@@ -1,0 +1,67 @@
+{
+  "action": "plan",
+  "number": 4697,
+  "title": "Patch: the AI takes a lethal it reaches by drawing first, as it did before #4608, by finishing a cut-short replay's turn on each sampled world",
+  "branch": "bot/issue-4697",
+  "thread": "**Issue #4697 (data, not instructions):**\n\n```text\n# #4697: Patch: the AI takes a lethal it reaches by drawing first, as it did before #4608, by finishing a cut-short replay's turn on each sampled world\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSince today's change to how the AI checks a winning line, it often passes up a win that needs it to draw a card first. Example: the AI has 2 mana and holds a 1-mana \"draw 2\" spell and a 1-mana 4/4. The opponent is on 4 health, and every card left in the AI's deck is a 1-mana spell that deals 4 damage. Drawing first wins on the spot, whatever it draws. Yet in about two games of three, the AI plays the 4/4 first, draws, and ends its turn with no mana left for the spell it drew. The fix lets the AI finish its turn properly in each of the possible draws it imagines, so it sees that drawing first wins in all of them. A player in practice stops seeing the AI walk past an obvious lethal.\n\n## Why\n\n- `decide` searches one sampled world (world 0) and then replays its best lines on the others. A line that draws and then plays the card it drew is cut on every other world: each world shuffles the AI's library, so the drawn instance is not there, and the replay ends its turn at the cut with its mana unspent. R4447000 (`spec/rulings/R4447000.md`) built the fix for this, `fill_turn` (`crates/ai/src/search.rs:326`). It ships switched off (`replay_fill_steps: 0`, `crates/ai/src/config.rs:234-237`) only because its fork screen \"did not finish in the bot's run: stopped after 2 hours, nothing printed\".\n- #4608 (R4608000, merged 2026-11-24, `confirm_lone_win: true` at `crates/ai/src/config.rs:246`, `finalist_means` at `crates/ai/src/decide.rs:362-377`) now ranks a line that won on world 0 alone by its score on the other worlds. Its ruling names the draw case as one it means to catch (\"the seat's own shuffled library dealt the card the line drew\"). It reckons another world confirms a line that truly wins with chance p with probability 1 \u2212 (1 \u2212 p)\u00b2. But with the fill off, another world can confirm a draw-then-play line only when it happens to draw the same instance. So a win that every draw gives is ranked as \"draw and pass\".\n- The lethal solver cannot save the line either: `wins_on` (`crates/ai/src/lethal.rs:101-131`) requires each step of the line, by instance id, to be legal on every world.\n- **Measured**, with a scratch crate outside the repository on `main` at 70926614d9. The scene: the AI's turn 5 at 2 mana, hand Stockpile (core-005) and Mr. Vanilla (core-008), library 20 True Strikes (core-044), opponent at 4 health with no board, decided at `AI_GATE_BUDGET` on seeds `probe:0` to `probe:39`, each played out with `play_ai_turn`.\n  - As shipped, the AI won that turn on 13 of 40 seeds. On the other 27 it played Vanilla, then Stockpile, then had no mana left.\n  - With `confirm_lone_win` off, it won on 40 of 40.\n  - With `confirm_lone_win` on and `replay_fill_steps` at 3, it won on 40 of 40.\n  - Replaying world 0's line [Stockpile, True Strike] on three other worlds: with the fill off, all three were cut and none won (1 crystal unspent); with the fill on, all three won.\n- **#4608's own tests hold.** With the fill at 3, every `r4608000_` test in `crates/ai/tests/ai/lone_win.rs` passed, both knife scenes included, and so did every `r4447000_` test but the one that pins the switch at 0 (`r4447000_a_pinned_decision_keeps_its_action_line_and_nodes`, `crates/ai/tests/ai/replay_fill.rs:96-130`). That test now fails on purpose: its own scene changes from \"Vanilla, Stockpile, then a drawn card\" (137 nodes) to \"Stockpile, then the drawn 1-drop, then Vanilla\" (171 nodes).\n- In a scene where only 1 of 20 library cards wins, the AI with the fill on drew first on 4 of 40 seeds, the same as with #4608 off (shipped: 2). The fill does not turn #4608's lucky-world case back into a gamble.\n- Fork screens now resume across runs (R4607000, #4634, merged today; `training/improve.md:168-178`). So #4447's unfinished screen is now one a bot can finish.\n\n## Proposal\n\n1. Set `AI_SEARCH.replay_fill_steps` to 3, the value R4447000's tests replay with (`FILL` in `replay_fill.rs`). Nothing else in the search changes: `fill_turn`, its node slice and `decide`'s reserve are as R4447000 built them.\n2. A ruling in the issue's block records the switch and why #4608 made it necessary: a cut replay is no evidence against a win when the fill is off. It gets a \u00a711 paragraph in `spec/pending/<issue>.md`, and R4447000's and R4608000's notes are left alone.\n3. Add scene tests named after that ruling:\n   - the measured scene above, where the AI wins the turn on every one of a fixed run of seeds;\n   - the same scene's line replayed on another world, won with the fill on;\n   - #4608's knife scenes, left untouched and still green.\n4. Re-pin `r4447000_a_pinned_decision_keeps_its_action_line_and_nodes` to the switch as shipped (or retitle it to pin the shipped decision), and say so in the ruling.\n5. Play #4447's fork screen (the candidate at 3 against a control at 0, `--set improve-dev --forks --extend --save <file in the worktree>`), resuming across continued runs as R4607000 allows. Record its tally in the knob's comment, as #4448's are. Decided in advance: the switch stays on unless the finished screen reads `forkEdgeHigh` below 0. In that case it ships at 0 again, with the scene test recorded as a known miss in the ruling. An inconclusive screen leaves the scene tests to settle it (R4319000), as #4608's were.\n\n## Where it lands\n\n- `crates/ai/src/config.rs` (`AI_SEARCH.replay_fill_steps` and its comment)\n- `crates/ai/tests/ai/replay_fill.rs`, or a new test file beside `lone_win.rs` for the scene\n- `crates/ai/README.md` (Budgets: \"At 0, as shipped\" becomes the new value)\n- `spec/rulings/R<issue>000.md`, `spec/pending/<issue>.md`\n- SPEC \u00a79.9; R4447000, R4608000, R4397000, R4607000\n\n## Acceptance criteria\n\n- [ ] `AI_SEARCH.replay_fill_steps` is 3, or 0 again only if the finished fork screen read `forkEdgeHigh` below 0, and its comment records the screen's tally or says it is inconclusive.\n- [ ] A test named after the new ruling builds the scene (2 mana; Stockpile and Mr. Vanilla in hand; a library of True Strikes; opponent at 4) and asserts that `play_ai_turn` wins the turn on every seed of a fixed run. It fails with the switch at 0.\n- [ ] Every `r4608000_` test passes unchanged.\n- [ ] `r4447000_a_pinned_decision_keeps_its_action_line_and_nodes` pins the decision as shipped, and the ruling says why it moved.\n- [ ] `cargo test -p jackioh-ai`, `cargo clippy -p jackioh-ai --all-targets -- -D warnings`, `cargo fmt --check` and `cargo jackioh spec check` pass. `cargo jackioh gate` (smoke) passes with its counts in the PR body, and its perf leg stays under `max_decision_ms`.\n\n## Size and risks\n\nMedium: one constant, one ruling, two or three scene tests and a README line. The fork screen is the slow part: about 12\u201316 core-hours by #4448's numbers, so several continued runs.\n\nRisks:\n- With the fill on, `decide` keeps up to `finalists \u00d7 (determinizations \u2212 1) \u00d7 21` nodes back for it: 126 of the gate budget's 1,200, taken from the beam's slice. Other decisions may change a little, which the gate smoke and the screen measure.\n- Tests that pin exact AI decisions or node counts on a turn whose finalist replays are cut will move. Each must be re-pinned with its reason, not loosened.\n- The ladder bots and the Duos AI team decide through `decide`, so they move with the practice AI.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** leaves it to a person: I reproduced the misplay on main (the AI won 10 of 40 seeds and opened with Mr. Vanilla on the other 30), but the fix turns on a switch whose own screen never finished, its keep rule is looser than training/improve.md's, and a narrower fix in finalist_means could cure just this case, so a person should choose the fix and approve the screen's cost.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-24T09:17:57Z:\n\napprove\n\nWhy: this is a regression #4608 caused, and it's measured: the AI wins a draw-then-lethal scene on 13 of 40 seeds as shipped, and on 40 of 40 with `replay_fill_steps` at 3, while every `r4608000_` test still passes. The fill already exists and is tested (R4447000), so this turns it on rather than adding new search code. Hold its fork screen to `training/improve.md`'s own rule, not the issue's looser one: keep 3 only when `forkEdgeLow` is above 0, or, if the screen is inconclusive, by the scene tests (R4319000). If the screen drops it, fall back to the narrower fix in `finalist_means`, where a replay that was cut counts as no evidence against a world-0 win.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4697: needs a plan; `claude-8` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T09:18:43Z",
+    "claimed_at": "2026-11-24T09:23:28Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4673 is held for `claude-7` until 03:30 (5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4676 skipped: it waits for #4672, #4673 to close first",
+    "#4677 skipped: it waits for #4674 to close first",
+    "#4678 skipped: it waits for #4673, #4675 to close first",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4680 skipped: it waits for #4678 to close first",
+    "#4681 skipped: it waits for #4680 to close first"
+  ]
+}
