@@ -251,9 +251,10 @@ things in it are not obvious:
   (`https://accounts.google.com/gsi/`, R2983000).
 - **One container, which sleeps.** The server holds every live match in memory (§4.1), so every
   request reaches the same instance (`max_instances: 1`), placed in eastern North America beside
-  Supabase. After ten minutes with no request and no open socket it stops, and the next request
-  starts it again; a live match always has its sockets open, so it never sleeps under one. A daily
-  cron wakes it, so its hourly loops run and the database sees a query.
+  Supabase. After five minutes (`SLEEP_AFTER`, `apps/edge/src/index.ts`) with no request and no open
+  socket it stops, and the next request starts it again; a live match always has its sockets open, so it
+  never sleeps under one. A daily cron wakes it, so its hourly loops run and the database sees a query, and
+  an hourly one wakes it for the daily games' sweep once a sweep has something due (R4691000).
 - **The image is the whole server.** `rust:1.97-slim-bookworm` stages run `cargo build --release -p
   jackioh-server` after cargo-chef (pinned) has compiled its dependencies from the workspace's
   manifests alone, in a layer a change to the sources does not rebuild, and a
@@ -387,7 +388,7 @@ Notes that matter:
 | The log already holds the actor's next seq | `StoreError::SeqClash`: the actor is dropped from the map, both sockets close (1001), and the next socket rebuilds it from the log (R776000) |
 | Process boot | nothing: no actor is rebuilt until a socket for its match arrives, when `actor/registry.rs` folds `(seed, decks, log)`, from the checkpoint the last drain, or every `MATCH_CHECKPOINT_MIN_ACTIONS`-th row as the match is played (#4224), stored when it passes (#1169); the rebuilt clock restarts the turn clock from full and keeps the ceiling from `started_at` |
 | First socket on an actor while the other seat has never attached to it (a restart, a no-show) | start that seat's grace at its stored `grace_deadline_at` if the restart left one (never later than a fresh window, at once if already past), else a fresh 60 s; it expires as a loss like any other. A match no socket returns to is the reaper's ceiling draw (R112, R744) |
-| Idle | The process has no hibernation; an actor with no sockets and an expired grace has already ended. The container stops once no request or socket has reached it for ten minutes (`apps/edge`), and the next request boots it, which is a process boot. On Durable Objects this row would read "hibernate". |
+| Idle | The process has no hibernation; an actor with no sockets and an expired grace has already ended. The container stops once no request or socket has reached it for five minutes (`SLEEP_AFTER`, `apps/edge`), and the next request boots it, which is a process boot. On Durable Objects this row would read "hibernate". |
 
 The actor reaches the world in four places only: the clock (`tokio::time`), its timers, the store's
 `matches_append_actions`, and its two sockets. A Durable Object port would replace those four, not the

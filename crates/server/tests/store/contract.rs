@@ -15006,9 +15006,22 @@ mod daily {
             "{}",
             harness.name
         );
+        // R4691000: the next to lapse, whatever its state, is what the sweep is next due for.
+        assert_eq!(
+            q!(harness, t => t.daily_invites_next_lapse()),
+            Some(now + 1),
+            "{}",
+            harness.name
+        );
         assert_eq!(
             q!(harness, t => t.daily_invites_purge(now + 1)),
             3,
+            "{}",
+            harness.name
+        );
+        assert_eq!(
+            q!(harness, t => t.daily_invites_next_lapse()),
+            None,
             "{}",
             harness.name
         );
@@ -15273,7 +15286,20 @@ mod r4039000_notifications {
         }
         q!(harness, t => t.notifications_mark_read(&ana.id, None, at));
         q!(harness, t => t.notifications_add(&notice(&bo.id, NotificationKind::LobbyInvite, Some(&ana.id), "lobby-b", at - 10), 100));
+        // R4691000: the oldest row, whoever it tells, is what the purge is next due for.
+        assert_eq!(
+            q!(harness, t => t.notifications_oldest_at()),
+            Some(at - 10),
+            "{}",
+            harness.name
+        );
         assert_eq!(q!(harness, t => t.notifications_purge(at)), 3, "{}", harness.name);
+        assert_eq!(
+            q!(harness, t => t.notifications_oldest_at()),
+            Some(at),
+            "{}",
+            harness.name
+        );
         assert_eq!(
             subjects(&q!(harness, t => t.notifications_page(&ana.id, None, 10))),
             vec!["lobby-3", "lobby-2"],

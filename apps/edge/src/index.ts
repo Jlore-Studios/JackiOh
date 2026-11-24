@@ -13,6 +13,7 @@ import { Container } from "@cloudflare/containers";
 
 import { ALERT_WINDOW_MS, canTell, tell } from "./alerts.ts";
 import {
+  DAILY_NEXT_PATH,
   DAILY_SWEEP_CRON,
   DAILY_SWEEP_PATH,
   HEALTH_PATH,
@@ -22,6 +23,7 @@ import {
   forServer,
   isModulePath,
   isServerPath,
+  nextDueOf,
   precompressedModule,
   settingsFingerprint,
   withSecurityHeaders,
@@ -50,8 +52,22 @@ export const TOLD_AT_KEY = "jackioh:server.unreachable:toldAt";
  */
 export const SETTINGS_FINGERPRINT_KEY = "jackioh:server.settings:fingerprint";
 
+/**
+ * R4691000: the key in the object's storage that holds when a daily sweep next has something due, as the
+ * server said going to sleep: `{ at: <epoch ms> | null }`, null for nothing until a request. Deleted
+ * whenever the container starts, so only the answer of a server that went to sleep is ever kept.
+ */
+export const DAILY_NEXT_DUE_KEY = "jackioh:daily.sweep:nextDueAt";
+
+/** R4691000: how long the `/daily-next` ask may take as the server goes to sleep; past it, nothing is kept. */
+export const DAILY_NEXT_TIMEOUT_MS = 5_000;
+
 /** The one instance every request reaches: the server holds every live match in memory. */
 const INSTANCE = "main";
+
+/** A success status, as `Response.ok` reads one: the sweep's status comes back over RPC as a number. */
+const HTTP_OK_FIRST = 200;
+const HTTP_OK_LAST = 299;
 
 /** How long a server on an older image gets to drain (its `SHUTDOWN_DRAIN_SECONDS`, 20) before it is killed. */
 const RETIRE_WAIT_MS = 30_000;
@@ -85,6 +101,80 @@ export class Server extends Container<Env> {
   private toldAt = Number.NEGATIVE_INFINITY;
   /** The read of `TOLD_AT_KEY` that sets `toldAt`, made once per object. */
   private toldAtLoad: Promise<void> | undefined;
+
+  /**
+   * R4691000: a start forgets when a sweep is next due, since what this run's requests store is the
+   * server's to say as it goes to sleep (`onActivityExpired`). A server stopped any other way (a deploy's
+   * retire, a crash) leaves no time, and the hourly cron wakes it as before.
+   */
+  override async onStart(): Promise<void> {
+    try {
+      await this.ctx.storage.delete(DAILY_NEXT_DUE_KEY);
+    } catch (error) {
+      console.warn("server.daily_next_unforgotten", error);
+    }
+  }
+
+  /**
+   * R4691000: as the server goes to sleep, asks it when a daily sweep next has something due and keeps the
+   * answer, then stops it as the library does. An answer that does not come, or says nothing readable,
+   * keeps nothing.
+   */
+  override async onActivityExpired(): Promise<void> {
+    if (this.ctx.container?.running) await this.rememberNextDue();
+    await super.onActivityExpired();
+  }
+
+  private async rememberNextDue(): Promise<void> {
+    try {
+      const answer = await this.containerFetch(
+        `http://container${DAILY_NEXT_PATH}`,
+        { signal: AbortSignal.timeout(DAILY_NEXT_TIMEOUT_MS) },
+        SERVER_PORT,
+      );
+      if (!answer.ok) {
+        console.warn("server.daily_next_failed", answer.status);
+        return;
+      }
+      const at = nextDueOf(await answer.json());
+      if (at === undefined) {
+        console.warn("server.daily_next_unreadable");
+        return;
+      }
+      await this.ctx.storage.put(DAILY_NEXT_DUE_KEY, { at });
+    } catch (error) {
+      console.warn("server.daily_next_failed", error);
+    }
+  }
+
+  /**
+   * R4691000: the hourly cron's daily sweep. A sleeping server whose last word was a time still to come (or
+   * nothing due at all) is left asleep: no sweep has anything to do before then. A running server, or a
+   * sleeping one that left no time, is swept as before. Resolves the sweep's status, or null when the server
+   * was left asleep. Public, since the cron calls it over Durable Object RPC.
+   */
+  async sweepDaily(): Promise<number | null> {
+    if (!this.ctx.container?.running) {
+      const at = await this.keptNextDue();
+      if (at !== undefined && (at === null || at > Date.now())) {
+        console.log("server.daily_sweep.asleep", at);
+        return null;
+      }
+    }
+    const swept = await this.fetch(new Request(`http://container${DAILY_SWEEP_PATH}`, { method: "POST" }));
+    return swept.status;
+  }
+
+  /** R4691000: the kept time (`DAILY_NEXT_DUE_KEY`), or undefined when none is kept or it cannot be read. */
+  private async keptNextDue(): Promise<number | null | undefined> {
+    try {
+      const kept = await this.ctx.storage.get<{ at: number | null }>(DAILY_NEXT_DUE_KEY);
+      return kept?.at;
+    } catch (error) {
+      console.warn("server.daily_next_unreadable", error);
+      return undefined;
+    }
+  }
 
   override async fetch(request: Request): Promise<Response> {
     await this.ensureImageChecked();
@@ -274,9 +364,12 @@ export default {
    */
   async scheduled(controller, env, ctx): Promise<void> {
     // #3727: the hourly cron runs the daily games' sweep; the daily one wakes the server as before.
+    // R4691000: a sleeping server with nothing due yet is left asleep (`Server.sweepDaily`).
     if (controller.cron === DAILY_SWEEP_CRON) {
-      const swept = await server(env).fetch(new Request(`http://container${DAILY_SWEEP_PATH}`, { method: "POST" }));
-      if (!swept.ok) throw new Error(`the server's ${DAILY_SWEEP_PATH} answered ${swept.status}`);
+      const status = await server(env).sweepDaily();
+      if (status !== null && (status < HTTP_OK_FIRST || status > HTTP_OK_LAST)) {
+        throw new Error(`the server's ${DAILY_SWEEP_PATH} answered ${status}`);
+      }
       return;
     }
     const stub = server(env);

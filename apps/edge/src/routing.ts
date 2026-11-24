@@ -105,6 +105,24 @@ export const READY_PATH = "/readyz";
 export const DAILY_SWEEP_CRON = "7 * * * *";
 export const DAILY_SWEEP_PATH = "/daily-sweep";
 
+/**
+ * R4691000: what the Worker asks the server as it goes to sleep: when a daily sweep next has something
+ * due (crates/server's `daily::notify::next_due`), as `{ "nextDueAt": <epoch ms> | null }`. Outside `/api`
+ * and `/ws`, as the sweep's path is.
+ */
+export const DAILY_NEXT_PATH = "/daily-next";
+
+/**
+ * R4691000: `/daily-next`'s time out of its answer: a number, null (nothing due until a request changes
+ * what is stored), or undefined for an answer that says neither, which is kept as no answer.
+ */
+export function nextDueOf(body: unknown): number | null | undefined {
+  if (typeof body !== "object" || body === null || !("nextDueAt" in body)) return undefined;
+  const at = body.nextDueAt;
+  if (at === null) return null;
+  return typeof at === "number" && Number.isFinite(at) ? at : undefined;
+}
+
 /** The server's settings that wrangler.jsonc's `vars` hold, one set per environment. */
 export const SERVER_VARS = ["PUBLIC_ORIGINS", "SUPABASE_URL", "TRUSTED_PROXY_HOPS", "LADDER_BOTS", "DEV_STRICT"] as const;
 

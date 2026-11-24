@@ -55,6 +55,13 @@ custom domains and Access are `infra/cloudflare.tf`'s.
   (`DAILY_SWEEP_PATH`), which ends the daily games whose move ran out and sends the "your move" emails
   and pushes while nobody else wakes it (SPEC §9.13). The path is outside `/api/*` and `/ws/*`, so
   nobody else reaches it through the Worker. The daily wake-up stays as it was (CLAUDE.md rule 13).
+  R4691000 (#4709): the cron goes through the object's `sweepDaily`, which leaves a sleeping server
+  asleep while the time it gave as it went to sleep is still to come. When `SLEEP_AFTER` runs out,
+  `onActivityExpired` asks the server's `/daily-next` (`DAILY_NEXT_PATH`, bounded by
+  `DAILY_NEXT_TIMEOUT_MS`) when a sweep next has something due, and keeps the answer under
+  `DAILY_NEXT_DUE_KEY` before the stop. `onStart` forgets it, so a server stopped any other way left
+  none. A running server, a kept time that has come, no kept time, or a storage that cannot be read
+  all mean a sweep as before.
 - **When it cannot reach the server** (#3618). A server that cannot boot, or that the Worker cannot reach,
   tells nobody itself, so the Worker raises `server.unreachable` (`src/alerts.ts`) when a request's start
   threw or outran `START_WAIT_MS`, and when the daily `/readyz` fails. It tells people as the server's own

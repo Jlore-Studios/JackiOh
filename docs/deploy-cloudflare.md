@@ -22,8 +22,9 @@ a static file from the web build, served without running any Worker code, but on
 WebAssembly module, stored brotli-compressed (`/assets/*.wasm-*.br`, #3183), which the Worker serves
 from the `ASSETS` binding with its `Content-Encoding`, so the browser decodes it as it downloads. Those
 two prefixes go to the Worker, which hands them to one container running `crates/server/Dockerfile`'s image. The
-container sleeps after ten minutes with no request and no open socket, and the next request starts
-it again. A daily cron wakes it, and an hourly one wakes it for the daily games' sweep (#3727).
+container sleeps after five minutes (`SLEEP_AFTER`) with no request and no open socket, and the next request starts
+it again. A daily cron wakes it, and an hourly one wakes it for the daily games' sweep (#3727) once a sweep has
+something due (R4691000).
 
 Each deploy ships the web build and the server together, so a site's client and server are never
 from different commits, and production's server no longer runs a day ahead of its client.
@@ -446,9 +447,12 @@ once a day and opens a `human` issue once the period's spend, or its projection,
 `ALERT_DOLLARS` ($15, about both containers awake all month); it needs `CLOUDFLARE_BILLING_TOKEN`
 (section 3) and says so, green, until it is set.
 
-The daily games' hourly cron (#3727, `DAILY_SWEEP_CRON`) wakes each site's container once an hour for a
-sweep that takes a moment, which then sleeps `SLEEP_AFTER` later: about a sixth of the hours awake on a
-quiet site, at most a dollar or so a month for each `basic` container.
+The daily games' hourly cron (#3727, `DAILY_SWEEP_CRON`) woke each site's container once an hour for a
+sweep that takes a moment, which then slept `SLEEP_AFTER` later: about a sixth of the hours awake on a
+quiet site, up to a dollar or so a month for each `basic` container. Since R4691000 (#4709) it wakes a
+sleeping container only in an hour when a sweep has something due (a deadline, a notification, a lapse
+or a feed row's keep, as the server said going to sleep), so a site with no daily games running sleeps
+through the night.
 
 ## 7. Known gaps
 
