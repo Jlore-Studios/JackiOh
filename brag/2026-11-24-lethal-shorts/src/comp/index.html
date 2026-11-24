@@ -1,0 +1,392 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>JackiOh — lethal shorts (vertical) composition</title>
+<style>
+  @font-face { font-family: "Alegreya"; src: url("assets/alegreya-5.3.0-latin-wght-normal.woff2") format("woff2"); font-weight: 400 900; }
+  @font-face { font-family: "Inter"; src: url("assets/inter-5.3.0-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+  html, body { margin: 0; padding: 0; background: #0c0704; }
+  #stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: #0c0704; }
+  .scene { position: absolute; inset: 0; display: none; overflow: hidden; }
+  .abs { position: absolute; }
+  .full { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; }
+
+  /* The tavern backdrop: .tavern.app-shell's gradients and its ::before planks (apps/web/src/auth/tavern.css). */
+  .tavern {
+    position: absolute; inset: 0; isolation: isolate; overflow: hidden;
+    background:
+      radial-gradient(ellipse 70% 40% at 50% 100%, rgba(255, 150, 60, 0.2), transparent 70%),
+      radial-gradient(ellipse 90% 55% at 50% 0%, rgba(90, 52, 27, 0.38), transparent 70%),
+      linear-gradient(180deg, #1c110a 0%, #120b07 55%, #0c0704 100%);
+  }
+  .tavern::before {
+    content: ""; position: absolute; z-index: -1; left: -20%; right: -20%; bottom: 0; height: 520px;
+    transform: perspective(700px) rotateX(58deg); transform-origin: 50% 100%;
+    background:
+      repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.5) 0 3px, transparent 3px 12.5%),
+      repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.14) 0 1px, transparent 1px 17px),
+      linear-gradient(180deg, #2b170c 0%, #5a341b 60%, #8a5a33 100%);
+    opacity: 0.55;
+    -webkit-mask-image: linear-gradient(0deg, #000 25%, transparent 100%);
+    mask-image: linear-gradient(0deg, #000 25%, transparent 100%);
+  }
+  .gold {
+    font-family: "Alegreya", serif; font-weight: 800; line-height: 1.0; letter-spacing: 0.01em;
+    padding: 0 0.06em 0.08em; white-space: nowrap;
+    background: linear-gradient(180deg, #fbe7b0 0%, #ffe39a 22%, #f3c969 44%, #c9953f 64%, #9b6423 84%, #d9a44c 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+    -webkit-text-stroke: var(--stroke, 2px) #3a1f0c;
+    filter: drop-shadow(0 0 var(--glow, 18px) rgba(255, 170, 60, 0.38)) drop-shadow(0 3px 0 #3a1f0c);
+  }
+  .ctr { left: 0; width: 1040px; text-align: center; }
+  .body { font-family: "Inter", sans-serif; font-weight: 600; color: #efe0bf; text-shadow: 0 2px 12px rgba(0,0,0,0.7); }
+  .caps { font-family: "Alegreya", serif; font-weight: 700; color: #c9953f; letter-spacing: 0.28em; text-transform: uppercase; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
+  .face { position: absolute; border-radius: 4.6% / 3.3%; overflow: hidden; }
+  .face img { width: 100%; height: 100%; display: block; }
+  /* The platforms' own caption style: bold white on a dark rounded box, one line each. */
+  .tbox { position: absolute; left: 520px; transform-origin: 50% 50%; white-space: nowrap;
+    font-family: "Inter", sans-serif; font-weight: 800; font-size: 58px; line-height: 1; color: #fff;
+    background: rgba(8, 5, 3, 0.86); border-radius: 16px; padding: 18px 28px 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); }
+  .tbox em { font-style: normal; color: #f3c969; }
+  .lane { position: absolute; top: 278px; width: 190px; height: 1010px; border-radius: 18px;
+    border: 4px solid rgba(255, 214, 120, 0.95); box-shadow: 0 0 26px rgba(255, 180, 70, 0.7), inset 0 0 30px rgba(255, 190, 90, 0.35); }
+  #dip { position: absolute; inset: 0; background: #0c0704; pointer-events: none; z-index: 50; }
+  #bands { position: absolute; inset: 0; z-index: 60; display: none; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- 1. The hook's footage: the aimed board, the takeover (cut C's cold open) and the rewind. -->
+  <div class="scene" id="s1">
+    <img class="full" id="s1img" alt="">
+    <div class="full" id="s1top" style="height:220px;background:linear-gradient(180deg,#0a0604,#0f0a07)"></div>
+    <div class="abs" id="s1scrim" style="left:20px;top:1220px;width:1000px;height:360px;background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(10,6,3,0.78), rgba(10,6,3,0.45) 55%, transparent 75%)"></div>
+    <div class="abs" id="s1flash" style="left:0;top:1160px;width:1040px;height:480px;background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,214,120,0.55), rgba(255,150,60,0.15) 50%, transparent 72%)"></div>
+    <div class="abs gold" id="lethal" style="font-size:170px;--stroke:4px;--glow:26px;left:520px;top:1400px;transform-origin:50% 50%">LETHAL.</div>
+    <div class="full" id="rew" style="background:repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 7px)"></div>
+    <div class="abs" id="rewIcon" style="left:96px;top:286px;width:150px;height:90px;padding:20px 26px;background:rgba(8,5,3,0.8);border-radius:18px;box-shadow:0 8px 30px rgba(0,0,0,0.5)"><div class="abs" style="left:26px;top:20px;width:150px;height:90px">
+      <div class="abs" style="left:0;top:0;width:0;height:0;border-top:45px solid transparent;border-bottom:45px solid transparent;border-right:70px solid #fff;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.6))"></div>
+      <div class="abs" style="left:70px;top:0;width:0;height:0;border-top:45px solid transparent;border-bottom:45px solid transparent;border-right:70px solid #fff;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.6))"></div>
+    </div></div>
+  </div>
+
+  <!-- 2. My Pawn's words over the random turn. -->
+  <div class="scene" id="s2">
+    <img class="full" id="s2img" alt="">
+    <div class="full" id="s2scrim" style="background:linear-gradient(180deg, rgba(12,7,4,0.35) 0%, rgba(12,7,4,0.55) 40%, rgba(12,7,4,0.9) 62%, rgba(12,7,4,0.94) 100%)"></div>
+    <div class="abs" id="pawnGlow" style="left:90px;top:160px;width:900px;height:1040px;background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(170,110,255,0.45), rgba(120,60,200,0.18) 45%, transparent 70%)"></div>
+    <div class="face" id="pawn" style="left:270px;top:296px;width:540px;height:754px;box-shadow:0 30px 80px rgba(0,0,0,0.6), 0 0 40px rgba(170,110,255,0.35)"><img src="faces/core-096-base.png" alt=""></div>
+    <div class="abs caps ctr" id="pawnCaps" style="top:1092px;font-size:30px">Trap · My Pawn</div>
+    <div class="abs gold ctr" id="cancel" style="top:1136px;font-size:150px;--stroke:3px;transform-origin:50% 60%">Cancel it.</div>
+    <div class="abs body" id="random" style="left:120px;width:800px;top:1338px;font-size:56px;line-height:1.18;text-align:center">The rest of their turn is played at random.</div>
+  </div>
+
+  <!-- 4. Lanes and traps, on the real boards. -->
+  <div class="scene" id="s4">
+    <img class="full" id="s4img" alt="" style="transform-origin:0 0">
+    <div class="full" id="lanes"></div>
+    <div class="full" id="s4scrim" style="background:linear-gradient(0deg, rgba(10,6,3,0.96) 0%, rgba(10,6,3,0.86) 24%, rgba(10,6,3,0.0) 40%)"></div>
+    <div class="abs" id="s4flash" style="inset:0;background:#fff3d6"></div>
+    <div class="abs gold" id="cap1" style="left:90px;top:1340px;font-size:132px;--stroke:3px">Five lanes.</div>
+    <div class="abs gold" id="cap2" style="left:90px;top:1340px;font-size:132px;--stroke:3px">Hidden traps.</div>
+  </div>
+
+  <!-- 5. Radiant -->
+  <div class="scene" id="s5">
+    <div class="tavern"></div>
+    <div class="abs" id="radGlow" style="left:40px;top:180px;width:1000px;height:1000px;background:radial-gradient(circle at 50% 50%, rgba(255,214,120,0.75), rgba(243,201,105,0.32) 32%, rgba(201,149,63,0.08) 55%, transparent 70%)"></div>
+    <div id="sparks" class="full"></div>
+    <div class="abs" id="flipper" style="left:268px;top:300px;width:543px;height:760px;transform-style:preserve-3d">
+      <div class="face" style="inset:0;width:543px;height:760px;backface-visibility:hidden;box-shadow:0 30px 70px rgba(0,0,0,0.65)"><img src="faces/core-008-base.png" alt=""></div>
+      <div class="face" style="inset:0;width:543px;height:760px;backface-visibility:hidden;transform:rotateY(180deg);box-shadow:0 30px 70px rgba(0,0,0,0.55), 0 0 60px rgba(255,200,90,0.75)"><img src="faces/core-008-radiant.png" alt=""></div>
+    </div>
+    <div class="abs caps" id="lblBase" style="left:268px;width:543px;top:1092px;text-align:center;font-size:30px">Base</div>
+    <div class="abs caps" id="lblRad" style="left:268px;width:543px;top:1092px;text-align:center;font-size:30px;color:#f3c969">Radiant</div>
+    <div class="abs gold ctr" id="radCap" style="top:1168px;font-size:112px;line-height:1.06;white-space:normal;--stroke:2.5px">Every card<br>goes Radiant.</div>
+  </div>
+
+  <!-- 6. Wall -->
+  <div class="scene" id="s6">
+    <div class="full" style="perspective:1600px;z-index:0;isolation:isolate">
+      <div id="wall" class="abs" style="left:50%;top:50%;width:0;height:0;transform-style:preserve-3d"></div>
+    </div>
+    <div class="full" style="z-index:1;background:radial-gradient(ellipse 60% 30% at 50% 44%, rgba(12,7,4,0.92), rgba(12,7,4,0.7) 55%, rgba(12,7,4,0.35) 100%)"></div>
+    <div class="abs gold ctr" id="c800" style="z-index:2;top:640px;font-size:180px;--stroke:4px;--glow:28px">800 cards.</div>
+    <div class="abs gold ctr" id="c8" style="z-index:2;top:858px;font-size:118px;--stroke:3px">Eight sets.</div>
+  </div>
+
+  <!-- 7. Outro -->
+  <div class="scene" id="s7">
+    <div class="tavern"></div>
+    <div class="abs" id="s7glow" style="left:0;top:420px;width:1080px;height:560px;background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,170,60,0.25), transparent 70%)"></div>
+    <img class="abs" id="s7logo" src="assets/jackioh-logo.svg" style="left:110px;top:560px;width:860px;height:279px" alt="">
+    <div class="abs body" id="outro" style="left:120px;width:800px;top:892px;text-align:center;font-size:50px;line-height:1.2">Play online<br>or against the AI.</div>
+    <div class="abs gold ctr" id="url" style="top:1060px;font-size:140px;--stroke:3.5px;--glow:26px">jackioh.com</div>
+  </div>
+
+  <!-- The hook's captions (cuts B and C), over every scene while they last. -->
+  <div class="full" id="hookText" style="z-index:40;display:none">
+    <div class="tbox" id="tb1" style="top:1250px">You swing for lethal.</div>
+    <div class="tbox" id="tb2" style="top:1372px">They flip <em>this</em>.</div>
+    <div class="tbox" id="tb3" style="top:1300px">One second earlier</div>
+  </div>
+
+  <div id="dip"></div>
+  <!-- The platforms' UI bands, drawn only for checks (?bands=1). -->
+  <div id="bands">
+    <div class="abs" style="left:0;top:0;width:1080px;height:250px;background:rgba(255,0,0,0.3)"></div>
+    <div class="abs" style="left:0;top:1536px;width:1080px;height:384px;background:rgba(255,0,0,0.3)"></div>
+    <div class="abs" style="left:940px;top:960px;width:140px;height:576px;background:rgba(255,0,0,0.3)"></div>
+  </div>
+</div>
+
+<script>
+const Q = new URLSearchParams(location.search);
+const CUT = Q.get("cut") || "a";
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eOut = (x) => 1 - Math.pow(1 - x, 3);
+const eIn = (x) => x * x * x;
+const eIO = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const lerp = (a, b, x) => a + (b - a) * x;
+const FPS_SEQ = 60;
+const TK = 107 / 60; // page time of the takeover's first frame (seq/0107.jpg)
+const SHIFT = 180;   // the board's footage sits this far down, so the hero at 3 clears the platforms' top bar
+const END = 14.0;
+$("bands").style.display = Q.get("bands") ? "block" : "none";
+const seqSrc = (page) => `seq/${String(Math.max(0, Math.floor(page * FPS_SEQ + 1e-6))).padStart(4, "0")}.jpg`;
+const show = (id, on) => { $(id).style.display = on ? "block" : "none"; };
+const pending = [];
+function setSrc(img, src) { if (img.getAttribute("src") !== src) img.setAttribute("src", src); pending.push(img); }
+function textIn(el, t, at, d = 0.18, rise = 18) {
+  const x = eOut(seg(t, at, at + d));
+  el.style.opacity = x;
+  el.style.transform = `translateY(${(1 - x) * rise}px)`;
+}
+// A caption box pops in (and out) the way the platforms' own text does.
+function boxIn(el, t, at, out) {
+  const x = seg(t, at, at + 0.12);
+  const o = out === undefined ? 1 : 1 - seg(t, out, out + 0.1);
+  const s = t < at ? 0.6 : lerp(0.6, 1, eOut(x)) + 0.06 * Math.sin(Math.PI * x);
+  el.style.opacity = t < at ? 0 : clamp(x * 2.5) * o;
+  el.style.transform = `translate(-50%, 0) scale(${s})`;
+}
+
+const FACES = ["classic-003-base","stinkyscape-001-base","meditative-002-base","core-041-base","traininggrounds-016-base","classicplus-012-radiant","stinkyscapeplus-102-base","meditativeplus-022-base","core-081-radiant","classic-059-base","stinkyscape-139-base","meditative-068-base","traininggrounds-008-base","classicplus-058-base","core-012-base","stinkyscapeplus-087-base","meditative-075-radiant","classic-077-base","meditativeplus-011-base","stinkyscape-003-radiant","core-043-base","traininggrounds-006-radiant","classicplus-064-base","meditative-004-base","stinkyscapeplus-001-base","classic-048-base","core-026-base","stinkyscape-114-base","meditative-088-base","traininggrounds-017-base","classicplus-070-base","meditativeplus-023-base","core-009-base","stinkyscapeplus-101-base","classic-012-base","meditative-030-base","stinkyscape-169-base","traininggrounds-007-base","core-035-base","classicplus-039-base","meditativeplus-008-base","stinkyscapeplus-002-base","classic-016-base","meditative-100-base","core-045-base","traininggrounds-003-base","stinkyscape-001-base","core-043-radiant","meditative-073-base","traininggrounds-032-base","classicplus-012-base","core-081-base","meditative-075-base","traininggrounds-006-base","stinkyscape-003-base","core-008-radiant"];
+const W_COLS = 8, W_ROWS = 10, FW = 232, FH = 325, GAP = 26;
+(function buildWall() {
+  const wall = $("wall");
+  for (let r = 0; r < W_ROWS; r++) {
+    const row = document.createElement("div");
+    row.className = "abs wall-row";
+    row.style.left = `${-(W_COLS * (FW + GAP)) / 2}px`;
+    row.style.top = `${(r - W_ROWS / 2) * (FH + GAP)}px`;
+    for (let c = 0; c < W_COLS; c++) {
+      const f = document.createElement("div");
+      f.className = "face";
+      Object.assign(f.style, { left: `${c * (FW + GAP)}px`, top: "0px", width: `${FW}px`, height: `${FH}px`, boxShadow: "0 18px 40px rgba(0,0,0,0.55)" });
+      const img = document.createElement("img");
+      img.src = `faces/${FACES[(r * 5 + c * 3) % FACES.length]}.png`;
+      f.appendChild(img);
+      row.appendChild(f);
+    }
+    wall.appendChild(row);
+  }
+})();
+// The five lanes' outlines on the board (columns of the phone layout, in its 1080-wide pixels).
+const LANE_X = [40, 242, 444, 645, 847];
+(function buildLanes() { for (const x of LANE_X) { const d = document.createElement("div"); d.className = "lane"; d.style.left = `${x + 3}px`; $("lanes").appendChild(d); } })();
+const SPARKS = [];
+(function buildSparks() {
+  const box = $("sparks");
+  for (let i = 0; i < 26; i++) {
+    const s = document.createElement("div");
+    s.className = "abs";
+    const size = 6 + ((i * 37) % 9);
+    s.style.width = s.style.height = `${size}px`;
+    s.style.borderRadius = "50%";
+    s.style.background = "radial-gradient(circle, #fff6d6 0%, #f3c969 45%, rgba(243,201,105,0) 72%)";
+    box.appendChild(s);
+    SPARKS.push({ el: s, a: (i / 26) * Math.PI * 2 + ((i * 53) % 10) * 0.05, r: 240 + ((i * 71) % 170), size, d: 0.55 + ((i * 29) % 30) / 100 });
+  }
+})();
+
+// The hook's footage at hook time h, per cut: which page time of the capture, and its framing.
+function hookFrame(h) {
+  const img = $("s1img");
+  let page, fx = "none", rew = 0;
+  if (CUT === "c") {
+    if (h < 1.0) page = TK + 0.45 + h * 0.9;                                  // cold open on the takeover
+    else if (h < 1.5) { const x = eIO(seg(h, 1.0, 1.5)); page = lerp(TK + 1.35, TK - 0.5, x); rew = 1; } // rewind
+    else page = TK - 0.5 + (h - 1.5);                                         // and play it from there
+  } else page = h * (TK / 2);                                                 // the aim, reaching the takeover at 2.0
+  page = Math.min(page, TK + 3);
+  setSrc(img, seqSrc(page));
+  const board = page < TK;
+  const push = board ? 1 + 0.05 * eIO(seg(h, 0, 2)) : 1 + 0.03 * seg(h, 0, 1);
+  const jitter = rew ? Math.sin(h * 173) * 10 : 0;
+  img.style.transformOrigin = board ? "300px 520px" : "540px 700px";
+  img.style.transform = `translate(${jitter}px, ${board ? SHIFT : 0}px) scale(${push})`;
+  img.style.filter = rew ? "saturate(0.55) contrast(1.12) brightness(0.92) hue-rotate(-8deg)" : "none";
+  $("s1top").style.display = board ? "block" : "none";
+  $("rew").style.display = rew ? "block" : "none";
+  $("rew").style.transform = `translateY(${(h * 900) % 7}px)`;
+  $("rewIcon").style.display = CUT === "c" && h >= 1.0 && h < 1.5 ? "block" : "none";
+  $("rewIcon").style.opacity = 0.75 + 0.25 * Math.sin(h * 40);
+  const isA = CUT === "a";
+  for (const id of ["lethal", "s1scrim", "s1flash"]) show(id, isA);
+  if (isA) {
+    const slam = seg(h, 0.4, 0.5);
+    const shake = h >= 0.5 && h < 0.83 ? Math.sin((h - 0.5) * 90) * 7 * (1 - seg(h, 0.5, 0.83)) : 0;
+    img.style.transform = `translate(${shake}px, ${SHIFT + shake * 0.4}px) scale(${push})`;
+    const s = h < 0.4 ? 2.4 : lerp(2.4, 1, eIn(slam));
+    $("lethal").style.opacity = h < 0.4 ? 0 : clamp(slam * 2.2);
+    $("lethal").style.transform = `translate(-50%, -50%) scale(${s * (1 + 0.012 * seg(h, 0.5, 2))})`;
+    $("s1scrim").style.opacity = h < 0.4 ? 0 : clamp(slam * 1.6);
+    $("s1flash").style.opacity = h < 0.5 ? 0 : 1 - eOut(seg(h, 0.5, 0.9));
+  }
+}
+
+window.renderAt = async function renderAt(t) {
+  pending.length = 0;
+  // The loop's tail: from 13.75 the outro dips out and the hook's first frame comes back in.
+  const tail = t >= END - 0.25;
+  const scene = t < 2 ? 1 : t < 6.5 ? 2 : t < 8.5 ? 4 : t < 10 ? 5 : t < 11.5 ? 6 : 7;
+  const shown = tail && t >= END - 0.13 ? 1 : scene;
+  for (const i of [1, 2, 4, 5, 6, 7]) show(`s${i}`, i === shown);
+
+  let dip = 0;
+  for (const j of [6.5, 11.5]) {
+    if (t >= j - 0.08 && t < j) dip = Math.max(dip, eIn(seg(t, j - 0.08, j)));
+    if (t >= j && t < j + 0.12) dip = Math.max(dip, 1 - eOut(seg(t, j, j + 0.12)));
+  }
+  if (tail) dip = t < END - 0.13 ? eIn(seg(t, END - 0.25, END - 0.13)) : 1 - eOut(seg(t, END - 0.13, END + 0.03));
+  $("dip").style.opacity = dip;
+
+  if (shown === 1) hookFrame(tail ? 0 : t);
+
+  // The hook's captions.
+  const ht = $("hookText");
+  ht.style.display = (CUT === "b" && t < 2.45) || (CUT === "c" && t >= 1.0 && t < 2.3) ? "block" : "none";
+  show("tb1", CUT === "b"); show("tb2", CUT === "b"); show("tb3", CUT === "c");
+  if (CUT === "b") { boxIn($("tb1"), t, 0.05, 2.3); boxIn($("tb2"), t, 1.0, 2.3); }
+  if (CUT === "c") boxIn($("tb3"), t, 1.0, 2.15);
+
+  if (shown === 2) {
+    const page = t < 3 ? TK + (t - 2) : TK + 1 + (t - 3) * 0.85;
+    setSrc($("s2img"), seqSrc(page));
+    const b = eIO(seg(t, 2.85, 3.12));
+    const img = $("s2img");
+    const back = page >= TK + 2.7; // the board is back from the takeover: sit it where the hook had it
+    img.style.filter = b > 0 ? `blur(${10 * b}px) brightness(${lerp(1, 0.8, b)}) saturate(${lerp(1, 0.9, b)})` : "none";
+    img.style.transformOrigin = "540px 700px";
+    img.style.transform = `translateY(${back ? SHIFT * 0.5 : 0}px) scale(${1 + 0.06 * b + 0.02 * seg(t, 3, 6.5)})`;
+    $("s2scrim").style.opacity = b;
+    const p = eOut(seg(t, 2.95, 3.3));
+    const bob = Math.sin((t - 3) * 2.2) * 6 * seg(t, 3.3, 3.8);
+    $("pawn").style.opacity = clamp(p * 1.4);
+    $("pawn").style.transform = `translate(0, ${(1 - p) * 420 + bob}px) rotate(${lerp(-8, 2, p)}deg)`;
+    $("pawnGlow").style.opacity = p * (0.85 + 0.15 * Math.sin((t - 3) * 3.1));
+    textIn($("pawnCaps"), t, 2.95, 0.2, 14);
+    const c = seg(t, 2.9, 3.0);
+    $("cancel").style.opacity = t < 2.9 ? 0 : clamp(c * 2);
+    $("cancel").style.transform = `scale(${lerp(1.18, 1, eIn(c))})`;
+    textIn($("random"), t, 3.3, 0.2, 20);
+  }
+
+  if (shown === 4) {
+    const img = $("s4img");
+    const k = t < 7.5 ? 0 : 1;
+    const local = t - (6.5 + k);
+    setSrc(img, k === 0 ? "stills/board-t1.png" : "stills/board-t2.png");
+    // Each board drifts toward its subject: the five lanes, then the two face-down traps.
+    const [fx, fy, s0] = k === 0 ? [540, 760, 1.0] : [640, 400, 1.22];
+    const s = s0 + 0.04 * eIO(seg(local, 0, 1)) + 0.04 * (1 - eOut(seg(local, 0, 0.18)));
+    const ty = k === 0 ? 40 : 330;
+    img.style.transform = `translate(${fx - fx * s}px, ${fy - fy * s + ty}px) scale(${s})`;
+    $("lanes").style.display = k === 0 ? "block" : "none";
+    if (k === 0) {
+      $("lanes").style.transform = img.style.transform;
+      $("lanes").style.transformOrigin = "0 0";
+      [...$("lanes").children].forEach((d, i) => {
+        const a = seg(local, 0.08 + i * 0.07, 0.2 + i * 0.07);
+        d.style.opacity = eOut(a) * (1 - 0.55 * seg(local, 0.7, 1));
+      });
+    }
+    $("s4flash").style.opacity = local < 0.14 && k > 0 ? 0.16 * (1 - eOut(seg(local, 0, 0.14))) : 0;
+    show("cap1", k === 0); show("cap2", k === 1);
+    textIn($("cap1"), t, 6.5, 0.16, 18);
+    textIn($("cap2"), t, 7.5, 0.16, 18);
+  }
+
+  if (shown === 5) {
+    const enter = eOut(seg(t, 8.5, 8.75));
+    const flip = eIO(seg(t, 8.86, 9.14));
+    const lift = Math.sin(flip * Math.PI) * 0.06;
+    $("flipper").style.opacity = enter;
+    $("flipper").style.transform = `perspective(1500px) translateY(${(1 - enter) * 60 + Math.sin((t - 8.5) * 2.0) * 5}px) rotateY(${180 * flip}deg) scale(${1 + lift})`;
+    const g = seg(t, 9.0, 9.25);
+    $("radGlow").style.opacity = t < 9 ? 0 : eOut(g) * (0.85 + 0.15 * Math.sin((t - 9.25) * 4.2)) + 0.35 * (1 - seg(t, 9.0, 9.6)) * (t < 9.6 ? 1 : 0);
+    $("radGlow").style.transform = `scale(${lerp(0.55, 1, eOut(g)) + 0.15 * (1 - seg(t, 9.0, 9.6))})`;
+    $("lblBase").style.opacity = enter * (1 - seg(t, 8.86, 9.0));
+    $("lblRad").style.opacity = eOut(seg(t, 9.1, 9.3));
+    textIn($("radCap"), t, 8.55, 0.2, 18);
+    for (const sp of SPARKS) {
+      const x = seg(t, 9.02, 9.02 + sp.d);
+      const on = t >= 9.02 && x < 1;
+      sp.el.style.display = on ? "block" : "none";
+      if (!on) continue;
+      const rr = sp.r * eOut(x);
+      sp.el.style.left = `${540 + Math.cos(sp.a) * rr - sp.size / 2}px`;
+      sp.el.style.top = `${680 + Math.sin(sp.a) * rr * 1.1 - sp.size / 2}px`;
+      sp.el.style.opacity = (1 - x) * clamp(x * 6);
+    }
+  }
+
+  if (shown === 6) {
+    const local = t - 10;
+    const z = lerp(1.16, 1.0, eOut(seg(local, 0, 1.5)));
+    $("wall").style.transform = `rotateX(20deg) rotateZ(-13deg) scale(${z})`;
+    document.querySelectorAll(".wall-row").forEach((row, i) => {
+      const dir = i % 2 === 0 ? 1 : -1;
+      row.style.transform = `translateX(${dir * (-60 + 120 * seg(local, 0, 1.5))}px)`;
+    });
+    const c = seg(t, 10.0, 10.16);
+    $("c800").style.opacity = clamp(c * 2);
+    $("c800").style.transform = `scale(${lerp(1.22, 1, eOut(c))})`;
+    textIn($("c8"), t, 10.5, 0.16, 18);
+  }
+
+  if (shown === 7) {
+    const r = eOut(seg(t, 11.5, 11.9));
+    const logo = $("s7logo");
+    logo.style.opacity = r;
+    logo.style.filter = `blur(${(1 - r) * 8}px) drop-shadow(0 0 ${(12 + 26 * Math.exp(-4 * Math.max(0, t - 11.85))) * r}px rgba(255,170,60,${0.5 * r})) drop-shadow(0 4px 0 #3a1f0c)`;
+    logo.style.transform = `translateY(${(1 - r) * 50}px) scale(${lerp(0.95, 1, r)})`;
+    $("s7glow").style.opacity = r;
+    textIn($("outro"), t, 11.7, 0.18, 16);
+    const u = seg(t, 12.0, 12.18);
+    $("url").style.opacity = clamp(u * 2);
+    const beat = t > 12.5 ? Math.exp(-6 * ((t - 12.5) % 0.5)) * 0.012 : 0;
+    $("url").style.transform = `scale(${lerp(1.2, 1, eOut(u)) + beat})`;
+  }
+
+  await Promise.all(pending.map((img) => (img.complete && img.naturalWidth ? img.decode().catch(() => {}) : new Promise((r) => { img.onload = img.onerror = () => r(); }).then(() => img.decode().catch(() => {})))));
+  await document.fonts.ready;
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  return shown;
+};
+window.ready = (async () => {
+  await document.fonts.load('800 100px "Alegreya"');
+  await document.fonts.load('700 30px "Alegreya"');
+  await document.fonts.load('600 50px "Inter"');
+  await document.fonts.load('800 58px "Inter"');
+  await Promise.all([...document.images].map((i) => i.decode().catch(() => {})));
+  return true;
+})();
+</script>
+</body>
+</html>
