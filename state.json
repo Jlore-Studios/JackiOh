@@ -41420,6 +41420,14 @@
         "title": "Patch: Plague Counter placement prompts refuse Evasive cards and Mayor draws them with Lucky",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-24T09:30:53Z",
+        "number": 4687,
+        "reason": "one bug of this class has shipped (#4623's forced Windfast stand-in), and it is fixed now, with tests that fail without the fix. That is one case, not a recurring class. The proposal also has the monitor call `restrictions::attack_restriction` itself, which restates the engine's check rather than judging from events, against the monitor's own \"an oracle, not the fix restated\" rule, so a bug inside that function would pass it. Worth revisiting if a second attack-restriction bug gets through.",
+        "title": "Patch: the fuzz monitor fails a game in which an attack targets a card barred by attack restrictions",
+        "verdict": "came to nothing",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "declined": [
@@ -42179,6 +42187,13 @@
         "number": 4693,
         "reason": "it is reachable (a Nerf may add Crater to a card in hand, `TUNE_NERF_HAND_KEYWORDS`, a GIGA one included), but what Crater should lock on a GIGA Unit is unruled. R783010 locks \"its own unit zone\", and a GIGA's span includes the other row's zones, so \"all four\" would also lock backrow zones. That is a design call on a rare interaction. Rule it first, and the fix is small.",
         "title": "Patch: a GIGA Unit with Crater locks all four of its spanned zones on arrival",
+        "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-24T09:30:53Z",
+        "number": 4687,
+        "reason": "one bug of this class has shipped (#4623's forced Windfast stand-in), and it is fixed now, with tests that fail without the fix. That is one case, not a recurring class. The proposal also has the monitor call `restrictions::attack_restriction` itself, which restates the engine's check rather than judging from events, against the monitor's own \"an oracle, not the fix restated\" rule, so a bug inside that function would pass it. Worth revisiting if a second attack-restriction bug gets through.",
+        "title": "Patch: the fuzz monitor fails a game in which an attack targets a card barred by attack restrictions",
         "why": "rejected by @jgoetzmann"
       }
     ],
