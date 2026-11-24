@@ -19919,9 +19919,9 @@
       "provider": "muse",
       "queued_at": "2026-11-24T21:24:19Z",
       "requested_by": "squishy-squooby",
-      "run_id": "",
+      "run_id": "pending:348cf14c-1795561937",
       "runs_on": "night-vm-muse-fill",
-      "started_at": "2026-11-24T23:01:00Z",
+      "started_at": "2026-11-24T23:12:48Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -20462,9 +20462,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T23:12:04Z",
+    "at": "2026-11-24T23:12:48Z",
     "url": "",
-    "what": "plan #4809 on claude-3"
+    "what": "build #4841 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T22:58:52Z",
