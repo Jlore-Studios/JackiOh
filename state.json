@@ -18362,15 +18362,11 @@
     "what": "review #4574 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-24T04:09:07Z",
+    "at": "2026-11-24T04:20:20Z",
     "notes": [
-      "#4662 is held for `claude-8` until 22:10 (it refused a call)",
-      "delivered build #4588 on muse (run 45305549702): part",
-      "started review #4662 on claude-8 (run 45324645702)",
-      "started plan #4594 on claude-8 (run 45324728141)",
-      "started build #4593 on muse (run 45324808960)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-24T07:20:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` it refused a call; its limit resets at 2026-11-24T04:20:00Z; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
-      "pruned 4 plan file(s) older than 7 days"
+      "started review #4574 on claude-6 (run 45325860963)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-24T07:20:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19076,7 +19072,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-24T04:09:07Z",
+  "loop_tick": "2026-11-24T04:20:20Z",
   "machine_disk": {
     "issue": null,
     "reading": {
