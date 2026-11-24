@@ -260,7 +260,7 @@ fn probe_vagabond() {
             "p2": { "library": filler(), "hand": ["core-005"], "field": [{ "def": "stand-in (1) 0/30", "lane": 1 }] },
         }));
         s.play("stinkyscapeplus-155", json!({}));
-        println!("PROBE vagabond events={:?}", s.last_events().iter().map(|e| format!("{:?}", e.type_())).collect::<Vec<_>>());
+        println!("PROBE vagabond events={:?}", s.last_events().iter().map(|e| format!("{:?}", e.event_type())).collect::<Vec<_>>());
         let ship = (1..=5).filter_map(|lane| s.unit(P1, lane).or_else(|| s.backrow(P1, lane))).next().expect("a ship");
         println!("PROBE vagabond radiant={radiant} mana_left={} ship={}{} slumber={:?} acts={:?}", s.state().players[P1].mana.current, ship.def_id, if ship.radiant { "*" } else { "" }, ship.slumber, s.activations_of(&ship));
         let offered: Vec<String> = s.offered(P1).iter().map(|a| format!("{a:?}").chars().take(90).collect()).collect();

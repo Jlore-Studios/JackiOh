@@ -381,174 +381,7 @@ fn explore_forged() {
                 continue;
             }
             let me = seat_to_act(&state).unwrap_or(state.active);
-            let opp = opponent_of(me);
-            let legal = legal_actions(&state, me);
-            let legal_json: Vec<Value> = legal.iter().map(|b| js(b)).collect();
-            let mut forged: Vec<(String, Value)> = Vec::new();
-            // A. ids from every zone, in every action that names a card.
-            let mut ids: Vec<(String, String)> = Vec::new();
-            let mut take = |zone: &str, cards: Vec<&CardInstance>| {
-                for card in cards.into_iter().take(2) {
-                    ids.push((zone.to_string(), card.id.clone()));
-                }
-            };
-            take("own-library", state.players[me].library.iter().collect());
-            take("own-exile", state.players[me].exile.iter().collect());
-            take("own-graveyard", state.players[me].graveyard.iter().collect());
-            take("own-units", state.players[me].units.iter().flatten().flatten().collect());
-            take("own-backrow", state.players[me].backrow.iter().flatten().collect());
-            take("opp-hand", state.players[opp].hand.iter().collect());
-            take("opp-library", state.players[opp].library.iter().collect());
-            take("opp-graveyard", state.players[opp].graveyard.iter().collect());
-            take("opp-units", state.players[opp].units.iter().flatten().flatten().collect());
-            take("opp-backrow", state.players[opp].backrow.iter().flatten().collect());
-            for bogus in ["c999999", "", "hidden", "hero-p1", "hero-p2", "random"] {
-                ids.push(("bogus".to_string(), bogus.to_string()));
-            }
-            for (zone, id) in &ids {
-                forged.push((format!("play {zone}"), json!({"type":"play","instanceId":id})));
-                forged.push((format!("play-zone {zone}"), json!({"type":"play","instanceId":id,"zone":{"row":"units","lane":1}})));
-                forged.push((format!("play-backrow {zone}"), json!({"type":"play","instanceId":id,"zone":{"row":"backrow","lane":1}})));
-                forged.push((format!("play-facedown {zone}"), json!({"type":"play","instanceId":id,"faceDown":"cloaked"})));
-                forged.push((format!("trade {zone}"), json!({"type":"trade","instanceId":id})));
-                forged.push((format!("switch {zone}"), json!({"type":"switchPosition","instanceId":id})));
-                forged.push((format!("activate {zone}"), json!({"type":"activate","instanceId":id})));
-                forged.push((format!("activatePower {zone}"), json!({"type":"activatePower","instanceId":id})));
-                forged.push((format!("attack-by {zone}"), json!({"type":"attack","attackerId":id,"targetId":format!("hero-{opp}")})));
-                if let Some(mine) = state.players[me].units.iter().flatten().flatten().next() {
-                    forged.push((format!("attack-on {zone}"), json!({"type":"attack","attackerId":mine.id,"targetId":id})));
-                }
-                forged.push((format!("mulligan {zone}"), json!({"type":"mulligan","keep":[id]})));
-            }
-            for offer in [-1i64, i32::MIN as i64, i32::MAX as i64, 6, 64] {
-                forged.push(("marketBuy".to_string(), json!({"type":"marketBuy","offer":offer})));
-            }
-            forged.push(("answerDraw".to_string(), json!({"type":"answerDraw","accept":true})));
-            forged.push(("sandbox".to_string(), json!({"type":"sandbox","op":{"op":"draw","player":me,"count":1}})));
-            // B. listed plays with one field forged.
-            let plays: Vec<&Value> = legal_json.iter().filter(|j| j["type"] == "play").collect();
-            let stride = (plays.len() / 6).max(1);
-            let own_units: Vec<String> = state.players[me].units.iter().flatten().flatten().map(|c| c.id.clone()).collect();
-            let any_ids: Vec<String> = ids.iter().map(|(_, id)| id.clone()).collect();
-            for play in plays.iter().step_by(stride) {
-                let with = |key: &str, value: Value| {
-                    let mut body = (*play).clone();
-                    body[key] = value;
-                    body
-                };
-                for lane in [-1i64, 0, 7, 8, 1000, i32::MAX as i64, i32::MIN as i64] {
-                    for row in ["units", "backrow"] {
-                        forged.push((format!("lane {row}"), with("zone", json!({"row":row,"lane":lane}))));
-                    }
-                }
-                for x in [i32::MAX as i64, 1 << 30, 1000, 3, 0, -1, i32::MIN as i64] {
-                    forged.push(("x".to_string(), with("x", json!(x))));
-                }
-                forged.push(("embiggen".to_string(), with("embiggen", json!(true))));
-                forged.push(("equip".to_string(), with("equip", json!(true))));
-                for reveal in ["cloaked", "endOfThisTurn", "startOfNextTurn", "endOfNextTurn"] {
-                    forged.push(("faceDown".to_string(), with("faceDown", json!(reveal))));
-                }
-                if let Some(first) = own_units.first() {
-                    forged.push(("tributes-one".to_string(), with("tributes", json!([first]))));
-                    forged.push(("tributes-dup".to_string(), with("tributes", json!([first, first]))));
-                    forged.push(("tributes-all".to_string(), with("tributes", json!(own_units))));
-                }
-                if let Some(listed) = play["tributes"].as_array().filter(|t| t.len() >= 2) {
-                    forged.push(("tributes-listed-dup".to_string(), with("tributes", json!(vec![listed[0].clone(); listed.len()]))));
-                }
-                if let Some(listed) = play["targets"].as_array().filter(|t| !t.is_empty()) {
-                    forged.push(("targets-dup".to_string(), with("targets", json!(vec![listed[0].clone(); listed.len() + 1]))));
-                    if listed.len() >= 2 {
-                        forged.push(("targets-same".to_string(), with("targets", json!(vec![listed[0].clone(); listed.len()]))));
-                    }
-                    forged.push(("targets-none".to_string(), with("targets", json!([]))));
-                    for id in &any_ids {
-                        let mut targets = listed.clone();
-                        targets[0] = json!({"pick":"instance","instanceId":id});
-                        forged.push(("targets-any".to_string(), with("targets", json!(targets))));
-                    }
-                    for hero in ["p1", "p2"] {
-                        let mut targets = listed.clone();
-                        targets[0] = json!({"pick":"hero","player":hero});
-                        forged.push(("targets-hero".to_string(), with("targets", json!(targets))));
-                    }
-                } else {
-                    for id in any_ids.iter().take(6) {
-                        forged.push(("targets-added".to_string(), with("targets", json!([{"pick":"instance","instanceId":id}]))));
-                    }
-                }
-                if let Some(listed) = play["modes"].as_array().filter(|m| !m.is_empty()) {
-                    forged.push(("modes-dup".to_string(), with("modes", json!(vec![listed[0].clone(); listed.len() + 1]))));
-                    forged.push(("modes-none".to_string(), with("modes", json!([]))));
-                } else {
-                    forged.push(("modes-added".to_string(), with("modes", json!(["draw"]))));
-                }
-                for id in any_ids.iter().take(8) {
-                    for tokens in [1i64, -1, 0, i32::MAX as i64] {
-                        forged.push(("plague".to_string(), with("plague", json!({"from":id,"tokens":tokens}))));
-                    }
-                }
-            }
-            // C. forged answers to the open prompt.
-            if let Some(pending) = state.pending.as_ref().filter(|p| p.player_id == me) {
-                let answer = |selection: Value| json!({"type":"answer","choiceId":pending.id,"selection":selection});
-                for id in &any_ids {
-                    forged.push(("answer-any-id".to_string(), answer(json!([{"pick":"instance","instanceId":id}]))));
-                }
-                forged.push(("answer-none".to_string(), answer(json!([{"pick":"none"}]))));
-                forged.push(("answer-empty".to_string(), answer(json!([]))));
-                for lane in [-1i64, 0, 1, 8, i32::MAX as i64, i32::MIN as i64] {
-                    for row in ["units", "backrow"] {
-                        for who in ["p1", "p2"] {
-                            forged.push(("answer-zone".to_string(), answer(json!([{"pick":"zone","player":who,"row":row,"lane":lane}]))));
-                        }
-                    }
-                }
-                for who in ["p1", "p2"] {
-                    forged.push(("answer-hero".to_string(), answer(json!([{"pick":"hero","player":who}]))));
-                }
-                forged.push(("answer-mode".to_string(), answer(json!([{"pick":"mode","option":"draw"}]))));
-                let all: Vec<Value> = pending.options.iter().map(|o| js(&o.selection)).collect();
-                forged.push(("answer-all".to_string(), answer(json!(all))));
-                if all.len() >= 2 {
-                    forged.push(("answer-two".to_string(), answer(json!([all[0], all[1]]))));
-                    forged.push(("answer-two-rev".to_string(), answer(json!([all[1], all[0]]))));
-                }
-            }
-            // The outcomes the listing allows, per card.
-            let mut listed_outcomes: IndexMap<String, IndexSet<String>> = IndexMap::new();
-            for (kind, body) in forged {
-                let Ok(parsed) = serde_json::from_value::<ActionBody>(body.clone()) else { continue };
-                if legal.contains(&parsed) {
-                    continue;
-                }
-                probes += 1;
-                match try_reduce(&state, &parsed, me) {
-                    Err(panic) => {
-                        let key = format!("PANIC {kind}: {}", panic.chars().take(120).collect::<String>());
-                        seen.entry(key).or_insert_with(|| (format!("seed {seed} step {steps} {me}: {body}"), 0)).1 += 1;
-                    }
-                    Ok(result) if result.error.is_none() => {
-                        let card = body["instanceId"].as_str().or(body["attackerId"].as_str()).unwrap_or("").to_string();
-                        let outcomes = listed_outcomes.entry(format!("{}:{card}", body["type"])).or_insert_with(|| {
-                            legal
-                                .iter()
-                                .zip(&legal_json)
-                                .filter(|(_, j)| (j["type"] == body["type"] || (body["type"] == "activatePower" && j["type"] == "activate")) && (j["instanceId"].as_str().or(j["attackerId"].as_str()).unwrap_or("") == card))
-                                .filter_map(|(b, _)| try_reduce(&state, b, me).ok())
-                                .map(|r| canon(&r.state))
-                                .collect()
-                        });
-                        if !outcomes.contains(&canon(&result.state)) {
-                            let def = find_instance(&state, &card).map(|c| c.def_id.clone()).unwrap_or_default();
-                            let key = format!("ACCEPTED {kind} ({} listed outcomes)", outcomes.len());
-                            seen.entry(key).or_insert_with(|| (format!("seed {seed} step {steps} {me} def {def}: {body}"), 0)).1 += 1;
-                        }
-                    }
-                    Ok(_) => {}
-                }
-            }
+            probes += probe_state(&state, me, &format!("seed {seed} step {steps}"), &mut seen);
         }
         eprintln!("seed {seed}: {steps} steps, turn {}", state.turn);
     }
@@ -1013,5 +846,228 @@ fn explore_set_traps() {
                 }
             }
         }
+    }
+}
+
+/// Forged actions for `me` on `state`: each accepted one that no listed action's outcome matches, and each panic.
+fn probe_state(state: &GameState, me: PlayerId, tag: &str, seen: &mut IndexMap<String, (String, usize)>) -> usize {
+    let mut probes = 0usize;
+            let opp = opponent_of(me);
+            let legal = legal_actions(state, me);
+            let legal_json: Vec<Value> = legal.iter().map(|b| js(b)).collect();
+            let mut forged: Vec<(String, Value)> = Vec::new();
+            // A. ids from every zone, in every action that names a card.
+            let mut ids: Vec<(String, String)> = Vec::new();
+            let mut take = |zone: &str, cards: Vec<&CardInstance>| {
+                for card in cards.into_iter().take(2) {
+                    ids.push((zone.to_string(), card.id.clone()));
+                }
+            };
+            take("own-library", state.players[me].library.iter().collect());
+            take("own-exile", state.players[me].exile.iter().collect());
+            take("own-graveyard", state.players[me].graveyard.iter().collect());
+            take("own-units", state.players[me].units.iter().flatten().flatten().collect());
+            take("own-backrow", state.players[me].backrow.iter().flatten().collect());
+            take("opp-hand", state.players[opp].hand.iter().collect());
+            take("opp-library", state.players[opp].library.iter().collect());
+            take("opp-graveyard", state.players[opp].graveyard.iter().collect());
+            take("opp-units", state.players[opp].units.iter().flatten().flatten().collect());
+            take("opp-backrow", state.players[opp].backrow.iter().flatten().collect());
+            for bogus in ["c999999", "", "hidden", "hero-p1", "hero-p2", "random"] {
+                ids.push(("bogus".to_string(), bogus.to_string()));
+            }
+            for (zone, id) in &ids {
+                forged.push((format!("play {zone}"), json!({"type":"play","instanceId":id})));
+                forged.push((format!("play-zone {zone}"), json!({"type":"play","instanceId":id,"zone":{"row":"units","lane":1}})));
+                forged.push((format!("play-backrow {zone}"), json!({"type":"play","instanceId":id,"zone":{"row":"backrow","lane":1}})));
+                forged.push((format!("play-facedown {zone}"), json!({"type":"play","instanceId":id,"faceDown":"cloaked"})));
+                forged.push((format!("trade {zone}"), json!({"type":"trade","instanceId":id})));
+                forged.push((format!("switch {zone}"), json!({"type":"switchPosition","instanceId":id})));
+                forged.push((format!("activate {zone}"), json!({"type":"activate","instanceId":id})));
+                forged.push((format!("activatePower {zone}"), json!({"type":"activatePower","instanceId":id})));
+                forged.push((format!("attack-by {zone}"), json!({"type":"attack","attackerId":id,"targetId":format!("hero-{opp}")})));
+                if let Some(mine) = state.players[me].units.iter().flatten().flatten().next() {
+                    forged.push((format!("attack-on {zone}"), json!({"type":"attack","attackerId":mine.id,"targetId":id})));
+                }
+                forged.push((format!("mulligan {zone}"), json!({"type":"mulligan","keep":[id]})));
+            }
+            for offer in [-1i64, i32::MIN as i64, i32::MAX as i64, 6, 64] {
+                forged.push(("marketBuy".to_string(), json!({"type":"marketBuy","offer":offer})));
+            }
+            forged.push(("answerDraw".to_string(), json!({"type":"answerDraw","accept":true})));
+            forged.push(("sandbox".to_string(), json!({"type":"sandbox","op":{"op":"draw","player":me,"count":1}})));
+            // B. listed plays with one field forged.
+            let plays: Vec<&Value> = legal_json.iter().filter(|j| j["type"] == "play").collect();
+            let stride = (plays.len() / 6).max(1);
+            let own_units: Vec<String> = state.players[me].units.iter().flatten().flatten().map(|c| c.id.clone()).collect();
+            let any_ids: Vec<String> = ids.iter().map(|(_, id)| id.clone()).collect();
+            for play in plays.iter().step_by(stride) {
+                let with = |key: &str, value: Value| {
+                    let mut body = (*play).clone();
+                    body[key] = value;
+                    body
+                };
+                for lane in [-1i64, 0, 7, 8, 1000, i32::MAX as i64, i32::MIN as i64] {
+                    for row in ["units", "backrow"] {
+                        forged.push((format!("lane {row}"), with("zone", json!({"row":row,"lane":lane}))));
+                    }
+                }
+                for x in [i32::MAX as i64, 1 << 30, 1000, 3, 0, -1, i32::MIN as i64] {
+                    forged.push(("x".to_string(), with("x", json!(x))));
+                }
+                forged.push(("embiggen".to_string(), with("embiggen", json!(true))));
+                forged.push(("equip".to_string(), with("equip", json!(true))));
+                for reveal in ["cloaked", "endOfThisTurn", "startOfNextTurn", "endOfNextTurn"] {
+                    forged.push(("faceDown".to_string(), with("faceDown", json!(reveal))));
+                }
+                if let Some(first) = own_units.first() {
+                    forged.push(("tributes-one".to_string(), with("tributes", json!([first]))));
+                    forged.push(("tributes-dup".to_string(), with("tributes", json!([first, first]))));
+                    forged.push(("tributes-all".to_string(), with("tributes", json!(own_units))));
+                }
+                if let Some(listed) = play["tributes"].as_array().filter(|t| t.len() >= 2) {
+                    forged.push(("tributes-listed-dup".to_string(), with("tributes", json!(vec![listed[0].clone(); listed.len()]))));
+                }
+                if let Some(listed) = play["targets"].as_array().filter(|t| !t.is_empty()) {
+                    forged.push(("targets-dup".to_string(), with("targets", json!(vec![listed[0].clone(); listed.len() + 1]))));
+                    if listed.len() >= 2 {
+                        forged.push(("targets-same".to_string(), with("targets", json!(vec![listed[0].clone(); listed.len()]))));
+                    }
+                    forged.push(("targets-none".to_string(), with("targets", json!([]))));
+                    for id in &any_ids {
+                        let mut targets = listed.clone();
+                        targets[0] = json!({"pick":"instance","instanceId":id});
+                        forged.push(("targets-any".to_string(), with("targets", json!(targets))));
+                    }
+                    for hero in ["p1", "p2"] {
+                        let mut targets = listed.clone();
+                        targets[0] = json!({"pick":"hero","player":hero});
+                        forged.push(("targets-hero".to_string(), with("targets", json!(targets))));
+                    }
+                } else {
+                    for id in any_ids.iter().take(6) {
+                        forged.push(("targets-added".to_string(), with("targets", json!([{"pick":"instance","instanceId":id}]))));
+                    }
+                }
+                if let Some(listed) = play["modes"].as_array().filter(|m| !m.is_empty()) {
+                    forged.push(("modes-dup".to_string(), with("modes", json!(vec![listed[0].clone(); listed.len() + 1]))));
+                    forged.push(("modes-none".to_string(), with("modes", json!([]))));
+                } else {
+                    forged.push(("modes-added".to_string(), with("modes", json!(["draw"]))));
+                }
+                for id in any_ids.iter().take(8) {
+                    for tokens in [1i64, -1, 0, i32::MAX as i64] {
+                        forged.push(("plague".to_string(), with("plague", json!({"from":id,"tokens":tokens}))));
+                    }
+                }
+            }
+            // C. forged answers to the open prompt.
+            if let Some(pending) = state.pending.as_ref().filter(|p| p.player_id == me) {
+                let answer = |selection: Value| json!({"type":"answer","choiceId":pending.id,"selection":selection});
+                for id in &any_ids {
+                    forged.push(("answer-any-id".to_string(), answer(json!([{"pick":"instance","instanceId":id}]))));
+                }
+                forged.push(("answer-none".to_string(), answer(json!([{"pick":"none"}]))));
+                forged.push(("answer-empty".to_string(), answer(json!([]))));
+                for lane in [-1i64, 0, 1, 8, i32::MAX as i64, i32::MIN as i64] {
+                    for row in ["units", "backrow"] {
+                        for who in ["p1", "p2"] {
+                            forged.push(("answer-zone".to_string(), answer(json!([{"pick":"zone","player":who,"row":row,"lane":lane}]))));
+                        }
+                    }
+                }
+                for who in ["p1", "p2"] {
+                    forged.push(("answer-hero".to_string(), answer(json!([{"pick":"hero","player":who}]))));
+                }
+                forged.push(("answer-mode".to_string(), answer(json!([{"pick":"mode","option":"draw"}]))));
+                let all: Vec<Value> = pending.options.iter().map(|o| js(&o.selection)).collect();
+                forged.push(("answer-all".to_string(), answer(json!(all))));
+                if all.len() >= 2 {
+                    forged.push(("answer-two".to_string(), answer(json!([all[0], all[1]]))));
+                    forged.push(("answer-two-rev".to_string(), answer(json!([all[1], all[0]]))));
+                }
+            }
+            // The outcomes the listing allows, per card.
+            let mut listed_outcomes: IndexMap<String, IndexSet<String>> = IndexMap::new();
+            for (kind, body) in forged {
+                let Ok(parsed) = serde_json::from_value::<ActionBody>(body.clone()) else { continue };
+                if legal.contains(&parsed) {
+                    continue;
+                }
+                probes += 1;
+                match try_reduce(state, &parsed, me) {
+                    Err(panic) => {
+                        let key = format!("PANIC {kind}: {}", panic.chars().take(120).collect::<String>());
+                        seen.entry(key).or_insert_with(|| (format!("{tag} {me}: {body}"), 0)).1 += 1;
+                    }
+                    Ok(result) if result.error.is_none() => {
+                        let card = body["instanceId"].as_str().or(body["attackerId"].as_str()).unwrap_or("").to_string();
+                        let outcomes = listed_outcomes.entry(format!("{}:{card}", body["type"])).or_insert_with(|| {
+                            legal
+                                .iter()
+                                .zip(&legal_json)
+                                .filter(|(_, j)| (j["type"] == body["type"] || (body["type"] == "activatePower" && j["type"] == "activate")) && (j["instanceId"].as_str().or(j["attackerId"].as_str()).unwrap_or("") == card))
+                                .filter_map(|(b, _)| try_reduce(state, b, me).ok())
+                                .map(|r| canon(&r.state))
+                                .collect()
+                        });
+                        if !outcomes.contains(&canon(&result.state)) {
+                            let def = find_instance(state, &card).map(|c| c.def_id.clone()).unwrap_or_default();
+                            let key = format!("ACCEPTED {kind} ({} listed outcomes)", outcomes.len());
+                            seen.entry(key).or_insert_with(|| (format!("{tag} {me} def {def}: {body}"), 0)).1 += 1;
+                        }
+                    }
+                    Ok(_) => {}
+                }
+            }
+            probes
+}
+
+/// Every card from a fixed, busy position: its listed plays forged one field at a time.
+#[test]
+fn explore_forged_cards() {
+    jackioh_cards::register_all();
+    std::panic::set_hook(Box::new(|_| {}));
+    let pool = pool();
+    let pick = |offset: usize, n: usize| -> Vec<String> {
+        let stride = pool.len() / n;
+        (0..n).map(|k| pool[(offset + k * stride) % pool.len()].clone()).collect()
+    };
+    let (lib1, lib2) = (pick(3, 12), pick(41, 12));
+    let hand2 = pick(29, 4);
+    let mut seen: IndexMap<String, (String, usize)> = IndexMap::new();
+    let mut probes = 0usize;
+    for chunk in pool.chunks(3) {
+        for place in ["hand", "graveyard", "field"] {
+            let built = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                let mut p1 = json!({ "hand": ["core-008"], "mana": 10, "library": lib1, "field": ["core-008", "core-019"], "graveyard": ["core-025", "core-005"],
+                    "backrow": [{ "def": "core-096", "faceUp": false }] });
+                if place == "field" {
+                    let units: Vec<&String> = chunk.iter().filter(|d| registered_catalog()[d.as_str()].type_ == CardType::Unit).collect();
+                    let backs: Vec<&String> = chunk.iter().filter(|d| registered_catalog()[d.as_str()].type_ != CardType::Unit && registered_catalog()[d.as_str()].type_ != CardType::Spell).collect();
+                    p1["field"] = json!(units);
+                    p1["backrow"] = json!(backs);
+                } else {
+                    let mut cards: Vec<Value> = chunk.iter().map(|d| json!(d)).collect();
+                    cards.push(json!("core-008"));
+                    p1[place] = json!(cards);
+                }
+                scenario(json!({
+                    "seed": format!("forged-{}", chunk[0]),
+                    "turn": 9,
+                    "p1": p1,
+                    "p2": { "hand": hand2, "library": lib2, "field": ["core-025", "core-011"], "graveyard": ["core-008", "core-020"],
+                            "backrow": [{ "def": "core-096", "faceUp": false }, "core-006"] },
+                }))
+                .state()
+                .clone()
+            }));
+            let Ok(state) = built else { continue };
+            probes += probe_state(&state, PlayerId::P1, &format!("{place} {}", chunk.join(",")), &mut seen);
+        }
+    }
+    println!("{probes} probes");
+    for (key, (example, count)) in &seen {
+        println!("FOUND {key} x{count}\n     {example}");
     }
 }

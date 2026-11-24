@@ -265,6 +265,22 @@ fn play_one(seed: u64, max_steps: usize) -> Vec<String> {
             duos_hash(&state)
         ));
     }
+    if state.result.as_ref().is_some_and(|result| result.reason != "poolEmptied") {
+        for duel in 0..2 {
+            let game = &state.duels[duel];
+            eprintln!(
+                "  duel {duel}: result {:?} turn {} healths {:?}/{:?} duos {:?}/{:?} last {:?}",
+                game.result,
+                game.turn,
+                game.players.p1.hero.health,
+                game.players.p2.hero.health,
+                game.players.p1.duos,
+                game.players.p2.duos,
+                log.last()
+            );
+        }
+        eprintln!("  teams {:?}", state.teams);
+    }
     eprintln!(
         "seed {seed}: {} actions, round {}, result {:?}, findings {}",
         log.len(),
@@ -279,7 +295,7 @@ fn play_one(seed: u64, max_steps: usize) -> Vec<String> {
 fn probe_random_play() {
     jackioh_cards::register_all();
     let mut all: Vec<String> = Vec::new();
-    for seed in 101..=112u64 {
+    for seed in [10u64, 109] {
         all.extend(play_one(seed, 500));
     }
     for line in &all {

@@ -801,3 +801,33 @@ fn probe_equip_hand_over() {
         }
     }
 }
+
+#[test]
+fn probe_ticketed() {
+    jackioh_cards::register_all();
+    if std::env::var("AUDIT_PROBE").unwrap_or_default() != "ticketed" {
+        return;
+    }
+    for name in ["giga", "mixed", "special"] {
+        let s = board(name, "stinkyscape-009", false).unwrap();
+        let state = s.state().clone();
+        let id = state.players[P1].hand[0].id.clone();
+        let plays: Vec<PlayAction> = legal_actions(&state, P1)
+            .iter()
+            .filter_map(PlayAction::from_body)
+            .filter(|play| play.instance_id == id)
+            .collect();
+        println!("{name}: {} plays", plays.len());
+        for play in &plays {
+            let target = match play.targets.as_deref() {
+                Some([Selection::Instance { instance_id }]) => instance_id.clone(),
+                other => format!("{other:?}"),
+            };
+            let named = find_instance(&state, &target).map(|c| format!("{} {:?} giga={:?} slumber={}", c.def_id, c.zone, c.giga, c.slumber.is_some())).unwrap_or_default();
+            let result = send(&state, play).unwrap();
+            let after = find_instance(&result.state, &id).map(|c| format!("{:?} ctl={}", c.zone, c.controller)).unwrap_or("gone".to_string());
+            let mana = result.state.players[P1].mana.current;
+            println!("  -> {target} [{named}] err={:?} ticketed now {after} mana {mana}", result.error);
+        }
+    }
+}

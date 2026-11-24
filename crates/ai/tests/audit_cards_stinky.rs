@@ -80,3 +80,58 @@ fn probe_zzoth_replicators() {
     eprintln!("p1 units: {:?}", units_of(&s, P1));
     eprintln!("pending: {:?}", s.state().pending.is_some());
 }
+
+fn dump(s: &Scenario, who: &str, card: &CardInstance) {
+    let c = s.card(card).clone();
+    let v = s.stats(&c);
+    eprintln!("{who}: def={} zone={:?} atk={} hp={} kws={:?} slumber={:?} radiant={}", c.def_id, c.zone, v.attack, v.health, v.keywords, c.slumber, c.radiant);
+}
+
+#[test]
+fn probe_tnack_copies_shockwave() {
+    const TNACK: &str = "stinkyscape-020";
+    const SHOCK: &str = "stinkyscape-111";
+    let mut s = scenario_with_cards(json!({
+        "p1": { "hand": [TNACK, FILLER], "field": [{ "def": SHOCK, "lane": 1 }], "library": filler(4), "mana": 10 },
+        "p2": { "hand": [FILLER], "library": filler(4) },
+    }));
+    let shock = s.unit_at(P1, 1);
+    dump(&s, "shock", &shock);
+    s.play(TNACK, json!({ "zone": 3, "targets": pick::instance(&shock) }));
+    let tnack = s.unit_at(P1, 3);
+    dump(&s, "tnack", &tnack);
+    eprintln!("tnack memory: {:?}", s.card(&tnack).memory);
+}
+
+#[test]
+fn probe_tnack_copies_starship() {
+    const TNACK: &str = "stinkyscape-020";
+    const AP: &str = "stinkyscape-100";
+    const HIT_JOB: &str = "core-016";
+    let mut s = scenario_with_cards(json!({
+        "p1": { "hand": [HIT_JOB, TNACK, FILLER], "field": [{ "def": AP, "lane": 2 }], "library": filler(4), "mana": 10 },
+        "p2": { "hand": [FILLER], "library": filler(4) },
+    }));
+    for player in [P1, P2] { s.state_mut().players[player].auto_end_turn = Some(false); }
+    let piece = s.unit_at(P1, 2);
+    s.play(HIT_JOB, json!({ "targets": pick::instance(&piece) }));
+    let ship = jackioh_engine::prelude::dormant_starship_of(s.state(), P1).expect("ship").clone();
+    dump(&s, "ship dormant", &ship);
+    s.state_mut().players[P1].mana.current = 10;
+    eprintln!("tnack targets before launch: {:?}", s.play_targets(TNACK));
+    s.activate(&ship, json!({ "ability": jackioh_engine::prelude::STARSHIP_LAUNCH_ABILITY }));
+    dump(&s, "ship launched", &ship);
+    s.state_mut().players[P1].mana.current = 10;
+    eprintln!("tnack targets after launch: {:?}", s.play_targets(TNACK));
+    s.play(TNACK, json!({ "zone": 3, "targets": pick::instance(&ship) }));
+    let tnack = s.unit_at(P1, 3);
+    dump(&s, "tnack", &tnack);
+    eprintln!("tnack memory: {:?}", s.card(&tnack).memory);
+    eprintln!("tnack activations: {:?}", s.activations_of(&tnack));
+    eprintln!("tnack attacks: {:?}", s.attacks_of(&tnack).len());
+    s.end_turn();
+    s.end_turn();
+    dump(&s, "tnack next turn", &tnack);
+    eprintln!("tnack attacks next turn: {:?}", s.attacks_of(&tnack).len());
+    eprintln!("tnack activations: {:?}", s.activations_of(&tnack));
+}
