@@ -580,6 +580,9 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     next.generators.retain(|id, _| {
         !hidden.contains(id) && find_instance(state, id).is_some_and(|card| card.owner == seat)
     });
+    // R4672001: the Created cards' makers are the game record's alone; they would name what made a
+    // hidden card, and no decision reads them, so all go.
+    next.makers.clear();
     // R865: the opponent's unrevealed secret choices are no seat's to read either — the seat's own
     // stay, and a revealed choice is public history both seats watched happen.
     if let Some(secrets) = next.secrets.as_mut() {

@@ -1919,6 +1919,16 @@ pub struct GameState {
     #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
     #[cfg_attr(feature = "ts", ts(as = "Option<IndexMap<String, String>>", optional))]
     pub generators: IndexMap<String, String>,
+    /// R4672001: each Created card's maker by instance id: the catalog id of the card whose effect minted
+    /// it and the face it ran (`generators::record_maker`), where `generators` keeps the root. The game
+    /// record's (§9.11): no rule reads it, `replay::hash_state` leaves it out, no view is told it and the
+    /// AI's redaction drops it. Empty, and absent from the JSON, until a card's effect creates a card.
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    #[cfg_attr(
+        feature = "ts",
+        ts(as = "Option<IndexMap<String, crate::wire::MadeBy>>", optional)
+    )]
+    pub makers: IndexMap<String, crate::wire::MadeBy>,
     /// R3049000: the win-rate snapshot the game was handed (`CreateGameOptions.winRates`), as
     /// `win_rates::kept_for_game` keeps it, which M #50 CN Tech and M+ #2 NA Tech read
     /// (`win_rates::win_rates_of`). A `create_game` input, frozen with the game, so every pick reads
@@ -3053,6 +3063,7 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
         radiance_lends: None,
         radiant_world: None,
         generators: IndexMap::new(),
+        makers: IndexMap::new(),
         win_rates: None,
         fused_scripts: crate::scripts::FusedScripts::default(),
     };
