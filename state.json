@@ -20029,17 +20029,8 @@
       }
     },
     "4725": {
-      "action": "plan",
-      "asks": [
-        "c:7133278153"
-      ],
-      "build_next": {
-        "from_run": "45412033733",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-24T14:40:19Z",
-        "until": "2026-11-24T15:10:19Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-24T14:40:10Z",
         "difficulty": "hard",
@@ -20058,10 +20049,9 @@
         "reason": "planned on opus",
         "trail": "ad -20\", \"description\": \"Check acceptance rule on AI test helpers\"}\n- Bash: {\"command\": \"sed -n 1380,1480p crates/tools/tests/acceptance.rs\", \"description\": \"Read the shared helper acceptance check\"}\n- Bash: {\"command\": \"ls spec/rulings/R3554003.md && sed -n 1,15p spec/rulings/R3554003.md; ls spec/pending/ | head\", \"description\": \"Confirm cited ruling note exists\"}\n- Bash: {\"command\": \"grep -n \\\"proven_in\\\" -A12 spec/rulings/R1849005.md | grep -n \\\"ai/\\\" ; grep -rn \\\"fn r[0-9]\\\" crates/ai/tests/ai/gauntlet.rs | head -3\", \"description\": \"Check if AI test citations need \u2026\n- Bash: {\"command\": \"mkdir -p /tmp/scratch4725 && awk '/^```rust$/{f=1;next} /^```$/{if(f){exit}} f' .bot-notes.md > /tmp/scratch4725/slash.rs && wc -l /tmp/scratch4725/slash.rs && tail -25 /tmp/scratch4725/\u2026\n- Write: {\"file_path\": \"/tmp/scratch4725/slash.rs\", \"content\": \"//! The slash in the AI's threat (#4725). On a slashed board (R3554003) a Unit attacks only Units on its own\\n//! half and a hero from either, s\u2026\n- tool error: <tool_use_error>File has not been read yet. Read it first before writing to it.</tool_use_error>\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4725/crates/ai/tests/zz_scratch_4725.rs\", \"content\": \"//! Planner's scratch entry for #4725 (untracked; deleted before the run ends).\\n#[path = \\\"ai/s\u2026\n- Read: {\"file_path\": \"/tmp/scratch4725/slash.rs\", \"limit\": 3}\n- Bash: {\"command\": \"rm /tmp/scratch4725/slash.rs\", \"description\": \"Remove the truncated scratch copy\"}\n- Write: {\"file_path\": \"/tmp/scratch4725/slash.rs\", \"content\": \"//! The slash in the AI's threat (#4725). On a slashed board (R3554003) a Unit attacks only Units on its own\\n//! half and a hero from either, s\u2026\n- Bash: {\"command\": \"timeout 590 cargo test -p jackioh-ai --test zz_scratch_4725 2>&1 | tail -60\", \"description\": \"Build and run the scratch slash tests\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -n \\\"members\\\" -A25 Cargo.toml | head -40; grep -rn \\\"include_str!\\\\|include_bytes!\\\" crates/cards/build.rs crates/engine/src crates/cards/src crates/ai/src 2>/dev/null | grep -o '\\\u2026\n- Bash: {\"command\": \"du -sh crates 2>/dev/null; df -h /tmp | tail -1\", \"description\": \"Check crates size and free disk\"}\n- Bash: {\"command\": \"mkdir -p /tmp/mut4725 && cp -r Cargo.toml Cargo.lock rust-toolchain.toml rustfmt.toml .cargo crates /tmp/mut4725/ && cd /tmp/mut4725 && grep -n \\\"&& attack_restriction(state, attacker, &\u2026\n- Bash: {\"command\": \"cd /tmp/mut4725 && CARGO_TARGET_DIR=/tmp/mut4725-target timeout 590 cargo test -p jackioh-ai --test zz_scratch_4725 2>&1 | grep -v \\\"^\\\\s*Compiling\\\" | tail -60\", \"description\": \"Run the\u2026\n- Bash: {\"command\": \"cat rustfmt.toml; rustfmt --edition 2024 --config-path rustfmt.toml --check /tmp/scratch4725/slash.rs; echo \\\"fmt exit $?\\\"\", \"description\": \"Check the test file's formatting\"}\n- Bash: {\"command\": \"grep -n \\\"Each hit in the walk takes the Taunt's strike back\\\" crates/ai/README.md | head; grep -n \\\"Each hit in the walk takes the Taunt's strike back\\\" crates/ai/README.md | cut -d: -f\u2026\n- Bash: {\"command\": \"sed -n 120,160p crates/ai/README.md | cut -c1-400; grep -n -i \\\"slash\\\\|attack_restriction\\\\|binds\\\\|\\u00a74.2 step 3\\\" crates/ai/README.md | head -20\", \"description\": \"Read the README's\u2026\n- Bash: {\"command\": \"grep -n \\\"crates/ai/tests\\\" crates/tools/tests/*.rs scripts/ci-scope.sh 2>/dev/null | head -20\", \"description\": \"Find checks that read AI test files\"}\n- Bash: {\"command\": \"sed -n 1300,1380p crates/tools/tests/acceptance.rs\", \"description\": \"Read helper-name lists the AI tests are held to\"}\n- Write: {\"file_path\": \"/tmp/scratch4725/slash.rs\", \"content\": \"//! The slash in the AI's threat (#4725). On a slashed board (R3554003) a Unit attacks only Units on its own\\n//! half and a hero from either, s\u2026\n- Bash: {\"command\": \"rustfmt --edition 2024 --config-path rustfmt.toml --check /tmp/scratch4725/slash.rs && echo FMT-OK; awk 'length > 110 {print FILENAME\\\": \\\"FNR\\\": \\\"length}' /tmp/scratch4725/slash.rs; ti\u2026\n- Bash: {\"command\": \"rustfmt --edition 2024 --config-path rustfmt.toml /tmp/scratch4725/slash.rs && rustfmt --edition 2024 --config-path rustfmt.toml --check /tmp/scratch4725/slash.rs && echo FMT-OK && sed -\u2026\n- said: Now clippy on the file through the scratch entry, then I write the draft.\n- Bash: {\"command\": \"timeout 590 cargo clippy -p jackioh-ai --test zz_scratch_4725 -- -D warnings 2>&1 | grep -v \\\"^\\\\s*Checking\\\\|^\\\\s*Compiling\\\" | tail -30\", \"description\": \"Run clippy on the scratch test\u2026\n- said: Clippy is clean on the formatted file (`-D warnings`, nothing reported). Last check: what `classify --claims` makes of a change that only touches tests and the README.\n- Bash: {\"command\": \"grep -n \\\"crates/ai\\\\|README\\\\|\\\\\\\"tests/\\\\|/tests/\\\" crates/tools/src/classify.rs | head -30\", \"description\": \"See how classify sorts AI test and README paths\"}\n- Bash: {\"command\": \"sed -n 255,320p crates/tools/src/classify.rs\", \"description\": \"Read classify's path-to-area rules\"}\n- Bash: {\"command\": \"rm crates/ai/tests/zz_scratch_4725.rs && rm -rf /tmp/mut4725 /tmp/mut4725-target && git status --porcelain; grep -n \\\"tests/ai/[a-z_]*\\\\.rs\\\" crates/ai/README.md | head -5; sed -n 146,14\u2026\n- Read: {\"file_path\": \"/tmp/scratch4725/slash.rs\"}\n- Bash: {\"command\": \"cp /tmp/scratch4725/slash.rs /tmp/scratch4725/slash.final.rs && echo ok\", \"description\": \"Keep a copy of the verified test file\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4725/.bot-plan.md\", \"content\": \"# Plan #4725 (opus planner, run 2) \\u2014 draft\\n\\nState: DONE verifying. The earlier sonnet plan holds, and its numbe\u2026\n- Bash: {\"command\": \"git status --porcelain; ls crates/ai/tests/\", \"description\": \"Confirm worktree is clean of scratch files\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule line 2 (the AI): the work pins how the AI's Taunt walk reads the slash; it was already rated hard and can't be rated lower\"} --> **The issue's premise is false, so the issue's flag and walk change are not built.** The walk already reads the halves of a \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-24T13:53:24Z",
       "owner_why": "it plans it",
@@ -20074,12 +20064,14 @@
       "provider": "claude-7",
       "queued_at": "2026-11-24T13:45:20Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45412033733",
+      "run_id": "pending:74319a3b-1795531508",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-24T14:15:15Z",
+      "started_at": "2026-11-24T14:45:46Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7133278153"
+      ]
     },
     "4726": {
       "action": "review",
@@ -21002,9 +20994,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T14:44:48Z",
+    "at": "2026-11-24T14:45:46Z",
     "url": "",
-    "what": "build #4737 on claude-1"
+    "what": "build #4725 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-24T14:23:06Z",
