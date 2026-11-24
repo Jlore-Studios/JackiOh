@@ -18576,6 +18576,9 @@
         }
       }
     },
+    "4686": {
+      "suggestion": true
+    },
     "4690": {
       "action": "build",
       "asks": [],
@@ -41241,6 +41244,13 @@
         "at": "2026-11-24T09:18:21Z",
         "number": 4683,
         "title": "Patch: hand-hint pips name themselves on hover like field marks do",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-24T09:18:30Z",
+        "number": 4686,
+        "title": "Patch: drop stale unmet rematch offers when match window expires to avoid phantom offers",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
       }
