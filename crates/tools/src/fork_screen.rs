@@ -116,14 +116,14 @@ pub(crate) struct DealLine {
     pub rollouts: usize,
 }
 
-/// R4607000: what resuming a save played and read: the tally and the duel lines in deal
-/// order, and how many games this call played (none when the save was already finished). The
-/// records stay in the save file, which is the record store.
+/// R4607000: what resuming a save read back: the tally and the duel lines in deal
+/// order. The records stay in the save file, which is the record store. How many games a
+/// resume played is observed through the probe factory's calls, so the report carries no
+/// counter of its own.
 #[derive(Debug)]
 pub(crate) struct SaveReport {
     pub tally: String,
     pub duels: Vec<String>,
-    pub games_played: usize,
 }
 
 /// What a scripted probe answers with: the deal, the move and the control's final played body.
@@ -1020,17 +1020,12 @@ pub(crate) fn resume_save(
             .count()
     };
     let mut target = initial_deals;
-    let mut games_played = 0usize;
     // A finished save plays nothing and reprints its tally, without even the identity game.
     if (1..=target).all(|deal| map.contains_key(&deal))
         && next_batch(target, live_of(&map), extend, initial_deals).is_none()
     {
         let (tally, duels) = tally_from_lines(expected, &map.values().collect::<Vec<_>>())?;
-        return Ok(SaveReport {
-            tally,
-            duels,
-            games_played,
-        });
+        return Ok(SaveReport { tally, duels });
     }
     if let Some(first) = map.keys().next().copied() {
         let mut game = trunk_setups(b, base, first, 1)?
@@ -1044,6 +1039,11 @@ pub(crate) fn resume_save(
     loop {
         let missing: Vec<i32> = (1..=target).filter(|deal| !map.contains_key(deal)).collect();
         if !missing.is_empty() {
+            // Each finished deal reaches the file as soon as it is done, under one
+            // writer at a time with each line flushed at once, so a kill mid-batch
+            // loses only the deals still playing; readers sort by deal, so
+            // completion order never reaches the output.
+            let append = Mutex::new(());
             let played: Vec<(i32, DealLine)> = missing
                 .par_iter()
                 .map(|&deal| {
@@ -1052,19 +1052,17 @@ pub(crate) fn resume_save(
                         .next()
                         .ok_or_else(|| anyhow::anyhow!("arena: save: deal {deal} has no setup"))?;
                     game.self_budget = expected.budget;
-                    play_deal(&game, make_probe(&game)?).map(|line| (deal, line))
+                    let line = play_deal(&game, make_probe(&game)?)?;
+                    let _guard = append
+                        .lock()
+                        .map_err(|_| anyhow::anyhow!("arena: save: the save writer is poisoned"))?;
+                    append_deal_line(path, &line)?;
+                    Ok((deal, line))
                 })
                 .collect::<anyhow::Result<Vec<_>>>()?;
-            // One writer at a time, each line flushed at once; readers sort by deal.
-            static APPEND: Mutex<()> = Mutex::new(());
-            let _guard = APPEND
-                .lock()
-                .map_err(|_| anyhow::anyhow!("arena: save: the save writer is poisoned"))?;
             for (deal, line) in played {
-                append_deal_line(path, &line)?;
                 map.insert(deal, line);
             }
-            games_played += missing.len();
         }
         match next_batch(target, live_of(&map), extend, initial_deals) {
             None => break,
@@ -1074,11 +1072,7 @@ pub(crate) fn resume_save(
         }
     }
     let (tally, duels) = tally_from_lines(expected, &map.values().collect::<Vec<_>>())?;
-    Ok(SaveReport {
-        tally,
-        duels,
-        games_played,
-    })
+    Ok(SaveReport { tally, duels })
 }
 
 /// Trunk deal games `first..first+batch`, each played once with the control on both seats: the
@@ -1584,7 +1578,6 @@ mod tests {
             &scripted_factory(&fresh_calls, late_fork),
         )
         .unwrap();
-        assert_eq!(report.games_played, 2);
         assert_eq!(fresh_calls.load(std::sync::atomic::Ordering::SeqCst), 2);
         let full_lines = read_lines(&full);
         assert_eq!(full_lines.len(), 2);
@@ -1609,7 +1602,6 @@ mod tests {
         )
         .unwrap();
         // The identity game plus the one missing deal, and nothing else.
-        assert_eq!(resumed.games_played, 1);
         assert_eq!(resume_calls.load(std::sync::atomic::Ordering::SeqCst), 2);
         assert_eq!(resumed.tally, report.tally);
         // The resumed file ends with the same deal lines: the same deals with the same
@@ -1668,7 +1660,8 @@ mod tests {
             &scripted_factory(&resume_calls, late_fork),
         )
         .unwrap();
-        assert_eq!(resumed.games_played, 1);
+        // The identity game plus the replayed torn deal, and nothing else.
+        assert_eq!(resume_calls.load(std::sync::atomic::Ordering::SeqCst), 2);
         assert_eq!(resumed.tally, report.tally);
         let torn_lines = read_lines(&torn);
         assert_eq!(torn_lines.len(), 2);
@@ -1679,6 +1672,50 @@ mod tests {
 
         let _ = std::fs::remove_file(&full);
         let _ = std::fs::remove_file(&torn);
+    }
+
+    #[test]
+    fn r4607000_a_deal_finished_before_a_batch_error_stays_in_the_file() {
+        // Each finished deal reaches the file as soon as it is done, not when its
+        // batch ends: a batch that fails on one deal still keeps the deals that
+        // finished first, so a kill mid-batch loses only the deals still playing.
+        jackioh_cards::register_all();
+        let control = entrant(&AgentSpec::SelfAi).unwrap();
+        let header = test_header(2);
+        let base = "r4607000-partial";
+        let path = save_path("partial");
+        let _ = std::fs::remove_file(&path);
+
+        // Deal 2's probe fails, but only once deal 1's line has reached the file,
+        // so the test never depends on which thread finishes first.
+        let refused = resume_save(&path, &header, base, &control, 2, false, &|game: &ArenaGame| {
+            if game.n == 2 {
+                // One deal at the tests' budget takes minutes on a small runner;
+                // the bound only stops a run where deal 1 never lands.
+                let deadline = std::time::Instant::now() + std::time::Duration::from_secs(600);
+                loop {
+                    let text = std::fs::read_to_string(&path).unwrap_or_default();
+                    if text.lines().count() >= 2 {
+                        break;
+                    }
+                    assert!(
+                        std::time::Instant::now() < deadline,
+                        "deal 1 never reached the file"
+                    );
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                }
+                anyhow::bail!("r4607000-partial: deal 2 fails");
+            }
+            Ok(Probe::scripted(game.n, late_fork))
+        })
+        .unwrap_err();
+        assert!(refused.to_string().contains("deal 2 fails"), "{refused}");
+        // The finished deal survived the failed batch.
+        let lines = read_lines(&path);
+        assert_eq!(lines.len(), 1, "{lines:?}");
+        assert_eq!(lines[0].deal, 1);
+
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]
@@ -1881,7 +1918,6 @@ mod tests {
             &scripted_factory(&calls, late_fork),
         )
         .unwrap();
-        assert_eq!(again.games_played, 0);
         assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 0);
         assert_eq!(again.tally, report.tally);
         assert_eq!(again.duels, report.duels);
