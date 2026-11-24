@@ -44509,6 +44509,13 @@
         "title": "Patch: the e2e replay hash is computed by the engine, not a TypeScript copy",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-24T18:43:00Z",
+        "number": 4767,
+        "title": "Patch: seedGame checks the route resolved its fixture decks",
+        "verdict": "came to nothing",
+        "why": "rejected by @MaxGoetzmann"
       }
     ],
     "declined": [
@@ -45288,6 +45295,12 @@
         "at": "2026-11-24T13:50:15Z",
         "number": 4730,
         "title": "Patch: a banned account's open queue tickets pair with no one",
+        "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-24T18:43:00Z",
+        "number": 4767,
+        "title": "Patch: seedGame checks the route resolved its fixture decks",
         "why": "rejected by @MaxGoetzmann"
       }
     ],
