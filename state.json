@@ -19323,6 +19323,7 @@
       "run_id": "45375638256",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 495,
       "started_at": "2026-11-24T10:31:41Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -42214,9 +42215,33 @@
         "title": "Patch: the browser's Back and the phone's back swipe close an open replay, as its corner arrow does, instead of leaving the screen",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-3"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "ed5efe314d2213ba7ad778944a8bfb206f793b84",
+        "issue": 4675,
+        "merged_at": "2026-11-24T11:13:49Z",
+        "n": 495,
+        "pr": 4706,
+        "queued_at": "2026-11-24T11:13:49Z",
+        "sha": "863732844756bd5bb5ec7f3cc1648211e3675e31",
+        "status": "queued",
+        "title": "Patch: deeper card stats, X0, each card's versions across patches and their figures",
+        "tries": 0
       }
     ],
-    "count": 494
+    "count": 495
   },
   "statistics": {
     "at": "2026-11-24T11:05:43Z"
