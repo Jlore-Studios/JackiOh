@@ -93,8 +93,8 @@ var Convention = regexp.MustCompile(`^Patch(?: v\p{Nd}+\.\p{Nd}+\.\p{Nd}+[a-z]*)
 // joined by ", "), its day's patch `patches cut: v0.6.3` alone or after the ship's versions as
 // `patches ship: v0.6.2c; patches cut: v0.6.3` (#3944), `patches log: abc1234..def5678` (promote-production.yml's technical log,
 // #1370), `Promote main to production: 28 commit(s) up to 6d44be2` (scripts/promote-production.sh,
-// into `_production`) and a training lane's promotion, `AI gen 8 (improve): …`
-// (training/improve.md, learn.yml and unban.md). The bots' own pull requests take a title that
+// into `_production`) and a training lane's promotion, `AI gen 8 (improve): …` (the lanes are
+// retired, #4701; #4702 removes `promote`). The bots' own pull requests take a title that
 // follows the convention (`pull_title`).
 var AutomatedPull = regexp.MustCompile(
 	`^(?:patches ship: v\p{Nd}+\.\p{Nd}+\.\p{Nd}+[a-z]*(?:, v\p{Nd}+\.\p{Nd}+\.\p{Nd}+[a-z]*)*(?:; patches cut: v\p{Nd}+\.\p{Nd}+\.\p{Nd}+)?$` +

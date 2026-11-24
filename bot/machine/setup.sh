@@ -11,38 +11,20 @@
 # where its CLI login lives, its Rust toolchain for the light checks, and its GitHub runner
 # (unpacked here, registered by register-runners.sh) runs its jobs. No agent user has sudo or
 # Docker.
-#
-# The training box (training/README.md), with --training and nothing else:
-#
-#   bash setup.sh --training
-#
-# Two users, agent-train-improve and agent-train-unban, each with its own checkout, Rust, Muse
-# and gh, and the systemd service jackioh-train@<lane> that runs training/loop.sh <lane> forever.
-# The box is always on: no idle stop, no runner, no starter. Each user's Muse login and GitHub
-# token are a person's to put in once (README.md, The training box). TRAIN_REPO (OWNER/REPO) is the
-# repository the lanes clone, push to and open pull requests on.
 set -euo pipefail
 [ "$(id -u)" = 0 ] || { echo "run as root" >&2; exit 1; }
-training=""
-if [ "${1:-}" = --training ]; then
-  training=1
-  shift
-  [ "$#" = 0 ] || { echo "setup.sh --training takes no subscription ids" >&2; exit 2; }
-fi
+[ "${1:-}" != --training ] || { echo "setup.sh --training is gone: no training lane runs on a box (#4701)" >&2; exit 2; }
 # The Claude accounts log in from secrets and run on GitHub's runners, so none has a user here.
-[ -n "$training" ] || [ "$#" -gt 0 ] || set -- gpt agy muse
+[ "$#" -gt 0 ] || set -- gpt agy muse
 export DEBIAN_FRONTEND=noninteractive HOME=/root
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # The version rust-toolchain.toml pins (with its components and target), installed for every user
 # that runs the repository's checks, so cargo in a checkout never downloads a toolchain mid-job.
 # Change it with rust-toolchain.toml, then run this again on both boxes.
 RUST_TOOLCHAIN=1.97.0
-TRAIN_REPO="${TRAIN_REPO:-Jlore-Studios/JackiOh}"
-TRAIN_LANES="improve unban gather"
-[ -n "$training" ] || date +%s > /run/night-vm-last-busy  # a long setup is not idle time
+date +%s > /run/night-vm-last-busy  # a long setup is not idle time
 
-# Swap: three jobs at once on 8 GB, each running the repo's checks; on the training box, room for
-# both lanes' release builds beside their games.
+# Swap: three jobs at once on 8 GB, each running the repo's checks.
 if [ ! -f /swapfile ]; then
   fallocate -l 8G /swapfile && chmod 600 /swapfile && mkswap /swapfile >/dev/null && swapon /swapfile
   echo '/swapfile none swap sw 0 0' >> /etc/fstab
@@ -128,104 +110,12 @@ install_muse() {
   chmod -R a+rX /usr/local/lib/muse
 }
 
-# Node 24 (the repo's .nvmrc), and pnpm through corepack (package.json pins the version). On the
-# training box, loop.sh and Muse run the web's tests that play the AI with them before a promotion
-# goes up (training/README.md).
+# Node 24 (the repo's .nvmrc), and pnpm through corepack (package.json pins the version).
 if ! node --version 2>/dev/null | grep -q '^v24\.'; then
   curl -fsSL https://deb.nodesource.com/setup_24.x | bash - >/dev/null
   apt-get install -y -qq nodejs >/dev/null
 fi
 corepack enable
-
-if [ -n "$training" ]; then
-  # GitHub's CLI from GitHub's own apt repository (cli.github.com): loop.sh lists, opens and
-  # auto-merges the lanes' pull requests with it, and git pushes through it.
-  if [ ! -f /etc/apt/sources.list.d/github-cli.list ]; then
-    install -d -m 755 /etc/apt/keyrings
-    curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-      -o /etc/apt/keyrings/githubcli-archive-keyring.gpg
-    chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
-      > /etc/apt/sources.list.d/github-cli.list
-    apt-get update -qq
-  fi
-  apt-get install -y -qq gh >/dev/null
-  install_muse
-
-  # The box is always on. A box set up before as a night box (or by an older training setup)
-  # has the idle stop: it goes.
-  systemctl disable --now night-vm-idle-stop.timer >/dev/null 2>&1 || true
-  rm -f /etc/systemd/system/night-vm-idle-stop.timer /etc/systemd/system/night-vm-idle-stop.service
-
-  for lane in $TRAIN_LANES; do
-    user="agent-train-$lane"
-    home="/home/$user"
-    id "$user" >/dev/null 2>&1 || useradd -m -s /bin/bash -K UMASK=077 "$user"
-    chmod 700 "$home"
-    install_rust "$user"
-    # The lane's own checkout, which loop.sh resets to main every cycle (so its target/ stays and
-    # each build after the first is incremental).
-    if [ ! -d "$home/JackiOh/.git" ]; then
-      (cd "$home" && sudo -u "$user" -H git clone --quiet "https://github.com/$TRAIN_REPO.git" JackiOh)
-    fi
-    # git pushes through gh's login (what `gh auth setup-git` writes), and commits under a name of
-    # the lane's own unless a person set one: Muse commits its promotion and loop.sh rebases it.
-    (cd "$home" && sudo -u "$user" -H git config --global --replace-all \
-      credential.https://github.com.helper '!/usr/bin/gh auth git-credential')
-    if ! (cd "$home" && sudo -u "$user" -H git config --global user.email >/dev/null); then
-      (cd "$home" && sudo -u "$user" -H git config --global user.name "JackiOh training ($lane)")
-      (cd "$home" && sudo -u "$user" -H git config --global user.email "$user@jackioh-train-box")
-    fi
-    sudo -u "$user" mkdir -p "$home/training-out/$lane" "$home/logs"
-  done
-
-  # One lane, forever: training/loop.sh <lane> as the lane's user, from its checkout. A system
-  # unit's %h is root's home whatever User= says, so the paths name the lane's home in full; the
-  # loop sets JACKIOH_TRAINING_OUT to the same directory itself. RAYON_NUM_THREADS=2: three lanes'
-  # games share the box's vCPUs. MUSE_MODEL is the knob for Muse's model.
-  cat > /etc/systemd/system/jackioh-train@.service <<'EOF'
-[Unit]
-Description=JackiOh AI training lane %i (training/README.md)
-Wants=network-online.target
-After=network-online.target
-
-[Service]
-User=agent-train-%i
-WorkingDirectory=/home/agent-train-%i/JackiOh
-ExecStart=/bin/sh /home/agent-train-%i/JackiOh/training/loop.sh %i
-Restart=always
-RestartSec=60
-Environment=MUSE_MODEL=muse-spark-1.3-contributor
-Environment=MUSE_NO_AUTO_UPDATE=1
-Environment=RAYON_NUM_THREADS=2
-Environment=JACKIOH_TRAINING_OUT=/home/agent-train-%i/training-out/%i
-Environment=COREPACK_ENABLE_DOWNLOAD_PROMPT=0
-Environment=CYPRESS_INSTALL_BINARY=0
-Environment=PATH=/home/agent-train-%i/.cargo/bin:/usr/local/bin:/usr/bin:/bin
-
-[Install]
-WantedBy=multi-user.target
-EOF
-  systemctl daemon-reload
-  # A lane already running keeps its Muse session; it reads a changed unit at its next restart
-  # (`systemctl restart jackioh-train@<lane>`). None starts: #682's audit stopped the two LLM lanes
-  # on 2026-10-25 (#1677), and gather on 2026-11-04, since it filed staging's database alone and
-  # gather.yml files both (R1933001). Setup keeps their users and checkouts but never starts them
-  # again. Starting one is a person's `systemctl enable --now` of its unit.
-  apt-get clean
-
-  for lane in $TRAIN_LANES; do
-    user="agent-train-$lane"
-    printf '%-20s %s; rustc %s; %s\n' "jackioh-train@$lane" \
-      "$(systemctl is-active "jackioh-train@$lane" || true)" \
-      "$(cd "/home/$user" && sudo -u "$user" -H "/home/$user/.cargo/bin/rustc" --version 2>&1 | awk '{print $2}')" \
-      "$(cd "/home/$user" && sudo -u "$user" -H gh auth status >/dev/null 2>&1 && echo "gh logged in" || echo "gh not logged in")"
-  done
-  printf '%-7s %s\n' muse "$(muse --version 2>&1 | head -1)" gh "$(gh --version 2>&1 | head -1)" \
-    node "$(node --version 2>&1)"
-  df -h / | awk 'NR==2 {print "disk: " $4 " free of " $2}'
-  exit 0
-fi
 
 # Codex sandboxes commands with bubblewrap, which Ubuntu's AppArmor blocks by default.
 echo 'kernel.apparmor_restrict_unprivileged_userns=0' > /etc/sysctl.d/60-codex-bwrap.conf

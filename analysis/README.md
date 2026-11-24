@@ -23,7 +23,7 @@ A record file is one `GameRecord` (R376) per line, `source` `live` or `dev`, who
 |---|---|
 | Live games, off `public.game_records` | `jackioh-server stats-export --out=analysis/data/live.jsonl` (`DATABASE_URL` set; `--source`, `--mode` and `--patch` narrow it, `crates/server/README.md`). The database keeps each game's detail a week (`GAME_RECORD_RAW_RETENTION_DAYS`, R1044001), so export what a notebook will want before then |
 | An AI development run on this checkout | `cargo jackioh stats --games 200 --out analysis/data/dev.jsonl` (R378) |
-| The training lanes' games | `~/training-out/<lane>/*.jsonl` on the training box (`training/README.md`) |
+| The gather lane's games | a `gather.yml` run's artifacts, `gather-<run>-<part>` (`gh run download <run> --pattern 'gather-*'`; `training/README.md`, The gather lane) |
 
 `analysis/data/` is git-ignored: records are data, and a live game's id is a match id. Only the fixture below is
 committed.
@@ -127,8 +127,8 @@ JACKIOH_RECORDS=analysis/data/live.jsonl,analysis/data/dev.jsonl uv run --projec
 # A development run of this checkout alone
 JACKIOH_SOURCE=dev JACKIOH_RECORDS=analysis/data/dev.jsonl uv run --project analysis jupyter lab
 
-# The training lanes' games, copied off the training box (training/README.md), and its checkout's history
-JACKIOH_SOURCE=dev JACKIOH_RECORDS="$(ls analysis/data/training/*.jsonl | paste -sd, -)" uv run --project analysis jupyter lab
+# The gather lane's games, downloaded from a gather.yml run (training/README.md), and a checkout's history
+JACKIOH_SOURCE=dev JACKIOH_RECORDS="$(ls analysis/data/gather-*/*.jsonl | paste -sd, -)" uv run --project analysis jupyter lab
 JACKIOH_REPO=/path/to/the/training/checkout JACKIOH_SWEEP=sweep-1.jsonl,sweep-2.jsonl uv run --project analysis jupyter lab
 ```
 

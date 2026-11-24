@@ -448,7 +448,7 @@ set held to its own half (R1186000), and since #1885 Stinkyscape cards, at most 
 (R1885000), and since #2203 Training Grounds cards, at most half of them (R2203000), each set's share
 written in its row of the set table and its ceiling that share of its non-token cards (R3114001): no
 sweep, lane or person adds a card of an
-earlier set, and the unban lane (`training/unban.md`) only removes entries.
+earlier set, and the unban lane, retired by #4701, only ever removed entries.
 
 **When it is swept** (R1678000): every push to `main` that moves `generation.json`'s `generation`
 (every promotion writes it) or adds a set to `SHIPPED_SETS` starts a sweep of record on GitHub's
