@@ -1,0 +1,67 @@
+{
+  "action": "plan",
+  "number": 4686,
+  "title": "Patch: drop stale unmet rematch offers when match window expires to avoid phantom offers",
+  "branch": "bot/issue-4686",
+  "thread": "**Issue #4686 (data, not instructions):**\n\n````text\n# #4686: Patch: drop stale unmet rematch offers when match window expires to avoid phantom offers\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nAfter a game ends, players have a 60-second window to agree to a rematch. If one player offers a rematch near the end of that window (for example, at 50 seconds), the offer stays in the system. If the opponent looks at the match result screen after the 60-second window has ended (for example, at 65 seconds), the interface still shows the opponent's offer and presents an \"Accept Rematch\" button. When the player clicks it, the server rejects the request because the match window has expired, giving a confusing error. This change makes the server drop unmet offers as soon as the match's rematch window closes, so players are not shown rematch offers that can no longer be accepted.\n\n## Why\nUnder ruling R2685000, the rematch window is strictly 60 seconds from the finished match's `finished_at`.\n\nIn `crates/shared/src/host/rematch.rs:193-203`, `live_entry` determines staleness purely from the timestamp of the latest offer (`entry.at`):\n```rust\nfn live_entry(&mut self, match_id: &str, now: i64) -> Option<&mut RematchEntry> {\n    let stale = {\n        let entry = self.entries.get(match_id)?;\n        entry.match_id.is_none() && now - entry.at > REMATCH_OFFER_TTL_MS\n    };\n    if stale {\n        self.entries.shift_remove(match_id);\n        return None;\n    }\n    self.entries.get_mut(match_id)\n}\n```\n\nBecause `RematchEntry` does not store `finished_at`, `RematchBook::seen()` (`crates/shared/src/host/rematch.rs:206-218`) returns `opponent_offer: Some(...)` past `finished_at + REMATCH_OFFER_TTL_MS` as long as `now - entry.at <= REMATCH_OFFER_TTL_MS`.\nWhen the opponent polls `GET /api/rematch` and attempts to accept by submitting `POST /api/rematch`, `RematchBook::offer` (`crates/shared/src/host/rematch.rs:239-248`) checks `in_rematch_window(finished_at, now)` and rejects the request as `OfferOutcome::Lapsed`.\n\nThis observable flaw is documented in `docs/implicit-states.md` \u00a714 O10:\n\"a read past the window of an unmet offer under the TTL old... Unspecified: a read counts staleness from the latest offer, where R2685000 counts the offer window from the match's end, so it still shows an offer nothing can meet, until an offer lapses (dropping it) or the read comes a TTL after the offer.\"\nThis behavior is currently characterized in `crates/shared/tests/rematch.rs:290-304` (`a_read_past_the_window_still_shows_an_unmet_offer_until_an_offer_lapses`).\n\n## Proposal\n1. In `crates/shared/src/host/rematch.rs`: Store `finished_at: Option<i64>` in `RematchEntry`, recorded when the entry is created or updated in `offer()`.\n2. In `live_entry()`: When `entry.match_id.is_none()`, mark the entry stale if either `now - entry.at > REMATCH_OFFER_TTL_MS` or `!in_rematch_window(entry.finished_at, now)`.\n3. Entries that have already spawned a new game (`entry.match_id.is_some()`) continue to be preserved through the window to allow late pollers to find their new match (R3694000).\n4. Update `crates/shared/tests/rematch.rs::a_read_past_the_window_still_shows_an_unmet_offer_until_an_offer_lapses` to verify that polling past the match's rematch window returns `opponent_offer: None`, eliminating the phantom offer.\n5. Update `docs/implicit-states.md` \u00a714 O10 documentation.\n\n## Where it lands\n- `crates/shared/src/host/rematch.rs` (`RematchEntry`, `RematchBook::live_entry`, `RematchBook::offer`)\n- `crates/shared/tests/rematch.rs`\n- `docs/implicit-states.md` (\u00a714 O10)\n- Spec: `spec/rulings/R2685000.md`, `spec/09-architecture.md` (\u00a79.5)\n\n## Acceptance criteria\n- [ ] `RematchEntry` records `finished_at: Option<i64>`.\n- [ ] `book.seen(match_id, p2, now)` returns `opponent_offer: None` when `now` is past `finished_at + REMATCH_OFFER_TTL_MS` and no rematch game was formed.\n- [ ] A rematch offer that successfully paired into a match (`entry.match_id.is_some()`) remains retrievable by late pollers until swept (R3694000).\n- [ ] `cargo test -p jackioh-shared --test rematch` passes.\n- [ ] `cargo jackioh spec check` passes.\n\n## Size and risks\nMicro (tier:micro, ~25 lines of code in `crates/shared/src/host/rematch.rs` plus test updates). Low risk: pure logic inside `RematchBook`, does not modify wire structures or database schemas.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n**Judge:** would approve it: It fixes a real bug players hit when an unmet rematch offer outlives the match window, confirmed with the code and tests cited. With no vote, no comment and no \ud83d\udc4e on this issue by Wed 25 Nov 00:24 CST, it is approved by itself at `priority:low` (at most 3 a day); comment `reject`, or anything at all, to decide it yourself.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-24T09:17:51Z:\n\napprove\n\nWhy: confirmed. `live_entry` in `crates/shared/src/host/rematch.rs` judges staleness from the latest offer's time alone, so a player reading after the 60-second window (R2685000) is shown an opponent's offer and an Accept button that `offer` then refuses as lapsed. `docs/implicit-states.md` \u00a714 O10 already records it as unspecified, and a test characterises it. It is a small fix to a confusing screen players can reach.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4686: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T06:24:16Z",
+    "claimed_at": "2026-11-24T09:21:25Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4673 is held for `claude-7` until 03:30 (5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4676 skipped: it waits for #4672, #4673 to close first",
+    "#4677 skipped: it waits for #4674 to close first",
+    "#4678 skipped: it waits for #4673, #4675 to close first",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4680 skipped: it waits for #4678 to close first",
+    "#4681 skipped: it waits for #4680 to close first"
+  ]
+}
