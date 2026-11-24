@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4732,
+  "title": "Patch: the C module's build refuses an export named like a maths function again, now that it strips the names the old check read",
+  "branch": "bot/issue-4732",
+  "thread": "**Issue #4732 (data, not instructions):**\n\n```text\n# #4732: Patch: the C module's build refuses an export named like a maths function again, now that it strips the names the old check read\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe engine is also built as a second, standalone module for hosts that are not a browser, such as the planned Roblox port. On 19 November one of that module's functions was named `log`, which is also the maths library's name for the logarithm. Every logarithm inside the module then turned into a crash.\n\nA check was added that night to fail the build if this happened again. Under two hours later, a change that makes the module smaller started removing function names from it. The name the check searches for went with them, so the check can no longer fire.\n\nOnce this is built, a clashing name fails the build and the error names the function. A small self-test in the same build proves the check still works. Nobody notices this until a binding gets an unlucky name, say `round` for an Assault round. Then the bot or the maintainer gets a red build, instead of a port whose ladder bots and ratings crash.\n\n## Why\n\n- **The guard reads a name that is no longer there.** `scripts/build-wasm.sh:263-269` holds the #4273 guard: `grep -aq 'signature_mismatch:' \"$C_MODULE\"`. The linker writes the trapping stub's name only into the module's `name` section; the stub's body is just `unreachable`.\n- **The strip landed right after the guard.** `scripts/build-wasm.sh:241-244` builds the module with `CARGO_PROFILE_RELEASE_STRIP=symbols` (#4283, d70de4becb, 2026-11-20 01:19 UTC), which links with `--strip-all`. The script's own measurement note at `:235` says `name section gone`, and `crates/wasm/c/README.md:111` says the module ships without its `name` section. The guard had landed in 8f57b06c3f (#4282) at 2026-11-19 23:30 UTC, so it ran on an unstripped module for under two hours.\n- **Reproduced on the pinned toolchain.** I used rustc 1.97.0 on wasm32-unknown-unknown with thin LTO, as the workspace's release profile has it. The test crate was a cdylib exporting `#[unsafe(no_mangle)] extern \"C\" fn log(ptr: *const u8, len: usize) -> i32`, with a second crate calling `f64::ln`.\n  - Unstripped: the guard's grep matches, and `ln_of(2)` traps.\n  - With build-wasm.sh's three C-module settings (opt-level z, one codegen unit, strip symbols): the module is valid and imports nothing, so the import check passes. It has no `name` section, `ln_of(2)` still traps with `unreachable`, and the grep finds nothing.\n  - Both times, rust-lld printed `function signature mismatch: log` as a warning, which cargo shows and the build ignores.\n- **The class of bug is live.** `crates/wasm/c/src/lib.rs` has 77 raw `#[unsafe(no_mangle)]` exports, each named after its binding. The crates it links call libm by name: `.ln()` in `crates/shared/src/bots/think.rs:90`, which the `bots` export reaches (`crates/wasm/core/src/lib.rs:1009`), and `.round()` in `crates/shared/src/bots/pool.rs:219`. The panic probe and the hotseat fixture that run after the build (`build-wasm.sh:270-290`) call neither.\n- **One guard covers both modules.** `crates/wasm/tests/export_parity.rs` holds the C module to every name the browser module binds. So a colliding name fails the C link, whichever module the binding was added for.\n\n## Proposal\n\n1. In `crates/wasm/c/src/lib.rs`, add `#![cfg_attr(target_arch = \"wasm32\", deny(linker_messages))]`. On the reproduction this turned the mismatch into `error: linker stderr: rust-lld: function signature mismatch: log` (cargo exit 101). The renamed export linked clean, and a host build with the attribute was unaffected. It covers every wasm32 build of the crate, including the README's plain `cargo build`, not only the script's.\n2. Remove the dead grep and its comment from `build-wasm.sh`, and say there that the lint refuses the collision.\n3. Add a self-test to the C path of `build-wasm.sh`, after the module's build:\n   - Write a ten-line fixture crate to a temporary directory, with its own `[workspace]` table and its own `CARGO_TARGET_DIR`. It exports a function named `log` and calls `f64::ln`.\n   - Paste in the attribute line the script reads from `crates/wasm/c/src/lib.rs`.\n   - Build it under the same `CARGO_PROFILE_RELEASE_*` settings as the module, named once and used by both builds.\n   - Fail the script unless that link fails with `signature mismatch`. A missing attribute line in `lib.rs` fails it too.\n   \n   A flag or toolchain change that silences the guard then fails the build, which is the way the grep died.\n4. In `crates/wasm/c/README.md`, add one line saying that a binding whose name collides with a libm or host symbol fails the link.\n\nTwo decisions the task leaves open, settled here:\n\n- The lint goes in the source rather than `-C link-arg=--fatal-warnings` through `cargo rustc` in the script, because the lint covers every wasm32 build of the crate.\n- No name-based or behaviour-based check replaces the grep. Any check that reads names dies with the strip, and calling `ln` would cover only `ln`.\n\n## Where it lands\n\n- `crates/wasm/c/src/lib.rs`: one crate attribute.\n- `scripts/build-wasm.sh`: the C module's block.\n- `apps/web/src/net/build-wasm-cache.test.ts`: its stand-in cargo answers the self-test's build with the failure a real link gives, and one new case shows that the script fails when the self-test links clean.\n- `crates/wasm/c/README.md`: one line.\n- No SPEC section or ruling: this is build tooling. `docs/v0.3.0/SURFACE.md` \u00a710.5 describes the module and stays as it is.\n\n## Acceptance criteria\n\n- [ ] `JACKIOH_WASM_C=1 JACKIOH_WASM_NORMAL=0 sh scripts/build-wasm.sh` passes on the branch, and CI's `web (wasm c module)` is green.\n- [ ] With one export renamed to `log` in a local scratch change that is not merged, the same command fails at the link, naming `function signature mismatch: log`. The pull request quotes that output.\n- [ ] With the attribute deleted from `crates/wasm/c/src/lib.rs`, the script fails at its self-test, naming the missing line.\n- [ ] No `signature_mismatch:` grep remains in `build-wasm.sh`.\n- [ ] `build-wasm-cache.test.ts` passes, including a case where a self-test that links clean fails the script.\n- [ ] `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test -p jackioh-wasm-c` and `cargo fmt --check` pass.\n\n## Size and risks\n\nSmall: one attribute, about 30 lines of shell, one test case and one README line. Difficulty: medium.\n\n- I did not build the real 18 MB module here; a cold build takes about 456 s (`build-wasm.sh:238-239`). If its link already prints a linker message today, the lint fails the build at once. The builder's first `JACKIOH_WASM_C=1` build will show that; the message then gets fixed or reported, never allowed.\n- The self-test costs seconds: the fixture needs only `std`, which the wasm32 target ships prebuilt. It took about a second here.\n- The browser module gets no lint of its own, because `export_parity.rs` holds its names to the C module's, so the C link already refuses a clashing name for both.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** would approve it: Confirmed: the #4273 guard in build-wasm.sh greps for a name that the #4283 strip removes, so it can no longer fire; a scratch crate on the pinned toolchain built with the script's settings still traps with the grep finding nothing, the proposed deny(linker_messages) turns that into a link error, and the real C module builds today with no linker messages, so the fix won't break it. With no vote, no comment and no \ud83d\udc4e on this issue by Wed 25 Nov 06:48 CST, it is approved by itself at `priority:low` (at most 3 a day); comment `reject`, or anything at all, to decide it yourself.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-24T13:46:20Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4732: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T13:46:47Z",
+    "claimed_at": "2026-11-24T13:55:02Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
