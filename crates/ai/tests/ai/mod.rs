@@ -25,6 +25,7 @@ pub mod duos;
 pub mod endings;
 pub mod evaluate;
 pub mod evaluate_v020;
+pub mod evasive;
 pub mod even_trades;
 pub mod evolve;
 pub mod exile;
