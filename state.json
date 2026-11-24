@@ -18695,7 +18695,9 @@
     "4768": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "ci_early": true,
+      "ci_fixed_head": "9d19c68c2e8f7077d2d0e2f430d99affb308baea",
       "ci_fixes": 1,
       "ci_on_head": false,
       "ci_reruns": {
@@ -18718,7 +18720,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-24T19:03:01Z",
+      "feedback_since": "2026-11-24T19:41:53Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-24T19:08:59Z",
@@ -18761,7 +18763,7 @@
         "provider": "claude-3",
         "run": "45466063316"
       },
-      "source": "ci",
+      "source": "",
       "started_at": "2026-11-24T19:41:53Z",
       "stop_requested": false,
       "taken_asks": [],
