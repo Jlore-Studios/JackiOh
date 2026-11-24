@@ -20267,7 +20267,9 @@
     },
     "4734": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:7133330054"
+      ],
       "failures": 2,
       "forced": false,
       "handoff": {
@@ -20302,9 +20304,7 @@
       ],
       "strikes": 2,
       "suggestion": true,
-      "taken_asks": [
-        "c:7133330054"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "4735": {
