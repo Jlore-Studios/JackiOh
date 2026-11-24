@@ -425,13 +425,42 @@ pub fn adjacent_to_aimed(
     scope: &BoardScope,
     aim: TargetAim,
 ) -> Vec<CardInstance> {
-    adjacent_to_with(ctx, spec, scope, aim)
+    adjacent_to_with(ctx, spec, scope, aim, Beside::Units)
 }
 
 /// §3.1 Adjacent: lanes N-1 and N+1 on the target's own side and row, never across sides and never
-/// the target itself. An empty or dormant neighbour contributes nothing (§3.2, R13).
+/// the target itself. An empty or dormant neighbour contributes nothing (§3.2, R13). These are the Units
+/// beside it: a card lying on a unit zone is none (R4665000, `zones::is_adjacent_card`).
 pub fn adjacent_to(ctx: &EffectContext<'_>, spec: &TargetSpec, scope: &BoardScope) -> Vec<CardInstance> {
-    adjacent_to_with(ctx, spec, scope, TargetAim::Help)
+    adjacent_to_with(ctx, spec, scope, TargetAim::Help, Beside::Units)
+}
+
+/// §3.1, R2198003: "the permanents beside" the target, `adjacent_to`'s lanes with a card lying on a unit
+/// zone among them, the Field Spell it is (R4665000; Core #34 Collateral Damage's Radiant, a Spell's
+/// Cleave on a board pick, C+ #65.4 Golden Grape's "the cards next to it").
+pub fn adjacent_permanents_to(
+    ctx: &EffectContext<'_>,
+    spec: &TargetSpec,
+    scope: &BoardScope,
+) -> Vec<CardInstance> {
+    adjacent_to_with(ctx, spec, scope, TargetAim::Help, Beside::Permanents)
+}
+
+/// `adjacent_permanents_to` under an aim (MD-B1, R940).
+pub fn adjacent_permanents_to_aimed(
+    ctx: &EffectContext<'_>,
+    spec: &TargetSpec,
+    scope: &BoardScope,
+    aim: TargetAim,
+) -> Vec<CardInstance> {
+    adjacent_to_with(ctx, spec, scope, aim, Beside::Permanents)
+}
+
+/// What an adjacency walk reads beside its card (R4665000): the Units there, or every permanent there.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Beside {
+    Units,
+    Permanents,
 }
 
 fn adjacent_to_with(
@@ -439,6 +468,7 @@ fn adjacent_to_with(
     spec: &TargetSpec,
     scope: &BoardScope,
     aim: TargetAim,
+    beside: Beside,
 ) -> Vec<CardInstance> {
     let Some(card) = instance_of(ctx, spec) else {
         return Vec::new();
@@ -458,8 +488,13 @@ fn adjacent_to_with(
             continue;
         }
         met.push(found.id.clone());
-        // R1081000: beside a Unit standing in the backrow, only a Unit standing there is adjacent.
-        if !crate::zones::is_adjacent_card(ctx.state, &card, found) {
+        // R1081000: beside a Unit standing in the backrow, only a Unit standing there is adjacent; R4665000:
+        // a card lying on a unit zone is a permanent beside it, never a Unit.
+        let adjacent = match beside {
+            Beside::Units => crate::zones::is_adjacent_card(ctx.state, &card, found),
+            Beside::Permanents => crate::zones::is_adjacent_permanent(ctx.state, &card, found),
+        };
+        if !adjacent {
             continue;
         }
         if !matches_scope_aimed(ctx, found, scope, aim) {

@@ -1724,10 +1724,17 @@ pub fn in_units_row_or_standing(state: &GameState, card: &CardInstance) -> bool 
 /// R1081000: whether `neighbour` is adjacent to `origin` in the sense an effect or a Cleave reads: beside a
 /// Unit standing in the backrow, only another Unit standing there, never a Trap or a Field Spell (§3.1
 /// Adjacent, §4.4 step 10 hit "units adjacent"). R4665000: and never a card lying on a unit zone, which is
-/// no Unit. `adjacent` itself only names the zones.
+/// no Unit; "the permanents beside" a pick read `is_adjacent_permanent`. `adjacent` itself only names the
+/// zones.
 pub fn is_adjacent_card(state: &GameState, origin: &CardInstance, neighbour: &CardInstance) -> bool {
-    !lies_on_unit_zone(state, neighbour)
-        && (!stands_in_backrow(state, origin) || is_standing_unit(state, neighbour))
+    !lies_on_unit_zone(state, neighbour) && is_adjacent_permanent(state, origin, neighbour)
+}
+
+/// §3.1, R2198003: whether `neighbour` is among "the permanents beside" `origin` (Core #34 Collateral
+/// Damage's Radiant, a Spell's Cleave on a board pick): R1081000's rule beside a Unit standing in the
+/// backrow, and a card lying on a unit zone is one, the Field Spell it is (R4665000).
+pub fn is_adjacent_permanent(state: &GameState, origin: &CardInstance, neighbour: &CardInstance) -> bool {
+    !stands_in_backrow(state, origin) || is_standing_unit(state, neighbour)
 }
 
 /// R1081000: the Units standing in `player`'s backrow zones, in lane order; every walk of the

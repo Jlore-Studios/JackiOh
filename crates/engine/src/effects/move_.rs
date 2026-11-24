@@ -10,7 +10,8 @@ use crate::announce::{innermost_live_announce, is_announce_live, mark_countered}
 use crate::draw::add_to_hand;
 use crate::echo::exile_on_landing;
 use crate::effects::targets::{
-    BoardScope, PlayerSpec, TargetSpec, adjacent_to_aimed, cards_in_scope_aimed, instance_of, player_of,
+    BoardScope, PlayerSpec, TargetSpec, adjacent_permanents_to_aimed, cards_in_scope_aimed, instance_of,
+    player_of,
 };
 use crate::mana::{effective_cost, is_x_cost};
 use crate::ownership::take_into_hand;
@@ -333,13 +334,15 @@ pub struct ExileAdjacentToArgs {
     pub scope: BoardScope,
 }
 
-/// §3.1 Adjacent exile: lanes N-1 and N+1 on the target's own side and row (#34 Collateral Damage
-/// radiant); the card pairs it with a plain `exile` on the target.
+/// §3.1 Adjacent exile: the permanents in lanes N-1 and N+1 on the target's own side and row (#34
+/// Collateral Damage radiant, R2198003), a card lying on a unit zone among them (R4665000); the card pairs
+/// it with a plain `exile` on the target.
 pub fn exile_adjacent_to(args: ExileAdjacentToArgs) -> Effect {
     Effect::new("exileAdjacentTo", move |ctx| {
-        let cards: Vec<CardInstance> = adjacent_to_aimed(ctx, &args.target, &args.scope, TargetAim::Harm)
-            .into_iter()
-            .collect();
+        let cards: Vec<CardInstance> =
+            adjacent_permanents_to_aimed(ctx, &args.target, &args.scope, TargetAim::Harm)
+                .into_iter()
+                .collect();
         for card in &cards {
             exile_card(ctx, card);
         }

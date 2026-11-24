@@ -8,9 +8,10 @@
 //! that side's control (§3.2 Stack). The permanent lies beneath it as a card beneath a Stack does, out
 //! of play and keeping its damage, and resumes when Ticketed leaves the field, any way it leaves. On a
 //! unit zone it lies there, no Unit (`zones::lies_on_unit_zone`): it fills the zone, nothing attacks it,
-//! no health judges it, and no Unit sweep, Cleave or other read of a Unit's neighbours reaches it
-//! (`zones::is_adjacent_card`); an effect that names a backrow card may name it, and a sweep of the
-//! backrow, of the Field Spells or of every permanent meets it after that side's backrow lanes. With no
+//! no health judges it, and no Unit sweep, Cleave or other read of the Units beside a card reaches it
+//! (`zones::is_adjacent_card`); an effect that names a backrow card, or the permanents beside a pick
+//! (R2198003, `zones::is_adjacent_permanent`), may name it, and a sweep of the backrow, of the Field
+//! Spells or of every permanent meets it after that side's backrow lanes. With no
 //! permanent left to stack on it lands in its graveyard (R138). Radiant: no Brittle, so it stays until it
 //! leaves. Through v0.6.12c its Cry held another face-up permanent beneath it in its own zone
 //! (`hold_beneath`, R1850003, R1875001), which `script_v0_6_12c` keeps (R767000). Declares no numbers.
@@ -111,6 +112,7 @@ mod tests {
     const GUY_ATT: &str = "classicplus-005"; // Guy Att: Radiant "Cry: Destroy every backrow card."
     const FIRE: &str = "classicplus-t-ai-06"; // Datacenter Fire: "Destroy all Field Spells. Deal 1 damage …"
     const CLEAVER: &str = "stand-in (1) 4/9 Cleave";
+    const BEAN: &str = "traininggrounds-027"; // Hopeful Jelly Bean: Radiant "Cleave / Make a permanent Radiant."
 
     fn board(radiant: bool, hand: Value, field: Value, backrow: Value) -> Scenario {
         let mut cards = vec![json!({ "def": ID, "radiant": radiant }), json!(FILLER)];
@@ -410,6 +412,48 @@ mod tests {
             assert_eq!(s.card(ticketed.as_str()).damage, 0);
             assert_eq!(s.card(under.as_str()).damage, 0);
             assert_eq!(s.unit(P2, 3).map(|top| top.id), Some(ticketed));
+        }
+
+        /// R4665000, §3.1, R2198003: "the permanents adjacent to" a pick (Radiant Collateral Damage) are
+        /// more than its Units: it lies beside the pick as the Field Spell it is, so it goes too, and the Unit
+        /// beneath resumes, untouched.
+        #[test]
+        fn r4665000_the_permanents_beside_a_pick_take_it_and_the_unit_beneath_resumes() {
+            let mut s = board(
+                false,
+                json!([{ "def": COLLATERAL, "radiant": true }]),
+                json!([{ "def": VANILLA, "lane": 2 }, { "def": VANILLA, "lane": 3 }]),
+                json!([]),
+            );
+            let pick = s.unit_at(P2, 2).id;
+            let under = s.unit_at(P2, 3).id;
+            stack_on(&mut s, &under);
+            let ticketed = s.unit(P2, 3).expect("Ticketed").id;
+            s.play(COLLATERAL, json!({ "targets": pick::id(&pick) }));
+            s.expect_in_zone(pick.as_str(), "exile");
+            s.expect_in_zone(ticketed.as_str(), "exile");
+            assert_eq!(s.unit(P2, 3).map(|top| top.id), Some(under));
+        }
+
+        /// R4665000, R2198003: a Spell's Cleave on a board pick (Radiant Hopeful Jelly Bean) reaches the
+        /// permanents beside it, so it turns Radiant beside the pick.
+        #[test]
+        fn r4665000_a_spells_cleave_on_a_board_pick_reaches_it() {
+            let mut s = board(
+                false,
+                json!([{ "def": BEAN, "radiant": true }]),
+                json!([{ "def": VANILLA, "lane": 2 }, { "def": VANILLA, "lane": 3 }]),
+                json!([]),
+            );
+            let pick = s.unit_at(P2, 2).id;
+            let under = s.unit_at(P2, 3).id;
+            stack_on(&mut s, &under);
+            let ticketed = s.unit(P2, 3).expect("Ticketed").id;
+            assert!(!s.card(ticketed.as_str()).radiant);
+            s.play(BEAN, json!({ "targets": pick::id(&pick) }));
+            assert!(s.card(pick.as_str()).radiant);
+            assert!(s.card(ticketed.as_str()).radiant);
+            assert!(!s.card(under.as_str()).radiant);
         }
 
         /// R3550009, R4665000: every enemy permanent lists it after their backrow, and never the Unit
