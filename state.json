@@ -21095,12 +21095,14 @@
     "what": "build #4737 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-24T15:11:39Z",
+    "at": "2026-11-24T15:21:18Z",
     "notes": [
-      "delivered build #4737 on claude-1 (run 45417546279): interrupted",
-      "delivered review #4574 on claude-6 (run 45397510273): stopped",
-      "started review #4749 on claude-6 (run 45423183733)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-24T17:20:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 47%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-24T18:50:00Z; it can start a build or a plan again in 3h 34m; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)"
+      "#4732 is held for `claude-3` until 11:20 (it refused a call)",
+      "delivered review #4749 on claude-6 (run 45423183733): reviewed",
+      "delivered build #4722 on muse (run 45411190805): built",
+      "started review #4750 on muse (run 45425164185)",
+      "started build #4737 on claude-6 (run 45425313138)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-24T17:20:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 47%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-24T18:50:00Z; it can start a build or a plan again in 3h 24m; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4732 held for `claude-3` until 11:20 (it refused a call)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -21806,7 +21808,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-24T15:11:39Z",
+  "loop_tick": "2026-11-24T15:21:18Z",
   "machine_disk": {
     "issue": null,
     "reading": {
