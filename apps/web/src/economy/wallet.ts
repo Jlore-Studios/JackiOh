@@ -3,10 +3,12 @@
 // session's token, never a sum; a failed read leaves what was known, so an account never read shows
 // no pill. R3206000: it reads through `getWallet`'s window, so a navigation or the page coming back
 // into view inside `READ_CACHE_FRESH_MS` of the last answer sends no read; a paid result, which
-// `announceWallet()` announces with no balance, drops what the payout changed and reads at once.
+// `announceWallet()` announces with no balance, drops what the payout changed and reads at once, and has
+// the mounted ownership providers read the owned cosmetics again (`forgetOwnedCosmetics`, R4780000).
 
 import { useEffect, useSyncExternalStore } from "react";
 
+import { forgetOwnedCosmetics } from "../cards/ownedFullArt.ts";
 import { forgetPaidReads, getWallet } from "../net/api.ts";
 import { attempt } from "../net/errors.ts";
 import { readSession } from "../net/session.ts";
@@ -65,13 +67,16 @@ function read(token: string, again: boolean): void {
  * Tells every pill the balance changed: with `jlore`, a server answer's balance, shown at once with
  * no request; with none (a level or a quest may have paid some), each reads the wallet again.
  * R3206000: with none, the kept reads the payout changed are dropped first (`forgetPaidReads`), or
- * that read would be answered from the balance kept before it.
+ * that read would be answered from the balance kept before it, and the mounted ownership providers read
+ * the owned cosmetics again (`forgetOwnedCosmetics`, R4780000).
  */
 export function announceWallet(jlore?: number): void {
   if (typeof window === "undefined") return;
   if (typeof jlore !== "number" || !Number.isFinite(jlore)) {
     const token = readSession()?.accessToken;
     if (token !== undefined) forgetPaidReads(token);
+    // R4780000: a Fleet level the game reached paid a cosmetic (R3335001): the mounted providers read what the account owns again, after the kept read above is dropped.
+    forgetOwnedCosmetics();
   }
   window.dispatchEvent(new CustomEvent<number | undefined>(WALLET_CHANGED, { detail: jlore }));
 }
