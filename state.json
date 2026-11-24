@@ -18992,11 +18992,19 @@
     "what": "plan #4697 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-24T09:10:38Z",
+    "at": "2026-11-24T09:18:38Z",
     "notes": [
-      "#4672: `claude-8` can start again, so its hold is lifted",
-      "started build #4672 on claude-8 (run 45362903275)",
-      "nothing more to start: nothing is queued"
+      "#4682 needs a plan",
+      "#4683 needs a plan",
+      "#4686 needs a plan",
+      "#4697 needs a plan",
+      "delivered review #4694 on muse (run 45353770308): approved",
+      "delivered build #4673 on claude-7 (run 45350134495): interrupted",
+      "started plan #4686 on muse (run 45364418903)",
+      "started plan #4682 on muse (run 45364523746)",
+      "started plan #4683 on agy (run 45364637512)",
+      "started plan #4697 on claude-8 (run 45364745131)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` 5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-24T10:30:00Z; it can start a build or a plan again in 5m; `claude-8` is busy; `claude-1` is idle, but nothing queued is for it; `claude-4` is idle, but nothing queued is for it; `claude-6` is idle, but nothing queued is for it; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4673 held for `claude-7` until 03:30 (5-hour usage is 70%, too close to its 70% cap to start a long run (it starts under 65%))"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -19702,7 +19710,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-24T09:10:38Z",
+  "loop_tick": "2026-11-24T09:18:38Z",
   "machine_disk": {
     "issue": null,
     "reading": {
