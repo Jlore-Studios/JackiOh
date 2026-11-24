@@ -1,54 +1,57 @@
 //! Audit (decks area): exploration.
 
-use jackioh_ai::{AI_DECK, AI_GATE, AI_GATE_BUDGET, AiDeckOptions, Matchup, build_ai_deck, game_config};
-use jackioh_engine::testkit::{AI_DIFFICULTY, CardType, create_rng, def_of};
+use jackioh_ai::{
+    AI_GATE_BUDGET, AiOptions, DEALT_Q, FIXTURE_BANNED_IDS, SHADOW_BAN, SHADOW_UNBANNED, SHADOW_WATCH,
+    UNBANNED_PREFER, play_ai_turn,
+};
+use jackioh_engine::testkit::{
+    Action, CatalogQueryArgs, PlayerId, create_rng, hash_state, json, query, reduce, scenario,
+};
 
-fn units_in(deck: &[String]) -> usize {
-    deck.iter()
-        .filter(|id| def_of(None, id).type_ == CardType::Unit)
-        .count()
+const P1: PlayerId = PlayerId::P1;
+const P2: PlayerId = PlayerId::P2;
+
+#[test]
+fn explore_table_ids() {
+    jackioh_cards::register_all();
+    let pool: Vec<String> = query(&CatalogQueryArgs::default()).iter().map(|d| d.id.clone()).collect();
+    for (name, ids) in [
+        ("SHADOW_BAN", SHADOW_BAN.iter().map(|(id, _)| *id).collect::<Vec<_>>()),
+        ("SHADOW_WATCH", SHADOW_WATCH.iter().map(|(id, _)| *id).collect()),
+        ("SHADOW_UNBANNED", SHADOW_UNBANNED.to_vec()),
+        ("FIXTURE_BANNED_IDS", FIXTURE_BANNED_IDS.to_vec()),
+        ("DEALT_Q", DEALT_Q.iter().map(|(id, _)| *id).collect()),
+        ("UNBANNED_PREFER", UNBANNED_PREFER.to_vec()),
+    ] {
+        let missing: Vec<&&str> = ids.iter().filter(|id| !pool.iter().any(|p| p == **id)).collect();
+        let mut sorted = ids.clone();
+        sorted.sort();
+        sorted.dedup();
+        eprintln!("{name}: {} ids, missing from the deck-legal pool {missing:?}, sorted+unique {}", ids.len(), sorted == ids);
+    }
 }
 
 #[test]
-fn explore_default_unit_floor() {
+fn explore_play_ai_turn_twice() {
     jackioh_cards::register_all();
-    for (name, handicap) in [
-        ("easy", AI_DIFFICULTY.easy),
-        ("medium", AI_DIFFICULTY.medium),
-        ("hard", AI_DIFFICULTY.hard),
-    ] {
-        let size = handicap.deck_size;
-        let units_needed = (f64::from(size) * AI_DECK.min_unit_share).ceil() as usize;
-        let opts = AiDeckOptions {
-            mana_cap: Some(handicap.mana_cap),
-            ..AiDeckOptions::default()
-        };
-        let mut miss = 0;
-        let mut first = None;
-        for n in 1..=5000 {
-            let seed = format!("audit-default:{name}:{n}");
-            let deck = build_ai_deck(&mut create_rng(&seed, 0), size, &opts);
-            let units = units_in(&deck);
-            if units < units_needed {
-                miss += 1;
-                if first.is_none() {
-                    first = Some(format!("{seed}: {units} of {size}, needs {units_needed}"));
-                }
-            }
-        }
-        eprintln!("{name} size {size} cap {}: {miss} of 5000 miss; first {first:?}", handicap.mana_cap);
-    }
-    for matchup in Matchup::ALL {
-        for n in 1..=AI_GATE.full_seeds[*matchup] {
-            let config = game_config(*matchup, n, AI_GATE_BUDGET, AI_GATE.seed_series);
-            for (seat, deck) in [("p1", &config.decks.0), ("p2", &config.decks.1)] {
-                let size = deck.len() as i32;
-                let units_needed = (f64::from(size) * AI_DECK.min_unit_share).ceil() as usize;
-                let units = units_in(deck);
-                if units < units_needed {
-                    eprintln!("gate {matchup} game {n} {seat}: {units} units of {size}, needs {units_needed}");
-                }
-            }
-        }
+    let start = scenario(json!({
+        "seed": "audit-turns",
+        "active": "p1",
+        "turn": 9,
+        "p1": { "hand": ["core-025", "core-011"], "mana": 4, "library": ["core-008", "core-011", "core-019"] },
+        "p2": { "hand": ["core-025", "core-011"], "mana": 4, "library": ["core-008", "core-011", "core-019"] },
+    }))
+    .state()
+    .clone();
+    let mut ai = AiOptions::with_budget(create_rng("audit-turns", 0), AI_GATE_BUDGET);
+    let first = play_ai_turn(&start, P1, &mut ai);
+    eprintln!("first: {:?}", first.actions.iter().map(|a| (a.nonce.clone(), a.body.clone())).collect::<Vec<_>>());
+    let second = play_ai_turn(&first.state, P2, &mut ai);
+    eprintln!("second: {:?}", second.actions.iter().map(|a| (a.nonce.clone(), a.body.clone())).collect::<Vec<_>>());
+    let mut current = first.state.clone();
+    for action in &second.actions {
+        let next = reduce(&current, &Action::new(action.body.clone(), P2, action.nonce.clone()));
+        eprintln!("{} changed {}", action.nonce, hash_state(&next.state) != hash_state(&current));
+        current = next.state;
     }
 }

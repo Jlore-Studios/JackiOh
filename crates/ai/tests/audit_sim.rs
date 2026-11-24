@@ -287,3 +287,112 @@ fn echo_probe() {
     let decision = decide(&root, AI, &mut options).expect("a decision");
     println!("decision {:?} {} line {:?}", decision.reason, action_key(&decision.action), decision.line.iter().map(action_key).collect::<Vec<_>>());
 }
+
+fn find_action(state: &GameState, key: &str) -> Option<ActionBody> {
+    legal_actions(state, AI).into_iter().find(|action| action_key(action) == key)
+}
+
+#[test]
+fn explore_orders() {
+    jackioh_cards::register_all();
+    std::panic::set_hook(Box::new(|_| {}));
+    let filter = std::env::var("AUDIT_FILTER").unwrap_or_default();
+    let defs: Vec<(String, bool)> = registered_catalog()
+        .iter()
+        .filter(|(id, _)| filter.is_empty() || id.contains(&filter))
+        .map(|(id, def)| (id.clone(), def.type_ == CardType::Unit))
+        .collect();
+    let mut kinds: IndexMap<String, Vec<String>> = IndexMap::new();
+    for (def_id, is_unit) in &defs {
+        for (on_field, radiant) in [(false, false), (false, true), (true, false)] {
+            let build = || {
+                let mut hand = vec![json!("core-t-coin"), json!("classic-055"), json!("core-008"), json!("core-025")];
+                let mut field = vec![json!({ "def": "core-008", "lane": 1 }), json!({ "def": "core-056", "lane": 2 })];
+                let mut backrow: Vec<Value> = Vec::new();
+                if on_field && *is_unit {
+                    field.push(json!({ "def": def_id, "lane": 4, "radiant": radiant }));
+                } else if on_field {
+                    backrow.push(json!({ "def": def_id, "lane": 4, "radiant": radiant, "faceUp": true }));
+                } else {
+                    hand.insert(0, json!({ "def": def_id, "radiant": radiant }));
+                }
+                scenario(json!({
+                    "seed": "audit-sim-order",
+                    "p1": { "hand": hand, "field": field, "backrow": backrow,
+                        "library": ["core-008", "core-005", "core-067", "core-030", "core-053", "core-005"],
+                        "graveyard": ["core-008", "core-005"], "mana": 10 },
+                    "p2": { "hand": ["core-008", "core-005"],
+                        "field": [{ "def": "core-053", "lane": 1 }, { "def": "core-030", "lane": 4 }],
+                        "library": ["core-008", "core-005", "core-067", "core-030", "core-053", "core-005"],
+                        "graveyard": ["core-008"] },
+                }))
+            };
+            let Ok(s) = catch_unwind(AssertUnwindSafe(build)) else { continue };
+            let root = s.state().clone();
+            let tested_id = if on_field {
+                let u = active_units_of(&root, AI).into_iter().find(|u| u.def_id == *def_id).map(|u| u.id.clone());
+                let b = root.players[AI].backrow.iter().flatten().find(|c| c.def_id == *def_id).map(|c| c.id.clone());
+                match u.or(b) { Some(id) => id, None => continue }
+            } else {
+                root.players[AI].hand[0].id.clone()
+            };
+            let counter = create_node_counter(10_000_000, None);
+            let all = legal_actions(&root, AI);
+            let tested: Vec<ActionBody> = all.iter().filter(|a| names_instance(a, &tested_id)).take(6).cloned().collect();
+            // fillers: one per other source, first variant aimed at the enemy hero when it has one
+            let mut fillers: Vec<ActionBody> = Vec::new();
+            let mut seen_src: Vec<String> = Vec::new();
+            for a in &all {
+                if names_instance(a, &tested_id) { continue; }
+                let src = match a {
+                    ActionBody::Play { instance_id, .. } => format!("p{instance_id}"),
+                    ActionBody::Attack { attacker_id, target_id } if target_id == "hero-p2" => format!("a{attacker_id}"),
+                    _ => continue,
+                };
+                if seen_src.contains(&src) { continue; }
+                let aimed = match a {
+                    ActionBody::Play { targets: Some(t), .. } => matches!(t.first(), Some(Selection::Hero { player }) if *player == PlayerId::P2),
+                    _ => true,
+                };
+                if !aimed { continue; }
+                seen_src.push(src);
+                fillers.push(a.clone());
+            }
+            for t in &tested {
+                for f in &fillers {
+                    let run = |first: &ActionBody, second: &ActionBody| -> Option<GameState> {
+                        let a = simulate(&root, AI, first, &counter, Prices::NONE)?.ok()?;
+                        if a.pending.is_some() || line_status(&a, AI, root.turn) != LineStatus::Open { return None; }
+                        let second = find_action(&a, &action_key(second))?;
+                        let b = simulate(&a, AI, &second, &counter, Prices::NONE)?.ok()?;
+                        if line_status(&b, AI, root.turn) != LineStatus::Open { return None; }
+                        Some(b)
+                    };
+                    let (Some(x), Some(y)) = (run(t, f), run(f, t)) else { continue };
+                    if search_signature(&x, AI) != search_signature(&y, AI) || unit_lanes(&x) != unit_lanes(&y) { continue; }
+                    let mut out = Vec::new();
+                    diff(&serde_json::to_value(&x).unwrap(), &serde_json::to_value(&y).unwrap(), "", &mut out);
+                    let mut paths: Vec<String> = out.iter().map(|line| {
+                        let p = line.split(':').next().unwrap_or("").to_string();
+                        let mut norm = String::new();
+                        for part in p.split('/') { if part.chars().all(|c| c.is_ascii_digit()) && !part.is_empty() { norm.push_str("/#"); } else if !part.is_empty() { norm.push('/'); norm.push_str(part); } }
+                        norm
+                    }).filter(|p| !p.contains("turnLog/playedIds") && !p.contains("turnLog/costsPaid") && !p.contains("/graveyard/") && !p.contains("/fieldExits") && !p.starts_with("/counters") && !p.contains("/exile/")).collect();
+                    paths.sort(); paths.dedup();
+                    if paths.is_empty() { continue; }
+                    let ex = evaluate(&x, AI, NextSwing::Enemy, &AI_EVAL);
+                    let ey = evaluate(&y, AI, NextSwing::Enemy, &AI_EVAL);
+                    let lx: Vec<String> = legal_actions(&x, AI).iter().map(action_key).collect();
+                    let ly: Vec<String> = legal_actions(&y, AI).iter().map(action_key).collect();
+                    let tag = format!("{}{}", if ex != ey { "EVAL " } else { "" }, if lx != ly { "LEGAL " } else { "" });
+                    kinds.entry(format!("{tag}{}", paths.join(" "))).or_default().push(format!("{def_id}{}{} + {}", if radiant {"*"} else {""}, if on_field {"@field"} else {""}, action_key(f)));
+                }
+            }
+        }
+    }
+    for (kind, cards) in &kinds {
+        let mut names: Vec<&String> = cards.iter().collect();
+        names.dedup();
+        println!("ORDER {} x{}\n    {:?}", kind, cards.len(), names.iter().take(6).collect::<Vec<_>>());
+    }
+}

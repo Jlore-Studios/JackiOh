@@ -133,12 +133,45 @@ fn every_instance(state: &GameState) -> Vec<&CardInstance> {
     out
 }
 
+
+/// Objects of the redacted JSON that name a hidden instance by id beside a readable definition.
+fn named_hidden(v: &Value, hidden: &indexmap::IndexSet<String>, path: &str, out: &mut Vec<(String, String)>) {
+    match v {
+        Value::Array(items) => {
+            for item in items {
+                named_hidden(item, hidden, &format!("{path}[]"), out);
+            }
+        }
+        Value::Object(fields) => {
+            let names_hidden = fields.iter().any(|(key, value)| {
+                key != "formerId" && value.as_str().is_some_and(|text| hidden.contains(text))
+            });
+            if names_hidden {
+                for (key, value) in fields {
+                    let lower = key.to_lowercase();
+                    if (lower.ends_with("defid") || lower == "radiant" || lower == "cost" || lower == "x")
+                        && value.as_str() != Some("ai:hidden")
+                        && !(lower == "radiant" && value == &Value::Bool(false))
+                    {
+                        out.push((format!("{path}.{key}"), serde_json::to_string(v).unwrap_or_default()));
+                    }
+                }
+            }
+            for (key, item) in fields {
+                named_hidden(item, hidden, &format!("{path}.{key}"), out);
+            }
+        }
+        _ => {}
+    }
+}
+
 #[test]
 fn explore_taint() {
     jackioh_cards::register_all();
     let mut tally: indexmap::IndexMap<String, (usize, String)> = indexmap::IndexMap::new();
     let games: usize = std::env::var("AUDIT_GAMES").ok().and_then(|v| v.parse().ok()).unwrap_or(10);
-    for game in 0..games {
+    let first: usize = std::env::var("AUDIT_FIRST").ok().and_then(|v| v.parse().ok()).unwrap_or(0);
+    for game in first..first + games {
         let seed = format!("audit-taint-{game}");
         let mut state = begin_game(&create_game(&CreateGameOptions {
             seed: seed.clone(),
@@ -157,29 +190,19 @@ fn explore_taint() {
             }
             state = result.state;
             n += 1;
-            if n % 3 != 0 {
-                continue;
-            }
             for seat in PLAYER_IDS {
                 let hidden = hidden_instance_ids(&state, seat);
                 let seen = redact(&state, seat);
                 let v = js(&seen);
-                let visible: indexmap::IndexSet<String> = every_instance(&state)
-                    .into_iter()
-                    .filter(|card| !hidden.contains(&card.id))
-                    .map(|card| card.def_id.clone())
-                    .collect();
-                for id in &hidden {
-                    let Some(card) = find_instance(&state, id) else { continue };
-                    if visible.contains(&card.def_id) {
-                        continue;
+                let mut hits = Vec::new();
+                named_hidden(&v, &hidden, "", &mut hits);
+                for (path, object) in hits {
+                    if path.starts_with(".players.") && (path.contains(".hand[]") || path.contains(".library[]") || path.contains(".backrow[]") || path.contains(".backrowPiles[]") || path.contains(".resolving[]")) && !path.contains("memory") {
+                        // the placeholder itself: check separately
+                        if path.ends_with(".cost") || path.ends_with(".x") { continue; }
                     }
-                    let mut hits = Vec::new();
-                    find_string(&v, &card.def_id, "", &mut hits);
-                    for hit in hits {
-                        let entry = tally.entry(hit).or_insert((0, format!("{seed} n={n} seat={seat} card={} def={} zone={:?}", card.id, card.def_id, card.zone)));
-                        entry.0 += 1;
-                    }
+                    let entry = tally.entry(path).or_insert((0, format!("{seed} n={n} seat={seat} pendingOf={:?} {}", state.pending.as_ref().map(|p| p.player_id), object.chars().take(600).collect::<String>())));
+                    entry.0 += 1;
                 }
             }
         }
