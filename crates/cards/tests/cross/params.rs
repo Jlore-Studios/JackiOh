@@ -682,6 +682,10 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("infiniteassault-005", PRICE),
         ("infiniteassault-021", PRICE),
         ("infiniteassault-024", PRICE),
+        // C6 (#4590): IA #123's hike, #131's and #144's Cost caps and #144's hike.
+        ("infiniteassault-123", PRICE),
+        ("infiniteassault-131", PRICE),
+        ("infiniteassault-144", PRICE),
         // R4586009: Brittle counts; #34's price.
         ("infiniteassault-028", KEYWORD),
         ("infiniteassault-034", PRICE),

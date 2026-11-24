@@ -184,6 +184,7 @@ pub mod hotseat_smoke;
 pub mod immutable;
 pub mod instance_data;
 pub mod invariants;
+pub mod jailbreak_verbs;
 pub mod keyword_via;
 pub mod kill_credit;
 pub mod ky_competition;

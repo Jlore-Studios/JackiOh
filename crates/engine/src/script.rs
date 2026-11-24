@@ -661,6 +661,10 @@ pub struct StaticFlags {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mana_per_turn: Option<i32>,
     // Meditative
+    /// R4590001 (IA #142 The Jailbreaker): while this card acts on the field, its controller's
+    /// opponent's Spells have their targets chosen randomly.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub random_opponent_spell_targets: Option<bool>,
     /// R981–R984, Meditative #40 Feng Shui: while this card acts on the field, it judges every face-up
     /// play at §10.5 step 3 by its element against its player's last (`subsystems::feng_shui`). On its
     /// Radiant face it rewards only its controller's plays and punishes only the opponent's.
@@ -1123,6 +1127,10 @@ pub struct Script {
     /// Ceaseless Void's computed cost (R55); everything else uses the printed cost.
     pub cost: Option<CostHook>,
     pub cry: Option<Hook>,
+    /// R4590000 (IA #134 Rootkit Runner): "When this is revealed", run once a Unit set face-down
+    /// by its Cloaked has come out and its Cry has run, as its controller. It never runs on a
+    /// face-up play.
+    pub revealed: Option<Hook>,
     pub death: Option<Hook>,
     /// After the mulligan, before turn 1: only Heroic Power uses it (§6.2, R43).
     pub start_of_game: Option<Hook>,
@@ -1361,6 +1369,7 @@ impl Script {
     pub fn hook_named(&self, name: &str) -> Option<&Hook> {
         match name {
             "cry" => self.cry.as_ref(),
+            "revealed" => self.revealed.as_ref(),
             "death" => self.death.as_ref(),
             "startOfGame" => self.start_of_game.as_ref(),
             "entersHand" => self.enters_hand.as_ref(),

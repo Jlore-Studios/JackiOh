@@ -1323,6 +1323,9 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
             "Your next Spell this turn has {}",
             crate::wire::keyword_key(keyword)
         ),
+        // R4590001: IA #130 Prompt Injection's "your opponent's next Spell has its targets chosen
+        // randomly", read from the affected side.
+        ModifierKind::RandomTargetsNextSpell => "Your next Spell has its targets chosen randomly".to_string(),
         // R1859007: Stinkyscape's War Doctrines' "for the rest of the game, your Units have X". R1870004:
         // #4.4 Last Word's "your Units have Charge during it", the turn named until it comes.
         ModifierKind::UnitsHaveKeyword { keyword, .. } => format!(

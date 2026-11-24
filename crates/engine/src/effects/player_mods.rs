@@ -143,6 +143,36 @@ pub fn price_next_spell_in_health(args: HealthPriceArgs) -> Effect {
     })
 }
 
+/// `randomTargetsNextSpells`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct RandomTargetsNextSpellsArgs {
+    /// How many of the player's next face-up Spells have their targets drawn at random (IA #130
+    /// Prompt Injection: 1, its Radiant face 2).
+    pub count: i32,
+    /// Whose next Spells, relative to the controller. Default "self".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+}
+
+/// R4590001 (IA #130 Prompt Injection): the player's next `count` face-up Spells have their declared
+/// targets drawn at random — a `used` modifier each, spent one per Spell at §10.5 step 4
+/// (`play_steps::spend_random_targets_next_spell`). A countered play spends none (R90).
+pub fn random_targets_next_spells(args: RandomTargetsNextSpellsArgs) -> Effect {
+    Effect::new("randomTargetsNextSpells", move |ctx| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        for _ in 0..args.count.max(0) {
+            add_modifier(
+                ctx,
+                player,
+                ModifierExpiry::Used,
+                ModifierKind::RandomTargetsNextSpell,
+            );
+        }
+    })
+}
+
 /// `giveNextSpellKeyword`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]

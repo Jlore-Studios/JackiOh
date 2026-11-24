@@ -126,7 +126,8 @@ fn without_parenthetical(name: &str) -> String {
 }
 
 /// R903: one named alias — "Coin" names The Coin, which M #27's texts call by the short name.
-const ALIASES: &[(&str, &str)] = &[("The Coin", "Coin")];
+/// IA #143 names its token in the plural, which the single-s plural check in `names` misses (R279).
+const ALIASES: &[(&str, &str)] = &[("The Coin", "Coin"), ("Corrupted Process", "Corrupted Processes")];
 
 fn names_of(def: &CardDef) -> Vec<String> {
     let bare = without_parenthetical(&def.name);
