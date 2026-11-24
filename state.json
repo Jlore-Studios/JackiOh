@@ -21566,7 +21566,9 @@
     },
     "45414762279": {
       "at": "2026-11-24T14:37:52Z",
+      "done": true,
       "ref": "bcba8ae7-1795530566",
+      "status": "interrupted",
       "tries": 1
     }
   },
