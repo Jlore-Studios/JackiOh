@@ -44465,6 +44465,7 @@
       {
         "at": "2026-11-24T18:58:00Z",
         "number": 4770,
+        "reason": "confirmed. Edwin Van'Spacechief's script declares `condition_met` and `cry` but no `preview`, though its Cry computes its gain from the cards played earlier this turn, and \u00a710.8 has every card whose text computes a number from the board carry it as `preview` (R280). Quickstriker counts the same thing and already previews it, so this is a small fix that copies an existing hook, and players stop counting their earlier plays by hand.",
         "title": "Patch: Edwin Van'Spacechief previews its Combo gain",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
