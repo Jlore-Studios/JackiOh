@@ -43,6 +43,12 @@
     "max_open": 10,
     "spare_lanes": 1,
     "idle_minutes": 0,
+    "auto_approve": {
+      "enabled": true,
+      "wait_hours": 24,
+      "per_day": 3,
+      "window": 100
+    },
     "priorities": {
       "fuzz": "low",
       "checks": "low",

@@ -35857,7 +35857,7 @@
     },
     "radiant": {
       "attack": 6,
-      "health": 1,
+      "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"

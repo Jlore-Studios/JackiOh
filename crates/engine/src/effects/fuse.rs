@@ -390,9 +390,16 @@ pub struct FuseRandomIntoArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub count: Option<i32>,
     /// R3558003: the pool leaves out every card already a fusion, judged by its definition
-    /// (`subsystems::fuse::fused_ingredients`) — a filled Smoothie is never filled again.
+    /// (`subsystems::fuse::fused_ingredients`) — a filled Smoothie is never filled again. With `asText`,
+    /// a card that already runs a text it gained this way is left alone too (R4440006).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unfused_only: Option<bool>,
+    /// R4440006 (a Smoothie since issue #4440): the picks are not fused into the kept card. Their fusion is
+    /// minted as a definition of its own (`subsystems::fuse::mint_text_def`) and the kept card runs its
+    /// text (R1850000's record, `subsystems::unit_text`), keeping its own instance, name, cost, type,
+    /// tags, rarity and art: it is no fusion, and a play of it is no play of the picks.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub as_text: Option<bool>,
 }
 
 /// E23 (Classic+ #31 Fusion Lab, #73): for each kept card, the one `into.target` names or every card
@@ -425,7 +432,9 @@ pub fn fuse_random_into(args: FuseRandomIntoArgs) -> Effect {
             // R3558003: with `unfusedOnly`, a card already a fusion is left alone — a filled
             // Smoothie is never filled again.
             if args.unfused_only == Some(true)
-                && crate::subsystems::fuse::fused_ingredients(ctx.sink.state, &card.def_id).is_some()
+                && (crate::subsystems::fuse::fused_ingredients(ctx.sink.state, &card.def_id).is_some()
+                    || (args.as_text == Some(true)
+                        && crate::subsystems::unit_text::unit_text_of(&card).is_some()))
             {
                 continue;
             }
@@ -443,6 +452,10 @@ pub fn fuse_random_into(args: FuseRandomIntoArgs) -> Effect {
                     card.owner,
                     Zone::Gone { player: card.owner },
                 ));
+            }
+            if args.as_text == Some(true) {
+                gain_fused_text(ctx, &card, &ingredients, args.radiant == Some(true));
+                continue;
             }
             let on_field = card.zone.z() == ZoneName::Field;
             let radiant_ingredients = if args.radiant == Some(true) {
@@ -472,6 +485,30 @@ pub fn fuse_random_into(args: FuseRandomIntoArgs) -> Effect {
             );
         }
     })
+}
+
+/// R4440006: `card` runs the text of `ingredients` fused, each on its Radiant face with `radiant`
+/// (R469), through R1850000's record on its own memory, which R215's reset ends as it lands from a play
+/// (or R78's as it leaves the field). No event reports it: the card stays where it is as it was, and its
+/// owner's view shows the text it runs (`CardView.copies`). Nothing happens when the fusion would not be
+/// made (`mint_text_def`).
+fn gain_fused_text(
+    ctx: &mut EffectContext<'_>,
+    card: &CardInstance,
+    ingredients: &[CardInstance],
+    radiant: bool,
+) {
+    let forced = vec![radiant; ingredients.len()];
+    let Some(def_id) = crate::subsystems::fuse::mint_text_def(ctx.sink.state, ingredients, &forced) else {
+        return;
+    };
+    let Some(live) = crate::state::find_instance_mut(ctx.sink.state, &card.id) else {
+        return;
+    };
+    live.memory.insert(
+        crate::subsystems::unit_text::UNIT_TEXT_KEY.to_string(),
+        serde_json::json!({ "defId": def_id, "radiant": false }),
+    );
 }
 
 // The weapon kit: Equip from a pick (#1841, R1841002; SPEC §6.1 Equip).
@@ -549,6 +586,7 @@ pub fn equip_picks(args: EquipPicksArgs) -> Effect {
                         keep_cost: Some(false),
                         count: None,
                         unfused_only: None,
+                        as_text: None,
                     });
                     (random.apply)(ctx);
                 }

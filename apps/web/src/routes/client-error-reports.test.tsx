@@ -51,6 +51,9 @@ describe("#3619 the boundary reports a crash", () => {
       </RouteErrorBoundary>,
     );
     expect(screen.getByTestId(shellTestid.loadFailed)).toBeInTheDocument();
-    expect(fetchMock).not.toHaveBeenCalled();
+    // R4605000: the boundary checks /version.json on a chunk failure; that static read is not a
+    // report. Nothing reaches the owners: no call posts to /api/client-errors.
+    const requested = fetchMock.mock.calls.map((call) => String(call[0]));
+    expect(requested.filter((url) => url.includes("/api/client-errors"))).toEqual([]);
   });
 });

@@ -680,8 +680,9 @@ export function decide(state: GameState, seat: PlayerId, options: AiOptions): De
    a world does not offer (each world draws its own Discover) gives way to that world's best answer
    (#1636), so every finalist is scored after the reply. Any other step a world does not offer cuts
    the replay there, counted in `stats.replaysCut`, and with `AI_SEARCH.replay_fill_steps` above 0
-   that world's turn is played on greedily before it ends (R4447000). The best mean over all K wins (ties go to
-   det-0 order). If the counter ran out before any reply was scored, the static scores decide as
+   that world's turn is played on greedily before it ends (R4447000). The best mean over all K wins, a
+   finalist that won on `dets[0]` alone taking its mean on the others (R4608000) (ties go to det-0
+   order). If the counter ran out before any reply was scored, the static scores decide as
    they would without the reply. Reason `"prompt"` if `pub.pending` was the seat's, else `"search"`.
 7. If no line was ever scored (all simulations failed or the budget was 0): `endTurn` if it is a
    candidate, else `cands[0]`, with reason `"fallback"`. Every internal throw is caught and counted
