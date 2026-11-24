@@ -526,6 +526,8 @@ fn compute_layers_on(
     // Layer 4: permanent buffs.
     attack += instance.buffs.attack;
     max_health += instance.buffs.health;
+    // R4587000: "+N Attack this turn" holds while its turn is now.
+    attack += crate::effects::turn_buff::turn_buff_of(state, instance).map_or(0, |buff| buff.attack);
 
     // Layer 5: auras. A card dormant under a Stack pile is "not on the field for effects" (§3.2, R13),
     // so no aura reaches it until it resumes on top (one shrinking max health, #46, would kill it).
@@ -559,6 +561,10 @@ fn compute_layers_on(
     }
     listed.extend(conditional_keywords_of(state, instance));
     listed.extend(instance.granted_keywords.iter().cloned());
+    // R4587000: "and <keywords> this turn", beside the granted keywords while its turn is now.
+    if let Some(held) = crate::effects::turn_buff::turn_buff_of(state, instance) {
+        listed.extend(held.keywords.iter().cloned());
+    }
     for modifier in &auras {
         listed.extend(modifier.keywords.iter().flatten().cloned());
     }
@@ -619,7 +625,9 @@ fn compute_layers_on(
 pub fn stats_with_buffs(state: &GameState, instance: &CardInstance) -> BuffedStats {
     let printed = face_of(state, instance);
     BuffedStats {
-        attack: printed.attack + instance.buffs.attack,
+        attack: printed.attack
+            + instance.buffs.attack
+            + crate::effects::turn_buff::turn_buff_of(state, instance).map_or(0, |buff| buff.attack),
         max_health: printed.health + instance.buffs.health,
     }
 }

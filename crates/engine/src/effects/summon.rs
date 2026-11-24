@@ -913,6 +913,8 @@ pub fn clone_of(
         attack: source.buffs.attack,
         health: source.buffs.health,
     };
+    // R4587000: a copy keeps the source's this-turn buff (R57).
+    copy.turn_buff = source.turn_buff.clone();
     copy.vanilla = args.vanilla == Some(true) || source.vanilla;
     if args.granted_keywords != Some(false) {
         copy.granted_keywords = source.granted_keywords.clone();

@@ -128,6 +128,9 @@ pub mod prelude;
 #[cfg(feature = "testkit")]
 pub mod testkit;
 
+#[cfg(test)]
+mod tmp_debug;
+
 pub use wire::*;
 
 pub use animated::*;
