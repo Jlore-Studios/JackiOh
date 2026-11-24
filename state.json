@@ -19481,15 +19481,6 @@
       "failures": 0,
       "feedback_since": "2026-11-24T11:45:16Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-24T12:06:42Z",
-        "family": "muse",
-        "kind": "work",
-        "notes": "",
-        "provider": "muse",
-        "reason": "the failing CI check passed locally and nothing needed changing, so CI runs again on the same head, with no commit",
-        "trail": "- <!-- bot: {\"ci_local\": \"passed\", \"status\": \"done\", \"title\": \"Patch: the clock alarm covers the mulligan and background tabs\"} -->\n- No changes made. The CI failure is not this branch's doing: the failed job `web (unit 6/8)` timed out on the old single-test version of `src/cards/art/art.test.ts` (\"B1 equal arguments give deep-equal specs for every catalog card, and Math.random is never called\" at line 62:3, one test over the who\u2026\n- Verification on this head, `main` merged in:\n- - `pnpm --dir apps/web test src/cards/art/art.test.ts` \u2014 36 passed, 1 file passed (B1 slices run 400\u20131000 ms each).\n- - `pnpm --dir apps/web test src/audio/engine.test.ts src/audio/clockAlarm.test.ts src/game/Clock.test.tsx src/audio/AudioControls.test.tsx` \u2014 177 passed, confirming the merge did not disturb the branch's own tests.\n- - `cargo jackioh spec check` was started to confirm the cited R-ids still resolve; the tree is clean (`git status` empty) and no commit is needed, so the harness can re-run CI on this head as-is.\n- One observation for the record: the merge-queue build tested the pre-merge head, so it timed out on code `main` had already fixed; nothing further to fix here.\n- `cargo jackioh spec check` finished: ok \u2014 2450 rulings, 6123 proofs. Tree is clean. Nothing further changed; the head stands as reported.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4716 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4716/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
-      },
       "interruptions": 0,
       "issue": 4682,
       "kind": "review",
