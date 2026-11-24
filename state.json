@@ -19288,6 +19288,13 @@
     "4814": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45487170420",
+        "model": "opus",
+        "provider": "claude-3",
+        "since": "2026-11-24T21:23:46Z",
+        "until": "2026-11-24T21:53:46Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
