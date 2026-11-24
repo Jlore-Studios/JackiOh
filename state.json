@@ -20208,6 +20208,8 @@
       }
     },
     "4859": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T21:05:44Z",
@@ -20221,8 +20223,11 @@
         "trail": "- Status: implementation, ruling note, and all three test files are written; `actions.test.ts` is running now with the rest of the verification queue behind it.<!-- bot: {\"status\": \"done\", \"title\": \"Patch: a card or hero an open target prompt lights on the board answers it when clicked, as the Plague\u2026\n- ## What changed\n- An open one-pick `target` prompt is now answered by clicking a glowing card, hero, or face-down card's zone on the board, sending exactly the engine's listed `answer` at once; a several-pick prompt toggles the clicked option in the open picker's selection and sends nothing until Confirm. The list a\u2026\n- - [actions.ts](/home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-4781/apps/web/src/game/actions.ts): new `matchTargetOption` (lit card by id, lit hero by seat, face-down card by zone; never placement, never another kind/seat, never hand/zone-selection/list-only clicks), `answerTargetProm\u2026\n- - [Game.tsx](/home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-4781/apps/web/src/game/Game.tsx): `handleClick` tries the one-pick answer (dispatch) then the several-pick hand-off (`boardPickRef` toggle) before `onClickTarget`, so offered clicks never reach the attack-notice path; `clickR\u2026\n- - [Prompt.tsx](/home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-4781/apps/web/src/game/Prompt.tsx): `pickerForPending` sets `boardKeys` for several-pick target prompts (never `boardOnly`); `PromptModal` registers its `pick` into the new `boardPickRef` with cleanup to null.\n- - Ruling [R4781000](/home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-4781/spec/rulings/R4781000.md), pending paragraph [4781.md](/home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-4781/spec/pending/4781.md), one \u00a710.6 sentence.\n- ## Tests\n- New `R4781000` blocks in `actions.test.ts`, `Game.test.tsx` (single-pick clicks on enemy unit, own unit, hero, face-down zone each send exactly that option's answer with call counts; no attack notice; multi-pick toggle/untoggle/Confirm; opponent's prompt, mode prompt, replay guards), and `Prompt.te\u2026\n- ## Decisions\n- - Departure from the plan: `Prompt`'s document click/keydown listener (R514) is gated to non-`target` chromes. A zone click bubbles to both `Game.handleClick` and that listener, which would have toggled a multi-pick option twice (net no-op); lit-card clicks stop propagation so they were safe. Rejec\u2026\n- - Rejected (per issue): dropping the list for one-pick targets; R3864000 kept target lists.\n- - Reviewer note: the multi-pick toggle test asserting `aria-pressed` stays `true` after one board click is the double-answer guard \u2014 it fails if a click ever picks twice.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-4781 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-4781/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4781,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-24T22:04:00Z",
         "from_run": "45487566935",
         "gates": [
           {
@@ -20281,8 +20286,15 @@
         "source": "build",
         "until": "2026-11-24T22:32:55Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-24T22:02:55Z",
+      "run_id": "pending:d77ec3f5-1795557808",
+      "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
+      "started_at": "2026-11-24T22:04:00Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -20296,9 +20308,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T21:52:30Z",
+    "at": "2026-11-24T22:04:00Z",
     "url": "",
-    "what": "plan #4838 on agy"
+    "what": "review #4859 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T21:48:34Z",
