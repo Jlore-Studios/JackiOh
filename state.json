@@ -21754,12 +21754,14 @@
     "what": "plan #4761 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-24T17:23:54Z",
+    "at": "2026-11-24T17:33:09Z",
     "notes": [
-      "#4732: `claude-3` can start again, so its hold is lifted",
-      "started review #4649 on claude-7 (run 45448395346)",
-      "started build #4732 on claude-3 (run 45448528472)",
-      "nothing more to start: nothing is queued"
+      "delivered suggest on muse (run 45446879431): suggested",
+      "delivered build #4751 on muse (run 45429868584): built",
+      "started review #4762 on muse (run 45450338600)",
+      "started plan #4761 on muse (run 45450503478)",
+      "nothing more to start: nothing is queued",
+      "#4761: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22465,7 +22467,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-24T17:23:54Z",
+  "loop_tick": "2026-11-24T17:33:09Z",
   "machine_disk": {
     "issue": null,
     "reading": {
