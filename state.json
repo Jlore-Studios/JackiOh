@@ -21621,6 +21621,14 @@
           "muse": "medium"
         }
       }
+    },
+    "4768": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-24T17:26:01Z",
+      "issue": 4732,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
