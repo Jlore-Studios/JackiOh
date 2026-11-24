@@ -44,6 +44,7 @@ export default function HandHints({
           data-dimmed={pip.dimmed === true ? "true" : undefined}
           role="img"
           aria-label={pip.label}
+          title={pip.label}
         >
           <Icon name={hint.icon} />
           {pip.n === undefined ? null : (
