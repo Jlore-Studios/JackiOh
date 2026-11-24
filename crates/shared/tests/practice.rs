@@ -1139,6 +1139,7 @@ fn assault_config(seed: &str) -> PracticeConfig {
         enemy_deck: enemy_deck.clone(),
         enemy_handicap: enemy,
         enemy_marks: marks.clone(),
+        enemy_sets: Vec::new(),
         level: jackioh_run::AssaultLevel {
             level: 1,
             enemy: "Enemy".to_string(),
@@ -1188,6 +1189,26 @@ fn r4582000_an_assault_fight_is_created_from_its_setup_a_game_of_its_own_kind() 
     assert!(session.kept.is_empty());
     assert_eq!(session.save, Some(None));
     assert_eq!(session.records.len(), 1);
+}
+
+/// R4595000: an Assault fight names its enemy's sets at the AI's seat, so the game keeps them and the
+/// AI's and the hint's determinizations read them; a fight that names none stores nothing
+#[test]
+fn r4595000_an_assault_fight_names_the_enemys_sets_at_the_ais_seat() {
+    let mut setup = assault_config("practice-r4595000");
+    let enemy_deck: Vec<String> = (1..=12).map(|n| format!("infiniteassault-{n:03}")).collect();
+    let assault = setup.assault.as_mut().expect("an Assault fight");
+    assault.enemy_deck = enemy_deck.clone();
+    assault.level.deck = enemy_deck;
+    assault.enemy_sets = vec![jackioh_engine::SetName::InfiniteAssault];
+    let session = Session::start(&setup).expect("starts");
+    let sets = session.host.fold_args().deck_sets.expect("the enemy's sets");
+    assert_eq!(
+        (sets.p1, sets.p2),
+        (None, Some(vec![jackioh_engine::SetName::InfiniteAssault]))
+    );
+    let unnamed = Session::start(&assault_config("practice-r4595000-none")).expect("starts");
+    assert!(unnamed.host.fold_args().deck_sets.is_none());
 }
 
 #[test]

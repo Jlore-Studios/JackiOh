@@ -6,7 +6,7 @@ use crate::assault::content::content_file;
 use crate::assault::day::MONTH_DAYS;
 use crate::config::{
     ASSAULT_COMMANDER_HEALTH, ASSAULT_COMMANDER_LEVELS, ASSAULT_DECK_SIZE, ASSAULT_HERO_HEALTH,
-    ASSAULT_HISTORY_DAYS, ASSAULT_LEVELS, ASSAULT_UPGRADES,
+    ASSAULT_HISTORY_DAYS, ASSAULT_LEVELS, ASSAULT_SET, ASSAULT_UPGRADES,
 };
 use jackioh_engine::catalog::{deckable, registered_catalog};
 use jackioh_engine::config::{HUMAN_HANDICAP, Handicap};
@@ -771,7 +771,7 @@ fn an_attempt_file_folds_back_to_its_state_and_names_a_refused_step() {
 }
 
 #[test]
-fn the_fight_setup_answers_only_in_a_fight_with_its_seed_decks_and_handicaps() {
+fn r4595000_the_fight_setup_answers_only_in_a_fight_with_its_seed_decks_handicaps_and_sets() {
     let content = set_content();
     let date = "2027-05-06";
     let day = day_for(&content, date);
@@ -796,6 +796,8 @@ fn the_fight_setup_answers_only_in_a_fight_with_its_seed_decks_and_handicaps() {
     assert_eq!(answered.enemy_deck, day.levels[0].deck);
     assert_eq!(answered.enemy_handicap, day.levels[0].handicap);
     assert_eq!(answered.enemy_marks, day.levels[0].marks);
+    // R4595000: the enemy's deck is the Assault's set, and the setup says so.
+    assert_eq!(answered.enemy_sets, vec![ASSAULT_SET]);
     assert_eq!(answered.level, day.levels[0]);
     // Another day answers nothing, nor does a level it does not hold.
     let other = day_for(&content, "2027-05-07");

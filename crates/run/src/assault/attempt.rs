@@ -11,7 +11,7 @@ use crate::assault::{
     AssaultAction, AssaultDay, AssaultFightSetup, AssaultFile, AssaultPhase, AssaultRecord, AssaultSetup,
     AssaultState, checkpoints, commander_rank,
 };
-use crate::config::ASSAULT_LEVELS;
+use crate::config::{ASSAULT_LEVELS, ASSAULT_SET};
 use crate::{RunAction, run_fight_report};
 
 /// IA6: an attempt at its start: the setup checked against the day and the record. The deck is
@@ -182,6 +182,8 @@ pub fn assault_fight_setup(state: &AssaultState, day: &AssaultDay) -> Option<Ass
         enemy_deck: level.deck.clone(),
         enemy_handicap: level.handicap,
         enemy_marks: level.marks.clone(),
+        // R4595000: the enemy's deck is the Assault's set, and the game says so.
+        enemy_sets: vec![ASSAULT_SET],
         level,
     })
 }

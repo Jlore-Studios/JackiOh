@@ -600,6 +600,8 @@ pub fn recorded_start(input: &FoldArgs) -> GameState {
         deck_marks: input.deck_marks.clone(),
         // R3049000: and the win-rate snapshot, or CN Tech and NA Tech pick other cards.
         win_rates: input.win_rates.clone(),
+        // R4595000: and the deck sets, which the state keeps.
+        deck_sets: input.deck_sets.clone(),
         ..Default::default()
     })
 }

@@ -100,3 +100,99 @@ fn r2102000_two_states_that_differ_only_in_the_ais_hidden_cards_give_one_answer(
         }
     }
 }
+
+// R4595000: an Infinite Assault enemy's deck is dealt from its own set, which the game names, so the
+// hint (and the AI) resample its unseen cards from Infinite Assault cards alone.
+
+const ASSAULT_A: Hidden = Hidden {
+    hand: ["infiniteassault-001", "infiniteassault-002"],
+    library: [
+        "infiniteassault-003",
+        "infiniteassault-004",
+        "infiniteassault-005",
+    ],
+    trap: "infiniteassault-029",
+};
+
+const ASSAULT_B: Hidden = Hidden {
+    hand: ["infiniteassault-006", "infiniteassault-007"],
+    library: [
+        "infiniteassault-008",
+        "infiniteassault-009",
+        "infiniteassault-010",
+    ],
+    trap: "infiniteassault-148",
+};
+
+/// `board`, the AI's deck named as dealt from the Infinite Assault (R4595000).
+fn assault_board(seed: &str, hidden: &Hidden, trapped: bool, health: i32) -> GameState {
+    let mut state = board(seed, PlayerId::P2, hidden, trapped, health);
+    state.players.p1.deck_sets = Some(vec![SetName::InfiniteAssault]);
+    state
+}
+
+/// The AI's cards the human cannot see, in one determinization of `state` from the human's seat.
+fn sampled_hidden(state: &GameState, rng: &mut Rng) -> Vec<String> {
+    let world = determinize(&redact(state, HUMAN), HUMAN, rng, DeterminizeOptions::default());
+    let ai = &world.players.p1;
+    ai.hand
+        .iter()
+        .chain(ai.library.iter())
+        .chain(ai.backrow.iter().flatten())
+        .map(|card| card.def_id.clone())
+        .collect()
+}
+
+/// R4595000: the hint's worlds deal an Assault deck's hand, library and face-down card from Infinite
+/// Assault cards alone, the face-down card from its Traps of the cost it shows; a deck that names no
+/// set samples every set
+#[test]
+fn r4595000_the_lethal_hint_against_an_assault_deck_samples_infinite_assault_cards() {
+    let assault = assault_board("assault-hint", &ASSAULT_A, true, 6);
+    let mut rng = Rng::new("r4595000", 0);
+    for _ in 0..LETHAL_HINT_DETERMINIZATIONS {
+        let hidden = sampled_hidden(&assault, &mut rng);
+        assert_eq!(hidden.len(), 6);
+        for id in &hidden {
+            let def = find_def(None, id).expect("a catalog card");
+            assert_eq!(def.set, SetName::InfiniteAssault, "{id}");
+            assert!(!def.is_token(), "{id}");
+        }
+        let trap = find_def(None, &hidden[5]).expect("the face-down card");
+        assert!(
+            matches!(trap.type_, CardType::Trap | CardType::FieldTrap),
+            "{}",
+            trap.id
+        );
+    }
+    let mut unnamed = assault.clone();
+    unnamed.players.p1.deck_sets = None;
+    let mut rng = Rng::new("r4595000", 0);
+    let other_sets = (0..LETHAL_HINT_DETERMINIZATIONS)
+        .flat_map(|_| sampled_hidden(&unnamed, &mut rng))
+        .any(|id| find_def(None, &id).is_some_and(|def| def.set != SetName::InfiniteAssault));
+    assert!(other_sets, "a deck that names no set samples every set");
+}
+
+/// R4595000, R185: against an Assault deck the hint still answers from what the human sees alone,
+/// whichever Infinite Assault cards the AI hides, and lights a lethal no face-down card can stop
+#[test]
+fn r4595000_the_lethal_hint_against_an_assault_deck_reads_only_what_the_human_sees() {
+    for trapped in [false, true] {
+        for health in [6, 20] {
+            let a = assault_board("assault-hint-a", &ASSAULT_A, trapped, health);
+            let b = assault_board("assault-hint-b", &ASSAULT_B, trapped, health);
+            let case = format!("trapped {trapped}, health {health}");
+            assert_eq!(
+                hash_state(&redact(&a, HUMAN)),
+                hash_state(&redact(&b, HUMAN)),
+                "{case}"
+            );
+            let hint = lethal_hint(&a, HUMAN, None);
+            assert_eq!(lethal_hint(&b, HUMAN, None), hint, "{case}");
+            if !trapped {
+                assert_eq!(hint, health == 6, "{case}");
+            }
+        }
+    }
+}
