@@ -146,6 +146,10 @@ is the engine's `query::cleave_struck` less the target: a GIGA beside the target
 met once, and beside a Unit standing in the backrow only standing Units (R3546001, R1081000). Where such a
 splash through a GIGA meets a later Taunt, the walk tries a third order, that Cleave attacker first
 (`giga_cleave_read`, R4257000, #4257; off in `GREEDY_EVAL`, whose walk keeps the one-lane splash).
+On a slashed board a Taunt binds only the attackers on its own half: the walk asks `attack_restriction`,
+which refuses a Unit across the slash and lets a hero be attacked from either half, so a Taunt across the
+slash walls nothing in `face_threat`, `ready_gap` or `wall_switches` (R3554003, #4725; no flag, so
+`GREEDY_EVAL`'s walk reads it too).
 Each hit in the walk takes the Taunt's strike back (§4.3), read through the §4.4 steps that can stop it as a
 First Strike one is: an attacker it destroys still lands that hit but makes none of its later swings, a
 Windfury one's second included, and the wounds and popped shield it leaves carry to the attacker's next
