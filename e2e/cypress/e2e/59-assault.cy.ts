@@ -76,7 +76,8 @@ describe("59 Infinite Assault — the day's deck through level 1, kept over a re
 
   it("starts on the day's deck, wins level 1, keeps the attempt over a reload and ends it on Abandon", () => {
     cy.visit(ASSAULT);
-    cy.get(ts(assaultTestid.page), { timeout: BOOT_TIMEOUT }).should("be.visible");
+    // The page is a `display: contents` wrapper, which Cypress never counts as visible.
+    cy.get(ts(assaultTestid.page), { timeout: BOOT_TIMEOUT }).should("exist");
 
     // The day screen: a fresh record, the ladder, and the three deck sources.
     cy.get(ts(assaultTestid.record)).should("contain.text", "Best: level 0").and("contain.text", "Attempts: 0");
@@ -162,7 +163,7 @@ describe("59 Infinite Assault — the day's deck through level 1, kept over a re
     // Back on the day screen, after a reload too: level 1 beaten, no attempt open, a new one may start.
     cy.get(ts(assaultTestid.result)).contains("button", "Back to today").click();
     cy.reload();
-    cy.get(ts(assaultTestid.page), { timeout: BOOT_TIMEOUT }).should("be.visible");
+    cy.get(ts(assaultTestid.page), { timeout: BOOT_TIMEOUT }).should("exist");
     cy.get(ts(assaultTestid.record))
       .should("contain.text", `Best: level ${String(FIRST_LEVEL)}`)
       .and("contain.text", `Attempts: ${String(FIRST_ATTEMPT)}`);
