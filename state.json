@@ -42496,7 +42496,8 @@
       "2026-11-24T10:10:39Z,45371621615,claude-4,opus,plan,4585,medium,failed,,0,0,0,0,,4,4,,,1510.2,claude-1,none,other,0",
       "2026-11-24T10:03:49Z,45351422491,claude-3,opus,build,4675,hard,built,,91.5,251,102855,28892152,10.2083,16,97,,,117.3,claude-3,fresh,,1",
       "2026-11-24T10:22:20Z,45373591674,claude-4,opus,plan,4583,medium,failed,,0,0,0,0,,4,4,,,1522.2,claude-4,none,,0",
-      "2026-11-24T10:22:17Z,45373482076,claude-1,opus,plan,4584,medium,failed,,0,0,0,0,,60,60,,,1521.5,claude-1,none,,0"
+      "2026-11-24T10:22:17Z,45373482076,claude-1,opus,plan,4584,medium,failed,,0,0,0,0,,60,60,,,1521.5,claude-1,none,,0",
+      "2026-11-24T10:19:48Z,45373365464,claude-4,opus,plan,4585,medium,failed,,0,0,0,0,,4,4,,,1520.8,claude-4,none,,0"
     ]
   },
   "version": 1
