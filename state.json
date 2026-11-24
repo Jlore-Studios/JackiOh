@@ -20833,9 +20833,11 @@
         "by": "`muse` (medium)",
         "sha": "20a8906ac16d54aa8d9e52ceeabcea6909a74571"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T14:09:51Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-24T14:34:50Z",
         "family": "muse",
@@ -20845,6 +20847,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a dungeon or Assault fight that has ended keeps its result when the player leaves before Continue\"} -->\n- ## What changed\n- A finished dungeon or Assault fight now keeps its result the moment its report arrives, under ruling R4733000 (`spec/rulings/R4733000.md`, paragraph in `spec/pending/4733.md`):\n- - **Hold on arrival.** Each fight screen hands the worker's `fightOver` to its store the moment it arrives (`holdReport` / `hold`), stored beside the kept run (`jackioh.dungeon.held`, keyed by row/col) or attempt (`jackioh.assault.held`, keyed by attempt/level). Only the outcome action is held, nev\u2026\n- - **Continue applies and clears** the hold in the same write that appends the action.\n- - **Leaving applies it.** The dungeon's Menu now sends the report first (amending R3932000); both screens send any unsent held report on unmount, exactly once via a sent-guard (reset on refusal so retry-on-refusal still works).\n- - **Loading applies it.** A store that loads a kept run/attempt still on the held fight applies the report once through the run's own reduce; refused or mismatched holds are dropped and the fight is dealt fresh. Pre-change kept values without a hold load as before. Both stores also watch the held k\u2026\n- Files: `dungeon/store.ts`, `dungeon/fight/FightScreen.tsx`, `dungeon/config.ts`, `assault/store.ts` (`commitAction` extracted from `actOn` with identical behavior), `assault/fight/FightScreen.tsx` (new required `onHold` prop), `assault/AssaultPage.tsx`, `assault/config.ts`, plus the ruling notes. N\u2026\n- ## How tested\n- - `cargo jackioh spec check`: ok (2456 rulings, 6141 proofs).\n- - `pnpm --dir apps/web test` on the four touched files: dungeon store 39/39, dungeon fight + assault store + assault fight 63/63 \u2014 15 new `R4733000` tests (hold-on-arrival, Menu/unmount apply-once, Continue-then-leave/reload applies nothing, refused-hold dropped, lost ends run/attempt as after Cont\u2026\n- - Also pass: `DayScreen` (2) and `StartScreen` (21) tests (their fakes gained the new methods), `pnpm typecheck`, eslint on all 13 touched files, `cargo fmt --check`.\n- ## Decisions and reviewer notes\n- - Followed the plan; deviations: held keys added to both `storage`-event watch lists (the plan's race argument assumes it); dungeon `sendOnce` resets its guard on refusal; four store tests per side instead of three (added Continue-clears-hold).\n- - Accepted per the issue: a reload inside the worker's single round trip before the report arrives still deals the fight fresh; a reloaded Assault win lands on the next Briefing rather than the page-local after-level screen.\n- - Look twice at: the unmount effect (`sendRef` mirror, `[controller]` dep) and the assault `loadCore` apply path, where `commitAction` persists before the function returns.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4733 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4733/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4733,
       "kind": "review",
       "live": "reviewing",
