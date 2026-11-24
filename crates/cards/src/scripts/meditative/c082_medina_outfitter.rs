@@ -1,7 +1,7 @@
 //! M #82 Medina Outfitter (SPEC §8.8 row 82): (1) Unit, Common, 1/1 → 2/2.
 //!
-//! Base:    "Cry: Buff every card in your hand. You have {mana} less mana next turn."
-//! Radiant: "Cry: Buff every card in your hand {times|time|times}. You have {mana} less mana next turn."
+//! Base:    "Cry: Buff every card in your hand. Overload ({mana})."
+//! Radiant: "Cry: Buff every card in your hand {times|time|times}. Overload ({mana})."
 //! Engine: `upgrade({ scope: { side: "self", zones: ["hand"] }, times: param("times") })`: each card
 //! in the hand takes `times` separate Buffs (R386), each one draw (R442); an Immutable card is left
 //! alone; a hand is a pile the opponent cannot read, so every application is cued and none counted

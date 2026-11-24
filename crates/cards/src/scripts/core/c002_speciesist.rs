@@ -1,7 +1,7 @@
 //! SPEC §8.1 #2 Speciesist — 4/1 → 8/2 Unit, Human, cost 2 (7/1 → 14/2, cost 3 from issue #3837 until
 //! issue #4353; 4/1 → 8/2, cost 2 until issue #3837).
-//! Base: "Cry: destroy target enemy non-Human unit. You have {mana} less mana next turn." Radiant: "Cry:
-//! destroy all enemy non-Human units. You have {mana} less mana next turn." — the radiant cell restates
+//! Base: "Cry: destroy target enemy non-Human unit. Overload ({mana})." Radiant: "Cry:
+//! destroy all enemy non-Human units. Overload ({mana})." — the radiant cell restates
 //! the clause, so it replaces the base one (§8 Conventions) and the radiant form declares no target at
 //! all.
 //!

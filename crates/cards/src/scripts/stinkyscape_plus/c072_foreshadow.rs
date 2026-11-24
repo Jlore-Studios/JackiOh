@@ -21,7 +21,7 @@
 //! Tribute 5 is the script's `tribute` (R101); every other keyword is catalog data. An enemy summon is
 //! answered at once (R3550000) with one trigger's two effects: a forced attack on the arrival, then 1
 //! less mana next turn — each doing what it can, so a summon that can't be attacked still costs the
-//! mana (R3555003). Both faces share the script; the Radiant face drops Can't attack in the catalog.
+//! mana (R3555003). The catalog prints the loss "Overload ({mana})" (§6.3 Overload X). Both faces share the script; the Radiant face drops Can't attack in the catalog.
 
 use jackioh_engine::prelude::*;
 

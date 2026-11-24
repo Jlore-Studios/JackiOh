@@ -1,8 +1,9 @@
 //! M #89 Jlarna (SPEC §8.8 row 89). (3) Field Spell, Rare ((4) until issue #3951).
 //!
-//! Base:    "Aura: Credit line {credit}: spend up to {credit} mana you don't have. Repay it in
-//!          {instalments|instalment|instalments}, one each start of turn.\nEnd of turn: Tribute this if
-//!          you didn't use it this turn."
+//! Base:    "Aura: Credit line {credit}: spend up to {credit} mana you don't have. Repay it as
+//!          Overload over your next {instalments|turn|turns}.\nEnd of turn: Tribute this if you didn't
+//!          use it this turn." (§6.3 Overload X: each instalment is taken off a refresh as an Overload is,
+//!          though the credit line keeps its own ledger.)
 //! Radiant: the Aura line alone.
 //! Engine:  "The Aura, a credit line paid in 4 (MD-E13, rewritten): while Jlarna acts on its
 //!          controller's field, any mana they spend may go past what they have (R1223) — current mana

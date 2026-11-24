@@ -2,7 +2,7 @@
 //! (printed Epic).
 //!   Base:    "Temporary. Guess their Mind Games. Win: cancel their reward. Lose: take your penalty. When
 //!            you discard this, take all three penalties. Attack beats Greed, Greed beats Defend, Defend
-//!            beats Attack. A tie does nothing. Greed: You have {mana} less mana next turn. Discard
+//!            beats Attack. A tie does nothing. Greed: Overload ({mana}). Discard
 //!            {discards} random cards. Attack: Deal {damage} damage to your hero and each of your
 //!            Units. Defend: Heal your opponent's hero and each of their Units {heal}. They gain
 //!            +{armor} Armor."

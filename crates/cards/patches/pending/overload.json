@@ -1,0 +1,34 @@
+{
+  "title": "Overload",
+  "sources": "this branch, claude/jolly-pasteur-ddg2yy",
+  "notes": "Overload (X) is the printed name of the next-turn rider of -X (spec 6.3 Overload X, R1848004): every card that read \"lose X mana next turn\" or \"you have X less mana next turn\" prints it, and Hinder reads \"Overload your opponent (X)\". Speciesist, Hinder, Expedition12, Expedition123, Fortify Mind, Medina Outfitter, Core System, Secure System, Legacy: Snom Bunny Mind Control, Impact Reactor and Foreshadow; Jlarna repays its credit line \"as Overload over your next N turns\", its instalments kept in their own ledger (R1224). Wording only: no script and no number changed, and the glossary gains the Overload term in English and Chinese.",
+  "player": {
+    "title": "Overload",
+    "new": [
+      "Overload (X) is a new keyword: you have X less mana next turn."
+    ],
+    "balance": [],
+    "changes": [],
+    "text": [
+      "Speciesist, Medina Outfitter, Expedition12, Expedition123 and Fortify Mind print their next-turn mana loss as Overload.",
+      "Core System, Secure System, Legacy: Snom Bunny Mind Control, Impact Reactor and Foreshadow print theirs as Overload too.",
+      "Hinder now reads \"Overload your opponent\".",
+      "Jlarna repays its credit line as Overload over your next turns."
+    ],
+    "fixes": []
+  },
+  "cards": [
+    "core-002",
+    "core-021",
+    "meditative-018",
+    "meditative-019",
+    "meditative-022-1",
+    "meditative-082",
+    "meditative-089",
+    "stinkyscape-117",
+    "stinkyscape-118",
+    "traininggrounds-052",
+    "stinkyscapeplus-056",
+    "stinkyscapeplus-072"
+  ]
+}

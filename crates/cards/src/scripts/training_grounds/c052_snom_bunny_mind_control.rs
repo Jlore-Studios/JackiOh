@@ -71,7 +71,8 @@ fn steal_chosen() -> Effect {
     steal(json_as(json!({ "target": { "of": "chosen" } })))
 }
 
-/// Issue #3996, both faces: "Steal an enemy Unit. Next turn, lose ({loss}) mana." (R1848004, R3996101).
+/// Issue #3996, both faces: "Steal an enemy Unit. Next turn, lose ({loss}) mana.", printed "Overload ({loss})"
+/// since (§6.3 Overload X) (R1848004, R3996101).
 fn steal_and_lose() -> Script {
     Script {
         targets: enemy_unit(),

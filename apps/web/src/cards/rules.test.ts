@@ -301,6 +301,8 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Burn",
   "Toxic",
   "Replenish",
+  // The next-turn rider's printed name (§6.3 Overload X): the cards that read "lose X mana next turn" print it.
+  "Overload",
 ];
 
 /**

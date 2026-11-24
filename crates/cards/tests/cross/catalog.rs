@@ -10857,9 +10857,9 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
         let speciesist = &CATALOG["traininggrounds-041"];
         assert_eq!(speciesist.name, format!("Legacy: {}", core.name));
         assert_eq!(speciesist.tags, [Tag::Human, Tag::Legacy]);
-        // R2195003: issue #4353 gave Core #2's Cry "You have {mana} less mana next turn", which the Legacy
-        // card, frozen against later Core patches, does not print.
-        let frozen = |text: &str| text.replace(" You have {mana} less mana next turn.", "");
+        // R2195003: issue #4353 gave Core #2's Cry "You have {mana} less mana next turn", printed "Overload
+        // ({mana})" since (§6.3 Overload X), which the Legacy card, frozen against later Core patches, does not print.
+        let frozen = |text: &str| text.replace(" Overload ({mana}).", "");
         assert_eq!(
             (
                 speciesist.rarity,
