@@ -19895,7 +19895,7 @@
       "verdict_rounds": 1
     },
     "4724": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "cleared": {
@@ -19918,22 +19918,23 @@
       "forced": false,
       "interruptions": 0,
       "issue": 4673,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "resolving",
+      "live": "reviewing",
       "merge_owner": "claude-4",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-1",
       "question": "",
       "queued_at": "2026-11-24T16:12:18Z",
       "round_tier": "strong",
-      "run_id": "45434768758",
+      "run_id": "pending:a07a515e-1795546417",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 510,
-      "started_at": "2026-11-24T16:14:16Z",
+      "started_at": "2026-11-24T18:54:01Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -21722,9 +21723,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T18:42:42Z",
+    "at": "2026-11-24T18:54:01Z",
     "url": "",
-    "what": "plan #4766 on muse"
+    "what": "spot-check #4724 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-24T18:37:59Z",
@@ -44173,7 +44174,15 @@
         "n": 510,
         "pr": 4724,
         "queued_at": "2026-11-24T18:29:02Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "pending:a07a515e-1795546417",
         "sha": "2c81129d1d1391cef86ca272b5231c961d594776",
+        "started_at": "2026-11-24T18:54:01Z",
         "status": "queued",
         "title": "Patch: deeper card stats, S1, Radiant and Normal faces read on their own scales",
         "tries": 0
