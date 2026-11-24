@@ -18567,6 +18567,13 @@
     "4682": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-24T09:32:34Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "client-only presentation change in apps/web (no engine-rules, AI, cross-crate, migration, or ~40-file scope), so none of the hard-rule lines holds"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
