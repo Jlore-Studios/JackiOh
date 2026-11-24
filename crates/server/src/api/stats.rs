@@ -838,7 +838,7 @@ fn card_variants(app: &App, report: &WindowedReport, id: &str, face: StatsFace) 
     }
     for group in &mut groups {
         // A stable sort: rows of one share keep `variant_rows`' order.
-        group.rows.sort_by(|a, b| b.games.cmp(&a.games));
+        group.rows.sort_by_key(|row| std::cmp::Reverse(row.games));
     }
     groups
 }
