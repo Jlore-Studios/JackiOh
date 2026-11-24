@@ -20425,17 +20425,10 @@
     "what": "build #4736 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-24T13:09:02Z",
+    "at": "2026-11-24T13:21:15Z",
     "notes": [
-      "#4726 is held for `claude-8` until 07:10 (5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "delivered plan #4736 on muse (run 45399169626): planned",
-      "delivered build #4721 on muse (run 45391188167): built",
-      "delivered build #4720 on claude-4 (run 45389243465): built",
-      "started review #4726 on claude-8 (run 45401089286)",
-      "started review #4740 on claude-4 (run 45401201901)",
-      "started review #4739 on muse (run 45401309489)",
-      "started build #4736 on muse (run 45401423337)",
-      "nothing more to start: nothing is queued"
+      "delivered review #4739 on muse (run 45401309489): approved",
+      "delivered review #4735 on claude-4 (run 45397613408): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -21141,7 +21134,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-24T13:09:02Z",
+  "loop_tick": "2026-11-24T13:21:15Z",
   "machine_disk": {
     "issue": null,
     "reading": {
