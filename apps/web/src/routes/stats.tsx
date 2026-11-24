@@ -19,6 +19,9 @@
 // Reference cards, as readable text, no face (PlainText.tsx). R4673000, R4673001: their Face control (All, Normal
 // or Radiant, kept in the address) reads every figure they and the Sets tab show on one face, against that face's
 // own field and band, and the drill-down on the page's face and patch, with each face's rate and the Radiant gap.
+// R4676000, R4676001: the drill-down's Extended stats toggle swaps its details for one panel, kept in the address as
+// `extended`: a Segmented of the sections the card has, Choices (each choice's share, tier and Adjusted) and Radiant
+// vs normal (each face's figures and the gap).
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { KEYWORD_KINDS, SHIPPED_SETS, type CardDef, type CardDefs, type KeywordKind } from "@jackioh/shared";
@@ -42,6 +45,7 @@ import {
   getPublicPlayers,
   type CardDrillDownResponse,
   type CardFaces,
+  type PublicVariantGroup,
   type CardStatsOptions,
   type PublicFaceFigures,
   type PublicPlayerSummary,
@@ -323,17 +327,114 @@ function gapPercent(share: number): string {
   });
 }
 
+/** R4676001: the Extended stats panel's sections, in its Segmented's order. S3 adds Outputs. */
+type ExtendedSection = "choices" | "faces";
+const EXTENDED_SECTIONS: readonly ExtendedSection[] = ["choices", "faces"];
+
+/** R4676001: the panel an address opens beside `card`; none, or a section the page does not know, is closed. */
+function extendedOf(params: URLSearchParams): ExtendedSection | null {
+  const asked = params.get("extended");
+  return EXTENDED_SECTIONS.find((known) => known === asked) ?? null;
+}
+
+/** R4676000: a choice's share of the card's plays, a whole percent. */
+function shareText(share: number): string {
+  return formatNumber(share, { style: "percent", maximumFractionDigits: 0 });
+}
+
+/** R4676000: the heading of a kind of choice's table. */
+function kindTitle(kind: PublicVariantGroup["kind"]): string {
+  switch (kind) {
+    case "mode":
+      return t("Options chosen");
+    case "x":
+      return t("X paid");
+    case "embiggen":
+      return t("Embiggened");
+  }
+}
+
 /**
- * R4673001: the drill-down's line under the faces, on every face: the card's Normal and Radiant adjusted rates,
- * each read against its own face's field, and Radiant's minus Normal's with its 95% range.
+ * R4676000: the panel's Choices: one table per kind of choice the card has, its rows by share as the server sends
+ * them, each with the deck table's tier chip, Adjusted and, with the ranges shown, its 95% range.
  */
-function FaceLine({ faces }: { faces: CardFaces }): ReactElement {
-  const { gap } = faces;
+function ChoicesTables({ variants, showRanges }: { variants: PublicVariantGroup[]; showRanges: boolean }): ReactElement {
   return (
-    <p className="stats-drilldown-face-line" data-testid={statsTestid.drillDownFaceLine}>
-      <span data-testid={statsTestid.drillDownFaceNormal}>{t("Normal {rate}", { rate: faceRateText(faces.normal) })}</span>
-      <span data-testid={statsTestid.drillDownFaceRadiant}>{t("Radiant {rate}", { rate: faceRateText(faces.radiant) })}</span>
-      <span data-testid={statsTestid.drillDownFaceGap}>
+    <section className="stats-drilldown-section" data-testid={statsTestid.extendedChoices}>
+      {variants.map((group) => (
+        <table key={group.kind} className="stats-table stats-extended-table" data-kind={group.kind} data-testid={statsTestid.extendedKind}>
+          <caption>{kindTitle(group.kind)}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{t("Choice")}</th>
+              <th scope="col">{t("Share")}</th>
+              <th scope="col">{t("Tier")}</th>
+              <th scope="col">{t("Adjusted")}</th>
+              <th scope="col">{t("Games")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {group.rows.map((row) => (
+              <tr key={row.key} data-key={row.key} data-testid={statsTestid.extendedRow}>
+                <th scope="row">{row.label}</th>
+                <td>{shareText(row.share)}</td>
+                <td>
+                  <TierChip tier={row.hasEnoughGames ? row.tier : null} testid={statsTestid.extendedTier} />
+                </td>
+                <td>
+                  {row.hasEnoughGames ? adjustedText(row.adjustedWinRate) : t("not enough games")}
+                  {showRanges && row.hasEnoughGames && (
+                    <RangeText low={row.adjustedLow} high={row.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
+                  )}
+                </td>
+                <td>{formatNumber(row.games)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ))}
+    </section>
+  );
+}
+
+/**
+ * R4673001, R4676001: the panel's Radiant vs normal: the card's Normal and Radiant figures, each read against its own
+ * face's field, as two rows of the deck table's cells, and Radiant's adjusted rate minus Normal's with its 95% range.
+ */
+function FacesTable({ faces, showRanges }: { faces: CardFaces; showRanges: boolean }): ReactElement {
+  const { gap } = faces;
+  const row = (label: string, figures: PublicFaceFigures, testid: string): ReactElement => (
+    <tr data-testid={testid}>
+      <th scope="row">{label}</th>
+      <td>
+        <TierChip tier={figures.hasEnoughGames ? figures.tier : null} testid={statsTestid.extendedTier} />
+      </td>
+      <td>
+        {faceRateText(figures)}
+        {showRanges && figures.hasEnoughGames && (
+          <RangeText low={figures.adjustedLow} high={figures.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
+        )}
+      </td>
+      <td>{formatNumber(figures.games)}</td>
+    </tr>
+  );
+  return (
+    <section className="stats-drilldown-section" data-testid={statsTestid.drillDownFaceLine}>
+      <table className="stats-table stats-extended-table">
+        <thead>
+          <tr>
+            <th scope="col">{t("Face")}</th>
+            <th scope="col">{t("Tier")}</th>
+            <th scope="col">{t("Adjusted")}</th>
+            <th scope="col">{t("Games")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {row(t("Normal"), faces.normal, statsTestid.drillDownFaceNormal)}
+          {row(t("Radiant"), faces.radiant, statsTestid.drillDownFaceRadiant)}
+        </tbody>
+      </table>
+      <p className="stats-extended-gap" data-testid={statsTestid.drillDownFaceGap}>
         {t("Radiant gap {gap}", {
           gap:
             gap === null
@@ -344,8 +445,8 @@ function FaceLine({ faces }: { faces: CardFaces }): ReactElement {
                   high: gapPercent(gap.high),
                 }),
         })}
-      </span>
-    </p>
+      </p>
+    </section>
   );
 }
 
@@ -407,6 +508,8 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const [keywordFilter, setKeywordFilter] = useState<string>(initialParams.get("keyword") ?? "");
   const [view, setView] = useState<ViewKey>(initialParams.get("view") === "grid" ? "grid" : "table");
   const [cardDrillDownId, setCardDrillDownId] = useState<string | null>(initialParams.get("card"));
+  // R4676001: the drill-down's Extended stats panel and its section, kept in the address beside `card`.
+  const [extended, setExtended] = useState<ExtendedSection | null>(() => extendedOf(initialParams));
   // R2895000: the 95% ranges under Win rate and Adjusted, off by default.
   const [showRanges, setShowRanges] = useState(initialParams.get("ranges") === "1");
   const [mode, setMode] = useState<StatsMode>(() => modeOf(initialParams));
@@ -477,6 +580,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     if (keywordFilter) params.set("keyword", keywordFilter);
     if (view !== "table") params.set("view", view);
     if (cardDrillDownId) params.set("card", cardDrillDownId);
+    if (cardDrillDownId && extended) params.set("extended", extended);
     if (mode !== DEFAULT_MODE) params.set("mode", mode);
     if (face !== DEFAULT_FACE) params.set("face", face);
     if (showRanges) params.set("ranges", "1");
@@ -484,7 +588,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     const query = params.toString();
     const target = query ? `${paths.stats}?${query}` : paths.stats;
     navigate(target, { replace: true });
-  }, [tab, patch, search, sortCol, sortDir, setFilter, rarityFilter, costFilter, keywordFilter, view, cardDrillDownId, mode, face, showRanges]);
+  }, [tab, patch, search, sortCol, sortDir, setFilter, rarityFilter, costFilter, keywordFilter, view, cardDrillDownId, extended, mode, face, showRanges]);
 
   useEffect(() => {
     updateUrl();
@@ -814,6 +918,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   // R4673001: the open card's face line, never the card before's while its details load or after they fail;
   // none from a server deployed before it.
   const drillDownFaces = drillDownLoading || drillDownError ? undefined : drillDownData?.faces;
+  // R4676001: the panel's sections the open card has, Choices only when it offers a choice; the one shown is the one
+  // asked for, or the first the card has.
+  const drillDownVariants = drillDownLoading || drillDownError ? [] : (drillDownData?.variants ?? []);
+  const extendedSections = EXTENDED_SECTIONS.filter((section) =>
+    section === "choices" ? drillDownVariants.length > 0 : drillDownFaces !== undefined,
+  );
+  const extendedShown = extended !== null && extendedSections.includes(extended) ? extended : extendedSections[0];
   const drillDownTokens = drillDownDef ? tokensOf(drillDownDef) : [];
   // R3887000: every card its text names, for the breakdown's Reference cards while Plain text is on.
   const drillDownRefs = drillDownDef ? referencesOf(drillDownDef) : [];
@@ -1779,7 +1890,10 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
               closeTestid={statsTestid.drillDownClose}
               closeLabel={t("Close card details")}
               title={drillDownDef ? readerName(drillDownDef) : cardDrillDownId}
-              onClose={() => setCardDrillDownId(null)}
+              onClose={() => {
+                setCardDrillDownId(null);
+                setExtended(null);
+              }}
               actions={[]}
             >
               <div className="stats-drilldown-body">
@@ -1811,7 +1925,6 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         </div>
                       </FullArtShown>
                     </OwnCopy>
-                    {drillDownFaces && <FaceLine faces={drillDownFaces} />}
                     <div className="stats-drilldown-actions">
                       <button
                         type="button"
@@ -1821,6 +1934,16 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         onClick={() => setDrillDownRadiant((shown) => !shown)}
                       >
                         {t("Show Radiant")}
+                      </button>
+                      {/* R4676001: the details column gives way to the Extended stats panel while pressed */}
+                      <button
+                        type="button"
+                        className="stats-drilldown-action"
+                        data-testid={statsTestid.extendedToggle}
+                        aria-pressed={extended !== null}
+                        onClick={() => setExtended((open) => (open === null ? (extendedSections[0] ?? "choices") : null))}
+                      >
+                        {t("Extended stats")}
                       </button>
                       <a
                         className="stats-drilldown-action button-secondary"
@@ -1909,6 +2032,26 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                       <button type="button" className="stats-retry-btn" onClick={() => setDrillDownAttempt((n) => n + 1)}>
                         {t("Retry")}
                       </button>
+                    </div>
+                  ) : drillDownData && extended !== null ? (
+                    <div className="stats-extended" data-testid={statsTestid.extendedPanel}>
+                      <h3 className="stats-extended-title">{t("Extended stats")}</h3>
+                      {extendedSections.length > 1 && extendedShown !== undefined && (
+                        <Segmented
+                          label={t("Extended stats")}
+                          value={extendedShown}
+                          onChange={setExtended}
+                          options={extendedSections.map((section) => ({
+                            value: section,
+                            label: section === "choices" ? t("Choices") : t("Radiant vs normal"),
+                            testId: section === "choices" ? statsTestid.extendedChoicesTab : statsTestid.extendedFacesTab,
+                            className: "stats-view-btn",
+                          }))}
+                        />
+                      )}
+                      {extendedShown === "choices" && <ChoicesTables variants={drillDownVariants} showRanges={showRanges} />}
+                      {extendedShown === "faces" && drillDownFaces && <FacesTable faces={drillDownFaces} showRanges={showRanges} />}
+                      {extendedShown === undefined && <p className="stats-empty-sub">{t("Details unavailable.")}</p>}
                     </div>
                   ) : drillDownData ? (
                     <>

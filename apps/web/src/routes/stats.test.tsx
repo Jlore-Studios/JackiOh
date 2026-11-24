@@ -1450,6 +1450,8 @@ describe("the card drill-down dialog", () => {
     const retry = await within(dialog).findByRole("button", { name: "Retry" }, SLOW);
     const close = screen.getByTestId(statsTestid.drillDownClose);
     const radiant = screen.getByTestId(statsTestid.drillDownRadiantToggle);
+    // R4676001: Extended stats stands beside Show Radiant.
+    const extended = screen.getByTestId(statsTestid.extendedToggle);
     const almanac = screen.getByTestId(statsTestid.drillDownAlmanac);
     // R3939000: Show card text stands below View in Almanac.
     const cardText = within(dialog).getByTestId(cardTextTestid.dialog);
@@ -1457,11 +1459,11 @@ describe("the card drill-down dialog", () => {
     expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
     expect(close).toHaveFocus();
 
-    for (const next of [radiant, almanac, cardText, retry, close]) {
+    for (const next of [radiant, extended, almanac, cardText, retry, close]) {
       press("Tab");
       expect(next).toHaveFocus();
     }
-    for (const previous of [retry, cardText, almanac, radiant, close]) {
+    for (const previous of [retry, cardText, almanac, extended, radiant, close]) {
       press("Tab", { shiftKey: true });
       expect(previous).toHaveFocus();
     }
@@ -3579,7 +3581,7 @@ describe("R4673000 R4673001 the Face control", () => {
     await waitFor(() => expect(rushCells()).toEqual(["1", "Rush Token", "55", "B", "52.1%", "—"]), SLOW);
   });
 
-  it("R4673001 a row opens the drill-down on the page's face and patch, with the Normal, Radiant and gap line on every face, not enough games below the floor", async () => {
+  it("R4673001 R4676001 a row opens the drill-down on the page's face and patch, with the Normal, Radiant and gap table in Extended stats on every face, not enough games below the floor", async () => {
     serveFaces();
     at("/stats?patch=0.1.0");
     const { unmount } = render(<StatsRoute />);
@@ -3594,20 +3596,27 @@ describe("R4673000 R4673001 the Face control", () => {
     const close = (): void => {
       fireEvent.click(screen.getByTestId(statsTestid.drillDownClose));
     };
-    const line = (modal: HTMLElement): string[] =>
-      [statsTestid.drillDownFaceNormal, statsTestid.drillDownFaceRadiant, statsTestid.drillDownFaceGap].map(
-        (id) => within(modal).getByTestId(id).textContent ?? "",
-      );
-    const seen = ["Normal 51.2%", "Radiant 58.0%", "Radiant gap +6.8% (+1.2% to +12.4%)"];
+    // R4676001: the faces' figures are Extended stats' Radiant vs normal, each face's Adjusted, then the gap.
+    const line = (modal: HTMLElement): string[] => {
+      if (within(modal).getByTestId(statsTestid.extendedToggle).getAttribute("aria-pressed") !== "true") {
+        fireEvent.click(within(modal).getByTestId(statsTestid.extendedToggle));
+      }
+      const adjusted = (id: string): string => within(within(modal).getByTestId(id)).getAllByRole("cell")[1]?.textContent ?? "";
+      return [
+        adjusted(statsTestid.drillDownFaceNormal),
+        adjusted(statsTestid.drillDownFaceRadiant),
+        within(modal).getByTestId(statsTestid.drillDownFaceGap).textContent ?? "",
+      ];
+    };
+    const seen = ["51.2%", "58.0%", "Radiant gap +6.8% (+1.2% to +12.4%)"];
 
-    // All: asked for the page's patch and no face; the line under the faces, before the actions, and no face named.
+    // All: asked for the page's patch and no face; no line under the faces, the figures inside Extended stats.
     let modal = await open("core-001");
     expect(asked("core-001")).toEqual({ mode: "all", patch: "0.1.0" });
-    const faceLine = within(modal).getByTestId(statsTestid.drillDownFaceLine);
-    expect(faceLine.previousElementSibling).toHaveClass("stats-drilldown-faces");
-    expect(faceLine.nextElementSibling).toHaveClass("stats-drilldown-actions");
-    expect(line(modal)).toEqual(seen);
     expect(within(modal).getByText("Turn 1:")).toBeInTheDocument();
+    expect(within(modal).queryByTestId(statsTestid.drillDownFaceLine)).toBeNull();
+    expect(line(modal)).toEqual(seen);
+    expect(within(modal).getByTestId(statsTestid.drillDownFaceLine).closest(".stats-drilldown-details")).not.toBeNull();
     expect(within(modal).queryByTestId(statsTestid.drillDownFaceShown)).toBeNull();
     close();
 
@@ -3628,11 +3637,12 @@ describe("R4673000 R4673001 the Face control", () => {
     expect(asked("core-003")).toEqual({ mode: "all", face: "normal", patch: "0.1.0" });
     expect(within(modal).getByText("Turn 2:")).toBeInTheDocument();
     expect(within(modal).getByTestId(statsTestid.drillDownFaceShown)).toHaveTextContent("Normal faces only");
-    expect(line(modal)).toEqual(["Normal 49.5%", "Radiant not enough games", "Radiant gap not enough games"]);
+    expect(line(modal)).toEqual(["49.5%", "not enough games", "Radiant gap not enough games"]);
     close();
 
-    // A server that sends no faces draws no line.
+    // A server that sends no faces draws no table.
     modal = await open("core-002");
+    fireEvent.click(within(modal).getByTestId(statsTestid.extendedToggle));
     expect(within(modal).queryByTestId(statsTestid.drillDownFaceLine)).toBeNull();
     close();
     unmount();
@@ -3643,7 +3653,7 @@ describe("R4673000 R4673001 the Face control", () => {
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
     fireEvent.click(screen.getByText("Spark Pup"));
     modal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
-    await within(modal).findByTestId(statsTestid.drillDownFaceLine, undefined, SLOW);
+    await within(modal).findByText("Win rate by turn played", undefined, SLOW);
     expect(asked("core-001")).toEqual({ mode: "all", face: "radiant" });
   });
 
@@ -3698,5 +3708,128 @@ describe("R4673000 R4673001 the Face control", () => {
     expect(within(table).getAllByRole("row")[1]).toHaveTextContent("52.0%");
     expect(setsAsked().length).toBeGreaterThan(0);
     expect(setsAsked().every(([, , face]) => face === null)).toBe(true);
+  });
+});
+
+describe("R4676000 R4676001 Extended stats", () => {
+  const FACES = {
+    normal: { games: 30, adjustedWinRate: 0.512, adjustedLow: 0.48, adjustedHigh: 0.544, tier: "B", hasEnoughGames: true },
+    radiant: { games: 25, adjustedWinRate: 0.58, adjustedLow: 0.552, adjustedHigh: 0.608, tier: "A", hasEnoughGames: true },
+    gap: { gap: 0.068, low: 0.012, high: 0.124 },
+  };
+  const row = (key: string, label: string, games: number, share: number, rate: number, tier: string | null) => ({
+    key,
+    label,
+    games,
+    share,
+    adjustedWinRate: rate,
+    adjustedLow: rate - 0.02,
+    adjustedHigh: rate + 0.02,
+    tier,
+    hasEnoughGames: tier !== null,
+  });
+  /** Spark Pup offers two options and an X; Lava Hound offers no choice. */
+  const VARIANTS = [
+    { kind: "mode", rows: [row("deal", "deal", 60, 0.6, 0.56, "A"), row("heal", "heal", 10, 0.1, 0.44, null)] },
+    { kind: "x", rows: [row("top", "X ≥ 5", 40, 0.4, 0.51, "B")] },
+  ];
+
+  function serve(): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        const json = (body: unknown): Promise<Response> => Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+        if (url.pathname === "/api/stats/cards") return json(MOCK_CARD_STATS_PROVISIONAL);
+        if (url.pathname.startsWith("/api/stats/cards/")) {
+          const id = decodeURIComponent(url.pathname.slice("/api/stats/cards/".length));
+          return json({ ...MOCK_DRILL_DOWN, face: "all", faces: FACES, variants: id === "core-001" ? VARIANTS : [] });
+        }
+        return json({});
+      }),
+    );
+  }
+
+  const openModal = async (): Promise<HTMLElement> => {
+    const modal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+    await within(modal).findByText("Win rate by turn played", undefined, SLOW);
+    return modal;
+  };
+  const toggle = (modal: HTMLElement): HTMLElement => within(modal).getByTestId(statsTestid.extendedToggle);
+
+  it("R4676001 the Extended stats toggle sits beside Show Radiant and swaps the details for the panel and back", async () => {
+    serve();
+    at("/stats?card=core-001");
+    render(<StatsRoute />);
+    const modal = await openModal();
+    const button = toggle(modal);
+    expect(button.previousElementSibling).toBe(within(modal).getByTestId(statsTestid.drillDownRadiantToggle));
+    expect(button).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(button);
+    expect(button).toHaveAttribute("aria-pressed", "true");
+    const panel = within(modal).getByTestId(statsTestid.extendedPanel);
+    expect(within(modal).queryByText("Win rate by turn played")).toBeNull();
+    // Choices first: one table per kind, rows as the server ordered them, with the deck table's cells.
+    expect(within(panel).getByTestId(statsTestid.extendedChoicesTab)).toHaveAttribute("aria-pressed", "true");
+    const tables = within(panel).getAllByTestId(statsTestid.extendedKind);
+    expect(tables.map((table) => table.getAttribute("data-kind"))).toEqual(["mode", "x"]);
+    const rows = within(tables[0]!).getAllByTestId(statsTestid.extendedRow);
+    expect(rows.map((one) => one.getAttribute("data-key"))).toEqual(["deal", "heal"]);
+    expect(rows[0]).toHaveTextContent("deal");
+    expect(rows[0]).toHaveTextContent("60%");
+    expect(rows[0]).toHaveTextContent("56.0%");
+    expect(within(rows[0]!).getByTestId(statsTestid.extendedTier)).toHaveTextContent("A");
+    expect(rows[1]).toHaveTextContent("not enough games");
+    expect(within(tables[1]!).getByTestId(statsTestid.extendedRow)).toHaveTextContent("X ≥ 5");
+    expect(within(panel).queryByTestId(statsTestid.adjustedRange)).toBeNull();
+    expect(window.location.search).toContain("extended=choices");
+
+    // Radiant vs normal: the faces' two rows and the gap.
+    fireEvent.click(within(panel).getByTestId(statsTestid.extendedFacesTab));
+    expect(within(panel).getByTestId(statsTestid.drillDownFaceNormal)).toHaveTextContent("51.2%");
+    expect(within(panel).getByTestId(statsTestid.drillDownFaceGap)).toHaveTextContent("Radiant gap +6.8% (+1.2% to +12.4%)");
+    expect(within(panel).queryByTestId(statsTestid.extendedChoices)).toBeNull();
+    expect(window.location.search).toContain("extended=faces");
+
+    // Pressed again, the details come back and the address forgets the panel.
+    fireEvent.click(button);
+    expect(within(modal).queryByTestId(statsTestid.extendedPanel)).toBeNull();
+    expect(within(modal).getByText("Win rate by turn played")).toBeInTheDocument();
+    expect(window.location.search).not.toContain("extended=");
+  });
+
+  it("R4676001 a card with no choice shows no Choices segment, and a shared link opens the panel on its section", async () => {
+    serve();
+    at("/stats?card=core-002&extended=choices");
+    render(<StatsRoute />);
+    const modal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+    const panel = await within(modal).findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    await within(panel).findByTestId(statsTestid.drillDownFaceLine, undefined, SLOW);
+    // Its one section needs no Segmented, and none for Choices.
+    expect(within(panel).queryByTestId(statsTestid.extendedChoicesTab)).toBeNull();
+    expect(within(panel).queryByTestId(statsTestid.extendedFacesTab)).toBeNull();
+    expect(toggle(modal)).toHaveAttribute("aria-pressed", "true");
+    cleanup();
+
+    at("/stats?card=core-001&extended=faces&ranges=1");
+    render(<StatsRoute />);
+    const shared = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    await within(shared).findByTestId(statsTestid.drillDownFaceLine, undefined, SLOW);
+    expect(within(shared).getByTestId(statsTestid.extendedFacesTab)).toHaveAttribute("aria-pressed", "true");
+    // With the ranges shown, each face's range sits under its Adjusted.
+    expect(within(shared).getAllByTestId(statsTestid.adjustedRange)).toHaveLength(2);
+  });
+
+  it("R4676001 Escape closes the dialog with the panel open, and the address forgets both", async () => {
+    serve();
+    at("/stats?card=core-001&extended=choices");
+    render(<StatsRoute />);
+    const panel = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    await within(panel).findByTestId(statsTestid.extendedChoices, undefined, SLOW);
+    press("Escape");
+    await waitFor(() => expect(screen.queryByTestId(statsTestid.drillDownModal)).toBeNull());
+    expect(window.location.search).not.toContain("card=");
+    expect(window.location.search).not.toContain("extended=");
   });
 });

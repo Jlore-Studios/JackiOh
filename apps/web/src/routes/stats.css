@@ -529,18 +529,58 @@
   flex: 1 1 auto;
 }
 
-/* R4673001: the Normal and Radiant rates and the Radiant gap under the faces, wrapping inside the column, whose
-   gap spaces it; and the face the details read, at their top. */
-.stats-drilldown-face-line {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-6);
-  margin: 0;
-  font-size: var(--type-sm);
-}
-
+/* R4673001: the face the details read, at their top. */
 .stats-drilldown-details > .stats-sample-hint {
   margin: 0;
+}
+
+/* R4676001: the Extended stats panel in the details column's place: its title, its sections' Segmented and their
+   small tables in the deck table's type, each caption and header cell in the drill-down's heading look. On a phone
+   the dialog's body scrolls it, and a long choice's words wrap in their cell. */
+.stats-extended {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.stats-extended .stats-drilldown-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.stats-extended-title,
+.stats-extended-table caption,
+.stats-extended-table thead th {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim, #9aa1b8);
+  text-align: left;
+}
+
+.stats-extended-table caption {
+  padding-bottom: var(--space-2);
+}
+
+.stats-extended-table th,
+.stats-extended-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line, #2c3245);
+  vertical-align: top;
+}
+
+.stats-extended-table tbody th {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.stats-extended-gap {
+  margin: 0;
+  font-size: var(--type-sm);
 }
 
 /* Pressed, it wears the Radiant gold. As long as the tavern's bare-button size rule, and later, so it wins. */
