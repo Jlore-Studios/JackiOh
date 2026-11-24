@@ -236,7 +236,9 @@ impl PracticeHost {
         // R3476000: a free game never resumes a run fight's save, nor a run fight a free game's.
         // Two run fights then rest on the seed, which names the fight (the run's seed, row and
         // column).
-        if kept_config.is_run() != asked.is_run() {
+        // R4582001: nor does either resume an Assault fight's, nor an Assault fight theirs; two Assault
+        // fights rest on the seed, which names the day, the level and the attempt.
+        if kept_config.is_run() != asked.is_run() || kept_config.is_assault() != asked.is_assault() {
             return Err("the saved practice game is not the one the page remembers".to_string());
         }
         let saved_on = catalog_of(&save.catalog, save.versions);
@@ -494,7 +496,7 @@ impl PracticeHost {
             self.emit(PracticeOutput::Voided { at: now });
             return;
         }
-        if keep && !self.config.is_lesson() && !self.config.is_run() {
+        if keep && !self.config.is_lesson() && !self.config.is_mode_fight() {
             self.keep(now);
         }
         let human = self.human_seat();
@@ -584,14 +586,14 @@ impl PracticeHost {
         let human = self.human_seat();
         // R508: the board the human takes away, once a free game is over; R679: a voided game leaves
         // none, and R923000: a sandbox game, whose board its tools built, leaves none either, nor does
-        // R2706000's run fight.
+        // R2706000's run fight or R4582000's Assault fight.
         let keeps_board = self
             .game
             .result
             .is_some_and(|result| result.reason != GameOverReason::Voided)
             && !self.config.is_lesson()
             && !self.config.is_sandbox()
-            && !self.config.is_run();
+            && !self.config.is_mode_fight();
         PracticeSnapshot {
             view: jackioh_engine::view_for(&self.game, human),
             legal: jackioh_engine::legal_actions(&self.game, human),

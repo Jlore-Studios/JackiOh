@@ -9,6 +9,7 @@
 //! writes the cursor back, so a run file (`RunFile`: its setup, the unlocks it started from and its
 //! log) folds to the same state anywhere. That is how a Campaign run is checked before it pays (DR1).
 
+pub mod assault;
 pub mod config;
 mod fight;
 
@@ -25,6 +26,14 @@ mod tests;
 #[cfg(test)]
 mod walk_tests;
 
+pub use assault::{
+    AssaultAction, AssaultCard, AssaultCommander, AssaultConstants, AssaultContent, AssaultDay,
+    AssaultDeckSource, AssaultDoctrine, AssaultEscalation, AssaultFightSetup, AssaultFile, AssaultLevel,
+    AssaultPhase, AssaultRecord, AssaultSetup, AssaultState, AssaultUpgrade, AssaultUpgradeKind,
+    assault_catalog_content, assault_constants, assault_create, assault_day, assault_day_seed,
+    assault_fight_report, assault_fight_setup, assault_fold, assault_placeholder_content, assault_record,
+    assault_reduce,
+};
 pub use fight::{RunFightSetup, run_catalog_content, run_fight_report, run_fight_setup};
 
 use jackioh_engine::config::PERCENT;

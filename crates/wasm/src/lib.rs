@@ -154,6 +154,93 @@ pub fn run_daily_seed(date_json: &str, n_json: &str) -> Result<String, JsError> 
     js(wasm_core::run_daily_seed(date_json, n_json))
 }
 
+// The Infinite Assault (docs/infinite-assault.md IA1, IA5, IA9)
+
+/// "2026-11-23" -> "assault-2026-11-23", or refused.
+#[wasm_bindgen]
+pub fn assault_day_seed(date_json: &str) -> Result<String, JsError> {
+    js(wasm_core::assault_day_seed(date_json))
+}
+
+/// The set's cards by tag + assault.json.
+#[wasm_bindgen]
+pub fn assault_catalog_content(catalog_json: &str) -> Result<String, JsError> {
+    js(wasm_core::assault_catalog_content(catalog_json))
+}
+
+/// Shipped stand-ins until the release.
+#[wasm_bindgen]
+pub fn assault_placeholder_content(catalog_json: &str) -> Result<String, JsError> {
+    js(wasm_core::assault_placeholder_content(catalog_json))
+}
+
+/// The Assault's content for the browser: `assault_placeholder_content` until the release.
+#[wasm_bindgen]
+pub fn assault_content() -> Result<String, JsError> {
+    js(wasm_core::assault_content())
+}
+
+/// R3496000: `AssaultContent` for a catalog version: the build's own, a carried version's, or `null`.
+#[wasm_bindgen]
+pub fn assault_content_at(version_json: &str) -> Result<String, JsError> {
+    js(wasm_core::assault_content_at(version_json))
+}
+
+/// The day's deal: 20 levels and their escalations, or refused.
+#[wasm_bindgen]
+pub fn assault_day(date_json: &str, content_json: &str) -> Result<String, JsError> {
+    js(wasm_core::assault_day(date_json, content_json))
+}
+
+/// `{ state }` for an attempt started, `{ error }` for a setup the attempt refuses.
+#[wasm_bindgen]
+pub fn assault_create(setup_json: &str, record_json: &str, day_json: &str) -> Result<String, JsError> {
+    js(wasm_core::assault_create(setup_json, record_json, day_json))
+}
+
+/// `{ state }` after one action, `{ error }` for an action the attempt refuses.
+#[wasm_bindgen]
+pub fn assault_reduce(state_json: &str, day_json: &str, action_json: &str) -> Result<String, JsError> {
+    js(wasm_core::assault_reduce(state_json, day_json, action_json))
+}
+
+/// The fight being played (`AssaultFightSetup`), or `null` outside one.
+#[wasm_bindgen]
+pub fn assault_fight_setup(state_json: &str, day_json: &str) -> Result<String, JsError> {
+    js(wasm_core::assault_fight_setup(state_json, day_json))
+}
+
+/// `{ action }` for the `FightOver` a finished fight sends, `{ error }` for a game that reports none.
+#[wasm_bindgen]
+pub fn assault_fight_report(game_json: &str, human_json: &str) -> Result<String, JsError> {
+    js(wasm_core::assault_fight_report(game_json, human_json))
+}
+
+/// The day's record folded with the attempt's progress.
+#[wasm_bindgen]
+pub fn assault_record(record_json: &str, state_json: &str) -> Result<String, JsError> {
+    js(wasm_core::assault_record(record_json, state_json))
+}
+
+/// `{ state }` for an attempt file folded, `{ error }` naming the first refused step.
+#[wasm_bindgen]
+pub fn assault_fold(file_json: &str, day_json: &str) -> Result<String, JsError> {
+    js(wasm_core::assault_fold(file_json, day_json))
+}
+
+/// The Assault's numbers the screens show, so the client states none (CLAUDE.md rule 9).
+#[wasm_bindgen]
+pub fn assault_constants() -> Result<String, JsError> {
+    js(wasm_core::assault_constants())
+}
+
+/// The day's Assault deck: practice's fresh random deck for a human (R258's draw, `banned: []`),
+/// seeded `{day seed}-deck`, no lean (IA5).
+#[wasm_bindgen]
+pub fn assault_day_deck(date_json: &str) -> Result<String, JsError> {
+    js(wasm_core::assault_day_deck(date_json))
+}
+
 // The engine (SURFACE §6.1)
 
 /// `GameState` from JSON arguments.

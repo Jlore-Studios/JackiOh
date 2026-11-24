@@ -55,8 +55,9 @@ describe("public/_redirects", () => {
 
   it("routes every screen in the route table, with or without a trailing slash", () => {
     const fixed = Object.entries(paths)
-      // Production serves a genuine 404 at /dev/hotseat, /dev/duos and /dev/fx (and /dev/replays).
-      .filter(([name]) => name !== "hotseat" && name !== "duosDev" && name !== "fxGallery")
+      // Production serves a genuine 404 at /dev/hotseat, /dev/duos and /dev/fx (and /dev/replays), and
+      // at /assault until the release opens it (IA7, ASSAULT_OPEN).
+      .filter(([name]) => name !== "hotseat" && name !== "duosDev" && name !== "fxGallery" && name !== "assault")
       .flatMap(([, path]) => (typeof path === "string" ? [path] : []));
     expect(fixed).toContain(paths.privacy);
     // R630: the Card Almanac is public.
@@ -72,7 +73,7 @@ describe("public/_redirects", () => {
 
   it("rewrites nothing but the route table's screens, in either spelling", () => {
     const screens = Object.entries(paths)
-      .filter(([name]) => name !== "hotseat" && name !== "duosDev" && name !== "fxGallery")
+      .filter(([name]) => name !== "hotseat" && name !== "duosDev" && name !== "fxGallery" && name !== "assault")
       .flatMap(([, path]) => {
         if (typeof path === "string") return [path];
         // A screen by id, in `_redirects`' spelling; the others are a screen with a query.
@@ -104,6 +105,7 @@ describe("public/_redirects", () => {
       "/dev/duos",
       "/dev/fx",
       "/dev/replays",
+      "/assault",
       "/Login",
       "/loginx",
       "/almanac/extra",

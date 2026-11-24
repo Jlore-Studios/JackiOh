@@ -38,6 +38,8 @@ export const routeChunks = {
   // #2705: the Dungeon run and its stats, played offline on the engine in the browser.
   dungeon: routeChunk(() => import("../dungeon/DungeonPage.tsx")),
   dungeonStats: routeChunk(() => import("../dungeon/DungeonStatsPage.tsx")),
+  // #4581: the daily Infinite Assault, played offline on the engine in the browser.
+  assault: routeChunk(() => import("../assault/AssaultPage.tsx")),
   privacy: routeChunk(() => import("./privacy.tsx")),
   terms: routeChunk(() => import("./terms.tsx")),
   purchases: routeChunk(() => import("./purchases.tsx")),
@@ -71,6 +73,7 @@ const ENGINE_CHUNKS: ReadonlySet<RouteChunkName> = new Set<RouteChunkName>([
   "watch",
   "dungeon",
   "dungeonStats",
+  "assault",
   // The board's card faces and log lines, and the list's numbers (`dailyConstants`), are the module's.
   "daily",
   "dailyGame",
