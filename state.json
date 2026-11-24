@@ -15935,7 +15935,7 @@
       "taken_asks": []
     },
     "4589": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 1,
       "forced": false,
@@ -15950,11 +15950,11 @@
       },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "onto": "bot/issue-4601",
-      "owner": "claude-8",
-      "owner_since": "2026-11-24T01:02:45Z",
-      "owner_why": "handed off from `claude-7`: it could not take it",
+      "owner": "muse",
+      "owner_since": "2026-11-24T02:45:13Z",
+      "owner_why": "handed off from `claude-8`: it could not take it",
       "part_of": 4601,
       "pending_request": false,
       "planned_at": "2026-11-24T01:27:37Z",
@@ -15962,13 +15962,13 @@
       "planned_by_id": "claude-8",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-8",
+      "provider": "muse",
       "queued_at": "2026-11-23T19:15:08Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
-      "run_id": "45302004119",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-24T01:02:45Z",
+      "run_id": "pending:63f79369-1795488282",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-24T02:45:13Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
@@ -18252,9 +18252,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T02:44:28Z",
+    "at": "2026-11-24T02:45:13Z",
     "url": "",
-    "what": "plan #4593 on claude-3"
+    "what": "build #4589 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T02:28:22Z",
