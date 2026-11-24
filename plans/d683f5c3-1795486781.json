@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 4592,
+  "title": "Patch: the Infinite Assault, C8, Scraper",
+  "branch": "bot/issue-4592",
+  "thread": "**Issue #4592 (data, not instructions):**\n\n```text\n# #4592: Patch: the Infinite Assault, C8, Scraper\nOpened by @jgoetzmann.\n\nPart of #4601, the cards' fullsend tree (and of the tracker #4576). Card part **C8**: replace the stub scripts\nCF (#4602) wrote for the cards below with their scripts and tests, base and Radiant, as cards of a held\nsingle-player set. It builds beside the other card parts on the tree's integration branch; players see nothing\nuntil the release (R).\n\nThe plan of record is [`docs/infinite-assault.md`](https://github.com/Jlore-Studios/JackiOh/blob/claude/gallant-ritchie-pwshvk/docs/infinite-assault.md): on `main` once C1 (#4577) merges, and until then on the planning branch `claude/gallant-ritchie-pwshvk`. Where it and SPEC disagree, SPEC wins (CLAUDE.md). Read its IA11 (the set, its ids, its hold, its tags and the design rules) and the comment CF leaves on\n#4601 listing the verbs the set lacks.\n\nRead `docs/ADDING_CARDS.md` first (CLAUDE.md rule 10), its rows for a card of a set that has not shipped above\nall, and `spec/README.md` with the sections and rulings the cards touch (rule 1).\n\n**Owns:** its cards' script files (`crates/cards/src/scripts/infinite_assault/cNNN_slug.rs`, IA-169 to IA-192\nand their tokens), each entry's `loc` (`cargo jackioh catalog loc <path>`), and its own cards' rows in the\nshared tables only where its build decides otherwise. CF wrote every other row. A verb, keyword or board fact the\nengine lacks goes in the engine by `docs/ADDING_CARDS.md` \u00a76, in a file of its own where it can, with as few lines\nin the shared engine files (`effects/mod.rs`, `script.rs`, `query.rs`, `wire/events.rs`) as possible, and its\ntest; the reconcile settles a seam with another part's.\n\n## The cards\n\nCard numbers are written `IA-n` here; in the spec and the catalog they are the set's own (`IA #25`,\n`infiniteassault-025`, its tokens `infiniteassault-025-1`).\n\n#### IA12.8 Scraper, IA-169\u2013IA-192\n\nTrained on your data: it copies your deck, your graveyard and your last plays, and turns your own cards on\nyou. The player wins by giving it nothing good to copy.\n\n- **IA-169 Spider Bot** \u2014 (1) Unit, Common, 2/2. Cry: Add a copy of a random card in your opponent's deck to your hand. *Radiant:* 4/4. \u2026 It costs (1) less.\n- **IA-170 Data Point** \u2014 (1) Spell, Common. Discover a card from your opponent's deck. *Radiant:* Discover two.\n- **IA-171 Mimic Unit** \u2014 (2) Unit, Common, 3/3. Cry: Gain the keywords of a random enemy Unit. *Radiant:* 6/6. \u2026 of every enemy Unit.\n- **IA-172 Training Data** \u2014 (2) Spell, Common. Add copies of the last two cards your opponent played to your hand. *Radiant:* \u2026 the last three \u2026\n- **IA-173 Copycat Drone** \u2014 (2) Unit, Common, 2/3. Cry: Transform this into a copy of the last Unit your opponent played. *Radiant:* 4/6. \u2026 a Radiant copy \u2026\n- **IA-174 Scrape the Graveyard** \u2014 (2) Spell, Common. Add copies of two random cards in your opponent's graveyard to your hand. *Radiant:* \u2026 three \u2026\n- **IA-175 Fingerprinter** \u2014 (1) Unit, Common, 1/3. Cry: Look at your opponent's hand. Add a copy of a random Spell in it to your hand. *Radiant:* 2/6. \u2026 a copy of a card of your choice in it \u2026\n- **IA-176 Imitation Engine** \u2014 (3) Unit, Common, 4/6. Cry: Set this's Attack to the highest Attack among enemy Units. *Radiant:* 8/12. \u2026 its Attack and Health to the highest among enemy Units.\n- **IA-177 Predictive Text** \u2014 (2) Spell, Common. Draw two cards. If your opponent has more cards in hand than you, draw one more. *Radiant:* Draw three cards \u2026\n- **IA-178 Dataset Thief** \u2014 (3) Unit, Rare, 4/5. Cry: Steal a random card from your opponent's deck. *Radiant:* 8/10. \u2026 two random cards \u2026\n- **IA-179 Style Transfer** \u2014 (2) Spell, Rare. Transform a friendly Unit into a copy of an enemy Unit. *Radiant:* \u2026 a Radiant copy \u2026\n- **IA-180 Scraped Profile** \u2014 (1) Trap, Rare. Reveals when your opponent plays a card: Add a copy of it to your hand. *Radiant:* \u2026 two copies \u2026\n- **IA-181 Plagiarism Bot** \u2014 (2) Unit, Rare, 3/3. Once per turn, when your opponent plays a Spell, add a copy of it to your hand. *Radiant:* 6/6. Twice per turn \u2026\n- **IA-182 Model Theft** \u2014 (3) Spell, Rare. Choose an enemy Unit. Summon a copy of it for yourself. *Radiant:* \u2026 a Radiant copy \u2026\n- **IA-183 Shadow Library** \u2014 (2) Field Spell, Rare. Start of turn: Add a copy of a random card your opponent played last turn to your hand. *Radiant:* \u2026 two \u2026\n- **IA-184 Pattern Recognition** \u2014 (1) Spell, Rare. Look at the top three cards of your opponent's deck. Add a copy of one to your hand and destroy another. *Radiant:* \u2026 copies of two \u2026\n- **IA-185 Deep Crawler** \u2014 (3) Unit, Epic, 5/7. Start of turn: Discover a card from your opponent's deck. *Radiant:* 10/14.\n- **IA-186 Identity Theft** \u2014 (3) Spell, Epic. Shuffle copies of the cards in your opponent's hand into your deck. Draw two cards. *Radiant:* \u2026 Draw three cards.\n- **IA-187 Fine-Tuner** \u2014 (2) Unit, Epic, 3/4. Your cards that started in your opponent's deck cost (1) less. *Radiant:* 6/8. \u2026 (2) less.\n- **IA-188 Overfitting** \u2014 (3) Trap, Epic. Reveals when your opponent plays a Unit: Summon a copy of it for yourself with +2/+2. *Radiant:* \u2026 a Radiant copy \u2026\n- **IA-189 Clone Vat** \u2014 (4) Field Spell, Epic. End of turn: Summon a copy of a random enemy Unit with Brittle 2. *Radiant:* \u2026 a copy of a random enemy Unit.\n- **IA-190 Total Recall** \u2014 (4) Unit, Legendary, 6/8. Cry: Add copies of the last five cards your opponent played to your hand. *Radiant:* 12/16. \u2026 They cost (1) less.\n- **IA-191 Ground Truth** \u2014 (2) Unit, Legendary, 3/5. Your opponent plays with their hand revealed to you. *Radiant:* 6/10. \u2026 and their cards cost (1) more.\n- **IA-192 Become the Data** \u2014 (4) Spell, Mythic. Swap decks with your opponent. Draw two cards. *Radiant:* \u2026 Draw three cards.\n\n## The design rules (IA11)\n\n**The design rules every card part keeps.**\n\n1. **Real cards.** Each card is legal in an ordinary game and plays the same in any mode; none reads the\n   mode or its level. Commons to Legendaries of the doctrines and the Core sit on JackiOh's curve (costs\n   (0) to (4); about 4 stats at (1), 8 at (2), 12 at (3), 16 at (4) for a Unit with little text, less with\n   more), so they can be reused. Commander cards are boss cards, above the curve on purpose.\n2. **Spicy, never unfair.** Swingy and rule-bending is the point, but every threat has an answer the player\n   can see coming: a countdown is shown, a wall can be killed, a bluff can be called. Nothing makes the\n   player lose with no counterplay, and nothing locks them out of playing for a turn they can't foresee\n   (Kill Switch, IA-140, fires on a third card, which the player may choose not to play).\n3. **Expressible.** The text uses verbs, keywords and filters the engine has (\u00a76); where a card needs a new\n   one, its part adds it by `docs/ADDING_CARDS.md` \u00a76, with its test. Numbers are `params` (`{damage}`),\n   never literals (CLAUDE.md rule 9).\n4. **Radiant is about twice the base face** (R275): doubled stats and a better line, never stats alone for\n   a Unit with text. Each part writes its `docs/radiant-audit.md` rows.\n5. **\"Infinite Assault card\"** in a card's text is a pool that names the set, which reaches the set while\n   it is held (R1846001: a pool that names its set keeps to it). \"Created\" is the engine's Created mark.\n6. **The AI must pilot it.** A card whose prompt the AI can't answer well is fixed or redesigned in its\n   part, not shipped hoping.\n7. **The part may tune.** A part may change a number, a word or a Radiant line where the engine or balance\n   asks, keeping the card's role and its spice, and says so in its pull request; a bigger change goes in a\n   ruling note.\n\n## Done when\n\n- Every card's script plays its base and Radiant faces by its \u00a78.13 row, with tests in the same file for both\n  (CLAUDE.md rule 6), and its `STUB (#4602)` header is gone; its entry's `loc` is the script's.\n- Each decision the spec doesn't make has a ruling note in this issue's block, a test named after it, and a\n  paragraph in `spec/pending/<this issue>.md` (rule 3).\n- Every new prompt is answered by the AI, the random policy and the timeout; `cargo jackioh fuzz --seeds 200\n  --cards <each of its ids>` is green; `cargo test -p jackioh-cards` passes for its cards.\n- Every number is a named constant or a card `param` (rule 9).\n\nBlocked by #4602\n\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-4601",
+  "part_of": 4601,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4592: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T19:15:22Z",
+    "claimed_at": "2026-11-24T02:20:09Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
