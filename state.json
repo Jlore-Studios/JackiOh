@@ -19860,17 +19860,8 @@
       "verdict_rounds": 1
     },
     "4722": {
-      "action": "plan",
-      "asks": [
-        "c:7133262493"
-      ],
-      "build_next": {
-        "from_run": "45407520148",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-24T14:07:38Z",
-        "until": "2026-11-24T14:37:38Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-24T14:07:30Z",
         "difficulty": "medium",
@@ -19889,10 +19880,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- ```\n- 5. Run `cargo test -p jackioh-server --test server api::rematch` and confirm exactly these two new tests fail (GET answers 200) while the rest pass.\n- 6. In `rematch_status_route`, keep the series-game refusal where it is, then insert before `let seen = offers(app).seen(...)`:\n- ```rust\n- // \u00a79.13 (#3727): a daily game's rematch is a new daily challenge, never a live rematch.\n- if one_tx!(app.db, |t| t.daily_games_get(&match_row.id).await?)?.is_some() {\n- return Ok(json(\n- 409,\n- serde_json::json!({ \"error\": {\n- \"code\": \"daily\",\n- \"message\": \"A daily game's rematch is a new daily challenge.\",\n- } }),\n- ));\n- }\n- // R1638000: refused before the book is read, as an offer is refused before it is recorded.\n- if match_row.catalog_version != app.catalog.version {\n- return Err(cards_changed(app, &match_row.catalog_version));\n- }\n- ```\n- Copy the daily body from `offer_rematch_route` exactly; do not refactor the POST path into a shared helper. Do not add finished/stakes checks to the GET: a status read is not an offer.\n- ## Tests\n- - `crates/server/tests/api/rematch.rs`, `rematch_refusals::a_daily_matchs_status_is_409_daily`: GET on a finished daily match is 409 `daily` with POST's message.\n- - `crates/server/tests/api/rematch.rs`, `r1638000_a_rematch_across_a_patch::r1638000_get_on_a_match_on_an_earlier_catalog_is_409_update_required`: GET on a finished match with `catalogVersion: \"v-before-the-patch\"` is 409 `update_required` with matching `expected`/`received` details.\n- - The 200 path is pinned by existing tests that must keep passing: `rematch_offers::upserts_one_seats_offer_and_reports_both_seats_offers_back` (offers and `matchId` round-trip through GET) and the `r1372` lean tests asserting `status(...)[\"mode\"]`.\n- - Commands: `cargo test -p jackioh-server --test server api::rematch`, then `cargo fmt --check`, `cargo clippy -p jackioh-server --all-targets -- -D warnings`, and `cargo jackioh spec check`.\n- ## Done when\n- - [ ] GET on a finished daily match answers 409 `daily` with POST's message\n- - [ ] GET on a finished match on another catalog answers 409 `update_required` with matching `expected`/`received`\n- - [ ] GET on a current-catalog finish still answers 200 with `youOffered`, `opponentOffer`, `opponentHere`, `matchId`, `mode`\n- - [ ] The two new tests fail without the route change and pass with it\n- - [ ] The rematch test file, `cargo fmt --check`, `cargo clippy -p jackioh-server --all-targets -- -D warnings`, and `cargo jackioh spec check` pass\n- ## Risks\n- - A client relying on GET succeeding for daily matches breaks: the only caller is the live-match result screen (`apps/web/src/net/api.ts` `rematchStatus`, polled from `apps/web/src/game/net.ts`); the daily board never calls this GET (it uses `POST /api/daily/challenges`), so the blast radius is exa\u2026\n- - Ordering matters: daily and catalog checks run after the series check and before the book read, so a series game still answers `series_game` and no offer state is touched by a refused read. The alternative of hiding the button client-side by catalog version was rejected (CLAUDE.md rule 7: the cli\u2026\n- ## Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4722 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4722/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-24T13:49:58Z",
       "owner_why": "it plans it",
@@ -19905,12 +19895,14 @@
       "provider": "muse",
       "queued_at": "2026-11-24T13:44:39Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45407520148",
+      "run_id": "pending:f93beb9a-1795529406",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-24T13:49:58Z",
+      "started_at": "2026-11-24T14:10:37Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7133262493"
+      ]
     },
     "4723": {
       "action": "plan",
@@ -20790,9 +20782,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T14:09:51Z",
+    "at": "2026-11-24T14:10:37Z",
     "url": "",
-    "what": "build #4733 on muse"
+    "what": "build #4722 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T14:07:59Z",
