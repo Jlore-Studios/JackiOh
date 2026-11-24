@@ -204,3 +204,12 @@ describe("public/_headers", () => {
     ]);
   });
 });
+
+describe("index.html", () => {
+  it("asks for the manifest with credentials: without the Access cookie, staging's Access answers it with its login page", () => {
+    const html = readFileSync(join(HERE, "../../index.html"), "utf8");
+    const manifests = html.match(/<link\b[^>]*\brel="manifest"[^>]*>/gu) ?? [];
+    expect(manifests).toHaveLength(1);
+    expect(manifests[0]).toContain('crossorigin="use-credentials"');
+  });
+});
