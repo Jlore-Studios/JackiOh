@@ -590,6 +590,12 @@ pub struct StaticFlags {
     /// random from the legal ones.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub random_targets: Option<bool>,
+    /// R4594014 (Infinite Assault #239 Zero-Day): while this card acts on its controller's field,
+    /// the controller's opponent's Spells have their declared targets and target prompts drawn at
+    /// random from the legal ones (`random_targets::targets_random_for`); modes and Discover are
+    /// not targets, and attacks, activations and `mayor_luck` keep `targets_random`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub random_enemy_spell_targets: Option<bool>,
     /// Meditative #91 Windfast (ME-ATTACKSUMMON, R1202, R831006): when this would attack, a random
     /// Unit summoned from its controller's hand makes that attack instead.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -769,6 +775,12 @@ pub struct StaticFlags {
     /// run by an effect the opponent controls pass over them (`face_down::face_down_warded`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub face_down_ward: Option<bool>,
+    /// R4594001 (Infinite Assault #218 Thousand Faces): while this card acts on its controller's
+    /// field, its controller's face-down cards cannot be destroyed, by either side's effects
+    /// (`face_down::face_down_indestructible`); reveal, Exile, bounce, steal and transform are
+    /// not stopped. Read at §4.5 step 1 beside Indestructible.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub face_down_indestructible: Option<bool>,
     // Stinkyscape (issue #1844)
     /// R1844000 (Stinkyscape #46 Circadian Halfcycler): while this card acts on the field, the
     /// autopilot plays the first this-many R456 actions of each of its controller's turns, then hands

@@ -1113,6 +1113,8 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 never_berserk: flags(|f| f.never_berserk),
                 heal_to_damage: flags(|f| f.heal_to_damage),
                 random_targets: flags(|f| f.random_targets),
+                face_down_indestructible: flags(|f| f.face_down_indestructible),
+                random_enemy_spell_targets: flags(|f| f.random_enemy_spell_targets),
                 attack_from_hand: flags(|f| f.attack_from_hand),
                 bounce_attacker: flags(|f| f.bounce_attacker),
                 attack_joiners: flags(|f| f.attack_joiners),

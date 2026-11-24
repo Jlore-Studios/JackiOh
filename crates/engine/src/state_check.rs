@@ -167,10 +167,12 @@ fn resolve_indestructible_marks(sink: &mut EngineSink<'_>) {
             if card.marked_destroyed != Some(true) || card.unpreventable_destroy == Some(true) {
                 continue;
             }
+            // R4594001: a guarded face-down card keeps its mark off as an Indestructible one does.
             if !has_keyword(
                 &crate::layers::unit_view(sink.state, &card).keywords,
                 KeywordKind::Indestructible,
-            ) {
+            ) && !crate::face_down::face_down_indestructible(sink.state, &card)
+            {
                 continue;
             }
             if let Some(live_card) = find_instance_mut(sink.state, &card.id) {
@@ -862,6 +864,9 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
         // goes on below as any collected card; only step 5's `enteredGraveyard` is not its to report.
         let elsewhere = card.exiled || landed == MoveResult::Replaced;
         pass.owed.push(card.snapshot.clone());
+        // R4594005: one history record per death under the card's controller (R172), tokens in;
+        // a discard is no death, and only a Unit's death is logged.
+        crate::history::record_death(sink.state, &card.snapshot, card.died_as);
         // R1852000: a piece that died, which the pass's last step fuses into its owner's Starship.
         if card.piece {
             pass.pieces

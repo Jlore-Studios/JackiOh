@@ -220,7 +220,8 @@ fn lent_by_player(state: &GameState, instance: &CardInstance, immune: bool) -> V
 /// R4586006 (Infinite Assault #33 Uncanny Valley, "Enemy Units have −N Attack"): the Attack its
 /// controller's "your Units have N" lends it — the live `UnitsAttack` amounts on its controller's
 /// side added up — gated as `lent_by_player`, so Units arriving later read it as they land.
-fn attack_lent_by_player(state: &GameState, instance: &CardInstance) -> i32 {
+/// R4594002: one a Spell made passes the card by while it is `immune` to Spells, as keywords do.
+fn attack_lent_by_player(state: &GameState, instance: &CardInstance, immune: bool) -> i32 {
     if instance.vanilla
         || is_dormant(state, instance)
         || crate::slumber::is_slumbering(instance)
@@ -236,7 +237,13 @@ fn attack_lent_by_player(state: &GameState, instance: &CardInstance) -> i32 {
                 && crate::mana::modifier_is_live(state, modifier)
         })
         .map(|modifier| match modifier.kind {
-            ModifierKind::UnitsAttack { amount } => amount,
+            ModifierKind::UnitsAttack { amount, from_spell } => {
+                if immune && from_spell == Some(true) {
+                    0
+                } else {
+                    amount
+                }
+            }
             _ => 0,
         })
         .sum()
@@ -543,16 +550,6 @@ fn compute_layers_on(
         attack += modifier.attack.unwrap_or(0);
         max_health += modifier.max_health.unwrap_or(0);
     }
-    // R4586006: the player-level Attack lend, a layer-5 aura beside the sources' own.
-    attack += attack_lent_by_player(state, instance);
-    // §10.4: an aura that sets attack to a value (Classic #88's Radiant "0 Attack") applies after every
-    // other layer, so nothing above lifts it; with several, the last in aura order holds.
-    for modifier in &auras {
-        if let Some(set_attack) = modifier.set_attack {
-            attack = set_attack;
-        }
-    }
-
     let mut listed: Vec<Keyword> = Vec::new();
     if !instance.vanilla && !crate::alt_play::is_dormant(instance) {
         listed.extend(printed.keywords.iter().cloned());
@@ -565,6 +562,16 @@ fn compute_layers_on(
     // R4508000: the keywords above, which hold every Immune to Spells a card can have (no lend gives
     // it), decide whether a Spell's lend passes the card by.
     let immune = has_keyword(&listed, KeywordKind::ImmuneToSpells);
+    // R4586006: the player-level Attack lend, a layer-5 aura beside the sources' own.
+    // R4594002: a Spell's lend passes a Unit Immune to Spells by too, read through the layers above.
+    attack += attack_lent_by_player(state, instance, immune);
+    // §10.4: an aura that sets attack to a value (Classic #88's Radiant "0 Attack") applies after every
+    // other layer, so nothing above lifts it; with several, the last in aura order holds.
+    for modifier in &auras {
+        if let Some(set_attack) = modifier.set_attack {
+            attack = set_attack;
+        }
+    }
     listed.extend(lent_by_player(state, instance, immune));
     let mut keywords: Vec<Keyword> = with_brittle_count(&listed, instance);
 

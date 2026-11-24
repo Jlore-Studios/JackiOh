@@ -21,7 +21,9 @@ use crate::script::{Effect, EffectContext, EffectPart, EngineSink, Hook, Memo, S
 use crate::state::{
     CardInstance, EngineError, GameState, PendingChoice, PromptOption, Resume, find_instance,
 };
-use crate::wire::{ActionBody, GameEvent, PlayerId, PromptKind, Row, Selection, TargetAim, ZoneName};
+use crate::wire::{
+    ActionBody, CardType, GameEvent, PlayerId, PromptKind, Row, Selection, TargetAim, ZoneName,
+};
 use crate::work::{
     PausedStep, RUN_MARKS_KEY, RunMarks, WorkPlan, begin_work_cascade, card_data, drain_work, park_work,
     paused_of, run_marks_of, script_step_for,
@@ -1289,6 +1291,18 @@ pub fn run_enters_hand(sink: &mut EngineSink<'_>, card: &CardInstance, controlle
 /// enemies among its target options when there is one. Anything else is asked as it stands: the other
 /// player's prompts are theirs, and an engine sequence's own question makes its random picks itself
 /// (`play_steps`).
+/// R4594014: the type of the card whose prompt `resume` continues — the instance as it stands
+/// now, else its definition's. Unknown reads as a Unit, which keeps `targets_random`'s old answer.
+fn resume_type(state: &GameState, resume: &Resume) -> CardType {
+    resume
+        .instance_id
+        .as_deref()
+        .and_then(|id| find_instance(state, id))
+        .map(|card| crate::faces::card_type_of(state, card))
+        .or_else(|| crate::catalog::find_def(Some(state), &resume.def_id).map(|def| def.type_))
+        .unwrap_or(CardType::Unit)
+}
+
 fn cast_prompt_shape(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<OpenPromptArgs> {
     if has_answerer(&args.resume.hook) {
         return Some(args);
@@ -1302,7 +1316,14 @@ fn cast_prompt_shape(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<
     let args = OpenPromptArgs { options, ..args };
     // R1200: while a Mayor acts a `target` prompt is answered at once at random, for whichever player
     // it opened for, meeting no targeting point (as R452's picks). R1201: the opener's Lucky rolls again.
-    if args.kind == PromptKind::Target && crate::random_targets::targets_random(sink.state) {
+    // R4594014: a Spell's `target` prompt while Zero-Day stands the same way.
+    if args.kind == PromptKind::Target
+        && crate::random_targets::targets_random_for(
+            sink.state,
+            args.player,
+            resume_type(sink.state, &args.resume),
+        )
+    {
         let luck = crate::random_targets::mayor_luck(sink.state, args.player);
         answer_at_random(sink, &args, luck);
         return None;
@@ -1422,7 +1443,12 @@ fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs, luck: i32)
     // I22 (#4540): the fuzz monitor holds this draw to the targeting rules (`testkit::seams`).
     #[cfg(feature = "testkit")]
     if args.kind == PromptKind::Target {
-        let by = if crate::random_targets::targets_random(state) {
+        // R4594014: a draw Zero-Day's flag caused is a Mayor draw to the seam.
+        let by = if crate::random_targets::targets_random_for(
+            state,
+            args.player,
+            resume_type(state, &args.resume),
+        ) {
             crate::testkit::seams::TargetDrawBy::Mayor
         } else {
             crate::testkit::seams::TargetDrawBy::RandomCast

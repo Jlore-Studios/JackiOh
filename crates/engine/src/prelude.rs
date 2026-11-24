@@ -33,6 +33,7 @@ pub use crate::geometry::{
 pub use crate::giga::{enters_giga, is_giga, lanes_of, occupant_at};
 pub use crate::grants::*;
 pub use crate::graveyard_play::*;
+pub use crate::history::{History, PlayedUnit, deaths_of, units_played_by};
 pub use crate::kill_credit::*;
 pub use crate::layers::*;
 pub use crate::mana::*;

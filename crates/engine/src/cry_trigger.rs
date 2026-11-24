@@ -335,7 +335,14 @@ fn ask_targets(sink: &mut EngineSink, run: &mut CryRun, card: &CardInstance) -> 
             continue;
         }
         // R1200: while a Mayor acts a `target` Cry pick is drawn at random, and nobody is asked.
-        if decl.kind == PromptKind::Target && crate::random_targets::targets_random(sink.state) {
+        // R4594014: a Spell's Cry pick while Zero-Day stands the same way.
+        if decl.kind == PromptKind::Target
+            && crate::random_targets::targets_random_for(
+                sink.state,
+                run.controller,
+                crate::faces::card_type_of(sink.state, card),
+            )
+        {
             let picks = crate::random_targets::draw_picks(
                 sink.state,
                 &mut *sink.rng,

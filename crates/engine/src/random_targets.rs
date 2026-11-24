@@ -8,7 +8,7 @@ use crate::combat::AttackTarget;
 use crate::damage::DamageTarget;
 use crate::rng::Rng;
 use crate::state::GameState;
-use crate::wire::{KeywordKind, PLAYER_IDS, PlayerId, Selection, TargetAim};
+use crate::wire::{CardType, KeywordKind, PLAYER_IDS, PlayerId, Selection, TargetAim, opponent_of};
 
 /// R1200: whether a Mayor acts on the field — a card in either player's active units whose running
 /// face carries `random_targets`.
@@ -18,6 +18,22 @@ pub fn targets_random(state: &GameState) -> bool {
             .into_iter()
             .any(|card| crate::scripts::flags_of(state, card).random_targets == Some(true))
     })
+}
+
+/// R4594014 (Infinite Assault #239 Zero-Day): whether `player`'s declared targets and target
+/// prompts for a card of `type_` are drawn at random: a Mayor's, or — for a Spell — a card in the
+/// opponent's active units whose running face carries `random_enemy_spell_targets`. Attacks,
+/// activations and `mayor_luck` keep `targets_random`.
+pub fn targets_random_for(state: &GameState, player: PlayerId, type_: CardType) -> bool {
+    if targets_random(state) {
+        return true;
+    }
+    type_ == CardType::Spell
+        && crate::zones::active_units_of(state, opponent_of(player))
+            .into_iter()
+            .any(|card| {
+                crate::scripts::flags_of(state, card).random_enemy_spell_targets == Some(true)
+            })
 }
 
 /// R1201: the Lucky of `chooser`'s acting Mayors, summed — the extra rolls their controller's

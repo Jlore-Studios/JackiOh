@@ -1325,7 +1325,7 @@ fn modifier_label(state: &GameState, player: PlayerId, modifier: &PlayerModifier
         ),
         // R4586006: Infinite Assault #33 Uncanny Valley's "Enemy Units have −N Attack until your
         // next turn", read from the affected side.
-        ModifierKind::UnitsAttack { amount } => format!("Your Units have {amount:+} Attack"),
+        ModifierKind::UnitsAttack { amount, .. } => format!("Your Units have {amount:+} Attack"),
     }
 }
 

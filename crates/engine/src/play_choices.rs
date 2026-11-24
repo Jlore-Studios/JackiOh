@@ -2452,8 +2452,6 @@ pub fn priced_play_actions(
 ) -> Vec<PlayAction> {
     let mut out: Vec<PlayAction> = Vec::new();
     let tribute_sets = legal_tribute_sets(state, player, card);
-    // R1200: read once, at the first action listed: no Tribute set, zone or choice changes it.
-    let mut random: Option<bool> = None;
 
     for PlayPrice {
         x,
@@ -2521,7 +2519,13 @@ pub fn priced_play_actions(
                         };
                         // R1200: while a Mayor acts the reducer draws the targets, so collapsed
                         // choices list one action, not one per target set.
-                        if *random.get_or_insert_with(|| crate::random_targets::targets_random(state)) {
+                        // R4594014: a Spell its player lists while Zero-Day stands is drawn the same
+                        // way, read per face since the price decides the face.
+                        if crate::random_targets::targets_random_for(
+                            state,
+                            player,
+                            crate::faces::card_type_of(state, &face),
+                        ) {
                             pushed.targets = without_target_picks(
                                 state,
                                 player,

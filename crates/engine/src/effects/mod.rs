@@ -54,6 +54,7 @@ pub mod memory;
 pub mod move_;
 pub mod perks;
 pub mod plague;
+pub mod played_copies;
 pub mod player_mods;
 pub mod position;
 pub mod quests;
@@ -86,6 +87,7 @@ pub mod tune_live;
 pub mod turn_end;
 pub mod turn_hooks;
 pub mod turns;
+pub mod units_this_turn;
 pub mod win;
 
 pub use activations::*;
@@ -139,6 +141,7 @@ pub use memory::*;
 pub use move_::*;
 pub use perks::*;
 pub use plague::*;
+pub use played_copies::*;
 pub use player_mods::*;
 pub use position::*;
 pub use quests::*;
@@ -171,6 +174,7 @@ pub use tune_live::*;
 pub use turn_end::*;
 pub use turn_hooks::*;
 pub use turns::*;
+pub use units_this_turn::*;
 pub use win::*;
 
 // §6.3 Discover's offer count and C+ #29's card cost, from `crate::config` (CLAUDE.md rule 9, SURFACE §6.4).

@@ -623,9 +623,20 @@ pub fn validate_play(
     // R1200: while a Mayor acts the action carries no targets, so draw each at random before anything
     // is checked or paid; the targeting point, costs and Joro's replacements meet the drawn target
     // (MD-E9). A face-down play (ME-ALTPLAY, R1044) declares nothing, so draws nothing.
+    // R4594014: a Spell its player casts while Zero-Day stands is drawn the same way.
     let mut owned = action.clone();
-    if crate::random_targets::targets_random(sink.state) && owned.face_down.is_none() {
-        let face = crate::play_choices::face_for_action(sink.state, player, &card, &owned);
+    let face = if owned.face_down.is_none() {
+        Some(crate::play_choices::face_for_action(sink.state, player, &card, &owned))
+    } else {
+        None
+    };
+    if let Some(face) = face
+        && crate::random_targets::targets_random_for(
+            sink.state,
+            player,
+            crate::faces::card_type_of(sink.state, &face),
+        )
+    {
         let given = owned.targets.clone().unwrap_or_default();
         let modes = owned.modes.clone().unwrap_or_default();
         let decls = crate::play_choices::declared_targets(sink.state, &face);
@@ -2507,7 +2518,14 @@ fn ask_repeat_targets(
             continue;
         }
         // R1200: while a Mayor acts a `target` repeat is drawn at random, and nobody is asked.
-        if decl.kind == PromptKind::Target && crate::random_targets::targets_random(sink.state) {
+        // R4594014: a Spell's repeat while Zero-Day stands the same way.
+        if decl.kind == PromptKind::Target
+            && crate::random_targets::targets_random_for(
+                sink.state,
+                run.player,
+                crate::faces::card_type_of(sink.state, card),
+            )
+        {
             let picks = crate::random_targets::draw_picks(
                 sink.state,
                 &mut *sink.rng,

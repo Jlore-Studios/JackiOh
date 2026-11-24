@@ -54,6 +54,7 @@ pub mod combat_reactions;
 pub mod combat_resolution;
 pub mod combat_validation;
 pub mod combo_index;
+pub mod commanders;
 pub mod concealed_copy;
 pub mod condition_active;
 pub mod config;

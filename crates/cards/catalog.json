@@ -44894,7 +44894,7 @@
         "step": 1
       }
     ],
-    "loc": 6,
+    "loc": 46,
     "base": {
       "attack": 5,
       "health": 8,
@@ -44931,7 +44931,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 6,
+    "loc": 57,
     "base": {
       "keywords": [],
       "text": "Your face-down cards can't be destroyed.\nOnce per turn, when you set a card face-down, draw a card."
@@ -44974,7 +44974,7 @@
         "step": 1
       }
     ],
-    "loc": 6,
+    "loc": 20,
     "base": {
       "attack": 7,
       "health": 5,
@@ -45033,7 +45033,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 21,
     "base": {
       "keywords": [],
       "text": "Your Units have +{attack} Attack and Charge this turn. Deal {damage} damage to your hero."
@@ -45071,7 +45071,7 @@
         "step": 1
       }
     ],
-    "loc": 6,
+    "loc": 31,
     "base": {
       "attack": 5,
       "health": 9,
@@ -45113,7 +45113,7 @@
         "step": 1
       }
     ],
-    "loc": 6,
+    "loc": 25,
     "base": {
       "keywords": [],
       "text": "Summon three Drones. Give your Units +{buff}/+{buff}."
@@ -45148,7 +45148,7 @@
         "step": 1
       }
     ],
-    "loc": 6,
+    "loc": 57,
     "base": {
       "attack": 6,
       "health": 6,
@@ -45185,7 +45185,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 47,
     "base": {
       "keywords": [],
       "text": "Summon copies of the three most expensive friendly Units that died this game."
@@ -45210,7 +45210,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 54,
     "base": {
       "attack": 4,
       "health": 8,
@@ -45239,7 +45239,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 18,
     "base": {
       "keywords": [],
       "text": "Steal two random cards from your opponent's hand."
@@ -45264,7 +45264,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 15,
     "base": {
       "attack": 4,
       "health": 16,
@@ -45319,7 +45319,7 @@
         "step": 1
       }
     ],
-    "loc": 6,
+    "loc": 49,
     "base": {
       "keywords": [],
       "text": "Reveals when an enemy Unit with {threshold} or more Attack attacks: Cancel the attack."
@@ -45344,7 +45344,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "attack": 8,
       "health": 10,
@@ -45373,7 +45373,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 12,
     "base": {
       "keywords": [],
       "text": "Fill your board with copies of random Units your opponent played this game."
@@ -45398,7 +45398,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 25,
     "base": {
       "attack": 0,
       "health": 30,
@@ -45441,7 +45441,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 44,
     "base": {
       "keywords": [],
       "text": "Exile an enemy Unit and every enemy Unit adjacent to it."
@@ -45466,7 +45466,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 23,
     "base": {
       "attack": 7,
       "health": 7,
@@ -45505,14 +45505,14 @@
         "step": 1
       }
     ],
-    "loc": 6,
+    "loc": 32,
     "base": {
       "keywords": [],
-      "text": "Transform every enemy Unit into a random Unit that costs ({step}) less."
+      "text": "Transform every enemy Unit into a random Unit whose Cost is ({step}) lower."
     },
     "radiant": {
       "keywords": [],
-      "text": "Transform every enemy Unit into a random Unit that costs ({step}) less."
+      "text": "Transform every enemy Unit into a random Unit whose Cost is ({step}) lower."
     }
   },
   "infiniteassault-235": {
@@ -45542,7 +45542,7 @@
         "step": 1
       }
     ],
-    "loc": 6,
+    "loc": 24,
     "base": {
       "attack": 8,
       "health": 12,
@@ -45579,7 +45579,7 @@
     "flavor": "Tech",
     "token": true,
     "cost": 4,
-    "loc": 6,
+    "loc": 22,
     "base": {
       "attack": 12,
       "health": 16,
@@ -45621,7 +45621,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 23,
     "base": {
       "keywords": [],
       "text": "Fill your board with random Infinite Assault Units. They have Rush."
@@ -45664,7 +45664,7 @@
         "step": 1
       }
     ],
-    "loc": 6,
+    "loc": 37,
     "base": {
       "attack": 10,
       "health": 10,
@@ -45720,7 +45720,7 @@
       }
     ],
     "dealsDamage": true,
-    "loc": 6,
+    "loc": 36,
     "base": {
       "keywords": [],
       "text": "Start of turn: Deal {damage} damage to each hero, {growth} more each turn this has been on the field."
@@ -45745,7 +45745,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 4,
-    "loc": 6,
+    "loc": 26,
     "base": {
       "attack": 6,
       "health": 12,
@@ -45754,7 +45754,7 @@
           "kind": "Immune to Spells"
         }
       ],
-      "text": "Immune to Spells\nCry: Steal every enemy Unit that costs (2) or less.\nAura: Your opponent's Spells have their targets chosen randomly."
+      "text": "Immune to Spells\nCry: Steal every enemy (2) Cost or less Unit.\nAura: Your opponent's Spells have their targets chosen randomly."
     },
     "radiant": {
       "attack": 12,
@@ -45764,7 +45764,7 @@
           "kind": "Immune to Spells"
         }
       ],
-      "text": "Immune to Spells\nCry: Steal every enemy Unit that costs (3) or less.\nAura: Your opponent's Spells have their targets chosen randomly."
+      "text": "Immune to Spells\nCry: Steal every enemy (3) Cost or less Unit.\nAura: Your opponent's Spells have their targets chosen randomly."
     }
   },
   "infiniteassault-240": {
@@ -45782,7 +45782,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 6,
+    "loc": 47,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays a Spell: Counter it. Cast it for yourself."
