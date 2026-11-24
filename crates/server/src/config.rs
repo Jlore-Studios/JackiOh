@@ -1154,6 +1154,14 @@ pub const CARD_STATS_CURVE_TOP: i32 = 6;
 /// Cache-Control max-age in seconds for public card statistics endpoints.
 pub const CARD_STATS_CACHE_TTL_SECONDS: i64 = 300;
 
+/// SPEC §11 R4677000: after every patch of the newest patch's line (its `major.minor`), how many of the
+/// line before's newest patches anyone but a dev account may read on `/stats`.
+pub const PUBLIC_STATS_PATCHES_LINE_BEFORE: usize = 2;
+
+/// SPEC §11 R4677000: how many of the newest patches anyone but a dev account may always read on `/stats`,
+/// when that run is longer than the newest line's patches and `PUBLIC_STATS_PATCHES_LINE_BEFORE` more.
+pub const PUBLIC_STATS_PATCHES_NEWEST: usize = 5;
+
 /// SPEC §11 R978000, R2491000: how many computed reports each of the card statistics' kept stores
 /// (`api::stats::KeptReports`) holds at once, each for `CARD_STATS_CACHE_TTL_SECONDS`; keeping
 /// another drops the one kept longest ago. The card drill-down keeps at most 24 however many patches
