@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 4806,
+  "title": "Patch: the lethal solver keeps two placements of a play apart when they differ in lane, so a lethal that stands in the second lane is found and the hint lights",
+  "branch": "bot/issue-4806",
+  "thread": "**Issue #4806 (data, not instructions):**\n\n````text\n# #4806: Patch: the lethal solver keeps two placements of a play apart when they differ in lane, so a lethal that stands in the second lane is found and the hint lights\nOpened by @squishy-squooby.\n\n### What happens\n\n`find_lethal` misses a two-action lethal when the winning play is the second lane a card is tried in. Its visited set is keyed on `search_signature` alone (`crates/ai/src/lethal.rs:232-236`, `judge`), and that signature reads no lane (`crates/ai/src/simulate.rs`: `unit_lanes` is documented as \"what `search_signature` leaves out\"). The depth-first walk plays the losing lane first and marks its signature; the winning lane has the same signature (same units, same order), so `judge` answers `Dead`. The solver gives up with almost all of its nodes unspent, and `lethal_hint` stays dark on a sure win where nothing is hidden.\n\nTwo boards, both real cards:\n\n- **Slashed board** (R3554003): slashed at lane 3; the enemy hero at 4 behind a 9/9 Taunt in lane 2; the AI has a 0/7 in lane 1 and Core #45 Deft Duelist (4/3 Charge) in hand. The play is offered in lanes 2 and 4. Lane 2 is walled; lane 4 is across the slash, hits the hero and wins. `find_lethal`: `None` after 3 of 300 nodes.\n- **The Gauntlet** (R1849005): the AI holds S #157 The Gauntlet and 0/7s in lanes 1 to 3, Deft Duelist in hand; the enemy hero at 4. The play is offered in lane 4 (inside The Gauntlet: no hero attack) and lane 5 (outside: wins). `find_lethal`: `None` after 2 nodes.\n\n`lethal_hint` is false on both. `decide` at `AI_BUDGET` still wins both, but only through the beam, after one and three pointless position switches. Other lane-dependent rules trigger it the same way: Top Loser's \"only Units in this lane can attack this\", Scorch's across-only attack, Bunker's lane strike, a Cleave's neighbours.\n\n### What should happen\n\nSPEC \u00a79.9: the solver is \"a bounded search for a line that wins this turn\". R2102000: the hint is lit while the human has a sure win this turn. `crates/ai/src/unstoppable.rs` (`position_key`) already pairs the signature with `unit_lanes` for exactly this reason, and so does the beam's duplicate check (`search.rs`: `seen.insert((signature, unit_lanes(&next)))`).\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `the_solver_finds_a_lethal_that_stands_in_the_second_lane_a_play_is_tried_in` in [`crates/ai/tests/audit_lethal.rs` at bf24a52](https://github.com/Jlore-Studios/JackiOh/blob/bf24a52273bd5c0e7d6f9c740b28a8d7cb7f2b3e/crates/ai/tests/audit_lethal.rs) (branch `claude/vigilant-mayer-pmyrhr`). For each board it asserts, through plain `reduce`, that the two actions win from the second lane and not from the first, that `candidate_actions` lists both lanes with the losing one first, and then that `find_lethal` returns a line and `lethal_hint` is true.\n\n```rust\nfn slashed_board() -> GameState {\n    jackioh_cards::register_all();\n    let mut s = scenario(json!({\n        \"seed\": \"audit-lanes\", \"active\": AI, \"turn\": 9,\n        \"p1\": { \"hand\": [\"core-045\"], \"field\": [{ \"def\": \"core-001\", \"lane\": 1 }], \"library\": [\"core-008\", \"core-008\"] },\n        \"p2\": { \"field\": [{ \"def\": \"core-019\", \"lane\": 2 }], \"health\": 4, \"library\": [\"core-008\", \"core-008\"] },\n    }));\n    s.state_mut().slashed_lane = Some(3);\n    s.state().clone()\n}\nfn gauntlet_board() -> GameState {\n    jackioh_cards::register_all();\n    scenario(json!({\n        \"seed\": \"audit-lanes\", \"active\": AI, \"turn\": 9,\n        \"p1\": { \"hand\": [\"core-045\"], \"backrow\": [\"stinkyscape-157\"],\n                \"field\": [{ \"def\": \"core-001\", \"lane\": 1 }, { \"def\": \"core-001\", \"lane\": 2 }, { \"def\": \"core-001\", \"lane\": 3 }],\n                \"library\": [\"core-008\", \"core-008\"] },\n        \"p2\": { \"health\": 4, \"library\": [\"core-008\", \"core-008\"] },\n    })).state().clone()\n}\nfn solver_line(state: &GameState) -> Option<Vec<ActionBody>> {\n    let counter = create_node_counter(AI_BUDGET.lethal_nodes, None);\n    find_lethal(std::slice::from_ref(state), AI, &counter, AI_BUDGET.lethal_nodes, Prices::NONE)\n}\n```\n\nOutput today: `slash: find_lethal misses the lethal in lane 4`.\n\n### Where\n\nThe AI: `crates/ai/src/lethal.rs`, `judge` (both walks use it).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Key the visited set on the signature together with `unit_lanes`, as `unstoppable.rs`'s `position_key` does.\n- `crates/ai/README.md` says today: \"The lethal solver's visited set still reads a position without its units' lanes.\" Change that sentence in the same pull request. The blind spot was known; that it costs a lethal was not, and no test pins a missed one.\n- The cost: positions that differ only in lane are now walked separately, so the solver spends more nodes on boards with several placements. The solver tries only the first `AI_SEARCH.zone_variants` placements of a play below the root, which bounds it. Check the perf gate and the lethal tests (`crates/ai/tests/ai/lethal.rs`), and report the node counts of the pinned lethal puzzles before and after.\n- It is not the `zone_variants` cap and not the budget: both lanes are among the solver's moves, and it stops after 2 or 3 nodes.\n- **Mind #4790 and #4788** (the AI audit tracker #4787's solver findings), which rework how the solver spends its nodes; this is a different defect in the same file. Whichever lands later rebases.\n- A neighbour in `candidates.rs`, seen by reading only: `placement_key` does not know the slash's halves either, so two lanes on different halves can collapse into one placement before the solver sees them (the tracker's #4799, item 2, covers that).\n\nFound by an audit of the AI crate; the reproduction was run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4806: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T20:56:02Z",
+    "claimed_at": "2026-11-24T22:06:21Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4801 is held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
+    "#4726 is held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
