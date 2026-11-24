@@ -20510,7 +20510,9 @@
     },
     "4737": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:7133304256"
+      ],
       "difficulty_by": {
         "at": "2026-11-24T14:40:55Z",
         "difficulty": "hard",
@@ -20573,9 +20575,7 @@
       "started_at": "2026-11-24T14:44:48Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:7133304256"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "4739": {
