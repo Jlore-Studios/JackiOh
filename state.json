@@ -20958,13 +20958,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-3",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-6",
+            "run": "45423183733",
+            "tier": "medium"
+          }
+        ],
         "sha": "f6695a9d32a1a679ae3f551d9d0dc56220d07e80",
-        "tiers": {}
+        "tiers": {
+          "claude": "medium"
+        }
       }
     }
   },
