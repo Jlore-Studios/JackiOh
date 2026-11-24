@@ -15956,16 +15956,27 @@
       "taken_asks": []
     },
     "4590": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
       "onto": "bot/issue-4601",
+      "owner": "claude-6",
+      "owner_since": "2026-11-24T00:30:11Z",
+      "owner_why": "it plans it",
       "part_of": 4601,
       "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-23T19:15:11Z",
       "requested_by": "jgoetzmann",
-      "stop_requested": false
+      "run_id": "pending:f6c0d19e-1795480182",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-24T00:30:11Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "4591": {
       "failures": 0,
@@ -17903,9 +17914,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T00:29:29Z",
+    "at": "2026-11-24T00:30:11Z",
     "url": "",
-    "what": "review #4656 on claude-8"
+    "what": "plan #4590 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-24T00:18:25Z",
