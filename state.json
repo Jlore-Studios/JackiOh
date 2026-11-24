@@ -18704,6 +18704,13 @@
     "4686": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-24T09:33:17Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Not engine rules, AI, cross-crate design, migration, or big: pure single-crate book logic plus its tests and one doc row."
+      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
