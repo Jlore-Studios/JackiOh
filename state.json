@@ -16200,6 +16200,10 @@
     },
     "4601": {
       "closeout": false,
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
       "parked": [
         "bot/issue-4587",
         "bot/issue-4588",
@@ -16208,6 +16212,10 @@
         "bot/issue-4593",
         "bot/issue-4594"
       ],
+      "pending_request": false,
+      "queued_at": "2026-11-24T08:00:42Z",
+      "requested_by": "jgoetzmann-bot",
+      "stop_requested": false,
       "tree": {
         "adopted": true,
         "at": "2026-11-23T19:14:52Z",
