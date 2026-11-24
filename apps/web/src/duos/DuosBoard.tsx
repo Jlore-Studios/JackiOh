@@ -38,6 +38,7 @@ import XpReveal from "../economy/XpReveal.tsx";
 import type { GameEconomy } from "../economy/xp.ts";
 import Game from "../game/Game.tsx";
 import { outcomeFor, resultReason, type ResultOutcome } from "../game/Result.tsx";
+import { MainMenuButton } from "../game/MainMenuButton.tsx";
 import { ModifierList } from "../game/ModifierList.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import type { PingKind, PingTarget, ReceivedPing } from "../net/duos.ts";
@@ -285,6 +286,7 @@ function ResultPanel({
   onWatchReplay,
   onLeave,
   leaveRoute,
+  onMenu,
   playAgain,
 }: {
   view: DuosView;
@@ -294,6 +296,7 @@ function ResultPanel({
   onWatchReplay: (() => void) | undefined;
   onLeave: (() => void) | undefined;
   leaveRoute: string | undefined;
+  onMenu: (() => void) | undefined;
   playAgain: DuosPlayAgain | undefined;
 }): ReactElement | null {
   // #1755: the panel focuses its first way on as it mounts (the rail's "Result" mounts it afresh).
@@ -342,6 +345,8 @@ function ResultPanel({
             {t("Back to Play together")}
           </button>
         )}
+        {/* #4742, R4742000: after the way back to the hub, out to the Play menu; /dev/duos has no route to leave for. */}
+        {onMenu === undefined ? null : <MainMenuButton testid={duosTestid.resultMenu} onClick={onMenu} />}
       </div>
       {line === null ? null : (
         <p className="duos-result__note" data-testid={duosTestid.resultAgainStatus} role={line.alert ? "alert" : "status"}>
@@ -673,6 +678,7 @@ export function DuosBoard({
           onWatchReplay={chrome?.onWatchReplay}
           onLeave={chrome?.onLeave}
           leaveRoute={chrome?.leaveRoute}
+          onMenu={chrome?.onMenu}
           playAgain={chrome?.playAgain}
         />
       ) : null}

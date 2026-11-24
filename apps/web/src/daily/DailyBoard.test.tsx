@@ -548,6 +548,24 @@ describe("R3855000 a daily board shows what every table shows", () => {
       expect(window.location.pathname).toBe(paths.dailyGame("g-1"));
     });
 
+    it("R4742000 a finished game's result offers Main menu after Back to daily games, which goes to Play", async () => {
+      serve(finished);
+      render(<DailyBoard matchId="g-1" />);
+      const overlay = await screen.findByTestId("result-overlay", undefined, SLOW);
+
+      const back = within(overlay).getByTestId(dailyTestid.backToList);
+      const menu = within(overlay).getByTestId(dailyTestid.mainMenu);
+      expect(menu).toHaveTextContent("Main menu");
+      expect(menu.parentElement).toBe(back.parentElement);
+      expect(back.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(back).toHaveTextContent("Back to daily games");
+
+      fireEvent.click(menu);
+      await waitFor(() => {
+        expect(window.location.pathname).toBe("/play");
+      });
+    });
+
     it("R3855000 a voided game's result offers no replay", async () => {
       serve(() => dailyGame({ ...finished(), view: baseView({ result: { winner: "draw", reason: "voided" } }) }));
       render(<DailyBoard matchId="g-1" />);
@@ -667,6 +685,21 @@ describe("R3934000 a finished game whose moves are no longer kept", () => {
 
     await waitFor(() => {
       expect(window.location.pathname).toBe("/daily");
+    });
+  });
+
+  it("R4742000 an expired game's result offers Main menu beside Back to daily games", async () => {
+    serve(() => expiredGame());
+    render(<DailyBoard matchId="g-1" />);
+
+    const panel = await screen.findByTestId(dailyTestid.expired, undefined, SLOW);
+    const menu = within(panel).getByTestId(dailyTestid.mainMenu);
+    expect(menu).toHaveTextContent("Main menu");
+    expect(menu.parentElement).toBe(within(panel).getByTestId(dailyTestid.backToList).parentElement);
+
+    fireEvent.click(menu);
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/play");
     });
   });
 

@@ -10,6 +10,7 @@ import { DIFFICULTIES, TURN_CAP_PLAYER_TURNS } from "@jackioh/engine/config";
 import type { PlayerId, PlayerView } from "@jackioh/shared";
 
 import { Dialog, type DialogAction } from "../game/Dialog.tsx";
+import { mainMenuAction } from "../game/MainMenuButton.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { PRACTICE_RESULT_PARTICLES } from "../practice/config.ts";
 import { outcomeOf } from "../practice/PracticeResult.tsx";
@@ -36,6 +37,8 @@ type TutorialResultProps = {
   onRetry(): void;
   onBack(): void;
   onPlayPractice(): void;
+  /** #4742: the board's Menu control once the game is over (`routes/practice.tsx`'s `onMenu`); the lesson's progress is already kept. */
+  onMenu(): void;
   onViewBoard(): void;
 };
 
@@ -136,6 +139,7 @@ export function TutorialResult({
   onRetry,
   onBack,
   onPlayPractice,
+  onMenu,
   onViewBoard,
 }: TutorialResultProps): ReactElement {
   useLocale();
@@ -184,7 +188,11 @@ export function TutorialResult({
       title={title}
       description={line}
       onClose={onViewBoard}
-      actions={[primary, { label: t("Back to lessons"), kind: "secondary", onClick: onBack, testid: tutorialTestid.back }]}
+      actions={[
+        primary,
+        { label: t("Back to lessons"), kind: "secondary", onClick: onBack, testid: tutorialTestid.back },
+        mainMenuAction(onMenu, tutorialTestid.mainMenu),
+      ]}
       footer={
         <button type="button" className="link-button practice-result__view" data-testid={tutorialTestid.viewBoard} onClick={onViewBoard}>
           {t("View the board")}

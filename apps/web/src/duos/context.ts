@@ -28,6 +28,8 @@ export type DuosChrome = {
   onLeave?: () => void;
   /** #2116: the route `onLeave` goes to, so the button names it for a prefetch (R2116000); absent, none. */
   leaveRoute?: string;
+  /** #4742: the result panel's Main menu, out to Play; absent, it offers none (/dev/duos has no route to leave for). */
+  onMenu?: () => void;
   /** #965: the result panel's "Watch the replay" (§13.9); absent, it offers none (/dev/duos has no server replay). */
   onWatchReplay?: () => void;
   /** R2092000: the result panel's Play again; absent, it offers none. */

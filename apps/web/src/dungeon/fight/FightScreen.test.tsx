@@ -689,6 +689,38 @@ describe("R4733000 a finished fight keeps its result when the player leaves befo
   });
 });
 
+describe("R4742000 the dungeon fight's result panel offers Main menu", () => {
+  it("R4742000 once the fight has its result, the panel's Main menu follows Continue and goes to Play without asking", async () => {
+    at(paths.dungeon);
+    const act = vi.fn(() => null);
+    const host = fightHost();
+    renderFight(host, fakeDungeon(act));
+    await screen.findByTestId(fightTestid.screen);
+    expect(screen.queryByTestId(fightTestid.resultMenu)).toBeNull();
+
+    concedeOnBoard();
+    const proceed = await screen.findByTestId(fightTestid.continue);
+    await waitFor(() => {
+      expect(proceed).toBeEnabled();
+    });
+    const menu = screen.getByTestId(fightTestid.resultMenu);
+    expect(menu).toHaveTextContent("Main menu");
+    // In Continue's own row, after it: Continue stays the first, primary answer.
+    expect(menu.parentElement).toBe(proceed.parentElement);
+    expect(proceed.parentElement?.firstElementChild).toBe(proceed);
+    expect(proceed).toHaveClass("button-primary");
+    expect(proceed.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    fireEvent.click(menu);
+    expect(window.location.pathname).toBe(paths.play);
+    expect(screen.queryByTestId(fightTestid.leaveDialog)).toBeNull();
+    // R4733000: leaving the finished fight sends its report first, once, as Continue would.
+    expect(act).toHaveBeenCalledTimes(1);
+    expect(act).toHaveBeenCalledWith(expect.objectContaining({ type: "fightOver", won: false }));
+    at("/");
+  });
+});
+
 describe("#2925 a fight paces the AI as practice does", () => {
   const GAP = 40;
   const SLOW: PracticePacing = { firstActionMs: GAP, actionGapMs: GAP, promptAnswerMs: GAP };
