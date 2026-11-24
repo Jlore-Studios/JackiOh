@@ -15796,6 +15796,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-23T08:56:36Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "",
       "run_id": "45369397965",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-24T09:52:57Z",
@@ -15804,7 +15805,8 @@
         "the run failed: RuntimeError: the integration branch bot/issue-4578 is gone"
       ],
       "strikes": 1,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "4585": {
       "action": "plan",
