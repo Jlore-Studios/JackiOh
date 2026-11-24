@@ -20312,17 +20312,8 @@
       ]
     },
     "4733": {
-      "action": "plan",
-      "asks": [
-        "c:7133320508"
-      ],
-      "build_next": {
-        "from_run": "45407415298",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-24T14:08:21Z",
-        "until": "2026-11-24T14:38:21Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-24T14:08:12Z",
         "difficulty": "medium",
@@ -20341,10 +20332,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "s; extend `fakeDungeon` with `holdReport` mock |\n- | `apps/web/src/dungeon/store.test.ts` | change | New `R4733000` apply-once / refused / lost tests |\n- | `apps/web/src/assault/fight/FightScreen.test.tsx` | change | New `R4733000` hold / unmount / once tests; pass `onHold` in `renderFight` |\n- | `apps/web/src/assault/store.test.ts` | change | New `R4733000` apply-once / refused / lost tests |\n- | `spec/rulings/R4733000.md` | new | The ruling, citing \u00a715.6, R3476000, R3932000, R4582000, R4582001 |\n- | `spec/pending/4733.md` | new | The \u00a711 paragraph for R4733000 |\n- Must not touch: `crates/`, `apps/edge/`, `apps/admin/`, `e2e/`, `.github/`, `.harness/`, `.squishy/`, `bot/`, the worker and practice host (the finished-fight slot clearing stays as is). Governing spec: \u00a715.6, \u00a715.2, \u00a715.7, \u00a715.10 and rulings R3476000, R3932000, R4582000, R4582001. No `apps/web/REA\u2026\n- ## Steps\n- 1. **Ruling and pending note.** Write `spec/rulings/R4733000.md` (front matter `id: R4733000`; title: `A finished dungeon or Assault fight keeps its result when the player leaves before Continue (issue #4733)`; `cards: \"\u00a715.6, R3476000, R3932000, R4582000, R4582001, issue #4733\"`; `proven_in` listi\u2026\n- 2. **Dungeon held-report storage.** In `apps/web/src/dungeon/config.ts` add `export const DUNGEON_HELD_KEY = \"jackioh.dungeon.held\";`. In `apps/web/src/dungeon/store.ts` add `type HeldReport = { row: number | null; col: number; action: RunAction }`, `parseHeldReport` (reject unless `v` matches, row\u2026\n- 3. **Dungeon hold and apply-on-load.** Add `holdReport(action: RunAction): void` to the `Dungeon` type; implement `holdFightReport` reading `core?.live`, returning silently unless the live run's phase is `fight`, writing `{ row: live.run.row, col: live.run.col, action }`; expose it in `useDungeon`'\u2026\n- 4. **Dungeon fight screen.** In `apps/web/src/dungeon/fight/FightScreen.tsx` add `dungeonRef` mirroring the existing `setupRef` pattern. Add `heldFor`/`sentRef` refs and a `sendOnce` callback that returns unless `action !== null && controller !== null && sentRef.current !== controller`, then marks \u2026\n- 5. **Assault held-report storage and store.** In `apps/web/src/assault/config.ts` add `export const ASSAULT_HELD_KEY = \"jackioh.assault.held\";`. In `apps/web/src/assault/store.ts` add `type HeldAssault = { attempt: number; level: number; action: AssaultAction }`, parse with the existing `parseActio\u2026\n- 6. **Assault fight screen and page.** In `apps/web/src/assault/fight/FightScreen.tsx` add required prop `onHold: (action: AssaultAction) => void` with an `onHoldRef` mirror; hold-on-arrival effect and `sendOnce`/unmount cleanup exactly as the dungeon screen (replacing `send`), with `onMenu` keeping\u2026\n- 7. **Tests.** Dungeon screen: extend `fakeDungeon` with `holdReport: vi.fn()`; add `it(\"R4733000 the report is held on arrival, before Continue\")` (hold called with `LOST`, `act` uncalled, Continue still enabled), `it(\"R4733000 Menu after the report sends the report first, then goes to Play\")`, `it\u2026\n- 8. **Checks.** Run `cargo jackioh spec check`, then `pnpm --dir apps/web test src/dungeon/store.test.ts`, `src/dungeon/fight/FightScreen.test.tsx`, `src/assault/store.test.ts`, `src/assault/fight/FightScreen.test.tsx` (each builds the WASM module first), plus `cargo fmt --check` if any Rust was tou\u2026\n- ## Tests\n- Each new test is named `it(\"R4733000 \u2026\")` and asserts the behavior in step 7: hold-on-arrival without sending or screen change; Menu/unmount applying exactly once; Continue-then-unmount/reload applying nothing more; refused holds dropped with the fight dealt fresh; lost fights settling history/reco\u2026\n- ## Done when\n- - [ ] Won fight, then Menu: run past that fight with the win's max HP and refill (or attempt on next level's Briefing), no fresh fight dealt.\n- - [ ] Lost or conceded fight, then Menu: run ended lost with history record (or attempt Lost screen), as after Continue.\n- - [ ] Reload with an arrived report: applied once, hold cleared, no fresh fight; Continue or unmount after that applies nothing more.\n- - [ ] Unmount with an arrived report, without Continue: applied once.\n- - [ ] Refused held report dropped; fight dealt fresh; pre-change kept values without a hold still load.\n- - [ ] Board's end unchanged until Continue; existing R4582000/R3932000 tests pass.\n- - [ ] `R4733000` tests in all four files, listed in the note's `proven_in`; `cargo jackioh spec check` passes.\n- - [ ] The four `pnpm --dir apps/web test <file>` runs pass.\n- ## Risks\n- - Double-apply (Continue then unmount; two tabs via `storage` event): closed by clearing the hold in the same synchronous tick that appends the action; the second path finds no hold and a finished run/attempt refuses (`\"The run is over.\"` / `\"The attempt is over.\"`). Do not reorder the clear after \u2026\n- - Dev-only StrictMode remount runs the unmount cleanup early; `sentRef` plus the store's refusal make the duplicate a harmless no-op. Production is unaffected.\n- - Rule 7: only the outcome action crosses into the store; the log and hidden hands stay in the worker. The store's row/col and attempt/level keys are the player's own position, not hidden information.\n- - Reload inside the worker's single round trip between game end and report arrival still deals the fight fresh; accepted per the issue, no test covers it.\n- ## Open questions\n- None. Every decision the task left open is settled above: page-side hold (not worker-kept finished save), no `pagehide` writer, fight-identity keying, clear-on-Continue-attempt, Briefing landing for reloaded Assault wins, and no README change.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4733 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4733/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-24T13:49:21Z",
       "owner_why": "it plans it",
@@ -20357,12 +20347,14 @@
       "provider": "muse",
       "queued_at": "2026-11-24T13:47:02Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45407415298",
+      "run_id": "pending:31760f5d-1795529360",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-24T13:49:21Z",
+      "started_at": "2026-11-24T14:09:51Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7133320508"
+      ]
     },
     "4734": {
       "action": "plan",
@@ -20798,9 +20790,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T13:55:02Z",
+    "at": "2026-11-24T14:09:51Z",
     "url": "",
-    "what": "plan #4732 on claude-3"
+    "what": "build #4733 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T14:07:59Z",
