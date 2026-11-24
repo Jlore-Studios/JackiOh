@@ -1,0 +1,64 @@
+{
+  "action": "plan",
+  "number": 4585,
+  "title": "Patch: the Infinite Assault, G, the e2e spec",
+  "branch": "bot/issue-4585",
+  "thread": "**Issue #4585 (data, not instructions):**\n\n````text\n# #4585: Patch: the Infinite Assault, G, the e2e spec\nOpened by @jgoetzmann.\n\nPart of #4576. Part **G** of the mode, built on `main` once the mode's tree (#4578, parts A to D) has\nmerged, as its own pull request: it reads A's code and the surface below as they landed.\n\nThe plan of record is [`docs/infinite-assault.md`](https://github.com/Jlore-Studios/JackiOh/blob/claude/gallant-ritchie-pwshvk/docs/infinite-assault.md): on `main` once C1 merges, and until then on the planning branch `claude/gallant-ritchie-pwshvk`. Where it and SPEC disagree, SPEC wins (CLAUDE.md). Read its IA7 and IA10, `e2e/README.md`, and the dungeon run's spec if there is one.\n\n**Owns:** `e2e/cypress/e2e/<nn>-assault.cy.ts` and its fixtures. Touch nothing else.\n\n## Build\n\n- A Cypress spec on the e2e build (no server): open `/assault`, take the day's Assault deck, Start, read the\n  briefing of level 1, win level 1 through the e2e build's hooks (`window.__jackioh`, as the other specs drive a\n  game), reach level 2's briefing, reload and find the record and the open attempt kept; then abandon and find\n  the attempt ended. It uses the surface's test ids.\n- Whether it joins `e2e smoke` is the eight-minute budget's call (`ci.yml`); default: the full e2e run.\n\n## Done when\n\n- `cd e2e && pnpm exec cypress run --spec cypress/e2e/<nn>-assault.cy.ts` green against a built client\n  (`pnpm --dir apps/web build:e2e`), and `pnpm --dir e2e typecheck` green.\n- Every number is a named constant where CLAUDE.md rule 9 says; every decision the spec doesn't make is a\n  ruling note in this issue's block with its proving test and its `spec/pending/<issue>.md` paragraph (rule 3).\n\n**The surface (frozen).** Rust, in `jackioh_run` (serde camelCase; `ts` exports to\n`apps/web/src/wire/generated/`; JSON in and out through the WebAssembly module, one export per function,\nnamed as the function, wrapped in `apps/web/src/wasm/index.ts` in camelCase as the `run*` wrappers are):\n\n```rust\npub fn assault_day_seed(date: &str) -> Result<String, String>;            // \"2026-11-23\" -> \"assault-2026-11-23\"\npub fn assault_catalog_content(catalog: &CardDefs) -> AssaultContent;     // the set's cards by tag + assault.json\npub fn assault_placeholder_content(catalog: &CardDefs) -> AssaultContent; // shipped stand-ins until the release\npub fn assault_day(date: &str, content: &AssaultContent) -> Result<AssaultDay, String>;\npub fn assault_create(setup: &AssaultSetup, record: &AssaultRecord, day: &AssaultDay) -> Result<AssaultState, String>;\npub fn assault_reduce(state: &AssaultState, day: &AssaultDay, action: &AssaultAction) -> Result<AssaultState, String>;\npub fn assault_fight_setup(state: &AssaultState, day: &AssaultDay) -> Option<AssaultFightSetup>;\npub fn assault_fight_report(game: &ReplayInput, human: PlayerId) -> Result<AssaultAction, String>;\npub fn assault_record(record: &AssaultRecord, state: &AssaultState) -> AssaultRecord;\npub fn assault_fold(file: &AssaultFile, day: &AssaultDay) -> Result<AssaultState, String>;\npub fn assault_constants() -> AssaultConstants;\n\npub struct AssaultContent { pub cards: Vec<AssaultCard>, pub doctrines: Vec<AssaultDoctrine>, pub commanders: Vec<AssaultCommander> }\npub struct AssaultCard { pub id: String, pub rarity: Rarity, pub doctrine: Option<String>, pub commander: bool }\npub struct AssaultDoctrine { pub id: String, pub name: String, pub line: String, pub enemies: Vec<String> }\npub struct AssaultCommander { pub id: String, pub name: String, pub rank: u8, pub doctrine: Option<String>, pub cards: Vec<String> }\npub enum AssaultUpgradeKind { OpeningCards, DeckSize, Radiant, Buffed, ManaBonus, ManaCap, HeroHealth, HeroArmor, ExtraDraw } // \"openingCards\", \u2026\npub struct AssaultUpgrade { pub kind: AssaultUpgradeKind, pub stacks: i32 }\npub enum AssaultEscalation { Cards, Upgrade { upgrade: AssaultUpgradeKind } } // tagged \"kind\": \"cards\" | \"upgrade\"\npub struct AssaultLevel {\n    pub level: u8, pub enemy: String, pub doctrine: Option<String>, pub commander: Option<String>,\n    pub escalations: Vec<AssaultEscalation>,   // what this level added\n    pub upgrades: Vec<AssaultUpgrade>,         // everything held at this level\n    pub rarities: [i32; 5],                    // its deck's Common, Rare, Epic, Legendary, Mythic counts\n    pub deck: Vec<String>, pub marks: Vec<DeckMark>, pub handicap: Handicap,\n}\npub struct AssaultDay { pub date: String, pub seed: String, pub levels: Vec<AssaultLevel> }\npub enum AssaultDeckSource { Saved, Preset, DayDeck }                       // \"saved\" | \"preset\" | \"dayDeck\"\npub struct AssaultSetup { pub date: String, pub deck: Vec<String>, pub source: AssaultDeckSource, pub start_level: u8, pub attempt: u32 }\npub enum AssaultPhase { Briefing, Fight, Lost, Repelled, Abandoned }\npub struct AssaultState { pub setup: AssaultSetup, pub level: u8, pub phase: AssaultPhase, pub beaten: Vec<u8>, pub turns: i32 }\npub enum AssaultAction { Fight, FightOver { won: bool, turns: i32 }, Abandon } // tagged \"kind\": \"fight\" | \"fightOver\" | \"abandon\"\npub struct AssaultFightSetup { pub seed: String, pub human_deck: Vec<String>, pub human_handicap: Handicap,\n    pub enemy_deck: Vec<String>, pub enemy_handicap: Handicap, pub enemy_marks: Vec<DeckMark>, pub level: AssaultLevel }\npub struct AssaultRecord { pub date: String, pub best: u8, pub checkpoints: Vec<u8>, pub attempts: u32, pub repelled_on: Option<u32> }\npub struct AssaultFile { pub version: String, pub setup: AssaultSetup, pub record: AssaultRecord, pub actions: Vec<AssaultAction> }\npub struct AssaultConstants { pub levels: u8, pub commander_levels: Vec<u8>, pub checkpoints: Vec<u8>, pub history_days: u32 }\n```\n\nThe WebAssembly module also exports `assault_content()` (the content the browser deals from:\n`assault_placeholder_content` until the release, then `assault_catalog_content`), `assault_content_at(version)`\nand `assault_day_deck(date)` (IA5). The web: route `/assault` (`paths.assault`); the device store's keys\n`jackioh.assault.attempt` (the open attempt's file and its kept fight) and `jackioh.assault.records` (the\ndays' records); `ASSAULT_OPEN` in `apps/web/src/assault/config.ts`; part D's\n`apps/web/src/assault/fight/FightScreen.tsx` exports `AssaultFightScreen({ state, day, onAction })`, which\npart C's page renders in the `fight` phase and which calls `onAction` with the `fightOver` action that\n`assaultFightReport` folds; the test ids, in `apps/web/src/assault/testids.ts`: `assault-page`,\n`assault-deck-saved`, `assault-deck-preset`, `assault-deck-day`, `assault-start`, `assault-level-<n>`,\n`assault-briefing`, `assault-fight-start`, `assault-result`, `assault-record`, and in\n`fight/testids.ts`: `assault-fight`.\n\nBlocked by #4578\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-4578",
+  "part_of": 4578,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4585: needs a plan; `claude-1` (claude, `sonnet`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T08:56:33Z",
+    "claimed_at": "2026-11-24T09:52:15Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4673 is held for `claude-7` until 04:30 (5-hour usage is 73%, too close to its 70% cap to start a long run (it starts under 65%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4595 skipped: it waits for #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4676 skipped: it waits for #4672, #4673 to close first",
+    "#4678 skipped: it waits for #4673, #4675 to close first",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4680 skipped: it waits for #4678 to close first",
+    "#4681 skipped: it waits for #4680 to close first"
+  ]
+}
