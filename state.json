@@ -20761,6 +20761,9 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "4743": {
+      "suggestion": true
+    },
     "4745": {
       "action": "plan",
       "asks": [],
@@ -43404,6 +43407,13 @@
         "title": "Patch: a banned account's open queue tickets pair with no one",
         "verdict": "came to nothing",
         "why": "rejected by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-24T14:20:54Z",
+        "number": 4743,
+        "title": "Patch: a play still being built closes when the game ends on your turn, instead of covering the result",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
       }
     ],
     "declined": [
