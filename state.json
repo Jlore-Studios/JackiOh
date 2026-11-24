@@ -18842,17 +18842,8 @@
       }
     },
     "4696": {
-      "action": "plan",
-      "asks": [
-        "c:7127221731"
-      ],
-      "build_next": {
-        "from_run": "45367052762",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-24T09:48:22Z",
-        "until": "2026-11-24T10:18:22Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-24T09:48:13Z",
         "difficulty": "medium",
@@ -18871,10 +18862,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "ors stay as they are), `crates/engine`, `crates/cards`, `crates/ai`, `apps/web`, `e2e`, `spec/` (no new rule by default; see step 5), `.github/`, `.harness/`, `.squishy/`, `bot/`. Governing spec: \u00a79.5 (`spec/09-architecture.md:68`), \u00a713.8 (`spec/13-duos.md:1\u2026\n- ## Steps\n- 1. `crates/shared/src/host/duel.rs`, `on_attached`: read `let here = self.connected[home];` first. Guard only the three greeting-related statements with `if here`, leaving order and the rest untouched:\n- - `self.clock.clear_grace(player, &mut self.fx);` under `if here` (a dead seat's grace keeps running).\n- - `self.greet(home, player, now);` under `if here` (greet nobody; `send_to_home` would drop the frames anyway, but the `Greeting` outputs must not emit).\n- - The `DuelOutput::Greeting { home, part: GreetingPart::Watchers }` emit under `if here` (it targets only the attaching seat's socket via `push_watchers_to`).\n- - Keep unconditional and in place: `start_absent_grace(now)` (R744), `persist_clocks()`, `push_clock(player.opponent(), now)` (the other seat's frame must carry the running grace). Copy the surrounding comment style; cite `\u00a79.5, R744, R3767000` on the guard.\n- 2. Same file, `on_disconnected`: extend the early return to `if self.stopped || self.finished || self.connected[home] { return; }` with a comment that a disconnect running after its seat's next socket attached is stale, as the co-op host's `on_disconnected` already holds. Bot seats are unaffected (\u2026\n- 3. `crates/shared/src/host/duos.rs`, `on_attached`: wrap only the cancel block in `if self.here(seat) { ... }` \u2014 the `grace[index].take()` plus `cancel`, and the `mem::replace(&mut self.ai_playing[index], false)` plus `SeatBack` note \u2014 with a comment citing B37, R744, R3767000. Leave everything aft\u2026\n- 4. Add the three tests in **Tests** below, modelling the dead-seat `Attached` as a bare `DuelEvent::Attached` / `DuosHostEvent::Attached` with no preceding `Connected` (note `Table::connect` feeds both, so do not use it for the re-seat). Each must fail on `main` before the fix: run each against the\u2026\n- 5. Ruling only if needed: default is no spec change, since \u00a79.5, the server README and R744 already state the behaviour. If and only if you judge the stale-disconnect drop (step 2) to be a new decision the spec does not make, add ruling `R4696000` (first free in this issue's block): note `spec/ruli\u2026\n- 6. No actor-level test: it is not deterministically possible (see **Risks**), and the issue asks for one only if the fake socket can be closed as its handlers go in. Do not add a threaded or timing-based actor test. The pre-dropped-socket early return is already covered by the existing `seat_states\u2026\n- ## Tests\n- - `crates/shared/tests/duel.rs`, `mod being_here`, `s9_5_a_socket_dropped_while_being_seated_leaves_the_grace_running`: connect P1 and P2, `Arm`, `through_the_mulligans`, feed `Left{P2}` then `Disconnected{P2}`; record `deadline = now + grace_ms()`. Feed bare `Attached{P2}`. Assert grace is `Some(d\u2026\n- - Same module, `s9_5_a_stale_disconnect_after_a_reconnect_starts_no_grace`: connect both, `Arm`, mulligans, feed `Left{P2}`, `Connected{P2}` (next socket inside the gap), then stale `Disconnected{P2}`. Assert grace `None` and no `Grace{P2}` timer before feeding `Attached{P2}`. Feed `Attached{P2}`; \u2026\n- - `crates/shared/tests/duos.rs`, `mod the_clocks`, `b37_a_socket_dropped_while_being_seated_leaves_the_grace_for_the_ai`: connect A1 and A2, `Arm`, `through_the_mulligans`, feed `Left{A1}` then `Disconnected{A1}`; record `started = timer(DuosGrace{A1})` (`Some(now + grace_ms())`). Feed bare `Attach\u2026\n- - Commands: `cargo test -p jackioh-shared`, `cargo test -p jackioh-server --test server actor::`, `cargo fmt --check`, `cargo clippy -p jackioh-shared -p jackioh-server --all-targets -- -D warnings`, plus `cargo jackioh spec check` only if step 5 was taken.\n- ## Done when\n- - [ ] Dead-seat `Attached` leaves the 1v1 grace running, stored, and on the opponent's clock frame, greets nobody, and the match ends on `Disconnect` past the deadline.\n- - [ ] Stale 1v1 `Disconnected` while the seat is connected starts no grace and the later `Attached` greets normally.\n- - [ ] Dead-seat `Attached` leaves the co-op grace running with `ai_playing` untouched, and the AI takes the seat past it (\u00a713.8).\n- - [ ] Each new test was seen red on the unmodified hosts and green after.\n- - [ ] The four commands above pass (plus `spec check` if a ruling was added); no existing test changed.\n- ## Risks\n- - Flaky actor test temptation: `attach()` runs synchronously from its entry `is_open` check through handler install to `enqueue(Task::Attach)`, so no test can interleave a drop there; a pre-dropped socket takes the early return, and once a live successor holds the seat `on_socket_gone` early-return\u2026\n- - Determinism/replay: the fix makes each seat's outcome independent of task order, which strictly helps; no randomness, clock reads, or new state shape is added, and the checkpoint JSON is unchanged.\n- - Hidden information: the dead seat is sent nothing (its `Send`s were already `connected`/`here`-gated); the opponent/teammate frames carry only the grace deadline they already carry for live drops.\n- - Output-order churn: step 1 keeps every emit in its current relative order for the connected case, so greeting-shape tests (`here-3`, portraits/loadouts actor tests) are unaffected.\n- ## Open questions\n- None. Every choice is settled by the issue, \u00a79.5, \u00a713.8, R744/R3767000/B37, or the code's own guards; the only conditional (step 5's ruling) is the builder's judgment call, not a person's.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4696 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4696/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-24T09:37:59Z",
       "owner_why": "it plans it",
@@ -18887,12 +18877,14 @@
       "provider": "muse",
       "queued_at": "2026-11-24T09:30:30Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45367052762",
+      "run_id": "pending:a168aeed-1795513858",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-24T09:37:59Z",
+      "started_at": "2026-11-24T09:51:33Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7127221731"
+      ]
     },
     "4697": {
       "action": "plan",
@@ -19041,9 +19033,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T09:50:46Z",
+    "at": "2026-11-24T09:51:33Z",
     "url": "",
-    "what": "build #4683 on agy"
+    "what": "build #4696 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T09:30:21Z",
