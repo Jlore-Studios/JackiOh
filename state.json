@@ -18487,10 +18487,12 @@
       "planned_by_id": "claude-7",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 4724,
       "provider": "claude-7",
+      "question": "",
       "queued_at": "2026-11-24T05:55:21Z",
       "requested_by": "jgoetzmann",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "45375489958",
       "runs_on": "ubuntu-latest",
       "session": {
