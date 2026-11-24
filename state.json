@@ -19470,6 +19470,16 @@
         "sha": "6ec561104e80fe32eb309c5a3f6837184cb0dade",
         "tiers": {}
       }
+    },
+    "4823": {
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-24T21:04:11Z",
+      "requested_by": "squishy-squooby",
+      "stop_requested": false
     }
   },
   "labels_synced": "e752b3263433d01e",
