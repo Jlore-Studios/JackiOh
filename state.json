@@ -18476,6 +18476,9 @@
       "requested_by": "jgoetzmann",
       "stop_requested": false
     },
+    "4682": {
+      "suggestion": true
+    },
     "4684": {
       "action": "review",
       "asks": [],
@@ -41187,6 +41190,15 @@
         "why": "I checked it on main: when a socket drops while it is being seated, the server queues Disconnect ahead of Attach, and both hosts' on_attached then cancel the grace without checking the seat is still connected, so the seat sits empty with no countdown; the fix is small, the bug is confirmed, and it breaks behaviour that \u00a79.5 and the server README promise."
       }
     },
+    "decided": [
+      {
+        "at": "2026-11-24T09:18:09Z",
+        "number": 4682,
+        "title": "Patch: the clock alarm covers the mulligan and background tabs",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
+      }
+    ],
     "declined": [
       {
         "at": "2026-10-25T13:04:17Z",
