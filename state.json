@@ -16952,7 +16952,7 @@
       "question": "",
       "queued_at": "2026-11-23T19:38:10Z",
       "requested_by": "jgoetzmann",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "45286823845",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-23T23:12:51Z",
