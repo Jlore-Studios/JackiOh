@@ -17575,7 +17575,7 @@
       "question": "",
       "queued_at": "2026-11-24T21:24:26Z",
       "requested_by": "jgoetzmann-bot",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "45507686268",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
