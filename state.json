@@ -19795,14 +19795,26 @@
       "stop_requested": false
     },
     "4838": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "agy",
+      "owner_since": "2026-11-24T21:52:30Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-24T21:22:13Z",
       "requested_by": "squishy-squooby",
-      "stop_requested": false
+      "run_id": "pending:4cc26baf-1795557110",
+      "runs_on": "night-vm-agy",
+      "started_at": "2026-11-24T21:52:30Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "4839": {
       "failures": 0,
@@ -20056,9 +20068,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T21:51:37Z",
+    "at": "2026-11-24T21:52:30Z",
     "url": "",
-    "what": "review #4857 on muse"
+    "what": "plan #4838 on agy"
   },
   "last_sweep": {
     "at": "2026-11-24T21:34:46Z",
