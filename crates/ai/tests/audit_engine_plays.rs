@@ -1,10 +1,435 @@
 //! Audit of how a card is played (`play_choices.rs`, `play_steps.rs` and their neighbours). Temporary.
 
+use std::collections::BTreeMap;
+use std::panic::{AssertUnwindSafe, catch_unwind};
+
 use jackioh_engine::testkit::*;
 
+const P1: PlayerId = PlayerId::P1;
+const P2: PlayerId = PlayerId::P2;
+
+fn board(name: &str, tested: &str, radiant: bool) -> Option<Scenario> {
+    let t = json!({ "def": tested, "radiant": radiant });
+    let lib = json!(["core-008", "core-005", "core-067", "core-030", "core-053", "core-005"]);
+    let mixed_p2 = json!({
+        "hand": ["core-008", "core-005"],
+        "field": [
+            { "def": "core-019", "lane": 1 },
+            { "def": "classicplus-051", "lane": 2 },
+            { "def": "stinkyscape-074", "lane": 3 },
+            { "def": "core-053", "lane": 4, "slumber": { "turns": 2 } },
+            { "def": "classic-089", "lane": 5 },
+        ],
+        "backrow": [{ "def": "core-018", "lane": 2 }, { "def": "meditative-066", "lane": 5, "faceUp": true }],
+        "library": lib,
+        "graveyard": ["core-008", "core-067", "core-005"],
+    });
+    let mixed_p1 = |mana: i32| {
+        json!({
+            "hand": [t, "core-008", "core-005", "classic-055"],
+            "field": [
+                { "def": "core-008", "lane": 1 },
+                { "def": "core-t-sheep", "lane": 2 },
+                { "def": "core-019", "lane": 3, "damage": 2 },
+            ],
+            "backrow": [
+                { "def": "core-018", "lane": 1 },
+                { "def": "meditative-066", "lane": 2, "faceUp": true },
+                { "def": "stinkyscapeplus-035", "lane": 4, "row": "backrow" },
+            ],
+            "library": lib,
+            "graveyard": ["core-008", "core-005", "core-067", "core-026"],
+            "mana": mana,
+        })
+    };
+    let opts = match name {
+        "mixed" => json!({ "seed": "audit-plays", "p1": mixed_p1(10), "p2": mixed_p2 }),
+        "poor" => json!({ "seed": "audit-plays", "p1": mixed_p1(1), "p2": mixed_p2 }),
+        "empty" => json!({ "seed": "audit-plays", "p1": { "hand": [t], "mana": 10 }, "p2": {} }),
+        "full" => json!({
+            "seed": "audit-plays",
+            "p1": {
+                "hand": [t, "core-008"],
+                "field": ["core-008", "core-003", "core-092", "core-t-sheep", "core-030"],
+                "backrow": [
+                    "core-018",
+                    { "def": "meditative-066", "faceUp": true },
+                    { "def": "classicplus-033", "faceUp": true },
+                    { "def": "stinkyscape-016", "faceUp": true },
+                    { "def": "core-064", "faceUp": true },
+                ],
+                "library": lib,
+                "graveyard": ["core-008", "core-005"],
+                "mana": 10,
+            },
+            "p2": {
+                "hand": ["core-008"],
+                "field": ["core-008", "core-019", "classicplus-051", "stinkyscape-116", "core-053"],
+                "backrow": [
+                    "core-018",
+                    { "def": "meditative-066", "faceUp": true },
+                    "core-018",
+                    { "def": "core-064", "faceUp": true },
+                    "core-018",
+                ],
+                "library": lib,
+                "graveyard": ["core-008"],
+            },
+        }),
+        "mayor" => {
+            let mut p2 = mixed_p2.clone();
+            p2["field"] = json!([
+                { "def": "core-019", "lane": 1 },
+                { "def": "classicplus-051", "lane": 2 },
+                { "def": "meditative-086", "lane": 3 },
+                { "def": "classic-089", "lane": 5 },
+            ]);
+            json!({ "seed": "audit-plays", "p1": mixed_p1(10), "p2": p2 })
+        }
+        "special" => json!({
+            "seed": "audit-plays",
+            "p1": {
+                "hand": [t, "core-008", "core-056", "classic-033"],
+                "field": [
+                    { "def": "core-008", "lane": 1 },
+                    { "def": "core-092", "lane": 1, "stack": true },
+                    { "def": "core-003", "lane": 3 },
+                ],
+                "backrow": [
+                    { "def": "classicplus-033", "lane": 1, "faceUp": true },
+                    { "def": "stinkyscape-016", "lane": 2, "faceUp": true },
+                    { "def": "meditativeplus-022", "lane": 3, "faceUp": true },
+                    { "def": "classic-074", "lane": 4, "faceUp": true, "counters": { "plague": 3 } },
+                ],
+                "library": lib,
+                "graveyard": ["core-008", "core-005", "core-026", "core-067"],
+                "mana": 4,
+            },
+            "p2": mixed_p2,
+        }),
+        _ => return None,
+    };
+    catch_unwind(AssertUnwindSafe(|| scenario(opts))).ok()
+}
+
+fn sig(state: &GameState) -> String {
+    let mut copy = state.clone();
+    copy.applied = Vec::new();
+    serde_json::to_string(&copy).unwrap_or_default()
+}
+
+fn send(state: &GameState, play: &PlayAction) -> Result<ReduceResult, String> {
+    let action = Action::new(play.clone().into_body(), P1, "audit");
+    catch_unwind(AssertUnwindSafe(|| reduce(state, &action))).map_err(|payload| {
+        payload
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| payload.downcast_ref::<&str>().map(|s| s.to_string()))
+            .unwrap_or_else(|| "panic".to_string())
+    })
+}
+
+fn universe(state: &GameState) -> Vec<Selection> {
+    let mut out: Vec<Selection> = Vec::new();
+    let mut ids: Vec<String> = Vec::new();
+    for player in [P1, P2] {
+        let side = &state.players[player];
+        ids.extend(side.units.iter().flatten().flatten().map(|c| c.id.clone()));
+        ids.extend(side.backrow.iter().flatten().map(|c| c.id.clone()));
+        ids.extend(side.backrow_piles.iter().flatten().flatten().map(|c| c.id.clone()));
+        ids.extend(side.carried.iter().flatten().flatten().map(|c| c.id.clone()));
+        ids.extend(side.hand.iter().map(|c| c.id.clone()));
+        ids.extend(side.graveyard.iter().take(3).map(|c| c.id.clone()));
+        ids.extend(side.library.iter().take(1).map(|c| c.id.clone()));
+    }
+    ids.push("c9999".to_string());
+    out.extend(ids.into_iter().map(|instance_id| Selection::Instance { instance_id }));
+    for player in [P1, P2] {
+        out.push(Selection::Hero { player });
+        for row in [Row::Units, Row::Backrow] {
+            for lane in [0, 1, 2, 3, 4, 5, 6] {
+                out.push(Selection::Zone { player, row, lane });
+            }
+        }
+    }
+    out.push(Selection::None);
+    out
+}
+
+fn mutations(state: &GameState, card: &CardInstance, base: &PlayAction) -> Vec<(&'static str, PlayAction)> {
+    let mut out: Vec<(&'static str, PlayAction)> = Vec::new();
+    let all = universe(state);
+    let mana = state.players[P1].mana.current;
+    out.push(("zone", PlayAction { zone: None, ..base.clone() }));
+    for row in [Row::Units, Row::Backrow] {
+        for lane in 0..=6 {
+            let zone = Some(ZoneChoice { row, lane });
+            out.push(("zone", PlayAction { zone, ..base.clone() }));
+            out.push(("equip", PlayAction { zone, equip: Some(true), ..base.clone() }));
+        }
+    }
+    out.push(("equip", PlayAction { equip: Some(true), ..base.clone() }));
+    out.push(("equip", PlayAction { equip: Some(false), ..base.clone() }));
+    out.push(("equip", PlayAction { equip: None, ..base.clone() }));
+    for x in [None, Some(-1), Some(0), Some(1), Some(2), Some(mana), Some(mana + 1), Some(99), Some(i32::MAX)] {
+        out.push(("x", PlayAction { x, ..base.clone() }));
+    }
+    for embiggen in [None, Some(true), Some(false)] {
+        out.push(("embiggen", PlayAction { embiggen, ..base.clone() }));
+    }
+    let field: Vec<String> = all
+        .iter()
+        .filter_map(|s| match s {
+            Selection::Instance { instance_id } => Some(instance_id.clone()),
+            _ => None,
+        })
+        .collect();
+    out.push(("tributes", PlayAction { tributes: None, ..base.clone() }));
+    out.push(("tributes", PlayAction { tributes: Some(Vec::new()), ..base.clone() }));
+    let had = base.tributes.clone().unwrap_or_default();
+    for id in &field {
+        out.push(("tributes", PlayAction { tributes: Some(vec![id.clone()]), ..base.clone() }));
+        out.push(("tributes", PlayAction { tributes: Some(vec![id.clone(), id.clone()]), ..base.clone() }));
+        let mut more = had.clone();
+        more.push(id.clone());
+        out.push(("tributes", PlayAction { tributes: Some(more), ..base.clone() }));
+        if let Some(first) = had.first() {
+            let mut swapped = had.clone();
+            swapped[0] = id.clone();
+            if *first != *id {
+                out.push(("tributes", PlayAction { tributes: Some(swapped), ..base.clone() }));
+            }
+        }
+    }
+    let own: Vec<String> = active_units_of(state, P1).into_iter().map(|u| u.id.clone()).collect();
+    for a in &own {
+        for b in &own {
+            if a != b {
+                out.push(("tributes", PlayAction { tributes: Some(vec![a.clone(), b.clone()]), ..base.clone() }));
+            }
+        }
+    }
+    let had = base.targets.clone().unwrap_or_default();
+    out.push(("targets", PlayAction { targets: None, ..base.clone() }));
+    out.push(("targets", PlayAction { targets: Some(Vec::new()), ..base.clone() }));
+    for pick in &all {
+        out.push(("targets", PlayAction { targets: Some(vec![pick.clone()]), ..base.clone() }));
+        let mut more = had.clone();
+        more.push(pick.clone());
+        out.push(("targets", PlayAction { targets: Some(more), ..base.clone() }));
+        for at in 0..had.len().min(3) {
+            let mut swapped = had.clone();
+            swapped[at] = pick.clone();
+            out.push(("targets", PlayAction { targets: Some(swapped), ..base.clone() }));
+        }
+    }
+    for at in 0..had.len().min(3) {
+        let mut doubled = had.clone();
+        doubled.push(had[at].clone());
+        out.push(("targets", PlayAction { targets: Some(doubled), ..base.clone() }));
+        let mut dropped = had.clone();
+        dropped.remove(at);
+        out.push(("targets", PlayAction { targets: Some(dropped), ..base.clone() }));
+    }
+    let mut options: Vec<String> = vec!["bogus".to_string()];
+    for radiant in [false, true] {
+        let face = CardInstance { radiant, ..card.clone() };
+        for decl in declared_modes(state, &face) {
+            options.extend(decl.options.iter().cloned());
+        }
+    }
+    out.push(("modes", PlayAction { modes: None, ..base.clone() }));
+    out.push(("modes", PlayAction { modes: Some(Vec::new()), ..base.clone() }));
+    for a in &options {
+        out.push(("modes", PlayAction { modes: Some(vec![a.clone()]), ..base.clone() }));
+        for b in &options {
+            out.push(("modes", PlayAction { modes: Some(vec![a.clone(), b.clone()]), ..base.clone() }));
+        }
+    }
+    for reveal in [RevealAt::EndOfThisTurn, RevealAt::StartOfNextTurn, RevealAt::EndOfNextTurn, RevealAt::Cloaked] {
+        out.push(("faceDown", PlayAction { face_down: Some(reveal), ..base.clone() }));
+        out.push((
+            "faceDown",
+            PlayAction { face_down: Some(reveal), targets: None, modes: None, zone: None, ..base.clone() },
+        ));
+    }
+    out.push(("plague", PlayAction { plague: None, ..base.clone() }));
+    for id in field.iter().take(14) {
+        for tokens in [-1, 0, 1, 2, 99] {
+            out.push((
+                "plague",
+                PlayAction { plague: Some(PlagueSpend { from: id.clone(), tokens }), ..base.clone() },
+            ));
+        }
+    }
+    out
+}
+
 #[test]
-fn builds() {
+fn explore() {
     jackioh_cards::register_all();
-    let s = scenario(json!({}));
-    assert!(!legal_actions(s.state(), PlayerId::P1).is_empty());
+    std::panic::set_hook(Box::new(|_| {}));
+    let filter = std::env::var("AUDIT_FILTER").unwrap_or_default();
+    let only_board = std::env::var("AUDIT_BOARD").unwrap_or_default();
+    let out_path = std::env::var("AUDIT_OUT").unwrap_or_default();
+    if filter.is_empty() && out_path.is_empty() {
+        return;
+    }
+    let defs: Vec<String> = registered_catalog()
+        .keys()
+        .filter(|id| !id.starts_with("infiniteassault") && id.starts_with(&filter))
+        .cloned()
+        .collect();
+    let mut groups: BTreeMap<String, (usize, Vec<String>)> = BTreeMap::new();
+    let mut note = |key: String, example: String| {
+        let entry = groups.entry(key).or_insert((0, Vec::new()));
+        entry.0 += 1;
+        if entry.1.len() < 4 {
+            entry.1.push(example);
+        }
+    };
+    let mut reduces = 0usize;
+    for def_id in &defs {
+        for radiant in [false, true] {
+            for name in ["mixed", "poor", "empty", "full", "mayor", "special"] {
+                if !only_board.is_empty() && only_board != name {
+                    continue;
+                }
+                let Some(s) = board(name, def_id, radiant) else {
+                    note(format!("SETUP {name}"), def_id.clone());
+                    continue;
+                };
+                let mut state = s.state().clone();
+                state.applied = Vec::new();
+                let card = state.players[P1].hand[0].clone();
+                let legal = match catch_unwind(AssertUnwindSafe(|| legal_actions(&state, P1))) {
+                    Ok(legal) => legal,
+                    Err(_) => {
+                        note("LEGAL_ACTIONS PANIC".to_string(), format!("{def_id} r={radiant} {name}"));
+                        continue;
+                    }
+                };
+                let plays: Vec<PlayAction> = legal
+                    .iter()
+                    .filter_map(PlayAction::from_body)
+                    .filter(|play| play.instance_id == card.id)
+                    .collect();
+                let truncated = hand_play_choices_truncated(&state, P1, &card);
+                let mut listed_sigs: Vec<String> = Vec::new();
+                let whole = plays.len() <= 1500;
+                for play in plays.iter().take(1500) {
+                    reduces += 1;
+                    match send(&state, play) {
+                        Err(panic) => note(
+                            format!("LISTED PANIC {}", panic.chars().take(90).collect::<String>()),
+                            format!("{def_id} r={radiant} {name} {}", serde_json::to_string(play).unwrap()),
+                        ),
+                        Ok(result) => match result.error {
+                            Some(error) => note(
+                                format!("LISTED REFUSED {}", error.chars().take(60).collect::<String>()),
+                                format!("{def_id} r={radiant} {name} {} :: {error}", serde_json::to_string(play).unwrap()),
+                            ),
+                            None => listed_sigs.push(sig(&result.state)),
+                        },
+                    }
+                }
+                let mut templates: Vec<PlayAction> = Vec::new();
+                if plays.is_empty() {
+                    templates.push(PlayAction { instance_id: card.id.clone(), ..Default::default() });
+                } else {
+                    for at in [0, plays.len() / 2, plays.len() - 1] {
+                        if !templates.contains(&plays[at]) {
+                            templates.push(plays[at].clone());
+                        }
+                    }
+                }
+                let mut tried: IndexSet<PlayAction> = IndexSet::new();
+                for template in &templates {
+                    for (label, forged) in mutations(&state, &card, template) {
+                        if plays.contains(&forged) || !tried.insert(forged.clone()) {
+                            continue;
+                        }
+                        reduces += 1;
+                        match send(&state, &forged) {
+                            Err(panic) => note(
+                                format!("FORGED PANIC {label} {}", panic.chars().take(90).collect::<String>()),
+                                format!("{def_id} r={radiant} {name} {}", serde_json::to_string(&forged).unwrap()),
+                            ),
+                            Ok(result) => {
+                                if result.error.is_some() {
+                                    continue;
+                                }
+                                if listed_sigs.contains(&sig(&result.state)) {
+                                    continue;
+                                }
+                                let why = if !whole {
+                                    "manyplays"
+                                } else if truncated {
+                                    "truncated"
+                                } else if plays.is_empty() {
+                                    "NOPLAYS"
+                                } else {
+                                    "distinct"
+                                };
+                                note(
+                                    format!("UNLISTED ACCEPTED {label} {why} {def_id}"),
+                                    format!(
+                                        "r={radiant} {name} forged={} template={}",
+                                        serde_json::to_string(&forged).unwrap(),
+                                        serde_json::to_string(template).unwrap()
+                                    ),
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    let mut text = format!("defs {} reduces {reduces}\n", defs.len());
+    for (key, (count, examples)) in &groups {
+        text.push_str(&format!("== {key} x{count}\n"));
+        for example in examples {
+            text.push_str(&format!("   {example}\n"));
+        }
+    }
+    if !out_path.is_empty() {
+        std::fs::write(&out_path, &text).unwrap();
+    }
+    println!("{}", text.chars().take(6000).collect::<String>());
+}
+
+#[test]
+fn dump_decls() {
+    jackioh_cards::register_all();
+    let out_path = std::env::var("AUDIT_DUMP").unwrap_or_default();
+    if out_path.is_empty() {
+        return;
+    }
+    std::panic::set_hook(Box::new(|_| {}));
+    let mut text = String::new();
+    for (def_id, def) in registered_catalog().iter() {
+        if def_id.starts_with("infiniteassault") {
+            continue;
+        }
+        for radiant in [false, true] {
+            let Some(s) = board("empty", def_id, radiant) else { continue };
+            let card = s.state().players[P1].hand[0].clone();
+            let decls = declared_targets(s.state(), &card);
+            let modes = declared_modes(s.state(), &card);
+            if decls.is_empty() && modes.is_empty() {
+                continue;
+            }
+            let multi = decls.len() > 1;
+            let wide = decls.iter().enumerate().any(|(at, d)| at + 1 < decls.len() && d.max > d.min);
+            text.push_str(&format!(
+                "{def_id} r={radiant} {:?} \"{}\" multi={multi} wide={wide} decls={} modes={}\n",
+                def.type_,
+                def.name,
+                serde_json::to_string(&decls).unwrap(),
+                serde_json::to_string(&modes).unwrap()
+            ));
+        }
+    }
+    std::fs::write(&out_path, text).unwrap();
 }

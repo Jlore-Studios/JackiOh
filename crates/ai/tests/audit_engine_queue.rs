@@ -209,7 +209,7 @@ fn probe_crafted_answers() {
             }
             let mut reversed = selection.clone();
             reversed.reverse();
-            let a = reduce(after, &Action::new(body.clone(), holder, "n".into()));
+            let a = reduce(after, &Action::new(body.clone(), holder, "n"));
             let b = reduce(
                 after,
                 &Action::new(
@@ -218,7 +218,7 @@ fn probe_crafted_answers() {
                         selection: reversed,
                     },
                     holder,
-                    "n".into(),
+                    "n",
                 ),
             );
             if a.error != b.error || (a.error.is_none() && hash_state(&a.state) != hash_state(&b.state)) {
@@ -236,4 +236,193 @@ fn probe_crafted_answers() {
         println!("{problem}");
     }
     assert!(problems.is_empty(), "{} problems", problems.len());
+}
+
+/// PROBE: a timeout from either seat at every state; a JSON round trip of every state before its action.
+#[test]
+fn probe_timeout_and_round_trip() {
+    let steps = games(24, "timeout", 500);
+    let mut problems: Vec<String> = Vec::new();
+    let (mut timeouts, mut trips) = (0usize, 0usize);
+    for (index, (before, after, seat, action)) in steps.iter().enumerate() {
+        // JSON round trip (§10.1, work.rs header: "a paused state survives a JSON round trip and replays exactly").
+        let text = serde_json::to_string(before).unwrap();
+        let back: GameState = serde_json::from_str(&text).unwrap();
+        let act = Action::new(action.clone(), *seat, "trip");
+        let direct = reduce(before, &act);
+        let tripped = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| reduce(&back, &act)));
+        trips += 1;
+        match tripped {
+            Err(_) => problems.push(format!("step {index}: PANIC after JSON round trip on {action:?}")),
+            Ok(tripped) => {
+                if tripped.error != direct.error || hash_state(&tripped.state) != hash_state(&direct.state) {
+                    problems.push(format!(
+                        "step {index}: JSON round trip changes {:?} (pending {:?}, work {:?}): {:?} vs {:?}",
+                        action.action_type(),
+                        before.pending.as_ref().map(|p| (p.kind, p.resume.hook.clone(), p.resume.def_id.clone())),
+                        before.work.iter().map(|w| w.resume.hook.clone()).collect::<Vec<_>>(),
+                        direct.error,
+                        tripped.error
+                    ));
+                }
+            }
+        }
+        if after.result.is_some() || after.mulligan.is_some() {
+            continue;
+        }
+        for who in PLAYER_IDS {
+            timeouts += 1;
+            let act = Action::new(ActionBody::Timeout, who, "timeout");
+            let state = after.clone();
+            let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| reduce(&state, &act)));
+            let Ok(result) = outcome else {
+                problems.push(format!(
+                    "step {index}: PANIC on timeout by {who} (pending {:?})",
+                    after.pending.as_ref().map(|p| (p.kind, p.resume.hook.clone(), p.resume.def_id.clone()))
+                ));
+                continue;
+            };
+            if let Some(error) = &result.error {
+                problems.push(format!("step {index}: timeout refused: {error}"));
+                continue;
+            }
+            let next = &result.state;
+            let held = after.pending.as_ref().map(|p| p.player_id);
+            if who == after.active {
+                // R79: every prompt of theirs is answered, then the turn ends; it stops at a prompt the
+                // other player holds and once the turn has passed.
+                let stopped = next.result.is_some()
+                    || next.turn != after.turn
+                    || next.pending.as_ref().is_some_and(|p| p.player_id != who);
+                if !stopped {
+                    problems.push(format!(
+                        "step {index}: active timeout left turn {} open: phase {:?} pending {:?} (was {:?}) work {:?}",
+                        after.turn,
+                        next.phase,
+                        next.pending.as_ref().map(|p| (p.kind, p.resume.hook.clone(), p.resume.def_id.clone(), p.player_id)),
+                        after.pending.as_ref().map(|p| (p.kind, p.resume.hook.clone(), p.resume.def_id.clone(), p.player_id)),
+                        next.work.iter().map(|w| w.resume.hook.clone()).collect::<Vec<_>>(),
+                    ));
+                }
+            } else if held == Some(who) {
+                let same = next.pending.as_ref().map(|p| p.id.clone()) == after.pending.as_ref().map(|p| p.id.clone());
+                if same && next.result.is_none() {
+                    problems.push(format!(
+                        "step {index}: non-active timeout did not answer {:?}",
+                        after.pending.as_ref().map(|p| (p.kind, p.resume.hook.clone(), p.resume.def_id.clone()))
+                    ));
+                }
+            } else if hash_state(next) != hash_state(after) {
+                problems.push(format!("step {index}: non-active timeout with no prompt of theirs changed the state"));
+            }
+        }
+    }
+    println!("timeouts {timeouts}, round trips {trips}");
+    problems.sort();
+    problems.dedup();
+    for problem in problems.iter().take(40) {
+        println!("{problem}");
+    }
+    assert!(problems.is_empty(), "{} problems", problems.len());
+}
+
+/// PROBE: Income Tax firing inside a random cast (Jogg's Box) of the drawer's.
+#[test]
+fn probe_income_tax_inside_random_cast() {
+    jackioh_cards::register_all();
+    const TAX: &str = "classic-009";
+    const JOGG: &str = "classicplus-047";
+    let filler: Vec<&str> = vec!["core-008"; 30];
+    let (mut fired, mut wrong) = (0, 0);
+    for n in 0..120 {
+        let s = scenario(json!({
+            "seed": format!("audit-tax:{n}"), "active": "p1", "turn": 9,
+            "p1": { "hand": [JOGG, "core-008", "core-008", "core-008"], "mana": 10, "library": filler },
+            "p2": { "hand": ["core-019", "core-012", "core-025"],
+                    "backrow": [{ "def": TAX, "faceUp": false }], "library": filler },
+        }));
+        let before = s.state().clone();
+        let p2_hand: Vec<String> = before.players[PlayerId::P2].hand.iter().map(|c| c.id.clone()).collect();
+        let Some(play) = s.plays_of(JOGG).into_iter().next() else {
+            continue;
+        };
+        let act = Action::new(play, PlayerId::P1, "jogg");
+        let Ok(result) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| reduce(&before, &act))) else {
+            println!("seed {n}: PANIC");
+            continue;
+        };
+        if result.error.is_some() {
+            continue;
+        }
+        let at = result.events.iter().position(
+            |event| matches!(event, GameEvent::TrapFired { def_id, .. } if def_id == TAX),
+        );
+        let Some(at) = at else {
+            continue;
+        };
+        fired += 1;
+        let after = &result.state;
+        let taken: Vec<&String> = p2_hand
+            .iter()
+            .filter(|id| after.players[PlayerId::P1].hand.iter().any(|c| &c.id == *id)
+                || after.players[PlayerId::P1].graveyard.iter().any(|c| &c.id == *id))
+            .collect();
+        if !taken.is_empty() {
+            wrong += 1;
+            if wrong <= 2 {
+                println!(
+                    "seed {n}: pending {:?}; P2's hand cards now P1's: {taken:?}",
+                    after.pending.as_ref().map(|p| (p.kind, p.player_id, p.resume.def_id.clone()))
+                );
+                for event in result.events.iter().skip(at.saturating_sub(3)).take(14) {
+                    let text = serde_json::to_string(event).unwrap();
+                    println!("   {}", &text[..text.len().min(230)]);
+                }
+            }
+        } else if fired <= 3 {
+            println!(
+                "seed {n}: fired, pending {:?}, P1 hand {} P2 hand {}",
+                after.pending.as_ref().map(|p| (p.kind, p.player_id, p.resume.def_id.clone())),
+                after.players[PlayerId::P1].hand.len(),
+                after.players[PlayerId::P2].hand.len()
+            );
+        }
+    }
+    println!("income tax fired in {fired} plays; P2's hand went to P1 in {wrong}");
+    assert_eq!(wrong, 0);
+}
+
+/// PROBE: a triggered Cry's target prompt naming Paul Allen's Ghost (R450: "a prompt answer naming such
+/// a card pays before it goes on").
+#[test]
+fn probe_triggered_cry_targeting_cost() {
+    jackioh_cards::register_all();
+    const REWIND: &str = "classic-054";
+    const SORCERER: &str = "core-068";
+    const GHOST: &str = "classic-089";
+    let mut s = scenario(json!({
+        "seed": "audit-rewind", "active": "p1", "turn": 9,
+        "p1": { "hand": [REWIND, "core-008", "core-008", "core-008"], "mana": 10,
+                "field": [SORCERER], "library": ["core-008", "core-008", "core-008"] },
+        "p2": { "field": [GHOST], "library": ["core-008", "core-008", "core-008"] },
+    }));
+    let sorcerer = s.card(SORCERER).clone();
+    let ghost = s.card(GHOST).clone();
+    s.play(REWIND, json!({ "targets": [{ "pick": "instance", "instanceId": sorcerer.id }] }));
+    let pending = s.state().pending.clone().expect("the triggered Cry asks its target");
+    println!("prompt {:?} hook {} options {:?}", pending.kind, pending.resume.hook,
+        pending.options.iter().map(|o| o.key.clone()).collect::<Vec<_>>());
+    let hand_before = s.hand(PlayerId::P1).len();
+    s.answer(json!([{ "pick": "instance", "instanceId": ghost.id }]));
+    let discards = s
+        .last_events()
+        .iter()
+        .filter(|event| matches!(event, GameEvent::Discarded { .. }))
+        .count();
+    println!("hand {hand_before} -> {}, discards {discards}", s.hand(PlayerId::P1).len());
+    for event in s.last_events() {
+        let text = serde_json::to_string(event).unwrap();
+        println!("   {}", &text[..text.len().min(200)]);
+    }
+    assert_eq!(discards, 2, "R450: a prompt answer naming Paul Allen's Ghost pays its 2 discards");
 }

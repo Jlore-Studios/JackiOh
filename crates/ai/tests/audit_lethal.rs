@@ -1,383 +1,73 @@
-//! Audit scratch: the static combat walk against the engine (exploration; trimmed before the report).
-
-#![allow(dead_code)]
+//! Audit of the lethal solver and the static combat walk (`lethal.rs`, `evaluate.rs`'s Taunt walk).
+//! Each test asserts the documented behaviour and FAILS on the code as it stands.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
 const AI: PlayerId = PlayerId::P1;
 const HUMAN: PlayerId = PlayerId::P2;
-const WIN: i32 = 1000;
-
-fn register() {
-    jackioh_cards::register_all();
-}
-
-fn stand_in(attack: i32, health: i32, keywords: &[&str]) -> String {
-    if keywords.is_empty() {
-        format!("stand-in (1) {attack}/{health}")
-    } else {
-        format!("stand-in (1) {attack}/{health} {}", keywords.join(", "))
-    }
-}
-
-/// The most the seat's attacks alone can take off the enemy hero's life from `state`, every order and
-/// every target tried through `reduce`; `WIN` when some order wins the game.
-fn brute(state: &GameState, seat: PlayerId, root_life: i32, depth: u32, nodes: &mut u64) -> i32 {
-    let opp = seat.opponent();
-    if let Some(result) = &state.result {
-        return if result.winner.player() == Some(seat) { WIN } else { 0 };
-    }
-    let mut best = root_life - effective_life(state, opp);
-    if state.pending.is_some() || state.active != seat || state.phase != Phase::Main {
-        return best;
-    }
-    for action in legal_actions(state, seat) {
-        if !matches!(action, ActionBody::Attack { .. }) {
-            continue;
-        }
-        *nodes += 1;
-        let stepped = reduce(state, &Action::new(action, seat, format!("b{depth}-{nodes}")));
-        if stepped.error.is_some() {
-            continue;
-        }
-        best = best.max(brute(&stepped.state, seat, root_life, depth + 1, nodes));
-        if best >= WIN {
-            return best;
-        }
-    }
-    best
-}
-
-struct Board {
-    desc: String,
-    state: GameState,
-}
-
-const ATT_KW: [&str; 12] = [
-    "Windfury",
-    "Frenzy",
-    "Ranged",
-    "Flying",
-    "Trample",
-    "Pierce",
-    "Poisonous",
-    "Lifesteal",
-    "Cleave",
-    "First Strike",
-    "Divine Shield",
-    "Armor 1",
-];
-const DEF_KW: [&str; 10] = [
-    "Armor 1",
-    "Armor 2",
-    "Divine Shield",
-    "First Strike",
-    "Reborn",
-    "Poisonous",
-    "Indestructible",
-    "Flying",
-    "Ranged",
-    "Pierce",
-];
-
-fn random_board(seed: &str, max_att: i32, multi: bool) -> Board {
-    let mut rng = create_rng(seed, 0);
-    let mut desc = String::new();
-    let mut lanes: Vec<i32> = rng.shuffle(&[1, 2, 3, 4, 5]);
-    let n_att = 1 + rng.int(max_att);
-    let mut p1: Vec<Value> = Vec::new();
-    for _ in 0..n_att {
-        let attack = 1 + rng.int(6);
-        let health = 1 + rng.int(6);
-        let mut kws: Vec<&str> = Vec::new();
-        for kw in ATT_KW {
-            if rng.chance(0.18) {
-                if !multi && (kw == "Windfury" || kw == "Frenzy") {
-                    continue;
-                }
-                kws.push(kw);
-            }
-        }
-        let lane = lanes.pop().unwrap();
-        let def = stand_in(attack, health, &kws);
-        desc.push_str(&format!("A[{lane}] {def}; "));
-        p1.push(json!({ "def": def, "lane": lane }));
-    }
-    let mut lanes: Vec<i32> = rng.shuffle(&[1, 2, 3, 4, 5]);
-    let n_def = rng.int(4);
-    let mut p2: Vec<Value> = Vec::new();
-    for _ in 0..n_def {
-        let attack = rng.int(6);
-        let health = 1 + rng.int(7);
-        let mut kws: Vec<&str> = Vec::new();
-        if rng.chance(0.75) {
-            kws.push("Taunt");
-        }
-        for kw in DEF_KW {
-            if rng.chance(0.15) {
-                if kw.starts_with("Armor") && kws.iter().any(|k| k.starts_with("Armor")) {
-                    continue;
-                }
-                kws.push(kw);
-            }
-        }
-        let lane = lanes.pop().unwrap();
-        let def = stand_in(attack, health, &kws);
-        let position = if rng.chance(0.2) { "DEF" } else { "ATK" };
-        desc.push_str(&format!("D[{lane}{}] {def}; ", if position == "DEF" { " DEF" } else { "" }));
-        p2.push(json!({ "def": def, "lane": lane, "position": position }));
-    }
-    let health = 4 + rng.int(24);
-    let armor = if rng.chance(0.2) { 1 + rng.int(2) } else { 0 };
-    desc.push_str(&format!("hero {health} armor {armor}"));
-    let mut s = scenario(json!({
-        "seed": seed,
-        "active": AI,
-        "turn": 9,
-        "p1": { "field": p1, "library": ["core-008", "core-008"] },
-        "p2": { "field": p2, "health": health, "armor": armor, "library": ["core-008", "core-008"] },
-    }));
-    for player in PLAYER_IDS {
-        s.state_mut().players[player].auto_end_turn = Some(false);
-    }
-    Board {
-        desc,
-        state: s.state().clone(),
-    }
-}
-
-
-fn explore(tag: &str, max_att: i32, multi: bool, over_only: bool) {
-    register();
-    let mut over = 0;
-    let mut under = 0;
-    let total: u32 = std::env::var("AUDIT_N").ok().and_then(|n| n.parse().ok()).unwrap_or(300);
-    for n in 0..total {
-        let board = random_board(&format!("audit-{tag}-{n}"), max_att, multi);
-        let life = effective_life(&board.state, HUMAN);
-        let gap = ready_gap(&board.state, AI);
-        let walk = life - gap as i32;
-        let mut nodes = 0;
-        let truth = brute(&board.state, AI, life, 0, &mut nodes);
-        let walk_wins = walk >= life;
-        let truth_wins = truth >= WIN;
-        if walk_wins && truth_wins {
-            continue;
-        }
-        if walk > truth && !(truth_wins) {
-            over += 1;
-            println!("OVER  {tag}#{n}: walk {walk} > truth {truth} (life {life}) :: {}", board.desc);
-        } else if walk < truth.min(life) && !over_only {
-            under += 1;
-            println!("UNDER {tag}#{n}: walk {walk} < truth {truth} (life {life}) :: {}", board.desc);
-        }
-    }
-    println!("{tag}: over {over}, under {under} of {total}");
-}
-
-#[test]
-fn explore_one_attacker() {
-    explore("one", 1, false, false);
-}
-
-#[test]
-fn explore_one_attacker_multi() {
-    explore("onemulti", 1, true, false);
-}
-
-#[test]
-fn explore_many_over() {
-    explore("many", 3, true, true);
-}
-
-/// `brute`, returning the best line too.
-fn brute_line(state: &GameState, seat: PlayerId, root_life: i32, depth: u32) -> (i32, Vec<String>) {
-    let opp = seat.opponent();
-    if let Some(result) = &state.result {
-        return (if result.winner.player() == Some(seat) { WIN } else { 0 }, vec![]);
-    }
-    let mut best = (root_life - effective_life(state, opp), vec![]);
-    if state.pending.is_some() || state.active != seat || state.phase != Phase::Main {
-        return best;
-    }
-    for action in legal_actions(state, seat) {
-        let ActionBody::Attack { attacker_id, target_id } = &action else {
-            continue;
-        };
-        let label = format!("{attacker_id}->{target_id}");
-        let stepped = reduce(state, &Action::new(action.clone(), seat, format!("bl{depth}")));
-        if stepped.error.is_some() {
-            continue;
-        }
-        let (value, mut line) = brute_line(&stepped.state, seat, root_life, depth + 1);
-        if value > best.0 {
-            line.insert(0, label);
-            best = (value, line);
-        }
-    }
-    best
-}
-
-#[test]
-fn trace_one() {
-    register();
-    let tag = std::env::var("AUDIT_TAG").unwrap_or("onemulti".into());
-    let n: u32 = std::env::var("AUDIT_ONE").ok().and_then(|n| n.parse().ok()).unwrap_or(97);
-    let multi = tag != "one";
-    let max_att = if tag == "many" { 3 } else { 1 };
-    let board = random_board(&format!("audit-{tag}-{n}"), max_att, multi);
-    let life = effective_life(&board.state, HUMAN);
-    println!("{}", board.desc);
-    for player in PLAYER_IDS {
-        for unit in active_units_of(&board.state, player) {
-            let view = unit_view(&board.state, unit);
-            println!("  {player} {} {} {}/{} armor {} {:?}", unit.id, unit.def_id, view.attack, view.health, view.armor, view.keywords.iter().map(|k| k.kind().as_str()).collect::<Vec<_>>());
-        }
-    }
-    println!("walk {} truth {:?}", life - ready_gap(&board.state, AI) as i32, brute_line(&board.state, AI, life, 0));
-}
-
-/// The same random board mirrored: p2's units attack next turn, p1 (on turn) holds the defenders.
-fn random_threat_board(seed: &str, max_att: i32, multi: bool) -> Board {
-    let mut rng = create_rng(seed, 0);
-    let mut desc = String::new();
-    let mut lanes: Vec<i32> = rng.shuffle(&[1, 2, 3, 4, 5]);
-    let n_att = 1 + rng.int(max_att);
-    let mut att: Vec<Value> = Vec::new();
-    for _ in 0..n_att {
-        let attack = rng.int(7);
-        let health = 1 + rng.int(6);
-        let mut kws: Vec<&str> = Vec::new();
-        for kw in ATT_KW.iter().chain(["Deft", "Can't attack", "Rush", "Charge", "Brittle 1", "Reborn"].iter()) {
-            if rng.chance(0.15) {
-                if !multi && (*kw == "Windfury" || *kw == "Frenzy") {
-                    continue;
-                }
-                kws.push(kw);
-            }
-        }
-        let lane = lanes.pop().unwrap();
-        let def = stand_in(attack, health, &kws);
-        let position = if rng.chance(0.15) { "DEF" } else { "ATK" };
-        desc.push_str(&format!("A[{lane}{}] {def}; ", if position == "DEF" { " DEF" } else { "" }));
-        att.push(json!({ "def": def, "lane": lane, "position": position }));
-    }
-    let mut lanes: Vec<i32> = rng.shuffle(&[1, 2, 3, 4, 5]);
-    let n_def = rng.int(4);
-    let mut dfd: Vec<Value> = Vec::new();
-    for _ in 0..n_def {
-        let attack = rng.int(6);
-        let health = 1 + rng.int(7);
-        let mut kws: Vec<&str> = Vec::new();
-        if rng.chance(0.75) {
-            kws.push("Taunt");
-        }
-        for kw in DEF_KW {
-            if rng.chance(0.15) {
-                if kw.starts_with("Armor") && kws.iter().any(|k| k.starts_with("Armor")) {
-                    continue;
-                }
-                kws.push(kw);
-            }
-        }
-        let lane = lanes.pop().unwrap();
-        let def = stand_in(attack, health, &kws);
-        let position = if rng.chance(0.2) { "DEF" } else { "ATK" };
-        desc.push_str(&format!("D[{lane}{}] {def}; ", if position == "DEF" { " DEF" } else { "" }));
-        dfd.push(json!({ "def": def, "lane": lane, "position": position }));
-    }
-    let health = 4 + rng.int(24);
-    let armor = if rng.chance(0.2) { 1 + rng.int(2) } else { 0 };
-    desc.push_str(&format!("hero {health} armor {armor}"));
-    let mut s = scenario(json!({
-        "seed": seed,
-        "active": AI,
-        "turn": 9,
-        "p1": { "field": dfd, "health": health, "armor": armor, "library": ["core-008", "core-008"] },
-        "p2": { "field": att, "library": ["core-008", "core-008"] },
-    }));
-    for player in PLAYER_IDS {
-        s.state_mut().players[player].auto_end_turn = Some(false);
-    }
-    Board {
-        desc,
-        state: s.state().clone(),
-    }
-}
-
-fn explore_threat(tag: &str, max_att: i32, multi: bool, over_only: bool) {
-    register();
-    let mut over = 0;
-    let mut under = 0;
-    let total: u32 = std::env::var("AUDIT_N").ok().and_then(|n| n.parse().ok()).unwrap_or(300);
-    for n in 0..total {
-        let board = random_threat_board(&format!("audit-{tag}-{n}"), max_att, multi);
-        let life = effective_life(&board.state, AI);
-        let walk = face_threat(&board.state, HUMAN);
-        let ended = reduce(&board.state, &Action::new(ActionBody::EndTurn, AI, "end"));
-        assert!(ended.error.is_none(), "{:?}", ended.error);
-        let next = ended.state;
-        assert!(next.active == HUMAN && next.phase == Phase::Main && next.pending.is_none(), "{}", board.desc);
-        let mut nodes = 0;
-        let truth = brute(&next, HUMAN, life, 0, &mut nodes);
-        let walk_wins = walk >= life;
-        let truth_wins = truth >= WIN;
-        if walk_wins && truth_wins {
-            continue;
-        }
-        if walk > truth && !(truth_wins) {
-            over += 1;
-            println!("OVER  {tag}#{n}: walk {walk} > truth {truth} (life {life}) :: {}", board.desc);
-        } else if walk < truth.min(life) && !over_only {
-            under += 1;
-            println!("UNDER {tag}#{n}: walk {walk} < truth {truth} (life {life}) :: {}", board.desc);
-        }
-    }
-    println!("{tag}: over {over}, under {under} of {total}");
-}
-
-#[test]
-fn explore_threat_one() {
-    explore_threat("t-one", 1, false, false);
-}
-
-#[test]
-fn explore_threat_many_over() {
-    explore_threat("t-many", 3, true, true);
-}
-
-// ---- lead 1: the solver's visited set reads no lane ----
 
 const DUELIST: &str = "core-045"; // Deft Duelist, 4/3 Charge, Deft
 const DFENDER: &str = "core-001"; // Big D-fender, 0/7: declares no attack (R7)
 const MENACE: &str = "core-019"; // Midrange Menace, 9/9 Taunt
-const GAUNTLET: &str = "stinkyscape-157";
+const GAUNTLET: &str = "stinkyscape-157"; // The Gauntlet (R1849005)
+const ZEPHRYS: &str = "core-097"; // Zephrys: one of AI_SEARCH.expensive_def_ids (100 extra nodes a play)
 
-fn play_to(state: &GameState, def: &str, lane: i32) -> ActionBody {
-    let card = state.players[AI].hand.iter().find(|card| card.def_id == def).expect("in hand");
-    legal_actions(state, AI)
+fn won_by(state: &GameState, seat: PlayerId) -> bool {
+    state
+        .result
+        .as_ref()
+        .is_some_and(|result| result.winner.player() == Some(seat))
+}
+
+/// One action through `reduce`; `nonce` is fresh at each call (the engine answers a repeated one unchanged).
+fn step(state: &GameState, seat: PlayerId, action: ActionBody, nonce: &str) -> GameState {
+    let stepped = reduce(state, &Action::new(action, seat, nonce));
+    assert!(stepped.error.is_none(), "{:?}", stepped.error);
+    stepped.state
+}
+
+/// Whether the AI wins by playing the Deft Duelist into unit lane `lane` and attacking the hero with it.
+fn duelist_wins_from(state: &GameState, lane: i32) -> bool {
+    let card = state.players[AI].hand.iter().find(|card| card.def_id == DUELIST).expect("in hand");
+    let play = legal_actions(state, AI)
         .into_iter()
         .find(|action| {
             matches!(action, ActionBody::Play { instance_id, zone: Some(zone), face_down: None, .. }
                 if *instance_id == card.id && zone.lane == lane && zone.row == Row::Units)
         })
-        .unwrap_or_else(|| panic!("no play of {def} into lane {lane}"))
-}
-
-fn wins_by(state: &GameState, lane: i32) -> bool {
-    let played = reduce(state, &Action::new(play_to(state, DUELIST, lane), AI, "p"));
-    assert!(played.error.is_none(), "{:?}", played.error);
-    let duelist = active_units_of(&played.state, AI).into_iter().find(|u| u.def_id == DUELIST).unwrap().id.clone();
+        .expect("the play is legal");
+    let played = step(state, AI, play, "audit-play");
     let hit = reduce(
-        &played.state,
-        &Action::new(ActionBody::Attack { attacker_id: duelist, target_id: "hero-p2".into() }, AI, "a"),
+        &played,
+        &Action::new(
+            ActionBody::Attack {
+                attacker_id: card.id.clone(),
+                target_id: "hero-p2".into(),
+            },
+            AI,
+            "audit-hit",
+        ),
     );
-    hit.error.is_none() && hit.state.result.as_ref().is_some_and(|r| r.winner.player() == Some(AI))
+    hit.error.is_none() && won_by(&hit.state, AI)
 }
 
+fn solver_line(state: &GameState) -> Option<Vec<ActionBody>> {
+    let counter = create_node_counter(AI_BUDGET.lethal_nodes, None);
+    find_lethal(
+        std::slice::from_ref(state),
+        AI,
+        &counter,
+        AI_BUDGET.lethal_nodes,
+        Prices::NONE,
+    )
+}
+
+/// The AI holds a Deft Duelist (4/3 Charge); the enemy hero is at 4. The board is slashed at lane 3
+/// (R3554003): the enemy's 9/9 Taunt stands in lane 2, on the Left half, so a Duelist played into lane 2
+/// is walled and one played into lane 4, on the Right half, hits the hero and wins.
 fn slashed_board() -> GameState {
-    register();
+    jackioh_cards::register_all();
     let mut s = scenario(json!({
         "seed": "audit-lanes", "active": AI, "turn": 9,
         "p1": { "hand": [DUELIST], "field": [{ "def": DFENDER, "lane": 1 }], "library": ["core-008", "core-008"] },
@@ -387,8 +77,10 @@ fn slashed_board() -> GameState {
     s.state().clone()
 }
 
+/// The same lethal under The Gauntlet (R1849005): lanes 1 to 3 hold the AI's 0/7s, so the Duelist goes into
+/// lane 4, inside The Gauntlet, where it may attack no hero, or lane 5, outside it, where it wins.
 fn gauntlet_board() -> GameState {
-    register();
+    jackioh_cards::register_all();
     scenario(json!({
         "seed": "audit-lanes", "active": AI, "turn": 9,
         "p1": { "hand": [DUELIST], "backrow": [GAUNTLET],
@@ -400,35 +92,121 @@ fn gauntlet_board() -> GameState {
     .clone()
 }
 
-fn report(tag: &str, state: &GameState, good: i32, bad: i32) {
-    println!("{tag}: wins by lane {good}: {}, by lane {bad}: {}", wins_by(state, good), wins_by(state, bad));
-    let plays: Vec<String> = candidate_actions(state, AI, Prices::NONE)
-        .iter()
-        .filter(|a| matches!(a, ActionBody::Play { .. }))
-        .map(action_key)
-        .collect();
-    println!("{tag}: candidate plays {plays:?}");
-    let counter = create_node_counter(AI_BUDGET.lethal_nodes, None);
-    let line = find_lethal(std::slice::from_ref(state), AI, &counter, AI_BUDGET.lethal_nodes, Prices::NONE);
-    println!("{tag}: find_lethal {:?} used {}", line.as_ref().map(|l| l.iter().map(action_key).collect::<Vec<_>>()), counter.used());
-    println!("{tag}: lethal_hint {}", lethal_hint(state, AI, None));
-    let mut options = AiOptions::with_budget(create_rng("audit-lanes", 0), AI_BUDGET);
-    let decision = decide(state, AI, &mut options).expect("a decision");
-    println!("{tag}: decide {:?} {}", decision.reason, action_key(&decision.action));
-}
-
+/// Finding 1. SPEC §9.9: the solver is "a bounded search for a line that wins this turn". `judge`
+/// (lethal.rs:232) keys its visited set on `search_signature`, which leaves out the units' lanes
+/// (simulate.rs:1273 `unit_lanes`: "what `search_signature` leaves out"), so the second lane
+/// `candidate_actions` offers for a play is "a position already seen" and is never searched. Here the two
+/// lanes differ in whether the unit may hit the hero, and the lethal is in the second. The solver spends 3
+/// of its 300 nodes and answers "no lethal"; `lethal_hint` (R2102000: lit "while the human has a sure win
+/// this turn") stays dark with nothing hidden on the board. `unstoppable.rs`'s `position_key` already
+/// pairs the signature with `unit_lanes`.
 #[test]
-fn lead_lanes_report() {
-    report("slash", &slashed_board(), 4, 2);
-    report("gauntlet", &gauntlet_board(), 5, 4);
-}
-
-#[test]
-fn lead_lanes_turn() {
-    for (tag, state) in [("slash", slashed_board()), ("gauntlet", gauntlet_board())] {
-        let mut ai = AiOptions::with_budget(create_rng("audit-lanes-turn", 0), AI_BUDGET);
-        let turn = play_ai_turn(&state, AI, &mut ai);
-        let trace: Vec<String> = turn.decisions.iter().map(|d| format!("{:?}:{}", d.reason, action_key(&d.action))).collect();
-        println!("{tag}: result {:?} life {} :: {trace:?}", turn.state.result.as_ref().map(|r| r.winner.player()), turn.state.players[HUMAN].hero.health);
+fn the_solver_finds_a_lethal_that_stands_in_the_second_lane_a_play_is_tried_in() {
+    for (name, state, bad, good) in [
+        ("slash", slashed_board(), 2, 4),
+        ("gauntlet", gauntlet_board(), 4, 5),
+    ] {
+        // The engine: two actions win from the second lane, and none does from the first.
+        assert!(duelist_wins_from(&state, good), "{name}");
+        assert!(!duelist_wins_from(&state, bad), "{name}");
+        // Both lanes are among the solver's moves, the losing one first.
+        let lanes: Vec<i32> = candidate_actions(&state, AI, Prices::NONE)
+            .iter()
+            .filter_map(|action| match action {
+                ActionBody::Play { zone: Some(zone), .. } => Some(zone.lane),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(lanes, vec![bad, good], "{name}");
+        assert!(solver_line(&state).is_some(), "{name}: find_lethal misses the lethal in lane {good}");
+        assert!(lethal_hint(&state, AI, None), "{name}: the hint is dark on a sure two-action win");
     }
+}
+
+/// Finding 2. The Taunt walk counts a Cleave splash's Trample excess only on a neighbour that is itself a
+/// Taunt the walk has still to reach (evaluate.rs:1954 `if j <= i || !has_keyword(.., Taunt) { continue }`).
+/// §4.4 step 9 sends "its hit on the defender or its Cleave's (step 10)" beyond the struck unit's health to
+/// its controller's hero, whatever that neighbour's keywords. A 5/4 Cleave, Trample attacker walled by a 0/9
+/// Taunt with a 1/1 on each side deals the hero 4 + 4 = 8 in one attack; `face_threat` reads 0, so at 8 life
+/// the evaluation sees no lethal threat (README: `face_threat` is "the face damage `attacker`'s board could
+/// deal the other hero next turn").
+#[test]
+fn the_walk_counts_a_cleave_splashs_trample_excess_over_a_neighbour_without_taunt() {
+    jackioh_cards::register_all();
+    let mut s = scenario(json!({
+        "seed": "audit-splash", "active": AI, "turn": 9,
+        "p1": { "health": 8, "library": ["core-008", "core-008"], "field": [
+            { "def": "stand-in (1) 1/1", "lane": 2 },
+            { "def": "stand-in (1) 0/9 Taunt", "lane": 3 },
+            { "def": "stand-in (1) 1/1", "lane": 4 },
+        ] },
+        "p2": { "library": ["core-008", "core-008"],
+                "field": [{ "def": "stand-in (1) 5/4 Cleave, Trample", "lane": 3 }] },
+    }));
+    for player in PLAYER_IDS {
+        s.state_mut().players[player].auto_end_turn = Some(false);
+    }
+    let state = s.state().clone();
+
+    // The engine: the AI passes, the one attack on the Taunt kills the AI's hero through both splashes.
+    let passed = step(&state, AI, ActionBody::EndTurn, "audit-pass");
+    let attacker = active_units_of(&passed, HUMAN)[0].id.clone();
+    let taunt = active_units_of(&passed, AI)
+        .into_iter()
+        .find(|unit| unit_has(&passed, unit, KeywordKind::Taunt))
+        .expect("the Taunt")
+        .id
+        .clone();
+    let hit = step(
+        &passed,
+        HUMAN,
+        ActionBody::Attack {
+            attacker_id: attacker,
+            target_id: taunt,
+        },
+        "audit-attack",
+    );
+    assert!(won_by(&hit, HUMAN), "the attack is lethal in the engine");
+
+    // The static reads of the same attack: next turn's threat as the AI sees it now, and the gap the
+    // attacker's own solver reads once it is on turn.
+    assert_eq!(face_threat(&state, HUMAN), 8);
+    assert!(ready_gap(&passed, HUMAN) <= 0.0, "ready_gap {}", ready_gap(&passed, HUMAN));
+}
+
+/// Finding 3. `find_lethal` is two walks: depth-first on `AI_SEARCH.lethal_quick_nodes` (40), then best-first
+/// "on the rest of the allowance" (lethal.rs header). A step whose surcharge the quick slice cannot pay is
+/// refused as `Some(Err)` (simulate.rs:772: "refuse the step like any refused action"), the depth-first
+/// walk `continue`s past it (lethal.rs:259), runs out of moves and returns `Walk::Exhausted`, which
+/// `find_lethal_with_quick_nodes` reads as "the tree was searched to the end" and returns `None`
+/// (lethal.rs:386) with 299 of its 300 nodes unspent. The best-first walk, whose slice pays the surcharge,
+/// never runs. Zephrys (100 extra nodes) with the enemy hero at 3 is a lethal the solver proves in 107
+/// nodes when its depth-first stage is given none.
+#[test]
+fn a_step_the_quick_slice_cannot_pay_for_leaves_the_rest_of_the_allowance_to_the_second_walk() {
+    jackioh_cards::register_all();
+    let state = scenario(json!({
+        "seed": "audit-zephrys", "active": AI, "turn": 9,
+        "p1": { "hand": [ZEPHRYS], "library": ["core-008", "core-008"] },
+        "p2": { "health": 3, "library": ["core-008", "core-008"] },
+    }))
+    .state()
+    .clone();
+    let limit = AI_BUDGET.lethal_nodes;
+
+    // With no depth-first stage the lethal is proved well inside the allowance.
+    let counter = create_node_counter(limit, None);
+    let second_walk =
+        find_lethal_with_quick_nodes(std::slice::from_ref(&state), AI, &counter, limit, 0, Prices::NONE);
+    assert!(second_walk.is_some(), "the best-first walk proves it");
+    assert!(counter.used() < limit);
+
+    // The solver as `decide`, `lethal_hint` and `unstoppable_lethal` call it.
+    let counter = create_node_counter(limit, None);
+    let found = find_lethal(std::slice::from_ref(&state), AI, &counter, limit, Prices::NONE);
+    assert!(
+        found.is_some(),
+        "find_lethal gave up after {} of {limit} nodes",
+        counter.used()
+    );
 }

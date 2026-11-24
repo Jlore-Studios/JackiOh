@@ -14,6 +14,8 @@ const VANILLA: &str = "core-008";
 const OOMEN: &str = "core-067";
 /// Core #96 My Pawn, the Trap `AI_SEARCH.ai_turn_trap_ids` names.
 const MY_PAWN: &str = "core-096";
+/// Meditative #86 Mayor Medinamogger, a 5/4: "Aura: All targets are chosen at random."
+const MAYOR: &str = "meditative-086";
 /// Stinkyscape #66 Miner v5, a 0/8: "Activate 5: Gain a random Stinkyscape Resource" (five uses a turn).
 const MINER: &str = "stinkyscape-066";
 
@@ -87,12 +89,15 @@ fn a_reply_short_of_an_attacks_surcharge_is_cut_not_played_as_a_passed_turn() {
 /// attacks", and `simulate_reply` runs "until the seat's next main phase or prompt, or game end"
 /// (reply.rs line 887). Three unblocked 4/4s against the AI at 12 are lethal, and the reply takes it. A
 /// Miner v5 beside them (five Activates a turn, each followed by the play of the Resource it gained, a
-/// card not in `hidden`) spends ten of `AI_REPLY.max_steps` (12) before the first attack, so the reply
-/// stops mid-turn after two attacks: the AI reads the line as survived.
+/// card not in `hidden`) spends ten of `AI_REPLY.max_steps` (12) before the first attack, so the loop
+/// (reply.rs line 911) runs out after two attacks and hands back a state with the opponent still on turn
+/// and its third 4/4 unswung, which `reply_score` then scores as the whole reply.
 #[test]
 fn a_five_use_activate_does_not_crowd_the_opponents_lethal_attacks_out_of_the_reply() {
+    // On this seed the five Resources are Gellium and Korrelite (a heal and a 1-damage ping), so nothing
+    // but the step cap stands between the opponent and its third attack.
     let reply = |field: Value| {
-        let state = handed_over(json!({ "health": 12 }), json!({ "field": field }));
+        let state = handed_over_on("audit-reply-miner-7", json!({ "health": 12 }), json!({ "field": field }));
         let counter = create_node_counter(600, None);
         simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI), Prices::NONE).expect("a reply")
     };
@@ -102,27 +107,71 @@ fn a_five_use_activate_does_not_crowd_the_opponents_lethal_attacks_out_of_the_re
         Some(Winner::from(HUMAN)),
         "three 4/4s at the open face of a hero at 12 are lethal"
     );
-    for n in 0..8 {
-        let seed = format!("audit-reply-miner-{n}");
-        let state = handed_over_on(&seed, json!({ "health": 12 }), json!({ "field": [VANILLA, VANILLA, VANILLA, MINER] }));
-        let counter = create_node_counter(600, None);
-        let r = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI), Prices::NONE).expect("a reply");
-        let played: Vec<String> = r.applied.iter().flat_map(|a| a.events.iter()).filter_map(|e| match e {
-            GameEvent::CardPlayed { def_id, .. } => Some(def_id.clone()),
-            GameEvent::AttackDeclared { attacker_id, target_id, .. } => Some(format!("ATTACK {attacker_id}->{target_id}")),
-            GameEvent::Activated { ability, .. } => Some(format!("act {ability}")),
-            _ => None,
-        }).collect();
-        println!("{seed}: result {:?} active {:?} hp {} used {} :: {played:?}", r.result.map(|x| x.winner), r.active, r.players[AI].hero.health, counter.used());
-    }
     let mined = reply(json!([VANILLA, VANILLA, VANILLA, MINER]));
+    let unswung = active_units_of(&mined, HUMAN)
+        .into_iter()
+        .filter(|unit| unit.def_id == VANILLA && !unit.exertion.attacked)
+        .count();
     assert_eq!(
         mined.result.map(|result| result.winner),
         Some(Winner::from(HUMAN)),
         "beside a Miner v5 the reply stopped with the opponent still on turn: active {:?}, turn {}, \
-         the AI at {}",
+         the AI at {}, {unswung} of the 4/4s unswung",
         mined.active,
         mined.turn,
         mined.players[AI].hero.health
+    );
+}
+
+/// R1200 (`crates/engine/src/reduce.rs` `attack`, `config::RANDOM_ATTACK_TARGET`): while a Mayor
+/// Medinamogger acts on either field, `legal_actions` lists each attacker's one attack with the target
+/// `"random"`, and the engine draws the target. reply.rs `ranked_attacks` (lines 348-355) compares that
+/// id with the seat's hero id and then asks `trade_value` for a Unit of that id, which answers
+/// `f64::NEG_INFINITY` (lines 162-168), so no attack is ever "worth making" and the opponent ends its
+/// turn. README: the reply plays "its attacks"; `b41` (docs/polish/3-ai.md): it takes lethal in reach.
+#[test]
+fn r1200_the_reply_attacks_while_a_mayor_draws_every_target_at_random() {
+    let reply = |p1: Value, p2: Value| {
+        let state = handed_over(p1, p2);
+        let counter = create_node_counter(200, None);
+        simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI), Prices::NONE).expect("a reply")
+    };
+    // The opponent's Mayor (5/4) and 4/4 against the AI at 4 with no Unit: the hero is the only target
+    // the draw can name, and either hit is lethal.
+    let lethal = reply(json!({ "health": 4 }), json!({ "field": [VANILLA, MAYOR] }));
+    assert_eq!(
+        lethal.result.map(|result| result.winner),
+        Some(Winner::from(HUMAN)),
+        "under its own Mayor the opponent attacked nothing: active {:?}, turn {}, the AI at {}",
+        lethal.active,
+        lethal.turn,
+        lethal.players[AI].hero.health
+    );
+}
+
+/// The same with the Mayor on the AI's own side: the opponent's 4/4 has one legal attack, drawn between
+/// the Mayor and the AI's hero, and the reply never makes it.
+#[test]
+fn r1200_the_reply_attacks_while_the_ais_own_mayor_acts() {
+    let state = handed_over(json!({ "health": 4, "field": [MAYOR] }), json!({ "field": [VANILLA] }));
+    assert!(
+        legal_actions(&state, HUMAN)
+            .iter()
+            .any(|action| matches!(action, ActionBody::Attack { target_id, .. } if target_id == "random")),
+        "the engine offers the 4/4 its random attack"
+    );
+    let counter = create_node_counter(200, None);
+    let reply =
+        simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI), Prices::NONE).expect("a reply");
+    let swung = reply.result.is_some()
+        || active_units_of(&reply, HUMAN)
+            .into_iter()
+            .any(|unit| unit.def_id == VANILLA && unit.exertion.attacked)
+        || !on_field(&reply, HUMAN, VANILLA);
+    assert!(
+        swung,
+        "the opponent's 4/4 never attacked: the AI at {}, its Mayor on the field: {}",
+        reply.players[AI].hero.health,
+        on_field(&reply, AI, MAYOR)
     );
 }

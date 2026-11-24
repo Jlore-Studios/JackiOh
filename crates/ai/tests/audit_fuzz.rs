@@ -313,6 +313,7 @@ struct Tally {
     twin_changed_cards: usize,
     evaluations: usize,
     max_nodes_over: usize,
+    bump_checks: usize,
 }
 
 struct Flags {
@@ -322,6 +323,8 @@ struct Flags {
     unstoppable: bool,
     twins: bool,
     window: usize,
+    /// Ids minted unseen before each searched decision is taken again (0: never).
+    bump: usize,
 }
 
 struct Claim {
@@ -768,6 +771,28 @@ fn play(spec: &Spec, flags: &Flags, tally: &mut Tally, problems: &mut Vec<String
                                             again.rng.cursor()
                                         ));
                                     }
+                                }
+                            }
+                            // The redacted state keeps `next_id`: the same state with two more ids minted
+                            // where the seat cannot see (the other seat drew S+ #17 Smoothie).
+                            if flags.bump > 0 && decision.stats.nodes > 0 {
+                                tally.bump_checks += 1;
+                                let mut bumped = state.clone();
+                                bumped.next_id += flags.bump as u32;
+                                let mut again = AiOptions::with_budget(before.clone(), budget);
+                                let second = decide_styled(&bumped, seat, &mut again, &style);
+                                if second.as_ref() != Some(&decision) || again.rng.cursor() != cursor {
+                                    problems.push(format!(
+                                        "[P1 nextId] {}: next_id {} +{}: first {} {:?} cursor {}, second {} cursor {}",
+                                        here(at, &state),
+                                        state.next_id,
+                                        flags.bump,
+                                        short(&decision.action),
+                                        decision.stats,
+                                        cursor,
+                                        short(&second),
+                                        again.rng.cursor()
+                                    ));
                                 }
                             }
                             // Property 4: a lethal the solver proved.
@@ -1266,6 +1291,7 @@ fn explore(families: &str) {
         unstoppable: env_usize("AF_UNSTOPPABLE", 1) == 1,
         twins: env_usize("AF_TWINS", 1) == 1,
         window: env_usize("AF_WINDOW", 30),
+        bump: env_usize("AF_BUMP", 0),
     };
     let (_, problems) = run(&families, env_usize("AF_FROM", 1), env_usize("AF_N", 1), &flags);
     println!("{} problems", problems.len());
@@ -1283,4 +1309,315 @@ fn explore_b() {
     if let Ok(families) = std::env::var("AF_B") {
         explore(&families);
     }
+}
+
+// ---------------------------------------------------------------------------------------------
+// The opponent's unseen Smoothie
+// ---------------------------------------------------------------------------------------------
+
+/// S+ #17 Smoothie: "When added to your hand, select two random fruits for it."
+const SMOOTHIE: &str = "stinkyscapeplus-017";
+
+/// Both seats keep their whole hand, then p1 ends its first turn: p2's first main phase.
+fn to_p2s_first_turn(start: &GameState) -> Option<GameState> {
+    let mut state = start.clone();
+    for step in 0..6 {
+        if state.result.is_some() {
+            return None;
+        }
+        let seat = seat_to_act(&state).unwrap_or(state.active);
+        let own_main = state.pending.is_none() && state.active == seat && state.phase == Phase::Main;
+        if own_main && seat == PlayerId::P2 {
+            return Some(state);
+        }
+        let body = if own_main {
+            ActionBody::EndTurn
+        } else if state.pending.is_none() {
+            ActionBody::Mulligan {
+                keep: ids_of(&state.players[seat].hand),
+            }
+        } else {
+            return None;
+        };
+        let result = reduce(&state, &Action::new(body, seat, format!("s{step}")));
+        if result.error.is_some() {
+            return None;
+        }
+        state = result.state;
+    }
+    None
+}
+
+/// Two games of `seed` that differ in one card of p1's deck, the one p1 draws on its first turn (or
+/// holds from the deal): the deck's own card in the first, a Smoothie in the second.
+fn smoothie_worlds(seed: &str) -> Option<(GameState, GameState, String)> {
+    let easy = AI_DIFFICULTY.easy;
+    let decks = (
+        deck(seed, PlayerId::P1, &easy, None),
+        deck(seed, PlayerId::P2, &easy, None),
+    );
+    if decks.0.iter().chain(decks.1.iter()).any(|id| id == SMOOTHIE) {
+        return None;
+    }
+    let options = |decks: (Vec<String>, Vec<String>)| CreateGameOptions {
+        seed: seed.to_string(),
+        decks,
+        ..CreateGameOptions::default()
+    };
+    let created = create_game(&options(decks.clone()));
+    let plain_start = begin_game(&created).state;
+    let plain = to_p2s_first_turn(&plain_start)?;
+    // The card p1 drew since the deal, else the first it holds.
+    let dealt: Vec<String> = ids_of(&plain_start.players.p1.hand);
+    let hand = &plain.players.p1.hand;
+    let slot_id = hand
+        .iter()
+        .find(|card| !dealt.contains(&card.id))
+        .or_else(|| hand.first())?
+        .id
+        .clone();
+    let slot = created.players.p1.library.iter().position(|card| card.id == slot_id)?;
+    let mut other = decks.clone();
+    other.0[slot] = SMOOTHIE.to_string();
+    let smoothie = to_p2s_first_turn(&begin_game(&create_game(&options(other))).state)?;
+    Some((plain, smoothie, slot_id))
+}
+
+/// Looks for a seed on which p2's decision differs between the two worlds.
+#[test]
+fn scan_smoothie() {
+    let Ok(count) = std::env::var("AF_SCAN") else {
+        return;
+    };
+    jackioh_cards::register_all();
+    let count: usize = count.parse().unwrap_or(10);
+    let from = env_usize("AF_FROM", 1);
+    for n in from..from + count {
+        let seed = format!("audit-fuzz:smoothie:{n}");
+        let Some((mut plain, mut smoothie, slot_id)) = smoothie_worlds(&seed) else {
+            println!("{seed}: skipped");
+            continue;
+        };
+        let seat = PlayerId::P2;
+        let mut rng = Rng::new(&format!("{seed}:ctl:p2"), 0);
+        for step in 0..8 {
+            if plain.result.is_some() || seat_to_act(&plain) != Some(seat) {
+                break;
+            }
+            let same_view = view_for(&plain, seat) == view_for(&smoothie, seat);
+            let diff = diff_values(
+                &serde_json::to_value(redact(&plain, seat)).unwrap_or_default(),
+                &serde_json::to_value(redact(&smoothie, seat)).unwrap_or_default(),
+            );
+            let mut a = AiOptions::with_budget(rng.clone(), AI_BUDGET);
+            let mut b = AiOptions::with_budget(rng.clone(), AI_BUDGET);
+            let first = decide_styled(&plain, seat, &mut a, &AI_STYLE_EXACT).expect("a decision");
+            let second = decide_styled(&smoothie, seat, &mut b, &AI_STYLE_EXACT).expect("a decision");
+            println!(
+                "{seed} step {step} slot {slot_id}: same view {same_view}, next_id {} vs {}, redact diff {:?}; {} {} ({} nodes, {:.3}) vs {} {} ({} nodes, {:.3}){}",
+                plain.next_id,
+                smoothie.next_id,
+                diff,
+                first.reason.as_str(),
+                short(&first.action),
+                first.stats.nodes,
+                first.stats.score,
+                second.reason.as_str(),
+                short(&second.action),
+                second.stats.nodes,
+                second.stats.score,
+                if first.action != second.action { "  <== ACTION DIFFERS" } else { "" }
+            );
+            if !same_view || first.action != second.action {
+                break;
+            }
+            rng = a.rng.clone();
+            let action = Action::new(first.action.clone(), seat, format!("d{step}"));
+            let (x, y) = (reduce(&plain, &action), reduce(&smoothie, &action));
+            if x.error.is_some() || y.error.is_some() {
+                break;
+            }
+            plain = x.state;
+            smoothie = y.state;
+        }
+    }
+}
+
+/// The game of `spec`, with the card `seat`'s opponent was dealt as `id` a Smoothie instead.
+fn with_smoothie(spec: &Spec, opp: PlayerId, id: &str) -> Option<GameState> {
+    let created = create(spec);
+    let slot = created.players[opp].library.iter().position(|card| card.id == id)?;
+    let mut other = spec.clone();
+    let deck = if opp == PlayerId::P1 {
+        &mut other.decks.0
+    } else {
+        &mut other.decks.1
+    };
+    if deck.iter().any(|def_id| def_id == SMOOTHIE) {
+        return None;
+    }
+    deck[slot] = SMOOTHIE.to_string();
+    Some(begin_game(&create(&other)).state)
+}
+
+/// Plays whole games, then replays each with one card of the opponent's deck a Smoothie, and decides
+/// again wherever the seat's view is the same and the id counter is not.
+#[test]
+fn scan_smoothie_games() {
+    let Ok(families) = std::env::var("AF_SCAN2") else {
+        return;
+    };
+    jackioh_cards::register_all();
+    let flags = Flags {
+        determinism_every: 0,
+        hints: false,
+        unstoppable: false,
+        twins: false,
+        window: 30,
+        bump: 0,
+    };
+    let from = env_usize("AF_FROM", 1);
+    let (mut pairs, mut stats_differ, mut actions_differ) = (0usize, 0usize, 0usize);
+    for family in families.split(',') {
+        for n in from..from + env_usize("AF_N", 1) {
+            let spec = spec_of(family, n);
+            let mut tally = Tally::default();
+            let mut problems = Vec::new();
+            let played = play(&spec, &flags, &mut tally, &mut problems);
+            let mut states: Vec<GameState> = vec![played.s0.clone()];
+            for action in &played.log {
+                let next = reduce(states.last().expect("a state"), action).state;
+                states.push(next);
+            }
+            for seat in PLAYER_IDS {
+                let opp = seat.opponent();
+                for id in &played.deck_ids[opp] {
+                    let Some(mut world) = with_smoothie(&spec, opp, id) else {
+                        continue;
+                    };
+                    for at in 0..played.log.len() {
+                        let own = &states[at];
+                        if view_for(own, seat) != view_for(&world, seat) {
+                            break;
+                        }
+                        if own.next_id != world.next_id {
+                            for rec in played.recs.iter().filter(|rec| rec.at == at && rec.seat == seat) {
+                                pairs += 1;
+                                let mut options = AiOptions::with_budget(rec.before.clone(), rec.budget);
+                                let Some(other) = decide_styled(&world, seat, &mut options, &rec.style) else {
+                                    continue;
+                                };
+                                if other.stats != rec.decision.stats {
+                                    stats_differ += 1;
+                                }
+                                if other.action != rec.decision.action {
+                                    actions_differ += 1;
+                                    println!(
+                                        "ACTION DIFFERS {} seat {} card {} at {} turn {} next_id {} vs {}: {} {:?} | {} {:?}",
+                                        spec.label,
+                                        seat.as_str(),
+                                        id,
+                                        at,
+                                        own.turn,
+                                        own.next_id,
+                                        world.next_id,
+                                        short(&rec.decision.action),
+                                        rec.decision.stats,
+                                        short(&other.action),
+                                        other.stats
+                                    );
+                                }
+                            }
+                        }
+                        let stepped = reduce(&world, &played.log[at]);
+                        if stepped.error.is_some() {
+                            break;
+                        }
+                        world = stepped.state;
+                    }
+                }
+            }
+            println!(
+                "{}: {} actions; so far {pairs} pairs, {stats_differ} with other stats, {actions_differ} with another action",
+                spec.label,
+                played.log.len()
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Finding 1: tests
+// ---------------------------------------------------------------------------------------------
+
+const SMOOTHIE_SEED: &str = "audit-fuzz:smoothie:9";
+
+#[test]
+fn f1a_redact_is_the_same_for_two_worlds_the_seat_cannot_tell_apart() {
+    jackioh_cards::register_all();
+    let (plain, smoothie, _) = smoothie_worlds(SMOOTHIE_SEED).expect("the two worlds");
+    let seat = PlayerId::P2;
+    assert_eq!(view_for(&plain, seat), view_for(&smoothie, seat), "PREMISE: one view");
+    let diff = diff_values(
+        &serde_json::to_value(redact(&plain, seat)).expect("serializes"),
+        &serde_json::to_value(redact(&smoothie, seat)).expect("serializes"),
+    );
+    assert_eq!(diff, Vec::<String>::new());
+}
+
+#[test]
+fn f1b_decide_is_the_same_for_two_worlds_the_seat_cannot_tell_apart() {
+    jackioh_cards::register_all();
+    let (plain, smoothie, _) = smoothie_worlds(SMOOTHIE_SEED).expect("the two worlds");
+    let seat = PlayerId::P2;
+    assert_eq!(view_for(&plain, seat), view_for(&smoothie, seat), "PREMISE: one view");
+    let decided = |state: &GameState| {
+        let mut options = AiOptions::with_budget(Rng::new(&format!("{SMOOTHIE_SEED}:ctl:p2"), 0), AI_BUDGET);
+        let decision = decide_styled(state, seat, &mut options, &AI_STYLE_EXACT).expect("a decision");
+        (decision.action, decision.stats, options.rng.cursor())
+    };
+    assert_eq!(decided(&plain), decided(&smoothie));
+}
+
+#[test]
+fn f1c_two_ids_minted_unseen_do_not_change_the_action() {
+    use jackioh_ai::{MatchConfig, MatchHooks, SeatController, play_match};
+    jackioh_cards::register_all();
+    let spec = spec_of("hard", 4);
+    let ai = SeatController::Ai {
+        budget: Some(SMALL),
+        skill: None,
+    };
+    let config = MatchConfig {
+        seed: spec.seed.clone(),
+        decks: spec.decks.clone(),
+        handicaps: spec.handicaps.clone(),
+        controllers: PerPlayer::new(ai, ai),
+        max_actions: Some(61),
+        setup: MatchSetup::default(),
+    };
+    let mut last: Option<(GameState, PlayerId, Rng)> = None;
+    let record = {
+        let mut hooks = MatchHooks {
+            time_decision: Some(Box::new(|state, seat, rng, run| {
+                last = Some((state.clone(), seat, rng.clone()));
+                run();
+            })),
+            ..MatchHooks::default()
+        };
+        play_match(&config, &mut hooks)
+    };
+    assert_eq!(record.log.len(), 61, "PREMISE: the game reaches its 61st action");
+    let (state, seat, rng) = last.expect("a decision");
+    let decided = |state: &GameState| {
+        let mut options = AiOptions::with_budget(rng.clone(), SMALL);
+        decide_styled(state, seat, &mut options, &AI_STYLE_EXACT)
+            .expect("a decision")
+            .action
+    };
+    // What the opponent drawing a Smoothie unseen does to the state `redact` hands the search.
+    let mut minted = state.clone();
+    minted.next_id += 2;
+    println!("turn {} seat {} next_id {}", state.turn, seat.as_str(), state.next_id);
+    assert_eq!(decided(&state), decided(&minted));
 }
