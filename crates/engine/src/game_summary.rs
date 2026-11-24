@@ -767,6 +767,8 @@ fn seat_summary(reading: &Reading, deck: Vec<String>, player: PlayerId) -> SeatS
         starship_pieces_fused: Some(reading.starship_pieces_fused[player]).filter(|n| *n > 0),
         starships_launched: Some(reading.starships_launched[player]).filter(|n| *n > 0),
         picks: listed(&reading.picks[player]),
+        // R4552000: the AI's fold writes the turn rows (`jackioh_ai::attach_swing_turns`).
+        swing_turns: None,
     }
 }
 
@@ -845,11 +847,11 @@ impl SummaryReader {
     }
 }
 
-/// R376: what each seat's cards did in a finished game, and how it ended; `None` with no result. The
-/// fold is `replay::fold`'s, so an action the log holds and the engine refuses is skipped as there.
-pub fn summarize_game(input: &FoldArgs) -> Option<GameSummary> {
+/// R376, R4552000: the state a recorded game began in, set up as it was played (`summarize_game` and
+/// the AI's turn rows, `jackioh_ai::swing_turns`, both start here, so both read the game that was played).
+pub fn recorded_start(input: &FoldArgs) -> GameState {
     // No `dealt` here, unlike `fold`: it changes no event.
-    let start = create_recorded_game(&CreateGameOptions {
+    create_recorded_game(&CreateGameOptions {
         seed: input.seed.clone(),
         decks: input.decks.clone(),
         catalog: input.catalog.clone(),
@@ -863,21 +865,60 @@ pub fn summarize_game(input: &FoldArgs) -> Option<GameSummary> {
         // R3049000: and the win-rate snapshot, or CN Tech and NA Tech pick other cards.
         win_rates: input.win_rates.clone(),
         ..Default::default()
-    });
-    let mut reader = SummaryReader::new(&start);
+    })
+}
 
-    let begun = begin_game(&start);
-    reader.step(&start, None, &begun.events, &begun.state);
+/// R376, R4552000: replays `log` from `start` (`recorded_start`), the game's beginning first, handing
+/// each step to `step` as `(before, events, after)`, and returns the state it ends in. The fold is
+/// `replay::fold`'s, so an action the log holds and the engine refuses is skipped as there.
+pub fn read_steps(
+    start: &GameState,
+    log: &[Action],
+    mut step: impl FnMut(&GameState, &[GameEvent], &GameState),
+) -> GameState {
+    read_acted_steps(start, log, |before, _, events, after| step(before, events, after))
+}
+
+/// R4672000: `read_steps`, handing each step the action that took it as well (`None` for the game's
+/// beginning), which the record's reader reads a prompt's answer off (`SummaryReader::step`).
+fn read_acted_steps(
+    start: &GameState,
+    log: &[Action],
+    mut step: impl FnMut(&GameState, Option<&Action>, &[GameEvent], &GameState),
+) -> GameState {
+    let begun = begin_game(start);
+    step(start, None, &begun.events, &begun.state);
     let mut state = begun.state;
-
-    for action in &input.log {
+    for action in log {
         let result = reduce(&state, action);
         if result.error.is_some() {
             continue;
         }
-        reader.step(&state, Some(action), &result.events, &result.state);
+        step(&state, Some(action), &result.events, &result.state);
         state = result.state;
     }
+    state
+}
+
+/// R376: what each seat's cards did in a finished game, and how it ended; `None` with no result. The
+/// fold is `replay::fold`'s, so an action the log holds and the engine refuses is skipped as there.
+pub fn summarize_game(input: &FoldArgs) -> Option<GameSummary> {
+    summarize_game_with(input, |_, _, _| {})
+}
+
+/// R4552000: `summarize_game`, handing each step of its one fold to `step` as well, as `read_steps`
+/// does, so another reading of the game (the AI's turn rows, `jackioh_ai::summarize_with_swing_turns`)
+/// shares the fold rather than replay the log again (#2213: a finished game's log is folded once).
+pub fn summarize_game_with(
+    input: &FoldArgs,
+    mut step: impl FnMut(&GameState, &[GameEvent], &GameState),
+) -> Option<GameSummary> {
+    let start = recorded_start(input);
+    let mut reader = SummaryReader::new(&start);
+    let state = read_acted_steps(&start, &input.log, |before, action, events, after| {
+        reader.step(before, action, events, after);
+        step(before, events, after);
+    });
 
     let outcome = state.result?;
     Some(GameSummary {
