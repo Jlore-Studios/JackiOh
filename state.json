@@ -15038,9 +15038,10 @@
       "started_at": "2026-11-23T04:56:16Z",
       "stop_requested": false,
       "strike_log": [
-        "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
+        "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled",
+        "`claude-6` (claude, opus) rejected it: `task`: The issue's acceptance asks the pull request to report the split-half reliability, the correlation of deck cards' Swing with their adjusted "
       ],
-      "strikes": 1,
+      "strikes": 2,
       "taken_asks": [],
       "verdict_rounds": 4
     },
