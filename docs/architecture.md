@@ -231,7 +231,7 @@ What "operating a server" costs us, and the mitigation each cost already has in 
 
 | Cost | Mitigation |
 | --- | --- |
-| A restart drops every live match | `(seed, log)` rebuild when the first socket for the match arrives, starting the grace of a seat that has not come back (R744) — SPEC §9.5: "A crashed actor rebuilds its state by folding `(seed, log)`". `app.live_matches()` is the reaper's query. |
+| A restart drops every live match | `(seed, log)` rebuild when the first socket for the match arrives, starting the grace of a seat that has not come back (R744) — SPEC §9.5: "A crashed actor rebuilds its state by folding `(seed, log)`". The reaper reads only the live matches past their ceiling (`matches_past_ceiling`, #4712). |
 | One process is one point of failure | The hard ceiling and the reaper (§9.5) guarantee no match and no player is stuck forever, whatever happens to the process. |
 | Horizontal scale needs match affinity | Out of scope at this population (ARCHITECTURE-CCG §6.1: "single digits at 3am"). When it is needed, `matches.status` plus a claim column is the smallest change. |
 
