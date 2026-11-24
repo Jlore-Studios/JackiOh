@@ -20977,6 +20977,14 @@
         "sha": "20a8906ac16d54aa8d9e52ceeabcea6909a74571",
         "tiers": {}
       }
+    },
+    "4749": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-24T14:12:54Z",
+      "issue": 4731,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
