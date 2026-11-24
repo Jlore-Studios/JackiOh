@@ -227,14 +227,15 @@ mod tests {
             assert_eq!(beneath(&own, P1, Row::Units, 1), vec![vanilla]);
         }
 
-        /// R638, R4665000: Brittle 3 ticks at its controller's turns, p2's here; crumbled, the Unit
-        /// beneath resumes on top.
+        /// R638, R4665000: Brittle 3 ticks at its controller's turns, p2's here, from the first a full
+        /// turn cycle after it entered (`BRITTLE_FIRST_TICK_TURNS`), so p2's fourth turn crumbles it;
+        /// crumbled, the Unit beneath resumes on top.
         #[test]
         fn r638_r4665000_brittle_3_crumbles_it_and_the_unit_beneath_resumes() {
             let mut s = board(false, json!([]), json!([{ "def": SORCERER, "lane": 3 }]), json!([]));
             let sorcerer = s.unit_at(P2, 3).id;
             stack_on(&mut s, &sorcerer);
-            for _ in 0..2 {
+            for _ in 0..3 {
                 crate::next_turn_of(&mut s, P2);
                 assert_eq!(s.unit(P2, 3).map(|top| top.def_id), Some(ID.to_string()));
             }
