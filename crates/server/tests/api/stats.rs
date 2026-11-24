@@ -2337,6 +2337,7 @@ mod r4675001_play_versions {
                 "last",
                 "live",
                 "name",
+                "patches",
                 "tier"
             ]
         );
@@ -2355,6 +2356,11 @@ mod r4675001_play_versions {
         assert_eq!(live["hasEnoughGames"], json!(true));
         assert!(live["tier"].is_string(), "{live}");
         assert!(live["adjustedWinRate"].is_number(), "{live}");
+        // R4678001: the patches its versions reach, the newest among them.
+        assert!(
+            live["patches"].as_u64().is_some_and(|patches| patches >= 1),
+            "{live}"
+        );
 
         // Its oldest play version began before the records: no games and no figure.
         let oldest = core[0];
