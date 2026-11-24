@@ -61,6 +61,37 @@ fn due(waiting: &[WaitingGame], last: Option<i64>, now: i64) -> bool {
         .any(|game| game.since > last || (now >= reminder_at(game) && reminder_at(game) > last))
 }
 
+/// R4691000: the first time at or after `now` when [`decide_notify`] sends this account something, the
+/// games waiting on it as they stand: `None` when nothing it waits on ever will (no channel, nothing new,
+/// or every deadline gone first). The plan's sends can turn on only at `now`, at a waiting game's
+/// reminder or when the email gap ends, so the first of those that sends is the answer. A game past its
+/// deadline waits on nobody (R3727000), so each candidate weighs only the games still running at it.
+pub fn next_notify_at(input: &NotifyInput, now: i64) -> Option<i64> {
+    let mut candidates: Vec<i64> = input.waiting.iter().map(reminder_at).collect();
+    candidates.extend(
+        input
+            .last_email_at
+            .map(|last| last + DAILY_EMAIL_MIN_GAP_HOURS * MS_PER_HOUR),
+    );
+    candidates.push(now);
+    candidates.retain(|at| *at >= now);
+    candidates.sort_unstable();
+    candidates.dedup();
+    candidates.into_iter().find(|&at| {
+        let running = NotifyInput {
+            waiting: input
+                .waiting
+                .iter()
+                .filter(|game| game.deadline > at)
+                .cloned()
+                .collect(),
+            ..input.clone()
+        };
+        let plan = decide_notify(&running, at);
+        plan.email || plan.push
+    })
+}
+
 /// The plan for one account at `now`.
 pub fn decide_notify(input: &NotifyInput, now: i64) -> NotifyPlan {
     let mut games = input.waiting.clone();

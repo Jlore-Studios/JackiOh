@@ -34,7 +34,7 @@ use serde_json::{Value, json};
 use tokio::sync::{mpsc, watch};
 
 use jackioh_shared::economy::rewards::utc_day_bounds;
-use jackioh_shared::notify::{NotifyInput, NotifyPlan, WaitingGame, decide_notify};
+use jackioh_shared::notify::{NotifyInput, NotifyPlan, WaitingGame, decide_notify, next_notify_at};
 
 use crate::api::collection::caller_profile;
 use crate::api::http::{ApiError, ApiResult, Req, bad_request, bool as body_bool, lock, log_warn, ok, str};
@@ -47,7 +47,7 @@ use crate::config::{
 };
 use crate::daily::games::{load, settle, waiting_of};
 use crate::daily::webpush::{self, PushOutcome, Subscription};
-use crate::db::store::PushSubRow;
+use crate::db::store::{DailyGameRow, DailyNotifyRow, PushSubRow, StoreError, Tx};
 use crate::loops::FailingStreak;
 use crate::social::live::push_social;
 use crate::social::{no_content, profiles_by_id};
@@ -78,23 +78,17 @@ async fn notify_one(app: &Arc<App>, profile_id: &str, now: i64) -> Result<Sent, 
     let _held = guard.lock().await;
     let mut tx = app.db.begin(None).await?;
     let rows = tx.daily_games_of(profile_id, 0).await?;
-    // R3727000: a move past its deadline is lost, settled or not yet, so it waits on nobody.
-    let waiting: Vec<WaitingGame> = waiting_of(&rows, profile_id)
-        .into_iter()
-        .filter(|(_, _, deadline)| *deadline > now)
-        .map(|(match_id, since, deadline)| WaitingGame {
-            match_id,
-            since,
-            deadline,
-        })
-        .collect();
+    let waiting = waiting_at(&rows, profile_id, now);
     if waiting.is_empty() {
         tx.commit().await?;
         return Ok(Sent::default());
     }
-    let settings = tx.daily_notify_get(profile_id).await?;
-    let profile = tx.profiles_get_by_id(profile_id).await?;
-    let subscriptions = tx.push_subs_of(profile_id).await?;
+    let Account {
+        input,
+        email,
+        settings,
+        subscriptions,
+    } = read_account(app, &mut tx, profile_id, waiting).await?;
     // The opponents' names, for the email's lines.
     let opponents: IndexMap<String, String> = {
         let ids: Vec<String> = rows
@@ -115,21 +109,6 @@ async fn notify_one(app: &Arc<App>, profile_id: &str, now: i64) -> Result<Sent, 
             .collect()
     };
     tx.commit().await?;
-
-    let email = profile.map(|profile| profile.email).unwrap_or_default();
-    let input = NotifyInput {
-        // A channel whose keys the server was not given is off (§9.13).
-        email_on: settings.email_on && app.daily.mailer.is_some(),
-        has_email: !email.trim().is_empty(),
-        push_devices: if app.daily.push.is_some() {
-            u32::try_from(subscriptions.len()).unwrap_or(u32::MAX)
-        } else {
-            0
-        },
-        last_email_at: settings.last_email_at,
-        last_push_at: settings.last_push_at,
-        waiting,
-    };
     let plan = decide_notify(&input, now);
     let mut sent = Sent::default();
     if plan.email {
@@ -171,6 +150,60 @@ async fn notify_one(app: &Arc<App>, profile_id: &str, now: i64) -> Result<Sent, 
         tx.commit().await?;
     }
     Ok(sent)
+}
+
+/// What [`decide_notify`] reads of one account with `waiting` on it, and what sending needs besides.
+struct Account {
+    input: NotifyInput,
+    email: String,
+    settings: DailyNotifyRow,
+    subscriptions: Vec<PushSubRow>,
+}
+
+/// Reads [`Account`] for `profile_id` in `tx`.
+async fn read_account(
+    app: &App,
+    tx: &mut Tx<'_>,
+    profile_id: &str,
+    waiting: Vec<WaitingGame>,
+) -> Result<Account, StoreError> {
+    let settings = tx.daily_notify_get(profile_id).await?;
+    let profile = tx.profiles_get_by_id(profile_id).await?;
+    let subscriptions = tx.push_subs_of(profile_id).await?;
+    let email = profile.map(|profile| profile.email).unwrap_or_default();
+    let input = NotifyInput {
+        // A channel whose keys the server was not given is off (§9.13).
+        email_on: settings.email_on && app.daily.mailer.is_some(),
+        has_email: !email.trim().is_empty(),
+        push_devices: if app.daily.push.is_some() {
+            u32::try_from(subscriptions.len()).unwrap_or(u32::MAX)
+        } else {
+            0
+        },
+        last_email_at: settings.last_email_at,
+        last_push_at: settings.last_push_at,
+        waiting,
+    };
+    Ok(Account {
+        input,
+        email,
+        settings,
+        subscriptions,
+    })
+}
+
+/// The games of `rows` waiting on `profile_id` at `now`. R3727000: a move past its deadline is lost,
+/// settled or not yet, so it waits on nobody.
+fn waiting_at(rows: &[DailyGameRow], profile_id: &str, now: i64) -> Vec<WaitingGame> {
+    waiting_of(rows, profile_id)
+        .into_iter()
+        .filter(|(_, _, deadline)| *deadline > now)
+        .map(|(match_id, since, deadline)| WaitingGame {
+            match_id,
+            since,
+            deadline,
+        })
+        .collect()
 }
 
 /// #3843: takes one of the UTC day's player emails (`Tx::daily_email_claim`); false once the day's
@@ -498,6 +531,49 @@ pub async fn sweep_route(app: &Arc<App>, _req: Req) -> ApiResult {
     Ok(ok(
         serde_json::to_value(&swept).map_err(|error| ApiError::internal(error.to_string()))?
     ))
+}
+
+/// R4691000: the first time at or after `now` a sweep has something to do (SPEC §9.13), or `None` when
+/// nothing will until a request changes what is stored: a running game's deadline (now, for one past
+/// it or a result to write again), each waiting account's next notification (`next_notify_at`), the
+/// next invite to lapse and the oldest feed row's `NOTIFICATIONS_KEEP_DAYS`. Only a request changes
+/// any of these, and each request runs on an awake server, so the answer as it goes to sleep holds
+/// until it wakes: the Worker asks then (`GET /daily-next`), and its hourly cron leaves a sleeping
+/// server asleep until the time has come.
+pub async fn next_due(app: &Arc<App>, now: i64) -> Result<Option<i64>, ApiError> {
+    let mut tx = app.db.begin(None).await?;
+    let overdue = !tx.daily_games_due(now).await?.is_empty();
+    let running = tx.daily_games_running().await?;
+    let lapse = tx.daily_invites_next_lapse().await?;
+    let oldest = tx.notifications_oldest_at().await?;
+    let mut due: Vec<i64> = running.iter().filter_map(|row| row.next_deadline_at).collect();
+    if overdue {
+        due.push(now);
+    }
+    due.extend(lapse);
+    // The purge deletes a row once it is older than the keep, so a millisecond past it.
+    due.extend(oldest.map(|at| at + NOTIFICATIONS_KEEP_DAYS * MS_PER_DAY + 1));
+    let mut holders: IndexSet<&str> = IndexSet::new();
+    for row in &running {
+        holders.extend([row.players.0.as_str(), row.players.1.as_str()]);
+    }
+    for profile_id in holders {
+        let waiting = waiting_at(&running, profile_id, now);
+        if waiting.is_empty() {
+            continue;
+        }
+        let account = read_account(app, &mut tx, profile_id, waiting).await?;
+        due.extend(next_notify_at(&account.input, now));
+    }
+    tx.commit().await?;
+    Ok(due.into_iter().min().map(|at| at.max(now)))
+}
+
+/// `GET /daily-next`: [`next_due`] as `{ "nextDueAt": <epoch ms> | null }`, for the Worker as the server
+/// goes to sleep. Outside `/api`, so only the Worker reaches it.
+pub async fn next_due_route(app: &Arc<App>, _req: Req) -> ApiResult {
+    let next = next_due(app, app.daily.now()).await?;
+    Ok(ok(json!({ "nextDueAt": next })))
 }
 
 /// The sweep every `DAILY_SWEEP_MINUTES` while the server is awake.

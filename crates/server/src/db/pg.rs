@@ -8560,6 +8560,17 @@ pub async fn daily_invites_purge(t: &mut PgTx<'_>, now: i64) -> Result<i64, Stor
     Ok(i64::try_from(done.rows_affected()).unwrap_or(i64::MAX))
 }
 
+/// R4691000: the least `expires_at` of any invite, the next the purge above deletes. A read of the
+/// table it keeps to about a week of invites.
+pub async fn daily_invites_next_lapse(t: &mut PgTx<'_>) -> Result<Option<i64>, StoreError> {
+    run_as(t, None).await?;
+    let row = sqlx::query("select min(expires_at) as next from public.daily_invites")
+        .fetch_one(&mut **t)
+        .await
+        .map_err(db_error)?;
+    get::<Option<i64>>(&row, "next")
+}
+
 // daily notices
 
 /// Two statements: the row with its defaults (the table's: email on, `gen_random_uuid()`'s token),

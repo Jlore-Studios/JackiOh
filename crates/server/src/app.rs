@@ -1178,6 +1178,14 @@ pub static ROUTES: &[Route] = &[
         AuthLevel::None,
         h!(crate::daily::notify::sweep_route),
     ),
+    // R4691000: what the Worker asks as the server goes to sleep (apps/edge `DAILY_NEXT_PATH`), outside
+    // `/api` and `/ws` as the sweep is.
+    (
+        "GET",
+        crate::config::DAILY_NEXT_PATH,
+        AuthLevel::None,
+        h!(crate::daily::notify::next_due_route),
+    ),
     // api/e2e.rs (R144): the reseed on demand, end-to-end mode only; anywhere else its handler
     // answers as a path nobody serves.
     (
@@ -1457,7 +1465,7 @@ fn init_logging(alerts: Option<crate::alerts::AlertLayer>) {
 fn spawn_loops(app: &Arc<App>) -> Vec<(&'static str, JoinHandle<()>)> {
     // §9.5: the matchmaker's sweeper and the reaper; R260, R263: the series sweeper runs the pick
     // clock and starts a game a restart left unstarted. The retention purge runs once now, since the
-    // container sleeps after ten idle minutes (apps/edge). R1454: with `LADDER_BOTS=on`, the bot pool
+    // container sleeps after five idle minutes (apps/edge's `SLEEP_AFTER`). R1454: with `LADDER_BOTS=on`, the bot pool
     // is sized once now and then hourly.
     let mut running = vec![
         (
@@ -1497,7 +1505,7 @@ fn spawn_loops(app: &Arc<App>) -> Vec<(&'static str, JoinHandle<()>)> {
         ),
         // end Duos co-op (#946)
         // SPEC §9.13 (#3727): the daily games' sweep while the server is awake; the Worker's hourly
-        // cron runs the same sweep through `POST /daily-sweep` while it sleeps.
+        // cron runs the same sweep through `POST /daily-sweep` while it sleeps, once one is due (R4691000).
         (
             "daily.sweeper",
             loops::spawn_supervised("daily.sweeper", app.clone(), crate::daily::notify::run_sweeper),

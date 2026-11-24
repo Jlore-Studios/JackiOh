@@ -13,7 +13,7 @@ use jackioh_shared::host::daily::{
     DailyClock, daily_allows, daily_board, daily_expired, daily_holders, daily_legal, daily_sync,
     is_daily_time,
 };
-use jackioh_shared::notify::{NotifyInput, WaitingGame, decide_notify};
+use jackioh_shared::notify::{NotifyInput, WaitingGame, decide_notify, next_notify_at};
 
 /// The epoch millisecond the games start at.
 const NOW: i64 = 1_700_000_000_000;
@@ -483,4 +483,50 @@ fn notify_pushes_without_a_gap() {
     reminded.last_push_at = Some(NOW);
     let reminder = NOW + window() - DAILY_REMINDER_HOURS * HOUR;
     assert!(decide_notify(&reminded, reminder).push);
+}
+
+#[test]
+fn r4691000_the_next_send_is_the_first_reminder_or_gap_that_sends() {
+    // Already due: a new game nobody has been told of sends at once.
+    assert_eq!(next_notify_at(&account(vec![waiting("a", NOW)]), NOW), Some(NOW));
+
+    // Told: the next send is the game's reminder, and nothing is due before it.
+    let game = waiting("a", NOW);
+    let reminder = game.deadline - DAILY_REMINDER_HOURS * HOUR;
+    let mut told = account(vec![game.clone()]);
+    told.last_email_at = Some(NOW);
+    assert_eq!(next_notify_at(&told, NOW + HOUR), Some(reminder));
+    assert!(!decide_notify(&told, reminder - 1).email);
+    assert!(decide_notify(&told, reminder).email);
+    // Reminded too: nothing more to say about it.
+    told.last_email_at = Some(reminder);
+    assert_eq!(next_notify_at(&told, reminder + HOUR), None);
+
+    // A held email goes out when the gap ends.
+    let mut held = account(vec![waiting("a", NOW), waiting("b", NOW + HOUR)]);
+    held.last_email_at = Some(NOW - HOUR + 1);
+    let gap_ends = NOW - HOUR + 1 + DAILY_EMAIL_MIN_GAP_HOURS * HOUR;
+    assert_eq!(next_notify_at(&held, NOW + HOUR), Some(gap_ends));
+
+    // No channel, nothing ever: an account with email off and no device.
+    let mut silent = account(vec![waiting("a", NOW)]);
+    silent.email_on = false;
+    assert_eq!(next_notify_at(&silent, NOW), None);
+    assert_eq!(next_notify_at(&account(Vec::new()), NOW), None);
+
+    // A push device reminds as an email would, gap or no gap.
+    let mut pushed = account(vec![game.clone()]);
+    pushed.email_on = false;
+    pushed.push_devices = 1;
+    pushed.last_push_at = Some(NOW);
+    assert_eq!(next_notify_at(&pushed, NOW + HOUR), Some(reminder));
+
+    // A gap that ends after the only game's deadline sends nothing: the game is lost by then (R3727000).
+    let mut late = account(vec![WaitingGame {
+        match_id: "a".to_string(),
+        since: NOW - window(),
+        deadline: NOW + HOUR,
+    }]);
+    late.last_email_at = Some(NOW);
+    assert_eq!(next_notify_at(&late, NOW), None);
 }

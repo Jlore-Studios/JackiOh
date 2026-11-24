@@ -5490,6 +5490,12 @@ pub fn daily_invites_purge(f: &mut FakeTx<'_>, now: i64) -> Result<i64, StoreErr
     Ok(gone as i64)
 }
 
+/// R4691000: the least `expires_at` of any invite.
+pub fn daily_invites_next_lapse(f: &mut FakeTx<'_>) -> Result<Option<i64>, StoreError> {
+    call(f, "dailyInvites.nextLapse")?;
+    Ok(f.tables().daily.invites.iter().map(|row| row.expires_at).min())
+}
+
 // daily notices
 
 pub fn daily_notify_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<DailyNotifyRow, StoreError> {

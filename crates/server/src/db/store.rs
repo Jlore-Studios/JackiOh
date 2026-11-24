@@ -3288,6 +3288,12 @@ impl Tx<'_> {
         dispatch!(self, daily_invites_purge(now))
     }
 
+    /// R4691000: when the next invite lapses, whatever its state (the sweep deletes it then,
+    /// R4390000): the least `expires_at`, or `None` while there is none.
+    pub async fn daily_invites_next_lapse(&mut self) -> StoreResult<Option<i64>> {
+        dispatch!(self, daily_invites_next_lapse())
+    }
+
     // daily notices
 
     /// §9.13: the account's notice settings. A missing row is written first, with the defaults:

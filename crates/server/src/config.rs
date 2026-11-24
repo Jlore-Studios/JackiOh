@@ -1674,11 +1674,15 @@ pub use jackioh_shared::config::{
 
 /// §9.13: how often the daily sweep ends the games whose move ran out, lapses old challenges and
 /// seeks and sends the emails and pushes due, in minutes, while the server is awake. The Worker's
-/// hourly cron (`apps/edge`'s `DAILY_SWEEP_CRON`) wakes it for one while nobody else does.
+/// hourly cron (`apps/edge`'s `DAILY_SWEEP_CRON`) wakes it for one while nobody else does, once one
+/// has something due (R4691000, `DAILY_NEXT_PATH`).
 pub const DAILY_SWEEP_MINUTES: u64 = 60;
 /// §9.13: the route the Worker's cron posts the sweep to; outside `/api`, so the Worker's public
 /// `fetch` never forwards it.
 pub const DAILY_SWEEP_PATH: &str = "/daily-sweep";
+/// R4691000: the route the Worker asks, as the server goes to sleep, when a sweep next has something
+/// due (`daily::notify::next_due`); outside `/api`, as the sweep's is.
+pub const DAILY_NEXT_PATH: &str = "/daily-next";
 /// §9.13: how many times a request ends a game on time when another request moved first and its
 /// log row clashed (R3727000), before it answers what it read.
 pub const DAILY_SETTLE_ATTEMPTS: usize = 3;
