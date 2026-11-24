@@ -16220,6 +16220,9 @@
     },
     "4601": {
       "closeout": false,
+      "parked": [
+        "bot/issue-4587"
+      ],
       "tree": {
         "adopted": true,
         "at": "2026-11-23T19:14:52Z",
