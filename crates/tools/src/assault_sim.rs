@@ -284,6 +284,10 @@ fn play_fight(
     Ok((row, action))
 }
 
+/// A fight player: the fight `state` stands on, as its row and the `fightOver` its record reports.
+type FightFn<'a> =
+    dyn Fn(&AssaultState, &AssaultDay) -> Result<(FightRow, AssaultAction), String> + Sync + 'a;
+
 /// The day's first attempt at level 1 with the day's Assault deck and an empty record.
 fn first_attempt(day: &AssaultDay) -> Result<(AssaultSetup, AssaultRecord), String> {
     let setup = AssaultSetup {
@@ -309,7 +313,7 @@ fn play_day(
     date: &str,
     content: &AssaultContent,
     levels: Option<&[u8]>,
-    fight: &(dyn Fn(&AssaultState, &AssaultDay) -> Result<(FightRow, AssaultAction), String> + Sync),
+    fight: &FightFn<'_>,
 ) -> Result<Vec<FightRow>, String> {
     let day = assault_day(date, content)?;
     let (setup, record) = first_attempt(&day)?;
@@ -548,4 +552,306 @@ pub fn run(args: Args) -> anyhow::Result<()> {
         bail!("assault-sim: {} faults", faults.len());
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The days, from `DEFAULT_FROM`, whose fights the bands play.
+    const BAND_DAYS: u32 = 6;
+    /// R4583000: the fewest level-1 fights, in percent, the day's Assault deck may win before level 1 is
+    /// no longer clearly winnable (an AI mirror at one skill is about even; measured at `TEST_BUDGET`:
+    /// 3 of 6, 4 of 12 and 7 of 16 from `DEFAULT_FROM`, 18 of 32 from 2027-01-01; at full budget 5 of 8).
+    const LEVEL_ONE_WIN_PERCENT_MIN: usize = 25;
+    /// R4583000: the most level-20 fights, in percent, it may win before level 20 is no longer clearly
+    /// hard (measured: none of 12, none of 8 at full budget).
+    const LEVEL_TWENTY_WIN_PERCENT_MAX: usize = 20;
+    /// The days the daily sweep walks, at full budget.
+    const DAILY_DAYS: u32 = 4;
+
+    /// The fights at `level` in `rows`, summed.
+    fn sums_at(rows: &[FightRow], level: u8) -> Sums {
+        let mut sums = Sums::default();
+        rows.iter()
+            .filter(|row| row.level == level)
+            .for_each(|row| sums.add(row));
+        sums
+    }
+
+    /// R4583000: a level's margin, the player's HP left less the enemy's, summed over its fights; the
+    /// lower, the harder.
+    fn margin(sums: &Sums) -> i64 {
+        sums.hp_left - sums.enemy_hp_left
+    }
+
+    /// R4583000: level 1's band, broken when it won under `LEVEL_ONE_WIN_PERCENT_MIN` percent of its
+    /// fights or was not played.
+    fn level_one_band(rows: &[FightRow]) -> Option<String> {
+        let first = sums_at(rows, 1);
+        (first.fights == 0 || first.won * (PERCENT as usize) < first.fights * LEVEL_ONE_WIN_PERCENT_MIN).then(|| {
+            format!(
+                "level 1 won {} of {}, under {LEVEL_ONE_WIN_PERCENT_MIN}%: it is no longer clearly winnable",
+                first.won, first.fights
+            )
+        })
+    }
+
+    /// R4583000: the top level's band, broken when it won over `LEVEL_TWENTY_WIN_PERCENT_MAX` percent of
+    /// its fights or was not played.
+    fn top_level_band(rows: &[FightRow]) -> Option<String> {
+        let last = sums_at(rows, ASSAULT_LEVELS);
+        (last.fights == 0 || last.won * (PERCENT as usize) > last.fights * LEVEL_TWENTY_WIN_PERCENT_MAX).then(|| {
+            format!(
+                "level {ASSAULT_LEVELS} won {} of {}, over {LEVEL_TWENTY_WIN_PERCENT_MAX}%: it is no longer clearly hard",
+                last.won, last.fights
+            )
+        })
+    }
+
+    /// R4583000: a Commander level's band, broken when its mean margin is no lower than the level before
+    /// it, or either was not played.
+    fn commander_band(rows: &[FightRow], commander: u8) -> Option<String> {
+        let (before, boss) = (sums_at(rows, commander - 1), sums_at(rows, commander));
+        // Compares the means without dividing: boss / b < before / c, as boss × c < before × b.
+        let harder = before.fights > 0
+            && boss.fights > 0
+            && margin(&boss) * (before.fights as i64) < margin(&before) * (boss.fights as i64);
+        (!harder).then(|| {
+            format!(
+                "level {commander}'s margin {} over {} fights is no lower than level {}'s {} over {}: the Commander is no longer harder",
+                margin(&boss),
+                boss.fights,
+                commander - 1,
+                margin(&before),
+                before.fights
+            )
+        })
+    }
+
+    /// Every band `rows` breaks, each named with its numbers.
+    fn broken_bands(rows: &[FightRow]) -> Vec<String> {
+        let mut broken: Vec<String> = [level_one_band(rows), top_level_band(rows)]
+            .into_iter()
+            .flatten()
+            .collect();
+        broken.extend(
+            ASSAULT_COMMANDER_LEVELS
+                .iter()
+                .filter_map(|&c| commander_band(rows, c)),
+        );
+        broken
+    }
+
+    /// `levels` on each of `BAND_DAYS` days, played to its end at `TEST_BUDGET` and full skill, every
+    /// fight on its own core, back in input order.
+    fn play_bands(content: &AssaultContent, levels: &[u8]) -> Vec<FightRow> {
+        let dates = dates(DEFAULT_FROM, BAND_DAYS).expect("the band days");
+        let jobs: Vec<(u8, &String)> = levels
+            .iter()
+            .flat_map(|&level| dates.iter().map(move |date| (level, date)))
+            .collect();
+        jobs.into_par_iter()
+            .map(|(level, date)| {
+                // The bands pin tuned outcomes, not rolls (#3117), as run-sim's do.
+                let _unshifted = jackioh_engine::testkit::hold_pool_shift(0);
+                let fight = |state: &AssaultState, day: &AssaultDay| {
+                    play_fight(state, day, AI_SKILL_MAX, TEST_BUDGET)
+                };
+                play_day(date, content, Some(&[level]), &fight).map_err(|e| format!("{date}: {e}"))
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .expect("the band fights end clean")
+            .into_iter()
+            .flatten()
+            .collect()
+    }
+
+    fn content() -> AssaultContent {
+        jackioh_cards::register_all();
+        browser_content().expect("the browser's content")
+    }
+
+    /// IA10: the escalation's numbers are strawmen to tune, not to break. `levels` are played from their
+    /// own fights on the content the browser deals, as `assault-sim --levels` plays them, and `band`
+    /// must hold. Each band is a test of its own, so the shards of ci.yml's `tools, wasm` share them.
+    fn hold_band(levels: &[u8], band: impl Fn(&[FightRow]) -> Option<String>) {
+        let content = content();
+        let rows = play_bands(&content, levels);
+        if let Some(broken) = band(&rows) {
+            panic!(
+                "the Assault broke its band (change the bands only with a deliberate retune):\n{broken}\n{}",
+                render("the band", &rows, &content)
+            );
+        }
+    }
+
+    #[test]
+    fn r4583000_level_1_is_clearly_winnable() {
+        hold_band(&[1], level_one_band);
+    }
+
+    #[test]
+    fn r4583000_level_20_is_clearly_hard() {
+        hold_band(&[ASSAULT_LEVELS], top_level_band);
+    }
+
+    /// The `n`th Commander level and the level before it, the Commander's band held.
+    fn hold_commander_band(n: usize) {
+        let commander = ASSAULT_COMMANDER_LEVELS[n];
+        hold_band(&[commander - 1, commander], |rows| {
+            commander_band(rows, commander)
+        });
+    }
+
+    #[test]
+    fn r4583000_the_rank_1_commander_is_harder_than_level_4() {
+        hold_commander_band(0);
+    }
+
+    #[test]
+    fn r4583000_the_rank_2_commander_is_harder_than_level_9() {
+        hold_commander_band(1);
+    }
+
+    #[test]
+    fn r4583000_the_rank_3_commander_is_harder_than_level_14() {
+        hold_commander_band(2);
+    }
+
+    #[test]
+    fn r4583000_the_rank_4_commander_is_harder_than_level_19() {
+        hold_commander_band(3);
+    }
+
+    /// A fight at `level` that ends `won`, with `hp_left` and `enemy_hp_left`.
+    fn row(level: u8, won: bool, hp_left: i32, enemy_hp_left: i32) -> FightRow {
+        FightRow {
+            level,
+            commander: None,
+            upgrades: Vec::new(),
+            won,
+            turns: 1,
+            hp_left,
+            enemy_hp_left,
+        }
+    }
+
+    /// Rows that hold every band: level 1 won, level 20 lost, each Commander lost by more than the
+    /// level before it.
+    fn holding() -> Vec<FightRow> {
+        let mut rows = vec![row(1, true, 10, 0), row(ASSAULT_LEVELS, false, 0, 30)];
+        for commander in ASSAULT_COMMANDER_LEVELS {
+            rows.push(row(commander - 1, false, 0, 5));
+            if commander != ASSAULT_LEVELS {
+                rows.push(row(commander, false, 0, 10));
+            }
+        }
+        rows
+    }
+
+    #[test]
+    fn r4583000_each_band_names_the_edit_that_breaks_it() {
+        assert_eq!(broken_bands(&holding()), Vec::<String>::new());
+        let mut easy_one = holding();
+        easy_one[0] = row(1, false, 0, 5);
+        let broken = broken_bands(&easy_one);
+        assert_eq!(broken.len(), 1, "{broken:?}");
+        assert!(broken[0].starts_with("level 1 won 0 of 1"), "{broken:?}");
+        let mut soft_top = holding();
+        soft_top[1] = row(ASSAULT_LEVELS, true, 1, 0);
+        let broken = broken_bands(&soft_top);
+        // A won level 20 is also no harder than level 19.
+        assert_eq!(broken.len(), 2, "{broken:?}");
+        assert!(broken[0].starts_with("level 20 won 1 of 1"), "{broken:?}");
+        let mut soft_boss = holding();
+        soft_boss.retain(|row| row.level != ASSAULT_COMMANDER_LEVELS[1]);
+        soft_boss.push(row(ASSAULT_COMMANDER_LEVELS[1], false, 0, 5));
+        let broken = broken_bands(&soft_boss);
+        assert_eq!(broken.len(), 1, "{broken:?}");
+        assert!(broken[0].starts_with("level 10's margin -5"), "{broken:?}");
+        assert_eq!(broken_bands(&[]).len(), 2 + ASSAULT_COMMANDER_LEVELS.len());
+    }
+
+    #[test]
+    fn r4583000_an_upgrade_is_weighed_against_its_own_levels() {
+        let held = |level: u8, won: bool| FightRow {
+            upgrades: vec![AssaultUpgradeKind::HeroArmor],
+            ..row(level, won, 0, 0)
+        };
+        let rows = [
+            held(3, false),
+            row(3, true, 0, 0),
+            row(3, true, 0, 0),
+            row(9, true, 0, 0),
+        ];
+        let effects = upgrade_effects(&rows);
+        assert_eq!(effects.len(), 1);
+        let (kind, with, without) = effects[0];
+        assert_eq!(kind, AssaultUpgradeKind::HeroArmor);
+        assert_eq!((with.fights, with.won), (1, 0));
+        // Level 9 holds no armor anywhere, so it is not weighed.
+        assert_eq!((without.fights, without.won), (2, 2));
+        let text = render("t", &rows, &content());
+        assert!(text.contains("  heroArmor: 0/1 (0%), 2/2 (100%)\n"), "{text}");
+        assert!(text.contains("   3  2/3 (66%)"), "{text}");
+    }
+
+    #[test]
+    fn the_dates_step_over_months_leap_days_and_years() {
+        assert_eq!(next_date("2026-11-30").unwrap(), "2026-12-01");
+        assert_eq!(next_date("2026-12-31").unwrap(), "2027-01-01");
+        assert_eq!(next_date("2028-02-28").unwrap(), "2028-02-29");
+        assert_eq!(next_date("2027-02-28").unwrap(), "2027-03-01");
+        assert_eq!(next_date("2100-02-28").unwrap(), "2100-03-01");
+        assert_eq!(next_date("2000-02-28").unwrap(), "2000-02-29");
+        assert!(next_date("2026-13-01").is_err());
+        assert_eq!(
+            dates("2026-11-29", 3).unwrap(),
+            ["2026-11-29", "2026-11-30", "2026-12-01"]
+        );
+        assert!(dates("tomorrow", 1).is_err());
+        assert_eq!(levels_of(false, &[]), None);
+        assert_eq!(
+            levels_of(true, &[]).map(|l| l.len()),
+            Some(ASSAULT_LEVELS as usize)
+        );
+        assert_eq!(levels_of(true, &[3]), Some(vec![3]));
+        assert!(parse_level("0").is_err() && parse_level("21").is_err() && parse_level("20").is_ok());
+    }
+
+    #[test]
+    fn an_attempt_walks_to_its_first_loss_and_its_file_folds() {
+        // Stub fights, no game: won through level 6, lost at 7. The walk's own `assault_fold` check
+        // runs on its file.
+        let content = content();
+        let fight = |state: &AssaultState, _day: &AssaultDay| {
+            let won = state.level < 7;
+            let r = row(state.level, won, 1, 0);
+            Ok((r, AssaultAction::FightOver { won, turns: 1 }))
+        };
+        let rows = play_day(DEFAULT_FROM, &content, None, &fight).expect("the walk ends clean");
+        let levels: Vec<u8> = rows.iter().map(|row| row.level).collect();
+        assert_eq!(levels, (1..=7).collect::<Vec<u8>>());
+        let all = play_day(DEFAULT_FROM, &content, levels_of(true, &[]).as_deref(), &fight).unwrap();
+        assert_eq!(all.len(), ASSAULT_LEVELS as usize);
+        let won = |state: &AssaultState, _day: &AssaultDay| {
+            Ok((
+                row(state.level, true, 1, 0),
+                AssaultAction::FightOver { won: true, turns: 1 },
+            ))
+        };
+        let repelled = play_day(DEFAULT_FROM, &content, None, &won).unwrap();
+        assert_eq!(repelled.len(), ASSAULT_LEVELS as usize);
+    }
+
+    #[test]
+    #[ignore = "daily: DAILY_DAYS whole days at full budget; the r4583000 band tests play the band levels at the tiny budget per pull request"]
+    fn the_daily_sweep_walks_whole_days_at_full_budget_and_prints_the_report() {
+        let content = content();
+        let dates = dates(DEFAULT_FROM, DAILY_DAYS).unwrap();
+        let (text, faults) = sweep(&dates, &[AI_SKILL_MAX], "full", None, "", &content);
+        println!("{text}");
+        assert!(faults.is_empty(), "{faults:?}");
+    }
 }
