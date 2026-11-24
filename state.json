@@ -20195,6 +20195,9 @@
       "stop_requested": false,
       "suggestion": true
     },
+    "4732": {
+      "suggestion": true
+    },
     "4735": {
       "action": "review",
       "asks": [],
@@ -43100,6 +43103,13 @@
         "at": "2026-11-24T13:46:35Z",
         "number": 4737,
         "title": "Patch: board scopes and Cleave treat a card lying on a unit zone as backrow, not a Unit",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-24T13:46:44Z",
+        "number": 4732,
+        "title": "Patch: the C module's build refuses an export named like a maths function again, now that it strips the names the old check read",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
       }
