@@ -18867,6 +18867,9 @@
         "tiers": {}
       }
     },
+    "4696": {
+      "suggestion": true
+    },
     "4697": {
       "action": "plan",
       "asks": [],
@@ -41350,6 +41353,13 @@
         "title": "Patch: spec 56's duplicate number in e2e resolves to spec 59 for board notices overlay",
         "verdict": "came to nothing",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-24T09:30:28Z",
+        "number": 4696,
+        "title": "Patch: a match socket that drops while it is being seated starts its seat's disconnect grace, in 1v1 and co-op, instead of its own arrival cancelling it",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
       }
     ],
     "declined": [
