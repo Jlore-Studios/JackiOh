@@ -42638,7 +42638,10 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-24T12:59:52Z",
         "every": 5,
+        "findings": 2,
+        "follow_up": 4736,
         "head": "10ae5a8cc9fef19de0ab7344bca287c486015806",
         "issue": 4682,
         "merged_at": "2026-11-24T12:32:19Z",
@@ -42651,12 +42654,13 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:db7eda3a-1795524712",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45397719696",
         "sha": "f10180a05739cd1cfe4a4fe86805b809709645e9",
         "started_at": "2026-11-24T12:52:17Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the clock alarm covers the mulligan and background tabs",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 500
