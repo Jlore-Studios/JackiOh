@@ -50,7 +50,7 @@ trap backrow. This file binds every agent, not only Claude.
    the spec does not make follows Hearthstone semantics and gets a note in the same PR, numbered with the
    lowest free in its issue's block (issue N owns R(N×1000) to R(N×1000+999)), and a proving test named after
    it (`fn r58_…` in Rust, an `it("R58 …")` in TypeScript); its §11 paragraph goes in `spec/pending/<N>.md`,
-   since `spec-fold.yml` writes `spec/11-rulings.md`, `spec/INDEX.md` and `spec/CARDS.md` on `main` daily
+   since `spec-fold.yml` writes `spec/history/`, `spec/INDEX.md` and `spec/CARDS.md` on `main` daily
    and a branch leaves all three alone. `spec/README.md`, Adding a ruling, has the details; `cargo jackioh
    spec check` fails on any mismatch between the notes, their tests and the R-ids cited in `crates/`,
    `apps/web/src/`, `apps/edge/src/`, `apps/admin/src/` or `e2e/`, comments included.

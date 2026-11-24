@@ -4,9 +4,9 @@ The specification now lives in [`spec/`](spec/README.md), as one note per sectio
 
 Every id is unchanged, so every citation of the old file still holds:
 
-- `SPEC §N` and `SPEC §N.M` are the `## N.` and `### N.M` headings of `spec/NN-<slug>.md`: §2 is [`spec/02-core-systems.md`](spec/02-core-systems.md), §6.3 is in [`spec/06-keywords.md`](spec/06-keywords.md), §10.8 in [`spec/10-engine-guide.md`](spec/10-engine-guide.md). [`spec/README.md`](spec/README.md) maps every section to its note.
+- `SPEC §N` and `SPEC §N.M` are the `## N.` and `### N.M` headings of `spec/NN-<slug>.md`: §2 is [`spec/02-core-systems.md`](spec/02-core-systems.md). A long section (§6, §8, §9, §10) is a folder of one note a subsection beside its opening: §6.3 is [`spec/06-keywords/6.3-actions-and-verbs.md`](spec/06-keywords/6.3-actions-and-verbs.md), §10.8 [`spec/10-engine-guide/10.8-viewfor.md`](spec/10-engine-guide/10.8-viewfor.md). [`spec/README.md`](spec/README.md) maps every section to its note.
 - `R<n>`, a row of the old §11 table, is the note `spec/rulings/R<nnnn>.md`, zero-padded to four digits at least: R113 is [`spec/rulings/R0113.md`](spec/rulings/R0113.md). Its front matter names the tests that prove it (`proven_in`).
-- §11's prose, where each block of rulings came from, is [`spec/11-rulings.md`](spec/11-rulings.md), and the paragraphs merged since the last daily fold are in `spec/pending/`.
+- §11's prose, where each block of rulings came from, is [`spec/11-rulings.md`](spec/11-rulings.md) for the early rulings and `spec/history/<issue>.md` for each issue's since, and the paragraphs merged since the last daily fold are in `spec/pending/`.
 
 To find a ruling, open `spec/rulings/R<nnnn>.md`. To find the rulings on a point, a section or a card, or one entry of a long note without reading the note, follow [`spec/README.md`, Looking things up](spec/README.md#looking-things-up); [`spec/INDEX.md`](spec/INDEX.md) is every ruling on one line (id, title, note and what it touches, rewritten daily).
 
