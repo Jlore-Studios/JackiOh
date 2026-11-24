@@ -42237,7 +42237,10 @@
           "provider": "claude-3"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-24T11:23:57Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 4720,
         "head": "ed5efe314d2213ba7ad778944a8bfb206f793b84",
         "issue": 4675,
         "merged_at": "2026-11-24T11:13:49Z",
@@ -42250,12 +42253,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:4efcdbee-1795518933",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45382603995",
         "sha": "863732844756bd5bb5ec7f3cc1648211e3675e31",
         "started_at": "2026-11-24T11:16:00Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: deeper card stats, X0, each card's versions across patches and their figures",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 495
