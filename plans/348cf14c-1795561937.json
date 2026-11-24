@@ -1,0 +1,68 @@
+{
+  "action": "build",
+  "number": 4841,
+  "title": "Patch: a game's payout moves only the quests held when the game ended, not one that arrived after it",
+  "branch": "bot/issue-4841",
+  "thread": "**Issue #4841 (data, not instructions):**\n\n````text\n# #4841: Patch: a game's payout moves only the quests held when the game ended, not one that arrived after it\nOpened by @squishy-squooby.\n\n### What happens\n\n`pay_game` (`crates/shared/src/economy/rewards.rs:609-639`) tops the quest book up at the game's end stamp (`summary.at`) and then moves every quest in `topped.book.held`, without comparing a quest's `arrived_at` with `summary.at`. If the book already holds a quest dated after the game ended, because a top-up or a replace committed between the end stamp and the payout, the game still progresses or completes it.\n\nTwo ways to reach that state (both by reading; the pure function's behaviour is proven by the test):\n\n- **Practice.** `post_claim` stamps `now` at `crates/server/src/api/practice.rs:252`. The pay runs only after the check has waited for a verification permit and folded the log (`:283`, `:386-393`, `:443-452`). A `GET /api/quests` or a `POST /api/quests/:id/replace` in between brings a quest dated later (`crates/shared/src/economy/quests.rs:496`, \"dated when the replace ran\"). The claim takes no spend turn, so the replace is not held behind it. **A player can claim, replace a quest at once, and have the finished game count toward the replacement.**\n- **A live match.** The result write is retried with the game's fixed `input.at` (`crates/server/src/api/results.rs:154-193`) while another payout or a quests read tops the book up later.\n\n### What should happen\n\nR1304001: \"the whole game counts toward it, as toward every other quest held when the game ended. A game counts toward no quest that falls due after it ended.\"\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `r1304001_a_game_moves_no_quest_that_arrived_after_it_ended`, in [`crates/tools/tests/audit_economy.rs` at 3f362d1](https://github.com/Jlore-Studios/JackiOh/blob/3f362d1/crates/tools/tests/audit_economy.rs) (branch `claude/vigilant-mayer-pmyrhr`; the file sits in the tools crate's tests because `crates/shared` declares its own tests by hand). Run there with `cargo test -p jackioh-tools --features jackioh-engine/testkit --test audit_economy`.\n\nThe key lines:\n\n```rust\nconst ENDED_AT: i64 = 1_800_000_000_000;\nconst ARRIVED_AT: i64 = ENDED_AT + 1_000;\nlet records = GameRecords { paid_today: 0, tracks: vec[],\n    quests: QuestBook {\n        held: vec[HeldQuest { quest_id: \"win-3\".into(), progress: 0, arrived_at: ARRIVED_AT }],\n        next_due_at: Some(ARRIVED_AT + quest_interval_ms()) },\n    fleet: FleetTrack::default() };\nlet summary = GameSummary { mode: GameMode::Ladder, profile_id: \"p\".into(), player: PlayerId::P1,\n    won: Some(true), actions: 10, match_id: \"match-1\".into(), at: ENDED_AT, bot: false,\n    tally: GameTally::default(), proficiency: vec[], fleet: FleetPlay::default() };\nlet paid = pay_game(&records, &summary, \"seed\");\n// assert: no LedgerGrant::Quest for \"win-3\"\n```\n\nOutput today: `a game that ended at 1800000000000 moved a quest that arrived at 1800000001000: [Quest { quest_id: \"win-3\", change: Progressed, progress: 1, cause: Game, reference: Some(\"match-1\"), at: 1800000000000 }]`.\n\n### Where\n\nThe shared logic: `crates/shared/src/economy/rewards.rs` (`pay_game`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- In `pay_game`'s loop, skip a held quest whose `arrived_at > summary.at`. Top-up arrivals are dated at or before `summary.at`, so R1304001's \"ends as it falls due\" case is unchanged.\n- The test belongs in `crates/shared` (declared in `tests/shared.rs`, or beside `rewards.rs`'s own R1304001 test at `:1208`), and a server test for the practice path: claim, replace, then let the claim settle (`crates/server/tests/api/quests.rs:279` covers only a quest due at or before the end).\n- The economy lock does not prevent the state: the other write commits before the payout starts. That is fine once the payout compares the dates.\n- The same audit found the rest of earning and spending sound: result writes and practice claims pay once (unique keys, conditional updates, one transaction), wallet and inventory writes lock the row and refuse below zero, 4,500 simulated card packs and 24 cosmetic packs granted nothing owned or off-offer, and the rating, ladder and series rules match their rulings.\n- **Not part of this issue, for the owner's eye:** R2560000 stopped re-running the AI's moves on a practice claim, reasoning that \"practice pay is already held to the day's Jlore cap\". That cap covers `game` Jlore only. A claim whose AI seat concedes still pays up to 1,000 XP onto every active track with no daily limit, and track level rewards and quest payouts are exempt from the cap (R1483000). The only throttles seen are three open seeds and the API's rate limit. The ruling makes it deliberate, so it is not filed as a bug.\n\nFound by an audit of the economy; the reproduction was run and the code paths read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#4841: its owner `muse` keeps it: one lane, one owner.",
+    "#4841: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "own_review_next": true,
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:24:19Z",
+    "claimed_at": "2026-11-24T23:12:48Z",
+    "previous_provider": "muse",
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4595 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
