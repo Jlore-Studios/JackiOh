@@ -197,7 +197,9 @@ none of them. Later shared modules add theirs here.
 
 ## Checking the built module
 
-The build (`JACKIOH_WASM_C=1 sh scripts/build-wasm.sh`) checks that the module imports nothing, contains no trapping stubs, and keeps readable panic text after a trap. It then plays the hotseat fixture (`crates/engine/tests/golden/01-hotseat-full-game.json`) move by move using the reference host (`luau/tools/reference-host.mjs fixture`), failing if the game ends anywhere other than `HOTSEAT_HASH` (`512357ea`).
+The build (`JACKIOH_WASM_C=1 sh scripts/build-wasm.sh`) checks that the module imports nothing, fails the link if an export is named like a libm or host function (a self-test builds a fixture to prove the guard still fires), and keeps readable panic text after a trap. It then plays the hotseat fixture (`crates/engine/tests/golden/01-hotseat-full-game.json`) move by move using the reference host (`luau/tools/reference-host.mjs fixture`), failing if the game ends anywhere other than `HOTSEAT_HASH` (`512357ea`).
+
+A binding whose name collides with a libm or host symbol (`log`, `round`) fails the link: `src/lib.rs`'s `deny(linker_messages)` turns rust-lld's `function signature mismatch: <name>` into an error naming it, on every wasm32 build of the crate (#4732).
 
 To run the reference host by hand:
 
