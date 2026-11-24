@@ -42137,6 +42137,10 @@
       "4696": {
         "at": "2026-11-24T08:52:43Z",
         "why": "I checked it on main: when a socket drops while it is being seated, the server queues Disconnect ahead of Attach, and both hosts' on_attached then cancel the grace without checking the seat is still connected, so the seat sits empty with no countdown; the fix is small, the bug is confirmed, and it breaks behaviour that \u00a79.5 and the server README promise."
+      },
+      "4722": {
+        "at": "2026-11-24T11:54:22Z",
+        "why": "It mirrors two refusals POST already returns so the result screen stops offering a rematch that can only fail with 409."
       }
     },
     "decided": [
