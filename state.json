@@ -18361,6 +18361,8 @@
       }
     },
     "4664": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-24T03:35:30Z",
@@ -18374,8 +18376,11 @@
         "trail": "ription\": \"Summarise SQL suite\u2026\n- Bash: {\"command\": \"grep -n \\\"OK (\\u00a79.13): the four tables\\\" /tmp/sql_run.log | cut -c1-200; echo \\\"- run 6: sql/run.sh green (EXIT 0) incl. the 0100 re-apply block\\\" >> .bot-notes.md\", \"description\": \"\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web test src/daily/DailyRoute.test.tsx src/daily/DailyBoard.test.tsx src/routes/replays.test.tsx src/routes/account-sections.test.tsx > /tmp/web_test.log 2>&1; echo \\\"EXI\u2026\n- Bash: {\"command\": \"grep -rn \\\"export.*function Username\\\\|export default function Username\\\" apps/web/src | head -3\", \"description\": \"Find the Username component\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4621/apps/web/src/auth/Username.tsx\"}\n- Bash: {\"command\": \"grep -n \\\"opponentName\\\" apps/web/src -r | head\", \"description\": \"Check how replays render a deleted opponent\"}\n- Grep: {\"pattern\": \"DELETE\\\", \\\"/api/account\\\"\", \"path\": \"/home/runner/work/_temp/work/item-4621/crates/server/tests\", \"output_mode\": \"files_with_matches\"}\n- Bash: {\"command\": \"grep -n \\\"daily\\\" crates/server/tests/api/account.rs | head; sed -n '/async fn r3727008_an_account_playing/,/^}/p' crates/server/tests/api/daily.rs | grep -n \\\"daily/games\\\\|404\\\\|daily\\\u2026\n- Bash: {\"command\": \"grep -n \\\"fn r3727008_an_account\\\" crates/server/tests/api/daily.rs; sed -n '/fn r3727008_an_account_playing/,/^}/p' crates/server/tests/api/daily.rs | tail -30\", \"description\": \"Read th\u2026\n- Bash: {\"command\": \"until grep -q \\\"^EXIT\\\" /tmp/spec_check.log; do sleep 10; done; tail -8 /tmp/spec_check.log | cut -c1-300\", \"description\": \"Wait for spec check result\", \"timeout\": 2400000}\n- Bash: {\"command\": \"echo \\\"- run 6: spec check ok (2420 rulings); running classify\\\" >> .bot-notes.md; timeout 1700 cargo jackioh classify --base origin/main --claims 2>&1 | tail -15\", \"description\": \"Run c\u2026\n- Bash: {\"command\": \"echo \\\"- run 6: classify --claims: App (ok)\\\" >> .bot-notes.md; tail -5 /tmp/web_test.log | cut -c1-200\", \"description\": \"Check web test progress\"}\n- Bash: {\"command\": \"timeout 3000 cargo test -p jackioh-server > /tmp/server_test.log 2>&1; echo \\\"EXIT $?\\\" >> /tmp/server_test.log\", \"description\": \"Run the server crate's full test suite\", \"timeout\": 3300\u2026\n- Bash: {\"command\": \"until grep -q \\\"^EXIT\\\" /tmp/web_test.log; do sleep 10; done; grep -E \\\"\\u2713|\\u2717|\\u00d7|FAIL|Test Files|Tests |EXIT\\\" /tmp/web_test.log | grep -v \\\"^ *\\u2713\\\" | tail -20; grep -c \\\u2026\n- Bash: {\"command\": \"cd apps/web && timeout 600 pnpm exec vitest run src/daily/DailyRoute.test.tsx src/daily/DailyBoard.test.tsx -t R4621000 --reporter=verbose 2>&1 | grep -E \\\"R4621000|Test Files|Tests \\\" |\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4621 && echo \\\"- run 6: web tests green (4 files, 94 tests; 4 R4621000 tests ran)\\\" >> .bot-notes.md && timeout 900 pnpm --dir apps/web typecheck 2>&\u2026\n- Bash: {\"command\": \"git status --short; echo \\\"- run 6: web typecheck + eslint clean; server tests running\\\" >> .bot-notes.md\", \"description\": \"Check working tree for stray changes\"}\n- Bash: {\"command\": \"cargo fmt --check 2>&1 | head -5; echo \\\"FMT EXIT ${PIPESTATUS[0]}\\\"; git diff --stat 1c391f1c6f 291991861c | tail -3\", \"description\": \"Check formatting and what the main merge brought\"}\n- Bash: {\"command\": \"git diff --stat 1c391f1c6f 291991861c | grep -v \\\"spec/rulings\\\" | head -40\", \"description\": \"List non-ruling files the merge changed\"}\n- Bash: {\"command\": \"grep -n '\\\"a deleted account\\\"' apps/web/src/i18n/zh-CN.json; git diff 1c391f1c6f 291991861c -- apps/web/src/i18n/zh-CN.json | grep \\\"^[-+]\\\" \", \"description\": \"Confirm the translation k\u2026\n- Bash: {\"command\": \"until grep -q \\\"^EXIT\\\" /tmp/server_test.log; do sleep 15; done; grep -E \\\"^test result|FAILED|panicked|failures:|^EXIT|Running\\\" /tmp/server_test.log | cut -c1-200 | tail -30\", \"descrip\u2026\n- Bash: {\"command\": \"grep -E \\\"^test result|FAILED|panicked|^EXIT|Running\\\" /tmp/server_test.log | cut -c1-200 | tail -30; grep -E \\\"r4621000|r3727008|r3934000\\\" /tmp/server_test.log | head\", \"description\": \u2026\n- Bash: {\"command\": \"echo \\\"- run 6: cargo test -p jackioh-server green (lib 145, server 1939, store 785); next clippy, db/run.sh\\\" >> .bot-notes.md; timeout 1700 cargo clippy -p jackioh-server --all-targets\u2026\n- Bash: {\"command\": \"echo \\\"- run 6: clippy -p jackioh-server clean; running db/run.sh\\\" >> .bot-notes.md; docker rm -f jackioh-pg-test >/dev/null 2>&1; timeout 3000 sh crates/server/tests/db/run.sh > /tmp/d\u2026\n- Bash: {\"command\": \"grep -n \\\"pub async fn profiles_get_many\\\" -A 25 crates/server/src/db/pg.rs | head -35; grep -n \\\"async fn profiles_by_id\\\" -A 15 crates/server/src/daily/*.rs crates/server/src/social/*.\u2026\n- Bash: {\"command\": \"sed -n 8240,8278p crates/server/src/db/pg.rs\", \"description\": \"Read the daily due sweep query\"}\n- Bash: {\"command\": \"until grep -q \\\"^EXIT\\\" /tmp/db_run.log; do sleep 15; done; grep -E \\\"^test result|FAILED|panicked|^EXIT|r4621000|r3727008\\\" /tmp/db_run.log | cut -c1-200 | tail -20\", \"description\": \"Wa\u2026\n- Bash: {\"command\": \"sleep 1; tail -3 /tmp/db_run.log | cut -c1-200\", \"description\": \"Peek at the Postgres suite progress\"}\n- Bash: {\"command\": \"until grep -q \\\"^EXIT\\\" /tmp/db_run.log; do sleep 15; done; grep -E \\\"^EXIT\\\" /tmp/db_run.log\", \"description\": \"Block until the Postgres suite finishes\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -E \\\"^test result|FAILED|panicked|r4621000|r3727008\\\" /tmp/db_run.log | cut -c1-200 | tail -12; docker rm -f jackioh-pg-test >/dev/null 2>&1; docker ps -a --format '{{.Names}}' | he\u2026\n- Bash: {\"command\": \"echo \\\"- run 6: db/run.sh green (postgres r4621000 + r3727008 ok). All checks done; writing report.\\\" >> .bot-notes.md; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replac\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a finished daily game stays on the opponent's Daily screen when the other player deletes their account\"} --> ## What changed When one player deletes their account after a daily game is over, the game now stays on the other player's Daily screen. Before,\u2026"
       },
       "issue": 4621,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-24T05:01:23Z",
         "from_run": "45320586741",
         "gates": [
           {
@@ -18467,7 +18472,11 @@
         "source": "build",
         "until": "2026-11-24T05:30:24Z"
       },
+      "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-24T05:00:24Z",
+      "run_id": "pending:40b99ac3-1795496459",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -18486,6 +18495,9 @@
         "provider": "claude-1",
         "run": "45320586741"
       },
+      "started_at": "2026-11-24T05:01:23Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -18499,9 +18511,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T04:51:18Z",
+    "at": "2026-11-24T05:01:23Z",
     "url": "",
-    "what": "review #4629 on claude-1"
+    "what": "review #4664 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-24T04:50:11Z",
