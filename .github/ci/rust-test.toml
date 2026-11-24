@@ -154,12 +154,12 @@ test = "-p jackioh-ai --test ai_slow"
 # `ai`'s: in one group they took the job past seven minutes (#1929). A name filter matches anywhere
 # in a test's path, so `tools, wasm` skips exactly what the other two run (`fuzz::` matches
 # `duos_fuzz::` too). Those two run the binary alone, so a test elsewhere (an integration test, a doc
-# test) whose path held `fuzz::`, `selfplay::` or `positions::` would run in no group: name none so.
+# test) whose path held `fuzz::` or `selfplay::` would run in no group: name none so.
 [[group]]
 group = "tools fuzz"
 scope = "tools_wasm"
 cache = "tools-wasm"
-test = "-p jackioh-tools --bin jackioh -- fuzz:: positions:: --skip duos_fuzz::"
+test = "-p jackioh-tools --bin jackioh -- fuzz:: --skip duos_fuzz::"
 
 [[group]]
 group = "tools duos, selfplay"
@@ -171,4 +171,4 @@ test = "-p jackioh-tools --bin jackioh -- duos_fuzz:: selfplay::"
 group = "tools, wasm"
 scope = "tools_wasm"
 cache = "tools-wasm"
-test = "--workspace --exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai -- --skip fuzz:: --skip selfplay:: --skip positions::"
+test = "--workspace --exclude jackioh-engine --exclude jackioh-cards --exclude jackioh-server --exclude jackioh-ai -- --skip fuzz:: --skip selfplay::"
