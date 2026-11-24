@@ -18502,6 +18502,9 @@
       "stop_requested": false,
       "suggestion": true
     },
+    "4683": {
+      "suggestion": true
+    },
     "4684": {
       "action": "review",
       "asks": [],
@@ -41219,6 +41222,13 @@
         "number": 4682,
         "reason": "the alarm exists to reach a player who looked away, and on a desktop switching tabs is the usual way of looking away. Today `accepting()` in `audio/engine.ts` drops every sound while the page is hidden, the alarm's beats included, and `Clock.tsx` leaves the mulligan silent on purpose, so a missed prompt is answered by the AI policy (R79) with no sound at all. Exempting only the viewer's own alarm keeps everything else quiet, as #4528 wanted. The Audio settings hint (\"Sound effects and voices sta",
         "title": "Patch: the clock alarm covers the mulligan and background tabs",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-24T09:18:21Z",
+        "number": 4683,
+        "title": "Patch: hand-hint pips name themselves on hover like field marks do",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
       }
