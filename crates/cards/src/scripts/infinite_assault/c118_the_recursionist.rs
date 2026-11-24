@@ -58,7 +58,7 @@ mod tests {
     use crate::scenario;
 
     const HIT_JOB: &str = "core-016"; // Hit Job: the kill
-    const PAWN: &str = "stand-in (1) 1/1, Reborn";
+    const PAWN: &str = "stand-in (1) 1/1 Reborn";
     const FILLER: &str = "stand-in (0) Spell";
 
     /// The Recursionist watches p1's Reborn Pawn die three times.

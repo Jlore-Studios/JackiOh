@@ -76,10 +76,12 @@ mod tests {
         s
     }
 
-    /// The shuffled copies: the played Spells, told from the library's fillers by their discount.
+    /// The shuffled copies: the played Spells, told from the library's fillers by their discount,
+    /// in the library or already drawn by the draws after the shuffle.
     fn shuffled(s: &Scenario) -> Vec<CardInstance> {
         s.pile(P1, "library")
             .into_iter()
+            .chain(s.hand(P1))
             .filter(|card| card.def_id == SPELL && card.cost_mod != 0)
             .collect()
     }

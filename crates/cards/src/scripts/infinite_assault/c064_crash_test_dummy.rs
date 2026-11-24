@@ -35,8 +35,8 @@ mod tests {
 
     fn board(radiant: bool) -> Scenario {
         scenario(json!({
-            "p1": { "hand": [HIT_JOB], "field": [{ "def": ID, "radiant": radiant }], "mana": 10 },
-            "p2": { "field": ["stand-in (1) 1/1"] },
+            "p1": { "hand": [HIT_JOB, "core-005"], "field": [{ "def": ID, "radiant": radiant }], "mana": 10, "library": crate::filler(4) },
+            "p2": { "field": ["stand-in (1) 1/1"], "hand": ["core-005"], "library": crate::filler(4) },
         }))
     }
 

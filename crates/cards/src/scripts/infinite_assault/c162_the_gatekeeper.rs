@@ -116,6 +116,9 @@ mod tests {
         fn after_its_own_survived_attack_your_hero_gains_3_armor() {
             let mut s = board(false);
             s.play(ID, json!({ "zone": 2 }));
+            // Its summoning sickness wears off by its next turn.
+            s.end_turn();
+            s.end_turn();
             let keeper = s.unit_at(P1, 2);
             let target = s.unit_at(P2, 1);
             s.attack(&keeper, &target);

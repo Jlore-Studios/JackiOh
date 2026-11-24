@@ -68,7 +68,8 @@ mod tests {
         let mut s = scenario(json!({
             "seed": seed,
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, STOCKPILE], "field": [KEEP], "library": crate::filler(4) },
-            "p2": { "hand": [STOCKPILE], "library": crate::filler(4) },
+            // A Unit for the Rush to hit: Rush hits no hero on its summon turn.
+            "p2": { "hand": [STOCKPILE], "field": [{ "def": "stand-in (1) 1/9", "lane": 1 }], "library": crate::filler(4) },
         }));
         s.play(ID, json!({}));
         s
@@ -95,9 +96,12 @@ mod tests {
         fn the_rush_units_attack_at_once_occupied_lanes_kept() {
             let s = cast(false, "assault-base");
             expect_rush_ia(&s, false, 4);
-            // A fresh summon with Rush lists attacks at once; a sick Unit lists none.
-            let first = summoned(&s)[0].id.clone();
-            assert!(!s.attacks_of(&first).is_empty(), "Rush attacks at once");
+            // A fresh summon with Rush lists attacks at once on the enemy Unit (one that can't
+            // attack, as some of the set's can't, lists none).
+            assert!(
+                summoned(&s).iter().any(|card| !s.attacks_of(card.id.as_str()).is_empty()),
+                "Rush attacks at once"
+            );
         }
     }
 

@@ -63,12 +63,14 @@ mod tests {
             s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 3, "health": 4 }));
             // Give p1 a card that started in p2's deck
             let mut stolen = new_instance(s.state_mut(), TARGET, P1, Zone::Hand { player: P1 });
+            // A stolen card started in a deck: `new_instance` makes a Created one (R943).
+            stolen.created = None;
             stolen.started_in = Some(PlayerId::P2);
             s.state_mut().players[P1].hand.push(stolen);
 
             // Stolen card has 1 discount
             let stolen_card = s.hand(P1).into_iter().find(|c| c.def_id == TARGET).unwrap();
-            assert_eq!(cost_now(s.state(), &stolen_card), 3); // 4 - 1
+            assert_eq!(cost_now(s.state(), &stolen_card), 2); // Midrange Menace's (3), less 1
 
             // Normal card has no discount
             let normal_card = s.hand(P1).into_iter().find(|c| c.def_id == NORMAL).unwrap();
@@ -84,11 +86,11 @@ mod tests {
             let mut s = board(true);
             s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 6, "health": 8 }));
             let mut stolen = new_instance(s.state_mut(), TARGET, P1, Zone::Hand { player: P1 });
+            stolen.created = None;
             stolen.started_in = Some(PlayerId::P2);
             s.state_mut().players[P1].hand.push(stolen);
-
             let stolen_card = s.hand(P1).into_iter().find(|c| c.def_id == TARGET).unwrap();
-            assert_eq!(cost_now(s.state(), &stolen_card), 2); // 4 - 2
+            assert_eq!(cost_now(s.state(), &stolen_card), 1); // Midrange Menace's (3), less 2
         }
     }
 }

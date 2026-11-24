@@ -78,7 +78,7 @@ mod tests {
             "seed": seed,
             "p1": {
                 "backrow": [{ "def": ID, "radiant": radiant, "faceUp": true, "lane": 1 }],
-                "hand": [TRAP, STOCKPILE],
+                "hand": [TRAP, STOCKPILE, crate::CLOAKED_UNIT],
                 "library": crate::filler(4),
             },
             "p2": { "hand": [STOCKPILE], "library": crate::filler(4) },

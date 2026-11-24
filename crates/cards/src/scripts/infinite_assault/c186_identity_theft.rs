@@ -69,8 +69,10 @@ mod tests {
             let mut s = board(false);
             s.play(ID, json!({}));
             assert_eq!(s.hand(P1).len(), 2);
-            let p1_library = &s.state().players[P1].library;
-            assert!(p1_library.iter().any(|c| c.def_id == TARGET));
+            // The copy went into the deck; the draws after it may already have taken it.
+            let side = &s.state().players[P1];
+            let copies = side.library.iter().chain(&side.hand).filter(|c| c.def_id == TARGET).count();
+            assert_eq!(copies, 1, "one copy of the card in their hand");
         }
     }
 

@@ -67,7 +67,7 @@ mod tests {
     fn board(radiant: bool, seed: &str, hand: Value) -> Scenario {
         scenario(json!({
             "seed": seed,
-            "p1": { "hand": [{ "def": ID, "radiant": radiant }], "library": crate::filler(3) },
+            "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "library": crate::filler(3) },
             "p2": { "hand": hand, "library": crate::filler(3) },
         }))
     }

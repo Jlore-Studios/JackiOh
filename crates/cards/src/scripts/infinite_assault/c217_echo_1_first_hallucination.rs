@@ -158,7 +158,8 @@ mod tests {
             }));
             let hero = s.state().players[P2].hero.health;
             s.attack(ATTACKER, "hero");
-            assert_eq!(attacker_health(&s, P1), 4, "no answer on an enemy Figment's reveal");
+            // The attacker stands in lane 2, beside Echo-1.
+            assert_eq!(unit_view(s.state(), &s.unit_at(P1, 2)).health, 4, "no answer on an enemy Figment's reveal");
             assert_eq!(s.state().players[P2].hero.health, hero - 4, "the attack still lands");
         }
 

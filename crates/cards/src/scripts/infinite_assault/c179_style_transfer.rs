@@ -73,7 +73,7 @@ mod tests {
 
     use crate::scenario;
 
-    const SMALL_UNIT: &str = "core-005"; // Stockpile
+    const SMALL_UNIT: &str = "core-008"; // Mr. Vanilla
     const BIG_UNIT: &str = "core-019"; // Midrange Menace
 
     fn board(radiant: bool) -> Scenario {

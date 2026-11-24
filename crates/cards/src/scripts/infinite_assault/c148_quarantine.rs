@@ -84,10 +84,10 @@ mod tests {
             "p1": {
                 "backrow": [{ "def": QUARANTINE, "radiant": radiant }],
                 "field": [VANILLA],
-                "hand": [filler(1)],
+                "hand": filler(1),
                 "library": filler(6),
             },
-            "p2": { "field": [ATTACKER], "hand": [filler(1)], "library": filler(6) },
+            "p2": { "field": [ATTACKER], "hand": filler(1), "library": filler(6) },
         }))
     }
 
@@ -146,10 +146,10 @@ mod tests {
                 "p1": {
                     "backrow": [QUARANTINE],
                     "field": [MOTHS],
-                    "hand": [filler(1)],
+                    "hand": filler(1),
                     "library": filler(6),
                 },
-                "p2": { "field": [ATTACKER], "hand": [filler(1)], "library": filler(6) },
+                "p2": { "field": [ATTACKER], "hand": filler(1), "library": filler(6) },
             }));
             s.end_turn();
             assert_eq!(s.state().active, P1);

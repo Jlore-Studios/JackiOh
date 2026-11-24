@@ -46,6 +46,23 @@ fn emit_cost(ctx: &mut EffectContext<'_>, card: &CardInstance) {
     });
 }
 
+/// R4, R4589008: add `amount` to the `costMod` of the card `id` while it is in a hand, reporting its
+/// price; a card in any other place, or none, takes nothing.
+pub(crate) fn price_in_hand(ctx: &mut EffectContext<'_>, id: &str, amount: i32) {
+    if amount == 0 {
+        return;
+    }
+    let Some(live) = find_instance_mut(ctx.sink.state, id) else {
+        return;
+    };
+    if live.zone.z() != ZoneName::Hand {
+        return;
+    }
+    live.cost_mod += amount;
+    let card = live.clone();
+    emit_cost(ctx, &card);
+}
+
 /// The card as it stands in the state after a write, or the copy when it is in no pile.
 fn as_it_stands(ctx: &EffectContext<'_>, card: CardInstance) -> CardInstance {
     find_instance(ctx.sink.state, &card.id).cloned().unwrap_or(card)

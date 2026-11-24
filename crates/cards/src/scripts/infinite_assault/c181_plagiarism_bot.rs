@@ -78,7 +78,8 @@ mod tests {
 
     use crate::scenario;
 
-    const SPELL: &str = "core-016"; // Hit Job
+    /// A Spell that needs no target.
+    const SPELL: &str = "stand-in (0) Spell";
 
     fn board(radiant: bool) -> Scenario {
         scenario(json!({

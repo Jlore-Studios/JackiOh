@@ -31,7 +31,8 @@ fn bomb() -> Script {
                 "hook": RESUME_HOOK,
                 "data": { "instanceId": this.id },
                 "watch": this.id,
-                "label": format!("Logic Bomb: destroys every enemy Unit in {turns} turns"),
+                // The badge adds the countdown ("in 3 turns") to the label itself.
+                "label": "Logic Bomb: destroys every enemy Unit",
             })))]
         })),
         resume: IndexMap::from([(
@@ -90,6 +91,9 @@ mod tests {
         }))
     }
 
+    /// `GameState.turn` counts player-turns: a round is p1's and p2's.
+    const PLAYER_TURNS_A_ROUND: i32 = 2;
+
     /// Both sides pass `rounds` full rounds (p1 then p2).
     fn pass_rounds(s: &mut Scenario, rounds: usize) {
         for _ in 0..rounds {
@@ -114,16 +118,17 @@ mod tests {
         fn r4590007_it_fires_on_turn_3_not_turn_2_and_shows_a_badge() {
             let mut s = board(false, "logic-bomb", json!([FILLER]));
             s.play(ID, json!({ "zone": 1 }));
+            let played_on = s.state().turn;
             assert_eq!(
                 p1_badges(&s, P1),
                 vec!["Logic Bomb: destroys every enemy Unit in 3 turns".to_string()]
             );
             pass_rounds(&mut s, 2);
-            assert_eq!(s.state().turn, 3);
-            assert_eq!(enemy_units(&s), 2, "alive at the start of the third turn");
+            assert_eq!(s.state().turn, played_on + 2 * PLAYER_TURNS_A_ROUND);
+            assert_eq!(enemy_units(&s), 2, "alive at the start of p1's second turn after it");
             s.end_turn().end_turn();
-            assert_eq!(s.state().turn, 4);
-            assert_eq!(enemy_units(&s), 0, "destroyed at the start of the fourth turn");
+            assert_eq!(s.state().turn, played_on + 3 * PLAYER_TURNS_A_ROUND);
+            assert_eq!(enemy_units(&s), 0, "destroyed at the start of p1's third turn after it");
         }
 
         #[test]
@@ -147,12 +152,13 @@ mod tests {
         fn r4590007_it_fires_a_turn_earlier() {
             let mut s = board(true, "logic-bomb-radiant", json!([FILLER]));
             s.play(ID, json!({ "zone": 1 }));
+            let played_on = s.state().turn;
             pass_rounds(&mut s, 1);
-            assert_eq!(s.state().turn, 2);
-            assert_eq!(enemy_units(&s), 2, "alive at the start of the second turn");
+            assert_eq!(s.state().turn, played_on + PLAYER_TURNS_A_ROUND);
+            assert_eq!(enemy_units(&s), 2, "alive at the start of p1's first turn after it");
             s.end_turn().end_turn();
-            assert_eq!(s.state().turn, 3);
-            assert_eq!(enemy_units(&s), 0, "destroyed at the start of the third turn");
+            assert_eq!(s.state().turn, played_on + 2 * PLAYER_TURNS_A_ROUND);
+            assert_eq!(enemy_units(&s), 0, "destroyed at the start of p1's second turn after it");
         }
     }
 }

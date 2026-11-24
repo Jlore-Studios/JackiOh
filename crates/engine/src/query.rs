@@ -1580,8 +1580,11 @@ fn exiles_on_damage(state: &GameState, source: &CardInstance) -> bool {
 }
 
 /// Whether a unit's Divine Shield is up (§6.1): the view drops a spent one.
+/// Whether a hit on `unit` pops its Divine Shield: one immune to damage keeps it (R4591004).
 fn is_shielded(state: &GameState, unit: &CardInstance) -> bool {
-    unit_has(state, unit, KeywordKind::DivineShield) && unit.divine_shield_spent != Some(true)
+    unit_has(state, unit, KeywordKind::DivineShield)
+        && unit.divine_shield_spent != Some(true)
+        && !crate::effects::firewall::units_immune_now(state, unit)
 }
 
 /// §4.4 steps 1 to 4 on a unit, read as `damage.rs`'s pipeline reads them (`damage::project_hit`,

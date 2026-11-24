@@ -127,7 +127,7 @@ mod tests {
                     "library": filler(6),
                 },
                 "p2": {
-                    "field": ["stand-in (1) 1/7 Windfury", WEAK, WEAK],
+                    "field": ["stand-in (1) 1/7 Windfury", WEAK, WEAK, WEAK],
                     "hand": [FILLER],
                     "library": filler(6),
                 },
@@ -137,11 +137,15 @@ mod tests {
             let target = s.unit_at(P1, 1);
             s.attack(&windy, &target);
             s.attack(&windy, &target);
+            // R4591002: the limit counts Units, so the Windfury unit's second attack spends nothing
+            // and two more Units may still attack.
             let second = s.unit_at(P2, 2);
             s.attack(&second, &target);
-            assert_eq!(attacks(&s, P2).len(), 0, "three attacks fill the count");
             let third = s.unit_at(P2, 3);
-            s.expect_refused(|s| s.attack(&third, &target));
+            s.attack(&third, &target);
+            assert_eq!(attacks(&s, P2).len(), 0, "three Units fill the count");
+            let fourth = s.unit_at(P2, 4);
+            s.expect_refused(|s| s.attack(&fourth, &target));
         }
     }
 

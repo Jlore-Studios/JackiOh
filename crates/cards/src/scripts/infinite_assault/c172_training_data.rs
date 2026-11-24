@@ -48,7 +48,8 @@ mod tests {
     fn board(radiant: bool) -> Scenario {
         scenario(json!({
             "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "mana": 10 },
-            "p2": { "hand": [SPELL1, SPELL2, SPELL3], "mana": 10 },
+            // The Stockpile keeps p2's turn from ending by itself between its plays.
+            "p2": { "hand": [SPELL1, SPELL2, SPELL3, FILLER], "mana": 20, "library": crate::filler(3) },
             "active": "p2",
         }))
     }

@@ -52,6 +52,9 @@ mod tests {
             "p2": { "field": [BIG], "hand": [STOCKPILE], "library": crate::filler(4) },
         }));
         s.play(ID, json!({}));
+        // Its summoning sickness wears off by its next turn.
+        s.end_turn();
+        s.end_turn();
         // Twice: the first hit spends its Divine Shield, the second kills it.
         for _ in 0..2 {
             let friend = s.unit(P1, 1).expect("the Friend").id.clone();

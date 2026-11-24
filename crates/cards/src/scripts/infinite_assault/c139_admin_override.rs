@@ -56,7 +56,8 @@ mod tests {
         scenario(json!({
             "seed": "admin-override",
             "p1": { "hand": [{ "def": ID, "radiant": radiant }], "mana": 10 },
-            "p2": { "hand": ["core-005"], "field": [VANILLA, VANILLA] },
+            // The second Unit outlives the stolen one's hit, so its damage stays to read.
+            "p2": { "hand": ["core-005"], "field": [VANILLA, "stand-in (1) 4/8"] },
         }))
     }
 

@@ -473,6 +473,12 @@ pub fn exile_matching(args: ExileMatchingArgs) -> Effect {
 #[serde(rename_all = "camelCase")]
 pub struct BounceArgs {
     pub target: TargetSpec,
+    /// R4589008 (IA #103 Undo, "It costs (1) more"): added to the `costMod` of the card the bounce
+    /// puts in a hand. The card is gone for the run's later effects once off the field (R174), so the
+    /// bounce prices it itself; a token that ceases to exist (R11) or a card a full hand burns (§2.4)
+    /// takes nothing (R4).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_mod: Option<i32>,
 }
 
 /// §6.3 Bounce: return the card to its controller's hand (R747).
@@ -482,6 +488,9 @@ pub fn bounce(args: BounceArgs) -> Effect {
             return;
         };
         bounce_card(ctx, &card);
+        if let Some(amount) = args.cost_mod {
+            crate::effects::cost::price_in_hand(ctx, &card.id, amount);
+        }
     })
 }
 

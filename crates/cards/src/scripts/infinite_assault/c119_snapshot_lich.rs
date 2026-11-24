@@ -70,9 +70,10 @@ mod tests {
             },
             "p2": { "hand": [FILLER], "library": crate::filler(4) },
         }));
+        // The Fodder first, so the Lich's Cry snapshots it.
+        s.play(FODDER, json!({ "zone": 2 }));
         s.play(ID, json!({ "zone": 1 }));
         let lich = s.unit_at(P1, 1).id.clone();
-        s.play(FODDER, json!({ "zone": 2 }));
         let fodder = s.unit_at(P1, 2);
         s.play(HIT_JOB, pick::targets(pick::instance(&fodder)));
         s.end_turn();

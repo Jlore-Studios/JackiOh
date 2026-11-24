@@ -107,7 +107,9 @@ mod tests {
         #[test]
         fn r4589002_radiant_shuffles_and_draws_two() {
             let s = ground(true);
-            assert!(library_of(&s).iter().any(|card| card.def_id == ID));
+            // It went into the deck; the two draws after it may already have taken it.
+            let back = library_of(&s).into_iter().chain(s.hand(P1)).filter(|card| card.def_id == ID).count();
+            assert_eq!(back, 1, "the Engine shuffles its own grave with the rest");
             assert_eq!(s.hand(P1).len(), 2, "nothing spent, two drawn");
         }
     }

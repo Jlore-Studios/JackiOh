@@ -75,7 +75,8 @@ mod tests {
     use crate::scenario;
 
     const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
-    const VANILLA: &str = "stand-in (1) 4/4 R12/12";
+    /// A body that outlives the Radiant face's 6.
+    const VANILLA: &str = "stand-in (1) 4/10";
 
 
     fn health_of(s: &Scenario, lane: i32) -> i32 {

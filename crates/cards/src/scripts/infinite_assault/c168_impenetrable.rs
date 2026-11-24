@@ -91,6 +91,8 @@ mod tests {
             s.play(ID, json!({}));
             s.end_turn();
             s.end_turn();
+            // p1's next turn began and ended the window: p2 attacks on its next turn.
+            s.end_turn();
             let hitter = s.unit_at(P2, 1);
             let unit = s.unit_at(P1, 1);
             s.attack(&hitter, &unit);

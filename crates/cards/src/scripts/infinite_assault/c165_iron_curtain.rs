@@ -75,10 +75,10 @@ mod tests {
             "p1": {
                 "backrow": [{ "def": CURTAIN, "radiant": radiant }],
                 "field": [VANILLA],
-                "hand": [filler(1)],
+                "hand": filler(1),
                 "library": filler(6),
             },
-            "p2": { "field": [ATTACKER, ATTACKER], "hand": [filler(1)], "library": filler(6) },
+            "p2": { "field": [ATTACKER, ATTACKER], "hand": filler(1), "library": filler(6) },
         }))
     }
 

@@ -1067,6 +1067,10 @@ pub fn project_hit(
     let (side, after) = match target {
         DamageTarget::Hero { player } => (*player, hero_hit_amount(state, *player, amount, pierce)),
         DamageTarget::Unit { instance } => {
+            // R4591004: a hit on a Unit immune to damage lands nothing, as `land` reads it.
+            if crate::effects::firewall::units_immune_now(state, instance) {
+                return 0;
+            }
             let view = crate::layers::unit_view(state, instance);
             // Step 1, and step 4 read first: a shield's hit and an Indestructible's spend no pool.
             if (has_keyword(&view.keywords, KeywordKind::DivineShield)

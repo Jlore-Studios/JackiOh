@@ -49,7 +49,7 @@ mod tests {
         let mut s = scenario(json!({
             "seed": seed,
             "p1": {
-                "hand": [{ "def": ID, "radiant": radiant }, STOCKPILE],
+                "hand": [{ "def": ID, "radiant": radiant }, STOCKPILE, crate::CLOAKED_UNIT],
                 "library": crate::filler(4),
             },
             "p2": { "hand": [STOCKPILE], "library": crate::filler(4) },

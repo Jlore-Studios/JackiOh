@@ -83,10 +83,10 @@ mod tests {
             "p1": {
                 "backrow": [{ "def": HONEYPOT, "radiant": radiant }],
                 "field": [VANILLA],
-                "hand": [filler(1)],
+                "hand": filler(1),
                 "library": filler(6),
             },
-            "p2": { "field": [ATTACKER], "hand": [filler(1)], "library": filler(6) },
+            "p2": { "field": [ATTACKER], "hand": filler(1), "library": filler(6) },
         }))
     }
 
@@ -126,10 +126,10 @@ mod tests {
                 "p1": {
                     "backrow": [HONEYPOT],
                     "field": [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA],
-                    "hand": [filler(1)],
+                    "hand": filler(1),
                     "library": filler(6),
                 },
-                "p2": { "field": [ATTACKER], "hand": [filler(1)], "library": filler(6) },
+                "p2": { "field": [ATTACKER], "hand": filler(1), "library": filler(6) },
             }));
             let attacker = s.unit_at(P2, 1);
             let target = s.unit_at(P1, 1);

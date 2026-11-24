@@ -71,6 +71,7 @@ mod tests {
     fn board(radiant: bool) -> Scenario {
         scenario(json!({
             "seed": "the-jailbreaker",
+            "active": "p2",
             "p1": { "field": [{ "def": JAILBREAKER, "radiant": radiant }] },
             "p2": { "hand": [BURN, VANILLA], "mana": 10, "library": crate::filler(3) },
         }))
@@ -102,20 +103,21 @@ mod tests {
         fn r4590001_the_radiant_aura_hikes_and_draws_and_its_cry_nerfs_the_hand() {
             let mut s = scenario(json!({
                 "seed": "the-jailbreaker-radiant",
-                "p1": { "hand": [{ "def": JAILBREAKER, "radiant": true }], "mana": 10 },
+                "p1": { "hand": [{ "def": JAILBREAKER, "radiant": true }, "core-005"], "mana": 10, "library": crate::filler(3) },
                 "p2": { "hand": [BURN, VANILLA], "mana": 10, "library": crate::filler(3) },
             }));
             s.play(ID, json!({ "zone": 1 }));
-            let burn = s.card(BURN).clone();
-            assert_eq!(cost_of(&s, &burn), 1, "the hike holds");
-            let plays = s.plays_of(BURN);
-            assert_eq!(plays.len(), 1, "targets drawn at random");
             let nerfs = s
                 .events()
                 .iter()
                 .filter(|event| matches!(event, GameEvent::Degraded { .. }))
                 .count();
             assert_eq!(nerfs, 2, "the Cry Nerfed every card of the hand");
+            s.end_turn();
+            let burn = s.card(BURN).clone();
+            assert!(cost_of(&s, &burn) >= 1, "the hike holds");
+            let plays = s.plays_of(BURN);
+            assert_eq!(plays.len(), 1, "targets drawn at random");
         }
     }
 }

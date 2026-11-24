@@ -2,12 +2,13 @@
 //!   Base:    "Bounce an enemy Unit. It costs (1) more."
 //!   Radiant: "Bounce an enemy Unit. It costs (2) more. Draw a card."
 //!
-//! C #37 Gravedigger's shape: `bounce` the chosen enemy Unit — a bounce off the field, so it says
-//! "Bounce" (R692) and the card returns to its controller's hand (R747) — then `set_cost_mod` the
-//! tax, which applies only to a card that reaches the hand (R11). The tax is a fixed price, not a
-//! param (R482's `PRICE` row). The Radiant face doubles the step and draws a card.
+//! `bounce` the chosen enemy Unit — a bounce off the field, so it says "Bounce" (R692) and the card
+//! returns to its controller's hand (R747) — with the tax as the bounce's `costMod`: the card is gone
+//! for the run's later effects once off the field (R174), so the bounce prices the card that reaches
+//! the hand itself, and a token or a burned card takes nothing (R11, R4589008). The tax is a fixed
+//! price, not a param (R482's `PRICE` row). The Radiant face doubles the step and draws a card.
 
-use jackioh_engine::effects::{bounce, draw, set_cost_mod};
+use jackioh_engine::effects::{bounce, draw};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "infiniteassault-103";
@@ -23,13 +24,10 @@ fn undo(tax: i32, draws: bool) -> Script {
     Script {
         targets: vec![TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["unit"] }))],
         cry: Some(hook(move |_ctx| {
-            let mut effects =
-                vec![bounce(json_as(json!({ "target": { "of": "chosen" }})))];
-            effects.push(set_cost_mod(json_as(json!({
+            let mut effects = vec![bounce(json_as(json!({
                 "target": { "of": "chosen" },
-                "amount": tax,
-                "inHandOnly": true,
-            }))));
+                "costMod": tax,
+            })))];
             if draws {
                 effects.push(draw(json_as(json!({ "count": DRAW }))));
             }

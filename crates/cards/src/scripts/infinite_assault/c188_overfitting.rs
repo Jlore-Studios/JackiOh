@@ -85,7 +85,7 @@ mod tests {
 
     use crate::scenario;
 
-    const UNIT: &str = "core-005"; // Stockpile
+    const UNIT: &str = "stand-in (1) 1/1 R2/2";
 
     fn board(radiant: bool) -> Scenario {
         scenario(json!({
@@ -124,7 +124,7 @@ mod tests {
             let summoned = s.unit_at(P1, 1);
             assert_eq!(summoned.def_id, UNIT);
             assert!(summoned.radiant);
-            s.expect_stats(&summoned, json!({ "attack": 3, "health": 3 }));
+            s.expect_stats(&summoned, json!({ "attack": 4, "health": 4 }));
         }
     }
 }

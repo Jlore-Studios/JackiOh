@@ -87,6 +87,8 @@ mod tests {
     const MOTHS: &str = "core-009"; // Moths to the Flame: Start of turn forces every enemy Unit to attack it.
     const ATTACKER: &str = "core-008";
     const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    /// A Trap that fills a backrow zone.
+    const SET_TRAP: &str = "stand-in (1) Trap";
 
     fn figments(s: &Scenario) -> Vec<CardInstance> {
         s.state().players[P1]
@@ -147,7 +149,7 @@ mod tests {
                 "seed": "figment-full",
                 "p1": {
                     "hand": [WEAVER, STOCKPILE],
-                    "backrow": [STOCKPILE, STOCKPILE, STOCKPILE, STOCKPILE, STOCKPILE],
+                    "backrow": [SET_TRAP, SET_TRAP, SET_TRAP, SET_TRAP, SET_TRAP],
                     "library": crate::filler(4),
                 },
                 "p2": { "field": [ATTACKER], "hand": [STOCKPILE], "library": filler(4) },

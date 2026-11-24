@@ -163,6 +163,49 @@ mod r4591001_a_contained_unit_neither_attacks_nor_is_attacked_until_the_casters_
 mod r4591004_an_immune_unit_takes_no_hit_and_keeps_divine_shield {
     use super::*;
 
+    /// R3100000's forecast reads the hit as the pipeline lands it (`damage::project_hit`): on a
+    /// Unit immune to damage it lands nothing and pops no shield, so the attacker that would have
+    /// killed it kills nothing, and the immune attacker takes nothing back (fuzz seeds 18, 122, 185
+    /// of `--cards "Infinite Assault"`).
+    #[test]
+    fn r4591004_the_forecast_reads_an_immune_unit_as_taking_nothing() {
+        let mut s = start(json!({
+            "seed": "firewall-forecast",
+            "p1": { "field": [FIVE_FIVE], "hand": [WEAK], "library": [WEAK, WEAK, WEAK, WEAK] },
+            "p2": { "field": [SHIELDED, WEAK], "hand": [WEAK], "library": [WEAK, WEAK, WEAK, WEAK] },
+        }));
+        let attacker = s.unit(P1, 1).map(|unit| unit.id).unwrap();
+        let shielded = s.unit(P2, 1).map(|unit| unit.id).unwrap();
+        let weak = s.unit(P2, 2).map(|unit| unit.id).unwrap();
+        let forecast_on = |s: &Scenario, target: &str| {
+            combat_forecast(s.state(), P1)
+                .attacks
+                .into_iter()
+                .find(|attack| attack.attacker_id == attacker && attack.target_id == target)
+                .expect("the attack is listed")
+        };
+        let before = forecast_on(&s, &weak);
+        assert!(before.kills && before.dealt == 5, "the 5/5 kills the 1/1");
+        assert!(forecast_on(&s, &shielded).pops, "the hit pops the shield");
+
+        units_immune(s.state_mut(), P2);
+        let weak_hit = forecast_on(&s, &weak);
+        assert_eq!(
+            (weak_hit.dealt, weak_hit.kills),
+            (0, false),
+            "the immune 1/1 takes nothing"
+        );
+        assert!(
+            !forecast_on(&s, &shielded).pops,
+            "an immune Unit keeps its shield"
+        );
+
+        units_immune(s.state_mut(), P1);
+        let back = forecast_on(&s, &shielded);
+        assert_eq!(back.taken, 0, "the immune attacker takes nothing back");
+        assert!(back.survives);
+    }
+
     #[test]
     fn r4591004_no_damage_instance_so_the_shield_stays() {
         let mut s = start(json!({

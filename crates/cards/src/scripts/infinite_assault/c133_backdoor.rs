@@ -67,7 +67,8 @@ mod tests {
                 "backrow": [{ "def": ID, "radiant": radiant, "faceUp": false, "lane": 2 }],
                 "library": crate::filler(3),
             },
-            "p2": { "hand": [SPELL, VANILLA, VANILLA], "library": crate::filler(3), "mana": 10 },
+            // p2's Unit keeps its turn from ending by itself once its hand is taken.
+            "p2": { "hand": [SPELL, VANILLA, VANILLA], "field": [{ "def": "stand-in (1) 1/1", "lane": 5 }], "library": crate::filler(3), "mana": 10 },
         }))
     }
 

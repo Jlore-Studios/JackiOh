@@ -72,7 +72,7 @@ mod tests {
     fn board(radiant: bool) -> Scenario {
         scenario(json!({
             "p1": {
-                "hand": [{ "def": ID, "radiant": radiant }],
+                "hand": [{ "def": ID, "radiant": radiant }, "core-005"],
                 "field": [UNIT, UNIT],
                 "library": crate::filler(3),
                 "mana": 8,
@@ -92,6 +92,7 @@ mod tests {
         #[test]
         fn your_units_switch_give_0_4_and_divine_shield() {
             let mut s = board(false);
+            let enemy_stood = s.unit_at(P2, 1).position;
             s.play(ID, json!({}));
             for lane in 1..=2 {
                 let unit = s.unit_at(P1, lane);
@@ -99,7 +100,7 @@ mod tests {
                 assert!(defended(&s, &s.card(unit.id.as_str())));
             }
             // The enemy's Units stand as they stood.
-            assert_eq!(s.unit_at(P2, 1).position, None);
+            assert_eq!(s.unit_at(P2, 1).position, enemy_stood);
         }
     }
 

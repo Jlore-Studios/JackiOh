@@ -92,12 +92,12 @@ mod tests {
             "p1": {
                 "backrow": [{ "def": BLACKHOLE, "radiant": radiant }],
                 "field": [VANILLA],
-                "hand": [filler(1)],
+                "hand": filler(1),
                 "library": filler(6),
             },
             "p2": {
                 "field": [ATTACKER],
-                "hand": [filler(1), filler(1)],
+                "hand": filler(2),
                 "library": filler(6),
             },
         }))

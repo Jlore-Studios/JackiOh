@@ -44,11 +44,13 @@ mod tests {
 
     const UNIT: &str = "stand-in (1) 2/2";
     const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
+    /// The enemy Unit the injected Unit's Rush may hit on its summon turn (Rush hits no hero then).
+    const ENEMY: &str = "stand-in (1) 1/7";
 
     fn board(radiant: bool) -> Scenario {
         scenario(json!({
             "p1": { "hand": [UNIT, { "def": ID, "radiant": radiant }] },
-            "p2": { "field": [UNIT], "hand": [FILLER], "library": crate::filler(2) },
+            "p2": { "field": [ENEMY], "hand": [FILLER], "library": crate::filler(2) },
         }))
     }
 
@@ -71,12 +73,12 @@ mod tests {
             // The Injector is unchanged: no bonus on itself.
             s.expect_stats(&injector, json!({ "attack": 3, "health": 3 }));
             assert!(!has_keyword(&s.stats(&injector).keywords, KeywordKind::Rush));
-            // The sick Unit played first can attack at once.
-            s.attack(&unit, "hero");
-            s.expect_health(P2, HERO_HEALTH - 4);
             // The enemy's Units get nothing.
-            s.expect_stats(&enemy, json!({ "attack": 2, "health": 2 }));
+            s.expect_stats(&enemy, json!({ "attack": 1, "health": 7 }));
             assert!(!has_keyword(&s.stats(&enemy).keywords, KeywordKind::Rush));
+            // The sick Unit played first can attack at once, with its 4 Attack.
+            s.attack(&unit, &enemy);
+            s.expect_stats(&enemy, json!({ "attack": 1, "health": 3 }));
         }
 
         #[test]
@@ -95,7 +97,7 @@ mod tests {
             let mut s = board(false);
             injected(&mut s);
             let enemy = s.unit_at(P2, 1);
-            s.expect_stats(&enemy, json!({ "attack": 2, "health": 2 }));
+            s.expect_stats(&enemy, json!({ "attack": 1, "health": 7 }));
         }
     }
 
@@ -106,12 +108,12 @@ mod tests {
         fn r4587000_your_other_units_have_4_attack_and_rush_this_turn() {
             let mut s = board(true);
             injected(&mut s);
-            let (unit, injector) = (s.unit_at(P1, 1), s.unit_at(P1, 2));
+            let (unit, injector, enemy) = (s.unit_at(P1, 1), s.unit_at(P1, 2), s.unit_at(P2, 1));
             s.expect_stats(&unit, json!({ "attack": 6, "health": 2 }));
             assert!(has_keyword(&s.stats(&unit).keywords, KeywordKind::Rush));
             s.expect_stats(&injector, json!({ "attack": 6, "health": 6 }));
-            s.attack(&unit, "hero");
-            s.expect_health(P2, HERO_HEALTH - 6);
+            s.attack(&unit, &enemy);
+            s.expect_stats(&enemy, json!({ "attack": 1, "health": 1 }));
         }
     }
 }

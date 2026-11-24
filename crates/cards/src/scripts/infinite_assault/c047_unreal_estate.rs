@@ -126,7 +126,8 @@ mod tests {
             s.attack(ATTACKER, VANILLA);
             assert!(canceled(&s));
             s.expect_stats(VANILLA, json!({ "health": 7 }));
-            s.expect_in_zone(ID, "graveyard");
+            // A Field Trap stays set and fires again (R2657001).
+            s.expect_in_zone(ID, "field");
         }
 
         #[test]
@@ -157,7 +158,8 @@ mod tests {
             let mut s = armed(true, &seed);
             s.attack(ATTACKER, VANILLA);
             assert!(canceled(&s));
-            s.expect_in_zone(ID, "graveyard");
+            // A Field Trap stays set and fires again (R2657001).
+            s.expect_in_zone(ID, "field");
         }
     }
 }

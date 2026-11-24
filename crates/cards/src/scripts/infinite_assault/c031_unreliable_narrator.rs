@@ -140,9 +140,11 @@ mod tests {
             let options = offered(&s);
             s.answer(json!([options[2].clone(), options[0].clone()]));
             let defs = library_defs(&s);
+            // R221: the picks are taken in the order the prompt offered them, whatever order the
+            // answer lists them in, so A goes to the bottom first and C below it.
             assert_eq!(
                 defs.iter().map(String::as_str).collect::<Vec<_>>(),
-                vec![TOP_B, REST, STOCKPILE, STOCKPILE, TOP_C, TOP_A]
+                vec![TOP_B, REST, STOCKPILE, STOCKPILE, TOP_A, TOP_C]
             );
         }
     }

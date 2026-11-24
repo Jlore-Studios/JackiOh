@@ -60,6 +60,13 @@ mod tests {
         }))
     }
 
+    /// Whether p1, whose turn it is, may attack the Unit `id`.
+    fn attackable(s: &Scenario, id: &str) -> bool {
+        legal_actions(s.state(), P1).iter().any(|action| {
+            matches!(action, ActionBody::Attack { target_id, .. } if target_id == id)
+        })
+    }
+
     fn offers_attack(s: &Scenario, id: &str) -> bool {
         let unit = s.card(id).clone();
         legal_actions(s.state(), unit.controller).iter().any(|action| {
@@ -83,7 +90,7 @@ mod tests {
             s.end_turn();
             assert!(!offers_attack(&s, &held), "still contained on the intervening turn");
             s.end_turn();
-            assert!(offers_attack(&s, &held), "containment ends as your next turn begins");
+            assert!(attackable(&s, &held), "containment ends as your next turn begins");
         }
     }
 
@@ -97,16 +104,21 @@ mod tests {
             let second = s.unit_at(P2, 2);
             s.play(
                 ID,
-                pick::targets(json!([pick::instance(&first), pick::instance(&second)])),
+                json!({ "targets": [
+                    { "pick": "instance", "instanceId": first.id },
+                    { "pick": "instance", "instanceId": second.id },
+                ] }),
             );
             let one = s.unit_at(P2, 1).id.clone();
             let two = s.unit_at(P2, 2).id.clone();
             assert!(!offers_attack(&s, &one));
             assert!(!offers_attack(&s, &two));
             s.end_turn();
+            assert!(!offers_attack(&s, &one), "still contained on the intervening turn");
+            assert!(!offers_attack(&s, &two), "still contained on the intervening turn");
             s.end_turn();
-            assert!(offers_attack(&s, &one));
-            assert!(offers_attack(&s, &two));
+            assert!(attackable(&s, &one), "containment ends as your next turn begins");
+            assert!(attackable(&s, &two), "containment ends as your next turn begins");
         }
     }
 }

@@ -62,6 +62,8 @@ mod tests {
     const TRAP: &str = "core-041"; // Sheepish: a Trap, to sit face-down
     const ARMOR: &str = "core-073"; // Anti-oneshot Armor: a face-up Field Spell
     const FILLER: &str = "core-005"; // Stockpile: Draw 2. Heal your hero 2.
+    /// A second Trap, to sit face-down beside the first.
+    const SET_TRAP: &str = "stand-in (1) Trap";
 
     fn board(radiant: bool, backrow: Value) -> Scenario {
         scenario(json!({
@@ -104,7 +106,7 @@ mod tests {
                 true,
                 json!([
                     { "def": TRAP, "faceUp": false, "lane": 1 },
-                    { "def": FILLER, "faceUp": false, "lane": 2 },
+                    { "def": SET_TRAP, "faceUp": false, "lane": 2 },
                     { "def": ARMOR, "faceUp": true, "lane": 3 },
                 ]),
             );

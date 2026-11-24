@@ -64,13 +64,15 @@ mod tests {
         let mut s = scenario(json!({
             "seed": seed,
             "p1": {
-                "field": [{ "def": SLEEPER, "lane": 1 }],
-                "hand": [{ "def": ID, "radiant": radiant }, FILLER],
+                "hand": [SLEEPER, { "def": ID, "radiant": radiant }, FILLER],
                 "library": crate::filler(4),
                 "mana": 10,
             },
             "p2": { "hand": [FILLER], "library": crate::filler(4) },
         }));
+        // Played from the hand, the sleeper enters Dormant.
+        s.play(SLEEPER, json!({ "zone": 1 }));
+        assert!(is_slumbering(&s.unit_at(P1, 1)), "Dormant as it lands");
         s.play(ID, json!({ "zone": 2 }));
         s
     }
