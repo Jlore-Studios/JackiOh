@@ -346,3 +346,89 @@ fn explore_threat_one() {
 fn explore_threat_many_over() {
     explore_threat("t-many", 3, true, true);
 }
+
+// ---- lead 1: the solver's visited set reads no lane ----
+
+const DUELIST: &str = "core-045"; // Deft Duelist, 4/3 Charge, Deft
+const DFENDER: &str = "core-001"; // Big D-fender, 0/7: declares no attack (R7)
+const MENACE: &str = "core-019"; // Midrange Menace, 9/9 Taunt
+const GAUNTLET: &str = "stinkyscape-157";
+
+fn play_to(state: &GameState, def: &str, lane: i32) -> ActionBody {
+    let card = state.players[AI].hand.iter().find(|card| card.def_id == def).expect("in hand");
+    legal_actions(state, AI)
+        .into_iter()
+        .find(|action| {
+            matches!(action, ActionBody::Play { instance_id, zone: Some(zone), face_down: None, .. }
+                if *instance_id == card.id && zone.lane == lane && zone.row == Row::Units)
+        })
+        .unwrap_or_else(|| panic!("no play of {def} into lane {lane}"))
+}
+
+fn wins_by(state: &GameState, lane: i32) -> bool {
+    let played = reduce(state, &Action::new(play_to(state, DUELIST, lane), AI, "p"));
+    assert!(played.error.is_none(), "{:?}", played.error);
+    let duelist = active_units_of(&played.state, AI).into_iter().find(|u| u.def_id == DUELIST).unwrap().id.clone();
+    let hit = reduce(
+        &played.state,
+        &Action::new(ActionBody::Attack { attacker_id: duelist, target_id: "hero-p2".into() }, AI, "a"),
+    );
+    hit.error.is_none() && hit.state.result.as_ref().is_some_and(|r| r.winner.player() == Some(AI))
+}
+
+fn slashed_board() -> GameState {
+    register();
+    let mut s = scenario(json!({
+        "seed": "audit-lanes", "active": AI, "turn": 9,
+        "p1": { "hand": [DUELIST], "field": [{ "def": DFENDER, "lane": 1 }], "library": ["core-008", "core-008"] },
+        "p2": { "field": [{ "def": MENACE, "lane": 2 }], "health": 4, "library": ["core-008", "core-008"] },
+    }));
+    s.state_mut().slashed_lane = Some(3);
+    s.state().clone()
+}
+
+fn gauntlet_board() -> GameState {
+    register();
+    scenario(json!({
+        "seed": "audit-lanes", "active": AI, "turn": 9,
+        "p1": { "hand": [DUELIST], "backrow": [GAUNTLET],
+                "field": [{ "def": DFENDER, "lane": 1 }, { "def": DFENDER, "lane": 2 }, { "def": DFENDER, "lane": 3 }],
+                "library": ["core-008", "core-008"] },
+        "p2": { "health": 4, "library": ["core-008", "core-008"] },
+    }))
+    .state()
+    .clone()
+}
+
+fn report(tag: &str, state: &GameState, good: i32, bad: i32) {
+    println!("{tag}: wins by lane {good}: {}, by lane {bad}: {}", wins_by(state, good), wins_by(state, bad));
+    let plays: Vec<String> = candidate_actions(state, AI, Prices::NONE)
+        .iter()
+        .filter(|a| matches!(a, ActionBody::Play { .. }))
+        .map(action_key)
+        .collect();
+    println!("{tag}: candidate plays {plays:?}");
+    let counter = create_node_counter(AI_BUDGET.lethal_nodes, None);
+    let line = find_lethal(std::slice::from_ref(state), AI, &counter, AI_BUDGET.lethal_nodes, Prices::NONE);
+    println!("{tag}: find_lethal {:?} used {}", line.as_ref().map(|l| l.iter().map(action_key).collect::<Vec<_>>()), counter.used());
+    println!("{tag}: lethal_hint {}", lethal_hint(state, AI, None));
+    let mut options = AiOptions::with_budget(create_rng("audit-lanes", 0), AI_BUDGET);
+    let decision = decide(state, AI, &mut options).expect("a decision");
+    println!("{tag}: decide {:?} {}", decision.reason, action_key(&decision.action));
+}
+
+#[test]
+fn lead_lanes_report() {
+    report("slash", &slashed_board(), 4, 2);
+    report("gauntlet", &gauntlet_board(), 5, 4);
+}
+
+#[test]
+fn lead_lanes_turn() {
+    for (tag, state) in [("slash", slashed_board()), ("gauntlet", gauntlet_board())] {
+        let mut ai = AiOptions::with_budget(create_rng("audit-lanes-turn", 0), AI_BUDGET);
+        let turn = play_ai_turn(&state, AI, &mut ai);
+        let trace: Vec<String> = turn.decisions.iter().map(|d| format!("{:?}:{}", d.reason, action_key(&d.action))).collect();
+        println!("{tag}: result {:?} life {} :: {trace:?}", turn.state.result.as_ref().map(|r| r.winner.player()), turn.state.players[HUMAN].hero.health);
+    }
+}

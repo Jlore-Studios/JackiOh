@@ -201,7 +201,10 @@ fn explore_taint() {
                         // the placeholder itself: check separately
                         if path.ends_with(".cost") || path.ends_with(".x") { continue; }
                     }
-                    let entry = tally.entry(path).or_insert((0, format!("{seed} n={n} seat={seat} pendingOf={:?} {}", state.pending.as_ref().map(|p| p.player_id), object.chars().take(600).collect::<String>())));
+                    if path.ends_with(".cost") { continue; }
+                    let acting = ai_to_act(&state, seat);
+                    let trap = state.work.iter().filter_map(|item| item.resume.data.get("firing")).filter_map(|f| f.get("trapId").and_then(Value::as_str)).filter_map(|id| find_instance(&state, id)).map(|c| format!("{}@{:?}", c.def_id, c.controller)).collect::<Vec<_>>().join(",");
+                    let entry = tally.entry(format!("{path} acting={acting}")).or_insert((0, format!("{seed} n={n} seat={seat} traps=[{trap}] pendingOf={:?} {}", state.pending.as_ref().map(|p| p.player_id), object.chars().take(400).collect::<String>())));
                     entry.0 += 1;
                 }
             }

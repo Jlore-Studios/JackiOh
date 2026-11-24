@@ -438,6 +438,65 @@ fn side_game(
     current
 }
 
+/// What the hint's own solver found on its own worlds, and how that line fares on the true state.
+fn hint_detail(state: &GameState, seat: PlayerId) -> String {
+    use jackioh_ai::{
+        DeterminizeOptions, LETHAL_HINT_DETERMINIZATIONS, LETHAL_HINT_NODES, LETHAL_HINT_SEED, det_ground,
+        determinize_on,
+    };
+    let public = redact(state, seat);
+    let ground = det_ground(&public, seat);
+    let mut rng = Rng::new(LETHAL_HINT_SEED, 0);
+    let worlds: Vec<GameState> = (0..LETHAL_HINT_DETERMINIZATIONS)
+        .map(|_| determinize_on(&public, seat, &mut rng, DeterminizeOptions::default(), &ground))
+        .collect();
+    let counter = create_node_counter(LETHAL_HINT_NODES, None);
+    let line = find_lethal(&worlds, seat, &counter, LETHAL_HINT_NODES, Prices::NONE);
+    let mut out = format!("hint line ({} nodes): {}", counter.used(), short(&line));
+    let Some(line) = line else {
+        return out;
+    };
+    let mut current = state.clone();
+    for (step, action) in line.iter().enumerate() {
+        if current.result.is_some() {
+            break;
+        }
+        let result = reduce(&current, &Action::new(action.clone(), seat, format!("hint-line{step}")));
+        if let Some(error) = result.error {
+            out.push_str(&format!(" | true state refuses step {step}: {error}"));
+            break;
+        }
+        let kinds: Vec<String> = result
+            .events
+            .iter()
+            .filter_map(|event| {
+                serde_json::to_value(event)
+                    .ok()
+                    .and_then(|value| value.get("type").and_then(Value::as_str).map(str::to_string))
+            })
+            .collect();
+        out.push_str(&format!(" | step {step}: {}", kinds.join(",")));
+        current = result.state;
+    }
+    out.push_str(&format!(" | on the true state: {:?}", current.result));
+    let opp = seat.opponent();
+    let backrow: Vec<String> = state.players[opp]
+        .backrow
+        .iter()
+        .flatten()
+        .map(|card| format!("{}:{}:faceUp={:?}", card.id, card.def_id, card.face_up))
+        .collect();
+    out.push_str(&format!(" | opp backrow {backrow:?} opp life {:?}", state.players[opp].hero));
+    let mut options = AiOptions::with_budget(Rng::new("hint:p1", 0), AI_BUDGET);
+    if seat == PlayerId::P2 {
+        options.rng = Rng::new("hint:p2", 0);
+    }
+    if let Some(decision) = decide_styled(state, seat, &mut options, &AI_STYLE_EXACT) {
+        out.push_str(&format!(" | decide: {} {:?}", decision.reason.as_str(), decision.stats));
+    }
+    out
+}
+
 fn won_by(state: &GameState, seat: PlayerId) -> bool {
     state
         .result
@@ -526,10 +585,11 @@ fn play(spec: &Spec, flags: &Flags, tally: &mut Tally, problems: &mut Vec<String
                     );
                     if !won_by(&end, seat) {
                         problems.push(format!(
-                            "[P4b hint] {}: lethal_hint true for {} yet the AI at AI_BUDGET does not win this turn: {:?}",
+                            "[P4b hint] {}: lethal_hint true for {} yet the AI at AI_BUDGET does not win this turn: {:?} || {}",
                             here(at, &state),
                             seat.as_str(),
-                            trace
+                            trace,
+                            hint_detail(&state, seat)
                         ));
                     }
                 }
@@ -1099,6 +1159,25 @@ fn check_twins(
                 if let Some(error) = stepped.error {
                     diverged = Some((at + 1, format!("refused: {error}")));
                     break;
+                }
+                if std::env::var("AF_VERBOSE").is_ok()
+                    && twin.next_id == own.next_id
+                    && stepped.state.next_id != states[at + 1].next_id
+                {
+                    let mine = reduce(own, &played.log[at]);
+                    println!(
+                        "    nextId parts at {} (turn {}) seat {} on {}: own {} twin {}; events {:?}",
+                        at,
+                        own.turn,
+                        seat.as_str(),
+                        short(&played.log[at]),
+                        states[at + 1].next_id,
+                        stepped.state.next_id,
+                        diff_values(
+                            &serde_json::to_value(&mine.events).unwrap_or_default(),
+                            &serde_json::to_value(&stepped.events).unwrap_or_default()
+                        )
+                    );
                 }
                 twin = stepped.state;
             }

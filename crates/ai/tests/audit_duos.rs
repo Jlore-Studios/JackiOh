@@ -145,6 +145,73 @@ fn field_unit(state: &mut DuosState, seat: DuosSeat, def_id: &str, lane: i32) ->
     unit.id
 }
 
+const TWO_DROP: &str = "core-020";
+const HIT_JOB: &str = "core-016";
+
+/// The best `evaluate` A2 reaches with one legal `Play` on the true duel 1, and that play.
+fn best_play(state: &DuosState) -> (f64, Value) {
+    let duel1 = &state.duels[1];
+    let mut best = (f64::NEG_INFINITY, Value::Null);
+    for (at, action) in legal_actions(duel1, PlayerId::P1).into_iter().enumerate() {
+        if !matches!(&action, ActionBody::Play { .. }) {
+            continue;
+        }
+        let applied = reduce_unpiloted(duel1, &Action::new(action.clone(), PlayerId::P1, format!("best{at}")));
+        if applied.error.is_some() {
+            continue;
+        }
+        let value = evaluate(&applied.state, PlayerId::P1, NextSwing::Enemy, &AI_EVAL);
+        if value > best.0 {
+            best = (value, json_of(&action));
+        }
+    }
+    best
+}
+
+fn nonce_state(filled: i32) -> (DuosState, String) {
+    let mut state = round_one("audit-duos-after", None);
+    let two = set_hand(&mut state, A1, &[TWO_DROP]).remove(0);
+    set_mana(&mut state, A1, DUOS_PASS_COST);
+    set_hand(&mut state, A2, &[BIG]);
+    set_mana(&mut state, A2, cost(BIG) + cost(TWO_DROP));
+    for lane in 1..=filled {
+        field_unit(&mut state, A2, ONE_DROP, lane);
+    }
+    (state, two)
+}
+
+#[test]
+fn explore_nonce() {
+    for filled in [0, 2, 3] {
+        let (state, two) = nonce_state(filled);
+        println!("filled {filled}: A1 plays {:?} passes {:?}", plays_in(&state.duels[0], PlayerId::P1, &two).len(), duos_passes(&state, A1));
+    }
+}
+
+fn baseline_state(own_unit: bool) -> (DuosState, String) {
+    let mut state = round_one("audit-duos-baseline", None);
+    let two = set_hand(&mut state, A1, &[TWO_DROP]).remove(0);
+    set_mana(&mut state, A1, DUOS_PASS_COST);
+    set_hand(&mut state, A2, &[HIT_JOB]);
+    set_mana(&mut state, A2, cost(HIT_JOB));
+    if own_unit {
+        field_unit(&mut state, A2, ONE_DROP, 1);
+    }
+    field_unit(&mut state, B2, BIG, 2);
+    (state, two)
+}
+
+#[test]
+fn explore_baseline() {
+    for own in [false, true] {
+        let (state, two) = baseline_state(own);
+        let without = best_play(&state);
+        let passed = apply(&state, A1, DuosActionBody::Pass { instance_id: two.clone() });
+        let with = best_play(&passed);
+        println!("own {own}: passes {:?}; best without {without:?}; best with {with:?}; A2 mana {}", duos_passes(&state, A1), state.duels[1].players[PlayerId::P1].mana.current);
+    }
+}
+
 /// EXPLORE: the order `legal_actions` lists a targeted spell's plays in, and each one's score.
 #[test]
 fn explore_target_order() {
