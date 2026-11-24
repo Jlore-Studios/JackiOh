@@ -1,30 +1,84 @@
-//! SPEC §8.13 IA #197 Long Context ((2) Unit, Common, 3/3 → 6/6), a card of the held Infinite Assault set
-//! (R4577000). STUB (#4602): no behaviour yet; C9 (#4593) writes its script and its tests (CLAUDE.md rule 6).
+//! IA #197 Long Context (SPEC §8.13 row 197), a card of the held Infinite Assault set
+//! (R4577000).
 //!   Base:    "Cry: Draw a card. For the rest of the game, your hand size is {handSize}."
 //!   Radiant: "Cry: Draw two cards. For the rest of the game, your hand size is {handSize}."
 //!
-//! Its catalog entry, sound, flavour, Chinese, FX, art and audit rows are already written.
+//! Engine: a Cry (R1): `set_hand_cap` to the declared `handSize` for the rest of the game (R1143,
+//! the latest setting wins), then `draw` — one card, two on the Radiant face — so the draws use
+//! the new room. Built by C9 (#4593).
 
+use jackioh_engine::effects::{draw, set_hand_cap};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "infiniteassault-197";
 
-pub fn script() -> CardScripts {
-    let base = Script::default();
-    let radiant = base.clone();
-    CardScripts { base, radiant }
+/// The base face's draws; the Radiant face draws twice.
+const DRAWS: i32 = 1;
+const RADIANT_DRAWS: i32 = 2;
+
+fn long_context(draws: i32) -> Script {
+    Script {
+        cry: Some(hook(move |ctx| {
+            vec![
+                set_hand_cap(json_as(json!({ "cap": param(&*ctx, "handSize") }))),
+                draw(json_as(json!({ "count": draws }))),
+            ]
+        })),
+        ..Script::default()
+    }
 }
 
-// STUB (#4602): the card's part replaces this test with its script's tests.
+pub fn script() -> CardScripts {
+    CardScripts {
+        base: long_context(DRAWS),
+        radiant: long_context(RADIANT_DRAWS),
+    }
+}
+
+// IA #197 Long Context — SPEC §8.13 row 197.
 #[cfg(test)]
 mod tests {
+    use jackioh_engine::testkit::PlayerId::P1;
     use jackioh_engine::testkit::*;
 
-    #[test]
-    fn the_stub_is_a_card_of_the_held_infinite_assault_set() {
-        crate::register_all();
-        let def = catalog::def_of(None, super::ID);
-        assert_eq!(def.set, SetName::InfiniteAssault);
-        assert!(!set_ships(def.set));
+    use super::ID;
+    use crate::scenario;
+
+    const FILLER: &str = "core-005"; // Stockpile: a play always open, so no turn ends by itself.
+
+    fn cried(radiant: bool, seed: &str) -> Scenario {
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": {
+                "hand": [{ "def": ID, "radiant": radiant }, FILLER],
+                "library": crate::filler(6),
+                "mana": 10,
+            },
+            "p2": { "hand": [FILLER], "library": crate::filler(4) },
+        }));
+        s.play(ID, json!({ "zone": 1 }));
+        s
+    }
+
+    mod base {
+        use super::*;
+
+        #[test]
+        fn the_cry_draws_one_and_sets_the_hand_cap_to_12() {
+            let s = cried(false, "long-context-base");
+            assert_eq!(hand_cap_of(s.state(), P1), 12);
+            assert_eq!(s.hand(P1).len(), 2);
+        }
+    }
+
+    mod radiant {
+        use super::*;
+
+        #[test]
+        fn the_cry_draws_two_and_sets_the_hand_cap_to_12() {
+            let s = cried(true, "long-context-radiant");
+            assert_eq!(hand_cap_of(s.state(), P1), 12);
+            assert_eq!(s.hand(P1).len(), 3);
+        }
     }
 }

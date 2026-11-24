@@ -43980,18 +43980,28 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 6,
     "base": {
       "attack": 0,
       "health": 3,
       "keywords": [],
-      "text": "Start of turn: The most expensive card in your hand costs (1) less."
+      "text": "Start of turn: The most expensive card in your hand costs ({discount}) less."
     },
     "radiant": {
       "attack": 0,
       "health": 6,
       "keywords": [],
-      "text": "Start of turn: The most expensive card in your hand costs (2) less."
+      "text": "Start of turn: The most expensive card in your hand costs ({discount}) less."
     }
   },
   "infiniteassault-195": {
@@ -44363,14 +44373,24 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
+    "params": [
+      {
+        "key": "discount",
+        "base": 1,
+        "radiant": 1,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      }
+    ],
     "loc": 6,
     "base": {
       "keywords": [],
-      "text": "The Units in your hand cost (1) less."
+      "text": "The Units in your hand cost ({discount}) less."
     },
     "radiant": {
       "keywords": [],
-      "text": "The cards in your hand cost (1) less."
+      "text": "The cards in your hand cost ({discount}) less."
     }
   },
   "infiniteassault-205": {

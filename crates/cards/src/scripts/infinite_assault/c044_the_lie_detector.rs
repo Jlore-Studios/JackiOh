@@ -99,14 +99,15 @@ mod tests {
         s
     }
 
+    // TEMP-C9-VERIFY: reverted before delivery; unbreaks inference so the suite compiles.
     fn p1_figments(s: &Scenario) -> Vec<CardInstance> {
-        s.state().players[P1]
-            .backrow
-            .iter()
-            .filter_map(|slot| slot.clone())
-            .filter(|card| card.def_id == FIGMENT)
-            .cloned()
-            .collect()
+        let mut out = Vec::new();
+        for slot in s.state().players[P1].backrow.iter().flatten() {
+            if slot.def_id == FIGMENT {
+                out.push(slot.clone());
+            }
+        }
+        out
     }
 
     fn p2_backrow_defs(s: &Scenario) -> Vec<String> {

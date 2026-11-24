@@ -27,7 +27,7 @@ use crate::script::EngineSink;
 use crate::wire::{
     AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, CraftMode, DeckMark, Enchantment,
     GameEvent, Keyword, PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, RowFlags,
-    SecretChoice, Selection, StarscapeReward, Tag, Tuning, Zone, ZoneRef, string_union,
+    SecretChoice, Selection, SetName, StarscapeReward, Tag, Tuning, Zone, ZoneRef, string_union,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -2332,6 +2332,12 @@ pub struct FaceUpRecord {
 #[serde(rename_all = "camelCase")]
 pub struct GameLog {
     pub played_by_tag: IndexMap<Tag, i32>,
+    /// R4593000 (Infinite Assault #195 Power Law): this player's plays of each single-player set's cards
+    /// this game, counted as `played_by_tag` is; written only for such a card, so a game without one
+    /// serializes as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub played_by_set: Option<IndexMap<SetName, i32>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub last_face_up_play: Option<FaceUpRecord>,

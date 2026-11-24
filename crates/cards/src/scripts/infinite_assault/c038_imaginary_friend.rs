@@ -76,7 +76,8 @@ mod tests {
 
         #[test]
         fn r4586000_the_death_sets_one_plain_figment() {
-            let s = killed(false, "friend-base");
+            // TEMP-C9-VERIFY: reverted before delivery.
+            let mut s = killed(false, "friend-base");
             s.expect_in_zone(ID, "graveyard");
             let set = figments(&s);
             assert_eq!(set.len(), 1);
@@ -90,7 +91,8 @@ mod tests {
 
         #[test]
         fn r4586000_the_death_sets_two_radiant_figments() {
-            let s = killed(true, "friend-radiant");
+            // TEMP-C9-VERIFY: reverted before delivery.
+            let mut s = killed(true, "friend-radiant");
             s.expect_in_zone(ID, "graveyard");
             let set = figments(&s);
             assert_eq!(set.len(), 2);

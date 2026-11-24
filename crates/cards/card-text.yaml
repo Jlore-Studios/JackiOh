@@ -10757,8 +10757,8 @@ infiniteassault-194: # Compute Shard
     death: Out of budget.
   zh:
     name: 算力碎片
-    base: 回合开始时：你手牌中费用最高的牌的法力值消耗减少(1)点。
-    radiant: 回合开始时：你手牌中费用最高的牌的法力值消耗减少(2)点。
+    base: 回合开始时：你手牌中费用最高的牌的法力值消耗减少({discount})点。
+    radiant: 回合开始时：你手牌中费用最高的牌的法力值消耗减少({discount})点。
 infiniteassault-195: # Power Law
   flavour: Played ten cards? Cute. Played ten thousand? Now it is awake.
   voice:
@@ -10859,8 +10859,8 @@ infiniteassault-204: # Moore's Law
     cast: Cheaper chips for everyone.
   zh:
     name: 摩尔定律
-    base: 你手牌中的单位的法力值消耗减少(1)点。
-    radiant: 你手牌中的牌的法力值消耗减少(1)点。
+    base: 你手牌中的单位的法力值消耗减少({discount})点。
+    radiant: 你手牌中的牌的法力值消耗减少({discount})点。
 infiniteassault-205: # Doomsday Clock
   flavour: Four turns on the dial. Ten at the bell. No snooze.
   voice:

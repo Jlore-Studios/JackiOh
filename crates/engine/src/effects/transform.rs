@@ -671,6 +671,84 @@ pub fn transform_beneath(args: TransformBeneathArgs) -> Effect {
     })
 }
 
+/// `transformIntoCopy`'s argument: the field Unit to rewrite (`instanceId`), into a copy of the
+/// field Unit `of` names (default the running card).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct TransformIntoCopyArgs {
+    pub instance_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub of: Option<TargetSpec>,
+}
+
+/// E24, Infinite Assault #211 Grey Goo (R4593007): `instanceId` becomes R57's copy of the field
+/// Unit `of` names, as it stands (its buffs, its face), keeping its owner, controller, position
+/// and place; a new body, so summoning sick (R659), and the old card ceases to exist (R35: no
+/// graveyard, no Death). An Immutable card stays as it is (R23), a Dormant one is passed by
+/// (R1839000), and the source is never its own copy.
+pub fn transform_into_copy(args: TransformIntoCopyArgs) -> Effect {
+    Effect::new("transformIntoCopy", move |ctx| {
+        let spec = args.of.clone().unwrap_or(TargetSpec::SelfCard);
+        let Some(DamageTarget::Unit { instance: source }) = resolve_target(ctx, &spec) else {
+            return;
+        };
+        let Some(at) = slot_of(ctx.state, &source) else {
+            return;
+        };
+        if at.row != Row::Units {
+            return;
+        }
+        let Some(old) = find_instance(ctx.state, &args.instance_id).cloned() else {
+            return;
+        };
+        let Some(old_at) = slot_of(ctx.state, &old) else {
+            return;
+        };
+        if old_at.row != Row::Units {
+            return;
+        }
+        if old.id == source.id || !transformable(ctx, &old) || crate::slumber::is_slumbering(&old) {
+            return;
+        }
+        let mut copy = clone_of(
+            ctx,
+            &source,
+            old.owner,
+            &json_as(json!({ "of": { "of": "self" } })),
+        );
+        if old.position.is_some() {
+            copy.position = old.position;
+        }
+        // A new body on the field, like any Transform result (§4.1).
+        copy.summoned_turn = Some(ctx.state.turn);
+        let hidden_from = unreadable_by(ctx, &old);
+        let copy_id = copy.id.clone();
+        let copy_def_id = copy.def_id.clone();
+        if !replace_in_zone(&mut *ctx.state, &old, &mut copy) {
+            return;
+        }
+        if let Some(live) = find_instance_mut(ctx.state, &copy_id) {
+            live.controller = old.controller;
+        }
+        let mut retired = old.clone();
+        cease_to_exist(&mut *ctx.state, &mut retired);
+        ctx.events.push(GameEvent::Transformed {
+            instance_id: old.id.clone(),
+            from_def_id: old.def_id.clone(),
+            to_def_id: copy_def_id,
+            new_instance_id: copy_id.clone(),
+            hidden_from: if hidden_from.is_empty() {
+                None
+            } else {
+                Some(hidden_from)
+            },
+            creator: None,
+        });
+        crate::generators::credit_creator(ctx, &copy_id);
+    })
+}
+
 /// `swapBook`'s argument.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]

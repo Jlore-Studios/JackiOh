@@ -519,6 +519,12 @@ pub fn played_this_game_with_tag(state: &GameState, player: PlayerId, tag: Tag) 
         .unwrap_or(0)
 }
 
+/// R4593001 (Infinite Assault #196 Emergent Behavior): how many turns `player` has started this
+/// game, the current turn included (`PlayerState.turns_started`, R845).
+pub fn turns_started_of(state: &GameState, player: PlayerId) -> i32 {
+    state.players[player].turns_started
+}
+
 /// B5 E4, R451: the last Spell either player played (Classic #57 Echo) as its play recorded it (a
 /// played Echo is the Spell it copied), or `None`. A copy.
 pub fn last_spell_played(state: &GameState) -> Option<PlayRecord> {

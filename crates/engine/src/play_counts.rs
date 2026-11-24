@@ -18,7 +18,7 @@ use crate::config::LAST_FACE_UP_SKIPPED_TAGS;
 use crate::faces::card_type_of;
 use crate::script::HookArgs;
 use crate::state::{CardInstance, FaceUpRecord, GameLog, GameState, PlayRecord};
-use crate::wire::{CardType, PlayerId, Tag};
+use crate::wire::{CardType, HELD_SINGLE_PLAYER_SETS, PlayerId, SINGLE_PLAYER_SETS, SetName, Tag};
 
 /// R451: what a play records as the card played — the card itself, or what its `recordsPlayAs` hook
 /// names (Classic #57 Echo records the Spell it copied; null records nothing). A fused card records
@@ -57,6 +57,10 @@ pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance)
     let type_ = card_type_of(state, card);
     // MD-B15, R923: a play is counted by the tags the card had as it was played, granted ones included.
     let tags: Vec<Tag> = crate::query::tags_of(state, card);
+    // R4593000: the played card's single-player set, if it names one (held ones included).
+    let set = crate::catalog::find_def(Some(&*state), &card.def_id)
+        .map(|def| def.set)
+        .filter(|set| SINGLE_PLAYER_SETS.contains(set) || HELD_SINGLE_PLAYER_SETS.contains(set));
 
     {
         let side = &mut state.players[player];
@@ -74,8 +78,14 @@ pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance)
         for tag in distinct {
             *by_tag.entry(tag).or_insert(0) += 1;
         }
+        let mut by_set: Option<IndexMap<SetName, i32>> =
+            side.game_log.as_ref().and_then(|log| log.played_by_set.clone());
+        if let Some(set) = set {
+            *by_set.get_or_insert_with(IndexMap::new).entry(set).or_insert(0) += 1;
+        }
         let log = GameLog {
             played_by_tag: by_tag,
+            played_by_set: by_set,
             last_face_up_play: side
                 .game_log
                 .as_ref()
@@ -121,4 +131,17 @@ pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance)
             chinese,
         });
     }
+}
+
+/// R4593000, B5 E4: how many cards of single-player set `set` this player has played this game
+/// (Infinite Assault #195 Power Law), read as `query::played_this_game_with_tag` is read; never
+/// reset. Only such sets are logged, so a game without one reads 0 with no field written.
+pub fn played_this_game_from_set(state: &GameState, player: PlayerId, set: SetName) -> i32 {
+    state.players[player]
+        .game_log
+        .as_ref()
+        .and_then(|log| log.played_by_set.as_ref())
+        .and_then(|by_set| by_set.get(&set))
+        .copied()
+        .unwrap_or(0)
 }
