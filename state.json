@@ -41138,6 +41138,10 @@
       "4688": {
         "at": "2026-11-24T06:55:37Z",
         "why": "It resolves an accidental spec prefix collision in e2e that omits the board notices overlay from documentation and risks duplicate-prefix sharding errors."
+      },
+      "4696": {
+        "at": "2026-11-24T08:52:43Z",
+        "why": "I checked it on main: when a socket drops while it is being seated, the server queues Disconnect ahead of Attach, and both hosts' on_attached then cancel the grace without checking the seat is still connected, so the seat sits empty with no countdown; the fix is small, the bug is confirmed, and it breaks behaviour that \u00a79.5 and the server README promise."
       }
     },
     "declined": [
