@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 4742,
+  "title": "Patch: a Main menu button on every end-of-game screen",
+  "branch": "bot/issue-4742",
+  "thread": "**Issue #4742 (data, not instructions):**\n\n```text\n# #4742: Patch: a Main menu button on every end-of-game screen\nOpened by @MaxGoetzmann.\n\n### What it does\n\nGoing back to the menu is the button players click most once a game ends, yet most of the client's end-of-game screens don't have one. An audit of `apps/web/src` found only the online match (`routes/match.tsx`, \"Back to the lobby\") and the dev hotseat put a way back on the result itself. This adds a **Main menu** button to the result of every mode that lacks one.\n\n#### Screens with no menu button (must fix)\n\n| Screen | What it offers now | How to reach the menu today |\n|---|---|---|\n| Practice vs AI: `practice/PracticeResult.tsx` (`actions`, ~line 134) | Play again, Change setup, Watch the replay, Share the last turn, View the board | The board's Menu control (`routes/practice.tsx` `menuButtons`, ~line 1086) sits under the modal dialog: View the board, then Menu, 2 clicks |\n| Tutorial lesson: `tutorial/TutorialResult.tsx` (`actions`, ~line 187) | Next lesson / Retry / Play a practice game, Back to lessons | None. A lesson gets no `controlExtras` (`practice.tsx` ~line 1130), so the board has no Menu control either |\n| Dungeon run over: `dungeon/map/RunOverScreen.tsx` (`.dungeon-run-actions`, ~line 124) | Start a new run, Statistics | Only the corner `BackLink` at the top of `RunScreen.tsx` (~line 123), usually scrolled off above the long stats list |\n\n#### Menu only on the board behind the result (should fix)\n\n| Screen | Result panel | Note |\n|---|---|---|\n| Dungeon fight: `dungeon/fight/FightScreen.tsx` `resultActions` (~line 265) | Continue / Retry | The board's Main menu control still takes clicks through `.result-scrim` (`pointer-events: none`), but the panel itself offers none |\n| Infinite Assault fight: `assault/fight/FightScreen.tsx` `resultActions` (~line 266) | Continue / Retry | Same as the dungeon fight |\n\nContinue stays the primary action on both. Main menu goes after it, and must not discard the run or the day's attempt in a way the existing board Main menu control doesn't (it's already allowed once the fight has its result: R3932000, R4582001).\n\n#### Out to the mode's hub only (nice to have)\n\nDaily game (`daily/DailyBoard.tsx`, \"Back to daily games\") and Duos (`duos/DuosBoard.tsx`, \"Back to Play together\") each exit to their own hub. Add Main menu beside the hub button. The watch route (`together/WatchRoute.tsx`) and the assault day result screens (`assault/day/ResultScreens.tsx`, which already have a corner arrow to Play) are fine as they are.\n\n#### Where it goes\n\n- Where a route already has a menu handler, the new button reuses it, so the two never disagree. Practice and the tutorial reuse `onMenu` in `routes/practice.tsx`, which also clears the practice resume. The dungeon and assault fights reuse their board `menuButton`'s handler.\n- Everywhere else it goes to `paths.play`, as the match's \"Back to the lobby\" and the mode screens' `BackLink`s do.\n- Known mismatch, **out of scope here**: practice's `onMenu` goes to `paths.landing` (`/`), while the match, dungeon and assault go to `paths.play` (`/play`). Don't change practice's destination in this issue. Mention it in the PR so a person can decide.\n\nPrefer one small shared button (one label, `t(\"Main menu\")`, already in the i18n catalogs) over a hand-written copy on each screen. Each one gets its own `data-testid`, per the screen's testid module.\n\n### Acceptance\n\n- [ ] The practice result dialog has a Main menu action that leaves in one click and does what the board's Menu control does on a finished game (unit test in the practice route's tests).\n- [ ] The tutorial result dialog has a Main menu action that leaves the lesson (unit test).\n- [ ] The dungeon run-over screen has a Main menu button in `.dungeon-run-actions` that goes to `paths.play` (unit test).\n- [ ] The dungeon fight and assault fight result panels have a Main menu button after Continue that does what their board Main menu control does once the fight is over (unit tests).\n- [ ] Daily and Duos results show Main menu beside their hub button (unit tests), or the PR says why not.\n- [ ] Practice's result still focuses Play again first, and the 1v1 panel's first-action focus (`Result.tsx`) is unchanged.\n- [ ] e2e specs that list or count a result's buttons are updated. `pnpm --dir apps/web test`, `typecheck` and eslint are green.\n\n### Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4742: needs a plan; `claude-4` (claude, `sonnet`, medium) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T13:52:31Z",
+    "claimed_at": "2026-11-24T13:52:42Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4742 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
