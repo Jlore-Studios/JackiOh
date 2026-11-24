@@ -82,7 +82,7 @@ Counted with the fake store's `on_call` hook: one ranked match, random policy on
 | Start | 16 (the stats totals among them, cached per process after the first match) |
 | Both seats attach | 4 |
 | An action | 1 (the append) for 27 actions, 2 (append and clocks) for 12, 3 for 1 |
-| The end (the last action) | 71 before, 63 after |
+| The end (the last action) | 71 before, 65 after (#4711) |
 
 - In Postgres a one-statement transaction is three round trips. `BEGIN` and the session statement already share one (#3208, pinned by `tests/store/round_trips.rs`).
 - **The end's fix, #4711.** The actor re-read the result, the match, the series, both profiles and each person's day totals in a second transaction. All of that recomputed whether the daily cap held pay back, which the write's payout already carries (`GameEconomy::jlore_capped`). A fresh write's caps now come off its payout. A repeat, a rebuilt actor or an economy that is off still reads them.
