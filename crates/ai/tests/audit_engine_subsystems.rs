@@ -2,8 +2,6 @@
 //! Quests, the hero power, the crafter, ...). Each test asserts the ruled or printed behaviour and fails
 //! on the bug it proves.
 
-#![allow(unused_imports, dead_code)]
-
 use jackioh_engine::testkit::*;
 
 const P1: PlayerId = PlayerId::P1;
@@ -59,9 +57,43 @@ fn r880_a_crafted_units_stats_past_the_budget_are_refused_however_large() {
     );
 }
 
-// ---------------------------------------------------------------------------------------------
-// PROBES (temporary)
-// ---------------------------------------------------------------------------------------------
+const SCRATCH_PAD: &str = "meditativeplus-026"; // Scratch Pad: True Craft's chain with no offer (R1182002)
+
+/// R880, R883 (`subsystems/craft.rs`): the block table is "R21's keywords plus Armor and Echo, the
+/// hooks, the verbs, priced in points", and "a `grantKeyword` costs what its keyword costs". A keyword
+/// the table does not price is no block: the validator refuses it on the card's own keyword line
+/// ("{kind} is not a craft block"). The "Give a unit a keyword" verb is not held to the table: any
+/// keyword kind but Armor passes, and `effect_points` prices an unpriced one at 0. Scratch Pad's prompt
+/// has no offer to narrow it (R1182002), so a client's recipe grants Indestructible for no points.
+#[test]
+fn r883_a_crafted_grant_of_a_keyword_the_block_table_does_not_price_is_refused() {
+    jackioh_cards::register_all();
+    let mut s = scenario(json!({
+        "seed": "audit-craft-unpriced-grant",
+        "p1": { "hand": [SCRATCH_PAD], "mana": 10 },
+        "p2": { "hand": ["core-053"], "library": ["core-001", "core-002"] },
+    }));
+    s.play(SCRATCH_PAD, json!({}));
+    s.answer(json!(["0"]));
+    assert_eq!(
+        s.state().pending.as_ref().map(|pending| pending.kind),
+        Some(PromptKind::Craft)
+    );
+    // The control: the same keyword on the card's own keyword line is refused as no craft block.
+    let mut printed = unit_recipe(0, 1, 1);
+    printed["keywords"] = json!([{ "kind": "Indestructible" }]);
+    s.expect_refused_with(
+        |s| s.answer(json!([{ "pick": "craft", "recipe": printed }])),
+        "Indestructible is not a craft block",
+    );
+    // A 1/2 Unit spends the whole budget at cost 0 (2 points); its Cry grants Indestructible on top.
+    let mut granting = unit_recipe(0, 1, 2);
+    granting["hats"] = json!([{ "hat": "cry", "effects": [{ "verb": "grantKeyword", "keyword": "Indestructible" }] }]);
+    s.expect_refused_with(
+        |s| s.answer(json!([{ "pick": "craft", "recipe": granting }])),
+        "cannot be crafted",
+    );
+}
 
 const HEROIC_POWER: &str = "core-098";
 const CORE_SYSTEM: &str = "stinkyscape-117"; // "Bounce all permanents. Overload."
@@ -142,216 +174,4 @@ fn r3551002_a_used_end_times_costs_10_again_after_the_card_was_bounced_and_repla
         return;
     }
     panic!("no seed offered End Times on both plays");
-}
-
-fn lcg(x: u64) -> u64 {
-    x.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407)
-}
-
-/// A random walk from `setup`: at each step one of both seats' legal actions, applied through `reduce`.
-/// Returns what went wrong, if anything: a listed action refused, a panic, or an invariant finding.
-fn walk(name: &str, setup: Value, salt: u64, steps: usize) -> Option<String> {
-    let s = scenario(setup);
-    let mut state = s.state().clone();
-    let mut monitor = create_invariant_monitor(&state);
-    let mut x = lcg(salt ^ 0x9e37_79b9_7f4a_7c15);
-    let mut trail: Vec<String> = Vec::new();
-    for step in 0..steps {
-        if state.result.is_some() {
-            break;
-        }
-        let mut all: Vec<(PlayerId, ActionBody)> = Vec::new();
-        for player in [P1, P2] {
-            let listed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| legal_actions(&state, player)));
-            let Ok(listed) = listed else {
-                return Some(format!("{name}/{salt} step {step}: legal_actions panicked; trail {trail:?}"));
-            };
-            for action in listed {
-                if matches!(
-                    action,
-                    ActionBody::Concede
-                        | ActionBody::OfferDraw
-                        | ActionBody::AnswerDraw { .. }
-                        | ActionBody::Emote { .. }
-                        | ActionBody::Mulligan { .. }
-                ) {
-                    continue;
-                }
-                all.push((player, action));
-            }
-        }
-        if all.is_empty() {
-            break;
-        }
-        x = lcg(x);
-        let others: Vec<&(PlayerId, ActionBody)> =
-            all.iter().filter(|(_, action)| !matches!(action, ActionBody::EndTurn)).collect();
-        let (player, body) = if !others.is_empty() && (x >> 40) % 7 != 0 {
-            x = lcg(x);
-            others[((x >> 33) as usize) % others.len()].clone()
-        } else {
-            x = lcg(x);
-            all[((x >> 33) as usize) % all.len()].clone()
-        };
-        let text = serde_json::to_string(&body).unwrap_or_default();
-        trail.push(format!("{}:{}", player.as_str(), text));
-        if trail.len() > 12 {
-            trail.remove(0);
-        }
-        let before: Vec<String> = monitor
-            .before(&state, player, &body)
-            .into_iter()
-            .filter(|finding| !finding.starts_with("I3"))
-            .collect();
-        if !before.is_empty() {
-            return Some(format!("{name}/{salt} step {step}: before {before:?}; trail {trail:?}"));
-        }
-        let action = Action::new(body, player, format!("w{step}"));
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| reduce(&state, &action)));
-        let result = match result {
-            Ok(result) => result,
-            Err(panic) => {
-                let message = panic
-                    .downcast_ref::<String>()
-                    .cloned()
-                    .or_else(|| panic.downcast_ref::<&str>().map(|text| text.to_string()))
-                    .unwrap_or_default();
-                return Some(format!("{name}/{salt} step {step}: PANIC {message}; trail {trail:?}"));
-            }
-        };
-        if let Some(error) = result.error {
-            return Some(format!("{name}/{salt} step {step}: REFUSED {error}; trail {trail:?}"));
-        }
-        let after: Vec<String> = monitor
-            .after(&result.events, &result.state)
-            .into_iter()
-            .filter(|finding| !finding.starts_with("I3"))
-            .collect();
-        if !after.is_empty() {
-            if std::env::var("WALK_DEBUG").is_ok() {
-                for event in &result.events {
-                    let text = serde_json::to_string(event).unwrap_or_default();
-                    println!("EVENT {}", &text[..text.len().min(420)]);
-                }
-                if let Ok(id) = std::env::var("WALK_CARD") {
-                    for (label, st) in [("before", &state), ("after", &result.state)] {
-                        if let Some(card) = find_instance(st, &id) {
-                            let mut text = serde_json::to_value(card).unwrap_or_default();
-                            text["memory"] = json!(null);
-                            println!("CARD {label} {}", text);
-                        }
-                    }
-                }
-            }
-            return Some(format!("{name}/{salt} step {step}: after {after:?}; trail {trail:?}"));
-        }
-        state = result.state;
-    }
-    None
-}
-
-fn boards() -> Vec<(&'static str, Value)> {
-    let ships = json!({
-        "p1": {
-            "field": ["stinkyscapeplus-157", "stinkyscape-049", "stinkyscape-101", "stinkyscape-040"],
-            "backrow": ["core-098", "stinkyscape-125"],
-            "hand": ["stinkyscape-137", "stinkyscape-176", "stinkyscapeplus-155", "stinkyscapeplus-080",
-                     "stinkyscape-144", "core-016", "stinkyscape-151", "stinkyscape-133"],
-            "library": ["stinkyscape-090", "stinkyscape-106", "stinkyscape-136", "stinkyscapeplus-154",
-                        "stinkyscapeplus-156", "stinkyscape-117", "core-016", "stinkyscape-052",
-                        "stinkyscape-050", "stinkyscape-062", "stinkyscape-134", "stinkyscape-017"],
-            "mana": 10,
-        },
-        "p2": {
-            "field": ["stinkyscape-052", "stinkyscape-050", "stinkyscape-062", "stinkyscape-017"],
-            "backrow": ["stinkyscape-131"],
-            "hand": ["core-016", "stinkyscape-151", "stinkyscape-176", "stinkyscape-117", "core-052",
-                     "stinkyscape-019", "classicplus-035"],
-            "library": ["stinkyscape-090", "stinkyscape-106", "stinkyscape-133", "stinkyscapeplus-157",
-                        "stinkyscape-137", "core-016", "stinkyscape-049", "stinkyscape-101",
-                        "stinkyscapeplus-155", "stinkyscape-144", "core-052", "stinkyscape-019"],
-            "mana": 10,
-        },
-    });
-    let quests = json!({
-        "p1": {
-            "field": ["meditative-047", "stinkyscapeplus-161", "classicplus-030"],
-            "backrow": ["stinkyscape-112", "classic-090", "stinkyscape-007", "core-098"],
-            "hand": ["classicplus-031", "meditative-075", "stinkyscape-006", "core-016", "stinkyscape-117",
-                     "core-005", "core-099", "meditative-017"],
-            "library": ["core-005", "core-016", "classicplus-074", "stinkyscape-114", "core-085",
-                        "meditativeplus-026", "stinkyscapeplus-087", "stinkyscapeplus-075", "core-052",
-                        "classicplus-035", "meditative-042", "stinkyscape-148"],
-            "mana": 10,
-        },
-        "p2": {
-            "field": ["meditative-047", "stinkyscapeplus-161", "stinkyscape-114"],
-            "backrow": ["classicplus-074", "core-085", "meditative-075", "stinkyscape-112"],
-            "hand": ["core-016", "stinkyscape-117", "core-052", "classicplus-035", "core-005", "core-098",
-                     "classic-090", "meditative-042"],
-            "library": ["core-005", "core-016", "classicplus-031", "stinkyscape-007", "core-099",
-                        "meditative-017", "stinkyscapeplus-087", "stinkyscapeplus-075", "stinkyscape-006",
-                        "stinkyscape-148", "meditativeplus-026", "classicplus-030"],
-            "mana": 10,
-        },
-    });
-    vec![("ships", ships), ("quests", quests)]
-}
-
-const POOL: &[&str] = &[
-    "stinkyscapeplus-157", "stinkyscape-049", "stinkyscape-101", "stinkyscape-040", "stinkyscape-137",
-    "stinkyscape-176", "stinkyscapeplus-155", "stinkyscapeplus-080", "stinkyscape-144", "stinkyscape-151",
-    "stinkyscape-133", "stinkyscape-090", "stinkyscape-106", "stinkyscape-136", "stinkyscapeplus-154",
-    "stinkyscapeplus-156", "stinkyscape-052", "stinkyscape-050", "stinkyscape-062", "stinkyscape-134",
-    "stinkyscape-017", "stinkyscape-019", "stinkyscape-131", "stinkyscape-125", "stinkyscape-130",
-    "stinkyscape-127", "stinkyscape-025", "stinkyscape-026", "stinkyscapeplus-075", "stinkyscapeplus-087",
-    "stinkyscapeplus-161", "stinkyscapeplus-011", "stinkyscapeplus-019",
-    "stinkyscape-112", "classic-090", "stinkyscape-007", "core-098", "stinkyscape-006",
-    "meditative-047", "classicplus-030", "classicplus-031", "meditative-075", "core-099", "core-085",
-    "classicplus-074", "stinkyscape-114", "classicplus-043", "meditativeplus-002", "stinkyscapeplus-005",
-    "meditative-095", "meditative-059", "meditative-017", "meditativeplus-026", "meditativeplus-016",
-    "meditative-040", "meditative-042", "classicplus-062", "classicplus-027", "classicplus-029",
-    "classicplus-035", "core-052", "classicplus-042", "meditativeplus-020", "meditativeplus-018", "core-096",
-    "classic-055", "classicplus-033", "stinkyscape-148", "meditative-071", "core-095", "classicplus-073",
-    "stinkyscape-150", "stinkyscapeplus-142", "classicplus-004", "classic-078", "classic-074", "classic-027",
-    "classic-043", "core-091", "classic-062", "classic-077", "classic-014", "classic-050", "core-049",
-    "classicplus-026", "core-061", "core-086", "classic-032", "classicplus-009", "meditative-024",
-    "meditative-023", "stinkyscapeplus-033", "stinkyscapeplus-085", "stinkyscapeplus-103",
-    "stinkyscapeplus-105", "stinkyscapeplus-025", "stinkyscape-117", "core-016", "traininggrounds-052",
-    "classic-015", "classic-021", "meditative-069", "meditative-083", "meditativeplus-011",
-    "meditativeplus-012", "meditativeplus-013", "stinkyscape-116", "stinkyscape-169", "stinkyscape-173",
-    "stinkyscapeplus-029", "stinkyscapeplus-035", "stinkyscapeplus-038", "classicplus-007",
-];
-
-fn dealt(salt: u64) -> Value {
-    let mut order: Vec<&str> = POOL.to_vec();
-    let mut x = lcg(salt.wrapping_mul(7919) ^ 0xdead_beef);
-    for at in (1..order.len()).rev() {
-        x = lcg(x);
-        order.swap(at, ((x >> 33) as usize) % (at + 1));
-    }
-    let take = |from: usize, count: usize| -> Vec<&str> { order.iter().cycle().skip(from).take(count).copied().collect() };
-    json!({
-        "p1": { "hand": take(0, 9), "library": take(9, 26), "mana": 10 },
-        "p2": { "hand": take(35, 9), "library": take(44, 26), "mana": 10 },
-    })
-}
-
-#[test]
-fn probe_walks() {
-    jackioh_cards::register_all();
-    let from: u64 = std::env::var("WALK_FROM").ok().and_then(|v| v.parse().ok()).unwrap_or(0);
-    let count: u64 = std::env::var("WALK_COUNT").ok().and_then(|v| v.parse().ok()).unwrap_or(40);
-    let mut found: Vec<String> = Vec::new();
-    for salt in from..from + count {
-        for (name, setup) in boards().into_iter().chain(std::iter::once(("dealt", dealt(salt)))) {
-            let mut setup = setup.clone();
-            setup["seed"] = json!(format!("audit-walk-{name}-{salt}"));
-            if let Some(finding) = walk(name, setup, salt, 320) {
-                println!("FOUND {finding}\n");
-                found.push(finding);
-            }
-        }
-    }
-    println!("{} findings", found.len());
 }

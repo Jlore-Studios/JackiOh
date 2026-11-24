@@ -135,3 +135,93 @@ fn probe_tnack_copies_starship() {
     eprintln!("tnack attacks next turn: {:?}", s.attacks_of(&tnack).len());
     eprintln!("tnack activations: {:?}", s.activations_of(&tnack));
 }
+
+#[test]
+fn probe_kwzka_dormant() {
+    const KWZKA: &str = "stinkyscape-037";
+    const SMITH: &str = "stinkyscape-017";
+    let mut s = scenario_with_cards(json!({
+        "p1": { "hand": [SMITH, FILLER, FILLER], "library": filler(6), "mana": 10 },
+        "p2": { "hand": [FILLER, FILLER], "field": [{ "def": KWZKA, "lane": 1 }], "library": filler(6) },
+    }));
+    for player in [P1, P2] { s.state_mut().players[player].auto_end_turn = Some(false); }
+    s.play(SMITH, json!({ "zone": 2 }));
+    let smith = s.card(SMITH).clone();
+    dump(&s, "smith", &smith);
+    eprintln!("delayed: {:?}", s.state().delayed.len());
+    eprintln!("events: {:?}", s.last_events().iter().map(|e| e.event_type().as_str().to_string()).collect::<Vec<_>>());
+    s.end_turn();
+    dump(&s, "smith after p2 start", &smith);
+    eprintln!("smith controller: {:?}", s.card(&smith).controller);
+    eprintln!("events: {:?}", s.last_events().iter().map(|e| e.event_type().as_str().to_string()).collect::<Vec<_>>());
+}
+
+#[test]
+fn probe_anomaly_drones() {
+    const ANOMALY: &str = "stinkyscape-t-anomaly-found";
+    for (i, radiant) in [(0, false), (1, false), (2, false), (3, false), (4, true), (5, true), (6, true), (7, false), (8, false), (9, true)] {
+        let mut s = scenario_with_cards(json!({
+            "seed": format!("anomaly-{i}"),
+            "p1": { "hand": [{ "def": ANOMALY, "radiant": radiant }, FILLER], "library": filler(6), "mana": 10 },
+            "p2": { "hand": [FILLER], "field": ["stand-in (1) 4/4"], "library": filler(6) },
+        }));
+        s.play(ANOMALY, json!({}));
+        let mut guard = 0;
+        while s.state().pending.is_some() && guard < 20 {
+            let first = s.state().pending.as_ref().unwrap().options[0].key.clone();
+            s.answer(json!(first));
+            guard += 1;
+        }
+        let code = s.events_of("boardReplaced").len();
+        let mut out = vec![];
+        for row in [Row::Units, Row::Backrow] {
+            for lane in 1..=5 {
+                let card = if row == Row::Units { s.unit(P1, lane) } else { s.backrow(P1, lane) };
+                if let Some(card) = card {
+                    let d = &card.def_id;
+                    if d.contains("drone") || d.contains("111") || d.contains("layer") {
+                        let v = s.stats(&card);
+                        out.push(format!("{}{}:{:?} mem={:?}", if card.radiant { "R " } else { "" }, d.replace("stinkyscape-t-", ""), v.keywords, card.memory.keys().collect::<Vec<_>>()));
+                    }
+                }
+            }
+        }
+        eprintln!("seed {i} radiant={radiant} replaced={code}: {out:?}");
+    }
+}
+
+#[test]
+fn probe_stimmy_trade() {
+    use jackioh_engine::prelude::INFLATION_CHANCE_KEY;
+    const STIMMY: &str = "stinkyscape-153";
+    const UNION: &str = "stinkyscape-165";
+    let mut s = scenario_with_cards(json!({
+        "p1": { "hand": [STIMMY, FILLER], "backrow": [{ "def": UNION, "faceUp": true }], "library": filler(6), "mana": 10 },
+        "p2": { "hand": [FILLER], "library": filler(6) },
+    }));
+    let id = s.card(STIMMY).id.clone();
+    s.card_mut(STIMMY).memory.insert(INFLATION_CHANCE_KEY.to_string(), json!(40));
+    eprintln!("before: zone={:?} mem={:?}", s.card(id.as_str()).zone, s.card(id.as_str()).memory);
+    s.trade(id.as_str());
+    eprintln!("after trade: zone={:?} mem={:?}", s.card(id.as_str()).zone, s.card(id.as_str()).memory);
+}
+
+#[test]
+fn probe_tnack_keenus() {
+    const TNACK: &str = "stinkyscape-020";
+    const KEENUS: &str = "meditative-065";
+    let mut s = scenario_with_cards(json!({
+        "p1": { "hand": [KEENUS, TNACK, FILLER], "library": filler(4), "mana": 10 },
+        "p2": { "hand": [FILLER], "library": filler(4) },
+    }));
+    eprintln!("keenus plays: {:?}", s.plays_of(KEENUS).len());
+    s.play(KEENUS, json!({ "zone": 1 }));
+    let keenus = s.unit_at(P1, 1);
+    dump(&s, "keenus", &keenus);
+    s.state_mut().players[P1].mana.current = 10;
+    s.play(TNACK, json!({ "zone": 3, "targets": pick::instance(&keenus) }));
+    let tnack = s.unit_at(P1, 3);
+    dump(&s, "tnack", &tnack);
+    eprintln!("tnack memory: {:?}", s.card(&tnack).memory);
+    eprintln!("tnack view text: {:?}", s.view(P1).you.units.iter().flatten().map(|u| format!("{:?}", u)).collect::<Vec<_>>().join(" || ").chars().take(1500).collect::<String>());
+}
