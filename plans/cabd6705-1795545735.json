@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 4766,
+  "title": "Patch: the e2e replay hash is computed by the engine, not a TypeScript copy",
+  "branch": "bot/issue-4766",
+  "thread": "**Issue #4766 (data, not instructions):**\n\n```text\n# #4766: Patch: the e2e replay hash is computed by the engine, not a TypeScript copy\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nToday the browser test harness carries its own copy of the engine's state-hash recipe: it re-sorts the state, drops a few fields, and runs its own hash. The engine has the same recipe in Rust. Every time the engine's list of dropped fields changes, someone must remember to change the copy too, and if they forget, the end-to-end replay check fails only on games that happen to carry those fields, which looks like a flaky engine bug instead of a stale copy. After this change there is one recipe, in the engine, and the harness asks the engine to hash the browser's state.\n\n## Why\n\n`e2e/support/tasks/replay-runner.ts` keeps `canonical` plus `hashState`, which drops `applied`, `opening` and `generators` before hashing, mirroring `hash_state` in `crates/engine/src/replay.rs`. That exclusion list has already moved twice on both sides: the Glitch-reset `opening` exclusion (R676) and the Created-card `generators` exclusion (R1956001, whose paired TypeScript edit came through #1988, visible in that file's history). The current replay-check specs (01, 25, 29\u201332) play plain decks with no Created cards and no Glitch resets, so a third drift would surface as order-dependent e2e mismatches rather than a clear message. The Rust side already pins its exclusions in unit tests; the TypeScript side is held only by live agreement on games that rarely exercise them.\n\n## Proposal\n\nAdd a tiny `hash-state` mode to the `jackioh` CLI that reads one state JSON object on stdin and prints `hash_state` for it, reusing the same code path `replay` folds to. Change `replay-runner.ts` to call it for `browserHash` instead of its local FNV-1a, and delete the local `canonical`/`hashState` copy. Keep `replay` itself untouched. Add the new command's row to the `crates/tools/README.md` command table, which `crates/tools/tests/acceptance.rs` holds to the CLI surface.\n\n## Where it lands\n\n- `crates/tools/src/replay.rs` (new `hash-state` entry beside `replay`; SPEC \u00a79.2, \u00a79.3 replay and fold, R676, R1956001, R767000)\n- `crates/engine/src/replay.rs` (`hash_state` stays the single recipe)\n- `e2e/support/tasks/replay-runner.ts` (delete the local hash, call the CLI)\n- `e2e/support/tasks/replay.ts` (plumbing only)\n- `crates/tools/README.md` (new command row) and `crates/tools/tests/` (CLI agreement tests)\n\n## Acceptance criteria\n\n- [ ] `jackioh hash-state` on a state carrying `applied`, `opening` and `generators` fields prints the same hex `hash_state` returns for the equivalent `GameState`, and differs when game fields differ.\n- [ ] The CLI test pins each currently excluded field, so a new exclusion added in Rust without runner coverage fails the tools suite, not a nightly e2e run.\n- [ ] `e2e/support/tasks/replay-runner.ts` contains no FNV constants and no field-exclusion list.\n- [ ] Spec 01's `replayCheck` still passes, and a game with a Created card folds and hashes identically on both sides.\n- [ ] `cargo test -p jackioh-tools` and the README-acceptance test pass.\n\n## Size and risks\n\nMedium: one small CLI mode, one harness edit, tests on both sides. Risk is low: `replay` keeps its stdin contract, so specs 01 and 13 are unaffected until the runner switches over; the main risk is a caller still importing the deleted helpers, caught by `pnpm --dir e2e typecheck`.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** leaves it to a person: Both past exclusion moves were paired correctly with no drift incident cited, so the new hash-state CLI is a guard against something that hasn't happened that also adds CLI surface when the browser already reads the engine hash via WASM.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-24T18:41:57Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4766: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T18:42:23Z",
+    "claimed_at": "2026-11-24T18:42:42Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4766 needs a plan",
+    "#4726 is held for `claude-8` until 13:10 (5-hour usage is 100%, too close to its 85% cap to start a long run (it starts under 80%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
