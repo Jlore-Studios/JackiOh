@@ -20762,15 +20762,8 @@
       "suggestion": true
     },
     "4745": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45411892354",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-24T14:24:09Z",
-        "until": "2026-11-24T14:54:09Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -20782,10 +20775,9 @@
         "reason": "planned on sonnet",
         "trail": "- Grep: {\"pattern\": \"stinkyscapeplus-020\", \"output_mode\": \"files_with_matches\", \"head_limit\": 50}\n- Grep: {\"pattern\": \"Flip a coin for the whole effect\", \"output_mode\": \"content\", \"head_limit\": 50}\n- Grep: {\"pattern\": \"Flip a coin for the whole effect|Randomly either Buff or Nerf\", \"glob\": \"!crates/cards/patches/*\", \"output_mode\": \"content\", \"-n\": true}\n- Bash: {\"command\": \"ls crates/cards/patches | grep -v '^v' | head; ls crates/cards/patches/pending 2>/dev/null | head; grep -n -i \\\"pending\\\\|fragment\\\\|words\\\" docs/ADDING_CARDS.md | head -60\"}\n- Bash: {\"command\": \"sed -n 195,245p docs/ADDING_CARDS.md; ls crates/cards/patches/pending | head; ls crates/cards/patches/pending | wc -l\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4745/crates/cards/src/scripts/stinkyscape_plus/c020_b_patch.rs\", \"limit\": 40}\n- Bash: {\"command\": \"sed -n 1024p spec/08-catalog.md | cut -c1-1500\"}\n- Bash: {\"command\": \"sed -n 1000,1023p spec/08-catalog.md | cut -c1-220; grep -rn \\\"08-catalog\\\" crates/*/tests crates/tools/src 2>/dev/null | head\"}\n- Bash: {\"command\": \"grep -n \\\"Heads\\\\|Tails\\\" crates/cards/catalog.json | head -5; grep -rn \\\"stinkyscapeplus-020\\\" crates/cards/tests/cross/*.rs | head; grep -rln \\\"Flip a coin\\\" crates/cards/card-text.yam\u2026\n- Bash: {\"command\": \"sed -n 29630,29660p crates/cards/catalog.json; grep -n -B2 -A6 \\\"stinkyscapeplus-020\\\" crates/cards/card-text.yaml | head -30; sed -n 595,615p crates/cards/tests/cross/params.rs; sed -n \u2026\n- Bash: {\"command\": \"grep -rn \\\"words-only\\\\|words only\\\\|tier:micro\\\" docs/issues-and-patches.md | head; git log --oneline -5 -- crates/cards/patches/pending; git log -3 --stat --format=%s -- 'crates/cards/\u2026\n- Bash: {\"command\": \"sed -n 7226,7232p crates/cards/card-text.yaml; grep -rn \\\"fn reads_as_luck_based\\\" -A12 crates/cards/tests/cross/query.rs | head -30; grep -rn \\\"Randomly either\\\\|Flip a coin for\\\" crate\u2026\n- Bash: {\"command\": \"grep -n \\\"Randomly either\\\\|Flip a coin for\\\" spec/rulings/R3557000.md docs/radiant-audit.md crates/cards/src/scripts/meditative/c054_money_machine.rs apps/web/src/game/modeText.ts apps/\u2026\n- Bash: {\"command\": \"git show 445ccaa547:crates/cards/patches/pending/the-cosmetic-offers-and-the-full-screen-art-s-music-load.json; git show cd5052586f --name-only --format= | head -20; grep -n \\\"text\\\\b\\\\|\u2026\n- Bash: {\"command\": \"grep -n \\\"Flip\\\\|\\\\.text\\\\|Randomly\\\" crates/cards/src/scripts/stinkyscape_plus/c020_b_patch.rs | head; grep -n \\\"stinkyscapeplus-020\\\" crates/cards/chinese.json | head -3; grep -n \\\"20\\\u2026\n- Bash: {\"command\": \"sed -n 40,50p docs/ADDING_CARDS.md | cut -c1-600; grep -c \\\"stinkyscapeplus\\\" crates/cards/patches/v0.6.12f.json; grep -n \\\"Stinkyscape+\\\" crates/cards/patches/shipped.json | head -3; gr\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4745/.bot-plan.md\", \"content\": \"Draft: wording-only change to stinkyscapeplus-020 (catalog.json 29643/29652, spec/08-catalog.md row 20 of 8.12 line 10\u2026\n- said: ## Goal Reword S+ #20 B-Patch (`stinkyscapeplus-020`) so its two coin sides are spelled out, in the catalog, the spec row and the script's header comment, and claim the change with a pending patch fragment. The new base text is `Cast on draw: Flip a coin. Heads: Buff every card on the field and in \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-24T14:14:30Z",
       "owner_why": "it plans it",
@@ -20798,9 +20790,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-24T14:14:25Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45411892354",
+      "run_id": "pending:d740ce35-1795530381",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-24T14:14:30Z",
+      "started_at": "2026-11-24T14:26:56Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -20817,9 +20809,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T14:15:15Z",
+    "at": "2026-11-24T14:26:56Z",
     "url": "",
-    "what": "plan #4725 on claude-7"
+    "what": "build #4745 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-24T14:03:04Z",
