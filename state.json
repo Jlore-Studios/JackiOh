@@ -19453,7 +19453,7 @@
       }
     },
     "4716": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "ci_early": true,
       "ci_fixes": 0,
@@ -19492,23 +19492,24 @@
       },
       "interruptions": 0,
       "issue": 4682,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "fixing-ci",
+      "live": "reviewing",
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-3",
       "question": "",
       "queued_at": "2026-11-24T11:45:07Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "45387072012",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:db7eda3a-1795524712",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 500,
-      "started_at": "2026-11-24T11:45:16Z",
+      "started_at": "2026-11-24T12:52:17Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -20242,9 +20243,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T12:51:39Z",
+    "at": "2026-11-24T12:52:17Z",
     "url": "",
-    "what": "review #4735 on claude-4"
+    "what": "spot-check #4716 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-24T12:39:05Z",
@@ -42625,7 +42626,15 @@
         "n": 500,
         "pr": 4716,
         "queued_at": "2026-11-24T12:32:19Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:db7eda3a-1795524712",
         "sha": "f10180a05739cd1cfe4a4fe86805b809709645e9",
+        "started_at": "2026-11-24T12:52:17Z",
         "status": "queued",
         "title": "Patch: the clock alarm covers the mulligan and background tabs",
         "tries": 0
