@@ -250,8 +250,10 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     // R4608000: on. No fork screen was played (training/improve.md, A screen); its scene tests
     // (crates/ai/tests/ai/lone_win.rs) settle it, as an inconclusive screen's would (R4319000).
     confirm_lone_win: true,
-    // R4788000: on. Its deal screen, 400 games on improve-dev against the control at 3a83bd7741, is still
-    // being played as this is committed; its scene tests (crates/ai/tests/ai/wide_lethal.rs) hold it.
+    // R4788000: on. Its deal screen, 400 games on improve-dev against the control at 3a83bd7741, read
+    // 200-200, edge 0.0 (0.0 to 0.0), inconclusive (R4319000): 0 decided of 200 (won 0, lost 0), 6
+    // diverged, every game clean; its scene tests (crates/ai/tests/ai/wide_lethal.rs) settle it
+    // (training/improve.md, A screen). false stops every walk at its scaled allowance.
     lethal_reach: true,
     probe_seed: "ai:probe",
     tribute_sets: 120,
