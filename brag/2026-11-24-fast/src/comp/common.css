@@ -1,0 +1,31 @@
+@font-face { font-family: "Alegreya"; src: url("assets/alegreya-5.3.0-latin-wght-normal.woff2") format("woff2"); font-weight: 400 900; }
+@font-face { font-family: "Inter"; src: url("assets/inter-5.3.0-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+html, body { margin: 0; padding: 0; background: #0c0704; }
+#stage { position: relative; overflow: hidden; background: #0c0704; }
+.scene { position: absolute; inset: 0; display: none; overflow: hidden; }
+.abs { position: absolute; }
+.full { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+/* The tavern backdrop: .tavern.app-shell's gradients and its ::before planks (apps/web/src/auth/tavern.css). */
+.tavern { position: absolute; inset: 0; isolation: isolate; overflow: hidden;
+  background: radial-gradient(ellipse 70% 40% at 50% 100%, rgba(255, 150, 60, 0.2), transparent 70%),
+    radial-gradient(ellipse 90% 55% at 50% 0%, rgba(90, 52, 27, 0.38), transparent 70%),
+    linear-gradient(180deg, #1c110a 0%, #120b07 55%, #0c0704 100%); }
+.tavern::before { content: ""; position: absolute; z-index: -1; left: -20%; right: -20%; bottom: 0; height: 33%;
+  transform: perspective(700px) rotateX(58deg); transform-origin: 50% 100%;
+  background: repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.5) 0 3px, transparent 3px 12.5%),
+    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.14) 0 1px, transparent 1px 17px),
+    linear-gradient(180deg, #2b170c 0%, #5a341b 60%, #8a5a33 100%);
+  opacity: 0.55; -webkit-mask-image: linear-gradient(0deg, #000 25%, transparent 100%); mask-image: linear-gradient(0deg, #000 25%, transparent 100%); }
+/* Gold display type: the wordmark's gradient clipped to the text, the dark engraved edge, hearth glow. */
+.gold { font-family: "Alegreya", serif; font-weight: 800; line-height: 1.0; letter-spacing: 0.01em; padding: 0 0.06em 0.08em; white-space: nowrap;
+  background: linear-gradient(180deg, #fbe7b0 0%, #ffe39a 22%, #f3c969 44%, #c9953f 64%, #9b6423 84%, #d9a44c 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: var(--stroke, 2px) #3a1f0c;
+  filter: drop-shadow(0 0 var(--glow, 18px) rgba(255, 170, 60, 0.38)) drop-shadow(0 3px 0 #3a1f0c); }
+.body { font-family: "Inter", sans-serif; font-weight: 600; color: #efe0bf; text-shadow: 0 2px 12px rgba(0,0,0,0.75); }
+.caps { font-family: "Alegreya", serif; font-weight: 700; color: #c9953f; letter-spacing: 0.28em; text-transform: uppercase; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
+.face { position: absolute; border-radius: 4.6% / 3.3%; overflow: hidden; box-shadow: 0 14px 32px rgba(0,0,0,0.55); }
+.face img { width: 100%; height: 100%; display: block; }
+.ring { position: absolute; border-radius: 50%; border: 4px solid rgba(255, 214, 120, 0.95); box-shadow: 0 0 30px rgba(255, 190, 80, 0.8), inset 0 0 20px rgba(255, 190, 80, 0.5); }
+#flash { position: absolute; inset: 0; background: #fff3d6; pointer-events: none; z-index: 40; opacity: 0; }
+#dip { position: absolute; inset: 0; background: #0c0704; pointer-events: none; z-index: 50; opacity: 0; }

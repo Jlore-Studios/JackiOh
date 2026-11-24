@@ -1,0 +1,110 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>JackiOh: Fast (vertical)</title>
+<link rel="stylesheet" href="common.css">
+<style> #stage { width: 1080px; height: 1920px; } #bands { position:absolute; inset:0; z-index:60; display:none; pointer-events:none; } </style>
+</head><body><div id="stage">
+  <!-- 1. The montage, the phone layout -->
+  <div class="scene" id="v1">
+    <img class="full" id="v1img" alt="" style="transform-origin:50% 40%">
+    <div class="full" style="background:linear-gradient(180deg, rgba(12,7,4,0.1) 8%, rgba(12,7,4,0.86) 16%, rgba(12,7,4,0.78) 32%, transparent 42%)"></div>
+    <div class="abs gold" id="v1a" style="left:0;width:1080px;text-align:center;top:300px;font-size:168px;--stroke:3.5px;transform-origin:50% 60%">One game.</div>
+    <div class="abs gold" id="v1b" style="left:0;width:1080px;text-align:center;top:490px;font-size:104px;--stroke:2.5px;transform-origin:50% 60%">Start to finish.</div>
+  </div>
+  <!-- 2. The lethal swing -->
+  <div class="scene" id="v2">
+    <img class="full" id="v2img" alt="" style="transform-origin:50% 45%">
+    <div class="abs" id="v2scrim" style="left:0;top:1060px;width:1080px;height:360px;background:linear-gradient(180deg, transparent 0%, rgba(10,6,3,0.82) 30%, rgba(10,6,3,0.82) 70%, transparent 100%)"></div>
+    <div class="abs gold" id="vlethal" style="left:0;width:1080px;text-align:center;top:1150px;font-size:176px;--stroke:4px;--glow:26px;transform-origin:50% 60%">LETHAL.</div>
+  </div>
+  <!-- 3. Mana -->
+  <div class="scene" id="v3">
+    <img class="full" id="v3img" alt="" style="transform-origin:54% 76%">
+    <div class="full" style="background:radial-gradient(circle 200px at 580px 1463px, transparent 0%, rgba(10,6,3,0.3) 55%, rgba(10,6,3,0.84) 100%)"></div>
+    <div class="ring" id="v3ring" style="left:480px;top:1418px;width:200px;height:90px;border-radius:45px"></div>
+    <div class="abs gold" id="vmana" style="left:0;width:1080px;text-align:center;top:760px;font-size:300px;--stroke:5px;--glow:30px;transform-origin:50% 60%">1/1</div>
+    <div class="abs gold" id="v3a" style="left:0;width:1080px;text-align:center;top:300px;font-size:96px;--stroke:2.5px">Mana tops out at 4.</div>
+    <div class="abs body" id="v3b" style="left:0;width:1080px;text-align:center;top:440px;font-size:54px">Full mana on your fourth turn.</div>
+  </div>
+  <!-- 4. The deck -->
+  <div class="scene" id="v4">
+    <div class="tavern"></div>
+    <div class="abs gold" id="v4a" style="left:0;width:1080px;text-align:center;top:270px;font-size:116px;--stroke:2.5px">25-card decks.</div>
+    <div class="abs body" id="v4b" style="left:0;width:1080px;text-align:center;top:420px;font-size:56px">No duplicates.</div>
+    <div class="abs" id="vgrid" style="left:170px;top:530px;width:740px;height:1020px"></div>
+  </div>
+  <!-- 5. Outro, ending on the first frame's board -->
+  <div class="scene" id="v5">
+    <div class="tavern"></div>
+    <div class="abs" style="left:40px;top:420px;width:1000px;height:640px;background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,170,60,0.28), transparent 70%)"></div>
+    <img class="abs" id="vlogo" src="assets/jackioh-logo.svg" style="left:110px;top:520px;width:860px;height:279px" alt="">
+    <div class="abs gold" id="v5a" style="left:0;width:1080px;text-align:center;top:880px;font-size:104px;--stroke:2.5px">Short, sharp games.</div>
+    <div class="abs body" id="v5b" style="left:0;width:1080px;text-align:center;top:1060px;font-size:52px">Play the AI in your browser.</div>
+    <div class="abs gold" id="v5c" style="left:0;width:1080px;text-align:center;top:1150px;font-size:124px;--stroke:3px">jackioh.com</div>
+    <img class="full" id="v5loop" alt="" style="opacity:0">
+  </div>
+  <div id="flash"></div><div id="dip"></div>
+  <svg id="bands" width="1080" height="1920"><rect x="0" y="0" width="1080" height="250" fill="rgba(255,0,0,0.35)"/><rect x="0" y="1536" width="1080" height="384" fill="rgba(255,0,0,0.35)"/><rect x="940" y="960" width="140" height="576" fill="rgba(255,0,0,0.35)"/></svg>
+</div>
+<script src="common.js"></script>
+<script>
+const TAG = "port", IMPACT = 2.1; // page time of Clobberer's hit in seq/port (release 1.851 + 0.25)
+const faces = buildGrid($("vgrid"), 5, 140, 196, 10);
+if (location.hash === "#bands") $("bands").style.display = "block";
+const CUTS = [8, 16, 24, 32];
+const END = 419 / 30;
+window.renderAt = async function (t) {
+  pending.length = 0;
+  const sc = t < B(8) ? 1 : t < B(16) ? 2 : t < B(24) ? 3 : t < B(32) ? 4 : 5;
+  for (let i = 1; i <= 5; i++) show(`v${i}`, i === sc);
+  let fl = 0;
+  for (const k of CUTS) if (t >= B(k) && t < B(k) + 0.12) fl = 0.42 * (1 - eOut(seg(t, B(k), B(k) + 0.12)));
+  $("flash").style.opacity = fl;
+  if (sc === 1) {
+    const k = Math.min(MONTAGE.length - 1, Math.floor(t / (BEAT / 2) + 1e-6));
+    setSrc($("v1img"), still(TAG, MONTAGE[k]));
+    const local = seg(t - k * (BEAT / 2), 0, BEAT / 2);
+    $("v1img").style.transform = `scale(${(1.0 + 0.05 * t / B(8)) * (1 + 0.035 * (1 - eOut(local)))})`;
+    slam($("v1a"), t, 0.0, 0.12, 1.5);
+    slam($("v1b"), t, B(3), 0.12, 1.5);
+  } else if (sc === 2) {
+    setSrc($("v2img"), seqSrc(TAG, IMPACT + (t - B(12))));
+    const hit = seg(t, B(12), B(12) + 0.25);
+    const shake = t >= B(12) && t < B(12) + 0.25 ? Math.sin(t * 90) * 10 * (1 - hit) : 0;
+    $("v2img").style.transform = `scale(${1.02 + 0.04 * seg(t, B(8), B(12)) - 0.02 * eOut(hit)}) translate(${shake}px, ${shake * 0.6}px)`;
+    $("v2scrim").style.opacity = eOut(seg(t, B(12) - 0.1, B(12) + 0.1));
+    slam($("vlethal"), t, B(12), 0.1, 1.9);
+  } else if (sc === 3) {
+    const k = clamp(Math.floor((t - B(16)) / B(2) + 1e-6), 0, 3);
+    setSrc($("v3img"), still(TAG, MANA[k]));
+    $("v3img").style.transform = `scale(${1.0 + 0.04 * seg(t, B(16), B(24))})`;
+    const big = $("vmana"); big.textContent = `${k + 1}/${k + 1}`;
+    big.style.transform = `scale(${lerp(1.35, 1, eOut(seg(t, B(16 + 2 * k), B(16 + 2 * k) + 0.1)))})`;
+    $("v3ring").style.opacity = 0.6 + 0.4 * (1 - eOut(seg(t - B(16 + 2 * k), 0, 0.3)));
+    textIn($("v3a"), t, B(16));
+    textIn($("v3b"), t, B(18));
+  } else if (sc === 4) {
+    textIn($("v4a"), t, B(24));
+    textIn($("v4b"), t, B(27));
+    faces.forEach((f, i) => {
+      const at = B(24) + i * (B(4) / 25);
+      const x = eBack(seg(t, at, at + 0.16));
+      f.style.opacity = clamp(seg(t, at, at + 0.06));
+      f.style.transform = `translateY(${(1 - x) * 40}px) scale(${lerp(0.85, 1, x)})`;
+    });
+  } else {
+    const x = eOut(seg(t, B(32), B(32) + 0.35));
+    $("vlogo").style.opacity = x; $("vlogo").style.transform = `translateY(${(1 - x) * 30}px) scale(${lerp(0.94, 1, x)})`;
+    textIn($("v5a"), t, B(32) + 0.1);
+    textIn($("v5b"), t, B(33));
+    textIn($("v5c"), t, B(34));
+    // The loop: the last beat dissolves into frame 1's board, so the end flows into the start.
+    setSrc($("v5loop"), still(TAG, MONTAGE[0]));
+    const lx = eIO(seg(t, B(39), END - 1 / 30));
+    $("v5loop").style.opacity = lx;
+    $("v5loop").style.transform = `scale(${lerp(1.03, 1.0, lx)})`;
+  }
+  await settleImages();
+  return sc;
+};
+window.ready = (async () => { await document.fonts.ready; await Promise.all([...document.images].map((i) => i.decode().catch(() => {}))); })();
+</script></body></html>

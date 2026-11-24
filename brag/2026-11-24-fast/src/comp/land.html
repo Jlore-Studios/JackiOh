@@ -1,0 +1,128 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>JackiOh: Fast (landscape)</title>
+<link rel="stylesheet" href="common.css">
+<style> #stage { width: 1920px; height: 1080px; } </style>
+</head><body><div id="stage">
+  <!-- 1. The montage: one real game, a still per half beat -->
+  <div class="scene" id="s1">
+    <img class="full" id="s1img" alt="" style="transform-origin:50% 45%">
+    <div class="full" style="background:linear-gradient(90deg, rgba(12,7,4,0.9) 0%, rgba(12,7,4,0.72) 30%, rgba(12,7,4,0.15) 55%, transparent 70%)"></div>
+    <div class="abs gold" id="s1a" style="left:104px;top:330px;font-size:176px;--stroke:3.5px;transform-origin:0% 60%">One game.</div>
+    <div class="abs gold" id="s1b" style="left:112px;top:540px;font-size:112px;--stroke:2.5px;transform-origin:0% 60%">Start to finish.</div>
+  </div>
+  <!-- 2. The lethal swing, recorded with the page slowed -->
+  <div class="scene" id="s2">
+    <img class="full" id="s2img" alt="" style="transform-origin:62% 40%">
+    <div class="full" id="s2scrim" style="background:linear-gradient(0deg, rgba(10,6,3,0.9) 0%, rgba(10,6,3,0.6) 20%, transparent 42%)"></div>
+    <div class="abs gold" id="lethal" style="left:96px;top:846px;font-size:180px;--stroke:4px;--glow:26px;transform-origin:20% 60%">LETHAL.</div>
+  </div>
+  <!-- 3. Mana: p1's four turn starts -->
+  <div class="scene" id="s3">
+    <img class="full" id="s3img" alt="" style="transform-origin:84% 78%">
+    <div class="full" id="s3scrim" style="background:radial-gradient(circle 190px at 1617px 837px, transparent 0%, rgba(10,6,3,0.25) 60%, rgba(10,6,3,0.82) 100%)"></div>
+    <div class="ring" id="s3ring" style="left:1537px;top:797px;width:160px;height:80px;border-radius:40px"></div>
+    <div class="abs gold" id="manaBig" style="left:150px;top:250px;font-size:300px;--stroke:5px;--glow:30px;transform-origin:30% 60%">1/1</div>
+    <div class="abs gold" id="s3a" style="left:160px;top:640px;font-size:104px;--stroke:2.5px">Mana tops out at 4.</div>
+    <div class="abs body" id="s3b" style="left:166px;top:780px;font-size:58px">Full mana on your fourth turn.</div>
+  </div>
+  <!-- 4. The 25 cards that played it -->
+  <div class="scene" id="s4">
+    <div class="tavern"></div>
+    <div class="abs gold" id="s4a" style="left:0;width:1920px;text-align:center;top:150px;font-size:140px;--stroke:3px">25-card decks.</div>
+    <div class="abs body" id="s4b" style="left:0;width:1920px;text-align:center;top:330px;font-size:60px">No duplicates.</div>
+    <div class="abs" id="grid" style="left:62px;top:520px;width:1808px;height:370px"></div>
+  </div>
+  <!-- 5. Lanes and a trap -->
+  <div class="scene" id="s5">
+    <img class="full" id="s5img" alt="" style="transform-origin:50% 30%">
+    <div class="full" id="s5scrim" style="background:linear-gradient(0deg, rgba(10,6,3,0.92) 0%, rgba(10,6,3,0.7) 22%, transparent 45%)"></div>
+    <div class="ring" id="s5ring" style="left:735px;top:76px;width:190px;height:210px;border-radius:24px"></div>
+    <div class="abs gold" id="s5a" style="left:110px;top:850px;font-size:120px;--stroke:3px">Units fight in five lanes.</div>
+    <div class="abs gold" id="s5b" style="left:110px;top:850px;font-size:120px;--stroke:3px">Traps wait face down.</div>
+  </div>
+  <!-- 6. The spec's own words over the win -->
+  <div class="scene" id="s6">
+    <img class="full" id="s6img" alt="" style="filter:blur(10px) brightness(0.55);transform:scale(1.05)">
+    <div class="abs gold" id="s6a" style="left:0;width:1920px;text-align:center;top:400px;font-size:200px;--stroke:4.5px;--glow:30px;transform-origin:50% 55%">Short, sharp games.</div>
+  </div>
+  <!-- 7. Outro -->
+  <div class="scene" id="s7">
+    <div class="tavern"></div>
+    <div class="abs" style="left:360px;top:120px;width:1200px;height:560px;background:radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,170,60,0.28), transparent 70%)"></div>
+    <img class="abs" id="logo" src="assets/jackioh-logo.svg" style="left:460px;top:220px;width:1000px;height:324px" alt="">
+    <div class="abs body" id="s7a" style="left:0;width:1920px;text-align:center;top:640px;font-size:56px">Play the AI in your browser. No account.</div>
+    <div class="abs gold" id="s7b" style="left:0;width:1920px;text-align:center;top:750px;font-size:120px;--stroke:3px">jackioh.com</div>
+  </div>
+  <div id="flash"></div><div id="dip"></div>
+</div>
+<script src="common.js"></script>
+<script>
+const TAG = "land", IMPACT = 2.6; // page time of Clobberer's hit in seq/land (release 2.349 + 0.25)
+const faces = buildGrid($("grid"), 13, 128, 179, 12);
+const CUTS = [8, 16, 24, 32, 42, 50];
+window.renderAt = async function (t) {
+  pending.length = 0;
+  const sc = t < B(8) ? 1 : t < B(16) ? 2 : t < B(24) ? 3 : t < B(32) ? 4 : t < B(42) ? 5 : t < B(50) ? 6 : 7;
+  for (let i = 1; i <= 7; i++) show(`s${i}`, i === sc);
+  let fl = 0;
+  for (const k of CUTS) if (t >= B(k) && t < B(k) + 0.12) fl = 0.42 * (1 - eOut(seg(t, B(k), B(k) + 0.12)));
+  $("flash").style.opacity = fl;
+  let dip = 0;
+  if (t > 20.25) dip = eIO(seg(t, 20.25, 20.9));
+  $("dip").style.opacity = dip;
+  if (sc === 1) {
+    const k = Math.min(MONTAGE.length - 1, Math.floor(t / (BEAT / 2) + 1e-6));
+    setSrc($("s1img"), still(TAG, MONTAGE[k]));
+    const local = seg(t - k * (BEAT / 2), 0, BEAT / 2);
+    $("s1img").style.transform = `scale(${(1.0 + 0.05 * t / B(8)) * (1 + 0.035 * (1 - eOut(local)))})`;
+    slam($("s1a"), t, 0.0, 0.12, 1.5);
+    slam($("s1b"), t, B(3), 0.12, 1.5);
+  } else if (sc === 2) {
+    const page = IMPACT + (t - B(12));
+    setSrc($("s2img"), seqSrc(TAG, page));
+    const hit = seg(t, B(12), B(12) + 0.25);
+    const shake = t >= B(12) && t < B(12) + 0.25 ? Math.sin(t * 90) * 10 * (1 - hit) : 0;
+    $("s2img").style.transform = `scale(${1.04 + 0.04 * seg(t, B(8), B(12)) - 0.03 * eOut(hit)}) translate(${shake}px, ${shake * 0.6}px)`;
+    $("s2scrim").style.opacity = eOut(seg(t, B(12) - 0.1, B(12) + 0.1));
+    slam($("lethal"), t, B(12), 0.1, 1.9);
+  } else if (sc === 3) {
+    const k = clamp(Math.floor((t - B(16)) / B(2) + 1e-6), 0, 3);
+    setSrc($("s3img"), still(TAG, MANA[k]));
+    $("s3img").style.transform = `scale(${1.0 + 0.04 * seg(t, B(16), B(24))})`;
+    const big = $("manaBig");
+    big.textContent = `${k + 1}/${k + 1}`;
+    const x = seg(t, B(16 + 2 * k), B(16 + 2 * k) + 0.1);
+    big.style.opacity = 1; big.style.transform = `scale(${lerp(1.35, 1, eOut(x))})`;
+    $("s3ring").style.opacity = 0.6 + 0.4 * (1 - eOut(seg(t - B(16 + 2 * k), 0, 0.3)));
+    textIn($("s3a"), t, B(16));
+    textIn($("s3b"), t, B(18));
+  } else if (sc === 4) {
+    textIn($("s4a"), t, B(24));
+    textIn($("s4b"), t, B(27));
+    faces.forEach((f, i) => {
+      const at = B(24) + i * (B(4) / 25);
+      const x = eBack(seg(t, at, at + 0.16));
+      f.style.opacity = clamp(seg(t, at, at + 0.06));
+      f.style.transform = `translateY(${(1 - x) * 40}px) scale(${lerp(0.85, 1, x)})`;
+    });
+  } else if (sc === 5) {
+    const second = t >= B(37);
+    setSrc($("s5img"), still(TAG, second ? 20 : 19));
+    $("s5img").style.transform = second ? `scale(${1.0 + 0.06 * eOut(seg(t, B(37), B(42)))})` : `scale(${1.0 + 0.03 * seg(t, B(32), B(37))})`;
+    $("s5ring").style.opacity = second ? eOut(seg(t, B(37) + 0.05, B(37) + 0.25)) : 0;
+    $("s5ring").style.transform = second ? `scale(${lerp(1.3, 1, eOut(seg(t, B(37) + 0.05, B(37) + 0.25)))})` : "";
+    if (second) { hide($("s5a")); textIn($("s5b"), t, B(37)); } else { hide($("s5b")); textIn($("s5a"), t, B(32)); }
+  } else if (sc === 6) {
+    setSrc($("s6img"), seqSrc(TAG, IMPACT + 1.6));
+    slam($("s6a"), t, B(42), 0.12, 1.4);
+  } else {
+    const x = eOut(seg(t, B(50), B(50) + 0.4));
+    $("logo").style.opacity = x; $("logo").style.transform = `translateY(${(1 - x) * 30}px) scale(${lerp(0.94, 1, x)})`;
+    textIn($("s7a"), t, B(51));
+    textIn($("s7b"), t, B(53));
+  }
+  await settleImages();
+  return sc;
+};
+window.ready = (async () => { await document.fonts.ready; await Promise.all([...document.images].map((i) => i.decode().catch(() => {}))); })();
+</script></body></html>
