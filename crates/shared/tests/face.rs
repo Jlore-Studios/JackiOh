@@ -454,6 +454,7 @@ fn a_view() -> jackioh_engine::wire::PlayerView {
         sandbox: None,
         deck_marks: None,
         win_rates: None,
+        deck_sets: None,
     });
     let state = jackioh_engine::begin_game(&state).state;
     jackioh_engine::view_for(&state, PlayerId::P1)
