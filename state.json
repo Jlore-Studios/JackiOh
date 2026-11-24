@@ -21731,6 +21731,9 @@
           "claude": "strong"
         }
       }
+    },
+    "4770": {
+      "suggestion": true
     }
   },
   "labels_synced": "e752b3263433d01e",
@@ -44447,6 +44450,13 @@
         "title": "Patch: the AI reads its Tipsy-blurred cards as blurred",
         "verdict": "came to nothing",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-24T18:58:00Z",
+        "number": 4770,
+        "title": "Patch: Edwin Van'Spacechief previews its Combo gain",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
       }
     ],
     "declined": [
