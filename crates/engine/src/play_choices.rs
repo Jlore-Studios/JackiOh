@@ -363,9 +363,16 @@ pub fn row_for_card(state: &GameState, card: &CardInstance) -> Row {
     }
 }
 
-/// §10.5 step 4: permanents take a zone, a Spell resolves without one.
+/// §10.5 step 4: permanents take a zone, a Spell resolves without one. R4665000: so does a card that
+/// stacks on its target (S #9 Ticketed): the target's zone is its, named by no zone of the play.
 pub fn needs_zone(state: &GameState, card: &CardInstance) -> bool {
-    crate::faces::card_type_of(state, card) != CardType::Spell
+    crate::faces::card_type_of(state, card) != CardType::Spell && !stacks_on_target(state, card)
+}
+
+/// R4665000: whether this card's play lands on top of its declared target's pile (S #9 Ticketed's
+/// "Stack this on a permanent anywhere"), read off its face in hand; a face-down set never does.
+pub fn stacks_on_target(state: &GameState, card: &CardInstance) -> bool {
+    card.set_as.is_none() && crate::scripts::flags_of(state, card).stacks_on_target == Some(true)
 }
 
 /// §6.2 Stack: "may be played onto an occupied zone" (§3.2), read off the card's keywords where it is
@@ -1223,6 +1230,17 @@ pub fn legal_selections_for(
                         };
                         // R1081000: a Unit standing there is no backrow card (§6.1 Animated).
                         if on_field(held) && !crate::zones::is_standing_unit(state, held) {
+                            offer(Selection::Instance {
+                                instance_id: held.id.clone(),
+                            });
+                        }
+                    }
+                    // R4665000: a card lying on a unit zone is a backrow card there, no Unit.
+                    for slot in crate::zones::slots_of(side, Row::Units) {
+                        if let Some(held) = crate::zones::card_at(state, slot)
+                            && crate::zones::lies_on_unit_zone(state, held)
+                            && on_field(held)
+                        {
                             offer(Selection::Instance {
                                 instance_id: held.id.clone(),
                             });

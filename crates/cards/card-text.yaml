@@ -4489,10 +4489,8 @@ stinkyscape-009: # Ticketed
     cast: You're parked illegally. Ticket issued.
   zh:
     name: 罚单
-    base: "易碎3\n战吼：将另一个永久物置于这张牌之下。\n当这张牌离开场上时，被置于其下的永久物回到其控制者一方。"
-    radiant: "战吼：将另一个永久物置于这张牌之下。\n当这张牌离开场上时，被置于其下的永久物回到其控制者一方。"
-    previews:
-      the permanent beneath it: 被置于其下的永久物
+    base: "易碎3\n将这张牌堆叠在任意一个永久物上。"
+    radiant: 将这张牌堆叠在任意一个永久物上。
 stinkyscape-010: # Otherworldly Endurance
   flavour: Three prayers from a faith nobody here has heard of.
   voice:

@@ -69,14 +69,14 @@ use crate::scripts::meditative_plus::{
     c022_mountaintop_garden, c023_enormous_elderberry,
 };
 use crate::scripts::stinkyscape::{
-    c004_olivian_expanse, c007_the_greatest_heist, c010_2_divine_spirit, c011_2_arcane_missiles,
-    c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior, c018_3_casper, c018_imitated_instrumentality,
-    c023_warp_disruptor, c024_warp_disruptor_ii, c026_zolarketh, c033_drone_core_vii, c034_drone_core_viii,
-    c035_drone_core_ix, c036_drone_core_x, c042_core_researcher, c045_drone_commander,
-    c046_circadian_halfcycler, c049_spacemine, c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3,
-    c054_beam_v4, c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5,
-    c060_cannon_v5, c061_flak_v5, c070_zzoth, c074_paragon_x, c080_galaxy, c083_halo, c086_prototype_x2,
-    c087_siva_1, c094_tmack_trav, c096_ocean_tsunami, c109_xxfreshjack, c111_shockwave447,
+    c004_olivian_expanse, c007_the_greatest_heist, c009_ticketed, c010_2_divine_spirit,
+    c011_2_arcane_missiles, c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior, c018_3_casper,
+    c018_imitated_instrumentality, c023_warp_disruptor, c024_warp_disruptor_ii, c026_zolarketh,
+    c033_drone_core_vii, c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x, c042_core_researcher,
+    c045_drone_commander, c046_circadian_halfcycler, c049_spacemine, c050_beam_v3, c051_repeater_v3,
+    c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5,
+    c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c070_zzoth, c074_paragon_x, c080_galaxy, c083_halo,
+    c086_prototype_x2, c087_siva_1, c094_tmack_trav, c096_ocean_tsunami, c109_xxfreshjack, c111_shockwave447,
     c112_job_application, c115_scornboi, c116_megabase, c119_unsecure_system, c129_jlockeeds_missile_pod,
     c134_felinor_containment_chamber, c140_rush_token_launcher, c143_book_launcher, c148_alteran_reach,
     c149_wildar, c153_stimmycheck, c154_dice_of_doom, c158_stratos_swarm, c163_swear_loyalities,
@@ -1394,6 +1394,8 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.12c",
         c007_churnwalker::script_v0_6_12c,
     ),
+    // #4665's Ticketed (R4665000): the Cry that held a permanent beneath it in its own zone.
+    (c009_ticketed::ID, "v0.6.12b", c009_ticketed::script_v0_6_12b),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

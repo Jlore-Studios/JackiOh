@@ -61,7 +61,7 @@ const MEDITATIVE_PREVIEWED: [&str; 2] = ["meditative-008", "meditative-040"];
 /// R2476000: the cards that show what they remember, each proved in its own script file (issue #2476's
 /// pass over the catalog). Palantir's base face Tributes on its first steal, so only its Radiant face
 /// counts; Memory Leak's Radiant face chooses no mode, so only its base face marks one.
-const REMEMBERED: [&str; 38] = [
+const REMEMBERED: [&str; 37] = [
     "core-022",
     "core-039",
     "classic-004",
@@ -81,7 +81,6 @@ const REMEMBERED: [&str; 38] = [
     "meditative-096-1",
     "meditativeplus-020-1",
     "stinkyscape-005",
-    "stinkyscape-009",
     "stinkyscape-018-2",
     "stinkyscape-018-3",
     "stinkyscape-112",

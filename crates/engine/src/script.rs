@@ -617,6 +617,11 @@ pub struct StaticFlags {
     /// MD-F12, R1281: its controller may play any Unit onto its zone as if it had Stack.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stack_base: Option<bool>,
+    /// R4665000: "Stack this on a permanent anywhere" (S #9 Ticketed): its play takes no zone of its own
+    /// but the zone of the permanent its declared target names, either side's, either row, and it lands
+    /// on top of that pile, in that side's control (§3.2 Stack); on a unit zone it lies there, no Unit.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stacks_on_target: Option<bool>,
     /// MD-F12, R1281: how many times the Unit is Upgraded as it lands, read through `buffs`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stack_base_buffs: Option<i32>,

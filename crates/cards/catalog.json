@@ -18665,11 +18665,11 @@
           "n": 3
         }
       ],
-      "text": "Brittle 3\nCry: Hold another permanent beneath this.\nWhen this leaves the field, the permanent beneath it returns to its controller."
+      "text": "Brittle 3\nStack this on a permanent anywhere."
     },
     "radiant": {
       "keywords": [],
-      "text": "Cry: Hold another permanent beneath this.\nWhen this leaves the field, the permanent beneath it returns to its controller."
+      "text": "Stack this on a permanent anywhere."
     }
   },
   "stinkyscape-010": {

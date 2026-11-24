@@ -1288,6 +1288,18 @@ fn announced_zone(state: &GameState, run: &PlayRun, card: &CardInstance) -> Opti
     )
 }
 
+/// R4665000: the zone a card that stacks on its target lands in: that of the permanent its first
+/// declared target names, while that permanent still tops its zone on the field (§3.2).
+fn stack_target_zone(state: &GameState, run: &PlayRun) -> Option<ZoneSlot> {
+    let target = standing_targets(run).into_iter().find_map(|selection| match selection {
+        Selection::Instance { instance_id } => Some(instance_id),
+        _ => None,
+    })?;
+    let named = find_instance(state, &target)?;
+    let slot = crate::zones::slot_of(state, named)?;
+    card_at(state, slot).is_some_and(|top| top.id == named.id).then_some(slot)
+}
+
 /// R448: the card leaves its hand (or graveyard, R454) for the resolving zone (a cast's waits there
 /// already) and `cardAnnounced` goes out, showing what `cardPlayed` would (a face-down card only its
 /// zone, `view_for`). False when the card is no longer where the play takes it from (R226).
@@ -1624,6 +1636,11 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
         if let Some(theirs) = handed_over_zone(sink.state, run, &card) {
             run.zone = Some(theirs);
         }
+        // R4665000: a card that stacks on its target (S #9 Ticketed) takes the zone of the permanent
+        // the play named, either side's; with none left it lands in its graveyard, as R138's does.
+        if crate::play_choices::stacks_on_target(sink.state, &card) {
+            run.zone = stack_target_zone(sink.state, run);
+        }
     }
 
     // R227: a Trap or Field Trap set face-down takes a fresh id before anything names it on the field,
@@ -1672,8 +1689,12 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
         .is_some_and(crate::starship::exiles_stacked_play);
     let placed = match run.zone {
         Some(zone) => {
-            // R1086: an Equip play lands on top of its host, as a Stack card lands on its pile.
-            let stack = plays_on_stack(sink.state, &card) || base.is_some() || run.equip_host.is_some();
+            // R1086: an Equip play lands on top of its host, as a Stack card lands on its pile, and
+            // R4665000's on top of its target.
+            let stack = plays_on_stack(sink.state, &card)
+                || base.is_some()
+                || run.equip_host.is_some()
+                || crate::play_choices::stacks_on_target(sink.state, &card);
             let options = PlaceOnFieldOptions { stack: Some(stack) };
             if zone.row == Row::Backrow {
                 // R1081000: a Unit played into the backrow was vetted as a Flexible Unit (Flying has
@@ -1687,6 +1708,10 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
         None => false,
     };
     if placed {
+        // R4665000: on a unit zone it lies there, no Unit.
+        if crate::play_choices::stacks_on_target(sink.state, &card) {
+            crate::zones::lie_down(sink.state, &card.id);
+        }
         let turn = sink.state.turn;
         if let Some(on_field) = find_instance_mut(sink.state, &card.id) {
             on_field.summoned_turn = Some(turn);

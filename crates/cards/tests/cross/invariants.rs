@@ -3244,7 +3244,7 @@ mod i16_every_card_s_record_agrees_with_the_pile_that_holds_it {
 
     const KPOP: &str = "core-050"; // K-Pop Fanatic: Cry: Allure an enemy permanent, a steal at its next turn's start
     const TOWER: &str = "classicplus-033"; // Ivory Tower: a carrier
-    const TICKETED: &str = "stinkyscape-009"; // Ticketed: holds a permanent beneath it
+    const TICKETED: &str = "stinkyscape-009"; // Ticketed: stacks itself on a permanent anywhere (R4665000)
 
     fn i16(g: &Scenario) -> Vec<String> {
         create_invariant_monitor(g.state())
@@ -3255,7 +3255,8 @@ mod i16_every_card_s_record_agrees_with_the_pile_that_holds_it {
     }
 
     /// A board of real cards holding what I16 must not flag: a stolen unit, a backrow pile, a carried unit,
-    /// a held card and a buffed hand card. Also the stolen unit.
+    /// a Ticketed stacked on an enemy Unit in the enemy's control (R4665000) and a buffed hand card. Also
+    /// the stolen unit.
     fn board() -> (Scenario, CardInstance) {
         let mut g = scenario(json!({
             "p1": {
@@ -3276,7 +3277,7 @@ mod i16_every_card_s_record_agrees_with_the_pile_that_holds_it {
         }));
         let stolen = g.unit_at(PlayerId::P2, 1);
         let held = g.unit_at(PlayerId::P2, 2);
-        g.play(TICKETED, json!({ "zone": 1, "targets": pick::instance(&held) }));
+        g.play(TICKETED, json!({ "targets": pick::instance(&held) }));
         g.play(KPOP, json!({ "targets": pick::instance(&stolen) }));
         g.end_turn();
         g.end_turn();
@@ -3285,7 +3286,13 @@ mod i16_every_card_s_record_agrees_with_the_pile_that_holds_it {
             (g.card(&stolen).controller, g.card(&stolen).owner),
             (PlayerId::P1, PlayerId::P2)
         );
-        assert_eq!(g.state().held.iter().flatten().count(), 1);
+        let stacked = ZoneSlot {
+            player: PlayerId::P2,
+            row: Row::Units,
+            lane: 2,
+        };
+        assert_eq!(beneath_at(g.state(), stacked).len(), 1);
+        assert_eq!(g.card(TICKETED).controller, PlayerId::P2);
         let pile = ZoneSlot {
             player: PlayerId::P1,
             row: Row::Backrow,
@@ -3319,7 +3326,7 @@ mod i16_every_card_s_record_agrees_with_the_pile_that_holds_it {
     }
 
     #[test]
-    fn i16_is_clean_with_a_stolen_unit_a_backrow_pile_a_carried_unit_a_held_card_and_a_buffed_hand_card() {
+    fn i16_is_clean_with_a_stolen_unit_backrow_and_ticketed_piles_a_carried_unit_and_a_buffed_hand_card() {
         assert_eq!(i16(&board().0), no_violations());
     }
 

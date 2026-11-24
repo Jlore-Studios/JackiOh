@@ -39,11 +39,13 @@ pub(crate) fn units_of(state: &GameState, player: PlayerId) -> Vec<CardInstance>
     let side = &state.players[player];
     let mut units: Vec<CardInstance> = Vec::new();
     for lane in 1..=UNIT_ZONES {
+        // R4665000: a card lying on a unit zone is no Unit, and no health judges it.
         if let Some(top) = side
             .units
             .get((lane - 1) as usize)
             .and_then(|pile| pile.as_ref())
             .and_then(|pile| pile.first())
+            && !crate::zones::lies_on_unit_zone(state, top)
         {
             units.push(top.clone());
         }
