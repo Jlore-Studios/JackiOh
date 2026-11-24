@@ -615,6 +615,44 @@ mod the_clocks {
         assert!(back.timer(TimerKey::DuosGrace { seat: A2 }).is_none());
     }
 
+    /// §13.8, B37, R744, R3767000: a socket that drops while it is being seated starts its seat's
+    /// grace like any other drop. The re-seat's `Connected` already ran before the drop's `Left`,
+    /// so the dead `Attached` arrives with the seat gone: the grace keeps running, the AI is left
+    /// out of it until the deadline, and past it the AI takes the seat.
+    #[test]
+    fn b37_a_socket_dropped_while_being_seated_leaves_the_grace_for_the_ai() {
+        let mut table = Table::new(setup(opening("duos-grace-3")));
+        table.connect(A1);
+        table.connect(A2);
+        table.feed(DuosHostEvent::Arm);
+        table.through_the_mulligans();
+        table.feed(DuosHostEvent::Left { seat: A1 });
+        table.feed(DuosHostEvent::Disconnected { seat: A1 });
+        let started = table.timer(TimerKey::DuosGrace { seat: A1 });
+        assert_eq!(started, Some(table.now + grace_ms()));
+        let notes = table.notes.len();
+        table.feed(DuosHostEvent::Attached { seat: A1 });
+        assert_eq!(table.timer(TimerKey::DuosGrace { seat: A1 }), started);
+        assert!(!table.host.ai_playing(A1));
+        assert_eq!(table.notes.len(), notes);
+        assert!(
+            table
+                .notes
+                .iter()
+                .all(|note| !matches!(note, DuosNote::SeatBack { seat } if *seat == A1)),
+            "{:?}",
+            table.notes
+        );
+        table.sleep(grace_ms());
+        assert!(table.host.ai_playing(A1));
+        assert!(
+            table
+                .notes
+                .iter()
+                .any(|note| matches!(note, DuosNote::SeatAiPlaying { seat } if *seat == A1))
+        );
+    }
+
     #[test]
     fn r1047000_a_game_folded_back_past_its_ceiling_ends_at_once_in_a_draw_and_one_inside_arms_it() {
         let mut late = setup(opening("duos-ceiling-1"));

@@ -15,7 +15,7 @@ caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`
 `SweepOptions`'s `now`); a decision the sweep's clock found slow goes out the same way, to `SweepOptions`'s `retime`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
 The Death, the turn-hook, the activation, the attack-hook and the awakening prices of a decision (R2424000,
-R2477000, R2564000, R2688000, R3064000) travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
+R2477000, R2564000, R2688000, R3064000), and the evolution prices (R4648000), travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
 through the search to the scorers that read them. `decide` takes them from `decision_prices` on its `probe_world`, and
 `decision_prices_at` gives a caller outside a decision the same prices for a state, on `AI_DECISION_PRICE_NODES`:
 `cargo jackioh positions` scores its rows with them (R4070000). Any other call outside a decision passes
@@ -220,6 +220,18 @@ card with a wake trigger on either field, and each Unit with one in the seat's o
 prices the controller's evaluation after the one wake less after the other, each crystal gained at
 `next_turn_mana`; `slumber_worth` adds `AI_EVAL.awaken` of it for both sides' sleepers, inside the slumber
 share, and `GREEDY_EVAL` keeps 0.
+An unevolved card's Evolve text counts by its evolution (R4648000): `evolve_prices` evolves each unit on
+either field that can still evolve, and each such Unit in the seat's own hand, placed first (R923001), on a
+sandbox copy within `AI_EVOLVE_PROBE_NODES`, and prices the controller's evaluation after it less before
+it, each crystal gained at `next_turn_mana`, split over the runs its text took (R3536003). The same root
+reads the card's road there (`EvolveCondition`) on throwaway copies: its "Evolves when" holding once its
+side's empty unit zones are filled, once the seat's own hand gains (0) Cost cards, or once it is left on 1
+health, and an event otherwise (its own trigger, a Stack, an enemy's hand). `unit_worth` adds
+`AI_EVAL.evolve` of the price, once for each run its text would take now, times how close the card stands:
+the share of its side's zones filled, of the free cards it needs that the hand holds, or of its health
+lost, and `evolve_event_share` for an event, inside the Brittle share, for both sides' units. A card its
+own turn or attack text evolves (the Wasp, Space Invader, Lantern Distiller) counts through that text's
+price, the enemy's hand is never probed, and `GREEDY_EVAL` keeps 0.
 A passed line's Float counts toward the seat's own "Float reduces cost" cards (R3695000): the engine's
 `float_cuts_in_hand` reads what the Float took off each of them, and `float_credit` pays
 `AI_EVAL.float_discount` for each crystal that went toward one still above the seat's crystals (its

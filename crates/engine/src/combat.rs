@@ -339,6 +339,10 @@ pub fn why_cannot_switch_in(
     if crate::slumber::is_slumbering(unit) {
         return Err(EngineError::new(crate::restrictions::SLUMBER_REFUSAL));
     }
+    // R4665000: nor does a card lying on a unit zone, which is no Unit and has no position.
+    if crate::zones::lies_on_unit_zone(auras.state(), unit) {
+        return Err(EngineError::new("that card is no Unit"));
+    }
     // R1174000: a Frozen Unit's own switch is refused; an effect's (R20) is not.
     if spend_exertion && unit.frozen.is_some() {
         return Err(EngineError::new(FROZEN_REFUSAL));

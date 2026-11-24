@@ -20,7 +20,7 @@ import {
   CLOCK_ALARM_LOOKAHEAD_MS,
   CLOCK_ALARM_SHARP_FROM_MS,
 } from "./constants.ts";
-import { PROMPT_CLOCK_MS } from "@jackioh/server-config";
+import { MULLIGAN_CLOCK_MS, PROMPT_CLOCK_MS } from "@jackioh/server-config";
 import { createAudioEngine, setAudioEngineForTests } from "./engine.ts";
 import { DEFAULT_AUDIO_SETTINGS, resetAudioSettingsForTests, writeAudioSettings } from "./settings.ts";
 import { FakeClock, fakeContextFactory, fakeSpeech } from "./test/fakeAudio.ts";
@@ -111,6 +111,13 @@ describe("R506 the turn clock's alarm: the schedule (R439)", () => {
   it("R4562000 the prompt clock's 30 seconds cover the alarm's whole schedule", () => {
     const heard = countdown(PROMPT_CLOCK_MS, REPAINT_MS);
     expect(heard.map((b) => b.second)).toEqual(Array.from({ length: FROM_S }, (_, i) => FROM_S - i));
+  });
+
+  it("R268 a 45-second mulligan countdown plans beats only for its last 30 seconds", () => {
+    const heard = countdown(MULLIGAN_CLOCK_MS, REPAINT_MS);
+    expect(heard.map((b) => b.second)).toEqual(Array.from({ length: FROM_S }, (_, i) => FROM_S - i));
+    expect(heard[0]?.second).toBe(FROM_S);
+    for (const beat of heard) expect(beat.atMs, `second ${String(beat.second)}`).toBe(MULLIGAN_CLOCK_MS - beat.second * CLOCK_ALARM_BEAT_MS);
   });
 
   it("R506 a beat that cannot be heard is passed over, not saved up for when sound returns", () => {
@@ -209,6 +216,19 @@ describe("R506 the turn clock's alarm through the engine", () => {
     expect(log.filter((c) => c.id === "heartbeat")).toHaveLength(FROM_S - SHARP_S);
     expect(log.filter((c) => c.id === "clockTick").map((c) => c.params?.amount)).toEqual(Array.from({ length: SHARP_S }, (_, i) => i + 1));
   });
+
+  it("R506 the alarm's own beats keep sounding in a hidden tab while other clockTick cues stay silent", () => {
+    const factory = fakeContextFactory({ state: "running", resumeMode: "run" });
+    const clock = new FakeClock(10_000);
+    engine = createAudioEngine({ createContext: factory.create, speech: fakeSpeech().port, now: clock.now, visibility: () => "hidden" });
+    engine.unlock();
+    const memory = stepClockAlarm(engine, DEFAULT_AUDIO_SETTINGS, CLOCK_ALARM_IDLE, 12_300, true);
+    expect(sfxLog(engine).map((c) => [c.id, c.delayMs])).toEqual([["heartbeat", 300]]);
+    expect(memory.lastSecond).toBe(12);
+    // The same id through any other caller (a set-piece bed's `clockTick`) carries no flag.
+    expect(engine.playSfx("clockTick", { amount: 5 })).toBe(false);
+    expect(sfxLog(engine)).toHaveLength(1);
+  });
 });
 
 /* The hook */
@@ -220,17 +240,20 @@ describe("R506 useTurnClockAlarm", () => {
     localStorage.clear();
   });
 
-  function recordingEngine(state: "running" | "locked"): AudioEngine & { beats: [string, number | undefined][] } {
+  function recordingEngine(state: "running" | "locked"): AudioEngine & { beats: [string, number | undefined][]; alarms: unknown[] } {
     const beats: [string, number | undefined][] = [];
+    const alarms: unknown[] = [];
     const fake = {
       beats,
+      alarms,
       state: () => state,
-      playSfx: (id: string, _params?: unknown, delayMs?: number) => {
+      playSfx: (id: string, _params?: unknown, delayMs?: number, options?: unknown) => {
         beats.push([id, delayMs]);
+        alarms.push(options);
         return true;
       },
     };
-    return fake as unknown as AudioEngine & { beats: [string, number | undefined][] };
+    return fake as unknown as AudioEngine & { beats: [string, number | undefined][]; alarms: unknown[] };
   }
 
   it("R506 each repaint's reading beats through the audio engine, once per second", () => {
@@ -246,6 +269,8 @@ describe("R506 useTurnClockAlarm", () => {
       ["heartbeat", 300],
       ["heartbeat", 300],
     ]);
+    // Caller-scoped: every alarm beat carries the hidden-tab exemption flag.
+    expect(engine.alarms).toEqual([{ alarm: true }, { alarm: true }]);
   });
 
   it("R506 the opponent's clock and a locked context stay silent, and nothing throws without audio", () => {
