@@ -8,6 +8,7 @@ import JSON5 from "json5";
 import { describe, expect, it } from "vitest";
 
 import {
+  EDGE_CACHED_READ,
   DAILY_SWEEP_CRON,
   forServer,
   HEALTH_PATH,
@@ -122,12 +123,16 @@ describe("#4011 nothing in front caches /api/*", () => {
     expect(tf).not.toMatch(/cache/i);
   });
 
-  it("never calls the Cache API from the Worker", () => {
-    const sources = ["apps/edge/src/index.ts", "apps/edge/src/routing.ts"]
-      .map((file) => readFileSync(join(ROOT, file), "utf8"))
-      .join("\n");
-    expect(sources).not.toMatch(/\bcaches\b/);
-    expect(sources).not.toMatch(/cacheTtl|cacheEverything/i);
+  it("R4691002 calls the Cache API only for a shipped patch's catalog, through edgeCachedRead", () => {
+    const index = readFileSync(join(ROOT, "apps/edge/src/index.ts"), "utf8");
+    const routing = readFileSync(join(ROOT, "apps/edge/src/routing.ts"), "utf8");
+    // #4011: one call site, which hands `caches.default` to the helper behind `isEdgeCachedRead`.
+    expect(index.match(/\bcaches\b/g)).toHaveLength(1);
+    expect(index).toMatch(/if \(isEdgeCachedRead\(request\)\) \{\s+return edgeCachedRead\(\s+request,\s+caches\.default,/u);
+    expect(routing).not.toMatch(/\bcaches\b/);
+    // #4713: the one read it may keep is a versioned catalog, never /api/catalog or anything else.
+    expect(EDGE_CACHED_READ.source).toBe(String.raw`^\/api\/catalog\/[^/]+$`);
+    expect(`${index}\n${routing}`).not.toMatch(/cacheTtl|cacheEverything/i);
   });
 
   it("gives /api/* no rule in public/_headers", () => {

@@ -57,6 +57,55 @@ export function precompressedModule(stored: Response): Response {
 }
 
 /**
+ * #4713, R4691002: the server's one read the Worker answers from Cloudflare's cache: a shipped patch's
+ * catalog, `GET /api/catalog/<version>`, the same bytes for everybody whatever the request carries
+ * (#4011's rule, held by the server's test), which the server marks `public`. Only with no query string,
+ * so the cache's key is the path alone. Never `/api/catalog` itself, whose `x-deployed-commit` the
+ * deploys' live check polls (CLAUDE.md rule 13), and no other `/api/*` read (#4011).
+ */
+export const EDGE_CACHED_READ = /^\/api\/catalog\/[^/]+$/u;
+
+export function isEdgeCachedRead(request: Request): boolean {
+  const url = new URL(request.url);
+  return request.method === "GET" && url.search === "" && EDGE_CACHED_READ.test(url.pathname);
+}
+
+/** The slice of the Workers Cache API (the data centre's default cache) `edgeCachedRead` uses. */
+export interface EdgeCache {
+  match(request: Request): Promise<Response | undefined>;
+  put(request: Request, response: Response): Promise<void>;
+}
+
+/**
+ * #4713, R4691002: a read `isEdgeCachedRead` names, from `cache` when this data centre holds it, so it
+ * never reaches the server; else from `load` (the server), kept through `waitUntil` when the server
+ * marked it `public` (a 404, or the live catalog's `no-store`, is never kept). A cache that fails is
+ * passed by: the server answers as it would with no cache.
+ */
+export async function edgeCachedRead(
+  request: Request,
+  cache: EdgeCache,
+  load: () => Promise<Response>,
+  waitUntil: (promise: Promise<unknown>) => void,
+): Promise<Response> {
+  try {
+    const kept = await cache.match(request);
+    if (kept !== undefined) return kept;
+  } catch (error) {
+    console.warn("edge.cache_unreadable", error);
+  }
+  const answer = await load();
+  if (answer.status === 200 && /\bpublic\b/u.test(answer.headers.get("Cache-Control") ?? "")) {
+    waitUntil(
+      cache.put(request, answer.clone()).catch((error: unknown) => {
+        console.warn("edge.cache_unwritten", error);
+      }),
+    );
+  }
+  return answer;
+}
+
+/**
  * The request as the server sees it. R190: the per-IP limits read the `X-Forwarded-For` entry
  * `TRUSTED_PROXY_HOPS` places from the right, so the Worker replaces whatever the caller wrote with
  * the one address Cloudflare saw (`CF-Connecting-IP`), and `TRUSTED_PROXY_HOPS` is 1.

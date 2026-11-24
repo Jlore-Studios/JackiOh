@@ -63,6 +63,8 @@ vi.mock("@cloudflare/containers", () => ({
 
 const COMMIT = "abc123";
 const LISTENING = new Response("from the server");
+/** The context a request gets, for a test that is not about what it leaves running. */
+const REQUEST_CTX = { waitUntil: vi.fn(), passThroughOnException: vi.fn() } as unknown as ExecutionContext;
 /** The context a cron run gets, for a test that is not about what the run tells people. */
 const CRON_CTX = { waitUntil: vi.fn() } as unknown as ExecutionContext;
 /** #4118: the settings of most tests: the commit and nothing else. */
@@ -701,9 +703,49 @@ describe("the Worker's routes", () => {
     } as unknown as Env;
   }
 
+  it("R4691002 answers a shipped patch's catalog from the edge's cache, and the live one from the server", async () => {
+    const held = new Map<string, Response>();
+    const cache = {
+      match: vi.fn((request: Request) => Promise.resolve(held.get(request.url)?.clone())),
+      put: vi.fn((request: Request, response: Response) => {
+        held.set(request.url, response);
+        return Promise.resolve();
+      }),
+    };
+    vi.stubGlobal("caches", { default: cache });
+    try {
+      const fetch = vi.fn((request: Request) =>
+        Promise.resolve(
+          new URL(request.url).pathname === "/api/catalog"
+            ? new Response("{}", { headers: { "Cache-Control": "no-store" } })
+            : new Response("{}", { headers: { "Cache-Control": "public, max-age=86400" } }),
+        ),
+      );
+      const env = routedEnv(fetch);
+      const pending: Promise<unknown>[] = [];
+      const ctx = {
+        waitUntil: (promise: Promise<unknown>) => {
+          pending.push(promise);
+        },
+        passThroughOnException: vi.fn(),
+      } as unknown as ExecutionContext;
+
+      for (let n = 0; n < 2; n += 1) {
+        await worker.fetch(new Request("https://jackioh.com/api/catalog/v0.6.9"), env, ctx);
+        await worker.fetch(new Request("https://jackioh.com/api/catalog"), env, ctx);
+        await Promise.all(pending);
+      }
+
+      const reached = fetch.mock.calls.map(([request]) => new URL(request.url).pathname);
+      expect(reached).toEqual(["/api/catalog/v0.6.9", "/api/catalog", "/api/catalog"]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("answers anything that is neither the server's nor the module's with 404", async () => {
     const env = routedEnv(() => Promise.resolve(new Response("unreached")));
-    const answer = await worker.fetch(new Request("https://jackioh.com/login"), env);
+    const answer = await worker.fetch(new Request("https://jackioh.com/login"), env, REQUEST_CTX);
 
     expect(answer.status).toBe(404);
     expect(await answer.text()).toBe("Not found");
@@ -712,7 +754,7 @@ describe("the Worker's routes", () => {
 
   it("#4297 carries the static security headers on its own 404", async () => {
     const env = routedEnv(() => Promise.resolve(new Response("unreached")));
-    const answer = await worker.fetch(new Request("https://jackioh.com/login"), env);
+    const answer = await worker.fetch(new Request("https://jackioh.com/login"), env, REQUEST_CTX);
 
     expect(answer.headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(answer.headers.get("X-Frame-Options")).toBe("DENY");
@@ -726,6 +768,7 @@ describe("the Worker's routes", () => {
     const answer = await worker.fetch(
       new Request("https://jackioh.com/api/catalog", { headers: { "X-Forwarded-For": "spoofed" } }),
       env,
+      REQUEST_CTX,
     );
 
     expect(env.SERVER.idFromName).toHaveBeenCalledWith("main");
@@ -746,7 +789,7 @@ describe("the Worker's routes", () => {
       vi.spyOn(console, level).mockImplementation(() => undefined),
     );
     try {
-      await worker.fetch(new Request("https://jackioh.com/ws/match?matchId=m1&token=SECRET-TOKEN"), env);
+      await worker.fetch(new Request("https://jackioh.com/ws/match?matchId=m1&token=SECRET-TOKEN"), env, REQUEST_CTX);
 
       const forwarded = fetch.mock.calls[0]?.[0] as Request;
       expect(new URL(forwarded.url).searchParams.get("token")).toBe("SECRET-TOKEN");
@@ -1317,7 +1360,7 @@ describe("#3183 the engine's compressed module", () => {
     const env = { ASSETS: assets, SERVER: { idFromName: vi.fn(), get: vi.fn() } };
     // An incoming request carries Cloudflare's `cf` facts, which a test's own Request has none of.
     const path = new Request("https://jackioh.com/assets/jackioh_wasm_bg.wasm-BIXTgzSO.br") as Parameters<typeof worker.fetch>[0];
-    const served = await worker.fetch(path, env as unknown as Env);
+    const served = await worker.fetch(path, env as unknown as Env, REQUEST_CTX);
     expect(assets.fetch).toHaveBeenCalledWith(path);
     expect(env.SERVER.get).not.toHaveBeenCalled();
     expect(served.headers.get("Content-Encoding")).toBe("br");

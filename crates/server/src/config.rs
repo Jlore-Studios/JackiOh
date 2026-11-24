@@ -1680,6 +1680,11 @@ pub const DAILY_SWEEP_MINUTES: u64 = 60;
 /// §9.13: the route the Worker's cron posts the sweep to; outside `/api`, so the Worker's public
 /// `fetch` never forwards it.
 pub const DAILY_SWEEP_PATH: &str = "/daily-sweep";
+/// R4691002 (#4713): how long a shipped patch's catalog (`GET /api/catalog/:version`, R388) may be kept
+/// by a browser and by the Worker's edge cache, which then answers a repeat read without the server.
+/// A shipped version never reopens, but #1371 once renamed them all; a day bounds what a rename would
+/// leave stale without a purge.
+pub const CATALOG_SNAPSHOT_MAX_AGE_SECONDS: i64 = 86_400;
 /// R4691000: the route the Worker asks, as the server goes to sleep, when a sweep next has something
 /// due (`daily::notify::next_due`); outside `/api`, as the sweep's is.
 pub const DAILY_NEXT_PATH: &str = "/daily-next";

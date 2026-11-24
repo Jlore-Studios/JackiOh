@@ -20,7 +20,9 @@ import {
   READY_PATH,
   SERVER_PORT,
   containerEnv,
+  edgeCachedRead,
   forServer,
+  isEdgeCachedRead,
   isModulePath,
   isServerPath,
   nextDueOf,
@@ -346,7 +348,7 @@ function server(env: Env): DurableObjectStub<Server> {
 }
 
 export default {
-  async fetch(request, env): Promise<Response> {
+  async fetch(request, env, ctx): Promise<Response> {
     const { pathname } = new URL(request.url);
     if (isModulePath(pathname)) return precompressedModule(await env.ASSETS.fetch(request));
     if (!isServerPath(pathname)) {
@@ -354,6 +356,17 @@ export default {
       const headers = new Headers();
       withSecurityHeaders(headers);
       return new Response("Not found", { status: 404, headers });
+    }
+    // #4713, R4691002: a shipped patch's catalog comes from this data centre's cache when it holds it.
+    if (isEdgeCachedRead(request)) {
+      return edgeCachedRead(
+        request,
+        caches.default,
+        () => server(env).fetch(forServer(request)),
+        (promise) => {
+          ctx.waitUntil(promise);
+        },
+      );
     }
     return server(env).fetch(forServer(request));
   },

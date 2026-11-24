@@ -62,6 +62,11 @@ custom domains and Access are `infra/cloudflare.tf`'s.
   `DAILY_NEXT_DUE_KEY` before the stop. `onStart` forgets it, so a server stopped any other way left
   none. A running server, a kept time that has come, no kept time, or a storage that cannot be read
   all mean a sweep as before.
+- **A shipped patch's catalog comes from the edge** (R4691002, #4713). A query-less
+  `GET /api/catalog/<version>` (`isEdgeCachedRead`) is answered from the data centre's cache when it
+  holds it (`edgeCachedRead`, the Worker's one Cache API call), and a 200 the server marked `public`
+  (a day, `CATALOG_SNAPSHOT_MAX_AGE_SECONDS`) is kept for the next read. `/api/catalog` and every other
+  `/api/*` read are never cached (#4011).
 - **When it cannot reach the server** (#3618). A server that cannot boot, or that the Worker cannot reach,
   tells nobody itself, so the Worker raises `server.unreachable` (`src/alerts.ts`) when a request's start
   threw or outran `START_WAIT_MS`, and when the daily `/readyz` fails. It tells people as the server's own

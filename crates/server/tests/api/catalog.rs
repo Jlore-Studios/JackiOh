@@ -581,6 +581,80 @@ mod r388_get_api_catalog_version_serves_the_catalog_as_each_patch_left_it_b4_2 {
     }
 
     #[tokio::test]
+    async fn r4691002_a_shipped_snapshot_may_be_kept_and_the_live_catalog_never() {
+        let app = test_app().await;
+        let versions = catalog_api::load_patch_versions().await;
+        let shipped = versions.first().expect("patches.json has versions");
+        let snapshot = get(&app, &format!("/api/catalog/{shipped}"), None).await;
+        assert_eq!(snapshot.status, 200);
+        assert_eq!(
+            snapshot.headers["cache-control"],
+            format!(
+                "public, max-age={}",
+                jackioh_server::config::CATALOG_SNAPSHOT_MAX_AGE_SECONDS
+            )
+        );
+        // The deploy's live check reads the running commit off the live catalog (CLAUDE.md rule 13).
+        assert_eq!(
+            get(&app, "/api/catalog", None).await.headers["cache-control"],
+            "no-store"
+        );
+        // A version with no snapshot is answered no-store, never kept.
+        let unknown = get(&app, "/api/catalog/v9.9.9", None).await;
+        assert_eq!(unknown.status, 404);
+        assert_ne!(
+            unknown.headers.get("cache-control").map(|value| value.as_bytes()),
+            Some(snapshot.headers["cache-control"].as_bytes())
+        );
+    }
+
+    /// #4011's rule for a read a shared cache keeps: the same bytes and the same `Cache-Control` whatever
+    /// the request carries, so a cache keyed on the path alone poisons nobody.
+    #[tokio::test]
+    async fn r4691002_a_shipped_snapshot_is_the_same_bytes_whatever_the_caller_carries() {
+        let app = test_app().await;
+        let versions = catalog_api::load_patch_versions().await;
+        let path = format!("/api/catalog/{}", versions.first().expect("a shipped patch"));
+        let variants: [&[(&str, &str)]; 5] = [
+            &[],
+            &[("authorization", "Bearer e2e-token-p1")],
+            &[("accept-language", "fr-FR"), ("cookie", "sid=abc")],
+            &[
+                ("x-forwarded-host", "evil.example"),
+                ("x-original-url", "/api/admin"),
+                ("x-rewrite-url", "/api/admin"),
+            ],
+            &[
+                ("authorization", "Bearer e2e-token-p2"),
+                ("accept-language", "zh-CN"),
+            ],
+        ];
+        let mut answers = Vec::new();
+        for headers in variants {
+            let mut builder = Request::builder()
+                .method("GET")
+                .uri(&path)
+                .header("x-forwarded-for", "203.0.113.7");
+            for (name, value) in headers {
+                builder = builder.header(*name, *value);
+            }
+            let response = app::router(app.clone())
+                .oneshot(builder.body(Body::empty()).expect("a well-formed request"))
+                .await
+                .expect("the router always answers");
+            let cache = response.headers()["cache-control"].clone();
+            let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+                .await
+                .expect("the body reads");
+            answers.push((cache, bytes));
+        }
+        assert!(
+            answers.windows(2).all(|pair| pair[0] == pair[1]),
+            "every caller gets the same snapshot"
+        );
+    }
+
+    #[tokio::test]
     async fn r388_shows_what_a_patch_changed() {
         let app = test_app().await;
         let v0_1_0 = get(&app, "/api/catalog/v0.1.0", None).await.json();

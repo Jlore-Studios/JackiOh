@@ -15,6 +15,7 @@ use sha2::{Digest, Sha256};
 use crate::api::http::{ApiError, ApiErrorCode, ApiResult, Req};
 use crate::app::App;
 use crate::bug_reports::BUG_REPORTS_HEADER;
+use crate::config::CATALOG_SNAPSHOT_MAX_AGE_SECONDS;
 
 /// The patch list (R388, B4.2): `patches.json`, the list of patches in the order they were made.
 /// Compiled in from the cards crate's copy, like the catalog itself.
@@ -223,7 +224,8 @@ pub async fn get_catalog(app: &Arc<App>, _req: Req) -> ApiResult {
 
 /// `GET /api/catalog/:version` (SPEC §9.4, R388, B4.2).
 /// Public: the snapshot patch `version` left, as `{ version, defs }`, from compiled card history
-/// (`jackioh_cards::catalog_defs_at`), or `app.catalog` when it matches its version. An unknown,
+/// (`jackioh_cards::catalog_defs_at`), `public` for `CATALOG_SNAPSHOT_MAX_AGE_SECONDS` (R4691002), or
+/// `app.catalog` when it matches its version, `no-store` as the live catalog is. An unknown,
 /// malformed or traversal-shaped version is 404, with no file read the request selects.
 pub async fn get_catalog_version(app: &Arc<App>, req: Req) -> ApiResult {
     let version = req.params.get("version").map(String::as_str).unwrap_or_default();
@@ -232,10 +234,15 @@ pub async fn get_catalog_version(app: &Arc<App>, req: Req) -> ApiResult {
         let defs_json =
             serde_json::to_string(defs).unwrap_or_else(|error| panic!("CardDefs serialize: {error}"));
         let body = format!("{{\"version\":{version_json},\"defs\":{defs_json}}}");
+        // R4691002: a shipped snapshot is the same bytes for everybody, kept a while by the browser and
+        // the Worker's edge cache, so a repeat read never reaches (or wakes) the server.
         let response = Response::builder()
             .status(200)
             .header("content-type", "application/json; charset=utf-8")
-            .header("cache-control", "no-store")
+            .header(
+                "cache-control",
+                format!("public, max-age={CATALOG_SNAPSHOT_MAX_AGE_SECONDS}"),
+            )
             .body(Body::from(body))
             .unwrap_or_else(|error| panic!("a catalog response: {error}"));
         return Ok(response);
