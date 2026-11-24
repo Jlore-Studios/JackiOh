@@ -125,8 +125,8 @@ fn probe_bloodbloom_echo_reminisce() {
             break;
         }
         println!("prompt {} options {:?}", p.prompt, p.options);
-        let first = serde_json::to_value(&p.options[0]).unwrap();
-        s.answer(first);
+        let first = p.options[0].key.clone();
+        s.answer(json!(first));
     }
     println!("prompts {n} hand {:?}", dump_hand(&s, P1));
     println!("exile {:?}", s.pile(P1, "exile").iter().map(|c| c.def_id.clone()).collect::<Vec<_>>());
@@ -179,4 +179,46 @@ fn probe_spirit_lash_flashback_under_garden() {
     for a in s.offered(P1) {
         println!("offered {}", serde_json::to_string(&a).unwrap());
     }
+}
+
+/// Probe 8: KY's Intuition's offer in both views.
+#[test]
+fn probe_kys_intuition_views() {
+    const KYI: &str = "meditativeplus-025";
+    let mut s = game(json!({
+        "seed": "p8",
+        "p1": { "hand": [KYI, FILLER], "library": [FILLER, FILLER, FILLER], "mana": 10 },
+        "p2": { "hand": [FILLER], "library": [FILLER, FILLER, FILLER] },
+    }));
+    s.play(KYI, json!({}));
+    let pending = s.state().pending.clone().expect("prompt");
+    println!("state options: {:?}", pending.options.iter().map(|o| (o.key.clone(), o.label.chars().take(40).collect::<String>())).collect::<Vec<_>>());
+    println!("resume data keys: {:?}", pending.resume.data.keys().collect::<Vec<_>>());
+    println!("resume data: {}", serde_json::to_string(&pending.resume.data).unwrap().chars().take(600).collect::<String>());
+    let v1 = serde_json::to_string(&s.view(P1)).unwrap();
+    let v2 = serde_json::to_string(&s.view(P2)).unwrap();
+    let at = v1.find("\"pending\"").unwrap_or(0);
+    println!("p1 view pending: {}", v1[at..].chars().take(900).collect::<String>());
+    let at2 = v2.find("\"pending\"").unwrap_or(0);
+    println!("p2 view pending: {}", v2[at2..].chars().take(500).collect::<String>());
+}
+
+/// Probe 9: Level Up! (Radiant) and a Trigor chain body with a stats override.
+#[test]
+fn probe_trigor_radiant_chain() {
+    const TRIGOR: &str = "traininggrounds-025";
+    const KILL: &str = "traininggrounds-046";
+    let mut s = game(json!({
+        "seed": "p9",
+        "p1": { "hand": [KILL, KILL, KILL], "field": [{ "def": TRIGOR, "radiant": true, "lane": 1 }], "library": [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER], "mana": 10 },
+        "p2": { "hand": [FILLER], "library": [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER] },
+    }));
+    let t = s.unit_at(P1, 1).id;
+    s.play(KILL, pick::targets(pick::id(&t)));
+    let units: Vec<_> = active_units_of(s.state(), P1).into_iter().map(|c| { let v = unit_view(s.state(), c); (c.def_id.clone(), c.radiant, v.attack, v.health) }).collect();
+    println!("after radiant death: {units:?}");
+    let t2 = s.unit_at(P1, 1).id;
+    s.play(KILL, pick::targets(pick::id(&t2)));
+    let units: Vec<_> = active_units_of(s.state(), P1).into_iter().map(|c| { let v = unit_view(s.state(), c); (c.def_id.clone(), c.radiant, v.attack, v.health) }).collect();
+    println!("same turn second death (chain mark): {units:?}");
 }

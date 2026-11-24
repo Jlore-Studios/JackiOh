@@ -249,3 +249,21 @@ fn probe_ticketed_radiant_brittle() {
             s.view(P1).you.backrow.iter().flatten().map(|b| format!("{:?}", b).chars().take(0).collect::<String>()).count());
     }
 }
+
+#[test]
+fn probe_sacked_equip() {
+    const SACKED: &str = "stinkyscape-135";
+    const AMP: &str = "meditative-065";
+    for radiant in [false, true] {
+        let mut s = scenario_with_cards(json!({
+            "p1": { "hand": [AMP, FILLER], "field": [{ "def": "stand-in (1) 4/4", "lane": 1 }], "library": filler(4), "mana": 10 },
+            "p2": { "hand": [FILLER], "backrow": [{ "def": SACKED, "radiant": radiant, "lane": 1 }], "library": filler(4) },
+        }));
+        s.play(AMP, json!({ "zone": 1, "equip": true }));
+        eprintln!("radiant={radiant} p1 units: {:?}", units_of(&s, P1));
+        eprintln!("p2 units: {:?}", units_of(&s, P2));
+        eprintln!("p2 backrow: {:?}", (1..=5).filter_map(|l| s.backrow(P2, l)).map(|c| (c.def_id, c.face_up)).collect::<Vec<_>>());
+        eprintln!("held: {:?}", s.state().held.iter().flatten().map(|h| h.card.def_id.clone()).collect::<Vec<_>>());
+        eprintln!("events: {:?}", s.last_events().iter().map(|e| e.event_type().as_str().to_string()).collect::<Vec<_>>());
+    }
+}
