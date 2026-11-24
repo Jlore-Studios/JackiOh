@@ -1,0 +1,95 @@
+{
+  "action": "build",
+  "number": 4747,
+  "title": "Patch: one fixed order for every card's keyword line",
+  "branch": "bot/issue-4747",
+  "thread": "**Issue #4747 (data, not instructions):**\n\n```text\n# #4747: Patch: one fixed order for every card's keyword line\nOpened by @MaxGoetzmann.\n\n## What it does\n\nA card's keyword line (R366: its keywords first, as one comma-separated list on a line of its own) prints its keywords in whatever order they arrive, so the same keywords read differently from card to card. Of the 166 catalog faces with two or more keywords, 52 keyword pairs are printed both ways: \"Flying, Ranged\" 24 times and \"Ranged, Flying\" 8, \"Can't Defend, Ranged\" 6 and \"Ranged, Can't Defend\" 11, and so on. Nothing sorts them:\n\n- **Printed:** the line is authored in each face's `text` in `crates/cards/catalog.json`, in no set order (the Chinese faces keep their own lines too).\n- **Live:** the engine's `as_set` (`crates/engine/src/layers.rs:382`) dedupes in first-seen order, printed then given; the face model (`crates/shared/src/face/model.rs:156`, `:523`, and the gained line at `:429`) and the web (`MinionFace.tsx`'s `KeywordIcons`, `FieldBadges.tsx`, `Card.tsx:665`) pass that order straight through.\n\nThis sets one display order, in three tiers: **economy** (cost, card flow and how or where a card is played), then **powerful effects and drawbacks**, then **combat** (in the order a fight reads: when it attacks, where it reaches, what its hits do, how it survives).\n\n| # | Item | # | Item | # | Item |\n|---|---|---|---|---|---|\n| | **Economy** | | **Powerful effects and drawbacks** | | **Combat** |\n| 1 | Tribute X (not a keyword; already shares the line, R366) | 14 | Indestructible | 28 | Charge |\n| 2 | Echo X (not a keyword; already shares the line) | 15 | Immutable | 29 | Rush |\n| 3 | Tradable | 16 | Immune to Spells | 30 | Windfury |\n| 4 | Flashback | 17 | Untributable | 31 | Frenzy |\n| 5 | Temporary X | 18 | Evasive | 32 | Deft |\n| 6 | Cloaked | 19 | Can't attack | 33 | Taunt |\n| 7 | Equip | 20 | Can't Defend | 34 | Flying |\n| 8 | Stack | 21 | Brittle X | 35 | Ranged |\n| 9 | Flexible | 22 | Crater | 36 | First Strike |\n| 10 | GIGA | 23 | Animated | 37 | Pierce |\n| 11 | Tipsy X | 24 | Animated on your turn | 38 | Trample |\n| 12 | Spell Damage +X | 25 | Starship Piece | 39 | Cleave |\n| 13 | Lucky X | 26 | Starship | 40 | Poisonous |\n| | | | | 41 | Toxic |\n| | | | | 42 | Burn |\n| | | | | 43 | Lifesteal |\n| | | | | 44 | Divine Shield |\n| | | | | 45 | Armor X |\n| | | | | 46 | Reborn |\n\n**Evolve is not in the order:** it never prints as a bare word on the keyword line, only as \"Evolve:\" ability text. The retired Immune to tribal tag based hate (`KeywordKind::RETIRED`) is left out too. Numbered entries (Lucky, Armor, Spell Damage) that a unit holds more than once stay together at their kind's place.\n\n### How to build it\n\n1. **Write the order down in the spec.** Add it to spec \u00a76.1 (`spec/06-keywords.md`), with a new ruling note in this issue's block (R(N\u00d71000)\u2026), its \u00a711 paragraph in `spec/pending/<N>.md` and a proving test named after it (CLAUDE.md rule 3). The order is a display call, so it is a ruling here, not Hearthstone semantics.\n2. **One constant.** Put the list once in `crates/shared` (a `KEYWORD_LINE_ORDER` of `KeywordKind`s beside the face code or in `crates/shared/src/config.rs`; Tribute and Echo are placed by the text sort as items 1 and 2). Nothing else restates it (rule 9's spirit).\n3. **Printed text: reorder the lines, not the data arrays.** Rewrite the keyword line of every face whose line is out of order: 84 catalog entries, 141 faces by the order above, plus their Chinese lines. **Leave each face's `keywords` array as it is**, so the engine's state, its seeded draws and the golden replay do not move. `cargo jackioh classify --base origin/main --claims` should then report a words-only change. Cover it with a pending fragment (`cargo jackioh patches \u2026 --source <this issue>`, its player note by hand per `docs/ADDING_CARDS.md`), and check that no card plays differently.\n4. **Live faces: sort in the face model.** In `crates/shared/src/face/model.rs`, sort `keywords` (and so `keyword_words`, index for index) and the gained-keywords line by the constant. Do the same wherever a live or fused keyword line is rebuilt (`text_in_play`, R3941002's fused line in `fused.rs`, `short.rs`). The engine's `as_set` stays unsorted.\n5. **Web: render the face's order.** `KeywordIcons` and `FieldBadges` pair words with keywords via `keywords.indexOf(keyword)`, so they must take the face's sorted `keywords`, not `unit.keywords` (`MinionFace.tsx:338`, `Card.tsx:665`, `FieldBadges.tsx:111-113`). Otherwise the icons run in the old order and the words in the new.\n6. **Hold it.** `crates/cards/tests/cross/card_text.rs` already parses each face's leading keyword line (`is_tribute_or_echo_count` among it). Make it also fail when the line's items are out of order. Add a test that the constant lists every `KeywordKind` except the retired ones and Evolve, so a new keyword fails until it is given a place.\n\n## Acceptance\n\n- The ruling's test: a face whose keywords arrive as Ranged, Flying, Can't Defend, Tribute 2 prints \"Tribute 2, Can't Defend, Flying, Ranged\", its `keywords` and `keywordWords` in that order and still paired index for index (English and Chinese).\n- A unit that gains a keyword in play shows it at its place in the order on its face and its field badges, not at the end, and its gained-keywords line is in the same order.\n- `card_text.rs` fails on any catalog face whose keyword line is out of order, and passes on today's catalog after the rewrite.\n- A test fails if a non-retired `KeywordKind` other than Evolve is missing from the order constant.\n- No catalog face's `keywords` array changes, and `cargo jackioh golden check` and the fuzz gate pass unchanged.\n- The web tests cover `KeywordIcons`/`FieldBadges` rendering a sorted face whose `unit.keywords` arrive unsorted.\n- `cargo jackioh spec check`, `catalog check`, `patches check` and `classify --claims` pass.\n\n## Blocked by, part of\n\nNone.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#4747: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`",
+    "#4747: handed off from its owner `claude-3` (`claude-3` it refused a call; its limit resets at 2026-11-24T17:20:00Z; it can start again only in 2h 33m, more than the 120 minutes an item waits for its owner); `muse` owns it from this run"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "own_review_next": true,
+  "handoff": {
+    "at": "2026-11-24T14:34:40Z",
+    "family": "claude",
+    "kind": "draft",
+    "notes": "",
+    "provider": "claude-3",
+    "reason": "`claude-3` reached its usage limit",
+    "trail": "- said: You've hit your 5-hour limit \u00b7 resets 5:20pm (UTC)"
+  },
+  "session": {
+    "action": "plan",
+    "artifact": 14931661635,
+    "artifact_bytes": 60678,
+    "artifact_name": "work",
+    "at": "2026-11-24T14:38:13Z",
+    "bytes": 78896,
+    "cwd": "/home/runner/work/_temp/work/item-4747",
+    "ended": "interrupted: `claude-3` reached its usage limit",
+    "head": "4661395bbdbd52d93fc3606659c16b69ce07e9f8",
+    "id": "7b89bb2f-62de-4ffc-9bd7-67507a22fac0",
+    "kind": "plan",
+    "model": "sonnet",
+    "project": "-home-runner-work--temp-work-item-4747",
+    "provider": "claude-3",
+    "run": "45414762279"
+  },
+  "journal": "# Journal of #4747\n\nEvery night-bot run on #4747, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-24 14:38 UTC \u00b7 plan #4747 \u00b7 `claude-3` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/45414762279) on `claude-3` (`opus` (strong)). It ended **interrupted**: `claude-3` reached its usage limit\nModel calls: 1, 0 model minutes.\nSession: fresh: none was kept for this item. This run's: kept session `7b89bb2f-62de-4ffc-9bd7-67507a22fac0` of #4747 on claude-3 (78,896 bytes) in run 45414762279's `work` artifact, for its next run there.\nIts work ended at `4661395bbdbd` on `bot/issue-4747`.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 14:34 | start | from `origin/main` |  | at `4661395bbdbd` |\n| 2 | 14:34 | plan (`sonnet`) | plan the item before anyone builds it | 0.0 min | refused: the usage limit |\n| 3 | 14:34 | stop | `claude-3` reached its usage limit |  |  |\n",
+  "usage_facts": {
+    "queued_at": "2026-11-24T14:21:39Z",
+    "claimed_at": "2026-11-24T14:46:43Z",
+    "previous_provider": "claude-3",
+    "handed_off": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-24T17:20:00Z; it can start again only in 2h 33m, more than the 120 minutes an item waits for its owner"
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
