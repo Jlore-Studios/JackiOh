@@ -714,8 +714,9 @@ describe("R4742000 the dungeon fight's result panel offers Main menu", () => {
     fireEvent.click(menu);
     expect(window.location.pathname).toBe(paths.play);
     expect(screen.queryByTestId(fightTestid.leaveDialog)).toBeNull();
-    // Leaving the finished fight hands the run nothing: Continue is what reports it.
-    expect(act).not.toHaveBeenCalled();
+    // R4733000: leaving the finished fight sends its report first, once, as Continue would.
+    expect(act).toHaveBeenCalledTimes(1);
+    expect(act).toHaveBeenCalledWith(expect.objectContaining({ type: "fightOver", won: false }));
     at("/");
   });
 });
