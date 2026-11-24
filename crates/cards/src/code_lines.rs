@@ -2,8 +2,9 @@
 //! file, so the BUSTED and complicated lists it compiles in come from here) and by the tools, which
 //! count a version's lists for `patches ship` and a change's for `classify` (R2173000). #3116: and
 //! whether a script owes an extra turn, which `build.rs` lists for the AI's hand prices (R846).
-//! R3882000: and whether a script reads the win rates of record, which a refresh of them claims. Pure
-//! string work, so the cards crate may hold it (CLAUDE.md rule 4).
+//! R3882000: and whether a script reads the win rates of record, which a refresh of them claims. #4609:
+//! and whether a script calls a verb that rewrites a card's text, which `build.rs` lists for the sweep at
+//! Immutable cards (R4609000). Pure string work, so the cards crate may hold it (CLAUDE.md rule 4).
 
 /// R2173000: what a script's code spells when it reads the BUSTED or complicated lists: a catalog
 /// query's `busted` or `complicated` field (in JSON or as a Rust field) or the engine's readers.
@@ -50,6 +51,46 @@ const EXTRA_TURN_VERB: &str = "take_extra_turn";
 /// Last Word). A turn owed through another file's helper or another card's cast is not seen.
 pub fn owes_extra_turn(source: &str) -> bool {
     script_code(source).any(|code| names_word(&code, EXTRA_TURN_VERB))
+}
+
+/// #4609, R4609000: the engine's verbs that rewrite a card's text, the ones Immutable stops (§6.1, §6.3;
+/// R23, R386): a Transform's (a Replace, a random one, the cards beneath a Stack, a cost step, a book
+/// swap), a Vanilla's, a Nerf's and a Buff's (a hidden one, a keyword lost, a number set or picked), and
+/// a Fuse's onto a card (a Weapon Equipped from a pick among them, R1841002).
+const TEXT_REWRITE_VERBS: [&str; 17] = [
+    "transform",
+    "transform_random",
+    "transform_beneath",
+    "transform_cost_step",
+    "swap_book",
+    "vanilla",
+    "degrade",
+    "upgrade",
+    "degrade_secretly",
+    "lose_keyword",
+    "set_number",
+    "discover_number",
+    "fuse_cards",
+    "fuse_random_into",
+    "fuse_generated",
+    "fuse_board_into",
+    "equip_picks",
+];
+
+/// #4609, R4609000: whether a card script calls a verb that rewrites a card's text
+/// (`TEXT_REWRITE_VERBS`): its code, above its tests and without its comments, names one as a call,
+/// `verb(`, so a `"vanilla": true` field or the `use` bringing a verb in is not one. The cross test that
+/// plays each such card at Immutable stand-ins reads the list `build.rs` makes of them.
+pub fn rewrites_text(source: &str) -> bool {
+    script_code(source).any(|code| TEXT_REWRITE_VERBS.iter().any(|verb| names_call(&code, verb)))
+}
+
+/// Whether `code` calls `word`: the word with no identifier character before it, and `(` after it.
+fn names_call(code: &str, word: &str) -> bool {
+    code.match_indices(word).any(|(at, _)| {
+        !code[..at].chars().next_back().is_some_and(is_ident_char)
+            && code[at + word.len()..].trim_start().starts_with('(')
+    })
 }
 
 /// Whether `code` holds `word` with no identifier character on either side.
