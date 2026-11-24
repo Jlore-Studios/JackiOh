@@ -20376,6 +20376,14 @@
         "sha": "643bc9fe11c6afdd717d7280ab238726bb400b6b",
         "tiers": {}
       }
+    },
+    "4740": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-24T11:59:31Z",
+      "issue": 4720,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
