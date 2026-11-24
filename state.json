@@ -17655,7 +17655,7 @@
       }
     },
     "4651": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "strong",
       "ci_early": false,
@@ -17681,7 +17681,7 @@
           "where": "apps/web/src/assault/AssaultPage.tsx:117"
         }
       ],
-      "live": "reviewing",
+      "live": "revising",
       "pending_request": false,
       "provider": "claude-4",
       "question": "",
@@ -17690,7 +17690,7 @@
       "review_floor": "",
       "review_notes": "",
       "round_tier": "strong",
-      "run_id": "45345419042",
+      "run_id": "pending:62f5a4bb-1795505035",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17711,7 +17711,7 @@
         "run": "45330532203"
       },
       "source": "cross-review",
-      "started_at": "2026-11-24T07:06:17Z",
+      "started_at": "2026-11-24T07:24:21Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -18476,9 +18476,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T07:15:45Z",
+    "at": "2026-11-24T07:24:21Z",
     "url": "",
-    "what": "plan #4673 on claude-7"
+    "what": "revise #4651 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-24T07:14:09Z",
