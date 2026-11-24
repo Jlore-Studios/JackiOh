@@ -427,6 +427,8 @@ export const PRACTICE_RESULT = "practice-result";
 export const PRACTICE_PLAY_AGAIN = "practice-play-again";
 export const PRACTICE_CHANGE_SETUP = "practice-change-setup";
 export const PRACTICE_VIEW_BOARD = "practice-view-board";
+/** #4742: in the result dialog, out to the Play hub's Solo group. */
+export const PRACTICE_MAIN_MENU = "practice-main-menu";
 /** R768000: a kept game's replay, and its last turn's GIF, from the result dialog. */
 export const PRACTICE_WATCH_REPLAY = "practice-watch-replay";
 export const PRACTICE_SHARE_LAST_TURN = "practice-share-last-turn";
@@ -488,6 +490,8 @@ export const TUTORIAL_PLAY_PRACTICE = "tutorial-play-practice";
 export const TUTORIAL_STILL_TO_FIND = "tutorial-still-to-find";
 export const TUTORIAL_WHATS_NEXT = "tutorial-whats-next";
 export const TUTORIAL_VIEW_BOARD = "tutorial-view-board";
+/** #4742: in the lesson's result dialog, out to the Play hub's Solo group. */
+export const TUTORIAL_MAIN_MENU = "tutorial-main-menu";
 
 // A14: selectors mirror `apps/web/src/cards/inspect/testids.ts` and deckbuilder `testids.ts` (SPEC §10.10; R277, R279, R280, R654, R660).
 

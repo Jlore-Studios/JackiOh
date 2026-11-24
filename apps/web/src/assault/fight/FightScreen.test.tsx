@@ -475,6 +475,52 @@ describe("R4733000 a finished fight keeps its result when the player leaves befo
   });
 });
 
+describe("R4742000 the Assault fight's result panel offers Main menu", () => {
+  /** A finished fight, its Continue enabled: the panel the Main menu sits in. */
+  async function finished(onAction: Mock<(action: AssaultAction) => void>, onLeave?: () => void): Promise<HTMLElement> {
+    renderFight(fightHost(), onAction, onLeave);
+    await screen.findByTestId(assaultFightTestid.screen);
+    expect(screen.queryByTestId(assaultFightTestid.resultMenu)).toBeNull();
+    concedeOnBoard();
+    const proceed = await screen.findByTestId(assaultFightTestid.continue);
+    await waitFor(() => {
+      expect(proceed).toBeEnabled();
+    });
+    return proceed;
+  }
+
+  it("R4742000 the result panel's Main menu follows Continue, sends the report and calls onLeave", async () => {
+    const onAction = vi.fn<(action: AssaultAction) => void>();
+    const onLeave = vi.fn();
+    const proceed = await finished(onAction, onLeave);
+
+    const menu = screen.getByTestId(assaultFightTestid.resultMenu);
+    expect(menu).toHaveTextContent("Main menu");
+    expect(menu.parentElement).toBe(proceed.parentElement);
+    expect(proceed.parentElement?.firstElementChild).toBe(proceed);
+    expect(proceed).toHaveClass("button-primary");
+    expect(proceed.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    fireEvent.click(menu);
+    expect(onAction).toHaveBeenCalledWith(LOST);
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onLeave).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId(assaultFightTestid.leaveDialog)).toBeNull();
+  });
+
+  it("R4742000 without a way back the panel's Main menu sends the report and goes to the Play menu", async () => {
+    at("/assault");
+    const onAction = vi.fn<(action: AssaultAction) => void>();
+    await finished(onAction);
+
+    fireEvent.click(screen.getByTestId(assaultFightTestid.resultMenu));
+    expect(onAction).toHaveBeenCalledWith(LOST);
+    expect(window.location.pathname).toBe(paths.play);
+    expect(screen.queryByTestId(assaultFightTestid.leaveDialog)).toBeNull();
+    at("/");
+  });
+});
+
 describe("R4582002 the fight shows what the Assault holds", () => {
   it("R4582002 the enemy's upgrades are listed beside its hero, each by name, stacks and effect", async () => {
     renderFight(fightHost());

@@ -174,4 +174,6 @@ export const dungeonMapTestid = {
   newRun: "dungeon-run-new",
   /** B31: the run's statistics page. */
   statsLink: "dungeon-run-stats-link",
+  /** #4742: out to the Play menu; the run stays saved. */
+  mainMenu: "dungeon-run-main-menu",
 } as const;

@@ -1,6 +1,6 @@
 //! S #118 Secure System (SPEC §8.10 row S 118; §10.4, R1748003, R1848004, R1868001): (3) Spell, Epic.
-//!   Base:    "Set all Units' Attack to 0. Lose {loss} mana next turn." — 1.
-//!   Radiant: "Set all enemy Units' Attack to 0. Lose {loss} mana next turn." — 1.
+//!   Base:    "Set all Units' Attack to 0. Overload ({loss})." — 1.
+//!   Radiant: "Set all enemy Units' Attack to 0. Overload ({loss})." — 1.
 //!
 //! Engine: existing primitives (ST-S14-7): each Unit on the field of both sides is given a `buff` of
 //! minus its Attack as it stands now through the layers, before layer 5's floor (`unclamped_attack`,
