@@ -42451,6 +42451,10 @@
       "4723": {
         "at": "2026-11-24T11:54:24Z",
         "why": "It mirrors two refusals the offer already returns so the co-op panel stops showing Play again when pressing it can only fail."
+      },
+      "4730": {
+        "at": "2026-11-24T12:40:00Z",
+        "why": "Banned queue tickets still pair and strand an opponent today, and the fix extends decided R4019000 with cited code and tests."
       }
     },
     "decided": [
