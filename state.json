@@ -18531,6 +18531,13 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "- said: You've hit your 5-hour limit \u00b7 resets 12:20pm (UTC)"
       },
+      "hold": {
+        "ends": "2026-11-24T12:26:15Z",
+        "owner": "claude-3",
+        "since": "2026-11-24T10:26:15Z",
+        "until": "2026-11-24T12:20:00Z",
+        "why": "it refused a call"
+      },
       "interruptions": 0,
       "kind": "build",
       "live": "planning",
