@@ -19242,15 +19242,8 @@
       "taken_asks": []
     },
     "4786": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45489941009",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-24T21:36:54Z",
-        "until": "2026-11-24T22:06:54Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -19262,10 +19255,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- ## Files to touch\n- | File | New / change | What changes |\n- | --- | --- | --- |\n- | `crates/ai/src/match_.rs` | change | `play_ai_turn` (line 488): skip taken `t{n}` nonces; loop bound becomes `actions.len()`; doc comment notes the skip |\n- | `crates/ai/tests/ai/surface.rs` | change | `mod surface_play_ai_turn`: one new regression test; existing `t0\u2026` pin untouched |\n- Must not touch: `.github/`, `.harness/`, `.squishy/`, `bot/`, `spec/`, `docs/`, `apps/`, or any crate besides `crates/ai`. Governing sections: engine nonce dedupe (`crates/engine/src/reduce.rs` `reduce_held`, `NONCE_HISTORY` in `crates/engine/src/config.rs`), the AI README Matches contract, and the\u2026\n- ## Steps\n- 1. In `play_ai_turn` (`crates/ai/src/match_.rs:488`), keep the overall shape (decide \u2192 `Action::new` \u2192 `reduce`, break on refusal) and insert a skip before minting, following the precedent of `nonce_for` in `crates/engine/src/subsystems/ai_policy.rs:117`, which also probes `state.applied` for colli\u2026\n- ```rust\n- while current.applied.iter().any(|entry| entry.nonce == format!(\"t{n}\")) {\n- n += 1;\n- }\n- let action = Action::new(decision.action.clone(), seat, format!(\"t{n}\"));\n- n += 1;\n- ```\n- Probe `current` (not the input `state`), so nonces minted earlier in the same turn are skipped too.\n- 2. In the same function, change the loop bound from `n < AI_TURN_MAX_ACTIONS` to `actions.len() < AI_TURN_MAX_ACTIONS`. This is load-bearing, not cosmetic: if skips advanced `n` against the ceiling, a turn following a 60-action turn would skip `t0\u2026t59` and exit without playing. `n` counts nonce suf\u2026\n- 3. Update the function's `///` doc line to `decide \u2192 reduce until !ai_to_act(state, seat) or AI_TURN_MAX_ACTIONS; nonces t${n}, skipping any the game already applied`. No constant is added (rule 9: no new numbers; the `t` prefix and ceiling are existing).\n- 4. In `crates/ai/tests/ai/surface.rs`, inside `mod surface_play_ai_turn` (which already has `jackioh_ai::*` and `testkit::*` in scope), add the issue's reproduction verbatim as `a_second_play_ai_turn_on_the_same_game_applies_every_action_it_returns`: scenario seed `\"audit-turns\"`, p1's turn via `pl\u2026\n- 5. Run the module tests, clippy for the crate, and fmt (exact commands under Tests).\n- ## Tests\n- - `crates/ai/tests/ai/surface.rs`, `mod surface_play_ai_turn`: new `a_second_play_ai_turn_on_the_same_game_applies_every_action_it_returns` \u2014 fails on `main` (p2's `t0` replays p1's play of `c6`, state unchanged), passes after the fix (every returned action reduces cleanly and changes state).\n- - Same module: existing `plays_decides_actions_with_nonces_t0_t1_until_the_ai_owes_nothing` \u2014 must keep passing, proving a first call still mints exactly `t0, t1, \u2026` with `actions.len() == decisions.len()`.\n- - Commands: `cargo test -p jackioh-ai --test ai surface_play_ai_turn`, then `cargo clippy -p jackioh-ai --all-targets -- -D warnings` and `cargo fmt --check`. No engine, web, or spec-check runs are needed (no engine/spec/doc files change; signature is unchanged so WASM/TS need nothing).\n- ## Done when\n- - [ ] A chained second `play_ai_turn` on one game returns only engine-applied actions (new test green, and it fails with the fix reverted)\n- - [ ] A first call still mints `t0, t1, \u2026` with actions/decisions aligned (existing surface pin green)\n- - [ ] No other `crates/ai` test needed moving: single-call callers behave exactly as before (skip is a no-op on a fresh `applied`)\n- - [ ] The three commands above are green\n- ## Risks\n- - Counting skips against `AI_TURN_MAX_ACTIONS` would starve a turn following a long turn of its whole ceiling; the `actions.len()` bound in step 2 prevents this \u2014 verify by re-reading the loop before running tests.\n- - Matching only `current.applied` (the last `NONCE_HISTORY` = 64 entries) is exactly the engine's dedupe window, so a `t{n}` evicted from the window is one the engine will treat as new; reuse there is safe by construction, and 60 (the ceiling) < 64, so a full first turn's nonces are all still skipp\u2026\n- - Nonce choice derives from state only: deterministic, pure (rule 4 intact), carries no hidden information (rule 7 intact), and the public signature is unchanged, so no caller, WASM binding, or doc needs updating.\n- ## Open questions\n- - The hard-rule's parenthetical (\"The AI \u2026 (`crates/ai/src/`)\") reads strictly as hard, but the change is a mechanical nonce-minting loop touching neither decisions nor search, so medium stands; flagging per the brief rather than re-rating.\n- - The duplicate notice (#4799 item 5, same defect): the bot holds no GitHub credential and cannot comment on the other issue, so a person should note there once this lands rather than the builder widening this change to cover it.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4786 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4786/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-24T21:19:29Z",
       "owner_why": "it plans it",
@@ -19278,9 +19270,9 @@
       "provider": "muse",
       "queued_at": "2026-11-24T20:46:01Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45489941009",
+      "run_id": "pending:5a1836ce-1795556400",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-24T21:19:29Z",
+      "started_at": "2026-11-24T21:40:32Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -19946,9 +19938,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T21:39:47Z",
+    "at": "2026-11-24T21:40:32Z",
     "url": "",
-    "what": "build #4825 on muse"
+    "what": "build #4786 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T21:22:02Z",
