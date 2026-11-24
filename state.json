@@ -20634,6 +20634,8 @@
       }
     },
     "4869": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T21:40:32Z",
@@ -20647,8 +20649,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: `play_ai_turn` called twice on one game gives every action a nonce the game has not seen\"} -->\n- ## What changed and why\n- `play_ai_turn` (`crates/ai/src/match_.rs`) minted nonces `t0, t1, \u2026` from zero on every call. A second call on the same game replayed the first turn's nonces, which the engine answers unchanged with `error: None` (\u00a79.3 dedupe) \u2014 so the swallowed decisions were still recorded as played. The fix, exa\u2026\n- - Before minting, skip any `t{n}` already in `current.applied` (probing `current`, so nonces minted earlier in the same turn are covered too; same probe pattern as `nonce_for` in `crates/engine/src/subsystems/ai_policy.rs`).\n- - The loop bound changed from `n < AI_TURN_MAX_ACTIONS` to `actions.len() < AI_TURN_MAX_ACTIONS`, so skips never eat the turn's action ceiling. On a fresh game the skip is a no-op and `n == actions.len()` holds, so single-call behavior is bit-identical.\n- - Doc comment updated. No new constants (rule 9), no ruling (bug against the existing README Matches contract plus \u00a79.3, not an open rules decision).\n- - New regression test `a_second_play_ai_turn_on_the_same_game_applies_every_action_it_returns` in `mod surface_play_ai_turn` (`crates/ai/tests/ai/surface.rs`), verbatim from the issue; the existing `t0\u2026` pin is untouched.\n- ## How it was tested\n- - `cargo test -p jackioh-ai --test ai surface_play_ai_turn` \u2014 2 passed (new test plus existing pin).\n- - Fix temporarily reverted to prove the new test fails: it fails with the issue's exact message, ``p2's action t0 (Play { instance_id: \"c6\", \u2026 }) changed nothing: its nonce was p1's``.\n- - `cargo clippy -p jackioh-ai --all-targets -- -D warnings` \u2014 clean. `cargo fmt --check` \u2014 clean.\n- - Extra check beyond the plan: `training_grounds.rs::r3135000_\u2026` chains `play_ai_turn` across rounds (state feeds forward through `act`), so I ran all 17 `training_grounds` tests \u2014 green.\n- ## Decisions and notes for the reviewer\n- - Followed the plan exactly; no departures except running the `training_grounds` module as an extra scope check (it is the only existing test that chains calls) and one fmt-mandated line collapse.\n- - Dead end worth knowing: my first revert-check accidentally dropped the loop-end `n += 1` as well as the skip, producing an infinite loop (same `t0` replayed forever with `error: None`, a full `decide` per spin). I killed the runaway test binary, restored the increment for a faithful revert, and u\u2026\n- - The duplicate-notice comment asks that whichever of #4786 / #4799-item-5 lands first say so on the other issue. I hold no GitHub credential and cannot comment \u2014 a person should note it on #4799 once this lands.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4786 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4786/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4786,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-24T23:52:39Z",
         "from_run": "45493485011",
         "gates": [
           {
@@ -20707,8 +20712,15 @@
         "source": "build",
         "until": "2026-11-25T00:21:35Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-24T23:51:35Z",
+      "run_id": "pending:1dd437b2-1795564324",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-24T23:52:39Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -20722,9 +20734,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T23:43:00Z",
+    "at": "2026-11-24T23:52:39Z",
     "url": "",
-    "what": "review #4868 on agy"
+    "what": "review #4869 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T23:40:40Z",
