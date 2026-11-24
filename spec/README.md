@@ -28,7 +28,7 @@ One note per top-level section, its subsections inside:
 
 ## Looking things up
 
-Read the entry a task touches and follow its links: never open a note whole to find it, and never search all of `spec/` for a word. The catalog, [[§11]] and the index are too long to open in one read, and [[§6]], [[§9]] and [[§10]] come back cut short. A paragraph or a table row is one line, often 1 to 3 KB, and a fact is written up to four times (its section, its ruling note, that note's [[§11]] paragraph, the index), so `grep -rn Reborn spec/` returns 206 KB where the titles of the 101 notes that mention it are 11 KB (measured 2026-11-24).
+Read the entry a task touches and follow its links: never open a note whole to find it, and never search all of `spec/` for a word. The catalog, [[§11]] and the index are 0.5 to 1 MB each, more than one read returns, and [[§6]], [[§9]] and [[§10]] are over 130 KB. A paragraph or a table row is one line, often 1 to 3 KB, and a fact is written up to four times (its section, its ruling note, that note's [[§11]] paragraph, the index), so `grep -rn Reborn spec/` returns 206 KB where the titles of the 101 notes that mention it are 11 KB (measured 2026-11-24).
 
 - **Which section a question belongs to**: [[§1.1]], the rules at a glance, links the section each rule is in.
 - **A subsection**: `grep -n '^#' spec/10-engine-guide.md` gives each heading's line; read from that line to the next heading's.
