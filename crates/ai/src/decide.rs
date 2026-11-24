@@ -479,7 +479,7 @@ pub fn decision_prices(probe: &GameState, seat: PlayerId, counter: &dyn NodeCoun
 }
 
 /// R4070000: the prices a decision of `seat`'s at `state` would pass its search, for a caller outside a
-/// decision (`cargo jackioh positions`): `state` redacted for the seat (R185), so a true state is fine,
+/// decision: `state` redacted for the seat (R185), so a true state is fine,
 /// its `probe_world`, and `decision_prices` on a counter of `AI_DECISION_PRICE_NODES`, every probe's cap.
 pub fn decision_prices_at(state: &GameState, seat: PlayerId) -> Prices {
     let public = redact(state, seat);

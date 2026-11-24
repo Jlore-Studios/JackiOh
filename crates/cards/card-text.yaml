@@ -10955,7 +10955,7 @@ infiniteassault-215: # The Optimizer
   flavour: It rewrites your hand one coin dearer. Reviews are mixed.
   voice:
     play: Your hand, but pricier.
-    attack: Upgraded, allegedly!
+    attack: Premium, allegedly!
     death: Rolled back.
   zh:
     name: 优化器
