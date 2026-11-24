@@ -20337,17 +20337,22 @@
     "what": "plan #4806 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-24T21:48:34Z",
+    "at": "2026-11-24T21:59:49Z",
     "notes": [
       "#4801 is held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
       "#4726 is held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
-      "delivered build #4780 on muse (run 45487423721): built",
-      "delivered plan #4734 on agy (run 45467999862): failed",
-      "started review #4857 on muse (run 45495298254)",
-      "started plan #4838 on agy (run 45495441056)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-25T00:10:00Z; it can start a build or a plan again in 1h 16m; `claude-1` 5-hour usage is 49%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-24T23:50:00Z; it can start a build or a plan again in 1h 56m; `claude-4` 5-hour usage is 72%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-25T01:00:00Z; it can start a build or a plan again in 3h 06m; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4726 held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%)); #4801 held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
+      "delivered plan #4848 on claude-3 (run 45493610348): planned",
+      "delivered plan #4803 on claude-3 (run 45491342603): planned",
+      "delivered revise #4768 on claude-3 (run 45489572142): built",
+      "delivered build #4781 on muse (run 45487566935): built",
+      "started review #4859 on muse (run 45497300379)",
+      "started review #4768 on claude-3 (run 45497425561)",
+      "started plan #4805 on claude-3 (run 45497565223)",
+      "started plan #4806 on claude-3 (run 45497699749)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-25T00:10:00Z; it can start a build or a plan again in 1h 02m; `claude-1` 5-hour usage is 49%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-24T23:50:00Z; it can start a build or a plan again in 1h 42m; `claude-4` 5-hour usage is 72%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-25T01:00:00Z; it can start a build or a plan again in 2h 52m; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4726 held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%)); #4801 held for `claude-8` until 17:10 (5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%))",
       "pruned 3 plan file(s) older than 7 days",
-      "runner gate: started 0 of 3 waiting run(s); 3 wait for a slot"
+      "#4822: closed, so `bot:merging` is off",
+      "runner gate: started 0 of 4 waiting run(s); 4 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -21053,7 +21058,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-24T21:48:34Z",
+  "loop_tick": "2026-11-24T21:59:49Z",
   "machine_disk": {
     "issue": null,
     "reading": {
