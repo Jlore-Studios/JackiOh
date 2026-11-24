@@ -21556,11 +21556,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-24T17:44:48Z",
+        "at": "2026-11-24T18:15:34Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "The AI: its decisions or its search (crates/ai/src/) \u2014 the change prices a keyword in the AI's static evaluation."
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule 2 (the AI): it changes AI_EVAL's keyword weights in crates/ai/src/config.rs, which steer the AI's trades and evaluation"
       },
       "failures": 0,
       "forced": false,
