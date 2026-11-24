@@ -1143,6 +1143,71 @@ fn r1204_trample_into_the_guard_tramples_into_its_hero() {
     assert!(!on_field(&result.state, &guard.id), "the guard died of its 5");
 }
 
+#[test]
+fn r4599005_a_guard_immune_to_spells_never_takes_a_spell_s_hit_and_still_catches_a_unit_s() {
+    let immune = |state: &mut GameState, id: &str| {
+        find_instance_mut(state, id)
+            .expect("the guard")
+            .granted_keywords
+            .push(Keyword::ImmuneToSpells);
+    };
+    // A Spell's lethal hit on the ally stays on the ally: the guard takes nothing (§6.1, R4453000).
+    let mut state = playing("r4599005-spell");
+    let guard = put(&mut state, &fx::guard.id, slot(P1, Row::Units, 1), json!({}));
+    immune(&mut state, &guard.id);
+    let ally = put(&mut state, &fx::ally.id, slot(P1, Row::Units, 2), json!({}));
+    let bolt = in_hand(&mut state, &fx::bolt.id, P2, 1).remove(0);
+    state = act(&state, end_turn(P1));
+    let result = act_result(
+        &state,
+        json!({
+            "type": "play",
+            "instanceId": bolt.id,
+            "playerId": "p2",
+            "targets": [{ "pick": "instance", "instanceId": ally.id }],
+        }),
+    );
+    assert!(result.error.is_none(), "{:?}", result.error);
+    assert!(redirected(&result.events).is_empty());
+    assert_eq!(damaged(&result.events), vec![(ally.id.clone(), 10)]);
+    assert!(!on_field(&result.state, &ally.id), "the ally died of the 10");
+    assert_eq!(
+        find_instance(&result.state, &guard.id).expect("the guard").damage,
+        0
+    );
+    // A Spell's lethal hit on the hero stays on the hero.
+    let mut state = playing("r4599005-hero");
+    let guard = put(&mut state, &fx::guard.id, slot(P1, Row::Units, 1), json!({}));
+    immune(&mut state, &guard.id);
+    let smite = in_hand(&mut state, &fx::smite.id, P2, 1).remove(0);
+    state = act(&state, end_turn(P1));
+    let result = act_result(
+        &state,
+        json!({
+            "type": "play",
+            "instanceId": smite.id,
+            "playerId": "p2",
+            "targets": [{ "pick": "hero", "player": "p1" }],
+        }),
+    );
+    assert!(result.error.is_none(), "{:?}", result.error);
+    assert!(redirected(&result.events).is_empty());
+    assert!(result.state.players[P1].hero.health <= 0);
+    // A Unit's lethal attack is still the guard's to catch.
+    let mut state = playing("r4599005-unit");
+    let guard = put(&mut state, &fx::guard.id, slot(P1, Row::Units, 1), json!({}));
+    immune(&mut state, &guard.id);
+    let ally = put(&mut state, &fx::ally.id, slot(P1, Row::Units, 2), json!({}));
+    state = act(&state, end_turn(P1));
+    let ram = put(&mut state, &fx::ram.id, slot(P2, Row::Units, 1), json!({}));
+    let result = act_result(&state, attack_action(P2, &ram.id, &ally.id));
+    assert!(result.error.is_none(), "{:?}", result.error);
+    assert_eq!(
+        redirected(&result.events),
+        vec![(ally.id.clone(), guard.id.clone())]
+    );
+}
+
 // R113 (ME-ATTACKSUMMON): a question that opens mid-attack owes the rest of the replacement or the
 // rider behind it, and the rest runs once it is answered.
 mod r113_a_question_mid_attack_summon_owes_the_rest {

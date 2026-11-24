@@ -1,9 +1,7 @@
-# What is left of the move from Render to Cloudflare (docs/deploy-cloudflare.md section 4), run by hand
+# The Supabase and Resend setup that needs a secret (docs/deploy-cloudflare.md section 4), run by hand
 # from Actions -> cutover, so no secret passes through anyone's machine: each value goes from where it
 # lives (this repository's secrets, a project's Management API) straight to where it is used, masked in
-# the log. Render's jackioh-server was deleted on 2026-11-03 (section 4, step 7), and with it the steps
-# that read it: staging-secrets, drop-ping, production-secrets, copy, after-cutover and delete-render
-# (they are in this file's history). The steps below still run.
+# the log. The name is from the move to Cloudflare, finished on 2026-11-03.
 #
 # Each run does one `step`:
 #   check-production    writes nothing: whether PRODUCTION_SUPABASE_SECRET_KEY is shaped like a secret
@@ -14,7 +12,7 @@
 #                       confirmations, SMTP, the email templates, rate limits, MFA, sessions, providers,
 #                       with production's own Site URL and Redirect URLs (infra/supabase.tf's) and
 #                       leaked-password protection on. It also adds https://staging.jackioh.com/login to
-#                       staging's Redirect URLs, keeping the rest (section 4, step 4). A value that names
+#                       staging's Redirect URLs, keeping the rest. A value that names
 #                       staging's project, and a secret the API does not hand back, stay out and are
 #                       named. With `dry_run` (the default) it lists what it would change and writes
 #                       nothing.
@@ -41,8 +39,8 @@
 #   dev-stats           staging's development statistics into JackiOh-Production (R1933001): the
 #                       totals' development rows and game_record_batches, replacing whatever production
 #                       holds of them, in one transaction whose counts must agree with staging's. Live
-#                       rows are not touched. Run it again whenever the two may have drifted (a gather or
-#                       learn run whose import into production failed and was not run again): staging
+#                       rows are not touched. Run it again whenever the two may have drifted (a gather
+#                       run whose import into production failed and was not run again): staging
 #                       files every development run, so its rows are the whole of them.
 #
 # PRODUCTION_DATABASE_URL may be the session pooler URI exactly as Supabase shows it, `[YOUR-PASSWORD]`
@@ -530,7 +528,7 @@ jobs:
           production=$(cat "$RUNNER_TEMP/production.url")
           host=$(python3 -c 'import sys, urllib.parse as u; print(u.urlsplit(sys.argv[1]).hostname)' "$production")
           q() { psql "$1" -XAtq -v ON_ERROR_STOP=1 "${@:2}"; }
-          # training/learn.md's two logins: stats_importer acts as service_role only by `set role`, and
+          # training/README.md's two logins: stats_importer acts as service_role only by `set role`, and
           # stats_reader's every transaction is read-only. The copy brought both from staging.
           q "$production" -c "select rolname || ': ' || case when rolconfig is null then 'no settings' else array_to_string(rolconfig, ', ') end
             from pg_roles where rolname in ('stats_importer', 'stats_reader') order by 1" | sed 's/^/production holds /'

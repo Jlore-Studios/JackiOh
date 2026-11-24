@@ -24,7 +24,7 @@ row in the same pull request.
 | --- | --- | --- |
 | `BOT_GITHUB_TOKEN` | A classic token of `@jgoetzmann-bot` (`public_repo`, `workflow`). A pull request or push made with it starts CI, which one made with `GITHUB_TOKEN` never does. It also moves `_production`. [bot/README.md](../bot/README.md), Setting it up | bot-night, bot-commands, bot-status, patches-ship, spec-fold, winrates-refresh, promote-staging, promote-production, releases |
 | `SQUISHY_GITHUB_TOKEN` | A classic token of `@squishy-squooby`, Squishy's account ([bot/README.md](../bot/README.md), Squishy) | squishy-run, squishy-commands, bot-status |
-| `LEARN_LANE_TOKEN` | A fine-grained token that writes contents and pull requests on this repository alone, for the training lanes' promotions. It expires; a run then fails at its deliver step ([training/learn.md](../training/learn.md), Setting it up) | learn, sweep |
+| `LEARN_LANE_TOKEN` | A fine-grained token that writes contents and pull requests on this repository alone, for the shadow-ban sweep's pull request (R1678000): one opened with a run's own token would start no CI. Named for the retired learn lane, which used it first. It expires on the date it was given, so renew it before then; without it, or once it has expired, the sweep fails at its push and leaves its record as the run's artifact (`record.patch`) | sweep |
 
 ## Model subscriptions
 
@@ -49,8 +49,8 @@ GitHub's runners have no IPv6.
 | Secret | What it is | Read by |
 | --- | --- | --- |
 | `STATS_DATABASE_URL` | Production's read-only statistics login, `stats_reader` (R1933001): the card statistics' totals, which `jackioh-server stats-cards --window` reads. Set: winrates-refresh's run 43600686946 (2026-11-14) read production through it | winrates-refresh, db-size (production) |
-| `STATS_IMPORT_DATABASE_URL` | Staging's statistics importer, `stats_importer`, which the development lanes file their games through. cutover also takes its pooler host for production's addresses | gather, learn, selfplay, selfplay-shards, db-size (staging), cutover |
-| `PRODUCTION_STATS_IMPORT_DATABASE_URL` | Production's `stats_importer`, set on 2026-11-03 by cutover's `stats-logins` (R1933001) | gather, learn, selfplay, selfplay-shards |
+| `STATS_IMPORT_DATABASE_URL` | Staging's statistics importer, `stats_importer`, which the development lanes file their games through. cutover also takes its pooler host for production's addresses | gather, db-size (staging), cutover |
+| `PRODUCTION_STATS_IMPORT_DATABASE_URL` | Production's `stats_importer`, set on 2026-11-03 by cutover's `stats-logins` (R1933001) | gather |
 | `PRODUCTION_DATABASE_URL` | JackiOh-Production's session pooler URI for its owner role, as Supabase shows it | cutover |
 | `PRODUCTION_DB_PASSWORD` | That role's password, which cutover percent-encodes into the URI | cutover |
 | `PRODUCTION_SUPABASE_SECRET_KEY` | JackiOh-Production's secret API key | cutover (`check-production`) |

@@ -365,6 +365,183 @@ pub extern "C" fn run_daily_seed(
     })
 }
 
+// The Infinite Assault (docs/infinite-assault.md IA1, IA5, IA9)
+
+/// "2026-11-23" -> "assault-2026-11-23", or refused.
+#[unsafe(no_mangle)]
+pub extern "C" fn assault_day_seed(date_json_ptr: *const u8, date_json_len: usize) -> i32 {
+    boundary(|| wasm_core::assault_day_seed(arg("assaultDaySeed: the date", date_json_ptr, date_json_len)?))
+}
+
+/// The set's cards by tag + assault.json.
+#[unsafe(no_mangle)]
+pub extern "C" fn assault_catalog_content(catalog_json_ptr: *const u8, catalog_json_len: usize) -> i32 {
+    boundary(|| {
+        wasm_core::assault_catalog_content(arg(
+            "assaultCatalogContent: the catalog",
+            catalog_json_ptr,
+            catalog_json_len,
+        )?)
+    })
+}
+
+/// Shipped stand-ins until the release.
+#[unsafe(no_mangle)]
+pub extern "C" fn assault_placeholder_content(catalog_json_ptr: *const u8, catalog_json_len: usize) -> i32 {
+    boundary(|| {
+        wasm_core::assault_placeholder_content(arg(
+            "assaultPlaceholderContent: the catalog",
+            catalog_json_ptr,
+            catalog_json_len,
+        )?)
+    })
+}
+
+/// The Assault's content for the browser: `assault_placeholder_content` until the release.
+#[unsafe(no_mangle)]
+pub extern "C" fn assault_content() -> i32 {
+    boundary(wasm_core::assault_content)
+}
+
+/// R3496000: `AssaultContent` for a catalog version: the build's own, a carried version's, or `null`.
+#[unsafe(no_mangle)]
+pub extern "C" fn assault_content_at(version_json_ptr: *const u8, version_json_len: usize) -> i32 {
+    boundary(|| {
+        wasm_core::assault_content_at(arg(
+            "assaultContentAt: the version",
+            version_json_ptr,
+            version_json_len,
+        )?)
+    })
+}
+
+/// The day's deal: 20 levels and their escalations, or refused.
+#[unsafe(no_mangle)]
+pub extern "C" fn assault_day(
+    date_json_ptr: *const u8,
+    date_json_len: usize,
+    content_json_ptr: *const u8,
+    content_json_len: usize,
+) -> i32 {
+    boundary(|| {
+        let date = arg("assaultDay: the date", date_json_ptr, date_json_len)?;
+        let content = arg("assaultDay: the content", content_json_ptr, content_json_len)?;
+        wasm_core::assault_day(date, content)
+    })
+}
+
+/// `{ state }` for an attempt started, `{ error }` for a setup the attempt refuses.
+#[unsafe(no_mangle)]
+pub extern "C" fn assault_create(
+    setup_json_ptr: *const u8,
+    setup_json_len: usize,
+    record_json_ptr: *const u8,
+    record_json_len: usize,
+    day_json_ptr: *const u8,
+    day_json_len: usize,
+) -> i32 {
+    boundary(|| {
+        let setup = arg("assaultCreate: the setup", setup_json_ptr, setup_json_len)?;
+        let record = arg("assaultCreate: the record", record_json_ptr, record_json_len)?;
+        let day = arg("assaultCreate: the day", day_json_ptr, day_json_len)?;
+        wasm_core::assault_create(setup, record, day)
+    })
+}
+
+/// `{ state }` after one action, `{ error }` for an action the attempt refuses.
+#[unsafe(no_mangle)]
+pub extern "C" fn assault_reduce(
+    state_json_ptr: *const u8,
+    state_json_len: usize,
+    day_json_ptr: *const u8,
+    day_json_len: usize,
+    action_json_ptr: *const u8,
+    action_json_len: usize,
+) -> i32 {
+    boundary(|| {
+        let state = arg("assaultReduce: the state", state_json_ptr, state_json_len)?;
+        let day = arg("assaultReduce: the day", day_json_ptr, day_json_len)?;
+        let action = arg("assaultReduce: the action", action_json_ptr, action_json_len)?;
+        wasm_core::assault_reduce(state, day, action)
+    })
+}
+
+/// The fight being played (`AssaultFightSetup`), or `null` outside one.
+#[unsafe(no_mangle)]
+pub extern "C" fn assault_fight_setup(
+    state_json_ptr: *const u8,
+    state_json_len: usize,
+    day_json_ptr: *const u8,
+    day_json_len: usize,
+) -> i32 {
+    boundary(|| {
+        let state = arg("assaultFightSetup: the state", state_json_ptr, state_json_len)?;
+        let day = arg("assaultFightSetup: the day", day_json_ptr, day_json_len)?;
+        wasm_core::assault_fight_setup(state, day)
+    })
+}
+
+/// `{ action }` for the `FightOver` a finished fight sends, `{ error }` for a game that reports none.
+#[unsafe(no_mangle)]
+pub extern "C" fn assault_fight_report(
+    game_json_ptr: *const u8,
+    game_json_len: usize,
+    human_json_ptr: *const u8,
+    human_json_len: usize,
+) -> i32 {
+    boundary(|| {
+        let game = arg("assaultFightReport: the game", game_json_ptr, game_json_len)?;
+        let human = arg("assaultFightReport: the human", human_json_ptr, human_json_len)?;
+        wasm_core::assault_fight_report(game, human)
+    })
+}
+
+/// The day's record folded with the attempt's progress.
+#[unsafe(no_mangle)]
+pub extern "C" fn assault_record(
+    record_json_ptr: *const u8,
+    record_json_len: usize,
+    state_json_ptr: *const u8,
+    state_json_len: usize,
+) -> i32 {
+    boundary(|| {
+        let record = arg("assaultRecord: the record", record_json_ptr, record_json_len)?;
+        let state = arg("assaultRecord: the state", state_json_ptr, state_json_len)?;
+        wasm_core::assault_record(record, state)
+    })
+}
+
+/// `{ state }` for an attempt file folded, `{ error }` naming the first refused step.
+#[unsafe(no_mangle)]
+pub extern "C" fn assault_fold(
+    file_json_ptr: *const u8,
+    file_json_len: usize,
+    day_json_ptr: *const u8,
+    day_json_len: usize,
+) -> i32 {
+    boundary(|| {
+        let file = arg("assaultFold: the file", file_json_ptr, file_json_len)?;
+        let day = arg("assaultFold: the day", day_json_ptr, day_json_len)?;
+        wasm_core::assault_fold(file, day)
+    })
+}
+
+/// The Assault's numbers the screens show, so the client states none (CLAUDE.md rule 9).
+#[unsafe(no_mangle)]
+pub extern "C" fn assault_constants() -> i32 {
+    boundary(wasm_core::assault_constants)
+}
+
+/// The day's Assault deck: practice's fresh random deck for a human (R258's draw, `banned: []`),
+/// seeded `{day seed}-deck`, no lean (IA5).
+#[unsafe(no_mangle)]
+pub extern "C" fn assault_day_deck(date_json_ptr: *const u8, date_json_len: usize) -> i32 {
+    boundary(|| {
+        let date = arg("assaultDayDeck: the date", date_json_ptr, date_json_len)?;
+        wasm_core::assault_day_deck(date)
+    })
+}
+
 // The engine (SURFACE §6.1)
 
 /// `GameState` from JSON arguments.

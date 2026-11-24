@@ -5,8 +5,8 @@
 // done, on a clock of its own: the sweep, its deliveries, the statistics count and the runner gate
 // each run on a goroutine of their own (#3675), so none of them holds the issue up.
 //
-// It opens with its date, then a bar chart of how far the training lanes have played on GitHub's
-// runners (the learn lane's export by its shards, and each part of gather by its hours: `progress`),
+// It opens with its date, then a bar chart of how far the gather lane has played on GitHub's
+// runners (each of its parts by its hours: `progress`),
 // then a headline (what runs, what waits and on what, which subscriptions can
 // start work), then the excess compute (`ExcessSection`, #3659: the lanes spare, so whether people
 // should open more issues, and of which difficulty), then draws the same facts as `/harness status`

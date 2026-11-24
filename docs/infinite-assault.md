@@ -735,7 +735,7 @@ after M as its own pull request (the bot adopted A to D as the tree's parts when
 | --- | --- | --- | --- |
 | A | `A, the Assault's rules` | `crates/run/src/assault/`, `crates/run/src/assault.json`, the Assault block of `crates/run/src/config.rs`, `crates/run/README.md`'s Assault section, the generated `Assault*.ts`, `apps/web/src/wire/run.ts` | hard |
 | B | `B, the Assault in the WebAssembly module` | `crates/wasm/`, `apps/web/src/wasm/` (the `assault*` wrappers), the day's Assault deck's export | medium |
-| C | `C, the Assault screen` | `apps/web/src/assault/` but `fight/`; `main.tsx`, the route chunks, `net/navigate.ts`, both `vercel.json`, `routes/playModes.ts`, `routes/PlayHub.tsx`, `routes/commandEntries.ts`, `i18n/zh-CN.json` | medium |
+| C | `C, the Assault screen` | `apps/web/src/assault/` but `fight/`; `main.tsx`, the route chunks, `net/navigate.ts`, `apps/web/public/_redirects`, `routes/playModes.ts`, `routes/PlayHub.tsx`, `routes/commandEntries.ts`, `i18n/zh-CN.json` | medium |
 | D | `D, the Assault's fights` | `apps/web/src/assault/fight/`, the practice worker's hooks it needs (`apps/web/src/practice/`) | hard |
 
 **The surface (frozen).** Rust, in `jackioh_run` (serde camelCase; `ts` exports to

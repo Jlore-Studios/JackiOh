@@ -577,7 +577,7 @@ func TestBasics_ForbiddenAndReviewPaths(t *testing.T) {
 		"rustfmt.toml", "crates/engine/clippy.toml", ".cargo/config.toml", "vitest.config.ts",
 		"apps/web/vitest.config.ts", "apps/web/tsconfig.json", "eslint.config.js", "wrangler.jsonc",
 		"apps/edge/src/index.ts", "apps/web/public/_headers", "e2e/cypress.config.ts",
-		"scripts/promote-production.sh", "scripts/vercel-ignore.sh"} {
+		"scripts/promote-production.sh", "scripts/promote-staging.sh"} {
 		assertTrue(t, git.Matches(path, review), path)
 	}
 	// #2986: these merge themselves, a migration and a lock on a condition (`migration_paths`,

@@ -9,6 +9,7 @@ import ts from "typescript";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
+import { assaultContent } from "./wasm/index.ts";
 import glossary from "../../../crates/shared/data/glossary.json";
 import zhCN from "./i18n/zh-CN.json";
 
@@ -279,8 +280,22 @@ const PROPER_NAMES = [
   "Wrecked Spice Platform",
   "Drone Hideouts",
   "Frontier Outpost",
+  // The Infinite Assault's upgrades, by the names players see (docs/infinite-assault.md IA3).
+  "Expanded Context",
+  "Bigger Dataset",
+  "Fine-Tuned",
+  "Reinforced Weights",
+  "Raised Ceiling",
+  "Hardened Shell",
+  "Parallel Inference",
 ];
-const PHRASES_TO_REMOVE = [...cardNames, "Play together", ...PROPER_NAMES].sort((a, b) => b.length - a.length);
+// The Infinite Assault's enemies and Commanders, by the names its day screen and briefing show
+// (`crates/run/src/assault.json`, read through the module).
+const ASSAULT_NAMES = ((content) => [
+  ...content.doctrines.flatMap((doctrine) => doctrine.enemies),
+  ...content.commanders.map((commander) => commander.name),
+])(assaultContent());
+const PHRASES_TO_REMOVE = [...cardNames, "Play together", ...PROPER_NAMES, ...ASSAULT_NAMES].sort((a, b) => b.length - a.length);
 
 const cardTypes = Object.values(CATALOG).flatMap((c) => (c.type ? c.type.split(/\s+/) : []));
 const cardTags = Object.values(CATALOG).flatMap((c) => (c.tags ?? []).flatMap((t) => t.split(/\s+/)));
@@ -289,7 +304,7 @@ const glossaryWords = glossary.entries.flatMap((e) =>
 );
 
 const EXPLICIT_NAMES =
-  "JackiOh Jlore Credits Tickets Coins Embers Conquest Attack Defense Position Health Deck Decks Collection Almanac Practice Trios Backrow Legendary Mythic Rare Epic Shard Chase Classic Meditative Stinkyscape Core Prime Training Grounds Vanguard Universe Rift Trade Tributed Greed Opponent Cost Roblox GitHub Chrome Google Authenticator Authy English Chinese Latin".split(
+  "JackiOh Jlore Credits Tickets Coins Embers Conquest Attack Defense Position Health Deck Decks Collection Almanac Practice Trios Backrow Legendary Mythic Rare Epic Shard Chase Classic Meditative Stinkyscape Core Prime Training Grounds Vanguard Universe Rift Trade Tributed Greed Opponent Cost Roblox GitHub Chrome Google Authenticator Authy English Chinese Latin Assault".split(
     /\s+/,
   );
 

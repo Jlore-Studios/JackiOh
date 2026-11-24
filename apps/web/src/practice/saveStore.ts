@@ -19,6 +19,9 @@ export type PracticeSaveStore = {
   /** R3476000: the run fight in progress, in its own slot; never the free game's. */
   readRunFight(): PracticeSave | null;
   writeRunFight(save: PracticeSave | null): void;
+  /** R4582001: the Infinite Assault fight in progress, in its own slot; never the free game's or a run fight's. */
+  readAssaultFight(): PracticeSave | null;
+  writeAssaultFight(save: PracticeSave | null): void;
   /** R768: the kept finished games, oldest first. */
   readReplays(): readonly PracticeReplay[];
   writeReplays(replays: readonly PracticeReplay[]): void;
@@ -28,6 +31,7 @@ export const PRACTICE_SAVE_DB = "jackioh.practice";
 const STORE = "save";
 const KEY = "game";
 const RUN_FIGHT_KEY = "runFight";
+const ASSAULT_FIGHT_KEY = "assaultFight";
 const REPLAYS_KEY = "replays";
 
 /** A store that forgets on reload: jsdom, a browser without IndexedDB, and the tests. */
@@ -35,9 +39,11 @@ export function memorySaveStore(
   initial: PracticeSave | null = null,
   replays: readonly PracticeReplay[] = [],
   runFight: PracticeSave | null = null,
+  assaultFight: PracticeSave | null = null,
 ): PracticeSaveStore {
   let save = initial;
   let fight = runFight;
+  let assault = assaultFight;
   let kept = [...replays];
   return {
     ready: Promise.resolve(),
@@ -48,6 +54,10 @@ export function memorySaveStore(
     readRunFight: () => fight,
     writeRunFight: (next) => {
       fight = next;
+    },
+    readAssaultFight: () => assault,
+    writeAssaultFight: (next) => {
+      assault = next;
     },
     readReplays: () => kept,
     writeReplays: (next) => {
@@ -108,6 +118,8 @@ export function indexedDbSaveStore(factory: IDBFactory): PracticeSaveStore {
   let save: PracticeSave | null = null;
   // R3476000: the run fight's own slot, read at boot and written per answer, beside the free game's.
   let runFight: PracticeSave | null = null;
+  // R4582001: the Assault fight's own slot, beside the free game's and the run fight's.
+  let assaultFight: PracticeSave | null = null;
   let replays: PracticeReplay[] = [];
   let db: IDBDatabase | null = null;
 
@@ -121,6 +133,8 @@ export function indexedDbSaveStore(factory: IDBFactory): PracticeSaveStore {
     save = isSave(stored) ? stored : null;
     const fight: unknown = await request(db.transaction(STORE, "readonly").objectStore(STORE).get(RUN_FIGHT_KEY));
     runFight = isSave(fight) ? fight : null;
+    const assault: unknown = await request(db.transaction(STORE, "readonly").objectStore(STORE).get(ASSAULT_FIGHT_KEY));
+    assaultFight = isSave(assault) ? assault : null;
     const kept: unknown = await request(db.transaction(STORE, "readonly").objectStore(STORE).get(REPLAYS_KEY));
     replays = Array.isArray(kept) ? (kept as unknown[]).filter(isReplay) : [];
   }
@@ -129,6 +143,7 @@ export function indexedDbSaveStore(factory: IDBFactory): PracticeSaveStore {
     db = null;
     save = null;
     runFight = null;
+    assaultFight = null;
     replays = [];
   });
 
@@ -156,6 +171,18 @@ export function indexedDbSaveStore(factory: IDBFactory): PracticeSaveStore {
         else store.put(next, RUN_FIGHT_KEY);
       } catch {
         // As for a free game's save: this answer's fight is lost, and the fight goes on.
+      }
+    },
+    readAssaultFight: () => assaultFight,
+    writeAssaultFight(next) {
+      assaultFight = next;
+      if (db === null) return;
+      try {
+        const store = db.transaction(STORE, "readwrite").objectStore(STORE);
+        if (next === null) store.delete(ASSAULT_FIGHT_KEY);
+        else store.put(next, ASSAULT_FIGHT_KEY);
+      } catch {
+        // As for a run fight's save: this answer's fight is lost, and the fight goes on.
       }
     },
     readReplays: () => replays,

@@ -23,8 +23,9 @@ pub struct Opening {
 /// The AI's deck is never counted dealt: no view shows its seat, and R185's redaction would hide its own
 /// library.
 fn dealt_seats(config: &PracticeConfig) -> Option<Vec<PlayerId>> {
-    // R2706000: a run deck is built over the run, not dealt, whatever `deck` says.
-    if config.is_run() || config.is_lesson() {
+    // R2706000: a run deck is built over the run, not dealt, whatever `deck` says; R4582000: an Assault
+    // fight's deck is the attempt's.
+    if config.is_mode_fight() || config.is_lesson() {
         return None;
     }
     matches!(config.deck, PracticeDeckChoice::Random { .. }).then(|| vec![config.human_seat])
@@ -73,7 +74,7 @@ struct Deal {
 /// §9.10, R291: a lesson's fixed decks, the tutorial handicap on the AI (R290) and `TUTORIAL_HUMAN` on
 /// the human, whose fixed deck is smaller than `DECK_SIZE` (R1705005); or a free game's (§9.9), none on
 /// the human. R2706000: a dungeon run's fight plays its setup's two decks and two handicaps, whatever
-/// `deck` and `difficulty` say.
+/// `deck` and `difficulty` say, and R4582000: so does an Infinite Assault fight.
 fn deal_decks(config: &PracticeConfig) -> Result<Deal, String> {
     if let Some(run) = &config.run {
         return Ok(Deal {
@@ -81,6 +82,14 @@ fn deal_decks(config: &PracticeConfig) -> Result<Deal, String> {
             ai_deck: run.enemy_deck.clone(),
             handicap: run.enemy_handicap,
             human_handicap: Some(run.human_handicap),
+        });
+    }
+    if let Some(assault) = &config.assault {
+        return Ok(Deal {
+            human_deck: assault.human_deck.clone(),
+            ai_deck: assault.enemy_deck.clone(),
+            handicap: assault.enemy_handicap,
+            human_handicap: Some(assault.human_handicap),
         });
     }
     if let Some(lesson) = &config.lesson {
@@ -147,6 +156,10 @@ pub fn deal(asked: &PracticeConfig) -> Result<Opening, String> {
     if let Some(run) = &asked.run {
         config.seed = run.seed.clone();
     }
+    // R4582000: an Assault fight plays on its level's seed (`{day seed}-L{level}-A{attempt}`), likewise.
+    if let Some(assault) = &asked.assault {
+        config.seed = assault.seed.clone();
+    }
     let human = config.human_seat;
     let Deal {
         human_deck,
@@ -162,20 +175,27 @@ pub fn deal(asked: &PracticeConfig) -> Result<Opening, String> {
         }
     }
     // R508: the human's last board, on a free game only; the AI's seat never has one. R923000: a sandbox
-    // game brings none, and R2706000: nor does a run fight, a game of its own kind.
-    let board: Vec<LastBoardEntry> = if config.is_lesson() || config.is_sandbox() || config.is_run() {
+    // game brings none, and R2706000, R4582000: nor does a run's or an Assault's fight, a game of its own kind.
+    let board: Vec<LastBoardEntry> = if config.is_lesson() || config.is_sandbox() || config.is_mode_fight() {
         Vec::new()
     } else {
         config.last_board.clone().unwrap_or_default()
     };
     let last_boards = (!board.is_empty()).then(|| seat_ordered(human, board, Vec::new()));
-    // R2706000: the run deck's Radiant and buffed cards, at the human's seat; none, no key, so a game
-    // without marks is created and hashes as before (DR14 B3).
+    // R2706000: the run deck's Radiant and buffed cards, at the human's seat; R4582000: the Assault
+    // enemy's, at the AI's. None, no key, so a game without marks is created and hashes as before (DR14 B3).
     let deck_marks = config
         .run
         .as_ref()
         .filter(|run| !run.human_marks.is_empty())
-        .map(|run| only_at::<Vec<DeckMark>>(human, run.human_marks.clone()));
+        .map(|run| only_at::<Vec<DeckMark>>(human, run.human_marks.clone()))
+        .or_else(|| {
+            config
+                .assault
+                .as_ref()
+                .filter(|assault| !assault.enemy_marks.is_empty())
+                .map(|assault| only_at::<Vec<DeckMark>>(human.opponent(), assault.enemy_marks.clone()))
+        });
     let options = CreateGameOptions {
         seed: config.seed.clone(),
         decks: seat_ordered(human, human_deck, ai_deck),

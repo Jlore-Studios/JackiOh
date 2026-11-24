@@ -17,6 +17,8 @@ import { announceAccountChange } from "../net/gate.ts";
 import { readSession, writeSession, type Session } from "../net/session.ts";
 import { t } from "../i18n/i18n.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
+import CodeField from "./CodeField.tsx";
+import { TOTP_CODE_FORMAT } from "./codeInput.ts";
 import { requiredProblem } from "./validation.ts";
 
 import "./two-step.css";
@@ -204,19 +206,18 @@ function TwoStepPanel({ token }: { token: string }): ReactElement {
             </span>
           </p>
           <label htmlFor="account-two-step-code">{t("Code from the app")}</label>
-          <input
+          {/* R4669000: the two-step code is one field drawn as six boxes. */}
+          <CodeField
             id="account-two-step-code"
-            data-testid={twoStepTestid.code}
-            type="text"
+            testId={twoStepTestid.code}
+            format={TOTP_CODE_FORMAT}
             inputMode="numeric"
             autoComplete="one-time-code"
-            autoCorrect="off"
-            spellCheck={false}
             autoFocus
             value={code}
             disabled={busy}
-            onChange={(event) => {
-              setCode(event.target.value);
+            onChange={(next) => {
+              setCode(next.formatted);
               setError(null);
             }}
           />

@@ -601,7 +601,8 @@ async fn r1452_restart_resumes_the_bot_seat() {
 #[tokio::test(start_paused = true)]
 async fn r1452_a_restart_mid_game_resumes_the_bot_on_its_next_turn() {
     // Re-pinned for #1705's 25-card decks: under "seed-bot-restart-mid" the bot's one play spends its
-    // turn, which ends by itself (R82) with no `endTurn` of the bot's to see.
+    // turn, which ends by itself (R82) with no `endTurn` of the bot's to see. Since issue #4665 the read
+    // is any action of the bot's after the restart, an `endTurn` or a play its turn ends on.
     let m = bot_match("seed-bot-restart-mid-1", PlayerId::P2, PersonaName::Silent, false).await;
     to_the_persons_turn(&m).await;
     let turn = m.actor.snapshot().turn;
@@ -637,7 +638,7 @@ async fn r1452_a_restart_mid_game_resumes_the_bot_on_its_next_turn() {
     assert!(
         log[before..]
             .iter()
-            .any(|(seat, nonce, kind)| *seat == bot && bot_nonce(nonce) && kind == "endTurn"),
+            .any(|(seat, nonce, _)| *seat == bot && bot_nonce(nonce)),
         "{log:?}"
     );
     let row = q!(m.app, matches_get(MATCH_ID)).expect("the match row");

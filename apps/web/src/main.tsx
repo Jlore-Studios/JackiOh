@@ -102,6 +102,7 @@ import { signOut, signOutLabel, useSigningOut } from "./auth/signOut.ts";
 import CommandMenu from "./routes/CommandMenu.tsx";
 import { QueueFound } from "./routes/GameBanner.tsx";
 import { routeChunks, startScreen, watchRouteIntent } from "./routes/chunks.tsx";
+import { ASSAULT_OPEN } from "./assault/config.ts";
 import LandingRoute from "./routes/landing.tsx";
 import { followInApp } from "./routes/nav.tsx";
 import { readSettings } from "./settings/store.ts";
@@ -131,6 +132,8 @@ const SeriesRoute = routeChunks.series.Screen;
 const PracticeRoute = routeChunks.practice.Screen;
 const DungeonRoute = routeChunks.dungeon.Screen;
 const DungeonStatsRoute = routeChunks.dungeonStats.Screen;
+// IA7: until the release opens the Infinite Assault (ASSAULT_OPEN), only a dev or e2e build serves it.
+const AssaultRoute = ASSAULT_OPEN || import.meta.env.MODE !== "production" ? routeChunks.assault.Screen : null;
 const PrivacyRoute = routeChunks.privacy.Screen;
 const TermsRoute = routeChunks.terms.Screen;
 const PurchasesRoute = routeChunks.purchases.Screen;
@@ -742,6 +745,15 @@ export function App(): ReactElement {
       return (
         <EngineGate>
           <DungeonStatsRoute />
+        </EngineGate>
+      );
+    }
+    // #4581: the Infinite Assault is offline and open to anyone, as practice and the Dungeon run are.
+    if (path === paths.assault) {
+      if (AssaultRoute === null) return <NotFound path={path} />;
+      return (
+        <EngineGate>
+          <AssaultRoute />
         </EngineGate>
       );
     }

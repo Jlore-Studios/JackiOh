@@ -619,7 +619,7 @@ checks, then one transaction folds every record into the totals and writes no ro
 and claims the file in `game_record_batches` (migration 0060) by the SHA-256 of its contents with how
 many it folded. The same file imported again folds nothing, and a record whose id `game_records`
 holds, or that the file repeats, is left out; the games themselves are read off the file, which the
-learn lane and the gather workflow keep as their runs' artifacts. Each record folded also folds its
+gather workflow keeps as its runs' artifacts. Each record folded also folds its
 whole game under its `record_totals` key into `game_totals` (migration 0063), read and added to in
 Rust as a card row is, so the game figures `GET /api/stats/games` and `stats report --games` read
 outlive the purge; a record folded before 0063 counts in `record_totals` alone, with no back-fill

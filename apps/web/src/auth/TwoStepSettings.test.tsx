@@ -4,10 +4,12 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { TOTP_CODE_FORMAT } from "@jackioh/server-config";
 import { AUTH_MESSAGES, AUTH_NOTICES } from "../net/auth.ts";
 import { readSession, writeSession } from "../net/session.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import TwoStepSettings, { twoStepTestid } from "./TwoStepSettings.tsx";
+import { codeFieldSegmentTestid } from "./testids.ts";
 
 const URL_ = "https://project.supabase.co";
 const TOKEN = "access-aal1";
@@ -109,6 +111,39 @@ describe("R665 turning two-step sign-in on and off", () => {
       code: "123456",
     });
     expect(listed).toBeGreaterThan(0);
+  });
+
+  it("R4669000 enrolment draws the code as six boxes over one input", async () => {
+    const calls = serve({
+      "GET /auth/v1/user": factors([]),
+      "POST /auth/v1/factors": ENROLLED,
+      "POST /auth/v1/factors/f-new/challenge": { status: 200, body: { id: "challenge-1" } },
+      "POST /auth/v1/factors/f-new/verify": {
+        status: 200,
+        body: { access_token: "access-aal2", refresh_token: "refresh-2", expires_in: 3600 },
+      },
+    });
+    const { container } = render(<TwoStepSettings token={TOKEN} />);
+    fireEvent.click(await screen.findByTestId(twoStepTestid.start));
+    await screen.findByTestId(twoStepTestid.qr);
+
+    expect(container.querySelectorAll("input")).toHaveLength(1);
+    const input = screen.getByTestId(twoStepTestid.code);
+    expect(input.tagName).toBe("INPUT");
+    expect(input).toHaveAttribute("autocomplete", "one-time-code");
+    expect(input).toHaveAttribute("inputmode", "numeric");
+    for (let index = 0; index < TOTP_CODE_FORMAT.length; index += 1) {
+      expect(screen.getByTestId(codeFieldSegmentTestid(index))).toHaveAttribute("aria-hidden", "true");
+    }
+    expect(screen.queryByTestId(codeFieldSegmentTestid(TOTP_CODE_FORMAT.length))).toBeNull();
+
+    fireEvent.change(input, { target: { value: "123456" } });
+    fireEvent.click(screen.getByTestId(twoStepTestid.confirm));
+    expect((await screen.findByTestId(twoStepTestid.notice)).textContent).toBe(AUTH_NOTICES.mfaEnrolled);
+    expect(calls.find((call) => call.path === "/auth/v1/factors/f-new/verify")?.body).toEqual({
+      challenge_id: "challenge-1",
+      code: "123456",
+    });
   });
 
   it("R665 a wrong code leaves it off and says so", async () => {

@@ -963,12 +963,26 @@
     "cost": 3,
     "loc": 12,
     "base": {
-      "keywords": [],
-      "text": "Make a card in your hand Radiant."
+      "keywords": [
+        {
+          "kind": "Tradable"
+        },
+        {
+          "kind": "Flashback"
+        }
+      ],
+      "text": "Tradable, Flashback\nMake a card in your hand Radiant."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Make 2 cards in your hand Radiant."
+      "keywords": [
+        {
+          "kind": "Tradable"
+        },
+        {
+          "kind": "Flashback"
+        }
+      ],
+      "text": "Tradable, Flashback\nMake 2 cards in your hand Radiant."
     }
   },
   "core-027": {
@@ -6041,9 +6055,12 @@
       "keywords": [
         {
           "kind": "Stack"
+        },
+        {
+          "kind": "Taunt"
         }
       ],
-      "text": "Stack\nDeath: Destroy every backrow card."
+      "text": "Stack, Taunt\nDeath: Destroy every backrow card."
     },
     "radiant": {
       "attack": 6,
@@ -6051,9 +6068,12 @@
       "keywords": [
         {
           "kind": "Stack"
+        },
+        {
+          "kind": "Taunt"
         }
       ],
-      "text": "Stack\nDeath: Destroy every enemy backrow card."
+      "text": "Stack, Taunt\nDeath: Destroy every enemy backrow card."
     }
   },
   "classic-052": {
@@ -8497,23 +8517,15 @@
       "health": 3,
       "keywords": [
         {
-          "kind": "Armor",
-          "n": 2
-        },
-        {
           "kind": "Can't Defend"
         }
       ],
-      "text": "Armor 2, Can't Defend\nOnly Units in this lane can attack this."
+      "text": "Can't Defend\nOnly Units in this lane can attack this."
     },
     "radiant": {
       "attack": 6,
       "health": 6,
       "keywords": [
-        {
-          "kind": "Armor",
-          "n": 2
-        },
         {
           "kind": "Immune to Spells"
         },
@@ -8521,7 +8533,7 @@
           "kind": "Can't Defend"
         }
       ],
-      "text": "Armor 2, Immune to Spells, Can't Defend\nOnly Units in this lane can attack this."
+      "text": "Immune to Spells, Can't Defend\nOnly Units in this lane can attack this."
     }
   },
   "classicplus-019-2": {
@@ -8688,16 +8700,6 @@
     "flavor": "Physical",
     "token": true,
     "cost": 2,
-    "params": [
-      {
-        "key": "attackGain",
-        "base": 2,
-        "radiant": 4,
-        "better": "up",
-        "step": 1,
-        "min": 1
-      }
-    ],
     "loc": 23,
     "base": {
       "attack": 3,
@@ -8710,7 +8712,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Rush, First Strike\nAfter this destroys a Unit, it gains +{attackGain} Attack.\nWhile Berserk: Start of turn and end of turn: this attacks your hero."
+      "text": "Rush, First Strike\nWhile Berserk: Start of turn and end of turn: this attacks your hero."
     },
     "radiant": {
       "attack": 6,
@@ -8723,7 +8725,7 @@
           "kind": "First Strike"
         }
       ],
-      "text": "Charge, First Strike\nAfter this destroys a Unit, it gains +{attackGain} Attack.\nThis can't go Berserk."
+      "text": "Charge, First Strike\nThis can't go Berserk."
     }
   },
   "classicplus-020": {
@@ -13985,13 +13987,32 @@
     "cost": 2,
     "loc": 18,
     "base": {
-      "keywords": [],
-      "text": "End the turn. Your hero is immune to damage until your next turn begins. Exile this."
+      "keywords": [
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Tradable\nEnd the turn. Your hero is immune to damage until your next turn begins. Exile this."
     },
     "radiant": {
-      "keywords": [],
-      "text": "Your hero is immune to damage until your next turn begins. Exile this."
-    }
+      "keywords": [
+        {
+          "kind": "Tradable"
+        }
+      ],
+      "text": "Tradable\nReplenish {refresh} mana. Your hero is immune to damage until your next turn begins. Exile this."
+    },
+    "params": [
+      {
+        "key": "refresh",
+        "base": 2,
+        "radiant": 2,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant"
+      }
+    ]
   },
   "meditative-049": {
     "id": "meditative-049",
@@ -15443,6 +15464,15 @@
         "min": 1,
         "tunedOn": "radiant",
         "read": "cry"
+      },
+      {
+        "key": "mana",
+        "base": 1,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
       }
     ],
     "loc": 17,
@@ -15450,13 +15480,13 @@
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "Cry: Buff every card in your hand."
+      "text": "Cry: Buff every card in your hand. You have {mana} less mana next turn."
     },
     "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Buff every card in your hand {times|time|times}."
+      "text": "Cry: Buff every card in your hand {times|time|times}. You have {mana} less mana next turn."
     }
   },
   "meditative-083": {
@@ -19882,7 +19912,7 @@
     "rarity": "Epic",
     "flavor": "Tech",
     "token": false,
-    "cost": 5,
+    "cost": 6,
     "refs": [
       "stinkyscape-t-drone-interceptor",
       "stinkyscape-t-drone-corvette"
@@ -20872,8 +20902,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 6,
-        "radiant": 12,
+        "base": 5,
+        "radiant": 10,
         "better": "up",
         "step": 2,
         "min": 1
@@ -22783,7 +22813,7 @@
     "loc": 6,
     "base": {
       "attack": 7,
-      "health": 5,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -22799,7 +22829,7 @@
     },
     "radiant": {
       "attack": 14,
-      "health": 10,
+      "health": 8,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -28411,16 +28441,27 @@
     "rarity": "Rare",
     "flavor": "Holy",
     "token": false,
-    "cost": 3,
+    "cost": 2,
     "loc": 18,
     "base": {
       "keywords": [],
-      "text": "Make a card in your hand Radiant."
+      "text": "Make a card in your hand Radiant. It costs ({surcharge}) more."
     },
     "radiant": {
       "keywords": [],
-      "text": "Make 2 cards in your hand Radiant."
-    }
+      "text": "Make a card in your hand Radiant."
+    },
+    "params": [
+      {
+        "key": "surcharge",
+        "base": 1,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "base"
+      }
+    ]
   },
   "traininggrounds-051": {
     "id": "traininggrounds-051",
@@ -29136,7 +29177,7 @@
           "n": 4
         }
       ],
-      "text": "Armor 4\nCry: Choose one.\nChain all enemy Units: when one takes damage, every other chained Unit takes it too.\nChain all friendly Units: damage one takes is split among them, rounded down."
+      "text": "Armor 4, Tribute 1\nCry: Choose one.\nChain all enemy Units: when one takes damage, every other chained Unit takes it too.\nChain all friendly Units: damage one takes is split among them, rounded down."
     },
     "radiant": {
       "attack": 6,
@@ -29147,7 +29188,7 @@
           "n": 8
         }
       ],
-      "text": "Armor 8\nCry: Choose one.\nChain all enemy Units: when one takes damage, every other chained Unit takes it too.\nChain all friendly Units: damage one takes is split among them, rounded down."
+      "text": "Armor 8, Tribute 1\nCry: Choose one.\nChain all enemy Units: when one takes damage, every other chained Unit takes it too.\nChain all friendly Units: damage one takes is split among them, rounded down."
     }
   },
   "stinkyscapeplus-008": {
@@ -29480,8 +29521,8 @@
     "cost": 2,
     "loc": 6,
     "base": {
-      "attack": 2,
-      "health": 1,
+      "attack": 5,
+      "health": 3,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -29493,8 +29534,8 @@
       "text": "Starship Piece, Windfury"
     },
     "radiant": {
-      "attack": 4,
-      "health": 2,
+      "attack": 10,
+      "health": 6,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -30426,7 +30467,7 @@
     "rarity": "Rare",
     "flavor": "Tech",
     "token": false,
-    "cost": 1,
+    "cost": 3,
     "params": [
       {
         "key": "health",
@@ -30440,11 +30481,11 @@
     "loc": 31,
     "base": {
       "keywords": [],
-      "text": "End of turn: Heal all Units to full and give them +{health} Health."
+      "text": "End of turn: Heal all your Units to full and give them +{health} Health."
     },
     "radiant": {
       "keywords": [],
-      "text": "End of turn: Heal all Units to full and give them +{health} Health and Divine Shield."
+      "text": "End of turn: Heal all your Units to full and give them +{health} Health and Divine Shield."
     }
   },
   "stinkyscapeplus-042": {
@@ -31140,17 +31181,17 @@
     "rarity": "Epic",
     "flavor": "Clout",
     "token": false,
-    "cost": 2,
+    "cost": 4,
     "loc": 18,
     "base": {
-      "attack": 2,
-      "health": 6,
+      "attack": 9,
+      "health": 11,
       "keywords": [],
       "text": "Cry: Summon Shawarma Law."
     },
     "radiant": {
-      "attack": 4,
-      "health": 12,
+      "attack": 18,
+      "health": 22,
       "keywords": [],
       "text": "Cry: Summon Radiant Shawarma Law."
     },
@@ -31212,20 +31253,20 @@
     "rarity": "Epic",
     "flavor": "Tech",
     "token": false,
-    "cost": 1,
+    "cost": 3,
     "loc": 42,
     "base": {
       "keywords": [],
-      "text": "Dormant for {dormant|turn|turns}.\nAll Units gain Rush and Windfury, and Spells gain Echo +{spellEcho}."
+      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Rush and Windfury, and your Spells gain Echo +{spellEcho}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Rush and Windfury, and Spells gain Echo +{spellEcho}."
+      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Rush and Windfury, and your Spells gain Echo +{spellEcho}."
     },
     "params": [
       {
         "key": "dormant",
-        "base": 1,
+        "base": 2,
         "radiant": 1,
         "better": "down",
         "step": 1,
@@ -31253,21 +31294,21 @@
     "rarity": "Epic",
     "flavor": "Tech",
     "token": false,
-    "cost": 2,
+    "cost": 4,
     "loc": 42,
     "base": {
       "keywords": [],
-      "text": "Dormant for {dormant|turn|turns}.\nAll Units gain Charge and Windfury, and Spells gain Echo +{spellEcho}."
+      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Charge and Windfury, and your Spells gain Echo +{spellEcho}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Charge and Windfury, and Spells gain Echo +{spellEcho}."
+      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Charge and Windfury, and your Spells gain Echo +{spellEcho}."
     },
     "params": [
       {
         "key": "dormant",
         "base": 2,
-        "radiant": 2,
+        "radiant": 1,
         "better": "down",
         "step": 1,
         "min": 1

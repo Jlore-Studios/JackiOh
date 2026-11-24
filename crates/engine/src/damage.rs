@@ -494,12 +494,20 @@ fn land(
 
     // R3554007, §4.4 step 0b: a hit on a split-chained Unit is divided among every member of its
     // chain, rounded down, each share landing as its own chain hit through `land_hit`. The target's
-    // share is what this hit dealt.
+    // share is what this hit dealt. R4599006: a Spell's hit passes a member Immune to Spells by, so it
+    // is divided among the others.
     if flags.is_none_or(|flags| !flags.chain_hit)
         && let Some(live) = unit.as_ref()
         && let Some(chain) = live.split_chain
     {
-        let members = crate::geometry::chain_members(sink.state, chain, crate::geometry::ChainKind::Split);
+        let members: Vec<CardInstance> =
+            crate::geometry::chain_members(sink.state, chain, crate::geometry::ChainKind::Split)
+                .into_iter()
+                .filter(|member| {
+                    member.id == live.id
+                        || !crate::restrictions::spell_cannot_reach(sink.state, source, member)
+                })
+                .collect();
         if members.len() > 1 {
             let share = amount_in / members.len() as i32;
             let chained = chain_flags(flags);
@@ -778,7 +786,8 @@ fn land(
     }
 
     // R3554007, §4.4 step 8b: what a shared-chained Unit was dealt is dealt again to each other
-    // member of its chain, as its own chain hit, so no echo echoes again.
+    // member of its chain, as its own chain hit, so no echo echoes again. R4599006: a Spell's echo
+    // passes a member Immune to Spells by.
     if dealt > 0
         && flags.is_none_or(|flags| !flags.chain_hit)
         && let Some(live) = &unit
@@ -786,7 +795,7 @@ fn land(
     {
         let chained = chain_flags(flags);
         for member in crate::geometry::chain_members(sink.state, chain, crate::geometry::ChainKind::Shared) {
-            if member.id == live.id {
+            if member.id == live.id || crate::restrictions::spell_cannot_reach(sink.state, source, &member) {
                 continue;
             }
             let hit = DamageArgs {
@@ -835,8 +844,7 @@ fn lethal_replaced(
     if !lethal {
         return None;
     }
-    let source_id = args.source.as_ref().map(|card| card.id.clone());
-    crate::replacements::lethal_hit_window(sink, &args.target, amount, source_id, caught)
+    crate::replacements::lethal_hit_window(sink, &args.target, amount, args.source.as_ref(), caught)
 }
 
 /// §4.4 step 9: a Trample excess goes on as a new instance of the same hit (not raised again, keeping
