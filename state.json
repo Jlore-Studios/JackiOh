@@ -17268,9 +17268,11 @@
       "action": "revise",
       "asks": [],
       "audit_tier": "",
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-24T07:07:28Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-24T06:15:03Z",
         "family": "claude",
@@ -17280,6 +17282,7 @@
         "reason": "`claude-1` stops mid-call: 5-hour usage is 100%, at or over its 100% cap; it resets at 2026-11-24T08:50:00Z",
         "trail": ""
       },
+      "interruptions": 0,
       "issue": 4604,
       "kind": "revise",
       "last_findings": [],
