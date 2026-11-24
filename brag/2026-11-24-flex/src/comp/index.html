@@ -1,0 +1,449 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>JackiOh — flex video composition</title>
+<style>
+  @font-face { font-family: "Alegreya"; src: url("assets/alegreya-5.3.0-latin-wght-normal.woff2") format("woff2"); font-weight: 400 900; }
+  @font-face { font-family: "Inter"; src: url("assets/inter-5.3.0-latin-wght-normal.woff2") format("woff2"); font-weight: 100 900; }
+  html, body { margin: 0; padding: 0; background: #0c0704; }
+  #stage { position: relative; overflow: hidden; background: #0c0704; }
+  .scene { position: absolute; inset: 0; display: none; overflow: hidden; }
+  .abs { position: absolute; }
+  /* The tavern backdrop: .tavern.app-shell's gradients and its ::before planks (apps/web/src/auth/tavern.css). */
+  .tavern {
+    position: absolute; inset: 0; isolation: isolate; overflow: hidden;
+    background:
+      radial-gradient(ellipse 70% 40% at 50% 100%, rgba(255, 150, 60, 0.2), transparent 70%),
+      radial-gradient(ellipse 90% 55% at 50% 0%, rgba(90, 52, 27, 0.38), transparent 70%),
+      linear-gradient(180deg, #1c110a 0%, #120b07 55%, #0c0704 100%);
+  }
+  .tavern::before {
+    content: ""; position: absolute; z-index: -1; left: -20%; right: -20%; bottom: 0; height: 33%;
+    transform: perspective(700px) rotateX(58deg); transform-origin: 50% 100%;
+    background:
+      repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.5) 0 3px, transparent 3px 12.5%),
+      repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.14) 0 1px, transparent 1px 17px),
+      linear-gradient(180deg, #2b170c 0%, #5a341b 60%, #8a5a33 100%);
+    opacity: 0.55;
+    -webkit-mask-image: linear-gradient(0deg, #000 25%, transparent 100%);
+    mask-image: linear-gradient(0deg, #000 25%, transparent 100%);
+  }
+  .gold {
+    font-family: "Alegreya", serif; font-weight: 800; line-height: 1.02; letter-spacing: 0.01em;
+    padding: 0 0.06em 0.08em; white-space: nowrap;
+    background: linear-gradient(180deg, #fbe7b0 0%, #ffe39a 22%, #f3c969 44%, #c9953f 64%, #9b6423 84%, #d9a44c 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+    -webkit-text-stroke: var(--stroke, 2.5px) #3a1f0c;
+    filter: drop-shadow(0 0 var(--glow, 18px) rgba(255, 170, 60, 0.38)) drop-shadow(0 3px 0 #3a1f0c);
+  }
+  .body { font-family: "Inter", sans-serif; font-weight: 600; color: #efe0bf; text-shadow: 0 2px 12px rgba(0,0,0,0.7); }
+  .caps { font-family: "Alegreya", serif; font-weight: 700; color: #c9953f; letter-spacing: 0.22em; text-transform: uppercase; text-shadow: 0 2px 10px rgba(0,0,0,0.8); }
+  .look { position: absolute; border-radius: 4.6% / 3.3%; overflow: hidden; box-shadow: 0 26px 60px rgba(0,0,0,0.6); }
+  .look img { width: 100%; height: 100%; display: block; }
+  .pic { position: absolute; overflow: hidden; border-radius: 10px; box-shadow: 0 26px 60px rgba(0,0,0,0.6); }
+  .pic img { width: 100%; height: 100%; display: block; object-fit: cover; }
+  .pill { display: inline-block; font-family: "Alegreya", serif; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+    padding: 0.12em 0.6em 0.16em; border-radius: 999px; border: 2px solid currentColor; background: rgba(12,7,4,0.55); }
+  .chip { white-space: nowrap; }
+  .chip .kind { font-family: "Alegreya", serif; font-weight: 700; color: #c9953f; letter-spacing: 0.22em; text-transform: uppercase; }
+  .chip .name { font-family: "Inter", sans-serif; font-weight: 600; color: #efe0bf; }
+  .rung { position: absolute; display: flex; align-items: center; gap: 22px; border-radius: 14px; padding: 0 26px;
+    border: 2px solid rgba(201,149,63,0.25); background: rgba(28,17,10,0.72); box-sizing: border-box; }
+  .rung .rn { font-family: "Alegreya", serif; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #efe0bf; }
+  #dip { position: absolute; inset: 0; background: #0c0704; pointer-events: none; z-index: 50; }
+  .glow { position: absolute; pointer-events: none; border-radius: 50%; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="tavern"></div>
+
+  <!-- The hook and the dressing: one card's face in the Collection's own looks. -->
+  <div class="scene" id="sA">
+    <div class="glow" id="aGlow"></div>
+    <div class="look" id="aFace"><img id="aImg" alt=""><div class="abs" id="aFlash" style="inset:0;background:#fff8e6;opacity:0"></div></div>
+    <div class="abs gold" id="aCap1"></div>
+    <div class="abs gold" id="aCap2"></div>
+    <div class="abs" id="aRungs"></div>
+    <div class="abs chip" id="aChip"><div class="kind" id="aKind"></div><div class="name" id="aName"></div><span class="pill" id="aRar"></span></div>
+  </div>
+
+  <!-- One card, eight looks. -->
+  <div class="scene" id="sB">
+    <div class="abs gold" id="bCap"></div>
+    <div class="abs" id="bGrid"></div>
+  </div>
+
+  <!-- The account's looks: playmat, backdrop, card back (landscape). -->
+  <div class="scene" id="sC">
+    <div class="abs gold" id="cCap"></div>
+    <div class="pic" id="cBoard"><img id="cBoardImg" alt=""></div>
+    <div class="abs chip" id="cChip1"></div>
+    <div class="pic" id="cBack" style="border-radius:28px"><img id="cBackImg" alt=""></div>
+    <div class="abs chip" id="cChip2"></div>
+  </div>
+
+  <!-- Earned, never sold; the Jlorious card back. -->
+  <div class="scene" id="sD">
+    <div class="glow" id="dGlow"></div>
+    <div class="pic" id="dBack" style="border-radius:30px"><img id="dImg" alt=""></div>
+    <div class="abs" id="dSparks"></div>
+    <div class="abs gold" id="dCap1"></div>
+    <div class="abs gold" id="dCap2"></div>
+    <div class="abs caps" id="dLabel"></div>
+  </div>
+
+  <!-- Outro. -->
+  <div class="scene" id="sE">
+    <div class="glow" id="eGlow"></div>
+    <img class="abs" id="eLogo" src="assets/jackioh-logo.svg" alt="">
+    <div class="abs body" id="eLine"></div>
+    <div class="abs gold" id="eUrl">jackioh.com</div>
+  </div>
+
+  <div id="dip"></div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const eOut = (x) => 1 - Math.pow(1 - x, 3);
+const eIn = (x) => x * x * x;
+const eBack = (x) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+const lerp = (a, b, x) => a + (b - a) * x;
+const V = new URLSearchParams(location.search).has("v");
+const W = V ? 1080 : 1920, H = V ? 1920 : 1080;
+const DUR = V ? 13.7 : 20.0;
+const B = 60 / 140; // edm-5's beat; the music starts on one of its beats, so beat k is at k·B from frame 0
+const GRAB = V ? "gv" : "gl";
+const RAR = { Common: "#d9dde6", Rare: "#3d8bfd", Epic: "#a45cf0", Legendary: "#ff9f1c", Mythic: "#ff5fd2" };
+$("stage").style.width = W + "px"; $("stage").style.height = H + "px";
+let COUNTS = {};
+const pending = [];
+function setSrc(img, src) { if (img.getAttribute("src") !== src) img.setAttribute("src", src); pending.push(img); }
+// A look's frame `u` seconds after it came on: its own 30 fps page-time sequence, held on its last frame (or slowed by `rate`).
+function lookSrc(name, u, rate = 1) {
+  const n = COUNTS[`${GRAB}/${name}`] || 1;
+  const k = Math.min(n - 1, Math.max(0, Math.floor(u * 30 * rate + 1e-6)));
+  return `${GRAB}/${name}/${String(k).padStart(3, "0")}.png`;
+}
+function textIn(el, t, at, d = 0.18, rise = 18) {
+  const x = eOut(seg(t, at, at + d));
+  el.style.opacity = x;
+  el.style.transform = `translateY(${(1 - x) * rise}px)`;
+}
+function place(el, x, y, w, h) {
+  el.style.left = x + "px"; el.style.top = y + "px";
+  if (w !== undefined) el.style.width = w + "px";
+  if (h !== undefined) el.style.height = h + "px";
+}
+function chipHTML(kind, name, rarity, k, n, r) {
+  return (kind ? `<span class="kind" style="font-size:${k}px">${kind}</span>&nbsp;&nbsp;` : "") + `<span class="name" style="font-size:${n}px">${name}</span>&nbsp;&nbsp;<span class="pill" style="font-size:${r}px;color:${RAR[rarity]}">${rarity}</span>`;
+}
+
+// ---- The timeline, in beats -------------------------------------------------------------------------------
+// The hook: Nature Titan's Alt art ladder, rung by rung (spec §14.2's table: Alt art Rare, Alt full art Legendary,
+// animated Mythic, animated and signed Mythic), from its Default.
+const LADDER = [
+  { at: 0, look: "default", label: "Default", rarity: null },
+  { at: 2, look: "alt-art", label: "Alt art", rarity: "Rare" },
+  { at: 4, look: "alt-full-art", label: "Alt full art", rarity: "Legendary" },
+  { at: 5, look: "alt-animated", label: "Animated", rarity: "Mythic" },
+  { at: 6, look: "alt-signed", label: "Signed", rarity: "Mythic" },
+];
+// The dressing: foils, finishes and borders from the card view's strips (registry names and rarities).
+const DRESS_L = [
+  ["foil-cracked-ice", "Foil", "Cracked ice", "Legendary"], ["foil-molten-gold", "Foil", "Molten gold", "Legendary"],
+  ["foil-void-shimmer", "Foil", "Void shimmer", "Mythic"], ["foil-galaxy", "Foil", "Galaxy", "Epic"],
+  ["finish-gilded-edge", "Finish", "Gilded edge", "Legendary"], ["finish-starlit", "Finish", "Starlit", "Mythic"],
+  ["border-filigree", "Border", "Filigree", "Legendary"], ["border-celestial", "Border", "Celestial", "Mythic"],
+];
+const DRESS_V = [
+  ["foil-cracked-ice", "Foil", "Cracked ice", "Legendary"], ["foil-void-shimmer", "Foil", "Void shimmer", "Mythic"],
+  ["finish-gilded-edge", "Finish", "Gilded edge", "Legendary"], ["finish-starlit", "Finish", "Starlit", "Mythic"],
+  ["border-celestial", "Border", "Celestial", "Mythic"],
+];
+const DRESS = V ? DRESS_V : DRESS_L;
+const VARIANTS = [["default", "Default"], ["full-art", "Full art"], ["alt-art", "Alt art"], ["comic", "Comic"],
+  ["night", "Night"], ["watercolor", "Watercolor"], ["tarot", "Tarot"], ["out-of-frame", "Out of frame"]];
+// Section starts, in beats.
+const T = V
+  ? { dress: 8, grid: 13, jl: 19, out: 28, line2: 23 }
+  : { dress: 8, grid: 16, board: 24, jl: 32, out: 42, line2: 36 };
+
+// ---- Layout ------------------------------------------------------------------------------------------------
+const L = V ? {
+  face: { x: 204, y: 590, w: 672, h: 939 },
+  cap1: { x: 0, y: 262, size: 104, w: 1080 }, chip: { x: 0, y: 486, w: 1080 },
+} : {
+  face: { x: 250, y: 105, w: 624, h: 872 },
+  cap1: { x: 1000, y: 120, size: 112, w: 860 }, chip: { x: 1000, y: 520, w: 860 },
+};
+place($("aFace"), L.face.x, L.face.y, L.face.w, L.face.h);
+place($("aGlow"), L.face.x - L.face.w * 0.45, L.face.y - L.face.h * 0.12, L.face.w * 1.9, L.face.h * 1.24);
+for (const id of ["aCap1", "aCap2"]) {
+  const el = $(id);
+  place(el, L.cap1.x, L.cap1.y); el.style.width = L.cap1.w + "px"; el.style.fontSize = L.cap1.size + "px";
+  el.style.whiteSpace = "pre"; el.style.textAlign = V ? "center" : "left";
+}
+$("aCap1").textContent = "Level up\nyour cards.";
+$("aCap2").textContent = V ? "Foils. Finishes.\nBorders." : "Foils.\nFinishes.\nBorders.";
+place($("aChip"), L.chip.x, L.chip.y); $("aChip").style.width = L.chip.w + "px"; $("aChip").style.textAlign = V ? "center" : "left";
+
+// The ladder's rungs (landscape): the Collection's ladder, lowest first.
+const RUNGS = [];
+if (!V) {
+  const box = $("aRungs"); place(box, 1000, 400, 760, 560);
+  LADDER.forEach((r, i) => {
+    const el = document.createElement("div"); el.className = "rung";
+    place(el, 0, i * 108, 700, 90);
+    el.innerHTML = `<span class="rn" style="font-size:38px">${r.label}</span>` + (r.rarity ? `<span class="pill" style="font-size:24px;margin-left:auto;color:${RAR[r.rarity]}">${r.rarity}</span>` : `<span class="pill" style="font-size:24px;margin-left:auto;color:${RAR.Common}">Every card</span>`);
+    box.appendChild(el); RUNGS.push(el);
+  });
+}
+
+// The grid of eight looks.
+const GRID = [];
+(function buildGrid() {
+  const box = $("bGrid"); place(box, 0, 0, W, H);
+  const fw = V ? 236 : 262, fh = Math.round(fw * 880 / 630);
+  VARIANTS.forEach(([look, label], i) => {
+    let x, y;
+    if (V) {
+      const row = Math.floor(i / 3), col = i % 3, inRow = row < 2 ? 3 : 2;
+      const gx = 30, rowW = inRow * fw + (inRow - 1) * gx;
+      x = (W - rowW) / 2 + col * (fw + gx); y = 492 + row * (fh + 20);
+    } else {
+      const row = Math.floor(i / 4), col = i % 4, gx = 52;
+      x = (W - (4 * fw + 3 * gx)) / 2 + col * (fw + gx); y = 222 + row * (fh + 66);
+    }
+    const f = document.createElement("div"); f.className = "look"; place(f, x, y, fw, fh);
+    const img = document.createElement("img"); img.src = `${GRAB}/${look}/000.png`; f.appendChild(img);
+    box.appendChild(f);
+    let lab = null;
+    if (!V) {
+      lab = document.createElement("div"); lab.className = "abs caps"; lab.textContent = label;
+      place(lab, x - 40, y + fh + 14, fw + 80); lab.style.textAlign = "center"; lab.style.fontSize = "24px";
+      box.appendChild(lab);
+    }
+    GRID.push({ f, lab, i });
+  });
+  const cap = $("bCap"); cap.textContent = V ? "One card.\nEight looks." : "One card. Eight looks.";
+  cap.style.whiteSpace = "pre"; cap.style.textAlign = "center"; cap.style.width = W + "px";
+  place(cap, 0, V ? 262 : 58); cap.style.fontSize = (V ? 104 : 104) + "px";
+})();
+
+// The account's looks (landscape only).
+if (!V) {
+  const cap = $("cCap"); cap.textContent = "Dress your board too."; cap.style.textAlign = "center"; cap.style.width = W + "px";
+  place(cap, 0, 58); cap.style.fontSize = "104px";
+  place($("cBoard"), 150, 250, 1040, 650);
+  place($("cBack"), 1340, 250, 464, 650);
+  for (const id of ["cChip1", "cChip2"]) $(id).style.textAlign = "center";
+  place($("cChip1"), 150, 930, 1040); place($("cChip2"), 1240, 930, 664);
+}
+
+// The Jlorious card back.
+(function buildJl() {
+  const back = V ? { x: 255, y: 560, w: 570, h: 798 } : { x: 1170, y: 170, w: 520, h: 728 };
+  place($("dBack"), back.x, back.y, back.w, back.h);
+  place($("dGlow"), back.x - back.w * 0.7, back.y - back.h * 0.25, back.w * 2.4, back.h * 1.5);
+  for (const id of ["dCap1", "dCap2"]) {
+    const el = $(id); el.style.whiteSpace = "pre"; el.style.fontSize = (V ? 100 : 112) + "px";
+    if (V) { place(el, 0, 262); el.style.width = W + "px"; el.style.textAlign = "center"; } else { place(el, 170, 330); }
+  }
+  $("dCap1").textContent = "Earned by playing.\nNever sold.";
+  $("dCap2").textContent = "The Jlorious back?\nTop 100 only.";
+  const lab = $("dLabel"); lab.innerHTML = `Card back · Jlorious · <span style="color:${RAR.Mythic}">Mythic</span>`;
+  lab.style.fontSize = (V ? 30 : 30) + "px"; lab.style.textAlign = "center";
+  if (V) place(lab, 0, back.y + back.h + 34, W); else place(lab, back.x - 160, back.y + back.h + 30, back.w + 320);
+  // Sparks, fixed by index, so a frame depends on t alone.
+  const box = $("dSparks"); place(box, back.x + back.w / 2, back.y + back.h / 2, 0, 0);
+  for (let i = 0; i < 24; i++) {
+    const s = document.createElement("div"); s.className = "abs";
+    const size = 6 + ((i * 37) % 9); s.style.width = s.style.height = size + "px"; s.style.borderRadius = "50%";
+    s.style.background = "radial-gradient(circle, #fff6d6 0%, #f3c969 45%, rgba(243,201,105,0) 72%)";
+    s.dataset.a = (i / 24) * Math.PI * 2 + ((i * 53) % 10) * 0.05; s.dataset.r = (V ? 300 : 300) + ((i * 71) % 170); s.dataset.d = 0.55 + ((i * 29) % 30) / 100;
+    box.appendChild(s);
+  }
+})();
+
+// Outro.
+(function buildOut() {
+  if (V) {
+    place($("eLogo"), 140, 640, 800, 259); place($("eGlow"), 0, 520, 1080, 520);
+    place($("eLine"), 0, 990, W); place($("eUrl"), 0, 1070, W);
+    $("eLine").style.fontSize = "58px"; $("eUrl").style.fontSize = "138px";
+  } else {
+    place($("eLogo"), 500, 200, 920, 298); place($("eGlow"), 360, 110, 1200, 520);
+    place($("eLine"), 0, 570, W); place($("eUrl"), 0, 660, W);
+    $("eLine").style.fontSize = "60px"; $("eUrl").style.fontSize = "170px";
+  }
+  $("eLine").textContent = "Flex it at"; $("eLine").style.textAlign = "center"; $("eUrl").style.textAlign = "center";
+  $("eGlow").style.background = "radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,170,60,0.25), transparent 70%)";
+})();
+
+const show = (id, on) => { $(id).style.display = on ? "block" : "none"; };
+
+// ---- Scenes -------------------------------------------------------------------------------------------------
+function renderHook(t, fade = 1) {
+  // The face and its ladder: the current rung, then the dressing.
+  const b = t / B;
+  let look, rarity, kind, name, since, rung = 0;
+  if (b < T.dress) {
+    for (let i = 0; i < LADDER.length; i++) if (b >= LADDER[i].at) rung = i;
+    const r = LADDER[rung]; look = r.look; rarity = r.rarity; kind = r.rarity ? "Level" : ""; name = r.label; since = t - r.at * B;
+  } else {
+    const i = Math.min(DRESS.length - 1, Math.floor(b - T.dress));
+    const d = DRESS[i]; look = d[0]; kind = d[1]; name = d[2]; rarity = d[3]; since = t - (T.dress + i) * B;
+  }
+  setSrc($("aImg"), lookSrc(look, since));
+  // A punch and a flash on every change (none on the very first frame, which is the settled poster).
+  const fresh = t > 0.05 ? eOut(seg(since, 0, 0.2)) : 1;
+  const push = 1 + 0.025 * seg(t, 0, (V ? T.grid : T.grid) * B);
+  const big = look === "alt-art" ? 0.06 : 0.035;
+  $("aFace").style.transform = `scale(${push * (1 + big * (1 - fresh))})`;
+  $("aFlash").style.opacity = t > 0.05 ? 0.4 * (1 - eOut(seg(since, 0, 0.16))) : 0;
+  const gc = rarity ? RAR[rarity] : "#f3c969";
+  $("aGlow").style.background = `radial-gradient(ellipse 50% 50% at 50% 50%, ${gc}55, ${gc}14 45%, transparent 70%)`;
+  $("aGlow").style.opacity = 0.75 + 0.25 * (1 - fresh);
+  // Captions.
+  const inDress = b >= T.dress;
+  $("aCap1").style.display = inDress ? "none" : "block";
+  $("aCap2").style.display = inDress ? "block" : "none";
+  if (!inDress) { $("aCap1").style.opacity = 1; $("aCap1").style.transform = "none"; }
+  else textIn($("aCap2"), t, T.dress * B, 0.18, 18);
+  // The chip: in landscape the ladder carries the levels and the chip the dressing; in vertical the chip carries both.
+  const chip = $("aChip");
+  if (V) {
+    chip.style.display = "block";
+    chip.innerHTML = rarity ? chipHTML(kind === "Level" ? "" : kind, name, rarity, 30, 46, 26) : chipHTML("", "Default", "Common", 30, 46, 26).replace(">Common<", ">Every card<");
+    chip.style.opacity = 1;
+  } else if (inDress) {
+    chip.style.display = "block";
+    chip.innerHTML = `<div class="kind" style="font-size:34px;margin-bottom:10px">${kind}</div><div class="name" style="font-size:76px;margin-bottom:22px">${name}</div><span class="pill" style="font-size:30px;color:${RAR[rarity]}">${rarity}</span>`;
+    chip.style.top = "560px";
+    chip.style.opacity = eOut(seg(since, 0, 0.1));
+  } else chip.style.display = "none";
+  // Rungs (landscape): lit up to the current one.
+  RUNGS.forEach((el, i) => {
+    el.style.display = inDress ? "none" : "flex";
+    const on = i <= rung, cur = i === rung;
+    const c = LADDER[i].rarity ? RAR[LADDER[i].rarity] : "#f3c969";
+    const lit = cur ? eOut(seg(t - LADDER[i].at * B, 0, 0.15)) : on ? 1 : 0;
+    el.style.opacity = on ? 1 : 0.42;
+    el.style.borderColor = cur ? c : on ? "rgba(201,149,63,0.55)" : "rgba(201,149,63,0.22)";
+    el.style.boxShadow = cur ? `0 0 ${28 * lit}px ${c}99, inset 0 0 ${18 * lit}px ${c}33` : "none";
+    el.style.transform = `translateX(${cur ? 18 * lit : 0}px) scale(${cur ? 1 + 0.03 * lit : 1})`;
+  });
+  $("sA").style.opacity = fade;
+}
+
+window.renderAt = async function renderAt(t) {
+  pending.length = 0;
+  const b = t / B;
+  const scene = b < T.grid ? "A" : b < (V ? T.jl : T.board) ? "B" : (!V && b < T.jl) ? "C" : b < T.out ? "D" : "E";
+  const loopIn = V && t >= 13.45; // the vertical cut's last frames turn back into its first, so it loops
+  for (const s of ["A", "B", "C", "D", "E"]) show("s" + s, s === scene || (loopIn && s === "A"));
+
+  // Dips at the section joins.
+  let dip = 0;
+  const joins = (V ? [T.grid, T.jl, T.out] : [T.grid, T.board, T.jl, T.out]).map((k) => k * B);
+  for (const j of joins) {
+    if (t >= j - 0.08 && t < j) dip = Math.max(dip, eIn(seg(t, j - 0.08, j)));
+    if (t >= j && t < j + 0.12) dip = Math.max(dip, 1 - eOut(seg(t, j, j + 0.12)));
+  }
+  if (V && t >= 13.3) dip = Math.max(dip, t < 13.45 ? eIn(seg(t, 13.3, 13.45)) : 0);
+  if (!V && t >= 19.4) dip = Math.max(dip, eIn(seg(t, 19.4, 20.0)) * 0.6);
+  $("dip").style.opacity = dip;
+
+  if (scene === "A") renderHook(t);
+  if (loopIn) { renderHook(0, eOut(seg(t, 13.45, 13.7))); $("sE").style.opacity = 0; }
+
+  if (scene === "B") {
+    const t0 = T.grid * B;
+    $("bCap").style.display = "block"; textIn($("bCap"), t, t0 + 0.02, 0.18, 18);
+    for (const g of GRID) {
+      const at = t0 + 0.1 + g.i * (B / 2);
+      const x = seg(t, at, at + 0.28);
+      g.f.style.opacity = clamp(x * 3);
+      g.f.style.transform = `translateY(${(1 - eBack(x)) * 90}px) rotate(${(1 - eOut(x)) * (g.i % 2 ? 4 : -4)}deg) scale(${1 + 0.012 * Math.max(0, 1 - Math.abs(t - at - 0.3) * 3)})`;
+      if (g.lab) { g.lab.style.opacity = clamp((t - at - 0.15) * 5); }
+    }
+  }
+
+  if (scene === "C") {
+    const t0 = T.board * B, t1 = (T.board + 2) * B, t2 = (T.board + 4) * B;
+    textIn($("cCap"), t, t0 + 0.02);
+    const onField = t >= t1;
+    const name = onField ? "field-cosmic-drift" : "table-astral";
+    setSrc($("cBoardImg"), lookSrc(name, t - (onField ? t1 : t0)));
+    const bx = eOut(seg(t, t0 + 0.05, t0 + 0.35));
+    $("cBoard").style.opacity = bx; $("cBoard").style.transform = `translateX(${(1 - bx) * -80}px)`;
+    const pop = onField ? 1 + 0.03 * (1 - eOut(seg(t, t1, t1 + 0.2))) : 1;
+    $("cBoard").style.transform += ` scale(${pop})`;
+    $("cChip1").innerHTML = onField ? chipHTML("Backdrop", "Cosmic drift", "Mythic", 30, 44, 24) : chipHTML("Playmat", "Astral", "Mythic", 30, 44, 24);
+    $("cChip1").style.opacity = onField ? eOut(seg(t, t1, t1 + 0.12)) : eOut(seg(t, t0 + 0.2, t0 + 0.38));
+    const kx = eOut(seg(t, t2, t2 + 0.3));
+    setSrc($("cBackImg"), lookSrc("back-nebula", Math.max(0, t - t2), 0.58));
+    $("cBack").style.opacity = kx; $("cBack").style.transform = `translateY(${(1 - eBack(kx)) * 120}px) rotate(${(1 - kx) * 6}deg)`;
+    $("cChip2").innerHTML = chipHTML("Card back", "Nebula", "Mythic", 30, 44, 24);
+    $("cChip2").style.opacity = eOut(seg(t, t2 + 0.15, t2 + 0.33));
+  }
+
+  if (scene === "D") {
+    const t0 = T.jl * B, t2 = T.line2 * B;
+    setSrc($("dImg"), lookSrc("back-jlorious", t - t0));
+    const x = seg(t, t0 + 0.02, t0 + 0.4);
+    const float = Math.sin((t - t0) * 1.6) * 6;
+    $("dBack").style.opacity = clamp(x * 2.5);
+    $("dBack").style.transform = `translateY(${(1 - eOut(x)) * 60 + float}px) scale(${lerp(0.86, 1, eBack(x))}) rotate(${(1 - eOut(x)) * -5}deg)`;
+    const pulse = Math.exp(-3 * Math.max(0, t - t0 - 0.3));
+    $("dGlow").style.background = `radial-gradient(ellipse 50% 50% at 50% 50%, rgba(160,110,255,${0.32 + 0.25 * pulse}), rgba(255,95,210,0.1) 45%, transparent 70%)`;
+    $("dGlow").style.opacity = clamp(x * 2);
+    for (const s of $("dSparks").children) {
+      const d = Number(s.dataset.d), a = Number(s.dataset.a), r = Number(s.dataset.r);
+      const p = seg(t, t0 + 0.25, t0 + 0.25 + d);
+      s.style.opacity = p > 0 && p < 1 ? Math.sin(p * Math.PI) : 0;
+      const rr = eOut(p) * r;
+      s.style.transform = `translate(${Math.cos(a) * rr}px, ${Math.sin(a) * rr}px)`;
+    }
+    const l2 = t >= t2;
+    $("dCap1").style.display = l2 ? "none" : "block";
+    $("dCap2").style.display = l2 ? "block" : "none";
+    if (!l2) textIn($("dCap1"), t, t0 + 0.05); else textIn($("dCap2"), t, t2);
+    $("dLabel").style.opacity = eOut(seg(t, t0 + 0.35, t0 + 0.55));
+  }
+
+  if (scene === "E") {
+    const t0 = T.out * B;
+    $("sE").style.opacity = loopIn ? 0 : 1;
+    const r = eOut(seg(t, t0, t0 + 0.4));
+    const logo = $("eLogo");
+    logo.style.opacity = r;
+    logo.style.filter = `blur(${(1 - r) * 8}px) drop-shadow(0 0 ${(12 + 26 * Math.exp(-4 * Math.max(0, t - t0 - 0.35))) * r}px rgba(255,170,60,${0.5 * r})) drop-shadow(0 4px 0 #3a1f0c)`;
+    logo.style.transform = `translateY(${(1 - r) * 50}px) scale(${lerp(0.95, 1, r)})`;
+    $("eGlow").style.opacity = r;
+    textIn($("eLine"), t, t0 + 0.12, 0.18, 16);
+    const u = seg(t, t0 + 0.2, t0 + 0.38);
+    $("eUrl").style.opacity = clamp(u * 2);
+    $("eUrl").style.transform = `scale(${lerp(1.2, 1, eOut(u))})`;
+  }
+
+  await Promise.all(pending.map((img) => (img.complete && img.naturalWidth ? img.decode().catch(() => {}) : new Promise((r) => { img.onload = img.onerror = () => r(); }).then(() => img.decode().catch(() => {})))));
+  await document.fonts.ready;
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  return scene;
+};
+window.ready = (async () => {
+  COUNTS = await (await fetch("manifest.json")).json();
+  await document.fonts.load('800 100px "Alegreya"');
+  await document.fonts.load('700 30px "Alegreya"');
+  await document.fonts.load('600 50px "Inter"');
+  await Promise.all([...document.images].map((i) => i.decode().catch(() => {})));
+  return true;
+})();
+</script>
+</body>
+</html>
