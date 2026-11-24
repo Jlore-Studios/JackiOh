@@ -209,7 +209,7 @@ never state, so a hidden card cannot be named by it.
   definitions a view carries (`PlayerView.defs`) consulted next.
 - **The oracle.** `data/glossary.json`, `power-words.json` and `short-forms.json` are the tables the web
   held in `glossary.ts`, `inPlay.ts` and `shortText.ts`; the web's `rules.test.ts` still holds the glossary
-  to `spec/06-keywords.md`, and `src/face/power.rs` holds the powers to the engine's own table.
+  to `spec/06-keywords/`, and `src/face/power.rs` holds the powers to the engine's own table.
 
 ## `src/log/`: the game log's lines
 
