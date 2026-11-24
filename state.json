@@ -20417,9 +20417,7 @@
     },
     "4737": {
       "action": "build",
-      "asks": [
-        "c:7133304256"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-24T14:40:55Z",
         "difficulty": "hard",
@@ -20442,9 +20440,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-1",
-      "owner_since": "2026-11-24T13:52:00Z",
-      "owner_why": "it plans it",
+      "owner": "claude-6",
+      "owner_since": "2026-11-24T15:25:15Z",
+      "owner_why": "handed off from `claude-1`: `claude-1` 5-hour usage is 47%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-24T18:50:00Z; it can start again only in 3h 24m, more than the 120 minutes an item waits for its owner",
       "paused": {
         "at": "2026-11-24T15:12:43Z",
         "interrupt": "usage",
@@ -20456,11 +20454,11 @@
       "planned_by_id": "claude-1",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-1",
+      "provider": "claude-6",
       "queued_at": "2026-11-24T13:46:42Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
-      "run_id": "45417546279",
+      "run_id": "pending:228b8db7-1795533883",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -20479,10 +20477,12 @@
         "provider": "claude-1",
         "run": "45417546279"
       },
-      "started_at": "2026-11-24T14:44:48Z",
+      "started_at": "2026-11-24T15:25:15Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:7133304256"
+      ],
       "verdict_rounds": 0
     },
     "4739": {
@@ -21090,9 +21090,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T15:24:29Z",
+    "at": "2026-11-24T15:25:15Z",
     "url": "",
-    "what": "review #4750 on muse"
+    "what": "build #4737 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-24T15:11:39Z",
