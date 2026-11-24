@@ -212,3 +212,13 @@ export function watermarkOf(set: string | null): Watermark | null {
   const kind = KINDS[set];
   return kind === undefined ? null : WATERMARKS[kind];
 }
+
+/**
+ * R4596000: the accent a face of `set` wears over its frame (`data-set-accent`, setmark.css), the Infinite
+ * Assault's "glitch" (a machine-written card's split red and cyan edge and scanlines); no other set has one.
+ */
+export type SetAccent = "glitch";
+
+export function setAccentOf(set: string | null): SetAccent | undefined {
+  return set === "Infinite Assault" ? "glitch" : undefined;
+}
