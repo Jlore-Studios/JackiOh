@@ -693,10 +693,11 @@ pub fn validate_play(
     }
 
     // Step 1 accepted the zone; a play that named none takes the leftmost free one — or, on a full
-    // row, the leftmost one its own Tribute empties (R391).
+    // row, the leftmost one its own Tribute empties (R391). R4665000: a card that stacks on its
+    // target takes none of its own.
     let tributes: Vec<String> = action.tributes.clone().unwrap_or_default();
     let mut zone: Option<ZoneSlot> = None;
-    if is_permanent(state, &card) {
+    if is_permanent(state, &card) && crate::play_choices::needs_zone(state, &card) {
         zone = match &action.zone {
             None => default_zone_for(state, player, &card, &tributes),
             Some(named) => Some(ZoneSlot {
@@ -1291,13 +1292,17 @@ fn announced_zone(state: &GameState, run: &PlayRun, card: &CardInstance) -> Opti
 /// R4665000: the zone a card that stacks on its target lands in: that of the permanent its first
 /// declared target names, while that permanent still tops its zone on the field (§3.2).
 fn stack_target_zone(state: &GameState, run: &PlayRun) -> Option<ZoneSlot> {
-    let target = standing_targets(run).into_iter().find_map(|selection| match selection {
-        Selection::Instance { instance_id } => Some(instance_id),
-        _ => None,
-    })?;
+    let target = standing_targets(run)
+        .into_iter()
+        .find_map(|selection| match selection {
+            Selection::Instance { instance_id } => Some(instance_id),
+            _ => None,
+        })?;
     let named = find_instance(state, &target)?;
     let slot = crate::zones::slot_of(state, named)?;
-    card_at(state, slot).is_some_and(|top| top.id == named.id).then_some(slot)
+    card_at(state, slot)
+        .is_some_and(|top| top.id == named.id)
+        .then_some(slot)
 }
 
 /// R448: the card leaves its hand (or graveyard, R454) for the resolving zone (a cast's waits there
