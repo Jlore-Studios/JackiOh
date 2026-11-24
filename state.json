@@ -42321,7 +42321,8 @@
       "2026-11-24T09:57:28Z,claude-6,ping,before,45369517024,2,2026-11-24T14:20:00Z,,,allowed,70,,"
     ],
     "runs": [
-      "2026-11-24T09:59:12Z,45369625864,claude-3,opus,plan,4677,hard,interrupted,refusal,0,0,0,0,,100,100,,,238.6,,fresh,,1"
+      "2026-11-24T09:59:12Z,45369625864,claude-3,opus,plan,4677,hard,interrupted,refusal,0,0,0,0,,100,100,,,238.6,,fresh,,1",
+      "2026-11-24T09:57:28Z,45369517024,claude-6,opus,plan,4583,medium,failed,,0,0,0,0,,2,2,,,1497,,none,,0"
     ]
   },
   "version": 1
