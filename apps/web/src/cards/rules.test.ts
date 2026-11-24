@@ -114,12 +114,10 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // words ("The card to the right of this …", "When your exile has 5 cards cast this").
     "Hand aura",
     "When they meet",
-    "Always starts on the bottom of your deck",
     "Cast from the deck",
   ],
   "§6.3": [
     "Summon",
-    "Play",
     "Destroy",
     "Sacrifice",
     "Discard",
@@ -148,7 +146,6 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Infinite mana",
     // R3548002: the game-wide Warhero worth.
     "Warhero Token's worth",
-    "Damage",
     "Lose health",
     "Draw",
     "Add to hand",
@@ -162,12 +159,10 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Lose all mana",
     "Extra turn",
     "Autopilot",
-    "Trigger End of turn effects",
     "Keep a secret",
     "Guess a secret",
     "Answer questions in a row",
     "Alternative win condition",
-    "Win the game",
     // #1843 (R1843000, R1843002): Stinkyscape's.
     "Vote to remove",
     "Escape the Universe",
@@ -222,7 +217,6 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1859007: the War Doctrines' "your Units have X", plain as Hearthstone prints it.
     "Units have keyword",
     // R1870000, R1870001, R1870002, R1870004, R1870007: Stinkyscape's Terminus texts (S22), in plain words.
-    "Win on play",
     "Exile all, piles whole",
     "Gain Echo",
     "Units keyword next turn",
@@ -294,16 +288,13 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Plague Counter",
   "Set health",
   "Redirect",
-  "End the turn",
   "Trigger a Cry",
-  "Look at a hand",
   "Allure",
   "Freeze",
   "Awaken",
   "Launch",
   "Jade Counter",
   "Exile",
-  "Hand size",
   "Mark in a hand",
   // R3572000: the verbs and counters of #3535 and #3540: Evolve, Burn and Toxic, and Replenish (R364).
   "Evolve",
@@ -772,9 +763,7 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     // Every alias is a spelling a card prints, never a retired variant.
     const printed: Readonly<Partial<Record<GlossaryTermId, readonly string[]>>> = {
       "Plague Counter": ["Plague Counters"],
-      "Look at a hand": ["Look at your opponent's hand"],
       Bounce: ["Bounced", "bounced"],
-      "Hand size": ["hand size"],
       "Mark in a hand": ["Mark", "marked"],
       // Issue #814: the lowercase second half of a compound trigger bolds as the term.
       "Start of turn": ["start of turn"],
@@ -796,7 +785,6 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       // R1563000: Bread and Butter prints "Reveals when any player Floats".
       Float: ["Floats", "Floated"],
       // R1857000: the Stinkyscape set's faces print these mid-sentence, and "fuses" and "Floated" above.
-      "End the turn": ["end the turn"],
       Allure: ["Allured"],
       // #2521: ZolarKeth's "A University can be Activated at most once each turn" (R2521003).
       Activate: ["Activated", "Activates"],
@@ -870,9 +858,7 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
       ["Plague Counter", "classic-039", "base", "Plague Counters"],
       ["Set health", "classic-029", "base", "Set health"],
       ["Redirect", "meditative-064", "base", "Redirect"],
-      ["End the turn", "classicplus-026", "base", "End the turn"],
       ["Trigger a Cry", "classic-054", "base", "Trigger a Cry"],
-      ["Look at a hand", "classic-011", "base", "Look at your opponent's hand"],
       // R1174000: M+ #24 Bob prints the verb on both faces; no card prints the status Frozen.
       ["Freeze", "meditativeplus-024", "base", "Freeze"],
       ["Freeze", "meditativeplus-024", "radiant", "Freeze"],
@@ -931,9 +917,7 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
       "Plague Counter",
       "Set health",
       "Redirect",
-      "End the turn",
       "Trigger a Cry",
-      "Look at a hand",
     ];
     const found = new Set(PLAYED_TEXTS.flatMap(({ text }) => termsIn(text)));
     for (const term of fresh) expect(found.has(term), term).toBe(true);
@@ -989,11 +973,10 @@ describe("R2657000: Can't Defend, the keyword that took over from the status Can
 });
 
 describe("R1384: the glossary's rows for the Meditative cards' words", () => {
-  it("R1384 Exile, Hand size and Mark in a hand are found where a Meditative card prints them", () => {
+  it("R1384 Exile and Mark in a hand are found where a Meditative card prints them", () => {
     const cases: readonly (readonly [GlossaryTermId, string, "base" | "radiant", string])[] = [
       // Meditative #48 Tranquility: "… Exile this." (#78 Occidentless Mandate Destroys since issue #4154).
       ["Exile", "meditative-048", "base", "Exile"],
-      ["Hand size", "meditative-079", "base", "hand size"],
       ["Mark in a hand", "meditative-076", "base", "Mark"],
       ["Mark in a hand", "meditative-076", "radiant", "Mark"],
       ["Unlock", "meditative-027", "base", "Unlock"],
@@ -1009,11 +992,10 @@ describe("R1384: the glossary's rows for the Meditative cards' words", () => {
   it("R1384 the rows say what §6.3 says, in a player's words", () => {
     expect(GLOSSARY.Exile.section).toBe("§6.3");
     expect(GLOSSARY.Exile.rule).toContain("no Death");
-    expect(GLOSSARY["Hand size"].rule).toContain("rest of the game");
     expect(GLOSSARY["Mark in a hand"].rule).toContain("hand");
-    // A lower-case "hand size" is a word of card text, and the capitalised row is matched as well.
-    expect(termsIn("your hand size is 12")).toEqual(["Hand size"]);
-    expect(termsIn("Hand size 12")).toEqual(["Hand size"]);
+    // Meditative #79 sets the hand size for the rest of the game (§2.4, R1143), in plain words.
+    expect(termsIn("your hand size is 12")).toEqual([]);
+    expect(termsIn("Hand size 12")).toEqual([]);
   });
 
   it("R1384 Lucky's row says what §6.1's does: a coin flip is a luck-based roll, and Lucky given to a card adds", () => {

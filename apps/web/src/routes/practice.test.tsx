@@ -20,7 +20,7 @@ import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 
 import { DECK_NAME_MAX_LENGTH, ECONOMY_LIVE, MAX_SAVED_DECKS, MAX_SAVED_TRIOS } from "@jackioh/server-config";
 import { ApiRequestError, type DecksResponse, type TutorialAccountProgress } from "../net/api.ts";
-import { practiceDeckPath } from "../net/navigate.ts";
+import { paths, practiceDeckPath } from "../net/navigate.ts";
 import type { PracticeClaimAnswer, PracticeEarningApi, PracticeSeedIssued, PracticeSeedReleased } from "../net/practice.ts";
 import type { Account } from "../net/gate.ts";
 import {
@@ -51,6 +51,7 @@ import { PRACTICE_RESUME_STORAGE_KEY, readPracticeResumeState } from "../practic
 import { memorySaveStore } from "../practice/saveStore.ts";
 import { practiceTestid } from "../practice/testids.ts";
 import { baseView, emptySide } from "../test/fixtures.ts";
+import { pressBack } from "../test/history.ts";
 import { stubPhoneBar } from "../test/phoneBar.ts";
 import { settle } from "../test/settle.ts";
 import { setReducedMotion } from "../test/setup.ts";
@@ -2669,6 +2670,21 @@ describe("R768000 a kept game's replay from the result dialog", () => {
     fireEvent.click(screen.getByTestId(replayTestid.back));
     expect(await screen.findByTestId(T.result)).toBeInTheDocument();
     expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+  });
+
+  it("R4619000 one Back on Watch the replay returns to the finished game's result on /practice", async () => {
+    window.history.replaceState(null, "", paths.play);
+    window.history.pushState(null, "", paths.practice);
+    await concedeKept(true);
+
+    fireEvent.click(screen.getByTestId(T.watchReplay));
+    const player = await screen.findByTestId(replayTestid.player);
+    await waitFor(() => expect(player).toHaveAttribute("data-step", "0"));
+
+    await pressBack();
+    expect(await screen.findByTestId(T.result)).toBeInTheDocument();
+    expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+    expect(window.location.pathname).toBe(paths.practice);
   });
 
   it("R768000 Share the last turn opens the kept game at its last step with Share as GIF open", async () => {

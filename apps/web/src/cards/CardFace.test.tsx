@@ -412,14 +412,15 @@ describe("B8: the cost gem renders the model's cost", () => {
   });
 
   it("B8 an embiggen card's gem shows its base price and a .cf-cost-alt with the embiggen price", () => {
-    const gem = one(catalogFace("core-046"), ".cost-gem");
+    // Unbiased Immigration, "2 embiggen 4".
+    const gem = one(catalogFace("core-059"), ".cost-gem");
     expect(gemText(gem)).toBe("2");
     expect(gem.getAttribute("data-cost")).toBe("2");
     expect(one(gem, ".cf-cost-alt").textContent).toContain("4");
   });
 
   it("B8 R1175000 the second cost badge is named for the Embiggened version, for a screen reader and on hover", () => {
-    for (const [id, cost] of [["core-046", "4"], ["core-056", "3"], ["meditative-021", "1"], ["meditative-081", "1"]] as const) {
+    for (const [id, cost] of [["core-046", "3"], ["core-059", "4"], ["core-056", "3"], ["meditative-021", "1"], ["meditative-081", "1"]] as const) {
       const alt = one(one(catalogFace(id), ".cost-gem"), ".cf-cost-alt");
       expect(alt.textContent, id).toBe(cost);
       expect(alt.getAttribute("role"), id).toBe("img");
@@ -703,7 +704,7 @@ describe("B14: the radiant face", () => {
     expect(speciesist.textContent).toBe("Cry: Destroy all enemy non-Human Units. You have 1 less mana next turn.");
     expect(speciesist.querySelectorAll('strong.cf-term[data-term="Cry"]')).toHaveLength(1);
     cleanup();
-    expect(one(catalogFace("core-046", true), ".card-text").textContent).toBe("Aura: Enemy Units have −2/−2.\nEmbiggened (4): −4/−4 instead.");
+    expect(one(catalogFace("core-046", true), ".card-text").textContent).toBe("Aura: Enemy Units have −2/−2.\nEmbiggened (3): −4/−4 instead.");
   });
 
   it("R277 R276 the five cards that had no radiant form print a radiant face that differs, marked (core-038, core-080, core-093-1, core-095-1, core-096)", () => {

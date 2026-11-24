@@ -1,4 +1,5 @@
-//! #77 Professor Curvature (SPEC §8.3, R48, R65, R363, §2.2, §10.1).
+//! #77 Professor Curvature (SPEC §8.3, R48, R65, R363, §2.2, §10.1). Unit 4/5 → 8/10 since issue #4440
+//! (3/3 → 6/6 before it, catalog data).
 //! Base: "Cry: (4)+ Cost cards cost (1) less on your next turn."; radiant "... cost (2) less ..." (§8).
 //! Delayed player modifier checked against cost at play (R48; expires at cleanup, §2.2, §10.1; R65, R363).
 //! Threshold checked after discounts and embiggen (§10.4, R169).
@@ -204,13 +205,13 @@ mod tests {
         }
 
         #[test]
-        fn the_cry_fires_on_play_from_hand_and_the_body_is_the_printed_3_3_s8_3() {
+        fn the_cry_fires_on_play_from_hand_and_the_body_is_the_printed_4_5_s8_3() {
             let mut s = board(false);
 
             s.play(CURVATURE, json!({}));
 
             s.expect_events(json!(["cardPlayed", "modifierChanged"]))
-                .expect_stats(CURVATURE, json!({ "attack": 3, "maxHealth": 3, "health": 3 }));
+                .expect_stats(CURVATURE, json!({ "attack": 4, "maxHealth": 5, "health": 5 }));
         }
     }
 
@@ -304,12 +305,12 @@ mod tests {
         }
 
         #[test]
-        fn the_radiant_body_is_the_printed_6_6_s8_3() {
+        fn the_radiant_body_is_the_printed_8_10_s8_3() {
             let mut s = board(true);
 
             s.play(CURVATURE, json!({}));
 
-            s.expect_stats(CURVATURE, json!({ "attack": 6, "maxHealth": 6, "health": 6 }));
+            s.expect_stats(CURVATURE, json!({ "attack": 8, "maxHealth": 10, "health": 10 }));
         }
     }
 }

@@ -787,7 +787,9 @@ from the written rows) and checks after every step that the log rebuilds the gam
 timer changes nothing, that a match ends once and that a restart holds the game. `HOST_FUZZ_SEEDS` matches per machine
 run on every pull request and `daily_host_fuzz_sweep` plays `HOST_FUZZ_DAILY_SEEDS`; to rerun one failing seed, set
 `REPRO = Some((Machine::Duel, <seed>))` (or `Duos`) in the file, as the failure's text says, and run `cargo test -p
-jackioh-shared --features jackioh-engine/testkit --test host_fuzz repro`; the practice session's, `tests/practice.rs` (played on the real catalog with a `Session`
+jackioh-shared --features jackioh-engine/testkit --test shared host_soak::repro`. The files under `tests/` are
+modules of the one binary `tests/shared.rs`; a new file is declared there, which `crates/tools/tests/acceptance.rs`
+checks (#4610). The practice session's, `tests/practice.rs` (played on the real catalog with a `Session`
 standing in for a host). The ranked ladder's: `tests/glicko2.rs`, `tests/ladder.rs` and `tests/season.rs` (moved from the server's API tests
 with the maths), `tests/board.rs` (the sort key) and `tests/ranked_game.rs` (`decide` and its JSON calls). The `ts` feature writes the types that cross to
 `apps/web/src/wire/generated/`; commit any diff. `cargo test --workspace` writes them too (`jackioh-wasm-core`'s

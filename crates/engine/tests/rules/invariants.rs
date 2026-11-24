@@ -4015,6 +4015,50 @@ mod i21 {
     }
 
     #[test]
+    fn r4623000_the_state_check_s_evolution_of_an_immune_unit_is_no_spell_s_and_i21_allows_it() {
+        use crate::rules::fixtures::evolution::{FULL, register_evolution_fixtures};
+
+        // p1's "Evolves when all your unit zones are full" Unit, Immune to Spells, one zone short of full.
+        let mut state = playing("r4623000");
+        register_evolution_fixtures();
+        let id = put(&mut state, FULL, slot(P1, Row::Units, 1), json!({})).id;
+        find_instance_mut(&mut state, &id)
+            .expect("the evolving Unit")
+            .granted_keywords
+            .push(Keyword::ImmuneToSpells);
+        let beside = put(&mut state, PLAIN, slot(P1, Row::Units, 2), json!({})).id;
+        for lane in 3..UNIT_ZONES {
+            put(&mut state, PLAIN, slot(P1, Row::Units, lane), json!({}));
+        }
+        // A Spell's summon fills the row, and the settled state check evolves the Unit by its own
+        // condition (R3536001): its `evolved` lands in the Spell's run, before any marker of its own.
+        let mut after = state.clone();
+        let mut events = vec![marker(SPELL)];
+        events.extend(settled(
+            &mut after,
+            effects::summon(json_as(json!({ "defId": PLAIN }))),
+        ));
+        assert_eq!(
+            find_instance(&after, &id).and_then(|card| card.evolved),
+            Some(true)
+        );
+        let evolved = events
+            .iter()
+            .position(|event| matches!(event, GameEvent::Evolved { instance_id, .. } if *instance_id == id))
+            .expect("the state check evolved it");
+        assert!(
+            !events[1..evolved]
+                .iter()
+                .any(|event| matches!(event, GameEvent::HookResolving { .. })),
+            "{events:?}"
+        );
+        assert_eq!(i21(&state, &events, &after), Vec::<String>::new());
+        // With its condition not holding after the step, the `evolved` is the Spell's (its `evolve` verb).
+        let opened = moved(&after, &beside, OffFieldZone::Graveyard);
+        only(&i21(&state, &events, &opened), &id, &["I21", "evolved"]);
+    }
+
+    #[test]
     fn r4508003_tears_of_the_kwzki_tree_s_world_makes_an_immune_unit_radiant_and_i21_allows_it() {
         let (before, id) = immune_board("r4508003");
         let mut after = before.clone();
@@ -4114,7 +4158,6 @@ mod i21 {
     fn r4604004_the_state_check_s_deaths_and_exiles_and_a_burn_tick_on_a_divine_shield_are_no_spell_s_and_i21_allows_them()
      {
         use crate::rules::fixtures::card_on_card::{register_card_on_card, tag_exiler};
-        use jackioh_engine::geometry::BlackHole;
 
         let (before, id) = immune_board("r4604004");
         // A death after an earlier run of the step (a trap, another card's hook, a turn edge, an attack):
@@ -4144,19 +4187,11 @@ mod i21 {
             &["I21", "destroyed"],
         );
 
-        // An exile while a Black Hole is open, as the step begins or as it ends (R4440050).
+        // An exile while an exile aura stands (R1850002): as the step ends, or from the arrival of a card
+        // that carries one, gone again by its end; not before that arrival.
         let banished = moved(&before, &id, OffFieldZone::Exile);
         let exile = [marker(SPELL), exiled(&id)];
         only(&i21(&before, &exile, &banished), &id, &["I21", "exiled"]);
-        let mut holed = banished.clone();
-        holed.black_hole = Some(BlackHole::new(3, None));
-        assert_eq!(i21(&before, &exile, &holed), Vec::<String>::new());
-        let mut holed_before = before.clone();
-        holed_before.black_hole = Some(BlackHole::new(3, None));
-        assert_eq!(i21(&holed_before, &exile, &banished), Vec::<String>::new());
-
-        // An exile while an exile aura stands (R1850002): as the step ends, or from the arrival of a card
-        // that carries one, gone again by its end; not before that arrival.
         register_card_on_card();
         let mut aura = banished.clone();
         put(&mut aura, &tag_exiler().id, slot(P1, Row::Units, 2), json!({}));
@@ -4181,6 +4216,19 @@ mod i21 {
             &i21(&before, &[marker(SPELL), exiled(&id), summoned], &banished),
             &id,
             &["I21", "exiled"],
+        );
+        // A card transformed into one that carries an exile aura arrives with it too (S+ #104 Tireless
+        // Cultivation turning a Drone into S #115 Scornboi).
+        let transformed: GameEvent = json_as(json!({
+            "type": "transformed",
+            "instanceId": "i21-drone",
+            "fromDefId": PLAIN,
+            "toDefId": tag_exiler().id,
+            "newInstanceId": "i21-exiler",
+        }));
+        assert_eq!(
+            i21(&before, &[marker(SPELL), transformed, exiled(&id)], &banished),
+            Vec::<String>::new()
         );
 
         // A Burn tick a Divine Shield takes: its `divineShieldLost`, then the Burn's removal.
@@ -4232,34 +4280,28 @@ mod i21 {
     }
 
     #[test]
-    fn r4604007_a_unit_evolving_by_its_own_evolves_when_is_no_spell_s_and_i21_allows_it() {
-        use crate::rules::fixtures::evolution::{PINGER, ZERO, register_evolution_fixtures};
+    fn r4604007_a_black_hole_opened_in_the_step_pulls_at_its_turn_s_end_and_i21_allows_it() {
+        use jackioh_engine::geometry::BlackHole;
 
-        let mut state = playing("r4604007");
-        register_evolution_fixtures();
-        let zero = put(&mut state, ZERO, slot(P2, Row::Units, 1), json!({})).id;
-        let pinger = put(&mut state, PINGER, slot(P2, Row::Units, 2), json!({})).id;
-        for id in [&zero, &pinger] {
-            find_instance_mut(&mut state, id)
-                .expect("on the field")
-                .granted_keywords
-                .push(Keyword::ImmuneToSpells);
-        }
-        let evolved = |id: &str, def_id: &str| -> GameEvent {
-            json_as(json!({ "type": "evolved", "player": "p2", "instanceId": id, "defId": def_id }))
+        // The immune Unit stands in p2's lane 1; a Black Hole cast in the step opens beside it, in lane 2,
+        // and pulls at the end of p2's turn, inside a hand Spell's "whenever" run (R4440050).
+        let (before, id) = immune_board("r4604007");
+        let banished = moved(&before, &id, OffFieldZone::Exile);
+        let turn_ended: GameEvent =
+            json_as(json!({ "type": "turnEnded", "player": "p2", "turn": 1, "unspentMana": 0 }));
+        let pull = [turn_ended, marker(SPELL), exiled(&id)];
+        let holed = |lane: i32| {
+            let mut after = banished.clone();
+            after.black_hole = Some(BlackHole {
+                at_end: Some(true),
+                ..BlackHole::new(lane, None)
+            });
+            after
         };
-        // A Spell fills its controller's hand with (0) cards, and the settled state check evolves the
-        // Unit by its own "Evolves when your hand holds 3 (0) cards" (C+ #49 Jay Fungus's shape).
-        assert_eq!(
-            i21(&state, &[marker(SPELL), evolved(&zero, ZERO)], &state),
-            Vec::<String>::new()
-        );
-        // A Unit with no such condition evolves only by a verb: in a Spell's run, a reach.
-        only(
-            &i21(&state, &[marker(SPELL), evolved(&pinger, PINGER)], &state),
-            &pinger,
-            &["I21", "evolved"],
-        );
+        assert_eq!(i21(&before, &pull, &holed(2)), Vec::<String>::new());
+        // No hole, or one two lanes away that the pull cannot reach it from: the Spell's exile, a reach.
+        only(&i21(&before, &pull, &banished), &id, &["I21", "exiled"]);
+        only(&i21(&before, &pull, &holed(3)), &id, &["I21", "exiled"]);
     }
 
     #[test]

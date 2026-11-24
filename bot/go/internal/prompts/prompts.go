@@ -19,9 +19,10 @@ import (
 )
 
 // Names = ("system", "plan", "build", "fix", "revise", "review", "suggest", "oneshot", "split", "reconcile"),
-// and `spotcheck`, the after-merge spot-check's review (#2748).
+// `spotcheck`, the after-merge spot-check's review (#2748), and `judge`, a survey's second look at
+// its suggestions (`suggestions.auto_approve`).
 var Names = []string{"system", "plan", "build", "fix", "revise", "review", "suggest", "oneshot", "split",
-	"reconcile", "spotcheck"}
+	"reconcile", "spotcheck", "judge"}
 
 // Template is Python's string.Template: `$$` is a `$`, `$name` and `${name}` are placeholders
 // (an ASCII identifier: Python's pattern is `(?a:[_a-z][_a-z0-9]*)` under re.IGNORECASE), and

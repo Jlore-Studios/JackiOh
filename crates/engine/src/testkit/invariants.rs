@@ -102,15 +102,17 @@
 //!      face-down in it) running as a Trap (M #99's row, R3806000, R4604003). Lawful: anything inside an
 //!      attack (R4508002), a `controlChanged` or `bounced` after a board `swapped`, a `rotated` or a
 //!      `rolledBack` and a restore's `radiantSet` (R4508001), an exile in a `LANE_TAKERS` card's run
-//!      (R4508004), a `radiantSet` under Tears of the Kwzki Tree's world (R4508003), the state check's
-//!      switch out of a barred Defense and a Burn or Toxic tick (R4508005), the state check's `destroyed`
-//!      in a run after another of the step, an `exiled` while an exile aura stands or a Black Hole is
-//!      open and a Burn tick a Divine Shield takes (R4604004), the `destroyed` of a Unit an aura's change
-//!      kills (R4604006), the `evolved` of a Unit by its own "Evolves when …" (R4604007), and a Burn's
-//!      removal anywhere in a turn's end (R4604008). A Unit is judged only while still on the field and
-//!      immune after the step, or gone from it with its own keywords immune until a `rolledBack` restores
-//!      its side (R4604005). Reads the events, the catalog and the scripts' standing rules, never
-//!      `restrictions::unaffected_by`; I14's branches and each Duos duel run it.
+//!      (R4508004) or by the Black Hole's pull at a turn's end (R4577008; R4604007: one opened in the step
+//!      among them), a `radiantSet` under Tears of the Kwzki Tree's world (R4508003), the state check's
+//!      switch out of a barred Defense and a Burn or Toxic tick (R4508005), the state check's evolution of
+//!      a Unit whose "Evolves when" holds after the step (R4623000), the state check's `destroyed` in a run
+//!      after another of the step, an `exiled` while an exile aura stands and a Burn tick a Divine Shield
+//!      takes (R4604004), the `destroyed` of a Unit an aura's change kills (R4604006), and a Burn's
+//!      removal anywhere in a turn's end (R4604008).
+//!      A Unit is judged only while still on the field and immune after the step, or gone from it with its
+//!      own keywords immune until a `rolledBack` restores its side (R4604005). Reads the events, the
+//!      catalog and the scripts' standing rules, never `restrictions::unaffected_by`; I14's branches and
+//!      each Duos duel run it.
 //!   I22 every `target` pick is one its source may aim at (§10.5 step 1, R450; #4540): no Dormant card,
 //!      whatever the source or none (R1839000); no face-up Evasive card in play from a Spell or Field
 //!      Spell, the source read as R781001 reads it (R4353002); no face-up card Immune to Spells from a
@@ -1363,8 +1365,10 @@ struct ImmuneMark {
     /// Whether its own keywords hold the immunity (`layers::card_keywords` and its conditional ones), so
     /// it is still judged once the step takes it off the field, where no aura reaches it.
     own: bool,
-    /// R4604005: its controller as the step begins, whose side a board restore rebuilds.
+    /// R4577008: the side it stands on and the lanes it covers as the step begins, which the Black Hole's
+    /// pull at a turn's end reads; R4604005: the side a board restore rebuilds.
     side: PlayerId,
+    lanes: Vec<i32>,
     /// R4604006: its damage is at least its health before the auras (§10.4 layers 1 to 4,
     /// `layers::stats_with_buffs`), so only an aura's health holds it up as the step begins.
     propped: bool,
@@ -1372,16 +1376,16 @@ struct ImmuneMark {
 
 /// I21: the Units Immune to Spells a step begins with, by instance id; the cards then set face-down on
 /// either field, whose runs are a Trap's; the run an answer step continues (`state.pending`'s
-/// resume), which marks no `hookResolving` of its own (R2783000); and whether a Black Hole is open and an
-/// exile aura stands.
+/// resume), which marks no `hookResolving` of its own (R2783000); the Black Hole it begins with, whether
+/// an exile aura stands and whether it begins inside a turn's end.
 #[derive(Clone, Debug)]
 struct ImmuneStep {
     marks: IndexMap<String, ImmuneMark>,
     set: IndexSet<String>,
+    /// R4577008: the Black Hole the step begins with, when it pulls at a turn's end (R4440050).
+    hole: Option<crate::geometry::BlackHole>,
     pending_def: Option<String>,
     pending_instance: Option<String>,
-    /// R4604004: a Black Hole open as the step begins (S+ #77), whose pull exiles at the turn's end.
-    hole: bool,
     /// R4604004: an exile aura standing as the step begins (R1850002), which exiles at each state check.
     exile_aura: bool,
     /// R4604008: the step begins inside a turn's end (`Phase::End`: an answer step resuming it), where the
@@ -1408,7 +1412,11 @@ fn immune_step(state: &GameState) -> ImmuneStep {
             let mark = ImmuneMark {
                 label: name_of(unit),
                 own,
-                side: unit.controller,
+                side: match unit.zone {
+                    Zone::Field { player, .. } => player,
+                    _ => unit.controller,
+                },
+                lanes: crate::giga::lanes_of(unit),
                 propped: unit.damage >= crate::layers::stats_with_buffs(state, unit).max_health,
             };
             (unit.id.clone(), mark)
@@ -1423,9 +1431,9 @@ fn immune_step(state: &GameState) -> ImmuneStep {
     ImmuneStep {
         marks,
         set,
+        hole: state.black_hole.filter(crate::geometry::BlackHole::pulls_at_end),
         pending_def: resume.map(|resume| resume.def_id.clone()),
         pending_instance: resume.and_then(|resume| resume.instance_id.clone()),
-        hole: state.black_hole.is_some(),
         exile_aura: crate::card_on_card::exile_aura_stands(state),
         ending: state.phase == Phase::End,
     }
@@ -1559,6 +1567,42 @@ fn ticks_on(event: &GameEvent, previous: Option<&GameEvent>, next: Option<&GameE
         || burn_removed(event) && previous.is_some_and(shield_lost)
 }
 
+/// I21, R4623000: whether `id` stands on the field after the step with its own "Evolves when" holding
+/// (R3536001): the settled state check's evolution (`evolution::evolve_standing`), the game's rule reading
+/// the card's own condition, whose `evolved` lands in the open run before its Evolve text's marker.
+fn evolves_standing(after: &GameState, id: &str) -> bool {
+    find_instance(after, id).is_some_and(|card| {
+        matches!(card.zone, Zone::Field { .. })
+            && crate::scripts::script_of(after, card)
+                .evolves_when
+                .as_ref()
+                .is_some_and(|when| {
+                    when(crate::script::HookArgs {
+                        state: after,
+                        self_: card,
+                        radiant: card.radiant,
+                    })
+                })
+    })
+}
+
+/// I21, R4577008: whether an `exiled` of `mark`'s Unit may be the Black Hole's pull at the end of `ended`'s
+/// turn (R4440050, `geometry::pull_at_turn_end`): the step began with a hole that pulls at a turn's end and
+/// pulls that player's permanents, the turn has ended, and the Unit stood on that player's side one lane
+/// from the hole, where one step toward it reaches it (R3554001). The hole is the board's, not the Spell's.
+fn pulled_into_the_hole(
+    hole: Option<crate::geometry::BlackHole>,
+    ended: Option<PlayerId>,
+    mark: &ImmuneMark,
+) -> bool {
+    let (Some(hole), Some(player)) = (hole, ended) else {
+        return false;
+    };
+    mark.side == player
+        && hole.pulls.is_none_or(|pulls| pulls == player)
+        && mark.lanes.iter().any(|lane| (lane - hole.lane).abs() == 1)
+}
+
 /// I21 (§6.1 Immune to Spells, R4453000): no Spell changes a Unit Immune to Spells on the field. The
 /// step's events are walked in order, tracking the card running (`hookResolving`, a trap, a turn edge
 /// and the AI's turn; a play nested in a run is its own from its `cardPlayed` to its `cardResolved`,
@@ -1569,21 +1613,26 @@ fn ticks_on(event: &GameEvent, previous: Option<&GameEvent>, next: Option<&GameE
 ///   §6.1's immunity is no restriction on attacks, and the attacking Unit is what reaches its target;
 /// - a `controlChanged` or a `bounced` after a board `swapped`, a `rotated` or a `rolledBack`, and a
 ///   board restore's `radiantSet` (R4508001; R4454000, R4454002): the board move carries it whole;
-/// - an `exiled` in a `LANE_TAKERS` card's run (R4508004): the lane goes with all it holds;
+/// - an `exiled` in a `LANE_TAKERS` card's run (R4508004): the lane goes with all it holds; and one of
+///   a Unit the Black Hole's pull swallows at a turn's end (R4577008, `pulled_into_the_hole`), a stage of
+///   the turn's end with no marker of its own, which follows whatever Spell's trigger ran last (R4440050):
+///   the hole the step began with or, when there was none, the one open as it ends (R4604007);
 /// - a `radiantSet` while Tears of the Kwzki Tree's world holds every card Radiant (R4508003, R4454001);
 /// - the game's own rules that run inside the Spell's run with no marker (R4508005): §4.5 step 1's
 ///   switch out of Defense of a Unit the board bars from it (`forbidden_defense`, I17's), and a Burn or
 ///   Toxic tick (`ticks_on`), a Burn tick a Divine Shield takes among them (R4604004), and a Burn's
 ///   removal anywhere in a turn's end, from its `turnEnded` to the next `turnStarted` (R4604008), where
-///   its tick's hit may show nothing (a hit of 0) or a damage chain's echoes may come between;
+///   its tick's hit may show nothing (a hit of 0) or a damage chain's echoes may come between; and the
+///   settled state check's `evolved` of a Unit whose "Evolves when" holds after the step (R4623000,
+///   `evolves_standing`);
 /// - the state check's other rules (R4604004): a `destroyed` in a run that began after another marker
 ///   of the step, or that the step resumed (`ImmuneRun::inherited`: an earlier run may have doomed it),
 ///   and an `exiled` while an exile aura stands (R1850002: as the step begins or ends, or once a card
-///   carrying one arrives) or a Black Hole is open (R4440050); a `destroyed` of a Unit that only an
-///   aura's health held up as the step began (`ImmuneMark::propped`), which dies at the state check once
-///   the aura goes, whatever took it away, or that died at a max health of 0 or less, which only a stat
-///   change brings and a Spell's change to it would show in an event of its own (R4604006); and an
-///   `evolved` of a Unit whose own text holds an "Evolves when …" condition (R4604007, R3536001).
+///   carrying one arrives by a `summoned`, a `cardPlayed` or a `transformed`); and a `destroyed` of a
+///   Unit that only an aura's health held up as the step began (`ImmuneMark::propped`), which dies at
+///   the state check once the aura goes, whatever took it away, or that died at a max health of 0 or
+///   less, which only a stat change brings and a Spell's change to it would show in an event of its own
+///   (R4604006).
 ///
 /// A `cardResolved` whose `cardPlayed` the step never saw ends the run, and a card announced face-down
 /// runs as a Trap under the id it is played as (R4604003). A `rolledBack` releases the Units of the sides
@@ -1618,11 +1667,9 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
     let mut released: IndexSet<&str> = IndexSet::new();
     // The ids a `trapFired` named so far: a card set face-down whose trap fires runs as a Trap.
     let mut fired: IndexSet<&str> = IndexSet::new();
-    // R4604004: an exile aura standing (R1850002) or a Black Hole open (R4440050) exiles at the state
-    // check or the turn's end, inside whatever run is going: one standing as the step begins or ends, or
-    // from the arrival of a card that carries one.
+    // R4604004: an exile aura standing (R1850002) exiles at each state check, inside whatever run is
+    // going: one standing as the step begins or ends, or from the arrival of a card that carries one.
     let mut exile_aura = step.exile_aura || crate::card_on_card::exile_aura_stands(after);
-    let hole = step.hole || after.black_hole.is_some();
     // R4604004: the markers met so far, `Some(source)` for a hook or a trap and `None` for an attack, a
     // turn edge, the AI's turn or a resumed run: a run after another's may meet the deaths it doomed.
     let mut marked: Vec<Option<&str>> = Vec::new();
@@ -1651,8 +1698,18 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
     let mut nested: Vec<(&str, ImmuneRun<'_>)> = Vec::new();
     // R4508003: under Tears of the Kwzki Tree every card is Radiant (R3569000).
     let radiant_world = after.radiant_world == Some(true);
+    // R4577008: whose turn has ended in this step, so the Black Hole's pull may follow; R4604007: the
+    // hole the step begins with, or else one opened in it that is still open as it ends.
+    let mut ended: Option<PlayerId> = None;
+    let hole = step
+        .hole
+        .or(after.black_hole.filter(crate::geometry::BlackHole::pulls_at_end));
     for (at, event) in events.iter().enumerate() {
-        if let GameEvent::Summoned { def_id, .. } | GameEvent::CardPlayed { def_id, .. } = event
+        if let GameEvent::Summoned { def_id, .. }
+        | GameEvent::CardPlayed { def_id, .. }
+        | GameEvent::Transformed {
+            to_def_id: def_id, ..
+        } = event
             && crate::card_on_card::carries_exile_aura(after, def_id)
         {
             exile_aura = true;
@@ -1683,14 +1740,19 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 };
                 continue;
             }
-            GameEvent::TurnStarted { .. }
-            | GameEvent::TurnEnded { .. }
-            | GameEvent::AutopilotEngaged { .. } => {
-                // R4604008: from a `turnEnded` to the next `turnStarted` is the turn's end.
-                match event {
-                    GameEvent::TurnEnded { .. } => turn_end = true,
-                    GameEvent::TurnStarted { .. } => turn_end = false,
-                    _ => {}
+            GameEvent::TurnEnded { player, .. } => {
+                // R4577008: the Black Hole's pull may follow; R4604008: the turn's end runs to the next
+                // `turnStarted`.
+                ended = Some(*player);
+                turn_end = true;
+                marked.push(None);
+                run = ImmuneRun::NONE;
+                continue;
+            }
+            GameEvent::TurnStarted { .. } | GameEvent::AutopilotEngaged { .. } => {
+                ended = None;
+                if matches!(event, GameEvent::TurnStarted { .. }) {
+                    turn_end = false;
                 }
                 marked.push(None);
                 run = ImmuneRun::NONE;
@@ -1797,15 +1859,17 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 // R4508001: Bogos Binted's Radiant face rebuilds its side Radiant (R4454002); R4508003:
                 // Tears of the Kwzki Tree's world.
                 GameEvent::RadiantSet { .. } => run.window == Some(ImmuneWindow::Restore) || radiant_world,
-                // R4508004: a lane the board loses; R4604004: an exile aura's or a Black Hole's exile.
-                GameEvent::Exiled { .. } => run.takes_lane || hole || exile_aura,
+                // R4508004: a lane the board loses; R4577008: or the hole's pull at a turn's end; R4604004:
+                // or an exile aura's exile at the state check.
+                GameEvent::Exiled { .. } => {
+                    run.takes_lane || pulled_into_the_hole(hole, ended, mark) || exile_aura
+                }
                 // R4604004: the state check's death of a Unit an earlier run of the step doomed;
                 // R4604006: or of one an aura's health held up, whatever took the aura away, or one an
                 // aura's change brought to a max health of 0 or less.
                 GameEvent::Destroyed { max_health, .. } => run.inherited || mark.propped || *max_health <= 0,
-                // R4604007: the settled state check evolving a Unit by its own "Evolves when …".
-                GameEvent::Evolved { .. } => find_instance(after, id)
-                    .is_some_and(|card| crate::scripts::script_of(after, card).evolves_when.is_some()),
+                // R4623000: the state check evolves it by its own standing condition (R3536001).
+                GameEvent::Evolved { .. } => evolves_standing(after, id),
                 // R4508005: §4.5 step 1 switches it out of a Defense Position the board bars it from.
                 GameEvent::PositionSwitched {
                     position: Position::Atk,

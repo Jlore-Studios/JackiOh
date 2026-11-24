@@ -16,8 +16,11 @@ import { FX_COVERAGE_FLOOR } from "../constants.ts";
 /** The catalog's non-token cards, in catalog order. */
 const CARDS = Object.keys(CATALOG).filter((id) => CATALOG[id]?.token !== true);
 
-/** The census `CARDS` holds: 634 before Stinkyscape+ shipped its 166 (#3596). */
-const NON_TOKEN_CARDS = 800;
+/**
+ * The census `CARDS` holds: 634 before Stinkyscape+ shipped its 166 (#3596), then 800 before the Infinite
+ * Assault's first part (#4577) added its 24, held but each with its table entry, as every catalog card has.
+ */
+const NON_TOKEN_CARDS = 824;
 
 /** A Spell part's own moments are the Starship's, not the card's: its entry stays `none` (R2801000). */
 const STARSHIP_PART_NONE = "none: Starship part";

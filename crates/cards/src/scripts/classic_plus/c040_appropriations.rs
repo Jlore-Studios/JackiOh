@@ -1,24 +1,27 @@
 //! C+ #40 Appropriations (SPEC §8.7 row 40, E38, E39, R58, R60, R80, R81, R177, R311, R348, R380, R581,
-//! R3135002, R3996201, R4154105). (X) Spell, Epic. Choose one, with the play (R81); X is at least 1 (R348);
-//! no number below 1; ⌊ ⌋ rounds down:
-//!   Military:   your Units on the field, in your hand and in your deck get +(⌊5X/3⌋−2) Attack and Rush.
+//! R3135002, R3563000, R3996201, R4154105, R4666000). (X) Spell, Epic. Choose one, with the play (R81); X is
+//! at least 1 (R348); no number below 1; ⌊ ⌋ rounds down:
+//!   Military:   your Units on the field and in your hand get +(2X−2) Attack and Rush.
 //!   Education:  shuffle ⌊5X/3⌋−2 random Radiant Books into your deck; they have Cast on draw and aim at
 //!               enemies when they harm and at your side when they help.
-//!   Culture:    each card on your field, in your hand and in your deck has a ⌊17X/4⌋% chance to become
-//!               Radiant.
-//!   Healthcare: your Units on the field, in your hand and in your deck get +(⌊5X/3⌋−2) Health and Armor X.
-//!   Radiant:    +(⌊17X/5⌋−4) Attack; ⌊17X/5⌋−2 Books; 12X%; +⌊17X/5⌋ Health and Armor 2X.
-//! Issue #4154 cut each about 15% again, the Armor kept (R4154105); `script_v0_6_6h` keeps the numbers
-//! before it, +(2X−3) [+(4X−5)], 2X−3 [4X−3], 5X% [14X%] and +(2X−3) [+4X]. Issue #3996 cut each about
-//! 15% at X = 4 (R3996201); `script_v0_6_5b` keeps the numbers before it, +(2X−2) [+(4X−3)], 2X−2
-//! [4X−1], 6X% [16X%] and +(2X−2) [+(5X−1)].
+//!   Culture:    each card on your field, in your hand and in your deck has a 6X% chance to become Radiant.
+//!   Healthcare: your Units on the field and in your hand get +(2X−2) Health and Armor X.
+//!   Radiant:    +(4X−3) Attack; ⌊17X/5⌋−2 Books; 16X%; +(5X−1) Health and Armor 2X.
+//! Issue #4666 took Military and Healthcare off the deck and gave them and Culture back the numbers #3996
+//! and #4154 took, Education unchanged (R4666000); `script_v0_6_12b` keeps the script before it, Military
+//! and Healthcare on the deck too at +(⌊5X/3⌋−2) [+(⌊17X/5⌋−4)] and +(⌊5X/3⌋−2) [+⌊17X/5⌋], Culture
+//! ⌊17X/4⌋% [12X%]. Issue #4154 had cut each about 15% again, the Armor kept (R4154105; `script_v0_6_6h`
+//! keeps the numbers before it, +(2X−3) [+(4X−5)], 2X−3 [4X−3], 5X% [14X%] and +(2X−3) [+4X]), and issue
+//! #3996 about 15% at X = 4 (R3996201; `script_v0_6_5b` keeps the numbers before it, +(2X−2) [+(4X−3)],
+//! 2X−2 [4X−1], 6X% [16X%] and +(2X−2) [+(5X−1)]).
 //!
-//! Military and Healthcare are E38's buffs and grants over your field (tops of piles), hand and deck,
-//! carried onto the field as a card enters, silent where a card is hidden (R440). Education's Books are
-//! non-token Books of every set (R380), repeats allowed (R60), each Radiant and enchanted (E39), R80's
-//! cap turning the rest away. Culture is `radiantChance`'s roll per card, #42 Selective Breeding's reading
-//! (R177, R581): every card is rolled, a Radiant one too, so neither the draws nor the cues count the
-//! hidden Radiant cards; a library card made Radiant is listed as it went in (R311). Tunes: none beyond X.
+//! Military and Healthcare are E38's buffs and grants over your field (tops of piles) and hand, a hand
+//! card's carried onto the field as it enters, silent where a card is hidden (R440). Education's Books are
+//! non-token Books of every set (R380), unique until the pool runs out (R3563000), each Radiant and
+//! enchanted (E39), R80's cap turning the rest away. Culture is `radiantChance`'s roll per card, #42
+//! Selective Breeding's reading (R177, R581): every card is rolled, a Radiant one too, so neither the draws
+//! nor the cues count the hidden Radiant cards; a library card made Radiant is listed as it went in (R311).
+//! Tunes: none beyond X.
 
 use jackioh_engine::effects::{
     buff_cards, chosen_options, grant_keyword_cards, radiant_chance, shuffle_random_from_catalog,
@@ -28,6 +31,11 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "classicplus-040";
 
 const MODES: &[&str] = &["Military", "Education", "Culture", "Healthcare"];
+
+/// R4666000: the zones Military and Healthcare reach, your field and your hand.
+const REACH: &[&str] = &["field", "hand"];
+/// R767000: their reach through v0.6.12b, your deck too.
+const REACH_V0_6_12B: &[&str] = &["field", "hand", "library"];
 
 /// One number of a face: `per_x` times X over `over`, rounded down, less `less` (`at`).
 type PerX = (i32, i32, i32);
@@ -42,9 +50,14 @@ struct Face {
     armor: PerX,
 }
 
-/// R4154105: ⌊5X/3⌋−2 [⌊17X/5⌋−4], ⌊5X/3⌋−2 [⌊17X/5⌋−2], ⌊17X/4⌋% [12X%], ⌊5X/3⌋−2 [⌊17X/5⌋], X [2X].
-const BASE: Face = Face { attack: (5, 3, 2), books: (5, 3, 2), percent: (17, 4, 0), health: (5, 3, 2), armor: (1, 1, 0) };
-const RADIANT: Face = Face { attack: (17, 5, 4), books: (17, 5, 2), percent: (12, 1, 0), health: (17, 5, 0), armor: (2, 1, 0) };
+/// R4666000: 2X−2 [4X−3], ⌊5X/3⌋−2 [⌊17X/5⌋−2], 6X% [16X%], 2X−2 [5X−1], X [2X]: v0.6.5b's Attack,
+/// percent and Health (R3996201) with v0.6.12b's Books and the Armor of every version.
+const BASE: Face = Face { attack: (2, 1, 2), books: (5, 3, 2), percent: (6, 1, 0), health: (2, 1, 2), armor: (1, 1, 0) };
+const RADIANT: Face = Face { attack: (4, 1, 3), books: (17, 5, 2), percent: (16, 1, 0), health: (5, 1, 1), armor: (2, 1, 0) };
+/// R767000: the numbers through v0.6.12b, before #4666 (R4154105): ⌊5X/3⌋−2 [⌊17X/5⌋−4], ⌊5X/3⌋−2
+/// [⌊17X/5⌋−2], ⌊17X/4⌋% [12X%], ⌊5X/3⌋−2 [⌊17X/5⌋], X [2X].
+const BASE_V0_6_12B: Face = Face { attack: (5, 3, 2), books: (5, 3, 2), percent: (17, 4, 0), health: (5, 3, 2), armor: (1, 1, 0) };
+const RADIANT_V0_6_12B: Face = Face { attack: (17, 5, 4), books: (17, 5, 2), percent: (12, 1, 0), health: (17, 5, 0), armor: (2, 1, 0) };
 /// R767000: the numbers through v0.6.6h, before #4154's nerf (R3996201).
 const BASE_V0_6_6H: Face = Face { attack: (2, 1, 3), books: (2, 1, 3), percent: (5, 1, 0), health: (2, 1, 3), armor: (1, 1, 0) };
 const RADIANT_V0_6_6H: Face = Face { attack: (4, 1, 5), books: (4, 1, 3), percent: (14, 1, 0), health: (4, 1, 0), armor: (2, 1, 0) };
@@ -63,19 +76,20 @@ const RADIANT_V0_3_7B: Face = Face { attack: (5, 1, 0), books: (5, 1, 0), percen
 const ALL: i32 = 100;
 
 /// A face's number at `x`: "2X−3" is `(2, 1, 3)` and "⌊5X/3⌋−2" `(5, 3, 2)`, the division rounding down
-/// (R4154105). No number is below 1 (R3135002): at X = 1 the base face's "⌊5X/3⌋−2" reads 1, not −1. The
+/// (R4154105). No number is below 1 (R3135002): at X = 1 the base face's "2X−2" reads 1, not 0. The
 /// floor has stood since #3135, so it reads v0.6.5b's and v0.6.6h's faces as they ran (their "2X−2" and
 /// "2X−3" at X = 1 read 1 then too); no older kept face comes near it, so it moves none of their numbers.
 fn at((per_x, over, less): PerX, x: i32) -> i32 {
     (per_x * x / over - less).max(1)
 }
 
-/// Your Units on the field, in your hand and in your deck (an E38 card scope).
-fn units() -> Value {
-    json!({ "side": "self", "zones": ["field", "hand", "library"], "rows": ["units"], "types": ["Unit"] })
+/// Your Units in the `reach` zones (an E38 card scope).
+fn units(reach: &[&str]) -> Value {
+    json!({ "side": "self", "zones": reach, "rows": ["units"], "types": ["Unit"] })
 }
 
-fn appropriations(face: Face) -> Script {
+/// The card's script for one face's numbers, Military and Healthcare reaching the `reach` zones.
+fn appropriations(face: Face, reach: &'static [&'static str]) -> Script {
     Script {
         modes: vec![ModeDecl {
             kind: PromptKind::Mode,
@@ -85,8 +99,8 @@ fn appropriations(face: Face) -> Script {
             let x = ctx.x;
             match chosen_options(ctx).first().map(String::as_str) {
                 Some("Military") => vec![
-                    buff_cards(json_as(json!({ "scope": units(), "attack": at(face.attack, x) }))),
-                    grant_keyword_cards(json_as(json!({ "scope": units(), "keyword": { "kind": "Rush" } }))),
+                    buff_cards(json_as(json!({ "scope": units(reach), "attack": at(face.attack, x) }))),
+                    grant_keyword_cards(json_as(json!({ "scope": units(reach), "keyword": { "kind": "Rush" } }))),
                 ],
                 Some("Education") => vec![shuffle_random_from_catalog(json_as(json!({
                     "query": { "tags": ["Book"] },
@@ -99,9 +113,9 @@ fn appropriations(face: Face) -> Script {
                     "chance": f64::min(1.0, f64::from(at(face.percent, x)) / f64::from(ALL)),
                 })))],
                 Some("Healthcare") => vec![
-                    buff_cards(json_as(json!({ "scope": units(), "health": at(face.health, x) }))),
+                    buff_cards(json_as(json!({ "scope": units(reach), "health": at(face.health, x) }))),
                     grant_keyword_cards(json_as(json!({
-                        "scope": units(),
+                        "scope": units(reach),
                         "keyword": { "kind": "Armor", "n": at(face.armor, x) },
                     }))),
                 ],
@@ -114,8 +128,19 @@ fn appropriations(face: Face) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: appropriations(BASE),
-        radiant: appropriations(RADIANT),
+        base: appropriations(BASE, REACH),
+        radiant: appropriations(RADIANT, REACH),
+    }
+}
+
+/// R767000: the scripts v0.6.12b and the versions before it back to the one after v0.6.6h's ran,
+/// Military and Healthcare on your deck too at +(⌊5X/3⌋−2) Attack [+(⌊17X/5⌋−4)] and +(⌊5X/3⌋−2) Health
+/// [+⌊17X/5⌋], Culture ⌊17X/4⌋% [12X%], each at least 1 (R3135002); `KEPT_SCRIPTS` folds those versions'
+/// replays under it (R4666000).
+pub fn script_v0_6_12b() -> CardScripts {
+    CardScripts {
+        base: appropriations(BASE_V0_6_12B, REACH_V0_6_12B),
+        radiant: appropriations(RADIANT_V0_6_12B, REACH_V0_6_12B),
     }
 }
 
@@ -124,8 +149,8 @@ pub fn script() -> CardScripts {
 /// `KEPT_SCRIPTS` folds those versions' replays under it (R4154105).
 pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
-        base: appropriations(BASE_V0_6_6H),
-        radiant: appropriations(RADIANT_V0_6_6H),
+        base: appropriations(BASE_V0_6_6H, REACH_V0_6_12B),
+        radiant: appropriations(RADIANT_V0_6_6H, REACH_V0_6_12B),
     }
 }
 
@@ -134,8 +159,8 @@ pub fn script_v0_6_6h() -> CardScripts {
 /// (R3135002); `KEPT_SCRIPTS` folds those versions' replays under it (R3996201).
 pub fn script_v0_6_5b() -> CardScripts {
     CardScripts {
-        base: appropriations(BASE_V0_6_5B),
-        radiant: appropriations(RADIANT_V0_6_5B),
+        base: appropriations(BASE_V0_6_5B, REACH_V0_6_12B),
+        radiant: appropriations(RADIANT_V0_6_5B, REACH_V0_6_12B),
     }
 }
 
@@ -144,8 +169,8 @@ pub fn script_v0_6_5b() -> CardScripts {
 /// versions' replays under it.
 pub fn script_v0_5_11o() -> CardScripts {
     CardScripts {
-        base: appropriations(BASE_V0_5_11O),
-        radiant: appropriations(RADIANT_V0_5_11O),
+        base: appropriations(BASE_V0_5_11O, REACH_V0_6_12B),
+        radiant: appropriations(RADIANT_V0_5_11O, REACH_V0_6_12B),
     }
 }
 
@@ -154,8 +179,8 @@ pub fn script_v0_5_11o() -> CardScripts {
 /// replays under them.
 pub fn script_v0_4_0f() -> CardScripts {
     CardScripts {
-        base: appropriations(BASE_V0_4_0F),
-        radiant: appropriations(RADIANT_V0_4_0F),
+        base: appropriations(BASE_V0_4_0F, REACH_V0_6_12B),
+        radiant: appropriations(RADIANT_V0_4_0F, REACH_V0_6_12B),
     }
 }
 
@@ -164,13 +189,13 @@ pub fn script_v0_4_0f() -> CardScripts {
 /// replays under them.
 pub fn script_v0_3_7b() -> CardScripts {
     CardScripts {
-        base: appropriations(BASE_V0_3_7B),
-        radiant: appropriations(RADIANT_V0_3_7B),
+        base: appropriations(BASE_V0_3_7B, REACH_V0_6_12B),
+        radiant: appropriations(RADIANT_V0_3_7B, REACH_V0_6_12B),
     }
 }
 
 // C+ #40 Appropriations — SPEC §8.7 row 40, E38, E39, R60, R80, R81, R97, R177, R311, R348, R380,
-// R440, R581, R3135002, R3996201, R4154105, BUILD M9 row C+ 40.
+// R440, R581, R3135002, R3996201, R4154105, R4666000, BUILD M9 row C+ 40.
 #[cfg(test)]
 mod tests {
     use crate::events_json;
@@ -370,16 +395,18 @@ mod tests {
         use super::*;
 
         #[test]
-        fn e38_r3996201_your_units_on_the_field_in_your_hand_and_in_your_deck_get_2x_less_3_attack_and_rush_spells_and_the_opponents_units_do_not() {
+        fn e38_r4666000_your_units_on_the_field_and_in_your_hand_get_2x_less_2_attack_and_rush_your_deck_spells_and_the_opponents_units_do_not() {
             let mut s = appropriations(false, json!({}), json!({}));
             s.play(APPROPRIATIONS, json!({ "x": 3, "modes": ["Military"] }));
             let timmy = unit(&s, P1, 1);
-            s.expect_stats(&timmy, json!({ "attack": 6, "health": 3 }));
+            s.expect_stats(&timmy, json!({ "attack": 7, "health": 3 }));
             assert!(keywords_of(&s, &timmy).contains(&"Rush".to_string()));
-            for card in [mine(&s, VANILLA, "hand"), mine(&s, MENACE, "library")] {
-                assert_eq!(card.buffs.attack, 3);
-                assert!(card.granted_keywords.iter().map(kind_of).any(|kind| kind == "Rush"));
-            }
+            let held = mine(&s, VANILLA, "hand");
+            assert_eq!(held.buffs.attack, 4);
+            assert!(held.granted_keywords.iter().map(kind_of).any(|kind| kind == "Rush"));
+            let deck = mine(&s, MENACE, "library");
+            assert_eq!(deck.buffs.attack, 0);
+            assert!(deck.granted_keywords.is_empty());
             assert_eq!(mine(&s, ECLIPSE, "hand").buffs.attack, 0);
             assert_eq!(mine(&s, FILLER, "library").buffs.attack, 0);
             let theirs = unit(&s, P2, 1);
@@ -400,9 +427,8 @@ mod tests {
             assert_eq!(s.card(timmy.as_str()).buffs.attack, 0);
             assert!(!s.card(timmy.as_str()).granted_keywords.iter().map(kind_of).any(|kind| kind == "Rush"));
             let held = s.card(held.as_str()).clone();
-            assert_eq!(held.buffs.attack, 3);
+            assert_eq!(held.buffs.attack, 4);
             assert!(held.granted_keywords.iter().map(kind_of).any(|kind| kind == "Rush"));
-            assert_eq!(mine(&s, MENACE, "library").buffs.attack, 3);
         }
 
         #[test]
@@ -423,15 +449,15 @@ mod tests {
             let timmy = unit(&s, P1, 1).id;
             crate::stand_in_backrow(&mut s, &timmy, 2);
             s.play(APPROPRIATIONS, json!({ "x": 3, "modes": ["Military"] }));
-            assert_eq!(s.card(timmy.as_str()).buffs.attack, 3);
-            s.expect_stats(timmy.as_str(), json!({ "attack": 6, "health": 3 }));
+            assert_eq!(s.card(timmy.as_str()).buffs.attack, 4);
+            s.expect_stats(timmy.as_str(), json!({ "attack": 7, "health": 3 }));
             assert!(keywords_of(&s, s.card(timmy.as_str())).contains(&"Rush".to_string()));
         }
 
         #[test]
         fn e38_r3135002_a_hand_unit_carries_the_buff_and_rush_onto_the_field_as_it_enters() {
             let mut s = appropriations(false, json!({}), json!({}));
-            // 2X−3 is −1 at X = 1: the floor of 1 (R3135002).
+            // 2X−2 is 0 at X = 1: the floor of 1 (R3135002).
             s.play(APPROPRIATIONS, json!({ "x": 1, "modes": ["Military"] }));
             s.play(VANILLA, json!({ "zone": 2 }));
             let vanilla = unit(&s, P1, 2);
@@ -440,10 +466,10 @@ mod tests {
         }
 
         #[test]
-        fn r97_r440_hand_and_deck_changes_are_hidden_from_the_opponent_the_decks_are_unread_by_its_owner_r311() {
+        fn r97_r440_hand_changes_are_hidden_from_the_opponent_the_deck_is_listed_to_its_owner_as_it_was_r311() {
             let mut s = appropriations(false, json!({}), json!({}));
             s.play(APPROPRIATIONS, json!({ "x": 1, "modes": ["Military"] }));
-            let hidden = [mine(&s, VANILLA, "hand").id, mine(&s, MENACE, "library").id];
+            let hidden = [mine(&s, VANILLA, "hand").id];
             let named = |events: &[Value]| -> Vec<String> {
                 events
                     .iter()
@@ -458,15 +484,33 @@ mod tests {
             assert!(listed(&s).contains(&json!({ "defId": MENACE, "radiant": false, "count": 1 })));
         }
 
-        /// R4154105: ⌊17X/5⌋−4 at X = 2 is 2 (4X−5's 3 through v0.6.6h).
+        /// R4666000: 4X−3 at X = 2 is 5 (⌊17X/5⌋−4's 2 through v0.6.12b).
         #[test]
-        fn r4154105_radiant_17x_over_5_less_4_attack_and_rush() {
+        fn r4666000_radiant_4x_less_3_attack_and_rush() {
             let mut s = appropriations(true, json!({}), json!({}));
             s.play(APPROPRIATIONS, json!({ "x": 2, "modes": ["Military"] }));
             let timmy = unit(&s, P1, 1);
-            s.expect_stats(&timmy, json!({ "attack": 5 }));
+            s.expect_stats(&timmy, json!({ "attack": 8 }));
             assert!(keywords_of(&s, &timmy).contains(&"Rush".to_string()));
-            assert_eq!(mine(&s, VANILLA, "hand").buffs.attack, 2);
+            assert_eq!(mine(&s, VANILLA, "hand").buffs.attack, 5);
+            assert_eq!(mine(&s, MENACE, "library").buffs.attack, 0);
+        }
+
+        /// R767000, R4154105: through v0.6.12b the Radiant face's ⌊17X/5⌋−4 at X = 2 was 2, and it reached
+        /// the deck too, Rush and all.
+        #[test]
+        fn r767000_r4154105_the_kept_v0_6_12b_script_gives_radiant_17x_over_5_less_4_attack_and_rush_to_the_deck_too() {
+            crate::under_kept(APPROPRIATIONS, super::super::script_v0_6_12b(), || {
+                let mut s = appropriations(true, json!({}), json!({}));
+                s.play(APPROPRIATIONS, json!({ "x": 2, "modes": ["Military"] }));
+                let timmy = unit(&s, P1, 1);
+                s.expect_stats(&timmy, json!({ "attack": 5 }));
+                assert!(keywords_of(&s, &timmy).contains(&"Rush".to_string()));
+                for card in [mine(&s, VANILLA, "hand"), mine(&s, MENACE, "library")] {
+                    assert_eq!(card.buffs.attack, 2);
+                    assert!(card.granted_keywords.iter().map(kind_of).any(|kind| kind == "Rush"));
+                }
+            });
         }
 
         /// R767000, R3996201: through v0.6.6h the Radiant face's 4X−5 at X = 2 was 3.
@@ -680,15 +724,25 @@ mod tests {
         }
 
         #[test]
-        fn r4154105_base_17x_over_4_at_x_23_is_97_so_some_card_stays_over_seeds_and_at_x_24_every_card_turns() {
-            assert!((0..200).any(|n| culture(false, 23, n).1 > 0));
-            assert_eq!(culture(false, 24, 0), (5, 0));
+        fn r4666000_base_6x_at_x_16_is_96_so_some_card_stays_over_seeds_and_at_x_17_every_card_turns() {
+            assert!((0..200).any(|n| culture(false, 16, n).1 > 0));
+            assert_eq!(culture(false, 17, 0), (5, 0));
         }
 
         #[test]
-        fn r4154105_radiant_12x_at_x_8_is_96_so_some_card_stays_over_seeds_and_at_x_9_every_card_turns() {
-            assert!((0..200).any(|n| culture(true, 8, n).1 > 0));
-            assert_eq!(culture(true, 9, 0), (5, 0));
+        fn r4666000_radiant_16x_at_x_6_is_96_so_some_card_stays_over_seeds_and_at_x_7_every_card_turns() {
+            assert!((0..200).any(|n| culture(true, 6, n).1 > 0));
+            assert_eq!(culture(true, 7, 0), (5, 0));
+        }
+
+        #[test]
+        fn r767000_r4154105_the_kept_v0_6_12b_script_rolls_17x_over_4_and_12x_so_some_card_stays_at_x_23_and_x_8() {
+            crate::under_kept(APPROPRIATIONS, super::super::script_v0_6_12b(), || {
+                assert!((0..200).any(|n| culture(false, 23, n).1 > 0));
+                assert_eq!(culture(false, 24, 0), (5, 0));
+                assert!((0..200).any(|n| culture(true, 8, n).1 > 0));
+                assert_eq!(culture(true, 9, 0), (5, 0));
+            });
         }
 
         #[test]
@@ -710,7 +764,7 @@ mod tests {
             crate::under_kept(APPROPRIATIONS, super::super::script_v0_5_11o(), || {
                 assert_eq!(culture(false, 15, 0), (5, 0));
             });
-            // Today's ⌊17X/4⌋% is 63% there: some card stays over the seeds.
+            // Today's 6X% is 90% there: some card stays over the seeds.
             assert!((0..80).any(|n| culture(false, 15, n).1 > 0));
         }
 
@@ -802,39 +856,80 @@ mod tests {
         use super::*;
 
         #[test]
-        fn e38_r3996201_your_units_everywhere_get_2x_less_3_health_and_armor_x_which_stacks_with_printed_armor() {
+        fn e38_r4666000_your_units_on_the_field_and_in_your_hand_get_2x_less_2_health_and_armor_x_which_stacks_with_printed_armor_your_deck_does_not() {
             let mut s = appropriations(false, json!({ "field": [TIMMY, ARMORED] }), json!({}));
             s.play(APPROPRIATIONS, json!({ "x": 3, "modes": ["Healthcare"] }));
             let timmy = unit(&s, P1, 1);
-            s.expect_stats(&timmy, json!({ "attack": 3, "health": 6 }));
+            s.expect_stats(&timmy, json!({ "attack": 3, "health": 7 }));
             assert_eq!(s.stats(&timmy).armor, 3);
             assert_eq!(s.stats(unit(&s, P1, 2)).armor, 10);
             let vanilla = mine(&s, VANILLA, "hand");
-            assert_eq!(vanilla.buffs.health, 3);
+            assert_eq!(vanilla.buffs.health, 4);
             assert_eq!(vanilla.granted_keywords, vec![Keyword::Armor { n: 3 }]);
-            assert_eq!(mine(&s, MENACE, "library").buffs.health, 3);
+            let deck = mine(&s, MENACE, "library");
+            assert_eq!(deck.buffs.health, 0);
+            assert!(deck.granted_keywords.is_empty());
             let theirs = unit(&s, P2, 1);
             s.expect_stats(&theirs, json!({ "health": 3 }));
         }
 
-        /// R4154105: ⌊17X/5⌋ at X = 2 is 6 (4X's 8 through v0.6.6h); the Armor 2X is kept.
+        /// R4666000: a hand Unit carries its Health and Armor onto the field as it enters.
         #[test]
-        fn r4154105_radiant_17x_over_5_health_and_armor_2x() {
+        fn e38_r4666000_a_hand_unit_carries_the_health_and_armor_onto_the_field_as_it_enters() {
+            let mut s = appropriations(false, json!({}), json!({}));
+            s.play(APPROPRIATIONS, json!({ "x": 2, "modes": ["Healthcare"] }));
+            s.play(VANILLA, json!({ "zone": 2 }));
+            let vanilla = unit(&s, P1, 2);
+            s.expect_stats(&vanilla, json!({ "attack": 4, "health": 6 }));
+            assert_eq!(s.stats(&vanilla).armor, 2);
+        }
+
+        /// R4666000: 5X−1 at X = 2 is 9 (⌊17X/5⌋'s 6 through v0.6.12b); the Armor 2X is kept.
+        #[test]
+        fn r4666000_radiant_5x_less_1_health_and_armor_2x() {
             let mut s = appropriations(true, json!({}), json!({}));
             s.play(APPROPRIATIONS, json!({ "x": 2, "modes": ["Healthcare"] }));
             let timmy = unit(&s, P1, 1);
-            s.expect_stats(&timmy, json!({ "health": 9 }));
+            s.expect_stats(&timmy, json!({ "health": 12 }));
             assert_eq!(s.stats(&timmy).armor, 4);
+            assert_eq!(mine(&s, MENACE, "library").buffs.health, 0);
+        }
+
+        /// R767000, R4154105: through v0.6.12b the Radiant face's ⌊17X/5⌋ at X = 2 was 6, and it reached
+        /// the deck too, Armor and all.
+        #[test]
+        fn r767000_r4154105_the_kept_v0_6_12b_script_gives_radiant_17x_over_5_health_and_armor_2x_to_the_deck_too() {
+            crate::under_kept(APPROPRIATIONS, super::super::script_v0_6_12b(), || {
+                let mut s = appropriations(true, json!({}), json!({}));
+                s.play(APPROPRIATIONS, json!({ "x": 2, "modes": ["Healthcare"] }));
+                let timmy = unit(&s, P1, 1);
+                s.expect_stats(&timmy, json!({ "health": 9 }));
+                assert_eq!(s.stats(&timmy).armor, 4);
+                let deck = mine(&s, MENACE, "library");
+                assert_eq!(deck.buffs.health, 6);
+                assert_eq!(deck.granted_keywords, vec![Keyword::Armor { n: 4 }]);
+            });
         }
     }
 
-    /// R3135002, R4154105: each number at X = 1, 4 and 6 on both faces, played end to end.
-    mod r4154105_the_numbers {
+    /// R3135002, R4666000: each number at X = 1, 4 and 6 on both faces, played end to end.
+    mod the_numbers {
         use super::*;
+        use crate::scripts::classic_plus::c040_appropriations as card;
 
-        /// (radiant, X, Attack, Books, Health, Armor) by the formulas: ⌊5X/3⌋−2 [⌊17X/5⌋−4], ⌊5X/3⌋−2
-        /// [⌊17X/5⌋−2], ⌊5X/3⌋−2 [⌊17X/5⌋] and X [2X], each at least 1.
+        /// (radiant, X, Attack, Books, Health, Armor) by the formulas: 2X−2 [4X−3], ⌊5X/3⌋−2 [⌊17X/5⌋−2],
+        /// 2X−2 [5X−1] and X [2X], each at least 1 (R4666000).
         const ROWS: [(bool, i32, i32, usize, i32, i32); 6] = [
+            (false, 1, 1, 1, 1, 1),
+            (false, 4, 6, 4, 6, 4),
+            (false, 6, 10, 8, 10, 6),
+            (true, 1, 1, 1, 4, 2),
+            (true, 4, 13, 11, 19, 8),
+            (true, 6, 21, 18, 29, 12),
+        ];
+        /// R767000, R4154105: the same through v0.6.12b: ⌊5X/3⌋−2 [⌊17X/5⌋−4], ⌊5X/3⌋−2 [⌊17X/5⌋−2],
+        /// ⌊5X/3⌋−2 [⌊17X/5⌋] and X [2X].
+        const ROWS_V0_6_12B: [(bool, i32, i32, usize, i32, i32); 6] = [
             (false, 1, 1, 1, 1, 1),
             (false, 4, 4, 4, 4, 4),
             (false, 6, 8, 8, 8, 6),
@@ -853,22 +948,29 @@ mod tests {
         ];
 
         #[test]
-        fn r4154105_military_education_and_healthcare_at_x_1_4_and_6_on_both_faces() {
-            played_rows(ROWS);
+        fn r4666000_military_education_and_healthcare_at_x_1_4_and_6_on_both_faces_none_on_the_deck() {
+            played_rows(ROWS, false);
+        }
+
+        #[test]
+        fn r767000_r4154105_the_kept_v0_6_12b_script_at_x_1_4_and_6_on_both_faces_the_deck_too() {
+            crate::under_kept(APPROPRIATIONS, card::script_v0_6_12b(), || played_rows(ROWS_V0_6_12B, true));
         }
 
         #[test]
         fn r767000_r3996201_the_kept_v0_6_6h_script_at_x_1_4_and_6_on_both_faces() {
-            crate::under_kept(APPROPRIATIONS, super::super::script_v0_6_6h(), || played_rows(ROWS_V0_6_6H));
+            crate::under_kept(APPROPRIATIONS, card::script_v0_6_6h(), || played_rows(ROWS_V0_6_6H, true));
         }
 
-        /// Each row's Military, Education and Healthcare, played end to end.
-        fn played_rows(rows: [(bool, i32, i32, usize, i32, i32); 6]) {
+        /// Each row's Military, Education and Healthcare, played end to end; `deck` is whether Military
+        /// and Healthcare reach the deck's Unit.
+        fn played_rows(rows: [(bool, i32, i32, usize, i32, i32); 6], deck: bool) {
+            let on_deck = |n: i32| if deck { n } else { 0 };
             for (radiant, x, attack, books, health, armor) in rows {
                 let mut s = appropriations(radiant, json!({ "mana": 10 }), json!({}));
                 s.play(APPROPRIATIONS, json!({ "x": x, "modes": ["Military"] }));
                 assert_eq!(mine(&s, VANILLA, "hand").buffs.attack, attack, "Military radiant {radiant} X {x}");
-                assert_eq!(mine(&s, MENACE, "library").buffs.attack, attack);
+                assert_eq!(mine(&s, MENACE, "library").buffs.attack, on_deck(attack));
 
                 let mut s = appropriations(radiant, json!({ "library": [], "mana": 10 }), json!({}));
                 s.play(APPROPRIATIONS, json!({ "x": x, "modes": ["Education"] }));
@@ -879,34 +981,61 @@ mod tests {
                 let vanilla = mine(&s, VANILLA, "hand");
                 assert_eq!(vanilla.buffs.health, health, "Healthcare radiant {radiant} X {x}");
                 assert_eq!(vanilla.granted_keywords, vec![Keyword::Armor { n: armor }]);
+                assert_eq!(mine(&s, MENACE, "library").buffs.health, on_deck(health));
             }
         }
 
         #[test]
-        fn r4154105_culture_is_17x_over_4_percent_and_radiant_12x_percent_at_x_1_4_and_6() {
+        fn r4666000_culture_is_6x_percent_and_radiant_16x_percent_at_x_1_4_and_6() {
             for (radiant, x, percent) in [
-                (false, 1, 4),
-                (false, 4, 17),
-                (false, 6, 25),
-                (true, 1, 12),
-                (true, 4, 48),
-                (true, 6, 72),
+                (false, 1, 6),
+                (false, 4, 24),
+                (false, 6, 36),
+                (true, 1, 16),
+                (true, 4, 64),
+                (true, 6, 96),
             ] {
-                let face = if radiant { super::super::RADIANT } else { super::super::BASE };
-                assert_eq!(super::super::at(face.percent, x), percent, "radiant {radiant} X {x}");
+                let face = if radiant { card::RADIANT } else { card::BASE };
+                assert_eq!(card::at(face.percent, x), percent, "radiant {radiant} X {x}");
             }
-            // Through v0.6.6h: 5X% and 14X%.
-            let (base, radiant) = (super::super::BASE_V0_6_6H, super::super::RADIANT_V0_6_6H);
-            assert_eq!((super::super::at(base.percent, 4), super::super::at(radiant.percent, 4)), (20, 56));
+            // Through v0.6.12b: ⌊17X/4⌋% and 12X% (R4154105); through v0.6.6h: 5X% and 14X%.
+            let (base, radiant) = (card::BASE_V0_6_12B, card::RADIANT_V0_6_12B);
+            assert_eq!((card::at(base.percent, 4), card::at(radiant.percent, 4)), (17, 48));
+            let (base, radiant) = (card::BASE_V0_6_6H, card::RADIANT_V0_6_6H);
+            assert_eq!((card::at(base.percent, 4), card::at(radiant.percent, 4)), (20, 56));
         }
 
-        /// R4154105: no number of either face is above what it was through v0.6.6h at any X, the Armor the
-        /// same.
+        /// R4666000: Military's, Culture's and Healthcare's numbers are v0.6.5b's (R3996201) at every X,
+        /// Education's v0.6.12b's, and the Armor every version's.
         #[test]
-        fn r4154105_no_number_is_above_its_v0_6_6h_value_at_any_x() {
+        fn r4666000_the_numbers_given_back_are_v0_6_5bs_and_education_keeps_v0_6_12bs() {
+            let faces = [
+                (card::BASE, card::BASE_V0_6_5B, card::BASE_V0_6_12B),
+                (card::RADIANT, card::RADIANT_V0_6_5B, card::RADIANT_V0_6_12B),
+            ];
+            for (now, given_back, before) in faces {
+                for x in 1..=30 {
+                    for (a, b) in [
+                        (now.attack, given_back.attack),
+                        (now.percent, given_back.percent),
+                        (now.health, given_back.health),
+                        (now.armor, given_back.armor),
+                    ] {
+                        assert_eq!(card::at(a, x), card::at(b, x), "X {x}");
+                    }
+                    assert_eq!(card::at(now.books, x), card::at(before.books, x), "X {x}");
+                    assert_eq!(card::at(now.armor, x), card::at(before.armor, x), "X {x}");
+                }
+            }
+        }
+
+        /// R4154105: no number of either face through v0.6.12b is above what it was through v0.6.6h at any
+        /// X, the Armor the same.
+        #[test]
+        fn r4154105_no_v0_6_12b_number_is_above_its_v0_6_6h_value_at_any_x() {
             let pairs = [
-                (super::super::BASE, super::super::BASE_V0_6_6H),
-                (super::super::RADIANT, super::super::RADIANT_V0_6_6H),
+                (card::BASE_V0_6_12B, card::BASE_V0_6_6H),
+                (card::RADIANT_V0_6_12B, card::RADIANT_V0_6_6H),
             ];
             for (now, then) in pairs {
                 for x in 1..=30 {
@@ -916,9 +1045,9 @@ mod tests {
                         (now.percent, then.percent),
                         (now.health, then.health),
                     ] {
-                        assert!(super::super::at(a, x) <= super::super::at(b, x), "X {x}");
+                        assert!(card::at(a, x) <= card::at(b, x), "X {x}");
                     }
-                    assert_eq!(super::super::at(now.armor, x), super::super::at(then.armor, x), "X {x}");
+                    assert_eq!(card::at(now.armor, x), card::at(then.armor, x), "X {x}");
                 }
             }
         }
@@ -926,16 +1055,18 @@ mod tests {
         #[test]
         fn r3135002_no_number_of_either_face_is_below_1_at_any_x() {
             for face in [
-                super::super::BASE,
-                super::super::RADIANT,
-                super::super::BASE_V0_6_6H,
-                super::super::RADIANT_V0_6_6H,
-                super::super::BASE_V0_6_5B,
-                super::super::RADIANT_V0_6_5B,
+                card::BASE,
+                card::RADIANT,
+                card::BASE_V0_6_12B,
+                card::RADIANT_V0_6_12B,
+                card::BASE_V0_6_6H,
+                card::RADIANT_V0_6_6H,
+                card::BASE_V0_6_5B,
+                card::RADIANT_V0_6_5B,
             ] {
                 for x in 1..=20 {
                     for number in [face.attack, face.books, face.percent, face.health, face.armor] {
-                        assert!(super::super::at(number, x) >= 1, "X {x}");
+                        assert!(card::at(number, x) >= 1, "X {x}");
                     }
                 }
             }

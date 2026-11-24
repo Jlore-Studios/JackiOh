@@ -1,4 +1,5 @@
-//! SPEC §8.12 S+ #153 Noxious Rounds (Unit 1/1 → 2/2, cost 3, 4 until issue #4353, Epic), a card of the
+//! SPEC §8.12 S+ #153 Noxious Rounds (Unit 3/1 → 6/2, 1/1 → 2/2 until issue #4440 and 3/1 → 6/1 in v0.6.11d,
+//! R4440005; cost 3, 4 until issue #4353, Epic), a card of the
 //! Stinkyscape+ set (R1420, R3535000).
 //!   Base and Radiant: "Starship Piece
 //!            Damage dealt is Toxic."
@@ -46,9 +47,9 @@ mod tests {
     /// An equipped host.
     const HOST: &str = "stand-in (1) 4/4 R12/12";
 
-    /// The printed attack, and the Radiant face's.
-    const ATTACK: i32 = 1;
-    const RADIANT_ATTACK: i32 = 2;
+    /// The printed attack, and the Radiant face's (issue #4440: 3/1, Radiant 6/2).
+    const ATTACK: i32 = 3;
+    const RADIANT_ATTACK: i32 = 6;
 
     fn rounds_on(radiant: bool, p2: Value) -> Scenario {
         weapon_board(
@@ -131,10 +132,12 @@ mod tests {
         }
 
         #[test]
-        fn its_stats_are_doubled() {
-            let s = rounds_on(true, json!({}));
-            let view = s.stats(ID);
-            assert_eq!((view.attack, view.health), (2, 2));
+        fn r4440005_its_stats_double_3_1_to_6_2() {
+            for (radiant, stats) in [(false, (3, 1)), (true, (6, 2))] {
+                let s = rounds_on(radiant, json!({}));
+                let view = s.stats(ID);
+                assert_eq!((view.attack, view.health), stats, "radiant {radiant}");
+            }
         }
     }
 }
