@@ -2,7 +2,7 @@
 
 This is the plan and the runbook for running JackiOh on Cloudflare: what runs where, how a commit
 reaches each site, what the repo enforces, what a person sets outside the repo, and what to do when
-something goes wrong. Render and Vercel are gone. The database and sign-in stay on Supabase.
+something goes wrong. The database and sign-in are on Supabase.
 
 ## 1. Target state
 
@@ -195,7 +195,7 @@ staging -> Run workflow moves it now (to its `sha`, or main's newest green commi
 | GitHub secrets | `CF_ACCESS_CLIENT_ID`, `CF_ACCESS_CLIENT_SECRET`: the service token's pair | staging's live check |
 | GitHub secret | `CLOUDFLARE_BILLING_TOKEN`: a custom token with the account's Billing: Read alone | `cf-spend.yml` |
 | GitHub secret | `BOT_GITHUB_TOKEN` (already set) | moving `_production` |
-| GitHub secret | `CODE_PEPPER`: both Workers' pepper, the one copy that can be read back (a Worker's secret cannot), kept from Render's on 2026-11-03 | a person setting it on a new Worker, or `mint-code` |
+| GitHub secret | `CODE_PEPPER`: both Workers' pepper, the one copy that can be read back (a Worker's secret cannot) | a person setting it on a new Worker, or `mint-code` |
 | `infra/terraform.tfvars` (git ignores it) | `staging_team_emails`: who Access lets into staging | `terraform apply` |
 | `infra/terraform.tfvars` (git ignores it) | `admin_emails`: who Access lets into the dev dashboard, the dev accounts' addresses (R3074000, `apps/admin/README.md`) | `terraform apply` |
 
@@ -205,42 +205,23 @@ redirect URLs in `infra/` (`infra/README.md`). **Never** put `SUPABASE_SECRET_KE
 or `CODE_PEPPER` in the web build or in `wrangler.jsonc`: anything the web build reads is readable by
 every visitor, and the repository is public.
 
-## 4. Moving from Render and Vercel, in order
+## 4. Setting up a Worker, staging's Access and `cutover.yml`
 
-Production keeps serving from Render until step 6 verifies the new server, so do these in order.
+Section 3 lists what lives outside the repo; this is how each is set up, for a new Worker or a lost
+secret.
 
-**Actions -> cutover** (`.github/workflows/cutover.yml`) ran steps 3 and 6's secrets, the copy and
-the dropping of staging's keep-alive, one `step` a run, so no secret passed through a person: each
-value went from Render's `jackioh-server` or a repository secret straight to where it was used. Those
-steps read Render, and left the file with it (step 7; they are in its history); what still runs there
-is `check-production`, `production-auth`, `email`, `stats-logins` and `dev-stats`. For production it
-reads `PRODUCTION_SUPABASE_SECRET_KEY` and `PRODUCTION_DATABASE_URL` (JackiOh-Production's secret key
-and session pooler URI). The URI may keep Supabase's `[YOUR-PASSWORD]`, with the password itself in
-`PRODUCTION_DB_PASSWORD`, which, when set, replaces any password the URI holds; the workflow
-percent-encodes it. Step `check-production` writes nothing and says whether those secrets are a secret
-key and an address that reaches JackiOh-Production. The commands below are what it does, for doing it
-by hand.
-
-### Step 1: Merge
-
-Production moved only on a `/promote` during the move (section 2.1), so nothing promoted it before
-its secrets existed. (Before 2026-11-02 production merged by itself once a day, and this step held it
-with `/hold`; since 2026-11-03 the daily promotion moves it again.) Merge the pull request. Its first green CI run on main
-starts `deploy-staging.yml`, which creates `jackioh-staging`. That first deploy's server cannot start
-until step 3 gives it its secrets, so its live check fails once: expected.
-
-### Step 2: Cloudflare account
+### The Cloudflare account and the deploy token
 
 1. Workers & Pages -> Plans: the **Workers Paid** plan.
-2. The deploy token: My Profile -> API Tokens. The existing `CLOUDFLARE_API_TOKEN` was made from the
-   **Edit Cloudflare Workers** template. If a deploy says the token may not manage containers, edit
-   the token and add the account's Containers permission (Edit).
+2. The deploy token: My Profile -> API Tokens. `CLOUDFLARE_API_TOKEN` is made from the **Edit
+   Cloudflare Workers** template. If a deploy says the token may not manage containers, edit the
+   token and add the account's Containers permission (Edit).
 3. Workers & Pages -> `jackioh` -> Settings -> Build: no Git repository connected (Cloudflare's own
    builds stay off: GitHub Actions builds and deploys).
 
-### Step 3: The servers' secrets
+### A Worker's secrets
 
-For each Worker (`--env staging`, then `--env=""` for production), from `apps/edge`:
+For each Worker (`--env staging`, or `--env=""` for production), from `apps/edge`:
 
 ```
 pnpm exec wrangler secret put SUPABASE_SECRET_KEY --config ../../wrangler.jsonc --env staging
@@ -248,89 +229,57 @@ pnpm exec wrangler secret put DATABASE_URL --config ../../wrangler.jsonc --env s
 pnpm exec wrangler secret put CODE_PEPPER --config ../../wrangler.jsonc --env staging
 ```
 
-Staging's values are the ones Render's `jackioh-server` holds now (Environment), since staging keeps
-the project production used (JackiOh-Staging, section 8), with one change: `DATABASE_URL` is
-Supabase's **session pooler** URI (Supabase -> Connect -> Session pooler), which works over IPv4. The
-direct host is IPv6-only, and a container's outbound IPv6 is not something to depend on. Copy
-`DEV_PROFILE_IDS` if Render has it. Production's are set in step 6, from its own project. A secret reaches a container when it
-starts, so after setting them run **deploy staging** by hand (Actions -> deploy staging -> Run
-workflow). Actions -> cutover, step `staging-secrets`, does all of this once deploy staging has
-created the Worker.
+`SUPABASE_SECRET_KEY` and `DATABASE_URL` come from the Worker's own project (section 8): its secret
+key (Project Settings -> API Keys), and its **session pooler** URI (Connect -> Session pooler), which
+works over IPv4. The direct host is IPv6-only, and a container's outbound IPv6 is not something to
+depend on. `CODE_PEPPER` is the repository secret of that name (section 3), the same on both Workers,
+since every invite code's hash depends on it. A secret reaches a container when it starts, so after
+setting one, run **deploy staging** by hand, or **promote production** with **redeploy** ticked.
 
-### Step 4: Staging's address and Access
+### Staging's Access
 
-Done on 2026-11-02 through Cloudflare's API, in this order, so staging was behind Access from its
-first request:
-
-1. Zero Trust, team `jackioh` (`jackioh.cloudflareaccess.com`), the Free plan (up to 50 users), with
-   One-time PIN as the sign-in.
-2. The Access application `JackiOh staging` on `staging.jackioh.com` and its two policies, as
-   `infra/cloudflare.tf` declares them, the team's being the two owners' addresses.
-3. `staging.jackioh.com` as `jackioh-staging`'s custom domain. `infra/cloudflare.tf`'s `import`
-   blocks adopt all four at step 6's apply, whose `infra/terraform.tfvars` must list the same
-   addresses (`staging_team_emails`), or the apply changes the policy to the file's.
-4. The service token `JackiOh staging deploy check` (a year), whose pair is the repository secrets
-   `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET`, for deploy-staging.yml's live check.
+Staging is behind Cloudflare Access: Zero Trust team `jackioh` (`jackioh.cloudflareaccess.com`), the
+Free plan (up to 50 users), with One-time PIN as the sign-in. `infra/cloudflare.tf` declares the
+Access application `JackiOh staging` on `staging.jackioh.com`, its two policies, the custom domain,
+and the service token `JackiOh staging deploy check` (made on 2026-11-02 for a year), whose pair is
+the repository secrets `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET`, for deploy-staging.yml's
+live check.
 
 To let someone else into staging, add their address to the policy `JackiOh staging: the team` (Zero
-Trust -> Access -> Policies) and to `staging_team_emails`.
+Trust -> Access -> Policies) and to `staging_team_emails` in `infra/terraform.tfvars`, or the next
+apply changes the policy back to the file's.
 
-Until step 6 production signs in on the project that becomes staging's, and `infra/supabase.tf`
-would move that project's Site URL to staging. So add `https://staging.jackioh.com/login` to that
-project's Redirect URLs (Actions -> cutover, step `production-auth` does it; or by hand,
-Authentication -> URL Configuration), leaving its Site URL and `https://jackioh.com/login` as they
-are; step 6's full apply puts it to the file.
+### Checking a site
 
-### Step 5: Verify staging
+Replace `$SITE` with `https://staging.jackioh.com` or `https://jackioh.com`. On staging a browser asks
+for an Access sign-in first.
 
-Replace `$SITE` with `https://staging.jackioh.com`. A browser asks for an Access sign-in first.
-
-1. Open `$SITE` signed out of Access: Cloudflare's sign-in page, not the game.
+1. On staging, open `$SITE` signed out of Access: Cloudflare's sign-in page, not the game.
 2. `/practice` loads, `/decks` loaded directly and reloaded stays on the deck screen, `/loginx` is a
    404, and DevTools -> Console shows no CSP violations.
 3. Sign in. DevTools -> Network: the API calls go to `$SITE/api/...` and the socket to
-   `wss://staging.jackioh.com/ws/match`.
-4. Request a password reset: the email's link opens staging.
+   `/ws/match` on the same host.
+4. Request a password reset: the email's link opens `$SITE`.
 5. Save a deck, queue, and play a match in two browsers. Reload one mid-match: it comes back into
    the same position.
-6. Calibrate `TRUSTED_PROXY_HOPS` (`docs/architecture.md` §10, step 8): Workers & Pages ->
-   `jackioh-staging` -> Logs, find `api.forwarded_for` after a request of your own. If `fewestEntries`
-   is 2, set both environments' `TRUSTED_PROXY_HOPS` to `"2"` in `wrangler.jsonc`.
-7. Leave it idle for 15 minutes, then load `/decks`: it waits a few seconds while the server starts.
-   Note how long; that is the cold start players see.
+6. Leave it idle for 15 minutes, then load `/decks`: it waits a few seconds while the server starts
+   (section 7, Cold starts).
 
-### Step 6: Production
+`TRUSTED_PROXY_HOPS` is calibrated from the `api.forwarded_for` log (`docs/architecture.md` §10,
+step 8).
 
-1. Step 3's secrets for `--env=""`, from JackiOh-Production (Project Settings -> API Keys, and its
-   own session pooler URI), with the `CODE_PEPPER` and `DEV_PROFILE_IDS` Render holds: the copy
-   keeps every invite code's hash and every account's id, so the same pepper and ids still fit.
-   Actions -> cutover, step `production-secrets`.
-2. Copy the data into JackiOh-Production (section 8, The copy), straight before the next item: Render
-   writes to the old project until the redeploy, so anything a player saves between the two stays
-   on staging. Actions -> cutover, step `drop-ping` first, then `copy` with `dry_run` and without.
-3. Actions -> promote production -> Run workflow, with **redeploy** ticked. This deploys `_production`
-   as it is to the `jackioh` Worker and its container, and checks the live site.
-4. Verify as in step 5 against `https://jackioh.com` (no Access). The site and the server now share
-   an origin; nothing calls `jackioh-server.onrender.com` any more. Sign in with an account made
-   before the copy: its password works, its collection and decks are there.
-5. `terraform -chdir=infra plan`, then `apply`, untargeted: the first full one (`infra/README.md`, The
-   first import). Only now may staging's project lose `https://jackioh.com` as its Site URL.
-6. From here on production moves as section 2.1 says: `/promote` on the production issue.
+### `cutover.yml`
 
-### Step 7: Turn Render and Vercel off
-
-Done on 2026-11-03, the owners' call (CLAUDE.md rule 13), straight after step 6 rather than a day
-later, so Render would stop billing:
-
-1. Actions -> cutover, step `after-cutover`, once `https://jackioh.com/api/catalog` answered with an
-   `x-deployed-commit`: suspended Render's `jackioh-server` and gave staging's project its own Site URL
-   and Redirect URLs. Step `delete-render` then kept Render's `CODE_PEPPER`, sealed to a key a person
-   held and opened straight into the repository secret `CODE_PEPPER` (section 3), and deleted the
-   Blueprint and the service. The owners deleted the Render workspace's card and the Vercel project.
-2. The repository secrets `RENDER_DEPLOY_HOOK_URL`, `RENDER_API_KEY` and `VERCEL_DEPLOY_HOOK_URL` are
-   deleted, and cutover's steps that read Render (`staging-secrets`, `drop-ping`,
-   `production-secrets`, `copy`, `after-cutover`, `delete-render`) left `cutover.yml`;
-   `check-production`, `production-auth`, `email`, `stats-logins` and `dev-stats` still run.
+**Actions -> cutover** (`.github/workflows/cutover.yml`) runs the setup that needs a secret, one
+`step` a run, so no secret passes through a person: each value goes from a repository secret or a
+project's Management API straight to where it is used. Its steps are `check-production`,
+`production-auth`, `email`, `email-links`, `manual-linking`, `stats-logins` and `dev-stats`, and its
+header says what each does. For production it reads `PRODUCTION_SUPABASE_SECRET_KEY` and
+`PRODUCTION_DATABASE_URL` (JackiOh-Production's secret key and session pooler URI). The URI may keep
+Supabase's `[YOUR-PASSWORD]`, with the password itself in `PRODUCTION_DB_PASSWORD`, which, when set,
+replaces any password the URI holds; the workflow percent-encodes it. Step `check-production` writes
+nothing and says whether those secrets are a secret key and an address that reaches
+JackiOh-Production.
 
 ## 5. Day-to-day operation
 
@@ -354,7 +303,7 @@ later, so Render would stop billing:
   back too before relying on it. Either way, nobody `/promote`s until the fix has merged, and the
   next daily promotion deploys main as it stands: if the revert cannot be on main before the next
   daily super run passes, disable `promote-production.yml` until it is (section 2.1).
-- **Change a secret:** `wrangler secret put` (section 4, step 3), then redeploy that site (Run
+- **Change a secret:** `wrangler secret put` (section 4, A Worker's secrets), then redeploy that site (Run
   workflow on deploy staging, or promote production with **redeploy**); the first request after it
   restarts a running server on the new settings.
 - **Move staging by hand:** Actions -> promote staging -> Run workflow. With no `sha` it moves
@@ -452,12 +401,14 @@ quiet site, at most a dollar or so a month for each `basic` container.
 
 ## 7. Known gaps
 
-- **An open tab can run an older client.** A deploy ships both halves together, but a browser that
-  loaded the page before it keeps that client until it reloads, so a change to the API or the match
-  protocol must keep accepting the previous client for a while (as `ws_server.rs` keeps the
-  previous client's `?token=` upgrade, R1379000).
-- **One container is one point of failure,** as Render's one instance was (`docs/architecture.md`
-  §4.1), and now without Render's "keep the old instance until the new one is healthy".
+- **An open tab picks up the new client on its next menu move (R4605000).** A deploy ships both halves together, and a browser that
+  loaded the page before it checks `/version.json` when it wakes and loads the new build in place
+  of its next menu-to-menu move, never over a board; a screen that still fails on a stale chunk
+  reloads once by itself. So "a while" is bounded by the player's next move between menus, and a change to the API or the match
+  protocol must keep accepting the previous client only that long, plus for in-flight sockets
+  (as `ws_server.rs` keeps the previous client's `?token=` upgrade, R1379000).
+- **One container is one point of failure** (`docs/architecture.md` §4.1), and no old instance is
+  kept until the new one is healthy.
 - **Cold starts.** The first request after ten idle minutes waits for the container and the
   server's boot, up to `START_WAIT_MS` (`apps/edge/src/index.ts`). A wake with nothing new reads the
   migration ledger once and writes the catalog in one statement that rewrites no unchanged row
@@ -487,23 +438,21 @@ Each site has a Supabase project of its own, both in the jlore-studios organizat
 | --- | --- | --- |
 | Project | JackiOh-Staging, `exmjdaswedxhnzmpzqrq`: the original project, which production used until the move | JackiOh-Production, `fuzpvmjdejvbjcarypyi`, made on 2026-11-01 |
 | Named in | `apps/web/.env.staging`, `wrangler.jsonc` `env.staging`, `infra/supabase.tf` | `apps/web/.env.production`, `wrangler.jsonc`'s top level, `infra/supabase.tf` |
-| Card statistics | the development lanes' (`gather.yml`, `learn.yml`'s import, through `STATS_IMPORT_DATABASE_URL`) and staging's own games | the same development lanes' (through `PRODUCTION_STATS_IMPORT_DATABASE_URL`) and players' games (R1933001) |
+| Card statistics | the development lane's (`gather.yml`, through `STATS_IMPORT_DATABASE_URL`) and staging's own games | the same development lanes' (through `PRODUCTION_STATS_IMPORT_DATABASE_URL`) and players' games (R1933001) |
 | Read by | `db-size.yml` through `STATS_IMPORT_DATABASE_URL` | `winrates-refresh.yml` and `db-size.yml` through `STATS_DATABASE_URL`, the read-only login `stats_reader` |
 
 `apps/web/src/net/env-production.test.ts` fails when the two builds name one project, or when a
 build's project is not its own server's `SUPABASE_URL`.
 
-**Setting up JackiOh-Production,** once, before section 4's step 6: Authentication as
+**Setting up JackiOh-Production** (done on 2026-11-03): Authentication as
 `docs/architecture.md` §10 steps 1 and 2 say (email confirmations, SMTP, the email templates, MFA,
 and each OAuth provider wanted, whose callback is now this project's); the Site URL and Redirect URLs
 are `infra/supabase.tf`'s. Settings live per project, so none comes over with the data. Actions ->
 cutover, step `production-auth` (the repository secret `SUPABASE_ACCESS_TOKEN`, a personal access
 token), copies staging's to production, first with `dry_run` to list the changes. What the API does
 not hand back, SMTP's password and each provider's client secret among them, it leaves out whole and
-names in the run's warnings: those are set by hand. The new
-project has its own signing keys, so every player signs in once more after the switch, with the same
-password. The project's two statistics logins, `stats_importer` and `stats_reader` (read-only), came
-with the copy; Actions -> cutover, step `stats-logins`, gives each a password of its own and prints
+names in the run's warnings: those are set by hand. The project's two statistics logins, `stats_importer` and `stats_reader` (read-only), came over
+from staging; Actions -> cutover, step `stats-logins`, gives each a password of its own and prints
 their addresses sealed to a key a person holds, who opens them into `PRODUCTION_STATS_IMPORT_DATABASE_URL`
 and `STATS_DATABASE_URL` (done on 2026-11-03).
 
@@ -516,35 +465,10 @@ a sending-only key it makes for the domain, and deletes the one before: run it a
 key. Resend's free plan sends 100 a day, of which the daily games' player mail takes at most 50
 (`DAILY_PLAYER_EMAILS_PER_DAY`, `crates/server/README.md`, Daily games); its dashboard (Emails) shows each one sent and bounced.
 
-**The copy,** at section 4's step 6, with nobody promoting production meanwhile: Supabase's own way
-between projects, the CLI's `db dump` (it runs `pg_dump` in Docker) from staging and `psql` into the
-empty production project, both through their session pooler URIs as `postgres`, held in a file outside
-the repository (`chmod 600`) and never pasted anywhere. Actions -> cutover, step `copy`, did it all,
-refusing a production project that was not empty and rolling the whole copy back when the counts
-differed (it read staging's address from Render, so it left the file with Render; it is in the file's
-history):
-
-```
-supabase db dump --db-url "$STAGING_DB_URL" -f roles.sql --role-only
-supabase db dump --db-url "$STAGING_DB_URL" -f schema.sql
-supabase db dump --db-url "$STAGING_DB_URL" -f data.sql --use-copy --data-only \
-  -x public.game_records -x public.card_totals -x public.game_totals -x public.record_totals \
-  -x public.game_record_batches
-psql "$PRODUCTION_DB_URL" --single-transaction -v ON_ERROR_STOP=1 -f roles.sql -f schema.sql \
-  -c 'set session_replication_role = replica' -f data.sql
-```
-
-The five tables left out hold the card statistics; only their live rows come over, `\copy (select *
-from public.<table> where source = 'live')` out of staging and `\copy public.<table> from` into
-production for `game_records`, `card_totals`, `game_totals` and `record_totals`. `game_record_batches`
-holds only the development imports' batches, so none of it comes. Then Advisors -> Security on the new
-project (row-level security is on for every `public` table, as on staging), and the counts of
-`profiles`, `matches` and `auth.users` on both sides, which must agree.
-
 **Production's figures count the development games too** (R1933001, the owner's decision of
 2026-11-03, which replaced R1933000's live games alone). §9.11's publication gate pads a patch's
 public figures with development games until it has `PUBLIC_STATS_MIN_LIVE_GAMES` live games, and with
-fewer than 100 players online at once a patch seldom gets there before the next ships. The copy left
+fewer than 100 players online at once a patch seldom gets there before the next ships. Production's data, copied from staging on 2026-11-03, left
 the development rows behind (R1933000 was in force); Actions -> cutover, step `dev-stats`, then
 replaced production's development rows with staging's, and the development lanes have filed into
 both since. Run `dev-stats` again whenever the two may have drifted, such as after an import that

@@ -99,6 +99,13 @@ function CardIcon({ id }: { id: PlayCardId }): ReactElement {
           <path d="M12 28V16a4 4 0 0 1 8 0v12" />
         </svg>
       );
+    case "assault":
+      return (
+        <svg {...ICON_PROPS}>
+          <path d="M4 28h24M7 28V13a9 9 0 0 1 18 0v15" />
+          <path d="M11 28V16a5 5 0 0 1 10 0v12M16 3v6M12 5l4 4 4-4" />
+        </svg>
+      );
     case "tutorial":
       return (
         <svg {...ICON_PROPS}>

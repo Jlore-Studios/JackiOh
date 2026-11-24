@@ -8,8 +8,8 @@ use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 
 use super::fixtures::trigger_multipliers::{
-    AIMER, ASKER, BOLT, DIER, DOUBLE, EXTRA_UNIT_ONE, EXTRA_UNIT_TWO, FEAR, JOINT, JOINT_TWO, LEAVER, LIVING,
-    NUKE, PAWN, SPAWNER, TICKER, TRIGGERER, register,
+    AIMER, ASKER, BOLT, DIER, DOUBLE, DOUBLE_TWO, EXTRA_UNIT_ONE, EXTRA_UNIT_TWO, FEAR, GIVER, JOINT,
+    JOINT_TWO, LEAVER, LIVING, NUKE, PAWN, SPAWNER, TICKER, TRIGGERER, register,
 };
 
 const P1: PlayerId = PlayerId::P1;
@@ -66,6 +66,29 @@ fn on_field(s: &Scenario, player: PlayerId, def_id: &str) -> usize {
         .into_iter()
         .filter(|card| card.def_id == def_id)
         .count()
+}
+
+/// R1107: give `unit` the fixture Death `tm-giver#hit` (1 to the enemy hero), as a grant effect would.
+fn grant_hit(s: &mut Scenario, unit: &CardInstance) {
+    s.card_mut(unit).grants = Some(vec![Grant {
+        grant: format!("{GIVER}#hit"),
+        radiant: false,
+        params: IndexMap::new(),
+    }]);
+}
+
+/// p1's Unit in lane 1 (`unit`), under the multiplier `multiplier`, given `tm-giver#hit` and then
+/// destroyed by a Bolt: the enemy hero's health after its Deaths ran.
+fn granted_death_under(multiplier: &str, unit: &str) -> i32 {
+    let mut s = game(
+        json!({ "backrow": [multiplier], "field": [unit], "hand": [BOLT] }),
+        json!({}),
+    );
+    let unit = s.unit(P1, 1).expect("p1's unit in lane 1");
+    grant_hit(&mut s, &unit);
+    s.play(BOLT, json!({ "targets": [instance(&unit)] }));
+    s.expect_in_zone(unit, "graveyard");
+    health(&s, P2)
 }
 
 // R820: the highest multiplier holds
@@ -234,6 +257,23 @@ fn r823_a_death_runs_again_for_its_controller() {
         29,
         "p2's Dier's Death runs once: p2 has no multiplier"
     );
+}
+
+#[test]
+fn r823_r1107_a_granted_death_runs_again_under_a_multiplier_of_one() {
+    // The Pawn prints no Death: its only one is granted, and it runs twice for its controller.
+    assert_eq!(granted_death_under(DOUBLE, PAWN), 28);
+}
+
+#[test]
+fn r823_r1107_a_granted_death_runs_twice_more_under_a_multiplier_of_two() {
+    assert_eq!(granted_death_under(DOUBLE_TWO, PAWN), 27);
+}
+
+#[test]
+fn r823_r1107_a_printed_and_a_granted_death_run_again_as_one_list() {
+    // The Dier's own Death (1) and the granted one (1) are one list, and the list runs twice.
+    assert_eq!(granted_death_under(DOUBLE, DIER), 26);
 }
 
 #[test]

@@ -1,5 +1,5 @@
 //! SPEC §8.10 Stinkyscape 108 Trila 3, a card of the Stinkyscape set.
-//! (3) Unit, Common, 7/7 → 14/14: Starship Piece, Ranged, Windfury.
+//! (3) Unit, Common, 7/4 → 14/8 (7/5 → 14/10 until issue #4665): Starship Piece, Ranged, Windfury.
 //! Radiant: Starship Piece, Ranged, Rush, Windfury.
 //!
 //! Keywords only (§6.1): its script is empty. Starship Piece: its death fuses a copy into its
@@ -50,5 +50,17 @@ mod tests {
         s.expect_refused(|s| s.attack(TRILA, "hero"));
         s.attack(TRILA, VANILLA);
         s.expect_in_zone(VANILLA, "graveyard");
+    }
+
+    /// Issue #4665: a 7/4 (Radiant 14/8) since, from a 7/5 (14/10).
+    #[test]
+    fn stands_at_7_4_radiant_at_14_8() {
+        for (radiant, attack, health) in [(false, 7, 4), (true, 14, 8)] {
+            let mut s = scenario(json!({
+                "p1": { "hand": [ANCHOR], "field": [{ "def": TRILA, "radiant": radiant }], "library": filler(4) },
+                "p2": { "hand": [ANCHOR], "library": filler(4) },
+            }));
+            s.expect_stats(TRILA, json!({ "attack": attack, "health": health, "maxHealth": health }));
+        }
     }
 }

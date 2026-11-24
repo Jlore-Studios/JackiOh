@@ -110,8 +110,8 @@ function csp(): string {
 }
 
 describe("public/_headers", () => {
-  it("has four blocks: every path, the fonts, the bundle and the audio", () => {
-    expect(blocks().map((block) => block.path)).toEqual(["/*", "/fonts/*", "/assets/*", "/audio/*"]);
+  it("has five blocks: every path, the fonts, the bundle, the audio and the build's version", () => {
+    expect(blocks().map((block) => block.path)).toEqual(["/*", "/fonts/*", "/assets/*", "/audio/*", "/version.json"]);
   });
 
   it("sends the security headers on every path, with an enforced CSP", () => {
@@ -196,5 +196,11 @@ describe("public/_headers", () => {
 
   it("lets a browser keep voice lines and music a year (#4393): every audio fetch carries its manifest's hash (?v=)", () => {
     expect(blocks().find((block) => block.path === "/audio/*")?.headers).toEqual(IMMUTABLE);
+  });
+
+  it("R4605000 sends /version.json with no-cache so a stale tab sees the next build", () => {
+    expect(blocks().find((block) => block.path === "/version.json")?.headers).toEqual([
+      { key: "Cache-Control", value: "no-cache" },
+    ]);
   });
 });

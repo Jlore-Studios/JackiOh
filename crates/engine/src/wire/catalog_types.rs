@@ -201,6 +201,10 @@ string_union! {
     /// Issue #3535 adds Mindustrial, Mineral, Automa-α, Automa-β, Automa-γ, Automa-δ, Automa-Ω,
     /// Automa-ζ and Paperclip (the Stinkyscape+ set's family tags, R3535002), which the server
     /// admits from migration 0087.
+    /// Issue #4577 adds the Infinite Assault set's eight doctrine tags, Hallucination, Overclock,
+    /// Batch, Recursion, Jailbreak, Firewall, Scraper and Singularity, and Commander (its boss
+    /// cards): family tags no rule reads, declared before their cards for the set's later parts,
+    /// which the server admits from migration 0099 (R4577001).
     pub enum Tag {
         Human = "Human",
         Felinor = "Felinor",
@@ -241,6 +245,15 @@ string_union! {
         AutomaOmega = "Automa-Ω",
         AutomaZeta = "Automa-ζ",
         Paperclip = "Paperclip",
+        Hallucination = "Hallucination",
+        Overclock = "Overclock",
+        Batch = "Batch",
+        Recursion = "Recursion",
+        Jailbreak = "Jailbreak",
+        Firewall = "Firewall",
+        Scraper = "Scraper",
+        Singularity = "Singularity",
+        Commander = "Commander",
         Token = "Token",
     }
 }
@@ -303,7 +316,8 @@ string_union! {
 }
 
 /// #3114, R3114000: where a set stands. The lists every caller reads (`CATALOG_SETS`,
-/// `SHIPPED_SETS`, `SINGLE_PLAYER_SETS`) are the set table's rows of a stage, in its order.
+/// `SHIPPED_SETS`, `SINGLE_PLAYER_SETS`, `HELD_SINGLE_PLAYER_SETS`) are the set table's rows of a
+/// stage, in its order.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SetStage {
     /// A set that ships (R380, R1420): in the catalog order and in every pool that names no set.
@@ -314,6 +328,12 @@ pub enum SetStage {
     /// A set made for single-player modes (R1846001): never shipped, never in the catalog order,
     /// reached only by a catalog query's `everySet`.
     SinglePlayer,
+    /// A single-player set the catalog holds while it is built card by card, before its mode ships
+    /// (R4577000, amending R1846001): never shipped, never in the catalog order and in no pool that
+    /// names no set, `everySet` included; only a pool that names the set (`set`) or its cards
+    /// (`defId`) reaches it, and a thread the testkit previews it on (`preview_sets`,
+    /// `preview_every_set`). The release that opens its mode turns its row to `SinglePlayer`.
+    HeldSinglePlayer,
 }
 
 /// #3114, R3114000: one row of the set table, every fact the code reads per set.
@@ -339,7 +359,8 @@ macro_rules! set_table {
             /// §5: Core, Classic, Classic+ (R380), Meditative (v0.3.5, R1420) and Meditative+ (v0.3.15,
             /// issue #1173, R1178000), Stinkyscape (issue #1836, R1857000; released by #1884) and
             /// Training Grounds (issue #2193, R2194000; released by #2204) and Stinkyscape+ (issue #3535,
-            /// R3535000; released by #3573) ship; Boss and Boss-X are reserved.
+            /// R3535000; released by #3573) ship; Boss and Boss-X are reserved; the Infinite Assault
+            /// (tracker #4576, R4577000) is a single-player set held while it is built.
             pub enum SetName { $( $variant = $name ),+ }
         }
 
@@ -400,6 +421,7 @@ const fn sets_in<const N: usize>(stages: &[SetStage]) -> [SetName; N] {
 const CATALOG_STAGES: &[SetStage] = &[SetStage::Shipped, SetStage::Held];
 const SHIPPED_STAGES: &[SetStage] = &[SetStage::Shipped];
 const SINGLE_PLAYER_STAGES: &[SetStage] = &[SetStage::SinglePlayer];
+const HELD_SINGLE_PLAYER_STAGES: &[SetStage] = &[SetStage::HeldSinglePlayer];
 
 /// Every set the catalog orders, shipped or not, in catalog order (B2.2): a set keeps its place
 /// when it ships, so a seeded pick over a pool replays the same before and after (R1420).
@@ -420,6 +442,13 @@ pub fn set_ships(set: SetName) -> bool {
 /// and no pool that names no set reaches them, but a catalog query's `everySet` ("every set,
 /// single-player ones too") does. The set table's `SinglePlayer` rows (R3114000).
 pub const SINGLE_PLAYER_SETS: [SetName; count_in(SINGLE_PLAYER_STAGES)] = sets_in(SINGLE_PLAYER_STAGES);
+
+/// R4577000: the single-player sets held while they are built card by card (the Infinite Assault,
+/// tracker #4576), which no deck holds and no pool that names no set reaches, `everySet` included:
+/// a pool that names the set, or the testkit's preview, is the only way in. The set table's
+/// `HeldSinglePlayer` rows (R3114000).
+pub const HELD_SINGLE_PLAYER_SETS: [SetName; count_in(HELD_SINGLE_PLAYER_STAGES)] =
+    sets_in(HELD_SINGLE_PLAYER_STAGES);
 
 /// R1371: the newest set that ships, the last entry of `SHIPPED_SETS` (catalog order): Classic+
 /// until the Meditative set shipped, Meditative until Meditative+ did, then whichever set ships
@@ -456,7 +485,8 @@ pub const SHIPPED_SETS: [SetName; count_in(SHIPPED_STAGES)] = sets_in(SHIPPED_ST
 // SHIPPED_SETS` to the first `];` between a push's base and its head, to see whether a set
 // shipped. Rows are only appended, never moved or removed: a row's place is its set's place in
 // `SetName`, in the catalog order (R1420) and in the deck codes' card numbers (R1410). A set is
-// added as a `Held` row and ships when its row says `Shipped`.
+// added as a `Held` row and ships when its row says `Shipped`; a single-player set built card by
+// card is added as a `HeldSinglePlayer` row and opens to `SinglePlayer` with its mode (R4577000).
 set_table![
     Core = "Core" { stage: Shipped, segment: "core", abbreviation: None, shadow_ban_share: None },
     Classic = "Classic" { stage: Shipped, segment: "classic", abbreviation: Some("C"), shadow_ban_share: None },
@@ -468,6 +498,7 @@ set_table![
     Boss = "Boss" { stage: SinglePlayer, segment: "boss", abbreviation: None, shadow_ban_share: None },
     BossX = "Boss-X" { stage: SinglePlayer, segment: "bossx", abbreviation: None, shadow_ban_share: None },
     StinkyscapePlus = "Stinkyscape+" { stage: Shipped, segment: "stinkyscapeplus", abbreviation: Some("S+"), shadow_ban_share: Some((1, 5)) },
+    InfiniteAssault = "Infinite Assault" { stage: HeldSinglePlayer, segment: "infiniteassault", abbreviation: Some("IA"), shadow_ban_share: None },
 ];
 
 /// R924000: what "More cards from" picks for a player's dealt Random deck (R1372, R1373): the newest
@@ -2098,6 +2129,62 @@ mod tests {
         assert_eq!(Tag::AutomaAlpha.as_str(), "Automa-α");
         assert_eq!(Tag::AutomaOmega.as_str(), "Automa-Ω");
         assert_eq!(Tag::AutomaZeta.as_str(), "Automa-ζ");
+    }
+
+    // R4577000: the Infinite Assault is the set table's last row, a single-player set held while it
+    // is built: in neither the catalog order, the sets that ship nor the open single-player sets.
+    #[test]
+    fn r4577000_infinite_assault_is_held_for_single_player() {
+        let row = set_row(SetName::InfiniteAssault);
+        assert_eq!(
+            *row,
+            SetRow {
+                set: SetName::InfiniteAssault,
+                stage: SetStage::HeldSinglePlayer,
+                segment: "infiniteassault",
+                abbreviation: Some("IA"),
+                shadow_ban_share: None,
+            }
+        );
+        assert_eq!(SetName::InfiniteAssault.as_str(), "Infinite Assault");
+        assert_eq!(SetName::ALL.last(), Some(&SetName::InfiniteAssault));
+        assert_eq!(HELD_SINGLE_PLAYER_SETS, [SetName::InfiniteAssault]);
+        assert!(!CATALOG_SETS.contains(&SetName::InfiniteAssault));
+        assert!(!SHIPPED_SETS.contains(&SetName::InfiniteAssault));
+        assert!(!SINGLE_PLAYER_SETS.contains(&SetName::InfiniteAssault));
+        assert!(!set_ships(SetName::InfiniteAssault));
+    }
+
+    // R4577001: the Infinite Assault's doctrine tags and Commander read and write their printed
+    // names, between Paperclip and Token.
+    #[test]
+    fn r4577001_the_infinite_assault_tags_read_and_write_their_printed_names() {
+        let tags = [
+            (Tag::Hallucination, "Hallucination"),
+            (Tag::Overclock, "Overclock"),
+            (Tag::Batch, "Batch"),
+            (Tag::Recursion, "Recursion"),
+            (Tag::Jailbreak, "Jailbreak"),
+            (Tag::Firewall, "Firewall"),
+            (Tag::Scraper, "Scraper"),
+            (Tag::Singularity, "Singularity"),
+            (Tag::Commander, "Commander"),
+        ];
+        for (tag, name) in tags {
+            assert_eq!(tag.as_str(), name);
+            let json = serde_json::to_value(tag).expect("tag serializes");
+            assert_eq!(json, name);
+            let back: Tag = serde_json::from_value(json).expect("tag reads back");
+            assert_eq!(back, tag);
+        }
+        let paperclip = Tag::ALL
+            .iter()
+            .position(|tag| *tag == Tag::Paperclip)
+            .expect("Paperclip is a tag");
+        let after: Vec<Tag> = Tag::ALL[paperclip + 1..].to_vec();
+        let mut expected: Vec<Tag> = tags.iter().map(|(tag, _)| *tag).collect();
+        expected.push(Tag::Token);
+        assert_eq!(after, expected);
     }
 
     // R3114001: a set's shadow-ban ceiling is its share of its non-token cards, rounded down.

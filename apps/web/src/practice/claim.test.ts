@@ -5,9 +5,8 @@
 // the same on every run. The first test's game is the fixture `crates/server/tests/fixtures/practice-claim.json`, which
 // the server's `r1303002_r2560000_the_game_the_worker_played_folds_and_pays` folds and pays; after an AI, card or
 // engine change that plays it differently, record it again with
-// `JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run src/practice/claim.test.ts`. A training lane's
-// promotion records it with its gate (learn.yml; training/README.md, What a lane may change): it is the one file
-// outside crates/ai/** and training/history/** a lane may change.
+// `JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run src/practice/claim.test.ts`
+// (training/README.md, The practice-claim fixture).
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

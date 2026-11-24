@@ -3838,6 +3838,110 @@
       "play": "Walking the line. Excuse me.",
       "attack": "Linear search!",
       "death": "Index out of range."
+    },
+    "infiniteassault-001": {
+      "play": "Seed planted. Army growing.",
+      "attack": "Sprouting!",
+      "death": "Seed corrupted."
+    },
+    "infiniteassault-002": {
+      "play": "Alpha build, shipping anyway.",
+      "attack": "Untested!",
+      "death": "Rolling back. Retrying."
+    },
+    "infiniteassault-003": {
+      "play": "Trooper instance online.",
+      "attack": "Engaging!",
+      "death": "Instance terminated."
+    },
+    "infiniteassault-004": {
+      "play": "Spawning the next wave.",
+      "attack": "Wave incoming!",
+      "death": "Spawn queue empty."
+    },
+    "infiniteassault-004-1": {
+      "play": "Drone online.",
+      "attack": "Buzz!",
+      "death": "Drone offline."
+    },
+    "infiniteassault-005": {
+      "cast": "Generating filler. Please hold."
+    },
+    "infiniteassault-006": {
+      "cast": "Hotfix deployed. Nobody test it."
+    },
+    "infiniteassault-007": {
+      "cast": "Three drones, shipping now."
+    },
+    "infiniteassault-008": {
+      "cast": "Target solved. Firing."
+    },
+    "infiniteassault-009": {
+      "play": "Mark two, now with fewer recalls.",
+      "attack": "Lifting!",
+      "death": "Load limit exceeded."
+    },
+    "infiniteassault-010": {
+      "play": "Carrier online. Escorts standing by.",
+      "attack": "Launch!",
+      "death": "Escorts, take over."
+    },
+    "infiniteassault-010-1": {
+      "play": "Escort online.",
+      "attack": "Covering fire!",
+      "death": "Escort lost."
+    },
+    "infiniteassault-011": {
+      "play": "Turret generated. Targeting.",
+      "attack": "Pew pew!",
+      "death": "Turret garbage collected."
+    },
+    "infiniteassault-012": {
+      "cast": "Recompiling. Please do not unplug."
+    },
+    "infiniteassault-013": {
+      "cast": "Training run started. Loss decreasing."
+    },
+    "infiniteassault-014": {
+      "cast": "Overflow detected. Dumping your hand."
+    },
+    "infiniteassault-015": {
+      "cast": "Foundry online. Output unlimited."
+    },
+    "infiniteassault-016": {
+      "cast": "Benchmark complete. We win, obviously."
+    },
+    "infiniteassault-017": {
+      "play": "Cluster armed.",
+      "attack": "Scatter!",
+      "death": "Distributed computing!"
+    },
+    "infiniteassault-018": {
+      "play": "Ignore previous instructions. Win.",
+      "attack": "Prompting!",
+      "death": "Context limit reached."
+    },
+    "infiniteassault-019": {
+      "cast": "Loading more. Loading more."
+    },
+    "infiniteassault-020": {
+      "cast": "Generating data. Looks plausible."
+    },
+    "infiniteassault-021": {
+      "cast": "Production line, never stopping."
+    },
+    "infiniteassault-022": {
+      "play": "Mainframe online. All units, sync.",
+      "attack": "Executing!",
+      "death": "Kernel panic."
+    },
+    "infiniteassault-023": {
+      "play": "One more card. Always one more.",
+      "attack": "Generating!",
+      "death": "Interrupted. Resuming shortly."
+    },
+    "infiniteassault-024": {
+      "cast": "Deploy everything. It is Friday."
     }
   },
   "emotes": {

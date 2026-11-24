@@ -25,7 +25,7 @@ bot/machine/on-machine.sh bot/machine/setup.sh gpt agy muse
 
 | | |
 |---|---|
-| Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus compressed swap in memory and 8 GB of swapfile), the largest the project's Free plan allows: the move to `m7i-flex.xlarge` planned for 2026-10-26 never took (its jobs still read 7.6 GB of memory on 10-27, `reviews/2026-10-27-muse-usage.md`, finding 4); Ubuntu 24.04, 120 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
+| Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus compressed swap in memory and 8 GB of swapfile), the largest the project's Free plan allows: the move to `m7i-flex.xlarge` planned for 2026-10-26 never took (its jobs still read 7.6 GB of memory on 10-27, #2272's audit, finding 4); Ubuntu 24.04, 120 GB gp3, tagged `Name=jackioh-night-vm`, in the project's Region (`us-east-2`) |
 | Way in | Session Manager only (`aws ssm start-session --target <instance>`): no inbound port, no key pair. The instance role has `AmazonSSMManagedInstanceCore` and nothing else. |
 | Users | `agent-<id>` per subscription (`agent-gpt`, `agent-agy`, `agent-muse`): a home only it can read, no `sudo`, no Docker |
 | Runners | `~agent-<id>/actions-runner` (and `actions-runner-2` … for a subscription with `lanes` over 1), registered as `night-vm-<id>` (`night-vm-<id>-2` …) with the one label `night-vm-<id>`, each a systemd service under that user. Muse's fill-in runners ([The Muse box](#the-muse-box)) are `~agent-muse/actions-runner-fill` and `-fill-2`, `night-vm-muse-fill` and `night-vm-muse-fill-2`, labelled `night-vm-muse-fill` |
@@ -58,7 +58,7 @@ contributors' pull requests wait for approval before any workflow runs (Settings
 
 | File | Runs | What it does |
 |---|---|---|
-| `setup.sh` | on the machine, as root | everything above except the logins and the registration; idempotent, run it again to update the CLIs or Rust, or to add a subscription. With `--training`, the training box instead (below) |
+| `setup.sh` | on the machine, as root | everything above except the logins and the registration; idempotent, run it again to update the CLIs or Rust, or to add a subscription |
 | `clean.sh` | on the machine, as each agent user | gives back the disk that user's jobs can do without (Disk, below); installed as `/usr/local/bin/night-vm-clean.sh` |
 | `disk-report.sh` | on the machine, as root | read-only: what fills the disk, biggest first, the runner versions kept and the disk timer's last runs |
 | `on-machine.sh` | on your computer | runs a local script on the machine through Session Manager, with the scripts beside it, starting the machine first if it is stopped |
@@ -121,96 +121,24 @@ runners, `gh` signed in as a repository admin. They find the machine by its `Nam
 
 ## The training box
 
-**Since 2026-11-04 no training lane runs here.** #682's audit
-(`reviews/2026-10-22-issue-682-subscriptions.md`) found that the two LLM lanes made no fair promotion
-in about 427 hours, and that on Muse's plan they spent most of the night bot's week. So
-`jackioh-train@improve` and `@unban` were disabled on 2026-10-25, and `jackioh-train@gather` on
-2026-11-04: it filed its games into staging's database alone, while `gather.yml` files every
-patch's into both (R1933001). All three are `disabled; inactive (dead)`, and `setup.sh --training`
-keeps their users and checkouts but starts none again. The AI improves through the
-`learn` lane on GitHub's runners instead (`training/learn.md`). Whether this box becomes a second
-night box or is stopped was #1677's question: it is the Muse box now ([The Muse box](#the-muse-box)).
-
-The AI training lanes (`training/README.md`, #306 part 39) run on a second, bigger box that
-is always on: `jackioh-train@improve`, `jackioh-train@unban` and `jackioh-train@gather`, three systemd
-services that run `training/loop.sh <lane>` forever, each as its own user with its own checkout and
-Rust (the two training lanes also hold a Muse login and GitHub token, which the gather lane needs
-neither of). They run outside the harness: no runner, no GitHub Actions job, no slot of
-`machine_parallel`, no `training` label. A training lane opens its own pull requests from `ai/<lane>`,
-and CI's `training gate` re-runs its promotion before anything merges; the gather lane opens none.
+**No training lane runs on any box.** The training box ran the AI's training lanes,
+`training/loop.sh improve|unban|gather` as `jackioh-train@<lane>` services, until 2026-11-04, and
+#4701 removed them with `setup.sh --training` (git history has both). It is the Muse box now
+([The Muse box](#the-muse-box)), on the instance it was built on:
 
 | | |
 |---|---|
-| Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus compressed swap in memory and 8 GB of swapfile), Ubuntu 24.04 x86_64, 100 GB gp3 encrypted, tagged `Name=jackioh-train-box`, in the project's Region (`us-east-2`). The plan was an `m7i.xlarge` (4 vCPUs, 16 GB); the project's Free plan refused instance types outside the Free Tier, so the box built on 2026-10-07 (`i-017d1843ea5e68cef`, #427) is an `m7i-flex.large`. The move to `m7i-flex.xlarge` planned for 2026-10-26 never took (finding 4 of `reviews/2026-10-27-muse-usage.md`) |
+| Instance | EC2 `m7i-flex.large` (2 vCPUs, 8 GB, plus compressed swap in memory and 8 GB of swapfile), Ubuntu 24.04 x86_64, 100 GB gp3 encrypted, tagged `Name=jackioh-train-box`, in the project's Region (`us-east-2`). The plan was an `m7i.xlarge` (4 vCPUs, 16 GB); the project's Free plan refused instance types outside the Free Tier, so the box built on 2026-10-07 (`i-017d1843ea5e68cef`, #427) is an `m7i-flex.large`. The move to `m7i-flex.xlarge` planned for 2026-10-26 never took (finding 4 of #2272's audit) |
 | Way in | Session Manager only, like the night box: no inbound port, no key pair. It uses the night box's subnet and instance profile (`jackioh-night-vm`: `AmazonSSMManagedInstanceCore`, and `CloudWatchAgentServerPolicy`). IMDSv2 required. |
-| Users | `agent-train-improve`, `agent-train-unban` and `agent-train-gather`: a home only each can read, no `sudo`, no Docker |
-| In each home | `~/JackiOh`, the lane's checkout (`loop.sh` resets it to `main` every cycle; its `target/` stays, so builds after the first are incremental); Rust (rustup and the toolchain `rust-toolchain.toml` pins, with `rustfmt` and `clippy`); `~/training-out/<lane>/` (the games' records, `attempts.md`, the gate's reports); `~/logs/<lane>.log` (the loop's log) |
-| CLIs | `muse` (as on the night box; #1272 moved the lanes to it), `gh` (GitHub's apt repository), `git` (pushing through `gh`'s login), Node 24 and pnpm (corepack), with which the loop and Muse run the web's tests that play the AI before a promotion goes up |
-| Services | `jackioh-train@.service`: `User=agent-train-%i`, `training/loop.sh %i` from the lane's checkout, `Restart=always` after `RestartSec=60`, `MUSE_MODEL=muse-spark-1.3-contributor` (the knob for Muse's model) and `MUSE_NO_AUTO_UPDATE=1`, `RAYON_NUM_THREADS=2` (the three lanes' games share the box's vCPUs), `JACKIOH_TRAINING_OUT` the lane's `~/training-out/<lane>`; only `gather` enabled since #1677, so it alone starts at boot |
-| Idle stop | none: the box never powers itself off, and no starter wakes it |
 
-Build it once, after the cutover has put `training/loop.sh` on `main` (a lane runs whatever `main`
-holds; before that its service restarts every minute and does nothing):
-
-1. **The instance**, as in the table above.
-2. **Set it up**: `TAG=jackioh-train-box bot/machine/on-machine.sh bot/machine/setup.sh --training`.
-   It installs the CLIs, makes both users with their checkouts and Rust, writes the service and
-   starts both lanes; they wait, retrying every minute, until the logins below are in.
-3. **Log each lane in once**, as its own user (`aws ssm start-session --target <instance>`): Muse,
-   then a fine-grained GitHub token that can write contents and pull requests on this repository
-   only, one token per lane:
-
-   ```sh
-   sudo -iu agent-train-improve muse login
-   sudo -iu agent-train-improve gh auth login --hostname github.com --git-protocol https --with-token < improve-token.txt
-   sudo -iu agent-train-unban muse login
-   sudo -iu agent-train-unban gh auth login --hostname github.com --git-protocol https --with-token < unban-token.txt
-   ```
-
-   `setup.sh` already made `gh` git's credential helper for each user, and gave each a commit name
-   of its own (`JackiOh training (<lane>)`); set `git config --global user.name`/`user.email` as
-   that user to commit as someone else. Delete the token files after.
-4. **Check it**: `systemctl status jackioh-train@improve jackioh-train@unban`, then `sudo reboot`
-   and the same again (both come back by themselves). A lane's first cycle builds `jackioh` from
-   `main` (minutes), starts Muse, and writes `GameRecord` lines to
-   `~agent-train-<lane>/training-out/<lane>/<date>.jsonl`:
-   `sudo tail -f ~agent-train-improve/logs/improve.log`. `muse --version` and a one-line
-   `muse exec` as each user show whether Muse answers; if it does not, leave the services as they
-   are: they retry every minute, which costs nothing, and start working once it does.
-
-Running the lanes:
-
-- **Stop a lane** (its Muse session ends with it): `sudo systemctl stop jackioh-train@improve`;
-  `sudo systemctl disable jackioh-train@improve` keeps it stopped across reboots, and `sudo
-  systemctl enable --now jackioh-train@improve` starts it again.
-- **Watch a lane**: each keeps a pull request open from `ai/<lane>`, a draft while Muse works, with
-  one comment per session rewritten every 15 minutes (`training/README.md`, Watching a lane on
-  GitHub). To refuse one promotion, close its pull request: the lane starts again from `main` with a
-  new draft.
-- **Change Muse's model**: edit `MUSE_MODEL` in `setup.sh`'s unit, run `setup.sh --training`
-  again, then `sudo systemctl restart jackioh-train@improve jackioh-train@unban` (a running lane
-  reads a changed unit only when it restarts). The lanes spend the same Muse plan as the night bot's
-  `muse` seat, which its usage readings show (the status issue).
-- **Updating** the CLIs or Rust: run `setup.sh --training` again; it changes nothing else and never
-  restarts a lane.
-- **Disk**: the box cleans itself (`training/loop.sh`'s `free_disk`), since the night box's
-  clean-up does not run here. Each cycle starts, with no session of its lane going, by reading the
-  disk; under 20 GB free (`TRAIN_DISK_FLOOR_GB`) the lane deletes its own builds but the release
-  one (the parent and the gate's), its download caches (cargo's, pnpm's, npm's) and its `/tmp`
-  leftovers older than 6 hours, all of which come back by themselves, and says so in its log. The
-  lanes' test builds carry no debug info, as on the night box: with it, Muse's `cargo test` runs
-  had built 20 GB of `target/debug` a lane in two weeks and left the disk 6 GB free (2026-10-19).
-  Muse keeps every session in `~/.local/share/muse/sessions/` (a few hundred MB a day); the loop
-  deletes one 8 hours after it ended, as `clean.sh` does on the night box. The records
-  (`training-out/`) and logs stay.
-- **Cost**: about $0.096 an hour for the instance (on-demand `m7i-flex.large` in `us-east-2`), so
-  about $70 a month were it always on (the Muse box stops when idle), plus about $8 for its disk,
-  all taken from the Free plan's credits while they last.
+**Cost**: about $0.096 an hour for the instance (on-demand `m7i-flex.large` in `us-east-2`), so
+about $70 a month were it always on (the Muse box stops when idle), plus about $8 for its disk, all
+taken from the Free plan's credits while they last.
 
 ## The Muse box
 
 Since #1677 the training box also carries Muse's runners. Two builds at once on one 8 GB box swap
-(`reviews/2026-10-19-issue-383-muse.md`, finding 1): a Muse build that shared the box took a median
+(#1277's audit, finding 1): a Muse build that shared the box took a median
 57 minutes in its build call, against 34 alone, so each box held one Muse runner. Since 2026-10-26
 each box runs three of these jobs at most. That was set for `m7i-flex.xlarge` (4 vCPUs, 16 GB), but
 both boxes are still `m7i-flex.large` (2 vCPUs, 8 GB), so three building jobs overrun a box's
@@ -237,7 +165,6 @@ which is why both boxes are AWS's.
 | Instance | `m7i-flex.large` (2 vCPUs, 8 GB) | `m7i-flex.large` (2 vCPUs, 8 GB) |
 | Runners | `night-vm-gpt`, `night-vm-agy`, `night-vm-muse` and Muse's `night-vm-muse-fill` and `night-vm-muse-fill-2` | `night-vm-muse-b2`, `night-vm-muse-2-b2` and `night-vm-muse-3-b2` |
 | At once | three: gpt's lane and agy's, which Muse fills while either cannot start work, and one of Muse's own | three of Muse's own |
-| Also | | `jackioh-train@gather` ([`training/gather.md`](../../training/gather.md)), while the box is on |
 | Idle stop | after 30 minutes with no job | the same, since `setup.sh muse` ran on it |
 | Starter | `jackioh-night-vm-starter`, for every `night-vm-*` label | `jackioh-muse-box-starter`, for `night-vm-muse` alone |
 
@@ -298,8 +225,7 @@ repository admin:
 neither the idle stop nor the starters change for that): run step 4's two commands, in that order, and step 6. Until the night box's fill-in
 runners are registered, a Muse run the planner puts in gpt's or agy's lane waits queued for them.
 
-**Updating it:** `TAG=jackioh-train-box bot/machine/on-machine.sh bot/machine/setup.sh muse`. Never
-`--training` on it: that takes the idle stop off again, and the box then stays on for good.
+**Updating it:** `TAG=jackioh-train-box bot/machine/on-machine.sh bot/machine/setup.sh muse`.
 
 **Going back to one box:** take `fill_in` out of Muse's entry in `providers.json` and set its
 `lanes` to what the night box should hold, run

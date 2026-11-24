@@ -371,7 +371,7 @@ describe("R1183005: Meditative+ #25 KY's Intuition's Discover offers code", () =
 });
 
 describe("#492 one card picker, front and center, for every short choice", () => {
-  const AURA = "core-046"; // Suppressive Aura, "2 embiggen 4"
+  const AURA = "core-059"; // Unbiased Immigration, "2 embiggen 4" (Suppressive Aura was until issue #4440 made it "1 embiggen 3")
   const APPROPRIATIONS = "classicplus-040"; // an X Spell with a "Choose one" of four
 
   function handView(defId: string, over: { cost?: number; embiggenCost?: number; radiant?: boolean } = {}): PlayerView {
@@ -493,17 +493,17 @@ describe("#492 one card picker, front and center, for every short choice", () =>
     expect(onAction).toHaveBeenCalledWith({ type: "play", instanceId: "h1", x: 3 });
   });
 
-  it("R3135002 R3996201 R4154105 Appropriations' four options read their numbers on both faces: ⌊5X/3⌋−2, ⌊5X/3⌋−2, ⌊17X/4⌋% and ⌊5X/3⌋−2, then ⌊17X/5⌋−4, ⌊17X/5⌋−2, 12X% and ⌊17X/5⌋", () => {
+  it("R3135002 R4154105 R4666000 Appropriations' four options read their reach and numbers on both faces: field and hand at 2X−2, ⌊5X/3⌋−2 Books, 6X% and 2X−2, then 4X−3, ⌊17X/5⌋−2, 16X% and 5X−1", () => {
     const detail = (option: string, radiant: boolean): string | undefined => modeText(APPROPRIATIONS, option, radiant).detail;
-    const where = "Your Units on the field, in your hand and in your deck get";
-    expect(detail("Military", false)).toBe(`${where} +(⌊5X/3⌋−2) Attack and Rush.`);
+    const where = "Your Units on the field and in your hand get";
+    expect(detail("Military", false)).toBe(`${where} +(2X−2) Attack and Rush.`);
     expect(detail("Education", false)).toBe("Shuffle ⌊5X/3⌋−2 random Radiant Books into your deck. They have Cast on draw.");
-    expect(detail("Culture", false)).toBe("Each card on your field, in your hand and in your deck has a ⌊17X/4⌋% chance to become Radiant.");
-    expect(detail("Healthcare", false)).toBe(`${where} +(⌊5X/3⌋−2) Health and Armor X.`);
-    expect(detail("Military", true)).toBe(`${where} +(⌊17X/5⌋−4) Attack and Rush.`);
+    expect(detail("Culture", false)).toBe("Each card on your field, in your hand and in your deck has a 6X% chance to become Radiant.");
+    expect(detail("Healthcare", false)).toBe(`${where} +(2X−2) Health and Armor X.`);
+    expect(detail("Military", true)).toBe(`${where} +(4X−3) Attack and Rush.`);
     expect(detail("Education", true)).toBe("Shuffle ⌊17X/5⌋−2 random Radiant Books into your deck. They have Cast on draw.");
-    expect(detail("Culture", true)).toBe("Each card on your field, in your hand and in your deck has a 12X% chance to become Radiant.");
-    expect(detail("Healthcare", true)).toBe(`${where} +⌊17X/5⌋ Health and Armor 2X.`);
+    expect(detail("Culture", true)).toBe("Each card on your field, in your hand and in your deck has a 16X% chance to become Radiant.");
+    expect(detail("Healthcare", true)).toBe(`${where} +(5X−1) Health and Armor 2X.`);
   });
 
   it("#492 a short Choose one, an embiggen price and a short X are the one card layout: cards in a row in the middle", () => {

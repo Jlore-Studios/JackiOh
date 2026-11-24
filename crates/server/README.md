@@ -346,13 +346,13 @@ token, no socket, no cookie and no engine in the client, so any client can play 
 
 | Route | Auth | What it does |
 | --- | --- | --- |
-| `GET /api/daily` | Active | `{games, challenges: {incoming, outgoing}, seeks, waiting}`: the caller's running games and its newest `DAILY_RECENT_FINISHED` finished ones, its open challenges both ways and its open seeks, and how many games wait on its move; a game past its deadline is ended first (R3727000) |
+| `GET /api/daily` | Active | `{games, challenges: {incoming, outgoing}, seeks, waiting}`: the caller's running games and its newest `DAILY_RECENT_FINISHED` finished ones, its open challenges both ways and its open seeks, and how many games wait on its move; a game past its deadline is ended first (R3727000). A game's `opponent` whose account was deleted after it ended is `{profileId: "", username: ""}` (R4621000) |
 | `POST /api/daily/challenges` | Active | `{friendId, mode: "bo1"\|"random", perMoveDays, deckId?, leanSet?}`: 201 `{id}`. Any friend, online or not, in a game or not; 404 for anyone else, 422 `bad_mode` or `bad_time`, 409 `already_challenged` (one open per friend) or `daily_full` (R3727004); counted against `CHALLENGES_PER_HOUR` with the live ones. Lapses `DAILY_CHALLENGE_TTL_DAYS` after it was sent |
 | `POST /api/daily/challenges/:id/accept` | Active | `{mode, deckId?, leanSet?}`, the friend's own deck: 201 `{matchId}`; 409 `mode_mismatch`, `daily_full`; 404 once closed or lapsed |
 | `POST /api/daily/challenges/:id/decline`, `DELETE /api/daily/challenges/:id` | Active | the friend declines, the challenger cancels: 204 |
 | `POST /api/daily/seeks` | Active | `{mode, perMoveDays, deckId?, leanSet?}`: 201 `{matchId}` when it pairs at once with the oldest open seek of the same mode and time from someone neither blocks, else 201 `{seekId}`; never a ladder bot. 409 `already_seeking`, `daily_full`. Lapses `DAILY_SEEK_TTL_DAYS` later |
 | `DELETE /api/daily/seeks/:id` | Active | cancels the caller's seek: 204 |
-| `GET /api/daily/games/:matchId` | Active | `{matchId, seat, view, legal, forecast, seq, holds, hasMove, perMoveDays, mode, catalogVersion, olderCatalog, opponent, over, lostOnTime, nextGame}`: the caller's own `view_for`, legal actions and `forecast` only (`forecast` is the engine's `combat_forecast` for the seat kept to the attacks `legal` lists, R3855000; `legal` holds only a concede and `forecast` is empty while the move is the other player's), under the game's catalog (R3727005); 404 for a game the caller does not play. A finished game whose log the retention purge took answers 200 with its list row (the stored board's turn, life and result, and when it ended) plus `expired: true` and no `view`, `legal` or `forecast`, never folded (R3934000) |
+| `GET /api/daily/games/:matchId` | Active | `{matchId, seat, view, legal, forecast, seq, holds, hasMove, perMoveDays, mode, catalogVersion, olderCatalog, opponent, over, lostOnTime, nextGame}`: the caller's own `view_for`, legal actions and `forecast` only (`forecast` is the engine's `combat_forecast` for the seat kept to the attacks `legal` lists, R3855000; `legal` holds only a concede and `forecast` is empty while the move is the other player's), under the game's catalog (R3727005); 404 for a game the caller does not play. A finished game whose log the retention purge took answers 200 with its list row (the stored board's turn, life and result, and when it ended) plus `expired: true` and no `view`, `legal` or `forecast`, never folded (R3934000). An `opponent` whose account was deleted after the game ended is `{profileId: "", username: ""}` (R4621000) |
 | `POST /api/daily/games/:matchId/actions` | Active | `{after, nonce, action}`, `after` the `seq` it was read at: 200 with the read. A nonce already logged answers 200 and applies nothing; 409 `stale` (the log moved on, or another request sent after the same `seq` was logged first: the clock is written only on `daily_games.seq` still at `after`), `time_up` or `over`; 422 `not_your_move` (anything but `concede` from a seat holding no move, R3727006's offerer among them) or `illegal`. Every refusal carries `game`, the read as it stands. A finished game whose log the purge took answers 409 `over` (`time_up` if it was lost on time) with its `expired` read as `game`, and logs nothing (R3934000) |
 | `GET /api/daily/settings`, `PUT /api/daily/settings` | Active | `{emailOn, hasEmail, vapidPublicKey, pushDevices, emailAvailable}`, `emailAvailable` whether the server sends player email at all (`PLAYER_RESEND_API_KEY` set, R4039000); the `PUT` takes `{emailOn}` |
 | `POST /api/daily/push` | Active | `{endpoint, keys: {p256dh, auth}}`, this device's subscription (an `https` endpoint at a browser's push service, one of `PUSH_SERVICE_HOSTS` or a subdomain of one, else 400; past `PUSH_MAX_DEVICES` the oldest goes): 204 |
@@ -619,7 +619,7 @@ checks, then one transaction folds every record into the totals and writes no ro
 and claims the file in `game_record_batches` (migration 0060) by the SHA-256 of its contents with how
 many it folded. The same file imported again folds nothing, and a record whose id `game_records`
 holds, or that the file repeats, is left out; the games themselves are read off the file, which the
-learn lane and the gather workflow keep as their runs' artifacts. Each record folded also folds its
+gather workflow keeps as its runs' artifacts. Each record folded also folds its
 whole game under its `record_totals` key into `game_totals` (migration 0063), read and added to in
 Rust as a card row is, so the game figures `GET /api/stats/games` and `stats report --games` read
 outlive the purge; a record folded before 0063 counts in `record_totals` alone, with no back-fill
@@ -912,7 +912,8 @@ player can aim the server's requests elsewhere. With a key unset its channel is 
 server sends neither. A block or an unfriending cancels the open daily challenges between the two
 (R3727007); a game already running goes on. `DELETE /api/account` settles the caller's overdue daily games
 and is refused (409 `conflict`) while one still runs, since 0012's `matches_seats_filled_unless_over_check`
-would refuse it in Postgres, and the in-memory store refuses it alike (R3727008).
+would refuse it in Postgres, and the in-memory store refuses it alike (R3727008). Once a game is over the delete
+goes through and the game stays for the other player, the gone seat read as `""` (R4621000).
 
 ## Ladder bots (§9.5, §9.12, R1453, R1454, R1451, R1452, R639000, R641000, R747000)
 
@@ -1512,6 +1513,21 @@ Migration 0098 only adds three indexes (#4468). `player_stats_public_games_idx` 
 sums (R1483000), read one day of the account's `game` rows, not its whole history.
 `tests/sql/01_schema_invariants.sql` CHECK 26 and CHECK 27 plan them with sequential scans off, and fail
 when the list sorts or a ledger filters the day.
+
+Migration 0099 widens the `cards` tag check once more, as 0088 did, with #4577's nine Infinite Assault tags
+(R4577001) — the eight doctrine tags Hallucination, Overclock, Batch, Recursion, Jailbreak, Firewall, Scraper
+and Singularity, and Commander — so the check names the engine's whole `Tag` union again. The set is a
+single-player set held while it is built (R4577000), so `seed-catalog` writes none of its cards yet; the day
+it does, nothing fails. It rewrites no row. `tests/sql/01_schema_invariants.sql` CHECK 18 probes every tag.
+
+Migration 0100 gives a daily seat 0012's rule for a 1v1 seat (R4621000), as 0051 gave a co-op seat.
+`daily_games.p1_profile_id` and `p2_profile_id` become nullable and `on delete set null`, replacing 0089's
+cascade, so a deleted account's seat on a finished daily game empties while the game stays on the other
+player's Daily screen, its board, result and replay opening as before. It adds no check: the game's
+`matches` row already refuses emptying a running game's seat (`matches_seats_filled_unless_over_check`,
+R3727008). Both stores read an emptied seat back as `""` (`remove_daily_rows` empties it in memory), and
+`daily::games` names such an opponent with empty fields and never looks it up.
+`tests/sql/53_daily_games.sql` checks the keys, the emptied seat and the running game's refusal.
 
 ## Tests
 

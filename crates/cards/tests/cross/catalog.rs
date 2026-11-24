@@ -517,7 +517,7 @@ const CORE: &[SpecRow] = &[
     row(
         "46",
         "Suppressive Aura",
-        emb(2, 4),
+        emb(1, 3),
         T::FieldSpell,
         &[],
         R::Rare,
@@ -842,8 +842,8 @@ const CORE: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Rare,
-        st(3, 3),
-        st(6, 6),
+        st(4, 5),
+        st(8, 10),
     ),
     row(
         "78",
@@ -1207,8 +1207,8 @@ const CLASSIC: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Common,
-        st(3, 4),
-        st(6, 8),
+        st(3, 6),
+        st(6, 12),
     ),
     row(
         "7",
@@ -5262,7 +5262,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "33",
         "Drone Core VII",
-        c(5),
+        c(6),
         T::Spell,
         &[G::DroneCore],
         R::Epic,
@@ -5909,8 +5909,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Common,
-        st(7, 5),
-        st(14, 10),
+        st(7, 4),
+        st(14, 8),
     ),
     row(
         "109",
@@ -7406,7 +7406,7 @@ const TRAINING_GROUNDS: &[SpecRow] = &[
     row(
         "50",
         "Legacy: Glowy Jelly Bean",
-        c(3),
+        c(2),
         T::Spell,
         &[G::JellyBean, G::Legacy],
         R::Rare,
@@ -7708,8 +7708,8 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Rare,
-        st(2, 1),
-        st(4, 2),
+        st(5, 3),
+        st(10, 6),
     ),
     row(
         "17",
@@ -7947,7 +7947,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "41",
         "Mend Projector",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[G::Mindustrial],
         R::Rare,
@@ -8138,12 +8138,12 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "61",
         "Jayaad",
-        c(2),
+        c(4),
         T::Unit,
         &[G::Human, G::Acclaimed],
         R::Epic,
-        st(2, 6),
-        st(4, 12),
+        st(9, 11),
+        st(18, 22),
     ),
     row(
         "61.1",
@@ -8158,7 +8158,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "62",
         "Overdrive Projector",
-        c(1),
+        c(3),
         T::FieldSpell,
         &[G::Mindustrial],
         R::Epic,
@@ -8168,7 +8168,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "63",
         "Overdrive Dome",
-        c(2),
+        c(4),
         T::FieldSpell,
         &[G::Mindustrial],
         R::Epic,
@@ -8399,7 +8399,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "84",
         "Bogos Binted",
-        c(3),
+        c(2),
         T::Unit,
         &[],
         R::Legendary,
@@ -9164,8 +9164,8 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Epic,
-        st(1, 1),
-        st(2, 2),
+        st(3, 1),
+        st(6, 2),
     ),
     row(
         "154",
@@ -9501,6 +9501,271 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     ),
 ];
 
+/// R4577000: the Infinite Assault's rows (SPEC §8.13, §7), the cards that have landed: C1 (issue #4577)
+/// built the Assault Core, #1 to #24, with the tokens #4.1 and #10.1. Every card carries `AI` (R4577001).
+const INFINITE_ASSAULT: &[SpecRow] = &[
+    row(
+        "1",
+        "Seed Drone",
+        c(1),
+        T::Unit,
+        &[G::Ai],
+        R::Common,
+        st(2, 2),
+        st(4, 4),
+    ),
+    row(
+        "2",
+        "Scrap Prototype",
+        c(0),
+        T::Unit,
+        &[G::Ai],
+        R::Common,
+        st(1, 2),
+        st(2, 4),
+    ),
+    row(
+        "3",
+        "Assault Trooper",
+        c(1),
+        T::Unit,
+        &[G::Ai],
+        R::Common,
+        st(3, 2),
+        st(6, 4),
+    ),
+    row(
+        "4",
+        "Wave Spawner",
+        c(2),
+        T::Unit,
+        &[G::Ai],
+        R::Common,
+        st(3, 4),
+        st(6, 8),
+    ),
+    row(
+        "4.1",
+        "Drone",
+        c(1),
+        T::Unit,
+        &[G::Ai, G::Token],
+        R::Token,
+        st(1, 1),
+        st(2, 2),
+    ),
+    row(
+        "5",
+        "Generated Filler",
+        c(1),
+        T::Spell,
+        &[G::Ai],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "6",
+        "Hotfix",
+        c(1),
+        T::Spell,
+        &[G::Ai],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "7",
+        "Bulk Order",
+        c(2),
+        T::Spell,
+        &[G::Ai],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "8",
+        "Firing Solution",
+        c(1),
+        T::Spell,
+        &[G::Ai],
+        R::Common,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "9",
+        "Heavy Lifter Mk.II",
+        c(3),
+        T::Unit,
+        &[G::Ai],
+        R::Common,
+        st(5, 7),
+        st(10, 14),
+    ),
+    row(
+        "10",
+        "Assault Carrier",
+        c(4),
+        T::Unit,
+        &[G::Ai],
+        R::Common,
+        st(7, 8),
+        st(14, 16),
+    ),
+    row(
+        "10.1",
+        "Drone Escort",
+        c(2),
+        T::Unit,
+        &[G::Ai, G::Token],
+        R::Token,
+        st(3, 3),
+        st(6, 6),
+    ),
+    row(
+        "11",
+        "Quickgen Turret",
+        c(2),
+        T::Unit,
+        &[G::Ai],
+        R::Rare,
+        st(2, 5),
+        st(4, 10),
+    ),
+    row(
+        "12",
+        "Recompile",
+        c(1),
+        T::Spell,
+        &[G::Ai],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "13",
+        "Training Run",
+        c(2),
+        T::Spell,
+        &[G::Ai],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "14",
+        "Overflow Error",
+        c(1),
+        T::Trap,
+        &[G::Ai],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "15",
+        "Drone Foundry",
+        c(2),
+        T::FieldSpell,
+        &[G::Ai],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "16",
+        "Benchmark Run",
+        c(1),
+        T::Spell,
+        &[G::Ai],
+        R::Rare,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "17",
+        "Cluster Drone",
+        c(2),
+        T::Unit,
+        &[G::Ai],
+        R::Rare,
+        st(3, 2),
+        st(6, 4),
+    ),
+    row(
+        "18",
+        "Prompt Engineer",
+        c(2),
+        T::Unit,
+        &[G::Ai],
+        R::Rare,
+        st(2, 4),
+        st(4, 8),
+    ),
+    row(
+        "19",
+        "Infinite Scroll",
+        c(3),
+        T::Spell,
+        &[G::Ai],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "20",
+        "Synthetic Data",
+        c(2),
+        T::Spell,
+        &[G::Ai],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "21",
+        "Endless Production Line",
+        c(4),
+        T::FieldSpell,
+        &[G::Ai],
+        R::Epic,
+        NO_STATS,
+        NO_STATS,
+    ),
+    row(
+        "22",
+        "Assault Mainframe",
+        c(4),
+        T::Unit,
+        &[G::Ai],
+        R::Epic,
+        st(6, 10),
+        st(12, 20),
+    ),
+    row(
+        "23",
+        "The Generator",
+        c(3),
+        T::Unit,
+        &[G::Ai],
+        R::Legendary,
+        st(4, 6),
+        st(8, 12),
+    ),
+    row(
+        "24",
+        "Mass Deployment",
+        c(4),
+        T::Spell,
+        &[G::Ai],
+        R::Legendary,
+        NO_STATS,
+        NO_STATS,
+    ),
+];
+
 const FIXTURES: &[(SetName, &[SpecRow])] = &[
     (SetName::Core, CORE),
     (SetName::Classic, CLASSIC),
@@ -9510,11 +9775,13 @@ const FIXTURES: &[(SetName, &[SpecRow])] = &[
     (SetName::Stinkyscape, STINKYSCAPE),
     (SetName::TrainingGrounds, TRAINING_GROUNDS),
     (SetName::StinkyscapePlus, STINKYSCAPE_PLUS),
+    (SetName::InfiniteAssault, INFINITE_ASSAULT),
 ];
 
 /// The only tags any entry may carry: BUILD M4-T1's and B2.4's, and those added since (the mechanics
 /// patch's Plague, patch v0.2.Y's Catalyst, Prime and Acclaimed, #1837's tags R1837000, the Stinkyscape
-/// set's R1857000, #2521's, the Stinkyscape+ set's nine, R3535002).
+/// set's R1857000, #2521's, the Stinkyscape+ set's nine, R3535002, and the Infinite Assault's nine,
+/// R4577001).
 const ALLOWED_TAGS: &[&str] = &[
     "Human",
     "Felinor",
@@ -9555,6 +9822,15 @@ const ALLOWED_TAGS: &[&str] = &[
     "Automa-Ω",
     "Automa-ζ",
     "Paperclip",
+    "Hallucination",
+    "Overclock",
+    "Batch",
+    "Recursion",
+    "Jailbreak",
+    "Firewall",
+    "Scraper",
+    "Singularity",
+    "Commander",
     "Token",
 ];
 
@@ -9839,27 +10115,69 @@ mod catalog_membership_build_m4_t1_b2_1 {
     // segment as the set's row of the set table does: a new set is its row and its census entry.
     #[test]
     fn r3114000_every_census_set_has_a_table_row_with_its_segment() {
-        use jackioh_engine::{CATALOG_SETS, SetStage, set_row};
+        use jackioh_engine::{CATALOG_SETS, HELD_SINGLE_PLAYER_SETS, SetStage, set_row};
         for census in CENSUS {
             let set: SetName = census
                 .set
                 .parse()
                 .unwrap_or_else(|error| panic!("{}: {error}", census.set));
             let row = set_row(set);
+            // R4577000: a single-player set held while it is built holds cards too.
             assert!(
-                matches!(row.stage, SetStage::Shipped | SetStage::Held),
-                "{}: the census holds a set the catalog orders, not a {:?} one",
+                matches!(
+                    row.stage,
+                    SetStage::Shipped | SetStage::Held | SetStage::HeldSinglePlayer
+                ),
+                "{}: the census holds a set the catalog orders or one held for single-player, not a {:?} one",
                 census.set,
                 row.stage
             );
             assert_eq!(census.segment, row.segment, "{}'s segment", census.set);
         }
         let named: Vec<&str> = CENSUS.iter().map(|census| census.set).collect();
-        let ordered: Vec<&str> = CATALOG_SETS.iter().map(|set| set.as_str()).collect();
+        let ordered: Vec<&str> = CATALOG_SETS
+            .iter()
+            .chain(HELD_SINGLE_PLAYER_SETS.iter())
+            .map(|set| set.as_str())
+            .collect();
         assert_eq!(
             named, ordered,
-            "one census entry per set the catalog orders, in its order"
+            "one census entry per set the catalog orders, in its order, then one per held single-player set"
         );
+    }
+
+    /// R4577001: every Infinite Assault entry is an AI generated card (R1421), a token keeping `Token`
+    /// beside it, and the Assault Core's (#1 to #24 and their tokens) carry no doctrine's tag.
+    #[test]
+    fn r4577001_every_infinite_assault_entry_carries_ai() {
+        const CORE_LAST: u32 = 24;
+        let entries: Vec<_> = CATALOG
+            .values()
+            .filter(|card| card.set == SetName::InfiniteAssault)
+            .collect();
+        assert!(
+            entries.len() >= INFINITE_ASSAULT.len(),
+            "{} entries",
+            entries.len()
+        );
+        for card in entries {
+            assert!(card.tags.contains(&Tag::Ai), "{} carries AI", card.id);
+            assert_eq!(card.tags.contains(&Tag::Token), card.token, "{}", card.id);
+            let number: u32 = card
+                .index
+                .split('.')
+                .next()
+                .and_then(|number| number.parse().ok())
+                .unwrap_or_else(|| panic!("{}: a numbered index", card.id));
+            if number <= CORE_LAST {
+                let expected = if card.token {
+                    vec![Tag::Ai, Tag::Token]
+                } else {
+                    vec![Tag::Ai]
+                };
+                assert_eq!(card.tags, expected, "{}", card.id);
+            }
+        }
     }
 
     #[test]

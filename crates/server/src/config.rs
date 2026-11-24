@@ -269,6 +269,25 @@ pub const ROOM_CODE_FORMAT: CodeFormat = CodeFormat {
     max_input_length: CODE_INPUT_MAX_LENGTH,
 };
 
+/// R4669000: the two-step code's alphabet. R104 leaves out `0` and `1`, which a TOTP code needs,
+/// so this is its own alphabet: all ten digits.
+pub const TOTP_CODE_ALPHABET: &str = "0123456789";
+/// R4669000: a two-step code is 6 digits long.
+pub const TOTP_CODE_LENGTH: usize = 6;
+/// R4669000: a two-step code is drawn as six boxes, one digit per box.
+pub const TOTP_CODE_GROUP_SIZE: usize = 1;
+/// R4669000: no separator between the boxes; the stored code is the six digits.
+pub const TOTP_CODE_SEPARATOR: &str = "";
+
+/// R4669000: the shape `CodeField` draws a two-step code with (one digit per box, no separator).
+pub const TOTP_CODE_FORMAT: CodeFormat = CodeFormat {
+    alphabet: TOTP_CODE_ALPHABET,
+    length: TOTP_CODE_LENGTH,
+    group_size: TOTP_CODE_GROUP_SIZE,
+    separator: TOTP_CODE_SEPARATOR,
+    max_input_length: CODE_INPUT_MAX_LENGTH,
+};
+
 /// SPEC §11 R190: how many `X-Forwarded-For` entries, counted from the right, the deployment's own
 /// proxies wrote, when `TRUSTED_PROXY_HOPS` does not say. Zero: with no proxy in front (a local or
 /// E2E server) the header is whatever the caller wrote, and trusting it would let a caller choose its

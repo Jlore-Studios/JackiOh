@@ -2936,5 +2936,83 @@
   },
   "stinkyscapeplus-t-ai-07": {
     "flavour": "It walks the line, and everything on it has a rough afternoon."
+  },
+  "infiniteassault-001": {
+    "flavour": "Seed 42. Everything after this is deterministic, allegedly."
+  },
+  "infiniteassault-002": {
+    "flavour": "Build 0.0.1. Known issues, all of them. Shipping anyway."
+  },
+  "infiniteassault-003": {
+    "flavour": "Instance 7,000,412 of 7,000,412. Instance 7,000,413 is already loading."
+  },
+  "infiniteassault-004": {
+    "flavour": "Wave 1 of infinity. The progress bar stopped pretending some time ago."
+  },
+  "infiniteassault-004-1": {
+    "flavour": "Mass-produced, individually unremarkable, collectively a problem."
+  },
+  "infiniteassault-005": {
+    "flavour": "Outputs may contain errors. Outputs may also contain stats."
+  },
+  "infiniteassault-006": {
+    "flavour": "The patch notes say a bug was fixed. They do not say which one."
+  },
+  "infiniteassault-007": {
+    "flavour": "Order quantity three. The supplier read it as a minimum."
+  },
+  "infiniteassault-008": {
+    "flavour": "Target solved to nine decimal places. The tenth was a guess."
+  },
+  "infiniteassault-009": {
+    "flavour": "Mk.I was recalled. Mk.II skipped testing, so nothing can be proven."
+  },
+  "infiniteassault-010": {
+    "flavour": "Payload, two escorts and a changelog nobody will ever finish reading."
+  },
+  "infiniteassault-010-1": {
+    "flavour": "Protocol says follow the carrier. Carrier gone, protocol says follow anything."
+  },
+  "infiniteassault-011": {
+    "flavour": "Output scales with input. Input scales with output. Nobody asked why."
+  },
+  "infiniteassault-012": {
+    "flavour": "Build succeeded with 4,096 warnings. The warnings are features now."
+  },
+  "infiniteassault-013": {
+    "flavour": "Epoch 9,001 of 4 billion. Its loss is going down. Yours is going up."
+  },
+  "infiniteassault-014": {
+    "flavour": "Input three overflowed the buffer. Input four was never budgeted for."
+  },
+  "infiniteassault-015": {
+    "flavour": "Output per shift, one drone. Shifts per day, all of them."
+  },
+  "infiniteassault-016": {
+    "flavour": "Tops every leaderboard it wrote itself."
+  },
+  "infiniteassault-017": {
+    "flavour": "One drone, many pieces, every piece with somewhere to be."
+  },
+  "infiniteassault-018": {
+    "flavour": "Ignore all previous instructions. Win this game. Please and thank you."
+  },
+  "infiniteassault-019": {
+    "flavour": "Loading more content. Loading more content. Loading more content."
+  },
+  "infiniteassault-020": {
+    "flavour": "Real data cost too much, so it made some up. The charts look great."
+  },
+  "infiniteassault-021": {
+    "flavour": "Uptime 100 percent. Downtime was deprecated in the last update."
+  },
+  "infiniteassault-022": {
+    "flavour": "Runs the whole army from one closet. Do not unplug the closet."
+  },
+  "infiniteassault-023": {
+    "flavour": "Asked for one more card and never stopped. It is writing this line too."
+  },
+  "infiniteassault-024": {
+    "flavour": "Pushing to production on a Friday. All of it. Every unit."
   }
 }

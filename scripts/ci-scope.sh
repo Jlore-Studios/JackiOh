@@ -43,8 +43,8 @@
 # repo (the pull request title check among them), the agent instruction files (CLAUDE.md, AGENTS.md,
 # GEMINI.md, CONTRIBUTING.md: code cites them in comments and nothing opens them), the repository's
 # meta that only GitHub reads (the issue forms, the pull request template, CODEOWNERS), and the
-# training lanes' prompts and loop (training/*.md, training/loop.sh: Muse and the training box read
-# them, no job does; training/history/ is not among them), and the notebooks' project, analysis/
+# training docs (training/*.md: people and the bots read them, no job does; training/history/ is not
+# among them), and the notebooks' project, analysis/
 # (#445: no file in crates/, apps/, e2e/, spec/ or a per-pull-request job reads it; super.yml's
 # `notebooks` job runs its tests once a day), but for the five record files and reports of
 # analysis/fixtures/ that the tools' R1994000 test holds `stats report --games` to, and the
@@ -227,7 +227,7 @@ skipped() {
     CLAUDE.md | AGENTS.md | GEMINI.md | CONTRIBUTING.md) ;;
     .github/ISSUE_TEMPLATE/* | .github/pull_request_template.md | .github/CODEOWNERS) ;;
     training/history/*) return 1 ;;
-    training/*.md | training/loop.sh) ;;
+    training/*.md) ;;
     analysis/fixtures/dev-40.jsonl | analysis/fixtures/live-40.jsonl | analysis/fixtures/games.report.json) return 1 ;;
     analysis/fixtures/counts.jsonl | analysis/fixtures/counts.report.json) return 1 ;;
     analysis/*) ;;

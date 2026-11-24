@@ -369,7 +369,7 @@ func TestDecision_AnOlderRepliedStopIsAnswered(t *testing.T) {
 }
 
 func TestDecision_AHandOverIsNoQuestion(t *testing.T) {
-	h, _, _ := decisionAsked(t, humanBlocked("Set `VITE_SUPABASE_URL` in Vercel's project settings.", true))
+	h, _, _ := decisionAsked(t, humanBlocked("Set `SUPABASE_SECRET_KEY` in the Worker's secrets.", true))
 	labels := h.gh.LabelNames(12)
 	assertIn(t, config.LabelHumanRequired, labels)
 	assertNotIn(t, config.LabelNeedsDecision, labels)

@@ -28,18 +28,19 @@ use serde::Deserialize;
 use serde_json::{Map, Value};
 
 use crate::scripts::classic::{
-    c001_curse_of_the_forgotten_classic, c004_palantir, c008_pickle, c009_income_tax,
-    c013_boots_on_the_ground, c014_shadowstep, c020_the_power_to_punish, c023_devils_pact,
+    c001_curse_of_the_forgotten_classic, c004_palantir, c006_cloaked_toe_cracker, c008_pickle,
+    c009_income_tax, c013_boots_on_the_ground, c014_shadowstep, c020_the_power_to_punish, c023_devils_pact,
     c024_book_of_knowledge, c027_pestilent_slime, c028_second_wind, c032_felinor_feelings, c035_prep,
     c037_last_hurrah, c039_outbreak, c040_mc_tech, c047_recurring_felinor, c052_final_gambit, c057_echo,
     c062_living_bomb, c064_malzahars_recycler, c070_book_of_plague, c088_siphon_squad, c090_in_too_deep,
 };
 use crate::scripts::classic_plus::{
     c007_the_house, c011_anime_armor, c016_conjure_rush_token, c019_1_top_loser, c019_2_jungle_loser,
-    c019_3_mid_loser, c023_dropshipping, c026_tommy_tempo, c029_portal_to_the_past, c030_felinor_fuser,
-    c033_ivory_tower, c037_wardrum, c040_appropriations, c042_kys_test, c043_ai_slop, c047_joggs_box,
-    c048_jlockeeds_lobbyist, c049_jay_fungus, c051_jlockeeds_j15_fighter, c053_book_of_tokens,
-    c062_kys_papaya, c068_organic_produce, c071_book_of_buff, c073_1_classic_golem, c078_claudes_datacenter,
+    c019_3_mid_loser, c019_5_bot_loser, c023_dropshipping, c026_tommy_tempo, c029_portal_to_the_past,
+    c030_felinor_fuser, c033_ivory_tower, c037_wardrum, c040_appropriations, c042_kys_test, c043_ai_slop,
+    c047_joggs_box, c048_jlockeeds_lobbyist, c049_jay_fungus, c051_jlockeeds_j15_fighter,
+    c053_book_of_tokens, c062_kys_papaya, c068_organic_produce, c071_book_of_buff, c073_1_classic_golem,
+    c078_claudes_datacenter,
 };
 use crate::scripts::core::{
     c002_speciesist, c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c032_prem_panther,
@@ -84,17 +85,20 @@ use crate::scripts::stinkyscape::{
     t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::{
-    c004_profe_yates, c009_drone_assembler_v4, c010_drone_assembler_v5, c021_jlockeed_shredder_12,
-    c025_snom_bunny, c037_scorch, c039_mindustrial_cross_over, c041_mend_projector, c046_phase_fabric,
-    c061_1_shawarma_law, c064_surge_wall, c065_thorium_wall, c066_plastanium_wall, c067_phase_wall,
-    c076_ayys_lmao, c077_black_hole, c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage,
-    c082_endless_expedition, c093_recessive_replicators, c097_selective_enrollment,
+    c004_profe_yates, c007_churnwalker, c009_drone_assembler_v4, c010_drone_assembler_v5, c017_smoothie,
+    c018_large_smoothie, c021_jlockeed_shredder_12, c025_snom_bunny, c037_scorch,
+    c039_mindustrial_cross_over, c041_mend_projector, c046_phase_fabric, c061_1_shawarma_law,
+    c062_overdrive_projector, c063_overdrive_dome, c064_surge_wall, c065_thorium_wall, c066_plastanium_wall,
+    c067_phase_wall, c076_ayys_lmao, c077_black_hole, c079_a_glimpse_into_the_endless_sea,
+    c080_the_last_voyage, c082_endless_expedition, c093_recessive_replicators, c097_selective_enrollment,
     c104_tireless_cultivation, c119_eclipse, c120_crawler, c121_1_toxopid_leg, c121_toxopid,
-    c145_fire_beam_v5, c155_the_far_vagabond, c159_raven, c166_mindustrial_revolution,
+    c131_tetrative_reconstructor, c145_fire_beam_v5, c155_the_far_vagabond, c159_raven,
+    c166_mindustrial_revolution,
 };
 use crate::scripts::training_grounds::{
     c015_in_a_hurry, c031_level_up, c035_corpse_recycler, c036_training_dummy, c038_tutorial_master,
     c039_call_to_chaos_training_grounds_edition, c040_goetzmann_game_design, c045_jlockeeds_weapons,
+    c050_glowy_jelly_bean as c050_legacy_glowy_jelly_bean,
     c052_snom_bunny_mind_control as c052_legacy_snom_bunny_mind_control,
     c056_corpse_eater as c056_legacy_corpse_eater,
 };
@@ -120,8 +124,9 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// R4353021, R4353022, R4353024, R4353025, and Medina Enforcer's and Repeater v5's numbers of uses and
 /// hooks), #4350 (R4350000), #4395 (R4395000), #4469 (R3554003), #4382's sweep of the carried catalogs
 /// (R4382001: Adaptive UI's Rush Token through v0.1.0d), #4396 (R4396000), #4423 (R4423000), #4424
-/// (R4424000), and #4440 (R4440003: Profe Yates's exile; R4440050 to R4440055, and the Tributes of
-/// xxFreshJack, Raven, ZolarKeth and Galaxy, Last Hurrah's Flashback and Double Counting's price).
+/// (R4424000), #4440 (R4440003: Profe Yates's exile; R4440050 to R4440055, and the Tributes of
+/// xxFreshJack, Raven, ZolarKeth and Galaxy, Last Hurrah's Flashback and Double Counting's price),
+/// and #4666 (R4666000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (c074_adaptive_ui::ID, "v0.1.0d", c074_adaptive_ui::script_v0_1_0d),
@@ -1319,6 +1324,76 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.9n",
         c009_joint_filing::script_v0_6_9n,
     ),
+    // #4440 Stinkyscape+ Balance Changes VI, its second part (the cards the first left out): Tetrative
+    // Reconstructor's Tribute 4 and Cloaked Toe Cracker's free Traps and Radiant mana, the last scripts
+    // before it.
+    (
+        c131_tetrative_reconstructor::ID,
+        "v0.6.11c",
+        c131_tetrative_reconstructor::script_v0_6_11c,
+    ),
+    (
+        c006_cloaked_toe_cracker::ID,
+        "v0.6.11c",
+        c006_cloaked_toe_cracker::script_v0_6_11c,
+    ),
+    // #4440's last part (R4440006): the Smoothies' Fruits fused into them, before they gained their text.
+    (c017_smoothie::ID, "v0.6.11d", c017_smoothie::script_v0_6_11d),
+    (
+        c018_large_smoothie::ID,
+        "v0.6.11d",
+        c018_large_smoothie::script_v0_6_11d,
+    ),
+    // #4666 (R4666000): Appropriations' Military and Healthcare on the deck too, before they kept to the
+    // field and the hand, and its numbers before #4666 gave them back.
+    (
+        c040_appropriations::ID,
+        "v0.6.12b",
+        c040_appropriations::script_v0_6_12b,
+    ),
+    // #4665 Stinkyscape+ Balance Changes VII: Mend Projector, Overdrive Projector and Overdrive Dome
+    // over both sides (R4665001, R4665002), Bot Loser's Attack on a kill (R4665003), the Flaks' 60/30/10
+    // (R4665004), the Legacy Glowy Jelly Bean's copy of Core #26 (R4665006) and Churnwalker with no
+    // Tribute, the last scripts before it.
+    // v0.6.8c and v0.6.8d declared no `health` yet: they ran v0.6.8b's script.
+    (
+        c041_mend_projector::ID,
+        "v0.6.8d",
+        c041_mend_projector::script_v0_6_8b,
+    ),
+    (
+        c041_mend_projector::ID,
+        "v0.6.12c",
+        c041_mend_projector::script_v0_6_12c,
+    ),
+    (
+        c062_overdrive_projector::ID,
+        "v0.6.12c",
+        c062_overdrive_projector::script_v0_6_12c,
+    ),
+    (
+        c063_overdrive_dome::ID,
+        "v0.6.12c",
+        c063_overdrive_dome::script_v0_6_12c,
+    ),
+    (
+        c019_5_bot_loser::ID,
+        "v0.6.12c",
+        c019_5_bot_loser::script_v0_6_12c,
+    ),
+    (c053_flak_v3::ID, "v0.6.12c", c053_flak_v3::script_v0_6_12c),
+    (c057_flak_v4::ID, "v0.6.12c", c057_flak_v4::script_v0_6_12c),
+    (c061_flak_v5::ID, "v0.6.12c", c061_flak_v5::script_v0_6_12c),
+    (
+        c050_legacy_glowy_jelly_bean::ID,
+        "v0.6.12c",
+        c050_legacy_glowy_jelly_bean::script_v0_6_12c,
+    ),
+    (
+        c007_churnwalker::ID,
+        "v0.6.12c",
+        c007_churnwalker::script_v0_6_12c,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -1991,6 +2066,30 @@ mod tests {
                 "v0.6.9j", "v0.6.9k", "v0.6.9l", "v0.6.9m", "v0.6.9n",
             ],
             "v0.6.9o",
+        );
+    }
+
+    /// Issue #4440's second part: v0.6.11c shipped while it sat in the merge queue, so its rows are keyed
+    /// there, the newest version that ran the scripts they keep (v0.6.10 to v0.6.11c among them).
+    #[test]
+    fn r767000_issue_4440_part_2_scripts_are_kept_through_v0_6_11c_the_newest_version_that_ran_them() {
+        assert_kept_through(
+            &[c131_tetrative_reconstructor::ID, c006_cloaked_toe_cracker::ID],
+            &[
+                "v0.6.10", "v0.6.10b", "v0.6.10c", "v0.6.10d", "v0.6.11", "v0.6.11b", "v0.6.11c",
+            ],
+            "v0.6.11d",
+        );
+    }
+
+    /// Issue #4440's last part: v0.6.11d was the newest shipped version as it was built, so the Smoothies'
+    /// rows are keyed there, the newest version that fused their Fruits into them.
+    #[test]
+    fn r767000_issue_4440_part_3_the_smoothies_are_kept_through_v0_6_11d_the_newest_version_that_ran_them() {
+        assert_kept_through(
+            &[c017_smoothie::ID, c018_large_smoothie::ID],
+            &["v0.6.11", "v0.6.11b", "v0.6.11c", "v0.6.11d"],
+            "v0.6.11e",
         );
     }
 

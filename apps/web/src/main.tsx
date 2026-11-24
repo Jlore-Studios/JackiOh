@@ -65,8 +65,9 @@ import { useCardPicksAccountSync } from "./cards/cardPicksSync.ts";
 import { useProficiencyAccountSync } from "./cards/proficiencySync.ts";
 import { ViewerAccountCosmetics, ViewerFullArt } from "./cards/ownedFullArt.ts";
 import { FullScreenArtHost } from "./cards/index.ts";
+import { pageWake } from "./game/net.ts";
 import { countLocaleVisit, initLocale, t, useLocale } from "./i18n/i18n.ts";
-import { installClientErrorReports, reportClientError } from "./net/clientErrors.ts";
+import { installClientErrorReports, isChunkLoadFailure, reportClientError } from "./net/clientErrors.ts";
 import { useAccount, type Account } from "./net/gate.ts";
 import { SITE_NAME, canonicalUrlFor, documentTitleFor } from "./net/head.ts";
 import { useQueueFollow } from "./net/liveGame.ts";
@@ -86,6 +87,7 @@ import {
   watchIdOf,
 } from "./net/navigate.ts";
 import { readSession } from "./net/session.ts";
+import { checkForUpdate, noteReloadedEntry, readDeployedEntry, reloadPage, runningEntry } from "./net/update.ts";
 import type { MeResponse } from "./net/api.ts";
 import { GlitchPath, NotFoundPlay } from "./notfound/NotFoundPlay.tsx";
 import { ChallengeToast } from "./together/ChallengeToast.tsx";
@@ -100,6 +102,7 @@ import { signOut, signOutLabel, useSigningOut } from "./auth/signOut.ts";
 import CommandMenu from "./routes/CommandMenu.tsx";
 import { QueueFound } from "./routes/GameBanner.tsx";
 import { routeChunks, startScreen, watchRouteIntent } from "./routes/chunks.tsx";
+import { ASSAULT_OPEN } from "./assault/config.ts";
 import LandingRoute from "./routes/landing.tsx";
 import { followInApp } from "./routes/nav.tsx";
 import { readSettings } from "./settings/store.ts";
@@ -129,6 +132,8 @@ const SeriesRoute = routeChunks.series.Screen;
 const PracticeRoute = routeChunks.practice.Screen;
 const DungeonRoute = routeChunks.dungeon.Screen;
 const DungeonStatsRoute = routeChunks.dungeonStats.Screen;
+// IA7: until the release opens the Infinite Assault (ASSAULT_OPEN), only a dev or e2e build serves it.
+const AssaultRoute = ASSAULT_OPEN || import.meta.env.MODE !== "production" ? routeChunks.assault.Screen : null;
 const PrivacyRoute = routeChunks.privacy.Screen;
 const TermsRoute = routeChunks.terms.Screen;
 const PurchasesRoute = routeChunks.purchases.Screen;
@@ -316,13 +321,13 @@ function GateError({ account }: { account: Extract<Account, { kind: "error" }> }
  * for a tab left open (the old hashed file is gone). Without this the root would unmount to a blank page.
  * A reload fetches the current build.
  */
-type LoadFailedState = { failed: boolean };
+type LoadFailedState = { failed: boolean; updated: boolean };
 
 export class RouteErrorBoundary extends Component<{ children: ReactNode }, LoadFailedState> {
-  override state: LoadFailedState = { failed: false };
+  override state: LoadFailedState = { failed: false, updated: false };
 
   static getDerivedStateFromError(): LoadFailedState {
-    return { failed: true };
+    return { failed: true, updated: false };
   }
 
   override componentDidCatch(error: unknown, info: ErrorInfo): void {
@@ -330,10 +335,31 @@ export class RouteErrorBoundary extends Component<{ children: ReactNode }, LoadF
     console.error("A screen failed to load", error, info.componentStack);
     // #3619: and to the owners, unless it is a lazy chunk that failed (the panel below covers that).
     reportClientError("boundary", error);
+    // R4605000: a chunk that failed on a stale build reloads once into the new one instead of
+    // blaming the connection. A second failure for the same entry, or the same build, keeps the panel.
+    if (isChunkLoadFailure(error)) {
+      void (async () => {
+        const deployed = await readDeployedEntry();
+        const running = runningEntry();
+        if (deployed === null || running === null || deployed === running) return;
+        if (noteReloadedEntry(deployed)) return;
+        this.setState({ failed: true, updated: true });
+        reloadPage();
+      })();
+    }
   }
 
   override render(): ReactNode {
     if (!this.state.failed) return this.props.children;
+    if (this.state.updated) {
+      return (
+        <ShellPanel testId={shellTestid.loadFailed}>
+          <p className="notice" role="alert">
+            {t("JackiOh was just updated. Loading the new version…")}
+          </p>
+        </ShellPanel>
+      );
+    }
     return (
       <ShellPanel testId={shellTestid.loadFailed}>
         <p className="notice" role="alert">
@@ -722,6 +748,15 @@ export function App(): ReactElement {
         </EngineGate>
       );
     }
+    // #4581: the Infinite Assault is offline and open to anyone, as practice and the Dungeon run are.
+    if (path === paths.assault) {
+      if (AssaultRoute === null) return <NotFound path={path} />;
+      return (
+        <EngineGate>
+          <AssaultRoute />
+        </EngineGate>
+      );
+    }
     if (path === paths.leaderboard) {
       return (
         <Gated key={path} engine>
@@ -952,6 +987,12 @@ if (import.meta.env.MODE !== "test") {
 
   // #3619: an uncaught error or an unhandled rejection reaches the owners, as the boundary's does.
   installClientErrorReports();
+  // R4605000: a tab left open across a deploy notices the next build when it wakes: the next
+  // menu move then loads it (net/navigate.ts `go`). Wired here, not in `net/update.ts`, which
+  // `net/navigate.ts` reads and the build's config chain bundles without the `@jackioh/*` aliases.
+  pageWake(() => {
+    void checkForUpdate();
+  });
   // The settings store's first read puts `data-reduce-motion` on <html> (index.css), so the player's
   // "Reduce motion" holds from the first paint of every screen, not only once a board has read it.
   readSettings();

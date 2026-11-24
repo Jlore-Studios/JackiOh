@@ -301,7 +301,9 @@ mod tests {
                 crate::register_all();
                 let (s, tower, _rider) =
                     tower_with(TOE_CRACKER, TowerOptions { hand: Some(vec![SHEEPISH, FILLER]), ..TowerOptions::default() });
-                assert!(text_of(&s, &tower).contains("Aura: Your Traps cost (0)."));
+                // Issue #4440: Cloaked Toe Cracker's base Aura is "cost (2) less" since.
+                let text = text_of(&s, &tower);
+                assert!(text.contains("Aura: Your Traps cost (") && text.contains(") less."), "{text}");
                 assert_eq!(effective_cost(s.state(), s.card(SHEEPISH), Default::default()), 0);
             }
 
@@ -478,9 +480,11 @@ mod tests {
             fn r469_it_is_fused_in_on_its_radiant_face() {
                 crate::register_all();
                 let (s, tower, _rider) = tower_with(TOE_CRACKER, TowerOptions { radiant: true, ..TowerOptions::default() });
-                // Cloaked Toe Cracker's Radiant face adds "After you play a Trap, gain 1 mana", on both fused faces.
-                assert!(text_of(&s, &tower).contains("After you play a Trap"));
-                assert!(def_of(Some(s.state()), &s.card(&tower).def_id).base.text.contains("After you play a Trap"));
+                // Cloaked Toe Cracker's Radiant face's Aura is "cost (0)", its base face's "(2) less" (issue
+                // #4440): the Radiant one, on both fused faces.
+                assert!(text_of(&s, &tower).contains("Aura: Your Traps cost (0)."));
+                let base = def_of(Some(s.state()), &s.card(&tower).def_id).base.text.clone();
+                assert!(base.contains("Aura: Your Traps cost (0).") && !base.contains("less"), "{base}");
             }
 
             #[test]

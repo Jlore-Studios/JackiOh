@@ -5,7 +5,8 @@
 // empties it. A new Legendary or Mythic comes with its signature, or joins the list where the catalog puts it.
 // R3389001: Classic's pass (#3389) took its eleven off. R3399000: Classic+'s pass (#3399) took its thirty-five off.
 // R3402001: Core's pass (#3402) took its ten off, leaving Ceaseless Void (#3338). Stinkyscape+'s fifty-nine
-// joined it at the set's release (#3596), owed their set's signature pass.
+// joined it at the set's release (#3596), owed their set's signature pass. The Infinite Assault's two joined
+// it with the set's first part (#4577), owed theirs.
 
 import { describe, expect, it } from "vitest";
 
@@ -40,6 +41,8 @@ const SIGNATURE_PENDING: readonly string[] = [
   "stinkyscapeplus-t-terminus-starship-red-giant-requiem", "stinkyscapeplus-t-terminus-starship-cold-exodus",
   "stinkyscapeplus-t-terminus-starship-omega-drift", "stinkyscapeplus-t-terminus-starship-farthest-shore",
   "stinkyscapeplus-t-terminus-starship-nightfall-covenant", "stinkyscapeplus-t-terminus-starship-vacuum-psalm",
+  // Infinite Assault
+  "infiniteassault-023", "infiniteassault-024",
 ];
 
 /** Every Legendary and Mythic of the catalog, tokens by the rarity they print, in catalog order. */

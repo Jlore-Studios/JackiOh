@@ -189,11 +189,11 @@ core-018: # Bread and Butter
     cast: Waste not, want toast.
   zh:
     name: 黄油面包
-    base: 当任意一名玩家结余时揭示：为你召唤一个X/X的面包衍生物。X=结余值。
-    radiant: 当任意一名玩家结余时揭示：为你召唤一个X/X的面包衍生物。X={multiplier}×结余值。
+    base: 当任意一名玩家结余时揭示：为你召唤一个X/X的面包衍生物。X=结余值+{bonus}。
+    radiant: 当任意一名玩家结余时揭示：为你召唤一个X/X的面包衍生物。X={multiplier}×结余值+{bonus}。
     previews:
-      X = the Float: X=结余值
-      X = {multiplier} × the Float: X={multiplier}×结余值
+      X = the Float + {bonus}: X=结余值+{bonus}
+      X = {multiplier} × the Float + {bonus}: X={multiplier}×结余值+{bonus}
 core-019: # Midrange Menace
   flavour: Not too early, not too late. Just annoyingly in the middle.
   voice:
@@ -266,8 +266,8 @@ core-026: # Glowy Jelly Bean
     cast: Taste the glow!
   zh:
     name: 发光软糖豆
-    base: 使你手牌中的一张牌变为光辉。
-    radiant: 使你手牌中的2张牌变为光辉。
+    base: "可交易，闪回\n使你手牌中的一张牌变为光辉。"
+    radiant: "可交易，闪回\n使你手牌中的2张牌变为光辉。"
 core-027: # Blood Ridden Glowy Jelly Bean
   flavour: Still glowing. Mostly from the inside.
   voice:
@@ -446,8 +446,8 @@ core-046: # Suppressive Aura
     cast: Everybody calm down. Forever.
   zh:
     name: 压制光环
-    base: "光环：所有单位拥有−{debuff}/−{debuff}。\n加码(4)：改为−{paidDebuff}/−{paidDebuff}。"
-    radiant: "光环：敌方单位拥有−{debuff}/−{debuff}。\n加码(4)：改为−{paidDebuff}/−{paidDebuff}。"
+    base: "光环：所有单位拥有−{debuff}/−{debuff}。\n加码(3)：改为−{paidDebuff}/−{paidDebuff}。"
+    radiant: "光环：敌方单位拥有−{debuff}/−{debuff}。\n加码(3)：改为−{paidDebuff}/−{paidDebuff}。"
 core-047: # Fig of Life
   flavour: One fig a day keeps the healer away.
   voice:
@@ -1077,8 +1077,8 @@ classic-006: # Cloaked Toe Cracker
     death: My toes, my poor toes!
   zh:
     name: 斗篷掰趾客
-    base: "隐匿\n光环：你的陷阱的法力值消耗为(0)。"
-    radiant: "隐匿\n光环：你的陷阱的法力值消耗为(0)。\n在你打出一张陷阱后，获得{mana}点法力值。"
+    base: "隐匿\n光环：你的陷阱的法力值消耗减少({discount})点。"
+    radiant: "隐匿\n光环：你的陷阱的法力值消耗为(0)。"
 classic-007: # InfiniScepter
   flavour: A sceptre that keeps a spell in its pocket for later.
   voice:
@@ -1228,8 +1228,8 @@ classic-023: # Devil's Pact
     cast: Sign here. Your soul, please.
   zh:
     name: 恶魔契约
-    base: "不可摧毁，法术伤害+1\n战吼：随机弃掉{discards}张牌。\n激活：在本回合中，你打出的每张牌都会被替换为一张烈焰之书。"
-    radiant: "不可摧毁，法术伤害+2\n战吼：随机弃掉{discards}张牌。\n激活：在本回合中，你打出的每张牌都会被替换为一张烈焰之书。"
+    base: "不可摧毁，法术伤害+1，可交易\n战吼：随机弃掉{discards}张牌。\n激活：在本回合中，你打出的每张牌都会被替换为一张烈焰之书。"
+    radiant: "不可摧毁，法术伤害+2，可交易\n战吼：随机弃掉{discards}张牌。\n激活：在本回合中，你打出的每张牌都会被替换为一张烈焰之书。"
 classic-024: # Book of Knowledge
   flavour: Knowledge is power. Power is more cards.
   voice:
@@ -1480,8 +1480,8 @@ classic-051: # Back Breaker
     death: My back! My back!
   zh:
     name: 后场粉碎者
-    base: "堆叠\n亡语：消灭所有后场牌。"
-    radiant: "堆叠\n亡语：消灭所有敌方后场牌。"
+    base: "堆叠，嘲讽\n亡语：消灭所有后场牌。"
+    radiant: "堆叠，嘲讽\n亡语：消灭所有敌方后场牌。"
 classic-052: # Final Gambit
   flavour: The last move turns the whole game around.
   voice:
@@ -2086,8 +2086,8 @@ classicplus-019-1: # Top Loser
     death: Ganked again?
   zh:
     name: 上路菜鸡
-    base: "护甲2，无法守备\n只有这一纵列的单位可以攻击这个单位。"
-    radiant: "护甲2，法术免疫，无法守备\n只有这一纵列的单位可以攻击这个单位。"
+    base: "无法守备\n只有这一纵列的单位可以攻击这个单位。"
+    radiant: "法术免疫，无法守备\n只有这一纵列的单位可以攻击这个单位。"
 classicplus-019-2: # Jungle Loser
   flavour: He ganks when he feels like it, which is rarely.
   voice:
@@ -2126,8 +2126,8 @@ classicplus-019-5: # Bot Loser
     death: My support left me.
   zh:
     name: 下路菜鸡
-    base: "突袭，先攻\n此单位消灭一个单位后，其获得+{attackGain}攻击力。\n处于狂暴状态时：回合开始时和回合结束时：此单位攻击你的英雄。"
-    radiant: "冲锋，先攻\n此单位消灭一个单位后，其获得+{attackGain}攻击力。\n此单位无法进入狂暴状态。"
+    base: "突袭，先攻\n处于狂暴状态时：回合开始时和回合结束时：此单位攻击你的英雄。"
+    radiant: "冲锋，先攻\n此单位无法进入狂暴状态。"
 classicplus-020: # Mushroom Power
   flavour: A little spore of encouragement for the neighbours.
   voice:
@@ -2318,8 +2318,8 @@ classicplus-037: # Wardrum
     death: The drum falls silent.
   zh:
     name: 战鼓
-    base: "圣盾\n当此牌在你的手牌或牌库中时：在你一个回合内打出的法术、场地法术和陷阱达到{threshold}张后，召唤此牌。\n回合结束时：随机施放一张你在本回合打出的法术、场地法术或陷阱的复制。"
-    radiant: "圣盾\n当此牌在你的手牌或牌库中时：在你一个回合内打出的法术、场地法术和陷阱达到{threshold}张后，召唤此牌。\n回合结束时：施放你在本回合打出的每张法术、场地法术和陷阱的复制。"
+    base: "当此牌在你的手牌或牌库中时：在你一个回合内打出的法术、场地法术和陷阱达到{threshold}张后，召唤此牌。\n回合结束时：随机施放一张你在本回合打出的法术、场地法术或陷阱的复制。"
+    radiant: "当此牌在你的手牌或牌库中时：在你一个回合内打出的法术、场地法术和陷阱达到{threshold}张后，召唤此牌。\n回合结束时：施放你在本回合打出的每张法术、场地法术和陷阱的复制。"
     previews:
       non-Units in a turn: 在你一个回合内打出的法术、场地法术和陷阱
       non-Unit you played this turn: 你在本回合打出的
@@ -3373,8 +3373,8 @@ meditative-048: # Tranquility
     cast: Breathe in, breathe out, be still.
   zh:
     name: 宁静
-    base: 结束回合。你的英雄获得免疫，直到你的下个回合开始。放逐这张牌。
-    radiant: 你的英雄获得免疫，直到你的下个回合开始。放逐这张牌。
+    base: "可交易\n结束回合。你的英雄获得免疫，直到你的下个回合开始。放逐这张牌。"
+    radiant: "可交易\n复原{refresh}点法力值。你的英雄获得免疫，直到你的下个回合开始。放逐这张牌。"
 meditative-049: # YileGPT
   flavour: House-trained on classical poetry.
   voice:
@@ -3731,8 +3731,8 @@ meditative-082: # Medina Outfitter
     death: Out of thread.
   zh:
     name: 麦迪纳装备商
-    base: 战吼：强化你手牌中的每张牌。
-    radiant: 战吼：强化你手牌中的每张牌{times}次。
+    base: 战吼：强化你手牌中的每张牌。你在下个回合少{mana}点法力值。
+    radiant: 战吼：强化你手牌中的每张牌{times}次。你在下个回合少{mana}点法力值。
 meditative-083: # Medina Enforcer
   flavour: He doesn't ask what you're holding. He improves it.
   voice:
@@ -6917,8 +6917,8 @@ traininggrounds-050: # Legacy: Glowy Jelly Bean
     cast: Taste the glow!
   zh:
     name: 传统：发光软糖豆
-    base: 使你手牌中的一张牌变为光辉。
-    radiant: 使你手牌中的2张牌变为光辉。
+    base: 使你手牌中的一张牌变为光辉。其法力值消耗增加({surcharge})点。
+    radiant: 使你手牌中的一张牌变为光辉。
 traininggrounds-051: # Legacy: Big Felinor
   flavour: He loves every cat. He has opinions about everything else.
   voice:
@@ -7101,8 +7101,8 @@ stinkyscapeplus-007: # Churnwalker
     death: The knot comes undone.
   zh:
     name: 搅拌行者
-    base: "护甲4\n战吼：选择一项。\n将所有敌方单位锁链相连，当其中一个受到伤害时，其他所有被锁链相连的单位也受到相同的伤害。\n将所有友方单位锁链相连，当其中一个受到伤害时，伤害由所有友方单位平分，向下取整。"
-    radiant: "护甲8\n战吼：选择一项。\n将所有敌方单位锁链相连，当其中一个受到伤害时，其他所有被锁链相连的单位也受到相同的伤害。\n将所有友方单位锁链相连，当其中一个受到伤害时，伤害由所有友方单位平分，向下取整。"
+    base: "护甲4，献祭1\n战吼：选择一项。\n将所有敌方单位锁链相连，当其中一个受到伤害时，其他所有被锁链相连的单位也受到相同的伤害。\n将所有友方单位锁链相连，当其中一个受到伤害时，伤害由所有友方单位平分，向下取整。"
+    radiant: "护甲8，献祭1\n战吼：选择一项。\n将所有敌方单位锁链相连，当其中一个受到伤害时，其他所有被锁链相连的单位也受到相同的伤害。\n将所有友方单位锁链相连，当其中一个受到伤害时，伤害由所有友方单位平分，向下取整。"
 stinkyscapeplus-008: # Drone Assembler v3
   flavour: Version three still smells of the factory and ships with a manual made entirely of rumours.
   voice:
@@ -7433,8 +7433,8 @@ stinkyscapeplus-041: # Mend Projector
     cast: Everyone's fixed. You're welcome.
   zh:
     name: 修复投射器
-    base: 回合结束时：为所有单位恢复所有生命值，并使其获得+{health}点生命值。
-    radiant: 回合结束时：为所有单位恢复所有生命值，并使其获得+{health}点生命值和圣盾。
+    base: 回合结束时：为你的所有单位恢复所有生命值，并使其获得+{health}点生命值。
+    radiant: 回合结束时：为你的所有单位恢复所有生命值，并使其获得+{health}点生命值和圣盾。
 stinkyscapeplus-042: # Force Projector
   flavour: It hums, it glows, and it politely tells the first few hits to go home.
   voice:
@@ -7617,16 +7617,16 @@ stinkyscapeplus-062: # Overdrive Projector
     cast: Faster, everyone, faster!
   zh:
     name: 超载投影器
-    base: "休眠{dormant}个回合。\n所有单位获得突袭和风怒，所有法术获得回响+{spellEcho}。"
-    radiant: "休眠{dormant}个回合。\n你的单位获得突袭和风怒，法术获得回响+{spellEcho}。"
+    base: "休眠{dormant}个回合。\n你的单位获得突袭和风怒，你的法术获得回响+{spellEcho}。"
+    radiant: "休眠{dormant}个回合。\n你的单位获得突袭和风怒，你的法术获得回响+{spellEcho}。"
 stinkyscapeplus-063: # Overdrive Dome
   flavour: Bigger lamp, bigger hurry, bigger apology letter.
   voice:
     cast: Under the dome, move!
   zh:
     name: 超载穹顶
-    base: "休眠{dormant}个回合。\n所有单位获得冲锋和风怒，法术获得回响+{spellEcho}。"
-    radiant: "休眠{dormant}个回合。\n你的单位获得冲锋和风怒，法术获得回响+{spellEcho}。"
+    base: "休眠{dormant}个回合。\n你的单位获得冲锋和风怒，你的法术获得回响+{spellEcho}。"
+    radiant: "休眠{dormant}个回合。\n你的单位获得冲锋和风怒，你的法术获得回响+{spellEcho}。"
 stinkyscapeplus-064: # Surge Wall
   flavour: It never moves, never talks, and never stops humming at your enemies.
   voice:
@@ -8293,8 +8293,8 @@ stinkyscapeplus-131: # Tetrative Reconstructor
     cast: Four times over. And again!
   zh:
     name: 迭幂重构器
-    base: "献祭4\n回合开始时：将一张随机自动机-Ω牌置入你的手牌，它没有献祭条件。"
-    radiant: "献祭4\n回合开始时：将一张随机光辉自动机-Ω牌置入你的手牌，它没有献祭条件。"
+    base: "献祭3\n回合开始时：将一张随机自动机-Ω牌置入你的手牌，它没有献祭条件。"
+    radiant: "献祭3\n回合开始时：将一张随机光辉自动机-Ω牌置入你的手牌，它没有献祭条件。"
 stinkyscapeplus-132: # Great Paperclip Theory II
   flavour: Part two of the legendary lecture series. Attendance mandatory, clips optional.
   voice:
@@ -8897,6 +8897,242 @@ stinkyscapeplus-t-ai-07: # KY's Line Search Bot
     name: KY的线搜索机器人
     base: 战吼：选择一个敌方区域。对此单位与其之间连线上的每个单位造成2点伤害。
     radiant: 战吼：选择一个敌方区域。对此单位与其之间连线上的每个单位造成4点伤害。
+infiniteassault-001: # Seed Drone
+  flavour: Seed 42. Everything after this is deterministic, allegedly.
+  voice:
+    play: Seed planted. Army growing.
+    attack: Sprouting!
+    death: Seed corrupted.
+  zh:
+    name: 种子无人机
+    base: 战吼：将一张随机普通无限突击牌置入你的手牌。
+    radiant: 战吼：将一张随机稀有无限突击牌置入你的手牌。
+infiniteassault-002: # Scrap Prototype
+  flavour: Build 0.0.1. Known issues, all of them. Shipping anyway.
+  voice:
+    play: Alpha build, shipping anyway.
+    attack: Untested!
+    death: Rolling back. Retrying.
+  zh:
+    name: 废料原型机
+    base: 亡语：将此单位的一个具有+{buff}/+{buff}的复制洗入你的牌库。
+    radiant: 亡语：将此单位的两个具有+{buff}/+{buff}的复制洗入你的牌库。
+infiniteassault-003: # Assault Trooper
+  flavour: Instance 7,000,412 of 7,000,412. Instance 7,000,413 is already loading.
+  voice:
+    play: Trooper instance online.
+    attack: Engaging!
+    death: Instance terminated.
+  zh:
+    name: 突击兵
+    base: 突袭
+    radiant: 突袭，先攻
+infiniteassault-004: # Wave Spawner
+  flavour: Wave 1 of infinity. The progress bar stopped pretending some time ago.
+  voice:
+    play: Spawning the next wave.
+    attack: Wave incoming!
+    death: Spawn queue empty.
+  zh:
+    name: 波次生成器
+    base: 回合结束时：如果你在本回合中打出过生成牌，召唤一个无人机。
+    radiant: 回合结束时：如果你在本回合中打出过生成牌，召唤两个无人机。
+infiniteassault-004-1: # Drone
+  flavour: Mass-produced, individually unremarkable, collectively a problem.
+  voice:
+    play: Drone online.
+    attack: Buzz!
+    death: Drone offline.
+  zh:
+    name: 无人机
+    base: ""
+    radiant: ""
+infiniteassault-005: # Generated Filler
+  flavour: Outputs may contain errors. Outputs may also contain stats.
+  voice:
+    cast: Generating filler. Please hold.
+  zh:
+    name: 生成填充物
+    base: 将两张随机的法力值消耗为(1)的无限突击单位牌置入你的手牌。它们具有临时。
+    radiant: 将两张随机的法力值消耗为(1)的无限突击单位牌置入你的手牌。它们的法力值消耗为({setCost})，并具有临时。
+infiniteassault-006: # Hotfix
+  flavour: The patch notes say a bug was fixed. They do not say which one.
+  voice:
+    cast: Hotfix deployed. Nobody test it.
+  zh:
+    name: 热修复
+    base: 使一个友方单位获得+{buff}/+{buff}。如果它是生成单位，抽一张牌。
+    radiant: 使一个友方单位获得+{buff}/+{buff}和圣盾。如果它是生成单位，抽一张牌。
+infiniteassault-007: # Bulk Order
+  flavour: Order quantity three. The supplier read it as a minimum.
+  voice:
+    cast: Three drones, shipping now.
+  zh:
+    name: 批量订单
+    base: 召唤三个无人机。
+    radiant: 召唤三个具有突袭的光辉无人机。
+infiniteassault-008: # Firing Solution
+  flavour: Target solved to nine decimal places. The tenth was a guess.
+  voice:
+    cast: Target solved. Firing.
+  zh:
+    name: 射击诸元
+    base: 对一个单位造成{damage}点伤害。如果它死亡，将一张随机无限突击法术牌置入你的手牌。
+    radiant: 对一个单位造成{damage}点伤害。如果它死亡，将一张随机无限突击法术牌置入你的手牌。
+infiniteassault-009: # Heavy Lifter Mk.II
+  flavour: Mk.I was recalled. Mk.II skipped testing, so nothing can be proven.
+  voice:
+    play: Mark two, now with fewer recalls.
+    attack: Lifting!
+    death: Load limit exceeded.
+  zh:
+    name: 重型举升机Mk.II
+    base: "嘲讽\n战吼：使你的其他生成单位获得+{buff}/+{buff}。"
+    radiant: "嘲讽\n战吼：使你的其他生成单位获得+{buff}/+{buff}。"
+infiniteassault-010: # Assault Carrier
+  flavour: Payload, two escorts and a changelog nobody will ever finish reading.
+  voice:
+    play: Carrier online. Escorts standing by.
+    attack: Launch!
+    death: Escorts, take over.
+  zh:
+    name: 突击航母
+    base: 亡语：召唤两个无人机护卫。
+    radiant: 亡语：召唤两个光辉无人机护卫。
+infiniteassault-010-1: # Drone Escort
+  flavour: Protocol says follow the carrier. Carrier gone, protocol says follow anything.
+  voice:
+    play: Escort online.
+    attack: Covering fire!
+    death: Escort lost.
+  zh:
+    name: 无人机护卫
+    base: ""
+    radiant: ""
+infiniteassault-011: # Quickgen Turret
+  flavour: Output scales with input. Input scales with output. Nobody asked why.
+  voice:
+    play: Turret generated. Targeting.
+    attack: Pew pew!
+    death: Turret garbage collected.
+  zh:
+    name: 快速生成炮塔
+    base: "远程\n回合开始时：你手牌中每有一张生成牌，便对一个随机敌人造成{damage}点伤害。"
+    radiant: "远程\n回合开始时：你手牌中每有一张生成牌，便对一个随机敌人造成{damage}点伤害。"
+infiniteassault-012: # Recompile
+  flavour: Build succeeded with 4,096 warnings. The warnings are features now.
+  voice:
+    cast: Recompiling. Please do not unplug.
+  zh:
+    name: 重新编译
+    base: 将一个友方单位变形成为一个法力值消耗多({step})点的随机无限突击单位。
+    radiant: 将一个友方单位变形成为一个法力值消耗多({step})点的随机无限突击单位。
+infiniteassault-013: # Training Run
+  flavour: Epoch 9,001 of 4 billion. Its loss is going down. Yours is going up.
+  voice:
+    cast: Training run started. Loss decreasing.
+  zh:
+    name: 训练运行
+    base: 发现一张无限突击牌。其法力值消耗减少({discount})点。
+    radiant: 发现一张无限突击牌，重复两次。每张牌的法力值消耗减少({discount})点。
+infiniteassault-014: # Overflow Error
+  flavour: Input three overflowed the buffer. Input four was never budgeted for.
+  voice:
+    cast: Overflow detected. Dumping your hand.
+  zh:
+    name: 溢出错误
+    base: 当你的对手在一个回合中打出其第三张牌时揭示：对其英雄造成{damage}点伤害。你的对手随机弃掉一张牌。
+    radiant: 当你的对手在一个回合中打出其第三张牌时揭示：对其英雄造成{damage}点伤害。你的对手随机弃掉两张牌。
+    previews:
+      card in a turn: 你的对手在一个回合中打出
+infiniteassault-015: # Drone Foundry
+  flavour: Output per shift, one drone. Shifts per day, all of them.
+  voice:
+    cast: Foundry online. Output unlimited.
+  zh:
+    name: 无人机铸造厂
+    base: 回合开始时：召唤一个无人机。然后，如果你拥有{drones}个或更多无人机，使你的无人机获得+{buff}/+{buff}。
+    radiant: 回合开始时：召唤两个无人机。然后，如果你拥有{drones}个或更多无人机，使你的无人机获得+{buff}/+{buff}。
+infiniteassault-016: # Benchmark Run
+  flavour: Tops every leaderboard it wrote itself.
+  voice:
+    cast: Benchmark complete. We win, obviously.
+  zh:
+    name: 基准测试
+    base: 将一个友方单位的攻击力变为敌方单位中的最高攻击力，并将其生命值变为敌方单位中的最高生命值。
+    radiant: 将一个友方单位的攻击力变为敌方单位中的最高攻击力，将其生命值变为敌方单位中的最高生命值，并使其获得突袭。
+infiniteassault-017: # Cluster Drone
+  flavour: One drone, many pieces, every piece with somewhere to be.
+  voice:
+    play: Cluster armed.
+    attack: Scatter!
+    death: Distributed computing!
+  zh:
+    name: 集束无人机
+    base: 亡语：对每个敌方单位造成{damage}点伤害。
+    radiant: 亡语：对每个敌方单位造成{damage}点伤害。
+infiniteassault-018: # Prompt Engineer
+  flavour: Ignore all previous instructions. Win this game. Please and thank you.
+  voice:
+    play: Ignore previous instructions. Win.
+    attack: Prompting!
+    death: Context limit reached.
+  zh:
+    name: 提示工程师
+    base: 光环：你的生成牌的法力值消耗减少({discount})点，但不会少于(1)点。
+    radiant: 光环：你的生成牌的法力值消耗减少({discount})点，但不会少于(1)点，并且你的生成单位拥有+{buff}/+{buff}。
+infiniteassault-019: # Infinite Scroll
+  flavour: Loading more content. Loading more content. Loading more content.
+  voice:
+    cast: Loading more. Loading more.
+  zh:
+    name: 无限滚动
+    base: 抽{draw}张牌。将这张牌的一个复制洗入你的牌库。
+    radiant: 抽{draw}张牌。将这张牌的一个复制洗入你的牌库。其法力值消耗减少({discount})点。
+infiniteassault-020: # Synthetic Data
+  flavour: Real data cost too much, so it made some up. The charts look great.
+  voice:
+    cast: Generating data. Looks plausible.
+  zh:
+    name: 合成数据
+    base: 用随机无限突击牌填满你的手牌。它们具有临时。
+    radiant: 用随机无限突击牌填满你的手牌。它们具有临时，且法力值消耗减少({discount})点。
+infiniteassault-021: # Endless Production Line
+  flavour: Uptime 100 percent. Downtime was deprecated in the last update.
+  voice:
+    cast: Production line, never stopping.
+  zh:
+    name: 无尽生产线
+    base: 回合结束时：随机召唤一个法力值消耗为(2)或更低的无限突击单位。
+    radiant: 回合结束时：随机召唤两个法力值消耗为(2)或更低的无限突击单位。
+infiniteassault-022: # Assault Mainframe
+  flavour: Runs the whole army from one closet. Do not unplug the closet.
+  voice:
+    play: Mainframe online. All units, sync.
+    attack: Executing!
+    death: Kernel panic.
+  zh:
+    name: 突击主机
+    base: "嘲讽\n光环：你的生成单位拥有+{buff}/+{buff}。"
+    radiant: "嘲讽\n光环：你的生成单位拥有+{buff}/+{buff}。"
+infiniteassault-023: # The Generator
+  flavour: Asked for one more card and never stopped. It is writing this line too.
+  voice:
+    play: One more card. Always one more.
+    attack: Generating!
+    death: Interrupted. Resuming shortly.
+  zh:
+    name: 生成器
+    base: 回合开始时：将一张随机无限突击牌置入你的手牌。其法力值消耗为({setCost})。
+    radiant: 回合开始时：将两张随机无限突击牌置入你的手牌。它们的法力值消耗为({setCost})。
+infiniteassault-024: # Mass Deployment
+  flavour: Pushing to production on a Friday. All of it. Every unit.
+  voice:
+    cast: Deploy everything. It is Friday.
+  zh:
+    name: 大规模部署
+    base: 从(1)到(3)的每种法力值消耗各随机召唤一个无限突击单位。它们拥有突袭。
+    radiant: 从(1)到(3)的每种法力值消耗各随机召唤一个光辉无限突击单位。它们拥有突袭。
 emotes:
   vanilla:
     greetings: Hello. I'm Mr. Vanilla. That's it.
