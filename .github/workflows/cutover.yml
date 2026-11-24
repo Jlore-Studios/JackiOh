@@ -39,8 +39,8 @@
 #   dev-stats           staging's development statistics into JackiOh-Production (R1933001): the
 #                       totals' development rows and game_record_batches, replacing whatever production
 #                       holds of them, in one transaction whose counts must agree with staging's. Live
-#                       rows are not touched. Run it again whenever the two may have drifted (a gather or
-#                       learn run whose import into production failed and was not run again): staging
+#                       rows are not touched. Run it again whenever the two may have drifted (a gather
+#                       run whose import into production failed and was not run again): staging
 #                       files every development run, so its rows are the whole of them.
 #
 # PRODUCTION_DATABASE_URL may be the session pooler URI exactly as Supabase shows it, `[YOUR-PASSWORD]`
@@ -528,7 +528,7 @@ jobs:
           production=$(cat "$RUNNER_TEMP/production.url")
           host=$(python3 -c 'import sys, urllib.parse as u; print(u.urlsplit(sys.argv[1]).hostname)' "$production")
           q() { psql "$1" -XAtq -v ON_ERROR_STOP=1 "${@:2}"; }
-          # training/learn.md's two logins: stats_importer acts as service_role only by `set role`, and
+          # training/README.md's two logins: stats_importer acts as service_role only by `set role`, and
           # stats_reader's every transaction is read-only. The copy brought both from staging.
           q "$production" -c "select rolname || ': ' || case when rolconfig is null then 'no settings' else array_to_string(rolconfig, ', ') end
             from pg_roles where rolname in ('stats_importer', 'stats_reader') order by 1" | sed 's/^/production holds /'

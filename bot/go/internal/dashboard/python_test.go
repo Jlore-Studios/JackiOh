@@ -4,7 +4,6 @@ import (
 	"os"
 	"slices"
 	"testing"
-	"time"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/py"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/pyjson"
@@ -56,9 +55,7 @@ func TestConstantsMatchPython(t *testing.T) {
 		"BOX_CELLS": BoxCells, "RESULT": Result, "TIMELINE_STYLE": TimelineStyle,
 		"BOX_STYLES": BoxStyles, "STYLE": Style, "LEGEND": Legend, "LANE_ORDER": LaneOrder,
 		"LANES_MARK": LanesMark, "CLAUDE_SECRET": ClaudeSecret, "USAGE_CHART": UsageChart,
-		"STEP": Step, "MODE_KIND": ModeKind, "LEARN_WORKFLOW": LearnWorkflow,
-		"LEARN_BRANCH": LearnBranch, "LEARN_SCHEDULE": LearnSchedule, "LEARN_ROWS": LearnRows,
-		"LEARN_NO_RUNNER": LearnNoRunner, "RUNNERS_MINUTES": RunnersMinutes,
+		"STEP": Step, "MODE_KIND": ModeKind, "RUNNERS_MINUTES": RunnersMinutes,
 		"RUNNERS_START": RunnersStart, "RUNNERS_END": RunnersEnd, "EXPLAINED": Explained,
 		"HOSTED_RUNNERS": HostedRunners, "RUNNER_RUNS": RunnerRuns, "RUNNER_ROWS": RunnerRows,
 		"WORKFLOWS": Workflows, "HOSTED_ROLES": HostedRoles, "BOXES_NOTE": BoxesNote,
@@ -68,7 +65,7 @@ func TestConstantsMatchPython(t *testing.T) {
 		"PROGRESS_START": ProgressStart, "PROGRESS_END": ProgressEnd, "PROGRESS_CHART": ProgressChart,
 		"BOX_SLOTS": slots, "SECTION_START": SectionStart, "SECTION_END": SectionEnd,
 		"TRAINING_LANES": TrainingLanes, "SHOWN_STEPS": ShownSteps,
-		"TRAINING_STALE": TrainingStale.Seconds(), "LEARN_PR_STALE": LearnPRStale.Seconds(),
+		"TRAINING_STALE": TrainingStale.Seconds(),
 	}
 	sorted := pyjson.Options{SortKeys: true}
 	python := loadPython(t).Obj("constants")
@@ -153,25 +150,6 @@ func TestLanesMatchPython(t *testing.T) {
 		}
 		if got := inUse(row); got != p[2] {
 			t.Errorf("_in_use(%s) = %q, want %q", pyjson.Dumps(row), got, p[2])
-		}
-	}
-}
-
-func TestLearnMatchesPython(t *testing.T) {
-	c := loadPython(t)
-	for _, p := range cases(t, c, "learn_outcome") {
-		if got := LearnOutcome(pyjson.Obj(p[0]), pyjson.Objs(p[1])); got != p[2] {
-			t.Errorf("learn_outcome(%s, %s) = %q, want %q", pyjson.Dumps(p[0]), pyjson.Dumps(p[1]),
-				got, p[2])
-		}
-	}
-	for _, p := range cases(t, c, "next_learn_run") {
-		at, err := time.Parse(time.RFC3339, p[0].(string))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got := NextLearnRun(at).Format("2006-01-02T15:04:05Z"); got != p[1] {
-			t.Errorf("next_learn_run(%s) = %s, want %s", p[0], got, p[1])
 		}
 	}
 }

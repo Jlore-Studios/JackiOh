@@ -96,7 +96,7 @@ func TestCigate_OnlyAFewRunsGoAtOnceCountedInRuns(t *testing.T) {
 	w.running("ci.yml", "workflow_dispatch", 5)
 	w.running("ci.yml", "pull_request", 6)
 	w.running("bot-night.yml", "workflow_dispatch", 7)
-	w.running("selfplay.yml", "schedule", 8)
+	w.running("gather.yml", "schedule", 8)
 	w.waiting(10, "pull_request", 2)
 	assertIn(t, "started 0 of 1 waiting run(s); 1 wait for a slot", cigate.Tick(w.ctx))
 	going, read := cigate.Read(w.ctx)

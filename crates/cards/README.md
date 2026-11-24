@@ -383,6 +383,12 @@ Every change to card data is a patch, and every patch is kept.
   window does: each version's tier and the families that play in it, as recorded, or, for a version
   shipped before tiers were recorded, from its `changes` (`WORDING_FIELDS`, `PATCH_MIN_CARDS`,
   `PRE_TIER_MAJORS`). The server and the tools hand it to the engine's `windowed_card_stats`.
+- `play_versions()` (the same file, R4675000) reads it as each card's play versions: the runs of
+  shipped versions over which the card plays the same, `<card>~<first version>`, a new one starting
+  where a change line moves a field other than `WORDING_FIELDS` and `PLAY_VERSION_QUIET_FIELDS` (`loc`)
+  or the version's own `plays` claim its family; no tier ends one, and a day's cut restates its micros.
+  `deck_play_versions()` keeps a deck's cards, which the engine's `play_version_figures` reads
+  (`GET /api/stats/versions`, R4675001).
 - Every shipped version but the newest is carried for replays (R767000): its definitions rebuilt
   from its snapshot, its scripts the build's own, and the win-rate table it shipped with (R1266000:
   its `win_rates/<version>.json`, or the empty table with no file, R1329000). A patch

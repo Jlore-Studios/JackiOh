@@ -1512,6 +1512,36 @@ mod r2491000_kept_card_history {
         assert_eq!(reads_of(&app, &loads, &paths[0]).await, (0, 0), "{}", paths[0]);
     }
 
+    // R4675001: the play versions' table is cut from the snapshot the cards read, once per `?pilot=` and
+    // `?mode=`, so the whole history costs one load of every patch's totals however many keys ask.
+    #[tokio::test(start_paused = true)]
+    async fn r4675001_the_route_reads_every_patch_once_and_shares_the_snapshot_with_the_cards() {
+        let past = past_patch().await;
+        let app = test_app().await;
+        insert_records(&app, mixed_records(&past)).await;
+        let loads = count_loads(&app).await;
+
+        assert_eq!(reads_of(&app, &loads, "/api/stats/versions").await, (1, 1));
+        for path in [
+            "/api/stats/versions",
+            "/api/stats/versions?mode=bo1&pilot=human",
+            "/api/stats/versions?mode=constructed&pilot=ai",
+            "/api/stats/cards",
+        ] {
+            assert_eq!(reads_of(&app, &loads, path).await, (0, 0), "{path}");
+        }
+        // A key's table is what a load of its own gives from the same records.
+        let (_, _, kept) = get_public(&app, "/api/stats/versions?mode=bo1&pilot=human").await;
+        let reference = test_app().await;
+        insert_records(&reference, mixed_records(&past)).await;
+        let (_, _, own) = get_public(&reference, "/api/stats/versions?mode=bo1&pilot=human").await;
+        assert_eq!(kept, own);
+
+        // At the TTL the snapshot is loaded again.
+        tokio::time::advance(Duration::from_millis(ttl_ms())).await;
+        assert_eq!(reads_of(&app, &loads, "/api/stats/versions").await, (1, 1));
+    }
+
     #[tokio::test(start_paused = true)]
     async fn r3067000_distinct_unshipped_patches_cost_no_load_of_every_patch() {
         let app = test_app().await;
@@ -1884,6 +1914,101 @@ mod r1367000_card_stats_by_window {
             .expect("a major has shipped")
             .version;
         assert_eq!(first(&patches[0]), *newest_patch);
+    }
+}
+
+mod r4675001_play_versions {
+    use super::*;
+
+    /// The keys of a JSON object, sorted.
+    fn keys(value: &Value) -> Vec<String> {
+        let mut keys: Vec<String> = value.as_object().expect("an object").keys().cloned().collect();
+        keys.sort();
+        keys
+    }
+
+    #[tokio::test]
+    async fn r4675001_the_route_lists_every_play_version_and_an_old_one_with_no_totals() {
+        let app = test_app().await;
+        let floor = count(CARD_STATS_MIN_SAMPLE);
+        let records: Vec<Value> = (0..floor)
+            .map(|i| make_game_record(&format!("pv-{i}"), RecordOptions::default()))
+            .collect();
+        insert_records(&app, records).await;
+
+        let (status, headers, data) = get_public(&app, "/api/stats/versions").await;
+        assert_eq!(status, 200);
+        let ttl = format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}");
+        assert_eq!(cache_control(&headers), Some(ttl.as_str()));
+        assert_eq!(
+            keys(&data),
+            [
+                "bandHigh",
+                "bandLow",
+                "field",
+                "minSample",
+                "mode",
+                "pilot",
+                "versions"
+            ]
+        );
+        assert_eq!((&data["pilot"], &data["mode"]), (&json!("merged"), &json!("all")));
+        assert_eq!(data["minSample"], json!(CARD_STATS_MIN_SAMPLE));
+        let rows = data["versions"].as_array().expect("versions is a list");
+        let versions = jackioh_cards::deck_play_versions();
+        assert_eq!(rows.len(), versions.len());
+        // Figures only, and no source (R661): a client reads each definition from its catalog at `last`.
+        assert_eq!(
+            keys(&rows[0]),
+            [
+                "adjustedHigh",
+                "adjustedLow",
+                "adjustedWinRate",
+                "card",
+                "first",
+                "games",
+                "hasEnoughGames",
+                "id",
+                "last",
+                "live",
+                "name",
+                "tier"
+            ]
+        );
+        for (row, version) in rows.iter().zip(&versions) {
+            assert_eq!(row["id"], json!(version.id));
+        }
+
+        let core: Vec<&Value> = rows
+            .iter()
+            .filter(|row| row["card"] == json!("core-001"))
+            .collect();
+        let live = core.last().expect("core-001 has play versions");
+        assert_eq!(live["live"], json!(true));
+        assert_eq!(live["last"], json!(current_patch()));
+        assert_eq!(live["games"], json!(floor));
+        assert_eq!(live["hasEnoughGames"], json!(true));
+        assert!(live["tier"].is_string(), "{live}");
+        assert!(live["adjustedWinRate"].is_number(), "{live}");
+
+        // Its oldest play version began before the records: no games and no figure.
+        let oldest = core[0];
+        assert_eq!(oldest["first"], json!(jackioh_cards::shipped_versions()[0]));
+        assert_eq!(oldest["live"], json!(false));
+        assert_eq!(oldest["games"], json!(0));
+        assert_eq!(oldest["hasEnoughGames"], json!(false));
+        for figure in ["adjustedWinRate", "adjustedLow", "adjustedHigh", "tier"] {
+            assert_eq!(oldest[figure], Value::Null, "{figure}");
+        }
+
+        // `?mode=` and `?pilot=` name what the figures count; every game here is a Best of 1.
+        let (_, _, conquest) = get_public(&app, "/api/stats/versions?mode=bo3&pilot=human").await;
+        assert_eq!(
+            (&conquest["pilot"], &conquest["mode"]),
+            (&json!("human"), &json!("bo3"))
+        );
+        let row = find(&conquest["versions"], "id", &live["id"]).expect("the live row");
+        assert_eq!(row["games"], json!(0));
     }
 }
 
@@ -3236,6 +3361,14 @@ mod cache_poisoning {
         let app = test_app().await;
         insert_records(&app, vec![make_game_record("poison-1", RecordOptions::default())]).await;
         let responses = seven_ways(&app, "/api/stats/games").await;
+        assert_same_bytes(&responses, CARD_STATS_CACHE_TTL_SECONDS);
+    }
+
+    #[tokio::test]
+    async fn cache_poisoning_versions_same_bytes_whatever_the_caller_carries() {
+        let app = test_app().await;
+        insert_records(&app, vec![make_game_record("poison-1", RecordOptions::default())]).await;
+        let responses = seven_ways(&app, "/api/stats/versions").await;
         assert_same_bytes(&responses, CARD_STATS_CACHE_TTL_SECONDS);
     }
 
