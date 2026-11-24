@@ -72,17 +72,17 @@ mod tests {
         #[test]
         fn r4588004_attack_follows_the_other_units() {
             let mut s = board(json!([{ "def": ID }, UNIT, UNIT]));
-            s.expect_stats(&ganger(&s), json!({ "attack": 3 + 2 }));
+            s.expect_stats(ganger(&s), json!({ "attack": 3 + 2 }));
             // The enemy's Unit is no friendly Unit, and a death drops it.
             let other = s.unit_at(P1, 2);
             s.play(HIT_JOB, pick::targets(pick::instance(&other)));
-            s.expect_stats(&ganger(&s), json!({ "attack": 3 + 1 }));
+            s.expect_stats(ganger(&s), json!({ "attack": 3 + 1 }));
         }
 
         #[test]
         fn alone_it_is_a_3_3() {
             let mut s = board(json!([{ "def": ID }]));
-            s.expect_stats(&ganger(&s), json!({ "attack": 3, "health": 3 }));
+            s.expect_stats(ganger(&s), json!({ "attack": 3, "health": 3 }));
         }
     }
 
@@ -92,7 +92,7 @@ mod tests {
         #[test]
         fn r4588004_attack_follows_the_other_units() {
             let mut s = board(json!([{ "def": ID, "radiant": true }, UNIT, UNIT]));
-            s.expect_stats(&ganger(&s), json!({ "attack": 6 + 4 }));
+            s.expect_stats(ganger(&s), json!({ "attack": 6 + 4 }));
         }
     }
 }

@@ -73,7 +73,7 @@ fn faces(cap: i64) -> Script {
                 ]
             },
         )
-        .with_when(|ctx, event| set_face_down(ctx, event))],
+        .with_when(set_face_down)],
         ..Script::default()
     }
 }

@@ -338,6 +338,15 @@ pub fn fire_trap(
     // `controller` is the seat the trap sits on (R154); its identity follows R97 on both seats
     // (R2734000). A trap stolen since the event is face-down on its new controller's side: the flip is
     // announced on the seat it sits on.
+    // R4586007: the attacker of the attack this firing answers, if it answers one, named only in a
+    // game holding an Infinite Assault card (`recursion_log::kept`), whose Figment answers read it:
+    // no other game's events, views or recorded traces move (D14).
+    let attacker_id = match event {
+        GameEvent::AttackDeclared { attacker_id, .. } if crate::recursion_log::kept(sink.state) => {
+            Some(attacker_id.clone())
+        }
+        _ => None,
+    };
     // R2657001: a Field Trap already face-up reveals nothing as it fires again (`again`).
     sink.events.push(GameEvent::TrapFired {
         instance_id: trap.id.clone(),
@@ -346,11 +355,7 @@ pub fn fire_trap(
         row: at.map_or(Row::Backrow, |slot| slot.row),
         lane: at.map_or(0, |slot| slot.lane),
         again: fires_again(sink.state, trap),
-        // R4586007: the attacker of the attack this firing answers, if it answers one.
-        attacker_id: match event {
-            GameEvent::AttackDeclared { attacker_id, .. } => Some(attacker_id.clone()),
-            _ => None,
-        },
+        attacker_id,
     });
 
     // §5.1: it has fired, and it is face-up from this moment (R33) — which also keeps it out of every

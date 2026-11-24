@@ -40,7 +40,7 @@ mod tests {
         fn no_attack_is_offered() {
             let s = board(false, "corrupted-process");
             for lane in [1, 2] {
-                assert!(s.attacks_of(&s.unit_at(P2, lane)).is_empty());
+                assert!(s.attacks_of(s.unit_at(P2, lane)).is_empty());
             }
         }
     }
@@ -52,7 +52,7 @@ mod tests {
         fn no_attack_is_offered() {
             let s = board(true, "corrupted-process-radiant");
             for lane in [1, 2] {
-                assert!(s.attacks_of(&s.unit_at(P2, lane)).is_empty());
+                assert!(s.attacks_of(s.unit_at(P2, lane)).is_empty());
             }
         }
     }

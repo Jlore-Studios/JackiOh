@@ -91,7 +91,7 @@ mod tests {
             }));
             s.end_turn();
             let over = s.events().iter().find_map(|event| match event {
-                GameEvent::GameOver { winner, .. } => Some(winner.clone()),
+                GameEvent::GameOver { winner, .. } => Some(*winner),
                 _ => None,
             });
             assert_eq!(over, Some(Winner::Draw), "both heroes at 0 is a draw");

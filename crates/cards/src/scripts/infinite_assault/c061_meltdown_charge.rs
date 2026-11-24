@@ -60,7 +60,7 @@ mod tests {
     }
 
     fn unit_health(s: &Scenario, player: PlayerId) -> i32 {
-        s.stats(&s.unit_at(player, 1)).health
+        s.stats(s.unit_at(player, 1)).health
     }
 
     mod base {

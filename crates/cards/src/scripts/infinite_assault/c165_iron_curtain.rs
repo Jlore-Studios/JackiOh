@@ -92,12 +92,12 @@ mod tests {
             let attacker = s.unit_at(P2, 1);
             s.attack(&attacker, &first);
             // 2 from the curtain in the window, then 2 back from the 2/5: 6 - 4.
-            s.expect_stats(&s.unit_at(P2, 1), json!({ "attack": 3, "health": 2 }));
-            s.expect_stats(&s.unit_at(P1, 1), json!({ "attack": 2, "health": 2 }));
+            s.expect_stats(s.unit_at(P2, 1), json!({ "attack": 3, "health": 2 }));
+            s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 2, "health": 2 }));
             s.expect_in_zone(CURTAIN, "field");
             let second = s.unit_at(P2, 2);
             s.attack(&second, "hero");
-            s.expect_stats(&s.unit_at(P2, 2), json!({ "attack": 3, "health": 4 }));
+            s.expect_stats(s.unit_at(P2, 2), json!({ "attack": 3, "health": 4 }));
             s.expect_health(P1, 27);
             assert_eq!(s.count("trapFired"), 2, "it fires on every declared attack");
             s.expect_in_zone(CURTAIN, "field");
@@ -113,7 +113,7 @@ mod tests {
             let attacker = s.unit_at(P2, 1);
             s.attack(&attacker, "hero");
             // 4 from the curtain in the window; no strike back from a hero.
-            s.expect_stats(&s.unit_at(P2, 1), json!({ "attack": 3, "health": 2 }));
+            s.expect_stats(s.unit_at(P2, 1), json!({ "attack": 3, "health": 2 }));
             s.expect_health(P1, 27);
             s.expect_in_zone(CURTAIN, "field");
         }

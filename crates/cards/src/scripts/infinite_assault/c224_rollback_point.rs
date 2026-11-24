@@ -32,7 +32,7 @@ fn rollback(radiant: bool) -> Script {
                         .map(|def| (query_cost(def), death.def_id.clone()))
                 })
                 .collect();
-            scored.sort_by(|left, right| right.0.cmp(&left.0));
+            scored.sort_by_key(|scored| std::cmp::Reverse(scored.0));
             if scored.is_empty() {
                 return vec![];
             }

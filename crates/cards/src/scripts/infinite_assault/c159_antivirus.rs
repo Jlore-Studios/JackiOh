@@ -76,7 +76,7 @@ mod tests {
         fn cry_destroys_an_enemy_backrow_card() {
             let mut s = board(false);
             play(&mut s);
-            s.expect_stats(&s.unit_at(P1, 2), json!({ "attack": 2, "health": 5 }));
+            s.expect_stats(s.unit_at(P1, 2), json!({ "attack": 2, "health": 5 }));
             s.expect_in_zone(FOE_TRAP, "graveyard");
             assert_eq!(s.state().players[P1].hero.armor, 0);
         }
@@ -101,7 +101,7 @@ mod tests {
         fn then_your_hero_gains_5_armor() {
             let mut s = board(true);
             play(&mut s);
-            s.expect_stats(&s.unit_at(P1, 2), json!({ "attack": 4, "health": 10 }));
+            s.expect_stats(s.unit_at(P1, 2), json!({ "attack": 4, "health": 10 }));
             s.expect_in_zone(FOE_TRAP, "graveyard");
             assert_eq!(s.state().players[P1].hero.armor, 5);
         }

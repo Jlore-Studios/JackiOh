@@ -35,7 +35,7 @@ fn short_circuit_attacker(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<
     if attacker.controller == ctx.controller {
         return None;
     }
-    let attack = unit_view(ctx.state, &attacker).attack;
+    let attack = unit_view(ctx.state, attacker).attack;
     Some((attacker_id.clone(), attack))
 }
 

@@ -27,7 +27,7 @@ pub fn gain_keywords_of(args: GainKeywordsOfArgs) -> Effect {
         let Some(self_card) = ctx.live_self() else {
             return;
         };
-        if !in_units_row_or_standing(ctx.state, &self_card) {
+        if !in_units_row_or_standing(ctx.state, self_card) {
             return;
         }
 

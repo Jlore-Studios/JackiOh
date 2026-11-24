@@ -64,9 +64,9 @@ mod tests {
         fn your_units_gain_1_2_the_enemy_gains_nothing() {
             let mut s = board(false);
             s.play(ID, json!({}));
-            s.expect_stats(&s.unit_at(P1, 1), json!({ "attack": 3, "health": 5 }));
-            s.expect_stats(&s.unit_at(P1, 2), json!({ "attack": 3, "health": 5 }));
-            s.expect_stats(&s.unit_at(P2, 1), json!({ "attack": 4, "health": 4 }));
+            s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 3, "health": 5 }));
+            s.expect_stats(s.unit_at(P1, 2), json!({ "attack": 3, "health": 5 }));
+            s.expect_stats(s.unit_at(P2, 1), json!({ "attack": 4, "health": 4 }));
             s.expect_in_zone(ID, "graveyard");
         }
 
@@ -77,7 +77,7 @@ mod tests {
                 "p2": { "library": crate::filler(3) },
             }));
             s.play(ID, json!({}));
-            s.expect_stats(&s.unit_at(P1, 1), json!({ "attack": 2, "health": 3 }));
+            s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 2, "health": 3 }));
         }
     }
 
@@ -88,8 +88,8 @@ mod tests {
         fn your_units_gain_2_4() {
             let mut s = board(true);
             s.play(ID, json!({}));
-            s.expect_stats(&s.unit_at(P1, 1), json!({ "attack": 4, "health": 7 }));
-            s.expect_stats(&s.unit_at(P1, 2), json!({ "attack": 4, "health": 7 }));
+            s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 4, "health": 7 }));
+            s.expect_stats(s.unit_at(P1, 2), json!({ "attack": 4, "health": 7 }));
         }
     }
 }

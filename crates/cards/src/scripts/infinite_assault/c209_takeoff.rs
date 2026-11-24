@@ -107,7 +107,7 @@ mod tests {
             let view = unit_view(s.state(), &unit);
             assert_eq!((view.attack, view.health), (6, 8));
             assert!(
-                card_keywords(s.state(), &unit).iter().any(|keyword| *keyword == Keyword::Rush),
+                card_keywords(s.state(), &unit).contains(&Keyword::Rush),
                 "it has Rush"
             );
         }

@@ -290,7 +290,7 @@ fn r4592006_keywords_copied_are_printed_and_granted_never_brittle_or_a_spent_shi
         &mut make_context(&mut sink, Some(&friendly), by(P1)),
     );
 
-    let live_friendly = live(&sink.state, &friendly.id);
+    let live_friendly = live(sink.state, &friendly.id);
     let kws = jackioh_engine::layers::card_keywords(sink.state, &live_friendly);
     assert!(kws.contains(&Keyword::Taunt));
     assert!(

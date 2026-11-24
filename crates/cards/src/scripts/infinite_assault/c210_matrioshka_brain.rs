@@ -44,8 +44,8 @@ mod tests {
             let view = unit_view(s.state(), &unit);
             assert_eq!((view.attack, view.health), (10, 20));
             let keywords = card_keywords(s.state(), &unit);
-            assert!(keywords.iter().any(|keyword| *keyword == Keyword::Giga));
-            assert!(keywords.iter().any(|keyword| *keyword == Keyword::Taunt));
+            assert!(keywords.contains(&Keyword::Giga));
+            assert!(keywords.contains(&Keyword::Taunt));
         }
     }
 
@@ -59,12 +59,10 @@ mod tests {
             let view = unit_view(s.state(), &unit);
             assert_eq!((view.attack, view.health), (20, 40));
             let keywords = card_keywords(s.state(), &unit);
-            assert!(keywords.iter().any(|keyword| *keyword == Keyword::Giga));
-            assert!(keywords.iter().any(|keyword| *keyword == Keyword::Taunt));
+            assert!(keywords.contains(&Keyword::Giga));
+            assert!(keywords.contains(&Keyword::Taunt));
             assert!(
-                keywords
-                    .iter()
-                    .any(|keyword| *keyword == Keyword::DivineShield)
+                keywords.contains(&Keyword::DivineShield)
             );
         }
     }

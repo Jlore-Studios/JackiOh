@@ -69,14 +69,14 @@ mod tests {
         fn r4591003_it_returns_the_damage_it_took() {
             let mut s = board(false, ATTACKER);
             s.play(ID, json!({ "zone": 1 }));
-            s.expect_stats(&s.unit_at(P1, 1), json!({ "attack": 2, "health": 8 }));
+            s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 2, "health": 8 }));
             s.end_turn();
             let attacker = s.unit_at(P2, 1);
             let mirror = s.unit_at(P1, 1);
             s.attack(&attacker, &mirror);
             // 3 lands on the 2/8; the strike-back 2 and the returned 3: 10 - 2 - 3.
-            s.expect_stats(&s.unit_at(P2, 1), json!({ "attack": 3, "health": 5 }));
-            s.expect_stats(&s.unit_at(P1, 1), json!({ "attack": 2, "health": 5 }));
+            s.expect_stats(s.unit_at(P2, 1), json!({ "attack": 3, "health": 5 }));
+            s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 2, "health": 5 }));
         }
 
         #[test]
@@ -100,14 +100,14 @@ mod tests {
         fn it_returns_twice_the_damage_it_took() {
             let mut s = board(true, ATTACKER);
             s.play(ID, json!({ "zone": 1 }));
-            s.expect_stats(&s.unit_at(P1, 1), json!({ "attack": 4, "health": 16 }));
+            s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 4, "health": 16 }));
             s.end_turn();
             let attacker = s.unit_at(P2, 1);
             let mirror = s.unit_at(P1, 1);
             s.attack(&attacker, &mirror);
             // 3 lands on the 4/16; the strike-back 4 and twice 3: 10 - 4 - 6.
             s.expect_in_zone(&attacker, "graveyard");
-            s.expect_stats(&s.unit_at(P1, 1), json!({ "attack": 4, "health": 13 }));
+            s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 4, "health": 13 }));
         }
     }
 }

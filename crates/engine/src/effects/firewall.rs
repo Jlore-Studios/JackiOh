@@ -152,7 +152,7 @@ pub fn attackers_this_turn(state: &GameState, player: PlayerId) -> Vec<String> {
         .clone()
         .unwrap_or_default();
     for unit in active_units_of(state, player) {
-        if unit.exertion.attacked && !attackers.iter().any(|id| *id == unit.id) {
+        if unit.exertion.attacked && !attackers.contains(&unit.id) {
             attackers.push(unit.id.clone());
         }
     }
@@ -171,7 +171,7 @@ pub fn attack_limit_refusal(state: &GameState, attacker: &CardInstance) -> Resul
         return Ok(());
     };
     let attackers = attackers_this_turn(state, attacker.controller);
-    if attackers.iter().any(|id| *id == attacker.id) {
+    if attackers.contains(&attacker.id) {
         return Ok(());
     }
     if attackers.len() as i32 >= limit {
@@ -188,7 +188,7 @@ pub fn note_limited_attacker(state: &mut GameState, attacker: &CardInstance) {
     }
     let log = &mut state.players[attacker.controller].turn_log;
     let attackers = log.attackers.get_or_insert_with(Vec::new);
-    if !attackers.iter().any(|id| *id == attacker.id) {
+    if !attackers.contains(&attacker.id) {
         attackers.push(attacker.id.clone());
     }
 }

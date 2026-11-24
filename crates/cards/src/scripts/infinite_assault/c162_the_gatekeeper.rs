@@ -87,7 +87,7 @@ mod tests {
             let keeper = s.unit_at(P1, 2);
             s.attack(&attacker, &keeper);
             // The 2/2 pops nothing through the 5/9; the keeper stands at 9 - 2.
-            s.expect_stats(&s.unit_at(P1, 2), json!({ "attack": 5, "health": 7 }));
+            s.expect_stats(s.unit_at(P1, 2), json!({ "attack": 5, "health": 7 }));
             assert_eq!(armor(&s), 3);
         }
 
@@ -133,7 +133,7 @@ mod tests {
         fn after_this_survives_an_attack_your_hero_gains_6_armor() {
             let mut s = board(true);
             s.play(ID, json!({ "zone": 2 }));
-            s.expect_stats(&s.unit_at(P1, 2), json!({ "attack": 10, "health": 18 }));
+            s.expect_stats(s.unit_at(P1, 2), json!({ "attack": 10, "health": 18 }));
             s.end_turn();
             let attacker = s.unit_at(P2, 1);
             let keeper = s.unit_at(P1, 2);

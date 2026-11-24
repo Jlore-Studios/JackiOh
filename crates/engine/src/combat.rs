@@ -2377,8 +2377,7 @@ fn close_combat(
         target,
         forced,
         since,
-        from,
-        fought_from,
+        fought_from..from,
     );
     if !allies.holders.is_empty() && sink.state.result.is_none() {
         if is_paused(sink) {
@@ -2390,11 +2389,12 @@ fn close_combat(
 }
 
 /// R4591003 (IA #156 Mirror Firewall): the damage the defender took in its combat — the sum of the
-/// `Damage` amounts this combat's window landed on it, after Armor (0 when Divine Shield took the
-/// hit, which lands no `Damage`). `None` when nothing landed, so a combat with no such hit owes no
-/// new JSON (D14).
-fn damage_taken_in(sink: &EngineSink<'_>, defender_id: &str, fought_from: usize, from: usize) -> Option<i32> {
-    let taken: i32 = sink.events[fought_from.min(sink.events.len())..from.min(sink.events.len())]
+/// `Damage` amounts the combat's `window` of events (its fight, before the closing check) landed on
+/// it, after Armor (0 when Divine Shield took the hit, which lands no `Damage`). `None` when nothing
+/// landed, so a combat with no such hit owes no new JSON (D14).
+fn damage_taken_in(sink: &EngineSink<'_>, defender_id: &str, window: &std::ops::Range<usize>) -> Option<i32> {
+    let end = window.end.min(sink.events.len());
+    let taken: i32 = sink.events[window.start.min(end)..end]
         .iter()
         .filter_map(|event| match event {
             GameEvent::Damage {
@@ -2407,6 +2407,8 @@ fn damage_taken_in(sink: &EngineSink<'_>, defender_id: &str, fought_from: usize,
 }
 
 /// MD-C26: the attacker's `afterAttack`, then the defender's `afterAttacked`, each when it has one.
+/// `fought` is the combat's window of events: from its fight (R4591003) to its closing check, whose
+/// events follow it.
 fn combatant_hooks(
     sink: &mut EngineSink<'_>,
     snapshot: CardInstance,
@@ -2414,9 +2416,9 @@ fn combatant_hooks(
     target: &AttackTarget,
     forced: bool,
     since: u32,
-    from: usize,
-    fought_from: usize,
+    fought: std::ops::Range<usize>,
 ) {
+    let from = fought.end;
     let attacker_id = snapshot.id.clone();
     let hooked = crate::scripts::script_of(sink.state, &snapshot)
         .after_attack
@@ -2458,7 +2460,11 @@ fn combatant_hooks(
             .after_attacked
             .is_some()
     {
-        let damage_taken = damage_taken_in(sink, &defender.id, fought_from, from);
+        // R4591003: named only in a game holding an Infinite Assault card (`recursion_log::kept`), as
+        // IA #156 reads it, so no other game's owed hook or its data moves (D14).
+        let damage_taken = crate::recursion_log::kept(sink.state)
+            .then(|| damage_taken_in(sink, &defender.id, &fought))
+            .flatten();
         let owed = OwedAfterAttacked {
             defender_id: defender.id.clone(),
             attacker_id,

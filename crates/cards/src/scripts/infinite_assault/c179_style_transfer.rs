@@ -30,13 +30,13 @@ fn style_transfer(radiant: bool) -> Script {
             let mut ally = None;
             let mut enemy = None;
             for t in &ctx.targets {
-                if let Selection::Instance { instance_id } = t {
-                    if let Some(card) = find_instance(ctx.state, instance_id) {
-                        if card.controller == ctx.controller {
-                            ally = Some(instance_id.clone());
-                        } else {
-                            enemy = Some(instance_id.clone());
-                        }
+                if let Selection::Instance { instance_id } = t
+                    && let Some(card) = find_instance(ctx.state, instance_id)
+                {
+                    if card.controller == ctx.controller {
+                        ally = Some(instance_id.clone());
+                    } else {
+                        enemy = Some(instance_id.clone());
                     }
                 }
             }

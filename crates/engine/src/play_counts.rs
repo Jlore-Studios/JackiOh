@@ -57,9 +57,12 @@ pub fn record_play(state: &mut GameState, player: PlayerId, card: &CardInstance)
     let type_ = card_type_of(state, card);
     // MD-B15, R923: a play is counted by the tags the card had as it was played, granted ones included.
     let tags: Vec<Tag> = crate::query::tags_of(state, card);
-    // R4593000: the played card's single-player set, if it names one (held ones included).
-    let set = crate::catalog::find_def(Some(&*state), &card.def_id)
-        .map(|def| def.set)
+    // R4593000: the played card's single-player set, if it names one (held ones included), counted
+    // only in a game holding an Infinite Assault card (`recursion_log::kept`, R4589000), so no other
+    // game's state moves: a Boss fight's plays write nothing.
+    let set = crate::recursion_log::kept(state)
+        .then(|| crate::catalog::find_def(Some(&*state), &card.def_id).map(|def| def.set))
+        .flatten()
         .filter(|set| SINGLE_PLAYER_SETS.contains(set) || HELD_SINGLE_PLAYER_SETS.contains(set));
 
     {

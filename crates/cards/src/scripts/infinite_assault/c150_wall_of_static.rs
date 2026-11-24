@@ -67,13 +67,13 @@ mod tests {
         fn a_3_10_taunt_that_cannot_attack_and_strikes_back_only() {
             let mut s = board(false);
             s.play(ID, json!({ "zone": 1 }));
-            s.expect_stats(&s.unit_at(P1, 1), json!({ "attack": 3, "health": 10 }));
+            s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 3, "health": 10 }));
             s.end_turn();
             let attacker = s.unit_at(P2, 1);
             let wall = s.unit_at(P1, 1);
             s.attack(&attacker, &wall);
             // Only the wall's own 3 strike-back: 10 - 3.
-            s.expect_stats(&s.unit_at(P2, 1), json!({ "attack": 4, "health": 7 }));
+            s.expect_stats(s.unit_at(P2, 1), json!({ "attack": 4, "health": 7 }));
             let wall = s.unit_at(P1, 1);
             s.expect_refused(|s| s.attack(&wall, &attacker));
         }
@@ -86,13 +86,13 @@ mod tests {
         fn after_this_is_attacked_deal_2_damage_to_the_attacker() {
             let mut s = board(true);
             s.play(ID, json!({ "zone": 1 }));
-            s.expect_stats(&s.unit_at(P1, 1), json!({ "attack": 6, "health": 20 }));
+            s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 6, "health": 20 }));
             s.end_turn();
             let attacker = s.unit_at(P2, 1);
             let wall = s.unit_at(P1, 1);
             s.attack(&attacker, &wall);
             // The wall's 6 strike-back and the hook's 2: 10 - 8.
-            s.expect_stats(&s.unit_at(P2, 1), json!({ "attack": 4, "health": 2 }));
+            s.expect_stats(s.unit_at(P2, 1), json!({ "attack": 4, "health": 2 }));
         }
     }
 }

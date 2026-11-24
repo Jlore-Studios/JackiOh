@@ -100,7 +100,7 @@ mod tests {
             let mut s = set(false, 2, "emergence-quiet");
             s.end_turn();
             assert_eq!(stats(&s, 1), (4, 4));
-            assert!(is_face_down(s.state(), &s.card(ID)), "still set");
+            assert!(is_face_down(s.state(), s.card(ID)), "still set");
         }
     }
 

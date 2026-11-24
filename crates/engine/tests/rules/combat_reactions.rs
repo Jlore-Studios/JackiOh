@@ -1060,7 +1060,7 @@ mod r4589006_a_reset_that_keeps_its_card_standing {
         s.end_turn();
         s.end_turn();
         assert_eq!(id_at(&s, P1, 2), lich, "the Lich never left its zone");
-        assert_eq!(s.card(&id_at(&s, P1, 1)).def_id, PLAIN, "its snapshot is back");
+        assert_eq!(s.card(id_at(&s, P1, 1)).def_id, PLAIN, "its snapshot is back");
         assert!(
             s.card(&lich).memory.contains_key(effects::SIDE_SNAPSHOT_KEY),
             "its note is kept, so it may reset again later"
@@ -1081,7 +1081,7 @@ mod r4589006_a_reset_that_keeps_its_card_standing {
         s.end_turn();
         s.end_turn();
         assert_eq!(id_at(&s, P1, 2), lich);
-        assert_eq!(s.card(&id_at(&s, P1, 1)).def_id, PLAIN);
+        assert_eq!(s.card(id_at(&s, P1, 1)).def_id, PLAIN);
         assert!(
             s.pile(P1, "graveyard").iter().any(|card| card.def_id == PLAIN),
             "the extra stays dead: nothing reset"

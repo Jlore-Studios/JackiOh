@@ -97,7 +97,7 @@ mod tests {
             for lane in 1..=2 {
                 let unit = s.unit_at(P1, lane);
                 s.expect_stats(&unit, json!({ "attack": 2, "health": 6 }));
-                assert!(defended(&s, &s.card(unit.id.as_str())));
+                assert!(defended(&s, s.card(unit.id.as_str())));
             }
             // The enemy's Units stand as they stood.
             assert_eq!(s.unit_at(P2, 1).position, enemy_stood);
@@ -114,7 +114,7 @@ mod tests {
             for lane in 1..=2 {
                 let unit = s.unit_at(P1, lane);
                 s.expect_stats(&unit, json!({ "attack": 2, "health": 10 }));
-                assert!(defended(&s, &s.card(unit.id.as_str())));
+                assert!(defended(&s, s.card(unit.id.as_str())));
             }
         }
     }

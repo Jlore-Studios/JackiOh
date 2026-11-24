@@ -107,7 +107,7 @@ mod tests {
             // Three attacks into the limiter's strike-back; each 1/1 dies.
             for lane in 1..=3 {
                 let attacker = s.unit_at(P2, lane);
-                s.attack(&attacker, &s.unit_at(P1, 1));
+                s.attack(&attacker, s.unit_at(P1, 1));
             }
             assert!(s.unit(P2, 3).is_none(), "the third attacker died");
             assert_eq!(attacks(&s, P2).len(), 0, "the dead attacker still counts");

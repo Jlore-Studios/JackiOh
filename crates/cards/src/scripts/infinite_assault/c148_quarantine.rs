@@ -110,8 +110,8 @@ mod tests {
             s.attack(&attacker, &target);
             assert!(fired(&s));
             assert!(canceled(&s));
-            s.expect_stats(&s.unit_at(P2, 1), json!({ "attack": 1, "health": 3 }));
-            s.expect_stats(&s.unit_at(P1, 1), json!({ "health": 5 }));
+            s.expect_stats(s.unit_at(P2, 1), json!({ "attack": 1, "health": 3 }));
+            s.expect_stats(s.unit_at(P1, 1), json!({ "health": 5 }));
             assert!(s.card(attacker.id.as_str()).frozen.is_none());
             s.expect_in_zone(QUARANTINE, "graveyard");
         }
@@ -132,10 +132,10 @@ mod tests {
             let attacker = s.unit_at(P2, 1);
             let target = s.unit_at(P1, 1);
             s.attack(&attacker, &target);
-            s.expect_stats(&s.unit_at(P2, 1), json!({ "attack": 1 }));
+            s.expect_stats(s.unit_at(P2, 1), json!({ "attack": 1 }));
             s.end_turn();
             s.end_turn();
-            s.expect_stats(&s.unit_at(P2, 1), json!({ "attack": 3 }));
+            s.expect_stats(s.unit_at(P2, 1), json!({ "attack": 3 }));
         }
 
         #[test]
@@ -176,7 +176,7 @@ mod tests {
             s.attack(&attacker, &target);
             assert!(fired(&s));
             assert!(canceled(&s));
-            s.expect_stats(&s.unit_at(P2, 1), json!({ "attack": 1, "health": 3 }));
+            s.expect_stats(s.unit_at(P2, 1), json!({ "attack": 1, "health": 3 }));
             assert!(s.card(attacker.id.as_str()).frozen.is_some(), "the attacker is Frozen");
         }
     }

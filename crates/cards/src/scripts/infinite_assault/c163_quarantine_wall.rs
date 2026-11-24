@@ -67,7 +67,7 @@ mod tests {
         fn a_0_20_taunt_whose_turn_start_gains_3_armor() {
             let mut s = board(false);
             s.play(ID, json!({ "zone": 1 }));
-            s.expect_stats(&s.unit_at(P1, 1), json!({ "attack": 0, "health": 20 }));
+            s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 0, "health": 20 }));
             assert_eq!(armor(&s), 0);
             s.end_turn();
             s.end_turn();
@@ -82,7 +82,7 @@ mod tests {
         fn a_0_40_taunt_whose_turn_start_gains_6_armor() {
             let mut s = board(true);
             s.play(ID, json!({ "zone": 1 }));
-            s.expect_stats(&s.unit_at(P1, 1), json!({ "attack": 0, "health": 40 }));
+            s.expect_stats(s.unit_at(P1, 1), json!({ "attack": 0, "health": 40 }));
             s.end_turn();
             s.end_turn();
             assert_eq!(armor(&s), 6);
