@@ -5,6 +5,9 @@
 //! 2. Best-first walk ordered by `ready_gap` (enemy hero life including Duos pool R964000 less ready attacks).
 //!
 //! Proved lines are verified across all determinizations and trimmed (`trim_lethal`, R1965000).
+//!
+//! R4788000: a decision whose allowance was scaled down hands the walk a reach past it
+//! (`find_lethal_reaching`), spent only from a position that already reads as lethal and on a won line's proof.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::rc::Rc;
@@ -291,7 +294,17 @@ fn next_open(open: &[Open]) -> usize {
 }
 
 /// Stage 2: best-first by `ready_gap`, each expansion simulating its first AI_SEARCH.lethalWidth moves.
-fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter, prices: &Prices) -> Walk {
+/// R4788000: `near` is the walk's allowance. Once it is spent the walk goes on only from a position whose
+/// ready attacks already reach lethal (`ready_gap` at or under 0), on `far`, which also pays for every
+/// proof of a line that won on determinization 0 (`find_lethal_reaching`). With `far` no wider than `near`
+/// the walk stops where `near` does.
+fn best_first(
+    dets: &[GameState],
+    seat: PlayerId,
+    near: &dyn NodeCounter,
+    far: &dyn NodeCounter,
+    prices: &Prices,
+) -> Walk {
     let Some(root) = dets.first() else {
         return Walk::Exhausted;
     };
@@ -305,19 +318,30 @@ fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter, pri
     }];
     let mut order: u32 = 1;
 
+    let mut near_spent = false;
     while !open.is_empty() {
         let node = open.remove(next_open(&open));
+        // `next_open` takes the smallest gap first: when this one does not reach, none left does.
+        let reaches = node.gap <= 0.0;
+        if near_spent && !reaches {
+            return Walk::Cut;
+        }
+        let counter = if reaches { far } else { near };
         let width = AI_SEARCH.lethal_width.max(0) as usize;
         for action in lethal_moves(&node.state, seat, prices).into_iter().take(width) {
             let next = match simulate(&node.state, seat, &action, counter, prices) {
-                None => return Walk::Cut,
+                None if reaches => return Walk::Cut,
+                None => {
+                    // The allowance is spent: the children this expansion already made may still reach.
+                    near_spent = true;
+                    break;
+                }
                 Some(Err(_)) => continue,
                 Some(Ok(next)) => next,
             };
             let mut line = node.line.clone();
             line.push(action);
-            let Some(verdict) = judge(dets, seat, &line, &next, root.turn, &mut visited, counter, prices)
-            else {
+            let Some(verdict) = judge(dets, seat, &line, &next, root.turn, &mut visited, far, prices) else {
                 return Walk::Cut;
             };
             match verdict {
@@ -367,6 +391,48 @@ pub fn find_lethal_with_quick_nodes(
     quick_nodes: usize,
     prices: &Prices,
 ) -> Option<Vec<ActionBody>> {
+    walks(dets, seat, counter, limit, counter, limit, quick_nodes, prices)
+}
+
+/// R4788000: `find_lethal` for a decision whose allowance was scaled down (decide.rs `scaled_budget`): it spends at
+/// most `limit` nodes of `counter`, and past them goes on, up to `reach` nodes in all and on `beyond`'s
+/// nodes, only while the best-first walk stands at a position whose ready attacks already reach lethal
+/// (`ready_gap` at or under 0) or proves on the other determinizations a line that won on the first. With
+/// `reach` at or under `limit` it is `find_lethal` on `counter`, node for node.
+pub fn find_lethal_reaching(
+    dets: &[GameState],
+    seat: PlayerId,
+    counter: &dyn NodeCounter,
+    limit: usize,
+    beyond: &dyn NodeCounter,
+    reach: usize,
+    prices: &Prices,
+) -> Option<Vec<ActionBody>> {
+    walks(
+        dets,
+        seat,
+        counter,
+        limit,
+        beyond,
+        reach,
+        AI_SEARCH.lethal_quick_nodes as usize,
+        prices,
+    )
+}
+
+/// Both walks: the depth-first one on `quick_nodes` of `limit`, then the best-first one on the rest of
+/// `limit`, drawn from `counter`, and past it on what `reach` leaves of `beyond` (`best_first`).
+#[allow(clippy::too_many_arguments)]
+fn walks(
+    dets: &[GameState],
+    seat: PlayerId,
+    counter: &dyn NodeCounter,
+    limit: usize,
+    beyond: &dyn NodeCounter,
+    reach: usize,
+    quick_nodes: usize,
+    prices: &Prices,
+) -> Option<Vec<ActionBody>> {
     let root = dets.first()?;
     // R2201000: there is no lethal on a seat that cannot lose, so nothing is searched for one.
     if limit == 0 || !can_lose(root, seat.opponent()) {
@@ -390,13 +456,19 @@ pub fn find_lethal_with_quick_nodes(
         return None;
     }
 
-    let left = limit.saturating_sub(counter.used() - start);
+    let spent = counter.used() - start;
+    let left = limit.saturating_sub(spent);
     if left == 0 {
         return None;
     }
     let second = {
         let rest = create_sub_counter(counter, left);
-        best_first(dets, seat, &rest, prices)
+        if reach > limit {
+            let far = create_sub_counter(beyond, reach.saturating_sub(spent));
+            best_first(dets, seat, &rest, &far, prices)
+        } else {
+            best_first(dets, seat, &rest, &rest, prices)
+        }
     };
     match second {
         Walk::Line(line) => Some(line),
