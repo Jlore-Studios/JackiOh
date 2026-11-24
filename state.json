@@ -41612,16 +41612,7 @@
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {
-      "1": {
-        "area": "server",
-        "count": 5,
-        "last_run": "2026-11-24T05:43:17Z",
-        "provider": "agy",
-        "run_id": "45335288250",
-        "taken_asks": []
-      }
-    },
+    "running": {},
     "taken_asks": []
   },
   "usage": null,
