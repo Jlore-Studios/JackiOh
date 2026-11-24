@@ -622,29 +622,11 @@
       ]
     },
     {
-      "id": "End the turn",
-      "label": "End the turn",
-      "rule": "The turn ends from an effect",
-      "section": "§6.3",
-      "aliases": [
-        "end the turn"
-      ]
-    },
-    {
       "id": "Trigger a Cry",
       "label": "Trigger a Cry",
       "rule": "Run a unit's Cry again",
       "section": "§6.3",
       "aliases": []
-    },
-    {
-      "id": "Look at a hand",
-      "label": "Look at a hand",
-      "rule": "See the opponent's hand in a prompt",
-      "section": "§6.3",
-      "aliases": [
-        "Look at your opponent's hand"
-      ]
     },
     {
       "id": "Allure",
@@ -701,15 +683,6 @@
         "exile",
         "exiles",
         "exiled"
-      ]
-    },
-    {
-      "id": "Hand size",
-      "label": "Hand size",
-      "rule": "How many cards a hand holds, set for the rest of the game",
-      "section": "§6.3",
-      "aliases": [
-        "hand size"
       ]
     },
     {

@@ -10,10 +10,10 @@ export function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
 }
 
-/** Issue #4015: outside keys that must never become object keys (prototype pollution). */
-const UNSAFE_KEYS: ReadonlySet<string> = new Set(["__proto__", "constructor", "prototype"]);
-
-/** Issue #4015: false for a key parsed from outside that must never become an object key. */
+/**
+ * Issue #4015: false for a key parsed from outside that must never become an object key (prototype
+ * pollution): `__proto__`, `constructor` and `prototype`.
+ */
 export function isSafeKey(key: string): boolean {
-  return !UNSAFE_KEYS.has(key);
+  return key !== "__proto__" && key !== "constructor" && key !== "prototype";
 }

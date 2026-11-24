@@ -9,7 +9,8 @@
 //!            Activate: Discard a Thorium to skip the blow up chance this turn."
 //!
 //! Start of its controller's turn (R62): temporary mana and a draw (as S T-red-narcor's). End of its
-//! controller's turn: a `chance`% roll from the game's Rng — Lucky and Luck rerolling toward a miss
+//! controller's turn: a `chance`% roll (12 since issue #4440, 15 before it, catalog data) from the game's
+//! Rng — Lucky and Luck rerolling toward a miss
 //! (R3556005) — and on a hit `damage` to its controller's hero, then it destroys itself ("blow up").
 //! The Activate discards a chosen #48 Thorium from hand (an existing `choose_from_hand` prompt, as
 //! S+ #29 Grinder Veteran's) to skip this turn's roll. With no Thorium in hand it is not offered.
@@ -194,8 +195,21 @@ mod tests {
             assert_eq!(s.hand(P1).len(), 3, "the natural draw and the Reactor's draw");
         }
 
+        /// Issue #4440: the chance is 12% on both faces, from 15%.
         #[test]
-        fn r3556005_about_fifteen_percent_of_ends_blow_up() {
+        fn issue_4440_both_faces_declare_a_12_percent_chance() {
+            let def = crate::card_def(ID);
+            let chance = def
+                .params
+                .iter()
+                .flatten()
+                .find(|param| param.key == "chance")
+                .expect("the Reactor declares its chance");
+            assert_eq!((chance.base, chance.radiant), (12, 12));
+        }
+
+        #[test]
+        fn r3556005_about_twelve_percent_of_ends_blow_up() {
             let mut blown = 0;
             for n in 0..200 {
                 let mut s = reactor_only(false, &format!("s55-blow-{n}"));

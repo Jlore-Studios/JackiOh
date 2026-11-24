@@ -2,7 +2,7 @@
 //!   Base:    "Stack / Aura: Spells cost ({surcharge}) more." (1)
 //!   Radiant: "Stack / Aura: Spells cost ({surcharge}) more." (2)
 //!   Engine:  "Cost (§6.3, R65) on both players' Spells (the Spell type, not Field Spells) where a play
-//!            takes them from (a hand, or a graveyard a permission lets its owner play from, §6.3 Play),
+//!            takes them from (a hand, or a graveyard a permission lets its owner play from, §10.5),
 //!            as a price for a play; a cast pays nothing (R70). Tunes: surcharge 1 ↑ (Radiant 2)."
 //!
 //! The aura is B5 E15's price rule (`Script.costAura`): a flat rung of the declared surcharge

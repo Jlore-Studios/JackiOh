@@ -390,6 +390,9 @@ const RARE_CARDS: readonly (readonly [string, Archetype, ParticleKind])[] = [
   ["stinkyscapeplus-155", "spell", "bubble"], // The Far Vagabond
   ["stinkyscapeplus-157", "unit", "bubble"], // Phantom Shipyard
   ["stinkyscapeplus-160", "unit", "bubble"], // Icarus
+  // R4577009: the held Infinite Assault set's two Legendaries, after every earlier entry so none of theirs moves.
+  ["infiniteassault-023", "unit", "ember"], // The Generator
+  ["infiniteassault-024", "spell", "bubble"], // Mass Deployment
 ];
 
 const RARE_ART_MOTION: Readonly<Record<string, ArtMotion>> = Object.fromEntries(

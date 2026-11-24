@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { manualClock, type ManualClock } from "../game/deckbuilder/testkit.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
-import { setReducedMotion } from "../test/setup.ts";
+import { resetVisibility, setReducedMotion, setVisibility } from "../test/setup.ts";
 import { UNDO_REPEAT_MS, UNDO_WINDOW_MS, useUndoHold, type HeldDeletion, type UndoTimer } from "./hold.ts";
 import { UNDO_TOAST, UNDO_TOAST_UNDO, UndoToast } from "./UndoToast.tsx";
 
@@ -153,6 +153,40 @@ describe("R2119000 the undo hold", () => {
     expect(clock.pending()).toBe(0);
   });
 
+  // #4550, docs/implicit-states.md §15 U11.
+  it("R2119000 the page going hidden and then pagehide, as a closing tab fires them, send it once", async () => {
+    const { log, tick } = mount();
+    fireEvent.click(screen.getByText("first"));
+    try {
+      act(() => {
+        setVisibility("hidden");
+      });
+    } finally {
+      resetVisibility();
+    }
+    act(() => {
+      window.dispatchEvent(new Event("pagehide"));
+    });
+    await tick(UNDO_WINDOW_MS * 2);
+    expect(log).toEqual(["send first true"]);
+  });
+
+  // #4550, docs/implicit-states.md §15 U13.
+  it("R2119000 leaving the screen after Undo, or after the window's end, sends nothing more", async () => {
+    const undone = mount();
+    fireEvent.click(screen.getByText("first"));
+    fireEvent.click(screen.getByTestId(UNDO_TOAST_UNDO));
+    undone.unmount();
+    expect(undone.log).toEqual(["restore first"]);
+
+    const sent = mount();
+    fireEvent.click(screen.getByText("first"));
+    await sent.tick(UNDO_WINDOW_MS);
+    sent.unmount();
+    expect(sent.log).toEqual(["send first false"]);
+    expect(sent.clock.pending()).toBe(0);
+  });
+
   it("R2119000 the toast is a status that takes no focus, and its Undo is reached and pressed by keyboard", async () => {
     const { log } = mount();
     const user = userEvent.setup();
@@ -249,6 +283,19 @@ describe("R3059000 a double click", () => {
     expect(clock.pending(), "the guard's timer is gone with the hold's").toBe(0);
     fireEvent.click(screen.getByText("second"));
     expect(log).toEqual(["restore first"]);
+    expect(screen.getByTestId(UNDO_TOAST)).toHaveTextContent("second deleted · Undo");
+  });
+
+  // #4550, docs/implicit-states.md §15 U9.
+  it("R3059000 a send at once ends the guard, so a deletion right after it is taken", () => {
+    const { log, clock } = mount();
+    fireEvent.click(screen.getByText("first"));
+    fireEvent.click(screen.getByText("now"));
+    expect(log).toEqual(["send first false"]);
+    expect(screen.queryByTestId(UNDO_TOAST)).toBeNull();
+    expect(clock.pending(), "the guard's timer is gone with the hold's").toBe(0);
+    fireEvent.click(screen.getByText("second"));
+    expect(log).toEqual(["send first false"]);
     expect(screen.getByTestId(UNDO_TOAST)).toHaveTextContent("second deleted · Undo");
   });
 });

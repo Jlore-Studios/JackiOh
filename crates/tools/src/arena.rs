@@ -147,6 +147,11 @@ pub struct Args {
     /// Needs `--set improve-dev`; the candidate is probed at full skill, so `--a-skill` stays 1.
     #[arg(long)]
     pub forks: bool,
+    /// R4607000: the fork screen's save file: without it the screen behaves as today; with it
+    /// each finished deal is appended as one JSON line (after one header line) as soon as it is
+    /// done, and running the same command again plays only the deals still missing.
+    #[arg(long)]
+    pub save: Option<PathBuf>,
     /// The directory the game records go to (`<dir>/<date>.jsonl`); default `$JACKIOH_TRAINING_OUT`,
     /// else stdout.
     #[arg(long)]
@@ -1390,8 +1395,9 @@ pub(crate) fn diverged_of(outcomes: &[ArenaOutcome]) -> usize {
         .count()
 }
 
-/// R4319000: whether `--extend` stops with this many decided deals after this many games: at the
-/// floor, or at the cap. The stop looks at how many deals were decided, never which way they went.
+/// R4319000, R4397000: whether `--extend` stops with this many decided deals (or live forks) after
+/// this many games: at the floor, or at the cap. The stop looks at how many deals were decided (or
+/// forks are live), never which way they went.
 pub(crate) fn screen_done(decided: usize, games: i32) -> bool {
     decided >= SCREEN_MIN_DECIDED || games >= SCREEN_MAX_GAMES
 }
@@ -1452,6 +1458,9 @@ pub(crate) fn records_of(outcomes: &[ArenaOutcome]) -> anyhow::Result<Vec<GameRe
 }
 
 pub fn run(args: Args) -> anyhow::Result<()> {
+    if args.save.is_some() && !args.forks {
+        bail!("arena: --save resumes only the fork screen, so it needs --forks");
+    }
     if args.forks {
         return crate::fork_screen::run(args);
     }
@@ -1784,6 +1793,7 @@ mod tests {
             paired,
             extend,
             forks: false,
+            save: None,
             out: None,
             a_skill: AI_SKILL_MAX,
             b_skill: AI_SKILL_MAX,
@@ -1834,6 +1844,14 @@ mod tests {
                 "{seed}"
             );
         }
+    }
+
+    #[test]
+    fn r4607000_save_needs_forks() {
+        let mut args = screen(Some("save-try-1"), None, Some(60), false, false);
+        args.save = Some(PathBuf::from("save.jsonl"));
+        let refused = run(args).unwrap_err();
+        assert!(refused.to_string().contains("--forks"), "{refused}");
     }
 
     #[test]

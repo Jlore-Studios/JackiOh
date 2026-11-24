@@ -3079,7 +3079,8 @@ store_union! {
 /// §9.13: a daily game beside its match (`public.daily_games`): the accounts at p1 and p2 as the
 /// game began (seat order, like `MatchRow.players`), its mode (`bo1` or `random`) and days per
 /// move, its clock and its public board, the earliest deadline its clock holds, and when it began
-/// and ended. Running while `ended_at` is `None`.
+/// and ended. Running while `ended_at` is `None`. A seat whose account was deleted after the game
+/// ended reads back as the empty id in both stores (migration 0100, R4621000).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct DailyGameRow {

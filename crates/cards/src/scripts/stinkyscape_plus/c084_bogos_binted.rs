@@ -1,4 +1,5 @@
-//! SPEC §8.12 S+ #84 Bogos Binted, a card of the Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #84 Bogos Binted, (2) since issue #4440 ((3) before it, catalog data), a card of the
+//! Stinkyscape+ set (R1420, R3535000).
 //!   Base:    5/6; "Cry: Take a snapshot of all your other permanents. Death: Reset your board
 //!            to that state."
 //!   Radiant: 10/12; "Cry:" the same; "Death: Reset your board to that state but they're Radiant."
@@ -44,6 +45,19 @@ mod tests {
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     /// Hit Job: Destroy target Unit.
     const HIT_JOB: &str = "core-016"; // Hit Job
+
+    /// Issue #4440: it costs (2) on both faces, from (3).
+    #[test]
+    fn issue_4440_it_costs_2_on_both_faces() {
+        for radiant in [false, true] {
+            let mut s = weapon_board(
+                "s084-cost",
+                json!({ "hand": [{ "def": ID, "radiant": radiant }], "library": filler(4) }),
+                json!({}),
+            );
+            crate::expect_costs(&mut s, ID, 2, json!({}));
+        }
+    }
 
     /// Kills `id` with a Hit Job, so its Death resolves.
     fn hit_job(s: &mut Scenario, id: &str) {

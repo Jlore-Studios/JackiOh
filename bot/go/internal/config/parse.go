@@ -197,6 +197,24 @@ func areas(raw any) []SuggestionArea {
 	return out
 }
 
+// autoApprove is `suggestions.auto_approve`: an object whose keys are all optional.
+func autoApprove(raw any) AutoApprove {
+	o, ok := raw.(*pyjson.Object)
+	if !ok {
+		raiseConfig("suggestions.auto_approve: expected an object")
+	}
+	out := AutoApprove{
+		Enabled:   pyjson.Truthy(o.GetOr("enabled", false)),
+		WaitHours: py.MustInt(o.GetOr("wait_hours", 24)),
+		PerDay:    py.MustInt(o.GetOr("per_day", 3)),
+		Window:    py.MustInt(o.GetOr("window", 100)),
+	}
+	if out.WaitHours < 0 || out.PerDay < 0 || out.Window < 0 {
+		raiseConfig("suggestions.auto_approve: wait_hours, per_day and window can't be negative")
+	}
+	return out
+}
+
 // priorities is _priorities: `suggestions.priorities`: each key a known class, each value a
 // priority level.
 func priorities(raw any) map[string]string {
@@ -418,6 +436,7 @@ func Parse(raw *pyjson.Object, root string, env map[string]string, pool *provide
 	c.SuggestionsSpareLanes = py.MustInt(suggestions.GetOr("spare_lanes", 3))
 	c.SuggestionPriorities = priorities(suggestions.GetOr("priorities", pyjson.New()))
 	c.SuggestionAreas = areas(suggestions.GetOr("areas", []any{}))
+	c.AutoApprove = autoApprove(suggestions.GetOr("auto_approve", pyjson.New()))
 	c.Quiet = quiet(raw.Get("quiet"))
 	c.ForbiddenPaths = mustStrs(raw.Get("forbidden_paths"))
 	c.ReviewPaths = mustStrs(raw.Get("review_paths"))

@@ -4025,6 +4025,110 @@
       attack: { voice: "robot" },
       death: { voice: "robot" },
     },
+    "infiniteassault-001": { // Seed Drone
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "infiniteassault-002": { // Scrap Prototype
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "infiniteassault-003": { // Assault Trooper
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "infiniteassault-004": { // Wave Spawner
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "infiniteassault-004-1": { // Drone
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "infiniteassault-005": { // Generated Filler
+      cast: { voice: "sapi-synth" },
+    },
+    "infiniteassault-006": { // Hotfix
+      cast: { voice: "sapi-synth" },
+    },
+    "infiniteassault-007": { // Bulk Order
+      cast: { voice: "sapi-synth" },
+    },
+    "infiniteassault-008": { // Firing Solution
+      cast: { voice: "sapi-synth" },
+    },
+    "infiniteassault-009": { // Heavy Lifter Mk.II
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "infiniteassault-010": { // Assault Carrier
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "infiniteassault-010-1": { // Drone Escort
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "infiniteassault-011": { // Quickgen Turret
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "infiniteassault-012": { // Recompile
+      cast: { voice: "sapi-synth" },
+    },
+    "infiniteassault-013": { // Training Run
+      cast: { voice: "sapi-synth" },
+    },
+    "infiniteassault-014": { // Overflow Error
+      cast: { voice: "sapi-synth" },
+    },
+    "infiniteassault-015": { // Drone Foundry
+      cast: { voice: "sapi-synth" },
+    },
+    "infiniteassault-016": { // Benchmark Run
+      cast: { voice: "sapi-synth" },
+    },
+    "infiniteassault-017": { // Cluster Drone
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "infiniteassault-018": { // Prompt Engineer
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "infiniteassault-019": { // Infinite Scroll
+      cast: { voice: "sapi-synth" },
+    },
+    "infiniteassault-020": { // Synthetic Data
+      cast: { voice: "sapi-synth" },
+    },
+    "infiniteassault-021": { // Endless Production Line
+      cast: { voice: "sapi-synth" },
+    },
+    "infiniteassault-022": { // Assault Mainframe
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "infiniteassault-023": { // The Generator
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" },
+    },
+    "infiniteassault-024": { // Mass Deployment
+      cast: { voice: "sapi-synth" },
+    },
   },
   emotes: {
     vanilla: { persona: "plain" },

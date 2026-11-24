@@ -6,8 +6,10 @@
 import { useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
 
+import { boardShownNow } from "../game/boardShown.ts";
 import { reducedMotionNow } from "../settings/motion.ts";
 import { moveOverBackEntry, popBackLayer } from "./backLayers.ts";
+import { fullLoadPage, updateWaiting } from "./update.ts";
 
 const NAVIGATED = "jackioh:navigated";
 
@@ -101,6 +103,12 @@ function showMove(from: string, update: () => void): void {
 }
 
 function go(path: string, replace: boolean): void {
+  // R4605000: with an update waiting the move is a full page load to the target, landing on the
+  // screen asked for up to date; over a board the move stays in place and the load waits.
+  if (updateWaiting() && !boardShownNow()) {
+    fullLoadPage(path, replace);
+    return;
+  }
   const from = currentPath();
   if (!moveOverBackEntry(path, replace)) {
     if (replace) window.history.replaceState(null, "", path);
@@ -277,6 +285,8 @@ export const paths = {
   dungeon: "/dungeon",
   /** #2705: the Sandbox's stats and leaderboards, on the device. */
   dungeonStats: "/dungeon/stats",
+  /** #4581: the daily Infinite Assault, played offline against the AI. */
+  assault: "/assault",
   hotseat: "/dev/hotseat",
   match: (matchId: string): string => `/match/${matchId}`,
   /** R338: a Conquest series between its games. */

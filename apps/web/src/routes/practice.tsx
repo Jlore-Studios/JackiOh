@@ -43,6 +43,7 @@ import { getFxSettings } from "../fx/settings.ts";
 import { t } from "../i18n/i18n.ts";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import { ApiRequestError, ApiUnreachableError, getDecks, getMe, type DecksResponse, type MeResponse } from "../net/api.ts";
+import { BackLayer } from "../net/backLayers.ts";
 import { PRACTICE_EARNING_API, type PracticeEarningApi } from "../net/practice.ts";
 import { readFailureOf, useAccount, type Account } from "../net/gate.ts";
 import { useLiveGame } from "../net/liveGame.ts";
@@ -1060,6 +1061,8 @@ function PracticeScreen({
     );
     return (
       <Shell variant="game">
+        {/* R4619000: Back means the replay's corner arrow; first, so what the replay opens is a layer above it. */}
+        <BackLayer onClose={onLeaveReplay} />
         {lookup === null ? player : <CatalogContext.Provider value={lookup}>{player}</CatalogContext.Provider>}
       </Shell>
     );

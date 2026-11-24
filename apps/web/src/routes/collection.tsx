@@ -47,7 +47,7 @@ import {
 } from "../net/api.ts";
 import { readFailureOf, type ReadFailure } from "../net/gate.ts";
 import { navigate, paths, useSearch } from "../net/navigate.ts";
-import { cachedRead } from "../net/readCache.ts";
+import { cachedRead, subscribeKept } from "../net/readCache.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import { Tabs } from "../tabs/Tabs.tsx";
 import { BackLink } from "./nav.tsx";
@@ -104,6 +104,7 @@ function useRead<T>(
   token: string,
   load: (token: string) => Promise<T>,
   kept: (token: string) => T | undefined,
+  followedPath?: string,
 ): Read<T> {
   // The read is held with the token it belongs to: after an account switch the other account's
   // answer is never drawn, and a failed read keeps only what this account's own cache holds.
@@ -138,6 +139,22 @@ function useRead<T>(
       canceled = true;
     };
   }, [token, load, kept, attempt]);
+
+  // R4568000: while mounted, a read with a path to follow redraws from the kept answer as soon as this
+  // device's own write folds into it. A forgotten answer (undefined) leaves what is drawn alone, and an
+  // identical value (another account's write) redraws nothing.
+  useEffect(() => {
+    if (followedPath === undefined) return undefined;
+    return subscribeKept(followedPath, () => {
+      const next = cachedRead<T>(token, followedPath);
+      if (next === undefined) return;
+      setHeld((previous) => {
+        if (previous.token !== token) return previous;
+        if (previous.read.kind === "ready" && Object.is(previous.read.value, next)) return previous;
+        return { token, read: { kind: "ready", value: next } };
+      });
+    });
+  }, [followedPath, token, kept]);
 
   return held.token === token ? held.read : startOf(kept, token);
 }
@@ -265,7 +282,8 @@ function CardsSection({
 
 /** Issue #3734: the decks as tiles, each with the validator's verdict on it. A collection that cannot be read leaves ownership unknown. */
 function DecksSection({ token }: { token: string }): ReactElement {
-  const decks = useRead(token, getDecks, keptDecks);
+  // R4568000: the decks read follows the kept decks, so a landed save or deletion redraws the tab.
+  const decks = useRead(token, getDecks, keptDecks, keptPaths.decks);
   const cards = useRead(token, getCollection, keptCollection);
   return (
     <div className="collection-body" data-testid={collectionTestid.body}>

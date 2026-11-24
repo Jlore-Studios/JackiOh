@@ -9,7 +9,7 @@
 
 use std::cell::Cell;
 
-use crate::wire::{CATALOG_SETS, SetName};
+use crate::wire::{CATALOG_SETS, HELD_SINGLE_PLAYER_SETS, SetName};
 
 thread_local! {
     static PREVIEWED: Cell<Vec<SetName>> = const { Cell::new(Vec::new()) };
@@ -45,11 +45,17 @@ pub fn preview_sets(sets: &[SetName]) -> PreviewGuard {
     PreviewGuard { before }
 }
 
-/// Previews every set the catalog orders (`CATALOG_SETS`) on this thread until the guard drops: the
-/// fuzz tool's default, so random games reach every card in the catalog (R1420).
+/// Previews every set the catalog orders (`CATALOG_SETS`) and every single-player set held while it
+/// is built (`HELD_SINGLE_PLAYER_SETS`, R4577000) on this thread until the guard drops: the fuzz
+/// tool's default, so random games reach every card in the catalog (R1420).
 #[must_use = "the preview ends when the guard drops"]
 pub fn preview_every_set() -> PreviewGuard {
-    preview_sets(&CATALOG_SETS)
+    let sets: Vec<SetName> = CATALOG_SETS
+        .iter()
+        .chain(HELD_SINGLE_PLAYER_SETS.iter())
+        .copied()
+        .collect();
+    preview_sets(&sets)
 }
 
 /// Restores the sets previewed before `preview_sets` when it drops.

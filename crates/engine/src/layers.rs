@@ -192,8 +192,9 @@ fn is_dormant(state: &GameState, instance: &CardInstance) -> bool {
 /// R1859007: the keywords its controller's "your Units have X" lends a card (`UnitsHaveKeyword`): to
 /// a Unit of theirs in a unit zone or standing in the backrow (R1081000), never a Vanilla one (unlike
 /// an aura's grant, §8.10), nor one Dormant or buried under a Stack pile (R13, R1839000). R1870004:
-/// only while the modifier is live.
-fn lent_by_player(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
+/// only while the modifier is live. R4508000: one a Spell made passes the card by while it is `immune`
+/// to Spells by its other keywords, read live, so it lends again once the immunity goes.
+fn lent_by_player(state: &GameState, instance: &CardInstance, immune: bool) -> Vec<Keyword> {
     if instance.vanilla
         || is_dormant(state, instance)
         || crate::slumber::is_slumbering(instance)
@@ -205,7 +206,10 @@ fn lent_by_player(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
         .mods
         .iter()
         .filter_map(|modifier| match &modifier.kind {
-            ModifierKind::UnitsHaveKeyword { keyword } if crate::mana::modifier_is_live(state, modifier) => {
+            ModifierKind::UnitsHaveKeyword { keyword, from_spell }
+                if crate::mana::modifier_is_live(state, modifier)
+                    && !(immune && *from_spell == Some(true)) =>
+            {
                 Some(keyword.clone())
             }
             _ => None,
@@ -531,7 +535,10 @@ fn compute_layers_on(
     for modifier in &auras {
         listed.extend(modifier.keywords.iter().flatten().cloned());
     }
-    listed.extend(lent_by_player(state, instance));
+    // R4508000: the keywords above, which hold every Immune to Spells a card can have (no lend gives
+    // it), decide whether a Spell's lend passes the card by.
+    let immune = has_keyword(&listed, KeywordKind::ImmuneToSpells);
+    listed.extend(lent_by_player(state, instance, immune));
     let mut keywords: Vec<Keyword> = with_brittle_count(&listed, instance);
 
     // Position grants: Defense adds Taunt and Armor +1 (§4.1).

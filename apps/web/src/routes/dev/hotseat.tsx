@@ -26,6 +26,7 @@ import { navigate, paths } from "../../net/navigate.ts";
 import { navTestid } from "../nav.tsx";
 import { messageOf } from "../../net/errors.ts";
 import { getStored } from "../../net/storage.ts";
+import { isRecord } from "../../wire/json.ts";
 
 /** BUILD M5-T3: the dev handle exists only outside a production build. */
 const DEV_ONLY = import.meta.env.MODE !== "production";
@@ -141,11 +142,8 @@ export function readInjectedDecks(): Record<string, string[]> | undefined {
  * fields and nothing else, so no stray key reaches the engine.
  */
 function handicapShape(raw: unknown): Handicap | undefined {
-  if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return undefined;
-  const { deckSize, manaBonus, manaCap, extraOpeningCards, extraDrawsPerTurn, heroHealth } = raw as Record<
-    string,
-    unknown
-  >;
+  if (!isRecord(raw)) return undefined;
+  const { deckSize, manaBonus, manaCap, extraOpeningCards, extraDrawsPerTurn, heroHealth } = raw;
   if (
     typeof deckSize !== "number" ||
     typeof manaBonus !== "number" ||

@@ -141,7 +141,7 @@ pub struct DamageAllArgs {
     pub scope: BoardScope,
 }
 
-/// §6.3 Damage over a scope: one §4.4 instance per target in `cardsInScope` order, then each scoped
+/// Damage over a scope (§4.4): one §4.4 instance per target in `cardsInScope` order, then each scoped
 /// side's hero if `heroes` (#13). The targets are read before the first hit, since §4.5 runs no state
 /// check between one effect's hits (R59); a target that absorbs its hit fizzles silently.
 ///

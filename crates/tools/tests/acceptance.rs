@@ -33,6 +33,8 @@
 //!    of `crates/run/src/config.rs`, and `spec/README.md` maps the note.
 //!  - Discards (#3914): no test under the card scripts or `crates/engine/tests` notes a value and drops it with
 //!    a bare `let _ = <identifier>;`.
+//!  - Shared tests (#4610): every Rust file directly under `crates/shared/tests` is declared by its one
+//!    integration-test entry point, since that crate disables Cargo's automatic test discovery.
 //!  - Statics (#3063): the pure crates' sources declare no `thread_local!`, `static mut` or static holding a
 //!    `Cell`, `RefCell`, `UnsafeCell` or `Atomic*` but the ones CLAUDE.md rule 4 names (`RULE_4_STATICS`).
 //!  - TS (#4426): `crates/wasm/core/Cargo.toml`'s `[dev-dependencies]` name `jackioh-run` and `jackioh-shared`
@@ -2104,6 +2106,107 @@ fn discards_the_check_refuses_a_planted_let_in_each_covered_tree() {
     found.sort();
     expected.sort();
     assert_eq!(found, expected);
+}
+
+/// The Rust files directly under `crates/shared/tests` that `shared.rs` does not declare (#4610).
+fn undeclared_shared_tests(root: &Path) -> Vec<String> {
+    let tests = root.join("crates/shared/tests");
+    let mut files = Vec::new();
+    for entry in fs::read_dir(&tests).unwrap_or_else(|error| panic!("{}: {error}", tests.display())) {
+        let entry = entry.expect("a shared test directory entry");
+        let path = entry.path();
+        if path.is_file() && path.extension().is_some_and(|extension| extension == "rs") {
+            files.push(
+                entry
+                    .file_name()
+                    .into_string()
+                    .expect("a UTF-8 shared test file name"),
+            );
+        }
+    }
+    files.sort();
+
+    let mut declared = BTreeSet::new();
+    let entry = "shared.rs";
+    let path = tests.join(entry);
+    let text = fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+    for line in text.lines() {
+        if let Some(rest) = line.trim().strip_prefix("#[path = \"")
+            && let Some((name, _)) = rest.split_once('"')
+        {
+            declared.insert(name.to_string());
+        }
+    }
+
+    files
+        .into_iter()
+        .filter(|name| name != entry && !declared.contains(name))
+        .map(|name| format!("crates/shared/tests/{name}"))
+        .collect()
+}
+
+#[test]
+fn shared_tests_every_file_is_declared_by_the_one_test_binary() {
+    const MIN_SHARED_TEST_FILES: usize = 20;
+
+    let root = repo();
+    let tests = root.join("crates/shared/tests");
+    assert!(
+        tests.join("shared.rs").is_file(),
+        "crates/shared/tests/shared.rs is the shared crate's test entry point (#4610)"
+    );
+    let rust_files = fs::read_dir(&tests)
+        .expect("the shared tests directory")
+        .map(|entry| entry.expect("a shared test directory entry"))
+        .filter(|entry| {
+            entry
+                .path()
+                .extension()
+                .is_some_and(|extension| extension == "rs")
+        })
+        .count();
+    assert!(
+        rust_files > MIN_SHARED_TEST_FILES,
+        "only {rust_files} Rust files found under crates/shared/tests"
+    );
+
+    let found = undeclared_shared_tests(&root);
+    assert!(
+        found.is_empty(),
+        "jackioh-shared has autotests = false (#4610): add each test file to crates/shared/tests/shared.rs with a #[path] declaration: {found:?}"
+    );
+}
+
+#[test]
+fn shared_tests_the_check_refuses_a_planted_undeclared_file() {
+    let scratch = Scratch(std::env::temp_dir().join(format!(
+        "jackioh-shared-tests-{}-{}",
+        std::process::id(),
+        SCRATCH.fetch_add(1, Ordering::Relaxed)
+    )));
+    let root = scratch.0.as_path();
+    let _ = fs::remove_dir_all(root);
+    let tests = root.join("crates/shared/tests");
+    fs::create_dir_all(&tests).expect("the shared tests directory");
+    fs::write(tests.join("shared.rs"), "#[path = \"a.rs\"]\nmod a;\n").expect("the shared test entry point");
+    fs::write(tests.join("a.rs"), "").expect("the declared test");
+    fs::write(tests.join("planted.rs"), "").expect("the planted test");
+    fs::write(tests.join("shared_planted.rs"), "").expect("the planted prefixed test");
+
+    assert_eq!(
+        undeclared_shared_tests(root),
+        [
+            "crates/shared/tests/planted.rs",
+            "crates/shared/tests/shared_planted.rs",
+        ]
+    );
+
+    fs::write(
+        tests.join("shared.rs"),
+        "#[path = \"a.rs\"]\nmod a;\n#[path = \"planted.rs\"]\nmod planted;\n#[path = \"shared_planted.rs\"]\nmod shared_planted;\n",
+    )
+    .expect("the shared test entry point");
+    assert!(undeclared_shared_tests(root).is_empty());
 }
 
 /// The built `jackioh`, whose clap surface the README's command table is held to (#1720).

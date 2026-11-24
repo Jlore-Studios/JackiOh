@@ -2,7 +2,7 @@
 //!   Base:    "Aura: ({threshold})+ Cost cards cost ({surcharge}) more." (3, 1)
 //!   Radiant: "Aura: Your opponent can't play ({threshold})+ Cost cards." (3)
 //!   Engine:  "Cost (§6.3, R65) on both players' cards where a play takes them from (a hand, or a
-//!            graveyard a permission lets its owner play from, §6.3 Play), as a price for a play; '(3)+'
+//!            graveyard a permission lets its owner play from, §10.5), as a price for a play; '(3)+'
 //!            is read where R363 reads Professor Curvature's '(4)+', on the cost before this aura adds
 //!            its (1). Radiant: `legalActions` offers the opponent no play of a card that costs (3) or
 //!            more at that moment (R65); casts (R70) are not plays from hand and are unaffected. Tunes:

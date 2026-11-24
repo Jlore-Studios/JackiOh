@@ -1,0 +1,139 @@
+{
+  "doctrines": [
+    {
+      "id": "Hallucination",
+      "name": "Hallucination",
+      "line": "Sets Traps that may be nothing, and plays copies that fade.",
+      "enemies": ["Mirage Weaver", "Phantom Choir", "Static Ghost", "The Unreliable Narrator"]
+    },
+    {
+      "id": "Overclock",
+      "name": "Overclock",
+      "line": "Burns its own health for fast, huge turns.",
+      "enemies": ["Redline Racer", "Burst Clock", "Fan Failure", "Thermal Throttler"]
+    },
+    {
+      "id": "Batch",
+      "name": "Batch",
+      "line": "Floods the board with copies and buffs them all.",
+      "enemies": ["Hive Process", "Parallel Legion", "Worker Pool", "Mass Producer"]
+    },
+    {
+      "id": "Recursion",
+      "name": "Recursion",
+      "line": "What dies comes back, stronger.",
+      "enemies": ["Loop Unroller", "Stack Overflow", "The Rerun", "Rollback Daemon"]
+    },
+    {
+      "id": "Jailbreak",
+      "name": "Jailbreak",
+      "line": "Taxes, freezes and steals your cards.",
+      "enemies": ["Prompt Injector", "Rootkit Runner", "Exploit Broker", "The Jailbreaker"]
+    },
+    {
+      "id": "Firewall",
+      "name": "Firewall",
+      "line": "Walls, shields and Traps that punish attacks.",
+      "enemies": ["Packet Filter", "Quarantine Wall", "Bastion Node", "The Gatekeeper"]
+    },
+    {
+      "id": "Scraper",
+      "name": "Scraper",
+      "line": "Copies your deck and plays your cards against you.",
+      "enemies": ["Data Harvester", "Web Crawler", "Dataset Thief", "The Mimic"]
+    },
+    {
+      "id": "Singularity",
+      "name": "Singularity",
+      "line": "Starts slow and grows without limit: answer it early.",
+      "enemies": ["Power Law", "Compute Cluster", "The Long Context", "Emergent Mind"]
+    }
+  ],
+  "commanders": [],
+  "standInCommanders": [
+    {
+      "id": "meditative-051",
+      "name": "Echo-1",
+      "rank": 1,
+      "doctrine": "Hallucination",
+      "cards": ["meditative-051", "classic-057"]
+    },
+    {
+      "id": "classic-080",
+      "name": "Redline",
+      "rank": 1,
+      "doctrine": "Overclock",
+      "cards": ["classic-080", "core-065"]
+    },
+    {
+      "id": "stinkyscapeplus-010",
+      "name": "Hivemaster Batch-01",
+      "rank": 1,
+      "doctrine": "Batch",
+      "cards": ["stinkyscapeplus-010", "classicplus-053"]
+    },
+    {
+      "id": "stinkyscape-088",
+      "name": "Loopback",
+      "rank": 2,
+      "doctrine": "Recursion",
+      "cards": ["stinkyscape-088", "traininggrounds-035"]
+    },
+    {
+      "id": "meditative-045",
+      "name": "Root Kit",
+      "rank": 2,
+      "doctrine": "Jailbreak",
+      "cards": ["meditative-045", "classicplus-040"]
+    },
+    {
+      "id": "stinkyscape-116",
+      "name": "Bastion.exe",
+      "rank": 2,
+      "doctrine": "Firewall",
+      "cards": ["stinkyscape-116", "classic-005"]
+    },
+    {
+      "id": "stinkyscape-074",
+      "name": "The Harvester",
+      "rank": 3,
+      "doctrine": "Scraper",
+      "cards": ["stinkyscape-074", "stinkyscape-018"]
+    },
+    {
+      "id": "stinkyscapeplus-072",
+      "name": "The Black Box",
+      "rank": 3,
+      "doctrine": "Singularity",
+      "cards": ["stinkyscapeplus-072", "meditative-075"]
+    },
+    {
+      "id": "meditative-049",
+      "name": "Model Collapse",
+      "rank": 3,
+      "doctrine": "Recursion",
+      "cards": ["meditative-049", "classicplus-043"]
+    },
+    {
+      "id": "stinkyscape-086",
+      "name": "The Prime Generator",
+      "rank": 4,
+      "doctrine": null,
+      "cards": ["stinkyscape-086", "classicplus-078"]
+    },
+    {
+      "id": "stinkyscape-111",
+      "name": "Thermal Runaway",
+      "rank": 4,
+      "doctrine": "Overclock",
+      "cards": ["stinkyscape-111", "stinkyscapeplus-056"]
+    },
+    {
+      "id": "stinkyscape-109",
+      "name": "Zero-Day",
+      "rank": 4,
+      "doctrine": "Jailbreak",
+      "cards": ["stinkyscape-109", "classic-009"]
+    }
+  ]
+}

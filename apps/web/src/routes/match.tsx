@@ -43,6 +43,7 @@ import { Loading, SITE_NAME, ShellPanel, documentTitleFor } from "../main.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import Username from "../auth/Username.tsx";
 import { getMatchRanks, type MatchRanksResponse } from "../net/api.ts";
+import { BackLayer } from "../net/backLayers.ts";
 import { guardLeaving, navigate, paths } from "../net/navigate.ts";
 import OpenedReplay from "../replay/OpenedReplay.tsx";
 import { openOnlineMatchReplay } from "../replay/sources.ts";
@@ -439,6 +440,12 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   if (watching !== null && view.result !== null) {
     return (
       <CatalogContext.Provider value={lookup}>
+        {/* R4619000: Back means the replay's corner arrow; first, so what the replay opens is a layer above it. */}
+        <BackLayer
+          onClose={() => {
+            setWatching(null);
+          }}
+        />
         <OpenedReplay
           key={watching.share ? "share" : "watch"}
           load={() => openOnlineMatchReplay(token, matchId)}

@@ -178,6 +178,16 @@ fn constants() -> Vec<(&'static str, Value)> {
             }),
         ),
         ("ROOM_CODE_LENGTH", json!(c::ROOM_CODE_LENGTH)),
+        (
+            "TOTP_CODE_FORMAT",
+            json!({
+                "alphabet": c::TOTP_CODE_FORMAT.alphabet,
+                "length": c::TOTP_CODE_FORMAT.length,
+                "groupSize": c::TOTP_CODE_FORMAT.group_size,
+                "separator": c::TOTP_CODE_FORMAT.separator,
+                "maxInputLength": c::TOTP_CODE_FORMAT.max_input_length,
+            }),
+        ),
         ("SEAT_TAKEN_CLOSE_CODE", json!(c::SEAT_TAKEN_CLOSE_CODE)),
         ("SERIES_MAX_GAMES", json!(c::SERIES_MAX_GAMES)),
         ("SERIES_PICK_SECONDS", json!(c::SERIES_PICK_SECONDS)),
@@ -435,7 +445,7 @@ fn every_name_is_listed_once() {
         // #3767: SEAT_TAKEN_CLOSE_CODE (R3767000).
         // #3619: CLIENT_ERROR_MESSAGE_MAX_CHARS and CLIENT_ERROR_STACK_MAX_CHARS.
         listed,
-        87 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7 + 2 + 2 + 2 + 1 + 2 + 1 + 1 + 1 + 2,
+        87 + 35 + 1 + 1 + 1 + 1 + 6 + 2 + 1 + 1 + 1 + 6 + 6 + 4 + 7 + 2 + 2 + 2 + 1 + 2 + 1 + 1 + 1 + 2 + 1,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -462,7 +472,7 @@ fn every_name_is_listed_once() {
          PACKS_OPEN_ALL_MAX and DECK_SYNC_ITEMS_MAX (R3212000, R3212001), and #3213's \
          POST_GAME_FRAME_VERSION (R3213000), and #3694's MATCH_OVER_CLOSE_CODE (R3694000), and #3730's \
          LOBBY_START_COUNTDOWN_SECONDS (R3730002), and #3767's SEAT_TAKEN_CLOSE_CODE (R3767000), and #3619's CLIENT_ERROR_MESSAGE_MAX_CHARS and \
-         CLIENT_ERROR_STACK_MAX_CHARS"
+         CLIENT_ERROR_STACK_MAX_CHARS, and #4669's TOTP_CODE_FORMAT (R4669000)"
     );
 }
 

@@ -613,6 +613,18 @@ type SuggestionArea struct {
 	Focus string
 }
 
+// AutoApprove is `suggestions.auto_approve`: after a survey, a second model call (the judge,
+// `prompts/judge.md`) reads each suggestion against the recent decisions on suggestions and says
+// whether it would approve it. One it would approve goes ahead by itself once it has waited
+// `WaitHours` with no vote, no person's comment and no 👎 on it, at `priority:low`, at most
+// `PerDay` in any 24 hours (`plan.AutoApprove`, in the sweep). Off, or left out, judges nothing.
+type AutoApprove struct {
+	Enabled   bool
+	WaitHours int // how long a suggestion the judge would approve waits for a person first
+	PerDay    int // the most suggestions approved by themselves in any 24 hours
+	Window    int // how many of the latest decisions on suggestions the judge reads
+}
+
 // SuggestionClasses are the classes a suggestion survey files each suggestion under
 // (`prompts/suggest.md`, #1409). `suggestions.priorities` maps a class to the `priority:*` level
 // its suggestions open with; a class it leaves out (`feature`, the owner's call) opens with none.
@@ -714,9 +726,12 @@ type Config struct {
 	// SuggestionAreas: the parts of the repository a survey keeps to (#4026), one survey at a time
 	// each, so as many surveys run at once as there are areas. None: one survey, of everything.
 	SuggestionAreas []SuggestionArea
-	Quiet           *Quiet
-	ForbiddenPaths  []string
-	ReviewPaths     []string
+	// AutoApprove is `suggestions.auto_approve`: a judge reads each new suggestion, and one it
+	// would approve that nobody voted on, commented on or 👎'd goes ahead by itself.
+	AutoApprove    AutoApprove
+	Quiet          *Quiet
+	ForbiddenPaths []string
+	ReviewPaths    []string
 	// MigrationPaths and LockFiles are the paths that merge themselves on a condition (#2986,
 	// `merge.go`): a migration with no data-losing or access-changing statement that changes no
 	// migration `main` has, and a lock that gains no package. The config's `migration_paths` and

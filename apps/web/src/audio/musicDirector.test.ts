@@ -49,7 +49,7 @@ type Rig = {
   setSettings(patch: Partial<AudioSettings>): void;
 };
 
-function rig(options: { settings?: Partial<AudioSettings>; rotation?: number } = {}): Rig {
+function rig(options: { settings?: Partial<AudioSettings>; rotation?: number; musicKey?: object } = {}): Rig {
   const requests: MusicRequest[] = [];
   const listeners = new Set<(s: AudioSettings) => void>();
   const r: Rig = {
@@ -101,7 +101,7 @@ function rig(options: { settings?: Partial<AudioSettings>; rotation?: number } =
       listeners.add(l);
       return () => listeners.delete(l);
     },
-    rotation: () => options.rotation ?? 0,
+    ...(options.musicKey === undefined ? { rotation: () => options.rotation ?? 0 } : { musicKey: options.musicKey }),
   });
   return r;
 }
@@ -156,6 +156,40 @@ describe("R631 a match's music opens on its station", () => {
     r.director.onView(midGame({ active: "p2" }));
     r.director.settle();
     expect(r.last()).toEqual({ track: "tavern-1", intro: null, opponentTurn: true });
+  });
+});
+
+describe("R4606000 a remount under the same music key", () => {
+  it("R4606000 a remount under the same music key keeps the rotation and asks for no sting", () => {
+    localStorage.removeItem(MUSIC_ROTATION_KEY);
+    const key = {};
+    const first = rig({ musicKey: key });
+    first.director.onView(opening());
+    expect(first.last()).toEqual({ track: "tavern-1", intro: "tavern-start", opponentTurn: false });
+    expect(first.resets).toBe(1);
+    expect(localStorage.getItem(MUSIC_ROTATION_KEY)).toBe("1");
+    first.director.dispose();
+    const second = rig({ musicKey: key });
+    second.director.onView(midGame());
+    expect(second.last()).toEqual({ track: "tavern-1", intro: null, opponentTurn: false });
+    expect(second.resets).toBe(0);
+    expect(localStorage.getItem(MUSIC_ROTATION_KEY)).toBe("1");
+    second.director.dispose();
+    localStorage.removeItem(MUSIC_ROTATION_KEY);
+  });
+
+  it("R4606000 a different music key moves the rotation on", () => {
+    localStorage.removeItem(MUSIC_ROTATION_KEY);
+    const first = rig({ musicKey: {} });
+    first.director.onView(opening());
+    expect(first.last()).toEqual({ track: "tavern-1", intro: "tavern-start", opponentTurn: false });
+    first.director.dispose();
+    const second = rig({ musicKey: {} });
+    second.director.onView(opening());
+    expect(second.last()).toEqual({ track: "tavern-2", intro: "tavern-start", opponentTurn: false });
+    expect(localStorage.getItem(MUSIC_ROTATION_KEY)).toBe("2");
+    second.director.dispose();
+    localStorage.removeItem(MUSIC_ROTATION_KEY);
   });
 });
 

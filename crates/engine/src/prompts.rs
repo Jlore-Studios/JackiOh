@@ -1419,6 +1419,21 @@ fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs, luck: i32)
         return;
     };
     let targets = in_offered_order(&probe, selection);
+    // I22 (#4540): the fuzz monitor holds this draw to the targeting rules (`testkit::seams`).
+    #[cfg(feature = "testkit")]
+    if args.kind == PromptKind::Target {
+        let by = if crate::random_targets::targets_random(state) {
+            crate::testkit::seams::TargetDrawBy::Mayor
+        } else {
+            crate::testkit::seams::TargetDrawBy::RandomCast
+        };
+        let source = args
+            .resume
+            .instance_id
+            .as_deref()
+            .and_then(|id| find_instance(state, id));
+        crate::testkit::seams::record_target_draw(state, source, args.player, by, &targets);
+    }
     let chosen_from = crate::stays::exit_mark(sink.state);
     run_resume(
         sink,

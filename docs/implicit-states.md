@@ -4,7 +4,7 @@ Some of the code's states have no name: several fields read together (an `Option
 "pending" field beside what it guards) hold them, where one enum would. This file maps them: for each, its
 fields, every combination of their values, what moves it between them, and whether each combination can
 happen. It was started by #3678. The code audit's fourth part (`.github/hygiene/code.md` section 4, #3719)
-extends it on each run: #3899's mapped states 4 to 6 and checked states 1 to 3 again; #4114's mapped states 7 to 9 and checked 1 to 6 again; #4291's mapped states 10 to 12 and checked 1, 2, 6 and 8 again.
+extends it on each run: #3899's mapped states 4 to 6 and checked states 1 to 3 again; #4114's mapped states 7 to 9 and checked 1 to 6 again; #4291's mapped states 10 to 12 and checked 1, 2, 6 and 8 again; #4550's mapped states 13 to 15 and checked 1 to 3, 6 to 8 and 10 to 12 again.
 
 How to read and extend it:
 
@@ -26,7 +26,10 @@ How to read and extend it:
 
 ## 1. A match actor's seat
 
-**Checked at** `ae977ece3e`, plus #4291's pull request. Since `b0e998a29b` (`git log b0e998a29b.. -- <its files>`,
+**Checked at** `0bf5057480`, plus #4550's pull request. Since `ae977ece3e` (`git log ae977ece3e.. -- <its files>`, `bcdc70af1d` being #4291's own pull request): `4bc32f259f` (#4529) has `attach` take no seat for a socket already closed when it reaches the seat, and start
+the grace for one that drops while it is being seated (S15, S16); `0cbf13009a` (#4474) has both actors keep each
+seat's view until the game next changes, which moves no row. #4550's pull request changes `duel.rs`'s clock run
+(state 13's T4), not `connected` or `stopped`. Checked before at `ae977ece3e`, plus #4291's pull request. Since `b0e998a29b` (`git log b0e998a29b.. -- <its files>`,
 `87bd279557` being #4114's own pull request): `14e3fd964e` (#4239) queues a checkpoint after every
 `MATCH_CHECKPOINT_MIN_ACTIONS`-th logged row (state 10), `17e34d0815` (#4169) gives the co-op actor its
 checkpoint, `094e51ea83` (#4128, R4013000) makes a reused 1v1 nonce its own seat's duplicate, and
@@ -79,10 +82,17 @@ actor, G = 0, no socket). `Core` is never serialized, so a JSON round trip does 
 | S12 | a second socket for one home seat while the first is open | Reachable: a second tab, or another device (a reconnect before the old socket closed is the same, and the client's own replacement of a stale socket lets it go first, so its close is never heard) | The newer socket takes the seat, the older is closed with `SEAT_TAKEN_CLOSE_CODE` (4412), and no grace starts since the seat was never empty (R744; `on_socket_gone`'s comment). The replaced client goes to `elsewhere` (`apps/web/src/game/net.ts`'s and `duos/socket.ts`'s `onclose`): no backoff, no reconnect, and its page says the game is open in another tab or on another device with a Play here button that takes the seat back (R3767000). A watcher's replacement stays 1000 | `crates/server/tests/actor/match_actor.rs::seat_states_3678::r3767000_a_second_socket_for_one_seat_replaces_the_first_with_seat_taken_and_starts_no_grace`, `crates/server/tests/actor/duos.rs::seat_states_3678::r3767000_a_second_socket_for_one_duos_seat_replaces_the_first_with_seat_taken` (new); the web's, `apps/web/src/game/net.test.ts`, `apps/web/src/duos/socket.test.ts`, `apps/web/src/routes/match.test.tsx` and `apps/web/src/duos/DuosRoute.test.tsx`, each under "R3767000" |
 | S13 | (co-op) a socket for an AI team's seat, b1 or b2 | Unreachable from the routes: `DuosActor::seat_of` (`DuosMatch::seat_of`) answers none for an empty profile, and an AI team's b1 and b2 hold `""` (`duos/store.rs`; `duos/rooms.rs` names them only for a 2v2), so it answers a1 or a2 only. A held handle reaches `attach`'s guard (`DuosTeamB::person`: none for an AI team's seat) | Team B's seats are the AI's (§13.7) and only a human seat's socket is greeted (§13); the guard closes it 1000 and greets nothing | `crates/server/tests/actor/duos.rs::seat_states_3678::a_socket_handed_to_an_ai_seat_is_closed_and_never_greeted` (new) |
 | S14 | (2v2) a socket for a team-B person's seat, b1 or b2 | Reachable: a four-account private lobby's 2v2 (R3731002); `seat_of` answers b1 or b2, and S1 to S12 hold for it as for a1 and a2 (the same per-slot arrays) | Greeted with its own seat's view; a drop starts its grace, the AI plays the seat past it, and its return takes it back (R3731002, §13.7) | `crates/server/tests/actor/duos.rs::two_v_two::r3731002_four_sockets_play_a_two_v_two_to_its_end`, `…::two_v_two::r3731002_a_team_b_disconnect_hands_the_seat_to_the_ai_and_its_return_takes_it_back` |
+| S15 | a socket already closed when it reaches `attach` | Reachable: the transport closes while the registry finds or rebuilds the actor, before `attach` runs (the tests hand `attach` a socket already closed) | It takes no seat: the seat keeps what it held, no other socket is closed (no 4412), and a running grace keeps running, or an empty seat's absent grace starts as the other seat attaches (`crates/server/README.md`'s attach paragraph; R744, R3767000) | `crates/server/tests/actor/match_actor.rs::seat_states_3678::a_dropped_socket_for_a_seat_with_a_running_grace_leaves_the_grace_running`, `…::seat_states_3678::a_dropped_socket_rebuilt_after_a_restart_takes_no_seat_so_the_other_seats_attach_starts_its_absent_grace`, `…::seat_states_3678::a_dropped_second_socket_for_a_held_seat_closes_nothing_and_the_open_socket_keeps_its_views`, `crates/server/tests/actor/duos.rs::seat_states_3678::a_dropped_socket_takes_no_coop_seat_so_the_grace_runs_and_the_ai_takes_over` |
+| S16 | a socket that closes after `attach`'s open check but before its close handler is in, while another socket held the seat | Reachable only as a race: the transport closes between the check and `socket.attach`; no test can order it | **Unspecified**: the new socket takes the seat, so the held one is closed with `SEAT_TAKEN_CLOSE_CODE` and its tab reads `elsewhere`, while the second open check runs `on_socket_gone` and the seat's grace starts with no socket on it (the README's attach paragraph covers only a socket closed before it is seated) | — |
 
 ## 2. The engine's paused action
 
-**Checked at** `ae977ece3e`, plus #4291's pull request. Since `b0e998a29b`: `80a4d31165` (#4057) runs I7 on I14's
+**Checked at** `0bf5057480`, plus #4550's pull request. Since `ae977ece3e` (`git log ae977ece3e.. -- <its files>`, `bcdc70af1d` being #4291's own pull request): `65538df6ca` (#4404, R3925000) brings the loop cap: past `RESOLUTION_EVENT_CAP`
+events in one interaction card text is off until the next, while owed work still drains (`loop_cap.rs`'s header).
+Its count lives on the sink's `Frontier`, never in state, so it adds no field here; E6 and E8 cite it, and E11 and E12
+are new. The other ten (`5c99ba4501`, `3ba8d95152`, `77e6ef9230`, `07683ea0a1`, `7c0760e0f5`, `0cd6b9dfb3`,
+`a1bc49198d`, `99bf500496`, `d5f68be2ec`, `6b9d92dea2`) touch Dormant cards, Quests, mana, the attack preview and
+the testkit's monitor, fields outside this state. Checked before at `ae977ece3e`, plus #4291's pull request. Since `b0e998a29b`: `80a4d31165` (#4057) runs I7 on I14's
 copies too (E8); `e73836296f` (#4111, I18), `afb994522b` (#4143, I8), `087a371898` (#4254) and `f034bfcd6c`
 (#4255) add or widen other testkit invariants; `70985031f0` (#4122) and `978ccfceda` (#4265) follow renamed
 ids through board history, `69a14a320d` (#4194) adds a hero's Burn and `79474b2d38` (#4234) a card's
@@ -124,11 +134,13 @@ round trip, a checkpoint and a replay fold (which rebuild the same values, §10.
 | E4 | prompt open, `work` owed, cursor below its length | Reachable: answer Radiant Core #65's first start-of-turn question. The drain takes the owed turn start back up and resets the cursor (R113); the second question opens from the prompt's own step and parks nothing new, so the turn start waits at index 0 with the cursor at 0. A throwaway random-policy probe of 400 games also met it with the cursor strictly between 0 and the length (a target question inside a draw chain that cast Core #95, four items owed, the cursor at 1) | A park now goes ahead of everything still owed (R113, `work.rs`'s header) | `…::paused_action_states_3678::e3_e4_a_second_question_of_one_start_of_turn_clause_waits_with_the_turn_start_owed_past_the_cursor` (new; it also round-trips this state through JSON) |
 | E5 | mulligans open, no prompt, `work` empty, cursor 0 | Reachable: `begin_game` | Both mulligans open at once, `pending` untouched (§2.1 step 3, R265; I7 excuses this state) | `crates/cards/tests/cross/setup_and_mulligan.rs::open_mulligans_3678::e5_the_open_mulligans_hold_no_prompt_in_pending_and_owe_nothing` (new) |
 | E5′ | mulligans open with `work` owed | Not shown: `open_mulligans` is setup's last step (`deal_from`), run only after every owed setup item has been taken; no sequence found reaches it. I7's test builds it by hand (`i7_work_owed_behind_an_open_prompt_is_not_orphaned`), which proves the check, not reachability | Owed work waits for the mulligans (I7) | — |
-| E6 | over, no prompt, no mulligans, `work` as it stood | Reachable both ways. Empty: Core #68's Cry kills the enemy hero. Owed: p2 concedes (R211) while p1's Core #7 Discover is open, so the play's rest stays owed | Nothing happens after the game is over, every action refused (§2.5, R216); a game over keeps its debt (testkit invariant I7's note: "a game over keeps its debt") | `crates/cards/tests/cross/paused_sequences.rs::paused_action_states_3678::e6_e7_a_game_won_inside_a_cry_closes_every_prompt`, `…::paused_action_states_3678::e6_e7_a_concession_under_an_open_prompt_closes_it_and_leaves_the_rest_of_the_play_owed` (new) |
+| E6 | over, no prompt, no mulligans, `work` as it stood | Reachable both ways. Empty: Core #68's Cry kills the enemy hero. Owed: p2 concedes (R211) while p1's Core #7 Discover is open, so the play's rest stays owed | Nothing happens after the game is over, every action refused (§2.5, R216); a game over keeps its debt (testkit invariant I7's note: "a game over keeps its debt") | `crates/cards/tests/cross/paused_sequences.rs::paused_action_states_3678::e6_e7_a_game_won_inside_a_cry_closes_every_prompt`, `…::paused_action_states_3678::e6_e7_a_concession_under_an_open_prompt_closes_it_and_leaves_the_rest_of_the_play_owed` (new), `crates/engine/tests/rules/loop_cap.rs::r3925000_a_hero_killed_in_the_capped_resolution_still_ends_the_game` (a hero killed in a capped resolution) |
 | E7 | over with a prompt open, or with the mulligans open | Unreachable: `end_game` clears `pending` and `mulligan`, `work::paused` stops every scope once `result` is set, and `reduce` refuses every action after (R216) | — | the two E6 tests assert both closed and every action refused |
-| E8 | live, no prompt, no mulligans, `work` owed or cursor ≠ 0 | Unreachable: an action ends by draining `work` (§10.3, `drain_work`) until it is empty or a scope pauses on a prompt or a result, and taking each item resets the cursor. I7 flags it after every action of CI's `cargo jackioh fuzz --seeds 200`, and the 400-game probe never met it. The I7 tests in `invariants.rs` that show it flagged set the fields by hand, so they prove the check, not reachability. Since #4113 (#4057) I7 also runs on the copy I14 reduces each listed action on (`branch_state_findings`, `orphaned_work_findings`); its test there plants the work in the branch's result (`crates/cards/tests/cross/invariants.rs::i14_a_listed_action_reduce_refuses::i14_branch_reports_orphaned_work_on_accepted_branch_action`), which again proves the check, not reachability | Orphaned work (I7) | — |
+| E8 | live, no prompt, no mulligans, `work` owed or cursor ≠ 0 | Unreachable: an action ends by draining `work` (§10.3, `drain_work`) until it is empty or a scope pauses on a prompt or a result, and taking each item resets the cursor. I7 flags it after every action of CI's `cargo jackioh fuzz --seeds 200`, and the 400-game probe never met it. The I7 tests in `invariants.rs` that show it flagged set the fields by hand, so they prove the check, not reachability. Since #4113 (#4057) I7 also runs on the copy I14 reduces each listed action on (`branch_state_findings`, `orphaned_work_findings`); its test there plants the work in the branch's result (`crates/cards/tests/cross/invariants.rs::i14_a_listed_action_reduce_refuses::i14_branch_reports_orphaned_work_on_accepted_branch_action`), which again proves the check, not reachability. A capped interaction (R3925000) still drains what is owed, its card text off, so it too ends with nothing owed: `crates/engine/tests/rules/loop_cap.rs::r3925000_a_self_recursive_death_loop_stops_at_the_cap` | Orphaned work (I7) | — |
 | E9 | cursor above the length | Unreachable: `place` inserts at `min(cursor, len)` and sets the cursor one past it, `take_work` and `begin_work_cascade` set 0, `drop_work` clamps to the new length, and an owed AI turn (`ai_policy`) resets it to 0 before it appends what was owed | — | — |
 | E10 | mulligans open and a prompt open | Unreachable: `open_mulligans` does nothing while `pending` is set, and `resolve_mulligans` clears `mulligan` before the answers it resolves can ask (R224, R265) | — | — |
+| E11 | live, `work` owed, the loop cap tripped in the interaction | Reachable: p1's End turn parks one `END_OF_TURN_WORK` behind a question its end-of-turn chain asks, and the answer's chain trips the cap (the test's second part; its first trips the cap inside End turn itself) | The owed steps still drain with card text off, so the engine's own step finishes: the turn ends and the next starts, and nothing is left owed (R3925000; `loop_cap.rs`'s header: "a turn's end") | `crates/engine/tests/rules/loop_cap.rs::r3925000_a_turn_end_capped_mid_way_still_ends_the_turn` (new), `crates/engine/tests/rules/pauses.rs::the_work_queue_9_3_r68::r3925000_a_sequence_that_keeps_owing_work_stops_at_the_cap` |
+| E12 | a prompt open when the interaction would reach the cap | Reachable: a question opens before the count reaches `RESOLUTION_EVENT_CAP` | A pause, not a trip: the answer is the next interaction and its count starts over (R3925000) | `crates/engine/tests/rules/loop_cap.rs::r3925000_the_count_starts_over_after_each_answer` |
 
 E7 to E10 are **representable when serialized**: a `GameState` read back from JSON (a checkpoint, a replay
 fixture, the wire's state for the tools) can hold them, and one enum for the paused action would rule them
@@ -136,7 +148,9 @@ out. No shape is changed here.
 
 ## 3. The dungeon run's position
 
-**Checked at** `ae977ece3e`, plus #4291's pull request: unchanged since `b0e998a29b` but for #4114's own pull request
+**Checked at** `0bf5057480`, plus #4550's pull request. Since `ae977ece3e` (`git log ae977ece3e.. -- <its files>`, `bcdc70af1d` being #4291's own pull request): `f1ddc391cf` (#4360) moves the walk's state checks into
+`crates/run/src/invariants.rs`'s `check_run_invariants` and adds a random-policy map fuzz with illegal probes; it
+moves no row (D5, D7 and D8 cite it). Checked before at `ae977ece3e`, plus #4291's pull request: unchanged since `b0e998a29b` but for #4114's own pull request
 (`87bd279557`) and #4291's, which reads the store's string lists with the shared `isStringArray`, the same
 test. Checked before at `b0e998a29b`, plus #4114's pull request. Since `656a2238acf5`, `a040a62718` (#4097) has
 `run_create` refuse a curse taken twice and a mini-boss's replacement drop roll at its tier floor, which made
@@ -166,10 +180,10 @@ spec check` treats one cited in `crates/` as a ruling's citation (CLAUDE.md rule
 | D2 | row none, col 0, `Dead`, HP the max | Reachable: `Abandon` before the first step | The run ends lost, is still scored, and refuses every action (§15.8) | `crates/run/src/tests.rs::abandoning_before_the_first_step_ends_the_run_off_the_map` (new; its one-action log folds back to it) |
 | D3 | row none with any other phase, or with col ≠ 0 | Unreachable: only `Go` leaves `Map`, and it sets `row` and `col` before the node's phase; `Won` follows the final boss | — | — |
 | D4 | row set, col in its row, a node's phase | Reachable: `Go`, then the node's tiles and fights | The node's own rules (§15.5 to §15.8) | `crates/run/src/walk_tests.rs::walks_play_whole_runs_in_bounds_start_every_fight_and_replay`, `crates/run/src/tests.rs::a_lost_fight_ends_the_run` |
-| D5 | col at or past its row's width | Unreachable: `Go` refuses it ("row {row} has no node {col}") | — | — |
+| D5 | col at or past its row's width | Unreachable: `Go` refuses it ("row {row} has no node {col}") | — | `crates/run/src/map_fuzz_tests.rs::map_fuzz_random_policy_with_illegal_probes_stays_in_bounds_and_replays` (its map probe steps past the row's width when every node of the row is reachable, and is refused with the state left as it was) |
 | D6 | `Dead`, HP 0 | Reachable: a lost fight | "Any other end drops HP to zero and ends the run" (§15.6) | `crates/run/src/walk_tests.rs::walks_play_whole_runs_in_bounds_start_every_fight_and_replay` (`WALK_LOSS_PERCENT` of its fights are lost), `crates/run/src/tests.rs::a_lost_fight_ends_the_run` |
-| D7 | `Dead`, HP above 0, row set | Reachable: `Abandon` in a fight (or on a tile) | Ends lost, scored, refusing every action (§15.8). The HP it keeps is **unspecified**: §15.6 drops HP to zero at "any other end" of a fight, §15.8 does not say what abandoning a fight leaves, and the run keeps the HP it held, where `walk_tests.rs`'s `check_state` holds a dead run to HP 0 (the walk never abandons) | `crates/run/src/tests.rs::abandoning_in_a_fight_ends_the_run_where_it_stands_with_its_hp_left` (new) |
-| D8 | alive with HP below 1 or above the max | Unreachable: HP reaches 0 only with `Dead`; a win refills it (R3584000); `with_max_hp` keeps it at the max as the max moves, and an event that would take the max below 1 is refused (R3584001), so outside `Dead` HP is always the max (R3584001: "always the max outside a fight"; a fight's own health lives in its game until the report) | — | the walk's `check_state` after every step; `walk_hp_zero_while_alive_fails` and `walk_hp_past_the_max_fails` prove the check |
+| D7 | `Dead`, HP above 0, row set | Reachable: `Abandon` in a fight (or on a tile) | Ends lost, scored, refusing every action (§15.8). The HP it keeps is **unspecified**: §15.6 drops HP to zero at "any other end" of a fight, §15.8 does not say what abandoning a fight leaves, and the run keeps the HP it held, where `crates/run/src/invariants.rs`'s `check_run_invariants` holds a dead run to HP 0 (the walks never abandon) | `crates/run/src/tests.rs::abandoning_in_a_fight_ends_the_run_where_it_stands_with_its_hp_left` (new) |
+| D8 | alive with HP below 1 or above the max | Unreachable: HP reaches 0 only with `Dead`; a win refills it (R3584000); `with_max_hp` keeps it at the max as the max moves, and an event that would take the max below 1 is refused (R3584001), so outside `Dead` HP is always the max (R3584001: "always the max outside a fight"; a fight's own health lives in its game until the report) | — | `crates/run/src/invariants.rs`'s `check_run_invariants` after every step of the walks and the map fuzz; `walk_hp_zero_while_alive_fails` and `walk_hp_past_the_max_fails` prove the check |
 | D9 | `Won`, row set, HP the max | Reachable: play to the end | Extract and bank, then the run refuses every action (§15.7, §15.8) | `crates/run/src/tests.rs::a_run_played_to_the_end_wins_and_its_file_folds_back_to_the_same_state` (also its JSON round trip) |
 
 D3 and D5 are **representable when serialized**: a hand-written `RunState` could hold them, and
@@ -178,7 +192,7 @@ device never keeps a `RunState`, only the log it folds, so no run file reaches t
 
 ## 4. The web's stored session
 
-**Checked at** `ae977ece3e`: unchanged since `b0e998a29b` (`git log b0e998a29b.. -- <its files>` prints nothing).
+**Checked at** `0bf5057480`: unchanged since `ae977ece3e` but for #4291's own pull request (`bcdc70af1d`). Checked before at `ae977ece3e`: unchanged since `b0e998a29b` (`git log b0e998a29b.. -- <its files>` prints nothing).
 Checked before at `b0e998a29b`: unchanged since `656a2238acf5`, plus #3899's pull request (`git log 656a2238acf5..
 -- apps/web/src/net/session.ts apps/web/src/net/storage.ts` prints nothing).
 
@@ -214,7 +228,7 @@ Its rows are W1 to W10 (W for the web's session), never `R<n>`.
 
 ## 5. The web's live game
 
-**Checked at** `ae977ece3e`: unchanged since `b0e998a29b` but for #4114's own pull request (`87bd279557`). Checked
+**Checked at** `0bf5057480`, plus #4550's pull request: unchanged since `ae977ece3e` but for #4291's own pull request (`bcdc70af1d`); #4550's moves `/play`'s deck, trio and challenge picks onto `together/challengeChoice.ts`'s (the same outputs for every input), which moves no row. Checked before at `ae977ece3e`: unchanged since `b0e998a29b` but for #4114's own pull request (`87bd279557`). Checked
 before at `b0e998a29b`. Since `656a2238acf5`, plus #3899's pull request: `88b1df6f05` (#3902, R3729001)
 keeps the moment a tab queued beside its mode, for the menus' queue banner and its Cancel (L14 to L17).
 
@@ -264,7 +278,10 @@ the banner's.
 
 ## 6. `Game.tsx`'s layers
 
-**Checked at** `ae977ece3e`. Since `b0e998a29b`: `70985031f0` (#4079, R3864000) has a click on a lit unit a play
+**Checked at** `0bf5057480`, plus #4550's pull request. Since `ae977ece3e` (`git log ae977ece3e.. -- <its files>`, `bcdc70af1d` being #4291's own pull request): `65538df6ca` (#4404) adds `loopCapped` to the runner's bursts,
+`6b9d92dea2` (#4307) changes the attack preview's `overflowOnto`, and `4224de56cd` (#4343) rewrites the runner's
+internals under the same tests; none touches the selection, the drag or the prompt's fade, so no row moved.
+Checked before at `ae977ece3e`. Since `b0e998a29b`: `70985031f0` (#4079, R3864000) has a click on a lit unit a play
 tributes, once the play asks only its zone, answer the zone (`onClickTarget`); it is one click of a build,
 with no layer beside it, so no row moved. Checked before at `b0e998a29b`. Since `656a2238acf5`, plus #3899's pull request: `ff38380a54` (#3976) and
 `e3dbd4c61a` (#3839) pass the heroes their portraits and the prompt a sequence clock, `1b3c343975` (#3910)
@@ -320,7 +337,8 @@ piece, the opening deal); a prompt opening or answered; a setting changed. Its r
 
 ## 7. The web's match socket
 
-**Checked at** `ae977ece3e`: unchanged since `b0e998a29b` but for #4114's own pull request (`87bd279557`). Checked
+**Checked at** `0bf5057480`, plus #4550's pull request. Since `ae977ece3e` (`git log ae977ece3e.. -- <its files>`, `bcdc70af1d` being #4291's own pull request): `c4bc8bd2a8` (#4355, R4250000) starts the backoff over on the
+first `view`, not on `onopen`, in both clients (N3, N17, N18). Checked before at `ae977ece3e`: unchanged since `b0e998a29b` but for #4114's own pull request (`87bd279557`). Checked
 before at `b0e998a29b`, plus #4114's pull request.
 
 **Files:** `apps/web/src/game/net.ts` (`createMatchClient`, `createBackoff`, `createWakeProbe`, `letGo`),
@@ -339,7 +357,7 @@ reconnect on the backoff, 4401, 4403 and 4404 refuse, 4410 (R679) and 4411 (R369
 (R3767000) goes `elsewhere`; a socket factory that throws; the backoff's timer; and a page wake (the tab
 shown, the network back), whose probe replaces a socket silent past `WS_PING_INTERVAL_SECONDS` that does
 not answer. The client is a closure, never serialized; a reload starts it from nothing. Its rows are N1 to
-N17 (N for the network), never `R<n>`. The co-op client runs the same machine, and
+N18 (N for the network), never `R<n>`. The co-op client runs the same machine, and
 `apps/web/src/duos/socket.test.ts` holds its tests, the new 1001 one (N3) and N15's among them, each named
 as here with "co-op".
 
@@ -347,7 +365,7 @@ as here with "co-op".
 |---|---|---|---|---|
 | N1 | `connecting`, a socket not yet open, no step | Reachable: `connect()` | `hello` on open asks for a fresh full view (§9.5); the token rides the handshake, never the address (R1379000) | `apps/web/src/game/net.test.ts` › "sends `hello` on open: §9.5's 'push me a fresh full view'", › "R1379000 the address names the match and never the token, which is offered as a subprotocol" |
 | N2 | `open`, a probe waiting | Reachable: a page wake past the silence | Replaced if the probe goes unanswered, kept if it answers (R1441) | › "R1441 a silent socket is replaced when the tab turns visible, and the new socket sends hello", › "R1441 a quiet socket that answers the probe is kept", › "R1441 a socket heard within the ping interval is not probed" |
-| N3 | `reconnecting`, no socket, a step waiting | Reachable: a close with 1006, 1000 or 1001 | Reopened after the step, plus up to `RECONNECT_JITTER` of it (R1441); 1001 is the restart drain's close, which the client reconnects on (R3694000, R1115000) | › "reopens after an unexpected close, with a backoff", › "R3767000 a close with 1000 still reconnects", › "R3694000 a close with 1001, a restart's drain, reconnects with a backoff" (new), › "R1441 a reconnect waits its backoff plus up to a quarter more" |
+| N3 | `reconnecting`, no socket, a step waiting | Reachable: a close with 1006, 1000 or 1001 | Reopened after the step, plus up to `RECONNECT_JITTER` of it (R1441); 1001 is the restart drain's close, which the client reconnects on (R3694000, R1115000) | › "reopens after an unexpected close, with a backoff", › "R3767000 a close with 1000 still reconnects", › "R3694000 a close with 1001, a restart's drain, reconnects with a backoff" (new), › "R1441 a reconnect waits its backoff plus up to a quarter more", › "R4250000 a socket refused with 4429 after open climbs the backoff", › "R4250000 a socket closed with 1011 after open climbs the backoff" |
 | N4 | `reconnecting` with a transport error, no socket, a step waiting | Reachable: the browser refuses to construct the socket (a bad URL, a blocked scheme) | **Unspecified**: retried on the backoff like a dropped socket, its error shown (`errorCode` `transport`) until a view clears it | › "a socket the browser cannot construct is retried on the backoff, with a transport error" (new) |
 | N5 | `reconnecting`, a socket connecting | Reachable: N3's step fires, or `connect()` during N3 | The connection reads `reconnecting` until the socket opens; `connect()` cuts the step short (the match bar's Reconnect now) | › "reopens after an unexpected close, with a backoff", › "connect() during a backoff opens a socket at once and drops the pending retry" |
 | N6 | `reconnecting`, no socket, no step | Unreachable: every move into `reconnecting` either opens a socket (`replace`) or schedules a step (`onclose`, a throwing factory), and the step's timer opens one | — | — |
@@ -361,11 +379,15 @@ as here with "co-op".
 | N14 | a socket already closing when the page wakes | Reachable: the browser has begun the close (readyState 2) and the page wakes past the silence | Replaced at once, the old one let go with 1000 "replaced", no probe sent (R1441) | › "R1441 a socket that never opened is replaced at once when the page wakes", › "R1441 a socket already closing when the page wakes is replaced at once" (new) |
 | N15 | `refusedToken` set outside `refused` | Was reachable: a 4401, then Reconnect (`connect()`), the server takes that socket, then a 4412 or a 4410; `setToken` with a renewed token then opened a socket from `elsewhere` or onto a gone match | A refusal is its handshake's (R1115000): once a socket opens after it, a renewal reopens nothing. From `elsewhere` only Play here opens a socket (R3767000); a voided match is gone (R679) | **#4114: was a mismatch, fixed**: `open` now clears `refusedToken` with each socket it creates, in both clients. › "R1115000 a socket opened after a 4401 forgets the refusal: a renewal once the seat is taken or the match is gone opens nothing" (new; failed before the fix: "4412: expected [ FakeSocket{ …(9) }, …(2) ] to have a length of 2 but got 3") |
 | N16 | a socket and a waiting step at once | Was reachable only through N15 (a renewal opening a socket while a 1006's step waited); unreachable since: `connect()` cancels the step before it opens, and nothing else opens a socket while a step waits | The step's `open` finds the socket and does nothing | N15's test |
-| N17 | the backoff past its last step | Reachable: six drops in a row | The last step (`RECONNECT_DELAYS_MS`'s last) repeats; an opened socket starts the steps over (R1441) | › "R1441 the backoff's last step repeats, and an opened socket starts the steps over" (new) |
+| N17 | the backoff past its last step | Reachable: six drops in a row | The last step (`RECONNECT_DELAYS_MS`'s last) repeats; a socket that delivered a view starts the steps over (R1441, R4250000) | › "R1441 the backoff's last step repeats, and a socket that delivered a view starts the steps over", › "R4250000 a socket that delivered a view starts the backoff over" |
+| N18 | open, no view yet | Reachable: a socket opens and the server sends another frame (`watchers`) before the view, or refuses it after the upgrade | Still on the backoff: only a delivered view starts the steps over, since every refusal reaches the browser after its open (R4250000) | › "R4250000 a frame before the first view does not start the backoff over" (new), and in `apps/web/src/duos/socket.test.ts` › "R4250000 a co-op frame before the first view does not start the backoff over" (new) |
 
 ## 8. A match's registry entry
 
-**Checked at** `ae977ece3e`, plus #4291's pull request. Since `b0e998a29b`: `17e34d0815` (#4169) checkpoints each
+**Checked at** `0bf5057480`, plus #4550's pull request. Since `ae977ece3e` (`git log ae977ece3e.. -- <its files>`, `bcdc70af1d` being #4291's own pull request): `1dcd5b65a6` (#4439) folds a co-op rebuild under the fold's
+panic guard, so a panicking fold is an internal error that registers no actor (A6's co-op test); #4550's pull
+request reads both registries' window through `in_again_window` (the same outputs). No row moved. Checked before
+at `ae977ece3e`, plus #4291's pull request. Since `b0e998a29b`: `17e34d0815` (#4169) checkpoints each
 co-op actor before the drain stops it (`DuosRegistry::drain_one`) and has a co-op rebuild fold from it;
 `1fd0162fbf` (#4131, R4131000) swaps `app.rs`'s redemption breaker for the operator's pause, a field outside
 this state; and `14e3fd964e` (#4239), outside these files, has a live match write a checkpoint every
@@ -402,7 +424,7 @@ A10b, A10c), never `R<n>`.
 | A3 | a live row, no actor | Reachable: a restart, a crash, `stop` | The next socket rebuilds it to the same state and view (§9.5): from the last checkpoint stored when it passes (the drain's or, since #4169 and #4224, the periodic one; #1169), else from `(seed, log)` | `crates/server/tests/actor/recovery.rs::m6_t4_crash_recovery::rebuilds_an_actor_for_a_socket_that_arrives_when_nothing_is_in_memory`, `…::m6_t4_crash_recovery::killing_the_actor_mid_game_and_reconnecting_yields_the_same_view_for_for_both_players`, `crates/server/tests/actor/checkpoints.rs::a_drained_match_rebuilds_from_its_checkpoint_as_a_full_fold_rebuilds_it`, `…::a_live_match_checkpoints_every_min_actions_rows_as_it_is_played_and_a_crash_resumes_there`, `…::a_checkpoint_that_fails_a_check_is_refused_and_the_whole_log_is_folded` |
 | A4 | a finished row, its log kept, no actor | Reachable: `reap_finished` past the window, or a restart | A seat's socket rebuilds it inside the window; past the window it is refused (R1285000) | `crates/server/tests/actor/ws_server.rs::a_finished_matchs_seats_may_reopen_its_socket::a_seat_reopens_its_socket_on_its_finished_match`, `…::r1285000_a_seat_is_refused_its_finished_matchs_socket_once_the_rematch_window_has_passed`, `crates/server/tests/actor/telemetry.rs::r1442_play_telemetry_through_the_actor::r1442_the_backfill_and_a_rebuild_fold_a_finished_match_after_the_reaper_dropped_its_actor` |
 | A5 | a rebuild in flight, a second socket arrives | Reachable: both seats reconnect together | One fold, both sockets on the one actor (`rebuilding`'s doc) | `crates/server/tests/actor/recovery.rs::m6_t4_crash_recovery::folds_the_log_once_when_both_sockets_arrive_together` |
-| A6 | a rebuild that failed | Reachable: the store fails a read, or the fold panics | The socket is refused (1011 for an internal error, `AttachError`), nothing is kept, and the next socket rebuilds | `crates/server/tests/actor/recovery.rs::m6_t4_crash_recovery::a_rebuild_the_store_fails_is_not_kept_and_the_next_socket_rebuilds` (new), `crates/server/tests/actor/long_fold.rs::a_rebuild_whose_fold_panics_is_an_internal_error_and_registers_no_actor` |
+| A6 | a rebuild that failed | Reachable: the store fails a read, or the fold panics | The socket is refused (1011 for an internal error, `AttachError`), nothing is kept, and the next socket rebuilds | `crates/server/tests/actor/recovery.rs::m6_t4_crash_recovery::a_rebuild_the_store_fails_is_not_kept_and_the_next_socket_rebuilds` (new), `crates/server/tests/actor/long_fold.rs::a_rebuild_whose_fold_panics_is_an_internal_error_and_registers_no_actor`, `…::a_duos_rebuild_whose_fold_panics_is_an_internal_error_and_registers_no_actor` |
 | A7 | a `rebuilding` entry whose creator was dropped | Reachable only if the call that made the entry is cancelled mid-rebuild. Every production caller runs where nothing cancels it (a socket's `on_upgrade` task) except the bot loop's `kick_off_bot_match`, which `stop_loops` aborts in the restart drain, after which the process ends | **Unspecified**: the entry is never removed, so the next caller initialises the cell again and the actor it caches is handed to every later `actor_for` that misses the map, a stopped one after a `stop` | — (for a person) |
 | A8 | a live actor in memory | Reachable: `start`, or a rebuild | Every socket for the match reaches it (§9.2: one actor per match) | `crates/server/tests/actor/match_actor.rs::m6_t4_the_match_actor::two_websocket_clients_complete_a_scripted_game` |
 | A9 | `start` and a rebuild of the same id at once | Reachable only as a race: a socket for the id between `start`'s row write and its insert | **Unspecified**: whichever inserts second wins the map, and a socket attached to the other plays on an actor no one else reaches (§9.2 asks for one) | — (for a person) |
@@ -436,7 +458,7 @@ without the mark: "left live after the drain").
 
 ## 9. The practice game kept for a resume
 
-**Checked at** `ae977ece3e`: unchanged since `b0e998a29b` but for #4114's own pull request (`87bd279557`). Checked
+**Checked at** `0bf5057480`: unchanged since `ae977ece3e` but for #4291's own pull request (`bcdc70af1d`). Checked before at `ae977ece3e`: unchanged since `b0e998a29b` but for #4114's own pull request (`87bd279557`). Checked
 before at `b0e998a29b`, plus #4114's pull request.
 
 **Files:** `apps/web/src/practice/resume.ts` (R, read as untrusted input), `apps/web/src/practice/saveStore.ts`
@@ -483,7 +505,11 @@ neither (R2706000, R3476000). Its rows are K1 to K21 (K for kept), never `R<n>`.
 
 ## 10. A live match's stored checkpoint
 
-**Checked at** `ae977ece3e`, plus #4291's pull request.
+**Checked at** `0bf5057480`, plus #4550's pull request. Since `ae977ece3e` (`git log ae977ece3e.. -- <its files>`, `bcdc70af1d` being #4291's own pull request): `37774db591` (#4543) reads the Daily list's portraits and
+the daily games due through the store, `4bc32f259f` (#4529) seats no closed socket (state 1's S15), `0cbf13009a`
+(#4474) caches the seats' views, `73fe3958cd` (#4429) and `0b6703d0cd` (#4416) add store reads for settings and
+retention, and `4256b42744` (#4415) has the share put report whether it wrote (state 11's F31); none touches the
+checkpoint's put, its queue or `verify`, so no row moved. Checked before at `ae977ece3e`, plus #4291's pull request.
 
 **Files:** `crates/server/src/actor/match_actor.rs` (`Task::Checkpoint`, `checkpoint`, `write_checkpoint`),
 `crates/server/src/actor/checkpoint.rs` (`checkpoint_row`, `verify`), `crates/server/src/actor/registry.rs`
@@ -533,11 +559,14 @@ the same `verify_body` and the same store guards (`put_newer_checkpoint` keeps b
 
 ## 11. A notification's read mark
 
-**Checked at** `ae977ece3e`, plus #4291's pull request.
+**Checked at** `0bf5057480`, plus #4550's pull request. Since `ae977ece3e` (`git log ae977ece3e.. -- <its files>`, `bcdc70af1d` being #4291's own pull request): `70a1730b46` (#4367, R4348000) has a block delete the rows
+between the two either way and push both counts (F30); `4256b42744` (#4415, R4391000) has a share already held
+write no row and tell nobody (F31, and F25's exception); `37774db591` (#4543) reads the Daily list's portraits in
+one query and moves no row. Checked before at `ae977ece3e`, plus #4291's pull request.
 
 **Files:** `crates/server/src/notifications/mod.rs` (`notify`, `mark_subject`, `list`, `mark_read`) and
 `store.rs`; R4233000's callers (`crates/server/src/daily/games.rs`, `daily/invites.rs`, `social/friends.rs`,
-`lobby/mod.rs`, `api/replays.rs`); `apps/web/src/inbox/feed.ts` (`openFeed`), `InboxBell.tsx`,
+`lobby/mod.rs`, `api/replays.rs`, `social/shares.rs`, `daily/notify.rs`); `apps/web/src/inbox/feed.ts` (`openFeed`), `InboxBell.tsx`,
 `NotificationToast.tsx`, `RecentSection.tsx` and `apps/web/src/together/socialPoll.ts` (`onNotificationPush`).
 
 **Fields,** per row: `read_at` (none or a moment); its kind, actor and subject (what an act marks it by); for a
@@ -549,7 +578,7 @@ recipient's unread row of the same kind, actor and subject; a `notification` fra
 mark (`mark_subject`: a board read or action, a challenge's accept or decline, a friend request's answer, a lobby's
 enter, a replay's read); the panel's opening (`POST /api/notifications/read` up to the newest row, R4039001); a
 page read (it deletes a closed lobby's invites); the cap (`NOTIFICATIONS_KEEP`) and the daily sweep's purge
-(`NOTIFICATIONS_KEEP_DAYS`); a push to the account's sockets; a reload. Its rows are F1 to F29 (F for feed),
+(`NOTIFICATIONS_KEEP_DAYS`); a block (R4348000: the rows between the two deleted); a push to the account's sockets; a reload. Its rows are F1 to F31 (F for feed),
 never `R<n>`; N is state 7's.
 
 | # | Combination | Reachable (sequence) or not (why) | Expected (source) | Does (test) |
@@ -578,15 +607,19 @@ never `R<n>`; N is state 7's.
 | F22 | a mark, an account with two tabs | Reachable | Both tabs' sockets hear the new count (R4233000) | `crates/server/tests/actor/social_live.rs::r4233000_push::r4233000_a_mark_reaches_every_socket_of_its_account` (new), `…::r4233000_a_mark_pushes_the_new_count` |
 | F23 | a pushed row while a board is shown | Reachable | **Unspecified**: the toast is held until the board goes, then shown, though the row may be read by then | `apps/web/src/inbox/NotificationToast.test.tsx` › "R4039001 while a board is shown the toast is held, and it shows once the board goes" |
 | F24 | the socket down, or a reload | Reachable | The poll's social read carries the count (R3214000); the panel reads the page afresh | `apps/web/src/together/polling.test.tsx` › "R3214000 after the connection drops the social poll reads at once and resumes its pace" |
-| F25 | a second notice on an unread row's kind, actor and subject | Reachable: a daily game's next move | Replaces it, so moves never stack; a read row stays beside the new one (R4039000) | `crates/server/tests/store/contract.rs::r4039000_notifications::r4039000_add_replaces_an_unread_row_and_keeps_the_newest`, `crates/server/tests/api/daily.rs::r4039000_daily_feed::r4039000_a_second_move_stands_beside_a_read_row` |
+| F25 | a second notice on an unread row's kind, actor and subject | Reachable: a daily game's next move | Replaces it, so moves never stack; a read row stays beside the new one (R4039000), except a share already held, which writes no row at all (F31, R4391000) | `crates/server/tests/store/contract.rs::r4039000_notifications::r4039000_add_replaces_an_unread_row_and_keeps_the_newest`, `crates/server/tests/api/daily.rs::r4039000_daily_feed::r4039000_a_second_move_stands_beside_a_read_row` |
 | F26 | past the cap, or past the keep days | Reachable | The newest `NOTIFICATIONS_KEEP` kept; the sweep purges older rows, read or not (R4039000) | `crates/server/tests/api/notifications.rs::r4039000_the_cap_keeps_the_newest`, `…::r4039000_the_sweep_purges_rows_past_the_keep_days` |
 | F27 | a read row unread again | Unreachable: no write clears `read_at` (`mark_read` and `mark_subject` set it on unread rows only) | — | `crates/server/tests/store/contract.rs::r4039000_notifications::r4233000_mark_subject_marks_only_matching_kind_subject_and_actor` |
 | F28 | a row naming a deleted account | Unreachable: a deleted profile takes its rows both ways | — | `…::r4039000_a_deleted_profile_takes_its_rows_both_ways` |
 | F29 | a `notification` frame for a read row | Unreachable: `notify` sends a frame only for a row written unread. **Representable when serialized**: the frame carries `read` | — | F2's tests |
+| F30 | a block between two accounts with rows between them | Reachable: Ana and Bob each request the other and cancel (each keeps the other's row unread), Cy requests Ana, then Ana blocks Bob | Every row between the two goes, either way and read or not, no third party's row is touched, and each count drops and is pushed (R4348000; unblocking restores nothing) | `crates/server/tests/api/friends.rs::r4039000_friend_feed::r4348000_a_block_deletes_the_notifications_between_the_two_and_unblock_restores_nothing`, `crates/server/tests/store/contract.rs::r4039000_notifications::r4348000_delete_between_removes_only_the_pairs_rows_either_way`, `crates/server/tests/actor/social_live.rs::r4348000_block_push::r4348000_a_block_that_removes_only_notifications_pushes_both_the_new_count` (new; Ana's frame reads 2 then 1, Bob's 1 then 0) |
+| F31 | a share of a match with a friend that already holds it | Reachable: share, then share again (the first row read or not) | 204, with no row, no frame and no toast, so the friend's feed and count stay as they were (R4391000) | `crates/server/tests/api/shares.rs::r4391000_share_limits::r4391000_a_share_already_held_answers_204_and_tells_the_friend_nothing_again` |
 
 ## 12. The web's social socket
 
-**Checked at** `ae977ece3e`, plus #4291's pull request.
+**Checked at** `0bf5057480`, plus #4550's pull request. Since `ae977ece3e` (`git log ae977ece3e.. -- <its files>`, `bcdc70af1d` being #4291's own pull request): `c4bc8bd2a8` (#4355) rewords `createBackoff`'s comment for the
+match sockets' R4250000 reset; the social socket still starts the steps over on its `social` frame (V28), so no
+row moved. Checked before at `ae977ece3e`, plus #4291's pull request.
 
 **Files:** `apps/web/src/together/socialSocket.ts` (`openSocialSocket`: `open`, `replace`, `afterClose`, `retry`,
 `close`), `apps/web/src/together/socialPoll.ts` (`start`, `stop`, `tick`, `onLive`, `onQuiet`, `openSocket`),
@@ -638,6 +671,133 @@ view), never `R<n>`.
 | V26 | two clients at once | Unreachable: `openSocket` opens none while one is held, and `onQuiet` lets go of the one held before any other opens | — | — |
 | V27 | `live` with no socket | Unreachable: every path that drops the socket (`onclose`, `replace`, the probe's `replace`) sets it down in the same step, `close` clears it, and `onQuiet` tells the poll | — | — |
 | V28 | the backoff past its last step | Reachable: drops in a row | The last step repeats; a `social` frame starts the steps over (R1441) | › "R3214000 a dropped socket reopens on the match socket's backoff" |
+
+## 13. The match clock
+
+**Checked at** `0bf5057480`, plus #4550's pull request.
+
+**Files:** `crates/shared/src/host/clock.rs` (`MatchClock`: `sync`, `start_grace`, `clear_grace`, `retry`, `fire`,
+`stop`, `arm_ceiling`), `crates/shared/src/host/timer.rs` (`Fx`, `Countdown`), `crates/shared/src/host/snapshot.rs`
+(`clock_view_for`) and `crates/shared/src/host/duel.rs` (`new`, `on_arm`, `on_expire`, `advance_run`, `resolve`,
+`on_attached`, `on_disconnected`, `on_seats_swapped`, `on_stop`).
+
+**Fields:** the clock's `stopped`; the turn clock's `owner`, `turn_key` and `remaining` (with its timer); the
+non-active holder's prompt clock (`holder`, with its timer); the mulligan window's `mulligan_open` and
+`mulligan_expired` (with its timer and deadline); each seat's `grace[p]`; the question sequence's `sequence_first` and
+`sequence_player` (with its timer); `ceiling` and `ceiling_at`; and, read with them, the host's `finished`, `stopped`,
+`run` (an expiry's server actions still owed, logged one row at a time) and `stored_grace` (R744's deadline not yet
+handed to the clock). Each timer is a `Countdown`'s id in the state; the host that runs the machine keeps the timer.
+
+**What moves it:** `DuelHost::new` (the ceiling armed from the match's start, then a sync: the mulligan window or the
+turn clock); `arm` (a sync, and R744's absent grace in a bot's match); a row written (`after_change`'s sync: the turn
+key, the prompt's holder, the window, the sequence); a timer firing (`fire` names the expiry, and `on_expire` derives
+its server actions and logs them, R79, R268); the log refusing a server row (R776000's `retry`, a retry later); a
+socket arriving or leaving (§9.5's grace, R147, R744); a Glitch's swap (R677); the game ending or `stop` (every timer
+taken back); a rebuild (a new host: the ceiling from `created_at`, the rest afresh but a stored grace, R744); a JSON
+round trip (the timer ids kept, the timers not). Its rows are T1 to T20 (T for timer), never `R<n>`.
+
+| # | Combination | Reachable (sequence) or not (why) | Expected (source) | Does (test) |
+|---|---|---|---|---|
+| T1 | not synced: only the ceiling | Reachable: a match row before its host's first sync (`initial_clocks`); `DuelHost::new` syncs at once, so no host holds it past `new` | Only the ceiling stated (§9.5) | `crates/shared/tests/clock.rs::match_clock::gives_a_fresh_match_row_only_the_ceiling_9_5` |
+| T2 | the mulligan window open, no prompt | Reachable: `begin_game`, then `new` | One deadline for both seats, no turn or prompt clock under it, an answer moving nothing (R268) | `crates/shared/tests/clock.rs::match_clock::r268_the_mulligan_clock_runs_one_deadline_for_both_seats_at_once_and_no_turn_clock_runs_under_it`, `…::match_clock::r268_one_seat_answering_neither_re_arms_nor_extends_the_mulligan_clock`, `crates/shared/tests/duel.rs::the_opening::r79_a_new_host_arms_the_ceiling_and_the_mulligan_clock_at_once` |
+| T3 | the window run out, its timeouts owed (`run` holding them) | Reachable: the window runs out with both seats owing | One `timeout` for each seat still owing, in seat order, each logged before the next; a stop between them dispatches no more; turn 1 starts its turn clock from full (R268) | `crates/shared/tests/duel.rs::the_opening::r268_the_clock_running_out_times_out_every_seat_still_owing_in_seat_order_and_turn_1_starts`, `…::the_opening::r268_a_seat_that_answered_is_not_timed_out_and_its_answer_does_not_move_the_deadline`, `…::reads_and_stops::r268_a_stop_between_the_mulligan_timeouts_dispatches_no_more_of_them` |
+| T4 | another clock (a grace) running out while `run` still owes a timeout | Was reachable: p2 drops during the mulligans, and the store is still writing the first seat's timeout when p2's grace runs out | Every seat still owing gets its timeout ("the actor sends a `timeout` for each player who still owes a mulligan", R268), and the other clock runs out again a retry later (R776000) | **#4550: was a mismatch, fixed**: `on_expire` replaced the run, so the second seat's timeout was lost and, the window's clock spent, the match waited in its mulligans. A clock that runs out while a run still owes actions now runs out again `MATCH_SERVER_ACTION_RETRY_MS` later. `crates/shared/tests/duel.rs::reads_and_stops::r268_a_grace_running_out_between_the_mulligan_timeouts_still_times_out_the_second_seat` (new; failed before the fix with `left: []`, `right: ["srv-mulligan-2"]`) |
+| T5 | a setup question the first seat holds (turn 0, the prompt the active seat's) | Reachable: a cast-on-draw card in p1's opening deal asks before the mulligans open (§2.4) | **Unspecified**: R268 calls setup nobody's turn, while R79 governs the active player's prompt by the turn clock. The turn clock times it from full and its expiry is a `Turn` timeout | `crates/shared/tests/clock.rs::match_clock::a_setup_question_the_first_seat_holds_is_timed_by_its_turn_clock` (new); p2's, on its prompt clock: `…::match_clock::r268_a_cards_question_during_setup_is_still_timed_by_r79_on_either_side_of_the_window` |
+| T6 | the turn clock running, no prompt | Reachable: any turn | Runs out after `TURN_CLOCK_SECONDS`, naming the active player; a `timeout` logged under `srv-turn-<seq>`; the next seat's clock from full (R79, R270) | `crates/shared/tests/clock.rs::match_clock::r79_expires_the_turn_clock_after_turn_clock_seconds_and_names_the_active_player`, `…::match_clock::resets_the_turn_clock_when_the_turn_changes`, `crates/shared/tests/duel.rs::the_turn_clock::r79_the_active_players_clock_running_out_logs_a_timeout_under_a_server_nonce` |
+| T7 | a prompt the non-active player holds | Reachable: a trap's question on the opponent's turn | Its own prompt clock; the turn clock paused with what it had left; only the prompt's clock runs out; the active player's prompt stays on the turn clock (R79) | `crates/shared/tests/clock.rs::match_clock::r79_a_prompt_held_by_the_non_active_player_pauses_the_turn_clock_and_only_its_own_clock_expires`, `…::match_clock::does_not_pause_the_turn_clock_for_a_prompt_held_by_the_active_player` |
+| T8 | a second prompt for the same non-active holder, with no sync between that has none | Reachable: the holder answers and the answer's resolution asks it again | **Unspecified**: R79 gives such a prompt "its own prompt clock of 30 s"; the clock keys it by holder alone, so the second keeps the first one's deadline | `crates/shared/tests/clock.rs::match_clock::a_second_prompt_for_the_same_non_active_holder_keeps_the_first_ones_deadline` (new) |
+| T9 | a server row the log refused | Reachable: the store fails the row | The clock that ran out runs out again a retry later and the action is derived again under the same nonce; whatever would stop that clock stops the retry (R776000) | `crates/shared/tests/duel.rs::the_turn_clock::r776000_a_row_the_log_would_not_take_runs_the_clock_out_again_and_the_same_nonce_is_retried`, `crates/shared/tests/clock.rs::match_clock::r776000_a_retry_runs_an_expired_turn_clock_out_once_more_and_a_new_turn_cancels_it`, `…::match_clock::r776000_a_retried_prompt_mulligan_or_ceiling_clock_runs_out_once_more`, `…::r776000_retries::r776000_a_retry_for_another_seat_or_a_closed_window_re_arms_nothing` |
+| T10 | a clock running out while a seat's own row is in flight | Reachable: the active seat's End turn is still being written as its turn clock runs out | **Unspecified**: the timeout finds the log busy and is answered `NotRecorded`, so the clock runs out again a retry later; the row landing ends the turn, which takes the retry back, and the next seat's clock runs from the row | `crates/shared/tests/duel.rs::the_turn_clock::a_clock_running_out_while_a_seats_row_is_in_flight_is_tried_again_and_a_new_turn_cancels_it` (new) |
+| T11 | a seat's grace running | Reachable: a socket drops (§9.5), or the first attach finds the other account not yet here (R744) | The clock keeps running; the grace's end is that seat's loss; a second grace keeps the first deadline (R147); a stored one is kept up to a fresh window (R744); coming back inside it ends it (§9.5) | `crates/shared/tests/duel.rs::being_here::s9_5_a_dropped_socket_starts_the_grace_and_the_opponent_is_told`, `…::being_here::s9_5_the_grace_running_out_is_a_loss_for_the_seat_that_left`, `…::being_here::s9_5_returning_inside_the_window_ends_the_grace_and_greets_the_seat_with_a_fresh_view`, `…::being_here::r744_a_grace_stored_before_a_restart_is_kept_up_to_a_fresh_window`, `crates/shared/tests/clock.rs::match_clock::r147_keeps_the_first_deadline_when_a_second_grace_starts_so_a_flapping_socket_cannot_extend_it` |
+| T12 | a seat back while the row of its forfeit is in flight, the row then refused | Reachable: the grace runs out, the store is slow on the forfeit's row, the seat attaches, then the store fails the row | **Unspecified**: R776000 runs the clock out again and stops the retry for "the player back inside the grace"; this seat came back after the grace ran out but before the retry. The retry re-arms a grace one retry long and the seat forfeits though it is here, where a seat back after the refusal clears the retried grace and plays on | `crates/shared/tests/duel.rs::being_here::a_seat_back_before_its_failed_forfeit_is_answered_still_forfeits_on_the_retry` (new) |
+| T13 | a Glitch swap while an account is away | Reachable: p2 drops, then a Glitch swaps the seats (R677) | **Unspecified**: R677 moves the accounts to the other seats and says nothing of a running grace; the away account's grace restarts from full on the seat it plays now, so the time it was already away is given back | `crates/shared/tests/duel.rs::scripted::r677_a_swap_moves_the_away_accounts_grace_to_the_seat_it_plays_now` |
+| T14 | a question sequence open | Reachable: a card's run of questions | One window from its first question, beside the turn clock; a new first question opens another; its expiry answers Stop for its holder only (R1563006, R1184001) | `crates/shared/tests/clock.rs::r1563006_the_question_sequence_clock::r1563006_a_sequence_runs_out_60_seconds_after_its_first_question_whatever_it_answered_since`, `…::r1563006_the_question_sequence_clock::r1563006_it_runs_beside_the_turn_clock_never_instead_of_it`, `…::r1563006_the_question_sequence_clock::r1563006_the_same_first_question_keeps_its_window_and_a_new_one_opens_another`, `crates/shared/tests/duel.rs::the_sequence::r1563006_a_sequence_expiry_answers_stop_for_the_question_holder_only` |
+| T15 | a question met mid-sequence (its streak past 0) with no window open | Reachable: a host made after a sequence's first question (a rebuild) meets a later one | **Unspecified**: R1563006 counts the window from the sequence's first question, which the new host never saw; it opens a full window from the question it first meets | `crates/shared/tests/clock.rs::r1563006_the_question_sequence_clock::a_question_met_mid_sequence_with_no_window_opens_a_full_one` (new) |
+| T16 | a host made for a finished match whose game has no result | Reachable: a match ended as a ceiling draw after a reduce panicked (R1253000: no row, so the fold has no result), rebuilt for a socket inside its rematch window | **Unspecified**: only `clock.rs`'s comment says it ("Once a match is over it stays over: a late `sync` must never re-arm a deadline"). `new` arms the ceiling and the turn or mulligan clock, which run out and log nothing (`on_expire` returns for a finished host) | `crates/shared/tests/duel.rs::reads_and_stops::r79_a_finished_matchs_clocks_running_out_log_nothing` |
+| T17 | a host made from its JSON on another host, then `arm` | Reachable through the boundary (design rule 3: a caller that keeps `DuelHost` as JSON resumes it on another server); no caller in this repository does, since the server rebuilds from the log | `arm`: "clocks brought up to date" (`crates/shared/README.md`'s event table), so that a match can "resume it on another server" (design rule 3) | **Mismatch, named**: the JSON keeps the old host's timer ids, so `sync` finds each clock armed and sets no timer, and no clock runs out on the new host. `crates/shared/tests/duel.rs::the_checkpoint::a_host_made_from_its_json_elsewhere_is_set_no_clock_timer_by_arm` (new; shows what it does) |
+| T18 | a rebuilt host (a new host for a match made earlier) | Reachable: a restart or a let-go, then a socket | The ceiling at what is left of it from the match's start (R79), the mulligan or turn clock afresh (`clock.rs`: "A rebuilt host (§9.5) arms a fresh full deadline"), a stored grace kept (R744) | `crates/shared/tests/duel.rs::the_opening::r79_r268_a_rebuilt_host_arms_the_ceiling_left_and_the_mulligans_afresh_and_the_ceiling_draws` (new), `…::being_here::r744_a_grace_stored_before_a_restart_is_kept_up_to_a_fresh_window` |
+| T19 | stopped (the game over, or `stop`) | Reachable: the game ends; `stop` | Every timer taken back; a later sync or timer does nothing (R79, §9.5) | `crates/shared/tests/clock.rs::match_clock::stops_everything_once_the_match_is_over`, `…::match_clock::stop_cancels_every_timer_and_is_idempotent`, `…::match_clock::r268_stop_cancels_a_running_mulligan_clock`, `crates/shared/tests/duel.rs::being_here::stop_takes_every_clock_back_and_later_timers_do_nothing` |
+| T20 | the ceiling running out | Reachable: `MATCH_CEILING_MINUTES` after the match's start | One `ceilingReached` row stamped with the active seat, the match a draw (R79, R146, R389) | `crates/shared/tests/clock.rs::match_clock::r79_fires_the_ceiling_once_measured_from_started_at`, `…::r389_the_match_ceiling_doubled_with_the_turn_cap_patch_v0_2_0_b4_3::r389_the_clock_arms_the_ceiling_at_the_configured_minutes_from_the_matchs_start`, T18's test (its `srv-ceiling-1` and the draw) |
+
+T17 is also **representable when serialized**: a `DuelHost` read back holds timer ids that name timers no host keeps.
+
+## 14. The rematch book
+
+**Checked at** `0bf5057480`, plus #4550's pull request.
+
+**Files:** `crates/shared/src/host/rematch.rs` (`RematchBook`: `offer`, `seen`, `release`, `sweep`, `live_entry`;
+`in_rematch_window`), `crates/shared/src/host/again.rs` (`in_again_window`, the one window check),
+`crates/shared/src/host/boundary.rs` (the book over the boundary, which its caller holds) and
+`crates/server/src/api/rematch.rs` (`RematchOffers`, `offer_as`, `rematch_seen`, `sweep_rematch_offers`).
+
+**Fields,** per finished match's id: `offers` (seat to stakes), `leans` (seat to its latest offer's pick), `at` (the
+latest offer's moment), `match_id` (the game claimed, or none) and `generation`; the book's `next_generation`; read
+with the match's `finished_at` and now.
+
+**What moves it:** `offer` inside the window (an entry made or met; equal stakes claim one game) or past it (it
+lapses: an unclaimed entry dropped, a claimed one answers its game); `seen` (a stale unclaimed entry dropped as it is
+read); `release(generation)` (a failed create); the reaper's `sweep` (after `reap_finished`, in the same tick); a
+restart (the server's book is `App`'s, in memory, and is lost); a JSON round trip (the boundary's caller holds it).
+Its rows are O1 to O16 (O for offer), never `R<n>`.
+
+| # | Combination | Reachable (sequence) or not (why) | Expected (source) | Does (test) |
+|---|---|---|---|---|
+| O1 | no entry | Reachable: no offer yet; after a stale read or a lapse; after a restart | Nobody has offered (R672). **Unspecified** after a restart: the offers made before it are forgotten, and a game already claimed is no longer found by a late read | `crates/shared/tests/rematch.rs::an_entry_whose_latest_offer_is_stale_is_dropped_when_read_but_one_with_a_game_stays` (the empty book after the stale read); no test restarts the server's book |
+| O2 | one seat's offer waiting | Reachable: one offer inside the window | It waits, and the other seat is told (R672, R3213000) | `crates/shared/tests/rematch.rs::r672_two_equal_offers_make_exactly_one_game_with_the_leans_of_both_seats` (its first offer) |
+| O3 | equal offers: one game claimed | Reachable: both seats offer equal stakes | Exactly one game, from both seats' leans (R672, R1372, R924000) | the same test |
+| O4 | a third offer after the claim | Reachable: a seat offers again once the game is made | It meets the game already made and makes no second (R672) | the same test (its third offer) |
+| O5 | unequal stakes | Reachable: a rematch beside a double-or-nothing | Both wait; a changed mind meets the other offer (R672) | `crates/shared/tests/rematch.rs::r672_unequal_stakes_wait_and_a_changed_mind_meets_the_other_offer` |
+| O6 | a seat offering again before the pair meets | Reachable: p1 offers with a lean, then again with none, then p2 offers | The seat's latest offer stands (R672's changed mind), its lean with it (`RematchEntry.leans`: "its latest offer's pick", R1372) | `crates/shared/tests/rematch.rs::a_seat_that_offers_again_is_held_to_its_latest_lean` (new) |
+| O7 | an offer past the window, no entry | Reachable: a late offer; a finished row with no end | It lapses silently, recording nothing (R2685000); a row with no end is outside the window (R1285000) | `crates/shared/tests/rematch.rs::r2685000_an_offer_past_the_finished_matchs_window_lapses_and_records_nothing` |
+| O8 | an offer past the window on an unclaimed entry | Reachable: p1 inside the window, p2 past it | No game, and the entry is dropped (R2685000) | `crates/shared/tests/rematch.rs::r2685000_an_old_offer_cannot_meet_a_new_one_but_a_game_made_inside_the_window_keeps_its_id` |
+| O9 | an offer past the window on a claimed entry | Reachable: the pair met inside the window, then a seat offers or polls late | It lapses but answers the game made, so the seat still learns where to go (R2685000) | the same test |
+| O10 | a read past the window of an unmet offer under the TTL old | Reachable: p1 offers 5 ms after the end; p2 reads just past the window | **Unspecified**: a read counts staleness from the latest offer, where R2685000 counts the offer window from the match's end, so it still shows an offer nothing can meet, until an offer lapses (dropping it) or the read comes a TTL after the offer | `crates/shared/tests/rematch.rs::a_read_past_the_window_still_shows_an_unmet_offer_until_an_offer_lapses` (new) |
+| O11 | an entry stale by its latest offer while the match's window is open | Unreachable: every offer is taken at or after `finished_at`, so inside the window no entry's latest offer is more than the TTL old. **Representable when serialized**: a book read back over the boundary can hold one | — | — |
+| O12 | an offer exactly the TTL old | Reachable | Still read, dropped a millisecond later; the window is the TTL inclusive (R2685000) | `crates/shared/tests/rematch.rs::r2685000_an_offer_exactly_the_ttl_old_is_still_read_and_the_book_counts_its_entries`, `…::the_rematch_window_runs_from_the_end_to_the_ttl_inclusive_and_never_without_an_end` |
+| O13 | a claimed game whose create failed | Reachable: the store fails the new match | That entry's claim cleared, so the seats offer again and meet; another entry's generation clears nothing (`release`'s doc) | `crates/shared/tests/rematch.rs::a_failed_create_clears_the_claim_of_that_entry_only` |
+| O14 | a game claimed at the window's last moment, the reaper's sweep as the window ends | Reachable: both offers at `finished_at + REMATCH_OFFER_TTL_MS`, the reaper's tick a millisecond later (`reap_finished` lets the actor go, then the sweep) | The game survives the sweep, so the one status read the result screen makes after its socket closes finds it (R3694000: "a rematch made in the window's last moment being found that way") | `crates/shared/tests/rematch.rs::r3694000_a_game_claimed_at_the_windows_last_moment_survives_the_sweep_at_its_end` (new) |
+| O15 | the sweep | Reachable: the reaper's tick | Drops each entry whose latest offer is past the TTL with no live actor, and keeps the rest (`sweep_rematch_offers`' doc) | `crates/shared/tests/rematch.rs::the_sweep_drops_old_entries_with_no_live_host_and_keeps_the_rest` |
+| O16 | the book read back from JSON | Reachable: every boundary call (the caller holds the book) | The same book (design rule 3) | `crates/shared/tests/rematch.rs::the_book_reads_back_from_json` |
+
+## 15. The undo hold
+
+**Checked at** `0bf5057480`, plus #4550's pull request.
+
+**Files:** `apps/web/src/undo/hold.ts` (`useUndoHold`: `release`, `send`, `hold`, `undo`, `sendNow` and its page
+listeners) and `apps/web/src/undo/UndoToast.tsx`; its callers `apps/web/src/game/deckbuilder/DeckWorkshop.tsx` and
+`apps/web/src/together/useFriendActions.ts`.
+
+**Fields:** `current` (the held deletion), `held` (the same, as the state that draws the toast), `handle` (the
+window's timer), `repeat` (the double-click guard's timer) and `timerRef` (the timers it runs on).
+
+**What moves it:** `hold` (refused inside the guard; otherwise it sends any deletion held, holds the new one and
+starts the window and the guard); the window's end (sent); the guard's end; Undo (restored, nothing sent); `sendNow`;
+`pagehide` and the page turning hidden (sent with keepalive); the screen's unmount (sent). Every send and Undo goes
+through `release`, which clears every field at once. A reload or a second tab starts from nothing. Its rows are U1 to
+U17 (U for undo), never `R<n>`.
+
+| # | Combination | Reachable (sequence) or not (why) | Expected (source) | Does (test) |
+|---|---|---|---|---|
+| U1 | mounted, nothing held | Reachable: the screen mounts | No toast, nothing sent (R2119000) | every test's start in `apps/web/src/undo/hold.test.tsx`; U13's test unmounts from it |
+| U2 | held, inside the guard | Reachable: a deletion | The item off the screen, the toast's Undo offered, nothing sent until `UNDO_WINDOW_MS` (R2119000) | `apps/web/src/undo/hold.test.tsx` › "R2119000 sends nothing until UNDO_WINDOW_MS has passed, then sends once" |
+| U3 | a second hold inside the guard | Reachable: a double click | Refused: nothing sent, held or hidden, and the first stays held with its window (R3059000) | › "R3059000 a second hold inside UNDO_REPEAT_MS is refused: it sends nothing and the first stays held" |
+| U4 | a third press after the guard ends, a refused one between | Reachable | Taken: a refused press does not extend the guard (R3059000) | › "R3059000 a refused hold does not extend the guard" |
+| U5 | Undo after a refused second hold | Reachable | The one deletion held is restored (R3059000) | › "R3059000 Undo after a refused second hold restores the one deletion held" |
+| U6 | held, the guard over, a second hold | Reachable: a deletion `UNDO_REPEAT_MS` or more after the first | The first sent at once, the second held with a window of its own, one toast (R2119000, R3059000) | › "R2119000 a second deletion sends the first at once and takes the toast", › "R3059000 a hold at UNDO_REPEAT_MS sends the first and holds the second" |
+| U7 | the window ends | Reachable | Sent once, without keepalive, and the toast goes (R2119000) | U2's test |
+| U8 | Undo inside the guard | Reachable: Undo at once | Restored and never sent; the guard ends with the hold, so a deletion right after is taken (R2119000, R3059000) | › "R2119000 Undo puts the item back and sends nothing, then or later", › "R3059000 Undo ends the guard, so a deletion right after it is taken" |
+| U9 | `sendNow` inside the guard | Reachable: a new deck at the cap right after a deletion | Sent at once; the guard ends with it, so a deletion right after is taken (R3059000: "a send at once (`sendNow`)") | › "R3059000 a send at once ends the guard, so a deletion right after it is taken" (new) |
+| U10 | the page turning hidden while held | Reachable: a tab switch | Sent at once with keepalive (R2119000) | › "R2119000 pagehide, or the page going hidden, sends it at once with keepalive" |
+| U11 | hidden, then `pagehide` | Reachable: a closing tab fires both | Sent once (R2119000: "is then sent once") | › "R2119000 the page going hidden and then pagehide, as a closing tab fires them, send it once" (new) |
+| U12 | leaving the screen while held | Reachable: the screen unmounts | Sent, with no timer left (R2119000) | › "R2119000 leaving the screen sends it" |
+| U13 | leaving the screen with nothing held | Reachable: after Undo, or after the window's end | Nothing more sent (R2119000) | › "R2119000 leaving the screen after Undo, or after the window's end, sends nothing more" (new) |
+| U14 | a deletion held with no window running | Unreachable: `hold` sets both in one call, `release` clears both, and the window's own end clears `handle` as it sends, which releases | — | — |
+| U15 | `held` and `current` apart | Unreachable: every write sets both in the same call | — | — |
+| U16 | the guard running with nothing held | Unreachable: `release` clears the guard with the hold, and the guard (`UNDO_REPEAT_MS`) ends before the window (`UNDO_WINDOW_MS`) could | — | — |
+| U17 | the window running with nothing held | Unreachable: `release` clears it | — | — |
+
+Not checked: the decks screen and the friends drawer each run their own `useUndoHold`, so if both can be on screen
+at once, two deletions are held at once, where R2119000 has "one is held at a time". No test mounts both.
 
 ## Not states (versions)
 
@@ -718,10 +878,27 @@ Each reads an older record; nothing is removed.
   4403 waits for a renewed token), V16 (a renewal's replacement reads once more), V19 (a socket the browser
   cannot construct is retried on the backoff), C10′ (a periodic checkpoint whose put is in flight when `stop`
   lands is written, though `checkpoint`'s doc says `stop` writes none).
+- **#4550's fix,** with a test that failed before it: T4 (a grace running out while the first mulligan timeout's
+  row was in flight replaced the run, so the second seat's timeout was lost and the match waited in its mulligans:
+  R268's "a `timeout` for each player who still owes a mulligan", R776000's retry). If it reads as a decision
+  instead, it needs a ruling in a pull request of its own.
+- **#4550's mismatch named, not fixed:** T17 (a `DuelHost` made from its JSON on another host gets no clock timer
+  from `arm`, where the shared README's `arm` row says "clocks brought up to date" and design rule 3 has a match
+  resume on another server; a fix changes what `arm` emits for every match the server arms).
+- **#4550's unspecified:** S16 (a socket that closes as it is seated sends the held tab to `elsewhere` with nobody on
+  the seat), T5 (the first seat's setup question runs on its turn clock), T8 (a second prompt for the same holder
+  keeps the first one's deadline), T10 (a clock running out with the seat's own row in flight is retried), T12 (a
+  seat back while its forfeit's row is in flight still forfeits on the retry, where one back after the refusal
+  does not), T13 (a swap gives the away account a fresh grace), T15 (a host that meets a sequence mid-way opens a
+  full window), T16 (a host made for a finished match with no result arms clocks that log nothing), O1 (a restart
+  forgets every rematch offer and claim) and O10 (a read past the window still shows an offer nothing can meet).
+- **#4550's not checked:** the decks screen and the friends drawer each run their own `useUndoHold` (§15), so two
+  deletions may be held at once, where R2119000 has "one is held at a time"; no test mounts both.
 - **Not shown:** E5′ (mulligans open with work owed); W10 (a duplicated tab: jsdom cannot copy a tab).
 - **Representable when serialized:** C7 (a checkpoint ahead of its log) and a checkpoint row on a finished
   match (the row's shape allows both; the store's guards and `verify` keep them out), F29 (a `notification` frame
   carries `read`, which a pushed row always has false), and `NotificationRow`'s `kind` beside a free `subject`
   and `payload` (nothing in the row ties a kind to its subject's shape); E7 to E10 (`GameState`), D3 and D5 (`RunState`), K11 (a practice
   save edited in IndexedDB), and a practice record with `run`, `aiBanned` or `lastBoard` (`resume.ts`'s
-  `isConfig` checks no extra keys; with `run`, a resume would read the run fight's slot).
+  `isConfig` checks no extra keys; with `run`, a resume would read the run fight's slot); T17 (a `DuelHost` read back keeps timer ids no host holds) and O11
+  (a `RematchBook` read back with an entry stale inside its window).

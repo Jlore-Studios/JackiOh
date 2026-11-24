@@ -415,7 +415,13 @@ export default function Clock(props: ClockProps) {
   const urgency = readUrgency(readout);
   const turnRemaining = readout.turn?.remainingMs ?? null;
   // R439, R506: the viewer's own running turn clock beats in its last 30 seconds (audio/clockAlarm.ts).
-  useTurnClockAlarm(turnRemaining, readout.turn !== null && readout.turn.side === "you" && !readout.turn.paused);
+  // The kind gate keeps an own-turn prompt's countdown on the prompt hook below, never on both.
+  useTurnClockAlarm(turnRemaining, readout.turn !== null && readout.turn.side === "you" && readout.turn.kind === "turn" && !readout.turn.paused);
+  const promptRemaining = readout.prompt?.remainingMs ?? null;
+  // R4562000: the viewer's own open prompt counts down with the same beats. `side === "you"`
+  // is false for the opponent's prompt, for a holderless prompt and for the mulligan (side null),
+  // so those stay silent; a null prompt (answered, expired, left) resets the schedule.
+  useTurnClockAlarm(promptRemaining, readout.prompt !== null && readout.prompt.side === "you" && readout.prompt.kind === "prompt");
   const fuseMs = !reduced && urgency.side === "you" && urgency.level !== "none" ? turnRemaining : null;
 
   return (

@@ -16,13 +16,10 @@ import { sideOf, testid } from "../../../game/contract.ts";
 import { frac, ringCue, shakeCues, tid, tunedBurst } from "../../build.ts";
 import { FX_CENTER, FX_HEAL_SPLAT_AT, FX_SLAM_AT, FX_SPLAT_HOLD_MS } from "../../constants.ts";
 import { figureCue, figureTint } from "../../figures.ts";
-import { FLAVOR_LOOKS, paletteLook } from "../../flavors.ts";
+import { FLAVOR_LOOKS } from "../../flavors.ts";
 import { hit, isFirstEntry } from "../../motifs/build.ts";
 import type { FxAnchor, FxCue, FxPlay } from "../../types.ts";
 import { ENTRANCE_TRAUMA, heroOf, projectile, type CardFxPlan, type CardRecipe, type Entrance, type RecipeFixture } from "../recipe.ts";
-
-/** The look its pool and breath wear: Holy's, as its aura's. */
-const INTROSPECTION_PALETTE = "Holy";
 
 /** Every particle count it throws, at intensity "normal" (rule 9). */
 const TUNING = {
@@ -63,7 +60,8 @@ function landing(event: GameEvent, view: PlayerView): FxAnchor {
 }
 
 export const poolBreath: Entrance = ({ D, tgt, intensity: i, view, landing: landed, leadMs }) => {
-  const look = paletteLook(INTROSPECTION_PALETTE) ?? FLAVOR_LOOKS.Holy;
+  // The look its pool and breath wear: Holy's, as its aura's.
+  const look = FLAVOR_LOOKS.Holy;
   const tint = figureTint(look);
   const at = tid(tgt);
   const lead = leadMs ?? 0;
@@ -80,7 +78,7 @@ export const poolBreath: Entrance = ({ D, tgt, intensity: i, view, landing: land
 };
 
 export const introspection: CardRecipe = (event, p, play) => {
-  const look = paletteLook(INTROSPECTION_PALETTE) ?? FLAVOR_LOOKS.Holy;
+  const look = FLAVOR_LOOKS.Holy;
   const i = p.env.intensity;
   const side = sideOf(p.view, play.player);
   const hand = tid(animTestid.hand(side));

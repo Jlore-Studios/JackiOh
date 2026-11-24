@@ -117,9 +117,10 @@ pub const AI_GATE: AiGate = AiGate {
         hard_vs_easy: 0.75,
     },
     measured_rate: ByMatchup {
-        ai_vs_random: 0.945,
-        ai_vs_greedy: 0.68,
-        hard_vs_easy: 0.913,
+        // R4513000: measured on 50 fresh tuning deals per matchup.
+        ai_vs_random: 1.0,
+        ai_vs_greedy: 0.92,
+        hard_vs_easy: 0.94,
     },
     false_alarm: 0.05,
     max_decision_ms: 1500.0,
@@ -170,15 +171,20 @@ pub fn binomial_tail(n: i32, p: f64, k: i32) -> f64 {
     dist.iter().skip(k.max(0) as usize).fold(0.0, |sum, q| sum + q)
 }
 
-/// Wins needed for `matchup`: max k where P(Binomial(games, measured_rate) >= k) >= 1 - false_alarm,
-/// capped at ceil(brief_rate * games) (SPEC §9.9).
-pub fn gate_needed(matchup: Matchup, games: i32) -> i32 {
-    let measured = AI_GATE.measured_rate[matchup];
+/// Wins needed for `matchup` given an arbitrary win rate: max k where
+/// P(Binomial(games, rate) >= k) >= 1 - false_alarm, capped at ceil(brief_rate * games).
+pub fn gate_needed_with_rate(matchup: Matchup, games: i32, rate: f64) -> i32 {
     let mut k = 0;
-    while k < games && binomial_tail(games, measured, k + 1) >= 1.0 - AI_GATE.false_alarm {
+    while k < games && binomial_tail(games, rate, k + 1) >= 1.0 - AI_GATE.false_alarm {
         k += 1;
     }
     k.min((AI_GATE.brief_rate[matchup] * f64::from(games)).ceil() as i32)
+}
+
+/// Wins needed for `matchup`: max k where P(Binomial(games, measured_rate) >= k) >= 1 - false_alarm,
+/// capped at ceil(brief_rate * games) (SPEC §9.9).
+pub fn gate_needed(matchup: Matchup, games: i32) -> i32 {
+    gate_needed_with_rate(matchup, games, AI_GATE.measured_rate[matchup])
 }
 
 /// Game n (1-based): the subject sits p1 when n is odd and p2 when n is even.
@@ -290,12 +296,17 @@ fn game_config_with_banned(
 
 /// Plays the listed matchup games, folded to record replay hash and errors against `gate_needed`.
 pub fn run_gate_games(matchup: Matchup, numbers: &[i32], budget: SearchBudget) -> GateReport {
-    run_games(matchup, numbers, budget, game_config)
+    run_games(matchup, numbers, budget, AI_GATE.seed_series, game_config)
+}
+
+/// Plays the listed matchup games on the tuning series (`AI_TUNING_SERIES`).
+pub fn run_tuning_gate_games(matchup: Matchup, numbers: &[i32], budget: SearchBudget) -> GateReport {
+    run_games(matchup, numbers, budget, AI_TUNING_SERIES, game_config)
 }
 
 /// #1113: `run_gate_games` using the frozen fixture pool.
 pub fn run_fixture_gate_games(matchup: Matchup, numbers: &[i32], budget: SearchBudget) -> GateReport {
-    run_games(matchup, numbers, budget, fixture_game_config)
+    run_games(matchup, numbers, budget, AI_GATE.seed_series, fixture_game_config)
 }
 
 /// The games `config_for` deals, each folded with its handicaps to fill replay_hash/replay_errors.
@@ -303,11 +314,12 @@ fn run_games(
     matchup: Matchup,
     numbers: &[i32],
     budget: SearchBudget,
+    series: &str,
     config_for: fn(Matchup, i32, SearchBudget, &str) -> MatchConfig,
 ) -> GateReport {
     let mut games: Vec<GateGame> = Vec::new();
     for &n in numbers {
-        let config = config_for(matchup, n, budget, AI_GATE.seed_series);
+        let config = config_for(matchup, n, budget, series);
         let subject_seat = subject_seat_of(n);
         let record = play_match(&config, &mut MatchHooks::default());
 

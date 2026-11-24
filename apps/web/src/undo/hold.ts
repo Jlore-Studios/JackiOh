@@ -41,7 +41,8 @@ export type UndoHold = {
   /**
    * Holds a deletion, sending any held before it at once, and returns `true`. Returns `false`, sending and
    * holding nothing, when it comes within `UNDO_REPEAT_MS` of the last one taken: the caller then leaves
-   * its item where it is.
+   * its item where it is. The guard ends with the hold (R3059000), so a deletion right after Undo,
+   * `sendNow`, the page hiding, the window's end or leaving the screen is taken.
    */
   hold: (deletion: HeldDeletion) => boolean;
   undo: () => void;

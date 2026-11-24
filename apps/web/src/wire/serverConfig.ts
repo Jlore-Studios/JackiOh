@@ -157,6 +157,7 @@ export const TERMS_VERSION = "2026-11-05/2026-11-11";
 export const TIER_WEIGHT_TOTAL = 1000;
 export const TOKEN_BAR_POINTS_BY_CARD_RARITY = {"common":1,"epic":3,"legendary":5,"mythic":10,"rare":2};
 export const TOKEN_BAR_POINTS_BY_COSMETIC_RARITY = {"common":1,"epic":3,"legendary":5,"mythic":10,"rare":2};
+export const TOTP_CODE_FORMAT = {"alphabet":"0123456789","groupSize":1,"length":6,"maxInputLength":64,"separator":""};
 export const TRIO_CODE_CORE_ONLY_VERSION = 1;
 export const TRIO_CODE_MAX_INPUT_LENGTH = 2048;
 export const TRIO_CODE_VERSION = 2;

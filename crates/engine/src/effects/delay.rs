@@ -451,7 +451,8 @@ pub fn meet_kill_deadlines(state: &mut GameState, killer_id: &str) {
 /// R963, MD-C4 (Meditative #39.5 Jade Beauty): "Allure every enemy Unit" — each enemy Unit on the field
 /// now (a pile's top: never a carried Unit, R446, or one dormant under a Stack, R13) is stolen at the
 /// start of the Allurer's next turn, or destroyed with no open unit zone. One entry per Unit, watching
-/// its stay (R174) with the `allure` mark (R437); the entries outlive the Allurer (R76).
+/// its stay (R174) with the `allure` mark (R437); the entries outlive the Allurer (R76). A Spell's passes
+/// a Unit Immune to Spells by (R4453000).
 pub fn allure_enemy_units() -> Effect {
     Effect::new("allureEnemyUnits", move |ctx| {
         let (def_id, radiant) = maker_of(ctx);
@@ -474,8 +475,9 @@ pub fn allure_enemy_units() -> Effect {
                 .into_iter()
                 .cloned(),
         );
-        // R1839000: a Dormant card is marked by nothing, so Allure passes it by.
-        units.retain(|unit| !crate::slumber::is_slumbering(unit));
+        // R1839000: a Dormant card is marked by nothing, so Allure passes it by; R4453000: so does a Spell's
+        // Allure (S #150's Call to Chaos) a Unit Immune to Spells.
+        units.retain(|unit| !crate::restrictions::unaffected_by(ctx, unit));
         for unit in units {
             let mut data: IndexMap<String, Value> = IndexMap::new();
             data.insert("instanceId".to_string(), Value::String(unit.id.clone()));

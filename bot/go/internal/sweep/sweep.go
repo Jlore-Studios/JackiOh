@@ -129,7 +129,7 @@ func Sweep(ctx *hctx.Context) []string {
 	parts := []part{
 		{"labels", Labels}, {"comments", comments}, {"reviews", reviews},
 		{"assignments", assignments}, {"early_ci", earlyCI}, {"failed_ci", failedCI}, {"needs_plan", needsPlan}, {"holds", holds},
-		{"turns", turns}, {"decisions", decisions}, {"green_heads", GreenHeads}, {"person_merges", PersonMerges}, {"trees", Trees},
+		{"turns", turns}, {"decisions", decisions}, {"auto_approve", autoApprove}, {"green_heads", GreenHeads}, {"person_merges", PersonMerges}, {"trees", Trees},
 		{"deliveries", Deliveries},
 		{"night_run", func(ctx *hctx.Context, since time.Time) []string { return NightRun(ctx, since) }},
 		{"issue_types", issueTypes}, {"difficulty_labels", difficultyLabels},
@@ -362,6 +362,12 @@ func holds(ctx *hctx.Context, since time.Time) []string {
 // turns takes up the pull requests waiting their turn whose turn came (#2948, `plan.SyncTurns`).
 func turns(ctx *hctx.Context, since time.Time) []string {
 	return plan.SyncTurns(ctx, 0)
+}
+
+// autoApprove queues the suggestions the judge would approve that waited with no one's vote,
+// comment or 👎 (`suggestions.auto_approve`, `plan.AutoApprove`).
+func autoApprove(ctx *hctx.Context, since time.Time) []string {
+	return plan.AutoApprove(ctx)
 }
 
 // decisions keeps the stops for a decision (#2986, #3009, `plan.SyncDecisions`): a question a trusted

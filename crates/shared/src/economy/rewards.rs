@@ -1057,6 +1057,75 @@ mod tests {
         assert!(pay_xp(&tracks, 0, Cause::Track, "m").is_empty());
     }
 
+    /// R1302003: whether the payout unlocks an older track reads the newest track with the payout's XP
+    /// added, so one XP short of the unlock level and one XP more unlocks, as does the whole of it paid onto
+    /// a track not yet written.
+    #[test]
+    fn r1302003_the_unlock_reads_the_newest_track_with_the_payouts_xp_added() {
+        let newest = newest_shipped_set();
+        let unlock = total_xp_for_level(SET_TRACK_UNLOCK_LEVEL);
+        let short = vec![SetTrack {
+            set_id: newest.as_str().to_string(),
+            xp: unlock - 1,
+            level: i64::from(SET_TRACK_UNLOCK_LEVEL) - 1,
+            rewards_claimed: i64::from(SET_TRACK_UNLOCK_LEVEL) - 1,
+        }];
+        let rows = |grants: &[LedgerGrant]| {
+            grants
+                .iter()
+                .filter(|grant| matches!(grant, LedgerGrant::Track { .. }))
+                .count()
+        };
+        assert_eq!(
+            rows(&pay_xp(&short, 1, Cause::Track, "m")),
+            2,
+            "the newest track and one older"
+        );
+        assert_eq!(
+            rows(&pay_xp(&[], unlock, Cause::Quest, "q")),
+            2,
+            "the newest track and one older"
+        );
+    }
+
+    /// R1302003, R1302006: a game that unlocks an older track shows it in its answer from its first level
+    /// with no XP to the level the game's XP reached, every level in between paid.
+    #[test]
+    fn r1302003_r1302006_the_answer_shows_the_unlocked_track_at_the_level_its_xp_reached() {
+        let newest = newest_shipped_set();
+        let older = SHIPPED_SETS
+            .iter()
+            .rev()
+            .skip_while(|set| **set != newest)
+            .nth(1)
+            .copied()
+            .expect("an older shipped set");
+        let xp = game_xp(GameMode::Ladder, 10, true);
+        let short = total_xp_for_level(SET_TRACK_UNLOCK_LEVEL) - xp;
+        let tracks = vec![SetTrack {
+            set_id: newest.as_str().to_string(),
+            xp: short,
+            level: track_level(short),
+            rewards_claimed: track_level(short),
+        }];
+        let paid = pay_game(
+            &records(0, tracks, quiet()),
+            &summary(GameMode::Ladder, Some(true), 10),
+            "s",
+        );
+        let gain = paid
+            .economy
+            .tracks
+            .iter()
+            .find(|gain| gain.set_id == older.as_str())
+            .expect("the unlocked track's gain");
+        assert_eq!(
+            (gain.before.level, gain.after.level, gain.after.xp),
+            (SET_TRACK_FIRST_LEVEL, track_level(xp), xp)
+        );
+        assert_eq!(gain.levels.len() as i64, track_level(xp));
+    }
+
     /// R1304001: a held quest moves by what the game did, never past its target, and completes and pays on
     /// reaching it: its row, its Jlore and its XP onto the tracks.
     #[test]

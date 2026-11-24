@@ -63,7 +63,9 @@ export const jadeBoulder: Entrance = ({ D, tgt, intensity: i, view, landing, lea
 
 export const jadeBeauty: CardRecipe = (event, p, play) => {
   // Her Allure's marks, her end-of-turn hook's (a `trigger` entry; her play's in the gallery).
-  if (event.type !== "marked" || event.mark !== ALLURE_MARK || !event.added) return null;
+  // Stryker disable next-line ConditionalExpression: only a "marked" event carries a mark, so without this test another event's absent mark still fails the next; it is there for TypeScript's narrowing.
+  if (event.type !== "marked") return null;
+  if (event.mark !== ALLURE_MARK || !event.added) return null;
   if (play.hook !== undefined && play.hook !== "trigger") return null;
   const look = paletteLook(JADE_PALETTE) ?? FLAVOR_LOOKS.Hustle;
   const pink = paletteFor(ALLURE_MARK_COLOR);
@@ -88,5 +90,6 @@ export const jadeBeauty: CardRecipe = (event, p, play) => {
 /** R3405001: her Allure on the other player's first Unit (her Mythic play's entry is long, so one mark). */
 export const jadeBeautyFixture: RecipeFixture = (view, _instanceId, player: PlayerId): GameEvent[] => {
   const foe = (player === view.viewer ? view.opponent : view.you).units.find((unit) => unit !== null);
-  return foe === undefined || foe === null ? [] : [{ type: "marked", instanceId: foe.instanceId, mark: ALLURE_MARK, color: ALLURE_MARK_COLOR, added: true }];
+  // `find` answers a Unit or undefined, never one of the empty zones' nulls it skips.
+  return foe === undefined ? [] : [{ type: "marked", instanceId: foe.instanceId, mark: ALLURE_MARK, color: ALLURE_MARK_COLOR, added: true }];
 };

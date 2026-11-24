@@ -32,14 +32,15 @@ mod code_blocks {
 pub use code_blocks::CODE_BLOCKS;
 
 /// R1846000, R2173000: compiled card metrics (`CODE_LINES`, `BUSTED`, `COMPLICATED`, `LIST_READERS`,
-/// and #3116's `EXTRA_TURN_CARDS`).
+/// #3116's `EXTRA_TURN_CARDS` and #4609's `TEXT_REWRITERS`).
 mod card_metrics {
     include!(concat!(env!("OUT_DIR"), "/card_metrics.rs"));
 }
-pub use card_metrics::{BUSTED, CODE_LINES, COMPLICATED, EXTRA_TURN_CARDS, LIST_READERS};
+pub use card_metrics::{BUSTED, CODE_LINES, COMPLICATED, EXTRA_TURN_CARDS, LIST_READERS, TEXT_REWRITERS};
 
 /// R1846000, R2173000: a card script's code lines, as `build.rs` counts them, whether it reads
-/// the BUSTED or complicated lists, and whether it owes an extra turn (#3116).
+/// the BUSTED or complicated lists, whether it owes an extra turn (#3116), and whether it rewrites a
+/// card's text (#4609).
 pub mod code_lines;
 
 /// SPEC §5.1's single pool source over the shipped catalog (its `catalog.query`: `query`, `pool`, …).

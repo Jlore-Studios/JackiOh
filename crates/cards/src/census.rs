@@ -259,6 +259,19 @@ pub const CENSUS: &[SetCensus] = &[
             ("Mythic", 12),
         ],
     },
+    // R4577000: the Infinite Assault (tracker #4576, docs/infinite-assault.md IA11), a single-player set
+    // held while it is built card by card. Its counts are the cards that have landed, each card part
+    // raising them (C1, issue #4577: the Assault Core, #1 to #24, and the tokens #4.1 Drone and #10.1
+    // Drone Escort); it ships in no total and no tag count.
+    SetCensus {
+        set: "Infinite Assault",
+        segment: "infiniteassault",
+        cards: 24,
+        shared_cards: &[],
+        card_defined_tokens: &["4.1", "10.1"],
+        shared_tokens: &[],
+        rarities: &[("Common", 10), ("Rare", 8), ("Epic", 4), ("Legendary", 2)],
+    },
 ];
 
 /// §5, §7, §8, B2.4: how many catalog entries carry each tag, tokens included, so a tag that drifts
@@ -402,6 +415,18 @@ pub fn tag_count(tag: Tag) -> usize {
         Tag::AutomaZeta => stinkyscape_plus(5),
         // S01: S #44 Great Paperclip Theory I gains the tag.
         Tag::Paperclip => stinkyscape(1) + stinkyscape_plus(2),
+        // R4577001: the Infinite Assault's doctrine tags and Commander, declared by issue #4577 for
+        // the set's later parts. Its cards are a single-player set's, which ships in no catalog
+        // total, so none counts here (its `AI` tags neither, R4577000).
+        Tag::Hallucination
+        | Tag::Overclock
+        | Tag::Batch
+        | Tag::Recursion
+        | Tag::Jailbreak
+        | Tag::Firewall
+        | Tag::Scraper
+        | Tag::Singularity
+        | Tag::Commander => 0,
         // Every token of the sets that ship carries it, so its count is their tokens' sum (R1420).
         Tag::Token => CENSUS
             .iter()

@@ -1,4 +1,4 @@
-//! C #1 Curse of the Forgotten Classic (SPEC §8.6 row 1, §6.3 Damage, Draw, Recruit, Forced attack;
+//! C #1 Curse of the Forgotten Classic (SPEC §8.6 row 1, §4.4 Damage; §6.3 Draw, Recruit, Forced attack;
 //! R12, R33, R53, R63, R280). Spell, cost 1, Rare.
 //!   Base:    "Deal {damage} damage to the enemy hero for each card in their exile. Draw {draw}."
 //!   Radiant: "Deal {damage} damage to the enemy hero for each card in their exile. Draw {draw}.

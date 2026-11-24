@@ -746,9 +746,14 @@ mod r65_pools_and_filters_read_a_definition_s_cost_out_of_play {
     #[test]
     fn r65_an_embiggen_card_s_query_cost_is_its_base_price_and_it_answers_that_cost_s_query() {
         register();
-        // Core #46 Suppressive Aura, #59 Unbiased Immigration, #84 Going Long and Classic+ #36 Conjure
-        // Bones are "2 embiggen 4".
-        for id in ["core-046", "core-059", "core-084", "classicplus-036"] {
+        // Core #59 Unbiased Immigration, #84 Going Long and Classic+ #36 Conjure Bones are "2 embiggen 4"
+        // (and #46 Suppressive Aura was until issue #4440 made it "1 embiggen 3", below).
+        let def = &CATALOG["core-046"];
+        assert_eq!(def.cost, CardCost::Embiggen { base: 1, embiggen: 3 });
+        assert_eq!(query_cost(def), 1);
+        assert!(ids_of_defs(query(&q(json!({ "cost": 1 })))).contains(&"core-046".to_string()));
+        assert!(!ids_of_defs(query(&q(json!({ "cost": 3 })))).contains(&"core-046".to_string()));
+        for id in ["core-059", "core-084", "classicplus-036"] {
             let def = &CATALOG[id];
             assert_eq!(def.cost, CardCost::Embiggen { base: 2, embiggen: 4 }, "{id}");
             assert_eq!(query_cost(def), 2, "{id}");
@@ -1121,7 +1126,7 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
     const STINKYSCAPE_ONE_ONES: &[&str] = &["stinkyscape-038", "stinkyscape-081", "stinkyscape-098"];
     /// The Stinkyscape+ release (#3573): its printed 1/1 Units, its two tokens (#26.1 Conscript and #27.1
     /// Imp) among them, last in the catalog order. S+ #37 Scorch left it as a 1/5 (issue #3951), and S+ #159
-    /// Raven as a 2/2 (issue #4440).
+    /// Raven as a 2/2 and S+ #153 Noxious Rounds as a 3/1 (issue #4440).
     const STINKYSCAPE_PLUS_ONE_ONES: &[&str] = &[
         "stinkyscapeplus-011",
         "stinkyscapeplus-012",
@@ -1130,7 +1135,6 @@ mod the_1_1_pool_m51_devin_bot_s_cry_every_printed_1_1_unit_tokens_included_r108
         "stinkyscapeplus-060",
         "stinkyscapeplus-101",
         "stinkyscapeplus-115",
-        "stinkyscapeplus-153",
     ];
 
     #[test]

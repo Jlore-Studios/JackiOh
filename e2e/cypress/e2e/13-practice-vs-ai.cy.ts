@@ -309,9 +309,12 @@ describe("13 — practice against the AI, with no account and no server (§9.9, 
       ).to.eq(true);
     });
 
-    // R745: the log retains early turns.
+    // R745: the log retains early turns. #4614: the log mounts only the rows near the
+    // viewport, so scroll to the top before reading the early turns (as the almanac's
+    // pool scrolls through, spec 33); the assertions themselves are unchanged.
     reachHumanTurn();
     cy.then(() => {
+      cy.get(ts(LOG)).scrollTo("top");
       cy.get(`${ts(LOG)} .log-line[data-event="turnEnded"]`).should("contain.text", `You ended turn ${firstEnded} with`);
     });
     cy.get(`${ts(LOG)} .log-line[data-event="turnStarted"]`).should("contain.text", "Turn 1: Opponent");

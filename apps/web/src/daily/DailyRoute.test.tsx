@@ -404,3 +404,21 @@ describe("R3840000 the open Daily list reads a game that ended", () => {
     expect(rowOf("theirs")).toHaveAttribute("data-over", "true");
   });
 });
+
+describe("R4621000 a finished game whose opponent deleted their account", () => {
+  it("R4621000 lists the opponent as a deleted account", async () => {
+    const gone = game("gone", {
+      over: true,
+      theirMove: false,
+      result: { outcome: "win", reason: "concede" },
+      endedAt: Date.now() - 1000,
+      opponent: { profileId: "", username: "" },
+    });
+    serve({ list: { ...list(), games: [gone] }, dailyWaiting: 0 });
+    render(<DailyRoute />);
+    await screen.findAllByTestId(dailyTestid.gameRow, undefined, SLOW);
+
+    expect(rowOf("gone")).toHaveAttribute("data-over", "true");
+    expect(rowOf("gone")).toHaveTextContent("a deleted account");
+  });
+});

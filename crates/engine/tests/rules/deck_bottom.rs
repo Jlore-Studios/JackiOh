@@ -77,3 +77,62 @@ mod r80_the_named_end_of_the_library {
         );
     }
 }
+
+// R4577002: `shuffleInto`'s `buff` and `costMod` ride on each fresh card, and only on it.
+mod r4577002_the_riders_of_a_fresh_card {
+    use super::*;
+
+    #[test]
+    fn r4577002_a_buff_rides_on_the_fresh_card() {
+        let mut state = playing("dc-deck-bottom-buff");
+        let mut sink = sink_for(&mut state);
+        apply_effects(
+            &[shuffle_into(json_as(json!({
+                "defId": grunt.id,
+                "count": 1,
+                "position": "bottom",
+                "buff": { "attack": 1, "health": 2 },
+            })))],
+            &mut make_context(&mut sink, None, by(P1)),
+        );
+        let last = sink.state.players.p1.library.last().expect("a last card");
+        assert_eq!(last.def_id, grunt.id);
+        assert_eq!((last.buffs.attack, last.buffs.health), (1, 2));
+        assert_eq!(last.cost_mod, 0);
+    }
+
+    #[test]
+    fn r4577002_a_cost_mod_rides_on_the_fresh_card() {
+        let mut state = playing("dc-deck-bottom-cost-mod");
+        let mut sink = sink_for(&mut state);
+        apply_effects(
+            &[shuffle_into(json_as(json!({
+                "defId": grunt.id,
+                "count": 1,
+                "position": "bottom",
+                "costMod": -1,
+            })))],
+            &mut make_context(&mut sink, None, by(P1)),
+        );
+        let last = sink.state.players.p1.library.last().expect("a last card");
+        assert_eq!(last.def_id, grunt.id);
+        assert_eq!(last.cost_mod, -1);
+        assert_eq!((last.buffs.attack, last.buffs.health), (0, 0));
+    }
+
+    #[test]
+    fn r4577002_without_riders_the_fresh_card_is_plain() {
+        let mut state = playing("dc-deck-bottom-plain");
+        let mut sink = sink_for(&mut state);
+        apply_effects(
+            &[shuffle_into(json_as(json!({
+                "defId": grunt.id,
+                "count": 1,
+                "position": "bottom",
+            })))],
+            &mut make_context(&mut sink, None, by(P1)),
+        );
+        let last = sink.state.players.p1.library.last().expect("a last card");
+        assert_eq!((last.buffs.attack, last.buffs.health, last.cost_mod), (0, 0, 0));
+    }
+}

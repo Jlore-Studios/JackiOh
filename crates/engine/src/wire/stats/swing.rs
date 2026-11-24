@@ -1361,18 +1361,76 @@ mod tests {
         .collect()
     }
 
+    /// Game `n` of the order test: `swing_game`'s, but in every fourth game from the second p1's seat
+    /// is an older record's, with no turn rows, and in every fourth from the fourth p1 plays on to a
+    /// twelfth turn and plays `quiet` on it, not on its first. So which records come first decides the
+    /// order the fold meets the buckets in, both the records key's and `quiet`'s.
+    fn order_game(n: usize) -> GameRecord {
+        let mut game = swing_game(n, "wild", "quiet");
+        let p1 = &mut game.game.seats[PlayerId::P1];
+        match n % 4 {
+            1 => p1.swing_turns = None,
+            3 => {
+                let rows = p1.swing_turns.as_mut().unwrap();
+                for index in rows.len()..12 {
+                    let turn = turn_of(index, true);
+                    rows.push(SwingTurn {
+                        turn,
+                        eval: eval_for(0.5, turn, true),
+                        acting: Vec::new(),
+                        facing: Vec::new(),
+                    });
+                }
+                let quiet = p1.played.iter().position(|card| card == "quiet").unwrap();
+                p1.played_turns.as_mut().unwrap()[quiet] = turn_of(11, true);
+            }
+            _ => {}
+        }
+        game
+    }
+
+    /// The order a fold met the records key's buckets in, and each card's play buckets.
+    fn met_order(totals: &StatsTotals) -> (Vec<i32>, Vec<(String, Vec<i32>)>) {
+        let rows = totals
+            .game_totals
+            .values()
+            .flat_map(|total| total.swing.keys().copied())
+            .collect();
+        let mut cards: Vec<(String, Vec<i32>)> = totals
+            .cards
+            .values()
+            .flatten()
+            .map(|(card, total)| {
+                (
+                    card.clone(),
+                    total.stats.swing.played.buckets.keys().copied().collect(),
+                )
+            })
+            .collect();
+        cards.sort();
+        (rows, cards)
+    }
+
     #[test]
     fn r4552001_any_fold_order_gives_the_same_figures_bit_for_bit() {
-        let records: Vec<GameRecord> = (0..40).map(|n| swing_game(n, "wild", "quiet")).collect();
+        let records: Vec<GameRecord> = (0..40).map(order_game).collect();
         let forward = totals_of(&records);
         let reverse = totals_of(records.iter().rev());
-        let mut halves = totals_of(records.iter().skip(20));
-        halves.add(&totals_of(records.iter().take(20)));
+        let mut halves = totals_of(records.iter().skip(1).step_by(2));
+        halves.add(&totals_of(records.iter().step_by(2)));
+        // The same whole sums, met in other orders.
         assert_eq!(forward, reverse);
         assert_eq!(forward, halves);
+        let (rows, cards) = met_order(&forward);
+        for other in [&reverse, &halves] {
+            let (other_rows, other_cards) = met_order(other);
+            assert_ne!(rows, other_rows);
+            assert_ne!(cards, other_cards);
+        }
         let (_, first) = report_of(&forward);
         for other in [&reverse, &halves] {
             let (_, again) = report_of(other);
+            assert_eq!(first.deck_field, again.deck_field);
             assert_eq!(
                 first.deck_field.typical.to_bits(),
                 again.deck_field.typical.to_bits()
@@ -1382,6 +1440,220 @@ mod tests {
                 assert_eq!(bits(figures), bits(&again.cards[card]), "{card}");
             }
         }
+    }
+
+    /// The records key's sums of the turns given, each `(bucket, turns' q)`, met in the order given.
+    fn rows_of(turns: &[(i32, &[i64])]) -> SwingRows {
+        let mut rows = SwingRows::new();
+        for (bucket, turns) in turns {
+            let held = rows.entry(*bucket).or_default();
+            for q in *turns {
+                held[0] += 1;
+                held[1] += q;
+                held[2] += q * q;
+            }
+        }
+        rows
+    }
+
+    /// A card's sums of the games given, each game's turns `(bucket, q)` met in the order given.
+    fn sums_of(games: &[&[(i32, i64)]]) -> SwingSums {
+        let mut sums = SwingSums::default();
+        for turns in games {
+            let mut game = SwingSums::default();
+            for (bucket, q) in *turns {
+                game.count(*bucket, *q);
+            }
+            game.close_game();
+            sums.add(&game);
+        }
+        sums
+    }
+
+    #[test]
+    fn r4552001_a_sum_over_buckets_or_made_cards_takes_them_in_one_order() {
+        // Records folded in another order meet the same buckets in another order: the whole sums are
+        // the same, but adding floats is not associative, so every sum read off them takes its terms in
+        // one order. Taken in the order met, these turns' sums differ in their last bit.
+        let turns: [(i32, &[i64]); 3] = [
+            (1, &[-215, -295, 195, 184]),
+            (2, &[-208, -19, -301, 160]),
+            (-1, &[-336, 177, -339, 233]),
+        ];
+        // As a record's fold meets them, p1's turns first, and as one whose p1 kept no rows meets them.
+        let met = rows_of(&turns);
+        let other = rows_of(&[turns[2], turns[0], turns[1]]);
+        assert_eq!(met, other);
+        assert_ne!(met.keys().collect::<Vec<_>>(), other.keys().collect::<Vec<_>>());
+        let baseline = swing_baseline(&met);
+        let again = swing_baseline(&other);
+        assert_eq!(baseline.row_variance.to_bits(), again.row_variance.to_bits());
+        assert_eq!(baseline.alpha, again.alpha);
+
+        // A card's play turns in those buckets, met in two orders.
+        let played: [&[(i32, i64)]; 3] = [
+            &[(1, 173), (1, 399)],
+            &[(2, 62), (2, 120)],
+            &[(-1, -206), (-1, -211), (-1, 124)],
+        ];
+        let card = |games: [&[(i32, i64)]; 3]| SwingTally {
+            played: sums_of(&games),
+            ..SwingTally::default()
+        };
+        let (first, second) = (card(played), card([played[2], played[0], played[1]]));
+        assert_eq!(first, second);
+        let figures_of = |tally: &SwingTally| {
+            let report = swing_report([("card", tally)], [], &baseline);
+            bits(&report.cards["card"])
+        };
+        assert_eq!(figures_of(&first), figures_of(&second));
+
+        // A maker's Swing, its made cards' board terms met in two orders.
+        let terms = Terms {
+            plays: 1,
+            acting: 0,
+            play: Some(0.0),
+            board: None,
+            rms: None,
+            rms_rows: 0,
+            noise: None,
+        };
+        let made_board: IndexMap<&str, f64> = [("made-a", 0.01), ("made-b", 0.02), ("made-c", 0.03)]
+            .into_iter()
+            .collect();
+        let maker = |order: [&str; 3]| SwingTally {
+            made_acting: order.iter().map(|card| (card.to_string(), 1)).collect(),
+            ..SwingTally::default()
+        };
+        let swing = |tally: &SwingTally| swing_of(&terms, tally, false, &made_board).map(f64::to_bits);
+        assert_eq!(
+            swing(&maker(["made-a", "made-b", "made-c"])),
+            swing(&maker(["made-c", "made-b", "made-a"]))
+        );
+    }
+
+    #[test]
+    fn r4552001_turns_one_game_gave_are_one_cluster() {
+        // The same twelve turns, as twelve games of one turn each or three games of four: the games
+        // cluster the turns (`n_eff = n² / Σ turns a game gave²`), so the second has a quarter of the
+        // first's effective turns and four times its noise, its RMS the same.
+        let qs: [i64; 12] = [120, -80, 200, -150, 40, -260, 90, -30, 170, -110, 60, -220];
+        let turns: Vec<(i32, i64)> = qs.iter().map(|q| (1, *q)).collect();
+        let games = |size: usize| SwingTally {
+            played: sums_of(&turns.chunks(size).collect::<Vec<_>>()),
+            ..SwingTally::default()
+        };
+        let (one, four) = (games(1), games(4));
+        assert_eq!((one.played.rows(), one.played.cluster), (12, 12));
+        assert_eq!((four.played.rows(), four.played.cluster), (12, 48));
+        let baseline = swing_baseline(&rows_of(&[(1, &qs), (2, &[300, -300, 0, 0])]));
+        let report = swing_report([("one", &one), ("four", &four)], [], &baseline);
+        let (one, four) = (figures(&report, "one"), figures(&report, "four"));
+        assert_eq!(one.rms.map(f64::to_bits), four.rms.map(f64::to_bits));
+        let ratio = four.noise.unwrap() / one.noise.unwrap();
+        assert!((ratio - 4.0).abs() < 1e-9, "noise {ratio}× as wide");
+    }
+
+    /// Game `n` of the fold test, p1 (a person) going first against p2 (the AI). p1's four turns
+    /// begin at 50%, 50%, 70% and 70% and it wins, so they gain 0, 20, 0 and 30 points; p2's three
+    /// stand at 50% and it loses.
+    ///  - p1 plays two copies of `hand` on its second turn (turn 3), and an effect casts `reply` from
+    ///    its deck on p2's next turn (turn 4): both count with p1's second turn, each once.
+    ///  - Two copies of p1's `board` act on its third and fourth turns.
+    ///  - Two copies of p2's `wall`, and a token its Cry made, act against p1 on p1's second and third.
+    fn facing_game(n: usize) -> GameRecord {
+        let wall = || ActingCard::Dealt("wall".to_string());
+        let own = || ActingCard::Dealt("board".to_string());
+        let token = || {
+            ActingCard::Created(CreatedActing {
+                card: "core-t-rush".to_string(),
+                maker: Some("wall".to_string()),
+            })
+        };
+        let mut p1 = seat(
+            &["hand", "reply", "board"],
+            true,
+            &[
+                (0.5, vec![], vec![]),
+                (0.5, vec!["hand", "hand"], vec![]),
+                (0.7, vec![], vec![own(), own()]),
+                (0.7, vec![], vec![own(), own()]),
+            ],
+        );
+        for row in &mut p1.swing_turns.as_mut().unwrap()[1..3] {
+            row.facing = vec![wall(), wall(), token()];
+        }
+        p1.cast_or_summoned = Some(vec![CreatedUse {
+            card: "reply".to_string(),
+            turn: 4,
+            radiant: false,
+        }]);
+        let quiet = || (0.5, vec![], vec![]);
+        let p2 = seat(&["wall"], false, &[quiet(), quiet(), quiet()]);
+        let mut game = record(&format!("f{n:03}"), Winner::P1, p1, p2);
+        game.pilots = PerPlayer::new(Pilot::Human, Pilot::Ai);
+        game
+    }
+
+    /// The fold test's ordinary game: the same decks and turns, nothing played or acting, p1's chance
+    /// standing at 50% to a draw.
+    fn standing_game(n: usize) -> GameRecord {
+        let quiet = || (0.5, vec![], vec![]);
+        let p1 = seat(
+            &["hand", "reply", "board"],
+            true,
+            &[quiet(), quiet(), quiet(), quiet()],
+        );
+        let p2 = seat(&["wall"], false, &[quiet(), quiet(), quiet()]);
+        let mut game = record(&format!("s{n:03}"), Winner::Draw, p1, p2);
+        game.pilots = PerPlayer::new(Pilot::Human, Pilot::Ai);
+        game
+    }
+
+    #[test]
+    fn r4552001_a_facing_card_a_reply_and_a_cast_fold_with_the_turns_they_belong_to() {
+        let mut records: Vec<GameRecord> = (0..20).map(facing_game).collect();
+        records.extend((0..20).map(standing_game));
+        let totals = totals_of(&records);
+        let key = |pilot: Pilot| TotalsKey {
+            patch: "v0.1.1".to_string(),
+            source: GameSource::Dev,
+            mode: GameMode::Random,
+            pilot,
+        };
+        let (person, ai) = (&totals.cards[&key(Pilot::Human)], &totals.cards[&key(Pilot::Ai)]);
+        let buckets =
+            |pairs: &[(i32, [i64; 2])]| -> IndexMap<i32, [i64; 2]> { pairs.iter().copied().collect() };
+
+        // Played on its own turn, two copies once, and cast on the opponent's turn that replied to it:
+        // both with p1's second turn (bucket 2), each worth its 20 points.
+        let hand = &person["hand"].stats.swing;
+        assert_eq!(hand.played.buckets, buckets(&[(2, [20, 4000])]));
+        let reply = &person["reply"].stats.swing;
+        assert_eq!(reply.played.buckets, buckets(&[(2, [20, 4000])]));
+        // Two copies acting on a turn count it once.
+        let board = &person["board"].stats.swing;
+        assert_eq!(board.acting.buckets, buckets(&[(3, [20, 0]), (4, [20, 6000])]));
+
+        // The opponent's acting cards are tallied under the opponent's key, with p1's turns' change
+        // and buckets, each game's two turns one cluster.
+        let wall = &ai["wall"].stats.swing;
+        assert_eq!(wall.facing.buckets, buckets(&[(2, [20, 4000]), (3, [20, 0])]));
+        assert_eq!(wall.facing.cluster, 20 * 2 * 2);
+        assert!(wall.played.is_empty() && wall.acting.is_empty());
+        assert_eq!(ai["core-t-rush"].stats.created_swing.facing.rows(), 40);
+        assert!(
+            person
+                .get("wall")
+                .is_none_or(|total| total.stats.swing.is_empty() && total.stats.created_swing.is_empty())
+        );
+
+        // A card acting against the seat whose turns gain is worth that much less to its own: its
+        // Board swing has the sign turned.
+        let (_, report) = report_of(&totals);
+        let wall = figures(&report, "wall").board.unwrap();
+        let board = figures(&report, "board").board.unwrap();
+        assert!(wall < 0.0 && board > 0.0, "wall {wall}, board {board}");
     }
 
     #[test]

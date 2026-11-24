@@ -56,6 +56,11 @@ export type MusicDirectorOptions = {
   subscribeSettings?: (listener: (s: AudioSettings) => void) => () => void;
   /** The rotation the match whose first view this is uses (default: `rotationFor`). */
   rotation?: (first: PlayerView) => number;
+  /**
+   * R4606000: one object per match; remounts under the same key share its rotation and skip the
+   * fresh-match reset and sting. Absent, every mount is a new match.
+   */
+  musicKey?: object;
 };
 
 export const LOW_HEALTH_AT = Math.floor(HERO_HEALTH * MUSIC_LOW_HEALTH_FRACTION);
@@ -71,6 +76,22 @@ export function rotationFor(first: PlayerView): number {
   if (known !== undefined) return known;
   const n = nextRotation();
   rotations.set(first, n);
+  return n;
+}
+
+const keyRotations = new WeakMap<object, number>();
+const startedMusicKeys = new WeakSet<object>();
+
+/**
+ * R4606000: the device's counter, moved on once per match key. Boards remounting under the same
+ * key (a replay step, a co-op portal flip) share one rotation: the first mount moves it on, later
+ * ones reuse it.
+ */
+export function rotationForKey(key: object): number {
+  const known = keyRotations.get(key);
+  if (known !== undefined) return known;
+  const n = nextRotation();
+  keyRotations.set(key, n);
   return n;
 }
 
@@ -110,7 +131,8 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
   const getLines = (): CardAudioTable => options.lines ?? soundTablesNow()?.cardAudio ?? EMPTY_LINES;
   const settings = options.settings ?? readAudioSettings;
   const subscribeSettings = options.subscribeSettings ?? subscribeAudioSettings;
-  const rotationOf = options.rotation ?? rotationFor;
+  const key = options.musicKey;
+  const rotationOf = options.rotation ?? (key !== undefined ? () => rotationForKey(key) : rotationFor);
 
   let viewer: PlayerId | null = null;
   let latest: PlayerView | null = null;
@@ -182,10 +204,14 @@ export function createMusicDirector(options: MusicDirectorOptions): MusicDirecto
       latest = view;
       if (viewer === null) {
         rotation = rotationOf(view);
-        sink.resetResume();
+        // R4606000: only the key's first mount resets the resume points and asks for the
+        // match-start sting; a remount under the same key continues the track it was playing.
+        const fresh = key === undefined ? true : !startedMusicKeys.has(key);
+        if (key !== undefined) startedMusicKeys.add(key);
+        if (fresh) sink.resetResume();
         read(view);
         const s = station();
-        if (settings().dynamicMusic && view.result === null && view.turn <= 1) intro = startTrack(s);
+        if (fresh && settings().dynamicMusic && view.result === null && view.turn <= 1) intro = startTrack(s);
         push();
         // What this match may need next; the sting and the in-game track were just asked for.
         sink.preload([dangerTrack(s), ...Object.values(RESULT_TRACKS)]);

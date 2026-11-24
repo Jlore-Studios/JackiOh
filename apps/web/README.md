@@ -283,6 +283,8 @@ game's paid result, which `announceWallet()` with no balance calls), and a dev t
 
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
 
+A tab left open across a deploy loads the next build on its next menu move (R4605000): the build writes `dist/version.json` naming its entry script, the tab checks it when it wakes (at most once per `UPDATE_CHECK_MIN_MS`), and with an update waiting the move is a full page load to the target instead — the cross-fade above is skipped and the tab-memory read cache starts empty, one extra read per screen once. Never over a board: moves stay in place until it is gone. A screen that still fails on a stale chunk reloads once by itself, bounded by a `sessionStorage` key per entry.
+
 An `<a>` to a screen of the app (`href={paths.…}` or an address starting with `/`) carries `onClick={followInApp(…)}` (`routes/nav.tsx`), which moves in place and leaves a modified or middle click to the browser, or opens a new tab (`target="_blank"`); a bare one reloads the site, emptying the read cache and reloading the engine. `src/in-app-links.test.ts` holds it, with the links that load the page on purpose (`FULL_LOADS`) and why.
 
 **Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`; `Dialog` in `game/Dialog.tsx`, the board's confirms, the practice result and, since #3221 (R3221000), `SettingsPanel`, `ChatPanel`, the Collection's `CardCosmeticsView`, `/stats`'s card breakdown and the menus' other dialogs, through it) and, through `BackLayer` mounted with their panels, the match's `Marketplace`, the deck builder's `DeckHistory`, `DeckCosmeticsPicker` and `PortraitPicker`, the home screen's `QuestsBookmark` and `NewsBookmark`, the match's `ModifierList` and the hero's `EmoteMenu` and `MuteMenu` (not drawn `inline` in hero inspect, which owns them) call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
@@ -1190,14 +1192,15 @@ src/practice/
   controller.ts       one request in flight, and the pacing loop that plays the AI's turn one
                       visible action at a time (think indicator, gaps from config.ts)
   aiTable.ts          the hooks that pace the AI at a table (controller state, board busy, the voice and
-                      showcase holds), shared by the route and a dungeon fight's screen
+                      showcase holds), shared by the route, a dungeon fight's screen and an Infinite Assault fight's screen
   config.ts testids.ts PracticeSetup.tsx ThinkIndicator.tsx PracticeLeave.tsx PracticeResult.tsx practice.css
   decks.ts            random, the three named practice decks (hand-built lists), the account's saved decks by name
   lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage
                       `jackioh.practice.lastBoard`, try/catch
   saveStore.ts        the worker's save of a free game in progress (R668): config, log, AI cursor,
-                      catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom), and the last
-                      PRACTICE_REPLAYS_KEPT finished free games (R768)
+                      catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom), and a dungeon
+                      run's fight and an Infinite Assault fight each in a slot of its own (R3476000, R4582001),
+                      and the last PRACTICE_REPLAYS_KEPT finished free games (R768)
   resume.ts           the page's half (R668): only the setup it chose, in localStorage
                       `jackioh.practice.game`, try/catch, marked `saved` once left with Save and leave (R765)
   todaysDeal.ts       today's deal (R2882000): the UTC day's seed daily-YYYY-MM-DD and seat, on a random deck
@@ -1506,7 +1509,9 @@ Every word the client shows a player follows [`WRITING.md`](WRITING.md), the cli
 client shows (a string or JSX text in a source that `src/i18n/zh-CN.json` translates), no curly
 apostrophe there or in a dictionary key, and no straight double quote there. Its glossary sets
 sentence case, one name per page, one verb per action, and bans arrow characters in translations,
-held by guards against Title Case labels outside their allowlist.
+held by guards against Title Case labels outside their allowlist. The site and its images carry
+no tagline (#4653): where a sentence is needed, write a plain description of the game, and do
+not add one back.
 
 ## Internationalisation
 

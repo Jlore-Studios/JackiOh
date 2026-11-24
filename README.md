@@ -3,8 +3,8 @@
 A 1v1 card game: Hearthstone-style mana, combat and keywords played on Yu-Gi-Oh-style lanes with
 a hidden trap backrow. Games are short: 25-card decks with no duplicates, 4 max mana, 30 health
 and a 30-turn cap. Every card has a stronger Radiant form. A pure, seeded rules engine runs every
-match, so any game replays exactly from its seed and action log. You can play hotseat, online, or
-against a practice AI.
+match, so any game replays exactly from its seed and action log. You can play a friend on
+one screen, play online, or practice against the AI.
 
 | Read | For |
 |---|---|

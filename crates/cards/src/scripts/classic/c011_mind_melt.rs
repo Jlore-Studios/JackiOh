@@ -1,4 +1,4 @@
-//! C #11 Mind Melt (SPEC §8.6 row 11, §6.3 Look at a hand, §10.6, §10.8; R65, R81, R177, R1838000). Spell,
+//! C #11 Mind Melt (SPEC §8.6 row 11, §10.6, §10.8; R65, R81, R177, R1838000). Spell,
 //! cost 1, Common.
 //!   Base:    "Tradable\nLook at your opponent's hand. Exile {cards|card|cards} from it."
 //!   Radiant: "Tradable\nLook at your opponent's hand. Choose a cost. Exile every card of that cost from it."

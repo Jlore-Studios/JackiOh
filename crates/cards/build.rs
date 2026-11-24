@@ -63,7 +63,8 @@
 //! Beside them, `LIST_READERS`: the ids whose script reads the two lists (`reads_card_lists`, R2173000),
 //! which the engine's golden binary holds its committed logs free of (R1846003), and `EXTRA_TURN_CARDS`,
 //! the ids whose script owes an extra turn (`owes_extra_turn`, #3116), which `register_all` hands to the
-//! engine for the AI's hand prices (R846).
+//! engine for the AI's hand prices (R846), and `TEXT_REWRITERS`, the ids whose script calls a verb that
+//! rewrites a card's text (`rewrites_text`, #4609), which the cross test plays at Immutable cards.
 //!
 //! The crate's `clippy.toml` bans file and environment reads (CLAUDE.md rule 4); a build script runs
 //! at compile time, which is exactly where data may reach a pure crate (SURFACE §3), so it may read.
@@ -79,7 +80,7 @@ use std::path::{Path, PathBuf};
 #[allow(dead_code)]
 #[path = "src/code_lines.rs"]
 mod code_lines;
-use code_lines::{code_lines, owes_extra_turn, reads_card_lists, without_comments};
+use code_lines::{code_lines, owes_extra_turn, reads_card_lists, rewrites_text, without_comments};
 
 /// One card file: its set's folder under `src/scripts/` (SURFACE §4.1), its module name, its absolute
 /// path and its `ID`. A set that has not shipped yet (R1420) has its folder too: its cards are built,
@@ -223,8 +224,8 @@ fn read_config_usize(path: &Path, name: &str) -> usize {
 
 /// R1846000: `$OUT_DIR/card_metrics.rs`: `CODE_LINES`, every catalog entry's script's code lines,
 /// and `BUSTED` and `COMPLICATED`, the ids with more than `busted_over` and `complicated_over`;
-/// `LIST_READERS` (R2173000) and `EXTRA_TURN_CARDS` (#3116), each sorted by id (`by_id` is), so the
-/// engine finds an id by binary search.
+/// `LIST_READERS` (R2173000), `EXTRA_TURN_CARDS` (#3116) and `TEXT_REWRITERS` (#4609), each sorted by id
+/// (`by_id` is), so the engine finds an id by binary search.
 fn render_card_metrics(
     by_id: &BTreeMap<&str, &CardFile>,
     busted_over: usize,
@@ -232,6 +233,7 @@ fn render_card_metrics(
 ) -> String {
     let mut readers: Vec<&str> = Vec::new();
     let mut extra_turns: Vec<&str> = Vec::new();
+    let mut rewriters: Vec<&str> = Vec::new();
     let counts: Vec<(&str, usize)> = by_id
         .iter()
         .map(|(id, file)| {
@@ -242,6 +244,9 @@ fn render_card_metrics(
             }
             if owes_extra_turn(&source) {
                 extra_turns.push(id);
+            }
+            if rewrites_text(&source) {
+                rewriters.push(id);
             }
             (*id, code_lines(&source))
         })
@@ -283,6 +288,15 @@ fn render_card_metrics(
     );
     out.push_str("pub static EXTRA_TURN_CARDS: &[&str] = &[\n");
     for id in &extra_turns {
+        let _ = writeln!(out, "    {id:?},");
+    }
+    out.push_str("];\n");
+    out.push_str(
+        "\n/// The ids whose script calls a verb that rewrites a card's text (`rewrites_text`), sorted by id \
+         (#4609, R4609000).\n",
+    );
+    out.push_str("pub static TEXT_REWRITERS: &[&str] = &[\n");
+    for id in &rewriters {
         let _ = writeln!(out, "    {id:?},");
     }
     out.push_str("];\n");

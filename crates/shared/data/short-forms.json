@@ -39,7 +39,7 @@
     },
     "classic-023": {
       "base": {
-        "en": "Indestructible, Spell Damage +1\nCry: Discard {discards|random card|random cards}.\nActivate: Your plays this turn become Books of Flame."
+        "en": "Indestructible, Spell Damage +1, Tradable\nCry: Discard {discards|random card|random cards}.\nActivate: Your plays this turn become Books of Flame."
       }
     },
     "classic-028": {
@@ -67,10 +67,10 @@
     },
     "classicplus-037": {
       "base": {
-        "en": "Divine Shield\nIn hand or deck, summoned after {threshold} non-Units in a turn.\nEnd of turn: Recast a random non-Unit you played this turn."
+        "en": "In hand or deck, summoned after {threshold} non-Units in a turn.\nEnd of turn: Recast a random non-Unit you played this turn."
       },
       "radiant": {
-        "en": "Divine Shield\nIn hand or deck, summoned after {threshold} non-Units in a turn.\nEnd of turn: Recast each non-Unit you played this turn."
+        "en": "In hand or deck, summoned after {threshold} non-Units in a turn.\nEnd of turn: Recast each non-Unit you played this turn."
       }
     },
     "classicplus-073": {

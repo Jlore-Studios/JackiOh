@@ -409,6 +409,28 @@ mod the_opening {
             }
         }
     }
+    /// R79, R268: a host rebuilt for a match made earlier arms the ceiling for what is left of it, from the
+    /// match's start, and the mulligan clock afresh, from the rebuild; the ceiling running out first is the
+    /// match's draw, logged under the server's nonce (#4550, docs/implicit-states.md §13 T18).
+    #[test]
+    fn r79_r268_a_rebuilt_host_arms_the_ceiling_left_and_the_mulligans_afresh_and_the_ceiling_draws() {
+        let created_at = EPOCH - MATCH_CEILING_MINUTES * MINUTE + 30 * SECOND;
+        let mut rebuilt = setup(opening("open-5"));
+        rebuilt.created_at = created_at;
+        rebuilt.clocks = initial_clocks(created_at);
+        let mut table = Table::new(rebuilt);
+        assert_eq!(table.timer(TimerKey::Ceiling), Some(EPOCH + 30 * SECOND));
+        assert_eq!(table.timer(TimerKey::Mulligan), Some(EPOCH + mulligan_ms()));
+        table.feed(DuelEvent::Arm);
+        table.sleep(30 * SECOND - 1);
+        assert!(table.log.is_empty(), "{:?}", table.nonces());
+        table.sleep(1);
+        assert_eq!(table.nonces(), vec!["srv-ceiling-1"]);
+        assert_eq!(table.log[0].1.body, ActionBody::CeilingReached);
+        assert_eq!(table.records.len(), 1, "{:?}", table.notes);
+        assert_eq!(table.records[0].outcome.winner, Winner::Draw);
+        assert_eq!(table.records[0].outcome.reason, GameOverReason::MatchCeiling);
+    }
 }
 
 mod the_turn_clock {
@@ -469,6 +491,53 @@ mod the_turn_clock {
         let (_, action) = table.log.last().expect("the retry landed");
         assert_eq!(action.nonce, format!("srv-turn-{next_seq}"));
         assert_eq!(table.active(), first.opponent());
+    }
+
+    /// R79, R776000: the turn clock running out while the active seat's own row is in flight finds the
+    /// log busy, so its timeout is not recorded and the clock runs out again a retry later; the row
+    /// landing ends the turn, which takes that retry back, and the next seat's clock runs from the row
+    /// (#4550, docs/implicit-states.md §13 T10; whether the timeout should wait for the row instead is
+    /// unspecified).
+    #[test]
+    fn a_clock_running_out_while_a_seats_row_is_in_flight_is_tried_again_and_a_new_turn_cancels_it() {
+        let mut table = Table::new(setup(opening("turn-3")));
+        table.feed(DuelEvent::Arm);
+        table.through_the_mulligans();
+        let first = table.active();
+        let seq = table.host.next_seq();
+        let rows = table.log.len();
+        table.sleep(turn_ms() - 1);
+        table.holding_appends = true;
+        table.feed(DuelEvent::Action {
+            by: ActionBy::Home { home: first },
+            nonce: "end".to_string(),
+            body: ActionBody::EndTurn,
+        });
+        table.sleep(1);
+        let timeout = table.answer(&format!("srv-turn-{seq}"));
+        assert!(matches!(timeout, ActionAnswer::NotRecorded), "{timeout:?}");
+        assert_eq!(
+            table.timer(TimerKey::Turn),
+            Some(table.now + MATCH_SERVER_ACTION_RETRY_MS)
+        );
+        table.holding_appends = false;
+        table.feed(DuelEvent::Logged {
+            outcome: LogOutcome::Written,
+        });
+        let ended = table.answer("end");
+        assert!(
+            matches!(ended, ActionAnswer::Ack { seq: acked } if acked == seq),
+            "{ended:?}"
+        );
+        assert_eq!(table.active(), first.opponent());
+        assert_eq!(table.timer(TimerKey::Turn), Some(table.now + turn_ms()));
+        table.sleep(MATCH_SERVER_ACTION_RETRY_MS);
+        assert_eq!(table.log.len(), rows, "{:?}", table.nonces());
+        assert_eq!(table.active(), first.opponent());
+        assert_eq!(
+            table.host.remaining_for(first.opponent(), table.now),
+            Some(turn_ms() - MATCH_SERVER_ACTION_RETRY_MS)
+        );
     }
 }
 
@@ -790,6 +859,40 @@ mod being_here {
         }
         assert_eq!(table.log.len(), rows);
         assert!(table.host.is_stopped());
+    }
+
+    /// §9.5, R776000: a seat back before the log answers the row of its forfeit still forfeits: the row
+    /// the log refused is derived again as the grace runs out again a retry later, though the seat is here
+    /// by then (#4550, docs/implicit-states.md §13 T12; R776000 says only that the clock runs out again,
+    /// and whether coming back should take the retry back is unspecified).
+    #[test]
+    fn a_seat_back_before_its_failed_forfeit_is_answered_still_forfeits_on_the_retry() {
+        let mut table = Table::new(setup(opening("here-8")));
+        table.connect(P1);
+        table.connect(P2);
+        table.feed(DuelEvent::Arm);
+        table.through_the_mulligans();
+        table.feed(DuelEvent::Left { home: P2 });
+        table.feed(DuelEvent::Disconnected { home: P2 });
+        let seq = table.host.next_seq();
+        table.holding_appends = true;
+        table.sleep(grace_ms());
+        table.connect(P2);
+        assert_eq!(table.clocks_p2_grace(), None);
+        table.holding_appends = false;
+        table.feed(DuelEvent::Logged {
+            outcome: LogOutcome::Failed,
+        });
+        let forfeit = table.answer(&format!("srv-grace-{seq}"));
+        assert!(matches!(forfeit, ActionAnswer::NotRecorded), "{forfeit:?}");
+        assert!(table.records.is_empty());
+        table.sleep(MATCH_SERVER_ACTION_RETRY_MS);
+        let (_, action) = table.log.last().expect("the retried forfeit was logged");
+        assert_eq!(action.body, ActionBody::DisconnectExpired { player: P2 });
+        assert_eq!(action.nonce, format!("srv-grace-{seq}"));
+        assert_eq!(table.records.len(), 1);
+        assert_eq!(table.records[0].outcome.winner, Winner::P1);
+        assert_eq!(table.records[0].outcome.reason, GameOverReason::Disconnect);
     }
 }
 
@@ -1737,6 +1840,26 @@ mod the_checkpoint {
             expiry
         );
     }
+
+    /// Design rule 3 and `arm`'s row in the README ("clocks brought up to date"): a host made from its JSON
+    /// on another host keeps the timer ids of the host it was saved on, so `arm` sets no timer for a clock
+    /// already running and no clock runs out there (#4550, docs/implicit-states.md §13 T17: a mismatch
+    /// named for a person, who decides; this shows what it does).
+    #[test]
+    fn a_host_made_from_its_json_elsewhere_is_set_no_clock_timer_by_arm() {
+        let mut table = Table::new(setup(opening("save-2")));
+        table.feed(DuelEvent::Arm);
+        table.through_the_mulligans();
+        assert!(table.timer(TimerKey::Turn).is_some());
+        let json = serde_json::to_string(&table.host).expect("the host serializes");
+        let resumed: DuelHost = serde_json::from_str(&json).expect("the host reads back");
+        let mut elsewhere = Table::of(resumed);
+        elsewhere.now = table.now;
+        elsewhere.feed(DuelEvent::Arm);
+        assert!(elsewhere.timers.is_empty(), "{:?}", elsewhere.timers);
+        elsewhere.sleep(2 * turn_ms());
+        assert!(elsewhere.log.is_empty(), "{:?}", elsewhere.nonces());
+    }
 }
 
 mod the_forecast {
@@ -1918,6 +2041,32 @@ mod reads_and_stops {
         });
         assert!(table.host.is_stopped());
         assert_eq!(expired(&table), 1, "{:?}", table.notes);
+    }
+
+    /// R268, R776000: a seat's grace running out while the first mulligan timeout awaits its row does not
+    /// take the place of the timeouts still owed: the grace is tried again a retry later, and once the row
+    /// lands the second seat is timed out too (#4550, docs/implicit-states.md §13 T4).
+    #[test]
+    fn r268_a_grace_running_out_between_the_mulligan_timeouts_still_times_out_the_second_seat() {
+        let mut table = playing("grace-between-timeouts");
+        table.feed(DuelEvent::Left { home: P2 });
+        table.feed(DuelEvent::Disconnected { home: P2 });
+        table.holding_appends = true;
+        table.sleep(mulligan_ms());
+        table.sleep(grace_ms() - mulligan_ms());
+        assert_eq!(
+            table.timer(TimerKey::Grace { player: P2 }),
+            Some(table.now + MATCH_SERVER_ACTION_RETRY_MS),
+            "the grace that ran out behind the held row is tried again"
+        );
+        table.connect(P2);
+        table.holding_appends = false;
+        table.feed(DuelEvent::Logged {
+            outcome: LogOutcome::Written,
+        });
+        assert_eq!(table.nonces(), vec!["srv-mulligan-2"]);
+        assert!(table.host.game().turn >= 1, "{:?}", table.notes);
+        assert!(table.records.is_empty(), "{:?}", table.records);
     }
 
     /// The host's reads for its own sends and its checkpoint: the match's id, the newest nonce in the log, and

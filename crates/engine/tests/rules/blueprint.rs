@@ -333,6 +333,61 @@ mod r1282_wide_tribute {
         assert!(!offered.iter().any(|c| c.controller == P2));
     }
 
+    /// R4555000 (fuzz seed 6138): a Dormant card in either backrow is neither offered, nor in a listed
+    /// set, nor accepted by the reducer, while an awake cheap permanent beside it still pays.
+    #[test]
+    fn r4555000_a_wide_tribute_never_takes_a_dormant_backrow_card() {
+        let mut state = board("r4555000-dormant-field");
+        register_blueprint();
+        let units: Vec<String> = (1..=4)
+            .map(|lane| put(&mut state, "bp-cheap-unit", slot(P1, Row::Units, lane), json!({})).id)
+            .collect();
+        let mine = put(&mut state, "bp-cheap-field", slot(P1, Row::Backrow, 1), json!({}));
+        let theirs = put(&mut state, "bp-cheap-field", slot(P2, Row::Backrow, 1), json!({}));
+        let awake = put(&mut state, "bp-cheap-field", slot(P2, Row::Backrow, 2), json!({}));
+        for id in [&mine.id, &theirs.id] {
+            find_instance_mut(&mut state, id).expect("on the field").slumber =
+                Some(Slumber { turns: Some(2) });
+        }
+        let church = give_hand(&mut state, "bp-church", P1);
+        state.players.p1.mana.current = 10;
+
+        let ids: Vec<String> = legal_tribute_units(&state, P1, &church)
+            .iter()
+            .map(|c| c.id.clone())
+            .collect();
+        assert!(ids.contains(&awake.id), "an awake cheap Field Spell still pays");
+        assert!(!ids.contains(&mine.id), "a Dormant card of mine is not offered");
+        assert!(
+            !ids.contains(&theirs.id),
+            "a Dormant card of theirs is not offered"
+        );
+
+        let sets = legal_tribute_sets(&state, P1, &church);
+        assert!(!sets.is_empty());
+        assert!(
+            sets.iter()
+                .all(|set| !set.contains(&mine.id) && !set.contains(&theirs.id))
+        );
+
+        let mut tributes = units.clone();
+        tributes.push(theirs.id.clone());
+        let res = act_result(
+            &state,
+            json!({
+                "type": "play",
+                "playerId": "p1",
+                "instanceId": church.id,
+                "zone": { "row": "units", "lane": 5 },
+                "tributes": tributes,
+            }),
+        );
+        assert!(
+            res.error.unwrap_or_default().contains("cannot be tributed"),
+            "the reducer refuses a Dormant card as a Tribute"
+        );
+    }
+
     #[test]
     fn r1282_legal_actions_lists_19_380_church_plays_on_a_full_board() {
         let mut state = board("r1282-full-board");

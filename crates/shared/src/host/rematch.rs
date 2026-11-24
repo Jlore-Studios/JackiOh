@@ -23,7 +23,7 @@ pub type RematchStakes = i32;
 /// R1285000, R2685000: whether a finished match's rematch window is open at `now`: at most
 /// `REMATCH_OFFER_TTL_MS` since its end. A finished row with no end is outside it.
 pub fn in_rematch_window(finished_at: Option<i64>, now: i64) -> bool {
-    finished_at.is_some_and(|finished_at| now - finished_at <= REMATCH_OFFER_TTL_MS)
+    finished_at.is_some_and(|finished_at| super::again::in_again_window(finished_at, now))
 }
 
 /// R672: the stakes a request names, or `None` when it names neither a rematch nor a double-or-nothing.

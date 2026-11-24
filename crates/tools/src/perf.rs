@@ -42,7 +42,7 @@ use jackioh_engine::{
     reduce, view_for,
 };
 
-use crate::duos_fuzz::duos_decks_for_seed;
+use crate::duos_fuzz::duos_decks_for_seed_from;
 use crate::fuzz::{SHIPPED_FUZZ_POOL, actor_of, decks_for_seed_from, weigh, weigh_duos};
 use crate::gate;
 use crate::golden::{STEP_CAP, spec_for_seed};
@@ -551,7 +551,7 @@ struct PlayedDuos {
 fn play_coop_game(seed: u32) -> Result<PlayedDuos> {
     let options = DuosCreateOptions {
         seed: format!("perf-duos-{seed}"),
-        decks: duos_decks_for_seed(seed),
+        decks: duos_decks_for_seed_from(seed, &SHIPPED_FUZZ_POOL),
         ..DuosCreateOptions::default()
     };
     let begun = duos_begin(&duos_create(&options));

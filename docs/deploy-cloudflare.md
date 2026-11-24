@@ -452,10 +452,12 @@ quiet site, at most a dollar or so a month for each `basic` container.
 
 ## 7. Known gaps
 
-- **An open tab can run an older client.** A deploy ships both halves together, but a browser that
-  loaded the page before it keeps that client until it reloads, so a change to the API or the match
-  protocol must keep accepting the previous client for a while (as `ws_server.rs` keeps the
-  previous client's `?token=` upgrade, R1379000).
+- **An open tab picks up the new client on its next menu move (R4605000).** A deploy ships both halves together, and a browser that
+  loaded the page before it checks `/version.json` when it wakes and loads the new build in place
+  of its next menu-to-menu move, never over a board; a screen that still fails on a stale chunk
+  reloads once by itself. So "a while" is bounded by the player's next move between menus, and a change to the API or the match
+  protocol must keep accepting the previous client only that long, plus for in-flight sockets
+  (as `ws_server.rs` keeps the previous client's `?token=` upgrade, R1379000).
 - **One container is one point of failure,** as Render's one instance was (`docs/architecture.md`
   §4.1), and now without Render's "keep the old instance until the new one is healthy".
 - **Cold starts.** The first request after ten idle minutes waits for the container and the

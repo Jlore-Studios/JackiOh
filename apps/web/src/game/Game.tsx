@@ -259,6 +259,8 @@ export type GameProps = {
    * on the whole page, so a second board would play the other duel's cues on the own board.
    */
   silent?: boolean;
+  /** R4606000: one object per match; remounts under the same key keep the match's music. Absent, every mount is a new match. */
+  musicKey?: object;
   /**
    * R3497000: an online board drains its animation queue while the page is hidden (and when it turns
    * visible with steps still queued), so coming back shows the live board at once. Practice, dungeon
@@ -342,6 +344,7 @@ export default function Game({
   tradeBar = true,
   showOfferDraw = true,
   silent = false,
+  musicKey,
   drainWhenHidden = false,
   visibility,
   setPieceOf,
@@ -568,7 +571,7 @@ export default function Game({
   const fallbackVisibility = useMemo(() => defaultVisibility(), []);
   const source = visibility ?? fallbackVisibility;
   useGameStats(view, trackStats);
-  useGameAudio(runner, view, silent); // before the layout effects below: it must see each view before the runner is fed (audio/useGameAudio.ts)
+  useGameAudio(runner, view, silent, musicKey); // before the layout effects below: it must see each view before the runner is fed (audio/useGameAudio.ts)
   // A voice line holding the channel marks the board `data-speaking`, the one attribute practice's
   // pacing reads to hold the AI's next step (SPEC §9.9).
   const speaking = useVoiceSpeaking();

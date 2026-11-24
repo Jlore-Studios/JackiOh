@@ -75,6 +75,8 @@ mod tests {
     const FILLER: &str = "core-005";
     /// (1) 4/4 Unit with no text: what fills the board.
     const VANILLA: &str = "core-008";
+    /// Double Counting: its controller's Cries and Deaths run again.
+    const DOUBLE_COUNTING: &str = "meditative-010";
 
     /// p1 holds the Underclassman (base unless `radiant_face`); both sides keep cards in hand so no
     /// turn auto-ends.
@@ -155,6 +157,37 @@ mod tests {
             .into_iter()
             .filter_map(|line| line.as_str().map(str::to_string))
             .collect()
+    }
+
+    /// p1 plays the base Underclassman into lane 1, then Double Counting (its Radiant face when
+    /// `counting_radiant`) into backrow lane 1: the summoned Unit, in lane 2, dies under the multiplier.
+    /// Double Counting comes second, since it would double the Underclassman's own Cry too.
+    fn under_double_counting(seed: &str, counting_radiant: bool) -> (Scenario, CardInstance) {
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": {
+                "mana": 10,
+                "hand": [UNDERCLASSMAN, { "def": DOUBLE_COUNTING, "radiant": counting_radiant }, FILLER],
+                "library": filler(4),
+            },
+            "p2": { "hand": [FILLER], "library": filler(4) },
+        }));
+        s.play(UNDERCLASSMAN, json!({ "zone": 1 }));
+        let unit = s.unit("p1", 2).expect("the summoned Unit");
+        s.play(DOUBLE_COUNTING, json!({ "zone": 1 }));
+        (s, unit)
+    }
+
+    /// A seed whose summoned Unit prints no Death of its own, so its only Death is the granted one.
+    fn counted_seed(counting_radiant: bool) -> String {
+        seed_where("underclassman-double-counting", |seed| {
+            let (_, unit) = under_double_counting(seed, counting_radiant);
+            jackioh_engine::scripts::registered_entry(&unit.def_id)
+                .expect("a registered card")
+                .base
+                .death
+                .is_none()
+        })
     }
 
     mod m58_permanent_underclassman {
@@ -368,6 +401,28 @@ mod tests {
             let unit = s.unit("p1", 2).expect("the summoned Unit");
             kill(&mut s, &unit);
             assert_eq!(books(&s).len(), 2, "a Buffed {{books}} adds two");
+        }
+
+        #[test]
+        fn r823_r1107_under_double_counting_the_death_it_gave_adds_its_book_again() {
+            let (mut s, unit) = under_double_counting(&counted_seed(false), false);
+            kill(&mut s, &unit);
+            assert_eq!(
+                books_of(&s, PlayerId::P1).len(),
+                2,
+                "the granted Death runs twice"
+            );
+        }
+
+        #[test]
+        fn r823_r1107_under_a_radiant_double_counting_it_adds_three_books() {
+            let (mut s, unit) = under_double_counting(&counted_seed(true), true);
+            kill(&mut s, &unit);
+            assert_eq!(
+                books_of(&s, PlayerId::P1).len(),
+                3,
+                "the granted Death runs three times"
+            );
         }
 
         #[test]

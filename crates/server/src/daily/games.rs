@@ -616,8 +616,13 @@ fn forecast_of(pinned: Pinned, state: &EngineState, seat: PlayerId, legal: &[Act
 /// The caller's read of one game, as `GET /api/daily/games/:matchId` and every action answer it.
 async fn game_json(app: &Arc<App>, loaded: &Loaded, me: &str, seat: PlayerId) -> Result<Value, ApiError> {
     let other = opponent_of(seat);
+    let opponent_id = loaded.account_at(other);
     let mut tx = app.db.begin(Some(me)).await?;
-    let opponent = tx.profiles_get_by_id(loaded.account_at(other)).await?;
+    let opponent = if opponent_id.is_empty() {
+        None
+    } else {
+        tx.profiles_get_by_id(opponent_id).await?
+    };
     let rows = tx.daily_games_of(me, 0).await?;
     // R4233000: reading the board marks this game's move and ended rows read, inside the read's own
     // transaction and only while unread, so a slow timer's re-read (R3840000) writes nothing. A
@@ -675,7 +680,7 @@ async fn game_json(app: &Arc<App>, loaded: &Loaded, me: &str, seat: PlayerId) ->
         "catalogVersion": loaded.match_row.catalog_version,
         // R3727005: played on an older card version than the server's.
         "olderCatalog": loaded.match_row.catalog_version != app.catalog.version,
-        "opponent": opponent.as_ref().map(PlayerRef::of),
+        "opponent": opponent_ref(opponent_id, opponent.as_ref()),
         "over": loaded.over(),
         "lostOnTime": lost_on_time(&loaded.daily.board),
         "nextGame": next_game,
@@ -719,7 +724,11 @@ async fn expired_json(app: &Arc<App>, stored: &Stored, me: &str) -> Result<Value
         &stored.daily.players.0
     };
     let mut tx = app.db.begin(Some(me)).await?;
-    let opponent = tx.profiles_get_by_id(opponent_id).await?;
+    let opponent = if opponent_id.is_empty() {
+        None
+    } else {
+        tx.profiles_get_by_id(opponent_id).await?
+    };
     // R4233000: as `game_json`'s read marks, for a game whose moves are gone. A mark that changed
     // any row pushes the reader's social frame, as `game_json`'s does.
     let marked = match tx
@@ -746,7 +755,7 @@ async fn expired_json(app: &Arc<App>, stored: &Stored, me: &str) -> Result<Value
         &stored.daily,
         stored.match_row.portraits,
         me,
-        opponent.as_ref().map(PlayerRef::of),
+        opponent_ref(opponent_id, opponent.as_ref()),
     )
     .ok_or_else(|| not_found("no such daily game"))?;
     game["expired"] = json!(true);
@@ -899,6 +908,19 @@ fn summary_json(
     }))
 }
 
+/// R4621000: the opponent at `id` as a daily read names them. A seat a deleted account emptied names
+/// nobody, with both fields empty as `/api/replays` names one, never null; it is never looked up, since
+/// Postgres casts the id to uuid. Any other id is its profile, or none when none holds it.
+fn opponent_ref(id: &str, profile: Option<&crate::db::store::Profile>) -> Option<PlayerRef> {
+    if id.is_empty() {
+        return Some(PlayerRef {
+            profile_id: String::new(),
+            username: String::new(),
+        });
+    }
+    profile.map(PlayerRef::of)
+}
+
 /// One invite as the list shows it.
 fn invite_json(
     row: &DailyInviteRow,
@@ -956,7 +978,7 @@ pub async fn list(app: &Arc<App>, req: Req) -> ApiResult {
                 row,
                 portraits.get(&row.match_id).copied().flatten(),
                 &me,
-                people.get(opponent_id).map(PlayerRef::of),
+                opponent_ref(opponent_id, people.get(opponent_id)),
             )
         })
         .collect();

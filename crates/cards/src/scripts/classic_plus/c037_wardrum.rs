@@ -1,10 +1,9 @@
 //! C+ #37 Wardrum (SPEC §8.7 row 37): (2) Unit ((3) and 5/5 → 10/10 until issue #3951, (4) until issue
-//! #3837, (5) until issue #3138), Quickdraw, Legendary, 4/4 → 8/8, Divine Shield on both faces (issue #3138).
-//!   Base:    "Divine Shield. While in your hand or deck: After you play {threshold} non-Units in a turn, summon this.
+//! #3837, (5) until issue #3138), Quickdraw, Legendary, 4/4 → 8/8, no Divine Shield since issue #4440
+//! (both faces printed it from issue #3138 through v0.6.11c, catalog data the shipped catalogs keep).
+//!   Base:    "While in your hand or deck: After you play {threshold} non-Units in a turn, summon this.
 //!            End of turn: Cast a copy of a random non-Unit you played this turn."
 //!   Radiant: "… End of turn: Cast a copy of each non-Unit you played this turn."
-//! The Divine Shield is catalog data (§6.1, pipeline step 1); it does nothing in a hand or a deck and is on
-//! the Unit when it enters the field, played or summoned.
 //! A hand and deck trigger (B5 E26) on the resolution of the play that is the threshold-th non-Unit play
 //! of the turn (casts count, R70, but a cast on draw is no play, R2179002) summons it into the leftmost open
 //! unit zone with no Cry, or leaves it where it is. The end of turn casts fresh copies by definition and face
@@ -271,9 +270,9 @@ mod tests {
     }
 
     /// Issue #3951: it costs (2), from (3) ((4) until issue #3837, (5) until issue #3138), on both faces:
-    /// played with 2, as a 4/4 (Radiant 8/8) that has the Divine Shield from the first moment.
+    /// played with 2, as a 4/4 (Radiant 8/8). Issue #4440: with no Divine Shield on either face.
     #[test]
-    fn issue_3951_it_costs_2_and_enters_the_field_with_its_divine_shield_on_both_faces() {
+    fn issue_3951_it_costs_2_and_issue_4440_enters_the_field_with_no_divine_shield_on_both_faces() {
         for (radiant, health) in [(false, 4), (true, 8)] {
             let mut s = scenario(json!({
                 "p1": { "hand": [{ "def": WARDRUM, "radiant": radiant }, FILLER], "library": LIBRARY },
@@ -284,13 +283,19 @@ mod tests {
             s.play(WARDRUM, json!({}));
             s.expect_mana(P1, 0);
             s.expect_stats(WARDRUM, json!({ "attack": health, "health": health, "maxHealth": health }));
-            assert!(has_shield(&s, WARDRUM), "radiant {radiant}: played with the shield");
+            assert!(!has_shield(&s, WARDRUM), "radiant {radiant}: played with no shield");
         }
     }
 
-    /// Issue #3138: the summon at the 3rd non-Unit play of the turn brings the shield onto the field too.
+    /// Issue #4440: neither face prints Divine Shield, so a summoned Wardrum has none and its first hit
+    /// lands: the Menace's 9 kills it on either face (4/4, Radiant 8/8).
     #[test]
-    fn issue_3138_a_summoned_wardrum_has_its_divine_shield_on_both_faces() {
+    fn issue_4440_a_summoned_wardrum_has_no_divine_shield_and_its_first_hit_lands_on_both_faces() {
+        let def = crate::card_def(WARDRUM);
+        for face in [&def.base, &def.radiant] {
+            assert!(face.keywords.is_empty(), "{:?}", face.keywords);
+            assert!(!face.text.contains("Divine Shield"), "{}", face.text);
+        }
         for radiant in [false, true] {
             let mut s = scenario(json!({
                 "p1": {
@@ -299,35 +304,19 @@ mod tests {
                 },
                 "p2": { "hand": [FILLER] },
             }));
-            assert!(has_shield(&s, WARDRUM), "radiant {radiant}: printed in the hand, where it does nothing");
             play_three(&mut s);
             assert_eq!(wardrum_in(&s), ZoneName::Field, "radiant {radiant}");
-            assert!(has_shield(&s, WARDRUM), "radiant {radiant}: summoned with the shield");
+            assert!(!has_shield(&s, WARDRUM), "radiant {radiant}: summoned with no shield");
         }
-    }
-
-    /// Issue #3138: the Divine Shield negates the first damage instance on both faces, then it is gone
-    /// and the next hit lands (pipeline step 1, R63).
-    #[test]
-    fn issue_3138_the_divine_shield_absorbs_a_first_hit_and_the_next_one_lands_on_both_faces() {
-        for (radiant, health) in [(false, 4), (true, 8)] {
+        for radiant in [false, true] {
             let mut s = scenario(json!({
                 "p1": { "field": [{ "def": WARDRUM, "radiant": radiant }], "hand": [FILLER] },
-                "p2": { "field": [{ "def": MENACE, "lane": 1 }, { "def": MENACE, "lane": 2 }], "hand": [FILLER] },
+                "p2": { "field": [{ "def": MENACE, "lane": 1 }], "hand": [FILLER] },
             }));
             let wardrum = s.card(WARDRUM).clone();
-            assert!(has_shield(&s, &wardrum.id), "radiant {radiant}");
             s.end_turn();
-            let first = s.unit(P2, 1).expect("the first Menace").id;
-            let second = s.unit(P2, 2).expect("the second Menace").id;
-
-            s.attack(&first, &wardrum);
-            s.expect_in_zone(&wardrum, "field");
-            s.expect_stats(&wardrum, json!({ "health": health, "maxHealth": health }));
-            assert!(!has_shield(&s, &wardrum.id), "radiant {radiant}: the shield is spent");
-
-            // The Menace's 9 lands whole on either face (4/4, Radiant 8/8 since issue #3951).
-            s.attack(&second, &wardrum);
+            let menace = s.unit(P2, 1).expect("the Menace").id;
+            s.attack(&menace, &wardrum);
             s.expect_in_zone(&wardrum, "graveyard");
         }
     }

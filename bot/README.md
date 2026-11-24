@@ -101,7 +101,10 @@ when that is):
   it to people instead ([Triage](#triage)). On one of the bot's suggestions (`bot:suggestion`) any
   of these is your yes to it, and the queue takes `bot:suggestion` off. So is a comment that says
   only **`approve`**, while **`reject`** closes the suggestion unbuilt (as not planned), which
-  makes room for the next survey (#760);
+  makes room for the next survey (#760). Say why on the lines after `reject`, or in a comment
+  after it: the surveys and the judge read the reasons. One the judge would approve goes ahead by
+  itself after a day if no one votes on it, comments or reacts 👎
+  ([Suggestions that approve themselves](#suggestions-that-approve-themselves));
 - **assign** `@jgoetzmann-bot`;
 - comment **`/harness build`**, or **`@jgoetzmann-bot <what you want>`**. Your words become part
   of the request.
@@ -301,6 +304,46 @@ and why, and every item passed over because of `human` or a dependency.
 The issue is the spec, so write it the way you would for a careful contributor: what should
 happen, where, and how you would check it. The builder reads the issue body, every comment from
 people on the trust list, `CLAUDE.md` and `SPEC.md`. Comments from anyone else are left out.
+
+### Suggestions that approve themselves
+
+Most of the bot's suggestions are approved (575 of the 671 people decided by 2026-11-23), so
+`suggestions.auto_approve` in `.harness/config.json` lets the clear ones go ahead without
+waiting for a person, and keeps the rest for one:
+
+1. **The reasons are kept.** The rest of a `reject` comment (its lines after the vote, without
+   quotes or anything after a `---` rule), or else the first comment a trusted person leaves on the
+   suggestion after it closed, is kept as the reason it came to nothing (`declined.Reason`). The
+   rest of an `approve` comment is kept the same way, as the reason it was approved
+   (`declined.ApprovalReason`). Every survey reads the reasons for those that came to nothing
+   beside their titles, and `prompts/suggest.md`'s "What gets rejected" lists the kinds people
+   reject (a guard against a bug that hasn't happened, a speed-up nobody measured, a report nothing
+   acts on, upkeep for every future change, a design call, polish only the maintainer sees, undoing
+   a decision made on purpose, overlap) and the evidence that clears a guard or a speed-up.
+2. **A judge reads each new suggestion.** After a survey, a second model call
+   (`prompts/judge.md`; the subscription's review seat where it has one, else the survey's) checks
+   the claim each of the survey's suggestions rests on, in the code, and looks for overlap. It reads
+   them against `prompts/judge.md`'s lists of what gets rejected and what gets approved, and against
+   the latest `window` (100) decisions on suggestions, newest
+   first, with their reasons (`suggest.decided`: each one a person approved, and each that came to
+   nothing, rejected, closed unbuilt, handed to people or failed for good, as it ended). Those
+   decisions are its rolling window of what people want now: where they disagree with the prompt's
+   lists, they win. It says of each suggestion `approve` or `person`, and why, and the issue's
+   footer says so. A judge call that fails or stops leaves every suggestion to a person and loses
+   none.
+3. **One it would approve goes ahead by itself.** The sweep (`plan.AutoApprove`) queues a
+   suggestion the judge would approve once it has waited `wait_hours` (24) with no one taking it
+   up: a vote, a comment that is not the bot's, or a 👎 on the issue leaves it to a person, for
+   good. It is queued as a person's `approve` queues it, so it is planned, built, reviewed and
+   merged under every gate, and `/harness stop` takes it back out; the bot says so on it.
+4. **At `priority:low`, a few a day.** Each goes ahead at `priority:low`, whatever its class
+   opened it with, so it waits behind everything a person asked for, and at most `per_day` (3) go
+   ahead in any 24 hours (`suggest.auto_approved`, the times they did); one past the cap waits for
+   the next sweep with room. Its approval joins the decisions as `auto-approved`, which the judge is
+   told is no person's decision, so it never learns from its own approvals.
+
+`enabled: false`, or no `auto_approve` at all, judges nothing and approves nothing. Squishy makes no
+suggestions.
 
 ## Fullsend
 
@@ -593,7 +636,7 @@ in place of the `bot:*` ones.
 | `bot:stuck` | beside `bot:blocked`: a hard build or revision used every review round (`max_review_cycles`, 10 for hard) without an approval. Its comment says why, round by round (`go/internal/failures/`): the builder's sessions, the checks that were red, the reviewer's verdicts and the findings that kept coming back. A person reads it before anyone tries again; an approval takes the label off |
 | `bot:pr-open` | the issue has an open bot pull request |
 | `bot:pr` | a pull request the bot opened |
-| `bot:suggestion` | an improvement the bot proposes; comment `approve` (or add `bot:build`, assign the bot, or `/harness build`) to have it built, which takes this label off and leaves its `priority:*` label on; comment `reject` (or close it) to say no. It opens with the priority its class sets ([One night](#one-night-step-by-step), step 1) |
+| `bot:suggestion` | an improvement the bot proposes; comment `approve` (or add `bot:build`, assign the bot, or `/harness build`) to have it built, which takes this label off and leaves its `priority:*` label on; comment `reject` (or close it) to say no. It opens with the priority its class sets ([One night](#one-night-step-by-step), step 1). One the judge would approve goes ahead by itself, at `priority:low`, after a day with no one's vote, comment or 👎 ([Suggestions that approve themselves](#suggestions-that-approve-themselves)) |
 | `ready for merge` | the reviews approved the pull request's head, but auto-merge could not turn on (a review-only path, a migration that loses data (an `UPDATE` with no `WHERE` counts), changes access or edits one `main` has, a new package in a lock, `main`'s protection, GitHub refusing it, or `auto_merge` off; its comment names which), so the bot @-mentions the operator to merge it. It comes off when the pull request goes back into the queue (a revision, a review run, a run that holds it, `bot:blocked`); triage never adds it |
 | `tracking` | a tracker or status issue, a type label: the bot comments on it and rewrites its own, but never queues, plans, builds or splits it ([above](#priority-and-human)) |
 | `difficulty:medium`, `difficulty:hard` | the weakest tier that may plan, build and approve it: medium, strong. A person may set one; otherwise the planner rates the item, by [how hard it is](#how-hard-it-is), and the bot labels it; three failures of its own raise it a step ([below](#rating-strikes-and-the-step-up)). With none it counts as medium, and with several the hardest counts. `difficulty:easy` is retired (#2748): the sweep moves it to `difficulty:medium` on every open thread, then deletes it (`config.Relabelled`), and until then it reads as medium |
@@ -1976,7 +2019,9 @@ pruned after a week ([`go/internal/controller/`](go/internal/controller/)).
    saw them). Every survey also reads the log of suggestions that came to nothing (`suggest.declined`:
    rejected by a vote, closed unbuilt, or approved and then handed to people or failed for good,
    [`go/internal/declined/`](go/internal/declined/)) and never offers one again; one it offers anyway,
-   by the same title, is not opened. The survey files each suggestion under one class
+   by the same title, is not opened, and the reasons people gave for them. After it, a judge reads
+   its suggestions, and one it would approve goes ahead by itself after a day with no one's vote
+   ([Suggestions that approve themselves](#suggestions-that-approve-themselves)). The survey files each suggestion under one class
    (`prompts/suggest.md`: `fuzz`, `checks`, `telemetry`, `refactor`, `ai`, `fairness`,
    `security`, `data`, `polish`, `feature`, the one picked up first when two fit), and
    `suggestions.priorities` in `.harness/config.json` maps a class to the `priority:*` label it
@@ -2622,7 +2667,7 @@ started as Squishy (`go/tests/squishy_cases_test.go`, from `go/tests/squishy_tes
 | `go/internal/spotcheck/` | the after-merge spot-check (#2748): the count of medium and hard merges, every 5th queued for Opus's review of the merged change, and the record of each check's verdict, findings and follow-up issue |
 | `go/internal/mergegate/` | what a migration or a lock must not hold to merge itself (#2986): a data-losing (an `UPDATE` with no `WHERE` among them, #3009) or access-changing statement, a package `main`'s lock lacks, a Cargo dependency its lock does not hold; `deliver/mergegate.go` reads the branch's files with it |
 | `go/internal/human/` | work only a person can do (#793): when a plan needs one, the labels the bot lets go of, and the `human required` summary that names the people, says why and where the work is (#3009) |
-| `go/internal/declined/` | the suggestions that came to nothing, which no survey offers again (#797) |
+| `go/internal/declined/` | the suggestions that came to nothing, which no survey offers again (#797), with the reasons people gave, and the log of decisions on suggestions the judge reads ([Suggestions that approve themselves](#suggestions-that-approve-themselves)) |
 | `go/internal/memory/` | the machine's memory as its jobs read it, kept for the status issue's line on it (#312) |
 | `go/internal/threads/`, `go/internal/prompts/`, `go/internal/verdicts/` | what the model is told, and reading what it answers |
 | `go/internal/controller/` | the status loop as the planner (#1455): it plans, writes each plan to the state branch and starts each night run with its plan; `plan-fetch` reads and checks such a plan in the run; and it delivers each such run once it ends (#1537), with the model job's upload and a fresh clone of the default branch |

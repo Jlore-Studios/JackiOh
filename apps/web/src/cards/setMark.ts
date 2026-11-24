@@ -1,7 +1,8 @@
 // The set mark on a card's frame (R503), as a printed card carries its expansion symbol: Core a ringed
 // orb, Classic a columned temple (Classic+ with a plus), Meditative an ensō with a red seal (Meditative+
 // with a plus, R2718000), Stinkyscape a green planet with stink lines (R1883000; Stinkyscape+ the same
-// with a plus, R3572000), Training Grounds a straw target over two crossed practice swords (R2202000);
+// with a plus, R3572000), Training Grounds a straw target over two crossed practice swords (R2202000),
+// the held Infinite Assault set a red infinity loop on a dark hexagonal chip (R4577009);
 // any other set (the reserved Boss sets, one this client does not know yet) a plain diamond, so every
 // card shows one.
 //
@@ -24,6 +25,7 @@ export type SetMarkKind =
   | "stinkyscape"
   | "stinkyscape-plus"
   | "training-grounds"
+  | "infinite-assault"
   | "unknown";
 
 /** A set mark that is a set's own, not the fallback diamond: the sets that have a watermark (R2718000). */
@@ -69,6 +71,10 @@ const WOOD = "#c58a48";
 const WOOD_INK = "#3a2210";
 const STRAW = "#f1dfa8";
 const TARGET_RED = "#d2452f";
+const CHIP = "#2b3038";
+const CHIP_INK = "#0c0e12";
+const CHIP_TRACE = "#5ad1ff";
+const ASSAULT_RED = "#ff4a3a";
 
 /** A wooden practice sword from the hilt at (x1, y1) to the tip at (x2, y2), outlined. */
 function woodenSword(x1: number, y1: number, x2: number, y2: number): string {
@@ -123,6 +129,10 @@ const GLYPHS: Readonly<Record<SetMarkKind, string>> = {
     `<circle cx='12' cy='12' r='7.6' fill='${STRAW}' stroke='${WOOD_INK}' stroke-width='1.2'/>` +
     `<circle cx='12' cy='12' r='5.2' fill='${TARGET_RED}' stroke='${WOOD_INK}' stroke-width='0.6'/>` +
     `<circle cx='12' cy='12' r='3' fill='${STRAW}'/><circle cx='12' cy='12' r='1.3' fill='${TARGET_RED}'/>`,
+  "infinite-assault":
+    `<path d='M12 1.6L21 6.8V17.2L12 22.4L3 17.2V6.8Z' fill='${CHIP}' stroke='${CHIP_INK}' stroke-width='1.4' stroke-linejoin='round'/>` +
+    `<path d='M12 4.6L18.4 8.3V15.7L12 19.4L5.6 15.7V8.3Z' fill='none' stroke='${CHIP_TRACE}' stroke-width='0.8' stroke-linejoin='round'/>` +
+    `<path d='M12 12C10.4 9.6 6.4 9.6 6.4 12C6.4 14.4 10.4 14.4 12 12C13.6 9.6 17.6 9.6 17.6 12C17.6 14.4 13.6 14.4 12 12Z' fill='none' stroke='${ASSAULT_RED}' stroke-width='1.8' stroke-linecap='round'/>`,
   unknown: `<path d='M12 1.6L22.4 12L12 22.4L1.6 12Z' fill='#bba8dc' stroke='#1d1530' stroke-width='1.6' stroke-linejoin='round'/><path d='M12 7.4L16.6 12L12 16.6L7.4 12Z' fill='#1d1530'/>`,
 };
 
@@ -140,6 +150,7 @@ const SRC: Readonly<Record<SetMarkKind, string>> = {
   stinkyscape: glyphUri(GLYPHS.stinkyscape),
   "stinkyscape-plus": glyphUri(GLYPHS["stinkyscape-plus"]),
   "training-grounds": glyphUri(GLYPHS["training-grounds"]),
+  "infinite-assault": glyphUri(GLYPHS["infinite-assault"]),
   unknown: glyphUri(GLYPHS.unknown),
 };
 
@@ -152,6 +163,7 @@ const KINDS: Readonly<Record<string, WatermarkKind>> = {
   Stinkyscape: "stinkyscape",
   "Stinkyscape+": "stinkyscape-plus",
   "Training Grounds": "training-grounds",
+  "Infinite Assault": "infinite-assault",
 };
 
 /** The mark a card of `set` wears, the diamond for a set with no glyph. */
@@ -191,6 +203,7 @@ const WATERMARKS: Readonly<Record<WatermarkKind, Watermark>> = {
   stinkyscape: watermark("stinkyscape"),
   "stinkyscape-plus": watermark("stinkyscape-plus"),
   "training-grounds": watermark("training-grounds"),
+  "infinite-assault": watermark("infinite-assault"),
 };
 
 /** R2718000: the watermark behind a card of `set`'s rules text; none for no set or a set with no symbol. */

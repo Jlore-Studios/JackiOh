@@ -24,6 +24,7 @@ import { awaitsYou, installDevHandle, pollWhileVisible, remainingMs, viewDerived
 import { readPlayLean } from "../game/playLean.ts";
 import { formatSeconds, t, useLocale } from "../i18n/i18n.ts";
 import { Loading, SITE_NAME, ShellPanel, documentTitleFor } from "../main.tsx";
+import { BackLayer } from "../net/backLayers.ts";
 import { getDuosAgain, offerDuosAgain, type DuosAgainStatus } from "../net/duos.ts";
 import { guardLeaving, navigate, paths } from "../net/navigate.ts";
 import { BackLink, followInApp } from "../routes/nav.tsx";
@@ -350,6 +351,12 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
   if (watching && view.result !== null) {
     return (
       <CatalogContext.Provider value={lookup}>
+        {/* R4619000: Back means the replay's corner arrow; first, so what the replay opens is a layer above it. */}
+        <BackLayer
+          onClose={() => {
+            setWatching(false);
+          }}
+        />
         <DuosReplay
           matchId={matchId}
           onLeave={() => {

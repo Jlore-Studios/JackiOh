@@ -18,10 +18,12 @@ import type { AudioEngine } from "../audio/types.ts";
 import { modifierListTestid } from "../game/ModifierList.tsx";
 import { formatDateTime } from "../i18n/i18n.ts";
 import type { DailyExpiredGame, DailyGame } from "../net/daily.ts";
+import { paths } from "../net/navigate.ts";
 import { clearReadCache } from "../net/readCache.ts";
 import { replayTestid } from "../replay/ReplayPlayer.tsx";
 import { resetSettings, writeSettings } from "../settings/store.ts";
 import { baseView, card, emptySide, opponentModifiers, pendingFor, unit, yourModifiers } from "../test/fixtures.ts";
+import { pressBack } from "../test/history.ts";
 import { foldedReplaySteps } from "../test/replay.ts";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { at, refusal, signIn, stubServer, type Call, type Reply } from "../test/stubServer.ts";
@@ -526,6 +528,26 @@ describe("R3855000 a daily board shows what every table shows", () => {
       expect(screen.queryByTestId(replayTestid.player)).toBeNull();
     });
 
+    it("R4619000 one Back on a finished daily game's replay returns to its result on /daily/:id", async () => {
+      at(paths.daily);
+      window.history.pushState(null, "", paths.dailyGame("g-1"));
+      serve(finished, (call) => {
+        if (call.method !== "GET" || call.path !== "/api/replays/g-1") return undefined;
+        const from = Number(call.query.get("from") ?? "0");
+        const count = Number(call.query.get("count") ?? "1");
+        return { status: 200, body: { matchId: "g-1", from, steps: steps.slice(from, from + count), total: steps.length } };
+      });
+      render(<DailyBoard matchId="g-1" />);
+      await screen.findByTestId("result-overlay", undefined, SLOW);
+      fireEvent.click(screen.getByTestId(dailyTestid.watchReplay));
+      expect(await screen.findByTestId(replayTestid.player, undefined, SLOW)).toHaveAttribute("data-step", "0");
+
+      await pressBack();
+      expect(await screen.findByTestId(dailyTestid.watchReplay, undefined, SLOW)).toBeInTheDocument();
+      expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+      expect(window.location.pathname).toBe(paths.dailyGame("g-1"));
+    });
+
     it("R3855000 a voided game's result offers no replay", async () => {
       serve(() => dailyGame({ ...finished(), view: baseView({ result: { winner: "draw", reason: "voided" } }) }));
       render(<DailyBoard matchId="g-1" />);
@@ -670,5 +692,46 @@ describe("R3934000 a finished game whose moves are no longer kept", () => {
     });
     await flush();
     expect(server.to("GET", GAME)).toHaveLength(reads + 1);
+  });
+});
+
+describe("R4621000 a finished game whose opponent deleted their account", () => {
+  const steps = foldedReplaySteps();
+  const GONE = { profileId: "", username: "" };
+  const finished = (): DailyGame =>
+    dailyGame({ view: baseView({ result: { winner: "p1", reason: "concede" } }), over: true, hasMove: false, legal: [], holds: [], opponent: GONE });
+
+  it("R4621000 names them a deleted account on the board and offers no Rematch", async () => {
+    serve(finished);
+    render(<DailyBoard matchId="g-1" />);
+    await screen.findByTestId("result-overlay", undefined, SLOW);
+
+    expect(screen.getByTestId("hero-opponent").querySelector(".hero-seat")).toHaveTextContent("a deleted account");
+    expect(screen.queryByTestId(dailyTestid.rematch)).toBeNull();
+    expect(screen.getByTestId(dailyTestid.watchReplay)).toBeInTheDocument();
+    expect(screen.getByTestId(dailyTestid.backToList)).toBeInTheDocument();
+  });
+
+  it("R4621000 its replay names them a deleted account", async () => {
+    serve(finished, (call) => {
+      if (call.method !== "GET" || call.path !== "/api/replays/g-1") return undefined;
+      const from = Number(call.query.get("from") ?? "0");
+      const count = Number(call.query.get("count") ?? "1");
+      return { status: 200, body: { matchId: "g-1", from, steps: steps.slice(from, from + count), total: steps.length } };
+    });
+    render(<DailyBoard matchId="g-1" />);
+    await screen.findByTestId("result-overlay", undefined, SLOW);
+
+    fireEvent.click(screen.getByTestId(dailyTestid.watchReplay));
+    expect(await screen.findByTestId(replayTestid.player, undefined, SLOW)).toHaveAttribute("data-step", "0");
+    expect(screen.getByTestId("hero-opponent").querySelector(".hero-seat")).toHaveTextContent("a deleted account");
+  });
+
+  it("R4621000 a game whose moves are no longer kept reads vs a deleted account", async () => {
+    serve(() => expiredGame({ opponent: GONE }));
+    render(<DailyBoard matchId="g-1" />);
+
+    const panel = await screen.findByTestId(dailyTestid.expired, undefined, SLOW);
+    expect(panel).toHaveTextContent("vs a deleted account");
   });
 });

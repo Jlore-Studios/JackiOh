@@ -10,7 +10,7 @@ use crate::own_library::hide_from_owner;
 use crate::script::Effect;
 use crate::state::{CardInstance, GameState, find_instance, find_instance_mut, new_instance};
 use crate::tuning::copy_tuning;
-use crate::wire::Zone;
+use crate::wire::{AttackHealth, Zone};
 
 use super::targets::{PlayerSpec, player_of};
 
@@ -64,6 +64,15 @@ pub struct ShuffleIntoArgs {
     /// Absent is the open shuffle-in every other card makes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unseen: Option<bool>,
+    /// R4577002 (Infinite Assault #2 Scrap Prototype, "a copy of this with +1/+1"): added to each
+    /// fresh card's buffs, after R57's riders, which never carry buffs, so a copy of a copy is no
+    /// bigger than the first. Absent is no buff.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub buff: Option<AttackHealth>,
+    /// R4577002 (Infinite Assault #19 Infinite Scroll's Radiant face, "it costs (1) less"): added to
+    /// each fresh card's `cost_mod`, as `addToHand`'s `costMod` is. Absent is its printed price.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_mod: Option<i32>,
 }
 
 /// Shuffle fresh copies of a definition into a library. A copy a full library refuses is judged by
@@ -78,6 +87,13 @@ pub fn shuffle_into(args: ShuffleIntoArgs) -> Effect {
             }
             let source = source_of(ctx.state, args.copy_of.as_deref()).cloned();
             carry_from(&mut card, source.as_ref());
+            if let Some(buff) = args.buff {
+                card.buffs.attack += buff.attack;
+                card.buffs.health += buff.health;
+            }
+            if let Some(cost_mod) = args.cost_mod {
+                card.cost_mod += cost_mod;
+            }
             if let Some(memory) = &args.memory {
                 card.memory.extend(memory.clone());
             }

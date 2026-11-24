@@ -6,8 +6,8 @@
 //!            Embiggened (3): Starship Piece."
 //!
 //! End of turn (R62), R4285002: its Attack as it stands then, through the layers, buffs and auras included
-//! (§10.4, R1878002), times `ATTACK_MULTIPLE` (Radiant `RADIANT_ATTACK_MULTIPLE`), dealt by §6.3 Damage's
-//! split (`damage_split`, R59, R60): one point at a time, each to a random enemy still standing, the enemy
+//! (§10.4, R1878002), times `ATTACK_MULTIPLE` (Radiant `RADIANT_ATTACK_MULTIPLE`), dealt by §4.4's split
+//! damage (`damage_split`, R59, R60): one point at a time, each to a random enemy still standing, the enemy
 //! hero or an enemy Unit, by the match rng; an Attack of 0 or less deals nothing (R63). R4285001: the
 //! Embiggened version is a Starship Piece and no longer has Equip, the piece lent by its text to the card
 //! stamped embiggened (R1878001). Equipped by a lent Equip (S #16 Rod of Ages, R1869000), its text runs on

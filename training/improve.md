@@ -171,9 +171,11 @@ invisible to the fork screen and wants the deal screen.
    the screen of `AI_EVAL.turn_hook` played 200 trunk games and 155 forks in 3 h 7 min, and that of
    `AI_EVAL.activation` 200 and 205 in 4 h 0 min, each on a 4-core Intel Xeon at 2.30 GHz, about 12
    and 16 core-hours. Neither fits a bot's model call (150 minutes), and a fork screen prints nothing
-   until its tally and cannot resume, so a run that dies first reads nothing and is run again from
-   the same binaries: the first run of #4448's `turn_hook` screen died 3 hours in, when the idle
-   cloud session it ran in was reclaimed.
+   until its tally, so pass `--save` at a path inside your worktree: each finished deal is appended
+   to the file as soon as it is done, the harness carries the file into a continued run, and after
+   a cut the same command plays only the deals still missing (R4607000). The first run of #4448's
+   `turn_hook` screen died 3 hours in, when the idle cloud session it ran in was reclaimed. Record
+   the tally in the knob's config comment as today, and delete the save file before finishing.
 4. Decide a screen's size before you start it. 400 games is the floor; a change you expect to gain
    only a point or two needs more to show it (`--games 800` plays deals 1 to 400). Never extend a
    screen because it came close, never screen the same change again to get a better read, and never

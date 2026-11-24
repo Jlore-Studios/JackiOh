@@ -611,7 +611,7 @@ describe("R2784000 the per-set effects tables", () => {
     }
   });
 
-  it("R2787000 R2794000 R3405001 the eleven example Field Spells across the sets wear their auras", () => {
+  it("R2787000 R2794000 R3405001 the twelve example Field Spells across the sets wear their auras", () => {
   const examples = {
     "core-014": { look: "storm", scope: "side" },
     "core-046": { look: "void", scope: "board" },
@@ -626,8 +626,10 @@ describe("R2784000 the per-set effects tables", () => {
     "traininggrounds-019": { look: "bloom", scope: "zone" },
     // Stinkyscape+'s Mender (#3596), one example a file.
     "stinkyscapeplus-040": { look: "bloom", scope: "zone" },
+    // The held Infinite Assault set's Drone Foundry (#4577), its file's example.
+    "infiniteassault-015": { look: "steam", palette: "Tech/rocket", scope: "zone" },
   };
-  expect(Object.keys(examples)).toHaveLength(11);
+  expect(Object.keys(examples)).toHaveLength(12);
   // R2794000: Classic's pass gave its two examples their play's motifs beside the aura.
   const hooksOf: Readonly<Record<string, object>> = {
     "classic-042": { cast: { motif: "tally" }, activate: { motif: "tally" } },

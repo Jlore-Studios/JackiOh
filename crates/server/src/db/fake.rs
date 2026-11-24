@@ -3333,7 +3333,8 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     // The dev dashboard (#3074): 0080's hand-set ratings and rating ledger cascade with the
     // profile; its audit rows and posts stay and forget it (`on delete set null`).
     crate::admin::store::remove_admin_rows(&mut tables.admin, profile_id);
-    // Daily games (#3727): 0089's rows cascade with the profile.
+    // Daily games (#3727): 0089's rows cascade with the profile; 0100 empties its seat on each daily
+    // game, which stays for the other player (R4621000).
     remove_daily_rows(&mut tables.daily, profile_id);
     // The notification feed (#4039): 0093's rows cascade with the profile they tell or name.
     crate::notifications::store::remove_notification_rows(&mut tables.notifications, profile_id);
@@ -4998,7 +4999,8 @@ pub fn shares_by(f: &mut FakeTx<'_>, match_id: &str, sharer: &str) -> Result<Vec
 // Migration 0089's four tables, in memory. Strict where Postgres is strict: one game per match and only
 // beside its match row, one open challenge per sender and friend and one open seek per sender, mode and
 // days per move (the two partial unique keys), each table's checks, one subscription per endpoint, and
-// every row goes with the profile it names (`remove_daily_rows`) and a game with its match.
+// every row goes with the profile it names but a game's seat, which empties (`remove_daily_rows`), and a
+// game goes with its match.
 
 use crate::db::store::{
     DailyGameRow, DailyInviteKind, DailyInviteRow, DailyInviteState, DailyNotifyRow, PushSubRow,
@@ -5016,11 +5018,17 @@ pub struct DailyTables {
     pub email_days: IndexMap<i64, i32>,
 }
 
-/// Every daily row naming the profile, as 0089's `on delete cascade` takes them.
+/// Every daily row naming the profile, as 0089's `on delete cascade` takes them, but a game's seat,
+/// which empties (0100's `on delete set null`, R4621000).
 pub fn remove_daily_rows(daily: &mut DailyTables, profile_id: &str) {
-    keep_only(&mut daily.games, |row| {
-        row.players.0 != profile_id && row.players.1 != profile_id
-    });
+    // 0100, R4621000: the seat empties and the game stays for the other player.
+    for row in daily.games.iter_mut() {
+        for seat in [&mut row.players.0, &mut row.players.1] {
+            if *seat == profile_id {
+                seat.clear();
+            }
+        }
+    }
     keep_only(&mut daily.invites, |row| {
         row.from_profile != profile_id && row.to_profile.as_deref() != Some(profile_id)
     });

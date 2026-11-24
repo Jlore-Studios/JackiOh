@@ -9,6 +9,7 @@ import { t } from "../i18n/i18n.ts";
 import { playTestid } from "./playTestids.ts";
 import { TUTORIAL_LESSONS } from "../tutorial/lessons.ts";
 import { dailyConstants } from "../wasm/index.ts";
+import { ASSAULT_OPEN } from "../assault/config.ts";
 
 /** R3729000: the hub's groups, in the order they are drawn. */
 export type PlayGroup = "online" | "daily" | "friends" | "solo";
@@ -45,6 +46,7 @@ export type PlayCardId =
   | "challenge"
   | "practice"
   | "dungeon"
+  | "assault"
   | "tutorial";
 
 export type PlayCard = {
@@ -74,6 +76,7 @@ export const GAME_MINUTES: Readonly<Record<Exclude<PlayCardId, "daily">, readonl
   challenge: [10, 20],
   practice: [10, 20],
   dungeon: [20, 40],
+  assault: [20, 40],
   tutorial: [3, 5],
 };
 
@@ -87,6 +90,7 @@ export const PLAY_CARD_TESTID: Readonly<Record<PlayCardId, string>> = {
   challenge: playTestid.challenge,
   practice: playTestid.practice,
   dungeon: playTestid.dungeon,
+  assault: "play-assault",
   tutorial: playTestid.tutorial,
 };
 
@@ -143,6 +147,20 @@ export function playCards({ signedIn, dailyWaiting }: PlayCardsOptions): readonl
       testid: PLAY_CARD_TESTID.dungeon,
       action: { kind: "link", href: paths.dungeon },
     },
+    ...(ASSAULT_OPEN
+      ? [
+          {
+            id: "assault" as const,
+            group: "solo" as const,
+            name: t("Infinite Assault"),
+            line: t("20 levels against AI-made bosses. New every day."),
+            time: minutesText(GAME_MINUTES.assault),
+            needs: t("Nothing to bring"),
+            testid: PLAY_CARD_TESTID.assault,
+            action: { kind: "link" as const, href: paths.assault },
+          },
+        ]
+      : []),
     {
       id: "tutorial",
       group: "solo",

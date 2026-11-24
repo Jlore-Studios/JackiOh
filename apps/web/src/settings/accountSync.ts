@@ -6,7 +6,7 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 
 import { getPlayerSettings, putPlayerSettings, type PlayerSettingsAccountCopy, type PlayerSettingsGroup } from "../net/api.ts";
 import type { Account } from "../net/gate.ts";
-import { isSafeKey } from "../wire/json.ts";
+import { isRecord, isSafeKey } from "../wire/json.ts";
 import { SETTINGS_GROUPS, type SettingsGroup } from "./groups.ts";
 import { getStored, setStored } from "../net/storage.ts";
 
@@ -100,7 +100,7 @@ export function retrySettingsSync(): void {
 function readClock(): Record<string, number> {
   try {
     const raw: unknown = JSON.parse(getStored(SETTINGS_SYNC_STORAGE_KEY) ?? "null");
-    if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return {};
+    if (!isRecord(raw)) return {};
     const clock: Record<string, number> = {};
     for (const [id, at] of Object.entries(raw)) {
       // Issue #4015: a stored key from outside never becomes an object key.
@@ -126,7 +126,7 @@ function sameValues(a: Record<string, unknown>, b: Record<string, unknown>): boo
 /** The server's answer, read as untrusted input. */
 function accountCopy(raw: unknown): PlayerSettingsAccountCopy {
   const groups = (raw as { groups?: unknown } | null)?.groups;
-  if (typeof groups !== "object" || groups === null || Array.isArray(groups)) {
+  if (!isRecord(groups)) {
     throw new Error("not a settings answer");
   }
   const copy: PlayerSettingsAccountCopy = { groups: {} };

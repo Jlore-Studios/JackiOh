@@ -1059,6 +1059,7 @@ mod r1859007_units_have_keyword {
             expiry: ModifierExpiry::Never,
             kind: ModifierKind::UnitsHaveKeyword {
                 keyword: Keyword::Trample,
+                from_spell: None,
             },
         });
         assert!(ours.iter().all(|id| has_trample(&s, id)));
@@ -1080,5 +1081,55 @@ mod r1859007_units_have_keyword {
                 "{viewer:?}: {mods:?}"
             );
         }
+    }
+    /// R4508000: a Spell's "your Units have X" passes a Unit Immune to Spells by, read live, so it lends
+    /// again once the immunity goes; a Trap's (S #4.4 Last Word) still lends to it.
+    #[test]
+    fn r4508000_a_spell_s_units_have_keyword_passes_an_immune_unit_by_and_a_trap_s_lends_to_it() {
+        let mut s = board(
+            "r4508000",
+            json!({
+                "field": [
+                    { "def": "stand-in (1) 4/4 Immune to Spells", "lane": 1 },
+                    { "def": PLAIN, "lane": 2 },
+                    { "def": PLAIN, "lane": 3 },
+                ],
+            }),
+            json!({}),
+        );
+        let (immune, plain_id, granted) = (id_at(&s, P1, 1), id_at(&s, P1, 2), id_at(&s, P1, 3));
+        s.card_mut(granted.as_str())
+            .granted_keywords
+            .push(Keyword::ImmuneToSpells);
+        let lend = |from_spell: Option<bool>| PlayerModifier {
+            id: "r4508000".to_string(),
+            expiry: ModifierExpiry::Never,
+            kind: ModifierKind::UnitsHaveKeyword {
+                keyword: Keyword::Trample,
+                from_spell,
+            },
+        };
+        s.state_mut().players.p1.mods.push(lend(Some(true)));
+        assert!(has_trample(&s, &plain_id));
+        assert!(!has_trample(&s, &immune), "a Spell's lend passes it by");
+        assert!(!has_trample(&s, &granted), "a granted immunity too");
+        assert!(
+            unit_has(s.state(), s.card(immune.as_str()), KeywordKind::ImmuneToSpells),
+            "and it keeps its immunity"
+        );
+        // Read live: once the immunity goes, the lend reaches it.
+        s.card_mut(granted.as_str()).granted_keywords.clear();
+        assert!(has_trample(&s, &granted));
+        // A lend no Spell made reaches it.
+        s.state_mut().players.p1.mods = vec![lend(None)];
+        assert!(has_trample(&s, &immune) && has_trample(&s, &plain_id));
+        // Only a Spell's lend is marked: the badge reads the same.
+        let view = s.view(P1);
+        assert!(
+            view.you
+                .modifiers
+                .iter()
+                .any(|badge| badge.label == "Your Units have Trample")
+        );
     }
 }
