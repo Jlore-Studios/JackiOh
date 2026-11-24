@@ -41698,7 +41698,8 @@
       "2026-11-24T05:52:50Z,45333469775,claude-1,opus,plan,4648,hard,planned,,22.6,192,132408,20348105,9.2156,31,81,,,390.1,muse,fresh,other,1",
       "2026-11-24T05:53:00Z,45330448235,claude-8,opus,build,4619,hard,built,,10.8,116,30918,5509160,2.5965,67,72,,,99.2,claude-8,fresh,,1",
       "2026-11-24T06:09:50Z,45337995347,muse,muse-spark-1.3-contributor,plan,4674,medium,planned,,2.5,0,0,0,,15,15,42,42,11.1,,none,,1",
-      "2026-11-24T06:09:33Z,45337846902,claude-1,opus,build,4648,hard,interrupted,5-hour cap,0,0,0,0,,100,100,,,427.8,claude-1,none,,0"
+      "2026-11-24T06:09:33Z,45337846902,claude-1,opus,build,4648,hard,interrupted,5-hour cap,0,0,0,0,,100,100,,,427.8,claude-1,none,,0",
+      "2026-11-24T06:12:41Z,45337691603,claude-8,opus,review,4684,hard,approved,,5.4,5,2406,173655,1.0657,75,80,,,0.9,,none,,1"
     ]
   },
   "version": 1
