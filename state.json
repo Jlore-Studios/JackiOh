@@ -21754,6 +21754,13 @@
     "4770": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-24T19:11:25Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard line holds: it mirrors an existing hook in one card script, with pin-list and sidecar updates in a single crate \u2014 no engine rules, AI, cross-crate design, migration, or large file count."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
