@@ -42388,6 +42388,9 @@
   "usage_spool": {
     "readings": [
       "2026-11-24T10:10:42Z,claude-4,ping,before,45371852671,4,2026-11-24T14:20:00Z,,,allowed,70,,"
+    ],
+    "runs": [
+      "2026-11-24T10:10:43Z,45371852671,claude-4,opus,plan,4583,medium,failed,,0,0,0,0,,4,4,,,1511.5,claude-6,none,other,0"
     ]
   },
   "version": 1
