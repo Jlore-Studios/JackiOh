@@ -270,7 +270,8 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
     // mana" marked it), Training Grounds #50 Legacy: Glowy Jelly Bean's (issue #4665), Classic #29 Book of Vital Kill's, Meditative+ #11, #12 and #13's
     // Living Potions, the Stinkyscape set's #9 Ticketed and Core #79 Twinspell, whose Radiant face drops
     // "Then this goes to the graveyard." (R3044000), Stinkyscape+ #31, #72, #73 and #85 (§8.12) and
-    // Classic+ #73.1 Classic Golem, less "Radiant" since issue #4292 (radiantDiff.test.ts names all twenty;
+    // Classic+ #73.1 Classic Golem, less "Radiant" since issue #4292, and the Infinite Assault's #36, #86, #94,
+    // #166 and #189 (§8.13) (radiantDiff.test.ts names all twenty-five;
     // #149 Wildar's Radiant face adds "It costs (0)." (#2657), a mark, no deletion).
     const pureDeletions = new Set([
       "core-055",
@@ -293,6 +294,11 @@ describe("R277: a Radiant face prints its whole text and marks what differs from
       "stinkyscapeplus-072",
       "stinkyscapeplus-073",
       "stinkyscapeplus-085",
+      "infiniteassault-036",
+      "infiniteassault-086",
+      "infiniteassault-094",
+      "infiniteassault-166",
+      "infiniteassault-189",
     ]);
     for (const card of DEFS) {
       const f = face(card.id, true);

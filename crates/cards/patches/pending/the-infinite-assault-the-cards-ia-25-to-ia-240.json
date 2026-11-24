@@ -1,0 +1,17 @@
+{
+  "title": "Patch: the Infinite Assault, the cards, IA-25 to IA-240",
+  "sources": "#4601",
+  "notes": "Issue #4601 (part of #4576): the held single-player Infinite Assault set's cards IA #25-#240 and their 13 tokens, the eight doctrines and the twelve Commanders, built as one fullsend tree (CF #4602, C2-C10 #4586-#4594) and reconciled here, with the engine verbs they need, each reached only by the set's cards or written only in a game that holds one (R4589000). No pool deals the set while it is held (R4577000), so no card players can reach plays differently and no golden trace moves. Claims --visual because the change touches apps/web/src/cards/ (R2529000): placeholder scenes, dioramas and motion recipes keyed to infiniteassault- ids only (R4577009); no shipped card's picture moves.",
+  "player": {
+    "title": "Behind the scenes",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Groundwork for future content. No card you can play looks or plays any differently."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

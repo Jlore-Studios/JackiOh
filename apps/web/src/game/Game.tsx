@@ -98,6 +98,13 @@ import type { GameSideline } from "../sideline/useSideline.ts";
 /** The attribute a mounted Game sets on its parent, the element board.css lays the game screen out by (#3633). */
 export const GAME_HOST_ATTRIBUTE = "data-game-host";
 
+/**
+ * R4773000: the attribute a mounted Game sets on the document element while a game is up. board.css
+ * locks the page against scroll, bounce and pull-to-refresh off it, and clears it on unmount, so the
+ * page scrolls as before once the game is gone.
+ */
+export const GAME_SCROLL_LOCK_ATTRIBUTE = "data-game-scroll-lock";
+
 function sameSet(a: ReadonlySet<string> | undefined, b: ReadonlySet<string> | undefined): boolean {
   if (a === b) return true;
   if (a === undefined || b === undefined || a.size !== b.size) return false;
@@ -374,10 +381,14 @@ export default function Game({
     const parent = host?.parentElement;
     if (!parent) return;
     parent.setAttribute(GAME_HOST_ATTRIBUTE, "true");
+    // R4773000: while a game is hosted the document never scrolls or overscrolls on touch (board.css).
+    document.documentElement.setAttribute(GAME_SCROLL_LOCK_ATTRIBUTE, "true");
     return () => {
       // React runs this before it detaches `host`, so only another Game in the same parent keeps the mark.
       const another = Array.from(parent.children).some((child) => child !== host && child.classList.contains("game"));
       if (!another) parent.removeAttribute(GAME_HOST_ATTRIBUTE);
+      // The unmounting game is still counted, so only its going away clears the lock.
+      if (document.querySelectorAll(".game").length <= 1) document.documentElement.removeAttribute(GAME_SCROLL_LOCK_ATTRIBUTE);
     };
   }, [host]);
   // #3633: the root's custom properties, which board.css and animations.css read (rootVars.ts).
