@@ -102,7 +102,8 @@
 //!      `controlChanged` or `bounced` after a board `swapped`, a `rotated` or a `rolledBack` and a
 //!      restore's `radiantSet` (R4508001), an exile in a `LANE_TAKERS` card's run (R4508004) or by the
 //!      Black Hole's pull at a turn's end (R4577008), a `radiantSet` under Tears of the Kwzki Tree's world
-//!      (R4508003), and the state check's switch out of a barred Defense and a Burn or Toxic tick (R4508005). A Unit is judged only while still on the
+//!      (R4508003), the state check's switch out of a barred Defense and a Burn or Toxic tick (R4508005),
+//!      and the state check's evolution of a Unit whose "Evolves when" holds after the step (R4623000). A Unit is judged only while still on the
 //!      field and immune after the step, or gone from it with its own keywords immune. Reads the events
 //!      and the catalog, never `restrictions::unaffected_by`; I14's branches and each Duos duel run it.
 //!   I22 every `target` pick is one its source may aim at (§10.5 step 1, R450; #4540): no Dormant card,
@@ -1528,6 +1529,25 @@ fn ticks_on(event: &GameEvent, previous: Option<&GameEvent>, id: &str) -> bool {
         ) && previous.is_some_and(tick)
 }
 
+/// I21, R4623000: whether `id` stands on the field after the step with its own "Evolves when" holding
+/// (R3536001): the settled state check's evolution (`evolution::evolve_standing`), the game's rule reading
+/// the card's own condition, whose `evolved` lands in the open run before its Evolve text's marker.
+fn evolves_standing(after: &GameState, id: &str) -> bool {
+    find_instance(after, id).is_some_and(|card| {
+        matches!(card.zone, Zone::Field { .. })
+            && crate::scripts::script_of(after, card)
+                .evolves_when
+                .as_ref()
+                .is_some_and(|when| {
+                    when(crate::script::HookArgs {
+                        state: after,
+                        self_: card,
+                        radiant: card.radiant,
+                    })
+                })
+    })
+}
+
 /// I21, R4577008: whether an `exiled` of `mark`'s Unit may be the Black Hole's pull at the end of `ended`'s
 /// turn (R4440050, `geometry::pull_at_turn_end`): the step began with a hole that pulls at a turn's end and
 /// pulls that player's permanents, the turn has ended, and the Unit stood on that player's side one lane
@@ -1561,7 +1581,8 @@ fn pulled_into_the_hole(
 /// - a `radiantSet` while Tears of the Kwzki Tree's world holds every card Radiant (R4508003, R4454001);
 /// - the game's own rules that run inside the Spell's run with no marker (R4508005): §4.5 step 1's
 ///   switch out of Defense of a Unit the board bars from it (`forbidden_defense`, I17's), and a Burn or
-///   Toxic tick (`ticks_on`).
+///   Toxic tick (`ticks_on`); and the settled state check's `evolved` of a Unit whose "Evolves when" holds
+///   after the step (R4623000, `evolves_standing`).
 ///
 /// A Unit is judged only when it is still on the field and still immune after the step (an aura that
 /// dropped mid-step, or a step that first took its immunity away, makes no finding), or when it is gone
@@ -1699,6 +1720,8 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 // R4508004: a lane the board loses; R4577008: or the hole's pull at a turn's end.
                 GameEvent::Exiled { .. } => run.takes_lane || pulled_into_the_hole(step.hole, ended, mark),
                 // R4508005: §4.5 step 1 switches it out of a Defense Position the board bars it from.
+                // R4623000: the state check evolves it by its own standing condition (R3536001).
+                GameEvent::Evolved { .. } => evolves_standing(after, id),
                 GameEvent::PositionSwitched {
                     position: Position::Atk,
                     ..

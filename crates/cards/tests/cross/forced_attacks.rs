@@ -9,6 +9,8 @@
 //!  - R174: a run stops once its target has left the field, even when Reborn puts it straight back;
 //!    and (round 4, lens L2) an attacker the run named that died in an earlier combat of the run and
 //!    is back through Reborn is passed over, like one that is gone (R96).
+//!  - R1202, R1849005: when Moths forces #91 Windfast at it inside S #157 The Gauntlet, the stand-in
+//!    summoned outside the Gauntlet makes no attack, and the base face bounces it all the same.
 //!
 //! Test paths: SURFACE §4.1, §8.
 
@@ -239,5 +241,64 @@ mod r174_a_forced_run_and_a_target_that_left_the_field {
         g.expect_in_zone(&fiender.id, "field");
         assert_eq!(g.card(&fiender.id).reborn_spent, Some(true));
         g.expect_stats(&fiender.id, json!({ "health": 1 }));
+    }
+}
+
+mod r1202_a_forced_substitute_keeps_to_the_attack_rules {
+    use super::*;
+
+    const GAUNTLET: &str = "stinkyscape-157"; // The Gauntlet: the middle three lanes fight only each other
+    const WINDFAST: &str = "meditative-091"; // Windfast: a hand Unit makes each of its attacks
+
+    #[test]
+    fn r1202_r1849005_a_substitute_landing_outside_the_gauntlet_does_not_attack_moths_inside_it() {
+        let mut g = scenario(json!({
+            "seed": "r1202-gauntlet",
+            "p1": {
+                "mana": 10,
+                "hand": [GAUNTLET, VANILLA, STOCKPILE],
+                "field": [{ "def": WINDFAST, "lane": 2 }],
+                "library": [TIMMY, TIMMY],
+            },
+            "p2": {
+                "hand": [STOCKPILE],
+                "field": [{ "def": MOTHS, "lane": 3 }],
+                "library": [TIMMY, TIMMY],
+            },
+        }));
+        // p1's one Unit in hand, so the stand-in's pick draws no random number (R129).
+        let stand_in = g
+            .hand(P1)
+            .into_iter()
+            .find(|card| card.def_id == VANILLA)
+            .expect("Mr. Vanilla in p1's hand");
+        let moths = g.unit_at(P2, 3);
+        let windfast = g.unit_at(P1, 2);
+        g.play(GAUNTLET, json!({ "zone": 1 }));
+        // p2's start of turn: Moths forces Windfast, both inside the Gauntlet; the stand-in lands in the
+        // leftmost open zone, lane 1, outside it, from which it may not attack Moths.
+        g.end_turn();
+        let events = g.last_events().to_vec();
+        assert_eq!(declared(&events), Vec::new(), "no attack is declared");
+        assert!(
+            events.iter().any(|event| matches!(
+                event,
+                GameEvent::Summoned { instance_id, lane: 1, .. } if *instance_id == stand_in.id
+            )),
+            "the stand-in was summoned into lane 1"
+        );
+        assert!(
+            events.iter().any(
+                |event| matches!(event, GameEvent::Bounced { instance_id, .. } if *instance_id == stand_in.id)
+            ),
+            "the base face bounced it"
+        );
+        assert_eq!(g.card(&moths.id).damage, 0, "Moths was not struck");
+        assert_eq!(
+            g.card(&windfast.id).damage,
+            0,
+            "Windfast neither strikes nor is struck"
+        );
+        g.expect_in_zone(&stand_in.id, "hand");
     }
 }

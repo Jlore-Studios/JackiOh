@@ -8064,7 +8064,12 @@ macro_rules! push_sub_columns {
 fn daily_game_of(row: &PgRow) -> Result<DailyGameRow, StoreError> {
     Ok(DailyGameRow {
         match_id: uuid_text(row, "match_id")?,
-        players: (uuid_text(row, "p1_profile_id")?, uuid_text(row, "p2_profile_id")?),
+        // R4621000: a deleted account's seat (migration 0100) reads back empty, as a 1v1 or co-op seat
+        // does (KNOWN DIVERGENCES, deleted accounts).
+        players: (
+            uuid_text_or_null(row, "p1_profile_id")?.unwrap_or_default(),
+            uuid_text_or_null(row, "p2_profile_id")?.unwrap_or_default(),
+        ),
         mode: queue_mode_of(&get::<String>(row, "mode")?)?,
         per_move_days: get(row, "per_move_days")?,
         clock: json_col(row, "clock")?,
@@ -8844,7 +8849,10 @@ mod tests {
 //    that bind the seats a finished match hands on (R768) take an id that is no uuid as naming nothing
 //    (`profiles_get_many`, `ranked_standings_subset`, `blocks_between`, the economy's `game_jlore_totals`).
 //    A live match or series cannot lose a seat: the delete is refused, by constraint here and by
-//    `DELETE /api/account` first.
+//    `DELETE /api/account` first. A daily game's seats (0100, R4621000) and a co-op match's (0051,
+//    R1497000) read back as the empty string in both stores, since the in-memory store empties them too
+//    (`remove_daily_rows`, `duos::store::remove_duos_rows`); `daily::games` names such a seat with empty
+//    fields and never looks it up.
 //  * clocks. `MatchClocks` has a grace deadline per player; `public.matches` has one `grace_deadline_at` plus
 //    two `*_disconnected_at`. The per-player deadlines live in the `*_disconnected_at` columns and
 //    `grace_deadline_at` keeps the nearer; a migration adding per-player deadline columns would retire this.

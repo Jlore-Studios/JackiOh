@@ -97,7 +97,7 @@ declare
   -- 0030, 0031, 0033, 0035, 0036, 0040, 0043, 0044, 0046, 0048, 0049, 0050, 0051, 0052, 0053, 0054,
   -- 0055, 0056, 0057, 0058, 0059, 0062, 0064, 0065, 0068, 0069, 0070, 0071, 0072, 0073, 0074, 0075,
   -- 0076 and 0079 add no table, 0082 drops custom_cards, which 0037 had added, and 0083, 0084, 0085, 0087, 0088 and
-  -- 0091 add none, nor do 0094, 0095, 0096, 0098 and 0099.
+  -- 0091 add none, nor do 0094, 0095, 0096, 0098, 0099 and 0100.
   -- The three loadout tables stay after 0007, unread and unwritten (R254), so they are still expected
   -- here.
   expected constant text[] := array[

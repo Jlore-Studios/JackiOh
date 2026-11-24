@@ -34579,5 +34579,36 @@
       "stinkyscapeplus-125"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.12c",
+    "date": "2026-11-24",
+    "title": "Appropriations: Military and Healthcare reach only your field and hand",
+    "source": "#4666",
+    "notes": "The owner's request (#4666): C+ #40 Appropriations' Military and Healthcare stop reaching the deck and cover only your Units on the field and in your hand, and in return they and Culture get back the numbers #3996 and #4154 took, on both faces; Education is unchanged. Military gives +(2X−2) Attack and Rush [+(4X−3)], Healthcare +(2X−2) Health and Armor X [+(5X−1), Armor 2X], Culture 6X% [16X%] over your field, hand and deck: v0.6.5b's numbers (R3996201). Education keeps ⌊5X/3⌋−2 [⌊17X/5⌋−2] (R4154105). The script through v0.6.12b is kept as `script_v0_6_12b` (R767000). Ruling R4666000.",
+    "player": {
+      "title": "Appropriations",
+      "new": [],
+      "balance": [
+        "Appropriations' Military gives +(2X−2) Attack and Rush, up from +(⌊5X/3⌋−2). Radiant: +(4X−3), up from +(⌊17X/5⌋−4).",
+        "Appropriations' Healthcare gives +(2X−2) Health and Armor X, up from +(⌊5X/3⌋−2) Health. Radiant: +(5X−1) Health and Armor 2X, up from +⌊17X/5⌋ Health.",
+        "Appropriations' Culture gives each card a 6X% chance to become Radiant, up from ⌊17X/4⌋%. Radiant: 16X%, up from 12X%."
+      ],
+      "changes": [
+        "Appropriations' Military and Healthcare now reach only your Units on the field and in your hand, no longer the ones in your deck."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "c5e4e4ef836bee5b89cb98c117fee4007f32201e"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classicplus-040",
+      "core-017"
+    ],
+    "changes": []
   }
 ]

@@ -3,7 +3,8 @@
 //! started on (R3727005), its open challenges cancelled by a block (R3727007), holding its accounts
 //! from deletion while it runs (R3727008), and "your move" sent by email and Web Push, to a browser's
 //! push service only. A finished game whose moves the retention purge took opens as its stored result
-//! and refuses every move (R3934000).
+//! and refuses every move (R3934000). A finished game stays for the other player when one of its
+//! players deletes their account, naming that opponent by nobody (R4621000).
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
@@ -1397,6 +1398,95 @@ async fn r3727008_an_account_playing_a_daily_game_is_deleted_only_once_the_game_
             .expect("the match stays");
         tx.commit().await.expect("commit");
         assert_eq!(row.status, MatchStatus::Finished, "by time {by_time}");
+    }
+}
+
+// R4621000: a finished daily game stays for the other player when one deletes their account
+
+#[tokio::test]
+async fn r4621000_a_finished_daily_game_stays_for_the_other_player_when_one_deletes_their_account() {
+    let gone = json!({ "profileId": "", "username": "" });
+    for purged in [false, true] {
+        let (app, ada, bo) = two_friends().await;
+        let match_id = daily_game(&app, &ada, &bo, 3).await;
+        past_the_mulligan(&app, [&ada, &bo], &match_id).await;
+        let seq = read(&app, &ada, &match_id).await["seq"].as_i64().expect("a seq");
+        let (status, body) = send(
+            &app,
+            &ada,
+            &match_id,
+            seq,
+            "concede",
+            json!({ "type": "concede" }),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(match_status(&app, &match_id).await, MatchStatus::Finished);
+
+        let (status, body) = api(&app, "DELETE", "/api/account", &ada.token, Value::Null).await;
+        assert_eq!(status, 204, "purged {purged}: {body}");
+        if purged {
+            assert!(purge_its_log(&app, &match_id).await > 0, "the purge took the log");
+        }
+
+        // Bo's list still holds the game, its opponent named by nobody.
+        let (status, list) = api(&app, "GET", "/api/daily", &bo.token, Value::Null).await;
+        assert_eq!(status, 200, "purged {purged}: {list}");
+        let row = &list["games"][0];
+        assert_eq!(row["matchId"], match_id.as_str(), "purged {purged}: {list}");
+        assert_eq!(row["over"], true, "purged {purged}: {list}");
+        assert_eq!(row["result"]["outcome"], "win", "purged {purged}: {list}");
+        assert_eq!(row["opponent"], gone, "purged {purged}: {list}");
+
+        // Its board opens with the result, as before.
+        let game = read(&app, &bo, &match_id).await;
+        assert_eq!(game["opponent"], gone, "purged {purged}: {game}");
+        assert_eq!(game["over"], true, "purged {purged}: {game}");
+        if purged {
+            assert_eq!(game["expired"], true, "{game}");
+            assert_eq!(game["result"]["outcome"], "win", "{game}");
+        } else {
+            assert!(game["view"].is_object(), "{game}");
+            assert!(!game["view"]["result"].is_null(), "{game}");
+            assert!(game.get("expired").is_none(), "{game}");
+        }
+
+        // A move is refused as over, the game it answers naming nobody either.
+        let (status, body) = send(
+            &app,
+            &bo,
+            &match_id,
+            seq + 1,
+            "after-the-delete",
+            json!({ "type": "endTurn" }),
+        )
+        .await;
+        assert_eq!((status, code_of(&body)), (409, "over"), "purged {purged}: {body}");
+        assert_eq!(body["game"]["opponent"], gone, "purged {purged}: {body}");
+
+        // R768: its replay still opens from Bo's seat while its log is kept.
+        if !purged {
+            let (status, replay) = api(
+                &app,
+                "GET",
+                &format!("/api/replays/{match_id}"),
+                &bo.token,
+                Value::Null,
+            )
+            .await;
+            assert_eq!(status, 200, "{replay}");
+        }
+
+        // No rematch against an account that is gone: it is nobody's friend now.
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/daily/challenges",
+            &bo.token,
+            random_challenge(&ada, 3),
+        )
+        .await;
+        assert_eq!(status, 404, "purged {purged}: {body}");
     }
 }
 
