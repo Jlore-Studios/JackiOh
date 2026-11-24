@@ -19526,28 +19526,24 @@
     "what": "plan #4786 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-24T20:57:22Z",
+    "at": "2026-11-24T21:13:14Z",
     "notes": [
-      "#4810 needs a plan",
-      "#4811 needs a plan",
-      "#4812 needs a plan",
-      "#4813 needs a plan",
-      "delivered build #4779 on muse (run 45484981610): planned",
-      "delivered plan #4780 on claude-3 (run 45484737584): planned",
-      "delivered review #4768 on claude-3 (run 45484523397): approved",
-      "delivered suggest on muse (run 45482824431): suggested",
-      "delivered suggest on claude-8 (run 45482711987): interrupted",
-      "delivered build #4761 on claude-3 (run 45457951084): built",
-      "started review #4822 on claude-3 (run 45487038411)",
-      "started plan #4814 on claude-3 (run 45487170420)",
-      "started plan #4801 on claude-3 (run 45487294125)",
-      "started build #4780 on muse (run 45487423721)",
-      "started build #4781 on muse (run 45487566935)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-25T00:10:00Z; it can start a build or a plan again in 2h 03m; `claude-1` 5-hour usage is 49%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-24T23:50:00Z; it can start a build or a plan again in 2h 43m; `claude-4` 5-hour usage is 72%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-25T01:00:00Z; it can start a build or a plan again in 3h 53m; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
-      "pruned 3 plan file(s) older than 7 days",
-      "#4819: typed it Task",
-      "#4818: typed it Task",
-      "runner gate: started 0 of 8 waiting run(s); 8 wait for a slot"
+      "#4825 needs a plan",
+      "#4826 needs a plan",
+      "#4760: approved and green, so its strikes are cleared",
+      "delivered review #4822 on claude-3 (run 45487038411): approved",
+      "delivered plan #4785 on claude-3 (run 45484851043): planned",
+      "delivered suggest on muse (run 45482941789): suggested",
+      "delivered review #4776 on muse (run 45477872146): approved",
+      "started revise #4768 on claude-3 (run 45489572142)",
+      "started plan #4827 on claude-3 (run 45489695124)",
+      "started plan #4825 on muse (run 45489819555)",
+      "started plan #4786 on muse (run 45489941009)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-25T00:10:00Z; it can start a build or a plan again in 1h 49m; `claude-1` 5-hour usage is 49%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-24T23:50:00Z; it can start a build or a plan again in 2h 29m; `claude-4` 5-hour usage is 72%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-25T01:00:00Z; it can start a build or a plan again in 3h 39m; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
+      "pruned 1 plan file(s) older than 7 days",
+      "#4830: typed it Task",
+      "#4829: typed it Task",
+      "runner gate: started 0 of 6 waiting run(s); 6 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -20253,7 +20249,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-24T20:57:22Z",
+  "loop_tick": "2026-11-24T21:13:14Z",
   "machine_disk": {
     "issue": null,
     "reading": {
