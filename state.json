@@ -16340,6 +16340,7 @@
     "4608": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-23T20:27:22Z",
         "difficulty": "hard",
