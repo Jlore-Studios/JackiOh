@@ -41526,7 +41526,8 @@
     "runs": [
       "2026-11-24T04:57:12Z,45328033469,claude-8,opus,plan,4619,hard,planned,,13.2,177,80696,12895018,5.8586,52,66,,,77.8,agy,fresh,other,1",
       "2026-11-24T04:52:39Z,45327948228,claude-7,opus,plan,4594,hard,planned,,9.8,197,53014,11867439,4.847,21,30,,,564.4,claude-8,fresh,other,1",
-      "2026-11-24T04:54:11Z,45320586741,claude-1,opus,build,4621,hard,built,,28.6,110,18020,5575407,2.2865,41,1,,,477.1,claude-3,fresh,cap,1"
+      "2026-11-24T04:54:11Z,45320586741,claude-1,opus,build,4621,hard,built,,28.6,110,18020,5575407,2.2865,41,1,,,477.1,claude-3,fresh,cap,1",
+      "2026-11-24T05:16:09Z,45314676535,muse,muse-spark-1.3-contributor,build,4589,hard,part,,150.1,0,0,0,,36,10,34,40,450.1,claude-8,none,other,1"
     ]
   },
   "version": 1
