@@ -18391,8 +18391,12 @@
     "what": "review #4629 on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-24T04:43:24Z",
-    "notes": [],
+    "at": "2026-11-24T04:50:11Z",
+    "notes": [
+      "started review #4629 on claude-1 (run 45329252913)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-24T07:20:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
+      "pruned 2 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -19097,7 +19101,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-24T04:43:24Z",
+  "loop_tick": "2026-11-24T04:50:11Z",
   "machine_disk": {
     "issue": null,
     "reading": {
