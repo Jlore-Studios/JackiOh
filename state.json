@@ -19894,11 +19894,15 @@
     "what": "plan #4720 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-24T11:14:43Z",
+    "at": "2026-11-24T11:23:02Z",
     "notes": [
-      "started review #4706 on claude-8 (run 45382603995)",
+      "delivered review #4706 on claude-8 (run 45382603995): reviewed",
+      "delivered review #4716 on muse (run 45377480853): approved",
+      "started review #4649 on claude-7 (run 45384119219)",
+      "started plan #4720 on claude-4 (run 45384237934)",
       "nothing more to start: nothing is queued",
-      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
+      "#4720: typed it Task",
+      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -20604,7 +20608,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-24T11:14:43Z",
+  "loop_tick": "2026-11-24T11:23:02Z",
   "machine_disk": {
     "issue": null,
     "reading": {
