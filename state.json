@@ -19887,6 +19887,13 @@
     "4723": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-24T14:06:48Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "none of the five hard lines holds: one server status route plus its tests, no engine/AI/migration/cross-crate design, far under 40 files"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
