@@ -1395,7 +1395,7 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c007_churnwalker::script_v0_6_12c,
     ),
     // #4665's Ticketed (R4665000): the Cry that held a permanent beneath it in its own zone.
-    (c009_ticketed::ID, "v0.6.12b", c009_ticketed::script_v0_6_12b),
+    (c009_ticketed::ID, "v0.6.12c", c009_ticketed::script_v0_6_12c),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

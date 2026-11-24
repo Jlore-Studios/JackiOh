@@ -10,8 +10,8 @@
 //! unit zone it lies there, no Unit (`zones::lies_on_unit_zone`): it fills the zone, nothing attacks it,
 //! no health judges it, and an effect that names a backrow card may name it. With no permanent left to
 //! stack on it lands in its graveyard (R138). Radiant: no Brittle, so it stays until it leaves. Through
-//! v0.6.12b its Cry held another face-up permanent beneath it in its own zone (`hold_beneath`,
-//! R1850003, R1875001), which `script_v0_6_12b` keeps (R767000). Declares no numbers.
+//! v0.6.12c its Cry held another face-up permanent beneath it in its own zone (`hold_beneath`,
+//! R1850003, R1875001), which `script_v0_6_12c` keeps (R767000). Declares no numbers.
 
 use jackioh_engine::effects::{HoldArgs, hold_beneath};
 use jackioh_engine::preview::is_face_down;
@@ -64,9 +64,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000, R4665000: through v0.6.12b its Cry held another face-up permanent beneath it in its own
+/// R767000, R4665000: through v0.6.12c its Cry held another face-up permanent beneath it in its own
 /// zone (R1850003, R1875001); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_12b() -> CardScripts {
+pub fn script_v0_6_12c() -> CardScripts {
     let base = Script {
         targets: vec![TargetDecl::target(
             1,
@@ -286,9 +286,9 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for v0.6.12b, its Cry holding a face-up permanent beneath it in its own
+    /// R767000: the script kept for v0.6.12c, its Cry holding a face-up permanent beneath it in its own
     /// zone (R1850003, R1875001).
-    mod kept_v0_6_12b {
+    mod kept_v0_6_12c {
         use super::*;
 
         mod base {
@@ -297,7 +297,7 @@ mod tests {
             /// R2476000: after "the permanent beneath it", the Unit it holds by name, to both seats.
             #[test]
             fn r2476000_it_names_the_permanent_it_holds() {
-                crate::under_kept(ID, super::super::super::script_v0_6_12b(), || {
+                crate::under_kept(ID, super::super::super::script_v0_6_12c(), || {
                     for radiant in [false, true] {
                         let mut s = board(radiant, json!([]), json!([{ "def": LAR, "lane": 2 }]), json!([]));
                         let lar = s.unit_at(P2, 2).id;
@@ -312,7 +312,7 @@ mod tests {
 
             #[test]
             fn r1850003_it_holds_a_chosen_enemy_unit_with_no_death_and_frees_its_zone() {
-                crate::under_kept(ID, super::super::super::script_v0_6_12b(), || {
+                crate::under_kept(ID, super::super::super::script_v0_6_12c(), || {
                     let mut s = board(false, json!([]), json!([{ "def": LAR, "lane": 2 }]), json!([]));
                     let lar = s.unit_at(P2, 2).id;
                     ticket(&mut s, &lar);
@@ -325,7 +325,7 @@ mod tests {
 
             #[test]
             fn r638_once_brittle_3_crumbles_it_the_unit_comes_back_sick_and_with_no_cry() {
-                crate::under_kept(ID, super::super::super::script_v0_6_12b(), || {
+                crate::under_kept(ID, super::super::super::script_v0_6_12c(), || {
                     let mut s = board(false, json!([]), json!([{ "def": SORCERER, "lane": 3 }]), json!([]));
                     let sorcerer = s.unit_at(P2, 3).id;
                     ticket(&mut s, &sorcerer);
@@ -345,7 +345,7 @@ mod tests {
 
             #[test]
             fn r1875001_destroyed_or_exiled_it_releases_at_once() {
-                crate::under_kept(ID, super::super::super::script_v0_6_12b(), || {
+                crate::under_kept(ID, super::super::super::script_v0_6_12c(), || {
                     for (spell, seed) in [(JAMMED, "ticketed-destroyed"), (COLLATERAL, "ticketed-exiled")] {
                         let mut s = board(false, json!([spell]), json!([{ "def": VANILLA, "lane": 4 }]), json!([]));
                         let vanilla = s.unit_at(P2, 4).id;
@@ -363,7 +363,7 @@ mod tests {
 
             #[test]
             fn r1875001_bounced_it_releases_at_once() {
-                crate::under_kept(ID, super::super::super::script_v0_6_12b(), || {
+                crate::under_kept(ID, super::super::super::script_v0_6_12c(), || {
                     let mut s = board(
                         false,
                         json!([CORE_SYSTEM]),
@@ -398,7 +398,7 @@ mod tests {
 
             #[test]
             fn r1875001_a_held_field_spell_comes_back_to_its_backrow_with_no_cry() {
-                crate::under_kept(ID, super::super::super::script_v0_6_12b(), || {
+                crate::under_kept(ID, super::super::super::script_v0_6_12c(), || {
                     let mut s = board(false, json!([JAMMED]), json!([]), json!([{ "def": ARMOR, "lane": 3 }]));
                     let armor = s.backrow(P2, 3).expect("the Field Spell").id;
                     let hand = s.hand(P2).len();
@@ -413,7 +413,7 @@ mod tests {
 
             #[test]
             fn r1875001_it_may_hold_its_own_sides_permanent_but_no_face_down_card() {
-                crate::under_kept(ID, super::super::super::script_v0_6_12b(), || {
+                crate::under_kept(ID, super::super::super::script_v0_6_12c(), || {
                     let mut s = board(false, json!([]), json!([]), json!([{ "def": TRAP, "lane": 2 }]));
                     let trap = s.backrow(P2, 2).expect("the set Trap").id;
                     s.expect_refused(|s| s.play(ID, json!({ "zone": 1, "targets": pick::id(&trap) })));
@@ -433,7 +433,7 @@ mod tests {
 
             #[test]
             fn r11_a_held_unit_token_is_gone_for_good() {
-                crate::under_kept(ID, super::super::super::script_v0_6_12b(), || {
+                crate::under_kept(ID, super::super::super::script_v0_6_12c(), || {
                     let mut s = board(false, json!([JAMMED]), json!([{ "def": RUSH_TOKEN, "lane": 1 }]), json!([]));
                     let token = s.unit_at(P2, 1).id;
                     ticket(&mut s, &token);
@@ -446,7 +446,7 @@ mod tests {
 
             #[test]
             fn r1850003_with_no_open_zone_the_card_is_exiled() {
-                crate::under_kept(ID, super::super::super::script_v0_6_12b(), || {
+                crate::under_kept(ID, super::super::super::script_v0_6_12c(), || {
                     let field: Vec<Value> = (1..=5).map(|lane| json!({ "def": VANILLA, "lane": lane })).collect();
                     let mut s = crate::scenario(json!({
                         "seed": "ticketed-full",
@@ -481,7 +481,7 @@ mod tests {
 
             #[test]
             fn r1875001_with_no_brittle_it_holds_until_it_leaves() {
-                crate::under_kept(ID, super::super::super::script_v0_6_12b(), || {
+                crate::under_kept(ID, super::super::super::script_v0_6_12c(), || {
                     let mut s = board(true, json!([JAMMED]), json!([{ "def": VANILLA, "lane": 2 }]), json!([]));
                     let vanilla = s.unit_at(P2, 2).id;
                     ticket(&mut s, &vanilla);
