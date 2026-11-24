@@ -63,7 +63,8 @@ mod tests {
             "p2": { "library": crate::filler(2) },
         }));
         s.end_turn();
-        let units = active_units_of(s.state(), P1).into_iter().cloned().collect();
+        // A Dormant summon (IA #199, #200) fills its zone though it acts for no one (R1839000).
+        let units = jackioh_engine::zones::units_on_field_of(s.state(), P1).into_iter().cloned().collect();
         (s, units)
     }
 

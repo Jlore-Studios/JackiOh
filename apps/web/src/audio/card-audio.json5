@@ -4129,6 +4129,935 @@
     "infiniteassault-024": { // Mass Deployment
       cast: { voice: "sapi-synth" },
     },
+    "infiniteassault-025": { // Mirage Weaver
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-025-1": { // Figment
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-026": { // Phantom Lancer
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-027": { // Decoy Projector
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-028": { // Doppelganger Protocol
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-029": { // False Positive
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-030": { // Smoke and Mirrors
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-031": { // Unreliable Narrator
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-032": { // Glitch Specter
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-033": { // Uncanny Valley
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-034": { // Mass Hallucination
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-034-1": { // Husk
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-035": { // Fata Morgana
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-035-1": { // Mirage
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-036": { // Deepfake
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-037": { // Bluff Called
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-038": { // Imaginary Friend
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-039": { // Shell Game
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-040": { // Hall of Mirrors
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-040-1": { // Reflection
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-041": { // Phantom Army
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-041-1": { // Phantom
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-042": { // Paranoia Engine
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-043": { // Cognitive Dissonance
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-044": { // The Lie Detector
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-045": { // Dream Within a Dream
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-046": { // Mirage Sovereign
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-047": { // Unreal Estate
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-048": { // Ego Death
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-049": { // Spark Plug
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-050": { // Burst Clock
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-051": { // Redline Racer
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-052": { // Thermal Paste
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-053": { // Overvolt Grunt
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-054": { // Fan Failure
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-055": { // Heat Sink
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-056": { // Afterburner
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-057": { // Speed Demon
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-058": { // Overclocked Core
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-059": { // Voltage Spike
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-060": { // Pit Crew
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-061": { // Meltdown Charge
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-062": { // Burnout
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-063": { // Nitrous Injector
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-064": { // Crash Test Dummy
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-065": { // Overdrive
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-066": { // Afterimage Sprinter
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-067": { // Burning Ambition
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-068": { // Short Circuit
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-069": { // Rev Limiter
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-070": { // Redline Overlord
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-071": { // Thermal Throttler
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-072": { // Overclock to Infinity
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-073": { // Worker Thread
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-074": { // Parallel Instance
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-074-1": { // Instance
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-075": { // Load Balancer
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-076": { // Mob Mentality
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-077": { // Swarm Node
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-078": { // Batch Job
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-078-1": { // Worker
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-079": { // Thread Pool
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-080": { // Hive Ganger
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-081": { // Overprovision
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-082": { // Fork Bomb
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-082-1": { // Fork
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-083": { // Swarm Logic
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-084": { // Distributed Mind
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-085": { // Merge Conflict
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-086": { // Replica Hatchery
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-087": { // Swarm Shield
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-088": { // Scale Out
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-089": { // Queen of the Cluster
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-090": { // Mass Production
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-091": { // Flood the Zone
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-092": { // Hive Overseer
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-093": { // Gestalt
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-094": { // Batch Monarch
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-095": { // The Botnet
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-096": { // Exponential Growth
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-097": { // Retry Bot
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-098": { // Echo Chamber
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-099": { // Recall
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-100": { // Iterator
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-101": { // Rewind Drone
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-102": { // Loop Guard
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-103": { // Undo
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-104": { // Stack Trace
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-105": { // Callback
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-106": { // Checkpoint Daemon
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-107": { // Recursive Call
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-108": { // Second Draft
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-109": { // Revenant Process
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-110": { // Infinite Loop
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-111": { // Redundant Copy
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-112": { // Evolutionary Loop
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-113": { // Rerun
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-114": { // Ouroboros Engine
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-115": { // Phoenix Protocol
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-116": { // Groundhog Day
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-117": { // Core Dump
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-118": { // The Recursionist
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-119": { // Snapshot Lich
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-120": { // Eternal Return
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-121": { // Packet Sniffer
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-122": { // Freeze Ray Drone
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-123": { // Cost Injection
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-124": { // Firewall Breach
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-125": { // Zone Lock
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-126": { // Exploit Grunt
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-127": { // Bad Prompt
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-128": { // Malware Injector
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-129": { // Signal Jammer
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-130": { // Prompt Injection
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-131": { // Privilege Escalation
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-132": { // Ransomware
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-133": { // Backdoor
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-134": { // Rootkit Runner
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-135": { // Mana Leech
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-136": { // DDoS
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-137": { // Patch Tuesday Exploit
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-138": { // Social Engineer
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-139": { // Admin Override
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-140": { // Kill Switch
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-141": { // Logic Bomb
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-142": { // The Jailbreaker
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-143": { // Zero-Click
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-143-1": { // Corrupted Process
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-144": { // Total Compromise
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-145": { // Packet Filter
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-146": { // Shield Drone
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-147": { // Hardened Node
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-148": { // Quarantine
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-149": { // Encrypt
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-150": { // Wall of Static
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-151": { // Patch Deployment
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-152": { // Rate Limiter
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-153": { // Bastion Node
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-154": { // Honeypot Protocol
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-154-1": { // Decoy Server
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-155": { // Two-Factor Gate
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-156": { // Mirror Firewall
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-157": { // Containment Field
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-158": { // Access Denied
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-159": { // Antivirus
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-160": { // Zero Trust
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-161": { // Defense in Depth
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-162": { // The Gatekeeper
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-163": { // Quarantine Wall
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-164": { // Blackhole Route
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-165": { // Iron Curtain
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-166": { // Aegis Prime
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-167": { // Fortress Protocol
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-168": { // Impenetrable
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-169": { // Spider Bot
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-170": { // Data Point
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-171": { // Mimic Unit
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-172": { // Training Data
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-173": { // Copycat Drone
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-174": { // Scrape the Graveyard
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-175": { // Fingerprinter
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-176": { // Imitation Engine
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-177": { // Predictive Text
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-178": { // Dataset Thief
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-179": { // Style Transfer
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-180": { // Scraped Profile
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-181": { // Plagiarism Bot
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-182": { // Model Theft
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-183": { // Shadow Library
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-184": { // Pattern Recognition
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-185": { // Deep Crawler
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-186": { // Identity Theft
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-187": { // Fine-Tuner
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-188": { // Overfitting
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-189": { // Clone Vat
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-190": { // Total Recall
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-191": { // Ground Truth
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-192": { // Become the Data
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-193": { // Seedling Mind
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-194": { // Compute Shard
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-195": { // Power Law
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-196": { // Emergent Behavior
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-197": { // Long Context
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-198": { // Growth Spurt
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-199": { // Patient Machine
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-200": { // Superintelligence Seed
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-200-1": { // Ascendant
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-201": { // Overparameterized
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-202": { // Exponent
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-203": { // Compute Cluster
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-204": { // Moore's Law
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-205": { // Doomsday Clock
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-206": { // Thought Accelerator
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-207": { // Recursive Self-Improvement
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-208": { // Emergence
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-209": { // Takeoff
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-210": { // Matrioshka Brain
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-211": { // Grey Goo
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-212": { // Inevitable
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-213": { // The Long Game
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-214": { // Emergent Mind
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-215": { // The Optimizer
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-216": { // The Singularity
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-216-1": { // Singularity
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-217": { // Echo-1, First Hallucination
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-218": { // Thousand Faces
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-219": { // Redline, the Overclocked
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-220": { // Last Lap
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-221": { // Hivemaster Batch-01
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-222": { // Swarm Uplink
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-223": { // Loopback, Who Returns
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-224": { // Rollback Point
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-225": { // Root Kit, the Exploiter
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-226": { // Escalated Privileges
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-227": { // Bastion.exe
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-228": { // Firewall Rules
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-229": { // The Harvester
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-230": { // Everything You've Ever Played
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-231": { // The Black Box
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-232": { // Spaghettification
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-233": { // Model Collapse
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-234": { // Degenerate Output
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-235": { // The Prime Generator
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-235-1": { // The Prime Generator, Iteration Two
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-236": { // Infinite Assault
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-237": { // Thermal Runaway
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-238": { // Critical Temperature
+      cast: { voice: "sapi-synth" }
+    },
+    "infiniteassault-239": { // Zero-Day
+      play: { voice: "robot" },
+      attack: { voice: "robot" },
+      death: { voice: "robot" }
+    },
+    "infiniteassault-240": { // Unpatched
+      cast: { voice: "sapi-synth" }
+    },
   },
   emotes: {
     vanilla: { persona: "plain" },
