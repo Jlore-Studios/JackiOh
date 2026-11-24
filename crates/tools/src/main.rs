@@ -25,15 +25,12 @@ mod golden;
 mod names;
 mod patches;
 mod perf;
-mod positions;
-mod promote;
 mod replay;
 mod retcon;
 mod run_sim;
 mod sample_size;
 mod seed_watch;
 mod selfplay;
-mod selfplay_records;
 mod spec;
 mod spec_cards;
 mod stats;
@@ -102,12 +99,8 @@ enum Command {
     Arena(arena::Args),
     /// The agent protocol on stdin and stdout (part 29).
     Agent(agent::Args),
-    /// The promotion gate (part 29).
-    Promote(promote::Args),
-    /// Self-play game logs (#1006; they fed the learned evaluation, retired by R4159000).
+    /// Self-play game logs (#1006), which `classify` compares across two builds (R1365000).
     Selfplay(selfplay::Args),
-    /// Self-play logs folded into training rows (#1006; they fed the learned evaluation, retired: R4159000).
-    Positions(positions::Args),
     /// `winrates --refresh <report.json>`: the win rates of record from production's windowed card figures, once per patch (R3882000).
     Winrates(winrates::Args),
 }
@@ -137,9 +130,7 @@ fn main() -> ExitCode {
         Command::Names(args) => names::run(args),
         Command::Arena(args) => arena::run(args),
         Command::Agent(args) => agent::run(args),
-        Command::Promote(args) => promote::run(args),
         Command::Selfplay(args) => selfplay::run(args),
-        Command::Positions(args) => positions::run(args),
         Command::Winrates(args) => winrates::run(args),
     };
     // R3925000: the measurement behind `RESOLUTION_EVENT_CAP`, the most events one interaction emitted in

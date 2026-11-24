@@ -2759,11 +2759,11 @@ fn readme_the_command_table_is_the_clis() {
         "only {commands} commands read off `jackioh -h`; clap's help format changed"
     );
     assert!(
-        tree[&vec!["promote".to_string()]]
+        tree[&vec!["arena".to_string()]]
             .flags
             .iter()
-            .any(|flag| flag.name == "lane" && !flag.values.is_empty()),
-        "no possible values read off `jackioh promote -h`; clap's help format changed"
+            .any(|flag| flag.name == "set" && !flag.values.is_empty()),
+        "no possible values read off `jackioh arena -h`; clap's help format changed"
     );
     for name in HAND_PARSED {
         let command = &tree[&vec![name.to_string()]];
@@ -3370,6 +3370,65 @@ const RETIRED_NETWORK_NAMES: [&str; 6] = [
     "EvalKind",
     "learned_parity",
 ];
+
+/// R4702000: the commands only the retired training lanes ran are gone (#4702). The promotion gate,
+/// `promote`, and CI's replay of it (R732001, R1012000, R1679000) go first.
+#[test]
+fn r4702000_r732001_r1012000_r1679000_the_tools_have_no_promotion_gate() {
+    let root = repo();
+    assert!(
+        !root.join("crates/tools/src/promote.rs").exists(),
+        "crates/tools/src/promote.rs is back"
+    );
+    let main = fs::read_to_string(root.join("crates/tools/src/main.rs")).expect("crates/tools/src/main.rs");
+    assert!(
+        !main.contains("mod promote") && !main.contains("Promote("),
+        "crates/tools/src/main.rs mounts `promote` again"
+    );
+    let ci = fs::read_to_string(root.join(".github/workflows/ci.yml")).expect(".github/workflows/ci.yml");
+    assert!(
+        !ci.contains("training-gate") && !ci.contains("jackioh promote"),
+        "ci.yml replays a training lane's promotion again"
+    );
+}
+
+/// R4702000: no `positions` command folds self-play logs into training rows (R1006003, R1006004,
+/// R1006006, R1171000, R3112002, R4070000), and no `stats from-selfplay` files them. `selfplay` stays:
+/// `classify` plays it on two builds (R1365000).
+#[test]
+fn r4702000_r1006003_r1006004_r1006006_r1171000_r3112002_r4070000_no_positions_command() {
+    let root = repo();
+    for gone in [
+        "crates/tools/src/positions.rs",
+        "crates/tools/src/selfplay_records.rs",
+    ] {
+        assert!(!root.join(gone).exists(), "{gone} is back");
+    }
+    let main = fs::read_to_string(root.join("crates/tools/src/main.rs")).expect("crates/tools/src/main.rs");
+    for mounted in ["mod positions", "Positions(", "mod selfplay_records"] {
+        assert!(!main.contains(mounted), "crates/tools/src/main.rs: `{mounted}`");
+    }
+    assert!(
+        main.contains("mod selfplay;"),
+        "`selfplay` is gone, and `classify` plays it"
+    );
+}
+
+/// R4702000: the AI extracts no features: the learned evaluation they fed is retired (R4159000), and
+/// `positions` was their last reader (R1006000, R1012004, R3112000).
+#[test]
+fn r4702000_r1006000_r1012004_r3112000_the_ai_extracts_no_features() {
+    let root = repo();
+    assert!(
+        !root.join("crates/ai/src/features.rs").exists(),
+        "crates/ai/src/features.rs is back"
+    );
+    let lib = fs::read_to_string(root.join("crates/ai/src/lib.rs")).expect("crates/ai/src/lib.rs");
+    assert!(
+        !lib.contains("mod features"),
+        "crates/ai/src/lib.rs: `mod features`"
+    );
+}
 
 /// R4159000, R1010000, R1010001, R1011000, R1171001, R3112001: the AI compiles no network and no prior.
 /// `crates/ai` has no build script, no `learned` or `policy` module and no weights file, and no source of
