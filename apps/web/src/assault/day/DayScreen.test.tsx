@@ -24,6 +24,7 @@ function assault(over: Partial<Assault> = {}): Assault {
     records: { [DAY.date]: RECORD },
     start: vi.fn(() => null),
     act: vi.fn(() => null),
+    hold: vi.fn(),
     tryAgain: vi.fn(() => null),
     dismiss: vi.fn(),
     ...over,
