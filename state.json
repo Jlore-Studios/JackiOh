@@ -17660,7 +17660,7 @@
     "4651": {
       "action": "revise",
       "asks": [],
-      "audit_tier": "strong",
+      "audit_tier": "",
       "ci_early": false,
       "ci_fixed_head": "40355a6121f665209119ce33bf5599886f0e7fa1",
       "ci_fixes": 1,
@@ -17671,19 +17671,12 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-24T05:02:43Z",
+      "feedback_since": "2026-11-24T07:24:21Z",
       "forced": false,
       "interruptions": 0,
       "issue": 4578,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "The Lost screen's Try again starts the new attempt on the lost attempt's own date (`date: state.setup.date`) and on the content it was folded with, not today's, which breaks this branch's own ruling R4581000.",
-          "evidence": "R4581000 (spec/pending/4581.md) says the current day's deal is offered once the attempt ends. `dismissResult` (store.ts:341-355) does that with `assaultToday()` and `assaultContent()`, but `onTryAgain` calls `assault.start({ date: state.setup.date, \u2026 })`. `startAttempt` (store.ts:298-309) then reuses `from.day` and `from.content` and stamps `version: catalogVersion()`. `assault_create` (attempt.rs:25-33) only checks that the setup, the day and the record share a date, so it accepts the past day. An attempt begun before midnight UTC and lost after it can be retried on yesterday's day as often as the player likes. If that attempt was folded on an older catalog version (`assaultContentAt`), the new file names the current version but was dealt on the old content, so after a reload `foldAttempt` re-deals it on the current content and may drop or change it. Fix: build Try again's start from today's date and the current content, as `dismissResult` does, take the start level from today's record, and add a test for it.",
-          "severity": "blocking",
-          "where": "apps/web/src/assault/AssaultPage.tsx:117"
-        }
-      ],
+      "last_findings": [],
       "live": "revising",
       "pending_request": false,
       "provider": "claude-4",
@@ -17713,7 +17706,7 @@
         "provider": "claude-7",
         "run": "45330532203"
       },
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-11-24T07:24:21Z",
       "stop_requested": false,
       "taken_asks": [],
