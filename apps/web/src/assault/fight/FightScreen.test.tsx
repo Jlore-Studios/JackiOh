@@ -422,7 +422,7 @@ describe("R4582002 the fight shows what the Assault holds", () => {
     renderFight(fightHost());
     await screen.findByTestId(assaultFightTestid.screen);
 
-    fireEvent.click(screen.getByRole("button", { name: "Upgrades: 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Boosts: 2" }));
     const armor = screen.getByTestId(assaultFightTestid.upgrade("heroArmor"));
     expect(armor).toHaveTextContent("Hardened Shell");
     expect(armor).toHaveTextContent("×2");

@@ -132,7 +132,7 @@ export function DayScreen({ assault, saved, onResume }: DayScreenProps): ReactEl
                       t("{rarity}: {count}", { rarity: t(rarity), count: String(strength.rarities[index] ?? 0) }),
                     ).join(t(" · "))}
                   </p>
-                  <p>{t("{count} upgrades", { count: String(strength.upgrades.length) })}</p>
+                  <p>{t("{count} boosts", { count: String(strength.upgrades.length) })}</p>
                 </div>
               )}
             </section>

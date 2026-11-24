@@ -2,13 +2,13 @@
    (UpgradeTray.tsx) and the enemy's name and level on the board's rail (FightScreen.tsx). Colors,
    radii, layers, shadows and sizes are the tokens' (palette.css, surfaces.css, typescale.css). */
 
-.assault-upgrades {
+.assault-boost-tray {
   position: relative;
   display: inline-flex;
   flex: none;
 }
 
-.assault-upgrades__open {
+.assault-boost-tray__open {
   display: inline-flex;
   align-items: center;
   min-height: 32px;
@@ -16,7 +16,7 @@
 }
 
 /* The list opens under the tray, toward the field. */
-.assault-upgrades__list {
+.assault-boost-tray__list {
   position: absolute;
   top: calc(100% + var(--space-3));
   left: 0;
@@ -40,18 +40,18 @@
   text-align: start;
 }
 
-.assault-upgrades__item {
+.assault-boost-tray__item {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
 }
 
-.assault-upgrades__stacks {
+.assault-boost-tray__stacks {
   color: var(--text-dim);
   font-size: var(--type-xs);
 }
 
-.assault-upgrades__text {
+.assault-boost-tray__text {
   margin: 0;
   line-height: 1.3;
 }

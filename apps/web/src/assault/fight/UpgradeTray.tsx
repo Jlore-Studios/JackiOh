@@ -98,11 +98,11 @@ export function UpgradeTray({ upgrades }: UpgradeTrayProps): ReactElement | null
   if (upgrades.length === 0) return null;
 
   const count = String(upgrades.length);
-  const label = t("Upgrades: {count}", { count });
+  const label = t("Boosts: {count}", { count });
 
   return (
     <div
-      className="assault-upgrades"
+      className="assault-boost-tray"
       data-testid={assaultFightTestid.upgrades}
       ref={root}
       onKeyDown={(event) => {
@@ -113,7 +113,7 @@ export function UpgradeTray({ upgrades }: UpgradeTrayProps): ReactElement | null
     >
       <button
         type="button"
-        className="assault-upgrades__open button-secondary"
+        className="assault-boost-tray__open button-secondary"
         data-testid={assaultFightTestid.upgradesOpen}
         ref={button}
         aria-expanded={open}
@@ -127,14 +127,14 @@ export function UpgradeTray({ upgrades }: UpgradeTrayProps): ReactElement | null
         {label}
       </button>
       {open ? (
-        <ul className="assault-upgrades__list" id={listId} data-testid={assaultFightTestid.upgradesList} aria-label={label}>
+        <ul className="assault-boost-tray__list" id={listId} data-testid={assaultFightTestid.upgradesList} aria-label={label}>
           {/* R2127000: Back closes the list, as Escape does. */}
           <BackLayer onClose={close} />
           {upgrades.map((upgrade, index) => (
-            <li key={`${String(index)}-${upgrade.kind}`} className="assault-upgrades__item" data-testid={assaultFightTestid.upgrade(upgrade.kind)}>
-              <strong className="assault-upgrades__name">{upgradeName(upgrade.kind)}</strong>
-              <span className="assault-upgrades__stacks">{t("×{count}", { count: String(upgrade.stacks) })}</span>
-              <p className="assault-upgrades__text">{upgradeLine(upgrade.kind)}</p>
+            <li key={`${String(index)}-${upgrade.kind}`} className="assault-boost-tray__item" data-testid={assaultFightTestid.upgrade(upgrade.kind)}>
+              <strong className="assault-boost-tray__name">{upgradeName(upgrade.kind)}</strong>
+              <span className="assault-boost-tray__stacks">{t("×{count}", { count: String(upgrade.stacks) })}</span>
+              <p className="assault-boost-tray__text">{upgradeLine(upgrade.kind)}</p>
             </li>
           ))}
         </ul>

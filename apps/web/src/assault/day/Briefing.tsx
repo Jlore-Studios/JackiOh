@@ -64,7 +64,7 @@ export function Briefing({ content, level, onFight, onAbandon }: BriefingProps):
                 key={upgrade.kind}
                 data-new={newUpgrades.has(upgrade.kind) ? "true" : undefined}
               >
-                {t("{upgrade} × {stacks}", { upgrade: upgradeName(upgrade.kind), stacks: String(upgrade.stacks) })}
+                {t("{name} × {stacks}", { name: upgradeName(upgrade.kind), stacks: String(upgrade.stacks) })}
                 {newUpgrades.has(upgrade.kind) ? ` ${t("New this level")}` : null}
               </li>
             ))}
