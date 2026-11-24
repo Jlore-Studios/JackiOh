@@ -19910,15 +19910,8 @@
       "stop_requested": false
     },
     "4838": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45495441056",
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-24T22:14:21Z",
-        "until": "2026-11-24T22:44:21Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -19930,10 +19923,9 @@
         "reason": "planned on gemini-3.8-flash-high",
         "trail": "- run_command: grep -rn \"\\\"friendId\\\"\" /home/agent-agy/actions-runner/_work/_temp/work/item-4838/crates/server/src/\n- said: \n- read_file: {\"EndLine\": 95, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4838/crates/server/src/social/watch.rs\", \"StartLine\": 80}\n- said: \n- read_file: {\"EndLine\": 50, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4838/crates/server/src/lib.rs\", \"StartLine\": 1}\n- said: \n- run_command: grep -rn \"is_uuid\" /home/agent-agy/actions-runner/_work/_temp/work/item-4838/crates/server/src/db/fake.rs\n- said: \n- run_command: ls -la /home/agent-agy/actions-runner/_work/_temp/work/item-4838/crates/server/tests/\n- said: \n- run_command: ls -la /home/agent-agy/actions-runner/_work/_temp/work/item-4838/crates/server/tests/api/\n- said: \n- run_command: head -n 60 /home/agent-agy/actions-runner/_work/_temp/work/item-4838/crates/server/tests/api/stats.rs\n- said: \n- run_command: head -n 40 /home/agent-agy/actions-runner/_work/_temp/work/item-4838/crates/server/tests/support/deps.rs\n- said: \n- run_command: grep -rn \"pub async fn call\" /home/agent-agy/actions-runner/_work/_temp/work/item-4838/crates/server/tests/support/\n- said: \n- read_file: {\"EndLine\": 170, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4838/crates/server/tests/support/deps.rs\", \"StartLine\": 150}\n- said: \n- run_command: cargo test -p jackioh-server --test server api::chat::\n- said: \n- run_command: grep -rn \"R1384000\" /home/agent-agy/actions-runner/_work/_temp/work/item-4838/spec/\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0bff23fd-71c2-43b2-b252-dc41785f80c4/task-156\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0bff23fd-71c2-43b2-b252-dc41785f80c4/task-156\"}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4838/.bot-plan.md\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0bff23fd-71c2-43b2-b252-dc41785f80c4/task-156\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0bff23fd-71c2-43b2-b252-dc41785f80c4/task-156\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0bff23fd-71c2-43b2-b252-dc41785f80c4/task-156\"}\n- said: \n- manage_task: {\"Action\": \"kill\", \"TaskId\": \"0bff23fd-71c2-43b2-b252-dc41785f80c4/task-156\"}\n- said: \n- read_file: {\"EndLine\": 300, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4838/.bot-plan.md\", \"StartLine\": 1}\n- said: ## Goal Validate client input at the HTTP boundary and align store behavior so that requests with NUL characters (`U+0000`), non-standard UUID spellings (such as URN prefixes), and out-of-range chat cursor timestamps return HTTP 400 Bad Request instead of causing PostgreSQL statement errors (HTTP 5\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "agy",
       "owner_since": "2026-11-24T21:52:30Z",
       "owner_why": "it plans it",
@@ -19946,9 +19938,9 @@
       "provider": "agy",
       "queued_at": "2026-11-24T21:22:13Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45495441056",
+      "run_id": "pending:7e36ed6e-1795558610",
       "runs_on": "night-vm-agy",
-      "started_at": "2026-11-24T21:52:30Z",
+      "started_at": "2026-11-24T22:17:23Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -20414,9 +20406,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T22:16:38Z",
+    "at": "2026-11-24T22:17:23Z",
     "url": "",
-    "what": "review #4861 on muse"
+    "what": "build #4838 on agy"
   },
   "last_sweep": {
     "at": "2026-11-24T21:59:49Z",
