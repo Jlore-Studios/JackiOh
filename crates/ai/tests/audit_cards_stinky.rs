@@ -225,3 +225,27 @@ fn probe_tnack_keenus() {
     eprintln!("tnack memory: {:?}", s.card(&tnack).memory);
     eprintln!("tnack view text: {:?}", s.view(P1).you.units.iter().flatten().map(|u| format!("{:?}", u)).collect::<Vec<_>>().join(" || ").chars().take(1500).collect::<String>());
 }
+
+#[test]
+fn probe_ticketed_radiant_brittle() {
+    const TICKETED: &str = "stinkyscape-009";
+    const IKWZKI: &str = "stinkyscape-110";
+    const HANGER: &str = "stinkyscape-168";
+    let mut s = scenario_with_cards(json!({
+        "p1": { "hand": [TICKETED, IKWZKI, FILLER, FILLER, FILLER], "backrow": [{ "def": HANGER, "faceUp": true, "lane": 2 }], "library": filler(12), "mana": 10 },
+        "p2": { "hand": [FILLER, FILLER, FILLER], "library": filler(12) },
+    }));
+    for player in [P1, P2] { s.state_mut().players[player].auto_end_turn = Some(false); }
+    let hanger = s.backrow(P1, 2).unwrap();
+    s.play(TICKETED, pick::targets(pick::instance(&hanger)));
+    let ticketed = s.card(TICKETED).clone();
+    eprintln!("ticketed zone={:?} brittle={:?} radiant={}", s.card(&ticketed).zone, s.card(&ticketed).brittle, s.card(&ticketed).radiant);
+    s.play(IKWZKI, json!({ "zone": 1, "targets": pick::instance(&ticketed) }));
+    for round in 0..5 {
+        s.end_turn();
+        s.end_turn();
+        let t = s.card(&ticketed).clone();
+        eprintln!("round {round} turn {}: ticketed zone={:?} brittle={:?} radiant={} | view brittle {:?}", s.state().turn, t.zone, t.brittle, t.radiant,
+            s.view(P1).you.backrow.iter().flatten().map(|b| format!("{:?}", b).chars().take(0).collect::<String>()).count());
+    }
+}

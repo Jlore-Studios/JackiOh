@@ -75,17 +75,11 @@ fn r3568001_radiant_cosmic_bard_after_a_radiant_psychic_scream() {
             },
         }));
         s.play(PSYCHIC_SCREAM, json!({}));
-        if seed == 0 {
-            let lib: Vec<String> = s.pile(P1, "library").iter().map(|c| format!("{}(m{})", c.def_id, c.cost_mod)).collect();
-            println!("DEBUG after scream: p1 lib={lib:?} p2 field={:?} p2 gy={:?}", s.unit(P2, 1).map(|c| c.def_id), s.pile(P2, "graveyard").iter().map(|c| c.def_id.clone()).collect::<Vec<_>>());
+        // p2's turn ends by itself once nothing but ending it is left (§2.5); else end it.
+        if s.state().active == P2 {
+            s.end_turn();
         }
-        s.end_turn();
-        if seed == 0 {
-            println!("DEBUG after end: active={:?} turn={} hand={:?} mana={:?} events={:?}", s.state().active, s.state().turn, s.hand(P1).iter().map(|c| c.def_id.clone()).collect::<Vec<_>>(), s.state().players[P1].mana.current, s.last_events().iter().map(|e| format!("{:?}", e.event_type())).collect::<Vec<_>>());
-        }
-        if s.state().active != P1 {
-            continue;
-        }
+        assert_eq!(s.state().active, P1);
         let in_deck = |def: &str| s.pile(P1, "library").iter().any(|card| card.def_id == def);
         if !in_deck(FREE_UNIT) || !in_deck(ONE_UNIT) {
             continue;

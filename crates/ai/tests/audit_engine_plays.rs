@@ -965,3 +965,41 @@ fn finding_a_play_naming_a_huge_x_is_refused_not_a_panic_while_a_mayor_acts() {
         outcome.map(|result| result.error).map_err(|payload| payload.downcast_ref::<String>().cloned())
     );
 }
+
+#[test]
+fn probe_giga_tribute() {
+    jackioh_cards::register_all();
+    if std::env::var("AUDIT_PROBE").unwrap_or_default() != "gigatribute" {
+        return;
+    }
+    for tested in ["stinkyscape-085", "stinkyscapeplus-052", "core-055"] {
+        let s = scenario(json!({
+            "p1": {
+                "hand": [tested],
+                "field": [
+                    { "def": "stinkyscapeplus-t-ai-04", "lane": 1 },
+                    { "def": "core-008", "lane": 3 }, { "def": "core-008", "lane": 4 }, { "def": "core-008", "lane": 5 },
+                ],
+                "backrow": [{ "def": "core-018", "lane": 3 }, { "def": "core-018", "lane": 4 }, { "def": "core-018", "lane": 5 }],
+                "mana": 10,
+            },
+            "p2": { "hand": ["core-008"], "field": [{ "def": "core-008", "lane": 5 }] },
+        }));
+        let state = s.state().clone();
+        let id = state.players[P1].hand[0].id.clone();
+        let giga = state.players[P1].units[0].as_ref().unwrap()[0].id.clone();
+        let plays = plays_of(&state, &id);
+        println!("{tested}: {} plays; giga={giga}", plays.len());
+        let mut seen: IndexSet<String> = IndexSet::new();
+        for play in &plays {
+            let key = format!("zone={:?} tributes={:?}", play.zone.map(|z| (z.row, z.lane)), play.tributes);
+            if play.tributes.as_ref().is_some_and(|t| t.contains(&giga)) && seen.insert(key.clone()) {
+                println!("   {key}");
+            }
+        }
+        let view = view_for(&state, P1);
+        if let HandView::Cards(cards) = &view.you.hand {
+            println!("   playReason {:?}", cards[0].play_reason);
+        }
+    }
+}
