@@ -231,10 +231,11 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     zone_variants: 2,
     position_switches: 2,
     max_auto_answers: 8,
-    // #4447: 0. Its fork screen (3 against the control at 0, built from 3af8296300; 50 trunk deals on
-    // improve-dev) did not finish in the bot's run: stopped after 2 hours, nothing printed (training/
-    // improve.md, A screen).
-    replay_fill_steps: 0,
+    // R4697000: 3, the value R4447000's tests replay with. At 0 a replay cut where its world drew
+    // other cards than the line's ended its turn there, which R4608000 read as evidence against a
+    // win every draw gives. Fork screen (3 against the control at 0, built from ad096cc; improve-dev,
+    // --forks --extend): playing.
+    replay_fill_steps: 3,
     max_auto_answer_options: 4,
     auto_answer_seed: "ai:answers",
     lethal_max_depth: 10,

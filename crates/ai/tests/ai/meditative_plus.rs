@@ -416,10 +416,12 @@ const SHORTLIST: usize = AI_BUDGET.finalists * AI_SEARCH.lines_per_action as usi
 /// R3696000: on every budget from one too tight to reply to the Supply Drop line to one that spares it,
 /// a decision that replies to it still scores its finalists on every sampled world: its reply draws only
 /// on the nodes the other worlds do not keep back.
+/// R4697000: the fill's slice makes the other worlds keep 126 more nodes back, so the line is first
+/// replied to at 295 nodes (165 with the fill off), and the sweep reaches 330.
 #[test]
 fn r3696000_on_a_tight_budget_the_supply_drop_line_costs_no_world_its_score() {
     let state = supply_drop_beside_two_vanillas();
-    let decisions: Vec<Decision> = (60..=200)
+    let decisions: Vec<Decision> = (60..=330)
         .step_by(5)
         .map(|nodes| {
             decide(
