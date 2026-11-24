@@ -19736,11 +19736,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-24T11:23:58Z",
+        "at": "2026-11-24T11:55:44Z",
         "difficulty": "hard",
-        "provider": "claude-8",
+        "provider": "claude-4",
         "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #4706, a hard change"
+        "why": "No line of the rule holds (a test and doc fix in crates/cards, 3 files), but the bot already rated it hard and a plan may not rate lower"
       },
       "failures": 0,
       "forced": false,
