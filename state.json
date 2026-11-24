@@ -20426,9 +20426,7 @@
       "started_at": "2026-11-24T15:25:15Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:7133304256"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "4739": {
