@@ -9,7 +9,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::view_for::view_for;
 
 use super::fixtures::board_geometry::*;
-use super::fixtures::harness::{live, run_effect, slot};
+use super::fixtures::harness::{live, run_effect, run_with_targets, slot};
 
 /// p1's main phase with `p1` and `p2` as given, plain cards to draw, and no turn that ends by
 /// itself, so each test ends every turn it means to.
@@ -334,6 +334,49 @@ mod r3554007_damage_chains {
         hit(&mut s, &second, 6);
         assert_eq!(damage_on(s.state(), &second), 6);
         assert_eq!(damage_on(s.state(), &first), 3, "no share reached back");
+    }
+
+    #[test]
+    fn r4599006_a_spell_s_echo_and_share_pass_a_member_immune_to_spells_by() {
+        const IMMUNE: &str = "stand-in (1) 1/20 Immune to Spells";
+        let enemies = json!({
+            "field": [field_unit(BULWARK, 1), field_unit(IMMUNE, 2), field_unit(BULWARK, 3)],
+        });
+        let p1 = json!({ "hand": ["stand-in (0) Spell"] });
+        // The hit as the Spell in p1's hand deals it.
+        let spell_hit = |s: &mut Scenario, id: &str, amount: i32| {
+            let spell = s.state().players[P1].hand[0].clone();
+            let effect = effects::damage(json_as(json!({
+                "to": { "of": "instance", "instanceId": id },
+                "amount": amount,
+            })));
+            run_with_targets(s.state_mut(), effect, Some(&spell), vec![], P1)
+        };
+        for kind in ["shared", "split"] {
+            let mut s = board(&format!("r4599006-{kind}"), p1.clone(), enemies.clone());
+            chain(&mut s, "enemy", kind);
+            let ids = [id_at(&s, P2, 1), id_at(&s, P2, 2), id_at(&s, P2, 3)];
+            spell_hit(&mut s, &ids[0], 6);
+            // Shared: the 6 echoes onto the other plain member. Split: the 6 is divided between the two
+            // plain members only.
+            let each = if kind == "shared" { 6 } else { 3 };
+            assert_eq!(damage_on(s.state(), &ids[0]), each, "{kind}");
+            assert_eq!(damage_on(s.state(), &ids[2]), each, "{kind}");
+            assert_eq!(
+                damage_on(s.state(), &ids[1]),
+                0,
+                "{kind}: the immune member is passed by"
+            );
+            // A hit from no Spell still reaches it: 6 echoed, or 6 among three.
+            let mut s = board(&format!("r4599006-{kind}-plain"), p1.clone(), enemies.clone());
+            chain(&mut s, "enemy", kind);
+            let ids = [id_at(&s, P2, 1), id_at(&s, P2, 2), id_at(&s, P2, 3)];
+            hit(&mut s, &ids[0], 6);
+            let each = if kind == "shared" { 6 } else { 2 };
+            for id in &ids {
+                assert_eq!(damage_on(s.state(), id), each, "{kind}: {id}");
+            }
+        }
     }
 }
 
