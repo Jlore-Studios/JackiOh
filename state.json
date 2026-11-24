@@ -42249,7 +42249,8 @@
     "runs": [
       "2026-11-24T09:29:01Z,45364745131,claude-8,opus,plan,4697,medium,planned,,2,33,13566,1089895,0.5095,11,12,,,4.8,,fresh,,1",
       "2026-11-24T09:25:24Z,45364523746,muse,muse-spark-1.3-contributor,plan,4682,medium,planned,,2.6,0,0,0,,0,0,45,45,3.9,,none,,1",
-      "2026-11-24T09:28:11Z,45364418903,muse,muse-spark-1.3-contributor,plan,4686,medium,planned,,3.4,0,0,0,,0,0,45,45,177.2,,none,,1"
+      "2026-11-24T09:28:11Z,45364418903,muse,muse-spark-1.3-contributor,plan,4686,medium,planned,,3.4,0,0,0,,0,0,45,45,177.2,,none,,1",
+      "2026-11-24T09:26:37Z,45361645740,claude-4,opus,review,4651,hard,approved,,19,74,16975,4845437,3.7493,61,0,,,20.4,claude-4,none,,1"
     ]
   },
   "version": 1
