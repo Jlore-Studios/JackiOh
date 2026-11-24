@@ -425,6 +425,9 @@ describe("R2784000 the per-set effects tables", () => {
     // R3399000: Classic+'s signatures' seventeen entrances.
     const classicPlus = [...FX_CARD_TABLE.keys()].filter((defId) => defId.startsWith("classicplus-")).flatMap((defId) => entranceKeyOf(defId) ?? []);
     expect(classicPlus).toHaveLength(17);
+    // R4596000: the Infinite Assault's twelve Commanders' boots (infiniteassault/signatures.test.ts names each).
+    const assault = [...FX_CARD_TABLE.keys()].filter((defId) => defId.startsWith("infiniteassault-")).flatMap((defId) => entranceKeyOf(defId) ?? []);
+    expect(assault).toHaveLength(12);
     // Every entrance the table names is a recipe, and the four marquees', the signature Units', (R3334004) the
     // Dormant Starship's and Starfleet Commander's and Classic's and Classic+'s signatures' are all of them.
     const named = [...FX_CARD_TABLE.keys()].flatMap((defId) => {
@@ -433,7 +436,7 @@ describe("R2784000 the per-set effects tables", () => {
     });
     for (const key of named) expect(typeof ENTRANCES[key], key).toBe("function");
     expect(new Set(named)).toEqual(
-      new Set([...Object.values(entrances), ...Object.values(signatureEntrances), ...Object.values(classicEntrances), ...Object.values(meditativeEntrances), ...classicPlus, "shipyardRollout", "fleetCommand"]),
+      new Set([...Object.values(entrances), ...Object.values(signatureEntrances), ...Object.values(classicEntrances), ...Object.values(meditativeEntrances), ...classicPlus, ...assault, "shipyardRollout", "fleetCommand"]),
     );
     expect(Object.keys(ENTRANCES).sort()).toEqual([...new Set(named)].sort());
   });
