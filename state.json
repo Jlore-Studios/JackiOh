@@ -17541,11 +17541,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-23T23:09:04Z",
+        "at": "2026-11-24T06:02:13Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "The AI rule decides it: the change is the AI's decisions and search in crates/ai/src/."
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "Rule 2, the AI: it changes the evaluation and the decision's root probes in crates/ai/src (evaluate.rs, decide.rs, config.rs)."
       },
       "failures": 0,
       "forced": false,
