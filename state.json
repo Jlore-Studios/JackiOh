@@ -19956,6 +19956,8 @@
       "stop_requested": false
     },
     "4857": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T21:04:58Z",
@@ -19969,8 +19971,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a cosmetic a Fleet track level pays shows owned in the Collection as soon as the game ends, not after a reload\"} -->\n- ## What changed and why\n- A game's paid result now also drops the kept owned-cosmetics read and re-runs the mounted ownership providers, so a Fleet track level's reward shows owned and equippable the moment the game ends.\n- - [api.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-4780/apps/web/src/net/api.ts): `forgetPaidReads` also drops `keptPaths.cosmetics`, with the doc comment naming the Fleet level (R3335001, R4780000).\n- - [wallet.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-4780/apps/web/src/economy/wallet.ts): `announceWallet()`'s no-balance branch calls `forgetOwnedCosmetics()` after `forgetPaidReads`, outside the token check. The balance branch is untouched.\n- - [ownedFullArt.ts](/home/agent-muse/actions-runner/_work/_temp/work/item-4780/apps/web/src/cards/ownedFullArt.ts): doc comment only, naming the paid game's Fleet level.\n- - Tests: `readCache.test.ts` list test renamed to `R3206000 R4780000 \u2026` and extended with the cosmetics path (asserted via `paths.map(path => path === keptPaths.collection)`); new `R4780000 \u2026` test in `accountOwnership.test.tsx` mounts `ViewerFullArt` + `ViewerAccountCosmetics` + `StarshipLooks`, d\u2026\n- - Spec: new `spec/rulings/R4780000.md` (amends R3206000) and `spec/pending/4780.md`; one sentence added to `R3206000.md` and to \u00a714.15's \"Where it shows\"; one clause in `apps/web/README.md`.\n- ## How tested\n- - `pnpm --dir apps/web test src/net/readCache.test.ts`: 26 passed.\n- - `pnpm --dir apps/web test src/cards/accountOwnership.test.tsx`: 6 passed, including the new test.\n- - Fail-without-fix: with only the `forgetOwnedCosmetics()` line disabled, the new test fails at step 7 (tile stays `data-owned=\"false\"`); restored afterwards.\n- - 11 touched/caller web files together (`JlorePill`, `landing-news`, `Shop`, `shop`, `navigation-reads`, `match`, `practice`, `DuosBoard`, `DevTools`, `StarshipLooks`, plus the two above): 465 passed, 0 failed.\n- - `cargo jackioh spec check`: ok (2470 rulings, 6178 proofs). `cargo fmt --check`: clean. `pnpm --dir apps/web typecheck`: clean. `eslint` on the 5 touched files: clean.\n- ## Decisions and notes for the reviewer\n- - Followed the plan as written; no departures. The one judgment call the plan left to me (where to put the new test) went inside the existing `R1833000` describe in `accountOwnership.test.tsx`, reusing its imports and resets.\n- - `typecheck` heap-OOMs twice at node's default heap on this machine (unrelated to the change; it OOMs before reporting anything). It passes with `NODE_OPTIONS=--max-old-space-size=6144`. Worth knowing if CI's web job is memory-constrained, but not something this change causes.\n- - No import cycle: `economy/wallet.ts` now imports from `cards/ownedFullArt.ts`, which imports nothing under `economy/`.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4780 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4780/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4780,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-24T21:51:37Z",
         "from_run": "45487423721",
         "gates": [
           {
@@ -20029,8 +20034,15 @@
         "source": "build",
         "until": "2026-11-24T22:19:48Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-24T21:49:48Z",
+      "run_id": "pending:72b2058e-1795557058",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-24T21:51:37Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -20044,9 +20056,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T21:41:18Z",
+    "at": "2026-11-24T21:51:37Z",
     "url": "",
-    "what": "plan #4848 on claude-3"
+    "what": "review #4857 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T21:34:46Z",
