@@ -77,6 +77,10 @@ pub const AI_GATE_BUDGET: SearchBudget = AI_BUDGET;
 /// const, not an `AiSearch` field, since that struct derives `Eq`.
 pub const AI_WRAP_UP_SHARE: f64 = 0.6;
 
+/// R4608000: a world's score above this share of `AI_EVAL.win` is a game the seat won there (`win − turn`,
+/// evaluate.rs `evaluate_priced`; no position comes near it). Not an `AiSearch` field: that derives `Eq`.
+pub const AI_WON_SCORE_SHARE: f64 = 0.5;
+
 /// R2102000: the stream the practice AI's lethal hint (`lethal::lethal_hint`, SPEC §9.9) draws
 /// its worlds from, its own: never the match's, nor the AI's, so asking it moves no other stream.
 pub const LETHAL_HINT_SEED: &str = "ai:lethal-hint";
@@ -178,6 +182,10 @@ pub struct AiSearch {
     pub lethal_width: i32,
     /// Lines per first action scored after the opponent's reply on determinization 0.
     pub lines_per_action: i32,
+    /// R4608000: a finalist whose line won on determinization 0, the world the beam searched, and on no
+    /// other scored determinization is ranked by its mean on those others (`decide::finalist_means`).
+    /// `false` ranks every finalist by the plain mean of all its worlds, as before.
+    pub confirm_lone_win: bool,
     /// Seed of the throwaway determinization that lists candidates for the forced check.
     pub probe_seed: &'static str,
     /// R90, R1282: the most sets a shipped card lists, #55's 3 of ten units.
@@ -233,6 +241,9 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     lethal_quick_nodes: 40,
     lethal_width: 60,
     lines_per_action: 2,
+    // R4608000: on. No fork screen was played (training/improve.md, A screen); its scene tests
+    // (crates/ai/tests/ai/lone_win.rs) settle it, as an inconclusive screen's would (R4319000).
+    confirm_lone_win: true,
     probe_seed: "ai:probe",
     tribute_sets: 120,
     fat_reference: 30,

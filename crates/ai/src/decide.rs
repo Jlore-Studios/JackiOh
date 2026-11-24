@@ -9,9 +9,10 @@
 //! 5. the exact lethal solver, verified on every determinization and trimmed (R1965000), unless a style
 //!    passes over it (R1452).
 //! 6. the beam on determinization 0, its best lines scored after the opponent's reply and its best first
-//!    actions re-scored on the other determinizations; the best mean wins. A host's wrap-up stops the
-//!    beam and skips R3696000's payoff line, so that a clock still leaves the reply to the shortlist and
-//!    the other determinizations (R3498000).
+//!    actions re-scored on the other determinizations; the best mean wins, a finalist that won on
+//!    determinization 0 alone taking its mean on the others (R4608000). A host's wrap-up stops the beam and
+//!    skips R3696000's payoff line, so that a clock still leaves the reply to the shortlist and the other
+//!    determinizations (R3498000).
 //! 7. a fallback when nothing could be scored.
 //!
 //! The chosen action is tried on the true state first (`submitted`, #1575). Only it is played, so the AI
@@ -31,7 +32,7 @@ use crate::candidates::candidate_actions;
 use crate::config::{
     AI_DECISION_PRICE_NODES, AI_EVAL, AI_KY_COMPETITION_ACCURACY, AI_KY_COMPETITION_RADIANT_ACCURACY,
     AI_KY_TEST_ACCURACY, AI_MULLIGAN, AI_MULLIGAN_CURVE, AI_REPLY, AI_SEARCH, AI_STYLE_EXACT,
-    AI_WRAP_UP_SHARE,
+    AI_WON_SCORE_SHARE, AI_WRAP_UP_SHARE,
 };
 use crate::determinize::{DetGround, DeterminizeOptions, det_ground, determinize_on};
 use crate::evaluate::{
@@ -353,6 +354,34 @@ pub fn pick_finalist(means: &[f64], temperature: f64, rng: &mut Rng) -> usize {
         }
     }
     best_index
+}
+
+/// R4608000: each finalist's mean from its row of scores, determinization 0's first. With `confirm`, a row
+/// whose first score is a won game (above `AI_WON_SCORE_SHARE` of `AI_EVAL.win`) and whose other scores, at
+/// least one, are none won takes the mean of those others; every other row the mean of all its scores.
+pub fn finalist_means(rows: &[Vec<f64>], confirm: bool) -> Vec<f64> {
+    let won = AI_EVAL.win * AI_WON_SCORE_SHARE;
+    rows.iter()
+        .map(|row| match row.split_first() {
+            Some((first, others))
+                if confirm
+                    && *first > won
+                    && !others.is_empty()
+                    && others.iter().all(|score| *score <= won) =>
+            {
+                mean_of(others)
+            }
+            _ => mean_of(row),
+        })
+        .collect()
+}
+
+/// The mean of `scores`, added first to last; 0 for none.
+fn mean_of(scores: &[f64]) -> f64 {
+    match scores.split_first() {
+        None => 0.0,
+        Some((first, rest)) => rest.iter().fold(*first, |total, score| total + score) / scores.len() as f64,
+    }
 }
 
 /// What the guarded body decided, before the stats are read off the counter.
@@ -680,7 +709,7 @@ fn plan(
         finalist_count,
     );
 
-    let mut totals: Vec<f64> = finalists.iter().map(|entry| entry.score).collect();
+    let mut rows: Vec<Vec<f64>> = finalists.iter().map(|entry| vec![entry.score]).collect();
     let mut scored_on: i32 = 1;
     for world in dets.iter().skip(1) {
         let hidden = hidden_card_ids(world, seat);
@@ -706,8 +735,8 @@ fn plan(
             break;
         }
         for (index, score) in row.into_iter().enumerate() {
-            if let Some(total) = totals.get_mut(index) {
-                *total += score;
+            if let Some(scores) = rows.get_mut(index) {
+                scores.push(score);
             }
         }
         scored_on += 1;
@@ -715,9 +744,8 @@ fn plan(
     }
     scratch.worlds_scored = usize::try_from(scored_on).unwrap_or(0);
 
-    let means: Vec<f64> = (0..finalists.len())
-        .map(|index| totals.get(index).copied().unwrap_or(0.0) / f64::from(scored_on))
-        .collect();
+    // R4608000: a finalist that won on determinization 0 alone is ranked by its mean on the others.
+    let means = finalist_means(&rows, AI_SEARCH.confirm_lone_win);
     let chosen_index = pick_finalist(&means, style.temperature, rng);
     let chosen_mean = means.get(chosen_index).copied().unwrap_or(0.0);
 

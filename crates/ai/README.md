@@ -316,6 +316,11 @@ and a softmax
 best. Each takes one draw from `options.rng` when it is above zero and none at zero, so `decide`,
 which is `decide_styled` at `AI_STYLE_EXACT`, draws only for its determinizations, as it always has.
 
+R4608000: a finalist whose line won on determinization 0, the one searched, and on no other scored world
+(a score above `AI_WON_SCORE_SHARE` of `AI_EVAL.win`) takes its mean on those others (`finalist_means`).
+Every other finalist keeps the plain mean, which `AI_SEARCH.confirm_lone_win` off restores bit for bit.
+The solver, the hint and the concession check never read the means.
+
 ## The lethal hint (R2102000, R2291000)
 
 ```rust
