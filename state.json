@@ -18342,15 +18342,8 @@
       }
     },
     "4669": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45336427313",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-24T06:01:21Z",
-        "until": "2026-11-24T06:31:21Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -18362,10 +18355,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "` with gold/brass (border `rgba(243, 201, \u2026\n- 7. `apps/web/src/net/auth.ts`: import `TOTP_CODE_FORMAT` from `@jackioh/server-config` and replace the literal with `const TOTP_CODE_PATTERN = new RegExp(`^[${TOTP_CODE_FORMAT.alphabet}]{${TOTP_CODE_FORMAT.length}}$`, \"u\");` plus a comment that the shape is `TOTP_CODE_FORMAT`. Keep `normalizeOneTim\u2026\n- 8. `apps/web/src/routes/login.tsx`: import `CodeField` from `../auth/CodeField.tsx` and `TOTP_CODE_FORMAT` from `../auth/codeInput.ts`. In the `{codeAsked || secondFactor ? ...}` block, render `<CodeField id=\"login-code\" testId={loginTestid.code} format={TOTP_CODE_FORMAT} inputMode=\"numeric\" autoCo\u2026\n- 9. `apps/web/src/auth/TwoStepSettings.tsx`: import `CodeField` and `TOTP_CODE_FORMAT`; replace the `account-two-step-code` plain input with `<CodeField id=\"account-two-step-code\" testId={twoStepTestid.code} format={TOTP_CODE_FORMAT} inputMode=\"numeric\" autoComplete=\"one-time-code\" autoFocus value={\u2026\n- 10. `apps/web/src/i18n/zh-CN.json`: add `\"Two-step codes use only {alphabet}, so \u201c{character}\u201d can't be part of one. Check that character again.\": \"\u4e24\u6b65\u9a8c\u8bc1\u7801\u53ea\u4f7f\u7528{alphabet}\uff0c\u6240\u4ee5\u201c{character}\u201d\u4e0d\u80fd\u51fa\u73b0\u5728\u4e24\u6b65\u9a8c\u8bc1\u7801\u4e2d\u3002\u8bf7\u518d\u68c0\u67e5\u8be5\u5b57\u7b26\u3002\"`, `\"\u201c{character}\u201d isn't used in two-step codes. They use {alphabet}.\": \"\u4e24\u6b65\u9a8c\u8bc1\u7801\u4e2d\u4e0d\u4f7f\u7528\u201c{character}\u201d\u3002\u2026\n- 11. Spec: write `spec/rulings/R4669000.md` (`id: R4669000`, title `The two-step code is one field drawn as six boxes`, `cards: \"\u00a79.4, R191, R665, issue #4669\"`, `proven_in` listing the four test files in the table, body with `[[R665]]`, `[[\u00a79.4]]`, `[[R191]]`, `[[R104]]` links); write `spec/pending\u2026\n- 12. Tests: extend `CodeField.test.tsx`'s `Harness` with `format?: CodeFormat` passed through; add the `R4669000` tests named under Tests. Add the `R4669000` tests to the other three files. Run every command under Tests.\n- 13. Walkthrough (`ui-walkthrough` skill): serve the dev client, and screenshot the digits field at 1280\u00d7720 and 390\u00d7844. The real MFA step and enrolment need provider credentials the bot must not read, so if they prove unreachable, mount the digits `CodeField` through the local component-spec runne\u2026\n- 14. Run `cargo jackioh spec check` last, after all code and prose citations exist.\n- ## Tests\n- - `CodeField.test.tsx`: `it(\"R4669000 draws a digits field as six aria-hidden boxes over one one-time-code input\")` (one input; `autocomplete=\"one-time-code\"`, `inputmode=\"numeric\"`, invite testid override; six segments, seventh absent; `0 of 6` progress); `it(\"R4669000 typing fills the boxes in or\u2026\n- - `TwoStepSettings.test.tsx`: `it(\"R4669000 enrolment draws the code as six boxes over one input\")` (one `twoStepTestid.code` input with the one-time-code/numeric attributes; six `code-field-segment-*`; existing enrol/verify flow still posts `code: \"123456\"`).\n- - `login-methods.test.tsx`: `it(\"R4669000 the second step draws one one-time-code input as six boxes\")` (mfa mode: one `loginTestid.code` input with attributes, six segments; typing `123456` and submitting stores the raised session); `it(\"R4669000 the email code step keeps its plain field\")` (email\u2026\n- - `codes.test.ts`: `it(\"R4669000 reads digits with TOTP_CODE_FORMAT\")` (`readCodeInput(\"123 456\")` \u2192 `123456` complete; `findCodeInText(\"code 123-456\")` finds it; `formattedCaret(3) === 3`; a letter reads as `excluded`).\n- - Commands: `cargo test -p jackioh-server --test export_config`; `pnpm --dir apps/web test src/auth/CodeField.test.tsx`; `pnpm --dir apps/web test src/auth/TwoStepSettings.test.tsx`; `pnpm --dir apps/web test src/routes/login-methods.test.tsx`; `pnpm --dir apps/web test src/net/auth-methods.test.ts\u2026\n- ## Done when\n- - [ ] `/login` MFA step and enrolment each render exactly one `<input>` (existing test ids, `autocomplete=\"one-time-code\"`, `inputmode=\"numeric\"`) drawn as six `aria-hidden` boxes; autofocus on step open.\n- - [ ] Typing, `123456` / `123 456` / `123-456` paste, and Backspace behave per Goal; letter and seventh digit refused with digits sentences.\n- - [ ] `TOTP_CODE_PATTERN` derives from `TOTP_CODE_FORMAT`; email field byte-identical behavior.\n- - [ ] Ruling note, `spec/pending/4669.md`, \u00a79.4 sentence exist; `cargo jackioh spec check` passes.\n- - [ ] All commands under Tests pass, including pre-existing R665/R191 tests and typecheck.\n- - [ ] Desktop and phone screenshots captured and reported (paths plus the 390px no-horizontal-scroll assertion); attached to the PR by a person (see Open questions).\n- ## Risks\n- - `i18n.test.ts` scans non-test sources for `t()` literals and fails on missing `zh-CN.json` entries: the three entries in step 10 are mandatory, with exact English keys.\n- - `every_name_is_listed_once` asserts an exact export count: the `+ 1` in step 2 is mandatory.\n- - `prefer-regex-literals` and purity lints: the `RegExp` constructor takes non-literal parts, so it stays a constructor; no new statics or client-side rule enforcement (rule 7).\n- - Six boxes at 390px: verified by the `scrollWidth` assertion in step 13, not by eye alone.\n- - Planner's calls, alternatives rejected: constant lives in server config, not `crates/shared` (TOTP is auth-side); only the format object is exported, not scalars (smaller churn; tests read `.length`); empty separator, not a hidden `-` (a `-` would leak into the stored formatted value); variant as\u2026\n- ## Open questions\n- - Screenshots in the PR need a person: the bot holds no GitHub credential and the walkthrough skill forbids writing screenshots into the repo, so the builder can only capture the PNGs under `.cache/browse/` and report their paths. A person attaches them to the PR. If the authenticated steps prove u\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4669 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4669/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-24T05:53:10Z",
       "owner_why": "it plans it",
@@ -18378,9 +18370,9 @@
       "provider": "muse",
       "queued_at": "2026-11-24T05:51:43Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45336427313",
+      "run_id": "pending:b98bcfc7-1795500254",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-24T05:53:10Z",
+      "started_at": "2026-11-24T06:04:39Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -18635,9 +18627,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T06:04:02Z",
+    "at": "2026-11-24T06:04:39Z",
     "url": "",
-    "what": "review #4684 on claude-8"
+    "what": "build #4669 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T05:50:37Z",
