@@ -15611,10 +15611,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-23T21:08:16Z",
       "stop_requested": false,
-      "strike_log": [
-        "`claude-4` (claude, opus) rejected it: `apps/web/src/assault/AssaultPage.tsx:117`: The Lost screen's Try again starts the new attempt on the lost attempt's own date (`date: state.setup.date`) and on t"
-      ],
-      "strikes": 1,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "tree": {
         "adopted": true,
