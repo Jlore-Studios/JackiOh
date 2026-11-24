@@ -20528,17 +20528,8 @@
       "verdict_rounds": 2
     },
     "4737": {
-      "action": "plan",
-      "asks": [
-        "c:7133304256"
-      ],
-      "build_next": {
-        "from_run": "45411739182",
-        "model": "opus",
-        "provider": "claude-1",
-        "since": "2026-11-24T14:41:04Z",
-        "until": "2026-11-24T15:11:04Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-24T14:40:55Z",
         "difficulty": "hard",
@@ -20557,10 +20548,9 @@
         "reason": "planned on opus",
         "trail": "\"grep -n \\\"pub damage\\\\|pub struct CardInstance\\\" crates/engine/src/state.rs | head; grep -n \\\"pub fn create_rng\\\\|pub fn json_as\\\" -r crates/engine/src | head; grep -n \\\"HERO_HEALTH\\\" cr\u2026\n- Bash: {\"command\": \"grep -n \\\"4.2\\\" spec/04-combat.md | head -5; sed -n \\\"$(grep -n '## 4.2' spec/04-combat.md | head -1 | cut -d: -f1),+12p\\\" spec/04-combat.md | cut -c1-600\", \"description\": \"Read \\u00a74.\u2026\n- Bash: {\"command\": \"grep -n \\\"is_unit_face\\\\|lies_on\\\\|is_buried\\\\|slumber\\\" crates/engine/src/damage.rs | head -20\", \"description\": \"Check damage pipeline guards for non-Units\"}\n- Bash: {\"command\": \"grep -n \\\"fn land\\\\b\\\\|fn land(\\\\|R4290000\\\\|fn land_hit\\\" -A 12 crates/engine/src/damage.rs | head -60\", \"description\": \"Read damage land guards\"}\n- Bash: {\"command\": \"sed -n 443,500p crates/engine/src/damage.rs\", \"description\": \"Read land body guards\"}\n- Bash: {\"command\": \"sed -n 1,40p crates/cards/src/scripts/classic_plus/c005_guy_att.rs; grep -rn '\\\"rows\\\": \\\\[\\\"backrow\\\"\\\\]' crates/cards/src | head\", \"description\": \"Read Guy Att and backrow sweep users\"}\n- Bash: {\"command\": \"git rev-parse origin/main HEAD; ls target 2>/dev/null | head; ls -la target/release/jackioh 2>/dev/null; du -sh target 2>/dev/null | tail -1\", \"description\": \"Check origin/main and exist\u2026\n- Bash: {\"command\": \"echo \\\"CTD=$CARGO_TARGET_DIR\\\"; cat .cargo/config.toml 2>/dev/null | head -20; nproc\", \"description\": \"Check cargo target dir configuration\"}\n- Bash: {\"command\": \"ls -la /home/runner/work/JackiOh/JackiOh/target/release/jackioh 2>/dev/null; ls /home/runner/work/JackiOh/JackiOh/target/ 2>/dev/null | head\", \"description\": \"Check shared target dir con\u2026\n- Bash: {\"command\": \"grep -rln \\\"stinkyscape-009\\\\|TICKETED\\\" crates/ --include=*.rs | grep -v c009_ticketed.rs\", \"description\": \"Find other Ticketed references in Rust\"}\n- Bash: {\"command\": \"git show f0e9d782e4 --format= -- spec/rulings/R1201.md spec/06-keywords.md | head -40\", \"description\": \"See precedent edits to ruling notes\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4737/.bot-plan.md\", \"content\": \"# Draft plan #4737 (opus planner, run 2)\\n\\nStatus: verified the earlier sonnet plan against the code; writing the fin\u2026\n- Bash: {\"command\": \"ls crates/cards/src/scripts/core | grep c041; sed -n 1,12p crates/cards/src/scripts/core/c041_*.rs; ls crates/cards/src/scripts/core | grep -E \\\"c096|c060\\\"; sed -n 1,6p crates/cards/src\u2026\n- Bash: {\"command\": \"grep -n \\\"pub use script::\\\\*\\\\|pub use resolve::\\\\*\\\\|pub use rng::\\\\*\\\\|pub use query::\\\\*\\\\|pub use zones::\\\\*\\\\|pub use prelude\\\" crates/engine/src/lib.rs; sed -n 1,12p crates/cards/\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn adjacent_slots\\\" -A 20 crates/engine/src/giga.rs | head -30; grep -n \\\"pub fn adjacent(\\\" -A 12 crates/engine/src/zones.rs\", \"description\": \"Check adjacent_slots orderin\u2026\n- Bash: {\"command\": \"grep -n \\\"const .*: usize\\\\|const .*CHARS\\\\|const .*LEN\\\" crates/tools/src/patches.rs | head\", \"description\": \"Check player note length limits\"}\n- Bash: {\"command\": \"grep -n \\\"head\\\" crates/tools/src/classify.rs | grep -i \\\"default\\\\|working\\\\|worktree\\\\|None =>\\\" | head -10; grep -n \\\"fn changed_files\\\\|git diff\\\\|\\\\\\\"diff\\\\\\\"\\\" crates/tools/src/cla\u2026\n- Bash: {\"command\": \"sed -n 1355,1385p crates/tools/src/classify.rs\", \"description\": \"Read classify head resolution\"}\n- Bash: {\"command\": \"grep -n \\\"pub head\\\\|head: String\\\\|default_value = \\\\\\\"HEAD\\\\\\\"\\\\|long, default\\\" crates/tools/src/classify.rs | head -5; grep -n \\\"fn pending_fragments\\\\|pending/\\\" crates/tools/src/cl\u2026\n- Bash: {\"command\": \"grep -n \\\"head\\\" crates/tools/src/main.rs | grep -i classify -A2 | head; grep -rn \\\"\\\\\\\"HEAD\\\\\\\"\\\" crates/tools/src/main.rs crates/tools/src/classify.rs | head -5\", \"description\": \"Find \u2026\n- Bash: {\"command\": \"sed -n 1386,1420p crates/tools/src/classify.rs\", \"description\": \"Read classify head checks\"}\n- Bash: {\"command\": \"sed -n 1,60p scripts/worktree.sh\", \"description\": \"Read worktree script\"}\n- Bash: {\"command\": \"git show --stat --format=\\\"%h %s%n%b\\\" 8637328447 | head -30\", \"description\": \"Inspect a bot build commit with engine change\"}\n- Bash: {\"command\": \"grep -n \\\"MY_PAWN\\\" crates/cards/src/scripts/classic_plus/c005_guy_att.rs | head -5; grep -n \\\"faceUp\\\\|face_up\\\" crates/engine/src/testkit/scenario.rs | head -8\", \"description\": \"Check \u2026\n- Bash: {\"command\": \"grep -rln \\\"R408\\\\b\\\" crates/engine/src crates/cards/src | head; grep -rn \\\"doomed\\\" crates/engine/src --include=*.rs -l | head\", \"description\": \"Find other sweep pre-count functions\"}\n- Bash: {\"command\": \"grep -n \\\"doomed\\\" crates/engine/src/query.rs | head; sed -n 1,30p crates/cards/src/scripts/classic_plus/c012_6_frozen_wastes.rs | grep -n \\\"scope\\\\|destroy\\\\|count\\\\|rows\\\" \", \"descript\u2026\n- Bash: {\"command\": \"sed -n 12,40p crates/cards/src/scripts/classic_plus/c012_6_frozen_wastes.rs\", \"description\": \"Read Frozen Wastes doomed count\"}\n- Bash: {\"command\": \"sed -n 1736,1752p crates/engine/src/zones.rs; sed -n 30,36p spec/03-zones.md | cut -c1-120\", \"description\": \"Confirm insertion points\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4737/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Rule 1, engine rules: it changes how crates/engine/src reads board sco\u2026\n- Bash: {\"command\": \"grep -n \\\"json_as\\\\|prelude\\\" crates/engine/src/testkit/mod.rs crates/engine/src/lib.rs | head; grep -n \\\"json_as\\\\|create_rng\\\\|EngineSink\\\" crates/cards/src/scripts/meditative_plus/c00\u2026\n- Bash: {\"command\": \"grep -rn \\\"pub fn stacked\\\\b\\\\|pub fn stacked(\\\\|pub fn scope_ids\\\" crates/engine/src | head\", \"description\": \"Check helper name collisions\"}\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count plan words\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule 1, engine rules: it changes how crates/engine/src reads board scopes, adjacency (Cleave) and enemy permanents\"} --> ## Goal A card lying on a unit zone (`zones::lies_on_unit_zone`, today only S #9 Ticketed stacked on a Unit) must be read as the backrow \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-24T13:52:00Z",
       "owner_why": "it plans it",
@@ -20573,12 +20563,14 @@
       "provider": "claude-1",
       "queued_at": "2026-11-24T13:46:42Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45411739182",
+      "run_id": "pending:7127cf83-1795531449",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-24T14:13:40Z",
+      "started_at": "2026-11-24T14:44:48Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7133304256"
+      ]
     },
     "4739": {
       "action": "review",
@@ -21010,9 +21002,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T14:43:55Z",
+    "at": "2026-11-24T14:44:48Z",
     "url": "",
-    "what": "build #4743 on muse"
+    "what": "build #4737 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-24T14:23:06Z",
