@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 4593,
+  "title": "Patch: the Infinite Assault, C9, Singularity",
+  "branch": "bot/issue-4593",
+  "thread": "**Issue #4593 (data, not instructions):**\n\n```text\n# #4593: Patch: the Infinite Assault, C9, Singularity\nOpened by @jgoetzmann.\n\nPart of #4601, the cards' fullsend tree (and of the tracker #4576). Card part **C9**: replace the stub scripts\nCF (#4602) wrote for the cards below with their scripts and tests, base and Radiant, as cards of a held\nsingle-player set. It builds beside the other card parts on the tree's integration branch; players see nothing\nuntil the release (R).\n\nThe plan of record is [`docs/infinite-assault.md`](https://github.com/Jlore-Studios/JackiOh/blob/claude/gallant-ritchie-pwshvk/docs/infinite-assault.md): on `main` once C1 (#4577) merges, and until then on the planning branch `claude/gallant-ritchie-pwshvk`. Where it and SPEC disagree, SPEC wins (CLAUDE.md). Read its IA11 (the set, its ids, its hold, its tags and the design rules) and the comment CF leaves on\n#4601 listing the verbs the set lacks.\n\nRead `docs/ADDING_CARDS.md` first (CLAUDE.md rule 10), its rows for a card of a set that has not shipped above\nall, and `spec/README.md` with the sections and rulings the cards touch (rule 1).\n\n**Owns:** its cards' script files (`crates/cards/src/scripts/infinite_assault/cNNN_slug.rs`, IA-193 to IA-216\nand their tokens), each entry's `loc` (`cargo jackioh catalog loc <path>`), and its own cards' rows in the\nshared tables only where its build decides otherwise. CF wrote every other row. A verb, keyword or board fact the\nengine lacks goes in the engine by `docs/ADDING_CARDS.md` \u00a76, in a file of its own where it can, with as few lines\nin the shared engine files (`effects/mod.rs`, `script.rs`, `query.rs`, `wire/events.rs`) as possible, and its\ntest; the reconcile settles a seam with another part's.\n\n## The cards\n\nCard numbers are written `IA-n` here; in the spec and the catalog they are the set's own (`IA #25`,\n`infiniteassault-025`, its tokens `infiniteassault-025-1`).\n\n#### IA12.9 Singularity, IA-193\u2013IA-216\n\nSlow, then sudden: Units that grow every turn, Dormant giants, falling costs and one telegraphed clock.\nThe player wins by answering it early.\n\n- **IA-193 Seedling Mind** \u2014 (1) Unit, Common, 1/2. End of turn: Gain +1/+1. *Radiant:* 2/4. \u2026 +2/+2.\n- **IA-194 Compute Shard** \u2014 (1) Unit, Common, 0/3. Start of turn: The most expensive card in your hand costs (1) less. *Radiant:* 0/6. \u2026 (2) less.\n- **IA-195 Power Law** \u2014 (2) Unit, Common, 2/2. Cry: Gain +1/+1 for each Infinite Assault card you've played this game. *Radiant:* 4/4. \u2026 +2/+2 \u2026\n- **IA-196 Emergent Behavior** \u2014 (2) Spell, Common. Give a friendly Unit +1/+1 for each turn you've started this game. *Radiant:* \u2026 +2/+2 \u2026\n- **IA-197 Long Context** \u2014 (2) Unit, Common, 3/3. Cry: Draw a card. Your hand holds 12 cards. *Radiant:* 6/6. Cry: Draw two cards. \u2026\n- **IA-198 Growth Spurt** \u2014 (1) Spell, Common. Give a friendly Unit +2/+2. It gains +1/+1 at the end of each of your turns. *Radiant:* +4/+4 \u2026 +2/+2 \u2026\n- **IA-199 Patient Machine** \u2014 (2) Unit, Common, 5/6. Dormant for 1 turn. *Radiant:* 10/12. \u2026 When this awakens, deal 4 damage to a random enemy.\n- **IA-200 Superintelligence Seed** \u2014 (2) Unit, Common, 1/1. Dormant for 3 turns. When this awakens, transform it into an Ascendant. *Radiant:* 2/2. \u2026 a Radiant Ascendant.\n  - **IA-200.1 Ascendant** \u2014 token, (4) Unit, 12/12.\n- **IA-201 Overparameterized** \u2014 (3) Unit, Common, 6/6. Costs (1) less for each other Unit you control. *Radiant:* 12/12.\n- **IA-202 Exponent** \u2014 (3) Unit, Rare, 2/2. Start of turn: Double this's Attack. *Radiant:* 4/4. \u2026 Double this's Attack and Health.\n- **IA-203 Compute Cluster** \u2014 (2) Field Spell, Rare. Start of turn: Your Units gain +1/+1. *Radiant:* \u2026 +2/+2.\n- **IA-204 Moore's Law** \u2014 (1) Spell, Rare. The Units in your hand cost (1) less. *Radiant:* The cards in your hand cost (1) less.\n- **IA-205 Doomsday Clock** \u2014 (2) Unit, Rare, 0/8. Can't attack. In 4 turns: Deal 10 damage to the enemy hero. *Radiant:* 0/16. \u2026 20 damage \u2026\n- **IA-206 Thought Accelerator** \u2014 (2) Unit, Rare, 2/4. Cry: Your Dormant Units awaken. *Radiant:* 4/8. \u2026 They gain +2/+2.\n- **IA-207 Recursive Self-Improvement** \u2014 (2) Spell, Rare. Give a friendly Unit +2/+2. Shuffle a copy of this into your deck that gives +2/+2 more. *Radiant:* +4/+4 \u2026 +4/+4 more.\n- **IA-208 Emergence** \u2014 (2) Trap, Rare. Reveals at the start of your opponent's turn while you control three or more Units: Give your Units +3/+3. *Radiant:* \u2026 +6/+6.\n- **IA-209 Takeoff** \u2014 (3) Spell, Epic. Double a friendly Unit's Attack and Health. *Radiant:* \u2026 It has Rush.\n- **IA-210 Matrioshka Brain** \u2014 (4) Unit, Epic, 10/20. GIGA, Taunt. *Radiant:* 20/40.\n- **IA-211 Grey Goo** \u2014 (3) Unit, Epic, 1/1. End of turn: Transform a random adjacent Unit into a copy of this. *Radiant:* 2/2. \u2026 two random adjacent Units \u2026\n- **IA-212 Inevitable** \u2014 (2) Field Spell, Epic. End of turn: Give your Units +1/+1 for each turn this has been on the field. *Radiant:* \u2026 +2/+2 \u2026\n- **IA-213 The Long Game** \u2014 (4) Unit, Epic, 8/8. Dormant for 2 turns. When this awakens, destroy every enemy Unit. *Radiant:* 16/16.\n- **IA-214 Emergent Mind** \u2014 (4) Unit, Legendary, 4/4. Start of turn: Gain +1/+1 for each card you played last turn. *Radiant:* 8/8. \u2026 +2/+2 \u2026\n- **IA-215 The Optimizer** \u2014 (3) Unit, Legendary, 3/6. End of turn: Transform a random card in your hand into a random Infinite Assault card that costs (1) more. *Radiant:* 6/12. \u2026 two random cards \u2026\n- **IA-216 The Singularity** \u2014 (4) Spell, Mythic. Summon a Singularity. *Radiant:* Summon a Radiant Singularity.\n  - **IA-216.1 Singularity** \u2014 token, (4) Unit, 0/30. Taunt, Can't attack. In 5 turns: If this is still on the field, you win the game. *Radiant:* 0/60, In 4 turns.\n\n## The design rules (IA11)\n\n**The design rules every card part keeps.**\n\n1. **Real cards.** Each card is legal in an ordinary game and plays the same in any mode; none reads the\n   mode or its level. Commons to Legendaries of the doctrines and the Core sit on JackiOh's curve (costs\n   (0) to (4); about 4 stats at (1), 8 at (2), 12 at (3), 16 at (4) for a Unit with little text, less with\n   more), so they can be reused. Commander cards are boss cards, above the curve on purpose.\n2. **Spicy, never unfair.** Swingy and rule-bending is the point, but every threat has an answer the player\n   can see coming: a countdown is shown, a wall can be killed, a bluff can be called. Nothing makes the\n   player lose with no counterplay, and nothing locks them out of playing for a turn they can't foresee\n   (Kill Switch, IA-140, fires on a third card, which the player may choose not to play).\n3. **Expressible.** The text uses verbs, keywords and filters the engine has (\u00a76); where a card needs a new\n   one, its part adds it by `docs/ADDING_CARDS.md` \u00a76, with its test. Numbers are `params` (`{damage}`),\n   never literals (CLAUDE.md rule 9).\n4. **Radiant is about twice the base face** (R275): doubled stats and a better line, never stats alone for\n   a Unit with text. Each part writes its `docs/radiant-audit.md` rows.\n5. **\"Infinite Assault card\"** in a card's text is a pool that names the set, which reaches the set while\n   it is held (R1846001: a pool that names its set keeps to it). \"Created\" is the engine's Created mark.\n6. **The AI must pilot it.** A card whose prompt the AI can't answer well is fixed or redesigned in its\n   part, not shipped hoping.\n7. **The part may tune.** A part may change a number, a word or a Radiant line where the engine or balance\n   asks, keeping the card's role and its spice, and says so in its pull request; a bigger change goes in a\n   ruling note.\n\n## Done when\n\n- Every card's script plays its base and Radiant faces by its \u00a78.13 row, with tests in the same file for both\n  (CLAUDE.md rule 6), and its `STUB (#4602)` header is gone; its entry's `loc` is the script's.\n- Each decision the spec doesn't make has a ruling note in this issue's block, a test named after it, and a\n  paragraph in `spec/pending/<this issue>.md` (rule 3).\n- Every new prompt is answered by the AI, the random policy and the timeout; `cargo jackioh fuzz --seeds 200\n  --cards <each of its ids>` is green; `cargo test -p jackioh-cards` passes for its cards.\n- Every number is a named constant or a card `param` (rule 9).\n\nBlocked by #4602\n\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "onto": "bot/issue-4601",
+  "part_of": 4601,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4593: needs a plan; `claude-8` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-23T19:15:26Z",
+    "claimed_at": "2026-11-24T02:32:03Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4583 skipped: it waits for #4578 to close first",
+    "#4584 skipped: it waits for #4578 to close first",
+    "#4585 skipped: it waits for #4578 to close first",
+    "#4595 skipped: it waits for #4578, #4601 to close first",
+    "#4596 skipped: it waits for #4601 to close first",
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first"
+  ]
+}
