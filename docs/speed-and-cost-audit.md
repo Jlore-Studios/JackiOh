@@ -133,10 +133,14 @@ Fixed in #4712:
 
 | Query | Before | After | How |
 |---|---|---|---|
-| `replays_list_with_modes` (`GET /api/replays`, `GET /api/friends/recent`) | 47–54 ms for 11 rows; 69–91 ms and 1.75 MB for 50 | PART4_HISTORY | partial indexes per seat on `(profile, ended_at desc, id desc)` where `status = 'over'`, a UNION ALL of the two seats, no unused jsonb columns |
-| the reaper's live-match read (every 30 s) | 114–146 ms and 13.3 MB a pass at 400 live matches | PART4_REAPER | its own read of only the matches past their ceiling, through `matches_status_ceiling_at_idx` |
-| `results_record_for` (`GET /api/auth/me`) | 11.6–13 ms for 11k games, linear in games | PART4_RECORD | covering indexes per seat, a UNION ALL |
-| `last_boards_sample_others` (every match start) | 6 ms at 20k profiles (`order by random()`) | PART4_SAMPLE | a partial index and a random-key seek |
+| `replays_list_with_modes` (`GET /api/replays`, `GET /api/friends/recent`) | the 11k-game player's page: about 165 ms round trip (145 ms executing), its sort spilled to disk; recent opponents 140 ms | about 2 ms round trip (0.35 ms executing); recent opponents 0.85 ms; a typical player's 2 ms becomes 0.3 ms | partial indexes per seat on `(profile, ended_at desc, id desc)` where `status = 'over'`; the page is found one arm per seat, then only its rows are joined, into a narrower `ReplayListRow` without the unused jsonb columns |
+| the reaper's live-match read (every 30 s) | about 150 ms round trip and 13.3 MB a pass at 400 live matches, every live match's whole row (win rates included) | about 2 ms: `matches_past_ceiling` reads only the matches past their ceiling, through `matches_status_ceiling_at_idx` | its own store method; `matches_live` is kept but no server code calls it |
+| `results_record_for` (`GET /api/auth/me`) | 7.6 ms for 11k games, linear in games | 1.9 ms | covering indexes per seat (the p2 one also carries `p1_profile_id`, so a row seating the player twice still counts once), a sum of two index-only counts |
+| `last_boards_sample_others` (every match start) | about 4.3 ms round trip (`order by random()` over the table) | about 0.35 ms | a partial index and a random-key seek, topped up from the start |
+
+The table's before and after come from one run, on the same data with a warm cache. Old and new queries returned identical answers for 300 players across 5 pages (1,495 comparisons) and for all 20,000 players' records. The new migration is `0101_slow_read_indexes.sql`. Held by:
+- the SQL suite's CHECK 29, which checks each index's shape and plans each query with sequential scans off;
+- the store contract's cases for each rewritten read, on both stores.
 
 Measured and fine:
 - the ladder's subset and rank reads;
