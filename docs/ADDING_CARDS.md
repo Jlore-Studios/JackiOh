@@ -53,8 +53,8 @@ BUILD's must-pass tables take no row for a new card; its own tests are the recor
 - Its `card-audio.json5` and `card-text.yaml` entries are written as for any card, but no voice file is expected for it until the set ships
   (`gen-voice.mjs --check` leaves it out), so [§7](#7-what-cannot-be-done-on-linux)'s rendering is owed by the release, not by the card.
   Its intro (row 10) is the release's too: the intros' totality test reads the sets that ship. (The Stinkyscape set's intros
-  came early, with its look-and-sound part, issue #1883, R1883000, and the Stinkyscape+ set's with its own, issue #3572,
-  R3572000, so neither's release owes any.)
+  came early, with its look-and-sound part, issue #1883, R1883000, the Stinkyscape+ set's with its own, issue #3572,
+  R3572000, and the single-player Infinite Assault set's with its own, issue #4596, R4596000, so no such release owes any.)
 - Its picture is not the release's: the web's art tests hold every catalog entry, a held set's included, to its rarity's
   detail floor (R3331001) and every Legendary and Mythic to a motion recipe of its own (R3340000), so a held set's cards draw
   placeholder scenes from the day they land (`apps/web/src/cards/art/infiniteAssaultRecipes.ts`, R4577009; Stinkyscape+'s,
