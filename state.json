@@ -18962,11 +18962,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-24T10:04:00Z",
+        "at": "2026-11-24T10:52:01Z",
         "difficulty": "hard",
         "provider": "claude-4",
-        "tier": "medium",
-        "why": "Rule 1 (engine rules): the change is in the resolution of a rules effect in crates/engine/src/effects/plague.rs, where it changes which cards a random draw may pick, its Lucky rolls, and I22's record."
+        "tier": "strong",
+        "why": "Engine rules: it changes the resolution of a target prompt's random answer in crates/engine/src/effects/plague.rs (rule line 1)"
       },
       "failures": 0,
       "forced": false,
