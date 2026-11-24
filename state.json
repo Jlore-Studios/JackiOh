@@ -19905,17 +19905,8 @@
       ]
     },
     "4723": {
-      "action": "plan",
-      "asks": [
-        "c:7133271853"
-      ],
-      "build_next": {
-        "from_run": "45407649955",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-24T14:06:57Z",
-        "until": "2026-11-24T14:36:57Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-24T14:06:48Z",
         "difficulty": "medium",
@@ -19934,10 +19925,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- 2. In `again_status`, between the end of the 2v2 early-return block (line 366, the closing of the `if !match_row.team_b().is_ai()` block) and the `let seen = offers(app).book.seen(...)` read (line 368), insert these two blocks in POST order (empty seat first, catalog second, exactly as `offer_again\u2026\n- ```rust\n- // R1497000: a seat emptied by a deleted account cannot be played again, as the offer is refused.\n- if match_row.a1.is_empty() || match_row.a2.is_empty() {\n- return Err(ApiError::new(\n- ApiErrorCode::Conflict,\n- \"that co-op game cannot be played again\",\n- ));\n- }\n- // R1638000: a match played on a catalog version other than the server's offers no Play again, as\n- // the offer is refused before anything is recorded.\n- if match_row.options.catalog_version != app.catalog.version {\n- return Err(cards_changed(app, &match_row.options.catalog_version));\n- }\n- ```\n- Change nothing else: not the `ended_at` check, not the 2v2 block, not the `book.seen` / presence / `AgainStatusBody` construction, and add no window check (`in_again_window` stays POST-only; `book.seen` in `crates/shared/src/host/again.rs:217-230` already answers an already-made id past the TTL, wh\u2026\n- 3. In `crates/server/tests/api/duos_again.rs`, update the tail of `r2092000_a_stale_catalog_answers_update_required_and_makes_nothing` (lines 374-375): replace the two lines that read `status` and assert `seen[\"matchId\"]` is null with assertions that `status` returns 409, `body[\"error\"][\"code\"]` is\u2026\n- 4. Add `r2092000_status_on_an_emptied_seat_answers_conflict_and_makes_no_game`: seed row `(\"\", a2-id)` via the existing `finished_row` helper and assert `status(&app, &a2.token, ...)` returns 409 with `body[\"error\"][\"message\"]` equal to `\"that co-op game cannot be played again\"`; repeat with row `(\u2026\n- 5. Add `r2092000_status_on_a_current_two_seat_match_answers_offers_presence_and_available`: on a finished current-catalog row, assert GET before any offer is 200 with `youOffered false`, `teammateOffered false`, `teammateHere false`, `matchId` null, and `unavailable` false (use `assert_eq!(seen[\"un\u2026\n- ## Tests\n- - `cargo test -p jackioh-server --test server api::duos_again::` \u2014 all co-op Play-again API tests, including the updated stale-catalog test and the two new tests. Each new/updated test fails without the step-2 change (status answers 200) and passes with it.\n- - `cargo test -p jackioh-server --test server api::lobbies::r3731003` \u2014 the 2v2 `unavailable: true` contract still holds.\n- - `pnpm --dir apps/web test src/duos/DuosRoute.test.tsx` \u2014 the result panel's Play-again tests still pass (its pretest builds the WASM module first).\n- - `cargo fmt --check`, `cargo clippy -p jackioh-server --all-targets -- -D warnings`, and `cargo jackioh spec check` (R-ids are cited in the touched files, so confirm the index still agrees).\n- ## Done when\n- - [ ] GET status on a finished match with a stale catalog answers 409 `update_required` with the POST's `{expected, received}` details and makes no game\n- - [ ] GET status with either seat empty answers 409 `\"that co-op game cannot be played again\"` and makes no game\n- - [ ] GET on a current two-seat finished match still answers 200 with `youOffered`, `teammateOffered`, `teammateHere`, `matchId`, and `unavailable: false`\n- - [ ] 2v2 status still answers 200 `unavailable: true`; window behavior unchanged (already-made ids still answer); no booking logic changed\n- - [ ] The commands under Tests all pass\n- ## Risks\n- - A client treating non-200 status as a fault: the panel's poll (`DuosRoute.tsx:120-134`) discards GET rejections and keeps its last status, and it already handles 404s on this route the same way; the new 409s follow that existing contract, and presses still surface the POST's words through the off\u2026\n- - Status hiding an already-made game id when the catalog flips or a seat empties after creation: deliberate and consistent \u2014 POST checks these refusals before its window/lapse read too, so status and offer can never disagree about whether Play again can work.\n- - `book.seen` takes `&mut self` and sweeps stale unanswered entries as a side effect; that predates this change and stays the only book interaction in status \u2014 no offer is recorded and no game is made on this path.\n- ## Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4723 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4723/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-24T13:50:41Z",
       "owner_why": "it plans it",
@@ -19950,12 +19940,14 @@
       "provider": "muse",
       "queued_at": "2026-11-24T13:45:07Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45407649955",
+      "run_id": "pending:18d32d10-1795529454",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-24T13:50:41Z",
+      "started_at": "2026-11-24T14:11:25Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7133271853"
+      ]
     },
     "4724": {
       "action": "review",
@@ -20782,9 +20774,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T14:10:37Z",
+    "at": "2026-11-24T14:11:25Z",
     "url": "",
-    "what": "build #4722 on muse"
+    "what": "build #4723 on muse"
   },
   "last_sweep": {
     "at": "2026-11-24T14:07:59Z",
