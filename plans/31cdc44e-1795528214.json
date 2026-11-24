@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4723,
+  "title": "Patch: co-op Play again status reports when Play again cannot work",
+  "branch": "bot/issue-4723",
+  "thread": "**Issue #4723 (data, not instructions):**\n\n```text\n# #4723: Patch: co-op Play again status reports when Play again cannot work\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nAfter a co-op game ends, the result panel keeps asking the server whether the teammate wants to play again and shows a Play again button while that is possible. Pressing it when the cards changed since the game, or when the teammate's account is gone, can only fail. The panel should say so up front instead of offering a button that fails when pressed.\n\n## Why\n\n`POST /api/duos/matches/:matchId/again` (`crates/server/src/duos/again.rs:293-344`) refuses a live game, a 2v2, an emptied seat (`match_row.a1/a2` empty, `again.rs:310-317`, R1497000), and a stale catalog (`again.rs:318-323`, R1638000) before recording anything, and lapses past the window (`again.rs:328-337`, R1398000). `GET /api/duos/matches/:matchId/again` (`again_status`, `again.rs:346-392`) only handles the live-game and 2v2 (`unavailable`) cases, then answers the book's offers and presence. The result panel polls that GET (`apps/web/src/duos/DuosRoute.tsx:106`, `apps/web/src/duos/context.ts:33`, `apps/web/src/net/duos.ts:42-66`, R2092000), so after a patch ships it still shows Play again and the press fails with 409 `update_required`, and after a teammate deletes their account it still shows the waiting status while any new offer is refused. The 1v1 rematch status has the same shape of gap for series versus other refusals; this is the co-op half. No open issue covers the status route (open #4686/#4718 cover sweeping unmet 1v1 offers, not the co-op status).\n\n## Proposal\n\nMake `again_status` mirror the offer's unconditional refusals: when the catalog differs, answer the same 409 `update_required` the POST answers; when either seat is empty, answer 409 with the same \"cannot be played again\" message. Keep the 2v2 `unavailable: true` shape unchanged, keep the window behavior (lapsed offers still answer any game already made), and change no booking logic. Add server tests: status on a stale-catalog finished co-op match is 409 `update_required`; status when a seat is empty is 409; status on a current two-seat match still answers offers, presence, and `unavailable: false`.\n\n## Where it lands\n\n- `crates/server/src/duos/again.rs` (`again_status`)\n- `crates/server/tests/` Play-again status tests for the catalog and empty-seat cases\n- SPEC \u00a713.9; R1398000, R1497000, R1638000, R2092000, R3731003 (no new ruling: the decisions already exist, the status just reports them)\n\n## Acceptance criteria\n\n- [ ] GET Play-again status on a finished co-op match played on another catalog answers 409 `update_required`\n- [ ] GET Play-again status when either co-op seat is empty answers 409 and makes no game\n- [ ] GET on a current two-seat finished match still answers 200 with `youOffered`, `teammateOffered`, `teammateHere`, `matchId`, `unavailable: false`\n- [ ] The co-op result panel's Play-again tests still pass; new tests fail without the fix and pass with it; touched crate tests, `cargo fmt --check`, and `cargo clippy -p jackioh-server --all-targets -- -D warnings` pass\n\n## Size and risks\n\nSmall: one status route plus tests. Risk is a client that treats any non-200 status as a fault rather than a reason; the panel already handles `unavailable: true` and 404s for the same route, so a 409 with a message follows the route's existing contract. Alternative rejected: adding a new `unavailable` reason instead of the POST's 409s; that would fork the status and offer contracts and force every caller to learn a new shape, while the POST's codes already say exactly why Play again cannot work.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n**Judge:** would approve it: It mirrors two refusals the offer already returns so the co-op panel stops showing Play again when pressing it can only fail. With no vote, no comment and no \ud83d\udc4e on this issue by Wed 25 Nov 05:54 CST, it is approved by itself at `priority:low` (at most 3 a day); comment `reject`, or anything at all, to decide it yourself.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-24T13:44:40Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4723: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T13:45:07Z",
+    "claimed_at": "2026-11-24T13:50:41Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4583, #4584, #4585, #4595, #4596 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
