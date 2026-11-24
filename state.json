@@ -19376,6 +19376,8 @@
       "stop_requested": false
     },
     "4715": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T09:50:46Z",
@@ -19389,8 +19391,11 @@
         "trail": "- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.test.tsx\"}\n- said: \n- read_file: {\"EndLine\": 285, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.test.tsx\", \"StartLine\": 250}\n- said: \n- read_file: {\"EndLine\": 210, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.test.tsx\", \"StartLine\": 180}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"4583345f-8739-4e85-956a-ea0b4a705cce/task-20\"}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.test.tsx\"}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.test.tsx\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"4583345f-8739-4e85-956a-ea0b4a705cce/task-20\"}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/.bot-notes.md\"}\n- said: The test run (which compiles the WebAssembly engine before executing `HandHints.test.tsx`) is currently running in the background. I have applied the changes to [`HandHints.tsx`](file:///home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.tsx) and updated [`HandHint\u2026\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && pnpm --dir apps/web test src/i18n/i18n.test.ts\n- said: I have launched the `i18n.test.ts` suite to verify dictionary coverage and will wait for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && pnpm exec eslint apps/web/src/game/HandHints.tsx apps/web/src/game/HandHints.test.tsx\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && cargo fmt --check\n- said: I have launched `cargo fmt --check` to verify Rust code formatting and will wait for it to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && cargo jackioh catalog check\n- said: I have launched `cargo jackioh catalog check` and will wait for it to finish.\n- said: `cargo jackioh catalog check` is still compiling tools in the background; waiting for it to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && cargo jackioh patches check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && cargo jackioh spec check\n- said: I have launched `cargo jackioh spec check` and will wait for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4683 && git diff\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4683/.bot-notes.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: hand-hint pips name themselves on hover like field marks do\"} --> ## Summary of changes In [`HandHints.tsx`](file:///home/agent-agy/actions-runner/_work/_temp/work/item-4683/apps/web/src/game/HandHints.tsx), added `title={pip.label}` to each rendered `.\u2026"
       },
       "issue": 4683,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-24T10:42:45Z",
         "from_run": "45369060926",
         "gates": [
           {
@@ -19449,8 +19454,15 @@
         "source": "build",
         "until": "2026-11-24T11:10:45Z"
       },
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-24T10:40:45Z",
+      "run_id": "pending:25d30318-1795516934",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "started_at": "2026-11-24T10:42:45Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gemini",
@@ -19550,9 +19562,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T10:32:32Z",
+    "at": "2026-11-24T10:42:45Z",
     "url": "",
-    "what": "plan #4692 on claude-4"
+    "what": "review #4715 on agy"
   },
   "last_sweep": {
     "at": "2026-11-24T10:25:41Z",
