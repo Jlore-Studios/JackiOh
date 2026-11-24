@@ -552,6 +552,11 @@ fn compute_layers_on(
             attack = set_attack;
         }
     }
+    // R4591000: a set Attack this turn (IA #148 Quarantine) applies after every layer, even the aura
+    // sets above — nothing above lifts it — until that turn ends.
+    if let Some(set) = crate::effects::firewall::attack_set_this_turn(state, instance) {
+        attack = set;
+    }
 
     let mut listed: Vec<Keyword> = Vec::new();
     if !instance.vanilla && !crate::alt_play::is_dormant(instance) {

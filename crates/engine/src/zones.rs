@@ -1277,6 +1277,9 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.half = None;
     instance.shared_chain = None;
     instance.split_chain = None;
+    // R4591000, R4591001: so are a set Attack and Containment, stamped on the Unit on the field.
+    instance.attack_this_turn = None;
+    instance.contained = None;
 }
 
 /// R766 (#473): a card that reaches a graveyard or exile costs its printed cost again (R65), a
