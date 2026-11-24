@@ -254,3 +254,132 @@ fn explore_pipeline() {
     }
     assert!(notes.is_empty(), "{} notes", notes.len());
 }
+
+/// Every route's fights and tiles, by dynamic programming, and the graph's shape.
+fn check_map(state: &RunState, tag: &str) -> Result<(), String> {
+    let map = &state.map;
+    let rows = RUN_ACTS * (RUN_ACT_ROWS + 1);
+    if map.len() != rows {
+        return Err(format!("{tag}: {} rows", map.len()));
+    }
+    // (fewest fights, most fights) on any route from the first row to each node.
+    let mut counts: Vec<(i32, i32)> = Vec::new();
+    for (r, row) in map.iter().enumerate() {
+        let boss_row = (r + 1) % (RUN_ACT_ROWS + 1) == 0;
+        if row.is_empty() {
+            return Err(format!("{tag}: row {r} is empty"));
+        }
+        if boss_row && (row.len() != 1 || row[0].column != RUN_MAP_COLUMNS / 2) {
+            return Err(format!("{tag}: boss row {r} is {} nodes", row.len()));
+        }
+        let above = map.get(r + 1).map_or(0, Vec::len);
+        let mut reached = vec![false; above];
+        for (c, node) in row.iter().enumerate() {
+            if c > 0 && row[c - 1].column >= node.column {
+                return Err(format!("{tag}: row {r} columns out of order"));
+            }
+            if node.column >= RUN_MAP_COLUMNS {
+                return Err(format!("{tag}: row {r} column {}", node.column));
+            }
+            let want = if boss_row {
+                if r + 1 == rows { RunNodeKind::Boss } else { RunNodeKind::MiniBoss }
+            } else {
+                node.kind
+            };
+            if node.kind != want || (!boss_row && node.kind.is_boss()) {
+                return Err(format!("{tag}: row {r} node {c} is {:?}", node.kind));
+            }
+            if r == 0 && !node.kind.is_fight() {
+                return Err(format!("{tag}: first row holds a tile"));
+            }
+            if node.kind.is_fight() != node.enemy.is_some() || (node.kind == RunNodeKind::Event) != node.event.is_some() {
+                return Err(format!("{tag}: row {r} node {c} holds the wrong things"));
+            }
+            if r + 1 == rows {
+                if !node.next.is_empty() {
+                    return Err(format!("{tag}: the final boss leads on"));
+                }
+            } else if node.next.is_empty() {
+                return Err(format!("{tag}: dead end at row {r} node {c}"));
+            }
+            for (i, &n) in node.next.iter().enumerate() {
+                if n >= above || (i > 0 && node.next[i - 1] >= n) {
+                    return Err(format!("{tag}: row {r} node {c} next {:?}", node.next));
+                }
+                reached[n] = true;
+                let wide = (map[r + 1][n].column as i64 - node.column as i64).abs() > 1;
+                let fan = boss_row || (r + 2) % (RUN_ACT_ROWS + 1) == 0;
+                if wide && !fan {
+                    return Err(format!("{tag}: a wide edge from row {r} node {c}"));
+                }
+            }
+        }
+        if reached.iter().any(|r| !r) {
+            return Err(format!("{tag}: an orphan on row {}", r + 1));
+        }
+        // No two edges cross.
+        for (a, na) in row.iter().enumerate() {
+            for (b, nb) in row.iter().enumerate().skip(a + 1) {
+                for &x in &na.next {
+                    for &y in &nb.next {
+                        if x > y {
+                            return Err(format!("{tag}: edges cross above row {r}"));
+                        }
+                    }
+                }
+            }
+        }
+        let own = |n: &RunNode| i32::from(n.kind.is_fight());
+        counts = if r == 0 {
+            row.iter().map(|n| (own(n), own(n))).collect()
+        } else {
+            let below = &map[r - 1];
+            row.iter()
+                .enumerate()
+                .map(|(i, n)| {
+                    let from: Vec<(i32, i32)> = below.iter().zip(&counts).filter(|(b, _)| b.next.contains(&i)).map(|(_, c)| *c).collect();
+                    (from.iter().map(|c| c.0).min().unwrap() + own(n), from.iter().map(|c| c.1).max().unwrap() + own(n))
+                })
+                .collect()
+        };
+    }
+    let (fewest, most) = counts[0];
+    let tiles_fewest = rows as i32 - most;
+    if fewest < RUN_ROUTE_FIGHTS_MIN || most > RUN_ROUTE_FIGHTS_MAX || tiles_fewest < RUN_ROUTE_TILES_MIN {
+        return Err(format!("{tag}: routes hold {fewest} to {most} fights, {tiles_fewest} tiles at least"));
+    }
+    Ok(())
+}
+
+#[test]
+fn explore_maps() {
+    let content = run_placeholder_content();
+    let seeds: usize = std::env::var("AUDIT_SEEDS").ok().and_then(|v| v.parse().ok()).unwrap_or(2000);
+    let mut bad = Vec::new();
+    for n in 0..seeds {
+        let setup = RunSetup {
+            seed: run_seed(&format!("audit-map-{n}")),
+            starter: content.starter_access[..RUN_STARTER_SIZE].to_vec(),
+            artifacts: Vec::new(),
+            curses: Vec::new(),
+        };
+        let made = catch_unwind(AssertUnwindSafe(|| run_create(&setup, &RunUnlocks::default(), &content)));
+        match made {
+            Err(_) => bad.push(format!("{}: run_create panics", setup.seed)),
+            Ok(Err(e)) => bad.push(format!("{}: {e}", setup.seed)),
+            Ok(Ok(state)) => {
+                if let Err(e) = check_map(&state, &setup.seed) {
+                    bad.push(e);
+                }
+                let again = run_create(&setup, &RunUnlocks::default(), &content).unwrap();
+                if again != state {
+                    bad.push(format!("{}: the same seed deals another run", setup.seed));
+                }
+            }
+        }
+    }
+    for b in bad.iter().take(20) {
+        eprintln!("BAD {b}");
+    }
+    assert!(bad.is_empty(), "{} bad maps of {seeds}", bad.len());
+}

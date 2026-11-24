@@ -64,6 +64,8 @@ struct Table {
     records: usize,
     /// How many of the next appends the log refuses.
     failing_appends: usize,
+    wrong: Vec<String>,
+    swaps: usize,
 }
 
 impl Table {
@@ -77,6 +79,8 @@ impl Table {
             answers: Vec::new(),
             records: 0,
             failing_appends: 0,
+            wrong: Vec::new(),
+            swaps: 0,
         };
         table.run(outputs);
         table
@@ -111,6 +115,36 @@ impl Table {
                     self.feed(DuelEvent::Logged { outcome });
                 }
                 DuelOutput::Answer { nonce, answer } => self.answers.push((nonce, answer)),
+                DuelOutput::Send { home, message } => {
+                    let seat = self.host.playing(home);
+                    match message {
+                        jackioh_shared::host::SeatMessage::View { view, legal, .. } => {
+                            if view.viewer != seat {
+                                self.wrong.push(format!("view of {:?} sent to home {home:?} playing {seat:?}", view.viewer));
+                            }
+                            let mut mine = jackioh_engine::view_for(self.host.game(), seat);
+                            mine.clock_ms = view.clock_ms;
+                            if *view != mine {
+                                self.wrong.push(format!("the view sent to {home:?} is not view_for({seat:?})"));
+                            }
+                            if legal != jackioh_engine::legal_actions(self.host.game(), seat) {
+                                self.wrong.push(format!("the legal actions sent to {home:?} are not {seat:?}'s"));
+                            }
+                        }
+                        jackioh_shared::host::SeatMessage::PromptForYou { player, .. } => {
+                            if player != seat {
+                                self.wrong.push(format!("promptForYou of {player:?} sent to {home:?} playing {seat:?}"));
+                            }
+                        }
+                        jackioh_shared::host::SeatMessage::PromptForOpponent { pending_for, .. } => {
+                            if pending_for == seat {
+                                self.wrong.push(format!("promptForOpponent naming {pending_for:?} sent to its own seat"));
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                DuelOutput::SeatsSwapped { .. } => self.swaps += 1,
                 DuelOutput::Record { .. } => {
                     self.records += 1;
                     self.feed(DuelEvent::ResultRecorded);
@@ -258,6 +292,7 @@ fn search_liveness() {
     let mut found = Vec::new();
     let mut known = 0;
     let mut ends: Vec<String> = Vec::new();
+    let mut swaps = 0;
     for seed in from..from + seeds {
         let name = format!("audit-live-{seed}");
         let mut rng = Rng::new(&format!("{name}:policy"), 0);
@@ -335,13 +370,17 @@ fn search_liveness() {
             table.act(player, &format!("c-{step}"), body);
             table.sleep(i64::from(rng.int(3)) * SECOND);
         }
+        if let Some(wrong) = table.wrong.first() {
+            found.push(format!("seed {seed}: WRONG SEND {wrong} ({} in all)", table.wrong.len()));
+        }
+        swaps += table.swaps;
         let game = table.host.game();
         ends.push(format!("{}:{}:{}", game.turn, table.log.len(), game.result.map_or("-".to_string(), |r| format!("{:?}", r.reason))));
     }
     for line in &found {
         println!("{line}\n");
     }
-    println!("ends: {ends:?}");
+    println!("ends: {} games, {swaps} seat swaps", ends.len());
     println!("{} findings over {seeds} seeds; finding A met {known} times", found.len());
     assert!(found.is_empty());
 }
