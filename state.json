@@ -16646,7 +16646,7 @@
     "4619": {
       "action": "plan",
       "asks": [],
-      "failures": 1,
+      "failures": 2,
       "forced": false,
       "handoff": {
         "at": "2026-11-23T21:57:57Z",
