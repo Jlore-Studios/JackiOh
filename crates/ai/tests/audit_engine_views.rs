@@ -557,3 +557,128 @@ fn explore_forged() {
         println!("FOUND {key} x{count}\n     {example}");
     }
 }
+
+/// Every card played once from a fixed position; the opponent's hidden order (library, hand) reversed
+/// must not change what the other seat is shown unless the play makes a card public.
+#[test]
+fn explore_card_sweep() {
+    jackioh_cards::register_all();
+    std::panic::set_hook(Box::new(|_| {}));
+    let pool = pool();
+    let pick = |offset: usize, n: usize| -> Vec<String> {
+        let stride = pool.len() / n;
+        (0..n).map(|k| pool[(offset + k * stride) % pool.len()].clone()).collect()
+    };
+    let (lib1, lib2) = (pick(3, 12), pick(41, 12));
+    let (hand1, hand2) = (pick(17, 3), pick(29, 4));
+    let mut seen: IndexMap<String, (String, usize)> = IndexMap::new();
+    let only = std::env::var("AUDIT_CARD").ok();
+    for def in &pool {
+        if only.as_ref().is_some_and(|o| o != def) {
+            continue;
+        }
+        let built = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let mut hand = vec![def.clone()];
+            hand.extend(hand1.clone());
+            scenario(json!({
+                "seed": format!("sweep-{def}"),
+                "turn": 9,
+                "p1": { "hand": hand, "mana": 10, "library": lib1, "field": ["core-008", "core-019"], "graveyard": ["core-025", "core-005"] },
+                "p2": { "hand": hand2, "library": lib2, "field": ["core-025", "core-011"], "graveyard": ["core-008", "core-020"],
+                        "backrow": [{ "def": "core-096", "faceUp": false }] },
+            }))
+            .state()
+            .clone()
+        }));
+        let Ok(base) = built else { continue };
+        let me = PlayerId::P1;
+        let card_id = base.players[me].hand[0].id.clone();
+        let plays: Vec<ActionBody> = legal_actions(&base, me)
+            .into_iter()
+            .filter(|b| matches!(b, ActionBody::Play { instance_id, .. } if *instance_id == card_id))
+            .collect();
+        let stride = (plays.len() / 3).max(1);
+        for play in plays.iter().step_by(stride) {
+            for (name, viewer) in [("opp-library", PlayerId::P2), ("opp-hand", PlayerId::P2), ("opp-library", PlayerId::P1), ("opp-hand", PlayerId::P1), ("own-library", PlayerId::P1)] {
+                let hidden_side = if name == "own-library" { viewer } else { opponent_of(viewer) };
+                let mut twin = base.clone();
+                if name == "opp-hand" {
+                    twin.players[hidden_side].hand.reverse();
+                } else {
+                    twin.players[hidden_side].library.reverse();
+                }
+                let run = |start: &GameState| -> Result<(GameState, usize, Vec<String>), String> {
+                    let mut r = try_reduce(start, play, me)?;
+                    if let Some(e) = r.error.take() {
+                        return Err(format!("refused: {e}"));
+                    }
+                    let mut fresh = r.events.len();
+                    let mut state = r.state;
+                    let mut answers = Vec::new();
+                    for step in 0..6 {
+                        let Some(holder) = state.pending.as_ref().map(|p| p.player_id) else { break };
+                        if state.result.is_some() {
+                            break;
+                        }
+                        let legal = legal_actions(&state, holder);
+                        let Some(first) = legal.iter().find(|b| matches!(b, ActionBody::Answer { .. })) else { break };
+                        answers.push(js(&legal).to_string());
+                        let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                            reduce(&state, &Action::new(first.clone(), holder, format!("ans-{step}")))
+                        }))
+                        .map_err(|_| "panic in answer".to_string())?;
+                        fresh += r.events.len();
+                        state = r.state;
+                    }
+                    Ok((state, fresh, answers))
+                };
+                let (a, b) = (run(&base), run(&twin));
+                let (Ok((s1, n1, ans1)), Ok((s2, n2, ans2))) = (&a, &b) else {
+                    if let (Err(e), _) | (_, Err(e)) = (&a, &b)
+                        && !e.starts_with("refused")
+                    {
+                        seen.entry(format!("PANIC {def}: {}", e.chars().take(100).collect::<String>())).or_insert_with(|| (js(play).to_string(), 0)).1 += 1;
+                    }
+                    continue;
+                };
+                if ans1 != ans2 {
+                    continue;
+                }
+                let split = |state: &GameState, fresh: usize| {
+                    let mut view = js(&view_for(state, viewer));
+                    let events = view["events"].as_array().cloned().unwrap_or_default();
+                    let shown = viewed_of_newest(state, viewer, fresh).min(events.len());
+                    let new: Vec<Value> = events[events.len() - shown..].to_vec();
+                    view.as_object_mut().unwrap().remove("events");
+                    (view, new)
+                };
+                let ((v1, e1), (v2, e2)) = (split(s1, *n1), split(s2, *n2));
+                let board_same = v1 == v2;
+                let types = |events: &[Value]| events.iter().map(|e| e["type"].as_str().unwrap_or("?").to_string()).collect::<Vec<_>>();
+                if name == "own-library" && types(&e1).iter().any(|t| t == "drawn" || t == "addedToHand" || t == "promptOpened") {
+                    continue;
+                }
+                if e1 == e2 && board_same {
+                    continue;
+                }
+                let mut diffs = Vec::new();
+                if types(&e1) != types(&e2) {
+                    diffs.push(("SHAPE".to_string(), types(&e1).join(","), types(&e2).join(",")));
+                } else {
+                    diffs_into(&e1, &e2, &mut diffs);
+                }
+                diff_paths(&v1, &v2, "view", &mut diffs);
+                let (path, x, y) = diffs.first().cloned().unwrap_or_default();
+                let key = format!("{name} viewer={viewer} board_same={board_same} {def} {}", strip_indexes(&path));
+                seen.entry(key).or_insert_with(|| (format!("{path}: {x} | {y} for {}", js(play)), 0)).1 += 1;
+            }
+        }
+    }
+    for (key, (example, count)) in &seen {
+        println!("SWEEP {key} x{count}\n     {example}");
+    }
+}
+
+fn diffs_into(a: &[Value], b: &[Value], out: &mut Vec<(String, String, String)>) {
+    diff_paths(&Value::from(a.to_vec()), &Value::from(b.to_vec()), "new", out);
+}

@@ -1,6 +1,12 @@
 //! Audit of the engine's combat and damage (`combat.rs`, `damage.rs`, `subsystems/lethal.rs`,
 //! `query::combat_forecast`). Each test asserts the ruled behaviour and FAILS on the code as it stands,
 //! but the one named `control_…`, which passes and pins the baseline.
+//!
+//! One root cause, three cases: R44's lethal projection (`subsystems::lethal::is_lethal`) nets the heal
+//! of a defender's Lifesteal strike back (R176) through `strike_back_heal`, which returns the strike
+//! back's plain damage: no healing multiplier (R1180003), no lane strike (R1283), and no conversion of
+//! the heal into damage (R413). My Pawn (#96), its glow, the combat forecast's `overflow.kills` and the
+//! AI's reply model all read it.
 
 use jackioh_engine::testkit::*;
 
@@ -178,7 +184,6 @@ fn blood_moon_board(pawn: bool) -> (GameState, String, String) {
 fn r176_the_forecast_counts_a_converted_lifesteal_heal_as_damage() {
     let (state, attacker, defender) = blood_moon_board(false);
     let after = attack(&state, &attacker, &defender);
-    eprintln!("hero {} result {:?}", after.state.players[P2].hero.health, after.state.result.is_some());
     assert!(after.state.result.is_some(), "10 - 8 - 3 = -1: the hero falls");
     assert!(
         overflow_kills(&state, &attacker, &defender),
@@ -194,6 +199,56 @@ fn r44_my_pawn_fires_on_an_attack_a_converted_lifesteal_heal_makes_lethal() {
     let (state, attacker, defender) = blood_moon_board(true);
     let after = attack(&state, &attacker, &defender);
     let fired = after.events.iter().any(|event| matches!(event, GameEvent::TrapFired { .. }));
-    eprintln!("fired {fired} hero {} over {}", after.state.players[P2].hero.health, after.state.result.is_some());
     assert!(fired, "My Pawn stayed set on an attack that killed its hero");
+}
+
+const BANISHER: &str = "meditative-072"; // 2/1, "Whenever this damages a Unit, exile that Unit."
+
+/// p1's 10/10 Trample attacker faces p2's The Banisher (2/1) with First Strike; p2's hero has 5 life.
+/// The Banisher strikes first (§4.3 step 1) and its damage exiles the attacker (R1124), which "deals
+/// nothing" (§4.3: "Whichever is destroyed here deals nothing"; `combat::has_fallen` counts a Unit marked
+/// for exile), so no Trample excess reaches the hero. `pawn` sets My Pawn in p2's backrow.
+fn banisher_board(pawn: bool) -> (GameState, String, String) {
+    jackioh_cards::register_all();
+    let mut p2 = json!({
+        "field": [{ "def": BANISHER, "lane": 3 }],
+        "health": 5, "hand": [VANILLA], "library": [VANILLA, VANILLA, VANILLA],
+    });
+    if pawn {
+        p2["backrow"] = json!([MY_PAWN]);
+    }
+    let s = scenario(json!({
+        "seed": "audit-first-strike-exile", "active": "p1", "turn": 9,
+        "p1": {
+            "field": [{ "def": VANILLA, "lane": 3, "statsOverride": { "attack": 10, "health": 10 } }],
+            "hand": [VANILLA], "library": [VANILLA, VANILLA, VANILLA],
+        },
+        "p2": p2,
+    }));
+    let attacker = s.unit_at(P1, 3).id;
+    let defender = s.unit_at(P2, 3).id;
+    let mut state = s.state().clone();
+    find_instance_mut(&mut state, &attacker).expect("attacker").granted_keywords.push(Keyword::Trample);
+    find_instance_mut(&mut state, &defender).expect("defender").granted_keywords.push(Keyword::FirstStrike);
+    (state, attacker, defender)
+}
+
+/// Finding 4. R176: "An attacker that a First Strike defender destroys in §4.3's step 1 deals nothing
+/// at all, so none of its Trample excess can reach the hero and the attack is not lethal"; R4111000: a
+/// First Strike defender's blow counts "an exile on damage as [it counts] Poisonous". The forecast's own
+/// entry knows it (`forecast_attack`'s `exiled_first`), but R44's projection (`projected_damage_with`)
+/// asks `falls_to_first_strike` alone, which does not: it counts 9 Trample excess that never lands, and
+/// My Pawn cancels an attack that would have dealt its hero nothing.
+#[test]
+fn r176_my_pawn_stays_set_when_a_first_strike_banisher_exiles_the_attacker_first() {
+    let (state, attacker, defender) = banisher_board(false);
+    let after = attack(&state, &attacker, &defender);
+    // The engine's combat: the attacker is exiled before its blow, and the hero is untouched.
+    assert_eq!(after.state.players[P2].hero.health, 5);
+    assert!(find_instance(&after.state, &defender).is_some_and(|card| matches!(card.zone, Zone::Field { .. })));
+
+    let (state, attacker, defender) = banisher_board(true);
+    let after = attack(&state, &attacker, &defender);
+    let fired = after.events.iter().any(|event| matches!(event, GameEvent::TrapFired { .. }));
+    assert!(!fired, "My Pawn fired on an attack that deals its hero nothing");
 }
