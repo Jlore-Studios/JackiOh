@@ -19907,6 +19907,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 510,
       "started_at": "2026-11-24T16:14:16Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -44056,9 +44057,33 @@
         "title": "Patch: the AI's Taunt walk reads the slash's halves",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-4"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "a4d54c35cf6033002d6a4b9a16e9039d2b2dee9f",
+        "issue": 4673,
+        "merged_at": "2026-11-24T18:29:02Z",
+        "n": 510,
+        "pr": 4724,
+        "queued_at": "2026-11-24T18:29:02Z",
+        "sha": "2c81129d1d1391cef86ca272b5231c961d594776",
+        "status": "queued",
+        "title": "Patch: deeper card stats, S1, Radiant and Normal faces read on their own scales",
+        "tries": 0
       }
     ],
-    "count": 509
+    "count": 510
   },
   "statistics": {
     "at": "2026-11-24T18:18:28Z"
