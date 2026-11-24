@@ -20268,7 +20268,7 @@
     "4734": {
       "action": "plan",
       "asks": [],
-      "failures": 1,
+      "failures": 2,
       "forced": false,
       "handoff": {
         "at": "2026-11-24T16:24:40Z",
