@@ -844,11 +844,8 @@ fn collect(sink: &mut EngineSink<'_>, dying: &[CardInstance], cause: DeathCause)
                 .push(card.snapshot.clone());
         }
         let runs = extra.get(&card.snapshot.controller).copied().unwrap_or(0);
-        if runs > 0
-            && crate::scripts::script_of(sink.state, &card.snapshot)
-                .death
-                .is_some()
-        {
+        // R823, R1107: a granted Death is rerun too, as the pass runs it (own first, then each grant).
+        if runs > 0 && crate::grants::death_hook_of(sink.state, &card.snapshot).is_some() {
             for _ in 0..runs {
                 pass.owed.push(card.snapshot.clone());
             }
