@@ -1117,6 +1117,8 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 bounce_attacker: flags(|f| f.bounce_attacker),
                 attack_joiners: flags(|f| f.attack_joiners),
                 stack_base: flags(|f| f.stack_base),
+                // R4665000: a fusion plays as its host does, never stacking on a target.
+                stacks_on_target: None,
                 stack_base_buffs: numbers(|f| f.stack_base_buffs),
                 tribute_cheap: numbers(|f| f.tribute_cheap),
                 lane_multiplier: numbers(|f| f.lane_multiplier),
