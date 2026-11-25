@@ -1,7 +1,7 @@
 {
   "title": "Patch: Galaxia's Attack goes to the first Unit played each turn only, not to the second when the first did not stay on the field",
   "sources": "issue #4826",
-  "notes": "Issue #4826: S+ #74 Galaxia now records grantedTurn on any resolved Unit play of her controller's that resolves while she stands, and buffs only if the Unit still stands face-up on the field, so a first Unit that left the field during resolution does not give the Attack to the second Unit played that turn (R4826000).",
+  "notes": "Issue #4826: S+ #74 Galaxia now records grantedTurn on any resolved Unit play of her controller's that resolves while she stands, and buffs only if the Unit stayed in play (*permanent) and still stands face-up on the field, so a first Unit that left the field during resolution (e.g. dying and returning via Reborn) does not get the Attack buff and does not give it to the second Unit played that turn (R83, R174, R4826000).",
   "player": {
     "title": "Galaxia buffs the first Unit played only",
     "new": [],

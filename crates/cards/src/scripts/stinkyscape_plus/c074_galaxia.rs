@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #74 Galaxia (§6.2, §10.5 step 7; R119, R1420, R2179002, R3568000, R4826000): (2) Unit, Epic,
+//! SPEC §8.12 S+ #74 Galaxia (§6.2, §10.5 step 7; R83, R119, R174, R1420, R2179002, R3568000, R4826000): (2) Unit, Epic,
 //! 4/6 → 8/12, a card of the Stinkyscape+ set. Built by S20 (#3568).
 //!   Base:    "Aura: The first Unit you play each turn gets +{attack} Attack." (attack 3)
 //!   Radiant: the same at +6 attack.
@@ -14,8 +14,9 @@
 //! the turn she last gave the attack, which ends that turn's offer; a new turn, or a new arrival after she
 //! left, is a new offer. A card set face-down is no Unit (R783004), a cast on draw is no play (R2179002),
 //! and only her controller's plays count. A first Unit that leaves the field before resolving spends the
-//! turn's offer without receiving the buff, and the next Unit played that turn is not the first (R4826000).
-//! Both faces are one script: the Radiant face's 6 is her declared `attack`.
+//! turn's offer without receiving the buff, and the next Unit played that turn is not the first (R4826000);
+//! if it returned before resolution ends (e.g. via Reborn), it is a new arrival and not still in play on
+//! that stay (R83, R174). Both faces are one script: the Radiant face's 6 is her declared `attack`.
 
 use jackioh_engine::prelude::*;
 
@@ -25,11 +26,13 @@ pub const ID: &str = "stinkyscapeplus-074";
 const GRANTED_TURN: &str = "grantedTurn";
 
 /// Whether this event is her controller's resolved play of a Unit that the ruling counts
-/// (R119, R783004, R2179002, R3568000, R4826000), returning its instance id.
-fn played_unit(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
+/// (R119, R783004, R2179002, R3568000, R4826000), returning its instance id and whether it stayed
+/// in play on that stay (`permanent`, R174).
+fn played_unit(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<(String, bool)> {
     let GameEvent::CardResolved {
         player,
         instance_id,
+        permanent,
         ..
     } = event
     else {
@@ -44,12 +47,12 @@ fn played_unit(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
     {
         return None;
     }
-    Some(instance_id.clone())
+    Some((instance_id.clone(), *permanent))
 }
 
 fn first_unit() -> TriggerDef {
     TriggerDef::new("g74-first-unit", &[GameEventType::CardResolved], |ctx, event| {
-        let Some(unit_id) = played_unit(&*ctx, event) else {
+        let Some((unit_id, permanent)) = played_unit(&*ctx, event) else {
             return vec![];
         };
         let turn = ctx.state.turn;
@@ -57,14 +60,17 @@ fn first_unit() -> TriggerDef {
             return vec![];
         }
         let mut effects = vec![remember(json_as(json!({ "key": GRANTED_TURN, "value": turn })))];
-        // R4826000: the attack buff is given only if the played Unit still stands face-up on the field
-        // under her controller's control once its play resolves.
+        // R83, R174, R4826000: the attack buff is given only if the played Unit stayed in play
+        // (`permanent`) and still stands face-up on the field under her controller's control once its
+        // play resolves. A Unit that left the field during resolution (e.g. dying to its Cry and
+        // returning via Reborn) is a new arrival and not still in play on that stay (`permanent` is false).
         let state: &GameState = &*ctx.state;
-        let standing = find_instance(state, &unit_id).is_some_and(|unit| {
-            unit.zone.z() == ZoneName::Field
-                && unit.controller == ctx.controller
-                && card_type_of(state, unit) == CardType::Unit
-        });
+        let standing = permanent
+            && find_instance(state, &unit_id).is_some_and(|unit| {
+                unit.zone.z() == ZoneName::Field
+                    && unit.controller == ctx.controller
+                    && card_type_of(state, unit) == CardType::Unit
+            });
         if standing {
             effects.push(buff(json_as(json!({
                 "target": { "of": "instance", "instanceId": unit_id },
@@ -89,7 +95,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S+ #74 Galaxia — SPEC §8.12 row 74 (R119, R2179002, R3568000, R4826000).
+// S+ #74 Galaxia — SPEC §8.12 row 74 (R83, R119, R174, R2179002, R3568000, R4826000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -260,6 +266,40 @@ mod tests {
             s.stats(second_id.as_str()).attack,
             3 + bonus(false),
             "the first Unit to resolve gets the buff"
+        );
+    }
+
+    #[test]
+    fn r174_r4826000_first_unit_with_reborn_dying_to_its_cry_is_not_buffed() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": {
+                "hand": [OCCIDENTAL, SECOND, FILLER],
+                "field": [{ "def": ID, "lane": 1 }],
+                "mana": 10,
+                "library": [FILLER, FILLER, FILLER],
+            },
+            "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+        }));
+        // Give Occidental Reborn while in hand.
+        s.card_mut(OCCIDENTAL).granted_keywords.push(Keyword::Reborn);
+        // Occidental destroys all permanents in lane 5, destroying itself upon arrival.
+        // Reborn brings it back to lane 5, but under R174/R83 it left the field during resolution
+        // and is a new arrival (*permanent is false).
+        s.play(OCCIDENTAL, json!({ "zone": 5 }));
+        let occ_id = s.unit_at(P1, 5).id;
+        assert_eq!(
+            s.stats(occ_id.as_str()).attack,
+            9,
+            "Occidental returned via Reborn does not receive the first-unit buff"
+        );
+        // The turn's offer is spent, so the second Unit also receives no buff.
+        s.play(SECOND, json!({ "zone": 2 }));
+        let second_id = s.unit_at(P1, 2).id;
+        assert_eq!(
+            s.stats(second_id.as_str()).attack,
+            3,
+            "the second Unit played this turn is not the first"
         );
     }
 }
