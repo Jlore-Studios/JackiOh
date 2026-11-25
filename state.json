@@ -21583,7 +21583,16 @@
       "feedback_since": "2026-11-25T19:53:52Z",
       "issue": 4925,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "04b8c10986f012c6de180079ae776ded724acb79",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
