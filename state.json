@@ -20591,15 +20591,8 @@
       "taken_asks": []
     },
     "4843": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45566857520",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-25T07:25:04Z",
-        "until": "2026-11-25T07:55:04Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -20611,10 +20604,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "d) < (select at, id from public.admin_actions where id = $2))\n- ```\n- Copy the surrounding statement shape from the current query; only the `where` line's first predicate changes.\n- 2. **`crates/server/src/admin/store.rs`, `fake::actions_page`.** Mirror the SQL exactly. Before filtering, resolve the anchor owned pair `filter.before_id.and_then(|before| tables.actions.iter().find(|row| row.id == before).map(|row| (row.at, row.id)))`, then replace the `before_id` filter with: no\u2026\n- 3. **`crates/server/src/admin/store.rs` docs.** Rewrite the `before_id` field doc (\u00a780-84): it is the `id` of the last row of the shown page, and paging answers rows strictly older than that row in `(at desc, id desc)` order, not rows with a smaller id. Adjust the `admin_actions_page` / `admin_acti\u2026\n- 4. **`crates/server/tests/store/contract.rs`.** Add the issue's sketch as `audit_pages_when_at_and_id_disagree` in `mod dev_dashboard`, next to `audit_pages_by_cursor_and_filter`, using that file's `action()`, `q!`, `active_profile`, `harness.now()` helpers; use `at` values `[now + 1, now, now + 2]\u2026\n- 5. **`crates/server/src/api/admin.rs` and `crates/server/README.md`.** Update only prose: `before_id` is the cursor naming the shown page's last row (comparison follows the `(at, id)` sort key); `nextBeforeId` stays the last row's id when the page is full and a read with it answers the next older p\u2026\n- 6. **`apps/admin/src/Audit.tsx`.** Add `const [readFilter, setReadFilter] = useState(applied)` holding the filter the shown rows were read with, and `const generation = useRef(0)`. In the first-page effect, bump `generation.current` at the start; on success set `readFilter` to the filter that read \u2026\n- 7. **`apps/admin/src/test/fakes.ts`.** Widen `Route` to `Reply | ((call: Call) => Reply | Promise<Reply>) | \"never\"` and make the stubbed fetch executor `async`, awaiting a function route's result before building the `Response`. Sync routes behave exactly as before.\n- 8. **`apps/admin/src/Dashboard.test.tsx`, new test 1.** \"Older after a failed filtered read uses the shown list's filter\": fail `GET /api/admin/audit?profile_id=p-dev` with the file's `refusal`, Apply the profile filter, wait for the load error, assert two rows remain, press Older, and assert exact\u2026\n- 9. **`apps/admin/src/Dashboard.test.tsx`, new test 2.** \"drops an Older answer that lands after a new first page\": gate `GET /api/admin/audit?before_id=6` behind a deferred promise, press Older, Apply a canned filtered first page (`nextBeforeId: null`), wait for the single filtered row, then resolv\u2026\n- 10. **`apps/admin/README.md`.** Extend the Audit bullet: Older appends the next page of the shown list's filter past `nextBeforeId`, and an Older answer overtaken by a newer first page is dropped.\n- ## Tests\n- - `crates/server/tests/store/contract.rs`, `audit_pages_when_at_and_id_disagree`: asserts paged reads over `at` values `[now+1, now, now+2]` return every row exactly once. Run `cargo test -p jackioh-server --test server_store audit_pages`.\n- - `crates/server/tests/api/admin.rs` (existing `audit_read_pages_by_cursor_and_filters`, `audit_read_filters_by_since_and_until`): regression only. Run `cargo test -p jackioh-server --test server audit`.\n- - `apps/admin/src/Dashboard.test.tsx`, \"Older after a failed filtered read uses the shown list's filter\" and \"drops an Older answer that lands after a new first page\". Run `pnpm exec vitest run --project admin apps/admin/src/Dashboard.test.tsx`, plus `pnpm --dir apps/admin typecheck` and `pnpm exec\u2026\n- - Also run `cargo fmt --check`, `cargo clippy -p jackioh-server --all-targets -- -D warnings`, and `cargo jackioh spec check`.\n- ## Done when\n- - [ ] Tuple-cursor paging in both stores; every audit row appears exactly once when `at` and `id` disagree.\n- - [ ] `before_id` stays on the wire; unknown ids answer an empty page in both stores alike.\n- - [ ] Older sends the shown list's filter; stale Older answers change nothing; failed filtered reads keep old rows without orphaning the cursor.\n- - [ ] All commands under Tests pass, including the new contract test (memory half) and both new dashboard tests.\n- - [ ] `cargo fmt --check`, the `jackioh-server` clippy gate, admin typecheck/eslint, and `cargo jackioh spec check` pass.\n- - [ ] The smaller neighbour noted in the issue (`GET /api/admin/news` paging past 100 posts) is left untouched.\n- ## Risks\n- - A `before_id` naming no row now answers an empty page (subselect finds nothing) instead of `id < $2`. Nothing in the tree relies on the old behavior (no such test exists), and the API documents the value only as the previous page's cursor, but note the change.\n- - Tuple comparison on `timestamptz` trusts equal `at` inputs to compare equal; rows sharing a millisecond tie-break by `id desc` exactly as the sort does, in both stores.\n- - The generation guard leaves `loading` to the newer first page's own resolve; Audit's first-page effect always settles `setLoading`, so no stuck spinner, but keep the effect's `live` guard and do not disable Apply/Refresh.\n- - `fakes.ts` becomes async: existing sync and `\"never\"` routes are unaffected (`Promise.resolve` unwrapping preserved), but every admin test exercises the stub, so the full admin project run covers it.\n- ## Open questions\n- None for a person. Difficulty stays medium: the change is confined to the server's admin store plus one app component, needs no migration (the 0080 index already orders `(at desc, id desc)`), no engine/AI work, and no new ruling \u2014 the fix implements R3074000's existing \"next older page with no gaps\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4843 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4843/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-25T07:16:28Z",
       "owner_why": "it plans it",
@@ -20627,9 +20619,9 @@
       "provider": "muse",
       "queued_at": "2026-11-24T21:27:48Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45566857520",
+      "run_id": "pending:3157ad9d-1795591640",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-25T07:16:28Z",
+      "started_at": "2026-11-25T07:27:57Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -22584,9 +22576,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T07:27:06Z",
+    "at": "2026-11-25T07:27:57Z",
     "url": "",
-    "what": "revise #4884 on claude-7"
+    "what": "build #4843 on muse"
   },
   "last_sweep": {
     "at": "2026-11-25T07:09:54Z",
