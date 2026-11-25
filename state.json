@@ -17545,17 +17545,18 @@
       "merge_owner": "claude-8",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-1",
       "question": "",
       "queued_at": "2026-11-24T21:24:26Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "45516731495",
+      "run_id": "pending:baed7c2e-1795582489",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 525,
-      "started_at": "2026-11-25T00:15:55Z",
+      "started_at": "2026-11-25T04:55:26Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -22154,9 +22155,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T04:54:37Z",
+    "at": "2026-11-25T04:55:26Z",
     "url": "",
-    "what": "spot-check #4875 on claude-1"
+    "what": "spot-check #4726 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-25T04:35:37Z",
@@ -44699,7 +44700,15 @@
         "n": 525,
         "pr": 4726,
         "queued_at": "2026-11-25T03:11:23Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "pending:baed7c2e-1795582489",
         "sha": "eeea5aacb6b2b800515b3f45fdd3b1bdbe43d57c",
+        "started_at": "2026-11-25T04:55:26Z",
         "status": "queued",
         "title": "Patch: deeper card stats, S0, each play's choice and each made card's maker in the record",
         "tries": 0
