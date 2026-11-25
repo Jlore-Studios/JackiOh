@@ -406,7 +406,10 @@ and once a step has run, for each such card it cast without playing it, from a g
 A step whose surcharge the counter cannot pay is refused in the beam (`simulate` answers `Some(Err)` and
 the beam tries the next), but cuts the opponent's reply (`simulate_reply` answers `None`, as for a spent
 counter: `reduce_for`, `best_try`), since a skipped reply step reads as an opponent who passed it up
-(R4809000).
+(R4809000). The lethal solver's first walk, depth-first on `AI_SEARCH.lethal_quick_nodes`, skips such a
+step too (`simulate`'s refusal is `UNPAID_SURCHARGE`), and a line whose replay on another
+determinization meets one, but then ends cut rather than searched, so the best-first walk still runs on
+the rest of the solver's allowance (R4807000).
 Such a step, once run, is kept for the rest of its decision (`SimMemo` on the root counter, at most
 `AI_SEARCH.memo_steps`), and the same step from the same state, nonce records aside, is answered from
 it without the engine, its nonce record rebuilt as the engine builds it and its nodes charged as before,

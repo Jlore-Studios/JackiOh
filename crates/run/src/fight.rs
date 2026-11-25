@@ -11,7 +11,7 @@ use jackioh_engine::replay::ReplayInput;
 use jackioh_engine::state::{
     CreateGameOptions, GameState, SetupKind, create_recorded_game, starting_hero_health, validate_setup,
 };
-use jackioh_engine::wire::{CardDefs, DeckMark, GameEvent, PlayerId, Winner};
+use jackioh_engine::wire::{CardDefs, DeckMark, GameEvent, GameOverReason, PlayerId, Winner};
 use serde::{Deserialize, Serialize};
 
 use crate::config::{RUN_ELITE_TIERS, RUN_STARTER_CARDS, RUN_TIERS};
@@ -242,13 +242,31 @@ impl Tally {
     }
 }
 
+/// R4852000: `run_fight_report`'s refusal of a game a Glitch voided (R679), which has no result.
+pub(crate) const VOIDED_FIGHT: &str = "a Glitch voided the fight, so it never happened: it is dealt again";
+
 /// DR14: the `RunAction::FightOver` a finished fight sends, folded from its record as `summarize_game`
 /// folds one (an action the engine refuses is skipped). `won` is `human`'s win; `hp` its hero's health
 /// at the end; `damage_dealt` every `damage` event's amount on a target the enemy controls, its hero
 /// or a unit; `healing_done` every `healed` event's on `human`'s side; `cards_drawn` `human`'s draws
-/// after the opening deal; `turns` the game's. A setup the engine refuses, or a game with no result,
-/// is refused.
+/// after the opening deal; `turns` the game's. A setup the engine refuses, a game with no result, or
+/// one a Glitch voided (R4852000: it never happened, R679, and the run deals it again), is refused.
 pub fn run_fight_report(game: &ReplayInput, human: PlayerId) -> Result<RunAction, String> {
+    let (reason, action) = fight_report(game, human)?;
+    // R4852000: a voided fight is no "other end" of §15.6: it reports nothing, and the run stays on it.
+    if reason == GameOverReason::Voided {
+        return Err(VOIDED_FIGHT.to_string());
+    }
+    Ok(action)
+}
+
+/// DR14: the fold behind `run_fight_report`: the `FightOver` a finished game sends with the reason it
+/// ended, a void read as any other end (no winner, so no win). `run_fight_report` refuses a void
+/// (R4852000); `assault_fight_report` does not yet (#4576).
+pub(crate) fn fight_report(
+    game: &ReplayInput,
+    human: PlayerId,
+) -> Result<(GameOverReason, RunAction), String> {
     // The fold's JSON is `createGame`'s plus its `log` (as the browser's `fold` reads it), so every
     // setup field the record carries, the deck marks among them, reaches the game unnamed here.
     let options: CreateGameOptions = serde_json::to_value(game)
@@ -278,12 +296,13 @@ pub fn run_fight_report(game: &ReplayInput, human: PlayerId) -> Result<RunAction
     let outcome = state
         .result
         .ok_or("the game is not over: only a finished fight reports")?;
-    Ok(RunAction::FightOver {
+    let action = RunAction::FightOver {
         won: outcome.winner == Winner::from(human),
         hp: state.players[human].hero.health,
         damage_dealt: tally.damage_dealt,
         healing_done: tally.healing_done,
         cards_drawn: tally.cards_drawn,
         turns: state.turn,
-    })
+    };
+    Ok((outcome.reason, action))
 }

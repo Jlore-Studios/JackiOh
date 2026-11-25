@@ -5,7 +5,9 @@
 // board's rail shows beside the run's timer and the chip that lists the live modifiers (B22, B24,
 // R3912000), and each side's relics sit in a tray beside its hero (B23). There is no Play again: once
 // the game is over the page asks the worker for its report, the run's `FightOver` (B25), and Continue
-// sends it to the run, which a lost fight ends (B26).
+// sends it to the run, which a lost fight ends (B26). A fight a Glitch voided never happened (R679,
+// R4852000): it has no report, and its panel's Deal it again deals it fresh from its seed, as Try
+// again does.
 //
 // The board is the practice route's (`routes/practice.tsx`): the same controller, pacing
 // (`practice/aiTable.ts`: the AI waits on `data-animating`, `data-showcase` and `data-speaking`, #2925),
@@ -143,8 +145,10 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
   const [report, setReport] = useState<Report | null>(null);
   const [reportAttempt, setReportAttempt] = useState(0);
   const over = state.phase === "over";
+  // R4852000: a fight a Glitch voided never happened (R679): no report is asked for, and the run stays on it.
+  const voided = over && state.snapshot?.view.result?.reason === "voided";
   useEffect(() => {
-    if (controller === null || !over) return;
+    if (controller === null || !over || voided) return;
     let canceled = false;
     controller.runReport().then(
       (action) => {
@@ -157,7 +161,7 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     return () => {
       canceled = true;
     };
-  }, [controller, over, reportAttempt]);
+  }, [controller, over, voided, reportAttempt]);
   const shownReport = report !== null && report.controller === controller ? report : null;
   const action = shownReport !== null && "action" in shownReport ? shownReport.action : null;
 
@@ -293,7 +297,17 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
   const tier = String(setup.enemy.tier);
   const tierLabel = node?.kind === "elite" ? t("Elite, tier {tier}", { tier }) : t("Tier {tier}", { tier });
 
-  const resultActions = (
+  const resultActions = voided ? (
+    <>
+      <p className="result-overlay__note" data-testid={fightTestid.voided} role="status">
+        {t("A Glitch voided this fight, so it never happened. Your run stands where it was.")}
+      </p>
+      <button type="button" className="button-primary" data-testid={fightTestid.redeal} onClick={onRetryFight}>
+        {t("Deal it again")}
+      </button>
+      <MainMenuButton testid={fightTestid.resultMenu} onClick={onMenu} />
+    </>
+  ) : (
     <>
       {shownReport !== null && "error" in shownReport ? (
         <>
