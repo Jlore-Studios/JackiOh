@@ -22366,17 +22366,18 @@
       "merge_owner": "claude-1",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-1",
+      "provider": "claude-7",
       "question": "",
       "queued_at": "2026-11-25T10:58:21Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "45600440603",
+      "run_id": "pending:a4c43914-1795607628",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 545,
-      "started_at": "2026-11-25T11:01:01Z",
+      "started_at": "2026-11-25T11:54:21Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -23498,9 +23499,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T11:53:36Z",
+    "at": "2026-11-25T11:54:21Z",
     "url": "",
-    "what": "review #4912 on claude-6"
+    "what": "spot-check #4890 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-25T11:38:34Z",
@@ -46064,7 +46065,15 @@
         "n": 545,
         "pr": 4890,
         "queued_at": "2026-11-25T11:42:26Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "run_id": "pending:a4c43914-1795607628",
         "sha": "6dbc748ffd6b1f2d7a1f274d08a0779ff40e911b",
+        "started_at": "2026-11-25T11:54:21Z",
         "status": "queued",
         "title": "Patch: Galaxia's Attack goes to the first Unit played each turn only, not to the second when the first did not stay on the field",
         "tries": 0
