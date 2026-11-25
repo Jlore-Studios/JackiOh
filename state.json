@@ -22601,13 +22601,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [],
-        "sha": "2a9f9c0dcdfc7fed95bbfb2e72acf5aacd3f1121",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "muse",
+            "provider": "muse",
+            "run": "45653739613",
+            "tier": "medium"
+          }
+        ],
+        "sha": "7b3b4bfce1e60dc68fbf820930caef4a1fa7c2e5",
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "4895": {
