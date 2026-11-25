@@ -69,7 +69,7 @@ use crate::scripts::meditative_plus::{
     c022_mountaintop_garden, c023_enormous_elderberry,
 };
 use crate::scripts::stinkyscape::{
-    c004_olivian_expanse, c007_the_greatest_heist, c009_ticketed, c010_2_divine_spirit,
+    c004_olivian_expanse, c007_the_greatest_heist, c009_ticketed, c010_1_inner_fire, c010_2_divine_spirit,
     c011_2_arcane_missiles, c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior, c018_3_casper,
     c018_imitated_instrumentality, c023_warp_disruptor, c024_warp_disruptor_ii, c026_zolarketh,
     c033_drone_core_vii, c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x, c042_core_researcher,
@@ -1416,6 +1416,13 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c102_cosmic_bard::ID,
         "fragment:radiant-cosmic-bard-leaves-both-drawn-units-at-the-cheapest",
         c102_cosmic_bard::script_kept_4832,
+    ),
+    // #4840 (R1867002): the buffs before the unfloored-Attack reading (R4779000: keyed by the
+    // pending fragment, so versions shipped while the branch waits stay covered).
+    (
+        c010_1_inner_fire::ID,
+        "fragment:inner-fire-reads-attack-below-0",
+        c010_1_inner_fire::script_v0_6_13h,
     ),
 ];
 
