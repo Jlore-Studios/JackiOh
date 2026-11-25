@@ -20527,15 +20527,8 @@
       "taken_asks": []
     },
     "4833": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45614856007",
-        "model": "sonnet",
-        "provider": "claude-6",
-        "since": "2026-11-25T12:41:04Z",
-        "until": "2026-11-25T13:11:04Z"
-      },
       "died": 1,
       "failures": 0,
       "forced": false,
@@ -20548,10 +20541,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md 2>/dev/null | head -60; ls .bot-plan.md 2>&1; cat crates/cards/src/scripts/stinkyscape_plus/c125_omura.rs; sed -n 55,100p crates/cards/src/scripts/stinkyscape_plus/c124\u2026\n- Bash: {\"command\": \"grep -n \\\"offered\\\\|activations_of\\\\|activate_actions_for\\\" crates/cards/src/scripts/stinkyscape_plus/c124_sei.rs | head; grep -n \\\"fn activations_of\\\" -A12 crates/engine/src/testkit/*.r\u2026\n- Bash: {\"command\": \"sed -n 190,222p docs/ADDING_CARDS.md; sed -n 145,175p crates/cards/src/scripts/stinkyscape_plus/c124_sei.rs; ls crates/cards/patches/pending | tail -4; f=$(ls crates/cards/patches/pendin\u2026\n- Bash: {\"command\": \"git show 6dbc748ffd --stat | head -20; git show 6dbc748ffd -- 'crates/cards/patches/pending/*' | head -50; grep -n \\\"scenario\\\\|fn weapon_board\\\" crates/cards/src/lib.rs | head\"}\n- Bash: {\"command\": \"sed -n 95,125p crates/cards/src/scripts/stinkyscape_plus/c124_sei.rs; grep -n \\\"pub fn weapon_board\\\" -A15 crates/cards/src/*.rs | head -30\"}\n- Bash: {\"command\": \"git show 6dbc748ffd --stat | tail -8; git log --oneline -5 -- crates/cards/patches/pending | head; grep -n \\\"125\\\" spec/08-catalog/8.12-stinkyscape-plus.md | head -5; grep -rn \\\"has not \u2026\n- Bash: {\"command\": \"git show a9c2665f8d --stat | tail -8; git show a9c2665f8d -- crates/cards/patches/pending | head -40; grep -n \\\"stinkyscapeplus-124\\\\|stinkyscapeplus-125\\\" crates/cards/patches/patches.j\u2026\n- Bash: {\"command\": \"grep -n \\\"^| 124 \\\" spec/08-catalog/8.12-stinkyscape-plus.md | cut -c1-900; grep -n \\\"R703\\\" -r spec/rulings/R0703.md | head -3; grep -n \\\"proven_in\\\" -A4 spec/rulings/R0703.md\"}\n- said: **Goal.** Omura's Activate (S+ #125, `omura`) is not offered while the opponent has no Unit, and `reduce` refuses it then, so the 3-turn cooldown cannot be started on nothing. This is done the way Sei's is: the target is marked `required: Some(true)` (R703, R3560008). Nothing else about the card ch\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-25T12:33:09Z",
       "owner_why": "handed off from `muse`: `muse` has no runner free where it runs",
@@ -20564,9 +20556,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-25T05:52:45Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45614856007",
+      "run_id": "pending:2cbb5be4-1795610911",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-25T12:33:09Z",
+      "started_at": "2026-11-25T12:49:05Z",
       "stop_requested": false,
       "strike_log": [
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
@@ -24160,9 +24152,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T12:48:18Z",
+    "at": "2026-11-25T12:49:05Z",
     "url": "",
-    "what": "review #4917 on claude-6"
+    "what": "build #4833 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-25T12:26:59Z",
