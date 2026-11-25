@@ -100,7 +100,7 @@ pub fn hall_of_fame(
     fn gap(high: &PlayVersionFigures, low: &PlayVersionFigures) -> Option<f64> {
         let (high_rate, _, high_low) = rated(high)?;
         let (low_rate, _, low_high) = rated(low)?;
-        (high_rate > low_rate).then(|| high_low - low_high)
+        (high_rate > low_rate).then_some(high_low - low_high)
     }
     // Most nerfed: the biggest falls, ranked by what the figures still show once both sides' noise
     // is out; the before version ranks, the after one may be short of games.
