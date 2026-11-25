@@ -105,7 +105,7 @@ E2E_ARTIFACTS=artifacts/my-run E2E_KEEP_ASSETS=1 pnpm exec cypress run --spec â€
 ```
 
 `E2E_ARTIFACTS` moves the e2e and the component folders alike (the CLI's `--config
-screenshotsFolder` does not reach the component block). Stop a server you started by its port
+screenshotsFolder` does not reach the component block). It also moves the e2e downloads folder and the replay-task logs: with `E2E_ARTIFACTS=artifacts/my-run`, downloads land in `artifacts/my-run/downloads` and each replay log in `artifacts/my-run/<label>.json` (e.g. `01-hotseat-full-game.json`). Stop a server you started by its port
 (`lsof -tiTCP:<port> -sTCP:LISTEN | xargs kill`), never by a process-name pattern, which also ends
 everyone else's. Headless Chrome's default window crops a capture taller than about 633 px; pass
 `--config viewportHeight=â€¦` (or `cy.viewport`) with a browser launched at a larger `--window-size`

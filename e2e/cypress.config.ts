@@ -38,12 +38,12 @@ export default defineConfig({
     specPattern: "cypress/e2e/**/*.cy.ts",
     supportFile: "support/e2e.ts",
     fixturesFolder: "fixtures",
-    // E2E_ARTIFACTS moves the screenshots and videos (and E2E_KEEP_ASSETS=1 stops the trash at the
-    // start of a run), so two runs on one machine never delete each other's evidence (e2e/README.md).
+    // E2E_ARTIFACTS moves the screenshots, videos and downloads (and E2E_KEEP_ASSETS=1 stops the
+    // trash at the start of a run), so two runs on one machine never delete each other's evidence (e2e/README.md).
     screenshotsFolder: `${process.env.E2E_ARTIFACTS ?? "artifacts"}/screenshots`,
     videosFolder: `${process.env.E2E_ARTIFACTS ?? "artifacts"}/videos`,
     trashAssetsBeforeRuns: process.env.E2E_KEEP_ASSETS !== "1",
-    downloadsFolder: "artifacts/downloads",
+    downloadsFolder: `${process.env.E2E_ARTIFACTS ?? "artifacts"}/downloads`,
     video: false,
     screenshotOnRunFailure: true,
     // BUILD M5-T1 renders at 1280x720; the responsive case (390x844) is a component test there,
