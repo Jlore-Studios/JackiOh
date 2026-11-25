@@ -24947,6 +24947,8 @@
       }
     },
     "4946": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-25T15:21:41Z",
@@ -24960,8 +24962,11 @@
         "trail": "-4817/spec/rulings/R4817000.md\", \"old_string\": \"and reading the running face's Brittle each time the count is read (`active_britt\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4817/spec/rulings/R4817001.md\", \"old_string\": \"and so do Core #25 and Core #56 Jilliax,\", \"new_string\": \"and so do Core #25 4-ma\u2026\n- Bash: {\"command\": \"until grep -q '^EXIT' /tmp/classify2.txt 2>/dev/null && grep -q TOOLS_DONE /tmp/tools_tests.txt 2>/dev/null; do sleep 10; done; grep -v Compiling /tmp/classify2.txt | tail -8; echo ====;\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index('## State'); end=s.index('## Log')\\nnew='''## State\\n\\n- Run 3 (2026-11-25, `claude-8`, opus). Runs 1 (plan) and 2 (\u2026\n- Bash: {\"command\": \"grep -n 'mutants' .github/workflows/*.yml | head -5\", \"description\": \"Check whether CI runs the mutants script\"}\n- Bash: {\"command\": \"ls crates/cards/*.json crates/cards/data 2>/dev/null | head; grep -rn '\\\"kind\\\": *\\\"Brittle\\\", *\\\"n\\\": *0' crates/cards/ --include=*.json | head -3\", \"description\": \"Check the catalog fo\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\nimport json\\nd=json.load(open('crates/cards/catalog.json'))\\ncards=d['cards'] if isinstance(d,dict) and 'cards' in d else d\\nvals=cards.values() if isinstance(cards\u2026\n- said: No card prints Brittle 0, so `printed > 0` behaves exactly like `is_some()`, and a `>`\u2192`>=` mutant of it would survive. I'll simplify to `is_some()`.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4817/crates/engine/src/brittle_count.rs\", \"old_string\": \" let face_prints = numbered_sum(&running_face(state, &card).keywords, K\u2026\n- Bash: {\"command\": \"cat rustfmt.toml; cargo fmt --check 2>&1 | head -20\", \"description\": \"Check rustfmt settings and formatting\"}\n- Bash: {\"command\": \"until grep -q '^EXIT' /tmp/classify2.txt 2>/dev/null && grep -q TOOLS_DONE /tmp/tools_tests.txt 2>/dev/null; do sleep 10; done; grep -v Compiling /tmp/classify2.txt | tail -8; echo ====;\u2026\n- Bash: {\"command\": \"grep -v Compiling /tmp/classify2.txt | tail -8; echo ====; cat /tmp/tools_tests.txt\", \"description\": \"Read classify rerun and tools test status\"}\n- said: Classify now passes with the fragment (exit 0, the claim matches). Tools tests are still running.\n- Bash: {\"command\": \"echo \\\"- run 3: classify rerun with fragment: EXIT 0 (claims match). Simplified face_prints to is_some() (no card prints Brittle <= 0). Waiting on tools tests; then fuzz, r4817 rerun, cl\u2026\n- TaskStop: {\"task_id\": \"b22baq4q5\"}\n- TaskStop: {\"task_id\": \"bx1099qi6\"}\n- said: The scratch worktree has done its job, so I'm removing it and its branch.\n- Bash: {\"command\": \"git -C ../jackioh-wt/classify log --oneline -3; git worktree remove --force ../jackioh-wt/classify && git branch -D wt/classify; git worktree list | head; git branch --list 'wt/*'\", \"des\u2026\n- Bash: {\"command\": \"until grep -q TOOLS_DONE /tmp/tools_tests.txt 2>/dev/null; do sleep 10; done; cat /tmp/tools_tests.txt\", \"description\": \"Wait for the tools tests\", \"timeout\": 3000000, \"run_in_background\u2026\n- Bash: {\"command\": \"ps aux | grep -E '[c]argo test|[r]ustc|jackioh_tools|golden|acceptance' | head -5 | cut -c1-200\", \"description\": \"See what the tools test run is doing\"}\n- Bash: {\"command\": \"pstree -p 26553 2>/dev/null | head -5 || ps --ppid 26553 -o pid,etime,args | cut -c1-200\", \"description\": \"Show the tools test child process\"}\n- Bash: {\"command\": \"cargo jackioh fuzz --seeds 200 > /tmp/fuzz.txt 2>&1; echo \\\"EXIT $?\\\" >> /tmp/fuzz.txt\", \"description\": \"Run the 200-seed fuzz gate\", \"timeout\": 3600000, \"run_in_background\": true}\n- Bash: {\"command\": \"until grep -q '^EXIT' /tmp/fuzz.txt 2>/dev/null && grep -q TOOLS_DONE /tmp/tools_tests.txt 2>/dev/null; do sleep 10; done; grep -v Compiling /tmp/fuzz.txt | tail -6; echo ===; cat /tmp/t\u2026\n- said: The tools tests (goldens, acceptance) and the 200-seed fuzz are still running. Classify passed and the scratch worktree is gone. I'll report when they finish.\n- Bash: {\"command\": \"tail -2 /tmp/fuzz.txt; cat /tmp/tools_tests.txt\", \"description\": \"Peek at fuzz and tools test progress\"}\n- Bash: {\"command\": \"until grep -q TOOLS_DONE /tmp/tools_tests.txt 2>/dev/null; do sleep 10; done; cat /tmp/tools_tests.txt\", \"description\": \"Wait for the tools tests to finish\", \"timeout\": 600000}\n- said: The tools tests pass, goldens included. Checking that the `ts` build left `apps/web/src/wire` unchanged:\n- Bash: {\"command\": \"git status --porcelain; git status --porcelain -- apps/web/src/wire | wc -l\", \"description\": \"Check working tree, including the wire dir\"}\n- Bash: {\"command\": \"until grep -q '^EXIT' /tmp/fuzz.txt 2>/dev/null; do sleep 10; done; grep -v Compiling /tmp/fuzz.txt | tail -6\", \"description\": \"Wait for the fuzz run\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -v Compiling /tmp/fuzz.txt | grep -iE 'seeds|fail|ok|games' | head -8\", \"description\": \"Show the fuzz summary lines\"}\n- said: Fuzz: 200 seeds passed, 0 failed. Last, re-running the engine's Brittle and Radiant rules tests and clippy after the `is_some()` edit.\n- Bash: {\"command\": \"cargo test -p jackioh-engine --features testkit --test rules -- brittle effects_radiant 2>&1 | grep -E 'FAILED|panicked|test result' | head; cargo clippy -p jackioh-engine -p jackioh-car\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-cards r4817 2>&1 | grep -E 'FAILED|panicked|test result: ok. [1-9]'; cargo jackioh spec check 2>&1 | tail -1; cargo jackioh patches check 2>&1 | tail -1\", \"descript\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index('## State'); end=s.index('## Log')\\nnew='''## State\\n\\n- Run 3 (2026-11-25, `claude-8`, opus): DONE. Every plan step\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a card made Radiant where it stands starts the Brittle its Radiant face newly prints, and regains a Reborn that face newly prints\"} --> ## What changed Turning a card Radiant where it stands, or back to base, now re-reads the Brittle and Reborn its new \u2026"
       },
       "issue": 4817,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-25T17:38:31Z",
         "from_run": "45644288740",
         "gates": [
           {
@@ -25053,7 +25058,11 @@
         "source": "build",
         "until": "2026-11-25T18:06:59Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-25T17:36:59Z",
+      "run_id": "pending:538eb615-1795628265",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -25072,6 +25081,9 @@
         "provider": "claude-8",
         "run": "45644288740"
       },
+      "started_at": "2026-11-25T17:38:31Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -25085,9 +25097,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T17:25:58Z",
+    "at": "2026-11-25T17:38:31Z",
     "url": "",
-    "what": "plan #4932 on claude-3"
+    "what": "review #4946 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-25T17:16:55Z",
