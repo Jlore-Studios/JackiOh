@@ -25850,18 +25850,24 @@
     "what": "build #4921 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-25T19:06:55Z",
+    "at": "2026-11-25T19:23:29Z",
     "notes": [
-      "delivered review #4944 on muse (run 45680735080): reviewed",
-      "delivered build #4836 on claude-4 (run 45659616583): built",
-      "started review #4952 on claude-4 (run 45682657485)",
-      "started plan #4937 on muse (run 45682827978)",
-      "started plan #4931 on agy (run 45683004641)",
-      "started plan #4921 on claude-3 (run 45683173196)",
-      "started plan #4925 on claude-3 (run 45683342877)",
-      "started build #4926 on muse (run 45683522341)",
+      "CI on #4944: #4944: queued a CI fix",
+      "delivered plan #4925 on claude-3 (run 45683342877): planned",
+      "delivered plan #4921 on claude-3 (run 45683173196): planned",
+      "delivered plan #4931 on agy (run 45683004641): planned",
+      "delivered plan #4937 on muse (run 45682827978): planned",
+      "delivered review #4935 on claude-1 (run 45678587895): approved",
+      "delivered review #4947 on claude-6 (run 45671122200): approved",
+      "delivered build #4832 on muse (run 45656900416): built",
+      "started review #4953 on muse (run 45686104317)",
+      "started build #4937 on muse (run 45686275435)",
+      "started revise #4944 on agy (run 45686457890)",
+      "started build #4932 on claude-1 (run 45686625187)",
+      "started plan #4931 on claude-1 (run 45686790795)",
+      "started build #4921 on claude-6 (run 45686967383)",
       "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
-      "pruned 2 plan file(s) older than 7 days"
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -26563,7 +26569,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T19:06:55Z",
+  "loop_tick": "2026-11-25T19:23:29Z",
   "machine_disk": {
     "issue": null,
     "reading": {
