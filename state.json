@@ -22620,7 +22620,8 @@
       "kind": "review",
       "live": "reviewing",
       "own_review": {
-        "claimed_at": "2026-11-25T11:21:13Z",
+        "claimed": true,
+        "claimed_at": "2026-11-25T16:25:39Z",
         "from_run": "45529087678",
         "gates": [
           {
@@ -22682,10 +22683,10 @@
       "pending_request": false,
       "provider": "muse",
       "queued_at": "2026-11-25T05:25:09Z",
-      "run_id": "45603653788",
+      "run_id": "pending:7f23189b-1795623855",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
-      "started_at": "2026-11-25T11:21:13Z",
+      "started_at": "2026-11-25T16:25:39Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -24670,9 +24671,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T15:59:14Z",
+    "at": "2026-11-25T16:25:39Z",
     "url": "",
-    "what": "review #4939 on claude-7"
+    "what": "review #4893 on muse"
   },
   "last_sweep": {
     "at": "2026-11-25T16:05:55Z",
