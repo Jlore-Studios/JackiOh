@@ -24102,6 +24102,8 @@
       }
     },
     "4928": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-25T12:32:18Z",
@@ -24115,8 +24117,11 @@
         "trail": " ok, spec check ok. Running cargo test -p jackioh-run, tools run_sim, classify, typecheck, eslint.\\\" >> .bot-notes.md; cargo test -p jackioh-run --featur\u2026\n- Bash: {\"command\": \"grep -rn '#\\\\[ignore' crates/run/src | head -3; cargo test -p jackioh-tools run_sim 2>&1 | grep -E 'test result|FAILED|panicked' | head -10\", \"description\": \"Confirm ignored test is pre-\u2026\n- said: Run suite (135 passed) and run-sim tests (17 passed) are green. Next: the shared host's practice tests, typecheck, eslint and classify.\n- Bash: {\"command\": \"cargo test -p jackioh-shared --features jackioh-engine/testkit --test practice 2>&1 | grep -E 'test result|FAILED|panicked' | head -5\", \"description\": \"Run shared crate practice host tes\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web typecheck 2>&1 | tail -5; pnpm exec eslint apps/web/src/dungeon/fight 2>&1 | tail -10\", \"description\": \"Typecheck web and lint touched dir\", \"timeout\": 600000}\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4852/3f339d4a-a4a2-477b-95e8-0ccaa99ecbc1/tasks/b6vcvtq0f.output; git fetch --quiet origin main 2>&1 | tail -2; cargo jackioh class\u2026\n- Bash: {\"command\": \"ls crates/shared/tests/ | head; cargo test -p jackioh-shared --features jackioh-engine/testkit --test practice 2>&1 | tail -5\", \"description\": \"Check shared test targets and rerun\", \"tim\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-shared --features jackioh-engine/testkit --test shared -- practice run 2>&1 | grep -E 'test result|FAILED|panicked|error' | head -8\", \"description\": \"Run shared sui\u2026\n- Bash: {\"command\": \"grep -rln 'run_fight_report\\\\|runFightReport\\\\|fight_report' --include=*.rs --include=*.ts --include=*.tsx --include=*.luau --include=*.lua --include=*.md . 2>/dev/null | grep -v node_mo\u2026\n- Bash: {\"command\": \"grep -n 'fight_report\\\\|no result\\\\|refus' docs/dungeon-run.md | head; grep -n 'run_fight_report' -A3 crates/wasm/README.md crates/wasm/c/README.md crates/tools/README.md | grep -i 'resu\u2026\n- Bash: {\"command\": \"sed -n '388,393p' docs/dungeon-run.md\", \"description\": \"Read B10 in dungeon-run doc\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/tools/README.md'\\ns=open(p).read()\\nold=\\\"A lost fight is data; a fight that is not clean (a throw, a refusal, a fallback, a caught search panic, no result, \u2026\n- Bash: {\"command\": \"git diff crates/run/src/fight.rs crates/run/src/assault/attempt.rs apps/web/src/dungeon/fight/FightScreen.tsx spec/15-dungeon-run.md\", \"description\": \"Review core diff\"}\n- Bash: {\"command\": \"grep -n 'runFightReport\\\\|run_fight_report' docs/v0.3.0/SURFACE.md docs/architecture.md 2>/dev/null | head -5\", \"description\": \"Check surface docs for run_fight_report\"}\n- said: The fixes and docs are done. Now running the harness's own web check (every web test touched by the change, including whatever loads `zh-CN.json`) against the branch's base:\n- Bash: {\"command\": \"echo \\\"- tools README run-sim row notes the void. Running vitest --changed 13e90a64c0 (harness web check).\\\" >> .bot-notes.md; timeout 1500 pnpm exec vitest run --project web --changed 1\u2026\n- said: Meanwhile, updating the notes' State section:\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=\\\"- Run 2 (build, opus, 2026-11-25): starting the plan's steps from scratch; nothing built before.\\\\n\\\"\\nnew=\\\"\\\"\\\"- Run 2 (bu\u2026\n- ToolSearch: {\"query\": \"select:Monitor\"}\n- Monitor: {\"command\": \"f=/tmp/claude-1001/-home-runner-work--temp-work-item-4852/3f339d4a-a4a2-477b-95e8-0ccaa99ecbc1/tasks/b9eawn5wg.output; until grep -qE 'Test Files|Error|error' \\\"$f\\\" 2>/dev/null; do slee\u2026\n- tool error: A variable set in this command can't be checked before it runs\n- Monitor: {\"command\": \"until grep -qE 'Test Files|Error|error' /tmp/claude-1001/-home-runner-work--temp-work-item-4852/3f339d4a-a4a2-477b-95e8-0ccaa99ecbc1/tasks/b9eawn5wg.output 2>/dev/null; do sleep 5; done;\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4852/3f339d4a-a4a2-477b-95e8-0ccaa99ecbc1/tasks/b9eawn5wg.output\", \"description\": \"Read web test run output\"}\n- said: The web run is still going; I'll wait for it to finish.\n- Bash: {\"command\": \"until grep -qE 'Test Files|rror' /tmp/claude-1001/-home-runner-work--temp-work-item-4852/3f339d4a-a4a2-477b-95e8-0ccaa99ecbc1/tasks/b9eawn5wg.output 2>/dev/null; do sleep 10; done; cat /\u2026\n- Monitor: {\"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-4852/3f339d4a-a4a2-477b-95e8-0ccaa99ecbc1/tasks/b60hf71qo.output ]; do sleep 10; done; cat /tmp/claude-1001/-home-runner-wor\u2026\n- Bash: {\"command\": \"ps aux | grep -c '[v]itest'; ls -la /tmp/claude-1001/-home-runner-work--temp-work-item-4852/3f339d4a-a4a2-477b-95e8-0ccaa99ecbc1/tasks/ | tail -5\", \"description\": \"Check vitest is still \u2026\n- said: Vitest is running; its output only arrives at the end because of the filter. Waiting for the notification.\n- Bash: {\"command\": \"while pgrep -f 'vitest run --project web --changed' >/dev/null; do sleep 15; done; cat /tmp/claude-1001/-home-runner-work--temp-work-item-4852/3f339d4a-a4a2-477b-95e8-0ccaa99ecbc1/tasks/\u2026\n- Bash: {\"command\": \"date -u +%H:%M; pgrep -fa 'vitest' | head -5 | cut -c1-200\", \"description\": \"Check time and vitest processes\"}\n- Bash: {\"command\": \"while pgrep -f 'vitest.mjs run --project web --changed' >/dev/null; do sleep 15; done; date -u +%H:%M; cat /tmp/claude-1001/-home-runner-work--temp-work-item-4852/3f339d4a-a4a2-477b-95e8\u2026\n- ToolSearch: {\"query\": \"select:TaskStop\"}\n- TaskStop: {\"task_id\": \"b9nnueows\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Left: only the final report (vitest --changed run was in progress).\\\\n\\\",\\\"- vitest --project web --changed 13e90a\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a dungeon fight that a Glitch voided is dealt again, not reported as a lost fight that ends the whole run\"} --> ## What changed When a Glitch voids a dungeon fight (`GameOverReason::Voided`, R679), the run no longer counts it as a loss. The run stays on\u2026"
       },
       "issue": 4852,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-25T14:09:06Z",
         "from_run": "45614723682",
         "gates": [
           {
@@ -24208,7 +24213,11 @@
         "source": "build",
         "until": "2026-11-25T14:37:38Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-25T14:07:38Z",
+      "run_id": "pending:19edb4fd-1795615702",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -24227,6 +24236,9 @@
         "provider": "claude-4",
         "run": "45614723682"
       },
+      "started_at": "2026-11-25T14:09:06Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -24240,9 +24252,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T14:03:39Z",
+    "at": "2026-11-25T14:09:06Z",
     "url": "",
-    "what": "review #4927 on claude-6"
+    "what": "review #4928 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-25T14:00:14Z",
