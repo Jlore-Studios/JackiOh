@@ -116,10 +116,10 @@
     },
     "meditative-045": {
       "base": {
-        "en": "Cry: Nerf other CN and KY cards in play and hands.\nAura: Your Units are Cloaked.\nDeath: Shuffle in its Prime."
+        "en": "Cloaked\nCry: Nerf other CN and KY cards in play and hands.\nDeath: Shuffle in its Prime."
       },
       "radiant": {
-        "en": "Cry: Nerf other CN and KY cards in play and hands {times|time|times}.\nAura: Cloaks your Units.\nDeath: Shuffle in a Prime."
+        "en": "Cloaked\nCry: Nerf other CN and KY cards in play and hands {times|time|times}.\nDeath: Shuffle in a Prime."
       }
     },
     "meditative-049-1": {

@@ -13852,14 +13852,22 @@
     "base": {
       "attack": 1,
       "health": 3,
-      "keywords": [],
-      "text": "Cry: Nerf all other CN and KY cards on the field and in hands.\nAura: Your Units are Cloaked.\nDeath: Shuffle a Knowledge Breaker Prime into your deck."
+      "keywords": [
+        {
+          "kind": "Cloaked"
+        }
+      ],
+      "text": "Cloaked\nCry: Nerf all other CN and KY cards on the field and in hands.\nDeath: Shuffle a Knowledge Breaker Prime into your deck."
     },
     "radiant": {
       "attack": 2,
       "health": 6,
-      "keywords": [],
-      "text": "Cry: Nerf all other CN and KY cards on the field and in hands {times|time|times}.\nAura: Your Units are Cloaked.\nDeath: Shuffle a Radiant Knowledge Breaker Prime into your deck."
+      "keywords": [
+        {
+          "kind": "Cloaked"
+        }
+      ],
+      "text": "Cloaked\nCry: Nerf all other CN and KY cards on the field and in hands {times|time|times}.\nDeath: Shuffle a Radiant Knowledge Breaker Prime into your deck."
     }
   },
   "meditative-045-1": {

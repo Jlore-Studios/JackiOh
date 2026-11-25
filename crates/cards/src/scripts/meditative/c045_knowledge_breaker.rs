@@ -1,17 +1,21 @@
 //! M #45 Knowledge Breaker (SPEC §8.8 row 45): (1) Unit, CN, KY, Catalyst, Legendary, 1/3 → 2/6.
 //!
-//! Base:    "Cry: Nerf all other CN and KY cards on the field and in hands.
-//!           Aura: Your Units are Cloaked.
+//! Base:    "Cloaked
+//!           Cry: Nerf all other CN and KY cards on the field and in hands.
 //!           Death: Shuffle a Knowledge Breaker Prime into your deck."
-//! Radiant: "Cry: Nerf all other CN and KY cards on the field and in hands {times|time|times}.
-//!           Aura: Your Units are Cloaked.
+//! Radiant: "Cloaked
+//!           Cry: Nerf all other CN and KY cards on the field and in hands {times|time|times}.
 //!           Death: Shuffle a Radiant Knowledge Breaker Prime into your deck."
 //!          (Divine Shield too until issue #4292.)
 //! Engine:
+//! - Cloaked (§6.1, R783004): catalog data, so it may be set face-down from its controller's hand.
 //! - Cry: `degrade` over every other CN or KY card on fields and in hands, `times`; a card in
 //!   Chinese is CN (R1176000).
 //! - Death: `shuffle_into` the Prime, Radiant on the Radiant face (C+ #38's shape).
-//! - Aura: Cloaked for the Units in its controller's hand while it acts (`cloak_hand_aura`, R1040).
+//!
+//! Issue #4783 took "Aura: Your Units are Cloaked." off both faces and gave the card Cloaked itself;
+//! `script_v0_6_13c` keeps the Aura, Cloaked for the Units in its controller's hand while it acts
+//! (`cloak_hand_aura`, R1040), for the replays of v0.5.3 to v0.6.13c (R767000).
 
 use jackioh_engine::alt_play::cloak_hand_aura;
 use jackioh_engine::prelude::*;
@@ -25,7 +29,9 @@ const NERFED_ZONES: &[&str] = &["field", "hand"];
 /// Through v0.5.2: the decks too.
 const NERFED_ZONES_V0_5_2: &[&str] = &["field", "hand", "library"];
 
-fn breaker(radiant: bool, zones: &'static [&'static str]) -> Script {
+/// One face: `zones` are where the Cry Nerfs, and `aura` whether it lends its controller's hand Units
+/// Cloaked, as through v0.6.13c.
+fn breaker(radiant: bool, zones: &'static [&'static str], aura: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let times = param(&*ctx, "times");
@@ -46,23 +52,32 @@ fn breaker(radiant: bool, zones: &'static [&'static str]) -> Script {
                 "radiant": radiant,
             })))]
         })),
-        aura: Some(cloak_hand_aura(CardType::Unit)),
+        aura: aura.then(|| cloak_hand_aura(CardType::Unit)),
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: breaker(false, NERFED_ZONES),
-        radiant: breaker(true, NERFED_ZONES),
+        base: breaker(false, NERFED_ZONES, false),
+        radiant: breaker(true, NERFED_ZONES, false),
+    }
+}
+
+/// R767000: after v0.5.2 through v0.6.13c its Aura lent its controller's hand Units Cloaked (issue
+/// #4783); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_13c() -> CardScripts {
+    CardScripts {
+        base: breaker(false, NERFED_ZONES, true),
+        radiant: breaker(true, NERFED_ZONES, true),
     }
 }
 
 /// R767000: through v0.5.2 the Cry Nerfed the decks too; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_2() -> CardScripts {
     CardScripts {
-        base: breaker(false, NERFED_ZONES_V0_5_2),
-        radiant: breaker(true, NERFED_ZONES_V0_5_2),
+        base: breaker(false, NERFED_ZONES_V0_5_2, true),
+        radiant: breaker(true, NERFED_ZONES_V0_5_2, true),
     }
 }
 
@@ -194,6 +209,17 @@ mod tests {
             .collect()
     }
 
+    /// R767000: `run` under the scripts kept for v0.6.13c, whose Aura lent its controller's hand Units
+    /// Cloaked while it acted (R1040); issue #4783 took the Aura away. The face-down plays and reveals
+    /// the tests below make through it are every Cloaked card's (R783004, R1041, R1046, R4237000).
+    fn under_aura<T>(run: impl FnOnce() -> T) -> T {
+        crate::under_kept(
+            BREAKER,
+            crate::scripts::meditative::c045_knowledge_breaker::script_v0_6_13c(),
+            run,
+        )
+    }
+
     mod base {
         use super::*;
 
@@ -274,35 +300,103 @@ mod tests {
 
         #[test]
         fn r1040_r1041_r4237000_a_set_unit_waits_for_its_reveal_then_attacks_the_turn_after() {
+            under_aura(|| {
+                let mut s = scenario(json!({
+                    "seed": "breaker-set",
+                    "p1": {
+                        "mana": 8,
+                        "hand": [BREAKER, VANILLA],
+                        "field": [{ "def": BREAKER, "lane": 1 }],
+                        "library": [VANILLA, VANILLA],
+                    },
+                    "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA] },
+                }));
+                let vanilla = in_hand(&s, VANILLA);
+                set_face_down(&mut s, &vanilla.id, 2);
+                let set = s.backrow(P1, 2).expect("set in the backrow").id;
+                // R783006: it has no timing, so the turns pass and it stays set.
+                s.end_turn().end_turn();
+                assert!(s.state().pending.is_none());
+                assert!(s.unit(P1, 2).is_none(), "it never reveals by itself");
+                assert!(s.backrow(P1, 2).is_some());
+                reveal(&mut s, &set);
+                // R1041, R383: it turned face-up and animated into the unit zone of its own lane.
+                assert!(s.backrow(P1, 2).is_none());
+                let unit = s.unit(P1, 2).expect("the revealed unit");
+                assert_eq!(unit.def_id, VANILLA);
+                assert_eq!(unit.face_up, Some(true));
+                assert_eq!(unit.set_as, None);
+                // R4237000: it entered that zone now, so it is summoning sick until its controller's next turn.
+                assert!(s.attacks_of(&unit).is_empty());
+                s.end_turn().end_turn();
+                assert!(!s.attacks_of(&unit).is_empty());
+            });
+        }
+
+        /// Issue #4783: both faces print Cloaked, so it may be set face-down from its controller's hand
+        /// at its own price (R783004).
+        #[test]
+        fn r783004_it_prints_cloaked_on_both_faces_and_may_be_set_face_down() {
+            let def = crate::card_def(BREAKER);
+            assert_eq!(def.base.keywords, vec![Keyword::Cloaked]);
+            assert_eq!(def.radiant.keywords, vec![Keyword::Cloaked]);
+            for radiant_face in [false, true] {
+                let mut s = scenario(json!({
+                    "seed": if radiant_face { "breaker-cloaked-r" } else { "breaker-cloaked" },
+                    "p1": { "mana": 8, "hand": [{ "def": BREAKER, "radiant": radiant_face }, VANILLA], "library": [VANILLA] },
+                    "p2": { "hand": [VANILLA], "library": [VANILLA] },
+                }));
+                let breaker = in_hand(&s, BREAKER);
+                assert!(cloaked(&s, &breaker.id));
+                assert!(!face_down_plays(&s, P1, &breaker.id).is_empty());
+                set_face_down(&mut s, &breaker.id, 2);
+                assert_eq!(s.backrow(P1, 2).expect("set in the backrow").def_id, BREAKER);
+                s.expect_mana(P1, 7);
+            }
+        }
+
+        /// R1041: set by its own Cloaked, it runs no Cry as it is set and runs it as it reveals.
+        #[test]
+        fn r1041_set_by_its_own_cloaked_it_runs_its_cry_as_it_reveals() {
             let mut s = scenario(json!({
-                "seed": "breaker-set",
-                "p1": {
-                    "mana": 8,
-                    "hand": [BREAKER, VANILLA],
-                    "field": [{ "def": BREAKER, "lane": 1 }],
+                "seed": "breaker-self-set",
+                "p1": { "mana": 8, "hand": [BREAKER, VANILLA], "library": [VANILLA, VANILLA] },
+                "p2": {
+                    "hand": [VANILLA],
+                    "field": [{ "def": CNKY, "lane": 1, "radiant": true }],
                     "library": [VANILLA, VANILLA],
                 },
-                "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA] },
             }));
-            let vanilla = in_hand(&s, VANILLA);
-            set_face_down(&mut s, &vanilla.id, 2);
+            let breaker = in_hand(&s, BREAKER);
+            set_face_down(&mut s, &breaker.id, 2);
+            assert!(degraded_ids(&s).is_empty(), "a set card runs no Cry");
             let set = s.backrow(P1, 2).expect("set in the backrow").id;
-            // R783006: it has no timing, so the turns pass and it stays set.
             s.end_turn().end_turn();
-            assert!(s.state().pending.is_none());
-            assert!(s.unit(P1, 2).is_none(), "it never reveals by itself");
-            assert!(s.backrow(P1, 2).is_some());
             reveal(&mut s, &set);
-            // R1041, R383: it turned face-up and animated into the unit zone of its own lane.
-            assert!(s.backrow(P1, 2).is_none());
-            let unit = s.unit(P1, 2).expect("the revealed unit");
-            assert_eq!(unit.def_id, VANILLA);
-            assert_eq!(unit.face_up, Some(true));
-            assert_eq!(unit.set_as, None);
-            // R4237000: it entered that zone now, so it is summoning sick until its controller's next turn.
-            assert!(s.attacks_of(&unit).is_empty());
-            s.end_turn().end_turn();
-            assert!(!s.attacks_of(&unit).is_empty());
+            assert_eq!(s.unit(P1, 2).expect("revealed").def_id, BREAKER);
+            let printer = s.backrow(P2, 1).expect("p2's Printer").id;
+            assert!(degraded_ids(&s).contains(&printer), "the Cry Nerfed p2's Printer");
+        }
+
+        /// Issue #4783: it has no Aura, so the Units in its controller's hand are not Cloaked while it
+        /// acts (R1040 holds only for the replays of v0.6.13c and before).
+        #[test]
+        fn it_lends_its_hand_units_no_cloaked_since_issue_4783() {
+            for radiant_face in [false, true] {
+                let s = scenario(json!({
+                    "seed": "breaker-no-aura",
+                    "p1": {
+                        "mana": 8,
+                        "hand": [VANILLA, HIT_JOB],
+                        "field": [{ "def": BREAKER, "lane": 1, "radiant": radiant_face }],
+                        "library": [VANILLA],
+                    },
+                    "p2": { "hand": [VANILLA], "library": [VANILLA] },
+                }));
+                let vanilla = in_hand(&s, VANILLA);
+                assert!(!cloaked(&s, &vanilla.id));
+                assert!(face_down_plays(&s, P1, &vanilla.id).is_empty());
+            }
         }
 
         #[test]
@@ -386,123 +480,133 @@ mod tests {
 
         #[test]
         fn r1040_r1046_a_set_unit_pays_its_own_price_takes_no_targets_and_shows_as_a_trap() {
-            // Speciesist (2): its Cry targets an enemy non-Human, but set face-down it names none and its
-            // text is dormant.
-            let mut s = scenario(json!({
-                "seed": "breaker-set-price",
-                "p1": { "mana": 5, "hand": [SPECIESIST, VANILLA], "field": [{ "def": BREAKER, "lane": 1 }], "library": [VANILLA] },
-                "p2": { "hand": [VANILLA], "field": [{ "def": ENEMY, "lane": 1 }], "library": [VANILLA] },
-            }));
-            let speciesist = in_hand(&s, SPECIESIST);
-            set_face_down(&mut s, &speciesist.id, 2);
-            assert!(s.state().pending.is_none(), "no target is asked");
-            s.expect_mana(P1, 3);
-            assert!(s.unit(P2, 1).is_some(), "the Cry is dormant");
-            let set = s.backrow(P1, 2).expect("set in the backrow");
-            assert_eq!(set.def_id, SPECIESIST);
-            let theirs = serde_json::to_string(&s.view(P2)).expect("the view serializes");
-            assert!(!theirs.contains(SPECIESIST), "p2 never reads the set Unit");
+            under_aura(|| {
+                // Speciesist (2): its Cry targets an enemy non-Human, but set face-down it names none and its
+                // text is dormant.
+                let mut s = scenario(json!({
+                    "seed": "breaker-set-price",
+                    "p1": { "mana": 5, "hand": [SPECIESIST, VANILLA], "field": [{ "def": BREAKER, "lane": 1 }], "library": [VANILLA] },
+                    "p2": { "hand": [VANILLA], "field": [{ "def": ENEMY, "lane": 1 }], "library": [VANILLA] },
+                }));
+                let speciesist = in_hand(&s, SPECIESIST);
+                set_face_down(&mut s, &speciesist.id, 2);
+                assert!(s.state().pending.is_none(), "no target is asked");
+                s.expect_mana(P1, 3);
+                assert!(s.unit(P2, 1).is_some(), "the Cry is dormant");
+                let set = s.backrow(P1, 2).expect("set in the backrow");
+                assert_eq!(set.def_id, SPECIESIST);
+                let theirs = serde_json::to_string(&s.view(P2)).expect("the view serializes");
+                assert!(!theirs.contains(SPECIESIST), "p2 never reads the set Unit");
+            });
         }
 
         #[test]
         fn r1041_it_reveals_into_the_leftmost_open_zone_when_its_lane_is_taken() {
-            let mut s = scenario(json!({
-                "seed": "breaker-leftmost",
-                "p1": {
-                    "mana": 8,
-                    "hand": [VANILLA, BREAKER],
-                    "field": [{ "def": BREAKER, "lane": 1 }, { "def": VANILLA, "lane": 2 }],
-                    "library": [VANILLA, VANILLA],
-                },
-                "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA] },
-            }));
-            let card = in_hand(&s, VANILLA);
-            set_face_down(&mut s, &card.id, 2);
-            let set = s.backrow(P1, 2).expect("set").id;
-            s.end_turn().end_turn();
-            reveal(&mut s, &set);
-            assert!(s.backrow(P1, 2).is_none());
-            assert_eq!(s.unit(P1, 3).expect("the leftmost open zone").def_id, VANILLA);
+            under_aura(|| {
+                let mut s = scenario(json!({
+                    "seed": "breaker-leftmost",
+                    "p1": {
+                        "mana": 8,
+                        "hand": [VANILLA, BREAKER],
+                        "field": [{ "def": BREAKER, "lane": 1 }, { "def": VANILLA, "lane": 2 }],
+                        "library": [VANILLA, VANILLA],
+                    },
+                    "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA] },
+                }));
+                let card = in_hand(&s, VANILLA);
+                set_face_down(&mut s, &card.id, 2);
+                let set = s.backrow(P1, 2).expect("set").id;
+                s.end_turn().end_turn();
+                reveal(&mut s, &set);
+                assert!(s.backrow(P1, 2).is_none());
+                assert_eq!(s.unit(P1, 3).expect("the leftmost open zone").def_id, VANILLA);
+            });
         }
 
         #[test]
         fn r1041_it_runs_its_cry_with_prompts_as_it_reveals() {
-            let mut s = scenario(json!({
-                "seed": "breaker-reveal-cry",
-                "p1": { "mana": 8, "hand": [SPECIESIST, VANILLA], "field": [{ "def": BREAKER, "lane": 1 }], "library": [VANILLA, VANILLA] },
-                "p2": { "hand": [VANILLA], "field": [{ "def": ENEMY, "lane": 1 }], "library": [VANILLA, VANILLA] },
-            }));
-            let enemy = s.unit(P2, 1).expect("the enemy").id;
-            let speciesist = in_hand(&s, SPECIESIST);
-            set_face_down(&mut s, &speciesist.id, 2);
-            let set = s.backrow(P1, 2).expect("set").id;
-            s.end_turn().end_turn();
-            reveal(&mut s, &set);
-            let open = s.state().pending.clone().expect("the Cry asks for its target");
-            assert_eq!(open.player_id, P1);
-            s.answer(json!([format!("instance:{enemy}")]));
-            assert_eq!(s.unit(P1, 2).expect("revealed").def_id, SPECIESIST);
-            s.expect_in_zone(&enemy, "graveyard");
+            under_aura(|| {
+                let mut s = scenario(json!({
+                    "seed": "breaker-reveal-cry",
+                    "p1": { "mana": 8, "hand": [SPECIESIST, VANILLA], "field": [{ "def": BREAKER, "lane": 1 }], "library": [VANILLA, VANILLA] },
+                    "p2": { "hand": [VANILLA], "field": [{ "def": ENEMY, "lane": 1 }], "library": [VANILLA, VANILLA] },
+                }));
+                let enemy = s.unit(P2, 1).expect("the enemy").id;
+                let speciesist = in_hand(&s, SPECIESIST);
+                set_face_down(&mut s, &speciesist.id, 2);
+                let set = s.backrow(P1, 2).expect("set").id;
+                s.end_turn().end_turn();
+                reveal(&mut s, &set);
+                let open = s.state().pending.clone().expect("the Cry asks for its target");
+                assert_eq!(open.player_id, P1);
+                s.answer(json!([format!("instance:{enemy}")]));
+                assert_eq!(s.unit(P1, 2).expect("revealed").def_id, SPECIESIST);
+                s.expect_in_zone(&enemy, "graveyard");
+            });
         }
 
         #[test]
         fn r1041_with_no_open_unit_zone_its_reveal_waits_for_one() {
-            let mut s = scenario(json!({
-                "seed": "breaker-no-room",
-                "p1": {
-                    "mana": 8,
-                    "hand": [VANILLA, HIT_JOB, VANILLA],
-                    "field": [
-                        { "def": BREAKER, "lane": 1 }, { "def": VANILLA, "lane": 2 }, { "def": VANILLA, "lane": 3 },
-                        { "def": VANILLA, "lane": 4 }, { "def": VANILLA, "lane": 5 },
-                    ],
-                    "library": [VANILLA, VANILLA, VANILLA],
-                },
-                "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA, VANILLA] },
-            }));
-            let card = in_hand(&s, VANILLA);
-            set_face_down(&mut s, &card.id, 2);
-            let set = s.backrow(P1, 2).expect("set").id;
-            s.end_turn().end_turn();
-            // R783006: every unit zone is full, so its Reveal is not offered and is refused.
-            assert!(!reveal_offered(&s, &set));
-            s.expect_refused(|s| s.activate(set.as_str(), json!({ "ability": CLOAKED_REVEAL })));
-            assert_eq!(s.backrow(P1, 2).expect("still set").id, set);
-            let blocker = s.unit(P1, 5).expect("lane 5").id;
-            s.play(
-                HIT_JOB,
-                json!({ "targets": [{ "pick": "instance", "instanceId": blocker }] }),
-            );
-            assert!(reveal_offered(&s, &set));
-            reveal(&mut s, &set);
-            assert!(s.backrow(P1, 2).is_none());
-            assert_eq!(s.unit(P1, 5).expect("it animated").def_id, VANILLA);
+            under_aura(|| {
+                let mut s = scenario(json!({
+                    "seed": "breaker-no-room",
+                    "p1": {
+                        "mana": 8,
+                        "hand": [VANILLA, HIT_JOB, VANILLA],
+                        "field": [
+                            { "def": BREAKER, "lane": 1 }, { "def": VANILLA, "lane": 2 }, { "def": VANILLA, "lane": 3 },
+                            { "def": VANILLA, "lane": 4 }, { "def": VANILLA, "lane": 5 },
+                        ],
+                        "library": [VANILLA, VANILLA, VANILLA],
+                    },
+                    "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA, VANILLA] },
+                }));
+                let card = in_hand(&s, VANILLA);
+                set_face_down(&mut s, &card.id, 2);
+                let set = s.backrow(P1, 2).expect("set").id;
+                s.end_turn().end_turn();
+                // R783006: every unit zone is full, so its Reveal is not offered and is refused.
+                assert!(!reveal_offered(&s, &set));
+                s.expect_refused(|s| s.activate(set.as_str(), json!({ "ability": CLOAKED_REVEAL })));
+                assert_eq!(s.backrow(P1, 2).expect("still set").id, set);
+                let blocker = s.unit(P1, 5).expect("lane 5").id;
+                s.play(
+                    HIT_JOB,
+                    json!({ "targets": [{ "pick": "instance", "instanceId": blocker }] }),
+                );
+                assert!(reveal_offered(&s, &set));
+                reveal(&mut s, &set);
+                assert!(s.backrow(P1, 2).is_none());
+                assert_eq!(s.unit(P1, 5).expect("it animated").def_id, VANILLA);
+            });
         }
 
         #[test]
         fn r1040_its_hand_units_have_cloaked_only_while_it_acts_and_a_set_one_stays_set() {
-            let mut s = scenario(json!({
-                "seed": "breaker-left",
-                "p1": { "mana": 8, "hand": [VANILLA, HIT_JOB, VANILLA], "field": [{ "def": BREAKER, "lane": 1 }], "library": [VANILLA, VANILLA] },
-                "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA] },
-            }));
-            let first = in_hand(&s, VANILLA);
-            assert!(cloaked(&s, &first.id), "the Aura lends it Cloaked");
-            assert!(!cloaked(&s, &in_hand(&s, HIT_JOB).id), "a Spell is not a Unit");
-            set_face_down(&mut s, &first.id, 2);
-            let set = s.backrow(P1, 2).expect("set").id;
-            let other = in_hand(&s, VANILLA);
-            let breaker = s.unit(P1, 1).expect("the Breaker").id;
-            s.play(
-                HIT_JOB,
-                json!({ "targets": [{ "pick": "instance", "instanceId": breaker }] }),
-            );
-            s.expect_in_zone(&breaker, "graveyard");
-            assert!(!cloaked(&s, &other.id));
-            assert!(face_down_plays(&s, P1, &other.id).is_empty());
-            s.end_turn().end_turn();
-            reveal(&mut s, &set);
-            assert_eq!(s.unit(P1, 2).expect("it still reveals").def_id, VANILLA);
+            under_aura(|| {
+                let mut s = scenario(json!({
+                    "seed": "breaker-left",
+                    "p1": { "mana": 8, "hand": [VANILLA, HIT_JOB, VANILLA], "field": [{ "def": BREAKER, "lane": 1 }], "library": [VANILLA, VANILLA] },
+                    "p2": { "hand": [VANILLA], "library": [VANILLA, VANILLA] },
+                }));
+                let first = in_hand(&s, VANILLA);
+                assert!(cloaked(&s, &first.id), "the Aura lends it Cloaked");
+                assert!(!cloaked(&s, &in_hand(&s, HIT_JOB).id), "a Spell is not a Unit");
+                set_face_down(&mut s, &first.id, 2);
+                let set = s.backrow(P1, 2).expect("set").id;
+                let other = in_hand(&s, VANILLA);
+                let breaker = s.unit(P1, 1).expect("the Breaker").id;
+                s.play(
+                    HIT_JOB,
+                    json!({ "targets": [{ "pick": "instance", "instanceId": breaker }] }),
+                );
+                s.expect_in_zone(&breaker, "graveyard");
+                assert!(!cloaked(&s, &other.id));
+                assert!(face_down_plays(&s, P1, &other.id).is_empty());
+                s.end_turn().end_turn();
+                reveal(&mut s, &set);
+                assert_eq!(s.unit(P1, 2).expect("it still reveals").def_id, VANILLA);
+            });
         }
 
         #[test]
@@ -526,22 +630,24 @@ mod tests {
 
         #[test]
         fn r1040_the_opponents_units_are_not_cloaked() {
-            // p2's own turn, so its plays are listed at all; the Breaker acts on p1's side.
-            let s = scenario(json!({
-                "seed": "breaker-foe",
-                "active": "p2",
-                "p1": { "mana": 8, "hand": [VANILLA], "field": [{ "def": BREAKER, "lane": 1 }], "library": [VANILLA] },
-                "p2": { "mana": 8, "hand": [VANILLA], "library": [VANILLA] },
-            }));
-            let enemy = s
-                .hand(P2)
-                .iter()
-                .find(|card| card.def_id == VANILLA)
-                .cloned()
-                .unwrap();
-            assert!(!cloaked(&s, &enemy.id));
-            assert!(s.can_play(&enemy));
-            assert!(face_down_plays(&s, P2, &enemy.id).is_empty());
+            under_aura(|| {
+                // p2's own turn, so its plays are listed at all; the Breaker acts on p1's side.
+                let s = scenario(json!({
+                    "seed": "breaker-foe",
+                    "active": "p2",
+                    "p1": { "mana": 8, "hand": [VANILLA], "field": [{ "def": BREAKER, "lane": 1 }], "library": [VANILLA] },
+                    "p2": { "mana": 8, "hand": [VANILLA], "library": [VANILLA] },
+                }));
+                let enemy = s
+                    .hand(P2)
+                    .iter()
+                    .find(|card| card.def_id == VANILLA)
+                    .cloned()
+                    .unwrap();
+                assert!(!cloaked(&s, &enemy.id));
+                assert!(s.can_play(&enemy));
+                assert!(face_down_plays(&s, P2, &enemy.id).is_empty());
+            });
         }
     }
 
@@ -551,9 +657,10 @@ mod tests {
         #[test]
         fn r1042_radiant_nerfs_twice_on_fields_and_in_hands_with_no_divine_shield_since_issue_4292() {
             let def = crate::card_def(BREAKER);
-            // Its Radiant face printed Divine Shield until issue #4292; now it prints no keyword, as the base.
-            assert!(def.radiant.keywords.is_empty());
-            assert!(def.base.keywords.is_empty());
+            // Its Radiant face printed Divine Shield until issue #4292; since issue #4783 it prints
+            // Cloaked alone, as the base.
+            assert_eq!(def.radiant.keywords, vec![Keyword::Cloaked]);
+            assert_eq!(def.base.keywords, vec![Keyword::Cloaked]);
             let mut s = spread_board("breaker-cry-radiant", true);
             let breaker = s
                 .hand(P1)

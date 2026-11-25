@@ -315,7 +315,7 @@ pub fn det_ground(public_state: &GameState, seat: PlayerId) -> DetGround {
     let mut cloakable: PerPlayer<Vec<String>> = PerPlayer::default();
     let mut slot_pool: PerPlayer<Vec<String>> = PerPlayer::default();
     for side in PLAYER_IDS {
-        // R1046: Knowledge Breaker's and Paranoia's auras lend Cloaked to a hand's Units and Spells,
+        // R1046: Knowledge Breaker Prime's and Paranoia's auras lend Cloaked to a hand's Units and Spells,
         // so while one acts those cards are `lent_cloaked_def_ids` too.
         let mut side_cloakable = printed_cloaked.clone();
         for id in jackioh_engine::alt_play::lent_cloaked_def_ids(public_state, side) {

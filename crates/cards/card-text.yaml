@@ -3337,8 +3337,8 @@ meditative-045: # Knowledge Breaker
     death: What I knew returns.
   zh:
     name: 知识破坏者
-    base: "战吼：削弱场上和双方手牌中的每张其他中国或KY牌。\n光环：你的单位拥有隐匿。\n亡语：将一张至尊知识破坏者洗入你的牌库。"
-    radiant: "战吼：削弱场上和双方手牌中的每张其他中国或KY牌{times}次。\n光环：你的单位拥有隐匿。\n亡语：将一张光辉至尊知识破坏者洗入你的牌库。"
+    base: "隐匿\n战吼：削弱场上和双方手牌中的每张其他中国或KY牌。\n亡语：将一张至尊知识破坏者洗入你的牌库。"
+    radiant: "隐匿\n战吼：削弱场上和双方手牌中的每张其他中国或KY牌{times}次。\n亡语：将一张光辉至尊知识破坏者洗入你的牌库。"
 meditative-045-1: # Knowledge Breaker Prime
   flavour: It broke through thinking about breaking through.
   voice:
