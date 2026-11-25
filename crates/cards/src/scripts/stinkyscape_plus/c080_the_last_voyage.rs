@@ -16,7 +16,7 @@
 //! free launch (R1852006), and one at once as well. The number summoned is the declared `starships`.
 //! Issue #4783 gave the base face its launch at once back and has its end-of-turn launches begin at the
 //! end of its caster's next turn, not the turn it is cast on (R4783030); `script_v0_6_13c` keeps the
-//! base face of v0.6.6i to v0.6.13c, which launched none at once and one at the end of the cast turn.
+//! base face after v0.6.9n through v0.6.13c, which launched none at once and one at the end of the cast turn.
 //! Issue #4440 moved the launch from the start of each of its caster's turns from the next on to the end
 //! of each; `script_v0_6_9n` keeps the start for the replays of v0.6.9n and before. Issue #4154 took the
 //! base face's launch at once out; `script_v0_6_6h` keeps it for the replays of v0.6.6h and before

@@ -3,8 +3,8 @@
 //! #1563. Through v0.5.9f it cost (10), had Can't attack and "Start of turn: Make [a random permanent
 //! / {radiants} random permanents] of yours Radiant" (`script_v0_5_9f`, kept for those replays,
 //! R767000). Issue #4783 cut its cost (8) → (4) and gave both faces' Cry "Overload ({mana})." first,
-//! `mana` 2 on both faces; `script_v0_6_13c` keeps the Cry without it for the replays of v0.5.9g to
-//! v0.6.13c (R767000).
+//! `mana` 2 on both faces; `script_v0_6_13c` keeps the Cry without it for the replays after v0.5.9f
+//! through v0.6.13c (R767000).
 //!
 //! "Float reduces cost." plus "Cry: Overload ({mana}). Do {picks} of these at random …" / Radiant
 //! "Cry: Overload ({mana}). [all five] …"

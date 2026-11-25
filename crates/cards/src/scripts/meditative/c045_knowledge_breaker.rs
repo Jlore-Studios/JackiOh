@@ -15,7 +15,7 @@
 //!
 //! Issue #4783 took "Aura: Your Units are Cloaked." off both faces and gave the card Cloaked itself;
 //! `script_v0_6_13c` keeps the Aura, Cloaked for the Units in its controller's hand while it acts
-//! (`cloak_hand_aura`, R1040), for the replays of v0.5.3 to v0.6.13c (R767000).
+//! (`cloak_hand_aura`, R1040), for the replays after v0.5.2 through v0.6.13c (R767000).
 
 use jackioh_engine::alt_play::cloak_hand_aura;
 use jackioh_engine::prelude::*;

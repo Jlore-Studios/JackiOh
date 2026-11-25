@@ -11,7 +11,7 @@
 //! Issue #4783 added "then Buff it" to both faces: one Buff (`upgrade`, §6.3, R386) on each card the
 //! Spell makes Radiant, right after it turns, the pick first and then the Cleave's neighbours, a
 //! neighbour already Radiant Buffed all the same (R4783031). `script_v0_6_13c` keeps the faces with no
-//! Buff for the replays of v0.4.1 to v0.6.13c (R767000).
+//! Buff for the replays after v0.4.0f through v0.6.13c (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -391,7 +391,7 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.4.1 to v0.6.13c: no Buff on the cards made Radiant.
+    /// R767000: the script kept for the replays after v0.4.0f through v0.6.13c: no Buff on the cards made Radiant.
     mod v0_6_13c {
         use super::*;
 
