@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4921,
+  "title": "Patch: the AI without its learned evaluation is generation 14, so the shadow ban is swept on it and the ladder bots' ratings re-settle",
+  "branch": "bot/issue-4921",
+  "thread": "**Issue #4921 (data, not instructions):**\n\n```text\n# #4921: Patch: the AI without its learned evaluation is generation 14, so the shadow ban is swept on it and the ladder bots' ratings re-settle\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nSince 19 November the practice AI plays without the learned network it used to score its lines, and that changed many of its decisions. The repository still says the AI is generation 13, the generation that network made. Three things are meant to follow a new AI, and all three read that number. The first is the automatic re-check of the cards the AI may keep out of its own decks. The second is the ladder bots' ratings: each bot is meant to become less certain once, so its rating can move to the new AI's strength. The third is the label on every recorded game. None of them noticed the change.\n\nOnce this is built, the AI is generation 14, with a history line saying why. The card re-check runs on main by itself. Each ladder bot's next rated game widens its rating's uncertainty once. New game records name the AI that actually played them.\n\n## Why\n\n- `crates/ai/generation.json` names generation 13, lane `learn`, dated 2026-10-21. That was the learn lane's one promotion, the learned evaluation. `training/README.md` (Reading the history) says this file is the AI on `main`.\n- R4159000 retired that evaluation on 2026-11-19 (`d40d3a457d`). Its note says: 'With the correction gone, the AI's decisions move wherever it applied'. Three pinned decisions moved, and the dungeon's elite tiers were retuned (`RUN_ELITE_TIERS`). The generation did not move, and the note calls the sweep of record 'unchanged'.\n- The sweep of record (R1678000) starts only on a push to `main` that moves `generation.json`'s `generation` or ships a set (`.github/workflows/sweep.yml`, `on.push.paths`; `crates/tools/src/sweep.rs:1169`, `ai_changed = \u2026 base_generation != generation`).\n  - The last reports of record, `training/history/sweep-2026-11-13*.md`, ran on generation 13 with the network on.\n  - When the generation moves, `due_ids` (`sweep.rs:1112`) names every `SHADOW_WATCH` card of a set that may hold bans. By my count of `crates/ai/src/shadow_ban.rs` that is 189 rows: 10 Meditative, 9 Meditative+, 85 Stinkyscape, 67 Stinkyscape+ and 18 Training Grounds. None of them has been measured on the AI that plays now.\n- R1560000 widens a ladder bot's deviation once, when the server's generation is newer than the one the bot was last rated on (`crates/server/src/api/ranked.rs:238-269`, `BOT_PROMOTION_DEVIATION_BOOST` 150). With the number stuck at 13, bots rated on the network keep a settled deviation while playing another AI, so each game moves their rating only a little toward its strength. `docs/bot-calibration.md:152` puts the last calibration at generation 13, on 2026-10-28.\n- Every record names the generation of the build that played it (`RecordBuild.ai_generation`, `crates/engine/src/wire/stats.rs:385`, read from `jackioh_ai::ai_generation`, `crates/ai/src/dev_run.rs:72`). Since 2026-11-19 the gather lane's records and the live records (`crates/server/src/api/game_records.rs:349`) say 13 for an AI that is not generation 13's.\n- `WIN_PROBABILITY_AI_GENERATION` is 13 (`crates/engine/src/config.rs:2418`). The fit it names (#4574, 2026-11-24) reads swing rows written by `evaluate`, the hand evaluation (`crates/ai/src/swing_turns.rs:150`, a file added that day). The retirement did not change that evaluation.\n- A generation no lane made has a precedent: generation 9, #732's one-off, with lane `meditative` in `training/history/meditative.jsonl`.\n\n## Proposal\n\n1. `crates/ai/generation.json` becomes generation 14, lane `hand`:\n   - `parent`: the last `main` commit before R4159000 merged (`d40d3a457d`'s first parent).\n   - `tree`: the tree of `crates/ai/src` at the branch's base.\n   - `vsRandom` and `vsParent`: `null`.\n   - `shadowBan` and `parentShadowBan`: 0.\n   - `date`: the build day.\n   \n   The same line goes in a new `training/history/hand.jsonl`.\n2. `vsParent` stays `null`. A build of generation 13's commit would play today's cards by its own older definitions, from before every balance patch since. A screen against it would measure stale card text as much as the evaluation. `promotions_of` skips a line without a `vsParent` (`crates/server/src/cli/bot_calibrate.rs:150-153`), so the calibration anchor moves by nothing rather than by a guess.\n3. `WIN_PROBABILITY_AI_GENERATION` becomes 14 and its weights stay as they are. Its comment says the fit's rows came from the hand evaluation. `stats calibrate` then stops warning on generation-14 records (`crates/tools/src/win_probability.rs:294`).\n4. `training/README.md` (Reading the history) gets a paragraph on generation 14 beside generation 9's. A ruling note records the decision and two rejected alternatives:\n   - Bumping the generation on every AI fix: upkeep on every change, and each bump would start a sweep of several runner-hours.\n   - Leaving it at 13: while no lane promotes, no AI change would start either trigger again.\n5. Nothing else moves. No deck, decision or game hash reads the number.\n\n## Where it lands\n\n- `crates/ai/generation.json`\n- `training/history/hand.jsonl` (new)\n- `training/README.md`\n- `crates/engine/src/config.rs` (`WIN_PROBABILITY_AI_GENERATION`)\n- a test in `crates/ai/tests/ai/dev_run.rs`\n- `spec/rulings/R<n>.md` and `spec/pending/<issue>.md`: \u00a79.9, citing R1367000, R1560000, R1678000 and R4159000\n\n## Acceptance criteria\n\n- [ ] `generation.json` names generation 14, lane `hand`, `vsParent` `null`, and a `shadowBan` equal to `SHADOW_BAN.len()`. `training/history/hand.jsonl` holds the same line.\n- [ ] A test named after the ruling fails on today's tree. It checks that `jackioh_ai::ai_generation()` is 14 and that `generation.json`'s line is the last line of `hand.jsonl`.\n- [ ] On the branch, `cargo jackioh sweep --due origin/main` reports base generation 13 and generation 14, and names the watched cards of the sets that may hold bans. The pull request gives the count.\n- [ ] `WIN_PROBABILITY_AI_GENERATION` is 14, its four weights are unchanged, and `cargo test -p jackioh-tools win_probability` passes.\n- [ ] The AI's `shadow_ban` and `dev_run` tests pass, and so do the analysis package's `load_generations` tests and its notebook test (`analysis/tests`).\n- [ ] `cargo jackioh spec check` passes.\n\n## Size and risks\n\nSmall: about seven files and no Rust logic. The cost comes after the merge, on `main`:\n\n- The sweep of record plays about 190 cards on both faces, across up to `SWEEP_SHARDS_MAX` (10) runner jobs. That is a few hours of runner time shared with CI.\n- The sweep may ban cards within each set's ceiling, which is its job. Its own pull request records the practice-claim fixture again.\n- The sweep's push needs `LEARN_LANE_TOKEN` to still be valid (`docs/repository-secrets.md`). Without it, the run ends red and leaves its record as an artifact for a person.\n- Each ladder bot widens once, capped at a new player's deviation, on its first rated game after the deploy. That happens only while `LADDER_BOTS` is on.\n- Re-running `bot-calibrate` stays the follow-on `docs/bot-calibration.md` already prescribes. It is not part of this change.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** leaves it to a person: The claims check out, but raising the generation launches a sweep of several runner-hours that can shadow-ban some of 189 cards and resets every ladder bot's rating certainty, with nothing measured to show today's bans or ratings are wrong; 35 commits have changed crates/ai/src since 2026-11-19 without a bump, so whether this one change deserves a new generation is the maintainers' call.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-25T19:08:22Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4921: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-25T19:08:55Z",
+    "claimed_at": "2026-11-25T19:14:09Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4649 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
