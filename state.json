@@ -47654,9 +47654,9 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": null,
+    "idle_since": "2026-11-25T13:08:36Z",
     "last_area": "client",
-    "last_run": "2026-11-25T13:10:32Z",
+    "last_run": "2026-11-25T13:08:36Z",
     "provider": null,
     "requested": false,
     "run_id": null,
@@ -47675,14 +47675,6 @@
         "last_run": "2026-11-25T13:08:36Z",
         "provider": "claude-7",
         "run_id": "45620587693",
-        "taken_asks": []
-      },
-      "3": {
-        "area": "server",
-        "count": 2,
-        "last_run": "2026-11-25T13:09:31Z",
-        "provider": "claude-8",
-        "run_id": "45620735726",
         "taken_asks": []
       }
     },
