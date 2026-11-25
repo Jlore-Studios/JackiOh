@@ -22610,7 +22610,8 @@
       "kind": "review",
       "live": "reviewing",
       "own_review": {
-        "claimed_at": "2026-11-25T05:26:25Z",
+        "claimed": true,
+        "claimed_at": "2026-11-25T11:21:13Z",
         "from_run": "45529087678",
         "gates": [
           {
@@ -22672,10 +22673,10 @@
       "pending_request": false,
       "provider": "muse",
       "queued_at": "2026-11-25T05:25:09Z",
-      "run_id": "45553595174",
+      "run_id": "pending:ec03d4ca-1795605574",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
-      "started_at": "2026-11-25T05:26:25Z",
+      "started_at": "2026-11-25T11:21:13Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -23465,9 +23466,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T11:04:04Z",
+    "at": "2026-11-25T11:21:13Z",
     "url": "",
-    "what": "build #4802 on claude-7"
+    "what": "review #4893 on muse"
   },
   "last_sweep": {
     "at": "2026-11-25T11:10:41Z",
