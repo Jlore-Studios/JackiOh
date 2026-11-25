@@ -20205,6 +20205,7 @@
     "4833": {
       "action": "build",
       "asks": [],
+      "died": 1,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
@@ -20215,7 +20216,7 @@
       "owner_why": "it took it up",
       "pending_request": false,
       "provider": "muse",
-      "queued_at": "2026-11-24T21:20:13Z",
+      "queued_at": "2026-11-25T05:52:45Z",
       "requested_by": "squishy-squooby",
       "run_id": "45543077986",
       "runs_on": "night-vm-muse-fill",
