@@ -6,7 +6,7 @@
 //! and `host::expiry` turns it into the action the engine sees.
 //!
 //!  - turn clock (R79): the active player's, paused while a prompt is open for the non-active player;
-//!  - holder prompt clock (R79): answers that prompt;
+//!  - holder prompt clock (R79, R4848000): one per prompt, answers that prompt;
 //!  - mulligan clock (R268): one deadline for both seats while open (R265);
 //!  - disconnect grace per player (§9.5, R147, R744);
 //!  - hard ceiling (R79), measured from `started_at`;
@@ -82,6 +82,11 @@ pub struct ClockView {
     pub active: PlayerId,
     /// Who owes the open prompt an answer, or null.
     pub pending_for: Option<PlayerId>,
+    /// R4848000: the open prompt's id, or null: each prompt the non-active player holds gets its own prompt
+    /// clock. Host bookkeeping; no client is sent it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub prompt_id: Option<String>,
     /// R265: the seats that still owe their mulligan while both are open, in seat order; empty
     /// outside that window. Non-empty with no `pending_for` is the window the mulligan clock runs
     /// over (R268).
@@ -169,8 +174,11 @@ pub struct MatchClock {
     remaining: i64,
     turn: Countdown,
 
-    // Non-active holder's prompt clock: `holder` outlives the timer so a later `sync` cannot re-arm.
+    // Non-active holder's prompt clock, keyed by the prompt it was armed for (R79, R4848000): `holder` and
+    // `prompt_for` (that prompt's id) outlive the timer, so a later `sync` on the same prompt cannot re-arm it
+    // (only R776000's retry does), while a new prompt, the same holder's next one included, arms afresh.
     holder: Option<PlayerId>,
+    prompt_for: Option<String>,
     prompt: Countdown,
 
     // R268: the mulligan deadline is set on first sight and never moved, so the second seat gets no
@@ -206,6 +214,7 @@ impl MatchClock {
             remaining: TURN_CLOCK_SECONDS * MS_PER_SECOND,
             turn: Countdown::default(),
             holder: None,
+            prompt_for: None,
             prompt: Countdown::default(),
             mulligan: Countdown::default(),
             mulligan_open: false,
@@ -279,6 +288,7 @@ impl MatchClock {
     fn clear_prompt(&mut self, fx: &mut Fx) {
         self.prompt.cancel(TimerKey::Prompt, fx);
         self.holder = None;
+        self.prompt_for = None;
     }
 
     /// R268: one deadline for the whole window, armed the first time it is seen.
@@ -396,7 +406,10 @@ impl MatchClock {
             None => self.clear_prompt(fx),
             Some(holder) if holder == view.active => self.clear_prompt(fx),
             Some(holder) => {
-                if Some(holder) != self.holder {
+                // R4848000: the clock is the question's. A prompt it was not armed for gets a fresh one, the
+                // same holder's next included; the same prompt, its clock spent, waits for R776000's retry.
+                if Some(holder) != self.holder || view.prompt_id != self.prompt_for {
+                    self.prompt_for = view.prompt_id.clone();
                     self.arm_prompt(holder, now, fx);
                 }
             }

@@ -36129,5 +36129,33 @@
       "stinkyscapeplus-162"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.13h",
+    "date": "2026-11-25",
+    "title": "Forced Propagation: one Buff per copy when Echo repeats it",
+    "source": "issue #4825",
+    "notes": "Radiant mark is per resolution (id, turn, events_from), so an Echo repeat Buffs only its own ten copies",
+    "player": {
+      "title": "Forced Propagation no longer double-Buffs its copies",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Radiant Forced Propagation repeated by Echo no longer re-Buffs the first ten copies."
+      ]
+    },
+    "commits": [
+      "fa40ae047c99de727c67c896b6284e87797b2711"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-109",
+      "stinkyscape-111",
+      "stinkyscapeplus-024"
+    ],
+    "changes": []
   }
 ]

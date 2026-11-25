@@ -689,10 +689,10 @@ pub fn enemy_unit_arrival(state: &GameState, controller: PlayerId, event: &GameE
     }
 }
 
-/// R3550009: every enemy permanent — the opponent's acting units, then their backrow, each once
-/// (Stinkyscape+ #25 Snom Bunny's Death); Classic #40 MC Tech's count and pick read it too. A Dormant
-/// card is none (R4322000): `active_units_of` leaves out a Dormant Unit, and the backrow walk leaves
-/// out a Dormant card.
+/// R3550009: every enemy permanent — the opponent's acting units, then their backrow, then any card lying
+/// on their unit zones (R4665000), each once (Stinkyscape+ #25 Snom Bunny's Death); Classic #40 MC Tech's
+/// count and pick read it too. A Dormant card is none (R4322000): `active_units_of` leaves out a Dormant
+/// Unit, and the backrow walk leaves out a Dormant card.
 pub fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let enemy = opponent_of(player);
     let backrow: Vec<CardInstance> = crate::zones::slots_of(enemy, Row::Backrow)
@@ -707,6 +707,13 @@ pub fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance
         .filter(|card| !permanents.iter().any(|unit| unit.id == card.id))
         .collect();
     permanents.extend(backrow);
+    // R4665000: and a card lying on one of their unit zones, a backrow card there, after their backrow.
+    permanents.extend(
+        crate::zones::lying_on_unit_zones_of(state, enemy)
+            .into_iter()
+            .filter(|card| !crate::slumber::is_slumbering(card))
+            .cloned(),
+    );
     permanents
 }
 

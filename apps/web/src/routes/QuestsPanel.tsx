@@ -1,5 +1,6 @@
 // `/collection`'s quests (SPEC §14.9, #1304, #1307): each held quest, its progress and pay, and the
 // time until the next; the landing's bookmark (R2035000) shares `useQuests` and `QuestsView`.
+// R4818000: this page reads again once per due time too, as the bookmark does.
 // The server decides all of it (CLAUDE.md rule 7): `GET /api/quests` tops the account up first
 // (R1304000) and answers when the next falls due, `null` at `QUEST_MAX_HELD` or with the economy off
 // (R1304002). This only counts down on the clock (`auth/cooldown.ts`), so a background tab's frozen
@@ -289,5 +290,5 @@ export function QuestsView({
 
 export default function QuestsPanel({ token }: { token: string }): ReactElement | null {
   const { quests, error, reread, replace } = useQuests(token);
-  return <QuestsView quests={quests} error={error} onRetry={reread} onReplace={replace} />;
+  return <QuestsView quests={quests} error={error} onRetry={reread} onArrived={reread} onReplace={replace} />;
 }

@@ -11,7 +11,7 @@ use jackioh_engine::subsystems::ky_competition::worked_answer;
 use jackioh_engine::{
     ANSWER_KEY, ANSWER_STOP_KEY, Action, ActionBody, AppliedAction, CardInstance, GameEvent, GameState,
     KY_COMPETITION_MAX, NONCE_HISTORY, PLAYER_IDS, Phase, PlayerId, PromptKind, ReduceResult, Rng, Selection,
-    TurnLog, active_units_of, effective_life, find_instance, is_sick, legal_actions, max_mana_for,
+    TurnLog, active_units_of, effective_life, find_instance, home_of, is_sick, legal_actions, max_mana_for,
     opponent_of, owed_mana_of, reduce_unpiloted, self_def_ids, slot_of, stop_answer, subsystems, unit_view,
     units_on_field_of,
 };
@@ -968,8 +968,17 @@ fn card_signature(card: &CardInstance) -> String {
 fn unit_play_signature(state: &GameState, unit: &CardInstance) -> String {
     let view = unit_view(state, unit);
     let frozen = unit.frozen.map(|thaw| format!(":f{thaw}")).unwrap_or_default();
+    // R4808000: the damage chain a Churnwalker put the unit in (R3554007), only while it is in one.
+    let shared = unit
+        .shared_chain
+        .map(|chain| format!(":c{chain}"))
+        .unwrap_or_default();
+    let split = unit
+        .split_chain
+        .map(|chain| format!(":x{chain}"))
+        .unwrap_or_default();
     format!(
-        "{}{}{}:{}/{}/{}/{}:{:?}:{:?}/{:?}:{}:{:?}:{:?}{}{frozen}",
+        "{}{}{}:{}/{}/{}/{}:{:?}:{:?}/{:?}:{}:{:?}:{:?}{}{frozen}{shared}{split}",
         unit.def_id,
         if unit.radiant { "*" } else { "" },
         if unit.vanilla { "~" } else { "" },
@@ -1091,7 +1100,7 @@ fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>)
 }
 
 /// Position signature for the beam's duplicate check and, with the units' lanes (`position_key`, R4806000),
-/// the lethal solver's visited set (R1224, #898, #1797, R3772000).
+/// the lethal solver's visited set (R1224, #898, #1797, R3772000, R4808000).
 pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
     position_signature(state, seat, false)
 }
@@ -1275,21 +1284,44 @@ fn position_signature(state: &GameState, seat: PlayerId, lane_free: bool) -> Str
     {
         parts.push(format!("E{}", element.as_str()));
     }
+    // R4808000: while a card that copies the last Spell (C #57 Echo) is where the seat could play it
+    // (its hand or its graveyard), the last Spell is that card's text (`subsystems::copied_text_of`),
+    // so two orders of the same plays that end on different Spells are two positions; said only then,
+    // so every other signature stays as it was.
+    let side = &state.players[seat];
+    if side
+        .hand
+        .iter()
+        .chain(&side.graveyard)
+        .any(subsystems::copies_text)
+    {
+        let last = state.last_spell.as_ref().map_or("-".to_string(), |last| {
+            format!("{}{}", last.def_id, if last.radiant { "*" } else { "" })
+        });
+        parts.push(format!("V{last}"));
+    }
     parts.join("|")
 }
 
-/// Every active unit's lane, each side's in `active_units_of` order, the sides in `PLAYER_IDS` order
-/// (#1797): what `search_signature` leaves out. The beam's duplicate check reads the two together, as
-/// `position_key` does for the lethal solver's and the concession check's walks, so two placements of
-/// one play that differ only in lane stay two positions, while two orders of the same moves into the
-/// same lanes stay one.
+/// Every unit's lane, Dormant cards included, with an animated card's home zone beside it (R4808000),
+/// each side's in `units_on_field_of` order, the sides in `PLAYER_IDS` order (#1797): what
+/// `search_signature` leaves out. The beam's duplicate check reads the two together, as `position_key` does
+/// for the lethal solver's and the concession check's walks, so two placements of one play that differ only
+/// in lane stay two positions, while two orders of the same moves into the same lanes stay one.
 pub fn unit_lanes(state: &GameState) -> String {
     PLAYER_IDS
         .into_iter()
         .map(|player| {
-            active_units_of(state, player)
+            units_on_field_of(state, player)
                 .into_iter()
-                .map(|unit| slot_of(state, unit).map_or(0, |slot| slot.lane).to_string())
+                .map(|unit| {
+                    let lane = slot_of(state, unit).map_or(0, |slot| slot.lane);
+                    // R4808000: an animated card's home, the backrow zone it goes back to.
+                    match home_of(state, &unit.id) {
+                        Some(home) => format!("{lane}h{}{}", home.zone.player, home.zone.lane),
+                        None => lane.to_string(),
+                    }
+                })
                 .collect::<Vec<_>>()
                 .join(",")
         })
