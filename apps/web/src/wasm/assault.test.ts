@@ -141,7 +141,7 @@ describe("assault WebAssembly exports", () => {
     // The deal of 2026-11-23 on this build's stand-ins, as the module answered it; a change to the
     // catalog's deckable cards or to the deal moves it (#4783: a Commander's health, 30 + five times
     // the level).
-    expect(hash).toBe("25ea8bf2");
+    expect(hash).toBe("a26a9567");
   });
 
   it("the day deck has DECK_SIZE distinct ids, is equal twice, and every id is in the catalog", () => {
