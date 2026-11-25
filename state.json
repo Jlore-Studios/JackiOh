@@ -20639,7 +20639,7 @@
       "started_at": "2026-11-24T23:53:20Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 3
     },
     "4845": {
       "failures": 0,
