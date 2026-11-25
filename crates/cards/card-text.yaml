@@ -7497,7 +7497,7 @@ stinkyscapeplus-049: # Metaglass
     cast: Crystal clear. Aim true!
   zh:
     name: 金属玻璃
-    base: 使一个单位获得远程。
+    base: 使一个单位获得远程和+{attack}攻击力。
     radiant: 使一个单位获得远程和+{attack}攻击力。
 stinkyscapeplus-050: # Graphite
   flavour: Soft enough to draw with, sharp enough to end an argument.
@@ -7553,8 +7553,8 @@ stinkyscapeplus-056: # Impact Reactor
     cast: Brace for impact. Everyone, brace!
   zh:
     name: 冲击反应堆
-    base: "巨型\n战吼：过载({mana})，再下个回合过载({mana2})。\n休眠{dormant}个回合。\n苏醒时：获得无限法力值。"
-    radiant: "巨型\n战吼：过载({mana})，再下个回合过载({mana2})。\n休眠{dormant}个回合。\n苏醒时：获得无限法力值。"
+    base: "巨型\n战吼：过载({mana})。\n休眠{dormant}个回合。\n苏醒时：获得无限法力值。"
+    radiant: "巨型\n战吼：过载({mana})。\n休眠{dormant}个回合。\n苏醒时：获得无限法力值。"
 stinkyscapeplus-057: # Phase Weaver
   flavour: She knits scarves out of light. They are very warm and slightly late.
   voice:
@@ -7893,8 +7893,8 @@ stinkyscapeplus-090: # Meltdown
     death: Cooling down. Finally.
   zh:
     name: 熔毁
-    base: "灵活，远程，无法守备，风怒\n此单位攻击时，获得+{attack}攻击力并受到{damage}点伤害。\n当此单位被冻结时，使其完全恢复生命值。"
-    radiant: "灵活，远程，风怒\n此单位攻击时，获得+{attack}攻击力并受到{damage}点伤害。\n当此单位被冻结时，使其完全恢复生命值。"
+    base: "灵活，远程，无法守备，风怒\n此单位攻击时，获得+{attack}攻击力并受到{damage}点伤害。"
+    radiant: "灵活，远程，风怒\n此单位攻击时，获得+{attack}攻击力并受到{damage}点伤害。"
 stinkyscapeplus-091: # Tsunami
   flavour: Arrives like a wall, leaves like a puddle.
   voice:
@@ -8177,8 +8177,8 @@ stinkyscapeplus-120: # Crawler
     death: Splat, as planned.
   zh:
     name: 爬行者
-    base: "可以花费(1)从你的墓地中打出。\n亡语：将一张巨毒蛛置入你的手牌。如果你的手牌中已有一张，则改为使其法力值消耗减少({reduce})点。"
-    radiant: "可以花费(1)从你的墓地中打出。\n亡语：将一张光辉巨毒蛛置入你的手牌。如果你的手牌中已有一张，则改为使其法力值消耗减少({reduce})点。"
+    base: "闪回\n亡语：将一张巨毒蛛置入你的手牌。如果你的手牌中已有一张，则改为使其法力值消耗减少({reduce})点。"
+    radiant: "闪回\n亡语：将一张光辉巨毒蛛置入你的手牌。如果你的手牌中已有一张，则改为使其法力值消耗减少({reduce})点。"
 stinkyscapeplus-121: # Toxopid
   flavour: More legs than a centipede, with worse manners.
   voice:
@@ -8187,8 +8187,8 @@ stinkyscapeplus-121: # Toxopid
     death: Even giants fall.
   zh:
     name: 巨毒蛛
-    base: "陨坑，不可变，突袭\n结余减费。\n战吼：在场上随机的空的单位区中召唤{legs}个巨毒蛛腿。\n场上有巨毒蛛腿时不可摧毁。\n无视嘲讽。\n回合结束时：使所有敌人获得毒素{toxic}。"
-    radiant: "陨坑，不可变，突袭\n结余减费。\n战吼：在你对手场上随机的空的单位区中召唤{legs}个光辉巨毒蛛腿。\n场上有巨毒蛛腿时不可摧毁。\n无视嘲讽。\n回合结束时：使所有敌人获得毒素{toxic}。"
+    base: "陨坑，不可变，突袭\n结余减费。\n战吼：在场上随机的空的单位区中召唤{legs}个巨毒蛛腿。\n场上有巨毒蛛腿时不可摧毁。\n回合结束时：使所有敌人获得毒素{toxic}。"
+    radiant: "陨坑，不可变，突袭\n结余减费。\n战吼：在你对手场上随机的空的单位区中召唤{legs}个光辉巨毒蛛腿。\n场上有巨毒蛛腿时不可摧毁。\n回合结束时：使所有敌人获得毒素{toxic}。"
 stinkyscapeplus-121-1: # Toxopid Leg
   flavour: Strictly a leg. Unreasonably proud of it.
   voice:
@@ -8389,8 +8389,8 @@ stinkyscapeplus-137: # The Perfect Pair
     cast: Two parts, one perfect match!
   zh:
     name: 完美搭档
-    base: 将一张自动机-δ及其配对的自动机-Ω牌置入你的手牌。配对为：权杖与君临，本影与日蚀，四翼机与八翼机，赛伊与大村，船帆与乌鸦。
-    radiant: 将一张光辉自动机-δ及其配对的光辉自动机-Ω牌置入你的手牌。配对为：权杖与君临，本影与日蚀，四翼机与八翼机，赛伊与大村，船帆与乌鸦。
+    base: 将一张自动机-δ及其配对的自动机-Ω牌置入你的手牌。
+    radiant: 将一张光辉自动机-δ及其配对的光辉自动机-Ω牌置入你的手牌。
 stinkyscapeplus-138: # Delta Definition
   flavour: Defines a delta as a small change. The change is not small.
   voice:
@@ -8607,7 +8607,7 @@ stinkyscapeplus-158: # Quick Chaos
     cast: Opened it. Regretted it.
   zh:
     name: 速效混沌
-    base: 抽到时施放：随机施放一张法术，目标随机。
+    base: 抽到时施放：随机施放一张法术，目标随机。随机弃掉{discards}张牌。
     radiant: 抽到时施放：随机施放一张光辉法术，目标随机。
 stinkyscapeplus-159: # Raven
   flavour: Brings you a shiny thing and expects a thank-you note.

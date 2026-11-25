@@ -491,10 +491,10 @@
     },
     "stinkyscapeplus-121": {
       "base": {
-        "en": "Crater, Immutable, Rush\nCry: Summon {legs|Leg|Legs}.\nIndestructible with Legs.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+        "en": "Crater, Immutable, Rush\nCry: Summon {legs|Leg|Legs}.\nIndestructible with Legs.\nEnd of turn: Toxic {toxic} all enemies."
       },
       "radiant": {
-        "en": "Crater, Immutable, Rush\nCry: Summon {legs|Leg|Legs} for them.\nIndestructible with Legs.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+        "en": "Crater, Immutable, Rush\nCry: Summon {legs|Leg|Legs} for them.\nIndestructible with Legs.\nEnd of turn: Toxic {toxic} all enemies."
       }
     },
     "stinkyscapeplus-123": {
@@ -513,11 +513,6 @@
     "stinkyscapeplus-133": {
       "radiant": {
         "en": "Add a Radiant Dagger and Flare. The first play of each cost of Radiant Automa-ζ adds the next cost's, Radiant."
-      }
-    },
-    "stinkyscapeplus-137": {
-      "radiant": {
-        "en": "Add a Radiant Automa-δ and its Radiant Automa-Ω pair: Scepter and Reign, Antumbra and Eclipse, Quad and Oct, Sei and Omura, Vela and Corvus."
       }
     },
     "stinkyscapeplus-142": {

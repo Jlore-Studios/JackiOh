@@ -2,8 +2,10 @@
 //! Unit directly across from it (S+ #37 Scorch, `attacksOnlyAcross`) may attack no hero (R3550001,
 //! `attack_restriction`), so `face_threat` counts none of its swings (one a turn since issue #3951, ten
 //! before) and `wall_switches` offers no wall against them. An attacker that Ignores Taunt (S+ #121 Toxopid, `ignoresTaunt`) skips §4.2 step 3
-//! (R3560007), so no Taunt binds it, Defense Position's included. The stand-ins: Mr. Vanilla, a 4/4; Core
-//! #25, a 7/7 with Armor 7; and Midrange Menace, a 9/9 with Taunt.
+//! (R3560007), so no Taunt binds it, Defense Position's included. Toxopid printed it through v0.6.13c and
+//! no card prints it since issue #4783 (R4783021), so its tests run under the script kept for those replays
+//! (R767000), which carries the flag. The stand-ins: Mr. Vanilla, a 4/4; Core #25, a 7/7 with Armor 7; and
+//! Midrange Menace, a 9/9 with Taunt.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -31,6 +33,21 @@ fn duel(ai: Value, enemy: Value) -> GameState {
     scenario(json!({ "seed": "ai-static-flags", "p1": ai, "p2": enemy }))
         .state()
         .clone()
+}
+
+/// `run` with Toxopid on the script kept for v0.6.13c, the last that ignored Taunt (R4783021, R767000).
+fn ignoring_taunt<T>(run: impl FnOnce() -> T) -> T {
+    register_cards();
+    let kept: &'static jackioh_engine::ShippedCatalog =
+        Box::leak(Box::new(jackioh_engine::ShippedCatalog::new(
+            "kept",
+            jackioh_cards::CATALOG.clone(),
+            jackioh_engine::prelude::IndexMap::from([(
+                TOXOPID.to_string(),
+                jackioh_cards::scripts::stinkyscape_plus::c121_toxopid::script_v0_6_13c(),
+            )]),
+        )));
+    jackioh_engine::with_shipped(Some(kept), run)
 }
 
 /// The 7/7's switch to Defense Position.
@@ -105,56 +122,62 @@ fn a_lone_scorch_calls_for_no_wall() {
 /// A Toxopid swings past the Taunt Defense Position grants, and past a printed Taunt.
 #[test]
 fn toxopid_walks_past_a_defense_position_unit() {
-    for (radiant, attack) in [(false, 10), (true, 20)] {
-        let s = duel(
-            json!({ "field": [{ "def": VANILLA, "lane": 3, "position": "DEF" }] }),
-            json!({ "field": [{ "def": TOXOPID, "lane": 3, "radiant": radiant }] }),
-        );
-        assert_eq!(face_threat(&s, HUMAN), attack, "radiant {radiant}");
-        assert_eq!(face_threat_with(&s, HUMAN, &OFF), 0, "radiant {radiant}");
-        assert_eq!(face_threat_with(&s, HUMAN, &GREEDY_EVAL), 0, "radiant {radiant}");
-    }
+    ignoring_taunt(|| {
+        for (radiant, attack) in [(false, 10), (true, 20)] {
+            let s = duel(
+                json!({ "field": [{ "def": VANILLA, "lane": 3, "position": "DEF" }] }),
+                json!({ "field": [{ "def": TOXOPID, "lane": 3, "radiant": radiant }] }),
+            );
+            assert_eq!(face_threat(&s, HUMAN), attack, "radiant {radiant}");
+            assert_eq!(face_threat_with(&s, HUMAN, &OFF), 0, "radiant {radiant}");
+            assert_eq!(face_threat_with(&s, HUMAN, &GREEDY_EVAL), 0, "radiant {radiant}");
+        }
 
-    let s = duel(
-        json!({ "field": [{ "def": MENACE, "lane": 1 }] }),
-        json!({ "field": [{ "def": TOXOPID, "lane": 3 }] }),
-    );
-    assert_eq!(face_threat(&s, HUMAN), 10);
-    assert_eq!(face_threat_with(&s, HUMAN, &OFF), 0);
+        let s = duel(
+            json!({ "field": [{ "def": MENACE, "lane": 1 }] }),
+            json!({ "field": [{ "def": TOXOPID, "lane": 3 }] }),
+        );
+        assert_eq!(face_threat(&s, HUMAN), 10);
+        assert_eq!(face_threat_with(&s, HUMAN, &OFF), 0);
+    });
 }
 
 /// Only the Taunt-ignorer walks past: the Taunt still binds every other attacker.
 #[test]
 fn a_taunt_still_walls_every_other_attacker() {
-    let s = duel(
-        json!({ "field": [{ "def": MENACE, "lane": 1 }] }),
-        json!({ "field": [{ "def": TOXOPID, "lane": 3 }, { "def": VANILLA, "lane": 1 }] }),
-    );
-    assert_eq!(face_threat(&s, HUMAN), 10);
-    assert_eq!(face_threat_with(&s, HUMAN, &OFF), 0);
+    ignoring_taunt(|| {
+        let s = duel(
+            json!({ "field": [{ "def": MENACE, "lane": 1 }] }),
+            json!({ "field": [{ "def": TOXOPID, "lane": 3 }, { "def": VANILLA, "lane": 1 }] }),
+        );
+        assert_eq!(face_threat(&s, HUMAN), 10);
+        assert_eq!(face_threat_with(&s, HUMAN, &OFF), 0);
 
-    let s = duel(
-        json!({ "field": [{ "def": MENACE, "lane": 1 }] }),
-        json!({ "field": [{ "def": VANILLA, "lane": 1 }] }),
-    );
-    assert_eq!(face_threat(&s, HUMAN), 0);
-    assert_eq!(face_threat_with(&s, HUMAN, &OFF), 0);
+        let s = duel(
+            json!({ "field": [{ "def": MENACE, "lane": 1 }] }),
+            json!({ "field": [{ "def": VANILLA, "lane": 1 }] }),
+        );
+        assert_eq!(face_threat(&s, HUMAN), 0);
+        assert_eq!(face_threat_with(&s, HUMAN, &OFF), 0);
+    });
 }
 
 /// At 10 life against a Toxopid, the 7/7's switch to Defense Position used to look like it walled the
 /// lethal swing; it walls nothing, so it is not offered.
 #[test]
 fn a_toxopid_makes_a_defense_switch_pointless() {
-    let s = duel(
-        json!({ "health": 10, "field": [{ "def": BIG, "lane": 1 }] }),
-        json!({ "field": [{ "def": TOXOPID, "lane": 3 }] }),
-    );
-    assert_eq!(face_threat(&s, HUMAN), 10);
-    assert!(walls(&s).is_empty(), "{:?}", walls(&s));
+    ignoring_taunt(|| {
+        let s = duel(
+            json!({ "health": 10, "field": [{ "def": BIG, "lane": 1 }] }),
+            json!({ "field": [{ "def": TOXOPID, "lane": 3 }] }),
+        );
+        assert_eq!(face_threat(&s, HUMAN), 10);
+        assert!(walls(&s).is_empty(), "{:?}", walls(&s));
 
-    let walled = act(&s, AI, wall(&s));
-    assert_eq!(face_threat(&walled, HUMAN), 10);
-    assert_eq!(face_threat_with(&walled, HUMAN, &OFF), 0);
+        let walled = act(&s, AI, wall(&s));
+        assert_eq!(face_threat(&walled, HUMAN), 10);
+        assert_eq!(face_threat_with(&walled, HUMAN, &OFF), 0);
+    });
 }
 
 /// The evaluation drops the lethal threat an enemy Scorch would pose the AI, and the lethal pressure the
@@ -184,16 +207,18 @@ fn the_evaluation_drops_the_lethal_threat_and_pressure_these_flags_wall_off() {
 /// Menace, leaving 5 of the enemy's 15.
 #[test]
 fn the_lethal_gap_reads_ignores_taunt_too() {
-    let s = duel(
-        json!({ "field": [{ "def": TOXOPID, "lane": 3 }] }),
-        json!({ "health": 15, "field": [{ "def": MENACE, "lane": 1 }] }),
-    );
-    let toxopid = unit(&s, AI, TOXOPID);
-    let attacks = [(toxopid, 10, true)];
-    assert_eq!(damage_past_taunts_with(&s, HUMAN, &attacks, &AI_EVAL), 10);
-    assert_eq!(damage_past_taunts_with(&s, HUMAN, &attacks, &OFF), 0);
-    assert_eq!(damage_past_taunts(&s, HUMAN, &attacks), 10);
-    close(ready_gap(&s, AI), 5.0);
+    ignoring_taunt(|| {
+        let s = duel(
+            json!({ "field": [{ "def": TOXOPID, "lane": 3 }] }),
+            json!({ "health": 15, "field": [{ "def": MENACE, "lane": 1 }] }),
+        );
+        let toxopid = unit(&s, AI, TOXOPID);
+        let attacks = [(toxopid, 10, true)];
+        assert_eq!(damage_past_taunts_with(&s, HUMAN, &attacks, &AI_EVAL), 10);
+        assert_eq!(damage_past_taunts_with(&s, HUMAN, &attacks, &OFF), 0);
+        assert_eq!(damage_past_taunts(&s, HUMAN, &attacks), 10);
+        close(ready_gap(&s, AI), 5.0);
+    });
 }
 
 /// With neither card on the field, the flag changes no number, on either side.
