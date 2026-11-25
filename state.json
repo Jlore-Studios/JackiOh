@@ -23841,6 +23841,13 @@
     "4921": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-25T19:25:43Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "No rule line holds: no crates/ai/src or engine source, decision or search changes (one data file, one constant, one test, docs); no cross-crate contract changes, since the three readers already read the number; no migration; about 10 files."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
