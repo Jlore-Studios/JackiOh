@@ -45957,7 +45957,8 @@
       "2026-11-25T05:45:05Z,claude-4,stream,call,45552064545,21,2026-11-25T06:00:00Z,,,allowed,100,,"
     ],
     "runs": [
-      "2026-11-25T06:09:30Z,45539587105,claude-3,opus,revise,4864,hard,interrupted,refusal,123.1,12,2575,330589,3.5028,1,100,,,166.2,claude-3,resumed,,3"
+      "2026-11-25T06:09:30Z,45539587105,claude-3,opus,revise,4864,hard,interrupted,refusal,123.1,12,2575,330589,3.5028,1,100,,,166.2,claude-3,resumed,,3",
+      "2026-11-25T06:20:38Z,45552064545,claude-4,opus,build,4813,hard,built,,29.5,78,20572,3198511,1.6741,13,21,,,495.6,claude-3,fresh,other,1"
     ]
   },
   "version": 1
