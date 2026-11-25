@@ -1,7 +1,7 @@
 //! IA #41.1 Phantom (SPEC §8.13 row 41.1, §7), a token of the held Infinite Assault set
 //! (R4577000).
 //!
-//! A (1) 3/1, Rush, Brittle 1 → Radiant (1) 6/2, Rush, Brittle 1: Rush and Brittle 1 are the
+//! A (1) 3/1, Brittle 1, Rush → Radiant (1) 6/2, Brittle 1, Rush: Rush and Brittle 1 are the
 //! designer's printed word on both faces, kept by the token rule, so both faces run the default
 //! script. Phantom Army fills with plain Phantoms on its base face and Radiant ones on its
 //! Radiant face.

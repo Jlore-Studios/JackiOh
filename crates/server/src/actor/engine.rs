@@ -87,9 +87,11 @@ pub fn create_game_args(
         glitch_boards,
         // R923000: no match the server runs is a practice sandbox.
         sandbox: None,
-        // R2702000: nor deck marks, which only the dungeon run deals.
+        // R2702000: nor deck marks, which only the dungeon run deals, nor deck sets (R4595000),
+        // which only the Infinite Assault names.
         deck_marks: None,
         win_rates,
+        deck_sets: None,
     }
 }
 
@@ -112,10 +114,11 @@ pub fn fold_args(
         dealt,
         last_boards,
         glitch_boards,
-        // R923000, R2702000: as `create_game_args`, never a sandbox and no deck mark.
+        // R923000, R2702000, R4595000: as `create_game_args`, never a sandbox, no deck mark, no deck set.
         sandbox: None,
         deck_marks: None,
         win_rates,
+        deck_sets: None,
     }
 }
 

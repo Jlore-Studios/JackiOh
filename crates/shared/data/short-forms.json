@@ -19,10 +19,10 @@
     },
     "core-089": {
       "base": {
-        "en": "Rush, Brittle 1\nIn your hand, gains the stats of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
+        "en": "Brittle 1, Rush\nIn your hand, gains the stats of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
       },
       "radiant": {
-        "en": "Rush, Brittle 3\nIn hand: gains twice each dead Unit's stats.\nMay attack again after attacking a Unit."
+        "en": "Brittle 3, Rush\nIn hand: gains twice each dead Unit's stats.\nMay attack again after attacking a Unit."
       }
     },
     "core-095": {
@@ -39,7 +39,7 @@
     },
     "classic-023": {
       "base": {
-        "en": "Indestructible, Spell Damage +1, Tradable\nCry: Discard {discards|random card|random cards}.\nActivate: Your plays this turn become Books of Flame."
+        "en": "Tradable, Spell Damage +1, Indestructible\nCry: Discard {discards|random card|random cards}.\nActivate: Your plays this turn become Books of Flame."
       }
     },
     "classic-028": {
@@ -286,7 +286,7 @@
         "en": "Flying\nCry: Next turn, make your opponent a trade offer: you give a card from your hand, they Discover one of theirs for you."
       },
       "radiant": {
-        "en": "Flying, Lucky 1\nCry: Next turn, make your opponent a trade offer: you give a card from your hand, they Discover one of theirs for you."
+        "en": "Lucky 1, Flying\nCry: Next turn, make your opponent a trade offer: you give a card from your hand, they Discover one of theirs for you."
       }
     },
     "stinkyscape-087": {
@@ -397,7 +397,7 @@
     },
     "traininggrounds-016": {
       "radiant": {
-        "en": "Divine Shield, Taunt, Armor 6\nCry: Summon a Radiant Chosen by the Sun to the left and a Radiant Chosen by the Moon to the right."
+        "en": "Taunt, Divine Shield, Armor 6\nCry: Summon a Radiant Chosen by the Sun to the left and a Radiant Chosen by the Moon to the right."
       }
     },
     "traininggrounds-039": {
@@ -411,10 +411,10 @@
     },
     "stinkyscapeplus-007": {
       "base": {
-        "en": "Armor 4, Tribute 1\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
+        "en": "Tribute 1, Armor 4\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
       },
       "radiant": {
-        "en": "Armor 8, Tribute 1\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
+        "en": "Tribute 1, Armor 8\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
       }
     },
     "stinkyscapeplus-024": {
@@ -451,10 +451,10 @@
     },
     "stinkyscapeplus-072": {
       "base": {
-        "en": "Tribute 5, Indestructible, Can't attack, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nAttacks each summoned enemy; Overload ({mana})."
+        "en": "Tribute 5, Flexible, Indestructible, Immutable, Immune to Spells, Can't attack, Can't Defend, Ranged\nAttacks each summoned enemy; Overload ({mana})."
       },
       "radiant": {
-        "en": "Tribute 5, Indestructible, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nAttacks each summoned enemy; Overload ({mana})."
+        "en": "Tribute 5, Flexible, Indestructible, Immutable, Immune to Spells, Can't Defend, Ranged\nAttacks each summoned enemy; Overload ({mana})."
       }
     },
     "stinkyscapeplus-080": {
@@ -491,10 +491,10 @@
     },
     "stinkyscapeplus-121": {
       "base": {
-        "en": "Crater, Immutable, Rush\nCry: Summon {legs|Leg|Legs}.\nIndestructible with Legs.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+        "en": "Immutable, Crater, Rush\nCry: Summon {legs|Leg|Legs}.\nIndestructible with Legs.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
       },
       "radiant": {
-        "en": "Crater, Immutable, Rush\nCry: Summon {legs|Leg|Legs} for them.\nIndestructible with Legs.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+        "en": "Immutable, Crater, Rush\nCry: Summon {legs|Leg|Legs} for them.\nIndestructible with Legs.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
       }
     },
     "stinkyscapeplus-123": {

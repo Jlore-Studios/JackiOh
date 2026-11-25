@@ -6,13 +6,24 @@ import { describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
 import { GLITCH_DEF_ID } from "@jackioh/engine/config";
-import { fillParams, type CardDef, type CardFace, type Tag } from "@jackioh/shared";
+import { fillParams, type CardDef, type CardFace, type Keyword, type Tag } from "@jackioh/shared";
 
 import { fusedDef } from "../test/fixtures.ts";
 import { DORMANT_STARSHIP_ID, DORMANT_STARSHIP_NAME } from "./fused.ts";
 import { ALL_TRIBES, foilFor, frameRarity } from "./frame.ts";
 import { faceModel, type FaceModel, type FaceSource } from "./model.ts";
 import { legacyText, markedText, termsIn } from "../test/faceData.ts";
+import { keywordLineOrder } from "../wasm/index.ts";
+
+/** R4747000: `keywords` in the keyword line's one order, as the face model sorts them; a kind with no place keeps its own order after the rest. */
+function inLineOrder(keywords: readonly Keyword[]): Keyword[] {
+  const order = keywordLineOrder();
+  const rank = (keyword: Keyword): number => {
+    const at = order.indexOf(keyword.kind);
+    return at < 0 ? order.length : at;
+  };
+  return [...keywords].sort((a, b) => rank(a) - rank(b));
+}
 
 const DEFS: readonly CardDef[] = Object.values(CATALOG);
 const UNKNOWN_ID = "core-999";
@@ -127,7 +138,8 @@ describe("B7: faceModel copies the def and picks the face", () => {
         expect(f.index, where).toBe(card.index);
         expect(f.set, where).toBe(card.set);
         expect(f.radiant, where).toBe(radiant);
-        expect(f.keywords, where).toEqual(shown.keywords);
+        // R4747000: the printed keywords, in the keyword line's one order.
+        expect(f.keywords, where).toEqual(inLineOrder(shown.keywords));
         // Each face prints its own catalog text whole, its `{key}` numbers filled in (B3.4 rule 5); only
         // a radiant face marks anything (R277).
         expect(f.text.full, where).toBe(fillParams(card, radiant ? "radiant" : "base"));
@@ -499,7 +511,7 @@ describe("a face in play is the card as the view says it stands; the collection'
     expect(f.stats).toEqual({ attack: 9, health: 11, maxHealth: 11, attackTone: "buffed", healthTone: "buffed" });
     // Its text and keywords are still the card's own: a meal changes numbers, not words.
     expect(f.text.full).toBe(def("core-089").base.text);
-    expect(f.keywords).toEqual(def("core-089").base.keywords);
+    expect(f.keywords).toEqual(inLineOrder(def("core-089").base.keywords));
     expect(f.printed).toBeNull();
     expect(face("core-089", false).stats).toMatchObject({ attack: 2, health: 2 });
   });
@@ -592,7 +604,8 @@ describe("a face in play is the card as the view says it stands; the collection'
       },
       inPlay: {},
     });
-    expect(f.gained).toEqual([{ kind: "Poisonous" }, { kind: "Taunt" }, { kind: "Armor", n: 1 }]);
+    // R4747000: in the keyword line's order, Taunt before Poisonous.
+    expect(f.gained).toEqual([{ kind: "Taunt" }, { kind: "Poisonous" }, { kind: "Armor", n: 1 }]);
     expect(f.text.full).toBe("Rush, First Strike");
     expect(f.printed).toBeNull();
   });
@@ -601,10 +614,11 @@ describe("a face in play is the card as the view says it stands; the collection'
     const fused = fusedDef([def("core-011"), def("core-089")]);
     const f = faceModel({ defId: fused.id, def: fused, radiant: false, liveCost: 4, inPlay: {} });
     expect(f).toMatchObject({ known: true, name: "Tempo Timmy + Corpse Eater", type: "Unit", tags: ["Human"] });
-    // R3941002: Tempo Timmy's "Rush, First Strike" and Corpse Eater's "Rush, Brittle 1" print as one line.
+    // R3941002: Tempo Timmy's "Rush, First Strike" and Corpse Eater's "Brittle 1, Rush" print as one line, in
+    // R4747000's order: the drawback Brittle before the combat keywords.
     const [, ...corpseEater] = def("core-089").base.text.split("\n");
-    expect(f.text.full).toBe(["Rush, First Strike, Brittle 1", ...corpseEater].join("\n"));
-    expect(f.keywords.map((keyword) => keyword.kind)).toEqual(["Rush", "First Strike", "Brittle"]);
+    expect(f.text.full).toBe(["Brittle 1, Rush, First Strike", ...corpseEater].join("\n"));
+    expect(f.keywords.map((keyword) => keyword.kind)).toEqual(["Brittle", "Rush", "First Strike"]);
     expect(f.stats).toMatchObject({ attack: 5, health: 5 });
   });
 

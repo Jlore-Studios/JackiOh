@@ -4,8 +4,12 @@
 // (R4083000), Games behind the tab's Columns toggle, and Since: the version it began at and the patches it reaches.
 // It sorts, views and ranges by the page's one state, as the Tokens tab does, and a row opens the card's drill-down.
 // Every figure is the server's (CLAUDE.md rule 7); the tier fit only measures its range against its band (R3184001).
+// R4680000: the same table and grid draw the Versions view, one row per play version of each card the Cards tab lists,
+// its Card as that version printed it and its span in Since; a row near the screen asks for its version's catalog.
 
-import type { ReactElement, ReactNode } from "react";
+import { useEffect, useState, type ReactElement, type ReactNode } from "react";
+import type { CardCost, CardDef } from "@jackioh/shared";
+import { canWatchArt, whenNear } from "../cards/art/near.ts";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import type { PublicCardStat, PublicPlayVersion, PublicStatsVersionsResponse } from "../net/api.ts";
 import { ADJUSTED_RANGE_DIGITS } from "./config.ts";
@@ -27,14 +31,24 @@ export function runningSortOf(col: string, dir: "asc" | "desc"): CreatedSort {
   return { col: RUNNING_SORT_COLUMNS.find((known) => known === col) ?? "adjustedWinRate", dir };
 }
 
-/** R4678001: one card's row: its live play version's figures, with the card's cost and rarity from the Cards tab's row. */
+/**
+ * R4678001: one card's row: its live play version's figures, with the card's cost and rarity from the Cards tab's row.
+ * R4680000: on Versions, one play version's, its id the play version's own.
+ */
 export type RunningRow = SortedRow & {
-  cost: number;
-  rarity: string;
-  /** The version its live play version began at. */
+  /** The card the row is: on Running its id too. */
+  card: string;
+  /** R4680000: as the row's version printed them; none while an old version's catalog loads. */
+  cost: number | "X" | undefined;
+  rarity: string | undefined;
+  /** The version its play version began at. */
   since: string;
+  /** R4680000: on Versions, the version it ended at, or null for the card's live version. */
+  until?: string | null;
   /** The patches that play version reaches; none from a server deployed before it. */
   patches: number | undefined;
+  /** R4680000: the shipped version whose catalog holds an old version's definition, until that catalog has loaded. */
+  needs?: string;
 };
 
 /**
@@ -53,6 +67,7 @@ export function runningRows(
     return [
       {
         id: card.id,
+        card: card.id,
         name: version.name,
         cost: card.cost,
         rarity: card.rarity,
@@ -69,22 +84,100 @@ export function runningRows(
   });
 }
 
+/** R4680000: a cost as the badge prints it: an Embiggen card's base cost. */
+function badgeCost(cost: CardCost): number | "X" {
+  return typeof cost === "object" ? cost.base : cost;
+}
+
+/**
+ * R4680000: Versions' rows: every play version of each card the Cards tab lists under its filters, in that order and
+ * each card's oldest first, or only the closed ones under Past versions only. A live version's cost and rarity are the
+ * Cards tab's row's; an old one's are its definition's (`defOf`: undefined until its catalog loads, null where none
+ * could be read), and until it has one the row names the version whose catalog it needs.
+ */
+export function versionRows(
+  cards: readonly Pick<PublicCardStat, "id" | "cost" | "rarity">[],
+  versions: readonly PublicPlayVersion[],
+  pastOnly: boolean,
+  defOf: (version: PublicPlayVersion) => CardDef | null | undefined,
+): RunningRow[] {
+  const byCard = new Map<string, PublicPlayVersion[]>();
+  for (const version of versions) {
+    if (pastOnly && version.live) continue;
+    byCard.set(version.card, [...(byCard.get(version.card) ?? []), version]);
+  }
+  return cards.flatMap((card) =>
+    (byCard.get(card.id) ?? []).map((version): RunningRow => {
+      const def = version.live ? null : defOf(version);
+      return {
+        id: version.id,
+        card: card.id,
+        name: version.name,
+        cost: version.live ? card.cost : def ? badgeCost(def.cost) : undefined,
+        rarity: version.live ? card.rarity : def?.rarity,
+        games: version.games,
+        adjustedWinRate: version.adjustedWinRate,
+        adjustedLow: version.adjustedLow,
+        adjustedHigh: version.adjustedHigh,
+        tier: version.tier,
+        hasEnoughGames: version.hasEnoughGames,
+        since: version.first,
+        until: version.live ? null : version.last,
+        patches: version.patches,
+        needs: version.live || def ? undefined : version.last,
+      };
+    }),
+  );
+}
+
+/** R4680000: a play version's span, "v0.5.8 – v0.6.9", one version alone, or "v0.6.10 – live" for its live one. */
+export function spanText(since: string, until: string | null): string {
+  if (until === null) return `${since} – ${t("live")}`;
+  return until === since ? since : `${since} – ${until}`;
+}
+
 /** R4678001: how many patches a play version reaches. */
-function patchesText(patches: number): string {
+export function patchesText(patches: number): string {
   return patches === 1 ? t("across 1 patch") : t("across {n} patches", { n: formatNumber(patches) });
 }
 
-/** R4678001: Since: the version, then the patches it reaches. */
-function Since({ row }: { row: RunningRow }): ReactElement {
+/** R4678001: Since: the version, then the patches it reaches. R4680000: on Versions, its span, its live one marked. */
+function Since({ row, testid }: { row: RunningRow; testid: string }): ReactElement {
   return (
-    <span data-testid={statsTestid.runningSince}>
-      {row.since}
+    <span data-testid={testid}>
+      {row.until === undefined ? (
+        row.since
+      ) : row.until === null ? (
+        <>
+          {row.since} – <span className="stats-version-live">{t("live")}</span>
+        </>
+      ) : (
+        spanText(row.since, row.until)
+      )}
       {row.patches !== undefined && row.patches > 0 && <span className="stats-sample-hint"> {patchesText(row.patches)}</span>}
     </span>
   );
 }
 
+/** A row's card, and on Versions its play version, whether it is live, and the catalog it still needs (R4680000). */
+function rowData(row: RunningRow): Record<string, string | undefined> {
+  if (row.until === undefined) return { "data-card-id": row.card };
+  return {
+    "data-card-id": row.card,
+    "data-version-id": row.id,
+    "data-live": row.until === null ? "true" : undefined,
+    "data-needs": row.needs,
+  };
+}
+
+/** R4678001, R4680000: what each view's table, grid and Since are tested by. */
+const PANEL_TESTIDS = {
+  running: { table: statsTestid.runningTable, grid: statsTestid.runningGrid, since: statsTestid.runningSince },
+  versions: { table: statsTestid.versionsTable, grid: statsTestid.versionsGrid, since: statsTestid.versionsSpan },
+} as const;
+
 export function RunningPanel({
+  kind = "running",
   rows,
   sort,
   onSort,
@@ -98,7 +191,10 @@ export function RunningPanel({
   visibleThumbnail,
   visibleGames,
   onOpen,
+  onNeed,
 }: {
+  /** R4680000: Running, or Versions, which draws a row per play version. */
+  kind?: keyof typeof PANEL_TESTIDS;
   rows: readonly RunningRow[];
   /** The page's one sort, which a header asks the page to change, as the deck table's headers do. */
   sort: CreatedSort;
@@ -110,33 +206,56 @@ export function RunningPanel({
   /** The id of what names the table: the tab. */
   labeledBy: string;
   nameOf: (id: string, name: string) => string;
-  /** A card's face in the Grid, as the deck grid draws it. */
+  /** A row's face in the Grid, as the deck grid draws it, by the row's id. */
   faceOf: (id: string) => ReactNode;
-  /** R3887000: a card's plain text, or null for an id with none; the name stands in for it. */
+  /** R3887000: a row's plain text by its id, or null for one with none; the name stands in for it. */
   plainCardOf?: (id: string) => ReactNode;
   visibleThumbnail: boolean;
   visibleGames: boolean;
-  /** A row opens the card's drill-down, as a deck row does. */
+  /** A row opens its drill-down by its id, as a deck row does. */
   onOpen: (id: string, opener: HTMLElement) => void;
+  /** R4680000: a row near the screen whose version's catalog has not loaded asks for it. */
+  onNeed?: (version: string) => void;
 }): ReactElement {
   const locale = useLocale();
-  const sorted = sortCreated(rows, sort, band, nameOf, locale === "en" ? undefined : locale);
+  const testids = PANEL_TESTIDS[kind];
+  const cardOf = new Map(rows.map((row) => [row.id, row.card]));
+  const sorted = sortCreated(rows, sort, band, (id, name) => nameOf(cardOf.get(id) ?? id, name), locale === "en" ? undefined : locale);
   const header = { sort, onSort: (col: CreatedColumn) => onSort(pressedSort(sort, col)) };
   const adjustedOf = (row: RunningRow): number | null => (row.hasEnoughGames ? (row.adjustedWinRate ?? null) : null);
+  const labelOf = (row: RunningRow): string =>
+    row.until === undefined ? nameOf(row.card, row.name) : `${nameOf(row.card, row.name)}, ${spanText(row.since, row.until)}`;
+
+  // R4680000: each row whose version's catalog has not loaded asks for it once it nears the screen (at once where
+  // nothing can watch the screen), so only the rows on screen load theirs. Watched again when the rows or view change.
+  const [root, setRoot] = useState<HTMLElement | null>(null);
+  const order = sorted.map((row) => row.id).join("\n");
+  useEffect(() => {
+    if (onNeed === undefined || root === null) return;
+    const stops = [...root.querySelectorAll<HTMLElement>("[data-needs]")].map((element) => {
+      const version = element.dataset.needs ?? "";
+      if (canWatchArt()) return whenNear(element, () => onNeed(version));
+      onNeed(version);
+      return () => undefined;
+    });
+    return () => {
+      for (const stop of stops) stop();
+    };
+  }, [root, order, onNeed]);
 
   if (view === "grid") {
     return (
-      <ul className={`stats-grid${plainCardOf ? " stats-grid--plain" : ""}`} data-testid={statsTestid.runningGrid} aria-labelledby={labeledBy}>
+      <ul ref={setRoot} className={`stats-grid${plainCardOf ? " stats-grid--plain" : ""}`} data-testid={testids.grid} aria-labelledby={labeledBy}>
         {sorted.map((row) => {
           const plainCard = plainCardOf?.(row.id) ?? null;
           const adjusted = adjustedOf(row);
           return (
-            <li key={row.id} className="stats-grid-item" data-card-id={row.id}>
+            <li key={row.id} className="stats-grid-item" {...rowData(row)}>
               <button
                 type="button"
                 className={`stats-grid-card${plainCard === null ? "" : " stats-grid-card--plain"}`}
                 onClick={(e) => onOpen(row.id, e.currentTarget)}
-                aria-label={nameOf(row.id, row.name)}
+                aria-label={labelOf(row)}
               >
                 {plainCard ?? faceOf(row.id)}
               </button>
@@ -157,7 +276,7 @@ export function RunningPanel({
                 <dd>{row.games}</dd>
                 <dt>{t("Since")}</dt>
                 <dd>
-                  <Since row={row} />
+                  <Since row={row} testid={testids.since} />
                 </dd>
               </dl>
             </li>
@@ -169,7 +288,7 @@ export function RunningPanel({
 
   return (
     <TableScroll labeledBy={labeledBy}>
-      <table className="stats-table" data-testid={statsTestid.runningTable}>
+      <table ref={setRoot} className="stats-table" data-testid={testids.table}>
         <thead>
           <tr>
             {visibleThumbnail && (
@@ -194,7 +313,8 @@ export function RunningPanel({
               <tr
                 key={row.id}
                 className="stats-tr"
-                data-card-id={row.id}
+                {...rowData(row)}
+                aria-label={row.until === undefined ? undefined : labelOf(row)}
                 onClick={(e) => onOpen(row.id, e.currentTarget)}
                 role="button"
                 tabIndex={0}
@@ -213,7 +333,7 @@ export function RunningPanel({
                   </td>
                 )}
                 <td className="stats-td stats-td--name">
-                  {plainCard ?? <span className="stats-card-name-link">{nameOf(row.id, row.name)}</span>}
+                  {plainCard ?? <span className="stats-card-name-link">{nameOf(row.card, row.name)}</span>}
                 </td>
                 {visibleGames && <td className="stats-td">{row.games}</td>}
                 <td className="stats-td">
@@ -236,7 +356,7 @@ export function RunningPanel({
                   )}
                 </td>
                 <td className="stats-td">
-                  <Since row={row} />
+                  <Since row={row} testid={testids.since} />
                 </td>
               </tr>
             );

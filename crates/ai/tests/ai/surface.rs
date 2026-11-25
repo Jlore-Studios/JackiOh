@@ -435,6 +435,40 @@ mod surface_play_ai_turn {
         }
         assert!(!ai_to_act(&turn.state, AI));
     }
+
+    /// a second play_ai_turn on the same game applies every action it returns
+    #[test]
+    fn a_second_play_ai_turn_on_the_same_game_applies_every_action_it_returns() {
+        jackioh_cards::register_all();
+        let start = scenario(json!({
+            "seed": "audit-turns", "active": "p1", "turn": 9,
+            "p1": { "hand": ["core-025", "core-011"], "mana": 4, "library": ["core-008", "core-011", "core-019"] },
+            "p2": { "hand": ["core-025", "core-011"], "mana": 4, "library": ["core-008", "core-011", "core-019"] },
+        }))
+        .state()
+        .clone();
+        let mut ai = AiOptions::with_budget(create_rng("audit-turns", 0), AI_GATE_BUDGET);
+        let first = play_ai_turn(&start, PlayerId::P1, &mut ai);
+        assert!(first.actions.len() >= 2, "p1 plays and ends its turn");
+        let second = play_ai_turn(&first.state, PlayerId::P2, &mut ai);
+
+        let mut current = first.state.clone();
+        for action in &second.actions {
+            let next = reduce(
+                &current,
+                &Action::new(action.body.clone(), PlayerId::P2, action.nonce.clone()),
+            );
+            assert!(next.error.is_none());
+            assert_ne!(
+                hash_state(&next.state),
+                hash_state(&current),
+                "p2's action {} ({:?}) changed nothing: its nonce was p1's",
+                action.nonce,
+                action.body
+            );
+            current = next.state;
+        }
+    }
 }
 
 // sweep.ts: the clock

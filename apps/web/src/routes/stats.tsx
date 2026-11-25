@@ -3,7 +3,9 @@
 // and keyword, R2446000), Tokens (R4279001), Sets (R1966000), Players (public aggregates, fun stats from #125) and
 // Experimental (R4678000: figures that span patches; its Running view, R4678001, is each card's live play version
 // over every patch since it last changed, under the Cards tab's filters, sort, view and ranges, with no patch bar,
-// games tile or Face, a line naming what it shows in their place, and a drill-down on All and the newest patch). No
+// games tile or Face, a line naming what it shows in their place, and a drill-down on All and the newest patch; R4680000:
+// its Segmented's Versions view is every play version of those cards as its own row, Past versions only one button, and
+// R4680001 a version's row opens its own drill-down, `?card=<id>&version=<first>`, drawn from its own catalog). No
 // provisional banner and no reading notes (R2325000): the page never names a data source or the gate (R661).
 // Below the per-row floor a row reads "not enough games". The Adjusted win rate leads (R2777000), so the table
 // shows no When drawn, Drawn vs not drawn, Radiant or Normal (R3184000); with the ranges shown, a tier says how
@@ -31,6 +33,7 @@ import { chineseName, drawnInChinese, readerName, readerTerms } from "../cards/c
 import { CardFace } from "../cards/CardFace.tsx";
 import { FullArtShown, OwnCopy, fullArtSource } from "../cards/fullArt.ts";
 import { faceModel } from "../cards/model.ts";
+import { RefsInteractive } from "../cards/refContext.tsx";
 import { useCardSettings } from "../cards/settings.ts";
 import { EmptyState } from "../empty/EmptyState.tsx";
 import { Dialog } from "../game/Dialog.tsx";
@@ -48,6 +51,7 @@ import {
   type CardFaces,
   type CardStatsOptions,
   type PublicFaceFigures,
+  type PublicPlayVersion,
   type PublicPlayerSummary,
   type PublicStatsCardsResponse,
   type PublicStatsVersionsResponse,
@@ -79,12 +83,14 @@ import {
 } from "../stats/patches.ts";
 import { PlainCard, PlainTextButton, usePlainText } from "../stats/PlainText.tsx";
 import { RangeText, TierFitText } from "../stats/RangeText.tsx";
-import { RUNNING_SORT_COLUMNS, RunningPanel, runningRows, runningSortOf } from "../stats/RunningPanel.tsx";
+import { RUNNING_SORT_COLUMNS, RunningPanel, runningRows, runningSortOf, versionRows } from "../stats/RunningPanel.tsx";
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
 import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
 import { TierChip, adjustedText, decisivenessText, tierRank } from "../stats/TierChip.tsx";
 import { cardTierFit } from "../stats/tierFit.ts";
+import { useVersionSnapshots } from "../stats/versionDefs.ts";
+import { VersionDrillDown, type VersionRead } from "../stats/VersionDrillDown.tsx";
 import type { StatsFace } from "../wire/generated/StatsFace.ts";
 import { CardTextButton, CardTextFaces, cardTextTestid, useCardText, type CardText } from "./cardText.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
@@ -175,6 +181,15 @@ function StatsGridFaceInner({ defId, def }: { defId: string; def: CardDef }): Re
   );
 }
 
+/** R4680000: an old play version's face in the Grid, as its own catalog printed it, built once per definition; R279: an old printing's references are not interactive. */
+const StatsVersionGridFace = memo(function StatsVersionGridFace({ def }: { def: CardDef }): ReactElement {
+  return (
+    <RefsInteractive enabled={false}>
+      <StatsGridFaceInner defId={def.id} def={def} />
+    </RefsInteractive>
+  );
+});
+
 /** #4511: a drill-down token's face, built once per token, as the grid card's face is. */
 const StatsDrillDownTokenFace = memo(function StatsDrillDownTokenFace({ def }: { def: CardDef }): ReactElement {
   const face = useFaceModel({ defId: def.id, def, radiant: false });
@@ -224,6 +239,9 @@ function setPercent(rate: number, signed = false): string {
 type TabKey = "cards" | "tokens" | "sets" | "players" | "experimental";
 const TAB_KEYS: readonly TabKey[] = ["cards", "tokens", "sets", "players", "experimental"];
 type ViewKey = "table" | "grid";
+/** R4678000, R4680000: the Experimental tab's views, in the order they landed; `?experimental=` names any but the first. */
+type ExperimentalView = "running" | "versions";
+const EXPERIMENTAL_VIEWS: readonly ExperimentalView[] = ["running", "versions"];
 type SortColumn = "name" | "games" | "tier" | "adjustedWinRate" | "decisiveness" | "winRate" | "playRate";
 type SortDirection = "asc" | "desc";
 
@@ -413,6 +431,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const [keywordFilter, setKeywordFilter] = useState<string>(initialParams.get("keyword") ?? "");
   const [view, setView] = useState<ViewKey>(initialParams.get("view") === "grid" ? "grid" : "table");
   const [cardDrillDownId, setCardDrillDownId] = useState<string | null>(initialParams.get("card"));
+  // R4680001: with a card, the play version its drill-down opens on, by the version it began at.
+  const [drillDownVersion, setDrillDownVersion] = useState<string | null>(() => (initialParams.get("card") ? initialParams.get("version") : null));
+  // R4680000: the Experimental tab's view, and Versions' Past versions only.
+  const [experimentalView, setExperimentalView] = useState<ExperimentalView>(
+    () => EXPERIMENTAL_VIEWS.find((known) => known === initialParams.get("experimental")) ?? "running",
+  );
+  const [pastOnly, setPastOnly] = useState(initialParams.get("past") === "1");
   // R2895000: the 95% ranges under Win rate and Adjusted, off by default.
   const [showRanges, setShowRanges] = useState(initialParams.get("ranges") === "1");
   const [mode, setMode] = useState<StatsMode>(() => modeOf(initialParams));
@@ -488,6 +513,9 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     if (keywordFilter) params.set("keyword", keywordFilter);
     if (view !== "table") params.set("view", view);
     if (cardDrillDownId) params.set("card", cardDrillDownId);
+    if (cardDrillDownId && drillDownVersion) params.set("version", drillDownVersion);
+    if (experimentalView !== "running") params.set("experimental", experimentalView);
+    if (pastOnly) params.set("past", "1");
     if (mode !== DEFAULT_MODE) params.set("mode", mode);
     if (face !== DEFAULT_FACE) params.set("face", face);
     if (showRanges) params.set("ranges", "1");
@@ -495,7 +523,25 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     const query = params.toString();
     const target = query ? `${paths.stats}?${query}` : paths.stats;
     navigate(target, { replace: true });
-  }, [tab, patch, search, sortCol, sortDir, setFilter, rarityFilter, costFilter, keywordFilter, view, cardDrillDownId, mode, face, showRanges]);
+  }, [
+    tab,
+    patch,
+    search,
+    sortCol,
+    sortDir,
+    setFilter,
+    rarityFilter,
+    costFilter,
+    keywordFilter,
+    view,
+    cardDrillDownId,
+    drillDownVersion,
+    experimentalView,
+    pastOnly,
+    mode,
+    face,
+    showRanges,
+  ]);
 
   useEffect(() => {
     updateUrl();
@@ -641,9 +687,12 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   }, [tab, patch, mode, face, setsAttempt, collecting]);
 
   // R4678001: Running reads every play version's figures on the page's match type once the Experimental tab is
-  // open; a pooled view is no patch query, so it is open to everyone (R4677000) and sends no token.
+  // open; a pooled view is no patch query, so it is open to everyone (R4677000) and sends no token. R4680001: so does
+  // a play version's drill-down, from any tab.
+  const versionOpen = cardDrillDownId !== null && drillDownVersion !== null;
+  const wantVersions = experimental || versionOpen;
   useEffect(() => {
-    if (!experimental) return;
+    if (!wantVersions) return;
     setVersionsData(null);
     setVersionsError(false);
     const controller = new AbortController();
@@ -655,14 +704,15 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
         if (!controller.signal.aborted) setVersionsError(true);
       });
     return () => controller.abort();
-  }, [experimental, mode, versionsAttempt]);
+  }, [wantVersions, mode, versionsAttempt]);
 
   // R4673001: a card's details on the page's match type, face and patch (none asked for the newest patch).
   // R4678001: from the Experimental tab, which shows neither, on All and the newest patch.
   const detailsFace = experimental ? DEFAULT_FACE : face;
   const detailsPatch = experimental ? "" : patch;
   useEffect(() => {
-    if (!cardDrillDownId) {
+    // R4680001: a play version's drill-down reads no patch's details.
+    if (!cardDrillDownId || drillDownVersion !== null) {
       setDrillDownData(null);
       return;
     }
@@ -688,7 +738,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       });
 
     return () => controller.abort();
-  }, [cardDrillDownId, mode, detailsFace, detailsPatch, drillDownAttempt]);
+  }, [cardDrillDownId, drillDownVersion, mode, detailsFace, detailsPatch, drillDownAttempt]);
 
   // The drill-down is a modal like the client's others (docs/polish/6-cards.md, B25), drawn through
   // Dialog.tsx (R3221000), whose keys close it and keep Tab inside, and Back too (R2127000). The control
@@ -700,6 +750,11 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const openDrillDown = (id: string, opener: HTMLElement): void => {
     drillDownOpener.current = opener;
     setCardDrillDownId(id);
+    setDrillDownVersion(null);
+  };
+  const closeDrillDown = (): void => {
+    setCardDrillDownId(null);
+    setDrillDownVersion(null);
   };
 
   useEffect(() => {
@@ -836,6 +891,60 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     [filteredCards, versionsData],
   );
 
+  // R4680000: each old version's definition, from its catalog once a row on screen or its drill-down asks for it; a
+  // live one's is the catalog's own.
+  const { snapshots: versionSnapshots, need: needSnapshot } = useVersionSnapshots();
+  const readVersion = useCallback(
+    (version: PublicPlayVersion): VersionRead | undefined => {
+      const snapshot = version.live ? catalog() : versionSnapshots.get(version.last);
+      if (snapshot === undefined) return undefined;
+      const def = snapshot?.[version.card];
+      return snapshot === null || def === undefined ? null : { def, names: snapshot };
+    },
+    [versionSnapshots],
+  );
+  const needVersion = useCallback(
+    (version: PublicPlayVersion): void => {
+      if (!version.live) needSnapshot(version.last);
+    },
+    [needSnapshot],
+  );
+  const versionById = useMemo(() => new Map((versionsData?.versions ?? []).map((version) => [version.id, version])), [versionsData]);
+  // R4680000: every play version of the cards the Cards tab lists, or the closed ones alone.
+  const versionsShown = useMemo(
+    () =>
+      versionsData
+        ? versionRows(filteredCards, versionsData.versions, pastOnly, (version) => {
+            const read = readVersion(version);
+            return read === undefined ? undefined : (read?.def ?? null);
+          })
+        : [],
+    [filteredCards, versionsData, pastOnly, readVersion],
+  );
+  const versionFaceOf = (id: string): ReactNode => {
+    const version = versionById.get(id);
+    if (version === undefined) return null;
+    if (version.live) return gridFaceOf(version.card);
+    const read = readVersion(version);
+    return read ? <StatsVersionGridFace def={read.def} /> : null;
+  };
+  const versionPlainOf = (id: string): ReactNode => {
+    const version = versionById.get(id);
+    const read = version === undefined ? null : readVersion(version);
+    return read ? <PlainCard def={read.def} /> : null;
+  };
+  const openVersion = (id: string, opener: HTMLElement): void => {
+    const version = versionById.get(id);
+    if (version === undefined) return;
+    drillDownOpener.current = opener;
+    setCardDrillDownId(version.card);
+    setDrillDownVersion(version.first);
+  };
+  // R4680001: the open play version, and its card's versions either side of it.
+  const versionsOfOpen = cardDrillDownId && versionsData ? versionsData.versions.filter((version) => version.card === cardDrillDownId) : [];
+  const openAt = versionsOfOpen.findIndex((version) => version.first === drillDownVersion);
+  const openPlayVersion = versionOpen && openAt >= 0 ? versionsOfOpen[openAt] : undefined;
+
   const summary = cardStatsData?.summary;
 
 
@@ -950,7 +1059,8 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   // R3324003: how the cards show, one row of labelled groups, every on/off control a pressed button. R4083000: the
   // Tokens tab shows the same row, its sort select offering only the columns its tables have and no Play rate column.
   // R4678001: so does Running, with no Face, which it does not read (R4678000).
-  const cardOptions = (shown: "cards" | "tokens" | "running"): ReactElement => {
+  // R4680000: and Versions, as Running, with its Past versions only.
+  const cardOptions = (shown: "cards" | "tokens" | "running" | "versions"): ReactElement => {
     const columns: readonly SortColumn[] =
       shown === "cards" ? SORT_COLUMNS : shown === "tokens" ? CREATED_SORT_COLUMNS : RUNNING_SORT_COLUMNS;
     const sortShown = shown === "cards" ? sortCol : shown === "tokens" ? createdSort.col : runningSort.col;
@@ -1005,7 +1115,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
         </div>
 
         {/* R4673001: the face every figure of both tabs reads, kept in the address; its buttons carry their words alone (R3184000) */}
-        {shown !== "running" && (
+        {(shown === "cards" || shown === "tokens") && (
           <div className="stats-view-toggle">
             <span className="stats-sort-label" aria-hidden="true">
               {t("Face")}
@@ -1020,6 +1130,21 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                 { value: "radiant", label: t("Radiant"), testId: statsTestid.faceRadiant, className: "stats-view-btn" },
               ]}
             />
+          </div>
+        )}
+
+        {/* R4680000: the closed versions alone, an on/off button in the Segmented's look (R3324003) */}
+        {shown === "versions" && (
+          <div className="segmented">
+            <button
+              type="button"
+              className={`segmented__item stats-view-btn ${pastOnly ? "segmented__item--selected" : ""}`}
+              data-testid={statsTestid.versionsPastOnly}
+              aria-pressed={pastOnly}
+              onClick={() => setPastOnly((only) => !only)}
+            >
+              {t("Past versions only")}
+            </button>
           </div>
         )}
 
@@ -1089,7 +1214,9 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
         {/* R4678000: the Experimental tab reads no patch: one line names what it shows in the patch bar's place */}
         {experimental && (
           <p className="stats-experimental-line" data-testid={statsTestid.experimentalLine}>
-            {t("Every card's current version, over every patch since it last changed")}
+            {experimentalView === "versions"
+              ? t("Every version of every card, each over the patches it was played on")
+              : t("Every card's current version, over every patch since it last changed")}
           </p>
         )}
 
@@ -1822,14 +1949,23 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
         label: t("Experimental"),
         testId: statsTestid.tabExperimental,
         panelClassName: "stats-panel one-screen__body",
-        // R4678000: figures that span patches. Its one view, Running, shows no Segmented of views until a second
-        // lands. R4678001: each card the Cards tab's filters list, on its live play version, sorted, viewed and
-        // ranged by the page's one state.
+        // R4678000: figures that span patches, in a Segmented of its views now that it has two (R4680000). R4678001:
+        // Running, each card the Cards tab's filters list, on its live play version; R4680000: Versions, every play
+        // version of those cards; each sorted, viewed and ranged by the page's one state.
         panel: (
           <>
+            <Segmented
+              label={t("Experimental views")}
+              value={experimentalView}
+              onChange={setExperimentalView}
+              options={[
+                { value: "running", label: t("Running"), testId: statsTestid.experimentalRunning, className: "stats-view-btn" },
+                { value: "versions", label: t("Versions"), testId: statsTestid.experimentalVersions, className: "stats-view-btn" },
+              ]}
+            />
             <div className="stats-filter-bar">
               {cardFilters()}
-              {cardOptions("running")}
+              {cardOptions(experimentalView)}
             </div>
 
             {versionsError || cardStatsError ? (
@@ -1848,8 +1984,26 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
               </div>
             ) : versionsData === null || cardStatsLoading ? (
               <Skeleton variant={view === "grid" ? "grid" : "table"} label={t("Loading card statistics…")} />
-            ) : running.length === 0 ? (
+            ) : (experimentalView === "versions" ? versionsShown : running).length === 0 ? (
               <EmptyState text={t("No cards match the selected filters.")} />
+            ) : experimentalView === "versions" ? (
+              <RunningPanel
+                kind="versions"
+                rows={versionsShown}
+                sort={runningSort}
+                onSort={sortCreatedBy}
+                view={view}
+                showRanges={showRanges}
+                band={versionsData}
+                labeledBy="stats-tab-experimental"
+                nameOf={shownName}
+                faceOf={versionFaceOf}
+                plainCardOf={plain.shown ? versionPlainOf : undefined}
+                visibleThumbnail={visibleCols.thumbnail}
+                visibleGames={visibleCols.games}
+                onOpen={openVersion}
+                onNeed={needSnapshot}
+              />
             ) : (
               <RunningPanel
                 rows={running}
@@ -1873,8 +2027,43 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     ]}
   />
 
+        {/* R4680001: a play version's drill-down, once the versions have loaded */}
+        {versionOpen && openPlayVersion !== undefined && versionsData && (
+          <VersionDrillDown
+            version={openPlayVersion}
+            before={versionsOfOpen[openAt - 1]}
+            after={versionsOfOpen[openAt + 1]}
+            band={versionsData}
+            title={shownName(openPlayVersion.card, openPlayVersion.name)}
+            read={readVersion}
+            need={needVersion}
+            onOpen={(version) => setDrillDownVersion(version.first)}
+            onClose={closeDrillDown}
+          />
+        )}
+        {versionOpen && openPlayVersion === undefined && (
+          <Dialog
+            role="dialog"
+            testid={statsTestid.drillDownModal}
+            className="stats-drilldown-modal"
+            closeTestid={statsTestid.drillDownClose}
+            closeLabel={t("Close card details")}
+            title={drillDownDef ? readerName(drillDownDef) : cardDrillDownId}
+            onClose={closeDrillDown}
+            actions={[]}
+          >
+            <div className="stats-drilldown-body">
+              {versionsData === null && !versionsError ? (
+                <Skeleton variant="rows" label={t("Loading this card's details…")} />
+              ) : (
+                <p className="stats-empty-sub">{t("Details unavailable.")}</p>
+              )}
+            </div>
+          </Dialog>
+        )}
+
         {/* Card Drill-Down Modal */}
-        {cardDrillDownId && (
+        {cardDrillDownId && !versionOpen && (
             <Dialog
               role="dialog"
               testid={statsTestid.drillDownModal}
@@ -1883,7 +2072,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
               closeTestid={statsTestid.drillDownClose}
               closeLabel={t("Close card details")}
               title={drillDownDef ? readerName(drillDownDef) : cardDrillDownId}
-              onClose={() => setCardDrillDownId(null)}
+              onClose={closeDrillDown}
               actions={[]}
             >
               <div className="stats-drilldown-body">

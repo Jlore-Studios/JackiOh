@@ -1,6 +1,6 @@
 //! SPEC §8.13 IA #104 Stack Trace ((1) Spell, Common), a card of the held Infinite Assault set (R4577000).
 //!   Base:    "Flashback\nDraw a card."
-//!   Radiant: "Flashback, Echo 1\nDraw a card."
+//!   Radiant: "Echo 1, Flashback\nDraw a card."
 //!
 //! M+ #5 Spirit Lash's shape without the damage: the Cry draws a card, and Flashback is the
 //! catalog's keyword (§6.1). The Radiant face adds Echo 1 (`StaticFlags.echo`, §6.2), so it draws

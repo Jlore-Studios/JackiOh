@@ -86,7 +86,7 @@ use crate::scripts::stinkyscape::{
 };
 use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c007_churnwalker, c009_drone_assembler_v4, c010_drone_assembler_v5, c017_smoothie,
-    c018_large_smoothie, c021_jlockeed_shredder_12, c025_snom_bunny, c037_scorch,
+    c018_large_smoothie, c021_jlockeed_shredder_12, c024_forced_propagation, c025_snom_bunny, c037_scorch,
     c039_mindustrial_cross_over, c041_mend_projector, c045_surge_alloy, c046_phase_fabric, c047_plastanium,
     c049_metaglass, c050_graphite, c061_1_shawarma_law, c062_overdrive_projector, c063_overdrive_dome,
     c064_surge_wall, c065_thorium_wall, c066_plastanium_wall, c067_phase_wall, c076_ayys_lmao,
@@ -1376,6 +1376,13 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c063_overdrive_dome::ID,
         "v0.6.12c",
         c063_overdrive_dome::script_v0_6_12c,
+    ),
+    // #4825 (R3557001): Forced Propagation's Radiant mark before it was per resolution, kept under
+    // v0.6.13c, the newest shipped version that ran it.
+    (
+        c024_forced_propagation::ID,
+        "v0.6.13c",
+        c024_forced_propagation::script_v0_6_13c,
     ),
     (
         c019_5_bot_loser::ID,

@@ -1231,7 +1231,9 @@ describe("the glossary (B26)", () => {
     [{ kind: "Taunt" }, { kind: "Lifesteal" }, { kind: "Rush" }],
     true,
   );
-  const ORDER: GlossaryTermId[] = ["Death", "Cry", "Lifesteal", "Taunt", "Rush"];
+  // R4747000: the probe's keywords arrive as Taunt, Lifesteal, Rush; the face sorts them, so the
+  // keywords the text did not list follow in the fixed line order (Rush before Taunt).
+  const ORDER: GlossaryTermId[] = ["Death", "Cry", "Lifesteal", "Rush", "Taunt"];
 
   const BARE_FACE: FaceModel = probe("glossary-empty-probe", "Glossary Empty Probe", "", [], false);
 
@@ -1293,10 +1295,11 @@ describe("the glossary (B26)", () => {
 
   it("B26 a keyword the text already names is listed once", () => {
     const def = defOf("core-003");
-    expect(def.base.text).toBe("Taunt, Divine Shield, Reborn, Can't Defend");
+    // R4747000: the keyword line prints Can't Defend first.
+    expect(def.base.text).toBe("Can't Defend, Taunt, Divine Shield, Reborn");
     render(<Trigger id="a" subject={{ key: "b26-once", face: faceOf("core-003") }} />);
     hover(screen.getByTestId("a"));
-    expect(glossaryTerms(screen.getByTestId(INSPECT_HOVER))).toEqual(["Taunt", "Divine Shield", "Reborn", "Can't Defend"]);
+    expect(glossaryTerms(screen.getByTestId(INSPECT_HOVER))).toEqual(["Can't Defend", "Taunt", "Divine Shield", "Reborn"]);
   });
 
   it("B26 a face with no terms and no keywords renders no inspect-glossary at all", () => {

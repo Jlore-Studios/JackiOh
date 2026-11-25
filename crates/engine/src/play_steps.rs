@@ -409,6 +409,7 @@ pub struct PlayRun {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub from_deck: Option<bool>,
     /// R1086: the host an Equip play fuses into at step 7 (ME-EQUIP), read at step 1 (D14).
+    /// R4834000: cleared at step 4 when the card is handed to the opponent.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub equip_host: Option<String>,
     // B5 E14 (Classic #57 Echo; R399, R546)
@@ -1483,6 +1484,9 @@ fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, 
         cost_paid: run.cost_paid,
         x: card.x,
         embiggened: card.embiggened,
+        // R4672000: the declared choices for the game record, already one per declaration in the card's
+        // order (`play_choices::refuse_modes`, R81); `None` for a play with none.
+        modes: (!run.modes.is_empty()).then(|| run.modes.clone()),
         former_id: former_id.clone(),
         // R454: a play from the graveyard says so (public), for a client to animate it from there.
         from: run.source.map(|PlaySource::Graveyard| PlayedFrom::Graveyard),
@@ -1639,8 +1643,11 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     } else {
         // R360: #55's base face, paid for with an opposing unit, is summoned for the opponent: still
         // this player's play and card (§3.2), in the opponent's zone and control (`place_on_field`).
+        // R4834000: the hand-over cancels an Equip play: the card never stands on its host, so it
+        // lands as a plain arrival and step 7 fuses nothing (`fuse_equip`).
         if let Some(theirs) = handed_over_zone(sink.state, run, &card) {
             run.zone = Some(theirs);
+            run.equip_host = None;
         }
         // R4665000: a card that stacks on its target (S #9 Ticketed) takes the zone of the permanent
         // the play named, either side's; with none left it lands in its graveyard, as R138's does.
@@ -2896,7 +2903,7 @@ fn finish_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
 
 /// R1086 (ME-EQUIP): fuse the Equip card on top into its host, which keeps its zone, damage,
 /// exertion and arrival turn; the Equip card ceases to exist with no Death. If either left the field
-/// first, nothing fuses.
+/// first, or step 4 handed the card to the opponent (R4834000), nothing fuses.
 fn fuse_equip(sink: &mut EngineSink<'_>, run: &PlayRun) {
     let Some(host_id) = run.equip_host.clone() else {
         return;

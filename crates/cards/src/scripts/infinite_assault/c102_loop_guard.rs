@@ -1,6 +1,6 @@
 //! SPEC §8.13 IA #102 Loop Guard ((3) Unit, Common, 4/6 → 8/12), a card of the held Infinite Assault set (R4577000).
 //!   Base:    "Taunt, Reborn"
-//!   Radiant: "Taunt, Reborn, Divine Shield"
+//!   Radiant: "Taunt, Divine Shield, Reborn"
 //!
 //! Taunt, Reborn and Divine Shield are the catalog's: the script is empty, as C+ #6 Wrong-House
 //! Attacker's is, and the Radiant face only adds Divine Shield.

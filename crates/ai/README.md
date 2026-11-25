@@ -54,7 +54,7 @@ them (its option reads the view's `Face-down card`, R177), its own library's ord
 it that came from the opponent or that it was never shown (R312), what changed on its other cards there, each read
 as its owner's list shows it, by the definition and face it went in with and its Created mark, unless its own
 prompt offers it (R2691000), the seed, the event history, every card's hidden Nerfs, its own
-hand's too (R1845000), what the opponent bought at the Marketplace (R1853004), and the opponent's Created cards' generators (R1956001)), and strips from the events its queues keep what `view_for` strips of a
+hand's too (R1845000), what the opponent bought at the Marketplace (R1853004), the opponent's Created cards' generators (R1956001), and every Created card's maker, the game record's alone (R4672001)), and strips from the events its queues keep what `view_for` strips of a
 hidden card. Every simulation runs on a `determinize`d copy whose hidden cards are resampled from the
 non-token cards of every set their own side has not shown (R185, R380, R2826000: the opponent's hidden
 cards and a card of the seat's library from the opponent's deck, R73, against what the opponent shows,
@@ -411,7 +411,10 @@ same `Decision`. The browser's wall-clock cap arrives as `should_stop` (the WASM
 which ends the search early with the best line found. R3498000: every host with a clock also passes
 `wrap_up`, fired at `AI_WRAP_UP_SHARE` of its limit (`wrap_up_after_ms`), which stops the beam's slice
 of the counter and skips the payoff line R3696000 adds: the beam's open lines end their turn and the reply and the other determinizations
-run on until `should_stop`. `SearchStats.replied` and `worldsScored` say how far they got, and
+run on until `should_stop`. R4801000: it is first polled once the beam has tried every move at its
+root (`NodeCounter::end_root`), however many nodes those cost (a surcharged play, its auto-answers),
+so a wrap-up that fired before the beam still leaves it lines, the root's End turn among them.
+`SearchStats.replied` and `worldsScored` say how far they got, and
 `Decision::fell_short` names a decision that left its finalists unscored on a sampled world. With no
 clock, or a wrap-up that never fires, a decision is node for node what it was.
 
@@ -429,13 +432,15 @@ back beside each other world's reserve. It ships at 3 (R4697000), so `decide` ke
 cut replay ends its turn where it stands and a decision is node for node what it was before R4447000;
 `score_line` keeps the cut whatever the switch.
 
-## Decks and the shadow ban (R184, R186, R390, R1370, R1390, R817000, R976000)
+## Decks and the shadow ban (R184, R186, R390, R1370, R4784000, R1390, R817000, R976000)
 
 `build_ai_deck(rng, size, &AiDeckOptions)` deals `size` distinct non-token ids from every set by
 weighted sampling without replacement (`AI_DECK`), leaving out `SHADOW_BAN_IDS` unless `banned` says
 otherwise. `lean_set` (R1370) names a set at least `AI_DECK.lean_min_share` of the deck comes from, a
-hard floor kept together with the units' and the theme's; absent, the draw is exactly the one it always
-was. `build_ai_deck_traced` also counts the picks that floor forced, the measurement `lean_boost` was
+hard floor kept together with the units' and the theme's; absent, the draw is the one it always was,
+except that a card which would leave the theme's and the units' floors out of reach together is drawn
+again from the same roll (R4784000), so only a deck that lost the units' floor deals differently.
+`build_ai_deck_traced` also counts the picks that floor forced, the measurement `lean_boost` was
 chosen by. Every deck holds at most `AI_DECK.max_quickdraw` (2) Quickdraw cards, an `include`d one
 counted and always dealt, and Quickdraw is never a theme (R817000). `gated_sets` (R1390) names the sets the draw never deals from: its default is the soft gate
 `AI_DECK_GATED_SETS` in `src/config.rs`, so every AI deck holds none of them whatever ships or a

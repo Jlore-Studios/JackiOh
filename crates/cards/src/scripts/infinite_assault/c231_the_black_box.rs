@@ -1,8 +1,8 @@
 //! IA #231 The Black Box (SPEC §8.13 row 231), a card of the held Infinite Assault set
 //! (R4577000).
-//!   Base:    "Taunt, Can't attack. Start of turn: Exile a random enemy permanent. This gains +5
+//!   Base:    "Can't attack, Taunt. Start of turn: Exile a random enemy permanent. This gains +5
 //!            Health."
-//!   Radiant: "Taunt, Can't attack. Start of turn: Exile two random enemy permanents. This gains +5
+//!   Radiant: "Can't attack, Taunt. Start of turn: Exile two random enemy permanents. This gains +5
 //!            Health."
 //!
 //! Taunt and Can't attack are catalog data. A permanent is any card in a unit or backrow zone — a
