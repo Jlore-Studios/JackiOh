@@ -1,0 +1,19 @@
+{
+  "title": "Patch: Ticketed is offered no permanent it cannot stack on",
+  "sources": "issue #4835",
+  "notes": "Issue #4835: Ticketed's play (R4665000) is offered and may name only a permanent whose zone a card played onto it may enter (zones::accepts_stack_card): no GIGA (R3546000), none in a Locked zone (R688); ruling R4835000. Engine change in play_choices::legal_selections_for; the catalog is untouched, so the card is claimed with --plays. Classify stage 2 against the base build finds stinkyscape-009 plays differently, and no other card or rule.",
+  "player": {
+    "title": "Ticketed is offered only permanents it can stack on",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "Ticketed is no longer offered a GIGA permanent, where the play was paid for and Ticketed was lost, nor a permanent in a Locked zone, which a play may not enter."
+    ]
+  },
+  "cards": [],
+  "plays": [
+    "stinkyscape-009"
+  ]
+}
