@@ -21556,11 +21556,15 @@
     "what": "review #4950 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-25T23:33:36Z",
+    "at": "2026-11-25T23:41:30Z",
     "notes": [
+      "delivered suggest on claude-6 (run 45721160122): interrupted",
+      "delivered suggest on claude-3 (run 45720953647): interrupted",
+      "delivered revise #4950 on claude-7 (run 45701754102): built",
+      "started review #4950 on claude-7 (run 45723710646)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
-      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
+      "pruned 4 plan file(s) older than 7 days",
+      "runner gate: started 0 of 3 waiting run(s); 3 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22262,7 +22266,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T23:33:36Z",
+  "loop_tick": "2026-11-25T23:41:30Z",
   "machine_disk": {
     "issue": null,
     "reading": {
