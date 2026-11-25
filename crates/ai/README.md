@@ -517,11 +517,10 @@ the same way, and the skill-to-Elo curve is measured with the arena.
 `MatchConfig.setup` (`MatchSetup`: `dealt`, `lastBoards`, `glitchBoards`, `deckMarks`, written beside
 the config's other keys) carries the setup inputs `create_game` takes beyond the decks and handicaps
 (R433, R417, R564, R678, R2702000), and `MatchConfig::fold_args` folds a record with all of them
-(#1697). Unset, a game is created, played and folded exactly as before. No gate sets it;
-`SweepOptions.setup` opts a sweep in, the same inputs in seat order in every game. `SweepOptions.face`
-(`SweepFace`, base when absent) picks the face the forced card is dealt on: the Radiant one adds a `deckMarks`
-entry for it on the AI's seat (R2702000), and `cargo jackioh sweep` plays both (#4466). `cargo jackioh
-run-sim` sets `deckMarks` for a dungeon run's fight (#3065).
+(#1697). Unset, a game is created, played and folded exactly as before. No gate sets it.
+`SweepOptions.face` (`SweepFace`, base when absent) picks the face the forced card is dealt on: the
+Radiant one sets a `deckMarks` entry for it on the AI's seat (R2702000), and `cargo jackioh sweep`
+plays both (#4466). `cargo jackioh run-sim` sets `deckMarks` for a dungeon run's fight (#3065).
 
 ## Development runs for the card statistics (R378)
 
@@ -532,8 +531,8 @@ record of source `dev` under the patch the run tests, id `dev:<patch>:<seed>` (`
 `forced_dev_game_config`, which `DevRunOptions.force` selects, deals the same game with one card in one
 seat's deck, p1's in odd games and p2's in even ones (R1284000). Both decks are dealt with the card
 banned, and the holder's card at the slot `${seed}:force` picks is replaced by it.
-`DevRunOptions.setup` creates every game of a run with the same setup inputs (`dev_run_config`), so a
-record stays a pure function of its number.
+`dev_run_config` deals game n of the run its options describe, so a record stays a pure function of
+its number.
 
 R4552000, R4552002: `swing_turns` (`src/swing_turns.rs`) replays a finished game's log from the engine's
 own start and steps (`recorded_start`, `read_steps`, as `summarize_game` does) and writes, at the start of

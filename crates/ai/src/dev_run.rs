@@ -55,12 +55,6 @@ pub struct DevRunOptions {
     /// this build's AI generation (`ai_generation`); `None` files no build.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub commit: Option<String>,
-    /// #1697: the setup inputs every game of the run is created with beyond its decks (§9.3): dealt
-    /// seats (R433), last boards (R417, R564) and Glitch boards (R678), in seat order. The same in
-    /// every game, so a record stays a pure function of its number and the options (`cargo jackioh
-    /// stats` plays them in parallel).
-    #[serde(flatten)]
-    pub setup: MatchSetup,
 }
 
 /// `crates/ai/generation.json`, compiled in (CLAUDE.md rule 4: data reaches a pure crate only at
@@ -142,16 +136,11 @@ pub fn forced_dev_game_config(n: i32, series: &str, budget: Option<SearchBudget>
     dev_match(seed, decks, budget)
 }
 
-/// Game n of the run `options` describes: R258's deal, or R1284000's with `options.force` in one seat,
-/// created with the run's setup inputs (#1697).
+/// Game n of the run `options` describes: R258's deal, or R1284000's with `options.force` in one seat.
 pub fn dev_run_config(n: i32, options: &DevRunOptions) -> MatchConfig {
-    let config = match options.force.as_deref() {
+    match options.force.as_deref() {
         None => dev_game_config(n, &options.series, options.budget),
         Some(card) => forced_dev_game_config(n, &options.series, options.budget, card),
-    };
-    MatchConfig {
-        setup: options.setup.clone(),
-        ..config
     }
 }
 

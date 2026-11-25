@@ -251,10 +251,6 @@ pub struct SweepOptions<'a> {
     /// Issue #1113: the ids `sweep_card` keeps out of the AI's deck; absent, `SHADOW_BAN`'s. A seeded
     /// test passes `FIXTURE_BANNED_IDS`, so a shadow-ban change re-deals none of its games.
     pub banned: Option<&'a [&'a str]>,
-    /// #1697: the setup inputs every game of the sweep is created with beyond its decks (§9.3), in
-    /// seat order and the same in every game, whichever seat the AI takes (to give the AI a last
-    /// board in every game, give both seats one). Absent, every game is created as before.
-    pub setup: Option<&'a MatchSetup>,
     /// #4466: the face the forced card is dealt on; absent, its base face.
     pub face: Option<SweepFace>,
 }
@@ -417,7 +413,6 @@ fn sweep_config(
     n: i32,
     tier: Difficulty,
     filler: &Filler,
-    setup: &MatchSetup,
     face: SweepFace,
 ) -> SweepSetup {
     let ai_seat = swept_seat_of(n);
@@ -450,25 +445,17 @@ fn sweep_config(
 
     // #4466: the Radiant face deals the forced card Radiant through its seat's deck mark (R2702000). An
     // AI deck holds distinct ids, so the forced id has one index.
-    let mut setup = setup.clone();
+    let mut setup = MatchSetup::default();
     if face == SweepFace::Radiant
         && let Some(index) = ai_deck.iter().position(|id| id.as_str() == def_id)
     {
-        let marks = setup
-            .deck_marks
-            .get_or_insert_with(PerPlayerOpt::default)
-            .slot(ai_seat)
-            .get_or_insert_with(Vec::new);
-        if let Some(mark) = marks.iter_mut().find(|mark| mark.index == index) {
-            // A mark the setup carries keeps its Buffs.
-            mark.radiant = true;
-        } else {
-            marks.push(DeckMark {
-                index,
-                radiant: true,
-                upgrades: 0,
-            });
-        }
+        let mut marks = PerPlayerOpt::default();
+        *marks.slot(ai_seat) = Some(vec![DeckMark {
+            index,
+            radiant: true,
+            upgrades: 0,
+        }]);
+        setup.deck_marks = Some(marks);
     }
 
     let ai = SeatController::Ai {
@@ -636,11 +623,9 @@ fn play_sweep_game(
     tracked: &[String],
     options: &SweepOptions,
 ) -> SweepGame {
-    let no_setup = MatchSetup::default();
-    let inputs = options.setup.unwrap_or(&no_setup);
     let face = options.face.unwrap_or_default();
     let setup = match catch_unwind(AssertUnwindSafe(|| {
-        sweep_config(seed, def_id, n, tier, filler, inputs, face)
+        sweep_config(seed, def_id, n, tier, filler, face)
     })) {
         Ok(setup) => setup,
         // The card cannot even be dealt (not a deck-legal card, or the pool is too small): an error.
@@ -1135,60 +1120,11 @@ pub fn sweep_verdict(pass1: &[SweepResult], pass2: &[SweepPass2]) -> SweepVerdic
 
 #[cfg(test)]
 mod tests {
-    use jackioh_engine::{CreateGameOptions, LastBoardEntry, begin_game, create_game};
+    use jackioh_engine::{CreateGameOptions, begin_game, create_game};
 
     use super::*;
 
     const PORTAL: &str = "classicplus-029";
-
-    #[test]
-    fn a_sweep_game_carries_the_sweeps_setup_inputs_and_deals_as_without_them() {
-        jackioh_cards::register_all();
-        let board = vec![LastBoardEntry {
-            def_id: "core-012".to_string(),
-            radiant: false,
-        }];
-        let setup = MatchSetup {
-            last_boards: Some((board.clone(), board)),
-            ..MatchSetup::default()
-        };
-        let filler = Filler {
-            banned: vec![],
-            boost: None,
-        };
-        for n in [1, 2] {
-            let seed = format!("sweep:easy:{PORTAL}:{n}");
-            let plain = sweep_config(
-                &seed,
-                PORTAL,
-                n,
-                Difficulty::Easy,
-                &filler,
-                &MatchSetup::default(),
-                SweepFace::Base,
-            );
-            let carried = sweep_config(
-                &seed,
-                PORTAL,
-                n,
-                Difficulty::Easy,
-                &filler,
-                &setup,
-                SweepFace::Base,
-            );
-            assert_eq!(plain.config.setup, MatchSetup::default(), "game {n}");
-            assert_eq!(carried.config.setup, setup, "game {n}");
-            assert_eq!(carried.ai_seat, plain.ai_seat, "game {n}");
-            assert_eq!(
-                MatchConfig {
-                    setup: MatchSetup::default(),
-                    ..carried.config
-                },
-                plain.config,
-                "game {n}: only the setup differs"
-            );
-        }
-    }
 
     fn no_filler() -> Filler {
         Filler {
@@ -1197,10 +1133,10 @@ mod tests {
         }
     }
 
-    /// Game n of PORTAL's Easy sweep on `face`, on the Radiant face's seed, from `setup`.
-    fn portal_config(n: i32, setup: &MatchSetup, face: SweepFace) -> SweepSetup {
+    /// Game n of PORTAL's Easy sweep on `face`, on the Radiant face's seed.
+    fn portal_config(n: i32, face: SweepFace) -> SweepSetup {
         let seed = sweep_seed("sweep", Difficulty::Easy, PORTAL, SweepFace::Radiant, n);
-        sweep_config(&seed, PORTAL, n, Difficulty::Easy, &no_filler(), setup, face)
+        sweep_config(&seed, PORTAL, n, Difficulty::Easy, &no_filler(), face)
     }
 
     fn ai_deck_of(setup: &SweepSetup) -> &Vec<String> {
@@ -1227,8 +1163,8 @@ mod tests {
     fn the_radiant_face_deals_the_forced_card_radiant_and_the_base_face_does_not() {
         jackioh_cards::register_all();
         for n in [1, 2] {
-            let base = portal_config(n, &MatchSetup::default(), SweepFace::Base);
-            let radiant = portal_config(n, &MatchSetup::default(), SweepFace::Radiant);
+            let base = portal_config(n, SweepFace::Base);
+            let radiant = portal_config(n, SweepFace::Radiant);
             assert_eq!(base.config.setup.deck_marks, None, "game {n}");
             assert_eq!(radiant.ai_seat, base.ai_seat, "game {n}");
             assert_eq!(radiant.config.decks, base.config.decks, "game {n}");
@@ -1274,46 +1210,6 @@ mod tests {
                 }
             }
         }
-    }
-
-    #[test]
-    fn the_radiant_face_keeps_a_mark_the_setup_carries() {
-        jackioh_cards::register_all();
-        let plain = portal_config(1, &MatchSetup::default(), SweepFace::Radiant);
-        let ai_seat = plain.ai_seat;
-        let index = ai_deck_of(&plain)
-            .iter()
-            .position(|id| id == PORTAL)
-            .expect("the forced card is dealt");
-        let other = DeckMark {
-            index: 0,
-            radiant: false,
-            upgrades: 1,
-        };
-        let mut marks = PerPlayerOpt::default();
-        *marks.slot(ai_seat) = Some(vec![DeckMark {
-            index,
-            radiant: false,
-            upgrades: 2,
-        }]);
-        *marks.slot(opponent_of(ai_seat)) = Some(vec![other]);
-        let setup = MatchSetup {
-            deck_marks: Some(marks),
-            ..MatchSetup::default()
-        };
-
-        let radiant = portal_config(1, &setup, SweepFace::Radiant);
-        let got = radiant.config.setup.deck_marks.clone().unwrap_or_default();
-        assert_eq!(
-            got.get(ai_seat),
-            Some(&vec![DeckMark {
-                index,
-                radiant: true,
-                upgrades: 2
-            }])
-        );
-        assert_eq!(got.get(opponent_of(ai_seat)), Some(&vec![other]));
-        assert_eq!(portal_config(1, &setup, SweepFace::Base).config.setup, setup);
     }
 
     #[test]
