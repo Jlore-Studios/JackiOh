@@ -19753,7 +19753,7 @@
       "waiting_comment": 7160915168
     },
     "4812": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -19766,32 +19766,24 @@
         "reason": "planned on opus",
         "trail": "}\n- Bash: {\"command\": \"grep -rn -i \\\"amend\\\" spec/README.md docs/issues-and-patches.md | cut -c1-600 | head -20\", \"description\": \"Look up ruling amendment conventions\"}\n- Bash: {\"command\": \"grep -rln \\\"^Amended by issue\\\" spec/rulings | head -5; grep -rh \\\"^Amended by issue\\\\|^\\\\*\\\\*Amended\\\" spec/rulings | head -5 | cut -c1-400; grep -rn \\\"Ruling numbers\\\" -A15 docs/issues\u2026\n- Bash: {\"command\": \"grep -rn \\\"stolen_mana_crystals\\\\|perm_mod\\\" crates/engine/src --include=*.rs | grep -v \\\"^crates/engine/src/mana.rs\\\\|effects/mana.rs\\\" | head -20; grep -n \\\"^use jackioh_engine::{\\\" -A\u2026\n- Bash: {\"command\": \"sed -n 1640,1665p crates/engine/src/state.rs; sed -n 37,60p crates/ai/src/evaluate.rs; grep -rn \\\"mana_crystals\\\\|stolen\\\" crates/engine/src/view*.rs crates/engine/src/redact* 2>/dev/nul\u2026\n- Bash: {\"command\": \"grep -rn \\\"turns_started\\\" crates/engine/src/testkit* | head -10; grep -rn \\\"AI_DIFFICULTY\\\" -A12 crates/engine/src/config.rs | grep -n \\\"mana_cap\\\\|mana_bonus\\\" | head\", \"description\": \u2026\n- Bash: {\"command\": \"ls crates/cards/; python3 - <<'EOF'\\nimport json,glob\\nfor f in glob.glob('crates/cards/**/catalog.json', recursive=True)[:1]:\\n print(f)\\n data=json.load(open(f))\\n cards = data if isin\u2026\n- Bash: {\"command\": \"grep -n \\\"pub cost_mod\\\" -B3 crates/engine/src/state.rs | head; grep -rn \\\"cost_mod\\\" crates/ai/tests/ai/*.rs | head -5\", \"description\": \"Check a hand card's cost_mod field\"}\n- Bash: {\"command\": \"grep -rn \\\"pub fn own_cost\\\" -A20 crates/engine/src | head -30\", \"description\": \"Read the engine's own_cost\"}\n- Bash: {\"command\": \"sed -n 1074,1090p crates/ai/src/candidates.rs; grep -rn \\\"dead_in_hand\\\\|next_turn_crystals\\\\|R4154400\\\" --include=*.md --include=*.rs --include=*.ts . 2>/dev/null | grep -v \\\"^./spec/\\\\\u2026\n- Bash: {\"command\": \"sed -n 270,278p crates/ai/README.md\", \"description\": \"Read the AI README's dead-card paragraph\"}\n- Bash: {\"command\": \"git show --stat 56bddc1a7c | head -30; git show --stat 7d4b6ab64b | head -30\", \"description\": \"Show files of recent bot AI fixes\"}\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | cut -c1-700 | head -12\", \"description\": \"Read classify docs on what needs a fragment\"}\n- Bash: {\"command\": \"grep -n \\\"turns_started += 1\\\\|refresh_mana\\\" crates/engine/src/turn.rs | head\", \"description\": \"Check turn start order in the engine\"}\n- Bash: {\"command\": \"ls spec/rulings/R3538006.md spec/rulings/R3569008.md spec/rulings/R4331001.md spec/rulings/R1854003.md spec/rulings/R0844.md spec/rulings/R0180.md; grep -l 'S+ #95' spec/rulings/*.md | h\u2026\n- Bash: {\"command\": \"grep -c \\\"which a Trade turns into a card drawn (\\\\[\\\\[R4154400\\\\]\\\\])\\\" spec/09-architecture/9.9-practice-ai.md; grep -n \\\"one more while under \\\\`MAX_MANA\\\\`\\\" spec/rulings/R4154400.md\u2026\n- Bash: {\"command\": \"grep -n \\\"testkit\\\\|\\\\[dev-dependencies\\\\]\\\" -A0 crates/ai/Cargo.toml; grep -n \\\"mod tradable\\\\|mod support\\\" crates/ai/tests/ai/mod.rs crates/ai/tests/ai.rs 2>/dev/null\", \"description\":\u2026\n- Bash: {\"command\": \"timeout 1500 cargo test -p jackioh-ai --test ai tradable:: 2>&1 | tail -15\", \"description\": \"Run the existing Tradable AI tests on the base\", \"run_in_background\": true}\n- said: Now the draft plan, while the base tests build.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4812/.bot-plan.md\", \"content\": \"# Plan draft for #4812 (planner's working notes)\\n\\nFound:\\n- `crates/ai/src/evaluate.rs:999-1014`: `CRYSTALS_PER_TURN\u2026\n- Bash: {\"command\": \"grep -rln \\\"stolen_mana_crystals\\\\|perm_mod\\\" crates/ai/tests crates/ai/src | head; grep -rn \\\"dead_in_hand\\\" crates/ai/tests | grep -v tradable.rs | head\", \"description\": \"Find AI tests\u2026\n- Bash: {\"command\": \"grep -n \\\"stolen_mana_crystals\\\\|perm_mod\\\" crates/ai/tests/ai/position_model.rs | head -5; sed -n 995,1025p crates/ai/src/simulate.rs\", \"description\": \"Check other perm_mod readers in t\u2026\n- Monitor: {\"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-4812/d6009d26-6117-4382-9b18-05a562b633b1/tasks/bq1juvunb.output ] && grep -q \\\"test result\\\\|error\\\" /tmp/claude-1001/-home\u2026\n- said: The base `tradable::` tests are still compiling, so I'll wait for them before I finalize.\n- Bash: {\"command\": \"sleep 1; cat /tmp/claude-1001/-home-runner-work--temp-work-item-4812/d6009d26-6117-4382-9b18-05a562b633b1/tasks/bq1juvunb.output | tail -5\", \"description\": \"Check interim test output\"}\n- TaskList: {}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4812/.bot-plan.md\", \"content\": \"# Plan draft for #4812 (planner's working notes)\\n\\nFound:\\n- `crates/ai/src/evaluate.rs:999-1014`: `CRYSTALS_PER_TURN\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4812/d6009d26-6117-4382-9b18-05a562b633b1/tasks/bq1juvunb.output | tail -5; ls target 2>/dev/null | head\", \"description\": \"Check te\u2026\n- Monitor: {\"command\": \"until grep -q \\\"test result\\\\|error\\\\|warning: unused\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-4812/d6009d26-6117-4382-9b18-05a562b633b1/tasks/bq1juvunb.output 2>/dev/null; d\u2026\n- ScheduleWakeup: {\"delaySeconds\": 900, \"reason\": \"fallback while the base AI test build runs\", \"prompt\": \"continue planning #4812: check the base tradable test run\", \"noop\": true}\n- said: I've written the plan draft to `.bot-plan.md`. The base `tradable::` AI tests are still compiling, and I'll finish the plan once I know they pass on `main`'s code.\n- Bash: {\"command\": \"tail -8 /tmp/claude-1001/-home-runner-work--temp-work-item-4812/d6009d26-6117-4382-9b18-05a562b633b1/tasks/bq1juvunb.output\", \"description\": \"Read the base test run result\"}\n- ScheduleWakeup: {\"stop\": true}\n- ToolSearch: {\"query\": \"select:TaskStop\"}\n- TaskStop: {\"task_id\": \"bwhwore9o\"}\n- TaskStop: {\"task_id\": \"b4qt2y43u\"}\n- said: **Goal.** `dead_in_hand` (R4154400) should read the next refresh the way the engine's `max_mana_for` gives it. The count of crystals under the cap now grows by one only while it is below `MAX_MANA`. A maximum lowered at the cap for the rest of the game (`mana.perm_mod`, from S+ #95 JC Backed or S+ \u2026"
       },
-      "hold": {
-        "ends": "2026-11-25T13:20:27Z",
-        "lifted": "2026-11-25T13:21:39Z",
-        "owner": "claude-3",
-        "since": "2026-11-25T11:20:27Z",
-        "until": "2026-11-25T13:20:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-25T08:58:50Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-8",
+      "owner_since": "2026-11-25T14:18:44Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-25T09:19:29Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-8",
       "queued_at": "2026-11-24T20:57:19Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45581073945",
+      "run_id": "pending:d0f06103-1795616282",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-25T08:58:50Z",
+      "started_at": "2026-11-25T14:18:44Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 7160917331
@@ -24240,9 +24232,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T14:09:06Z",
+    "at": "2026-11-25T14:18:44Z",
     "url": "",
-    "what": "review #4928 on claude-4"
+    "what": "build #4812 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-25T14:06:17Z",
