@@ -873,7 +873,7 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000, #3734, R3734000): f
 routes/QuestsPanel.tsx  /collection's Progress tab's quests (§14.9) from GET /api/quests: each held quest's progress and
                         reward, and the countdown to the next; moved from /account (#1307), and Replace on each, behind
                         a confirm, while a replace is left today (R2210000). The landing's bookmark
-                        shares `useQuests` and `QuestsView` (R2035000)
+                        shares `useQuests` and `QuestsView` (R2035000), and both read again once when the next quest falls due (R4818000)
 routes/NewsPanel.tsx    the landing's news (§14.13, #2875) from GET /api/news: the live entries, newest first (R2875001),
                         each with its reward in words (R2875003) and Claim, POST /api/news/:id/claim, a spend sent
                         once (R2875000); the bookmark's count is the entries the server says are unclaimed (R2875002)
