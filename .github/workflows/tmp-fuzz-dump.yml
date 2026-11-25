@@ -1,0 +1,53 @@
+# TEMPORARY (issue #4783), deleted before its pull request merges: the session building it cannot
+# build Rust (its container's network policy denies crates.io). This replays fuzz seed 164, whose
+# I21 finding failed `rust (checks, fuzz 200)`, with the fuzz loop patched in this job alone to dump
+# the failing step's action, events and the state before it, and prints them for the session to read.
+name: tmp fuzz dump
+
+on:
+  pull_request:
+    paths: [".github/workflows/tmp-fuzz-dump.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: patch the fuzz loop to dump the failing step
+        run: |
+          python3 - <<'EOF'
+          p = 'crates/tools/src/fuzz.rs'
+          t = open(p).read()
+          a = "        let result = reduce(&state, &action);\n        if let Some(error) = &result.error {\n            return Err(FuzzFailure::new(\n                FailureStage::Play,"
+          assert t.count(a) == 1, 'reduce anchor'
+          t = t.replace(a, "        let tmp_prev = state.clone();\n" + a)
+          b = "        let mut broken = monitor.after(&result.events, &state);\n"
+          assert t.count(b) == 1, 'after anchor'
+          dump = (
+              "        if !broken.is_empty() {\n"
+              "            std::fs::write(\"/tmp/dump-action.json\", serde_json::to_string(log.last().unwrap()).unwrap()).unwrap();\n"
+              "            std::fs::write(\"/tmp/dump-events.json\", serde_json::to_string(&result.events).unwrap()).unwrap();\n"
+              "            std::fs::write(\"/tmp/dump-prev.json\", serde_json::to_string(&tmp_prev).unwrap()).unwrap();\n"
+              "            std::fs::write(\"/tmp/dump-after.json\", serde_json::to_string(&state).unwrap()).unwrap();\n"
+              "        }\n"
+          )
+          t = t.replace(b, b + dump)
+          open(p, 'w').write(t)
+          EOF
+      - name: build
+        run: cargo build --release -p jackioh-tools
+      - name: replay seed 164
+        run: target/release/jackioh fuzz --from 164 --seeds 1 2>&1 | grep -v "^\s*$" | grep -E "I21|failed|passed" || true
+      - name: print the dump
+        run: |
+          for f in action events prev after; do
+            echo "DUMP-$f-BEGIN"
+            gzip -9c /tmp/dump-$f.json | base64 -w0
+            echo
+            echo "DUMP-$f-END"
+          done
