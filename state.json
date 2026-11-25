@@ -21958,6 +21958,8 @@
       "action": "review",
       "asks": [],
       "audit_tier": "",
+      "ci_fixed_head": "09fffc31119fd30c8d0f83d2977664ac919754e9",
+      "ci_fixes": 1,
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
