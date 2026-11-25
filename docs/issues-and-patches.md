@@ -485,7 +485,7 @@ renumbers before it merges: it merges `main` in, moves its note to the next numb
 issue's block (the file name and its `id`), and renames its proving tests (`fn r<n>_…`, `it("R<n> …")`)
 and every `R<n>` and `[[R<n>]]` its change cites. The clash shows as a conflict on the note, and `cargo jackioh spec check` fails on
 whatever the renumbering missed: two notes with one `id`, a test or a citation with no note, a link
-to nothing. No branch writes `spec/INDEX.md` or the end of `spec/11-rulings.md`, which every
+to nothing. No branch writes `spec/INDEX.md` or `spec/history/`, which every
 ruling's branch once conflicted on: a branch's §11 paragraph goes in `spec/pending/<n>.md`, and
 `spec-fold.yml` folds the paragraphs and rewrites the index on `main` daily (`spec/README.md`, Adding
 a ruling). Numbers on `main` are never reused or renumbered (`spec/README.md`). Under the old rule

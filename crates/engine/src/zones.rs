@@ -1274,6 +1274,8 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.stats_override = None;
     instance.armor_override = None;
     instance.taunt_suppressed_turn = None;
+    // R4587000: a this-turn buff is a status of the stay on the field, gone with R78's reset.
+    instance.turn_buff = None;
     instance.face_up = None;
     instance.revealed = None;
     instance.last_damaged_by = None;
@@ -1304,6 +1306,9 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.half = None;
     instance.shared_chain = None;
     instance.split_chain = None;
+    // R4591000, R4591001: so are a set Attack and Containment, stamped on the Unit on the field.
+    instance.attack_this_turn = None;
+    instance.contained = None;
 }
 
 /// R766 (#473): a card that reaches a graveyard or exile costs its printed cost again (R65), a
@@ -1589,6 +1594,7 @@ pub fn move_to_zone(
     // (R87) carries no link of its chain (R28) into a play of its own.
     // R2618000: it lands as its keeper's own card, before R78's reset hands control back to its owner.
     if let Some(keeper) = keeper {
+        crate::origin::note_origin(crate::recursion_log::kept(state), instance);
         instance.owner = keeper;
     }
     let to_graveyard_or_exile = zone == OffFieldZone::Graveyard || zone == OffFieldZone::Exile;

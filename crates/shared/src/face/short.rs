@@ -24,7 +24,9 @@
 //! are (the view's numbers, R386, and a Radiant face's marks against its base face's written words, R277), and
 //! the whole text stays where it stood. The five still clamp: the Quest faces, which print one stage
 //! (R2450000), and S #116 Megabase, whose keyword line alone fills four of the box's six lines. A face printed
-//! in Chinese clamps where its written form has no Chinese words of its own (`zh`).
+//! in Chinese clamps where its written form has no Chinese words of its own (`zh`). Issue #4601 wrote the
+//! words of the held Infinite Assault set's #235 The Prime Generator, whose keyword, start-of-turn and Death
+//! lines run to seven on both faces.
 //!
 //! Only a face printing its catalog text takes a short form (in play #98 prints its rolled power and a Call
 //! to Chaos "???", `power.rs`). In play the Summit prints only its header and the next Ascent line (#814,

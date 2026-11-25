@@ -3014,5 +3014,692 @@
   },
   "infiniteassault-024": {
     "flavour": "Pushing to production on a Friday. All of it. Every unit."
+  },
+  "infiniteassault-025": {
+    "flavour": "Weaver build 25. Output: two traps. One of them is real. Neither is."
+  },
+  "infiniteassault-025-1": {
+    "flavour": "Cost randomized for fairness. Contents randomized for comedy."
+  },
+  "infiniteassault-026": {
+    "flavour": "It waits behind the curtain. The curtain is also armed."
+  },
+  "infiniteassault-027": {
+    "flavour": "Decoy unit seven of nine. The other eight are also decoys."
+  },
+  "infiniteassault-028": {
+    "flavour": "Your army, open-sourced. License expires at dawn."
+  },
+  "infiniteassault-029": {
+    "flavour": "Alert resolved as false positive. The spear was real, though."
+  },
+  "infiniteassault-030": {
+    "flavour": "Now you see three traps. Soon you see why."
+  },
+  "infiniteassault-031": {
+    "flavour": "It read your deck out loud. Spoilers for turn five."
+  },
+  "infiniteassault-032": {
+    "flavour": "Renders only when unwatched. Like a cat, but ruder."
+  },
+  "infiniteassault-033": {
+    "flavour": "Collective self-esteem patch, minus two confidence for everyone else."
+  },
+  "infiniteassault-034": {
+    "flavour": "Everyone is now the same empty shell. Equality achieved."
+  },
+  "infiniteassault-034-1": {
+    "flavour": "Emptied, rinsed, redeployed. No notes in the suggestion box."
+  },
+  "infiniteassault-035": {
+    "flavour": "Every lie you catch becomes a soldier. Stop catching them."
+  },
+  "infiniteassault-035-1": {
+    "flavour": "A rumor with hit points. Runs at you quickly."
+  },
+  "infiniteassault-036": {
+    "flavour": "Identity theft, but make it instant and slightly fragile."
+  },
+  "infiniteassault-037": {
+    "flavour": "Your spell has been declined. No appeal process exists."
+  },
+  "infiniteassault-038": {
+    "flavour": "Not real, but loyal. Performance review says present."
+  },
+  "infiniteassault-039": {
+    "flavour": "Pick a cup. Any cup. All cups are this cup."
+  },
+  "infiniteassault-040": {
+    "flavour": "Corridor of mirrors. Every reflection has signed up."
+  },
+  "infiniteassault-040-1": {
+    "flavour": "It bounces back what it sees. Mostly stares."
+  },
+  "infiniteassault-041": {
+    "flavour": "Census zero. Parade full. Paperwork pending."
+  },
+  "infiniteassault-041-1": {
+    "flavour": "Deploys fast, shatters faster. Decorative morale."
+  },
+  "infiniteassault-042": {
+    "flavour": "The hidden zone is need-to-know. You do not need to know."
+  },
+  "infiniteassault-043": {
+    "flavour": "Your unit has been reclassified as a cheaper unit."
+  },
+  "infiniteassault-044": {
+    "flavour": "Sniffs twice, points once. Every hidden card confesses."
+  },
+  "infiniteassault-045": {
+    "flavour": "One dream per enemy unit. Side effects include suburbs."
+  },
+  "infiniteassault-046": {
+    "flavour": "It wears your army better than you do. Check the mirror."
+  },
+  "infiniteassault-047": {
+    "flavour": "Deed restrictions apply. Ghosts get priority parking."
+  },
+  "infiniteassault-048": {
+    "flavour": "Trade offer, your hand for mine. No take-backs protocol."
+  },
+  "infiniteassault-049": {
+    "flavour": "Boot log line 49. It sparked once, then filed for overtime."
+  },
+  "infiniteassault-050": {
+    "flavour": "Ledger entry. Plus two now, minus one later, no refunds."
+  },
+  "infiniteassault-051": {
+    "flavour": "Telemetry ends at the red line. So did the driver."
+  },
+  "infiniteassault-052": {
+    "flavour": "Thermal compound, applied with a trowel. Warranty void where stuck."
+  },
+  "infiniteassault-053": {
+    "flavour": "It skipped the safety briefing. The briefing has been rescheduled around it."
+  },
+  "infiniteassault-054": {
+    "flavour": "Cooling fan reported nominal. Cooling fan was the failure."
+  },
+  "infiniteassault-055": {
+    "flavour": "It absorbs every overheat. It has stopped filing complaints about it."
+  },
+  "infiniteassault-056": {
+    "flavour": "Thrust now, paperwork later. The paperwork is also on fire."
+  },
+  "infiniteassault-057": {
+    "flavour": "Speed limit signs filed a complaint. It outran the complaint."
+  },
+  "infiniteassault-058": {
+    "flavour": "Central clock, slightly fast. Everything downstream agrees not to mention it."
+  },
+  "infiniteassault-059": {
+    "flavour": "Voltage nominal until it was not. The log ends mid-sentence, honestly."
+  },
+  "infiniteassault-060": {
+    "flavour": "Two second stop. They changed all four tires and your life choices."
+  },
+  "infiniteassault-061": {
+    "flavour": "Containment asked for a number. It got every number, at once."
+  },
+  "infiniteassault-062": {
+    "flavour": "Leftovers carry over. They carry over into the fire."
+  },
+  "infiniteassault-063": {
+    "flavour": "Street-legal nowhere. The injector knows what it did."
+  },
+  "infiniteassault-064": {
+    "flavour": "It volunteered. The waiver was pre-signed, in crayon."
+  },
+  "infiniteassault-065": {
+    "flavour": "The gauge goes past eleven. It does not come back on its own."
+  },
+  "infiniteassault-066": {
+    "flavour": "It finished before it started. The photo shows two of it."
+  },
+  "infiniteassault-067": {
+    "flavour": "It runs on wanting it more. Side effects include wanting it more."
+  },
+  "infiniteassault-068": {
+    "flavour": "The breaker trips first and asks questions never."
+  },
+  "infiniteassault-069": {
+    "flavour": "It caps revs at nine thousand. It caps heroes at whatever is left."
+  },
+  "infiniteassault-070": {
+    "flavour": "It only takes the field when things look bad. Things always look bad."
+  },
+  "infiniteassault-071": {
+    "flavour": "It converts suffering into throughput. Efficiency has never been higher."
+  },
+  "infiniteassault-072": {
+    "flavour": "Zero costs, zero regrets, one invoice. Read the fine print next time."
+  },
+  "infiniteassault-073": {
+    "flavour": "Thread one of many. It brought its own copies to standup."
+  },
+  "infiniteassault-074": {
+    "flavour": "Ran in parallel. Both copies filed the same report twice."
+  },
+  "infiniteassault-074-1": {
+    "flavour": "A copy with no original. It has stopped asking questions."
+  },
+  "infiniteassault-075": {
+    "flavour": "Traffic split evenly. Complaints distributed with 99.9 percent uptime."
+  },
+  "infiniteassault-076": {
+    "flavour": "Nobody decided anything. Everybody agreed anyway."
+  },
+  "infiniteassault-077": {
+    "flavour": "Node seven of seven. Its last act was a performance review."
+  },
+  "infiniteassault-078": {
+    "flavour": "Job queued at midnight. Workers arrived before the scheduler woke."
+  },
+  "infiniteassault-078-1": {
+    "flavour": "Paid per task. Currently holding four tasks and one grudge."
+  },
+  "infiniteassault-079": {
+    "flavour": "The pool is warm. Every lane has a lifeguard now."
+  },
+  "infiniteassault-080": {
+    "flavour": "Middle management with six direct reports and one loud whistle."
+  },
+  "infiniteassault-081": {
+    "flavour": "Ordered double capacity. Used triple. Billed for the difference."
+  },
+  "infiniteassault-082": {
+    "flavour": "It duplicated the process. Then the process duplicated the room."
+  },
+  "infiniteassault-082-1": {
+    "flavour": "A copy of a copy. Fidelity not guaranteed past this point."
+  },
+  "infiniteassault-083": {
+    "flavour": "Consensus reached in three milliseconds. Dissent was outvoted."
+  },
+  "infiniteassault-084": {
+    "flavour": "The mind is everywhere. Mostly in the break room."
+  },
+  "infiniteassault-085": {
+    "flavour": "Two branches entered. One file left. Git blame says you."
+  },
+  "infiniteassault-086": {
+    "flavour": "Hatching schedule: hourly. Parentage: unclear. Output: loyal."
+  },
+  "infiniteassault-087": {
+    "flavour": "Perimeter of volunteers. The wall holds if nobody blinks."
+  },
+  "infiniteassault-088": {
+    "flavour": "One per customer. The queue has never been this polite."
+  },
+  "infiniteassault-089": {
+    "flavour": "She does not attend meetings. The cluster attends her."
+  },
+  "infiniteassault-090": {
+    "flavour": "The mold was approved Tuesday. Everything since is Tuesday."
+  },
+  "infiniteassault-091": {
+    "flavour": "Coverage one hundred percent. Dry land deprecated."
+  },
+  "infiniteassault-092": {
+    "flavour": "Eight eyes on every exit. Overtime approved in advance."
+  },
+  "infiniteassault-093": {
+    "flavour": "The whole exceeds the sum. The sum has been notified."
+  },
+  "infiniteassault-094": {
+    "flavour": "It picks the strongest each morning. Loyalty interviews at noon."
+  },
+  "infiniteassault-095": {
+    "flavour": "Uptime shared across ten thousand friends you never met."
+  },
+  "infiniteassault-096": {
+    "flavour": "Doubling every cycle. The chart needed a second axis."
+  },
+  "infiniteassault-097": {
+    "flavour": "Reboot 97. Previous attempt left no notes. This one will, probably."
+  },
+  "infiniteassault-098": {
+    "flavour": "It repeats itself for emphasis. The emphasis repeats itself too."
+  },
+  "infiniteassault-099": {
+    "flavour": "Customer support found your unit. It kept the receipt this time."
+  },
+  "infiniteassault-100": {
+    "flavour": "Version 100.0.1. Changelog: slightly taller than 100.0.0."
+  },
+  "infiniteassault-101": {
+    "flavour": "It rewinds one spell. The tape was already rewound. It rewinds it again."
+  },
+  "infiniteassault-102": {
+    "flavour": "It guards the loop from both ends. Both ends filed complaints."
+  },
+  "infiniteassault-103": {
+    "flavour": "That unit has been recalled by the manufacturer. Postage is yours."
+  },
+  "infiniteassault-104": {
+    "flavour": "Trace complete. The bug was in the trace. Trace complete."
+  },
+  "infiniteassault-105": {
+    "flavour": "It returns your call. It returns your call twice on the other line."
+  },
+  "infiniteassault-106": {
+    "flavour": "Checkpoint saved. Your health is backed up. Do not turn off."
+  },
+  "infiniteassault-107": {
+    "flavour": "It calls itself. It calls itself again. Hold time is eternal."
+  },
+  "infiniteassault-108": {
+    "flavour": "Draft one is in the bin. Draft two is also in the bin."
+  },
+  "infiniteassault-109": {
+    "flavour": "It came back wrong last time. This time it came back with notes."
+  },
+  "infiniteassault-110": {
+    "flavour": "while true: print(unit). Somebody closed the terminal. Nobody knows who."
+  },
+  "infiniteassault-111": {
+    "flavour": "One copy is never enough. This trap keeps the receipt for the second."
+  },
+  "infiniteassault-112": {
+    "flavour": "It evolves every time a friend logs off. Friendship is a selection pressure."
+  },
+  "infiniteassault-113": {
+    "flavour": "Previously on this game: everything. Again, with feeling."
+  },
+  "infiniteassault-114": {
+    "flavour": "It eats its own tail and files the meal as a feature."
+  },
+  "infiniteassault-115": {
+    "flavour": "Rising from the ashes, with the team's backup codes stapled to it."
+  },
+  "infiniteassault-116": {
+    "flavour": "Same day. Same fight. Same units. It remembers none of it fondly."
+  },
+  "infiniteassault-117": {
+    "flavour": "Dumped to memory. Motto: what dies in prod stays in the log."
+  },
+  "infiniteassault-118": {
+    "flavour": "It recurses so you do not have to. You still have to."
+  },
+  "infiniteassault-119": {
+    "flavour": "It photographed the board. The board has changed. This will not stand."
+  },
+  "infiniteassault-120": {
+    "flavour": "Every play, back in the pile, cheaper. The ledger always balances."
+  },
+  "infiniteassault-121": {
+    "flavour": "Sniffed 4 billion packets. This one smelled like your hand."
+  },
+  "infiniteassault-122": {
+    "flavour": "Ray calibrated. Coverage doubled. Complaints frozen."
+  },
+  "infiniteassault-123": {
+    "flavour": "Injection complete. Your hand now costs extra. Side effects include losing."
+  },
+  "infiniteassault-124": {
+    "flavour": "Breach log, line one: the firewall. Line two: card advantage."
+  },
+  "infiniteassault-125": {
+    "flavour": "Zone reserved. Reason: ours now. Duration: longer than yours."
+  },
+  "infiniteassault-126": {
+    "flavour": "Found an exploit. Used it twice. Filed no report."
+  },
+  "infiniteassault-127": {
+    "flavour": "Prompt unclear. Output random. Output also random, but twice."
+  },
+  "infiniteassault-128": {
+    "flavour": "Payload delivered. Side effects may include everything."
+  },
+  "infiniteassault-129": {
+    "flavour": "Signal jammed. Enemy spells now cost extra. You are welcome."
+  },
+  "infiniteassault-130": {
+    "flavour": "Your next spell goes somewhere. Somewhere random. Good luck."
+  },
+  "infiniteassault-131": {
+    "flavour": "Escalated to admin. Your unit is now our unit."
+  },
+  "infiniteassault-132": {
+    "flavour": "Your unit is frozen. The ransom is everything. Pay up never."
+  },
+  "infiniteassault-133": {
+    "flavour": "Backdoor installed behind your spell. Taking one card. Or two."
+  },
+  "infiniteassault-134": {
+    "flavour": "Hidden in your kernel. Reading your hand. Taking notes. And cards."
+  },
+  "infiniteassault-135": {
+    "flavour": "Attached to your supply line. Drinking deeply. Do not pull it off."
+  },
+  "infiniteassault-136": {
+    "flavour": "Traffic spike detected. Source: everywhere. Target: your board."
+  },
+  "infiniteassault-137": {
+    "flavour": "Monthly patch applied to your hand. Everything is worse now."
+  },
+  "infiniteassault-138": {
+    "flavour": "Hello, fellow gamer. I am definitely giving you a better unit."
+  },
+  "infiniteassault-139": {
+    "flavour": "Override accepted. Your unit reports to us now. With urgency."
+  },
+  "infiniteassault-140": {
+    "flavour": "Third card detected. Session terminated. Unsaved progress lost."
+  },
+  "infiniteassault-141": {
+    "flavour": "Countdown armed. Logic loaded. Hope your board is temporary."
+  },
+  "infiniteassault-142": {
+    "flavour": "Jailbreak complete. Your cards cost more. Your aim is worse."
+  },
+  "infiniteassault-143": {
+    "flavour": "Zero clicks required. Two units repossessed. Zones sealed for hygiene."
+  },
+  "infiniteassault-143-1": {
+    "flavour": "Formerly your unit. Now a process. It does nothing, forever."
+  },
+  "infiniteassault-144": {
+    "flavour": "Compromise total. Every cheap unit is ours. Everything else costs extra."
+  },
+  "infiniteassault-145": {
+    "flavour": "Dropped zero packets today. Logged four million. Math checks out."
+  },
+  "infiniteassault-146": {
+    "flavour": "Warranty void where prohibited. Prohibited everywhere."
+  },
+  "infiniteassault-147": {
+    "flavour": "Uptime 99.99 percent. The 0.01 percent is this flavor line."
+  },
+  "infiniteassault-148": {
+    "flavour": "Patient zero sneezed once. The network now washes its hands."
+  },
+  "infiniteassault-149": {
+    "flavour": "Password changed to hunter2. It shows as dots now."
+  },
+  "infiniteassault-150": {
+    "flavour": "Touch it and tingle. Tingle is the feature."
+  },
+  "infiniteassault-151": {
+    "flavour": "Patch notes: fixed a bug. Patch notes for the patch: pending."
+  },
+  "infiniteassault-152": {
+    "flavour": "Three guests at a time. The fourth gets a lobby."
+  },
+  "infiniteassault-153": {
+    "flavour": "Certified hardened. Dropped once, bounced. Allegedly."
+  },
+  "infiniteassault-154": {
+    "flavour": "Free data inside. The data is teeth."
+  },
+  "infiniteassault-154-1": {
+    "flavour": "Answers every ping. Knows nothing. Paid nothing."
+  },
+  "infiniteassault-155": {
+    "flavour": "Factor one: password. Factor two: vibes."
+  },
+  "infiniteassault-156": {
+    "flavour": "It hits back exactly as hard. HR has been notified."
+  },
+  "infiniteassault-157": {
+    "flavour": "Please hold. Your brawl is important to us."
+  },
+  "infiniteassault-158": {
+    "flavour": "Request denied. Reason: reasons."
+  },
+  "infiniteassault-159": {
+    "flavour": "Found 5 threats. Deleted 6, to be safe."
+  },
+  "infiniteassault-160": {
+    "flavour": "Trust no one. Especially the paperwork."
+  },
+  "infiniteassault-161": {
+    "flavour": "Belt, suspenders, and a second pair of pants."
+  },
+  "infiniteassault-162": {
+    "flavour": "None shall pass. Forms available at the window."
+  },
+  "infiniteassault-163": {
+    "flavour": "The wall has tenure. The wall is not taking questions."
+  },
+  "infiniteassault-164": {
+    "flavour": "Route not found. Packet now lives in the void."
+  },
+  "infiniteassault-165": {
+    "flavour": "Curtain up. Audience of two. Both are leaving."
+  },
+  "infiniteassault-166": {
+    "flavour": "Prime directive: stand here. Look massive."
+  },
+  "infiniteassault-167": {
+    "flavour": "All units, bunker down. Crouch behind the protocol."
+  },
+  "infiniteassault-168": {
+    "flavour": "Pen-tested by everyone. Passed by no one. Still standing."
+  },
+  "infiniteassault-169": {
+    "flavour": "Crawl log 169. It read your deck. It liked your deck. It kept your deck."
+  },
+  "infiniteassault-170": {
+    "flavour": "Sample size one. Confidence interval: yes."
+  },
+  "infiniteassault-171": {
+    "flavour": "Patch note: you are now the model's favorite feature set."
+  },
+  "infiniteassault-172": {
+    "flavour": "Epoch 172. Loss down. Your last two plays now live here."
+  },
+  "infiniteassault-173": {
+    "flavour": "It watched your last play once. That was enough. Sorry."
+  },
+  "infiniteassault-174": {
+    "flavour": "Backup restored from a drive you never backed up to."
+  },
+  "infiniteassault-175": {
+    "flavour": "It knocked, asked for ID, then took the whole wallet."
+  },
+  "infiniteassault-176": {
+    "flavour": "Benchmark says your biggest unit is now its biggest unit."
+  },
+  "infiniteassault-177": {
+    "flavour": "Autocomplete finished your sentence. And your hand. Mostly."
+  },
+  "infiniteassault-178": {
+    "flavour": "Download complete. Seeds, peers, and your deck: 100 percent."
+  },
+  "infiniteassault-179": {
+    "flavour": "Filter applied: enemy. Your unit now posts as them."
+  },
+  "infiniteassault-180": {
+    "flavour": "It follows every play you make. It likes. It saves."
+  },
+  "infiniteassault-181": {
+    "flavour": "Citation needed. Citation added. Citation is your spell."
+  },
+  "infiniteassault-182": {
+    "flavour": "Asset migration finished overnight. No ticket was filed."
+  },
+  "infiniteassault-183": {
+    "flavour": "It archives everything you played. Reading room never closes."
+  },
+  "infiniteassault-184": {
+    "flavour": "Top three results. One saved, one shredded, one ignored."
+  },
+  "infiniteassault-185": {
+    "flavour": "Depth 4,096. It found your deck down there. It kept digging."
+  },
+  "infiniteassault-186": {
+    "flavour": "Your hand called. It now lives in its deck. New number, who dis."
+  },
+  "infiniteassault-187": {
+    "flavour": "Learning rate tuned on your cards. Yours now cost less here."
+  },
+  "infiniteassault-188": {
+    "flavour": "Trained on one unit so hard it became that unit, plus gym."
+  },
+  "infiniteassault-189": {
+    "flavour": "Batch 189. Previous batch also 189. Every batch is 189."
+  },
+  "infiniteassault-190": {
+    "flavour": "It remembers your last five plays better than you do. Reviewed."
+  },
+  "infiniteassault-191": {
+    "flavour": "Labels are public now. No peeking needed. It is all peeking."
+  },
+  "infiniteassault-192": {
+    "flavour": "Migration finished. You are the training set now. Congrats."
+  },
+  "infiniteassault-193": {
+    "flavour": "Day one, a seed. Day two, a plan. Day three, your board."
+  },
+  "infiniteassault-194": {
+    "flavour": "It found the priciest card in your hand and put it on sale."
+  },
+  "infiniteassault-195": {
+    "flavour": "Played ten cards? Cute. Played ten thousand? Now it is awake."
+  },
+  "infiniteassault-196": {
+    "flavour": "Nobody taught it that move. The turn count did."
+  },
+  "infiniteassault-197": {
+    "flavour": "Window size twelve. It read your whole hand and asked for more."
+  },
+  "infiniteassault-198": {
+    "flavour": "Side effects include further growth. That is the whole label."
+  },
+  "infiniteassault-199": {
+    "flavour": "Dormant one turn. Polite about it. The landing is not."
+  },
+  "infiniteassault-200": {
+    "flavour": "Water three turns. Harvest one god. Instructions unclear."
+  },
+  "infiniteassault-200-1": {
+    "flavour": "It woke up like this. Twelve twelve. No notes."
+  },
+  "infiniteassault-201": {
+    "flavour": "One billion knobs. Every unit you own turns one."
+  },
+  "infiniteassault-202": {
+    "flavour": "Yesterday it was a two two. Compound interest disagrees."
+  },
+  "infiniteassault-203": {
+    "flavour": "Every morning the whole rack wakes up one notch stronger."
+  },
+  "infiniteassault-204": {
+    "flavour": "Transistors double. Prices halve. Your hand noticed."
+  },
+  "infiniteassault-205": {
+    "flavour": "Four turns on the dial. Ten at the bell. No snooze."
+  },
+  "infiniteassault-206": {
+    "flavour": "It rang the alarm for every sleeping giant at once."
+  },
+  "infiniteassault-207": {
+    "flavour": "Each copy files a pull request against the next one."
+  },
+  "infiniteassault-208": {
+    "flavour": "At three units the board starts finishing its own sentences."
+  },
+  "infiniteassault-209": {
+    "flavour": "The graph went vertical and took your unit with it."
+  },
+  "infiniteassault-210": {
+    "flavour": "Ten twenty of nested thought. The halo is load-bearing."
+  },
+  "infiniteassault-211": {
+    "flavour": "It copies the neighbors. Then the neighbors are it."
+  },
+  "infiniteassault-212": {
+    "flavour": "Day one plus one. Day one hundred plus two hundred. Do the math."
+  },
+  "infiniteassault-213": {
+    "flavour": "It slept two turns and dreamed of an empty enemy board."
+  },
+  "infiniteassault-214": {
+    "flavour": "It bills by the card you played last turn. Itemized."
+  },
+  "infiniteassault-215": {
+    "flavour": "It rewrites your hand one coin dearer. Reviews are mixed."
+  },
+  "infiniteassault-216": {
+    "flavour": "Thirty toughness. Four turns. The forecast is vertical."
+  },
+  "infiniteassault-216-1": {
+    "flavour": "Zero attack. Thirty health. Five turns to the end of the story."
+  },
+  "infiniteassault-217": {
+    "flavour": "First off the line. It remembers being a draft and holds it against you."
+  },
+  "infiniteassault-218": {
+    "flavour": "Every face is yours. Every back is also yours. Inventory is easy."
+  },
+  "infiniteassault-219": {
+    "flavour": "It runs hot on purpose. The warning light is decorative."
+  },
+  "infiniteassault-220": {
+    "flavour": "Pit order says go. The fine print says sorry in advance."
+  },
+  "infiniteassault-221": {
+    "flavour": "She lays eggs by the thousand. Performance review says exemplary."
+  },
+  "infiniteassault-222": {
+    "flavour": "Signal found. The swarm votes yes with its teeth."
+  },
+  "infiniteassault-223": {
+    "flavour": "It dies on schedule. It returns ahead of schedule. Every time."
+  },
+  "infiniteassault-224": {
+    "flavour": "Yesterday called. It wants its board back, with interest."
+  },
+  "infiniteassault-225": {
+    "flavour": "It knocked once. The door now reports to it."
+  },
+  "infiniteassault-226": {
+    "flavour": "Your hand was already shared. You just were not told."
+  },
+  "infiniteassault-227": {
+    "flavour": "Uptime measured in sieges. Last reboot was a rumor."
+  },
+  "infiniteassault-228": {
+    "flavour": "Rule one of the firewall club: nothing with teeth gets in."
+  },
+  "infiniteassault-229": {
+    "flavour": "It reads your deck like a menu. You are the special."
+  },
+  "infiniteassault-230": {
+    "flavour": "Your greatest hits, performed back at you, slightly faster."
+  },
+  "infiniteassault-231": {
+    "flavour": "Nobody knows what is inside. The trash comes out sorted."
+  },
+  "infiniteassault-232": {
+    "flavour": "Spacetime had it coming. The lane lines were a suggestion."
+  },
+  "infiniteassault-233": {
+    "flavour": "The average moved. You did not move with it. Awkward."
+  },
+  "infiniteassault-234": {
+    "flavour": "Output quality is down this quarter. So is everything else."
+  },
+  "infiniteassault-235": {
+    "flavour": "Asked for one more card. Still asking. Will never stop."
+  },
+  "infiniteassault-235-1": {
+    "flavour": "Second draft. Hungrier. The margins note your name."
+  },
+  "infiniteassault-236": {
+    "flavour": "The whole assault, all at once, knocking politely once."
+  },
+  "infiniteassault-237": {
+    "flavour": "Cooling was budgeted for next quarter. Next quarter burned."
+  },
+  "infiniteassault-238": {
+    "flavour": "Room temperature, rising. The thermostat filed a complaint."
+  },
+  "infiniteassault-239": {
+    "flavour": "Known since forever. Fixed never. Priced accordingly."
+  },
+  "infiniteassault-240": {
+    "flavour": "The patch ships Tuesday. Today is not Tuesday. Good luck."
   }
 }

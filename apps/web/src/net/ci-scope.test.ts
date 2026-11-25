@@ -194,7 +194,7 @@ describe("scripts/ci-scope.sh", () => {
     "scripts/build-wasm.sh",
     "apps/web/src/main.tsx",
     "e2e/cypress/e2e/01-hotseat-full-game.cy.ts",
-    // `spec check` reads the notes; the training gate reads the lanes' history.
+    // `spec check` reads the notes; training/history/ is no skip-list path.
     "spec/rulings/R0195.md",
     "spec/README.md",
     "training/history/improve.jsonl",
@@ -623,6 +623,8 @@ describe("scripts/ci-scope.sh", () => {
     ["apps/web/src/wire/generated/Action.ts", ["rust_engine", "rust_server", "rust_tools_wasm"]],
     ["docs/radiant-audit.md", ["rust_cards"]],
     ["spec/07-tokens.md", ["rust_cards"]],
+    // §8 is one note a subsection: radiant_stats.rs reads each, and the tools' acceptance test holds its list to the folder.
+    ["spec/08-catalog/8.10-stinkyscape.md", ["rust_cards", "rust_tools_wasm"]],
     ["e2e/support/config.ts", ["rust_server"]],
     // The tools' README check reads the cited e2e specs, so their files run its group (#4449).
     ["e2e/cypress/e2e/01-hotseat-full-game.cy.ts", ["rust_tools_wasm"]],

@@ -255,10 +255,12 @@ pub async fn card_stats_versions(
     let totals = tx.stats_totals_load(&query).await?;
     tx.commit().await?;
     let versions = jackioh_cards::deck_play_versions();
+    let history = jackioh_cards::patch_history();
     let mut table = play_version_figures(
         &totals,
         &PlayVersionQuery {
             versions: &versions,
+            history: &history,
             live_pilot: options.filter.pilot,
             mode: options.filter.mode.map_or(ModeFilter::All, ModeFilter::Only),
             min_sample: crate::config::CARD_STATS_MIN_SAMPLE,

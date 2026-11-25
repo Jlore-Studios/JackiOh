@@ -21,13 +21,14 @@ use crate::config::{
 };
 use crate::effects::tune::{TuneDirection, tune_once};
 use crate::geometry::{BlackHole, Half};
+use crate::recursion_log::RecursionLog;
 use crate::resolve::{HookOptions, make_context};
 use crate::rng::Rng;
 use crate::script::EngineSink;
 use crate::wire::{
     AttackHealth, CardDef, CardDefs, CardElement, CardType, Counters, CraftMode, DeckMark, Enchantment,
     GameEvent, Keyword, PLAYER_IDS, PerPlayer, PerPlayerOpt, PlayerId, PromptKind, RevealAt, RowFlags,
-    SecretChoice, Selection, StarscapeReward, Tag, Tuning, Zone, ZoneRef, string_union,
+    SecretChoice, Selection, SetName, StarscapeReward, Tag, Tuning, Zone, ZoneRef, string_union,
 };
 
 pub use crate::wire::{GameResult, Phase, Position, Winner};
@@ -186,6 +187,40 @@ pub struct StarshipPieceRecord {
     pub radiant: Option<bool>,
 }
 
+/// R4591000 (IA #148 Quarantine): a set Attack this turn (`CardInstance.attack_this_turn`,
+/// `effects::firewall::set_attack_this_turn`): the Attack `layers` reads instead of every other
+/// layer while `turn` is the game's. A status, never text: R78's reset takes it off as the card
+/// leaves the field. Absent on every other card, so a game nothing sets an Attack in serializes
+/// and hashes as before (D14).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnAttack {
+    pub turn: i32,
+    pub attack: i32,
+}
+
+/// R4591001 (IA #157 Containment Field): a timed "can't attack or be attacked"
+/// (`CardInstance.contained`, `effects::firewall::contain_until_next_turn`): the bars
+/// `restrictions::cannot_attack` and `cannot_be_attacked` read. It ends as its caster's next turn
+/// begins — the turn stamped as it lands, never worked out later (as the thaw is stamped, R49) —
+/// or when the Unit leaves the field. A status, never text: R78's reset takes it off with the card
+/// leaving the field. Absent on every other card (D14).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct ContainedUntil {
+    pub until_turn: i32,
+}
+
 /// B3.3, R385, R638: a card's Brittle count and the turn it started (`CardInstance.brittle`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(
@@ -201,6 +236,21 @@ pub struct BrittleCounter {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
     pub printed: Option<bool>,
+}
+
+/// R4587000: "+N Attack and <keywords> this turn": holds while `turn` is `state.turn` (layers.rs).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct TurnBuff {
+    pub turn: i32,
+    pub attack: i32,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub keywords: Vec<Keyword>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -275,6 +325,10 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub taunt_suppressed_turn: Option<i32>,
+    /// R4587000: "+N Attack and <keywords> this turn" (layers.rs reads it while its turn is now).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub turn_buff: Option<TurnBuff>,
     /// A backrow card whose identity is public, e.g. a Field Trap that has fired (R33).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -481,6 +535,21 @@ pub struct CardInstance {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub split_chain: Option<u32>,
+    /// R4592002: the player whose deck this card started in (before any steal, swap or keeper).
+    /// Kept in every zone and through resets; a copy is a new card without it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub started_in: Option<PlayerId>,
+    /// R4591000: this Unit's Attack is set to `attack` while the game's turn is `turn`
+    /// (`effects::firewall::attack_set_this_turn`), read after every other Attack layer.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub attack_this_turn: Option<TurnAttack>,
+    /// R4591001: this Unit can't attack or be attacked until its caster's next turn begins
+    /// (`effects::firewall::is_contained`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub contained: Option<ContainedUntil>,
 }
 
 /// R783004, R1040, R1044: what a card played face-down as a Trap carries until it has revealed — how
@@ -606,6 +675,11 @@ pub struct CostRule {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub floor: Option<i32>,
+    /// R4592002 (Infinite Assault #187 Fine-Tuner, "your cards that started in your opponent's deck"):
+    /// the rule reaches only a card that started in the opponent's deck.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub from_opponents_deck: Option<bool>,
 }
 
 /// What a player modifier does, discriminated on `kind` (TS: the union half of `PlayerModifier`).
@@ -618,11 +692,11 @@ pub struct CostRule {
 #[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum ModifierKind {
     /// `minCurrentCost`: R48, R363 — only a card whose cost is then this or more (#77, "Cost (4)+").
-    /// `onlyType` is only ever "Spell".
+    /// `onlyType` is "Spell" (§8.2 #35) or "Unit" (IA #60).
     CostDiscount {
         amount: i32,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        #[cfg_attr(feature = "ts", ts(optional, type = "\"Spell\""))]
+        #[cfg_attr(feature = "ts", ts(optional, type = "\"Spell\" | \"Unit\""))]
         only_type: Option<CardType>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
@@ -729,6 +803,11 @@ pub enum ModifierKind {
     /// damage instance to it is 0 (a cap of 0 `damage::hero_damage_cap` reads at §4.4 step 3).
     /// Expiry is R757's Armor Up expiry, so it is gone as this player's next turn begins.
     HeroImmune,
+    /// R4591004 (IA #168 Impenetrable): this player's Units are immune to damage — every damage
+    /// instance to one of them is no damage instance at all, so Divine Shield stays (as in
+    /// R1849000). Expiry is R757's Armor Up expiry, so it is gone as this player's next turn
+    /// begins. Covers every Unit the player controls while it holds, summoned later ones included.
+    UnitsImmune,
     // ---- Meditative+ (docs/meditative-plus-set.md MP5, issue #1180) ----
     /// R1180001 (Meditative+ #11 Living Mana Potion): "You have Spell Damage +N this turn" — added to
     /// this player's Spell Damage, the one sum §4.4 step 0 reads (`damage::spell_damage_of`), while it
@@ -755,6 +834,10 @@ pub enum ModifierKind {
     KeywordNextSpell {
         keyword: Keyword,
     },
+    /// R4590001 (IA #130 Prompt Injection): the next Spell this player plays face-up has its declared
+    /// targets drawn at random (`random_targets::play_targets_random`), spent at §10.5 step 4. A
+    /// countered play spends none (R90); a cast never carries one (R70). Expiry `used`.
+    RandomTargetsNextSpell,
     // ---- Stinkyscape's Starship (issue #1852) ----
     /// R1852006: "Your Starship launch costs (N)": this player's next launch by the Activate costs
     /// `cost` (`starship::launch_cost`), the least of several, until a launch it prices spends it
@@ -802,6 +885,19 @@ pub enum ModifierKind {
     UnitsHaveKeyword {
         keyword: Keyword,
         /// R4508000: set when a Spell made it (`restrictions::effect_is_from_spell`), so it passes a Unit
+        /// Immune to Spells by (§6.1, R4453000). Only ever `Some(true)`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
+        from_spell: Option<bool>,
+    },
+    /// R4586006 (Infinite Assault #33 Uncanny Valley, "Enemy Units have −N Attack until your next
+    /// turn"): every Unit this player controls on the field has `amount` more Attack — below 0 a
+    /// cut — those that arrive later too (`layers::attack_lent_by_player`), gated as R1859007.
+    /// Attack is floored at 0 (§10.4). Expiry `nextTurnOf` the caster's turn (R757); R4588000,
+    /// R4594002: `thisTurn` for "your Units have +N Attack this turn" (`give_units_attack_this_turn`).
+    UnitsAttack {
+        amount: i32,
+        /// R4594002: set when a Spell made it (`restrictions::effect_is_from_spell`), so it passes a Unit
         /// Immune to Spells by (§6.1, R4453000). Only ever `Some(true)`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
@@ -1175,6 +1271,13 @@ pub struct TurnLog {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub played_before_end: Option<i32>,
+    /// R4591002 (IA #152 Rate Limiter): the ids of the Units that attacked on this turn while an
+    /// attack limit acted, in the order they first attacked — beside `played_before_end`. A Unit
+    /// that attacked and then left the field still counts, and one already counted may attack
+    /// again. Written only while a limit acts, so a game with no limit serializes as before (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub attackers: Option<Vec<String>>,
 }
 
 /// `PlayerState.hero`.
@@ -1477,6 +1580,13 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub game_log: Option<GameLog>,
+    /// R4589000: what this player's plays and deaths leave for the Recursion cards to read back
+    /// (`recursion_log.rs`): every face-up play this game and every Unit that died under them.
+    /// Absent until the game holds an Infinite Assault card, so a game without one hashes as it did
+    /// before this field existed (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub recursion: Option<RecursionLog>,
     // ---- v0.2.0 player fields, by workstream: activate and turn (E3, E4 draw counts, E10) ----
     /// B5 E3, E4, R457: how many draws this player has made on turn `turn`, whoever's turn it is — a
     /// fatigue draw included, a draw a limit stopped not. A count kept for an earlier turn reads as 0,
@@ -2335,6 +2445,12 @@ pub struct FaceUpRecord {
 #[serde(rename_all = "camelCase")]
 pub struct GameLog {
     pub played_by_tag: IndexMap<Tag, i32>,
+    /// R4593000 (Infinite Assault #195 Power Law): this player's plays of each single-player set's cards
+    /// this game, counted as `played_by_tag` is; written only for such a card, so a game without one
+    /// serializes as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub played_by_set: Option<IndexMap<SetName, i32>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub last_face_up_play: Option<FaceUpRecord>,
@@ -2393,6 +2509,7 @@ pub fn create_player_state() -> PlayerState {
         backrow_piles: None,
         carried: None,
         game_log: None,
+        recursion: None,
         draws: None,
         hand_cap: None,
         jade: None,
@@ -2891,6 +3008,7 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         armor_override: None,
         return_to_hand_at_end_of_turn: None,
         taunt_suppressed_turn: None,
+        turn_buff: None,
         face_up: None,
         revealed: None,
         last_damaged_by: None,
@@ -2928,6 +3046,9 @@ pub fn new_instance(state: &mut impl NextId, def_id: &str, owner: PlayerId, zone
         half: None,
         shared_chain: None,
         split_chain: None,
+        started_in: None,
+        attack_this_turn: None,
+        contained: None,
     };
     *next_id += 1;
     // R3548002: minting a Warhero Token starts its worth at 0, wherever the card is minted; R3538002:

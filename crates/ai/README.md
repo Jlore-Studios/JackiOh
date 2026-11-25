@@ -17,8 +17,8 @@ caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`
 The Death, the turn-hook, the activation, the attack-hook and the awakening prices of a decision (R2424000,
 R2477000, R2564000, R2688000, R3064000), and the evolution prices (R4648000), travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
 through the search to the scorers that read them. `decide` takes them from `decision_prices` on its `probe_world`, and
-`decision_prices_at` gives a caller outside a decision the same prices for a state, on `AI_DECISION_PRICE_NODES`:
-`cargo jackioh positions` scores its rows with them (R4070000). Any other call outside a decision passes
+`decision_prices_at` gives a caller outside a decision the same prices for a state, on `AI_DECISION_PRICE_NODES`
+(R4070000). Any other call outside a decision passes
 `Prices::NONE` (plain `evaluate`, the probes, the baselines) and prices nothing. The crate holds no thread-local.
 
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
@@ -424,8 +424,10 @@ or a random effect rolled otherwise), an answer to the seat's own prompt (#1636)
 turn on greedily (`fill_turn`: up to that many steps, each the best by `static_score` of the first
 `branching` candidates that are not endTurn, taken only when it beats standing still, never one that
 leaves the seat's own prompt open), on a slice of `steps × (branching + 1)` nodes, which `decide` keeps
-back beside each other world's reserve. At 0, as shipped, a cut replay ends its turn where it stands
-and a decision is node for node what it was; `score_line` keeps the cut whatever the switch.
+back beside each other world's reserve. It ships at 3 (R4697000), so `decide` keeps up to 126 more of
+`AI_BUDGET`'s 1,200 nodes back from the beam (21 for each of three finalists on two other worlds); at 0 a
+cut replay ends its turn where it stands and a decision is node for node what it was before R4447000;
+`score_line` keeps the cut whatever the switch.
 
 ## Decks and the shadow ban (R184, R186, R390, R1370, R1390, R817000, R976000)
 
@@ -503,7 +505,7 @@ both also time two hand-built wide boards. It holds them within the node budget 
 `AI_GATE.max_decision_ms`, and all three pinned fixtures (`tests/fixtures/pinned-*.json`, #1240)
 under `AI_GATE.pinned_decision_ms`. Tuning changes the weights in `src/config.rs`, never the floors,
 the seed counts or the brief's rates. The gates see only a broken AI; whether a change made it
-stronger is the training lanes' question (`training/README.md`, `cargo jackioh promote`).
+stronger is a screen's question (`training/improve.md`, How you measure).
 
 Every gate game is clean (B31): nothing refused or thrown, no fallback, a result, a log that folds to
 its hash, and no panic caught in an AI's search (`SearchStats.sim_panics`, summed in `MatchRecord`,
@@ -551,55 +553,16 @@ opponent's (`NextSwing::Enemy`) in thousandths, read off the true state, and the
 field, a Created card with the card that made it (none when a hand held it; a copy an effect cast names
 the card that cast it). `attach_swing_turns` files the rows in the record (`SeatSummary.swing_turns`).
 The writers read the summary and the rows off one fold of the log (#2213), `summarize_with_swing_turns`
-(the engine's `summarize_game_with` with a `SwingReader` beside it): `dev_game_record`, `stats
-from-selfplay` and the server's record filing (`crates/server/src/api/game_records.rs`) all call it.
+(the engine's `summarize_game_with` with a `SwingReader` beside it): `dev_game_record` and the
+server's record filing (`crates/server/src/api/game_records.rs`) both call it.
 Decisiveness is read off them (`crates/engine/src/wire/stats/swing.rs`).
-
-## The features (#466, #1006)
-
-`src/features.rs` turns a position into the rows `cargo jackioh positions` writes for the learn lane's
-exports (`docs/learned-eval.md` D3, D5, D10). The learned evaluation that read them in the search is
-retired (R4159000): no network reads them in this crate any more.
-
-```rust
-pub const FEATURES_VERSION: u32;
-pub fn features_of(state: &GameState, seat: PlayerId) -> Features;   // features(&redact(state, seat), seat)
-pub fn features(view: &GameState, seat: PlayerId) -> Features;       // view already redacted
-pub fn dense_names() -> Vec<String>;                                 // the dense layout, in order
-pub struct Features { pub dense: Vec<i32>, pub sparse: Vec<(String, i32)> }
-pub fn card_id_of_key(key: &str) -> Option<(&str, &str)>;           // a key's zone and card id, when it names one
-```
-
-- It reads only `redact` (R185, R1006000): two states that differ only in what the seat cannot see
-  give the same features. The projections that read card text (`unit_view`, `hero_armor_of`,
-  `face_threat`) run on the view less the backrow cards the seat cannot read, which are counted and
-  never read.
-- **dense**: integers, named by `dense_names`: the turn, who acts and whether the seat is p1; per
-  side, the seat's own first, its life (`effective_life`) and armor, mana, crystals and debt, its
-  hand, library, graveyard and backrow (and how much of the backrow the seat can read), its units in
-  aggregate (count, positions, attack, health, armor, damaged, Radiant), one count per keyword kind
-  (bar Tradable, a hand keyword newer than the layout, so the fitted weights still read it, R1838000),
-  the face damage its board threatens and its Jade and extra turns; then the seat's hand by cost,
-  and how many of its cards are Radiant (R1012004).
-- **sparse**: `(key, count)`, sorted, the key `<zone>:<side>:<card id>` for each card the seat can
-  name: `board` (both sides), `hand` (its own) and `backrow` (its own, and the enemy's face-up ones),
-  and `hand_radiant` (its own) beside `hand` for a Radiant card in its hand (R1012004).
-  Ids stay strings, so a patch or a new card never moves an index; an id a network's weights do not
-  know is no input at all.
-- **sparse, what a card is** (R3112000): each card with an id key also has
-  `<zone>.<attribute>:<side>:<value>` keys for its running face's type, its printed cost (`query_cost`)
-  and tags, its running face's keywords (counted as the dense counts count them) and printed attack and
-  health, each number clamped at `ATTRIBUTE_TOP`, and `<zone>.face:<side>:Radiant` when it is Radiant.
-  A card a network has no id row for still moves it through the keys it shares with the cards it was
-  fitted on.
-- `FEATURES_VERSION` names the layout; any change bumps it.
 
 ## The learned evaluation and the policy prior (retired)
 
 The learned evaluation (#466, #1010) and the policy prior (#1171) are retired (#4159, R4159000): the
 search scores every line and finalist with the hand eval (`evaluate_priced` over `AI_EVAL`) and expands
-each line's moves in `candidate_actions`' order. The crate has no build script and compiles no weights.
-`docs/learned-eval.md` is the record.
+each line's moves in `candidate_actions`' order. The crate has no build script, compiles no weights and
+extracts no features (#4702, R4702000). `git show d40d3a45:docs/learned-eval.md` is the record.
 
 ## Duos (§13.7)
 
