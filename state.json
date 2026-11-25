@@ -24752,9 +24752,11 @@
     "4944": {
       "action": "review",
       "asks": [],
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-25T16:28:49Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-25T17:10:28Z",
         "family": "gemini",
@@ -24764,6 +24766,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4842/.bot-notes.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo test -p jackioh-server api::cosmetic_packs::\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"937a0801-c7a3-4c29-97f4-c5baa8ce5660/task-156\"}\n- said: I have launched the full `api::cosmetic_packs::` test suite in the background. Waiting for the test run to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo test -p jackioh-server api::packs::\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"937a0801-c7a3-4c29-97f4-c5baa8ce5660/task-162\"}\n- said: I have launched the `api::packs::` tests in the background to verify card pack opening behavior. Waiting for the test run to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo clippy -p jackioh-server --all-targets -- -D warnings\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"937a0801-c7a3-4c29-97f4-c5baa8ce5660/task-168\"}\n- said: I have launched `cargo clippy -p jackioh-server --all-targets -- -D warnings` in the background. Waiting for clippy to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo fmt --check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo fmt\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo fmt --check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo run --release -p jackioh-tools -- catalog check\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"937a0801-c7a3-4c29-97f4-c5baa8ce5660/task-181\"}\n- said: I have launched `cargo run --release -p jackioh-tools -- catalog check` in the background. Waiting for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo run --release -p jackioh-tools -- patches check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo run --release -p jackioh-tools -- spec check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && git diff\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo run --release -p jackioh-tools -- classify --base origin/main --claims\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4842/.bot-notes.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: opening a cosmetic pack whose own points earn a cosmetic pack answers the packs still held, so the Shop keeps showing the one it earned\"} --> ### What changed - In [`crates/server/src/economy/grants.rs`](file:///home/agent-agy/actions-runner/_work/_temp\u2026"
       },
+      "interruptions": 0,
       "issue": 4842,
       "kind": "review",
       "live": "reviewing",
