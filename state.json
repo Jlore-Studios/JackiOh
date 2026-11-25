@@ -21539,28 +21539,15 @@
     "what": "plan #4818 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-25T03:19:26Z",
+    "at": "2026-11-25T03:33:30Z",
     "notes": [
-      "#4864 is held for `claude-3` until 21:20 (it refused a call)",
-      "#4805 is held for `claude-3` until 21:20 (it refused a call)",
-      "#4806 is held for `claude-3` until 21:20 (it refused a call)",
-      "#4808 is held for `claude-3` until 21:20 (it refused a call)",
-      "#4809 is held for `claude-3` until 21:20 (it refused a call)",
-      "#4810 is held for `claude-3` until 21:20 (it refused a call)",
-      "#4813 is held for `claude-3` until 21:20 (it refused a call)",
-      "#4815 is held for `claude-3` until 21:20 (it refused a call)",
-      "#4816 is held for `claude-3` until 21:20 (it refused a call)",
-      "#4821 is held for `claude-3` until 21:20 (it refused a call)",
-      "#4831 is held for `claude-3` until 21:20 (it refused a call)",
-      "#4785 is held for `claude-3` until 21:20 (it refused a call)",
-      "delivered review #4885 on claude-4 (run 45537499883): approved",
-      "started revise #4864 on claude-3 (run 45539587105)",
-      "started build #4805 on claude-3 (run 45539685122)",
-      "started review #4881 on claude-4 (run 45539787534)",
-      "started plan #4831 on claude-3 (run 45539888592)",
-      "started plan #4734 on claude-3 (run 45539991539)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-25T04:50:00Z; it can start a build or a plan again in 1h 22m; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
-      "pruned 4 plan file(s) older than 7 days"
+      "delivered plan #4831 on claude-3 (run 45539888592): planned",
+      "delivered review #4881 on claude-4 (run 45539787534): reviewed",
+      "delivered build #4832 on muse (run 45529267707): infra (its model job left no upload)",
+      "started review #4882 on claude-4 (run 45541252747)",
+      "started plan #4818 on claude-3 (run 45541343169)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-25T04:50:00Z; it can start a build or a plan again in 1h 11m; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22266,7 +22253,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T03:19:26Z",
+  "loop_tick": "2026-11-25T03:33:30Z",
   "machine_disk": {
     "issue": null,
     "reading": {
