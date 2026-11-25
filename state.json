@@ -21054,10 +21054,13 @@
     "what": "review #4874 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-25T01:08:57Z",
+    "at": "2026-11-25T01:16:35Z",
     "notes": [
-      "delivered revise #4864 on claude-3 (run 45519492017): interrupted",
-      "runner gate: started 1 of 1 waiting run(s) (run 45523707688 on patches/ship-a5b417a7d6)"
+      "delivered review #4870 on claude-3 (run 45515060897): interrupted",
+      "delivered build #4841 on muse (run 45508010899): built",
+      "started review #4874 on muse (run 45524883028)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-25T03:20:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4785 held for `claude-3` until 21:20 (it refused a call); #4805 held for `claude-3` until 21:20 (it refused a call); #4806 held for `claude-3` until 21:20 (it refused a call); #4808 held for `claude-3` until 21:20 (it refused a call); #4809 held for `claude-3` until 21:20 (it refused a call); #4810 held for `claude-3` until 21:20 (it refused a call); #4813 held for `claude-3` until 21:20 (it refused a call); #4815 held for `claude-3` until 21:20 (it refused a call); #4816 held for `claude-3` until 21:20 (it refused a call); #4821 held for `claude-3` until 21:20 (it refused a call); #4831 held for `claude-3` until 21:20 (it refused a call); #4864 held for `claude-3` until 21:20 (it refused a call)",
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -21763,7 +21766,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T01:08:57Z",
+  "loop_tick": "2026-11-25T01:16:35Z",
   "machine_disk": {
     "issue": null,
     "reading": {
