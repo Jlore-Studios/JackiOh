@@ -23816,13 +23816,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-6",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-6",
+            "run": "45617299118",
+            "tier": "strong"
+          }
+        ],
         "sha": "f8fc33cde4781a697b225a13e4a37565f8f7cbb0",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "4918": {
