@@ -24,16 +24,14 @@ A change to the AI makes it stronger when it wins more than the AI without it on
 
 ## How you measure
 
-Two fixed sets of deals measure a change, each deal played twice with the seats swapped: the
+A fixed set of deals measures a change, each deal played twice with the seats swapped: the
 candidate on p1 in a deal's first game and on p2 in its second, with the same decks and shuffles.
 That cancels most of the deal's luck, the first seat's edge and the god-hand alike, since a deal
 that favors one seat gives each AI one game of it (R850000, R850001).
 
 - **The dev set** is for screens: deals `improve-dev:1` to `:200`, the same in every screen,
-  played by `cargo jackioh arena … --set improve-dev`.
-- **The hold-out set** is the gate's own deals, `improve:<tree>:1` to `:200`, named for the
-  committed AI's source tree. Only the gate reads it, once per tree. The arena refuses a seed
-  base that names it, and the gate's dry run refuses uncommitted changes in `crates/ai/src`.
+  played by `cargo jackioh arena … --set improve-dev`. The lanes' promotion gate read a hold-out
+  set of its own; it is removed with them (R4702000).
 
 A change gets one kind of screen, the deal screen or the fork screen, chosen before it runs and
 recorded with it: a change still gets one screen under R850001's rule against second reads. The
@@ -95,8 +93,7 @@ invisible to the fork screen and wants the deal screen.
    screen with its kind and its forks, live forks and edge, for example `fork screen on
    improve-dev, 34 forks, 11 live, edge +0.062 (-0.104 to +0.229) vs control 1a2b3c4: reverted`.
 
-`cargo jackioh trace` prints one game turn by turn when you need to see why the AI lost it; trace
-the dev set's games, never the gate's.
+`cargo jackioh trace` prints one game turn by turn when you need to see why the AI lost it.
 
 ### How much a result says
 
@@ -107,15 +104,9 @@ about even (95-105, 101-99) when their pieces were re-screened at 200 games agai
 Fresh-seed reads ran about 10 points above the gate's in every session from s40 to s48. A change
 that wins by chance is reverted by the next fair measure. So:
 
-- the gate's sequential test (R1679000) passes an equal successor about 5% of the time, a stack that
-  truly wins 52% about 60% of the time and one at 53% about nine times in ten, in about 800 games;
 - 400 paired games put a change's edge within about ±0.1 of its true value when a deal's two games
   fall independently, and closer when the deal's luck cancels, so a screen keeps a gain of a few
-  points only when pairing has narrowed the interval, or on a larger screen decided in advance;
-- **never fish for seeds.** The gate's deals come from the committed tree, so a change that does
-  nothing (a comment, a renamed variable, a reordered constant) draws new ones. Never commit one to
-  play the gate again: every gate run must measure a tree that differs from the last in a way you
-  measured.
+  points only when pairing has narrowed the interval, or on a larger screen decided in advance.
 
 Fewer, measured changes beat many lucky ones.
 

@@ -463,13 +463,13 @@ sweep, lane or person adds a card of an
 earlier set, and the unban lane, retired by #4701, only ever removed entries.
 
 **When it is swept** (R1678000): every push to `main` that moves `generation.json`'s `generation`
-(every promotion writes it) or adds a set to `SHIPPED_SETS` starts a sweep of record on GitHub's
+(a promotion wrote it; since R4702000 removed `promote`, a person does) or adds a set to `SHIPPED_SETS` starts a sweep of record on GitHub's
 runners, `.github/workflows/sweep.yml`. `cargo jackioh sweep --due <base>` names the cards: the bans and
 the watched cards of the sets the ban may hold when the AI changed, every non-token card of a set that
 ships now and did not. Its report goes under `training/history/`, `--write` reads it last, and a
 changed table arrives as a `Patch: the shadow ban swept again after …` pull request with auto-merge
 on, `generation.json`'s `shadowBan` and the practice-claim fixture with it. So the sweep after a
-promotion may ban a card of those four sets again when the new AI is slow with it, within each
+new generation may ban a card of those four sets again when the new AI is slow with it, within each
 set's ceiling; a record `--write` refuses opens an issue for a person instead.
 
 `FIXTURE_BANNED_IDS` (issue #1113) is the frozen fixture pool: a copy of the table as it stood
@@ -477,7 +477,7 @@ when the seeded fixtures were dealt from it. It is never updated with the table;
 needs a new deal changes its seed instead. R290's tier games, the `cargo test` gate smokes behind
 `fixture_game_config`/`run_fixture_gate_games`, and the named practice seeds (R265's mulligan
 seeds, B34's walk, R677's glitch-swap) and spec 13's URL games deal the AI from it. `gate --full`,
-promotion, sweep and live practice keep the live table.
+sweep and live practice keep the live table.
 
 ## Matches and the quality gates
 
@@ -499,7 +499,7 @@ both also time two hand-built wide boards. It holds them within the node budget 
 `AI_GATE.max_decision_ms`, and all three pinned fixtures (`tests/fixtures/pinned-*.json`, #1240)
 under `AI_GATE.pinned_decision_ms`. Tuning changes the weights in `src/config.rs`, never the floors,
 the seed counts or the brief's rates. The gates see only a broken AI; whether a change made it
-stronger is the training lanes' question (`training/README.md`, `cargo jackioh promote`).
+stronger is a screen's question (`training/improve.md`, `cargo jackioh arena --set improve-dev`).
 
 Every gate game is clean (B31): nothing refused or thrown, no fallback, a result, a log that folds to
 its hash, and no panic caught in an AI's search (`SearchStats.sim_panics`, summed in `MatchRecord`,

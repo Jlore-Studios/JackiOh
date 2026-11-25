@@ -23,7 +23,6 @@ mod golden;
 mod names;
 mod patches;
 mod perf;
-mod promote;
 mod replay;
 mod retcon;
 mod run_sim;
@@ -96,8 +95,6 @@ enum Command {
     Arena(arena::Args),
     /// The agent protocol on stdin and stdout (part 29).
     Agent(agent::Args),
-    /// The promotion gate (part 29).
-    Promote(promote::Args),
     /// Self-play game logs (#1006): `classify`'s AI check plays the head and its base with it (#2651).
     Selfplay(selfplay::Args),
     /// `winrates --refresh <report.json>`: the win rates of record from production's windowed card figures, once per patch (R3882000).
@@ -128,7 +125,6 @@ fn main() -> ExitCode {
         Command::Names(args) => names::run(args),
         Command::Arena(args) => arena::run(args),
         Command::Agent(args) => agent::run(args),
-        Command::Promote(args) => promote::run(args),
         Command::Selfplay(args) => selfplay::run(args),
         Command::Winrates(args) => winrates::run(args),
     };

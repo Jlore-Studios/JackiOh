@@ -2759,11 +2759,11 @@ fn readme_the_command_table_is_the_clis() {
         "only {commands} commands read off `jackioh -h`; clap's help format changed"
     );
     assert!(
-        tree[&vec!["promote".to_string()]]
+        tree[&vec!["arena".to_string()]]
             .flags
             .iter()
-            .any(|flag| flag.name == "lane" && !flag.values.is_empty()),
-        "no possible values read off `jackioh promote -h`; clap's help format changed"
+            .any(|flag| flag.name == "set" && !flag.values.is_empty()),
+        "no possible values read off `jackioh arena -h`; clap's help format changed"
     );
     for name in HAND_PARSED {
         let command = &tree[&vec![name.to_string()]];
@@ -3495,6 +3495,30 @@ fn r4702000_r1006000_r1006003_r1006004_r1006006_r1012004_r1171000_r3112000_r3112
         main.contains("Selfplay(selfplay::Args)")
             && read("crates/tools/src/classify.rs").contains("\"selfplay\""),
         "`selfplay` stays while `classify` runs it for its AI check"
+    );
+}
+
+/// R4702000, and the rulings the gate's removal retires (R732001, R1679000; R1012000 was retired with
+/// the learn lane): `cargo jackioh promote` is gone, and neither the CLI nor the engine's config names
+/// the training gate.
+#[test]
+fn r4702000_r732001_r1012000_r1679000_the_promotion_gate_is_gone() {
+    let root = repo();
+    assert!(
+        !root.join("crates/tools/src/promote.rs").exists(),
+        "crates/tools/src/promote.rs is back"
+    );
+    let read =
+        |path: &str| fs::read_to_string(root.join(path)).unwrap_or_else(|error| panic!("{path}: {error}"));
+    let main = read("crates/tools/src/main.rs");
+    assert!(
+        !main.contains("mod promote") && !main.contains("Promote("),
+        "`jackioh promote` is back"
+    );
+    let config = read("crates/engine/src/config.rs");
+    assert!(
+        !config.contains(concat!("TRAINING", "_GATE")) && !config.contains(concat!("Training", "Gate")),
+        "the engine's config names the training gate again"
     );
 }
 

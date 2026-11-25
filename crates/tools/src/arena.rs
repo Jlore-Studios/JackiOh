@@ -5,8 +5,8 @@
 //!
 //! At skill `s` (R747000) an AI decision follows the agent with chance `s` and is the skill miss
 //! otherwise (R2214000), rolled on the seat's own stream. A paired series (`--paired`, R850000) plays
-//! each deal twice with the seats swapped; `--set improve-dev` is the improve lane's dev set (R850001).
-//! No base may name a training gate's own seeds (`<lane>` or `<lane>:…`). Each deck is `build_ai_deck`
+//! each deal twice with the seats swapped; `--set improve-dev` is the screens' dev set (R850001).
+//! Each deck is `build_ai_deck`
 //! minus its agent's shadow ban (R186), Easy both (R180), by one rule (R976000). Fallbacks and caught
 //! search panics are counted per seat (R1489000). So a game is a function of its seed and its two
 //! agents, whatever the thread count.
@@ -111,7 +111,7 @@ pub(crate) const SCREEN_GAMES: i32 = 400;
 /// decided deals the keep rule keeps a change that wins 15 of them, three in four.
 pub(crate) const SCREEN_MIN_DECIDED: usize = 20;
 
-/// R4319000: the most games a screen with `--extend` plays: the promotion gate's own maximum.
+/// R4319000: the most games a screen with `--extend` plays.
 pub(crate) const SCREEN_MAX_GAMES: i32 = 2000;
 
 /// R4319000: the deals each `--extend` batch after the first plays (200 games).
@@ -128,8 +128,7 @@ pub struct Args {
     /// Games to play: 1..=N. A seed set plays `SCREEN_GAMES` (400) unless this says more.
     #[arg(long)]
     pub games: Option<i32>,
-    /// The seed base: game n's seed is `<base>:<n>`, or deal d's `<base>:<d>` when paired. Never a
-    /// training gate's own (`improve`, `unban`, or either followed by `:`).
+    /// The seed base: game n's seed is `<base>:<n>`, or deal d's `<base>:<d>` when paired.
     #[arg(long, conflicts_with = "set", required_unless_present = "set")]
     pub seed: Option<String>,
     /// R850001: a fixed seed set to screen on, played paired.
@@ -182,8 +181,7 @@ impl SeedSet {
 }
 
 /// The series `args` name: its seed base, whether it is paired and its games. A seed set is always
-/// paired and plays at least `SCREEN_GAMES`; a base that names a training gate's seeds is refused
-/// (R850001), as is an odd paired count.
+/// paired and plays at least `SCREEN_GAMES` (R850001); an odd paired count is refused.
 fn series(args: &Args) -> anyhow::Result<(String, bool, i32)> {
     if args.extend && args.set.is_none() {
         bail!("arena: --extend screens a seed set, so it needs --set improve-dev");
@@ -200,12 +198,6 @@ fn series(args: &Args) -> anyhow::Result<(String, bool, i32)> {
             (set.base().to_string(), true, games)
         }
         (None, Some(seed)) => {
-            if crate::promote::is_gate_seed_base(seed) {
-                bail!(
-                    "arena: the seed base \"{seed}\" names a training gate's hold-out seeds, which no \
-                     screen plays (R850001): screen on `--set improve-dev`, or on a base of your own"
-                );
-            }
             let Some(games) = args.games else {
                 bail!("arena: a seed base needs --games");
             };
@@ -1800,7 +1792,7 @@ mod tests {
     }
 
     #[test]
-    fn r850001_screens_play_the_dev_set_and_never_a_gates_seeds() {
+    fn r850001_screens_play_the_dev_set_at_no_fewer_than_its_games() {
         assert_eq!(
             series(&screen(None, Some(SeedSet::ImproveDev), None, false, false)).unwrap(),
             ("improve-dev".to_string(), true, SCREEN_GAMES)
@@ -1820,29 +1812,12 @@ mod tests {
             series(&screen(Some("improve-try-3"), None, Some(60), true, false)).unwrap(),
             ("improve-try-3".to_string(), true, 60)
         );
-        // A gate's own seeds, the promotion's hold-out deals, are no screen's.
-        for gate in ["improve", "improve:abc", "unban:abc:7", "unban"] {
-            let refused = series(&screen(Some(gate), None, Some(400), true, false)).unwrap_err();
-            assert!(refused.to_string().contains("R850001"), "{gate}: {refused}");
-        }
         // A base needs its games, a paired series an even count, and every series a game.
         assert!(series(&screen(Some("improve-try-3"), None, None, false, false)).is_err());
         assert!(series(&screen(Some("improve-try-3"), None, Some(5), true, false)).is_err());
         assert!(series(&screen(None, Some(SeedSet::ImproveDev), Some(401), false, false)).is_err());
         assert!(series(&screen(Some("improve-try-3"), None, Some(0), false, false)).is_err());
         assert!(series(&screen(None, None, Some(400), false, false)).is_err());
-        for own in ["improve-dev", "improve-try-3", "unban-try-1", "improvement:1"] {
-            assert!(!crate::promote::is_gate_seed_base(own), "{own}");
-        }
-        // No deal of the dev set is a gate's, whatever the tree.
-        let base = SeedSet::ImproveDev.base();
-        for d in 1..=deal_of(SCREEN_GAMES) {
-            let seed = format!("{base}:{d}");
-            assert!(
-                !seed.starts_with("improve:") && !seed.starts_with("unban:"),
-                "{seed}"
-            );
-        }
     }
 
     #[test]

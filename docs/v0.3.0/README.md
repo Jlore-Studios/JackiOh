@@ -193,7 +193,7 @@ Each runs `training/loop.sh <lane>` forever (`Restart=always`):
    `AI gen <N> (<lane>): <one line from Devin>`, with auto-merge on.
 4. Sleep 60 s and repeat.
 
-**The gate.** `cargo jackioh promote` (SURFACE.md §14) plays 100 games against §10.7's random policy
+**The gate.** Removed with the lanes by #4702 (R4702000); what follows is the record. `cargo jackioh promote` (SURFACE.md §14) played 100 games against §10.7's random policy
 and 100 against the parent, seats alternating, the same seeds against both, each seat's deck from all
 three sets minus its own AI's shadow-ban list, and promotes on:
 

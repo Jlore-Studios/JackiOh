@@ -56,7 +56,10 @@ use crate::arena::utc_date;
 use crate::classify::{SETS_PATH, shipped_sets, show};
 use crate::gate::{MS_PER_SECOND, literal, time_decision, yardstick_ms};
 use crate::patches::repo_root;
-use crate::promote::GENERATION_PATH;
+
+/// The AI's generation record, relative to the repository root (`crates/ai/src/dev_run.rs` compiles it
+/// in): `sweep --due` reads the base's.
+const GENERATION_PATH: &str = "crates/ai/generation.json";
 
 /// The mean evaluate change per play, and each card's seconds, printed to this many decimals.
 const DECIMALS: usize = 1;
