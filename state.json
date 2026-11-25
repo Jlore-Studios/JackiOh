@@ -23911,6 +23911,9 @@
       "stop_requested": false,
       "suggestion": true
     },
+    "4926": {
+      "suggestion": true
+    },
     "4927": {
       "action": "review",
       "asks": [],
@@ -48638,6 +48641,13 @@
         "at": "2026-11-25T19:09:39Z",
         "number": 4925,
         "title": "Patch: fold the e2e replay check through one jackioh call instead of tsx plus two",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-25T19:09:48Z",
+        "number": 4926,
+        "title": "Patch: honor E2E_ARTIFACTS in the downloads folder and the replay-task log dir",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
       }
