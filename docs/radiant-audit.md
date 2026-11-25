@@ -1143,7 +1143,7 @@ A card added after the sections above has one row here, keyed by its id. A perso
 | stinkyscapeplus-139 | Operation Omega | Meets | It still adds 2 Automa-Ω cards (with Tribute 2 when Embiggened), but they are Radiant ones: a Radiant rider that meets R275. |
 | stinkyscapeplus-140 | Automa Reintegration Plan | Meets | The Automa Unit it discovers is a Radiant one, which still gains Starship Piece: a Radiant rider that meets R275. |
 | stinkyscapeplus-141 | Stinky 1x Engineer | Meets | Stats double 2/3 → 4/6, and the Cry destroys 3 other random permanents where the base only nerfs them: a stronger effect on the same count, which meets R275. |
-| stinkyscapeplus-142 | Call to Chaos (Mindustrial-Swarm Edition) | Meets | The Radiant face resolves three different random effects in the order listed against one, every number unchanged (issue #4154's cuts are on both faces), as every Call to Chaos does, which meets R275. |
+| stinkyscapeplus-142 | Call to Chaos (Mindustrial-Swarm Edition) | Meets | The Radiant face resolves three different random effects in the order listed against one, every number unchanged (issue #4154's and issue #4783's cuts are on both faces), as every Call to Chaos does, which meets R275. |
 | stinkyscapeplus-142-1 | Mindustrial Golem | Meets | Stats double 5/5 → 10/10, and the random Mindustrial card it summons after attacking is Radiant instead of plain: a Radiant rider that meets R275. |
 | stinkyscapeplus-142-2 | Swarm Golem | Meets | Stats double 5/5 → 10/10, and the Evolved Swarm card it summons after attacking is Radiant instead of plain: a Radiant rider that meets R275. |
 | stinkyscapeplus-143 | Fire Beam v3 | Meets | Attack stays 0 and health doubles 2 → 4; the Activate's Burn rises 2 → 4 (2×), so it meets R275. |
