@@ -694,6 +694,9 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // edge 0.0 (-0.028 to 0.028); inconclusive (R4319000): 8 decided of 200 (won 4, lost 4), 33 diverged;
     // its scene tests settle it (training/improve.md, A screen).
     strike_back_survival_read: true,
+    // #4805: on. Its screen, 400 games on improve-dev against the control at cf1fb68fd9 with this flag off,
+    // read 200-200, edge 0.0 (0.0 to 0.0); inconclusive (R4319000): 0 decided of 200 (won 0, lost 0), 1
+    // diverged; its scene tests settle it (training/improve.md, A screen).
     splash_trample_read: true,
     health: 1.0,
     armor_point: 0.8,
