@@ -36157,5 +36157,34 @@
       "stinkyscapeplus-024"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.13i",
+    "date": "2026-11-25",
+    "title": "Patch: board scopes and Cleave treat a card lying on a unit zone as backrow, not a Unit",
+    "source": "#4737, #4760",
+    "notes": "R4665000: a card lying on a unit zone (S #9 Ticketed stacked on a Unit) is a backrow card, a Field Spell, not a Unit. Board scopes pass it by in a unit sweep and meet it after that side's backrow lanes in a backrow, Field Spell or every-permanent sweep; Cleave and every read of the Units beside a card (zones::is_adjacent_card) pass it by, while the permanents beside a pick (zones::is_adjacent_permanent: Radiant Collateral Damage and Path of Exile's exile_adjacent_to, Radiant Hopeful Jelly Bean, Golden Grape) still reach it, as before (R2198003); query::enemy_permanents lists it after the enemy's backrow (Snom Bunny, MC Tech); T-AI-6 Datacenter Fire destroys and counts it. classify stage 2 against main's build (f62ca60184) finds no card that plays differently in its games and no rule every game meets; it counts classicplus-065 as changed only because C+ #65.4 Golden Grape, a token, cannot be forced, and its script moved from adjacent_to to adjacent_permanents_to, the same read it had before, so it is claimed with --plays. No KEPT_SCRIPTS entry: Golden Grape's script does what it did, and the verbs change for every catalog; replays this change alters are refused as rules_changed (R767000).",
+    "player": {
+      "title": "Ticketed on a Unit is a Field Spell",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Effects that hit every Unit no longer destroy, bounce or damage a Ticketed stacked on a Unit, so the Unit beneath it stays beneath.",
+        "Cleave, and effects that reach the Units beside a card, no longer reach a Ticketed stacked on the Unit next to it.",
+        "Effects that destroy every backrow card or every Field Spell now destroy a Ticketed stacked on a Unit, and Datacenter Fire counts it in its damage.",
+        "Snom Bunny and MC Tech now count a Ticketed stacked on an enemy Unit among the enemy's permanents."
+      ]
+    },
+    "commits": [
+      "2573310ee6822682cdec25b22415c5605fb550c1"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classicplus-065"
+    ],
+    "changes": []
   }
 ]
