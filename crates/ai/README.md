@@ -159,6 +159,10 @@ swing; a Ranged attacker takes none from a non-Ranged Taunt (R783000). A Frenzy 
 the Taunt it attacked, and that survives, has its swings back to `attacks_per_turn`, each with the hit's own
 hero permission; an exiled Taunt and one a Cleave splash destroys free none (R3543003)
 (`strike_back_survival_read`, R4402000, #4402; off in `GREEDY_EVAL`).
+A Cleave splash in the walk lands on every unit it strikes. A unit without Taunt, or a Taunt the walk has
+passed, is met as its earlier hits and splashes left it: gone once destroyed, or back as its Reborn body. Each
+splash spends the pools in the engine's order, and a Trample attacker's sends what it deals beyond the unit's
+health to the hero (§4.4 step 9) (`splash_trample_read`, R4805000, #4805; off in `GREEDY_EVAL`).
 A hit on a Taunt, its Cleave splash and a First Strike Taunt's strike back are
 each capped after Armor by the struck unit's own guard (C+ #11 Anime Armor, R2179005), as `blow` caps the
 static trader's. Past the caps, every static read of a hit takes §4.4 steps 3a and 3b
@@ -402,7 +406,10 @@ and once a step has run, for each such card it cast without playing it, from a g
 A step whose surcharge the counter cannot pay is refused in the beam (`simulate` answers `Some(Err)` and
 the beam tries the next), but cuts the opponent's reply (`simulate_reply` answers `None`, as for a spent
 counter: `reduce_for`, `best_try`), since a skipped reply step reads as an opponent who passed it up
-(R4809000).
+(R4809000). The lethal solver's first walk, depth-first on `AI_SEARCH.lethal_quick_nodes`, skips such a
+step too (`simulate`'s refusal is `UNPAID_SURCHARGE`), and a line whose replay on another
+determinization meets one, but then ends cut rather than searched, so the best-first walk still runs on
+the rest of the solver's allowance (R4807000).
 Such a step, once run, is kept for the rest of its decision (`SimMemo` on the root counter, at most
 `AI_SEARCH.memo_steps`), and the same step from the same state, nonce records aside, is answered from
 it without the engine, its nonce record rebuilt as the engine builds it and its nodes charged as before,

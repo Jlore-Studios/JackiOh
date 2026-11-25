@@ -1,0 +1,23 @@
+{
+  "title": "Inner Fire reads Attack below 0",
+  "sources": "#4840",
+  "notes": "Inner Fire took its buff off the shown Attack, so a Unit below 0 came up short; it now reads Attack before layer 5's floor",
+  "player": {
+    "title": "Inner Fire fixed below 0 Attack",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "Inner Fire on a Unit with negative Attack (under an aura such as Spikey Pillow) now sets it to exactly its Health, instead of coming up short."
+    ]
+  },
+  "cards": [
+    "stinkyscape-010-1"
+  ],
+  "plays": [
+    "stinkyscape-010-1",
+    "stinkyscape-109",
+    "stinkyscape-111"
+  ]
+}

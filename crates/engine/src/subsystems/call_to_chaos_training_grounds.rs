@@ -107,14 +107,19 @@ fn add_cards(name: &'static str, count: i32, radiant: bool, mana: i32) -> Effect
 
 /// R2200002, R2200004, R3135000: one random Call to Chaos of the sets that ship (R380, R1420), this edition
 /// among them once its set ships (R387), added at its printed price; a full hand burns it (§2.4).
+/// R673, R4845000: a card generated into a hand, so it is Glitch instead on the match's odds.
 fn add_random_call() -> Effect {
     Effect::new("callToChaosTrainingGrounds:addCall", |ctx| {
         let pool = crate::catalog::query(&json_as(json!({ "tags": [CHAOS_TAG] })));
         // R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
-        let Some(def_id) =
-            crate::catalog::pick_generated_unique(&mut *ctx.sink.rng, &pool, None, &mut ctx.draw_tally)
-                .map(|def| def.id.clone())
-        else {
+        // R673, R4845000: a card generated into a hand may be Glitch (`catalog::GlitchOdds` is the state).
+        let Some(def_id) = crate::catalog::pick_generated_unique(
+            &mut *ctx.sink.rng,
+            &pool,
+            Some(&*ctx.sink.state),
+            &mut ctx.draw_tally,
+        )
+        .map(|def| def.id.clone()) else {
             return;
         };
         let add = crate::effects::add_to_hand::add_to_hand(AddToHandArgs {
