@@ -23862,6 +23862,8 @@
       }
     },
     "4917": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-25T10:46:48Z",
@@ -23875,8 +23877,11 @@
         "trail": "o has-origin-main; timeout 1500 ./../../../JackiOh/JackiOh/target/release/jackioh classify --base origin/main --claims 2>&1 | tail \u2026\n- said: `classify` reports Internal and demands no fragment. Starting the full `carried` run in the background, and the whole tools suite in the foreground.\n- Bash: {\"command\": \"timeout 3000 /home/runner/work/JackiOh/JackiOh/target/release/jackioh carried > /tmp/carried.log 2>&1; echo \\\"exit $?\\\" >> /tmp/carried.log\", \"description\": \"Run the full carried catalog\u2026\n- Bash: {\"command\": \"timeout 1700 cargo test -p jackioh-tools 2>&1 | grep -E '^test result|FAILED|panicked|^error' | head -20\", \"description\": \"Run the full tools crate tests\", \"timeout\": 1800000}\n- Bash: {\"command\": \"tail -6 /tmp/carried.log\", \"description\": \"Read the full carried run's result\"}\n- said: Full `carried`: 2716 eras over 107 versions, 0 failed. While the tools suite runs, checking that `build.rs` reruns when `patches.json` changes (a ship must re-resolve keys).\n- Bash: {\"command\": \"grep -n 'rerun-if' crates/cards/build.rs | head\", \"description\": \"Check build.rs rerun triggers\"}\n- Bash: {\"command\": \"grep -rn 'includes\\\\b\\\\|\\\"tier\\\"\\\\|Object.keys' apps/web/src/patches/*.ts 2>/dev/null | head -10; ls apps/web/src/patches/ | head -20\", \"description\": \"Check the web's patches reader for\u2026\n- Grep: {\"pattern\": \"patches\\\\.json\", \"path\": \"/home/runner/work/_temp/work/item-4779/crates\", \"glob\": \"!{tools,cards}/**\", \"output_mode\": \"files_with_matches\"}\n- Bash: {\"command\": \"grep -rn 'deny_unknown\\\\|struct .*Patch.*{' crates/server/src/api/catalog.rs crates/server/src/cli/seed_catalog.rs crates/engine/src/wire/stats/window.rs crates/engine/src/wire/stats/pla\u2026\n- Bash: {\"command\": \"sed -n 150,185p crates/server/src/economy/news.rs\", \"description\": \"Read news.rs PatchRecord parsing\"}\n- said: Other `patches.json` readers ignore unknown fields. Updating notes while the tools suite finishes.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"Next: release build -> patches check, carried --card x7, spec check; fmt, clippy, full cards tests, classify, ca\u2026\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-4779/52bbe423-6d66-4a76-96be-d7c4a22688f4/tasks/b5q3d89h0.output\"}\n- said: Still running (output is buffered through grep). Reviewing the `patches.rs` diff meanwhile.\n- Bash: {\"command\": \"git diff crates/tools/src/patches.rs | sed -n 1,140p\", \"description\": \"Review the patches.rs diff\"}\n- said: One wording fix: the reused-stem message says the key \"would resolve to it\", but it resolves to the version *before* the old one.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/tools/src/patches.rs'\\ns=open(p).read()\\na='so a kept script keyed \\\\\\\\\\\"fragment:{stem}\\\\\\\\\\\" would resolve to it: give the fragment another title (R4779000\u2026\n- Bash: {\"command\": \"git diff docs/ADDING_CARDS.md crates/cards/README.md spec/rulings/R767000.md | grep '^[-+]' | cut -c1-260\", \"description\": \"Review docs and R767000 diff\"}\n- said: Checking whether ADDING_CARDS also tells authors to name the kept fn after a version, which a fragment key would leave them unable to know.\n- Bash: {\"command\": \"grep -n 'script_v' docs/ADDING_CARDS.md crates/cards/README.md | cut -c1-220\", \"description\": \"Look for kept-fn naming guidance\"}\n- said: No naming rule to update. Waiting on the tools suite.\n- Bash: {\"command\": \"sleep 5; cat /tmp/claude-1001/-home-runner-work--temp-work-item-4779/52bbe423-6d66-4a76-96be-d7c4a22688f4/tasks/b5q3d89h0.output; ps aux | grep -c '[j]ackioh-' \", \"description\": \"Check t\u2026\n- ToolSearch: {\"query\": \"select:Monitor\"}\n- Monitor: {\"description\": \"tools test suite finishing\", \"timeout_ms\": 600000, \"command\": \"f=/tmp/claude-1001/-home-runner-work--temp-work-item-4779/52bbe423-6d66-4a76-96be-d7c4a22688f4/tasks/b5q3d89h0.output; \u2026\n- tool error: 'f' was tracked as literal '/tmp/claude-1001/-home-runner-work--temp-work-item-4779/52bbe423-6d66-4a76-96be-d7c4a22688f4/tasks/b5q3d89h0.output' but condition may modify it (||/pipeline/unset/&&-shor\u2026\n- Monitor: {\"description\": \"tools test suite finishing\", \"timeout_ms\": 600000, \"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-4779/52bbe423-6d66-4a76-96be-d7c4a22688f4/tasks/b5q3d89h0\u2026\n- Bash: {\"command\": \"git status --short | head -40\", \"description\": \"List changed files\"}\n- said: Waiting for the tools suite to report.\n- Bash: {\"command\": \"until [ -s /tmp/claude-1001/-home-runner-work--temp-work-item-4779/52bbe423-6d66-4a76-96be-d7c4a22688f4/tasks/b5q3d89h0.output ]; do sleep 10; done; cat /tmp/claude-1001/-home-runner-wor\u2026\n- said: I'll wait for the notification before going further.\n- ToolSearch: {\"query\": \"select:TaskStop\"}\n- said: Two watchers on the same output; stopping the duplicate monitor.\n- TaskStop: {\"task_id\": \"bem5gce9m\"}\n- said: The tools suite is still running; I'll be notified when it finishes.\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4779/52bbe423-6d66-4a76-96be-d7c4a22688f4/tasks/b5q3d89h0.output\", \"description\": \"Read the tools suite result\"}\n- said: Tools suite green (the ignored ones are the existing daily tests). That run started before my message wording fix, so re-running the R4779000 tests plus fmt and clippy on the final tree.\n- Bash: {\"command\": \"timeout 900 cargo test -p jackioh-tools r4779000 2>&1 | grep -E '^test |FAILED|panicked' ; cargo fmt --check; echo \\\"fmt ${?}\\\"; timeout 900 cargo clippy -p jackioh-cards -p jackioh-tool\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"Next: full cargo test -p jackioh-tools (running), then final report.\\\"\\\"\\\",\\\"\\\"\\\"Also green: full cargo test -p \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: kept card scripts take their last version from the patch that ships them, so a patch shipped first never leaves one stale\"} --> ## What changed A `KEPT_SCRIPTS` row can now be keyed `(ID, \"fragment:<stem>\", fn)`, where `<stem>` is the branch's `crates/c\u2026"
       },
       "issue": 4779,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-25T12:48:18Z",
         "from_run": "45598237440",
         "gates": [
           {
@@ -23968,7 +23973,11 @@
         "source": "build",
         "until": "2026-11-25T13:14:23Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-25T12:44:23Z",
+      "run_id": "pending:25ce454d-1795610864",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -23987,6 +23996,9 @@
         "provider": "claude-6",
         "run": "45598237440"
       },
+      "started_at": "2026-11-25T12:48:18Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -24148,9 +24160,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T12:47:30Z",
+    "at": "2026-11-25T12:48:18Z",
     "url": "",
-    "what": "review #4916 on claude-7"
+    "what": "review #4917 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-25T12:26:59Z",
