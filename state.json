@@ -25161,6 +25161,10 @@
         {
           "at": "2026-11-25T09:20:38Z",
           "minutes": 217.9
+        },
+        {
+          "at": "2026-11-25T10:12:21Z",
+          "minutes": 42.2
         }
       ],
       "tokens_spent": [
@@ -26171,17 +26175,24 @@
           "cost": 0.0,
           "input": 2928039,
           "output": 310734
+        },
+        {
+          "at": "2026-11-25T10:12:21Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 604183,
+          "output": 79419
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-25T12:36:02Z",
-          "utilization": 0.67
+          "utilization": 0.87
         },
-        "observed_at": "2026-11-25T09:20:38Z",
+        "observed_at": "2026-11-25T10:12:21Z",
         "seven_day": {
           "resets_at": "2026-12-01T16:36:02Z",
-          "utilization": 0.43
+          "utilization": 0.48
         },
         "status": "allowed"
       }
@@ -46912,7 +46923,13 @@
       "2026-11-25T10:02:59Z,claude-3,stream,call,45588480794,91,2026-11-25T13:20:00Z,,,allowed_warning,,,",
       "2026-11-25T10:03:59Z,claude-3,stream,call,45588480794,92,2026-11-25T13:20:00Z,,,allowed_warning,,,",
       "2026-11-25T10:05:14Z,claude-3,stream,call,45588480794,93,2026-11-25T13:20:00Z,,,allowed_warning,,,",
-      "2026-11-25T10:05:44Z,claude-3,stream,call,45588480794,94,2026-11-25T13:20:00Z,,,allowed_warning,,,"
+      "2026-11-25T10:05:44Z,claude-3,stream,call,45588480794,94,2026-11-25T13:20:00Z,,,allowed_warning,,,",
+      "2026-11-25T09:24:29Z,agy,usage-command,before,45584996635,67,2026-11-25T12:36:02Z,43,2026-12-01T16:36:02Z,allowed,100,100,",
+      "2026-11-25T09:34:44Z,agy,usage-command,call,45584996635,71,2026-11-25T12:36:02Z,44,2026-12-01T16:36:02Z,allowed,100,100,",
+      "2026-11-25T09:44:48Z,agy,usage-command,call,45584996635,78,2026-11-25T12:36:02Z,46,2026-12-01T16:36:02Z,allowed,100,100,",
+      "2026-11-25T09:54:54Z,agy,usage-command,call,45584996635,86,2026-11-25T12:36:02Z,47,2026-12-01T16:36:02Z,allowed,100,100,",
+      "2026-11-25T10:05:01Z,agy,usage-command,call,45584996635,86,2026-11-25T12:36:02Z,47,2026-12-01T16:36:02Z,allowed,100,100,",
+      "2026-11-25T10:06:51Z,agy,usage-command,after,45584996635,87,2026-11-25T12:36:02Z,48,2026-12-01T16:36:02Z,allowed,100,100,"
     ],
     "runs": [
       "2026-11-25T10:06:37Z,45588480794,claude-3,opus,plan,4828,hard,planned,,17.6,195,103754,14642807,6.7443,71,94,,,750.9,,fresh,,1"
