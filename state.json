@@ -1382,6 +1382,12 @@
       "lines": [
         "reject"
       ]
+    },
+    "c:7152360448": {
+      "at": "2026-11-25T03:55:21Z",
+      "lines": [
+        "/harness handoff human"
+      ]
     }
   },
   "items": {
