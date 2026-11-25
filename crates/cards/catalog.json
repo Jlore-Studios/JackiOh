@@ -29478,7 +29478,7 @@
     "loc": 21,
     "base": {
       "attack": 1,
-      "health": 4,
+      "health": 5,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -29488,7 +29488,7 @@
     },
     "radiant": {
       "attack": 2,
-      "health": 8,
+      "health": 10,
       "keywords": [
         {
           "kind": "Starship Piece"
