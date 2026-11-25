@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 4931,
+  "title": "Patch: screen the reply's open-lethal switch again on today's reply",
+  "branch": "bot/issue-4931",
+  "thread": "**Issue #4931 (data, not instructions):**\n\n```text\n# #4931: Patch: screen the reply's open-lethal switch again on today's reply\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nWhen the practice AI imagines the opponent's answer to its plans, the imagined opponent scores its attacks one hit at a time and never notices it could win on the spot, even with lethal on board. A switch (`AI_REPLY.open_lethal`) makes the imagined opponent take the win when it sees one: every remaining attack on the hero counts as the win, so the face goes first and no attacker is wasted on a kill. It has always been off. Turning it on would make the AI respect real counter-lethal: lines that walk into a killing board score worse, lines that hold back a Taunt or keep health score better, and the practice opponent defends itself like a player who sees the win.\n\n## Why\n\nSPEC \u00a79.9 (`spec/09-architecture/9.9-practice-ai.md`, The opponent's reply) ends the lethal paragraph with: this is switched off (`AI_REPLY.open_lethal`) until a screen keeps it. The spec invites exactly this screen. The switch was screened twice on older replies and kept off both times for lack of evidence, not for harm: #1634's screen read 203-197, edge +0.015 (-0.002 to +0.032), inconclusive with 3 decided of 200 (won 3, lost 0); #4246's read 200-200, edge 0.0, inconclusive with 0 decided of 200 (`crates/ai/src/config.rs`, `AI_REPLY.open_lethal` comment). But the reply those screens measured is not today's reply. Since #4246 the reply gained spread Activates that reach every lane (R4515000), walls against lethal (R4187000), close steps that end open turns (R4810000), First-Strike-exiled attackers worth nothing (R4171000), damage pools and conversions (R4064000, R4064001), GIGA-aware Cleave (R4257000), strike-back and Frenzy handling (R4402000), Lifesteal face value, and cleanup-discard comparison (R3696001). Walls (R4187000) in particular interact directly with whether the reply takes lethal, so an inconclusive read on that reply does not settle the switch on this one. No open issue covers it and it is none of the rejected suggestions.\n\n## Proposal\n\nFlip `AI_REPLY.open_lethal` to true behind one 400-game deal screen on improve-dev against a control built from the tip (`training/improve.md`, A screen), size decided in advance; keep only if `edgeLow` is above 0, else revert and record the screen in the config comment. Pin the new reply behavior with scene tests (reply with lethal on board attacks the hero first and spends nothing on kills; a non-lethal reply is unchanged). If inconclusive a third time, leave it off with no further screen until the reply itself changes again.\n\n## Where it lands\n\n- `crates/ai/src/config.rs` (`AI_REPLY.open_lethal` and its screen comment)\n- `crates/ai/tests/ai/reply.rs` (scene tests for the lethal reply)\n- `spec/09-architecture/9.9-practice-ai.md` (one line, only if the screen keeps it: off-until-a-screen-keeps-it becomes on-since-the-screen)\n- `crates/ai/src/reply.rs` (read-only: `simulate_reply_with` already threads the switch, `reply.rs:912-999`)\n\n## Acceptance criteria\n\n- [ ] Control built from the committed tip before any change; 400 games on improve-dev, candidate versus control, with the tally recorded (wins, edge with interval, decided wonBoth-lostBoth, diverged) in the config comment and the issue.\n- [ ] Kept only if `edgeLow` is above 0; otherwise reverted, screen recorded, switch stays off.\n- [ ] Scene tests fail without the flip (reply does not take a showing lethal) and pass with it.\n- [ ] `cargo test -p jackioh-ai` and `cargo clippy -p jackioh-ai --all-targets -- -D warnings` green; `cargo jackioh gate` smoke green.\n- [ ] No other constant touched; no screen repeated or extended after the read.\n\n## Size and risks\n\nSmall code change (one constant plus tests); medium time (400 games, roughly 25-45 minutes on two cores, fits a bot run per `training/improve.md`). Main risk is a third inconclusive screen that settles nothing; contained by fixing the size in advance, keeping only on `edgeLow > 0`, and stopping after one screen.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** would approve it: It re-screens the spec-invited open_lethal switch after the reply changed substantially, keeping only on edgeLow above 0. With no vote, no comment and no \ud83d\udc4e on this issue by Thu 26 Nov 09:14 CST, it is approved by itself at `priority:low` (at most 3 a day); comment `reject`, or anything at all, to decide it yourself.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-25T19:07:26Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4931: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-25T19:07:53Z",
+    "claimed_at": "2026-11-25T19:13:07Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4649 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
