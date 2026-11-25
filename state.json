@@ -22059,24 +22059,13 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "built_by": "claude-7",
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "provider": "claude-7",
-            "run": "45577438939",
-            "tier": "strong"
-          }
-        ],
-        "sha": "09fffc31119fd30c8d0f83d2977664ac919754e9",
-        "tiers": {
-          "claude": "strong"
-        }
+        "reviews": [],
+        "sha": "8ea21c930bcdac02a60d3e96096781314e431113",
+        "tiers": {}
       }
     },
     "4885": {
