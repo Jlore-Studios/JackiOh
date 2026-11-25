@@ -13,7 +13,7 @@ use jackioh_engine::{
     carried_at, cleave_struck, converts_to, damage_pool_of, effective_cost, effective_life, find_def,
     find_instance, find_instance_mut, flags_of, has_keyword, is_locked, lane_multiplier_for, legal_actions,
     midlane_lanes_of, pierces, position_after_switch, row_size, slot_of, strike_back_multiplier_for,
-    subsystems, takes_strike_back, unit_damage_cap, unit_view, units_on_field_of,
+    subsystems, takes_strike_back, unit_damage_cap, unit_view,
 };
 use serde_json::Value;
 
@@ -1045,20 +1045,18 @@ fn last_resort_due(state: &GameState, seat: PlayerId, legal: &[ActionBody]) -> b
 }
 
 /// R4783040: what a card's text says when it puts cards into its owner's own deck: "Shuffle … into your
-/// deck" (Classic #30 Recycle, Stinkyscape+ #24 Forced Propagation, a Death's Prime, …) and M #54 Money
+/// deck" (Classic #30 Recycle, Stinkyscape+ #24 Forced Propagation, …) and M #54 Money
 /// Machine's "into both decks". An opponent's deck ("into your opponent's deck") is none of them.
 const REFILL_PHRASES: &[&str] = &["into your deck", "into both decks"];
 
-/// R4783040: whether a card of `seat`'s own other than `except`, in its hand or on its field (a Unit, or a
-/// card in its backrow), shuffles cards into its deck by the text of the face it runs (`REFILL_PHRASES`): a
-/// way to put cards back into a deck A Glimpse into the Endless Sea has emptied. The seat's own cards are
-/// all ones it can read.
+/// R4783040: whether a card in `seat`'s own hand other than `except` shuffles cards into its deck by the
+/// text of the face it runs (`REFILL_PHRASES`): a way to put cards back into a deck A Glimpse into the
+/// Endless Sea has emptied. Only the hand counts: the Glimpse exiles every permanent, so a card on the field
+/// would be gone before it could refill anything. The seat's own hand is all cards it can read.
 fn refills_own_deck(state: &GameState, seat: PlayerId, except: &str) -> bool {
-    let side = &state.players[seat];
-    side.hand
+    state.players[seat]
+        .hand
         .iter()
-        .chain(units_on_field_of(state, seat))
-        .chain(side.backrow.iter().flatten())
         .any(|card| card.id != except && shuffles_into_own_deck(state, card))
 }
 
