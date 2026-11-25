@@ -22547,7 +22547,6 @@
       "kind": "review",
       "live": "reviewing",
       "own_review": {
-        "claimed": true,
         "claimed_at": "2026-11-25T05:26:25Z",
         "from_run": "45529087678",
         "gates": [
@@ -22605,7 +22604,7 @@
         "rounds_used": 0,
         "since": "2026-11-25T05:25:09Z",
         "source": "build",
-        "until": "2026-11-25T05:55:09Z"
+        "until": "2026-11-25T11:19:44Z"
       },
       "pending_request": false,
       "provider": "muse",
