@@ -24188,6 +24188,13 @@
     "4931": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-25T19:26:37Z",
+        "difficulty": "hard",
+        "provider": "agy",
+        "tier": "medium",
+        "why": "Line 2: the AI's decisions or its search (crates/ai/src/config.rs)"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
