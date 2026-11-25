@@ -20076,6 +20076,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 570,
       "started_at": "2026-11-25T22:25:06Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -44150,9 +44151,33 @@
         "title": "Patch: pin the perf corpus so card additions stop re-dealing it",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-8"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "aa2248629360f0bd25b0ce65400c1932f521fe2d",
+        "issue": 4811,
+        "merged_at": "2026-11-25T23:06:59Z",
+        "n": 570,
+        "pr": 4939,
+        "queued_at": "2026-11-25T23:06:59Z",
+        "sha": "c1b1371cde1147dbe6ed8f1028d992d099633b73",
+        "status": "queued",
+        "title": "Patch: the AI prices a Unit's attack text beside a twin that keeps the keywords its side lends it, so a lent Trample or Flying is not booked as the text's worth",
+        "tries": 0
       }
     ],
-    "count": 569
+    "count": 570
   },
   "statistics": {
     "at": "2026-11-25T22:56:52Z"
