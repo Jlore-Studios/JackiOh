@@ -22074,14 +22074,6 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "- said: You've hit your 5-hour limit \u00b7 resets 8:20am (UTC)"
       },
-      "hold": {
-        "ends": "2026-11-25T08:24:37Z",
-        "lifted": "2026-11-25T08:22:29Z",
-        "owner": "claude-3",
-        "since": "2026-11-25T06:24:37Z",
-        "until": "2026-11-25T08:20:00Z",
-        "why": "it refused a call"
-      },
       "kind": "build",
       "live": "planning",
       "owner": "claude-3",
@@ -22089,7 +22081,7 @@
       "owner_why": "it plans it",
       "pending_request": false,
       "provider": "claude-3",
-      "run_id": "45552188303",
+      "run_id": "pending:e7eed4ee-1795595218",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -22108,7 +22100,7 @@
         "provider": "claude-3",
         "run": "45552188303"
       },
-      "started_at": "2026-11-25T05:14:25Z",
+      "started_at": "2026-11-25T08:27:35Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 7154762186
@@ -22934,9 +22926,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T08:26:43Z",
+    "at": "2026-11-25T08:27:35Z",
     "url": "",
-    "what": "build #4805 on claude-3"
+    "what": "plan #4891 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-25T08:14:11Z",
