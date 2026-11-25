@@ -45801,6 +45801,9 @@
       "2026-11-25T05:23:09Z,claude-3,stream,call,45539685122,100,2026-11-25T08:20:00Z,,,rejected,,,",
       "2026-11-25T05:33:10Z,claude-3,stream,call,45539685122,100,2026-11-25T08:20:00Z,,,rejected,,,",
       "2026-11-25T05:42:44Z,claude-3,refusal,call,45539685122,100,2026-11-25T08:20:00Z,,,rejected,,,2026-11-25T08:20:00Z"
+    ],
+    "runs": [
+      "2026-11-25T05:42:44Z,45539685122,claude-3,opus,build,4805,hard,interrupted,refusal,134.9,0,0,0,4.6378,2,100,,,387.8,claude-3,fresh,,1"
     ]
   },
   "version": 1
