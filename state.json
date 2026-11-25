@@ -20719,6 +20719,18 @@
       "asks": [],
       "ci_fixed_head": "9096323a9e277ef9004bb0a0dad9238740bbcb90",
       "ci_fixes": 1,
+      "cleared": {
+        "approver": {
+          "family": "gemini",
+          "model": "gemini-3.8-flash-high",
+          "provider": "agy",
+          "tier": "medium"
+        },
+        "at": "2026-11-25T01:40:56Z",
+        "built_by": "agy",
+        "by": "`gemini` (medium)",
+        "sha": "9096323a9e277ef9004bb0a0dad9238740bbcb90"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T22:17:23Z",
@@ -20734,6 +20746,7 @@
       "issue": 4838,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "agy",
       "pending_request": false,
       "provider": "agy",
       "queued_at": "2026-11-24T23:41:50Z",
