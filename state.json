@@ -21930,13 +21930,14 @@
     "what": "plan #4804 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-25T04:24:40Z",
+    "at": "2026-11-25T04:35:37Z",
     "notes": [
-      "delivered plan #4595 on claude-3 (run 45542897616): planned",
-      "started review #4629 on claude-6 (run 45546881725)",
-      "started plan #4802 on claude-3 (run 45546972541)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-25T04:50:00Z; it can start a build or a plan again in 21m; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
-      "pruned 1 plan file(s) older than 7 days"
+      "delivered plan #4779 on claude-3 (run 45545791091): planned",
+      "delivered build #4835 on claude-8 (run 45534784616): built",
+      "started review #4887 on claude-8 (run 45548236507)",
+      "started plan #4804 on claude-3 (run 45548321376)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 100%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-25T04:50:00Z; it can start a build or a plan again in 9m; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
+      "runner gate: started 1 of 1 waiting run(s) (run 45548376907 on patches/ship-fa40ae047c)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22642,7 +22643,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T04:24:40Z",
+  "loop_tick": "2026-11-25T04:35:37Z",
   "machine_disk": {
     "issue": null,
     "reading": {
