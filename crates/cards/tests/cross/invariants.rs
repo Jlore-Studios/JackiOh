@@ -3833,7 +3833,8 @@ mod r4577008_the_black_hole_s_turn_end_pull_is_no_spell_s_reach {
     fn r4577008_a_spell_s_exile_of_an_immune_unit_the_pull_cannot_reach_is_still_a_reach() {
         // One lane from the hole on the side whose turn ended, the pull swallows it; two lanes away it only
         // steps, and at the end of p1's turn p2's Unit is not pulled at all, so a Spell's exile of either is
-        // a reach.
+        // a reach. The Spell is cast at the turn's end: a standing trigger there (Drone Core VII's Float)
+        // opens no run I21 reads, R62's tail following it with no marker of its own (R4599007).
         for (lane, side, owner, reach) in [
             (2, "p1", PlayerId::P1, false),
             (1, "p1", PlayerId::P1, true),
@@ -3856,7 +3857,7 @@ mod r4577008_the_black_hole_s_turn_end_pull_is_no_spell_s_reach {
                     "sourceId": "r4577008-source",
                     "defId": DRONE_CORE_VII,
                     "controller": "p1",
-                    "hook": "whenever",
+                    "hook": "cry",
                 })),
                 event(json!({ "type": "exiled", "instanceId": id, "defId": IMMUNE, "owner": side })),
             ];
