@@ -5091,7 +5091,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "18",
         "Imitated Instrumentality",
-        c(3),
+        c(4),
         T::Spell,
         &[],
         R::Legendary,
