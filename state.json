@@ -23726,7 +23726,7 @@
     "what": "plan #4852 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-25T11:49:54Z",
+    "at": "2026-11-25T12:01:55Z",
     "notes": [
       "#4804 is held for `claude-3` until 07:20 (it refused a call)",
       "#4807 is held for `claude-3` until 07:20 (it refused a call)",
@@ -23737,13 +23737,14 @@
       "#4824 is held for `claude-3` until 07:20 (it refused a call)",
       "#4828 is held for `claude-3` until 07:20 (it refused a call)",
       "#4836 is held for `claude-3` until 07:20 (it refused a call)",
-      "delivered review #4884 on claude-7 (run 45606942258): reviewed",
-      "delivered review #4902 on claude-1 (run 45589968430): approved",
-      "delivered build #4831 on claude-6 (run 45582932874): built",
-      "started review #4912 on claude-6 (run 45608623835)",
-      "started review #4890 on claude-7 (run 45608733680)",
-      "started plan #4839 on claude-1 (run 45608849297)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-25T13:20:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` its last run could not work (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-11-25T12:01:34Z; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` it refused a call; its limit resets at 2026-11-25T12:44:57Z; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4804 held for `claude-3` until 07:20 (it refused a call); #4807 held for `claude-3` until 07:20 (it refused a call); #4811 held for `claude-3` until 07:20 (it refused a call); #4812 held for `claude-3` until 07:20 (it refused a call); #4817 held for `claude-3` until 07:20 (it refused a call); #4823 held for `claude-3` until 07:20 (it refused a call); #4824 held for `claude-3` until 07:20 (it refused a call); #4828 held for `claude-3` until 07:20 (it refused a call); #4836 held for `claude-3` until 07:20 (it refused a call)"
+      "delivered review #4890 on claude-7 (run 45608733680): reviewed",
+      "delivered build #4676 on claude-3 (run 45586536322): interrupted",
+      "delivered build #4816 on claude-8 (run 45579336840): built",
+      "started review #4913 on claude-8 (run 45610448244)",
+      "started plan #4845 on claude-7 (run 45610578833)",
+      "started plan #4852 on claude-4 (run 45610705810)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-25T13:20:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` it refused a call; its limit resets at 2026-11-25T12:44:57Z; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4676 held for `claude-3` until 07:20 (it refused a call); #4804 held for `claude-3` until 07:20 (it refused a call); #4807 held for `claude-3` until 07:20 (it refused a call); #4811 held for `claude-3` until 07:20 (it refused a call); #4812 held for `claude-3` until 07:20 (it refused a call); #4817 held for `claude-3` until 07:20 (it refused a call); #4823 held for `claude-3` until 07:20 (it refused a call); #4824 held for `claude-3` until 07:20 (it refused a call); #4828 held for `claude-3` until 07:20 (it refused a call); #4836 held for `claude-3` until 07:20 (it refused a call)",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -24449,7 +24450,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T11:49:54Z",
+  "loop_tick": "2026-11-25T12:01:55Z",
   "machine_disk": {
     "issue": null,
     "reading": {
