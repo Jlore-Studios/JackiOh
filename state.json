@@ -24631,13 +24631,14 @@
       "merge_owner": "claude-3",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-8",
       "queued_at": "2026-11-25T15:36:16Z",
-      "run_id": "45647361971",
+      "run_id": "pending:0648dfb5-1795630621",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 560,
-      "started_at": "2026-11-25T15:37:55Z",
+      "started_at": "2026-11-25T18:17:42Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -25281,9 +25282,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T18:16:46Z",
+    "at": "2026-11-25T18:17:42Z",
     "url": "",
-    "what": "review #4948 on claude-6"
+    "what": "spot-check #4940 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-25T17:59:14Z",
@@ -47859,7 +47860,15 @@
         "n": 560,
         "pr": 4940,
         "queued_at": "2026-11-25T18:03:34Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:0648dfb5-1795630621",
         "sha": "324379057abaa7af130fd5546cb9ce2c3fae573e",
+        "started_at": "2026-11-25T18:17:42Z",
         "status": "queued",
         "title": "Patch: the AI's redaction hides the tags of the opponent's face-down Trap in the play counts, and the hidden card an interrupted trap firing remembers",
         "tries": 0
