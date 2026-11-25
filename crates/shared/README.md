@@ -412,8 +412,9 @@ read like the 1v1 machine's, and its timers are the `duos*` `TimerKey`s. What it
   back, no loss by disconnect) or in the mode an expiry forced. The pause before every AI action
   (`DUOS_AI_STEP_DELAY_MS`), whether the move needs the AI's search at all (a mulligan kept whole or a
   turn simply ended does not), the move it falls back on and R188's forbidden ones, a refused move
-  deciding again, an unwritten one retried after `BOT_WRITE_RETRY_MS` (or the match let go if its row is
-  gone: `checkRow`, `rowChecked`).
+  deciding again, a pass (or an end of turn once its seat's hand has changed) decided on a state the game
+  has since moved past deciding again too (R4813000), an unwritten one retried after `BOT_WRITE_RETRY_MS`
+  (or the match let go if its row is gone: `checkRow`, `rowChecked`).
 - **The flow of a change** (B35, B40): the order of every view and clock, the result recorded once with every
   clock gone, a server action's panic ending the match as a ceiling draw (R1253000).
 
