@@ -19293,14 +19293,6 @@
         "reason": "planned on opus",
         "trail": "ead -60; grep -rn \\\"impl NodeCounter for\\\\|impl.*NodeCounter for\\\" crates | head\", \"description\": \u2026\n- Bash: {\"command\": \"grep -rn \\\"beam_search(\\\" crates --include=*.rs | grep -v \\\"^crates/ai/src/search.rs:123\\\" | head; grep -n \\\"pub use\\\\|pub mod\\\" crates/ai/src/lib.rs | head -30\", \"description\": \"Find be\u2026\n- Bash: {\"command\": \"ls crates/ai/tests/ crates/ai/tests/ai | head -50; sed -n 1,60p crates/ai/tests/ai/search.rs\", \"description\": \"List AI tests and read search.rs header\"}\n- Bash: {\"command\": \"grep -n \\\"fn surcharge_nodes\\\\|fn announced_surcharge_nodes\\\\|fn own_prompt_score\\\" crates/ai/src/simulate.rs; grep -n \\\"root_branching\\\" crates/ai/src/*.rs crates/shared/src -r | head -\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4801/.bot-plan.md\", \"content\": \"# Draft plan #4801 (planner notes)\\n\\nFound:\\n- simulate.rs CounterKind::Sub has `floor: usize`; take() polls wrap_up \u2026\n- Bash: {\"command\": \"sed -n 440,500p crates/ai/src/simulate.rs; sed -n 2130,2170p crates/ai/tests/ai/search.rs; grep -n \\\"pub fn ai_options\\\" -A8 crates/ai/tests/ai/support.rs\", \"description\": \"Read surcharg\u2026\n- Bash: {\"command\": \"grep -n \\\"pub const AI\\\\|pub const HUMAN\\\" crates/ai/tests/ai/support.rs; grep -n \\\"\\\\\\\"active\\\\\\\"\\\" crates/ai/tests/ai/*.rs | head -3; git show bf24a52:crates/ai/tests/audit_decide.rs 2\u2026\n- Bash: {\"command\": \"git show bf24a52:crates/ai/tests/audit_decide.rs | sed -n 1,40p; git show bf24a52:crates/ai/tests/audit_decide.rs | grep -n \\\"fn one_card\\\\|ZEPHRYS\\\\|a_wrap_up_fired\\\" \", \"description\": \u2026\n- Bash: {\"command\": \"git show bf24a52:crates/ai/tests/audit_decide.rs | sed -n 118,185p\", \"description\": \"Read the reproduction test body\"}\n- Bash: {\"command\": \"sed -n 1210,1270p crates/shared/tests/bots_decide.rs; grep -n \\\"wrap\\\" crates/wasm/core/src/lib.rs | sed -n 1,5p; grep -n \\\"fn r3498000\\\" -A30 crates/wasm/core/src/lib.rs | grep -n \\\"nod\u2026\n- Bash: {\"command\": \"sed -n 1,30p crates/ai/src/decide.rs; grep -rn \\\"root_branching + 1\\\\|root's worth\\\\|floor\\\" crates/ai/src crates/ai/README.md docs/polish/3-ai.md spec/09-architecture.md 2>/dev/null | g\u2026\n- Bash: {\"command\": \"grep -rn \\\"create_wrap_up_counter\\\\|end_exploring\\\\|NodeCounter\\\" docs/ crates/ai/README.md spec/ 2>/dev/null | head; grep -n \\\"simulate.rs\\\\|search.rs\\\" scripts/ci-scope.sh | head -3\", \u2026\n- Bash: {\"command\": \"ls crates/wasm/c 2>/dev/null | head; grep -rln \\\"wrap_up\\\\|wrapUp\\\\|end_exploring\\\\|endExploring\\\" crates/wasm/c luau apps/web/src 2>/dev/null | head\", \"description\": \"Check C module and\u2026\n- Bash: {\"command\": \"git log --oneline -8 -- crates/ai/src/simulate.rs crates/ai/src/search.rs crates/ai/src/decide.rs; for c in $(git log --format=%h -4 -- crates/ai/src/simulate.rs crates/ai/src/search.rs \u2026\n- Bash: {\"command\": \"cat spec/rulings/R4608000.md; cat spec/pending/4608.md 2>/dev/null | head -3; git show 6b3a6e17e6 -- spec/pending/4608.md | tail -3\", \"description\": \"Read a recent AI ruling note as temp\u2026\n- Bash: {\"command\": \"grep -rn \\\"INDEX.md\\\" crates/tools/src/*.rs crates/tools/src/**/*.rs 2>/dev/null | head -8\", \"description\": \"Check whether spec check reads INDEX.md\"}\n- Bash: {\"command\": \"ls crates/cards/src/scripts/core/ | grep -i \\\"097\\\\|zeph\\\"; grep -n \\\"^//\\\" crates/cards/src/scripts/core/*097*.rs | head -12; grep -n \\\"expensive_def_nodes\\\\|judged_card_nodes\\\\|ai_turn\u2026\n- Bash: {\"command\": \"sed -n 30,70p crates/ai/src/lib.rs | grep -n \\\"simulate\\\\|search\\\\|types\\\"; grep -n \\\"fn hand_id\\\" crates/ai/tests/ai/*.rs | head -3\", \"description\": \"Check AI crate re-exports and test \u2026\n- Bash: {\"command\": \"sed -n 120,147p crates/ai/tests/ai/support.rs\", \"description\": \"Read hand_id helper\"}\n- Bash: {\"command\": \"grep -n \\\"fn hand_id\\\\|^mod \\\\|^ fn \\\\|^fn \\\" crates/ai/tests/ai/search.rs | head -60\", \"description\": \"List modules and helpers in search.rs tests\"}\n- Bash: {\"command\": \"sed -n '/dev-dependencies/,$p' crates/ai/Cargo.toml; grep -n \\\"bots_decide\\\" crates/shared/Cargo.toml | head -3; grep -n \\\"\\\\[\\\\[test\\\\]\\\\]\\\" -A3 crates/ai/Cargo.toml | head\", \"descripti\u2026\n- Bash: {\"command\": \"ls crates/tools/src | grep -i classif; grep -n \\\"crates/ai\\\\|\\\\\\\"ai\\\\\\\"\\\\|Ai =>\\\" crates/tools/src/classify*.rs 2>/dev/null | head -10\", \"description\": \"Check classify handling of AI cha\u2026\n- Bash: {\"command\": \"sed -n 285,320p crates/tools/src/classify.rs; grep -n \\\"fn claims\\\\|claims\\\" crates/tools/src/classify.rs | head -20\", \"description\": \"Read classify's AI area and claims logic\"}\n- Bash: {\"command\": \"grep -n \\\"diff.ai\\\\|Kind::Ai\\\" crates/tools/src/classify.rs | head; grep -n \\\"Kind::Ai\\\" -B3 -A10 crates/tools/src/classify.rs | sed -n 1,60p | grep -n \\\"fragment\\\\|needs\\\\|requires\\\\|cl\u2026\n- Bash: {\"command\": \"sed -n 1240,1260p crates/tools/src/classify.rs\", \"description\": \"Read the AI-only classify branch\"}\n- Bash: {\"command\": \"grep -n \\\"^### 9\\\\.9\\\\|^## 9\\\\.\\\" spec/09-architecture.md; grep -c \\\"\\\" spec/09-architecture.md; grep -o \\\"past it the beam explores no further and its open lines end their turn\\\" spec/0\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4801/.bot-plan.md\", \"content\": \"## Goal\\n\\nWhen a host's wrap-up (`AiOptions::wrap_up`, R3498000) has already fired as the beam starts, the beam still\u2026\n- Bash: {\"command\": \"grep -n \\\"^name\\\" crates/wasm/core/Cargo.toml crates/shared/Cargo.toml crates/ai/Cargo.toml; ls crates/shared/tests | grep bots_decide\", \"description\": \"Confirm crate package names for t\u2026\n- Bash: {\"command\": \"sed -n 36,50p crates/shared/Cargo.toml\", \"description\": \"Check shared crate test target names\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4801/.bot-plan.md\", \"old_string\": \"cargo test -p jackioh-shared --test bots_decide r3498000\", \"new_string\": \"cargo test -p jacki\u2026\n- said: ## Goal When a host's wrap-up (`AiOptions::wrap_up`, R3498000) has already fired as the beam starts, the beam still tries every move of its root, however many nodes a surcharged move takes, so the AI keeps lines and does not fall back to End turn. The root's own End turn is tried too. The wrap-up's\u2026"
       },
-      "hold": {
-        "ends": "2026-11-25T01:22:28Z",
-        "lifted": "2026-11-25T00:13:04Z",
-        "owner": "claude-8",
-        "since": "2026-11-24T23:22:28Z",
-        "until": "2026-11-25T00:10:00Z",
-        "why": "5-hour usage is 90%, too close to its 85% cap to start a long run (it starts under 80%)"
-      },
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
@@ -19323,9 +19315,9 @@
       "queued_at": "2026-11-24T20:53:28Z",
       "requested_by": "squishy-squooby",
       "round_tier": "",
-      "run_id": "45507794064",
+      "run_id": "pending:0572d345-1795565766",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-24T23:11:21Z",
+      "started_at": "2026-11-25T00:16:37Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -21018,9 +21010,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T00:15:55Z",
+    "at": "2026-11-25T00:16:37Z",
     "url": "",
-    "what": "review #4726 on claude-8"
+    "what": "build #4801 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-25T00:00:40Z",
