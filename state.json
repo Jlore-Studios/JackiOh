@@ -21224,6 +21224,8 @@
     "4959": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "4e02f28296ae8a39eb1e2738bb21209379b22664",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-25T19:36:58Z",
