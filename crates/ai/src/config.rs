@@ -2,7 +2,9 @@
 //! are tuning defaults: tests pin rankings and puzzle outcomes, never these values. Each constant
 //! object is a `const` of a struct named after it (SURFACE §4.2).
 
-use jackioh_engine::config::{CN_TECH_MIN_GAMES, KY_COMPETITION_MAX, MARKETPLACE_CREDITS_PER_MANA};
+use jackioh_engine::config::{
+    CN_TECH_MIN_GAMES, HERO_HEALTH, KY_COMPETITION_MAX, MARKETPLACE_CREDITS_PER_MANA,
+};
 use jackioh_engine::{KeywordKind, SetName};
 use serde::{Deserialize, Serialize};
 
@@ -873,6 +875,22 @@ const _: () = assert!(AI_EVAL.evolve_event_share >= 0.0 && AI_EVAL.evolve_event_
 /// permanent that hook reaches is a destroy waiting (`evaluate::plague_doomed`), and the move order tries a
 /// placement prompt's enemy permanents first (`candidates::plague_aims_first`).
 pub const AI_PLAGUE_BOMBS: &[&str] = &["classic-062"];
+
+/// R4783040: the cards the AI keeps for a last resort (issue #4783): Classic #37 Last Hurrah, which draws its
+/// whole deck, the hand cap burning the rest, and Stinkyscape+ #79 A Glimpse into the Endless Sea, which
+/// exiles its deck and every permanent for a countdown to a win. The search prices either far above what it
+/// costs (a fatigue draw counts nothing, `AI_EVAL.fatigue_draw`, and a countdown to a win counts a share of the
+/// win, R3696000), so a play of one is a candidate only while the seat's times are dire or it has no other
+/// play (`candidates::hold_last_resorts`).
+pub const AI_LAST_RESORT: &[&str] = &["classic-037", "stinkyscapeplus-079"];
+
+/// R4783040: the cards of `AI_LAST_RESORT` the seat may also play while it holds a way to put cards back into
+/// its deck (`candidates::refills_own_deck`): A Glimpse into the Endless Sea, which empties it.
+pub const AI_LAST_RESORT_REFILLED: &[&str] = &["stinkyscapeplus-079"];
+
+/// R4783040: the life at or under which the seat's times are dire and it may play a last-resort card, a
+/// third of a hero's starting `HERO_HEALTH`: one Feng Shui punishment (`FENG_SHUI_DAMAGE`) from dead.
+pub const AI_LAST_RESORT_DIRE_LIFE: i32 = HERO_HEALTH / 3;
 
 /// R2424000, R2687000: the most nodes a decision's Death probes (`evaluate::death_prices`) spend: two
 /// per field unit or readable backrow card with a Death, three per own hand Field Spell with one, three
