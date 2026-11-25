@@ -214,8 +214,8 @@ pub const CENSUS: &[SetCensus] = &[
         ],
     },
     // R1420, R3535000: the Stinkyscape+ set (issue #3535, docs/stinkyscape-plus-set.md SP1): its 166
-    // numbered cards (the second card on each reused number moved to #161 to #166), the 16 tokens
-    // its cards define, and its shared tokens: the four Terminus `#Token`s, the Warhero Token, the
+    // numbered cards (the second card on each reused number moved to #161 to #166), the 17 tokens
+    // its cards define (#4.1 Profe Yates Prime since issue #4440, R4440004), and its shared tokens: the four Terminus `#Token`s, the Warhero Token, the
     // ten Terminus Starships and the seven AI generated cards. Shipped by #3573, so it counts toward
     // every total from the release.
     SetCensus {
@@ -224,8 +224,8 @@ pub const CENSUS: &[SetCensus] = &[
         cards: 166,
         shared_cards: &[],
         card_defined_tokens: &[
-            "6.1", "6.2", "26.1", "27.1", "61.1", "69.1", "75.1", "76.1", "121.1", "133.1", "133.2", "133.3",
-            "133.4", "133.5", "142.1", "142.2",
+            "4.1", "6.1", "6.2", "26.1", "27.1", "61.1", "69.1", "75.1", "76.1", "121.1", "133.1", "133.2",
+            "133.3", "133.4", "133.5", "142.1", "142.2",
         ],
         shared_tokens: &[
             "T-tears-of-the-kwzki-tree",
@@ -259,6 +259,29 @@ pub const CENSUS: &[SetCensus] = &[
             ("Mythic", 12),
         ],
     },
+    // R4577000: the Infinite Assault (tracker #4576, docs/infinite-assault.md IA11), a single-player set
+    // held while it is built card by card. Its counts are IA11's table: C1 (issue #4577) wrote the Assault
+    // Core, #1 to #24, and the tokens #4.1 Drone and #10.1 Drone Escort, and CF (issue #4602) wrote every
+    // other entry, #25 to #240, and their 13 tokens (the doctrines' and the Commanders'); each card part
+    // then corrects its own rows. It ships in no total and no tag count.
+    SetCensus {
+        set: "Infinite Assault",
+        segment: "infiniteassault",
+        cards: 240,
+        shared_cards: &[],
+        card_defined_tokens: &[
+            "4.1", "10.1", "25.1", "34.1", "35.1", "40.1", "41.1", "74.1", "78.1", "82.1", "143.1", "154.1",
+            "200.1", "216.1", "235.1",
+        ],
+        shared_tokens: &[],
+        rarities: &[
+            ("Common", 82),
+            ("Rare", 64),
+            ("Epic", 50),
+            ("Legendary", 30),
+            ("Mythic", 14),
+        ],
+    },
 ];
 
 /// §5, §7, §8, B2.4: how many catalog entries carry each tag, tokens included, so a tag that drifts
@@ -273,18 +296,19 @@ pub fn tag_count(tag: Tag) -> usize {
         // #114, #115, #147 and #147.1, and #137 Starfleet Commander (#2521).
         // Training Grounds #1, #2, #3, #5, #8, #9, #18, #25, #28, #32 and #38, and the Legacy cards #41, #43,
         // #53 and #54.
-        // Stinkyscape+ #61 Jayaad joined them in issue #4154.
+        // Stinkyscape+ #61 Jayaad joined them in issue #4154, and #4.1 Profe Yates Prime in issue #4440.
         Tag::Human => {
             39 + meditative(16)
                 + meditative_plus(5)
                 + stinkyscape(21)
                 + training_grounds(15)
-                + stinkyscape_plus(12)
+                + stinkyscape_plus(13)
         }
         // Not Core #62 Friend of Felinors nor Classic #32 Felinor Feelings (#1837, R1837000).
         // Stinkyscape #87.
         // Training Grounds #17, #22, #23 and #33, and the Legacy cards #44 and #51.
-        Tag::Felinor => 9 + meditative(11) + stinkyscape(1) + training_grounds(6) + stinkyscape_plus(1),
+        // Stinkyscape+ #4 Profe Yates and, since issue #4440, its #4.1 Profe Yates Prime.
+        Tag::Felinor => 9 + meditative(11) + stinkyscape(1) + training_grounds(6) + stinkyscape_plus(2),
         // Meditative+ #20 KY's Competition, #20.1 Lil' Kenny and #25 KY's Intuition.
         // Stinkyscape #4.2 and #25.
         Tag::Ky => 9 + meditative(6) + meditative_plus(3) + stinkyscape(2) + stinkyscape_plus(1),
@@ -350,11 +374,13 @@ pub fn tag_count(tag: Tag) -> usize {
         // Meditative #45, #49 (#831) and #91; their Primes #45.1, #49.1 and #91.1.
         // Meditative+ #16 Jazakus and its #16.1 Jazakus Prime.
         // Stinkyscape #147 (Catalyst) and its #147.1 (Prime).
+        // Stinkyscape+ #4 Profe Yates (Catalyst) and, since issue #4440, its #4.1 (Prime).
         Tag::Catalyst => 2 + meditative(3) + meditative_plus(1) + stinkyscape(1) + stinkyscape_plus(1),
-        Tag::Prime => 2 + meditative(3) + meditative_plus(1) + stinkyscape(1),
+        Tag::Prime => 2 + meditative(3) + meditative_plus(1) + stinkyscape(1) + stinkyscape_plus(1),
         // Meditative #49 and #49.1, not #49.2 nor #49.3 (#831).
         // Stinkyscape #6, #26, #37, #87, #88, #109, #110, #111 and #115.
-        Tag::Acclaimed => 2 + meditative(2) + stinkyscape(9) + stinkyscape_plus(3),
+        // Stinkyscape+ #4, #5 and #61, and since issue #4440 #4.1 Profe Yates Prime.
+        Tag::Acclaimed => 2 + meditative(2) + stinkyscape(9) + stinkyscape_plus(4),
         // Meditative #8 Reach the Summit and #20 Aestheticize the Game, the tag's only cards.
         // Stinkyscape #148 and #148.1.
         Tag::Wincon => meditative(2) + stinkyscape(2) + stinkyscape_plus(1),
@@ -399,6 +425,18 @@ pub fn tag_count(tag: Tag) -> usize {
         Tag::AutomaZeta => stinkyscape_plus(5),
         // S01: S #44 Great Paperclip Theory I gains the tag.
         Tag::Paperclip => stinkyscape(1) + stinkyscape_plus(2),
+        // R4577001: the Infinite Assault's doctrine tags and Commander, declared by issue #4577 for
+        // the set's later parts. Its cards are a single-player set's, which ships in no catalog
+        // total, so none counts here (its `AI` tags neither, R4577000).
+        Tag::Hallucination
+        | Tag::Overclock
+        | Tag::Batch
+        | Tag::Recursion
+        | Tag::Jailbreak
+        | Tag::Firewall
+        | Tag::Scraper
+        | Tag::Singularity
+        | Tag::Commander => 0,
         // Every token of the sets that ship carries it, so its count is their tokens' sum (R1420).
         Tag::Token => CENSUS
             .iter()

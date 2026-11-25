@@ -104,7 +104,8 @@ mod tests {
         p2["library"] = filler(6);
         scenario(json!({
             "seed": "great-paperclip",
-            "p1": { "hand": cards, "library": filler(6), "mana": 42 },
+            // The theory and every tier's price, Drone Core VII's (6) since issue #4665.
+            "p1": { "hand": cards, "library": filler(6), "mana": 43 },
             "p2": p2,
         }))
     }

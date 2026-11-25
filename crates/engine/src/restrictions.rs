@@ -2,8 +2,10 @@
 //! step or an attack validator asks whether a card is out of an effect's reach, so the answer a client
 //! greys a pick out by and the answer the reducer refuses it by are one call (§10.2).
 //!
-//!  * Immune to Spells: targeting is `play_choices`'s; "doesn't affect it" is `effects/targets.rs`'s, which
-//!    asks `effect_is_from_spell` for every card a target or a scope names.
+//!  * Immune to Spells: targeting is `play_choices`'s; "doesn't affect it" is `unaffected_by`, which
+//!    `effects/targets.rs` asks of every card a target or a board scope names and, since R4453000,
+//!    `card_scope::cards_in_card_scope` of each field card, `buff_all_units`, `switch_all_positions`, the
+//!    Radiant picks' field pool and a Plague Counter placement (`effect_is_from_spell` there).
 //!  * Evasive's targeting half (R4353002, R450): every declaration and `target` prompt asks
 //!    `evasive_bars`, which bars a Spell's and a Field Spell's aim; random picks, scopes, Traps, Field
 //!    Traps and Units still reach it. Immutable bars no aim since R4353001: its text half (R23) is read
@@ -58,9 +60,10 @@ pub fn effect_is_from_spell(ctx: &EffectContext<'_>) -> bool {
     }
 }
 
-/// E35: the "doesn't affect it" half, as `effects/targets.rs` asks it of every card an effect names:
-/// a Spell's effects pass an immune unit on the field by. R1839000: every effect, whatever its
-/// source, passes a Dormant card by; only `effects::awaken` names it.
+/// E35: the "doesn't affect it" half, as `effects/targets.rs` asks it of every card an effect names
+/// and every walk of the field asks it of each card it meets (a card scope, every Unit, a random pick,
+/// R4453000): a Spell's effects pass an immune unit on the field by. R1839000: every effect, whatever
+/// its source, passes a Dormant card by; only `effects::awaken` names it.
 pub fn unaffected_by(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
     if crate::slumber::is_slumbering(card) {
         return true;
@@ -192,12 +195,15 @@ pub const SLASH_REFUSAL: &str = "that unit is across the slash";
 /// E35: this unit may make no attack, declared or forced ("can't attack or be attacked").
 pub fn cannot_attack(state: &GameState, unit: &CardInstance) -> bool {
     crate::scripts::flags_of(state, unit).cant_attack_or_be_attacked == Some(true)
+        || crate::effects::firewall::is_contained(state, unit)
 }
 
 /// E35: no attack may be made on this unit, declared or forced. Effects still target and hit it.
 pub fn cannot_be_attacked(state: &GameState, unit: &CardInstance) -> bool {
     let flags = crate::scripts::flags_of(state, unit);
-    flags.cant_be_attacked == Some(true) || flags.cant_attack_or_be_attacked == Some(true)
+    flags.cant_be_attacked == Some(true)
+        || flags.cant_attack_or_be_attacked == Some(true)
+        || crate::effects::firewall::is_contained(state, unit)
 }
 
 /// E35: only a unit standing in this unit's lane may attack it.

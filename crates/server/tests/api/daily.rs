@@ -3,7 +3,8 @@
 //! started on (R3727005), its open challenges cancelled by a block (R3727007), holding its accounts
 //! from deletion while it runs (R3727008), and "your move" sent by email and Web Push, to a browser's
 //! push service only. A finished game whose moves the retention purge took opens as its stored result
-//! and refuses every move (R3934000).
+//! and refuses every move (R3934000). A finished game stays for the other player when one of its
+//! players deletes their account, naming that opponent by nobody (R4621000).
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
@@ -28,7 +29,8 @@ use jackioh_server::api::queue::try_pair;
 use jackioh_server::api::retention::purge_expired;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
-    DAILY_MAX_ACTIVE_GAMES, DAILY_PLAYER_EMAILS_PER_DAY, MATCH_ACTION_RETENTION_DAYS, MS_PER_DAY,
+    DAILY_MAX_ACTIVE_GAMES, DAILY_PLAYER_EMAILS_PER_DAY, DAILY_REMINDER_HOURS, MATCH_ACTION_RETENTION_DAYS,
+    MS_PER_DAY, MS_PER_HOUR, NOTIFICATIONS_KEEP_DAYS,
 };
 use jackioh_server::daily::notify::sweep;
 use jackioh_server::db::store::{DailyNotifyRow, MatchStatus, ProfileStatus, PushSubRow};
@@ -38,7 +40,9 @@ use crate::support::deps::{
     TestAppOptions, add_user, call, json_request, record_logs, send as send_request, test_app_with,
 };
 use crate::support::engine::{TEST_GLITCH_VOID, fake_deck, install_test_cards};
-use crate::support::store::{Account, account, befriend, fail_on, fake, fake_lock, stop_failing};
+use crate::support::store::{
+    Account, account, befriend, fail_on, fake, fake_lock, record_calls, stop_failing,
+};
 
 // Helpers
 
@@ -1398,6 +1402,95 @@ async fn r3727008_an_account_playing_a_daily_game_is_deleted_only_once_the_game_
     }
 }
 
+// R4621000: a finished daily game stays for the other player when one deletes their account
+
+#[tokio::test]
+async fn r4621000_a_finished_daily_game_stays_for_the_other_player_when_one_deletes_their_account() {
+    let gone = json!({ "profileId": "", "username": "" });
+    for purged in [false, true] {
+        let (app, ada, bo) = two_friends().await;
+        let match_id = daily_game(&app, &ada, &bo, 3).await;
+        past_the_mulligan(&app, [&ada, &bo], &match_id).await;
+        let seq = read(&app, &ada, &match_id).await["seq"].as_i64().expect("a seq");
+        let (status, body) = send(
+            &app,
+            &ada,
+            &match_id,
+            seq,
+            "concede",
+            json!({ "type": "concede" }),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(match_status(&app, &match_id).await, MatchStatus::Finished);
+
+        let (status, body) = api(&app, "DELETE", "/api/account", &ada.token, Value::Null).await;
+        assert_eq!(status, 204, "purged {purged}: {body}");
+        if purged {
+            assert!(purge_its_log(&app, &match_id).await > 0, "the purge took the log");
+        }
+
+        // Bo's list still holds the game, its opponent named by nobody.
+        let (status, list) = api(&app, "GET", "/api/daily", &bo.token, Value::Null).await;
+        assert_eq!(status, 200, "purged {purged}: {list}");
+        let row = &list["games"][0];
+        assert_eq!(row["matchId"], match_id.as_str(), "purged {purged}: {list}");
+        assert_eq!(row["over"], true, "purged {purged}: {list}");
+        assert_eq!(row["result"]["outcome"], "win", "purged {purged}: {list}");
+        assert_eq!(row["opponent"], gone, "purged {purged}: {list}");
+
+        // Its board opens with the result, as before.
+        let game = read(&app, &bo, &match_id).await;
+        assert_eq!(game["opponent"], gone, "purged {purged}: {game}");
+        assert_eq!(game["over"], true, "purged {purged}: {game}");
+        if purged {
+            assert_eq!(game["expired"], true, "{game}");
+            assert_eq!(game["result"]["outcome"], "win", "{game}");
+        } else {
+            assert!(game["view"].is_object(), "{game}");
+            assert!(!game["view"]["result"].is_null(), "{game}");
+            assert!(game.get("expired").is_none(), "{game}");
+        }
+
+        // A move is refused as over, the game it answers naming nobody either.
+        let (status, body) = send(
+            &app,
+            &bo,
+            &match_id,
+            seq + 1,
+            "after-the-delete",
+            json!({ "type": "endTurn" }),
+        )
+        .await;
+        assert_eq!((status, code_of(&body)), (409, "over"), "purged {purged}: {body}");
+        assert_eq!(body["game"]["opponent"], gone, "purged {purged}: {body}");
+
+        // R768: its replay still opens from Bo's seat while its log is kept.
+        if !purged {
+            let (status, replay) = api(
+                &app,
+                "GET",
+                &format!("/api/replays/{match_id}"),
+                &bo.token,
+                Value::Null,
+            )
+            .await;
+            assert_eq!(status, 200, "{replay}");
+        }
+
+        // No rematch against an account that is gone: it is nobody's friend now.
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/daily/challenges",
+            &bo.token,
+            random_challenge(&ada, 3),
+        )
+        .await;
+        assert_eq!(status, 404, "purged {purged}: {body}");
+    }
+}
+
 // One sweep at a time
 
 /// §9.13: a sweep while another runs (the Worker's cron landing beside the awake server's own loop)
@@ -2502,6 +2595,179 @@ async fn an_email_the_mail_service_refused_spends_none_of_the_days_cap() {
     tx.commit().await.expect("commit");
 }
 
+/// §9.13: the after-move task and the sweep deciding for one profile at once send one email and
+/// one push, not one each. The task's send holds the profile's lock across decide, send and
+/// mark-sent; the sweep waits on it, then re-reads fresh state and finds nothing due.
+#[tokio::test]
+async fn the_after_move_task_and_the_sweep_send_one_profile_one_email_and_push() {
+    let (mail_api, mail_seen, mail_gate) = held_service(StatusCode::OK).await;
+    let (push_api, push_seen) = fake_service(StatusCode::OK).await;
+    let app = app_with(
+        None,
+        TestAppOptions {
+            mail_api: Some(format!("{mail_api}/emails")),
+            push_keys: Some(vapid_pair()),
+            ..TestAppOptions::default()
+        },
+    )
+    .await;
+    let ada = person(&app, 1, "Ada").await;
+    let bo = person(&app, 2, "Bo").await;
+    befriend(&app, &ada, &bo).await;
+    subscribe(&app, &ada, 1, format!("{push_api}/push/1/ada")).await;
+    subscribe(&app, &bo, 2, format!("{push_api}/push/2/bo")).await;
+
+    // Ada challenges, Bo accepts: both owe the mulligan, so both are due. The accept answers
+    // before any send (enqueue-and-return), and the task takes the acceptor first.
+    answers_at_once("the accept", daily_game(&app, &ada, &bo, 1)).await;
+    eventually("Bo's mail reached the service", || {
+        mail_seen.lock().expect("the requests").len() == 1
+    })
+    .await;
+
+    // The sweep starts while that send is still held: it collides with the task on Bo.
+    let sweep = tokio::spawn({
+        let app = Arc::clone(&app);
+        async move { sweep(&app, app.daily.now()).await }
+    });
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    // The sweep cannot finish while the gate is closed: its sends stall, or it waits on the
+    // acceptor's lock without sending. Which holder it reaches first is the seats' coin toss, so
+    // the challenger's mail may or may not have gone too.
+    assert!(!sweep.is_finished(), "the sweep collides instead of finishing");
+    assert!(
+        (1..=2).contains(&mail_seen.lock().expect("the requests").len()),
+        "one or two mails while gated: {:?}",
+        mail_seen.lock().expect("the requests").len()
+    );
+
+    mail_gate.add_permits(1);
+    let swept = sweep.await.expect("the sweep").expect("a sweep");
+    notifier_idle(&app).await;
+
+    // Exactly one email per recipient and one push per device, however the two collided: the
+    // sweep sent the challenger's notices, or waited on the queue's locks and sent none.
+    assert_eq!(mail_seen.lock().expect("the requests").len(), 2);
+    let mut to: Vec<String> = mail_seen
+        .lock()
+        .expect("the requests")
+        .iter()
+        .map(|(_, _, body)| {
+            serde_json::from_slice::<Value>(body).expect("a JSON mail")["to"][0]
+                .as_str()
+                .unwrap_or_default()
+                .to_string()
+        })
+        .collect();
+    to.sort();
+    assert_eq!(
+        to,
+        vec![
+            format!("{}@example.test", ada.id),
+            format!("{}@example.test", bo.id)
+        ]
+    );
+    let mut paths: Vec<String> = push_seen
+        .lock()
+        .expect("the requests")
+        .iter()
+        .map(|(path, _, _)| path.clone())
+        .collect();
+    paths.sort();
+    assert_eq!(paths, vec!["/push/1/ada".to_string(), "/push/2/bo".to_string()]);
+    for who in [&ada, &bo] {
+        let row = notify_row(&app, who).await;
+        assert!(row.last_email_at.is_some(), "{}", who.name);
+        assert!(row.last_push_at.is_some(), "{}", who.name);
+    }
+    assert!(
+        swept.emailed <= 1,
+        "the sweep emailed at most one: {}",
+        swept.emailed
+    );
+    assert_eq!(
+        swept.pushed, swept.emailed,
+        "the sweep pushed for each profile it emailed"
+    );
+}
+
+/// §9.13: the exclusion is per profile: a stalled send for one account never delays another's.
+/// Ada's push is held; Bo's goes while it is still held, and Ada is pushed exactly once total.
+#[tokio::test]
+async fn a_stalled_send_for_one_account_never_delays_another() {
+    let (held_api, held_seen, held_gate) = held_service(StatusCode::CREATED).await;
+    let (quick_api, quick_seen) = fake_service(StatusCode::OK).await;
+    let app = app_with(
+        None,
+        TestAppOptions {
+            push_keys: Some(vapid_pair()),
+            ..TestAppOptions::default()
+        },
+    )
+    .await;
+    let ada = person(&app, 1, "Ada").await;
+    let bo = person(&app, 2, "Bo").await;
+    let cy = person(&app, 3, "Cy").await;
+    let dan = person(&app, 5, "Dan").await;
+    befriend(&app, &bo, &dan).await;
+    befriend(&app, &cy, &ada).await;
+
+    // Bo and Dan's game, created first, is past the mulligan with Bo holding the move. Nothing is
+    // sent for any of it: no devices yet, and no mailer at all.
+    let first = daily_game(&app, &bo, &dan, 7).await;
+    past_the_mulligan(&app, [&bo, &dan], &first).await;
+    for n in 0..8 {
+        let (on_move, _) = holder(&app, [&bo, &dan], &first).await;
+        if on_move.id == bo.id {
+            break;
+        }
+        one_move(&app, [&bo, &dan], &first, n).await;
+    }
+    let (on_move, _) = holder(&app, [&bo, &dan], &first).await;
+    assert_eq!(on_move.id, bo.id, "Bo holds the first game's move");
+    notifier_idle(&app).await;
+
+    subscribe(&app, &ada, 1, format!("{held_api}/push/ada")).await;
+    subscribe(&app, &bo, 2, format!("{quick_api}/push/bo")).await;
+
+    // Cy challenges, Ada accepts: both owe the mulligan, so Ada is due. The accept answers before
+    // any send, and the task takes Ada first and stalls in her push's send.
+    answers_at_once("the accept", daily_game(&app, &cy, &ada, 7)).await;
+    eventually("Ada's push reached the service", || {
+        held_seen.lock().expect("the requests").len() == 1
+    })
+    .await;
+
+    // The sweep starts while Ada's send is still held. Bo's game was created first, so the sweep
+    // reaches him without touching Ada's lock.
+    let sweep = tokio::spawn({
+        let app = Arc::clone(&app);
+        async move { sweep(&app, app.daily.now()).await }
+    });
+    tokio::time::sleep(Duration::from_secs(1)).await;
+    assert_eq!(
+        quick_seen.lock().expect("the requests").len(),
+        1,
+        "Bo is pushed while Ada's send is held"
+    );
+    assert_eq!(
+        held_seen.lock().expect("the requests").len(),
+        1,
+        "Ada is pushed once, not once per caller"
+    );
+    assert!(!sweep.is_finished(), "the sweep waits on Ada's lock");
+
+    held_gate.add_permits(1);
+    let swept = sweep.await.expect("the sweep").expect("a sweep");
+    notifier_idle(&app).await;
+
+    // Ada's push went exactly once, from the queue's task; the sweep sent Bo's alone.
+    assert_eq!(held_seen.lock().expect("the requests").len(), 1);
+    assert_eq!((swept.emailed, swept.pushed), (0, 1));
+    assert!(notify_row(&app, &bo).await.last_push_at.is_some());
+    assert!(notify_row(&app, &ada).await.last_push_at.is_some());
+}
+
 #[tokio::test]
 async fn the_social_read_counts_the_daily_games_waiting_on_you() {
     let (app, ada, bo) = two_friends().await;
@@ -3337,4 +3603,172 @@ mod r4233000_read_on_open {
             logs.entries()
         );
     }
+}
+
+/// #4510: the list reads every game's portraits in one match read, not one whole match per game.
+#[tokio::test]
+async fn list_reads_every_games_portraits_in_one_match_read() {
+    use jackioh_engine::wire::PortraitId;
+    let (app, ada, bo) = two_friends().await;
+    let first = daily_game(&app, &ada, &bo, 1).await;
+    let second = daily_game(&app, &bo, &ada, 1).await;
+    let dealt = [
+        (&first, (PortraitId::Gary, PortraitId::Timmy)),
+        (&second, (PortraitId::Dfender, PortraitId::Shredder)),
+    ];
+    {
+        let mut data = fake_lock(&app).await;
+        for (match_id, pair) in dealt {
+            let row = data
+                .tables
+                .matches
+                .iter_mut()
+                .find(|row| &row.id == match_id)
+                .expect("the game's match");
+            row.portraits = Some(pair);
+        }
+    }
+
+    let calls = record_calls(&app).await;
+    let (status, ada_list) = api(&app, "GET", "/api/daily", &ada.token, Value::Null).await;
+    assert_eq!(status, 200, "{ada_list}");
+    let seen = calls.lock().expect("call log").clone();
+    stop_failing(&app).await;
+    assert_eq!(
+        seen.iter()
+            .filter(|call| call.as_str() == "matches.portraits")
+            .count(),
+        1,
+        "{seen:?}"
+    );
+    assert!(!seen.iter().any(|call| call == "matches.get"), "{seen:?}");
+
+    let (_, bo_list) = api(&app, "GET", "/api/daily", &bo.token, Value::Null).await;
+    for (match_id, pair) in dealt {
+        let pick = |list: &Value| {
+            let game = list["games"]
+                .as_array()
+                .and_then(|games| games.iter().find(|game| game["matchId"] == json!(match_id)))
+                .unwrap_or_else(|| panic!("{match_id} in {list}"))
+                .clone();
+            (game["portraits"]["me"].clone(), game["portraits"]["them"].clone())
+        };
+        let (mine, theirs) = pick(&ada_list);
+        let (bo_mine, bo_theirs) = pick(&bo_list);
+        assert_eq!((&mine, &theirs), (&bo_theirs, &bo_mine), "{match_id}");
+        let mut both = vec![
+            mine.as_str().expect("a portrait").to_string(),
+            theirs.as_str().expect("a portrait").to_string(),
+        ];
+        both.sort();
+        let mut want = vec![pair.0.as_str().to_string(), pair.1.as_str().to_string()];
+        want.sort();
+        assert_eq!(both, want, "{match_id}");
+    }
+}
+
+// R4691000: when a sweep next has something to do, which the Worker asks as the server goes to sleep
+
+/// `GET /daily-next`'s time, or `None`.
+async fn next_due_at(app: &Arc<App>) -> Option<i64> {
+    let (status, _headers, body) = call(app, "GET", "/daily-next", None, Value::Null).await;
+    assert_eq!(status, 200, "{body}");
+    body["nextDueAt"].as_i64()
+}
+
+/// The earliest deadline of `match_id` as the store holds it.
+async fn deadline_of(app: &Arc<App>, match_id: &str) -> i64 {
+    fake_lock(app)
+        .await
+        .tables
+        .daily
+        .games
+        .iter()
+        .find(|game| game.match_id == match_id)
+        .and_then(|game| game.next_deadline_at)
+        .expect("a running game's deadline")
+}
+
+/// Asserts `due` is the daily clock's now, read around the call that answered it.
+fn due_now(due: Option<i64>, before: i64, after: i64) {
+    let due = due.expect("something due");
+    assert!(before <= due && due <= after, "{before} <= {due} <= {after}");
+}
+
+#[tokio::test]
+async fn r4691000_next_due_is_the_first_deadline_lapse_or_purge_a_sweep_has() {
+    let empty = app_with(None, TestAppOptions::default()).await;
+    assert_eq!(next_due_at(&empty).await, None, "nothing stored, nothing due");
+    let (app, ada, bo) = two_friends().await;
+
+    // No mail key and no device: the game's deadline comes before the accepted challenge's lapse
+    // (a week) and the feed's oldest row's keep.
+    let match_id = daily_game(&app, &ada, &bo, 1).await;
+    let deadline = deadline_of(&app, &match_id).await;
+    assert_eq!(next_due_at(&app).await, Some(deadline));
+
+    // Past it, due at once; settled, the invite's lapse is next.
+    app.daily.set_offset(2 * MS_PER_DAY);
+    let before = app.daily.now();
+    let due = next_due_at(&app).await;
+    due_now(due, before, app.daily.now());
+    let (status, _headers, swept) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
+    assert_eq!((status, swept["settled"].as_i64()), (200, Some(1)), "{swept}");
+    let lapse = fake_lock(&app)
+        .await
+        .tables
+        .daily
+        .invites
+        .iter()
+        .map(|invite| invite.expires_at)
+        .min();
+    assert!(lapse.is_some(), "the accepted challenge is kept to its lapse");
+    assert_eq!(next_due_at(&app).await, lapse);
+
+    // Purged, the feed's oldest row is next, a millisecond past its keep.
+    app.daily
+        .set_offset(jackioh_server::config::DAILY_CHALLENGE_TTL_DAYS * MS_PER_DAY + 1);
+    let (status, _headers, swept) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
+    assert_eq!(status, 200, "{swept}");
+    let oldest = fake_lock(&app)
+        .await
+        .tables
+        .notifications
+        .rows
+        .iter()
+        .map(|row| row.created_at)
+        .min()
+        .expect("the game's feed rows");
+    assert_eq!(
+        next_due_at(&app).await,
+        Some(oldest + NOTIFICATIONS_KEEP_DAYS * MS_PER_DAY + 1)
+    );
+}
+
+#[tokio::test]
+async fn r4691000_next_due_counts_a_waiting_accounts_next_email() {
+    // The game starts on a server with no mail key, so nobody has been emailed of it.
+    let (quiet, ada, bo) = two_friends().await;
+    let match_id = daily_game(&quiet, &ada, &bo, 3).await;
+    let (mail_api, _seen) = fake_service(StatusCode::OK).await;
+    let app = app_with(
+        Some(quiet.db.clone()),
+        TestAppOptions {
+            mail_api: Some(format!("{mail_api}/emails")),
+            ..TestAppOptions::default()
+        },
+    )
+    .await;
+    let before = app.daily.now();
+    let due = next_due_at(&app).await;
+    due_now(due, before, app.daily.now());
+
+    // Emailed: the next is the game's reminder, before its deadline.
+    let (status, _headers, swept) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
+    assert_eq!((status, swept["emailed"].as_i64()), (200, Some(2)), "{swept}");
+    let deadline = deadline_of(&app, &match_id).await;
+    assert_eq!(
+        next_due_at(&app).await,
+        Some(deadline - DAILY_REMINDER_HOURS * MS_PER_HOUR)
+    );
 }

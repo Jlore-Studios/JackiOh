@@ -6,7 +6,8 @@
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::PlayerId::{self, P1, P2};
 use jackioh_engine::{
-    Action, ActionBody, Aim, AimEnd, DECK_SIZE, EmoteId, GameOverReason, GameState, PerPlayer, Rng, Winner,
+    Action, ActionBody, Aim, AimEnd, DECK_SIZE, EmoteId, GameOverReason, GameState, PerPlayer, PlayerView,
+    Rng, Winner,
 };
 use jackioh_shared::bots::decide::BotChoice;
 use jackioh_shared::bots::signals::{aim_lead_ms, idles_turn, rematch_plan};
@@ -88,6 +89,8 @@ struct Table {
     timers: Vec<(TimerKey, u32, i64)>,
     log: Vec<(i64, Action)>,
     sent: PerPlayer<Vec<SeatMessage>>,
+    /// The views each `Pushed` carried, in order.
+    pushed: Vec<PerPlayer<Option<Box<PlayerView>>>>,
     persisted: Vec<MatchClocks>,
     answers: Vec<(String, ActionAnswer)>,
     records: Vec<RecordRequest>,
@@ -123,6 +126,7 @@ impl Table {
             timers: Vec::new(),
             log: Vec::new(),
             sent: PerPlayer::new(Vec::new(), Vec::new()),
+            pushed: Vec::new(),
             persisted: Vec::new(),
             answers: Vec::new(),
             records: Vec::new(),
@@ -193,8 +197,8 @@ impl Table {
                 DuelOutput::Panicked { .. }
                 | DuelOutput::Applied { .. }
                 | DuelOutput::SeatsSwapped { .. }
-                | DuelOutput::Changed { .. }
-                | DuelOutput::Pushed { .. } => {}
+                | DuelOutput::Changed { .. } => {}
+                DuelOutput::Pushed { views, .. } => self.pushed.push(views),
             }
         }
     }
@@ -405,6 +409,28 @@ mod the_opening {
             }
         }
     }
+    /// R79, R268: a host rebuilt for a match made earlier arms the ceiling for what is left of it, from the
+    /// match's start, and the mulligan clock afresh, from the rebuild; the ceiling running out first is the
+    /// match's draw, logged under the server's nonce (#4550, docs/implicit-states.md §13 T18).
+    #[test]
+    fn r79_r268_a_rebuilt_host_arms_the_ceiling_left_and_the_mulligans_afresh_and_the_ceiling_draws() {
+        let created_at = EPOCH - MATCH_CEILING_MINUTES * MINUTE + 30 * SECOND;
+        let mut rebuilt = setup(opening("open-5"));
+        rebuilt.created_at = created_at;
+        rebuilt.clocks = initial_clocks(created_at);
+        let mut table = Table::new(rebuilt);
+        assert_eq!(table.timer(TimerKey::Ceiling), Some(EPOCH + 30 * SECOND));
+        assert_eq!(table.timer(TimerKey::Mulligan), Some(EPOCH + mulligan_ms()));
+        table.feed(DuelEvent::Arm);
+        table.sleep(30 * SECOND - 1);
+        assert!(table.log.is_empty(), "{:?}", table.nonces());
+        table.sleep(1);
+        assert_eq!(table.nonces(), vec!["srv-ceiling-1"]);
+        assert_eq!(table.log[0].1.body, ActionBody::CeilingReached);
+        assert_eq!(table.records.len(), 1, "{:?}", table.notes);
+        assert_eq!(table.records[0].outcome.winner, Winner::Draw);
+        assert_eq!(table.records[0].outcome.reason, GameOverReason::MatchCeiling);
+    }
 }
 
 mod the_turn_clock {
@@ -465,6 +491,53 @@ mod the_turn_clock {
         let (_, action) = table.log.last().expect("the retry landed");
         assert_eq!(action.nonce, format!("srv-turn-{next_seq}"));
         assert_eq!(table.active(), first.opponent());
+    }
+
+    /// R79, R776000: the turn clock running out while the active seat's own row is in flight finds the
+    /// log busy, so its timeout is not recorded and the clock runs out again a retry later; the row
+    /// landing ends the turn, which takes that retry back, and the next seat's clock runs from the row
+    /// (#4550, docs/implicit-states.md §13 T10; whether the timeout should wait for the row instead is
+    /// unspecified).
+    #[test]
+    fn a_clock_running_out_while_a_seats_row_is_in_flight_is_tried_again_and_a_new_turn_cancels_it() {
+        let mut table = Table::new(setup(opening("turn-3")));
+        table.feed(DuelEvent::Arm);
+        table.through_the_mulligans();
+        let first = table.active();
+        let seq = table.host.next_seq();
+        let rows = table.log.len();
+        table.sleep(turn_ms() - 1);
+        table.holding_appends = true;
+        table.feed(DuelEvent::Action {
+            by: ActionBy::Home { home: first },
+            nonce: "end".to_string(),
+            body: ActionBody::EndTurn,
+        });
+        table.sleep(1);
+        let timeout = table.answer(&format!("srv-turn-{seq}"));
+        assert!(matches!(timeout, ActionAnswer::NotRecorded), "{timeout:?}");
+        assert_eq!(
+            table.timer(TimerKey::Turn),
+            Some(table.now + MATCH_SERVER_ACTION_RETRY_MS)
+        );
+        table.holding_appends = false;
+        table.feed(DuelEvent::Logged {
+            outcome: LogOutcome::Written,
+        });
+        let ended = table.answer("end");
+        assert!(
+            matches!(ended, ActionAnswer::Ack { seq: acked } if acked == seq),
+            "{ended:?}"
+        );
+        assert_eq!(table.active(), first.opponent());
+        assert_eq!(table.timer(TimerKey::Turn), Some(table.now + turn_ms()));
+        table.sleep(MATCH_SERVER_ACTION_RETRY_MS);
+        assert_eq!(table.log.len(), rows, "{:?}", table.nonces());
+        assert_eq!(table.active(), first.opponent());
+        assert_eq!(
+            table.host.remaining_for(first.opponent(), table.now),
+            Some(turn_ms() - MATCH_SERVER_ACTION_RETRY_MS)
+        );
     }
 }
 
@@ -786,6 +859,141 @@ mod being_here {
         }
         assert_eq!(table.log.len(), rows);
         assert!(table.host.is_stopped());
+    }
+
+    /// §9.5, R776000: a seat back before the log answers the row of its forfeit still forfeits: the row
+    /// the log refused is derived again as the grace runs out again a retry later, though the seat is here
+    /// by then (#4550, docs/implicit-states.md §13 T12; R776000 says only that the clock runs out again,
+    /// and whether coming back should take the retry back is unspecified).
+    #[test]
+    fn a_seat_back_before_its_failed_forfeit_is_answered_still_forfeits_on_the_retry() {
+        let mut table = Table::new(setup(opening("here-8")));
+        table.connect(P1);
+        table.connect(P2);
+        table.feed(DuelEvent::Arm);
+        table.through_the_mulligans();
+        table.feed(DuelEvent::Left { home: P2 });
+        table.feed(DuelEvent::Disconnected { home: P2 });
+        let seq = table.host.next_seq();
+        table.holding_appends = true;
+        table.sleep(grace_ms());
+        table.connect(P2);
+        assert_eq!(table.clocks_p2_grace(), None);
+        table.holding_appends = false;
+        table.feed(DuelEvent::Logged {
+            outcome: LogOutcome::Failed,
+        });
+        let forfeit = table.answer(&format!("srv-grace-{seq}"));
+        assert!(matches!(forfeit, ActionAnswer::NotRecorded), "{forfeit:?}");
+        assert!(table.records.is_empty());
+        table.sleep(MATCH_SERVER_ACTION_RETRY_MS);
+        let (_, action) = table.log.last().expect("the retried forfeit was logged");
+        assert_eq!(action.body, ActionBody::DisconnectExpired { player: P2 });
+        assert_eq!(action.nonce, format!("srv-grace-{seq}"));
+        assert_eq!(table.records.len(), 1);
+        assert_eq!(table.records[0].outcome.winner, Winner::P1);
+        assert_eq!(table.records[0].outcome.reason, GameOverReason::Disconnect);
+    }
+
+    /// §9.5, R744, R3767000: a socket that drops while it is being seated starts its seat's grace
+    /// like any other drop. The re-seat's `Connected` already ran before the drop's `Left`, so the
+    /// dead `Attached` arrives with the seat gone: the grace keeps running, stored and on the other
+    /// seat's clock frame, nobody is greeted, and past the deadline the match ends on `Disconnect`.
+    #[test]
+    fn s9_5_a_socket_dropped_while_being_seated_leaves_the_grace_running() {
+        let mut table = Table::new(setup(opening("here-9")));
+        table.connect(P1);
+        table.connect(P2);
+        table.feed(DuelEvent::Arm);
+        table.through_the_mulligans();
+        table.feed(DuelEvent::Left { home: P2 });
+        table.feed(DuelEvent::Disconnected { home: P2 });
+        let deadline = table.now + grace_ms();
+        assert_eq!(table.clocks_p2_grace(), Some(deadline));
+        let persisted = table.persisted.len();
+        let told = table.sent.p1.len();
+        let sent_p2 = table.sent.p2.len();
+        let greetings = table.greetings.len();
+        table.feed(DuelEvent::Attached { home: P2 });
+        assert_eq!(table.clocks_p2_grace(), Some(deadline));
+        assert_eq!(table.timer(TimerKey::Grace { player: P2 }), Some(deadline));
+        // The stored grace is untouched: no new row was written.
+        assert_eq!(table.persisted.len(), persisted);
+        assert_eq!(
+            table.persisted.last().expect("stored").grace_deadline.p2,
+            Some(deadline)
+        );
+        // The dead seat got nothing and nobody was greeted, while the other seat's newest clock
+        // frame still carries the running grace.
+        assert_eq!(table.sent.p2.len(), sent_p2);
+        assert_eq!(table.greetings.len(), greetings);
+        let clock = table.sent.p1[told..]
+            .iter()
+            .rev()
+            .find_map(|message| match message {
+                SeatMessage::Clock { clocks, .. } => Some(clocks.clone()),
+                _ => None,
+            })
+            .expect("p1 was sent the clock");
+        assert_eq!(clock.grace_deadline.p2, Some(deadline));
+        let seq = table.host.next_seq();
+        table.sleep(grace_ms());
+        let (_, action) = table.log.last().expect("the loss was logged");
+        assert_eq!(action.body, ActionBody::DisconnectExpired { player: P2 });
+        assert_eq!(action.player_id, P2);
+        assert_eq!(action.nonce, format!("srv-grace-{seq}"));
+        assert_eq!(table.records.len(), 1);
+        assert_eq!(table.records[0].outcome.winner, Winner::P1);
+        assert_eq!(table.records[0].outcome.reason, GameOverReason::Disconnect);
+    }
+
+    /// §9.5: a disconnect that runs after its seat's next socket attached is stale — the seat is
+    /// back, so no grace starts and the later `Attached` greets it normally.
+    #[test]
+    fn s9_5_a_stale_disconnect_after_a_reconnect_starts_no_grace() {
+        let mut table = Table::new(setup(opening("here-10")));
+        table.connect(P1);
+        table.connect(P2);
+        table.feed(DuelEvent::Arm);
+        table.through_the_mulligans();
+        table.feed(DuelEvent::Left { home: P2 });
+        // The next socket arrives inside the gap, before the stale disconnect runs.
+        table.feed(DuelEvent::Connected { home: P2 });
+        table.feed(DuelEvent::Disconnected { home: P2 });
+        assert_eq!(table.clocks_p2_grace(), None);
+        assert_eq!(table.timer(TimerKey::Grace { player: P2 }), None);
+        table.greetings.clear();
+        let told = table.sent.p2.len();
+        table.feed(DuelEvent::Attached { home: P2 });
+        assert_eq!(table.clocks_p2_grace(), None);
+        // The greeting: the host's frames around the view, then the clock, then the watchers.
+        assert_eq!(
+            table.greetings,
+            vec![
+                (P2, GreetingPart::Before),
+                (P2, GreetingPart::After),
+                (P2, GreetingPart::Watchers)
+            ]
+        );
+        let kinds: Vec<&str> = table.sent.p2[told..]
+            .iter()
+            .map(|message| match message {
+                SeatMessage::View { .. } => "view",
+                SeatMessage::Clock { .. } => "clock",
+                _ => "other",
+            })
+            .collect();
+        assert_eq!(&kinds[..2], ["view", "clock"], "{kinds:?}");
+        table.sleep(grace_ms());
+        assert!(table.records.is_empty());
+        assert!(
+            table
+                .nonces()
+                .iter()
+                .all(|nonce| !nonce.starts_with("srv-grace-")),
+            "{:?}",
+            table.nonces()
+        );
     }
 }
 
@@ -1733,6 +1941,26 @@ mod the_checkpoint {
             expiry
         );
     }
+
+    /// Design rule 3 and `arm`'s row in the README ("clocks brought up to date"): a host made from its JSON
+    /// on another host keeps the timer ids of the host it was saved on, so `arm` sets no timer for a clock
+    /// already running and no clock runs out there (#4550, docs/implicit-states.md §13 T17: a mismatch
+    /// named for a person, who decides; this shows what it does).
+    #[test]
+    fn a_host_made_from_its_json_elsewhere_is_set_no_clock_timer_by_arm() {
+        let mut table = Table::new(setup(opening("save-2")));
+        table.feed(DuelEvent::Arm);
+        table.through_the_mulligans();
+        assert!(table.timer(TimerKey::Turn).is_some());
+        let json = serde_json::to_string(&table.host).expect("the host serializes");
+        let resumed: DuelHost = serde_json::from_str(&json).expect("the host reads back");
+        let mut elsewhere = Table::of(resumed);
+        elsewhere.now = table.now;
+        elsewhere.feed(DuelEvent::Arm);
+        assert!(elsewhere.timers.is_empty(), "{:?}", elsewhere.timers);
+        elsewhere.sleep(2 * turn_ms());
+        assert!(elsewhere.log.is_empty(), "{:?}", elsewhere.nonces());
+    }
 }
 
 mod the_forecast {
@@ -1914,6 +2142,32 @@ mod reads_and_stops {
         });
         assert!(table.host.is_stopped());
         assert_eq!(expired(&table), 1, "{:?}", table.notes);
+    }
+
+    /// R268, R776000: a seat's grace running out while the first mulligan timeout awaits its row does not
+    /// take the place of the timeouts still owed: the grace is tried again a retry later, and once the row
+    /// lands the second seat is timed out too (#4550, docs/implicit-states.md §13 T4).
+    #[test]
+    fn r268_a_grace_running_out_between_the_mulligan_timeouts_still_times_out_the_second_seat() {
+        let mut table = playing("grace-between-timeouts");
+        table.feed(DuelEvent::Left { home: P2 });
+        table.feed(DuelEvent::Disconnected { home: P2 });
+        table.holding_appends = true;
+        table.sleep(mulligan_ms());
+        table.sleep(grace_ms() - mulligan_ms());
+        assert_eq!(
+            table.timer(TimerKey::Grace { player: P2 }),
+            Some(table.now + MATCH_SERVER_ACTION_RETRY_MS),
+            "the grace that ran out behind the held row is tried again"
+        );
+        table.connect(P2);
+        table.holding_appends = false;
+        table.feed(DuelEvent::Logged {
+            outcome: LogOutcome::Written,
+        });
+        assert_eq!(table.nonces(), vec!["srv-mulligan-2"]);
+        assert!(table.host.game().turn >= 1, "{:?}", table.notes);
+        assert!(table.records.is_empty(), "{:?}", table.records);
     }
 
     /// The host's reads for its own sends and its checkpoint: the match's id, the newest nonce in the log, and
@@ -2614,5 +2868,155 @@ mod the_sequence {
                 .server_actions_for(ClockExpiry::Sequence { player: P2 })
                 .is_empty()
         );
+    }
+}
+
+mod the_kept_views {
+    use super::*;
+
+    fn begun(seed: &str, connect: &[PlayerId]) -> Table {
+        let mut table = Table::new(setup(opening(seed)));
+        for home in connect {
+            table.connect(*home);
+        }
+        table.feed(DuelEvent::Arm);
+        table.through_the_mulligans();
+        table
+    }
+
+    fn end_turn(table: &mut Table, nonce: &str) {
+        let home = table.active();
+        let answer = table.act(home, nonce, ActionBody::EndTurn);
+        assert!(matches!(answer, ActionAnswer::Ack { .. }), "{answer:?}");
+    }
+
+    fn last_view(table: &Table, home: PlayerId) -> PlayerView {
+        table.sent[home]
+            .iter()
+            .rev()
+            .find_map(|message| match message {
+                SeatMessage::View { view, .. } => Some((**view).clone()),
+                _ => None,
+            })
+            .expect("a view was sent")
+    }
+
+    #[test]
+    fn pushed_hands_over_the_views_it_sent() {
+        let mut table = begun("kept-1", &[P1, P2]);
+        end_turn(&mut table, "end-1");
+        let views = table.pushed.last().expect("a change was pushed");
+        for home in [P1, P2] {
+            let pushed = views[home].as_ref().expect("a connected seat is pushed its view");
+            assert_eq!(**pushed, last_view(&table, home));
+            assert_eq!(**pushed, table.host.view_for(table.host.playing(home), table.now));
+        }
+    }
+
+    #[test]
+    fn an_unconnected_seat_is_pushed_no_view() {
+        let mut table = begun("kept-2", &[P1]);
+        end_turn(&mut table, "end-1");
+        let views = table.pushed.last().expect("a change was pushed");
+        assert!(views[P1].is_some());
+        assert!(views[P2].is_none());
+    }
+
+    #[test]
+    fn a_change_builds_each_seat_view_once() {
+        let mut table = begun("kept-3", &[P1, P2]);
+        let before = table.host.views_built();
+        end_turn(&mut table, "end-1");
+        assert_eq!(table.host.views_built() - before, 2);
+    }
+
+    #[test]
+    fn aim_and_hover_relays_build_no_view() {
+        let mut table = begun("kept-4", &[P1, P2]);
+        end_turn(&mut table, "end-1");
+        let before = table.host.views_built();
+        let aim = Aim {
+            source: AimEnd::Hero { player: P1 },
+            target: Some(AimEnd::Hero { player: P2 }),
+        };
+        table.feed(DuelEvent::Aim {
+            home: P1,
+            aim: Some(aim),
+        });
+        table.sleep(AIM_RELAY_INTERVAL_MS);
+        table.feed(DuelEvent::Aim { home: P1, aim: None });
+        table.feed(DuelEvent::Hover {
+            home: P1,
+            index: Some(0),
+        });
+        table.sleep(AIM_RELAY_INTERVAL_MS);
+        table.feed(DuelEvent::Hover {
+            home: P1,
+            index: None,
+        });
+        assert_eq!(table.host.views_built(), before);
+        assert!(
+            table
+                .sent
+                .p2
+                .iter()
+                .any(|message| matches!(message, SeatMessage::Aim { .. })),
+            "the aim was relayed"
+        );
+        // The next change builds its views afresh.
+        end_turn(&mut table, "end-2");
+        assert_eq!(table.host.views_built(), before + 2);
+    }
+
+    #[test]
+    fn an_unconnected_receivers_relays_share_one_view() {
+        let mut table = begun("kept-5", &[P1]);
+        end_turn(&mut table, "end-1");
+        let aim = |target| DuelEvent::Aim {
+            home: P1,
+            aim: Some(Aim {
+                source: AimEnd::Hero { player: P1 },
+                target,
+            }),
+        };
+        let before = table.host.views_built();
+        table.feed(aim(Some(AimEnd::Hero { player: P2 })));
+        table.sleep(AIM_RELAY_INTERVAL_MS);
+        let after_first = table.host.views_built();
+        assert!(after_first - before <= 1);
+        table.feed(aim(None));
+        table.sleep(AIM_RELAY_INTERVAL_MS);
+        assert_eq!(table.host.views_built(), after_first);
+    }
+
+    #[test]
+    fn a_restored_checkpoint_equals_and_repushes_the_same_views() {
+        let mut table = begun("kept-6", &[P1, P2]);
+        end_turn(&mut table, "end-1");
+        let json = serde_json::to_value(&table.host).expect("the host serializes");
+        assert!(json.get("views").is_none(), "the cache is not in the checkpoint");
+        let mut resumed: DuelHost = serde_json::from_value(json).expect("the host reads back");
+        assert_eq!(resumed, table.host);
+        assert_eq!(resumed.views_built(), 0);
+        let event = DuelEvent::Action {
+            by: ActionBy::Home { home: table.active() },
+            nonce: "end-2".to_string(),
+            body: ActionBody::EndTurn,
+        };
+        let mut original = table.host.clone();
+        // The row is written, and the change is pushed.
+        let mut theirs = resumed.step(event.clone(), table.now);
+        let mut ours = original.step(event, table.now);
+        let written = DuelEvent::Logged {
+            outcome: LogOutcome::Written,
+        };
+        theirs.extend(resumed.step(written.clone(), table.now));
+        ours.extend(original.step(written, table.now));
+        assert_eq!(theirs, ours);
+        let pushed = theirs.iter().find_map(|output| match output {
+            DuelOutput::Pushed { views, .. } => Some(views),
+            _ => None,
+        });
+        assert!(pushed.is_some_and(|views| views.p1.is_some() && views.p2.is_some()));
     }
 }

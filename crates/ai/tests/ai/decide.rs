@@ -810,7 +810,7 @@ mod the_mulligans_curve {
     const FELINOR: &str = "meditative-025"; // Blue-Eyes White Felinor, 1, Tribute 2
     const LAVA_GOLEM: &str = "core-055"; // Lava Golem, 3, Tribute 3
     const TRIGOR: &str = "traininggrounds-025"; // Trigor, 3, Tribute 3
-    const RAVEN: &str = "stinkyscapeplus-159"; // Raven, 0, Tribute 1
+    const RAVEN: &str = "stinkyscapeplus-159"; // Raven, 0, Tribute 2 (Tribute 1 until issue #4440)
 
     /// `dearer_costs_hold`, and the printed costs the R3936000 tests assume: the evaluation prices
     /// Felinor by its printed 1, below a plain three (R4110000).
@@ -953,10 +953,12 @@ mod the_mulligans_curve {
         assert_eq!(priced(&state, PlayerId::P1), [(1, 1, 2), (3, 2, 3), (3, 3, 4)]);
         let decision = must_decide(&state, PlayerId::P1, seed);
         assert_eq!(kept(&decision), hand_at(&state, PlayerId::P1, [0, 1]));
-        // A free card with Tribute 1 costs two until a Float takes the Tribute off.
+        // A free card with Tribute 2 costs three, then two, until Floats take the Tribute off.
         let mut raven = seat_mulligan_with(seed, PlayerId::P1, &[RAVEN]);
-        assert_eq!(priced(&raven, PlayerId::P1)[0], (0, 1, 2));
+        assert_eq!(priced(&raven, PlayerId::P1)[0], (0, 2, 3));
         floated(&mut raven, PlayerId::P1, 0, 1);
+        assert_eq!(priced(&raven, PlayerId::P1)[0], (0, 1, 2));
+        floated(&mut raven, PlayerId::P1, 0, 2);
         assert_eq!(priced(&raven, PlayerId::P1)[0], (0, 0, 0));
     }
 

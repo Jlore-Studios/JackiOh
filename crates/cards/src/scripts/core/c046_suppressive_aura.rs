@@ -1,5 +1,6 @@
-//! #46 Suppressive Aura (SPEC §8.2): "Aura: All Units have −1/−1. Embiggened (4): −2/−2 instead.",
-//! radiant "Aura: Enemy Units have −2/−2. Embiggened (4): −4/−4 instead." The radiant cell restates the whole
+//! #46 Suppressive Aura (SPEC §8.2): (1), Embiggened (3), since issue #4440 ((2), Embiggened (4), before
+//! it, catalog data): "Aura: All Units have −1/−1. Embiggened (3): −2/−2 instead.",
+//! radiant "Aura: Enemy Units have −2/−2. Embiggened (3): −4/−4 instead." The radiant cell restates the whole
 //! clause and replaces the base one (§8 Conventions). Neither face prints a keyword.
 //! Ongoing aura (§10.4 layer 5, R83; #14, #45, R1081000; not permanent R78; CLAUDE.md rule 5). Embiggen reads play action (R1178000).
 //! Negative stat mods floor health/attack at 0 on read (§10.4).
@@ -66,7 +67,7 @@ pub fn script() -> CardScripts {
 // is already in the number. The props have no script beyond printed keywords.
 //
 // A scenario cannot place a card with `embiggened` set (R81 makes the price part of the play), so
-// every paid-4 case plays from hand with `{ embiggen: true }`, which writes it (R65).
+// every paid-3 case plays from hand with `{ embiggen: true }`, which writes it (R65).
 #[cfg(test)]
 mod tests {
     use super::{ID, script};
@@ -128,7 +129,8 @@ mod tests {
             // "All Units": the controller's own board is suppressed too.
             g.expect_stats(&mine, json!({ "attack": 6, "maxHealth": 6, "health": 6 }));
             g.expect_stats(&theirs, json!({ "attack": 6, "maxHealth": 6, "health": 6 }));
-            g.expect_mana(PlayerId::P1, 2);
+            // Issue #4440: it costs (1).
+            g.expect_mana(PlayerId::P1, 3);
         }
 
         /// "base: a 1-health unit dies at the state check, with no destroy effect involved (§4.5)"
@@ -172,9 +174,9 @@ mod tests {
             g.expect_stats(&theirs, json!({ "attack": 4, "maxHealth": 3, "health": 3 }));
         }
 
-        /// "R81, R65 base paid 4: the price chosen with the play makes it −2/−2"
+        /// "R81, R65 base paid 3: the price chosen with the play makes it −2/−2"
         #[test]
-        fn r81_r65_base_paid_4_the_price_chosen_with_the_play_makes_it_minus_2_minus_2() {
+        fn r81_r65_base_paid_3_the_price_chosen_with_the_play_makes_it_minus_2_minus_2() {
             let mut g = scenario(json!({
                 "p1": { "hand": [AURA], "field": [{ "def": SEVEN_SEVEN, "lane": 1 }] },
                 "p2": { "field": [{ "def": JILLIAX, "lane": 1 }, { "def": DUELIST, "lane": 2 }] },
@@ -186,7 +188,7 @@ mod tests {
             // The price travels in the play action, never as a prompt (§10.6: no Core card asks).
             g.play(AURA, json!({ "embiggen": true }));
 
-            g.expect_mana(PlayerId::P1, 0);
+            g.expect_mana(PlayerId::P1, 1);
             g.expect_stats(&mine, json!({ "attack": 5, "maxHealth": 5 }));
             // A 3/2 is at 0 max health now, and the 4/3 is a 2/1.
             g.expect_in_zone(&doomed, "graveyard");
@@ -194,9 +196,9 @@ mod tests {
             assert!(g.state().pending.is_none());
         }
 
-        /// "base: playing it for 2 leaves the instance unembiggened (R65's 'chosen price')"
+        /// "base: playing it for 1 leaves the instance unembiggened (R65's 'chosen price')"
         #[test]
-        fn r65_base_playing_it_for_2_leaves_the_instance_unembiggened() {
+        fn r65_base_playing_it_for_1_leaves_the_instance_unembiggened() {
             let mut g = scenario(json!({ "p1": { "hand": [AURA] } }));
             g.play(AURA, json!({}));
             assert_eq!(g.backrow(PlayerId::P1, 1).and_then(|card| card.embiggened), Some(false));
@@ -218,9 +220,9 @@ mod tests {
             g.expect_stats(&theirs, json!({ "attack": 5, "maxHealth": 5, "health": 5 }));
         }
 
-        /// "R81 radiant paid 4: enemy units are −4/−4"
+        /// "R81 radiant paid 3: enemy units are −4/−4"
         #[test]
-        fn r81_radiant_paid_4_enemy_units_are_minus_4_minus_4() {
+        fn r81_radiant_paid_3_enemy_units_are_minus_4_minus_4() {
             let mut g = scenario(json!({
                 "p1": { "hand": [radiant_aura()], "field": [{ "def": SEVEN_SEVEN, "lane": 1 }] },
                 "p2": { "field": [{ "def": SEVEN_SEVEN, "lane": 1 }] },
@@ -229,14 +231,14 @@ mod tests {
 
             g.play(AURA, json!({ "embiggen": true }));
 
-            g.expect_mana(PlayerId::P1, 0);
+            g.expect_mana(PlayerId::P1, 1);
             g.expect_stats(&theirs, json!({ "attack": 3, "maxHealth": 3, "health": 3 }));
             g.expect_stats(SEVEN_SEVEN, json!({ "attack": 7, "maxHealth": 7 }));
         }
 
-        /// "R69 radiant paid 4 on top of three more radiant auras: an enemy The Rock at 0 max health dies despite Indestructible"
+        /// "R69 radiant paid 3 on top of three more radiant auras: an enemy The Rock at 0 max health dies despite Indestructible"
         #[test]
-        fn r69_radiant_paid_4_on_top_of_three_more_radiant_auras_an_enemy_the_rock_at_0_max_health_dies() {
+        fn r69_radiant_paid_3_on_top_of_three_more_radiant_auras_an_enemy_the_rock_at_0_max_health_dies() {
             let mut g = scenario(json!({
                 "p1": {
                     "hand": [radiant_aura()],
@@ -292,7 +294,7 @@ mod tests {
             let def = def();
             assert_eq!(def.id, AURA);
             assert_eq!(serde_json::to_value(def.type_).unwrap(), json!("Field Spell"));
-            assert_eq!(serde_json::to_value(def.cost).unwrap(), json!({ "base": 2, "embiggen": 4 }));
+            assert_eq!(serde_json::to_value(def.cost).unwrap(), json!({ "base": 1, "embiggen": 3 }));
             let scripts = script();
             for face in [&scripts.base, &scripts.radiant] {
                 assert!(face.aura.is_some());

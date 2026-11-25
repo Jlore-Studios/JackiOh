@@ -207,14 +207,14 @@ fn an_entry_whose_latest_offer_is_stale_is_dropped_when_read_but_one_with_a_game
     assert_eq!(made.len(), 1);
 }
 
-/// R2685000: an entry whose latest offer is exactly the TTL old is still read, and dropped a millisecond
-/// later; the book counts the matches it holds an entry for.
+/// R2685000: the window runs from the finished match's end to the TTL inclusive: an offer is
+/// still read at the window's last moment, and a read past it drops the unmet entry.
 #[test]
-fn r2685000_an_offer_exactly_the_ttl_old_is_still_read_and_the_book_counts_its_entries() {
-    let mut book = book_with(&[(P1, STAKE_NORMAL)], END + 1);
-    book.offer("m2", Some(END), P1, STAKE_NORMAL, None, END + 1, "g1");
+fn r2685000_an_offer_at_the_windows_end_is_still_read_and_dropped_after() {
+    let mut book = book_with(&[(P1, STAKE_NORMAL)], END);
+    book.offer("m2", Some(END), P1, STAKE_NORMAL, None, END, "g1");
     assert_eq!((book.len(), book.is_empty()), (2, false));
-    let edge = END + 1 + REMATCH_OFFER_TTL_MS;
+    let edge = END + REMATCH_OFFER_TTL_MS;
     assert!(book.seen("m1", P1, edge).you_offered.is_some());
     assert_eq!(book.len(), 2);
     assert!(book.seen("m1", P1, edge + 1).you_offered.is_none());
@@ -248,6 +248,64 @@ fn the_book_reads_back_from_json() {
     let json = serde_json::to_string(&book).expect("the book serializes");
     let back: RematchBook = serde_json::from_str(&json).expect("the book reads back");
     assert_eq!(back, book);
+}
+
+/// R672, R1372: a seat that offers again is held to its latest offer, its lean among it: the pair's game
+/// is made from the leans of the offers that met (#4550, docs/implicit-states.md §14 O6).
+#[test]
+fn a_seat_that_offers_again_is_held_to_its_latest_lean() {
+    let mut book = RematchBook::default();
+    book.offer(
+        "m1",
+        Some(END),
+        P1,
+        STAKE_NORMAL,
+        Some(LeanPick::Newest),
+        END + 1,
+        "g1",
+    );
+    let again = book.offer("m1", Some(END), P1, STAKE_NORMAL, None, END + 2, "g2");
+    assert_eq!(again, OfferOutcome::Waiting { answered: None });
+    let met = book.offer(
+        "m1",
+        Some(END),
+        P2,
+        STAKE_NORMAL,
+        Some(LeanPick::Set(SetName::Core)),
+        END + 3,
+        "g3",
+    );
+    let OfferOutcome::Claimed { match_id, leans, .. } = met else {
+        panic!("{met:?}")
+    };
+    assert_eq!(match_id, "g3");
+    assert_eq!(leans, (None, Some(LeanPick::Set(SetName::Core))));
+}
+
+/// R2685000: a read past the finished match's window drops an unmet entry, so no offer nothing
+/// can meet is ever shown (#4686, docs/implicit-states.md §14 O10).
+#[test]
+fn r2685000_a_read_past_the_window_drops_an_unmet_offer() {
+    let mut book = book_with(&[(P1, STAKE_NORMAL)], END + 5);
+    let past = END + REMATCH_OFFER_TTL_MS + 1;
+    let seen = book.seen("m1", P2, past);
+    assert_eq!(
+        (seen.you_offered, seen.opponent_offer, seen.match_id),
+        (None, None, None)
+    );
+    assert!(book.is_empty());
+}
+
+/// R3694000: a game the pair made in the window's last moment survives the sweep that runs as the window
+/// ends, so the one status read the result screen makes after its socket closes still finds it (#4550,
+/// docs/implicit-states.md §14 O14).
+#[test]
+fn r3694000_a_game_claimed_at_the_windows_last_moment_survives_the_sweep_at_its_end() {
+    let last = END + REMATCH_OFFER_TTL_MS;
+    let mut book = book_with(&[(P1, STAKE_NORMAL), (P2, STAKE_NORMAL)], last);
+    assert_eq!(book.sweep(last + 1, |_| false), 0);
+    assert_eq!(book.seen("m1", P1, last + 1).match_id.as_deref(), Some("g1"));
+    assert_eq!(book.seen("m1", P2, last + 1).match_id.as_deref(), Some("g1"));
 }
 
 fn finished() -> FinishedSeats {

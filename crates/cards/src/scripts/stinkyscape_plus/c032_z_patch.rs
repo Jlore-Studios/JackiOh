@@ -98,4 +98,19 @@ mod tests {
         assert_eq!(changes(&s, &s.unit_at(P1, 1).id), (5, 0));
         assert_eq!(changes(&s, &s.unit_at(P2, 1).id), (5, 5));
     }
+
+    #[test]
+    fn r4453000_an_immune_unit_is_neither_buffed_nor_nerfed() {
+        // §6.1: "every permanent" passes a Unit Immune to Spells by.
+        let mut s = scenario(json!({
+            "seed": "z-patch-immune",
+            "p1": { "hand": [{ "def": ID }, FILLER], "field": [BODY], "library": filler(3), "mana": 10 },
+            "p2": { "hand": [FILLER], "field": [BODY], "library": filler(4) },
+        }));
+        let warded = s.unit_at(P2, 1).id;
+        s.card_mut(warded.as_str()).granted_keywords.push(Keyword::ImmuneToSpells);
+        s.play(ID, json!({}));
+        assert_eq!(changes(&s, &warded), (0, 0));
+        assert_eq!(changes(&s, &s.unit_at(P1, 1).id), (5, 5));
+    }
 }

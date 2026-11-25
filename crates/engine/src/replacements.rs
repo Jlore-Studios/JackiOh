@@ -266,6 +266,8 @@ fn fire(sink: &mut EngineSink<'_>, cand: &mut Candidate) -> bool {
         lane: at.map_or(0, |slot| slot.lane),
         // R2657001: a face-up Field Trap replacing again reveals nothing.
         again: crate::traps::fires_again(sink.state, &cand.card),
+        // R4586007: a replacement's firing answers no attack.
+        attacker_id: None,
     });
     // R783011: a Crater Trap Locks the backrow zone it is revealed in, as `traps::fire_trap` does.
     crate::crater::lock_on_firing(sink, &cand.card, at);
@@ -347,13 +349,15 @@ pub enum LethalHitTo {
 /// ME-LETHALGUARD) a Unit, to 0 or less. Returns where the hit now goes (dealt there as a new instance
 /// from the same source, through that destination's Armor, divisor and caps), that it was canceled
 /// (R1704001), or `None`. Only the target's controller's cards answer: "you would take lethal damage".
+/// `source` is the hit's card: a guard Immune to Spells never takes a Spell's hit (R4599005).
 pub fn lethal_hit_window(
     sink: &mut EngineSink<'_>,
     target: &DamageTarget,
     amount: i32,
-    source_id: Option<String>,
+    source: Option<&CardInstance>,
     caught: &[String],
 ) -> Option<LethalHitTo> {
+    let source_id = source.map(|card| card.id.clone());
     let controller = match target {
         DamageTarget::Hero { player } => *player,
         DamageTarget::Unit { instance } => instance.controller,
@@ -408,12 +412,16 @@ pub fn lethal_hit_window(
         // takes the hit as a Unit; any other redirect answers only hero targets, for the enemy hero.
         let destination: DamageTarget =
             if def.instead.redirect == Some(crate::script::InsteadRedirect::SelfCard) {
-                if cand.card.id == target_id || caught.contains(&cand.card.id) {
+                let instance = live_or(sink.state, &cand.card);
+                // R4599005: a Unit Immune to Spells never takes a Spell's hit on itself: the hit stays.
+                if cand.card.id == target_id
+                    || caught.contains(&cand.card.id)
+                    || (instance.zone.z() == ZoneName::Field
+                        && crate::restrictions::spell_cannot_reach(sink.state, source, &instance))
+                {
                     continue;
                 }
-                DamageTarget::Unit {
-                    instance: live_or(sink.state, &cand.card),
-                }
+                DamageTarget::Unit { instance }
             } else {
                 if !matches!(target, DamageTarget::Hero { .. }) {
                     continue;

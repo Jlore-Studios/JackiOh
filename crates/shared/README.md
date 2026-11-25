@@ -34,7 +34,11 @@ Every Part B issue follows it, and review holds each one to it.
 3. **The caller owns the state.** A long-lived thing (a match, a practice session) is a serializable
    value the caller holds and hands back on every call, like `GameState`. A Roblox server can then
    checkpoint it to MemoryStore and resume it on another server (#2898, risk 4). This crate keeps
-   nothing between calls: no static, no cache.
+   nothing between calls: no static, no cache. (What a machine keeps inside its own value is another matter:
+   the duel machine keeps each seat's engine view until the game next changes, so a change builds each view
+   once and the prompt, aim and hover relays read it. That copy is skipped by serde and the exported types,
+   ignored by equality and empty after a restore. `Pushed` carries the views it sent, for a host in the same
+   process: it is not serialized, and a caller handed none builds its own.)
 4. **Everything impure comes in as an argument:** the time (`now_ms`, or the `now` of the first move,
    in epoch milliseconds), random seeds (drawn through the engine's `Rng`, the same 32-bit generator),
    the locale, and whatever the store read.
@@ -205,7 +209,7 @@ never state, so a hidden card cannot be named by it.
   definitions a view carries (`PlayerView.defs`) consulted next.
 - **The oracle.** `data/glossary.json`, `power-words.json` and `short-forms.json` are the tables the web
   held in `glossary.ts`, `inPlay.ts` and `shortText.ts`; the web's `rules.test.ts` still holds the glossary
-  to `spec/06-keywords.md`, and `src/face/power.rs` holds the powers to the engine's own table.
+  to `spec/06-keywords/`, and `src/face/power.rs` holds the powers to the engine's own table.
 
 ## `src/log/`: the game log's lines
 
@@ -460,7 +464,8 @@ step(host, event, now) -> (host, outputs)
 What the machine decides: how the game is dealt (`deal.rs`: the human's deck, a list or the random deck dealt
 on `"{seed}:human-deck"` leaning as asked and counted dealt, R433, R1373, R924000; the AI's on
 `"{seed}:ai-deck"`; the tier's handicap on the AI's seat alone, R180; a lesson's decks under
-`TUTORIAL_HUMAN` and `AI_TUTORIAL`, R290, R1705005; a run fight's setup, R2706000; the human's last board,
+`TUTORIAL_HUMAN` and `AI_TUTORIAL`, R290, R1705005; a run fight's setup, R2706000, and an Infinite Assault
+fight's, R4582000, the enemy's deck marks at the AI's seat; the human's last board,
 R508; a sandbox, R923000), the nonces (`h<n>`, `a<n>`, each counting only accepted actions, so a refused
 action spends nothing and the log folds exactly: R187, R433, R508), the seat each action is sent from, what
 the AI may never take (R188, R923000), the snapshot, the save and its resume, the kept game and its number,
@@ -783,7 +788,9 @@ from the written rows) and checks after every step that the log rebuilds the gam
 timer changes nothing, that a match ends once and that a restart holds the game. `HOST_FUZZ_SEEDS` matches per machine
 run on every pull request and `daily_host_fuzz_sweep` plays `HOST_FUZZ_DAILY_SEEDS`; to rerun one failing seed, set
 `REPRO = Some((Machine::Duel, <seed>))` (or `Duos`) in the file, as the failure's text says, and run `cargo test -p
-jackioh-shared --features jackioh-engine/testkit --test host_fuzz repro`; the practice session's, `tests/practice.rs` (played on the real catalog with a `Session`
+jackioh-shared --features jackioh-engine/testkit --test shared host_soak::repro`. The files under `tests/` are
+modules of the one binary `tests/shared.rs`; a new file is declared there, which `crates/tools/tests/acceptance.rs`
+checks (#4610). The practice session's, `tests/practice.rs` (played on the real catalog with a `Session`
 standing in for a host). The ranked ladder's: `tests/glicko2.rs`, `tests/ladder.rs` and `tests/season.rs` (moved from the server's API tests
 with the maths), `tests/board.rs` (the sort key) and `tests/ranked_game.rs` (`decide` and its JSON calls). The `ts` feature writes the types that cross to
 `apps/web/src/wire/generated/`; commit any diff. `cargo test --workspace` writes them too (`jackioh-wasm-core`'s

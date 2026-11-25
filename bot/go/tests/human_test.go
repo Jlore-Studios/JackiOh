@@ -68,12 +68,12 @@ func TestHuman_APlanWithAnythingTheBotMayChangeDoesNot(t *testing.T) {
 func TestHuman_ThePlannersOwnLineBeforeTheGoalSaysIt(t *testing.T) {
 	forbidden := humanForbidden()
 	game := []string{"src/game.txt"}
-	head := "**Human required:** add `RENDER_API_KEY` in GitHub's\n  Actions secrets.\n\n"
+	head := "**Human required:** add `CLOUDFLARE_API_TOKEN` in GitHub's\n  Actions secrets.\n\n"
 	assertEqual(t, human.PlanNeeds(humanPlanBody(game, head), forbidden),
-		"add `RENDER_API_KEY` in GitHub's")
-	said := "Human required: set `VITE_FLAG` in Vercel.\n\n"
+		"add `CLOUDFLARE_API_TOKEN` in GitHub's")
+	said := "Human required: set `VITE_FLAG` in Cloudflare.\n\n"
 	assertEqual(t, human.PlanNeeds(humanPlanBody(game, said), forbidden),
-		"set `VITE_FLAG` in Vercel.")
+		"set `VITE_FLAG` in Cloudflare.")
 	// Past the Goal the words are the plan's own, not the planner's verdict.
 	late := humanPlanBody(game) + "\n**Human required:** nothing, really.\n"
 	assertEqual(t, human.PlanNeeds(late, forbidden), "")
@@ -167,11 +167,11 @@ func TestHuman_APlannerThatSaysOnlyAPersonCanDoItIsBelieved(t *testing.T) {
 	h := ratingDayHarness(t)
 	h.gh.AddIssue(12, fakes.Issue{Labels: []string{config.LabelBuild}, Body: "Turn on the deploy hook."})
 	text := strings.ReplaceAll(ratingRatedPlan("medium", nil, ""),
-		"## 1. Goal", "**Human required:** create `RENDER_DEPLOY_HOOK_URL` in GitHub's "+
+		"## 1. Goal", "**Human required:** create `CF_ACCESS_CLIENT_SECRET` in GitHub's "+
 			"secrets.\n\n## 1. Goal")
 	_, result := h.night(ratingPlanner(text))
 	assertEqual(t, dig(t, result, "status"), "blocked")
-	assertIn(t, "create `RENDER_DEPLOY_HOOK_URL` in GitHub's secrets.",
+	assertIn(t, "create `CF_ACCESS_CLIENT_SECRET` in GitHub's secrets.",
 		humanHandedToPeople(t, h, 12))
 }
 
@@ -268,7 +268,7 @@ func TestHuman_AHandOverArchivesTheBotsWork(t *testing.T) {
 		return nil
 	}, "the pull request's record")
 	_, result := h.night(workFake(map[string]runner.Handler{
-		"build":  workBuilder(map[string]string{}, humanBlocked("Add `RENDER_API_KEY` to GitHub's secrets.", true)),
+		"build":  workBuilder(map[string]string{}, humanBlocked("Add `CLOUDFLARE_API_TOKEN` to GitHub's secrets.", true)),
 		"review": workReviewer(workApprove)}))
 	assertEqual(t, []any{dig(t, result, "status"), dig(t, result, "human_required")}, []any{"blocked", true})
 	said := humanHandedToPeople(t, h, 12)
@@ -279,7 +279,7 @@ func TestHuman_AHandOverArchivesTheBotsWork(t *testing.T) {
 	assertEqual(t, h.gh.LabelNames(40), setOf(config.LabelPR))
 	assertTrue(t, h.gh.Branches["bot/issue-12"])
 	// One summary, on the issue and on its pull request.
-	assertIn(t, "**What a person must do or check:** Add `RENDER_API_KEY` to GitHub's secrets.", said)
+	assertIn(t, "**What a person must do or check:** Add `CLOUDFLARE_API_TOKEN` to GitHub's secrets.", said)
 	assertIn(t, fmt.Sprintf("**Where my work is:** branch `bot/issue-12`, pull request #40, its head `%s`. "+
 		"The pull request is a draft now, with auto-merge off; its branch is kept.", start[:12]), said)
 	assertEqual(t, lastOf(t, h.gh.BotComments(40)), said)
@@ -288,7 +288,7 @@ func TestHuman_AHandOverArchivesTheBotsWork(t *testing.T) {
 	issue, pr := state.Item(s, 12), state.Item(s, 40)
 	archived := queue.ArchivedOf(issue)
 	assertEqual(t, []any{archived.Get("branch"), archived.Get("pr"), archived.Get("head"), archived.Get("why")},
-		[]any{"bot/issue-12", 40, start, "Add `RENDER_API_KEY` to GitHub's secrets."})
+		[]any{"bot/issue-12", 40, start, "Add `CLOUDFLARE_API_TOKEN` to GitHub's secrets."})
 	assertEqual(t, queue.ArchivedOf(pr).Get("item"), 12)
 	for _, key := range []string{"kind", "queued_at", "session", "merge_owner", "ci_fixes", "turn"} {
 		assertFalse(t, issue.Has(key) || pr.Has(key), key)

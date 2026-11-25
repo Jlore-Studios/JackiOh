@@ -8,8 +8,8 @@ use jackioh_engine::subsystems::fuse::{FuseArgs, fuse};
 use jackioh_engine::testkit::*;
 
 use super::fixtures::trigger_multipliers::{
-    AIMER, ASKER, BOLT, DIER, DOUBLE, EXTRA_UNIT_ONE, EXTRA_UNIT_TWO, FEAR, JOINT, JOINT_TWO, LEAVER, LIVING,
-    NUKE, PAWN, SPAWNER, TICKER, TRIGGERER, register,
+    AIMER, ASKER, BOLT, DEATHS, DIER, DOUBLE, DOUBLE_TWO, EXTRA_UNIT_ONE, EXTRA_UNIT_TWO, FEAR, GIVER, JOINT,
+    JOINT_TWO, LEAVER, LIVING, NUKE, PAWN, REBORNER, REBORNS, SPAWNER, TICKER, TRIGGERER, register,
 };
 
 const P1: PlayerId = PlayerId::P1;
@@ -66,6 +66,29 @@ fn on_field(s: &Scenario, player: PlayerId, def_id: &str) -> usize {
         .into_iter()
         .filter(|card| card.def_id == def_id)
         .count()
+}
+
+/// R1107: give `unit` the fixture Death `tm-giver#hit` (1 to the enemy hero), as a grant effect would.
+fn grant_hit(s: &mut Scenario, unit: &CardInstance) {
+    s.card_mut(unit).grants = Some(vec![Grant {
+        grant: format!("{GIVER}#hit"),
+        radiant: false,
+        params: IndexMap::new(),
+    }]);
+}
+
+/// p1's Unit in lane 1 (`unit`), under the multiplier `multiplier`, given `tm-giver#hit` and then
+/// destroyed by a Bolt: the enemy hero's health after its Deaths ran.
+fn granted_death_under(multiplier: &str, unit: &str) -> i32 {
+    let mut s = game(
+        json!({ "backrow": [multiplier], "field": [unit], "hand": [BOLT] }),
+        json!({}),
+    );
+    let unit = s.unit(P1, 1).expect("p1's unit in lane 1");
+    grant_hit(&mut s, &unit);
+    s.play(BOLT, json!({ "targets": [instance(&unit)] }));
+    s.expect_in_zone(unit, "graveyard");
+    health(&s, P2)
 }
 
 // R820: the highest multiplier holds
@@ -237,6 +260,23 @@ fn r823_a_death_runs_again_for_its_controller() {
 }
 
 #[test]
+fn r823_r1107_a_granted_death_runs_again_under_a_multiplier_of_one() {
+    // The Pawn prints no Death: its only one is granted, and it runs twice for its controller.
+    assert_eq!(granted_death_under(DOUBLE, PAWN), 28);
+}
+
+#[test]
+fn r823_r1107_a_granted_death_runs_twice_more_under_a_multiplier_of_two() {
+    assert_eq!(granted_death_under(DOUBLE_TWO, PAWN), 27);
+}
+
+#[test]
+fn r823_r1107_a_printed_and_a_granted_death_run_again_as_one_list() {
+    // The Dier's own Death (1) and the granted one (1) are one list, and the list runs twice.
+    assert_eq!(granted_death_under(DOUBLE, DIER), 26);
+}
+
+#[test]
 fn r823_dying_together_doubles_nothing() {
     let mut s = game(
         json!({ "backrow": [DOUBLE], "field": [DIER], "hand": [NUKE] }),
@@ -274,4 +314,75 @@ fn r824_rounds_are_multiplied() {
     );
     s.play(FEAR, json!({}));
     assert_eq!(health(&s, P2), 26, "two rounds, each run twice");
+}
+
+// R4589003: The Recursionist's Death-only and Reborn multipliers
+
+#[test]
+fn r4589003_a_death_multiplier_reruns_deaths_not_cries() {
+    let mut s = game(
+        json!({ "backrow": [DEATHS], "field": [DIER], "hand": [AIMER, BOLT] }),
+        json!({}),
+    );
+    s.play(AIMER, json!({ "targets": [hero(P2)] }));
+    assert_eq!(health(&s, P2), 29, "the Cry runs once");
+    let dier = s.unit(P1, 1).expect("p1's dier");
+    s.play(BOLT, json!({ "targets": [instance(&dier)] }));
+    assert_eq!(health(&s, P2), 27, "the Death runs twice");
+}
+
+#[test]
+fn r4589003_the_highest_multiplier_holds() {
+    let mut s = game(
+        json!({ "backrow": [DOUBLE, DEATHS], "field": [DIER], "hand": [BOLT] }),
+        json!({}),
+    );
+    let dier = s.unit(P1, 1).expect("p1's dier");
+    s.play(BOLT, json!({ "targets": [instance(&dier)] }));
+    assert_eq!(health(&s, P2), 28, "the Death runs twice, not three times");
+}
+
+#[test]
+fn r4589003_a_doubled_reborn_returns_twice_then_stays_dead() {
+    let mut s = game(
+        json!({ "backrow": [REBORNS], "field": [REBORNER], "hand": [BOLT, BOLT, BOLT] }),
+        json!({}),
+    );
+    for round in 1..=3 {
+        let body = s.unit(P1, 1).expect("the reborner");
+        s.play(BOLT, json!({ "targets": [instance(&body)] }));
+        let back = s.unit(P1, 1).filter(|unit| unit.def_id == REBORNER);
+        if round < 3 {
+            assert!(back.is_some(), "round {round}: the doubled Reborn returns it");
+        } else {
+            assert!(back.is_none(), "round 3: its Reborn is spent, so it stays dead");
+        }
+    }
+    assert!(
+        s.pile(P1, "graveyard").iter().any(|card| card.def_id == REBORNER),
+        "the body rests in the graveyard"
+    );
+}
+
+#[test]
+fn r4589003_one_dying_in_the_pass_doubles_nothing() {
+    let mut s = game(
+        json!({ "backrow": [REBORNS], "field": [REBORNER], "hand": [NUKE, BOLT, BOLT] }),
+        json!({}),
+    );
+    s.play(NUKE, json!({}));
+    let body = s.unit(P1, 1).expect("the reborner returns once");
+    assert_eq!(body.def_id, REBORNER);
+    assert!(
+        !body
+            .memory
+            .contains_key(jackioh_engine::state_check::REBORN_KEPT_KEY),
+        "a Recursionist dying in the same pass doubles nothing (R823)"
+    );
+    // Its ordinary Reborn spent itself on that one return: the next death leaves it dead.
+    s.play(BOLT, json!({ "targets": [instance(&body)] }));
+    assert!(
+        s.unit(P1, 1).filter(|unit| unit.def_id == REBORNER).is_none(),
+        "no Reborn is left to spend"
+    );
 }

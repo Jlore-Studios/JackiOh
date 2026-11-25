@@ -11,16 +11,19 @@ import {
   FX_ADAPT_SLOW_MS,
   FX_ADAPT_WINDOW,
   FX_MAX_DT_MS,
+  FX_LOW_DEVICE_MEMORY_GB,
   FX_MAX_TAIL_MS,
   FX_MOBILE_WIDTH,
   FX_PARTICLE_CAP,
   FX_PARTICLE_CAP_MIN,
   FX_PARTICLE_CAP_MOBILE,
   FX_PHONE_FRAME_BUDGET_MS,
+  FX_PHONE_STAGE_LAYERS,
   FX_SHAKE_MAX_DEG,
   FX_SHAKE_MAX_PX,
 } from "./constants.ts";
 import { capacityFor, createFxDirector, type FxDirector, type FxDirectorOptions } from "./director.ts";
+import { cueScreens, layerBudgetScreens, takeoverForm, TAKEOVER_ARTLESS, TAKEOVER_BARE, TAKEOVER_DARK, type FxDevice } from "./layers.ts";
 import { PARTICLE_PRESETS } from "./presets.ts";
 import { resetShedForTests } from "./shed.ts";
 import type { FxSurface } from "./surface.ts";
@@ -30,7 +33,10 @@ import type {
   FxCue,
   FxFrameSource,
   FxShakeOffset,
+  FxSetPieceCue,
   FxShakeSink,
+  FxTakeoverCue,
+  FxTakeoverStage,
   FxVisibility,
 } from "./types.ts";
 
@@ -1192,5 +1198,133 @@ describe("#3633 a frame reads every box before it writes", () => {
     expect(log.join("")).toBe("rw");
     expect(h.root.querySelectorAll('[data-fx="sheen"]')).toHaveLength(0);
     expect(h.root.querySelectorAll('[data-fx="splat"]')).toHaveLength(1);
+  });
+});
+
+describe("R4493001 the director's layer budget", () => {
+  const PHONE: FxDevice = { width: 390, height: 844, dpr: 3, memoryGb: null };
+  const DESKTOP: FxDevice = { width: 1280, height: 800, dpr: 2, memoryGb: 8 };
+  const LOW: FxDevice = { width: 1280, height: 800, dpr: 1, memoryGb: FX_LOW_DEVICE_MEMORY_GB };
+  const TINT = { rim: "#7c3aed", core: "#1e1b4b", glow: "#c4b5fd" };
+  const SLICES = 7;
+  const stage: FxTakeoverStage = {
+    planes: [],
+    name: "Ceaseless Void",
+    face: "ink",
+    slices: Array.from({ length: SLICES }, (_, i) => ({ image: `url(s${String(i)})`, plane: "far" as const, depth: i / (SLICES - 1) })),
+  };
+  const TAKEOVER_MS = 1800;
+  const takeover = (): FxTakeoverCue => ({ kind: "takeover", stage, look: "void", tint: TINT, at: at("card-a"), landMs: 600, delayMs: 0, durationMs: TAKEOVER_MS });
+  const crunch = (delayMs: number): FxSetPieceCue => ({
+    kind: "setPiece",
+    shape: "crunch",
+    tint: TINT,
+    spin: 1,
+    side: null,
+    at: at("card-a"),
+    holdMs: 1200,
+    delayMs,
+    durationMs: 3000,
+  });
+  const slicesOf = (h: ReturnType<typeof harness>): number => h.root.querySelectorAll(".fx-takeover-plane").length;
+  /** As many Big Crunches as leave the phone's budget no room for the takeover with its merged stage, by the director's tables. */
+  const crowd = (): number => {
+    const budget = layerBudgetScreens(PHONE);
+    const merged = cueScreens(takeoverForm(takeover(), TAKEOVER_ARTLESS));
+    return Math.floor((budget - merged) / cueScreens(crunch(0))) + 1;
+  };
+
+  it("R4493001 a phone mounts at most FX_PHONE_STAGE_LAYERS planes", () => {
+    for (const device of [PHONE, { ...PHONE, width: 844, height: 390 }]) {
+      const h = harness({ device: () => device });
+      h.director.play([takeover()]);
+      h.pumpTo(T0 + 20);
+      expect(slicesOf(h)).toBe(FX_PHONE_STAGE_LAYERS);
+      expect(h.root.querySelectorAll(".fx-takeover-stage")).toHaveLength(1);
+    }
+  });
+
+  it("R4493001 desktop, and a director with no device, keep every slice", () => {
+    for (const over of [{ device: () => DESKTOP }, {}]) {
+      const h = harness(over);
+      h.director.play([takeover()]);
+      h.pumpTo(T0 + 20);
+      expect(slicesOf(h)).toBe(SLICES);
+    }
+  });
+
+  it("R4493001 mounted set pieces that fill the budget make the takeover drop its stage, and every set piece still mounts", () => {
+    const n = crowd();
+    expect(n).toBeGreaterThanOrEqual(1);
+    const h = harness({ device: () => PHONE });
+    h.director.play(Array.from({ length: n }, () => crunch(0)));
+    h.pumpTo(T0 + 20);
+    expect(h.root.querySelectorAll('[data-fx="setPiece"]')).toHaveLength(n);
+    h.director.play([takeover()]);
+    h.pumpTo(T0 + 40);
+    // The takeover still mounts, its dark, sweep, rays and wave: a main beat; only its stage went.
+    const mounted = h.root.querySelector('[data-fx="takeover"]');
+    expect(mounted).not.toBeNull();
+    expect([...(mounted?.children ?? [])].map((child) => child.className)).toEqual(["fx-takeover-dark", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+    expect(h.root.querySelectorAll('[data-fx="setPiece"]')).toHaveLength(n);
+    // One fewer leaves it room for its merged stage.
+    const roomy = harness({ device: () => PHONE });
+    roomy.director.play(Array.from({ length: n - 1 }, () => crunch(0)));
+    roomy.pumpTo(T0 + 20);
+    roomy.director.play([takeover()]);
+    roomy.pumpTo(T0 + 40);
+    expect(slicesOf(roomy)).toBe(FX_PHONE_STAGE_LAYERS);
+  });
+
+  it("R4493001 a pending set piece due before the takeover ends counts; one due after it does not", () => {
+    const n = crowd();
+    const h = harness({ device: () => PHONE });
+    h.director.play([takeover(), ...Array.from({ length: n }, () => crunch(100))]);
+    h.pumpTo(T0 + 20);
+    expect(h.root.querySelector(".fx-takeover-stage")).toBeNull();
+    expect(h.root.querySelector('[data-fx="takeover"]')).not.toBeNull();
+    h.pumpTo(T0 + 120);
+    expect(h.root.querySelectorAll('[data-fx="setPiece"]')).toHaveLength(n);
+    const later = harness({ device: () => PHONE });
+    later.director.play([takeover(), ...Array.from({ length: n }, () => crunch(TAKEOVER_MS + 100))]);
+    later.pumpTo(T0 + 20);
+    expect(slicesOf(later)).toBe(FX_PHONE_STAGE_LAYERS);
+  });
+
+  it("R4493001 a budget too full even for the stageless takeover leaves it its dark and its sweep, and the set pieces all mount", () => {
+    const budget = layerBudgetScreens(PHONE);
+    const n = Math.floor((budget - cueScreens(takeoverForm(takeover(), TAKEOVER_BARE))) / cueScreens(crunch(0))) + 1;
+    const h = harness({ device: () => PHONE });
+    h.director.play(Array.from({ length: n }, () => crunch(0)));
+    h.pumpTo(T0 + 20);
+    h.director.play([takeover()]);
+    h.pumpTo(T0 + 40);
+    const mounted = h.root.querySelector('[data-fx="takeover"]');
+    expect([...(mounted?.children ?? [])].map((child) => child.className)).toEqual(["fx-takeover-dark", "fx-takeover-sweep"]);
+    expect(h.root.querySelectorAll('[data-fx="setPiece"]')).toHaveLength(n);
+  });
+
+  it("R4493001 a takeover still to come counts at its dark and its sweep, and takes its own form when it fires", () => {
+    const h = harness({ device: () => PHONE });
+    const second = { ...takeover(), delayMs: 100 };
+    h.director.play([takeover(), second]);
+    h.pumpTo(T0 + 20);
+    // The first keeps its rays and wave beside the least the second will hold, though not its stage.
+    const [first] = h.root.querySelectorAll('[data-fx="takeover"]');
+    const own = (el: Element | undefined): string[] => [...(el?.children ?? [])].map((child) => child.className);
+    expect(own(first)).toEqual(["fx-takeover-dark", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+    expect(cueScreens(takeoverForm(takeover(), TAKEOVER_BARE)) + cueScreens(takeoverForm(second, TAKEOVER_DARK))).toBeLessThanOrEqual(layerBudgetScreens(PHONE));
+    h.pumpTo(T0 + 120);
+    // The second, beside the first as it mounted, has room for its dark and its sweep alone.
+    const both = h.root.querySelectorAll('[data-fx="takeover"]');
+    expect(both).toHaveLength(2);
+    expect(own(both[1])).toEqual(["fx-takeover-dark", "fx-takeover-sweep"]);
+  });
+
+  it("R4493001 a low-memory 1280x800 device keeps every slice", () => {
+    const h = harness({ device: () => LOW });
+    h.director.play([takeover()]);
+    h.pumpTo(T0 + 20);
+    expect(slicesOf(h)).toBe(SLICES);
   });
 });

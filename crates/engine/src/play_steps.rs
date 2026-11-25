@@ -622,9 +622,10 @@ pub fn validate_play(
 
     // R1200: while a Mayor acts the action carries no targets, so draw each at random before anything
     // is checked or paid; the targeting point, costs and Joro's replacements meet the drawn target
-    // (MD-E9). A face-down play (ME-ALTPLAY, R1044) declares nothing, so draws nothing.
+    // (MD-E9). A face-down play (ME-ALTPLAY, R1044) declares nothing, so draws nothing. R4590001:
+    // a Spell played under a random-targets modifier or a Jailbreaker's aura draws the same way.
     let mut owned = action.clone();
-    if crate::random_targets::targets_random(sink.state) && owned.face_down.is_none() {
+    if crate::random_targets::play_targets_random(sink.state, player, &card) && owned.face_down.is_none() {
         let face = crate::play_choices::face_for_action(sink.state, player, &card, &owned);
         let given = owned.targets.clone().unwrap_or_default();
         let modes = owned.modes.clone().unwrap_or_default();
@@ -693,10 +694,11 @@ pub fn validate_play(
     }
 
     // Step 1 accepted the zone; a play that named none takes the leftmost free one — or, on a full
-    // row, the leftmost one its own Tribute empties (R391).
+    // row, the leftmost one its own Tribute empties (R391). R4665000: a card that stacks on its
+    // target takes none of its own.
     let tributes: Vec<String> = action.tributes.clone().unwrap_or_default();
     let mut zone: Option<ZoneSlot> = None;
-    if is_permanent(state, &card) {
+    if is_permanent(state, &card) && crate::play_choices::needs_zone(state, &card) {
         zone = match &action.zone {
             None => default_zone_for(state, player, &card, &tributes),
             Some(named) => Some(ZoneSlot {
@@ -1288,6 +1290,22 @@ fn announced_zone(state: &GameState, run: &PlayRun, card: &CardInstance) -> Opti
     )
 }
 
+/// R4665000: the zone a card that stacks on its target lands in: that of the permanent its first
+/// declared target names, while that permanent still tops its zone on the field (§3.2).
+fn stack_target_zone(state: &GameState, run: &PlayRun) -> Option<ZoneSlot> {
+    let target = standing_targets(run)
+        .into_iter()
+        .find_map(|selection| match selection {
+            Selection::Instance { instance_id } => Some(instance_id),
+            _ => None,
+        })?;
+    let named = find_instance(state, &target)?;
+    let slot = crate::zones::slot_of(state, named)?;
+    card_at(state, slot)
+        .is_some_and(|top| top.id == named.id)
+        .then_some(slot)
+}
+
 /// R448: the card leaves its hand (or graveyard, R454) for the resolving zone (a cast's waits there
 /// already) and `cardAnnounced` goes out, showing what `cardPlayed` would (a face-down card only its
 /// zone, `view_for`). False when the card is no longer where the play takes it from (R226).
@@ -1624,6 +1642,11 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
         if let Some(theirs) = handed_over_zone(sink.state, run, &card) {
             run.zone = Some(theirs);
         }
+        // R4665000: a card that stacks on its target (S #9 Ticketed) takes the zone of the permanent
+        // the play named, either side's; with none left it lands in its graveyard, as R138's does.
+        if crate::play_choices::stacks_on_target(sink.state, &card) {
+            run.zone = stack_target_zone(sink.state, run);
+        }
     }
 
     // R227: a Trap or Field Trap set face-down takes a fresh id before anything names it on the field,
@@ -1672,8 +1695,12 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
         .is_some_and(crate::starship::exiles_stacked_play);
     let placed = match run.zone {
         Some(zone) => {
-            // R1086: an Equip play lands on top of its host, as a Stack card lands on its pile.
-            let stack = plays_on_stack(sink.state, &card) || base.is_some() || run.equip_host.is_some();
+            // R1086: an Equip play lands on top of its host, as a Stack card lands on its pile, and
+            // R4665000's on top of its target.
+            let stack = plays_on_stack(sink.state, &card)
+                || base.is_some()
+                || run.equip_host.is_some()
+                || crate::play_choices::stacks_on_target(sink.state, &card);
             let options = PlaceOnFieldOptions { stack: Some(stack) };
             if zone.row == Row::Backrow {
                 // R1081000: a Unit played into the backrow was vetted as a Flexible Unit (Flying has
@@ -1687,6 +1714,10 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
         None => false,
     };
     if placed {
+        // R4665000: on a unit zone it lies there, no Unit.
+        if crate::play_choices::stacks_on_target(sink.state, &card) {
+            crate::zones::lie_down(sink.state, &card.id);
+        }
         let turn = sink.state.turn;
         if let Some(on_field) = find_instance_mut(sink.state, &card.id) {
             on_field.summoned_turn = Some(turn);
@@ -1802,7 +1833,38 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     // R1848002: "your next Spell this turn has Poisonous" is had as it is played, as Forever&'s is.
     let card = live_or(sink.state, &card);
     give_next_spell_keywords(sink, &card, run.player);
+    // R4590001: a Spell played with its targets drawn at random spends one of those modifiers.
+    let card = live_or(sink.state, &card);
+    spend_random_targets_next_spell(sink, &card, run.player, run.cast == Some(true));
     true
+}
+
+/// R4590001 (IA #130 Prompt Injection): spend one live `RandomTargetsNextSpell` for the Spell played
+/// face-up, whose declared targets were drawn at random. A cast takes none (R70), a face-down set
+/// leaves it waiting (R783005), and a countered play spends none (R90).
+fn spend_random_targets_next_spell(
+    sink: &mut EngineSink<'_>,
+    card: &CardInstance,
+    player: PlayerId,
+    cast: bool,
+) {
+    if cast {
+        return;
+    }
+    if card_type_of(sink.state, card) != CardType::Spell || card.set_as.is_some() {
+        return;
+    }
+    let id = sink.state.players[player]
+        .mods
+        .iter()
+        .find(|modifier| {
+            matches!(modifier.kind, ModifierKind::RandomTargetsNextSpell)
+                && modifier_is_live(sink.state, modifier)
+        })
+        .map(|modifier| modifier.id.clone());
+    if let Some(id) = id {
+        remove_modifier(sink, player, &id);
+    }
 }
 
 /// E11, R454, §10.5 step 4: take the played card out of its hand or graveyard (E1's announce too);
@@ -2517,6 +2579,15 @@ fn ask_repeat_targets(
                 decl.max,
                 crate::targeting::target_aim(decl),
             );
+            // I22 (#4540): the fuzz monitor holds this draw to the targeting rules (`testkit::seams`).
+            #[cfg(feature = "testkit")]
+            crate::testkit::seams::record_target_draw(
+                sink.state,
+                Some(card),
+                run.player,
+                crate::testkit::seams::TargetDrawBy::Mayor,
+                &picks,
+            );
             if let Some(repeat) = run.repeat.as_mut() {
                 repeat.targets.extend(picks);
             }
@@ -2525,6 +2596,17 @@ fn ask_repeat_targets(
         // R452: a random cast makes this pick itself, at random, and asks nobody.
         if run.random == Some(true) || random_cast_of(sink.state, run.player).is_some() {
             let picks = random_picks(sink.rng, &options, decl.min, decl.max);
+            // I22 (#4540): a `target` pick only; a Tribute or a hand pick is no targeting.
+            #[cfg(feature = "testkit")]
+            if decl.kind == PromptKind::Target {
+                crate::testkit::seams::record_target_draw(
+                    sink.state,
+                    Some(card),
+                    run.player,
+                    crate::testkit::seams::TargetDrawBy::RandomCast,
+                    &picks,
+                );
+            }
             if let Some(repeat) = run.repeat.as_mut() {
                 repeat.targets.extend(picks);
             }

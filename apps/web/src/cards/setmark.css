@@ -84,3 +84,25 @@
   pointer-events: none;
   user-select: none;
 }
+
+/*
+ * R4596000: the Infinite Assault's accent (setMark.ts `setAccentOf`), a face the Assault wrote: its name split
+ * into red and cyan as a glitching screen splits it, and a red and a cyan edge either side of its picture's
+ * window. It never moves, so reduced motion needs nothing; a full-art, art-first or extended-art face keeps its own.
+ */
+.cf[data-set-accent="glitch"] .card-name {
+  text-shadow:
+    0.25cqw 0 0 color-mix(in srgb, var(--pal-red-400) 70%, transparent),
+    -0.25cqw 0 0 color-mix(in srgb, var(--pal-cyan-400) 70%, transparent);
+}
+
+.cf[data-set-accent="glitch"]:not([data-full-art="true"], [data-art-first="true"], [data-version="version-extended-art"]) .cf-art-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-content);
+  border-radius: inherit;
+  border-left: 0.35cqw solid color-mix(in srgb, var(--pal-red-400) 55%, transparent);
+  border-right: 0.35cqw solid color-mix(in srgb, var(--pal-cyan-400) 55%, transparent);
+  pointer-events: none;
+}

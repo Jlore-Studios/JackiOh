@@ -6,7 +6,7 @@
 //! {multiplier}× your Starship's Attack, split randomly among all enemies." Multiplier 1, Radiant 2.
 //! Engine: `give_units_keyword { Rush }`, a `unitsHaveKeyword` player modifier for the rest of the
 //! game: every Unit its caster controls has Rush, those that arrive later too, but a Vanilla one
-//! (R1859007). Then, once, as it is cast: §6.3 Damage's split (`damage_split`), N hits of 1, N =
+//! (R1859007). Then, once, as it is cast: §4.4's split damage (`damage_split`), N hits of 1, N =
 //! multiplier × the Attack of its caster's launched Starship (`launched_starship_of`, R1852005) as it
 //! stands, each to a random enemy still standing, the hero or a Unit, by the match rng (R60), the
 //! caster's Spell Damage raising each hit (R1859010); no launched Starship, nothing. Tunes: multiplier

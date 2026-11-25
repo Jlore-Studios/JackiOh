@@ -142,7 +142,8 @@ pub struct BuffAllUnitsArgs {
     pub health: Option<i32>,
 }
 
-/// "+X/+Y to every unit you control" (#43), in lane order, one `buffed` event each.
+/// "+X/+Y to every unit you control" (#43), in lane order, one `buffed` event each; a Spell's passes a
+/// Unit Immune to Spells by (R4453000).
 pub fn buff_all_units(args: BuffAllUnitsArgs) -> Effect {
     Effect::new("buffAllUnits", move |ctx| {
         let players: Vec<PlayerId> = match args.side {
@@ -162,6 +163,10 @@ pub fn buff_all_units(args: BuffAllUnitsArgs) -> Effect {
                 .cloned()
                 .collect();
             for unit in &units {
+                // R4453000: a Spell's "every Unit" passes a Unit Immune to Spells by (§6.1).
+                if crate::restrictions::unaffected_by(ctx, unit) {
+                    continue;
+                }
                 apply_buff(ctx, unit, &amount, true);
             }
         }

@@ -29,10 +29,13 @@
 //!    `register_all();` on the line above a `scenario(`, as `crate::scenario` registers the cards (#2930);
 //!  - Preview (R1420, #2257): every `preview_sets(&[…])` under `crates/` names a set `SHIPPED_SETS` does not
 //!    list: a preview of a set that ships opens nothing, so the patch that ships it takes its previews out.
-//!  - Dungeon (DR14 B33, #2709): `spec/15-dungeon-run.md`'s table of constants has one row per `pub const`
-//!    of `crates/run/src/config.rs`, and `spec/README.md` maps the note.
+//!  - Dungeon (DR14 B33, #2709): `spec/15-dungeon-run.md`'s and `spec/16-infinite-assault.md`'s tables of
+//!    constants together have one row per `pub const` of `crates/run/src/config.rs`, and `spec/README.md`
+//!    maps both notes (#4584).
 //!  - Discards (#3914): no test under the card scripts or `crates/engine/tests` notes a value and drops it with
 //!    a bare `let _ = <identifier>;`.
+//!  - Shared tests (#4610): every Rust file directly under `crates/shared/tests` is declared by its one
+//!    integration-test entry point, since that crate disables Cargo's automatic test discovery.
 //!  - Statics (#3063): the pure crates' sources declare no `thread_local!`, `static mut` or static holding a
 //!    `Cell`, `RefCell`, `UnsafeCell` or `Atomic*` but the ones CLAUDE.md rule 4 names (`RULE_4_STATICS`).
 //!  - TS (#4426): `crates/wasm/core/Cargo.toml`'s `[dev-dependencies]` name `jackioh-run` and `jackioh-shared`
@@ -247,8 +250,9 @@ const STRUCTURAL_READERS: &[&str] = &[
     // one row per card (#3804).
     "crates/cards/tests/cross/radiant_stats.rs",
     // This file names the patterns it looks for, and reads `crates/tools/README.md`'s command
-    // table (#1720) and `spec/15-dungeon-run.md`'s table of constants (B33), the first cell of each
-    // row only, and the line of `spec/README.md`'s map that links §15.
+    // table (#1720) and `spec/15-dungeon-run.md`'s and `spec/16-infinite-assault.md`'s tables of
+    // constants (B33), the first cell of each row only, and the lines of `spec/README.md`'s map that
+    // link §15 and §16.
     "crates/tools/tests/acceptance.rs",
 ];
 
@@ -1281,7 +1285,7 @@ mod tests {
 }
 
 /// One family of test helpers defined once, in its home, which every test under its trees takes
-/// rather than copying (#1777, #1826, #1997, #2023, #2385, #2160, #2930, #3913).
+/// rather than copying (#1777, #1826, #1997, #2023, #2160, #2930, #3913).
 struct SharedHelpers {
     /// The file that defines them, from the repository's root.
     home: &'static str,
@@ -1322,16 +1326,6 @@ const PICK_READERS: &[&str] = &[
     "crates/cards/src/scripts",
     "crates/cards/tests",
     "crates/ai/tests",
-];
-
-/// The server test trees `tests/server.rs` compiles with `tests/support/`, where no file but a
-/// helper's home may define one (#2385). `tests/store/` builds into `server_store` without them.
-const SERVER_SUPPORT_READERS: &[&str] = &[
-    "crates/server/tests/actor",
-    "crates/server/tests/api",
-    "crates/server/tests/bots",
-    "crates/server/tests/loops",
-    "crates/server/tests/support",
 ];
 
 /// The card scripts, each a card's script with its tests (CLAUDE.md rule 6).
@@ -1437,47 +1431,6 @@ const SHARED_TEST_HELPERS: &[SharedHelpers] = &[
         structs: &[],
         dirs: &["crates/ai/tests"],
         more_than: 40,
-    },
-    SharedHelpers {
-        home: "crates/server/tests/support/store.rs",
-        names: &[
-            "fake",
-            "fake_ref",
-            "fake_lock",
-            "to_json",
-            "from",
-            "uuid",
-            "advance",
-            "advance_and_yield",
-            "sleep_settled",
-            "table",
-            "fake_read",
-            "fail_on",
-            "stop_failing",
-            "hmac_sha256_hex",
-            "befriend",
-            "named_cards",
-        ],
-        statics: &[],
-        structs: &[],
-        dirs: SERVER_SUPPORT_READERS,
-        more_than: 80,
-    },
-    SharedHelpers {
-        home: "crates/server/tests/support/socket.rs",
-        names: &["read_frame_now"],
-        statics: &[],
-        structs: &[],
-        dirs: SERVER_SUPPORT_READERS,
-        more_than: 80,
-    },
-    SharedHelpers {
-        home: "crates/server/tests/support/engine.rs",
-        names: &["playable"],
-        statics: &[],
-        structs: &[],
-        dirs: SERVER_SUPPORT_READERS,
-        more_than: 80,
     },
 ];
 
@@ -1819,7 +1772,7 @@ fn helpers_each_test_takes_its_shared_helpers_from_their_home() {
     let homes: Vec<&str> = SHARED_TEST_HELPERS.iter().map(|row| row.home).collect();
     assert!(
         copies.is_empty(),
-        "a test defines its own copy of a shared helper, nonce counter or sink bench, looks a card up in a state under a name of its own, or reads a prompt's Mode options by hand (#1777, #1826, #1997, #2023, #2024, #2385, #3796, #3827, #3913): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
+        "a test defines its own copy of a shared helper, nonce counter or sink bench, looks a card up in a state under a name of its own, or reads a prompt's Mode options by hand (#1777, #1826, #1997, #2023, #2024, #3796, #3827, #3913): import the one in {homes:?} or {PICK_HOME}, or give a helper whose body differs another name: {copies:?}"
     );
 }
 
@@ -2018,40 +1971,6 @@ fn helpers_the_check_refuses_a_copy_in_each_covered_directory() {
     assert_eq!(copies, expected);
 }
 
-#[test]
-fn helpers_the_check_refuses_a_copy_in_the_server_tests() {
-    let scratch = Scratch(std::env::temp_dir().join(format!(
-        "jackioh-server-helpers-{}-{}",
-        std::process::id(),
-        SCRATCH.fetch_add(1, Ordering::Relaxed)
-    )));
-    let root = scratch.0.as_path();
-    let _ = fs::remove_dir_all(root);
-    let write = |path: &str, text: &str| {
-        let path = root.join(path);
-        fs::create_dir_all(path.parent().expect("a parent")).expect("its directory");
-        fs::write(path, text).expect("the file");
-    };
-    let from = "fn from<T: DeserializeOwned>(value: Value) -> T {\n    serde_json::from_value(value).expect(\"a value\")\n}\n";
-    write("crates/server/tests/api/planted.rs", from);
-    // tests/store/ builds without tests/support/, so its own copy is not one.
-    write("crates/server/tests/store/planted.rs", from);
-    write(
-        "crates/server/tests/bots/planted.rs",
-        "use super::*;\nfn playable() -> Vec<String> {\n    Vec::new()\n}\n",
-    );
-    let mut copies = shared_helper_copies(root);
-    drop(scratch);
-    copies.sort();
-    assert_eq!(
-        copies,
-        [
-            "crates/server/tests/api/planted.rs:1",
-            "crates/server/tests/bots/planted.rs:2"
-        ]
-    );
-}
-
 /// The 1-based lines of `text` that call `register_all();` on the line above one that calls a
 /// `scenario(`, a `//` comment aside: `crate::scenario` registers the shipped cards itself (#2930).
 fn registers_before_scenario(text: &str) -> Vec<usize> {
@@ -2189,6 +2108,107 @@ fn discards_the_check_refuses_a_planted_let_in_each_covered_tree() {
     found.sort();
     expected.sort();
     assert_eq!(found, expected);
+}
+
+/// The Rust files directly under `crates/shared/tests` that `shared.rs` does not declare (#4610).
+fn undeclared_shared_tests(root: &Path) -> Vec<String> {
+    let tests = root.join("crates/shared/tests");
+    let mut files = Vec::new();
+    for entry in fs::read_dir(&tests).unwrap_or_else(|error| panic!("{}: {error}", tests.display())) {
+        let entry = entry.expect("a shared test directory entry");
+        let path = entry.path();
+        if path.is_file() && path.extension().is_some_and(|extension| extension == "rs") {
+            files.push(
+                entry
+                    .file_name()
+                    .into_string()
+                    .expect("a UTF-8 shared test file name"),
+            );
+        }
+    }
+    files.sort();
+
+    let mut declared = BTreeSet::new();
+    let entry = "shared.rs";
+    let path = tests.join(entry);
+    let text = fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+    for line in text.lines() {
+        if let Some(rest) = line.trim().strip_prefix("#[path = \"")
+            && let Some((name, _)) = rest.split_once('"')
+        {
+            declared.insert(name.to_string());
+        }
+    }
+
+    files
+        .into_iter()
+        .filter(|name| name != entry && !declared.contains(name))
+        .map(|name| format!("crates/shared/tests/{name}"))
+        .collect()
+}
+
+#[test]
+fn shared_tests_every_file_is_declared_by_the_one_test_binary() {
+    const MIN_SHARED_TEST_FILES: usize = 20;
+
+    let root = repo();
+    let tests = root.join("crates/shared/tests");
+    assert!(
+        tests.join("shared.rs").is_file(),
+        "crates/shared/tests/shared.rs is the shared crate's test entry point (#4610)"
+    );
+    let rust_files = fs::read_dir(&tests)
+        .expect("the shared tests directory")
+        .map(|entry| entry.expect("a shared test directory entry"))
+        .filter(|entry| {
+            entry
+                .path()
+                .extension()
+                .is_some_and(|extension| extension == "rs")
+        })
+        .count();
+    assert!(
+        rust_files > MIN_SHARED_TEST_FILES,
+        "only {rust_files} Rust files found under crates/shared/tests"
+    );
+
+    let found = undeclared_shared_tests(&root);
+    assert!(
+        found.is_empty(),
+        "jackioh-shared has autotests = false (#4610): add each test file to crates/shared/tests/shared.rs with a #[path] declaration: {found:?}"
+    );
+}
+
+#[test]
+fn shared_tests_the_check_refuses_a_planted_undeclared_file() {
+    let scratch = Scratch(std::env::temp_dir().join(format!(
+        "jackioh-shared-tests-{}-{}",
+        std::process::id(),
+        SCRATCH.fetch_add(1, Ordering::Relaxed)
+    )));
+    let root = scratch.0.as_path();
+    let _ = fs::remove_dir_all(root);
+    let tests = root.join("crates/shared/tests");
+    fs::create_dir_all(&tests).expect("the shared tests directory");
+    fs::write(tests.join("shared.rs"), "#[path = \"a.rs\"]\nmod a;\n").expect("the shared test entry point");
+    fs::write(tests.join("a.rs"), "").expect("the declared test");
+    fs::write(tests.join("planted.rs"), "").expect("the planted test");
+    fs::write(tests.join("shared_planted.rs"), "").expect("the planted prefixed test");
+
+    assert_eq!(
+        undeclared_shared_tests(root),
+        [
+            "crates/shared/tests/planted.rs",
+            "crates/shared/tests/shared_planted.rs",
+        ]
+    );
+
+    fs::write(
+        tests.join("shared.rs"),
+        "#[path = \"a.rs\"]\nmod a;\n#[path = \"planted.rs\"]\nmod planted;\n#[path = \"shared_planted.rs\"]\nmod shared_planted;\n",
+    )
+    .expect("the shared test entry point");
+    assert!(undeclared_shared_tests(root).is_empty());
 }
 
 /// The built `jackioh`, whose clap surface the README's command table is held to (#1720).
@@ -2608,6 +2628,30 @@ fn split_table_row(row: &str) -> Vec<&str> {
     cells
 }
 
+/// The e2e spec files in `e2e_dir` whose names start with `number-` (#4287): the number as
+/// written, or zero-padded to two digits.
+fn e2e_spec_files(e2e_dir: &Path, number: &str) -> Vec<PathBuf> {
+    let mut matching_files: Vec<PathBuf> = Vec::new();
+    if let Ok(entries) = fs::read_dir(e2e_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if !path.is_file() {
+                continue;
+            }
+            if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                let alt = number.parse::<u32>().ok().map(|n| format!("{n:02}-"));
+                if file_name.starts_with(&format!("{number}-"))
+                    || alt.as_deref().is_some_and(|prefix| file_name.starts_with(prefix))
+                {
+                    matching_files.push(path);
+                }
+            }
+        }
+    }
+    matching_files.sort();
+    matching_files
+}
+
 /// Find problems where a table row in `crates/tools/README.md` cites an e2e spec that does not exist
 /// or does not invoke the command (#4287).
 fn table_e2e_citation_problems(readme: &str, e2e_dir: &Path) -> Vec<String> {
@@ -2636,24 +2680,7 @@ fn table_e2e_citation_problems(readme: &str, e2e_dir: &Path) -> Vec<String> {
         let does_cell = cells[2..].join("|");
         let cited_specs = parse_e2e_spec_citations(&does_cell);
         for number in cited_specs {
-            let mut matching_files: Vec<PathBuf> = Vec::new();
-            if let Ok(entries) = fs::read_dir(e2e_dir) {
-                for entry in entries.flatten() {
-                    let path = entry.path();
-                    if !path.is_file() {
-                        continue;
-                    }
-                    if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
-                        let alt = number.parse::<u32>().ok().map(|n| format!("{n:02}-"));
-                        if file_name.starts_with(&format!("{number}-"))
-                            || alt.as_deref().is_some_and(|prefix| file_name.starts_with(prefix))
-                        {
-                            matching_files.push(path);
-                        }
-                    }
-                }
-            }
-            matching_files.sort();
+            let matching_files = e2e_spec_files(e2e_dir, &number);
             if matching_files.is_empty() {
                 problems.push(format!(
                     "row `{cmd}` cites e2e spec {number}, but no spec file matching `{number}-*` exists in e2e/cypress/e2e"
@@ -2683,6 +2710,48 @@ fn table_e2e_citation_problems(readme: &str, e2e_dir: &Path) -> Vec<String> {
     problems
 }
 
+/// Find cited e2e spec numbers whose files `scripts/ci-scope.sh` leaves `rust_tools_wasm` off
+/// for (#4449): renaming a cited spec, or deleting its command call, must still run
+/// `rust (test tools, wasm)`, whose README check reads it. Numbers with no files are the
+/// existing check's to report, so this one skips them.
+fn cited_specs_missing_tools_scope(readme: &str, e2e_dir: &Path) -> Vec<String> {
+    let mut problems = Vec::new();
+    let rows: Vec<&str> = readme
+        .lines()
+        .skip_while(|line| !line.starts_with("| Command |"))
+        .skip(2)
+        .take_while(|line| line.starts_with('|'))
+        .collect();
+
+    let mut seen: Vec<String> = Vec::new();
+    for row in rows {
+        let cells = split_table_row(row);
+        if cells.len() < 3 {
+            continue;
+        }
+        let does_cell = cells[2..].join("|");
+        for number in parse_e2e_spec_citations(&does_cell) {
+            if seen.contains(&number) {
+                continue;
+            }
+            seen.push(number.clone());
+            for path in e2e_spec_files(e2e_dir, &number) {
+                let rel = path
+                    .strip_prefix(repo())
+                    .unwrap_or(&path)
+                    .to_string_lossy()
+                    .replace('\\', "/");
+                if !line_is(&scope_of(&[rel.as_str()]), "rust_tools_wasm") {
+                    problems.push(format!(
+                        "row cites e2e spec {number}, but scripts/ci-scope.sh leaves rust_tools_wasm off for {rel}: name its file in the crate map (#4449)"
+                    ));
+                }
+            }
+        }
+    }
+    problems
+}
+
 #[test]
 fn readme_the_command_table_is_the_clis() {
     let tree = cli_tree();
@@ -2692,11 +2761,11 @@ fn readme_the_command_table_is_the_clis() {
         "only {commands} commands read off `jackioh -h`; clap's help format changed"
     );
     assert!(
-        tree[&vec!["promote".to_string()]]
+        tree[&vec!["arena".to_string()]]
             .flags
             .iter()
-            .any(|flag| flag.name == "lane" && !flag.values.is_empty()),
-        "no possible values read off `jackioh promote -h`; clap's help format changed"
+            .any(|flag| flag.name == "set" && !flag.values.is_empty()),
+        "no possible values read off `jackioh arena -h`; clap's help format changed"
     );
     for name in HAND_PARSED {
         let command = &tree[&vec![name.to_string()]];
@@ -2726,6 +2795,39 @@ fn readme_the_command_table_cites_existing_e2e_specs_that_use_the_command() {
     assert!(
         problems.is_empty(),
         "crates/tools/README.md's command table cites stale, missing or unused e2e specs (#4287): {problems:#?}"
+    );
+}
+
+#[test]
+fn readme_cited_e2e_specs_scope_the_tools_group() {
+    let e2e_dir = repo().join("e2e/cypress/e2e");
+    let readme = fs::read_to_string(repo().join("crates/tools/README.md")).expect("the tools README");
+    let problems = cited_specs_missing_tools_scope(&readme, &e2e_dir);
+    assert!(
+        problems.is_empty(),
+        "a cited e2e spec's file leaves rust_tools_wasm off in scripts/ci-scope.sh (#4449): {problems:#?}"
+    );
+
+    // The specs the README cites today stay scoped.
+    let cited = "\
+| Command | Module | Does |
+| --- | --- | --- |
+| `replay` | `replay.rs` | e2e specs 01 and 13 check the browser's hash with it. |
+";
+    let problems = cited_specs_missing_tools_scope(cited, &e2e_dir);
+    assert!(problems.is_empty(), "unexpected problems: {problems:#?}");
+
+    // Spec 02 exists (02-prompts.cy.ts) but stays unmapped, so citing it fails.
+    let unmapped = "\
+| Command | Module | Does |
+| --- | --- | --- |
+| `replay` | `replay.rs` | e2e spec 02 checks the browser's hash with it. |
+";
+    assert_eq!(
+        cited_specs_missing_tools_scope(unmapped, &e2e_dir),
+        [
+            "row cites e2e spec 02, but scripts/ci-scope.sh leaves rust_tools_wasm off for e2e/cypress/e2e/02-prompts.cy.ts: name its file in the crate map (#4449)"
+        ]
     );
 }
 
@@ -2913,7 +3015,7 @@ fn preview_the_scan_finds_each_preview_of_shipped_sets_only() {
     assert_eq!(previews_of_shipped_sets_only(text), [1, 3]);
 }
 
-/// The constants `spec/15-dungeon-run.md`'s table names, the first cell of each row, in order.
+/// The constants a run's spec section's table names (§15's, §16's), the first cell of each row, in order.
 fn spec_table_constants(section: &str) -> Vec<String> {
     section
         .lines()
@@ -2923,13 +3025,41 @@ fn spec_table_constants(section: &str) -> Vec<String> {
         .collect()
 }
 
-// B33 (DR14, #2709): the dungeon run's spec section holds one row per `pub const` of the run's
-// `config.rs` and no other, and the spec's map links the note.
+// §8 is one note a subsection (`spec/08-catalog/`), and the cards' radiant_stats.rs reads them with
+// `include_str!`, a list a pure crate's test cannot build from the folder (CLAUDE.md rule 4). A note
+// added without joining that list would leave its rows' Radiant stats unchecked, so this holds the
+// list to the folder.
+#[test]
+fn every_catalog_note_is_read_by_the_radiant_stats_test() {
+    let root = repo();
+    let reader = fs::read_to_string(root.join("crates/cards/tests/cross/radiant_stats.rs"))
+        .expect("crates/cards/tests/cross/radiant_stats.rs");
+    let mut notes: Vec<String> = fs::read_dir(root.join("spec/08-catalog"))
+        .expect("spec/08-catalog")
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .collect();
+    notes.sort();
+    assert!(notes.len() >= 13, "only {} notes in spec/08-catalog", notes.len());
+    let unread: Vec<&String> = notes
+        .iter()
+        .filter(|note| !reader.contains(&format!("include_str!(\"../../../../spec/08-catalog/{note}\")")))
+        .collect();
+    assert!(
+        unread.is_empty(),
+        "crates/cards/tests/cross/radiant_stats.rs reads no {unread:?} of spec/08-catalog: add each to CATALOG_NOTE"
+    );
+}
+
+// B33 (DR14, #2709): the dungeon run's and the Infinite Assault's spec sections (§15, §16, #4584)
+// together hold one row per `pub const` of the run's `config.rs` and no other, and the spec's map
+// links both notes.
 #[test]
 fn dungeon_the_spec_section_tables_every_run_constant_and_the_map_links_it() {
     let root = repo();
     let config = fs::read_to_string(root.join("crates/run/src/config.rs")).expect("the run's config.rs");
-    let section = fs::read_to_string(root.join("spec/15-dungeon-run.md")).expect("spec/15-dungeon-run.md");
+    let section = fs::read_to_string(root.join("spec/15-dungeon-run.md")).expect("spec/15-dungeon-run.md")
+        + &fs::read_to_string(root.join("spec/16-infinite-assault.md")).expect("spec/16-infinite-assault.md");
     let map = fs::read_to_string(root.join("spec/README.md")).expect("spec/README.md");
     let constants: BTreeSet<String> = config_constants(&config).into_iter().collect();
     let rows: BTreeSet<String> = spec_table_constants(&section).into_iter().collect();
@@ -2942,13 +3072,15 @@ fn dungeon_the_spec_section_tables_every_run_constant_and_the_map_links_it() {
     let stale: Vec<&String> = rows.difference(&constants).collect();
     assert!(
         missing.is_empty() && stale.is_empty(),
-        "spec/15-dungeon-run.md's constants table and crates/run/src/config.rs disagree: rows to add {missing:?}, rows naming no constant {stale:?}"
+        "spec/15-dungeon-run.md's and spec/16-infinite-assault.md's constants tables and crates/run/src/config.rs disagree: rows to add {missing:?}, rows naming no constant {stale:?}"
     );
-    assert!(
-        map.lines()
-            .any(|line| line.starts_with("- [[§15]]") && line.contains("(15-dungeon-run.md)")),
-        "spec/README.md does not map spec/15-dungeon-run.md"
-    );
+    for (id, note) in [("§15", "15-dungeon-run.md"), ("§16", "16-infinite-assault.md")] {
+        assert!(
+            map.lines()
+                .any(|line| line.starts_with(&format!("- [[{id}]]")) && line.contains(&format!("({note})"))),
+            "spec/README.md does not map spec/{note}"
+        );
+    }
 }
 
 #[test]
@@ -3271,6 +3403,65 @@ const RETIRED_NETWORK_NAMES: [&str; 6] = [
     "learned_parity",
 ];
 
+/// R4702000: the commands only the retired training lanes ran are gone (#4702). The promotion gate,
+/// `promote`, and CI's replay of it (R732001, R1012000, R1679000) go first.
+#[test]
+fn r4702000_r732001_r1012000_r1679000_the_tools_have_no_promotion_gate() {
+    let root = repo();
+    assert!(
+        !root.join("crates/tools/src/promote.rs").exists(),
+        "crates/tools/src/promote.rs is back"
+    );
+    let main = fs::read_to_string(root.join("crates/tools/src/main.rs")).expect("crates/tools/src/main.rs");
+    assert!(
+        !main.contains("mod promote") && !main.contains("Promote("),
+        "crates/tools/src/main.rs mounts `promote` again"
+    );
+    let ci = fs::read_to_string(root.join(".github/workflows/ci.yml")).expect(".github/workflows/ci.yml");
+    assert!(
+        !ci.contains("training-gate") && !ci.contains("jackioh promote"),
+        "ci.yml replays a training lane's promotion again"
+    );
+}
+
+/// R4702000: no `positions` command folds self-play logs into training rows (R1006003, R1006004,
+/// R1006006, R1171000, R3112002, R4070000), and no `stats from-selfplay` files them. `selfplay` stays:
+/// `classify` plays it on two builds (R1365000).
+#[test]
+fn r4702000_r1006003_r1006004_r1006006_r1171000_r3112002_r4070000_no_positions_command() {
+    let root = repo();
+    for gone in [
+        "crates/tools/src/positions.rs",
+        "crates/tools/src/selfplay_records.rs",
+    ] {
+        assert!(!root.join(gone).exists(), "{gone} is back");
+    }
+    let main = fs::read_to_string(root.join("crates/tools/src/main.rs")).expect("crates/tools/src/main.rs");
+    for mounted in ["mod positions", "Positions(", "mod selfplay_records"] {
+        assert!(!main.contains(mounted), "crates/tools/src/main.rs: `{mounted}`");
+    }
+    assert!(
+        main.contains("mod selfplay;"),
+        "`selfplay` is gone, and `classify` plays it"
+    );
+}
+
+/// R4702000: the AI extracts no features: the learned evaluation they fed is retired (R4159000), and
+/// `positions` was their last reader (R1006000, R1012004, R3112000).
+#[test]
+fn r4702000_r1006000_r1012004_r3112000_the_ai_extracts_no_features() {
+    let root = repo();
+    assert!(
+        !root.join("crates/ai/src/features.rs").exists(),
+        "crates/ai/src/features.rs is back"
+    );
+    let lib = fs::read_to_string(root.join("crates/ai/src/lib.rs")).expect("crates/ai/src/lib.rs");
+    assert!(
+        !lib.contains("mod features"),
+        "crates/ai/src/lib.rs: `mod features`"
+    );
+}
+
 /// R4159000, R1010000, R1010001, R1011000, R1171001, R3112001: the AI compiles no network and no prior.
 /// `crates/ai` has no build script, no `learned` or `policy` module and no weights file, and no source of
 /// the AI or of the three WebAssembly crates names what only they used.
@@ -3361,6 +3552,59 @@ fn ts_the_generated_types_are_written_by_the_ci_test_build() {
         "crates/wasm/core/Cargo.toml's [dev-dependencies] no longer turn on `ts` for {missing:?}: CI no longer \
          holds `Run*.ts` and the shared types to the Rust (#4426); restore the `features = [\"ts\"]` lines"
     );
+}
+
+/// Whether the manifest's `[dev-dependencies]` turn `jackioh-wasm-core`'s `duos` feature on (#4542):
+/// without it no test build compiles the real Duos bodies.
+fn dev_dependency_missing_duos(manifest: &str) -> bool {
+    let mut in_dev = false;
+    for raw in manifest.lines() {
+        let line = raw.split('#').next().unwrap_or("").trim();
+        if line.starts_with('[') {
+            in_dev = line == "[dev-dependencies]";
+        } else if in_dev
+            && !line.is_empty()
+            && line
+                .strip_prefix("jackioh-wasm-core")
+                .and_then(|rest| rest.trim_start().strip_prefix('='))
+                .is_some_and(|rest| rest.contains("features") && rest.contains("\"duos\""))
+        {
+            return false;
+        }
+    }
+    true
+}
+
+/// #4542: the C crate's dev-dependency turns `jackioh-wasm-core`'s `duos` feature on, so every
+/// test build compiles the real Duos bodies while the shipped modules keep their stubs.
+#[test]
+fn duos_the_c_test_build_compiles_the_duos_bodies() {
+    let path = repo().join("crates/wasm/c/Cargo.toml");
+    let manifest = fs::read_to_string(&path).unwrap_or_else(|error| panic!("{}: {error}", path.display()));
+    assert!(
+        !dev_dependency_missing_duos(&manifest),
+        "crates/wasm/c/Cargo.toml's [dev-dependencies] no longer turn on `duos` for \
+         jackioh-wasm-core: no test build compiles the real Duos bodies (#4542); restore the \
+         `features = [\"duos\"]` line"
+    );
+}
+
+#[test]
+fn duos_the_dev_dependency_scan_finds_a_dropped_feature() {
+    let ok = "[dependencies]\njackioh-wasm-core = { path = \"../core\" }\n\n[dev-dependencies]\n\
+              # a comment\njackioh-wasm-core = { path = \"../core\", features = [\"duos\"] }\n";
+    assert!(!dev_dependency_missing_duos(ok));
+    let no_features = "[dev-dependencies]\njackioh-wasm-core = { path = \"../core\" }\n";
+    assert!(dev_dependency_missing_duos(no_features));
+    let other_feature =
+        "[dev-dependencies]\njackioh-wasm-core = { path = \"../core\", features = [\"serde\"] }\n";
+    assert!(dev_dependency_missing_duos(other_feature));
+    let commented =
+        "[dev-dependencies]\n# jackioh-wasm-core = { path = \"../core\", features = [\"duos\"] }\n";
+    assert!(dev_dependency_missing_duos(commented));
+    let linked = "[dependencies]\njackioh-wasm-core = { path = \"../core\", features = [\"duos\"] }\n\n[dev-dependencies]\n";
+    assert!(dev_dependency_missing_duos(linked));
+    assert!(dev_dependency_missing_duos("[package]\nname = \"x\"\n"));
 }
 
 #[test]

@@ -143,6 +143,14 @@ radiant?: true,
  */
 animated?: true, 
 /**
+ * R4423000: what the card was on the field as it died (`faces::card_type_of`), only when that is
+ * not its face's printed type: a card set by its Cloaked dies as a Field Trap or a Trap (R3777000,
+ * R783008), an Animated one standing in a unit zone as a Unit (R383). Unlike `animated`, the rules
+ * read it (`as_rules_read` keeps it, `query::is_unit_death`), and a view that hides the card hides
+ * it too (R97).
+ */
+diedAs?: CardType, 
+/**
  * R2783001: the keyword behind this event — Poisonous when a Poisonous hit marked the unit, else
  * First Strike when it fell to the strike §4.3 moved ahead and so struck nothing back — for the
  * client's cue; the engine sets it where the keyword applies, never a card (CLAUDE.md rule 5). No
@@ -185,7 +193,14 @@ lost?: true, } | { "type": "counterChanged", instanceId: string, counter: Counte
  * plays no reveal and "when one of your Traps reveals" does not answer it. Only ever
  * `Some(true)`, so a first firing serializes and hashes as it did.
  */
-again?: boolean, } | { "type": "attackDeclared", attackerId: string, targetId: string, forced: boolean, 
+again?: boolean, 
+/**
+ * R4586007: the attacker of the attack the firing answers (`traps::fire_trap` on an
+ * `attackDeclared`), in a game holding an Infinite Assault card (`recursion_log::kept`), so a
+ * trigger on a Figment's reveal can copy it. Absent otherwise, so no other game's firing
+ * serializes otherwise than it did before the field existed.
+ */
+attackerId?: string, } | { "type": "attackDeclared", attackerId: string, targetId: string, forced: boolean, 
 /**
  * ME-ATTACKSUMMON (R1202): the id of the card whose attack this replaces — Windfast's —
  * when a summoned substitute makes it. Absent otherwise.

@@ -6,7 +6,11 @@
 //! its placements go on; `answer_placement` (which `prompts.rs` calls for this hook, SURFACE §6.6)
 //! places them and drains what the prompt interrupted. The resume carries only plain numbers, so a
 //! paused chain survives JSON and replays exactly. The state check waits for the whole effect (R59), so
-//! a unit the placements shrank to 0 health (#42) dies after the last placement, not between two.
+//! a unit the placements shrank to 0 health (#42) dies after the last placement, not between two. A
+//! placement nobody is asked for (a random cast's, R452; any while a Mayor acts, R1200) draws from the
+//! options its prompt would offer (R450), so a Spell's or a Field Spell's never lands on an Evasive card
+//! in play (R4353002); the chooser's Mayor Lucky rolls it again (R1201), and the draw is recorded for
+//! I22 (#4540).
 
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
@@ -20,7 +24,7 @@ use crate::prompts::{
     AnswerInput, OpenPromptArgs, close_prompt, in_offered_order, open_prompt, resume_at, resume_of,
     why_answer_refused,
 };
-use crate::random_cast::{cast_mode_for_prompt, prefer_enemies};
+use crate::random_cast::{cast_mode_for_prompt, is_enemy_pick, prefer_enemies};
 use crate::script::{Effect, EngineSink};
 use crate::state::{CardInstance, EngineError, GameState, PromptOption, Resume, find_instance};
 use crate::wire::{PlayerId, PromptKind, Selection, ZoneName};
@@ -186,11 +190,13 @@ fn label_of(state: &GameState, card: &CardInstance) -> String {
 }
 
 /// Open the one placement prompt over every permanent on the field an effect reaches (R68's order; a
-/// Dormant card is none, R4322000), or return false when there is none: the placements fizzle and draw
-/// nothing (R129).
-fn ask_placement(sink: &mut EngineSink<'_>, player: PlayerId, resume: Resume) -> bool {
+/// Dormant card is none, R4322000; for a Spell, `from_spell`, nor a Unit Immune to Spells, R4453000),
+/// which the targeting point narrows again for the prompt and for a placement drawn at random (R450,
+/// R4353002), or return false when there is none: the placements fizzle and draw nothing (R129).
+fn ask_placement(sink: &mut EngineSink<'_>, player: PlayerId, resume: Resume, from_spell: bool) -> bool {
     let cards: Vec<CardInstance> = reachable_permanents_on_field(sink.state, player)
         .into_iter()
+        .filter(|card| !(from_spell && crate::restrictions::immune_to_spells(sink.state, card)))
         .cloned()
         .collect();
     if cards.is_empty() {
@@ -200,15 +206,53 @@ fn ask_placement(sink: &mut EngineSink<'_>, player: PlayerId, resume: Resume) ->
     let tokens = data.map_or(1, |data| data.amount);
     let count = data.map_or(1, |data| data.count).max(1);
     let total = tokens * count;
+    let options: Vec<PromptOption> = cards
+        .iter()
+        .map(|card| PromptOption {
+            key: format!("instance:{}", card.id),
+            label: label_of(sink.state, card),
+            selection: Selection::Instance {
+                instance_id: card.id.clone(),
+            },
+            cost: None,
+            radiant: None,
+        })
+        .collect();
+    let prompt = if total == 1 {
+        "Place a Plague Counter on a permanent".to_string()
+    } else {
+        format!("Place {total} Plague Counters on a permanent")
+    };
+    let args = OpenPromptArgs {
+        player,
+        kind: PromptKind::Target,
+        aim: None,
+        prompt,
+        options,
+        min: None,
+        max: None,
+        budget: None,
+        owner: None,
+        resume,
+    };
     // B5 E12, R452: a random cast's caster is never asked, so every placement goes on one random
     // permanent (R60). This hook answers its own prompts, so `open_prompt` would ask instead.
-    let mode = cast_mode_for_prompt(sink.state, player, resume.instance_id.as_deref());
+    let mode = cast_mode_for_prompt(sink.state, player, args.resume.instance_id.as_deref());
     // R1200: while a Mayor acts the placement is drawn at random too, and nobody is asked.
     let random = mode.is_some_and(|mode| mode.random) || crate::random_targets::targets_random(sink.state);
     if random {
-        let now: Vec<CardInstance> = reachable_permanents_on_field(sink.state, player)
+        // R450, R452, R4353002: the draw reads the options the prompt would offer (the targeting
+        // point), so a Spell's or a Field Spell's never lands on an Evasive card in play.
+        let legal: IndexSet<String> = crate::targeting_point::targetable_options(sink.state, &args)
             .into_iter()
-            .cloned()
+            .filter_map(|option| match option.selection {
+                Selection::Instance { instance_id } => Some(instance_id),
+                _ => None,
+            })
+            .collect();
+        let now: Vec<CardInstance> = cards
+            .into_iter()
+            .filter(|card| legal.contains(&card.id))
             .collect();
         let pool: Vec<CardInstance> = if mode.is_some_and(|mode| mode.friends_only) {
             // R1850004: a cast for its caster's own side places there alone.
@@ -233,47 +277,63 @@ fn ask_placement(sink: &mut EngineSink<'_>, player: PlayerId, resume: Resume) ->
         if pool.is_empty() {
             return false;
         }
-        let at = sink.rng.int(pool.len() as i32);
-        let Some(card) = pool.get(at as usize).cloned() else {
+        // R1201: the chooser's Mayor Lucky rolls again and keeps the later roll only when it lands on
+        // the enemy side (R656: an unaimed pick harms, as `answer_at_random` reads it). Luck 0 is the
+        // one `rng.int` this branch always drew, so a game with no Lucky Mayor replays byte for byte.
+        let luck = crate::random_targets::mayor_luck(sink.state, player);
+        let state: &GameState = sink.state;
+        let enemy = |at: i32| -> bool {
+            usize::try_from(at)
+                .ok()
+                .and_then(|at| pool.get(at))
+                .is_some_and(|card| {
+                    is_enemy_pick(
+                        state,
+                        player,
+                        &Selection::Instance {
+                            instance_id: card.id.clone(),
+                        },
+                    )
+                })
+        };
+        let at = sink.rng.lucky(
+            luck,
+            |rng| rng.int(pool.len() as i32),
+            |first, second| {
+                if enemy(second) && !enemy(first) {
+                    second
+                } else {
+                    first
+                }
+            },
+        );
+        let Some(card) = usize::try_from(at).ok().and_then(|at| pool.get(at)).cloned() else {
             return false;
         };
+        // I22 (#4540): the fuzz monitor holds this draw to the targeting rules (`testkit::seams`).
+        #[cfg(feature = "testkit")]
+        {
+            let by = if crate::random_targets::targets_random(sink.state) {
+                crate::testkit::seams::TargetDrawBy::Mayor
+            } else {
+                crate::testkit::seams::TargetDrawBy::RandomCast
+            };
+            let source = args
+                .resume
+                .instance_id
+                .as_deref()
+                .and_then(|id| find_instance(sink.state, id));
+            let picks = [Selection::Instance {
+                instance_id: card.id.clone(),
+            }];
+            crate::testkit::seams::record_target_draw(sink.state, source, player, by, &picks);
+        }
         for _ in 0..count {
             place_plague_on(sink, &card, tokens);
         }
         return false;
     }
-    let options: Vec<PromptOption> = cards
-        .iter()
-        .map(|card| PromptOption {
-            key: format!("instance:{}", card.id),
-            label: label_of(sink.state, card),
-            selection: Selection::Instance {
-                instance_id: card.id.clone(),
-            },
-            cost: None,
-            radiant: None,
-        })
-        .collect();
-    let prompt = if total == 1 {
-        "Place a Plague Counter on a permanent".to_string()
-    } else {
-        format!("Place {total} Plague Counters on a permanent")
-    };
-    let asked = open_prompt(
-        sink,
-        OpenPromptArgs {
-            player,
-            kind: PromptKind::Target,
-            aim: None,
-            prompt,
-            options,
-            min: None,
-            max: None,
-            budget: None,
-            owner: None,
-            resume,
-        },
-    );
+    let asked = open_prompt(sink, args);
     asked.is_some()
 }
 
@@ -314,7 +374,8 @@ pub fn place_plague_tokens(args: PlacePlagueTokensArgs) -> Effect {
         }
         let resume: Resume = resume_at(json_as(request));
         let controller = ctx.controller;
-        ask_placement(ctx, controller, resume);
+        let from_spell = crate::restrictions::effect_is_from_spell(ctx);
+        ask_placement(ctx, controller, resume, from_spell);
     })
 }
 

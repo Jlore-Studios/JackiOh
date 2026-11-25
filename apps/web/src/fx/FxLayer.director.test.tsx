@@ -9,6 +9,7 @@ import { fullBoardView } from "../test/fixtures.ts";
 import { FX_DEFAULT_SEED, FX_MOBILE_WIDTH, FX_PARTICLE_CAP, FX_PARTICLE_CAP_MOBILE } from "./constants.ts";
 import type { FxDirectorOptions } from "./director.ts";
 import FxLayer, { type FxSeams } from "./FxLayer.tsx";
+import { readDevice, type FxDevice } from "./layers.ts";
 import { resetFxSettingsForTests } from "./settings.ts";
 
 const built = vi.hoisted(() => [] as FxDirectorOptions[]);
@@ -73,5 +74,11 @@ describe("S9 B34 — the director the layer builds", () => {
   it("B34 a viewport narrower than FX_MOBILE_WIDTH caps it at FX_PARTICLE_CAP_MOBILE, from that width up at FX_PARTICLE_CAP", () => {
     expect(director({ ...QUIET, viewportWidth: () => FX_MOBILE_WIDTH - 1 }).capacity).toBe(FX_PARTICLE_CAP_MOBILE);
     expect(director({ ...QUIET, viewportWidth: () => FX_MOBILE_WIDTH }).capacity).toBe(FX_PARTICLE_CAP);
+  });
+
+  it("R4493001 the layer hands the director its device seam, else readDevice", () => {
+    const device = (): FxDevice => ({ width: 390, height: 844, dpr: 3, memoryGb: 2 });
+    expect(director({ ...QUIET, viewportWidth: () => 1280, device }).device).toBe(device);
+    expect(director({ ...QUIET, viewportWidth: () => 1280 }).device).toBe(readDevice);
   });
 });

@@ -58,6 +58,16 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+/** `network.fetch`, recording every call, with `route`'s answer swapped for `body`. */
+function answering(route: "search" | "create", body: unknown) {
+  return async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
+    const response = await network.fetch(input, init);
+    const path = new URL(input instanceof Request ? input.url : input).pathname;
+    const hit = route === "search" ? path === "/search/issues" : path === `/repos/${ALERT_REPO}/issues`;
+    return hit ? new Response(JSON.stringify(body), { status: response.status }) : response;
+  };
+}
+
 describe("parseAlertEmails", () => {
   it("keeps the addresses, trimmed, and leaves out what is none, counting without printing", () => {
     const kept = parseAlertEmails(" a@example.com , nobody, b c@example.com, d@nodot, e@@example.com, @example.com,, f@x.org ");
@@ -123,6 +133,16 @@ describe("the issue's text", () => {
     expect(body).toContain("holds none of them");
     expect(body).not.toContain(SECRET);
     expect(body).not.toContain("cause");
+  });
+
+  it("says where the details went and when to close it, word for word", () => {
+    expect(issueBody(SITE, BUILD, ALERT)).toContain(
+      "Its details went by email to the owners (`ALERT_EMAILS`) and are in the Worker's logs " +
+        "(Workers & Pages, the site's Worker, Logs, `server.unreachable`). The repository is public, so " +
+        "this issue holds none of them.\n\n" +
+        "While this issue is open, the alert recurring adds a comment here, at most once an hour, and sends no email. " +
+        "Close it once it is handled: the next one opens a new issue and emails again (`apps/edge/src/alerts.ts`, #3618).",
+    );
   });
 
   it("says unknown for a build the Worker was not given", () => {
@@ -210,6 +230,7 @@ describe("tell, with a token and a Resend key", () => {
     expect(email?.headers.authorization).toBe("Bearer re_key");
     expect(email?.headers["idempotency-key"]).toBe(`jackioh-alert/${SITE}/server.unreachable/${FakeNetwork.issueUrl(1)}`);
     expect(email?.headers["user-agent"]).toBe(ALERT_USER_AGENT);
+    expect(email?.headers["content-type"]).toBe("application/json");
     expect(email?.body).toEqual({
       from: ALERT_EMAIL_FROM,
       to: ["owner@example.com", "second@example.com"],
@@ -258,6 +279,47 @@ describe("tell, with a token and a Resend key", () => {
     const [comment] = network.to("comment");
     expect(comment?.url.pathname).toBe("/repos/Jlore-Studios/JackiOh/issues/7/comments");
     expect(comment?.body).toEqual({ body: commentOf(BUILD, ALERT) });
+  });
+
+  it("logs the comment it filed, with the issue's address, or none when GitHub sends none", async () => {
+    network.openIssues = [{ number: 7, title: TITLE, html_url: "https://github.com/x/7" }];
+
+    await tell(SETTINGS, ALERT);
+
+    expect(logs.info).toHaveBeenCalledWith("alert.filed", { kind: "commented", url: "https://github.com/x/7" });
+
+    logs.info.mockClear();
+    network.openIssues = [{ number: 7, title: TITLE } as never];
+
+    await tell(SETTINGS, ALERT);
+
+    expect(logs.info).toHaveBeenCalledWith("alert.filed", { kind: "commented", url: "" });
+  });
+
+  // alerts.rs reads a missing address as empty, and so does the Worker.
+  it.each([null, { number: 1 }])("opens an issue with no address when GitHub answers the creation %j", async (created) => {
+    vi.stubGlobal("fetch", answering("create", created));
+
+    await tell(SETTINGS, ALERT);
+
+    expect(logs.info).toHaveBeenCalledWith("alert.filed", { kind: "opened", url: "" });
+    expect(network.to("email")).toHaveLength(1);
+  });
+
+  it.each([null, {}])("opens an issue when the search answers %j, which lists none", async (found) => {
+    vi.stubGlobal("fetch", answering("search", found));
+
+    await tell(SETTINGS, ALERT);
+
+    expect(network.to("create")).toHaveLength(1);
+    expect(logs.error).not.toHaveBeenCalledWith("alert.issue.failed", expect.anything());
+  });
+
+  it("logs the email it sent, to how many addresses", async () => {
+    await tell(SETTINGS, ALERT);
+
+    expect(logs.info).toHaveBeenCalledWith("alert.emailed", 2);
+    expect(logs.error).not.toHaveBeenCalledWith("alert.email.failed", expect.anything());
   });
 
   it("ignores an issue whose title only holds the words, and opens a new one", async () => {

@@ -11,6 +11,7 @@ type Claim = { request: MusicRequest | null; intro: boolean };
 
 let menuHolders = 0;
 const claims: Claim[] = [];
+let applyQueued = false;
 
 function apply(): void {
   try {
@@ -25,6 +26,20 @@ function apply(): void {
   } catch {
     // Music is never worth an error.
   }
+}
+
+/**
+ * R4606000: a board leaving defers the hand-back to a microtask, so an unmount followed by a
+ * mount in the same commit (a replay step, a portal flip) passes the music on without asking
+ * for the menu theme in between. A real exit asks for it on the microtask.
+ */
+function scheduleApply(): void {
+  if (applyQueued) return;
+  applyQueued = true;
+  queueMicrotask(() => {
+    applyQueued = false;
+    apply();
+  });
 }
 
 /** The menu theme plays while anything holds this and no board is mounted. Returns the release. */
@@ -78,7 +93,7 @@ export function enterGameMusic(): MusicSink & { leave(): void } {
       if (at < 0) return;
       if (holds() && claim.intro) getMusicPlayer().stopIntro();
       claims.splice(at, 1);
-      apply();
+      scheduleApply();
     },
   };
 }

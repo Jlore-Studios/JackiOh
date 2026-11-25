@@ -147,7 +147,6 @@ describe("#778 the screens that never call the engine", () => {
     ["/reset-password", resetTestid.screen],
     ["/privacy", "privacy-screen"],
     ["/terms", "terms-screen"],
-    ["/accessibility", "accessibility-screen"],
   ])("#778 %s paints while the module is still loading", async (path, testId) => {
     serveAs("active");
     at(path);

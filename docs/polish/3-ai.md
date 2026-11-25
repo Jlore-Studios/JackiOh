@@ -640,7 +640,9 @@ export function beamSearch(det: GameState, seat: PlayerId, counter: NodeCounter,
  * AI_SEARCH.maxAutoAnswers prompts), the line's own answer is dropped, and the line plays on. What
  * is left ends its turn and is scored: after the
  * opponent's reply when `reply` is set (`replyScore`, with `hidden` as there), statically otherwise.
- * null if the counter ran out.
+ * null if the counter ran out. R4447000: `replay_line` is this replay reporting its cut, which `decide`
+ * counts in `stats.replaysCut` and, with `AI_SEARCH.replay_fill_steps` above 0, finishes greedily;
+ * `scoreLine` keeps the cut.
  */
 export function scoreLine(
   det: GameState, seat: PlayerId, actions: readonly ActionBody[], counter: NodeCounter,
@@ -674,10 +676,13 @@ export function decide(state: GameState, seat: PlayerId, options: AiOptions): De
    share of the reserve and never past the wrap-up: `shortlist_lines`, `payoff_score`, R3696000) are
    scored after the opponent's reply on `dets[0]` (`replyScore`), each first
    action keeps its best line, and the best `finalists` first actions are re-scored the same way
-   with `scoreLine(…, reply: true)` on `dets[1..K-1]`; a line's answer that a world does not offer
-   (each world draws its own Discover) gives way to that world's best answer (#1636), so every
-   finalist is scored after the reply. The best mean over all K wins (ties go to
-   det-0 order). If the counter ran out before any reply was scored, the static scores decide as
+   with `replay_line` (`scoreLine`'s replay, after the reply) on `dets[1..K-1]`; a line's answer that
+   a world does not offer (each world draws its own Discover) gives way to that world's best answer
+   (#1636), so every finalist is scored after the reply. Any other step a world does not offer cuts
+   the replay there, counted in `stats.replaysCut`, and with `AI_SEARCH.replay_fill_steps` above 0
+   that world's turn is played on greedily before it ends (R4447000). The best mean over all K wins, a
+   finalist that won on `dets[0]` alone taking its mean on the others (R4608000) (ties go to det-0
+   order). If the counter ran out before any reply was scored, the static scores decide as
    they would without the reply. Reason `"prompt"` if `pub.pending` was the seat's, else `"search"`.
 7. If no line was ever scored (all simulations failed or the budget was 0): `endTurn` if it is a
    candidate, else `cands[0]`, with reason `"fallback"`. Every internal throw is caught and counted
@@ -718,9 +723,11 @@ The rule, one step at a time, each step one `reduce` (one node):
    turn), each play and standing still are judged after it ends its turn (`known_play`, R3696001).
 2. **Visible activations.** An Activate of a card face-up on the field that is not in `hidden` (The
    Power to Punish, a Heroic Power's rolled Ping) is information too. The opponent tries up to
-   `AI_REPLY.visibleActivations` of them, those aimed at the seat's hero first, then at a card the
-   seat controls, and takes the one its own `evaluate` likes best, if that beats standing still
-   (#1036). A face-down card's Reveal is never tried: its card is a sample.
+   `AI_REPLY.visibleActivations` of them, those aimed at the seat's hero first, then those aimed at
+   a card the seat controls, one per pick, dealt out over every source and ability in turn, each
+   one's best target by the seat's `unitWorth` first (R4515000; `AI_REPLY.spreadActivations` off
+   gives back the first ones listed), and takes the one its own `evaluate` likes best, if that
+   beats standing still (#1036). A face-down card's Reveal is never tried: its card is a sample.
 3. **Trades.** Otherwise it takes the legal attack of highest static value, when that value is
    positive: an attack that kills the seat's hero is worth `AI_EVAL.win`; so is every attack on the
    hero while the attacks the opponent has left would reach it together past the seat's Taunts
@@ -740,7 +747,10 @@ The rule, one step at a time, each step one `reduce` (one node):
 4. **Defense.** When no attack is worth making, it tries up to `AI_REPLY.defenseSwitches` switches
    to Defense Position of its units in Attack Position whose switch is unspent (a unit that
    attacked has spent it, unless it has Deft, R49), one node each, and keeps the one its own
-   `evaluate` likes best, if that beats standing still (#1696). Facing lethal (`faceThreat` of the
+   `evaluate` likes best, if that beats standing still (#1696). Among those tries, after them, are up
+   to `AI_REPLY.attackSwitches` switches back to Attack Position of its units in Defense Position
+   without Deft (a Deft unit's is step 3's), each of which spends the unit's exertion, so it attacks
+   nothing that turn and threatens from the next (R4433000). Facing lethal (`faceThreat` of the
    seat's board at least the opponent's life, so `wallSwitches`, R2976000, offers any), it also tries
    the attack step 3 picked and up to `AI_REPLY.defenseSwitches` of those walls together, one node
    each, and keeps a wall only when its `evaluate` beats both standing still and that attack; an
@@ -902,7 +912,7 @@ export const AI_GATE = {
   /** The brief's floors (the build's `minWinRate`), wins only. */
   briefRate: { "ai-vs-random": 0.95, "ai-vs-greedy": 0.7, "hard-vs-easy": 0.8 },
   /** The subject's win rate as it ships, on fresh tuning deals (see "Fix pass 2"). */
-  measuredRate: { "ai-vs-random": 0.945, "ai-vs-greedy": 0.68, "hard-vs-easy": 0.913 },
+  measuredRate: { "ai-vs-random": 1.0, "ai-vs-greedy": 0.92, "hard-vs-easy": 0.94 },
   /** The most often one run may fail an AI as strong as measuredRate by chance (proposed, SPEC §9.9). */
   falseAlarm: 0.05,
   /** SPEC §9.9: the most one decision at AI_BUDGET may take on the machine that runs the gate. */

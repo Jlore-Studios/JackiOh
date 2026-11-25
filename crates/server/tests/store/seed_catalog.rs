@@ -6,8 +6,9 @@
 //! The second (`test:db` only: it runs when `DATABASE_URL` is set): `seed_catalog` writes the real catalog
 //! into `public.cards`, where every migration's constraints apply. `cards_tags_check` (0002) admits each
 //! later tag from the migration that adds it, 'Jlockeed' (R278, #13 and #14) from 0010, Book, Pancake
-//! and AI (B2.4) from 0015, #3038's Starship (R3038000) from 0083 and #3535's nine Stinkyscape+ tags
-//! (R3535002) from 0088 among them. The seed runs in one
+//! and AI (B2.4) from 0015, #3038's Starship (R3038000) from 0083, #3535's nine Stinkyscape+ tags
+//! (R3535002) from 0088 and #4577's nine Infinite Assault tags (R4577001) from 0099 among them. The seed
+//! runs in one
 //! transaction, so one such row fails the whole catalog. The first half compares the tags with the
 //! migrations' text; the second checks that the database accepts them. Both count the catalog of the
 //! sets that ship (`SHIPPED_SETS`), so they hold before and after the patches that ship the Meditative,
@@ -287,8 +288,9 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             .expect("the real catalog is read");
         let (file, tags) = admitted_tags();
         assert_eq!(
-            file, "0088_stinkyscape_plus_tags.sql",
-            "0088 re-adds the check with #3535's nine Stinkyscape+ tags (R3535002), after 0083's Starship"
+            file, "0099_infinite_assault_tags.sql",
+            "0099 re-adds the check with #4577's nine Infinite Assault tags (R4577001), after 0088's nine \
+             Stinkyscape+ tags (R3535002)"
         );
         let mut carried: Vec<String> = entries
             .iter()
@@ -352,7 +354,7 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     async fn r1411_the_tag_check_admits_exactly_the_engine_s_tags_so_every_set_the_catalog_holds_seeds_the_day_it_ships()
      {
         let (file, tags) = admitted_tags();
-        assert_eq!(file, "0088_stinkyscape_plus_tags.sql");
+        assert_eq!(file, "0099_infinite_assault_tags.sql");
         for tag in [
             "Wincon",
             "Potion",
@@ -378,6 +380,15 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             "Automa-Ω",
             "Automa-ζ",
             "Paperclip",
+            "Hallucination",
+            "Overclock",
+            "Batch",
+            "Recursion",
+            "Jailbreak",
+            "Firewall",
+            "Scraper",
+            "Singularity",
+            "Commander",
         ] {
             assert!(tags.iter().any(|admitted| admitted == tag), "{tag}: {tags:?}");
         }
@@ -443,7 +454,7 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
     #[tokio::test]
     async fn r3535002_the_latest_check_admits_the_stinkyscape_plus_tags() {
         let (file, tags) = admitted_tags();
-        assert_eq!(file, "0088_stinkyscape_plus_tags.sql");
+        assert_eq!(file, "0099_infinite_assault_tags.sql");
         for tag in [
             "Mindustrial",
             "Mineral",
@@ -454,6 +465,31 @@ mod r278_the_catalog_s_tags_and_the_cards_table_s_tag_check {
             "Automa-Ω",
             "Automa-ζ",
             "Paperclip",
+        ] {
+            assert!(tags.iter().any(|admitted| admitted == tag), "{tag}: {tags:?}");
+            assert!(
+                Tag::ALL.iter().any(|each| each.as_str() == tag),
+                "{tag} is one of the engine's tags"
+            );
+        }
+    }
+
+    /// R4577001: the latest check admits the Infinite Assault set's eight doctrine tags and Commander,
+    /// though `seed-catalog` writes none of the held set's cards yet (R4577000) (CLAUDE.md rule 3).
+    #[tokio::test]
+    async fn r4577001_the_latest_check_admits_the_infinite_assault_tags() {
+        let (file, tags) = admitted_tags();
+        assert_eq!(file, "0099_infinite_assault_tags.sql");
+        for tag in [
+            "Hallucination",
+            "Overclock",
+            "Batch",
+            "Recursion",
+            "Jailbreak",
+            "Firewall",
+            "Scraper",
+            "Singularity",
+            "Commander",
         ] {
             assert!(tags.iter().any(|admitted| admitted == tag), "{tag}: {tags:?}");
             assert!(
@@ -650,11 +686,11 @@ mod r278_db_seed_catalog_writes_the_real_catalog_jlockeed_book_pancake_ai_plague
         // #967: Meditative #49 is a Catalyst and its #49.1 a Prime, beside #45 and #91 and their tokens,
         // and Acclaimed is on #49 and #49.1 alone. Meditative+ adds a Catalyst and a Prime (#16, #16.1) and
         // no Acclaimed; the Stinkyscape set #147 (a Catalyst), #147.1 (a Prime) and nine Acclaimed; the
-        // Stinkyscape+ set one Catalyst and three Acclaimed.
+        // Stinkyscape+ set one Catalyst (#4), one Prime (#4.1, since #4440) and four Acclaimed.
         for (tag, theirs, plus, stinky, stinky_plus) in [
             ("Catalyst", 3, 1, 1, 1),
-            ("Prime", 3, 1, 1, 0),
-            ("Acclaimed", 2, 0, 9, 3),
+            ("Prime", 3, 1, 1, 1),
+            ("Acclaimed", 2, 0, 9, 4),
         ] {
             assert_eq!(rows_tagged(tag), tagged(tag), "{tag}");
             assert_eq!(

@@ -8,8 +8,8 @@ use super::fixtures::harness::{act, act_ok, act_result, apply_now, put, slot};
 use super::fixtures::keywords_783::{
     REVEAL_ECHO, board_783 as playing, cloak_spells, cloak_units, cloaked_asker, cloaked_bolt,
     cloaked_charger, cloaked_echo, cloaked_field, cloaked_field_trap, cloaked_mourner, cloaked_rusher,
-    cloaked_token, cloaked_trap, cloaked_unit, crater_cloaked, grunt, plain_spell, plain_unit, second_wind,
-    set_resolver, summon_set, toe_cracker, trap_discount,
+    cloaked_token, cloaked_trap, cloaked_unit, crater_cloaked, grunt, plain_spell, plain_unit,
+    revealed_drawer, second_wind, set_resolver, summon_set, toe_cracker, trap_discount,
 };
 use super::fixtures::prompt_harness::{answer_keys, cast_now, open_as, round_trip};
 
@@ -911,7 +911,7 @@ mod r783008_leaving_unrevealed {
     }
 
     /// Apply one effect for p1 and settle, as a resolving card's would.
-    fn cast_now_effect(state: &mut GameState, effect: Effect) {
+    fn cast_now_effect(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
         let mut events: Vec<GameEvent> = Vec::new();
         let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
         {
@@ -930,6 +930,43 @@ mod r783008_leaving_unrevealed {
             settle(&mut sink, SettleOptions::default());
         }
         state.rng_cursor = rng.cursor();
+        events
+    }
+
+    /// R4423000: destroyed while set by its Cloaked, the card died as the Field Trap it was set as
+    /// (R3777000), which its `destroyed` says and the rules keep, though its definition prints a Unit.
+    #[test]
+    fn r4423000_a_set_cloaked_unit_destroyed_unrevealed_died_as_a_field_trap() {
+        let mut state = playing("r4423000-destroy");
+        let unit = in_hand(&mut state, &cloaked_mourner().id, P1);
+        let set = cloak(&mut state, &unit.id, 2);
+        let events = cast_now_effect(
+            &mut state,
+            jackioh_engine::effects::destroy(json_as(
+                json!({ "target": { "of": "instance", "instanceId": set.id } }),
+            )),
+        );
+        let died = must(
+            events
+                .iter()
+                .find(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == set.id))
+                .cloned(),
+            "the set card's destroyed",
+        );
+        assert!(
+            matches!(
+                died,
+                GameEvent::Destroyed {
+                    died_as: Some(CardType::FieldTrap),
+                    ..
+                }
+            ),
+            "{died:?}"
+        );
+        assert!(!jackioh_engine::query::is_unit_death(
+            &state,
+            &died.as_rules_read()
+        ));
     }
 }
 
@@ -1158,6 +1195,8 @@ mod r783009_what_a_hidden_cloaked_card_may_be {
                 cloaked_bolt().id,
                 cloaked_field().id,
                 crater_cloaked().id,
+                // R4590000's Cloaked fixture (issue #4590), in this file's catalog.
+                revealed_drawer().id,
                 cloaked_mourner().id,
                 cloaked_echo().id,
                 cloaked_asker().id,

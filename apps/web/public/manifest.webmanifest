@@ -1,7 +1,7 @@
 {
   "name": "JackiOh",
   "short_name": "JackiOh",
-  "description": "A 1v1 card game of lanes, mana and hidden traps.",
+  "description": "A 1v1 card game where you summon units into lanes and set traps face down.",
   "start_url": "/daily",
   "scope": "/",
   "display": "standalone",

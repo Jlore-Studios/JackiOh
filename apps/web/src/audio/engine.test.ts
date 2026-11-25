@@ -58,6 +58,8 @@ import {
   type FakeSpeech,
 } from "./test/fakeAudio.ts";
 import { deferSoundTablesForTests, setSoundTablesForTests } from "./soundTablesLoader.ts";
+import { deferSfxForTests, setSfxForTests } from "./sfxLoader.ts";
+import * as sfxRecipes from "./sfx.ts";
 import type { AudioEngine, PlayedCue, SfxId, SfxParams, VoiceKey, CardAudioTable, PlayableLineKind, VoiceManifest } from "./types.ts";
 import { voiceUrl } from "./voiceData.ts";
 import { must } from "../test/stubServer.ts";
@@ -226,9 +228,13 @@ beforeEach(() => {
   localStorage.clear();
   resetAudioSettingsForTests();
   writeAudioSettings({ ...LEVELS, muted: false, voiceOn: true });
+  // #4428: the setup installed the recipes, and the last test may have emptied them: every test
+  // starts with them loaded, the way the client has them after the first paint.
+  setSfxForTests(sfxRecipes);
 });
 
 afterEach(() => {
+  setSfxForTests(null);
   setSoundTablesForTests(null);
   for (const engine of engines.splice(0)) {
     try {
@@ -463,6 +469,38 @@ describe("B5 the acceptance gate", () => {
     expect(r.engine.log()).toHaveLength(1);
   });
 
+  it("hidden: only the clock alarm's own beats (alarm flag) are accepted while hidden", () => {
+    const r = rig();
+    unlocked(r);
+    r.page.visibility = "hidden";
+
+    // The alarm's own beats carry the caller-scoped exemption (stepClockAlarm's `{ alarm: true }`).
+    expect(r.engine.playSfx("heartbeat", undefined, undefined, { alarm: true })).toBe(true);
+    expect(r.engine.playSfx("clockTick", { amount: 3 }, undefined, { alarm: true })).toBe(true);
+    // The same ids without the flag stay silent: a set-piece bed's `clockTick` (eventHorizon)
+    // through the director never carries it, so a hidden board clear stays silent.
+    expect(r.engine.playSfx("heartbeat")).toBe(false);
+    expect(r.engine.playSfx("clockTick", { amount: 5 })).toBe(false);
+    expect(r.engine.playSfx("draw")).toBe(false);
+    expect(r.engine.playVoice("core-004", "play")).toBe(false);
+    expect(r.engine.log().map((c) => (c.kind === "sfx" ? c.id : c.kind))).toEqual(["heartbeat", "clockTick"]);
+
+    r.page.visibility = "visible";
+    expect(r.engine.playSfx("draw")).toBe(true);
+    expect(r.engine.log()).toHaveLength(3);
+  });
+
+  it("hidden: muted still refuses the alarm", () => {
+    const r = rig();
+    unlocked(r);
+    writeAudioSettings({ muted: true });
+    r.page.visibility = "hidden";
+
+    expect(r.engine.playSfx("heartbeat", undefined, undefined, { alarm: true })).toBe(false);
+    expect(r.engine.playSfx("clockTick", { amount: 3 }, undefined, { alarm: true })).toBe(false);
+    expect(r.engine.log()).toEqual([]);
+  });
+
   it("B5 voiceOn false refuses playVoice but still accepts playSfx", async () => {
     const r = rig();
     unlocked(r);
@@ -510,6 +548,53 @@ describe("B5 the acceptance gate", () => {
     r.engine.playSfx("draw");
     r.engine.clearLog();
     expect(r.engine.log()).toEqual([]);
+  });
+
+  it("#4428 a sound asked for before the recipes load is skipped without an error", async () => {
+    const deferred = deferSfxForTests();
+    try {
+      const r = rig();
+      const audio = unlocked(r);
+      const before = audio.nodes.length;
+
+      expect(r.engine.playSfx("draw")).toBe(false);
+      expect(r.engine.playSfx("impact", { amount: 4 })).toBe(false);
+      await settle();
+
+      expect(r.engine.log()).toEqual([]);
+      expect(audio.nodes.length, "no source is built for a skipped sound").toBe(before);
+      expect(audio.violations).toEqual([]);
+    } finally {
+      deferred.resolve(sfxRecipes);
+    }
+  });
+
+  it("#4428 the same sound plays once the recipes have loaded", async () => {
+    const deferred = deferSfxForTests();
+    try {
+      const r = rig();
+      const audio = unlocked(r);
+      const bus = buses(audio);
+
+      expect(r.engine.playSfx("impact", { amount: 4 }, 250)).toBe(false);
+      expect(r.engine.log()).toEqual([]);
+
+      deferred.resolve(sfxRecipes);
+      await settle();
+
+      // Past the unlock's silent frame: only the recipe's own sources count, as in the B5 test above.
+      const before = audio.nodes.length;
+      expect(r.engine.playSfx("impact", { amount: 4 }, 250)).toBe(true);
+      expect(r.engine.log().at(-1)).toMatchObject({ kind: "sfx", id: "impact", params: { amount: 4 }, delayMs: 250 });
+      const sources = audio.nodes.slice(before).filter((n) => n.started);
+      expect(sources.length, "the recipe started at least one source").toBeGreaterThan(0);
+      for (const source of sources) {
+        expect(audio.reaches(source, bus.sfx), `${source.kind} is heard through the sfx bus`).toBe(true);
+      }
+      expect(audio.violations).toEqual([]);
+    } finally {
+      setSfxForTests(null);
+    }
   });
 });
 

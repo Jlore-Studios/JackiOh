@@ -57,7 +57,7 @@ mod tests {
     const BEAN: &str = "traininggrounds-027";
     const FELINORS: &str = "core-012"; // Duplicating Felinors: Cry: summon a copy of this
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
-    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your Units have +3 Attack (Radiant +6).
+    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your Units have +1 Attack (Radiant +3).
     const TRAP: &str = "core-041"; // Sheepish: a Trap
     const MEGABASE: &str = "stinkyscape-116"; // Megabase: Immune to Spells.
 
@@ -110,10 +110,10 @@ mod tests {
             let mut s = board(false, json!([VANILLA]), json!([WEAPONS]), json!([]));
             let unit = s.unit_at(P1, 1);
             let weapons = s.backrow(P1, 1).expect("the Field Spell");
-            assert_eq!(s.stats(&unit).attack, 6);
+            assert_eq!(s.stats(&unit).attack, 5);
             s.play(BEAN, pick::targets(pick::instance(&weapons)));
             assert!(s.card(&weapons).radiant);
-            assert_eq!(s.stats(&unit).attack, 8, "+4 now");
+            assert_eq!(s.stats(&unit).attack, 7, "+3 now");
         }
 
         #[test]

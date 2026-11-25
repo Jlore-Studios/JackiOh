@@ -7,7 +7,7 @@
 
 import { getAudioEngine } from "./engine.ts";
 import { holdMenuMusic } from "./musicScene.ts";
-import type { SfxId, SfxParams } from "./types.ts";
+import type { PlaySfxOptions, SfxId, SfxParams } from "./types.ts";
 import { installUiSounds } from "./uiSounds.ts";
 import { installAudioUnlock } from "./unlock.ts";
 
@@ -20,7 +20,12 @@ function install(): () => void {
     state: () => getAudioEngine().state(),
   });
   const removeTicks = installUiSounds(
-    { playSfx: (id: SfxId, params?: SfxParams, delayMs?: number) => getAudioEngine().playSfx(id, params, delayMs) },
+    // #4682: forwards the alarm flag when present, and otherwise calls through with the
+    // original arity, so the page-wide tick's observable call shape does not change.
+    { playSfx: (id: SfxId, params?: SfxParams, delayMs?: number, options?: PlaySfxOptions) =>
+      options === undefined
+        ? getAudioEngine().playSfx(id, params, delayMs)
+        : getAudioEngine().playSfx(id, params, delayMs, options) },
     document,
   );
   const releaseMenu = holdMenuMusic();

@@ -3,7 +3,7 @@
 
 use std::collections::BTreeSet;
 
-use jackioh_engine::effects::{cast, cast_new, cast_random, cast_random_at, damage, heal};
+use jackioh_engine::effects::{cast, cast_new, cast_random, cast_random_at, choose_target, damage, heal};
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::harness::{
@@ -43,6 +43,8 @@ const CASTS_DISCOVER: &str = "pbc-casts-discover";
 const HEAL_FRIEND: &str = "pbc-heal-friend";
 // R452: a Unit whose Cry aims at any unit or hero, triggered by a random cast of Rewind.
 const CRY_ANY: &str = "pbc-cry-any";
+// R452, R656, R4353002: a Spell whose Cry opens a target prompt for a unit.
+const ASK_UNIT_TARGET: &str = "pbc-ask-unit-target";
 
 fn inline_defs() -> Vec<CardDef> {
     vec![
@@ -52,6 +54,7 @@ fn inline_defs() -> Vec<CardDef> {
         spell("casts-named", 4604),
         spell("casts-discover", 4605),
         spell("heal-friend", 4606),
+        spell("ask-unit-target", 4607),
         json_as(json!({
             "id": CRY_ANY, "index": "4690", "name": "cry-any (casts)", "set": "Core", "type": "Unit",
             "tags": [], "rarity": "Common", "token": false, "cost": 1,
@@ -146,6 +149,23 @@ fn inline_scripts() -> IndexMap<String, CardScripts> {
             cry: Some(hook(|_ctx| {
                 vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 1 })))]
             })),
+            ..Script::default()
+        }),
+    );
+    scripts.insert(
+        ASK_UNIT_TARGET.to_string(),
+        both(Script {
+            cry: Some(hook(|_ctx| {
+                vec![choose_target(json_as(json!({
+                    "step": "hit",
+                    "scope": { "of": ["unit"] },
+                    "prompt": "Hit unit",
+                })))]
+            })),
+            resume: IndexMap::from([(
+                "hit",
+                hook(|_ctx| vec![damage(json_as(json!({ "to": { "of": "chosen" }, "amount": 1 })))]),
+            )]),
             ..Script::default()
         }),
     );
@@ -985,6 +1005,114 @@ mod e12_random_casts_r452 {
         }
         assert!(hit.len() > 1, "{hit:?}");
     }
+
+    #[test]
+    fn r4353002_random_cast_never_picks_evasive_enemy_unit() {
+        for seed in 1..=12 {
+            let mut state = playing(&format!("r4353002-evasive-{seed}"));
+            let plain = put(&mut state, "fx-2", slot(PlayerId::P2, Row::Units, 1), json!({}));
+            let mut evasive = put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 2), json!({}));
+            evasive.granted_keywords.push(Keyword::Evasive);
+            *find_instance_mut(&mut state, &evasive.id).unwrap() = evasive.clone();
+
+            let events = run(
+                &mut state,
+                vec![cast_random(json_as(json!({
+                    "query": { "defId": ASK_UNIT_TARGET },
+                    "count": 1,
+                })))],
+                None,
+            );
+            assert!(state.pending.is_none(), "seed {seed}");
+            let hits = damage_targets(&events);
+            assert_eq!(
+                hits,
+                vec![plain.id.clone()],
+                "seed {seed}: expected {plain:?} to be hit, got {hits:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn r4353002_random_cast_with_only_evasive_opens_nothing_and_resolves_rest() {
+        let mut state = playing("r4353002-only-evasive");
+        let mut evasive = put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 1), json!({}));
+        evasive.granted_keywords.push(Keyword::Evasive);
+        *find_instance_mut(&mut state, &evasive.id).unwrap() = evasive.clone();
+
+        let events = run(
+            &mut state,
+            vec![
+                cast_random(json_as(json!({
+                    "query": { "defId": ASK_UNIT_TARGET },
+                    "count": 1,
+                }))),
+                damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 2 }))),
+            ],
+            None,
+        );
+        assert!(state.pending.is_none());
+        let hits = damage_targets(&events);
+        assert_eq!(hits, vec!["hero-p2".to_string()]);
+    }
+
+    #[test]
+    fn r452_random_cast_never_picks_immune_to_spells_unit_or_dormant_unit() {
+        for seed in 1..=12 {
+            let mut state = playing(&format!("r452-immune-dormant-{seed}"));
+            let plain = put(&mut state, "fx-2", slot(PlayerId::P2, Row::Units, 1), json!({}));
+            let mut immune = put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 2), json!({}));
+            immune.granted_keywords.push(Keyword::ImmuneToSpells);
+            *find_instance_mut(&mut state, &immune.id).unwrap() = immune.clone();
+
+            let mut dormant = put(&mut state, "fx-21", slot(PlayerId::P2, Row::Units, 3), json!({}));
+            dormant.slumber = Some(Slumber { turns: Some(2) });
+            *find_instance_mut(&mut state, &dormant.id).unwrap() = dormant.clone();
+
+            let events = run(
+                &mut state,
+                vec![cast_random(json_as(json!({
+                    "query": { "defId": ASK_UNIT_TARGET },
+                    "count": 1,
+                })))],
+                None,
+            );
+            assert!(state.pending.is_none(), "seed {seed}");
+            let hits = damage_targets(&events);
+            assert_eq!(
+                hits,
+                vec![plain.id.clone()],
+                "seed {seed}: expected {plain:?} to be hit, got {hits:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn r452_random_cast_with_only_immune_or_dormant_opens_nothing() {
+        let mut state = playing("r452-only-immune-dormant");
+        let mut immune = put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 1), json!({}));
+        immune.granted_keywords.push(Keyword::ImmuneToSpells);
+        *find_instance_mut(&mut state, &immune.id).unwrap() = immune.clone();
+
+        let mut dormant = put(&mut state, "fx-21", slot(PlayerId::P2, Row::Units, 2), json!({}));
+        dormant.slumber = Some(Slumber { turns: Some(2) });
+        *find_instance_mut(&mut state, &dormant.id).unwrap() = dormant.clone();
+
+        let events = run(
+            &mut state,
+            vec![
+                cast_random(json_as(json!({
+                    "query": { "defId": ASK_UNIT_TARGET },
+                    "count": 1,
+                }))),
+                damage(json_as(json!({ "to": { "of": "enemyHero" }, "amount": 3 }))),
+            ],
+            None,
+        );
+        assert!(state.pending.is_none());
+        let hits = damage_targets(&events);
+        assert_eq!(hits, vec!["hero-p2".to_string()]);
+    }
 }
 
 mod e39_target_enemies_on_a_cast_its_caster_makes_r452 {
@@ -1086,6 +1214,40 @@ mod e39_target_enemies_on_a_cast_its_caster_makes_r452 {
                 2
             ),
             mixed
+        );
+    }
+
+    #[test]
+    fn r656_enemy_aimed_cast_keeps_friendly_options_when_only_enemy_is_evasive() {
+        let mut state = playing("r656-enemy-evasive");
+        let friendly = put(&mut state, "fx-2", slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let mut evasive = put(&mut state, "fx-3", slot(PlayerId::P2, Row::Units, 1), json!({}));
+        evasive.granted_keywords.push(Keyword::Evasive);
+        *find_instance_mut(&mut state, &evasive.id).unwrap() = evasive.clone();
+
+        let card = new_instance(
+            &mut state,
+            ASK_UNIT_TARGET,
+            PlayerId::P1,
+            Zone::Hand { player: PlayerId::P1 },
+        );
+        state.players[PlayerId::P1].hand.push(card.clone());
+        let mut events = Vec::new();
+        let mut rng = Rng::new(&state.seed, state.rng_cursor);
+        cast_card(
+            &mut EngineSink::new(&mut state, &mut events, &mut rng),
+            &card,
+            json_as(json!({ "targetEnemies": true })),
+        );
+        assert!(
+            state.pending.is_some(),
+            "expected prompt to open for friendly unit"
+        );
+        assert_eq!(
+            option_selections(&state),
+            vec![Selection::Instance {
+                instance_id: friendly.id.clone()
+            }]
         );
     }
 }

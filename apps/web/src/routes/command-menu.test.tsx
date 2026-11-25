@@ -164,7 +164,6 @@ describe("R2118000 the command menu", () => {
         "page-account",
         "page-privacy",
         "page-terms",
-        "page-accessibility",
         "page-copyright",
       ].map((id) => commandEntryTestid(id)),
     );

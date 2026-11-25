@@ -1,10 +1,10 @@
 //! SPEC §8.12 S+ #120 Crawler, a card of the Stinkyscape+ set (R1420, R3535000). Built by S13 (#3560).
 //! May be played from your GY for (1)
-//! 3/1
+//! 2/1 (3/1 until issue #4440)
 //! **Death:** Add a **Toxopid** to your hand. If you already have one there, reduce its cost by (2) instead.
 //! \~\~\~
 //! May be played from your GY for (1)
-//! 6/2
+//! 4/2 (6/2 until issue #4440)
 //! **Death:** Add a **Radiant Toxopid** to your hand. If you already have one there, reduce its cost by
 //! (3) instead.
 //!
@@ -246,9 +246,10 @@ mod tests {
         crate::next_turn_of(&mut s, P1);
         let wall = s.unit_at(P2, 1).id;
         s.attack(crawler.id.as_str(), wall.as_str());
-        // The 0/10 strikes back for nothing: the Crawler stands, and nothing died to add a Toxopid.
+        // The 0/10 strikes back for nothing: the Crawler stands, and nothing died to add a Toxopid. It hits
+        // for 2 since issue #4440 (3 before).
         s.expect_in_zone(crawler.id.as_str(), "field");
-        assert_eq!(s.stats(wall.as_str()).health, 10 - 3);
+        assert_eq!(s.stats(wall.as_str()).health, 10 - 2);
         assert!(toxopids(&s).is_empty());
     }
 

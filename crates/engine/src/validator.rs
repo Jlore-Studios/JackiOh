@@ -183,7 +183,24 @@ fn join_labels(labels: &[String]) -> String {
 /// Catalog staleness ("update required") is not one of L1–L6; the endpoint compares versions
 /// (BUILD M6-T2) and this module only checks membership in the snapshot it was handed.
 pub fn validate_loadout(input: &LoadoutInput) -> LoadoutResult {
-    check(&input.decks, &input.catalog, &input.collection, Scope::Trio)
+    validate_loadout_in(
+        &input.decks,
+        &input.catalog.version,
+        &input.catalog.cards,
+        input.catalog.banned.as_deref().unwrap_or_default(),
+        &input.collection,
+    )
+}
+
+/// Checks a trio against borrowed catalog data, without cloning its card definitions.
+pub fn validate_loadout_in(
+    decks: &[LoadoutDeck],
+    catalog_version: &str,
+    cards: &CardDefs,
+    banned: &[CardId],
+    collection: &Collection,
+) -> LoadoutResult {
+    check(decks, catalog_version, cards, banned, collection, Scope::Trio)
 }
 
 /// R253: a Best-of-3 trio is §9.4's loadout, so its rules are L1–L6 exactly.
@@ -209,10 +226,29 @@ pub struct DeckInput {
 /// not banned). L1 and L4 are about three decks together and cannot apply to one. Every error names
 /// the deck, as 1, so a message and a `deck` field read the same way they do for a trio.
 pub fn validate_deck(input: &DeckInput) -> LoadoutResult {
-    check(
-        std::slice::from_ref(&input.deck),
-        &input.catalog,
+    validate_deck_in(
+        &input.deck,
+        &input.catalog.version,
+        &input.catalog.cards,
+        input.catalog.banned.as_deref().unwrap_or_default(),
         &input.collection,
+    )
+}
+
+/// Checks one Best-of-1 deck against borrowed catalog data, without cloning its card definitions.
+pub fn validate_deck_in(
+    deck: &LoadoutDeck,
+    catalog_version: &str,
+    cards: &CardDefs,
+    banned: &[CardId],
+    collection: &Collection,
+) -> LoadoutResult {
+    check(
+        std::slice::from_ref(deck),
+        catalog_version,
+        cards,
+        banned,
+        collection,
         Scope::Deck,
     )
 }
@@ -228,12 +264,14 @@ enum Scope {
 /// deck, where L1 and L4 do not apply and L5's sentence names the deck rather than the trio.
 fn check(
     decks: &[LoadoutDeck],
-    catalog: &CatalogSnapshot,
+    catalog_version: &str,
+    cards: &CardDefs,
+    banned: &[CardId],
     collection: &Collection,
     scope: Scope,
 ) -> LoadoutResult {
     let mut errors: Vec<LoadoutError> = Vec::new();
-    let banned: IndexSet<&str> = catalog.banned.iter().flatten().map(String::as_str).collect();
+    let banned: IndexSet<&str> = banned.iter().map(String::as_str).collect();
     let deck_labels: Vec<String> = decks
         .iter()
         .enumerate()
@@ -245,7 +283,7 @@ fn check(
             .cloned()
             .unwrap_or_else(|| format!("Deck {}", index + 1))
     };
-    let label = |card_id: &str| -> String { card_label(card_id, &catalog.cards) };
+    let label = |card_id: &str| -> String { card_label(card_id, cards) };
 
     // L1 — exactly LOADOUT_DECKS decks. Loadout-wide, so no `deck` field.
     if scope == Scope::Trio && decks.len() != LOADOUT_DECKS {
@@ -316,7 +354,7 @@ fn check(
 
         for card_id in &deck_order {
             let count = deck_counts.get(card_id).copied().unwrap_or(0);
-            let def = catalog.cards.get(card_id);
+            let def = cards.get(card_id);
 
             // L3 (tokens) — skipped for an unknown id: there is no def to read. L6 reports that id.
             if let Some(def) = def
@@ -373,7 +411,7 @@ fn check(
                         "{} cannot contain {}: no such card in catalog version {}.",
                         label_at(index),
                         label(card_id),
-                        catalog.version
+                        catalog_version
                     ),
                     deck: Some(deck_number),
                     card_id: Some(card_id.clone()),

@@ -11,7 +11,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Dialog, DialogClose, dialogTestid, type DialogAction } from "./Dialog.tsx";
 import { CATALOG } from "@jackioh/cards";
 
-import { CardDetail, closeInspect } from "../cards/inspect/index.ts";
+import { closeInspect } from "../cards/inspect/index.ts";
+import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { useModalOverlay } from "../cards/inspect/store.ts";
 import { INSPECT_DETAIL } from "../cards/inspect/testids.ts";
 import { pressBack } from "../test/history.ts";

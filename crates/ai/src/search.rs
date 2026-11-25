@@ -2,7 +2,7 @@
 //! determinization, the best `beamWidth` open lines kept per depth, every line closed at the end of
 //! the seat's turn (or where it yields or the game ends) and scored there. `decide` scores the best
 //! of them again after the opponent's reply (reply.rs), and re-scores its finalists on the other
-//! determinizations with `score_line`.
+//! determinizations with `replay_line`.
 
 use std::cmp::Ordering;
 
@@ -17,8 +17,8 @@ use crate::config::{AI_EVAL, AI_SEARCH};
 use crate::evaluate::{NextSwing, Prices, evaluate_priced};
 use crate::reply::{hidden_card_ids, reply_score};
 use crate::simulate::{
-    AnswersTried, LineStatus, best_auto_answer, close_line, lane_free_signature, line_status,
-    own_prompt_score, search_signature, simulate, static_score, unit_lanes,
+    AnswersTried, LineStatus, best_auto_answer, close_line, create_sub_counter, lane_free_signature,
+    line_status, own_prompt_score, search_signature, simulate, static_score, unit_lanes,
 };
 use crate::types::{NodeCounter, SearchBudget};
 
@@ -275,22 +275,120 @@ pub fn beam_search(
     best_first_lines(complete)
 }
 
+/// R4447000: how a finalist's replay on another determinization plays on past the first step that world
+/// does not offer: at most `steps` greedy steps (`fill_turn`), each trying `width` candidates.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ReplayFill {
+    pub steps: usize,
+    pub width: usize,
+}
+
+impl ReplayFill {
+    /// No fill: the replay ends its turn at the cut, as before R4447000.
+    pub const OFF: ReplayFill = ReplayFill { steps: 0, width: 0 };
+
+    /// `AI_SEARCH.replay_fill_steps` steps of `width` candidates (the decision's `branching`).
+    pub fn configured(width: usize) -> ReplayFill {
+        ReplayFill {
+            steps: AI_SEARCH.replay_fill_steps.max(0) as usize,
+            width,
+        }
+    }
+
+    /// The most nodes one replay's fill may take, `steps × (width + 1)`; 0 when off.
+    pub fn ceiling(self) -> usize {
+        self.steps * (self.width + 1)
+    }
+}
+
+/// R4447000: a replayed line's score, whether a step its world does not offer cut it, and the state it
+/// was scored at (after its closing endTurn, before the opponent's reply).
+#[derive(Clone, Debug, PartialEq)]
+pub struct LineReplay {
+    pub score: f64,
+    pub cut: bool,
+    pub closed: GameState,
+}
+
+/// Whether a line stands open in the seat's main phase with nothing pending.
+fn open_in_main(state: &GameState, seat: PlayerId, root_turn: i32) -> bool {
+    line_status(state, seat, root_turn) == LineStatus::Open
+        && state.pending.is_none()
+        && state.active == seat
+        && state.phase == Phase::Main
+}
+
+/// R4447000: a cut replay's turn played on greedily: at most `fill.steps` steps, each the best by
+/// `static_score` of the first `fill.width` candidates that are not endTurn (`candidate_actions`' move
+/// order), taken only when it scores above standing still. A step leaving the seat's own prompt open is
+/// not tried. Every node comes from a slice of `fill.ceiling()`; a step the slice or the counter cannot
+/// finish is not taken, and the replay's closing endTurn then meets the counter as it stands.
+fn fill_turn(
+    mut state: GameState,
+    seat: PlayerId,
+    root_turn: i32,
+    counter: &dyn NodeCounter,
+    fill: ReplayFill,
+    prices: &Prices,
+) -> GameState {
+    let slice = create_sub_counter(counter, fill.ceiling());
+    for _ in 0..fill.steps {
+        if !open_in_main(&state, seat, root_turn) {
+            break;
+        }
+        let mut best_score = static_score(&state, seat, root_turn, prices);
+        let mut best: Option<GameState> = None;
+        let moves = candidate_actions(&state, seat, prices)
+            .into_iter()
+            .filter(|action| !matches!(action, ActionBody::EndTurn))
+            .take(fill.width);
+        for action in moves {
+            let next = match simulate(&state, seat, &action, &slice, prices) {
+                None => return state,
+                Some(Err(_)) => continue,
+                Some(Ok(next)) => next,
+            };
+            if next
+                .pending
+                .as_ref()
+                .is_some_and(|pending| pending.player_id == seat)
+            {
+                continue;
+            }
+            let score = static_score(&next, seat, root_turn, prices);
+            // Strictly above: a tie keeps standing still, or the earlier candidate.
+            if score > best_score {
+                best_score = score;
+                best = Some(next);
+            }
+        }
+        match best {
+            Some(next) => state = next,
+            None => break,
+        }
+    }
+    state
+}
+
 /// Replay `actions` on another determinization (`root_candidate_set`, #1635). If the line diverges
 /// at an own-prompt, auto-answers up to `max_auto_answers` (#1636). Closes turn and scores either
-/// with `reply_score` or statically.
-pub fn score_line(
+/// with `reply_score` or statically. R4447000: reports whether a step its world does not offer cut the
+/// line, and with `fill` on plays that world's turn on (`fill_turn`); `reply` is `Some(hidden)` to score
+/// after the opponent's reply.
+pub fn replay_line(
     det: &GameState,
     seat: PlayerId,
     actions: &[ActionBody],
     counter: &dyn NodeCounter,
-    reply: bool,
-    hidden: Option<&IndexSet<String>>,
+    reply: Option<&IndexSet<String>>,
     prices: &Prices,
-) -> Option<f64> {
+    fill: ReplayFill,
+) -> Option<LineReplay> {
     let root_turn = det.turn;
     let mut state = det.clone();
     let mut answered: usize = 0;
     let mut at = 0;
+    let mut cut = false;
 
     while let Some(action) = actions.get(at) {
         if line_status(&state, seat, root_turn) != LineStatus::Open {
@@ -311,10 +409,14 @@ pub fn score_line(
                 .as_ref()
                 .is_some_and(|pending| pending.player_id == seat);
             if !own_prompt || answered >= AI_SEARCH.max_auto_answers as usize {
+                cut = true;
                 break;
             }
             match best_auto_answer(&state, seat, AnswersTried::Drawn, counter, "line", prices)? {
-                Err(_) => break,
+                Err(_) => {
+                    cut = true;
+                    break;
+                }
                 Ok(next) => state = next,
             }
             answered += 1;
@@ -331,32 +433,59 @@ pub fn score_line(
         at += 1;
     }
 
+    // R4447000: a cut line plays its world's turn on, when the fill is on.
+    if cut && fill.steps > 0 {
+        state = fill_turn(state, seat, root_turn, counter, fill, prices);
+    }
+
     // A line still open at the seat's main phase ends its turn here, so every finalist is scored at
     // the same point; running out of nodes for that step is running out of nodes.
-    if line_status(&state, seat, root_turn) == LineStatus::Open
-        && state.pending.is_none()
-        && state.active == seat
-        && state.phase == Phase::Main
-    {
+    if open_in_main(&state, seat, root_turn) {
         match simulate(&state, seat, &ActionBody::EndTurn, counter, prices) {
             None => return None,
             // A finalist whose endTurn is refused keeps its static score, the hand eval's.
-            Some(Err(_)) => return Some(evaluate_priced(&state, seat, NextSwing::Enemy, &AI_EVAL, prices)),
+            Some(Err(_)) => {
+                let score = evaluate_priced(&state, seat, NextSwing::Enemy, &AI_EVAL, prices);
+                return Some(LineReplay {
+                    score,
+                    cut,
+                    closed: state,
+                });
+            }
             Some(Ok(next)) => state = next,
         }
     }
 
-    if reply {
-        let default_hidden;
-        let hidden = match hidden {
-            Some(hidden) => hidden,
-            None => {
-                default_hidden = hidden_card_ids(det, seat);
-                &default_hidden
-            }
-        };
-        reply_score(&state, seat, root_turn, counter, hidden, prices)
-    } else {
-        Some(static_score(&state, seat, root_turn, prices))
-    }
+    let score = match reply {
+        Some(hidden) => reply_score(&state, seat, root_turn, counter, hidden, prices)?,
+        None => static_score(&state, seat, root_turn, prices),
+    };
+    Some(LineReplay {
+        score,
+        cut,
+        closed: state,
+    })
+}
+
+/// `replay_line` with the fill off (R4447000): cut at the first step its world does not offer, whatever
+/// `AI_SEARCH.replay_fill_steps` is. `hidden` defaults to `det`'s hidden cards when `reply` is set.
+pub fn score_line(
+    det: &GameState,
+    seat: PlayerId,
+    actions: &[ActionBody],
+    counter: &dyn NodeCounter,
+    reply: bool,
+    hidden: Option<&IndexSet<String>>,
+    prices: &Prices,
+) -> Option<f64> {
+    let default_hidden;
+    let reply = match (reply, hidden) {
+        (false, _) => None,
+        (true, Some(hidden)) => Some(hidden),
+        (true, None) => {
+            default_hidden = hidden_card_ids(det, seat);
+            Some(&default_hidden)
+        }
+    };
+    replay_line(det, seat, actions, counter, reply, prices, ReplayFill::OFF).map(|replay| replay.score)
 }

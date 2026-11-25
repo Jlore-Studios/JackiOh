@@ -11,7 +11,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { CODE_ALPHABET, INVITE_CODE_FORMAT, ROOM_CODE_FORMAT } from "@jackioh/server-config";
+import { CODE_ALPHABET, INVITE_CODE_FORMAT, ROOM_CODE_FORMAT, TOTP_CODE_FORMAT } from "@jackioh/server-config";
 
 import codeInputCases from "../../../../crates/engine/tests/fixtures/code-input-cases.json";
 import {
@@ -307,5 +307,28 @@ describe("R191 B16 formattedCaret", () => {
     for (let n = 0; n <= ROOM_CODE_FORMAT.length; n += 1) {
       expect(formattedCaret(n, ROOM_CODE_FORMAT)).toBe(n);
     }
+  });
+});
+
+// R4669000: the two-step code is six digits, one per box, with no separator between them.
+describe("R4669000 reads digits with TOTP_CODE_FORMAT", () => {
+  it("R4669000 reads digits with TOTP_CODE_FORMAT", () => {
+    expect(TOTP_CODE_FORMAT.alphabet).toBe("0123456789");
+    expect(TOTP_CODE_FORMAT.length).toBe(6);
+    expect(TOTP_CODE_FORMAT.groupSize).toBe(1);
+    expect(TOTP_CODE_FORMAT.separator).toBe("");
+
+    const reading = readCodeInput("123 456", TOTP_CODE_FORMAT);
+    expect(reading.characters).toBe("123456");
+    expect(reading.formatted).toBe("123456");
+    expect(reading.complete).toBe(true);
+    expect(reading.problem).toBeNull();
+
+    expect(findCodeInText("code 123-456", TOTP_CODE_FORMAT)).toBe("123456");
+    expect(formattedCaret(3, TOTP_CODE_FORMAT)).toBe(3);
+
+    const refused = readCodeInput("12a456", TOTP_CODE_FORMAT);
+    expect(refused.characters).toBe("12");
+    expect(refused.problem).toEqual({ kind: "excluded", character: "A" });
   });
 });

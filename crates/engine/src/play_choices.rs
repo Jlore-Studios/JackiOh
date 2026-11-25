@@ -363,9 +363,16 @@ pub fn row_for_card(state: &GameState, card: &CardInstance) -> Row {
     }
 }
 
-/// §10.5 step 4: permanents take a zone, a Spell resolves without one.
+/// §10.5 step 4: permanents take a zone, a Spell resolves without one. R4665000: so does a card that
+/// stacks on its target (S #9 Ticketed): the target's zone is its, named by no zone of the play.
 pub fn needs_zone(state: &GameState, card: &CardInstance) -> bool {
-    crate::faces::card_type_of(state, card) != CardType::Spell
+    crate::faces::card_type_of(state, card) != CardType::Spell && !stacks_on_target(state, card)
+}
+
+/// R4665000: whether this card's play lands on top of its declared target's pile (S #9 Ticketed's
+/// "Stack this on a permanent anywhere"), read off its face in hand; a face-down set never does.
+pub fn stacks_on_target(state: &GameState, card: &CardInstance) -> bool {
+    card.set_as.is_none() && crate::scripts::flags_of(state, card).stacks_on_target == Some(true)
 }
 
 /// §6.2 Stack: "may be played onto an occupied zone" (§3.2), read off the card's keywords where it is
@@ -866,7 +873,8 @@ pub fn tribute_value_of(state: &GameState, unit: &CardInstance) -> i32 {
 }
 
 /// §6.3, R1282: your own units, plus the enemy's for a card that says so (#55), plus cheap permanents
-/// of either row and side for a wide Tribute (#97.4, R1282: up to 20 permanents). Dormant cards never.
+/// of either row and side for a wide Tribute (#97.4, R1282: up to 20 permanents). Never a card dormant
+/// beneath a Stack pile (R13), nor a Dormant one (R1839000, R4555000).
 pub fn legal_tribute_units<'a>(
     state: &'a GameState,
     player: PlayerId,
@@ -904,6 +912,7 @@ pub fn legal_tribute_units<'a>(
             for slot in crate::zones::slots_of(side, Row::Backrow) {
                 if let Some(c) = crate::zones::card_at(state, slot)
                     && c.id != card.id
+                    && !crate::slumber::is_slumbering(c)
                     && !out.iter().any(|existing| existing.id == c.id)
                     && !crate::query::is_untributable(state, c)
                     && crate::mana::cost_now(state, c) <= cheap
@@ -1221,6 +1230,17 @@ pub fn legal_selections_for(
                         };
                         // R1081000: a Unit standing there is no backrow card (§6.1 Animated).
                         if on_field(held) && !crate::zones::is_standing_unit(state, held) {
+                            offer(Selection::Instance {
+                                instance_id: held.id.clone(),
+                            });
+                        }
+                    }
+                    // R4665000: a card lying on a unit zone is a backrow card there, no Unit.
+                    for slot in crate::zones::slots_of(side, Row::Units) {
+                        if let Some(held) = crate::zones::card_at(state, slot)
+                            && crate::zones::lies_on_unit_zone(state, held)
+                            && on_field(held)
+                        {
                             offer(Selection::Instance {
                                 instance_id: held.id.clone(),
                             });
@@ -2401,7 +2421,7 @@ pub fn with_drawn_target_picks(
             } else {
                 low
             };
-            out.extend(crate::random_targets::draw_picks(
+            let drawn = crate::random_targets::draw_picks(
                 state,
                 rng,
                 player,
@@ -2409,7 +2429,17 @@ pub fn with_drawn_target_picks(
                 low,
                 high,
                 crate::targeting::target_aim(decl),
-            ));
+            );
+            // I22 (#4540): the fuzz monitor holds this draw to the targeting rules (`testkit::seams`).
+            #[cfg(feature = "testkit")]
+            crate::testkit::seams::record_target_draw(
+                state,
+                Some(card),
+                player,
+                crate::testkit::seams::TargetDrawBy::Mayor,
+                &drawn,
+            );
+            out.extend(drawn);
             continue;
         }
         let rest = &given[at.min(given.len())..];
@@ -2508,8 +2538,12 @@ pub fn priced_play_actions(
                             face_down: None,
                         };
                         // R1200: while a Mayor acts the reducer draws the targets, so collapsed
-                        // choices list one action, not one per target set.
-                        if *random.get_or_insert_with(|| crate::random_targets::targets_random(state)) {
+                        // choices list one action, not one per target set. R4590001: a Spell
+                        // played under a random-targets modifier or a Jailbreaker's aura lists
+                        // the same way.
+                        if *random.get_or_insert_with(|| {
+                            crate::random_targets::play_targets_random(state, player, card)
+                        }) {
                             pushed.targets = without_target_picks(
                                 state,
                                 player,

@@ -45,6 +45,7 @@ const FENG_SHUI: &str = "meditative-040";
 const CN_JADE_WELL: &str = "meditative-044";
 const DISRUPTIVE_DISRUPTOR: &str = "meditative-001";
 const DOUBLE_COUNTING: &str = "meditative-010";
+const JOINT_FILING: &str = "meditative-009";
 const MONEY_MACHINE: &str = "meditative-054";
 const GACHAHOLIC: &str = "meditative-101";
 const MEDINA_ENFORCER: &str = "meditative-083";
@@ -60,7 +61,7 @@ const CLONE_MACHINE: &str = "core-033"; // Unstable Clone Machine
 const LIVING_ARMOR_POTION: &str = "meditativeplus-012";
 const LIVING_HEALTH_POTION: &str = "meditativeplus-013";
 
-const ACTIVATE_CARDS: [&str; 104] = [
+const ACTIVATE_CARDS: [&str; 105] = [
     HEROIC_POWER,
     TWINSPELL,
     UNBIASED_IMMIGRATION,
@@ -92,6 +93,7 @@ const ACTIVATE_CARDS: [&str; 104] = [
     CN_JADE_WELL,
     DISRUPTIVE_DISRUPTOR,
     DOUBLE_COUNTING,
+    JOINT_FILING,
     GACHAHOLIC,
     MEDINA_ENFORCER,
     ALUNETH,
@@ -1450,8 +1452,8 @@ mod m_n1_disruptive_disruptor {
     }
 }
 
-/// Issue #4154: Double Counting's Activate, once a turn: a Discover of a Cry or Death card, (1) on the base
-/// face and free on the Radiant (R4154211).
+/// Issue #4154: Double Counting's Activate, once a turn: a Discover of a Cry or Death card, free on both
+/// faces since issue #4440 ((1) on the base face before it, R4154211).
 mod m_n10_double_counting {
     use super::*;
 
@@ -1470,13 +1472,46 @@ mod m_n10_double_counting {
     }
 
     #[test]
-    fn r4154211_base_pays_1_to_discover_once_a_turn() {
-        discovers(false, 1);
+    fn r4154211_base_discovers_for_free_once_a_turn() {
+        discovers(false, 0);
     }
 
     #[test]
     fn r4154211_radiant_discovers_for_free_once_a_turn() {
         discovers(true, 0);
+    }
+}
+
+/// Issue #4440: Joint Filing's Activate in its Cry's place, once a turn and free on both faces: a Discover
+/// of a card with a Start of turn or End of turn effect, the pick to the hand (R4440055).
+mod m_n9_joint_filing {
+    use super::*;
+
+    #[test]
+    fn r4440055_both_faces_discover_for_free_once_a_turn() {
+        for radiant in [false, true] {
+            let mut s = scenario(json!({
+                "p1": { "backrow": [on(JOINT_FILING, radiant)], "hand": [STOCKPILE], "library": [X, X], "mana": 4 },
+                "p2": { "hand": [FILLER] },
+            }));
+            activate_listed(&mut s, JOINT_FILING, any);
+            assert_eq!(
+                s.state().players.p1.mana.current,
+                4,
+                "radiant {radiant}: it pays nothing"
+            );
+            let pick = s.prompt_modes().into_iter().next().expect("a card on offer");
+            s.answer(json!(pick));
+            assert!(
+                s.hand(P1).iter().any(|card| card.def_id == pick),
+                "radiant {radiant}"
+            );
+            let id = s.card(JOINT_FILING).id.clone();
+            assert!(
+                listed(&s, &id).is_empty(),
+                "radiant {radiant}: Activate is once per turn"
+            );
+        }
     }
 }
 

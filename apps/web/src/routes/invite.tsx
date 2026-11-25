@@ -33,7 +33,7 @@ import { AUTH_NOTICES, authMessageOf, resendConfirmation } from "../net/auth.ts"
 import { announceAccountChange, callWithRenewal, useAccount, type Account } from "../net/gate.ts";
 import { loginPath, navigate, paths } from "../net/navigate.ts";
 import { pendingEmailEntry } from "../net/session.ts";
-import { signOut, signOutLabel, useSigningOut } from "./account.tsx";
+import { signOut, signOutLabel, useSigningOut } from "../auth/signOut.ts";
 import { BackLink, followInApp } from "./nav.tsx";
 import { Wordmark } from "./Wordmark.tsx";
 import ChangeEmail from "../settings/ChangeEmail.tsx";

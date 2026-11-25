@@ -4,6 +4,9 @@
 // R3336000 ships, R2800000 set pieces, and R3337002's radar and R3337003's rift and title card. R3400000: a
 // takeover's look may draw its art (takeoverArt.ts; R3399002: its parts or a drawing of its own, R3402000 a Core
 // Mythic's a scene of shapes); R3400001: a signature's figures (figures.ts), each a shape over its box, never a card.
+// R4493000: a phone's merged stage (layers.ts `mergeStage`) draws a merged slice's pictures as one element's backgrounds and
+// mounts no element for a plane left empty; R4493001: a takeover the layer budget made `artless` draws no art of its look,
+// and one it left `sweepOnly` no rays and no wave.
 
 import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
 import { ART_PLANES } from "../cards/art/pictures.ts";
@@ -89,10 +92,13 @@ function takeoverStage(doc: Document, card: FxTakeoverStage): HTMLElement {
     });
   } else {
     ART_PLANES.forEach((plane, i) => {
+      // R4493000: a plane a merge emptied (its picture drawn in the plane before it) is no layer at all.
+      const image = card.planes[i] ?? "";
+      if (image === "") return;
       const p = doc.createElement("div");
       p.className = "fx-takeover-plane";
       p.setAttribute("data-plane", plane);
-      p.style.backgroundImage = card.planes[i] ?? "";
+      p.style.backgroundImage = image;
       planes.appendChild(p);
     });
   }
@@ -504,6 +510,8 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       const stage = cue.stage === null ? null : takeoverStage(doc, cue.stage);
 
       for (const part of TAKEOVER_PARTS) {
+        // R4493001: a takeover the budget left its dark and its sweep draws no rays and no wave.
+        if (cue.sweepOnly === true && (part === "rays" || part === "wave")) continue;
         const child = doc.createElement("div");
         child.className = `fx-takeover-${part}`;
         el.appendChild(child);
@@ -520,9 +528,10 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
           el.appendChild(picture);
         }
         // R3400000: a look with art of its own draws it over the dark, under the sweep, rays and wave, one element a part;
-        // R3399002: or its drawing, one path a shape (R3402000: or a scene's shapes).
-        const parts = part === "dark" ? takeoverArtParts(cue.look) : [];
-        const drawing = part === "dark" ? TAKEOVER_ART_DRAWINGS[cue.look] : undefined;
+        // R3399002: or its drawing, one path a shape (R3402000: or a scene's shapes). R4493001: none once the budget took it.
+        const drawn = part === "dark" && cue.artless !== true;
+        const parts = drawn ? takeoverArtParts(cue.look) : [];
+        const drawing = drawn ? TAKEOVER_ART_DRAWINGS[cue.look] : undefined;
         if (parts.length === 0 && drawing === undefined) continue;
         const art = doc.createElement("div");
         art.className = "takeover-art";

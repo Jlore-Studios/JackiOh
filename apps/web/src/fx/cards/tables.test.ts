@@ -425,6 +425,9 @@ describe("R2784000 the per-set effects tables", () => {
     // R3399000: Classic+'s signatures' seventeen entrances.
     const classicPlus = [...FX_CARD_TABLE.keys()].filter((defId) => defId.startsWith("classicplus-")).flatMap((defId) => entranceKeyOf(defId) ?? []);
     expect(classicPlus).toHaveLength(17);
+    // R4596000: the Infinite Assault's twelve Commanders' boots (infiniteassault/signatures.test.ts names each).
+    const assault = [...FX_CARD_TABLE.keys()].filter((defId) => defId.startsWith("infiniteassault-")).flatMap((defId) => entranceKeyOf(defId) ?? []);
+    expect(assault).toHaveLength(12);
     // Every entrance the table names is a recipe, and the four marquees', the signature Units', (R3334004) the
     // Dormant Starship's and Starfleet Commander's and Classic's and Classic+'s signatures' are all of them.
     const named = [...FX_CARD_TABLE.keys()].flatMap((defId) => {
@@ -433,7 +436,7 @@ describe("R2784000 the per-set effects tables", () => {
     });
     for (const key of named) expect(typeof ENTRANCES[key], key).toBe("function");
     expect(new Set(named)).toEqual(
-      new Set([...Object.values(entrances), ...Object.values(signatureEntrances), ...Object.values(classicEntrances), ...Object.values(meditativeEntrances), ...classicPlus, "shipyardRollout", "fleetCommand"]),
+      new Set([...Object.values(entrances), ...Object.values(signatureEntrances), ...Object.values(classicEntrances), ...Object.values(meditativeEntrances), ...classicPlus, ...assault, "shipyardRollout", "fleetCommand"]),
     );
     expect(Object.keys(ENTRANCES).sort()).toEqual([...new Set(named)].sort());
   });
@@ -611,7 +614,7 @@ describe("R2784000 the per-set effects tables", () => {
     }
   });
 
-  it("R2787000 R2794000 R3405001 the eleven example Field Spells across the sets wear their auras", () => {
+  it("R2787000 R2794000 R3405001 the twelve example Field Spells across the sets wear their auras", () => {
   const examples = {
     "core-014": { look: "storm", scope: "side" },
     "core-046": { look: "void", scope: "board" },
@@ -626,8 +629,10 @@ describe("R2784000 the per-set effects tables", () => {
     "traininggrounds-019": { look: "bloom", scope: "zone" },
     // Stinkyscape+'s Mender (#3596), one example a file.
     "stinkyscapeplus-040": { look: "bloom", scope: "zone" },
+    // The held Infinite Assault set's Drone Foundry (#4577), its file's example.
+    "infiniteassault-015": { look: "steam", palette: "Tech/rocket", scope: "zone" },
   };
-  expect(Object.keys(examples)).toHaveLength(11);
+  expect(Object.keys(examples)).toHaveLength(12);
   // R2794000: Classic's pass gave its two examples their play's motifs beside the aura.
   const hooksOf: Readonly<Record<string, object>> = {
     "classic-042": { cast: { motif: "tally" }, activate: { motif: "tally" } },

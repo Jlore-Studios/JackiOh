@@ -348,6 +348,27 @@ describe("R3334001 the launch", () => {
     }
   });
 
+  it("R4493000 a phone's cinematic draws no closer than STARSHIP_CINEMATIC.phoneZoom", () => {
+    for (const n of [1, 4, 8]) {
+      const held = piecesOf(n);
+      const view = dormantBoard(held);
+      const full = cinematicOf(planStarship(launchEntry(held, view, "full"), view, env())?.cues ?? []);
+      const phone = cinematicOf(planStarship(launchEntry(held, view, "full"), view, env({ compact: true }))?.cues ?? []);
+      if (full === undefined || phone === undefined) throw new Error(`no cinematic of ${String(n)} pieces`);
+      // Every size zooms closer than a phone may on the desktop, and on a phone stops at phoneZoom.
+      expect(full.zoom, `${String(n)} pieces`).toBeGreaterThan(STARSHIP_CINEMATIC.phoneZoom);
+      expect(phone.zoom, `${String(n)} pieces`).toBe(STARSHIP_CINEMATIC.phoneZoom);
+      // Its camera still looks only where the picture at that zoom fills the screen, stern to bow.
+      expect(phone.cameraFrom).toEqual(cameraPoint(phone.cameraFrom, phone.zoom));
+      expect(phone.cameraTo).toEqual(cameraPoint(phone.cameraTo, phone.zoom));
+      expect(phone.cameraFrom.x).toBeLessThanOrEqual(phone.cameraTo.x);
+      // A phone on its side (wider than FX_MOBILE_WIDTH, its narrower side under it) caps the zoom too, its sparks a desktop's.
+      const side = cinematicOf(planStarship(launchEntry(held, view, "full"), view, env({ phone: true }))?.cues ?? []);
+      expect(side?.zoom, `${String(n)} pieces on its side`).toBe(STARSHIP_CINEMATIC.phoneZoom);
+      expect(side?.sparks, `${String(n)} pieces on its side`).toBe(full.sparks);
+    }
+  });
+
   it("R3334001 each doctrine announced over the ship; hidden none", () => {
     const view = launchedBoard([BEAM, RUSH]);
     for (const [defId, doctrine] of Object.entries(WAR_DOCTRINES)) {

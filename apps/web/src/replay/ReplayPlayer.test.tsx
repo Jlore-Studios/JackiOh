@@ -26,6 +26,36 @@ import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { REPLAY_PLAY_GAP_MS } from "./config.ts";
 import ReplayPlayer, { replayTestid } from "./ReplayPlayer.tsx";
 import { REPLAY_FAILURE_TEXT, ReplayFailure } from "./source.ts";
+import { MUSIC_ROTATION_KEY } from "../audio/constants.ts";
+import { setMusicPlayerForTests, type MusicPlayer, type MusicRequest } from "../audio/music.ts";
+import { loadSoundTables } from "../audio/soundTablesLoader.ts";
+
+// The sound tables load lazily; the music assertions read the shipped ones.
+await loadSoundTables();
+
+/** A player that records what it is asked for and plays nothing. */
+function recordingPlayer(): MusicPlayer & { requests: MusicRequest[] } {
+  const requests: MusicRequest[] = [];
+  return {
+    requests,
+    request: (r: MusicRequest) => {
+      requests.push(r);
+    },
+    playIntro: () => undefined,
+    stopIntro: () => undefined,
+    playSting: () => undefined,
+    preloadIntros: () => undefined,
+    intro: () => null,
+    resetResume: () => undefined,
+    preload: () => undefined,
+    setBusy: () => undefined,
+    current: () => null,
+    wanted: () => requests.at(-1)?.track ?? null,
+    opponentTurn: () => requests.at(-1)?.opponentTurn ?? false,
+    log: () => [],
+    dispose: () => undefined,
+  };
+}
 
 const steps = foldedReplaySteps();
 const LAST = steps.length - 1;
@@ -39,11 +69,15 @@ function cardsOf(hand: SideView["hand"]): CardView[] {
 
 beforeEach(() => {
   vi.useFakeTimers();
+  localStorage.clear();
 });
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
   closeInspect();
+  // R4606000: run a leaving board's deferred hand-back now, so none leaks into the next test.
+  await act(async () => {});
+  setMusicPlayerForTests(null);
   vi.useRealTimers();
   window.localStorage.clear();
   __resetSettingsForTests();
@@ -741,5 +775,49 @@ describe("leaving, paging and failing", () => {
 
     expect(screen.getByTestId(replayTestid.failure)).toHaveTextContent("This replay has expired.");
     expect(screen.queryByTestId(replayTestid.retry)).toBeNull();
+  });
+});
+
+describe("R4606000 the replay keeps the match's music", () => {
+  it("R4606000 stepping back, scrubbing and jumping turns keeps the rotation and the wanted track", async () => {
+    const player = recordingPlayer();
+    setMusicPlayerForTests(player);
+    try {
+      await open();
+      const [, second = 0] = TURN_STARTS;
+      const rotation = (): string | null => localStorage.getItem(MUSIC_ROTATION_KEY);
+      const baseline = rotation();
+      expect(baseline, "opening the replay moves the rotation on").not.toBeNull();
+      const wanted = player.wanted();
+      expect(wanted, "the replay's board wants a track").not.toBeNull();
+      const checkKept = (): void => {
+        expect(rotation(), "the rotation after the move").toBe(baseline);
+        expect(player.wanted(), "the wanted track after the move").toBe(wanted);
+      };
+      await press(replayTestid.forwardStep);
+      expect(shownStep()).toBe(1);
+      checkKept();
+      await press(replayTestid.backStep);
+      expect(shownStep()).toBe(0);
+      checkKept();
+      await jump(second);
+      expect(shownStep()).toBe(second);
+      checkKept();
+      await press(replayTestid.backTurn);
+      expect(shownStep()).toBe(0);
+      checkKept();
+      await press(replayTestid.forwardTurn);
+      expect(shownStep()).toBe(second);
+      checkKept();
+      const firstGame = player.requests.findIndex((r) => r.track !== null && r.track !== "menu");
+      expect(firstGame).toBeGreaterThanOrEqual(0);
+      expect(player.requests.slice(firstGame).some((r) => r.track === "menu"), "no menu theme between the moves").toBe(false);
+      expect(
+        player.requests.filter((r) => r.intro !== null && r.intro !== undefined).length,
+        "the match-start sting plays at most once",
+      ).toBeLessThanOrEqual(1);
+    } finally {
+      setMusicPlayerForTests(null);
+    }
   });
 });

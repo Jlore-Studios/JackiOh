@@ -35,7 +35,6 @@ export { CardArt, ART_PLANES } from "./art/index.ts";
 // Slice C: inspect.
 export {
   AlwaysFullText,
-  CardDetail,
   CardListPreview,
   CardListSheet,
   closeInspect,

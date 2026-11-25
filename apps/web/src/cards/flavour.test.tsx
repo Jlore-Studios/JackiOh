@@ -10,15 +10,18 @@ import type { CardDef } from "@jackioh/shared";
 
 import { BANNED_RULES_WORDS } from "../audio/constants.ts";
 import { CardFace } from "./CardFace.tsx";
-import { CARD_FLAVOUR, flavourFor } from "./flavour.ts";
+import { deferFlavourForTests, flavourNow, flavourFor, loadFlavour } from "./flavour.ts";
 import { Flavour } from "./inspect/Flavour.tsx";
 import { HoverPreview } from "./inspect/HoverPreview.tsx";
 import { InspectSheet } from "./inspect/InspectSheet.tsx";
-import { CardDetail, closeInspect } from "./inspect/index.ts";
+import { closeInspect } from "./inspect/index.ts";
+import { CardDetail } from "./inspect/CardDetail.tsx";
 import { INSPECT_ARTIST, INSPECT_DETAIL, INSPECT_FLAVOUR, INSPECT_HOVER, INSPECT_SHEET } from "./inspect/testids.ts";
 import { faceModel } from "./model.ts";
 
 const ANCHOR = { left: 100, top: 100, right: 160, bottom: 190, width: 60, height: 90 };
+
+await loadFlavour();
 
 function defOf(id: string): CardDef {
   const def = CATALOG[id];
@@ -27,7 +30,7 @@ function defOf(id: string): CardDef {
 }
 
 function lineOf(id: string): string {
-  const line = CARD_FLAVOUR[id]?.flavour;
+  const line = flavourNow()?.[id]?.flavour;
   if (line === undefined) throw new Error(`expected a flavour line for ${id}`);
   return line;
 }
@@ -50,7 +53,7 @@ afterEach(() => {
 describe("R660 the flavour lines' words", () => {
   it("R660 no flavour line speaks a rules word (the voice lines' list, issue #115)", () => {
     const offending: string[] = [];
-    for (const [id, entry] of Object.entries(CARD_FLAVOUR)) {
+    for (const [id, entry] of Object.entries(flavourNow() ?? {})) {
       const line = entry.flavour ?? "";
       for (const word of BANNED_RULES_WORDS) {
         if (bannedMatcher(word).test(line)) offending.push(`${id} says "${word}": ${line}`);
@@ -116,5 +119,42 @@ describe("R660 where the flavour shows", () => {
     const { container } = render(<CardFace face={faceModel({ defId: "core-001", def: defOf("core-001"), radiant: false })} layout="full" />);
     expect(container.textContent).not.toContain(lineOf("core-001"));
     expect(container.querySelector(`[data-testid="${INSPECT_FLAVOUR}"]`)).toBeNull();
+  });
+});
+
+describe("#4435 the flavour arrives after the first paint", () => {
+  it("#4435 a hover preview and a detail view gain the flavour line and the artist credit once the table arrives", async () => {
+    // No shipped entry names an artist yet, so the held table gains one on core-001.
+    const real = flavourNow();
+    if (real === null) throw new Error("expected the flavour table to be loaded");
+    const deferred = deferFlavourForTests();
+    try {
+      render(<HoverPreview face={faceModel({ defId: "core-008", def: defOf("core-008"), radiant: false })} anchor={ANCHOR} />);
+      render(<CardDetail def={defOf("core-001")} onClose={() => {}} />);
+      expect(screen.queryByTestId(INSPECT_FLAVOUR)).toBeNull();
+      deferred.resolve({ ...real, "core-001": { ...real["core-001"], artist: "A. Painter" } });
+      const flavours = await screen.findAllByTestId(INSPECT_FLAVOUR);
+      expect(flavours).toHaveLength(2);
+      expect(screen.getByTestId(INSPECT_HOVER)).toHaveTextContent(lineOf("core-008"));
+      expect(within(screen.getByTestId(INSPECT_DETAIL)).getByTestId(INSPECT_FLAVOUR)).toHaveTextContent(
+        lineOf("core-001"),
+      );
+      expect(screen.getByTestId(INSPECT_ARTIST)).toHaveTextContent("Art by A. Painter");
+    } finally {
+      await loadFlavour();
+    }
+  });
+
+  it("#4435 a failed load draws no flavour and the next loadFlavour tries again", async () => {
+    const deferred = deferFlavourForTests();
+    try {
+      const { container } = render(<Flavour defId="core-001" />);
+      deferred.reject(new Error("down"));
+      expect(container.firstChild).toBeNull();
+      await loadFlavour();
+      expect(await screen.findByTestId(INSPECT_FLAVOUR)).toHaveTextContent(lineOf("core-001"));
+    } finally {
+      await loadFlavour();
+    }
   });
 });

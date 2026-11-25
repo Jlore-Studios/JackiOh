@@ -369,6 +369,25 @@ pub fn played_type_of(state: &GameState, event: &GameEvent) -> Option<CardType> 
     Some(crate::faces::card_type_of_face(state, def_id, radiant))
 }
 
+/// R4423000: whether a `destroyed` is a Unit's death, by what the card was on the field as it died: its
+/// face's type off the event's definition, unless the event's `diedAs` says otherwise (a card set by its
+/// Cloaked died as the Field Trap or Trap it was set as, R3777000, R783008; an Animated Field Spell or
+/// Trap killed in a unit zone died as a Unit, R383). Scripts typing a death read this, never
+/// `def_of(..).type_`, since the card has left the field by then; `false` for other events.
+pub fn is_unit_death(state: &GameState, event: &GameEvent) -> bool {
+    let GameEvent::Destroyed {
+        def_id,
+        radiant,
+        died_as,
+        ..
+    } = event
+    else {
+        return false;
+    };
+    died_as.unwrap_or_else(|| crate::faces::card_type_of_face(state, def_id, *radiant == Some(true)))
+        == CardType::Unit
+}
+
 /// R174, R2199007: the field's departures so far, a mark to ask `left_field_since_mark` with later
 /// (Training Grounds #31 Level Up!: a Unit that left and came back is a new arrival).
 pub fn field_exit_mark(state: &GameState) -> u32 {
@@ -498,6 +517,12 @@ pub fn played_this_game_with_tag(state: &GameState, player: PlayerId, tag: Tag) 
         .and_then(|log| log.played_by_tag.get(&tag))
         .copied()
         .unwrap_or(0)
+}
+
+/// R4593001 (Infinite Assault #196 Emergent Behavior): how many turns `player` has started this
+/// game, the current turn included (`PlayerState.turns_started`, R845).
+pub fn turns_started_of(state: &GameState, player: PlayerId) -> i32 {
+    state.players[player].turns_started
 }
 
 /// B5 E4, R451: the last Spell either player played (Classic #57 Echo) as its play recorded it (a
@@ -1555,8 +1580,11 @@ fn exiles_on_damage(state: &GameState, source: &CardInstance) -> bool {
 }
 
 /// Whether a unit's Divine Shield is up (§6.1): the view drops a spent one.
+/// Whether a hit on `unit` pops its Divine Shield: one immune to damage keeps it (R4591004).
 fn is_shielded(state: &GameState, unit: &CardInstance) -> bool {
-    unit_has(state, unit, KeywordKind::DivineShield) && unit.divine_shield_spent != Some(true)
+    unit_has(state, unit, KeywordKind::DivineShield)
+        && unit.divine_shield_spent != Some(true)
+        && !crate::effects::firewall::units_immune_now(state, unit)
 }
 
 /// §4.4 steps 1 to 4 on a unit, read as `damage.rs`'s pipeline reads them (`damage::project_hit`,

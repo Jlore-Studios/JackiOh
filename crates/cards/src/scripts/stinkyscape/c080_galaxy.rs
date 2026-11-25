@@ -1,12 +1,13 @@
 //! Stinkyscape #80 Galaxy (SPEC §8.10 row 80). Unit 2/2 → 4/4 (5/5 → 10/10 until issue #3996), cost 4,
 //! Legendary.
-//!   Base:    "Tribute 2, Flying
+//!   Base:    "Tribute 3, Flying
 //!            Cry: Discover 2 Radiant Miners and Equip them into this."
-//!   Radiant: "Tribute 2, Flying
+//!   Radiant: "Tribute 3, Flying
 //!            Cry: Equip a Radiant copy of every Miner into this."
 //!
-//! Tribute 2 is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the keyword line's
-//! printed Tribute (R366). R1872003: the Cry is `equip_picks` (R1841002) from the Miners (`query::miners`,
+//! Tribute 3 since issue #4440 (Tribute 2 before it, which `script_v0_6_9n` keeps for the replays of
+//! v0.6.9n and before, R767000) is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the
+//! keyword line's printed Tribute (R366). R1872003: the Cry is `equip_picks` (R1841002) from the Miners (`query::miners`,
 //! R3869002), S #62 Miner v1 to S #66 Miner v5 today (named by id through v0.6.2b),
 //! each pick a fresh copy on its Radiant face (R469) fused straight into this (R1086, R77), its Activate
 //! with it (R1751000): two Discovers of three in turn, the second without the first; the Radiant face
@@ -19,22 +20,34 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscape-080";
 
-/// "Tribute 2" (R101).
-const TRIBUTE: i32 = 2;
+/// "Tribute 3" (R101), since issue #4440.
+const TRIBUTE: i32 = 3;
+/// "Tribute 2", through v0.6.9n.
+const TRIBUTE_V0_6_9G: i32 = 2;
 
 /// "Discover 2".
 const PICKS: i32 = 2;
 
-fn tribute() -> Option<StaticFlags> {
+fn tribute(units: i32) -> Option<StaticFlags> {
     Some(StaticFlags {
-        tribute: Some(TRIBUTE),
+        tribute: Some(units),
         ..StaticFlags::default()
     })
 }
 
 pub fn script() -> CardScripts {
+    galaxy(TRIBUTE)
+}
+
+/// R767000: through v0.6.9n it was Tribute 2 (issue #4440); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_9n() -> CardScripts {
+    galaxy(TRIBUTE_V0_6_9G)
+}
+
+/// Both faces, played for `units` Units.
+fn galaxy(units: i32) -> CardScripts {
     let base = Script {
-        static_flags: tribute(),
+        static_flags: tribute(units),
         cry: Some(hook(|_ctx| {
             vec![equip_picks(json_as(json!({
                 "query": crate::query::miners(),
@@ -46,7 +59,7 @@ pub fn script() -> CardScripts {
     };
     // R1872003: "a Radiant copy of every Miner", one by one, v1 to v5.
     let radiant = Script {
-        static_flags: tribute(),
+        static_flags: tribute(units),
         cry: Some(hook(|_ctx| {
             crate::query::pool_ids(&crate::query::miners())
                 .iter()
@@ -89,16 +102,16 @@ mod tests {
     const FILLER: &str = "core-005"; // Stockpile: a Spell
     const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
 
-    /// p1 plays the Galaxy (Radiant on `radiant`) into lane 3, its two Vanillas the Tribute.
+    /// p1 plays the Galaxy (Radiant on `radiant`) into lane 4, its three Vanillas the Tribute.
     fn played(radiant: bool) -> (Scenario, String) {
         let mut s = weapon_board(
             "s080",
-            json!({ "hand": [{ "def": ID, "radiant": radiant }], "field": [VANILLA, VANILLA], "mana": 10 }),
+            json!({ "hand": [{ "def": ID, "radiant": radiant }], "field": [VANILLA, VANILLA, VANILLA], "mana": 10 }),
             json!({}),
         );
-        let tributes = [1, 2].map(|lane| s.unit_at(P1, lane).id);
-        s.play(ID, json!({ "zone": 3, "tributes": tributes }));
-        let host = s.unit_at(P1, 3).id;
+        let tributes = [1, 2, 3].map(|lane| s.unit_at(P1, lane).id);
+        s.play(ID, json!({ "zone": 4, "tributes": tributes }));
+        let host = s.unit_at(P1, 4).id;
         (s, host)
     }
 
@@ -118,13 +131,38 @@ mod tests {
         assert_eq!((printed.radiant.attack, printed.radiant.health), (Some(4), Some(4)));
     }
 
+    /// Issue #4440: Tribute 3, so two Units no longer pay it.
     #[test]
-    fn r101_it_needs_tribute_2() {
-        let mut s = weapon_board("s080-tribute", json!({ "hand": [ID], "field": [VANILLA, VANILLA] }), json!({}));
+    fn r101_it_needs_tribute_3() {
+        let mut s = weapon_board(
+            "s080-tribute",
+            json!({ "hand": [ID], "field": [VANILLA, VANILLA, VANILLA] }),
+            json!({}),
+        );
         assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE);
-        let first = s.unit_at(P1, 1).id;
-        s.expect_refused(|s| s.play(ID, json!({ "zone": 3 })));
-        s.expect_refused(|s| s.play(ID, json!({ "zone": 3, "tributes": [first.as_str()] })));
+        let [first, second, third] = [1, 2, 3].map(|lane| s.unit_at(P1, lane).id);
+        s.expect_refused(|s| s.play(ID, json!({ "zone": 4 })));
+        s.expect_refused(|s| s.play(ID, json!({ "zone": 4, "tributes": [first.as_str()] })));
+        s.expect_refused(|s| s.play(ID, json!({ "zone": 4, "tributes": [first.as_str(), second.as_str()] })));
+        s.play(ID, json!({ "zone": 4, "tributes": [first.as_str(), second.as_str(), third.as_str()] }));
+        s.expect_in_zone(ID, "field");
+    }
+
+    /// R767000: through v0.6.9n two Units paid it (issue #4440).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_9n_needs_tribute_2() {
+        crate::under_kept(ID, script_v0_6_9n(), || {
+            let mut s = weapon_board(
+                "s080-kept",
+                json!({ "hand": [ID], "field": [VANILLA, VANILLA, VANILLA] }),
+                json!({}),
+            );
+            assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE_V0_6_9G);
+            let [first, second] = [1, 2].map(|lane| s.unit_at(P1, lane).id);
+            s.play(ID, json!({ "zone": 4, "tributes": [first.as_str(), second.as_str()] }));
+            s.expect_in_zone(ID, "field");
+            assert!(s.unit(P1, 3).is_some(), "the third Unit stays");
+        });
     }
 
     #[test]

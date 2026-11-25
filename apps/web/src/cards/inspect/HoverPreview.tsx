@@ -20,7 +20,7 @@ import { Extended, showsFullText, useAlwaysFullText } from "./Extended.tsx";
 import { Glossary } from "./Glossary.tsx";
 import { estimatedPreviewSize, placePreview, previewCardHeight, type PreviewPrefer, type Rect } from "./placement.ts";
 import { Flavour, showsEasterEgg } from "./Flavour.tsx";
-import { flavourFor } from "../flavour.ts";
+import { flavourFor, useFlavour } from "../flavour.ts";
 import { InspectNote } from "./InspectNote.tsx";
 import { Printed } from "./Printed.tsx";
 import { LocLine, StateNotes, hasStateNotes } from "./StateNotes.tsx";
@@ -48,7 +48,8 @@ export function HoverPreview({ face, anchor, prefer = "beside", note, keyHint }:
   const own = useOwnCopy();
   const named = resolve === null ? 0 : namedCards(face, resolve).length;
   const notes = hasStateNotes(face);
-  const flavoured = face.known && (flavourFor(face.defId) !== null || showsEasterEgg(face));
+  const sidecar = useFlavour();
+  const flavoured = face.known && (flavourFor(face.defId, sidecar ?? {}) !== null || showsEasterEgg(face));
   const side = notes || face.printed !== null || flavoured;
   const ascentLevel = face.ascent;
   // R3838001: below an `AlwaysFullText` the panel is there whenever the face has words.

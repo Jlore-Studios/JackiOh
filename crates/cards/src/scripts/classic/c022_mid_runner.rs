@@ -11,7 +11,7 @@
 //! to their controllers' hands (R747): a full hand burns it (R4, R317), a unit token ceases to exist
 //! (R11), and no view of theirs names a bounced face-down card (R97). R195: the hand glow uses the same test.
 
-use jackioh_engine::effects::{ForEachCardArgs, bounce, cards_in_scope, for_each_card, sacrifice};
+use jackioh_engine::effects::{ForEachCardArgs, bounce, enemy_permanent_pool, for_each_card, sacrifice};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-022";
@@ -46,8 +46,7 @@ fn cry(ctx: &mut EffectContext<'_>) -> Vec<Effect> {
         effects.push(for_each_card(ForEachCardArgs {
             // R60: different cards, drawn as the Cry reaches this clause.
             cards: Arc::new(move |c: &mut EffectContext<'_>| -> Vec<String> {
-                let scope: BoardScope = json_as(json!({ "side": "enemy", "rows": ["units", "backrow"] }));
-                let permanents = cards_in_scope(c, &scope);
+                let permanents = enemy_permanent_pool(c);
                 c.sink
                     .rng
                     .shuffle(&permanents)

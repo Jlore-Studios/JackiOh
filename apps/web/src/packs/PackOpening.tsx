@@ -27,7 +27,8 @@ import { createPortal } from "react-dom";
 import { CATALOG } from "@jackioh/cards";
 import { PACKS_OPEN_ALL_MAX } from "@jackioh/server-config";
 
-import { CardBack, CardDetail, CardFace, FullScreenArt, faceModel, useFullScreenTrigger } from "../cards/index.ts";
+import { CardBack, CardFace, FullScreenArt, faceModel, useFullScreenTrigger } from "../cards/index.ts";
+import { CardDetail } from "../cards/inspect/CardDetail.tsx";
 import { readerName } from "../cards/chinese.ts";
 import { WhenEngineReady } from "../wasm/WhenEngineReady.tsx";
 import { useModalOverlay } from "../cards/inspect/store.ts";

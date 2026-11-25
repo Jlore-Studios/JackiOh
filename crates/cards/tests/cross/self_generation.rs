@@ -67,6 +67,22 @@ const NAMES_ITS_OWN_POOL: &[(&str, &str)] = &[
         "stinkyscapeplus-083",
         "Offworld Replicant's Evolve adds a copy of this to your hand (rule 4: a copy of \"this\" is not generation, R3541001)",
     ),
+    (
+        "infiniteassault-019",
+        "Infinite Scroll shuffles a copy of this into your deck (rule 4, R4577002)",
+    ),
+    (
+        "infiniteassault-073",
+        "Worker Thread summons a copy of this (rule 4, as Duplicating Felinors)",
+    ),
+    (
+        "infiniteassault-107",
+        "Recursive Call shuffles a copy of this into your deck (rule 4, as Infinite Scroll)",
+    ),
+    (
+        "infiniteassault-207",
+        "Recursive Self-Improvement shuffles a copy of this into your deck (rule 4, R4593004)",
+    ),
 ];
 
 const SEEDS: &[&str] = &["self-gen-a", "self-gen-b", "self-gen-c", "self-gen-d"];

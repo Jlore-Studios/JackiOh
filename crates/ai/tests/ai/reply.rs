@@ -10,7 +10,10 @@ use jackioh_ai::*;
 use jackioh_engine::config::{AI_DIFFICULTY, AI_TUTORIAL, DIFFICULTIES};
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, act, all_out_attack, in_graveyard, is_legal, on_field, run_puzzle, trace};
+use super::support::{
+    AI, HUMAN, TWO_GUNS, act, all_out_attack, in_graveyard, install_two_guns, is_legal, on_field, row,
+    run_puzzle, trace,
+};
 
 const TURN: i32 = 9;
 const LIBRARY: &[&str] = &["core-008", "core-011", "core-008", "core-011"];
@@ -22,6 +25,8 @@ const HEROIC: &str = "core-098";
 const CRACKER: &str = "classic-006";
 /// C+ #13 Mommy Barker, whose Radiant face is a 4/4 Reborn.
 const BARKER: &str = "classicplus-013";
+/// M #100 Greaser, a vanilla 7/7.
+const GREASER: &str = "meditative-100";
 
 fn spread(base: Value, over: Option<&Value>) -> Value {
     let mut out = base;
@@ -123,17 +128,6 @@ mod simulate_reply {
         assert_eq!(unit_view(&reply, &duelist_of(&reply)).position, Position::Atk);
         assert_eq!(reply.active, AI);
         assert_eq!(counter.used(), 3);
-    }
-
-    #[test]
-    fn leaves_a_unit_without_deft_in_defense_position_and_ends_its_turn() {
-        let state = handed_over(json!({ "p2": { "field": [{ "def": "core-008", "position": "DEF" }] } }));
-        let counter = create_node_counter(20, None);
-        let reply = simulate_reply(&state, AI, &counter, &hidden_card_ids(&state, AI), Prices::NONE)
-            .expect("a reply");
-        assert_eq!(reply.players[AI].hero.health, 30);
-        assert_eq!(reply.active, AI);
-        assert_eq!(counter.used(), 1);
     }
 
     #[test]
@@ -615,6 +609,86 @@ mod visible_activations {
         assert_eq!(winner(&reply), Some(Winner::from(HUMAN)));
     }
 
+    /// #8 Mr. Vanilla, a vanilla 4/4.
+    const VANILLA: &str = "core-008";
+    /// S #52 Cannon v3: "Activate: Deal 5 damage to an enemy Unit."
+    const CANNON_V3: &str = "stinkyscape-052";
+    /// S #56 Cannon v4: "Activate: Deal 7 damage to an enemy Unit."
+    const CANNON_V4: &str = "stinkyscape-056";
+
+    /// The reply on `state` at the seat, given room for every step.
+    fn replied(state: &GameState) -> GameState {
+        simulate_reply(
+            state,
+            AI,
+            &create_node_counter(60, None),
+            &hidden_card_ids(state, AI),
+            Prices::NONE,
+        )
+        .expect("a reply")
+    }
+
+    /// R4515000: the four tries were the Cannon's first four targets, lanes 1 to 4, so the Greaser in
+    /// lane 5 read as out of its reach; now its best target comes first.
+    #[test]
+    fn r4515000_a_cannon_v4_facing_five_units_destroys_the_most_valuable_in_lane_5() {
+        let state = handed_over(json!({
+            "p1": { "field": row(json!(VANILLA), GREASER) },
+            "p2": { "field": [CANNON_V4] },
+        }));
+        let reply = replied(&state);
+        assert!(
+            in_graveyard(&reply, AI, GREASER),
+            "{:?}",
+            reply.players[AI].graveyard
+        );
+    }
+
+    /// R4515000: facing four 3/6s, the first Cannon's (v3, 5 damage) targets filled every try, so the
+    /// v4 behind it was never tried at lane 5; now each Cannon's best target is tried in turn, and the
+    /// v4's 7 damage on the Greaser is the opponent's best move.
+    #[test]
+    fn r4515000_of_two_cannons_the_reply_fires_the_second_at_the_lane_5_unit() {
+        let state = handed_over(json!({
+            "p1": { "field": row(json!({ "def": VANILLA, "statsOverride": { "attack": 3, "health": 6 } }), GREASER) },
+            "p2": { "field": [{ "def": CANNON_V3, "lane": 1 }, { "def": CANNON_V4, "lane": 2 }] },
+        }));
+        let reply = replied(&state);
+        assert!(
+            in_graveyard(&reply, AI, GREASER),
+            "{:?}",
+            reply.players[AI].graveyard
+        );
+    }
+
+    /// R4515000: a card with two Activates (as a launched Starship or a fused card) had only its first
+    /// tried at four targets; now each ability's best target is, and its 7-damage gun destroys the
+    /// Greaser.
+    #[test]
+    fn r4515000_a_card_with_two_activates_has_both_tried_in_the_reply() {
+        install_two_guns();
+        let state = handed_over(json!({
+            "p1": { "field": row(json!(VANILLA), GREASER) },
+            "p2": { "field": [TWO_GUNS] },
+        }));
+        let abilities: Vec<Option<String>> = legal_actions(&state, HUMAN)
+            .into_iter()
+            .filter_map(|action| match action {
+                ActionBody::Activate { ability, .. } => Some(ability),
+                _ => None,
+            })
+            .collect();
+        for gun in ["ping", "snipe"] {
+            assert!(abilities.contains(&Some(gun.to_string())), "{gun}: {abilities:?}");
+        }
+        let reply = replied(&state);
+        assert!(
+            in_graveyard(&reply, AI, GREASER),
+            "{:?}",
+            reply.players[AI].graveyard
+        );
+    }
+
     #[test]
     fn never_reveals_a_card_set_face_down_that_the_seat_cannot_see() {
         let state = cracker_set();
@@ -813,8 +887,8 @@ mod defense_switch_1696 {
             .expect("the unit is on p2's field")
     }
 
-    /// What p2's own evaluation gains by switching its unit `def_id` to Defense Position, the seat
-    /// swinging next: the comparison the reply's trial switch makes.
+    /// What p2's own evaluation gains by switching its unit `def_id` to Defense Position, or back to
+    /// Attack (R4433000), the seat swinging next: the comparison the reply's trial switch makes.
     fn switch_gain(state: &GameState, def_id: &str) -> f64 {
         let switch = ActionBody::SwitchPosition {
             instance_id: unit_of(state, def_id).id,
@@ -1031,5 +1105,69 @@ mod defense_switch_1696 {
         assert_eq!(unwalled.active, AI);
         assert!(face_threat(&unwalled, AI) >= effective_life(&unwalled, HUMAN));
         assert!((carried(&unwalled) - AI_EVAL.lethal_on_board).abs() < 1e-9);
+    }
+
+    /// R4433000: the seat's board is empty, so nothing punishes p2's Greaser for leaving Defense
+    /// Position: p2 switches it back to Attack and ends its turn. The switch spent its exertion, so the
+    /// seat's hero is untouched; one node for the switch tried, one for the endTurn.
+    #[test]
+    fn r4433000_switches_a_unit_without_deft_back_to_attack_when_nothing_is_worth_making() {
+        let state = handed_over(json!({ "p2": { "field": [{ "def": GREASER, "position": "DEF" }] } }));
+        assert!(switch_gain(&state, GREASER) > 0.0);
+        let (reply, used) = replied(&state);
+        assert_eq!(
+            unit_view(&reply, &unit_of(&reply, GREASER)).position,
+            Position::Atk
+        );
+        assert_eq!(reply.players[AI].hero.health, 30);
+        assert_eq!(reply.active, AI);
+        assert_eq!(used, 2);
+    }
+
+    /// R4433000: the seat's 7/7 would finish p2 at 7 next turn but for the Taunt of p2's Greaser in
+    /// Defense Position, so the trial switch back is dropped (its own evaluation prefers standing
+    /// still) and the Greaser stays walled, for the same two nodes.
+    #[test]
+    fn r4433000_leaves_the_unit_in_defense_while_its_taunt_holds_back_the_seats_lethal() {
+        let state = handed_over(json!({
+            "p1": { "field": [GREASER] },
+            "p2": { "health": 7, "field": [{ "def": GREASER, "position": "DEF" }] },
+        }));
+        assert!(switch_gain(&state, GREASER) < 0.0);
+        let (reply, used) = replied(&state);
+        assert_eq!(
+            unit_view(&reply, &unit_of(&reply, GREASER)).position,
+            Position::Def
+        );
+        assert_eq!(reply.players[AI].hero.health, 30);
+        assert_eq!(reply.players[HUMAN].hero.health, 7);
+        assert_eq!(reply.active, AI);
+        assert_eq!(used, 2);
+    }
+
+    /// R4433000: the AI at 7 holds Mr. Vanilla in Defense Position against p2's Greaser in Defense.
+    /// Read as a wall that stays a wall, the Greaser threatened nothing, and the AI switched Mr. Vanilla
+    /// out to Attack; expecting the switch back, it keeps its Taunt between the Greaser and its face.
+    #[test]
+    fn r4433000_decide_keeps_its_taunt_blocker_against_a_defense_unit_that_will_switch_back() {
+        let run = run_puzzle(
+            "r4433000-keeps",
+            json!({
+                "p1": { "health": 7, "field": [{ "def": "core-008", "position": "DEF" }], "library": LIBRARY },
+                "p2": { "field": [{ "def": GREASER, "position": "DEF" }], "library": LIBRARY },
+            }),
+        );
+        assert!(run.end.result.is_none(), "{}", trace(&run.turn));
+        let vanilla = active_units_of(&run.end, AI)
+            .into_iter()
+            .find(|unit| unit.def_id == "core-008")
+            .cloned()
+            .expect("Mr. Vanilla is on p1's field");
+        assert_eq!(
+            unit_view(&run.end, &vanilla).position,
+            Position::Def,
+            "{}",
+            trace(&run.turn)
+        );
     }
 }

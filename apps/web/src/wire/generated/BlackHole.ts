@@ -10,4 +10,8 @@ export type BlackHole = { lane: number, swallowed?: number, pulls?: PlayerId,
  * R3561000: the permanents it closes after, as its card resolved with them; `None`:
  * `BLACK_HOLE_CAPACITY`.
  */
-capacity?: number, };
+capacity?: number, 
+/**
+ * R4440050: it pulls at the end of each pulled player's turn, not the start. Only ever `Some(true)`.
+ */
+atEnd?: boolean, };

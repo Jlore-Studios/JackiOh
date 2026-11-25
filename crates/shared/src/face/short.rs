@@ -16,14 +16,17 @@
 //! #52's Radiant face; issue #3140: Meditative #40, #54 and #81 and Meditative+ #22, whose new Activate, Cry and
 //! draw lines put them over; issue #3138: Classic+ #37 Wardrum and Meditative #20 Aestheticize the Game, whose
 //! new keyword line (Divine Shield, Tradable) makes a seventh line; and Meditative #9's Radiant face, whose Cry
-//! and Aura run to seven lines (R3134001).
+//! and Aura ran to seven lines (R3134001) until issue #4440 put an Activate in the Cry's place; issue #4440:
+//! Classic #28 Second Wind's faces, whose Aura gained a mana line.
 //!
 //! Issue #3941 (R3941001) wrote the words of every face that clamped but five, the in-game text a face prints on
 //! the board and in a hand, an object `{ "en": … }` in the same file: its `{key}`s are filled as its whole text's
 //! are (the view's numbers, R386, and a Radiant face's marks against its base face's written words, R277), and
 //! the whole text stays where it stood. The five still clamp: the Quest faces, which print one stage
 //! (R2450000), and S #116 Megabase, whose keyword line alone fills four of the box's six lines. A face printed
-//! in Chinese clamps where its written form has no Chinese words of its own (`zh`).
+//! in Chinese clamps where its written form has no Chinese words of its own (`zh`). Issue #4601 wrote the
+//! words of the held Infinite Assault set's #235 The Prime Generator, whose keyword, start-of-turn and Death
+//! lines run to seven on both faces.
 //!
 //! Only a face printing its catalog text takes a short form (in play #98 prints its rolled power and a Call
 //! to Chaos "???", `power.rs`). In play the Summit prints only its header and the next Ascent line (#814,

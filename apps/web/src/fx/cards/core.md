@@ -21,7 +21,7 @@ from their hook's `hookResolving` marker, and a Trap's `cast` from its `trapFire
 | Card | Name | Type | Entry | Scale | Census | Why |
 | --- | --- | --- | --- | --- | --- | --- |
 | `core-001` | Big D-fender | Unit | none: its Aura is standing Armor, with no moment to draw | — | none: vanilla | the census agrees: its Aura changes nothing as it plays |
-| `core-002` | Speciesist | Unit | cry bolt | 1.24 | bolt | cry: the census agrees (bolt) |
+| `core-002` | Speciesist | Unit | cry bolt | 1.16 | bolt | cry: the census agrees (bolt) |
 | `core-003` | Right-house defender | Unit | none: vanilla | — | none: vanilla | keywords only, which the keyword beats and the attack rows draw |
 | `core-004` | Gary the Gambler | Unit | cry bless Hustle/cash | 1.08 | none: no motif reads questCompleted | cry: the census leaves out the events on the card itself, its buffed, upgraded and keywordGranted, which bless reads |
 | `core-005` | Stockpile | Spell | cast flight | 1.08 | bolt | cast: the census's suggestion is noise in its window (fatigue, other cards' events); its own effect is drawn, which flight reads |
@@ -65,14 +65,14 @@ from their hook's `hookResolving` marker, and a Trap's `cast` from its `trapFire
 | `core-043` | Big Felinor | Unit | cry wipe Beast/felinor | 1.45 | wipe | cry: the census agrees (wipe) |
 | `core-044` | True Strike | Spell | cast bolt | 1.08 | bolt | cast: the census agrees (bolt) |
 | `core-045` | Deft Duelist | Unit | none: vanilla | — | none: vanilla | keywords only, which the keyword beats and the attack rows draw |
-| `core-046` | Suppressive Aura | Field Spell | cast bolt; aura void board | 1.28 | bolt | cast: the census agrees (bolt) |
+| `core-046` | Suppressive Aura | Field Spell | cast bolt; aura void board | 1.19 | bolt | cast: the census agrees (bolt) |
 | `core-047` | Fig of Life | Spell | cast mend | 1.24 | none: no motif reads healed | cast: no census family reads healed, which mend (#2793) reads |
 | `core-048` | 5pek Controller | Spell | cast shift | 1.00 | none: no motif reads positionSwitched | cast: no census family reads swapped, rotated, positionSwitched and flickered, which shift (#2786) reads |
 | `core-049` | Snom Bunny Mind Control | Spell | cast tether Dark/curse | 1.63 | none: no motif reads controlChanged | cast: no census family reads stolen, controlChanged and held, which tether (#2786) reads |
 | `core-050` | K-Pop Fanatic | Unit | none: no motif reads marked, its Allure; the mark's own row plays | — | bolt | the census's bolt is its Allured card's later kills; no motif reads `marked`, its Allure, and the mark's own row plays |
 | `core-051` | KY's Private Tutor | Spell | cast send Nerd/chalk | 1.35 | none: no motif reads promptAnswered | cast: the census reads its prompt; its Discover adds the card to the hand (addedToHand), which send (#2793) reads |
 | `core-051-1` | KY's Empty Notebook | Spell | cast send Nerd/ink | 0.97 | not in census | cast: a token the census never played; its cards shuffle in (shuffledIn), which send (#2793) reads, in Nerd's ink beside its Tutor's chalk |
-| `core-052` | Silly Silas | Unit | bespoke mirrorballShuffle; aura mirrorball tile Tech/hologram | 1.85 | vanish | signature (R3402001): he pirouettes down a spotlight into a crater and tips his hat; his rotation spins a mirrorball ring and brands each card it hands over in its new owner's colour; a mirrorball glint stands on his zone |
+| `core-052` | Silly Silas | Unit | bespoke mirrorballShuffle; aura mirrorball tile Tech/hologram | 2.00 | vanish | signature (R3402001): he pirouettes down a spotlight into a crater and tips his hat; his rotation spins a mirrorball ring and brands each card it hands over in its new owner's colour; a mirrorball glint stands on his zone |
 | `core-053` | Reno | Unit | cry mend | 1.24 | none: no motif reads healed | cry: no census family reads healed, which mend (#2793) reads |
 | `core-054` | Straaza | Unit | cry send | 1.32 | none: no motif reads addedToHand | cry: no census family reads addedToHand and shuffledIn, which send (#2793) reads |
 | `core-055` | Lava Golem | Unit | cry offering | 1.36 | offering | cry: the census agrees (offering) |

@@ -42,6 +42,7 @@ import {
   WATERMARK_OPACITY_ON_DARK,
   WATERMARK_SIZE_PCT,
   glyphUri,
+  setAccentOf,
   setMarkOf,
   watermarkOf,
 } from "./setMark.ts";
@@ -150,6 +151,8 @@ async function freshCardFace(): Promise<CardFaceModule> {
     SCENE_RECIPES: data.SCENE_RECIPES,
     ALT_SCENE_RECIPES: data.ALT_SCENE_RECIPES,
   });
+  // #4714: and the cosmetic offers the face's look reads, as setup.ts installs them.
+  await (await import("./versions.ts")).loadCosmeticOffers();
   return import("./CardFace.tsx");
 }
 
@@ -412,14 +415,15 @@ describe("B8: the cost gem renders the model's cost", () => {
   });
 
   it("B8 an embiggen card's gem shows its base price and a .cf-cost-alt with the embiggen price", () => {
-    const gem = one(catalogFace("core-046"), ".cost-gem");
+    // Unbiased Immigration, "2 embiggen 4".
+    const gem = one(catalogFace("core-059"), ".cost-gem");
     expect(gemText(gem)).toBe("2");
     expect(gem.getAttribute("data-cost")).toBe("2");
     expect(one(gem, ".cf-cost-alt").textContent).toContain("4");
   });
 
   it("B8 R1175000 the second cost badge is named for the Embiggened version, for a screen reader and on hover", () => {
-    for (const [id, cost] of [["core-046", "4"], ["core-056", "3"], ["meditative-021", "1"], ["meditative-081", "1"]] as const) {
+    for (const [id, cost] of [["core-046", "3"], ["core-059", "4"], ["core-056", "3"], ["meditative-021", "1"], ["meditative-081", "1"]] as const) {
       const alt = one(one(catalogFace(id), ".cost-gem"), ".cf-cost-alt");
       expect(alt.textContent, id).toBe(cost);
       expect(alt.getAttribute("role"), id).toBe("img");
@@ -457,7 +461,7 @@ describe("B10: RulesText marks terms in bold", () => {
     const term = one(cry, ".card-text strong.cf-term");
     expect(term.getAttribute("data-term")).toBe("Cry");
     expect(term.textContent).toBe("Cry:");
-    expect(one(cry, ".cf-text-base").textContent).toBe("Cry: Destroy an enemy non-Human Unit. You have 1 less mana next turn.");
+    expect(one(cry, ".cf-text-base").textContent).toBe("Cry: Destroy an enemy non-Human Unit. Overload (1).");
     cleanup();
 
     const start = one(catalogFace("core-040"), '.card-text strong.cf-term[data-term="Start of turn"]');
@@ -700,10 +704,10 @@ describe("B14: the radiant face", () => {
 
   it("B14 a clause the radiant cell restates is printed once, in its radiant form (core-002, core-046)", () => {
     const speciesist = one(catalogFace("core-002", true), ".card-text");
-    expect(speciesist.textContent).toBe("Cry: Destroy all enemy non-Human Units. You have 1 less mana next turn.");
+    expect(speciesist.textContent).toBe("Cry: Destroy all enemy non-Human Units. Overload (1).");
     expect(speciesist.querySelectorAll('strong.cf-term[data-term="Cry"]')).toHaveLength(1);
     cleanup();
-    expect(one(catalogFace("core-046", true), ".card-text").textContent).toBe("Aura: Enemy Units have −2/−2.\nEmbiggened (4): −4/−4 instead.");
+    expect(one(catalogFace("core-046", true), ".card-text").textContent).toBe("Aura: Enemy Units have −2/−2.\nEmbiggened (3): −4/−4 instead.");
   });
 
   it("R277 R276 the five cards that had no radiant form print a radiant face that differs, marked (core-038, core-080, core-093-1, core-095-1, core-096)", () => {
@@ -1040,6 +1044,17 @@ describe("R503: the set mark and a token's printed rarity", () => {
     expect(svg).not.toContain("<text");
     expect(svg).not.toContain("<title");
     expect(one(catalogFace("stinkyscapeplus-001"), ".cf-set").getAttribute("data-set-mark")).toBe("stinkyscape-plus");
+  });
+
+  it("R4596000 an Infinite Assault face wears the glitch accent, base and Radiant, and no other set's face does", () => {
+    expect(setAccentOf("Infinite Assault")).toBe("glitch");
+    for (const set of ["Core", "Classic", "Stinkyscape+", "Training Grounds", "Boss"]) expect(setAccentOf(set), set).toBeUndefined();
+    expect(setAccentOf(null)).toBeUndefined();
+    for (const radiant of [false, true]) {
+      expect(catalogFace("infiniteassault-217", radiant).getAttribute("data-set-accent")).toBe("glitch");
+      cleanup();
+    }
+    expect(catalogFace("core-002").getAttribute("data-set-accent")).toBeNull();
   });
 
   it("R503 a set with no glyph of its own gets the fallback, still named; an unknown card shows no set", () => {

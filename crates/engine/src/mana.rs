@@ -85,6 +85,45 @@ pub fn move_mana_crystals(
     (lost, gained)
 }
 
+/// R4590002 (IA #135 Mana Leech): `thief` steals `count` of `victim`'s mana crystals, counted
+/// from the capped maximum: the victim's own crystals first (up to `held`, their count inside the
+/// cap), then crystals they had stolen. The victim's count drops to `held - own` inside the cap, so
+/// their own crystals come back one a turn (§2.3); the thief holds what they lost past the cap
+/// (`CrystalGain::PastTheCap`, R4331001). Returns the max mana the victim lost and the crystals the
+/// thief gained; the caller reports each side whose mana changed (`mana_event`).
+pub fn move_some_mana_crystals(
+    state: &mut GameState,
+    thief: PlayerId,
+    victim: PlayerId,
+    count: i32,
+) -> (i32, i32) {
+    let cap = handicap_of(&state.players[victim]).mana_cap;
+    let side = &mut state.players[victim];
+    let held = mana_crystal_count(side).min(cap).max(0);
+    let own = count.clamp(0, held);
+    let offset = side.mana_crystals.unwrap_or(0);
+    side.mana_crystals = Some(offset - (mana_crystal_count(side) - held) - own).filter(|moved| *moved != 0);
+    let from_stolen = (count - own).clamp(0, stolen_mana_crystals_of(side));
+    if from_stolen > 0 {
+        side.stolen_mana_crystals =
+            Some(stolen_mana_crystals_of(side) - from_stolen).filter(|left| *left != 0);
+    }
+    let before = side.mana.max;
+    side.mana.max = max_mana_for(side);
+    let lost = (before - side.mana.max).max(0);
+    side.mana.current = (side.mana.current - lost).max(0);
+
+    let side = &mut state.players[thief];
+    let gained = lost;
+    if gained > 0 {
+        let held = side.mana.max;
+        side.stolen_mana_crystals = Some(stolen_mana_crystals_of(side) + gained);
+        side.mana.max = max_mana_for(side);
+        side.mana.current += side.mana.max - held;
+    }
+    (lost, gained)
+}
+
 /// R169: the id the next refresh's rider (`mana.nextTurnMod`, §6.3 Mana: "'next turn' mana is stored
 /// as a modifier for the next refresh") travels under — one badge per player, which `modifierChanged`
 /// names as it appears, changes and is spent, and which the view lists while the rider is not 0.
@@ -102,9 +141,15 @@ pub fn refresh_mana(side: &mut PlayerState) {
 /// refresh sets max mana as usual but current mana to the next-turn rider only. A lost refresh
 /// still gives 0 first (`refresh_is_lost`).
 pub fn refresh_mana_with(side: &mut PlayerState, natural: bool) {
+    refresh_mana_with_bonus(side, natural, 0);
+}
+
+/// R4440052: `refresh_mana_with`, the refresh giving `bonus` more on top, a standing rider beside the
+/// one-shot one (`mana_per_turn_of`): max mana is unmoved, and a lost refresh gives none of it.
+pub fn refresh_mana_with_bonus(side: &mut PlayerState, natural: bool, bonus: i32) {
     let max = max_mana_for(side);
     side.mana.max = max;
-    side.mana.current = refreshed_mana(side, max, natural);
+    side.mana.current = refreshed_mana_with_bonus(side, max, natural, bonus);
     side.mana.next_turn_mod = 0;
     // R1224: ME-TURN's repayment schedule — the next instalment comes off the refresh, after any
     // rider. A lost refresh forgives the instalment: there is nothing to take it from.
@@ -126,13 +171,39 @@ pub fn refresh_is_lost(side: &PlayerState) -> bool {
 /// natural generation (MD-B2) it gives the rider alone; otherwise max plus the rider. Never below 0.
 /// MB23's repayment schedule (#89) comes off afterwards (`credit::take_instalment`).
 pub fn refreshed_mana(side: &PlayerState, max: i32, natural: bool) -> i32 {
+    refreshed_mana_with_bonus(side, max, natural, 0)
+}
+
+/// R4440052: `refreshed_mana` with `bonus` more, which counts as the rider does: with it under MD-B2's
+/// aura, against it when it is negative, and not at all on a lost refresh. Never below 0.
+pub fn refreshed_mana_with_bonus(side: &PlayerState, max: i32, natural: bool, bonus: i32) -> i32 {
+    let rider = side.mana.next_turn_mod + bonus;
     if refresh_is_lost(side) {
         0
     } else if natural {
-        (max + side.mana.next_turn_mod).max(0)
+        (max + rider).max(0)
     } else {
-        side.mana.next_turn_mod.max(0)
+        rider.max(0)
     }
+}
+
+/// R4440052: the declared number a "You have +N mana per turn" flag stands for (C #28 Second Wind's).
+pub const MANA_PER_TURN_PARAM: &str = "mana";
+
+/// R4440052: what `player`'s refresh gives on top of max mana, read as their turn begins, before it: the
+/// sum of the `mana_per_turn` flags of the face-up cards acting on their side of the field, a Unit a
+/// carrier holds included (R446, R1824000), each the card's declared `mana` as tunes moved it (R386) and
+/// never below 0. 0 with none.
+pub fn mana_per_turn_of(state: &GameState, player: PlayerId) -> i32 {
+    crate::zones::acting_on(state, player, crate::zones::StandingAt::ItsLane)
+        .into_iter()
+        .filter(|card| !crate::preview::is_face_down(state, card))
+        .filter_map(|card| {
+            crate::scripts::flags_of(state, card)
+                .mana_per_turn
+                .map(|flag| crate::params::declared_or(state, card, MANA_PER_TURN_PARAM, flag).max(0))
+        })
+        .sum()
 }
 
 /// R844: how many lost refreshes this player has left past this one, never below 0.
@@ -255,7 +326,10 @@ pub fn modifier_is_live(state: &GameState, modifier: &PlayerModifier) -> bool {
     // MD-C21: Tranquility's immunity holds the same way.
     if matches!(
         modifier.kind,
-        ModifierKind::HeroArmor { .. } | ModifierKind::HeroImmune
+        ModifierKind::HeroArmor { .. }
+            | ModifierKind::HeroImmune
+            | ModifierKind::UnitsImmune
+            | ModifierKind::UnitsAttack { .. }
     ) {
         return true;
     }

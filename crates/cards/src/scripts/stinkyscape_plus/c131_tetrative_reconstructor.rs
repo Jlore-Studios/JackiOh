@@ -1,12 +1,13 @@
 //! SPEC §8.12 S+ #131 Tetrative Reconstructor (§2.4, §5.1, §6.3 Tribute; R62, R65, R78, R101, R215, R382, R1420, R3535000,
 //! R3563000, R3565000, R3565001): (4) Field Spell, Mindustrial, Legendary, a card of the Stinkyscape+ set.
-//!   Base:    "Tribute 4
+//!   Base:    "Tribute 3
 //!            Start of turn: Add a random Automa-Ω card to your hand, it has no Tribute condition."
-//!   Radiant: "Tribute 4
+//!   Radiant: "Tribute 3
 //!            Start of turn: Add a random Radiant Automa-Ω card to your hand, it has no Tribute condition."
 //!
-//! Tribute 4 is the play validator's (§6.3, R101), read off `staticFlags.tribute`: four Units of its player's
-//! destroyed to pay it. At the start of its controller's turn (R62), before their draw, one
+//! Tribute 3 since issue #4440 (Tribute 4 before it, which `script_v0_6_11c` keeps for the replays of
+//! v0.6.11c and before, R767000) is the play validator's (§6.3, R101), read off `staticFlags.tribute`:
+//! three Units of its player's destroyed to pay it. At the start of its controller's turn (R62), before their draw, one
 //! `addRandomFromCatalog` from the Stinkyscape+ cards tagged Automa-Ω (R3565001), tokens out (§5.1, R382:
 //! no Reignclipse), the pool naming its set so that it reaches them while the set is held (R1420): Reign, Eclipse, Oct, Omura and Corvus.
 //! "It has no Tribute condition" is the add's `tribute` rider set to 0 (R3565000): the card asks no Tribute
@@ -17,8 +18,10 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-131";
 
-/// "Tribute 4" (R101).
-const TRIBUTE: i32 = 4;
+/// "Tribute 3" (R101), since issue #4440.
+const TRIBUTE: i32 = 3;
+/// "Tribute 4", through v0.6.11c.
+const TRIBUTE_V0_6_11C: i32 = 4;
 /// R3565000: "it has no Tribute condition".
 const NO_TRIBUTE: i32 = 0;
 
@@ -27,10 +30,10 @@ fn automa_cards() -> CatalogQueryArgs {
     json_as(json!({ "set": SetName::StinkyscapePlus, "tags": [Tag::AutomaOmega] }))
 }
 
-fn reconstructor(radiant: bool) -> Script {
+fn reconstructor(radiant: bool, tribute: i32) -> Script {
     Script {
         static_flags: Some(StaticFlags {
-            tribute: Some(TRIBUTE),
+            tribute: Some(tribute),
             ..StaticFlags::default()
         }),
         start_of_turn: Some(hook(move |_ctx| {
@@ -46,8 +49,16 @@ fn reconstructor(radiant: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: reconstructor(false),
-        radiant: reconstructor(true),
+        base: reconstructor(false, TRIBUTE),
+        radiant: reconstructor(true, TRIBUTE),
+    }
+}
+
+/// R767000: through v0.6.11c it was Tribute 4 (issue #4440); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_11c() -> CardScripts {
+    CardScripts {
+        base: reconstructor(false, TRIBUTE_V0_6_11C),
+        radiant: reconstructor(true, TRIBUTE_V0_6_11C),
     }
 }
 
@@ -136,7 +147,7 @@ mod tests {
     }
 
     #[test]
-    fn r101_tribute_4_is_required() {
+    fn r101_tribute_3_is_required() {
         for radiant in [false, true] {
             let mut s = to_play(radiant, "s131-tribute");
             assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE, "radiant {radiant}");
@@ -153,6 +164,28 @@ mod tests {
                 s.expect_in_zone(id.as_str(), "graveyard");
             }
         }
+    }
+
+    /// R767000: through v0.6.11c four Units paid it (issue #4440), and three are refused.
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_11c_needs_tribute_4() {
+        crate::under_kept(ID, script_v0_6_11c(), || {
+            let mut s = weapon_board(
+                "s131-kept",
+                json!({
+                    "hand": [ID],
+                    "library": filler(6),
+                    "field": vec![VANILLA; TRIBUTE_V0_6_11C as usize],
+                    "mana": 10,
+                }),
+                json!({ "hand": [FILLER], "library": filler(6) }),
+            );
+            assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE_V0_6_11C);
+            let fodder: Vec<String> = (1..=TRIBUTE_V0_6_11C).map(|lane| s.unit_at(P1, lane).id).collect();
+            s.expect_refused(|s| s.play(ID, json!({ "zone": 5, "tributes": fodder[1..].to_vec() })));
+            s.play(ID, json!({ "zone": 5, "tributes": fodder }));
+            s.expect_in_zone(ID, "field");
+        });
     }
 
     #[test]

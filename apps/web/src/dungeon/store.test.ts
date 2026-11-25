@@ -6,9 +6,9 @@
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { RunFile, RunState } from "@jackioh/run";
+import type { RunAction, RunFile, RunState } from "@jackioh/run";
 
-import { DUNGEON_ELAPSED_MIN_MS, DUNGEON_HISTORY_KEY, DUNGEON_PROGRESS_KEY, DUNGEON_RUN_KEY } from "./config.ts";
+import { DUNGEON_ELAPSED_MIN_MS, DUNGEON_HELD_KEY, DUNGEON_HISTORY_KEY, DUNGEON_PROGRESS_KEY, DUNGEON_RUN_KEY } from "./config.ts";
 import { clearStoredRunFight } from "../practice/saveStore.ts";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { __resetDungeonForTests, dailyRunNumber, readRunHistory, useDungeon, type Dungeon } from "./store.ts";
@@ -661,6 +661,81 @@ describe("R3476000 the kept fight follows the run", () => {
     expect(clearStoredRunFight, "a new run's first fight finds no kept fight").toHaveBeenCalledTimes(1);
     press(() => dungeon.current.abandon());
     expect(clearStoredRunFight, "an abandoned run keeps no fight").toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("R4733000 a finished fight keeps its result when the player leaves before Continue", () => {
+  const WON_FIGHT: RunAction = { type: "fightOver", won: true, hp: 20, damageDealt: 5, healingDone: 0, cardsDrawn: 3, turns: 4 };
+  const LOST_FIGHT: RunAction = { type: "fightOver", won: false, hp: 0, damageDealt: 5, healingDone: 0, cardsDrawn: 3, turns: 4 };
+
+  // A kept run written before this change holds no report: the B19 and R3496000 reload tests above
+  // load such runs, and every one still passes with the hold key absent.
+
+  it("R4733000 a held won report applies on load, once", () => {
+    const dungeon = mount();
+    press(() => dungeon.current.start(setupOf()));
+    expect(press(() => dungeon.current.act({ type: "go", col: 1 }))).toBeNull();
+    expect(dungeon.current.run?.phase).toEqual({ phase: "fight" });
+
+    press(() => dungeon.current.holdReport(WON_FIGHT));
+    expect(stored(DUNGEON_HELD_KEY)).toEqual({ row: 0, col: 1, action: WON_FIGHT });
+
+    // A reload applies the held report as Continue would, and no fresh fight is dealt.
+    const again = reload();
+    expect(again.current.run?.phase).toEqual({ phase: "map" });
+    expect((stored(DUNGEON_RUN_KEY) as { file: RunFile }).file.log).toEqual([{ type: "go", col: 1 }, WON_FIGHT]);
+    expect(window.localStorage.getItem(DUNGEON_HELD_KEY)).toBeNull();
+
+    // A second reload applies nothing more.
+    const third = reload();
+    expect(third.current.run?.phase).toEqual({ phase: "map" });
+    expect((stored(DUNGEON_RUN_KEY) as { file: RunFile }).file.log).toHaveLength(2);
+  });
+
+  it("R4733000 a held lost report ends the run as after Continue", () => {
+    const dungeon = mount();
+    press(() => dungeon.current.start(setupOf({ seed: "QWERTY" })));
+    press(() => dungeon.current.act({ type: "go", col: 0 }));
+    press(() => dungeon.current.holdReport(LOST_FIGHT));
+
+    const again = reload();
+    // As after Continue: the run ended lost, its record is in the history, the kept run is gone.
+    expect(again.current.run?.phase).toEqual({ phase: "dead" });
+    expect(window.localStorage.getItem(DUNGEON_RUN_KEY)).toBeNull();
+    expect(window.localStorage.getItem(DUNGEON_HELD_KEY)).toBeNull();
+    expect(readRunHistory()).toEqual([expect.objectContaining({ seed: "QWERTY", won: false })]);
+
+    // A further reload finds the start screen, settling nothing more.
+    expect(reload().current.run).toBeNull();
+    expect(readRunHistory()).toHaveLength(1);
+  });
+
+  it("R4733000 a held report the run refuses is dropped and the fight is dealt fresh", () => {
+    const dungeon = mount();
+    press(() => dungeon.current.start(setupOf()));
+    expect(press(() => dungeon.current.act({ type: "go", col: 1 }))).toBeNull();
+    press(() => dungeon.current.holdReport(WON_FIGHT));
+
+    // The run refuses the held report once: the hold is dropped and the run stays on its fight.
+    wasmBindings.runReduce.mockReturnValueOnce({ error: "the run is not in a fight" });
+    const again = reload();
+    expect(again.current.run?.phase).toEqual({ phase: "fight" });
+    expect(window.localStorage.getItem(DUNGEON_HELD_KEY)).toBeNull();
+    expect((stored(DUNGEON_RUN_KEY) as { file: RunFile }).file.log).toEqual([{ type: "go", col: 1 }]);
+  });
+
+  it("R4733000 Continue clears the hold, so a reload after it applies nothing more", () => {
+    const dungeon = mount();
+    press(() => dungeon.current.start(setupOf()));
+    expect(press(() => dungeon.current.act({ type: "go", col: 1 }))).toBeNull();
+    press(() => dungeon.current.holdReport(WON_FIGHT));
+
+    expect(press(() => dungeon.current.act(WON_FIGHT))).toBeNull();
+    expect(window.localStorage.getItem(DUNGEON_HELD_KEY)).toBeNull();
+
+    const again = reload();
+    expect(again.current.run?.phase).toEqual({ phase: "map" });
+    expect((stored(DUNGEON_RUN_KEY) as { file: RunFile }).file.log).toHaveLength(2);
   });
 });
 

@@ -170,13 +170,27 @@ mod b3_4_params_the_numbers_a_card_declares {
 
     #[test]
     fn r482_reads_the_numbers_lines_as_the_brief_writes_them_on_cards_that_show_one_of_each_kind() {
-        // A Radiant-only number: Cloaked Toe Cracker's "gain 1 mana" exists on its Radiant face only, so it
-        // is tuned there alone (R824000).
+        // A Radiant-only number: Bread and Butter's multiplier ("X = 3 × the Float") exists on its Radiant
+        // face only, so it is tuned there alone (R824000). (Cloaked Toe Cracker's "gain 1 mana" was the
+        // example until issue #4440 took it.)
+        let multiplier = card_def("core-018")
+            .params
+            .into_iter()
+            .flatten()
+            .find(|param| param.key == "multiplier")
+            .expect("Bread and Butter declares its multiplier");
+        assert_eq!(
+            serde_json::to_value(&multiplier).expect("params serialize"),
+            json!({ "key": "multiplier", "base": 1, "radiant": 3, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" })
+        );
+        assert!(!card_def("core-018").base.text.contains("{multiplier}"));
+        // A base-only number: Cloaked Toe Cracker's discount since issue #4440, its Radiant face's Traps
+        // costing (0).
         assert_eq!(
             serde_json::to_value(&card_def("classic-006").params).expect("params serialize"),
-            json!([{ "key": "mana", "base": 1, "radiant": 1, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }])
+            json!([{ "key": "discount", "base": 2, "radiant": 2, "better": "up", "step": 1, "min": 1, "tunedOn": "base" }])
         );
-        assert!(!card_def("classic-006").base.text.contains("{mana}"));
+        assert!(!card_def("classic-006").radiant.text.contains("{discount}"));
         assert!(matches_object(
             &first_param("classic-083"),
             &json!({ "key": "damage", "base": 10, "radiant": 20, "step": 2 })
@@ -380,9 +394,10 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             }
         }
         // The thirteen numbers issue #556 marked and issue #1748's two (#21's discards and #42's chance,
-        // R1748003), and the Meditative set's own, which §8.8 tunes "on the base face only": M #10's price
-        // (issue #4154, R4154211), M #14's draws, M #37's surcharge (R1748003), M #49.1's picks (#529) and
-        // M #76's marks. The held sets join batch by batch (Meditative+, R1178000; Stinkyscape, R1857000;
+        // R1748003), C #37's `flashback`, the base face's alone since issue #4440 (R4154202), and the
+        // Meditative set's own, which §8.8 tunes "on the base face only": M #14's draws, M #37's surcharge
+        // (R1748003), M #49.1's picks (#529) and M #76's marks (and M #10's price from issue #4154,
+        // R4154211, until issue #4440 took it away). The held sets join batch by batch (Meditative+, R1178000; Stinkyscape, R1857000;
         // Training Grounds, R2194000, its snapshots' among them, R2195003): each number is held to the rule
         // above; the pinned lists are the shipped.
         base_only.retain(|entry| {
@@ -394,13 +409,13 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         let (meditative, shipped): (Vec<String>, Vec<String>) = base_only
             .into_iter()
             .partition(|entry| entry.starts_with("meditative-"));
-        // #2657's Bear Honeypot `tokens`, the base face's "Summon 2" (its Radiant face fills the board), and
-        // #3140's C+ #16 Conjure Rush Token+ `tails`, the base face's coin flip, "2 on tails".
-        assert_eq!(shipped.len(), 17, "{shipped:#?}");
+        // #2657's Bear Honeypot `tokens`, the base face's "Summon 2" (its Radiant face fills the board),
+        // #3140's C+ #16 Conjure Rush Token+ `tails`, the base face's coin flip, "2 on tails", and C #6's
+        // `discount`, the base face's "(2) less" since issue #4440 (its Radiant face's Traps cost (0)).
+        assert_eq!(shipped.len(), 19, "{shipped:#?}");
         assert_eq!(
             meditative,
             vec![
-                "meditative-010 price".to_string(),
                 "meditative-014 draws".to_string(),
                 "meditative-037 surcharge".to_string(),
                 "meditative-049-1 picks".to_string(),
@@ -463,8 +478,9 @@ mod r1430_r1431_the_numbers_a_change_reaches {
         }
         // Core, Classic and Classic+: the thirty-one numbers issue #824 marked and the thirteen before
         // (C #46's and C #54's among them, R749), less C #59's tokens and C #75's draw, which both faces
-        // print (#2020), and C+ #68's `setCost`, which both faces print since issue #3951, with C #37's
-        // `flashback`, the Radiant face's alone since issue #4154 (R4154201); and the Meditative set's
+        // print (#2020), and C+ #68's `setCost`, which both faces print since issue #3951, and C #37's
+        // `flashback`, the Radiant face's alone from issue #4154 (R4154201) until issue #4440 made it the
+        // base face's; and the Meditative set's
         // nineteen (twenty until issue #4154 took M #1's Cry and its `mana` away, R4154207; twenty-three
         // until #3140 made M #81's draw both faces', twenty-two until issue #3951 made M #19.1's `mana`
         // both faces', twenty-one until issue #3996 took M #78's `discount` away), less M #1's draw (both
@@ -473,8 +489,9 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             .iter()
             .filter(|entry| entry.starts_with("meditative-"))
             .count();
-        // The held sets (Meditative+, R1178000; Stinkyscape, R1857000; Training Grounds, R2194000) join the
-        // count batch by batch: each number is held to the rule above; the pinned counts are the shipped.
+        // The held sets (Meditative+, R1178000; Stinkyscape, R1857000; Training Grounds, R2194000; the
+        // single-player Infinite Assault, R4577000) join the count batch by batch: each number is held to
+        // the rule above; the pinned counts are the shipped.
         let held = radiant_only
             .iter()
             .filter(|entry| {
@@ -482,13 +499,16 @@ mod r1430_r1431_the_numbers_a_change_reaches {
                     || entry.starts_with("stinkyscape-")
                     || entry.starts_with("traininggrounds-")
                     || entry.starts_with("stinkyscapeplus-")
+                    || entry.starts_with("infiniteassault-")
             })
             .count();
         // #2657's Anti-oneshot Armor `armor`, its Radiant face's "Your hero has Armor 1", and less
-        // M #49.1's `radiants`, gone with its start-of-turn text.
+        // M #49.1's `radiants`, gone with its start-of-turn text, and C #6's `mana`, gone with its Radiant
+        // face's gain since issue #4440; M #48's `refresh` joins the Meditative set's, its Radiant face's
+        // "Replenish 2 mana" since issue #4665 (R4665007).
         assert_eq!(
             (radiant_only.len() - meditative - held, meditative),
-            (43, 19),
+            (41, 20),
             "{radiant_only:#?}"
         );
     }
@@ -554,9 +574,8 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
 
     const FIXED: &[(&str, &str)] = &[
         ("core-023", KEYWORD),
-        // R2195003: the snapshots of Core #23 and #26, TG #49 and #50.
+        // R2195003: the snapshot of Core #23, TG #49 (TG #50's numbers are declared since issue #4665).
         ("traininggrounds-049", KEYWORD),
-        ("traininggrounds-050", TARGETS),
         ("classic-023", KEYWORD),
         ("classic-057", KEYWORD),
         ("classicplus-025", KEYWORD),
@@ -644,6 +663,11 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscapeplus-098", PRICE),
         ("stinkyscapeplus-103", PRICE),
         ("stinkyscapeplus-104", PRICE),
+        // R4589000: the held Infinite Assault set's numbered-keyword counts (IA #98's Echo,
+        // #104's Echo) and #103's tax (a price, R65).
+        ("infiniteassault-098", KEYWORD),
+        ("infiniteassault-104", KEYWORD),
+        ("infiniteassault-103", PRICE),
         ("stinkyscapeplus-128", PRICE),
         ("stinkyscapeplus-129", PRICE),
         ("stinkyscapeplus-130", PRICE),
@@ -653,6 +677,26 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscapeplus-142", PRICE),
         ("stinkyscapeplus-155", PRICE),
         ("stinkyscapeplus-166", PRICE),
+        // R4577000: the held Infinite Assault's set-named pools by price, IA #5's (1) Cost Units,
+        // #21's (2) Cost or less and #24's Costs from (1) to (3).
+        ("infiniteassault-005", PRICE),
+        ("infiniteassault-021", PRICE),
+        ("infiniteassault-024", PRICE),
+        // C6 (#4590): IA #123's hike, #131's and #144's Cost caps and #144's hike.
+        ("infiniteassault-123", PRICE),
+        ("infiniteassault-131", PRICE),
+        ("infiniteassault-144", PRICE),
+        // R4586009: Brittle counts; #34's price.
+        ("infiniteassault-028", KEYWORD),
+        ("infiniteassault-034", PRICE),
+        ("infiniteassault-036", KEYWORD),
+        ("infiniteassault-045", KEYWORD),
+        ("infiniteassault-189", KEYWORD),
+        // IA #52's Brittle 1 and IA #72's "cost (0)" (issue #4587).
+        ("infiniteassault-052", KEYWORD),
+        // R4588001: IA #86's Brittle 1.
+        ("infiniteassault-086", KEYWORD),
+        ("infiniteassault-072", PRICE),
         ("core-038", ENGINE),
         ("core-093", ENGINE),
         ("core-095", ENGINE),

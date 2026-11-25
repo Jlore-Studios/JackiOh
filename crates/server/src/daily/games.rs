@@ -19,7 +19,9 @@ use std::sync::Arc;
 
 use serde_json::{Value, json};
 
-use jackioh_engine::{Action, ActionBody, CombatForecast, GameOverReason, PlayerId, Winner, opponent_of};
+use jackioh_engine::{
+    Action, ActionBody, CombatForecast, GameOverReason, PlayerId, PortraitId, Winner, opponent_of,
+};
 use jackioh_shared::host::SERVER_NONCE_PREFIX;
 use jackioh_shared::host::daily::{
     DailyBoard, DailyClock, daily_allows, daily_board, daily_expired, daily_legal, daily_sync,
@@ -614,8 +616,13 @@ fn forecast_of(pinned: Pinned, state: &EngineState, seat: PlayerId, legal: &[Act
 /// The caller's read of one game, as `GET /api/daily/games/:matchId` and every action answer it.
 async fn game_json(app: &Arc<App>, loaded: &Loaded, me: &str, seat: PlayerId) -> Result<Value, ApiError> {
     let other = opponent_of(seat);
+    let opponent_id = loaded.account_at(other);
     let mut tx = app.db.begin(Some(me)).await?;
-    let opponent = tx.profiles_get_by_id(loaded.account_at(other)).await?;
+    let opponent = if opponent_id.is_empty() {
+        None
+    } else {
+        tx.profiles_get_by_id(opponent_id).await?
+    };
     let rows = tx.daily_games_of(me, 0).await?;
     // R4233000: reading the board marks this game's move and ended rows read, inside the read's own
     // transaction and only while unread, so a slow timer's re-read (R3840000) writes nothing. A
@@ -673,7 +680,7 @@ async fn game_json(app: &Arc<App>, loaded: &Loaded, me: &str, seat: PlayerId) ->
         "catalogVersion": loaded.match_row.catalog_version,
         // R3727005: played on an older card version than the server's.
         "olderCatalog": loaded.match_row.catalog_version != app.catalog.version,
-        "opponent": opponent.as_ref().map(PlayerRef::of),
+        "opponent": opponent_ref(opponent_id, opponent.as_ref()),
         "over": loaded.over(),
         "lostOnTime": lost_on_time(&loaded.daily.board),
         "nextGame": next_game,
@@ -717,7 +724,11 @@ async fn expired_json(app: &Arc<App>, stored: &Stored, me: &str) -> Result<Value
         &stored.daily.players.0
     };
     let mut tx = app.db.begin(Some(me)).await?;
-    let opponent = tx.profiles_get_by_id(opponent_id).await?;
+    let opponent = if opponent_id.is_empty() {
+        None
+    } else {
+        tx.profiles_get_by_id(opponent_id).await?
+    };
     // R4233000: as `game_json`'s read marks, for a game whose moves are gone. A mark that changed
     // any row pushes the reader's social frame, as `game_json`'s does.
     let marked = match tx
@@ -742,9 +753,9 @@ async fn expired_json(app: &Arc<App>, stored: &Stored, me: &str) -> Result<Value
     }
     let mut game = summary_json(
         &stored.daily,
-        Some(&stored.match_row),
+        stored.match_row.portraits,
         me,
-        opponent.as_ref().map(PlayerRef::of),
+        opponent_ref(opponent_id, opponent.as_ref()),
     )
     .ok_or_else(|| not_found("no such daily game"))?;
     game["expired"] = json!(true);
@@ -864,22 +875,14 @@ pub async fn act(app: &Arc<App>, req: Req) -> ApiResult {
 /// One game's row in the caller's list.
 fn summary_json(
     row: &DailyGameRow,
-    match_row: Option<&MatchRow>,
+    portraits: Option<(PortraitId, PortraitId)>,
     me: &str,
     opponent: Option<PlayerRef>,
 ) -> Option<Value> {
     let seat = seat_now(row, me)?;
     let other = opponent_of(seat);
     let home = home_of(row, me)?;
-    let portrait = |at: PlayerId| {
-        match_row.and_then(|m| m.portraits.as_ref()).map(|portraits| {
-            if at == PlayerId::P1 {
-                portraits.0
-            } else {
-                portraits.1
-            }
-        })
-    };
+    let portrait = |at: PlayerId| portraits.map(|pair| if at == PlayerId::P1 { pair.0 } else { pair.1 });
     let mine = row.clock.hold_of(seat).map(|hold| hold.deadline);
     let theirs = row.clock.hold_of(other).map(|hold| hold.deadline);
     let result = row
@@ -903,6 +906,19 @@ fn summary_json(
         "endedAt": row.ended_at,
         "createdAt": row.created_at,
     }))
+}
+
+/// R4621000: the opponent at `id` as a daily read names them. A seat a deleted account emptied names
+/// nobody, with both fields empty as `/api/replays` names one, never null; it is never looked up, since
+/// Postgres casts the id to uuid. Any other id is its profile, or none when none holds it.
+fn opponent_ref(id: &str, profile: Option<&crate::db::store::Profile>) -> Option<PlayerRef> {
+    if id.is_empty() {
+        return Some(PlayerRef {
+            profile_id: String::new(),
+            username: String::new(),
+        });
+    }
+    profile.map(PlayerRef::of)
 }
 
 /// One invite as the list shows it.
@@ -934,12 +950,9 @@ pub async fn list(app: &Arc<App>, req: Req) -> ApiResult {
     let mut tx = app.db.begin(Some(&me)).await?;
     let rows = tx.daily_games_of(&me, recent).await?;
     let invites = tx.daily_invites_open_of(&me, now).await?;
-    let mut matches = indexmap::IndexMap::new();
-    for row in &rows {
-        if let Some(match_row) = tx.matches_get(&row.match_id).await? {
-            matches.insert(row.match_id.clone(), match_row);
-        }
-    }
+    let ids: Vec<String> = rows.iter().map(|row| row.match_id.clone()).collect();
+    let portraits: indexmap::IndexMap<String, Option<(PortraitId, PortraitId)>> =
+        tx.matches_portraits(&ids).await?.into_iter().collect();
     let mut named: Vec<String> = rows
         .iter()
         .flat_map(|row| [row.players.0.clone(), row.players.1.clone()])
@@ -963,9 +976,9 @@ pub async fn list(app: &Arc<App>, req: Req) -> ApiResult {
             };
             summary_json(
                 row,
-                matches.get(&row.match_id),
+                portraits.get(&row.match_id).copied().flatten(),
                 &me,
-                people.get(opponent_id).map(PlayerRef::of),
+                opponent_ref(opponent_id, people.get(opponent_id)),
             )
         })
         .collect();

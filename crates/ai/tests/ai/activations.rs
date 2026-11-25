@@ -16,9 +16,11 @@
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
-use super::support::{AI, HUMAN, on_field, register_cards, unit};
+use super::support::{AI, HUMAN, TWO_GUNS, install_two_guns, on_field, register_cards, row, unit};
 
 const CANNON: &str = "stinkyscape-052";
+const CANNON_V4: &str = "stinkyscape-056";
+const GREASER: &str = "meditative-100";
 const POLYMORPH: &str = "meditative-024";
 const THE_ROCK: &str = "core-066";
 const POSTDOC: &str = "core-061";
@@ -395,4 +397,54 @@ fn r2603000_an_enemy_face_down_card_is_never_probed_and_changes_no_price() {
         on_a, on_b,
         "the enemy's face-down Trap changes no price and no node"
     );
+}
+
+/// R4515000: a card with two Activates has both tried at the root, each at the enemy's most valuable Unit
+/// first, so it is priced at the better: the 7-damage gun's kill of the lane-5 Greaser. Before it, the
+/// four tries were the 1-damage gun's at lanes 1 to 4.
+#[test]
+fn r4515000_a_card_with_two_activates_is_priced_at_the_better_of_the_two() {
+    install_two_guns();
+    let state = board(
+        "ai-spread-two-guns",
+        json!({ "field": [TWO_GUNS] }),
+        json!({ "field": row(json!(VANILLA), GREASER) }),
+    );
+    let abilities: Vec<Option<String>> = legal_actions(&state, AI)
+        .into_iter()
+        .filter_map(|action| match action {
+            ActionBody::Activate { ability, .. } => Some(ability),
+            _ => None,
+        })
+        .collect();
+    for gun in ["ping", "snipe"] {
+        assert!(abilities.contains(&Some(gun.to_string())), "{gun}: {abilities:?}");
+    }
+    let greaser = unit_worth(&state, unit(&state, HUMAN, GREASER), &AI_EVAL, Prices::NONE);
+    let (prices, used) = priced(&state);
+    let price = price_of(&prices, TWO_GUNS, AI);
+    assert!(
+        price >= greaser,
+        "its 7-damage gun destroys the enemy's Greaser: {price} against {greaser}"
+    );
+    assert!(used <= AI_ACTIVATION_PROBE_NODES, "{used}");
+}
+
+/// R4515000, R185: the tries are ordered by the AI's own Units and the enemy's visible Cannon v4 alone,
+/// so a hand card of the enemy's changes no decision.
+#[test]
+fn r4515000_hidden_cards_change_no_decision_where_an_enemy_cannon_v4_faces_five_units() {
+    let a = board(
+        "ai-spread-r185",
+        json!({ "field": row(json!(VANILLA), GREASER) }),
+        json!({ "hand": [VANILLA], "field": [CANNON_V4] }),
+    );
+    let mut b = a.clone();
+    b.players[HUMAN].hand[0].def_id = CANNON.to_string();
+    let decide_on = |state: &GameState| {
+        decide(state, AI, &mut AiOptions::new(create_rng("ai-spread-r185", 0))).expect("the AI acts")
+    };
+    let (on_a, on_b) = (decide_on(&a), decide_on(&b));
+    assert_eq!(on_a.action, on_b.action);
+    assert_eq!(on_a.line, on_b.line);
 }

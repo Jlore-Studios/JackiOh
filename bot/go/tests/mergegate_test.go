@@ -292,7 +292,7 @@ func TestMergegate_BuildScriptsTheDockerfileAndTheScriptsMergeThemselves(t *test
 		"crates/server/Dockerfile": "FROM scratch\n", "scripts/build-wasm.sh": "echo wasm\n",
 		"scripts/ci-scope.sh": "echo full=true\n", "package.json": "{}\n"})
 	mergegateMerges(t, h, number, said)
-	for _, script := range []string{"scripts/promote-production.sh", "scripts/vercel-ignore.sh"} {
+	for _, script := range []string{"scripts/promote-production.sh", "scripts/promote-staging.sh"} {
 		h, number, said = mergegateBuild(t, nil, map[string]any{script: "echo deploy\n"})
 		mergegateWaits(t, h, number, said, "the change touches `"+script+"`, which a person reviews")
 	}

@@ -15,10 +15,10 @@ trap backrow. This file binds every agent, not only Claude.
 - **Mind the usage limit.** Every session and bot run draws on a subscription's 5-hour and weekly limits
   (`bot/README.md`, Subscriptions), and either, or a run's time budget, can cut you off mid-task.
   - Spend on what moves the work. Run the subset that covers your change (Running a subset, below) before
-    any whole-workspace suite, and a slow suite once, at the end. Grep, and read long files by section:
-    `spec/11-rulings.md`, `spec/INDEX.md`, `spec/08-catalog.md`, `BUILD.md` and `bot/README.md` run to
-    hundreds or thousands of lines. Cut long output with `tail` or `grep` before it reaches your context.
-    Start a subagent only for work that needs one.
+    any whole-workspace suite, and a slow suite once, at the end. Grep, and read long files by section
+    (`BUILD.md`, `bot/README.md`), and look the spec up an entry at a time (`spec/README.md`, Looking
+    things up): one word searched in all of `spec/` returns hundreds of KB. Cut long output with `tail`
+    or `grep` before it reaches your context. Start a subagent only for work that needs one.
   - Keep the work resumable. In a session of your own, commit each step as it goes green, push at
     checkpoints (a cloud container's unpushed work dies with it) and keep your handoff current (rule 14). A
     bot run leaves committing and pushing to its harness, which keeps a cut-off run's work and continues it.
@@ -50,7 +50,7 @@ trap backrow. This file binds every agent, not only Claude.
    the spec does not make follows Hearthstone semantics and gets a note in the same PR, numbered with the
    lowest free in its issue's block (issue N owns R(N×1000) to R(N×1000+999)), and a proving test named after
    it (`fn r58_…` in Rust, an `it("R58 …")` in TypeScript); its §11 paragraph goes in `spec/pending/<N>.md`,
-   since `spec-fold.yml` writes `spec/11-rulings.md`, `spec/INDEX.md` and `spec/CARDS.md` on `main` daily
+   since `spec-fold.yml` writes `spec/history/`, `spec/INDEX.md` and `spec/CARDS.md` on `main` daily
    and a branch leaves all three alone. `spec/README.md`, Adding a ruling, has the details; `cargo jackioh
    spec check` fails on any mismatch between the notes, their tests and the R-ids cited in `crates/`,
    `apps/web/src/`, `apps/edge/src/`, `apps/admin/src/` or `e2e/`, comments included.
@@ -94,7 +94,7 @@ trap backrow. This file binds every agent, not only Claude.
 12. No agent merges a pull request, or reports one green or done, while a required check on its head is red
     or has not run, and none calls a failure pre-existing or environmental without a link to the same check
     failing on `main`. A report names every red check by its name. #825 was merged with its golden replay
-    red and closed as "all gates green" (`reviews/2026-10-14-issue-814-first-pass.md`).
+    red and closed as "all gates green" (#950's audit).
 13. Ask a person before you delete or disable anything called from outside this codebase: a
     webhook, a scheduled job (a workflow's `schedule:`), an auth callback, an HTTP route that a deploy probes
     or a person or another service calls (`/readyz` is the site Worker's daily wake-up, `/healthz` its

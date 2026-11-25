@@ -118,7 +118,8 @@ pub fn hashed_state_text(state: &GameState) -> String {
 /// records) or a unit's switch refusal (`switchReason`, R3821000, read off the state `legal_actions`
 /// reads): each dresses the view and plays no part in the game, as `hash_state`
 /// leaves its `generators` out, so a trace recorded before it was sent replays as it did, and one
-/// recorded on this build replays on the build before it.
+/// recorded on this build replays on the build before it. Nor a `destroyed`'s `diedAs` (R4423000): the
+/// rules read it, but what it changes in play the state text shows.
 pub fn view_texts(state: &GameState) -> [String; 2] {
     [PlayerId::P1, PlayerId::P2].map(|player| {
         let mut value = serde_json::to_value(view_for(state, player)).expect("a PlayerView serializes");
@@ -130,6 +131,7 @@ pub fn view_texts(state: &GameState) -> [String; 2] {
         strip_key(&mut value, "sourceRadiant");
         strip_key(&mut value, "via");
         strip_destroyed_animated(&mut value);
+        strip_key(&mut value, "diedAs");
         strip_key(&mut value, "optionCount");
         strip_key(&mut value, "printedOn");
         strip_key(&mut value, "hiddenTargets");
@@ -188,7 +190,8 @@ fn strip_key(value: &mut Value, key: &str) {
 /// forwards, as `view_texts` leaves out `createdBy`, so a trace recorded before it replays as it did.
 /// Nor the `hookResolving` markers (R2783000) and the `armorGained` reports (R3857000) or an event's
 /// `via` (R2783001) and a `destroyed`'s `animated` (R4395001), which are presentation only, so a trace recorded on this build replays on the
-/// build before it too (R1956001's way).
+/// build before it too (R1956001's way). Nor a `destroyed`'s `diedAs` (R4423000): the rules read it, but
+/// what it changes in play the state text shows.
 pub fn events_text(events: &[GameEvent]) -> String {
     let mut value = serde_json::to_value(events).expect("GameEvents serialize");
     if let Value::Array(items) = &mut value {
@@ -197,6 +200,7 @@ pub fn events_text(events: &[GameEvent]) -> String {
             if let Value::Object(event) = item {
                 event.remove("creator");
                 event.remove("via");
+                event.remove("diedAs");
                 strip_destroyed_animated(item);
             }
         }

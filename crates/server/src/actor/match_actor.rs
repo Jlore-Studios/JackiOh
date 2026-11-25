@@ -823,11 +823,11 @@ impl MatchActor {
             DuelOutput::Changed { .. } => {}
             // R645: a bot's emote goes out as a person's does (the hand, the rate gate, the relay).
             DuelOutput::BotEmote { home, emote } => self.relay_emote(core, home, emote),
-            DuelOutput::Pushed { snapshot } => {
+            DuelOutput::Pushed { snapshot, mut views } => {
                 // R1442: a seat's think time runs from this push.
                 core.telemetry.on_pushed(&snapshot, now_ms());
                 // Social (#939): B50, the watchers' record of the change, sent SPECTATE_DELAY_MS on.
-                self.spectate_record_in(core);
+                self.spectate_record_in(core, &mut views);
             }
             DuelOutput::Decide { request } => self.spawn_bot(core, request),
             DuelOutput::OfferRematch { home, stakes, reply } => {
@@ -1161,14 +1161,25 @@ impl MatchActor {
         };
         // #1657: the write answers each seat by the engine seat it credited, the core keeps each
         // account's by home; `load_jlore_caps` sends it.
-        {
+        // #4711: a write that paid every person's seat says itself whether the daily cap held pay back
+        // (`GameEconomy::jlore_capped`, what `game_jlore_caps` reads back off the ledger), so its caps
+        // need no second transaction; a repeat, or an economy that is off, paid none and is read.
+        let paid = {
             let mut core = self.lock();
             for seat in PLAYERS {
                 let home = playing(&core, seat);
                 core.economy[home] = economy[seat].take();
             }
+            let capped = |home: PlayerId| core.economy[home].as_ref().map(|paid| paid.jlore_capped);
+            PLAYERS
+                .iter()
+                .all(|&home| self.shared.bots[home].is_some() || core.economy[home].is_some())
+                .then(|| PerPlayer::new(capped(PlayerId::P1), capped(PlayerId::P2)))
+        };
+        match paid {
+            Some(capped) => self.apply_jlore_caps(capped.map(|_, held| held.unwrap_or(false)), true),
+            None => self.load_jlore_caps(true).await,
         }
-        self.load_jlore_caps(true).await;
         // R1442: the play telemetry goes after the result, so its write can never cost it.
         // R1452: a bot home's rows are the AI's, so no human figure reads them unasked.
         let pilot = |home: PlayerId| {
@@ -1210,6 +1221,11 @@ impl MatchActor {
                 PerPlayer::new(false, false)
             }
         };
+        self.apply_jlore_caps(caps, announce);
+    }
+
+    /// R1483000: takes `caps`, keyed by home; with `announce`, capped or paid seats get fresh views.
+    fn apply_jlore_caps(&self, caps: PerPlayer<bool>, announce: bool) {
         let mut core = self.lock();
         if caps.p1 || caps.p2 {
             core.jlore_capped = caps;
@@ -1652,6 +1668,14 @@ impl MatchActor {
     /// Hands a connection to the account that began in `home` (`seat_of`). Replaces (and closes, with
     /// `SEAT_TAKEN_CLOSE_CODE`, R3767000) a socket that account already held.
     pub fn attach(&self, home: PlayerId, socket: Socket) {
+        // A socket that went before its handler was in has no close left to run: it takes no seat,
+        // steps nothing and closes nothing. The seat keeps what it held, `socket_generation`, the
+        // rematch push and `Task::Attach` are left alone, and `Registry::attach` still answers `Ok`.
+        // An empty seat stays empty, so R744's absent grace starts as the other seat attaches (R744,
+        // R3767000).
+        if !socket.is_open() {
+            return;
+        }
         let previous = {
             let mut core = self.lock();
             if core.host.is_voided() {
@@ -1705,6 +1729,12 @@ impl MatchActor {
                 }
             }),
         });
+        // The socket may have dropped while it was being seated; its close handler was not in yet, so
+        // nothing will report it. `on_socket_gone` acts only when the seat holds a closed socket, so
+        // this starts the grace exactly as any other drop does (§9.5).
+        if !socket.is_open() {
+            self.on_socket_gone(home);
+        }
         if let Some(previous) = previous
             && previous != socket
         {
@@ -1829,6 +1859,17 @@ impl MatchActor {
     /// For the server's tests (`crates/server/tests/actor/`); never sent to a socket.
     pub fn engine_state(&self) -> EngineState {
         self.lock().host.game().clone()
+    }
+
+    /// For the server's tests (`crates/server/tests/actor/`): how many frames the record has encoded for a
+    /// watcher, none while nobody watches.
+    pub fn spectate_frames_encoded(&self) -> u64 {
+        self.lock().spectate.encoded
+    }
+
+    /// For the server's tests (`crates/server/tests/actor/`): how many engine views the machine has built.
+    pub fn seat_views_built(&self) -> u64 {
+        self.lock().host.views_built()
     }
 
     pub fn clocks(&self) -> MatchClocks {
@@ -1966,14 +2007,40 @@ pub const WATCH_NOT_ALLOWED: &str = "you may not watch this match";
 /// R1107000: what a finished match's watcher's close says, once it has been sent its seat's last view.
 pub(crate) const MATCH_OVER_CLOSE_REASON: &str = "the match is over";
 
-/// One recorded view of a seat: its encoded `view` frame (`legal: []`, B50), when the state it shows
-/// was reached, and its place in the record. R1834003: and the `(seat, card)` pairs it shows
-/// (`shown_defs`), whose card picks follow it to a watcher that has not had them.
+/// What a recorded view is kept as: the view the seat was sent, until a watcher is first due it, then its
+/// encoded `view` frame (`legal: []`, B50), which every watcher of that seat is sent as it is.
+enum FrameBody {
+    View(Box<PlayerView>),
+    Encoded(String),
+}
+
+/// One recorded view of a seat: its `view` frame (`legal: []`, B50), encoded the first time a watcher is
+/// due it, when the state it shows was reached, and its place in the record. R1834003: and the
+/// `(seat, card)` pairs it shows (`shown_defs`), whose card picks follow it to a watcher that has not had
+/// them.
 struct SpectateFrame {
     seq: u64,
     shown_at: i64,
-    frame: String,
+    body: FrameBody,
     shown: BTreeSet<(PlayerId, String)>,
+}
+
+impl SpectateFrame {
+    /// The encoded frame, encoding it now if no watcher has been due it yet (`encoded` counts that).
+    fn text(&mut self, encoded: &mut u64) -> &str {
+        if matches!(self.body, FrameBody::View(_))
+            && let FrameBody::View(view) =
+                std::mem::replace(&mut self.body, FrameBody::Encoded(String::new()))
+        {
+            // R3477000: a watcher is shown no forecast, as it is shown no legal action.
+            self.body = FrameBody::Encoded(encode(&view_message(*view, &[], None, false, None)));
+            *encoded += 1;
+        }
+        match &self.body {
+            FrameBody::Encoded(text) => text,
+            FrameBody::View(_) => unreachable!("the body was just encoded"),
+        }
+    }
 }
 
 /// One watching socket: the account behind it, the seat its friend began the match in, the last
@@ -2010,6 +2077,8 @@ fn send_cards_due(
 struct Spectate {
     records: PerPlayer<VecDeque<SpectateFrame>>,
     watchers: Vec<Watcher>,
+    /// How many frames have been encoded for a watcher: none while nobody watches. For tests.
+    encoded: u64,
     next_seq: u64,
     next_id: u64,
     /// The one wait armed for the next view due to a watcher, and when it is due.
@@ -2026,6 +2095,7 @@ impl Spectate {
         Spectate {
             records: PerPlayer::new(VecDeque::new(), VecDeque::new()),
             watchers: Vec::new(),
+            encoded: 0,
             next_seq: 0,
             next_id: 0,
             timer: None,
@@ -2225,13 +2295,16 @@ impl MatchActor {
             return;
         }
         let Spectate {
-            records, watchers, ..
+            records,
+            watchers,
+            encoded,
+            ..
         } = &mut core.spectate;
         let Some(watcher) = watchers.iter_mut().find(|watcher| watcher.id == id) else {
             return;
         };
         let Some(record) = records[watcher.home]
-            .iter()
+            .iter_mut()
             .find(|record| watcher.sent == Some(record.seq))
         else {
             return;
@@ -2241,7 +2314,7 @@ impl MatchActor {
         if !watcher.guard.hello_answer_allowed(id, now_ms()) {
             return;
         }
-        watcher.socket.send(record.frame.as_str());
+        watcher.socket.send(record.text(encoded));
     }
 
     /// R2609000: a frame of a watcher's that is neither a hello nor an emote is still unanswered
@@ -2372,27 +2445,29 @@ impl MatchActor {
     /// B50: the record's first views, of the state the actor opens on.
     fn spectate_record(&self) {
         let mut core = self.lock();
-        self.spectate_record_in(&mut core);
+        self.spectate_record_in(&mut core, &mut PerPlayer::new(None, None));
     }
 
     /// B50: records each seat's view of the state as it stands now, the clock's time left in it as
-    /// its player was shown, and sends whatever has come due.
-    fn spectate_record_in(&self, core: &mut Core) {
+    /// its player was shown, and sends whatever has come due. `pushed` holds the views the machine just
+    /// sent each seat, which the record takes as they were; it builds a view only for a seat sent none.
+    fn spectate_record_in(&self, core: &mut Core, pushed: &mut PerPlayer<Option<Box<PlayerView>>>) {
         if core.spectate.closed {
             return;
         }
         let now = now_ms();
         for home in PLAYERS {
-            let view = self.view_of(core, playing(core, home));
+            let view = match pushed[home].take() {
+                Some(view) => view,
+                None => Box::new(self.view_of(core, playing(core, home))),
+            };
             let shown = shown_defs(&view, &self.shared.dealt_cards);
-            // R3477000: a watcher is shown no forecast, as it is shown no legal action.
-            let frame = encode(&view_message(view, &[], None, false, None));
             let seq = core.spectate.next_seq;
             core.spectate.next_seq += 1;
             core.spectate.records[home].push_back(SpectateFrame {
                 seq,
                 shown_at: now,
-                frame,
+                body: FrameBody::View(view),
                 shown,
             });
         }
@@ -2406,6 +2481,7 @@ impl MatchActor {
         let Spectate {
             records,
             watchers,
+            encoded,
             timer,
             closed,
             ..
@@ -2414,14 +2490,14 @@ impl MatchActor {
             return;
         }
         for watcher in watchers.iter_mut() {
-            for record in &records[watcher.home] {
+            for record in records[watcher.home].iter_mut() {
                 if record.shown_at + SPECTATE_DELAY_MS > now {
                     break;
                 }
                 if watcher.sent.is_some_and(|sent| record.seq <= sent) {
                     continue;
                 }
-                watcher.socket.send(record.frame.as_str());
+                watcher.socket.send(record.text(encoded));
                 watcher.sent = Some(record.seq);
                 // R1834003: the card picks of what this view newly shows, after it.
                 send_cards_due(

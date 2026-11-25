@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 
 import { deferSceneDataForTests, loadSceneData, resetSceneDataForTests } from "../cards/art/sceneLoader.ts";
-import { flavourFor } from "../cards/flavour.ts";
+import { flavourFor, loadFlavour } from "../cards/flavour.ts";
 import { GLITCH_GLYPHS } from "../cards/glitch.ts";
 
 const reduced = vi.hoisted(() => ({ value: false }));
@@ -30,6 +30,7 @@ vi.mock("../net/navigate.ts", async (importOriginal) => ({
 
 const { loadSoundTables } = await import("../audio/soundTablesLoader.ts");
 await loadSoundTables();
+await loadFlavour();
 const { GlitchPath, NotFoundPlay, notFoundTestid } = await import("./NotFoundPlay.tsx");
 const { GLITCH_SETTLE_STEP_MS, LOST_CARDS, WAYS_OUT, glitchedPath, lostCardFor, lostCardLine } = await import("./lost.ts");
 

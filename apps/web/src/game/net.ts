@@ -18,6 +18,7 @@ import type { PostGameFrame } from "../wire/generated/PostGameFrame.ts";
 import { isRecord } from "../wire/json.ts";
 import { messageOf } from "../net/errors.ts";
 import { forecastField } from "./attackOutcome.ts";
+import { tabIdle, watchIdle } from "./idle.ts";
 
 /** BUILD M5-T3: the dev handle exists only outside a production build. */
 const DEV_ONLY = import.meta.env.MODE !== "production";
@@ -147,10 +148,12 @@ export function pageWake(handler: () => void): () => void {
 /**
  * R3205000: runs `read` every `everyMs`, except that a tick while the tab is hidden sends nothing. When
  * the tab shows again (or the network comes back, as `pageWake` has it) it reads once at once and the
- * pace starts over, so the next read is a full period later. A poll that holds a place the server
- * expires (the queue's ticket, R897000, a pick, a room) must not use this: it keeps its own interval, or
- * says through `keepRunning` when its tick may run hidden. Presentation only (CLAUDE.md rule 7).
- * It returns what stops the timer and the wakes.
+ * pace starts over, so the next read is a full period later. R4691001: a tick while the tab is idle
+ * (`watchIdle`: no input for `IDLE_QUIET_MS`) sends nothing either, and the first input reads at once and
+ * starts the pace over. A poll that holds a place the server expires (the queue's ticket, R897000, a
+ * pick, a room) must not use this: it keeps its own interval, or says through `keepRunning` when its tick
+ * may run hidden or idle. Presentation only (CLAUDE.md rule 7). It returns what stops the timer and the
+ * wakes.
  */
 export function pollWhileVisible(
   read: () => void,
@@ -159,19 +162,27 @@ export function pollWhileVisible(
 ): () => void {
   if (typeof window === "undefined" || typeof document === "undefined") return () => undefined;
   let timer: ReturnType<typeof setInterval> | null = null;
+  let idle = tabIdle();
   const start = (): void => {
     if (timer !== null) clearInterval(timer);
     timer = setInterval(() => {
-      if (document.visibilityState !== "hidden" || keepRunning()) read();
+      if ((document.visibilityState !== "hidden" && !idle) || keepRunning()) read();
     }, everyMs);
   };
-  const stopWake = pageWake(() => {
+  const wake = (): void => {
     read();
     start();
+  };
+  const stopWake = pageWake(wake);
+  // A tab turning visible is `pageWake`'s to read for, so only input wakes the poll here.
+  const stopIdle = watchIdle((next, cause) => {
+    idle = next;
+    if (!next && cause === "input" && document.visibilityState !== "hidden") wake();
   });
   start();
   return () => {
     stopWake();
+    stopIdle();
     if (timer !== null) clearInterval(timer);
     timer = null;
   };
@@ -180,20 +191,29 @@ export function pollWhileVisible(
 /**
  * R3576000: calls `onQuiet(true)` once the tab has stayed hidden for `afterMs`, and `onQuiet(false)` when
  * it shows again after that; a tab that shows sooner calls nothing. A page that starts hidden counts
- * from the call. What holds the server awake for a tab nobody looks at (its social socket, its presence
- * beat) lets go on the first and comes back on the second. Presentation only (CLAUDE.md rule 7). It
- * returns what stops the timer and the listener.
+ * from the call. R4691001: a tab idle for `IDLE_QUIET_MS` (`watchIdle`) is quiet too, until its next input
+ * or until it turns visible. What holds the server awake for a tab nobody looks at or uses (its social
+ * socket, its presence beat) lets go on the first and comes back on the second. Presentation only
+ * (CLAUDE.md rule 7). It returns what stops the timer and the listeners.
  */
-export function quietWhileHidden(onQuiet: (quiet: boolean) => void, afterMs: number): () => void {
+export function quietWhileAway(onQuiet: (quiet: boolean) => void, afterMs: number): () => void {
   if (typeof window === "undefined" || typeof document === "undefined") return () => undefined;
   let timer: ReturnType<typeof setTimeout> | null = null;
+  let hiddenQuiet = false;
+  let idle = tabIdle();
   let quiet = false;
+  const update = (): void => {
+    const next = hiddenQuiet || idle;
+    if (next === quiet) return;
+    quiet = next;
+    onQuiet(next);
+  };
   const arm = (): void => {
-    if (timer !== null || quiet) return;
+    if (timer !== null || hiddenQuiet) return;
     timer = setTimeout(() => {
       timer = null;
-      quiet = true;
-      onQuiet(true);
+      hiddenQuiet = true;
+      update();
     }, afterMs);
   };
   const onVisibility = (): void => {
@@ -203,14 +223,19 @@ export function quietWhileHidden(onQuiet: (quiet: boolean) => void, afterMs: num
     }
     if (timer !== null) clearTimeout(timer);
     timer = null;
-    if (!quiet) return;
-    quiet = false;
-    onQuiet(false);
+    hiddenQuiet = false;
+    update();
   };
   document.addEventListener("visibilitychange", onVisibility);
+  const stopIdle = watchIdle((next) => {
+    idle = next;
+    update();
+  });
   if (document.visibilityState === "hidden") arm();
+  update();
   return () => {
     document.removeEventListener("visibilitychange", onVisibility);
+    stopIdle();
     if (timer !== null) clearTimeout(timer);
     timer = null;
   };

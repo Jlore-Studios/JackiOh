@@ -21,6 +21,11 @@ function shown(): boolean {
   return boards > 0;
 }
 
+/** R4605000: whether a board is up now, outside a render, so a move can stay in place over it. */
+export function boardShownNow(): boolean {
+  return boards > 0;
+}
+
 /** R2118000: marks a mounted board, so the shell knows one is up. One mark per mount. */
 export function useMarkBoardShown(): void {
   useEffect(() => {

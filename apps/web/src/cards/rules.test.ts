@@ -2,7 +2,7 @@
 // jackioh-shared's (#3106): the glossary is its data file and the tokenizer is asked of the module (`richWords`),
 // so these still hold what a face prints to the spec; the rendered half of B10 is in CardFace.test.tsx. The glossary's rules are its
 // own reviewed data, in a player's words (#133), so nothing here compares a sentence with the spec's:
-// the tie is structure, the term names in the first column of spec/06-keywords.md's three tables.
+// the tie is structure, the term names in the first column of the three tables of spec/06-keywords/.
 // A row added without a glossary entry fails; a reworded rule fails nothing.
 
 import { readFileSync } from "node:fs";
@@ -34,15 +34,20 @@ import {
 /* helpers */
 
 /**
- * The spec's keyword note (§6) and its card-types note (§5), read for ids only (#133). Paths, not
- * `new URL("…", import.meta.url)`, which Vite rewrites into an asset URL `readFileSync` refuses.
+ * The spec's keyword notes (§6, one note a subsection in `spec/06-keywords/`) and its card-types note
+ * (§5), read for ids only (#133). Paths, not `new URL("…", import.meta.url)`, which Vite rewrites into
+ * an asset URL `readFileSync` refuses.
  */
 const SPEC_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../../../spec");
-const KEYWORDS_NOTE = join(SPEC_DIR, "06-keywords.md");
 const CARD_TYPES_NOTE = join(SPEC_DIR, "05-card-types.md");
 
 type TableSection = "§6.1" | "§6.2" | "§6.3";
 const TABLE_SECTIONS: readonly TableSection[] = ["§6.1", "§6.2", "§6.3"];
+const KEYWORD_NOTES: Readonly<Record<TableSection, string>> = {
+  "§6.1": "06-keywords/6.1-unit-keywords.md",
+  "§6.2": "06-keywords/6.2-triggers-and-timing.md",
+  "§6.3": "06-keywords/6.3-actions-and-verbs.md",
+};
 
 function headingIds(note: string): string[] {
   return readFileSync(note, "utf8")
@@ -55,9 +60,10 @@ function headingIds(note: string): string[] {
  * read, and a later table is no term table (§6.3's table of where a Buff or a Nerf is live, R3888000).
  */
 function rowNames(section: TableSection): string[] {
-  const lines = readFileSync(KEYWORDS_NOTE, "utf8").split("\n");
+  const note = KEYWORD_NOTES[section];
+  const lines = readFileSync(join(SPEC_DIR, note), "utf8").split("\n");
   const start = lines.findIndex((line) => line.startsWith(`### ${section.slice(1)} `));
-  if (start < 0) throw new Error(`spec/06-keywords.md has no ${section} heading`);
+  if (start < 0) throw new Error(`spec/${note} has no ${section} heading`);
   const names: string[] = [];
   for (const line of lines.slice(start + 1)) {
     if (line.startsWith("#")) break;
@@ -114,12 +120,10 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // words ("The card to the right of this …", "When your exile has 5 cards cast this").
     "Hand aura",
     "When they meet",
-    "Always starts on the bottom of your deck",
     "Cast from the deck",
   ],
   "§6.3": [
     "Summon",
-    "Play",
     "Destroy",
     "Sacrifice",
     "Discard",
@@ -148,7 +152,6 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Infinite mana",
     // R3548002: the game-wide Warhero worth.
     "Warhero Token's worth",
-    "Damage",
     "Lose health",
     "Draw",
     "Add to hand",
@@ -162,12 +165,10 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Lose all mana",
     "Extra turn",
     "Autopilot",
-    "Trigger End of turn effects",
     "Keep a secret",
     "Guess a secret",
     "Answer questions in a row",
     "Alternative win condition",
-    "Win the game",
     // #1843 (R1843000, R1843002): Stinkyscape's.
     "Vote to remove",
     "Escape the Universe",
@@ -222,7 +223,6 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     // R1859007: the War Doctrines' "your Units have X", plain as Hearthstone prints it.
     "Units have keyword",
     // R1870000, R1870001, R1870002, R1870004, R1870007: Stinkyscape's Terminus texts (S22), in plain words.
-    "Win on play",
     "Exile all, piles whole",
     "Gain Echo",
     "Units keyword next turn",
@@ -235,6 +235,13 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Watch first plays",
     // R4353020: S+ #79 A Glimpse into the Endless Sea's line and its badge, plain words like Immune to damage's row.
     "Immune to fatigue damage",
+    // R4587000, R4588000, R4588001, R4588005: the Infinite Assault's verbs (§8.13, #4587, #4588), which its cards
+    // print in plain words ("this turn", "Double the Attack and Health", "your cheapest Unit").
+    "Buff this turn",
+    "Units attack this turn",
+    "Units keyword this turn",
+    "Double stats",
+    "Cheapest or highest-Attack Unit",
   ],
 };
 
@@ -294,22 +301,21 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Plague Counter",
   "Set health",
   "Redirect",
-  "End the turn",
   "Trigger a Cry",
-  "Look at a hand",
   "Allure",
   "Freeze",
   "Awaken",
   "Launch",
   "Jade Counter",
   "Exile",
-  "Hand size",
   "Mark in a hand",
   // R3572000: the verbs and counters of #3535 and #3540: Evolve, Burn and Toxic, and Replenish (R364).
   "Evolve",
   "Burn",
   "Toxic",
   "Replenish",
+  // R4751000: Overload (X) is the printed name of the next-turn mana loss (§6.3).
+  "Overload",
 ];
 
 /**
@@ -772,9 +778,7 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
     // Every alias is a spelling a card prints, never a retired variant.
     const printed: Readonly<Partial<Record<GlossaryTermId, readonly string[]>>> = {
       "Plague Counter": ["Plague Counters"],
-      "Look at a hand": ["Look at your opponent's hand"],
       Bounce: ["Bounced", "bounced"],
-      "Hand size": ["hand size"],
       "Mark in a hand": ["Mark", "marked"],
       // Issue #814: the lowercase second half of a compound trigger bolds as the term.
       "Start of turn": ["start of turn"],
@@ -796,18 +800,18 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       // R1563000: Bread and Butter prints "Reveals when any player Floats".
       Float: ["Floats", "Floated"],
       // R1857000: the Stinkyscape set's faces print these mid-sentence, and "fuses" and "Floated" above.
-      "End the turn": ["end the turn"],
       Allure: ["Allured"],
       // #2521: ZolarKeth's "A University can be Activated at most once each turn" (R2521003).
       Activate: ["Activated", "Activates"],
       // R3572000: the Stinkyscape+ faces print these mid-sentence ("Burns 3", "then buff them", "lock the tile", "is countered",
       // "when it awakens", "is launched", "Evolved Swarm cards", "replenish 2 mana"); "Evolves" is the trigger's own verb.
-      Awaken: ["awakens"],
       Counter: ["countered"],
       Launch: ["launch", "launches", "launched"],
       Evolve: ["evolve", "Evolved", "Evolves"],
       Burn: ["Burns"],
       Replenish: ["replenish"],
+      // R4593011: the Infinite Assault's #206 Thought Accelerator prints "Your Dormant Units awaken." (§8.13).
+      Awaken: ["awaken", "awakens"],
     };
     for (const [key, entry] of Object.entries(GLOSSARY)) {
       expect(entry.aliases, key).toEqual(printed[key as GlossaryTermId] ?? []);
@@ -870,9 +874,7 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
       ["Plague Counter", "classic-039", "base", "Plague Counters"],
       ["Set health", "classic-029", "base", "Set health"],
       ["Redirect", "meditative-064", "base", "Redirect"],
-      ["End the turn", "classicplus-026", "base", "End the turn"],
       ["Trigger a Cry", "classic-054", "base", "Trigger a Cry"],
-      ["Look at a hand", "classic-011", "base", "Look at your opponent's hand"],
       // R1174000: M+ #24 Bob prints the verb on both faces; no card prints the status Frozen.
       ["Freeze", "meditativeplus-024", "base", "Freeze"],
       ["Freeze", "meditativeplus-024", "radiant", "Freeze"],
@@ -931,9 +933,7 @@ describe("R512: the tokenizer finds patch v0.2.0's terms in the catalog's own te
       "Plague Counter",
       "Set health",
       "Redirect",
-      "End the turn",
       "Trigger a Cry",
-      "Look at a hand",
     ];
     const found = new Set(PLAYED_TEXTS.flatMap(({ text }) => termsIn(text)));
     for (const term of fresh) expect(found.has(term), term).toBe(true);
@@ -961,13 +961,9 @@ describe("R2657000: Can't Defend, the keyword that took over from the status Can
     expect(rowOf(entry)).toBe("Can't Defend");
     expect(KEYWORD_MARK["Can't Defend"]).toBe("CD");
     expect(KEYWORD_KINDS).toContain("Can't Defend");
-    // Top Loser, both faces, and Spikey Pillow print it on their keyword lines.
-    expect(termsOf(played("classicplus-019-1"))).toEqual(
-      expect.arrayContaining([
-        { text: "Armor 2", term: "Armor" },
-        { text: "Can't Defend", term: "Can't Defend" },
-      ]),
-    );
+    // Top Loser, both faces, and Spikey Pillow print it on their keyword lines (Top Loser's Armor 2 went with
+    // issue #4665).
+    expect(termsOf(played("classicplus-019-1"))).toEqual(expect.arrayContaining([{ text: "Can't Defend", term: "Can't Defend" }]));
     expect(termsIn(played("classicplus-019-1", "radiant"))).toEqual(expect.arrayContaining(["Immune to Spells", "Can't Defend"]));
     expect(termsIn(played("core-065-1"))).toEqual(expect.arrayContaining(["Can't Defend", "Aura"]));
     // Jlockeed's J15 Fighter printed it again on both faces from #3042 (part 5 of #3000) until R3551003 gave it
@@ -989,11 +985,10 @@ describe("R2657000: Can't Defend, the keyword that took over from the status Can
 });
 
 describe("R1384: the glossary's rows for the Meditative cards' words", () => {
-  it("R1384 Exile, Hand size and Mark in a hand are found where a Meditative card prints them", () => {
+  it("R1384 Exile and Mark in a hand are found where a Meditative card prints them", () => {
     const cases: readonly (readonly [GlossaryTermId, string, "base" | "radiant", string])[] = [
       // Meditative #48 Tranquility: "… Exile this." (#78 Occidentless Mandate Destroys since issue #4154).
       ["Exile", "meditative-048", "base", "Exile"],
-      ["Hand size", "meditative-079", "base", "hand size"],
       ["Mark in a hand", "meditative-076", "base", "Mark"],
       ["Mark in a hand", "meditative-076", "radiant", "Mark"],
       ["Unlock", "meditative-027", "base", "Unlock"],
@@ -1009,11 +1004,10 @@ describe("R1384: the glossary's rows for the Meditative cards' words", () => {
   it("R1384 the rows say what §6.3 says, in a player's words", () => {
     expect(GLOSSARY.Exile.section).toBe("§6.3");
     expect(GLOSSARY.Exile.rule).toContain("no Death");
-    expect(GLOSSARY["Hand size"].rule).toContain("rest of the game");
     expect(GLOSSARY["Mark in a hand"].rule).toContain("hand");
-    // A lower-case "hand size" is a word of card text, and the capitalised row is matched as well.
-    expect(termsIn("your hand size is 12")).toEqual(["Hand size"]);
-    expect(termsIn("Hand size 12")).toEqual(["Hand size"]);
+    // Meditative #79 sets the hand size for the rest of the game (§2.4, R1143), in plain words.
+    expect(termsIn("your hand size is 12")).toEqual([]);
+    expect(termsIn("Hand size 12")).toEqual([]);
   });
 
   it("R1384 Lucky's row says what §6.1's does: a coin flip is a luck-based roll, and Lucky given to a card adds", () => {

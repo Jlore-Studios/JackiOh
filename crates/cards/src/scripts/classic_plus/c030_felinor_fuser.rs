@@ -175,8 +175,9 @@ mod tests {
         "traininggrounds-051",
         "stinkyscapeplus-004",
     ];
-    /// The four of `FELINOR_UNITS` that cost (4), which the faces' "(2) or less" and "(3) or less" leave out.
-    const COSTING_4: [&str; 4] = ["core-043", "meditative-094", "traininggrounds-051", "stinkyscapeplus-004"];
+    /// The three of `FELINOR_UNITS` that cost (4), which the faces' "(2) or less" and "(3) or less" leave out.
+    /// Stinkyscape+ #4 Profe Yates cost (4) too until issue #4440 made it (2).
+    const COSTING_4: [&str; 3] = ["core-043", "meditative-094", "traininggrounds-051"];
     /// #11 Tempo Timmy: a non-Felinor on the enemy side, which #43 Big Felinor's Cry would destroy.
     const TIMMY: &str = "core-011";
     const FILLER: &str = "core-005";

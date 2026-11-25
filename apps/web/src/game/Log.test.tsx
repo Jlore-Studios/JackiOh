@@ -5,7 +5,7 @@ import { CATALOG } from "@jackioh/cards";
 import type { GameEvent, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReactElement } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { INSPECT_CLOSE, INSPECT_HOVER, INSPECT_SHEET, closeInspect } from "../cards/index.ts";
 import { HOVER_DELAY_MS } from "../cards/inspect/index.ts";
@@ -18,6 +18,20 @@ import { CHINESE } from "../cards/chinese.ts";
 import { resetLocaleForTests, setLocale } from "../i18n/i18n.ts";
 import { baseView, emptySide, fullBoardView, fusedDef, unit, withEvents } from "../test/fixtures.ts";
 import { readSheet } from "../test/setup.ts";
+
+/**
+ * #4614: what the page says of the log's layout; null where it has none, as the jsdom of
+ * every other suite has none (so those suites draw every line, as before). The windowing
+ * suite drives it by hand.
+ */
+const layout = vi.hoisted(() => ({
+  viewport: null as { scrollTop: number; clientHeight: number } | null,
+}));
+
+vi.mock("./logWindow.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./logWindow.ts")>()),
+  readLogViewport: () => layout.viewport,
+}));
 
 afterEach(() => {
   cleanup();
@@ -958,5 +972,145 @@ describe("the log's card-name target size", () => {
     expect(css).toMatch(
       /@media \(pointer: coarse\)\s*\{\s*\.log \.log-card\s*\{\s*display: flex;\s*align-items: center;\s*width: 100%;\s*min-height: 44px;\s*\}\s*\}/,
     );
+  });
+});
+
+// #4614: a windowed log mounts only the rows near the viewport, holding the rest's place
+// with spacers. The layout is the viewport this file hands the hook's reads; the rows keep
+// their estimate tall, as jsdom lays none out.
+describe("#4614 a windowed log mounts only the rows near the viewport", () => {
+  const lookup = lookupFromDefs(CATALOG);
+  const nameOf = (defId: string): string => CATALOG[defId]?.name ?? defId;
+
+  const lost = (n: number): GameEvent => ({ type: "healthLost", player: "p1", amount: n });
+  const said = (n: number): string => `You lost ${String(n)} health`;
+  /** The engine's `VIEW_EVENT_LIMIT`: how many of the newest events a view carries (R168). */
+  const WINDOW = 32;
+  const game = (count: number): GameEvent[] => Array.from({ length: count }, (_, i) => lost(i + 1));
+  const windowOf = (events: readonly GameEvent[], end: number): GameEvent[] => events.slice(Math.max(0, end - WINDOW), end);
+  const log = (): HTMLElement => screen.getByTestId(testid.log);
+  const mounted = (): Element[] => [...log().querySelectorAll(".log-line")];
+
+  /** A log of `total` kept lines, joined window by window as a long match joins them. */
+  function renderHistory(total: number): void {
+    const events = game(total);
+    let end = WINDOW;
+    const first = render(<Log view={withEvents(baseView(), windowOf(events, end))} />);
+    while (end < total) {
+      end = Math.min(end + WINDOW - 1, total);
+      first.rerender(<Log view={withEvents(baseView(), windowOf(events, end))} />);
+    }
+  }
+
+  beforeEach(() => {
+    layout.viewport = { scrollTop: 0, clientHeight: 400 };
+  });
+
+  afterEach(() => {
+    layout.viewport = null;
+  });
+
+  it("windows about 1000 lines to a bounded row count, tenfold lines mounting no more", () => {
+    renderHistory(100);
+    const hundred = mounted().length;
+    expect(hundred).toBeLessThanOrEqual(60);
+    expect(log()).toHaveClass("log--virtual");
+    // The window sits at the top: no head spacer, and the first line numbers itself.
+    expect(log().querySelector(".log-spacer")).not.toBeNull();
+    expect(log().firstElementChild).toHaveClass("log-line");
+    expect(mounted()[0]?.getAttribute("value")).toBeNull();
+
+    cleanup();
+    renderHistory(1000);
+    const thousand = mounted().length;
+    expect(thousand).toBeLessThanOrEqual(60);
+    expect(thousand).toBe(hundred);
+  });
+
+  it("a new arrival keeps the newest line in view", () => {
+    const events = game(41);
+    const { rerender } = render(<Log view={withEvents(baseView(), windowOf(events, 40))} />);
+    const list = log();
+    Object.defineProperty(list, "scrollHeight", { value: 5000, configurable: true });
+    rerender(<Log view={withEvents(baseView(), windowOf(events, 41))} />);
+    expect(list.scrollTop).toBe(list.scrollHeight);
+  });
+
+  it("unmounted lines render nothing, near or far", () => {
+    renderHistory(1000);
+    expect(mounted().length).toBeLessThanOrEqual(60);
+    expect(log().innerHTML).toContain(said(1));
+    expect(log().innerHTML).not.toContain(said(1000));
+  });
+
+  it("draws dividers before each turn's first line but the log's first, wherever the window sits", () => {
+    const mixed = (count: number): GameEvent[] =>
+      Array.from({ length: count }, (_, i) =>
+        i % 20 === 0
+          ? ({ type: "turnStarted", player: i % 40 === 0 ? "p1" : "p2", turn: i / 20 + 1 } as GameEvent)
+          : lost(i + 1),
+      );
+    const events = mixed(200);
+    let end = WINDOW;
+    const first = render(<Log view={withEvents(baseView(), windowOf(events, end))} />);
+    while (end < 200) {
+      end = Math.min(end + WINDOW - 1, 200);
+      first.rerender(<Log view={withEvents(baseView(), windowOf(events, end))} />);
+    }
+    // The window sits at the top: the log's first line is a turn with no divider before it.
+    expect(log().firstElementChild).toHaveClass("log-line");
+    expect(log().firstElementChild?.textContent).toBe("Turn 1: You");
+
+    // Scrolled down, the first mounted row numbers its whole-log place, and each mounted
+    // turn past the log's first keeps its divider.
+    layout.viewport = { scrollTop: 1200, clientHeight: 400 };
+    fireEvent.scroll(log());
+    const rows = mounted();
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.length).toBeLessThan(200);
+    expect(rows[0]?.getAttribute("value")).toBe("41");
+    const dividers = [...log().querySelectorAll(".log-divider")];
+    expect(dividers.length).toBe(2);
+    for (const divider of dividers) {
+      expect(divider).toHaveAttribute("aria-hidden", "true");
+      expect(divider.nextElementSibling?.textContent).toMatch(/^Turn \d+/);
+    }
+  });
+
+  it("a card line still opens its inspect sheet", () => {
+    const PLAY: GameEvent = { type: "cardPlayed", player: "p2", instanceId: "c7", defId: "core-032", costPaid: 2 };
+    const events = [...game(100), PLAY];
+    let end = WINDOW;
+    const first = render(
+      <CatalogContext.Provider value={lookup}>
+        <Log view={withEvents(baseView(), windowOf(events, end))} />
+      </CatalogContext.Provider>,
+    );
+    while (end < events.length) {
+      end = Math.min(end + WINDOW - 1, events.length);
+      first.rerender(
+        <CatalogContext.Provider value={lookup}>
+          <Log view={withEvents(baseView(), windowOf(events, end))} />
+        </CatalogContext.Provider>,
+      );
+    }
+    // The card's line is the newest: scroll the window to the log's end.
+    layout.viewport = { scrollTop: 100_000, clientHeight: 400 };
+    fireEvent.scroll(log());
+    const line = within(log()).getByTestId(LOG_CARD_TESTID);
+    expect(line).toHaveTextContent(`Opponent played ${nameOf("core-032")} for 2`);
+    line.focus();
+    fireEvent.click(line);
+    expect(screen.getByTestId(INSPECT_SHEET)).toHaveTextContent(nameOf("core-032"));
+  });
+
+  it("the live region still speaks only the newest line, even where it is unmounted", () => {
+    const events = game(101);
+    const { rerender } = render(<Log view={withEvents(baseView(), windowOf(events, 100))} />);
+    expect(screen.getByTestId(testid.logLive).textContent).toBe("");
+    rerender(<Log view={withEvents(baseView(), windowOf(events, 101))} />);
+    expect(screen.getByTestId(testid.logLive).textContent).toBe(said(101));
+    // The window never left the top: the newest line spoke without mounting.
+    expect(log().innerHTML).not.toContain(said(101));
   });
 });

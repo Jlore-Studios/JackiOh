@@ -39,7 +39,15 @@
     },
     "classic-023": {
       "base": {
-        "en": "Indestructible, Spell Damage +1\nCry: Discard {discards|random card|random cards}.\nActivate: Your plays this turn become Books of Flame."
+        "en": "Indestructible, Spell Damage +1, Tradable\nCry: Discard {discards|random card|random cards}.\nActivate: Your plays this turn become Books of Flame."
+      }
+    },
+    "classic-028": {
+      "base": {
+        "en": "Indestructible\nCry: Discard your hand and exile your deck.\nAura: Your deck and graveyard have Flashback. +{mana} mana per turn."
+      },
+      "radiant": {
+        "en": "Indestructible\nCry: Discard your hand and your deck.\nAura: Your deck and graveyard have Flashback. +{mana} mana per turn."
       }
     },
     "classicplus-007": {
@@ -52,11 +60,6 @@
         "en": "Can't attack\nEnd of turn: Attack a random enemy Unit. A kill across from your Bot Loser is its kill."
       }
     },
-    "classicplus-026": {
-      "radiant": {
-        "en": "Taunt\nCast on draw: You may take {actions|more action|more actions}, then your turn ends.\nCry: Lose all your mana. Gain +{per} Health per mana."
-      }
-    },
     "classicplus-042-1": {
       "radiant": {
         "en": "Activate: Gain {mana} mana. Heal your hero {heal}. Your opponent discards {discards}. Add a Radiant Book, KY, Legendary and (4) Cost card at ({setCost})."
@@ -64,10 +67,10 @@
     },
     "classicplus-037": {
       "base": {
-        "en": "Divine Shield\nIn hand or deck, summoned after {threshold} non-Units in a turn.\nEnd of turn: Recast a random non-Unit you played this turn."
+        "en": "In hand or deck, summoned after {threshold} non-Units in a turn.\nEnd of turn: Recast a random non-Unit you played this turn."
       },
       "radiant": {
-        "en": "Divine Shield\nIn hand or deck, summoned after {threshold} non-Units in a turn.\nEnd of turn: Recast each non-Unit you played this turn."
+        "en": "In hand or deck, summoned after {threshold} non-Units in a turn.\nEnd of turn: Recast each non-Unit you played this turn."
       }
     },
     "classicplus-073": {
@@ -82,11 +85,6 @@
     "meditative-008": {
       "base": 2,
       "radiant": 2
-    },
-    "meditative-009": {
-      "radiant": {
-        "en": "Cry: Add a random Start of turn card and a random End of turn card to your hand.\nAura: Your turn effects trigger {extra|extra time|extra times}."
-      }
     },
     "meditative-020": {
       "base": {
@@ -413,10 +411,10 @@
     },
     "stinkyscapeplus-007": {
       "base": {
-        "en": "Armor 4\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
+        "en": "Armor 4, Tribute 1\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
       },
       "radiant": {
-        "en": "Armor 8\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
+        "en": "Armor 8, Tribute 1\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
       }
     },
     "stinkyscapeplus-024": {
@@ -453,18 +451,18 @@
     },
     "stinkyscapeplus-072": {
       "base": {
-        "en": "Tribute 5, Indestructible, Can't attack, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nAttacks each summoned enemy; lose {mana} mana next turn."
+        "en": "Tribute 5, Indestructible, Can't attack, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nAttacks each summoned enemy; Overload ({mana})."
       },
       "radiant": {
-        "en": "Tribute 5, Indestructible, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nAttacks each summoned enemy; lose {mana} mana next turn."
+        "en": "Tribute 5, Indestructible, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nAttacks each summoned enemy; Overload ({mana})."
       }
     },
     "stinkyscapeplus-080": {
       "base": {
-        "en": "Exile your hand, deck and board. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one each turn."
+        "en": "Exile your hand, deck and board. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one each turn end."
       },
       "radiant": {
-        "en": "Exile your hand, deck and both boards. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one now and each turn."
+        "en": "Exile your hand, deck and both boards. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one now and each turn end."
       }
     },
     "stinkyscapeplus-087": {
@@ -549,6 +547,14 @@
     "stinkyscapeplus-t-terminus-starship-farthest-shore": {
       "radiant": {
         "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Radiant Repeater v5, Ultra Capacitor and Healing Capsule."
+      }
+    },
+    "infiniteassault-235": {
+      "base": {
+        "en": "Immune to Spells\nStart of turn: Get a random Radiant Infinite Assault card, costing ({setCost}).\nDeath: Summon The Prime Generator, Iteration Two."
+      },
+      "radiant": {
+        "en": "Immune to Spells\nStart of turn: Get two random Radiant Infinite Assault cards, costing ({setCost}).\nDeath: Summon The Prime Generator, Iteration Two."
       }
     }
   },

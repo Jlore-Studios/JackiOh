@@ -28,6 +28,7 @@ import {
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -65,6 +66,7 @@ import {
   selectionForOption,
   selectionKey,
   selectionTestid,
+  targetBoardKeys,
   zoneKey,
   zonesInBoardOrder,
   parseZoneKey,
@@ -108,6 +110,11 @@ export type PromptProps = {
   legal?: readonly ActionBody[];
   onAction: (body: ActionBody) => void;
   onInteraction?: (next: Interaction) => void;
+  /**
+   * R4781000: where the open several-pick `target` prompt's picker registers its toggle, so a
+   * board click toggles through `Game`'s handler. Set by `Game` alone.
+   */
+  boardPickRef?: { current: ((key: string) => void) | null };
   onCancel?: () => void;
   /** The event type animating the open modal (`promptAnswered` fades it out), for `data-animating`. */
   animating?: string;
@@ -539,6 +546,12 @@ function pickerForPending(
     // #3864: one cell or zone is a tap on the board; a choice of several, or of none, keeps its list (and Confirm).
     if (pending.min >= 1 && pending.max <= 1) picker.boardOnly = true;
   }
+  // R4781000: a several-pick `target` prompt toggles from the board too, through the picker's `pick`.
+  // A one-pick one answers at once through `Game`'s handler, so it sets no keys; the list stays in
+  // both cases (R3864000 kept target lists).
+  if (pending.kind === "target" && !isPlaguePlacementPrompt(pending)) {
+    picker.boardKeys = targetBoardKeys(view, pending) ?? undefined;
+  }
   return picker;
 }
 
@@ -913,7 +926,8 @@ function CardOption(props: {
   readOnly?: boolean;
   onPick: () => void;
 }) {
-  useLocale();
+  // A language change rebuilds the face, as CardFace's labels redraw (R711000).
+  const locale = useLocale();
   const info = useCardInfo(props.item.defId ?? "", props.item.radiant === true);
   const fieldPower = useFieldPower(props.item.card?.instanceId);
   const copied = useCopiedDef(props.item.card);
@@ -922,25 +936,34 @@ function CardOption(props: {
   const name = props.item.defId === undefined ? props.item.label : nameOf(props.item.defId, info, drawnInChinese(flagged));
   const radiant = props.item.radiant === true;
   const cost = props.item.cost;
-  const drawn =
-    props.item.defId === undefined
-      ? null
-      : props.item.card !== undefined
-        ? liveFace(info, props.item.card, {
-            ...(fieldPower === undefined ? {} : { fieldPower }),
-            ...(copied === undefined ? {} : { copied }),
-          })
-        : faceModel({
-            defId: props.item.defId,
-            def: info.def,
-            name: info.name,
-            radiant,
-            chinese: flagged,
-            ...(cost === undefined ? {} : { liveCost: cost }),
-            inPlay: {},
-          });
-  const face =
-    drawn === null || props.item.price === undefined ? drawn : pricedFace(drawn, props.item.price, props.item.card, info.def);
+  // #4511: the face (with its embiggen price) memoized on exactly the inputs it takes, as
+  // `useLiveFace` does: a board re-render that leaves the options unchanged builds no face.
+  const { defId, card, price } = props.item;
+  const { def: infoDef, name: infoName } = info;
+  const face = useMemo(() => {
+    const drawn =
+      defId === undefined
+        ? null
+        : card !== undefined
+          ? liveFace(info, card, {
+              ...(fieldPower === undefined ? {} : { fieldPower }),
+              ...(copied === undefined ? {} : { copied }),
+            })
+          : faceModel({
+              defId,
+              def: infoDef,
+              name: infoName,
+              radiant,
+              chinese: flagged,
+              ...(cost === undefined ? {} : { liveCost: cost }),
+              inPlay: {},
+            });
+    return drawn === null || price === undefined ? drawn : pricedFace(drawn, price, card, infoDef);
+    // `info` is a fresh object per render; the deps key on its stable contents (`infoDef`/
+    // `infoName`) instead, so an unchanged option never crosses again. The callback still reads
+    // through `info` for `liveFace`, which is sound because a dep change always recomputes with the
+    // latest render's values, and unchanged deps mean unchanged contents.
+  }, [infoDef, infoName, card, fieldPower, copied, radiant, cost, flagged, price, defId, locale]);
   const caption = face === null ? undefined : props.item.caption;
   const pays = face === null || props.item.price === undefined ? undefined : priceLine(face);
   // R247: a number names no card here, so it is drawn on a card back and nothing opens it.
@@ -1276,6 +1299,11 @@ function PromptModal(props: {
   boardTestids: readonly string[];
   onAction: (body: ActionBody) => void;
   onInteraction?: (next: Interaction) => void;
+  /**
+   * R4781000: where a several-pick `target` picker's toggle is registered for board clicks.
+   * Forwarded from `PromptProps` on the engine branch alone.
+   */
+  boardPickRef?: { current: ((key: string) => void) | null };
   onCancel?: () => void;
   animating?: string;
   /** R2211000: a replay's picker: folded as it opens, its options greyed, and nothing it draws sends. */
@@ -1375,11 +1403,28 @@ function PromptModal(props: {
     first?.focus({ preventScroll: true });
   }, [picker.chrome, readOnly]);
 
+  // R4781000: a several-pick `target` prompt's board toggle, for `Game`'s handler: a board click
+  // on an offered card, hero or face-down zone toggles the picker's selection through it and sends
+  // nothing until Confirm. Registered only while this picker is open; the cleanup below puts it
+  // back to null, so a stale board click after it folds answers nothing.
+  const takesBoardTargetPicks = picker.chrome === "target" && picker.boardKeys !== undefined && !readOnly;
+  useEffect(() => {
+    const ref = props.boardPickRef;
+    if (ref === undefined || !takesBoardTargetPicks) return undefined;
+    ref.current = (key: string) => live.current.pick(key);
+    return () => {
+      ref.current = null;
+    };
+  }, [takesBoardTargetPicks, props.boardPickRef]);
+
   // R514: a click on a zone of the board a `cell` prompt offers, or Enter or Space on it, picks that
   // cell (#2757: or a lane pick's lane, from any of its four zones). The board's own handler builds nothing from a zone while a prompt is open, so this is the
   // one answer. maxi-tail: document listeners for the one board-answered prompt kind; move them into
   // `onClickTarget` (actions.ts) if target prompts are ever answered on the board too.
-  const answersOnBoard = picker.boardKeys !== undefined && !readOnly;
+  // R4781000: a `target` prompt answers on the board through `Game`'s handler above instead: a lit
+  // card's own click stops at the card (`Card.tsx` `fire`), so a bubble listener never sees the main
+  // case, and a zone click reaches both this listener and that handler, which would toggle twice.
+  const answersOnBoard = picker.boardKeys !== undefined && picker.chrome !== "target" && !readOnly;
   useEffect(() => {
     if (!answersOnBoard) return;
     const zone = '[data-testid^="zone-"]';
@@ -1993,6 +2038,7 @@ export default function Prompt(props: PromptProps) {
           key={pending.choiceId}
           source="engine"
           picker={pickerForPending(pending, props.view, props.legal ?? [], props.lesson === true, lookup)}
+          {...(props.boardPickRef === undefined ? {} : { boardPickRef: props.boardPickRef })}
           {...(pending.kind === "mulligan" && mulligan !== undefined
             ? { status: <OpponentMulliganStatus mulligan={mulligan} /> }
             : {})}

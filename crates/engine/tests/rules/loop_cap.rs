@@ -3,10 +3,11 @@
 //! text off, and the game goes on.
 //!
 //! Fixtures (`lc-`, from 9250): a Unit whose Death summons another of itself at 0/0 (statecheck.rs's
-//! `endless`), one more that also hits the enemy hero as it dies, a Cry that starts either loop, and a
-//! pinger: "Whenever the enemy hero takes damage, deal 1 to it", which stops at the enemy hero's health of
-//! 1, holds at each `stops` health and asks a question at each `asks` health (its answer pings on). A
-//! chain's event total is read off small runs of it (`Tally`), so no test hard-codes an event count.
+//! `endless`), one more that also hits the enemy hero as it dies, a Cry that starts either loop, a Unit
+//! whose end of turn hits the enemy hero, and a pinger: "Whenever the enemy hero takes damage, deal 1 to
+//! it", which stops at the enemy hero's health of 1, holds at each `stops` health and asks a question at
+//! each `asks` health (its answer pings on). A chain's event total is read off small runs of it (`Tally`),
+//! so no test hard-codes an event count.
 
 use jackioh_engine::effects::{choose_mode, damage, gain_hero_armor, summon};
 use jackioh_engine::loop_cap;
@@ -71,6 +72,11 @@ fn kick_pad() -> CardDef {
     def("kick-pad", "Spell", 9256, 0, 0)
 }
 
+/// At the end of your turn, deal 1 damage to the enemy hero, which starts the pinger's chain there.
+fn dusk() -> CardDef {
+    def("dusk", "Unit", 9257, 1, 5)
+}
+
 fn hit(to: &str) -> Effect {
     damage(json_as(json!({ "to": { "of": to }, "amount": 1 })))
 }
@@ -96,6 +102,7 @@ fn register(stops: Vec<i32>, asks: Vec<i32>) {
         pinger(),
         kick(),
         kick_pad(),
+        dusk(),
     ] {
         catalog.insert(card.id.clone(), card);
     }
@@ -173,6 +180,13 @@ fn register(stops: Vec<i32>, asks: Vec<i32>) {
             ..Script::default()
         }),
     );
+    scripts.insert(
+        dusk().id,
+        both(Script {
+            end_of_turn: Some(hook(|_ctx| vec![hit("enemyHero")])),
+            ..Script::default()
+        }),
+    );
     register_scripts(scripts);
 }
 
@@ -194,6 +208,13 @@ fn board(seed: &str, stops: Vec<i32>, asks: Vec<i32>, enemy_health: i32) -> Game
 fn chain_board(seed: &str, stops: Vec<i32>, asks: Vec<i32>, enemy_health: i32) -> GameState {
     let mut state = board(seed, stops, asks, enemy_health);
     put(&mut state, &pinger().id, slot(P1, Row::Units, 1), json!({}));
+    state
+}
+
+/// `chain_board` with `dusk` beside the pinger, so p1's End turn starts the chain.
+fn dusk_board(seed: &str, asks: Vec<i32>, enemy_health: i32) -> GameState {
+    let mut state = chain_board(seed, vec![], asks, enemy_health);
+    put(&mut state, &dusk().id, slot(P1, Row::Units, 2), json!({}));
     state
 }
 
@@ -494,6 +515,78 @@ fn r3925000_a_hero_killed_in_the_capped_resolution_still_ends_the_game() {
         .expect("the game ended");
     assert!(at < over, "the capped check's hero check ends it");
     assert_eq!(over, ended.events.len() - 1, "gameOver is the last event (R216)");
+}
+
+/// p1's turn 3 ended once, after the cap at `at`, and p2's turn 4 started after it.
+fn turn_passed_after(result: &ReduceResult, at: usize) {
+    let ended: Vec<usize> = (0..result.events.len())
+        .filter(|&i| matches!(result.events[i], GameEvent::TurnEnded { .. }))
+        .collect();
+    assert_eq!(ended.len(), 1, "turnEnded is emitted exactly once");
+    assert!(ended[0] > at, "the turn ends after the cap");
+    assert!(matches!(
+        result.events[ended[0]],
+        GameEvent::TurnEnded {
+            player: P1,
+            turn: 3,
+            ..
+        }
+    ));
+    let started = result.events.iter().rposition(|event| {
+        matches!(
+            event,
+            GameEvent::TurnStarted {
+                player: P2,
+                turn: 4,
+                ..
+            }
+        )
+    });
+    assert!(started > Some(ended[0]), "p2's turn starts after it");
+    assert_eq!((result.state.active, result.state.turn), (P2, 4));
+    assert_eq!(result.state.phase, Phase::Main);
+}
+
+/// R3925000: a turn's end the cap stops mid-way is owed engine work, so it still drains with the text
+/// off: `turnEnded` once, after the cap, then p2's turn, whether the chain runs inside End turn or in the
+/// answer to a prompt that parked the rest of the turn's end (#4550, docs/implicit-states.md §2 E11).
+#[test]
+fn r3925000_a_turn_end_capped_mid_way_still_ends_the_turn() {
+    // Inline: `dusk`'s end-of-turn hit starts the chain inside End turn, which reaches the cap.
+    let state = dusk_board("r3925000-turn-end", vec![], 100_000);
+    let ended = act_ok(&state, json!({ "type": "endTurn", "playerId": "p1" }));
+    let at = the_cap(&ended.events, P1);
+    assert!(at >= RESOLUTION_EVENT_CAP);
+    text_off_after(&ended.events, at);
+    settled(&ended.state);
+    no_dead_standing(&ended.state);
+    turn_passed_after(&ended, at);
+
+    // Paused: the chain asks at its first link, so End turn parks the rest of the turn's end; the answer
+    // is the next interaction, and its chain reaches the cap.
+    let state = dusk_board("r3925000-turn-end-asked", vec![100_000], 100_001);
+    let asked = act_ok(&state, json!({ "type": "endTurn", "playerId": "p1" }));
+    assert!(capped_events(&asked.events).is_empty());
+    assert!(
+        !asked
+            .events
+            .iter()
+            .any(|event| matches!(event, GameEvent::TurnEnded { .. })),
+        "the turn has not ended under the prompt"
+    );
+    assert_eq!(owed_work(&asked.state, Some(END_OF_TURN_WORK)).len(), 1);
+    assert_eq!((asked.state.active, asked.state.turn), (P1, 3));
+    let pending = asked.state.pending.clone().expect("the chain asks");
+    let answered = act_ok(
+        &asked.state,
+        json!({ "type": "answer", "choiceId": pending.id, "selection": [{ "pick": "mode", "option": "a" }], "playerId": "p1" }),
+    );
+    let at = the_cap(&answered.events, P1);
+    assert!(at >= RESOLUTION_EVENT_CAP);
+    text_off_after(&answered.events, at);
+    settled(&answered.state);
+    no_dead_standing(&answered.state);
+    turn_passed_after(&answered, at);
 }
 
 #[test]

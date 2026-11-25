@@ -102,7 +102,7 @@ crates/
   tools/                   package jackioh-tools (bin "jackioh") ← packages/*/scripts, ladder/, scripts/catalog-version.mjs
     src/main.rs            clap dispatch (§12), written by part 1
     src/<command>.rs       one per subcommand
-training/                  the AI training lanes (§14): README.md, improve.md, unban.md, loop.sh, history/
+training/                  the AI's training (§14): README.md, improve.md, gather.md, file-records.sh, history/
 spec/                      SPEC.md split into notes (§15)
 apps/web/src/wasm/         the TS wrapper over the WASM module (§10); pkg/ is generated and gitignored
 apps/web/src/wire/         the client's wire layer (§10.4): generated types and constants, hand-kept helpers
@@ -117,8 +117,8 @@ Rules that follow from the tree:
   it never edits those files. A dependency or module it wishes existed goes under `GAPS` in its notes
   (§16) and part 31 adds it.
 - Integration tests are one binary per crate (`tests/rules.rs`, `tests/cards.rs`, `tests/ai.rs`,
-  `tests/server.rs`, plus `tests/golden.rs`). Each file directly under `tests/` is its own binary
-  and its own link step, so 300 of them would cost minutes per `cargo test`. The engine's rules
+  `tests/server.rs`, `tests/shared.rs`, plus `tests/golden.rs`). Each file directly under `tests/` is its
+  own binary and its own link step, so 300 of them would cost minutes per `cargo test`. The engine's rules
   are three, `tests/rules.rs`, `tests/rules_2.rs` and `tests/rules_3.rs`, which CI compiles side by
   side (#2090, #2957).
 - Data files are **copied** by part 1, not moved: the TypeScript engine must keep working on
@@ -407,6 +407,12 @@ pub fn seat_played_by(state: &GameState, home: PlayerId) -> PlayerId;
 pub fn mulligan_owed(state: &GameState) -> Vec<PlayerId>;
 pub fn seats_swapped(state: &GameState) -> bool;
 pub fn summarize_game(args: &FoldArgs) -> Option<GameSummary>;
+pub fn summarize_game_with(args: &FoldArgs, step: impl FnMut(&GameState, &[GameEvent], &GameState)) -> Option<GameSummary>;
+                                                                    // R4552000: the same one fold, each step handed to `step` too
+                                                                    // (jackioh_ai::summarize_with_swing_turns, #2213)
+pub fn recorded_start(args: &FoldArgs) -> GameState;                // R4552000: the start summarize_game replays from
+pub fn read_steps(start: &GameState, log: &[Action], step: impl FnMut(&GameState, &[GameEvent], &GameState)) -> GameState;
+                                                                    // R4552000: its steps; jackioh_ai::swing_turns reads the same
 pub fn registered_catalog() -> &'static CardDefs;                   // after jackioh_cards::register_all()
 
 pub struct ReduceResult {                                           // serializes as { state, events, error? }
@@ -495,7 +501,12 @@ after it. It is withheld from the trigger loop, public, takes no room in R168's 
 of the golden texts (R3857000). Since #3925 `GameEvent::LoopCapped { player }` reports that an
 interaction reached `RESOLUTION_EVENT_CAP` events and its loop stopped (`loop_cap.rs`, whose count rides
 `Frontier.interaction_from` and dies with the action); public, and emitted only by a capped interaction,
-so no game that never reaches the cap hashes differently (R3925000).
+so no game that never reaches the cap hashes differently (R3925000). Since #4423 `destroyed` carries an
+optional `diedAs: CardType`, the card's type as it died (`faces::card_type_of`, read by
+`state_check.rs` before any collected card moves), serialized only when it differs from the printed
+face's: a Field Trap or Trap for a card set by its Cloaked, a Unit for an Animated one in a unit zone.
+Unlike `via` the rules read it (`as_rules_read` keeps it; `query::is_unit_death`); `view_for` removes it
+with the card's identity, and the golden texts leave it out (R4423000).
 
 ### 6.5 Mutation convention and the per-call sink
 
@@ -743,6 +754,7 @@ pub struct AiOptions<'a> {
 }
 pub fn wrap_up_after_ms(limit_ms: i64) -> i64;      // R3498000: the ms into a host's limit at which it fires wrap_up
     // SearchStats gains replied and worldsScored, and Decision::fell_short() a finalist left unscored on a sampled world (R3498000)
+    // SearchStats gains replaysCut, the finalist replays a sampled world cut short (R4447000)
 pub fn build_ai_deck(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> Vec<String>;
     // AiDeckOptions { banned, include, theme, mana_cap, boost, lean_set: Option<SetName> } (serde camelCase;
     // `leanSet`, R1370: at least ceil(size × AI_DECK.lean_min_share) of the deck from that set; absent, the
@@ -1142,7 +1154,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
 | `stats [--games N] [--patch v] [--out file]` | `stats.rs` | 22 | `pnpm ai:stats` | R378's development run |
 | `golden check`, `golden bless [--seeds N]` (retired in #2578), `golden record` | `golden.rs` | 23 | — | §13 |
 | `spec check`, `spec index` | `spec.rs` | 28 | `pnpm rulings:coverage`, `rulings.test.ts` | §15 |
-| `arena …`, `agent`, `promote …` | `arena.rs`, `agent.rs`, `promote.rs` | 29 | `ladder/`, `duel.ts` | §14 |
+| `arena …`, `agent` | `arena.rs`, `agent.rs` | 29 | `ladder/`, `duel.ts` | §14 |
 
 ## 13. Golden traces
 
@@ -1215,11 +1227,10 @@ The referee holds the true state and sends each agent only `redact(state, seat)`
 must share an engine version: an `ai/*` branch differs from `main` only under `crates/ai/` and
 `training/history/` (CI enforces it, part 30).
 
-### 14.2 `arena` and `promote`
+### 14.2 `arena`
 
 ```
-cargo jackioh arena --a self|random|bin:<path> --b self|random|bin:<path> (--set improve-dev [--games N] [--extend] [--forks] | --seed <base> --games N [--paired]) [--out <dir>]
-cargo jackioh promote --lane improve|unban --parent-bin <path to main's jackioh> [--dry-run] [--verify]
+cargo jackioh arena --a self|random|bin:<path> --b self|random|bin:<path> (--set improve-dev [--games N] [--extend] [--forks [--save <path>]] | --seed <base> --games N [--paired]) [--out <dir>]
 ```
 
 `arena` plays game `n` on the seed `<base>:<n>`, agent `a` on `p1` in odd games. `--paired` (R850000)
@@ -1249,55 +1260,16 @@ control's seat got, never the true state. When its action differs that decision 
 once after each action, both arms on to the end with the control on both seats. The tally adds
 `trunkGames`, `forks`, `liveForks`, `forksPerGame`, `rollouts` and `forkEdge` with its 95% interval
 `forkEdgeLow` and `forkEdgeHigh`, keeps a change when `forkEdgeLow` is above 0, and reads
-`inconclusive: true` below `SCREEN_MIN_DECIDED` live forks.
+`inconclusive: true` below `SCREEN_MIN_DECIDED` live forks. `--save <path>` (R4607000) appends
+each finished deal to the file as soon as it is done: one header line naming the set, `--games`,
+`--extend`, the budget, `FORK_ROLLOUTS`, `FORK_MAX_PER_GAME`, the catalog version and each agent's
+label and `info` answer, then one JSON line a deal. A rerun of the same command refuses a foreign
+file by field name, replays the first saved deal's trunk once as an identity check, and plays only
+the deals still missing; a finished save, run again, plays nothing and prints its tally again.
 
-`promote` plays the lane's deals against the parent, seeds `"<lane>:<tree>:<d>"` where `<tree>` is
-`git rev-parse HEAD:crates/ai/src` (so committing `generation.json` does not change the seeds), each
-deal played twice with the seats swapped as `arena --paired` plays one (candidate `p1` in its first
-game), each seat's deck `build_ai_deck` over every set that ships minus **its own** AI's shadow-ban
-list, no handicap (Easy both). The deals are the lane's hold-out set, read only by the committed AI
-they are named for: a dry run refuses uncommitted changes in `crates/ai/src`, as a promotion and a
-verification do (R850001). Every lane's gate is the sequential test `TRAINING_GATE` (R1679000): the
-deals are played `batch_deals` (100) at a time and read in deal order as the candidate's edge, and from
-deal `min_deals` (100) on it stops at the first whose log-likelihood ratio, H0 a mean edge of
-`edge_h0` (0) against H1 `edge_h1` (+0.06) with errors `alpha` and `beta` (5% each), reaches
-`ln((1 − β) / α)` (a pass) or falls to `ln(β / (1 − α))` (a fail); undecided at `max_deals` (1,000)
-it fails. A promotion's `vsParent` is the wins out of the games of the deals it read. It promotes when:
-
-| Lane | vs parent | shadow bans |
-|---|---|---|
-| `improve` | the test passes | — |
-| `unban` | the test passes | strictly fewer than the parent's |
-| `learn` | the test passes, on deals of its own (R1012000); retired with the learned evaluation by #4159 (R4159000), kept while `learn.yml` runs it | — |
-
-The improve lane's bar was 65 of 100 until issue #850 (R732001), then 220 of 400 paired games until
-issue #1679 (R850000), and the unban lane's 60 of 100 unpaired games.
-
-It played 100 more against `random` (SPEC §10.7's policy, `jackioh_ai::random_action`),
-needing 90, until generation 9, the first AI dealt the Meditative set, had beaten random in at least
-90 of 100 (issue #732, R732001); since then it plays none and a promotion records `"vsRandom": null`.
-The daily quality gates (`cargo jackioh gate --full`) still play random.
-
-A draw is not a win. `TRAINING_GATE` (`TrainingGate { min_deals, max_deals, batch_deals, edge_h0,
-edge_h1, alpha, beta, variance_floor }`) is a constant in `crates/engine/src/config.rs` next to
-`AI_GATE` (CLAUDE.md rule 9; part 1 wrote its predecessors, `TRAINING_IMPROVE` and `TRAINING_UNBAN`). Without
-`--dry-run` or `--verify`, a pass writes `crates/ai/generation.json` and appends the same object to
-`training/history/<lane>.jsonl`:
-
-```json
-{"generation":8,"lane":"improve","parent":"<main commit>","tree":"<crates/ai/src tree>","vsRandom":"93/100","vsParent":"87/100","shadowBan":11,"parentShadowBan":11,"date":"2026-11-02"}
-```
-
-`--verify` (CI) recomputes and compares with the branch's `generation.json`. Exit 0 on a pass, 1 on
-a failed gate. The report (Markdown, stdout) gives the wins, the bar and their 95% Wilson interval,
-and for a paired gate the edge over its deals with its interval, as `arena`'s tally computes it, in
-points of the games.
-
-Every run that plays its games, in any mode and whether or not it passes, rewrites
-`$JACKIOH_TRAINING_OUT/last-pass.md` when that directory is set: the pass in Markdown (the games the
-candidate won, lost and drew against the parent and those without a result, as `p1`, as `p2` and in
-all, and one square per game), which `training/loop.sh` puts at the top of the lane's draft pull
-request.
+`promote`, the training lanes' gate (a sequential test on each lane's hold-out deals, R1679000), is
+gone since #4702 (R4702000), with `TRAINING_GATE`; git history holds it. Its promotions' records are
+§14.3's.
 
 ### 14.3 `crates/ai/generation.json`
 
@@ -1314,7 +1286,7 @@ spec/README.md            the map: one line per section note, the note format, h
 spec/01-overview.md … spec/10-engine-guide.md      one note per SPEC § (its ### subsections inside)
 spec/11-rulings.md        §11's provenance paragraphs (the prose above the table), verbatim
 spec/rulings/R0001.md … spec/rulings/R0762.md      one note per §11 row (4-digit, zero-padded; 561 files)
-spec/INDEX.md             generated by `cargo jackioh spec index`: id | title | note | proven in
+spec/INDEX.md             generated by `cargo jackioh spec index`: id | title | note | touches
 ```
 
 A ruling note:

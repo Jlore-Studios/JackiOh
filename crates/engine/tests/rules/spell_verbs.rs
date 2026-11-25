@@ -361,6 +361,32 @@ mod r1848001_a_spells_trample_carries_its_excess_onto_the_adjacent_units {
     }
 
     #[test]
+    fn r4453000_a_dormant_neighbour_is_passed_by_and_the_excess_goes_on() {
+        // A Dormant card acts not (§6.1 Dormant, R1839000): it is no neighbour, so the excess skips it
+        // whichever way a draw would have gone, rather than stopping on a card `land` refuses.
+        let dormant_board = |seed: &str, radiant: bool| {
+            let mut s = meteor_board(seed, radiant, json!([]), three_plains());
+            let sleeper = id_at(&s, P2, 1);
+            find_instance_mut(s.state_mut(), &sleeper)
+                .expect("the sleeper")
+                .slumber = Some(Slumber { turns: Some(2) });
+            s
+        };
+        let mut s = dormant_board("r4453000-dormant", false);
+        let before = s.state().rng_cursor;
+        let (sleeper, target, right) = (id_at(&s, P2, 1), id_at(&s, P2, 2), id_at(&s, P2, 3));
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
+        assert_eq!(hits(&s), vec![(target, 3), (right, 3)]);
+        assert_eq!(s.card(&sleeper).damage, 0);
+        assert_eq!(s.state().rng_cursor, before, "a lone neighbour is no draw");
+
+        let mut s = dormant_board("r4453000-dormant-radiant", true);
+        let target = id_at(&s, P2, 2);
+        s.play(meteor.id.as_str(), pick::targets(pick::id(&target)));
+        assert_eq!(hero_health(&s, P2), HERO_HEALTH - (20 - 6));
+    }
+
+    #[test]
     fn r1848001_the_excess_is_what_armor_left_past_the_health_and_indestructible_sends_none() {
         // Armor 7 takes 7 of the 15; the 7/7 counts 7 of the 8 left, and its neighbour takes the 1.
         let mut s = meteor_board(
@@ -1181,5 +1207,67 @@ mod r1868000_an_x_cards_declared_target_reads_the_x_of_its_play {
             GameEvent::Buffed { instance_id, attack: 2, .. } if *instance_id == risen
         )));
         s.expect_in_zone(risen.as_str(), "graveyard");
+    }
+}
+
+// Issue #4508: I21's fuzz found S #150 Call to Chaos's "Allure every enemy Unit" marking a Unit Immune to
+// Spells: the Allure walk passed only a Dormant card by (R4453000).
+mod r4453000_a_spells_allure_passes_a_unit_immune_to_spells_by {
+    use super::*;
+    use jackioh_engine::effects::allure_enemy_units;
+
+    /// `allure_enemy_units` applied as `source`'s, p1's, and the ids it marked.
+    fn allured_by(s: &mut Scenario, source: &CardInstance) -> Vec<String> {
+        let mut events: Vec<GameEvent> = Vec::new();
+        let state = s.state_mut();
+        let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
+        {
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
+            let options = HookOptions {
+                controller: Some(P1),
+                ..Default::default()
+            };
+            let mut ctx = make_context(&mut sink, Some(source), options);
+            (allure_enemy_units().apply)(&mut ctx);
+        }
+        events
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Marked {
+                    instance_id,
+                    added: true,
+                    ..
+                } => Some(instance_id.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn r4453000_a_spells_allure_passes_a_unit_immune_to_spells_by_and_a_units_reaches_it() {
+        let mut s = board(
+            "p1",
+            "r4453000-allure",
+            json!(["stand-in (0) Spell"]),
+            json!([{ "def": "stand-in (1) 1/1", "lane": 1 }]),
+            json!([plain.id]),
+            json!([
+                { "def": "stand-in (1) 4/4 Immune to Spells", "lane": 1 },
+                { "def": "stand-in (1) 4/4", "lane": 2 },
+            ]),
+        );
+        let (immune, exposed) = (id_at(&s, P2, 1), id_at(&s, P2, 2));
+        let spell = s.card("stand-in (0) Spell").clone();
+        assert_eq!(
+            allured_by(&mut s, &spell),
+            vec![exposed.clone()],
+            "the Spell passes it by"
+        );
+        let unit = s.unit(P1, 1).expect("the Unit");
+        let mut by_unit = allured_by(&mut s, &unit);
+        by_unit.sort();
+        let mut both = vec![immune, exposed];
+        both.sort();
+        assert_eq!(by_unit, both, "a Unit's Allure reaches it");
     }
 }

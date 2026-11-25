@@ -470,6 +470,14 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         animated: Option<bool>,
+        /// R4423000: what the card was on the field as it died (`faces::card_type_of`), only when that is
+        /// not its face's printed type: a card set by its Cloaked dies as a Field Trap or a Trap (R3777000,
+        /// R783008), an Animated one standing in a unit zone as a Unit (R383). Unlike `animated`, the rules
+        /// read it (`as_rules_read` keeps it, `query::is_unit_death`), and a view that hides the card hides
+        /// it too (R97).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        died_as: Option<CardType>,
         /// R2783001: the keyword behind this event — Poisonous when a Poisonous hit marked the unit, else
         /// First Strike when it fell to the strike §4.3 moved ahead and so struck nothing back — for the
         /// client's cue; the engine sets it where the keyword applies, never a card (CLAUDE.md rule 5). No
@@ -703,6 +711,13 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         again: Option<bool>,
+        /// R4586007: the attacker of the attack the firing answers (`traps::fire_trap` on an
+        /// `attackDeclared`), in a game holding an Infinite Assault card (`recursion_log::kept`), so a
+        /// trigger on a Figment's reveal can copy it. Absent otherwise, so no other game's firing
+        /// serializes otherwise than it did before the field existed.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        attacker_id: Option<String>,
     },
     AttackDeclared {
         attacker_id: String,
@@ -1463,7 +1478,8 @@ impl GameEvent {
     /// R2783001: a `damage`, a `damageAbsorbed`, a `healed`, a `destroyed` and a `summoned` without their
     /// `via`, the client's cue (the `hookResolving` marker never reaches the loop at all, R2783000).
     /// R4395001: a `destroyed` without its `animated`, which only a script reading the action's own
-    /// `events` consults, so no state hash moves for it either.
+    /// `events` consults, so no state hash moves for it either. R4423000: a `destroyed` keeps its
+    /// `diedAs`, which the rules read.
     /// Every other event is itself.
     pub fn as_rules_read(&self) -> GameEvent {
         match self {
@@ -1516,6 +1532,7 @@ impl GameEvent {
                 killer_id,
                 radiant,
                 animated: _,
+                died_as,
                 via: _,
             } => GameEvent::Destroyed {
                 instance_id: instance_id.clone(),
@@ -1527,6 +1544,7 @@ impl GameEvent {
                 killer_id: killer_id.clone(),
                 radiant: *radiant,
                 animated: None,
+                died_as: *died_as,
                 via: None,
             },
             GameEvent::ControlChanged {
@@ -1971,6 +1989,7 @@ mod tests {
                 killer_id: Some("c4".into()),
                 radiant: None,
                 animated: None,
+                died_as: None,
                 via: Some(KeywordKind::Poisonous),
             },
             GameEvent::Summoned {
@@ -1992,5 +2011,32 @@ mod tests {
             assert!(read.get("via").is_none(), "{read}");
             assert!(serde_json::to_value(&event).unwrap().get("via").is_some());
         }
+    }
+
+    /// R4423000: a `destroyed` names what its card died as only when it is not the printed type, so an
+    /// ordinary death's JSON is what it was; the rules keep it.
+    #[test]
+    fn r4423000_died_as_rides_the_wire_only_when_set_and_the_rules_read_it() {
+        let died = |died_as: Option<CardType>| GameEvent::Destroyed {
+            instance_id: "c9".into(),
+            def_id: "core-001".into(),
+            owner: PlayerId::P2,
+            controller: PlayerId::P2,
+            attack: 1,
+            max_health: 1,
+            killer_id: None,
+            radiant: None,
+            animated: None,
+            died_as,
+            via: None,
+        };
+        let plain = serde_json::to_value(died(None)).unwrap();
+        assert!(plain.get("diedAs").is_none(), "{plain}");
+
+        let set = died(Some(CardType::FieldTrap));
+        let json = serde_json::to_string(&set).unwrap();
+        assert!(json.contains(r#""diedAs":"Field Trap""#), "{json}");
+        assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), set);
+        assert_eq!(set.as_rules_read(), set);
     }
 }

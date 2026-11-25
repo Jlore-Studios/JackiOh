@@ -1,9 +1,9 @@
 # The daily spec fold (`cargo jackioh spec fold`, crates/tools/src/spec.rs). A branch that adds a
 # ruling writes its §11 paragraph to spec/pending/<n>.md, n its issue's number (or its pull
-# request's), and never the end of spec/11-rulings.md or spec/INDEX.md: those two files conflicted on
+# request's), and never spec/history/ or spec/INDEX.md: the page that held the history and the index conflicted on
 # nearly every merge, and in one week 42 of the 68 revisions the night bot ran only because main had
-# moved were for them (reviews/2026-10-22-issue-682-subscriptions.md, finding 3). Once a day this folds
-# the paragraphs pending on main into 11-rulings.md in number order, deletes them, rewrites INDEX.md
+# moved were for them (#1681's audit, finding 3). Once a day this folds
+# the paragraphs pending on main into spec/history/<n>.md, one note an issue, deletes them, rewrites INDEX.md
 # from the notes and CARDS.md, the cards by keyword, tag and pool, from the catalog (#3804), and
 # opens the result as a pull request that merges itself by squash once CI passes, as
 # patches-ship.yml's promotions do. Only those three files wait for it: a branch still writes its
@@ -70,11 +70,11 @@ jobs:
           git add -A spec
           git -c user.name="$login" -c user.email="$id+$login@users.noreply.github.com" \
             commit -q -m "$title" \
-            -m "Folds spec/pending/ on main at $head into spec/11-rulings.md and rewrites spec/INDEX.md and spec/CARDS.md (\`cargo jackioh spec fold\`)."
+            -m "Folds spec/pending/ on main at $head into spec/history/ and rewrites spec/INDEX.md and spec/CARDS.md (\`cargo jackioh spec fold\`)."
           git push -u origin "$branch"
 
           body=$(printf '%s\n' \
-            "Folds the §11 paragraphs pending on main at $head into \`spec/11-rulings.md\`, in number order, deletes them, rewrites \`spec/INDEX.md\` from the ruling notes and \`spec/CARDS.md\` from the catalog (\`cargo jackioh spec fold\`)." \
+            "Folds the §11 paragraphs pending on main at $head into \`spec/history/<n>.md\`, one note an issue, deletes them, rewrites \`spec/INDEX.md\` from the ruling notes and \`spec/CARDS.md\` from the catalog (\`cargo jackioh spec fold\`)." \
             "" \
             "Opened by \`.github/workflows/spec-fold.yml\`; it merges itself once CI passes.")
           url=$(gh pr create --base main --head "$branch" --title "$title" --body "$body")

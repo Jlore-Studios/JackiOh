@@ -20,6 +20,7 @@ import { tokenFromProtocols } from "../net/socketProtocols.ts";
 import { writeSettings } from "../settings/index.ts";
 import { sidelineTestid } from "../sideline/testids.ts";
 import { baseView, duosTeamView, duosView, pendingFor } from "../test/fixtures.ts";
+import { pressBack } from "../test/history.ts";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { at, must, refusal, stubServer, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
 import type { DuosView } from "../wire/generated/DuosView.ts";
@@ -324,6 +325,21 @@ describe("R2092000 Play again on the co-op result", () => {
     expect(screen.getByTestId(duosTestid.resultAgain)).not.toBeDisabled();
   });
 
+  it("R4742000 a live game's result offers Main menu after Back to Play together, which leaves for the Play menu", async () => {
+    serve(() => HERE);
+    finished();
+    await flush();
+
+    const back = screen.getByTestId(duosTestid.resultBack);
+    const menu = screen.getByTestId(duosTestid.resultMenu);
+    expect(menu).toHaveTextContent("Main menu");
+    expect(back.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(menu.parentElement).toBe(back.parentElement);
+
+    fireEvent.click(menu);
+    expect(window.location.pathname).toBe(paths.play);
+  });
+
   it("R2092000 with the teammate's offer read, the panel says the teammate wants to play again, and a press makes the offer", async () => {
     const server = serve(() => ({ ...HERE, teammateOffered: true }));
     finished();
@@ -462,6 +478,42 @@ describe("R2092000 Play again on the co-op result", () => {
     } finally {
       resetVisibility();
     }
+  });
+});
+
+describe("R4619000 Back closes the co-op result's replay", () => {
+  const FINISHED = duosView(3, { outcome: "win", winner: "b", reason: "concede" });
+
+  beforeEach(() => {
+    at(paths.play);
+    window.history.pushState(null, "", paths.duos("dm-1"));
+    stubServer((call) => {
+      if (call.method === "GET" && call.path === "/api/catalog") return { status: 200, body: { version: "v1", defs: {} } };
+      if (call.method === "GET" && call.path === "/api/duos/matches/dm-1/replay") return { status: 200, body: { seat: "a1", steps: [duosView(0), FINISHED] } };
+      return undefined;
+    });
+  });
+
+  afterEach(() => {
+    at("/");
+  });
+
+  it("R4619000 one Back on a finished co-op match's replay returns to its result on /duos/:id", async () => {
+    render(<DuosRoute matchId="dm-1" token="tok-duos" />);
+    act(() => {
+      latest().readyState = 1;
+      latest().onopen?.({});
+    });
+    act(() => {
+      latest().onmessage?.({ data: JSON.stringify({ type: "view", view: FINISHED, legal: [] }) });
+    });
+    fireEvent.click(await screen.findByTestId(duosTestid.resultReplay));
+    await screen.findByTestId(duosTestid.replay);
+
+    await pressBack();
+    expect(await screen.findByTestId(duosTestid.resultReplay)).toBeInTheDocument();
+    expect(screen.queryByTestId(duosTestid.replay)).toBeNull();
+    expect(window.location.pathname).toBe(paths.duos("dm-1"));
   });
 });
 

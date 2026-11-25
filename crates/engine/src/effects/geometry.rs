@@ -26,6 +26,10 @@ pub struct OpenBlackHoleArgs {
     /// R3561000: the permanents it closes after (Black Hole's `permanents`); `None`: the engine's.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub capacity: Option<i32>,
+    /// R4440050: it pulls at the end of each pulled player's turn instead of the start (the base face
+    /// since issue #4440).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub at_end: Option<bool>,
 }
 
 /// R3554000 (S+ #77 Black Hole): open a Black Hole in the middle lane. A new hole replaces an open
@@ -39,6 +43,7 @@ pub fn open_black_hole(args: OpenBlackHoleArgs) -> Effect {
         };
         ctx.state.black_hole = Some(BlackHole {
             capacity: args.capacity,
+            at_end: (args.at_end == Some(true)).then_some(true),
             ..BlackHole::new(BLACK_HOLE_LANE, pulls)
         });
     })

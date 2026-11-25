@@ -14,7 +14,7 @@ import type { EmoteGate, EmoteId, PortraitId } from "@jackioh/shared";
 import { PORTRAITS } from "@jackioh/shared";
 
 import { readerName } from "../cards/chinese.ts";
-import { flavourFor } from "../cards/flavour.ts";
+import { flavourFor, useFlavour } from "../cards/flavour.ts";
 import { useModalOverlay } from "../cards/inspect/store.ts";
 import "../cards/inspect/inspect.css";
 import { DialogClose } from "../game/Dialog.tsx";
@@ -87,7 +87,8 @@ export function HeroInspect({
   const modal = useModalOverlay(onClose, closeRef);
   const nameId = useId();
   const { defId, def } = portraitDefs()[portrait];
-  const flavour = flavourFor(defId)?.flavour;
+  const sidecar = useFlavour();
+  const flavour = flavourFor(defId, sidecar ?? {})?.flavour;
 
   return createPortal(
     <div className="inspect-layer hero-inspect-layer" {...modal.layerProps}>

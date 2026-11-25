@@ -66,8 +66,11 @@ beforeEach(() => {
   setMusicPlayerForTests(player);
 });
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  // R4606000: a leaving board's hand-back lands on a microtask; run it now, against this test's
+  // player, so none leaks into the next test.
+  await act(async () => {});
   for (const release of releases.splice(0)) release();
   setMusicPlayerForTests(null);
   setAudioEngineForTests(null);
@@ -114,7 +117,7 @@ describe("R631 the audio panel's music controls", () => {
 });
 
 describe("R631 the menu theme and the board's music", () => {
-  it("R631 a screen without a board plays the menu theme; a board takes over and hands it back", () => {
+  it("R631 a screen without a board plays the menu theme; a board takes over and hands it back", async () => {
     releases.push(holdMenuMusic());
     expect(player.requests.at(-1)).toEqual({ track: "menu", opponentTurn: false });
 
@@ -127,6 +130,8 @@ describe("R631 the menu theme and the board's music", () => {
 
     unmount();
     expect(gameMusicClaims()).toBe(0);
+    // R4606000: the hand-back lands on a microtask, so it is flushed, not dropped, here.
+    await act(async () => {});
     expect(player.requests.at(-1)).toEqual({ track: "menu", opponentTurn: false });
   });
 
@@ -151,6 +156,31 @@ describe("R631 the menu theme and the board's music", () => {
     expect(player.intros).toEqual(["intro-core-097"]);
     expect(player.requests.length).toBeGreaterThan(0);
     expect(player.requests.filter((r) => r.track !== "tavern-1" && r.track !== "menu")).toEqual([]);
+  });
+});
+
+describe("R4606000 two boards of one match", () => {
+  it("R4606000 two boards of one match in a single commit never ask for the menu theme", async () => {
+    const key = {};
+    const first = render(<Game view={baseView({ turn: 1, phase: "mulligan" })} legal={[]} onAction={() => undefined} musicKey={key} />);
+    const wanted = player.requests.find((r) => r.track !== "menu")?.track;
+    expect(wanted).toBe("tavern-1");
+    const before = player.requests.length;
+    first.unmount();
+    render(<Game view={baseView({ turn: 6 })} legal={[]} onAction={() => undefined} musicKey={key} />);
+    await act(async () => {});
+    expect(player.requests.slice(before).some((r) => r.track === "menu")).toBe(false);
+    expect(player.requests.filter((r) => r.track !== "menu").at(-1)?.track).toBe(wanted);
+  });
+
+  it("R4606000 a keyed board leaving with nothing after it still brings the menu theme back", async () => {
+    releases.push(holdMenuMusic());
+    const { unmount } = render(<Game view={baseView({ turn: 1, phase: "mulligan" })} legal={[]} onAction={() => undefined} musicKey={{}} />);
+    expect(player.requests.find((r) => r.track !== "menu")).toEqual({ track: "tavern-1", intro: "tavern-start", opponentTurn: false });
+    unmount();
+    await act(async () => {});
+    expect(gameMusicClaims()).toBe(0);
+    expect(player.requests.at(-1)).toEqual({ track: "menu", opponentTurn: false });
   });
 });
 

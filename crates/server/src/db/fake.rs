@@ -42,12 +42,12 @@ use crate::db::store::{
     CollectionEntry, CollectionGrant, ConsentRow, Db, DeckVersion, DeckVersionOutcome, EmoteEventRow,
     FavoriteCard, FoldedRecords, FrozenTrio, FunStats, GameRecordQuery, InviteCluster, InviteCode,
     LastBoardEntry, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks,
-    MatchPhase, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode, PlayTelemetry,
-    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
-    PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
-    ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult,
-    ReplayRow, ReplayWithMode, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck,
-    SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
+    MatchPhase, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode,
+    PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
+    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
+    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput,
+    RedeemResult, ReplayListRow, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room,
+    SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
     StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
     TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord,
     UpsertOutcome, UsernameClaim, UsernameClaimOutcome, deck_version_step,
@@ -1303,6 +1303,21 @@ pub fn matches_get(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<MatchRow
     Ok(f.tables().matches.iter().find(|row| row.id == match_id).cloned())
 }
 
+/// #4510: the portrait pairs of the asked matches, as Postgres answers them (`live` and `over` rows only;
+/// the fake holds no `open` reservation, and a non-uuid matches nothing).
+pub fn matches_portraits(
+    f: &mut FakeTx<'_>,
+    match_ids: &[String],
+) -> Result<Vec<MatchPortraits>, StoreError> {
+    call(f, "matches.portraits")?;
+    Ok(f.tables()
+        .matches
+        .iter()
+        .filter(|row| match_ids.contains(&row.id))
+        .map(|row| (row.id.clone(), row.portraits))
+        .collect())
+}
+
 /// Append-only (§9.3), as `app.append_match_action` is (R776000): a nonce already logged at the row's
 /// own seq is answered with that row and writes nothing, so a write that committed and whose answer was
 /// lost can be sent again; a seq held under another nonce, or a nonce held at another seq, is a
@@ -1435,6 +1450,22 @@ pub fn matches_live(f: &mut FakeTx<'_>) -> Result<Vec<MatchRow>, StoreError> {
         .matches
         .iter()
         .filter(|row| row.status == MatchStatus::Live && !is_daily_match(tables, &row.id))
+        .cloned()
+        .collect())
+}
+
+/// The reaper's read: `matches_live`'s rows whose ceiling is at or before `now`, in the order made.
+pub fn matches_past_ceiling(f: &mut FakeTx<'_>, now: i64) -> Result<Vec<MatchRow>, StoreError> {
+    call(f, "matches.pastCeiling")?;
+    let tables: &FakeTables = f.tables();
+    Ok(tables
+        .matches
+        .iter()
+        .filter(|row| {
+            row.status == MatchStatus::Live
+                && row.clocks.ceiling_at <= now
+                && !is_daily_match(tables, &row.id)
+        })
         .cloned()
         .collect())
 }
@@ -1620,31 +1651,30 @@ pub fn replays_list_with_modes(
     profile_id: &str,
     limit: i64,
     offset: i64,
-) -> Result<Vec<ReplayWithMode>, StoreError> {
+) -> Result<Vec<ReplayListRow>, StoreError> {
     call(f, "replays.listWithModes")?;
     let tables: &FakeTables = f.tables();
-    let mut rows: Vec<ReplayWithMode> = tables
+    let mut rows: Vec<ReplayRow> = tables
         .matches
         .iter()
         .filter(|row| row.players.0 == profile_id || row.players.1 == profile_id)
         .filter_map(|row| replay_row_in(tables, row))
         .filter(|replay| replay.actions > 0)
-        .map(|replay| {
-            let mode = match_mode_in(tables, &replay.row.id);
-            ReplayWithMode { replay, mode }
-        })
         .collect();
     rows.sort_by(|a, b| {
-        b.replay
-            .row
+        b.row
             .finished_at
-            .cmp(&a.replay.row.finished_at)
-            .then_with(|| b.replay.row.id.cmp(&a.replay.row.id))
+            .cmp(&a.row.finished_at)
+            .then_with(|| b.row.id.cmp(&a.row.id))
     });
     Ok(rows
         .into_iter()
         .skip(usize::try_from(offset).unwrap_or(0))
         .take(usize::try_from(limit).unwrap_or(0))
+        .map(|replay| {
+            let mode = match_mode_in(tables, &replay.row.id);
+            ReplayListRow::of(replay, mode)
+        })
         .collect())
 }
 
@@ -3327,7 +3357,8 @@ pub fn remove_profile_rows(tables: &mut FakeTables, profile_id: &str) -> bool {
     // The dev dashboard (#3074): 0080's hand-set ratings and rating ledger cascade with the
     // profile; its audit rows and posts stay and forget it (`on delete set null`).
     crate::admin::store::remove_admin_rows(&mut tables.admin, profile_id);
-    // Daily games (#3727): 0089's rows cascade with the profile.
+    // Daily games (#3727): 0089's rows cascade with the profile; 0100 empties its seat on each daily
+    // game, which stays for the other player (R4621000).
     remove_daily_rows(&mut tables.daily, profile_id);
     // The notification feed (#4039): 0093's rows cascade with the profile they tell or name.
     crate::notifications::store::remove_notification_rows(&mut tables.notifications, profile_id);
@@ -4992,7 +5023,8 @@ pub fn shares_by(f: &mut FakeTx<'_>, match_id: &str, sharer: &str) -> Result<Vec
 // Migration 0089's four tables, in memory. Strict where Postgres is strict: one game per match and only
 // beside its match row, one open challenge per sender and friend and one open seek per sender, mode and
 // days per move (the two partial unique keys), each table's checks, one subscription per endpoint, and
-// every row goes with the profile it names (`remove_daily_rows`) and a game with its match.
+// every row goes with the profile it names but a game's seat, which empties (`remove_daily_rows`), and a
+// game goes with its match.
 
 use crate::db::store::{
     DailyGameRow, DailyInviteKind, DailyInviteRow, DailyInviteState, DailyNotifyRow, PushSubRow,
@@ -5010,11 +5042,17 @@ pub struct DailyTables {
     pub email_days: IndexMap<i64, i32>,
 }
 
-/// Every daily row naming the profile, as 0089's `on delete cascade` takes them.
+/// Every daily row naming the profile, as 0089's `on delete cascade` takes them, but a game's seat,
+/// which empties (0100's `on delete set null`, R4621000).
 pub fn remove_daily_rows(daily: &mut DailyTables, profile_id: &str) {
-    keep_only(&mut daily.games, |row| {
-        row.players.0 != profile_id && row.players.1 != profile_id
-    });
+    // 0100, R4621000: the seat empties and the game stays for the other player.
+    for row in daily.games.iter_mut() {
+        for seat in [&mut row.players.0, &mut row.players.1] {
+            if *seat == profile_id {
+                seat.clear();
+            }
+        }
+    }
     keep_only(&mut daily.invites, |row| {
         row.from_profile != profile_id && row.to_profile.as_deref() != Some(profile_id)
     });
@@ -5205,6 +5243,7 @@ pub fn daily_games_put(
     Ok(true)
 }
 
+// Postgres reads the running games and the finished ones apart (#4510) and merges them in this order.
 pub fn daily_games_due(f: &mut FakeTx<'_>, now: i64) -> Result<Vec<String>, StoreError> {
     call(f, "dailyGames.due")?;
     let tables = f.tables();
@@ -5473,6 +5512,12 @@ pub fn daily_invites_purge(f: &mut FakeTx<'_>, now: i64) -> Result<i64, StoreErr
     call(f, "dailyInvites.purge")?;
     let gone = keep_only(&mut f.tables().daily.invites, |row| row.expires_at > now);
     Ok(gone as i64)
+}
+
+/// R4691000: the least `expires_at` of any invite.
+pub fn daily_invites_next_lapse(f: &mut FakeTx<'_>) -> Result<Option<i64>, StoreError> {
+    call(f, "dailyInvites.nextLapse")?;
+    Ok(f.tables().daily.invites.iter().map(|row| row.expires_at).min())
 }
 
 // daily notices

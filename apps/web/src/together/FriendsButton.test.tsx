@@ -28,9 +28,14 @@ import { ChallengeToast } from "./ChallengeToast.tsx";
 import { UNDO_TOAST_UNDO } from "../undo/UndoToast.tsx";
 import { challengeKindTestid, chatTestid, friendsTestid, togetherTestid } from "./testids.ts";
 import { FriendsButton } from "./FriendsButton.tsx";
+import { friendsDrawerChunk } from "./friendsDrawerChunk.ts";
 import { tabStops } from "./modalKeys.ts";
 
 const { App, resetUsernamePromptForTests } = await import("../main.tsx");
+
+// #4444: the drawer arrives in its own chunk; warmed once here so the tests below measure the
+// drawer, not the code's arrival.
+await friendsDrawerChunk.load();
 
 const SLOW = { timeout: 8_000 } as const;
 const TEST_MS = 15_000;
@@ -1130,6 +1135,22 @@ describe("R3207003 the panel opens on the account the page kept", () => {
 
       await within(panel).findByText(wholeText("Me#1"), undefined, SLOW);
       expect(server.to("GET", ME_PATH)).toHaveLength(1);
+    },
+    TEST_MS,
+  );
+});
+
+describe("#4444 the drawer chunk", () => {
+  it(
+    "#4444 opening Friends loads its drawer chunk on first open, then draws the panel",
+    async () => {
+      signIn("tok-drawer-chunk");
+      serve(world());
+      shell();
+      expect(screen.queryByTestId(friendsTestid.panel)).toBeNull();
+      fireEvent.click(await button());
+      const panel = await screen.findByTestId(friendsTestid.panel, undefined, SLOW);
+      await within(panel).findByText(wholeText("Ann#2"), undefined, SLOW);
     },
     TEST_MS,
   );

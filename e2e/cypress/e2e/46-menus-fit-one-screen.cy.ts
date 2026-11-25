@@ -12,6 +12,7 @@ import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid, s
 import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
 import { practiceTestid } from "../../../apps/web/src/practice/testids.ts";
 import { menuShellTestid } from "../../../apps/web/src/shell/testids.ts";
+import { statsTestid } from "../../../apps/web/src/stats/testids.ts";
 import { SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED } from "../../../apps/web/src/wire/serverConfig.ts";
 import { allCardIds, cardId } from "../../support/cards.ts";
 import { MENU_SIZES, accounts, constants, routes, timeouts, type MenuSize } from "../../support/config.ts";
@@ -50,6 +51,10 @@ const ONE_SCREEN = 1;
 
 /** A box's edge may sit this far past the window's (a sub-pixel border) and still be inside it. */
 const EDGE_SLACK_PX = 1;
+/** How many of the boxes an overflow starts in its message names (#4375). */
+const PAST_EDGE_NAMED = 5;
+/** How far past the editor's edge a box must reach for that message to name it: more than rounding. */
+const PAST_EDGE_MIN_PX = 0.5;
 
 /** #4349: Chrome's select arrow and the gap before it, measured (Inter at 16 px: whole at a 218 px select with 8 px of padding, cut at 214, so 18 to 19.6); 20 rounds up. */
 const SELECT_ARROW_PX = 20;
@@ -142,7 +147,35 @@ function expectComparePickerWhole(select: HTMLSelectElement, where: string): voi
   expect(sidebar.scrollWidth, `the sidebar does not scroll sideways at ${where}`).to.be.at.most(sidebar.clientWidth + EDGE_SLACK_PX);
   expect(Math.ceil(selectBox.right), `the select ends inside the sidebar at ${where}`).to.be.at.most(Math.ceil(sidebar.getBoundingClientRect().right));
   const editor = doc.querySelector<HTMLElement>(ts(DECK_EDITOR));
-  expect(editor?.scrollWidth, `the editor does not overflow sideways at ${where}`).to.be.at.most((editor?.clientWidth ?? 0) + EDGE_SLACK_PX);
+  const past = editor === null ? "" : pastRightEdge(editor);
+  expect(editor?.scrollWidth, `the editor does not overflow sideways at ${where}${past}`).to.be.at.most((editor?.clientWidth ?? 0) + EDGE_SLACK_PX);
+}
+
+/**
+ * Where `box`'s sideways overflow comes from (#4375): the deepest of its descendants that reach past its
+ * right padding edge, by their own box or by what they lay out past it (`overflow-x: visible`, so a
+ * positioned `::before` or `::after` counts), the furthest first, each with its parent's name and how far
+ * past the edge it reaches.
+ */
+function pastRightEdge(box: HTMLElement): string {
+  const boxRect = box.getBoundingClientRect();
+  const edge = boxRect.left + box.clientLeft + box.clientWidth;
+  const reachOf = (element: HTMLElement): number => {
+    const rect = element.getBoundingClientRect();
+    const laidOut = getComputedStyle(element).overflowX === "visible" ? rect.left + element.clientLeft + element.scrollWidth : -Infinity;
+    return Math.max(rect.right, laidOut);
+  };
+  const past = [...box.querySelectorAll<HTMLElement>("*")].filter((element) => reachOf(element) > edge + PAST_EDGE_MIN_PX);
+  const deepest = past.filter((element) => !past.some((other) => other !== element && element.contains(other)));
+  deepest.sort((a, b) => reachOf(b) - reachOf(a));
+  const named = (element: Element | null): string =>
+    element === null ? "none" : `${element.tagName.toLowerCase()}${[...element.classList].map((name) => `.${name}`).join("")}`;
+  const parts = deepest.slice(0, PAST_EDGE_NAMED).map((element) => {
+    const rect = element.getBoundingClientRect();
+    return `${named(element)} in ${named(element.parentElement)}: box ${(rect.right - edge).toFixed(1)}px, laid out ${(reachOf(element) - edge).toFixed(1)}px past (scroll ${element.scrollWidth}, client ${element.clientWidth})`;
+  });
+  const style = getComputedStyle(box);
+  return ` (the editor's overflow-x ${style.overflowX}, padding-right ${style.paddingRight}; ${deepest.length} box(es) past its edge${parts.length === 0 ? "" : `: ${parts.join("; ")}`})`;
 }
 
 /**
@@ -297,6 +330,27 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
 
         it("R1581000 R3218000 R3324000 R4335000 /stats", () => {
           visitStatsFigures();
+          expectBackLinkBarOrder();
+          expectShellNav(false);
+          expectOnScreen(viewport, ONE_SCREEN);
+        });
+
+        // R4678000: the fifth tab is reachable in its row, which scrolls sideways where the tabs are wider than the
+        // window and never wraps or shrinks, and its page, Running and the line above the tabs, is one screen.
+        it("R1581000 R4335000 R4678000 /stats, the Experimental tab", () => {
+          cy.visit("/stats");
+          cy.get(ts(statsTestid.screen), { timeout: timeouts.view }).should("be.visible");
+          cy.get(ts(statsTestid.tabExperimental)).scrollIntoView().should("be.visible").click();
+          cy.get(ts(statsTestid.runningTable), { timeout: timeouts.view }).should("be.visible");
+          cy.get(ts(statsTestid.experimentalLine)).should("be.visible");
+          cy.get(ts(statsTestid.tabExperimental)).should(($tab) => {
+            const tab = $tab[0];
+            expect(tab, "the Experimental tab").to.not.eq(undefined);
+            const box = tab?.getBoundingClientRect() ?? new DOMRect();
+            const width = tab?.ownerDocument.defaultView?.innerWidth ?? 0;
+            expect(box.left, "the Experimental tab's left edge").to.be.at.least(-EDGE_SLACK_PX);
+            expect(box.right, "the Experimental tab's right edge").to.be.at.most(width + EDGE_SLACK_PX);
+          });
           expectBackLinkBarOrder();
           expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);

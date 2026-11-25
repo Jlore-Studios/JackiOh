@@ -819,8 +819,13 @@ fn r3134001_the_faces_the_balance_pass_put_over_the_limit_clamp() {
             assert!(written(id, radiant), "{id} {radiant}");
         }
     }
-    assert!(written("meditative-009", true));
+    // Issue #4440 put an Activate in Meditative #9's Cry's place, and both its faces fit whole again.
+    assert_eq!(short_form_of("meditative-009", true), None);
     assert_eq!(short_form_of("meditative-009", false), None);
+    // Issue #4440's "You have +N mana per turn" put both of Classic #28 Second Wind's faces a line over: each
+    // prints words written for it.
+    assert!(written("classic-028", false));
+    assert!(written("classic-028", true));
     // Issue #3837: Silly Silas's base face gained "Summon this for your opponent." and clamped, and his
     // Radiant face, Crater gone, fit. Issue #4353 took that line off and gave both faces "Float reduces
     // cost.": the base face fits, and the Radiant face prints words written for it.
@@ -903,8 +908,8 @@ fn r3556000_a_dormant_field_spell_in_the_backrow_wears_its_countdown() {
         .expect("a face-up backrow card");
     assert_eq!(
         live.slumber,
-        Some(jackioh_engine::state::Slumber { turns: Some(1) }),
-        "LiveCard carries the countdown off the backrow view"
+        Some(jackioh_engine::state::Slumber { turns: Some(2) }),
+        "LiveCard carries the countdown off the backrow view (2 turns on the base face since issue #4665)"
     );
     let faces = view_faces(Words::new(Locale::En), &view);
     let face = faces.get(&live.instance_id).expect("a face for the Projector");

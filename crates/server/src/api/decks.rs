@@ -1169,75 +1169,57 @@ fn assert_legal(
     decks: &[SavedDeck],
     scope: LoadoutScope,
 ) -> Result<(), ApiError> {
-    let banned: Vec<&String> = app
+    let banned: Vec<validator::CardId> = app
         .catalog
         .card_ids
         .iter()
         .filter(|card_id| app.catalog.is_banned(card_id))
+        .cloned()
         .collect();
-    let catalog =
-        json!({ "version": app.catalog.version, "cards": to_json(&app.catalog.defs)?, "banned": banned });
-    let collection = to_json(owned)?;
-    let deck_at = |deck: &SavedDeck| json!({ "name": deck.name, "cards": deck.cards });
+    let collection: validator::Collection = owned
+        .iter()
+        .map(|(card_id, quantity)| (card_id.clone(), i32::try_from(*quantity).unwrap_or(i32::MAX)))
+        .collect();
+    let decks: Vec<validator::LoadoutDeck> = decks
+        .iter()
+        .map(|deck| validator::LoadoutDeck {
+            name: Some(deck.name.clone()),
+            cards: deck.cards.clone(),
+        })
+        .collect();
     let result = match scope {
         LoadoutScope::Deck => {
-            let deck = decks
-                .first()
-                .map(deck_at)
-                .unwrap_or_else(|| json!({ "cards": [] }));
-            let input: validator::DeckInput = serde_json::from_value(
-                json!({ "deck": deck, "catalog": catalog, "collection": collection }),
-            )?;
-            to_json(&validator::validate_deck(&input))?
+            let deck = decks.first().cloned().unwrap_or_default();
+            validator::validate_deck_in(
+                &deck,
+                &app.catalog.version,
+                &app.catalog.defs,
+                &banned,
+                &collection,
+            )
         }
-        LoadoutScope::Trio => {
-            let input: validator::LoadoutInput = serde_json::from_value(json!({
-                "decks": decks.iter().map(deck_at).collect::<Vec<_>>(),
-                "catalog": catalog,
-                "collection": collection,
-            }))?;
-            to_json(&validator::validate_loadout(&input))?
-        }
+        LoadoutScope::Trio => validator::validate_loadout_in(
+            &decks,
+            &app.catalog.version,
+            &app.catalog.defs,
+            &banned,
+            &collection,
+        ),
     };
-    if result.get("ok").and_then(Value::as_bool) == Some(true) {
+    if result.ok {
         return Ok(());
     }
-    let errors: Vec<Value> = result
-        .get("errors")
-        .and_then(Value::as_array)
-        .map(|errors| {
-            errors
-                .iter()
-                .map(|error| {
-                    let mut issue = Map::new();
-                    issue.insert(
-                        "rule".to_string(),
-                        error.get("rule").cloned().unwrap_or(Value::Null),
-                    );
-                    issue.insert(
-                        "message".to_string(),
-                        error.get("message").cloned().unwrap_or(Value::Null),
-                    );
-                    if let Some(deck) = error.get("deck").filter(|deck| !deck.is_null()) {
-                        issue.insert("deck".to_string(), deck.clone());
-                    }
-                    if let Some(card_id) = error.get("cardId").filter(|card_id| !card_id.is_null()) {
-                        issue.insert("cardId".to_string(), card_id.clone());
-                    }
-                    Value::Object(issue)
-                })
-                .collect()
-        })
-        .unwrap_or_default();
-    let Some(first) = first_message(&errors) else {
+    let Some(first) = result.errors.first() else {
         return Err(ApiError::internal(
             "the validator refused a loadout without saying why",
         ));
     };
+    let message = first.message.clone();
+    let details = to_json(&result.errors)?;
     Err(ApiError::with_details(
         ApiErrorCode::LoadoutInvalid,
-        first,
-        Value::Array(errors),
+        message,
+        details,
     ))
 }
 

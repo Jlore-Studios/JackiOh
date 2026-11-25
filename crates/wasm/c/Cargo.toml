@@ -31,3 +31,9 @@ jackioh-engine = { workspace = true }
 serde_json = { workspace = true }
 # The tests read the shared logic's numbers from `constants` by name (#3098).
 jackioh-shared = { workspace = true }
+# #4542: turns `jackioh-wasm-core`'s `duos` feature on in every test build, so
+# `cargo test -p jackioh-wasm-c` and `cargo clippy --workspace --all-targets` compile the real
+# Duos bodies. Dev-dependency features never reach the WebAssembly modules
+# `scripts/build-wasm.sh` makes, so the shipped modules keep their stubs.
+# `crates/tools/tests/acceptance.rs` holds this line.
+jackioh-wasm-core = { path = "../core", features = ["duos"] }

@@ -216,6 +216,7 @@ mod r3554000_black_hole {
             swallowed: Some(9),
             pulls: None,
             capacity: None,
+            at_end: None,
         });
         let first = id_at(&s, P1, 3);
         let second = id_at(&s, P2, 3);
@@ -316,6 +317,36 @@ mod r3554001_pull {
         assert_eq!(where_is(s.state(), &near), "p2 units 2");
     }
 
+    /// R4440050: a hole opened `atEnd` pulls each player's permanents at the end of their turn, after the
+    /// Burn tick, and never at a start.
+    #[test]
+    fn r4440050_a_hole_opened_at_end_pulls_at_each_turns_end_never_its_start() {
+        let mut s = board(
+            "r4440050-at-end",
+            json!({ "field": [field_unit(PLAIN, 1), field_unit(PLAIN, 5)] }),
+            json!({ "field": [field_unit(PLAIN, 4)] }),
+        );
+        run_effect(
+            s.state_mut(),
+            effects::open_black_hole(json_as(json!({ "atEnd": true }))),
+            P1,
+        );
+        assert!(s.state().black_hole.is_some_and(|hole| hole.pulls_at_end()));
+        let (one, five) = (id_at(&s, P1, 1), id_at(&s, P1, 5));
+        let theirs = id_at(&s, P2, 4);
+        s.end_turn();
+        // p1's turn ended: theirs stepped; p2's began and pulled nothing.
+        assert_eq!(where_is(s.state(), &one), "p1 units 2");
+        assert_eq!(where_is(s.state(), &five), "p1 units 4");
+        assert_eq!(where_is(s.state(), &theirs), "p2 units 4");
+        s.end_turn();
+        // p2's turn ended: its lane 4 unit was swallowed; p1's began and pulled nothing.
+        assert_eq!(where_is(s.state(), &theirs), "exile");
+        assert_eq!(where_is(s.state(), &one), "p1 units 2");
+        assert_eq!(where_is(s.state(), &five), "p1 units 4");
+        assert_eq!(s.state().black_hole.map(|hole| hole.swallowed_count()), Some(1));
+    }
+
     #[test]
     fn r3554001_pull_passes_dormant_cards_by() {
         let mut s = board(
@@ -341,6 +372,44 @@ mod r3554001_pull {
             where_is(s.state(), &dormant.id),
             "p1 units 4",
             "the hole passes Dormant cards by"
+        );
+    }
+
+    /// R4524000: a Stack card may top a Dormant one (R1839003), and the hole passes that whole pile by:
+    /// neither card steps or goes, while the lane on the hole's other side is swallowed.
+    #[test]
+    fn r4524000_pull_passes_a_pile_holding_a_dormant_card_by() {
+        let mut s = board(
+            "r4524000-pile",
+            json!({
+                "hand": [HOLE],
+                "field": [field_unit(PLAIN, 4)],
+            }),
+            json!({}),
+        );
+        // A Dormant card in lane 2, stamped Slumber by hand (white-box), then topped by a Stack card.
+        let at = slot(P1, Row::Units, 2);
+        let dormant = put(s.state_mut(), PLAIN, at, json!({}));
+        find_instance_mut(s.state_mut(), &dormant.id)
+            .expect("the unit")
+            .slumber = Some(Slumber { turns: Some(2) });
+        let mut top = new_instance(s.state_mut(), PLAIN, P1, Zone::Hand { player: P1 });
+        assert!(place_on_field(
+            s.state_mut(),
+            &mut top,
+            at,
+            PlaceOnFieldOptions { stack: Some(true) }
+        ));
+        let beside = id_at(&s, P1, 4);
+        s.play(HOLE, json!({}));
+        s.end_turn();
+        s.end_turn();
+        assert_eq!(where_is(s.state(), &beside), "exile", "lane 4 was swallowed");
+        assert_eq!(where_is(s.state(), &top.id), "p1 units 2", "the pile's top stays");
+        assert_eq!(
+            where_is(s.state(), &dormant.id),
+            "p1 units 2",
+            "and so does the Dormant card beneath it"
         );
     }
 

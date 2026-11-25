@@ -16,8 +16,8 @@ use jackioh_engine::wire::DuosSeat;
 
 use crate::config::REMATCH_OFFER_TTL_MS;
 
-/// R1398000: whether a finished co-op match's Play again window is open at `now`: at most
-/// `REMATCH_OFFER_TTL_MS` since its end.
+/// R1285000, R1398000: whether a finished match's rematch or Play again window is open at `now`: at
+/// most `REMATCH_OFFER_TTL_MS` since its end.
 pub fn in_again_window(ended_at: i64, now: i64) -> bool {
     now - ended_at <= REMATCH_OFFER_TTL_MS
 }

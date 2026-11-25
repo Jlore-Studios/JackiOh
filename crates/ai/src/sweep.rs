@@ -2,7 +2,9 @@
 //! forces cards into AI decks against greedy baselines across tiers (AI_SWEEP.tiers) to identify failures.
 //!
 //! Evaluates cards across two tiers (Easy, Hard) and two passes (R390) for flags (`neverPlayed`, `selfHarm`,
-//! `selfKill`, `error`, `timeout`). Retimes slow decisions against perf gate (R977000).
+//! `selfKill`, `error`, `timeout`). Retimes slow decisions against perf gate (R977000). Each card is swept
+//! on both faces (#4466): its ordinary one, and its Radiant one through a deck mark (R2702000), each
+//! judged over its own games.
 
 use std::ops::{Deref, DerefMut};
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -10,8 +12,8 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::prelude::json_as;
 use jackioh_engine::{
-    AI_DIFFICULTY, ActionBody, CostOptions, Difficulty, GameState, OffFieldZone, PerPlayer, PerPlayerOpt,
-    Phase, PlayerId, Rng, create_rng, effective_cost, legal_actions, opponent_of, zone_cards,
+    AI_DIFFICULTY, ActionBody, CostOptions, DeckMark, Difficulty, GameState, OffFieldZone, PerPlayer,
+    PerPlayerOpt, Phase, PlayerId, Rng, create_rng, effective_cost, legal_actions, opponent_of, zone_cards,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -52,12 +54,46 @@ impl std::fmt::Display for SweepFlag {
     }
 }
 
+/// #4466: the face a sweep deals its forced card on: the ordinary one, or the Radiant one through a
+/// deck mark (R2702000). Filler is always dealt on its base face.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum SweepFace {
+    #[default]
+    Base,
+    Radiant,
+}
+
+impl SweepFace {
+    /// Every face, in the order a sweep plays them.
+    pub const ALL: [SweepFace; 2] = [SweepFace::Base, SweepFace::Radiant];
+
+    /// The literal, as a sweep line writes it.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            SweepFace::Base => "base",
+            SweepFace::Radiant => "radiant",
+        }
+    }
+
+    /// A base line writes no `face` key, so it reads as it did before faces existed.
+    fn is_base(&self) -> bool {
+        *self == SweepFace::Base
+    }
+}
+
+impl std::fmt::Display for SweepFace {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 /// `AI_SWEEP`'s shape (SURFACE §4.2: a constant object is a const of a struct named after it).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct AiSweep {
     /// The tiers every card is swept at: the fewest resources and the most (see the header).
     pub tiers: &'static [Difficulty],
-    /// Games per card and tier. Four left the neverPlayed flag at the mercy of one deal.
+    /// Games per card, tier and face (#4466). Four left the neverPlayed flag at the mercy of one deal.
     pub seeds_per_card: i32,
     pub decision_ms: i32,
     pub max_actions: i32,
@@ -66,7 +102,7 @@ pub struct AiSweep {
     pub self_harm_delta: f64,
     /// selfHarm needs at least this many plays, so one play into a trap does not ban a card.
     pub min_harm_plays: i32,
-    /// R390: pass 2's games per at-risk card and tier.
+    /// R390: pass 2's games per at-risk card, tier and face (#4466).
     pub seeds_per_card_at_risk: i32,
     /// R390: pass 2's filler draw multiplies every at-risk card's weight by this (as AI_DECK.themeBoost).
     /// A whole number, so `AiDeckOptions.boost.by` reads it whatever its number type.
@@ -102,6 +138,9 @@ pub const AI_SWEEP: AiSweep = AiSweep {
 #[serde(rename_all = "camelCase")]
 pub struct SweepStats {
     pub def_id: String,
+    /// #4466: the face the card was dealt on. Absent on a base line, so an older line reads as base.
+    #[serde(default, skip_serializing_if = "SweepFace::is_base")]
+    pub face: SweepFace,
     pub games: i32,
     pub drawn_games: i32,
     pub affordable_turns: i32,
@@ -187,7 +226,8 @@ pub struct SweepVerdict {
     pub flags: Vec<SweepFlag>,
     /// Never affordable at any tier: no evidence for or against it.
     pub unswept: bool,
-    /// The SHADOW_BAN reason, `"<flags>: <tier>: <what it measured>; …"`, or null when unflagged.
+    /// The SHADOW_BAN reason, `"<flags>: <tier>: <what it measured>; …"`, or null when unflagged; a
+    /// Radiant face's numbers are named `<tier> (Radiant)` (#4466).
     pub reason: Option<String>,
     /// R390, R600: the SHADOW_WATCH entry (at risk by its own numbers, and not banned), or null.
     pub watch: Option<String>,
@@ -221,6 +261,8 @@ pub struct SweepOptions<'a> {
     /// seat order and the same in every game, whichever seat the AI takes (to give the AI a last
     /// board in every game, give both seats one). Absent, every game is created as before.
     pub setup: Option<&'a MatchSetup>,
+    /// #4466: the face the forced card is dealt on; absent, its base face.
+    pub face: Option<SweepFace>,
 }
 
 const FLAG_ORDER: &[SweepFlag] = &[
@@ -373,7 +415,8 @@ struct SweepSetup {
     ai_seat: PlayerId,
 }
 
-/// Game n of a card's sweep at a tier: the AI on that tier's handicap, greedy on Easy's (a human's).
+/// Game n of a card's sweep at a tier: the AI on that tier's handicap, greedy on Easy's (a human's),
+/// the forced card dealt on `face`.
 fn sweep_config(
     seed: &str,
     def_id: &str,
@@ -381,6 +424,7 @@ fn sweep_config(
     tier: Difficulty,
     filler: &Filler,
     setup: &MatchSetup,
+    face: SweepFace,
 ) -> SweepSetup {
     let ai_seat = swept_seat_of(n);
     let greedy_seat = opponent_of(ai_seat);
@@ -409,6 +453,29 @@ fn sweep_config(
         easy.deck_size,
         &json_as::<AiDeckOptions>(json!({ "banned": [], "gatedSets": [], "manaCap": easy.mana_cap })),
     );
+
+    // #4466: the Radiant face deals the forced card Radiant through its seat's deck mark (R2702000). An
+    // AI deck holds distinct ids, so the forced id has one index.
+    let mut setup = setup.clone();
+    if face == SweepFace::Radiant
+        && let Some(index) = ai_deck.iter().position(|id| id.as_str() == def_id)
+    {
+        let marks = setup
+            .deck_marks
+            .get_or_insert_with(PerPlayerOpt::default)
+            .slot(ai_seat)
+            .get_or_insert_with(Vec::new);
+        if let Some(mark) = marks.iter_mut().find(|mark| mark.index == index) {
+            // A mark the setup carries keeps its Buffs.
+            mark.radiant = true;
+        } else {
+            marks.push(DeckMark {
+                index,
+                radiant: true,
+                upgrades: 0,
+            });
+        }
+    }
 
     let ai = SeatController::Ai {
         budget: Some(AI_GATE_BUDGET),
@@ -442,7 +509,7 @@ fn sweep_config(
                 PerPlayer::new(greedy, ai)
             },
             max_actions: Some(AI_SWEEP.max_actions as _),
-            setup: setup.clone(),
+            setup,
         },
     }
 }
@@ -450,6 +517,7 @@ fn sweep_config(
 fn empty_stats(def_id: &str) -> SweepStats {
     SweepStats {
         def_id: def_id.to_string(),
+        face: SweepFace::Base,
         games: 0,
         drawn_games: 0,
         affordable_turns: 0,
@@ -465,7 +533,40 @@ fn empty_stats(def_id: &str) -> SweepStats {
     }
 }
 
-/// `into` += `from`, field by field (defId stays).
+fn empty_face_stats(def_id: &str, face: SweepFace) -> SweepStats {
+    SweepStats {
+        face,
+        ..empty_stats(def_id)
+    }
+}
+
+/// Game n's seed of a card's sweep at a tier on a face (`prefix` "sweep" in pass 1, "sweep2" in pass
+/// 2): the base face's as before faces existed, the Radiant face's seeds of its own (#4466).
+fn sweep_seed(prefix: &str, tier: Difficulty, def_id: &str, face: SweepFace, n: i32) -> String {
+    match face {
+        SweepFace::Base => format!("{prefix}:{tier}:{def_id}:{n}"),
+        SweepFace::Radiant => format!("{prefix}:{tier}:{def_id}:radiant:{n}"),
+    }
+}
+
+/// A tier and face as a reason or a watch entry names them: the base face by its tier alone.
+fn face_label(tier: Difficulty, face: SweepFace) -> String {
+    match face {
+        SweepFace::Base => format!("{tier}"),
+        SweepFace::Radiant => format!("{tier} (Radiant)"),
+    }
+}
+
+/// The tiers a card's results were swept at, in the order they first appear.
+fn tiers_of(pass1: &[SweepResult], pass2: &[SweepPass2]) -> IndexSet<Difficulty> {
+    pass1
+        .iter()
+        .map(|result| result.tier)
+        .chain(pass2.iter().map(|result| result.tier))
+        .collect()
+}
+
+/// `into` += `from`, field by field (defId and face stay).
 fn add_stats(into: &mut SweepStats, from: &SweepStats) {
     into.games += from.games;
     into.drawn_games += from.drawn_games;
@@ -564,8 +665,9 @@ fn play_sweep_game(
 ) -> SweepGame {
     let no_setup = MatchSetup::default();
     let inputs = options.setup.unwrap_or(&no_setup);
+    let face = options.face.unwrap_or_default();
     let setup = match catch_unwind(AssertUnwindSafe(|| {
-        sweep_config(seed, def_id, n, tier, filler, inputs)
+        sweep_config(seed, def_id, n, tier, filler, inputs, face)
     })) {
         Ok(setup) => setup,
         // The card cannot even be dealt (not a deck-legal card, or the pool is too small): an error.
@@ -573,7 +675,7 @@ fn play_sweep_game(
             return SweepGame {
                 cards: vec![SweepStats {
                     games: 1,
-                    ..empty_stats(def_id)
+                    ..empty_face_stats(def_id, face)
                 }],
                 errors: 1,
                 timeouts: 0,
@@ -592,7 +694,15 @@ fn play_sweep_game(
         .filter(|id| dealt.contains(id))
         .map(|id| SweepStats {
             games: 1,
-            ..empty_stats(id)
+            // Only the forced card is dealt on the sweep's face; filler is dealt on its base one.
+            ..empty_face_stats(
+                id,
+                if id.as_str() == def_id {
+                    face
+                } else {
+                    SweepFace::Base
+                },
+            )
         })
         .collect();
     let mut errors = 0;
@@ -697,13 +807,15 @@ fn play_sweep_game(
 }
 
 /// Pass 1: `seeds` games (default seedsPerCard) of an AI on `tier`'s handicap (default Easy) whose
-/// deck includes `defId` against greedy on Easy's, at AI_GATE_BUDGET, on seeds
-/// `sweep:<tier>:<id>:<n>`. Every other banned card (`banned`, default `SHADOW_BAN`) stays out of the
-/// AI's deck, so its errors are not charged to this one.
+/// deck includes `defId` on `face` (default base) against greedy on Easy's, at AI_GATE_BUDGET, on seeds
+/// `sweep:<tier>:<id>:<n>` (the Radiant face's `sweep:<tier>:<id>:radiant:<n>`). Every other banned
+/// card (`banned`, default `SHADOW_BAN`) stays out of the AI's deck, so its errors are not charged to
+/// this one.
 pub fn sweep_card(def_id: &str, options: &SweepOptions) -> SweepResult {
     let seeds = options.seeds.unwrap_or(AI_SWEEP.seeds_per_card);
     let tier = options.tier.unwrap_or(Difficulty::Easy);
-    let mut stats = empty_stats(def_id);
+    let face = options.face.unwrap_or_default();
+    let mut stats = empty_face_stats(def_id, face);
     let banned: Vec<&str> = options.banned.map_or_else(
         || SHADOW_BAN.iter().map(|(id, _)| *id).collect(),
         <[&str]>::to_vec,
@@ -716,7 +828,7 @@ pub fn sweep_card(def_id: &str, options: &SweepOptions) -> SweepResult {
 
     for n in 1..=seeds {
         let game = play_sweep_game(
-            &format!("sweep:{tier}:{def_id}:{n}"),
+            &sweep_seed("sweep", tier, def_id, face, n),
             def_id,
             n,
             tier,
@@ -726,7 +838,7 @@ pub fn sweep_card(def_id: &str, options: &SweepOptions) -> SweepResult {
         );
         let card = game.cards.into_iter().next().unwrap_or_else(|| SweepStats {
             games: 1,
-            ..empty_stats(def_id)
+            ..empty_face_stats(def_id, face)
         });
         add_stats(
             &mut stats,
@@ -750,8 +862,10 @@ pub fn sweep_card(def_id: &str, options: &SweepOptions) -> SweepResult {
 }
 
 /// Pass 2 (R390): `seeds` games (default seedsPerCardAtRisk) of `defId`, one of the `atRisk` cards, on
-/// seeds `sweep2:<tier>:<id>:<n>`. Every at-risk card's filler weight is multiplied by atRiskBoost,
-/// `keepOut` (`pass2_keep_out`) is never filler, and every at-risk card the AI was dealt is counted.
+/// `face` (default base), on seeds `sweep2:<tier>:<id>:<n>` (the Radiant face's
+/// `sweep2:<tier>:<id>:radiant:<n>`). Every at-risk card's filler weight is multiplied by atRiskBoost,
+/// `keepOut` (`pass2_keep_out`) is never filler, and every at-risk card the AI was dealt is counted,
+/// filler on its base face.
 pub fn sweep_at_risk(
     def_id: &str,
     at_risk: &[String],
@@ -760,6 +874,7 @@ pub fn sweep_at_risk(
 ) -> SweepPass2 {
     let seeds = options.seeds.unwrap_or(AI_SWEEP.seeds_per_card_at_risk);
     let tier = options.tier.unwrap_or(Difficulty::Easy);
+    let face = options.face.unwrap_or_default();
     let filler = Filler {
         banned: keep_out.to_vec(),
         boost: Some(FillerBoost {
@@ -771,17 +886,17 @@ pub fn sweep_at_risk(
         .chain(at_risk.iter().filter(|id| id.as_str() != def_id).cloned())
         .collect();
     let mut totals: IndexMap<String, SweepStats> = IndexMap::new();
-    totals.insert(def_id.to_string(), empty_stats(def_id));
+    totals.insert(def_id.to_string(), empty_face_stats(def_id, face));
     let mut suspects: Vec<SweepSuspect> = Vec::new();
 
     for n in 1..=seeds {
-        let seed = format!("sweep2:{tier}:{def_id}:{n}");
+        let seed = sweep_seed("sweep2", tier, def_id, face, n);
         let game = play_sweep_game(&seed, def_id, n, tier, &filler, &tracked, options);
         for card in &game.cards {
             let forced = card.def_id == def_id;
             let total = totals
                 .entry(card.def_id.clone())
-                .or_insert_with(|| empty_stats(&card.def_id));
+                .or_insert_with(|| empty_face_stats(&card.def_id, card.face));
             add_stats(
                 total,
                 &SweepStats {
@@ -812,15 +927,16 @@ pub fn sweep_at_risk(
     }
 }
 
-/// R390: a card's pass-2 numbers at one tier, summed over every game it was dealt in, forced or filler.
-pub fn pass2_stats(pass2: &[SweepPass2], def_id: &str, tier: Difficulty) -> SweepStats {
-    let mut total = empty_stats(def_id);
+/// R390: a card's pass-2 numbers at one tier on one face (#4466), summed over every game it was dealt
+/// in on that face, forced or filler (filler is always dealt on its base face).
+pub fn pass2_stats(pass2: &[SweepPass2], def_id: &str, tier: Difficulty, face: SweepFace) -> SweepStats {
+    let mut total = empty_face_stats(def_id, face);
     for result in pass2 {
         if result.tier != tier {
             continue;
         }
         for card in &result.cards {
-            if card.def_id == def_id {
+            if card.def_id == def_id && card.face == face {
                 add_stats(&mut total, card);
             }
         }
@@ -883,59 +999,122 @@ fn numbers_of(stats: &SweepStats) -> String {
     )
 }
 
-/// Card's shadow-ban sweep verdict across tiers and passes (R186, R390, R2425000, R600).
+/// #4466: a card's numbers at one tier on one face, and the flags they raise, each with what it
+/// measured.
+struct FaceJudgement {
+    tier: Difficulty,
+    face: SweepFace,
+    first: SweepStats,
+    second: SweepStats,
+    raised: Vec<(SweepFlag, String)>,
+}
+
+/// A card judged at every tier it was swept at, on each face (#4466), every flag over that face's own
+/// games: error and timeout over both passes, neverPlayed, selfHarm and selfKill over pass 2 alone
+/// (R390, R2425000, R601). A face with no games raises nothing.
+fn judge_card(def_id: &str, pass1: &[SweepResult], pass2: &[SweepPass2]) -> Vec<FaceJudgement> {
+    let mut judged = Vec::new();
+    for tier in tiers_of(pass1, pass2) {
+        for face in SweepFace::ALL {
+            let mut first = empty_face_stats(def_id, face);
+            for result in pass1 {
+                if result.tier == tier && result.face == face {
+                    add_stats(&mut first, result);
+                }
+            }
+            let second = pass2_stats(pass2, def_id, tier, face);
+
+            let mut both = first.clone();
+            add_stats(&mut both, &second);
+            let mut raised: Vec<(SweepFlag, String)> = Vec::new();
+            for flag in sweep_flags(&SweepStats {
+                games: both.games,
+                errors: both.errors,
+                timeouts: both.timeouts,
+                ..empty_face_stats(def_id, face)
+            }) {
+                raised.push((flag, flag_detail(&both, flag, false)));
+            }
+            if second.playable_turns >= AI_SWEEP.ban_affordable_turns && second.plays == 0 {
+                raised.push((
+                    SweepFlag::NeverPlayed,
+                    flag_detail(&second, SweepFlag::NeverPlayed, true),
+                ));
+            }
+            if second.eval_delta_count >= AI_SWEEP.ban_harm_plays && mean(&second) < AI_SWEEP.self_harm_delta
+            {
+                raised.push((
+                    SweepFlag::SelfHarm,
+                    flag_detail(&second, SweepFlag::SelfHarm, true),
+                ));
+            }
+            if second.losing_plays >= AI_SWEEP.ban_losing_plays {
+                raised.push((
+                    SweepFlag::SelfKill,
+                    flag_detail(&second, SweepFlag::SelfKill, true),
+                ));
+            }
+            judged.push(FaceJudgement {
+                tier,
+                face,
+                first,
+                second,
+                raised,
+            });
+        }
+    }
+    judged
+}
+
+/// #4466: the flags a card's numbers on one face raise at any tier, in a reason's order.
+pub fn face_flags(
+    def_id: &str,
+    pass1: &[SweepResult],
+    pass2: &[SweepPass2],
+    face: SweepFace,
+) -> Vec<SweepFlag> {
+    let raised: IndexSet<SweepFlag> = judge_card(def_id, pass1, pass2)
+        .into_iter()
+        .filter(|judged| judged.face == face)
+        .flat_map(|judged| judged.raised.into_iter().map(|(flag, _)| flag))
+        .collect();
+    FLAG_ORDER
+        .iter()
+        .copied()
+        .filter(|flag| raised.contains(flag))
+        .collect()
+}
+
+/// Card's shadow-ban sweep verdict across tiers, faces and passes (R186, R390, R2425000, R600, #4466).
 pub fn sweep_verdict(pass1: &[SweepResult], pass2: &[SweepPass2]) -> SweepVerdict {
     let def_id = pass1
         .first()
         .map(|result| result.def_id.clone())
         .or_else(|| pass2.first().map(|result| result.forced.clone()))
         .unwrap_or_default();
-    let tiers: IndexSet<Difficulty> = pass1
-        .iter()
-        .map(|result| result.tier)
-        .chain(pass2.iter().map(|result| result.tier))
-        .collect();
+    let tiers = tiers_of(pass1, pass2);
     let mut flagged: IndexSet<SweepFlag> = IndexSet::new();
     let mut details: Vec<String> = Vec::new();
     let mut watched: Vec<String> = Vec::new();
     let mut affordable = 0;
 
-    for &tier in &tiers {
-        let mut first = empty_stats(&def_id);
-        for result in pass1 {
-            if result.tier == tier {
-                add_stats(&mut first, result);
-            }
-        }
-        let second = pass2_stats(pass2, &def_id, tier);
+    for judged in judge_card(&def_id, pass1, pass2) {
+        let FaceJudgement {
+            tier,
+            face,
+            first,
+            second,
+            raised,
+        } = judged;
+        let label = face_label(tier, face);
         affordable += first.affordable_turns + second.affordable_turns;
-
-        let mut both = first.clone();
-        add_stats(&mut both, &second);
         let mut parts: Vec<String> = Vec::new();
-        for flag in sweep_flags(&SweepStats {
-            games: both.games,
-            errors: both.errors,
-            timeouts: both.timeouts,
-            ..empty_stats(&def_id)
-        }) {
+        for (flag, detail) in raised {
             flagged.insert(flag);
-            parts.push(flag_detail(&both, flag, false));
-        }
-        if second.playable_turns >= AI_SWEEP.ban_affordable_turns && second.plays == 0 {
-            flagged.insert(SweepFlag::NeverPlayed);
-            parts.push(flag_detail(&second, SweepFlag::NeverPlayed, true));
-        }
-        if second.eval_delta_count >= AI_SWEEP.ban_harm_plays && mean(&second) < AI_SWEEP.self_harm_delta {
-            flagged.insert(SweepFlag::SelfHarm);
-            parts.push(flag_detail(&second, SweepFlag::SelfHarm, true));
-        }
-        if second.losing_plays >= AI_SWEEP.ban_losing_plays {
-            flagged.insert(SweepFlag::SelfKill);
-            parts.push(flag_detail(&second, SweepFlag::SelfKill, true));
+            parts.push(detail);
         }
         if !parts.is_empty() {
-            details.push(format!("{tier}: {}", parts.join(", ")));
+            details.push(format!("{label}: {}", parts.join(", ")));
         }
 
         let mut on_track: Vec<String> = Vec::new();
@@ -946,7 +1125,7 @@ pub fn sweep_verdict(pass1: &[SweepResult], pass2: &[SweepPass2]) -> SweepVerdic
             on_track.push(format!("pass 2 {}", numbers_of(&second)));
         }
         if !on_track.is_empty() {
-            watched.push(format!("{tier}: {}", on_track.join("; ")));
+            watched.push(format!("{label}: {}", on_track.join("; ")));
         }
     }
 
@@ -984,7 +1163,7 @@ pub fn sweep_verdict(pass1: &[SweepResult], pass2: &[SweepPass2]) -> SweepVerdic
 
 #[cfg(test)]
 mod tests {
-    use jackioh_engine::LastBoardEntry;
+    use jackioh_engine::{CreateGameOptions, LastBoardEntry, begin_game, create_game};
 
     use super::*;
 
@@ -1014,8 +1193,17 @@ mod tests {
                 Difficulty::Easy,
                 &filler,
                 &MatchSetup::default(),
+                SweepFace::Base,
             );
-            let carried = sweep_config(&seed, PORTAL, n, Difficulty::Easy, &filler, &setup);
+            let carried = sweep_config(
+                &seed,
+                PORTAL,
+                n,
+                Difficulty::Easy,
+                &filler,
+                &setup,
+                SweepFace::Base,
+            );
             assert_eq!(plain.config.setup, MatchSetup::default(), "game {n}");
             assert_eq!(carried.config.setup, setup, "game {n}");
             assert_eq!(carried.ai_seat, plain.ai_seat, "game {n}");
@@ -1028,5 +1216,148 @@ mod tests {
                 "game {n}: only the setup differs"
             );
         }
+    }
+
+    fn no_filler() -> Filler {
+        Filler {
+            banned: vec![],
+            boost: None,
+        }
+    }
+
+    /// Game n of PORTAL's Easy sweep on `face`, on the Radiant face's seed, from `setup`.
+    fn portal_config(n: i32, setup: &MatchSetup, face: SweepFace) -> SweepSetup {
+        let seed = sweep_seed("sweep", Difficulty::Easy, PORTAL, SweepFace::Radiant, n);
+        sweep_config(&seed, PORTAL, n, Difficulty::Easy, &no_filler(), setup, face)
+    }
+
+    fn ai_deck_of(setup: &SweepSetup) -> &Vec<String> {
+        if setup.ai_seat == PlayerId::P1 {
+            &setup.config.decks.0
+        } else {
+            &setup.config.decks.1
+        }
+    }
+
+    /// The game a config begins, as `play_match` creates it.
+    fn begun(config: &MatchConfig) -> GameState {
+        let created = create_game(&CreateGameOptions {
+            seed: config.seed.clone(),
+            decks: config.decks.clone(),
+            handicaps: config.handicaps.clone(),
+            deck_marks: config.setup.deck_marks.clone(),
+            ..CreateGameOptions::default()
+        });
+        begin_game(&created).state
+    }
+
+    #[test]
+    fn the_radiant_face_deals_the_forced_card_radiant_and_the_base_face_does_not() {
+        jackioh_cards::register_all();
+        for n in [1, 2] {
+            let base = portal_config(n, &MatchSetup::default(), SweepFace::Base);
+            let radiant = portal_config(n, &MatchSetup::default(), SweepFace::Radiant);
+            assert_eq!(base.config.setup.deck_marks, None, "game {n}");
+            assert_eq!(radiant.ai_seat, base.ai_seat, "game {n}");
+            assert_eq!(radiant.config.decks, base.config.decks, "game {n}");
+            let index = ai_deck_of(&radiant)
+                .iter()
+                .position(|id| id == PORTAL)
+                .unwrap_or_else(|| panic!("game {n}: the forced card is dealt"));
+            let marks = radiant.config.setup.deck_marks.clone().unwrap_or_default();
+            assert_eq!(
+                marks.get(radiant.ai_seat),
+                Some(&vec![DeckMark {
+                    index,
+                    radiant: true,
+                    upgrades: 0
+                }]),
+                "game {n}"
+            );
+            assert_eq!(marks.get(opponent_of(radiant.ai_seat)), None, "game {n}");
+
+            for (setup, radiant_face) in [(&base, false), (&radiant, true)] {
+                let state = begun(&setup.config);
+                for seat in [PlayerId::P1, PlayerId::P2] {
+                    let dealt: Vec<_> = [OffFieldZone::Hand, OffFieldZone::Library]
+                        .into_iter()
+                        .flat_map(|zone| zone_cards(&state, seat, zone))
+                        .collect();
+                    let forced = dealt.iter().filter(|card| card.def_id == PORTAL).count();
+                    let radiant_cards: Vec<&str> = dealt
+                        .iter()
+                        .filter(|card| card.radiant)
+                        .map(|card| card.def_id.as_str())
+                        .collect();
+                    if seat == setup.ai_seat {
+                        assert_eq!(forced, 1, "game {n}: the AI holds the forced card once");
+                        let want: Vec<&str> = if radiant_face { vec![PORTAL] } else { vec![] };
+                        assert_eq!(radiant_cards, want, "game {n}, Radiant face {radiant_face}");
+                    } else {
+                        assert!(
+                            radiant_cards.is_empty(),
+                            "game {n}: the greedy seat holds no Radiant card"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn the_radiant_face_keeps_a_mark_the_setup_carries() {
+        jackioh_cards::register_all();
+        let plain = portal_config(1, &MatchSetup::default(), SweepFace::Radiant);
+        let ai_seat = plain.ai_seat;
+        let index = ai_deck_of(&plain)
+            .iter()
+            .position(|id| id == PORTAL)
+            .expect("the forced card is dealt");
+        let other = DeckMark {
+            index: 0,
+            radiant: false,
+            upgrades: 1,
+        };
+        let mut marks = PerPlayerOpt::default();
+        *marks.slot(ai_seat) = Some(vec![DeckMark {
+            index,
+            radiant: false,
+            upgrades: 2,
+        }]);
+        *marks.slot(opponent_of(ai_seat)) = Some(vec![other]);
+        let setup = MatchSetup {
+            deck_marks: Some(marks),
+            ..MatchSetup::default()
+        };
+
+        let radiant = portal_config(1, &setup, SweepFace::Radiant);
+        let got = radiant.config.setup.deck_marks.clone().unwrap_or_default();
+        assert_eq!(
+            got.get(ai_seat),
+            Some(&vec![DeckMark {
+                index,
+                radiant: true,
+                upgrades: 2
+            }])
+        );
+        assert_eq!(got.get(opponent_of(ai_seat)), Some(&vec![other]));
+        assert_eq!(portal_config(1, &setup, SweepFace::Base).config.setup, setup);
+    }
+
+    #[test]
+    fn the_radiant_face_plays_on_seeds_of_its_own() {
+        let id = "core-011";
+        assert_eq!(
+            sweep_seed("sweep", Difficulty::Easy, id, SweepFace::Base, 3),
+            "sweep:easy:core-011:3"
+        );
+        assert_eq!(
+            sweep_seed("sweep", Difficulty::Easy, id, SweepFace::Radiant, 3),
+            "sweep:easy:core-011:radiant:3"
+        );
+        assert_eq!(
+            sweep_seed("sweep2", Difficulty::Hard, id, SweepFace::Radiant, 3),
+            "sweep2:hard:core-011:radiant:3"
+        );
     }
 }

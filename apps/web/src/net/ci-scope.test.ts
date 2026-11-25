@@ -157,8 +157,8 @@ describe("scripts/ci-scope.sh", () => {
     ).toEqual([]);
     // Squishy (#60): its switches and its two workflows, which only the bot's harness reads.
     expect(onFor(".squishy/config.json", ".github/workflows/squishy-run.yml", ".github/workflows/squishy-commands.yml")).toEqual([]);
-    // The training lanes' standing prompts and loop: Muse and the training box read them, no job does.
-    expect(onFor("training/README.md", "training/improve.md", "training/unban.md", "training/loop.sh")).toEqual([]);
+    // The training docs: people and the bots read them, no job does.
+    expect(onFor("training/README.md", "training/improve.md", "training/gather.md")).toEqual([]);
     // The notebooks' project (#445): only super.yml's daily `notebooks` job reads it.
     expect(onFor("analysis/notebooks/01-card-win-rates.ipynb", "analysis/jackioh_records/load.py", "analysis/uv.lock")).toEqual([]);
   });
@@ -194,7 +194,7 @@ describe("scripts/ci-scope.sh", () => {
     "scripts/build-wasm.sh",
     "apps/web/src/main.tsx",
     "e2e/cypress/e2e/01-hotseat-full-game.cy.ts",
-    // `spec check` reads the notes; the training gate reads the lanes' history.
+    // `spec check` reads the notes; training/history/ is no skip-list path.
     "spec/rulings/R0195.md",
     "spec/README.md",
     "training/history/improve.jsonl",
@@ -586,6 +586,9 @@ describe("scripts/ci-scope.sh", () => {
   it.each(["infra/versions.tf", "infra/.terraform.lock.hcl", "infra/README.md"])("runs infra/'s terraform steps, and nothing else, for %s", (file) => {
     expect(onFor(file), file).toEqual(["full", "infra"]);
   });
+  it("runs infra/'s terraform steps and web, and nothing else, for infra/cloudflare.tf, which the Worker's config test reads", () => {
+    expect(onFor("infra/cloudflare.tf")).toEqual(["full", "web", "infra"]);
+  });
   it.each([
     "crates/engine/src/reduce.rs",
     "apps/web/src/main.tsx",
@@ -607,8 +610,8 @@ describe("scripts/ci-scope.sh", () => {
     ["crates/ai/src/decide.rs", ["rust_server", "rust_ai", "rust_ai_slow", "rust_tools_wasm"]],
     ["crates/server/src/api/queue.rs", ["rust_server"]],
     ["crates/server/migrations/0068_v0_5_retcon.sql", ["rust_server", "rust_tools_wasm"]],
-    // acceptance.rs holds the server tests' helpers to tests/support/ (#2385); tests/store/ is not scanned.
-    ["crates/server/tests/api/queue.rs", ["rust_server", "rust_tools_wasm"]],
+    // The server binary holds these tests' helpers to tests/support/ (#2385); tests/store/ is not scanned.
+    ["crates/server/tests/api/queue.rs", ["rust_server"]],
     ["crates/server/tests/store/contract.rs", ["rust_server"]],
     ["crates/tools/src/fuzz.rs", ["rust_tools_wasm"]],
     ["crates/wasm/src/lib.rs", ["rust_tools_wasm"]],
@@ -620,7 +623,12 @@ describe("scripts/ci-scope.sh", () => {
     ["apps/web/src/wire/generated/Action.ts", ["rust_engine", "rust_server", "rust_tools_wasm"]],
     ["docs/radiant-audit.md", ["rust_cards"]],
     ["spec/07-tokens.md", ["rust_cards"]],
+    // §8 is one note a subsection: radiant_stats.rs reads each, and the tools' acceptance test holds its list to the folder.
+    ["spec/08-catalog/8.10-stinkyscape.md", ["rust_cards", "rust_tools_wasm"]],
     ["e2e/support/config.ts", ["rust_server"]],
+    // The tools' README check reads the cited e2e specs, so their files run its group (#4449).
+    ["e2e/cypress/e2e/01-hotseat-full-game.cy.ts", ["rust_tools_wasm"]],
+    ["e2e/cypress/e2e/13-practice-vs-ai.cy.ts", ["rust_tools_wasm"]],
     ["apps/web/.env.production", ["rust_tools_wasm"]],
     ["packages/engine/src/x.ts", ["rust_tools_wasm"]],
     ["apps/server/src/x.ts", ["rust_tools_wasm"]],
@@ -650,7 +658,7 @@ describe("scripts/ci-scope.sh", () => {
   }
   it.each([
     "apps/web/src/main.tsx",
-    "e2e/cypress/e2e/01-hotseat-full-game.cy.ts",
+    "e2e/cypress/e2e/02-prompts.cy.ts",
     "docs/architecture.md",
     "spec/rulings/R0195.md",
     "SPEC.md",
@@ -671,7 +679,7 @@ describe("scripts/ci-scope.sh", () => {
     };
     expect(tools({ "crates/server/src/x.rs": 'const X: &str = include_str!("x.json");\n' })).toBe(true);
     expect(tools({ "crates/server/src/x.rs": 'const X: &[u8] = include_bytes!("x.bin");\n' })).toBe(true);
-    expect(tools({ "crates/server/src/x.rs": "let s = std::fs::read_to_string(path);\n" })).toBe(true);
+    expect(tools({ "crates/server/tests/api/x.rs": "let s = std::fs::read_to_string(path);\n" })).toBe(true);
     expect(tools({ "crates/server/src/x.rs": 'const X: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/x.json");\n' })).toBe(true);
     expect(tools({ "apps/web/src/x.test.ts": 'const t = readFileSync(join(ROOT, "x.json"), "utf8");\n' })).toBe(true);
     // acceptance.rs holds every ignore to the daily form (super.yml's daily tests).
@@ -801,7 +809,8 @@ function namedPaths(roots: string[], keep: (file: string) => boolean): Map<strin
   return found;
 }
 
-/** What the web's typecheck, lint and unit tests read. ci-scope.test.ts, build-wasm-cache.test.ts and
+/** What the web job's typecheck, lint and unit tests read: the web's, the Worker's (apps/edge)
+ * and the dashboard's (apps/admin) sources. ci-scope.test.ts, build-wasm-cache.test.ts and
  * server-image.test.ts name paths only as data for their throwaway repos (the second reads only
  * scripts/build-wasm.sh for real, and the third scripts/server-image.sh and wrangler.jsonc, which run
  * web anyway). */
@@ -811,7 +820,19 @@ const DATA_ONLY = [
   "apps/web/src/net/server-image.test.ts",
 ];
 const WEB = namedPaths(
-  ["apps/web/src", "apps/web/scripts", "apps/web/vite.config.ts", "apps/web/vitest.config.ts", "apps/web/static-pages.ts"],
+  [
+    "apps/web/src",
+    "apps/web/scripts",
+    "apps/web/vite.config.ts",
+    "apps/web/vitest.config.ts",
+    "apps/web/static-pages.ts",
+    "apps/edge/src",
+    "apps/admin/src",
+    "apps/admin/worker",
+    "apps/admin/headers.test.ts",
+    "apps/admin/build.test.ts",
+    "apps/admin/wrangler.test.ts",
+  ],
   (file) => !DATA_ONLY.includes(file),
 );
 /** What e2e smoke's client build and specs read. */
@@ -822,7 +843,9 @@ const E2E = namedPaths(
 
 describe("scripts/ci-scope.sh against the paths the sources name", () => {
   it("finds the paths it must, so a scan that broke cannot pass empty", () => {
-    expect([...WEB.keys()]).toEqual(expect.arrayContaining(["crates/server/src/env.rs", "crates/engine/tests/fixtures/code-input-cases.json"]));
+    expect([...WEB.keys()]).toEqual(
+      expect.arrayContaining(["crates/server/src/env.rs", "crates/engine/tests/fixtures/code-input-cases.json", "infra/cloudflare.tf"]),
+    );
     expect([...E2E.keys()]).toEqual(expect.arrayContaining(["crates/cards/catalog.json"]));
   });
 

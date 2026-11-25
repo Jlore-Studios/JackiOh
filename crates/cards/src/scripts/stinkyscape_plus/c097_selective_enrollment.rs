@@ -1,4 +1,4 @@
-//! S+ #97 Selective Enrollment (SPEC §8.12 row 97). (5) Spell, Common.
+//! S+ #97 Selective Enrollment (SPEC §8.12 row 97). (6) Spell, Common ((5) until issue #4440).
 //!   Base:    "Float reduces cost.
 //!            Fill your hand with random Radiant S tier cards (or A tier if none exist)."
 //!   Radiant: "Float reduces cost.
@@ -81,8 +81,8 @@ mod tests {
     use crate::stinkyscape_family as fam;
     use crate::{filler, scenario};
 
-    /// Its printed cost since issue #4154.
-    const PRINTED: i32 = 5;
+    /// Its printed cost since issue #4440 ((5) from issue #4154).
+    const PRINTED: i32 = 6;
 
     const P1: PlayerId = PlayerId::P1;
 

@@ -154,7 +154,7 @@ async fn the_reaper_alerts_once_while_the_store_keeps_failing_and_again_after_a_
     let app = empty_test_app().await;
     let interval = ms(MATCH_REAPER_INTERVAL_SECONDS);
     let alerting = alerting_pass(interval);
-    fail_on(&app, "matches.live", "the live matches cannot be read").await;
+    fail_on(&app, "matches.pastCeiling", "the live matches cannot be read").await;
     let reaper = tokio::spawn(results::run_reaper(app.clone()));
 
     let passes = alerting + 5;
@@ -193,7 +193,7 @@ async fn the_reaper_alerts_once_while_the_store_keeps_failing_and_again_after_a_
     assert_eq!(logs.named("matches.reaper.recovered").len(), 1);
 
     // A new streak alerts again.
-    fail_on(&app, "matches.live", "the live matches cannot be read").await;
+    fail_on(&app, "matches.pastCeiling", "the live matches cannot be read").await;
     let passes = alerting + 2;
     assert_eq!(
         alerts_after_each_pass(&logs, "matches.reaper.failing", interval, interval, passes).await,
@@ -259,7 +259,7 @@ async fn stuck_match(app: &Arc<App>, id: &str, players: (&str, &str)) {
 }
 
 /// Makes the first `write` after each read of `live` fail, so the first match of every pass will
-/// not end and the rest do: the reaper's (`matches.live`, `results.insert`) or the co-op sweeper's
+/// not end and the rest do: the reaper's (`matches.pastCeiling`, `results.insert`) or the co-op sweeper's
 /// (`duos.matches.live`, `duos.matches.finish`).
 async fn wedge_first_match(app: &Arc<App>, live: &'static str, write: &'static str) {
     let writes = Arc::new(AtomicUsize::new(0));
@@ -281,7 +281,7 @@ async fn the_reaper_alerts_for_one_wedged_match_among_healthy_ones() {
     // The wedged match is the first the pass reaps: the fake lists live matches in the order made.
     stuck_match(&app, "match-wedged", ("profile-a", "profile-b")).await;
     stuck_match(&app, "match-healthy", ("profile-c", "profile-d")).await;
-    wedge_first_match(&app, "matches.live", "results.insert").await;
+    wedge_first_match(&app, "matches.pastCeiling", "results.insert").await;
     let interval = ms(MATCH_REAPER_INTERVAL_SECONDS);
     let alerting = alerting_pass(interval);
     let reaper = tokio::spawn(results::run_reaper(app.clone()));

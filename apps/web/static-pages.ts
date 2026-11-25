@@ -43,7 +43,7 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
   {
     path: paths.landing,
     description:
-      "JackiOh is a 1v1 card game of lanes, mana and hidden traps. Play the AI in your browser with no account, or play friends online with an invite code.",
+      "JackiOh is a 1v1 card game where you summon units into lanes and set traps face down. Play the AI in your browser with no account, or play friends online with an invite code.",
   },
   {
     path: paths.practice,
@@ -61,10 +61,6 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
       "JackiOh's privacy policy: what the site collects, why, who sees it, and how to delete your account.",
   },
   { path: paths.terms, description: "The terms of playing JackiOh." },
-  {
-    path: paths.accessibility,
-    description: "JackiOh's accessibility statement, and how to tell us about a barrier.",
-  },
   {
     path: paths.copyright,
     description: "How to report content on JackiOh that infringes your copyright, and how to answer a report.",
@@ -86,13 +82,13 @@ export const PUBLIC_PAGES: readonly PublicPage[] = [
 const section = (heading: string, body: string): string => `<section><h2>${heading}</h2>${body}</section>`;
 
 /**
- * Each page's own text, after its description, for a reader that runs no script. /privacy, /terms,
- * /accessibility and /copyright quote their routes word for word (static-pages.test.ts renders each to check).
+ * Each page's own text, after its description, for a reader that runs no script. /privacy, /terms
+ * and /copyright quote their routes word for word (static-pages.test.ts renders each to check).
  */
 export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
   [paths.landing]:
     section(
-      "A card game of lanes, mana and hidden traps",
+      "How it plays",
       `<p>Each player brings a ${String(DECK_SIZE)}-card deck and a hero with ${String(HERO_HEALTH)} health. ` +
         `Mana grows each turn, up to ${String(MAX_MANA)}, and pays for Units that fight in shared lanes, ` +
         `Spells, and Traps set face down in the backrow, hidden from the opponent until they spring. ` +
@@ -218,46 +214,6 @@ export const PAGE_TEXT: Readonly<Partial<Record<string, string>>> = {
       "Repeat infringers",
       "<p>We close the accounts of players who repeatedly infringe others&rsquo; copyrights.</p>",
     ),
-  [paths.accessibility]:
-    section(
-      "Our goal",
-      "<p>We want JackiOh to be usable by as many players as we can make it. It has had an automated " +
-        "check against the Web Content Accessibility Guidelines (WCAG) 2.2 at levels A and AA, and no " +
-        "audit by a person. We do not claim that it conforms to WCAG.</p>",
-    ) +
-    section(
-      "What we checked",
-      "<p>On the date above we checked every screen with axe-core 4.14 in Chrome, at a computer's " +
-        "size and at a phone's, against its WCAG 2.0, 2.1 and 2.2 rules at levels A and AA, and fixed " +
-        "every serious or critical problem it found, except " +
-        "those listed below. The same check runs every day, and fails when a new one appears.</p>" +
-        "<ul><li>The home page, signing in, creating an account, resetting a password, the invite code " +
-        "screen and the screen that asks for your date of birth and agreement to the terms.</li>" +
-        "<li>Play, Decks, Account and the leaderboard.</li>" +
-        "<li>The Almanac, Patch notes and Stats.</li>" +
-        "<li>Practice, its setup and a game, and a game on one device.</li>" +
-        "<li>Replays, Play together and the Collection.</li>" +
-        "<li>The Privacy Policy, the Terms, this page and the Copyright page.</li></ul>",
-    ) +
-    section(
-      "Current support",
-      "<ul><li>Menus, the deck builder, and the board's cards, zones and prompts can be used " +
-        "from the keyboard.</li>" +
-        "<li>Focused controls are marked, and each screen has headings.</li>" +
-        "<li>Card art is decorative and hidden from screen readers; each card's name and text are " +
-        "on the card as text.</li>" +
-        "<li>Reduce motion, effects and sound can be changed in Settings.</li></ul>",
-    ) +
-    section(
-      "Known gaps",
-      "<ul><li>A card shown as a button, on the home page, in the Almanac's card pool, in the Collection and in a game's " +
-        "prompts, is named by a short summary that names the card, not by all the text on its face.</li>" +
-        "<li>Dragging a card to play it needs a mouse or a touch screen. Choosing the card and then where " +
-        "it goes does the same, by click or by Enter on each.</li>" +
-        "<li>Color contrast is checked only where the tool can measure it, so text over card art and " +
-        "gradients has not been checked.</li>" +
-        "<li>No one has tested JackiOh with a screen reader or other assistive technology yet.</li></ul>",
-    ),
 };
 
 /** Files Vite copies from `public/` before `writeBundle` that name `SITE_ORIGIN`. */
@@ -322,6 +278,24 @@ function strip(html: string, pattern: RegExp): string {
 
 /** The page Cloudflare serves, with a 404 status, for a path no rule routes (`wrangler.jsonc` `not_found_handling`). */
 export const NOT_FOUND_FILE = "404.html";
+
+/** R4605000: the file beside `404.html` naming the build's entry script, so a stale tab sees the next build. */
+export const VERSION_FILE = "version.json";
+
+/**
+ * R4605000: the `src` of the template's `<script type="module">`: the entry script this build runs.
+ * Vite names it by its content hash in a production build, so a build's entry differs from every other's.
+ */
+export function versionEntryOf(template: string): string {
+  // Vite's build writes extra attributes into the entry tag (`crossorigin`), so the tag is
+  // matched whole and `src` read from it, whatever order the attributes come in.
+  for (const tag of template.matchAll(/<script\b[^>]*>/gu)) {
+    if (!/\btype="module"/u.test(tag[0])) continue;
+    const entry = /\bsrc="([^"]+)"/u.exec(tag[0])?.[1];
+    if (entry !== undefined && entry.length > 0) return entry;
+  }
+  throw new Error("static-pages.ts: index.html has no entry script");
+}
 
 /**
  * #3127, R3127000: the fallback's hand, left to right. The gems read 4, 0, 4. The ids are in no catalog: these are
@@ -554,6 +528,7 @@ export function writeStaticPages({
     writeFileSync(file, pageHtml(template, page, pages, extra, origin));
   }
   writeFileSync(join(outDir, NOT_FOUND_FILE), notFoundHtml(template, origin));
+  writeFileSync(join(outDir, VERSION_FILE), `${JSON.stringify({ entry: versionEntryOf(template) })}\n`);
   writeFileSync(join(outDir, "sitemap.xml"), sitemapXml(pages, origin));
   if (snapshot !== undefined) {
     mkdirSync(join(outDir, RELEASE_ART_FOLDER), { recursive: true });

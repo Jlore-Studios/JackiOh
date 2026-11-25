@@ -73,7 +73,7 @@ mod tests {
     const SEVEN_SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn"; // a plain hitter
     const D_FENDER: &str = "core-001"; // Big D-fender
     const SAINTESS: &str = "core-081"; // Radiant Saintess: "Death: Make your other Units Radiant."
-    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: a Field Spell, "Aura: Your Units have +2 Attack, Rush and First Strike."
+    const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: a Field Spell, "Aura: Your Units have +1 Attack, Rush and First Strike."
     const SHEEP: &str = "core-t-sheep"; // Sheep Token: worth 2 Tributes
     const ROCK: &str = "core-066"; // The Rock: Indestructible
 
@@ -149,11 +149,11 @@ mod tests {
             fn r78_the_amount_is_the_tributed_unit_s_attack_as_it_stood_an_aura_s_bonus_included() {
                 crate::register_all();
                 let mut s = setup(json!({ "field": [TURTLE, TIMMY], "backrow": [WEAPONS] }), json!({}));
-                s.expect_stats(TIMMY, json!({ "attack": 5 }));
+                s.expect_stats(TIMMY, json!({ "attack": 4 }));
 
                 eat(&mut s, TIMMY, pick::hero("p2"), TURTLE);
 
-                s.expect_health(P2, 25);
+                s.expect_health(P2, 26);
             }
 
             #[test]

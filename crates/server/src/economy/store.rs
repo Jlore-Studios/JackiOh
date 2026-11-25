@@ -1292,7 +1292,8 @@ mod pg {
         Ok(())
     }
 
-    /// One aggregate over the profile's rows (`jlore_grants_profile_idx` leads it).
+    /// One aggregate over the profile's `game` rows from `from` until `until`, read as one range of
+    /// `jlore_grants_profile_reason_at_idx` (migration 0098, tests/sql CHECK 27).
     pub async fn game_jlore_totals(
         t: &mut PgTx<'_>,
         profile_id: &str,

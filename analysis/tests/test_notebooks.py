@@ -12,11 +12,13 @@ files (`fixtures/games.report.json`, `fixtures/counts.report.json`).
 
 import json
 import math
+import re
 from pathlib import Path
 
 import nbformat
 import pytest
 from helpers import record, seat, write_records
+from jackioh_records import ai_sweep
 from nbconvert.preprocessors import ExecutePreprocessor
 
 ANALYSIS = Path(__file__).resolve().parents[1]
@@ -27,9 +29,23 @@ INPUTS = ("JACKIOH_RECORDS", "JACKIOH_CATALOG", "JACKIOH_SWEEP", "JACKIOH_REPO",
 
 
 def sweep_line(
-    card, tier, flags=(), games=8, drawn=4, affordable=6, plays=3, errors=0, timeouts=0, delta=10.0, unswept=False
+    card,
+    tier,
+    flags=(),
+    games=8,
+    drawn=4,
+    affordable=6,
+    plays=3,
+    errors=0,
+    timeouts=0,
+    delta=10.0,
+    unswept=False,
+    face="base",
+    raw_timeouts=None,
 ):
-    return {
+    """A pass-1 line; a Radiant one names its face (#4466), a base one writes none, as the sweep does. One with no
+    `raw_timeouts` writes no `rawTimeouts`, as a line that predates the field (R977000)."""
+    line = {
         "defId": card,
         "games": games,
         "drawnGames": drawn,
@@ -43,22 +59,80 @@ def sweep_line(
         "flags": list(flags),
         "unswept": unswept,
     }
+    if face != "base":
+        line["face"] = face
+    if raw_timeouts is not None:
+        line["rawTimeouts"] = raw_timeouts
+    return line
+
+
+def pass2_entry(
+    card,
+    face="base",
+    games=24,
+    drawn=18,
+    affordable=30,
+    playable=30,
+    plays=12,
+    errors=0,
+    timeouts=0,
+    delta=2.0,
+    losing=0,
+    raw_timeouts=None,
+):
+    """One card of a pass-2 line: the forced one first, then the at-risk cards dealt as filler."""
+    entry = {
+        "defId": card,
+        "games": games,
+        "drawnGames": drawn,
+        "affordableTurns": affordable,
+        "playableTurns": playable,
+        "plays": plays,
+        "errors": errors,
+        "timeouts": timeouts,
+        "evalDeltaSum": delta * plays,
+        "evalDeltaCount": plays,
+        "losingPlays": losing,
+    }
+    if face != "base":
+        entry["face"] = face
+    if raw_timeouts is not None:
+        entry["rawTimeouts"] = raw_timeouts
+    return entry
+
+
+def pass2_line(forced, tier, *entries):
+    """A pass-2 line (`sweep --pass2`'s): the card forced, and every at-risk card the AI was dealt."""
+    return {"forced": forced, "tier": tier, "games": 24, "cards": list(entries), "suspects": []}
 
 
 @pytest.fixture
 def flagged_sweep(tmp_path):
-    """Pass-1 lines with each flag, a card never affordable, a card the catalog lacks and a pass-2 line."""
+    """Pass-1 lines with each flag, a card never affordable, a card the catalog lacks, two Radiant lines (one
+    flagged where its base line is not, one clean where its base line is flagged) and pass-2 lines: three bans
+    (one on the Radiant face, one of a card the AI was also dealt as filler), a card cleared of its ban but still
+    watched, a card cleared, a card never affordable and a filler-only card."""
+    ban_turns = int(ai_sweep()["ban_affordable_turns"])
+    harm_plays = int(ai_sweep()["ban_harm_plays"])
     lines = [
         sweep_line("core-002", "easy", ["error"], errors=1),
-        sweep_line("core-002", "hard", ["timeout"], timeouts=2),
+        sweep_line("core-002", "hard", ["timeout"], timeouts=2, raw_timeouts=9),
         sweep_line("core-011", "easy", ["neverPlayed"], affordable=5, plays=0),
-        sweep_line("core-011", "hard"),
+        # Twelve slow decisions the re-timer cleared: counted 0, raw 12, and no flag.
+        sweep_line("core-011", "hard", raw_timeouts=12),
         sweep_line("classic-020", "easy", ["selfHarm"], plays=5, delta=-60.0),
         sweep_line("classic-020", "hard", ["selfHarm", "timeout"], plays=4, delta=-45.5, timeouts=1),
         sweep_line("classicplus-005", "easy", drawn=0, affordable=0, plays=0, unswept=True),
         sweep_line("classicplus-005", "hard", drawn=0, affordable=0, plays=0, unswept=True),
         sweep_line("gone-001", "easy"),
-        {"forced": "core-002", "tier": "easy", "games": 24, "cards": [], "suspects": []},
+        sweep_line("core-011", "hard", ["timeout"], timeouts=1, face="radiant"),
+        sweep_line("core-002", "easy", face="radiant"),
+        pass2_line("core-011", "easy", pass2_entry("core-011", playable=ban_turns, plays=0), pass2_entry("gone-001", games=6)),
+        pass2_line("core-011", "hard", pass2_entry("core-011", face="radiant", errors=1)),
+        pass2_line("classic-020", "hard", pass2_entry("classic-020", plays=harm_plays, delta=-60.0)),
+        pass2_line("core-002", "easy", pass2_entry("core-002", playable=ban_turns, plays=1)),
+        pass2_line("core-002", "hard", pass2_entry("core-002", raw_timeouts=5)),
+        pass2_line("classicplus-005", "easy", pass2_entry("classicplus-005", affordable=0, playable=0, plays=0)),
     ]
     path = tmp_path / "flagged.jsonl"
     path.write_text("".join(json.dumps(line) + "\n" for line in lines), encoding="utf-8")
@@ -133,9 +207,38 @@ def test_the_sweep_notebook_runs_on_a_sweep_with_flags(monkeypatch, flagged_swee
     outputs = outputs_of(executed)
     assert not [output for output in outputs if output.output_type == "error"]
     text = "".join(output.text for output in outputs if output.output_type == "stream")
-    assert "9 lines: 5 cards at 2 tiers" in text
-    assert "5 flagged, 2 unswept" in text
+    assert "11 lines: 5 cards at 2 tiers" in text
+    assert "6 flagged, 2 unswept" in text
+    # Raw timeouts stand beside the counted ones in each table (R977000): the flagged table's and pass 2's headers
+    # read `timeouts raw_timeouts`, and the pass-1 table, the cell's value, holds the column.
+    assert re.search(r"errors\s+timeouts\s+raw_timeouts\s+eval_delta_mean", text)
+    assert re.search(r"plays\s+timeouts\s+raw_timeouts\s+eval_delta_mean", text)
+    assert any(
+        "raw_timeouts" in output.data["text/plain"] for output in outputs if output.output_type == "execute_result"
+    )
     assert "Never affordable at any swept tier (no evidence either way): Guy Att" in text
+    assert "faces: base 9, radiant 2" in text
+    assert "Tempo Timmy (hard): flagged on the Radiant face only" in text
+    assert "Speciesist (easy): flagged on the base face only" in text
+
+    # Pass 2, the pass that bans: each state under its own heading, a ban apart from a cleared-but-watched card.
+    assert "6 pass-2 rows: 4 at-risk cards at 2 tiers, 144 games dealt, 3 banned, 1 watched, 1 cleared, 1 unswept" in text
+    assert "1 more row(s) hold cards dealt only as at-risk filler" in text
+    headings = [
+        "Banned (pass 2's own numbers raise a ban flag): 3",
+        "Cleared of a ban but still watched (pass 2 raises only half-strength flags): 1",
+        "Cleared (nothing raised at any strength): 1",
+        "Unswept (never affordable in pass 2's games: no evidence either way): 1",
+    ]
+    places = [text.index(heading) for heading in headings]
+    assert places == sorted(places)
+    banned, watched, cleared = (text[places[i] : places[i + 1]] for i in range(3))
+    assert "  Tempo Timmy (easy): neverPlayed;" in banned
+    assert "  Tempo Timmy (hard, Radiant): error;" in banned
+    assert "  Speciesist (easy): neverPlayed;" in watched and "  Speciesist (easy)" not in banned
+    assert "  Speciesist (hard):" in cleared
+    # Five slow decisions the re-timer cleared: shown beside the 0 counted, and the card stays cleared.
+    assert "0 timeouts (5 raw)" in cleared
 
 
 def test_the_win_rates_notebook_says_what_it_cannot_compare_with_one_patch_and_no_live_games(monkeypatch):
@@ -183,6 +286,25 @@ def test_the_sweep_notebook_runs_on_an_empty_sweep_and_a_repository_with_no_prom
     assert not [output for output in outputs if output.output_type == "error"]
     text = "".join(output.text for output in outputs if output.output_type == "stream")
     assert "0 lines: 0 cards" in text and "1 generations, 0 to 0" in text
+    assert "No pass-2 line in these sweep files" in text
+
+
+def test_the_sweep_notebook_shows_the_pass_2_table_on_the_committed_fixture(monkeypatch):
+    executed = run(NOTEBOOKS[2], monkeypatch)
+    assert not [output for output in outputs_of(executed) if output.output_type == "error"]
+    # Two tiers, each on both faces, for the one at-risk card the fixture replays.
+    assert "4 pass-2 rows: 1 at-risk cards at 2 tiers" in streams(executed)
+    # The fixture's Radiant core-001 at hard was slow eight times and cleared by the re-timer every time.
+    assert "0 timeouts (8 raw)" in streams(executed)
+
+
+def test_the_sweep_notebook_says_so_when_a_sweep_has_no_pass_2_line(monkeypatch, tmp_path):
+    pass1 = write_records(tmp_path / "pass1.jsonl", [sweep_line("core-002", "easy"), sweep_line("core-002", "hard")])
+    executed = run(NOTEBOOKS[2], monkeypatch, {"JACKIOH_SWEEP": pass1})
+    assert not [output for output in outputs_of(executed) if output.output_type == "error"]
+    text = streams(executed)
+    assert "2 lines: 1 cards" in text and "No pass-2 line in these sweep files" in text
+    assert "Banned (" not in text
 
 
 def streams(executed):

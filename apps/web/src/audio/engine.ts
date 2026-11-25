@@ -41,7 +41,7 @@ import {
 } from "./constants.ts";
 import { buildMix, mixLevels, type Mix } from "./mix.ts";
 import { readAudioSettings, subscribeAudioSettings } from "./settings.ts";
-import { SFX, renderSfx } from "./sfx.ts";
+import { loadSfx, onSfxLoaded, sfxNow, type SfxRecipes } from "./sfxLoader.ts";
 import type {
   AudioEngine,
   AudioSettings,
@@ -49,6 +49,7 @@ import type {
   CardAudioTable,
   CardHook,
   Persona,
+  PlaySfxOptions,
   PlayedCue,
   SfxId,
   SfxParams,
@@ -260,6 +261,9 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
   const saveData = options.saveData ?? savingData;
   let loadedLines: CardAudioTable | null = options.lines ?? soundTablesNow()?.cardAudio ?? null;
   let loadedManifest: VoiceManifest | null = options.manifest ?? soundTablesNow()?.voiceManifest ?? null;
+  // #4428: the sound-effect recipes arrive lazily (sfxLoader.ts), so a sound asked for before they
+  // land is skipped, never built. `SFX` and `renderSfx` below read through this, never the module.
+  let loadedSfx: SfxRecipes | null = sfxNow();
   const random = options.random ?? Math.random;
 
   type WaitingVoice = {
@@ -295,8 +299,15 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     }
   }
 
+  function setSfx(recipes: SfxRecipes): void {
+    if (disposed) return;
+    if (loadedSfx === null) loadedSfx = recipes;
+  }
+
   onSoundTablesLoaded(onTablesLoaded);
   void loadSoundTables().catch(() => {});
+  const unsubscribeSfx = onSfxLoaded(setSfx);
+  void loadSfx().catch(() => {});
 
   let ctx: AudioContext | null = null;
   let buses: Mix | null = null;
@@ -442,6 +453,8 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
   function unlock(): void {
     if (factory === null || broken || disposed) return;
     void loadSoundTables().then(onTablesLoaded).catch(() => {});
+    // #4428: the first gesture is the backstop that starts the recipes no earlier kick did.
+    void loadSfx().then(setSfx).catch(() => {});
     if (ctx !== null && ctx.state === "closed") teardownClosed();
     if (ctx === null) createFresh();
     if (ctx === null || ctx.state === "running") return;
@@ -519,20 +532,31 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
 
   /* gate */
 
-  function accepting(): boolean {
+  // #4682: the hidden-tab carve-out is caller-scoped, not id-scoped: only the clock alarm's
+  // own beats (`stepClockAlarm` passes `{ alarm: true }`) skip the hidden check, so a set-piece
+  // bed's `clockTick` (eventHorizon) through the director stays silent while hidden.
+  function accepting(alarm?: boolean): boolean {
     if (ctx === null || buses === null || disposed) return false;
     if (ctx.state === "closed") return false;
     if (readAudioSettings().muted) return false;
-    if (visibility() === "hidden") return false;
+    if (visibility() === "hidden" && !alarm) return false;
     return true;
   }
 
   /* sfx */
 
-  function playSfx(id: SfxId, params?: SfxParams, delayMs?: number): boolean {
+  function playSfx(id: SfxId, params?: SfxParams, delayMs?: number, options?: PlaySfxOptions): boolean {
     try {
-      if (!accepting() || ctx === null || buses === null) return false;
-      const spec = SFX[id];
+      if (!accepting(options?.alarm) || ctx === null || buses === null) return false;
+      // #4428: before the recipes land the cue is skipped, never built or logged; the kick keeps
+      // one tap behind the chunk, not behind silence. A late click is dropped, not queued: an sfx
+      // is timed to an animation entry, so sounding late is worse than staying silent.
+      const recipes = loadedSfx;
+      if (recipes === null) {
+        void loadSfx().then(setSfx).catch(() => {});
+        return false;
+      }
+      const spec = recipes.SFX[id];
       const t = now();
       const delay = delayMs ?? 0;
       const logged = (): Extract<PlayedCue, { kind: "sfx" }> =>
@@ -549,7 +573,11 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
       // faster than the retrigger guard.
       const rapid = RAPID_SFX.has(id);
       // R3334000: a run's scheduled sound is guarded at the time it sounds; every other at the time it is sent.
-      const sounds = SCHEDULED_SFX.has(id) ? t + delay : t;
+      // R506: the clock alarm's own beats (`stepClockAlarm` passes `{ alarm: true }`) are sent up to
+      // two at once while hidden, each delayed to its own second, so they are guarded when each
+      // sounds too; caller-scoped like #4682's hidden exemption, so other `heartbeat`/`clockTick`
+      // callers keep the send-time guard.
+      const sounds = SCHEDULED_SFX.has(id) || options?.alarm === true ? t + delay : t;
       const last = lastSfxAt.get(id);
       if (!rapid && last !== undefined && Math.abs(sounds - last) < SFX_RETRIGGER_MS) return false;
       sfxEnds = sfxEnds.filter((end) => end > t);
@@ -588,7 +616,11 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     try {
       if (!accepting() || ctx === null || buses === null) return false;
       if (defId === HIDDEN_DEF_ID) return false;
-      if (loadedLines === null) return false;
+      const recipes = loadedSfx;
+      if (loadedLines === null || recipes === null) {
+        if (recipes === null) void loadSfx().then(setSfx).catch(() => {});
+        return false;
+      }
       const found = effectFor(loadedLines, defId, hook);
       if (found === null) return false;
       const t = now();
@@ -606,11 +638,11 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
 
       const { effect } = found;
       const cue = ctx.createGain();
-      cue.gain.value = SFX[effect.sfx].gain * effect.gain;
+      cue.gain.value = recipes.SFX[effect.sfx].gain * effect.gain;
       cue.connect(buses.sfx);
       const startAt = ctx.currentTime + delay / 1000;
       const pitch = effect.pitch * (1 + (random() * 2 - 1) * EFFECT_PITCH_JITTER);
-      const lengthMs = renderSfx(effect.sfx, ctx, cue, startAt, effect.params ?? {}, pitch) * 1000;
+      const lengthMs = recipes.renderSfx(effect.sfx, ctx, cue, startAt, effect.params ?? {}, pitch) * 1000;
 
       lastEffectAt.set(found.name, t);
       sfxEnds.push(t + delay + lengthMs);
@@ -1106,6 +1138,7 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     for (const id of timers) clearTimeout(id);
     timers.clear();
     unsubscribeLifecycle?.();
+    unsubscribeSfx();
     unsubscribe?.();
     unsubscribe = null;
     if (channel?.phase === "speaking") {
@@ -1158,7 +1191,11 @@ export function createAudioEngine(options: AudioEngineOptions = {}): MatchFeelAu
     },
     musicOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, input: buses.music }),
     sfxOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, input: buses.sfx }),
-    crowdOutput: () => (ctx === null || buses === null || disposed ? null : { context: ctx, crowd: buses.crowd }),
+    // R4512000: the crowd bus is closed while the page is hidden, as effects and voices are.
+    crowdOutput: () =>
+      ctx === null || buses === null || disposed || visibility() === "hidden"
+        ? null
+        : { context: ctx, crowd: buses.crowd },
     subscribeState: (listener) => {
       stateListeners.add(listener);
       return () => {

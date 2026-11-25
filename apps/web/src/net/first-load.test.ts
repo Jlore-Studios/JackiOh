@@ -10,6 +10,8 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { soundTablesNow } from "../audio/soundTablesLoader.ts";
+import { flavourNow } from "../cards/flavour.ts";
+import { COSMETIC_OFFERS } from "../wire/generated/cosmeticOffers.ts";
 import "../audio/engine.ts";
 import "../routes/landing.tsx";
 
@@ -60,8 +62,39 @@ const SOURCE = join(SRC, "patches/source.ts");
  * `vite build --mode development`, as CI builds it, measured 473,538 bytes
  * (360,749 less). The budget is now 59 × 8192 (483,328), about 10 KB (2.1%)
  * over that: putting the scene data back would cross it.
+ *
+ * #4435 lowered it: the flavour sidecar (every card's flavour line and artist credit) loads in a
+ * chunk beside the engine module rather than with the entry chunk. `vite build --mode development`,
+ * as CI builds it, measured 445,874 bytes (27,664 less). The budget is now 56 × 8192 (458,752),
+ * about 13 KB (2.9%) over that: putting the sidecar back would cross it.
+ *
+ * #4428 lowered it, and merged after #4435: the sound-effect recipes ride their own lazy chunk beside
+ * the module rather than with the entry chunk. Its own build, which lacked #4435's change, measured
+ * 447,192 bytes (26,346 less than #4222's 473,538); #4435's own build, which lacked this one, measured
+ * 445,874. With both merged, `vite build --mode development`, as CI builds it, measured 420,381 bytes
+ * on `main` at 59c8529162: 25,493 less than #4435's 445,874. The budget is now 53 × 8192 (434,176),
+ * about 13 KB (3.3%) over that: putting the recipes, the sidecar or the scene data back would cross it.
+ *
+ * #4444 lowered it: the Friends drawer (the friends list and rows, the friend menu, the chat panel
+ * and the challenge dialog) rides its own lazy chunk behind the rail button rather than with the
+ * entry chunk. `vite build --mode development`, as CI builds it, measured 413,393 bytes
+ * (6,988 less). The budget is now 51 × 8192 (417,792), about 4 KB (1.1%)
+ * over that: putting the drawer panels back would cross it.
+ *
+ * #4517 lowered it: the card detail dialog (its patch history and win-rate box) rides its own
+ * lazy chunk behind the landing's fan cards, and the account screen rides `routeChunks.account`
+ * while only its sign-out helpers stay in the entry. `vite build --mode development`, as CI
+ * builds it, measured 384,276 bytes (29,117 less). The budget is now 48 × 8192 (393,216),
+ * about 9 KB (2.3%) over that: putting either module back would cross it.
+ *
+ * #4714 lowered it: the cosmetic offers (`COSMETIC_OFFERS`, now generated into a module of their own) ride a
+ * chunk beside the engine module, and the music player and its data ride the app's audio and the full-screen
+ * view's lazy import, rather than the entry's preloads. `vite build --mode development`, as CI builds it,
+ * measured 368,845 bytes against 386,034 on its base, c1b2c98c (17,189 less). The budget is now 46 × 8192
+ * (376,832), about 8 KB (2.2%) over that: putting the offers back would cross it, and the music player has its
+ * content guard below.
  */
-export const FIRST_LOAD_GZIP_BUDGET_BYTES = 483_328;
+export const FIRST_LOAD_GZIP_BUDGET_BYTES = 376_832;
 
 function sources(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -129,6 +162,169 @@ it("#4130 importing engine.ts and the landing does not run parseCardAudioText", 
   expect(soundTablesNow()).toBeNull();
 });
 
+it("#4428 no non-test module statically imports sfx.ts", () => {
+  const files = sources(SRC);
+  expect(files.length).toBeGreaterThan(100);
+  const staticFrom = /from\s+["']([^"']+)["']/gu;
+  const importsSfx = (specifier: string): boolean => (specifier.split("/").pop() ?? "") === "sfx.ts";
+  const offenders = files.filter((path) => {
+    const rel = relative(SRC, path);
+    // The sound tables' lazy chunk reads the recipes' ids and timbres (#4428): it is itself reached
+    // only through a dynamic import, never the entry chunk.
+    if (rel === "audio/soundTables.ts") return false;
+    // `import type` lines emit no bytes: only a value import joins the chunk.
+    const text = readFileSync(path, "utf8")
+      .split("\n")
+      .filter((line) => !/^\s*import\s+type\b/.test(line))
+      .join("\n");
+    return [...text.matchAll(staticFrom)].some((match) => importsSfx(match[1] ?? ""));
+  });
+  expect(offenders.map((path) => relative(SRC, path))).toEqual([]);
+  // The one module allowed to pull the recipes in, dynamically, is their loader.
+  const dynamicSfx = /import\(\s*["'][^"']*sfx\.ts["']\s*\)/u;
+  const holders = files.filter((path) => dynamicSfx.test(readFileSync(path, "utf8")));
+  expect(holders.map((path) => relative(SRC, path))).toEqual(["audio/sfxLoader.ts"]);
+});
+
+it("#4444 no non-test module statically imports the friends drawer panels", () => {
+  const files = sources(SRC);
+  expect(files.length).toBeGreaterThan(100);
+  const staticFrom = /from\s+["']([^"']+)["']/gu;
+  const drawerPanel = (specifier: string): boolean =>
+    ["ChallengeDialog.tsx", "ChatPanel.tsx", "FriendList.tsx", "FriendRows.tsx", "FriendMenu.tsx"].includes(specifier.split("/").pop() ?? "");
+  // Already reached only through a lazy chunk: the drawer's own module and the lazy Friends
+  // page (`TogetherRoute.tsx`, `TogetherPanels.tsx`), and the list's own rows.
+  const allowed = new Set([
+    "together/FriendsDrawer.tsx",
+    "together/TogetherRoute.tsx",
+    "together/TogetherPanels.tsx",
+    "together/FriendList.tsx",
+    "together/FriendRows.tsx",
+  ]);
+  const offenders = files.filter((path) => {
+    const rel = relative(SRC, path);
+    if (allowed.has(rel)) return false;
+    // `import type` lines emit no bytes: only a value import joins the chunk.
+    const text = readFileSync(path, "utf8")
+      .split("\n")
+      .filter((line) => !/^\s*import\s+type\b/.test(line))
+      .join("\n");
+    return [...text.matchAll(staticFrom)].some((match) => drawerPanel(match[1] ?? ""));
+  });
+  expect(offenders.map((path) => relative(SRC, path))).toEqual([]);
+  // The one module allowed to pull the drawer in, dynamically, is its chunk.
+  const dynamicDrawer = /import\(\s*["'][^"']*FriendsDrawer\.tsx["']\s*\)/u;
+  const holders = files.filter((path) => dynamicDrawer.test(readFileSync(path, "utf8")));
+  expect(holders.map((path) => relative(SRC, path))).toEqual(["together/friendsDrawerChunk.ts"]);
+});
+
+/** The file a relative `specifier` names from `importer`, or null for any other specifier. */
+function resolveRelative(importer: string, specifier: string): string | null {
+  if (!specifier.startsWith(".")) return null;
+  const base = join(dirname(importer), specifier);
+  const candidates = [base, `${base}.ts`, `${base}.tsx`, join(base, "index.ts"), join(base, "index.tsx")];
+  return candidates.find((candidate) => existsSync(candidate) && statSync(candidate).isFile()) ?? null;
+}
+
+/**
+ * Every file the entry loads statically: the static import graph from `main.tsx` (value imports and re-exports;
+ * `import type` and `export type` lines emit no bytes, and test files are never the entry's). Regexes over source,
+ * like this file's other checks: they cannot see a specifier built at runtime, and the client uses none outside
+ * `import.meta.glob`.
+ */
+function entryStaticGraph(): Set<string> {
+  const entry = join(SRC, "main.tsx");
+  const staticFrom = /from\s+["']([^"']+)["']/gu;
+  const valueTextOf = (path: string): string =>
+    readFileSync(path, "utf8")
+      .split("\n")
+      .filter((line) => !/^\s*import\s+type\b/u.test(line) && !/^\s*export\s+type\b/u.test(line))
+      .join("\n");
+  const reachable = new Set<string>([entry]);
+  const queue = [entry];
+  while (queue.length > 0) {
+    const current = queue.pop() as string;
+    if (/\.test\.tsx?$/u.test(current)) continue;
+    for (const match of valueTextOf(current).matchAll(staticFrom)) {
+      const next = resolveRelative(current, match[1] ?? "");
+      if (next !== null && !reachable.has(next)) {
+        reachable.add(next);
+        queue.push(next);
+      }
+    }
+  }
+  return reachable;
+}
+
+it("#4517 no lazy chunk is already in the entry's static graph", () => {
+  // A `lazy()` or `routeChunk` `import()` that resolves to code the entry already loads
+  // statically is dead weight in disguise: the bundler keeps the module in the entry chunk
+  // and the dynamic import fetches nothing new (#4517: the landing's `lazy()` CardDetail rode
+  // in through the `cards/` barrels). Walk the static import graph from `main.tsx` and fail on
+  // any non-test `import()` target inside it.
+  const dynamicTo = /import\(\s*["']([^"']+)["']/gu;
+  const reachable = entryStaticGraph();
+  expect(reachable.size).toBeGreaterThan(100);
+  // The only loaders allowed in the entry's static graph, each with its reason: their payloads
+  // sit behind lazy globs or lazy imports this file already guards.
+  const allowed = new Map<string, string>([
+    // Payload rides its lazy glob beside the engine; the small loader sits in the entry on purpose.
+    ["cards/chinese.ts", "payload rides its lazy glob beside the engine"],
+    // Recipes ride its lazy import; the small loader sits in the entry on purpose.
+    ["audio/sfxLoader.ts", "recipes ride its lazy import"],
+  ]);
+  const offenders: string[] = [];
+  for (const importer of [...reachable].sort()) {
+    if (/\.test\.tsx?$/u.test(importer)) continue;
+    for (const match of readFileSync(importer, "utf8").matchAll(dynamicTo)) {
+      const target = resolveRelative(importer, match[1] ?? "");
+      if (target === null || !reachable.has(target)) continue;
+      const rel = relative(SRC, target);
+      if (allowed.has(rel)) continue;
+      offenders.push(`${relative(SRC, importer)} → ${rel}`);
+    }
+  }
+  expect(offenders.sort()).toEqual([]);
+  expect([...allowed.keys()].sort()).toEqual(["audio/sfxLoader.ts", "cards/chinese.ts"]);
+});
+
+it("#4714 the entry's static graph holds neither the cosmetic offers nor the music player", () => {
+  // The offers ride their own chunk beside the engine module (`loadCosmeticOffers`, cards/versions.ts); the music
+  // player and its data ride the app's audio, which `main.tsx` imports after the first paint, and the full-screen
+  // view's own lazy import (cards/FullScreenArt.tsx).
+  const reachable = new Set([...entryStaticGraph()].map((path) => relative(SRC, path)));
+  expect(reachable.size).toBeGreaterThan(100);
+  expect(reachable).toContain("cards/versions.ts");
+  expect(reachable).toContain("cards/FullScreenArt.tsx");
+  for (const lazy of ["wire/generated/cosmeticOffers.ts", "audio/music.ts", "audio/musicData.ts"]) {
+    expect(reachable.has(lazy), lazy).toBe(false);
+  }
+});
+
+it("#4714 only cards/versions.ts names the cosmetic offers' module, through a dynamic import", () => {
+  const files = sources(SRC);
+  expect(files.length).toBeGreaterThan(100);
+  const namers = files.filter((path) => /cosmeticOffers\.ts/u.test(readFileSync(path, "utf8")));
+  expect(namers.map((path) => relative(SRC, path))).toEqual(["cards/versions.ts"]);
+  const loader = readFileSync(join(SRC, "cards/versions.ts"), "utf8");
+  expect(loader).not.toMatch(/from\s+["'][^"']*cosmeticOffers\.ts["']/u);
+  expect(loader).toMatch(/import\(\s*["'][^"']*cosmeticOffers\.ts["']\s*\)/u);
+});
+
+it("#4435 no non-test module names flavour.json except cards/flavour.ts, which never imports it statically", () => {
+  const files = sources(SRC);
+  expect(files.length).toBeGreaterThan(100);
+  const namers = files.filter((path) => /flavour\.json/u.test(readFileSync(path, "utf8")));
+  expect(namers.map((path) => relative(SRC, path))).toEqual(["cards/flavour.ts"]);
+  const loader = readFileSync(join(SRC, "cards/flavour.ts"), "utf8");
+  expect(loader).not.toMatch(/from\s+["'][^"']*flavour\.json["']/u);
+  expect(loader).toContain("import(");
+});
+
+it("#4435 importing landing and engine leaves flavourNow() null", () => {
+  expect(flavourNow()).toBeNull();
+});
+
 it("#4222 no non-test module statically imports scene data", () => {
   const files = sources(SRC);
   expect(files.length).toBeGreaterThan(100);
@@ -180,15 +376,22 @@ describe.skipIf(!existsSync(BUILT))("#3499 first load", () => {
     return files;
   }
 
-  /** Three patch-notes strings no card catalog shares: the first and newest notes, the newest title. */
+  /**
+   * Three patch-notes strings no card catalog shares: the first and newest notes, and the newest title. A
+   * title of one word can be a term the client prints for its own sake (v0.6.13c's "Overload" is a glossary
+   * keyword, #4751), so the newest title probes only when it holds more than one word; the notes always do.
+   */
   function probes(): string[] {
     const patches = JSON.parse(readFileSync(PATCHES, "utf8")) as {
       readonly notes?: unknown;
       readonly player?: { readonly title?: unknown };
     }[];
     if (!Array.isArray(patches) || patches.length === 0) throw new Error("patches.json is not a list of patches");
-    const found = [patches[0]?.notes, patches.at(-1)?.notes, patches.at(-1)?.player?.title];
-    expect(found.every((probe) => typeof probe === "string" && probe.length > 0)).toBe(true);
+    const notes = [patches[0]?.notes, patches.at(-1)?.notes];
+    expect(notes.every((probe) => typeof probe === "string" && probe.length > 0)).toBe(true);
+    const title = patches.at(-1)?.player?.title;
+    expect(typeof title === "string" && title.length > 0).toBe(true);
+    const found = typeof title === "string" && /\s/u.test(title.trim()) ? [...notes, title] : notes;
     return found.filter((probe): probe is string => typeof probe === "string");
   }
 
@@ -227,12 +430,126 @@ describe.skipIf(!existsSync(BUILT))("#3499 first load", () => {
     }
   });
 
+  it("#4435 the entry chunk and its preloads hold no flavour line or artist credit", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    const catalogText = readFileSync(join(WEB, "../../crates/cards/catalog.json"), "utf8");
+    const chineseText = readFileSync(join(WEB, "../../crates/cards/chinese.json"), "utf8");
+    const sidecar = JSON.parse(readFileSync(join(WEB, "../../crates/cards/flavour.json"), "utf8")) as Record<
+      string,
+      { flavour?: unknown; artist?: unknown }
+    >;
+    const ids = Object.keys(sidecar).filter((id) => id !== "//");
+    expect(ids.length).toBeGreaterThan(0);
+    // A probe string that also occurs in the catalog or the Chinese tables proves nothing.
+    const unique = (value: unknown): value is string =>
+      typeof value === "string" && value.length > 0 && !catalogText.includes(value) && !chineseText.includes(value);
+    const flavours = ids.map((id) => sidecar[id]?.flavour).filter(unique);
+    const artists = ids.map((id) => sidecar[id]?.artist).filter(unique);
+    expect(flavours.length).toBeGreaterThan(0);
+    // No shipped entry names an artist yet, so a third flavour line stands in until one does.
+    const probes = [flavours[0], flavours.at(-1), artists[0] ?? flavours[Math.floor(flavours.length / 2)]];
+    expect(probes.every((probe) => typeof probe === "string" && probe.length > 0)).toBe(true);
+    for (const probe of probes) {
+      for (const text of texts) expect(text).not.toContain(probe as string);
+    }
+  });
+
   it("#4222 the entry chunk and its preloads hold no scene kit or recipe text", () => {
     const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
     // Each occurs in `src` only in the scene data files, their tests, or `ART.md`: a kit part, a
     // figure pose, and a figure item each a recipe places.
     const sceneProbes = ["bone-scarecrow", "pose-genuflect", "item-trunk-club"];
     for (const probe of sceneProbes) {
+      for (const text of texts) expect(text).not.toContain(probe);
+    }
+  });
+
+  it("#4517 the entry chunk and its preloads hold no card-history text", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    // Each probe is a runtime string, so minification keeps it, and each occurs in `src` only in
+    // the card history view, its tests, or comments: the history's loading line, its failure
+    // line, and its line for a card no patch recorded.
+    const historyProbes = ["Loading this card's history…", "This card's history didn't load.", "No patch has recorded this card."];
+    for (const probe of historyProbes) {
+      for (const text of texts) expect(text).not.toContain(probe);
+    }
+  });
+
+  it("#4517 the entry chunk and its preloads hold no account-screen text", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    // Each probe is a runtime string, so minification keeps it, and each occurs in `src` only in
+    // the account screen or its tests: the sign-out note, the screen's loading line, and the
+    // profile header's member line. Never the sign-out buttons' own words: those stay in the entry.
+    const accountProbes = [
+      "Signing out forgets this session on this device and revokes it.",
+      "Loading your account…",
+      "Member since",
+    ];
+    for (const probe of accountProbes) {
+      for (const text of texts) expect(text).not.toContain(probe);
+    }
+  });
+
+  it("#4444 the entry chunk and its preloads hold no friends-drawer text", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    // Each probe is a runtime string, so minification keeps it, and each occurs in `src` only in
+    // the drawer panels, their tests, or comments: the chat's earlier page, the drawer's link to
+    // the Friends page, and the friend menu's daily item.
+    const drawerProbes = ["Show earlier messages", "See all friends", "Daily challenge"];
+    for (const probe of drawerProbes) {
+      for (const text of texts) expect(text).not.toContain(probe);
+    }
+  });
+
+  it("#4428 the entry chunk and its preloads hold no sfx recipes", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    // Each probe is a runtime string, so minification keeps it, and each is absent from the entry
+    // once the recipes leave it: a dotted run of recipe ids out of the id switch the bundler
+    // compiles (never dotted in `src`, and never dotted in the entry's cue map), and two
+    // oscillator/filter words the entry's own audio code never uses (`crowd.ts` reads them too, but
+    // only through the lazy `noise.ts` leaf). The issue's suggested `CENTS_PER_OCTAVE` and
+    // `CRUSH_CYCLE` cannot serve: the minifier renames them away, so they are absent from every
+    // built asset and would pass vacuously.
+    const sfxProbes = ["trapSet.trapSting.spell.mana", "sawtooth", "bandpass"];
+    for (const probe of sfxProbes) {
+      for (const text of texts) expect(text).not.toContain(probe);
+    }
+  });
+
+  /** Every built script's text, by name. */
+  function builtScripts(): Map<string, string> {
+    const assets = join(BUILT, "assets");
+    return new Map(
+      readdirSync(assets)
+        .filter((name) => name.endsWith(".js"))
+        .map((name): [string, string] => [name, readFileSync(join(assets, name), "utf8")]),
+    );
+  }
+
+  it("#4714 the entry chunk and its preloads hold no cosmetic offers", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    // The minifier writes an offer's list of card ids as one dotted string it splits, so each probe is a dotted
+    // run of ids: the first three of the first offer and the last three of the last, which no other list holds in
+    // that order. Each must be in some built script, or the probe would pass vacuously.
+    const offers = Object.values(COSMETIC_OFFERS);
+    const probes = [offers[0]?.slice(0, 3), offers.at(-1)?.slice(-3)].map((ids) => (ids ?? []).join("."));
+    const scripts = [...builtScripts().values()];
+    for (const probe of probes) {
+      expect(probe.split(".")).toHaveLength(3);
+      expect(scripts.some((text) => text.includes(probe)), `no built script holds ${probe}`).toBe(true);
+      for (const text of texts) expect(text).not.toContain(probe);
+    }
+  });
+
+  it("#4714 the entry chunk and its preloads hold no music player", () => {
+    const texts = entryAndPreloads().map((file) => readFileSync(file, "utf8"));
+    // Each probe is a runtime string, so minification keeps it, and each occurs in `src` only in the music modules
+    // and their tests: two of the player's methods no module outside `audio/music*.ts` names, and a check of
+    // `musicData.ts`'s manifest reader. Each must be in some built script, or the probe would pass vacuously.
+    const musicProbes = ["preloadIntros", "resetResume", "a sting needs a handoff within its file"];
+    const scripts = [...builtScripts().values()];
+    for (const probe of musicProbes) {
+      expect(scripts.some((text) => text.includes(probe)), `no built script holds ${probe}`).toBe(true);
       for (const text of texts) expect(text).not.toContain(probe);
     }
   });

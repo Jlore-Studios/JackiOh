@@ -2,7 +2,7 @@
 // game-over state (Result.tsx), and animations that played twice.
 
 import { CATALOG } from "@jackioh/cards";
-import type { ActionBody, AttackForecast, GameEvent, PlayerView } from "@jackioh/shared";
+import type { ActionBody, AttackForecast, GameEvent, PendingOption, PlayerView } from "@jackioh/shared";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { StrictMode, useState, type ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,7 +11,7 @@ import { ANIMATIONS, HIDDEN_ID } from "./animations.ts";
 import { DAMAGE_FEEL, SLAM_LAND_AT, UNIT_SLAM } from "./damageFeel.ts";
 import { CatalogContext, lookupFromDefs } from "./catalog.ts";
 import { testid, type Highlight } from "./contract.ts";
-import Game, { GAME_HOST_ATTRIBUTE, sameHighlight } from "./Game.tsx";
+import Game, { GAME_HOST_ATTRIBUTE, GAME_SCROLL_LOCK_ATTRIBUTE, sameHighlight } from "./Game.tsx";
 import { resultReason } from "./Result.tsx";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
 import { baseView, card, emptySide, faceDownBackrow, faceUpBackrow, pendingFor, unit, waitingPending, withEvents } from "../test/fixtures.ts";
@@ -188,6 +188,26 @@ describe("#3633 the game screen's host", () => {
     expect(host).toHaveAttribute(GAME_HOST_ATTRIBUTE, "true");
     unmount();
     expect(host).not.toHaveAttribute(GAME_HOST_ATTRIBUTE);
+  });
+
+  it("R4773000 Game locks the document against scroll while mounted and restores it on unmount", () => {
+    const shell = (showGame: boolean): ReactElement => (
+      <div className="app-shell app-shell--wide" data-testid="shell">
+        <nav className="screen-nav" />
+        {showGame ? <Game view={withEvents(baseView(), START)} legal={[]} onAction={vi.fn()} /> : null}
+      </div>
+    );
+    const { rerender, unmount } = render(shell(true));
+    const host = screen.getByTestId("shell");
+    expect(document.documentElement).toHaveAttribute(GAME_SCROLL_LOCK_ATTRIBUTE, "true");
+    // The route takes the game down and keeps its shell: the lock goes with the game.
+    rerender(shell(false));
+    expect(host).not.toHaveAttribute(GAME_HOST_ATTRIBUTE);
+    expect(document.documentElement).not.toHaveAttribute(GAME_SCROLL_LOCK_ATTRIBUTE);
+    rerender(shell(true));
+    expect(document.documentElement).toHaveAttribute(GAME_SCROLL_LOCK_ATTRIBUTE, "true");
+    unmount();
+    expect(document.documentElement).not.toHaveAttribute(GAME_SCROLL_LOCK_ATTRIBUTE);
   });
 });
 
@@ -564,6 +584,154 @@ describe("R821000 a Plague Counter placement is answered by a click on the board
   });
 });
 
+describe("R4781000 a target prompt is answered by a click on the board", () => {
+  const NO_ATTACK = "It cannot attack.";
+  const options: PendingOption[] = [
+    { key: "instance:e1", label: "Theirs", instanceId: "e1", defId: "core-002" },
+    { key: "instance:u1", label: "Mine", instanceId: "u1", defId: "core-002" },
+    { key: "instance:t1", label: "Face-down card", instanceId: "t1", player: "p2", row: "backrow", lane: 3 },
+    { key: "hero:p2", label: "Enemy hero", player: "p2" },
+  ];
+  const singleView = (): PlayerView =>
+    baseView({
+      you: emptySide("p1", {
+        units: [unit("p1", { instanceId: "u1", attackReason: NO_ATTACK }), null, null, null, null],
+      }),
+      opponent: emptySide("p2", {
+        hand: { count: 0 },
+        units: [unit("p2", { instanceId: "e1" }), null, null, null, null],
+        backrow: [null, null, faceDownBackrow, null, null],
+      }),
+      pending: pendingFor("target", options, { prompt: "Choose a target" }),
+    });
+  const answer = (instanceId: string): ActionBody => ({
+    type: "answer",
+    choiceId: "ch1",
+    selection: [{ pick: "instance", instanceId }],
+  });
+  const heroAnswer: ActionBody = {
+    type: "answer",
+    choiceId: "ch1",
+    selection: [{ pick: "hero", player: "p2" }],
+  };
+  const legal: ActionBody[] = [answer("e1"), answer("u1"), answer("t1"), heroAnswer];
+
+  it("sends the engine's answer for a click on a lit enemy unit", () => {
+    const onAction = vi.fn();
+    render(<Game view={singleView()} legal={legal} onAction={onAction} />);
+
+    fireEvent.click(screen.getByTestId(testid.card("e1")));
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenLastCalledWith(answer("e1"));
+  });
+
+  it("sends the engine's answer for a click on a lit own unit, with no attack notice", () => {
+    const onAction = vi.fn();
+    render(<Game view={singleView()} legal={legal} onAction={onAction} />);
+
+    fireEvent.click(screen.getByTestId(testid.card("u1")));
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenLastCalledWith(answer("u1"));
+    expect(screen.queryByTestId("attack-reason")).toBeNull();
+  });
+
+  it("sends the engine's answer for a click on a lit hero", () => {
+    const onAction = vi.fn();
+    render(<Game view={singleView()} legal={legal} onAction={onAction} />);
+
+    fireEvent.click(screen.getByTestId(testid.hero("opponent")));
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenLastCalledWith(heroAnswer);
+  });
+
+  it("sends the engine's answer for a click on the zone of a lit face-down card", () => {
+    const onAction = vi.fn();
+    render(<Game view={singleView()} legal={legal} onAction={onAction} />);
+
+    fireEvent.click(screen.getByTestId(testid.zone("opponent", "backrow", 3)));
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenLastCalledWith(answer("t1"));
+  });
+
+  it("toggles a several-pick option from the board and sends nothing until Confirm", () => {
+    const multi: ActionBody = {
+      type: "answer",
+      choiceId: "ch1",
+      selection: [
+        { pick: "instance", instanceId: "e1" },
+        { pick: "instance", instanceId: "u1" },
+      ],
+    };
+    const onAction = vi.fn();
+    render(
+      <Game
+        view={{ ...singleView(), pending: pendingFor("target", options, { prompt: "Choose two targets", min: 1, max: 2 }) }}
+        legal={[multi]}
+        onAction={onAction}
+      />,
+    );
+
+    // One board click presses the list option, and sends nothing.
+    fireEvent.click(screen.getByTestId(testid.card("e1")));
+    expect(onAction).not.toHaveBeenCalled();
+    expect(screen.getByTestId("prompt-option-instance:e1")).toHaveAttribute("aria-pressed", "true");
+
+    // A second board click unpresses it again, still sending nothing.
+    fireEvent.click(screen.getByTestId(testid.card("e1")));
+    expect(onAction).not.toHaveBeenCalled();
+    expect(screen.getByTestId("prompt-option-instance:e1")).toHaveAttribute("aria-pressed", "false");
+
+    // Two picks plus Confirm send one two-selection answer.
+    fireEvent.click(screen.getByTestId(testid.card("e1")));
+    fireEvent.click(screen.getByTestId(testid.card("u1")));
+    expect(onAction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId("prompt-submit"));
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenLastCalledWith(multi);
+  });
+
+  it("answers nothing for the opponent's prompt, showing the notice instead", () => {
+    const onAction = vi.fn();
+    render(<Game view={{ ...singleView(), pending: waitingPending }} legal={[]} onAction={onAction} />);
+
+    fireEvent.click(screen.getByTestId(testid.card("u1")));
+    expect(onAction).not.toHaveBeenCalled();
+    expect(screen.getByTestId("attack-reason")).toHaveTextContent(NO_ATTACK);
+  });
+
+  it("answers nothing from a board click for a prompt of another kind", () => {
+    const onAction = vi.fn();
+    render(
+      <Game
+        view={{
+          ...singleView(),
+          pending: pendingFor(
+            "mode",
+            [
+              { key: "mode:one", label: "One" },
+              { key: "mode:two", label: "Two" },
+            ],
+            { prompt: "Choose one" },
+          ),
+        }}
+        legal={[]}
+        onAction={onAction}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId(testid.card("e1")));
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
+  it("answers nothing from a board click on a replay", () => {
+    const onAction = vi.fn();
+    render(<Game view={singleView()} legal={legal} onAction={onAction} replay />);
+
+    fireEvent.click(screen.getByTestId(testid.card("e1")));
+    expect(onAction).not.toHaveBeenCalled();
+  });
+});
+
 describe("R3777001 a play aimed at a face-down enemy backrow card is built by a click on its zone", () => {
   const view = baseView({
     you: emptySide("p1", { hand: [card({ instanceId: "h1" })] }),
@@ -638,6 +806,43 @@ describe("a half-built play or attack is dropped at the turn change (#2924)", ()
 
     rerender(<Game view={{ ...mine, active: "p2", turn: 4 }} legal={[]} onAction={onAction} />);
     expect(screen.queryByTestId("prompt-scrim")).toBeNull();
+  });
+
+  it("closes a play's own picker when the game ends on the same turn (#4743)", () => {
+    const onAction = vi.fn();
+    const mine = baseView({ you: emptySide("p1", { hand: [card({ instanceId: "h1" })] }) });
+    const plays: ActionBody[] = [
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 } },
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 2 } },
+    ];
+    const { rerender } = render(<Game view={mine} legal={plays} onAction={onAction} />);
+
+    fireEvent.click(screen.getByTestId(testid.handCard("h1")));
+    expect(screen.getByTestId("prompt-modal")).toHaveAttribute("data-prompt-source", "play");
+
+    rerender(
+      <Game view={{ ...mine, result: { winner: "p2", reason: "concede" } }} legal={[]} onAction={onAction} />,
+    );
+    expect(screen.queryByTestId("prompt-scrim")).toBeNull();
+  });
+
+  it("drops the selected attacker when the game ends on the same turn (#4743)", () => {
+    const onAction = vi.fn();
+    const first = attacker();
+    const { rerender } = render(<Game view={first} legal={[attack]} onAction={onAction} />);
+
+    fireEvent.click(screen.getByTestId(testid.card("u1")));
+    expect(screen.getByTestId(testid.card("u1"))).toHaveAttribute("data-selected", "true");
+
+    // The finished view still lists the attack: only the #4743 drop clears the selection, since
+    // `highlightFor` already hides it (and refuses the click) whenever `legal` is empty.
+    rerender(
+      <Game view={{ ...first, result: { winner: "p2", reason: "concede" } }} legal={[attack]} onAction={onAction} />,
+    );
+    expect(screen.getByTestId(testid.card("u1"))).not.toHaveAttribute("data-selected");
+
+    fireEvent.click(screen.getByTestId(testid.card("e1")));
+    expect(onAction).not.toHaveBeenCalled();
   });
 
   it("keeps the selected attacker through view updates within the same turn", () => {

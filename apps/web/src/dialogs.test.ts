@@ -99,6 +99,7 @@ const ESCAPE_HANDLERS: Record<string, number> = {
   "emotes/ui.tsx": 1,
   "game/ModifierList.tsx": 1,
   "dungeon/fight/ArtifactTray.tsx": 1,
+  "assault/fight/UpgradeTray.tsx": 1,
   // The board's gestures: a drag or an aim Escape calls off, and the showcase Escape skips; the deck
   // builder's pool drag (R3734001) calls its own off the same way.
   "game/drag/DragLayer.tsx": 1,
@@ -195,7 +196,7 @@ function countsOf(count: (file: string) => number): Record<string, number> {
 /** The dialogs #3221 moved onto Dialog, each drawn through it. */
 const MOVED = [
   "settings/SettingsPanel.tsx",
-  "together/FriendsButton.tsx",
+  "together/FriendsDrawer.tsx",
   "together/ChatPanel.tsx",
   "together/ChallengeDialog.tsx",
   "collection/TokenOffer.tsx",

@@ -59,21 +59,46 @@ export function shippedPool(): readonly CardDef[] {
  * any other its whole catalog text, with no short form, within FAN_TEXT_LIMIT.
  */
 export function fitsTheFan(def: CardDef, fullArtOn: boolean): boolean {
+  // R2725000: the setting prints full art on the 21 full-art cards alone; a version needs its own pick.
+  // Checked before either face is worked out, so a full-art card costs no crossing while full art is on.
+  if (fullArtOn && isFullArtCard(def.id)) return true;
   return [false, true].every((radiant) => {
     const face = faceModel({ defId: def.id, def, radiant });
-    // R2725000: the setting prints full art on the 21 full-art cards alone; a version needs its own pick.
-    if (fullArtOn && isFullArtCard(def.id)) return true;
     return !face.hasShortForm && !overLimit(face.text.full, FAN_TEXT_LIMIT);
   });
 }
 
 const FITTING = new Map<string, readonly CardDef[]>();
 
+/**
+ * #4511: whether each card fits the fan, by card and setting: the sampler asks again for every
+ * draw, so without this each draw would cross for the card's two faces. The pools above stay as
+ * they are; this caches the one card the fast path keeps asking about.
+ */
+const FIT = new Map<string, boolean>();
+
+/** #4511: `fitsTheFan`, memoized per card and setting for the sampler's repeated draws. */
+function fitsCached(def: CardDef, fullArtOn: boolean): boolean {
+  const key = `${def.id}:${fullArtOn ? "1" : "0"}`;
+  const known = FIT.get(key);
+  if (known !== undefined) return known;
+  const fits = fitsTheFan(def, fullArtOn);
+  FIT.set(key, fits);
+  return fits;
+}
+
+/** #4511: clears the fan's caches (`FITTING`, `FIT`, `WEIGHTS`) so a test can deal from cold. */
+export function resetLandingFanCachesForTests(): void {
+  FITTING.clear();
+  FIT.clear();
+  WEIGHTS.clear();
+}
+
 function fitting(name: string, pool: readonly CardDef[], fullArtOn: boolean): readonly CardDef[] {
   const key = `${name}:${String(fullArtOn)}`;
   const known = FITTING.get(key);
   if (known !== undefined) return known;
-  const cards = pool.filter((def) => fitsTheFan(def, fullArtOn));
+  const cards = pool.filter((def) => fitsCached(def, fullArtOn));
   FITTING.set(key, cards);
   return cards;
 }
@@ -153,6 +178,49 @@ export function pickWeighted(cards: readonly CardDef[], random: RandomSource, we
   return cards[cards.length - 1];
 }
 
+/**
+ * #4511: how many uniform draws `sampleFittingCard` tries for one rarity before falling back to
+ * today's full filter, so a rarity whose fitting cards are nearly unreachable stays correct.
+ */
+export const FAN_SAMPLE_MAX_DRAWS = 32;
+
+/**
+ * #4511: the face-call bound the fan keeps for a returning player's deal from the shipped pool
+ * (landingFan.test.ts pins it): a few crossings per rarity, not every shipped card's two faces.
+ */
+export const LANDING_DEAL_FACE_BUDGET = 64;
+
+/**
+ * #4511: one rarity's card by rejection sampling: draw uniformly from `cards`, skip the cards that
+ * do not fit the fan, and accept a fitting card with probability `weigh(def) / maxWeight`. Each
+ * fitting card's chance stays exactly its weight over the fitting cards' summed weights (as R374,
+ * R639, R704 and R1017002's weighted draws have it), while the deal costs a few face calls instead
+ * of every card's. After `FAN_SAMPLE_MAX_DRAWS` draws without an acceptance, fall back to today's
+ * full filter, so a rarity with few or no fitting cards deals exactly what today's would.
+ */
+export function sampleFittingCard(
+  cards: readonly CardDef[],
+  random: RandomSource,
+  weigh: CardWeight,
+  fullArtOn: boolean,
+  maxWeight: number = FEATURE_WEIGHT_PLAIN * FULL_ART_WEIGHT_FACTOR,
+): CardDef | undefined {
+  for (let draw = 0; draw < FAN_SAMPLE_MAX_DRAWS; draw += 1) {
+    if (cards.length === 0) return undefined;
+    const def = cards[below(random, cards.length)];
+    if (def === undefined || !fitsCached(def, fullArtOn)) continue;
+    const weighed = weigh(def);
+    const weight = Number.isFinite(weighed) && weighed > 0 ? weighed : 1;
+    // A weight above `maxWeight` always accepts, since `random()` stays below 1.
+    if (random() * maxWeight < weight) return def;
+  }
+  return pickWeighted(
+    cards.filter((def) => fitsCached(def, fullArtOn)),
+    random,
+    weigh,
+  );
+}
+
 /** R639 swaps one slot for a weighted, unseen card of the same rarity; its Radiant face stays put. */
 export function rotateFan(
   hand: readonly FanFace[],
@@ -160,6 +228,7 @@ export function rotateFan(
   random: RandomSource,
   pool: readonly CardDef[] = shippedPool(),
   weigh: CardWeight = featureWeight,
+  fullArtOn = false,
 ): FanFace[] {
   if (hand.length === 0) return [...hand];
   const at = ((slot % hand.length) + hand.length) % hand.length;
@@ -167,7 +236,7 @@ export function rotateFan(
   if (current === undefined) return [...hand];
   const shown = new Set(hand.map(({ def }) => def.id));
   const candidates = pool.filter((def) => def.rarity === current.def.rarity && !shown.has(def.id));
-  const next = pickWeighted(candidates, random, weigh);
+  const next = sampleFittingCard(candidates, random, weigh, fullArtOn);
   if (next === undefined) return [...hand];
   return hand.map((face, index) => (index === at ? { def: next, radiant: face.radiant } : face));
 }
@@ -177,11 +246,12 @@ export function dealLandingFan(
   random: RandomSource,
   pool: readonly CardDef[] = corePool(),
   weigh: CardWeight = EVEN,
+  fullArtOn = false,
 ): FanFace[] {
   const byRarity = new Map<Rarity, CardDef[]>();
   for (const def of pool) byRarity.set(def.rarity, [...(byRarity.get(def.rarity) ?? []), def]);
   const rarities = shuffled([...byRarity.keys()], random).slice(0, FAN_FACES);
-  const picks = rarities.map((rarity) => pickWeighted(byRarity.get(rarity) ?? [], random, weigh));
+  const picks = rarities.map((rarity) => sampleFittingCard(byRarity.get(rarity) ?? [], random, weigh, fullArtOn));
   return picks
     .filter((def): def is CardDef => def !== undefined)
     .map((def, index) => ({ def, radiant: index === FAN_RADIANT_AT }));

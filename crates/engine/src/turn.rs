@@ -358,11 +358,13 @@ fn begin_turn(sink: &mut EngineSink, player: PlayerId, extra: bool) {
     crate::subsystems::autopilot::engage_aura(sink, player);
     // R2250002, R1853002: an open Marketplace rolls the player their offers and quotes its prices.
     crate::marketplace::marketplace_turn_start(sink, player);
-    // MD-B2, R941: the aura is read before the refresh, off the field as it stands now.
+    // MD-B2, R941: the aura is read before the refresh, off the field as it stands now; so is R4440052's
+    // "+N mana per turn".
     let natural = crate::mana::natural_mana_on(sink.state);
+    let bonus = crate::mana::mana_per_turn_of(sink.state, player);
     let side = &mut sink.state.players[player];
     let rider = side.mana.next_turn_mod;
-    crate::mana::refresh_mana_with(side, natural);
+    crate::mana::refresh_mana_with_bonus(side, natural, bonus);
     let lost_spent = crate::mana::spend_lost_refresh(side);
     sink.events.push(crate::mana::mana_event(player, side));
     // R169: the refresh spends the rider (§6.3 Mana), and its badge goes with it.
@@ -778,6 +780,9 @@ fn end_of_turn_after_window(sink: &mut EngineSink, player: PlayerId, due_before:
     // R4154000: then every Burn ticks once and is removed, settled with the delayed effects before
     // cleanup.
     crate::afflictions::tick_burn_at_turn_end(sink, player);
+    // R4440050: then a Black Hole that pulls at the end of turns draws `player`'s permanents one lane
+    // toward it, as it would at the start after the Toxic tick (R3554001).
+    crate::geometry::pull_at_turn_end(sink, player);
     end_of_turn_delayed_settle(sink, player);
 }
 

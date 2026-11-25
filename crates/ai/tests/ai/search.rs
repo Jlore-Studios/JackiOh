@@ -2237,18 +2237,23 @@ mod make_radiant_targets_1143 {
 
     /// #1143: at 3 crystals the 4-cost 7/7 cannot be played, so the turn is the Bean or Brother Lar: the
     /// Bean, which makes the 7/7 a 14/14 Reborn. Brother Lar comes first in hand, so a tie between the
-    /// Bean's targets would pick him.
+    /// Bean's targets would pick him. The Bean is Tradable since issue #4665, so the turn's one Trade is
+    /// spent first: the choice read here is the play's.
     #[test]
     fn glowy_jelly_bean_is_cast_on_the_hand_unit_whose_radiant_face_adds_most() {
         jackioh_cards::register_all();
         let library = ["core-008", "core-011", "core-008", "core-011"];
-        let state = scenario(json!({
+        let mut state = scenario(json!({
             "seed": "search-bean-uplift",
             "p1": { "hand": [BEAN, LAR, BIG], "mana": 3, "library": library },
             "p2": { "library": library },
         }))
         .state()
         .clone();
+        state.players.p1.trades = Some(jackioh_engine::state::DrawCount {
+            turn: state.turn,
+            count: jackioh_engine::config::TRADES_PER_TURN,
+        });
         let bean = hand_id(&state, BEAN);
         let big = hand_id(&state, BIG);
 
@@ -2363,6 +2368,33 @@ mod rescored_own_prompts_1636 {
             })
             .collect();
         assert!(answered.contains(&score), "{score} is none of {answered:?}");
+    }
+
+    /// R4447000: the line [Scarab, its answer] replayed on a world whose offer lacks that answer is not
+    /// cut: that world's own Discover is answered there (#1636), so the fill, on or off, changes nothing.
+    #[test]
+    fn r4447000_an_own_prompt_answer_another_world_does_not_offer_is_not_a_cut() {
+        let found_on = scarab_turn("search-rescore-a", 1);
+        let play = play_of(&found_on, SCARAB);
+        let answer = answers(&act(&found_on, AI, &play))
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| panic!("the Discover is not open"));
+        let line = [play, answer];
+        let world = scarab_turn("search-rescore-b", 1);
+        let replay = |fill: ReplayFill| {
+            let counter = create_node_counter(AI_BUDGET.nodes, None);
+            replay_line(&world, AI, &line, &counter, None, Prices::NONE, fill)
+                .unwrap_or_else(|| panic!("the counter ran out"))
+        };
+        let off = replay(ReplayFill::OFF);
+        let on = replay(ReplayFill {
+            steps: 3,
+            width: AI_BUDGET.branching,
+        });
+        assert!(!off.cut);
+        assert!(!on.cut);
+        assert_eq!(on, off);
     }
 
     /// #1636: a line cut at a refused play, no prompt open, is scored as before: where it stopped,

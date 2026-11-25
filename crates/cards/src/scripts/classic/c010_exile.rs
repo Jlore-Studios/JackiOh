@@ -20,11 +20,6 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classic-010";
 
-/// The enemy permanents on the field: the top of each unit pile, then each backrow card (§3.2, R13).
-fn enemy_permanents() -> BoardScope {
-    json_as(json!({ "side": "enemy", "rows": ["units", "backrow"] }))
-}
-
 struct Announced {
     instance_id: String,
     cost_paid: i32,
@@ -51,7 +46,7 @@ fn budget_picks(ctx: &mut EffectContext<'_>, budget: i32) -> Vec<CardInstance> {
     let mut picked: Vec<CardInstance> = Vec::new();
     let mut left = budget;
     while left > 0 {
-        let fits: Vec<CardInstance> = cards_in_scope(ctx, &enemy_permanents())
+        let fits: Vec<CardInstance> = enemy_permanent_pool(ctx)
             .into_iter()
             .filter(|card| !picked.iter().any(|taken| taken.id == card.id) && cost_now(ctx.state, card) <= left)
             .collect();

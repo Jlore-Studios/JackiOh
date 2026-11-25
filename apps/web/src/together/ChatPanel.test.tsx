@@ -19,6 +19,11 @@ import { ChatPanel } from "./ChatPanel.tsx";
 import { SOCIAL_POLL_MS } from "./config.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
 import { FriendsButton } from "./FriendsButton.tsx";
+import { friendsDrawerChunk } from "./friendsDrawerChunk.ts";
+
+// #4444: the drawer arrives in its own chunk; warmed once here so the panel tests below measure
+// the drawer, not the code's arrival.
+await friendsDrawerChunk.load();
 import { useSocialPoll } from "./socialPoll.ts";
 import { setSocialSocketFactory } from "./socialSocket.ts";
 import { friendsTestid, togetherTestid } from "./testids.ts";
@@ -175,6 +180,91 @@ describe("R1384000 earlier pages", () => {
       .map((call) => call.query.get("before"))
       .filter((before) => before !== null);
     expect(asked).toEqual([FIRST, SECOND]);
+  });
+
+  it("#4444 scrolling the message list to its top loads the earlier page by its cursor", async () => {
+    const server = serve(conversation(), (call) => {
+      if (call.method !== "GET" || call.path !== `/api/chat/${ANN.profileId}`) return undefined;
+      switch (call.query.get("before")) {
+        case null:
+          return { status: 200, body: { messages: conversation(), nextCursor: FIRST } };
+        case FIRST:
+          return { status: 200, body: { messages: [message("msg-0c", ANN.profileId, "are you there", 0)], nextCursor: null } };
+        default:
+          return refusal(400, "bad_request", "not a cursor");
+      }
+    });
+    render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
+    await waitFor(() => {
+      expect(shown()).toHaveLength(2);
+    }, SLOW);
+
+    const messages = must(document.querySelector("ol.chat-panel__messages"), "the message list");
+    fireEvent.scroll(messages, { target: { scrollTop: 0 } });
+    await waitFor(() => {
+      expect(shown()).toHaveLength(3);
+    }, SLOW);
+    expect(must(shown()[0], "the oldest")).toContain("are you there");
+    expect(screen.queryByTestId("chat-earlier")).toBeNull();
+    const asked = server
+      .to("GET", `/api/chat/${ANN.profileId}`)
+      .map((call) => call.query.get("before"))
+      .filter((before) => before !== null);
+    expect(asked).toEqual([FIRST]);
+
+    // With no earlier page left `loadEarlier` returns at once and sends nothing: the stub records
+    // the `fetch` synchronously, so this holds without a wait.
+    fireEvent.scroll(messages, { target: { scrollTop: 0 } });
+    expect(shown()).toHaveLength(3);
+    expect(server.to("GET", `/api/chat/${ANN.profileId}`).map((call) => call.query.get("before")).filter((before) => before !== null)).toEqual([
+      FIRST,
+    ]);
+  });
+
+  it("#4444 a failed earlier-page read arms no scroll restore for the next read", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
+    serve(conversation(), (call) => {
+      if (call.method !== "GET" || call.path !== `/api/chat/${ANN.profileId}`) return undefined;
+      switch (call.query.get("before")) {
+        case null:
+          return { status: 200, body: { messages: conversation(), nextCursor: FIRST } };
+        default:
+          return refusal(503, "unavailable", "Try again later.");
+      }
+    });
+    render(<ChatPanel friend={ANN} onClose={vi.fn()} />);
+    await waitFor(() => {
+      expect(shown()).toHaveLength(2);
+    }, SLOW);
+
+    // jsdom has no layout, so stand in fixed geometry: the list is 1000 high
+    // with its top 400 down, and every scrollTop write is recorded.
+    const list = must(document.querySelector("ol.chat-panel__messages"), "the message list");
+    Object.defineProperty(list, "scrollHeight", { value: 1000, configurable: true });
+    let top = 400;
+    const writes: number[] = [];
+    Object.defineProperty(list, "scrollTop", {
+      get: () => top,
+      set: (value: number) => {
+        writes.push(value);
+        top = value;
+      },
+      configurable: true,
+    });
+
+    fireEvent.scroll(list, { target: { scrollTop: 0 } });
+    await screen.findByTestId("chat-error", undefined, SLOW);
+    await waitFor(() => {
+      expect(screen.getByTestId("chat-earlier")).toBeEnabled();
+    }, SLOW);
+
+    // The failed read settled: the next poll re-reads the same newest page,
+    // whose newest id is unchanged, so neither the bottom scroll nor a stale
+    // restore may move the list.
+    writes.length = 0;
+    await settle({ advance: CHAT_POLL_MS + 1 });
+    expect(shown()).toHaveLength(2);
+    expect(writes).toEqual([]);
   });
 });
 

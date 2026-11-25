@@ -189,28 +189,65 @@ fn is_dormant(state: &GameState, instance: &CardInstance) -> bool {
     unit_top(state, player, lane).map(|top| top.id.as_str()) != Some(instance.id.as_str())
 }
 
-/// R1859007: the keywords its controller's "your Units have X" lends a card (`UnitsHaveKeyword`): to
-/// a Unit of theirs in a unit zone or standing in the backrow (R1081000), never a Vanilla one (unlike
-/// an aura's grant, §8.10), nor one Dormant or buried under a Stack pile (R13, R1839000). R1870004:
-/// only while the modifier is live.
-fn lent_by_player(state: &GameState, instance: &CardInstance) -> Vec<Keyword> {
-    if instance.vanilla
+/// R1859007: whether its controller's "your Units have X" reaches a card at all: a Unit of theirs in
+/// a unit zone or standing in the backrow (R1081000), never a Vanilla one (unlike an aura's grant,
+/// §8.10), nor one Dormant or buried under a Stack pile (R13, R1839000).
+fn takes_player_lends(state: &GameState, instance: &CardInstance) -> bool {
+    !(instance.vanilla
         || is_dormant(state, instance)
         || crate::slumber::is_slumbering(instance)
-        || !crate::zones::in_units_row_or_standing(state, instance)
-    {
+        || !crate::zones::in_units_row_or_standing(state, instance))
+}
+
+/// R1859007: the keywords its controller's "your Units have X" lends a card (`UnitsHaveKeyword`): to
+/// one that takes the player's lends (`takes_player_lends`). R1870004: only while the modifier is
+/// live. R4508000: one a Spell made passes the card by while it is `immune` to Spells by its other
+/// keywords, read live, so it lends again once the immunity goes.
+fn lent_by_player(state: &GameState, instance: &CardInstance, immune: bool) -> Vec<Keyword> {
+    if !takes_player_lends(state, instance) {
         return Vec::new();
     }
     state.players[instance.controller]
         .mods
         .iter()
         .filter_map(|modifier| match &modifier.kind {
-            ModifierKind::UnitsHaveKeyword { keyword } if crate::mana::modifier_is_live(state, modifier) => {
+            ModifierKind::UnitsHaveKeyword { keyword, from_spell }
+                if crate::mana::modifier_is_live(state, modifier)
+                    && !(immune && *from_spell == Some(true)) =>
+            {
                 Some(keyword.clone())
             }
             _ => None,
         })
         .collect()
+}
+
+/// R4586006 (Infinite Assault #33 Uncanny Valley, "Enemy Units have −N Attack"): the Attack its
+/// controller's "your Units have N" lends it — the live `UnitsAttack` amounts on its controller's
+/// side added up — gated as `lent_by_player`, so Units arriving later read it as they land.
+/// R4594002: one a Spell made passes the card by while it is `immune` to Spells, as keywords do.
+fn attack_lent_by_player(state: &GameState, instance: &CardInstance, immune: bool) -> i32 {
+    if !takes_player_lends(state, instance) {
+        return 0;
+    }
+    state.players[instance.controller]
+        .mods
+        .iter()
+        .filter(|modifier| {
+            matches!(&modifier.kind, ModifierKind::UnitsAttack { .. })
+                && crate::mana::modifier_is_live(state, modifier)
+        })
+        .map(|modifier| match modifier.kind {
+            ModifierKind::UnitsAttack { amount, from_spell } => {
+                if immune && from_spell == Some(true) {
+                    0
+                } else {
+                    amount
+                }
+            }
+            _ => 0,
+        })
+        .sum()
 }
 
 /// Every permanent whose aura is in play, in lane order per side (§10.4 layer 5): a face-down card's
@@ -497,6 +534,8 @@ fn compute_layers_on(
     // Layer 4: permanent buffs.
     attack += instance.buffs.attack;
     max_health += instance.buffs.health;
+    // R4587000: "+N Attack this turn" holds while its turn is now.
+    attack += crate::effects::turn_buff::turn_buff_of(state, instance).map_or(0, |buff| buff.attack);
 
     // Layer 5: auras. A card dormant under a Stack pile is "not on the field for effects" (§3.2, R13),
     // so no aura reaches it until it resumes on top (one shrinking max health, #46, would kill it).
@@ -514,6 +553,25 @@ fn compute_layers_on(
         attack += modifier.attack.unwrap_or(0);
         max_health += modifier.max_health.unwrap_or(0);
     }
+    let mut listed: Vec<Keyword> = Vec::new();
+    if !instance.vanilla && !crate::alt_play::is_dormant(instance) {
+        listed.extend(printed.keywords.iter().cloned());
+    }
+    listed.extend(conditional_keywords_of(state, instance));
+    listed.extend(instance.granted_keywords.iter().cloned());
+    // R4587000: "and <keywords> this turn", beside the granted keywords while its turn is now.
+    if let Some(held) = crate::effects::turn_buff::turn_buff_of(state, instance) {
+        listed.extend(held.keywords.iter().cloned());
+    }
+    for modifier in &auras {
+        listed.extend(modifier.keywords.iter().flatten().cloned());
+    }
+    // R4508000: the keywords above, which hold every Immune to Spells a card can have (no lend gives
+    // it), decide whether a Spell's lend passes the card by.
+    let immune = has_keyword(&listed, KeywordKind::ImmuneToSpells);
+    // R4586006: the player-level Attack lend, a layer-5 aura beside the sources' own.
+    // R4594002: a Spell's lend passes a Unit Immune to Spells by too, read through the layers above.
+    attack += attack_lent_by_player(state, instance, immune);
     // §10.4: an aura that sets attack to a value (Classic #88's Radiant "0 Attack") applies after every
     // other layer, so nothing above lifts it; with several, the last in aura order holds.
     for modifier in &auras {
@@ -521,17 +579,12 @@ fn compute_layers_on(
             attack = set_attack;
         }
     }
-
-    let mut listed: Vec<Keyword> = Vec::new();
-    if !instance.vanilla && !crate::alt_play::is_dormant(instance) {
-        listed.extend(printed.keywords.iter().cloned());
+    // R4591000: a set Attack this turn (IA #148 Quarantine) applies after every layer, even the aura
+    // sets above — nothing above lifts it — until that turn ends.
+    if let Some(set) = crate::effects::firewall::attack_set_this_turn(state, instance) {
+        attack = set;
     }
-    listed.extend(conditional_keywords_of(state, instance));
-    listed.extend(instance.granted_keywords.iter().cloned());
-    for modifier in &auras {
-        listed.extend(modifier.keywords.iter().flatten().cloned());
-    }
-    listed.extend(lent_by_player(state, instance));
+    listed.extend(lent_by_player(state, instance, immune));
     let mut keywords: Vec<Keyword> = with_brittle_count(&listed, instance);
 
     // Position grants: Defense adds Taunt and Armor +1 (§4.1).
@@ -585,7 +638,9 @@ fn compute_layers_on(
 pub fn stats_with_buffs(state: &GameState, instance: &CardInstance) -> BuffedStats {
     let printed = face_of(state, instance);
     BuffedStats {
-        attack: printed.attack + instance.buffs.attack,
+        attack: printed.attack
+            + instance.buffs.attack
+            + crate::effects::turn_buff::turn_buff_of(state, instance).map_or(0, |buff| buff.attack),
         max_health: printed.health + instance.buffs.health,
     }
 }

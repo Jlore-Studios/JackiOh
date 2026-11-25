@@ -8,10 +8,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ANOMALY_CODES } from "../cards/anomalies.ts";
 import { ART_PLANES } from "../cards/art/index.ts";
 import { anomalyMarkup } from "../cards/art/svg.ts";
-import { FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
+import { FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX, FX_PHONE_STAGE_LAYERS } from "./constants.ts";
 import { mountDomEffect, mountHold, type DomEffect } from "./dom.ts";
+import { mergeStage } from "./layers.ts";
 import { TAKEOVER_ART_DRAWINGS, TAKEOVER_ART_PARTS } from "./takeoverArt.ts";
-import type { FxBox, FxDomCue, FxHoldCue, TakeoverLook } from "./types.ts";
+import type { FxBox, FxDomCue, FxHoldCue, FxTakeoverCue, TakeoverLook } from "./types.ts";
 
 const AT: FxBox = { x: 100, y: 200, width: 80, height: 120 }; // center (140, 260)
 const TO: FxBox = { x: 700, y: 40, width: 60, height: 60 }; // center (730, 70)
@@ -275,6 +276,54 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     const { art: _none, ...bare } = takeover;
     const plain = expectMounted(mountDomEffect(root, bare, { at: AT }), bare);
     expect(plain.querySelector(".fx-takeover-art")).toBeNull();
+  });
+
+  it("R4493000 a merged slice draws its pictures as one element's backgrounds and an empty plane mounts nothing", () => {
+    const slices = ART_PLANES.flatMap((plane, i) => [0, 1].map((k) => ({ image: `url("s${String(2 * i + k)}")`, plane, depth: (2 * i + k) / 7 })));
+    const stage = { planes: [], name: "Ceaseless Void", face: "ink" as const, slices };
+    const merged = mergeStage(stage, FX_PHONE_STAGE_LAYERS);
+    const takeover: FxDomCue = { kind: "takeover", stage: merged, look: "void", tint: TINT, at: anchor, landMs: 1240, delayMs: 0, durationMs: 1800 };
+    // A stage signs its card's name, its one text node, so it is mounted plain (as R3345000's stage is above).
+    const staged = (cue: FxDomCue): HTMLElement => {
+      const el = mountDomEffect(root, cue, { at: AT })?.el;
+      if (el === undefined) throw new Error("no takeover");
+      return el;
+    };
+    const el = staged(takeover);
+    const planes = [...el.querySelectorAll<HTMLElement>(".fx-takeover-planes > .fx-takeover-plane")];
+    // One element a merged slice, each its run's pictures as backgrounds, the nearest on top.
+    expect(planes).toHaveLength(FX_PHONE_STAGE_LAYERS);
+    expect(planes.map((p) => p.style.backgroundImage)).toEqual(merged.slices?.map((slice) => slice.image));
+    expect(planes[2]?.style.backgroundImage).toBe('url("s7"), url("s6"), url("s5")');
+    expect(planes.map((p) => p.style.getPropertyValue("--fx-slice-depth"))).toEqual(merged.slices?.map((slice) => String(slice.depth)));
+    el.remove();
+    // A merged four-plane stage: the nearest's picture rides on the near plane, and the nearest mounts no element.
+    const flat = { planes: ART_PLANES.map((plane) => `url("${plane}")`), name: "Mythic", face: "ink" as const };
+    const four = staged({ ...takeover, stage: mergeStage(flat, FX_PHONE_STAGE_LAYERS) });
+    const shown = [...four.querySelectorAll<HTMLElement>(".fx-takeover-plane")];
+    expect(shown.map((p) => p.getAttribute("data-plane"))).toEqual(["far", "middle", "near"]);
+    expect(shown[2]?.style.backgroundImage).toBe('url("nearest"), url("near")');
+  });
+
+  it("R4493001 an artless takeover draws no look art, and a sweep-only one no rays and no wave", () => {
+    const parts = Object.keys(TAKEOVER_ART_PARTS)[0] as TakeoverLook;
+    const drawn = Object.keys(TAKEOVER_ART_DRAWINGS)[0] as TakeoverLook;
+    for (const look of [parts, drawn]) {
+      const takeover: FxTakeoverCue = { kind: "takeover", stage: null, look, tint: TINT, at: anchor, landMs: 1240, delayMs: 0, durationMs: 1800 };
+      const own = expectMounted(mountDomEffect(root, takeover, { at: AT }), takeover);
+      expect(own.querySelector(".takeover-art"), look).not.toBeNull();
+      own.remove();
+      // The budget took its art: the takeover's own layers alone.
+      const artless: FxTakeoverCue = { ...takeover, artless: true };
+      const bare = expectMounted(mountDomEffect(root, artless, { at: AT }), artless);
+      expect([...bare.children].map((child) => child.className), look).toEqual(["fx-takeover-dark", "fx-takeover-sweep", "fx-takeover-rays", "fx-takeover-wave"]);
+      bare.remove();
+      // Its least: the dark and the sweep alone.
+      const dark: FxTakeoverCue = { ...artless, sweepOnly: true };
+      const least = expectMounted(mountDomEffect(root, dark, { at: AT }), dark);
+      expect([...least.children].map((child) => child.className), look).toEqual(["fx-takeover-dark", "fx-takeover-sweep"]);
+      least.remove();
+    }
   });
 
   it("R3400001 a figure covers its box with its figure, tint, side and size", () => {

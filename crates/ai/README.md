@@ -15,10 +15,10 @@ caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`
 `SweepOptions`'s `now`); a decision the sweep's clock found slow goes out the same way, to `SweepOptions`'s `retime`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
 The Death, the turn-hook, the activation, the attack-hook and the awakening prices of a decision (R2424000,
-R2477000, R2564000, R2688000, R3064000) travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
+R2477000, R2564000, R2688000, R3064000), and the evolution prices (R4648000), travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
 through the search to the scorers that read them. `decide` takes them from `decision_prices` on its `probe_world`, and
-`decision_prices_at` gives a caller outside a decision the same prices for a state, on `AI_DECISION_PRICE_NODES`:
-`cargo jackioh positions` scores its rows with them (R4070000). Any other call outside a decision passes
+`decision_prices_at` gives a caller outside a decision the same prices for a state, on `AI_DECISION_PRICE_NODES`
+(R4070000). Any other call outside a decision passes
 `Prices::NONE` (plain `evaluate`, the probes, the baselines) and prices nothing. The crate holds no thread-local.
 
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
@@ -88,13 +88,16 @@ R1563005); the greedy baseline's simulation does not.
 
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
-it can see on the field, then its attacks, a kill priced at what it removes (a unit with Reborn unspent
+it can see on the field (the AI's hero first, then dealt over every card and ability at its most valuable
+cards, R4515000), then its attacks, a kill priced at what it removes (a unit with Reborn unspent
 less the body it comes back as, #1796, and less what its Death leaves behind, R2424000; plus a Trample
 attacker's excess on the hero and a Lifesteal attacker's heal, #1820, which its hit on the hero counts
 too, #3858; an attacker a First Strike defender destroys first earning no chip and no shield pop, since
 `fight` reads a blow that never lands as none, R4171000), and once none is worth making, or facing lethal
-against its best attack (R4187000), the switches to Defense Position its own
-evaluation prefers) on every determinization, and plays the first action of the best mean. When none
+against its best attack (R4187000), the switches to Defense Position its own evaluation prefers, and
+in the first case its switches back to Attack Position of units without Deft too, up to
+`AI_REPLY.attack_switches`, R4433000) on every determinization, and plays the first action of the
+best mean. When none
 of the lines `shortlist_lines` takes for the reply hands the turn over with an effect of the seat's own
 waiting that the root did not hold (a countdown, a next-turn reward), the best line that does is replied
 to as well, last, on a slice of the counter that leaves the other determinizations' share of the
@@ -143,6 +146,10 @@ is the engine's `query::cleave_struck` less the target: a GIGA beside the target
 met once, and beside a Unit standing in the backrow only standing Units (R3546001, R1081000). Where such a
 splash through a GIGA meets a later Taunt, the walk tries a third order, that Cleave attacker first
 (`giga_cleave_read`, R4257000, #4257; off in `GREEDY_EVAL`, whose walk keeps the one-lane splash).
+On a slashed board a Taunt binds only the attackers on its own half: the walk asks `attack_restriction`,
+which refuses a Unit across the slash and lets a hero be attacked from either half, so a Taunt across the
+slash walls nothing in `face_threat`, `ready_gap` or `wall_switches` (R3554003, #4725; no flag, so
+`GREEDY_EVAL`'s walk reads it too).
 Each hit in the walk takes the Taunt's strike back (§4.3), read through the §4.4 steps that can stop it as a
 First Strike one is: an attacker it destroys still lands that hit but makes none of its later swings, a
 Windfury one's second included, and the wounds and popped shield it leaves carry to the attacker's next
@@ -217,6 +224,18 @@ card with a wake trigger on either field, and each Unit with one in the seat's o
 prices the controller's evaluation after the one wake less after the other, each crystal gained at
 `next_turn_mana`; `slumber_worth` adds `AI_EVAL.awaken` of it for both sides' sleepers, inside the slumber
 share, and `GREEDY_EVAL` keeps 0.
+An unevolved card's Evolve text counts by its evolution (R4648000): `evolve_prices` evolves each unit on
+either field that can still evolve, and each such Unit in the seat's own hand, placed first (R923001), on a
+sandbox copy within `AI_EVOLVE_PROBE_NODES`, and prices the controller's evaluation after it less before
+it, each crystal gained at `next_turn_mana`, split over the runs its text took (R3536003). The same root
+reads the card's road there (`EvolveCondition`) on throwaway copies: its "Evolves when" holding once its
+side's empty unit zones are filled, once the seat's own hand gains (0) Cost cards, or once it is left on 1
+health, and an event otherwise (its own trigger, a Stack, an enemy's hand). `unit_worth` adds
+`AI_EVAL.evolve` of the price, once for each run its text would take now, times how close the card stands:
+the share of its side's zones filled, of the free cards it needs that the hand holds, or of its health
+lost, and `evolve_event_share` for an event, inside the Brittle share, for both sides' units. A card its
+own turn or attack text evolves (the Wasp, Space Invader, Lantern Distiller) counts through that text's
+price, the enemy's hand is never probed, and `GREEDY_EVAL` keeps 0.
 A passed line's Float counts toward the seat's own "Float reduces cost" cards (R3695000): the engine's
 `float_cuts_in_hand` reads what the Float took off each of them, and `float_credit` pays
 `AI_EVAL.float_discount` for each crystal that went toward one still above the seat's crystals (its
@@ -313,6 +332,11 @@ and a softmax
 best. Each takes one draw from `options.rng` when it is above zero and none at zero, so `decide`,
 which is `decide_styled` at `AI_STYLE_EXACT`, draws only for its determinizations, as it always has.
 
+R4608000: a finalist whose line won on determinization 0, the one searched, and on no other scored world
+(a score above `AI_WON_SCORE_SHARE` of `AI_EVAL.win`) takes its mean on those others (`finalist_means`).
+Every other finalist keeps the plain mean, which `AI_SEARCH.confirm_lone_win` off restores bit for bit.
+The solver, the hint and the concession check never read the means.
+
 ## The lethal hint (R2102000, R2291000)
 
 ```rust
@@ -391,6 +415,20 @@ run on until `should_stop`. `SearchStats.replied` and `worldsScored` say how far
 `Decision::fell_short` names a decision that left its finalists unscored on a sampled world. With no
 clock, or a wrap-up that never fires, a decision is node for node what it was.
 
+R4447000: `decide` replays each finalist's world-0 line on the other determinizations with
+`replay_line`, which says whether the line was cut there: whether it met a step that world does not
+offer (a card the line drew is another card there, since each world shuffles the seat's own library,
+or a random effect rolled otherwise), an answer to the seat's own prompt (#1636) aside.
+`SearchStats.replaysCut` counts those cuts over the worlds every finalist was scored on. With
+`AI_SEARCH.replay_fill_steps` above 0, a cut replay drops the rest of its line and plays that world's
+turn on greedily (`fill_turn`: up to that many steps, each the best by `static_score` of the first
+`branching` candidates that are not endTurn, taken only when it beats standing still, never one that
+leaves the seat's own prompt open), on a slice of `steps × (branching + 1)` nodes, which `decide` keeps
+back beside each other world's reserve. It ships at 3 (R4697000), so `decide` keeps up to 126 more of
+`AI_BUDGET`'s 1,200 nodes back from the beam (21 for each of three finalists on two other worlds); at 0 a
+cut replay ends its turn where it stands and a decision is node for node what it was before R4447000;
+`score_line` keeps the cut whatever the switch.
+
 ## Decks and the shadow ban (R184, R186, R390, R1370, R1390, R817000, R976000)
 
 `build_ai_deck(rng, size, &AiDeckOptions)` deals `size` distinct non-token ids from every set by
@@ -428,7 +466,7 @@ set held to its own half (R1186000), and since #1885 Stinkyscape cards, at most 
 (R1885000), and since #2203 Training Grounds cards, at most half of them (R2203000), each set's share
 written in its row of the set table and its ceiling that share of its non-token cards (R3114001): no
 sweep, lane or person adds a card of an
-earlier set, and the unban lane (`training/unban.md`) only removes entries.
+earlier set, and the unban lane, retired by #4701, only ever removed entries.
 
 **When it is swept** (R1678000): every push to `main` that moves `generation.json`'s `generation`
 (every promotion writes it) or adds a set to `SHIPPED_SETS` starts a sweep of record on GitHub's
@@ -458,16 +496,16 @@ Easy's floor is 75%, below the brief's 80%, by the user's decision (R4132001).
 
 | Matchup | Subject | Opponent | Full run | Smoke run |
 | --- | --- | --- | --- | --- |
-| `ai-vs-random` | the AI on Easy | random policy on Easy | 91 of 100 | 17 of 20 |
-| `ai-vs-greedy` | the AI on Easy | greedy baseline on Easy | 28 of 50 | 10 of 20 |
+| `ai-vs-random` | the AI on Easy | random policy on Easy | 95 of 100 | 19 of 20 |
+| `ai-vs-greedy` | the AI on Easy | greedy baseline on Easy | 35 of 50 | 14 of 20 |
 | `hard-vs-easy` | the AI on Hard | the AI on Easy | 38 of 50 | 15 of 20 |
 
-The perf gate holds each decision of the first ai-vs-greedy game, and two hand-built wide boards,
-within the node budget and under `AI_GATE.max_decision_ms`, and the two pinned positions
-(`tests/fixtures/pinned-improve-dev-*.json`, #1240) under `AI_GATE.pinned_decision_ms`. Tuning
-changes the weights in `src/config.rs`, never the floors, the seed counts or the brief's rates. The
-gates see only a broken AI; whether a change made it stronger is the training lanes' question
-(`training/README.md`, `cargo jackioh promote`).
+The perf gate times every decision of one ai-vs-greedy game in a smoke run and six in a full run;
+both also time two hand-built wide boards. It holds them within the node budget and under
+`AI_GATE.max_decision_ms`, and all three pinned fixtures (`tests/fixtures/pinned-*.json`, #1240)
+under `AI_GATE.pinned_decision_ms`. Tuning changes the weights in `src/config.rs`, never the floors,
+the seed counts or the brief's rates. The gates see only a broken AI; whether a change made it
+stronger is a screen's question (`training/improve.md`, How you measure).
 
 Every gate game is clean (B31): nothing refused or thrown, no fallback, a result, a log that folds to
 its hash, and no panic caught in an AI's search (`SearchStats.sim_panics`, summed in `MatchRecord`,
@@ -491,7 +529,9 @@ the same way, and the skill-to-Elo curve is measured with the arena.
 the config's other keys) carries the setup inputs `create_game` takes beyond the decks and handicaps
 (R433, R417, R564, R678, R2702000), and `MatchConfig::fold_args` folds a record with all of them
 (#1697). Unset, a game is created, played and folded exactly as before. No gate sets it;
-`SweepOptions.setup` opts a sweep in, the same inputs in seat order in every game. `cargo jackioh
+`SweepOptions.setup` opts a sweep in, the same inputs in seat order in every game. `SweepOptions.face`
+(`SweepFace`, base when absent) picks the face the forced card is dealt on: the Radiant one adds a `deckMarks`
+entry for it on the AI's seat (R2702000), and `cargo jackioh sweep` plays both (#4466). `cargo jackioh
 run-sim` sets `deckMarks` for a dungeon run's fight (#3065).
 
 ## Development runs for the card statistics (R378)
@@ -506,51 +546,23 @@ banned, and the holder's card at the slot `${seed}:force` picks is replaced by i
 `DevRunOptions.setup` creates every game of a run with the same setup inputs (`dev_run_config`), so a
 record stays a pure function of its number.
 
-## The features (#466, #1006)
-
-`src/features.rs` turns a position into the rows `cargo jackioh positions` writes for the learn lane's
-exports (`docs/learned-eval.md` D3, D5, D10). The learned evaluation that read them in the search is
-retired (R4159000): no network reads them in this crate any more.
-
-```rust
-pub const FEATURES_VERSION: u32;
-pub fn features_of(state: &GameState, seat: PlayerId) -> Features;   // features(&redact(state, seat), seat)
-pub fn features(view: &GameState, seat: PlayerId) -> Features;       // view already redacted
-pub fn dense_names() -> Vec<String>;                                 // the dense layout, in order
-pub struct Features { pub dense: Vec<i32>, pub sparse: Vec<(String, i32)> }
-pub fn card_id_of_key(key: &str) -> Option<(&str, &str)>;           // a key's zone and card id, when it names one
-```
-
-- It reads only `redact` (R185, R1006000): two states that differ only in what the seat cannot see
-  give the same features. The projections that read card text (`unit_view`, `hero_armor_of`,
-  `face_threat`) run on the view less the backrow cards the seat cannot read, which are counted and
-  never read.
-- **dense**: integers, named by `dense_names`: the turn, who acts and whether the seat is p1; per
-  side, the seat's own first, its life (`effective_life`) and armor, mana, crystals and debt, its
-  hand, library, graveyard and backrow (and how much of the backrow the seat can read), its units in
-  aggregate (count, positions, attack, health, armor, damaged, Radiant), one count per keyword kind
-  (bar Tradable, a hand keyword newer than the layout, so the fitted weights still read it, R1838000),
-  the face damage its board threatens and its Jade and extra turns; then the seat's hand by cost,
-  and how many of its cards are Radiant (R1012004).
-- **sparse**: `(key, count)`, sorted, the key `<zone>:<side>:<card id>` for each card the seat can
-  name: `board` (both sides), `hand` (its own) and `backrow` (its own, and the enemy's face-up ones),
-  and `hand_radiant` (its own) beside `hand` for a Radiant card in its hand (R1012004).
-  Ids stay strings, so a patch or a new card never moves an index; an id a network's weights do not
-  know is no input at all.
-- **sparse, what a card is** (R3112000): each card with an id key also has
-  `<zone>.<attribute>:<side>:<value>` keys for its running face's type, its printed cost (`query_cost`)
-  and tags, its running face's keywords (counted as the dense counts count them) and printed attack and
-  health, each number clamped at `ATTRIBUTE_TOP`, and `<zone>.face:<side>:Radiant` when it is Radiant.
-  A card a network has no id row for still moves it through the keys it shares with the cards it was
-  fitted on.
-- `FEATURES_VERSION` names the layout; any change bumps it.
+R4552000, R4552002: `swing_turns` (`src/swing_turns.rs`) replays a finished game's log from the engine's
+own start and steps (`recorded_start`, `read_steps`, as `summarize_game` does) and writes, at the start of
+every turn, one row for its seat: the turn counter, `evaluate` of the seat (`NextSwing::Seat`) less its
+opponent's (`NextSwing::Enemy`) in thousandths, read off the true state, and the cards acting on each
+field, a Created card with the card that made it (none when a hand held it; a copy an effect cast names
+the card that cast it). `attach_swing_turns` files the rows in the record (`SeatSummary.swing_turns`).
+The writers read the summary and the rows off one fold of the log (#2213), `summarize_with_swing_turns`
+(the engine's `summarize_game_with` with a `SwingReader` beside it): `dev_game_record` and the
+server's record filing (`crates/server/src/api/game_records.rs`) both call it.
+Decisiveness is read off them (`crates/engine/src/wire/stats/swing.rs`).
 
 ## The learned evaluation and the policy prior (retired)
 
 The learned evaluation (#466, #1010) and the policy prior (#1171) are retired (#4159, R4159000): the
 search scores every line and finalist with the hand eval (`evaluate_priced` over `AI_EVAL`) and expands
-each line's moves in `candidate_actions`' order. The crate has no build script and compiles no weights.
-`docs/learned-eval.md` is the record.
+each line's moves in `candidate_actions`' order. The crate has no build script, compiles no weights and
+extracts no features (#4702, R4702000). `git show d40d3a45:docs/learned-eval.md` is the record.
 
 ## Duos (§13.7)
 
@@ -629,6 +641,7 @@ cargo test -p jackioh-ai --test ai_slow       # one binary: CI gives each its ow
 cargo jackioh gate                            # the three gates and the perf gate at smoke size
 cargo jackioh gate --full                     # at full size (the daily super run plays it in shards)
 cargo jackioh gate --duos                     # the Duos gate: the Easy AI team against a random team and a greedy team (--games N)
+cargo jackioh gate --measure                  # measure the AI's win rates across all matchups on fresh tuning deals (--games N)
 cargo jackioh gate --full --shard 1/4 --out ai-gate-shards && cargo jackioh gate merge ai-gate-shards
 cargo jackioh trace ai-vs-greedy 3            # one gate game, turn by turn
 cargo jackioh sweep core-011 classic-020      # the shadow-ban sweep over these ids (no ids: every card)

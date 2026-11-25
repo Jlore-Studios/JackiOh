@@ -9,6 +9,15 @@ import { PHONE_SHEET_QUERY, over, upTo } from "../breakpoints.ts";
  */
 export const LOG_HISTORY_LIMIT = 1000;
 
+/** #4614: how many rows past each edge of the log's viewport stay mounted, past the visible ones. */
+export const LOG_OVERSCAN_ROWS = 10;
+
+/** #4614: the height, in pixels, an unmeasured log row is assumed to be until it is measured. */
+export const LOG_ROW_ESTIMATE_PX = 24;
+
+/** #4614: how close, in pixels, to the log's bottom counts as pinned there when lines arrive. */
+export const LOG_PIN_TOLERANCE_PX = 8;
+
 /**
  * R1297000: how many particles a backdrop (`game/Backdrop.tsx`) draws: the most any field has, so
  * no backdrop grows past it and a still backdrop under reduced motion shows the same set.

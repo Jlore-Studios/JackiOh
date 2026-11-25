@@ -109,10 +109,12 @@ fn gain_printed_shield(ctx: &mut EffectContext<'_>, card: &CardInstance) {
 /// §3.2 and R13: only the top of a Stack pile, or a Unit a carrier holds (R446, R1824000), is on the
 /// field, so only it can be picked.
 fn field_cards_of(ctx: &EffectContext<'_>, player: PlayerId) -> Vec<CardInstance> {
-    // R1839000, R4322000: nor is a Dormant card, which no effect reaches.
+    // R1839000, R4322000: nor is a Dormant card, which no effect reaches; R4453000: nor, for a Spell, a
+    // Unit Immune to Spells.
     crate::plague::reachable_permanents_on_field(ctx.state, player)
         .into_iter()
         .filter(|card| card.controller == player)
+        .filter(|card| !crate::restrictions::unaffected_by(ctx, card))
         .cloned()
         .collect()
 }

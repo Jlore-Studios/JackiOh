@@ -576,7 +576,8 @@ fn received(
 ) -> (GameState, CardInstance) {
     let mut receiving = mate_probe.clone();
     carry_match_defs(own_probe, &mut receiving, &card.def_id);
-    let given = passed_card(card.clone(), format!("c{}", receiving.next_id), mate);
+    let kept = jackioh_engine::recursion_log::kept(own_probe);
+    let given = passed_card(kept, card.clone(), format!("c{}", receiving.next_id), mate);
     receiving.next_id += 1;
     receiving.players[mate].hand.push(given.clone());
     (receiving, given)

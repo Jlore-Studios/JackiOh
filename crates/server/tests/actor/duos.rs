@@ -2995,6 +2995,37 @@ mod r2881000_watching_a_coop_game {
     }
 
     #[tokio::test(start_paused = true)]
+    async fn a_coop_game_nobody_watches_encodes_no_watcher_frame_and_a_newcomer_is_sent_the_newest_due_view()
+    {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let _a2 = h.seat(&h.guest).await;
+        h.ai_mulligans_answered(&a1).await;
+        h.keep(&a1, "a1-keep").await;
+        tokio::time::sleep(ms(SPECTATE_DELAY_MS) + DELAY_SLACK).await;
+        settle().await;
+        let actor = jackioh_server::duos::registry(&h.app)
+            .get(&h.match_id)
+            .expect("the live co-op match");
+        assert_eq!(actor.spectate_frames_encoded(), 0);
+
+        let fan = account(&h.app, 4, "Fay").await;
+        befriend(&h.app, &fan, &h.host).await;
+        let watcher = watch(&h, &fan, &h.host).await;
+        assert_admitted(&watcher);
+
+        let views = watcher.of_type("view");
+        assert_eq!(views.len(), 1, "{:?}", watcher.frames());
+        assert_eq!(views[0]["legal"], json!([]), "{}", views[0]);
+        assert!(
+            mulligan_answered(&views[0]["view"]["own"]),
+            "the newest due view: {}",
+            views[0]
+        );
+        assert_eq!(actor.spectate_frames_encoded(), 1);
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn r3477000_a_duos_seats_view_frames_carry_a_forecast_and_its_watchers_none() {
         let h = duos("easy").await;
         let a1 = h.seat(&h.host).await;
@@ -3555,6 +3586,44 @@ mod seat_states_3678 {
         assert_eq!(stray.close_code(), Some(CLOSE_NORMAL));
         assert_eq!(views(&stray), 0);
         assert_eq!(actor.presence(), [false, false]);
+    }
+
+    /// A dropped socket takes no co-op seat: the running grace is left alone, so the AI takes the
+    /// seat over once it ends, and no held socket is pushed out (R744, R3767000, B37).
+    #[tokio::test(start_paused = true)]
+    async fn a_dropped_socket_takes_no_coop_seat_so_the_grace_runs_and_the_ai_takes_over() {
+        let h = duos("easy").await;
+        let actor = registry(&h.app).get(&h.match_id).expect("the live actor");
+        let first = create_fake_socket();
+        actor.attach(DuosSeat::A1, first.socket());
+        quiet(&actor).await;
+        let second = create_fake_socket();
+        actor.attach(DuosSeat::A2, second.socket());
+        quiet(&actor).await;
+
+        first.drop();
+        quiet(&actor).await;
+        assert_eq!(actor.presence(), [false, true]);
+
+        let doomed = create_fake_socket();
+        doomed.drop();
+        settle().await;
+        actor.attach(DuosSeat::A1, doomed.socket());
+        quiet(&actor).await;
+
+        assert!(doomed.of_type("view").is_empty());
+        assert_eq!(first.close_code(), Some(ABNORMAL_CLOSE));
+        assert_eq!(actor.presence(), [false, true]);
+        let latest = second
+            .of_type("clock")
+            .last()
+            .cloned()
+            .expect("a clock frame reached A2");
+        assert!(!latest["graceDeadlines"]["a1"].is_null(), "{latest}");
+
+        tokio::time::sleep(ms(DISCONNECT_GRACE_MS) + PROMPTLY).await;
+        quiet(&actor).await;
+        assert!(actor.ai_playing(DuosSeat::A1));
     }
 }
 

@@ -3,12 +3,12 @@
 // decides nothing (CLAUDE.md rule 7): an Online card opens its panel, a link card is a link, the server
 // matches and the engine plays.
 
-import { useId, type ReactElement } from "react";
+import { useEffect, useId, type ReactElement } from "react";
 
 import { DailyBadge } from "../daily/DailyBadge.tsx";
 import { t } from "../i18n/i18n.ts";
 import { ladderOfMode, type Ladder, type OwnRankResponse, type PopulationResponse, type QueueMode } from "../net/api.ts";
-import { paths } from "../net/navigate.ts";
+import { SOLO_ANCHOR, paths } from "../net/navigate.ts";
 import { waitWords } from "../net/queueReadout.ts";
 import { rankCaption } from "../rank/rank.ts";
 import RankCrest from "../rank/RankCrest.tsx";
@@ -99,6 +99,13 @@ function CardIcon({ id }: { id: PlayCardId }): ReactElement {
           <path d="M12 28V16a4 4 0 0 1 8 0v12" />
         </svg>
       );
+    case "assault":
+      return (
+        <svg {...ICON_PROPS}>
+          <path d="M4 28h24M7 28V13a9 9 0 0 1 18 0v15" />
+          <path d="M11 28V16a5 5 0 0 1 10 0v12M16 3v6M12 5l4 4 4-4" />
+        </svg>
+      );
     case "tutorial":
       return (
         <svg {...ICON_PROPS}>
@@ -120,7 +127,8 @@ function GroupSection({
 }): ReactElement {
   const headingId = useId();
   return (
-    <section className="play-group" data-group={group} data-testid={playGroupTestid(group)} aria-labelledby={headingId}>
+    // #4742: a group's anchor is its name, so `/play#solo` names the Solo group (`navigate.ts`'s `playSoloPath`).
+    <section className="play-group" id={group} data-group={group} data-testid={playGroupTestid(group)} aria-labelledby={headingId}>
       <h2 id={headingId} className="play-group__heading">
         {groupLabel(group)}
       </h2>
@@ -143,6 +151,16 @@ export function PlayHub({
   onPick,
   onLobby,
 }: PlayHubProps): ReactElement {
+  // #4742, R4742000: arriving at `/play#solo` (practice's and the tutorial's Menu) puts the Solo group in view and
+  // the Practice card in focus; a plain `/play` is left as it is. The address is read once, on arrival.
+  useEffect(() => {
+    if (window.location.hash !== `#${SOLO_ANCHOR}`) return;
+    const solo = document.getElementById(SOLO_ANCHOR);
+    if (solo === null) return;
+    if (typeof solo.scrollIntoView === "function") solo.scrollIntoView({ block: "start" });
+    solo.querySelector<HTMLElement>('[data-card="practice"]')?.focus({ preventScroll: true });
+  }, []);
+
   /** What every card says of itself: its words, and for an Online card its rank and wait. */
   const body = (card: PlayCard): ReactElement => {
     const mode = card.action.kind === "queue" ? card.action.mode : null;

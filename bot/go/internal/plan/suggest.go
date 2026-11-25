@@ -172,6 +172,8 @@ func SuggestionPlan(ctx *hctx.Context, lanes *Lanes, force bool, quietOK string 
 		"area_focus", nil,
 		"existing", prompts.Data(existing, "Existing issues and pull requests"),
 		"declined", prompts.Data(declined.Lines(state), "Suggestions that came to nothing"),
+		// The judge's rolling window (`suggestions.auto_approve.window`, `prompts/judge.md`).
+		"decided", prompts.Data(declined.DecidedLines(state, cfg.AutoApprove.Window), "Recent decisions on suggestions"),
 		"forced", force,
 		"was_requested", wasRequested,
 		"previous_last_run", previous.Get("last_run"),

@@ -1,6 +1,6 @@
 //! S #137 Starfleet Commander (SPEC §8.10 row 137; R1, R70, R113, R1839002, R1852003, R1852005,
-//! R1852006, R1857002, R1859006, R3869001): (4) Unit, Human, Legendary, 9/9 → 18/18, First Strike, a card of the
-//! Stinkyscape set. It was Firststrike Capability, a Common with no tag, until #2521 renamed it; its
+//! R1852006, R1857002, R1859006, R3869001): (4) Unit, Human, Legendary, 7/7 → 14/14 (9/9 → 18/18 until issue
+//! #4440), First Strike, a card of the Stinkyscape set. It was Firststrike Capability, a Common with no tag, until #2521 renamed it; its
 //! Cry is unchanged, and its file keeps the old name.
 //!
 //! Base:    "First Strike\nCry: If you have a Dormant Starship, launch it, then Discover a War Doctrine and
@@ -163,15 +163,15 @@ mod tests {
                 .expect("the Doctrine in the graveyard")
                 .clone();
             assert_eq!(doctrine.radiant, radiant);
-            assert_eq!(s.stats(s.unit_at(P1, 4).id.as_str()).attack, if radiant { 18 } else { 9 });
+            assert_eq!(s.stats(s.unit_at(P1, 4).id.as_str()).attack, if radiant { 14 } else { 7 });
         }
     }
 
     #[test]
-    fn radiant_18_18_and_the_doctrine_cast_radiant() {
+    fn radiant_14_14_and_the_doctrine_cast_radiant() {
         let (mut s, _ship) = played("s137-radiant", true);
-        assert_eq!(s.stats(s.unit_at(P1, 4).id.as_str()).attack, 18);
-        assert_eq!(s.stats(s.unit_at(P1, 4).id.as_str()).health, 18);
+        assert_eq!(s.stats(s.unit_at(P1, 4).id.as_str()).attack, 14);
+        assert_eq!(s.stats(s.unit_at(P1, 4).id.as_str()).health, 14);
         let pick = s.prompt_modes()[0].clone();
         s.answer(json!(pick));
         let doctrine = s

@@ -9,9 +9,10 @@
 //! 5. the exact lethal solver, verified on every determinization and trimmed (R1965000), unless a style
 //!    passes over it (R1452).
 //! 6. the beam on determinization 0, its best lines scored after the opponent's reply and its best first
-//!    actions re-scored on the other determinizations; the best mean wins. A host's wrap-up stops the
-//!    beam and skips R3696000's payoff line, so that a clock still leaves the reply to the shortlist and
-//!    the other determinizations (R3498000).
+//!    actions re-scored on the other determinizations; the best mean wins, a finalist that won on
+//!    determinization 0 alone taking its mean on the others (R4608000). A host's wrap-up stops the beam and
+//!    skips R3696000's payoff line, so that a clock still leaves the reply to the shortlist and the other
+//!    determinizations (R3498000).
 //! 7. a fallback when nothing could be scored.
 //!
 //! The chosen action is tried on the true state first (`submitted`, #1575). Only it is played, so the AI
@@ -31,19 +32,19 @@ use crate::candidates::candidate_actions;
 use crate::config::{
     AI_DECISION_PRICE_NODES, AI_EVAL, AI_KY_COMPETITION_ACCURACY, AI_KY_COMPETITION_RADIANT_ACCURACY,
     AI_KY_TEST_ACCURACY, AI_MULLIGAN, AI_MULLIGAN_CURVE, AI_REPLY, AI_SEARCH, AI_STYLE_EXACT,
-    AI_WRAP_UP_SHARE,
+    AI_WON_SCORE_SHARE, AI_WRAP_UP_SHARE,
 };
 use crate::determinize::{DetGround, DeterminizeOptions, det_ground, determinize_on};
 use crate::evaluate::{
-    Prices, activation_prices, attack_hook_prices, awaken_prices, death_prices, prompt_activation_prices,
-    turn_hook_prices,
+    Prices, activation_prices, attack_hook_prices, awaken_prices, death_prices, evolve_prices,
+    prompt_activation_prices, turn_hook_prices,
 };
 use crate::lethal::{find_lethal, trim_lethal};
 use crate::match_::replacements_for;
 use crate::mulligan::mulligan_keep_curved;
 use crate::observe::{HIDDEN_DEF_ID, ai_to_act, redact, unanswered_draw_offer};
 use crate::reply::{hidden_card_ids, reply_score};
-use crate::search::{Line, beam_search, score_line};
+use crate::search::{Line, ReplayFill, beam_search, replay_line};
 use crate::simulate::{
     CountingNodeCounter, LineStatus, create_node_counter, create_sub_counter, create_wrap_up_counter,
     note_sim_panic,
@@ -62,6 +63,7 @@ fn quiet_stats() -> SearchStats {
         stopped_by: StoppedBy::Exhausted,
         replied: 0,
         worlds_scored: 0,
+        replays_cut: 0,
         score: 0.0,
     }
 }
@@ -354,6 +356,34 @@ pub fn pick_finalist(means: &[f64], temperature: f64, rng: &mut Rng) -> usize {
     best_index
 }
 
+/// R4608000: each finalist's mean from its row of scores, determinization 0's first. With `confirm`, a row
+/// whose first score is a won game (above `AI_WON_SCORE_SHARE` of `AI_EVAL.win`) and whose other scores, at
+/// least one, are none won takes the mean of those others; every other row the mean of all its scores.
+pub fn finalist_means(rows: &[Vec<f64>], confirm: bool) -> Vec<f64> {
+    let won = AI_EVAL.win * AI_WON_SCORE_SHARE;
+    rows.iter()
+        .map(|row| match row.split_first() {
+            Some((first, others))
+                if confirm
+                    && *first > won
+                    && !others.is_empty()
+                    && others.iter().all(|score| *score <= won) =>
+            {
+                mean_of(others)
+            }
+            _ => mean_of(row),
+        })
+        .collect()
+}
+
+/// The mean of `scores`, added first to last; 0 for none.
+fn mean_of(scores: &[f64]) -> f64 {
+    match scores.split_first() {
+        None => 0.0,
+        Some((first, rest)) => rest.iter().fold(*first, |total, score| total + score) / scores.len() as f64,
+    }
+}
+
 /// What the guarded body decided, before the stats are read off the counter.
 enum Plan {
     /// Answered at once, with quiet stats.
@@ -403,6 +433,8 @@ struct Scratch {
     replied: usize,
     /// R3498000: `SearchStats.worldsScored`.
     worlds_scored: usize,
+    /// R4447000: `SearchStats.replaysCut`.
+    replays_cut: usize,
 }
 
 /// R4070000: the world a decision's root lists its candidates and probes its prices on: `public`
@@ -418,9 +450,9 @@ pub fn probe_world(public: &GameState, seat: PlayerId, ground: &DetGround) -> Ga
     )
 }
 
-/// R2424000, R2477000, R2564000, R2565000, R2603000, R2687000, R2688000, R3064000: every Death (a
-/// backrow card's and a hand Field Spell's among them), turn hook, Activate, attack hook and Dormant
-/// card's awakening the seat can read, priced once on the probe world (`probe_world` of `public`) for the
+/// R2424000, R2477000, R2564000, R2565000, R2603000, R2687000, R2688000, R3064000, R4648000: every Death
+/// (a backrow card's and a hand Field Spell's among them), turn hook, Activate, attack hook, Dormant card's
+/// awakening and Evolve card's evolution the seat can read, priced once on the probe world (`probe_world` of `public`) for the
 /// whole decision from `counter`'s nodes; all are priced before any is passed, so no probe reads a price.
 /// R4197000: and, at the seat's own prompt whose card can take a power, what each answer's power gives
 /// (`prompt_activation_prices`). R4070000: `decide` and `decision_prices_at` both take a decision's prices
@@ -434,18 +466,20 @@ pub fn decision_prices(probe: &GameState, seat: PlayerId, counter: &dyn NodeCoun
     activations.extend(prompt_activation_prices(probe, seat, counter));
     let attack_hooks = attack_hook_prices(probe, seat, counter);
     let awakenings = awaken_prices(probe, seat, counter);
+    let evolutions = evolve_prices(probe, seat, counter);
     Prices {
         deaths,
         turn_hooks,
         activations,
         attack_hooks,
         awakenings,
+        evolutions,
         pool_loss: None,
     }
 }
 
 /// R4070000: the prices a decision of `seat`'s at `state` would pass its search, for a caller outside a
-/// decision (`cargo jackioh positions`): `state` redacted for the seat (R185), so a true state is fine,
+/// decision: `state` redacted for the seat (R185), so a true state is fine,
 /// its `probe_world`, and `decision_prices` on a counter of `AI_DECISION_PRICE_NODES`, every probe's cap.
 pub fn decision_prices_at(state: &GameState, seat: PlayerId) -> Prices {
     let public = redact(state, seat);
@@ -513,9 +547,9 @@ fn plan(
     let stage = create_sub_counter(counter, budget.nodes);
     let counter: &dyn NodeCounter = &stage;
 
-    // R2424000, R2477000, R2564000, R2688000, R3064000: the decision's prices (`decision_prices`), from
-    // the searched section's nodes, passed to every step below. R4188000: with the pool's coming loss
-    // `decide_with_pool_loss` was given.
+    // R2424000, R2477000, R2564000, R2688000, R3064000, R4648000: the decision's prices (`decision_prices`,
+    // each Evolve card's evolution among them), from the searched section's nodes, passed to every step
+    // below. R4188000: with the pool's coming loss `decide_with_pool_loss` was given.
     let prices = Prices {
         pool_loss: pool_loss.map(|loss| (seat, loss)),
         ..decision_prices(&probe, seat, counter)
@@ -576,8 +610,10 @@ fn plan(
     let root_turn = det0.turn;
     let remaining = budget.nodes.saturating_sub(counter.used());
     let finalist_count = budget.finalists.max(1);
-    // What one finalist's scores on every other determinization keep back (R3696000's `keep`, below).
-    let other_worlds = (k - 1) * (budget.max_depth + 1 + AI_REPLY.reserve_steps as usize);
+    // What one finalist's scores on every other determinization keep back (R3696000's `keep`, below),
+    // R4447000's fill slice included.
+    let fill = ReplayFill::configured(budget.branching);
+    let other_worlds = (k - 1) * (budget.max_depth + 1 + AI_REPLY.reserve_steps as usize + fill.ceiling());
     let per_finalist = (AI_SEARCH.lines_per_action * AI_REPLY.reserve_steps) as usize + other_worlds;
     let reserve = (remaining / 2).min(finalist_count * per_finalist);
     // The beam's own slice of the counter. Its stop reason is read as the beam ends: nothing takes a
@@ -675,41 +711,43 @@ fn plan(
         finalist_count,
     );
 
-    let mut totals: Vec<f64> = finalists.iter().map(|entry| entry.score).collect();
+    let mut rows: Vec<Vec<f64>> = finalists.iter().map(|entry| vec![entry.score]).collect();
     let mut scored_on: i32 = 1;
     for world in dets.iter().skip(1) {
         let hidden = hidden_card_ids(world, seat);
         let mut row: Vec<f64> = Vec::new();
+        let mut cuts: usize = 0;
         for entry in &finalists {
-            let Some(score) = score_line(
+            let Some(replay) = replay_line(
                 world,
                 seat,
                 &entry.line.actions,
                 counter,
-                !replied.is_empty(),
-                Some(&hidden),
+                (!replied.is_empty()).then_some(&hidden),
                 &prices,
+                fill,
             ) else {
                 break;
             };
-            row.push(score);
+            row.push(replay.score);
+            cuts += usize::from(replay.cut);
         }
         // A world the counter could not finish is left out for every finalist alike.
         if row.len() < finalists.len() {
             break;
         }
         for (index, score) in row.into_iter().enumerate() {
-            if let Some(total) = totals.get_mut(index) {
-                *total += score;
+            if let Some(scores) = rows.get_mut(index) {
+                scores.push(score);
             }
         }
         scored_on += 1;
+        scratch.replays_cut += cuts;
     }
     scratch.worlds_scored = usize::try_from(scored_on).unwrap_or(0);
 
-    let means: Vec<f64> = (0..finalists.len())
-        .map(|index| totals.get(index).copied().unwrap_or(0.0) / f64::from(scored_on))
-        .collect();
+    // R4608000: a finalist that won on determinization 0 alone is ranked by its mean on the others.
+    let means = finalist_means(&rows, AI_SEARCH.confirm_lone_win);
     let chosen_index = pick_finalist(&means, style.temperature, rng);
     let chosen_mean = means.get(chosen_index).copied().unwrap_or(0.0);
 
@@ -884,6 +922,7 @@ fn decide_in(
         lines: 0,
         replied: 0,
         worlds_scored: 0,
+        replays_cut: 0,
     };
 
     let outcome = catch_unwind(AssertUnwindSafe(|| {
@@ -899,6 +938,7 @@ fn decide_in(
         stopped_by: stopped_by.unwrap_or_else(|| counter.stopped_by()),
         replied: scratch.replied,
         worlds_scored: scratch.worlds_scored,
+        replays_cut: scratch.replays_cut,
         score,
     };
 
@@ -981,6 +1021,7 @@ mod tests {
             lines: 0,
             replied: 0,
             worlds_scored: 0,
+            replays_cut: 0,
         };
         let mut options = AiOptions::with_budget(Rng::new("decide-1575", 0), AI_BUDGET);
         let Plan::Searched {

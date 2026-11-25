@@ -3,7 +3,7 @@
 // only the defaults, the starters and what it owns; with nothing deciding (practice, hotseat,
 // R1310004's builds), all. R1953001: no face wears the account-wide foil, finish or border.
 
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -11,12 +11,17 @@ import { CATALOG } from "@jackioh/cards";
 
 import AccountCosmeticTiles from "../collection/AccountCosmeticTiles.tsx";
 import { collectionTestid } from "../collection/collection.ts";
+import StarshipLooks from "../collection/StarshipLooks.tsx";
+import { announceWallet } from "../economy/wallet.ts";
 import Board from "../game/Board.tsx";
 import DeckCosmeticsPicker from "../game/deckbuilder/DeckCosmeticsPicker.tsx";
 import type { DeckItem } from "../game/deckbuilder/sync.ts";
 import { DECK_COSMETICS_BUTTON } from "../game/deckbuilder/testids.ts";
-import type { OwnedCosmeticsResponse } from "../net/api.ts";
+import { keptPaths, type OwnedCosmeticsResponse } from "../net/api.ts";
+import { cachedRead } from "../net/readCache.ts";
+import { clearSession, writeSession } from "../net/session.ts";
 import { fullBoardView } from "../test/fixtures.ts";
+import { stubServer } from "../test/stubServer.ts";
 import { CardFace } from "./CardFace.tsx";
 import {
   AccountCosmeticsOwned,
@@ -41,6 +46,7 @@ import { faceModel } from "./model.ts";
 import {
   NO_ACCOUNT_COSMETICS,
   ViewerAccountCosmetics,
+  ViewerFullArt,
   ownedAccountCosmetics,
   readOwnedAccountCosmetics,
   readOwnedFullArt,
@@ -81,6 +87,8 @@ afterEach(() => {
   cleanup();
   resetCosmeticsForTests();
   resetOwnedFullArtForTests();
+  vi.unstubAllGlobals();
+  clearSession();
   localStorage.clear();
 });
 
@@ -252,5 +260,54 @@ describe("R1833000 the account cosmetics a picker offers and a side wears", () =
     );
     expect(probe.owns(SNOW)).toBe(true);
     expect(unread).not.toHaveBeenCalled();
+  });
+
+  it("R4780000 a paid result has the mounted providers read what the account owns again, so a Fleet level's reward is owned and equippable with no reload", async () => {
+    const TOKEN = "token-1";
+    const REWARD = "starship-piece-skin-gunmetal";
+    writeSession({ accessToken: TOKEN });
+    let owned: OwnedCosmeticsResponse = { cards: [], account: [] };
+    const server = stubServer((call) =>
+      call.method === "GET" && call.path === "/api/cosmetics" ? { status: 200, body: owned } : undefined,
+    );
+    render(
+      <ViewerFullArt token={TOKEN} gated>
+        <ViewerAccountCosmetics token={TOKEN} gated>
+          <StarshipLooks />
+        </ViewerAccountCosmetics>
+      </ViewerFullArt>,
+    );
+    await waitFor(() => {
+      expect(cachedRead<OwnedCosmeticsResponse>(TOKEN, keptPaths.cosmetics)).toEqual({ cards: [], account: [] });
+    });
+    const locked = screen.getByTestId(collectionTestid.tile(REWARD));
+    expect(locked).toHaveAttribute("data-owned", "false");
+    expect(within(locked).getByTestId(collectionTestid.tileEarn(REWARD))).toHaveTextContent("Fleet track level 4");
+
+    // The game paid the Fleet level's reward: a paid result announces with no balance.
+    owned = { cards: [], account: [REWARD] };
+    act(() => {
+      announceWallet();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId(collectionTestid.tile(REWARD))).toHaveAttribute("data-owned", "true");
+    });
+    const tile = screen.getByTestId(collectionTestid.tile(REWARD));
+    expect(screen.queryByTestId(collectionTestid.tileEarn(REWARD))).toBeNull();
+    expect(server.to("GET", "/api/cosmetics")).toHaveLength(2);
+
+    // The reward equips with a click, with no request.
+    fireEvent.click(within(tile).getByRole("button"));
+    expect(readCosmetics().starshipPieceSkin).toBe(REWARD);
+
+    // A result carrying a balance reads nothing more.
+    act(() => {
+      announceWallet(250);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(server.to("GET", "/api/cosmetics")).toHaveLength(2);
   });
 });

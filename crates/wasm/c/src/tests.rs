@@ -671,24 +671,167 @@ fn r3496000_run_content_at_answers_the_carried_and_current_versions_and_null_for
 }
 
 #[test]
-fn duos_exports_answer_what_the_core_bodies_answer() {
+fn assault_exports_answer_what_the_core_bodies_answer() {
     init();
-    // Built without the `duos` feature each body answers the reason, which the status carries.
-    assert_eq!(call!(duos_create; "{}";), expect(wasm_core::duos_create("{}")));
-    assert_eq!(call!(duos_begin; "{}";), expect(wasm_core::duos_begin("{}")));
+    let date = "\"2026-11-23\"";
+    let seed = call!(assault_day_seed; date;);
+    assert_eq!(seed, expect(wasm_core::assault_day_seed(date)));
+    let _seed_val: Value = serde_json::from_str(&ok(seed)).expect("JSON");
+
+    let deck = call!(assault_day_deck; date;);
+    assert_eq!(deck, expect(wasm_core::assault_day_deck(date)));
+    let deck_text = ok(deck);
+    let deck_cards: Vec<String> = serde_json::from_str(&deck_text).expect("JSON");
+
+    let content = call!(assault_content;;);
+    assert_eq!(content, expect(wasm_core::assault_content()));
+    let content = ok(content);
+
+    let numbers = call!(assault_constants;;);
+    assert_eq!(numbers, expect(wasm_core::assault_constants()));
+
+    let day = call!(assault_day; date, content;);
+    assert_eq!(day, expect(wasm_core::assault_day(date, &content)));
+    let day = ok(day);
+
+    let catalog_raw = ok(call!(catalog;;));
+    let cat_content = call!(assault_catalog_content; catalog_raw;);
     assert_eq!(
-        call!(duos_reduce; "{}", "{}";),
-        expect(wasm_core::duos_reduce("{}", "{}"))
+        cat_content,
+        expect(wasm_core::assault_catalog_content(&catalog_raw))
     );
+    let ph_content = call!(assault_placeholder_content; catalog_raw;);
     assert_eq!(
-        call!(duos_legal_actions; "{}", "a1";),
-        expect(wasm_core::duos_legal_actions("{}", "a1"))
+        ph_content,
+        expect(wasm_core::assault_placeholder_content(&catalog_raw))
     );
+
+    let setup = json!({
+        "date": "2026-11-23",
+        "deck": deck_cards,
+        "source": "dayDeck",
+        "startLevel": 1,
+        "attempt": 1,
+    })
+    .to_string();
+    let record = json!({
+        "date": "2026-11-23",
+        "best": 0,
+        "checkpoints": [],
+        // R4579002: the day's record at the attempt's start, before it counts.
+        "attempts": 0,
+        "repelledOn": null,
+    })
+    .to_string();
+
+    let created = call!(assault_create; setup, record, day;);
+    assert_eq!(created, expect(wasm_core::assault_create(&setup, &record, &day)));
+    let created: Value = serde_json::from_str(&ok(created)).expect("JSON");
+    let state = created["state"].to_string();
+    assert_ne!(state, "null", "{created}");
+
+    let action = json!({ "kind": "fight" }).to_string();
+    let file = json!({
+        "version": ok(call!(catalog_version;;)),
+        "setup": serde_json::from_str::<Value>(&setup).expect("JSON"),
+        "record": serde_json::from_str::<Value>(&record).expect("JSON"),
+        "actions": [serde_json::from_str::<Value>(&action).expect("JSON")],
+    })
+    .to_string();
+
+    let folded = call!(assault_fold; file, day;);
+    assert_eq!(folded, expect(wasm_core::assault_fold(&file, &day)));
+
+    let reduced = call!(assault_reduce; state, day, action;);
+    assert_eq!(reduced, expect(wasm_core::assault_reduce(&state, &day, &action)));
+    let reduced: Value = serde_json::from_str(&ok(reduced)).expect("JSON");
+    let after = reduced["state"].to_string();
+    assert_ne!(after, "null", "{reduced}");
+
+    let fight = call!(assault_fight_setup; after, day;);
+    assert_eq!(fight, expect(wasm_core::assault_fight_setup(&after, &day)));
+    assert_ne!(ok(fight), "null", "fighting state meets a fight");
+
+    let rec = call!(assault_record; record, after;);
+    assert_eq!(rec, expect(wasm_core::assault_record(&record, &after)));
+
+    let human = "\"p1\"";
     assert_eq!(
-        call!(duos_view_for; "{}", "a1";),
-        expect(wasm_core::duos_view_for("{}", "a1"))
+        call!(assault_fight_report; "{}", human;),
+        expect(wasm_core::assault_fight_report("{}", human))
     );
-    assert_eq!(call!(duos_create; "{}";).status, STATUS_FAILED);
+
+    let version = serde_json::to_string(&ok(call!(catalog_version;;))).expect("JSON");
+    assert_eq!(
+        call!(assault_content_at; version;),
+        expect(wasm_core::assault_content_at(&version))
+    );
+    let unknown = "\"v0.0.0-unknown\"";
+    assert_eq!(
+        call!(assault_content_at; unknown;),
+        expect(wasm_core::assault_content_at(unknown))
+    );
+}
+
+#[test]
+fn duos_exports_play_a_game_through_the_core_bodies() {
+    init();
+    let deck = |seed: &str| -> Value {
+        let options = json!({ "rngSeed": seed, "size": jackioh_engine::config::DECK_SIZE }).to_string();
+        let built: Value = serde_json::from_str(&ok(call!(build_ai_deck; options;))).expect("JSON");
+        built["deck"].clone()
+    };
+    let options = json!({
+        "seed": "duos-c-test",
+        "decks": {
+            "a1": deck("duos-c-a1"), "a2": deck("duos-c-a2"),
+            "b1": deck("duos-c-b1"), "b2": deck("duos-c-b2"),
+        },
+    })
+    .to_string();
+    let created = call!(duos_create; options;);
+    assert_eq!(created, expect(wasm_core::duos_create(&options)));
+    let created = ok(created);
+    let begun = call!(duos_begin; created;);
+    assert_eq!(begun, expect(wasm_core::duos_begin(&created)));
+    let begun = ok(begun);
+    let begun: Value = serde_json::from_str(&begun).expect("JSON");
+    let state = begun["state"].to_string();
+    let mut acted: Option<(String, Value)> = None;
+    for seat in ["a1", "a2", "b1", "b2"] {
+        let legal = call!(duos_legal_actions; state, seat;);
+        assert_eq!(legal, expect(wasm_core::duos_legal_actions(&state, seat)));
+        assert_eq!(legal.status, STATUS_OK, "{}", legal.text);
+        if acted.is_none() {
+            let bodies: Value = serde_json::from_str(&legal.text).expect("JSON");
+            if let Some(first) = bodies.as_array().and_then(|bodies| bodies.first()).cloned() {
+                acted = Some((seat.to_owned(), first));
+            }
+        }
+    }
+    let (seat, first) = acted.expect("a begun duos game offers an action");
+    let action = json!({ "seat": seat, "nonce": "duos-c-1", "body": first }).to_string();
+    let reduced = call!(duos_reduce; state, action;);
+    assert_eq!(reduced, expect(wasm_core::duos_reduce(&state, &action)));
+    assert_eq!(reduced.status, STATUS_OK, "{}", reduced.text);
+    assert!(
+        !reduced.text.contains("\"error\""),
+        "the legal action is taken: {}",
+        reduced.text
+    );
+    for seat in ["a1", "a2", "b1", "b2"] {
+        let viewed = call!(duos_view_for; state, seat;);
+        assert_eq!(viewed, expect(wasm_core::duos_view_for(&state, seat)));
+        assert_eq!(viewed.status, STATUS_OK, "{}", viewed.text);
+    }
+    // A bad deck is refused with its seat named (the setup check labels each deck by seat).
+    let mut bad: Value = serde_json::from_str(&options).expect("JSON");
+    bad["decks"]["b2"] = json!([]);
+    let bad = bad.to_string();
+    let refused = call!(duos_create; bad;);
+    assert_eq!(refused, expect(wasm_core::duos_create(&bad)));
+    assert_eq!(refused.status, STATUS_FAILED, "{}", refused.text);
+    assert!(refused.text.contains("b2"), "{}", refused.text);
 }
 
 #[test]

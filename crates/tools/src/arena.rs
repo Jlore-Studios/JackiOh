@@ -147,6 +147,11 @@ pub struct Args {
     /// Needs `--set improve-dev`; the candidate is probed at full skill, so `--a-skill` stays 1.
     #[arg(long)]
     pub forks: bool,
+    /// R4607000: the fork screen's save file: without it the screen behaves as today; with it
+    /// each finished deal is appended as one JSON line (after one header line) as soon as it is
+    /// done, and running the same command again plays only the deals still missing.
+    #[arg(long)]
+    pub save: Option<PathBuf>,
     /// The directory the game records go to (`<dir>/<date>.jsonl`); default `$JACKIOH_TRAINING_OUT`,
     /// else stdout.
     #[arg(long)]
@@ -176,6 +181,20 @@ impl SeedSet {
     }
 }
 
+/// The retired training lanes (#4701, #4702). Each lane's gate played the hold-out deals
+/// `<lane>:<tree>:<d>` its promotions are recorded on (`training/history/`), so no screen and no
+/// self-play run plays a base that names one (R850001, R1006002).
+const GATE_LANES: [&str; 3] = ["improve", "unban", "learn"];
+
+/// R850001: whether a seed base would play a training gate's seeds, a lane's name alone or followed
+/// by `:`.
+pub(crate) fn is_gate_seed_base(base: &str) -> bool {
+    GATE_LANES.into_iter().any(|lane| {
+        base.strip_prefix(lane)
+            .is_some_and(|rest| rest.is_empty() || rest.starts_with(':'))
+    })
+}
+
 /// The series `args` name: its seed base, whether it is paired and its games. A seed set is always
 /// paired and plays at least `SCREEN_GAMES`; a base that names a training gate's seeds is refused
 /// (R850001), as is an odd paired count.
@@ -195,7 +214,7 @@ fn series(args: &Args) -> anyhow::Result<(String, bool, i32)> {
             (set.base().to_string(), true, games)
         }
         (None, Some(seed)) => {
-            if crate::promote::is_gate_seed_base(seed) {
+            if is_gate_seed_base(seed) {
                 bail!(
                     "arena: the seed base \"{seed}\" names a training gate's hold-out seeds, which no \
                      screen plays (R850001): screen on `--set improve-dev`, or on a base of your own"
@@ -1390,8 +1409,9 @@ pub(crate) fn diverged_of(outcomes: &[ArenaOutcome]) -> usize {
         .count()
 }
 
-/// R4319000: whether `--extend` stops with this many decided deals after this many games: at the
-/// floor, or at the cap. The stop looks at how many deals were decided, never which way they went.
+/// R4319000, R4397000: whether `--extend` stops with this many decided deals (or live forks) after
+/// this many games: at the floor, or at the cap. The stop looks at how many deals were decided (or
+/// forks are live), never which way they went.
 pub(crate) fn screen_done(decided: usize, games: i32) -> bool {
     decided >= SCREEN_MIN_DECIDED || games >= SCREEN_MAX_GAMES
 }
@@ -1452,6 +1472,9 @@ pub(crate) fn records_of(outcomes: &[ArenaOutcome]) -> anyhow::Result<Vec<GameRe
 }
 
 pub fn run(args: Args) -> anyhow::Result<()> {
+    if args.save.is_some() && !args.forks {
+        bail!("arena: --save resumes only the fork screen, so it needs --forks");
+    }
     if args.forks {
         return crate::fork_screen::run(args);
     }
@@ -1784,6 +1807,7 @@ mod tests {
             paired,
             extend,
             forks: false,
+            save: None,
             out: None,
             a_skill: AI_SKILL_MAX,
             b_skill: AI_SKILL_MAX,
@@ -1823,7 +1847,7 @@ mod tests {
         assert!(series(&screen(Some("improve-try-3"), None, Some(0), false, false)).is_err());
         assert!(series(&screen(None, None, Some(400), false, false)).is_err());
         for own in ["improve-dev", "improve-try-3", "unban-try-1", "improvement:1"] {
-            assert!(!crate::promote::is_gate_seed_base(own), "{own}");
+            assert!(!is_gate_seed_base(own), "{own}");
         }
         // No deal of the dev set is a gate's, whatever the tree.
         let base = SeedSet::ImproveDev.base();
@@ -1834,6 +1858,14 @@ mod tests {
                 "{seed}"
             );
         }
+    }
+
+    #[test]
+    fn r4607000_save_needs_forks() {
+        let mut args = screen(Some("save-try-1"), None, Some(60), false, false);
+        args.save = Some(PathBuf::from("save.jsonl"));
+        let refused = run(args).unwrap_err();
+        assert!(refused.to_string().contains("--forks"), "{refused}");
     }
 
     #[test]

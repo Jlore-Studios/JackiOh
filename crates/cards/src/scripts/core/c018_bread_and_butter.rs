@@ -1,5 +1,7 @@
-//! #18 Bread and Butter (SPEC §8.1, §5.1, §7, R37, R52, R62, R1563000): "Reveals when any player
-//! Floats: Summon an X/X Bread Token for you. X = the Float." (Radiant: 3x; §6.2, §8 Conventions).
+//! #18 Bread and Butter (SPEC §8.1, §5.1, §7, R37, R52, R62, R1563000, R2657006): "Reveals when any
+//! player Floats: Summon an X/X Bread Token for you. X = the Float + {bonus}." (Radiant: "X =
+//! {multiplier} × the Float + {bonus}"; §6.2, §8 Conventions). The `bonus` since issue #4440 (1, Radiant
+//! 3), read with `param_or` so a replay of v0.6.11c or before, whose definition declares none, adds 0.
 //! End-of-turn trap window (§4.2 step 4, R68, R175; unspentMana Float, R195, #1563, §10.8).
 //! Summons token (R64; full board fails, §3.2); Radiant grants stats (R78).
 
@@ -18,12 +20,13 @@ fn unspent_on(event: &GameEvent) -> i32 {
 }
 
 /// The same on both faces: `multiplier` is §8's X (base) or 3X (radiant), a declared number (R386)
-/// tuned on the Radiant face only (R749: the base face prints no number, always 1). The condition is
-/// written twice: `traps.rs` filters on `when` (as `run_queued_trigger` does, R2271000), and `run`
-/// takes an empty effect list as "not met", so either way 0 unspent summons nothing and the trap stays armed.
+/// tuned on the Radiant face only (R749: the base face prints no multiplier, always 1), and `bonus`
+/// (1, Radiant 3) is added once a Float springs it. The condition is written twice: `traps.rs` filters
+/// on `when` (as `run_queued_trigger` does, R2271000), and `run` takes an empty effect list as "not
+/// met", so either way 0 unspent summons nothing and the trap stays armed.
 fn bread_trigger() -> TriggerDef {
     TriggerDef::new("bread-and-butter", &[GameEventType::TurnEnded], |ctx, event| {
-        let x = unspent_on(event) * param(&*ctx, "multiplier");
+        let x = bread_x(unspent_on(event), param(&*ctx, "multiplier"), bonus_of(&*ctx));
         if x <= 0 {
             return vec![];
         }
@@ -40,14 +43,33 @@ fn bread_trigger() -> TriggerDef {
     .with_when(|_ctx, event| unspent_on(event) > 0)
 }
 
-/// R280: the formula as the face prints it, which the preview labels its number with — X on the base
-/// face, `multiplier` × the Float on the Radiant one, with the multiplier as it stands.
-fn formula(radiant: bool, multiplier: i32) -> String {
-    if radiant {
+/// Issue #4440: the `bonus` a Float adds, 0 under a definition that declares none (R2657006).
+fn bonus_of<C: ParamContext + ?Sized>(ctx: &C) -> i32 {
+    param_or(ctx, "bonus", 0)
+}
+
+/// X for a Float of `float`: `multiplier` × the Float + `bonus`, and nothing at all without a Float, so
+/// a turn ended with nothing unspent makes no token (issue #4440: "only when there is excess mana").
+fn bread_x(float: i32, multiplier: i32, bonus: i32) -> i32 {
+    if float <= 0 {
+        return 0;
+    }
+    float * multiplier + bonus
+}
+
+/// R280: the formula as the face prints it, which the preview labels its number with — the Float plus
+/// `bonus` on the base face, `multiplier` × the Float plus `bonus` on the Radiant one, each number as it
+/// stands; with no `bonus` declared (R2657006) the formula prints none.
+fn formula(radiant: bool, multiplier: i32, bonus: i32) -> String {
+    let float = if radiant {
         format!("X = {multiplier} \u{00d7} the Float")
     } else {
         "X = the Float".to_string()
+    };
+    if bonus == 0 {
+        return float;
     }
+    format!("{float} + {bonus}")
 }
 
 /// R280: the Bread Token's X if the active player ended the turn now. `your_turn` names the active
@@ -60,9 +82,10 @@ fn preview() -> PreviewHook {
             opponent_of(ctx.controller)
         };
         let multiplier = param(&ctx, "multiplier");
+        let bonus = bonus_of(&ctx);
         vec![PreviewValue {
-            label: formula(ctx.radiant, multiplier),
-            value: unspent_mana_of(ctx.state, active) * multiplier,
+            label: formula(ctx.radiant, multiplier, bonus),
+            value: bread_x(unspent_mana_of(ctx.state, active), multiplier, bonus),
             display: None,
             ids: None,
         }]
@@ -134,8 +157,9 @@ mod tests {
 
             s.end_turn();
 
+            // Issue #4440: a Float of 2 and the bonus of 1.
             let token = s.unit_at(PlayerId::P1, 1);
-            expect_bread(&mut s, &token, 2);
+            expect_bread(&mut s, &token, 3);
             s.expect_events(json!(["turnEnded", "trapFired", "summoned"]));
         }
 
@@ -151,7 +175,7 @@ mod tests {
 
             // R64: lane 1 is taken, so the token takes the leftmost free zone.
             let token = s.unit_at(PlayerId::P1, 2);
-            expect_bread(&mut s, &token, 3);
+            expect_bread(&mut s, &token, 4);
             // R52: p2 ended the turn with the unspent mana, and gets nothing for it.
             for lane in 1..=5 {
                 assert!(s.unit(PlayerId::P2, lane).is_none());
@@ -159,7 +183,7 @@ mod tests {
         }
 
         #[test]
-        fn x_is_the_ending_player_s_unspent_mana() {
+        fn x_is_the_ending_player_s_unspent_mana_plus_1() {
             let mut s = scenario(json!({
                 "p1": { "backrow": ["core-018"], "mana": 4, "library": ["core-010"] },
                 "p2": { "field": ["core-012"], "library": ["core-010"] }
@@ -168,7 +192,58 @@ mod tests {
             s.end_turn();
 
             let token = s.unit_at(PlayerId::P1, 1);
+            expect_bread(&mut s, &token, 5);
+        }
+
+        /// Issue #4440's examples: a Float of 1 is a 2/2 and a Float of 2 a 3/3.
+        #[test]
+        fn issue_4440_a_float_of_1_is_a_2_2_and_a_float_of_2_a_3_3() {
+            for (float, x) in [(1, 2), (2, 3)] {
+                let mut s = scenario(json!({
+                    "p1": { "backrow": ["core-018"], "mana": float, "library": ["core-010"] },
+                    "p2": { "field": ["core-012"], "library": ["core-010"] }
+                }));
+                s.end_turn();
+                let token = s.unit_at(PlayerId::P1, 1);
+                expect_bread(&mut s, &token, x);
+            }
+        }
+
+        /// R386: the bonus is a declared number, so an upgrade adds to it on the base face too.
+        #[test]
+        fn r386_an_upgrade_of_the_bonus_makes_a_float_of_2_a_4_4() {
+            let mut s = scenario(json!({
+                "p1": { "backrow": ["core-018"], "mana": 2, "library": ["core-010"] },
+                "p2": { "field": ["core-012"], "library": ["core-010"] }
+            }));
+            assert_eq!(crate::upgrade_number(&mut s, "core-018", "bonus"), 2);
+            s.end_turn();
+            let token = s.unit_at(PlayerId::P1, 1);
             expect_bread(&mut s, &token, 4);
+        }
+
+        /// R2657006, R767000: a definition that declares no `bonus` (the shipped catalogs through
+        /// v0.6.11c) adds 0, so a replay of those versions makes the Float's X/X alone.
+        #[test]
+        fn r2657006_a_definition_declaring_no_bonus_makes_the_float_alone() {
+            crate::under_kept_as(
+                super::super::ID,
+                super::super::script(),
+                |def| {
+                    if let Some(params) = def.params.as_mut() {
+                        params.retain(|param| param.key != "bonus");
+                    }
+                },
+                || {
+                    let mut s = scenario(json!({
+                        "p1": { "backrow": ["core-018"], "mana": 2, "library": ["core-010"] },
+                        "p2": { "field": ["core-012"], "library": ["core-010"] }
+                    }));
+                    s.end_turn();
+                    let token = s.unit_at(PlayerId::P1, 1);
+                    expect_bread(&mut s, &token, 2);
+                },
+            );
         }
 
         #[test]
@@ -202,7 +277,7 @@ mod tests {
             s.end_turn(); // p1 ends with 1 unspent
 
             let first = s.unit_at(PlayerId::P1, 1);
-            expect_bread(&mut s, &first, 1);
+            expect_bread(&mut s, &first, 2);
             s.expect_in_zone(&trap, "field");
             // R33: a Field Trap that has fired is face-up to both players from then on.
             assert_eq!(s.card(&trap).face_up, Some(true));
@@ -210,7 +285,7 @@ mod tests {
             s.end_turn(); // p2 ends, its mana refreshed to MAX_MANA and unspent
 
             let second = s.unit_at(PlayerId::P1, 2);
-            expect_bread(&mut s, &second, 4);
+            expect_bread(&mut s, &second, 5);
             s.expect_in_zone(&trap, "field");
             assert!(!s.pile(PlayerId::P1, "graveyard").iter().any(|card| card.id == trap.id));
         }
@@ -220,7 +295,7 @@ mod tests {
         use super::*;
 
         #[test]
-        fn summons_a_3x_3x_bread_token() {
+        fn summons_a_3x_plus_3_bread_token() {
             let mut s = scenario(json!({
                 "p1": { "backrow": [{ "def": "core-018", "radiant": true }], "mana": 2, "library": ["core-010"] },
                 "p2": { "field": ["core-012"], "library": ["core-010"] }
@@ -228,8 +303,9 @@ mod tests {
 
             s.end_turn();
 
+            // Issue #4440: 3 × a Float of 2, and the bonus of 3.
             let token = s.unit_at(PlayerId::P1, 1);
-            expect_bread(&mut s, &token, 6);
+            expect_bread(&mut s, &token, 9);
         }
 
         #[test]
@@ -248,14 +324,14 @@ mod tests {
                 let shown = serde_json::to_value(&s.view(PlayerId::P1).you.backrow[0]).unwrap_or_default();
                 assert_eq!(
                     shown["preview"][0]["label"],
-                    json!(format!("X = {multiplier} \u{00d7} the Float"))
+                    json!(format!("X = {multiplier} \u{00d7} the Float + 3"))
                 );
-                assert_eq!(shown["preview"][0]["value"], json!(2 * multiplier));
+                assert_eq!(shown["preview"][0]["value"], json!(2 * multiplier + 3));
 
                 s.end_turn();
 
                 let token = s.unit_at(PlayerId::P1, 1);
-                expect_bread(&mut s, &token, 2 * multiplier);
+                expect_bread(&mut s, &token, 2 * multiplier + 3);
             }
         }
 
@@ -277,7 +353,7 @@ mod tests {
             s.end_turn();
 
             let token = s.unit_at(PlayerId::P1, 2);
-            expect_bread(&mut s, &token, 3);
+            expect_bread(&mut s, &token, 6);
             for lane in 1..=5 {
                 assert!(s.unit(PlayerId::P2, lane).is_none());
             }

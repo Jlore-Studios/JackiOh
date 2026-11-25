@@ -1,8 +1,9 @@
 //! How a verb names cards on the field, in a hand or in a deck (docs/classic-sets.md B3.3, B3.4, B5
 //! E38, E39); `targets::BoardScope` names the field only. A card dormant under a Stack (§3.2, R13) is
-//! in no scope. The walk is in R242's order: what everyone reads, then what only its owner reads (§9.1,
-//! R33), then what nobody reads (§3), each side by side (the active player's first, R68), so a hidden
-//! card's place among a verb's events says only its group.
+//! in no scope, nor, in a Spell's walk, a field card Immune to Spells (R4453000). The walk is in R242's
+//! order: what everyone reads, then what only its owner reads (§9.1, R33), then what nobody reads (§3),
+//! each side by side (the active player's first, R68), so a hidden card's place among a verb's events
+//! says only its group.
 
 use serde::{Deserialize, Serialize};
 
@@ -240,6 +241,12 @@ pub fn cards_in_card_scope(
                         scope.not_tags.as_deref(),
                     )
                 {
+                    matches = false;
+                }
+                // R4453000: a Spell's walk passes a field card it may not affect by (Immune to Spells,
+                // §6.1), as its aimed picks and board scopes do; a hand or a deck is no field, so a copy
+                // there is reached. Marked unmatched, not dropped, so a hidden pile stays whole (R440).
+                if matches && zone == CardZone::Field && crate::restrictions::unaffected_by(ctx, &card) {
                     matches = false;
                 }
                 let readers = readers_of(state, &card);

@@ -13,9 +13,13 @@ import { beforeEach } from "vitest";
 
 import { installSceneData } from "../cards/art/scene.ts";
 import { ALT_SCENE_RECIPES, drawFigure, SCENE_KIT, SCENE_RECIPES } from "../cards/art/sceneData.ts";
+import { setSfxForTests } from "../audio/sfxLoader.ts";
+import * as sfxRecipes from "../audio/sfx.ts";
 import { loadCardTables } from "../cards/chinese.ts";
+import { installCosmeticOffers } from "../cards/versions.ts";
 import { clearReadCache } from "../net/readCache.ts";
 import { loadWasmSync } from "../wasm/index.ts";
+import { COSMETIC_OFFERS } from "../wire/generated/cosmeticOffers.ts";
 
 // A path, not `new URL(…, import.meta.url)`: Vite rewrites that into an asset URL against the page's
 // origin, which `readFileSync` refuses.
@@ -28,6 +32,15 @@ await loadCardTables();
 // #4222: the scene tables load beside the engine module in the client, but every art test reads them
 // as already installed, the way the module is: the setup installs them before any test file imports.
 installSceneData({ SCENE_KIT, drawFigure, SCENE_RECIPES, ALT_SCENE_RECIPES });
+
+// #4714: the cosmetic offers load beside the scene tables in the client, but every test reads them as already
+// installed, the way the scene tables are.
+installCosmeticOffers(COSMETIC_OFFERS);
+
+// #4428: the sound-effect recipes load lazily in the client, but every test reads them as already
+// there, the way the scene tables are: the setup installs them before any test file imports. A test
+// that needs them missing (an early sound's skip) empties them itself with `deferSfxForTests()`.
+setSfxForTests(sfxRecipes);
 
 let reducedMotion = false;
 

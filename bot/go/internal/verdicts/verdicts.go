@@ -395,3 +395,38 @@ func orNil(v any) any {
 	}
 	return v
 }
+
+// Judgement is the judge's word on one suggestion (`prompts/judge.md`): `N`, its number in the
+// list it read (from 1), and whether it would approve it.
+type Judgement struct {
+	N       int
+	Approve bool
+	Why     string
+}
+
+// Judgements reads the judge's `<!-- judgements: [...] -->` header: each entry's `n` and a
+// `verdict` of "approve"; any other verdict, or none, leaves that suggestion to a person. An entry
+// whose `n` is not a whole number from 1 to `count` is skipped, and the first word on a number
+// stands.
+func Judgements(text string, count int) map[int]*Judgement {
+	value, _ := Header(text, "judgements")
+	entries, ok := value.([]any)
+	found := map[int]*Judgement{}
+	if !ok {
+		return found
+	}
+	for _, e := range entries {
+		entry, ok := e.(*pyjson.Object)
+		if !ok {
+			continue
+		}
+		n, err := py.Int(entry.Get("n"))
+		if err != nil || n < 1 || n > count || found[n] != nil {
+			continue
+		}
+		verdict := py.Lower(py.Strip(py.Str(entry.GetOr("verdict", ""))))
+		why := py.SliceTo(strings.Join(py.Split(py.Str(entry.GetOr("why", ""))), " "), 400)
+		found[n] = &Judgement{N: n, Approve: verdict == "approve", Why: why}
+	}
+	return found
+}

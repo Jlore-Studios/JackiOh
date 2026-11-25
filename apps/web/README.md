@@ -279,9 +279,11 @@ read keeps it with `keepRead`, which is no write. `apiRequest` shares a `GET` of
 counts every spend that settles (it sends an `Idempotency-Key`) and every `rememberRead`, fold, `forgetRead` and
 `clearReadCache`: a read asked after it moved never joins an earlier one, and one that finished after it moved is
 not kept. A write that changes a kept read without carrying it drops it (`forgetRead`; `forgetPaidReads` for a
-game's paid result, which `announceWallet()` with no balance calls), and a dev tool's success empties the cache.
+game's paid result, which `announceWallet()` with no balance calls; it also has the mounted ownership providers read the owned cosmetics again, `forgetOwnedCosmetics`, R4780000), and a dev tool's success empties the cache.
 
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
+
+A tab left open across a deploy loads the next build on its next menu move (R4605000): the build writes `dist/version.json` naming its entry script, the tab checks it when it wakes (at most once per `UPDATE_CHECK_MIN_MS`), and with an update waiting the move is a full page load to the target instead — the cross-fade above is skipped and the tab-memory read cache starts empty, one extra read per screen once. Never over a board: moves stay in place until it is gone. A screen that still fails on a stale chunk reloads once by itself, bounded by a `sessionStorage` key per entry.
 
 An `<a>` to a screen of the app (`href={paths.…}` or an address starting with `/`) carries `onClick={followInApp(…)}` (`routes/nav.tsx`), which moves in place and leaves a modified or middle click to the browser, or opens a new tab (`target="_blank"`); a bare one reloads the site, emptying the read cache and reloading the engine. `src/in-app-links.test.ts` holds it, with the links that load the page on purpose (`FULL_LOADS`) and why.
 
@@ -338,6 +340,16 @@ its slices over the farthest swinging on an attack (`artLive.css`); the full-scr
 as little as keeps the screen covered (`fullscreenCoverScale`), and the takeover flies through them (`fx/takeover.ts`,
 `fx-takeover-fly`). Alt art, a restyle and every flat face draw none. `dioramas.test.ts` lists any
 Mythic without one (`PENDING`, empty) and holds every slice to its picture's colours, no text and `ART_DETAIL_MAX_BYTES`.
+
+**Layer memory on a phone** (R4493000, R4493001): every DOM effect part is a GPU layer held at the device's full density,
+and a phone's browser kills the tab past its memory. So on a phone (the window's narrower side under `FX_MOBILE_WIDTH`) a
+takeover's stage merges its slices or planes into `FX_PHONE_STAGE_LAYERS` pictures (`fx/layers.ts`'s `mergeStage`). No
+effect element covers more than `FX_LAYER_MAX_SCREENS` at its largest scale. On a phone, or a device with
+`navigator.deviceMemory` of `FX_LOW_DEVICE_MEMORY_GB` or less, the director keeps what its mounted and coming DOM cues hold
+within `FX_PHONE_LAYER_BUDGET_MB` (`budgetTakeover`, from `layers.ts`'s tables). It mounts a takeover in the fullest form
+that fits: merged, then without its art, then without its stage, and at the least its dark and its sweep. No other cue is
+reduced. `fx/layerBudget.test.ts` estimates every DOM cue kind from `fx.css` (`src/test/layerEstimate.ts`) and holds the
+tables to it per pull request; `e2e/cypress/component/fx-phone-layers.cy.tsx` measures the phone scenes at 3x daily.
 
 ## Three flows at the table
 
@@ -535,6 +547,16 @@ difference. The control's tap band (up to
 zone's placeholder (`.zone::before`) is sized to the box a field card takes there less a 2px inset, so
 the unit's picture (#3341: its art runs up to the frame) and the backrow's outline keep a card's shape.
 
+**A short phone held upright** (#4427) keeps the same layout. Measured in Cypress's Chrome, the upright board
+needs no scrolling down to a window 491px tall with nothing above it and 537px tall with the top strip's rail,
+and End turn stays on the screen down to 484px and 530px (in the practice frame, which hides what overflows,
+down to 484px). So End turn and the whole hand stay on the screen of an iPhone SE in Safari (375x548), a
+320x568 phone and a 360x560 Android in Chrome, with every field row at its 44px floor or above;
+`e2e/cypress/component/board-layout.cy.tsx` holds those three sizes (its `#2876` and `#4427` rows). The Duos
+board, the only one that draws its rail in the control bar on an upright phone, budgets its cards in
+`duos.css` and is not measured here. A phone shorter than these would need a peek of the hand, as a phone on
+its side has.
+
 **Hand hints** (#2267). The viewer's own hand cards can wear a row of small pips top-left,
 under the cost gem. `game/HandHints.tsx` draws the row as a child of each card's root
 (`Card.tsx` `hintRow`); `game/handHints.css` styles it. The hints are one list, `HAND_HINTS`
@@ -646,6 +668,14 @@ The GIF code still loads on demand, never in the main bundle.
 Each `/replays` row that can be watched also offers "Download JSON" (R1141000): every step's view through the
 row's own source, the row's facts and the build's catalog version, no account named, made in memory and saved
 to the browser's downloads, for a bug report.
+Every mode's end-of-game result offers one **Main menu** button after its own ways on (R4742000, issue #4742):
+`game/MainMenuButton.tsx` draws it for the result panels and screens (the dungeon run-over screen and fights, the
+Infinite Assault fight, the daily game's result, the co-op result), and `mainMenuAction` is the same label as a
+`DialogAction` for the two Dialog results (practice's and a lesson's). The button decides nothing: each result's
+`onClick` is where it leaves for (a fight's is its board Menu's handler, so Assault's still reports the fight
+first; Duos' comes from `DuosChrome.onMenu`, and `/dev/duos` hangs none). Practice's Menu, its leave
+question's Save and leave and both Dialog results leave for `playSoloPath()` (`/play#solo`): `PlayHub` reads
+that fragment once on arrival, scrolls its Solo group into view and focuses the Practice card.
 A finished co-op game's result panel offers "Watch the replay" too (§13.9): `duos/DuosReplay.tsx` reads
 `GET /api/duos/matches/:matchId/replay` once and steps the seat's `DuosView`s on `DuosBoard`'s replay mode,
 with the player's controls, a round standing for a turn; it is never in `/replays`.
@@ -1170,14 +1200,15 @@ src/practice/
   controller.ts       one request in flight, and the pacing loop that plays the AI's turn one
                       visible action at a time (think indicator, gaps from config.ts)
   aiTable.ts          the hooks that pace the AI at a table (controller state, board busy, the voice and
-                      showcase holds), shared by the route and a dungeon fight's screen
+                      showcase holds), shared by the route, a dungeon fight's screen and an Infinite Assault fight's screen
   config.ts testids.ts PracticeSetup.tsx ThinkIndicator.tsx PracticeLeave.tsx PracticeResult.tsx practice.css
   decks.ts            random, the three named practice decks (hand-built lists), the account's saved decks by name
   lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage
                       `jackioh.practice.lastBoard`, try/catch
   saveStore.ts        the worker's save of a free game in progress (R668): config, log, AI cursor,
-                      catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom), and the last
-                      PRACTICE_REPLAYS_KEPT finished free games (R768)
+                      catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom), and a dungeon
+                      run's fight and an Infinite Assault fight each in a slot of its own (R3476000, R4582001),
+                      and the last PRACTICE_REPLAYS_KEPT finished free games (R768)
   resume.ts           the page's half (R668): only the setup it chose, in localStorage
                       `jackioh.practice.game`, try/catch, marked `saved` once left with Save and leave (R765)
   todaysDeal.ts       today's deal (R2882000): the UTC day's seed daily-YYYY-MM-DD and seat, on a random deck
@@ -1268,8 +1299,8 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   `practice/aiTable.ts`; it has no `?pace=fast`. The controller's general form is `setHold(reason, held)`. The settings panel's "Reduce motion" gives the reduced pacing,
   as the media query does.
 - A lesson in progress asks before a reload or a closed tab ends it (`beforeunload`), and the HUD's
-  Menu leaves for the landing page, asking first (Save and leave, or Leave without saving) while the
-  game is on.
+  Menu leaves for the Play hub's Solo group (`/play#solo`, R4742000), asking first (Save and leave, or Leave
+  without saving) while the game is on.
 
 ## The tutorial
 
@@ -1444,7 +1475,19 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   the shop's pack reveal do; `routes/engine-gate.test.tsx` holds the landing to it with a played game's stats.
   The scene kits and both recipe tables load in a chunk beside the module (#4222:
   `src/cards/art/sceneLoader.ts`): `EngineGate` and `useEngineReady` wait for both before a face draws,
-  and `test/setup.ts` installs the tables synchronously.
+  and `test/setup.ts` installs the tables synchronously. The cosmetic offers (`COSMETIC_OFFERS`, each
+  version's offered cards, `wire/generated/cosmeticOffers.ts`) load in the same step from a chunk of their
+  own (#4714, `loadCosmeticOffers` in `cards/versions.ts`, whose offer queries throw before they are in): the
+  shop's route chunk and the ownership read (`cards/ownedFullArt.ts`) await them too, and `test/setup.ts`
+  installs them. `main.tsx` starts the module's download at boot on every route with a low Fetch Priority
+  (`startWasmLoad`), so the route's own chunks come first; a screen that awaits the engine shares that one
+  download and never fetches it again. The full-screen art view imports the music player when it opens, never
+  with the faces that open it (`cards/FullScreenArt.tsx`). The sound-effect recipes load the same way
+  (#4428: `src/audio/sfxLoader.ts`): `main.tsx` starts them off the first paint beside the page-wide
+  sound, and the engine's `unlock()` is the backstop, never behind the module; a sound asked for
+  before they land is skipped silently, and `test/setup.ts` installs them synchronously. The
+  flavour sidecar loads in a chunk beside the module too (#4435, `src/cards/flavour.ts`): no screen
+  waits for it, and an inspect view opened before it arrives gains its line when it does.
 - `src/routes/chunks.tsx` is the one map `main.tsx` draws its screens from (#2116, R2116000):
   `watchRouteIntent` listens for pointer, focus and touch intent on links and `data-route`
   buttons and prefetches each route's code once per page load, and the Practice, Play and match
@@ -1466,7 +1509,7 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   `crates/cards` (the second and third generated from its `card-text.yaml`, #2498, each with a `"//"`
   entry that `flavour.ts` and `chinese.ts` drop).
 - The generated files (`src/wire/generated/`, `engineConfig.ts`, `serverConfig.ts`; among the first,
-  `generated/cosmetics.ts` is the server's cosmetics registry, the card slots, the deck slots and the full arts, R1295000, R1297000, R1313000) are written by
+  `generated/cosmetics.ts` is the server's cosmetics registry, the card slots, the deck slots and the full arts, R1295000, R1297000, R1313000, and `generated/cosmeticOffers.ts` beside it each version's offered cards, R2725001, #4714) are written by
   `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`; CI fails when they
   differ from what is committed, so a Rust change that moves the wire commits them in the same change.
 - Three files hold a game's state, and nothing else imports the engine's game functions: `game/engine.ts`
@@ -1481,7 +1524,9 @@ Every word the client shows a player follows [`WRITING.md`](WRITING.md), the cli
 client shows (a string or JSX text in a source that `src/i18n/zh-CN.json` translates), no curly
 apostrophe there or in a dictionary key, and no straight double quote there. Its glossary sets
 sentence case, one name per page, one verb per action, and bans arrow characters in translations,
-held by guards against Title Case labels outside their allowlist.
+held by guards against Title Case labels outside their allowlist. The site and its images carry
+no tagline (#4653): where a sentence is needed, write a plain description of the game, and do
+not add one back.
 
 ## Internationalisation
 

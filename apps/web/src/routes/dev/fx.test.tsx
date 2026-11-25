@@ -80,7 +80,11 @@ describe("R2784000 #2792 the /dev/fx gallery and sub-look", () => {
     // Jlockeed's Headquarters). R3399000: Classic+'s 104 (its eight tokens printed Legendary or Mythic that were
     // `none` are signatures now). R3395000: Tylannt's, Paragon Mk2's and Siva 2's signatures, which were `none`
     // (Stinkyscape 001 to 090's 97). Stinkyscape+'s 142 at its release (#3596): 131 cards and 11 tokens.
-    expect(cards).toHaveLength(814);
+    // #4440: S+ #4.1 Profe Yates Prime. #4577: the held Infinite Assault set's first 21 (its 26 entries less
+    // the five that are `none`), which the gallery plays as it plays every table entry.
+    // #4602: the foundation's 229, less the 32 that are `none` (tokens and keyword-only cards), so the
+    // gallery plays 1033. R4596000: Bastion.exe, which was `none`, boots onto the board now: 1034.
+    expect(cards).toHaveLength(1034);
     expect(cards).toContain("classic-071");
     // Playing a motif and a card's entry draws without throwing, whatever is picked.
     fireEvent.change(screen.getByTestId(fxGalleryTestid.motif), { target: { value: "lance" } });

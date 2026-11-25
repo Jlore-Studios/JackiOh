@@ -32,14 +32,15 @@ mod code_blocks {
 pub use code_blocks::CODE_BLOCKS;
 
 /// R1846000, R2173000: compiled card metrics (`CODE_LINES`, `BUSTED`, `COMPLICATED`, `LIST_READERS`,
-/// and #3116's `EXTRA_TURN_CARDS`).
+/// #3116's `EXTRA_TURN_CARDS` and #4609's `TEXT_REWRITERS`).
 mod card_metrics {
     include!(concat!(env!("OUT_DIR"), "/card_metrics.rs"));
 }
-pub use card_metrics::{BUSTED, CODE_LINES, COMPLICATED, EXTRA_TURN_CARDS, LIST_READERS};
+pub use card_metrics::{BUSTED, CODE_LINES, COMPLICATED, EXTRA_TURN_CARDS, LIST_READERS, TEXT_REWRITERS};
 
 /// R1846000, R2173000: a card script's code lines, as `build.rs` counts them, whether it reads
-/// the BUSTED or complicated lists, and whether it owes an extra turn (#3116).
+/// the BUSTED or complicated lists, whether it owes an extra turn (#3116), and whether it rewrites a
+/// card's text (#4609).
 pub mod code_lines;
 
 /// SPEC §5.1's single pool source over the shipped catalog (its `catalog.query`: `query`, `pool`, …).
@@ -63,10 +64,14 @@ pub use history::{
     shipped_catalog, shipped_versions,
 };
 
-/// R1367000: the card patch history as a card's stats window reads it.
+/// R1367000: the card patch history as a card's stats window reads it, and R4675000: as each card's
+/// play versions.
 mod patch_history;
 
-pub use patch_history::{PRE_TIER_MAJORS, WORDING_FIELDS, patch_history, patch_history_of};
+pub use patch_history::{
+    PLAY_VERSION_QUIET_FIELDS, PRE_TIER_MAJORS, WORDING_FIELDS, deck_play_versions, patch_history,
+    patch_history_of, play_versions, play_versions_of,
+};
 
 pub use query::*;
 
@@ -386,6 +391,29 @@ pub(crate) fn set_cloaked(
         .id
 }
 
+/// R383: an Animated Field Trap, Meditative #68 Catnip (5/5, Radiant 10/10), which animates into its lane's
+/// unit zone after its opponent's Spell.
+#[cfg(test)]
+pub(crate) const ANIMATED_TRAP: &str = "meditative-068";
+
+/// R4423000: what the `destroyed` of `id` among the scenario's last events says its card died as.
+#[cfg(test)]
+pub(crate) fn died_as_of(
+    s: &jackioh_engine::testkit::Scenario,
+    id: &str,
+) -> Option<jackioh_engine::CardType> {
+    use jackioh_engine::prelude::*;
+    s.events()
+        .iter()
+        .find_map(|event| match event {
+            GameEvent::Destroyed {
+                instance_id, died_as, ..
+            } if instance_id == id => Some(*died_as),
+            _ => None,
+        })
+        .expect("a destroyed of the card")
+}
+
 /// R1852000, #1859: builds p1's Dormant Starship from pieces fused via Core #16 Hit Jobs.
 #[cfg(test)]
 pub(crate) fn built_starship(
@@ -459,6 +487,14 @@ pub(crate) fn give_flying(s: &mut jackioh_engine::testkit::Scenario, id: &str) {
     use jackioh_engine::prelude::*;
     let card = find_instance_mut(s.state_mut(), id).expect("the card exists");
     card.granted_keywords.push(Keyword::Flying);
+}
+
+/// R783004: grants Cloaked to the card `id` while it is held, so it may be set face-down by it.
+#[cfg(test)]
+pub(crate) fn give_cloaked(s: &mut jackioh_engine::testkit::Scenario, id: &str) {
+    use jackioh_engine::prelude::*;
+    let card = find_instance_mut(s.state_mut(), id).expect("the card exists");
+    card.granted_keywords.push(Keyword::Cloaked);
 }
 
 /// R3546002: grants GIGA to the card `id` while it is held, so it enters the field GIGA when played.

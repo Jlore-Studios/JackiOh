@@ -28,8 +28,9 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 
 use jackioh_engine::wire::{
-    CardTotal, CoCount, DrillCount, FirstMet, FirstSeen, GameEventType, GameRecord, ListTotal, RecordsKey,
-    StatsTotals, TotalsKey, parse_game_record, portrait_or_default, sources_of,
+    CardTotal, CoCount, DrillCount, FaceDrills, FirstMet, FirstSeen, GameEventType, GameRecord, ListTotal,
+    PortraitId, RecordsKey, StatsFace, StatsTotals, TotalsKey, parse_game_record, portrait_or_default,
+    sources_of,
 };
 use jackioh_engine::{Action, LastBoardEntry, LeanPick, PlayerId, WinRateTable};
 use jackioh_shared::host::daily::{DailyBoard, DailyClock};
@@ -46,16 +47,16 @@ use crate::db::store::{
     CollectionGrant, ConsentRow, DailyGameRow, DailyInviteKind, DailyInviteRow, DailyInviteState,
     DailyNotifyRow, DeckVersion, DeckVersionOutcome, EmoteEventRow, FoldedRecords, FrozenDeck, FrozenTrio,
     GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, LoadoutSample, MatchActionRow,
-    MatchCheckpointRow, MatchClocks, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode, PlayTelemetry,
-    PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
-    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
-    ProfileRecord, ProfileStatus, PublicPlayerSummary, PushSubRow, QueueMode, RatedGameRow, RatedSide,
-    RedeemInviteCodeInput, RedeemResult, ReplayRow, ReplayWithMode, ResultRow, RetentionPurgeInput,
-    RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow,
-    SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket,
-    TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice, TutorialMergeInput,
-    TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord, UpsertOutcome, UsernameClaim,
-    UsernameClaimOutcome, deck_version_step,
+    MatchCheckpointRow, MatchClocks, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode,
+    PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
+    PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile,
+    ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus, PublicPlayerSummary, PushSubRow,
+    QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayListRow, ReplayRow,
+    ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck, SavedTrio, Season, SeasonStanding,
+    SeatedProfile, SeriesRow, SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow,
+    TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice,
+    TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord, UpsertOutcome,
+    UsernameClaim, UsernameClaimOutcome, deck_version_step,
 };
 use crate::loadout::{DeckSlots, Loadout};
 use crate::ranked::glicko2::Glicko;
@@ -676,6 +677,16 @@ fn last_board_of(value: &Value) -> Result<Vec<LastBoardEntry>, StoreError> {
         .collect())
 }
 
+/// R642: absent when neither seat carried a portrait; both then read as `vanilla`. The one reading of
+/// the two columns, shared by `to_match` and `matches_portraits` (#4510).
+fn portraits_of(p1: Option<&str>, p2: Option<&str>) -> Option<(PortraitId, PortraitId)> {
+    if p1.is_some() || p2.is_some() {
+        Some((portrait_or_default(p1), portrait_or_default(p2)))
+    } else {
+        None
+    }
+}
+
 fn to_match(row: MatchDbRow) -> Result<MatchRow, StoreError> {
     let status = from_literal(if row.status == "over" { "finished" } else { "live" })?;
     let boards = (
@@ -687,15 +698,7 @@ fn to_match(row: MatchDbRow) -> Result<MatchRow, StoreError> {
         last_board_of(&row.p2_glitch_board)?,
     );
     let p2_deck = row.p2_deck.unwrap_or(Value::Null);
-    // R642: absent when neither seat carried a portrait; both then read as `vanilla`.
-    let portraits = if row.p1_portrait.is_some() || row.p2_portrait.is_some() {
-        Some((
-            portrait_or_default(row.p1_portrait.as_deref()),
-            portrait_or_default(row.p2_portrait.as_deref()),
-        ))
-    } else {
-        None
-    };
+    let portraits = portraits_of(row.p1_portrait.as_deref(), row.p2_portrait.as_deref());
     Ok(MatchRow {
         id: row.id,
         seed: row.seed,
@@ -3072,6 +3075,34 @@ pub async fn matches_get(t: &mut PgTx<'_>, match_id: &str) -> Result<Option<Matc
         .transpose()
 }
 
+/// #4510: through `matches_pkey`. The answer holds the `live` and `over` matches among the asked ids, in
+/// no order; an id that is not a uuid names no match and Postgres would refuse it, so it is left out.
+pub async fn matches_portraits(
+    t: &mut PgTx<'_>,
+    match_ids: &[String],
+) -> Result<Vec<MatchPortraits>, StoreError> {
+    let ids: Vec<String> = match_ids.iter().filter(|id| is_uuid(id)).cloned().collect();
+    if ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    run_as(t, None).await?;
+    let rows = sqlx::query(
+        "select id, p1_portrait, p2_portrait from public.matches
+          where id = any($1::uuid[]) and status in ('live', 'over')",
+    )
+    .bind(ids)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter()
+        .map(|row| {
+            let p1 = get::<Option<String>>(row, "p1_portrait")?;
+            let p2 = get::<Option<String>>(row, "p2_portrait")?;
+            Ok((uuid_text(row, "id")?, portraits_of(p1.as_deref(), p2.as_deref())))
+        })
+        .collect()
+}
+
 /// §9.3's append-only log, written by `app.append_match_action` (migration 0004) and nothing else: it assigns
 /// `seq` from `matches.last_seq` under a row lock and returns the original `seq` for a repeated nonce. The
 /// port hands in the `seq` the actor already used, so a mismatch means the log and the actor have diverged:
@@ -3296,7 +3327,7 @@ pub async fn matches_finish(t: &mut PgTx<'_>, match_id: &str, at: i64) -> Result
     Ok(())
 }
 
-/// §9.5's crash recovery and the reaper's input, straight from `app.live_matches()`.
+/// Every live match, straight from `app.live_matches()` (§9.5).
 pub async fn matches_live(t: &mut PgTx<'_>) -> Result<Vec<MatchRow>, StoreError> {
     run_as(t, None).await?;
     let rows = sqlx::query(concat!("select ", match_columns!(), " from app.live_matches()"))
@@ -3311,6 +3342,31 @@ pub async fn matches_live(t: &mut PgTx<'_>) -> Result<Vec<MatchRow>, StoreError>
         }
     }
     Ok(live)
+}
+
+/// The reaper's read (R112, #4712): the rows `matches_live` answers (`app.live_matches()`'s `live`
+/// matches that are not a daily game's, with both seats) whose ceiling is at or before `now`. Read from
+/// the table, not through the function (a SECURITY DEFINER function is not inlined, so it would hand
+/// over every live row first), so the scan goes through 0004's `matches_status_ceiling_at_idx`. Each
+/// row comes whole: the fold of a log that already ended and the ceiling's draw take a `MatchRow`, and
+/// the columns they read past its clocks, the decks, boards and win-rate snapshot, are the bulk of a
+/// row. What the reaper no longer reads is every match still in play, on every pass.
+pub async fn matches_past_ceiling(t: &mut PgTx<'_>, now: i64) -> Result<Vec<MatchRow>, StoreError> {
+    run_as(t, None).await?;
+    let rows = sqlx::query(concat!(
+        "select ",
+        match_columns!(),
+        " from public.matches m
+          where m.status = 'live' and m.ceiling_at <= ",
+        ts!("$1"),
+        " and m.p2_profile_id is not null
+            and not exists (select 1 from public.daily_games d where d.match_id = m.id)"
+    ))
+    .bind(now)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    rows.iter().map(|row| to_match(MatchDbRow::read(row)?)).collect()
 }
 
 /// R376: a Conquest game is its series' (`series_with_game`). Otherwise a room's match is the row
@@ -3515,24 +3571,45 @@ pub async fn replays_list(
     Ok(replays)
 }
 
-/// R768: one query, the matches, their results and their action counts joined, with the mode
-/// derived in Rust by the same precedence `matches_mode_of` uses.
+/// R768: one query, the page of matches, their results and their action counts joined, with the mode
+/// derived in Rust by the same precedence `matches_mode_of` uses. #4712: the page is found first, one
+/// arm per seat, each walking its seat's index of finished matches (`matches_p1_over_ended_idx`,
+/// `matches_p2_over_ended_idx`, migration 0101) in the list's order and stopping after `limit + offset`
+/// rows; the two arms hold no match twice, since a match never seats one profile in both seats
+/// (`matches_players_differ_check`), so the first `limit + offset` of their union in that order are the
+/// list's. Only the page's rows are joined, and only the columns `ReplayListRow` holds are read.
 pub async fn replays_list_with_modes(
     t: &mut PgTx<'_>,
     profile_id: &str,
     limit: i64,
     offset: i64,
-) -> Result<Vec<ReplayWithMode>, StoreError> {
+) -> Result<Vec<ReplayListRow>, StoreError> {
     if !is_uuid(profile_id) {
         return Ok(Vec::new());
     }
     run_as(t, None).await?;
     let rows = sqlx::query(
-        "select m.id, m.status, m.seed, m.p1_profile_id, m.p2_profile_id, m.p1_deck, m.p2_deck,
-                m.catalog_version, m.turn_deadline_at, m.prompt_deadline_at, m.p1_disconnected_at,
-                m.p2_disconnected_at, m.ceiling_at, m.created_at, m.ended_at, m.p1_last_board,
-                m.p2_last_board, m.ranked, m.p1_portrait, m.p2_portrait, m.mode, m.stake,
-                m.p1_glitch_board, m.p2_glitch_board, m.final_hash, m.loadouts, m.win_rates,
+        "with page as (
+           select u.id, u.ended_at from (
+             (select m.id, m.ended_at from public.matches m
+               where m.status = 'over' and m.p1_profile_id = $1::uuid
+                 and exists (select 1 from public.results r where r.match_id = m.id)
+                 and exists (select 1 from public.match_actions a where a.match_id = m.id)
+               order by m.ended_at desc nulls last, m.id desc
+               limit $4::bigint)
+             union all
+             (select m.id, m.ended_at from public.matches m
+               where m.status = 'over' and m.p2_profile_id = $1::uuid
+                 and exists (select 1 from public.results r where r.match_id = m.id)
+                 and exists (select 1 from public.match_actions a where a.match_id = m.id)
+               order by m.ended_at desc nulls last, m.id desc
+               limit $4::bigint)
+           ) u
+           order by u.ended_at desc nulls last, u.id desc
+           limit $2::bigint offset $3::bigint
+         )
+         select m.id, m.p1_profile_id, m.p2_profile_id, m.catalog_version, m.ranked, m.p1_portrait,
+                m.p2_portrait, m.mode, m.room_code, m.room_mode,
                 r.match_id as r_match_id, r.p1_profile_id as r_p1_profile_id,
                 r.p2_profile_id as r_p2_profile_id, r.winner_profile_id as r_winner_profile_id,
                 r.reason as r_reason, r.turns as r_turns,
@@ -3540,46 +3617,27 @@ pub async fn replays_list_with_modes(
                 r.p2_rating_before as r_p2_rating_before, r.p2_rating_after as r_p2_rating_after,
                 r.ended_at as r_ended_at,
                 (select count(*) from public.match_actions a where a.match_id = m.id) as actions,
-                m.room_code, m.room_mode,
                 (select t.mode from public.tickets t where t.match_id = m.id
                   order by t.enqueued_at, t.id limit 1) as ticket_mode,
                 exists (select 1 from public.series s where s.state -> 'games'
                   @> jsonb_build_array(jsonb_build_object('matchId', m.id::text))) as in_series
-           from public.matches m
+           from page
+           join public.matches m on m.id = page.id
            join public.results r on r.match_id = m.id
-          where m.status = 'over'
-            and (m.p1_profile_id = $1::uuid or m.p2_profile_id = $1::uuid)
-            and exists (select 1 from public.results r where r.match_id = m.id)
-            and exists (select 1 from public.match_actions a where a.match_id = m.id)
-          order by m.ended_at desc nulls last, m.id desc
-          limit $2::bigint offset $3::bigint",
+          order by page.ended_at desc nulls last, page.id desc",
     )
     .bind(profile_id)
     .bind(limit)
     .bind(offset)
+    // Saturating, as `GET /api/replays` answers its next offset: an offset past every row lists nothing.
+    .bind(limit.saturating_add(offset))
     .fetch_all(&mut **t)
     .await
     .map_err(db_error)?;
     let mut replays = Vec::with_capacity(rows.len());
     for row in &rows {
-        let shape = MatchDbRow::read(row)?;
-        let replay = ReplayRow {
-            row: to_match(shape)?,
-            result: to_result(ResultDbRow {
-                match_id: uuid_text(row, "r_match_id")?,
-                p1_profile_id: uuid_text_or_null(row, "r_p1_profile_id")?,
-                p2_profile_id: uuid_text_or_null(row, "r_p2_profile_id")?,
-                winner_profile_id: uuid_text_or_null(row, "r_winner_profile_id")?,
-                reason: get(row, "r_reason")?,
-                turns: get(row, "r_turns")?,
-                p1_rating_before: get(row, "r_p1_rating_before")?,
-                p1_rating_after: get(row, "r_p1_rating_after")?,
-                p2_rating_before: get(row, "r_p2_rating_before")?,
-                p2_rating_after: get(row, "r_p2_rating_after")?,
-                ended_at: get(row, "r_ended_at")?,
-            })?,
-            actions: get(row, "actions")?,
-        };
+        let p1_portrait: Option<String> = get(row, "p1_portrait")?;
+        let p2_portrait: Option<String> = get(row, "p2_portrait")?;
         // R376, R672: the precedence `matches_mode_of` answers, in the same order.
         let own: Option<String> = get(row, "mode")?;
         let room_code: Option<String> = get(row, "room_code")?;
@@ -3597,7 +3655,33 @@ pub async fn replays_list_with_modes(
         } else {
             ticket_mode.as_deref().map(queue_mode_of).transpose()?
         };
-        replays.push(ReplayWithMode { replay, mode });
+        replays.push(ReplayListRow {
+            id: uuid_text(row, "id")?,
+            // As `to_match` reads them: a deleted seat is the empty id (KNOWN DIVERGENCES, deleted accounts),
+            // a false flag an absent one, and portraits absent when neither seat has one.
+            players: (
+                uuid_text_or_null(row, "p1_profile_id")?.unwrap_or_default(),
+                uuid_text_or_null(row, "p2_profile_id")?.unwrap_or_default(),
+            ),
+            catalog_version: get(row, "catalog_version")?,
+            ranked: get::<bool>(row, "ranked")?.then_some(true),
+            portraits: portraits_of(p1_portrait.as_deref(), p2_portrait.as_deref()),
+            result: to_result(ResultDbRow {
+                match_id: uuid_text(row, "r_match_id")?,
+                p1_profile_id: uuid_text_or_null(row, "r_p1_profile_id")?,
+                p2_profile_id: uuid_text_or_null(row, "r_p2_profile_id")?,
+                winner_profile_id: uuid_text_or_null(row, "r_winner_profile_id")?,
+                reason: get(row, "r_reason")?,
+                turns: get(row, "r_turns")?,
+                p1_rating_before: get(row, "r_p1_rating_before")?,
+                p1_rating_after: get(row, "r_p1_rating_after")?,
+                p2_rating_before: get(row, "r_p2_rating_before")?,
+                p2_rating_after: get(row, "r_p2_rating_after")?,
+                ended_at: get(row, "r_ended_at")?,
+            })?,
+            actions: get(row, "actions")?,
+            mode,
+        });
     }
     Ok(replays)
 }
@@ -4007,7 +4091,7 @@ pub async fn tickets_purge(t: &mut PgTx<'_>, cutoff: i64) -> Result<i64, StoreEr
 
 // Results (SPEC §2.5, §9.5)
 
-/// A profile's finished-match record, counted in one pass over `results`. A draw is a row with no winner
+/// A profile's finished-match record, counted over `results`. A draw is a row with no winner
 /// (§9.5), so the three counts partition every finished match. A row also has no winner when the winner
 /// deleted their account (migration 0012): a `DECISIVE_REASONS` ending always had a winner, so for the player
 /// left it is still a loss. R1843004: a `fled` row (`LOSER_DRAWS_REASONS`) is the winner's win and the other
@@ -4015,21 +4099,42 @@ pub async fn tickets_purge(t: &mut PgTx<'_>, cutoff: i64) -> Result<i64, StoreEr
 pub async fn results_record_for(t: &mut PgTx<'_>, profile_id: &str) -> Result<ProfileRecord, StoreError> {
     run_as(t, Some(profile_id)).await?;
     let decisive: Vec<String> = DECISIVE_REASONS.iter().map(|reason| reason.to_string()).collect();
+    // #4712: one count per seat, each read from its seat's index alone (`results_p1_record_idx`,
+    // `results_p2_record_idx`, migration 0101), summed; the second seat's count leaves out a row whose
+    // first seat is the player too, which one `or` over both seats counted once.
     let row = sqlx::query(
-        "select
-           count(*) filter (where winner_profile_id = $1::uuid)                         as wins,
-           count(*) filter (where winner_profile_id is distinct from $1::uuid
-                              and ((winner_profile_id is not null
-                                    and reason <> all($3::text[]))
-                                   or (winner_profile_id is null
-                                       and reason = any($2::text[]))))                   as losses,
-           count(*) filter (where (winner_profile_id is null
-                                   and reason <> all($2::text[]))
-                              or (winner_profile_id is distinct from $1::uuid
-                                  and winner_profile_id is not null
-                                  and reason = any($3::text[])))                         as draws
-         from public.results
-        where p1_profile_id = $1::uuid or p2_profile_id = $1::uuid",
+        "select sum(wins)::bigint as wins, sum(losses)::bigint as losses, sum(draws)::bigint as draws
+           from (
+             select
+               count(*) filter (where winner_profile_id = $1::uuid)                         as wins,
+               count(*) filter (where winner_profile_id is distinct from $1::uuid
+                                  and ((winner_profile_id is not null
+                                        and reason <> all($3::text[]))
+                                       or (winner_profile_id is null
+                                           and reason = any($2::text[]))))                   as losses,
+               count(*) filter (where (winner_profile_id is null
+                                       and reason <> all($2::text[]))
+                                  or (winner_profile_id is distinct from $1::uuid
+                                      and winner_profile_id is not null
+                                      and reason = any($3::text[])))                         as draws
+               from public.results
+              where p1_profile_id = $1::uuid
+             union all
+             select
+               count(*) filter (where winner_profile_id = $1::uuid),
+               count(*) filter (where winner_profile_id is distinct from $1::uuid
+                                  and ((winner_profile_id is not null
+                                        and reason <> all($3::text[]))
+                                       or (winner_profile_id is null
+                                           and reason = any($2::text[])))),
+               count(*) filter (where (winner_profile_id is null
+                                       and reason <> all($2::text[]))
+                                  or (winner_profile_id is distinct from $1::uuid
+                                      and winner_profile_id is not null
+                                      and reason = any($3::text[])))
+               from public.results
+              where p2_profile_id = $1::uuid and p1_profile_id is distinct from $1::uuid
+           ) seats",
     )
     .bind(profile_id)
     .bind(decisive)
@@ -4553,6 +4658,16 @@ pub async fn last_boards_put(
 }
 
 /// R678: random other players' non-empty server boards, one per profile (the primary key).
+///
+/// #4712: not `order by random()`, which read and sorted every non-empty server board at every match
+/// start, but the boards from a random key on, in profile order, through `last_boards_server_sample_idx`
+/// (migration 0101, partial on the same filters): the first `count` whose profile id is at or after a
+/// `gen_random_uuid()` drawn once for the statement, topped up from the lowest id when the key falls
+/// near the end, so a sample is short only when fewer boards than `count` are there to take. The price
+/// is a sample less even than `random()`'s: a board is first in proportion to the gap of ids before its
+/// profile's (profile ids are random v4 uuids, so the gaps differ, but none is ever left out), and the
+/// boards of one sample are neighbours in id order rather than drawn apart. A Glitch shows a board of
+/// some other player's last server game, which either draw gives.
 pub async fn last_boards_sample_others(
     t: &mut PgTx<'_>,
     exclude_profile_ids: &[String],
@@ -4569,11 +4684,24 @@ pub async fn last_boards_sample_others(
         .collect();
     run_as(t, None).await?;
     let rows = sqlx::query(
-        "select board from public.last_boards
-          where kind = 'server' and jsonb_array_length(board) > 0
-            and profile_id <> all($1::uuid[])
-          order by random()
-          limit $2::int",
+        "with pivot as materialized (select gen_random_uuid() as key)
+         select board from (
+           (select board, false as wrapped, profile_id from public.last_boards
+             where kind = 'server' and jsonb_array_length(board) > 0
+               and profile_id <> all($1::uuid[])
+               and profile_id >= (select key from pivot)
+             order by profile_id
+             limit $2::int)
+           union all
+           (select board, true, profile_id from public.last_boards
+             where kind = 'server' and jsonb_array_length(board) > 0
+               and profile_id <> all($1::uuid[])
+               and profile_id < (select key from pivot)
+             order by profile_id
+             limit $2::int)
+         ) sample
+         order by wrapped, profile_id
+         limit $2::int",
     )
     .bind(excluded)
     .bind(count)
@@ -4784,73 +4912,157 @@ pub async fn game_records_unfiled(
     rows.iter().map(|row| uuid_text(row, "id")).collect()
 }
 
-/// `card_totals.co` as stored: each other card's `[games, wins, record, seat, index]`.
-fn co_json(co: &IndexMap<String, CoCount>) -> Value {
+/// R4673001: the faces whose drills `card_totals.turns` and `.co` carry after a card's own counts, in order.
+const STORED_FACES: [StatsFace; 2] = [StatsFace::Radiant, StatsFace::Normal];
+
+/// R4673001: one turn's or co-played card's counts on each stored face, `[games, wins]` per face in
+/// `STORED_FACES`' order, or none when no face counted it (as every total folded before R4673001).
+fn face_counts(total: &CardTotal, count: impl Fn(&FaceDrills) -> Option<DrillCount>) -> Vec<i64> {
+    let counts: Vec<Option<DrillCount>> = STORED_FACES
+        .iter()
+        .map(|face| total.face(*face).and_then(&count))
+        .collect();
+    if counts.iter().all(Option::is_none) {
+        return Vec::new();
+    }
+    counts
+        .into_iter()
+        .flat_map(|count| {
+            let count = count.unwrap_or_default();
+            [count.games, count.wins]
+        })
+        .collect()
+}
+
+/// R4673001: adds what a stored entry says each face counted, `[games, wins]` per face in `STORED_FACES`'
+/// order; a face that counted no game gets no entry.
+fn add_face_counts(total: &mut CardTotal, counts: &[i64], mut add: impl FnMut(&mut FaceDrills, DrillCount)) {
+    for (face, pair) in STORED_FACES.iter().zip(counts.chunks(2)) {
+        if let ([games, wins], Some(drills)) = (pair, total.face_mut(*face))
+            && *games > 0
+        {
+            add(
+                drills,
+                DrillCount {
+                    games: *games,
+                    wins: *wins,
+                },
+            );
+        }
+    }
+}
+
+/// `card_totals.co` as stored: each other card's `[games, wins, record, seat, index]`, R4673001: followed by
+/// `[radiant games, radiant wins, normal games, normal wins]` when a face counted it.
+fn co_json(total: &CardTotal) -> Value {
     Value::Object(
-        co.iter()
+        total
+            .co
+            .iter()
             .map(|(card, count)| {
-                (
-                    card.clone(),
-                    json!([
-                        count.games,
-                        count.wins,
-                        count.first.record,
-                        count.first.seat,
-                        count.first.index
-                    ]),
-                )
+                let mut entry = vec![
+                    json!(count.games),
+                    json!(count.wins),
+                    json!(count.first.record),
+                    json!(count.first.seat),
+                    json!(count.first.index),
+                ];
+                entry.extend(
+                    face_counts(total, |drills| drills.co.get(card).copied())
+                        .into_iter()
+                        .map(Value::from),
+                );
+                (card.clone(), Value::Array(entry))
             })
             .collect(),
     )
 }
 
-fn co_of(value: Value) -> Result<IndexMap<String, CoCount>, StoreError> {
+/// One `card_totals.co` entry as stored, before R4673001 or after it.
+#[derive(serde::Deserialize)]
+#[serde(untagged)]
+enum StoredCo {
+    All((i64, i64, String, u8, u32)),
+    Faced((i64, i64, String, u8, u32, i64, i64, i64, i64)),
+}
+
+/// Reads `card_totals.co` into `total`: its co-played counts and (R4673001) each face's.
+fn co_of(value: Value, total: &mut CardTotal) -> Result<(), StoreError> {
     let bad = || {
-        StoreError::from("card_totals.co: expected { card: [games, wins, record, seat, index] }".to_string())
+        StoreError::from(
+            "card_totals.co: expected { card: [games, wins, record, seat, index] or [games, wins, record, seat, \
+             index, radiant games, radiant wins, normal games, normal wins] }"
+                .to_string(),
+        )
     };
     let Value::Object(entries) = value else {
         return Err(bad());
     };
-    entries
-        .into_iter()
-        .map(|(card, entry)| {
-            let (games, wins, record, seat, index): (i64, i64, String, u8, u32) =
-                serde_json::from_value(entry).map_err(|_| bad())?;
-            Ok((
-                card,
-                CoCount {
-                    games,
-                    wins,
-                    first: FirstMet { record, seat, index },
-                },
-            ))
-        })
-        .collect()
+    for (card, entry) in entries {
+        let ((games, wins, record, seat, index), faces) =
+            match serde_json::from_value::<StoredCo>(entry).map_err(|_| bad())? {
+                StoredCo::All(all) => (all, Vec::new()),
+                StoredCo::Faced((games, wins, record, seat, index, rg, rw, ng, nw)) => {
+                    ((games, wins, record, seat, index), vec![rg, rw, ng, nw])
+                }
+            };
+        add_face_counts(total, &faces, |drills, count| {
+            drills.co.insert(card.clone(), count);
+        });
+        total.co.insert(
+            card,
+            CoCount {
+                games,
+                wins,
+                first: FirstMet { record, seat, index },
+            },
+        );
+    }
+    Ok(())
 }
 
-/// `card_totals.turns` as stored: each turn's `[games, wins]`.
-fn turns_json(turns: &IndexMap<i32, DrillCount>) -> Value {
+/// `card_totals.turns` as stored: each turn's `[games, wins]`, R4673001: followed by `[radiant games,
+/// radiant wins, normal games, normal wins]` when a face counted it.
+fn turns_json(total: &CardTotal) -> Value {
     Value::Object(
-        turns
+        total
+            .turns
             .iter()
-            .map(|(turn, count)| (turn.to_string(), json!([count.games, count.wins])))
+            .map(|(turn, count)| {
+                let mut entry = vec![count.games, count.wins];
+                entry.extend(face_counts(total, |drills| drills.turns.get(turn).copied()));
+                (turn.to_string(), json!(entry))
+            })
             .collect(),
     )
 }
 
-fn turns_of(value: Value) -> Result<IndexMap<i32, DrillCount>, StoreError> {
-    let bad = || StoreError::from("card_totals.turns: expected { turn: [games, wins] }".to_string());
+/// Reads `card_totals.turns` into `total`: its turn counts and (R4673001) each face's.
+fn turns_of(value: Value, total: &mut CardTotal) -> Result<(), StoreError> {
+    let bad = || {
+        StoreError::from(
+            "card_totals.turns: expected { turn: [games, wins] or [games, wins, radiant games, radiant wins, \
+             normal games, normal wins] }"
+                .to_string(),
+        )
+    };
     let Value::Object(entries) = value else {
         return Err(bad());
     };
-    entries
-        .into_iter()
-        .map(|(turn, entry)| {
-            let turn: i32 = turn.parse().map_err(|_| bad())?;
-            let (games, wins): (i64, i64) = serde_json::from_value(entry).map_err(|_| bad())?;
-            Ok((turn, DrillCount { games, wins }))
-        })
-        .collect()
+    for (turn, entry) in entries {
+        let turn: i32 = turn.parse().map_err(|_| bad())?;
+        let counts: Vec<i64> = serde_json::from_value(entry).map_err(|_| bad())?;
+        let (games, wins, faces) = match counts.as_slice() {
+            [games, wins] => (*games, *wins, &[][..]),
+            [games, wins, faces @ ..] if faces.len() == 2 * STORED_FACES.len() => (*games, *wins, faces),
+            _ => return Err(bad()),
+        };
+        add_face_counts(total, faces, |drills, count| {
+            drills.turns.insert(turn, count);
+        });
+        total.turns.insert(turn, DrillCount { games, wins });
+    }
+    Ok(())
 }
 
 /// R1044000, R1994000: the record counts are added in SQL, the rest read, added to in Rust
@@ -4942,11 +5154,12 @@ async fn stats_totals_add(t: &mut PgTx<'_>, delta: &StatsTotals) -> Result<(), S
             pilot: from_literal(&get::<String>(row, "pilot")?)?,
         };
         let card: String = get(row, "card")?;
-        let total = CardTotal {
+        let mut total = CardTotal {
             stats: from_json(get::<Value>(row, "stats")?)?,
-            turns: turns_of(get::<Value>(row, "turns")?)?,
-            co: co_of(get::<Value>(row, "co")?)?,
+            ..CardTotal::new(&card)
         };
+        turns_of(get::<Value>(row, "turns")?, &mut total)?;
+        co_of(get::<Value>(row, "co")?, &mut total)?;
         stored.cards.entry(key).or_default().insert(card, total);
     }
 
@@ -5020,8 +5233,8 @@ async fn stats_totals_add(t: &mut PgTx<'_>, delta: &StatsTotals) -> Result<(), S
             columns[3].push(literal(&key.pilot)?);
             columns[4].push(card.clone());
             columns[5].push(json(&total.stats)?);
-            columns[6].push(turns_json(&total.turns).to_string());
-            columns[7].push(co_json(&total.co).to_string());
+            columns[6].push(turns_json(total).to_string());
+            columns[7].push(co_json(total).to_string());
         }
     }
     let [patches, sources, modes, pilots, cards, stats, turns, co] = columns;
@@ -5216,17 +5429,16 @@ pub async fn stats_totals_load(
             pilot: from_literal(&get::<String>(row, "pilot")?)?,
         };
         let card: String = get(row, "card")?;
-        let total = CardTotal {
+        let mut total = CardTotal {
             stats: from_json(get::<Value>(row, "stats")?)?,
-            turns: get::<Option<Value>>(row, "turns")?
-                .map(turns_of)
-                .transpose()?
-                .unwrap_or_default(),
-            co: get::<Option<Value>>(row, "co")?
-                .map(co_of)
-                .transpose()?
-                .unwrap_or_default(),
+            ..CardTotal::new(&card)
         };
+        if let Some(turns) = get::<Option<Value>>(row, "turns")? {
+            turns_of(turns, &mut total)?;
+        }
+        if let Some(co) = get::<Option<Value>>(row, "co")? {
+            co_of(co, &mut total)?;
+        }
         totals.cards.entry(key).or_default().insert(card, total);
     }
     Ok(totals)
@@ -8051,7 +8263,12 @@ macro_rules! push_sub_columns {
 fn daily_game_of(row: &PgRow) -> Result<DailyGameRow, StoreError> {
     Ok(DailyGameRow {
         match_id: uuid_text(row, "match_id")?,
-        players: (uuid_text(row, "p1_profile_id")?, uuid_text(row, "p2_profile_id")?),
+        // R4621000: a deleted account's seat (migration 0100) reads back empty, as a 1v1 or co-op seat
+        // does (KNOWN DIVERGENCES, deleted accounts).
+        players: (
+            uuid_text_or_null(row, "p1_profile_id")?.unwrap_or_default(),
+            uuid_text_or_null(row, "p2_profile_id")?.unwrap_or_default(),
+        ),
         mode: queue_mode_of(&get::<String>(row, "mode")?)?,
         per_move_days: get(row, "per_move_days")?,
         clock: json_col(row, "clock")?,
@@ -8225,21 +8442,37 @@ pub async fn daily_games_put(
     Ok(done.rows_affected() == 1)
 }
 
-/// Through `daily_games_due_idx`.
+/// #4510: two reads, merged here. The running games due go through `daily_games_due_idx`; the finished
+/// games whose match is still `live` are driven from the live matches, through
+/// `matches_status_created_at_idx` and the `daily_games` primary key. One `or` over both left the second
+/// arm without an index, so Postgres read every daily game ever played. Merged by that deadline or end,
+/// the match id breaking a tie (a match id is lower-case uuid text, so its string order is the uuid's).
 pub async fn daily_games_due(t: &mut PgTx<'_>, now: i64) -> Result<Vec<String>, StoreError> {
     run_as(t, None).await?;
-    let rows = sqlx::query(
-        "select d.match_id from public.daily_games d
-          where (d.ended_at is null and d.next_deadline_at <= $1::bigint)
-             or (d.ended_at <= $1::bigint
-                 and exists (select 1 from public.matches m where m.id = d.match_id and m.status = 'live'))
-          order by case when d.ended_at is null then d.next_deadline_at else d.ended_at end, d.match_id",
+    let running = sqlx::query(
+        "select d.match_id, d.next_deadline_at as at from public.daily_games d
+          where d.ended_at is null and d.next_deadline_at <= $1::bigint",
     )
     .bind(now)
     .fetch_all(&mut **t)
     .await
     .map_err(db_error)?;
-    rows.iter().map(|row| uuid_text(row, "match_id")).collect()
+    let unwritten = sqlx::query(
+        "select d.match_id, d.ended_at as at from public.matches m
+           join public.daily_games d on d.match_id = m.id
+          where m.status = 'live' and d.ended_at <= $1::bigint",
+    )
+    .bind(now)
+    .fetch_all(&mut **t)
+    .await
+    .map_err(db_error)?;
+    let mut due: Vec<(i64, String)> = running
+        .iter()
+        .chain(unwritten.iter())
+        .map(|row| Ok((get::<i64>(row, "at")?, uuid_text(row, "match_id")?)))
+        .collect::<Result<_, StoreError>>()?;
+    due.sort();
+    Ok(due.into_iter().map(|(_, match_id)| match_id).collect())
 }
 
 pub async fn daily_games_running(t: &mut PgTx<'_>) -> Result<Vec<DailyGameRow>, StoreError> {
@@ -8524,6 +8757,17 @@ pub async fn daily_invites_purge(t: &mut PgTx<'_>, now: i64) -> Result<i64, Stor
         .await
         .map_err(db_error)?;
     Ok(i64::try_from(done.rows_affected()).unwrap_or(i64::MAX))
+}
+
+/// R4691000: the least `expires_at` of any invite, the next the purge above deletes. A read of the
+/// table it keeps to about a week of invites.
+pub async fn daily_invites_next_lapse(t: &mut PgTx<'_>) -> Result<Option<i64>, StoreError> {
+    run_as(t, None).await?;
+    let row = sqlx::query("select min(expires_at) as next from public.daily_invites")
+        .fetch_one(&mut **t)
+        .await
+        .map_err(db_error)?;
+    get::<Option<i64>>(&row, "next")
 }
 
 // daily notices
@@ -8815,7 +9059,10 @@ mod tests {
 //    that bind the seats a finished match hands on (R768) take an id that is no uuid as naming nothing
 //    (`profiles_get_many`, `ranked_standings_subset`, `blocks_between`, the economy's `game_jlore_totals`).
 //    A live match or series cannot lose a seat: the delete is refused, by constraint here and by
-//    `DELETE /api/account` first.
+//    `DELETE /api/account` first. A daily game's seats (0100, R4621000) and a co-op match's (0051,
+//    R1497000) read back as the empty string in both stores, since the in-memory store empties them too
+//    (`remove_daily_rows`, `duos::store::remove_duos_rows`); `daily::games` names such a seat with empty
+//    fields and never looks it up.
 //  * clocks. `MatchClocks` has a grace deadline per player; `public.matches` has one `grace_deadline_at` plus
 //    two `*_disconnected_at`. The per-player deadlines live in the `*_disconnected_at` columns and
 //    `grace_deadline_at` keeps the nearer; a migration adding per-player deadline columns would retire this.

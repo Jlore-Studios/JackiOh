@@ -24,10 +24,12 @@ import {
   NOT_FOUND_HAND,
   PAGE_TEXT,
   PUBLIC_PAGES,
+  VERSION_FILE,
   connectSources,
   notFoundHtml,
   sitemapXml,
   staticPages,
+  versionEntryOf,
   writeStaticPages,
 } from "../static-pages.ts";
 import { CardFace } from "./cards/CardFace.tsx";
@@ -41,7 +43,6 @@ import { releaseArtAssets, releaseArtPath } from "./patches/releaseArt.ts";
 import { NOTE_SECTIONS, RELEASES, playerTitle, releaseGroups } from "./patches/releases.ts";
 import { FIXTURE_PATCHES, FIXTURE_SNAPSHOTS, M1, M2, TIERED_PATCHES, TIERED_SNAPSHOTS, V1, V2, V3, fixtureDef } from "./patches/fixtures.ts";
 import type { Patch, Snapshot } from "./patches/source.ts";
-import AccessibilityRoute from "./routes/accessibility.tsx";
 import CopyrightRoute from "./routes/copyright.tsx";
 import PrivacyRoute from "./routes/privacy.tsx";
 import TermsRoute from "./routes/terms.tsx";
@@ -238,6 +239,22 @@ describe("the static pages", () => {
     expect(sitemap).not.toMatch(/lastmod|changefreq|priority/u);
   });
 
+  it("R4605000 writes version.json naming the entry script of index.html", () => {
+    const outDir = writeAll({}, []);
+    const version = JSON.parse(readFileSync(join(outDir, VERSION_FILE), "utf8")) as { entry: string };
+    const template = new DOMParser().parseFromString(TEMPLATE, "text/html");
+    expect(version.entry).toBe(template.querySelector('script[type="module"]')?.getAttribute("src"));
+    expect(version.entry).toBe(versionEntryOf(TEMPLATE));
+    expect(version.entry).toBe("/src/main.tsx");
+    // Vite's build adds `crossorigin` to the entry tag (check-production-bundle.test.ts `ENTRY_TAG`).
+    expect(versionEntryOf('<script type="module" crossorigin src="/assets/index-test.js"></script>')).toBe(
+      "/assets/index-test.js",
+    );
+    expect(() => {
+      versionEntryOf("<html><head></head><body></body></html>");
+    }).toThrow(/has no entry script/u);
+  });
+
   it("name the host each build is served from in every address and in its CSP: jackioh.com in production, staging.jackioh.com on staging", () => {
     const production = originOf(envValue(".env.production", "VITE_SITE_ORIGIN"));
     const staging = originOf(envValue(".env.staging", "VITE_SITE_ORIGIN"));
@@ -355,12 +372,11 @@ describe("the static pages", () => {
     }
   });
 
-  it("quote /privacy, /terms, /accessibility and /copyright word for word from their own pages", () => {
+  it("quote /privacy, /terms and /copyright word for word from their own pages", () => {
     const page = build(CATALOG, REAL_PATCHES);
     const cases = [
       [PrivacyRoute, paths.privacy],
       [TermsRoute, paths.terms],
-      [AccessibilityRoute, paths.accessibility],
       [CopyrightRoute, paths.copyright],
     ] as const;
     for (const [Route, path] of cases) {

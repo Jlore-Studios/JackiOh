@@ -1,6 +1,16 @@
 //! Stinkyscape #109 xxFreshJack (SPEC §8.10 row 109). (4) Unit, Human, Acclaimed, Mythic, 6/11 → 12/22.
-//!   Base:    "Cry: Cast a random BUSTED card from anywhere in the game's code."
-//!   Radiant: "Cry: Discover a Radiant BUSTED card from anywhere in the game's code and cast it."
+//!   Base:    "Tribute 2
+//!            Float reduces Tribute requirement by 1.
+//!            Cry: Cast a random BUSTED card from anywhere in the game's code."
+//!   Radiant: "Tribute 2
+//!            Float reduces Tribute requirement by 1.
+//!            Cry: Discover a Radiant BUSTED card from anywhere in the game's code and cast it."
+//!
+//! Tribute 2 since issue #4440 is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the
+//! keyword line's printed Tribute (R366), lowered 1 by each of its owner's Floats while it waits in hand,
+//! never in the deck (R2657002), never below 0 (`float_lowers_tribute`, R1841003, as S+ #21 Jlockeed
+//! Shredder-12's). After v0.6.6h through v0.6.9n it was Tribute 1 with no Float line (issue #4154,
+//! `script_v0_6_9n`, kept, R767000), and through v0.6.6h it took none (`script_v0_6_6h`, kept).
 //!
 //! Cry (R1): the pool is `{ tier: "S", everySet: true, past: "also" }` (R3538005): every S-tier card
 //! of the sets that ship and the single-player sets, current or past, never this card (R387). The
@@ -22,18 +32,35 @@ fn busted_anywhere() -> CatalogQueryArgs {
     json_as(json!({ "tier": "S", "everySet": true, "past": "also" }))
 }
 
-/// "Tribute 1" (R101, R366: printed, declared nowhere), since issue #4154.
-const TRIBUTE: i32 = 1;
+/// "Tribute 2" (R101, R366: printed, declared nowhere), since issue #4440.
+const TRIBUTE: i32 = 2;
+/// "Tribute 1", after v0.6.6h through v0.6.9n (issue #4154).
+const TRIBUTE_V0_6_9G: i32 = 1;
 
-pub fn script() -> CardScripts {
+/// `script_v0_6_6h`'s faces played for `tribute` Units; `float`: whether "Float reduces Tribute
+/// requirement by 1" is printed (since issue #4440), a hand trigger (R1841003).
+fn tributed(tribute: i32, float: bool) -> CardScripts {
     let mut scripts = script_v0_6_6h();
     for face in [&mut scripts.base, &mut scripts.radiant] {
         face.static_flags = Some(StaticFlags {
-            tribute: Some(TRIBUTE),
+            tribute: Some(tribute),
             ..StaticFlags::default()
         });
+        if float {
+            face.hand_triggers = vec![float_lowers_tribute("stinkyscape-109-float-hand")];
+        }
     }
     scripts
+}
+
+pub fn script() -> CardScripts {
+    tributed(TRIBUTE, true)
+}
+
+/// R767000: after v0.6.6h through v0.6.9n it was Tribute 1 with no Float line (issue #4440); `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_6_9n() -> CardScripts {
+    tributed(TRIBUTE_V0_6_9G, false)
 }
 
 /// R767000: no Tribute through v0.6.6h (issue #4154); `KEPT_SCRIPTS` folds those replays under it.
@@ -118,22 +145,27 @@ pub fn script_v0_5_13g() -> CardScripts {
 mod tests {
     use super::*;
     use jackioh_engine::catalog::is_busted;
+    use jackioh_engine::play_choices::tribute_cost_of;
     use jackioh_engine::testkit::*;
 
-    use crate::{filler, scenario};
+    use crate::{filler, next_turn_of, scenario};
 
     const P1: PlayerId = PlayerId::P1;
 
     const FILLER: &str = "core-005"; // Stockpile: a Spell
-    /// The unit its Tribute 1 takes (issue #4154), in lane 2.
+    /// The units its Tribute 2 takes (issue #4440), in lanes 2 and 3; the first alone paid the Tribute 1 of
+    /// v0.6.9n and before.
     const BODY: &str = "stand-in (1) 1/1";
+    const SECOND: &str = "stand-in (1) 2/2";
+    /// Both of them, as a play's `tributes`.
+    const BODIES: [&str; 2] = [BODY, SECOND];
 
     fn board(radiant: bool, seed: &str) -> Scenario {
         let mut s = scenario(json!({
             "seed": seed,
             "p1": {
                 "hand": [{ "def": ID, "radiant": radiant }, FILLER],
-                "field": [{ "def": BODY, "lane": 2 }],
+                "field": [{ "def": BODY, "lane": 2 }, { "def": SECOND, "lane": 3 }],
                 "library": filler(8),
                 "mana": 4,
             },
@@ -174,7 +206,7 @@ mod tests {
         let run = || {
             let mut s = board(false, "xxfreshjack");
             let from = s.events().len();
-            s.play(ID, json!({ "zone": 1, "tributes": [BODY] }));
+            s.play(ID, json!({ "zone": 1, "tributes": BODIES }));
             assert!(s.state().pending.is_none(), "a random cast asks nothing (R452)");
             cast_since(&s, from)
         };
@@ -212,7 +244,7 @@ mod tests {
         let (mut s, options) = (0..100)
             .find_map(|n| {
                 let mut s = board(true, &format!("xxfreshjack-radiant-past-{n}"));
-                s.play(ID, json!({ "zone": 1, "tributes": [BODY] }));
+                s.play(ID, json!({ "zone": 1, "tributes": BODIES }));
                 let options = discovered(&s);
                 split_past_id(&options[0]).is_some().then_some((s, options))
             })
@@ -239,13 +271,13 @@ mod tests {
         assert_eq!(cast.first(), Some(&(options[0].clone(), true, 0)), "{cast:?}");
     }
 
-    /// Issue #4154: Tribute 1 on both faces (R101): with no unit to pay it the play is refused, and the unit
-    /// paid dies paying it. Its Cry casts a random BUSTED card from the build's own list, which a new
+    /// Issue #4440: Tribute 2 on both faces (R101): with no unit, or one, to pay it the play is refused, and the
+    /// units paid die paying it. Its Cry casts a random BUSTED card from the build's own list, which a new
     /// version's list changes and which may move both cards on (v0.6.7's exiles the board and the
-    /// graveyard), so the Tribute is read off the events: the paid unit's `destroyed` comes before
+    /// graveyard), so the Tribute is read off the events: each paid unit's `destroyed` comes before
     /// anything the Cry casts.
     #[test]
-    fn issue_4154_both_faces_need_tribute_1() {
+    fn issue_4440_both_faces_need_tribute_2() {
         crate::register_all();
         for radiant in [false, true] {
             let mut s = scenario(json!({
@@ -254,19 +286,87 @@ mod tests {
             }));
             s.expect_refused_with(|s| s.play(ID, json!({ "zone": 1 })), "Tribute");
             let mut s = board(radiant, "xxfreshjack-tribute");
-            let body = s.unit(P1, 2).expect("the body").id;
+            assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE);
+            s.expect_refused(|s| s.play(ID, json!({ "zone": 1, "tributes": [BODY] })));
+            let bodies = [2, 3].map(|lane| s.unit(P1, lane).expect("a body").id);
             let from = s.events().len();
-            s.play(ID, json!({ "zone": 1, "tributes": [BODY] }));
+            s.play(ID, json!({ "zone": 1, "tributes": BODIES }));
             let events = &s.events()[from..];
-            let paid = events
-                .iter()
-                .position(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == body));
             let cast = events
                 .iter()
                 .position(|event| matches!(event, GameEvent::CardPlayed { def_id, .. } if def_id != ID))
                 .unwrap_or(events.len());
-            assert!(paid.is_some_and(|at| at < cast), "radiant {radiant}: the Tribute took the body first");
+            for body in &bodies {
+                let paid = events
+                    .iter()
+                    .position(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if instance_id == body));
+                assert!(paid.is_some_and(|at| at < cast), "radiant {radiant}: the Tribute took {body} first");
+            }
         }
+    }
+
+    /// R1841003, R2657002: since issue #4440 each of its owner's Floats lowers its Tribute by 1 while it waits
+    /// in hand, never in the deck, on both faces; a lowered Tribute 1 is paid by one unit.
+    #[test]
+    fn r1841003_each_float_lowers_its_tribute_by_1_in_hand_never_in_the_deck() {
+        crate::register_all();
+        for radiant in [false, true] {
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [{ "def": ID, "radiant": radiant }, FILLER],
+                    "field": [{ "def": BODY, "lane": 2 }],
+                    "library": [FILLER, FILLER, FILLER, FILLER, { "def": ID, "radiant": radiant }],
+                    "mana": 2,
+                },
+                "p2": { "hand": [FILLER], "library": [FILLER, FILLER, FILLER, FILLER] },
+            }));
+            let in_hand = s.hand(P1).into_iter().find(|card| card.def_id == ID).expect("in hand").id;
+            let in_deck = s
+                .pile(P1, "library")
+                .into_iter()
+                .find(|card| card.def_id == ID)
+                .expect("in the deck")
+                .id;
+            let tribute = |s: &Scenario, id: &str| tribute_cost_of(s.state(), s.card(id));
+            s.end_turn();
+            assert_eq!(
+                (tribute(&s, &in_hand), tribute(&s, &in_deck)),
+                (TRIBUTE - 1, TRIBUTE),
+                "radiant {radiant}"
+            );
+            next_turn_of(&mut s, P1);
+            assert_eq!(tribute(&s, &in_hand), TRIBUTE - 1, "radiant {radiant}");
+            // The Cry may move the paid body on (a cast BUSTED card), so the payment is read off the events.
+            let body = s.unit(P1, 2).expect("the body").id;
+            let from = s.events().len();
+            s.play(&in_hand, json!({ "zone": 1, "tributes": [body.as_str()] }));
+            assert!(
+                s.events()[from..]
+                    .iter()
+                    .any(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == body)),
+                "radiant {radiant}: one unit paid the lowered Tribute"
+            );
+        }
+    }
+
+    /// R767000: after v0.6.6h through v0.6.9n one unit paid it and a Float lowered nothing (issue #4440).
+    #[test]
+    fn r767000_the_script_kept_for_v0_6_9n_needs_tribute_1_and_no_float_lowers_it() {
+        let kept = script_v0_6_9n();
+        assert!(kept.base.hand_triggers.is_empty() && kept.radiant.hand_triggers.is_empty(), "no Float");
+        crate::under_kept(ID, kept, || {
+            let mut s = board(false, "xxfreshjack-fold-9g");
+            assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE_V0_6_9G);
+            let body = s.unit(P1, 2).expect("the body").id;
+            let from = s.events().len();
+            s.play(ID, json!({ "zone": 1, "tributes": [BODY] }));
+            assert!(
+                s.events()[from..]
+                    .iter()
+                    .any(|event| matches!(event, GameEvent::Destroyed { instance_id, .. } if *instance_id == body)),
+                "one unit paid it"
+            );
+        });
     }
 
     /// R767000: a game on v0.6.6h and before plays it with no Tribute, under the kept script.

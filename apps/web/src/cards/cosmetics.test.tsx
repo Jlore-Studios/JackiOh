@@ -88,7 +88,8 @@ import { INSPECT_FACE, INSPECT_FACE_BASE, INSPECT_FACE_RADIANT } from "./inspect
 import { MinionFace } from "./MinionFace.tsx";
 import { faceModel, type FaceModel } from "./model.ts";
 import { CARD_SETTINGS_DEFAULTS, writeCardSettings } from "./settings.ts";
-import { COSMETICS, COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
+import { COSMETIC_OFFERS } from "../wire/generated/cosmeticOffers.ts";
+import { COSMETICS } from "../wire/generated/cosmetics.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 

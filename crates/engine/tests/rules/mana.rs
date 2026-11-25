@@ -224,6 +224,31 @@ mod r65_cost_calculation_m1_t6 {
         assert_eq!(side.mana.current, 0); // and never goes below 0
     }
 
+    /// R4440052: a refresh's standing bonus ("You have +N mana per turn") counts as the rider does: on top
+    /// of max mana, which it leaves where it is, with the rider alone under no natural mana (R941), and
+    /// not at all on a lost refresh (R844).
+    #[test]
+    fn r4440052_a_refresh_bonus_adds_past_max_and_a_lost_refresh_gives_none() {
+        let mut state = new_game("refresh-bonus", None);
+        let side = &mut state.players.p1;
+        side.turns_started = 9;
+        mana::refresh_mana_with_bonus(side, true, 2);
+        assert_eq!((side.mana.current, side.mana.max), (MAX_MANA + 2, MAX_MANA));
+
+        side.mana.next_turn_mod = -1;
+        mana::refresh_mana_with_bonus(side, false, 2);
+        assert_eq!(side.mana.current, 1, "no natural mana: the rider and the bonus");
+        assert_eq!(side.mana.next_turn_mod, 0, "the one-shot rider is spent");
+
+        side.lost_refresh_through = Some(side.turns_started);
+        mana::refresh_mana_with_bonus(side, true, 2);
+        assert_eq!(side.mana.current, 0, "a lost refresh gives none of it");
+
+        side.lost_refresh_through = None;
+        mana::refresh_mana(side);
+        assert_eq!(side.mana.current, MAX_MANA, "no bonus: the refresh as it was");
+    }
+
     /// §2.3, R1854003 (#3514): max mana is the turns started up to `MAX_MANA`, below, at and past it,
     /// plus the persistent modifiers and never below 0; the crystals are the turns started moved by those
     /// an effect stole.

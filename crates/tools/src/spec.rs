@@ -2,8 +2,8 @@
 //! (SURFACE §15, part 28), and the two files every ruling's branch once wrote.
 //!
 //! `spec/` is the specification as notes: one per section (`spec/NN-<slug>.md`, its `## N.` and
-//! `### N.M` headings the section ids) and one per ruling (`spec/rulings/R<nnnn>.md`), whose front
-//! matter is
+//! `### N.M` headings the section ids; a long section is its opening there and one note a subsection
+//! in `spec/NN-<slug>/`) and one per ruling (`spec/rulings/R<nnnn>.md`), whose front matter is
 //!
 //! ```text
 //! ---
@@ -15,7 +15,7 @@
 //! ---
 //! ```
 //!
-//! `check` holds eight rules:
+//! `check` holds nine rules:
 //!
 //! 1. every ruling note's `id` matches its file name (`R195` is `R0195.md`), and ids are unique;
 //! 2. every note has a `proven_in` path, and each exists and holds a test of the id that runs (#1718,
@@ -29,17 +29,20 @@
 //! 5. every note's `title` and `cards` are filled in, and each ruling, section and card `cards` names
 //!    exists (#2047);
 //! 6. every file in `spec/pending/` is a non-empty `<n>.md`, `n` the issue whose §11 paragraph it
-//!    holds: a branch writes there, never `spec/11-rulings.md`'s end or `spec/INDEX.md`, which every
-//!    ruling's branch conflicted on, and the index is the daily fold's to keep (#669);
+//!    holds: a branch writes there, never `spec/history/` or `spec/INDEX.md`, which every ruling's
+//!    branch conflicted on while one page held the history, and both are the daily fold's to keep
+//!    (#669);
 //! 7. no file rule 3 reads holds an `UNRESOLVED_MARKERS` phrase, which invites a second decision of a
 //!    point already ruled (#1243);
-//! 8. every ruling marker in §2 to §10 links a ruling before its sentence ends (REVIEW A2.3, #2048).
+//! 8. every ruling marker in §2 to §10 links a ruling before its sentence ends (REVIEW A2.3, #2048);
+//! 9. no note is over `NOTE_MAX_BYTES`, what one read of a file returns, but the generated index: the
+//!    catalog reached 819 KB and §11's history a megabyte before either was split.
 //!
 //! It reads ids, file names, headings, test names and `cards`' references, never the wording but rule
 //! 7's and rule 8's markers (#133). `index` rewrites `spec/INDEX.md` from the notes and `spec/CARDS.md`
-//! from the catalog and its named pools (`spec_cards.rs`, #3804); `fold` appends the
-//! pending paragraphs to `spec/11-rulings.md` in number order, deletes them and runs `index`
-//! (`spec-fold.yml`, on `main` daily).
+//! from the catalog and its named pools (`spec_cards.rs`, #3804); `fold` files each pending
+//! paragraph under `spec/history/<n>.md`, after what its issue has there already, deletes it from
+//! `spec/pending/` and runs `index` (`spec-fold.yml`, on `main` daily).
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt::Write as _;
@@ -47,7 +50,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, bail};
-use jackioh_engine::wire::{CATALOG_SETS, set_row};
+use jackioh_engine::wire::{SET_TABLE, set_row};
 
 use crate::patches::repo_root;
 
@@ -64,11 +67,11 @@ pub struct Args {
 
 #[derive(clap::Subcommand)]
 pub enum SpecCommand {
-    /// The eight checks (SURFACE §15, #1243, #2048): ids and file names, proofs, citations, links, titles and cards, the pending paragraphs' names, unresolved-ruling markers, ruling markers without a link.
+    /// The nine checks (SURFACE §15, #1243, #2048): ids and file names, proofs, citations, links, titles and cards, the pending paragraphs' names, unresolved-ruling markers, ruling markers without a link, notes too long to read.
     Check,
     /// Rewrite `spec/INDEX.md` from the ruling notes and `spec/CARDS.md` from the catalog and its named pools.
     Index,
-    /// Append `spec/pending/<n>.md` to `spec/11-rulings.md` in number order, delete them and rewrite `spec/INDEX.md` and `spec/CARDS.md` (spec-fold.yml, daily).
+    /// File each `spec/pending/<n>.md` under `spec/history/<n>.md`, delete it and rewrite `spec/INDEX.md` and `spec/CARDS.md` (spec-fold.yml, daily).
     Fold,
 }
 
@@ -120,19 +123,18 @@ const UNRESOLVED_MARKERS: &[&str] = &[concat!("proposed", " ruling"), concat!("n
 const CATALOG_PATH: &str = "crates/cards/catalog.json";
 
 /// The set names a card in a note's `cards` may carry before its `#` (`C+ #12.1`, `Meditative #40`),
-/// each with the catalog `set` it names (#2047): every set the catalog orders, by its name and by its
-/// abbreviation, both read from the set table (R3114000). A name of two words (`Training Grounds`)
-/// is never the one word before a `#`; its abbreviation (`TG`) is.
+/// each with the catalog `set` it names (#2047): every set of the set table, by its name and by its
+/// abbreviation, both read from it (R3114000), so a single-player set's cards resolve too (`IA #12`,
+/// R4577000). A name of two words (`Training Grounds`) is never the one word before a `#`; its
+/// abbreviation (`TG`) is.
 fn set_prefixes() -> Vec<(&'static str, &'static str)> {
-    CATALOG_SETS
+    SET_TABLE
         .iter()
+        .map(|row| row.set)
         .flat_map(|set| {
             let name = set.as_str();
-            std::iter::once((name, name)).chain(
-                set_row(*set)
-                    .abbreviation
-                    .map(|abbreviation| (abbreviation, name)),
-            )
+            std::iter::once((name, name))
+                .chain(set_row(set).abbreviation.map(|abbreviation| (abbreviation, name)))
         })
         .collect()
 }
@@ -147,10 +149,18 @@ const ISSUE_WORD: &str = "issue";
 /// The sections whose ruling markers rule 8 holds to a link (REVIEW A2.3): §2 to §10.
 const MARKED_SECTIONS: std::ops::RangeInclusive<u32> = 2..=10;
 
-const INDEX_HEADER: &str = "# Rulings index\n\nGenerated by `cargo jackioh spec index` from the notes in `rulings/`, and rewritten on `main` every day by `spec fold` (`.github/workflows/spec-fold.yml`), so a ruling merged since is in `rulings/` and not here yet: edit a note, never this file.\n\n| id | title | note | proven in |\n| --- | --- | --- | --- |\n";
+const INDEX_HEADER: &str = "# Rulings index\n\nGenerated by `cargo jackioh spec index` from the notes in `rulings/`, and rewritten on `main` every day by `spec fold` (`.github/workflows/spec-fold.yml`), so a ruling merged since is in `rulings/` and not here yet: edit a note, never this file.\n\nOne line per ruling: its id, its title (the question it answers), its note and what it touches (the note's `cards`: the sections, cards and rulings it affects), so a search of this file for a section or a card lists the rulings on it by title (`README.md`, Looking things up). The tests that prove a ruling are in its note (`proven_in`).\n\n| id | title | note | touches |\n| --- | --- | --- | --- |\n";
 
-/// The note `fold` appends the pending paragraphs to, in `spec/`.
-const RULINGS_NOTE: &str = "11-rulings.md";
+/// The folder `fold` files the pending paragraphs under, in `spec/`: `history/<n>.md` is where issue
+/// (or pull request) `n`'s rulings came from. One page held them all until it passed a megabyte.
+const HISTORY_DIR: &str = "history";
+
+/// The longest a note in `spec/` may be, in bytes: what one read of a file returns (256 KB). A note
+/// that passes it is split, a section into one note a subsection (`spec/README.md`, The map).
+const NOTE_MAX_BYTES: usize = 256 * 1024;
+
+/// The notes rule 9 leaves alone: the generated index, a table that is searched and never read whole.
+const UNBOUNDED_NOTES: &[&str] = &["spec/INDEX.md"];
 
 /* notes */
 
@@ -500,8 +510,9 @@ fn unresolved_markers(path: &str, text: &str) -> Vec<String> {
     found
 }
 
-/// Whether `path` (relative to the root) is the note of one of `MARKED_SECTIONS`:
-/// `spec/02-core-systems.md` to `spec/10-engine-guide.md`.
+/// Whether `path` (relative to the root) is a note of one of `MARKED_SECTIONS`:
+/// `spec/02-core-systems.md` to `spec/10-engine-guide.md`, and the notes of a section that is one
+/// note a subsection (`spec/08-catalog/8.10-stinkyscape.md`).
 fn is_marked_section(path: &str) -> bool {
     path.strip_prefix("spec/")
         .and_then(|name| name.split_once('-'))
@@ -1402,6 +1413,13 @@ fn problems(root: &Path) -> Result<(Vec<String>, SpecCounts)> {
         problems.extend(unlinked_markers(path, text));
     }
 
+    // 9. No note is longer than one read returns.
+    for (path, text) in &texts {
+        if let Some(problem) = oversized_note(path, text.len()) {
+            problems.push(problem);
+        }
+    }
+
     Ok((
         problems,
         SpecCounts {
@@ -1438,6 +1456,10 @@ fn check(root: &Path) -> Result<()> {
 
 /* the index */
 
+/// `spec/INDEX.md`: one row per ruling in number order, its id, title, note and what it touches (its
+/// `cards`), so one search of the file for a section or a card lists the rulings on it by title. The
+/// proofs stay in the note: a row that repeated `proven_in` was nearly half the file and answered no
+/// lookup.
 fn render_index(notes: &[RulingNote]) -> Result<String> {
     let mut rows: Vec<(u64, &RulingNote)> = Vec::with_capacity(notes.len());
     for note in notes {
@@ -1455,11 +1477,10 @@ fn render_index(notes: &[RulingNote]) -> Result<String> {
         let id = note.id.as_deref().unwrap_or("");
         let title = note.title.as_deref().unwrap_or("").replace('|', "\\|");
         let stem = &note.stem;
-        let proofs: Vec<String> = note.proven_in.iter().map(|path| format!("`{path}`")).collect();
+        let touches = note.cards.as_deref().unwrap_or("").replace('|', "\\|");
         writeln!(
             out,
-            "| {id} | {title} | [{stem}](rulings/{stem}.md) | {} |",
-            proofs.join(", ")
+            "| {id} | {title} | [{stem}](rulings/{stem}.md) | {touches} |"
         )?;
     }
     Ok(out)
@@ -1521,14 +1542,26 @@ fn pending_problems(root: &Path, pending: &[(PathBuf, Option<u64>, String)]) -> 
         .collect()
 }
 
-/// `rulings` with each paragraph appended as its own, a blank line before it, and one newline at
-/// the end.
-fn folded<'a>(rulings: &str, paragraphs: impl IntoIterator<Item = &'a str>) -> String {
-    let mut out = rulings.trim_end().to_string();
-    for paragraph in paragraphs {
+/// Rule 9's finding: a note of `bytes` bytes that is over `NOTE_MAX_BYTES` and not one of
+/// `UNBOUNDED_NOTES`.
+fn oversized_note(path: &str, bytes: usize) -> Option<String> {
+    (bytes > NOTE_MAX_BYTES && !UNBOUNDED_NOTES.contains(&path)).then(|| {
+        format!(
+            "{path}: {} KB, and a note is {} KB at most, what one read returns: split it, a section into one note a subsection (spec/README.md, The map)",
+            bytes / 1024,
+            NOTE_MAX_BYTES / 1024
+        )
+    })
+}
+
+/// `history` with `paragraphs` after it as their own, a blank line before them, and one newline at
+/// the end; `paragraphs` alone when the note is new.
+fn filed(history: &str, paragraphs: &str) -> String {
+    let mut out = history.trim_end().to_string();
+    if !out.is_empty() {
         out.push_str("\n\n");
-        out.push_str(paragraph.trim());
     }
+    out.push_str(paragraphs.trim());
     out.push('\n');
     out
 }
@@ -1545,21 +1578,25 @@ fn fold(root: &Path) -> Result<()> {
         pending.push((number, path, text));
     }
     pending.sort_by_key(|(number, _, _)| *number);
-    if !pending.is_empty() {
-        let path = root.join("spec").join(RULINGS_NOTE);
-        let rulings = fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
-        let out = folded(&rulings, pending.iter().map(|(_, _, text)| text.as_str()));
-        fs::write(&path, out).with_context(|| format!("writing {}", path.display()))?;
-        for (_, file, _) in &pending {
-            fs::remove_file(file).with_context(|| format!("removing {}", file.display()))?;
-        }
+    let history = root.join("spec").join(HISTORY_DIR);
+    for (number, file, text) in &pending {
+        fs::create_dir_all(&history).with_context(|| format!("creating {}", history.display()))?;
+        let path = history.join(format!("{number}.md"));
+        // An issue folded before (a second pull request of its) keeps what it has.
+        let before = if path.exists() {
+            fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?
+        } else {
+            String::new()
+        };
+        fs::write(&path, filed(&before, text)).with_context(|| format!("writing {}", path.display()))?;
+        fs::remove_file(file).with_context(|| format!("removing {}", file.display()))?;
     }
     let numbers: Vec<String> = pending
         .iter()
         .map(|(number, _, _)| format!("#{number}"))
         .collect();
     println!(
-        "spec fold: {} pending paragraph(s) into spec/{RULINGS_NOTE}{}",
+        "spec fold: {} pending paragraph(s) into spec/{HISTORY_DIR}/{}",
         pending.len(),
         if numbers.is_empty() {
             String::new()
@@ -1714,17 +1751,16 @@ mod tests {
     }
 
     #[test]
-    fn folds_the_pending_paragraphs_in_number_order_and_rewrites_the_index() {
+    fn folds_the_pending_paragraphs_into_their_issues_history_and_rewrites_the_index() {
         let root = std::env::temp_dir().join(format!("jackioh-spec-fold-{}", std::process::id()));
         let _ = fs::remove_dir_all(&root);
         fs::create_dir_all(root.join("spec").join("rulings")).unwrap();
         fs::create_dir_all(root.join("spec").join("pending")).unwrap();
+        fs::create_dir_all(root.join("spec").join(HISTORY_DIR)).unwrap();
         fs::write(root.join("spec").join("rulings").join("R0195.md"), NOTE).unwrap();
-        fs::write(
-            root.join("spec").join(RULINGS_NOTE),
-            "## 11. Rulings\n\n**[[R195]] is old.**\n",
-        )
-        .unwrap();
+        let history = |n: u32| root.join("spec").join(HISTORY_DIR).join(format!("{n}.md"));
+        // Issue #31 was folded once already; issue #2198 never was.
+        fs::write(history(31), "**[[R195]] is old.**\n").unwrap();
         fs::write(root.join("spec").join("INDEX.md"), "stale").unwrap();
         fs::write(
             root.join("spec").join("pending").join("2198.md"),
@@ -1739,8 +1775,12 @@ mod tests {
 
         fold(&root).unwrap();
         assert_eq!(
-            fs::read_to_string(root.join("spec").join(RULINGS_NOTE)).unwrap(),
-            "## 11. Rulings\n\n**[[R195]] is old.**\n\n**[[R195]] is earlier.**\n\n**[[R195]] is later.**\n"
+            fs::read_to_string(history(31)).unwrap(),
+            "**[[R195]] is old.**\n\n**[[R195]] is earlier.**\n"
+        );
+        assert_eq!(
+            fs::read_to_string(history(2198)).unwrap(),
+            "**[[R195]] is later.**\n"
         );
         assert!(read_pending(&root).unwrap().is_empty());
         let note = parse_note("spec/rulings/R0195.md".into(), "R0195".into(), NOTE).unwrap();
@@ -1756,16 +1796,46 @@ mod tests {
 
         // Nothing pending changes nothing but the index.
         fold(&root).unwrap();
-        assert!(
-            fs::read_to_string(root.join("spec").join(RULINGS_NOTE))
-                .unwrap()
-                .ends_with("later.**\n")
+        assert_eq!(
+            fs::read_to_string(history(31)).unwrap(),
+            "**[[R195]] is old.**\n\n**[[R195]] is earlier.**\n"
         );
 
         // A name with no number has no place: `fold` refuses it and leaves every file as it was.
         fs::write(root.join("spec").join("pending").join("temp-spec-2198.md"), "x").unwrap();
         assert!(fold(&root).is_err());
         assert_eq!(read_pending(&root).unwrap().len(), 1);
+        let _ = fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_note_longer_than_one_read_returns_is_refused_and_the_index_is_not() {
+        assert_eq!(
+            oversized_note("spec/08-catalog/8.10-stinkyscape.md", NOTE_MAX_BYTES),
+            None
+        );
+        assert_eq!(
+            oversized_note("spec/08-catalog/8.10-stinkyscape.md", NOTE_MAX_BYTES + 1),
+            Some("spec/08-catalog/8.10-stinkyscape.md: 256 KB, and a note is 256 KB at most, what one read returns: split it, a section into one note a subsection (spec/README.md, The map)".to_string())
+        );
+        assert_eq!(oversized_note("spec/INDEX.md", 4 * NOTE_MAX_BYTES), None);
+
+        // `check` reads the notes' sizes: a section's note that has outgrown the limit fails it.
+        let root = passing_tree(&format!("jackioh-spec-oversized-{}", std::process::id()));
+        fs::write(
+            root.join("spec").join("02-core-systems.md"),
+            "## 2. Core systems\n",
+        )
+        .unwrap();
+        assert_eq!(problems(&root).unwrap().0, Vec::<String>::new());
+        let long = format!("## 2. Core systems\n{}", "word ".repeat(NOTE_MAX_BYTES / 5));
+        fs::write(root.join("spec").join("02-core-systems.md"), long).unwrap();
+        let found = problems(&root).unwrap().0;
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(
+            found[0].starts_with("spec/02-core-systems.md: 256 KB, and a note is 256 KB at most"),
+            "{found:?}"
+        );
         let _ = fs::remove_dir_all(&root);
     }
 
@@ -1886,7 +1956,7 @@ mod tests {
         let out = render_index(&[block, sequential]).unwrap();
         assert_eq!(
             &out[INDEX_HEADER.len()..],
-            "| R195 | When a card glows yellow (`conditionActive`) | [R0195](rulings/R0195.md) | `crates/engine/tests/rules/condition_active.rs`, `crates/cards/tests/cross/condition_active.rs` |\n| R690000 | A new ruling takes a number from its issue's block (issue #690) | [R690000](rulings/R690000.md) | `crates/tools/src/spec.rs` |\n"
+            "| R195 | When a card glows yellow (`conditionActive`) | [R0195](rulings/R0195.md) | §10.8, §10.9, #10 |\n| R690000 | A new ruling takes a number from its issue's block (issue #690) | [R690000](rulings/R690000.md) | §11 |\n"
         );
     }
 
@@ -1957,13 +2027,17 @@ mod tests {
         for path in [
             "spec/02-core-systems.md",
             "spec/08-catalog.md",
+            "spec/08-catalog/8.10-stinkyscape.md",
             "spec/10-engine-guide.md",
+            "spec/10-engine-guide/10.8-viewfor.md",
         ] {
             assert!(is_marked_section(path), "{path}");
         }
         for path in [
             "spec/01-overview.md",
             "spec/11-rulings.md",
+            "spec/history/2198.md",
+            "spec/pending/2198.md",
             "spec/13-duos.md",
             "spec/README.md",
             "spec/INDEX.md",
@@ -2478,7 +2552,7 @@ mod tests {
             parse_note(
                 "spec/rulings/R0010.md".into(),
                 "R0010".into(),
-                "---\nid: R10\ntitle: a | b\nproven_in: []\n---\n",
+                "---\nid: R10\ntitle: a | b\ncards: \"#7 | #8\"\nproven_in: []\n---\n",
             )
             .unwrap(),
             parse_note(
@@ -2492,7 +2566,7 @@ mod tests {
         assert!(out.starts_with(INDEX_HEADER));
         assert_eq!(
             &out[INDEX_HEADER.len()..],
-            "| R2 | Two | [R0002](rulings/R0002.md) | `x.rs`, `y.ts` |\n| R10 | a \\| b | [R0010](rulings/R0010.md) |  |\n"
+            "| R2 | Two | [R0002](rulings/R0002.md) |  |\n| R10 | a \\| b | [R0010](rulings/R0010.md) | #7 \\| #8 |\n"
         );
     }
 }

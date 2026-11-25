@@ -743,7 +743,8 @@ pub const LAST_FACE_UP_SKIPPED_TAGS: &[Tag] = &[Tag::Ai];
 pub const ACTIVATE_UNLIMITED_CAP: i32 = 100;
 
 /// R4079000: the most a doubling or tripling of a Unit's stat takes it to (S #119 Unsecure System, S #10.2
-/// Divine Spirit).
+/// Divine Spirit). R4423001: the most Core #89 Corpse Eater's and TG #56 Legacy: Corpse Eater's gain takes
+/// their Attack and max Health to.
 pub const MULTIPLIED_STAT_CAP: i32 = 999;
 
 // ---- v0.2.0 constants: damage and combat (E5, E6, E35, E37) ----
@@ -1652,19 +1653,20 @@ pub const MARKETPLACE_FIXED_LOT_STOCK: i32 = 1;
 /// (`paysCredits`, Stinkyscape #89 Spice) draws each turn, its base face's, and of the draw its play or
 /// discard makes while the Marketplace is closed: "its price is determined like all other Resources", a
 /// Rare Resource's (Gellium's 3 to 10) through v0.6.6h, and since issue #4154 ("sells for ~25% more")
-/// that range's ends a quarter higher, rounded to the nearest Credit, a half up. Named for the hand sale
-/// it priced until issue #4410 (R1861000). `buy` is never read: such a card is no Resource and its lot,
-/// if any, is priced as a card.
+/// that range's ends a quarter higher, rounded to the nearest Credit, a half up (4 to 13 through
+/// v0.6.9n); since issue #4440 ("sells for ~15% more", R4440001) each end of that 15% higher, rounded the
+/// same way: 5 to 15. Named for the hand sale it priced until issue #4410 (R1861000). `buy` is never
+/// read: such a card is no Resource and its lot, if any, is priced as a card.
 pub const HAND_SALE_PRICE: ResourcePrice = ResourcePrice {
-    sell_min: 4,
-    sell_max: 13,
+    sell_min: 5,
+    sell_max: 15,
     buy: 0,
 };
-/// R4410000, R4154206: `HAND_SALE_PRICE` on the Radiant face, a Radiant Rare Resource's 6 to 20 a quarter
-/// higher.
+/// R4410000, R4154206, R4440001: `HAND_SALE_PRICE` on the Radiant face, a Radiant Rare Resource's 6 to 20
+/// a quarter higher (8 to 25), and that 15% higher: 9 to 29.
 pub const HAND_SALE_RADIANT_PRICE: ResourcePrice = ResourcePrice {
-    sell_min: 8,
-    sell_max: 25,
+    sell_min: 9,
+    sell_max: 29,
     buy: 0,
 };
 
@@ -1686,68 +1688,6 @@ pub const STARSCAPE_REWARDS: &[(StarscapeReward, i32)] = &[
     (StarscapeReward::Mana, 1),
     (StarscapeReward::Damage, 2),
 ];
-
-// ---------------------------------------------------------------------------------------------
-// The AI training lanes (SURFACE §14.2; docs/v0.3.0/README.md §8).
-// ---------------------------------------------------------------------------------------------
-
-/// R1679000: a training lane's promotion gate (SURFACE §14.2), a sequential probability ratio test
-/// on paired hold-out deals. `cargo jackioh promote` plays deal after deal against the parent, the AI
-/// on `main`, each twice with the seats swapped (R850000), and reads each deal's edge for the
-/// candidate: its wins less the parent's over the two games, halved, from −1 to 1 (a draw, or a game
-/// without a result, is nobody's win). The test weighs H0, a true mean edge of `edge_h0` (a successor
-/// no stronger than its parent), against H1, `edge_h1` (the smallest gain worth banking), by the log
-/// of their likelihood ratio, read as two normal laws with the deals' own variance: after `n` deals of
-/// edges summing to `S`, `(edge_h1 − edge_h0) · (S − n · (edge_h0 + edge_h1) / 2) / σ²`, the
-/// variance `σ²` the deals' own, never below `variance_floor`. From deal `min_deals` on it stops at
-/// the first deal whose ratio reaches `ln((1 − beta) / alpha)`, a pass, or falls to
-/// `ln(beta / (1 − alpha))`, a fail; one still between the two at `max_deals` fails. So an equal
-/// successor passes about `alpha` of the time and one at H1 fails about `beta` of it, and a clear
-/// loser stops early. The deals are played `batch_deals` at a time and read in deal order, so where it
-/// stops never depends on the thread count, and CI's `promote --verify` plays the same deals again.
-///
-/// The lanes play no games against SPEC §10.7's random policy: they dropped them once generation 9,
-/// the first AI dealt the Meditative set (issue #732), had beaten random in at least 90 of 100
-/// (R732001). The daily quality gates (`cargo jackioh gate --full`) still hold every AI on `main` to
-/// their floor against random.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct TrainingGate {
-    /// The deals the test reads before it may stop: the variance it reads needs this many.
-    pub min_deals: i32,
-    /// The most deals it plays; a test undecided at the last one fails.
-    pub max_deals: i32,
-    /// The deals played at once (on rayon's pool) before the test reads them.
-    pub batch_deals: i32,
-    /// H0's mean edge: a successor no stronger than its parent.
-    pub edge_h0: f64,
-    /// H1's mean edge: the gain the gate is built to bank, +0.06 (a 53% win rate, about +21 Elo).
-    pub edge_h1: f64,
-    /// The chance it promotes a successor at H0.
-    pub alpha: f64,
-    /// The chance it fails one at H1.
-    pub beta: f64,
-    /// The least variance the ratio divides by: deals that all come out alike (an AI against
-    /// itself splits every deal) have none.
-    pub variance_floor: f64,
-}
-
-/// R1679000: every lane's gate, the `improve`, `unban` and `learn` lanes' alike (the unban lane adds
-/// strictly fewer shadow bans than the parent's). On #1058's paired deals, whose edges had a variance
-/// of about 0.27 (of 200 deals, 25 won twice, 146 split and 29 lost twice), it promotes an equal
-/// successor about 4.5% of the time and one that truly wins 52%, 53% or 55% about 60%, 91% or all of
-/// it, where 220 of 400 (R850000) let those through about 6%, 15% and 53% of the time; it averages
-/// about 800 games at H0 and H1, 1,050 between them, and 300 for a clear loser, never more than 2,000.
-pub const TRAINING_GATE: TrainingGate = TrainingGate {
-    min_deals: 100,
-    max_deals: 1000,
-    batch_deals: 100,
-    edge_h0: 0.0,
-    edge_h1: 0.06,
-    alpha: 0.05,
-    beta: 0.05,
-    variance_floor: 0.01,
-};
 
 // ---------------------------------------------------------------------------------------------
 // Replays (R768, issue #508).
@@ -2414,6 +2354,99 @@ pub const TIER_A_FROM: f64 = (ADJUSTED_WIN_RATE_CENTER + TIER_BAND_HIGH) / 2.0;
 /// game (`ADJUSTED_WIN_RATE_CENTER`) to tier A's floor, and tier D is below tier C's.
 pub const TIER_C_FROM: f64 = (TIER_BAND_LOW + ADJUSTED_WIN_RATE_CENTER) / 2.0;
 
+/// R4673000: the Normal face's balance band top, tier S above it among the cards' normal faces: its own
+/// lever, starting at All's (`TIER_BAND_HIGH`). The face's rate already sits on its own field's spread, so
+/// the band is not widened by it.
+pub const NORMAL_TIER_BAND_HIGH: f64 = TIER_BAND_HIGH;
+
+/// R4673000: the Normal face's balance band bottom, tier F below it: its own lever, starting at All's
+/// (`TIER_BAND_LOW`).
+pub const NORMAL_TIER_BAND_LOW: f64 = TIER_BAND_LOW;
+
+/// R4673000: the Normal face's tier A floor, halfway from an even game to its band's top: its own lever,
+/// starting at All's (`TIER_A_FROM`).
+pub const NORMAL_TIER_A_FROM: f64 = (ADJUSTED_WIN_RATE_CENTER + NORMAL_TIER_BAND_HIGH) / 2.0;
+
+/// R4673000: the Normal face's tier C floor, halfway from its band's bottom to an even game: its own lever,
+/// starting at All's (`TIER_C_FROM`).
+pub const NORMAL_TIER_C_FROM: f64 = (NORMAL_TIER_BAND_LOW + ADJUSTED_WIN_RATE_CENTER) / 2.0;
+
+/// R4673000: the Radiant face's balance band top, tier S above it among the cards' Radiant faces: its own
+/// lever, starting at All's (`TIER_BAND_HIGH`). The face's rate already sits on its own field's spread, so
+/// the band is not widened by it.
+pub const RADIANT_TIER_BAND_HIGH: f64 = TIER_BAND_HIGH;
+
+/// R4673000: the Radiant face's balance band bottom, tier F below it: its own lever, starting at All's
+/// (`TIER_BAND_LOW`).
+pub const RADIANT_TIER_BAND_LOW: f64 = TIER_BAND_LOW;
+
+/// R4673000: the Radiant face's tier A floor, halfway from an even game to its band's top: its own lever,
+/// starting at All's (`TIER_A_FROM`).
+pub const RADIANT_TIER_A_FROM: f64 = (ADJUSTED_WIN_RATE_CENTER + RADIANT_TIER_BAND_HIGH) / 2.0;
+
+/// R4673000: the Radiant face's tier C floor, halfway from its band's bottom to an even game: its own
+/// lever, starting at All's (`TIER_C_FROM`).
+pub const RADIANT_TIER_C_FROM: f64 = (RADIANT_TIER_BAND_LOW + ADJUSTED_WIN_RATE_CENTER) / 2.0;
+
+/// R4552000: the win probability's intercept, `β₀` of `P = σ(β₀ + β₁·eval + β₂·turn + β₃·first)`, fit by
+/// `cargo jackioh stats calibrate` over development records against `WIN_PROBABILITY_AI_GENERATION`'s
+/// evaluation: the four weights are the fit of `crates/tools/tests/fixtures/win_probability.txt`, the
+/// 1,990 turn rows of 120 development games (`stats --games 120 --series calibration`), whose Brier score
+/// is 0.216 against the turn and first player's 0.249.
+pub const WIN_PROBABILITY_INTERCEPT: f64 = 0.05715243020315099;
+
+/// R4552000: `β₁`, the weight of the seat's evaluation less its opponent's, in the AI's own units (a
+/// record keeps it in thousandths, `SWING_EVAL_SCALE`).
+pub const WIN_PROBABILITY_EVAL: f64 = 0.011583154111302998;
+
+/// R4552000: `β₂`, the weight of the turn counter (§2.5) at the turn's start.
+pub const WIN_PROBABILITY_TURN: f64 = 0.013101763295514636;
+
+/// R4552000: `β₃`, the weight of having taken the first turn.
+pub const WIN_PROBABILITY_FIRST: f64 = 0.1472779464267806;
+
+/// R4552000: the AI generation (`crates/ai/generation.json`, R1367000) whose evaluation the four weights
+/// above were fit against. A change to the AI's evaluation moves the raw scale a record keeps, so a refit
+/// names its generation here.
+pub const WIN_PROBABILITY_AI_GENERATION: i32 = 13;
+
+/// R4552000: a turn row keeps the evaluation difference times this, rounded, so the record is whole
+/// numbers (thousandths of the AI's units).
+pub const SWING_EVAL_SCALE: f64 = 1000.0;
+
+/// R4552001: a turn's change in win probability is tallied in parts of this (thousandths of win chance),
+/// rounded, so the totals are whole numbers that add the same in any order.
+pub const SWING_PERMILLE: f64 = 1000.0;
+
+/// R4552001: an ordinary turn's gain (`α`) is read per own turn of the seat, from its first to this one;
+/// every later turn shares the last bucket. The seat that went first and the other are read apart.
+pub const SWING_TURN_BUCKETS: i32 = 10;
+
+/// R4552001: the fewest turns a card's term is read over before it counts toward its field's spread, as
+/// `CARD_STATS_MIN_SAMPLE` does for the adjusted win rate's field.
+pub const SWING_FIELD_MIN_ROWS: i64 = 20;
+
+/// R4552001: the spread (one standard deviation) of real cards' play terms assumed below
+/// `ADJUSTED_FIELD_MIN_CARDS` read cards, as a fraction of win chance.
+pub const SWING_PRIOR_PLAY_SPREAD: f64 = 0.02;
+
+/// R4552001: the spread of real cards' per-turn board terms (Board swing) assumed below
+/// `ADJUSTED_FIELD_MIN_CARDS` read cards, as a fraction of win chance.
+pub const SWING_PRIOR_BOARD_SPREAD: f64 = 0.01;
+
+/// R4552001: the typical card's Decisiveness assumed below `ADJUSTED_FIELD_MIN_CARDS` read cards, as a
+/// fraction of win chance (±12 points): the median raw RMS of the 90 deck cards played 10 times or more
+/// in 200 development games (12.4 points; issue #4552's run, the calibration fixture's 120 games and 40
+/// forced games each of S #120 Wild System and S+ #61 Jayaad).
+pub const DECISIVENESS_PRIOR_CENTER: f64 = 0.12;
+
+/// R4552001: the spread of real cards' Decisiveness assumed below `ADJUSTED_FIELD_MIN_CARDS` read cards,
+/// ±2 points: what a card's raw RMS on odd games shares with its raw RMS on even games, their covariance
+/// across cards (issue #4552's 360 development games: 3.7 points² over the 435 cards played 3 times or
+/// more in each half, 0.0 over the 221 played 5 times, 3.6 over the 45 played 8 times). The raw RMS
+/// spread about 5 points between cards, but nearly all of that was the sampling noise of a few plays.
+pub const DECISIVENESS_PRIOR_SPREAD: f64 = 0.02;
+
 // ---------------------------------------------------------------------------------------------
 // The weapon kit (#1841, R1841000–R1841003; SPEC §4.4, §6.2, §6.3)
 // ---------------------------------------------------------------------------------------------
@@ -2560,6 +2593,9 @@ pub const BLACK_HOLE_CAPACITY: i32 = 10;
 pub const SLASH_BASE_LANE: i32 = 3;
 /// R3554002: the lanes the Radiant face may slash.
 pub const SLASH_LANES: [i32; 3] = [2, 3, 4];
+
+/// R4589001: "since your last turn" reaches back this many player-turns.
+pub const SINCE_LAST_TURN: i32 = 1;
 
 #[cfg(test)]
 mod tests {

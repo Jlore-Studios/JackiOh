@@ -236,6 +236,21 @@ mod tests {
             }
 
             #[test]
+            fn r4453000_its_buff_passes_an_immune_cn_permanent_by() {
+                // §6.1: the Buff half passes an immune card by, as the destroy half already does.
+                let mut s = casting("gaokao-immune-buff", false);
+                let p1_brother = brother(&s, P1);
+                let p2_brother = brother(&s, P2);
+                s.card_mut(p2_brother.as_str())
+                    .granted_keywords
+                    .push(Keyword::ImmuneToSpells);
+                s.play(GAOKAO, json!({}));
+                assert_eq!(upgraded_for(s.events(), &p2_brother), 0);
+                assert_eq!(s.unit(P2, 2).expect("the immune Brother stands").id, p2_brother);
+                assert_eq!(upgraded_for(s.events(), &p1_brother), 2);
+            }
+
+            #[test]
             fn one_state_check_after_both() {
                 // The destroyed leave at the one state check after the whole list: every Buff lands
                 // before the first card dies.

@@ -1,9 +1,10 @@
 //! SPEC §8.12 S+ #139 Operation Omega (§2.4, §5.1, §6.3 Add to hand; R60, R65, R78, R215, R382, R1181003, R1420, R3535000,
-//! R3563000, R3565000, R3565001): (2 embiggen 4) Spell, Mindustrial, Legendary, a card of the Stinkyscape+ set.
+//! R3563000, R3565000, R3565001): (1 embiggen 3) Spell (2 embiggen 4 until issue #4440), Mindustrial, Legendary, a
+//! card of the Stinkyscape+ set.
 //!   Base:    "Add 2 Automa-Ω cards to your hand.
-//!            Embiggened (4): They have Tribute 2."
+//!            Embiggened (3): They have Tribute 2."
 //!   Radiant: "Add 2 Radiant Automa-Ω cards to your hand.
-//!            Embiggened (4): They have Tribute 2."
+//!            Embiggened (3): They have Tribute 2."
 //!
 //! Engine: its Cry is one `addRandomFromCatalog` of `automa` cards (R386, 2 on both faces) from the
 //! Stinkyscape+ cards tagged Automa-Ω (R3565001), tokens out (§5.1, R382: no Reignclipse), the pool naming its set so
@@ -60,8 +61,8 @@ mod tests {
     const FILLER: &str = "core-005";
     /// "Add 2 Automa-Ω cards", declared as `automa`.
     const COUNT: usize = 2;
-    /// The embiggened price.
-    const EMBIGGENED_MANA: i32 = 4;
+    /// The embiggened price, since issue #4440 ((4) before it).
+    const EMBIGGENED_MANA: i32 = 3;
     /// Reign, Eclipse, Oct, Omura and Corvus: the Automa-Ω cards that are no token.
     const POOL: [&str; 5] = ["stinkyscapeplus-114", "stinkyscapeplus-119", "stinkyscapeplus-123", "stinkyscapeplus-125", "stinkyscapeplus-127"];
     /// What each asks for when nothing has set it (R101).

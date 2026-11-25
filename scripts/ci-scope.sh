@@ -43,8 +43,8 @@
 # repo (the pull request title check among them), the agent instruction files (CLAUDE.md, AGENTS.md,
 # GEMINI.md, CONTRIBUTING.md: code cites them in comments and nothing opens them), the repository's
 # meta that only GitHub reads (the issue forms, the pull request template, CODEOWNERS), and the
-# training lanes' prompts and loop (training/*.md, training/loop.sh: Muse and the training box read
-# them, no job does; training/history/ is not among them), and the notebooks' project, analysis/
+# training docs (training/*.md: people and the bots read them, no job does; training/history/ is not
+# among them), and the notebooks' project, analysis/
 # (#445: no file in crates/, apps/, e2e/, spec/ or a per-pull-request job reads it; super.yml's
 # `notebooks` job runs its tests once a day), but for the five record files and reports of
 # analysis/fixtures/ that the tools' R1994000 test holds `stats report --games` to, and the
@@ -60,9 +60,9 @@
 # `rust (classify)` (#1370) reads every change to the cards, the engine and the AI, and runs exactly
 # when `full` does. The other docs are
 # not: `spec check` reads spec/, the radiant-standard test reads docs/radiant-audit.md, the catalog
-# test reads spec/07-tokens.md's table of tokens, radiant_stats.rs reads spec/08-catalog.md, web tests
-# read two spec/ notes (06-keywords.md and 05-card-types.md), and the `training gate` job reads
-# training/history/, and the tools' test of shadow_ban.rs reads its sweep-*.md reports. A
+# test reads spec/07-tokens.md's table of tokens, radiant_stats.rs reads spec/08-catalog/, web tests
+# read spec/06-keywords/ and spec/05-card-types.md, and the tools' test of shadow_ban.rs
+# reads training/history/'s sweep-*.md reports. A
 # `full=false` diff prints every other line false too.
 #
 # Past the skip list, each changed file turns lines on, and a line no file turned on is false:
@@ -79,7 +79,8 @@
 #  - Run everything but the db suites: the workspace's Cargo.toml, Cargo.lock, rust-toolchain.toml,
 #    .cargo/ but .cargo/mutants.toml, anything under .github/ that is not on the skip list, and this script. Of these, only
 #    .github/ and this script run infra too: the terraform steps read no cargo file.
-#  - infra: infra/, which nothing else reads (no web or e2e line turns on for it).
+#  - infra: infra/, of which only infra/cloudflare.tf turns web on (apps/edge's config
+#    test reads it, #4011); no e2e line turns on for it.
 #  - The db suites, each on what its script exercises (each script's header says): the migrations
 #    all three; tests/sql/ the sql invariants; the store (src/db/), the Supabase bootstrap
 #    (tests/db/bootstrap.sql), the server's manifest and Cargo.lock the store contract and the deploy
@@ -109,11 +110,14 @@
 #    (the engine's and the server's export tests write it, and jackioh-wasm-core's constants test reads
 #    engineConfig.ts, #3093) engine and server, and tools, wasm; docs/radiant-audit.md
 #    (radiant_standard.rs), spec/07-tokens.md (the catalog test's table of tokens, R1177001) and
-#    spec/08-catalog.md (radiant_stats.rs, a row's two Radiant stats cells, #3804) cards; e2e/support/config.ts (the server's tests/api/e2e.rs) server;
+#    spec/08-catalog/ (radiant_stats.rs, a row's two Radiant stats cells, #3804) cards, the folder tools, wasm too
+#    (acceptance.rs holds radiant_stats.rs's list of its notes to it); e2e/support/config.ts (the server's tests/api/e2e.rs) server;
 #    crates/server/.env.example and apps/web/.env.production (the catalog version's sites, which the
 #    tools' patches tests read; the ship case above takes precedence) tools, wasm, the first as well as server; crates/server/tests/'s
-#    actor/, api/, bots/, loops/ and support/ (acceptance.rs holds their helpers to support/'s,
-#    #2385) tools, wasm as well as server; crates/server/migrations/0068_v0_5_retcon.sql and
+#    actor/, api/, bots/, loops/ and support/ run server only because the server binary checks their
+#    shared helpers itself (#2385). If a later acceptance.rs scan reads those trees, its added lines
+#    must match a reader call, `CARGO_MANIFEST_DIR`, `#[ignore` or `preview_sets(` in the grep below
+#    before tools, wasm may remain off. crates/server/migrations/0068_v0_5_retcon.sql and
 #    0087_v0_5_13_retcon.sql (the tools' r2532000 and r3631001 retcon tests read them through
 #    repo_root().join(MIGRATIONS_REL), #4157) tools, wasm as well as server; and
 #    packages/, apps/server/ and ladder/ (acceptance.rs's V28) tools, wasm; training/history/sweep-*.md
@@ -123,8 +127,9 @@
 #    wasm; apps/web/src/audio/voice-text.json (the
 #    tools' export_card_text.rs writes it from crates/cards/card-text.yaml, #2498) tools, wasm; and
 #    apps/web/src/game/cardModes.json (the tools' export_card_modes.rs writes it from the card
-#    scripts, #2646) tools, wasm; and spec/15-dungeon-run.md and spec/README.md (acceptance.rs holds
-#    the first's table of constants to crates/run/src/config.rs, and the second's map to it, B33)
+#    scripts, #2646) tools, wasm; and spec/15-dungeon-run.md, spec/16-infinite-assault.md and
+#    spec/README.md (acceptance.rs holds the first two's tables of constants to
+#    crates/run/src/config.rs, and the third's map to them, B33, #4584)
 #    tools, wasm. scripts/ci-shards.toml, the shard counts of ci.yml's sharded jobs (#3072), runs
 #    every Rust group, and web and e2e as any file outside the lists below does, so a count it
 #    changes is seen running.
@@ -143,7 +148,8 @@
 #    quest pool, quests.json, has titles the quests panel's test holds to zh-CN, #3104) and the WASM crate's tests (except the engine's tests/fixtures/,
 #    which two web tests read), the C module's tests (crates/wasm/c/src/tests.rs; its other sources run
 #    `web`, since `web (wasm c module)` builds them, #3097), docs/, training/ (but training/file-records.sh,
-#    which env-production.test.ts holds to R1933001), reviews/, analysis/, infra/ and the top-level
+#    which env-production.test.ts holds to R1933001), reviews/, analysis/, infra/ but
+#    infra/cloudflare.tf (#4011) and the top-level
 #    Markdown. The Worker in front of the server, apps/edge/, and wrangler.jsonc are among what it
 #    runs for: the job lints, typechecks and tests the Worker, and cloudflare-config.test.ts reads
 #    the file.
@@ -175,7 +181,8 @@
 #    scripts/worktree.sh).
 #
 # apps/web/src/net/ci-scope.test.ts holds every line both ways, and holds `web` and `e2e` to every
-# repository path their sources name; crates/tools/tests/acceptance.rs holds the Rust groups to
+# repository path the web's, the Worker's and the dashboard's sources name (apps/web, apps/edge,
+# apps/admin); crates/tools/tests/acceptance.rs holds the Rust groups to
 # `cargo metadata` and to every file a crate includes from outside itself, and `replay`'s source
 # (tools' replay.rs) to the modules the e2e case keeps on (#4219).
 #
@@ -222,7 +229,7 @@ skipped() {
     CLAUDE.md | AGENTS.md | GEMINI.md | CONTRIBUTING.md) ;;
     .github/ISSUE_TEMPLATE/* | .github/pull_request_template.md | .github/CODEOWNERS) ;;
     training/history/*) return 1 ;;
-    training/*.md | training/loop.sh) ;;
+    training/*.md) ;;
     analysis/fixtures/dev-40.jsonl | analysis/fixtures/live-40.jsonl | analysis/fixtures/games.report.json) return 1 ;;
     analysis/fixtures/counts.jsonl | analysis/fixtures/counts.report.json) return 1 ;;
     analysis/*) ;;
@@ -343,8 +350,6 @@ for file in $files; do
     crates/server/.env.example) on rust_server rust_tools_wasm ;;
     crates/engine/* | crates/cards/*) on $RUST ;;
     crates/ai/*) on rust_ai rust_ai_slow rust_server rust_tools_wasm ;;
-    crates/server/tests/actor/* | crates/server/tests/api/* | crates/server/tests/bots/* | crates/server/tests/loops/* | \
-      crates/server/tests/support/*) on rust_server rust_tools_wasm ;;
     crates/server/migrations/*) on rust_server rust_tools_wasm ;;
     crates/server/*) on rust_server ;;
     crates/shared/* | crates/run/*) on rust_server rust_tools_wasm ;;
@@ -354,12 +359,16 @@ for file in $files; do
       on $RUST
       ;;
     apps/web/src/wire/*) on rust_engine rust_server rust_tools_wasm ;;
-    docs/radiant-audit.md | spec/07-tokens.md | spec/08-catalog.md) on rust_cards ;;
+    docs/radiant-audit.md | spec/07-tokens.md) on rust_cards ;;
+    # §8 is one note a subsection: radiant_stats.rs reads each, and the tools' acceptance test holds its
+    # list to the folder.
+    spec/08-catalog/*) on rust_cards rust_tools_wasm ;;
     e2e/support/config.ts) on rust_server ;;
+    e2e/cypress/e2e/01-* | e2e/cypress/e2e/13-*) on rust_tools_wasm ;;
     apps/web/.env.production | packages/* | apps/server/* | ladder/* | training/history/sweep-*.md) on rust_tools_wasm ;;
     apps/web/src/audio/voice-text.json) on rust_tools_wasm ;;
     apps/web/src/game/cardModes.json) on rust_tools_wasm ;;
-    spec/15-dungeon-run.md | spec/README.md) on rust_tools_wasm ;;
+    spec/15-dungeon-run.md | spec/16-infinite-assault.md | spec/README.md) on rust_tools_wasm ;;
     scripts/ci-shards.toml) on $RUST ;;
     analysis/fixtures/dev-40.jsonl | analysis/fixtures/live-40.jsonl | analysis/fixtures/games.report.json) on rust_tools_wasm ;;
     analysis/fixtures/counts.jsonl | analysis/fixtures/counts.report.json) on rust_tools_wasm ;;
@@ -377,6 +386,7 @@ for file in $files; do
     crates/engine/tests/* | crates/cards/tests/* | crates/ai/tests/* | crates/wasm/tests/* | crates/shared/tests/*) ;;
     crates/wasm/c/src/tests.rs) ;;
     training/file-records.sh) on web ;;
+    infra/cloudflare.tf) on web ;;
     docs/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
     *) on web ;;

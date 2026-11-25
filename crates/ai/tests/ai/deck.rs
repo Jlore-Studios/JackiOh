@@ -705,7 +705,8 @@ mod r1370_a_deck_that_leans_on_a_set {
         // the easy, hard and themed pins: Mana Well, Twinspell, Field of Dreams and Income Tax cost one
         // less, Felinor Feelings and Heroic Power one more; #4154 the human pin: Living Bomb (3), Snom
         // Bunny Mind Control (6), K-Pop Fanatic (3), Lockdown and Memory Leak (1), Field of Dreams (0) and others
-        // move cost).
+        // move cost; #4440's second part the human, easy and hard pins: Suppressive Aura costs (1), and the
+        // Toe Cracker, Professor Curvature and Wardrum change the deck builder's reads of them).
         let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
             (
                 "r1370-pin:human",
@@ -724,15 +725,15 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classicplus-003",
                     "classic-082",
                     "classicplus-013",
-                    "classicplus-035",
+                    "classicplus-036",
                     "classicplus-078",
                     "core-019",
                     "core-012",
                     "core-053",
                     "classic-085",
-                    "classicplus-036",
-                    "core-070",
-                    "classicplus-011",
+                    "classicplus-031",
+                    "core-077",
+                    "classicplus-019",
                 ],
             ),
             (
@@ -757,7 +758,7 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-032",
                     "classic-048",
                     "classicplus-067",
-                    "classic-006",
+                    "classic-009",
                     "classicplus-069",
                     "core-046",
                     "core-053",
@@ -787,16 +788,16 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classic-040",
                     "core-020",
                     "classic-066",
-                    "classicplus-011",
+                    "classicplus-012",
                     "classic-077",
-                    "classic-020",
+                    "classic-021",
                     "classicplus-003",
-                    "classic-058",
-                    "classicplus-005",
+                    "classic-062",
+                    "classicplus-018",
                     "classicplus-047",
                     "core-026",
-                    "classic-032",
-                    "classic-029",
+                    "classic-013",
+                    "classic-009",
                     "classic-018",
                     "classic-086",
                 ],

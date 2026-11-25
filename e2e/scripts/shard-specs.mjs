@@ -31,20 +31,23 @@ export const SMOKE = ["01", "06", "10", "13", "19", "51"];
  * Seconds per spec on ubuntu-latest, Chrome and Electron's slower: CI run 36973335249 (main at
  * e762937, the TypeScript server). Specs 01, 06 and 19 are #2181's: the smoke shards run on a
  * 4-core runner against the release jackioh-server, Chrome for Testing 154 (main at 17d45db), each
- * spec's Cypress "Duration"; 19's All random test alone waits about 50 s for the rating window to
- * widen after the rated game before it. Specs 29-36 are estimates (29-32 from the turns
- * they play, spec 03's length per turn; 36 from its play-through of the Meditative set, about six
+ * spec's Cypress "Duration"; 19 then waited about 50 s in its All random test for the rating window to
+ * widen after the rated game before it. #4485 has 19 reseed before each test and 51 shoot only with
+ * `--expose shots=1`: their 39 and 73 are the Cypress "Duration" of a run of each on a 4-core sandbox
+ * against the release server (19 took 39 s there, 51 took 73 s without the shots and 133 s with them),
+ * until the smoke run on that pull request measures them; replace both with its "Duration".
+ * Specs 29-36 are estimates (29-32 from the turns they play, spec 03's length per turn; 36 from its play-through of the Meditative set, about six
  * minutes in Chromium on a loaded machine); 50 from
  * its sampling windows (5 s idle + 8 s combat) plus its setup turns, until it has run (#3605);
  * 46 and 47 are #3728's estimates for its seven sizes (`MENU_SIZES`), scaled from 46's 52 s at two
- * sizes (#2181) and 47's 35 s at one, and 51 an estimate, until each is measured;
+ * sizes (#2181) and 47's 35 s at one, until each is measured;
  * once they have run, replace them with measured times (#79).
  */
 const WEIGHTS = {
   "01": 82, "02": 124, "03": 30, "04": 46, "05": 20, "06": 17, "07": 38, "08": 170, "09": 32,
   "10": 4, "11": 26, "12": 43, "13": 49, "14": 22, "15": 17, "16": 28, "17": 55, "18": 51,
-  "19": 99, "20": 28, "21": 20, "22": 28, "23": 11, "24": 26, "25": 36, "26": 11, "27": 4, "50": 90,
-  "28": 25, "29": 40, "30": 25, "31": 25, "32": 15, "33": 15, "34": 20, "35": 20, "36": 360, "46": 180, "47": 200, "51": 90, "99": 1,
+  "19": 39, "20": 28, "21": 20, "22": 28, "23": 11, "24": 26, "25": 36, "26": 11, "27": 4, "50": 90,
+  "28": 25, "29": 40, "30": 25, "31": 25, "32": 15, "33": 15, "34": 20, "35": 20, "36": 360, "46": 180, "47": 200, "51": 73, "99": 1,
 };
 const DEFAULT_WEIGHT = 30;
 

@@ -18,6 +18,7 @@ use indexmap::IndexMap;
 use tokio::sync::OnceCell;
 
 use jackioh_engine::{PLAYER_IDS, PerPlayer, PlayerId, portrait_or_default};
+use jackioh_shared::host::again::in_again_window;
 
 use crate::actor::checkpoint;
 use crate::actor::contracts::one_tx;
@@ -30,7 +31,7 @@ use crate::actor::ws_server::Socket;
 use crate::api::http::{ApiError, ApiErrorCode, lock};
 use crate::app::{App, now_ms};
 use crate::bug_reports::{Finding, FoundIn, refused_rows};
-use crate::config::{GLITCH_BOARDS_SAMPLED, MATCH_CEILING_MINUTES, REMATCH_OFFER_TTL_MS};
+use crate::config::{GLITCH_BOARDS_SAMPLED, MATCH_CEILING_MINUTES};
 use crate::db::store::{
     BotRow, LastBoardKind, MatchClocks, MatchRow, MatchStatus, ProfileKind, QueueMode, StartMatchInput,
     StoreError, Tx,
@@ -708,7 +709,7 @@ impl Registry {
                 .filter(|(_, actor)| {
                     actor
                         .finished_at()
-                        .is_some_and(|finished_at| now - finished_at > REMATCH_OFFER_TTL_MS)
+                        .is_some_and(|finished_at| !in_again_window(finished_at, now))
                 })
                 .map(|(match_id, _)| match_id.clone())
                 .collect();

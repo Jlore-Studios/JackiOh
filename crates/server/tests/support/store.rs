@@ -1,6 +1,5 @@
 //! The helpers every server test file carried its own copy of (#1491, #2385). A copy that behaved
-//! differently keeps a name of its own; `crates/tools/tests/acceptance.rs` (`SHARED_TEST_HELPERS`)
-//! refuses a new copy.
+//! differently keeps a name of its own; `tests/support/shared_helpers.rs` refuses a new copy.
 
 use std::sync::Arc;
 use std::time::Duration;

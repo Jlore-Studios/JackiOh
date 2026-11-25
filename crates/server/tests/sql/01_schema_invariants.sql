@@ -97,7 +97,7 @@ declare
   -- 0030, 0031, 0033, 0035, 0036, 0040, 0043, 0044, 0046, 0048, 0049, 0050, 0051, 0052, 0053, 0054,
   -- 0055, 0056, 0057, 0058, 0059, 0062, 0064, 0065, 0068, 0069, 0070, 0071, 0072, 0073, 0074, 0075,
   -- 0076 and 0079 add no table, 0082 drops custom_cards, which 0037 had added, and 0083, 0084, 0085, 0087, 0088 and
-  -- 0091 add none, nor do 0094, 0095 and 0096.
+  -- 0091 add none, nor do 0094, 0095, 0096, 0098, 0099, 0100 and 0101.
   -- The three loadout tables stay after 0007, unread and unwritten (R254), so they are still expected
   -- here.
   expected constant text[] := array[
@@ -952,9 +952,10 @@ end $$;
 -- with the Stinkyscape set's Drone Core, Weapon, War Doctrine and Swarm (R1857000), and 0069 with
 -- the Training Grounds Legacy cards' Legacy (R2511000), and 0070 with #2521's Resource and
 -- Faction, and 0083 with #3038's Starship (R3038000), and 0087 with #3535's Mindustrial, Mineral,
--- Automa-α, Automa-β, Automa-γ, Automa-δ, Automa-Ω, Automa-ζ and Paperclip (R3535002). Each probe
--- row is removed before the next, and each probe runs in a block of its own, so later checks see
--- only the cards CHECK 10 seeded.
+-- Automa-α, Automa-β, Automa-γ, Automa-δ, Automa-Ω, Automa-ζ and Paperclip (R3535002), and 0099
+-- with #4577's nine (R4577001), Hallucination, Overclock, Batch, Recursion, Jailbreak, Firewall,
+-- Scraper, Singularity and Commander. Each probe row is removed before the next, and each probe
+-- runs in a block of its own, so later checks see only the cards CHECK 10 seeded.
 do $$
 declare
   -- The `Tag` union in crates/engine/src/wire/catalog_types.rs, in its order.
@@ -963,7 +964,8 @@ declare
     'AI', 'Plague', 'Catalyst', 'Prime', 'Acclaimed', 'Wincon', 'Potion', 'Terminus', 'Quest',
     'Otherworldly', 'Other-Origins', 'Jelly Bean', 'Drone Core', 'Weapon', 'War Doctrine', 'Swarm',
     'Legacy', 'Resource', 'Faction', 'Starship', 'Mindustrial', 'Mineral', 'Automa-α', 'Automa-β',
-    'Automa-γ', 'Automa-δ', 'Automa-Ω', 'Automa-ζ', 'Paperclip', 'Token'];
+    'Automa-γ', 'Automa-δ', 'Automa-Ω', 'Automa-ζ', 'Paperclip', 'Hallucination', 'Overclock',
+    'Batch', 'Recursion', 'Jailbreak', 'Firewall', 'Scraper', 'Singularity', 'Commander', 'Token'];
   tag      text;
   refused  boolean;
 begin
@@ -979,14 +981,14 @@ begin
     delete from public.cards where id = 'check18-probe';
   end loop;
 
-  -- All forty on one card: `<@` holds for the whole list, not only one tag at a time.
+  -- All forty-nine on one card: `<@` holds for the whole list, not only one tag at a time.
   begin
     insert into public.cards (id, card_index, name, set_id, type, tags, rarity, token, cost,
                               catalog_version)
     values ('check18-probe', '18', 'Check 18 probe', 'Core', 'Unit', catalog_tags, 'Common', false,
             '1'::jsonb, 'core-1');
   exception when check_violation then
-    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all forty tags';
+    raise exception 'FAIL (CHECK 18): cards_tags_check refuses a card carrying all forty-nine tags';
   end;
   delete from public.cards where id = 'check18-probe';
 
@@ -1477,5 +1479,377 @@ begin
 
   raise notice 'OK (CHECK 25): % SECURITY DEFINER function(s) in public/app, none executable by a client role outside the allowlist', measured;
 end $$;
+
+\echo '=== CHECK 26 (#4468): the public players list walks player_stats_public_games_idx in order and sorts no row ==='
+-- GET /api/stats/players, open to anyone, reads player_stats_list_public (src/db/pg.rs): unbanned players'
+-- public rows, most games first (R654, R3911000), optionally matched on the username key (R1436). Over
+-- 2,000 analysed public rows of several KB of stats, some private and one banned, with sequential scans
+-- priced out, the default page and a search must walk player_stats_public_games_idx (migration 0098) and
+-- sort nothing; without 0098 the planner reads player_stats_pkey whole and sorts every public row. The
+-- probes are pg.rs's query with its binds as literals (no search, then a username key; `limit`
+-- PLAYER_STATS_PAGE_LIMIT, `offset` 0): an edit of pg.rs's `order by` edits this probe too. Rolled back, as CHECK 21.
+begin;
+insert into auth.users (id, email, email_confirmed_at)
+  select gen_random_uuid(), format('check-26-%s@example.test', n), now() from generate_series(1, 2000) as n;
+insert into public.player_stats (profile_id, stats, is_private, updated_at)
+  select u.id,
+         jsonb_build_object('games', (row_number() over (order by u.id)) % 500, 'cards', repeat('x', 4000)),
+         (row_number() over (order by u.id)) % 50 = 0,
+         now() - make_interval(mins => (row_number() over (order by u.id))::integer)
+    from auth.users u
+   where u.email like 'check-26-%';
+update public.profiles set status = 'banned'
+ where id = (select id from auth.users where email = 'check-26-1@example.test');
+analyze public.player_stats;
+analyze public.profiles;
+do $$
+declare
+  probes    text[];
+  plan_text text;
+  line      text;
+begin
+  probes := array[array['the default page', 'null'], array['a search', '''player#12''']];
+  -- Local to this file's transaction, which the rollback below ends.
+  perform set_config('enable_seqscan', 'off', true);
+  for i in 1 .. array_length(probes, 1) loop
+    plan_text := '';
+    for line in execute format(
+      'explain select ps.profile_id, p.username_base, p.username_tag, ps.stats, ps.updated_at
+         from public.player_stats ps
+         join public.profiles p on p.id = ps.profile_id
+        where ps.is_private = false
+          and p.status <> ''banned''
+          and (%1$s::text is null
+               or position(%1$s::text in (p.username_key || coalesce(''#'' || p.username_tag::text, ''''))) > 0)
+        order by
+          case when (ps.stats->>''games'') ~ ''^[0-9]+$'' then (ps.stats->>''games'')::bigint else 0 end desc,
+          ps.updated_at desc,
+          ps.profile_id asc
+        limit 50::int offset 0::int', probes[i][2]) loop
+      plan_text := plan_text || line || E'\n';
+    end loop;
+    if plan_text ~ 'Seq Scan on player_stats\M' then
+      raise exception E'FAIL (CHECK 26): % of player_stats_list_public reads player_stats whole:\n%', probes[i][1], plan_text;
+    end if;
+    if plan_text !~ '\mplayer_stats_public_games_idx\M' or plan_text ~ '\mSort\M' then
+      raise exception E'FAIL (CHECK 26): % of player_stats_list_public sorts player_stats instead of walking player_stats_public_games_idx:\n%', probes[i][1], plan_text;
+    end if;
+  end loop;
+  raise notice 'OK (CHECK 26): the players list''s default page and its search walk player_stats_public_games_idx in order, sort no row and read no player_stats whole';
+end $$;
+rollback;
+
+\echo '=== CHECK 27 (#4468): the daily pay sums read one day of one account''s game rows, each through its own index ==='
+-- A paid game's payout (economy/rewards.rs) and the daily-cap reads (api/results.rs, duos/mod.rs) sum an
+-- account's `game` rows of one UTC day: game_jlore_totals over jlore_grants and fleet_get, which GET
+-- /api/economy also runs, over fleet_track_grants (src/economy/store.rs; R1483000). Over 20 accounts of
+-- 2,000 analysed rows each, spread over 400 days, with sequential scans priced out, both day bounds must
+-- be an Index Cond of jlore_grants_profile_reason_at_idx and fleet_track_grants_profile_reason_at_idx
+-- (migration 0098), never a Filter; without 0098 each sum reads the account's rows through (profile_id,
+-- id) (0045, 0086) and filters the day. The probes are store.rs's queries with their binds as literals.
+-- Rolled back, as CHECK 21.
+begin;
+insert into auth.users (id, email, email_confirmed_at)
+  select gen_random_uuid(), format('check-27-%s@example.test', n), now() from generate_series(1, 20) as n;
+insert into public.jlore_grants (profile_id, delta, reason, ref, at)
+  select u.id, 10, case when n % 5 = 0 then 'quest' else 'game' end, format('check-27-%s', n),
+         now() - make_interval(hours => n * 5)
+    from auth.users u cross join generate_series(1, 2000) as n
+   where u.email like 'check-27-%';
+insert into public.fleet_track_grants (profile_id, xp, reason, ref, at)
+  select u.id, 10, 'game', format('check-27-%s', n), now() - make_interval(hours => n * 5)
+    from auth.users u cross join generate_series(1, 2000) as n
+   where u.email like 'check-27-%';
+analyze public.jlore_grants;
+analyze public.fleet_track_grants;
+do $$
+declare
+  day_ms    constant bigint := 24 * 3600 * 1000;
+  from_ms   constant bigint :=
+    (extract(epoch from date_trunc('day', clock_timestamp() at time zone 'utc')) * 1000)::bigint;
+  until_ms  constant bigint := from_ms + day_ms;
+  profile   uuid;
+  probes    text[];
+  plan_text text;
+  line      text;
+begin
+  select id into profile from auth.users where email = 'check-27-1@example.test';
+  probes := array[
+    array['jlore_grants_profile_reason_at_idx', 'game_jlore_totals', format(
+      'select coalesce(sum(delta), 0)::bigint,
+              coalesce(sum(delta) filter (where ref = %L::text), 0)::bigint
+         from public.jlore_grants
+        where profile_id = %L::uuid and reason = ''game''::text
+          and at >= to_timestamp(%s::double precision / 1000.0)
+          and at < to_timestamp(%s::double precision / 1000.0)', 'check-27-1', profile, from_ms, until_ms)],
+    array['fleet_track_grants_profile_reason_at_idx', 'fleet_get', format(
+      'select coalesce(sum(xp), 0)::bigint from public.fleet_track_grants
+        where profile_id = %L::uuid and reason = ''game''::text
+          and at >= to_timestamp(%s::double precision / 1000.0)
+          and at < to_timestamp(%s::double precision / 1000.0)', profile, from_ms, until_ms)]];
+  -- Local to this file's transaction, which the rollback below ends.
+  perform set_config('enable_seqscan', 'off', true);
+  for i in 1 .. array_length(probes, 1) loop
+    plan_text := '';
+    for line in execute 'explain ' || probes[i][3] loop
+      plan_text := plan_text || line || E'\n';
+    end loop;
+    if plan_text ~ 'Seq Scan on (jlore_grants|fleet_track_grants)\M' then
+      raise exception E'FAIL (CHECK 27): % reads its ledger whole:\n%', probes[i][2], plan_text;
+    end if;
+    if plan_text !~ ('\m' || probes[i][1] || '\M')
+       or plan_text !~ 'Index Cond: [^\n]*\mat >= '
+       or plan_text !~ 'Index Cond: [^\n]*\mat < '
+       or plan_text ~ 'Filter: [^\n]*\mat [<>]' then
+      raise exception E'FAIL (CHECK 27): % filters the account''s rows by day instead of reading the day through %:\n%',
+        probes[i][2], probes[i][1], plan_text;
+    end if;
+  end loop;
+  raise notice 'OK (CHECK 27): game_jlore_totals and fleet_get read one day of one account''s game rows through % and %, and filter no day',
+    'jlore_grants_profile_reason_at_idx', 'fleet_track_grants_profile_reason_at_idx';
+end $$;
+rollback;
+
+\echo '=== CHECK 28 (#4510): the daily list reads its games'' portraits and the daily sweep its due games, each through an index ==='
+-- daily::games::list reads the portraits of every game it lists in one query on matches_pkey
+-- (db/pg.rs matches_portraits), and the hourly sweep reads its due games in two (daily_games_due): the
+-- running games past their deadline through daily_games_due_idx, and the finished games whose match is
+-- still live from the live matches, through matches_status_created_at_idx and daily_games_pkey. One
+-- `or` over both left the finished arm (`ended_at <= $1`) without an index, so Postgres read every
+-- daily game ever played, and no row is deleted. With sequential scans priced out, no plan may read
+-- daily_games or matches whole, and each must name its index. Each probe is pg.rs's query with its binds
+-- as literals (the portraits' ids are uuid literals: a volatile gen_random_uuid() would not be an index
+-- bound). Over 3,000 analysed matches, all of them live or over, and 2,010 daily games, 2,000 of them
+-- finished with their match over, ten finished with it live and ten running. An empty table lets the
+-- planner read `status in ('live','over')`, which every row meets, over the key it was asked. Rolled back,
+-- as CHECK 21.
+begin;
+insert into auth.users (id, email, email_confirmed_at)
+  select gen_random_uuid(), format('check-28-%s@example.test', n), now() from generate_series(1, 2) as n;
+insert into public.matches (id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
+                            catalog_version, ceiling_at, started_at, ended_at)
+  select gen_random_uuid(), case when n <= 20 then 'live' else 'over' end, 'c28-' || n,
+         (select id from auth.users where email = 'check-28-1@example.test'),
+         (select id from auth.users where email = 'check-28-2@example.test'),
+         '[]', '[]', 'core-1', now(), now(), case when n <= 20 then null else now() end
+    from generate_series(1, 3000) as n;
+-- Matches 1-10: a game over whose result was never written (match live); 11-20: a running game;
+-- 21-2010: a game over, its match over.
+insert into public.daily_games (match_id, p1_profile_id, p2_profile_id, mode, per_move_days, clock, board,
+                                next_deadline_at, created_at, ended_at)
+  select m.id, m.p1_profile_id, m.p2_profile_id, 'bo1', 1, '{}', '{}',
+         case when n between 11 and 20 then 2000 + n end, 500 + n,
+         case when n between 11 and 20 then null else 600 + n end
+    from (select m.*, split_part(m.seed, '-', 2)::integer as n from public.matches m
+           where m.seed like 'c28-%') m
+   where n <= 2010;
+analyze public.matches;
+analyze public.daily_games;
+do $$
+declare
+  probes    text[];
+  plan_text text;
+  line      text;
+begin
+  probes := array[
+    array['daily_games_due_idx', 'the running games due',
+      'select d.match_id, d.next_deadline_at as at from public.daily_games d
+        where d.ended_at is null and d.next_deadline_at <= 1000::bigint'],
+    array['matches_status_created_at_idx', 'the finished games whose match is still live',
+      'select d.match_id, d.ended_at as at from public.matches m
+         join public.daily_games d on d.match_id = m.id
+        where m.status = ''live'' and d.ended_at <= 1000::bigint'],
+    array['matches_pkey', 'the portraits read',
+      'select id, p1_portrait, p2_portrait from public.matches
+        where id = any(array[''00000000-0000-4000-8000-000000000001'', ''00000000-0000-4000-8000-000000000002'']::uuid[])
+          and status in (''live'', ''over'')']];
+  -- Local to this block's transaction: the files after this one plan as they always have.
+  perform set_config('enable_seqscan', 'off', true);
+  for i in 1 .. array_length(probes, 1) loop
+    plan_text := '';
+    for line in execute 'explain ' || probes[i][3] loop
+      plan_text := plan_text || line || E'\n';
+    end loop;
+    if plan_text ~ 'Seq Scan on (daily_games|matches)\M' then
+      raise exception E'FAIL (CHECK 28): % reads its table whole:\n%', probes[i][2], plan_text;
+    end if;
+    if plan_text !~ ('\m' || probes[i][1] || '\M') then
+      raise exception E'FAIL (CHECK 28): % does not use %:\n%', probes[i][2], probes[i][1], plan_text;
+    end if;
+    if i = 2 and plan_text !~ '\mdaily_games_pkey\M' then
+      raise exception E'FAIL (CHECK 28): % does not use daily_games_pkey:\n%', probes[i][2], plan_text;
+    end if;
+  end loop;
+  raise notice 'OK (CHECK 28): the sweep''s two reads and the list''s portraits read go through % and read no table whole',
+    'daily_games_due_idx, matches_status_created_at_idx with daily_games_pkey, and matches_pkey';
+end $$;
+rollback;
+
+\echo '=== CHECK 29 (#4712): migration 0101''s indexes exist, and the replays list, the record, the board sample and the reaper read through an index ==='
+-- Migration 0101 indexes three reads of src/db/pg.rs that read rows they threw away: replays_list_with_modes
+-- (GET /api/replays, GET /api/friends/recent), one arm per seat on matches_p1_over_ended_idx and
+-- matches_p2_over_ended_idx, each the list's `order by` behind a seat and partial on `status = 'over'`;
+-- results_record_for (GET /api/auth/me), one count per seat on results_p1_record_idx and
+-- results_p2_record_idx; and last_boards_sample_others (every match start, R678), the boards from a
+-- random key on through last_boards_server_sample_idx, partial on the sample's filters. The reaper's read
+-- of the live matches past their ceiling (matches_past_ceiling) reads 0004's matches_status_ceiling_at_idx.
+-- First each index is held to its shape (its key, what it includes and what it is partial on). Then,
+-- over 3,000 analysed matches among 30 accounts, each in both seats, 2,980 of them finished with a result
+-- and an action and 20 live, with sequential scans priced out, each probe must read through its index and
+-- read no table whole: the page walks both seats' indexes in order and sorts nothing, the record reads
+-- each seat apart (no BitmapOr), the sample walks its index from a key. Each probe is pg.rs's query with
+-- its binds as literals (the replays probe its page, which the indexes serve): an edit there edits it here
+-- too. Rolled back, as CHECK 21.
+do $$
+declare
+  -- Each index and a pattern its definition must match.
+  expected constant text[][] := array[
+    ['matches_p1_over_ended_idx',
+     'ON public\.matches USING btree \(p1_profile_id, ended_at DESC NULLS LAST, id DESC\) WHERE \(status = ''over''::text\)$'],
+    ['matches_p2_over_ended_idx',
+     'ON public\.matches USING btree \(p2_profile_id, ended_at DESC NULLS LAST, id DESC\) WHERE \(status = ''over''::text\)$'],
+    ['results_p1_record_idx',
+     'ON public\.results USING btree \(p1_profile_id\) INCLUDE \(winner_profile_id, reason\)$'],
+    ['results_p2_record_idx',
+     'ON public\.results USING btree \(p2_profile_id\) INCLUDE \(winner_profile_id, reason, p1_profile_id\)$'],
+    ['last_boards_server_sample_idx',
+     'ON public\.last_boards USING btree \(profile_id\) WHERE \(\(kind = ''server''::text\) AND \(jsonb_array_length\(board\) > 0\)\)$']];
+  definition text;
+begin
+  for i in 1 .. array_length(expected, 1) loop
+    select indexdef into definition from pg_indexes
+     where schemaname = 'public' and indexname = expected[i][1];
+    if not found then
+      raise exception 'FAIL (CHECK 29): index public.% is missing', expected[i][1];
+    end if;
+    if definition !~ expected[i][2] then
+      raise exception E'FAIL (CHECK 29): index public.% is not the shape migration 0101 built:\n%', expected[i][1], definition;
+    end if;
+  end loop;
+  raise notice 'OK (CHECK 29): migration 0101''s % indexes are there, each its shape', array_length(expected, 1);
+end $$;
+begin;
+insert into auth.users (id, email, email_confirmed_at)
+  select gen_random_uuid(), format('check-29-%s@example.test', n), now() from generate_series(1, 30) as n;
+insert into public.matches (id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
+                            catalog_version, ceiling_at, started_at, ended_at)
+  select gen_random_uuid(), case when n <= 20 then 'live' else 'over' end, 'c29-' || n, a.id, b.id,
+         '[]', '[]', 'core-1', now() - make_interval(mins => n), now() - make_interval(mins => n + 60),
+         case when n <= 20 then null else now() - make_interval(mins => n) end
+    from generate_series(1, 3000) as n
+    join (select id, row_number() over (order by id) as k from auth.users where email like 'check-29-%') a
+      on a.k = n % 30 + 1
+    join (select id, row_number() over (order by id) as k from auth.users where email like 'check-29-%') b
+      on b.k = (n + 7) % 30 + 1;
+insert into public.results (match_id, p1_profile_id, p2_profile_id, winner_profile_id, reason, turns,
+                            p1_rating_before, p1_rating_after, p2_rating_before, p2_rating_after, ended_at)
+  select id, p1_profile_id, p2_profile_id, p1_profile_id, 'concede', 5, 1000, 1000, 1000, 1000, ended_at
+    from public.matches where seed like 'c29-%' and status = 'over';
+insert into public.match_actions (match_id, seq, player_id, player_seat, nonce, action)
+  select id, 1, p1_profile_id, 'p1', 'c29', '{"type":"endTurn"}'
+    from public.matches where seed like 'c29-%' and status = 'over';
+insert into public.last_boards (profile_id, kind, board)
+  select id, 'server', '[{"defId":"core-001","radiant":false}]' from auth.users where email like 'check-29-%';
+analyze public.matches;
+analyze public.results;
+analyze public.match_actions;
+analyze public.last_boards;
+do $$
+declare
+  profile   uuid;
+  probes    text[];
+  plan_text text;
+  line      text;
+begin
+  select id into profile from auth.users where email = 'check-29-1@example.test';
+  probes := array[
+    array['the replays list''s page', format(
+      'with page as (
+         select u.id, u.ended_at from (
+           (select m.id, m.ended_at from public.matches m
+             where m.status = ''over'' and m.p1_profile_id = %1$L::uuid
+               and exists (select 1 from public.results r where r.match_id = m.id)
+               and exists (select 1 from public.match_actions a where a.match_id = m.id)
+             order by m.ended_at desc nulls last, m.id desc
+             limit 21::bigint)
+           union all
+           (select m.id, m.ended_at from public.matches m
+             where m.status = ''over'' and m.p2_profile_id = %1$L::uuid
+               and exists (select 1 from public.results r where r.match_id = m.id)
+               and exists (select 1 from public.match_actions a where a.match_id = m.id)
+             order by m.ended_at desc nulls last, m.id desc
+             limit 21::bigint)
+         ) u
+         order by u.ended_at desc nulls last, u.id desc
+         limit 11::bigint offset 10::bigint
+       )
+       select id from page', profile)],
+    array['the record', format(
+      'select sum(wins)::bigint as wins, sum(losses)::bigint as losses, sum(draws)::bigint as draws from (
+         select count(*) filter (where winner_profile_id = %1$L::uuid) as wins,
+                count(*) filter (where winner_profile_id is distinct from %1$L::uuid
+                                   and ((winner_profile_id is not null and reason <> all(%3$L::text[]))
+                                        or (winner_profile_id is null and reason = any(%2$L::text[])))) as losses,
+                count(*) filter (where (winner_profile_id is null and reason <> all(%2$L::text[]))
+                                   or (winner_profile_id is distinct from %1$L::uuid and winner_profile_id is not null
+                                       and reason = any(%3$L::text[]))) as draws
+           from public.results where p1_profile_id = %1$L::uuid
+         union all
+         select count(*) filter (where winner_profile_id = %1$L::uuid),
+                count(*) filter (where winner_profile_id is distinct from %1$L::uuid
+                                   and ((winner_profile_id is not null and reason <> all(%3$L::text[]))
+                                        or (winner_profile_id is null and reason = any(%2$L::text[])))),
+                count(*) filter (where (winner_profile_id is null and reason <> all(%2$L::text[]))
+                                   or (winner_profile_id is distinct from %1$L::uuid and winner_profile_id is not null
+                                       and reason = any(%3$L::text[])))
+           from public.results where p2_profile_id = %1$L::uuid and p1_profile_id is distinct from %1$L::uuid
+       ) seats', profile, '{hero-death,concede,disconnect,won-by-effect,voted-out,fled-decisive}', '{fled}')],
+    array['the board sample', format(
+      'with pivot as materialized (select gen_random_uuid() as key)
+       select board from (
+         (select board, false as wrapped, profile_id from public.last_boards
+           where kind = ''server'' and jsonb_array_length(board) > 0
+             and profile_id <> all(array[%1$L]::uuid[])
+             and profile_id >= (select key from pivot)
+           order by profile_id limit 2::int)
+         union all
+         (select board, true, profile_id from public.last_boards
+           where kind = ''server'' and jsonb_array_length(board) > 0
+             and profile_id <> all(array[%1$L]::uuid[])
+             and profile_id < (select key from pivot)
+           order by profile_id limit 2::int)
+       ) sample
+       order by wrapped, profile_id
+       limit 2::int', profile)],
+    array['the reaper''s read',
+      'select m.id from public.matches m
+        where m.status = ''live'' and m.ceiling_at <= to_timestamp(1000000000000::double precision / 1000.0)
+          and m.p2_profile_id is not null
+          and not exists (select 1 from public.daily_games d where d.match_id = m.id)']];
+  -- Local to this file's transaction, which the rollback below ends.
+  perform set_config('enable_seqscan', 'off', true);
+  for i in 1 .. array_length(probes, 1) loop
+    plan_text := '';
+    for line in execute 'explain (costs off) ' || probes[i][2] loop
+      plan_text := plan_text || line || E'\n';
+    end loop;
+    if plan_text ~ 'Seq Scan on (matches|results|last_boards)\M' then
+      raise exception E'FAIL (CHECK 29): % reads its table whole:\n%', probes[i][1], plan_text;
+    end if;
+    if (i = 1 and (plan_text !~ '\mmatches_p1_over_ended_idx\M' or plan_text !~ '\mmatches_p2_over_ended_idx\M'
+                   or plan_text ~ '(^|\n) *(->  )?(Incremental )?Sort\n'))
+       or (i = 2 and (plan_text ~ '\mBitmapOr\M'
+                      or plan_text !~ 'Index Cond: \(p1_profile_id = '
+                      or plan_text !~ 'Index Cond: \(p2_profile_id = '))
+       or (i = 3 and plan_text !~ '\mlast_boards_server_sample_idx\M')
+       or (i = 4 and plan_text !~ '\mmatches_status_ceiling_at_idx\M') then
+      raise exception E'FAIL (CHECK 29): % does not read through its index:\n%', probes[i][1], plan_text;
+    end if;
+  end loop;
+  raise notice 'OK (CHECK 29): the replays list''s page walks % in order and sorts nothing, the record reads each seat apart, the sample walks % and the reaper reads %',
+    'matches_p1_over_ended_idx and matches_p2_over_ended_idx', 'last_boards_server_sample_idx',
+    'matches_status_ceiling_at_idx';
+end $$;
+rollback;
 
 \echo '=== ALL CHECKS RAN ==='
