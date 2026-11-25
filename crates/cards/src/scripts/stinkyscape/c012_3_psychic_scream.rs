@@ -203,6 +203,36 @@ mod tests {
             );
         }
 
+        /// R4821000: R11 ends the token on its way into a deck with room as well, reported `ceased`
+        /// as a full deck reports it, and no `shuffledIn` names it.
+        #[test]
+        fn r4821000_a_unit_token_into_a_deck_with_room_is_gone_reported_ceased_never_shuffled_in() {
+            let mut s = scenario(json!({
+                "p1": { "hand": [SCREAM, FILLER], "field": [SHEEP, VANILLA], "mana": 10 },
+                "p2": { "hand": [FILLER], "library": [FILLER, FILLER, FILLER] },
+            }));
+            let token = s.unit_at(P1, 1).id.clone();
+            let unit = s.unit_at(P1, 2).id.clone();
+
+            s.play(SCREAM, json!({}));
+
+            s.expect_in_zone(&token, "gone");
+            s.expect_in_zone(&unit, "library");
+            assert_eq!(s.pile(P2, "library").len(), 4);
+            assert_eq!(shuffled(&s), vec![unit]);
+            let overflows: Vec<_> = s
+                .events()
+                .iter()
+                .filter_map(|event| match event {
+                    GameEvent::LibraryOverflow { player, instance_id, outcome, .. } => {
+                        Some((*player, instance_id.clone(), *outcome))
+                    }
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(overflows, vec![(P2, token, LibraryOverflowOutcome::Ceased)]);
+        }
+
         #[test]
         fn r1867006_the_opponent_later_draws_the_casters_card_as_their_own() {
             let mut s = scenario(json!({

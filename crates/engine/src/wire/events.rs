@@ -528,6 +528,7 @@ pub enum GameEvent {
     /// effect was creating is `notCreated` (it never existed, #33's and #90's copies), an existing card
     /// goes to its owner's `graveyard` (its `enteredGraveyard` follows), and an existing unit-token card
     /// has `ceased` to exist (R11). `player` owns the library. `instanceId` and `defId` follow R97.
+    /// R4821000: `ceased` also reports a unit-token card R11 ends on its way into a library with room.
     LibraryOverflow {
         player: PlayerId,
         instance_id: String,
