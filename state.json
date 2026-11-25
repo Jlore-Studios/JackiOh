@@ -17766,7 +17766,8 @@
       "strikes": 0,
       "suggestion": true,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 0,
+      "waiting_comment": 7154758341
     },
     "4735": {
       "action": "review",
