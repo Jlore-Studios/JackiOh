@@ -20462,15 +20462,8 @@
       "waiting_comment": 7149580518
     },
     "4832": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45654958965",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-25T16:40:54Z",
-        "until": "2026-11-25T17:10:54Z"
-      },
       "died": 1,
       "failures": 0,
       "forced": false,
@@ -20483,10 +20476,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- ## Goal\n- Fix S+ #102 Cosmic Bard's Radiant face so every drawn Unit still in the hand ends at the cheapest drawn price even when a drawn Unit carries a `costMod` raise larger than that price. The fix stays in the card script: when `cost_mod > cheapest`, set the override to 0 and take the excess off with a h\u2026\n- ## Files to touch\n- | File | New / change | What changes |\n- |---|---|---|\n- | `crates/cards/src/scripts/stinkyscape_plus/c102_cosmic_bard.rs` | change | Cry hook: per-card override/mod branch; `pub fn script_kept_4832` (today's behavior); two new tests in `mod tests` |\n- | `crates/cards/src/history.rs` | change | Add `c102_cosmic_bard` to the `stinkyscape_plus` import block; append one `KEPT_SCRIPTS` row keyed `\"fragment:<stem>\"` |\n- | `crates/cards/patches/pending/<slug>.json` | new | Created by `cargo jackioh patches \u2026 --plays stinkyscapeplus-102`; hand-written `player` note added after |\n- | Must not touch | \u2014 | `.github/`, `.harness/`, `.squishy/`, `bot/`; `crates/engine/` (no verb change); `apps/web/`; `spec/` (no new ruling: R3568001 already states this behavior and its `proven_in` already lists the card file) |\n- Governing spec: \u00a78.12 row 102, \u00a76.2 Combo, \u00a76.3 Cost, \u00a72.4 draw, R65, R66, R78, R129, R135, R801, R3568001, R4779000 (fragment-keyed kept script).\n- ## Steps\n- 1. In `crates/cards/src/scripts/stinkyscape_plus/c102_cosmic_bard.rs`, read the cry hook (`fn bard`, lines 42\u201366) and `crates/engine/src/effects/cost.rs` (`set_cost_override` clamps at 0, line 175; `set_cost_mod` adds to `cost_mod`; both honor `inHandOnly` and emit `CostChanged`). Also read `docs/A\u2026\n- 2. Replace the `effects.extend(drawn.iter().map(... set_cost_override((cheapest - card.cost_mod).max(0), inHandOnly) ...))` block with a per-card `flat_map` over the same pre-draw `drawn` snapshot (keep reading `card.cost_mod` from that snapshot, never from live state after the draws). Per card, in\u2026\n- 3. Add `pub fn script_kept_4832() -> CardScripts` to the same card file, building base and radiant exactly as today's `bard(false)` / `bard(true)` do (copy the current override-only mapping). Keep `pub fn script()` on the fixed logic. Follow the `script_v0_5_2` precedent (e.g. `crates/cards/src/scr\u2026\n- 4. Add test `r3568001_radiant_sets_a_drawn_unit_carrying_a_larger_raise_to_the_cheapest` in the file's `mod tests`, reusing its `scenario`, `PlayerId::P1` and stand-in style: `crate::register_all();`, p1 mana 10, hand `[stand-in (0) Spell, { bard, radiant: true }]`, library `[{ FREE_UNIT (stand-in \u2026\n- 5. Add a kept-script test in the same `mod tests` mirroring the new test's setup and plays inside `crate::under_kept(ID, super::super::script_kept_4832(), || { \u2026 })` (see `crates/cards/src/lib.rs:311` and the `under_kept` use at `crates/cards/src/scripts/meditative/c102_catboy_maid_ssr.rs:350`), as\u2026\n- 6. Run `cargo jackioh patches \"<title>\" --source \"#4832\" --notes \"<what changed>\" --plays stinkyscapeplus-102` (script changed how the card plays; no catalog change, so `--plays`, no `--rule`/`--visual`), then hand-write the `player` note in the new fragment JSON: one line under `fixes` per `docs/i\u2026\n- 7. In `crates/cards/src/history.rs`, add `c102_cosmic_bard` to the `use crate::scripts::stinkyscape_plus::{\u2026}` block and append `(c102_cosmic_bard::ID, \"fragment:<stem>\", c102_cosmic_bard::script_kept_4832)` at the end of `KEPT_SCRIPTS`, with `<stem>` exactly the new pending fragment's file stem (R\u2026\n- ## Tests\n- - `crates/cards/src/scripts/stinkyscape_plus/c102_cosmic_bard.rs`, `r3568001_radiant_sets_a_drawn_unit_carrying_a_larger_raise_to_the_cheapest`: raised (0)+2 and plain (1) both price 1 after Radiant Combo; fails before the fix (raised prices 2).\n- - Same file, kept-script test (name it `kept_script_before_4832_still_prices_the_raised_unit_at_2`): same position under `under_kept` with `script_kept_4832`, asserts the raised card costs 2 (pins the kept script to the replaced behavior).\n- - Existing tests in the file (`r3568001_a_cost_change_a_card_carries_is_taken_off_so_both_cost_the_cheapest` with raise equal to cheapest, X-cost, hand-cap, no-Combo) must stay green unchanged.\n- - Commands: `cargo test -p jackioh-cards c102_cosmic_bard`; `cargo clippy -p jackioh-cards --all-targets -- -D warnings`; `cargo fmt --check`; `cargo jackioh patches check`; `cargo jackioh catalog check`; `cargo jackioh spec check`.\n- ## Done when\n- - [ ] `cost_mod > cheapest` drawn Unit ends at the cheapest price (override 0 plus hand-only mod); negative, zero, and smaller raises behave exactly as today.\n- - [ ] New behavior test and kept-script test pass; every existing `c102_cosmic_bard` test passes unmodified.\n- - [ ] Pending fragment exists with `--plays stinkyscapeplus-102` and a hand-written `player` note; `KEPT_SCRIPTS` row uses the fragment's stem.\n- - [ ] The six checks under Tests all pass.\n- ## Risks\n- - Two `CostChanged` events per raised card (override then mod) instead of one; both ride the existing hand-zone `emit_cost` path, so opponent redaction (`crates/engine/src/view_for.rs:2482`, hidden hand card) is unchanged, and deterministic drawn-order emission keeps replays stable.\n- - A drawn Unit the hand cap burns: both new effects are `inHandOnly` and fizzle exactly like today's override, per R3568001.\n- - Purity (CLAUDE.md rule 4): the card file composes existing `set_cost_override` / `set_cost_mod` verbs only; `crates/engine` is untouched.\n- ## Open questions\n- None.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4832 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4832/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-25T01:55:31Z",
       "owner_why": "it took it up",
@@ -20499,9 +20491,9 @@
       "provider": "muse",
       "queued_at": "2026-11-25T03:36:05Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45654958965",
+      "run_id": "pending:c93f047f-1795624926",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-25T16:32:16Z",
+      "started_at": "2026-11-25T16:42:50Z",
       "stop_requested": false,
       "strike_log": [
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
@@ -24687,9 +24679,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T16:32:16Z",
+    "at": "2026-11-25T16:42:50Z",
     "url": "",
-    "what": "plan #4832 on muse"
+    "what": "build #4832 on muse"
   },
   "last_sweep": {
     "at": "2026-11-25T16:21:05Z",
