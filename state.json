@@ -43947,6 +43947,14 @@
         "title": "Patch: a card or hero an open target prompt lights on the board answers it when clicked, as the Plague Counter placement already does",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-25T02:04:32Z",
+        "number": 4830,
+        "reason": "no bug, regression or measurement shows co-op view size costing anyone anything. A new budget judged on every pull request, set from a single co-op game, is upkeep every later change to the Duos view must satisfy. Worth adding the first time co-op payloads grow enough to matter.",
+        "title": "Patch: the perf budgets hold a Duos seat's view size, as they hold a 1v1 seat's",
+        "verdict": "came to nothing",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "declined": [
@@ -44739,6 +44747,13 @@
         "number": 4769,
         "reason": "the blur is cosmetic (R3548001), hides one field of a card in its owner's view alone, and the card's other fields usually still name it, so a player who knows the cards reads through it as the AI does. No player can see the AI read past its own blur, and the issue says self-play can't measure any gain. That leaves a hard change to `redact` and `determinize`, with new sampling in every decision, for nothing anyone would notice.",
         "title": "Patch: the AI reads its Tipsy-blurred cards as blurred",
+        "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-25T02:04:32Z",
+        "number": 4830,
+        "reason": "no bug, regression or measurement shows co-op view size costing anyone anything. A new budget judged on every pull request, set from a single co-op game, is upkeep every later change to the Duos view must satisfy. Worth adding the first time co-op payloads grow enough to matter.",
+        "title": "Patch: the perf budgets hold a Duos seat's view size, as they hold a 1v1 seat's",
         "why": "rejected by @jgoetzmann"
       }
     ],
