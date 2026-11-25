@@ -18996,11 +18996,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-24T20:58:43Z",
+        "at": "2026-11-25T04:36:35Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "CLAUDE.md rule 11 line 3 (design across crates): crates/tools (ship/check), crates/cards (build/history) and apps/web (Patch type) must agree on the new fragment field and its resolution"
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "rule 3, design across crates: crates/tools (patches ship/check) and crates/cards (build.rs, history.rs) must agree on the new `fragment` record and on how a kept key resolves, and a wrong resolution changes which script old replays run"
       },
       "failures": 0,
       "forced": false,
