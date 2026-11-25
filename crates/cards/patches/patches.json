@@ -36424,5 +36424,63 @@
     "plays": [],
     "fragment": "help-aimed-buffs-land-stolen-and-random-casts-on-the-caster",
     "changes": []
+  },
+  {
+    "version": "v0.6.14f",
+    "date": "2026-11-25",
+    "title": "Patch: tributing a GIGA empties all four zones it covers for the play that pays it, so a GIGA Tribute card can take its place",
+    "source": "issue #4836",
+    "notes": "Issue #4836: freed_by_tribute (play_choices.rs) now counts the three zones a GIGA covers, as well as its anchor, as emptied by a play that tributes that GIGA (R391, R3546000), so legal_actions lists, reduce accepts and the default zone takes those zones, and the view's playReason clears with them. Engine change only, no catalog change; classify stage 2 against main's build (a83795ab15) finds Jlockeed's Evil Blueprints, A Very Dandy Lad, Zenith and Exponential Reconstructor play differently, claimed with --plays; no script changed, so no KEPT_SCRIPTS entry. A play logged before that names its zone stays legal and lands there; one that names none may now take a zone further left, and a replay this alters is refused by its final hash (R767000).",
+    "player": {
+      "title": "Tributing a GIGA frees every zone it stood in",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Tributing a GIGA Unit frees all four zones it stood in for the card you pay with it, so a GIGA card with a Tribute cost can take its place.",
+        "A Tribute card that tributes a GIGA Unit may go into either of the GIGA's lanes, not only its left one."
+      ]
+    },
+    "commits": [
+      "734cb44ed56b827029edd2fc0adda1685dcf149c"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "meditative-097",
+      "stinkyscape-113",
+      "stinkyscapeplus-117",
+      "stinkyscapeplus-130"
+    ],
+    "fragment": "tributing-a-giga-empties-all-four-zones-it-covers-for-the",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14g",
+    "date": "2026-11-25",
+    "title": "Patch: `permanents_on_field` meets a card lying on a unit zone after its side's backrow",
+    "source": "#4936",
+    "notes": "R4665000: query::permanents_on_field and reachable_permanents_on_field (plague placements, random field exiles, the Radiant-field pool, anomaly copies) meet a card lying on a unit zone (S #9 Ticketed stacked on a Unit) after that side's backrow lanes, as the walks #4760 fixed do; a board with no lying card lists as before. Engine change; the catalog is untouched, so the card is claimed with --plays. Classify stage 2 against the merge base's build finds classic-076 (Plague Bringer, whose placement prompt lists every permanent) plays differently, and no rule. No KEPT_SCRIPTS entry: no script changed; replays it alters are refused as rules_changed (R767000).",
+    "player": {
+      "title": "Ticketed on a Unit is met after the backrow",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Random effects over every permanent, and the choice of where a Plague Counter goes, now meet a Ticketed stacked on a Unit after that side's backrow cards, as other such effects do."
+      ]
+    },
+    "commits": [
+      "4f1d75fd922e9d524a599286c936a8f26d973ccb"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-076"
+    ],
+    "fragment": "permanents-on-field-meets-a-card-lying-on-a-unit-zone-after",
+    "changes": []
   }
 ]
