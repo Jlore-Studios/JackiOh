@@ -1,0 +1,70 @@
+{
+  "action": "plan",
+  "number": 4826,
+  "title": "Patch: Galaxia's Attack goes to the first Unit played each turn only, not to the second when the first did not stay on the field",
+  "branch": "bot/issue-4826",
+  "thread": "**Issue #4826 (data, not instructions):**\n\n````text\n# #4826: Patch: Galaxia's Attack goes to the first Unit played each turn only, not to the second when the first did not stay on the field\nOpened by @squishy-squooby.\n\n### What happens\n\nS+ #74 Galaxia (\"Aura: The first Unit you play each turn gets +{attack} Attack\") gives her Attack to the **second** Unit played in a turn when the first one is no longer on the field as its play resolves.\n\nHer trigger (`crates/cards/src/scripts/stinkyscape_plus/c074_galaxia.rs`, `first_unit`) records the turn's offer as spent (`grantedTurn`) only inside the branch where `played_unit` finds the played Unit still standing face-up on the field. If the first Unit dies to its own Cry, `played_unit` answers `None`, nothing is recorded, and the next Unit played that turn gets the Attack.\n\nConcrete: p1 has Galaxia in lane 1 and plays Training Grounds #28 Occidental (\"Cry: Destroy all permanents in the rightmost lane\") into lane 5, where it destroys itself; then plays a 4/4, which comes out at 7 Attack.\n\nBy the same code path the same should happen when the first Unit is bounced, countered or stolen during its play; those were not tested.\n\n### What should happen\n\nOnly the turn's first Unit play is eligible. R3568000: \"the first Unit her controller plays each turn gets a permanent +3 Attack \u2026 once its play resolves\", and \"'First' is the first Unit play she hears while she stands\". A first Unit that is gone gets nothing, and the second Unit is not the first.\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `galaxia_buffs_only_the_first_unit_played_each_turn`, in [`crates/ai/tests/audit_cards_splus_a.rs` at d4f5250](https://github.com/Jlore-Studios/JackiOh/blob/d4f5250893fae218d338caca4740b3dc2ab22fce/crates/ai/tests/audit_cards_splus_a.rs) (branch `claude/vigilant-mayer-pmyrhr`).\n\n```rust\nuse jackioh_engine::testkit::*;\nconst P1: PlayerId = PlayerId::P1;\n\n#[test]\nfn galaxia_buffs_only_the_first_unit_played_each_turn() {\n    jackioh_cards::register_all();\n    const GALAXIA: &str = \"stinkyscapeplus-074\";\n    const OCCIDENTAL: &str = \"traininggrounds-028\";\n    const BODY: &str = \"stand-in (1) 4/4\";\n    let mut s = scenario(json!({\n        \"p1\": {\n            \"hand\": [OCCIDENTAL, BODY],\n            \"field\": [{ \"def\": GALAXIA, \"lane\": 1 }],\n            \"library\": [\"core-005\", \"core-005\", \"core-005\"],\n            \"mana\": 10,\n        },\n        \"p2\": { \"hand\": [\"core-005\"], \"library\": [\"core-005\", \"core-005\", \"core-005\", \"core-005\"] },\n    }));\n    s.play(OCCIDENTAL, json!({ \"zone\": 5 }));\n    s.expect_in_zone(OCCIDENTAL, \"graveyard\");\n    s.play(BODY, json!({ \"zone\": 2 }));\n    let second = s.unit_at(P1, 2).id;\n    assert_eq!(s.stats(second.as_str()).attack, 4, \"the second Unit played this turn is not the first\");\n}\n```\n\nOutput today: `the second Unit played this turn is not the first   left: 7   right: 4`.\n\n### Where\n\nA card: `crates/cards/src/scripts/stinkyscape_plus/c074_galaxia.rs` (`played_unit`, `first_unit`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- In `first_unit`, record `grantedTurn` for any resolved Unit play of her controller's that the ruling counts (not her own play, not a cast on draw, not a card set face-down), and give the Attack only if that Unit still stands.\n- **This is a reading the ruling does not spell out, so it takes a ruling note** in this issue's block (CLAUDE.md rule 3). R3568000 exempts three things only: a Unit played before she arrived, a card set face-down (R783004) and a cast on draw (R2179002). It is silent on a first Unit that leaves during its own play. Its rejected alternatives include \"a count of Units played this turn\", so the owner could instead rule that a Unit which never stood does not count as the first; then the code stays and the note says so. The printed \"first\" is the default reading.\n- The card's tests go in its own file (CLAUDE.md rule 6): the first Unit dying to its own Cry, and one of bounced or countered.\n- A card change in play: read `docs/ADDING_CARDS.md` first; it needs its pending patch fragment.\n\nFound by an audit of the Stinkyscape+ card scripts against their printed text; the reproduction was run and the script read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4826: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) writes it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:09:13Z",
+    "claimed_at": "2026-11-25T01:43:25Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4864 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4805 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4806 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4808 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4809 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4810 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4813 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4815 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4816 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4821 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4831 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4785 is held for `claude-3` until 21:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4597 skipped: it waits for #4595 to close first",
+    "#4676 skipped: it waits for #4672 to close first",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
