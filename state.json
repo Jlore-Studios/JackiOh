@@ -26935,10 +26935,6 @@
       "refused_until": "2026-11-25T03:20:00Z",
       "spent": [
         {
-          "at": "2026-11-14T03:24:59Z",
-          "minutes": 32.5
-        },
-        {
           "at": "2026-11-14T03:37:09Z",
           "minutes": 63.7
         },
@@ -27733,16 +27729,13 @@
         {
           "at": "2026-11-25T01:09:42Z",
           "minutes": 21.3
+        },
+        {
+          "at": "2026-11-25T01:17:17Z",
+          "minutes": 12.9
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-13T12:41:02Z",
-          "cache": 696613,
-          "cost": 0.8874,
-          "input": 19,
-          "output": 11128
-        },
         {
           "at": "2026-11-13T12:51:04Z",
           "cache": 2283644,
@@ -29135,16 +29128,22 @@
           "cost": 5.7343,
           "input": 185,
           "output": 84362
+        },
+        {
+          "at": "2026-11-25T01:17:17Z",
+          "cache": 3365172,
+          "cost": 2.0817,
+          "input": 93,
+          "output": 20368
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-25T03:20:00Z",
-          "utilization": 1.0
+          "utilization": 0.72
         },
-        "observed_at": "2026-11-25T01:09:42Z",
-        "rejected_resets_at": "2026-11-25T03:20:00Z",
-        "status": "rejected"
+        "observed_at": "2026-11-25T01:17:17Z",
+        "status": "allowed"
       }
     },
     "claude-4": {
@@ -44589,6 +44588,18 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-25T00:06:59Z,claude-3,stream,call,45515060897,61,2026-11-25T03:20:00Z,,,allowed,,,",
+      "2026-11-25T00:07:29Z,claude-3,stream,call,45515060897,62,2026-11-25T03:20:00Z,,,allowed,,,",
+      "2026-11-25T00:08:29Z,claude-3,stream,call,45515060897,63,2026-11-25T03:20:00Z,,,allowed,,,",
+      "2026-11-25T00:14:01Z,claude-3,stream,call,45515060897,67,2026-11-25T03:20:00Z,,,allowed,,,",
+      "2026-11-25T00:14:18Z,claude-3,stream,call,45515060897,68,2026-11-25T03:20:00Z,,,allowed,,,",
+      "2026-11-25T00:14:33Z,claude-3,stream,call,45515060897,69,2026-11-25T03:20:00Z,,,allowed,,,",
+      "2026-11-25T00:18:33Z,claude-3,stream,call,45515060897,71,2026-11-25T03:20:00Z,,,allowed,,,",
+      "2026-11-25T00:19:18Z,claude-3,stream,call,45515060897,72,2026-11-25T03:20:00Z,,,allowed,,,"
+    ]
   },
   "version": 1
 }
