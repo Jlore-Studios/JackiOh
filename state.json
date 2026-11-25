@@ -20395,7 +20395,7 @@
       "question": "",
       "queued_at": "2026-11-24T21:33:49Z",
       "requested_by": "squishy-squooby",
-      "round_tier": "strong",
+      "round_tier": "",
       "run_id": "45515250003",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-25T00:05:03Z",
