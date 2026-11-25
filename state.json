@@ -21292,15 +21292,8 @@
       "taken_asks": []
     },
     "4852": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45610705810",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-25T12:28:47Z",
-        "until": "2026-11-25T12:58:47Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -21312,10 +21305,9 @@
         "reason": "planned on opus",
         "trail": "/engine/src/replay.rs crates/engine/src/state/*.rs 2>/dev/null | head; grep -n \\\"pub fn new\\\" crates/engine/src/wire/actions.rs |\u2026\n- Bash: {\"command\": \"mkdir -p /tmp/proto4852/src /tmp/proto4852/tests && cd /tmp/proto4852 && W=/home/runner/work/_temp/work/item-4852 && cp $W/Cargo.lock . && cp $W/rust-toolchain.toml . && cat > Cargo.toml\u2026\n- Bash: {\"command\": \"cd /tmp/proto4852 && timeout 1500 cargo test --test void -- --nocapture > /tmp/proto4852/out.log 2>&1; echo exit $? >> /tmp/proto4852/out.log\", \"description\": \"Build and run the void pro\u2026\n- Bash: {\"command\": \"grep -n \\\"^#\\\" docs/issues-and-patches.md | head -40\", \"description\": \"List issues-and-patches headings\"}\n- Bash: {\"command\": \"sed -n 135,192p docs/issues-and-patches.md\", \"description\": \"Read version numbers section\"}\n- Bash: {\"command\": \"grep -n \\\"crates/run\\\\|crates/shared\\\\|\\\\\\\"crates/\\\" crates/tools/src/classify.rs | head -20\", \"description\": \"Check classifier path treatment\"}\n- Bash: {\"command\": \"sed -n 280,335p crates/tools/src/classify.rs\", \"description\": \"Read the classifier path classes\"}\n- Bash: {\"command\": \"grep -n \\\"runReport\\\\|run_fight_report\\\\|RunReport\\\" crates/shared/README.md apps/web/README.md docs/dungeon-run.md docs/implicit-states.md 2>/dev/null | head -20; grep -n \\\"dungeon\\\\|Du\u2026\n- Bash: {\"command\": \"sed -n 410,440p docs/implicit-states.md\", \"description\": \"Read implicit-states A section\"}\n- Bash: {\"command\": \"sed -n 149,200p docs/implicit-states.md | cut -c1-600\", \"description\": \"Read the dungeon run section of implicit-states\"}\n- Bash: {\"command\": \"sed -n 40,50p crates/run/README.md; sed -n 100,104p crates/run/README.md; sed -n 386,394p docs/dungeon-run.md; sed -n 412,420p docs/dungeon-run.md\", \"description\": \"Read README and desig\u2026\n- Bash: {\"command\": \"tail -5 /tmp/proto4852/out.log\", \"description\": \"Check prototype build progress\"}\n- Bash: {\"command\": \"grep -n \\\"fn play_fight\\\\|play_fight(\\\\|Err(\\\\|fault\\\" crates/tools/src/run_sim.rs | head -30; sed -n 200,240p crates/tools/src/run_sim.rs\", \"description\": \"Read run_sim fight handling\"}\n- Bash: {\"command\": \"grep -v \\\"Compiling\\\\|Downloaded\\\\|Downloading\\\" /tmp/proto4852/out.log | tail -30\", \"description\": \"Read prototype test output\"}\n- Bash: {\"command\": \"sed -n 380,425p crates/tools/src/run_sim.rs; sed -n 1,30p crates/tools/src/run_sim.rs\", \"description\": \"Read run_sim retry loop and header\"}\n- Bash: {\"command\": \"grep -rn \\\"fn .*run_sim\\\\|run_sim::\\\" crates/tools/src crates/tools/tests | grep -v \\\"^crates/tools/src/run_sim.rs:.*//\\\" | head -10; grep -n \\\"#\\\\[test\\\\]\\\" crates/tools/src/run_sim.rs \u2026\n- Bash: {\"command\": \"ls apps/web/src/i18n/; grep -n \\\"^### 2.5\\\" spec/02-core-systems.md; grep -n \\\"Voided\\\\|voided\\\" spec/02-core-systems.md | head -5\", \"description\": \"Check i18n setup and \\u00a72.5\"}\n- Bash: {\"command\": \"grep -n \\\"zh-CN\\\\|missing\\\\|every string\\\\|untranslated\\\" apps/web/src/i18n/i18n.test.ts | head -20; grep -c \\\"\\\" apps/web/src/i18n/zh-CN.json; grep -n \\\"could not be read\\\" apps/web/src\u2026\n- Bash: {\"command\": \"sed -n 60,100p apps/web/src/i18n/i18n.test.ts; sed -n 3960,3972p apps/web/src/i18n/zh-CN.json; grep -n \\\"Try again\\\\\\\"\\\\|\\\\\\\"Deal it again\\\\|Glitch voided\\\\|never happened\\\" apps/web/src\u2026\n- Bash: {\"command\": \"cat apps/web/src/wire/generated/Winner.ts 2>/dev/null || grep -rn \\\"export type Winner\\\" apps/web/src/wire | head -3; grep -rn \\\"export type GameResult\\\\b\\\\|export type GameResult =\\\" ap\u2026\n- Bash: {\"command\": \"sed -n 595,724p apps/web/src/dungeon/fight/FightScreen.test.tsx\", \"description\": \"Read Menu and R4733000 tests for patterns\"}\n- Bash: {\"command\": \"grep -n \\\"mod \\\\|pub use\\\" crates/run/src/lib.rs | head -30; grep -n \\\"mod \\\\|pub use\\\" crates/run/src/assault/mod.rs 2>/dev/null | head; ls crates/run/src/assault/\", \"description\": \"Che\u2026\n- Bash: {\"command\": \"sed -n 26,36p crates/run/src/lib.rs; grep -n \\\"assault_fight_report\\\\|fn \\\" crates/run/src/assault/fight_tests.rs | head -20; sed -n 1,30p crates/run/src/assault/fight_tests.rs\", \"descri\u2026\n- Bash: {\"command\": \"grep -rn \\\"classic-t-glitch\\\" crates/engine/src/config.rs crates/engine/src/*.rs | head -5; grep -n \\\"pub mod scripts\\\\|pub mod classic\\\" crates/cards/src/lib.rs crates/cards/src/scripts\u2026\n- Bash: {\"command\": \"sed -n 1,25p crates/run/README.md | cut -c1-300; grep -n \\\"Glitch\\\\|void\\\" crates/tools/src/run_sim.rs | head\", \"description\": \"Read run README head and run_sim mentions\"}\n- Bash: {\"command\": \"cd /tmp/proto4852 && sed -i 's/format!(\\\"R4852000-{n}\\\")/format!(\\\"glitch-void-{n}\\\")/' tests/void.rs && grep -n \\\"glitch-void\\\" tests/void.rs && timeout 600 cargo test --test void -- --\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4852/.bot-plan.md\", \"content\": \"## Goal\\n\\nA dungeon fight that a Glitch voids (`GameOverReason::Voided`, R679) is no longer reported as a lost fight:\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; grep -n \\\"fn seat_to_act\\\\|pub fn legal_actions\\\" crates/engine/src/reduce.rs | head -3\", \"description\": \"Count plan words and verify engine helpers\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ns=s.replace(\\\" If `spec check` rejects `cards` (it names only sections, rulings and cards), keep only those.\\\\n\\\",\\\"\\\")\\ns=s.replac\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ns=s.replace(\\\"- [ ] The harness's rustfmt, catalog, patches, rulings, clippy, cargo tests (with the clean `apps/web/src/wire` check\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4852/.bot-plan.md\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ns=s.replace(\\\" Import `crate::fight::VOIDED_FIGHT` if `use super::*` does not reach it (`super` is the crate root; use `crate::figh\u2026\n- said: ## Goal A dungeon fight that a Glitch voids (`GameOverReason::Voided`, R679) is no longer reported as a lost fight. `run_fight_report` refuses it, and the run stays on its fight with its HP unchanged. The fight screen offers **Deal it again**, which deals the same fight fresh from its seed (the run\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-25T12:07:02Z",
       "owner_why": "it plans it",
@@ -21328,9 +21320,9 @@
       "provider": "claude-4",
       "queued_at": "2026-11-24T21:36:07Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45610705810",
+      "run_id": "pending:90c7b6ec-1795609901",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-25T12:07:02Z",
+      "started_at": "2026-11-25T12:32:18Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -23854,9 +23846,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T12:31:29Z",
+    "at": "2026-11-25T12:32:18Z",
     "url": "",
-    "what": "build #4845 on claude-7"
+    "what": "build #4852 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-25T12:14:05Z",
