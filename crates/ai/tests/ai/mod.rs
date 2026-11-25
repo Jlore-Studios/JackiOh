@@ -80,6 +80,7 @@ pub mod scorer_casts;
 pub mod scraper;
 pub mod search;
 pub mod secrets;
+pub mod signature_gaps;
 pub mod sim_memo;
 pub mod sim_panics;
 pub mod skill;

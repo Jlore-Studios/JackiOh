@@ -4,6 +4,9 @@ The JackiOh client: React 19 + Vite. It renders a `PlayerView` and nothing else.
 and the deck validator it runs locally are the Rust crates compiled to WebAssembly (`crates/wasm`,
 [The engine as WebAssembly](#the-engine-as-webassembly) below).
 
+`game/Game.tsx` is the one board; each of its layers has one owning module: animations (`game/animations.ts`),
+effects (`fx/`), audio (`audio/`), cards (`cards/`), drag (`game/drag/`) and settings (`settings/`).
+
 ## The one rule
 
 CLAUDE.md rule 7 and SPEC §10.8: **the client sends intent and renders `viewFor`. It never
