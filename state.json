@@ -22038,6 +22038,66 @@
       "feedback_since": "2026-11-25T02:22:37Z",
       "issue": 4826,
       "kind": "revise",
+      "own_review": {
+        "from_run": "45532501291",
+        "gates": [
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "rustfmt",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo fmt --check",
+            "seconds": 23.7,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 124,
+            "inconclusive": true,
+            "name": "catalog",
+            "ok": false,
+            "pre_existing": false,
+            "run": "cargo jackioh catalog check",
+            "seconds": 1200.0,
+            "skipped": "",
+            "tail": "\n   Compiling jackioh-cards v0.5.0 (/home/agent-agy/actions-runner/_work/_temp/work/item-4826/crates/cards)\n   Compiling jackioh-shared v0.5.0 (/home/agent-agy/actions-runner/_work/_temp/work/item-4826/crates/shared)\n   Compiling jackioh-wasm-core v0.5.0 (/home/agent-agy/actions-runner/_work/_temp/work/item-4826/crates/wasm/core)\n   Compiling jackioh-tools v0.5.0 (/home/agent-agy/actions-runner/_work/_temp/work/item-4826/crates/tools)\n\n(timed out after 1200s)"
+          },
+          {
+            "exit_code": 124,
+            "inconclusive": true,
+            "name": "patches",
+            "ok": false,
+            "pre_existing": false,
+            "run": "cargo jackioh patches check",
+            "seconds": 600.2,
+            "skipped": "",
+            "tail": "\n   Compiling jackioh-tools v0.5.0 (/home/agent-agy/actions-runner/_work/_temp/work/item-4826/crates/tools)\n\n(timed out after 600s)"
+          },
+          {
+            "exit_code": 124,
+            "inconclusive": true,
+            "name": "rulings",
+            "ok": false,
+            "pre_existing": false,
+            "run": "cargo jackioh spec check",
+            "seconds": 600.1,
+            "skipped": "",
+            "tail": "\n   Compiling jackioh-tools v0.5.0 (/home/agent-agy/actions-runner/_work/_temp/work/item-4826/crates/tools)\n\n(timed out after 600s)"
+          }
+        ],
+        "head": "206f71e88ab3f703b5d406213a6f975148f5a053",
+        "kind": "build",
+        "model": "gemini-3.8-flash-high",
+        "provider": "agy",
+        "round_tier": "medium",
+        "rounds_on": 4826,
+        "rounds_used": 0,
+        "since": "2026-11-25T04:51:04Z",
+        "source": "build",
+        "until": "2026-11-25T05:21:04Z"
+      },
+      "queued_at": "2026-11-25T04:51:04Z",
       "self_check_findings": [],
       "votes": {
         "approvals": [],
