@@ -13,7 +13,7 @@
 //! Hinder's next-refresh modifier (§6.3 Mana, `next_turn_mana`, as M #18 Expedition12's), the declared
 //! `mana` (R386, 1 on both faces, read by the Cry alone), its controller's next refresh giving that much
 //! less, never below 0 (§2.3). It is the Cry's, so it comes with every Cry that runs, whatever the destroy
-//! finds, and never with a summon, which runs none; through v0.6.8b the Cry lost nothing, which
+//! finds, and never with a summon, which runs none; through v0.6.8d the Cry lost nothing, which
 //! `script_v0_6_8b` keeps (R767000).
 
 use jackioh_engine::effects::{destroy, destroy_all};
@@ -65,7 +65,7 @@ pub fn script() -> CardScripts {
     speciesist(true)
 }
 
-/// R767000: through v0.6.8b its Cry lost no mana (issue #4353); `KEPT_SCRIPTS` folds those replays
+/// R767000: through v0.6.8d its Cry lost no mana (issue #4353); `KEPT_SCRIPTS` folds those replays
 /// under it.
 pub fn script_v0_6_8b() -> CardScripts {
     speciesist(false)
@@ -245,7 +245,7 @@ mod tests {
             assert_eq!(s.state().players.p1.mana.next_turn_mod, -loss);
         }
 
-        /// R767000: through v0.6.8b the Cry lost no mana (issue #4353).
+        /// R767000: through v0.6.8d the Cry lost no mana (issue #4353).
         #[test]
         fn r767000_the_script_kept_for_v0_6_8b_loses_no_mana() {
             crate::under_kept(super::super::ID, super::super::script_v0_6_8b(), || {
