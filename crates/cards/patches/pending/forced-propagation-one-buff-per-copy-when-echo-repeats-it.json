@@ -1,0 +1,21 @@
+{
+  "title": "Forced Propagation: one Buff per copy when Echo repeats it",
+  "sources": "issue #4825",
+  "notes": "Radiant mark is per resolution (id, turn, events_from), so an Echo repeat Buffs only its own ten copies",
+  "player": {
+    "title": "Forced Propagation no longer double-Buffs its copies",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "Radiant Forced Propagation repeated by Echo no longer re-Buffs the first ten copies."
+    ]
+  },
+  "cards": [],
+  "plays": [
+    "stinkyscapeplus-024",
+    "stinkyscape-109",
+    "stinkyscape-111"
+  ]
+}
