@@ -21651,13 +21651,15 @@
     "what": "revise #4950 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-25T20:52:58Z",
+    "at": "2026-11-25T21:04:53Z",
     "notes": [
-      "delivered revise #4944 on agy (run 45686457890): built",
-      "delivered build #4937 on muse (run 45686275435): built",
-      "started review #4960 on muse (run 45699786407)",
+      "#4950: approved and green, so its strikes are cleared",
+      "delivered build #4932 on claude-1 (run 45686625187): built",
+      "started review #4961 on claude-1 (run 45701563706)",
+      "started revise #4950 on claude-7 (run 45701754102)",
       "nothing more to start: nothing is queued",
-      "runner gate: started 1 of 6 waiting run(s) (run 45663369967 on bot/issue-4842); 5 wait for a slot"
+      "pruned 3 plan file(s) older than 7 days",
+      "runner gate: started 0 of 4 waiting run(s); 4 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22359,7 +22361,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T20:52:58Z",
+  "loop_tick": "2026-11-25T21:04:53Z",
   "machine_disk": {
     "issue": null,
     "reading": {
