@@ -41918,42 +41918,6 @@
         "approver": {
           "family": "claude",
           "model": "opus",
-          "provider": "claude-6",
-          "tier": "strong"
-        },
-        "builder": {
-          "family": "claude",
-          "provider": "claude-6"
-        },
-        "difficulty": "hard",
-        "done_at": "2026-11-04T05:05:12Z",
-        "every": 5,
-        "findings": 0,
-        "head": "a569d7120a355c7695ca7656f6a932e8c361f2dc",
-        "issue": 2953,
-        "last_why": "stopped: #2965 was closed",
-        "merged_at": "2026-11-04T03:27:40Z",
-        "n": 35,
-        "pr": 2965,
-        "queued_at": "2026-11-04T03:27:40Z",
-        "reason": "stopped: #2965 was closed",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-7",
-          "tier": "strong"
-        },
-        "sha": "ed35dcedf54153a081e84ed58e126bc6d7c44a4d",
-        "started_at": "2026-11-04T04:49:00Z",
-        "status": "done",
-        "title": "Patch: rename six cards whose names wouldn't pass Roblox moderation",
-        "tries": 3,
-        "verdict": "failed"
-      },
-      {
-        "approver": {
-          "family": "claude",
-          "model": "opus",
           "provider": "claude-4",
           "tier": "strong"
         },
@@ -45453,7 +45417,9 @@
           "provider": "claude-4"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-25T08:07:35Z",
         "every": 5,
+        "findings": 0,
         "head": "d4f693627435c2a615b6af45f46eb5ea19d14e51",
         "issue": 4813,
         "merged_at": "2026-11-25T07:30:47Z",
@@ -45466,12 +45432,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:4da9a945-1795593522",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45572429439",
         "sha": "56bddc1a7cf09981764888ee53fcc0ff17df7731",
         "started_at": "2026-11-25T07:59:19Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the Duos host decides an AI seat's pass or End turn again when the game moved on since it was asked, so the two AI seats stop wasting the pass between them",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 535
