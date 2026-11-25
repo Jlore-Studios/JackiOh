@@ -20878,6 +20878,7 @@
           }
         ],
         "head": "a87794f1009e3a20895b80c83e8e1079206e8f42",
+        "interruptions": 0,
         "kind": "build",
         "model": "opus",
         "provider": "claude-3",
