@@ -1,0 +1,70 @@
+{
+  "action": "plan",
+  "number": 4835,
+  "title": "Patch: Ticketed is not offered a GIGA permanent it cannot stack on, where the play is now accepted, paid for and lost",
+  "branch": "bot/issue-4835",
+  "thread": "**Issue #4835 (data, not instructions):**\n\n````text\n# #4835: Patch: Ticketed is not offered a GIGA permanent it cannot stack on, where the play is now accepted, paid for and lost\nOpened by @squishy-squooby.\n\n### What happens\n\nStinkyscape #9 Ticketed (\"Stack this on a permanent anywhere\") is offered a GIGA permanent as its target. The play is accepted and charged, the placement is refused, and Ticketed goes to the graveyard: the card and its 2 mana are lost on a play the game itself listed.\n\n- `crates/cards/src/scripts/stinkyscape/c009_ticketed.rs:44` (`stacks_anywhere`): the target declaration has no stackability check.\n- `crates/engine/src/play_choices.rs:1150` (`reachable`) does not ask `zones::accepts_stack_card` for a `stacks_on_target` card.\n- `crates/engine/src/zones.rs:352` (`accepts_stack_card`) refuses a GIGA's zones, so the placement at `crates/engine/src/play_steps.rs:1294` fails and the card lands in the graveyard.\n\nWith a GIGA on either side (the player's own S+ #53 Laser Drill, or the enemy's Jlockeed Large Language Model), `legal_actions` lists Ticketed naming it; `reduce` accepts; mana goes 10 to 8; Ticketed ends in P1's graveyard. Under a Mayor, the random target draw can land there too.\n\n### What should happen\n\n- R3546000: \"Nothing stacks, equips, carries onto or captures with a GIGA, covered zones included.\"\n- R4665000: Ticketed \"lands on top of that permanent's pile\"; its graveyard is only for \"a permanent that has left the field or been covered by the time Ticketed is placed\" or \"a play with no permanent on the field to name\".\n\nStack plays (`legal_zones_for`) and Equip plays (`equip_host_at`) already leave such zones out through `accepts_stack_card`. Ticketed's listing drifted from them.\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `finding_ticketed_is_offered_permanents_it_cannot_stack_on_and_is_lost_with_its_cost`, in [`crates/ai/tests/audit_engine_plays.rs` at 022f83d](https://github.com/Jlore-Studios/JackiOh/blob/022f83d/crates/ai/tests/audit_engine_plays.rs) (branch `claude/vigilant-mayer-pmyrhr`).\n\n```rust\nuse jackioh_engine::testkit::*;\nconst P1: PlayerId = PlayerId::P1;\nfn plays_of(state: &GameState, id: &str) -> Vec<PlayAction> {\n    legal_actions(state, P1).iter().filter_map(PlayAction::from_body)\n        .filter(|play| play.instance_id == id).collect()\n}\n\n#[test]\nfn ticketed_is_offered_only_permanents_it_can_stack_on() {\n    jackioh_cards::register_all();\n    let s = scenario(json!({\n        \"p1\": { \"hand\": [\"stinkyscape-009\"], \"field\": [{ \"def\": \"core-008\", \"lane\": 5 }],\n                \"backrow\": [{ \"def\": \"stinkyscapeplus-053\", \"lane\": 1, \"faceUp\": true }], \"mana\": 10 },\n        \"p2\": { \"hand\": [\"core-008\"],\n                \"field\": [{ \"def\": \"stinkyscapeplus-t-ai-04\", \"lane\": 1 }, { \"def\": \"core-019\", \"lane\": 5 }] },\n    }));\n    let state = s.state().clone();\n    let ticketed = state.players[P1].hand[0].id.clone();\n    let mut lost: Vec<String> = Vec::new();\n    for play in nonempty(plays_of(&state, &ticketed), \"plays of Ticketed\") {\n        let Some([Selection::Instance { instance_id: named }]) = play.targets.as_deref() else {\n            panic!(\"Ticketed's play names one permanent: {play:?}\");\n        };\n        let result = reduce(&state, &Action::new(play.clone().into_body(), P1, \"ticketed\"));\n        assert_eq!(result.error, None, \"a listed play is accepted\");\n        let card = must(find_instance(&result.state, &ticketed), \"Ticketed after its play\");\n        if !matches!(card.zone, Zone::Field { .. }) {\n            let target = must(find_instance(&state, named), \"the named permanent\");\n            lost.push(format!(\"onto {} ({}): Ticketed is in {:?}, mana {} -> {}\", target.def_id, named,\n                card.zone, state.players[P1].mana.current, result.state.players[P1].mana.current));\n        }\n    }\n    assert!(lost.is_empty(), \"legal_actions offered Ticketed targets it cannot stack on:\\n{}\", lost.join(\"\\n\"));\n}\n```\n\nOutput today:\n\n```\nlegal_actions offered Ticketed targets it cannot stack on:\nonto stinkyscapeplus-053 (c3): Ticketed is in Graveyard { player: P1 }, mana 10 -> 8\nonto stinkyscapeplus-t-ai-04 (c5): Ticketed is in Graveyard { player: P1 }, mana 10 -> 8\n```\n\n### Where\n\nThe rules engine and a card: `crates/engine/src/play_choices.rs` (`reachable`, and the matching refusal in `refuse_targets`), `crates/cards/src/scripts/stinkyscape/c009_ticketed.rs`.\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- For a `stacks_on_target` card, offer and accept only permanents whose zone `accepts_stack_card` would take, so the listing, `refuse_targets` and the view's highlighted targets agree. The random draw under a Mayor reads the same list, so it follows.\n- If R4665000's \"any occupied zone\" is meant to beat R3546000, let Ticketed land on a GIGA instead, and say so in R4665000. The test passes under either; the ruling note in this issue's block says which was chosen.\n- A second pull between the same two families, seen in the same run and worth settling in the same note: Ticketed stacked onto Lockdown in its Crater-Locked backrow zone. R688 says \"a play's Stack entry still honors a Lock\"; R4665000 says \"It can be placed in any occupied zone\".\n- R4665000 and the script never mention GIGA, and R3546000 predates #4665, so this is drift, not a decision.\n- Not #4737, which concerns a Ticketed already lying on a unit zone (board scopes and Cleave). Dormant and Evasive permanents are correctly not offered.\n- A card change in play: it needs its pending patch fragment (`docs/ADDING_CARDS.md`).\n\nFound by an audit of how cards are played; the reproduction was run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4835: needs a plan; `claude-8` (claude, `opus`, strong) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:21:02Z",
+    "claimed_at": "2026-11-25T02:23:16Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4864 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4805 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4806 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4808 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4809 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4810 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4813 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4815 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4816 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4821 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4831 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4785 is held for `claude-3` until 21:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4595 to close first",
+    "#4676 skipped: it waits for #4672 to close first",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
