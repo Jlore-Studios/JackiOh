@@ -20123,14 +20123,25 @@
       "taken_asks": []
     },
     "4833": {
+      "action": "build",
+      "asks": [],
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
+      "live": "building",
+      "owner": "muse",
+      "owner_since": "2026-11-25T03:53:42Z",
+      "owner_why": "it took it up",
       "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-24T21:20:13Z",
       "requested_by": "squishy-squooby",
-      "stop_requested": false
+      "run_id": "pending:9d2eca15-1795578786",
+      "runs_on": "night-vm-muse-fill",
+      "started_at": "2026-11-25T03:53:42Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "4834": {
       "action": "build",
@@ -21568,9 +21579,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T03:52:51Z",
+    "at": "2026-11-25T03:53:42Z",
     "url": "",
-    "what": "build #4818 on muse"
+    "what": "build #4833 on muse"
   },
   "last_sweep": {
     "at": "2026-11-25T03:33:30Z",
