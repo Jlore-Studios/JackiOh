@@ -50,9 +50,9 @@ use jackioh_engine::{
     is_starship_piece, is_temporary_card, is_tradable, left_field_after, legal_actions, lost_refreshes_left,
     modifier_is_live, outcome_for, owed_mana_of, own_cost, pays_credits_like_a_resource, pierces, pile_at,
     plague_on, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of, settle, slots_of,
-    stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, toxic_on, trigger_holders_with_hook,
-    unit_damage_cap, unit_has, unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
-    yard_at_turn_start,
+    stats_with_buffs, stolen_mana_crystals_of, subsystems, sync_fused_scripts, takes_strike_back, toxic_on,
+    trigger_holders_with_hook, unit_damage_cap, unit_has, unit_view, units_on_field_of, why_sandbox_refused,
+    with_pool_hold, yard_at_turn_start,
 };
 use serde::{Deserialize, Serialize};
 
@@ -996,16 +996,20 @@ fn doomed_hand_card_value(state: &GameState, card: &CardInstance, doomed: bool, 
         * kept
 }
 
-/// R4154400, §2.3: the crystals a turn adds to a seat's maximum until it reaches `MAX_MANA`.
+/// R4154400, R4812000, §2.3: the crystals a turn adds to a seat's maximum while its crystal count under the
+/// cap is under `MAX_MANA`.
 const CRYSTALS_PER_TURN: i32 = 1;
 
-/// R4154400, §2.3: the crystals `side`'s next refresh brings, read off the public counts and never through
-/// the handicap (R180), as `lost_crystals` reads them: this turn's maximum, `CRYSTALS_PER_TURN` more while it
-/// is under `MAX_MANA`, moved by the next-turn rider (`rider_crystals`). Temporary mana a later play might
-/// make is not counted.
+/// R4154400, R4812000, §2.3: the crystals `side`'s next refresh brings, read off the public counts and never
+/// through the handicap (R180), as `lost_crystals` reads them: this turn's maximum, `CRYSTALS_PER_TURN` more
+/// while its crystal count under the cap is under `MAX_MANA`, moved by the next-turn rider (`rider_crystals`).
+/// That count is the maximum less what stands on top of the cap (`max_mana_for`): the modifier for the rest
+/// of the game (`mana.perm_mod`) and the crystals stolen past the cap (R4331001). Not counted: temporary mana a
+/// later play might make, and a maximum §2.3 floors at 0, read as if nothing were floored.
 fn next_turn_crystals(side: &PlayerState) -> i32 {
     let max = side.mana.max;
-    let grown = if max < MAX_MANA {
+    let capped = max - side.mana.perm_mod - stolen_mana_crystals_of(side);
+    let grown = if capped < MAX_MANA {
         max + CRYSTALS_PER_TURN
     } else {
         max
@@ -1017,7 +1021,8 @@ fn next_turn_crystals(side: &PlayerState) -> i32 {
 /// lent Tradable included, R1864002) with an own cost (`own_cost`; an X-cost card has none) that neither this
 /// turn's crystals nor its next refresh's (`next_turn_crystals`) pay for. A Trade swaps it for a card drawn
 /// and puts it back in the deck, under the top (R2657003), so the move order tries that Trade before the
-/// plays (`candidates.rs`) and `material` holds it at `dead_tradable_discount` off.
+/// plays (`candidates.rs`) and `material` holds it at `dead_tradable_discount` off. R4812000: that refresh
+/// grows only while the count under the cap does.
 pub fn dead_in_hand(state: &GameState, seat: PlayerId, card: &CardInstance) -> bool {
     own_cost(state, card).is_some_and(|cost| cost > next_turn_crystals(&state.players[seat]))
         && is_tradable(state, card)

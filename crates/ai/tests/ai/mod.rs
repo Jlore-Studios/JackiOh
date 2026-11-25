@@ -71,6 +71,7 @@ pub mod redact_queues;
 pub mod redact_revealed_backrow;
 pub mod redact_side_snapshot;
 pub mod redact_twice;
+pub mod redact_two_worlds;
 pub mod redact_view_mirror;
 pub mod replay_fill;
 pub mod replay_versions;
