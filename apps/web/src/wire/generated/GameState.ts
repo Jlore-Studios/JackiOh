@@ -17,6 +17,7 @@ import type { HandMeet } from "./HandMeet";
 import type { HeldCard } from "./HeldCard";
 import type { HomeZone } from "./HomeZone";
 import type { LastBoardEntry } from "./LastBoardEntry";
+import type { MadeBy } from "./MadeBy";
 import type { MarkRecord } from "./MarkRecord";
 import type { Marketplace } from "./Marketplace";
 import type { MulliganSeat } from "./MulliganSeat";
@@ -263,6 +264,13 @@ radiantWorld?: boolean,
  * Empty, and absent from the JSON, until a card's script creates a card.
  */
 generators?: { [key in string]: string }, 
+/**
+ * R4672001: each Created card's maker by instance id: the catalog id of the card whose effect minted
+ * it and the face it ran (`generators::record_maker`), where `generators` keeps the root. The game
+ * record's (§9.11): no rule reads it, `replay::hash_state` leaves it out, no view is told it and the
+ * AI's redaction drops it. Empty, and absent from the JSON, until a card's effect creates a card.
+ */
+makers?: { [key in string]: MadeBy }, 
 /**
  * R3049000: the win-rate snapshot the game was handed (`CreateGameOptions.winRates`), as
  * `win_rates::kept_for_game` keeps it, which M #50 CN Tech and M+ #2 NA Tech read

@@ -11,6 +11,11 @@ export type ClockView = { turn: number, active: PlayerId,
  */
 pendingFor: PlayerId | null, 
 /**
+ * R4848000: the open prompt's id, or null: each prompt the non-active player holds gets its own prompt
+ * clock. Host bookkeeping; no client is sent it.
+ */
+promptId?: string, 
+/**
  * R265: the seats that still owe their mulligan while both are open, in seat order; empty
  * outside that window. Non-empty with no `pending_for` is the window the mulligan clock runs
  * over (R268).

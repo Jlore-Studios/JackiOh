@@ -5,7 +5,7 @@
 use jackioh_ai::{AiDeckOptions, build_ai_deck};
 use jackioh_engine::{
     AI_DIFFICULTY, AI_TUTORIAL, CreateGameOptions, DECK_SIZE, DeckMark, Handicap, LastBoardEntry, LeanPick,
-    PerPlayerOpt, PlayerId, Rng, SetupKind, TUTORIAL_HUMAN,
+    PerPlayerOpt, PlayerId, Rng, SetName, SetupKind, TUTORIAL_HUMAN,
 };
 
 use super::types::{PracticeConfig, PracticeDeckChoice};
@@ -196,6 +196,13 @@ pub fn deal(asked: &PracticeConfig) -> Result<Opening, String> {
                 .filter(|assault| !assault.enemy_marks.is_empty())
                 .map(|assault| only_at::<Vec<DeckMark>>(human.opponent(), assault.enemy_marks.clone()))
         });
+    // R4595000: an Assault enemy's deck is dealt from the sets its setup names, at the AI's seat. None
+    // named, no key, so every other game is created and hashes as before.
+    let deck_sets = config
+        .assault
+        .as_ref()
+        .filter(|assault| !assault.enemy_sets.is_empty())
+        .map(|assault| only_at::<Vec<SetName>>(human.opponent(), assault.enemy_sets.clone()));
     let options = CreateGameOptions {
         seed: config.seed.clone(),
         decks: seat_ordered(human, human_deck, ai_deck),
@@ -203,6 +210,7 @@ pub fn deal(asked: &PracticeConfig) -> Result<Opening, String> {
         dealt: dealt_seats(&config),
         last_boards,
         deck_marks,
+        deck_sets,
         // R923000: the one game whose dev tools the engine takes.
         sandbox: config.is_sandbox().then_some(true),
         ..CreateGameOptions::default()

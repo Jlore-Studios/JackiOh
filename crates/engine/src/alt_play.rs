@@ -45,16 +45,20 @@ pub fn is_cloaked_set(card: &CardInstance) -> bool {
 pub fn printed_cloaked_def_ids() -> Vec<String> {
     crate::catalog::query(&crate::catalog::CatalogQueryArgs::default())
         .into_iter()
-        .filter(|def| {
-            [&def.base, &def.radiant].into_iter().any(|face| {
-                !matches!(
-                    face.type_.unwrap_or(def.type_),
-                    CardType::Trap | CardType::FieldTrap
-                ) && crate::wire::has_keyword(&face.keywords, KeywordKind::Cloaked)
-            })
-        })
+        .filter(|def| prints_cloaked(def))
         .map(|def| def.id.clone())
         .collect()
+}
+
+/// R783009: whether a definition prints Cloaked on a face that is no Trap, so its card may be set
+/// face-down by it.
+pub fn prints_cloaked(def: &crate::wire::CardDef) -> bool {
+    [&def.base, &def.radiant].into_iter().any(|face| {
+        !matches!(
+            face.type_.unwrap_or(def.type_),
+            CardType::Trap | CardType::FieldTrap
+        ) && crate::wire::has_keyword(&face.keywords, KeywordKind::Cloaked)
+    })
 }
 
 /// R783007, R783009: every catalog definition an aura on the field lends Cloaked to in this player's

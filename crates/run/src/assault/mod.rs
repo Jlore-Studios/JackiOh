@@ -22,7 +22,7 @@ pub use content::{assault_catalog_content, assault_placeholder_content};
 pub use day::{assault_day, assault_day_seed};
 
 use jackioh_engine::config::Handicap;
-use jackioh_engine::wire::{DeckMark, Rarity};
+use jackioh_engine::wire::{DeckMark, Rarity, SetName};
 use serde::{Deserialize, Serialize};
 
 use crate::config::{ASSAULT_COMMANDER_LEVELS, ASSAULT_HISTORY_DAYS, ASSAULT_LEVELS, ASSAULT_RARITY_CEILING};
@@ -267,6 +267,9 @@ pub struct AssaultFightSetup {
     pub enemy_deck: Vec<String>,
     pub enemy_handicap: Handicap,
     pub enemy_marks: Vec<DeckMark>,
+    /// R4595000: the sets the enemy's deck is dealt from, `createGame`'s `deckSets` at P2: the
+    /// Assault's own, which the mode states openly.
+    pub enemy_sets: Vec<SetName>,
     pub level: AssaultLevel,
 }
 
