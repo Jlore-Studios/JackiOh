@@ -20085,7 +20085,8 @@
       },
       "started_at": "2026-11-25T00:46:31Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 7149580518
     },
     "4832": {
       "failures": 0,
