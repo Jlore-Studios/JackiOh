@@ -20863,21 +20863,13 @@
       "verdict_rounds": 1
     },
     "4842": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45641128638",
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-25T16:10:16Z",
-        "until": "2026-11-25T16:40:16Z"
-      },
       "failures": 0,
       "forced": false,
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "agy",
       "owner_since": "2026-11-25T15:04:57Z",
       "owner_why": "handed off from `muse`: `muse` is busy: its lanes are all taken",
@@ -20890,9 +20882,9 @@
       "provider": "agy",
       "queued_at": "2026-11-24T21:24:42Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45641128638",
+      "run_id": "pending:c4025774-1795624079",
       "runs_on": "night-vm-agy",
-      "started_at": "2026-11-25T15:04:57Z",
+      "started_at": "2026-11-25T16:28:49Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -24673,9 +24665,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T16:27:44Z",
+    "at": "2026-11-25T16:28:49Z",
     "url": "",
-    "what": "build #4676 on claude-3"
+    "what": "build #4842 on agy"
   },
   "last_sweep": {
     "at": "2026-11-25T16:05:55Z",
