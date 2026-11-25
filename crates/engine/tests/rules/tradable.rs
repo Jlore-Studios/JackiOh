@@ -217,6 +217,42 @@ fn r1838000_a_card_given_tradable_in_the_hand_is_tradable() {
 }
 
 #[test]
+fn r4821001_a_unit_token_card_lent_tradable_has_no_trade_listed_refused_or_viewed() {
+    let (mut state, _spell, _unit) = holding("r4821001-token");
+    put(&mut state, &lender().id, slot(P1, Row::Backrow, 1), json!({}));
+    let token = in_hand(&mut state, "fx-token-rush", P1, 1).remove(0).id;
+    let card = find_instance(&state, &token).expect("the token card in hand");
+    assert!(is_tradable(&state, card), "the aura lends it Tradable");
+    assert!(!trades_listed(&state, P1).contains(&token));
+
+    // R11 would end it on the way into the deck, so the deck cannot take it (R4821001).
+    let name = &def_of(Some(&state), "fx-token-rush").name;
+    let refusal =
+        format!("{name} is a Unit token, which would cease to exist instead of going into your deck");
+    assert_eq!(
+        trade(&state, P1, &token, "t1").error.as_deref(),
+        Some(refusal.as_str())
+    );
+    assert_eq!(
+        hand_card(&view_for(&state, P1), &token).trade_reason.as_deref(),
+        Some(refusal.as_str())
+    );
+
+    // Into an empty deck it would have vanished and the Trade's draw fatigued its player (1c).
+    state.players.p1.library.clear();
+    let out = trade(&state, P1, &token, "t2");
+    assert_eq!(out.error.as_deref(), Some(refusal.as_str()));
+    assert_eq!(
+        (
+            out.state.players.p1.fatigue_count,
+            out.state.players.p1.hero.health
+        ),
+        (state.players.p1.fatigue_count, state.players.p1.hero.health)
+    );
+    assert!(out.state.players.p1.hand.iter().any(|held| held.id == token));
+}
+
+#[test]
 fn r1838001_the_other_player_learns_that_a_card_was_traded_and_not_which() {
     let (state, spell, _unit) = holding("r1838001-hidden");
     let out = trade(&state, P1, &spell, "t1");
