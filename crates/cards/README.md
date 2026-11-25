@@ -366,7 +366,7 @@ Every change to card data is a patch, and every patch is kept.
   Tech read the snapshot of the server's cached card stats each game is handed (R3049000).
   `cargo jackioh patches check` (CI's `rust (checks, fuzz 200)` job) fails naming
   the card when a change is unclaimed or claimed twice, a claimed card did not change, a `plays` id
-  is no shipped card, a fragment claims nothing, or a fragment's title, sources or notes is empty, when a fragment's or a shipped patch's player note is missing, empty or names a ruling,
+  is no shipped card, a fragment claims nothing (a `KEPT_SCRIPTS` row keyed by it is a claim, R4844000), or a fragment's title, sources or notes is empty, when a fragment's or a shipped patch's player note is missing, empty or names a ruling,
   an issue or a § (R724001).
 - After the merge, `.github/workflows/patches-ship.yml` runs `cargo jackioh patches ship`: it
   appends each fragment in first-parent order with its player note, named from its tier (a major
