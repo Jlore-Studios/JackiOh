@@ -22563,19 +22563,19 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-8",
-      "owner_since": "2026-11-25T17:17:38Z",
-      "owner_why": "a person answered its question, so the lane that asked carries the answer out",
+      "owner": "claude-3",
+      "owner_since": "2026-11-25T17:22:03Z",
+      "owner_why": "handed off from `claude-8`: `claude-8` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-25T08:55:25Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-8",
+      "provider": "claude-3",
       "question": "Should this week's hygiene pull request delete `docs/speed-and-cost-audit.md` as the shipped #4691 audit's record, or should #4891 close with no change (nothing to remove)?",
       "queued_at": "2026-11-25T17:17:38Z",
-      "run_id": "45588210915",
+      "run_id": "pending:e6eefc2e-1795627282",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -22594,7 +22594,7 @@
         "provider": "claude-8",
         "run": "45588210915"
       },
-      "started_at": "2026-11-25T09:44:03Z",
+      "started_at": "2026-11-25T17:22:03Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 7154762186
@@ -24926,9 +24926,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T17:21:08Z",
+    "at": "2026-11-25T17:22:03Z",
     "url": "",
-    "what": "review #4944 on agy"
+    "what": "build #4891 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-25T17:05:40Z",
