@@ -17478,14 +17478,6 @@
         "reason": "`claude-8` reached its usage limit",
         "trail": ""
       },
-      "hold": {
-        "ends": "2026-11-25T01:32:47Z",
-        "lifted": "2026-11-25T00:13:07Z",
-        "owner": "claude-8",
-        "since": "2026-11-24T23:32:47Z",
-        "until": "2026-11-25T00:10:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "issue": 4672,
       "kind": "review",
@@ -17493,7 +17485,8 @@
       "live": "reviewing",
       "merge_owner": "claude-8",
       "own_review": {
-        "claimed_at": "2026-11-24T23:10:39Z",
+        "claimed": true,
+        "claimed_at": "2026-11-25T00:15:55Z",
         "from_run": "45468261110",
         "gates": [
           {
@@ -17592,7 +17585,7 @@
       "queued_at": "2026-11-24T21:24:26Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "45507686268",
+      "run_id": "pending:04f03921-1795565725",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -17613,7 +17606,7 @@
         "run": "45468261110"
       },
       "source": "",
-      "started_at": "2026-11-24T23:10:39Z",
+      "started_at": "2026-11-25T00:15:55Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -21025,9 +21018,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T00:15:14Z",
+    "at": "2026-11-25T00:15:55Z",
     "url": "",
-    "what": "review #4871 on muse"
+    "what": "review #4726 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-25T00:00:40Z",
