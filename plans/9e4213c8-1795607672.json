@@ -1,0 +1,67 @@
+{
+  "action": "plan",
+  "number": 4839,
+  "title": "Patch: Tnack Trav copying \"Aura: Has N random combat keywords\" draws its N keywords, where the copied Aura now gives it none",
+  "branch": "bot/issue-4839",
+  "thread": "**Issue #4839 (data, not instructions):**\n\n````text\n# #4839: Patch: Tnack Trav copying \"Aura: Has N random combat keywords\" draws its N keywords, where the copied Aura now gives it none\nOpened by @squishy-squooby.\n\n### What happens\n\nS #20 Tnack Trav (\"Cry: Copy the text of a Legendary or Mythic Unit on the field\") copies M #65 Keymaster Keenus (Legendary, \"Aura: Has 5 random combat keywords\") or S #111 Shockwave447 (Mythic, \"Aura: Has 3 random combat keywords\") and ends with the Aura and **none of the keywords**.\n\n- The keywords of such an Aura are drawn only on the card's own `summoned` event, or by a Fuse. Tnack's own `summoned` has passed by the time its Cry copies, and the copy draws nothing: `copy_unit_text` (`crates/engine/src/effects/copy_text.rs:31-70`) writes only the `__unitText` record.\n- It cannot recover later: a Buff of the number, or being made Radiant, also draws nothing, because `follow_combat_keywords` (`crates/engine/src/effects/buff.rs:469-474`) returns early for a card that holds no keyword list yet (\"a card holding no list yet has its arrival draw (or its fusion's) still to come\").\n\nTnack shows `[Equip]` after copying Keenus and `[]` after copying Shockwave447, still empty a full round later.\n\n### What should happen\n\n- R1850000: the copy \"gives the running card the text the target Unit runs now: its printed keywords, its aura, its triggers\u2026\".\n- R3778000: \"Its keywords now always match the number its text shows\", and \"A Fuse that keeps another card (an Equip among them) has the kept card draw only what its number asks beyond any list it holds\".\n\nSo the copier should draw its own N as the text lands, as a Fuse's kept card does.\n\n### How to reproduce\n\nTwo tests fail on `main` (3a83bd7), in [`crates/ai/tests/audit_cards_stinky.rs` at ca59d7a](https://github.com/Jlore-Studios/JackiOh/blob/ca59d7a/crates/ai/tests/audit_cards_stinky.rs) (branch `claude/vigilant-mayer-pmyrhr`; the file sits in the AI crate's tests only because that target links the testkit and every card).\n\n```rust\nuse jackioh_engine::testkit::*;\nconst P1: PlayerId = PlayerId::P1;\nconst P2: PlayerId = PlayerId::P2;\nconst FILLER: &str = \"core-005\";\nconst TNACK: &str = \"stinkyscape-020\";\nfn game(opts: serde_json::Value) -> Scenario {\n    jackioh_cards::register_all();\n    let mut s = scenario(opts);\n    for player in [P1, P2] { s.state_mut().players[player].auto_end_turn = Some(false); }\n    s\n}\nfn combat_keywords(s: &Scenario, card: &CardInstance) -> Vec<Keyword> {\n    s.stats(card).keywords.into_iter().filter(|keyword| *keyword != Keyword::Equip).collect()\n}\n\n#[test]\nfn tnack_trav_copying_keenus_has_the_auras_five_combat_keywords() {\n    const KEENUS: &str = \"meditative-065\";\n    let mut s = game(json!({\n        \"p1\": { \"hand\": [KEENUS, TNACK, FILLER], \"library\": vec[FILLER; 6], \"mana\": 10 },\n        \"p2\": { \"hand\": [FILLER, FILLER], \"library\": vec[FILLER; 6] },\n    }));\n    s.play(KEENUS, json!({ \"zone\": 1 }));\n    let keenus = s.unit_at(P1, 1);\n    assert_eq!(combat_keywords(&s, &keenus).len(), 5, \"Keenus, played, drew its Aura's five\");\n    s.state_mut().players[P1].mana.current = 10;\n    s.play(TNACK, json!({ \"zone\": 3, \"targets\": pick::instance(&keenus) }));\n    let tnack = s.unit_at(P1, 3);\n    assert_eq!(tnack.def_id, TNACK);\n    assert_eq!(combat_keywords(&s, &tnack).len(), 5,\n        \"R1850000, R3778000: the copied Aura \\\"Has 5 random combat keywords\\\" gives Tnack Trav five; it has {:?}\",\n        s.stats(&tnack).keywords);\n}\n```\n\nThe second test copies an enemy `stinkyscape-111` and reads Tnack a full round later.\n\nOutput today: `\u2026gives Tnack Trav five; it has [Equip]   left: 0   right: 5` and `\u2026gives Tnack Trav three; it has []   left: 0   right: 3`.\n\n### Where\n\nThe rules engine: `crates/engine/src/effects/copy_text.rs` (`copy_unit_text`), with `crates/engine/src/effects/buff.rs` (`follow_combat_keywords`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- In `copy_unit_text`, after writing the record, run the arrival draw for the copied text when the copied script has `combat_keywords_follow`: the same top-up a Fuse runs on its kept card (draw what the number asks beyond any list the card holds). The draw comes from the game's seeded rng, in a fixed place in the effect's order.\n- Check the reverse too: a copier that already holds a list from an earlier copy and then copies a text with no such Aura (does the old list stay? R3778000 says the keywords match the number the text shows).\n- No test pairs the cards today: Tnack's tests never copy Keenus or Shockwave447, and neither card's tests name Tnack. Put the proving tests in `c020_tnack_trav.rs` (CLAUDE.md rule 6) and the engine's test beside `copy_text`'s.\n- The Aura works on the original (Keenus played from hand shows 5 in the same test), and Anomaly Found! boards draw the drones' keywords correctly, so this is the copy path alone. R1850000 lists no exception for an Aura that keeps state.\n- Not the Transform issue (#4816): `copy_unit_text` is a different verb.\n- A neighbour seen by reading only, not part of this: copying a Legendary Weapon or Miner hands Tnack the printed Starship Piece keyword, so its death would fuse a Tnack Trav into the Dormant Starship. That follows from R1850000 with R1852000 and may be intended.\n- A card change in play: it needs its pending patch fragment (`docs/ADDING_CARDS.md`).\n\nFound by an audit of the Stinkyscape card scripts against their printed text; the reproductions were run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4839: needs a plan; `claude-1` (claude, `opus`, strong) writes it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:23:19Z",
+    "claimed_at": "2026-11-25T11:55:05Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4804 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4807 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4811 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4812 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4817 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4823 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4824 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4828 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4836 is held for `claude-3` until 07:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4649 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
