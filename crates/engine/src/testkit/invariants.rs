@@ -3541,8 +3541,10 @@ pub fn listed_refused(
                         .chain(immutable_text_findings(&immutable, &result.events, &result.state));
                     for finding in branch {
                         found.push(format!(
-                            "I14 branch: after {player} sent {sent} (listed, not played) on turn {} (seed {}): {finding}",
-                            state.turn, state.seed
+                            "I14 branch: after {player} sent {sent} (listed, not played) on turn {} (seed {}): {finding} TMPBRANCH {}",
+                            state.turn,
+                            state.seed,
+                            tmp_trace(&result.events, result.events.len().saturating_sub(1))
                         ));
                     }
                 }

@@ -1622,9 +1622,19 @@ fn play_game_with_options(
             broken.extend(monitor.listed(&state, probe));
         }
         if let Some(first) = broken.first() {
+            // TEMPORARY (#4599 diagnosis, reverted before the pull request): the step's events.
+            let from = result.events.len().saturating_sub(60);
+            let step_trace: Vec<String> = result.events[from..]
+                .iter()
+                .enumerate()
+                .map(|(i, e)| {
+                    let text: String = serde_json::to_string(e).unwrap_or_default().chars().take(260).collect();
+                    format!("#{} {text}", from + i)
+                })
+                .collect();
             return Err(FuzzFailure::new(
                 FailureStage::Invariant,
-                first.clone(),
+                format!("{first} TMPSTEP {}", step_trace.join(" ¦ ")),
                 At {
                     turn: state.turn,
                     actions: log.len(),
