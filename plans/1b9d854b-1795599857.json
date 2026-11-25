@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4824,
+  "title": "Patch: the AI's redaction numbers new ids from what its seat can see, so ids minted where it cannot see no longer change its decision",
+  "branch": "bot/issue-4824",
+  "thread": "**Issue #4824 (data, not instructions):**\n\n````text\n# #4824: Patch: the AI's redaction numbers new ids from what its seat can see, so ids minted where it cannot see no longer change its decision\nOpened by @squishy-squooby.\n\n### What happens\n\n`redact` (`crates/ai/src/observe.rs:546-548`) resets the seed, the rng cursor and the nonce log, and leaves `next_id` as the true state has it. That counter moves when ids are minted where the seat cannot see, and the search reads it:\n\n- every instance a simulation mints is numbered from it, and a prompt's id is `q{next_id}` (`crates/engine/src/prompts.rs`);\n- the sample of `AI_SEARCH.max_auto_answer_options` answers is drawn on a stream seeded with the prompt's id (`crates/ai/src/simulate.rs:553-554`), and answers are ordered by `action_key`, which holds ids too.\n\nS+ #17 Smoothie's `enters_hand` hook (\"When added to your hand, select two random fruits for it\") mints two ids when its owner draws it. The other seat's `view_for` shows a hand one card larger and nothing else. So:\n\n- Two games from one seed that differ only in the card p1 draws on turn 1 (the deck's own card, or a Smoothie in the same deck slot) give p2 the **same** `view_for`, and `redact(\u00b7, p2)` differs at exactly one path: `.nextId: 54 vs 56`.\n- `decide` at `AI_BUDGET` on the same stream then walks 424 nodes and 24 lines on one world, 394 nodes and 25 lines on the other. The action is the same on this pair.\n- With `next_id` alone moved by 2 on a real mid-game state, the chosen action changes: `Play c79` (Cloaked, backrow lane 2) becomes `Play c48` (unit lane 1).\n\n### What should happen\n\nR185, and `crates/ai/README.md`: \"`decide` \u2026 reads the true `GameState` only through `ai_to_act` and `redact` (R185): `redact` blanks what the seat may not know\", \"two states that differ only in hidden cards give the same decision under the same rng\", and (Budgets) \"The same state, seed and budget always give the same `Decision`\". Two states the seat's view cannot tell apart must give one redaction and one decision.\n\n### How to reproduce\n\nThree tests fail on `main` (3a83bd7), in [`crates/ai/tests/audit_fuzz.rs` at 3f48455](https://github.com/Jlore-Studios/JackiOh/blob/3f48455045c5a81280ef70dadff3095989fd4d08/crates/ai/tests/audit_fuzz.rs) (branch `claude/vigilant-mayer-pmyrhr`; 235 lines, 8 seconds): `r185_redact_is_the_same_for_two_worlds_the_seat_cannot_tell_apart`, `r185_decide_is_the_same_for_two_worlds_the_seat_cannot_tell_apart`, `r185_two_ids_minted_unseen_do_not_change_the_action`.\n\nThe twin is two real games from `create_game`, replayed with the same actions, with equality of `view_for` asserted as a premise:\n\n```rust\nconst SMOOTHIE: &str = \"stinkyscapeplus-017\";\nconst SEED: &str = \"audit-fuzz:smoothie:9\";\nconst SEAT: PlayerId = PlayerId::P2;\n\n/// Two games of SEED at p2's first main phase, differing in one card of p1's deck: the one p1 drew\n/// on its first turn and still holds (the deck's own card, or a Smoothie in the same deck slot).\nfn two_worlds() -> (GameState, GameState) {\n    jackioh_cards::register_all();\n    let easy = AI_DIFFICULTY.easy;\n    let decks = (deck(SEED, PlayerId::P1, &easy, None), deck(SEED, PlayerId::P2, &easy, None));\n    let options = |decks| CreateGameOptions { seed: SEED.to_string(), decks, ..CreateGameOptions::default() };\n    let created = create_game(&options(decks.clone()));\n    let dealt = begin_game(&created).state;\n    let plain = to_p2s_first_turn(&dealt);   // both seats keep their hands, p1 ends its turn\n    let opening = ids_of(&dealt.players.p1.hand);\n    let drawn = plain.players.p1.hand.iter().find(|c| !opening.contains(&c.id)).expect(\"p1 drew\").id.clone();\n    let slot = created.players.p1.library.iter().position(|c| c.id == drawn).expect(\"slot\");\n    let mut other = decks;\n    other.0[slot] = SMOOTHIE.to_string();\n    let smoothie = to_p2s_first_turn(&begin_game(&create_game(&options(other))).state);\n    assert_eq!(view_for(&plain, SEAT), view_for(&smoothie, SEAT), \"PREMISE: the seat's view of the two worlds is the same\");\n    (plain, smoothie)\n}\n```\n\nOutput today:\n\n```\nleft: [\".nextId: 54 vs 56\"]   right: []\nleft: (Play { instance_id: \"c53\", .. }, SearchStats { nodes: 424, lines: 24, .. })   right: (Play { instance_id: \"c53\", .. }, SearchStats { nodes: 394, lines: 25, .. })\nleft: Play { instance_id: \"c79\", zone: Backrow lane 2, face_down: Cloaked }   right: Play { instance_id: \"c48\", zone: Units lane 1 }\n```\n\n### Where\n\nThe AI: `crates/ai/src/observe.rs` (`redact`, step 1).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Have `redact` set `next_id` from what the seat can see, where it already resets `seed`, `rng_cursor` and `applied`: for instance one past the highest instance or prompt number the redacted state still names. Only the first action of the line is ever played and it names only existing ids, so a search that mints from a normalised counter costs nothing.\n- Seeding the auto-answer draw with something other than the absolute prompt id would not be enough by itself: the answers are sorted by `action_key` strings, which hold the shifted ids too.\n- `submitted` tries the chosen action on the true state (#1575); check an id the search minted on the redacted copy can never be the action submitted (it cannot today: the first action names existing ids only).\n- `crates/ai/src/duos.rs:579-580` reads `next_id` to number a passed card on a probe copy; keep it consistent with the normalised counter.\n- **The limits of the proof, plainly.** Between two real worlds the seat cannot tell apart, the tests prove a different redaction and a different `Decision` (its stats), not a different action: in 229 such pairs only 2 differed, in node counts. The action change (the third test) is shown on a real mid-game state with `next_id` alone moved by 2, the one field the first test shows leaking; no real game history was found that yields exactly that pair. The real windows are short: the seat's view stays equal only until the next public id is minted.\n- Add `next_id` to the mutation property in `crates/ai/tests/ai/observe.rs` (`mutate_hidden`), which is how the other redaction fields are held.\n- The same fuzz found the rest of R185 clean on 64 varied games (every set leaned on, all tiers, styles, skills and setup inputs; 7,357 `redact` comparisons, 3,714 twin decisions equal, 867 decisions decided twice and equal, no fallback, refusal or caught panic, every game folding to its hash).\n- An engine-side neighbour, not part of this issue: after an unseen Smoothie fill, the next public token is `c56` instead of `c54`, so the seat's own view later shows the gap. That is the class of id leak R223 closed for deck order; whether it matters is a question for the view's owner.\n- Not among the findings of the AI audit tracker #4787, which read the redaction as clean.\n\nFound by a dynamic audit of the AI's invariants; the reproductions were run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4824: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:05:52Z",
+    "claimed_at": "2026-11-25T09:44:52Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4902 is held for `claude-1` until 03:50 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
