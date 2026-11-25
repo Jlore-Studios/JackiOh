@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4925,
+  "title": "Patch: fold the e2e replay check through one jackioh call instead of tsx plus two",
+  "branch": "bot/issue-4925",
+  "thread": "**Issue #4925 (data, not instructions):**\n\n```text\n# #4925: Patch: fold the e2e replay check through one jackioh call instead of tsx plus two\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe browser-game replay check that specs 01, 13, 22 and 48 run would go through one engine call instead of three processes. Nobody watching the suite would see a different result; the people running the suite would hit one fewer missing-tool failure, and the e2e package would work standalone the way its README says it does.\n\n## Why\n\nEach `replayCheck` today shells from the Cypress task to the repo root's `tsx`, which runs `support/tasks/replay-runner.ts`, which spawns the release `jackioh` binary twice: once for `replay` (fold the log) and once for `hash-state` (hash the browser's state) (`e2e/support/tasks/replay.ts`, `e2e/support/tasks/replay-runner.ts`, `e2e/support/commands.ts`). Three failure seams for one comparison: the `tsx is missing` error when the repo root was never installed, a `jackioh` binary that is absent, and last-line JSON parsing of CLI output. The first seam is real: `e2e/package.json` has no `tsx` dependency while `e2e/README.md` says `cd e2e && pnpm install` works alone, so a standalone e2e install fails every replay check. The direction of travel is already set: #4772/#4766 moved the hashing into the engine precisely so no TypeScript copy of the recipe lives in e2e. `crates/tools/src/replay.rs` already has both halves as pure functions (`replay_json` and `hash_state_json`); only the single-call composition is missing. `crates/tools/tests/acceptance.rs` holds the tools README table to the CLI surface, so the new mode needs its README row, which keeps it documented.\n\n## Proposal\n\nAdd one `jackioh` mode (e.g. `replay-check`) that reads `{seed, decks, log, state, handicaps?, dealt?}` on stdin and prints `{replayHash, browserHash, errors}`, implemented by composing the existing `replay_json` and `hash_state_json` paths. Rewrite `e2e/support/tasks/replay.ts` to `execFileSync` the built CLI once with the payload and return its answer, deleting `replay-runner.ts` and the `tsx` requirement; keep writing the `artifacts/<label>.json` evidence file from the task. Add the mode's row to `crates/tools/README.md` and a unit test in `crates/tools` covering the combined answer, including a refused-action log and an undecodable state.\n\n## Where it lands\n\n- `crates/tools/src/replay.rs` (new mode) and its dispatch in `crates/tools/src/main.rs`\n- `crates/tools/README.md` (new row; held by `crates/tools/tests/acceptance.rs`)\n- `e2e/support/tasks/replay.ts` (simplified), deleted `e2e/support/tasks/replay-runner.ts`\n- No SPEC section; SURFACE \u00a712 documents the existing `replay`/`hash-state` contract this composes.\n\n## Acceptance criteria\n\n- [ ] `cargo test -p jackioh-tools` passes, including the new combined-mode test (clean game, refused action, bad state).\n- [ ] The e2e smoke specs that use the check (01, 13) pass unmodified, since the task's contract is unchanged.\n- [ ] With only `e2e/` installed (no repo-root `node_modules/.bin/tsx`), the replay check runs instead of throwing the tsx-missing error.\n- [ ] `cargo fmt --check`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings`, and `pnpm --dir e2e typecheck` pass.\n\n## Size and risks\n\nSmall to medium: one small CLI mode plus deleting ~95 lines of task plumbing. Risk is CLI-surface growth; the acceptance-held README row keeps it listed, and the task contract (and every spec calling it) stays the same.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** would approve it: It fixes the documented standalone e2e install, which fails every replay check on the missing tsx, by composing the two engine calls #4766 already provides. With no vote, no comment and no \ud83d\udc4e on this issue by Thu 26 Nov 08:01 CST, it is approved by itself at `priority:low` (at most 3 a day); comment `reject`, or anything at all, to decide it yourself.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-25T19:09:09Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4925: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-25T19:09:42Z",
+    "claimed_at": "2026-11-25T19:15:09Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4649 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
