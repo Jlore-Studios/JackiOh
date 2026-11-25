@@ -19469,6 +19469,11 @@
       "owner": "claude-3",
       "owner_since": "2026-11-24T22:05:33Z",
       "owner_why": "it plans it",
+      "paused": {
+        "at": "2026-11-25T10:44:48Z",
+        "interrupt": "usage",
+        "provider": "claude-3"
+      },
       "pending_request": false,
       "planned_at": "2026-11-24T22:25:22Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
