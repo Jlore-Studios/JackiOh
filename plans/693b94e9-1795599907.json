@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4828,
+  "title": "Patch: a Heroic Power's End Times costs (10) again after a use, even when the card left the field between its cuts and that use",
+  "branch": "bot/issue-4828",
+  "thread": "**Issue #4828 (data, not instructions):**\n\n```text\n# #4828: Patch: a Heroic Power's End Times costs (10) again after a use, even when the card left the field between its cuts and that use\nOpened by @squishy-squooby.\n\n### What happens\n\nCore #98 Heroic Power's End Times lowers its own price at each of its controller's ends of turn and is meant to go back to (10) when used. The cut and the record of the cut live in two places that R78 treats differently:\n\n- each end of turn lowers the price by writing the card's **tuning** (`set_number` on `param:endTimes`) and banks the amount in **`memory[\"endTimesTaken\"]`** (`crates/engine/src/subsystems/hero_power.rs:610-643`, `end_times_tick`);\n- a use raises the price by the bank (`:647-670`, `end_times_reset`);\n- when the card leaves the field, `reset_instance` (`crates/engine/src/zones.rs`) clears `memory` and keeps `tuning`.\n\nSo a card that is bounced after some cuts keeps the cuts and loses the record of them. Replayed with End Times chosen again and then used, its price goes back up by a bank that is now empty: it stays at the cut price and keeps falling from there, since nothing ever gives the lost cuts back.\n\nConcrete: End Times is cut to (7) over three rounds; S #117 Core System (\"Bounce all permanents\") bounces the card; it is replayed, End Times is chosen again and used. After the use its price is **(7)**, not (10).\n\nBy reading, not tested: a copy also carries the tuning and no bank (`effects/summon.rs`: \"a copy keeps the source's tuning\", R443), as does a Flicker whose arrival roll lands on End Times.\n\n### What should happen\n\nR3551002: \"End Times' cuts add up over its controller's ends of turn \u2026 and are taken back when it is used, so the next use costs (10) again.\" The card's text says the same: \"reduce the cost of the next use of this\".\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `r3551002_a_used_end_times_costs_10_again_after_the_card_was_bounced_and_replayed`, in [`crates/ai/tests/audit_engine_subsystems.rs` at 933dd76](https://github.com/Jlore-Studios/JackiOh/blob/933dd76b39f8f72c31f19ee5ee3b499ad8274190/crates/ai/tests/audit_engine_subsystems.rs) (branch `claude/vigilant-mayer-pmyrhr`). The steps, for each of up to 200 seeds until one offers End Times on both plays:\n\n1. p1 holds Heroic Power (`core-098`), Core System (`stinkyscape-117`) and a filler at 10 mana; both seats turn auto-end off.\n2. Play Heroic Power, answer its prompt `endTimes`; the price (`hero_power::power_price`) is `END_TIMES_COST`.\n3. Three rounds of End turn; the price is `END_TIMES_COST - 3`.\n4. Play Core System (the card is bounced), play Heroic Power again, answer `endTimes`.\n5. End turns until p1 is active and can afford it, activate End Times, answer its Discover.\n6. Assert the price is `END_TIMES_COST` again, with no end of turn since the use.\n\nOutput today: `a used End Times costs (10) again (R3551002)   left: Some(7)   right: Some(10)`.\n\n### Where\n\nThe rules engine: `crates/engine/src/subsystems/hero_power.rs` (`end_times_tick`, `end_times_reset`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Keep the cut and its bank in one store. Either hold the running discount in `memory` alone and derive the price as the declared `endTimes` less it, so R78 drops both together; or keep the bank where the tuning lives, so a use always restores the price.\n- Decide what a bounced card's price should be on its return and say so in a ruling note in this issue's block: back at (10) (the cut was this stay's), or still cut (the card remembers). R3551002 speaks only of a use. R78's note says tuning persists for Buffs and Nerfs; nothing says End Times' moving price is one.\n- Not this bug, and to stay: Steady Shot's Radiant \"+2 for good\" is an intended permanent change.\n- The card's own tests (`c098_heroic_power.rs`, the `r3551002_*` ones) cover the cut, the floor, the Radiant cut and the opponent's turn; none pins the price after the card leaves the field. Add the bounce case there, on one pinned seed, and the copy case if the ruling covers it.\n- A card change in play: it needs its pending patch fragment (`docs/ADDING_CARDS.md`).\n\nFound by an audit of the engine's subsystems; the reproduction was run and the code path read before filing.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4828: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:14:48Z",
+    "claimed_at": "2026-11-25T09:45:43Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4902 is held for `claude-1` until 03:50 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
