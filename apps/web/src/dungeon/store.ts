@@ -493,6 +493,8 @@ function persistRun(live: Live): void {
 let core: Core | null = null;
 const listeners = new Set<() => void>();
 let pageListening = false;
+/** A Dungeon page was open and left: the cache may be older than what the device holds. */
+let pageWasOpen = false;
 
 function current(): Core {
   core ??= loadCore();
@@ -542,15 +544,19 @@ function setSession(running: boolean): void {
   commit({ ...core, live: next });
 }
 
+function reloadCore(): void {
+  // Another tab changed what is kept: read it all again, but for a finished run this tab still shows.
+  const kept = core?.live ?? null;
+  const next = loadCore();
+  commit(next.live === null && kept !== null && runFinished(kept.run) ? { ...next, live: kept } : next);
+}
+
 function onStorage(event: StorageEvent): void {
   // R4733000: another tab holding or clearing a report reloads this tab too, so a report is
   // applied once no matter which tab left the fight.
   const keys = [DUNGEON_PROGRESS_KEY, DUNGEON_RUN_KEY, DUNGEON_HISTORY_KEY, DUNGEON_HELD_KEY];
   if (typeof event.key === "string" && !keys.includes(event.key)) return;
-  // Another tab changed what is kept: read it all again, but for a finished run this tab still shows.
-  const kept = core?.live ?? null;
-  const next = loadCore();
-  commit(next.live === null && kept !== null && runFinished(kept.run) ? { ...next, live: kept } : next);
+  reloadCore();
 }
 
 /** R3502000: the browser page hid or showed again: the run's clock stops or runs on. */
@@ -583,11 +589,17 @@ function subscribe(listener: () => void): () => void {
   if (!pageListening && typeof window !== "undefined") {
     listenToPage();
     pageListening = true;
+    // The page opens again after leaving: start from what the device holds now, as another
+    // tab may have written while nothing listened. A first load already read it, and a
+    // second read would settle an unfoldable run twice and drop its notice. A finished run
+    // this tab still shows is kept.
+    if (pageWasOpen) reloadCore();
   }
   // The first render loads a run with no one listening, so its clock starts here.
   setSession(onScreen());
   return () => {
     listeners.delete(listener);
+    if (listeners.size === 0) pageWasOpen = true;
     if (listeners.size === 0 && pageListening) {
       stopListeningToPage();
       pageListening = false;
@@ -604,6 +616,7 @@ export function __resetDungeonForTests(): void {
   listeners.clear();
   if (pageListening) stopListeningToPage();
   pageListening = false;
+  pageWasOpen = false;
 }
 
 /** B20: every finished run on this device, oldest first. */
