@@ -1,0 +1,68 @@
+{
+  "action": "plan",
+  "number": 4840,
+  "title": "Patch: Inner Fire sets Attack equal to Health on a Unit whose Attack stands below 0, where it now comes up short",
+  "branch": "bot/issue-4840",
+  "thread": "**Issue #4840 (data, not instructions):**\n\n````text\n# #4840: Patch: Inner Fire sets Attack equal to Health on a Unit whose Attack stands below 0, where it now comes up short\nOpened by @squishy-squooby.\n\n### What happens\n\nS #10.1 Inner Fire (\"Set a Unit's Attack equal to its Health\") works out the buff it needs from the Unit's **shown** Attack, which is floored at 0:\n\n```rust\n// crates/cards/src/scripts/stinkyscape/c010_1_inner_fire.rs:39\nlet attack = (view.health + shift).max(0) - view.attack;\n```\n\nA Unit whose Attack stands below 0 underneath the floor then comes up short by that much.\n\nConcrete: a 1/5 stands under Core #65.1 Spikey Pillow (\"Your Units have \u22122 Attack\"), so it shows 0 Attack with \u22121 underneath. Base Inner Fire buffs by 5 \u2212 0 = +5 and the Unit shows **4/5**. Radiant Inner Fire on its caster's own Unit shows 8, not 9. Any Unit carried below 0 reaches this: the Pillow here, a Nerf, or Core #46 Suppressive Aura (the last two by reading).\n\n### What should happen\n\n- R1867002: \"Attack becomes Health plus the running face's shift, with a floor of 0\", read \"through the \u00a710.4 layers\", auras included.\n- R1868001, which names \"S #10.1 Inner Fire's reading\", sets a number exactly by reading the Attack \"before layer 5's floor (`unclamped_attack`\u2026), so every Unit shows exactly 0, one Nerfed below 0 included\". S #118 Secure System does this (`c118_secure_system.rs`); Inner Fire does not.\n\n### How to reproduce\n\nTwo tests fail on `main` (3a83bd7), in [`crates/ai/tests/audit_cards_stinky.rs` at ca59d7a](https://github.com/Jlore-Studios/JackiOh/blob/ca59d7a/crates/ai/tests/audit_cards_stinky.rs) (branch `claude/vigilant-mayer-pmyrhr`).\n\n```rust\nuse jackioh_engine::testkit::*;\nconst P1: PlayerId = PlayerId::P1;\nconst FILLER: &str = \"core-005\";\n\nfn inner_fire_under_a_pillow(radiant: bool) -> (i32, i32) {\n    jackioh_cards::register_all();\n    const INNER_FIRE: &str = \"stinkyscape-010-1\";\n    const PILLOW: &str = \"core-065-1\";\n    let mut s = scenario(json!({\n        \"p1\": {\n            \"hand\": [{ \"def\": INNER_FIRE, \"radiant\": radiant }, FILLER],\n            \"field\": [{ \"def\": \"stand-in (1) 1/5\", \"lane\": 1 }, { \"def\": PILLOW, \"lane\": 3 }],\n            \"library\": vec[FILLER; 4], \"mana\": 10,\n        },\n        \"p2\": { \"hand\": [FILLER], \"library\": vec[FILLER; 4] },\n    }));\n    let unit = s.unit_at(P1, 1);\n    assert_eq!(s.stats(&unit).attack, 0, \"1 Attack under \u22122 shows 0\");\n    s.play(INNER_FIRE, pick::targets(pick::instance(&unit)));\n    let after = s.stats(&unit);\n    (after.attack, after.health)\n}\n#[test]\nfn inner_fire_sets_attack_to_health_on_a_unit_below_zero_attack() {\n    let (attack, health) = inner_fire_under_a_pillow(false);\n    assert_eq!(attack, health, \"R1867002: Attack becomes Health\");\n}\n#[test]\nfn radiant_inner_fire_sets_attack_to_health_plus_four_on_a_unit_below_zero_attack() {\n    let (attack, health) = inner_fire_under_a_pillow(true);\n    assert_eq!(attack, health + 4, \"R1867002: Attack becomes Health plus the shift\");\n}\n```\n\nOutput today: `R1867002: Attack becomes Health   left: 4   right: 5` and `\u2026plus the shift   left: 8   right: 9`.\n\n### Where\n\nA card: `crates/cards/src/scripts/stinkyscape/c010_1_inner_fire.rs`.\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Subtract `unclamped_attack(&*ctx.state, &unit)` instead of `view.attack`, as Secure System does. A script reads state through the prelude's read helpers (CLAUDE.md, Architecture); `unclamped_attack` is one.\n- The card's tests go in its own file (CLAUDE.md rule 6): a Unit below 0, on both faces. Its tests today never put a Unit below 0.\n- Unsecure System's doubling of a Unit that shows 0 is ruled to stay at 0 (R1868001), so it is not affected.\n- The same floored-against-raw mismatch was found in the AI's redaction (#4803); a grep for other scripts that subtract `view.attack` or `stats(..).attack` to set a number would show whether there is a third.\n- A card change in play: read `docs/ADDING_CARDS.md` first; it needs its pending patch fragment.\n\nFound by an audit of the Stinkyscape card scripts against their printed text; the reproductions were run and the script read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4840: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:23:32Z",
+    "claimed_at": "2026-11-25T06:45:08Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4864 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4805 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4816 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4821 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4831 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4734 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4676 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4891 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4779 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4785 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4802 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4804 is held for `claude-3` until 02:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
