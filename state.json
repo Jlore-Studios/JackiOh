@@ -24306,6 +24306,14 @@
         "sha": "9f4c4922f07b314da257c5576b4405725c5f5f7b",
         "tiers": {}
       }
+    },
+    "4939": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-25T13:37:19Z",
+      "issue": 4811,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
