@@ -23237,8 +23237,15 @@
     "what": "plan #4836 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-25T10:03:58Z",
-    "notes": [],
+    "at": "2026-11-25T10:10:53Z",
+    "notes": [
+      "delivered plan #4828 on claude-3 (run 45588480794): planned",
+      "delivered plan #4847 on agy (run 45584996635): planned",
+      "started build #4847 on agy (run 45592960190)",
+      "started plan #4836 on claude-3 (run 45593095632)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
+      "pruned 1 plan file(s) older than 7 days"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -23943,7 +23950,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T10:03:58Z",
+  "loop_tick": "2026-11-25T10:10:53Z",
   "machine_disk": {
     "issue": null,
     "reading": {
