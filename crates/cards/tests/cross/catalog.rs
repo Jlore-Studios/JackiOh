@@ -9154,8 +9154,8 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Rare,
-        st(2, 1),
-        st(4, 2),
+        st(1, 4),
+        st(2, 8),
     ),
     row(
         "153",

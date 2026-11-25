@@ -35844,8 +35844,8 @@
     "cost": 2,
     "loc": 18,
     "base": {
-      "attack": 2,
-      "health": 1,
+      "attack": 1,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -35854,8 +35854,8 @@
       "text": "Starship Piece\nDamage also applies Toxic {toxic}."
     },
     "radiant": {
-      "attack": 4,
-      "health": 2,
+      "attack": 2,
+      "health": 8,
       "keywords": [
         {
           "kind": "Starship Piece"
