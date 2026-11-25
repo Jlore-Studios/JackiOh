@@ -20557,6 +20557,23 @@
       "requested_by": "squishy-squooby",
       "run_id": "45593095632",
       "runs_on": "ubuntu-latest",
+      "session": {
+        "action": "plan",
+        "artifact": 15012506276,
+        "artifact_bytes": 247211,
+        "artifact_name": "work",
+        "at": "2026-11-25T10:22:12Z",
+        "bytes": 324252,
+        "cwd": "/home/runner/work/_temp/work/item-4836",
+        "ended": "interrupted: `claude-3` reached its usage limit",
+        "head": "a9c2665f8dd6c6377342625a9d4de5cfd1b5e6d5",
+        "id": "39f2c8ba-88a9-43da-bdf2-b792752fbbc4",
+        "kind": "plan",
+        "model": "opus",
+        "project": "-home-runner-work--temp-work-item-4836",
+        "provider": "claude-3",
+        "run": "45593095632"
+      },
       "started_at": "2026-11-25T10:14:37Z",
       "stop_requested": false,
       "taken_asks": []
