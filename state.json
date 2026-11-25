@@ -20739,14 +20739,26 @@
       "verdict_rounds": 2
     },
     "4839": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "claude-1",
+      "owner_since": "2026-11-25T11:55:05Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "claude-1",
       "queued_at": "2026-11-24T21:23:19Z",
       "requested_by": "squishy-squooby",
-      "stop_requested": false
+      "run_id": "pending:9e4213c8-1795607672",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-25T11:55:05Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "4840": {
       "action": "build",
@@ -23499,9 +23511,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T11:54:21Z",
+    "at": "2026-11-25T11:55:05Z",
     "url": "",
-    "what": "spot-check #4890 on claude-7"
+    "what": "plan #4839 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-25T11:38:34Z",
