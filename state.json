@@ -20066,21 +20066,21 @@
       "interruptions": 0,
       "kind": "build",
       "live": "building",
-      "owner": "claude-4",
-      "owner_since": "2026-11-25T08:57:18Z",
-      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
+      "owner": "claude-1",
+      "owner_since": "2026-11-25T11:31:56Z",
+      "owner_why": "handed off from `claude-4`: `claude-4` its last run could not work (the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it ); it is left alone until 2026-11-25T12:01:34Z",
       "pending_request": false,
       "planned_at": "2026-11-25T00:54:26Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-4",
+      "provider": "claude-1",
       "queued_at": "2026-11-25T11:11:34Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45580851310",
+      "run_id": "pending:b95eee09-1795606282",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-25T08:57:18Z",
+      "started_at": "2026-11-25T11:31:56Z",
       "stop_requested": false,
       "strike_log": [
         "a run died: the model job left no result: it failed before the model started (the doctor step, the install or the CLI setup), or it was cancelled"
@@ -23344,9 +23344,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T11:31:09Z",
+    "at": "2026-11-25T11:31:56Z",
     "url": "",
-    "what": "revise #4884 on muse"
+    "what": "build #4821 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-25T11:18:33Z",
