@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 4851,
+  "title": "Patch: `spec check` credits only a proof that runs: a TypeScript test or an SQL heading that is commented out no longer proves its ruling",
+  "branch": "bot/issue-4851",
+  "thread": "**Issue #4851 (data, not instructions):**\n\n````text\n# #4851: Patch: `spec check` credits only a proof that runs: a TypeScript test or an SQL heading that is commented out no longer proves its ruling\nOpened by @squishy-squooby.\n\n### What happens\n\n`cargo jackioh spec check` (CLAUDE.md rule 3) passes a ruling whose only proof does not run, when that proof is a TypeScript test or an SQL heading that has been commented out or sits inside a string.\n\n- `ts_test_titles` (`crates/tools/src/spec.rs:932-999`) scans the file's raw bytes for `it(`, `test(` and `describe(` titles.\n- `sql_headings` (`:1045-1067`) finds `\\echo` anywhere on a line.\n- The Rust path blanks comments and strings first (`rust_code_only`, `:574`), and the module's own unit test refuses `// fn r999_commented() {}`.\n\nWith R1's only `proven_in` file holding any of these, `spec check` prints `1 rulings, 1 proofs \u2026 ok` and exits 0:\n\n- `// it(\"R1 the fixture ruling holds\", () => { \u2026 });`\n- the same test inside `/* \u2026 */`\n- `export const todo = 'write it(\"R1 the fixture ruling holds\") one day';`\n- `-- \\echo '### R1: the fixture ruling ###'` in an SQL script\n\nNo live instance exists today: a grep of every TypeScript file under the citing roots for a commented `it`, `test` or `describe` with an R-id found none. The hole is that the next one would pass.\n\n### What should happen\n\n`spec/README.md`, Note format: \"`proven_in` lists the files whose tests prove it, and only a test that runs counts (#1718)\", and a TypeScript title counts \"as long as no `.skip`, `.todo`, `.fixme` or `.only` turns it off\".\n\n### How to reproduce\n\nTwo tests fail on `main` (3a83bd7), in [`crates/tools/tests/audit_tools.rs` at b5a9801](https://github.com/Jlore-Studios/JackiOh/blob/b5a9801/crates/tools/tests/audit_tools.rs) (branch `claude/vigilant-mayer-pmyrhr`): `spec_check_refuses_a_typescript_proof_that_is_commented_out` and `spec_check_refuses_an_sql_heading_that_is_commented_out`.\n\nEach builds a small tree in a scratch directory (`spec/rulings/R0001.md` with `id: R1`, `cards: \"issue #1\"` and one `proven_in`; `crates/cards/catalog.json` as `{}`; the proof file), runs `jackioh spec --root <tree> check`, asserts that a control with a live test passes, and then asserts each dead proof is refused.\n\nRun with `JACKIOH_AUDIT_TMP=<a scratch directory> cargo test -p jackioh-tools --features jackioh-engine/testkit --test audit_tools`.\n\nOutput today:\n\n```\nR1's only proof is no test that runs, yet `spec check` passed:\nline-comment: // it(\"R1 the fixture ruling holds\", \u2026) -> spec check: 1 rulings, 1 proofs, 1 citations in 1 files, 0 links: ok\nblock-comment: \u2026 ok        string: \u2026 ok        sql-comment: -- \\echo '### R1: the fixture ruling ###' \u2026 ok\n```\n\n### Where\n\nCI, deploys or tooling: `crates/tools/src/spec.rs` (`ts_test_titles`, `sql_headings`, `proves`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Before `ts_test_titles` scans, blank `//` and `/* */` comments and the contents of strings and template literals, keeping the title string that directly follows `it(`, `test(` or `describe(`. In `sql_headings`, skip an `\\echo` on a line whose text before it starts with `--`.\n- Run the fixed check over the real repository and say in the pull request that it still passes (it should: no live case was found). If it does not, the rulings it now flags need real proofs, not an exemption.\n- Deliberate today, so not part of this: an empty or all-skipped `describe(\"R1 \u2026\")` counts, and the unit test `refuses_a_typescript_title_that_does_not_run` asserts `describe(\"R1 after\", () => {})` proves R1.\n- Contrived Rust neighbours, confirmed on a fixture and left for the builder's judgement: a `#[test] fn r1_\u2026` inside a `macro_rules!` body that is never invoked, under `#[cfg(any())]`, or with `#[cfg_attr(all(), ignore)]` counts as a proof though it never runs.\n- The tests belong beside the module's existing unit tests in `spec.rs` (it already builds fixture trees) rather than in a new integration file.\n\nFound by an audit of the project's own gates (`crates/tools`); the reproductions were run and the code read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4851: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:35:24Z",
+    "claimed_at": "2026-11-25T10:48:23Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4847 is held for `agy` until 06:44 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
