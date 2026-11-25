@@ -15566,7 +15566,8 @@
       "last_findings": [],
       "live": "reviewing",
       "own_review": {
-        "claimed_at": "2026-11-24T22:27:10Z",
+        "claimed": true,
+        "claimed_at": "2026-11-25T04:27:15Z",
         "from_run": "45345578620",
         "gates": [
           {
@@ -15674,7 +15675,7 @@
       "question": "",
       "queued_at": "2026-11-24T10:28:31Z",
       "round_tier": "strong",
-      "run_id": "45501074327",
+      "run_id": "pending:b454140e-1795580798",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -15695,7 +15696,7 @@
         "run": "45345578620"
       },
       "source": "",
-      "started_at": "2026-11-24T22:27:10Z",
+      "started_at": "2026-11-25T04:27:15Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -21743,9 +21744,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T04:17:38Z",
+    "at": "2026-11-25T04:27:15Z",
     "url": "",
-    "what": "plan #4779 on claude-3"
+    "what": "review #4629 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-25T04:13:31Z",
