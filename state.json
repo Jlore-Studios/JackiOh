@@ -21341,24 +21341,13 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
+        "approvals": [],
         "builder": "claude",
-        "built_by": "claude-1",
+        "built_by": "claude-4",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "provider": "claude-4",
-            "run": "45539787534",
-            "tier": "strong"
-          }
-        ],
-        "sha": "0fb08179cabec0f5470f957678b5ebcccc0e4c48",
-        "tiers": {
-          "claude": "strong"
-        }
+        "reviews": [],
+        "sha": "d61855ccab730f66ef3a87be5bfca80ed25db46d",
+        "tiers": {}
       }
     },
     "4882": {
