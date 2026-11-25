@@ -20120,32 +20120,13 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
+        "approvals": [],
         "builder": "claude",
-        "built_by": "claude-3",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "spec/09-architecture/9.9-practice-ai.md"
-          ],
-          "from": "a707e48276a6fd0896ac82cea522a0b916f969b6",
-          "main": "12f393b679225f1743a67b299d5007ca440d6530"
-        },
+        "built_by": "claude-8",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "provider": "claude-3",
-            "run": "45678759237",
-            "tier": "strong"
-          }
-        ],
-        "sha": "69cd94f37e90282026fd7a1f6dc59364eb905f2f",
-        "tiers": {
-          "claude": "strong"
-        }
+        "reviews": [],
+        "sha": "aa2248629360f0bd25b0ce65400c1932f521fe2d",
+        "tiers": {}
       },
       "waiting_comment": 7167136028
     },
