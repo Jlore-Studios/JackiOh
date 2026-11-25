@@ -24313,7 +24313,16 @@
       "feedback_since": "2026-11-25T13:37:19Z",
       "issue": 4811,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-7",
+        "rejections": [],
+        "reviews": [],
+        "sha": "9d3b23d19ac138bb4e5406edf16cf0f1719143cf",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
