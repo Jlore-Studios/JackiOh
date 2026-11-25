@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4817,
+  "title": "Patch: a card made Radiant where it stands starts the Brittle its Radiant face newly prints, and regains a Reborn that face newly prints",
+  "branch": "bot/issue-4817",
+  "thread": "**Issue #4817 (data, not instructions):**\n\n````text\n# #4817: Patch: a card made Radiant where it stands starts the Brittle its Radiant face newly prints, and regains a Reborn that face newly prints\nOpened by @squishy-squooby.\n\n### What happens\n\n`make_radiant` (`crates/engine/src/effects/radiant.rs:60-87`) flips a card's face in place and then calls `gain_printed_shield` for a Divine Shield the Radiant face newly prints. It does nothing for the two other keywords whose state lives on the card.\n\n**1. Brittle never starts, though the card shows it.**\nS #135.1 Sack prints Brittle 1 on its Radiant face only (base 0/4 Can't Defend; Radiant 0/8 Can't Defend, Brittle 1). A base Sack on the field made Radiant by C+ #65.4 Golden Grape has `radiant: true`, `brittle: None`, and view keywords `[CantDefend, Brittle { n: 1 }]`. A turn cycle later it is still there: `brittle::brittle_tick` needs `card.brittle` to be `Some`, and `layers::with_brittle_count` shows the printed keyword with no count in force. The control, a Sack that entered the field Radiant, has a count of 1 and crumbles at that point. Core #28 Knockoff Temu Glowy Jelly Bean and Core #81 Radiant Saintess's Death reach the same code. Both seats see \"Brittle 1\" on a card that will never crumble.\n\n**2. A used Reborn stays used when the Radiant face newly prints Reborn** (narrower).\nC+ #6 Wrong-House Attacker prints Reborn on its Radiant face only (eleven cards do, Core #25 4-mana 7/7 and Core #56 Jilliax among them). A base one that was granted Reborn by an effect dies and returns (`reborn_spent: Some(true)`, the grant gone by R78). Golden Grape then makes it Radiant, and its keywords are `[Rush, Lifesteal, Poisonous]`: no Reborn. `gain_printed_shield` (`radiant.rs:92-108`) clears `divine_shield_spent` in exactly this situation; nothing clears `reborn_spent`, and `crates/engine/src/layers.rs` then drops the printed Reborn.\n\n### What should happen\n\n- \u00a75.2 (`spec/05-card-types.md`): a card made Radiant on the field, \"the base-stat layer swaps immediately, damage taken and buffs are kept, newly gained keywords apply at once\".\n- R385: the count of each card a player controls on the field ticks at the start of their turn and \"At 0 the card is destroyed\"; \"The count is public on the field\".\n- \u00a710.4 subtracts \"a used Divine Shield, Reborn or Flashback, the last for good\", so the first two come back when gained again; `buff::grant_onto` and the Upgrade keyword row both clear `reborn_spent` on a new Reborn. `gain_printed_shield`'s own comment gives the reasoning for the shield: a face that newly prints it \"puts a spent shield up again, as a shield granted again does\".\n\n### How to reproduce\n\nTwo tests fail on `main` (3a83bd7), in [`crates/ai/tests/audit_engine_layers.rs` at 1bbcb71](https://github.com/Jlore-Studios/JackiOh/blob/1bbcb71ed6319d94421a157960124f0de94e9ac2/crates/ai/tests/audit_engine_layers.rs) (branch `claude/vigilant-mayer-pmyrhr`): `s5_2_a_radiant_face_that_newly_prints_brittle_starts_its_count` and `s5_2_a_radiant_face_that_newly_prints_reborn_gives_it_to_a_body_that_used_one`.\n\n```rust\nconst GRAPE: &str = \"classicplus-065-4\";\nconst FILLER: &str = \"core-005\";\n#[test]\nfn s5_2_a_radiant_face_that_newly_prints_brittle_starts_its_count() {\n    jackioh_cards::register_all();\n    const SACK: &str = \"stinkyscape-135-1\";\n    let board = |radiant: bool| scenario(json!({\n        \"seed\": \"sack\",\n        \"p1\": { \"hand\": [GRAPE, FILLER], \"field\": [{ \"def\": SACK, \"radiant\": radiant }],\n                \"library\": [FILLER, FILLER, FILLER, FILLER, FILLER], \"mana\": 10 },\n        \"p2\": { \"hand\": [FILLER], \"library\": [FILLER, FILLER, FILLER, FILLER, FILLER] },\n    }));\n    let cycle = |s: &mut Scenario| { s.end_turn(); s.end_turn(); };\n    let mut control = board(true);\n    assert!(control.card(SACK).brittle.is_some(), \"control: its printed Brittle started\");\n    cycle(&mut control);\n    assert!(control.unit(PlayerId::P1, 1).is_none(), \"control: a Sack that entered Radiant crumbles\");\n    let mut s = board(false);\n    let id = s.card(SACK).id.clone();\n    let targets = pick::card(&s, id.as_str());\n    s.play(GRAPE, json!({ \"targets\": targets }));\n    assert!(s.card(id.as_str()).radiant);\n    assert!(s.stats(id.as_str()).keywords.contains(&Keyword::Brittle { n: 1 }));\n    cycle(&mut s);\n    assert!(s.unit(PlayerId::P1, 1).is_none(),\n        \"\u00a75.2, R385: the Sack shows Brittle 1 since it was made Radiant and has not crumbled a turn cycle later (its count: {:?})\",\n        s.unit(PlayerId::P1, 1).and_then(|card| card.brittle));\n}\n```\n\nOutput today: `\u00a75.2, R385: the Sack shows Brittle 1 since it was made Radiant and has not crumbled a turn cycle later (its count: None)` and `\u00a75.2: the Radiant face newly prints Reborn, so the card has it; it has [Rush, Lifesteal, Poisonous]`.\n\nThe Reborn test writes the grant by hand (`granted_keywords.push(Keyword::Reborn)`) in place of a random-keyword card; the state is reachable in play, since Core #63 Plastic Surgery and Core #80 Zao Gao draw from R21's pool, which holds Reborn.\n\n### Where\n\nThe rules engine: `crates/engine/src/effects/radiant.rs` (`make_radiant`, `gain_printed_shield`, `clear_radiant`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- In `make_radiant`, for a card on the field with no count in force, start the count its new face prints (the write `brittle_count::start_brittle_on_field` makes, with `since` the current turn). Widen `gain_printed_shield` to Reborn: when the Radiant face prints Reborn and the base face does not, clear `reborn_spent`.\n- `clear_radiant` needs the mirror for a base face that prints Brittle where the Radiant one does not (S #9 Ticketed, reached by M #53 Prestige); that half was read, not tested.\n- Each takes a ruling note in this issue's block. R385 says \"a printed Brittle starts when the card enters the field\" and is silent on a face swap in place; read as \"only on entry\", the card would show a Brittle that does nothing, against \u00a75.2 and \"the count is public\". No ruling says a used Reborn stays used through a face change. If the owner rules the other way on either, then the view must stop showing the keyword instead.\n- Not this bug, and to stay as they are: a count already in force keeps its number across a face swap (B3.3 rule 5; Core #89 Corpse Eater, Brittle 1 against 3); a keyword printed on both faces stays spent (the code's comment says so).\n- No Brittle test covers a face swap on the field today (`crates/engine/tests/rules/brittle.rs`, `effects_brittle.rs`, the Sack's own tests).\n- A card change in play: it needs its pending patch fragment (`docs/ADDING_CARDS.md`).\n\nFound by an audit of the engine's continuous effects; the reproductions were run and the code paths read before filing.\n\n---\nComment by @squishy-squooby at 2026-11-24T21:23:14Z:\n\nA third case of the same defect, found after this was filed, for whoever plans or builds it: the mirror image of the Sack.\n\n**A base Ticketed made Radiant in place still crumbles from its base face's Brittle 3.** S #9 Ticketed is the only card whose base face prints Brittle and whose Radiant face prints none. A base Ticketed is played and gets `BrittleCounter { count: 3, printed: Some(true) }`. S #110 iKwzki's Duo makes it Radiant at the start of its controller's next turn. The count keeps ticking, 2 then 1 then 0, and the Radiant Ticketed is destroyed (`crumbled`).\n\n- R1875001: \"The Radiant face has no Brittle, so it holds until it is removed.\"\n- `active_brittle_count` (`crates/engine/src/brittle_count.rs:27-33`) switches a printed count off only for `vanilla`, though its own doc says \"A count its printed Brittle started is the card's text\": a face that no longer prints Brittle is the same case.\n- Starting a count on becoming Radiant (the Sack's fix above) does not fix this one. Treat a count with `printed: Some(true)` as in force only while the running face still prints Brittle (in `active_brittle_count`, beside the Vanilla test), or drop it in `make_radiant`.\n- The same count survives a bounce to hand (R766), so a Ticketed made Radiant off the field and replayed would crumble too; that path is by reading, not tested.\n\nFailing test: `ticketed_made_radiant_in_place_no_longer_crumbles` in [`crates/ai/tests/audit_cards_stinky.rs` at ca59d7a](https://github.com/Jlore-Studios/JackiOh/blob/ca59d7a/crates/ai/tests/audit_cards_stinky.rs). Its control (a Ticketed played Radiant stands through four of its controller's turns) passes; the base one made Radiant ends in the graveyard: ``R1875001: the Radiant face has no Brittle, so it holds until it is removed; it is in Graveyard { player: P1 } with 1 `crumbled` ``.\n\nThe face pairs that differ only in the number (Overdrive Module 2 against 4, Meltdown Layer 3 against 6, Corpse Eater 1 against 3, Alnilam 3 against 5) are the \"count already in force keeps its number\" rule this issue says should stay.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4817: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:00:52Z",
+    "claimed_at": "2026-11-25T09:22:12Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4902 is held for `claude-1` until 03:50 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
