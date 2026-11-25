@@ -126,7 +126,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R4382001: Adaptive UI's Rush Token through v0.1.0d), #4396 (R4396000), #4423 (R4423000), #4424
 /// (R4424000), #4440 (R4440003: Profe Yates's exile; R4440050 to R4440055, and the Tributes of
 /// xxFreshJack, Raven, ZolarKeth and Galaxy, Last Hurrah's Flashback and Double Counting's price),
-/// and #4666 (R4666000).
+/// #4666 (R4666000) and #4828 (R4828000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 /// R4779000: a row's key is that version, or `"fragment:<stem>"` (`FRAGMENT_KEY`), the stem of the
 /// pending fragment that ships the change, which `resolve_kept_key` reads as the version just before
@@ -1410,6 +1410,13 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     ),
     // #4665's Ticketed (R4665000): the Cry that held a permanent beneath it in its own zone.
     (c009_ticketed::ID, "v0.6.12c", c009_ticketed::script_v0_6_12c),
+    // #4828 (R4828000): End Times' bank in the card's memory, kept until the fragment that moves it into
+    // the card's tuning ships (R4779000).
+    (
+        c098_heroic_power::ID,
+        "fragment:end-times-gives-back-its-cuts-after-leaving-the-field",
+        c098_heroic_power::script_v0_6_14,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under or the
