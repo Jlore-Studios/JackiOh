@@ -17653,11 +17653,11 @@
       "asks": [],
       "died": 0,
       "difficulty_by": {
-        "at": "2026-11-24T21:50:28Z",
+        "at": "2026-11-25T03:48:06Z",
         "difficulty": "hard",
-        "provider": "step-up",
-        "tier": "",
-        "why": "failed 3 times at difficulty:medium"
+        "provider": "claude-3",
+        "tier": "strong",
+        "why": "Already labelled difficulty:hard (step-up), which a plan may not lower; by the rule alone it is medium: client-only, 10 files, no engine, AI, cross-crate or migration change."
       },
       "failures": 0,
       "forced": false,
