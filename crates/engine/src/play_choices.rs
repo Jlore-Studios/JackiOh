@@ -2729,7 +2729,7 @@ fn refuse_zone(
     Ok(())
 }
 
-fn refuse_x(
+pub(crate) fn refuse_x(
     state: &GameState,
     player: PlayerId,
     card: &CardInstance,
@@ -2768,7 +2768,7 @@ fn refuse_x(
     why_x_refused(state, player, x.unwrap_or(0), None)
 }
 
-fn refuse_embiggen(
+pub(crate) fn refuse_embiggen(
     state: &GameState,
     card: &CardInstance,
     embiggen: Option<bool>,
