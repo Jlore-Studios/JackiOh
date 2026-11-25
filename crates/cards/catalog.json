@@ -35768,7 +35768,7 @@
     "cost": 2,
     "loc": 18,
     "base": {
-      "attack": 3,
+      "attack": 4,
       "health": 1,
       "keywords": [
         {
@@ -35778,7 +35778,7 @@
       "text": "Starship Piece\nDamage also Burns {burns}."
     },
     "radiant": {
-      "attack": 6,
+      "attack": 8,
       "health": 2,
       "keywords": [
         {
@@ -35790,8 +35790,8 @@
     "params": [
       {
         "key": "burns",
-        "base": 3,
-        "radiant": 6,
+        "base": 4,
+        "radiant": 8,
         "better": "up",
         "step": 1,
         "min": 1
