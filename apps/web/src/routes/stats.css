@@ -892,15 +892,15 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-4);
 }
 
 .hall-entry {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-6);
   width: 100%;
-  padding: 10px 12px;
+  padding: var(--space-5) var(--space-6);
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-sm);
   background: var(--bg-raised);
@@ -913,14 +913,14 @@
   flex: none;
   width: 2ch;
   font-weight: 700;
-  color: var(--text-dim, #9aa1b8);
+  color: var(--text-dim);
 }
 
 .hall-faces {
   flex: none;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-3);
 }
 
 .hall-face {
@@ -938,12 +938,12 @@
   align-items: center;
   justify-content: center;
   aspect-ratio: 5 / 7;
-  font-size: 12px;
-  color: var(--text-dim, #9aa1b8);
+  font-size: var(--type-sm);
+  color: var(--text-dim);
 }
 
 .hall-arrow {
-  color: var(--text-dim, #9aa1b8);
+  color: var(--text-dim);
 }
 
 .hall-details {
@@ -951,7 +951,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-2);
 }
 
 .hall-versions {
@@ -962,16 +962,16 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-3);
 }
 
 .hall-changes {
-  font-size: 12px;
-  color: var(--text-dim, #9aa1b8);
+  font-size: var(--type-sm);
+  color: var(--text-dim);
 }
 
 .hall-balance {
-  font-size: 13px;
+  font-size: var(--type-md);
   font-style: italic;
 }
 

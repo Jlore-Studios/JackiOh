@@ -19,12 +19,22 @@ import { TierChip, adjustedText } from "./TierChip.tsx";
 import { cardTierFit } from "./tierFit.ts";
 
 /** R4681001: the four sections, in the order the issue lists them. */
-const SECTIONS: readonly { key: "broken" | "nerfed" | "buffed" | "changed"; title: string }[] = [
-  { key: "broken", title: "Most broken" },
-  { key: "nerfed", title: "Most nerfed" },
-  { key: "buffed", title: "Most buffed" },
-  { key: "changed", title: "Most changed" },
-];
+type HallSectionKey = "broken" | "nerfed" | "buffed" | "changed";
+const SECTIONS: readonly HallSectionKey[] = ["broken", "nerfed", "buffed", "changed"];
+
+/** R4681001: each section's heading, a literal `t()` call so R711000's scan covers it. */
+function sectionTitle(key: HallSectionKey): string {
+  switch (key) {
+    case "broken":
+      return t("Most broken");
+    case "nerfed":
+      return t("Most nerfed");
+    case "buffed":
+      return t("Most buffed");
+    case "changed":
+      return t("Most changed");
+  }
+}
 
 /** R4681001: one side's Adjusted and tier, or "not enough games" below R654's floor. */
 function SideFigures({
@@ -91,7 +101,7 @@ export function HallPanel({
   // R4680000: each face whose version's catalog has not loaded asks for it once it nears the screen (at
   // once where nothing can watch the screen), so only the entries on screen load theirs.
   const [root, setRoot] = useState<HTMLElement | null>(null);
-  const order = SECTIONS.map(({ key }) => hall[key].map((entry) => entry.before.id).join(",")).join("\n");
+  const order = SECTIONS.map((key) => hall[key].map((entry) => entry.before.id).join(",")).join("\n");
   useEffect(() => {
     if (root === null) return;
     const stops = [...root.querySelectorAll<HTMLElement>("[data-needs]")].map((element) => {
@@ -107,12 +117,12 @@ export function HallPanel({
 
   return (
     <div ref={setRoot}>
-      {SECTIONS.map(({ key, title }) => {
+      {SECTIONS.map((key) => {
         const entries = hall[key];
         if (entries.length === 0) return null;
         return (
-          <section key={key} data-testid={statsTestid.hallSection} aria-label={t(title)}>
-            <h3 className="hall-title">{t(title)}</h3>
+          <section key={key} data-testid={statsTestid.hallSection} aria-label={sectionTitle(key)}>
+            <h3 className="hall-title">{sectionTitle(key)}</h3>
             <ol className="hall-list">
               {entries.map((entry, index) => {
                 const single = entry.before.id === entry.after.id;
