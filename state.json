@@ -24826,6 +24826,8 @@
       }
     },
     "4944": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-25T16:28:49Z",
@@ -24839,8 +24841,11 @@
         "trail": "- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4842/.bot-notes.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo test -p jackioh-server api::cosmetic_packs::\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"937a0801-c7a3-4c29-97f4-c5baa8ce5660/task-156\"}\n- said: I have launched the full `api::cosmetic_packs::` test suite in the background. Waiting for the test run to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo test -p jackioh-server api::packs::\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"937a0801-c7a3-4c29-97f4-c5baa8ce5660/task-162\"}\n- said: I have launched the `api::packs::` tests in the background to verify card pack opening behavior. Waiting for the test run to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo clippy -p jackioh-server --all-targets -- -D warnings\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"937a0801-c7a3-4c29-97f4-c5baa8ce5660/task-168\"}\n- said: I have launched `cargo clippy -p jackioh-server --all-targets -- -D warnings` in the background. Waiting for clippy to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo fmt --check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo fmt\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo fmt --check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo run --release -p jackioh-tools -- catalog check\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"937a0801-c7a3-4c29-97f4-c5baa8ce5660/task-181\"}\n- said: I have launched `cargo run --release -p jackioh-tools -- catalog check` in the background. Waiting for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo run --release -p jackioh-tools -- patches check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo run --release -p jackioh-tools -- spec check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && git diff\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4842 && cargo run --release -p jackioh-tools -- classify --base origin/main --claims\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4842/.bot-notes.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: opening a cosmetic pack whose own points earn a cosmetic pack answers the packs still held, so the Shop keeps showing the one it earned\"} --> ### What changed - In [`crates/server/src/economy/grants.rs`](file:///home/agent-agy/actions-runner/_work/_temp\u2026"
       },
       "issue": 4842,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-25T17:21:08Z",
         "from_run": "45654315366",
         "gates": [
           {
@@ -24899,8 +24904,15 @@
         "source": "build",
         "until": "2026-11-25T17:48:43Z"
       },
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-25T17:18:43Z",
+      "run_id": "pending:d4ccdc5d-1795627225",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "started_at": "2026-11-25T17:21:08Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gemini",
@@ -24914,9 +24926,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T17:09:21Z",
+    "at": "2026-11-25T17:21:08Z",
     "url": "",
-    "what": "review #4943 on claude-4"
+    "what": "review #4944 on agy"
   },
   "last_sweep": {
     "at": "2026-11-25T17:05:40Z",
