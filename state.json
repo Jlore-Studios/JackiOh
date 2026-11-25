@@ -21215,6 +21215,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 540,
       "started_at": "2026-11-25T08:25:00Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -45713,9 +45714,33 @@
         "title": "Patch: the Duos host decides an AI seat's pass or End turn again when the game moved on since it was asked, so the two AI seats stop wasting the pass between them",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-3"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "bcedfcf64ec4b2129062db1b92948cb262668fb3",
+        "issue": 4814,
+        "merged_at": "2026-11-25T10:02:26Z",
+        "n": 540,
+        "pr": 4864,
+        "queued_at": "2026-11-25T10:02:26Z",
+        "sha": "85af9d5e42d3ad698087376e01a1774f444186cd",
+        "status": "queued",
+        "title": "Patch: Income Tax fired inside the drawer's random cast takes the drawer's hand, not its own controller's",
+        "tries": 0
       }
     ],
-    "count": 539
+    "count": 540
   },
   "statistics": {
     "at": "2026-11-25T09:54:15Z"
