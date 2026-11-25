@@ -19783,11 +19783,6 @@
       "owner": "claude-8",
       "owner_since": "2026-11-25T14:18:44Z",
       "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
-      "paused": {
-        "at": "2026-11-25T14:28:33Z",
-        "interrupt": "usage",
-        "provider": "claude-8"
-      },
       "pending_request": false,
       "planned_at": "2026-11-25T09:19:29Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
