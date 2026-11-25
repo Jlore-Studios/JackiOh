@@ -19419,7 +19419,7 @@
       "started_at": "2026-11-25T13:23:10Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 3,
       "waiting_comment": 7154768881
     },
     "4805": {
