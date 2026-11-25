@@ -4,12 +4,13 @@
 // `/stats`; no provisional banner and no reading notes (R2325000); no data source is named anywhere.
 // R4680001: the Experimental tab's Versions view opens an old play version's drill-down, drawn from the
 // catalog files the built client carries.
+// R4676001: at a phone's size the drill-down's Extended stats panel opens from a shared link inside the screen.
 
 import { landingTestid } from "../../../apps/web/src/auth/testids.ts";
 import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
 import { statsTestid } from "../../../apps/web/src/stats/testids.ts";
 import { CARD_NAMES, cardId } from "../../support/cards.ts";
-import { seedFor } from "../../support/config.ts";
+import { seedFor, viewports } from "../../support/config.ts";
 import {
   NAV_BACK,
   SITE_FOOTER,
@@ -275,5 +276,48 @@ describe("Spec 34 — the public Statistics page (R654)", () => {
     cy.get(ts(STATS_DRILL_DOWN_CLOSE)).click();
     cy.get(ts(STATS_DRILL_DOWN_MODAL)).should("not.exist");
     cy.location("search").should("not.include", "version=");
+  });
+
+  it("R4676001 at a phone's size the Extended stats panel opens from a shared link inside the dialog and the screen", () => {
+    const figures = (rate: number, tier: string) => ({
+      games: 40,
+      adjustedWinRate: rate,
+      adjustedLow: rate - 0.03,
+      adjustedHigh: rate + 0.03,
+      tier,
+      hasEnoughGames: true,
+    });
+    cy.intercept("GET", "**/api/stats/cards/core-001*", (req) => {
+      req.reply({
+        ...CARD_DRILL_DOWN_FIXTURE,
+        face: "all",
+        faces: { normal: figures(0.51, "B"), radiant: figures(0.57, "A"), gap: { gap: 0.06, low: 0.01, high: 0.11 } },
+        variants: [
+          {
+            kind: "mode",
+            rows: [
+              { key: "bounce all enemy units", label: "bounce all enemy units", share: 0.6, ...figures(0.55, "A") },
+              { key: "destroy all enemy units", label: "destroy all enemy units", share: 0.4, ...figures(0.47, "C") },
+            ],
+          },
+        ],
+      });
+    }).as("getExtended");
+    cy.viewport(viewports.phone.width, viewports.phone.height);
+    cy.visit("/stats?card=core-001&extended=choices");
+    cy.get(ts(statsTestid.extendedPanel), { timeout: 20_000 }).should("exist");
+    cy.get(ts(statsTestid.extendedToggle)).should("have.attr", "aria-pressed", "true");
+    cy.get(ts(statsTestid.extendedRow)).should("have.length", 2);
+    // The panel scrolls inside the dialog: brought into view, it lies wholly inside the screen's width.
+    cy.get(ts(statsTestid.extendedPanel)).scrollIntoView();
+    cy.get(ts(statsTestid.extendedPanel)).then(($panel) => {
+      const box = $panel.get(0)?.getBoundingClientRect();
+      if (!box) throw new Error("the panel has no box");
+      expect(box.left, "left edge").to.be.at.least(0);
+      expect(box.right, "right edge").to.be.at.most(viewports.phone.width);
+    });
+    cy.get(ts(statsTestid.extendedFacesTab)).click();
+    cy.get(ts(statsTestid.drillDownFaceGap)).should("be.visible");
+    cy.get(ts(statsTestid.extendedChoices)).should("not.exist");
   });
 });

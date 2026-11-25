@@ -28,9 +28,9 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    CardStats, CardStatsFilter, CreatedStats, GameFigures, GameSource, GameTotal, ModeFilter, PILOTS, Pilot,
-    PilotFilter, RecordsKey, SourceFilter, StatsTotals, SwingRows, add_created, add_stats, add_swing_rows,
-    card_stats_of, game_figures,
+    CardChoices, CardStats, CardStatsFilter, CreatedStats, GameFigures, GameSource, GameTotal, ModeFilter,
+    PILOTS, Pilot, PilotFilter, RecordsKey, SourceFilter, StatsTotals, SwingRows, add_created, add_stats,
+    add_swing_rows, card_stats_of, game_figures,
 };
 use crate::config::PUBLIC_STATS_MIN_LIVE_GAMES;
 
@@ -325,6 +325,10 @@ pub struct WindowedReport {
     /// own window as a deck card is.
     #[serde(default)]
     pub created: Vec<WindowedCreated>,
+    /// R4676000: each card's choices (R4672003), by catalog id, over its family's window as its row is.
+    /// Absent when no card has any.
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub choices: IndexMap<String, CardChoices>,
 }
 
 /// R2089000: one Created card's figures over its window.
@@ -348,6 +352,7 @@ pub(super) struct Part {
     pub(super) decks: i64,
     pub(super) cards: IndexMap<String, CardStats>,
     pub(super) created: IndexMap<String, CreatedStats>,
+    pub(super) choices: IndexMap<String, CardChoices>,
 }
 
 /// Each version's totals apart, so a version's figures read only its own keys: the records and the
@@ -390,6 +395,7 @@ pub(super) fn part_of(
         decks: 0,
         cards: IndexMap::new(),
         created: IndexMap::new(),
+        choices: IndexMap::new(),
     };
     // R2777001: each mode the query reads, summed, as one card's records in two modes are two decks.
     for read in mode.modes() {
@@ -419,6 +425,10 @@ pub(super) fn part_of(
                 }
                 Some(held) => add_created(held, &stats),
             }
+        }
+        // R4676000: the choices, summed the same way.
+        for row in report.choices {
+            part.choices.entry(row.card).or_default().add(&row.choices);
         }
     }
     part
@@ -533,6 +543,31 @@ pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> Windowe
             created.push(WindowedCreated { window, stats });
         }
     }
+    // R4676000: each card's choices over its family's window as above.
+    let mut ids: Vec<&str> = parts
+        .values()
+        .flat_map(|part| part.choices.keys().map(String::as_str))
+        .collect();
+    ids.sort_unstable();
+    ids.dedup();
+    let mut choices: IndexMap<String, CardChoices> = IndexMap::new();
+    for id in ids {
+        let family = card_family(id);
+        let window = windows
+            .entry(family)
+            .or_insert_with(|| window_in(&history, at, Some(family), query.request, &live_games))
+            .clone();
+        let mut held = CardChoices::default();
+        for part in counted_parts(&window) {
+            if let Some(card) = part.choices.get(id) {
+                held.add(card);
+            }
+        }
+        if !held.is_empty() {
+            held.sort();
+            choices.insert(id.to_string(), held);
+        }
+    }
     WindowedReport {
         at: query.at.to_string(),
         patch,
@@ -540,6 +575,7 @@ pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> Windowe
         decks,
         cards,
         created,
+        choices,
     }
 }
 
