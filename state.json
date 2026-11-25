@@ -46701,18 +46701,6 @@
   "suggest": {
     "asks": [],
     "auto": {
-      "4732": {
-        "at": "2026-11-24T12:48:11Z",
-        "why": "Confirmed: the #4273 guard in build-wasm.sh greps for a name that the #4283 strip removes, so it can no longer fire; a scratch crate on the pinned toolchain built with the script's settings still traps with the grep finding nothing, the proposed deny(linker_messages) turns that into a link error, and the real C module builds today with no linker messages, so the fix won't break it."
-      },
-      "4733": {
-        "at": "2026-11-24T12:48:34Z",
-        "why": "Confirmed on main: the practice host clears a finished fight's save (host.rs:468), the dungeon's Menu next to Continue only navigates (FightScreen.tsx:181), and the kept run has nothing marking the fight as played, so a lost or conceded fight gets a free retry, which breaks \u00a715's one lost fight ending the run."
-      },
-      "4734": {
-        "at": "2026-11-24T12:48:36Z",
-        "why": "Confirmed on main: End turn reads 'Enemy turn' on every finished view (Board.tsx:632-633, 822), and a board mounted on a finished game hides its result for 3.8 s waiting on an effect that FxLayer plays only on a null-to-result change (FxLayer.tsx:464), so these are small fixes to bugs players can see."
-      },
       "4737": {
         "at": "2026-11-24T13:00:28Z",
         "why": "Confirmed rules bugs on a shipped card where board scopes, Cleave, and enemy permanents treat a card lying on a unit zone as a Unit rather than backrow, violating R4665000."
