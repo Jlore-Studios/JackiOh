@@ -4,7 +4,7 @@ name: tmp fuzz 4599
 on:
   push:
     branches: [claude/charming-bell-p8etig]
-    paths: [".github/workflows/tmp-fuzz-4599.yml", "crates/**"]
+    paths: [".github/workflows/tmp-fuzz-4599.yml", ".github/tmp-*", "crates/**"]
   workflow_dispatch:
 env:
   CARGO_TERM_COLOR: never
@@ -45,8 +45,32 @@ jobs:
           SHARD: ${{ matrix.shard }}
           WAVE: ${{ matrix.wave }}
         run: |
+          [ -f .github/tmp-fullwave ] || { echo "no full wave this push"; exit 0; }
           per=$(( FUZZ_SEEDS / 4 ))
           from=$(( (SHARD - 1) * per + 1 ))
           flag=""
           [ "$WAVE" = handicap ] && flag=--handicap
           target/release/jackioh fuzz --from "$from" --seeds "$per" $flag
+  seeds:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: bin
+          path: ${{ runner.temp }}
+      - run: tar -xzf "$RUNNER_TEMP/bin.tgz"
+      - name: each listed seed alone, four at once
+        shell: bash
+        run: |
+          mkdir -p out
+          run_one() {
+            flag=""
+            [ "$1" = handicap ] && flag=--handicap
+            target/release/jackioh fuzz --from "$2" --seeds 1 $flag > "out/$1-$2.txt" 2>&1 || true
+          }
+          export -f run_one
+          xargs -P 4 -L 1 bash -c 'run_one "$0" "$1"' < .github/tmp-seeds.txt
+          for f in out/*.txt; do echo "################ $f"; grep -E "message:|seeds failed|0 failed| p[12] deck:" "$f" || tail -3 "$f"; done

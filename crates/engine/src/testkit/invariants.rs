@@ -1606,6 +1606,21 @@ fn pulled_into_the_hole(
         && mark.lanes.iter().any(|lane| (lane - hole.lane).abs() == 1)
 }
 
+// TEMPORARY (#4599 diagnosis, reverted before the pull request): the step's events up to `at`, one
+// JSON each, the reaching one marked.
+fn tmp_trace(events: &[GameEvent], at: usize) -> String {
+    let from = at.saturating_sub(60);
+    events[from..events.len().min(at + 3)]
+        .iter()
+        .enumerate()
+        .map(|(i, e)| {
+            let text: String = serde_json::to_string(e).unwrap_or_default().chars().take(260).collect();
+            format!("#{}{} {}", from + i, if from + i == at { "<<<" } else { "" }, text)
+        })
+        .collect::<Vec<_>>()
+        .join(" ¦ ")
+}
+
 /// I21 (§6.1 Immune to Spells, R4453000): no Spell changes a Unit Immune to Spells on the field. The
 /// step's events are walked in order, tracking the card running (`hookResolving`, a trap, a turn edge
 /// and the AI's turn; a play nested in a run is its own from its `cardPlayed` to its `cardResolved`,
@@ -1785,11 +1800,12 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 continue;
             }
             found.push(format!(
-                "I21 Spell reached Immune to Spells: {} names {} on turn {} in {}'s run (§6.1, R4453000)",
+                "I21 Spell reached Immune to Spells: {} names {} on turn {} in {}'s run (§6.1, R4453000) TMPTRACE {}",
                 event.event_type().as_str(),
                 mark.label,
                 after.turn,
-                run.running.unwrap_or("no card")
+                run.running.unwrap_or("no card"),
+                tmp_trace(events, at)
             ));
             released.insert(id);
         }
