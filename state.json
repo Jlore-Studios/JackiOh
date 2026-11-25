@@ -21207,13 +21207,7 @@
           "claude": "strong"
         }
       },
-      "waiting_comment": 7149562453,
-      "wip": {
-        "at": "2026-11-25T06:16:49Z",
-        "provider": "claude-3",
-        "sha": "e43fe31a356ef099e99af850998375a7d3ed3297",
-        "start": "f3c55c01dce17e75b689545a0ced5cb2354716a5"
-      }
+      "waiting_comment": 7149562453
     },
     "4868": {
       "action": "review",
