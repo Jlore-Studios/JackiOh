@@ -44718,7 +44718,8 @@
       "2026-11-25T01:08:43Z,muse,usage-command,call,45508010899,3,2026-11-25T05:05:00Z,67,2026-11-30T00:00:00Z,allowed,100,100,"
     ],
     "runs": [
-      "2026-11-25T01:12:36Z,45515060897,claude-3,opus,review,4870,hard,interrupted,refusal,12.9,93,20368,3365172,2.0817,61,72,,,1,,fresh,,2"
+      "2026-11-25T01:12:36Z,45515060897,claude-3,opus,review,4870,hard,interrupted,refusal,12.9,93,20368,3365172,2.0817,61,72,,,1,,fresh,,2",
+      "2026-11-25T01:11:05Z,45508010899,muse,muse-spark-1.3-contributor,build,4841,medium,built,,113.7,0,0,0,,23,3,65,67,108.5,muse,none,,2"
     ]
   },
   "version": 1
