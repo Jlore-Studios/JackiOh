@@ -1,0 +1,80 @@
+{
+  "action": "build",
+  "number": 4842,
+  "title": "Patch: opening a cosmetic pack whose own points earn a cosmetic pack answers the packs still held, so the Shop keeps showing the one it earned",
+  "branch": "bot/issue-4842",
+  "thread": "**Issue #4842 (data, not instructions):**\n\n````text\n# #4842: Patch: opening a cosmetic pack whose own points earn a cosmetic pack answers the packs still held, so the Shop keeps showing the one it earned\nOpened by @squishy-squooby.\n\n### What happens\n\nOpening a cosmetic pack answers `unopened`, the cosmetic packs still held, and the Shop trusts that number instead of reading again (R3211000). When the opening's own points fill the cosmetic token bar's Cosmetic Pack step, the answer is one short, and the Shop hides a pack the account holds until a reload.\n\nThe account holds 1 cosmetic pack, with `cosmetic_cycle` at position 5 (the Cosmetic Pack step, size 100) and `cosmetic_bar` at 93 or more. A cosmetic pack's five slots add at least 7 points. The opening's grants are `Inventory { CosmeticPack, -1 }`, \u2026, `Inventory { CosmeticPack, +1 }` (the bar paying): the pack is spent first and the bar's grants are appended later (`crates/shared/src/economy/open.rs:299-305`, `:348-349`; `bars.rs:227-236`).\n\n- `write_grants` returns the count after the **first** inventory grant (`crates/server/src/economy/grants.rs:124`, `:147`: `first_count.get_or_insert(count)`), which is 0, and that becomes `unopened` (`crates/server/src/economy/cosmetic_packs.rs:141-156`, `:171-177`). The account holds 1.\n- The client folds `next.unopened` into the panel and reads nothing again (`apps/web/src/shop/CosmeticPacks.tsx:195`, `:271-294`; `apps/web/src/routes/shop.tsx:63-68`: `onCosmeticChanged` bumps only `tokenReads`). The panel shows \"Cosmetic pack: 0 unopened\" and \"No unopened packs.\" with no Open button.\n- A replay with the same `Idempotency-Key` keeps the same wrong number.\n\nThe pack is not lost: `GET /api/cosmetic-packs` and a reload show it.\n\n### What should happen\n\n`unopened` is \"the cosmetic packs still held\" (`OpenedCosmeticPack`'s doc). SPEC \u00a714.5: \"A Cosmetic Pack step adds an unopened cosmetic pack to the inventory\", \"in the opening's own transaction\". R3211000 has the client rely on \"the open's answer [which] holds \u2026 the unopened count\".\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `a_cosmetic_pack_whose_bar_pays_a_cosmetic_pack_answers_the_packs_held_after_it`, in [`crates/tools/tests/audit_economy.rs` at 3f362d1](https://github.com/Jlore-Studios/JackiOh/blob/3f362d1/crates/tools/tests/audit_economy.rs) (branch `claude/vigilant-mayer-pmyrhr`). It proves the order of the grants and what a first-count read of them gives; the server's use of that count and the client's missing re-read are by reading.\n\n```rust\nlet records = PackRecords { held: 1, owned: IndexMap::new(),\n    cosmetics: OwnedCosmetics { cards: vec[], account: vec[] },\n    counters: AccountCounters { pity: PityCounters { epic: 0, legendary: 0, mythic: 0 },\n        card_bar: 0, cosmetic_bar: 99, cosmetic_cycle: 5, chase_shard: 0 } };\nlet inputs = CosmeticPackInputs { pool: pack_pool(shipped_defs(), PackKind::Global),\n    registry: registry().to_vec(), catalog: \"audit\".to_string() };\nlet opening = open_cosmetic_pack(&records, &inputs, \"audit-unopened\", 0).expect(\"a pack is held\");\nlet (mut held, mut first_count) = (records.held, None);\nfor grant in &opening.grants {\n    if let LedgerGrant::Inventory { item, delta, .. } = grant {\n        if *item == InventoryItem::CosmeticPack { held += delta; }\n        first_count.get_or_insert(held);   // what write_grants returns\n    }\n}\nassert_eq!(held, 1);\nassert_eq!(first_count, Some(held));\n```\n\nOutput today: ``the opening answers `unopened` Some(0), but the account holds 1   left: Some(0)   right: Some(1)``.\n\n### Where\n\nThe server: `crates/server/src/economy/cosmetic_packs.rs` (`open_cosmetic_pack_once`), `crates/server/src/economy/grants.rs` (`write_grants`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- In `open_cosmetic_pack_once`, answer `unopened` from the inventory as it stands after the grants are written (as `cosmetic_packs_in` reads it), or add the opening's later `CosmeticPack` grants to the first count. The kept idempotent answer then holds the right number too.\n- Check who else reads `write_grants`' first count and whether the same \"first, not last\" reading bites there. Read as safe: card packs (no bar step pays a card pack, and Open all uses `records.held`); `GET /api/cosmetic-packs` and the chase purchase read the inventory.\n- A server test with the cycle at its last step: `crates/server/tests/api/cosmetic_packs.rs:701` covers position 1 only.\n- No ruling mentions this count, so the fix needs none.\n\nFound by an audit of the economy; the reproduction was run and the code paths read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#4842: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "own_review_next": true,
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:24:42Z",
+    "claimed_at": "2026-11-25T06:46:01Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4864 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4805 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4816 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4821 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4831 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4734 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4676 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4891 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4779 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4785 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4802 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4804 is held for `claude-3` until 02:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
