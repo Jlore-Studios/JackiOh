@@ -22,67 +22,13 @@
     }
   },
   "items": {
-    "3670": {
-      "action": "build",
-      "died": 0,
-      "failures": 0,
-      "forced": false,
-      "interruptions": 0,
-      "kind": "build",
-      "live": "building",
-      "owner": "claude-squishy",
-      "owner_since": "2026-11-11T03:22:56Z",
-      "owner_why": "it took it up",
-      "pending_request": false,
-      "planned_at": "2026-11-11T04:33:48Z",
-      "planned_by": "`claude-squishy` (claude, `opus`, strong)",
-      "planned_by_id": "claude-squishy",
-      "planned_tier": "strong",
-      "pr": 3684,
-      "provider": "claude-squishy",
-      "round_tier": "strong",
-      "run_id": "42951887540",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-11T03:22:56Z",
-      "stop_requested": false,
-      "strikes": 0,
-      "verdict_rounds": 1
-    },
-    "3684": {
-      "cleared": {
-        "approver": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-squishy",
-          "tier": "strong"
-        },
-        "at": "2026-11-11T04:34:08Z",
-        "built_by": "claude-squishy",
-        "by": "`claude` (strong)",
-        "sha": "b97e4057fe90afa52df33f6baa2be23326e69e58"
-      },
-      "closed_at": "2026-11-11T16:20:57Z",
-      "difficulty": "hard",
-      "failures": 0,
-      "feedback_since": "2026-11-11T03:22:56Z",
-      "issue": 3670,
-      "kind": "revise",
-      "merge_owner_gave_up": {
-        "at": "2026-11-11T05:44:06Z",
-        "provider": "claude-squishy",
-        "sha": "b97e4057fe90afa52df33f6baa2be23326e69e58"
-      },
-      "merged": true
-    },
     "4167": {
       "action": "build",
-      "asks": [],
       "died": 0,
       "failures": 0,
       "forced": false,
       "interruptions": 0,
       "kind": "build",
-      "last_findings": [],
       "live": "building",
       "owner": "claude-squishy",
       "owner_since": "2026-11-18T03:52:59Z",
@@ -94,15 +40,12 @@
       "planned_tier": "strong",
       "pr": 4184,
       "provider": "claude-squishy",
-      "question": "",
       "round_tier": "strong",
       "run_id": "44233368162",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-18T03:52:59Z",
       "stop_requested": false,
-      "strike_log": [],
       "strikes": 0,
-      "taken_asks": [],
       "verdict_rounds": 2
     },
     "4184": {
@@ -129,28 +72,7 @@
         "provider": "claude-squishy",
         "sha": "1c8562609b1498827deb758bef73f9b20b44acc4"
       },
-      "merged": true,
-      "self_check_findings": [],
-      "votes": {
-        "approvals": [
-          "claude"
-        ],
-        "builder": "claude",
-        "built_by": "claude-squishy",
-        "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "provider": "claude-squishy",
-            "run": "44233368162",
-            "tier": "strong"
-          }
-        ],
-        "sha": "1c8562609b1498827deb758bef73f9b20b44acc4",
-        "tiers": {
-          "claude": "strong"
-        }
-      }
+      "merged": true
     }
   },
   "labels_synced": "ad570512878062b5",
@@ -285,8 +207,8 @@
     }
   },
   "pruned": {
-    "at": "2026-11-18T03:52:41Z",
-    "dropped": 4,
+    "at": "2026-11-25T05:00:56Z",
+    "dropped": 2,
     "shed": 2
   },
   "rate_limited_until": null,
