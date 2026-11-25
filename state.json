@@ -24091,13 +24091,16 @@
     "what": "build #4828 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-25T14:16:03Z",
+    "at": "2026-11-25T14:26:58Z",
     "notes": [
-      "delivered plan #4836 on claude-3 (run 45623474481): planned",
-      "started build #4812 on claude-8 (run 45632677195)",
-      "started build #4817 on claude-8 (run 45632847029)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` waits for its lane on its box, which `muse` fills now; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
-      "pruned 5 plan file(s) older than 7 days"
+      "delivered build #4817 on claude-8 (run 45632847029): interrupted",
+      "delivered build #4812 on claude-8 (run 45632677195): interrupted",
+      "delivered review #4928 on claude-4 (run 45630936058): approved",
+      "delivered review #4927 on claude-6 (run 45629962966): approved",
+      "started build #4823 on claude-4 (run 45635050397)",
+      "started build #4828 on claude-6 (run 45635236588)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-25T15:10:00Z; it can start a build or a plan again in 36m; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` waits for its lane on its box, which `muse` fills now; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4812 held for `claude-8` until 09:10 (5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%)); #4817 held for `claude-8` until 09:10 (5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%))",
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -24803,7 +24806,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T14:16:03Z",
+  "loop_tick": "2026-11-25T14:26:58Z",
   "machine_disk": {
     "issue": null,
     "reading": {
