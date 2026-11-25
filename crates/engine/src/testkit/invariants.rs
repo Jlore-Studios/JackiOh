@@ -2997,8 +2997,8 @@ pub fn hidden_information_violations(
         let Some(events) = scanned.get("events").and_then(Value::as_array) else {
             return String::new();
         };
-        let from = n.saturating_sub(12);
-        events[from..events.len().min(n + 3)]
+        let from = n.saturating_sub(2);
+        events[from..events.len().min(n + 60)]
             .iter()
             .enumerate()
             .map(|(i, e)| format!("#{} {}", from + i, e.to_string().chars().take(300).collect::<String>()))
