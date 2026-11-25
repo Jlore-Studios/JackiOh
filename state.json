@@ -21246,7 +21246,7 @@
         "kind": "build",
         "model": "opus",
         "provider": "claude-1",
-        "round_tier": "strong",
+        "round_tier": "",
         "rounds_on": 4848,
         "rounds_used": 0,
         "since": "2026-11-25T02:30:59Z",
