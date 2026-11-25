@@ -20731,9 +20731,11 @@
         "by": "`gemini` (medium)",
         "sha": "9096323a9e277ef9004bb0a0dad9238740bbcb90"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T22:17:23Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-24T23:40:42Z",
         "family": "gemini",
@@ -20743,6 +20745,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- read_file: {\"EndLine\": 435, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4838/crates/server/tests/api/chat.rs\", \"StartLine\": 400}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4838/crates/server/tests/api/chat.rs\"}\n- said: \n- read_file: {\"EndLine\": 1550, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4838/crates/server/tests/api/friends.rs\", \"StartLine\": 1515}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4838/crates/server/tests/api/friends.rs\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && cargo test -p jackioh-server --test server stats_queries_refuse_nul_characters_with_bad_request\n- said: The stats test is recompiling and running in the background.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && cargo test -p jackioh-server --test server api::chat::\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && cargo test -p jackioh-server --test server api::friends::\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && cargo test -p jackioh-server --test server daily_email_has_no_html_part_and_unsubscribe_page_reflects_no_token\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && cargo fmt --check\n- said: \n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && cargo fmt\n- said: Running cargo fmt in the background.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && cargo fmt --check\n- said: Verifying cargo fmt --check in the background.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && cargo clippy -p jackioh-server --all-targets -- -D warnings\n- said: Running cargo clippy on jackioh-server in the background.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && git diff --stat\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && cargo jackioh catalog check && cargo jackioh patches check && cargo jackioh spec check\n- said: Running catalog check, patches check, and spec check in the background.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4838 && git status\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4838/.bot-notes.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the server answers 400, not 500, to a NUL character, a UUID spelling Postgres will not cast, and a chat cursor past any timestamp\"} --> ### What changed and why 1. **Central NUL character rejection**: - In [`crates/server/src/api/http.rs`](file:///home/\u2026"
       },
+      "interruptions": 0,
       "issue": 4838,
       "kind": "review",
       "live": "reviewing",
