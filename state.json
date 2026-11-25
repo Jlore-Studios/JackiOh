@@ -22563,9 +22563,11 @@
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 4949,
       "provider": "claude-3",
-      "question": "Should this week's hygiene pull request delete `docs/speed-and-cost-audit.md` as the shipped #4691 audit's record, or should #4891 close with no change (nothing to remove)?",
+      "question": "",
       "queued_at": "2026-11-25T17:17:38Z",
+      "round_tier": "strong",
       "run_id": "45664009378",
       "runs_on": "ubuntu-latest",
       "session": {
@@ -22588,6 +22590,7 @@
       "started_at": "2026-11-25T17:22:03Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "waiting_comment": 7154762186
     },
     "4893": {
