@@ -26616,6 +26616,10 @@
         {
           "at": "2026-11-25T10:41:57Z",
           "minutes": 20.1
+        },
+        {
+          "at": "2026-11-25T15:53:35Z",
+          "minutes": 39.2
         }
       ],
       "tokens_spent": [
@@ -27640,17 +27644,24 @@
           "cost": 0.0,
           "input": 732800,
           "output": 22541
+        },
+        {
+          "at": "2026-11-25T15:53:35Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 207684,
+          "output": 54595
         }
       ],
       "usage": {
         "five_hour": {
-          "resets_at": "2026-11-25T12:36:02Z",
-          "utilization": 1.0
+          "resets_at": "2026-11-25T20:06:11Z",
+          "utilization": 0.04
         },
-        "observed_at": "2026-11-25T10:41:57Z",
+        "observed_at": "2026-11-25T15:53:35Z",
         "seven_day": {
           "resets_at": "2026-12-01T16:36:02Z",
-          "utilization": 0.51
+          "utilization": 0.52
         },
         "status": "allowed"
       }
@@ -48352,7 +48363,11 @@
     "readings": [
       "2026-11-25T15:42:29Z,claude-7,ping,before,45647738175,70,2026-11-25T16:50:00Z,,,allowed,70,,",
       "2026-11-25T15:43:06Z,claude-1,ping,before,45647559185,2,2026-11-25T20:20:00Z,,,allowed,40,,",
-      "2026-11-25T15:43:39Z,claude-1,stream,call,45647559185,3,2026-11-25T20:20:00Z,,,allowed,40,,"
+      "2026-11-25T15:43:39Z,claude-1,stream,call,45647559185,3,2026-11-25T20:20:00Z,,,allowed,40,,",
+      "2026-11-25T15:05:58Z,agy,usage-command,before,45641128638,0,2026-11-25T20:05:57Z,50,2026-12-01T16:36:02Z,allowed,100,100,",
+      "2026-11-25T15:16:11Z,agy,usage-command,call,45641128638,4,2026-11-25T20:06:11Z,52,2026-12-01T16:36:02Z,allowed,100,100,",
+      "2026-11-25T15:26:21Z,agy,usage-command,call,45641128638,4,2026-11-25T20:06:11Z,52,2026-12-01T16:36:02Z,allowed,100,100,",
+      "2026-11-25T15:36:28Z,agy,usage-command,call,45641128638,4,2026-11-25T20:06:11Z,52,2026-12-01T16:36:02Z,allowed,100,100,"
     ],
     "runs": [
       "2026-11-25T15:42:29Z,45647738175,claude-7,opus,review,4918,hard,interrupted,5-hour cap,0,0,0,0,,70,70,,,,,none,,0"
