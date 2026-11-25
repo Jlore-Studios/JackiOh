@@ -45235,7 +45235,8 @@
       "2026-11-25T20:25:18Z,muse,usage-command,call,45686275435,0,2026-11-26T01:06:00Z,86,2026-11-30T00:00:00Z,allowed,100,100,"
     ],
     "runs": [
-      "2026-11-25T20:41:39Z,45686457890,agy,gemini-3.8-flash-high,revise,4944,medium,built,,67,350316,19195,0,,43,4,61,63,10,muse,none,other,1"
+      "2026-11-25T20:41:39Z,45686457890,agy,gemini-3.8-flash-high,revise,4944,medium,built,,67,350316,19195,0,,43,4,61,63,10,muse,none,other,1",
+      "2026-11-25T20:45:37Z,45686275435,muse,muse-spark-1.3-contributor,build,4937,medium,built,,54.5,0,0,0,,8,0,86,86,25.6,muse,none,,1"
     ]
   },
   "version": 1
