@@ -12417,7 +12417,7 @@
     "loc": 39,
     "base": {
       "keywords": [],
-      "text": "Overload ({loss}). Make a card in your hand Radiant."
+      "text": "Overload ({loss}). Make a card in your hand Radiant, then Buff it."
     },
     "radiant": {
       "keywords": [
@@ -12425,7 +12425,7 @@
           "kind": "Cleave"
         }
       ],
-      "text": "Cleave\nOverload ({loss}). Make a card in your hand Radiant."
+      "text": "Cleave\nOverload ({loss}). Make a card in your hand Radiant, then Buff it."
     }
   },
   "meditative-019": {

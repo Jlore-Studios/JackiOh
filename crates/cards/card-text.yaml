@@ -3026,8 +3026,8 @@ meditative-018: # Expedition12
     cast: Sacrifice now, shine later.
   zh:
     name: 远征12
-    base: 过载({loss})。使你手牌中的一张牌变为光辉。
-    radiant: "顺劈\n过载({loss})。使你手牌中的一张牌变为光辉。"
+    base: 过载({loss})。使你手牌中的一张牌变为光辉，然后强化它。
+    radiant: "顺劈\n过载({loss})。使你手牌中的一张牌变为光辉，然后强化它。"
 meditative-019: # Expedition123
   flavour: Four days out, the map started drawing itself.
   voice:
