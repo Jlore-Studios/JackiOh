@@ -21987,22 +21987,22 @@
     "what": "plan #4891 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-25T04:46:46Z",
+    "at": "2026-11-25T05:03:37Z",
     "notes": [
-      "delivered review #4886 on claude-8 (run 45544332583): approved",
-      "delivered build #4818 on muse (run 45542986624): built",
-      "delivered revise #4881 on claude-4 (run 45542726646): built",
-      "delivered build #4826 on agy (run 45532501291): built",
-      "started review #4881 on claude-4 (run 45549701196)",
-      "started review #4889 on muse (run 45549784958)",
-      "started review #4890 on agy (run 45549869402)",
-      "started review #4875 on claude-1 (run 45549951118)",
-      "started review #4726 on claude-1 (run 45550041072)",
-      "started build #4806 on claude-8 (run 45550129878)",
+      "delivered review #4726 on claude-1 (run 45550041072): reviewed",
+      "delivered review #4875 on claude-1 (run 45549951118): reviewed",
+      "delivered review #4881 on claude-4 (run 45549701196): approved",
+      "delivered plan #4804 on claude-3 (run 45548321376): planned",
+      "delivered review #4887 on claude-8 (run 45548236507): approved",
+      "started revise #4760 on claude-6 (run 45551547630)",
+      "started review #4886 on claude-1 (run 45551644568)",
+      "started build #4808 on claude-8 (run 45551750852)",
+      "started build #4809 on claude-4 (run 45551853768)",
+      "started build #4810 on claude-1 (run 45551957712)",
+      "started build #4813 on claude-4 (run 45552064545)",
+      "started plan #4891 on claude-3 (run 45552188303)",
       "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
-      "pruned 2 plan file(s) older than 7 days",
-      "#4892: typed it Task",
-      "#4891: typed it Task"
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22708,7 +22708,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T04:46:46Z",
+  "loop_tick": "2026-11-25T05:03:37Z",
   "machine_disk": {
     "issue": null,
     "reading": {
