@@ -14680,6 +14680,11 @@
       "asks": [],
       "failures": 0,
       "forced": false,
+      "handoff_requested": {
+        "at": "2026-11-25T03:55:24Z",
+        "by": "squishy-squooby",
+        "to": "human"
+      },
       "interruptions": 0,
       "kind": "build",
       "live": "planning",
