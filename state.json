@@ -24351,6 +24351,13 @@
     "4936": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45667255960",
+        "model": "opus",
+        "provider": "claude-4",
+        "since": "2026-11-25T18:00:28Z",
+        "until": "2026-11-25T18:30:28Z"
+      },
       "difficulty_by": {
         "at": "2026-11-25T18:00:17Z",
         "difficulty": "hard",
