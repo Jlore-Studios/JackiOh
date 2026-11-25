@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4846,
+  "title": "Patch: a daily game's board never goes backwards: a read already under way cannot overwrite the answer to the move the player just made",
+  "branch": "bot/issue-4846",
+  "thread": "**Issue #4846 (data, not instructions):**\n\n```text\n# #4846: Patch: a daily game's board never goes backwards: a read already under way cannot overwrite the answer to the move the player just made\nOpened by @squishy-squooby.\n\n### What happens\n\nOn a daily game's board (`apps/web/src/daily/DailyBoard.tsx`), a read that was already out when the player acted can land after the action's answer and put the older state back on screen.\n\n1. A read goes out (`:131-153`). `pollWhileVisible` (`apps/web/src/game/net.ts:158-189`) reads at once when the tab shows again, or on the first input after `IDLE_QUIET_MS` (ten minutes), and input includes `pointermove` and `keydown`. So a player coming back to a daily board fires `GET /api/daily/games/:id` just before they move.\n2. The player acts. `send` (`:174-219`) posts the action with `after: shown.seq`. Nothing cancels the read in flight: the `!sending.current` guard at `:169` only stops a read from *starting* during a send.\n3. The POST's answer (seq N+1) lands and `setGame(answer)` runs.\n4. The earlier GET, which the server read at seq N, lands afterwards. Its `canceled` flag flips only when `reads` is bumped or the board unmounts, so `setGame(answer)` runs again with the older state.\n\nThe player sees their move undone: the card back in hand, or their turn back after End turn, or a conceded game live again, with the old list of legal moves. The next action goes `after: N` and gets 409 `stale`, which rereads silently; otherwise the 60-second poll puts it right.\n\nBy reading, with high confidence in the code path. How often it fires depends on the order of two responses; the first GET after a long idle is the slow one (the server may be waking), and the player's first move races it.\n\n### What should happen\n\nThe board never goes backwards. `DailyGame.seq` (`apps/web/src/net/daily.ts:74-75`: \"The last action's number: the next action is sent `after` it\") is there to order answers, and the file's header says \"the board draws the answer\". Every answer carries `seq`; the board never compares it.\n\n### How to reproduce\n\nA test in `apps/web/src/daily/DailyBoard.test.tsx` with its fake API (it has about thirty tests and none of an older read after a newer answer):\n\n1. Mount the board at seq 5 with `hasMove`.\n2. Trigger a reread whose promise is held.\n3. Send End turn and resolve its POST with seq 6 and `hasMove: false`.\n4. Resolve the held GET with seq 5.\n5. Assert the board still shows seq 6 with End turn unlit. Today it shows seq 5 with End turn lit again.\n\n### Where\n\nThe client: `apps/web/src/daily/DailyBoard.tsx` (the read effect, the poll and `send`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- In the read effect, ignore an answer whose `seq` is below the shown game's `seq` for the same `matchId`. Or bump a generation in `send`, so a read already out is dropped when it lands. The first is the smaller change and also covers two reads landing out of order.\n- An `expired` answer (R3934000) has no `seq`; decide how it orders against a live answer and say so in the test.\n- Overlapping reads already cancel each other; only read against send is unguarded. `sharedGet`'s de-duplication (`apps/web/src/net/api.ts:225`) does not help here, because a POST without an idempotency key does not move the write epoch.\n- The server already refuses a stale action (`409 stale`), so nothing wrong is ever written: this is what the player sees for up to a minute.\n- Run with `pnpm --dir apps/web test src/daily/DailyBoard.test.tsx`.\n\nFound by an audit of the web client's network layer, by reading (the client's tests could not be run where the audit ran).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4846: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:30:49Z",
+    "claimed_at": "2026-11-25T08:34:55Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
