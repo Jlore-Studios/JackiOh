@@ -43031,42 +43031,6 @@
         "approver": {
           "family": "claude",
           "model": "sonnet",
-          "provider": "claude-4",
-          "tier": "medium"
-        },
-        "builder": {
-          "family": "muse",
-          "provider": "muse"
-        },
-        "difficulty": "medium",
-        "done_at": "2026-11-04T12:35:02Z",
-        "every": 5,
-        "findings": 0,
-        "head": "a6c69931321abfecdfaef3a986cfdfe77d296666",
-        "issue": 2803,
-        "last_why": "stopped: #2992 was closed",
-        "merged_at": "2026-11-04T11:55:32Z",
-        "n": 50,
-        "pr": 2992,
-        "queued_at": "2026-11-04T11:55:32Z",
-        "reason": "stopped: #2992 was closed",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-6",
-          "tier": "strong"
-        },
-        "sha": "511755a4aec0e88d60be625efc4d3e279d50bac0",
-        "started_at": "2026-11-04T12:26:51Z",
-        "status": "done",
-        "title": "Patch: audit the card animations: coverage, consistency, motif use, frame rate on a phone and the gallery's captures",
-        "tries": 3,
-        "verdict": "failed"
-      },
-      {
-        "approver": {
-          "family": "claude",
-          "model": "sonnet",
           "provider": "claude-7",
           "tier": "medium"
         },
@@ -46563,7 +46527,9 @@
           "provider": "claude-7"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-25T13:33:20Z",
         "every": 5,
+        "findings": 0,
         "head": "db73a8df869b03d7a23ae3c1db743e9a13027e74",
         "issue": 4802,
         "merged_at": "2026-11-25T13:22:04Z",
@@ -46576,12 +46542,13 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:4a6fc0d9-1795613004",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45623183069",
         "sha": "cff29cdb4536c64f3712e93e926923c108a1ac77",
         "started_at": "2026-11-25T13:23:59Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the lethal solver keeps to the allowance its caller gave on a board that is not wide, where a floor meant for wide boards now raises it to 60 nodes",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 550
