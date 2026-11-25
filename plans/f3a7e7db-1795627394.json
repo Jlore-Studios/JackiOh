@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 4938,
+  "title": "Patch: give the Jlockeed-Unit pool a named function and call it from Headquarters",
+  "branch": "bot/issue-4938",
+  "thread": "**Issue #4938 (data, not instructions):**\n\n```text\n# #4938: Patch: give the Jlockeed-Unit pool a named function and call it from Headquarters\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nOne card fills the board with random Jlockeed Units. Its script hand-writes that pool's query, and its test hand-keeps the nine-id answer list. Both are correct today, but when the tenth Jlockeed Unit ships both rot by hand. This names the pool once, where all pools live, and calls it from both places.\n\n## Why\n\ncrates/cards/README.md (section 3) requires that a pool the spec would otherwise list card by card is a named function in src/query.rs plus a POOLS row, and that a script drawing from such a pool calls its function rather than writing the query inline. `jlockeed_cards()` (src/query.rs) covers all Jlockeed cards, but nothing narrows it to Units, so Headquarters keeps a local `fn jlockeed_units` (crates/cards/src/scripts/meditative/c097_9_jlockeeds_headquarters.rs:23-25) and its test `r380_the_jlockeed_units_of_the_sets_that_ship_are_the_nine_the_tests_name` re-implements the filter over the catalog beside a hand-kept nine-id `JLOCKEED_UNITS` list (:169-184).\n\n## Proposal\n\nAdd `jlockeed_units()` (Unit-narrowed, same shipped-set and token defaults) plus a POOLS row so the next daily fold lists it in spec/CARDS.md; the script calls it; the test derives its expected members from the pool function instead of the hand-kept list. Leave CARDS.md itself alone.\n\n## Where it lands\n\ncrates/cards/src/query.rs (new function + POOLS row) and crates/cards/src/scripts/meditative/c097_9_jlockeeds_headquarters.rs (script + test). No hand edits to generated files.\n\n## Acceptance criteria\n\n- [ ] Script contains no inline Jlockeed query; test derives expected members from the pool function, not a hand-kept id list\n- [ ] `cargo test -p jackioh-cards c097_9` and the cross query tests green\n- [ ] `cargo jackioh spec check` green with CARDS.md untouched\n\n## Size and risks\n\nS. Test-churn only; no behavior change. The only risk is the POOLS/CARDS.md plumbing, contained by leaving the generated file to the daily fold.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** leaves it to a person: Both the script and test are correct today, so it guards a tenth Jlockeed Unit that has not shipped and weakens the nine-id pin.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-25T17:15:19Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4938: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-25T17:15:47Z",
+    "claimed_at": "2026-11-25T17:23:57Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4649 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
