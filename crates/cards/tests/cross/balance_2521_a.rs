@@ -143,14 +143,15 @@ const NOT_PIECES: [&str; 15] = [
 /// #4154 moved the three Beams' damage down: 5, 7 and 9 (Radiant 10, 14 and 18) to 4, 6 and 8 (Radiant 8,
 /// 12 and 16), #4353 to 3, 5 and 7 (Radiant 6, 10 and 14), and Repeater v5's from 3 (Radiant 6) to 2
 /// (Radiant 4), and #4440 the Beams' to 2, 4 and 6 (Radiant 4, 8 and 12), and #4665 Beam v5's to 5
-/// (Radiant 10).
+/// (Radiant 10), and #4783 the Cannons' from 5, 7 and 9 (Radiant 10, 14 and 18) to 4, 6 and 8 (Radiant 8,
+/// 12 and 16).
 const AIMED_WEAPONS: [(&str, &str, i32, i32); 9] = [
     ("stinkyscape-050", "Beam v3", 2, 4),
     ("stinkyscape-054", "Beam v4", 4, 8),
     ("stinkyscape-058", "Beam v5", 5, 10),
-    (CANNON_V3, "Cannon v3", 5, 10),
-    ("stinkyscape-056", "Cannon v4", 7, 14),
-    ("stinkyscape-060", "Cannon v5", 9, 18),
+    (CANNON_V3, "Cannon v3", 4, 8),
+    ("stinkyscape-056", "Cannon v4", 6, 12),
+    ("stinkyscape-060", "Cannon v5", 8, 16),
     ("stinkyscape-051", "Repeater v3", 1, 2),
     ("stinkyscape-055", "Repeater v4", 2, 4),
     ("stinkyscape-059", "Repeater v5", 2, 4),

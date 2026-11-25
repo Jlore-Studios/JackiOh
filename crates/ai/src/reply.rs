@@ -1667,10 +1667,12 @@ mod tests {
         assert_eq!(defense_switch_tries(state, &legal, 0, 4), vec![switch(GREASER)]);
     }
 
-    /// S #52 Cannon v3: "Activate: Deal 5 damage to an enemy Unit."
+    /// S #52 Cannon v3: "Activate: Deal 4 damage to an enemy Unit."
     const CANNON_V3: &str = "stinkyscape-052";
-    /// S #56 Cannon v4: "Activate: Deal 7 damage to an enemy Unit."
+    /// S #56 Cannon v4: "Activate: Deal 6 damage to an enemy Unit."
     const CANNON_V4: &str = "stinkyscape-056";
+    /// S #60 Cannon v5: "Activate: Deal 8 damage to an enemy Unit.", enough to destroy a Greaser.
+    const CANNON_V5: &str = "stinkyscape-060";
     /// C #21 Turtinator: "Activate: Tribute another Unit. Deal damage equal to its Attack" to a Unit or
     /// hero.
     const TURTINATOR: &str = "classic-021";
@@ -1847,13 +1849,14 @@ mod tests {
         assert_eq!(tries_of(state, false), off);
     }
 
-    /// R4515000: a Cannon v4 facing four 4/4s and a Greaser in lane 5 is tried four times either way, one
-    /// node each; only the spread tries the lane-5 Greaser, so only then does the reply destroy it.
+    /// R4515000: a Cannon v5 facing four 4/4s and a Greaser in lane 5 is tried four times either way, one
+    /// node each; only the spread tries the lane-5 Greaser, so only then does the reply destroy it. (A
+    /// Cannon v4 until issue #4783 took its damage to 6, which leaves a 7/7 standing.)
     #[test]
     fn r4515000_a_step_spends_the_same_nodes_on_and_off_and_only_the_spread_reaches_the_lane_5_unit() {
         let s = p2_to_act(
             json!({ "field": row(json!(VANILLA)) }),
-            json!({ "field": [CANNON_V4] }),
+            json!({ "field": [CANNON_V5] }),
         );
         let state = s.state();
         let greaser = s.card(GREASER).id.clone();
