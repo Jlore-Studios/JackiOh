@@ -20911,9 +20911,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-7",
-      "owner_since": "2026-11-25T11:18:05Z",
-      "owner_why": "its approval shipped `09fffc31119f`, and the last approver owns the merge, so it fixes what CI found",
+      "owner": "muse",
+      "owner_since": "2026-11-25T11:31:09Z",
+      "owner_why": "handed off from `claude-7`: `claude-7` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-24T23:50:46Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
@@ -21994,7 +21994,7 @@
       }
     },
     "4884": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
@@ -22025,18 +22025,18 @@
       "issue": 4844,
       "kind": "revise",
       "last_findings": [],
-      "live": "reviewing",
+      "live": "fixing-ci",
       "merge_owner": "claude-7",
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "muse",
       "question": "",
       "queued_at": "2026-11-25T11:18:01Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
       "round_tier": "medium",
-      "run_id": "45577438939",
-      "runs_on": "ubuntu-latest",
+      "run_id": "pending:154d35df-1795606231",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "session": {
         "action": "review",
@@ -22056,7 +22056,7 @@
         "run": "45577438939"
       },
       "source": "ci",
-      "started_at": "2026-11-25T08:34:11Z",
+      "started_at": "2026-11-25T11:31:09Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -23344,9 +23344,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T11:21:13Z",
+    "at": "2026-11-25T11:31:09Z",
     "url": "",
-    "what": "review #4893 on muse"
+    "what": "revise #4884 on muse"
   },
   "last_sweep": {
     "at": "2026-11-25T11:18:33Z",
