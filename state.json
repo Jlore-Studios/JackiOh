@@ -24010,6 +24010,14 @@
         "sha": "f8fc33cde4781a697b225a13e4a37565f8f7cbb0",
         "tiers": {}
       }
+    },
+    "4918": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-25T10:46:00Z",
+      "issue": 4805,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
