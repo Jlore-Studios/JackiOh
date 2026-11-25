@@ -77,6 +77,15 @@ The greedy baseline's `mulligan_keep` reads mana alone. Nothing here reads a dif
 mulligan's bonus and cap): the tiers change the AI seat's resources only (R180), and the tutorial's
 opponent is the same AI on `AI_TUTORIAL` with the lesson's fixed deck (R290, R291).
 
+It keeps Classic #37 Last Hurrah and Stinkyscape+ #79 A Glimpse into the Endless Sea (`AI_LAST_RESORT`) for a
+last resort (R4783040): the candidate pool (`hold_last_resorts`, which every caller of the move list reads)
+drops a play of either unless the seat's times are dire (its life at most `AI_LAST_RESORT_DIRE_LIFE`, or
+`face_threat` of the enemy's board reaching it) or it has no other play (no card played this turn, and no
+legal play of any other card), and keeps A Glimpse (`AI_LAST_RESORT_REFILLED`) too while a card of its own in
+its hand or on its field shuffles cards into its own deck by its running face's text (`refills_own_deck`).
+The Trade of a Tradable Last Hurrah stays. It reads only the seat's own hand, field and turn and the public
+board, so every determinization keeps the same plays.
+
 A question of a sequence (Meditative+ #20 KY's Competition, R1184000) is answered at once, before
 any search, with the option its redacted statement works out to (`ky_competition::worked_answer`),
 never Stop: the redacted copy judges no answer right (R465), so a search would rank the answers alike
@@ -270,6 +279,11 @@ element is part of `search_signature`, so two orders of the same plays that end 
 two positions; with no Feng Shui acting neither changes. `GREEDY_EVAL` keeps 0.
 While a Feng Shui of the seat's own acts, its Activate (a free Auspicious Rock) is tier 2's first source,
 before the rewarded plays (`Auspice::Judge`, R4154403), so a busy turn's `branching` cut never drops it.
+While a Feng Shui of the seat's own acts, `feng_shui_outlook` also counts the Auspicious Rock its next turn's
+Activate adds (`coming_rock`, `AI_FENG_SHUI_ROCK`, Radiant on a Radiant Feng Shui) among the cards the next
+play may be, so a hand the element punishes costs nothing while that Rock is not punished, and a play no
+Feng Shui judges whose element generates another hand card's is a bridge (`Auspice::Bridge`), tried after
+the rewarded plays and before the other plain ones (R4783041).
 A Tradable card in the seat's own hand whose own cost is above the crystals its next refresh brings (this
 turn's `mana.max`, one more under `MAX_MANA`, moved by the rider; never the handicap) is dead
 (`dead_in_hand`): `material` holds it at `AI_EVAL.dead_tradable_discount` off its hand price, and its Trade

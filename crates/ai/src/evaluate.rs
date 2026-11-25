@@ -48,19 +48,19 @@ use jackioh_engine::{
     gauntlet_acts, has_keyword, heal_multiplier_of, hero_armor_of, hero_burn_of, hero_toxic_of, is_asleep,
     is_dormant_starship, is_extra_turn_card, is_giga, is_sick, is_slumbering, is_standing_unit,
     is_starship_piece, is_temporary_card, is_tradable, left_field_after, legal_actions, lost_refreshes_left,
-    modifier_is_live, outcome_for, owed_mana_of, own_cost, pays_credits_like_a_resource, pierces, pile_at,
-    plague_on, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of, settle, slots_of,
-    stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, toxic_on, trigger_holders_with_hook,
-    unit_damage_cap, unit_has, unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
-    yard_at_turn_start,
+    modifier_is_live, new_instance, outcome_for, owed_mana_of, own_cost, pays_credits_like_a_resource,
+    pierces, pile_at, plague_on, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of,
+    settle, slots_of, stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, toxic_on,
+    trigger_holders_with_hook, unit_damage_cap, unit_has, unit_view, units_on_field_of, why_sandbox_refused,
+    with_pool_hold, yard_at_turn_start,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::candidates::{Side, action_key, blow, cleaved_neighbours_with, side_of};
 use crate::config::{
     AI_ACTIVATION_PROBE_NODES, AI_AFFLICTION_TICKS, AI_ATTACK_HOOK_PROBE_NODES, AI_AWAKEN_PROBE_NODES,
-    AI_DEATH_PROBE_NODES, AI_EVAL, AI_EVOLVE_PROBE_NODES, AI_HAND_ACTIVATION_PROBE_NODES, AI_PLAGUE_BOMBS,
-    AI_PROMPT_ACTIVATION_PROBE_NODES, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
+    AI_DEATH_PROBE_NODES, AI_EVAL, AI_EVOLVE_PROBE_NODES, AI_FENG_SHUI_ROCK, AI_HAND_ACTIVATION_PROBE_NODES,
+    AI_PLAGUE_BOMBS, AI_PROMPT_ACTIVATION_PROBE_NODES, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
 };
 use crate::reply::{Known, hidden_card_ids, visible_activation};
 use crate::simulate::{create_sub_counter, note_sim_panic, simulate};
@@ -1077,16 +1077,21 @@ pub(crate) fn feng_shui_verdict(
 /// the card would gain in hand as Radiant (`hand_card_value`, R983), a punishment its hits' cost on
 /// `hero_value`'s curve, never below 1 life (R985), and a neutral verdict nothing. The best alone, since
 /// the seat chooses which card it plays first and only that one is judged by this element, so a hand of
-/// rewarded cards is no reason to hold them back. The seat's own hand only: the enemy's is hidden.
+/// rewarded cards is no reason to hold them back. The seat's own hand only: the enemy's is hidden. While a
+/// Feng Shui of the seat's own acts, the Auspicious Rock its next turn's Activate adds (`coming_rock`,
+/// R4783041) is one more card it may play first, so a hand the element punishes costs nothing while that Rock
+/// is not punished, and the Rock's own reward counts.
 fn feng_shui_outlook(state: &GameState, seat: PlayerId, w: &EvalWeights) -> f64 {
     if !feng_shui_acts(state) {
         return 0.0;
     }
     let life = effective_life(state, seat);
     let start = starting_life(state, seat);
+    let rock = coming_rock(state, seat);
     state.players[seat]
         .hand
         .iter()
+        .chain(rock.as_ref())
         .filter(|card| {
             find_def(Some(state), &card.def_id).is_some() && subsystems::feng_shui::judged(state, card)
         })
@@ -1104,6 +1109,28 @@ fn feng_shui_outlook(state: &GameState, seat: PlayerId, w: &EvalWeights) -> f64 
         })
         .reduce(f64::max)
         .unwrap_or(0.0)
+}
+
+/// R4783041: the id of the Rock `coming_rock` makes, which no card of a game takes (theirs are `c<n>`).
+const COMING_ROCK_ID: &str = "ai-coming-rock";
+
+/// R4783041: the Auspicious Rock (`AI_FENG_SHUI_ROCK`) the Activate of a Feng Shui of `seat`'s own adds to
+/// its hand at its next turn (once a turn, free, R384), Radiant when one of its Feng Shuis runs its Radiant
+/// face, as a hand card no state holds; `None` while none of its own acts (a face-down one's text sleeps) or
+/// the catalog has no Rock. A Feng Shui leaving the field before then is not modelled, as R3951100 has it.
+fn coming_rock(state: &GameState, seat: PlayerId) -> Option<CardInstance> {
+    if !acting_with_flag(state, seat, |flags| flags.feng_shui) {
+        return None;
+    }
+    find_def(Some(state), AI_FENG_SHUI_ROCK)?;
+    let mut rock = new_instance(&mut 0u32, AI_FENG_SHUI_ROCK, seat, Zone::Hand { player: seat });
+    rock.id = COMING_ROCK_ID.to_string();
+    rock.radiant = state.players[seat]
+        .backrow
+        .iter()
+        .flatten()
+        .any(|card| card.radiant && flags_of(state, card).feng_shui == Some(true));
+    Some(rock)
 }
 
 /// R962: the steps a Jade Counter at `jade` has climbed toward the next threshold it has not crossed.

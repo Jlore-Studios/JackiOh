@@ -34,6 +34,7 @@ pub mod gauntlet;
 pub mod graveyard_plays;
 pub mod hidden_nerfs;
 pub mod ky_competition;
+pub mod last_resort;
 pub mod lethal_hint;
 pub mod living_bomb;
 pub mod lone_win;

@@ -2,7 +2,9 @@
 //! are tuning defaults: tests pin rankings and puzzle outcomes, never these values. Each constant
 //! object is a `const` of a struct named after it (SURFACE §4.2).
 
-use jackioh_engine::config::{CN_TECH_MIN_GAMES, KY_COMPETITION_MAX, MARKETPLACE_CREDITS_PER_MANA};
+use jackioh_engine::config::{
+    CN_TECH_MIN_GAMES, HERO_HEALTH, KY_COMPETITION_MAX, MARKETPLACE_CREDITS_PER_MANA,
+};
 use jackioh_engine::{KeywordKind, SetName};
 use serde::{Deserialize, Serialize};
 
@@ -543,7 +545,9 @@ pub struct EvalWeights {
     /// R3951100: while a Feng Shui acts (Meditative #40, R981–R985), the share that counts of what the
     /// seat's next face-up play is worth to it (`evaluate::feng_shui_outlook`): of its own hand's cards a
     /// Feng Shui would judge, the best verdict its last element gives one, a reward at what the card would
-    /// gain in hand as Radiant and a punishment at the hit's cost on the hero curve. At 0 nothing is read.
+    /// gain in hand as Radiant and a punishment at the hit's cost on the hero curve. While a Feng Shui of
+    /// the seat's own acts, the Auspicious Rock its Activate adds next turn is one more such card
+    /// (`AI_FENG_SHUI_ROCK`, R4783041). At 0 nothing is read.
     pub feng_shui_outlook: f64,
     /// §3.2, R13, R3695001: the share of its `unit_worth` a card dormant under one of the seat's own
     /// unit piles counts. It resumes when the cards above it leave.
@@ -873,6 +877,28 @@ const _: () = assert!(AI_EVAL.evolve_event_share >= 0.0 && AI_EVAL.evolve_event_
 /// permanent that hook reaches is a destroy waiting (`evaluate::plague_doomed`), and the move order tries a
 /// placement prompt's enemy permanents first (`candidates::plague_aims_first`).
 pub const AI_PLAGUE_BOMBS: &[&str] = &["classic-062"];
+
+/// R4783040: the cards the AI keeps for a last resort (issue #4783): Classic #37 Last Hurrah, which draws its
+/// whole deck, the hand cap burning the rest, and Stinkyscape+ #79 A Glimpse into the Endless Sea, which
+/// exiles its deck and every permanent for a countdown to a win. The search prices either far above what it
+/// costs (a fatigue draw counts nothing, `AI_EVAL.fatigue_draw`, and a countdown to a win counts a share of the
+/// win, R3696000), so a play of one is a candidate only while the seat's times are dire or it has no other
+/// play (`candidates::hold_last_resorts`).
+pub const AI_LAST_RESORT: &[&str] = &["classic-037", "stinkyscapeplus-079"];
+
+/// R4783040: the cards of `AI_LAST_RESORT` the seat may also play while it holds a way to put cards back into
+/// its deck (`candidates::refills_own_deck`): A Glimpse into the Endless Sea, which empties it.
+pub const AI_LAST_RESORT_REFILLED: &[&str] = &["stinkyscapeplus-079"];
+
+/// R4783040: the life at or under which the seat's times are dire and it may play a last-resort card, a
+/// third of a hero's starting `HERO_HEALTH`: one Feng Shui punishment (`FENG_SHUI_DAMAGE`) from dead.
+pub const AI_LAST_RESORT_DIRE_LIFE: i32 = HERO_HEALTH / 3;
+
+/// R4783041: the card a Feng Shui's Activate adds to its controller's hand, Meditative #39.1 Auspicious Rock
+/// (水), Radiant on the Radiant face. While a Feng Shui of the seat's own acts, the one its next turn's
+/// Activate adds is a card its next play may be (`evaluate::feng_shui_outlook`), and a play that leaves an
+/// element generating a card of its hand bridges to it (`candidates::Auspice::Bridge`).
+pub const AI_FENG_SHUI_ROCK: &str = "meditative-039-1";
 
 /// R2424000, R2687000: the most nodes a decision's Death probes (`evaluate::death_prices`) spend: two
 /// per field unit or readable backrow card with a Death, three per own hand Field Spell with one, three
