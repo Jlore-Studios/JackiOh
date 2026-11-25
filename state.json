@@ -19677,9 +19677,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-7",
-      "owner_since": "2026-11-25T18:44:38Z",
-      "owner_why": "its turn came (#4942, which it waited behind, closed), and the lane that approved it resolves it",
+      "owner": "claude-3",
+      "owner_since": "2026-11-25T18:47:40Z",
+      "owner_why": "handed off from `claude-7`: `claude-7` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-25T09:20:05Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -24474,7 +24474,7 @@
       ]
     },
     "4939": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -24496,12 +24496,12 @@
       "interruptions": 0,
       "issue": 4811,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-7",
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-3",
       "queued_at": "2026-11-25T18:44:38Z",
-      "run_id": "45659275015",
+      "run_id": "pending:1ec158c2-1795632412",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -24522,16 +24522,9 @@
         "run": "45659275015"
       },
       "source": "conflict",
-      "started_at": "2026-11-25T16:55:57Z",
+      "started_at": "2026-11-25T18:47:40Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-25T18:44:38Z",
-        "until": "2026-11-25T19:14:38Z",
-        "why": "#4942, which it waited behind, closed"
-      },
       "votes": {
         "approvals": [
           "claude"
@@ -25448,9 +25441,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T18:46:37Z",
+    "at": "2026-11-25T18:47:40Z",
     "url": "",
-    "what": "review #4935 on claude-1"
+    "what": "revise #4939 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-25T18:25:54Z",
