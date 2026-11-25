@@ -21033,7 +21033,16 @@
       "feedback_since": "2026-11-24T23:12:48Z",
       "issue": 4841,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "0129276c4f4373c6b0577fafc6300e56c341c77e",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
