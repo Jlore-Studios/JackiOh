@@ -1,5 +1,5 @@
 //! S #18.2 BALTHASAR (SPEC §8.10 row S 18.2, §7; §2.4, §6.1, R57, R62, R70, R180, R290, R384, R451,
-//! R1300, R1843000, R1866002): (2) Field Spell, Tech, Token (printed Legendary), summoned by S #18
+//! R1300, R1843000, R1866002, R4831000): (2) Field Spell, Tech, Token (printed Legendary), summoned by S #18
 //! Imitated Instrumentality.
 //!   Base:    "Indestructible / Start of turn: Vote to remove you if your hero has less than half its
 //!            starting health. / Activate: Add a copy of the last card you played to your hand. It costs
@@ -8,10 +8,11 @@
 //!            ({surcharge}) more." (1)
 //!
 //! Engine: Indestructible is printed in `catalog.json` (§6.1). Start of turn (R62): `vote_out` when twice
-//! its controller's hero health is below the health that hero started with, its seat's handicap
-//! `heroHealth` else HERO_HEALTH (`starting_health_of`, R290, R180) (R1843000). Activate (R384, once a
-//! turn): a copy (R57) of the last face-up card its controller played (`last_face_up_played`, R451: casts
-//! count, R70; a face-down Trap never; the AI generated cards passed over), on the face it was played,
+//! its controller's hero health is below the health that hero started with, a Duos seat's own HP at
+//! setup, spent or not (R4831000), else its seat's handicap `heroHealth`, else HERO_HEALTH
+//! (`starting_health_of`, R290, R180) (R1843000). Activate (R384, once a turn): a copy (R57) of the
+//! last face-up card its controller played (`last_face_up_played`, R451: casts count, R70; a face-down
+//! Trap never; the AI generated cards passed over), on the face it was played,
 //! a Chinese one Chinese (R1300), added to their hand with `add_to_hand`'s `costMod` of `surcharge`, not
 //! capped; a full hand burns it (§2.4); nothing before a play.
 
@@ -101,6 +102,7 @@ pub fn script() -> CardScripts {
 // S #18.2 BALTHASAR — SPEC §8.10 row S 18.2, BUILD M12 row S 18.2 (R1866002).
 #[cfg(test)]
 mod tests {
+    use jackioh_engine::config::{DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD};
     use jackioh_engine::testkit::*;
 
     use crate::{filler, scenario};
@@ -119,19 +121,33 @@ mod tests {
         }))
     }
 
-    fn votes_at_start(health: i32, handicap: Option<Handicap>) -> usize {
+    /// The votes cast at the start of p1's turn on `health`, its side set up by `seat` first.
+    fn votes_with(health: i32, seat: impl FnOnce(&mut PlayerState)) -> usize {
         let mut s = scenario(json!({
             "active": "p2",
             "p1": { "hand": [FILLER], "backrow": [BALTHASAR], "health": health, "library": filler(4) },
             "p2": { "hand": [FILLER], "library": filler(4) },
         }));
-        s.state_mut().players.p1.handicap = handicap;
+        seat(&mut s.state_mut().players.p1);
         s.end_turn();
         assert_eq!(s.state().active, P1);
         s.last_events()
             .iter()
             .filter(|event| matches!(event, GameEvent::VoteCast { def_id, .. } if def_id == BALTHASAR))
             .count()
+    }
+
+    fn votes_at_start(health: i32, handicap: Option<Handicap>) -> usize {
+        votes_with(health, |side| side.handicap = handicap)
+    }
+
+    /// What `duos_create` puts on p1's side (§13.4) on the standard own HP: `health` its hero's health,
+    /// which reads its team's pool (capped at `pool_cap`) once `spent`.
+    fn votes_in_duos(health: i32, pool_cap: i32, spent: bool) -> usize {
+        votes_with(health, |side| {
+            let pool = if spent { health } else { pool_cap };
+            side.duos = Some(DuosLife { pool, pool_cap, spent, own_start: None });
+        })
     }
 
     /// R2476000: after "the last card you played", the card its Activate would copy, to both seats: the
@@ -186,6 +202,24 @@ mod tests {
             let twenty = Some(Handicap { hero_health: Some(20), ..HUMAN_HANDICAP });
             assert_eq!(votes_at_start(9, twenty), 1);
             assert_eq!(votes_at_start(10, twenty), 0);
+        }
+
+        /// R4831000: a Duos hero starts on its own 20, not 30, so 14 is above half and 9 below.
+        #[test]
+        fn r4831000_a_duos_hero_votes_only_below_half_its_own_hp() {
+            assert_eq!(votes_in_duos(9, DUOS_POOL_HEALTH, false), 1);
+            assert_eq!(votes_in_duos(10, DUOS_POOL_HEALTH, false), 0);
+            assert_eq!(votes_in_duos(14, DUOS_POOL_HEALTH, false), 0);
+            assert_eq!(votes_at_start(14, None), 1, "1v1: 14 of 30 is below half");
+        }
+
+        /// R4831000: once spent, the pool is set against the same 20, the Hard team's 30 pool included.
+        #[test]
+        fn r4831000_a_spent_seat_still_reads_the_own_hp_it_started_on() {
+            assert_eq!(votes_in_duos(9, DUOS_POOL_HEALTH, true), 1);
+            assert_eq!(votes_in_duos(10, DUOS_POOL_HEALTH, true), 0);
+            assert_eq!(votes_in_duos(14, DUOS_POOL_HEALTH_HARD, true), 0);
+            assert_eq!(votes_in_duos(9, DUOS_POOL_HEALTH_HARD, true), 1);
         }
 
         #[test]

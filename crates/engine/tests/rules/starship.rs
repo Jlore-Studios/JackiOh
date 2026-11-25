@@ -1107,6 +1107,35 @@ mod r1852005_the_memory_and_building_a_ship {
             assert!(memory.name.is_some(), "{viewer:?}");
         }
     }
+
+    /// R4816000: a Transform's new card arrives (S+ #103 making S+ #157 Phantom Shipyard), so a hull it
+    /// makes is Dormant with an empty memory and is judged by no health: it stays at 0/0.
+    #[test]
+    fn r4816000_a_unit_a_transform_turns_into_a_dormant_starship_is_dormant_starts_its_memory_and_stays_at_0_0()
+     {
+        use crate::rules::fixtures::harness::apply_now;
+
+        let mut s = board(
+            "p1",
+            json!([plain.id]),
+            json!([{ "def": plain.id, "lane": 1 }]),
+            json!([plain.id]),
+            json!([]),
+        );
+        let old = id_at(&s, P1, 1);
+        apply_now(
+            s.state_mut(),
+            jackioh_engine::effects::transform(json_as(json!({ "instanceId": old, "defId": hull.id }))),
+        );
+        let id = id_at(&s, P1, 1);
+        assert_ne!(id, old, "a new card stands in the lane");
+        let card = s.card(&id).clone();
+        assert_eq!(card.def_id, hull.id);
+        assert!(card.slumber.is_some(), "its printed Dormant starts");
+        assert!(card.starship.is_some(), "its hull's memory starts");
+        assert!(piece_defs(&card).is_empty(), "with no piece in it");
+        assert_eq!(ship_of(&s, P1).id, id, "it is p1's Dormant Starship");
+    }
 }
 
 mod r1852006_the_launch_price {
