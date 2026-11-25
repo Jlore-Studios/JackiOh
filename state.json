@@ -20170,6 +20170,13 @@
     "4834": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45530348810",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-25T02:19:39Z",
+        "until": "2026-11-25T02:49:39Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
