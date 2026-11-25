@@ -1171,3 +1171,145 @@ mod defense_switch_1696 {
         );
     }
 }
+
+/// R4810000: the reply's step caps. `ARMORY`'s free Activate ♾️ gains its controller's hero 1 Armor, a
+/// use the opponent's evaluation always prefers to standing still, so it takes every step it is let.
+mod step_caps_r4810000 {
+    use jackioh_engine::config::HERO_HEALTH;
+
+    use super::*;
+
+    /// A test-only Field Spell token, "Activate ♾️: Gain 1 Armor.", free.
+    const ARMORY: &str = "ai-test-armory";
+    /// #8 Mr. Vanilla, a vanilla 4/4.
+    const VANILLA: &str = "core-008";
+    /// S #66 Miner v5: "Activate 5: Gain a random Stinkyscape Resource" (R1872000).
+    const MINER: &str = "stinkyscape-066";
+    /// A 1/1 with Windfury: two attacks a turn.
+    const WINDFURY: &str = "stand-in (1) 1/1 Windfury";
+
+    fn armory_def() -> CardDef {
+        let face = json!({ "keywords": [], "text": "Activate ♾️: Gain 1 Armor." });
+        json_as(json!({
+            "id": ARMORY, "index": "ai-test-armory-1", "name": "Armory (AI test)", "set": "Core",
+            "type": "Field Spell", "tags": [], "rarity": "Token", "token": true, "cost": 1,
+            "base": face, "radiant": face,
+        }))
+    }
+
+    /// `ARMORY` on top of the real catalog and scripts, for this thread, as `install_two_guns` does.
+    fn install_armory() {
+        jackioh_cards::register_all();
+        let mut catalog = (*jackioh_cards::CATALOG).clone();
+        catalog.insert(ARMORY.to_string(), armory_def());
+        register_catalog_as(catalog, jackioh_cards::catalog_version());
+        let script = Script {
+            activations: vec![ActivationDecl {
+                id: "armor".to_string(),
+                label: "Gain 1 Armor".to_string(),
+                uses: ActivationUses::Unlimited,
+                cost: None,
+                targets: vec![],
+                modes: vec![],
+                can_activate: None,
+                has: None,
+                run: hook(|_ctx| vec![effects::gain_hero_armor(json_as(json!({ "amount": 1 })))]),
+            }],
+            ..Script::default()
+        };
+        let mut scripts = jackioh_cards::scripts_of();
+        scripts.insert(
+            ARMORY.to_string(),
+            CardScripts {
+                base: script.clone(),
+                radiant: script,
+            },
+        );
+        register_scripts(scripts);
+    }
+
+    /// p2's reply on 600 nodes, and the nodes it used.
+    fn replied(state: &GameState) -> (GameState, usize) {
+        let counter = create_node_counter(600, None);
+        let reply =
+            simulate_reply(state, AI, &counter, &hidden_card_ids(state, AI), Prices::NONE).expect("a reply");
+        (reply, counter.used())
+    }
+
+    /// A free Activate with no limit to its uses takes `AI_REPLY.play_steps` of the reply's steps and no
+    /// more, so the three 4/4s still swing for the AI's 12 health: on 3a83bd7 it took all twelve and the
+    /// line read as survived.
+    #[test]
+    fn r4810000_a_free_activate_takes_at_most_play_steps_so_the_lethal_attacks_still_come() {
+        install_armory();
+        let state = handed_over(json!({
+            "p1": { "health": 12 },
+            "p2": { "field": [VANILLA, VANILLA, VANILLA], "backrow": [ARMORY] },
+        }));
+        let (reply, used) = replied(&state);
+        assert_eq!(
+            reply.result.map(|result| result.winner),
+            Some(Winner::from(HUMAN))
+        );
+        assert_eq!(reply.players[HUMAN].hero.armor, AI_REPLY.play_steps);
+        assert_eq!(
+            used,
+            (AI_REPLY.play_steps + 3) as usize,
+            "six Armor uses and three attacks"
+        );
+    }
+
+    /// Ten Windfury attacks are more than the steps the Armor uses leave: the reply makes the attacks
+    /// its steps allow and then ends the opponent's turn, so the line is scored at the AI's next main
+    /// phase, as every other reply's is.
+    #[test]
+    fn r4810000_a_reply_whose_steps_run_out_still_ends_the_opponents_turn() {
+        install_armory();
+        let state = handed_over(json!({
+            "p2": { "field": [WINDFURY, WINDFURY, WINDFURY, WINDFURY, WINDFURY], "backrow": [ARMORY] },
+        }));
+        let (reply, used) = replied(&state);
+        assert!(reply.result.is_none());
+        assert_eq!(
+            (reply.active, reply.turn, reply.phase),
+            (AI, TURN + 2, Phase::Main)
+        );
+        assert!(reply.pending.is_none());
+        assert_eq!(reply.players[HUMAN].hero.armor, AI_REPLY.play_steps);
+        assert_eq!(
+            reply.players[AI].hero.health,
+            HERO_HEALTH - (AI_REPLY.max_steps - AI_REPLY.play_steps),
+            "one point for each step the Armor uses left"
+        );
+        assert_eq!(
+            used,
+            (AI_REPLY.max_steps + 1) as usize,
+            "the twelve steps and the endTurn"
+        );
+    }
+
+    /// The issue's board: beside S #66 Miner v5, whose every use gains a Resource the reply then
+    /// plays, the three 4/4s still swing for the AI's 12 health, as they do without it.
+    #[test]
+    fn r4810000_beside_a_miner_v5_the_reply_still_makes_its_lethal_attacks() {
+        for field in [
+            json!([VANILLA, VANILLA, VANILLA]),
+            json!([VANILLA, VANILLA, VANILLA, MINER]),
+        ] {
+            let state = handed_over(json!({
+                "seed": "audit-reply-miner-7",
+                "p1": { "health": 12 },
+                "p2": { "field": field },
+            }));
+            let (reply, _) = replied(&state);
+            assert_eq!(
+                reply.result.map(|result| result.winner),
+                Some(Winner::from(HUMAN)),
+                "{field}: active {:?}, turn {}, the AI at {}",
+                reply.active,
+                reply.turn,
+                reply.players[AI].hero.health
+            );
+        }
+    }
+}

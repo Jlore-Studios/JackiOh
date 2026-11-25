@@ -1067,8 +1067,19 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct AiReply {
-    /// Engine steps one reply may take: plays, attacks, prompt answers and the closing endTurn.
+    /// Engine steps one reply's turn may take: plays, Activates, switches, attacks, prompt answers and
+    /// its own endTurn. R4810000: a turn whose steps run out with the opponent still on turn is ended
+    /// in up to `close_steps` more.
     pub max_steps: i32,
+    /// R4810000: the most of `max_steps` that known plays (reply.rs `known_play`) and visible
+    /// Activates (`visible_activation`) take together. Past it a step tries neither, so a card with
+    /// many uses, or one whose every use gains a card the reply then plays (S #66 Miner v5), leaves
+    /// the attacks the rest.
+    pub play_steps: i32,
+    /// R4810000: the steps past `max_steps` a reply whose steps ran out with the opponent still on
+    /// turn takes to end that turn: its endTurn and the prompts the turn's end opens, answered as
+    /// every reply prompt is. The line is then scored at the seat's next decision.
+    pub close_steps: i32,
     /// Nodes `decide` reserves per reply when it splits the budget (a typical reply, not the most).
     pub reserve_steps: i32,
     /// Plays of cards the line put in the opponent's hand that one reply step tries, in move order.
@@ -1111,6 +1122,14 @@ pub struct AiReply {
 /// The opponent's reply that the best lines are scored after (reply.rs, SPEC §9.9).
 pub const AI_REPLY: AiReply = AiReply {
     max_steps: 12,
+    // R4810000: 6, so the 12 steps keep one attack for each of the engine's `UNIT_ZONES` (5) Units and
+    // the endTurn. With `close_steps` its screen, 400 games on improve-dev against the control at
+    // e3fe5705e3, read 199-201, edge -0.005 (-0.022 to 0.012); inconclusive (R4319000): 3 decided of 200
+    // (won 1, lost 2), 17 diverged, every game clean; its scene tests settle it (training/improve.md,
+    // A screen).
+    play_steps: 6,
+    // R4810000: 3, the endTurn and two prompts its turn's end may open.
+    close_steps: 3,
     reserve_steps: 5,
     known_plays: 8,
     visible_activations: 4,

@@ -11,6 +11,10 @@
 //!    without Deft up to AI_REPLY.attack_switches (R4433000); facing lethal, walls weighed against the
 //!    best attack (R4187000).
 //!
+//! Known plays and activations take at most AI_REPLY.play_steps of the turn's AI_REPLY.max_steps
+//! steps, so the attacks keep the rest; a turn whose steps run out is ended in up to
+//! AI_REPLY.close_steps more (R4810000).
+//!
 //! Step evaluation uses real `reduce` calls (catching unwinds, SURFACE §4.4.9). Countdowns
 //! waiting where reply ends are blended via `AI_REPLY.countdown_share` (#1995, R1181000).
 
@@ -885,7 +889,8 @@ pub fn hidden_card_ids(state: &GameState, seat: PlayerId) -> IndexSet<String> {
 }
 
 /// Simulates the opponent's reply turn according to the reply rules until the seat's next main phase
-/// or prompt, or game end. Prompts get `best_auto_answer`. Returns `None` when the node counter exhausts.
+/// or prompt, or game end; a turn whose `AI_REPLY.max_steps` run out is ended there (R4810000). Prompts
+/// get `best_auto_answer`. Returns `None` when the node counter exhausts.
 pub fn simulate_reply(
     state: &GameState,
     seat: PlayerId,
@@ -908,7 +913,9 @@ pub fn simulate_reply_with(
 ) -> Option<GameState> {
     let opp = seat.opponent();
     let mut current = state.clone();
-    for _step in 0..AI_REPLY.max_steps {
+    // R4810000: the known plays and visible Activates made so far, held to `AI_REPLY.play_steps`.
+    let mut plays = 0;
+    for taken in 0..AI_REPLY.max_steps + AI_REPLY.close_steps {
         if current.result.is_some() {
             return Some(current);
         }
@@ -929,25 +936,44 @@ pub fn simulate_reply_with(
         if current.active != opp {
             return Some(current);
         }
+        // R4810000: the turn's steps ran out with the opponent still on turn: it ends its turn, so the
+        // line is scored at the seat's next decision as every other reply is. A refused endTurn ends
+        // the reply where it stands.
+        if taken >= AI_REPLY.max_steps {
+            if !counter.take() {
+                return None;
+            }
+            let Some(ended) = reduce_for(&current, opp, &ActionBody::EndTurn, counter) else {
+                return Some(current);
+            };
+            current = ended;
+            continue;
+        }
 
         // One legal_actions serves the known-play try (its ordered candidates), the visible
         // activations, the Deft switches, the static trader's attack list and the position switches.
         let legal = legal_actions(&current, opp);
-        match known_play(&current, seat, &legal, hidden, counter, prices) {
-            Known::Cut => return None,
-            Known::Played(played) => {
-                current = *played;
-                continue;
+        // R4810000: past `AI_REPLY.play_steps` known plays and Activates a step tries neither, so the
+        // attacks keep the rest of the turn's steps.
+        if plays < AI_REPLY.play_steps {
+            match known_play(&current, seat, &legal, hidden, counter, prices) {
+                Known::Cut => return None,
+                Known::Played(played) => {
+                    current = *played;
+                    plays += 1;
+                    continue;
+                }
+                Known::Nothing => {}
             }
-            Known::Nothing => {}
-        }
-        match visible_activation(&current, seat, &legal, hidden, counter, prices) {
-            Known::Cut => return None,
-            Known::Played(played) => {
-                current = *played;
-                continue;
+            match visible_activation(&current, seat, &legal, hidden, counter, prices) {
+                Known::Cut => return None,
+                Known::Played(played) => {
+                    current = *played;
+                    plays += 1;
+                    continue;
+                }
+                Known::Nothing => {}
             }
-            Known::Nothing => {}
         }
         match deft_switch(&current, seat, &legal, counter, prices) {
             Known::Cut => return None,
