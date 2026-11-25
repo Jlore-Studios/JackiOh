@@ -22505,39 +22505,6 @@
     "4891": {
       "action": "build",
       "asks": [],
-      "decision": {
-        "answer": "1",
-        "answer_url": "https://github.com/Jlore-Studios/JackiOh/issues/4891#issuecomment-7169247266",
-        "answered_at": "2026-11-25T17:17:38Z",
-        "answered_by": "MaxGoetzmann",
-        "asked_at": "2026-11-25T10:58:57Z",
-        "assigned": [
-          "jgoetzmann",
-          "MaxGoetzmann"
-        ],
-        "default": 1,
-        "hours": 24,
-        "kind": "build",
-        "model": "opus",
-        "options": [
-          {
-            "change": "Delete `docs/speed-and-cost-audit.md` (16,118 B) as the only removal. The pull request body gets a proof row: `git grep -n -e 'speed-and-cost-audit' -e 'speed-and-cost'` prints nothing, no workflow, test or comment cites it, and #4727 shipped all six parts.",
-            "tradeoff": "The pull request then has a change the reviewer can pass. The cost reasoning (Cloudflare rates read 2026-11-24, before/after wake tables) leaves the tree and survives only in git history and #4727's commit message."
-          },
-          {
-            "change": "Make no change. A person closes #4891 as nothing to remove, using pass 1's evidence (no Rust file nothing names, no web module nothing imports, audio matching its manifests, every doc cited or kept for a reason).",
-            "tradeoff": "Keeps the audit record while #4691 may still be open, but the bot's review loop cannot pass a pull request with no change, so a person has to close the issue or stop the run."
-          },
-          {
-            "change": "Delete both `docs/speed-and-cost-audit.md` and `docs/roblox-crossplay.md` (28,658 B).",
-            "tradeoff": "Removes more unread prose, but `roblox-crossplay.md` is a design that has not been built yet (#3735, its RC11 build issues), not a finished plan. That goes beyond the issue's archive rule unless Roblox crossplay has been dropped."
-          }
-        ],
-        "problem": "The issue allows a run that finds nothing to remove: \"Nothing to remove? Make no change and say so in your answer, with your evidence.\" Pass 1 followed the plan and changed nothing. The reviewer blocked it for exactly that reason (\"The branch has no change from main\"). That finding contradicts the issue. If I make no change again, every later pass will hit the same block.\n\nThe tree does hold one record that could be deleted under the issue's archive rule: `docs/speed-and-cost-audit.md` (16,118 B). Nothing reads it. `git grep` for its name and for its title phrases finds nothing outside the file itself. It is #4691's measurement record, and all six of its parts (#4709 to #4714) shipped in #4727. But it only merged yesterday, and from the tree I cannot see whether #4691 is closed. The plan treated it as \"not an old report\" and left the call to a person. It is a judgment call about a record, not something the evidence settles, so I am not deleting it on my own just to get a diff past the reviewer.\n\nEvery other file with no reader has a reason to stay. `docs/roblox-crossplay.md` is a design that has not been built. `scripts/og-image.mjs` is run by hand. `photos/logo/preview-*.png` is listed in `photos/README.md`. `photos/logo/jackioh-card-back.png` is written by `apps/web/scripts/brand-logo.py`.",
-        "provider": "claude-8",
-        "question": "Should this week's hygiene pull request delete `docs/speed-and-cost-audit.md` as the shipped #4691 audit's record, or should #4891 close with no change (nothing to remove)?",
-        "why": "it is the only removal the issue's archive rule plausibly covers (an unread report of work whose parts have all shipped), a person still reviews this hygiene pull request before it merges, and git history keeps the file, while making no change cannot get past the bot's review"
-      },
       "died": 0,
       "failures": 0,
       "forced": false,
