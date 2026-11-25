@@ -1092,7 +1092,7 @@ mod tests {
     use super::*;
     use crate::simulate::create_node_counter;
 
-    /// C+ #13 Mommy Barker, whose Radiant face is a 4/4 Reborn.
+    /// C+ #13 Mommy Barker, whose Radiant face is a 4/2 Reborn.
     const BARKER: &str = "classicplus-013";
     /// #77 Professor Curvature, whose Radiant face is a vanilla 6/6.
     const CURVATURE: &str = "core-077";
@@ -1126,7 +1126,7 @@ mod tests {
         }))
     }
 
-    /// The worth of Mommy Barker's Reborn body (§4.5 step 4): its Radiant 4/4 at 1 health, no Reborn.
+    /// The worth of Mommy Barker's Reborn body (§4.5 step 4): its Radiant 4/2 at 1 health, no Reborn.
     fn barker_return() -> f64 {
         4.0 * AI_EVAL.attack + AI_EVAL.health
     }
@@ -1169,7 +1169,7 @@ mod tests {
         let worth = unit_worth(s.state(), barker, &AI_EVAL, Prices::NONE);
         assert!((trade.value - worth).abs() < 1e-9, "{}", trade.value);
         assert!(
-            (worth - (4.0 * AI_EVAL.attack + 4.0 * AI_EVAL.health)).abs() < 1e-9,
+            (worth - (4.0 * AI_EVAL.attack + 2.0 * AI_EVAL.health)).abs() < 1e-9,
             "{worth}"
         );
     }

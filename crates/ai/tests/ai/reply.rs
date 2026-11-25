@@ -23,7 +23,7 @@ const PUNISH: &str = "classic-020";
 const HEROIC: &str = "core-098";
 /// C #6 Cloaked Toe Cracker, the card that prints Cloaked.
 const CRACKER: &str = "classic-006";
-/// C+ #13 Mommy Barker, whose Radiant face is a 4/4 Reborn.
+/// C+ #13 Mommy Barker, whose Radiant face is a 4/2 Reborn.
 const BARKER: &str = "classicplus-013";
 /// M #100 Greaser, a vanilla 7/7.
 const GREASER: &str = "meditative-100";
@@ -162,8 +162,8 @@ mod simulate_reply {
     /// #1796: kills a vanilla 4/4 rather than a Reborn 5/5, which comes straight back
     #[test]
     fn kills_a_vanilla_4_4_rather_than_a_reborn_5_5_that_comes_straight_back() {
-        // Professor Curvature's Radiant 6/6 kills either and survives. Mommy Barker's Radiant 4/4
-        // Reborn, buffed to 5/5, comes back at its printed 4/4 on 1 health (§4.5 step 4), so its kill
+        // Professor Curvature's Radiant 6/6 kills either and survives. Mommy Barker's Radiant 4/2
+        // Reborn, buffed to 5/5, comes back at its printed 4/2 on 1 health (§4.5 step 4), so its kill
         // removes less than Mr. Vanilla's does, and Mr. Vanilla's beats 6 to the face.
         let mut state = handed_over(json!({
             "p1": { "field": [{ "def": BARKER, "radiant": true }, "core-008"] },
@@ -175,7 +175,7 @@ mod simulate_reply {
             .map(|unit| unit.id.clone())
             .expect("Mommy Barker is on p1's field");
         let unit = find_instance_mut(&mut state, &barker).expect("Mommy Barker");
-        unit.buffs = AttackHealth { attack: 1, health: 1 };
+        unit.buffs = AttackHealth { attack: 1, health: 3 };
         let view = unit_view(&state, find_instance(&state, &barker).expect("Mommy Barker"));
         assert_eq!((view.attack, view.health), (5, 5));
 

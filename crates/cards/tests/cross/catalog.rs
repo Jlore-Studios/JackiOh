@@ -2190,8 +2190,8 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Human, G::Pancake],
         R::Legendary,
-        st(2, 2),
-        st(4, 4),
+        st(2, 1),
+        st(4, 2),
     ),
     row("14", "Forever&", c(1), T::Spell, &[], R::Epic, NO_STATS, NO_STATS),
     row(
