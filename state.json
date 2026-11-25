@@ -20948,20 +20948,13 @@
         "reason": "`agy` reached its usage limit",
         "trail": "- said: Waiting for compilation to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ba6a5f02-2c8b-4a2c-830b-90ae9c73ad63/task-34\"}\n- said: Waiting for compilation to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ba6a5f02-2c8b-4a2c-830b-90ae9c73ad63/task-34\"}\n- said: Waiting for compilation to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ba6a5f02-2c8b-4a2c-830b-90ae9c73ad63/task-34\"}\n- said: Waiting for compilation to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ba6a5f02-2c8b-4a2c-830b-90ae9c73ad63/task-34\"}\n- said: Waiting for compilation to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ba6a5f02-2c8b-4a2c-830b-90ae9c73ad63/task-34\"}\n- said: Waiting for compilation to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ba6a5f02-2c8b-4a2c-830b-90ae9c73ad63/task-34\"}\n- said: Waiting for compilation to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ba6a5f02-2c8b-4a2c-830b-90ae9c73ad63/task-34\"}\n- said: Waiting for compilation to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ba6a5f02-2c8b-4a2c-830b-90ae9c73ad63/task-34\"}\n- said: Waiting for compilation to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ba6a5f02-2c8b-4a2c-830b-90ae9c73ad63/task-34\"}\n- said: \n- schedule: {\"DurationSeconds\": 60, \"Prompt\": \"Check status of background task-34\"}\n- said: Waiting for compilation to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ba6a5f02-2c8b-4a2c-830b-90ae9c73ad63/task-34\"}\n- said: Waiting for compilation to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ba6a5f02-2c8b-4a2c-830b-90ae9c73ad63/task-34\"}\n- said: Waiting for compilation to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ba6a5f02-2c8b-4a2c-830b-90ae9c73ad63/task-34\"}\n- said: Waiting for compilation to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ba6a5f02-2c8b-4a2c-830b-90ae9c73ad63/task-34\"}\n- said: Waiting for compilation to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ba6a5f02-2c8b-4a2c-830b-90ae9c73ad63/task-34\"}\n- said: Waiting for compilation to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ba6a5f02-2c8b-4a2c-830b-90ae9c73ad63/task-34\"}\n- said: Waiting for compilation to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ba6a5f02-2c8b-4a2c-830b-90ae9c73ad63/task-34\"}\n- said: Waiting for compilation to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ba6a5f02-2c8b-4a2c-830b-90ae9c73ad63/task-34\"}\n- said: Waiting for compilation to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"ba6a5f02-2c8b-4a2c-830b-90ae9c73ad63/task-34\"}\n- said: \n- manage_task: {\"Action\": \"list\"}"
       },
-      "hold": {
-        "ends": "2026-11-25T12:45:48Z",
-        "owner": "agy",
-        "since": "2026-11-25T10:45:48Z",
-        "until": "2026-11-25T12:44:57Z",
-        "why": "it refused a call"
-      },
       "interruptions": 1,
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "agy",
-      "owner_since": "2026-11-25T09:23:47Z",
-      "owner_why": "it plans it",
+      "owner": "",
+      "owner_since": "2026-11-25T10:49:53Z",
+      "owner_why": "released from its hold: `agy` has no runner free where it runs",
       "paused": {
         "at": "2026-11-25T10:42:09Z",
         "interrupt": "usage",
