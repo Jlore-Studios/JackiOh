@@ -41,9 +41,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.13h the target declared no aim (issue #4844); `KEPT_SCRIPTS` folds
+/// R767000: through v0.6.13i the target declared no aim (issue #4844); `KEPT_SCRIPTS` folds
 /// those replays under it.
-pub fn script_v0_6_13h() -> CardScripts {
+pub fn script_v0_6_13i() -> CardScripts {
     let old = vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))];
     let now = script();
     CardScripts {
@@ -213,15 +213,15 @@ mod tests {
         }
     }
 
-    mod v0_6_13h {
+    mod v0_6_13i {
         use super::*;
 
-        use crate::scripts::stinkyscape_plus::c045_surge_alloy::{ID, script_v0_6_13h};
+        use crate::scripts::stinkyscape_plus::c045_surge_alloy::{ID, script_v0_6_13i};
 
-        /// R767000: a game on v0.6.13h, before the aim, rushes the caster's enemy with a stolen cast.
+        /// R767000: a game on v0.6.13i, before the aim, rushes the caster's enemy with a stolen cast.
         #[test]
-        fn r767000_a_game_on_v0_6_13h_rushes_the_casters_enemy_with_a_stolen_cast() {
-            crate::under_kept(ID, script_v0_6_13h(), || {
+        fn r767000_a_game_on_v0_6_13i_rushes_the_casters_enemy_with_a_stolen_cast() {
+            crate::under_kept(ID, script_v0_6_13i(), || {
                 let (s, mine, theirs) = stolen_rig();
                 assert!(s.pile(P2, "graveyard").iter().any(|card| card.def_id == ALLOY), "P2 stole and cast it");
                 assert_eq!(keyword_count(&s, &mine, KeywordKind::Rush), 1, "the caster's enemy takes Rush");

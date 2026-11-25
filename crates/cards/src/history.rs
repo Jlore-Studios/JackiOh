@@ -1405,30 +1405,30 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     // #4665's Ticketed (R4665000): the Cry that held a permanent beneath it in its own zone.
     (c009_ticketed::ID, "v0.6.12c", c009_ticketed::script_v0_6_12c),
     // #4844 (R656's help aims): the aim-less targets of eight buff Spells, before they aimed help.
-    (c012_fortify::ID, "v0.6.13h", c012_fortify::script_v0_6_13h),
+    (c012_fortify::ID, "v0.6.13i", c012_fortify::script_v0_6_13i),
     (
         c027_hopeful_jelly_bean::ID,
-        "v0.6.13h",
-        c027_hopeful_jelly_bean::script_v0_6_13h,
+        "v0.6.13i",
+        c027_hopeful_jelly_bean::script_v0_6_13i,
     ),
     (
         c010_2_divine_spirit::ID,
-        "v0.6.13h",
-        c010_2_divine_spirit::script_v0_6_13h,
+        "v0.6.13i",
+        c010_2_divine_spirit::script_v0_6_13i,
     ),
     (
         c010_3_power_word_shield::ID,
-        "v0.6.13h",
-        c010_3_power_word_shield::script_v0_6_13h,
+        "v0.6.13i",
+        c010_3_power_word_shield::script_v0_6_13i,
     ),
     (
         c045_surge_alloy::ID,
-        "v0.6.13h",
-        c045_surge_alloy::script_v0_6_13h,
+        "v0.6.13i",
+        c045_surge_alloy::script_v0_6_13i,
     ),
-    (c047_plastanium::ID, "v0.6.13h", c047_plastanium::script_v0_6_13h),
-    (c049_metaglass::ID, "v0.6.13h", c049_metaglass::script_v0_6_13h),
-    (c050_graphite::ID, "v0.6.13h", c050_graphite::script_v0_6_13h),
+    (c047_plastanium::ID, "v0.6.13i", c047_plastanium::script_v0_6_13i),
+    (c049_metaglass::ID, "v0.6.13i", c049_metaglass::script_v0_6_13i),
+    (c050_graphite::ID, "v0.6.13i", c050_graphite::script_v0_6_13i),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
@@ -2247,6 +2247,26 @@ mod tests {
             ],
             &["v0.6.9", "v0.6.9h", "v0.6.9i", "v0.6.9j", "v0.6.9k"],
             "v0.6.9l",
+        );
+    }
+
+    /// Issue #4844: v0.6.13h and v0.6.13i (#4903) shipped while it was built, still running the aim-less
+    /// scripts kept here, so its rows are keyed at v0.6.13i, the newest version that ran them.
+    #[test]
+    fn r767000_issue_4844_scripts_are_kept_through_v0_6_13i_the_newest_version_that_ran_them() {
+        assert_kept_through(
+            &[
+                c012_fortify::ID,
+                c027_hopeful_jelly_bean::ID,
+                c010_2_divine_spirit::ID,
+                c010_3_power_word_shield::ID,
+                c045_surge_alloy::ID,
+                c047_plastanium::ID,
+                c049_metaglass::ID,
+                c050_graphite::ID,
+            ],
+            &["v0.6.13h", "v0.6.13i"],
+            "v0.6.13j",
         );
     }
 
