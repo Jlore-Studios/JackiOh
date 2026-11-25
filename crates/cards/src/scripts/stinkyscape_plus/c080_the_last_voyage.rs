@@ -143,9 +143,9 @@ const CAST_TURN: &str = "castTurn";
 /// start of each from the next on (through v0.6.9n).
 #[derive(Clone, Copy)]
 enum Launches {
-    AtEnd,
-    AtEndAfterThisOne,
-    AtStart,
+    EndOfTurn,
+    EndOfLaterTurns,
+    StartOfTurn,
 }
 
 /// One face: `radiant` also exiles the opponent's board, `launch_now` launches one at once (the
@@ -180,14 +180,14 @@ fn voyage(
                 }))));
             }
             effects.push(for_rest_of_game(json_as(match launches {
-                Launches::AtEnd => json!({ "step": "launch", "label": BADGE, "atEnd": true }),
-                Launches::AtEndAfterThisOne => json!({
+                Launches::EndOfTurn => json!({ "step": "launch", "label": BADGE, "atEnd": true }),
+                Launches::EndOfLaterTurns => json!({
                     "step": "launch",
                     "label": BADGE,
                     "atEnd": true,
                     "data": { "castTurn": ctx.state.turn },
                 }),
-                Launches::AtStart => json!({ "step": "launch", "label": BADGE_V0_6_9G }),
+                Launches::StartOfTurn => json!({ "step": "launch", "label": BADGE_V0_6_9G }),
             })));
             effects
         })),
@@ -206,8 +206,8 @@ fn voyage(
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: voyage(false, true, Launches::AtEndAfterThisOne, blueprints),
-        radiant: voyage(true, true, Launches::AtEnd, blueprints),
+        base: voyage(false, true, Launches::EndOfLaterTurns, blueprints),
+        radiant: voyage(true, true, Launches::EndOfTurn, blueprints),
     }
 }
 
@@ -216,8 +216,8 @@ pub fn script() -> CardScripts {
 /// folds those replays under it.
 pub fn script_v0_6_13h() -> CardScripts {
     CardScripts {
-        base: voyage(false, false, Launches::AtEnd, blueprints),
-        radiant: voyage(true, true, Launches::AtEnd, blueprints),
+        base: voyage(false, false, Launches::EndOfTurn, blueprints),
+        radiant: voyage(true, true, Launches::EndOfTurn, blueprints),
     }
 }
 
@@ -225,8 +225,8 @@ pub fn script_v0_6_13h() -> CardScripts {
 /// caster's turns from the next on (issue #4440). `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_9n() -> CardScripts {
     CardScripts {
-        base: voyage(false, false, Launches::AtStart, blueprints),
-        radiant: voyage(true, true, Launches::AtStart, blueprints),
+        base: voyage(false, false, Launches::StartOfTurn, blueprints),
+        radiant: voyage(true, true, Launches::StartOfTurn, blueprints),
     }
 }
 
@@ -234,8 +234,8 @@ pub fn script_v0_6_9n() -> CardScripts {
 /// `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
-        base: voyage(false, true, Launches::AtStart, blueprints),
-        radiant: voyage(true, true, Launches::AtStart, blueprints),
+        base: voyage(false, true, Launches::StartOfTurn, blueprints),
+        radiant: voyage(true, true, Launches::StartOfTurn, blueprints),
     }
 }
 
@@ -248,8 +248,8 @@ pub fn blueprints_v0_6_4c() -> Vec<StarshipBlueprint> {
 /// folds those replays under it.
 pub fn script_v0_6_4c() -> CardScripts {
     CardScripts {
-        base: voyage(false, true, Launches::AtStart, blueprints_v0_6_4c),
-        radiant: voyage(true, true, Launches::AtStart, blueprints_v0_6_4c),
+        base: voyage(false, true, Launches::StartOfTurn, blueprints_v0_6_4c),
+        radiant: voyage(true, true, Launches::StartOfTurn, blueprints_v0_6_4c),
     }
 }
 
