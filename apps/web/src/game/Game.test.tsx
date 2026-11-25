@@ -342,7 +342,8 @@ describe("the result overlay", () => {
   });
 
   it("waits out the effects layer's Victory / Defeat before it takes the pointer", () => {
-    render(<Game view={finished()} legal={[]} onAction={vi.fn()} />);
+    const { rerender } = render(<Game view={baseView()} legal={[]} onAction={vi.fn()} />);
+    rerender(<Game view={finished()} legal={[]} onAction={vi.fn()} />);
     const overlay = screen.getByTestId("result-overlay");
     expect(overlay).toHaveAttribute("data-revealed", "false");
     expect(overlay.style.animationDelay).not.toBe("");
@@ -350,6 +351,22 @@ describe("the result overlay", () => {
       vi.advanceTimersByTime(10_000);
     });
     expect(screen.getByTestId("result-overlay")).toHaveAttribute("data-revealed", "true");
+  });
+
+  it("R4734000 a board mounted on a finished game shows its result at once, with no animation delay", () => {
+    render(<Game view={finished()} legal={[]} onAction={vi.fn()} />);
+    const overlay = screen.getByTestId("result-overlay");
+    expect(overlay).toHaveAttribute("data-revealed", "true");
+    expect(overlay.style.animationDelay).toBe("");
+    expect(document.querySelector<HTMLElement>(".result-scrim")?.style.animationDelay).toBe("");
+  });
+
+  it("R4734000 a silent board's result waits for nothing: no effects layer plays on it", () => {
+    const { rerender } = render(<Game view={baseView()} legal={[]} onAction={vi.fn()} silent />);
+    rerender(<Game view={finished()} legal={[]} onAction={vi.fn()} silent />);
+    const overlay = screen.getByTestId("result-overlay");
+    expect(overlay).toHaveAttribute("data-revealed", "true");
+    expect(overlay.style.animationDelay).toBe("");
   });
 
   it("stays a chip when the route draws its own result dialog", () => {

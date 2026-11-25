@@ -300,9 +300,10 @@ impl ReplayFill {
         }
     }
 
-    /// The most nodes one replay's fill may take, `steps × (width + 1)`; 0 when off.
+    /// The most nodes one replay's fill may take, `steps × (width + 1)`; 0 when off. R4802000: saturating,
+    /// so a `branching` of "no limit" overflows nothing.
     pub fn ceiling(self) -> usize {
-        self.steps * (self.width + 1)
+        self.steps.saturating_mul(self.width.saturating_add(1))
     }
 }
 

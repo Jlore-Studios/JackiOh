@@ -7,7 +7,7 @@ export type Call = { method: string; url: string; headers: Record<string, string
 export type Reply = { status?: number; body?: unknown };
 
 /** A route's answer, fixed or worked out from the call; `"never"` leaves the request hanging. */
-export type Route = Reply | ((call: Call) => Reply) | "never";
+export type Route = Reply | ((call: Call) => Reply | Promise<Reply>) | "never";
 
 export type FakeFetch = {
   calls: Call[];
@@ -34,7 +34,7 @@ export function fakeFetch(routes: Record<string, Route> = {}): FakeFetch {
   };
   vi.stubGlobal(
     "fetch",
-    vi.fn((input: string, init: RequestInit = {}): Promise<Response> => {
+    vi.fn(async (input: string, init: RequestInit = {}): Promise<Response> => {
       const method = init.method ?? "GET";
       const body = typeof init.body === "string" ? (JSON.parse(init.body) as unknown) : undefined;
       const call: Call = { method, url: input, headers: { ...(init.headers as Record<string, string>) }, body };
@@ -45,11 +45,9 @@ export function fakeFetch(routes: Record<string, Route> = {}): FakeFetch {
         route === undefined
           ? { status: 404, body: { error: { code: "not_found", message: `no fake for ${method} ${input}` } } }
           : typeof route === "function"
-            ? route(call)
+            ? await route(call)
             : route;
-      return Promise.resolve(
-        new Response(reply.body === undefined ? null : JSON.stringify(reply.body), { status: reply.status ?? 200 }),
-      );
+      return new Response(reply.body === undefined ? null : JSON.stringify(reply.body), { status: reply.status ?? 200 });
     }),
   );
   return fake;

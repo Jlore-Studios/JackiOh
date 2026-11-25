@@ -2625,7 +2625,8 @@ button.modifier-badge[data-open="true"] {
   animation: end-turn-ready-pulse 1.2s var(--ease-in-out) infinite;
 }
 
-.board .control.control-end-turn[data-turn-state="enemy"] {
+.board .control.control-end-turn[data-turn-state="enemy"],
+.board .control.control-end-turn[data-turn-state="over"] {
   box-shadow: var(--shadow-inset-top);
   cursor: not-allowed;
   filter: saturate(0.54);

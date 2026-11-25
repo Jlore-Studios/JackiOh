@@ -10,7 +10,7 @@
 //! at full after it (R4353024); the Radiant face then grants each of them Divine Shield (as S+ #13
 //! Shield Repairer's). Issue #4665 made it (3), from (1), and its controller's Units alone (R4665001):
 //! through v0.6.12c it mended the opponent's Units too, after its controller's, which `script_v0_6_12c`
-//! keeps, and through v0.6.8b it gave no Health, which `script_v0_6_8b` keeps (R767000).
+//! keeps, and through v0.6.8d it gave no Health, which `script_v0_6_8b` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -236,7 +236,7 @@ mod tests {
             });
         }
 
-        /// R767000: through v0.6.8b it healed to full and gave no Health (issue #4353).
+        /// R767000: through v0.6.8d it healed to full and gave no Health (issue #4353).
         #[test]
         fn r767000_the_script_kept_for_v0_6_8b_gives_no_health() {
             crate::under_kept(ID, script_v0_6_8b(), || {
