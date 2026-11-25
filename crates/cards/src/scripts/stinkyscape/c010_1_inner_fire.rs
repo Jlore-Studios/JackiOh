@@ -76,8 +76,8 @@ fn inner_fire_v0_6_13h(radiant: bool) -> Script {
     }
 }
 
-/// R767000: through v0.6.13h the buff was taken off the shown (floored) Attack (issue #4840);
-/// `KEPT_SCRIPTS` folds those replays under it.
+/// R767000: before this fragment shipped the buff was taken off the shown (floored) Attack
+/// (issue #4840); `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_13h() -> CardScripts {
     CardScripts {
         base: inner_fire_v0_6_13h(false),

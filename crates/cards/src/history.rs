@@ -1410,10 +1410,11 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     ),
     // #4665's Ticketed (R4665000): the Cry that held a permanent beneath it in its own zone.
     (c009_ticketed::ID, "v0.6.12c", c009_ticketed::script_v0_6_12c),
-    // #4840 (R1867002): the buffs before the unfloored-Attack reading.
+    // #4840 (R1867002): the buffs before the unfloored-Attack reading (R4779000: keyed by the
+    // pending fragment, so versions shipped while the branch waits stay covered).
     (
         c010_1_inner_fire::ID,
-        "v0.6.13h",
+        "fragment:inner-fire-reads-attack-below-0",
         c010_1_inner_fire::script_v0_6_13h,
     ),
 ];
