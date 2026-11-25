@@ -1838,6 +1838,8 @@ export type CardDrillDownResponse = {
 export type PublicVariantRow = {
   key: string;
   label: string;
+  /** A `mode` row's options as recorded, for the page to name in the card's own words; absent for the other kinds. */
+  options?: string[];
   games: number;
   /** Its games over the card's played games on the face, 0..1. */
   share: number;

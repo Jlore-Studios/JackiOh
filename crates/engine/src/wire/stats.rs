@@ -2356,6 +2356,18 @@ pub struct VariantRow {
     pub games: FaceTally,
 }
 
+impl VariantRow {
+    /// R4676000: a `mode` row's options as recorded, one or a "choose two"'s pair (its key joins them with
+    /// `VARIANT_MODE_JOIN`, as `PlayVariant::label` does), for a page to name in the card's own words; none
+    /// for the other kinds.
+    pub fn options(&self) -> Vec<String> {
+        match self.kind {
+            VariantKind::Mode => self.key.split(VARIANT_MODE_JOIN).map(str::to_string).collect(),
+            VariantKind::X | VariantKind::Embiggen => Vec::new(),
+        }
+    }
+}
+
 impl FaceTally {
     /// R4676000: the seats a face reads: both faces on All.
     pub fn on(&self, face: StatsFace) -> Tally {
@@ -6791,8 +6803,12 @@ mod tests {
             assert_eq!(top.games.radiant.games, 20);
             assert_eq!(top.games.normal.games, 10);
             assert_eq!(top.games.on(StatsFace::All).games, 30);
-            // The options' row adds every label that holds them.
+            // The options' row adds every label that holds them, and names each option apart.
             assert_eq!(rows[0].games.on(StatsFace::All).games, 20);
+            assert_eq!(rows[0].options(), ["deal", "heal"]);
+            assert_eq!(rows[1].options(), ["gain"]);
+            assert!(rows[2].options().is_empty());
+            assert!(rows[6].options().is_empty());
             // A label is what `PlayVariant::label` writes.
             let label = PlayVariant {
                 modes: vec!["deal".to_string(), "heal".to_string()],

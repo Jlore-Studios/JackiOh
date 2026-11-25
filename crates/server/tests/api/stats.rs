@@ -4417,6 +4417,8 @@ mod r4676000_extended_stats {
             ]
         );
         assert_eq!(modes[0]["label"], json!("bounce all units"));
+        // Each option apart, for the page to name in the card's own words.
+        assert_eq!(modes[0]["options"], json!(["bounce all units"]));
         assert_eq!(modes[0]["games"], json!(30));
         let share = modes[0]["share"].as_f64().expect("a share");
         assert!((share - 30.0 / 70.0).abs() < 1e-3, "{share}");
@@ -4445,6 +4447,8 @@ mod r4676000_extended_stats {
         assert_eq!(x[0]["label"], json!("X ≥ 5"));
         assert_eq!(x[0]["games"], json!(40));
         assert_eq!(x[1]["label"], json!("X = 2"));
+        // Only a mode row names options.
+        assert!(x[0].get("options").is_none());
         assert_eq!(keys(rows(&dividend, "mode")), ["heal", "deal"]);
 
         let (_, _, prep) = get_public(&app, &format!("/api/stats/cards/{PREP}?mode=bo1")).await;

@@ -29,7 +29,7 @@
 // vs normal (each face's figures and the gap).
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
-import { KEYWORD_KINDS, SHIPPED_SETS, type CardDef, type CardDefs, type KeywordKind } from "@jackioh/shared";
+import { KEYWORD_KINDS, SHIPPED_SETS, fillParams, type CardDef, type CardDefs, type KeywordKind } from "@jackioh/shared";
 import Username from "../auth/Username.tsx";
 import { CardDefsProvider } from "../cards/index.ts";
 import { chineseName, drawnInChinese, readerName, readerTerms } from "../cards/chinese.ts";
@@ -42,6 +42,7 @@ import { EmptyState } from "../empty/EmptyState.tsx";
 import { Dialog } from "../game/Dialog.tsx";
 import { currentCatalog } from "../game/currentCatalog.ts";
 import { useFaceModel } from "../game/faces.ts";
+import { modeText } from "../game/modeText.ts";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
   ApiRequestError,
@@ -53,6 +54,7 @@ import {
   type CardDrillDownResponse,
   type CardFaces,
   type PublicVariantGroup,
+  type PublicVariantRow,
   type CardStatsOptions,
   type PublicFaceFigures,
   type PublicPlayVersion,
@@ -380,10 +382,35 @@ function kindTitle(kind: PublicVariantGroup["kind"]): string {
 }
 
 /**
+ * R4676000: a choice's words: a Choose One row's options each as the card names it in play (`modeText`), its
+ * numbers filled from the face the page reads, a "choose two"'s pair joined; the server's label otherwise.
+ */
+function choiceLabel(row: PublicVariantRow, def: CardDef | undefined, radiant: boolean): string {
+  if (row.options === undefined || row.options.length === 0) return row.label;
+  const face = radiant ? "radiant" : "base";
+  return row.options
+    .map((option) => {
+      const { label } = modeText(def?.id, option, radiant);
+      return def === undefined ? label : fillParams({ params: def.params, base: { ...def.base, text: label }, radiant: { ...def.radiant, text: label } }, face);
+    })
+    .join(" + ");
+}
+
+/**
  * R4676000: the panel's Choices: one table per kind of choice the card has, its rows by share as the server sends
  * them, each with the deck table's tier chip, Adjusted and, with the ranges shown, its 95% range.
  */
-function ChoicesTables({ variants, showRanges }: { variants: PublicVariantGroup[]; showRanges: boolean }): ReactElement {
+function ChoicesTables({
+  variants,
+  def,
+  radiant,
+  showRanges,
+}: {
+  variants: PublicVariantGroup[];
+  def: CardDef | undefined;
+  radiant: boolean;
+  showRanges: boolean;
+}): ReactElement {
   return (
     <section className="stats-drilldown-section" data-testid={statsTestid.extendedChoices}>
       {variants.map((group) => (
@@ -401,7 +428,7 @@ function ChoicesTables({ variants, showRanges }: { variants: PublicVariantGroup[
           <tbody>
             {group.rows.map((row) => (
               <tr key={row.key} data-key={row.key} data-testid={statsTestid.extendedRow}>
-                <th scope="row">{row.label}</th>
+                <th scope="row">{choiceLabel(row, def, radiant)}</th>
                 <td>{shareText(row.share)}</td>
                 <td>
                   <TierChip tier={row.hasEnoughGames ? row.tier : null} testid={statsTestid.extendedTier} />
@@ -2343,7 +2370,14 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                           }))}
                         />
                       )}
-                      {extendedShown === "choices" && <ChoicesTables variants={drillDownVariants} showRanges={showRanges} />}
+                      {extendedShown === "choices" && (
+                        <ChoicesTables
+                          variants={drillDownVariants}
+                          def={drillDownDef}
+                          radiant={detailsFace === "radiant"}
+                          showRanges={showRanges}
+                        />
+                      )}
                       {extendedShown === "faces" && drillDownFaces && <FacesTable faces={drillDownFaces} showRanges={showRanges} />}
                       {extendedShown === undefined && <p className="stats-empty-sub">{t("Details unavailable.")}</p>}
                     </div>

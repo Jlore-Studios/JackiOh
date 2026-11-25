@@ -4074,6 +4074,17 @@ describe("R4676000 R4676001 Extended stats", () => {
     { kind: "mode", rows: [row("deal", "deal", 60, 0.6, 0.56, "A"), row("heal", "heal", 10, 0.1, 0.44, null)] },
     { kind: "x", rows: [row("top", "X ≥ 5", 40, 0.4, 0.51, "B")] },
   ];
+  /** Efficiency Dividend's options as the server names them: each row's options apart, a pair for two. */
+  const DIVIDEND = [
+    {
+      kind: "mode",
+      rows: [
+        { ...row("heal", "heal", 40, 0.5, 0.52, "B"), options: ["heal"] },
+        { ...row("damage + mana", "damage + mana", 20, 0.25, 0.5, "B"), options: ["damage", "mana"] },
+      ],
+    },
+    { kind: "x", rows: [row("2", "X = 2", 30, 0.375, 0.5, "B")] },
+  ];
 
   function serve(): void {
     vi.stubGlobal(
@@ -4084,7 +4095,8 @@ describe("R4676000 R4676001 Extended stats", () => {
         if (url.pathname === "/api/stats/cards") return json(MOCK_CARD_STATS_PROVISIONAL);
         if (url.pathname.startsWith("/api/stats/cards/")) {
           const id = decodeURIComponent(url.pathname.slice("/api/stats/cards/".length));
-          return json({ ...MOCK_DRILL_DOWN, face: "all", faces: FACES, variants: id === "core-001" ? VARIANTS : [] });
+          const variants = id === "core-001" ? VARIANTS : id === "core-024" ? DIVIDEND : [];
+          return json({ ...MOCK_DRILL_DOWN, face: "all", faces: FACES, variants });
         }
         return json({});
       }),
@@ -4160,6 +4172,23 @@ describe("R4676000 R4676001 Extended stats", () => {
     expect(within(shared).getByTestId(statsTestid.extendedFacesTab)).toHaveAttribute("aria-pressed", "true");
     // With the ranges shown, each face's range sits under its Adjusted.
     expect(within(shared).getAllByTestId(statsTestid.adjustedRange)).toHaveLength(2);
+  });
+
+  it("R4676000 R4676001 a Choose One row names each option as the card does in play, its numbers from the face the page reads", async () => {
+    serve();
+    at("/stats?card=core-024&extended=choices");
+    render(<StatsRoute />);
+    const panel = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    const named = async (scope: HTMLElement): Promise<(string | null)[]> =>
+      (await within(scope).findAllByTestId(statsTestid.extendedRow, undefined, SLOW)).map((one) => one.querySelector("th")?.textContent ?? null);
+    // The normal face's words, its heal filled from the card's numbers; a pair joined; X keeps the server's label.
+    expect(await named(panel)).toEqual(["Heal 3X", "Deal X damage + Mana next turn", "X = 2"]);
+    cleanup();
+
+    at("/stats?card=core-024&extended=choices&face=radiant");
+    render(<StatsRoute />);
+    const radiant = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    expect(await named(radiant)).toEqual(["Heal 6X", "Deal 2X damage + Mana next turn", "X = 2"]);
   });
 
   it("R4676001 Escape closes the dialog with the panel open, and the address forgets both", async () => {

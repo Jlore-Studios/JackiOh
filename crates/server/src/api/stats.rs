@@ -748,6 +748,10 @@ pub struct CardDrillDownResponse {
 pub struct PublicVariantRow {
     pub key: String,
     pub label: String,
+    /// A `mode` row's options as recorded (`VariantRow::options`), for the page to name in the card's own
+    /// words; absent for the other kinds.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub options: Vec<String>,
     pub games: i64,
     /// The row's games over the card's played games on the face: how often players choose it.
     pub share: f64,
@@ -814,6 +818,7 @@ fn card_variants(app: &App, report: &WindowedReport, id: &str, face: StatsFace) 
         }
         let figures = variant_figures(&seen, &never, face, &field);
         let public = PublicVariantRow {
+            options: row.options(),
             key: row.key,
             label: row.label,
             games: i64::from(figures.games),
