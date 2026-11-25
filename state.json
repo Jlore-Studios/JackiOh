@@ -23302,10 +23302,21 @@
     "what": "build #4832 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-25T10:31:14Z",
+    "at": "2026-11-25T10:39:56Z",
     "notes": [
-      "started review #4864 on claude-6 (run 45596047686)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)"
+      "delivered review #4864 on claude-6 (run 45596047686): reviewed",
+      "delivered review #4910 on claude-4 (run 45594636679): approved",
+      "delivered build #4847 on agy (run 45592960190): interrupted",
+      "delivered review #4908 on muse (run 45590094035): approved",
+      "delivered plan #4824 on claude-3 (run 45588336758): interrupted",
+      "delivered review #4906 on muse (run 45582671601): approved",
+      "delivered build #4805 on claude-3 (run 45576332552): interrupted",
+      "started build #4805 on claude-4 (run 45598112233)",
+      "started build #4779 on claude-6 (run 45598237440)",
+      "started plan #4850 on muse (run 45598365689)",
+      "started plan #4851 on muse (run 45598487025)",
+      "started build #4832 on muse (run 45598610670)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-25T13:20:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` it refused a call; its limit resets at 2026-11-25T12:44:57Z; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -24011,7 +24022,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T10:31:14Z",
+  "loop_tick": "2026-11-25T10:39:56Z",
   "machine_disk": {
     "issue": null,
     "reading": {
