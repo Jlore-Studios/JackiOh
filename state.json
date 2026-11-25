@@ -23834,6 +23834,9 @@
         }
       }
     },
+    "4924": {
+      "suggestion": true
+    },
     "4927": {
       "action": "review",
       "asks": [],
@@ -47676,6 +47679,13 @@
         "at": "2026-11-25T17:15:43Z",
         "number": 4938,
         "title": "Patch: give the Jlockeed-Unit pool a named function and call it from Headquarters",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-25T17:16:44Z",
+        "number": 4924,
+        "title": "Patch: pin the perf corpus so card additions stop re-dealing it",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
       }
