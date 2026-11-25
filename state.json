@@ -26505,10 +26505,11 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-25T04:50:00Z",
-          "utilization": 0.15
+          "utilization": 1.0
         },
-        "observed_at": "2026-11-25T02:30:45Z",
-        "status": "allowed"
+        "observed_at": "2026-11-25T02:40:05Z",
+        "rejected_resets_at": "2026-11-25T04:50:00Z",
+        "status": "rejected"
       }
     },
     "claude-2": {
@@ -45073,7 +45074,8 @@
       "2026-11-25T01:15:15Z,claude-6,stream,call,45515156904,1,2026-11-25T06:00:00Z,,,allowed,50,,",
       "2026-11-25T01:23:00Z,claude-6,stream,call,45515156904,2,2026-11-25T06:00:00Z,,,allowed,50,,",
       "2026-11-25T01:32:30Z,claude-6,stream,call,45515156904,4,2026-11-25T06:00:00Z,,,allowed,50,,",
-      "2026-11-25T01:35:30Z,claude-6,stream,call,45515156904,5,2026-11-25T06:00:00Z,,,allowed,50,,"
+      "2026-11-25T01:35:30Z,claude-6,stream,call,45515156904,5,2026-11-25T06:00:00Z,,,allowed,50,,",
+      "2026-11-25T02:35:14Z,claude-1,ping,before,45533718341,100,2026-11-25T04:50:00Z,,,rejected,40,,"
     ],
     "runs": [
       "2026-11-25T02:18:08Z,45530348810,claude-8,opus,plan,4834,hard,planned,,10.5,122,63378,6870180,3.9447,21,30,,,284,,fresh,,1",
