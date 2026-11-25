@@ -15,7 +15,7 @@
 //! keep their `use` lines, since an import can change which code runs (R2050000). R2173001: moving a
 //! card across a BUSTED or complicated threshold (R1846000) plays every shipped reader differently.
 //!
-//! Stage 2 (`--parent-bin`, the base's build) keeps a script-only claim only when its forced games
+//! Stage 2 (`--parent-bin`, the merge base's build) keeps a script-only claim only when its forced games
 //! diverge, so a refactor claims nothing; script-claimed cards share those games in groups of
 //! `FORCED_GROUP_CARDS`, each still in `FORCED_GAMES` games, and a group that diverges falls back
 //! card by card (R4145000); replays `UNFORCED_GAMES` games for play code, divergences
@@ -137,7 +137,11 @@ pub struct Args {
     /// The commit the change ends at; stage 2 needs this binary built from it.
     #[arg(long, default_value = "HEAD")]
     head: String,
-    /// The base's own `jackioh`, for stage 2. Without it, stage 1's answer stands.
+    /// The repository root (default: the workspace this binary was built from, as every other
+    /// command reads it).
+    #[arg(long)]
+    pub root: Option<PathBuf>,
+    /// The merge base's own `jackioh`, for stage 2. Without it, stage 1's answer stands.
     #[arg(long, value_name = "PATH")]
     parent_bin: Option<PathBuf>,
     /// Print the classification as one JSON object.
@@ -165,7 +169,7 @@ pub struct Args {
 enum SelfplaySide {
     /// The head's games, on this binary.
     Head,
-    /// The base's games, on `--parent-bin`.
+    /// The merge base's games, on `--parent-bin`.
     Base,
 }
 
@@ -185,6 +189,9 @@ impl SelfplaySide {
 struct Report<'a> {
     #[serde(flatten)]
     classification: &'a Classification,
+    /// The commit stage 1 read the change from: `git merge-base` of the named base and head, so
+    /// a caller can build exactly the parent stage 2 wants.
+    merge_base: String,
     labels: Vec<String>,
     problems: Vec<String>,
 }
@@ -1366,9 +1373,55 @@ pub(crate) fn side_at(root: &Path, rev: &str) -> Result<Side> {
     })
 }
 
+/// The commit the change starts from: `git merge-base` of the named base and head, so a base
+/// behind the head still classifies only the branch's own change. A base that is already an
+/// ancestor is its own merge base, so that call reads exactly what it did. Where the two share
+/// no history (which `run`'s `rev` already rules out for commits it can resolve), it falls back
+/// to the named base, today's behavior.
+fn effective_base(root: &Path, base: &str, head: &str) -> Result<String> {
+    match git(root, &["merge-base", base, head], &[]) {
+        Ok(out) => Ok(out.trim().to_string()),
+        Err(_) => Ok(base.to_string()),
+    }
+}
+
+/// Everything stage 1 reads: the file list and both sides, each at the merge base, never at a
+/// base behind the head.
+struct Loaded {
+    effective: String,
+    files: Vec<FileChange>,
+    before: Side,
+    after: Side,
+}
+
+fn load(root: &Path, base: &str, head: &str) -> Result<Loaded> {
+    let effective = effective_base(root, base, head)?;
+    let names = git(
+        root,
+        &["diff", "--no-renames", "--name-only", &effective, head],
+        &[],
+    )?;
+    let files: Vec<FileChange> = names
+        .lines()
+        .filter(|path| !path.is_empty())
+        .map(|path| FileChange {
+            path: path.to_string(),
+            before: show(root, &effective, path),
+            after: show(root, head, path),
+        })
+        .collect();
+    let (before, after) = (side_at(root, &effective)?, side_at(root, head)?);
+    Ok(Loaded {
+        effective,
+        files,
+        before,
+        after,
+    })
+}
+
 pub fn run(args: Args) -> Result<()> {
     register_all();
-    let root = repo_root();
+    let root = args.root.unwrap_or_else(repo_root);
     let rev = |name: &str| -> Result<String> {
         Ok(git(
             &root,
@@ -1379,18 +1432,14 @@ pub fn run(args: Args) -> Result<()> {
         .to_string())
     };
     let (base, head) = (rev(&args.base)?, rev(&args.head)?);
-    let names = git(&root, &["diff", "--no-renames", "--name-only", &base, &head], &[])?;
-    let files: Vec<FileChange> = names
-        .lines()
-        .filter(|path| !path.is_empty())
-        .map(|path| FileChange {
-            path: path.to_string(),
-            before: show(&root, &base, path),
-            after: show(&root, &head, path),
-        })
-        .collect();
-    let (before, after) = (side_at(&root, &base)?, side_at(&root, &head)?);
-    let diff = read_diff(&before, &after, &files);
+    let loaded = load(&root, &base, &head)?;
+    if loaded.effective != base {
+        eprintln!(
+            "classify: {base} is not an ancestor of {head}; reading the branch's change from their merge base {}",
+            loaded.effective
+        );
+    }
+    let diff = read_diff(&loaded.before, &loaded.after, &loaded.files);
 
     if let Some(side) = args.selfplay_side {
         if side == SelfplaySide::Head && rev("HEAD")? != head {
@@ -1407,7 +1456,7 @@ pub fn run(args: Args) -> Result<()> {
             if rev("HEAD")? != head {
                 bail!("stage 2 runs this build as the head's, but the checkout is not at {head}");
             }
-            Some(check(&diff, &after, parent, args.selfplay_dir.as_deref())?)
+            Some(check(&diff, &loaded.after, parent, args.selfplay_dir.as_deref())?)
         }
         None => None,
     };
@@ -1415,14 +1464,15 @@ pub fn run(args: Args) -> Result<()> {
     let problems = if args.claims {
         if checked.is_none() && !classification.unchecked.is_empty() {
             bail!(
-                "--claims needs --parent-bin: stage 1 left {} unchecked",
-                classification.unchecked.join(", ")
+                "--claims needs --parent-bin (that build's jackioh): stage 1 left {} unchecked; stage 2 wants a build of the merge base {}",
+                classification.unchecked.join(", "),
+                loaded.effective
             );
         }
         crate::claims::problems(
             &classification,
             &crate::claims::fragments_at(&root, &head)?,
-            &crate::claims::fragments_at(&root, &base)?,
+            &crate::claims::fragments_at(&root, &loaded.effective)?,
         )
     } else {
         Vec::new()
@@ -1430,6 +1480,7 @@ pub fn run(args: Args) -> Result<()> {
     if args.json {
         let report = Report {
             classification: &classification,
+            merge_base: loaded.effective.clone(),
             labels: labels(&classification),
             problems: problems.clone(),
         };
@@ -2643,5 +2694,171 @@ mod tests {
         // test binary as `selfplay`, so it is not tried.)
         assert!(play_side(SelfplaySide::Base, &ai_diff, None, &dir).is_err());
         assert!(!dir.exists());
+    }
+
+    // R1365000: a base behind the head still classifies only the branch: the diff, the base side
+    // and the base fragments are read at their merge base, never at the diverged base.
+    use std::process::Command;
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    /// A directory under the system temp dir, removed when dropped.
+    struct TempRepo(PathBuf);
+
+    impl TempRepo {
+        fn new() -> TempRepo {
+            static NEXT: AtomicU32 = AtomicU32::new(0);
+            let n = NEXT.fetch_add(1, Ordering::Relaxed);
+            let path = std::env::temp_dir().join(format!("jackioh-classify-{n}"));
+            let _ = fs::remove_dir_all(&path);
+            fs::create_dir_all(&path).expect("a temp dir");
+            let repo = TempRepo(path);
+            repo.git(&["init", "-q", "-b", "main"]);
+            repo
+        }
+
+        fn path(&self) -> &Path {
+            &self.0
+        }
+
+        /// `git args` in the repo, as a test author with no config of their own.
+        fn git(&self, args: &[&str]) -> String {
+            let output = Command::new("git")
+                .args([
+                    "-c",
+                    "user.name=t",
+                    "-c",
+                    "user.email=t@t",
+                    "-c",
+                    "commit.gpgsign=false",
+                ])
+                .args(args)
+                .current_dir(&self.0)
+                .output()
+                .expect("git runs");
+            assert!(
+                output.status.success(),
+                "git {args:?} failed: {}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+            String::from_utf8(output.stdout).expect("git prints text")
+        }
+
+        fn write(&self, rel: &str, text: &str) {
+            let path = self.0.join(rel);
+            fs::create_dir_all(path.parent().expect("a parent")).expect("a folder");
+            fs::write(path, text).expect("a fixture file");
+        }
+
+        /// Commits everything as it stands and names the commit.
+        fn commit(&self, message: &str) -> String {
+            self.git(&["add", "-A"]);
+            self.git(&["commit", "-q", "-m", message]);
+            self.git(&["rev-parse", "HEAD"]).trim().to_string()
+        }
+    }
+
+    impl Drop for TempRepo {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    /// One card's catalog entry, fields in the order a catalog writes them.
+    fn entry(id: &str, cost: i64) -> String {
+        format!(r#""{id}": {{ "id": "{id}", "name": "Card {id}", "cost": {cost} }}"#)
+    }
+
+    fn catalog_of(entries: &[String]) -> String {
+        format!("{{\n{}\n}}\n", entries.join(",\n"))
+    }
+
+    fn script(id: &str, body: &str) -> String {
+        format!(
+            "use jackioh_engine::prelude::*;\n\npub const ID: &str = \"{id}\";\n\npub fn script() {{ {body} }}\n"
+        )
+    }
+
+    const C001: &str = "crates/cards/src/scripts/core/c001.rs";
+    const C002: &str = "crates/cards/src/scripts/core/c002.rs";
+
+    /// Commit A holds the catalog and both scripts; main moves to B changing core-002's script;
+    /// a branch off A commits C changing core-001's script.
+    fn diverged() -> (TempRepo, String, String, String) {
+        let repo = TempRepo::new();
+        repo.write(
+            CATALOG_PATH,
+            &catalog_of(&[entry("core-001", 1), entry("core-002", 2)]),
+        );
+        repo.write(C001, &script("core-001", "one()"));
+        repo.write(C002, &script("core-002", "one()"));
+        let a = repo.commit("base");
+        repo.write(C002, &script("core-002", "two()"));
+        let b = repo.commit("main moves on");
+        repo.git(&["checkout", "-q", "-b", "topic", a.as_str()]);
+        repo.write(C001, &script("core-001", "two()"));
+        let c = repo.commit("the branch");
+        (repo, a, b, c)
+    }
+
+    fn names_of(root: &Path, base: &str, head: &str) -> Vec<String> {
+        let mut names: Vec<String> =
+            crate::patches::git(root, &["diff", "--no-renames", "--name-only", base, head], &[])
+                .expect("the diff reads")
+                .lines()
+                .map(str::to_string)
+                .collect();
+        names.sort();
+        names
+    }
+
+    fn catalog_side(root: &Path, rev: &str) -> Side {
+        let text = show(root, rev, CATALOG_PATH).expect("the catalog");
+        Side::of_catalog(serde_json::from_str(&text).expect("a catalog"), Vec::new())
+    }
+
+    #[test]
+    fn r1365000_diverged_base_reads_the_branch_from_the_merge_base() {
+        let (repo, a, b, c) = diverged();
+        let root = repo.path();
+        assert_eq!(effective_base(root, &b, &c).expect("the merge base"), a);
+        assert_eq!(names_of(root, &a, &c), [C001], "the branch changed one script");
+        assert_eq!(
+            names_of(root, &b, &c),
+            [C001, C002],
+            "main's newer commit reads in reverse off the diverged base"
+        );
+        let diff = read_diff(
+            &catalog_side(root, &a),
+            &catalog_side(root, &c),
+            &[FileChange {
+                path: C001.to_string(),
+                before: show(root, &a, C001),
+                after: show(root, &c, C001),
+            }],
+        );
+        assert_eq!(diff.scripts, BTreeSet::from(["core-001".to_string()]));
+        assert!(diff.play.is_empty(), "{diff:?}");
+    }
+
+    #[test]
+    fn r1365000_an_ancestor_base_is_used_unchanged() {
+        let repo = TempRepo::new();
+        repo.write(
+            CATALOG_PATH,
+            &catalog_of(&[entry("core-001", 1), entry("core-002", 2)]),
+        );
+        repo.write(C001, &script("core-001", "one()"));
+        repo.write(C002, &script("core-002", "one()"));
+        let b = repo.commit("first");
+        repo.write(C001, &script("core-001", "two()"));
+        let c = repo.commit("second");
+        assert_eq!(effective_base(repo.path(), &b, &c).expect("the merge base"), b);
+    }
+
+    #[test]
+    fn the_root_flag_points_classify_at_a_fixture_repository() {
+        let args = parse(&["--base", "b", "--root", "dir"]).unwrap();
+        assert_eq!(args.root, Some(PathBuf::from("dir")));
+        assert_eq!(parse(&["--base", "b"]).unwrap().root, None);
     }
 }

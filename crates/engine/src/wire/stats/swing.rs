@@ -1587,6 +1587,8 @@ mod tests {
             card: "reply".to_string(),
             turn: 4,
             radiant: false,
+            variant: None,
+            source: None,
         }]);
         let quiet = || (0.5, vec![], vec![]);
         let p2 = seat(&["wall"], false, &[quiet(), quiet(), quiet()]);
@@ -1697,6 +1699,8 @@ mod tests {
                         card: "core-t-rush".to_string(),
                         turn: 1,
                         radiant: false,
+                        variant: None,
+                        source: None,
                     }]);
                 }
                 let p2 = seat(&["other"], false, &[(0.5, vec![], vec![]), (0.5, vec![], vec![])]);
@@ -1790,6 +1794,8 @@ mod tests {
                         card: "core-008".to_string(),
                         turn: 1,
                         radiant: false,
+                        variant: None,
+                        source: None,
                     };
                     p1.created_used = Some(vec![used.clone()]);
                     p1.created_played = Some(vec![used]);

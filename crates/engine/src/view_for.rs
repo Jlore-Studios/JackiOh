@@ -1557,6 +1557,8 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
             0 => None,
             luck => Some(luck),
         },
+        // R4595000: the sets the seat's deck is dealt from, public on both seats.
+        deck_sets: side.deck_sets.clone(),
         // R169: the badge list beside the hero, public on both seats.
         modifiers: modifier_views(state, player),
         mana: ManaView {
@@ -2265,8 +2267,9 @@ fn redact_event(
         GameEventType::CardPlayed | GameEventType::Summoned => {
             shown.remove("arrivedDuring");
             shown.remove("exitsFrom");
-            // R2089000: the game record's, as on `addedToHand`.
+            // R2089000: the game record's, as on `addedToHand`; R4672000's `modes` likewise.
             shown.remove("creator");
+            shown.remove("modes");
             if hidden(&instance) {
                 // R1046: a card set face-down by its Cloaked shows neither its `x` nor its
                 // `embiggened`; any other hidden play keeps both (D14).

@@ -371,8 +371,9 @@ because practice saves on players' devices store it (the practice session, `crat
 save that does not fold to its hash), `packages/cards/test/fixtures/01-hotseat-full-game.json` pins
 `"a798906b"`, and e2e specs 01, 13 and 22 compare browser and Node hashes:
 
-1. Serialize the state to `serde_json::Value`; remove the top-level keys `applied`, `opening` and
-   `generators` (the Created cards' generators, presentation only, R1956001).
+1. Serialize the state to `serde_json::Value`; remove the top-level keys `applied`, `opening`,
+   `generators` (the Created cards' generators, presentation only, R1956001) and `makers` (the Created
+   cards' makers, the game record's, R4672001).
 2. `canonical(v)`: a string, number, bool or null as `JSON.stringify` writes it (serde_json writes the
    same for integers and for the escapes `\" \\ \b \f \n \r \t \u00xx`, lower-case hex, non-ASCII
    raw); an array as `[` + items joined by `,` + `]`; an object as `{` + `"key":canonical(value)`
@@ -758,7 +759,8 @@ pub fn wrap_up_after_ms(limit_ms: i64) -> i64;      // R3498000: the ms into a h
 pub fn build_ai_deck(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> Vec<String>;
     // AiDeckOptions { banned, include, theme, mana_cap, boost, lean_set: Option<SetName> } (serde camelCase;
     // `leanSet`, R1370: at least ceil(size × AI_DECK.lean_min_share) of the deck from that set; absent, the
-    // draw is exactly the pre-R1370 one)
+    // pre-R1370 draw, a pick that would cost the theme's and the units' floors drawn again from the same
+    // roll, R4784000)
 pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> TracedAiDeck;  // { deck, lean_forced }
 pub fn redact(state: &GameState, seat: PlayerId) -> GameState;
 pub fn ai_to_act(state: &GameState, seat: PlayerId) -> bool;
