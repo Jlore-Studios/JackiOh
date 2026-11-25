@@ -13,6 +13,8 @@
   padding: max(var(--space-7), env(safe-area-inset-top)) max(var(--space-7), env(safe-area-inset-right))
     max(var(--space-7), env(safe-area-inset-bottom)) max(var(--space-7), env(safe-area-inset-left));
   overflow-y: auto;
+  /* R4773000: a dialog scrolls inside itself while the page is locked. */
+  overscroll-behavior: contain;
   background: color-mix(in srgb, var(--pal-wood-950) 70%, transparent);
   animation: dialog-fade-in calc(var(--motion-fast) * var(--anim-scale, 1)) var(--ease-out) both;
 }
@@ -42,6 +44,8 @@
   gap: var(--space-5);
   width: min(400px, 100%);
   margin: auto;
+  /* R4773000: a dialog scrolls inside itself (the drawer's `overflow-y`) while the page is locked. */
+  overscroll-behavior: contain;
   padding: var(--space-8) var(--space-8) var(--space-7);
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-lg);

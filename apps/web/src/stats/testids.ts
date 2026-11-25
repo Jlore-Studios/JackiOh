@@ -8,6 +8,27 @@ export const statsTestid = {
   tabSets: "stats-tab-sets",
   /** R4279001: the Tokens tab, the cards made during a game. */
   tabTokens: "stats-tab-tokens",
+  /** R4678000: the Experimental tab, the line above its panel, and R4678001 its Running table, grid and Since. */
+  tabExperimental: "stats-tab-experimental",
+  experimentalLine: "stats-experimental-line",
+  runningTable: "stats-running-table",
+  runningGrid: "stats-running-grid",
+  runningSince: "stats-running-since",
+  /** R4680000: the tab's Segmented of views (Running, Versions), Versions' table, grid, span and Past versions only. */
+  experimentalRunning: "stats-experimental-running",
+  experimentalVersions: "stats-experimental-versions",
+  versionsTable: "stats-versions-table",
+  versionsGrid: "stats-versions-grid",
+  versionsSpan: "stats-versions-span",
+  versionsPastOnly: "stats-versions-past-only",
+  /** R4680001: an old version's drill-down: its faces, figures, the versions before and after it and a neighbour's open button. */
+  versionDrillDown: "stats-version-drilldown",
+  versionFaces: "stats-version-faces",
+  versionFigures: "stats-version-figures",
+  versionBefore: "stats-version-before",
+  versionAfter: "stats-version-after",
+  versionOpen: "stats-version-open",
+  versionFailed: "stats-version-failed",
   setsLeaders: "stats-sets-leaders",
   setsTable: "stats-sets-table",
   setsOutliers: "stats-sets-outliers",

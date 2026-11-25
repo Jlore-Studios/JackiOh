@@ -24,6 +24,13 @@
 //! `ai_decide` and `lethal_hint` hand their bodies no clock: the search ends at its `budget` alone, and
 //! the decision depends only on `(state, seed, cursor, budget)`.
 
+// #4732: an export named like a libm or host function (`log`, `round`; #4273's `log` made every
+// `f64::ln` trap) makes rust-lld warn `function signature mismatch: <name>` and link a trapping
+// stub in its place. Denying the lint fails the link and names the export. The module is stripped
+// (#4283), so nothing in the built file shows the collision. scripts/build-wasm.sh's self-test
+// builds a fixture under this very line and fails unless that link fails.
+#![cfg_attr(target_arch = "wasm32", deny(linker_messages))]
+
 use std::cell::RefCell;
 
 use jackioh_wasm_core as wasm_core;

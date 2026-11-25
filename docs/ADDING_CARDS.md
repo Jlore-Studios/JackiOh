@@ -15,7 +15,7 @@ index in three digits after a `c`, then its slug with every `-` and `.` an `_` (
 
 | # | File | What changes | A gate fails without it |
 |---|---|---|---|
-| 1 | `spec/08-catalog.md` §8.7 (§8.1 Core, §8.6 Classic; `spec/07-tokens.md` for a token) | the card's row: the only source of card text (CLAUDE.md) | none |
+| 1 | `spec/08-catalog/`, the note of the card's set: `8.7-classic-plus.md` for §8.7 (`8.1` to `8.5` Core, `8.6-classic.md`; `spec/07-tokens.md` for a token) | the card's row: the only source of card text (CLAUDE.md) | none |
 | 2 | `crates/cards/catalog.json` | the entry, after the set's highest card index and before its shared tokens (`T-AI-…`); a token follows its card; it carries a `flavor`, chosen by [docs/polish/8-flavor.md](polish/8-flavor.md) (a change to a flavor alone needs no fragment, R1437000) | `catalog check`, `tests/cross/catalog.rs` |
 | 3 | `crates/cards/src/scripts/classic_plus/cNNN_slug.rs` | the script and its tests in one file ([§2](#2-templates)) | the build: `build.rs` refuses a catalog id with no file |
 | 4 | `crates/cards/tests/cross/catalog.rs` and `crates/cards/src/census.rs` | the card's fixture row in `CLASSIC_PLUS`; in `CENSUS` its set's `cards` (a token: its index in `card_defined_tokens` or `shared_tokens`) and its rarity's count, and in `tag_count` each tag it carries but Token. Every total and each set's fixture-row count is the census's sum | `tests/cross/catalog.rs`, `catalog check`, `cargo test -p jackioh-tools` |
@@ -34,7 +34,7 @@ before yours, so a pending-claimed card needs no edit there (R646). What stays h
 `src/census.rs`, each set's counts, rarities, tokens and tag counts written once and never computed from `catalog.json` (#108, #2581).
 BUILD's must-pass tables take no row for a new card; its own tests are the record (CLAUDE.md rule 6).
 
-**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set while issue #1173 built it, until it shipped in v0.3.15, R1178000; the Stinkyscape set while issue #1836 built it, until its release, issue #1884, R1857000; the Training Grounds set while tracker #2193 built it, until its release, issue #2204, R2194000; and the Stinkyscape+ set while tracker #3533 built it, until its release, issue #3573, R3535000; the single-player Infinite Assault set is held now, while tracker #4576 builds it, on a stage of its own, `HeldSinglePlayer`, R4577000) differs in five places, the Training Grounds paths below standing for any held set's (the Infinite Assault's foundation, issue #4577, wrote no stubs: each card part adds its own entries, scripts and rows under `docs/infinite-assault.md` IA11):
+**A card of a set that has not shipped** (R1420: the Meditative set was one while issue #496 built it, and the Meditative+ set while issue #1173 built it, until it shipped in v0.3.15, R1178000; the Stinkyscape set while issue #1836 built it, until its release, issue #1884, R1857000; the Training Grounds set while tracker #2193 built it, until its release, issue #2204, R2194000; and the Stinkyscape+ set while tracker #3533 built it, until its release, issue #3573, R3535000; the single-player Infinite Assault set is held now, while tracker #4576 builds it, on a stage of its own, `HeldSinglePlayer`, R4577000) differs in five places, the Training Grounds paths below standing for any held set's (the Infinite Assault's foundation, issue #4602, wrote every entry, row and a stub script for #25–#240: each card part replaced its stubs with the scripts and their tests, and corrected its own rows where its build decided otherwise, under `docs/infinite-assault.md` IA11):
 - Its script goes in `src/scripts/training_grounds/` (id `traininggrounds-NNN`, a token's `traininggrounds-NNN-k`; Stinkyscape's
   had entries outside the numbers too, `stinkyscape-t-<name>`). The foundation (issue #2194) wrote a stub for every entry there,
   `STUB (#2194):` in its header (the snapshots #41–#60 are part 2's, #2195, which adds their entries and scripts): a card
@@ -53,8 +53,8 @@ BUILD's must-pass tables take no row for a new card; its own tests are the recor
 - Its `card-audio.json5` and `card-text.yaml` entries are written as for any card, but no voice file is expected for it until the set ships
   (`gen-voice.mjs --check` leaves it out), so [§7](#7-what-cannot-be-done-on-linux)'s rendering is owed by the release, not by the card.
   Its intro (row 10) is the release's too: the intros' totality test reads the sets that ship. (The Stinkyscape set's intros
-  came early, with its look-and-sound part, issue #1883, R1883000, and the Stinkyscape+ set's with its own, issue #3572,
-  R3572000, so neither's release owes any.)
+  came early, with its look-and-sound part, issue #1883, R1883000, the Stinkyscape+ set's with its own, issue #3572,
+  R3572000, and the single-player Infinite Assault set's with its own, issue #4596, R4596000, so no such release owes any.)
 - Its picture is not the release's: the web's art tests hold every catalog entry, a held set's included, to its rarity's
   detail floor (R3331001) and every Legendary and Mythic to a motion recipe of its own (R3340000), so a held set's cards draw
   placeholder scenes from the day they land (`apps/web/src/cards/art/infiniteAssaultRecipes.ts`, R4577009; Stinkyscape+'s,
@@ -227,8 +227,16 @@ shipped version's definitions, rebuilt from the snapshots, and the frozen win-ra
 if any (R1329000), which its games read unless they hold a snapshot (R3049000), and runs
 its own scripts for them. A patch
 that changes what a card's script does, not only a number in its definition, keeps the script it
-replaces: add `(ID, the newest shipped version, a fn that builds the old scripts)` to
-`KEPT_SCRIPTS` in `crates/cards/src/history.rs`. Without it, the replays that script would change are
+replaces: add `(ID, "fragment:<stem>", a fn that builds the old scripts)`, `<stem>` your fragment's
+file name in `crates/cards/patches/pending/` without `.json`, to `KEPT_SCRIPTS` in
+`crates/cards/src/history.rs`. `patches ship` records each version's fragment, and the build reads the
+key as the version just before the one your fragment shipped as, or the newest shipped version while it
+is pending, so a version shipped while you wait in the merge queue is covered (R4779000). A later part
+of a split patch keys by a fragment still pending or by its own. Rows keyed by a version stay;
+`patches check` fails a key naming no shipped version nor fragment, and a pending fragment named as one
+already shipped. When `classify` finds no card playing differently (the change shows only in a stolen or
+random cast, which its forced games never reach), the fragment claims no `--plays`, so no card's
+statistics restart: the kept script keyed by it is its claim (R4844000). Without it, the replays that script would change are
 refused by their final hash rather than shown wrong. `cargo jackioh carried` plays every era of every carried
 catalog and folds it back, so a kept script that is missing and panics there fails it (R4382000, R4382001). A script that writes its card's words into the
 state (a badge, a prompt) reads them with `def_of(Some(&*ctx.state), ID)`, the definition the game
@@ -278,6 +286,9 @@ One more card shifts every random draw from the pool (R380), so tests and games 
   whole event window (#106), `determinize` put a Siphon Squad in a hidden slot the seat's own view rules out (#107), and a deeply nested
   fusion resumed Final Gambit's step against the wrong ingredient (#105). If a wave fails at a seed that has nothing to do with
   your card, print the failing game's state, find which card the panic or the diff names, and file it rather than editing the test. A failure you fix or file gets a record in `crates/tools/fuzz-corpus/` in the same change (its README), so its deal survives the next card.
+- **The perf corpus** (`crates/tools/perf-corpus/`, #4924) pins its games' decks, so a new card re-deals none of them. A removed or
+  renamed id fails `cargo jackioh perf` and the per-pull-request `tests/perf.rs`, naming the record: add its `retired` marker and run
+  `cargo jackioh perf --pin` (its README).
 - **The fused-pair sweep** (`cargo jackioh fused-pairs`, #2381) fuses the text of every card with a Death, a trigger, a start- or
   end-of-turn hook, an aura or a fused hook onto every fusable Unit, and plays each pair until the board settles. A new card with one of
   those hooks joins the texts, and a new Unit joins the bodies, so the pull request's stride sample can move onto pairs nobody has

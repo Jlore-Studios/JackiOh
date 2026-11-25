@@ -563,6 +563,26 @@ fn answer_owned(
     }
 }
 
+/// R450, R122 (#4815): the one way every answerer takes a prompt's answer (`answer_prompt` below,
+/// `play_steps::answer_play_prompt`, `cry_trigger::answer_cry_prompt`, `effects::plague::answer_placement`),
+/// so none skips the targeting point. The answer is validated, its picks put in the offered order (R221)
+/// and refused when they cost more discards than their chooser holds; only then is the prompt closed, the
+/// targeting cost paid in random discards (R682) and the interception run. Returns the picks as the
+/// targeting point left them; on `Err` nothing changed and the prompt stays open.
+pub fn take_answer(
+    sink: &mut EngineSink<'_>,
+    pending: &PendingChoice,
+    answer: &AnswerInput,
+) -> Result<Vec<Selection>, EngineError> {
+    why_answer_refused(pending, answer)?;
+    let picks = in_offered_order(pending, &answer.selection);
+    // B5 E5, R450: picks that cost more discards than their chooser holds are no answer.
+    crate::targeting_point::why_target_answer_refused(sink.state, pending, &picks)?;
+    close_prompt(sink);
+    // B5 E5, E9, R450: the cost first, then the pick an interception moves.
+    Ok(crate::targeting_point::target_answer(sink, pending, &picks))
+}
+
 /// §10.6: "`answer` re-invokes the script with the selection." Validate, close the prompt, re-enter the step
 /// its `resume` names with the selection in `ctx.targets`, then drain what the prompt interrupted in R113's
 /// order (a pause inside this step lands ahead of everything older) up to the next prompt, so one answer
@@ -578,15 +598,7 @@ pub fn answer_prompt(sink: &mut EngineSink<'_>, answer: &AnswerInput) -> Result<
         return answered;
     }
 
-    why_answer_refused(&pending, answer)?;
-    let picks = in_offered_order(&pending, &answer.selection);
-    // B5 E5, R450: the targeting point may refuse picks that cost more than their chooser can pay.
-    crate::targeting_point::why_target_answer_refused(sink.state, &pending, &picks)?;
-
-    close_prompt(sink);
-    // B5 E5, E9, R450: a cost the targeting point asks for first (its own answer then finishes this
-    // one), and the pick an interception moves.
-    let targeted: Vec<Selection> = crate::targeting_point::target_answer(sink, &pending, &picks);
+    let targeted = take_answer(sink, &pending, answer)?;
     // R1180005: a `target` prompt a resolving Spell's own script opened targets what it picks.
     if pending.kind == PromptKind::Target
         && let Some(asking) = pending.resume.instance_id.as_deref()
@@ -622,7 +634,7 @@ pub fn continue_answer(sink: &mut EngineSink<'_>, pending: &PendingChoice, picks
 }
 
 // The targeting point (B5 E5, E9, E35; R450): `targeting_point.rs`'s options, refusal and answer, which
-// `open_prompt` and `answer_prompt` call directly.
+// `open_prompt` and `take_answer` call directly.
 
 /// R221: an answer's picks are a set (R60's "N different cards"), taken in the order the prompt offered
 /// them: `legal_actions` offers each set once and `reduce` accepts any listing of it, so the listing must
@@ -1360,7 +1372,8 @@ fn cast_prompt_shape(sink: &mut EngineSink<'_>, args: OpenPromptArgs) -> Option<
 /// match rng, and re-enter its step as `answer_prompt` does, inside the effect that asked: the step runs
 /// first and the rest of that effect's list after it, the order a parked tail would have kept (R113). Nothing
 /// is emitted, since no prompt was open. R1201: `luck` rolls again and keeps the answer with more picks on
-/// the prompt's aim side (Mayor Medinamogger's Radiant face).
+/// the prompt's aim side (Mayor Medinamogger's Radiant face). The step runs as the prompt's owner
+/// (`OpenPromptArgs.owner`), else the player asked (R4814000).
 fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs, luck: i32) {
     let max = clamp(args.max.unwrap_or(1), 0, args.options.len() as i32);
     let probe = PendingChoice {
@@ -1439,7 +1452,9 @@ fn answer_at_random(sink: &mut EngineSink<'_>, args: &OpenPromptArgs, luck: i32)
         sink,
         &resume_of(&probe.resume),
         ResumeOptions {
-            controller: Some(args.player),
+            // R4814000: the pick is the holder's; the step continues the asking card's sequence as its
+            // controller, as `continue_answer` runs an answered prompt's (B5 E18).
+            controller: Some(args.owner.unwrap_or(args.player)),
             targets: Some(targets),
             modes: None,
             chosen_from: Some(chosen_from),

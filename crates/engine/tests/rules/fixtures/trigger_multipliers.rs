@@ -55,6 +55,12 @@ pub const JOINT: &str = "tm-joint";
 pub const JOINT_TWO: &str = "tm-joint-two";
 /// A Field Spell whose aura makes its controller's Cries and Deaths run 1 more time.
 pub const DOUBLE: &str = "tm-double";
+/// R4589003: a Field Spell whose aura makes its controller's Deaths run 1 more time.
+pub const DEATHS: &str = "tm-deaths";
+/// R4589003: a Field Spell whose aura makes its controller's Reborns happen twice.
+pub const REBORNS: &str = "tm-reborns";
+/// R4589003: a 1/1 Unit that prints Reborn.
+pub const REBORNER: &str = "tm-reborner";
 /// Units carrying a turn-hook multiplier of 1 and of 2, for a Fuse.
 pub const EXTRA_UNIT_ONE: &str = "tm-extra-unit-one";
 pub const EXTRA_UNIT_TWO: &str = "tm-extra-unit-two";
@@ -107,6 +113,17 @@ pub fn catalog() -> CardDefs {
         unit(9017, "fear", 2, 2),
         spell(9018, "giver"),
         field_spell(9019, "double-two"),
+        field_spell(9020, "deaths"),
+        field_spell(9021, "reborns"),
+        def(
+            9022,
+            "reborner",
+            "Unit",
+            json!({
+                "base": { "attack": 1, "health": 1, "keywords": [{ "kind": "Reborn" }], "text": "reborner" },
+                "radiant": { "attack": 2, "health": 2, "keywords": [{ "kind": "Reborn" }], "text": "reborner" },
+            }),
+        ),
     ]
     .into_iter()
     .map(|card| (card.id.clone(), card))
@@ -133,6 +150,21 @@ pub fn scripts() -> IndexMap<String, CardScripts> {
                 ..Script::default()
             },
         ),
+        (
+            DEATHS,
+            Script {
+                death_extra: Some(read_hook(|_args| 1)),
+                ..Script::default()
+            },
+        ),
+        (
+            REBORNS,
+            Script {
+                reborn_extra: Some(read_hook(|_args| 1)),
+                ..Script::default()
+            },
+        ),
+        (REBORNER, Script::default()),
         (EXTRA_UNIT_ONE, turn_extra(1)),
         (EXTRA_UNIT_TWO, turn_extra(2)),
         (

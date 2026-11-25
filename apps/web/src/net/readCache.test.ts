@@ -752,7 +752,7 @@ describe("R3206000 a fresh answer needs no read, and a read already out is share
     });
   });
 
-  it("R3206000 a paid result drops the wallet, quests, tracks, packs, tokens and ladders", () => {
+  it("R3206000 R4780000 a paid result drops the wallet, quests, tracks, packs, tokens, owned cosmetics and ladders", () => {
     writeSession({ accessToken: A1 });
     const constructed = ladderPath(keptPaths.leaderboard, "constructed");
     const random = ladderPath(keptPaths.leaderboard, "random");
@@ -762,6 +762,7 @@ describe("R3206000 a fresh answer needs no read, and a read already out is share
       keptPaths.tracks,
       keptPaths.packs,
       keptPaths.tokens,
+      keptPaths.cosmetics,
       constructed,
       random,
       keptPaths.collection,
@@ -774,15 +775,8 @@ describe("R3206000 a fresh answer needs no read, and a read already out is share
     );
 
     announceWallet();
-    expect(paths.map((path) => cachedRead(A1, path) !== undefined)).toEqual([
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      false,
-      true,
-    ]);
+    expect(paths.map((path) => cachedRead(A1, path) !== undefined)).toEqual(
+      paths.map((path) => path === keptPaths.collection),
+    );
   });
 });

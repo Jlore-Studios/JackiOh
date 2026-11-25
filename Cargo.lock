@@ -1330,6 +1330,7 @@ dependencies = [
  "jackioh-engine",
  "jackioh-run",
  "jackioh-shared",
+ "jackioh-wasm-core",
  "rayon",
  "serde",
  "serde_json",

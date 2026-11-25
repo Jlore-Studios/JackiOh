@@ -108,6 +108,12 @@ builds reads its own game's hold without the state (R2201001).
   built with `hook(|ctx| …)`, and never writes the state itself (CLAUDE.md rule 5).
 - `query.rs` (with `zones`, `layers`, `mana`, `numbers`, `params`) is the read half: the board facts
   a card reads instead of `GameState` fields. `crates/cards/README.md` lists them.
+- `recursion_log.rs` (R4589000–R4589004) is the Infinite Assault's one game history: the face-up plays
+  (with their player-turn) and Unit deaths each side keeps once the game holds an Infinite Assault card,
+  read by the Recursion, Scraper (R4592000) and Commander (R4594005, R4594009) cards, and
+  `returned_by_reborn`; `origin.rs` stamps a card's deck of origin under the same gate (R4592002);
+  `Script.death_extra` and `Script.reborn_extra` are IA #118's Death-only and Reborn multipliers, and
+  `reset_side_keeping_self` is IA #119's reset that leaves its own card standing.
 - `prelude` is what a card file names: `use jackioh_engine::prelude::*;`.
 - `subsystems/` holds the card-specific systems (fuse, rotation, scorer, the random policy
   `ai_policy`, the scorer-driven `autopilot` that `reduce` drives through a turn, R1183002, heroic
@@ -189,6 +195,9 @@ builds reads its own game's hold without the state (R2201001).
 - `scripts::script_of(state, def_id)` finds a card's script; a fused card's is composed from its
   ingredients on lookup (`subsystems::fuse::compose_fused_scripts`), and a crafted card's (Meditative
   #17, R882) from its recipe (`subsystems::craft::compile_crafted_scripts`).
+- `effects/turn_buff.rs` is "this turn" Attack and keywords (R4587000): `buff_this_turn`
+  (`buffThisTurn`) writes `CardInstance.turn_buff`, which layer 4 reads only while its `turn` is now.
+  It is absent until set, so old games hash the same.
 
 The engine never depends on `jackioh-cards` (only its tests do). An engine test that needs a card's
 behavior uses a test-only script in `tests/rules/fixtures/`, and the real card's test covers the
@@ -213,8 +222,9 @@ seat, a nonce and a `DuosActionBody`) through them:
   duel's own `concede` are refused; `Concede` is the team's, offered and confirmed, one offer per team
   (`DuosState.concede_offer` is a `PerTeam`).
 - **The shared life** (§13.4). A duel side's `PlayerState.duos` (`DuosLife`: `pool`, `pool_cap`,
-  `spent`) is absent outside Duos and skipped when absent, so a 1v1 state serializes, hashes and
-  folds exactly as before and every golden trace and fuzz seed is unchanged. Every write to a hero's
+  `spent`, and `own_start`, the own HP it started on, absent at `DUOS_OWN_HEALTH`, R4831000) is absent
+  outside Duos and skipped when absent, so a 1v1 state serializes, hashes and folds exactly as before
+  and every golden trace and fuzz seed is unchanged. Every write to a hero's
   health (`damage.rs`'s deal, heal, lose and set, `effects/swap.rs`) goes through `duos_life.rs`
   (`hero_loses`, `hero_heals`, `hero_set`, `effective_life`), which without `duos` is exactly the 1v1
   arithmetic. After every step the wrapper copies each team's pool into the other duel.
@@ -232,8 +242,7 @@ Duos game from four decks with the mulligans kept and round 1 open.
 ## Constants (CLAUDE.md rule 9)
 
 Every rules number is a named constant in `src/config.rs` (BUILD §2), the "decide" rulings (R1, R4,
-R5, R14, R26, R39) and R2's turn cap included, with the training lanes' gate (`TRAINING_IMPROVE`,
-`TRAINING_UNBAN`: each lane's games, pairing and wins) and Duos's team rules (§13.4, §13.7:
+R5, R14, R26, R39) and R2's turn cap included, with Duos's team rules (§13.4, §13.7:
 `DUOS_OWN_HEALTH`, `DUOS_POOL_HEALTH`, `DUOS_POOL_HEALTH_HARD`, `DUOS_PASS_COST`, `DUOS_PASS_CAP`,
 `DUOS_HUMAN_TEAM` and `duos_ai_team(difficulty)`), the Trade's (`TRADES_PER_TURN`, `TRADE_COST`,
 R1838000; a player's own figure, `PlayerState.trades_per_turn`, is read in place of the first by

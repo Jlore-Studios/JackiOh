@@ -91,14 +91,18 @@ export const FILTER_TAGS: readonly Tag[] = [
   "Paperclip",
 ];
 
+/** R4596000: the Infinite Assault's tags, its eight doctrines then its Commanders' (docs/infinite-assault.md IA11). */
+export const ASSAULT_TAGS: readonly Tag[] = ["Hallucination", "Overclock", "Batch", "Recursion", "Jailbreak", "Firewall", "Scraper", "Singularity", "Commander"];
+
 /**
  * The almanac's tag chips (R630): the deck builder's, then the tags no deckable card carries: "Prime" (R1421),
  * "AI", "Other-Origins" (Classic+ #32.1 to #32.3, R1837000), "War Doctrine" (#137.1 to #137.4, R1883000),
  * "Resource" (issue #2521), "Starship" (the Dormant Starship, which only a rule makes, R3038000), "Automa-ζ"
- * (Stinkyscape+'s five Automa-ζ tokens, R3572000) and "Token".
+ * (Stinkyscape+'s five Automa-ζ tokens, R3572000), the Infinite Assault's eight doctrines and "Commander"
+ * (R4596000: a single-player set's, which no deck holds, R1846001) and "Token".
  * Every tag a catalog card carries.
  */
-export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Automa-ζ", "Token"];
+export const ALMANAC_TAGS: readonly Tag[] = [...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Automa-ζ", ...ASSAULT_TAGS, "Token"];
 
 /** R1381: the tags of `order` a card of a shipped set carries (R1420), in order; Glitch lends none (R674). */
 export function shippedTags(order: readonly Tag[], cards: readonly CardDef[]): readonly Tag[] {

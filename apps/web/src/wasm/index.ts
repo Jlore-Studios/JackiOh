@@ -17,7 +17,17 @@
 import initWasm, { initSync } from "./pkg/jackioh_wasm.js";
 import * as normal from "./pkg/jackioh_wasm.js";
 
-import type { Action, ActionBody, CardDefs, EmoteId, GameEvent, PlayerId, PlayerView, SetName } from "../wire/index.ts";
+import type {
+  Action,
+  ActionBody,
+  CardDefs,
+  EmoteId,
+  GameEvent,
+  KeywordKind,
+  PlayerId,
+  PlayerView,
+  SetName,
+} from "../wire/index.ts";
 import type { CraftPreview } from "../wire/generated/CraftPreview.ts";
 import type { CraftRecipe } from "../wire/generated/CraftRecipe.ts";
 import type { PendingPromptView } from "../wire/generated/PendingPromptView.ts";
@@ -700,6 +710,16 @@ export function dailyConstants(): DailyConstants {
   return call("constants", () => {
     dailyConstantsCache ??= parsed<DailyConstants>(normal.constants());
     return dailyConstantsCache;
+  });
+}
+
+let keywordLineOrderCache: readonly KeywordKind[] | null = null;
+
+/** SPEC §6.1 R4747000: the keyword line's one display order (`crates/shared/src/config.rs`'s `KEYWORD_LINE_ORDER`), first to last. */
+export function keywordLineOrder(): readonly KeywordKind[] {
+  return call("constants", () => {
+    keywordLineOrderCache ??= parsed<{ KEYWORD_LINE_ORDER: readonly KeywordKind[] }>(normal.constants()).KEYWORD_LINE_ORDER;
+    return keywordLineOrderCache;
   });
 }
 

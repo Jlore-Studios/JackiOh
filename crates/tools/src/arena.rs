@@ -181,6 +181,20 @@ impl SeedSet {
     }
 }
 
+/// The retired training lanes (#4701, #4702). Each lane's gate played the hold-out deals
+/// `<lane>:<tree>:<d>` its promotions are recorded on (`training/history/`), so no screen and no
+/// self-play run plays a base that names one (R850001, R1006002).
+const GATE_LANES: [&str; 3] = ["improve", "unban", "learn"];
+
+/// R850001: whether a seed base would play a training gate's seeds, a lane's name alone or followed
+/// by `:`.
+pub(crate) fn is_gate_seed_base(base: &str) -> bool {
+    GATE_LANES.into_iter().any(|lane| {
+        base.strip_prefix(lane)
+            .is_some_and(|rest| rest.is_empty() || rest.starts_with(':'))
+    })
+}
+
 /// The series `args` name: its seed base, whether it is paired and its games. A seed set is always
 /// paired and plays at least `SCREEN_GAMES`; a base that names a training gate's seeds is refused
 /// (R850001), as is an odd paired count.
@@ -200,7 +214,7 @@ fn series(args: &Args) -> anyhow::Result<(String, bool, i32)> {
             (set.base().to_string(), true, games)
         }
         (None, Some(seed)) => {
-            if crate::promote::is_gate_seed_base(seed) {
+            if is_gate_seed_base(seed) {
                 bail!(
                     "arena: the seed base \"{seed}\" names a training gate's hold-out seeds, which no \
                      screen plays (R850001): screen on `--set improve-dev`, or on a base of your own"
@@ -1833,7 +1847,7 @@ mod tests {
         assert!(series(&screen(Some("improve-try-3"), None, Some(0), false, false)).is_err());
         assert!(series(&screen(None, None, Some(400), false, false)).is_err());
         for own in ["improve-dev", "improve-try-3", "unban-try-1", "improvement:1"] {
-            assert!(!crate::promote::is_gate_seed_base(own), "{own}");
+            assert!(!is_gate_seed_base(own), "{own}");
         }
         // No deal of the dev set is a gate's, whatever the tree.
         let base = SeedSet::ImproveDev.base();

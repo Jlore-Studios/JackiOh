@@ -8,7 +8,7 @@ The rules are pure Rust in `crates/run`, and its `README.md` is the contract. Ev
 
 The content (`RunContent`: pool, starting cards, enemies, artifacts, blessings, events, curses) is passed in. Until the designer's lists land it is placeholders (`run_placeholder_content()`, `crates/run/src/placeholder.json`).
 
-Every value is a constant of `crates/run/src/config.rs`. One the plan marks a strawman is to be tuned ([[§15.13]]). The Infinite Assault's (issue #4578) are the last rows until its own section holds them.
+Every value is a constant of `crates/run/src/config.rs`. One the plan marks a strawman is to be tuned ([[§15.13]]).
 
 | Constant | What it holds | Where |
 | --- | --- | --- |
@@ -69,24 +69,6 @@ Every value is a constant of `crates/run/src/config.rs`. One the plan marks a st
 | `RUN_SCORE_FINAL_BOSS_PERCENT` | Beating the final boss multiplies the score by this percent | [[§15.10]] |
 | `RUN_SCORE_CURSE_POINT_PERCENT` | Each curse point adds this percent to the score; a strawman | [[§15.9]], [[§15.10]] |
 | `RUN_SCORE_PER_EMBER` | The score one Ember is worth; a strawman | [[§15.10]] |
-| `ASSAULT_SET` | The set the Infinite Assault deals | [[R4579001]] |
-| `ASSAULT_COMMANDER_TAG` | The tag a Commander's cards carry | [[R4579001]] |
-| `ASSAULT_SEED_PREFIX` | The prefix of a day's seed | [[R4579002]] |
-| `ASSAULT_LEVELS` | The Infinite Assault's levels a day; a strawman | [[R4579000]] |
-| `ASSAULT_COMMANDER_LEVELS` | The Commander levels, ranks I to IV in order; a strawman | [[R4579000]] |
-| `ASSAULT_HISTORY_DAYS` | The days of records the device keeps | [[R4579002]] |
-| `ASSAULT_BASE_HANDICAP` | The resources every level starts from: Easy's | [[R4579000]] |
-| `ASSAULT_HERO_HEALTH` | A normal level's hero health, `(base, per level)`; a strawman | [[R4579000]] |
-| `ASSAULT_COMMANDER_HEALTH` | A Commander level's hero health, `(base, per level)`; a strawman | [[R4579000]] |
-| `ASSAULT_FEWER_OPENING` | The cards fewer in the opening draw on the first levels; a strawman | [[R4579000]] |
-| `ASSAULT_FEWER_OPENING_LEVELS` | The last level dealing fewer opening cards; a strawman | [[R4579000]] |
-| `ASSAULT_DECK_SIZE` | The deck's size before Bigger Dataset; a strawman | [[R4579000]] |
-| `ASSAULT_START_SLOTS` | Level 1's deck as Common, Rare, Epic, Legendary and Mythic slots; a strawman | [[R4579000]] |
-| `ASSAULT_CARD_STEP` | The slots a card step promotes; a strawman | [[R4579000]] |
-| `ASSAULT_RARITY_CEILING` | The rarest slot a level may hold, each `(from level, rarest slot)`; a strawman | [[R4579000]] |
-| `ASSAULT_CARD_STEP_PERCENT` | The chance, in percent, that a normal level's escalation is a card step; a strawman | [[R4579000]] |
-| `ASSAULT_DOCTRINE_SHARE` | The percent of a deck dealt from its doctrine; a strawman | [[R4579001]] |
-| `ASSAULT_UPGRADES` | The upgrades, each `(kind, per stack, most stacks, from level, weight)`; strawmen | [[R4579000]] |
 
 ### 15.1 Sandbox and Campaign
 
@@ -210,7 +192,7 @@ A mini-boss always drops its content's artifact, or else one of `RUN_MINI_BOSS_D
 
 **The report:** won or not, the human's final health, damage dealt to the enemy's hero and units, healing on the human's side, cards drawn, turns.
 
-A win of any kind adds `RUN_WIN_MAX_HP` to the max for the rest of the run, then refills HP to the new max, whatever the hero's final health was ([[R3584000]]). Any other end drops HP to zero and ends the run.
+A win of any kind adds `RUN_WIN_MAX_HP` to the max for the rest of the run, then refills HP to the new max, whatever the hero's final health was ([[R3584000]]). Any other end but a void drops HP to zero and ends the run. A fight a Glitch voids never happened ([[R679]]): it reports nothing, and the run, its HP as it was, deals it again fresh from the same seed ([[R4852000]]).
 
 **Curses and Combat artifacts** change the two handicaps after the tier's row ([[R2922001]]). Each curse taken changes the enemy's once: more hero health, more opening cards, or more crystals every turn, bonus and cap together ([[R181]]). Each Combat artifact held changes the human's once per level: more opening cards ([[R182]]) or starting Armor ([[R2922000]]). A negative amount counts as none, and an enemy's own artifacts change nothing. The placeholders' numbers are strawmen ([[§15.13]]).
 

@@ -191,6 +191,107 @@ pub fn give_control(args: StealTarget) -> Effect {
     })
 }
 
+/// `swapControl`'s arguments.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct SwapControlArgs {
+    /// The enemy Unit to take, on its stay (R174): the running card is the other half of the swap.
+    pub instance_id: String,
+}
+
+/// R4590003 (IA #138 Social Engineer): "Swap control of this and" the named enemy Unit. Both cards
+/// move at once, each placed by R15 with the zones they left counted free, so nothing is destroyed;
+/// both are summoning sick (R171). It does nothing unless both are on the field, both are active on
+/// it (R13) and their controllers differ. The taken Unit is the thief's steal (`ControlHow::Steal`,
+/// a quest step), the given one their give (`ControlHow::Give`).
+pub fn swap_control(args: SwapControlArgs) -> Effect {
+    Effect::new("swapControl", move |ctx| {
+        let Some(mine) = ctx
+            .self_
+            .as_ref()
+            .and_then(|this| find_instance(ctx.state, &this.id))
+        else {
+            return;
+        };
+        let Some(theirs) = instance_on_its_stay(ctx, &args.instance_id) else {
+            return;
+        };
+        let Some(my_slot) = slot_of(ctx.state, mine) else {
+            return;
+        };
+        let Some(their_slot) = slot_of(ctx.state, &theirs) else {
+            return;
+        };
+        if !is_active_on_field(ctx.state, mine) || !is_active_on_field(ctx.state, &theirs) {
+            return;
+        }
+        if mine.controller == theirs.controller {
+            return;
+        }
+        let mine_stands = crate::zones::stands_in_backrow(ctx.state, mine);
+        let theirs_stands = crate::zones::stands_in_backrow(ctx.state, &theirs);
+        let mut mine = mine.clone();
+        let mut theirs = theirs.clone();
+        remove_from_field(ctx.state, &mine, Default::default());
+        remove_from_field(ctx.state, &theirs, Default::default());
+        // Both are off the field, so each destination is read with both zones free (R15, R4590003).
+        let mine_to = destination_for(ctx, theirs.controller, &mine, &my_slot);
+        let theirs_to = destination_for(ctx, mine.controller, &theirs, &their_slot);
+        let (Some(mine_to), Some(theirs_to)) = (mine_to, theirs_to) else {
+            // Cannot happen (`to` was open); putting both cards back keeps the board legal, not
+            // losing them.
+            let options = PlaceOnFieldOptions { stack: Some(true) };
+            if mine_stands {
+                place_standing_on_field(ctx.state, &mut mine, my_slot, options);
+            } else {
+                place_on_field(ctx.state, &mut mine, my_slot, options);
+            }
+            if theirs_stands {
+                place_standing_on_field(ctx.state, &mut theirs, their_slot, options);
+            } else {
+                place_on_field(ctx.state, &mut theirs, their_slot, options);
+            }
+            return;
+        };
+        let mine_previous = mine.controller;
+        let theirs_previous = theirs.controller;
+        if mine_stands {
+            place_standing_on_field(ctx.state, &mut mine, mine_to, Default::default());
+        } else {
+            place_on_field(ctx.state, &mut mine, mine_to, Default::default());
+        }
+        if theirs_stands {
+            place_standing_on_field(ctx.state, &mut theirs, theirs_to, Default::default());
+        } else {
+            place_on_field(ctx.state, &mut theirs, theirs_to, Default::default());
+        }
+        // R171: each card has entered its new controller's side on this turn.
+        let placed_mine = find_instance(ctx.state, &mine.id).cloned().unwrap_or(mine);
+        enter_new_side(ctx, &placed_mine, mine_previous);
+        let placed_theirs = find_instance(ctx.state, &theirs.id).cloned().unwrap_or(theirs);
+        enter_new_side(ctx, &placed_theirs, theirs_previous);
+        ctx.events.push(GameEvent::ControlChanged {
+            instance_id: placed_mine.id.clone(),
+            controller: mine_to.player,
+            row: mine_to.row,
+            lane: mine_to.lane,
+            former_id: None,
+            how: Some(ControlHow::Give),
+        });
+        ctx.events.push(GameEvent::ControlChanged {
+            instance_id: placed_theirs.id.clone(),
+            controller: theirs_to.player,
+            row: theirs_to.row,
+            lane: theirs_to.lane,
+            former_id: None,
+            how: Some(ControlHow::Steal),
+        });
+        // R1854002: the taken Unit is its new controller's steal, for the quests.
+        crate::subsystems::quests::note_steal(ctx, theirs_to.player);
+    })
+}
+
 /// `stealAll`'s arguments: the row defaults to "units".
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]

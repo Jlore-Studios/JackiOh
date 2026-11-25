@@ -9,7 +9,8 @@
 //! with the AI in both seats: the player's at R747000's skill (each `--skill`, full by default), the
 //! enemy's at full skill, both at the budget. Its record must end clean (no throw, refusal, fallback or
 //! caught search panic, and a result) and fold to its hash, and its report goes back through
-//! `run_fight_report`. Every other choice (a node it may step onto, the artifact, a pack and what to
+//! `run_fight_report`, which refuses a fight a Glitch voided (R4852000), so one is a fault: the AI in
+//! both seats would deal it to the same void again. Every other choice (a node it may step onto, the artifact, a pack and what to
 //! keep, a shop's buys and upgrades, a campfire, an event, a blessing) follows a seeded policy.
 //!
 //! For each skill it prints, by kind of fight, by act and by tier, the elites apart (R3586001), how many
@@ -160,7 +161,7 @@ impl Start {
 }
 
 /// R747000: a skill is in `AI_SKILL_MIN..=AI_SKILL_MAX`; a NaN is outside it.
-fn parse_skill(text: &str) -> Result<f64, String> {
+pub(crate) fn parse_skill(text: &str) -> Result<f64, String> {
     let skill: f64 = text
         .parse()
         .map_err(|e: std::num::ParseFloatError| e.to_string())?;

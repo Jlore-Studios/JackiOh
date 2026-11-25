@@ -15,6 +15,7 @@ import { GLITCH_DEF_ID } from "@jackioh/engine/config";
 import {
   ALMANAC_CHIP_TAGS,
   ALMANAC_TAGS,
+  ASSAULT_TAGS,
   COST_BUCKETS,
   CURVE_TOP,
   DECK_CHIP_TAGS,
@@ -885,7 +886,7 @@ describe("the almanac's pool (R630)", () => {
   });
 
   it("R630 offers a chip for every tag a catalog card carries: the deck builder's, then Prime, AI, Other-Origins, War Doctrine, Resource, Starship, Automa-ζ and Token", () => {
-    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Automa-ζ", "Token"]);
+    expect([...ALMANAC_TAGS]).toEqual([...FILTER_TAGS, "Prime", "AI", "Other-Origins", "War Doctrine", "Resource", "Starship", "Automa-ζ", ...ASSAULT_TAGS, "Token"]);
     // R1420, R1381: the chips are the tags the cards of the shipped sets carry; a set being built adds
     // its tags when it ships.
     const carried = new Set(SHIPPED.filter((d) => d.id !== GLITCH_DEF_ID).flatMap((d) => d.tags));
@@ -965,6 +966,23 @@ describe("the chips follow what ships (R1380, R1381)", () => {
     expect(ALMANAC_CHIP_TAGS).toContain("Resource");
     expect(filterTagId("Faction")).toBe("db-filter-tag-faction");
     expect(filterTagId("Resource")).toBe("db-filter-tag-resource");
+  });
+
+  it("R4596000 the Infinite Assault's eight doctrines and Commander are Almanac chips, never the deck builder's, each with an id of its own", () => {
+    expect([...ASSAULT_TAGS]).toEqual(["Hallucination", "Overclock", "Batch", "Recursion", "Jailbreak", "Firewall", "Scraper", "Singularity", "Commander"]);
+    for (const tag of ASSAULT_TAGS) {
+      expect(ALMANAC_TAGS, tag).toContain(tag);
+      // R1846001: no deck holds a single-player card, so the deck builder offers none of its tags.
+      expect(FILTER_TAGS, tag).not.toContain(tag);
+    }
+    // Each is carried by the set's cards (IA11), and once the set is shown its chips are every tag its cards carry.
+    const assault = Object.values(CORE_CATALOG).filter((d) => d.set === "Infinite Assault");
+    const carried = new Set(assault.flatMap((d) => d.tags));
+    for (const tag of ASSAULT_TAGS) expect(carried.has(tag), tag).toBe(true);
+    expect(new Set(shippedTags(ALMANAC_TAGS, assault.map((d) => ({ ...d, set: "Core" as SetName }))))).toEqual(new Set(assault.flatMap((d) => d.tags)));
+    const ids = ASSAULT_TAGS.map((tag) => filterTagId(tag));
+    expect(ids[0]).toBe("db-filter-tag-hallucination");
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it("R3572000 each Automa tag has a chip id of its own", () => {

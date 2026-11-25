@@ -375,6 +375,16 @@ pub fn stacks_on_target(state: &GameState, card: &CardInstance) -> bool {
     card.set_as.is_none() && crate::scripts::flags_of(state, card).stacks_on_target == Some(true)
 }
 
+/// R4835000: whether a card that stacks on its target (S #9 Ticketed) may name `candidate`: the zone it
+/// tops takes a card played onto it (`zones::accepts_stack_card`, the test a Stack play's zone and an
+/// Equip play's host pass), so never a GIGA (R3546000), a permanent in a Locked zone (R688), or a
+/// carrier holding a Unit or the Unit it carries (R446). `legal_selections_for` asks it, so the listing,
+/// `refuse_targets`, the view and a Mayor's draw agree.
+fn stackable_target(state: &GameState, candidate: &CardInstance) -> bool {
+    crate::zones::slot_of(state, candidate)
+        .is_some_and(|slot| crate::zones::accepts_stack_card(state, slot, Default::default()))
+}
+
 /// §6.2 Stack: "may be played onto an occupied zone" (§3.2), read off the card's keywords where it is
 /// (§10.4, B5 E38). A backrow card with Stack tops an occupied backrow zone too (B5 E21, R447).
 pub fn plays_on_stack(state: &GameState, card: &CardInstance) -> bool {
@@ -644,7 +654,9 @@ fn immutable_fuser(state: &GameState, slot: &ZoneSlot) -> bool {
 
 /// R391 (B4.5): whether the Tribute a play pays empties this zone for it: a pile of exactly one card,
 /// that card tributed (a Stack pile's next card would resume, R13) and without Reborn (its zone would be
-/// reserved, R64), in a zone neither Locked nor reserved. The rule is the row's, the backrow's included;
+/// reserved, R64), in a zone neither Locked nor reserved. R3546000: a zone a GIGA covers is emptied by
+/// tributing that GIGA, which is read at its anchor; the Lock and the reservation are read on the zone
+/// the play enters. The rule is the row's, the backrow's included;
 /// an Activate cost needs no zone and never comes here (B3.2).
 pub fn freed_by_tribute(state: &GameState, slot: &ZoneSlot, tributes: &[String]) -> bool {
     if tributes.is_empty() {
@@ -653,20 +665,30 @@ pub fn freed_by_tribute(state: &GameState, slot: &ZoneSlot, tributes: &[String])
     if crate::zones::is_locked(state, slot) || crate::zones::is_reserved(state, slot) {
         return false;
     }
-    let Some(held) = crate::zones::card_at(state, slot) else {
-        return false;
+    // R3546000: a zone a GIGA covers holds no card; tributing the GIGA empties it as it does the
+    // anchor, so the GIGA is read where it stands.
+    let (held, at) = match crate::zones::card_at(state, slot) {
+        Some(held) => (held, *slot),
+        None => {
+            let Some(giga) = crate::giga::covering(state, *slot) else {
+                return false;
+            };
+            let Some(anchor) = crate::zones::slot_of(state, giga) else {
+                return false;
+            };
+            (giga, anchor)
+        }
     };
     if !tributes.contains(&held.id) {
         return false;
     }
-    if slot.row == Row::Units && crate::zones::pile_at(state, slot).map_or(0, |pile| pile.len()) != 1 {
+    if at.row == Row::Units && crate::zones::pile_at(state, at).map_or(0, |pile| pile.len()) != 1 {
         return false;
     }
     // R1081000: the same reading in the backrow, where a Unit stands on its own — a card beneath it
     // would resume (R13), and a Unit a carrier holds goes with the carrier's zone, not the Tribute's.
-    if slot.row == Row::Backrow
-        && (!crate::zones::beneath_at(state, *slot).is_empty()
-            || crate::zones::carried_at(state, *slot).is_some())
+    if at.row == Row::Backrow
+        && (!crate::zones::beneath_at(state, at).is_empty() || crate::zones::carried_at(state, at).is_some())
     {
         return false;
     }
@@ -1207,8 +1229,12 @@ pub fn legal_selections_for(
         out.push(selection);
     };
 
+    // R4835000: a card that stacks on its target names only a permanent its play can land on.
+    let stacks = stacks_on_target(state, card);
     let on_field = |held: &CardInstance| -> bool {
-        card_allowed(state, filter, held, card, player) && reachable(state, player, card, decl, held)
+        card_allowed(state, filter, held, card, player)
+            && reachable(state, player, card, decl, held)
+            && (!stacks || stackable_target(state, held))
     };
 
     for side in sides_for(player, decl) {
@@ -2538,8 +2564,12 @@ pub fn priced_play_actions(
                             face_down: None,
                         };
                         // R1200: while a Mayor acts the reducer draws the targets, so collapsed
-                        // choices list one action, not one per target set.
-                        if *random.get_or_insert_with(|| crate::random_targets::targets_random(state)) {
+                        // choices list one action, not one per target set. R4590001: a Spell
+                        // played under a random-targets modifier or a Jailbreaker's aura lists
+                        // the same way.
+                        if *random.get_or_insert_with(|| {
+                            crate::random_targets::play_targets_random(state, player, card)
+                        }) {
                             pushed.targets = without_target_picks(
                                 state,
                                 player,
@@ -2725,7 +2755,7 @@ fn refuse_zone(
     Ok(())
 }
 
-fn refuse_x(
+pub(crate) fn refuse_x(
     state: &GameState,
     player: PlayerId,
     card: &CardInstance,
@@ -2764,7 +2794,7 @@ fn refuse_x(
     why_x_refused(state, player, x.unwrap_or(0), None)
 }
 
-fn refuse_embiggen(
+pub(crate) fn refuse_embiggen(
     state: &GameState,
     card: &CardInstance,
     embiggen: Option<bool>,

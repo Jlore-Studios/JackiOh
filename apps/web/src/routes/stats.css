@@ -627,6 +627,21 @@
   .stats-drilldown-details {
     align-self: stretch;
   }
+
+  /* R4680001: a play version's two faces stay side by side, each half the column, so its figures and the
+     versions either side of it come sooner. */
+  .stats-drilldown-modal[data-version-id] .stats-drilldown-faces {
+    flex-wrap: nowrap;
+  }
+
+  .stats-drilldown-modal[data-version-id] .stats-drilldown-face {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+
+  .stats-drilldown-modal[data-version-id] .stats-drilldown-card-preview {
+    width: 100%;
+  }
 }
 
 /* R1966000: the Sets tab's three leaders sit in one row, at a phone's width too. */
@@ -772,10 +787,41 @@
 
 .stats-patch-search-none,
 .stats-patch-search-devs,
-.stats-patch-refused {
+.stats-patch-refused,
+.stats-experimental-line {
   margin: 0;
   font-size: var(--type-sm);
   color: var(--text-dim);
+}
+
+/* R4680000: a card's live play version, marked in its span as the header marks the current patch. */
+.stats-version-live {
+  padding: 0 var(--space-3);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-pill);
+  font-size: var(--type-xs);
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+/* R4680001: the version before or after the open one: its face, small, beside the change between them. */
+.stats-version-neighbour {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.stats-version-change {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-6);
+}
+
+.stats-version-change .patch-history__face {
+  flex: none;
+  width: 132px;
 }
 
 /* R3324001: the current patch, beside the page's title. */

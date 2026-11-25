@@ -1513,4 +1513,39 @@ mod r4233000_read_on_open {
         );
         assert_eq!(feed(&app, &bea).await["unread"], 1);
     }
+
+    #[tokio::test]
+    async fn friend_request_refuses_nul_username_with_bad_request() {
+        let app = empty_test_app().await;
+        let ada = account(&app, 1, "Ada").await;
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/friends/requests",
+            &ada.token,
+            json!({ "username": "a\u{0000}" }),
+        )
+        .await;
+        assert_eq!(status, 400);
+        assert_eq!(
+            body["error"]["message"],
+            "a request value may not contain a NUL character"
+        );
+    }
+
+    #[tokio::test]
+    async fn block_refuses_uppercase_self_block_with_bad_request() {
+        let app = empty_test_app().await;
+        let ada = account(&app, 1, "Ada").await;
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/blocks",
+            &ada.token,
+            json!({ "profileId": ada.id.to_ascii_uppercase() }),
+        )
+        .await;
+        assert_eq!(status, 400);
+        assert_eq!(body["error"]["message"], "you cannot block yourself");
+    }
 }

@@ -176,6 +176,20 @@ export const ENTRANCE_TRAUMA = {
   maskSplit: 0.8,
   pavilionUnfurl: 0.8,
   fortressRise: 0.8,
+  // R4596000: the Infinite Assault's twelve Commanders' (fx/cards/infiniteassault/commanders.ts), a Mythic's
+  // the louder, inside SIGNATURE_PERMANENT_MAX_TRAUMA.
+  echoBoot: 0.4,
+  redlineBoot: 0.5,
+  hiveBoot: 0.45,
+  loopBoot: 0.4,
+  rootkitBoot: 0.45,
+  bastionBoot: 0.5,
+  harvestBoot: 0.7,
+  blackBoxBoot: 0.75,
+  collapseBoot: 0.7,
+  primeBoot: 0.75,
+  runawayBoot: 0.8,
+  zeroDayBoot: 0.7,
 } as const;
 
 /** R3389001: the shake of each Classic signature recipe that shakes the board, on top of nothing (rule 9). */

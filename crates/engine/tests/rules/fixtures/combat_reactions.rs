@@ -65,6 +65,9 @@ pub const GUARD: &str = "e6-guard";
 /// A Trap: "Reveals when a hit would bring your hero to 0 or less: Cancel the hit" (Final Gambit's
 /// shape).
 pub const GAMBIT: &str = "e6-gambit";
+/// R4589006: a 6/10 Unit: "Cry: Take a snapshot of your permanents. Start of turn: If you have
+/// fewer permanents than the snapshot, reset your board to it."
+pub const LICH: &str = "e6-lich";
 
 fn card(index: u32, id: &str, type_: &str, stats: Option<(i32, i32)>, keywords: Value) -> CardDef {
     let (base, radiant) = match stats {
@@ -291,6 +294,24 @@ fn pip(radiant: bool) -> Script {
     }
 }
 
+/// R4589006: the Lich's Cry and start of turn: the snapshot, then the reset that leaves it
+/// standing when its side shrank.
+fn lich() -> Script {
+    Script {
+        cry: Some(hook(|_ctx| vec![effects::snapshot_side()])),
+        start_of_turn: Some(hook(|ctx| {
+            let Some(live) = ctx.live_self().cloned() else {
+                return vec![];
+            };
+            if !effects::side_shrank(ctx.state, &live) {
+                return vec![];
+            }
+            vec![effects::reset_side_keeping_self()]
+        })),
+        ..Script::default()
+    }
+}
+
 /// BOGOS's Cry and Death: the snapshot, then the restore, Radiant rebuilt Radiant.
 fn bogos(radiant: bool) -> Script {
     Script {
@@ -434,6 +455,7 @@ pub fn scripts() -> IndexMap<String, CardScripts> {
             radiant: soul_read(true),
         },
     );
+    all.insert(LICH.to_string(), both(lich()));
     all
 }
 
@@ -459,6 +481,7 @@ pub fn defs() -> Vec<CardDef> {
         card(35511, RANGER, "Unit", Some((3, 3)), json!([{ "kind": "Ranged" }])),
         card(35512, PIP, "Spell", None, json!([])),
         card(35513, BOGOS, "Unit", Some((5, 6)), json!([])),
+        card(35517, LICH, "Unit", Some((6, 10)), json!([])),
         card(35514, SOUL_READ, "Trap", None, json!([])),
         card(35515, BUNNY, "Unit", Some((2, 2)), json!([])),
         card(35516, SLOW, "Field Spell", None, json!([])),

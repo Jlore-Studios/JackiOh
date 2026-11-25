@@ -36,4 +36,11 @@ manaLocked?: number,
  * before it, so what the end of turn itself plays or casts (another Wardrum's copies) joins no pool.
  * `startTurn` rebuilds the log, which clears it, and a game over clears it too.
  */
-playedBeforeEnd?: number, };
+playedBeforeEnd?: number, 
+/**
+ * R4591002 (IA #152 Rate Limiter): the ids of the Units that attacked on this turn while an
+ * attack limit acted, in the order they first attacked — beside `played_before_end`. A Unit
+ * that attacked and then left the field still counts, and one already counted may attack
+ * again. Written only while a limit acts, so a game with no limit serializes as before (D14).
+ */
+attackers?: Array<string>, };

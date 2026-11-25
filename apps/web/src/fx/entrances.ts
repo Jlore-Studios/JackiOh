@@ -14,7 +14,8 @@
 // starting after its entry's lead (`leadMs`, R3405000). R3399000: Classic+'s signatures' seventeen, from #12
 // The Mother Pancake's "pancakeStack" to #78 Claude's Datacenter's "obeliskRise". R3395000: Stinkyscape 001 to
 // 090's signature Units and Field Spells, from #6 Tylannt's "vaultStride" to #88 Siva 2's "venomStep"
-// (fx/cards/stinkyscape/), each starting after its entry's lead too. It keys off the `summoned` event's
+// (fx/cards/stinkyscape/), each starting after its entry's lead too. R4596000: the Infinite Assault's twelve
+// Commanders' boots, from #217 Echo-1's "echoBoot" to #239 Zero-Day's "zeroDayBoot" (fx/cards/infiniteassault/). It keys off the `summoned` event's
 // own `defId`, which a hidden summon never has (R202), and decorates the entry the runner already timed,
 // so it paces nothing (R200, R201).
 //
@@ -115,6 +116,20 @@ import { sanctumRise } from "./cards/stinkyscape/sanctum.ts";
 import { scornGate } from "./cards/stinkyscape/scornboi.ts";
 import { shockwaveRing } from "./cards/stinkyscape/shockwave447.ts";
 import { FOOT, type Entrance, type EntranceKey } from "./cards/recipe.ts";
+import {
+  bastionBoot,
+  blackBoxBoot,
+  collapseBoot,
+  echoBoot,
+  harvestBoot,
+  hiveBoot,
+  loopBoot,
+  primeBoot,
+  redlineBoot,
+  rootkitBoot,
+  runawayBoot,
+  zeroDayBoot,
+} from "./cards/infiniteassault/commanders.ts";
 import { fleetCommand, shipyardRollout } from "./cards/stinkyscape/starshipSignatures.ts";
 import { FX_CRACK_TAIL_MS, FX_FLAVOR_LIVE, FX_SUMMON_BRUTE_TRAUMA, FX_SUMMON_FLAVOR_TUNING } from "./constants.ts";
 import { chaosFlavor, FLAVOR_LOOKS } from "./flavors.ts";
@@ -224,6 +239,19 @@ export const ENTRANCES: { readonly [K in EntranceKey]: Entrance } = {
   golemLock,
   prisonBars,
   fortressRise,
+  // R4596000: the Infinite Assault's twelve Commanders (fx/cards/infiniteassault/commanders.ts).
+  echoBoot,
+  redlineBoot,
+  hiveBoot,
+  loopBoot,
+  rootkitBoot,
+  bastionBoot,
+  harvestBoot,
+  blackBoxBoot,
+  collapseBoot,
+  primeBoot,
+  runawayBoot,
+  zeroDayBoot,
 };
 
 /* #1445: one summon entrance per flavor */

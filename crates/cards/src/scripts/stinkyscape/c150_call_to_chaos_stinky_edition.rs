@@ -340,6 +340,29 @@ mod tests {
         }
 
         #[test]
+        fn r4845000_r673_the_acclaimed_unit_may_be_glitch_and_refreshes_its_printed_zero() {
+            let mut s = scenario(json!({
+                "seed": SEED,
+                "p1": side(false, json!([])),
+                "p2": { "hand": [VANILLA], "library": filler(6) },
+            }));
+            s.state_mut().players.p1.mana.max = 10;
+            s.state_mut().players.p1.mana.current = 10;
+            // R673: certain odds, as a match whose System plays reach the denominator.
+            s.state_mut().system_plays = Some(GLITCH_ODDS_DENOMINATOR / GLITCH_ODDS_PER_SYSTEM_PLAY);
+            s.state_mut().rng_cursor = cursor_in(SEED, "acclaimed");
+            s.play(ID, json!({}));
+            // R4845000: the Acclaimed Unit is a card generated into a hand, so it is Glitch instead.
+            let added = added_to(&s, P1);
+            assert_eq!(added.len(), 1);
+            assert_eq!(added[0].def_id, GLITCH_DEF_ID);
+            // Its Refresh reads the card that reached the hand: Glitch's printed (0).
+            let printed = jackioh_engine::catalog::query_cost(&crate::card_def(GLITCH_DEF_ID));
+            assert_eq!(printed, 0);
+            assert_eq!(s.state().players.p1.mana.current, 10 - 4 + printed);
+        }
+
+        #[test]
         fn r1882003_entry_freeze_switches_every_enemy_unit_to_attack_and_freezes_it() {
             let s = chaos(
                 "freeze",
@@ -367,6 +390,28 @@ mod tests {
             assert_eq!(events_of(&s, "positionSwitched").len(), 1);
             let switched = s.unit(P2, 1).expect("an enemy Unit");
             assert!(!switched.exertion.switched);
+        }
+
+        #[test]
+        fn r4599000_entry_freeze_passes_an_enemy_unit_immune_to_spells_by() {
+            let s = chaos(
+                "freeze",
+                side(false, json!([])),
+                json!({
+                    "hand": [VANILLA],
+                    "field": [
+                        { "def": VANILLA, "lane": 1, "position": "DEF" },
+                        { "def": "stand-in (1) 4/4 Immune to Spells", "lane": 2, "position": "DEF" },
+                    ],
+                }),
+            );
+            let plain = s.unit(P2, 1).expect("an enemy Unit");
+            assert_eq!(plain.position.unwrap_or(Position::Atk), Position::Atk);
+            assert!(plain.frozen.is_some());
+            let immune = s.unit(P2, 2).expect("the immune Unit");
+            assert_eq!(immune.position, Some(Position::Def));
+            assert!(immune.frozen.is_none());
+            assert_eq!(events_of(&s, "positionSwitched").len(), 1);
         }
 
         #[test]

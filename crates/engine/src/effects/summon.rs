@@ -197,6 +197,12 @@ pub struct SummonArgs {
     /// R3541002: the fresh card enters Dormant for this many turns (`SummonPlacement.dormant_turns`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dormant_turns: Option<i32>,
+    /// R4591005 (IA #154 Honeypot Protocol): the fresh summon takes the open attack — the
+    /// `declaredAttack` is re-aimed at it (`effects::combat::redirect_open_attack`, R1122), so the
+    /// combat resolves against the summon. With no open zone nothing is summoned and the attack
+    /// goes on. Fresh summons only; a card moved by `instance` never takes one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub takes_attack: Option<bool>,
 }
 
 impl SummonArgs {
@@ -777,6 +783,10 @@ pub fn summon(args: SummonArgs) -> Effect {
             {
                 crate::work::remember_on(&mut card.memory, &ctx.data, key, json!(made.id.clone()));
             }
+            // R4591005: the fresh summon takes the open attack (Honeypot Protocol).
+            if args.takes_attack == Some(true) {
+                super::combat::redirect_open_attack(ctx, &made.id, None);
+            }
         }
     })
 }
@@ -913,6 +923,8 @@ pub fn clone_of(
         attack: source.buffs.attack,
         health: source.buffs.health,
     };
+    // R4587000: a copy keeps the source's this-turn buff (R57).
+    copy.turn_buff = source.turn_buff.clone();
     copy.vanilla = args.vanilla == Some(true) || source.vanilla;
     if args.granted_keywords != Some(false) {
         copy.granted_keywords = source.granted_keywords.clone();

@@ -165,6 +165,34 @@ pub fn steal_mana_crystals_to_cap() -> Effect {
     steal_mana_crystals_with(crate::mana::CrystalGain::ToTheCap)
 }
 
+/// `stealSomeManaCrystals`'s arguments.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct StealSomeManaCrystalsArgs {
+    /// How many crystals to steal (IA #135 Mana Leech: 1, its Radiant face 2).
+    pub count: i32,
+}
+
+/// R4590002 (IA #135 Mana Leech): "Steal N of your opponent's mana crystals", by
+/// `mana::move_some_mana_crystals`, the thief's gain standing past the cap (R4331001). Each side
+/// whose mana changed is announced; a steal that moves nothing announces nothing.
+pub fn steal_some_mana_crystals(args: StealSomeManaCrystalsArgs) -> Effect {
+    Effect::new("stealSomeManaCrystals", move |ctx| {
+        let thief = ctx.controller;
+        let victim = opponent_of(thief);
+        let (lost, gained) = crate::mana::move_some_mana_crystals(ctx.sink.state, thief, victim, args.count);
+        if lost > 0 {
+            let event = mana_event(victim, &ctx.sink.state.players[victim]);
+            ctx.sink.events.push(event);
+        }
+        if gained > 0 {
+            let event = mana_event(thief, &ctx.sink.state.players[thief]);
+            ctx.sink.events.push(event);
+        }
+    })
+}
+
 fn steal_mana_crystals_with(gain: crate::mana::CrystalGain) -> Effect {
     Effect::new("stealManaCrystals", move |ctx| {
         let thief = ctx.controller;

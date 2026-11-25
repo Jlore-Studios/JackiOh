@@ -556,6 +556,7 @@ mod duos_life_r964000 {
             pool,
             pool_cap: cap,
             spent,
+            own_start: None,
         });
         out
     }

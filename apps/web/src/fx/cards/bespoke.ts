@@ -18,8 +18,11 @@
 // thirty recipes (#3399), in catalog order.
 // R3395000: the signatures of Stinkyscape 001 to 090's Legendaries and Mythics (fx/cards/stinkyscape/;
 // Imitated Instrumentality's magiBoot grows from its flourish).
+// R4596000: the Infinite Assault's eight doctrine Mythics' casts, Ego Death's egoSwap to The Singularity's
+// singularityCollapse (fx/cards/infiniteassault/mythics.ts).
 
 import { ENTRANCE_TRAUMA, type CardRecipe, type EntranceKey } from "./recipe.ts";
+import { ASSAULT_MYTHIC_RECIPES } from "./infiniteassault/mythics.ts";
 import { bloodDrain } from "./core/bloodRidden.ts";
 import { chaosReels } from "./core/callToChaos.ts";
 import { gradeRings } from "./core/comboIndex.ts";
@@ -321,6 +324,8 @@ export const CARD_RECIPES = {
   packLob,
   relicSpill,
   printSlot,
+  // R4596000: the Infinite Assault's eight doctrine Mythics' casts (fx/cards/infiniteassault/).
+  ...ASSAULT_MYTHIC_RECIPES,
 } as const satisfies Readonly<Record<string, CardRecipe>>;
 
 export type CardRecipeKey = keyof typeof CARD_RECIPES;

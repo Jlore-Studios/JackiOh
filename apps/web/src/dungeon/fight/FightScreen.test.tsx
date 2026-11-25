@@ -123,7 +123,7 @@ type FightHost = {
  * The worker, scripted: a conceded game is lost; `runReport` answers each of `reports` in turn, then the
  * action. With `aiToAct` the game starts on the AI's turn, and an `aiStep` is answered with the AI done.
  * `resume` answers `started` only when asked, else `failed`; the first `startFails` starts fail. Every
- * snapshot lists `modifiers` on its sides' views (R169).
+ * snapshot lists `modifiers` on its sides' views (R169). A concede ends the game with `ending`.
  */
 function fightHost(
   reports: ("action" | "error")[] = [],
@@ -131,6 +131,7 @@ function fightHost(
   resume: "started" | "failed" = "failed",
   startFails = 0,
   modifiers: SideModifiers = {},
+  ending: PracticeSnapshot["view"]["result"] = { winner: "p2", reason: "concede" },
 ): FightHost {
   const requests: PracticeRequestBody[] = [];
   let id = 0;
@@ -156,7 +157,7 @@ function fightHost(
         }
       }
       if (body.type === "act" && body.action.type === "concede") {
-        response = { id: mine, type: "snapshot", snapshot: snapshotFor({ winner: "p2", reason: "concede" }, false, modifiers) };
+        response = { id: mine, type: "snapshot", snapshot: snapshotFor(ending, false, modifiers) };
       }
       if (body.type === "runReport") {
         response =
@@ -439,6 +440,54 @@ describe("B25, B26 the fight's end goes to the run", () => {
     fireEvent.click(proceed);
     expect(screen.getByTestId(fightTestid.actRefusal)).toHaveTextContent("the run is not in a fight");
     expect(proceed).toBeEnabled();
+  });
+});
+
+describe("R4852000 a fight a Glitch voided is dealt again, never reported", () => {
+  it("R4852000 a voided fight asks for no report, offers no Continue, and Deal it again deals the same fight fresh from its seed", async () => {
+    const host = fightHost([], false, "failed", 0, {}, { winner: "draw", reason: "voided" });
+    const act = vi.fn<(action: RunAction) => string | null>(() => null);
+    const holdReport = vi.fn<(action: RunAction) => void>();
+    renderFight(host, fakeDungeon(act, 65_000, holdReport));
+    await screen.findByTestId(fightTestid.screen);
+    concedeOnBoard();
+
+    expect(await screen.findByTestId(fightTestid.voided)).toHaveTextContent("A Glitch voided this fight");
+    expect(screen.queryByTestId(fightTestid.continue)).toBeNull();
+    expect(screen.queryByTestId(fightTestid.reportError)).toBeNull();
+    expect(host.reports(), "a void has no result to report").toBe(0);
+
+    fireEvent.click(screen.getByTestId(fightTestid.redeal));
+    await waitFor(() => {
+      expect(host.starts()).toHaveLength(2);
+    });
+    expect(host.starts()[1], "the same fight, from its seed").toEqual(
+      expect.objectContaining({ seed: SETUP.seed, humanSeat: "p1", run: SETUP }),
+    );
+    expect(host.resumes(), "dealt fresh, never resumed").toHaveLength(1);
+    await waitFor(() => {
+      expect(screen.queryByTestId(fightTestid.voided)).toBeNull();
+    });
+    expect(act).not.toHaveBeenCalled();
+    expect(holdReport).not.toHaveBeenCalled();
+  });
+
+  it("R4852000 Menu after a void goes to Play and sends the run nothing", async () => {
+    at(paths.dungeon);
+    const host = fightHost([], false, "failed", 0, {}, { winner: "draw", reason: "voided" });
+    const act = vi.fn<(action: RunAction) => string | null>(() => null);
+    renderFight(host, fakeDungeon(act));
+    await screen.findByTestId(fightTestid.screen);
+    concedeOnBoard();
+    await screen.findByTestId(fightTestid.voided);
+
+    fireEvent.click(screen.getByTestId(fightTestid.resultMenu));
+    expect(window.location.pathname).toBe(paths.play);
+    expect(screen.queryByTestId(fightTestid.leaveDialog)).toBeNull();
+    cleanup();
+    expect(act).not.toHaveBeenCalled();
+    expect(host.reports()).toBe(0);
+    at("/");
   });
 });
 

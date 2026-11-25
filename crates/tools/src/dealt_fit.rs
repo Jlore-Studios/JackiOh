@@ -213,7 +213,7 @@ pub fn run(args: &Args) -> Result<()> {
     let Some(fit) = fit(&records) else {
         bail!(
             "{} records read and none is a self-vs-bin arena game: DEALT_Q is fit on the candidate's \
-             games against a parent build (`cargo jackioh promote`'s, or `arena --a self --b bin:<path>`)",
+             games against a parent build (`arena --a self --b bin:<path>`)",
             records.len()
         );
     };

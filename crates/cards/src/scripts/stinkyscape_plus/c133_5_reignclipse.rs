@@ -4,28 +4,28 @@
 //! **Tribute 3**  
 //! **Immutable**  
 //! **Immune to spells**  
-//! **Ranged**  
+//! **Can’t Defend**  
+//! **Crater**  
 //! **Windfury**  
+//! **Flying**  
+//! **Ranged**  
 //! **Pierce**  
 //! **Cleave**  
 //! **Armor 7**  
-//! **Flying**  
-//! **Can’t Defend**  
-//! **Crater**  
 //! Damage also **Burns 9**  
 //! \~\~\~  
 //! 38/46  
 //! **Tribute 3**  
 //! **Immutable**  
 //! **Immune to spells**  
-//! **Ranged**  
+//! **Can’t Defend**  
+//! **Crater**  
 //! **Windfury**  
+//! **Flying**  
+//! **Ranged**  
 //! **Pierce**  
 //! **Cleave**  
 //! **Armor 10**  
-//! **Flying**  
-//! **Can’t Defend**  
-//! **Crater**  
 //! Damage also **Burns 18**
 //!
 //! The fusion of Reign and Eclipse (S+ #114, #119), with art and a name of its own (R3565003). Tribute 3
@@ -201,13 +201,13 @@ mod tests {
                 false,
                 &def.base,
                 7,
-                "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 7, Flying, Can't Defend, Crater\nDamage also Burns {burns}.",
+                "Tribute 3, Immutable, Immune to Spells, Can't Defend, Crater, Windfury, Flying, Ranged, Pierce, Cleave, Armor 7\nDamage also Burns {burns}.",
             ),
             (
                 true,
                 &def.radiant,
                 10,
-                "Tribute 3, Immutable, Immune to Spells, Ranged, Windfury, Pierce, Cleave, Armor 10, Flying, Can't Defend, Crater\nDamage also Burns {burns}.",
+                "Tribute 3, Immutable, Immune to Spells, Can't Defend, Crater, Windfury, Flying, Ranged, Pierce, Cleave, Armor 10\nDamage also Burns {burns}.",
             ),
         ] {
             let armors: Vec<_> = face

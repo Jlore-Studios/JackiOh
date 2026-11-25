@@ -273,26 +273,28 @@ fn fat_width(probe: &GameState, candidates: usize) -> usize {
     candidates.max(size)
 }
 
-/// The budget a decision of `fat` width spends (AI_SEARCH.fat_*): `nodes`, at most `fat_budget_nodes`
-/// (R2575000), in inverse proportion to the width past fat_reference, floored at fat_min_nodes; the
-/// lethal solver keeps its share of it, floored at fat_min_lethal. The search's shape is unchanged.
+/// The budget a decision of `fat` width spends (AI_SEARCH.fat_*). At or under fat_reference, the
+/// caller's own, the lethal solver's allowance at most its `nodes`. Past it, `nodes` at most
+/// `fat_budget_nodes` (R2575000), in inverse proportion to the width, floored at fat_min_nodes; the
+/// lethal solver keeps its share of it, floored at fat_min_lethal. R4802000: neither floor raises a
+/// figure above the caller's own, so a solver the caller gave nothing keeps nothing, and the share's
+/// product saturates, so a field at any value overflows nothing. The search's shape is unchanged.
 fn scaled_budget(budget: SearchBudget, fat: usize) -> SearchBudget {
     let reference = AI_SEARCH.fat_reference.max(1) as usize;
-    let nodes = if fat <= reference {
-        budget.nodes
-    } else {
-        let from = budget.nodes.min(AI_SEARCH.fat_budget_nodes.max(0) as usize);
-        (from * reference / fat).max(AI_SEARCH.fat_min_nodes.max(0) as usize)
-    };
-    // A budget that gives the lethal solver nothing (lethal_nodes 0) is a caller that does not
-    // want it run at all, not one to be floored up to fat_min_lethal.
-    let lethal_nodes = if budget.lethal_nodes == 0 {
-        0
-    } else {
-        (budget.lethal_nodes * nodes / budget.nodes.max(1))
-            .max(AI_SEARCH.fat_min_lethal.max(0) as usize)
-            .min(nodes)
-    };
+    if fat <= reference {
+        return SearchBudget {
+            lethal_nodes: budget.lethal_nodes.min(budget.nodes),
+            ..budget
+        };
+    }
+    let from = budget.nodes.min(AI_SEARCH.fat_budget_nodes.max(0) as usize);
+    let nodes = (from * reference / fat)
+        .max(AI_SEARCH.fat_min_nodes.max(0) as usize)
+        .min(budget.nodes);
+    let lethal_nodes = (budget.lethal_nodes.saturating_mul(nodes) / budget.nodes.max(1))
+        .max(AI_SEARCH.fat_min_lethal.max(0) as usize)
+        .min(budget.lethal_nodes)
+        .min(nodes);
     SearchBudget {
         nodes,
         lethal_nodes,
@@ -479,7 +481,7 @@ pub fn decision_prices(probe: &GameState, seat: PlayerId, counter: &dyn NodeCoun
 }
 
 /// R4070000: the prices a decision of `seat`'s at `state` would pass its search, for a caller outside a
-/// decision (`cargo jackioh positions`): `state` redacted for the seat (R185), so a true state is fine,
+/// decision: `state` redacted for the seat (R185), so a true state is fine,
 /// its `probe_world`, and `decision_prices` on a counter of `AI_DECISION_PRICE_NODES`, every probe's cap.
 pub fn decision_prices_at(state: &GameState, seat: PlayerId) -> Prices {
     let public = redact(state, seat);
@@ -613,17 +615,24 @@ fn plan(
     // What one finalist's scores on every other determinization keep back (R3696000's `keep`, below),
     // R4447000's fill slice included.
     let fill = ReplayFill::configured(budget.branching);
-    let other_worlds = (k - 1) * (budget.max_depth + 1 + AI_REPLY.reserve_steps as usize + fill.ceiling());
-    let per_finalist = (AI_SEARCH.lines_per_action * AI_REPLY.reserve_steps) as usize + other_worlds;
-    let reserve = (remaining / 2).min(finalist_count * per_finalist);
+    // R4802000: saturating, so a budget field at its largest value ("no limit") overflows nothing; each
+    // result is bounded by a `.min` or a counter's limit.
+    let other_worlds = (k - 1).saturating_mul(
+        budget
+            .max_depth
+            .saturating_add(1 + AI_REPLY.reserve_steps as usize)
+            .saturating_add(fill.ceiling()),
+    );
+    let per_finalist =
+        ((AI_SEARCH.lines_per_action * AI_REPLY.reserve_steps) as usize).saturating_add(other_worlds);
+    let reserve = (remaining / 2).min(finalist_count.saturating_mul(per_finalist));
     // The beam's own slice of the counter. Its stop reason is read as the beam ends: nothing takes a
     // node through the slice afterwards. R3498000: the host's wrap-up stops this slice alone, so that the
-    // reply and the other determinizations below still run until the hard stop. It is first polled once
-    // the root has been expanded (root_branching and endTurn): a wrap-up that fired before the beam would
-    // otherwise leave it no line and the decision would fall back.
+    // reply and the other determinizations below still run until the hard stop. R4801000: it is first
+    // polled once the beam has tried every move at its root (`end_root`), however many nodes those cost,
+    // so a wrap-up that fired before the beam still leaves it a line, the root's End turn among them.
     let (found, beam_stopped_by) = {
-        let beam_counter =
-            create_wrap_up_counter(counter, remaining - reserve, wrap_up, budget.root_branching + 1);
+        let beam_counter = create_wrap_up_counter(counter, remaining - reserve, wrap_up);
         let found = beam_search(det0, seat, &beam_counter, budget, &prices);
         (found, beam_counter.stopped_by())
     };
@@ -658,7 +667,7 @@ fn plan(
     // scored again on every other determinization, and the best mean wins.
     let (shortlist, payoff) = shortlist_lines(
         &found,
-        finalist_count * AI_SEARCH.lines_per_action as usize,
+        finalist_count.saturating_mul(AI_SEARCH.lines_per_action as usize),
         det0,
         seat,
     );
@@ -685,7 +694,7 @@ fn plan(
                 seat,
                 root_turn,
                 counter,
-                finalist_count * other_worlds,
+                finalist_count.saturating_mul(other_worlds),
                 &hidden0,
                 &prices,
             ) {
@@ -998,6 +1007,85 @@ mod tests {
     const LOBBYIST: &str = "classic-068"; // C #68: (3)+ Cost cards cost (1) more.
     const MENACE: &str = "core-019"; // (3) Unit 9/9 Taunt
     const VANILLA: &str = "core-008"; // (1) Unit 4/4
+
+    /// R4802000: 150 nodes, 40 of them the lethal solver's.
+    const SMALL_BUDGET: SearchBudget = SearchBudget {
+        nodes: 150,
+        lethal_nodes: 40,
+        ..AI_BUDGET
+    };
+
+    #[test]
+    fn r4802000_a_state_that_is_not_fat_keeps_the_callers_own_budget() {
+        let reference = AI_SEARCH.fat_reference as usize;
+        let small = SearchBudget {
+            nodes: 30,
+            lethal_nodes: 7,
+            ..AI_BUDGET
+        };
+        let none = SearchBudget {
+            lethal_nodes: 0,
+            ..AI_BUDGET
+        };
+        for budget in [AI_BUDGET, SMALL_BUDGET, small, none] {
+            assert_eq!(scaled_budget(budget, reference), budget);
+        }
+        let past = SearchBudget {
+            nodes: 30,
+            lethal_nodes: 100,
+            ..AI_BUDGET
+        };
+        assert_eq!(scaled_budget(past, reference).lethal_nodes, 30);
+    }
+
+    #[test]
+    fn r4802000_a_fat_states_floors_never_raise_the_callers_own_figures() {
+        let fat = 2 * AI_SEARCH.fat_reference as usize;
+        // The practice budget scales as it did.
+        assert_eq!(
+            scaled_budget(AI_BUDGET, fat),
+            SearchBudget {
+                nodes: 300,
+                lethal_nodes: 75,
+                ..AI_BUDGET
+            }
+        );
+        assert_eq!(
+            scaled_budget(AI_BUDGET, 1000),
+            SearchBudget {
+                nodes: 150,
+                lethal_nodes: 60,
+                ..AI_BUDGET
+            }
+        );
+        // Below the floors, the caller's own figures.
+        assert_eq!(scaled_budget(SMALL_BUDGET, fat), SMALL_BUDGET);
+        let below = SearchBudget {
+            nodes: 100,
+            lethal_nodes: 30,
+            ..AI_BUDGET
+        };
+        assert_eq!(scaled_budget(below, fat), below);
+        let none = SearchBudget {
+            lethal_nodes: 0,
+            ..AI_BUDGET
+        };
+        assert_eq!(scaled_budget(none, fat).lethal_nodes, 0);
+    }
+
+    #[test]
+    fn r4802000_a_budget_at_the_largest_values_scales_without_overflow() {
+        let fat = 2 * AI_SEARCH.fat_reference as usize;
+        let huge = SearchBudget {
+            nodes: usize::MAX,
+            lethal_nodes: usize::MAX,
+            ..AI_BUDGET
+        };
+        let scaled = scaled_budget(huge, fat);
+        assert_eq!(scaled.nodes, 300);
+        assert!(scaled.lethal_nodes <= scaled.nodes, "{scaled:?}");
+        assert_eq!(scaled_budget(huge, 1), huge);
+    }
 
     /// The AI (p1) at 3 mana with a (3) and a (1) Unit in hand. With `lobbyist`, C #68 stands on the
     /// other side's field and the (3) costs 4: the hidden tax R403's face-down aura was, planted where

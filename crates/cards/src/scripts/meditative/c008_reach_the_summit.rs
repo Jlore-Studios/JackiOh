@@ -17,11 +17,6 @@ pub const ID: &str = "meditative-008";
 /// Ascent 1's resolution prompt, answered by the damage below.
 const ASCENT_DAMAGE_STEP: &str = "ascent-damage";
 
-/// The enemy permanents: tops of unit piles and backrow cards, face-down ones included (§3.2, R13).
-fn enemy_permanents() -> BoardScope {
-    json_as(json!({ "side": "enemy", "rows": ["units", "backrow"] }))
-}
-
 /// R840: the Ascent level while this play resolves — the counted plays less the current one.
 /// A counted play precedes every cry, and an Echo repeat is not counted, so repeats resolve the
 /// same level.
@@ -32,7 +27,7 @@ fn resolving_level(self_: &CardInstance) -> i32 {
 /// R841, R60, R129: Ascent 4's picks — N distinct random enemy permanents. A pool holding N or
 /// fewer is used as is with no shuffle; otherwise N are drawn from a shuffle.
 fn exile_picks(ctx: &mut EffectContext<'_>, count: i32) -> Vec<String> {
-    let pool = cards_in_scope(&*ctx, &enemy_permanents());
+    let pool = enemy_permanent_pool(&*ctx);
     if pool.len() as i32 <= count {
         pool.into_iter().map(|card| card.id).collect()
     } else {

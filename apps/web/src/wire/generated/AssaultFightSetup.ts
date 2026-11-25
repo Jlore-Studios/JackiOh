@@ -2,6 +2,7 @@
 import type { AssaultLevel } from "./AssaultLevel";
 import type { DeckMark } from "./DeckMark";
 import type { Handicap } from "./Handicap";
+import type { SetName } from "./SetName";
 
 /**
  * What the caller hands `createGame` for the fight being played: the human is P1, the enemy P2
@@ -11,4 +12,9 @@ export type AssaultFightSetup = {
 /**
  * The level's game seed: `{day seed}-L{level}-A{attempt}`.
  */
-seed: string, humanDeck: Array<string>, humanHandicap: Handicap, enemyDeck: Array<string>, enemyHandicap: Handicap, enemyMarks: Array<DeckMark>, level: AssaultLevel, };
+seed: string, humanDeck: Array<string>, humanHandicap: Handicap, enemyDeck: Array<string>, enemyHandicap: Handicap, enemyMarks: Array<DeckMark>, 
+/**
+ * R4595000: the sets the enemy's deck is dealt from, `createGame`'s `deckSets` at P2: the
+ * Assault's own, which the mode states openly.
+ */
+enemySets: Array<SetName>, level: AssaultLevel, };

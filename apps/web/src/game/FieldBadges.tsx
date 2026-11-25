@@ -49,6 +49,8 @@ export type FieldBadgesProps = {
   /** The card as the view lists it: the `UnitView` of a unit, else the face-up `BackrowView`; its `activations` are the control's. */
   card: CardView;
   unit: UnitView | null | undefined;
+  /** The face's keywords in the fixed line order (R4747000); `unit` stays for armor and position. */
+  keywords: readonly Keyword[];
   /** The unit's keywords in the face's words, in order (`FaceModel.keywordWords`; R1301: a Chinese unit's are the table's). */
   words: readonly string[];
   /** What joins a list of them (`FaceModel.keywordJoin`). */
@@ -59,9 +61,10 @@ export type FieldBadgesProps = {
 };
 
 export default function FieldBadges(props: FieldBadgesProps): ReactElement | null {
-  const { card, unit } = props;
+  const { card, unit, keywords } = props;
   // A unit whose keywords the face draws as states (Taunt's frame, a Divine Shield's bubble) or that do nothing on the field has no mark to draw.
-  const { shown, folded } = keywordChips(unit?.keywords ?? [], unit?.armor ?? 0);
+  // R4747000: the marks run in the face's order, not the view's arrival order.
+  const { shown, folded } = keywordChips(keywords, unit?.armor ?? 0);
   const activations = (card.activations ?? []).length;
   if (activations === 0 && shown.length === 0 && folded.length === 0) return null;
   const chips = [...shown, ...folded];
@@ -72,6 +75,7 @@ export default function FieldBadges(props: FieldBadgesProps): ReactElement | nul
 function Stack({
   card,
   unit,
+  keywords: faceKeywords,
   words,
   join,
   highlight,
@@ -108,8 +112,8 @@ function Stack({
     observer.observe(zone);
     return () => observer.disconnect();
   }, [drawn]);
-  // R1301: a unit's keywords are named in the face's words (`words` follows `unit.keywords`' order).
-  const keywords = unit?.keywords ?? [];
+  // R1301, R4747000: a unit's keywords are named in the face's words (`words` follows the face's order).
+  const keywords = faceKeywords;
   const wordsOf = (keyword: Keyword): string => words[keywords.indexOf(keyword)] ?? keywordKey(keyword);
   const rest = chips.slice(fit.room);
   return (

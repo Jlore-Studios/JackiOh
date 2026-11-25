@@ -115,7 +115,8 @@ export function readOwnedAccountCosmetics(
 
 /**
  * Drops the session's answer and has every mounted `ViewerFullArt` and `ViewerAccountCosmetics` read
- * again (R1955000): called where an answer may have granted a cosmetic (a pack, a token, the Chase Shard).
+ * again (R1955000): called where an answer may have granted a cosmetic (a pack, a token, the Chase Shard,
+ * a paid game's Fleet level (`announceWallet()`, R4780000)).
  */
 export function forgetOwnedCosmetics(): void {
   cached = null;

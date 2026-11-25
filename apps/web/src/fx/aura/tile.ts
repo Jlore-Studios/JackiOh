@@ -42,6 +42,12 @@ export const TILE_PATTERN_OF_FAMILY: Readonly<Record<ShowcaseFamily, TilePattern
 };
 
 /**
+ * R4596000: the pattern of a Mythic of a set with no showcase family (the Infinite Assault's): circuitry, the
+ * machine's own printing, as its cards are what a generator wrote.
+ */
+export const TILE_PATTERN_NO_FAMILY: TilePattern = "circuitry";
+
+/**
  * R3342000: the cards whose tile steps past its hashed variant by this many, each because it would
  * otherwise wear an earlier card of its set's fingerprint (colors, variant, pattern, look and motes):
  * Stinkyscape+'s Icarus, whose crew colors, hue turn and variant are Meltdown's.
@@ -234,7 +240,7 @@ export function planTileAura(
   const look = (def.flavor ? TILE_LOOK_OF_FLAVOR[def.flavor] : undefined) ?? "arcane";
   const moteShape = THEME_MOTES[themeFor(def.tags, def.type)];
   const family = showcaseFamilyOf(def.set);
-  const pattern = tier === "Mythic" ? (family !== null ? TILE_PATTERN_OF_FAMILY[family] : "runes") : null;
+  const pattern = tier === "Mythic" ? (family !== null ? TILE_PATTERN_OF_FAMILY[family] : TILE_PATTERN_NO_FAMILY) : null;
   const step = Object.hasOwn(TILE_VARIANT_STEP, live.defId) ? (TILE_VARIANT_STEP[live.defId] ?? 0) : 0;
   const variant = (hashId(`${live.defId}:tile`) + step) % TILE_VARIANTS;
   const hue = hueOf(colors[1]);

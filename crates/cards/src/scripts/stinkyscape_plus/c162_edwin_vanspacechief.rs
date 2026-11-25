@@ -8,7 +8,8 @@
 //! itself not, as Core #10 Rapid Replenish reads it. With nothing played earlier the Cry gains nothing.
 //! The gain is a permanent buff of attack and health by the same number (§10.4 layer 4), on the card
 //! itself. The hand's yellow glow (R195) is declared: a `conditionMet` hook asks the same count from
-//! the hand (R4189000), as Core #10 Rapid Replenish reads it.
+//! the hand (R4189000), as Core #10 Rapid Replenish reads it. PREVIEW (R280) shows the gain the Cry
+//! would give now, the same count times the face's multiple, on both faces.
 //! The multiples are printed in the words, so they are named constants here, not declared numbers
 //! (R1748003), as Core #38's are.
 
@@ -22,9 +23,22 @@ const COMBO: i32 = 1;
 const BASE_MULTIPLE: i32 = 2;
 /// "Gain +4X/4X" on the Radiant face.
 const RADIANT_MULTIPLE: i32 = 4;
+/// R280: the part of the text the value belongs to, on each face.
+const BASE_LABEL: &str = "+2X";
+const RADIANT_LABEL: &str = "+4X";
+
+/// R280: the gain the Cry would give now, the face's multiple times the cards played earlier.
+fn preview(multiple: i32, label: &'static str) -> PreviewHook {
+    condition_hook(move |ctx| {
+        vec![count_preview(
+            label,
+            played_earlier(ctx.state, ctx.controller, ctx.self_) * multiple,
+        )]
+    })
+}
 
 /// `multiple`: how much of each card played earlier this unit gains, in attack and in health.
-fn edwin(multiple: i32) -> Script {
+fn edwin(multiple: i32, label: &'static str) -> Script {
     Script {
         // R4189000: in hand the card glows once a card was played earlier this turn, the same
         // count the Cry's X reads.
@@ -32,6 +46,7 @@ fn edwin(multiple: i32) -> Script {
             ctx.zone == ConditionZone::Hand
                 && played_earlier(ctx.state, ctx.controller, ctx.self_) >= COMBO
         })),
+        preview: Some(preview(multiple, label)),
         cry: Some(hook(move |ctx| {
             let x = played_earlier(ctx.state, ctx.controller, ctx.live_self());
             if x < COMBO {
@@ -50,8 +65,8 @@ fn edwin(multiple: i32) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: edwin(BASE_MULTIPLE),
-        radiant: edwin(RADIANT_MULTIPLE),
+        base: edwin(BASE_MULTIPLE, BASE_LABEL),
+        radiant: edwin(RADIANT_MULTIPLE, RADIANT_LABEL),
     }
 }
 
@@ -60,7 +75,7 @@ pub fn script() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
-    use super::ID;
+    use super::{BASE_LABEL, BASE_MULTIPLE, ID, RADIANT_LABEL, RADIANT_MULTIPLE};
     use crate::scenario;
 
     const CHEAP: &str = "stand-in (0) Spell"; // a play that does nothing: only the turn's count
@@ -171,5 +186,51 @@ mod tests {
         // A new turn: the two plays of the last one no longer count.
         s.play(ID, json!({}));
         s.expect_stats(ID, json!({ "attack": 2, "health": 2 }));
+    }
+
+    /// R280: Edwin's hand preview is the gain its Cry would give now, on this face; playing it
+    /// then gains exactly that.
+    fn previews_and_gains(radiant: bool, plays: usize) {
+        crate::register_all();
+        let mut s = board(radiant, plays);
+        for _ in 0..plays {
+            s.play(CHEAP, json!({}));
+        }
+        let (label, multiple, printed) = if radiant {
+            (RADIANT_LABEL, RADIANT_MULTIPLE, 4)
+        } else {
+            (BASE_LABEL, BASE_MULTIPLE, 2)
+        };
+        let gain = multiple * plays as i32;
+        let edwin = s.card(ID).id.clone();
+        assert_eq!(
+            crate::preview_seen(&s, PlayerId::P1, &edwin),
+            vec![(label.to_string(), gain, None)]
+        );
+        s.play(ID, json!({}));
+        s.expect_stats(
+            ID,
+            json!({ "attack": printed + gain, "health": printed + gain }),
+        );
+    }
+
+    #[test]
+    fn r280_base_previews_twice_plays_earlier_and_the_play_gains_it() {
+        previews_and_gains(false, 2);
+    }
+
+    #[test]
+    fn r280_base_with_nothing_played_earlier_previews_0_and_gains_nothing() {
+        previews_and_gains(false, 0);
+    }
+
+    #[test]
+    fn r280_radiant_previews_four_times_plays_earlier_and_the_play_gains_it() {
+        previews_and_gains(true, 3);
+    }
+
+    #[test]
+    fn r280_radiant_with_nothing_played_earlier_previews_0_and_gains_nothing() {
+        previews_and_gains(true, 0);
     }
 }

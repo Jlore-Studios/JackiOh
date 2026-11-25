@@ -31,9 +31,9 @@ that favors one seat gives each AI one game of it (R850000, R850001).
 
 - **The dev set** is for screens: deals `improve-dev:1` to `:200`, the same in every screen,
   played by `cargo jackioh arena … --set improve-dev`.
-- **The hold-out set** is the gate's own deals, `improve:<tree>:1` to `:200`, named for the
-  committed AI's source tree. Only the gate reads it, once per tree. The arena refuses a seed
-  base that names it, and the gate's dry run refuses uncommitted changes in `crates/ai/src`.
+- **The hold-out set** was the retired gate's own deals, `improve:<tree>:1` to `:200`, named for
+  the committed AI's source tree (#4702 removed the gate). The arena still refuses a seed base
+  that names it.
 
 A change gets one kind of screen, the deal screen or the fork screen, chosen before it runs and
 recorded with it: a change still gets one screen under R850001's rule against second reads. The
@@ -107,15 +107,15 @@ about even (95-105, 101-99) when their pieces were re-screened at 200 games agai
 Fresh-seed reads ran about 10 points above the gate's in every session from s40 to s48. A change
 that wins by chance is reverted by the next fair measure. So:
 
-- the gate's sequential test (R1679000) passes an equal successor about 5% of the time, a stack that
-  truly wins 52% about 60% of the time and one at 53% about nine times in ten, in about 800 games;
+- the retired gate's sequential test (R1679000) passed an equal successor about 5% of the time, a
+  stack that truly won 52% about 60% of the time and one at 53% about nine times in ten, in about
+  800 games;
 - 400 paired games put a change's edge within about ±0.1 of its true value when a deal's two games
   fall independently, and closer when the deal's luck cancels, so a screen keeps a gain of a few
   points only when pairing has narrowed the interval, or on a larger screen decided in advance;
-- **never fish for seeds.** The gate's deals come from the committed tree, so a change that does
-  nothing (a comment, a renamed variable, a reordered constant) draws new ones. Never commit one to
-  play the gate again: every gate run must measure a tree that differs from the last in a way you
-  measured.
+- **never fish for seeds.** Never screen a change again on new deals because the first read came
+  close: the gate's deals came from the committed tree, so a change that did nothing drew new ones,
+  and the lane's sessions learned that a second read on fresh seeds only measures luck.
 
 Fewer, measured changes beat many lucky ones.
 

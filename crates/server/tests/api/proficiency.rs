@@ -181,11 +181,15 @@ async fn r3013000_a_ladder_game_adds_the_seats_own_plays_and_nothing_else() {
                 card: token.clone(),
                 turn: 2,
                 radiant: false,
+                variant: None,
+                source: None,
             },
             CreatedUse {
                 card: X.to_owned(),
                 turn: 3,
                 radiant: false,
+                variant: None,
+                source: None,
             },
         ]),
         ..SeatSummary::default()

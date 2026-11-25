@@ -34,8 +34,6 @@ STALE_DAYS = 14
 #: (#3652).
 KEEP = {"_production", "_staging", "_brag", "_bot-state", "_bot-journal", "_bot-usage", "_squishy-state",
         "_squishy-journal"}
-#: Prefixes no sweep touches: the AI's training lanes.
-KEEP_PREFIXES = ("ai/",)
 #: What a bot's branch name points at (bot/README.md): its issue, or the pull request a cut-off
 #: revision left its work for.
 NAMED = re.compile(r"(?:bot|squishy)/(?:issue-(?P<issue>\d+)|old/issue-(?P<old>\d+)-.+"
@@ -85,7 +83,7 @@ def classify(branch: dict[str, Any], *, default: str, protected: set[str], now: 
     the default branch lacks, or None when unknown; it is asked only for a stale branch with no
     pull request."""
     name = branch["name"]
-    if name == default or name in protected or name in KEEP or name.startswith(KEEP_PREFIXES):
+    if name == default or name in protected or name in KEEP:
         return "keep", "infrastructure"
     prs = branch.get("prs") or []
     if any(pr["state"] == "OPEN" for pr in prs):

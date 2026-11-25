@@ -1905,6 +1905,15 @@ pub fn tickets_cancel(f: &mut FakeTx<'_>, ticket_id: &str, _at: i64) -> Result<(
     Ok(())
 }
 
+/// R4446000: every cancelled ticket enqueued before `cutoff`.
+pub fn tickets_purge(f: &mut FakeTx<'_>, cutoff: i64) -> Result<i64, StoreError> {
+    call(f, "tickets.purge")?;
+    let gone = keep_only(&mut f.tables().tickets, |row| {
+        row.status != TicketStatus::Canceled || row.enqueued_at >= cutoff
+    });
+    Ok(gone as i64)
+}
+
 // Results (§9.5)
 
 pub fn results_insert(f: &mut FakeTx<'_>, row: &ResultRow) -> Result<(), StoreError> {
@@ -4422,7 +4431,7 @@ pub fn blocks_between(f: &mut FakeTx<'_>, x: &str, y: &str) -> Result<bool, Stor
 
 pub fn blocks_add(f: &mut FakeTx<'_>, blocker: &str, blocked: &str, at: i64) -> Result<(), StoreError> {
     call(f, "blocks.add")?;
-    if blocker == blocked {
+    if blocker.eq_ignore_ascii_case(blocked) {
         return Err(StoreError::from("blocks_check: a block of oneself".to_string()));
     }
     let blocks = &mut f.tables().social.blocks;
@@ -4565,7 +4574,7 @@ pub fn profiles_find(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Option<Prof
     Ok(f.tables()
         .profiles
         .iter()
-        .find(|row| row.id == profile_id)
+        .find(|row| row.id.eq_ignore_ascii_case(profile_id))
         .cloned())
 }
 
@@ -5548,12 +5557,15 @@ pub fn daily_notify_sent(
 
 pub fn daily_notify_unsubscribe(f: &mut FakeTx<'_>, token: &str) -> Result<bool, StoreError> {
     call(f, "dailyNotify.unsubscribe")?;
+    if !crate::auth::is_uuid(token) {
+        return Ok(false);
+    }
     let Some(row) = f
         .tables()
         .daily
         .notify
         .iter_mut()
-        .find(|row| row.unsubscribe_token == token)
+        .find(|row| row.unsubscribe_token.eq_ignore_ascii_case(token))
     else {
         return Ok(false);
     };

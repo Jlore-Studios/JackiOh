@@ -61,6 +61,14 @@ mod r602_the_ais_view_keeps_what_a_live_face_down_card_visibly_does {
                     unit.def_id,
                     radiant
                 );
+                // R4803000: the sleeping card changes nothing a unit shows, so its raw Attack passes through.
+                assert_eq!(
+                    unclamped_attack(&seen, &seen_unit),
+                    unclamped_attack(&state, &unit),
+                    "{}, radiant {}",
+                    unit.def_id,
+                    radiant
+                );
             }
         }
         // R1149000: unrevealed, the Radiant face's "0 Attack" sleeps and the AI's units keep their
@@ -113,6 +121,8 @@ mod r602_the_ais_view_keeps_what_a_live_face_down_card_visibly_does {
                 assert_eq!(unit_view(&state, &unit).attack, 0, "{}", unit.def_id);
                 let seen_unit = card_by_id(&seen, &unit.id).cloned().expect("the unit is public");
                 assert_eq!(unit_view(&seen, &seen_unit).attack, 0, "{}", unit.def_id);
+                // R4803000: the hidden "0 Attack" changed what the unit shows, so it reads exactly 0.
+                assert_eq!(unclamped_attack(&seen, &seen_unit), 0, "{}", unit.def_id);
             }
             let legal: IndexSet<String> = legal_actions(&state, AI).iter().map(action_key).collect();
             assert!(!legal.iter().any(|key| key.contains("\"attack\"")));

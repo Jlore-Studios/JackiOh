@@ -12,6 +12,7 @@ import { consentTestid, inviteTestid, landingTestid, loginTestid, resetTestid, s
 import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
 import { practiceTestid } from "../../../apps/web/src/practice/testids.ts";
 import { menuShellTestid } from "../../../apps/web/src/shell/testids.ts";
+import { statsTestid } from "../../../apps/web/src/stats/testids.ts";
 import { SERIES_MAX_GAMES, SERIES_PICK_SECONDS, SERIES_WINS_NEEDED } from "../../../apps/web/src/wire/serverConfig.ts";
 import { allCardIds, cardId } from "../../support/cards.ts";
 import { MENU_SIZES, accounts, constants, routes, timeouts, type MenuSize } from "../../support/config.ts";
@@ -329,6 +330,27 @@ describe("46 — every menu fits one screen (issue #1581)", () => {
 
         it("R1581000 R3218000 R3324000 R4335000 /stats", () => {
           visitStatsFigures();
+          expectBackLinkBarOrder();
+          expectShellNav(false);
+          expectOnScreen(viewport, ONE_SCREEN);
+        });
+
+        // R4678000: the fifth tab is reachable in its row, which scrolls sideways where the tabs are wider than the
+        // window and never wraps or shrinks, and its page, Running and the line above the tabs, is one screen.
+        it("R1581000 R4335000 R4678000 /stats, the Experimental tab", () => {
+          cy.visit("/stats");
+          cy.get(ts(statsTestid.screen), { timeout: timeouts.view }).should("be.visible");
+          cy.get(ts(statsTestid.tabExperimental)).scrollIntoView().should("be.visible").click();
+          cy.get(ts(statsTestid.runningTable), { timeout: timeouts.view }).should("be.visible");
+          cy.get(ts(statsTestid.experimentalLine)).should("be.visible");
+          cy.get(ts(statsTestid.tabExperimental)).should(($tab) => {
+            const tab = $tab[0];
+            expect(tab, "the Experimental tab").to.not.eq(undefined);
+            const box = tab?.getBoundingClientRect() ?? new DOMRect();
+            const width = tab?.ownerDocument.defaultView?.innerWidth ?? 0;
+            expect(box.left, "the Experimental tab's left edge").to.be.at.least(-EDGE_SLACK_PX);
+            expect(box.right, "the Experimental tab's right edge").to.be.at.most(width + EDGE_SLACK_PX);
+          });
           expectBackLinkBarOrder();
           expectShellNav(false);
           expectOnScreen(viewport, ONE_SCREEN);

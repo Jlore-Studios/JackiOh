@@ -44,7 +44,7 @@ import DragLayer from "./drag/DragLayer.tsx";
 import OpponentAim from "./aim/OpponentAim.tsx";
 import { useAimEmitter } from "./aim/useAimEmitter.ts";
 import type { DragPlan } from "./drag/model.ts";
-import { IDLE, answerPlaguePlacement, boardKeyOf, highlightFor, onClickTarget, onControl, type Interaction } from "./actions.ts";
+import { IDLE, answerPlaguePlacement, answerTargetPrompt, boardKeyOf, highlightFor, matchTargetOption, onClickTarget, onControl, type Interaction } from "./actions.ts";
 import { attackOutcomes, hoveredAttack, withOutcomes, type HoveredAttack } from "./attackOutcome.ts";
 import {
   HIDDEN_ID,
@@ -97,6 +97,13 @@ import type { GameSideline } from "../sideline/useSideline.ts";
 
 /** The attribute a mounted Game sets on its parent, the element board.css lays the game screen out by (#3633). */
 export const GAME_HOST_ATTRIBUTE = "data-game-host";
+
+/**
+ * R4773000: the attribute a mounted Game sets on the document element while a game is up. board.css
+ * locks the page against scroll, bounce and pull-to-refresh off it, and clears it on unmount, so the
+ * page scrolls as before once the game is gone.
+ */
+export const GAME_SCROLL_LOCK_ATTRIBUTE = "data-game-scroll-lock";
 
 function sameSet(a: ReadonlySet<string> | undefined, b: ReadonlySet<string> | undefined): boolean {
   if (a === b) return true;
@@ -374,10 +381,14 @@ export default function Game({
     const parent = host?.parentElement;
     if (!parent) return;
     parent.setAttribute(GAME_HOST_ATTRIBUTE, "true");
+    // R4773000: while a game is hosted the document never scrolls or overscrolls on touch (board.css).
+    document.documentElement.setAttribute(GAME_SCROLL_LOCK_ATTRIBUTE, "true");
     return () => {
       // React runs this before it detaches `host`, so only another Game in the same parent keeps the mark.
       const another = Array.from(parent.children).some((child) => child !== host && child.classList.contains("game"));
       if (!another) parent.removeAttribute(GAME_HOST_ATTRIBUTE);
+      // The unmounting game is still counted, so only its going away clears the lock.
+      if (document.querySelectorAll(".game").length <= 1) document.documentElement.removeAttribute(GAME_SCROLL_LOCK_ATTRIBUTE);
     };
   }, [host]);
   // #3633: the root's custom properties, which board.css and animations.css read (rootVars.ts).
@@ -405,6 +416,13 @@ export default function Game({
   const [shown, setShown] = useState<PlayerView>(view);
   const latest = useRef<PlayerView>(view);
   latest.current = view;
+  // R4734000: whether this board has shown the game unfinished. The effects layer plays the killing blow and
+  // Victory / Defeat only when the shown view goes from no result to one on a mounted board (FxLayer.tsx), and
+  // a silent board has no effects layer, so only then does the result wait for them (`GameResult`'s `arrived`).
+  // A board mounted on a finished game (Back from Watch the replay, a reload) shows its result at once. React's
+  // "adjust state while rendering" pattern, as the concede dialog below does.
+  const [sawLive, setSawLive] = useState(view.result === null);
+  if (!sawLive && shown.result === null) setSawLive(true);
 
   const [animating, setAnimating] = useState(() => new Map<string, never>());
   /**
@@ -778,18 +796,37 @@ export default function Game({
   // #3633: what a click reads, as the board last drew it. The handler reads it here rather than closing
   // over it, so it stays one function while the board shows one view, and the cards it is handed to
   // (Card.tsx, sameCardProps) are not drawn again whenever the shown view changes.
-  const clickReads = useRef({ shown, legal, interaction });
+  const clickReads = useRef({ shown, legal, interaction, replay });
   useLayoutEffect(() => {
-    clickReads.current = { shown, legal, interaction };
+    clickReads.current = { shown, legal, interaction, replay };
   });
+  // R4781000: the open several-pick `target` prompt's toggle, registered by its picker. A board
+  // click toggles through it and sends nothing until Confirm.
+  const targetPickRef = useRef<((key: string) => void) | null>(null);
   const handleClick = useCallback(
     (target: ClickTarget) => {
-      const { shown: board, legal: moves, interaction: building } = clickReads.current;
+      const { shown: board, legal: moves, interaction: building, replay: isReplay } = clickReads.current;
       // R821000: "Place N Plague Counters" is answered by a click on the board, not from a list.
       const placement = answerPlaguePlacement(board, moves, board.pending, target);
       if (placement !== null) {
         dispatch(placement);
         return;
+      }
+      // R4781000: an open `target` prompt is answered by a click on the board too. A prompt of one
+      // pick sends the engine's answer at once; a prompt of several toggles the picker's selection,
+      // so its Confirm still sends. Either way the click answers exactly once and never reaches the
+      // attack notice below. A replay answers nothing from a board click.
+      if (!isReplay) {
+        const single = answerTargetPrompt(board, moves, board.pending, target);
+        if (single !== null) {
+          dispatch(single);
+          return;
+        }
+        const matched = matchTargetOption(board, board.pending, target);
+        if (matched !== null) {
+          targetPickRef.current?.(matched.key);
+          return;
+        }
       }
       const next = onClickTarget(board, moves, building, target);
       setInteraction(next.interaction);
@@ -1091,6 +1128,7 @@ export default function Game({
           interaction={interaction}
           legal={legal}
           onAction={dispatch}
+          boardPickRef={targetPickRef}
           onInteraction={setInteraction}
           animating={animating.get(animTestid.prompt)}
           lesson={lesson}
@@ -1140,6 +1178,7 @@ export default function Game({
             theirHand={theirHandOf(shown)}
             onOpenResult={onOpenResult}
             openResultTestId={openResultTestId}
+            arrived={sawLive && !silent}
           />
         </WearerProvider>
       ) : null}

@@ -188,6 +188,9 @@
   width: min(40rem, calc(100vw - 24px));
   max-height: 70vh;
   overflow-y: auto;
+  /* R4773000: the shop scrolls inside itself while the page is locked. */
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   padding: var(--space-6) var(--space-7) var(--space-7);
   border: 2px solid var(--pal-blue-800);
   border-radius: var(--radius-md);

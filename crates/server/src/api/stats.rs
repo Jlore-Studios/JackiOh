@@ -1021,6 +1021,7 @@ fn public_report(
         decks,
         cards,
         created,
+        choices: Vec::new(),
     }
 }
 
@@ -1484,10 +1485,12 @@ async fn kept_versions(
     let kept = cell
         .get_or_try_init(|| async {
             let versions = deck_play_versions();
+            let history = patch_history();
             Ok::<_, ApiError>(Arc::new(play_version_figures(
                 &snapshot.totals,
                 &PlayVersionQuery {
                     versions: &versions,
+                    history: &history,
                     live_pilot: pilot.filter(),
                     mode: mode.filter(),
                     min_sample: CARD_STATS_MIN_SAMPLE,

@@ -4125,3 +4125,71 @@ mod r4609000_every_text_rewriting_card_leaves_an_immutable_card_as_it_is {
         assert_eq!(unplayed, listed, "the faces the sweep's board lists no play of");
     }
 }
+
+// R4601000 (#4601): S #115 Scornboi's standing exile at the state check takes an immune Unit as the
+// board's, not as the run of the Spell that summoned it (fuzz `--duos` seed 3, IA #45 to #54 forced, where
+// S #150 Call to Chaos (Stinky Edition) filled the board with Humans and Scornboi among them).
+mod r4601000_a_standing_exile_aura_s_exile_is_no_spell_s_reach {
+    use super::*;
+
+    const SCORNBOI: &str = "stinkyscape-115";
+    const CALL_TO_CHAOS: &str = "stinkyscape-150";
+    const IMMUNE: &str = "stand-in (1) 4/4 Immune to Spells";
+
+    /// The I21 findings of a Call to Chaos run exiling p1's immune stand-in, the step beginning on
+    /// `before` and ending on `after`.
+    fn i21_of(before: &GameState, after: &GameState, id: &str) -> Vec<String> {
+        let mut monitor = create_invariant_monitor(before);
+        monitor.before(before, PlayerId::P2, &ActionBody::EndTurn);
+        let events = [
+            event(json!({
+                "type": "hookResolving",
+                "sourceId": "r4601000-source",
+                "defId": CALL_TO_CHAOS,
+                "controller": "p2",
+                "hook": "cry",
+            })),
+            event(json!({ "type": "exiled", "instanceId": id, "defId": IMMUNE, "owner": "p1" })),
+        ];
+        monitor
+            .after(&events, after)
+            .into_iter()
+            .filter(|finding| finding.starts_with("I21"))
+            .collect()
+    }
+
+    #[test]
+    fn r4601000_scornboi_s_exile_in_a_spell_s_run_is_the_board_s_and_i21_allows_it() {
+        let library = json!([VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA]);
+        let before = scenario(json!({
+            "active": "p2",
+            "p1": { "field": [IMMUNE], "library": library },
+            "p2": { "library": library },
+        }));
+        let id = before.unit_at(PlayerId::P1, 1).id;
+        // After the step Scornboi stands on p2's side and the stand-in is gone from the field.
+        let with_scornboi = scenario(json!({
+            "active": "p2",
+            "p1": { "library": library },
+            "p2": { "field": [SCORNBOI], "library": library },
+        }));
+        assert!(
+            find_instance(with_scornboi.state(), &id)
+                .is_none_or(|card| !matches!(card.zone, Zone::Field { .. })),
+            "the stand-in's id names nothing on the field after the step"
+        );
+        assert_eq!(
+            i21_of(before.state(), with_scornboi.state(), &id),
+            no_violations()
+        );
+        // With no exile aura standing, the Spell's exile of the immune Unit is a reach.
+        let without = scenario(json!({
+            "active": "p2",
+            "p1": { "library": library },
+            "p2": { "library": library },
+        }));
+        let found = i21_of(before.state(), without.state(), &id);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains(CALL_TO_CHAOS), "{}", found[0]);
+    }
+}

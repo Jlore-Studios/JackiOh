@@ -11,7 +11,7 @@ use jackioh_engine::subsystems::ky_competition::worked_answer;
 use jackioh_engine::{
     ANSWER_KEY, ANSWER_STOP_KEY, Action, ActionBody, AppliedAction, CardInstance, GameEvent, GameState,
     KY_COMPETITION_MAX, NONCE_HISTORY, PLAYER_IDS, Phase, PlayerId, PromptKind, ReduceResult, Rng, Selection,
-    TurnLog, active_units_of, effective_life, find_instance, is_sick, legal_actions, max_mana_for,
+    TurnLog, active_units_of, attack_target_of, find_instance, home_of, is_sick, legal_actions, max_mana_for,
     opponent_of, owed_mana_of, reduce_unpiloted, self_def_ids, slot_of, stop_answer, subsystems, unit_view,
     units_on_field_of,
 };
@@ -62,9 +62,10 @@ enum CounterKind<'a> {
         start: usize,
         limit: usize,
         capped: Cell<bool>,
-        /// R3498000: the beam's stop short of the clock, polled once `floor` nodes are drawn.
+        /// R3498000: the beam's stop short of the clock, polled once `root_tried` (R4801000).
         wrap_up: Option<&'a dyn Fn() -> bool>,
-        floor: usize,
+        /// R4801000: `end_root` was called: the beam has tried every move at its root.
+        root_tried: Cell<bool>,
         /// The wrap-up fired: no node is taken until `closing`.
         wrapped: Cell<bool>,
         /// `end_exploring` was called: the wrap-up no longer refuses.
@@ -156,7 +157,7 @@ impl NodeCounter for CountingNodeCounter<'_> {
                 limit,
                 capped,
                 wrap_up,
-                floor,
+                root_tried,
                 wrapped,
                 closing,
             } => {
@@ -169,7 +170,7 @@ impl NodeCounter for CountingNodeCounter<'_> {
                         return false;
                     }
                     if let Some(wrap_up) = wrap_up
-                        && parent.used().saturating_sub(*start) >= *floor
+                        && root_tried.get()
                         && wrap_up()
                     {
                         wrapped.set(true);
@@ -209,6 +210,12 @@ impl NodeCounter for CountingNodeCounter<'_> {
     fn end_exploring(&self) {
         if let CounterKind::Sub { closing, .. } = &self.kind {
             closing.set(true);
+        }
+    }
+
+    fn end_root(&self) {
+        if let CounterKind::Sub { root_tried, .. } = &self.kind {
+            root_tried.set(true);
         }
     }
 
@@ -370,17 +377,17 @@ pub fn create_node_counter<'a>(
 /// A slice of `parent`: at most `limit` more nodes, drawn from the parent. Running out of the slice
 /// does not stop the parent, so the lethal solver can hand what it left over to the beam.
 pub fn create_sub_counter<'a>(parent: &'a dyn NodeCounter, limit: usize) -> CountingNodeCounter<'a> {
-    create_wrap_up_counter(parent, limit, None, 0)
+    create_wrap_up_counter(parent, limit, None)
 }
 
 /// R3498000: `create_sub_counter` that also refuses once `wrap_up` answers true, polled before each node
-/// from the `floor`th node it has drawn on, until `end_exploring`; its parent runs on. The beam's slice:
-/// with `wrap_up` None it is `create_sub_counter`'s, node for node.
+/// once `end_root` is called (R4801000: the beam has tried every move at its root), until
+/// `end_exploring`; its parent runs on. The beam's slice: with `wrap_up` None it is
+/// `create_sub_counter`'s, node for node.
 pub fn create_wrap_up_counter<'a>(
     parent: &'a dyn NodeCounter,
     limit: usize,
     wrap_up: Option<&'a dyn Fn() -> bool>,
-    floor: usize,
 ) -> CountingNodeCounter<'a> {
     CountingNodeCounter {
         kind: CounterKind::Sub {
@@ -389,7 +396,7 @@ pub fn create_wrap_up_counter<'a>(
             limit,
             capped: Cell::new(false),
             wrap_up,
-            floor,
+            root_tried: Cell::new(false),
             wrapped: Cell::new(false),
             closing: Cell::new(false),
         },
@@ -440,8 +447,8 @@ pub fn line_status(state: &GameState, seat: PlayerId, root_turn: i32) -> LineSta
 /// `simulate`'s answer: the state reached, or the error.
 pub type SimStep = Result<GameState, String>;
 
-/// Up-front node surcharge for heavy actions (expensive scorers §10.7, turn-granting traps §8.5 core-096,
-/// watching players, or R186 sweep flags; #1240).
+/// Up-front node surcharge for heavy actions (expensive scorers §10.7, an attack a turn-granting trap
+/// would answer (§8.5 core-096, R4809001), watching players, or R186 sweep flags; #1240).
 pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) -> usize {
     match action {
         ActionBody::Play { instance_id, .. } => {
@@ -455,18 +462,27 @@ pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) 
             };
             expensive + judged
         }
-        ActionBody::Attack { attacker_id, .. } => {
+        ActionBody::Attack {
+            attacker_id,
+            target_id,
+        } => {
             let defender = opponent_of(actor);
-            // Trapped lethal-gate estimate against effective_life (R964000; never if cannot lose, R2201000).
-            let lethalish = jackioh_engine::can_lose(state, defender)
-                && find_instance(state, attacker_id)
-                    .is_some_and(|unit| unit_view(state, unit).attack >= effective_life(state, defender));
             let trapped = state.players[defender]
                 .backrow
                 .iter()
                 .flatten()
                 .any(|card| stands_for_any(state, &card.def_id, AI_SEARCH.ai_turn_trap_ids));
-            if lethalish && trapped {
+            // R4809001: only an attack the trap would answer, one its own projection calls lethal to its
+            // controller's hero (`subsystems::is_lethal`, R44): through a Unit only by Trample excess
+            // (R176), against effective_life (R964000), never to a hero that cannot lose (R2201000).
+            let answered = trapped
+                && find_instance(state, attacker_id)
+                    .zip(attack_target_of(state, target_id))
+                    .is_some_and(|(attacker, target)| {
+                        subsystems::defending_hero(&target) == defender
+                            && subsystems::is_lethal(state, attacker, &target)
+                    });
+            if answered {
                 AI_SEARCH.ai_turn_trap_nodes.max(0) as usize
             } else {
                 0
@@ -732,6 +748,11 @@ pub fn own_prompt_score(
     })
 }
 
+/// `simulate`'s refusal of a step whose up-front surcharge (`surcharge_nodes`) the counter's slice
+/// cannot pay once the step's own node is taken: a refusal of the slice, not of the step. The lethal
+/// solver's first walk reads it as a cut, not a searched tree (R4807000).
+pub(crate) const UNPAID_SURCHARGE: &str = "the step's surcharge does not fit the budget's slice";
+
 /// Simulates one AI action on determinized state and auto-answers subsequent opponent prompts.
 /// Returns `None` when node counter exhausts.
 pub fn simulate(
@@ -768,13 +789,13 @@ fn simulate_answering(
     // An action whose surcharge the slice cannot pay must not drain it node by node and then
     // return `None`: `None` is the callers' "the budget is spent, stop the wave" signal, so one
     // expensive step would stop every cheaper sibling beside it. Refuse the step like any refused
-    // action instead (Some(Err): the beam's `continue`, reply's "skip this action").
+    // action instead (Some(Err): the beam's `continue`). The reply checks a try's surcharge before
+    // it calls this and cuts instead (`best_try`, R4809000). The lethal solver's first walk tells it
+    // apart by `UNPAID_SURCHARGE` (R4807000).
     let surcharge = surcharge_nodes(state, seat, action);
     if counter.used() + surcharge > counter.limit() {
         note_sim_error(counter);
-        return Some(Err(
-            "the step's surcharge does not fit the budget's slice".to_string()
-        ));
+        return Some(Err(UNPAID_SURCHARGE.to_string()));
     }
     for _ in 0..surcharge {
         if !counter.take() {
@@ -961,8 +982,17 @@ fn card_signature(card: &CardInstance) -> String {
 fn unit_play_signature(state: &GameState, unit: &CardInstance) -> String {
     let view = unit_view(state, unit);
     let frozen = unit.frozen.map(|thaw| format!(":f{thaw}")).unwrap_or_default();
+    // R4808000: the damage chain a Churnwalker put the unit in (R3554007), only while it is in one.
+    let shared = unit
+        .shared_chain
+        .map(|chain| format!(":c{chain}"))
+        .unwrap_or_default();
+    let split = unit
+        .split_chain
+        .map(|chain| format!(":x{chain}"))
+        .unwrap_or_default();
     format!(
-        "{}{}{}:{}/{}/{}/{}:{:?}:{:?}/{:?}:{}:{:?}:{:?}{}{frozen}",
+        "{}{}{}:{}/{}/{}/{}:{:?}:{:?}/{:?}:{}:{:?}:{:?}{}{frozen}{shared}{split}",
         unit.def_id,
         if unit.radiant { "*" } else { "" },
         if unit.vanilla { "~" } else { "" },
@@ -1083,7 +1113,8 @@ fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>)
     }
 }
 
-/// Position signature for beam deduplication and lethal visited set (R1224, #898, #1797, R3772000).
+/// Position signature for the beam's duplicate check and, with the units' lanes (`position_key`, R4806000),
+/// the lethal solver's visited set (R1224, #898, #1797, R3772000, R4808000).
 pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
     position_signature(state, seat, false)
 }
@@ -1267,23 +1298,55 @@ fn position_signature(state: &GameState, seat: PlayerId, lane_free: bool) -> Str
     {
         parts.push(format!("E{}", element.as_str()));
     }
+    // R4808000: while a card that copies the last Spell (C #57 Echo) is where the seat could play it
+    // (its hand or its graveyard), the last Spell is that card's text (`subsystems::copied_text_of`),
+    // so two orders of the same plays that end on different Spells are two positions; said only then,
+    // so every other signature stays as it was.
+    let side = &state.players[seat];
+    if side
+        .hand
+        .iter()
+        .chain(&side.graveyard)
+        .any(subsystems::copies_text)
+    {
+        let last = state.last_spell.as_ref().map_or("-".to_string(), |last| {
+            format!("{}{}", last.def_id, if last.radiant { "*" } else { "" })
+        });
+        parts.push(format!("V{last}"));
+    }
     parts.join("|")
 }
 
-/// Every active unit's lane, each side's in `active_units_of` order, the sides in `PLAYER_IDS` order
-/// (#1797): what `search_signature` leaves out. The beam's duplicate check reads the two together, so
-/// two placements of one play that differ only in lane stay two positions, while two orders of the
-/// same moves into the same lanes stay one.
+/// Every unit's lane, Dormant cards included, with an animated card's home zone beside it (R4808000),
+/// each side's in `units_on_field_of` order, the sides in `PLAYER_IDS` order (#1797): what
+/// `search_signature` leaves out. The beam's duplicate check reads the two together, as `position_key` does
+/// for the lethal solver's and the concession check's walks, so two placements of one play that differ only
+/// in lane stay two positions, while two orders of the same moves into the same lanes stay one.
 pub fn unit_lanes(state: &GameState) -> String {
     PLAYER_IDS
         .into_iter()
         .map(|player| {
-            active_units_of(state, player)
+            units_on_field_of(state, player)
                 .into_iter()
-                .map(|unit| slot_of(state, unit).map_or(0, |slot| slot.lane).to_string())
+                .map(|unit| {
+                    let lane = slot_of(state, unit).map_or(0, |slot| slot.lane);
+                    // R4808000: an animated card's home, the backrow zone it goes back to.
+                    match home_of(state, &unit.id) {
+                        Some(home) => format!("{lane}h{}{}", home.zone.player, home.zone.lane),
+                        None => lane.to_string(),
+                    }
+                })
                 .collect::<Vec<_>>()
                 .join(",")
         })
         .collect::<Vec<_>>()
         .join("/")
+}
+
+/// A position of the lethal solver's and the concession check's walks (R4806000, R2660000): the
+/// search's own identity for it (`search_signature`) and the units' lanes, which that leaves out, so a
+/// unit played into another lane is another position, while two orders of the same moves into the same
+/// lanes stay one.
+pub(crate) fn position_key(state: &GameState, seat: PlayerId) -> String {
+    format!("{}|{}", search_signature(state, seat), unit_lanes(state))
 }

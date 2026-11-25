@@ -14,8 +14,8 @@ use serde::{Deserialize, Serialize};
 use crate::config::HAND_CAP_MAX;
 use crate::modifiers::add_modifier;
 use crate::script::Effect;
-use crate::state::{ModifierExpiry, ModifierKind};
-use crate::wire::{Keyword, opponent_of};
+use crate::state::{GameState, ModifierExpiry, ModifierKind};
+use crate::wire::{Keyword, PlayerId, opponent_of};
 
 use super::targets::{PlayerSpec, player_of};
 
@@ -83,22 +83,27 @@ pub struct MakeHeroImmuneArgs {
     pub player: Option<PlayerSpec>,
 }
 
+/// R757's Armor Up expiry, shared by every immunity that lasts as Armor Up does: made on the
+/// player's turn it lasts through the opponent's next; made on the opponent's, it ends at that
+/// turn's cleanup.
+pub(crate) fn armor_up_expiry(state: &GameState, player: PlayerId) -> ModifierExpiry {
+    if state.active == player {
+        ModifierExpiry::NextTurnOf {
+            player: opponent_of(player),
+            from_turn: state.turn,
+        }
+    } else {
+        ModifierExpiry::ThisTurn { turn: state.turn }
+    }
+}
+
 /// MD-C21 (Meditative #48 Tranquility): this player's hero is immune to damage until their next turn
 /// begins (a cap of 0 at §4.4 step 3), with R757's Armor Up expiry: made on their turn it lasts through
 /// the opponent's next; made on the opponent's, it ends at that turn's cleanup.
 pub fn make_hero_immune(args: MakeHeroImmuneArgs) -> Effect {
     Effect::new("makeHeroImmune", move |ctx| {
         let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
-        let expiry = if ctx.sink.state.active == player {
-            ModifierExpiry::NextTurnOf {
-                player: opponent_of(player),
-                from_turn: ctx.sink.state.turn,
-            }
-        } else {
-            ModifierExpiry::ThisTurn {
-                turn: ctx.sink.state.turn,
-            }
-        };
+        let expiry = armor_up_expiry(ctx.state, player);
         add_modifier(ctx, player, expiry, ModifierKind::HeroImmune);
     })
 }
@@ -140,6 +145,36 @@ pub fn price_next_spell_in_health(args: HealthPriceArgs) -> Effect {
                 echo: args.echo.filter(|echo| *echo > 0),
             },
         );
+    })
+}
+
+/// `randomTargetsNextSpells`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct RandomTargetsNextSpellsArgs {
+    /// How many of the player's next face-up Spells have their targets drawn at random (IA #130
+    /// Prompt Injection: 1, its Radiant face 2).
+    pub count: i32,
+    /// Whose next Spells, relative to the controller. Default "self".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+}
+
+/// R4590001 (IA #130 Prompt Injection): the player's next `count` face-up Spells have their declared
+/// targets drawn at random — a `used` modifier each, spent one per Spell at §10.5 step 4
+/// (`play_steps::spend_random_targets_next_spell`). A countered play spends none (R90).
+pub fn random_targets_next_spells(args: RandomTargetsNextSpellsArgs) -> Effect {
+    Effect::new("randomTargetsNextSpells", move |ctx| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        for _ in 0..args.count.max(0) {
+            add_modifier(
+                ctx,
+                player,
+                ModifierExpiry::Used,
+                ModifierKind::RandomTargetsNextSpell,
+            );
+        }
     })
 }
 
@@ -249,6 +284,45 @@ pub fn give_units_keyword_next_turn(args: GiveUnitsKeywordArgs) -> Effect {
             ModifierKind::UnitsHaveKeyword {
                 keyword: args.keyword.clone(),
                 from_spell,
+            },
+        );
+    })
+}
+
+/// `giveUnitsAttack`'s argument.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct GiveUnitsAttackArgs {
+    /// Whose Units take it, relative to the controller. Default "self".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerSpec>,
+    pub amount: i32,
+}
+
+/// R4586006 (Infinite Assault #33 Uncanny Valley, "Enemy Units have −N Attack until your next
+/// turn"): `amount` more Attack — below 0 a cut — on every Unit the affected player controls,
+/// those arriving later too. R757's expiry read for the caster: made on their turn it lasts
+/// through the affected side's next turn; made elsewhere, this turn.
+pub fn give_units_attack(args: GiveUnitsAttackArgs) -> Effect {
+    Effect::new("giveUnitsAttack", move |ctx| {
+        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
+        let turn = ctx.sink.state.turn;
+        let expiry = if ctx.sink.state.active == ctx.controller {
+            ModifierExpiry::NextTurnOf {
+                player,
+                from_turn: turn,
+            }
+        } else {
+            ModifierExpiry::ThisTurn { turn }
+        };
+        add_modifier(
+            ctx,
+            player,
+            expiry,
+            ModifierKind::UnitsAttack {
+                amount: args.amount,
+                from_spell: None,
             },
         );
     })

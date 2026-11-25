@@ -38,7 +38,19 @@ const RULES_WORDS: &[&str] = &["Exile", "Burn", "Echo", "Recycle", "Fuse", "Duo"
 /// "Jade" (Meditative #39.2), which names nothing inside it. R2198004: "Fortify Mind" (M #22.1)
 /// holds "Fortify" (TG #12), and still names itself. R3535001: "Ocean Tsunami" (Stinkyscape #96) holds
 /// "Tsunami" (Stinkyscape+ #91), which Stinkyscape #95's list of cards to add does not name.
-const RULES_PHRASES: &[&str] = &["Jade Counter", "Fortify Mind", "Ocean Tsunami"];
+/// R4602000: "Infinite Assault card", "Infinite Assault Unit" and "Infinite Assault Spell" hold
+/// "Infinite Assault" (IA #236), which names nothing inside them. IA #235.1's name, "The Prime
+/// Generator, Iteration Two", holds IA #235's, which IA #235's Death names only inside it (R2198004's
+/// shape: the token still names itself).
+const RULES_PHRASES: &[&str] = &[
+    "Jade Counter",
+    "Fortify Mind",
+    "Ocean Tsunami",
+    "Infinite Assault card",
+    "Infinite Assault Unit",
+    "Infinite Assault Spell",
+    "The Prime Generator, Iteration Two",
+];
 
 /// A match that is the whole phrase is not inside it (R2198004: the phrase may be a card's own name).
 /// Both bounds sit on the match's own edges, so every byte index here is a character boundary.
@@ -117,7 +129,8 @@ fn without_parenthetical(name: &str) -> String {
 }
 
 /// R903: one named alias — "Coin" names The Coin, which M #27's texts call by the short name.
-const ALIASES: &[(&str, &str)] = &[("The Coin", "Coin")];
+/// IA #143 names its token in the plural, which the single-s plural check in `names` misses (R279).
+const ALIASES: &[(&str, &str)] = &[("The Coin", "Coin"), ("Corrupted Process", "Corrupted Processes")];
 
 fn names_of(def: &CardDef) -> Vec<String> {
     let bare = without_parenthetical(&def.name);
@@ -582,6 +595,10 @@ mod r279_the_reference_map_spec_5_7_10_10 {
             if card.id == "core-t-coin" {
                 expected.push("Coin".to_string());
             }
+            // IA #143 names its token in the plural (`ALIASES`).
+            if card.id == "infiniteassault-143-1" {
+                expected.push("Corrupted Processes".to_string());
+            }
             assert_eq!(names_of(card), expected, "{}", card.id);
         }
     }
@@ -594,6 +611,32 @@ mod r279_the_reference_map_spec_5_7_10_10 {
             .map(|card| card.id.clone())
             .collect();
         assert_eq!(empty, Vec::<String>::new());
+    }
+
+    #[test]
+    fn r4602000_the_set_s_pool_phrase_names_the_set_and_not_ia_236() {
+        let card = |id: &str| CATALOG.get(id).unwrap_or_else(|| panic!("{id} in the catalog"));
+        // IA #236 is named "Infinite Assault", so every set-named pool phrase holds its name
+        // without naming it (R279): no refs list it for the phrase.
+        assert!(!names(
+            "Add a random Common Infinite Assault card to your hand.",
+            "Infinite Assault"
+        ));
+        assert!(names(
+            "Summon a random Infinite Assault Unit in each empty unit zone.",
+            "Infinite Assault Unit"
+        ));
+        for id in ["infiniteassault-001", "infiniteassault-236"] {
+            assert!(
+                !card(id)
+                    .refs
+                    .iter()
+                    .flatten()
+                    .any(|listed| listed == "infiniteassault-236"),
+                "{id}'s refs hold IA #236"
+            );
+        }
+        assert_eq!(named_by(card("infiniteassault-001")), Vec::<String>::new());
     }
 
     #[test]

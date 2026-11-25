@@ -85,7 +85,7 @@ class MatrixTests(unittest.TestCase):
         self.assertEqual({(job["shard"], job["shards"]) for job in jobs.values()},
                          {(1, 1), (1, 4), (2, 4), (3, 4), (4, 4)})
         self.assertEqual(jobs["tools, wasm 1/4"]["test"].split(" -- ")[1],
-                         "--skip fuzz:: --skip selfplay:: --skip positions::")
+                         "--skip fuzz:: --skip selfplay::")
 
     def test_a_new_rules_binary_gets_a_job_and_the_binaries_check_by_itself(self):
         self.repo.edit("crates/engine/Cargo.toml", '[[test]]\nname = "golden"',
