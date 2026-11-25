@@ -26105,23 +26105,17 @@
     "what": "review #4946 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-25T19:40:13Z",
+    "at": "2026-11-25T20:01:35Z",
     "notes": [
-      "#4947: `rust (checks, fuzz 200)` red in CI run 45685665654; its other early jobs have until 2026-11-25T19:42:55Z to report",
-      "#4935: approved and green, so its strikes are cleared",
-      "delivered build #4926 on muse (run 45683522341): built",
-      "delivered review #4951 on muse (run 45680587397): approved",
-      "delivered revise #4943 on claude-8 (run 45673856718): built",
-      "delivered review #4948 on claude-6 (run 45673513422): approved",
-      "delivered build #4936 on claude-4 (run 45671307244): built",
-      "delivered review #4893 on muse (run 45653739613): approved",
-      "started review #4956 on claude-4 (run 45688965769)",
-      "started review #4943 on claude-8 (run 45689141477)",
-      "started review #4955 on muse (run 45689314360)",
-      "started revise #4947 on claude-6 (run 45689509483)",
-      "started build #4925 on muse (run 45689684326)",
+      "delivered review #4955 on muse (run 45689314360): approved",
+      "delivered review #4952 on claude-4 (run 45682657485): blocked",
+      "delivered revise #4939 on claude-3 (run 45678759237): approved",
+      "delivered build #4924 on claude-7 (run 45676607115): built",
+      "delivered revise #4946 on claude-8 (run 45676430741): built",
+      "delivered review #4950 on claude-3 (run 45676242468): approved",
+      "started review #4958 on claude-7 (run 45692318580)",
+      "started review #4946 on claude-8 (run 45692510644)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
       "runner gate: started 0 of 3 waiting run(s); 3 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -26824,7 +26818,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T19:40:13Z",
+  "loop_tick": "2026-11-25T20:01:35Z",
   "machine_disk": {
     "issue": null,
     "reading": {
