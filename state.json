@@ -11324,10 +11324,10 @@
           "provider": "muse",
           "tier": "medium"
         },
-        "at": "2026-11-22T07:04:29Z",
-        "built_by": "claude-7",
+        "at": "2026-11-25T01:40:13Z",
+        "built_by": "muse",
         "by": "`muse` (medium)",
-        "sha": "433dfe490b1a952f3943fc918dcfb8597302f318"
+        "sha": "d6e664deaff19cb459f2e624e42e8430c1fc5af4"
       },
       "cross_rounds": 0,
       "died": 0,
