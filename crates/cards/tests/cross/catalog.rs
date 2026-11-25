@@ -1488,7 +1488,7 @@ const CLASSIC: &[SpecRow] = &[
     row(
         "39",
         "Outbreak",
-        c(3),
+        c(4),
         T::Spell,
         &[G::Plague],
         R::Epic,
