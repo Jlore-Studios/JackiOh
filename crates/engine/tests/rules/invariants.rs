@@ -4154,6 +4154,195 @@ mod i21 {
         no_world.radiant_world = None;
         only(&i21(&before, &events, &no_world), &id, &["I21", "radiantSet"]);
     }
+
+    /// R4599001, R4599008: the `destroyed` of the immune stand-in, its max health at death `max_health`.
+    fn died(id: &str, killer: Option<&str>, max_health: i32) -> GameEvent {
+        json_as(json!({
+            "type": "destroyed",
+            "instanceId": id,
+            "defId": IMMUNE,
+            "owner": "p2",
+            "controller": "p2",
+            "attack": 4,
+            "maxHealth": max_health,
+            "killerId": killer,
+        }))
+    }
+
+    #[test]
+    fn r4599001_a_death_naming_its_killer_in_a_spell_s_run_is_the_hit_s_and_i21_allows_it() {
+        let (state, id) = immune_board("r4599001");
+        let gone = moved(&state, &id, OffFieldZone::Graveyard);
+        // The lethal hit was credited to a Unit (R42): it is judged where it landed.
+        assert_eq!(
+            i21(&state, &[marker(SPELL), died(&id, Some("i21-killer"), 4)], &gone),
+            Vec::<String>::new()
+        );
+        // A death naming no killer, at full health, is the Spell's destroy, and one credited to the
+        // running Spell is its own hit.
+        for killer in [None, Some("i21-source")] {
+            only(
+                &i21(&state, &[marker(SPELL), died(&id, killer, 4)], &gone),
+                &id,
+                &["I21", "destroyed"],
+            );
+        }
+    }
+
+    #[test]
+    fn r4599002_a_card_announced_face_down_in_the_step_runs_as_a_trap_for_i21() {
+        let (state, id) = immune_board("r4599002");
+        let announced = |face_down: bool| -> GameEvent {
+            json_as(json!({
+                "type": "cardAnnounced",
+                "player": "p1",
+                "instanceId": "i21-set",
+                "defId": SPELL,
+                "cardType": "Spell",
+                "costPaid": 0,
+                "targets": [],
+                "faceDown": face_down,
+            }))
+        };
+        let played: GameEvent = json_as(json!({
+            "type": "cardPlayed",
+            "player": "p1",
+            "instanceId": "i21-played",
+            "defId": SPELL,
+            "costPaid": 0,
+            "formerId": "i21-set",
+        }));
+        let run = |face_down: bool| {
+            [
+                announced(face_down),
+                played.clone(),
+                marker_of("i21-played", SPELL),
+                buffed(&id),
+            ]
+        };
+        // Set face-down and resolving as it is set, the Spell runs as a Trap (R3806000) under its new id.
+        assert_eq!(i21(&state, &run(true), &state), Vec::<String>::new());
+        only(&i21(&state, &run(false), &state), &id, &["I21", "buffed"]);
+    }
+
+    #[test]
+    fn r4599007_from_a_turn_s_end_a_spell_s_standing_trigger_opens_no_run_i21_reads() {
+        let (state, id) = immune_board("r4599007");
+        let ended: GameEvent =
+            json_as(json!({ "type": "turnEnded", "player": "p1", "turn": 1, "unspentMana": 0 }));
+        let hook = |kind: &str| -> GameEvent {
+            json_as(json!({
+                "type": "hookResolving",
+                "sourceId": "i21-source",
+                "defId": SPELL,
+                "controller": "p1",
+                "hook": kind,
+            }))
+        };
+        // R62's tail follows the triggers answering the `turnEnded` with no marker of its own.
+        for kind in ["whenever", "endOfTurn"] {
+            let tail = [ended.clone(), hook(kind), buffed(&id)];
+            assert_eq!(i21(&state, &tail, &state), Vec::<String>::new(), "{kind}");
+        }
+        // A cast at the turn's end is still a Spell's run, and so is a standing trigger before it.
+        only(
+            &i21(&state, &[ended.clone(), hook("cry"), buffed(&id)], &state),
+            &id,
+            &["I21", "buffed"],
+        );
+        only(
+            &i21(&state, &[hook("whenever"), buffed(&id), ended], &state),
+            &id,
+            &["I21", "buffed"],
+        );
+    }
+
+    #[test]
+    fn r4599008_a_killerless_death_its_damage_meets_is_the_layers_and_i21_allows_it() {
+        let (mut state, id) = immune_board("r4599008");
+        find_instance_mut(&mut state, &id)
+            .expect("the immune Unit")
+            .damage = 3;
+        let gone = moved(&state, &id, OffFieldZone::Graveyard);
+        // An aura's loss left its max health at the 3 damage it held, and the state check destroyed it.
+        assert_eq!(
+            i21(&state, &[marker(SPELL), died(&id, None, 3)], &gone),
+            Vec::<String>::new()
+        );
+        // A sourceless Burn tick in the step adds to the damage held (R4508005).
+        let tick: GameEvent = json_as(json!({
+            "type": "damage",
+            "sourceId": null,
+            "targetId": id,
+            "amount": 2,
+            "combat": false,
+            "via": "Burn",
+        }));
+        assert_eq!(
+            i21(&state, &[marker(SPELL), tick, died(&id, None, 5)], &gone),
+            Vec::<String>::new()
+        );
+        // With health to spare, the death is the Spell's destroy.
+        only(
+            &i21(&state, &[marker(SPELL), died(&id, None, 4)], &gone),
+            &id,
+            &["I21", "destroyed"],
+        );
+    }
+
+    /// R4599010, R4599014: the immune stand-in's `exiled`.
+    fn exiled(id: &str) -> GameEvent {
+        json_as(json!({ "type": "exiled", "instanceId": id, "defId": IMMUNE, "owner": "p2" }))
+    }
+
+    #[test]
+    fn r4599010_an_exile_after_a_board_restore_in_a_spell_s_run_is_the_restore_s_and_i21_allows_it() {
+        let (state, id) = immune_board("r4599010");
+        let gone = moved(&state, &id, OffFieldZone::Exile);
+        let restored: GameEvent =
+            json_as(json!({ "type": "rolledBack", "player": "p1", "turnsAgo": 1, "sides": ["p1", "p2"] }));
+        assert_eq!(
+            i21(&state, &[marker(SPELL), restored, exiled(&id)], &gone),
+            Vec::<String>::new()
+        );
+        only(
+            &i21(&state, &[marker(SPELL), exiled(&id)], &gone),
+            &id,
+            &["I21", "exiled"],
+        );
+    }
+
+    #[test]
+    fn r4599014_a_board_replacement_s_exile_in_a_spell_s_run_takes_the_side_whole_and_i21_allows_it() {
+        let (state, id) = immune_board("r4599014");
+        let gone = moved(&state, &id, OffFieldZone::Exile);
+        let replaced: GameEvent = json_as(json!({ "type": "boardReplaced", "player": "p2" }));
+        assert_eq!(
+            i21(&state, &[marker(SPELL), replaced, exiled(&id)], &gone),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn r4599015_once_the_step_moves_a_unit_off_the_field_a_later_event_naming_its_id_is_no_reach() {
+        let (state, id) = immune_board("r4599015");
+        // It died in a Trap's run and came back (a Reborn's return under the same id), then a Spell hit it.
+        let hit: GameEvent = json_as(json!({
+            "type": "damage",
+            "sourceId": "i21-source",
+            "targetId": id,
+            "amount": 1,
+            "combat": false,
+        }));
+        let after_death = [trap_fired(), died(&id, None, 4), marker(SPELL), hit.clone()];
+        assert_eq!(i21(&state, &after_death, &state), Vec::<String>::new());
+        // With no departure before it, the hit is the Spell's reach.
+        only(
+            &i21(&state, &[marker(SPELL), hit], &state),
+            &id,
+            &["I21", "damage"],
+        );
+    }
 }
 
 mod i22 {

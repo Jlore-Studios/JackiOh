@@ -74,3 +74,15 @@ jobs:
           export -f run_one
           xargs -P 4 -L 1 bash -c 'run_one "$0" "$1"' < .github/tmp-seeds.txt
           for f in out/*.txt; do echo "################ $f"; grep -E "message:|seeds failed|0 failed| p[12] deck:" "$f" || tail -3 "$f"; done
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          node: "false"
+      - name: the engine's I21 tests
+        run: cargo test -p jackioh-engine --features testkit --test 'rules*' i21 2>&1 | grep -E 'test result|FAILED|panicked|failures:|error|^test .*r4599' | tail -60
+      - name: the cross tests of I21's rulings
+        run: cargo test -p jackioh-cards --test cards -- r4599 r4601000 2>&1 | grep -E 'test result|FAILED|panicked|error|^test ' | tail -30
