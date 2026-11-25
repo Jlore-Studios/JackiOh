@@ -53,36 +53,11 @@ use crate::types::{
     AiOptions, AiStyle, Decision, DecisionReason, NodeCounter, SearchBudget, SearchStats, StoppedBy,
 };
 
-fn quiet_stats() -> SearchStats {
-    SearchStats {
-        nodes: 0,
-        determinizations: 0,
-        lines: 0,
-        sim_errors: 0,
-        sim_panics: 0,
-        stopped_by: StoppedBy::Exhausted,
-        replied: 0,
-        worlds_scored: 0,
-        replays_cut: 0,
-        score: 0.0,
-    }
-}
-
 /// R3498000: the milliseconds into a host's `limit_ms` at which it fires the wrap-up
 /// (`AiOptions.wrap_up`), `AI_WRAP_UP_SHARE` of it, rounded; 0 for a limit of 0 or below. The one place
 /// the share is applied, so that every host wraps up alike.
 pub fn wrap_up_after_ms(limit_ms: i64) -> i64 {
     (limit_ms.max(0) as f64 * AI_WRAP_UP_SHARE).round() as i64
-}
-
-fn immediate(action: ActionBody, reason: DecisionReason) -> Decision {
-    Decision {
-        line: vec![action.clone()],
-        action,
-        reason,
-        stats: quiet_stats(),
-        first_sim_panic: None,
-    }
 }
 
 /// Step 7: endTurn when it is a candidate, else the first candidate, else endTurn regardless.
@@ -381,34 +356,40 @@ fn mean_of(scores: &[f64]) -> f64 {
     }
 }
 
-/// What the guarded body decided, before the stats are read off the counter.
-enum Plan {
-    /// Answered at once, with quiet stats.
-    Immediate(ActionBody, DecisionReason),
-    /// Searched: the stats are the counter's, with this score and, when given, this stop reason.
-    Searched {
-        action: ActionBody,
-        reason: DecisionReason,
-        line: Vec<ActionBody>,
-        score: f64,
-        stopped_by: Option<StoppedBy>,
-        /// The finalists not chosen, best mean first (`runners_up_of`); empty off step 6's pick.
-        runners_up: Vec<RunnerUp>,
-    },
+/// What the guarded body decided, before the stats are read off the counter: they are the counter's,
+/// with this score and, when given, this stop reason.
+struct Plan {
+    action: ActionBody,
+    reason: DecisionReason,
+    line: Vec<ActionBody>,
+    score: f64,
+    stopped_by: Option<StoppedBy>,
+    /// The finalists not chosen, best mean first (`runners_up_of`); empty off step 6's pick.
+    runners_up: Vec<RunnerUp>,
 }
 
 impl Plan {
-    /// Step 7's plan: the fallback action alone, scored 0, with this stop reason when given.
-    fn fallback(candidates: &[ActionBody], stopped_by: Option<StoppedBy>) -> Plan {
-        let action = fallback_action(candidates);
-        Plan::Searched {
+    /// `action` alone for `reason`, scored 0, with this stop reason when given.
+    fn single(action: ActionBody, reason: DecisionReason, stopped_by: Option<StoppedBy>) -> Plan {
+        Plan {
             line: vec![action.clone()],
             action,
-            reason: DecisionReason::Fallback,
+            reason,
             score: 0.0,
             stopped_by,
             runners_up: Vec::new(),
         }
+    }
+
+    /// Answered at once, before a node is taken or a world made, so the counter's stats are all zero;
+    /// it reads as a search that ran out of moves, whatever the host's clock says.
+    fn immediate(action: ActionBody, reason: DecisionReason) -> Plan {
+        Plan::single(action, reason, Some(StoppedBy::Exhausted))
+    }
+
+    /// Step 7's plan: the fallback action alone.
+    fn fallback(candidates: &[ActionBody], stopped_by: Option<StoppedBy>) -> Plan {
+        Plan::single(fallback_action(candidates), DecisionReason::Fallback, stopped_by)
     }
 }
 
@@ -510,7 +491,7 @@ fn plan(
 
     // 2. R188.
     if unanswered_draw_offer(&public, seat) {
-        return Plan::Immediate(
+        return Plan::immediate(
             ActionBody::AnswerDraw { accept: false },
             DecisionReason::DrawOffer,
         );
@@ -519,13 +500,13 @@ fn plan(
     // 3. The mulligan: its own, at once, whether or not the other seat has answered (R265).
     if public.pending.is_none() && mulligan_prompt_for(&public, seat).is_some() {
         let keep = mulligan_keep_curved(&public, seat, AI_MULLIGAN.keep_max_cost, &AI_MULLIGAN_CURVE);
-        return Plan::Immediate(ActionBody::Mulligan { keep }, DecisionReason::Mulligan);
+        return Plan::immediate(ActionBody::Mulligan { keep }, DecisionReason::Mulligan);
     }
 
     // 3, R1184002: a question of a sequence, or C+ #42 KY's Test's Easy problem (#2929), worked out from
     // its statement, at once (R1563005: right most of the time).
     if let Some(answer) = worked_answer_action(&public, seat, rng) {
-        return Plan::Immediate(answer, DecisionReason::Prompt);
+        return Plan::immediate(answer, DecisionReason::Prompt);
     }
 
     // 4. Forced: a throwaway world lists the candidates without touching options.rng. Every
@@ -538,7 +519,7 @@ fn plan(
     if scratch.candidates.len() == 1
         && let Some(only) = scratch.candidates.first()
     {
-        return Plan::Immediate(only.clone(), DecisionReason::Forced);
+        return Plan::immediate(only.clone(), DecisionReason::Forced);
     }
 
     // A decision's nodes cost more the wider the state is, so the searched part of the budget shrinks
@@ -585,7 +566,7 @@ fn plan(
         } else if let Some(trimmed) = trim_lethal(&dets, seat, lethal, counter, &prices)
             && let Some(first) = trimmed.first().cloned()
         {
-            return Plan::Searched {
+            return Plan {
                 action: first,
                 reason: DecisionReason::Lethal,
                 line: trimmed,
@@ -754,7 +735,7 @@ fn plan(
     } else {
         DecisionReason::Search
     };
-    Plan::Searched {
+    Plan {
         action,
         reason,
         line: chosen.actions.clone(),
@@ -916,28 +897,14 @@ fn decide_in(
         note_sim_panic(&counter, payload.as_ref());
         Plan::fallback(&scratch.candidates, None)
     });
-    match planned {
-        Plan::Immediate(action, reason) => Some(submitted(state, seat, immediate(action, reason), &[])),
-        Plan::Searched {
-            action,
-            reason,
-            line,
-            score,
-            stopped_by,
-            runners_up,
-        } => Some(submitted(
-            state,
-            seat,
-            Decision {
-                action,
-                reason,
-                line,
-                stats: stats(&counter, score, stopped_by),
-                first_sim_panic: counter.first_sim_panic(),
-            },
-            &runners_up,
-        )),
-    }
+    let decision = Decision {
+        action: planned.action,
+        reason: planned.reason,
+        line: planned.line,
+        stats: stats(&counter, planned.score, planned.stopped_by),
+        first_sim_panic: counter.first_sim_panic(),
+    };
+    Some(submitted(state, seat, decision, &planned.runners_up))
 }
 
 #[cfg(test)]
@@ -973,14 +940,7 @@ mod tests {
         let counter = create_node_counter(AI_BUDGET.nodes, None);
         let mut scratch = Scratch::default();
         let mut options = AiOptions::with_budget(Rng::new("decide-1575", 0), AI_BUDGET);
-        let Plan::Searched {
-            action,
-            reason,
-            line,
-            score,
-            runners_up,
-            ..
-        } = plan(
+        let planned = plan(
             state,
             AI,
             &AI_STYLE_EXACT,
@@ -988,21 +948,18 @@ mod tests {
             &counter,
             &mut scratch,
             None,
-        )
-        else {
-            panic!("the search decides");
-        };
+        );
         let decision = Decision {
-            action,
-            reason,
-            line,
+            action: planned.action,
+            reason: planned.reason,
+            line: planned.line,
             stats: SearchStats {
-                score,
-                ..quiet_stats()
+                score: planned.score,
+                ..SearchStats::default()
             },
             first_sim_panic: None,
         };
-        (decision, runners_up)
+        (decision, planned.runners_up)
     }
 
     fn plays(action: Option<&ActionBody>, card: &CardInstance) -> bool {

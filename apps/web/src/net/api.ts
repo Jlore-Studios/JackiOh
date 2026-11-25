@@ -1109,24 +1109,6 @@ export type DeckInput = {
   cardBackCosmetic?: string | null;
 };
 
-/**
- * `PUT /api/decks/:id`: creates or replaces. Refusals: 400 `bad_request` (a D1–D4 draft rule, issues in
- * `details`), 409 `conflict` with `details.limit` at `limits.decks`, 409 `update_required` for a stale
- * catalog, 404 when the id is another profile's.
- */
-export async function putDeck(token: string, id: string, input: DeckInput): Promise<{ deck: SavedDeck }> {
-  const answer = await apiRequest<{ deck: SavedDeck }>(`/api/decks/${encodeURIComponent(id)}`, {
-    method: "PUT",
-    token,
-    body: input,
-  });
-  updateCachedRead<DecksResponse>(token, keptPaths.decks, (before) => ({
-    ...before,
-    decks: withItem(before.decks, answer.deck),
-  }));
-  return answer;
-}
-
 /** The kept decks without deck `id`: a trio slot naming it empties (R252). */
 function withoutDeck(before: DecksResponse, id: string): DecksResponse {
   return {
@@ -1162,7 +1144,7 @@ export function getDeckVersions(token: string, deckId: string): Promise<{ versio
 /**
  * `POST /api/decks/:id/versions/:versionId/restore`: saves the version's name and cards as the deck's,
  * keeping its portrait and picks, as a new version, so the one it replaced stays listed. Refusals as
- * `putDeck`'s.
+ * `PUT /api/decks/:id`'s.
  */
 export async function restoreDeckVersion(
   token: string,

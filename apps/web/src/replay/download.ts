@@ -143,7 +143,3 @@ export function replayStepsOf(json: Record<string, unknown>): ReplayStep[] {
 export function replayPortraitsOf(json: Record<string, unknown>): SeatPortraits | null {
   return isRecord(json.game) ? seatPortraitsOf(json.game.portraits) : null;
 }
-
-export async function parseReplayJsonFile(file: File): Promise<ReplayStep[]> {
-  return replayStepsOf(await readReplayJsonFile(file));
-}

@@ -82,16 +82,17 @@ pub struct DuosDecision {
     pub first_sim_panic: Option<String>,
 }
 
+/// What `seat` may send while the game is on: `None` once it is over, or when the concede is all it has.
+fn offered(state: &DuosState, seat: DuosSeat) -> Option<Vec<DuosActionBody>> {
+    let legal = duos_legal_actions(state, seat);
+    let nothing = legal.iter().all(|body| matches!(body, DuosActionBody::Concede));
+    (state.result.is_none() && !nothing).then_some(legal)
+}
+
 /// `duos_decide`, with whether its action came off a fallback path (#1385): the same stream, the same
 /// action.
 pub fn duos_decision(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosDecision> {
-    if state.result.is_some() {
-        return None;
-    }
-    let legal = duos_legal_actions(state, seat);
-    if legal.iter().all(|body| matches!(body, DuosActionBody::Concede)) {
-        return None;
-    }
+    let legal = offered(state, seat)?;
     let duel = state.duels.get(seat.duel())?;
     // `decide` has already tried its action on the duel's true state (decide.rs `submitted`); the
     // wrapper's own refusals are by kind (a seat that has ended, a draw offer), so an action of a
@@ -630,13 +631,7 @@ pub fn duos_random_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
 /// would move with the AI it measures. It reads its duel through `greedy_action`'s `redact` alone
 /// (R185) and draws on `rng` only there. None when the seat has nothing to send.
 pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> Option<DuosActionBody> {
-    if state.result.is_some() {
-        return None;
-    }
-    let legal = duos_legal_actions(state, seat);
-    if legal.iter().all(|body| matches!(body, DuosActionBody::Concede)) {
-        return None;
-    }
+    let legal = offered(state, seat)?;
     let duel = state.duels.get(seat.duel())?;
     match greedy_action(duel, seat.player(), rng) {
         Some(action) if offers(&legal, action.action_type()) => Some(DuosActionBody::Duel { body: action }),

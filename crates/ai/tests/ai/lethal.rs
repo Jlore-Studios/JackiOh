@@ -8,8 +8,8 @@ use indexmap::IndexSet;
 use jackioh_ai::{
     AI_BUDGET, AI_EVAL, AI_GATE, AI_SEARCH, DecisionReason, DeterminizeOptions, LineStatus, MatchHooks,
     Matchup, NextSwing, NodeCounter, Prices, action_key, candidate_actions, create_node_counter,
-    damage_past_taunts, determinize, evaluate, face_threat, find_lethal, find_lethal_with_quick_nodes,
-    game_config, line_status, play_match, ready_gap, redact, search_signature, simulate,
+    damage_past_taunts, determinize, evaluate, face_threat, find_lethal, game_config, line_status,
+    play_match, ready_gap, redact, search_signature, simulate,
 };
 use jackioh_engine::testkit::{
     ActionBody, ActionType, AttackTarget, CardInstance, DuosLife, GameState, IndexMap, PLAYER_IDS, PlayerId,
@@ -262,23 +262,15 @@ mod the_lethal_solvers_walks {
     }
 
     #[test]
-    fn the_depth_first_walk_alone_does_not_find_it_within_the_same_allowance() {
-        // lethalQuickNodes at the whole allowance is the solver before the best-first walk existed. If a
-        // change to move order let it find this line, the board would no longer test the second walk.
+    fn the_depth_first_walk_alone_does_not_find_it_in_its_own_allowance() {
+        // An allowance of lethalQuickNodes is spent whole by the depth-first walk and leaves the best-first
+        // walk nothing. If a change to move order let the first walk find this line, the board would no
+        // longer test the second.
         let dets = worlds(&wide_board(), "lethal-wide", 2);
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        assert!(
-            find_lethal_with_quick_nodes(
-                &dets,
-                AI,
-                &counter,
-                AI_BUDGET.lethal_nodes,
-                AI_BUDGET.lethal_nodes,
-                Prices::NONE,
-            )
-            .is_none()
-        );
-        assert_eq!(counter.used(), AI_BUDGET.lethal_nodes);
+        let quick = AI_SEARCH.lethal_quick_nodes as usize;
+        assert!(find_lethal(&dets, AI, &counter, quick, Prices::NONE).is_none());
+        assert_eq!(counter.used(), quick);
     }
 
     #[test]

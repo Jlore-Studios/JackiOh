@@ -23,7 +23,6 @@ import type { CraftRecipe } from "../wire/generated/CraftRecipe.ts";
 import type { PendingPromptView } from "../wire/generated/PendingPromptView.ts";
 import type { DeckMark } from "../wire/generated/DeckMark.ts";
 import type { WinRateTable } from "../wire/generated/WinRateTable.ts";
-import type { CardInstance } from "../wire/generated/CardInstance.ts";
 import type { CombatForecast } from "../wire/generated/CombatForecast.ts";
 import type {
   AssaultAction,
@@ -301,10 +300,6 @@ export function lastBoardFor(state: GameState, seat: PlayerId): LastBoardCard[] 
 /** R677: the seat the player who began in `home` plays now. */
 export function seatPlayedBy(state: GameState, home: PlayerId): PlayerId {
   return call("seatPlayedBy", () => normal.seat_played_by(stateJson(state), home) as PlayerId);
-}
-
-export function findInstance(state: GameState, instanceId: string): CardInstance | undefined {
-  return call("findInstance", () => parsed<CardInstance | null>(normal.find_instance(stateJson(state), instanceId)) ?? undefined);
 }
 
 /**

@@ -47,9 +47,6 @@ export const RANDOM_GAME_MS = 45_000;
 
 export type LessonPolicy = "coach" | "coach-passive" | "autopilot" | "random" | "reckless" | "idle";
 
-/** Every policy a lesson must be won under (R2205001; `idle`, R2201000). */
-export const LESSON_POLICIES: readonly LessonPolicy[] = ["coach", "coach-passive", "autopilot", "random", "reckless", "idle"];
-
 export type LessonRun = {
   lesson: TutorialLesson;
   script: LessonScript;

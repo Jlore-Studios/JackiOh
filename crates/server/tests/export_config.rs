@@ -143,15 +143,6 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("PLAYER_STATS_BYTES_MAX", json!(c::PLAYER_STATS_BYTES_MAX)),
         ("PROMPT_CLOCK_MS", json!(c::PROMPT_CLOCK_MS)),
         ("PROMPT_CLOCK_SECONDS", json!(c::PROMPT_CLOCK_SECONDS)),
-        // R4677000: how far back anyone but a dev account may read `/stats`' patches.
-        (
-            "PUBLIC_STATS_PATCHES_LINE_BEFORE",
-            json!(c::PUBLIC_STATS_PATCHES_LINE_BEFORE),
-        ),
-        (
-            "PUBLIC_STATS_PATCHES_NEWEST",
-            json!(c::PUBLIC_STATS_PATCHES_NEWEST),
-        ),
         ("RANK_STREAK_FLAME_LENGTH", json!(c::RANK_STREAK_FLAME_LENGTH)),
         (
             "RATING_WINDOW_FULL_AFTER_SECONDS",
@@ -215,7 +206,6 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("CHAT_MAX_CHARS", json!(c::CHAT_MAX_CHARS)),
         ("CHAT_POLL_MS", json!(c::CHAT_POLL_MS)),
         ("PRESENCE_HEARTBEAT_MS", json!(c::PRESENCE_HEARTBEAT_MS)),
-        ("PRESENCE_TTL_MS", json!(c::PRESENCE_TTL_MS)),
         ("SOCIAL_POLL_MS", json!(c::SOCIAL_POLL_MS)),
         ("SPECTATE_DELAY_MS", json!(c::SPECTATE_DELAY_MS)),
         ("SPECTATORS_PER_MATCH", json!(c::SPECTATORS_PER_MATCH)),
@@ -256,10 +246,7 @@ fn constants() -> Vec<(&'static str, Value)> {
         ("PROFICIENCY_LEVELS", json!(c::PROFICIENCY_LEVELS)),
         ("JLORE_LADDER_WIN", json!(c::JLORE_LADDER_WIN)),
         ("XP_WIN_BONUS", json!(c::XP_WIN_BONUS)),
-        ("PRACTICE_SEED_TTL_SECONDS", json!(c::PRACTICE_SEED_TTL_SECONDS)),
         ("QUEST_MAX_HELD", json!(c::QUEST_MAX_HELD)),
-        ("QUEST_JLORE_MIN", json!(c::QUEST_JLORE_MIN)),
-        ("QUEST_JLORE_MAX", json!(c::QUEST_JLORE_MAX)),
         ("ECONOMY_LIVE", json!(c::ECONOMY_LIVE)),
         // #2875's news (§14.13, R2875001, R2875003): how long an entry lives and what each reward pays.
         ("NEWS_TTL_DAYS", json!(c::NEWS_TTL_DAYS)),
@@ -312,7 +299,6 @@ fn every_name_is_listed_once() {
         // #3730: LOBBY_START_COUNTDOWN_SECONDS (R3730002).
         // #3767: SEAT_TAKEN_CLOSE_CODE (R3767000).
         // #3619: CLIENT_ERROR_MESSAGE_MAX_CHARS and CLIENT_ERROR_STACK_MAX_CHARS.
-        // #4677: PUBLIC_STATS_PATCHES_LINE_BEFORE and PUBLIC_STATS_PATCHES_NEWEST (R4677000).
         listed,
         87 + 35
             + 1
@@ -338,10 +324,9 @@ fn every_name_is_listed_once() {
             + 1
             + 2
             + 1
-            + 2
-            // #4702's audit: less the 65 that no file under apps/ or e2e/ read any more (the economy's and
+            // #4702's audit: less the 69 that no file under apps/ or e2e/ read any more (the economy's and
             // Duos's numbers reach the client through the WebAssembly module, CLAUDE.md rule 9).
-            - 65,
+            - 69,
         "the 50 names the client imported from apps/server/src/config.ts, ROOM_CODE_FORMAT (R767), the \
          four USERNAME_* hints (R1432, R1435), the three WS_* heartbeat numbers (R1441), the play \
          telemetry's retention for the privacy policy (R1442), the age screen's and terms' three \
@@ -368,8 +353,7 @@ fn every_name_is_listed_once() {
          PACKS_OPEN_ALL_MAX and DECK_SYNC_ITEMS_MAX (R3212000, R3212001), and #3213's \
          POST_GAME_FRAME_VERSION (R3213000), and #3694's MATCH_OVER_CLOSE_CODE (R3694000), and #3730's \
          LOBBY_START_COUNTDOWN_SECONDS (R3730002), and #3767's SEAT_TAKEN_CLOSE_CODE (R3767000), and #3619's CLIENT_ERROR_MESSAGE_MAX_CHARS and \
-         CLIENT_ERROR_STACK_MAX_CHARS, and #4669's TOTP_CODE_FORMAT (R4669000), and #4677's \
-         PUBLIC_STATS_PATCHES_LINE_BEFORE and PUBLIC_STATS_PATCHES_NEWEST (R4677000)"
+         CLIENT_ERROR_STACK_MAX_CHARS, and #4669's TOTP_CODE_FORMAT (R4669000)"
     );
 }
 

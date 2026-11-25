@@ -19,13 +19,13 @@ use jackioh_engine::SHIPPED_SETS;
 use jackioh_engine::config::{
     AI_DIFFICULTY, AI_TUTORIAL, CRAFT_ADJECTIVES, CRAFT_HAT_PRICES, CRAFT_KEYWORD_PRICES, CRAFT_MAX_N,
     CRAFT_NOUNS, CRAFT_RETIRED_VERBS, CRAFT_VERB_PRICES, DECK_SIZE, DIFFICULTIES, DRAWS_PER_TURN,
-    DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, EARLIER_DECK_SIZE, EMOTE_COOLDOWN_MS, EMOTE_HAND_SIZE,
-    EMOTE_HAND_VOICE, EMOTE_WINDOW_MAX, EMOTE_WINDOW_MS, GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP,
-    KY_COMPETITION_SECONDS, LIBRARY_CAP, LOADOUT_DECKS, LOSER_DRAWS_REASONS, MAX_COPIES, MAX_MANA,
-    PROMPT_CARD_OPTION_LIMIT, RANDOM_ATTACK_TARGET, REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS, ROLL_HEADS,
-    ROLL_TAILS, SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX, SANDBOX_HERO_HEALTH_MAX, SANDBOX_MANA_MAX,
-    STARSHIP_NAMES, TRIBAL_TAGS, TURN_CAP_PLAYER_TURNS, TUTORIAL_BARRED_RARITIES, TUTORIAL_CARD_SET,
-    TUTORIAL_HUMAN, VERSIONS_SCHEME, VOTE_TALLY_SIZE,
+    DUOS_OWN_HEALTH, EARLIER_DECK_SIZE, EMOTE_COOLDOWN_MS, EMOTE_HAND_SIZE, EMOTE_HAND_VOICE,
+    EMOTE_WINDOW_MAX, EMOTE_WINDOW_MS, GLITCH_DEF_ID, HERO_HEALTH, HUMAN_HANDICAP, KY_COMPETITION_SECONDS,
+    LIBRARY_CAP, LOADOUT_DECKS, LOSER_DRAWS_REASONS, MAX_COPIES, MAX_MANA, PROMPT_CARD_OPTION_LIMIT,
+    RANDOM_ATTACK_TARGET, REPLAY_CHECKPOINT_EVERY, REPLAY_PAGE_STEPS, ROLL_HEADS, ROLL_TAILS,
+    SANDBOX_ARMOR_MAX, SANDBOX_DRAW_MAX, SANDBOX_HERO_HEALTH_MAX, SANDBOX_MANA_MAX, STARSHIP_NAMES,
+    TRIBAL_TAGS, TURN_CAP_PLAYER_TURNS, TUTORIAL_BARRED_RARITIES, TUTORIAL_CARD_SET, TUTORIAL_HUMAN,
+    VERSIONS_SCHEME,
 };
 use serde::Serialize;
 
@@ -113,7 +113,6 @@ fn engine_config_ts() -> String {
         constant("DECK_SIZE", None, &DECK_SIZE),
         constant("DIFFICULTIES", Some("readonly Difficulty[]"), DIFFICULTIES),
         constant("DRAWS_PER_TURN", None, &DRAWS_PER_TURN),
-        constant("DUOS_HUMAN_TEAM", Some("DuosTeamRules"), &DUOS_HUMAN_TEAM),
         constant("DUOS_OWN_HEALTH", None, &DUOS_OWN_HEALTH),
         // R1705003: the deck size a game made before #1705 holds to, which a saved draft may still have.
         constant("EARLIER_DECK_SIZE", None, &EARLIER_DECK_SIZE),
@@ -182,7 +181,6 @@ fn engine_config_ts() -> String {
         constant("TUTORIAL_CARD_SET", Some("SetName"), &TUTORIAL_CARD_SET),
         constant("TUTORIAL_HUMAN", Some("Handicap"), &TUTORIAL_HUMAN),
         // R1843000: the votes in one turn that remove a player, which a vote's banner counts toward.
-        constant("VOTE_TALLY_SIZE", None, &VOTE_TALLY_SIZE),
     ];
     constants.sort_by(|a, b| a.name.cmp(b.name));
 
@@ -204,7 +202,7 @@ fn engine_config_ts() -> String {
 #[test]
 fn export_engine_config() {
     let text = engine_config_ts();
-    assert_eq!(text.matches("\nexport const ").count(), 48, "{text}");
+    assert_eq!(text.matches("\nexport const ").count(), 46, "{text}");
     std::fs::write(OUTPUT, text).unwrap_or_else(|error| panic!("could not write {OUTPUT}: {error}"));
 }
 

@@ -339,7 +339,8 @@ fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter, pri
 }
 
 /// Runs depth-first then best-first lethal search on dets[0], requiring candidate lines
-/// to win on all determinizations. Spends at most `limit` nodes of `counter`.
+/// to win on all determinizations. Spends at most `limit` nodes of `counter`, the depth-first walk at
+/// most `AI_SEARCH.lethal_quick_nodes` of them.
 pub fn find_lethal(
     dets: &[GameState],
     seat: PlayerId,
@@ -347,25 +348,7 @@ pub fn find_lethal(
     limit: usize,
     prices: &Prices,
 ) -> Option<Vec<ActionBody>> {
-    find_lethal_with_quick_nodes(
-        dets,
-        seat,
-        counter,
-        limit,
-        AI_SEARCH.lethal_quick_nodes as usize,
-        prices,
-    )
-}
-
-/// `find_lethal` with a configurable depth-first quick-node budget.
-pub fn find_lethal_with_quick_nodes(
-    dets: &[GameState],
-    seat: PlayerId,
-    counter: &dyn NodeCounter,
-    limit: usize,
-    quick_nodes: usize,
-    prices: &Prices,
-) -> Option<Vec<ActionBody>> {
+    let quick_nodes = AI_SEARCH.lethal_quick_nodes as usize;
     let root = dets.first()?;
     // R2201000: there is no lethal on a seat that cannot lose, so nothing is searched for one.
     if limit == 0 || !can_lose(root, seat.opponent()) {
