@@ -19435,7 +19435,7 @@
       "waiting_comment": 7149564125
     },
     "4806": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -19448,32 +19448,24 @@
         "reason": "planned on opus",
         "trail": "ai/src/lethal.rs /tmp/lethal-fixed.rs && git -C /home/runner/work/_temp/work/item-4806 show HEAD:crates/ai/src/lethal.rs > crates/ai/src/lethal.rs && cargo te\u2026\n- Bash: {\"command\": \"cd /tmp/jw4806 && cargo fmt --check -p jackioh-ai 2>&1 | head -60\", \"description\": \"Check formatting of the scratch changes\", \"timeout\": 300000}\n- Bash: {\"command\": \"cd /tmp/jw4806 && python3 - <<'EOF'\\np='crates/ai/tests/ai/lethal.rs'\\ns=open(p).read()\\na=s.index(\\\"\\\\nmod lane_probe {\\\")\\nb=s.index(\\\"\\\\n/// R4806000: a lethal that stands only\\\")\\ns=\u2026\n- Bash: {\"command\": \"cd /tmp/jw4806 && cargo fmt -p jackioh-ai && cargo fmt --check -p jackioh-ai && echo FMT_OK && (cargo clippy -p jackioh-ai --all-targets -- -D warnings 2>&1 | grep -E \\\"^(warning|error)|\u2026\n- Bash: {\"command\": \"cd /tmp/jw4806 && for f in crates/ai/src/lethal.rs crates/ai/src/unstoppable.rs crates/ai/src/simulate.rs; do git -C /home/runner/work/_temp/work/item-4806 show HEAD:$f > /tmp/base.rs; d\u2026\n- Bash: {\"command\": \"ls crates/cards/src/scripts/core/ | grep -E \\\"^c00(1|8)_|^c019_|^c045_\\\"; ls crates/cards/src/scripts/stinkyscape/ | grep \\\"^c157_\\\"; head -5 crates/cards/src/scripts/core/c001_*.rs\", \"d\u2026\n- Bash: {\"command\": \"sed -n 1,40p crates/tools/src/gate.rs | cut -c1-250; grep -n \\\"perf_only\\\\|\\\\\\\"--perf\\\\|fn run_gate\\\\|args\\\" crates/tools/src/gate.rs | head -20\", \"description\": \"Read gate header for sm\u2026\n- Bash: {\"command\": \"grep -n \\\"smoke\\\\|games\\\" crates/ai/src/gate.rs | sed -n 1,30p | cut -c1-200\", \"description\": \"Check smoke gate game counts\"}\n- Bash: {\"command\": \"cd /tmp/jw4806 && (time cargo run --release -p jackioh-tools -- gate) > /tmp/jw4806-gate-fixed.log 2>&1; tail -40 /tmp/jw4806-gate-fixed.log | cut -c1-300\", \"description\": \"Run the AI's \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4806/.bot-plan.md\", \"content\": \"# Draft plan, #4806 (planner notes)\\n\\n## Experiment log (scratch copy /tmp/jw4806 = git archive HEAD; CARGO_TARGET_DI\u2026\n- Bash: {\"command\": \"cat rustfmt.toml; sed -n 1083,1090p crates/ai/src/simulate.rs; sed -n 1271,1277p crates/ai/src/simulate.rs\", \"description\": \"Check rustfmt settings and doc lines\"}\n- Bash: {\"command\": \"tail -c 600 /tmp/jw4806-gate-fixed.log\", \"description\": \"Check gate run progress\"}\n- Bash: {\"command\": \"cd /tmp/jw4806 && python3 - <<'EOF'\\np='crates/ai/tests/ai/lethal.rs'\\ns=open(p).read()\\nprobe='''\\n /// Temporary: the solver's nodes on the lethal boards this file pins and on the two \u2026\n- Bash: {\"command\": \"until grep -q \\\"Running \\\\`\\\\|^error\\\" /tmp/jw4806-gate-fixed.log; do sleep 10; done; grep -E \\\"Running|^error\\\" /tmp/jw4806-gate-fixed.log | head -3\", \"description\": \"Wait for the gate \u2026\n- Bash: {\"command\": \"grep -v \\\"Compiling\\\" /tmp/jw4806-gate-fixed.log | tail -40 | cut -c1-300\", \"description\": \"Read the gate run's results\"}\n- Bash: {\"command\": \"cd /tmp/jw4806 && cargo test -p jackioh-ai --test ai_slow probe_r4806000 -- --nocapture 2>&1 | grep -E \\\"NODES|test result|^error|^warning\\\" | cut -c1-200; git -C /home/runner/work/_temp\u2026\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-4806/.bot-plan.md <<'EOF'\\n- smoke gate AFTER: ai-vs-random 20/20 (19 needed), ai-vs-greedy 17/20 (14), hard-vs-easy 18/20 (15), 0 panics; perf +\u2026\n- Bash: {\"command\": \"git status --porcelain | head\", \"description\": \"Confirm the worktree has no tracked changes\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4806/.bot-plan.md\", \"content\": \"**Goal.** `find_lethal` (`crates/ai/src/lethal.rs`) keys both walks' visited sets on `position_key`, which is `search_\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Count the plan's words and characters\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4806/.bot-plan.md\", \"content\": \"**Goal.** Key `find_lethal`'s two walks' visited sets (`crates/ai/src/lethal.rs`) on `position_key`, which is `search_\u2026\n- Bash: {\"command\": \"mkdir -p /tmp/jw4806 && git archive HEAD | tar -x -C /tmp/jw4806 && cd /tmp/jw4806 && python3 - <<'EOF'\\nimport re\\nplan=open('/home/runner/work/_temp/work/item-4806/.bot-plan.md').read(\u2026\n- Bash: {\"command\": \"cd /tmp/jw4806 && cargo clippy -p jackioh-ai --all-targets -- -D warnings 2>&1 | grep -E \\\"^(warning|error)|Finished\\\" | head; cd /tmp && rm -rf /tmp/jw4806 /tmp/jw4806-*.log; wc -w /hom\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\ncode=sum(len(b.split()) for b in re.findall(r\\\"```.*?```\\\", s, re.S))\\nprint(\\\"code words\\\", code, \\\"total\\\", len(s.spli\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4806/.bot-plan.md\", \"content\": \"**Goal.** `find_lethal`'s two walks (`crates/ai/src/lethal.rs`) key their visited sets on `position_key`, which is `se\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md; git status --porcelain\", \"description\": \"Recount plan words and confirm a clean tree\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4806/.bot-plan.md\", \"old_string\": \"## Tests\\n\\n- In `crates/ai/tests/ai/lethal.rs` (the `ai_slow` binary):\\n - `r4806000_across_\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4806/.bot-plan.md\", \"old_string\": \"- **Determinism and hidden information.** `position_key` is pure string work over the state, \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Recount plan words\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4806/.bot-plan.md\"}\n- said: **Goal.** `find_lethal`'s two walks (`crates/ai/src/lethal.rs`) key their visited sets on `position_key`, which is `search_signature` plus `unit_lanes`. That function already exists in `unstoppable.rs`; move it to `simulate.rs` and share it. Done means: - the solver finds a lethal that stands only \u2026\n- said: **Goal.** `find_lethal`'s two walks (`crates/ai/src/lethal.rs`) key their visited sets on `position_key`, which is `search_signature` plus `unit_lanes`. That function already exists in `unstoppable.rs`; move it to `simulate.rs` and share it. Done means: - the solver finds a lethal that stands only \u2026"
       },
-      "hold": {
-        "ends": "2026-11-25T03:27:21Z",
-        "lifted": "2026-11-25T03:22:01Z",
-        "owner": "claude-3",
-        "since": "2026-11-25T01:27:21Z",
-        "until": "2026-11-25T03:20:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-24T22:06:21Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-8",
+      "owner_since": "2026-11-25T04:56:15Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-24T23:20:48Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-8",
       "queued_at": "2026-11-24T20:56:02Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45497699749",
+      "run_id": "pending:c4cd94e3-1795582539",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-24T22:06:21Z",
+      "started_at": "2026-11-25T04:56:15Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 7149565989
@@ -22155,9 +22147,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T04:55:26Z",
+    "at": "2026-11-25T04:56:15Z",
     "url": "",
-    "what": "spot-check #4726 on claude-1"
+    "what": "build #4806 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-25T04:35:37Z",
