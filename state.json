@@ -20181,7 +20181,7 @@
       "started_at": "2026-11-24T22:17:23Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 2
     },
     "4839": {
       "failures": 0,
