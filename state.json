@@ -21200,11 +21200,11 @@
           {
             "family": "claude",
             "provider": "claude-3",
-            "run": "45507557955",
+            "run": "45576082742",
             "tier": "strong"
           }
         ],
-        "sha": "f3c55c01dce17e75b689545a0ced5cb2354716a5",
+        "sha": "bcedfcf64ec4b2129062db1b92948cb262668fb3",
         "tiers": {
           "claude": "strong"
         }
