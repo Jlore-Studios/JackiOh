@@ -21653,16 +21653,15 @@
     "what": "review #4973 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-25T22:33:31Z",
+    "at": "2026-11-25T22:44:52Z",
     "notes": [
-      "delivered suggest on agy (run 45709513222): suggested",
-      "delivered build #4925 on muse (run 45689684326): built",
-      "started review #4972 on muse (run 45714784415)",
+      "delivered review #4948 on claude-3 (run 45713207327): approved",
+      "delivered review #4939 on claude-8 (run 45713064893): approved",
+      "delivered build #4931 on claude-3 (run 45695679777): built",
+      "started review #4973 on claude-3 (run 45716459311)",
       "nothing more to start: nothing is queued",
-      "#4971: typed it Task",
-      "#4970: typed it Task",
-      "#4969: typed it Task",
-      "runner gate: started 0 of 5 waiting run(s); 5 wait for a slot"
+      "pruned 1 plan file(s) older than 7 days",
+      "runner gate: started 0 of 6 waiting run(s); 6 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22364,7 +22363,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T22:33:31Z",
+  "loop_tick": "2026-11-25T22:44:52Z",
   "machine_disk": {
     "issue": null,
     "reading": {
