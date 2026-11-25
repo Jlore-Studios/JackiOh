@@ -23733,6 +23733,14 @@
         "sha": "cb8f044d63555aebed0ee6fa2937c15a72554961",
         "tiers": {}
       }
+    },
+    "4914": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-25T11:43:17Z",
+      "issue": 4847,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
