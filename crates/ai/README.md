@@ -161,7 +161,8 @@ A hit on a Taunt, its Cleave splash and a First Strike Taunt's strike back are
 each capped after Armor by the struck unit's own guard (C+ #11 Anime Armor, R2179005), as `blow` caps the
 static trader's. Past the caps, every static read of a hit takes §4.4 steps 3a and 3b
 (`pool_and_conversion_read`, R4064000, R4064001, #4064; off in `GREEDY_EVAL`). A hit from a source whose
-damage Burns or is Toxic (S+ #151 Volcanic Rounds, #153 Noxious Rounds, `converts_to`) deals nothing, kills
+damage Burns or is Toxic (S+ #153 Noxious Rounds; #151 Volcanic Rounds through v0.6.13c, whose hits since
+issue #4783 land and also Burn, R4783001; `converts_to`) deals nothing, kills
 nothing and heals nothing, though a Divine Shield still takes it: the walk's attacker waits at its Taunt, and
 the reply prices the counter instead, on a unit by `counter_price` (what `afflicted` takes off it with that
 much more on) and on a hero by `hero_ticks_added`. Each side's damage pools (S+ #42 Force Projector, #123

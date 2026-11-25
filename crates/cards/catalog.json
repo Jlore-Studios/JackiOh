@@ -35811,24 +35811,24 @@
     "cost": 4,
     "loc": 16,
     "base": {
-      "attack": 5,
+      "attack": 6,
       "health": 1,
       "keywords": [
         {
           "kind": "Starship Piece"
         }
       ],
-      "text": "Starship Piece\nDamage dealt Burns."
+      "text": "Starship Piece\nDamage dealt also Burns."
     },
     "radiant": {
-      "attack": 10,
+      "attack": 12,
       "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
         }
       ],
-      "text": "Starship Piece\nDamage dealt Burns."
+      "text": "Starship Piece\nDamage dealt also Burns."
     }
   },
   "stinkyscapeplus-152": {

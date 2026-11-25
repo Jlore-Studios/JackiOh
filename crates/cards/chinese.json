@@ -4898,8 +4898,8 @@
   },
   "stinkyscapeplus-151": {
     "name": "火山弹",
-    "base": "星舰部件\n造成的伤害会施加燃烧。",
-    "radiant": "星舰部件\n造成的伤害会施加燃烧。"
+    "base": "星舰部件\n造成的伤害也会施加燃烧。",
+    "radiant": "星舰部件\n造成的伤害也会施加燃烧。"
   },
   "stinkyscapeplus-152": {
     "name": "毒液弹",

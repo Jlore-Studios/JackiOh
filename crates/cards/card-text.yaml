@@ -8541,8 +8541,8 @@ stinkyscapeplus-151: # Volcanic Rounds
     death: Back to sleep.
   zh:
     name: 火山弹
-    base: "星舰部件\n造成的伤害会施加燃烧。"
-    radiant: "星舰部件\n造成的伤害会施加燃烧。"
+    base: "星舰部件\n造成的伤害也会施加燃烧。"
+    radiant: "星舰部件\n造成的伤害也会施加燃烧。"
 stinkyscapeplus-152: # Venomous Rounds
   flavour: Reads the fine print on every target. The fine print says you.
   voice:
