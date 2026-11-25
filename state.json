@@ -19765,10 +19765,8 @@
       "stop_requested": false
     },
     "4818": {
-      "action": "plan",
-      "asks": [
-        "c:7150277980"
-      ],
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-25T03:46:28Z",
         "difficulty": "medium",
@@ -19789,25 +19787,27 @@
       },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-25T03:38:08Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "muse",
+      "owner_since": "2026-11-25T03:52:51Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-25T03:46:31Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-3",
       "planned_model": "sonnet",
       "planned_tier": "medium",
-      "provider": "claude-3",
+      "provider": "muse",
       "queued_at": "2026-11-25T02:04:43Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45541343169",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-25T03:38:08Z",
+      "run_id": "pending:d5b42034-1795578736",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-25T03:52:51Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7150277980"
+      ]
     },
     "4821": {
       "action": "plan",
@@ -21568,9 +21568,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T03:52:03Z",
+    "at": "2026-11-25T03:52:51Z",
     "url": "",
-    "what": "plan #4595 on claude-3"
+    "what": "build #4818 on muse"
   },
   "last_sweep": {
     "at": "2026-11-25T03:33:30Z",
