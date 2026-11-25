@@ -20922,13 +20922,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
-        "builder": "claude",
-        "built_by": "claude-3",
+        "approvals": [
+          "claude"
+        ],
+        "builder": "",
+        "built_by": "",
         "rejections": [],
-        "reviews": [],
-        "sha": "a87794f1009e3a20895b80c83e8e1079206e8f42",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-8",
+            "run": "45529176241",
+            "tier": "strong"
+          }
+        ],
+        "sha": "9078998f51e75bafd44046f551d741e8ba5cfee6",
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "4871": {
