@@ -284,6 +284,9 @@ One more card shifts every random draw from the pool (R380), so tests and games 
   whole event window (#106), `determinize` put a Siphon Squad in a hidden slot the seat's own view rules out (#107), and a deeply nested
   fusion resumed Final Gambit's step against the wrong ingredient (#105). If a wave fails at a seed that has nothing to do with
   your card, print the failing game's state, find which card the panic or the diff names, and file it rather than editing the test. A failure you fix or file gets a record in `crates/tools/fuzz-corpus/` in the same change (its README), so its deal survives the next card.
+- **The perf corpus** (`crates/tools/perf-corpus/`, #4924) pins its games' decks, so a new card re-deals none of them. A removed or
+  renamed id fails `cargo jackioh perf` and the per-pull-request `tests/perf.rs`, naming the record: add its `retired` marker and run
+  `cargo jackioh perf --pin` (its README).
 - **The fused-pair sweep** (`cargo jackioh fused-pairs`, #2381) fuses the text of every card with a Death, a trigger, a start- or
   end-of-turn hook, an aura or a fused hook onto every fusable Unit, and plays each pair until the board settles. A new card with one of
   those hooks joins the texts, and a new Unit joins the bodies, so the pull request's stride sample can move onto pairs nobody has
