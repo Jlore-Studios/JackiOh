@@ -13256,6 +13256,7 @@
     "4649": {
       "action": "review",
       "asks": [],
+      "closed_at": "2026-11-25T22:56:22Z",
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-23T19:57:05Z",
@@ -13271,6 +13272,7 @@
       "issue": 4599,
       "kind": "review",
       "live": "reviewing",
+      "merged": false,
       "own_review": {
         "claimed_at": "2026-11-25T05:35:55Z",
         "from_run": "45254244480",
