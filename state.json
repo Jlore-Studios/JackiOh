@@ -21244,7 +21244,7 @@
       }
     },
     "4864": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "cleared": {
@@ -21267,22 +21267,23 @@
       "forced": false,
       "interruptions": 0,
       "issue": 4814,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "resolving",
+      "live": "reviewing",
       "merge_owner": "claude-3",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-6",
       "question": "",
       "queued_at": "2026-11-25T00:36:44Z",
       "round_tier": "strong",
-      "run_id": "45576082742",
+      "run_id": "pending:0ce986bf-1795602739",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 540,
-      "started_at": "2026-11-25T08:25:00Z",
+      "started_at": "2026-11-25T10:32:58Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -23406,9 +23407,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T10:24:06Z",
+    "at": "2026-11-25T10:32:58Z",
     "url": "",
-    "what": "review #4910 on claude-4"
+    "what": "spot-check #4864 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-25T10:21:16Z",
@@ -45946,7 +45947,15 @@
         "n": 540,
         "pr": 4864,
         "queued_at": "2026-11-25T10:02:26Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "run_id": "pending:0ce986bf-1795602739",
         "sha": "85af9d5e42d3ad698087376e01a1774f444186cd",
+        "started_at": "2026-11-25T10:32:58Z",
         "status": "queued",
         "title": "Patch: Income Tax fired inside the drawer's random cast takes the drawer's hand, not its own controller's",
         "tries": 0
