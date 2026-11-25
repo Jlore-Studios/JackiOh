@@ -1,7 +1,8 @@
 //! Transform and Vanilla (SPEC §6.3): the two verbs that rewrite what a card is, so Immutable
 //! refuses both (R23). A Transform puts a new instance of another definition in the same zone and
-//! position, with no Cry (R1); the card it replaces ceases to exist rather than reaching a graveyard
-//! (R35). Vanilla is a flag the layers read (§10.4): stats, buffs and damage are other layers and
+//! position, with no Cry (R1), but it arrives: it starts what any arrival starts and runs its
+//! start-of-game clause (R4816000). The card it replaces ceases to exist rather than reaching a
+//! graveyard (R35). Vanilla is a flag the layers read (§10.4): stats, buffs and damage are other layers and
 //! must survive it, and the definition is shared by every copy of the card, so it is never edited.
 //! A retired card goes to `zones::cease_to_exist` as the copy read here: it has already left its pile.
 
@@ -89,6 +90,20 @@ fn replace_on_field(
         live.face_up = Some(true);
     }
     find_instance(ctx.state, &replacement_id).cloned()
+}
+
+/// R4816000, R151: a Transform's new card on the field runs its start-of-game clause as it arrives, as
+/// a summoned card's does (`summon_onto`), after its `transformed`: a #98 Heroic Power rolls its power
+/// (R3134002). It runs for the card's controller, the fuse's choice (`subsystems::fuse`).
+fn run_arrival_clause(ctx: &mut EffectContext<'_>, id: &str) {
+    let Some(live) = find_instance(ctx.state, id).cloned() else {
+        return;
+    };
+    if live.zone.z() != ZoneName::Field {
+        return;
+    }
+    let controller = live.controller;
+    crate::prompts::run_start_of_game(ctx, &live, controller);
 }
 
 fn off_field_pile(ctx: &EffectContext<'_>, player: PlayerId, at: OffFieldZone) -> Vec<CardInstance> {
@@ -263,7 +278,12 @@ fn replace_card(
         creator: None,
     });
     crate::generators::credit_creator(ctx, &replacement.id);
-    Some(replacement)
+    run_arrival_clause(ctx, &replacement.id);
+    Some(
+        find_instance(ctx.state, &replacement.id)
+            .cloned()
+            .unwrap_or(replacement),
+    )
 }
 
 /// R177: who could not read this card where it is (a library card: both, §9.1; a hand card: the
@@ -671,6 +691,7 @@ pub fn transform_beneath(args: TransformBeneathArgs) -> Effect {
                 creator: None,
             });
             crate::generators::credit_creator(ctx, &copy_id);
+            run_arrival_clause(ctx, &copy_id);
         }
     })
 }
@@ -734,6 +755,7 @@ pub fn transform_into_copy(args: TransformIntoCopyArgs) -> Effect {
             creator: None,
         });
         crate::generators::credit_creator(ctx, &copy_id);
+        run_arrival_clause(ctx, &copy_id);
     })
 }
 

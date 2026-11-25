@@ -1,5 +1,6 @@
 // Notices for §2.4's overflows (SPEC §10.10, R318) use the runner's entries: the newest wins per pile or hand.
 // R3910000 adds the draw limit's "Draw limit" on that Deck pile, drawn as "Deck full" is.
+// R4821002: a ceased card reads "Ceased to exist", since a deck with room reports it too.
 // #33 Unstable Clone Machine is the library-overflow fixture.
 // `data-playing="true"` follows its entry; reduced motion starts none.
 // No rule lives here (CLAUDE.md rule 7); only redacted event data is read (R97, R202), showing a back for the sentinel.
@@ -163,7 +164,7 @@ export function PileNotice({
       data-outcome={notice.outcome}
       data-playing={playing}
     >
-      <span className="pile-notice-tag">{t("Deck full")}</span>
+      <span className="pile-notice-tag">{notice.outcome === "ceased" ? t("Ceased to exist") : t("Deck full")}</span>
       <NoticeCardFace
         card={notice.card}
         view={view}

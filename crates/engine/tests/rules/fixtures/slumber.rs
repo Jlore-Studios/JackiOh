@@ -1,6 +1,6 @@
 //! Test-only cards for Dormant (SPEC §6.1, §6.2 "When this awakens", §6.3 Awaken, R1839000–R1839003):
 //! the Dormant Units Stinkyscape will print, in their shapes, and the cards that try to reach them.
-//! Ids `sl-…` from 18390, so they collide with no other fixture file's.
+//! Ids `sl-…` from 18389, so they collide with no other fixture file's.
 
 #![allow(non_upper_case_globals)]
 
@@ -63,6 +63,9 @@ pub static napper: LazyLock<CardDef> = LazyLock::new(|| def(18392, "napper", "Un
 /// hero. Aura: every Unit has +1/+1."
 pub static dozer: LazyLock<CardDef> =
     LazyLock::new(|| def(18409, "dozer", "Field Spell", 0, (0, 0), json!([])));
+/// A Field Spell with no text: what a Transform turns into a Dormant one (R4816000).
+pub static lamp: LazyLock<CardDef> =
+    LazyLock::new(|| def(18389, "lamp", "Field Spell", 0, (0, 0), json!([])));
 /// "Aura: every Unit has +1/+1."
 pub static banner: LazyLock<CardDef> = LazyLock::new(|| def(18393, "banner", "Unit", 0, (1, 1), json!([])));
 /// "Stack. Cry: the cards beneath this become copies of it" (Classic+ #4).
@@ -373,6 +376,7 @@ pub static SLUMBER_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         rouse.clone(),
         call.clone(),
         dozer.clone(),
+        lamp.clone(),
     ]
 });
 

@@ -16,7 +16,8 @@
 //! card across a BUSTED or complicated threshold (R1846000) plays every shipped reader differently.
 //!
 //! Stage 2 (`--parent-bin`, the merge base's build) keeps a script-only claim only when its forced games
-//! diverge, so a refactor claims nothing; script-claimed cards share those games in groups of
+//! diverge, so a refactor claims nothing (R4850000: a quiet plain batch plays again with the forced
+//! cards pinned Radiant, so a Radiant face's change diverges too); script-claimed cards share those games in groups of
 //! `FORCED_GROUP_CARDS`, each still in `FORCED_GAMES` games, and a group that diverges falls back
 //! card by card (R4145000); replays `UNFORCED_GAMES` games for play code, divergences
 //! touching no card being a rule at `RULE_MIN_GAMES` (R2455000); and compares self-play logs for an AI
@@ -949,11 +950,35 @@ fn steered_with(id: &str, changed: &BTreeSet<String>) -> Vec<String> {
         .collect()
 }
 
+/// Whether the parent's `golden check` report over `games` holds a divergence `watch` explains: one
+/// touching one of its families, or one touching no card at all. The games' other cards are random,
+/// so a divergence one of them explains says nothing of the forced cards.
+fn diverged_in(
+    report: &str,
+    games: &HashMap<String, Value>,
+    watch: &BTreeSet<String>,
+    head: &Side,
+) -> Result<bool> {
+    for divergence in divergences(report) {
+        let Some(game) = games.get(&divergence.seed) else {
+            continue;
+        };
+        let touched = touched_by(&divergence, game, head)?;
+        if touched.is_empty() || touched.iter().any(|touched| watch.contains(touched)) {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
 /// Whether `FORCED_GAMES` games with `force` in both decks diverge on the parent's build in a way
 /// `watch` explains: a divergence touching one of its families, or one touching no card at all. The
 /// games' other cards are random, so a divergence one of them explains says nothing of the forced
 /// cards. A non-empty `steer` (R3935001) holds those cards and plays them after the forced ones.
-/// R4145000: the shared core behind one card's check and one group's.
+/// R4145000: the shared core behind one card's check and one group's. R4850000: a plain game is
+/// Radiant only by an in-game upgrade, so when the plain batch is quiet a second batch of the same
+/// seeds plays with the forced indices pinned Radiant through `deckMarks`, and its divergences
+/// count the same way.
 fn forced_games_diverge(
     force: &[String],
     steer: &[String],
@@ -963,21 +988,20 @@ fn forced_games_diverge(
 ) -> Result<bool> {
     let traces = temp_traces();
     let seeds: Vec<u32> = (1..=FORCED_GAMES).collect();
-    record_seeds(&seeds, force, steer, &traces)?;
+    record_seeds(&seeds, force, steer, false, &traces)?;
     let (_, report) = parent_check(parent, &traces)?;
     let games = games_in(&traces)?;
-    let mut diverged = false;
-    for divergence in divergences(&report) {
-        let Some(game) = games.get(&divergence.seed) else {
-            continue;
-        };
-        let touched = touched_by(&divergence, game, head)?;
-        if touched.is_empty() || touched.iter().any(|touched| watch.contains(touched)) {
-            diverged = true;
-            break;
-        }
+    if diverged_in(&report, &games, watch, head)? {
+        let _ = fs::remove_file(&traces);
+        return Ok(true);
     }
+    let radiant = temp_traces();
+    record_seeds(&seeds, force, steer, true, &radiant)?;
+    let (_, report) = parent_check(parent, &radiant)?;
+    let games = games_in(&radiant)?;
+    let diverged = diverged_in(&report, &games, watch, head)?;
     let _ = fs::remove_file(&traces);
+    let _ = fs::remove_file(&radiant);
     Ok(diverged)
 }
 
@@ -985,7 +1009,8 @@ fn forced_games_diverge(
 /// divergence that touches its family, or one that touches no card at all. The other cards of those
 /// games are random, so a divergence one of them explains says nothing of `id`. R3935001: the games of
 /// `STEERED_GAMES` also hold and play the cards that act on `id` (`actors`), and a divergence that
-/// touches one of them counts too.
+/// touches one of them counts too. R4850000: a quiet plain batch plays again with the forced cards
+/// pinned Radiant, so a change to the card's Radiant face diverges too.
 fn forced_diverge(id: &str, actors: &[String], head: &Side, parent: &Path) -> Result<bool> {
     let mut force = vec![id.to_string()];
     force.extend(actors.iter().cloned());
@@ -1274,7 +1299,7 @@ fn check(diff: &Diff, head: &Side, parent: &Path, selfplay_dir: Option<&Path>) -
     if diff.play_code && !patch_stop(&diff.play, &checked) {
         let traces = temp_traces();
         let seeds: Vec<u32> = (1..=UNFORCED_GAMES).collect();
-        record_seeds(&seeds, &[], &[], &traces)?;
+        record_seeds(&seeds, &[], &[], false, &traces)?;
         match parent_check(parent, &traces) {
             Ok((_, report)) => {
                 let games = games_in(&traces)?;

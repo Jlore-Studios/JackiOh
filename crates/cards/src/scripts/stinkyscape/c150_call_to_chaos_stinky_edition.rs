@@ -340,6 +340,29 @@ mod tests {
         }
 
         #[test]
+        fn r4845000_r673_the_acclaimed_unit_may_be_glitch_and_refreshes_its_printed_zero() {
+            let mut s = scenario(json!({
+                "seed": SEED,
+                "p1": side(false, json!([])),
+                "p2": { "hand": [VANILLA], "library": filler(6) },
+            }));
+            s.state_mut().players.p1.mana.max = 10;
+            s.state_mut().players.p1.mana.current = 10;
+            // R673: certain odds, as a match whose System plays reach the denominator.
+            s.state_mut().system_plays = Some(GLITCH_ODDS_DENOMINATOR / GLITCH_ODDS_PER_SYSTEM_PLAY);
+            s.state_mut().rng_cursor = cursor_in(SEED, "acclaimed");
+            s.play(ID, json!({}));
+            // R4845000: the Acclaimed Unit is a card generated into a hand, so it is Glitch instead.
+            let added = added_to(&s, P1);
+            assert_eq!(added.len(), 1);
+            assert_eq!(added[0].def_id, GLITCH_DEF_ID);
+            // Its Refresh reads the card that reached the hand: Glitch's printed (0).
+            let printed = jackioh_engine::catalog::query_cost(&crate::card_def(GLITCH_DEF_ID));
+            assert_eq!(printed, 0);
+            assert_eq!(s.state().players.p1.mana.current, 10 - 4 + printed);
+        }
+
+        #[test]
         fn r1882003_entry_freeze_switches_every_enemy_unit_to_attack_and_freezes_it() {
             let s = chaos(
                 "freeze",

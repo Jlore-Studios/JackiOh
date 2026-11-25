@@ -18726,7 +18726,7 @@
         "tunedOn": "radiant"
       }
     ],
-    "loc": 34,
+    "loc": 64,
     "base": {
       "keywords": [],
       "text": "Set a Unit's Attack equal to its Health."

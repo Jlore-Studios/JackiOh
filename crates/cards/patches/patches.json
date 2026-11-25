@@ -36186,5 +36186,217 @@
       "classicplus-065"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.13j",
+    "date": "2026-11-25",
+    "title": "Patch: Ticketed is offered no permanent it cannot stack on",
+    "source": "issue #4835",
+    "notes": "Issue #4835: Ticketed's play (R4665000) is offered and may name only a permanent whose zone a card played onto it may enter (zones::accepts_stack_card): no GIGA (R3546000), none in a Locked zone (R688); ruling R4835000. Engine change in play_choices::legal_selections_for; the catalog is untouched, so the card is claimed with --plays. Classify stage 2 against the base build finds stinkyscape-009 plays differently, and no other card or rule.",
+    "player": {
+      "title": "Ticketed is offered only permanents it can stack on",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Ticketed is no longer offered a GIGA permanent, where the play was paid for and Ticketed was lost, nor a permanent in a Locked zone, which a play may not enter."
+      ]
+    },
+    "commits": [
+      "a9c2665f8dd6c6377342625a9d4de5cfd1b5e6d5"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-009"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.6.13k",
+    "date": "2026-11-25",
+    "title": "Patch: a card a Transform makes arrives as any card does: one that prints Dormant sleeps, a Phantom Shipyard stays, and a Heroic Power rolls its power",
+    "source": "issue #4816",
+    "notes": "R4816000: a Transform's new card on the field (zones::replace_in_zone) now starts its printed Dormant (R1839000, R3556000) and a hull's Starship memory (R1852000) beside its printed Brittle, as every arrival from off the field does (zones::place_with), and runs its start-of-game clause after its transformed (effects::transform::run_arrival_clause), so a #98 Heroic Power it makes rolls its power (R3134002). Still no summon (R1): no Tipsy stamp, no Crater Lock (R783010), no entry animation. classify stage 2 against main's build (6fea683ac5) finds S+ #103 Transcend plays differently; its own script is unchanged, so no KEPT_SCRIPTS entry: the verbs change for every catalog, and replays this change alters are refused as rules_changed (R767000).",
+    "player": {
+      "title": "A card a Transform makes arrives as any card does",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A card a Transform makes that prints Dormant is Dormant.",
+        "A Phantom Shipyard a Transform makes stays Dormant.",
+        "A Heroic Power a Transform makes rolls its power."
+      ]
+    },
+    "commits": [
+      "784ef8529e1468a3eb70f4757464f7f62bf268b5"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscapeplus-103"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.6.14",
+    "date": "2026-11-25",
+    "title": "Patch: the daily patch, rolling up v0.6.13b to v0.6.13k",
+    "source": "patches cut at c9562b6ec883f13e2f09b093078dcee83b7f05ea: v0.6.13b, v0.6.13c, v0.6.13d, v0.6.13e, v0.6.13f, v0.6.13g, v0.6.13h, v0.6.13i, v0.6.13j, v0.6.13k",
+    "notes": "The day's patch (R3944000): it rolls up the micros shipped since v0.6.13, each a snapshot of its own: v0.6.13b (Patch: clearer rules text for S+ #20 B-Patch); v0.6.13c (Overload); v0.6.13d (Patch: the Infinite Assault, the cards, IA-25 to IA-240); v0.6.13e (Patch: the Infinite Assault, L, the set's look and sound); v0.6.13f (One fixed order for every card's keyword line); v0.6.13g (Patch: Edwin Van’Spacechief previews its Combo gain); v0.6.13h (Forced Propagation: one Buff per copy when Echo repeats it); v0.6.13i (Patch: board scopes and Cleave treat a card lying on a unit zone as backrow, not a Unit); v0.6.13j (Patch: Ticketed is offered no permanent it cannot stack on); v0.6.13k (Patch: a card a Transform makes arrives as any card does: one that prints Dormant sleeps, a Phantom Shipyard stays, and a Heroic Power rolls its power).",
+    "player": {
+      "title": "Forced Propagation no longer double-Buffs its copies, and 9 more changes",
+      "new": [
+        "Overload (X) is a new keyword: you have X less mana next turn."
+      ],
+      "balance": [],
+      "changes": [
+        "Groundwork for future content. No card you can play looks or plays any differently.",
+        "Edwin Van’Spacechief in your hand shows the Combo gain it would get if played now."
+      ],
+      "text": [
+        "B-Patch's text now spells out the coin: Heads Buffs every card on the field and in both hands, Tails Nerfs them.",
+        "Speciesist, Medina Outfitter, Expedition12, Expedition123 and Fortify Mind print their next-turn loss as Overload.",
+        "Core System, Secure System, Legacy: Snom Bunny Mind Control, Impact Reactor and Foreshadow do too.",
+        "Hinder reads \"Overload your opponent\".",
+        "Jlarna's credit line is repaid as Overload over the next turns.",
+        "Every card's keyword line now prints its keywords in one fixed order, from cost and card flow down through combat.",
+        "No card plays differently: only the order of the words changed, in English and Chinese."
+      ],
+      "fixes": [
+        "Radiant Forced Propagation repeated by Echo no longer re-Buffs the first ten copies.",
+        "Effects that hit every Unit no longer destroy, bounce or damage a Ticketed stacked on a Unit, so the Unit beneath it stays beneath.",
+        "Cleave, and effects that reach the Units beside a card, no longer reach a Ticketed stacked on the Unit next to it.",
+        "Effects that destroy every backrow card or every Field Spell now destroy a Ticketed stacked on a Unit, and Datacenter Fire counts it in its damage.",
+        "Snom Bunny and MC Tech now count a Ticketed stacked on an enemy Unit among the enemy's permanents.",
+        "Ticketed is no longer offered a GIGA permanent, where the play was paid for and Ticketed was lost, nor a permanent in a Locked zone, which a play may not enter.",
+        "A card a Transform makes that prints Dormant is Dormant.",
+        "A Phantom Shipyard a Transform makes stays Dormant.",
+        "A Heroic Power a Transform makes rolls its power."
+      ]
+    },
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classicplus-065",
+      "stinkyscape-009",
+      "stinkyscape-109",
+      "stinkyscape-111",
+      "stinkyscapeplus-024",
+      "stinkyscapeplus-103",
+      "stinkyscapeplus-162"
+    ],
+    "includes": [
+      "v0.6.13b",
+      "v0.6.13c",
+      "v0.6.13d",
+      "v0.6.13e",
+      "v0.6.13f",
+      "v0.6.13g",
+      "v0.6.13h",
+      "v0.6.13i",
+      "v0.6.13j",
+      "v0.6.13k"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.6.14b",
+    "date": "2026-11-25",
+    "title": "Patch: Omura's Activate is not offered with no enemy Unit to aim at, so it cannot be spent on nothing and start its cooldown",
+    "source": "issue #4833",
+    "notes": "Issue #4833: Omura's Activate target is now required (R703, R3560008), so with no enemy Unit it is not offered and refused, and its cooldown cannot start on nothing. Script change only, no catalog change, claimed with --plays.",
+    "player": {
+      "title": "Omura's Activate is offered only with an enemy Unit to aim at",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Omura's Activate can no longer be used with no enemy Unit on the field, where it did nothing and started its 3-turn cooldown."
+      ]
+    },
+    "commits": [
+      "7f10b536fe523e4604d2ec85f7f2d7f3a918ada4"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscapeplus-125"
+    ],
+    "fragment": "omura-s-activate-is-not-offered-with-no-enemy-unit-to-aim-at",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14c",
+    "date": "2026-11-25",
+    "title": "Inner Fire reads Attack below 0",
+    "source": "#4840",
+    "notes": "Inner Fire took its buff off the shown Attack, so a Unit below 0 came up short; it now reads Attack before layer 5's floor",
+    "player": {
+      "title": "Inner Fire fixed below 0 Attack",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Inner Fire on a Unit with negative Attack (under an aura such as Spikey Pillow) now sets it to exactly its Health, instead of coming up short."
+      ]
+    },
+    "commits": [
+      "b6b3421bb7080050792171f4cbd3b6b655d16ca7"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-010",
+      "stinkyscape-109",
+      "stinkyscape-111"
+    ],
+    "fragment": "inner-fire-reads-attack-below-0",
+    "changes": [
+      {
+        "id": "stinkyscape-010-1",
+        "name": "Inner Fire",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.14d",
+    "date": "2026-11-25",
+    "title": "Patch: a Unit token sent into a deck is reported as gone, not shuffled in, and a Unit-token card cannot be traded, so no Trade ends in fatigue",
+    "source": "issue #4821",
+    "notes": "Issue #4821: a Unit token R11 ends on its way into a deck with room is reported libraryOverflow ceased, never shuffledIn, with no arrival hooks (draw::into_library, R4821000); a Unit-token card cannot be Traded (trade::why_trade_refused's last check, R4821001), so no Trade's draw fatigues; a ceased card reads 'Ceased to exist' on the pile and in the log (R4821002). Engine change; the catalog is untouched, so the cards are claimed with --plays. Classify stage 2 against the base build finds meditative-039, meditative-100, stinkyscape-012 and stinkyscapeplus-133 play differently (in their games a Unit token sent into a deck with room was reported shuffled in), and no rule.",
+    "player": {
+      "title": "A Unit token sent into a deck ceases to exist, and Unit-token cards cannot be Traded",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A Unit token shuffled into a deck no longer shows as going in: it ceases to exist, and the deck pile shows \"Ceased to exist\".",
+        "A Unit-token card can no longer be Traded, so a Trade never puts its player into fatigue."
+      ]
+    },
+    "commits": [
+      "09aa5eb75ce398d494fe3dda4840a351f3595feb"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "meditative-039",
+      "meditative-100",
+      "stinkyscape-012",
+      "stinkyscapeplus-133"
+    ],
+    "fragment": "a-unit-token-sent-into-a-deck-is-reported-as-gone-not",
+    "changes": []
   }
 ]

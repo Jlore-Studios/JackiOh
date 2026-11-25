@@ -4,8 +4,9 @@
 //  - `chip`: one line at the foot of the screen, with "Result" to open the panel again. Practice asks
 //    for this form from the start, because its own result dialog (PracticeResult) is the panel there.
 // Both wait for the effects layer's Victory / Defeat sequence (`revealMs`) instead of sitting under
-// its word, and neither is a rule (CLAUDE.md rule 7): it reads `PlayerView.result`, and the
-// opponent's hand once the view reveals it. `data-reason` keeps the engine's own reason for tests.
+// its word, when it plays: only a result that arrived on the mounted board (`arrived`, R4734000)
+// waits. Neither is a rule (CLAUDE.md rule 7): it reads `PlayerView.result`, and the opponent's
+// hand once the view reveals it. `data-reason` keeps the engine's own reason for tests.
 //
 // R434: the game's end reveals both hands. When the view shows the opponent's (`reveal.ts`), the
 // panel lists it as "Their hand", and the chip's button opens it in the list dialog (TheirHand.tsx).
@@ -140,6 +141,12 @@ type GameResultProps = {
   onOpenResult?: () => void;
   /** The chip's `practice-outcome` button that opens the route's result dialog. */
   openResultTestId?: string;
+  /**
+   * R4734000: whether the result arrived on the mounted board: its shown view went from no result to one,
+   * the change the effects layer plays the killing blow and Victory / Defeat on. Only then does the panel
+   * wait `resultRevealMs()`; absent or false, it comes in at once, since nothing plays.
+   */
+  arrived?: boolean;
 };
 
 export function GameResult({
@@ -152,13 +159,14 @@ export function GameResult({
   theirHand = null,
   onOpenResult,
   openResultTestId,
+  arrived = false,
 }: GameResultProps): ReactElement {
   useLocale();
   const outcome = outcomeFor(result, viewer);
   // Only the first appearance waits for the effects layer; a fold or an unfold is immediate.
   const [open, setOpen] = useState(form === "panel");
   const [toggled, setToggled] = useState(false);
-  const [revealMs] = useState(resultRevealMs);
+  const [revealMs] = useState(() => (arrived ? resultRevealMs() : 0));
   // Until it has come in, it is transparent and takes no pointer, so nothing under it is blocked.
   const [revealed, setRevealed] = useState(revealMs === 0);
   useEffect(() => {
