@@ -1477,6 +1477,8 @@ fn play_game_with_options(
     let mut heaviest = Heaviest::default();
     // The events the last logged action returned, which a probe of its nonce is owed (#1386).
     let mut last_events: Vec<GameEvent> = Vec::new();
+    // TEMPORARY (#4599 diagnosis): the last few steps' events, newest last.
+    let mut tmp_recent: std::collections::VecDeque<Vec<GameEvent>> = std::collections::VecDeque::new();
     // #2426: the cards the game played, from setup's events on (a cast on draw among them).
     let mut played: IndexSet<String> = IndexSet::new();
     note_played(&mut played, &begun.events);
@@ -1611,6 +1613,10 @@ fn play_game_with_options(
             paused_steps.push(log.len());
         }
 
+        tmp_recent.push_back(result.events.clone());
+        if tmp_recent.len() > 4 {
+            tmp_recent.pop_front();
+        }
         let mut broken = monitor.after(&result.events, &state);
         if log.len().is_multiple_of(stride) || state.result.is_some() {
             broken.extend(monitor.hidden(&state));
@@ -1622,14 +1628,21 @@ fn play_game_with_options(
             broken.extend(monitor.listed(&state, probe));
         }
         if let Some(first) = broken.first() {
-            // TEMPORARY (#4599 diagnosis, reverted before the pull request): the step's events.
-            let from = result.events.len().saturating_sub(60);
-            let step_trace: Vec<String> = result.events[from..]
+            // TEMPORARY (#4599 diagnosis, reverted before the pull request): the last steps' events.
+            let step_trace: Vec<String> = tmp_recent
                 .iter()
                 .enumerate()
-                .map(|(i, e)| {
-                    let text: String = serde_json::to_string(e).unwrap_or_default().chars().take(260).collect();
-                    format!("#{} {text}", from + i)
+                .flat_map(|(step, events)| {
+                    let from = events.len().saturating_sub(40);
+                    events[from..]
+                        .iter()
+                        .enumerate()
+                        .map(|(i, e)| {
+                            let text: String =
+                                serde_json::to_string(e).unwrap_or_default().chars().take(300).collect();
+                            format!("S{step}#{} {text}", from + i)
+                        })
+                        .collect::<Vec<_>>()
                 })
                 .collect();
             return Err(FuzzFailure::new(
