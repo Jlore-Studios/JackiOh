@@ -25698,7 +25698,7 @@
     "cost": 1,
     "loc": 6,
     "base": {
-      "attack": 2,
+      "attack": 3,
       "health": 2,
       "keywords": [
         {
@@ -25714,7 +25714,7 @@
       "text": "Starship Piece, Cloaked, Immutable"
     },
     "radiant": {
-      "attack": 4,
+      "attack": 6,
       "health": 4,
       "keywords": [
         {

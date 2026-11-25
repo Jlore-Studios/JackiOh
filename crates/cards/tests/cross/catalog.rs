@@ -6672,8 +6672,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Rare,
-        st(2, 2),
-        st(4, 4),
+        st(3, 2),
+        st(6, 4),
     ),
     row(
         "T-dormant-starship",
