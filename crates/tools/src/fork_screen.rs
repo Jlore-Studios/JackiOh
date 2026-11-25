@@ -1815,6 +1815,11 @@ mod tests {
         let _ = std::fs::remove_file(&torn);
     }
 
+    /// R4607000: how long the partial-batch test's deal 2 waits for deal 1's line before it calls
+    /// the save broken: a deal at the tests' budget takes minutes on a small runner, and longer
+    /// under the pool probe, whose suites run at once.
+    const PARTIAL_DEAL_BOUND_SECS: u64 = 1200;
+
     #[test]
     fn r4607000_a_deal_finished_before_a_batch_error_stays_in_the_file() {
         // Each finished deal reaches the file as soon as it is done, not when its
@@ -1828,28 +1833,36 @@ mod tests {
         let _ = std::fs::remove_file(&path);
 
         // Deal 2's probe fails, but only once deal 1's line has reached the file,
-        // so the test never depends on which thread finishes first.
-        let refused = resume_save(&path, &header, base, &control, 2, false, &|game: &ArenaGame| {
-            if game.n == 2 {
-                // One deal at the tests' budget takes minutes on a small runner;
-                // the bound only stops a run where deal 1 never lands.
-                let deadline = std::time::Instant::now() + std::time::Duration::from_secs(600);
-                loop {
-                    let text = std::fs::read_to_string(&path).unwrap_or_default();
-                    if text.lines().count() >= 2 {
-                        break;
+        // so the test never depends on which thread finishes first. The batch runs on
+        // a pool of its own, a thread for each deal, so deal 2's wait holds only its
+        // own thread: on rayon's global pool, whose threads the binary's other tests
+        // keep busy, deal 1 could sit unstarted behind the wait until the bound (the
+        // pool probe's run, staging's super run 45477694511).
+        let deals = rayon::ThreadPoolBuilder::new().num_threads(2).build().unwrap();
+        let refused = deals.install(|| {
+            resume_save(&path, &header, base, &control, 2, false, &|game: &ArenaGame| {
+                if game.n == 2 {
+                    // One deal at the tests' budget takes minutes on a small runner;
+                    // the bound only stops a run where deal 1 never lands.
+                    let deadline =
+                        std::time::Instant::now() + std::time::Duration::from_secs(PARTIAL_DEAL_BOUND_SECS);
+                    loop {
+                        let text = std::fs::read_to_string(&path).unwrap_or_default();
+                        if text.lines().count() >= 2 {
+                            break;
+                        }
+                        assert!(
+                            std::time::Instant::now() < deadline,
+                            "deal 1 never reached the file"
+                        );
+                        std::thread::sleep(std::time::Duration::from_millis(10));
                     }
-                    assert!(
-                        std::time::Instant::now() < deadline,
-                        "deal 1 never reached the file"
-                    );
-                    std::thread::sleep(std::time::Duration::from_millis(10));
+                    anyhow::bail!("r4607000-partial: deal 2 fails");
                 }
-                anyhow::bail!("r4607000-partial: deal 2 fails");
-            }
-            Ok(Probe::scripted(game.n, late_fork))
-        })
-        .unwrap_err();
+                Ok(Probe::scripted(game.n, late_fork))
+            })
+            .unwrap_err()
+        });
         assert!(refused.to_string().contains("deal 2 fails"), "{refused}");
         // The finished deal survived the failed batch.
         let lines = read_lines(&path);

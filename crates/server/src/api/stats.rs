@@ -54,12 +54,12 @@ use jackioh_engine::wire::stats::{
     CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardTier, CardWindow, CreatedStats, GameFigures,
     GameMode, GameSource, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures,
     PlayVersionQuery, PlayVersionTable, SourceFilter, StatsFace, StatsField, StatsTotals, SwingReport,
-    SwingRows, Tally, TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated, WindowedGames,
-    WindowedReport, add_created, add_stats, card_family, card_stats_of, card_window, collapse_gameless,
-    created_face_adjusted, created_face_field, created_face_side, face_adjusted, face_drills_of, face_side,
-    face_stats_field, held_adjusted, patch_windows, play_version_figures, radiant_gap, seen, sources_of,
-    stats_field, swing_baseline, swing_report, tier_in, wilson_interval, win_rate, windowed_card_stats,
-    windowed_game_figures, windowed_swing_rows,
+    SwingRows, SwingTally, Tally, TotalsKey, WindowQuery, WindowRequest, WindowSource, WindowedCreated,
+    WindowedGames, WindowedReport, add_created, add_stats, card_family, card_stats_of, card_window,
+    collapse_gameless, created_face_adjusted, created_face_field, created_face_side, face_adjusted,
+    face_drills_of, face_side, face_stats_field, held_adjusted, patch_windows, play_version_figures,
+    radiant_gap, seen, sources_of, stats_field, swing_baseline, swing_report, tier_in, wilson_interval,
+    win_rate, windowed_card_stats, windowed_game_figures, windowed_swing_rows,
 };
 use jackioh_engine::{
     CardCost, CardDef, CardDefs, Pilot, WinRateTable, made_by_a_rule, win_rates_from_report,
@@ -1613,13 +1613,14 @@ pub async fn get_cards(app: &Arc<App>, req: Req) -> ApiResult {
     // R4552001, R4552002: every card's Decisiveness, read off the same cards as All's two fields, beside
     // the turns of the records the window counts. R4673000: All's on every face, as the play rate is: a
     // turn row names no face.
+    let empty = SwingTally::default();
     let swing = swing_report(
         app.catalog
             .defs
             .iter()
             .filter(|(_, def)| !def.token)
             .filter_map(|(id, _)| report.card(id))
-            .map(|card| (card.stats.card.as_str(), &card.stats.swing)),
+            .map(|card| (card.stats.card.as_str(), card.stats.swing.or(&empty))),
         report
             .created
             .iter()

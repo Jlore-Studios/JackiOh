@@ -122,6 +122,8 @@
 #    repo_root().join(MIGRATIONS_REL), #4157) tools, wasm as well as server; and
 #    packages/, apps/server/ and ladder/ (acceptance.rs's V28) tools, wasm; training/history/sweep-*.md
 #    (the tools' test that holds crates/ai/src/shadow_ban.rs to its reports of record) tools, wasm;
+#    training/history/hand.jsonl (the AI's test that holds generation.json to its history line, R4921000)
+#    ai;
 #    analysis/fixtures/'s dev-40.jsonl, live-40.jsonl, games.report.json, counts.jsonl and
 #    counts.report.json (the tools' test that holds `stats report --games` to them, R1994000) tools,
 #    wasm; apps/web/src/audio/voice-text.json (the
@@ -366,6 +368,7 @@ for file in $files; do
     e2e/support/config.ts) on rust_server ;;
     e2e/cypress/e2e/01-* | e2e/cypress/e2e/13-*) on rust_tools_wasm ;;
     apps/web/.env.production | packages/* | apps/server/* | ladder/* | training/history/sweep-*.md) on rust_tools_wasm ;;
+    training/history/hand.jsonl) on rust_ai ;;
     apps/web/src/audio/voice-text.json) on rust_tools_wasm ;;
     apps/web/src/game/cardModes.json) on rust_tools_wasm ;;
     spec/15-dungeon-run.md | spec/16-infinite-assault.md | spec/README.md) on rust_tools_wasm ;;

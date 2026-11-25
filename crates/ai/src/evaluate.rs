@@ -3311,28 +3311,57 @@ pub fn prompt_activation_prices(
     priced
 }
 
-/// R2688000: `turn` with `unit` as its hookless twin, and the keywords it prints: the twin is Vanilla
-/// (§6.3), so `script_of` runs none of its text and neither of its attack hooks fires (nor its wake
-/// trigger, R3064000), and it is
-/// granted the keywords it prints, as tuning leaves them (`face_of`), so it fights as itself.
-fn hookless_twin(turn: &GameState, unit: &CardInstance) -> (GameState, Vec<Keyword>) {
-    let printed = face_of(turn, unit).keywords;
-    let mut twin = turn.clone();
-    if let Some(card) = find_instance_mut(&mut twin, &unit.id) {
-        card.granted_keywords.extend(printed.iter().cloned());
-        card.vanilla = true;
+/// R4811000: the keywords `held` lists that `kept` does not, one for each entry `kept` lacks (two Armor
+/// entries are two, as §6.1 sums them): what a Vanilla copy of a unit loses of the keywords it holds.
+fn keywords_lost(held: &[Keyword], kept: &[Keyword]) -> Vec<Keyword> {
+    let mut left = kept.to_vec();
+    let mut lost = Vec::new();
+    for keyword in held {
+        match left.iter().position(|other| other == keyword) {
+            Some(at) => {
+                left.remove(at);
+            }
+            None => lost.push(keyword.clone()),
+        }
     }
-    (twin, printed)
+    lost
 }
 
-/// R2688000: `after`, the hookless twin's attack, with the unit's text given back before it is scored:
-/// Vanilla off and the printed keywords it was granted taken off again, one of each, so its Brittle,
-/// its lent keywords, its auras and its set stats read on both sides of the price as they do on the
-/// unit's own. A twin the attack took off the field has nothing to give back.
-fn with_text_back(mut after: GameState, unit_id: &str, printed: &[Keyword]) -> GameState {
-    if let Some(card) = find_instance_mut(&mut after, unit_id) {
-        card.vanilla = false;
-        for keyword in printed {
+/// R2688000, R4811000: `turn` with `unit` as its hookless twin, and the keywords the twin was granted:
+/// the twin is Vanilla (§6.3), so `script_of` runs none of its text and neither of its attack hooks
+/// fires (nor its wake trigger, R3064000), and it is granted the keywords it prints, as tuning leaves
+/// them (`face_of`), then every keyword the unit holds (`unit_view`) that this Vanilla copy does not
+/// (`keywords_lost`), a "your Units have X" lend among them, which no Vanilla card takes (R1859007), so
+/// it fights as itself. A unit already Vanilla runs no text: it is its own twin, granted nothing.
+fn hookless_twin(turn: &GameState, unit: &CardInstance) -> (GameState, Vec<Keyword>) {
+    let mut twin = turn.clone();
+    if unit.vanilla {
+        return (twin, Vec::new());
+    }
+    let mut granted = face_of(turn, unit).keywords;
+    if let Some(card) = find_instance_mut(&mut twin, &unit.id) {
+        card.granted_keywords.extend(granted.iter().cloned());
+        card.vanilla = true;
+    }
+    let lost = find_instance(&twin, &unit.id)
+        .map(|card| keywords_lost(&unit_view(turn, unit).keywords, &unit_view(&twin, card).keywords))
+        .unwrap_or_default();
+    if let Some(card) = find_instance_mut(&mut twin, &unit.id) {
+        card.granted_keywords.extend(lost.iter().cloned());
+    }
+    granted.extend(lost);
+    (twin, granted)
+}
+
+/// R2688000, R4811000: `after`, the hookless twin's attack, with the unit's text given back before it
+/// is scored: Vanilla as the unit was (off, unless it was Vanilla already), and the keywords the twin
+/// was granted (`hookless_twin`) taken off again, one of each, so its Brittle, its lent keywords, its
+/// auras and its set stats read on both sides of the price as they do on the unit's own. A twin the
+/// attack took off the field has nothing to give back.
+fn with_text_back(mut after: GameState, unit: &CardInstance, granted: &[Keyword]) -> GameState {
+    if let Some(card) = find_instance_mut(&mut after, &unit.id) {
+        card.vanilla = unit.vanilla;
+        for keyword in granted {
             if let Some(at) = card
                 .granted_keywords
                 .iter()
@@ -3379,14 +3408,14 @@ fn attack_hook_probe(
     if !settled(&hooked) {
         return Some(None);
     }
-    let (twin, printed) = hookless_twin(turn, unit);
+    let (twin, granted) = hookless_twin(turn, unit);
     let Ok(plain) = simulate(&twin, owner, attack, counter, Prices::NONE)? else {
         return Some(None);
     };
     if !settled(&plain) {
         return Some(None);
     }
-    let plain = with_text_back(plain, &unit.id, &printed);
+    let plain = with_text_back(plain, unit, &granted);
     let gained = hooked.players[owner].mana.current - plain.players[owner].mana.current;
     Some(Some(
         evaluate(&hooked, owner, NextSwing::Enemy, &AI_EVAL)
@@ -3492,11 +3521,11 @@ fn awaken_probe(before: &GameState, unit: &CardInstance, counter: &dyn NodeCount
     let Some(hooked) = wake_once(before, &unit.id, counter)? else {
         return Some(None);
     };
-    let (twin, printed) = hookless_twin(before, unit);
+    let (twin, granted) = hookless_twin(before, unit);
     let Some(plain) = wake_once(&twin, &unit.id, counter)? else {
         return Some(None);
     };
-    let plain = with_text_back(plain, &unit.id, &printed);
+    let plain = with_text_back(plain, unit, &granted);
     let gained = hooked.players[owner].mana.current - plain.players[owner].mana.current;
     Some(Some(
         evaluate(&hooked, owner, NextSwing::Enemy, &AI_EVAL)

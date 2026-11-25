@@ -2416,8 +2416,11 @@ pub const WIN_PROBABILITY_FIRST: f64 = 0.1472779464267806;
 
 /// R4552000: the AI generation (`crates/ai/generation.json`, R1367000) whose evaluation the four weights
 /// above were fit against. A change to the AI's evaluation moves the raw scale a record keeps, so a refit
-/// names its generation here.
-pub const WIN_PROBABILITY_AI_GENERATION: i32 = 13;
+/// names its generation here. R4921000: 14. The fit's rows (`swingTurns`, #4574) were written from
+/// 2026-11-24, after R4159000 retired the learned evaluation, by `evaluate`, the hand evaluation, which
+/// that retirement left as it was; the generation only now names the AI that played them, so the weights
+/// stand.
+pub const WIN_PROBABILITY_AI_GENERATION: i32 = 14;
 
 /// R4552000: a turn row keeps the evaluation difference times this, rounded, so the record is whole
 /// numbers (thousandths of the AI's units).
