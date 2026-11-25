@@ -41110,34 +41110,6 @@
   "spot_checks": {
     "checks": [
       {
-        "approver": {},
-        "builder": {},
-        "difficulty": "hard",
-        "done_at": "2026-11-03T17:38:26Z",
-        "every": 5,
-        "findings": 0,
-        "head": "98dc08c430b014676e8de2d13897e3dd1eda6c7e",
-        "issue": 2725,
-        "last_why": "stopped: #2904 was closed",
-        "merged_at": "2026-11-03T16:24:08Z",
-        "n": 20,
-        "pr": 2904,
-        "queued_at": "2026-11-03T16:24:08Z",
-        "reason": "stopped: #2904 was closed",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-3",
-          "tier": "strong"
-        },
-        "sha": "3343de55d27371973091b40e2a58bb52d794d23f",
-        "started_at": "2026-11-03T17:21:29Z",
-        "status": "done",
-        "title": "Patch: ten new card versions (alt art, sketch, pixel, immersive and more) and a deeper rarity ladder, after Pok\u00e9mon TCG Pocket; full arts rarer",
-        "tries": 3,
-        "verdict": "failed"
-      },
-      {
         "approver": {
           "family": "claude",
           "model": "opus",
@@ -44675,7 +44647,9 @@
           "provider": "claude-8"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-25T05:04:48Z",
         "every": 5,
+        "findings": 0,
         "head": "8b3b5b7b1f36d5f7416675b35050b090929ba858",
         "issue": 4672,
         "merged_at": "2026-11-25T03:11:23Z",
@@ -44688,12 +44662,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:baed7c2e-1795582489",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45550041072",
         "sha": "eeea5aacb6b2b800515b3f45fdd3b1bdbe43d57c",
         "started_at": "2026-11-25T04:55:26Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: deeper card stats, S0, each play's choice and each made card's maker in the record",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       },
       {
         "approver": {
