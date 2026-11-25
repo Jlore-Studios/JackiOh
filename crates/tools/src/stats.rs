@@ -44,11 +44,11 @@ use jackioh_engine::{
     CardChoicesRow, CardStats, CardStatsFilter, CardStatsReport, CardWindow, CreatedStats,
     DEFAULT_CARD_STATS_FILTER, DEV_RECORD_ID_PREFIX, FORCED_SERIES_PREFIX, GAME_MODES, GameFigures,
     GameGroup, GameMode, GameRecord, GameReport, ModeFilter, PILOT_FILTERS, PilotFilter, PlayVersionQuery,
-    PlayVersionTable, PlayerId, SOURCE_FILTERS, SourceFilter, StatsTotals, SwingFigures, SwingReport, Tally,
-    WindowQuery, WindowRequest, WindowedCard, WindowedCreated, WindowedReport, Winner, adjusted_win_rate,
-    card_stats, card_stats_of, created_played_delta, describe_filter, drawn_delta, format_card_choices,
-    format_card_stats, format_delta, format_play_versions, format_swing, format_tally, game_report,
-    not_drawn, play_version_figures, record_matches, stats_field, swing_baseline, swing_report,
+    PlayVersionTable, PlayerId, SOURCE_FILTERS, SourceFilter, StatsTotals, SwingFigures, SwingReport,
+    SwingTally, Tally, WindowQuery, WindowRequest, WindowedCard, WindowedCreated, WindowedReport, Winner,
+    adjusted_win_rate, card_stats, card_stats_of, created_played_delta, describe_filter, drawn_delta,
+    format_card_choices, format_card_stats, format_delta, format_play_versions, format_swing, format_tally,
+    game_report, not_drawn, play_version_figures, record_matches, stats_field, swing_baseline, swing_report,
     swing_rows_of, windowed_card_stats,
 };
 use serde::Serialize;
@@ -627,11 +627,12 @@ fn swing_of(records: &[GameRecord], filter: &CardStatsFilter) -> (CardStatsRepor
         totals.fold(record, false);
     }
     let report = card_stats_of(&totals, filter);
+    let empty = SwingTally::default();
     let swing = swing_report(
         report
             .cards
             .iter()
-            .map(|stats| (stats.card.as_str(), &stats.swing)),
+            .map(|stats| (stats.card.as_str(), stats.swing.or(&empty))),
         report
             .created
             .iter()
