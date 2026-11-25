@@ -16,6 +16,11 @@ turn: number, active: PlayerId,
  */
 pendingFor: PlayerId | null, 
 /**
+ * R4848000: the open prompt's id, or null; the prompt clock keys on it. Host bookkeeping: a seat's view
+ * shows the other seat only who holds a prompt (§10.6).
+ */
+pendingId: string | null, 
+/**
  * R265: while both mulligans are open (phase `mulligan`, `pending_for` null), the seats that
  * still owe theirs, in seat order; empty otherwise. Public (R266: that a seat is ready is
  * public, what it kept is not), and the mulligan clock (R268) and its expiry read nothing else.

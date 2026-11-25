@@ -683,19 +683,20 @@ view), never `R<n>`.
 `on_attached`, `on_disconnected`, `on_seats_swapped`, `on_stop`).
 
 **Fields:** the clock's `stopped`; the turn clock's `owner`, `turn_key` and `remaining` (with its timer); the
-non-active holder's prompt clock (`holder`, with its timer); the mulligan window's `mulligan_open` and
-`mulligan_expired` (with its timer and deadline); each seat's `grace[p]`; the question sequence's `sequence_first` and
-`sequence_player` (with its timer); `ceiling` and `ceiling_at`; and, read with them, the host's `finished`, `stopped`,
-`run` (an expiry's server actions still owed, logged one row at a time) and `stored_grace` (R744's deadline not yet
-handed to the clock). Each timer is a `Countdown`'s id in the state; the host that runs the machine keeps the timer.
+non-active holder's prompt clock (`holder` and `prompt_for`, the prompt it was armed for, with its timer); the
+mulligan window's `mulligan_open` and `mulligan_expired` (with its timer and deadline); each seat's `grace[p]`; the
+question sequence's `sequence_first` and `sequence_player` (with its timer); `ceiling` and `ceiling_at`; and, read
+with them, the host's `finished`, `stopped`, `run` (an expiry's server actions still owed, logged one row at a time)
+and `stored_grace` (R744's deadline not yet handed to the clock). Each timer is a `Countdown`'s id in the state; the
+host that runs the machine keeps the timer.
 
 **What moves it:** `DuelHost::new` (the ceiling armed from the match's start, then a sync: the mulligan window or the
 turn clock); `arm` (a sync, and R744's absent grace in a bot's match); a row written (`after_change`'s sync: the turn
-key, the prompt's holder, the window, the sequence); a timer firing (`fire` names the expiry, and `on_expire` derives
-its server actions and logs them, R79, R268); the log refusing a server row (R776000's `retry`, a retry later); a
-socket arriving or leaving (§9.5's grace, R147, R744); a Glitch's swap (R677); the game ending or `stop` (every timer
-taken back); a rebuild (a new host: the ceiling from `created_at`, the rest afresh but a stored grace, R744); a JSON
-round trip (the timer ids kept, the timers not). Its rows are T1 to T20 (T for timer), never `R<n>`.
+key, the prompt's holder and id, the window, the sequence); a timer firing (`fire` names the expiry, and `on_expire`
+derives its server actions and logs them, R79, R268); the log refusing a server row (R776000's `retry`, a retry
+later); a socket arriving or leaving (§9.5's grace, R147, R744); a Glitch's swap (R677); the game ending or `stop`
+(every timer taken back); a rebuild (a new host: the ceiling from `created_at`, the rest afresh but a stored grace,
+R744); a JSON round trip (the timer ids kept, the timers not). Its rows are T1 to T21 (T for timer), never `R<n>`.
 
 | # | Combination | Reachable (sequence) or not (why) | Expected (source) | Does (test) |
 |---|---|---|---|---|
@@ -706,7 +707,7 @@ round trip (the timer ids kept, the timers not). Its rows are T1 to T20 (T for t
 | T5 | a setup question the first seat holds (turn 0, the prompt the active seat's) | Reachable: a cast-on-draw card in p1's opening deal asks before the mulligans open (§2.4) | **Unspecified**: R268 calls setup nobody's turn, while R79 governs the active player's prompt by the turn clock. The turn clock times it from full and its expiry is a `Turn` timeout | `crates/shared/tests/clock.rs::match_clock::a_setup_question_the_first_seat_holds_is_timed_by_its_turn_clock` (new); p2's, on its prompt clock: `…::match_clock::r268_a_cards_question_during_setup_is_still_timed_by_r79_on_either_side_of_the_window` |
 | T6 | the turn clock running, no prompt | Reachable: any turn | Runs out after `TURN_CLOCK_SECONDS`, naming the active player; a `timeout` logged under `srv-turn-<seq>`; the next seat's clock from full (R79, R270) | `crates/shared/tests/clock.rs::match_clock::r79_expires_the_turn_clock_after_turn_clock_seconds_and_names_the_active_player`, `…::match_clock::resets_the_turn_clock_when_the_turn_changes`, `crates/shared/tests/duel.rs::the_turn_clock::r79_the_active_players_clock_running_out_logs_a_timeout_under_a_server_nonce` |
 | T7 | a prompt the non-active player holds | Reachable: a trap's question on the opponent's turn | Its own prompt clock; the turn clock paused with what it had left; only the prompt's clock runs out; the active player's prompt stays on the turn clock (R79) | `crates/shared/tests/clock.rs::match_clock::r79_a_prompt_held_by_the_non_active_player_pauses_the_turn_clock_and_only_its_own_clock_expires`, `…::match_clock::does_not_pause_the_turn_clock_for_a_prompt_held_by_the_active_player` |
-| T8 | a second prompt for the same non-active holder, with no sync between that has none | Reachable: the holder answers and the answer's resolution asks it again | **Unspecified**: R79 gives such a prompt "its own prompt clock of 30 s"; the clock keys it by holder alone, so the second keeps the first one's deadline | `crates/shared/tests/clock.rs::match_clock::a_second_prompt_for_the_same_non_active_holder_keeps_the_first_ones_deadline` (new) |
+| T8 | a second prompt for the same non-active holder, with no sync between that has none | Reachable: the holder answers and the answer's resolution asks it again | Each prompt its own 30 s (R4848000; was unspecified: the second kept the first one's deadline) | `crates/shared/tests/clock.rs::match_clock::r4848000_a_second_prompt_for_the_same_non_active_holder_gets_its_own_30_seconds`, `…::match_clock::r4848000_the_same_prompt_synced_again_keeps_its_deadline`, `crates/shared/tests/duel.rs::the_prompt_clock::r4848000_a_question_answered_in_time_leaves_the_next_its_own_30_seconds` |
 | T9 | a server row the log refused | Reachable: the store fails the row | The clock that ran out runs out again a retry later and the action is derived again under the same nonce; whatever would stop that clock stops the retry (R776000) | `crates/shared/tests/duel.rs::the_turn_clock::r776000_a_row_the_log_would_not_take_runs_the_clock_out_again_and_the_same_nonce_is_retried`, `crates/shared/tests/clock.rs::match_clock::r776000_a_retry_runs_an_expired_turn_clock_out_once_more_and_a_new_turn_cancels_it`, `…::match_clock::r776000_a_retried_prompt_mulligan_or_ceiling_clock_runs_out_once_more`, `…::r776000_retries::r776000_a_retry_for_another_seat_or_a_closed_window_re_arms_nothing` |
 | T10 | a clock running out while a seat's own row is in flight | Reachable: the active seat's End turn is still being written as its turn clock runs out | **Unspecified**: the timeout finds the log busy and is answered `NotRecorded`, so the clock runs out again a retry later; the row landing ends the turn, which takes the retry back, and the next seat's clock runs from the row | `crates/shared/tests/duel.rs::the_turn_clock::a_clock_running_out_while_a_seats_row_is_in_flight_is_tried_again_and_a_new_turn_cancels_it` (new) |
 | T11 | a seat's grace running | Reachable: a socket drops (§9.5), or the first attach finds the other account not yet here (R744) | The clock keeps running; the grace's end is that seat's loss; a second grace keeps the first deadline (R147); a stored one is kept up to a fresh window (R744); coming back inside it ends it (§9.5) | `crates/shared/tests/duel.rs::being_here::s9_5_a_dropped_socket_starts_the_grace_and_the_opponent_is_told`, `…::being_here::s9_5_the_grace_running_out_is_a_loss_for_the_seat_that_left`, `…::being_here::s9_5_returning_inside_the_window_ends_the_grace_and_greets_the_seat_with_a_fresh_view`, `…::being_here::r744_a_grace_stored_before_a_restart_is_kept_up_to_a_fresh_window`, `crates/shared/tests/clock.rs::match_clock::r147_keeps_the_first_deadline_when_a_second_grace_starts_so_a_flapping_socket_cannot_extend_it` |
@@ -719,6 +720,7 @@ round trip (the timer ids kept, the timers not). Its rows are T1 to T20 (T for t
 | T18 | a rebuilt host (a new host for a match made earlier) | Reachable: a restart or a let-go, then a socket | The ceiling at what is left of it from the match's start (R79), the mulligan or turn clock afresh (`clock.rs`: "A rebuilt host (§9.5) arms a fresh full deadline"), a stored grace kept (R744) | `crates/shared/tests/duel.rs::the_opening::r79_r268_a_rebuilt_host_arms_the_ceiling_left_and_the_mulligans_afresh_and_the_ceiling_draws` (new), `…::being_here::r744_a_grace_stored_before_a_restart_is_kept_up_to_a_fresh_window` |
 | T19 | stopped (the game over, or `stop`) | Reachable: the game ends; `stop` | Every timer taken back; a later sync or timer does nothing (R79, §9.5) | `crates/shared/tests/clock.rs::match_clock::stops_everything_once_the_match_is_over`, `…::match_clock::stop_cancels_every_timer_and_is_idempotent`, `…::match_clock::r268_stop_cancels_a_running_mulligan_clock`, `crates/shared/tests/duel.rs::being_here::stop_takes_every_clock_back_and_later_timers_do_nothing` |
 | T20 | the ceiling running out | Reachable: `MATCH_CEILING_MINUTES` after the match's start | One `ceilingReached` row stamped with the active seat, the match a draw (R79, R146, R389) | `crates/shared/tests/clock.rs::match_clock::r79_fires_the_ceiling_once_measured_from_started_at`, `…::r389_the_match_ceiling_doubled_with_the_turn_cap_patch_v0_2_0_b4_3::r389_the_clock_arms_the_ceiling_at_the_configured_minutes_from_the_matchs_start`, T18's test (its `srv-ceiling-1` and the draw) |
+| T21 | a non-active holder's prompt clock run out, its timeout opening the next prompt for the same holder | Reachable: S #22 Gatinsir's Phalanxes ask the seat not on turn four Discovers (R2176000), or a chain of Plague Counter questions | Its own 30 s (§9.5, R79, R4848000) | **#4848: was a mismatch, fixed**: `sync` armed nothing for the same holder, so only the ceiling ran and a silent seat held the turn to it. `crates/shared/tests/duel.rs::the_prompt_clock::r4848000_a_question_that_follows_a_timed_out_one_for_the_seat_not_on_turn_has_its_own_prompt_clock`, `…::the_prompt_clock::r4848000_a_silent_seat_not_on_turn_cannot_hold_the_match_past_its_prompt_clocks`, `…::the_prompt_clock::r4848000_a_refused_timeout_runs_the_same_questions_clock_out_again_and_the_next_question_gets_its_own`, `crates/shared/tests/clock.rs::match_clock::r4848000_a_spent_prompts_clock_waits_for_the_retry_and_the_next_prompt_gets_a_fresh_one`, `crates/shared/tests/host_fuzz.rs::r4848000_the_silent_probe_passes_a_chain_of_questions_for_the_seat_not_on_turn` |
 
 T17 is also **representable when serialized**: a `DuelHost` read back holds timer ids that name timers no host keeps.
 
@@ -887,12 +889,12 @@ Each reads an older record; nothing is removed.
   from `arm`, where the shared README's `arm` row says "clocks brought up to date" and design rule 3 has a match
   resume on another server; a fix changes what `arm` emits for every match the server arms).
 - **#4550's unspecified:** S16 (a socket that closes as it is seated sends the held tab to `elsewhere` with nobody on
-  the seat), T5 (the first seat's setup question runs on its turn clock), T8 (a second prompt for the same holder
-  keeps the first one's deadline), T10 (a clock running out with the seat's own row in flight is retried), T12 (a
-  seat back while its forfeit's row is in flight still forfeits on the retry, where one back after the refusal
-  does not), T13 (a swap gives the away account a fresh grace), T15 (a host that meets a sequence mid-way opens a
-  full window), T16 (a host made for a finished match with no result arms clocks that log nothing), O1 (a restart
-  forgets every rematch offer and claim) and O10 (a read past the window still shows an offer nothing can meet).
+  the seat), T5 (the first seat's setup question runs on its turn clock), T10 (a clock running out with the seat's
+  own row in flight is retried), T12 (a seat back while its forfeit's row is in flight still forfeits on the retry,
+  where one back after the refusal does not), T13 (a swap gives the away account a fresh grace), T15 (a host that
+  meets a sequence mid-way opens a full window), T16 (a host made for a finished match with no result arms clocks
+  that log nothing), O1 (a restart forgets every rematch offer and claim) and O10 (a read past the window still shows
+  an offer nothing can meet). T8 is decided by R4848000 (#4848).
 - **#4550's not checked:** the decks screen and the friends drawer each run their own `useUndoHold` (§15), so two
   deletions may be held at once, where R2119000 has "one is held at a time"; no test mounts both.
 - **Not shown:** E5′ (mulligans open with work owed); W10 (a duplicated tab: jsdom cannot copy a tab).
