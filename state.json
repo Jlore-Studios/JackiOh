@@ -20620,10 +20620,17 @@
     },
     "4836": {
       "action": "build",
+      "archived": {
+        "at": "2026-11-25T20:04:10Z",
+        "branch": "bot/issue-4836",
+        "head": "097f5efec3997d95cde9510eaa7cbac06134005d",
+        "issue": 4836,
+        "item": 4952,
+        "pr": 4952,
+        "why": "Someone with GitHub access needs to open run 45682322780 (https://github.com/Jlore-Studios/JackiOh/actions/runs/45682322780). In the `e2e smoke (1/4)` and `e2e smoke (3/4)` jobs, read the `the e2e specs of this shard` step: the Chrome version in Cypress's header, and the error. If it is `* is not a valid URL` on Chrome 158, the runner's Chrome is the cause, not this pull request. Then either pin CI's Chrome under `.github/` or upgrade Cypress in `e2e/package.json` (best as its own issue, since it affects every pull request), and re-run the two shards on this head. If the step instead shows a failing test in spec 01, 10 or 13, comment `@jgoetzmann-bot` with that assertion's text and the bot will fix it."
+      },
       "asks": [],
       "died": 0,
-      "failures": 0,
-      "forced": false,
       "handoff": {
         "at": "2026-11-25T19:05:56Z",
         "family": "claude",
@@ -20634,13 +20641,9 @@
         "trail": "ones-it-covers-for-the.json'\\nd=json.load(open(p))\\nd['notes']=d['notes'].replace(\\\"cla\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport json\\np='crates/cards/patches/pending/tributing-a-giga-empties-all-four-zones-it-covers-for-the.json'\\nd=json.load(open(p))\\nold=\\\"no script changed, so no KEPT\u2026\n- said: Re-running classify with the fragment in place to confirm `--claims` passes. First checking whether the binary compiles pending fragments in, which decides whether I must rebuild the head.\n- Bash: {\"command\": \"grep -rn \\\"pending\\\" crates/cards/build.rs | head -5; grep -rln \\\"patches/pending\\\" crates/tools/src/*.rs | head\", \"description\": \"Check whether pending fragments are compiled into the b\u2026\n- Bash: {\"command\": \"grep -n \\\"patches/pending\\\\|fn pending\\\\|read_dir\\\\|root\\\" crates/tools/src/claims.rs | head -15\", \"description\": \"See how claims.rs reads pending fragments\"}\n- said: Fragments are read from the head commit in git, and the engine in today's release binary is the same as the head's, so I only need to commit the fragment in the scratch worktree and re-run.\n- Bash: {\"command\": \"set -e; cp \\\"$CARGO_TARGET_DIR/release/jackioh\\\" /tmp/jackioh-head\\nf=crates/cards/patches/pending/tributing-a-giga-empties-all-four-zones-it-covers-for-the.json\\nmkdir -p ../jackioh-wt/\u2026\n- Bash: {\"command\": \"echo \\\"- Build pass 1: wrote fragment (--plays 4 cards, player note). Re-ran classify with fragment committed in classify-head using this worktree's release bin: kind internal, cards [],\u2026\n- Bash: {\"command\": \"sed -n 1255,1345p crates/tools/src/classify.rs\", \"description\": \"Read classify's unforced-games stage\"}\n- Bash: {\"command\": \"grep -n \\\"fn patch_stop\\\\|fn check_scripts\\\\|play: \\\\|\\\\.play = \\\\|pub play\\\\b\\\\|play_code\\\" crates/tools/src/classify.rs | head -20\", \"description\": \"Find patch_stop, check_scripts and \u2026\n- Bash: {\"command\": \"sed -n 470,560p crates/tools/src/classify.rs; sed -n 600,660p crates/tools/src/classify.rs\", \"description\": \"Read the Diff struct and how play_code is set\"}\n- Bash: {\"command\": \"echo \\\"== run1 err\\\"; cat /tmp/classify-4836.err | tail -15; echo \\\"== run2 err\\\"; cat /tmp/classify-4836b.err | tail -15; ls -la /tmp/jackioh-base /tmp/jackioh-head; md5sum /tmp/jackioh\u2026\n- Bash: {\"command\": \"wc -l crates/tools/src/claims.rs; grep -n \\\"^pub\\\\|^fn\\\\|plays as before\\\\|play_code\\\\|touched\\\" crates/tools/src/claims.rs | head -40\", \"description\": \"Outline claims.rs\"}\n- Bash: {\"command\": \"sed -n 52,140p crates/tools/src/claims.rs; grep -n \\\"claims::problems\\\\|fragments_at\\\" crates/tools/src/classify.rs | head\", \"description\": \"Read the claims problems function\"}\n- Bash: {\"command\": \"echo \\\"- Build pass 1: run 2 was invalid \\u2014 classify reads git at the build workspace (item-4836, HEAD = base). Re-running with --root ../jackioh-wt/classify-head.\\\" >> .bot-notes.md\u2026\n- Bash: {\"command\": \"grep -n \\\"import\\\\|pending\\\" apps/web/src/wording.test.ts | head -15\", \"description\": \"Check what wording.test.ts reads\"}\n- said: It reads the fragment from disk, so the harness's `--changed` run won't pick it up, but CI's full web run will. Running that file alone.\n- Bash: {\"command\": \"ls apps/web/src/wasm/pkg 2>/dev/null | head -3; timeout 600 pnpm exec vitest run --project web apps/web/src/wording.test.ts 2>&1 | tail -15\", \"description\": \"Run the web wording test on \u2026\n- said: It needs the WebAssembly build first (the harness's web step builds it too). Building it, then re-running.\n- Bash: {\"command\": \"sh scripts/build-wasm.sh > /tmp/wasm-build.log 2>&1; echo \\\"wasm exit=$?\\\"; tail -3 /tmp/wasm-build.log; timeout 600 pnpm exec vitest run --project web apps/web/src/wording.test.ts 2>&1 \u2026\n- Bash: {\"command\": \"timeout 600 pnpm exec vitest run --project web apps/web/src/wording.test.ts 2>&1 | grep -E \\\"Test Files|Tests |\\u2713|\\u2717|FAIL|\\u00d7\\\" | head -10; git status --porcelain\", \"descripti\u2026\n- Bash: {\"command\": \"grep -rln \\\"golden\\\" crates/*/tests/*.rs crates/tools/src/golden.rs 2>/dev/null | head; ls crates/engine/tests/ | head -30\", \"description\": \"Look for golden replay tests in the workspace\u2026\n- Bash: {\"command\": \"sed -n 1,30p crates/engine/tests/golden.rs | grep -n \\\"//\\\\|fn \\\" | head -15; ls crates/engine/tests/golden | head; sed -n 1,25p crates/tools/tests/golden.rs | grep -n \\\"//\\\" | head -10\"\u2026\n- Bash: {\"command\": \"git worktree remove --force ../jackioh-wt/classify-head && git worktree remove --force ../jackioh-wt/classify-base && git worktree prune && git worktree list | grep -c jackioh-wt; ls ../\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-engine --features testkit --test golden 2>&1 | grep -E \\\"^test result|FAILED|panicked\\\" ; cargo test -p jackioh-ai 2>&1 | grep -E \\\"^test result|FAILED|panicked|err\u2026\n- said: Golden (9) and the AI crate (72 + 1075 + 105) all pass; the 15 ignored are existing daily tests. Running the whole cards crate too, since classify named four cards whose games changed.\n- Bash: {\"command\": \"cargo test -p jackioh-cards 2>&1 | grep -E \\\"^test result|FAILED|panicked\\\" | head -20\", \"description\": \"Run every card test\", \"timeout\": 2400000}\n- said: All cards tests pass (11038 + 1268). Re-running `patches check` after the last note edit, and reviewing the final engine diff.\n- Bash: {\"command\": \"cargo jackioh patches check 2>&1 | tail -1; cargo fmt --check && echo FMT-OK; git diff crates/engine/src/play_choices.rs\", \"description\": \"Re-run patches check, fmt check and show engine\u2026\n- said: Everything is green. Updating the notes' State section for whoever picks this up.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index('## State'); end=s.index('## Log')\\nnew='''## State\\n\\n- Build pass 1 (opus) DONE. Plan Steps 1\\u20135 built as writ\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: tributing a GIGA empties all four zones it covers for the play that pays it, so a GIGA Tribute card can take its place\"} --> ## What changed A play that pays its Tribute with a GIGA now gets all four zones the GIGA stood in, not only its anchor. Before,\u2026"
       },
       "interruptions": 0,
-      "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-4",
-      "owner_since": "2026-11-25T16:57:53Z",
-      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
-      "pending_request": false,
+      "owner": "",
       "planned_at": "2026-11-25T14:17:13Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
@@ -20649,16 +20652,10 @@
       "pr": 4952,
       "provider": "claude-4",
       "question": "",
-      "queued_at": "2026-11-24T21:21:14Z",
-      "requested_by": "squishy-squooby",
-      "round_tier": "strong",
       "run_id": "45659616583",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-25T16:57:53Z",
-      "stop_requested": false,
-      "taken_asks": [],
-      "verdict_rounds": 0,
-      "waiting_comment": 7160929115
+      "taken_asks": []
     },
     "4837": {
       "action": "build",
@@ -25565,9 +25562,16 @@
     },
     "4952": {
       "action": "review",
+      "archived": {
+        "at": "2026-11-25T20:04:10Z",
+        "branch": "bot/issue-4836",
+        "head": "097f5efec3997d95cde9510eaa7cbac06134005d",
+        "issue": 4836,
+        "pr": 4952,
+        "why": "Someone with GitHub access needs to open run 45682322780 (https://github.com/Jlore-Studios/JackiOh/actions/runs/45682322780). In the `e2e smoke (1/4)` and `e2e smoke (3/4)` jobs, read the `the e2e specs of this shard` step: the Chrome version in Cypress's header, and the error. If it is `* is not a valid URL` on Chrome 158, the runner's Chrome is the cause, not this pull request. Then either pin CI's Chrome under `.github/` or upgrade Cypress in `e2e/package.json` (best as its own issue, since it affects every pull request), and re-run the two shards on this head. If the step instead shows a failing test in spec 01, 10 or 13, comment `@jgoetzmann-bot` with that assertion's text and the bot will fix it."
+      },
       "asks": [],
       "difficulty": "hard",
-      "failures": 0,
       "feedback_since": "2026-11-25T16:57:53Z",
       "handoff": {
         "at": "2026-11-25T19:05:56Z",
@@ -25579,33 +25583,13 @@
         "trail": "ones-it-covers-for-the.json'\\nd=json.load(open(p))\\nd['notes']=d['notes'].replace(\\\"cla\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport json\\np='crates/cards/patches/pending/tributing-a-giga-empties-all-four-zones-it-covers-for-the.json'\\nd=json.load(open(p))\\nold=\\\"no script changed, so no KEPT\u2026\n- said: Re-running classify with the fragment in place to confirm `--claims` passes. First checking whether the binary compiles pending fragments in, which decides whether I must rebuild the head.\n- Bash: {\"command\": \"grep -rn \\\"pending\\\" crates/cards/build.rs | head -5; grep -rln \\\"patches/pending\\\" crates/tools/src/*.rs | head\", \"description\": \"Check whether pending fragments are compiled into the b\u2026\n- Bash: {\"command\": \"grep -n \\\"patches/pending\\\\|fn pending\\\\|read_dir\\\\|root\\\" crates/tools/src/claims.rs | head -15\", \"description\": \"See how claims.rs reads pending fragments\"}\n- said: Fragments are read from the head commit in git, and the engine in today's release binary is the same as the head's, so I only need to commit the fragment in the scratch worktree and re-run.\n- Bash: {\"command\": \"set -e; cp \\\"$CARGO_TARGET_DIR/release/jackioh\\\" /tmp/jackioh-head\\nf=crates/cards/patches/pending/tributing-a-giga-empties-all-four-zones-it-covers-for-the.json\\nmkdir -p ../jackioh-wt/\u2026\n- Bash: {\"command\": \"echo \\\"- Build pass 1: wrote fragment (--plays 4 cards, player note). Re-ran classify with fragment committed in classify-head using this worktree's release bin: kind internal, cards [],\u2026\n- Bash: {\"command\": \"sed -n 1255,1345p crates/tools/src/classify.rs\", \"description\": \"Read classify's unforced-games stage\"}\n- Bash: {\"command\": \"grep -n \\\"fn patch_stop\\\\|fn check_scripts\\\\|play: \\\\|\\\\.play = \\\\|pub play\\\\b\\\\|play_code\\\" crates/tools/src/classify.rs | head -20\", \"description\": \"Find patch_stop, check_scripts and \u2026\n- Bash: {\"command\": \"sed -n 470,560p crates/tools/src/classify.rs; sed -n 600,660p crates/tools/src/classify.rs\", \"description\": \"Read the Diff struct and how play_code is set\"}\n- Bash: {\"command\": \"echo \\\"== run1 err\\\"; cat /tmp/classify-4836.err | tail -15; echo \\\"== run2 err\\\"; cat /tmp/classify-4836b.err | tail -15; ls -la /tmp/jackioh-base /tmp/jackioh-head; md5sum /tmp/jackioh\u2026\n- Bash: {\"command\": \"wc -l crates/tools/src/claims.rs; grep -n \\\"^pub\\\\|^fn\\\\|plays as before\\\\|play_code\\\\|touched\\\" crates/tools/src/claims.rs | head -40\", \"description\": \"Outline claims.rs\"}\n- Bash: {\"command\": \"sed -n 52,140p crates/tools/src/claims.rs; grep -n \\\"claims::problems\\\\|fragments_at\\\" crates/tools/src/classify.rs | head\", \"description\": \"Read the claims problems function\"}\n- Bash: {\"command\": \"echo \\\"- Build pass 1: run 2 was invalid \\u2014 classify reads git at the build workspace (item-4836, HEAD = base). Re-running with --root ../jackioh-wt/classify-head.\\\" >> .bot-notes.md\u2026\n- Bash: {\"command\": \"grep -n \\\"import\\\\|pending\\\" apps/web/src/wording.test.ts | head -15\", \"description\": \"Check what wording.test.ts reads\"}\n- said: It reads the fragment from disk, so the harness's `--changed` run won't pick it up, but CI's full web run will. Running that file alone.\n- Bash: {\"command\": \"ls apps/web/src/wasm/pkg 2>/dev/null | head -3; timeout 600 pnpm exec vitest run --project web apps/web/src/wording.test.ts 2>&1 | tail -15\", \"description\": \"Run the web wording test on \u2026\n- said: It needs the WebAssembly build first (the harness's web step builds it too). Building it, then re-running.\n- Bash: {\"command\": \"sh scripts/build-wasm.sh > /tmp/wasm-build.log 2>&1; echo \\\"wasm exit=$?\\\"; tail -3 /tmp/wasm-build.log; timeout 600 pnpm exec vitest run --project web apps/web/src/wording.test.ts 2>&1 \u2026\n- Bash: {\"command\": \"timeout 600 pnpm exec vitest run --project web apps/web/src/wording.test.ts 2>&1 | grep -E \\\"Test Files|Tests |\\u2713|\\u2717|FAIL|\\u00d7\\\" | head -10; git status --porcelain\", \"descripti\u2026\n- Bash: {\"command\": \"grep -rln \\\"golden\\\" crates/*/tests/*.rs crates/tools/src/golden.rs 2>/dev/null | head; ls crates/engine/tests/ | head -30\", \"description\": \"Look for golden replay tests in the workspace\u2026\n- Bash: {\"command\": \"sed -n 1,30p crates/engine/tests/golden.rs | grep -n \\\"//\\\\|fn \\\" | head -15; ls crates/engine/tests/golden | head; sed -n 1,25p crates/tools/tests/golden.rs | grep -n \\\"//\\\" | head -10\"\u2026\n- Bash: {\"command\": \"git worktree remove --force ../jackioh-wt/classify-head && git worktree remove --force ../jackioh-wt/classify-base && git worktree prune && git worktree list | grep -c jackioh-wt; ls ../\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-engine --features testkit --test golden 2>&1 | grep -E \\\"^test result|FAILED|panicked\\\" ; cargo test -p jackioh-ai 2>&1 | grep -E \\\"^test result|FAILED|panicked|err\u2026\n- said: Golden (9) and the AI crate (72 + 1075 + 105) all pass; the 15 ignored are existing daily tests. Running the whole cards crate too, since classify named four cards whose games changed.\n- Bash: {\"command\": \"cargo test -p jackioh-cards 2>&1 | grep -E \\\"^test result|FAILED|panicked\\\" | head -20\", \"description\": \"Run every card test\", \"timeout\": 2400000}\n- said: All cards tests pass (11038 + 1268). Re-running `patches check` after the last note edit, and reviewing the final engine diff.\n- Bash: {\"command\": \"cargo jackioh patches check 2>&1 | tail -1; cargo fmt --check && echo FMT-OK; git diff crates/engine/src/play_choices.rs\", \"description\": \"Re-run patches check, fmt check and show engine\u2026\n- said: Everything is green. Updating the notes' State section for whoever picks this up.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index('## State'); end=s.index('## Log')\\nnew='''## State\\n\\n- Build pass 1 (opus) DONE. Plan Steps 1\\u20135 built as writ\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: tributing a GIGA empties all four zones it covers for the play that pays it, so a GIGA Tribute card can take its place\"} --> ## What changed A play that pays its Tribute with a GIGA now gets all four zones the GIGA stood in, not only its anchor. Before,\u2026"
       },
       "issue": 4836,
-      "kind": "review",
       "live": "reviewing",
-      "pending_request": false,
       "provider": "claude-4",
-      "queued_at": "2026-11-25T19:09:22Z",
+      "question": "Someone with GitHub access needs to open run 45682322780 (https://github.com/Jlore-Studios/JackiOh/actions/runs/45682322780). In the `e2e smoke (1/4)` and `e2e smoke (3/4)` jobs, read the `the e2e specs of this shard` step: the Chrome version in Cypress's header, and the error. If it is `* is not a valid URL` on Chrome 158, the runner's Chrome is the cause, not this pull request. Then either pin CI's Chrome under `.github/` or upgrade Cypress in `e2e/package.json` (best as its own issue, since it affects every pull request), and re-run the two shards on this head. If the step instead shows a failing test in spec 01, 10 or 13, comment `@jgoetzmann-bot` with that assertion's text and the bot will fix it.",
       "run_id": "45682657485",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
-      "session": {
-        "action": "build",
-        "artifact": 15054691149,
-        "artifact_bytes": 327973,
-        "artifact_name": "work",
-        "at": "2026-11-25T19:09:34Z",
-        "bytes": 410564,
-        "cwd": "/home/runner/work/_temp/work/item-4836",
-        "ended": "built: built and checked; its own review run, on this subscription, reviews it next",
-        "head": "097f5efec3997d95cde9510eaa7cbac06134005d",
-        "id": "ca9bd4d4-840e-4557-a010-0045e11bbb1e",
-        "kind": "build",
-        "model": "opus",
-        "project": "-home-runner-work--temp-work-item-4836",
-        "provider": "claude-4",
-        "run": "45659616583"
-      },
       "started_at": "2026-11-25T19:11:06Z",
-      "stop_requested": false,
       "taken_asks": [],
       "votes": {
         "approvals": [],
