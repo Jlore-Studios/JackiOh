@@ -24712,6 +24712,8 @@
       }
     },
     "4943": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-25T14:31:42Z",
@@ -24725,8 +24727,11 @@
         "trail": "p\u2026\n- Bash: {\"command\": \"cargo jackioh fuzz --seeds 200 2>&1 | grep -iE 'fail|violation|ok|passed|seeds|error' | head -10\", \"description\": \"Show fuzz pass/fail summary lines\", \"timeout\": 1800000}\n- said: Fuzz: 200 passed, 0 failed, 1573 forecast attacks judged. Now the workspace test suite, once.\n- Bash: {\"command\": \"echo \\\"- build pass 1: fuzz 200: 200 passed, 0 failed. Running the workspace test command once.\\\" >> .bot-notes.md; cargo test --workspace --features jackioh-engine/testkit,jackioh-engin\u2026\n- said: While the suite runs, reviewing the full diff.\n- Bash: {\"command\": \"git diff crates/engine/src; git status --short\", \"description\": \"Show engine source diff and status\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4823/crates/engine/src/subsystems/lethal.rs\", \"old_string\": \"/// reaches: nothing for a hero target, a defender a First Strike a\u2026\n- Bash: {\"command\": \"sed -n 243,252p crates/engine/src/subsystems/lethal.rs\", \"description\": \"Check reflowed doc comment\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4823/crates/engine/src/subsystems/lethal.rs\", \"old_string\": \"/// `damage::project_hit` stops\\n/// (Divine Shield, Armor, a cap, \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## State'); j=s.index('## Log')\\nstate='''## State\\n- Build pass 1 (opus, 2026-11-25): plan steps 1-7 done; step 8 (no \u2026\n- said: Waiting on the workspace suite; nothing else depends on it.\n- ToolSearch: {\"query\": \"select:Monitor\"}\n- Monitor: {\"description\": \"workspace test suite finishing\", \"timeout_ms\": 600000, \"command\": \"f=/tmp/claude-1001/-home-runner-work--temp-work-item-4823/dfd790a1-f165-4ebe-a680-139e1b4d87a7/tasks/b9cawhzmd.outp\u2026\n- tool error: A variable set in this command can't be checked before it runs\n- Monitor: {\"description\": \"workspace test suite finishing\", \"timeout_ms\": 600000, \"command\": \"until grep -q '^exit ' /tmp/claude-1001/-home-runner-work--temp-work-item-4823/dfd790a1-f165-4ebe-a680-139e1b4d87a7\u2026\n- said: The suite is still running; I'll pick up when it reports.\n- Bash: {\"command\": \"tail -c 600 /tmp/ws-test-4823.log 2>/dev/null | tail -5\", \"description\": \"Peek at test log progress\"}\n- said: Still compiling; waiting for the monitor's notice.\n- Bash: {\"command\": \"tail -c 400 /tmp/ws-test-4823.log; echo; grep -c 'test result' /tmp/ws-test-4823.log; grep -E 'FAILED|panicked' /tmp/ws-test-4823.log | head\", \"description\": \"Check workspace test progre\u2026\n- Monitor: {\"description\": \"workspace test suite: exit or failures\", \"timeout_ms\": 600000, \"command\": \"until grep -q '^exit ' /tmp/claude-1001/-home-runner-work--temp-work-item-4823/dfd790a1-f165-4ebe-a680-139e\u2026\n- said: Re-armed the watch on the suite, which is still compiling the tools crate.\n- Bash: {\"command\": \"grep -c 'test result' /tmp/ws-test-4823.log; grep -E 'test result' /tmp/ws-test-4823.log | grep -v ' 0 failed' | head; grep -E 'FAILED|panicked' /tmp/ws-test-4823.log | head; tail -c 300\u2026\n- Monitor: {\"description\": \"workspace test suite: exit or failures\", \"timeout_ms\": 600000, \"command\": \"until grep -q '^exit ' /tmp/claude-1001/-home-runner-work--temp-work-item-4823/dfd790a1-f165-4ebe-a680-139e\u2026\n- said: The full-workspace build is still compiling; the watch is armed again.\n- Bash: {\"command\": \"grep -c 'test result' /tmp/ws-test-4823.log; grep -E 'test result' /tmp/ws-test-4823.log | grep -v ' 0 failed' | head; grep -E 'FAILED|panicked' /tmp/ws-test-4823.log | head; tail -c 300\u2026\n- said: Tests are running now: 16 binaries reported, none failed so far.\n- Monitor: {\"description\": \"workspace test suite: exit or failures\", \"timeout_ms\": 600000, \"command\": \"until grep -q '^exit ' /tmp/claude-1001/-home-runner-work--temp-work-item-4823/dfd790a1-f165-4ebe-a680-139e\u2026\n- said: Watch re-armed while the remaining test binaries run.\n- Bash: {\"command\": \"grep -c 'test result' /tmp/ws-test-4823.log; grep -E 'test result' /tmp/ws-test-4823.log | grep -v ' 0 failed' | head; grep -E '\\\\.\\\\.\\\\. FAILED|^failures:' /tmp/ws-test-4823.log | head;\u2026\n- Monitor: {\"description\": \"workspace test suite: exit or failures\", \"timeout_ms\": 600000, \"command\": \"until grep -q '^exit ' /tmp/claude-1001/-home-runner-work--temp-work-item-4823/dfd790a1-f165-4ebe-a680-139e\u2026\n- said: Twenty test binaries have passed with no failures; the tools crate's tests are running now.\n- Bash: {\"command\": \"grep -c 'test result' /tmp/ws-test-4823.log; grep -E 'test result' /tmp/ws-test-4823.log | grep -v ' 0 failed' | head; grep -E '\\\\.\\\\.\\\\. FAILED|^failures:' /tmp/ws-test-4823.log | head;\u2026\n- Monitor: {\"description\": \"workspace test suite: exit or failures\", \"timeout_ms\": 600000, \"command\": \"until grep -q '^exit ' /tmp/claude-1001/-home-runner-work--temp-work-item-4823/dfd790a1-f165-4ebe-a680-139e\u2026\n- said: The tools crate's unit tests are slow in a debug build; the watch is armed again.\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4823/dfd790a1-f165-4ebe-a680-139e1b4d87a7/tasks/b9cawhzmd.output | head; grep -c 'test result: ok' /tmp/ws-test-4823.log; grep -E '\u2026\n- said: Workspace suite: exit 0, 40 test binaries, 23,996 passed, 0 failed, no diff under `apps/web/src/wire`. Last, rustfmt and workspace clippy after the final doc-comment edit.\n- Bash: {\"command\": \"echo \\\"- build pass 1: workspace tests exit 0, 40 binaries, 23996 passed, 0 failed, no wire diff. Running fmt + workspace clippy.\\\" >> .bot-notes.md; cargo fmt --check && echo FMT-OK; ca\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Left: workspace test suite result (running), then report.\\\",\\\"- Workspace tests (40 binaries, 23996 passed, 0 fail\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: My Pawn stays set when a First Strike defender exiles the attacker before its blow, as the combat forecast already reads it\"} --> My Pawn (#96) no longer fires on a Trample attack into a First Strike The Banisher (M #72). The Banisher exiles the attacke\u2026"
       },
       "issue": 4823,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-25T17:09:21Z",
         "from_run": "45635050397",
         "gates": [
           {
@@ -24818,7 +24823,11 @@
         "source": "build",
         "until": "2026-11-25T17:37:32Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-25T17:07:32Z",
+      "run_id": "pending:8b39967b-1795626507",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -24837,6 +24846,9 @@
         "provider": "claude-4",
         "run": "45635050397"
       },
+      "started_at": "2026-11-25T17:09:21Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -24850,9 +24862,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T16:57:53Z",
+    "at": "2026-11-25T17:09:21Z",
     "url": "",
-    "what": "build #4836 on claude-4"
+    "what": "review #4943 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-25T16:51:05Z",
