@@ -1371,6 +1371,27 @@ fn soaked(left: &mut i32, hit: i32) -> i32 {
     hit - take
 }
 
+/// §4.4 steps 2 to 3b for `by`'s strike of `hit` on `me`: less `armor` unless it pierces (R346), within
+/// `me`'s own cap (R2179005), less what `pool` soaks of it (R4064000).
+fn struck(
+    state: &GameState,
+    me: &CardInstance,
+    armor: i32,
+    by: &CardInstance,
+    hit: i32,
+    mut pool: i32,
+) -> i32 {
+    let dealt = if pierces(state, Some(by), None) {
+        hit
+    } else {
+        (hit - armor).max(0)
+    };
+    soaked(
+        &mut pool,
+        unit_damage_cap(state, me).map_or(dealt, |cap| dealt.min(cap)),
+    )
+}
+
 /// A hero's side of the ledger: its concave life (`effective_life`, R964000) and its armor, less
 /// `hero_affliction` of what `ticks` (`coming_hero_ticks`) costs on that curve (R3822000).
 fn hero_side(state: &GameState, player: PlayerId, ticks: i32, w: &EvalWeights) -> f64 {
@@ -1879,8 +1900,7 @@ fn soak_past_taunts(
             // more, Poisonous or exiling (R1124). §4.3: a Ranged attacker takes none from a non-Ranged Taunt
             // (R783000), and one with First Strike none from a Taunt without it that its hit destroys (step
             // 1); any other strike back lands even when the hit destroys the Taunt (step 2, R59).
-            let fells = !stands[i].shield
-                && dealt > 0
+            let fells = dealt > 0
                 && !has_keyword(&stands[i].view.keywords, KeywordKind::Indestructible)
                 && (dealt >= stands[i].health || has_keyword(&keywords, KeywordKind::Poisonous) || exiling);
             let survives = !w.strike_back_survival_read
@@ -1952,9 +1972,7 @@ fn soak_past_taunts(
                         }
                         continue;
                     };
-                    if !has_keyword(&stands[j].view.keywords, KeywordKind::Taunt) {
-                        continue;
-                    }
+                    // Every stand is a Taunt: only Taunts enter the walk, and a Reborn body without one leaves it.
                     let (to_hero, kills) = splash_onto(
                         state,
                         defender,
@@ -2165,11 +2183,9 @@ fn first_giga_splash_breaker(
         cleaved_neighbours_with(state, attacker, &stand.unit, true)
             .iter()
             .any(|neighbour| {
-                later.iter().any(|next| {
-                    next.unit.id == neighbour.id
-                        && has_keyword(&next.view.keywords, KeywordKind::Taunt)
-                        && (is_giga(&stand.unit) || is_giga(&next.unit))
-                })
+                later
+                    .iter()
+                    .any(|next| next.unit.id == neighbour.id && (is_giga(&stand.unit) || is_giga(&next.unit)))
             })
             && breaks_alone(state, attacker, *attack, stand, pool, pools, w)
     })
@@ -2216,14 +2232,7 @@ fn falls_to_first_strike(
     {
         return false;
     }
-    let dealt = if pierces(state, Some(taunt), None) {
-        view.attack
-    } else {
-        (view.attack - mine.armor).max(0)
-    };
-    let dealt = unit_damage_cap(state, attacker).map_or(dealt, |cap| dealt.min(cap));
-    let mut left = pools.attacker;
-    let dealt = soaked(&mut left, dealt);
+    let dealt = struck(state, attacker, mine.armor, taunt, view.attack, pools.attacker);
     dealt > 0
         && (has_keyword(&view.keywords, KeywordKind::Poisonous)
             || exiles_what_it_damages(state, taunt, w)
@@ -2256,14 +2265,7 @@ fn strike_back_spares(
     if has_keyword(&mine.keywords, KeywordKind::Indestructible) || pools.converts(state, &stand.unit) {
         return true;
     }
-    let dealt = if pierces(state, Some(&stand.unit), None) {
-        strike
-    } else {
-        (strike - mine.armor).max(0)
-    };
-    let dealt = unit_damage_cap(state, attacker).map_or(dealt, |cap| dealt.min(cap));
-    let mut left = pools.attacker;
-    let dealt = soaked(&mut left, dealt);
+    let dealt = struck(state, attacker, mine.armor, &stand.unit, strike, pools.attacker);
     if dealt <= 0 {
         return true;
     }
@@ -2375,6 +2377,21 @@ fn death_probe(
     ))
 }
 
+/// `card` of `seat`'s hand as it would stand once played: a Unit on its field (`spawn_hand_unit`), a
+/// Field Spell set in its backrow (`spawn_hand_field_spell`). `Some(None)` for any other card.
+fn spawn_hand_card(
+    world: &GameState,
+    seat: PlayerId,
+    card: &CardInstance,
+    counter: &dyn NodeCounter,
+) -> Option<Option<(GameState, CardInstance)>> {
+    match card_type_of_face(world, &card.def_id, card.radiant) {
+        CardType::Unit => spawn_hand_unit(world, seat, card, counter),
+        CardType::FieldSpell => spawn_hand_field_spell(world, seat, card, counter),
+        _ => Some(None),
+    }
+}
+
 /// Whether `card` is one the hand probes spawn: a Unit or a Field Spell, by the face it holds.
 fn stays_once_played(world: &GameState, card: &CardInstance) -> bool {
     matches!(
@@ -2468,12 +2485,7 @@ fn spawned_death_probe(
     card: &CardInstance,
     counter: &dyn NodeCounter,
 ) -> Option<Option<f64>> {
-    let spawned = match card_type_of_face(world, &card.def_id, card.radiant) {
-        CardType::Unit => spawn_hand_unit(world, seat, card, counter)?,
-        CardType::FieldSpell => spawn_hand_field_spell(world, seat, card, counter)?,
-        _ => return Some(None),
-    };
-    let Some((placed, spawned)) = spawned else {
+    let Some((placed, spawned)) = spawn_hand_card(world, seat, card, counter)? else {
         return Some(None);
     };
     death_probe(&placed, seat, &spawned, counter)
@@ -2676,21 +2688,11 @@ fn spawned_turn_hook_probe(
     card: &CardInstance,
     counter: &dyn NodeCounter,
 ) -> Option<Option<(f64, f64)>> {
-    match card_type_of_face(world, &card.def_id, card.radiant) {
-        CardType::Unit => {
-            let Some((placed, unit)) = spawn_hand_unit(world, seat, card, counter)? else {
-                return Some(None);
-            };
-            turn_and_yard_probe(&placed, seat, &unit.id, counter)
-        }
-        CardType::FieldSpell => {
-            let Some((placed, set)) = spawn_hand_field_spell(world, seat, card, counter)? else {
-                return Some(None);
-            };
-            turn_hook_probe(&placed, seat, &set.id, counter)
-        }
-        _ => Some(None),
-    }
+    let Some((placed, spawned)) = spawn_hand_card(world, seat, card, counter)? else {
+        return Some(None);
+    };
+    // A Field Spell is no yard: `yard_probe` takes no node for it and adds nothing to its price.
+    turn_and_yard_probe(&placed, seat, &spawned.id, counter)
 }
 
 /// R3575402: whether `card` is a shipyard (`StaticFlags.starship_yard`, R3539004): a hull that fuses in a
@@ -3070,10 +3072,7 @@ fn rekeyed_activation_prices(
         let spawned = if card.zone.z() == ZoneName::Field {
             Some(Some((sandbox.clone(), card.clone())))
         } else {
-            match card_type_of_face(world, &card.def_id, card.radiant) {
-                CardType::Unit => spawn_hand_unit(&sandbox, seat, card, &probes),
-                _ => spawn_hand_field_spell(&sandbox, seat, card, &probes),
-            }
+            spawn_hand_card(&sandbox, seat, card, &probes)
         };
         let Some(spawned) = spawned else {
             return;

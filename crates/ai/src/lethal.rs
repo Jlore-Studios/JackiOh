@@ -252,9 +252,7 @@ fn judge(
 /// refused one, but the walk then ends `Cut`: it has not searched what lies past that step, and the
 /// best-first walk may pay for it (R4807000).
 fn depth_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter, prices: &Prices) -> Walk {
-    let Some(root) = dets.first() else {
-        return Walk::Exhausted;
-    };
+    let root = &dets[0]; // `find_lethal` answered an empty slice itself.
     let mut visited: IndexSet<String> = IndexSet::new();
     visited.insert(position_key(root, seat));
     let mut stack: Vec<Frame> = Vec::new();
@@ -310,9 +308,7 @@ fn next_open(open: &[Open]) -> usize {
 
 /// Stage 2: best-first by `ready_gap`, each expansion simulating its first AI_SEARCH.lethalWidth moves.
 fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter, prices: &Prices) -> Walk {
-    let Some(root) = dets.first() else {
-        return Walk::Exhausted;
-    };
+    let root = &dets[0]; // `find_lethal` answered an empty slice itself.
     let mut visited: IndexSet<String> = IndexSet::new();
     visited.insert(position_key(root, seat));
     let mut open: Vec<Open> = vec![Open {

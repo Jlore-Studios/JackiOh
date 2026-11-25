@@ -113,9 +113,10 @@ impl std::fmt::Display for DecisionReason {
 }
 
 /// `SearchStats["stoppedBy"]`: what ended a decision's search.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[serde(rename_all = "camelCase")]
 pub enum StoppedBy {
+    #[default]
     Exhausted,
     Budget,
     Clock,
@@ -131,7 +132,7 @@ impl StoppedBy {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchStats {
     pub nodes: usize,
