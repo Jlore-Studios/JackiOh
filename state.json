@@ -25133,6 +25133,8 @@
       }
     },
     "4949": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-25T17:22:03Z",
@@ -25146,8 +25148,11 @@
         "trail": "- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4891; cat .bot-notes.md 2>/dev/null | head -40; git log --oneline -1; git status --porcelain; git diff --stat origin/main 2>/dev/null | tail -3\", \"de\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4891; wc -c docs/speed-and-cost-audit.md; head -20 docs/speed-and-cost-audit.md; echo ---; git grep -n -e 'speed-and-cost-audit' -e 'speed-and-cost';\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4891; git grep -n -i -e 'six usual causes' -e 'slow-app audit' -e 'slow app audit' -- . ':!docs/speed-and-cost-audit.md' | head; echo ---; git grep -\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4891; ls spec/rulings/R4691* spec/pending/ 2>/dev/null | head -30; git grep -n -i 'audit' -- 'spec/rulings/R4691*' 'spec/pending/*' apps/edge/README.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4891; git grep -n -e 'read_dir(\\\"docs' -e \\\"read_dir(.*docs\\\" -e \\\"glob('docs\\\" -e 'glob(\\\"docs' -e \\\"docs/\\\\*\\\\.md\\\" -e \\\"docs/\\\\*\\\\*\\\" -e 'readdirS\u2026\n- said: Deleting the file, as @MaxGoetzmann's answer (option 1) decided. A fresh `git grep` finds no reader, and no glob over `docs/` reads it.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4891; git rm -q docs/speed-and-cost-audit.md && git status --porcelain; cat > .bot-notes.md <<'EOF'\\n## State\\n\\n- Pass 3 (opus), 2026-11-25. @MaxGoe\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4891; cargo fmt --check; echo \\\"fmt exit=$?\\\"; cargo jackioh spec check 2>&1 | tail -5; echo \\\"spec exit=${PIPESTATUS[0]}\\\"\", \"description\": \"Run rus\u2026\n- said: `cargo fmt --check` and `spec check` both pass, and spec check found no link pointing at the deleted file. Next I'm running the patches, catalog and classify checks on the built binary.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4891; cargo jackioh patches check 2>&1 | tail -2; echo \\\"patches exit=${PIPESTATUS[0]}\\\"; cargo jackioh catalog check 2>&1 | tail -2; echo \\\"catalog \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4891; pnpm --dir apps/web typecheck 2>&1 | tail -3; echo \\\"typecheck exit=${PIPESTATUS[0]}\\\"; pnpm exec eslint apps/web apps/edge apps/admin e2e 2>&1\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4891/bot/go && (unset HARNESS_HOME HARNESS_DRY_RUN; go test ./... 2>&1 | tail -15; echo \\\"go exit=${PIPESTATUS[0]}\\\"); cd .. && (unset HARNESS_HOME H\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4891; sed -n 135,155p apps/web/src/wasm/index.ts; ls apps/web/src/wasm/pkg 2>&1 | head; grep -n '\\\"typecheck\\\"\\\\|\\\"pretypecheck\\\"' apps/web/package.j\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4891; grep -n 'func TestSettle_MergirafFallsBackWhenAbsent' -A 40 bot/go/tests/settle_test.go | head -60; which mergiraf; echo \\\"which exit=$?\\\"\", \"d\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4891; grep -rn 'func Mergiraf(' -A 30 bot/go/internal/resolve/*.go | grep -n -i -e 'lookpath' -e 'path' -e 'cache' -e 'return' | head -20; grep -n 'f\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4891; sh scripts/build-wasm.sh > /tmp/wasm.log 2>&1; echo \\\"wasm exit=$?\\\"; tail -2 /tmp/wasm.log; pnpm --dir apps/web typecheck 2>&1 | tail -3; echo\u2026\n- said: The web typecheck passes once the WASM package is built, so the failure was environmental: CI builds the package before it typechecks. Next, why the Go test finds a mergiraf:\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4891; git status --porcelain; grep -n 'func CacheDir' -A 15 bot/go/internal/resolve/*.go | head -20; grep -n 'func FindMergiraf' -A 20 bot/go/interna\u2026\n- Bash: {\"command\": \"ls -la \\\"$HOME/.cache/jackioh-harness/\\\" 2>&1 | head\", \"description\": \"Check for a mergiraf the harness built in this host's cache\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4891/bot/go && h=$(mktemp -d) && (unset HARNESS_HOME HARNESS_DRY_RUN; HOME=$h GOCACHE=$(go env GOCACHE) GOPATH=$(go env GOPATH) GOMODCACHE=$(go env G\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4891; git status --porcelain; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Next: run cargo fmt --check, spec check, classi\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Architecture: weekly hygiene, dead files and archives, 2026-11-25\"} --> This pull request deletes one file, `docs/speed-and-cost-audit.md`. It is the record of the audit #4691 asked for. @MaxGoetzmann answered pass 2's question with \"1\", which picked this file\u2026"
       },
       "issue": 4891,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-25T18:31:44Z",
         "from_run": "45664009378",
         "gates": [
           {
@@ -25239,7 +25244,11 @@
         "source": "build",
         "until": "2026-11-25T18:57:44Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-25T18:27:44Z",
+      "run_id": "pending:0d931029-1795631460",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -25258,6 +25267,9 @@
         "provider": "claude-3",
         "run": "45664009378"
       },
+      "started_at": "2026-11-25T18:31:44Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -25407,9 +25419,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T18:18:46Z",
+    "at": "2026-11-25T18:31:44Z",
     "url": "",
-    "what": "revise #4943 on claude-8"
+    "what": "review #4949 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-25T18:11:29Z",
