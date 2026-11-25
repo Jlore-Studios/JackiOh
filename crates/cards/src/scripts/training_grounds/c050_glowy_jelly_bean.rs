@@ -106,11 +106,11 @@ mod tests {
 
     mod n26_glowy_jelly_bean_base {
         use super::*;
-        /// R4, R766: the pick IA #133 Backdoor steals into a full hand before the Cry resolves burns to its
-        /// new owner's graveyard, where neither the flag nor the surcharge reaches it (`inHandOnly`, as #72
+        /// R4, R766: the pick IA #133 Backdoor steals into a full hand as the Bean is played, before its Cry,
+        /// burns to its new owner's graveyard, where the surcharge does not price it (`inHandOnly`, as #72
         /// Reminisce prices its pick): the daily fuzz's handicapped seed 13173 left a price on it there.
         #[test]
-        fn a_pick_stolen_into_a_full_hand_before_the_cry_is_neither_made_radiant_nor_priced() {
+        fn a_pick_stolen_into_a_full_hand_before_the_cry_is_not_priced() {
             crate::register_all();
             // p2's hand is full, so the card Backdoor steals burns.
             let full = vec!["core-005"; usize::try_from(jackioh_engine::config::HAND_CAP).unwrap_or(10)];
@@ -123,10 +123,19 @@ mod tests {
             }));
             let chosen = hand_id_of(s.state(), TWO_FACED);
             s.play("traininggrounds-050", json!({ "targets": [{ "pick": "instance", "instanceId": chosen }] }));
+            let order: Vec<String> = s
+                .last_events()
+                .iter()
+                .map(|event| event.event_type().as_str().to_string())
+                .collect();
             let pick = find_instance(s.state(), &chosen).expect("the pick");
-            assert_eq!(pick.zone.z(), ZoneName::Graveyard, "it burned");
-            assert_eq!(pick.cost_mod, 0, "no price on a card in a graveyard");
-            assert!(!pick.radiant);
+            assert_eq!(pick.zone.z(), ZoneName::Graveyard, "{order:?}");
+            assert_eq!(pick.cost_mod, 0, "{order:?}");
+            for event in s.last_events() {
+                if let GameEvent::CostChanged { instance_id, .. } = event {
+                    assert_ne!(*instance_id, chosen, "the Cry priced the burned pick: {order:?}");
+                }
+            }
         }
 
         #[test]

@@ -1618,30 +1618,6 @@ fn pulled_into_the_hole(
         && mark.lanes.iter().any(|lane| (lane - hole.lane).abs() == 1)
 }
 
-// TEMPORARY (#4599 diagnosis, reverted before the pull request): the step's events up to `at`, one
-// JSON each, the reaching one marked.
-fn tmp_trace(events: &[GameEvent], at: usize) -> String {
-    let from = at.saturating_sub(60);
-    events[from..events.len().min(at + 3)]
-        .iter()
-        .enumerate()
-        .map(|(i, e)| {
-            let text: String = serde_json::to_string(e)
-                .unwrap_or_default()
-                .chars()
-                .take(260)
-                .collect();
-            format!(
-                "#{}{} {}",
-                from + i,
-                if from + i == at { "<<<" } else { "" },
-                text
-            )
-        })
-        .collect::<Vec<_>>()
-        .join(" ¦ ")
-}
-
 /// I21 (§6.1 Immune to Spells, R4453000): no Spell changes a Unit Immune to Spells on the field. The
 /// step's events are walked in order, tracking the card running (`hookResolving`, a trap, a turn edge
 /// and the AI's turn; a play nested in a run is its own from its `cardPlayed` to its `cardResolved`,
@@ -1896,12 +1872,11 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                 continue;
             }
             found.push(format!(
-                "I21 Spell reached Immune to Spells: {} names {} on turn {} in {}'s run (§6.1, R4453000) TMPTRACE {}",
+                "I21 Spell reached Immune to Spells: {} names {} on turn {} in {}'s run (§6.1, R4453000)",
                 event.event_type().as_str(),
                 mark.label,
                 after.turn,
-                run.running.unwrap_or("no card"),
-                tmp_trace(events, at)
+                run.running.unwrap_or("no card")
             ));
             released.insert(id);
         }
@@ -2985,33 +2960,12 @@ pub fn hidden_information_violations(
     );
 
     let mut found: Vec<String> = Vec::new();
-    // TEMPORARY (#4599 diagnosis, reverted before the pull request): the view's events around a leak.
-    let tmp_view = |path: &str| -> String {
-        let Some(n) = path
-            .strip_prefix("view.events[")
-            .and_then(|rest| rest.split(']').next())
-            .and_then(|n| n.parse::<usize>().ok())
-        else {
-            return String::new();
-        };
-        let Some(events) = scanned.get("events").and_then(Value::as_array) else {
-            return String::new();
-        };
-        let from = n.saturating_sub(2);
-        events[from..events.len().min(n + 60)]
-            .iter()
-            .enumerate()
-            .map(|(i, e)| format!("#{} {}", from + i, e.to_string().chars().take(300).collect::<String>()))
-            .collect::<Vec<_>>()
-            .join(" ¦ ")
-    };
     let mut report = |kind: &str, into: &str, needle: &str, path: &str, where_: &str| {
         found.push(format!(
             "I6 hidden {kind} in {into}: {viewer} is sent \"{needle}\" at {path}, a card in {where_}, on turn {} \
-             (§9.1, §10.8, R97{}) TMPVIEW {}",
+             (§9.1, §10.8, R97{})",
             state.turn,
-            if into == "legalActions" { ", R177" } else { "" },
-            tmp_view(path)
+            if into == "legalActions" { ", R177" } else { "" }
         ));
     };
     for (id, where_) in &ids {
@@ -3562,10 +3516,8 @@ pub fn listed_refused(
                         .chain(immutable_text_findings(&immutable, &result.events, &result.state));
                     for finding in branch {
                         found.push(format!(
-                            "I14 branch: after {player} sent {sent} (listed, not played) on turn {} (seed {}): {finding} TMPBRANCH {}",
-                            state.turn,
-                            state.seed,
-                            tmp_trace(&result.events, result.events.len().saturating_sub(1))
+                            "I14 branch: after {player} sent {sent} (listed, not played) on turn {} (seed {}): {finding}",
+                            state.turn, state.seed
                         ));
                     }
                 }
