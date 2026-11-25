@@ -20405,24 +20405,13 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "muse"
-        ],
-        "builder": "gemini",
-        "built_by": "agy",
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "provider": "muse",
-            "run": "45680735080",
-            "tier": "medium"
-          }
-        ],
-        "sha": "f785784e00b454b513f8218acf310770ff2e46c8",
-        "tiers": {
-          "muse": "medium"
-        }
+        "reviews": [],
+        "sha": "1ca679a1484d71d7bbd3cfede7ce37e512f898e3",
+        "tiers": {}
       }
     },
     "4946": {
