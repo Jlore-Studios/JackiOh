@@ -1173,7 +1173,7 @@ mod r1081000_flying_backrow {
 
     #[test]
     fn r1081000_a_standing_unit_is_no_backrow_card_but_one_of_the_units_to_every_walk() {
-        use jackioh_engine::effects::{StealAllArgs, cards_in_card_scope, cards_in_scope, steal_all};
+        use jackioh_engine::effects::{cards_in_card_scope, cards_in_scope, steal};
         let mut state = board("r1081000-walks");
         let walker = put(&mut state, &grunt().id, slot(P2, Row::Units, 1), json!({}));
         let wing = put(&mut state, &flyer().id, slot(P2, Row::Backrow, 2), json!({}));
@@ -1184,7 +1184,7 @@ mod r1081000_flying_backrow {
             json!({}),
         );
         let (walker, wing, field) = (walker.id, wing.id, field.id);
-        {
+        let units = {
             let mut sink = sink_for(&mut state);
             let ctx = make_context(
                 &mut sink,
@@ -1216,8 +1216,12 @@ mod r1081000_flying_backrow {
                     "once"
                 );
             }
+            board(json!(["units"]))
+        };
+        // A steal of every enemy Unit takes what the units walk lists, one `steal` each.
+        for id in &units {
+            run_effect(&mut state, steal(json_as(json!({ "instanceId": id }))), P1);
         }
-        run_effect(&mut state, steal_all(StealAllArgs::default()), P1);
         assert_eq!(live(&state, &walker).controller, P1);
         assert!(stands(&state, P1, &wing), "taken with the unit row's, standing");
         assert_eq!(live(&state, &field).controller, P2);

@@ -3570,6 +3570,8 @@ fn r4702002_r1085_the_engines_unreached_verbs_reads_and_tables_are_gone() {
         "lock_own_zone",
         "grant_keywords_random_unit",
         "swap_health",
+        "steal_all",
+        "shuffle_copies_of_self",
         "consume_modifier",
         "drop_delayed",
         "peek_work",

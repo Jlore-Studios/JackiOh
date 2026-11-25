@@ -259,7 +259,7 @@ export function playLesson(lessonId: string, options: Options = {}): LessonRun {
     let byCoach = false;
     if (policy === "coach") {
       const step = activeStep(script, coach);
-      if ((step?.kind === "act" || step?.kind === "moment") && step.expect !== undefined) {
+      if (step?.kind === "moment" && step.expect !== undefined) {
         const expected = step.expect;
         action = snapshot.legal.find((candidate) => expected(candidate, ctx)) ?? null;
         byCoach = action !== null;
@@ -267,7 +267,7 @@ export function playLesson(lessonId: string, options: Options = {}): LessonRun {
       action ??= autopilot(ctx);
     } else if (policy === "coach-passive") {
       const step = activeStep(script, coach);
-      if ((step?.kind === "act" || step?.kind === "moment") && step.expect !== undefined) {
+      if (step?.kind === "moment" && step.expect !== undefined) {
         const expected = step.expect;
         action = snapshot.legal.find((candidate) => expected(candidate, ctx)) ?? null;
         byCoach = action !== null;

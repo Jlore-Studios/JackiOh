@@ -25,7 +25,7 @@ const SCRIPT: LessonScript = {
     { id: "welcome", kind: "info", title: "Welcome", text: "These cards are your hand.", anchor: { kind: "hand" }, holdAi: true },
     {
       id: "play",
-      kind: "act",
+      kind: "moment",
       title: "Play a unit",
       text: (ctx) => `You have ${String(ctx.view.you.mana.current)} mana: play Mr. Vanilla.`,
       anchor: { kind: "handCard", defId: VANILLA },
@@ -35,7 +35,7 @@ const SCRIPT: LessonScript = {
     },
     {
       id: "end",
-      kind: "act",
+      kind: "moment",
       title: "End your turn",
       text: "Press End turn.",
       anchor: { kind: "endTurn" },
@@ -232,7 +232,7 @@ describe("the coach bubble", () => {
     expect(screen.queryByTestId(tutorialTestid.coachAck)).toBeNull();
   });
 
-  it("offers no Skip step: an info step and a tip have Got it alone, and an act step has no button", async () => {
+  it("offers no Skip step: an info step and a tip have Got it alone, and a moment with no hint to ask for has no button", async () => {
     const source = fakeSource();
     source.push(snap(myTurn(1)));
     mount(source, boardWith([]));
@@ -520,7 +520,7 @@ describe("the coach bubble", () => {
   it("waiting on the player's own turn, says it is their move; on the AI's turn it says so; neither has a button", async () => {
     const script: LessonScript = {
       lessonId: "later",
-      steps: [{ id: "later", kind: "act", title: "Later", text: "Not yet.", when: () => false, final: true }],
+      steps: [{ id: "later", kind: "moment", title: "Later", text: "Not yet.", when: () => false, final: true }],
       tips: [],
     };
     const source = fakeSource();
@@ -552,7 +552,7 @@ describe("the coach bubble", () => {
     const seen: (readonly GameEvent[])[] = [];
     const script: LessonScript = {
       lessonId: "events",
-      steps: [{ id: "watch", kind: "act", title: "Watch", text: "", done: (ctx) => (seen.push(ctx.fresh), false) }],
+      steps: [{ id: "watch", kind: "moment", title: "Watch", text: "", done: (ctx) => (seen.push(ctx.fresh), false) }],
       tips: [],
     };
     const drawn: GameEvent = { type: "drawn", player: "p1", instanceId: "h9", defId: "core-008" };

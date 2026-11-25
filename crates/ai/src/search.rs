@@ -52,6 +52,9 @@ pub fn expansion(state: &GameState, seat: PlayerId, width: usize, prices: &Price
     expand(candidate_actions(state, seat, prices), state, seat, width, prices)
 }
 
+/// `expansion` or `root_expansion`: a level's moves from a state, at most `width` of them.
+type Expansion = fn(&GameState, PlayerId, usize, &Prices) -> Vec<ActionBody>;
+
 /// `expansion` at the search's root (#1635): of `root_candidate_actions`, which keeps every distinct
 /// placement of a play.
 pub fn root_expansion(state: &GameState, seat: PlayerId, width: usize, prices: &Prices) -> Vec<ActionBody> {
@@ -133,22 +136,17 @@ pub fn beam_search(
         let mut seen: IndexSet<(String, String)> = IndexSet::new();
         let mut placements: IndexMap<String, usize> = IndexMap::new();
         let mut variants: Vec<(String, GameState, Vec<ActionBody>)> = Vec::new();
-        let width = if depth == 0 {
-            budget.root_branching
+        let (width, moves_of): (usize, Expansion) = if depth == 0 {
+            (budget.root_branching, root_expansion)
         } else {
-            budget.branching
+            (budget.branching, expansion)
         };
 
         for line in &frontier {
             if stopped {
                 break;
             }
-            let moves = if depth == 0 {
-                root_expansion(&line.state, seat, width, prices)
-            } else {
-                expansion(&line.state, seat, width, prices)
-            };
-            for action in moves {
+            for action in moves_of(&line.state, seat, width, prices) {
                 let next = match simulate(&line.state, seat, &action, counter, prices) {
                     None => {
                         stopped = true;

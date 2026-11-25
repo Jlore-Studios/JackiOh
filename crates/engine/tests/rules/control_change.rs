@@ -6,7 +6,7 @@
 
 use std::collections::BTreeSet;
 
-use jackioh_engine::effects::{steal, steal_all, summon, swap_board};
+use jackioh_engine::effects::{steal, summon, swap_board};
 use jackioh_engine::subsystems::rotation::{RotationArgs, rotate_rings};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
@@ -279,47 +279,6 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         assert_eq!(switcher.exertion, FRESH);
         assert_eq!(offered_attacks(&state, &charge), vec!["hero-p2".to_string()]);
         assert!(offers_switch(&state, &switcher));
-    }
-
-    #[test]
-    fn r171_steal_all_c86_marks_every_unit_it_takes_and_nothing_it_leaves_behind() {
-        let mut state = playing("cc-steal-all");
-        let turn = state.turn;
-        for lane in 1..=3 {
-            let mine = put(&mut state, &plain.id, slot(P1, Row::Units, lane), json!({}));
-            ready(&mut state, mine, turn - 1);
-        }
-        let mut taken: Vec<CardInstance> = Vec::new();
-        for lane in [1, 2] {
-            let card = put(&mut state, &plain.id, slot(P2, Row::Units, lane), json!({}));
-            taken.push(exhausted(&mut state, card, turn - 1));
-        }
-        let mut left_behind: Vec<CardInstance> = Vec::new();
-        for lane in [3, 4, 5] {
-            let card = put(&mut state, &plain.id, slot(P2, Row::Units, lane), json!({}));
-            left_behind.push(exhausted(&mut state, card, turn - 1));
-        }
-
-        let events = run_effect(&mut state, steal_all(Default::default()), P1);
-
-        assert_eq!(
-            control_changed(&events),
-            taken.iter().map(|c| c.id.clone()).collect::<Vec<_>>()
-        );
-        for card in &taken {
-            let card = live(&state, card);
-            assert_eq!(card.controller, P1);
-            assert_eq!(card.summoned_turn, Some(turn));
-            assert_eq!(card.exertion, FRESH);
-        }
-        // R15: no free zone, so these stay with their owner, untouched but for R4205000's destroy mark.
-        for card in &left_behind {
-            let card = live(&state, card);
-            assert_eq!(card.controller, P2);
-            assert_eq!(card.summoned_turn, Some(turn - 1));
-            assert_eq!(card.exertion, SPENT);
-            assert_eq!(card.marked_destroyed, Some(true));
-        }
     }
 
     #[test]

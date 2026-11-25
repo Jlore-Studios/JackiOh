@@ -1365,6 +1365,27 @@ fn soaked(left: &mut i32, hit: i32) -> i32 {
     hit - take
 }
 
+/// §4.4 steps 2 to 3b for `by`'s strike of `hit` on `me`: less `armor` unless it pierces (R346), within
+/// `me`'s own cap (R2179005), less what `pool` soaks of it (R4064000).
+fn struck(
+    state: &GameState,
+    me: &CardInstance,
+    armor: i32,
+    by: &CardInstance,
+    hit: i32,
+    mut pool: i32,
+) -> i32 {
+    let dealt = if pierces(state, Some(by), None) {
+        hit
+    } else {
+        (hit - armor).max(0)
+    };
+    soaked(
+        &mut pool,
+        unit_damage_cap(state, me).map_or(dealt, |cap| dealt.min(cap)),
+    )
+}
+
 /// A hero's side of the ledger: its concave life (`effective_life`, R964000) and its armor, less
 /// `hero_affliction` of what `ticks` (`coming_hero_ticks`) costs on that curve (R3822000).
 fn hero_side(state: &GameState, player: PlayerId, ticks: i32, w: &EvalWeights) -> f64 {
@@ -2141,14 +2162,7 @@ fn falls_to_first_strike(
     {
         return false;
     }
-    let dealt = if pierces(state, Some(taunt), None) {
-        view.attack
-    } else {
-        (view.attack - mine.armor).max(0)
-    };
-    let dealt = unit_damage_cap(state, attacker).map_or(dealt, |cap| dealt.min(cap));
-    let mut left = pools.attacker;
-    let dealt = soaked(&mut left, dealt);
+    let dealt = struck(state, attacker, mine.armor, taunt, view.attack, pools.attacker);
     dealt > 0
         && (has_keyword(&view.keywords, KeywordKind::Poisonous)
             || exiles_what_it_damages(state, taunt, w)
@@ -2181,14 +2195,7 @@ fn strike_back_spares(
     if has_keyword(&mine.keywords, KeywordKind::Indestructible) || pools.converts(state, &stand.unit) {
         return true;
     }
-    let dealt = if pierces(state, Some(&stand.unit), None) {
-        strike
-    } else {
-        (strike - mine.armor).max(0)
-    };
-    let dealt = unit_damage_cap(state, attacker).map_or(dealt, |cap| dealt.min(cap));
-    let mut left = pools.attacker;
-    let dealt = soaked(&mut left, dealt);
+    let dealt = struck(state, attacker, mine.armor, &stand.unit, strike, pools.attacker);
     if dealt <= 0 {
         return true;
     }
