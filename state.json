@@ -42399,42 +42399,6 @@
         "approver": {
           "family": "claude",
           "model": "opus",
-          "provider": "claude-4",
-          "tier": "strong"
-        },
-        "builder": {
-          "family": "claude",
-          "provider": "claude-4"
-        },
-        "difficulty": "hard",
-        "done_at": "2026-11-04T07:23:31Z",
-        "every": 5,
-        "findings": 0,
-        "head": "8375cea0f9d9e93683bef0a6f0c79b76f6a4aa66",
-        "issue": 2976,
-        "last_why": "stopped: #2998 was closed",
-        "merged_at": "2026-11-04T06:32:06Z",
-        "n": 40,
-        "pr": 2998,
-        "queued_at": "2026-11-04T06:32:06Z",
-        "reason": "stopped: #2998 was closed",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-3",
-          "tier": "strong"
-        },
-        "sha": "e485107852599734d92622e1291c13742a3313a2",
-        "started_at": "2026-11-04T07:09:41Z",
-        "status": "done",
-        "title": "Patch: the AI facing lethal keeps the switch to Defense that would stop it",
-        "tries": 3,
-        "verdict": "failed"
-      },
-      {
-        "approver": {
-          "family": "claude",
-          "model": "opus",
           "provider": "claude-3",
           "tier": "strong"
         },
@@ -45933,7 +45897,9 @@
           "provider": "claude-3"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-25T10:40:50Z",
         "every": 5,
+        "findings": 0,
         "head": "bcedfcf64ec4b2129062db1b92948cb262668fb3",
         "issue": 4814,
         "merged_at": "2026-11-25T10:02:26Z",
@@ -45946,12 +45912,13 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:0ce986bf-1795602739",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45596047686",
         "sha": "85af9d5e42d3ad698087376e01a1774f444186cd",
         "started_at": "2026-11-25T10:32:58Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: Income Tax fired inside the drawer's random cast takes the drawer's hand, not its own controller's",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 541
