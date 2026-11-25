@@ -11,7 +11,7 @@ use jackioh_engine::subsystems::ky_competition::worked_answer;
 use jackioh_engine::{
     ANSWER_KEY, ANSWER_STOP_KEY, Action, ActionBody, AppliedAction, CardInstance, GameEvent, GameState,
     KY_COMPETITION_MAX, NONCE_HISTORY, PLAYER_IDS, Phase, PlayerId, PromptKind, ReduceResult, Rng, Selection,
-    TurnLog, active_units_of, effective_life, find_instance, is_sick, legal_actions, max_mana_for,
+    TurnLog, active_units_of, attack_target_of, find_instance, is_sick, legal_actions, max_mana_for,
     opponent_of, owed_mana_of, reduce_unpiloted, self_def_ids, slot_of, stop_answer, subsystems, unit_view,
     units_on_field_of,
 };
@@ -447,8 +447,8 @@ pub fn line_status(state: &GameState, seat: PlayerId, root_turn: i32) -> LineSta
 /// `simulate`'s answer: the state reached, or the error.
 pub type SimStep = Result<GameState, String>;
 
-/// Up-front node surcharge for heavy actions (expensive scorers §10.7, turn-granting traps §8.5 core-096,
-/// watching players, or R186 sweep flags; #1240).
+/// Up-front node surcharge for heavy actions (expensive scorers §10.7, an attack a turn-granting trap
+/// would answer (§8.5 core-096, R4809001), watching players, or R186 sweep flags; #1240).
 pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) -> usize {
     match action {
         ActionBody::Play { instance_id, .. } => {
@@ -462,18 +462,27 @@ pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) 
             };
             expensive + judged
         }
-        ActionBody::Attack { attacker_id, .. } => {
+        ActionBody::Attack {
+            attacker_id,
+            target_id,
+        } => {
             let defender = opponent_of(actor);
-            // Trapped lethal-gate estimate against effective_life (R964000; never if cannot lose, R2201000).
-            let lethalish = jackioh_engine::can_lose(state, defender)
-                && find_instance(state, attacker_id)
-                    .is_some_and(|unit| unit_view(state, unit).attack >= effective_life(state, defender));
             let trapped = state.players[defender]
                 .backrow
                 .iter()
                 .flatten()
                 .any(|card| stands_for_any(state, &card.def_id, AI_SEARCH.ai_turn_trap_ids));
-            if lethalish && trapped {
+            // R4809001: only an attack the trap would answer, one its own projection calls lethal to its
+            // controller's hero (`subsystems::is_lethal`, R44): through a Unit only by Trample excess
+            // (R176), against effective_life (R964000), never to a hero that cannot lose (R2201000).
+            let answered = trapped
+                && find_instance(state, attacker_id)
+                    .zip(attack_target_of(state, target_id))
+                    .is_some_and(|(attacker, target)| {
+                        subsystems::defending_hero(&target) == defender
+                            && subsystems::is_lethal(state, attacker, &target)
+                    });
+            if answered {
                 AI_SEARCH.ai_turn_trap_nodes.max(0) as usize
             } else {
                 0
@@ -775,7 +784,8 @@ fn simulate_answering(
     // An action whose surcharge the slice cannot pay must not drain it node by node and then
     // return `None`: `None` is the callers' "the budget is spent, stop the wave" signal, so one
     // expensive step would stop every cheaper sibling beside it. Refuse the step like any refused
-    // action instead (Some(Err): the beam's `continue`, reply's "skip this action").
+    // action instead (Some(Err): the beam's `continue`). The reply checks a try's surcharge before
+    // it calls this and cuts instead (`best_try`, R4809000).
     let surcharge = surcharge_nodes(state, seat, action);
     if counter.used() + surcharge > counter.limit() {
         note_sim_error(counter);

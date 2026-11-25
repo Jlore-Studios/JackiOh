@@ -214,12 +214,13 @@ pub struct AiSearch {
     /// holds two states, and a decision meets a few at most.
     pub memo_steps: i32,
     /// The cards an armed backrow copy of which makes a simulated Attack cost `ai_turn_trap_nodes`
-    /// (§8.5 core-096: a whole random AI turn inside one reduce), asked only of an attack that could be
-    /// the lethal one the trap answers, so an ordinary poke is not priced like losing the turn. A fused
+    /// (§8.5 core-096: a whole random AI turn inside one reduce), asked only of an attack the trap
+    /// would answer, one its own projection calls lethal (`subsystems::is_lethal`, R4809001), so an
+    /// ordinary poke or an attack on a Defense Position Unit is not priced like losing the turn. A fused
     /// card holding one is charged the same (`stands_for_any`, #1240).
     pub ai_turn_trap_ids: &'static [&'static str],
-    /// Nodes an Attack into an armed `ai_turn_trap_ids` card pays beyond the one every `simulate`
-    /// takes — the playout's rough share of the nodes it burns.
+    /// Nodes an Attack an armed `ai_turn_trap_ids` card would answer pays beyond the one every
+    /// `simulate` takes — the playout's rough share of the nodes it burns.
     pub ai_turn_trap_nodes: i32,
     /// #1240: nodes a Play pays for each card in its player's hand while a card of the other side
     /// judges that player's plays (Pareto Optimality, `subsystems::watching`): the judge runs §10.7's

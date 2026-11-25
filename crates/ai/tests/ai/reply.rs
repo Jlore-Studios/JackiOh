@@ -1171,3 +1171,166 @@ mod defense_switch_1696 {
         );
     }
 }
+
+/// R4809000: a step of the reply whose surcharge the node counter cannot pay cuts the reply
+/// (`simulate_reply` answers `None`, as for a spent counter) instead of being skipped, which reads as
+/// an opponent who passed its turn or held a play back. R4809001: the My Pawn surcharge is charged only
+/// for an attack the trap would answer, one its own projection calls lethal (`subsystems::is_lethal`).
+mod surcharge_r4809000 {
+    use indexmap::IndexSet;
+
+    use super::super::support::unit;
+    use super::*;
+
+    /// #96 My Pawn, the `AI_SEARCH.ai_turn_trap_ids` card.
+    const MY_PAWN: &str = "core-096";
+    /// #8 Mr. Vanilla, a vanilla 4/4.
+    const VANILLA: &str = "core-008";
+    /// #67 Zoomerbin Oomen, a 1/2, set here in Defense Position, which gives it Taunt (§4.1).
+    const OOMEN: &str = "core-067";
+    /// C+ #64 Mulch Muncher, a 9/9 with Rush and Trample.
+    const MUNCHER: &str = "classicplus-064";
+    /// #97 Zephrys, an `AI_SEARCH.expensive_def_ids` card.
+    const ZEPHRYS: &str = "core-097";
+    /// Nodes the reply's steps fit in, but not a 40- or 100-node surcharge.
+    const SHORT: usize = 30;
+    /// Nodes that pay a My Pawn surcharge.
+    const ROOMY: usize = 400;
+
+    fn reply(state: &GameState, nodes: usize, hidden: &IndexSet<String>) -> Option<GameState> {
+        simulate_reply(state, AI, &create_node_counter(nodes, None), hidden, Prices::NONE)
+    }
+
+    fn unseen_reply(state: &GameState, nodes: usize) -> Option<GameState> {
+        reply(state, nodes, &hidden_card_ids(state, AI))
+    }
+
+    fn attack_on(state: &GameState, attacker: &str, target_id: String) -> ActionBody {
+        ActionBody::Attack {
+            attacker_id: unit(state, HUMAN, attacker).id.clone(),
+            target_id,
+        }
+    }
+
+    fn at_face(state: &GameState, attacker: &str) -> ActionBody {
+        attack_on(state, attacker, format!("hero-{}", AI.as_str()))
+    }
+
+    fn at_unit(state: &GameState, attacker: &str, target: &str) -> ActionBody {
+        let target_id = unit(state, AI, target).id.clone();
+        attack_on(state, attacker, target_id)
+    }
+
+    fn trap_nodes() -> usize {
+        AI_SEARCH.ai_turn_trap_nodes as usize
+    }
+
+    #[test]
+    fn r4809000_a_reply_short_of_an_attacks_surcharge_is_cut_not_played_as_a_passed_turn() {
+        let state = handed_over(json!({
+            "p1": { "health": 4, "backrow": [MY_PAWN] },
+            "p2": { "field": [VANILLA] },
+        }));
+        assert_eq!(
+            surcharge_nodes(&state, HUMAN, &at_face(&state, VANILLA)),
+            trap_nodes()
+        );
+        assert!(
+            unseen_reply(&state, SHORT).is_none(),
+            "a reply cut by the counter came back whole"
+        );
+        assert!(unseen_reply(&state, ROOMY).is_some());
+    }
+
+    #[test]
+    fn r4809000_a_known_play_whose_surcharge_the_counter_cannot_pay_cuts_the_reply() {
+        let state = handed_over(json!({ "p2": { "hand": [ZEPHRYS] } }));
+        let id = state.players[HUMAN]
+            .hand
+            .iter()
+            .find(|card| card.def_id == ZEPHRYS)
+            .map(|card| card.id.clone())
+            .expect("Zephrys is in p2's hand");
+        let play = legal_actions(&state, HUMAN)
+            .into_iter()
+            .find(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == id))
+            .expect("p2 may play Zephrys");
+        assert_eq!(
+            surcharge_nodes(&state, HUMAN, &play),
+            AI_SEARCH.expensive_def_nodes as usize
+        );
+        let unseen = hidden_card_ids(&state, AI);
+        let mut seen = unseen.clone();
+        assert!(seen.shift_remove(&id));
+        assert!(
+            reply(&state, SHORT, &unseen).is_some(),
+            "an unseen Zephrys is never tried"
+        );
+        assert!(
+            reply(&state, SHORT, &seen).is_none(),
+            "a reply too short for the known Zephrys came back as one that held it back"
+        );
+    }
+
+    #[test]
+    fn r4809001_an_attack_pays_the_my_pawn_surcharge_only_when_the_trap_would_answer_it() {
+        let open = |health: i32, backrow: Value| {
+            handed_over(json!({
+                "p1": { "health": health, "backrow": backrow },
+                "p2": { "field": [VANILLA] },
+            }))
+        };
+        let lethal = open(4, json!([MY_PAWN]));
+        assert_eq!(
+            surcharge_nodes(&lethal, HUMAN, &at_face(&lethal, VANILLA)),
+            trap_nodes()
+        );
+        let unarmed = open(4, json!([]));
+        assert_eq!(surcharge_nodes(&unarmed, HUMAN, &at_face(&unarmed, VANILLA)), 0);
+        let poke = open(30, json!([MY_PAWN]));
+        assert_eq!(surcharge_nodes(&poke, HUMAN, &at_face(&poke, VANILLA)), 0);
+
+        let guarded = handed_over(json!({
+            "p1": {
+                "health": 4,
+                "backrow": [MY_PAWN],
+                "field": [{ "def": OOMEN, "position": "DEF" }],
+            },
+            "p2": { "field": [VANILLA, MUNCHER] },
+        }));
+        assert_eq!(
+            surcharge_nodes(&guarded, HUMAN, &at_unit(&guarded, VANILLA, OOMEN)),
+            0,
+            "My Pawn answers nothing about an attack on a Defense Position Unit"
+        );
+        assert_eq!(
+            surcharge_nodes(&guarded, HUMAN, &at_unit(&guarded, MUNCHER, OOMEN)),
+            trap_nodes(),
+            "a Trample excess lethal to the hero is the trap's to answer (R44, R176)"
+        );
+    }
+
+    #[test]
+    fn r4809001_behind_my_pawn_a_short_reply_still_makes_an_attack_the_trap_cannot_answer() {
+        let board = |backrow: Value| {
+            handed_over(json!({
+                "p1": {
+                    "health": 4,
+                    "field": [{ "def": OOMEN, "position": "DEF" }],
+                    "backrow": backrow,
+                },
+                "p2": { "field": [VANILLA] },
+            }))
+        };
+        for backrow in [json!([MY_PAWN]), json!([])] {
+            let state = board(backrow.clone());
+            let short = unseen_reply(&state, SHORT).expect("a reply");
+            assert!(
+                !on_field(&short, AI, OOMEN),
+                "with backrow {backrow}, the 4/4 kills the 1/2: active {:?}, turn {}",
+                short.active,
+                short.turn
+            );
+        }
+    }
+}
