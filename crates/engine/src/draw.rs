@@ -172,7 +172,8 @@ fn library_overflow(
 
 /// R80: a library holds at most LIBRARY_CAP cards (`query::room_in`), so copies stop being created at
 /// the cap, and an existing card goes to its owner's graveyard instead (a unit-token card ceases to
-/// exist, R11). One already in its owner's graveyard stays there, with no second move and no second
+/// exist, R11; one ends on its way into a library with room too, reported `ceased`, R4821000). One
+/// already in its owner's graveyard stays there, with no second move and no second
 /// `enteredGraveyard`, since it never left (C #30 Recycle's, `effects/shuffle_card.rs`).
 ///
 /// R316: whichever it is, `libraryOverflow` reports the refusal (§10.3), so the board can show the full
@@ -285,7 +286,7 @@ fn into_library(
         Placement::BelowTop if library_len == 0 => 0,
         Placement::BelowTop => 1 + sink.rng.int(library_len),
     };
-    crate::zones::move_to_zone(
+    let moved = crate::zones::move_to_zone(
         sink.state,
         instance,
         crate::zones::OffFieldZone::Library,
@@ -294,6 +295,18 @@ fn into_library(
             ..Default::default()
         },
     );
+    // R11, R4821000: a unit token from the field, the resolving zone or a hand ceased on the way in, so
+    // nothing went into the library: reported as a full library reports it, with no `shuffledIn` (it names
+    // a card now in a library, R1838001) and no arrival roll. The slot above was drawn all the same, so
+    // every later rng draw of the game stays where it was.
+    if moved == crate::zones::MoveResult::Vanished {
+        sink.events.push(library_overflow(
+            instance,
+            LibraryOverflowOutcome::Ceased,
+            copy_of,
+        ));
+        return ShuffleInOutcome::Dropped;
+    }
     // R311: a shuffle-in is open to the library's owner: every Core one goes in by a card its owner
     // watched resolve, so they know what went in, though never where (the slot stays hidden, R97).
     if let Some(live) = find_instance_mut(sink.state, &instance.id) {
