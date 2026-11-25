@@ -21417,9 +21417,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T21:48:01Z",
+    "at": "2026-11-25T21:58:48Z",
     "url": "",
-    "what": "revise #4960 on muse"
+    "what": "suggestions (server) on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-25T21:42:01Z",
@@ -45162,13 +45162,22 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": "2026-11-25T21:57:43Z",
-    "last_area": "ai",
-    "last_run": "2026-11-25T14:53:59Z",
+    "idle_since": "2026-11-25T21:58:48Z",
+    "last_area": "server",
+    "last_run": "2026-11-25T21:58:48Z",
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {},
+    "running": {
+      "1": {
+        "area": "server",
+        "count": 4,
+        "last_run": "2026-11-25T21:58:48Z",
+        "provider": "claude-4",
+        "run_id": "pending:e0010949-1795643867",
+        "taken_asks": []
+      }
+    },
     "taken_asks": []
   },
   "usage": null,
