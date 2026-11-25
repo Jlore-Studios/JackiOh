@@ -100,7 +100,7 @@ fn is_hidden_backrow(state: &GameState, card: &CardInstance, seat: PlayerId) -> 
 /// library get new identities, Radiant flags and order; a backrow card the seat cannot read gets another
 /// Trap (another card of the pool, if it is no Trap) that shows the same cost (R351, #85's own included)
 /// and leaves the seat's view unchanged; the seat's own library is reordered; seed, cursor and the nonce
-/// log are replaced.
+/// log are replaced, and the id counter moves up (R4824000).
 fn mutate_hidden(state: &GameState, seat: PlayerId, seed: i64) -> GameState {
     let mut out = clone(state);
     let mut rng = create_rng(&format!("observe-mutate:{seed}"), 0);
@@ -167,6 +167,8 @@ fn mutate_hidden(state: &GameState, seat: PlayerId, seed: i64) -> GameState {
     out.seed = format!("observe-mutated-{seed}");
     out.rng_cursor = rng.int(10_000) as u32;
     out.applied = Vec::new();
+    // R4824000: ids minted where the seat cannot see move the counter, and only up.
+    out.next_id += 1 + rng.int(10) as u32;
     out
 }
 
