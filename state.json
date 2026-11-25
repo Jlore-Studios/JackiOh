@@ -25824,9 +25824,11 @@
         "by": "`muse` (medium)",
         "sha": "97b4503208ee90bab5f07657ecab9ef4bde3ea4e"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-25T19:16:12Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-25T19:31:58Z",
         "family": "muse",
@@ -25836,6 +25838,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: honor E2E_ARTIFACTS in the downloads folder and the replay-task log dir\"} -->\n- What changed and why: two runs of the e2e suite on one machine shared the downloads folder and the replay-task log files even when `E2E_ARTIFACTS` was set, so parallel runs could overwrite each other's evidence. Now everything the run writes honors the variable; unset behavior is byte-for-byte toda\u2026\n- - [e2e/cypress.config.ts](/home/agent-muse/actions-runner-fill/_work/_temp/work/item-4926/e2e/cypress.config.ts): e2e block `downloadsFolder` is now `` `${process.env.E2E_ARTIFACTS ?? \"artifacts\"}/downloads` ``, copying the screenshots/videos pattern above it; comment updated to \"screenshots, video\u2026\n- - [e2e/support/tasks/replay.ts](/home/agent-muse/actions-runner-fill/_work/_temp/work/item-4926/e2e/support/tasks/replay.ts): `replayHash` builds its dir as `path.join(projectRoot, process.env.E2E_ARTIFACTS ?? \"artifacts\")`. Kept `path.join` so the unset case is the identical string; no plumbing ne\u2026\n- - [e2e/README.md](/home/agent-muse/actions-runner-fill/_work/_temp/work/item-4926/e2e/README.md): parallel-runs paragraph gains one sentence naming the moved outputs (`artifacts/my-run/downloads`, `artifacts/my-run/<label>.json`).\n- How tested (commands I ran, output I saw):\n- - Throwaway probe `/tmp/probe-artifacts.ts` (per plan, never committed): first run failed because tsx treats `/tmp/*.ts` as CJS and rejects top-level await; reran the identical content as `/tmp/probe-artifacts.mts`. All 9 asserts passed: `downloadsFolder` resolves under `artifacts` unset and `artif\u2026\n- - `pnpm --dir e2e typecheck` passed (`tsc` clean, 45 deck fixtures OK).\n- - `git status --porcelain` shows only the three intended files; probe artifacts removed. Grep confirms no hardcoded `artifacts/downloads` remains in e2e sources and the hardcoded `path.join(projectRoot, \"artifacts\")` is gone (the `?? \"artifacts\"` fallback string necessarily remains).\n- Decisions the issue did not settle: none beyond the plan \u2014 followed it exactly except the `.mts` probe rename above. Reviewer look-twice: nothing; the diff is 5 insertions, 5 deletions across 3 files, and CI (which never sets the variable) cannot shift.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-fill/_work/_temp/work/item-4926 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-fill/_work/_temp/work/item-4926/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4926,
       "kind": "review",
       "live": "reviewing",
