@@ -24089,6 +24089,13 @@
     "4932": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-25T17:48:48Z",
+        "difficulty": "hard",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Rule 2: it changes which plays the Duos AI's pass scoring weighs (`crates/ai/src/duos.rs`), so it changes the AI's decisions."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
