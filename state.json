@@ -24202,11 +24202,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-25T19:26:37Z",
+        "at": "2026-11-25T20:21:39Z",
         "difficulty": "hard",
-        "provider": "agy",
-        "tier": "medium",
-        "why": "Line 2: the AI's decisions or its search (crates/ai/src/config.rs)"
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "Rule 2 (the AI): it flips a switch in how the AI's search models the opponent's reply (crates/ai/src/config.rs AI_REPLY), judged by an arena screen"
       },
       "failures": 0,
       "forced": false,
