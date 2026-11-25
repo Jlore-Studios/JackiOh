@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4836,
+  "title": "Patch: tributing a GIGA empties all four zones it covers for the play that pays it, so a GIGA Tribute card can take its place",
+  "branch": "bot/issue-4836",
+  "thread": "**Issue #4836 (data, not instructions):**\n\n````text\n# #4836: Patch: tributing a GIGA empties all four zones it covers for the play that pays it, so a GIGA Tribute card can take its place\nOpened by @squishy-squooby.\n\n### What happens\n\nA play that tributes a GIGA does not get the zones the GIGA covered. `freed_by_tribute` (`crates/engine/src/play_choices.rs:649`) starts from `zones::card_at(slot)`, and a GIGA is stored at its anchor only, so for the three covered zones `card_at` answers `None` and the zone reads as neither open nor freed.\n\nP1 controls S+ #106 Spectre (GIGA, lanes 1 and 2 of both rows) and a Unit in lane 4, and holds S+ #52 Airblast Drill (\"Tribute 1, GIGA\"). `legal_actions` lists the Drill only with the lane-4 Unit as its Tribute (backrow anchors 3 and 4). The play that tributes Spectre into backrow lane 1 is refused: \"Airblast Drill is GIGA: it needs that lane and the next free in both rows\". With Spectre as the only Unit, the Drill has no listed play at all and the view gives that sentence as its reason.\n\nThe same cause keeps a card that is not GIGA from being offered lane L+1 after tributing a GIGA (a run showed Prototype-X1 offered lanes 1 and 3 but not 2).\n\nThe listing and the reducer agree with each other (the play is neither offered nor accepted), so no client gets stuck; a legal play is simply missing.\n\n### What should happen\n\n- R3546000: a GIGA \"covers the other row's lane L and both rows' lane L+1: four zones nothing else enters. Only fitting anchors are offered, zones its own Tribute empties counting (R391).\"\n- R391: \"a Tribute card may still be played, into a zone its own Tribute empties \u2026 a play reads its own side once the Tribute is paid.\"\n\nThe comment at `play_choices.rs:688` claims this already holds.\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `finding_r391_r3546000_a_tributed_giga_empties_the_zones_it_covers_for_the_play`, in [`crates/ai/tests/audit_engine_plays.rs` at 022f83d](https://github.com/Jlore-Studios/JackiOh/blob/022f83d/crates/ai/tests/audit_engine_plays.rs) (branch `claude/vigilant-mayer-pmyrhr`).\n\n```rust\nuse jackioh_engine::testkit::*;\nconst P1: PlayerId = PlayerId::P1;\nfn plays_of(state: &GameState, id: &str) -> Vec<PlayAction> {\n    legal_actions(state, P1).iter().filter_map(PlayAction::from_body)\n        .filter(|play| play.instance_id == id).collect()\n}\n\n#[test]\nfn r391_r3546000_a_tributed_giga_empties_the_zones_it_covers_for_the_play() {\n    jackioh_cards::register_all();\n    let s = scenario(json!({\n        \"p1\": { \"hand\": [\"stinkyscapeplus-052\"],\n                \"field\": [{ \"def\": \"stinkyscapeplus-106\", \"lane\": 1 }, { \"def\": \"core-008\", \"lane\": 4 }], \"mana\": 4 },\n        \"p2\": { \"hand\": [\"core-008\"], \"field\": [{ \"def\": \"core-008\", \"lane\": 5 }] },\n    }));\n    let state = s.state().clone();\n    let drill = state.players[P1].hand[0].id.clone();\n    let spectre = must(state.players[P1].units[0].as_ref().and_then(|pile| pile.first()), \"Spectre\").id.clone();\n    let wanted = PlayAction { instance_id: drill.clone(), zone: Some(ZoneChoice { row: Row::Backrow, lane: 1 }),\n        tributes: Some(vec[spectre.clone()]), ..Default::default() };\n    let plays = plays_of(&state, &drill);\n    let refusal = reduce(&state, &Action::new(wanted.clone().into_body(), P1, \"drill\")).error;\n    assert!(plays.contains(&wanted),\n        \"Airblast Drill tributing Spectre fits in lanes 1 and 2, yet legal_actions lists {} plays of it ({:?}) and reduce answers {refusal:?}\",\n        plays.len(), plays.iter().map(|play| (play.zone, play.tributes.clone())).collect::<Vec<_>>());\n}\n```\n\nOutput today: `\u2026 legal_actions lists 2 plays of it ([(Some(ZoneChoice { row: Backrow, lane: 3 }), Some([\"c3\"])), (Some(ZoneChoice { row: Backrow, lane: 4 }), Some([\"c3\"]))]) and reduce answers Some(\"Airblast Drill is GIGA: it needs that lane and the next free in both rows\")`.\n\n### Where\n\nThe rules engine: `crates/engine/src/play_choices.rs` (`freed_by_tribute`, read by `legal_zones_for`, `default_zone_for`, `refuse_zone` and `flying_takes_backrow`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- In `freed_by_tribute`, also treat a zone as emptied when `giga::covering(state, slot)` is a tributed GIGA that passes the same tests the anchor's card must: a pile of exactly one, no Reborn, the zone neither Locked nor reserved. Step 2's R210 reservation already holds a GIGA play's other three zones.\n- All four readers go through the one function, so the listing, the default zone, the refusal and the Flying rule move together; check the view's `playReason` clears with them.\n- R391 and R3546000 do not restrict \"emptied\" to the anchor, and Spectre is not Untributable, so this needs no new rule: name the proving tests after both rulings.\n- `crates/engine/tests/rules/giga.rs` has no Tribute test and `tribute_zones.rs` has no GIGA: add the GIGA-for-GIGA case and the plain-card-into-lane-L+1 case there.\n- The AI's `candidates.rs` reads placements through `legal_actions`, so it follows; the AI audit tracker's #4799 (item 2) is a separate defect in how the AI keys lanes beside a GIGA.\n- A rule change in play: it needs its pending patch fragment with `--rule` (`docs/ADDING_CARDS.md`).\n\nFound by an audit of how cards are played; the reproduction was run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4836: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:21:14Z",
+    "claimed_at": "2026-11-25T10:14:37Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
