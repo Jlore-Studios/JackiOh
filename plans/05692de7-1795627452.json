@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4924,
+  "title": "Patch: pin the perf corpus so card additions stop re-dealing it",
+  "branch": "bot/issue-4924",
+  "thread": "**Issue #4924 (data, not instructions):**\n\n```text\n# #4924: Patch: pin the perf corpus so card additions stop re-dealing it\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nThe engine-speed budgets the pull-request gate holds would stop wobbling every time cards ship. Today adding one card re-deals every game the perf corpus times, so medians jump for reasons that have nothing to do with the change under test, and someone has to re-measure the budgets by hand. After this change the corpus is a checked-in set of pinned games, so the same build always times the same games and a budget crossing means the code got slower.\n\n## Why\n\n`crates/tools/src/perf.rs` builds its corpus live on every run: plain golden seeds `PERF_SEED_FIRST..=PERF_SEED_LAST` (1..40), handicapped seeds 201..210, the heaviest states of each by the fuzz growth measures, one run-start game and one Duos game. The decks come from the live shipped pools (`spec_for_seed` in `crates/tools/src/golden.rs` deals from the shipped sets, via the fuzz deck streams), so any card addition re-deals the whole corpus. The file says so itself: between two corpora the 1v1 medians moved by up to 1.8x and the Duos ones by up to 5.6x, runner CPUs added another 1.3x, each time budget is 5x the largest of twelve medians, and a budget crossed by a card change that made the corpus heavier is measured again the same way (`perf.rs`, the budget comment). That re-measurement is pure upkeep, and the 5x headroom that absorbs corpus churn also dulls the budgets against real slowdowns. `crates/tools/tests/perf.rs` already pins the corpus shape (hotseat states, 2 wide boards, at least one plain, handicapped, run-start and co-op game), so a pinned corpus has a test waiting for it. The repo already knows how to pin deals: `crates/tools/fuzz-corpus/` keeps each kept failure's decks and start inputs literally, with a `retired` marker when a patch removes an id.\n\n## Proposal\n\nCheck in the corpus inputs (seed, decks, handicaps, deck marks) for the plain range, the handicap range, the run-start game and the Duos game under `crates/tools/perf-corpus/`, one JSON file per game plus a README describing the record shape and the retirement rule copied from the fuzz corpus. `perf.rs` replays those inputs instead of dealing from the live pools; the heaviest-state selection then runs over the replayed games, so it stays deterministic too. Re-measure the medians once after pinning and keep the existing constants unless the pinned corpus moves them. Nothing about the budgets' meaning changes, and engine changes still move the timings (only the deals stop moving).\n\n## Where it lands\n\n- `crates/tools/src/perf.rs` (corpus construction; `crates/tools/README.md` perf row, enforced by `crates/tools/tests/acceptance.rs`)\n- new `crates/tools/perf-corpus/` records and README (modelled on `crates/tools/fuzz-corpus/README.md`)\n- `crates/tools/tests/perf.rs` (extend the corpus-shape assertions to the pinned files)\n- No SPEC section: the budgets are CLAUDE.md rule 9 constants (`*_BUDGET_*` in `perf.rs`) measured under #3429.\n\n## Acceptance criteria\n\n- [ ] Adding a card to the catalog (e.g. forcing an extra id into the fuzz pool) leaves every pinned corpus file byte-identical and `perf --smoke --json` reports the same corpus games.\n- [ ] `cargo test -p jackioh-tools --test perf` passes, including a new assertion that each corpus game replays from its pinned file with no refused action.\n- [ ] A corpus file holding a removed card id fails the lint with a message naming the `retired` marker to add, mirroring the fuzz corpus.\n- [ ] `cargo fmt --check` and `cargo clippy -p jackioh-tools --all-targets -- -D warnings` pass.\n\n## Size and risks\n\nMedium: about a hundred lines plus the corpus files. Risk is staleness if cards are removed (handled by the copied retirement rule) and the one-time re-measurement after pinning, which this issue's own acceptance run performs.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** leaves it to a person: Corpus churn is documented and re-measured by design with 5x headroom, and pinning would freeze new cards out of measurement while adding a retirement lint every removal must satisfy.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-25T17:16:23Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4924: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-25T17:16:47Z",
+    "claimed_at": "2026-11-25T17:24:56Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4649 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
