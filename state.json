@@ -44299,42 +44299,6 @@
         "approver": {
           "family": "claude",
           "model": "sonnet",
-          "provider": "claude-3",
-          "tier": "medium"
-        },
-        "builder": {
-          "family": "claude",
-          "provider": "claude-3"
-        },
-        "difficulty": "medium",
-        "done_at": "2026-11-05T02:02:52Z",
-        "every": 5,
-        "findings": 0,
-        "head": "028d973d9c81db0a7c6476a10b7377c2bb45a9d3",
-        "issue": 3063,
-        "last_why": "stopped: #3109 was closed",
-        "merged_at": "2026-11-05T01:28:17Z",
-        "n": 60,
-        "pr": 3109,
-        "queued_at": "2026-11-05T01:28:17Z",
-        "reason": "stopped: #3109 was closed",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-1",
-          "tier": "strong"
-        },
-        "sha": "6c1483f9fcc0928d7c2b7e4b9fe67bee7b109cbb",
-        "started_at": "2026-11-05T01:50:44Z",
-        "status": "done",
-        "title": "Patch: an acceptance test holds the pure crates' thread-locals and mutable statics to the list rule 4 allows",
-        "tries": 3,
-        "verdict": "failed"
-      },
-      {
-        "approver": {
-          "family": "claude",
-          "model": "sonnet",
           "provider": "claude-4",
           "tier": "medium"
         },
@@ -47830,7 +47794,9 @@
           "provider": "claude-3"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-25T18:27:02Z",
         "every": 5,
+        "findings": 0,
         "head": "8f3c804b848c7bfe8e82e20e875929f641d578dd",
         "issue": 4804,
         "merged_at": "2026-11-25T18:03:34Z",
@@ -47843,12 +47809,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:0648dfb5-1795630621",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45673669796",
         "sha": "324379057abaa7af130fd5546cb9ce2c3fae573e",
         "started_at": "2026-11-25T18:17:42Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the AI's redaction hides the tags of the opponent's face-down Trap in the play counts, and the hidden card an interrupted trap firing remembers",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 560
