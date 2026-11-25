@@ -50015,7 +50015,8 @@
       "2026-11-25T19:55:11Z,45689314360,muse,muse-spark-1.3-contributor,review,4955,medium,approved,,2.5,0,0,0,,8,9,86,86,9.3,,none,,1",
       "2026-11-25T19:54:17Z,45682657485,claude-4,opus,review,4952,hard,blocked,,40.6,149,35657,5865372,3.151,21,27,,,1.7,,fresh,,2",
       "2026-11-25T19:45:44Z,45678759237,claude-3,opus,revise,4939,hard,approved,,14.5,37,7029,1103609,1.0991,9,20,,,3,claude-7,fresh,other,2",
-      "2026-11-25T19:45:07Z,45676607115,claude-7,opus,build,4924,hard,built,,21.4,143,65637,9672488,4.5803,5,14,,,78,claude-3,fresh,other,1"
+      "2026-11-25T19:45:07Z,45676607115,claude-7,opus,build,4924,hard,built,,21.4,143,65637,9672488,4.5803,5,14,,,78,claude-3,fresh,other,1",
+      "2026-11-25T20:01:46Z,45676430741,claude-8,opus,revise,4946,hard,built,,40.9,77,16515,10315784,11.3986,30,38,,,9.3,claude-8,resumed,,1"
     ]
   },
   "version": 1
