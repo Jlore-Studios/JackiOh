@@ -43955,6 +43955,14 @@
         "title": "Patch: the perf budgets hold a Duos seat's view size, as they hold a 1v1 seat's",
         "verdict": "came to nothing",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-25T02:04:34Z",
+        "number": 4829,
+        "reason": "no leak or misbuilt flag is cited. The accept-path test would be gated on `preview`, which no test build turns on, so it would run nowhere. The refusal test guards the C module that ports use, not the browser module players load, which the issue leaves untested. That's a guard against something that hasn't happened.",
+        "title": "Patch: the C module's tests preview a set that has not shipped, pinning the accept and refusal paths",
+        "verdict": "came to nothing",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "declined": [
@@ -44754,6 +44762,13 @@
         "number": 4830,
         "reason": "no bug, regression or measurement shows co-op view size costing anyone anything. A new budget judged on every pull request, set from a single co-op game, is upkeep every later change to the Duos view must satisfy. Worth adding the first time co-op payloads grow enough to matter.",
         "title": "Patch: the perf budgets hold a Duos seat's view size, as they hold a 1v1 seat's",
+        "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-25T02:04:34Z",
+        "number": 4829,
+        "reason": "no leak or misbuilt flag is cited. The accept-path test would be gated on `preview`, which no test build turns on, so it would run nowhere. The refusal test guards the C module that ports use, not the browser module players load, which the issue leaves untested. That's a guard against something that hasn't happened.",
+        "title": "Patch: the C module's tests preview a set that has not shipped, pinning the accept and refusal paths",
         "why": "rejected by @jgoetzmann"
       }
     ],
