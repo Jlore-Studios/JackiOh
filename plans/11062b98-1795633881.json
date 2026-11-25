@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 4937,
+  "title": "Patch: route six held-set hooks through the engine's read helpers instead of `GameState` fields",
+  "branch": "bot/issue-4937",
+  "thread": "**Issue #4937 (data, not instructions):**\n\n```text\n# #4937: Patch: route six held-set hooks through the engine's read helpers instead of `GameState` fields\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nCard scripts are supposed to read the board only through the engine's read helpers, never raw state fields. Six newer scripts read the raw state directly. The game plays the same either way, but the six contradict the documented contract and will mislead the next person who copies them. This swaps each read for its helper with no behavior change.\n\n## Why\n\ncrates/cards/README.md (section 1) states a hook may read the state only through the engine's read helpers, never a `GameState` field: no script names `state.players[...]` above its `#[cfg(test)]`. Six hooks in the held set do exactly that, all above their test modules: c174_scrape_the_graveyard.rs:17, c175_fingerprinter.rs:19, c177_predictive_text.rs:21-22, c184_pattern_recognition.rs:97, c186_identity_theft.rs:17, c188_overfitting.rs:60. Every other repo-wide hit was checked per file and sits below `#[cfg(test)]` (test code, which the contract allows), e.g. c035_rollback.rs:157,871,1031, t_coin.rs:106,327, c045_knowledge_breaker.rs:144,244, c207_recursive_self_improvement.rs:112,117,118. Each has an existing helper spelling: `zone_cards` (Graveyard/Hand/Library), `zone_count` (Hand), and `fill_board_zones` (already used by meditative/c097_9, crates/engine/src/zones.rs).\n\n## Proposal\n\nMechanical swaps: graveyard/hand/library reads to `zone_cards` with the matching `OffFieldZone`, the two hand `.len()` reads to `zone_count`, and the empty-zone scan to `fill_board_zones`. No logic changes.\n\n## Where it lands\n\nThe six files under crates/cards/src/scripts/infinite_assault/. No spec change (behavior identical).\n\n## Acceptance criteria\n\n- [ ] No `state.players` read above `#[cfg(test)]` in those six files\n- [ ] `cargo test -p jackioh-cards infinite_assault` green\n- [ ] `cargo clippy -p jackioh-cards --all-targets -- -D warnings` green\n\n## Size and risks\n\nS. Zero behavior risk: purely mechanical, covered by the cards' existing base/Radiant tests.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** leaves it to a person: It changes no behavior by its own account, so it guards future copy-paste rather than fixing a bug players hit.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-25T19:06:53Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4937: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-25T19:07:16Z",
+    "claimed_at": "2026-11-25T19:12:04Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4649 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
