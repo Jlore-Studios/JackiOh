@@ -23814,6 +23814,9 @@
         }
       }
     },
+    "4921": {
+      "suggestion": true
+    },
     "4924": {
       "action": "build",
       "asks": [],
@@ -48436,6 +48439,13 @@
         "at": "2026-11-25T19:07:48Z",
         "number": 4931,
         "title": "Patch: screen the reply's open-lethal switch again on today's reply",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-25T19:08:51Z",
+        "number": 4921,
+        "title": "Patch: the AI without its learned evaluation is generation 14, so the shadow ban is swept on it and the ladder bots' ratings re-settle",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
       }
