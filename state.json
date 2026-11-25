@@ -20692,7 +20692,7 @@
       }
     },
     "4950": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "ci_early": true,
@@ -20729,11 +20729,13 @@
       },
       "interruptions": 0,
       "issue": 4676,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "fixing-ci",
+      "live": "reviewing",
       "merge_owner": "claude-3",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-25T23:44:55Z",
         "from_run": "45701754102",
         "gates": [
           {
@@ -20831,7 +20833,7 @@
       "queued_at": "2026-11-25T23:43:41Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "45701754102",
+      "run_id": "pending:f6d2a396-1795650258",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -20852,7 +20854,7 @@
         "run": "45701754102"
       },
       "source": "",
-      "started_at": "2026-11-25T21:09:40Z",
+      "started_at": "2026-11-25T23:44:55Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -21549,9 +21551,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T23:26:24Z",
+    "at": "2026-11-25T23:44:55Z",
     "url": "",
-    "what": "suggestions (tests) on agy"
+    "what": "review #4950 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-25T23:33:36Z",
