@@ -20131,15 +20131,8 @@
       "taken_asks": []
     },
     "4835": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45532577633",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-25T02:40:41Z",
-        "until": "2026-11-25T03:10:41Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -20151,10 +20144,9 @@
         "reason": "planned on opus",
         "trail": " \"List spec README sections\"}\n- Bash: {\"command\": \"sed -n 48,120p spec/README.md\", \"description\": \"Read note format and adding a ruling\"}\n- Bash: {\"command\": \"cat spec/pending/4665.md | cut -c1-400; echo; cat spec/rulings/R4665007.md | head -12; echo; cat spec/pending/4801.md | cut -c1-300\", \"description\": \"Read examples of pending paragraphs\"}\n- Bash: {\"command\": \"grep -rn \\\"R4665000\\\" spec/*.md spec/*/*.md 2>/dev/null | grep -v \\\"^spec/rulings\\\\|^spec/history\\\\|INDEX.md\\\\|CARDS.md\\\" | cut -c1-600\", \"description\": \"Find spec sections citing R46650\u2026\n- Bash: {\"command\": \"sed -n 34p spec/03-zones.md | grep -o \\\"Ticketed[^.]*\\\\.[^.]*\\\\.[^.]*\\\\.\\\" | head -3; sed -n 22p spec/08-catalog/8.10-stinkyscape.md | cut -c550-1600\", \"description\": \"Read the Ticketed \u2026\n- Bash: {\"command\": \"sed -n 34p spec/03-zones.md | grep -o \\\"[^.]*R4665000[^.]*\\\\.[^.]*\\\\.\\\" \", \"description\": \"Extract \\u00a73.2 sentence about R4665000\"}\n- Bash: {\"command\": \"grep -rn \\\"meditative-086\\\" crates/cards/src/scripts --include=*.rs | grep -v \\\"c086_\\\" | head -5\", \"description\": \"Find tests using Mayor Medinamogger\"}\n- Bash: {\"command\": \"sed -n 70,140p crates/cards/src/scripts/meditative/c101_gachaholic.rs; ls crates/cards/src/scripts/meditative/ | grep c086\", \"description\": \"Read Mayor usage in a card test\"}\n- Bash: {\"command\": \"grep -n \\\"fn r\\\\|scenario(json\\\\|s.play(\\\" crates/cards/src/scripts/meditative/c086_mayor_medinamogger.rs | head -20\", \"description\": \"See Mayor's own tests\"}\n- Bash: {\"command\": \"sed -n 66,118p crates/cards/src/scripts/meditative/c086_mayor_medinamogger.rs\", \"description\": \"Read Mayor draw tests\"}\n- Bash: {\"command\": \"grep -rn \\\"\\\\*\\\\*Crater\\\" spec/06-keywords* spec/06*/ 2>/dev/null | cut -c1-400 | head -3\", \"description\": \"Look up Crater keyword in spec\"}\n- Bash: {\"command\": \"ls spec/ | head -30; grep -rln \\\"Crater\\\" spec/0*.md spec/0*/ 2>/dev/null | head -5\", \"description\": \"Find where Crater is defined\"}\n- Bash: {\"command\": \"grep -n \\\"Crater\\\" spec/06-keywords/6.1-unit-keywords.md | cut -c1-500 | head -3\", \"description\": \"Read Crater definition\"}\n- Bash: {\"command\": \"grep -rn \\\"pub fn from_body\\\" crates/engine/src | head -3; grep -rn \\\"PlayAction::from_body\\\" crates/cards/src | head -3; grep -n \\\"fn expect_refused\\\\|fn card(\\\\|fn unit_at\\\\|fn backrow\u2026\n- Bash: {\"command\": \"sed -n 55,75p crates/engine/src/play_choices.rs; grep -n \\\"pub use\\\\|pub mod\\\" crates/engine/src/testkit/mod.rs | head -30; sed -n 2013,2035p crates/engine/src/testkit/scenario.rs\", \"des\u2026\n- Bash: {\"command\": \"head -3 spec/08-catalog/8.10-stinkyscape.md | cut -c1-120; grep -n \\\"^### 3.2\\\\|^## 3\\\" spec/03-zones.md | head\", \"description\": \"Verify section headings for links\"}\n- Bash: {\"command\": \"sed -n 1,30p scripts/worktree.sh\", \"description\": \"Read worktree script usage\"}\n- Bash: {\"command\": \"grep -n \\\"legal_actions\\\\|play_choices::\\\" crates/engine/src/view_for.rs | head -10\", \"description\": \"Check view_for's source of targets\"}\n- Bash: {\"command\": \"grep -n \\\"giga\\\" crates/engine/src/view_for.rs | head -10; grep -rn \\\"giga\\\" crates/engine/src/redact*.rs crates/ai/src/*.rs 2>/dev/null | head -10; grep -n \\\"pub fn is_giga\\\" -A6 crates\u2026\n- Bash: {\"command\": \"grep -rn \\\"stinkyscape-009\\\\|ticketed\\\" -i crates/ai/src crates/shared/src apps/web/src --include=*.rs --include=*.ts --include=*.tsx | head -10\", \"description\": \"Check AI and web refere\u2026\n- Bash: {\"command\": \"sed -n 470,500p crates/ai/src/shadow_ban.rs | cut -c1-200\", \"description\": \"Read shadow_ban context for Ticketed\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn target(\\\" -A12 crates/engine/src/script.rs | head -20\", \"description\": \"Verify TargetDecl::target kind\"}\n- Bash: {\"command\": \"grep -rn \\\"fn target(min\\\\|pub fn target(\\\" crates/engine/src/*.rs | head -3\", \"description\": \"Find TargetDecl::target\"}\n- Bash: {\"command\": \"grep -rn \\\"impl TargetDecl\\\" -A25 crates/engine/src | grep -n \\\"fn \\\\|kind\\\" | head -12\", \"description\": \"Find TargetDecl constructors\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn flags_of\\\" -A12 crates/engine/src/scripts.rs | head -16\", \"description\": \"Check flags_of signature\"}\n- Bash: {\"command\": \"grep -n \\\"names\\\" crates/tools/README.md | head -5 | cut -c1-700\", \"description\": \"Read names tool docs\"}\n- Bash: {\"command\": \"grep -n \\\"^| \\\\`names\\\" crates/tools/README.md | cut -c1-900\", \"description\": \"Read the names command row\"}\n- Bash: {\"command\": \"sed -n 15,60p crates/engine/src/random_targets.rs\", \"description\": \"Read play_targets_random\"}\n- Bash: {\"command\": \"ls spec/rulings/ | grep -E \\\"^R(0081|0090|0446|1200|0688|3546000|4665000)\\\\.md$\\\"\", \"description\": \"Verify cited rulings exist\"}\n- Bash: {\"command\": \"grep -n \\\"PlayAction\\\\|pub use play_choices\\\" crates/engine/src/lib.rs | head; grep -rn \\\"PlayAction::from_body\\\\|from_body\\\" crates/cards/src/scripts --include=*.rs | head -3; grep -n \\\u2026\n- Bash: {\"command\": \"grep -n \\\"mutants\\\" .github/workflows/ci.yml | head -5; grep -n \\\"test-package\\\\|--package\\\\|-p \\\" scripts/mutants.sh | head -5\", \"description\": \"Check whether mutants runs in CI\"}\n- Bash: {\"command\": \"grep -rln \\\"mutants\\\" .github/workflows/ | head; sed -n 1,25p scripts/mutants.sh\", \"description\": \"Find mutants usage in workflows\"}\n- Bash: {\"command\": \"grep -c \\\"lands on top of that permanent's pile, in its zone and that side's control (\\\\[\\\\[\\u00a73.2\\\\]\\\\] Stack, \\\\[\\\\[R4665000\\\\]\\\\]);\\\" spec/08-catalog/8.10-stinkyscape.md; grep -c \\\u2026\n- said: Spec anchors confirmed. Updating the draft with the full plan shape before writing the final message.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4835/.bot-plan.md\", \"content\": \"# Draft plan #4835 (planner notes) \\u2014 near final\\n\\nFindings:\\n- `legal_selections_for` (play_choices.rs ~1190) is\u2026\n- said: **Goal.** Ticketed (`stinkyscape-009`) should only be offered permanents it can actually be stacked on. Every place that reads Ticketed's targets should leave out a permanent whose zone `zones::accepts_stack_card` refuses: the legal actions, `refuse_targets`, the view's target highlights, the Mayor\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-25T02:23:16Z",
       "owner_why": "it plans it",
@@ -20167,9 +20159,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-24T21:21:02Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45532577633",
+      "run_id": "pending:07942105-1795574467",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-25T02:23:16Z",
+      "started_at": "2026-11-25T02:41:40Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -21264,9 +21256,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T02:32:43Z",
+    "at": "2026-11-25T02:41:40Z",
     "url": "",
-    "what": "review #4881 on claude-1"
+    "what": "build #4835 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-25T02:29:59Z",
