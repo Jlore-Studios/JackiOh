@@ -20262,10 +20262,10 @@
           "provider": "muse",
           "tier": "medium"
         },
-        "at": "2026-11-25T19:08:25Z",
-        "built_by": "agy",
+        "at": "2026-11-25T23:54:12Z",
+        "built_by": "muse",
         "by": "`muse` (medium)",
-        "sha": "f785784e00b454b513f8218acf310770ff2e46c8"
+        "sha": "1ca679a1484d71d7bbd3cfede7ce37e512f898e3"
       },
       "cross_rounds": 0,
       "died": 0,
