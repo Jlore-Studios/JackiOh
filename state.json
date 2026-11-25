@@ -21657,6 +21657,8 @@
     "4884": {
       "action": "review",
       "asks": [],
+      "audit_tier": "medium",
+      "cross_rounds": 1,
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -21673,16 +21675,31 @@
       },
       "interruptions": 0,
       "issue": 4844,
-      "kind": "review",
+      "kind": "revise",
+      "last_findings": [
+        {
+          "claim": "All eight new KEPT_SCRIPTS rows are filed under \"v0.6.13e\", but the aim-less scripts also ran in v0.6.13f, v0.6.13g and v0.6.13h, so replays of games on those versions fold under the new Help scripts and diverge.",
+          "evidence": "crates/cards/patches/shipped.json lists v0.6.13e, then f, g and h (h at commit fa40ae047c, before this branch). A kept row covers its own version and every one before it back to the previous kept row (history.rs test `r767000_a_kept_script_covers_its_version_and_those_before_back_to_the_previous`). The precedent row for Forced Propagation says \"kept under v0.6.13c, the newest shipped version that ran it\". Here the newest shipped version that ran the old scripts is v0.6.13h. A replay of a v0.6.13f..h game that has a Palantir, Solarius Prime, Appropriations or Lucky cast of these cards would use the new aim and break its final hash. The plan said to use whatever is newest on the branch, and `v0.6.13e` is not.",
+          "severity": "blocking",
+          "where": "crates/cards/src/history.rs:1408"
+        },
+        {
+          "claim": "The kept fns, their doc comments, the `mod v0_6_13e` tests, the test names and the fragment's notes all hard-code the wrong version label.",
+          "evidence": "The label appears in `script_v0_6_13e` and `mod v0_6_13e` in all eight card files, in the `r767000_a_game_on_v0_6_13e_\u2026` test names, and in the fragment text \"each keeps its aim-less script under v0.6.13e\". Change them together with the history.rs rows to `v0.6.13h` (`script_v0_6_13h`, `mod v0_6_13h`). The Divine Spirit comment needs the same edit, and its row must still come after its existing v0.6.6d row. Re-run `cargo test -p jackioh-cards history` and `cargo jackioh carried` afterwards.",
+          "severity": "blocking",
+          "where": "crates/cards/src/scripts/training_grounds/c012_fortify.rs:43"
+        }
+      ],
       "live": "reviewing",
       "pending_request": false,
       "provider": "claude-7",
-      "queued_at": "2026-11-25T07:13:27Z",
+      "queued_at": "2026-11-25T07:25:51Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "45566739729",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "source": "cross-review",
       "started_at": "2026-11-25T07:15:35Z",
       "stop_requested": false,
       "taken_asks": [],
