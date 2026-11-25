@@ -20377,8 +20377,11 @@
       "action": "revise",
       "asks": [],
       "ci_early": false,
-      "ci_fixes": 1,
+      "ci_fixes": 0,
       "ci_on_head": true,
+      "ci_reruns": {
+        "f785784e00b454b513f8218acf310770ff2e46c8": 1
+      },
       "ci_run_id": 45663369967,
       "ci_sha": "f785784e00b454b513f8218acf310770ff2e46c8",
       "cleared": {
