@@ -132,7 +132,9 @@
 #    crates/run/src/config.rs, and the third's map to them, B33, #4584)
 #    tools, wasm. scripts/ci-shards.toml, the shard counts of ci.yml's sharded jobs (#3072), runs
 #    every Rust group, and web and e2e as any file outside the lists below does, so a count it
-#    changes is seen running.
+#    changes is seen running. scripts/fuzz-slice.sh, the logic of the merge queue's fuzz slice
+#    (ci.yml's `rust (fuzz slice k/K)`, which runs on rust_tools_wasm), runs rust_tools_wasm and
+#    nothing else: no web or e2e job reads it.
 #  - acceptance.rs (tools) also scans every source under apps/, crates/ and e2e/ for a Markdown read
 #    (V23), every Rust source for a file it includes from outside its crate, every Rust source for
 #    an `#[ignore]` that does not say it runs daily, and every Rust source for a preview of sets that
@@ -370,6 +372,7 @@ for file in $files; do
     apps/web/src/game/cardModes.json) on rust_tools_wasm ;;
     spec/15-dungeon-run.md | spec/16-infinite-assault.md | spec/README.md) on rust_tools_wasm ;;
     scripts/ci-shards.toml) on $RUST ;;
+    scripts/fuzz-slice.sh) on rust_tools_wasm ;;
     analysis/fixtures/dev-40.jsonl | analysis/fixtures/live-40.jsonl | analysis/fixtures/games.report.json) on rust_tools_wasm ;;
     analysis/fixtures/counts.jsonl | analysis/fixtures/counts.report.json) on rust_tools_wasm ;;
   esac
@@ -389,6 +392,7 @@ for file in $files; do
     infra/cloudflare.tf) on web ;;
     docs/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
+    scripts/fuzz-slice.sh) ;;
     *) on web ;;
   esac
 
@@ -410,6 +414,7 @@ for file in $files; do
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
     crates/server/Dockerfile | wrangler.jsonc | apps/edge/* | apps/admin/* | eslint.config.js | vitest.config.ts) ;;
     scripts/browse.sh | scripts/promote-production.sh | scripts/promote-staging.sh | scripts/server-image.sh | scripts/worktree.sh) ;;
+    scripts/fuzz-slice.sh) ;;
     crates/tools/src/main.rs | crates/tools/src/replay.rs | crates/tools/src/catalog.rs | crates/tools/src/patches.rs) on e2e ;;
     crates/tools/src/* | crates/tools/fuzz-corpus/*) ;;
     *) on e2e ;;
