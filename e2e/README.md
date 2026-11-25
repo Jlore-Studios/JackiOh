@@ -21,8 +21,8 @@ resolves them, and the engine is reached only through the `jackioh` binary.
 ## Install
 
 ```
-pnpm install                              # repo root: e2e's packages, and tsx, which the replayHash task runs under
-cargo build --release -p jackioh-tools    # target/release/jackioh, whose `replay` the replayHash task runs
+pnpm install                              # repo root: e2e's packages, and tsx, which the tutorialLessons task (specs 22, 23, 27, 48) runs under
+cargo build --release -p jackioh-tools    # target/release/jackioh, whose `replay-check` the replayHash task runs (no tsx)
 cd e2e && pnpm install                    # on its own, as above; the postinstall fetches the Cypress binary
 pnpm exec cypress verify
 pnpm exec tsc -p tsconfig.json
