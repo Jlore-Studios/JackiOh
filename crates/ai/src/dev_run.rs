@@ -19,6 +19,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::AI_BUDGET;
 use crate::deck::{AiDeckOptions, build_ai_deck};
+use crate::gate::subject_seat_of;
 use crate::match_::{MatchConfig, MatchHooks, MatchSetup, SeatController, play_match};
 use crate::swing_turns::summarize_with_swing_turns;
 use crate::types::SearchBudget;
@@ -114,11 +115,6 @@ pub fn dev_game_config(n: i32, series: &str, budget: Option<SearchBudget>) -> Ma
     dev_match(seed, decks, budget)
 }
 
-/// R1284000: p1 holds the forced card in an odd game, p2 in an even one.
-fn forced_seat(n: i32) -> PlayerId {
-    if n % 2 == 1 { PlayerId::P1 } else { PlayerId::P2 }
-}
-
 /// Game n of a series with `card` in one seat's deck (R1284000). Both decks are R258's deal with `card`
 /// banned, so the other seat never holds it and no deal depends on the card's own numbers; the
 /// holder's card at the slot `${seed}:force` picks is replaced by `card`, which must be a deckable
@@ -127,7 +123,8 @@ pub fn forced_dev_game_config(n: i32, series: &str, budget: Option<SearchBudget>
     let seed = format!("{series}:{n}");
     let banned = [card.to_string()];
     let mut decks = (dev_deck(&seed, "p1", &banned), dev_deck(&seed, "p2", &banned));
-    let held = match forced_seat(n) {
+    // R1284000: p1 holds the forced card in an odd game, p2 in an even one.
+    let held = match subject_seat_of(n) {
         PlayerId::P1 => &mut decks.0,
         PlayerId::P2 => &mut decks.1,
     };

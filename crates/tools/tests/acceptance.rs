@@ -3462,6 +3462,42 @@ fn r4702000_r1006000_r1012004_r3112000_the_ai_extracts_no_features() {
     );
 }
 
+/// The sources of the AI (`crates/ai/src`) that name one of `names`, each as "path: `name`".
+fn ai_sources_naming(names: &[&str]) -> Vec<String> {
+    let root = repo();
+    let mut files = Vec::new();
+    sources(&root.join("crates/ai/src"), &mut files);
+    assert!(files.len() > 15, "only {} source files found", files.len());
+    let mut found: Vec<String> = Vec::new();
+    for file in &files {
+        let text = fs::read_to_string(file).unwrap_or_default();
+        for name in names {
+            if text.contains(name) {
+                found.push(format!(
+                    "{}: `{name}`",
+                    file.strip_prefix(&root).unwrap_or(file).display()
+                ));
+            }
+        }
+    }
+    found
+}
+
+/// R4702003: the evaluation's two terms that shipped at weight 0 are gone: no source of the AI names
+/// either weight or the read only they used.
+#[test]
+fn r4702003_the_evaluations_zero_weight_terms_are_gone() {
+    let found = ai_sources_naming(&[
+        concat!("enemy_face_down", "_per_cost"),
+        concat!("fatigue", "_draw:"),
+        concat!("fn shown", "_cost("),
+    ]);
+    assert!(
+        found.is_empty(),
+        "a zero-weight term of the evaluation is back (R4702003): {found:?}"
+    );
+}
+
 /// R4159000, R1010000, R1010001, R1011000, R1171001, R3112001: the AI compiles no network and no prior.
 /// `crates/ai` has no build script, no `learned` or `policy` module and no weights file, and no source of
 /// the AI or of the three WebAssembly crates names what only they used.

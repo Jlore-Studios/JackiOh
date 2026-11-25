@@ -10,17 +10,16 @@ use std::ops::{Deref, DerefMut};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use indexmap::{IndexMap, IndexSet};
-use jackioh_engine::prelude::json_as;
 use jackioh_engine::{
     AI_DIFFICULTY, ActionBody, CostOptions, DeckMark, Difficulty, GameState, OffFieldZone, PerPlayer,
     PerPlayerOpt, Phase, PlayerId, Rng, create_rng, effective_cost, legal_actions, opponent_of, zone_cards,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 use crate::config::{AI_EVAL, AI_GATE_BUDGET};
-use crate::deck::{AiDeckOptions, build_ai_deck};
+use crate::deck::{AiDeckBoost, AiDeckOptions, build_ai_deck};
 use crate::evaluate::{NextSwing, evaluate};
+use crate::gate::subject_seat_of;
 use crate::match_::{MatchConfig, MatchHooks, MatchSetup, SeatController, play_match, seated};
 use crate::shadow_ban::SHADOW_BAN_IDS;
 use crate::types::SearchBudget;
@@ -380,23 +379,12 @@ pub fn pass2_keep_out(pass1: &[SweepResult], ban: &[(&str, &str)]) -> Vec<String
     sorted
 }
 
-/// R390's boost in pass 2's filler: these ids' weights multiplied by `by`.
-#[derive(Clone, Debug, PartialEq)]
-struct FillerBoost {
-    ids: Vec<String>,
-    by: i32,
-}
-
 /// What the AI's deck is dealt from in one sweep game, beside its forced card.
 #[derive(Clone, Debug, PartialEq)]
 struct Filler {
     banned: Vec<String>,
-    boost: Option<FillerBoost>,
-}
-
-/// Game n (1-based) of a card's sweep: the AI sits p1 when n is odd and p2 when even.
-fn swept_seat_of(n: i32) -> PlayerId {
-    if n % 2 == 1 { PlayerId::P1 } else { PlayerId::P2 }
+    /// R390's boost in pass 2's filler: these ids' weights multiplied by `by`.
+    boost: Option<AiDeckBoost>,
 }
 
 /// `sweepConfig`'s answer.
@@ -415,32 +403,36 @@ fn sweep_config(
     filler: &Filler,
     face: SweepFace,
 ) -> SweepSetup {
-    let ai_seat = swept_seat_of(n);
+    // Game n (1-based) of a card's sweep: the AI sits p1 when n is odd and p2 when even.
+    let ai_seat = subject_seat_of(n);
     let greedy_seat = opponent_of(ai_seat);
     let handicap = AI_DIFFICULTY[tier];
     let easy = AI_DIFFICULTY.easy;
 
     // The swept card is forced in even when it is banned today, so a rerun can clear it.
-    let banned: Vec<&String> = filler.banned.iter().filter(|id| id.as_str() != def_id).collect();
-    let mut ai_options = json!({
-        "include": [def_id],
-        "banned": banned,
-        "manaCap": handicap.mana_cap,
-    });
-    if let Some(boost) = &filler.boost {
-        ai_options["boost"] = json!({ "ids": boost.ids, "by": boost.by });
-    }
+    let banned = filler.banned.iter().filter(|id| id.as_str() != def_id);
     let ai_deck = build_ai_deck(
         &mut create_rng(&format!("{seed}:deck:{ai_seat}"), 0),
         handicap.deck_size,
-        &json_as::<AiDeckOptions>(ai_options),
+        &AiDeckOptions {
+            include: Some(vec![def_id.to_string()]),
+            banned: Some(banned.cloned().collect()),
+            mana_cap: Some(handicap.mana_cap),
+            boost: filler.boost.clone(),
+            ..AiDeckOptions::default()
+        },
     );
     // The greedy seat stands in for a human, whose random deck ignores the AI's ban and its soft gate
     // (R1390).
     let greedy_deck = build_ai_deck(
         &mut create_rng(&format!("{seed}:deck:{greedy_seat}"), 0),
         easy.deck_size,
-        &json_as::<AiDeckOptions>(json!({ "banned": [], "gatedSets": [], "manaCap": easy.mana_cap })),
+        &AiDeckOptions {
+            banned: Some(Vec::new()),
+            gated_sets: Some(Vec::new()),
+            mana_cap: Some(easy.mana_cap),
+            ..AiDeckOptions::default()
+        },
     );
 
     // #4466: the Radiant face deals the forced card Radiant through its seat's deck mark (R2702000). An
@@ -834,9 +826,9 @@ pub fn sweep_at_risk(
     let face = options.face.unwrap_or_default();
     let filler = Filler {
         banned: keep_out.to_vec(),
-        boost: Some(FillerBoost {
+        boost: Some(AiDeckBoost {
             ids: at_risk.to_vec(),
-            by: AI_SWEEP.at_risk_boost,
+            by: f64::from(AI_SWEEP.at_risk_boost),
         }),
     };
     let tracked: Vec<String> = std::iter::once(def_id.to_string())

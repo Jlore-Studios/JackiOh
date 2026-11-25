@@ -448,8 +448,7 @@ turn on greedily (`fill_turn`: up to that many steps, each the best by `static_s
 leaves the seat's own prompt open), on a slice of `steps × (branching + 1)` nodes, which `decide` keeps
 back beside each other world's reserve. It ships at 3 (R4697000), so `decide` keeps up to 126 more of
 `AI_BUDGET`'s 1,200 nodes back from the beam (21 for each of three finalists on two other worlds); at 0 a
-cut replay ends its turn where it stands and a decision is node for node what it was before R4447000;
-`score_line` keeps the cut whatever the switch.
+cut replay ends its turn where it stands and a decision is node for node what it was before R4447000.
 
 ## Decks and the shadow ban (R184, R186, R390, R1370, R4784000, R1390, R817000, R976000)
 
@@ -651,9 +650,8 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
   (0.8) against random and `DUOS_GATE_GREEDY_WIN_FLOOR` (0.7) against greedy, of
   `DUOS_GATE_GAMES_SMOKE` (20) games with no action of either team refused, no AI action off a
   fallback path and no panic an AI seat's search caught (`cargo jackioh gate --duos` plays both);
-  `duos_gate_game_at` plays a game at another budget, and `duos_gate_game_with` one with a stand-in
-  decider (`DuosGateDecider`) for the AI team, which the tests use to show the gate catching a
-  weakened pass.
+  `duos_gate_game_with` plays a game at another budget or with a stand-in decider (`DuosGateDecider`)
+  for the AI team, which the tests use to show the gate catching a weakened pass.
 
 ## Commands
 

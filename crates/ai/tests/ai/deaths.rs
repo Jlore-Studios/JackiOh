@@ -789,8 +789,17 @@ fn r3038003_given_one_removal_every_determinization_scores_the_vanilla_kill_abov
         for (k, world) in worlds.iter().enumerate() {
             let hidden = hidden_card_ids(world, AI);
             let score = |line: &Line| {
-                score_line(world, AI, &line.actions, &counter, true, Some(&hidden), &prices)
-                    .expect("the counter has nodes left")
+                replay_line(
+                    world,
+                    AI,
+                    &line.actions,
+                    &counter,
+                    Some(&hidden),
+                    &prices,
+                    ReplayFill::OFF,
+                )
+                .map(|replay| replay.score)
+                .expect("the counter has nodes left")
             };
             let (piece_kill, vanilla_kill) = (score(piece), score(vanilla));
             assert!(
