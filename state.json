@@ -21006,9 +21006,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "",
-      "owner_since": "2026-11-25T10:49:53Z",
-      "owner_why": "released from its hold: `agy` has no runner free where it runs",
+      "owner": "muse",
+      "owner_since": "2026-11-25T11:43:17Z",
+      "owner_why": "it took it up; released from its hold: `agy` has no runner free where it runs",
       "paused": {
         "at": "2026-11-25T10:42:09Z",
         "interrupt": "usage",
@@ -21020,13 +21020,13 @@
       "planned_by_id": "agy",
       "planned_model": "gemini-3.8-flash-high",
       "planned_tier": "medium",
-      "provider": "agy",
+      "provider": "muse",
       "queued_at": "2026-11-24T21:31:02Z",
       "requested_by": "squishy-squooby",
       "round_tier": "medium",
-      "run_id": "45592960190",
-      "runs_on": "night-vm-agy",
-      "started_at": "2026-11-25T10:13:49Z",
+      "run_id": "pending:0d72543b-1795606964",
+      "runs_on": "night-vm-muse",
+      "started_at": "2026-11-25T11:43:17Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -23420,9 +23420,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T11:42:31Z",
+    "at": "2026-11-25T11:43:17Z",
     "url": "",
-    "what": "review #4884 on claude-7"
+    "what": "build #4847 on muse"
   },
   "last_sweep": {
     "at": "2026-11-25T11:28:07Z",
