@@ -48330,7 +48330,9 @@
     "readings": [
       "2026-11-25T15:42:29Z,claude-7,ping,before,45647738175,70,2026-11-25T16:50:00Z,,,allowed,70,,"
     ],
-    "runs": []
+    "runs": [
+      "2026-11-25T15:42:29Z,45647738175,claude-7,opus,review,4918,hard,interrupted,5-hour cap,0,0,0,0,,70,70,,,,,none,,0"
+    ]
   },
   "version": 1
 }
