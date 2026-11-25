@@ -868,3 +868,115 @@ mod hero_ineligible_attacks {
         assert_eq!(face_threat(&sick, AI), 5);
     }
 }
+
+/// R4806000: a lethal that stands only in the second lane the solver tries a play in (SPEC §9.9): Core
+/// #45 Deft Duelist (4/3 Charge) in hand, the enemy hero at 4. `candidate_actions` offers the play in two
+/// lanes, the losing one first; both reach one `search_signature`, which reads no lane.
+mod lane_placements {
+    use super::*;
+    use jackioh_ai::lethal_hint;
+
+    const DUELIST: &str = "core-045";
+    /// Core #1 Big D-fender, a 0/7: fills an AI lane and deals nothing.
+    const WALL: &str = "core-001";
+    /// Core #19 Midrange Menace, a 9/9 Taunt.
+    const MENACE: &str = "core-019";
+    /// S #157 The Gauntlet: the middle three lanes' Units attack only each other (R1849005).
+    const GAUNTLET: &str = "stinkyscape-157";
+    /// R3554003: the lane the slash voids; lanes 1 and 2 are the Left half, 4 and 5 the Right.
+    const SLASH_LANE: i32 = 3;
+
+    /// The Taunt in the enemy's lane 2 walls the Left half alone; the Duelist's lanes are 2 and 4.
+    fn slashed_board() -> GameState {
+        register_cards();
+        let mut s = scenario(json!({
+            "seed": "r4806000-lanes", "active": AI, "turn": 9,
+            "p1": { "hand": [DUELIST], "field": [{ "def": WALL, "lane": 1 }], "library": ["core-008", "core-008"] },
+            "p2": { "field": [{ "def": MENACE, "lane": 2 }], "health": 4, "library": ["core-008", "core-008"] },
+        }));
+        s.state_mut().slashed_lane = Some(SLASH_LANE);
+        s.state().clone()
+    }
+
+    /// The AI's The Gauntlet, its 0/7s in lanes 1 to 3: the Duelist's lanes are 4 (inside) and 5 (outside).
+    fn gauntlet_board() -> GameState {
+        register_cards();
+        scenario(json!({
+            "seed": "r4806000-lanes", "active": AI, "turn": 9,
+            "p1": {
+                "hand": [DUELIST],
+                "backrow": [GAUNTLET],
+                "field": [{ "def": WALL, "lane": 1 }, { "def": WALL, "lane": 2 }, { "def": WALL, "lane": 3 }],
+                "library": ["core-008", "core-008"],
+            },
+            "p2": { "health": 4, "library": ["core-008", "core-008"] },
+        }))
+        .state()
+        .clone()
+    }
+
+    /// The Duelist's plays `candidate_actions` offers, in move order, each with its lane.
+    fn duelist_plays(state: &GameState) -> Vec<(i32, ActionBody)> {
+        let duelist = mine(state, AI, DUELIST).id;
+        candidate_actions(state, AI, Prices::NONE)
+            .into_iter()
+            .filter_map(|action| match &action {
+                ActionBody::Play {
+                    instance_id,
+                    zone: Some(zone),
+                    ..
+                } if *instance_id == duelist => Some((zone.lane, action.clone())),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// Offered in `losing` then `winning`; `losing` leaves no hero attack, `winning` and the attack win;
+    /// the solver finds that line on this one world, and the hint lights.
+    fn finds_the_lethal_in_the_second_lane(state: &GameState, losing: i32, winning: i32) {
+        let plays = duelist_plays(state);
+        assert_eq!(
+            plays.iter().map(|(lane, _)| *lane).collect::<Vec<_>>(),
+            vec![losing, winning]
+        );
+        let at_hero = ActionBody::Attack {
+            attacker_id: mine(state, AI, DUELIST).id,
+            target_id: format!("hero-{HUMAN}"),
+        };
+        let walled = play_out(state, std::slice::from_ref(&plays[0].1));
+        assert!(
+            !legal_actions(&walled, AI).contains(&at_hero),
+            "lane {losing} may hit the hero"
+        );
+        let line = vec![plays[1].1.clone(), at_hero];
+        assert_eq!(
+            play_out(state, &line)
+                .result
+                .and_then(|result| result.winner.player()),
+            Some(AI)
+        );
+
+        let counter = create_node_counter(AI_BUDGET.lethal_nodes, None);
+        assert_eq!(
+            find_lethal(
+                std::slice::from_ref(state),
+                AI,
+                &counter,
+                AI_BUDGET.lethal_nodes,
+                Prices::NONE
+            ),
+            Some(line)
+        );
+        assert!(lethal_hint(state, AI, None));
+    }
+
+    #[test]
+    fn r4806000_across_the_slash_the_solver_finds_the_lethal_in_the_second_lane_a_play_is_tried_in() {
+        finds_the_lethal_in_the_second_lane(&slashed_board(), 2, 4);
+    }
+
+    #[test]
+    fn r4806000_outside_the_gauntlet_the_solver_finds_the_lethal_in_the_second_lane_a_play_is_tried_in() {
+        finds_the_lethal_in_the_second_lane(&gauntlet_board(), 4, 5);
+    }
+}

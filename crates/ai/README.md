@@ -311,7 +311,9 @@ beam, but when the beam keeps the earlier line, the first `AI_SEARCH.zone_varian
 turn where they stand after it, below that line on a tie. So the placements the beam tries reach the reply,
 which prices a Cleave into a unit's neighbours; a lane the reply scores the same as a better one of that
 play is not a finalist of its own. The
-lethal solver's visited set still reads a position without its units' lanes. Position
+lethal solver's visited set reads a position with its units' lanes, as the concession check's walk does
+(`simulate::position_key`, R4806000): a play tried in two lanes reaches two positions, so a lethal that
+stands only in the second (across a slash, outside The Gauntlet) is found. Position
 switches are the last tier of the move order, so a level's `branching` cut drops them from a busy board;
 the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit that could attack it next turn would kill and survive, `kills_and_survives`; R2021000) it cuts are
 kept (#1759), so a unit that cannot win its next fight can stand down however many earlier moves the board offers. While the

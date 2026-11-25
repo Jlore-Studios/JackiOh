@@ -1090,7 +1090,8 @@ fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>)
     }
 }
 
-/// Position signature for beam deduplication and lethal visited set (R1224, #898, #1797, R3772000).
+/// Position signature for the beam's duplicate check and, with the units' lanes (`position_key`, R4806000),
+/// the lethal solver's visited set (R1224, #898, #1797, R3772000).
 pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
     position_signature(state, seat, false)
 }
@@ -1278,9 +1279,10 @@ fn position_signature(state: &GameState, seat: PlayerId, lane_free: bool) -> Str
 }
 
 /// Every active unit's lane, each side's in `active_units_of` order, the sides in `PLAYER_IDS` order
-/// (#1797): what `search_signature` leaves out. The beam's duplicate check reads the two together, so
-/// two placements of one play that differ only in lane stay two positions, while two orders of the
-/// same moves into the same lanes stay one.
+/// (#1797): what `search_signature` leaves out. The beam's duplicate check reads the two together, as
+/// `position_key` does for the lethal solver's and the concession check's walks, so two placements of
+/// one play that differ only in lane stay two positions, while two orders of the same moves into the
+/// same lanes stay one.
 pub fn unit_lanes(state: &GameState) -> String {
     PLAYER_IDS
         .into_iter()
@@ -1293,4 +1295,12 @@ pub fn unit_lanes(state: &GameState) -> String {
         })
         .collect::<Vec<_>>()
         .join("/")
+}
+
+/// A position of the lethal solver's and the concession check's walks (R4806000, R2660000): the
+/// search's own identity for it (`search_signature`) and the units' lanes, which that leaves out, so a
+/// unit played into another lane is another position, while two orders of the same moves into the same
+/// lanes stay one.
+pub(crate) fn position_key(state: &GameState, seat: PlayerId) -> String {
+    format!("{}|{}", search_signature(state, seat), unit_lanes(state))
 }

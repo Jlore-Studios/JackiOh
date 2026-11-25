@@ -115,7 +115,8 @@ fn r4447000_a_pinned_decision_keeps_its_action_line_and_nodes() {
     // Recorded with the fill at 3 (R4697000): Stockpile first, then the 1-drop it drew on
     // determinization 0, then the 4/4. At 0 (3af8296300) it was the 4/4, then Stockpile, then a drawn
     // card, in 137 nodes: the other worlds' cut replays of the Stockpile line ended their turn with
-    // its crystals unspent.
+    // its crystals unspent. Its nodes are 178 since R4806000 (171 before): the lethal solver walks a
+    // play's two lanes as two positions.
     let stockpile = r#"{"instanceId":"c1","type":"play"}"#;
     let line = [
         stockpile,
@@ -129,7 +130,7 @@ fn r4447000_a_pinned_decision_keeps_its_action_line_and_nodes() {
         (
             stockpile.to_string(),
             line.iter().map(|key| key.to_string()).collect(),
-            171
+            178
         )
     );
 }
