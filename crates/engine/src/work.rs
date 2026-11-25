@@ -57,17 +57,6 @@ impl WorkPlan {
             owner,
         }
     }
-
-    pub fn resume(&self) -> Resume {
-        Resume {
-            def_id: self.def_id.clone(),
-            hook: self.hook.clone(),
-            step: self.step.clone(),
-            radiant: self.radiant,
-            instance_id: self.instance_id.clone(),
-            data: self.data.clone(),
-        }
-    }
 }
 
 /// Where a parked effect list keeps its control block, so the rest of `data` stays the card's.

@@ -5,7 +5,7 @@
 //! forced attack by a crossed unit happens and spends nothing. Runs reproduce from PROPERTY_SEED
 //! (CLAUDE.md rules 4 and 9 in spirit); a failing run names its index.
 
-use jackioh_engine::effects::{rotate, steal, swap_board};
+use jackioh_engine::effects::{SwapArgs, rotate, steal, swap};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
 
@@ -301,7 +301,9 @@ fn effect_of(state: &GameState, verb: &Verb) -> Option<Effect> {
             let target = enemies.get(pick % enemies.len().max(1))?;
             Some(steal(json_as(json!({ "instanceId": target }))))
         }
-        Verb::SwapBoard { .. } => Some(swap_board()),
+        Verb::SwapBoard { .. } => Some(swap(SwapArgs {
+            what: Some(SwapWhat::Board),
+        })),
         Verb::Rotate {
             direction, radiant, ..
         } => Some(rotate(json_as(

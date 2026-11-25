@@ -23,18 +23,6 @@ pub enum EnchantmentKind {
     SwapsBook,
 }
 
-impl EnchantmentKind {
-    /// The literal, as the wire writes it.
-    pub fn as_str(self) -> &'static str {
-        match self {
-            EnchantmentKind::ReturnAfterResolve => "returnAfterResolve",
-            EnchantmentKind::CastOnDraw => "castOnDraw",
-            EnchantmentKind::TargetEnemies => "targetEnemies",
-            EnchantmentKind::SwapsBook => "swapsBook",
-        }
-    }
-}
-
 pub fn enchantment_kind(entry: &Enchantment) -> EnchantmentKind {
     match entry {
         Enchantment::ReturnAfterResolve { .. } => EnchantmentKind::ReturnAfterResolve,

@@ -3,7 +3,7 @@
 //!
 //! - `replace_board`: "exile your board and replace it with a precreated one"; once the whole board
 //!   is laid each laid Unit's Cry fires, its choices drawn at random (R1855001, the designer's answer).
-//!   Not `swap_board`, #87's exchange of the two sides' boards (`effects::swap`, R88, R171).
+//!   Not `swap` with `what: board`, #87's exchange of the two sides' boards (`effects::swap`, R88, R171).
 //! - `scan_for_anomaly`: the Scanning Probes' roll: a Radiant find, a plain one or a miss, each miss
 //!   raising that player's later chances (R1855003).
 

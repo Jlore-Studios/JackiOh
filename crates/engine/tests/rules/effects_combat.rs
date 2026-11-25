@@ -906,11 +906,8 @@ mod cancel_attack_s6_3_cancel_an_attack_s4_2_step_4_r44_c96 {
         assert!(events_of_type(&paused.events, GameEventType::Damage).is_empty());
 
         // §10.1: everything owed is plain JSON, so the paused attack survives a clone round trip.
-        assert_eq!(
-            clone_state(&paused.state).declared_attack,
-            paused.state.declared_attack
-        );
-        assert_eq!(clone_state(&paused.state).work, paused.state.work);
+        assert_eq!(paused.state.clone().declared_attack, paused.state.declared_attack);
+        assert_eq!(paused.state.clone().work, paused.state.work);
         let through_json: GameState =
             serde_json::from_value(json_of(&paused.state)).expect("a paused state is plain JSON");
         assert_eq!(through_json.declared_attack, paused.state.declared_attack);

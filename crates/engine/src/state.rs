@@ -3406,12 +3406,6 @@ pub fn numbering_order<T: Clone>(state: &GameState, items: &[T]) -> Vec<T> {
     .shuffle(items)
 }
 
-/// A deep copy of a state. §10.1 keeps the state JSON-only; in Rust the clone is the derived one
-/// (SURFACE §4.4.8: TS's JSON round trip had no other effect on a JSON-only state).
-pub fn clone_state(state: &GameState) -> GameState {
-    state.clone()
-}
-
 /// §2.1, §2.2: whether it is `player`'s turn. Setup (`SETUP_TURN`) is no player's turn: `active`
 /// names p1 there only as a placeholder until p1 takes the first turn (§2.1 step 5), so a clause a
 /// card makes during setup — a cast on the opening deal or a mulligan's replacement draw (R70) — is

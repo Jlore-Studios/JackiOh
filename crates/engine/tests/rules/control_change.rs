@@ -6,7 +6,7 @@
 
 use std::collections::BTreeSet;
 
-use jackioh_engine::effects::{steal, summon, swap_board};
+use jackioh_engine::effects::{SwapArgs, steal, summon, swap};
 use jackioh_engine::subsystems::rotation::{RotationArgs, rotate_rings};
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
@@ -311,7 +311,13 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
             .expect("in the backrow")
             .summoned_turn = Some(turn - 1);
 
-        let events = run_effect(&mut state, swap_board(), P1);
+        let events = run_effect(
+            &mut state,
+            swap(SwapArgs {
+                what: Some(SwapWhat::Board),
+            }),
+            P1,
+        );
 
         let moved = [&mine, &top, &beneath, &my_trap, &theirs, &their_trap];
         assert_eq!(
@@ -342,7 +348,13 @@ mod r171_a_change_of_control_is_an_entry_s4_1 {
         let their_rush = put(&mut state, &rusher.id, slot(P2, Row::Units, 5), json!({}));
         let their_rush = ready(&mut state, their_rush, turn - 1);
 
-        run_effect(&mut state, swap_board(), P1);
+        run_effect(
+            &mut state,
+            swap(SwapArgs {
+                what: Some(SwapWhat::Board),
+            }),
+            P1,
+        );
 
         // What p1 received entered this turn: sick, with Rush and Charge applying as usual.
         assert!(attack_targets(&state, &live(&state, &their_plain)).is_empty());

@@ -284,11 +284,6 @@ impl EmotePersona {
         }
     }
 
-    /// The persona this bot was dealt.
-    pub fn persona(&self) -> PersonaName {
-        self.persona
-    }
-
     /// R677: a Glitch's swap moved the bot to the other engine seat.
     pub fn set_seat(&mut self, seat: PlayerId) {
         self.seat = seat;

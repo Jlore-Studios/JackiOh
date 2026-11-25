@@ -341,7 +341,7 @@ mod r676_glitchs_outcome_and_the_reset {
         in_hand(&mut start, GLITCH_DEF_ID, P1, 1);
         let card = start.players.p1.hand.last().cloned();
         let action = play_action(&card.map(|card| card.id).unwrap_or_default(), P1, "pure");
-        let a = reduce(&clone_state(&start), &action).state;
+        let a = reduce(&start.clone(), &action).state;
         let b = reduce(&round_trip(&start), &action).state;
         assert_eq!(hash_state(&a), hash_state(&b));
     }

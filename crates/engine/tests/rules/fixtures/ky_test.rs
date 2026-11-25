@@ -1,11 +1,11 @@
 //! Test-only cards for Classic+ #42 KY's Test's question bank (`subsystems::ky_test`, R420, R580): a
-//! fixture KY's Test running `ky_test_script` over a fixture bank, and one card for each reward pool, so
+//! fixture KY's Test running `ky_test_script_with` over a fixture bank, and one card for each reward pool, so
 //! the engine is proved without `crates/cards` (CLAUDE.md). The named rewards are registered under
 //! the real ids `config::KY_TEST_REWARDS` names (The Coin, KY's Gift), as stand-ins.
 
 use std::sync::LazyLock;
 
-use jackioh_engine::subsystems::ky_test::{KyTestProblem, ky_test_script};
+use jackioh_engine::subsystems::ky_test::{KyTestEasy, KyTestProblem, ky_test_script_with};
 use jackioh_engine::testkit::*;
 
 use super::harness::spread;
@@ -109,7 +109,7 @@ fn defs() -> Vec<CardDef> {
 }
 
 fn scripts_table() -> IndexMap<String, CardScripts> {
-    let made = ky_test_script(&FIXTURE_BANK);
+    let made = ky_test_script_with(&FIXTURE_BANK, KyTestEasy::FourDigits);
     let script = Script {
         cry: Some(made.cry.clone()),
         resume: made.resume.clone(),

@@ -526,8 +526,10 @@ mod names {
     /// is, none for Raisin and Jlorious.
     #[test]
     fn r605_each_grape_tier_has_its_literal_and_each_shown_tier_its_grape() {
-        let literals: Vec<&str> = GRAPE_TIERS.iter().map(|tier| tier.as_str()).collect();
-        assert_eq!(literals, ["rotten", "normal", "large", "golden", "mythic"]);
+        assert_eq!(
+            js(GRAPE_TIERS),
+            json!(["rotten", "normal", "large", "golden", "mythic"])
+        );
         for &tier in GRAPE_TIERS {
             assert_eq!(RankTier::from(tier).grape(), Some(tier));
         }

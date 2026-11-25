@@ -3647,6 +3647,7 @@ fn r4702002_r1085_the_engines_unreached_verbs_reads_and_tables_are_gone() {
         "lock_own_zone",
         "grant_keywords_random_unit",
         "swap_health",
+        "swap_board",
         "steal_all",
         "shuffle_copies_of_self",
         "consume_modifier",
@@ -3663,6 +3664,11 @@ fn r4702002_r1085_the_engines_unreached_verbs_reads_and_tables_are_gone() {
         "hand_rightmost",
         "hand_neighbor",
         "is_rightmost_in_hand",
+        "clone_state",
+        "ky_test_script",
+        "papaya_begin",
+        "papaya_answered",
+        "into_owned",
     ];
     let mut gone: Vec<String> = functions.iter().map(|name| format!("fn {name}(")).collect();
     gone.extend(
