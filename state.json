@@ -25884,6 +25884,8 @@
       }
     },
     "4956": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-25T18:04:04Z",
@@ -25897,8 +25899,11 @@
         "trail": " permanent on the field in R68's order \\u2014 the given side first (t\u2026\n- said: Now the tests in the Ticketed module.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4936/crates/cards/src/scripts/stinkyscape/c009_ticketed.rs\", \"old_string\": \" const MAYOR: &str = \\\"meditative-086\\\"; // Mayor Me\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4936/crates/cards/src/scripts/stinkyscape/c009_ticketed.rs\", \"old_string\": \" jackioh_engine::effects::cards_in_scope(&ctx, &scop\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4936/crates/cards/src/scripts/stinkyscape/c009_ticketed.rs\", \"old_string\": \" assert_eq!(permanents, vec![left, pawn, ticketed]);\u2026\n- Bash: {\"command\": \"echo \\\"- Fix in plague.rs and 3 tests in c009_ticketed.rs written; running c009_ticketed tests.\\\" >> .bot-notes.md; cargo test -p jackioh-cards c009_ticketed 2>&1 | grep -E '^(error|warn\u2026\n- said: All pass. Next I'll check that the three new tests fail when the old order is temporarily put back.\n- Bash: {\"command\": \"cp crates/engine/src/plague.rs /tmp/plague-fixed-4936.rs && git show HEAD:crates/engine/src/plague.rs > crates/engine/src/plague.rs && cargo test -p jackioh-cards c009_ticketed 2>&1 | gr\u2026\n- said: All three fail on the old order and pass with the fix. Now formatting, then the wider suites.\n- Bash: {\"command\": \"echo \\\"- New tests: green with the fix, all 3 FAILED on the old body (checked by swapping plague.rs back).\\\" >> .bot-notes.md; cargo fmt --check 2>&1 | head -40\", \"description\": \"Check r\u2026\n- said: rustfmt passes. Running the engine and card suites plus both clippy runs in the background.\n- Bash: {\"command\": \"echo \\\"- Running engine (testkit) + cards suites and clippy for both crates.\\\" >> .bot-notes.md; (cargo test -p jackioh-engine --features testkit 2>&1 | grep -E '^error|test result|FAILE\u2026\n- Bash: {\"command\": \"head -12 spec/rulings/R0060.md; grep -n 'proven_in' -A8 spec/rulings/R4665000.md | head -12\", \"description\": \"Check R60 and R4665000 notes\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4936/.bot-notes.md\", \"offset\": 200}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4936/.bot-notes.md\", \"old_string\": \"- Build run 1 (opus): starting from the plan. Nothing built yet.\", \"new_string\": \"- Build ru\u2026\n- Bash: {\"command\": \"until grep -q '=== clippy cards' /tmp/suites-4936.log && [ \\\"$(tail -1 /tmp/suites-4936.log)\\\" != \\\"=== clippy cards\\\" ]; do sleep 10; done; cat /tmp/suites-4936.log | grep -v 'test resu\u2026\n- Bash: {\"command\": \"cat /tmp/suites-4936.log | grep -v 'ok. 0 passed'\", \"description\": \"Show interim suite results\"}\n- said: The engine suite passed: 291, 2, 9, 3142, 675 and 849 tests across its binaries, none failing. The card suite is running now.\n- Bash: {\"command\": \"until [ \\\"$(grep -c '^===' /tmp/suites-4936.log)\\\" -ge 3 ]; do sleep 10; done; sed -n '/=== cards/,$p' /tmp/suites-4936.log | grep -v 'ok. 0 passed'\", \"description\": \"Wait for cards suit\u2026\n- said: Cards: 11043 and 1268 passed. Engine clippy is clean. Waiting on the card clippy run.\n- Bash: {\"command\": \"until grep -q 'Finished\\\\|^error' <(sed -n '/=== clippy cards/,$p' /tmp/suites-4936.log); do sleep 5; done; sed -n '/=== clippy cards/,$p' /tmp/suites-4936.log\", \"description\": \"Wait for\u2026\n- said: Both clippy runs are clean. Next is plan step 7: classify against the base binary, then spec check and patches check.\n- Bash: {\"command\": \"echo \\\"- Engine suite, cards suite (11043+1268), clippy engine+cards: all green. Running classify --claims (step 7).\\\" >> .bot-notes.md; git fetch -q origin main 2>&1 | tail -2; git rev-\u2026\n- Bash: {\"command\": \"until grep -q '^exit ' /tmp/claude-1001/-home-runner-work--temp-work-item-4936/768499a2-6d1b-4025-b9d8-b2445b852d92/tasks/b1i37ad5d.output; do sleep 10; done; cat /tmp/claude-1001/-home-\u2026\n- Bash: {\"command\": \"grep -v 'Compiling' /tmp/classify-4936.log; grep -n 'Internal' crates/tools/src/classify*.rs crates/tools/src/classify/*.rs 2>/dev/null | head -10\", \"description\": \"Read full classify ou\u2026\n- Bash: {\"command\": \"sed -n 1,40p crates/tools/src/classify.rs\", \"description\": \"Read classify module header\"}\n- said: Classify reports `Internal`. Stage 2 replayed games against the base build and nothing diverged, so per the plan no pending fragment is needed. Now spec check, patches check and the fuzz gate.\n- Bash: {\"command\": \"echo \\\"- classify --claims vs /tmp/jackioh-base-4936: 'classify: Internal', exit 0 -> no fragment (plan step 7, pass branch).\\\" >> .bot-notes.md; cargo jackioh spec check 2>&1 | grep -v \u2026\n- Bash: {\"command\": \"echo \\\"- spec check, patches check, catalog check: ok. Running fuzz --seeds 200.\\\" >> .bot-notes.md; cargo jackioh fuzz --seeds 200 2>&1 | grep -v Compiling | tail -6\", \"description\": \"R\u2026\n- Bash: {\"command\": \"cargo jackioh fuzz --seeds 200 2>&1 | grep -iE 'fail|panic|error|ok|passed|games' | grep -v Compiling | head -10\", \"description\": \"Find fuzz pass/fail summary line\", \"timeout\": 1800000}\n- said: Fuzz: 200 passed, 0 failed, 0 replay mismatches. One last check: whether any golden fixture or test outside the two crates could see the new order.\n- Bash: {\"command\": \"grep -rl 'stinkyscape-009' crates/*/tests e2e apps/web/src --include=*.json --include=*.rs --include=*.ts --include=*.jsonl 2>/dev/null | head; git status --porcelain\", \"description\": \"S\u2026\n- Bash: {\"command\": \"git diff crates/engine/src/plague.rs\", \"description\": \"Review the engine diff\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-notes.md'\\nt=open(p).read()\\nstart=t.index('## State')\\nend=t.index('## Log')\\nnew='''## State\\n\\n- Build run 1 (opus): DONE. Plan steps 1-8 complet\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: `permanents_on_field` meets a card lying on a unit zone after its side's backrow\"} --> ## What changed The engine's list of every permanent on the field now puts a Ticketed stacked on a Unit after that side's backrow cards, as the spec (R4665000) says. \u2026"
       },
       "issue": 4936,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-25T19:49:23Z",
         "from_run": "45671307244",
         "gates": [
           {
@@ -25990,7 +25995,11 @@
         "source": "build",
         "until": "2026-11-25T20:16:22Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-25T19:46:22Z",
+      "run_id": "pending:1098c0af-1795636092",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -26009,6 +26018,9 @@
         "provider": "claude-4",
         "run": "45671307244"
       },
+      "started_at": "2026-11-25T19:49:23Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -26022,9 +26034,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T19:36:58Z",
+    "at": "2026-11-25T19:49:23Z",
     "url": "",
-    "what": "build #4921 on claude-6"
+    "what": "review #4956 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-25T19:23:29Z",
