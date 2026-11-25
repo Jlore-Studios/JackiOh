@@ -24650,9 +24650,12 @@
     "what": "review #4939 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-25T16:02:15Z",
+    "at": "2026-11-25T16:05:55Z",
     "notes": [
-      "night_run: could not finish (GitHubError: POST /repos/Jlore-Studios/JackiOh/actions/workflows/bot-night.yml/dispatches: HTTP 500: )"
+      "delivered review #4929 on claude-1 (run 45647559185): reviewed",
+      "could not deliver plan #4842 on agy (run 45641128638), try 2 of 3 (GitHubError: POST /repos/Jlore-Studios/JackiOh/issues/4842/comments: HTTP 500: ): it is tried again next tick (1 more)",
+      "could not deliver build #4676 on claude-3 (run 45622897728), try 2 of 3 (GitHubError: POST /repos/Jlore-Studios/JackiOh/pulls: HTTP 500: ): it is tried again next tick (1 more)",
+      "night_run: could not finish (GitHubError: POST /repos/Jlore-Studios/JackiOh/issues/4676/comments: HTTP 502: Server Error)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -25354,7 +25357,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T15:47:14Z",
+  "loop_tick": "2026-11-25T16:05:55Z",
   "machine_disk": {
     "issue": null,
     "reading": {
