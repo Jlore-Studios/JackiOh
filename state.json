@@ -22119,20 +22119,23 @@
         "built_by": "claude-8",
         "carried": {
           "by": "`claude` (strong)",
-          "conflicts": [],
-          "from": "8dc8b04c7a18caf859428732a1254eb5b8d2114b",
-          "main": "fdbafa374cc8a0cbcb26907c026e93987cc834ba"
+          "conflicts": [
+            "crates/cards/src/scripts/stinkyscape/c009_ticketed.rs",
+            "spec/03-zones.md"
+          ],
+          "from": "c4a80906b2390359c0799a56bf44a45fde9f0cfd",
+          "main": "7d4b6ab64b628a12993fd2734a89a50235404da0"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-8",
-            "run": "45566625729",
+            "run": "45576206364",
             "tier": "strong"
           }
         ],
-        "sha": "c4a80906b2390359c0799a56bf44a45fde9f0cfd",
+        "sha": "187f650e9db6d2ba9d9a16a1a6d964efe4684c06",
         "tiers": {
           "claude": "strong"
         }
