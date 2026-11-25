@@ -317,7 +317,9 @@ beam, but when the beam keeps the earlier line, the first `AI_SEARCH.zone_varian
 turn where they stand after it, below that line on a tie. So the placements the beam tries reach the reply,
 which prices a Cleave into a unit's neighbours; a lane the reply scores the same as a better one of that
 play is not a finalist of its own. The
-lethal solver's visited set still reads a position without its units' lanes. Position
+lethal solver's visited set reads a position with its units' lanes, as the concession check's walk does
+(`simulate::position_key`, R4806000): a play tried in two lanes reaches two positions, so a lethal that
+stands only in the second (across a slash, outside The Gauntlet) is found. Position
 switches are the last tier of the move order, so a level's `branching` cut drops them from a busy board;
 the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit that could attack it next turn would kill and survive, `kills_and_survives`; R2021000) it cuts are
 kept (#1759), so a unit that cannot win its next fight can stand down however many earlier moves the board offers. While the
@@ -393,10 +395,15 @@ calls it; the ladder bots ask it before conceding.
 
 A decision's cost is counted in nodes: one node is one `reduce` call the AI makes, the reply's
 included, or one turn hook its root fires (R2477000, R2565000). A step whose `reduce` does far more work than most is charged extra nodes up front
-(`surcharge_nodes`: a play that ranks every shipped card, an attack into an armed My Pawn, a fused
-card holding either, and a play the other side's Pareto Optimality judges, per card held; #1240),
+(`surcharge_nodes`: a play that ranks every shipped card, an attack an armed My Pawn would answer, one
+its own projection calls lethal (`subsystems::is_lethal`, R4809001), a fused card holding either, and a
+play the other side's Pareto Optimality judges, per card held; #1240),
 and once a step has run, for each such card it cast without playing it, from a graveyard or at random
 (`announced_surcharge_nodes`, read off its `cardAnnounced` events; #1347).
+A step whose surcharge the counter cannot pay is refused in the beam (`simulate` answers `Some(Err)` and
+the beam tries the next), but cuts the opponent's reply (`simulate_reply` answers `None`, as for a spent
+counter: `reduce_for`, `best_try`), since a skipped reply step reads as an opponent who passed it up
+(R4809000).
 Such a step, once run, is kept for the rest of its decision (`SimMemo` on the root counter, at most
 `AI_SEARCH.memo_steps`), and the same step from the same state, nonce records aside, is answered from
 it without the engine, its nonce record rebuilt as the engine builds it and its nodes charged as before,

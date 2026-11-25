@@ -4,6 +4,9 @@
 //! 1. Depth-first walk in move order for `AI_SEARCH.lethalQuickNodes`.
 //! 2. Best-first walk ordered by `ready_gap` (enemy hero life including Duos pool R964000 less ready attacks).
 //!
+//! Each walk's visited set reads `position_key`, `search_signature` with the units' lanes (R4806000), so a
+//! play tried in two lanes reaches two positions.
+//!
 //! Proved lines are verified across all determinizations and trimmed (`trim_lethal`, R1965000).
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -22,7 +25,7 @@ use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
 use crate::evaluate::{Prices, damage_past_taunts, deft_in_defense};
 use crate::observe::redact;
 use crate::simulate::{
-    LineStatus, create_node_counter, create_sub_counter, line_status, search_signature, simulate,
+    LineStatus, create_node_counter, create_sub_counter, line_status, position_key, simulate,
 };
 use crate::types::{NodeCounter, StoppedBy};
 
@@ -229,21 +232,21 @@ fn judge(
     if line_status(next, seat, root_turn) != LineStatus::Open {
         return Some(Verdict::Dead);
     }
-    let signature = search_signature(next, seat);
-    if visited.contains(&signature) {
+    let key = position_key(next, seat);
+    if visited.contains(&key) {
         return Some(Verdict::Dead);
     }
-    visited.insert(signature);
+    visited.insert(key);
     Some(Verdict::Deeper)
 }
 
-/// Stage 1: depth-first in move order, with a visited set on `search_signature`.
+/// Stage 1: depth-first in move order, with a visited set on `position_key` (R4806000).
 fn depth_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter, prices: &Prices) -> Walk {
     let Some(root) = dets.first() else {
         return Walk::Exhausted;
     };
     let mut visited: IndexSet<String> = IndexSet::new();
-    visited.insert(search_signature(root, seat));
+    visited.insert(position_key(root, seat));
     let mut stack: Vec<Frame> = Vec::new();
     push_moves(
         &mut stack,
@@ -296,7 +299,7 @@ fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter, pri
         return Walk::Exhausted;
     };
     let mut visited: IndexSet<String> = IndexSet::new();
-    visited.insert(search_signature(root, seat));
+    visited.insert(position_key(root, seat));
     let mut open: Vec<Open> = vec![Open {
         state: Rc::new(root.clone()),
         line: Vec::new(),

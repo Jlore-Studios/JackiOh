@@ -36,8 +36,8 @@ use crate::evaluate::{
 };
 use crate::lethal::{deft_ready_switch, ready_gap};
 use crate::simulate::{
-    AnswersTried, LineStatus, best_auto_answer, charge_announced, line_status, note_sim_panic, simulate,
-    static_score, surcharge_nodes,
+    AnswersTried, LineStatus, SimStep, best_auto_answer, charge_announced, line_status, note_sim_panic,
+    simulate, static_score, surcharge_nodes,
 };
 use crate::types::NodeCounter;
 
@@ -358,15 +358,17 @@ fn ranked_attacks(
     ranked.into_iter().map(|(action, _)| action).collect()
 }
 
-/// Reduces one opponent action; `None` on panic or refusal. Counts node and charges surcharges (#1429).
+/// Reduces one opponent action, counting its surcharges (#1429): `None` when the counter cannot pay
+/// them, which cuts the reply as a spent counter does (R4809000); else the state reached, or the
+/// refusal or caught panic as `Err`.
 fn reduce_for(
     state: &GameState,
     actor: PlayerId,
     action: &ActionBody,
     counter: &dyn NodeCounter,
-) -> Option<GameState> {
-    // `None` here already reads "skip this step" to the reply walk, so a surcharge the slice
-    // cannot pay returns early instead of draining it node by node first.
+) -> Option<SimStep> {
+    // R4809000: a surcharge the counter cannot pay cuts the reply here rather than drain it node by
+    // node; skipped, the step would read as the opponent passing it up.
     let surcharge = surcharge_nodes(state, actor, action);
     if counter.used() + surcharge > counter.limit() {
         return None;
@@ -380,13 +382,10 @@ fn reduce_for(
     match catch_unwind(AssertUnwindSafe(|| reduce_unpiloted(state, &action))) {
         Ok(next) if next.error.is_none() => {
             charge_announced(counter, state, &action.body, &next);
-            Some(next.state)
+            Some(Ok(next.state))
         }
-        Ok(_) => None,
-        Err(payload) => {
-            note_sim_panic(counter, payload.as_ref());
-            None
-        }
+        Ok(next) => Some(Err(next.error.unwrap_or_default())),
+        Err(payload) => Some(Err(note_sim_panic(counter, payload.as_ref()))),
     }
 }
 
@@ -507,6 +506,7 @@ fn judged(
 /// The best of `tries` for `opp` by its own evaluation: one that wins the game at once, else the one
 /// whose result beats standing still by the most (ties keep the list's order). With `at_close`, each
 /// try and standing still are judged after `opp` ends its turn there (`judged`, R3696001).
+/// `Known::Cut` when the counter refused a node, or when a try's surcharge does not fit it (R4809000).
 fn best_try(
     state: &GameState,
     opp: PlayerId,
@@ -523,6 +523,13 @@ fn best_try(
         return Known::Cut;
     };
     for action in tries {
+        // R4809000: a try whose surcharge the counter cannot pay past the node `simulate` takes cuts
+        // the reply: `simulate` would refuse it as a refused step, and the reply would play on as if
+        // the opponent held the play back.
+        let surcharge = surcharge_nodes(state, opp, action);
+        if surcharge > 0 && counter.used() + 1 + surcharge > counter.limit() {
+            return Known::Cut;
+        }
         let next = match simulate(state, opp, action, counter, prices) {
             None => return Known::Cut,
             Some(Err(_)) => continue,
@@ -765,7 +772,10 @@ fn deft_switch(
         if !counter.take() {
             return Known::Cut;
         }
-        let Some(switched) = reduce_for(state, opp, action, counter) else {
+        let Some(stepped) = reduce_for(state, opp, action, counter) else {
+            return Known::Cut;
+        };
+        let Ok(switched) = stepped else {
             continue;
         };
         let after = legal_actions(&switched, opp);
@@ -885,7 +895,8 @@ pub fn hidden_card_ids(state: &GameState, seat: PlayerId) -> IndexSet<String> {
 }
 
 /// Simulates the opponent's reply turn according to the reply rules until the seat's next main phase
-/// or prompt, or game end. Prompts get `best_auto_answer`. Returns `None` when the node counter exhausts.
+/// or prompt, or game end. Prompts get `best_auto_answer`. Returns `None` when the node counter exhausts,
+/// or cannot pay a step's surcharge (R4809000).
 pub fn simulate_reply(
     state: &GameState,
     seat: PlayerId,
@@ -983,15 +994,17 @@ pub fn simulate_reply_with(
             return None;
         }
         let step = attack.clone().unwrap_or(ActionBody::EndTurn);
-        if let Some(next) = reduce_for(&current, opp, &step, counter) {
+        // R4809000: a step whose surcharge the counter cannot pay (`None`) cuts the reply.
+        if let Ok(next) = reduce_for(&current, opp, &step, counter)? {
             current = next;
             continue;
         }
-        // A refused attack ends the turn instead; a refused endTurn ends the reply where it stands.
+        // An attack the engine refused ends the turn instead; a refused endTurn ends the reply where it
+        // stands.
         if attack.is_none() || !counter.take() {
             return if attack.is_none() { Some(current) } else { None };
         }
-        let Some(ended) = reduce_for(&current, opp, &ActionBody::EndTurn, counter) else {
+        let Ok(ended) = reduce_for(&current, opp, &ActionBody::EndTurn, counter)? else {
             return Some(current);
         };
         current = ended;
