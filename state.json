@@ -24867,17 +24867,12 @@
     "what": "review #4943 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-25T16:51:05Z",
+    "at": "2026-11-25T17:05:40Z",
     "notes": [
-      "#4939: `claude-7` can start again, so its hold is lifted",
-      "delivered review #4928 on claude-4 (run 45653931229): approved",
-      "delivered build #4812 on claude-8 (run 45644085303): built",
-      "delivered revise #4907 on muse (run 45625193117): approved",
-      "started review #4939 on claude-7 (run 45659275015)",
-      "started review #4942 on claude-8 (run 45659444282)",
-      "started build #4836 on claude-4 (run 45659616583)",
+      "delivered build #4823 on claude-4 (run 45635050397): built",
+      "started review #4943 on claude-4 (run 45661714289)",
       "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -25579,7 +25574,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T16:51:05Z",
+  "loop_tick": "2026-11-25T17:05:40Z",
   "machine_disk": {
     "issue": null,
     "reading": {
