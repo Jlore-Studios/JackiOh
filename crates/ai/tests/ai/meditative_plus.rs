@@ -459,19 +459,16 @@ fn r3696000_on_a_tight_budget_the_supply_drop_line_costs_no_world_its_score() {
 }
 
 /// R3696000, R3498000: past the host's wrap-up the Supply Drop line is not replied to, while the
-/// shortlist and every other world still are. The beam never reaches its own poll (its floor is the root's
-/// `root_branching` and endTurn), so the one poll is the search's, before that line.
+/// shortlist and every other world still are. R4801000: the beam polls the wrap-up before each node once
+/// it has tried its root, so the wrap-up here answers false to every poll a wrap-up that never fires gets
+/// but the last, the search's before that line: it fires once the beam is through.
 #[test]
 fn r3696000_past_the_wrap_up_the_supply_drop_line_is_not_replied_to() {
     let state = supply_drop_beside_two_vanillas();
-    let budget = SearchBudget {
-        root_branching: AI_BUDGET.nodes,
-        ..AI_BUDGET
-    };
     let plain = decide(
         &state,
         AI,
-        &mut AiOptions::with_budget(create_rng("ai-supply-drop-combat", 0), budget),
+        &mut AiOptions::with_budget(create_rng("ai-supply-drop-combat", 0), AI_BUDGET),
     )
     .expect("the AI acts");
     assert_eq!(
@@ -483,22 +480,37 @@ fn r3696000_past_the_wrap_up_the_supply_drop_line_is_not_replied_to() {
     assert_eq!(plain.stats.stopped_by, StoppedBy::Exhausted);
 
     let polls = Cell::new(0usize);
-    let fired = || {
-        polls.set(polls.get() + 1);
-        true
+    let wrapped_at = |fires_from: usize| {
+        polls.set(0);
+        let wrap_up = || {
+            polls.set(polls.get() + 1);
+            polls.get() >= fires_from
+        };
+        decide(
+            &state,
+            AI,
+            &mut AiOptions {
+                rng: create_rng("ai-supply-drop-combat", 0),
+                budget: AI_BUDGET,
+                should_stop: None,
+                wrap_up: Some(&wrap_up),
+            },
+        )
+        .expect("the AI acts")
     };
-    let wrapped = decide(
-        &state,
-        AI,
-        &mut AiOptions {
-            rng: create_rng("ai-supply-drop-combat", 0),
-            budget,
-            should_stop: None,
-            wrap_up: Some(&fired),
-        },
-    )
-    .expect("the AI acts");
-    assert_eq!(polls.get(), 1);
+    assert_eq!(
+        wrapped_at(usize::MAX),
+        plain,
+        "PREMISE: a wrap-up that never fires decides as no clock does"
+    );
+    let unfired_polls = polls.get();
+    assert!(
+        unfired_polls > 0,
+        "PREMISE: the search polls before the Supply Drop line"
+    );
+
+    let wrapped = wrapped_at(unfired_polls);
+    assert_eq!(polls.get(), unfired_polls);
     assert_eq!(wrapped.stats.lines, plain.stats.lines, "one beam");
     assert_eq!(wrapped.stats.replied, SHORTLIST, "{:?}", wrapped.stats);
     assert_eq!(wrapped.stats.worlds_scored, AI_BUDGET.determinizations);

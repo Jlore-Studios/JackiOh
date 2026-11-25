@@ -205,6 +205,9 @@ pub trait NodeCounter {
     /// R3498000: from here the beam only ends its open lines' turns, which a wrap-up no longer refuses;
     /// a counter with no wrap-up ignores it.
     fn end_exploring(&self) {}
+    /// R4801000: the beam has tried every move at its root; a wrap-up is polled from here. A counter
+    /// with no wrap-up ignores it.
+    fn end_root(&self) {}
     /// The failed simulations this counter tallies (`SearchStats.simErrors`), if it tallies them.
     fn sim_error_tally(&self) -> Option<usize> {
         None

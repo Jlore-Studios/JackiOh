@@ -62,9 +62,10 @@ enum CounterKind<'a> {
         start: usize,
         limit: usize,
         capped: Cell<bool>,
-        /// R3498000: the beam's stop short of the clock, polled once `floor` nodes are drawn.
+        /// R3498000: the beam's stop short of the clock, polled once `root_tried` (R4801000).
         wrap_up: Option<&'a dyn Fn() -> bool>,
-        floor: usize,
+        /// R4801000: `end_root` was called: the beam has tried every move at its root.
+        root_tried: Cell<bool>,
         /// The wrap-up fired: no node is taken until `closing`.
         wrapped: Cell<bool>,
         /// `end_exploring` was called: the wrap-up no longer refuses.
@@ -156,7 +157,7 @@ impl NodeCounter for CountingNodeCounter<'_> {
                 limit,
                 capped,
                 wrap_up,
-                floor,
+                root_tried,
                 wrapped,
                 closing,
             } => {
@@ -169,7 +170,7 @@ impl NodeCounter for CountingNodeCounter<'_> {
                         return false;
                     }
                     if let Some(wrap_up) = wrap_up
-                        && parent.used().saturating_sub(*start) >= *floor
+                        && root_tried.get()
                         && wrap_up()
                     {
                         wrapped.set(true);
@@ -209,6 +210,12 @@ impl NodeCounter for CountingNodeCounter<'_> {
     fn end_exploring(&self) {
         if let CounterKind::Sub { closing, .. } = &self.kind {
             closing.set(true);
+        }
+    }
+
+    fn end_root(&self) {
+        if let CounterKind::Sub { root_tried, .. } = &self.kind {
+            root_tried.set(true);
         }
     }
 
@@ -370,17 +377,17 @@ pub fn create_node_counter<'a>(
 /// A slice of `parent`: at most `limit` more nodes, drawn from the parent. Running out of the slice
 /// does not stop the parent, so the lethal solver can hand what it left over to the beam.
 pub fn create_sub_counter<'a>(parent: &'a dyn NodeCounter, limit: usize) -> CountingNodeCounter<'a> {
-    create_wrap_up_counter(parent, limit, None, 0)
+    create_wrap_up_counter(parent, limit, None)
 }
 
 /// R3498000: `create_sub_counter` that also refuses once `wrap_up` answers true, polled before each node
-/// from the `floor`th node it has drawn on, until `end_exploring`; its parent runs on. The beam's slice:
-/// with `wrap_up` None it is `create_sub_counter`'s, node for node.
+/// once `end_root` is called (R4801000: the beam has tried every move at its root), until
+/// `end_exploring`; its parent runs on. The beam's slice: with `wrap_up` None it is
+/// `create_sub_counter`'s, node for node.
 pub fn create_wrap_up_counter<'a>(
     parent: &'a dyn NodeCounter,
     limit: usize,
     wrap_up: Option<&'a dyn Fn() -> bool>,
-    floor: usize,
 ) -> CountingNodeCounter<'a> {
     CountingNodeCounter {
         kind: CounterKind::Sub {
@@ -389,7 +396,7 @@ pub fn create_wrap_up_counter<'a>(
             limit,
             capped: Cell::new(false),
             wrap_up,
-            floor,
+            root_tried: Cell::new(false),
             wrapped: Cell::new(false),
             closing: Cell::new(false),
         },

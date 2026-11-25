@@ -411,7 +411,10 @@ same `Decision`. The browser's wall-clock cap arrives as `should_stop` (the WASM
 which ends the search early with the best line found. R3498000: every host with a clock also passes
 `wrap_up`, fired at `AI_WRAP_UP_SHARE` of its limit (`wrap_up_after_ms`), which stops the beam's slice
 of the counter and skips the payoff line R3696000 adds: the beam's open lines end their turn and the reply and the other determinizations
-run on until `should_stop`. `SearchStats.replied` and `worldsScored` say how far they got, and
+run on until `should_stop`. R4801000: it is first polled once the beam has tried every move at its
+root (`NodeCounter::end_root`), however many nodes those cost (a surcharged play, its auto-answers),
+so a wrap-up that fired before the beam still leaves it lines, the root's End turn among them.
+`SearchStats.replied` and `worldsScored` say how far they got, and
 `Decision::fell_short` names a decision that left its finalists unscored on a sampled world. With no
 clock, or a wrap-up that never fires, a decision is node for node what it was.
 
