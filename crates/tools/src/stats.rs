@@ -492,10 +492,12 @@ pub fn versions_report(args: &ReportArgs) -> Result<PlayVersionTable> {
         totals.fold(&record, false);
     }
     let versions = jackioh_cards::deck_play_versions();
+    let history = jackioh_cards::patch_history();
     let mut table = play_version_figures(
         &totals,
         &PlayVersionQuery {
             versions: &versions,
+            history: &history,
             live_pilot: args.pilot.unwrap_or_else(|| default_pilot(args.source)),
             mode: args.mode.map_or(ModeFilter::All, ModeFilter::Only),
             min_sample: jackioh_shared::config::CARD_STATS_MIN_SAMPLE,
@@ -1900,10 +1902,12 @@ mod tests {
             totals.fold(&record, false);
         }
         let versions = jackioh_cards::deck_play_versions();
+        let history = jackioh_cards::patch_history();
         let mut every = play_version_figures(
             &totals,
             &PlayVersionQuery {
                 versions: &versions,
+                history: &history,
                 live_pilot: PilotFilter::Unified,
                 mode: ModeFilter::All,
                 min_sample: jackioh_shared::config::CARD_STATS_MIN_SAMPLE,

@@ -3025,6 +3025,32 @@ fn spec_table_constants(section: &str) -> Vec<String> {
         .collect()
 }
 
+// §8 is one note a subsection (`spec/08-catalog/`), and the cards' radiant_stats.rs reads them with
+// `include_str!`, a list a pure crate's test cannot build from the folder (CLAUDE.md rule 4). A note
+// added without joining that list would leave its rows' Radiant stats unchecked, so this holds the
+// list to the folder.
+#[test]
+fn every_catalog_note_is_read_by_the_radiant_stats_test() {
+    let root = repo();
+    let reader = fs::read_to_string(root.join("crates/cards/tests/cross/radiant_stats.rs"))
+        .expect("crates/cards/tests/cross/radiant_stats.rs");
+    let mut notes: Vec<String> = fs::read_dir(root.join("spec/08-catalog"))
+        .expect("spec/08-catalog")
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .collect();
+    notes.sort();
+    assert!(notes.len() >= 13, "only {} notes in spec/08-catalog", notes.len());
+    let unread: Vec<&String> = notes
+        .iter()
+        .filter(|note| !reader.contains(&format!("include_str!(\"../../../../spec/08-catalog/{note}\")")))
+        .collect();
+    assert!(
+        unread.is_empty(),
+        "crates/cards/tests/cross/radiant_stats.rs reads no {unread:?} of spec/08-catalog: add each to CATALOG_NOTE"
+    );
+}
+
 // B33 (DR14, #2709): the dungeon run's and the Infinite Assault's spec sections (§15, §16, #4584)
 // together hold one row per `pub const` of the run's `config.rs` and no other, and the spec's map
 // links both notes.

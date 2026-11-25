@@ -35282,5 +35282,826 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.6.13d",
+    "date": "2026-11-24",
+    "title": "Patch: the Infinite Assault, the cards, IA-25 to IA-240",
+    "source": "#4601",
+    "notes": "Issue #4601 (part of #4576): the held single-player Infinite Assault set's cards IA #25-#240 and their 13 tokens, the eight doctrines and the twelve Commanders, built as one fullsend tree (CF #4602, C2-C10 #4586-#4594) and reconciled here, with the engine verbs they need, each reached only by the set's cards or written only in a game that holds one (R4589000). No pool deals the set while it is held (R4577000), so no card players can reach plays differently and no golden trace moves. Claims --visual because the change touches apps/web/src/cards/ (R2529000): placeholder scenes, dioramas and motion recipes keyed to infiniteassault- ids only (R4577009); no shipped card's picture moves.",
+    "player": {
+      "title": "Behind the scenes",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Groundwork for future content. No card you can play looks or plays any differently."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "e06369a734812cf6b4c1faebab06090c4d1ea872"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.6.13e",
+    "date": "2026-11-24",
+    "title": "Patch: the Infinite Assault, L, the set's look and sound",
+    "source": "#4596",
+    "notes": "Issue #4596 (part of #4576): the held single-player Infinite Assault set's look and sound (R4596000): a glitch accent on its faces, its doctrine and Commander chips in the Almanac, its twelve Commanders' entrances and eight doctrine Mythics' casts, its Mythics' tiles in circuitry, and intros for its 44 Legendaries and Mythics. Claims --visual because the change touches apps/web/src/cards/ (R2529000): the accent reaches only Infinite Assault faces, which no pool deals while the set is held (R4577000), so no shipped card looks or plays any differently.",
+    "player": {
+      "title": "Behind the scenes",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Groundwork for future content. No card you can play looks or plays any differently."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "13353ce677d397b16d8c436ce85f89d37f71cbea"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": []
+  },
+  {
+    "version": "v0.6.13f",
+    "date": "2026-11-25",
+    "title": "One fixed order for every card's keyword line",
+    "source": "#4747",
+    "notes": "Reorder every catalog face's keyword line into the R4747000 fixed order (English and Chinese); sort live, gained and fused keyword lines in the face model; render the face's order in KeywordIcons and FieldBadges.",
+    "player": {
+      "title": "Keyword lines in one fixed order",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "Every card's keyword line now prints its keywords in one fixed order, from cost and card flow down through combat.",
+        "No card plays differently: only the order of the words changed, in English and Chinese."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "a5b417a7d6e2163fc07308d1298ff934095d72f1"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "changes": [
+      {
+        "id": "core-003",
+        "name": "Right-house defender",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-009",
+        "name": "Moths to the Flame",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-019",
+        "name": "Midrange Menace",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-045",
+        "name": "Deft Duelist",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-055",
+        "name": "Lava Golem",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-089",
+        "name": "Corpse Eater",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-095-1",
+        "name": "Chaos Golem",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-023",
+        "name": "Devil's Pact",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-067",
+        "name": "Felinor Feeler",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-080",
+        "name": "BOOM! Big Max",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-006",
+        "name": "Wrong-House Attacker",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-028",
+        "name": "Nuestro hogar, nuestras tumbas",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-033",
+        "name": "Ivory Tower",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-051",
+        "name": "Jlockeed's J15 Fighter",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-073-1",
+        "name": "Classic Golem",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classicplus-074",
+        "name": "Twice Forward One Step Backwards",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-002",
+        "name": "Rampaging Rhino",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-005",
+        "name": "Death by 1000 cuts",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-011",
+        "name": "Double Header",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-039-5",
+        "name": "Jade Beauty",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "meditative-066",
+        "name": "Fiery Waraxe",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-071-1",
+        "name": "The Cane",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-080",
+        "name": "Aluneth",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "meditative-093",
+        "name": "Growing Felinor",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-093-1",
+        "name": "Growing Felinor Sr",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-093-2",
+        "name": "Growing Felinor Sr Sr",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-093-3",
+        "name": "Growing Felinor Super Senior",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-095-1",
+        "name": "CN Golem",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-097-2",
+        "name": "Wishing Well",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-097-5",
+        "name": "Bunker",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-097-7",
+        "name": "The Great Wall",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-016",
+        "name": "Rod of Ages",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-053",
+        "name": "Flak v3",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-057",
+        "name": "Flak v4",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-061",
+        "name": "Flak v5",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-073",
+        "name": "Paragon Mk2",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-074",
+        "name": "Paragon-X",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-077",
+        "name": "Yuma",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-094",
+        "name": "Tmack Trav",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-101",
+        "name": "Overdrive Module",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-108",
+        "name": "Trila 3",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-116",
+        "name": "Megabase",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-128",
+        "name": "Jlockeed's Yamato Cannon",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-136",
+        "name": "Magic Module",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-150-1",
+        "name": "Stinkyscape Golem",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-155",
+        "name": "Comet Crash",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-177",
+        "name": "Cloaking Module",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-drone-interceptor",
+        "name": "Drone Interceptor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-drone-corvette",
+        "name": "Drone Corvette",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-shield-layer",
+        "name": "Drone Battleship (Shield Layer)",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-propagation-layer",
+        "name": "Drone Battleship (Propagation Layer)",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-meltdown-layer",
+        "name": "Drone Battleship (Meltdown Layer)",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-014",
+        "name": "Explosive Trap",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-016",
+        "name": "Celestial Caller",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-039-1",
+        "name": "Training-Grounds Golem",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-047",
+        "name": "Legacy: Midrange Menace",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-001",
+        "name": "Starfruit",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-007",
+        "name": "Churnwalker",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-026-1",
+        "name": "Conscript",
+        "kind": "changed",
+        "fields": [
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-036",
+        "name": "Duo",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-067",
+        "name": "Phase Wall",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-072",
+        "name": "Foreshadow",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-073",
+        "name": "Ripple",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-090",
+        "name": "Meltdown",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-091",
+        "name": "Tsunami",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-106",
+        "name": "Spectre",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-107",
+        "name": "Fuse",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-108",
+        "name": "Swarmer",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-109",
+        "name": "Lancer",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-113",
+        "name": "Scepter",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-114",
+        "name": "Reign",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-115",
+        "name": "Flare",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-116",
+        "name": "Horizon",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-117",
+        "name": "Zenith",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-118",
+        "name": "Antumbra",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-119",
+        "name": "Eclipse",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-121",
+        "name": "Toxopid",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-121-1",
+        "name": "Toxopid Leg",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-124",
+        "name": "Sei",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-125",
+        "name": "Omura",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-133-1",
+        "name": "Daglare",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-133-2",
+        "name": "Macizon",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-133-3",
+        "name": "Fortnith",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-133-4",
+        "name": "Sceptumbra",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-133-5",
+        "name": "Reignclipse",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-t-alnilam",
+        "name": "Alnilam",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]
