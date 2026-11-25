@@ -3929,3 +3929,13 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-25T17:28:14Z,45644288740,claude-8,opus,build,4817,hard,built,,84.9,272,67028,20596961,7.0119,1,16,,,1100.8,claude-8,fresh,,1
 2026-11-25T17:37:34Z,45664712619,claude-3,opus,plan,4932,medium,planned,,8.4,59,64304,3511071,1.638,57,65,,,8.5,,fresh,,1
 2026-11-25T17:35:05Z,45664526610,claude-3,opus,plan,4924,medium,planned,,7.1,45,58485,2420086,1.372,56,63,,,8.2,,fresh,,1
+2026-11-25T17:51:54Z,45667255960,claude-4,opus,plan,4936,hard,planned,,7.8,129,45719,6761454,3.3031,7,14,,,22.3,muse,fresh,other,1
+2026-11-25T17:50:25Z,45635236588,claude-6,opus,build,4828,hard,built,,150,0,0,0,,22,11,,,1037.9,claude-3,fresh,other,1
+2026-11-25T18:08:48Z,45669091201,claude-3,opus,plan,4924,hard,planned,,13.7,120,83581,8232641,4.7691,67,86,,,34.3,claude-3,fresh,,1
+2026-11-25T17:59:57Z,45666915194,claude-8,opus,review,4946,hard,approved,,18,4,827,109082,1.544,19,22,,,1.5,,none,,1
+2026-11-25T18:04:08Z,45659444282,claude-8,opus,review,4942,hard,approved,,23.2,64,14947,1942390,1.9162,17,23,,,3.4,,fresh,,3
+2026-11-25T18:11:58Z,45657090145,claude-6,opus,build,4824,hard,built,,54.2,98,24388,4378583,2.1322,8,12,,,1178,claude-3,fresh,other,1
+2026-11-25T18:26:08Z,45673669796,claude-8,opus,review,4940,hard,reviewed,,4,57,21411,2386638,1.5894,23,29,,,,,none,,1
+2026-11-25T18:18:50Z,45664009378,claude-3,opus,build,4891,hard,built,,17.3,28,9336,729561,0.6457,55,66,,,4.4,claude-8,fresh,other,1
+2026-11-25T18:17:42Z,45659275015,claude-7,opus,review,4939,hard,approved,,39.6,30,7956,903243,2.5637,0,5,,,80.7,claude-7,fresh,,3
+2026-11-25T18:26:15Z,45654120833,claude-3,opus,build,4676,hard,built,,73.5,179,46033,20936863,11.8194,40,66,,,898.8,claude-3,resumed,,1
