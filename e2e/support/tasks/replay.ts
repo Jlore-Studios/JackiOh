@@ -30,7 +30,7 @@ type RunnerEnvelope =
 
 export function replayHash(projectRoot: string, payload: ReplayHashPayload): ReplayHashResult {
   const repoRoot = path.resolve(projectRoot, "..");
-  const artifacts = path.join(projectRoot, "artifacts");
+  const artifacts = path.join(projectRoot, process.env.E2E_ARTIFACTS ?? "artifacts");
   mkdirSync(artifacts, { recursive: true });
   const logFile = path.join(artifacts, `${payload.label}.json`);
   writeFileSync(
