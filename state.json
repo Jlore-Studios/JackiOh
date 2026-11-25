@@ -21402,14 +21402,13 @@
     "what": "spot-check #4958 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-25T21:17:34Z",
+    "at": "2026-11-25T21:30:02Z",
     "notes": [
-      "delivered revise #4947 on claude-6 (run 45689509483): built",
-      "delivered review #4943 on claude-8 (run 45689141477): blocked",
-      "started revise #4944 on muse (run 45703632742)",
-      "started review #4947 on claude-8 (run 45703797152)",
-      "nothing more to start: nothing is queued",
-      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
+      "delivered review #4947 on claude-8 (run 45703797152): reviewed",
+      "delivered review #4961 on claude-1 (run 45701563706): approved",
+      "delivered review #4960 on muse (run 45699786407): approved",
+      "started review #4958 on claude-8 (run 45705631671)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22111,7 +22110,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T21:17:34Z",
+  "loop_tick": "2026-11-25T21:30:02Z",
   "machine_disk": {
     "issue": null,
     "reading": {
