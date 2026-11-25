@@ -36302,5 +36302,70 @@
       "v0.6.13k"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.14b",
+    "date": "2026-11-25",
+    "title": "Patch: Omura's Activate is not offered with no enemy Unit to aim at, so it cannot be spent on nothing and start its cooldown",
+    "source": "issue #4833",
+    "notes": "Issue #4833: Omura's Activate target is now required (R703, R3560008), so with no enemy Unit it is not offered and refused, and its cooldown cannot start on nothing. Script change only, no catalog change, claimed with --plays.",
+    "player": {
+      "title": "Omura's Activate is offered only with an enemy Unit to aim at",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Omura's Activate can no longer be used with no enemy Unit on the field, where it did nothing and started its 3-turn cooldown."
+      ]
+    },
+    "commits": [
+      "7f10b536fe523e4604d2ec85f7f2d7f3a918ada4"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscapeplus-125"
+    ],
+    "fragment": "omura-s-activate-is-not-offered-with-no-enemy-unit-to-aim-at",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14c",
+    "date": "2026-11-25",
+    "title": "Inner Fire reads Attack below 0",
+    "source": "#4840",
+    "notes": "Inner Fire took its buff off the shown Attack, so a Unit below 0 came up short; it now reads Attack before layer 5's floor",
+    "player": {
+      "title": "Inner Fire fixed below 0 Attack",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Inner Fire on a Unit with negative Attack (under an aura such as Spikey Pillow) now sets it to exactly its Health, instead of coming up short."
+      ]
+    },
+    "commits": [
+      "b6b3421bb7080050792171f4cbd3b6b655d16ca7"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-010",
+      "stinkyscape-109",
+      "stinkyscape-111"
+    ],
+    "fragment": "inner-fire-reads-attack-below-0",
+    "changes": [
+      {
+        "id": "stinkyscape-010-1",
+        "name": "Inner Fire",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      }
+    ]
   }
 ]

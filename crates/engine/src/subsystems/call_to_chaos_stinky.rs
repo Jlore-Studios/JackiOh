@@ -121,7 +121,8 @@ fn build_quests() -> Effect {
 }
 
 /// 4. R1882002: one pick (R60) of the set's Acclaimed Units into its caster's hand, then a Replenish by
-///    its printed cost (§6.3, R364); a card a full hand burns replenishes nothing.
+///    its printed cost (§6.3, R364); a card a full hand burns replenishes nothing. R673, R4845000: the
+///    pick may be Glitch, a card generated into a hand, and a Glitch refreshes its printed (0).
 fn build_acclaimed() -> Effect {
     entry("acclaimed", |_ctx| {
         vec![Effect::new("callToChaosStinky:addAcclaimed", |ctx| {
@@ -131,7 +132,13 @@ fn build_acclaimed() -> Effect {
                 "set": SET
             })));
             // R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
-            let Some(def) = crate::catalog::pick_unique(ctx.sink.rng, &pool, &mut ctx.draw_tally) else {
+            // R673, R4845000: a card generated into a hand, so it may be Glitch (its printed (0) refreshes).
+            let Some(def) = crate::catalog::pick_generated_unique(
+                ctx.sink.rng,
+                &pool,
+                Some(&*ctx.sink.state),
+                &mut ctx.draw_tally,
+            ) else {
                 return;
             };
             let controller = ctx.controller;
