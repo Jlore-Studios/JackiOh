@@ -23181,9 +23181,11 @@
         "by": "`muse` (medium)",
         "sha": "70057efa5577d4f272bb6662fcd3797efafe6262"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-25T08:46:16Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-25T09:49:49Z",
         "family": "muse",
@@ -23193,6 +23195,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Test run in progress; will continue once its result arrives.<!-- bot: {\"status\": \"done\", \"title\": \"Patch: a daily game's board never goes backwards\"} -->\n- A daily board now drops any live answer below the shown game's `seq`, so a `GET /api/daily/games/:id` that was already out when the player acted can no longer redraw the older state over the action's answer.\n- What changed (exactly the three planned files, no spec/server/config):\n- - [DailyBoard.tsx](apps/web/src/daily/DailyBoard.tsx): the read effect's answer branch compares `answer.seq` against the shown game's `seq` for the same `matchId` and returns before `setGame` when the answer is older. Equal-seq answers still apply (reread clock refresh preserved). `expired` answers\u2026\n- - [stubServer.ts](apps/web/src/test/stubServer.ts): `Handler` may return `Promise<Reply>` so a test can hold a request until released; header comment notes it.\n- - [DailyBoard.test.tsx](apps/web/src/daily/DailyBoard.test.tsx): new `describe(\"#4846 the board never goes backwards\")` with one test staging the issue's repro \u2014 mount at seq 5, hold a reread via visibility toggle, End turn (POST answered seq 6, move gone), resolve the held GET with seq 5, assert t\u2026\n- How I tested it:\n- - New test red before the fix: the stale seq-5 answer redrew `data-has-move=\"true\"` (`pnpm --dir apps/web test src/daily/DailyBoard.test.tsx -t \"#4846\"` failed at the post-release assertion).\n- - After the fix: full file green, 34/34 passed (`pnpm --dir apps/web test src/daily/DailyBoard.test.tsx`).\n- - `pnpm --dir apps/web typecheck` clean. Note: the plain run OOM-crashed node (exit 134, core dumped) on this machine, so I reran with `NODE_OPTIONS=--max-old-space-size=6144` and it passed with no errors \u2014 an environment limit, not a type error.\n- - `pnpm exec eslint` on all three touched files clean.\n- Decisions the issue left open:\n- - `expired` always replaces a live board (no `seq` on it; the purge only moves forward). No reverse test: a live answer cannot land after a shown `expired` because same-path reads join while one is out (R3206000) and nothing reads once the game is gone \u2014 stated in a comment on the new test. Alterna\u2026\n- - Strict `<` (not `<=`) so equal-seq rereads still refresh the board's clock.\n- - Kept the `matchId` equality check as belt-and-braces even though the effect cleanup cancels old-matchId answers today, per the issue's \"for the same matchId\".\n- Reviewer look-twice: the async `stubServer` fetch adds a microtask before answers resolve; every existing consumer awaits via `findBy`/`waitFor`/`flush`, and the full DailyBoard file plus typecheck cover it.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4846 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4846/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4846,
       "kind": "review",
       "live": "reviewing",
