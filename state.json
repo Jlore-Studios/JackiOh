@@ -23763,13 +23763,14 @@
       "merge_owner": "claude-4",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-7",
       "queued_at": "2026-11-25T12:45:22Z",
-      "run_id": "45617042115",
+      "run_id": "pending:44a08465-1795621154",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 555,
-      "started_at": "2026-11-25T12:46:41Z",
+      "started_at": "2026-11-25T15:40:00Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -24624,9 +24625,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T15:39:00Z",
+    "at": "2026-11-25T15:40:00Z",
     "url": "",
-    "what": "review #4929 on claude-1"
+    "what": "spot-check #4918 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-25T15:13:11Z",
@@ -47184,7 +47185,15 @@
         "n": 555,
         "pr": 4918,
         "queued_at": "2026-11-25T15:12:52Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "run_id": "pending:44a08465-1795621154",
         "sha": "daee3b7b411241506d95243436e980ab2c7f38df",
+        "started_at": "2026-11-25T15:40:00Z",
         "status": "queued",
         "title": "Patch: the AI's count of a board's coming damage includes a Cleave splash's Trample excess over a neighbour that has no Taunt",
         "tries": 0
