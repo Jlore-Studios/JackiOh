@@ -16547,15 +16547,8 @@
       "stop_requested": false
     },
     "4681": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45527746325",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-25T01:51:38Z",
-        "until": "2026-11-25T02:21:38Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -16567,10 +16560,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "ame\u2026\n- 3. Write `spec/rulings/R4681001.md`: `GET /api/stats/hall-of-fame?mode=`, public, `Cache-Control: CARD_STATS_CACHE_TTL_SECONDS`, default merged pilot like the tab's versions fetch; body carries `pilot`, `mode`, `minSample`, `bandLow/High`, and four lists of entries each with full before/after figur\u2026\n- 4. Write `spec/pending/4681.md` with the two `**[[R4681000]] \u2026**` / `**[[R4681001]] \u2026**` paragraphs (copy the one-paragraph style of `spec/pending/4680.md`); append one bullet to the Experimental-tab paragraph of `spec/09-architecture/9.11-card-statistics.md` naming the Hall of Fame and its endpoin\u2026\n- 5. In `crates/cards/src/patch_history.rs`: add `date: String` (defaulted) and `player: PlayerNotes { balance: Vec<String> }` (defaulted, `#[serde(default)]`) to `Entry`; add `pub fn patch_ship_dates() -> IndexMap<String, String>`, `pub fn patch_balance_lines(version: &str) -> Vec<String>`, and `pub\u2026\n- 6. In `crates/engine/src/wire/stats/hall_of_fame.rs`: define `pub struct HallPair { pub before: String, pub after: String }` (play-version ids) and `pub struct HallOfFame { pub broken: Vec<HallPair>, pub nerfed: Vec<HallPair>, pub buffed: Vec<HallPair>, pub changed: Vec<(HallPair, usize)> }`; imple\u2026\n- 7. In `crates/server/src/config.rs`: add `pub const HALL_OF_FAME_LIST_LEN: usize = 10;` with an R4681001 comment; run `cargo test -p jackioh-server --test export_config` and keep the regenerated `apps/web/src/wire/serverConfig.ts` diff.\n- 8. In `crates/server/src/api/stats.rs`, following `get_versions`/`kept_versions`: add a `hall: Kept<PublicStatsMode, Arc<HallOfFameBody>>` field to `KeptReports` with a `hall_cell` accessor via `kept_cell`; shape entries by joining each `HallPair` to its `PlayVersionFigures` rows, dates from `patch\u2026\n- 9. In `apps/web/src/net/api.ts` beside `getStatsVersions`: add the mirrored `PublicHallEntry`/`PublicHallOfFameResponse` types and `getHallOfFame({mode, signal})`.\n- 10. In `apps/web/src/stats/HallPanel.tsx` (copy structure from `RunningPanel.tsx`, faces from `VersionDrillDown.tsx`'s `PatchFace` use): render four `<section>`s in order with `hallSection` testids and rank per entry; each entry is one `<button>` row (`hallEntry`) with before/after small `PatchFace\u2026\n- 11. In `apps/web/src/routes/stats.tsx`: extend `ExperimentalView`/`EXPERIMENTAL_VIEWS` with `\"hall\"`; add the Segmented option `{ value: \"hall\", label: t(\"Hall of Fame\"), testId: statsTestid.experimentalHall }`; fetch hall data when the tab is open and the view is hall (same pattern as the versions\u2026\n- 12. Walk the UI with the `ui-walkthrough` skill at 1280\u00d7720 and 390\u00d7844 before and after, seeded per `e2e/README.md`; capture each list's top 10 from the E2E/dev-run `hall-of-fame` JSON and keep the table plus what was seen for the pull request body (per `docs/issues-and-patches.md`, A task over ev\u2026\n- ## Tests\n- - `crates/engine/src/wire/stats/hall_of_fame.rs`: `fn r4681000_nerf_from_s_to_c_tops_most_nerfed` (card A many won games on v1, many lost on v2, both floored; assert `nerfed[0]` is `(A~v1, A~v2)` and `broken[0].before` is `A~v1`); `fn r4681000_short_after_still_shows_as_companion` (same pair with v\u2026\n- - `crates/server/tests/api/stats.rs`: `async fn r4681001_hall_of_fame_is_public_cached_and_shaped` (no token: 200, four lists, entries carry before/after rows with figures, `Cache-Control` holds `max-age=300`; repeat read folds nothing new, copying the `reads_of` pattern of the versions caching tes\u2026\n- - `apps/web/src/stats/hallOfFame.test.tsx`: copy the `serve()`/`VERSIONS`/`CARDS` harness from `versions.test.tsx`, adding a `HALL` payload and snapshots for before/after faces; `it(\"R4681001 the Segmented gains Hall of Fame after Versions with four sections in order\")`, `it(\"R4681001 an entry show\u2026\n- - Checks: `cargo fmt --check`; `cargo clippy -p jackioh-engine -p jackioh-cards -p jackioh-server --all-targets -- -D warnings`; `cargo jackioh spec check`.\n- ## Done when\n- - [ ] Most broken ranks by lower bound; S\u2192C nerf tops nerfed; spike ranks nowhere; four-version card tops changed; unchanged card only contends broken.\n- - [ ] Short companions render with \"not enough games\" and never rank alone.\n- - [ ] Endpoint is public, cached, `?mode=`-keyed; entries carry version ids, figures, dates, balance line.\n- - [ ] Segmented order Running, Versions, Hall of Fame; four sections in order; entry opens before-version drill-down; phone stacks faces above figures.\n- - [ ] Constants named (`HALL_OF_FAME_LIST_LEN`); R4681000/R4681001 notes, `proven_in`, `spec/pending/4681.md`, \u00a79.11 bullet; `spec check` green.\n- - [ ] Engine, server and web tests above plus fmt, clippy and touched web tests green.\n- - [ ] Walkthrough seen at both sizes; PR body carries the top-10-per-list table from E2E/dev data.\n- ## Risks\n- - `player.balance` lines are free text: name matching can miss or misattribute; the first-match rule is documented in R4681001 and unmatched entries show no line rather than a wrong one.\n- - Play-version figures share one field across eras, so ancient S versions may dominate Most broken; that is the specified all-time reading, and the bound ranking still discounts thin samples.\n- - Server acceptance cases use the compiled `patches.json`, so the four definition cases live in engine tests on fabricated versions; the server test proves wiring, caching and shape only.\n- - No hidden-information risk: all figures are already public via `/api/stats/versions`; faces come from shipped catalogs.\n- ## Open questions\n- - None. The balance-line attribution heuristic is settled above as R4681001 rather than asked.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4681 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4681/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-25T01:42:42Z",
       "owner_why": "it plans it",
@@ -16583,9 +16575,9 @@
       "provider": "muse",
       "queued_at": "2026-11-25T00:27:38Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45527746325",
+      "run_id": "pending:273da9ec-1795571606",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-25T01:42:42Z",
+      "started_at": "2026-11-25T01:53:59Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -21148,9 +21140,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T01:43:25Z",
+    "at": "2026-11-25T01:53:59Z",
     "url": "",
-    "what": "plan #4826 on agy"
+    "what": "build #4681 on muse"
   },
   "last_sweep": {
     "at": "2026-11-25T01:38:31Z",
