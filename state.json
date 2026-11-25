@@ -22368,6 +22368,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 545,
       "started_at": "2026-11-25T11:01:01Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -45964,9 +45965,33 @@
         "title": "Patch: Income Tax fired inside the drawer's random cast takes the drawer's hand, not its own controller's",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-1"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "3fd4464dd4aa411e4fa1bdf5c40a8d6e12484b39",
+        "issue": 4826,
+        "merged_at": "2026-11-25T11:42:26Z",
+        "n": 545,
+        "pr": 4890,
+        "queued_at": "2026-11-25T11:42:26Z",
+        "sha": "6dbc748ffd6b1f2d7a1f274d08a0779ff40e911b",
+        "status": "queued",
+        "title": "Patch: Galaxia's Attack goes to the first Unit played each turn only, not to the second when the first did not stay on the field",
+        "tries": 0
       }
     ],
-    "count": 544
+    "count": 545
   },
   "statistics": {
     "at": "2026-11-25T11:37:58Z"
