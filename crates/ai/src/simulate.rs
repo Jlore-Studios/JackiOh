@@ -529,35 +529,33 @@ pub(crate) fn best_auto_answer(
     let mut best: Option<(GameState, f64)> = None;
     let mut failure = String::new();
     for answer in answers {
-        if !counter.take() {
-            return None;
-        }
-        let action = Action::new(answer, answerer, format!("{prefix}:{}", counter.used()));
-        let next = match catch_unwind(AssertUnwindSafe(|| reduce_unpiloted(state, &action))) {
-            Ok(next) => next,
+        let stepped = catch_unwind(AssertUnwindSafe(|| {
+            step_answer(state, answerer, answer, counter, prefix)
+        }));
+        let next = match stepped {
+            Ok(None) => return None,
+            Ok(Some(Ok(next))) => next,
+            Ok(Some(Err(error))) => {
+                failure = error;
+                continue;
+            }
             Err(payload) => {
                 failure = note_sim_panic(counter, payload.as_ref());
                 continue;
             }
         };
-        if let Some(error) = next.error {
-            counter.note_sim_error();
-            failure = error;
-            continue;
-        }
-        charge_announced(counter, state, &action.body, &next);
         let score = if scored {
-            let swing = if next.state.active == answerer {
+            let swing = if next.active == answerer {
                 NextSwing::Seat
             } else {
                 NextSwing::Enemy
             };
-            evaluate_priced(&next.state, answerer, swing, &AI_EVAL, prices)
+            evaluate_priced(&next, answerer, swing, &AI_EVAL, prices)
         } else {
             0.0
         };
         if best.as_ref().is_none_or(|(_, best_score)| score > *best_score) {
-            best = Some((next.state, score));
+            best = Some((next, score));
         }
     }
     Some(best.map(|(state, _)| state).ok_or(failure))
@@ -607,8 +605,9 @@ pub(crate) fn worked_step(state: &GameState, seat: PlayerId) -> Option<(GameStat
     Some((keyed, answer))
 }
 
-/// #2929: `seat`'s `answer` stepped on `state` as `best_auto_answer` steps each it tries: one node
-/// (`None` once `counter` is spent), a refused step a failed simulation. Its callers catch a panic.
+/// `seat`'s `answer` stepped on `state`, as `best_auto_answer` steps each it tries and #2929 the one the
+/// seat works out: one node (`None` once `counter` is spent), a refused step a failed simulation. Its
+/// callers catch a panic.
 fn step_answer(
     state: &GameState,
     seat: PlayerId,

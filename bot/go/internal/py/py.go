@@ -126,9 +126,6 @@ func Mod(a, b int) int {
 	return m
 }
 
-// FloorDivF is a // b for floats.
-func FloorDivF(a, b float64) float64 { return math.Floor(a / b) }
-
 // Splitlines is str.splitlines(): it splits at \n, \r\n, \r, \v, \f, \x1c-\x1e, \x85,
 // and  , and a trailing break makes no empty last line.
 func Splitlines(s string) []string {
