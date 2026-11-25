@@ -1101,7 +1101,7 @@ fn b11_a_buffed_piece_fuses_with_its_printed_numbers_not_its_buffed_ones() {
         }));
         let cannon = s.unit_at(P1, 1).id;
         step_param(s.card_mut(cannon.as_str()), "damage", 2);
-        let printed = if radiant { 10 } else { 5 };
+        let printed = if radiant { 8 } else { 4 };
         let buffed = params_view(s.state(), s.card(cannon.as_str()))
             .and_then(|numbers| numbers.get("damage").copied());
         assert!(
