@@ -20069,17 +20069,18 @@
       "merge_owner": "claude-8",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-6",
       "question": "",
       "queued_at": "2026-11-25T22:19:49Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "45713064893",
+      "run_id": "pending:efbdb38e-1795648386",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 570,
-      "started_at": "2026-11-25T22:25:06Z",
+      "started_at": "2026-11-25T23:13:46Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 2,
@@ -21465,9 +21466,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T23:03:32Z",
+    "at": "2026-11-25T23:13:46Z",
     "url": "",
-    "what": "revise #4953 on muse"
+    "what": "spot-check #4939 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-25T22:56:48Z",
@@ -44086,7 +44087,15 @@
         "n": 570,
         "pr": 4939,
         "queued_at": "2026-11-25T23:06:59Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "run_id": "pending:efbdb38e-1795648386",
         "sha": "c1b1371cde1147dbe6ed8f1028d992d099633b73",
+        "started_at": "2026-11-25T23:13:46Z",
         "status": "queued",
         "title": "Patch: the AI prices a Unit's attack text beside a twin that keeps the keywords its side lends it, so a lent Trample or Flying is not booked as the text's worth",
         "tries": 0
