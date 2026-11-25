@@ -621,10 +621,16 @@ pub fn validate_play(
     }
 
     // R1200: while a Mayor acts the action carries no targets, so draw each at random before anything
-    // is checked or paid; the targeting point, costs and Joro's replacements meet the drawn target
+    // is paid; the targeting point, costs and Joro's replacements meet the drawn target
     // (MD-E9). A face-down play (ME-ALTPLAY, R1044) declares nothing, so draws nothing. R4590001:
     // a Spell played under a random-targets modifier or a Jailbreaker's aura draws the same way.
     let mut owned = action.clone();
+    // R348: the play's own numbers are checked before any script can read them. R1200's draw
+    // below runs the declarations' named checks against the X-stamped face, so an unbounded X
+    // would reach them (S #99's check multiplies by it). A Plague spend travels on no face the
+    // draw reads, so its check stays below.
+    crate::play_choices::refuse_x(sink.state, player, &card, owned.x)?;
+    crate::play_choices::refuse_embiggen(sink.state, &card, owned.embiggen)?;
     if crate::random_targets::play_targets_random(sink.state, player, &card) && owned.face_down.is_none() {
         let face = crate::play_choices::face_for_action(sink.state, player, &card, &owned);
         let given = owned.targets.clone().unwrap_or_default();
