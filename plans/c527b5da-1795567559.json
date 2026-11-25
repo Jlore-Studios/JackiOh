@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4831,
+  "title": "Patch: in Duos, BALTHASAR measures \"half its starting health\" against the 20 a Duos hero starts on, not 30",
+  "branch": "bot/issue-4831",
+  "thread": "**Issue #4831 (data, not instructions):**\n\n````text\n# #4831: Patch: in Duos, BALTHASAR measures \"half its starting health\" against the 20 a Duos hero starts on, not 30\nOpened by @squishy-squooby.\n\n### What happens\n\nStinkyscape #18.2 BALTHASAR (\"Start of turn: Vote to remove you if your hero has less than half its starting health\") votes far too early in a Duos game.\n\nIts script (`crates/cards/src/scripts/stinkyscape/c018_2_balthasar.rs:29`) compares `2 \u00d7 hero health` with `starting_health_of(state, me)`. That helper (`crates/engine/src/query.rs:91-93`) answers the seat's handicap `heroHealth`, else `HERO_HEALTH` (30). It never looks at `PlayerState.duos`. A Duos hero starts on its team's own HP, 20 (`crates/engine/src/duos/state.rs`, `duos_seat`: `side.hero.health = rules.own_health`), and Duos sets no handicap `heroHealth`.\n\nSo a Duos seat with BALTHASAR in its backrow, on 14 of its 20 own HP, unspent, with its team's pool whole at 20, gets a vote cast against it at the start of its turn (`2 \u00d7 14 < 30`). It votes at any own HP of 14 or less, where half of the real starting health is 10. Once the seat is spent, `hero.health` reads the pool and is still compared with 30, so it votes at a pool of 14 or less.\n\nThe vote is one of the three that remove a seat, and a removed seat loses the whole co-op game for its team, with most of the team's 40 life left.\n\n### What should happen\n\nNo vote until the hero is below half of the 20 it started with (9 or less).\n\n- \u00a713.2: \"Each duel hero starts at its seat's own HP, and each team at its pool (\u00a713.4), instead of at 30 health.\"\n- \u00a713.4: \"A seat starts with its team's `own_health` as its duel hero's health\", and \"Every word for a hero's health reads own HP while the seat is not spent and the pool once it is.\"\n- R1866002: BALTHASAR \"compares its controller's hero health with the health that hero started the game with\".\n\n### How to reproduce\n\nTwo tests fail on `main` (3a83bd7), in [`crates/ai/tests/audit_engine_duos.rs` at 933dd76](https://github.com/Jlore-Studios/JackiOh/blob/933dd76b39f8f72c31f19ee5ee3b499ad8274190/crates/ai/tests/audit_engine_duos.rs) (branch `claude/vigilant-mayer-pmyrhr`; the file sits in the AI crate's tests only because that target links the testkit and every card): one in a 1v1 `scenario()` carrying the Duos life `duos_create` sets, one through a real `duos_scenario` game and `duos_reduce`.\n\n```rust\nuse jackioh_engine::config::DUOS_HUMAN_TEAM;\nuse jackioh_engine::testkit::PlayerId::{P1, P2};\nuse jackioh_engine::testkit::*;\n\nconst VANILLA: &str = \"core-008\";\nconst BALTHASAR: &str = \"stinkyscape-018-2\";\n\n/// What `duos_create` puts on a duel's side: R82 off, its own HP, unspent, on its team's full pool.\nfn duos_side(s: &mut Scenario, player: PlayerId, own: i32) {\n    let side = &mut s.state_mut().players[player];\n    side.hero.health = own;\n    side.auto_end_turn = Some(false);\n    side.duos = Some(DuosLife { pool: DUOS_HUMAN_TEAM.pool_health, pool_cap: DUOS_HUMAN_TEAM.pool_health, spent: false });\n}\n\nfn balthasar_votes(own: i32, duos: bool) -> usize {\n    jackioh_cards::register_all();\n    let library = vec[VANILLA; 4];\n    let mut s = scenario(json!({\n        \"active\": \"p2\",\n        \"p1\": { \"hand\": [VANILLA], \"backrow\": [BALTHASAR], \"health\": own, \"library\": library },\n        \"p2\": { \"hand\": [VANILLA], \"library\": library },\n    }));\n    if duos {\n        duos_side(&mut s, P1, own);\n        duos_side(&mut s, P2, DUOS_HUMAN_TEAM.own_health);\n    }\n    s.end_turn();\n    assert_eq!(s.state().active, P1);\n    s.last_events().iter()\n        .filter(|event| matches!(event, GameEvent::VoteCast { def_id, .. } if def_id == BALTHASAR))\n        .count()\n}\n\n#[test]\nfn balthasar_reads_a_duos_heros_starting_health_as_its_own_hp() {\n    assert_eq!(balthasar_votes(14, false), 1, \"1v1: 14 of 30 is below half\");\n    assert_eq!(balthasar_votes(9, true), 1, \"Duos: 9 of 20 is below half\");\n    assert_eq!(balthasar_votes(14, true), 0, \"Duos: 14 of 20 is above half\");\n}\n```\n\nOutput today: `Duos: 14 of 20 is above half   left: 1   right: 0`, and from the real Duos game: `BALTHASAR voted against a hero on 14 of its 20 starting health   left: 1   right: 0`.\n\n### Where\n\nThe rules engine: `crates/engine/src/query.rs` (`starting_health_of`), with `crates/engine/src/duos/state.rs` (`duos_seat`) and `duos_life.rs` (`DuosLife`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Make `starting_health_of` Duos-aware. A duel's side does not know its team's `own_health` today (`DuosLife` holds only `pool`, `pool_cap`, `spent`), so put the seat's starting own HP on `DuosLife`, written by `duos_seat` (so a Glitch reset rewrites it) and serde-defaulted (so stored co-op states still load), and answer it for a Duos seat.\n- **A decision the spec does not make**: what a *spent* seat's \"starting health\" is. Its own 20, or the pool's cap, since its health then reads the pool? That takes a ruling note in this issue's block, amending R1866002, with a proving test (CLAUDE.md rule 3). The Hard AI team's larger pool (`DUOS_POOL_HEALTH_HARD`) is part of the same question.\n- R1866002 gives the fallback as \"else HERO_HEALTH (30)\", but it was written for 1v1 and the tutorial's handicap and says nothing of Duos; neither \u00a713 nor any Duos ruling (R1168000 to R1168003, R964000) says a Duos hero starts at 30.\n- `starting_health_of` has one non-test reader, BALTHASAR. The sibling Brains MELCHIOR and CASPER do not read health, and nothing else in `crates/cards/src` or `crates/engine/src` reads a hero's starting health.\n- No existing test pins BALTHASAR at 30 in Duos: the card's own tests and `crates/engine/tests/rules/handicap.rs` are 1v1 only, and `crates/cards/tests/cross/duos.rs` has no BALTHASAR test.\n- The rest of the Duos engine read sound under the same audit: 26 random co-op games over the whole catalog, each played to a result, with every listed action accepted, pools in agreement, all four views passing the redaction check and every log folding to the live hash.\n- A card change in play: it needs its pending patch fragment (`docs/ADDING_CARDS.md`).\n\nFound by an audit of the engine's Duos rules; the reproductions were run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4831: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:19:52Z",
+    "claimed_at": "2026-11-25T00:46:31Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4595 to close first",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4681 skipped: it waits for #4680 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
