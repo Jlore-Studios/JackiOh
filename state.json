@@ -21847,10 +21847,12 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "at": "2026-11-25T05:07:30Z",
+        "at": "2026-11-25T08:23:41Z",
         "built_by": "claude-8",
         "by": "`claude` (strong)",
-        "sha": "8dc8b04c7a18caf859428732a1254eb5b8d2114b"
+        "carried_from": "8dc8b04c7a18caf859428732a1254eb5b8d2114b",
+        "resolved_by": "`claude` (strong)",
+        "sha": "c4a80906b2390359c0799a56bf44a45fde9f0cfd"
       },
       "died": 0,
       "difficulty": "hard",
