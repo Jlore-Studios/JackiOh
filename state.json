@@ -22688,6 +22688,14 @@
         "sha": "5a9b4a033ebd11c739763bc9d90e3ad776688340",
         "tiers": {}
       }
+    },
+    "4902": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-25T05:12:25Z",
+      "issue": 4810,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
