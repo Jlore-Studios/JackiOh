@@ -1,6 +1,7 @@
 //! The Starship in the AI's reads (R1852000, R1852003): the launch is the engine's Activate, so it comes
 //! to the AI through `legal_actions` like any ability, and the prompts its fused Cries open are ordinary
-//! prompts, which `decide` and the random policy answer.
+//! prompts, which `decide` and the random policy answer; the dense features leave the two new keyword
+//! kinds out, so the features `positions` writes keep their layout.
 //!
 //! The file installs two test-only cards on top of the real catalog (Stinkyscape's shipped pieces are
 //! priced in `deaths.rs`, R2566000): the Dormant Starship under the id the engine summons, and a 1/1
@@ -180,10 +181,11 @@ fn launch(ship: &str) -> ActionBody {
 }
 
 #[test]
-fn r1852000_a_dormant_starship_is_no_unit_and_the_search_tells_its_position_apart() {
+fn r1852000_a_dormant_starship_is_no_unit_and_a_launched_one_flies_and_ranges() {
     let (state, ship) = built();
     // The Dormant Starship is no Unit (`active_units_of`), and the launched one carries the Starship
-    // tag (R3038000), and so Flying and Ranged. No card takes the Starship keyword any more (R3038001).
+    // tag (R3038000) and so Flying and Ranged, as any Unit's. No card takes the Starship keyword any
+    // more (R3038001).
     assert!(active_units_of(&state, AI).iter().all(|unit| unit.id != ship));
     let paused = apply(&state, launch(&ship), AI, "launch");
     let launched = find_instance(&paused, &ship).expect("the Starship");

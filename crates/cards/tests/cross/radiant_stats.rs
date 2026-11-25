@@ -8,8 +8,36 @@
 //! A Radiant cell written in prose ("Same", "Rush; same", "+4 Armor") is not read; only one that opens
 //! with `A/B` is.
 
-/// SPEC §8, read at compile time (`include_str!`: CLAUDE.md rule 4).
-const CATALOG_NOTE: &str = include_str!("../../../../spec/08-catalog.md");
+/// SPEC §8, read at compile time (`include_str!`: CLAUDE.md rule 4): the notes of `spec/08-catalog/`,
+/// one a subsection, in section order. A new set's note joins the list, which the tools' acceptance
+/// test holds to the folder (`every_catalog_note_is_read_by_the_radiant_stats_test`).
+const CATALOG_NOTE: &str = concat!(
+    include_str!("../../../../spec/08-catalog/8.1-core-1-20.md"),
+    "\n",
+    include_str!("../../../../spec/08-catalog/8.2-core-21-50.md"),
+    "\n",
+    include_str!("../../../../spec/08-catalog/8.3-core-51-80.md"),
+    "\n",
+    include_str!("../../../../spec/08-catalog/8.4-core-81-95.md"),
+    "\n",
+    include_str!("../../../../spec/08-catalog/8.5-core-96-100.md"),
+    "\n",
+    include_str!("../../../../spec/08-catalog/8.6-classic.md"),
+    "\n",
+    include_str!("../../../../spec/08-catalog/8.7-classic-plus.md"),
+    "\n",
+    include_str!("../../../../spec/08-catalog/8.8-meditative.md"),
+    "\n",
+    include_str!("../../../../spec/08-catalog/8.9-meditative-plus.md"),
+    "\n",
+    include_str!("../../../../spec/08-catalog/8.10-stinkyscape.md"),
+    "\n",
+    include_str!("../../../../spec/08-catalog/8.11-training-grounds.md"),
+    "\n",
+    include_str!("../../../../spec/08-catalog/8.12-stinkyscape-plus.md"),
+    "\n",
+    include_str!("../../../../spec/08-catalog/8.13-infinite-assault.md"),
+);
 
 /// The header of every §8 card table.
 const TABLE_HEADER: &str =

@@ -49,7 +49,7 @@
 #
 # A pull request that changes only files no job here reads (`scripts/ci-scope.sh` lists them: the
 # night bot's code and switches, the workflows that run the bot, the agent instruction files, the
-# training lanes' prompts) skips every job below except `bot selftest`, which the `changes` job
+# training docs) skips every job below except `bot selftest`, which the `changes` job
 # scopes on its own (`bot`). The `changes` job decides; each job below it runs `if:
 # needs.changes.outputs.full == 'true'`, so a skip is a job-level skip, which counts as passing for a
 # required check (a workflow-level `paths:` filter would leave the check pending forever), and the
@@ -151,8 +151,8 @@ jobs:
   # `bot` is `false` only for a pull request that changes none of the paths bot selftest's tests and
   # lints read. Those are the bot's code and switches, all of .github/ and .claude/ (the tests read
   # both directories whole: the workflows, the issue forms, the skills), the scripts
-  # (bot/go/tests/repo_meta_test.go reads scripts/*.sh), the training lanes' prompts and loop and
-  # training/file-records.sh (workflows_test.go holds gather and the learn shards to it),
+  # (bot/go/tests/repo_meta_test.go reads scripts/*.sh), the training docs and
+  # training/file-records.sh (workflows_test.go holds gather to it),
   # docs/issues-and-patches.md, and the toolchain and .cargo/ (the night bot's checks pin both). It
   # is set here, not in ci-scope.sh, because a bot-only diff is exactly the one ci-scope.sh answers
   # `full=false` for, and because .github/ is a path the bots may not change. Any doubt says `true`.
@@ -615,8 +615,8 @@ jobs:
         uses: ./.github/actions/setup
         with:
           node: "false"
-      # A worktree beside this one, into a target directory of its own, so the head's build units are
-      # never reused for the base (#585).
+      # main in a worktree beside this one, into a target directory of its own, so the head's build
+      # units are never reused for the base (#585).
       - name: the base built here, since main's run has not cached it
         if: ${{ steps.need.outputs.base == 'true' && steps.cached.outputs.cache-hit != 'true' }}
         env:

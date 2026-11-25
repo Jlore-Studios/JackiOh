@@ -63,6 +63,14 @@
   cursor: var(--cursor-glove-grab, grabbing) !important;
 }
 
+/* R4773000: no page movement at all during a drag or an aim, wherever the press started and
+   wherever the finger travels. Inner scrollers with their own `touch-action` still scroll. The
+   deck builder's pool-scroll-then-drag (`"deck"`, DeckDrag.tsx) stays out, so its pool scrolls. */
+:root[data-dragging]:not([data-dragging="deck"]) {
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
 /* The card in flight stays in its place in the hand, faded, so the ghost reads as the thing being
    moved. It does not lift the way a tapped or selected card does: on a phone the lift would
    stand it over your seat while the ghost is somewhere else. */

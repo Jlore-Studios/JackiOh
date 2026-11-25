@@ -493,6 +493,12 @@ pub fn played_this_game_with_tag(state: &GameState, player: PlayerId, tag: Tag) 
         .unwrap_or(0)
 }
 
+/// R4593001 (Infinite Assault #196 Emergent Behavior): how many turns `player` has started this
+/// game, the current turn included (`PlayerState.turns_started`, R845).
+pub fn turns_started_of(state: &GameState, player: PlayerId) -> i32 {
+    state.players[player].turns_started
+}
+
 /// B5 E4, R451: the last Spell either player played (Classic #57 Echo) as its play recorded it (a
 /// played Echo is the Spell it copied), or `None`. A copy.
 pub fn last_spell_played(state: &GameState) -> Option<PlayRecord> {
@@ -657,10 +663,10 @@ pub fn enemy_unit_arrival(state: &GameState, controller: PlayerId, event: &GameE
     }
 }
 
-/// R3550009: every enemy permanent — the opponent's acting units, then their backrow, each once
-/// (Stinkyscape+ #25 Snom Bunny's Death); Classic #40 MC Tech's count and pick read it too. A Dormant
-/// card is none (R4322000): `active_units_of` leaves out a Dormant Unit, and the backrow walk leaves
-/// out a Dormant card.
+/// R3550009: every enemy permanent — the opponent's acting units, then their backrow, then any card lying
+/// on their unit zones (R4665000), each once (Stinkyscape+ #25 Snom Bunny's Death); Classic #40 MC Tech's
+/// count and pick read it too. A Dormant card is none (R4322000): `active_units_of` leaves out a Dormant
+/// Unit, and the backrow walk leaves out a Dormant card.
 pub fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let enemy = opponent_of(player);
     let backrow: Vec<CardInstance> = crate::zones::slots_of(enemy, Row::Backrow)
@@ -675,6 +681,13 @@ pub fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance
         .filter(|card| !permanents.iter().any(|unit| unit.id == card.id))
         .collect();
     permanents.extend(backrow);
+    // R4665000: and a card lying on one of their unit zones, a backrow card there, after their backrow.
+    permanents.extend(
+        crate::zones::lying_on_unit_zones_of(state, enemy)
+            .into_iter()
+            .filter(|card| !crate::slumber::is_slumbering(card))
+            .cloned(),
+    );
     permanents
 }
 
@@ -1548,8 +1561,11 @@ fn exiles_on_damage(state: &GameState, source: &CardInstance) -> bool {
 }
 
 /// Whether a unit's Divine Shield is up (§6.1): the view drops a spent one.
+/// Whether a hit on `unit` pops its Divine Shield: one immune to damage keeps it (R4591004).
 fn is_shielded(state: &GameState, unit: &CardInstance) -> bool {
-    unit_has(state, unit, KeywordKind::DivineShield) && unit.divine_shield_spent != Some(true)
+    unit_has(state, unit, KeywordKind::DivineShield)
+        && unit.divine_shield_spent != Some(true)
+        && !crate::effects::firewall::units_immune_now(state, unit)
 }
 
 /// §4.4 steps 1 to 4 on a unit, read as `damage.rs`'s pipeline reads them (`damage::project_hit`,

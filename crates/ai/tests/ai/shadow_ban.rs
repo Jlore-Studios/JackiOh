@@ -314,6 +314,7 @@ mod sweep_flags_b25 {
                 retime: None,
                 tier: None,
                 banned: None,
+                setup: None,
                 face: None,
             },
         ));
@@ -548,6 +549,7 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
                     retime: None,
                     tier: Some(Difficulty::Easy),
                     banned: Some(FIXTURE_BANNED_IDS),
+                    setup: None,
                     face: None,
                 },
             )
@@ -573,6 +575,7 @@ mod the_sweep_judges_a_card_at_every_tier_r186 {
                 retime: None,
                 tier: Some(Difficulty::Hard),
                 banned: Some(FIXTURE_BANNED_IDS),
+                setup: None,
                 face: None,
             },
         ));
@@ -734,6 +737,7 @@ mod both_faces_r186 {
                 retime: None,
                 tier: Some(Difficulty::Easy),
                 banned: None,
+                setup: None,
                 face: Some(SweepFace::Radiant),
             },
         );
@@ -758,6 +762,7 @@ mod both_faces_r186 {
             retime: None,
             tier: Some(Difficulty::Easy),
             banned: None,
+            setup: None,
             face: Some(SweepFace::Radiant),
         };
         // build_ai_deck refuses an id that is no card, so no game is played: each one is an error.
@@ -1243,6 +1248,7 @@ mod the_two_pass_sweep_r390 {
                 retime: None,
                 tier: Some(Difficulty::Easy),
                 banned: None,
+                setup: None,
                 face: None,
             },
         ));
@@ -1294,6 +1300,7 @@ mod the_two_pass_sweep_r390 {
                 retime: None,
                 tier: Some(Difficulty::Easy),
                 banned: None,
+                setup: None,
                 face: None,
             },
         ));
@@ -1345,6 +1352,7 @@ mod a_slow_decision_timed_again_r977000 {
             retime: Some(&retime),
             tier: Some(Difficulty::Easy),
             banned: None,
+            setup: None,
             face: None,
         });
         (out, handed.get(), budget.get())
@@ -1416,6 +1424,7 @@ mod a_slow_decision_timed_again_r977000 {
                 retime: None,
                 tier: Some(Difficulty::Easy),
                 banned: None,
+                setup: None,
                 face: None,
             },
         );

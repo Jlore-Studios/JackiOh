@@ -1,5 +1,5 @@
-// Runs under the repo's tsx from its root: the Rust CLI folds a replay, and its state is compared with
-// the browser's by canonical JSON/FNV-1a hash (SURFACE §5.2, §12).
+// Runs under the repo's tsx from its root: the Rust CLI folds a replay (`jackioh replay`) and hashes the
+// browser's state (`jackioh hash-state`), both by the engine's one `hash_state` (SURFACE §5.2, §12; #4766).
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -20,36 +20,45 @@ type CliAnswer = { hash: string; errors: unknown[] };
 
 const CLI = path.resolve("target", "release", process.platform === "win32" ? "jackioh.exe" : "jackioh");
 
-/** Sorted keys: equal states, identical text. */
-function canonical(value: unknown): string {
-  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "null";
-  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
-  const entries = Object.entries(value as Record<string, unknown>)
-    .filter(([, v]) => v !== undefined)
-    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-    .map(([k, v]) => `${JSON.stringify(k)}:${canonical(v)}`);
-  return `{${entries.join(",")}}`;
-}
-
-/** Leaves out `applied`, a Glitch-redrawn opening (R676) and Created cards' generators (R1956001), as `replay::hash_state` does. */
-function hashState(state: unknown): string {
-  const { applied: _applied, opening: _opening, generators: _generators, ...rest } = state as Record<string, unknown>;
-  const text = canonical(rest);
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < text.length; i += 1) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash.toString(16).padStart(8, "0");
-}
-
-function fold(payload: Payload): CliAnswer {
+function requireCli(): void {
   if (!existsSync(CLI)) {
     throw new Error(
       `${CLI} is missing, so the recorded log cannot be folded by the engine. ` +
         "Build it from the repo root with `cargo build --release -p jackioh-tools`.",
     );
   }
+}
+
+/** Runs `jackioh <mode>` on `input` and parses its last stdout line. */
+function runCli(mode: string, input: unknown): unknown {
+  requireCli();
+  const run = spawnSync(CLI, [mode], {
+    input: JSON.stringify(input),
+    encoding: "utf8",
+    maxBuffer: 256 * 1024 * 1024,
+  });
+  if (run.error !== undefined) throw run.error;
+  if (run.status !== 0) {
+    throw new Error(`jackioh ${mode} exited with ${String(run.status)}:\n${run.stderr || run.stdout}`);
+  }
+  const line = run.stdout.trim().split("\n").at(-1) ?? "";
+  try {
+    return JSON.parse(line) as unknown;
+  } catch {
+    throw new Error(`jackioh ${mode} printed something that is not its answer:\n${run.stdout}`);
+  }
+}
+
+/** The browser's state hashed by the engine's own `hash_state` (`jackioh hash-state`), so no copy of its recipe lives here. */
+function hashViaCli(state: unknown): string {
+  const answer = runCli("hash-state", state) as { hash?: unknown };
+  if (typeof answer.hash !== "string") {
+    throw new Error(`jackioh hash-state's answer has no hash: ${JSON.stringify(answer)}`);
+  }
+  return answer.hash;
+}
+
+function fold(payload: Payload): CliAnswer {
   const input = {
     seed: payload.seed,
     decks: payload.decks,
@@ -57,24 +66,9 @@ function fold(payload: Payload): CliAnswer {
     ...(payload.handicaps === undefined ? {} : { handicaps: payload.handicaps }),
     ...(payload.dealt === undefined ? {} : { dealt: payload.dealt }),
   };
-  const run = spawnSync(CLI, ["replay"], {
-    input: JSON.stringify(input),
-    encoding: "utf8",
-    maxBuffer: 256 * 1024 * 1024,
-  });
-  if (run.error !== undefined) throw run.error;
-  if (run.status !== 0) {
-    throw new Error(`jackioh replay exited with ${String(run.status)}:\n${run.stderr || run.stdout}`);
-  }
-  const line = run.stdout.trim().split("\n").at(-1) ?? "";
-  let answer: CliAnswer;
-  try {
-    answer = JSON.parse(line) as CliAnswer;
-  } catch {
-    throw new Error(`jackioh replay printed something that is not its answer:\n${run.stdout}`);
-  }
+  const answer = runCli("replay", input) as CliAnswer;
   if (typeof answer.hash !== "string" || !Array.isArray(answer.errors)) {
-    throw new Error(`jackioh replay's answer has no hash or errors: ${line}`);
+    throw new Error(`jackioh replay's answer has no hash or errors: ${JSON.stringify(answer)}`);
   }
   return answer;
 }
@@ -86,7 +80,7 @@ function main(): void {
     `${JSON.stringify({
       ok: true,
       replayHash: result.hash,
-      browserHash: hashState(payload.state),
+      browserHash: hashViaCli(payload.state),
       errors: result.errors,
     })}\n`,
   );

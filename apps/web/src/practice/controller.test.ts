@@ -823,6 +823,7 @@ describe("R4582000 an Infinite Assault fight through the controller", () => {
     enemyDeck: ["classic-090"],
     enemyHandicap: { deckSize: 1, manaBonus: 0, manaCap: 4, extraOpeningCards: 0, extraDrawsPerTurn: 0, heroHealth: 20 },
     enemyMarks: [],
+    enemySets: [],
     level: LEVEL,
   };
   const FIGHT: PracticeStartConfig = { ...CONFIG, seed: SETUP.seed, assault: SETUP };

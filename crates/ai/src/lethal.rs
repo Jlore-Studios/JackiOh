@@ -230,15 +230,18 @@ fn judge(
         return Some(Verdict::Dead);
     }
     let signature = search_signature(next, seat);
-    if !visited.insert(signature) {
+    if visited.contains(&signature) {
         return Some(Verdict::Dead);
     }
+    visited.insert(signature);
     Some(Verdict::Deeper)
 }
 
 /// Stage 1: depth-first in move order, with a visited set on `search_signature`.
 fn depth_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter, prices: &Prices) -> Walk {
-    let root = &dets[0]; // `find_lethal` answered an empty slice itself.
+    let Some(root) = dets.first() else {
+        return Walk::Exhausted;
+    };
     let mut visited: IndexSet<String> = IndexSet::new();
     visited.insert(search_signature(root, seat));
     let mut stack: Vec<Frame> = Vec::new();
@@ -289,7 +292,9 @@ fn next_open(open: &[Open]) -> usize {
 
 /// Stage 2: best-first by `ready_gap`, each expansion simulating its first AI_SEARCH.lethalWidth moves.
 fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter, prices: &Prices) -> Walk {
-    let root = &dets[0]; // `find_lethal` answered an empty slice itself.
+    let Some(root) = dets.first() else {
+        return Walk::Exhausted;
+    };
     let mut visited: IndexSet<String> = IndexSet::new();
     visited.insert(search_signature(root, seat));
     let mut open: Vec<Open> = vec![Open {
@@ -335,8 +340,7 @@ fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter, pri
 }
 
 /// Runs depth-first then best-first lethal search on dets[0], requiring candidate lines
-/// to win on all determinizations. Spends at most `limit` nodes of `counter`, the depth-first walk at
-/// most `AI_SEARCH.lethal_quick_nodes` of them.
+/// to win on all determinizations. Spends at most `limit` nodes of `counter`.
 pub fn find_lethal(
     dets: &[GameState],
     seat: PlayerId,
@@ -344,7 +348,25 @@ pub fn find_lethal(
     limit: usize,
     prices: &Prices,
 ) -> Option<Vec<ActionBody>> {
-    let quick_nodes = AI_SEARCH.lethal_quick_nodes as usize;
+    find_lethal_with_quick_nodes(
+        dets,
+        seat,
+        counter,
+        limit,
+        AI_SEARCH.lethal_quick_nodes as usize,
+        prices,
+    )
+}
+
+/// `find_lethal` with a configurable depth-first quick-node budget.
+pub fn find_lethal_with_quick_nodes(
+    dets: &[GameState],
+    seat: PlayerId,
+    counter: &dyn NodeCounter,
+    limit: usize,
+    quick_nodes: usize,
+    prices: &Prices,
+) -> Option<Vec<ActionBody>> {
     let root = dets.first()?;
     // R2201000: there is no lethal on a seat that cannot lose, so nothing is searched for one.
     if limit == 0 || !can_lose(root, seat.opponent()) {

@@ -1,15 +1,15 @@
-//! `cargo jackioh selfplay`: the AI's game logs (#1006). The AI plays itself at `AI_GATE_BUDGET`, the
-//! browser's budget, on a development run's deals (R258: All Random decks, nothing banned), through
-//! `arena::play_game`, each seat seeing only `redact` (R185). Game `n`'s seed is `<base>:<n>`. The
-//! learned evaluation these logs fed is retired (R4159000, R4702000); `classify`'s AI check plays the
-//! head and its base with the command and compares the logs (`classify::start_selfplay`, #2651).
+//! `cargo jackioh selfplay`: self-play game logs (#1006), which `classify` plays on two builds and
+//! compares (R1365000). The AI plays itself at `AI_GATE_BUDGET`, the browser's budget, on a development
+//! run's deals (R258: All Random decks, nothing banned), through `arena::play_game`, each seat seeing
+//! only `redact` (R185). Game `n`'s seed is `<base>:<n>`, and a log replays exactly from its seed.
 //!
 //! Each game is one JSON line (`SelfplayGame`) in game order, so the file is byte-identical for the
 //! same base and games whatever `RAYON_NUM_THREADS` says (R1006001). A turn over
 //! `SELFPLAY_TURN_ACTIONS` actions ends its game without a result (R1006005), and so does a search that
 //! runs a board to a settle cap (§10.3, R1006007). A game with a refused action, a fallback or a caught
-//! panic is marked with `faults` (R1489000). A base naming the screens' dev set is refused, so no
-//! export plays a deal a screen measures on (R1006002).
+//! panic is marked with `faults` (R1489000). A base naming a training gate's hold-out deals
+//! (`arena::is_gate_seed_base`, R850001) or the improve lane's dev set is refused, so a self-play game
+//! never repeats a deal a gate or a screen played (R1006002).
 
 use std::io::{BufWriter, Write};
 use std::path::PathBuf;
@@ -32,7 +32,7 @@ pub struct Args {
     /// The first game's number (game n's seed is `<base>:<n>`), so shards of one export never overlap.
     #[arg(long, default_value_t = 1)]
     pub from: i32,
-    /// The seed base. Never the dev set's (`improve-dev`).
+    /// The seed base. Never a training gate's (`improve`, `unban`, …) nor the dev set's (`improve-dev`).
     #[arg(long)]
     pub seed: String,
     /// The directory the log file goes to: `<out>/selfplay-<base>-<first>-<last>.jsonl`.
@@ -40,7 +40,7 @@ pub struct Args {
     pub out: PathBuf,
 }
 
-/// One self-play game: `FoldArgs`' `seed`, `decks` and `log`, plus what checks and labels it.
+/// One self-play game: its seed, decks and log, which replay it, and what checks it.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SelfplayGame {
@@ -52,7 +52,7 @@ pub struct SelfplayGame {
     /// `None` when the game ended without a result (the action ceiling, or a controller that threw).
     pub result: Option<GameResult>,
     pub turns: i32,
-    /// The catalog version the game was played on (R767000).
+    /// The catalog version the game was played on (R767000), under which its log replays.
     pub catalog: String,
     /// The commit the binary was built from, or `"unknown"`.
     pub commit: String,
@@ -76,15 +76,21 @@ pub struct SelfplayGame {
 /// `ARENA_MAX_ACTIONS` at a second a decision. Such a game ends without a result.
 pub(crate) const SELFPLAY_TURN_ACTIONS: usize = 100;
 
-/// R1006002: whether a base names the deals every screen plays, the dev set (`--set improve-dev`).
+/// R1006002: whether a base names deals a screen or a gate plays: a training gate's hold-out deals
+/// (`arena::is_gate_seed_base`) or the improve lane's dev set (`--set improve-dev`).
 pub(crate) fn refused_base(base: &str) -> Option<String> {
+    if crate::arena::is_gate_seed_base(base) {
+        return Some(format!(
+            "selfplay: the seed base \"{base}\" names a training gate's hold-out deals (R850001, R1006002)"
+        ));
+    }
     let dev = SeedSet::ImproveDev.base();
     if base
         .strip_prefix(dev)
         .is_some_and(|rest| rest.is_empty() || rest.starts_with(':'))
     {
         return Some(format!(
-            "selfplay: the seed base \"{base}\" names the dev set, which the screens play (R1006002)"
+            "selfplay: the seed base \"{base}\" names the improve lane's dev set, which the screens play (R1006002)"
         ));
     }
     None
@@ -313,18 +319,18 @@ mod tests {
     use crate::arena::TEST_BUDGET;
 
     #[test]
-    fn r1006002_a_dev_set_base_is_refused_and_any_other_is_not() {
-        for base in ["improve-dev", "improve-dev:7"] {
+    fn r1006002_a_gate_or_dev_set_base_is_refused_and_any_other_is_not() {
+        for base in [
+            "improve",
+            "improve:abc",
+            "unban",
+            "unban:1",
+            "improve-dev",
+            "improve-dev:7",
+        ] {
             assert!(refused_base(base).is_some(), "{base} should be refused");
         }
-        for base in [
-            "learned",
-            "learned:1",
-            "improve",
-            "improvement",
-            "dev",
-            "export-2026-10-16",
-        ] {
+        for base in ["learned", "learned:1", "improvement", "dev", "export-2026-10-16"] {
             assert!(refused_base(base).is_none(), "{base} should be allowed");
         }
     }
@@ -417,7 +423,7 @@ mod tests {
     }
 
     #[test]
-    fn r1489000_a_game_with_a_fallback_is_marked_and_a_clean_one_writes_no_faults() {
+    fn r1489000_a_game_with_a_fallback_is_marked_with_its_faults() {
         jackioh_cards::register_all();
         let mut game = setups("selfplay-starved", 1, 1).remove(0);
         game.self_budget = jackioh_ai::SearchBudget {

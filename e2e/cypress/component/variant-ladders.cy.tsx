@@ -45,6 +45,7 @@ import {
   VERSION_TAROT_ID,
   artPictureOf,
   defaultLookOf,
+  installCosmeticOffers,
   isFullBleed,
   ladderOf,
   levelsOn,
@@ -54,6 +55,7 @@ import {
 import CardCosmeticsView from "../../../apps/web/src/collection/CardCosmeticsView.tsx";
 import { collectionTestid as T } from "../../../apps/web/src/collection/collection.ts";
 import { __resetSettingsForTests } from "../../../apps/web/src/settings/index.ts";
+import { COSMETIC_OFFERS } from "../../../apps/web/src/wire/generated/cosmeticOffers.ts";
 
 type CardDef = (typeof CATALOG)[string];
 type Point = { x: number; y: number };
@@ -101,6 +103,10 @@ function rungsOf(id: string): Rung[] {
     ...levelsOn(id, variant).map((level) => ({ card: id, variant, level })),
   ]);
 }
+
+// #4714: the offers load beside the scene tables, which the support file's `before` awaits, but the rungs below are
+// read as the spec loads, before any hook: install them at once, as apps/web's test/setup.ts does.
+installCosmeticOffers(COSMETIC_OFFERS);
 
 const RUNGS = rungsOf(CARD);
 

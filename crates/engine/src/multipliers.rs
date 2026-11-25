@@ -19,6 +19,10 @@ pub enum Multiplied {
     TurnHooks,
     /// Cry and Death (R822, R823).
     CryAndDeath,
+    /// Death alone (R4589003, IA #118 The Recursionist).
+    Deaths,
+    /// Reborn returns (R4589003, IA #118 The Recursionist).
+    Reborns,
     /// Evolve texts (R3536003).
     Evolutions,
 }
@@ -28,6 +32,8 @@ impl Multiplied {
         match self {
             Multiplied::TurnHooks => script.turn_hook_extra.as_ref(),
             Multiplied::CryAndDeath => script.cry_death_extra.as_ref(),
+            Multiplied::Deaths => script.death_extra.as_ref(),
+            Multiplied::Reborns => script.reborn_extra.as_ref(),
             Multiplied::Evolutions => script.evolve_extra.as_ref(),
         }
     }
@@ -55,4 +61,15 @@ pub fn extra_runs(state: &GameState, player: PlayerId, kind: Multiplied) -> i32 
         highest = highest.max(extra);
     }
     highest
+}
+
+/// R4589003: the extra Death runs `player`'s dying cards get now: the highest of their Cry-and-Death
+/// multiplier (R823) and their Death-only one, since the highest multiplier holds (R820).
+pub fn death_runs(state: &GameState, player: PlayerId) -> i32 {
+    extra_runs(state, player, Multiplied::CryAndDeath).max(extra_runs(state, player, Multiplied::Deaths))
+}
+
+/// R4589003: whether `player`'s Reborns happen twice: any Reborn multiplier acting on their side.
+pub fn reborns_doubled(state: &GameState, player: PlayerId) -> bool {
+    extra_runs(state, player, Multiplied::Reborns) > 0
 }

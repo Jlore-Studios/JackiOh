@@ -1,7 +1,7 @@
 // R4577009: the held Infinite Assault set's placeholder art (infiniteAssaultRecipes.ts). Every entry of the set, its
-// two Drone tokens included, draws a scene recipe of its own through the procedural painter, base and Radiant, at or
-// above its rarity's detail floor and under the ceiling; the two Legendaries use every layer and move by a recipe of
-// their own; and no id outside the set reaches the new recipes.
+// fifteen tokens included, draws a scene recipe of its own through the procedural painter, base and Radiant, at or
+// above its rarity's detail floor and under the ceiling; the Legendaries and Mythics use every layer and move by a
+// recipe of their own; and no id outside the set reaches the new recipes.
 
 import { describe, expect, it } from "vitest";
 
@@ -33,8 +33,8 @@ function svgOf(uri: string): string {
 
 describe("R4577009 the Infinite Assault set's placeholder art", () => {
   it("R4577009 the table is the set's every entry, tokens included, each drawn from a recipe of its own", () => {
-    expect(SET.length).toBe(26);
-    expect(SET.filter((card) => card.token)).toHaveLength(2);
+    expect(SET.length).toBe(255);
+    expect(SET.filter((card) => card.token)).toHaveLength(15);
     expect(INFINITE_ASSAULT_SCENE_CARDS.map(([id]) => id).sort()).toEqual(SET.map((card) => card.id).sort());
     const seen = new Map<string, string>();
     for (const card of SET) {
@@ -64,9 +64,9 @@ describe("R4577009 the Infinite Assault set's placeholder art", () => {
     }
   });
 
-  it("R4577009 the two Legendaries use every layer and move by a recipe of their own", () => {
-    const legendaries = SET.filter((card) => card.rarity === "Legendary").map((card) => card.id);
-    expect(legendaries.sort()).toEqual(["infiniteassault-023", "infiniteassault-024"]);
+  it("R4577009 the Legendaries and Mythics use every layer and move by a recipe of their own", () => {
+    const legendaries = SET.filter((card) => card.rarity === "Legendary" || card.rarity === "Mythic").map((card) => card.id);
+    expect(legendaries.sort()).toEqual(["infiniteassault-023", "infiniteassault-024", "infiniteassault-046", "infiniteassault-047", "infiniteassault-048", "infiniteassault-070", "infiniteassault-071", "infiniteassault-072", "infiniteassault-094", "infiniteassault-095", "infiniteassault-096", "infiniteassault-118", "infiniteassault-119", "infiniteassault-120", "infiniteassault-142", "infiniteassault-143", "infiniteassault-144", "infiniteassault-166", "infiniteassault-167", "infiniteassault-168", "infiniteassault-190", "infiniteassault-191", "infiniteassault-192", "infiniteassault-214", "infiniteassault-215", "infiniteassault-216", "infiniteassault-217", "infiniteassault-219", "infiniteassault-221", "infiniteassault-223", "infiniteassault-225", "infiniteassault-227", "infiniteassault-229", "infiniteassault-230", "infiniteassault-231", "infiniteassault-232", "infiniteassault-233", "infiniteassault-234", "infiniteassault-235", "infiniteassault-236", "infiniteassault-237", "infiniteassault-238", "infiniteassault-239", "infiniteassault-240"]);
     const others = new Map(Object.entries(FULL_ART_MOTION).filter(([id]) => !legendaries.includes(id)).map(([id, motion]) => [JSON.stringify(motion), id]));
     for (const id of legendaries) {
       const layers = new Set<SceneLayer>(composeScene(recipe(id), id).map((shape) => shape.layer));

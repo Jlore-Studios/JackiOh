@@ -575,7 +575,8 @@ pub fn complete_quest(
 /// Pays one finished game's rewards ([[R1302006]]): its Jlore, held to the account's daily cap
 /// ([[R1483000]]), its XP on every active set track ([`pay_xp_onto`]), and then moves its quests, which may pay
 /// too ([[R1304001]]): the account is topped up at the game's end first (from `seed`), so a quest that fell due
-/// as it ended counts it too; each held quest then moves by what the game did, never past its target, and
+/// as it ended counts it too; a quest held with `arrived_at` after the game's end is skipped ([[R1304001]]);
+/// each held quest then moves by what the game did, never past its target, and
 /// completes and pays on reaching it. A bot's side pays nothing. Answers what it paid, each track's gain read
 /// off the tracks before and after the whole payout, so a completed quest's XP is in it, and the writes in
 /// order.
@@ -613,6 +614,9 @@ pub fn pay_game(records: &GameRecords, summary: &GameSummary, seed: &str) -> Gam
         let Some(def) = quest_def(&held.quest_id) else {
             continue;
         };
+        if held.arrived_at > summary.at {
+            continue;
+        }
         let step =
             progress_of(&def.goal, summary.won, &summary.tally).min((def.target - held.progress).max(0));
         if step > 0 {
@@ -1240,6 +1244,42 @@ mod tests {
         assert_eq!(
             pay_game(&records(0, Vec::new(), quiet()), &bot, "s"),
             GamePayout::default()
+        );
+    }
+
+    /// R1304001: a game moves no quest that arrived after it ended.
+    #[test]
+    fn r1304001_a_game_moves_no_quest_that_arrived_after_it_ended() {
+        let def = quest_def("win-3").expect("the pool has win-3");
+        let book = QuestBook {
+            held: vec![HeldQuest {
+                quest_id: def.id.clone(),
+                progress: 0,
+                arrived_at: AT + 1_000,
+            }],
+            next_due_at: Some(AT + 1000 * quest_interval_ms()),
+        };
+        let paid = pay_game(
+            &records(0, Vec::new(), book),
+            &summary(GameMode::Ladder, Some(true), 3),
+            "seed-x",
+        );
+        assert!(
+            paid.grants.iter().all(|grant| !matches!(
+                grant,
+                LedgerGrant::Quest {
+                    change: QuestChange::Progressed | QuestChange::Completed,
+                    quest_id,
+                    ..
+                } if quest_id == &def.id
+            )),
+            "a game that ended at {AT} moved a quest that arrived later: {:?}",
+            paid.grants
+        );
+        assert!(
+            paid.economy.quests.is_empty(),
+            "no completion is paid: {:?}",
+            paid.economy.quests
         );
     }
 

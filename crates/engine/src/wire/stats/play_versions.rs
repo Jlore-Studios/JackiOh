@@ -12,11 +12,15 @@
 //!
 //! Its id is `<card>~<first version>` (`PLAY_VERSION_MARK`): `@` is a past version's (R3538002), and its
 //! last version moves at every ship while it is live, its first never.
+//!
+//! R4678001: each row also counts the patches its span reaches, the windows every card shares
+//! (`patch_windows`, R1973002) as the statistics page's patch bar lists them, which the Experimental
+//! tab's Running view names beside the version a card's current play version began at.
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
-use super::window::{Part, part_of, split_by_version};
+use super::window::{Part, PatchStep, part_of, patch_windows, split_by_version};
 use super::{
     CardStats, CardTier, CreatedStats, DECIMALS, GameMode, GameSource, ModeFilter, NO_FIGURE, PERCENT,
     PilotFilter, StatsField, StatsTotals, Tally, add_created, add_stats, adjusted_interval,
@@ -65,6 +69,9 @@ impl PlayVersion {
 pub struct PlayVersionQuery<'a> {
     /// The play versions to read, in the order the table lists them.
     pub versions: &'a [PlayVersion],
+    /// R4678001: every shipped version, in `patches.json`'s order (`jackioh_cards::patch_history`), whose
+    /// shared windows (`patch_windows`) a row's `patches` counts.
+    pub history: &'a [PatchStep],
     /// The seats of a live record counted (R807000); a development record always counts both (R378).
     pub live_pilot: PilotFilter,
     /// R377: the match types counted. R654's gate counts every mode's live games whatever it names.
@@ -83,6 +90,9 @@ pub struct PlayVersionFigures {
     pub first: String,
     pub last: String,
     pub live: bool,
+    /// R4678001: the patches its versions reach: the windows every card shares (`patch_windows`,
+    /// R1973002, a gameless patch folded into the one before as R1973001 folds it), counted once each.
+    pub patches: usize,
     /// The games its figures count: the decks that held it, under All Random the decks that saw it
     /// (R2777002), and for a card only a rule makes the seats that made one (R3070000).
     pub games: i64,
@@ -196,11 +206,27 @@ pub fn play_version_figures(totals: &StatsTotals, query: &PlayVersionQuery) -> P
         .collect();
     let floor = i32::try_from(query.min_sample).unwrap_or(i32::MAX);
     let field = stats_field(sums.iter().filter_map(|sum| sum.stats.as_ref()), floor);
+    // R4678001: each shipped version's window, as the patch bar lists them (R1973002).
+    let windows = patch_windows(
+        query.history,
+        |version| totals.games(version),
+        |version| totals.live_games(version),
+    );
+    let window_of: IndexMap<&str, usize> = windows
+        .iter()
+        .enumerate()
+        .flat_map(|(index, window)| {
+            window
+                .versions
+                .iter()
+                .map(move |version| (version.as_str(), index))
+        })
+        .collect();
     let versions = query
         .versions
         .iter()
         .zip(&sums)
-        .map(|(version, sum)| figures_of(version, sum, &field, query))
+        .map(|(version, sum)| figures_of(version, sum, &field, query, &window_of))
         .collect();
     PlayVersionTable {
         field,
@@ -211,12 +237,25 @@ pub fn play_version_figures(totals: &StatsTotals, query: &PlayVersionQuery) -> P
     }
 }
 
+/// R4678001: how many of the shared windows `window_of` names `version`'s versions reach. A play
+/// version's versions run in order and a window's are consecutive, so each window is a run of them.
+fn patches_of(version: &PlayVersion, window_of: &IndexMap<&str, usize>) -> usize {
+    let mut reached: Vec<usize> = version
+        .versions
+        .iter()
+        .filter_map(|shipped| window_of.get(shipped.as_str()).copied())
+        .collect();
+    reached.dedup();
+    reached.len()
+}
+
 /// One play version's row, as `get_cards` reads a card's.
 fn figures_of(
     version: &PlayVersion,
     sum: &Summed,
     field: &StatsField,
     query: &PlayVersionQuery,
+    window_of: &IndexMap<&str, usize>,
 ) -> PlayVersionFigures {
     let stats = sum.stats.as_ref();
     // R3070000: a card only a rule makes is in no deck: it reads the seats that made one (R2089000).
@@ -255,6 +294,7 @@ fn figures_of(
         first: version.first().to_string(),
         last: version.last().to_string(),
         live: version.live,
+        patches: patches_of(version, window_of),
         games,
         adjusted_win_rate: adjusted,
         adjusted_low: range.map(|(low, _)| low),
@@ -327,7 +367,8 @@ mod tests {
     use crate::wire::catalog_types::{PerPlayer, PlayerId};
     use crate::wire::events::{GameOverReason, Winner};
     use crate::wire::stats::{
-        CardStatsFilter, GameRecord, GameSummary, Pilot, RecordsKey, SeatSummary, SourceFilter, card_stats_of,
+        CardStatsFilter, GameRecord, GameSummary, PatchTier, Pilot, RecordsKey, SeatSummary, SourceFilter,
+        card_stats_of,
     };
 
     const A: &str = "core-001";
@@ -410,6 +451,7 @@ mod tests {
     fn query(versions: &[PlayVersion], min_sample: i64) -> PlayVersionQuery<'_> {
         PlayVersionQuery {
             versions,
+            history: &[],
             live_pilot: PilotFilter::Unified,
             mode: ModeFilter::All,
             min_sample,
@@ -585,6 +627,67 @@ mod tests {
             lines[4],
             "3 play versions of 2 cards (2 live); 2 with games; 1 with 2 games or more (1 live, 0 closed)."
         );
+    }
+
+    // R4678001: a row counts the shared windows its versions reach, as the patch bar lists them: a micro is
+    // no patch of its own, and a patch no game was played on before the next replaced it folds into the
+    // one before (R1973001).
+    #[test]
+    fn r4678001_a_row_counts_the_patches_its_versions_reach() {
+        let step = |version: &str, tier: PatchTier| PatchStep {
+            version: version.to_string(),
+            tier,
+            plays: Vec::new(),
+        };
+        let history = [
+            step("v1", PatchTier::Major),
+            step("v1b", PatchTier::Micro),
+            step("v2", PatchTier::Patch),
+            step("v3", PatchTier::Patch),
+            step("v4", PatchTier::Patch),
+            step("v4b", PatchTier::Micro),
+        ];
+        // No game on v3 before v4 replaced it: the windows are v1–v1b, v2–v3 and v4–v4b.
+        let totals = folded(&[
+            game("m1", GameSource::Live, "v1", &[A, B], true),
+            game("m2", GameSource::Live, "v2", &[A, B], false),
+            game("m3", GameSource::Live, "v4", &[A, B], true),
+        ]);
+        let versions = [
+            version(A, &["v1"], false),
+            version(A, &["v1b", "v2", "v3", "v4", "v4b"], true),
+            version(B, &["v1", "v1b", "v2", "v3", "v4", "v4b"], true),
+            version("core-003", &["v3", "v4", "v4b"], true),
+            version("core-004", &["v4b"], true),
+            version("core-005", &["v0"], false),
+        ];
+        let read = |history: &[PatchStep]| -> Vec<usize> {
+            let query = PlayVersionQuery {
+                history,
+                ..query(&versions, 1)
+            };
+            play_version_figures(&totals, &query)
+                .versions
+                .iter()
+                .map(|row| row.patches)
+                .collect()
+        };
+        assert_eq!(read(&history), [1, 3, 3, 2, 1, 0]);
+        // With a game on v3 it is a patch of its own, and every span across it reaches one more.
+        let mut on_v3 = totals.clone();
+        add_live(&mut on_v3, "v3", 1);
+        let query = PlayVersionQuery {
+            history: &history,
+            ..query(&versions, 1)
+        };
+        let reached: Vec<usize> = play_version_figures(&on_v3, &query)
+            .versions
+            .iter()
+            .map(|row| row.patches)
+            .collect();
+        assert_eq!(reached, [1, 4, 4, 2, 1, 0]);
+        // No history names no window.
+        assert_eq!(read(&[]), [0; 6]);
     }
 
     #[test]

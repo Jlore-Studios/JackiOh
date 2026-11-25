@@ -1789,7 +1789,7 @@ describe("R1966000 the Sets tab", () => {
     expect(asked.every((url) => !url.searchParams.has("rarity") && !url.searchParams.has("cost"))).toBe(true);
   });
 
-  it("#3222 R4279001 stats tabs answer arrow keys, moving between Cards, Tokens, Sets, and Players", async () => {
+  it("#3222 R4279001 R4678000 stats tabs answer arrow keys, moving between Cards, Tokens, Sets, Players and Experimental", async () => {
     serveSets();
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
@@ -1799,6 +1799,7 @@ describe("R1966000 the Sets tab", () => {
     const tokensTab = screen.getByTestId(statsTestid.tabTokens);
     const setsTab = screen.getByTestId(statsTestid.tabSets);
     const playersTab = screen.getByTestId(statsTestid.tabPlayers);
+    const experimentalTab = screen.getByTestId(statsTestid.tabExperimental);
 
     expect(cardsTab).toHaveAttribute("aria-selected", "true");
     expect(cardsTab).toHaveAttribute("tabindex", "0");
@@ -1818,12 +1819,16 @@ describe("R1966000 the Sets tab", () => {
     expect(document.activeElement).toBe(playersTab);
 
     fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(experimentalTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(experimentalTab);
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
     expect(cardsTab).toHaveAttribute("aria-selected", "true");
     expect(document.activeElement).toBe(cardsTab);
 
     fireEvent.keyDown(tablist, { key: "ArrowLeft" });
-    expect(playersTab).toHaveAttribute("aria-selected", "true");
-    expect(document.activeElement).toBe(playersTab);
+    expect(experimentalTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(experimentalTab);
   });
 
   it("R1966000 a read that fails shows Retry, which asks again", async () => {
@@ -2645,24 +2650,24 @@ describe("R3447000 the games tile names the patch its games were collected on", 
 });
 
 describe("R1973000 the Daily runs tab is gone", () => {
-  it("R1973000 R4279001 the page offers Cards, Tokens, Sets and Players, asks nothing of /api/stats/ci, and ?tab=ci opens the Cards tab", async () => {
+  it("R1973000 R4279001 R4678000 the page offers Cards, Tokens, Sets, Players and Experimental, asks nothing of /api/stats/ci, and ?tab=ci opens the Cards tab", async () => {
     at("/stats?tab=ci");
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
     const names = screen.getAllByRole("tab").map((tab) => tab.textContent);
-    expect(names).toEqual(["Cards", "Tokens", "Sets", "Players"]);
+    expect(names).toEqual(["Cards", "Tokens", "Sets", "Players", "Experimental"]);
     expect(screen.queryByText("Daily runs")).toBeNull();
     expect(requested("/api/stats/ci")).toEqual([]);
   });
 });
 
 describe("R4335000 the view tabs show their names alone, in a row that never shrinks", () => {
-  it("R4335000 each tab holds its name and no line of what it shows", async () => {
+  it("R4335000 R4678000 each tab holds its name and no line of what it shows", async () => {
     at("/stats");
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
     const tabs = screen.getAllByRole("tab");
-    expect(tabs.map((tab) => tab.textContent)).toEqual(["Cards", "Tokens", "Sets", "Players"]);
+    expect(tabs.map((tab) => tab.textContent)).toEqual(["Cards", "Tokens", "Sets", "Players", "Experimental"]);
     for (const tab of tabs) expect(tab.children).toHaveLength(0);
     for (const hint of [
       "Win rate and tier of every card",
@@ -3698,5 +3703,336 @@ describe("R4673000 R4673001 the Face control", () => {
     expect(within(table).getAllByRole("row")[1]).toHaveTextContent("52.0%");
     expect(setsAsked().length).toBeGreaterThan(0);
     expect(setsAsked().every(([, , face]) => face === null)).toBe(true);
+  });
+});
+
+describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
+  const json = (body: unknown): Response => new Response(JSON.stringify(body), { status: 200 });
+
+  // A card statistics read kept by an earlier test would answer for these filters without asking (R3206000).
+  beforeEach(() => {
+    clearReadCache();
+  });
+
+  /** A play version as `GET /api/stats/versions` sends it: no games and no figure unless given. */
+  function playVersion(card: string, name: string, first: string, live: boolean, figures: Record<string, unknown> = {}) {
+    return {
+      id: `${card}~${first}`,
+      card,
+      name,
+      first,
+      last: live ? "v0.2.0" : first,
+      live,
+      patches: 1,
+      games: 0,
+      adjustedWinRate: null,
+      adjustedLow: null,
+      adjustedHigh: null,
+      tier: null,
+      hasEnoughGames: false,
+      ...figures,
+    };
+  }
+
+  /** Every play version, read against a band of its own (47% to 53%), apart from the cards' (45% to 55%). */
+  const VERSIONS = {
+    pilot: "merged",
+    mode: "all",
+    field: { center: 0, spread: 0.05, cards: 4, baseline: 0.5, drawnFloor: 20 },
+    bandLow: 0.47,
+    bandHigh: 0.53,
+    minSample: 20,
+    versions: [
+      // Spark Pup before it last changed: closed, so no row of its own.
+      playVersion("core-001", "Spark Pup", "v0.1.0", false, {
+        games: 900,
+        adjustedWinRate: 0.61,
+        adjustedLow: 0.58,
+        adjustedHigh: 0.64,
+        tier: "S",
+        hasEnoughGames: true,
+      }),
+      playVersion("core-001", "Spark Pup", "v0.1.5", true, {
+        patches: 3,
+        games: 140,
+        adjustedWinRate: 0.512,
+        adjustedLow: 0.49,
+        adjustedHigh: 0.534,
+        tier: "B",
+        hasEnoughGames: true,
+      }),
+      // Below the floor: a rate the row does not show, and no tier.
+      playVersion("core-002", "Lava Hound", "v0.0.1", true, { patches: 7, games: 12, adjustedWinRate: 0.55 }),
+      playVersion("core-003", "Aqua Warden", "v0.2.0", true, {
+        games: 60,
+        adjustedWinRate: 0.455,
+        adjustedLow: 0.43,
+        adjustedHigh: 0.48,
+        tier: "F",
+        hasEnoughGames: true,
+      }),
+      // A card the Cards tab does not list: no row either.
+      playVersion("core-099", "Unlisted", "v0.0.1", true, { games: 50, adjustedWinRate: 0.5, tier: "C", hasEnoughGames: true }),
+    ],
+  };
+
+  /** The patches, so the bar shows on the other tabs. */
+  const PATCHES = [
+    { versions: ["0.2.0"], games: 1200, liveGames: 0 },
+    { versions: ["0.1.0"], games: 1500, liveGames: 0 },
+  ];
+
+  /**
+   * Answers the play versions with `versions`, a drill-down with Spark Pup's, and the card statistics with the cost
+   * filter applied as the server applies it, the cards' own band and the patches.
+   */
+  function serveRunning(versions: () => Response = () => json(VERSIONS)): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        if (url.pathname === "/api/stats/versions") return Promise.resolve(versions());
+        if (url.pathname.startsWith("/api/stats/cards/")) return Promise.resolve(json(MOCK_DRILL_DOWN));
+        if (url.pathname !== "/api/stats/cards") return Promise.resolve(json({}));
+        const cost = url.searchParams.get("cost");
+        const cards = MOCK_CARD_STATS_PROVISIONAL.cards.filter((card) => cost === null || card.cost === Number(cost));
+        const tiers = { center: 0, spread: 0.05, cards: 3, bandLow: 0.45, bandHigh: 0.55 };
+        return Promise.resolve(json({ ...MOCK_CARD_STATS_PROVISIONAL, cards, tiers, patches: PATCHES }));
+      }),
+    );
+  }
+
+  /** A table's rows as their card ids, and each row's cells. */
+  function rowsOf(table: HTMLElement): { ids: (string | null)[]; cells: string[][] } {
+    const rows = [...table.querySelectorAll("tbody tr")];
+    return {
+      ids: rows.map((row) => row.getAttribute("data-card-id")),
+      cells: rows.map((row) => [...row.querySelectorAll("td")].map((td) => td.textContent ?? "")),
+    };
+  }
+
+  const headers = (table: HTMLElement): string[] => within(table).getAllByRole("columnheader").map((th) => th.textContent ?? "");
+  const address = (): URLSearchParams => new URLSearchParams(window.location.search);
+
+  it("R4678000 ?tab=experimental opens the Experimental tab, named alone, and the address follows the tab", async () => {
+    at("/stats?tab=experimental");
+    serveRunning();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    const tab = screen.getByTestId(statsTestid.tabExperimental);
+    expect(tab).toHaveAttribute("aria-selected", "true");
+    expect(tab).toHaveTextContent(/^Experimental$/);
+    expect(tab.children).toHaveLength(0);
+    expect(screen.queryByTestId(statsTestid.cardsTable)).toBeNull();
+
+    fireEvent.click(screen.getByTestId(statsTestid.tabCards));
+    await waitFor(() => expect(address().has("tab")).toBe(false), SLOW);
+    fireEvent.click(screen.getByTestId(statsTestid.tabExperimental));
+    await waitFor(() => expect(address().get("tab")).toBe("experimental"), SLOW);
+  });
+
+  it("R4678000 R4680000 on the Experimental tab the patch bar, the games tile and Face are hidden, one line above the tabs names what it shows, and its Segmented offers Running and Versions", async () => {
+    at("/stats?patch=0.1.0&face=radiant");
+    serveRunning();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.patchBar)).toBeInTheDocument();
+    expect(screen.getByTestId(statsTestid.summaryTiles)).toBeInTheDocument();
+    expect(screen.getByTestId(statsTestid.faceRadiant)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByTestId(statsTestid.experimentalLine)).toBeNull();
+
+    fireEvent.click(screen.getByTestId(statsTestid.tabExperimental));
+    await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    for (const hidden of [
+      statsTestid.patchBar,
+      statsTestid.patchSearch,
+      statsTestid.summaryTiles,
+      statsTestid.faceAll,
+      statsTestid.faceNormal,
+      statsTestid.faceRadiant,
+    ]) {
+      expect(screen.queryByTestId(hidden), hidden).toBeNull();
+    }
+    const line = screen.getByTestId(statsTestid.experimentalLine);
+    expect(line).toHaveTextContent(/^Every card's current version, over every patch since it last changed$/);
+    const tablist = screen.getByRole("tablist", { name: "Statistics views" });
+    expect(line.compareDocumentPosition(tablist) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // R4680000: two views, so the Segmented of views shows, Running first and pressed; the options row keeps its
+    // View, ranges, Plain text and Columns.
+    const panel = screen.getByRole("tabpanel");
+    const views = within(panel).getByRole("group", { name: "Experimental views" });
+    expect(within(views).getAllByRole("button").map((button) => button.textContent)).toEqual(["Running", "Versions"]);
+    expect(within(views).getByRole("button", { name: "Running" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(panel).queryByRole("group", { name: "Face" })).toBeNull();
+    expect(within(panel).getByRole("group", { name: "View" })).toBeInTheDocument();
+    expect(within(panel).getByTestId(statsTestid.rangesToggle)).toBeInTheDocument();
+    expect(within(panel).getByTestId(statsTestid.plainTextToggle)).toBeInTheDocument();
+
+    // The patch and face stay the page's, in the address and on the other tabs.
+    expect(address().get("patch")).toBe("0.1.0");
+    expect(address().get("face")).toBe("radiant");
+    fireEvent.click(screen.getByTestId(statsTestid.tabCards));
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.patchBar)).toBeInTheDocument();
+    expect(screen.getByTestId(statsTestid.faceRadiant)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByTestId(statsTestid.experimentalLine)).toBeNull();
+  });
+
+  it("R4678001 Running lists each card the Cards tab lists on its live play version: Card, Name, Games, Tier, Adjusted and Since with the patches it reaches", async () => {
+    at("/stats?tab=experimental");
+    serveRunning();
+    render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    expect(headers(table)).toEqual(["Card", "Name", "Games", "Tier", "Adjusted ↓", "Since"]);
+    // Adjusted best first, the row below the floor last with no tier or rate; no closed version and no unlisted card.
+    expect(rowsOf(table)).toEqual({
+      ids: ["core-001", "core-003", "core-002"],
+      cells: [
+        ["1", "Spark Pup", "140", "B", "51.2%", "v0.1.5 across 3 patches"],
+        ["2", "Aqua Warden", "60", "F", "45.5%", "v0.2.0 across 1 patch"],
+        ["4", "Lava Hound", "12", "—", "—", "v0.0.1 across 7 patches"],
+      ],
+    });
+    // The cost badge wears the card's rarity, as a deck row's does.
+    expect(table.querySelector('tr[data-card-id="core-002"] .stats-card-thumb-badge')).toHaveAttribute("data-rarity", "Rare");
+    // Asked once, on the page's match type.
+    expect(requested("/api/stats/versions").map((url) => url.search)).toEqual(["?mode=all"]);
+
+    // Games is behind the Columns toggle, which has no Play rate here.
+    expect(screen.queryByTestId(statsTestid.columnPlayRate)).toBeNull();
+    fireEvent.click(screen.getByTestId(statsTestid.columnGames));
+    expect(headers(table)).toEqual(["Card", "Name", "Tier", "Adjusted ↓", "Since"]);
+    cleanup();
+
+    // A server deployed before the patches were counted: the version alone.
+    serveRunning(() => json({ ...VERSIONS, versions: VERSIONS.versions.map((row) => ({ ...row, patches: undefined })) }));
+    render(<StatsRoute />);
+    const older = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    expect(within(older).getAllByTestId(statsTestid.runningSince).map((since) => since.textContent)).toEqual(["v0.1.5", "v0.2.0", "v0.0.1"]);
+  });
+
+  it("R4678001 Running shares the Cards tab's filters: the search and the server's cost, and the match type, which it asks the route for", async () => {
+    serveRunning();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "Warden" } });
+    fireEvent.click(screen.getByTestId(statsTestid.tabExperimental));
+    const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    expect(rowsOf(table).ids).toEqual(["core-003"]);
+    expect(screen.getByTestId(statsTestid.searchInput)).toHaveValue("Warden");
+
+    fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "" } });
+    expect(rowsOf(table).ids).toEqual(["core-001", "core-003", "core-002"]);
+
+    // The cost is the server's: Running lists the cards its read lists.
+    fireEvent.change(screen.getByRole("combobox", { name: "Filter by cost" }), { target: { value: "4" } });
+    await waitFor(() => expect(rowsOf(screen.getByTestId(statsTestid.runningTable)).ids).toEqual(["core-002"]), SLOW);
+    expect(requested("/api/stats/cards").at(-1)?.searchParams.get("cost")).toBe("4");
+    fireEvent.change(screen.getByRole("combobox", { name: "Filter by cost" }), { target: { value: "3" } });
+    expectEmptyState(await screen.findByText("No cards match the selected filters.", undefined, SLOW));
+
+    // The match type asks the route again, and the address keeps every filter.
+    fireEvent.change(screen.getByTestId(statsTestid.modeSelect), { target: { value: "bo1" } });
+    await waitFor(() => expect(requested("/api/stats/versions").at(-1)?.searchParams.get("mode")).toBe("bo1"), SLOW);
+    await waitFor(() => expect(address().get("mode")).toBe("bo1"), SLOW);
+    expect(address().get("cost")).toBe("3");
+    expect(address().get("tab")).toBe("experimental");
+  });
+
+  it("R4678001 Running sorts by the page's one sort: Name, Games, Tier and Adjusted, set by the select, the direction and the headers, a sort it lacks read as Adjusted", async () => {
+    at("/stats?tab=experimental");
+    serveRunning();
+    render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    const select = screen.getByTestId(statsTestid.sortSelect);
+    expect(within(select).getAllByRole("option").map((option) => option.getAttribute("value"))).toEqual(["name", "games", "tier", "adjustedWinRate"]);
+    expect(select).toHaveValue("adjustedWinRate");
+
+    fireEvent.change(select, { target: { value: "name" } });
+    await waitFor(() => expect(address().get("sort")).toBe("name"), SLOW);
+    expect(rowsOf(table).ids).toEqual(["core-003", "core-002", "core-001"]);
+
+    // A header sets it; the direction button flips it; a row with no tier stays last either way.
+    fireEvent.click(within(table).getByRole("columnheader", { name: /^Tier/ }));
+    expect(select).toHaveValue("tier");
+    expect(rowsOf(table).ids).toEqual(["core-001", "core-003", "core-002"]);
+    fireEvent.click(screen.getByTestId(statsTestid.sortDir));
+    expect(rowsOf(table).ids).toEqual(["core-003", "core-001", "core-002"]);
+    await waitFor(() => expect(address().get("dir")).toBe("asc"), SLOW);
+
+    // The Cards tab follows it, and a Cards sort Running lacks reads as Adjusted there, in its direction.
+    fireEvent.click(screen.getByTestId(statsTestid.tabCards));
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("tier");
+    fireEvent.change(screen.getByTestId(statsTestid.sortSelect), { target: { value: "decisiveness" } });
+    fireEvent.click(screen.getByTestId(statsTestid.tabExperimental));
+    const again = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("adjustedWinRate");
+    expect(within(again).getByRole("columnheader", { name: /^Adjusted/ })).toHaveAttribute("aria-sort", "descending");
+    expect(rowsOf(again).ids).toEqual(["core-001", "core-003", "core-002"]);
+  });
+
+  it("R4678001 Running's Grid and Show 95% ranges are the page's: each card's tier, Adjusted, games and Since, its range and tier fit read against the play versions' band", async () => {
+    at("/stats?tab=experimental&view=grid&ranges=1");
+    serveRunning();
+    render(<StatsRoute />);
+    const grid = await screen.findByTestId(statsTestid.runningGrid, undefined, SLOW);
+    const items = [...grid.querySelectorAll<HTMLElement>("li")];
+    expect(items.map((item) => item.getAttribute("data-card-id"))).toEqual(["core-001", "core-003", "core-002"]);
+    const [pup, warden, hound] = items as [HTMLElement, HTMLElement, HTMLElement];
+    expect(within(pup).getByRole("button", { name: "Spark Pup" })).toBeInTheDocument();
+    // 49.0–53.4% holds 1.5 points of B's 50.0–51.5% on the versions' band, 34%; the cards' band would read 57%.
+    expect(within(pup).getByTestId(statsTestid.tierFit)).toHaveTextContent("34%");
+    expect(within(pup).getByTestId(statsTestid.adjustedRange)).toHaveTextContent("49.0–53.4%");
+    expect(within(pup).getByTestId(statsTestid.runningSince)).toHaveTextContent("v0.1.5 across 3 patches");
+    expect(within(warden).getByTestId(statsTestid.tierFit)).toHaveTextContent("80%");
+    expect(within(hound).queryByTestId(statsTestid.tierFit)).toBeNull();
+    expect(within(hound).queryByTestId(statsTestid.adjustedRange)).toBeNull();
+    expect(within(hound).getByTestId(statsTestid.tierCell)).toHaveTextContent("—");
+
+    // The Table, ranges off: no range and no fit.
+    fireEvent.click(screen.getByTestId(statsTestid.viewTable));
+    fireEvent.click(screen.getByTestId(statsTestid.rangesToggle));
+    const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    expect(within(table).queryByTestId(statsTestid.tierFit)).toBeNull();
+    expect(within(table).queryByTestId(statsTestid.adjustedRange)).toBeNull();
+    await waitFor(() => expect(address().has("view")).toBe(false), SLOW);
+    expect(address().has("ranges")).toBe(false);
+  });
+
+  it("R4678001 a Running row opens the card's drill-down on All and the newest patch, whatever face and patch the address holds for the other tabs", async () => {
+    at("/stats?tab=experimental&face=radiant&patch=0.1.0");
+    serveRunning();
+    render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    const row = table.querySelector<HTMLElement>('tbody tr[data-card-id="core-001"]')!;
+    fireEvent.click(row);
+    const modal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+    await within(modal).findByText("Win rate by turn played", undefined, SLOW);
+    expect(Object.fromEntries(requested("/api/stats/cards/core-001").at(-1)!.searchParams)).toEqual({ mode: "all" });
+    expect(within(modal).queryByTestId(statsTestid.drillDownFaceShown)).toBeNull();
+    await waitFor(() => expect(address().get("card")).toBe("core-001"), SLOW);
+    expect(address().get("face")).toBe("radiant");
+    expect(address().get("patch")).toBe("0.1.0");
+
+    fireEvent.click(screen.getByTestId(statsTestid.drillDownClose));
+    await waitFor(() => expect(screen.queryByTestId(statsTestid.drillDownModal)).toBeNull(), SLOW);
+    expect(document.activeElement).toBe(row);
+
+    // Enter on a row opens it too.
+    fireEvent.keyDown(table.querySelector<HTMLElement>('tbody tr[data-card-id="core-003"]')!, { key: "Enter" });
+    expect(await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW)).toBeInTheDocument();
+  });
+
+  it("R4678001 a read that fails offers Retry, which asks the route again", async () => {
+    let up = false;
+    serveRunning(() => (up ? json(VERSIONS) : new Response("{}", { status: 500 })));
+    at("/stats?tab=experimental");
+    render(<StatsRoute />);
+    expect(await screen.findByText("The card statistics didn't load.", undefined, SLOW)).toBeInTheDocument();
+    up = true;
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByTestId(statsTestid.runningTable, undefined, SLOW)).toBeInTheDocument();
+    expect(requested("/api/stats/versions")).toHaveLength(2);
   });
 });

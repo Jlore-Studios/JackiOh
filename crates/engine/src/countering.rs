@@ -64,6 +64,8 @@ fn spend(sink: &mut EngineSink<'_>, card: &CardInstance) {
         row: at.map_or(Row::Backrow, |slot| slot.row),
         lane: at.map_or(0, |slot| slot.lane),
         again,
+        // R4586007: a counter's firing answers no attack.
+        attacker_id: None,
     });
     // §5.1: it has fired, and it is face-up from this moment (R33).
     if let Some(live) = find_instance_mut(sink.state, &card.id) {

@@ -221,10 +221,11 @@ if [ "${JACKIOH_WASM_C:-0}" = 1 ]; then
       rustup target add "$WASM_TARGET"
     fi
   fi
-  # #4275: the C module a port translates carries every byte, so it builds small. Scoped
-  # `CARGO_PROFILE_RELEASE_*` env on this line alone (never exported: the browser module above is
-  # untouched). Measured 2026-11-19 (raw B, `gzip -9` B, wall s; gzip wobbles a few B run to run;
-  # walls are pass 1's trial log, sizes re-measured in pass 2 from its saved artifacts):
+  # #4275: the C module a port translates carries every byte, so it builds small. The
+  # `CARGO_PROFILE_RELEASE_*` env is scoped to this build and to the linker self-test's below,
+  # through `c_profile_env` (never exported: the browser module above is untouched). Measured
+  # 2026-11-19 (raw B, `gzip -9` B, wall s; gzip wobbles a few B run to run; walls are pass 1's
+  # trial log, sizes re-measured in pass 2 from its saved artifacts):
   #   baseline (thin LTO): 42,987,413 raw, 7,453,290 gz, 1587 s cold; name section 6,831,510 B.
   #   opt-level=z alone: 33,194,775 raw (-9,792,638), 4,779,269 gz, 799 s. Kept (wins in combination).
   #   opt-level=s alone: 32,710,078 raw (-10,277,335), 5,061,534 gz, 1041 s. Dropped: beats z raw
@@ -244,10 +245,10 @@ if [ "${JACKIOH_WASM_C:-0}" = 1 ]; then
   #     gz, wall not recorded: pass 1 was cut off mid-trial; text still readable when re-probed in
   #     pass 2, but -19,027 raw is negligible for a panic-strategy constraint); wasm-opt -Oz
   #     (absent here and on CI, skipped with a message below; nothing to measure).
-  CARGO_PROFILE_RELEASE_OPT_LEVEL=z \
-    CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1 \
-    CARGO_PROFILE_RELEASE_STRIP=symbols \
-    cargo build -p jackioh-wasm-c --release --target "$WASM_TARGET"
+  c_profile_env() {
+    env CARGO_PROFILE_RELEASE_OPT_LEVEL=z CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1 CARGO_PROFILE_RELEASE_STRIP=symbols "$@"
+  }
+  c_profile_env cargo build -p jackioh-wasm-c --release --target "$WASM_TARGET"
   # `wasm-opt -Oz` when it is on PATH, shrinking the module in place; skipped with a message when
   # it is not (as here and on CI, which have no wasm-opt).
   if command -v wasm-opt >/dev/null 2>&1; then
@@ -260,13 +261,73 @@ if [ "${JACKIOH_WASM_C:-0}" = 1 ]; then
     exit 1
   fi
   node -e 'const fs = require("fs"); const found = WebAssembly.Module.imports(new WebAssembly.Module(fs.readFileSync(process.argv[1]))); if (found.length > 0) { console.error("build-wasm: the C module imports " + JSON.stringify(found)); process.exit(1); }' "$C_MODULE"
-  # #4273: a `#[no_mangle]` export whose symbol collides with a libm/host symbol (as `log` did with
-  # libm's `log`) links as a trapping `signature_mismatch:` stub, and every `f64::ln` in the module
-  # then traps with `unreachable`. Fail the build on any such stub.
-  if grep -aq 'signature_mismatch:' "$C_MODULE"; then
-    echo "build-wasm: the C module contains a signature_mismatch stub (a #[no_mangle] export colliding with a libm/host symbol); rename the export" >&2
+  # #4732: a `#[unsafe(no_mangle)]` export named like a libm/host function (`log` was one, #4273) makes
+  # rust-lld warn `function signature mismatch: log`, links a trapping stub in its place, and every
+  # `f64::ln` then traps. The guard is crates/wasm/c/src/lib.rs's `deny(linker_messages)`, which fails
+  # the link and names the export. Nothing in the built file can show the collision (#4283's strip
+  # removed the stub's name), so this self-test proves the lint still fires under the module's own
+  # profile: a fixture that does what `log` did, built with that very line, must fail with
+  # `signature mismatch`. A lib.rs without the line, or a flag or toolchain change that silences the
+  # lint, fails the build here.
+  lint_line=$(grep -m1 '^#!\[.*deny(linker_messages)' "$ROOT/crates/wasm/c/src/lib.rs" || true)
+  if [ -z "$lint_line" ]; then
+    echo "build-wasm: crates/wasm/c/src/lib.rs has no #![cfg_attr(target_arch = \"wasm32\", deny(linker_messages))] line: without it an export named like a libm function (log, round) links as a trapping stub" >&2
     exit 1
   fi
+  guard=$(mktemp -d)
+  mkdir -p "$guard/dep/src" "$guard/src"
+  cat > "$guard/dep/Cargo.toml" <<'EOF'
+[package]
+name = "guard-dep"
+version = "0.0.0"
+edition = "2024"
+EOF
+  cat > "$guard/dep/src/lib.rs" <<'EOF'
+pub fn ln_of(x: f64) -> f64 {
+    x.ln()
+}
+EOF
+  cat > "$guard/Cargo.toml" <<'EOF'
+[package]
+name = "linker-guard"
+version = "0.0.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+guard-dep = { path = "dep" }
+
+[workspace]
+EOF
+  {
+    printf '%s\n\n' "$lint_line"
+    cat <<'EOF'
+#[unsafe(no_mangle)]
+pub extern "C" fn log(ptr: *const u8, len: usize) -> i32 {
+    (ptr as usize + len) as i32
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn use_ln(x: f64) -> f64 {
+    guard_dep::ln_of(x)
+}
+EOF
+  } > "$guard/src/lib.rs"
+  # LTO is the workspace's `[profile.release]`, which the fixture's own workspace lacks.
+  guard_built=0
+  guard_out=$(c_profile_env CARGO_PROFILE_RELEASE_LTO=thin CARGO_TARGET_DIR="$guard/target" \
+    cargo build --release --target "$WASM_TARGET" --manifest-path "$guard/Cargo.toml" 2>&1) && guard_built=1
+  rm -rf "$guard"
+  case "$guard_built:$guard_out" in
+    0:*"signature mismatch"*) ;;
+    *)
+      echo "build-wasm: the linker self-test failed: a fixture exporting \`log\` next to a crate that calls f64::ln did not fail to link with a \`signature mismatch\` under crates/wasm/c/src/lib.rs's deny(linker_messages), so the lint no longer guards the C module (#4732). cargo said:" >&2
+      printf '%s\n' "$guard_out" >&2
+      exit 1
+      ;;
+  esac
   # The panic's text must stay readable at jackioh_result_ptr()/jackioh_result_len() after the
   # trap (crates/wasm/c/README.md, Errors and traps): a huge alloc panics deterministically, and
   # the hook stows its message before the unreachable trap. Any silence fails the build.

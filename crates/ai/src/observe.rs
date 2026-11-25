@@ -204,8 +204,10 @@ pub fn hidden_instance_ids(state: &GameState, seat: PlayerId) -> IndexSet<String
     let opp = seat.opponent();
     let mut hidden: IndexSet<String> = IndexSet::new();
 
-    for card in &state.players[opp].hand {
-        hidden.insert(card.id.clone());
+    if !jackioh_engine::revealed_hand::hand_revealed_to(state, opp, seat) {
+        for card in &state.players[opp].hand {
+            hidden.insert(card.id.clone());
+        }
     }
     for card in &state.players[opp].library {
         hidden.insert(card.id.clone());
@@ -290,6 +292,7 @@ fn to_placeholder(card: &mut CardInstance) {
     card.tuning = None;
     card.brittle = None;
     card.enchantments = None;
+    card.started_in = None;
 }
 
 /// `to_placeholder` on a card held as loose JSON (setup's owed mulligan record), as TS ran it on a
@@ -335,6 +338,8 @@ fn to_placeholder_json(card: &mut Value) {
         // R3536002, CLAUDE.md rule 7: a hidden card carries neither Evolve mark.
         "evolved",
         "entersEvolved",
+        // R4592002: deck of origin is hidden.
+        "startedIn",
     ] {
         object.remove(key);
     }
@@ -468,18 +473,14 @@ fn belongs_to_hidden(instance_id: Option<&str>, resume: Option<&Resume>, hidden:
     is_hidden_id(instance_id, hidden) || is_hidden_id(resume.and_then(|r| r.instance_id.as_deref()), hidden)
 }
 
-/// A kept continuation as `seat` may read it. Its captured event (a trigger's `resume.data.event`) is
-/// scrubbed like a dispatch event, so a face-up card's trigger cannot carry a hidden card's identity
-/// through the queue; it holds no answer key (R465); and an in-flight play of a `secret_modes` card
-/// carries none of its modes in its run (R865).
+/// A kept entry's captured event (a trigger's `resume.data.event`) is scrubbed like a dispatch event,
+/// so a face-up card's trigger cannot carry a hidden card's identity through the queue.
 fn scrub_resume(state: &GameState, seat: PlayerId, resume: &mut Resume, hidden: &IndexSet<String>) {
     if let Some(event) = resume.data.get_mut("event")
         && event.is_object()
     {
         scrub_event_value(state, seat, event, hidden);
     }
-    without_answer_key(resume);
-    jackioh_engine::secrets::scrub_secret_modes(state, resume, seat);
 }
 
 /// R465: a multiple-choice problem's key (`ANSWER_KEY`, Classic+ #42) rides in the resume data of the
@@ -584,6 +585,9 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     next.generators.retain(|id, _| {
         !hidden.contains(id) && find_instance(state, id).is_some_and(|card| card.owner == seat)
     });
+    // R4672001: the Created cards' makers are the game record's alone; they would name what made a
+    // hidden card, and no decision reads them, so all go.
+    next.makers.clear();
     // R865: the opponent's unrevealed secret choices are no seat's to read either — the seat's own
     // stay, and a revealed choice is public history both seats watched happen.
     if let Some(secrets) = next.secrets.as_mut() {
@@ -694,6 +698,10 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         .retain(|entry| !belongs_to_hidden(Some(entry.instance_id.as_str()), Some(&entry.resume), &hidden));
     for entry in next.trigger_queue.iter_mut() {
         scrub_resume(state, seat, &mut entry.resume, &hidden);
+        without_answer_key(&mut entry.resume);
+        // R865: an in-flight play of a `secret_modes` card carries its modes in the run the queue
+        // holds; the other seat reads none of them.
+        jackioh_engine::secrets::scrub_secret_modes(state, &mut entry.resume, seat);
     }
 
     let mut cursor = next.work_cursor as i64;
@@ -707,6 +715,9 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         }
         scrub_resume(state, seat, &mut item.resume, &hidden);
         scrub_owed_mulligan(&mut item.resume, opp);
+        without_answer_key(&mut item.resume);
+        // R865: as above, for the owed play the work queue holds.
+        jackioh_engine::secrets::scrub_secret_modes(state, &mut item.resume, seat);
         kept_work.push(item);
     }
     next.work_cursor = cursor.min(kept_work.len() as i64).max(0) as usize;
@@ -718,12 +729,18 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         .retain(|entry| !belongs_to_hidden(None, Some(&entry.resume), &hidden));
     for entry in next.delayed.iter_mut() {
         scrub_resume(state, seat, &mut entry.resume, &hidden);
+        without_answer_key(&mut entry.resume);
+        // R865: as above, for a delayed continuation.
+        jackioh_engine::secrets::scrub_secret_modes(state, &mut entry.resume, seat);
     }
     for entry in next.dispatch.iter_mut() {
         entry.event = scrub_event(state, seat, &entry.event, &hidden);
     }
     if let Some(pending) = next.pending.as_mut() {
         scrub_resume(state, seat, &mut pending.resume, &hidden);
+        without_answer_key(&mut pending.resume);
+        // R865: as above, for the open prompt's continuation.
+        jackioh_engine::secrets::scrub_secret_modes(state, &mut pending.resume, seat);
     }
 
     // Step 6: a transient definition only a hidden card uses would name that card.
@@ -798,6 +815,9 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     // R602: what a hidden card visibly does stays. A face-down trap's aura is live (R403), and a unit's
     // Attack and Health are on the board for both players to read, so every unit keeps the stats it
     // shows: the difference its placeholder made goes on the unit's buffs.
+    // R4803000: the difference is taken on the Attack the unit shows, floored at 0 (§10.4). A unit whose
+    // shown Attack the placeholders left alone keeps its raw Attack, below 0 included (R150), and one whose
+    // shown Attack they changed takes the shown value, never how far below 0 a hidden aura took it (R185).
     for player in PLAYER_IDS {
         let ids: Vec<String> = active_units_of(&next, player)
             .iter()
@@ -809,7 +829,14 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
             };
             let truth = unit_view(state, shown);
             let attack_delta = match find_instance(&next, &id) {
-                Some(unit) => truth.attack - unclamped_attack(&next, unit),
+                Some(unit) => {
+                    let raw = unclamped_attack(&next, unit);
+                    if raw.max(0) == truth.attack {
+                        0
+                    } else {
+                        truth.attack - raw
+                    }
+                }
                 None => continue,
             };
             if let Some(unit) = find_instance_mut(&mut next, &id) {

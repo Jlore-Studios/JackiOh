@@ -6,7 +6,8 @@
 // R3389001: Classic's pass (#3389) took its eleven off. R3399000: Classic+'s pass (#3399) took its thirty-five off.
 // R3402001: Core's pass (#3402) took its ten off, leaving Ceaseless Void (#3338). Stinkyscape+'s fifty-nine
 // joined it at the set's release (#3596), owed their set's signature pass. The Infinite Assault's two joined
-// it with the set's first part (#4577), owed theirs.
+// it with the set's first part (#4577), owed theirs. The foundation (#4602) added the set's other
+// forty-two, owed theirs too. R4596000: the set's look and sound (#4596) took its twenty Commanders and Mythics off.
 
 import { describe, expect, it } from "vitest";
 
@@ -42,7 +43,10 @@ const SIGNATURE_PENDING: readonly string[] = [
   "stinkyscapeplus-t-terminus-starship-omega-drift", "stinkyscapeplus-t-terminus-starship-farthest-shore",
   "stinkyscapeplus-t-terminus-starship-nightfall-covenant", "stinkyscapeplus-t-terminus-starship-vacuum-psalm",
   // Infinite Assault
-  "infiniteassault-023", "infiniteassault-024",
+  "infiniteassault-023", "infiniteassault-024", "infiniteassault-046", "infiniteassault-047", "infiniteassault-070", "infiniteassault-071",
+  "infiniteassault-094", "infiniteassault-095", "infiniteassault-118", "infiniteassault-119", "infiniteassault-142", "infiniteassault-143",
+  "infiniteassault-166", "infiniteassault-167", "infiniteassault-190", "infiniteassault-191", "infiniteassault-214", "infiniteassault-215",
+  "infiniteassault-230", "infiniteassault-232", "infiniteassault-234", "infiniteassault-236", "infiniteassault-238", "infiniteassault-240",
 ];
 
 /** Every Legendary and Mythic of the catalog, tokens by the rarity they print, in catalog order. */

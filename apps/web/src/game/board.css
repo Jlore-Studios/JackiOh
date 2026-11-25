@@ -2416,6 +2416,11 @@ button.modifier-badge[data-open="true"] {
   gap: var(--space-2);
   min-width: 12rem;
   max-width: calc(100vw - 24px);
+  /* R4773000: the menu scrolls inside itself while the page is locked. */
+  max-height: min(50vh, 320px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   padding: var(--space-3);
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-md);
@@ -2781,6 +2786,9 @@ button.modifier-badge[data-open="true"] {
   padding: var(--space-3) var(--space-3) var(--space-3) var(--space-9);
   max-height: clamp(56px, 12vh, 160px);
   overflow-y: auto;
+  /* R4773000: the log keeps scrolling inside itself while the page is locked. */
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--pal-black) 28%, transparent);
@@ -4163,6 +4171,26 @@ button.modifier-badge[data-open="true"] {
   flex: 1 1 auto;
   min-height: 0;
   container-type: size;
+}
+
+/* R4773000: while a game is hosted the document never scrolls or overscrolls on touch: no page
+   scroll from a swipe anywhere on the board, no rubber-band bounce, no pull-to-refresh. Game sets
+   `data-game-scroll-lock` on `<html>` while mounted and clears it on unmount, so leaving the game
+   restores the page's scrolling. The lock stays on while a menu is open: every menu and the log
+   scroll inside their own regions with `overscroll-behavior: contain` on their own scrollers.
+   `touch-action` intersects only up to the first scrolling element, so those inner scrollers keep
+   their `pan-y` under the board's `none`. */
+:root[data-game-scroll-lock],
+:root[data-game-scroll-lock] body {
+  overscroll-behavior: none;
+}
+
+:root[data-game-scroll-lock] body {
+  overflow: hidden;
+}
+
+.app-shell--wide[data-game-host] .board {
+  touch-action: none;
 }
 
 /* Phones: the shell's frame and the chrome row come down to what a thumb needs. The match bar is

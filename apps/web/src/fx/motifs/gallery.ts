@@ -106,6 +106,7 @@ import { shockwaveLectureFixture } from "../cards/stinkyscape/shockwave447.ts";
 import { stimmyDropFixture } from "../cards/stinkyscape/stimmycheck.ts";
 import { chaosOrbFixture } from "../cards/stinkyscape/wildar.ts";
 import type { EntranceKey } from "../cards/recipe.ts";
+import { ASSAULT_MYTHIC_FIXTURES } from "../cards/infiniteassault/mythics.ts";
 import { STINKYSCAPE_SIGNATURE_BOARDS, STINKYSCAPE_SIGNATURE_FIXTURES } from "../cards/stinkyscape/signatureFixtures.ts";
 import { fleetBoard } from "../cards/stinkyscape/starshipSignatures.ts";
 import { FX_CARD_TABLE, type FxCardEntry } from "../cards/tables.ts";
@@ -747,6 +748,8 @@ export const RECIPE_FIXTURES: { readonly [K in CardRecipeKey]: (view: PlayerView
   printSlot: printSlotFixture,
   // R3395000: Stinkyscape 001 to 090's signatures (fx/cards/stinkyscape/signatureFixtures.ts).
   ...STINKYSCAPE_SIGNATURE_FIXTURES,
+  // R4596000: the Infinite Assault's eight doctrine Mythics (fx/cards/infiniteassault/mythics.ts).
+  ...ASSAULT_MYTHIC_FIXTURES,
 };
 
 /**

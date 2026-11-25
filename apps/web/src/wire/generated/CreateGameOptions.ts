@@ -5,6 +5,7 @@ import type { Handicap } from "./Handicap";
 import type { LastBoardEntry } from "./LastBoardEntry";
 import type { PerPlayerOpt } from "./PerPlayerOpt";
 import type { PlayerId } from "./PlayerId";
+import type { SetName } from "./SetName";
 import type { WinRateTable } from "./WinRateTable";
 
 /**
@@ -58,4 +59,11 @@ deckMarks?: PerPlayerOpt<Array<DeckMark>>,
  * (`replay::ReplayInput.winRates`). Omitted (practice, hotseat, the Sandbox, the run, the tools),
  * the game reads its shipped catalog's frozen table, else none.
  */
-winRates?: WinRateTable, };
+winRates?: WinRateTable, 
+/**
+ * R4595000: per seat, the sets its deck is dealt from, public (the view shows them), so
+ * determinization samples that seat's unseen cards from those sets. Every card of the seat's deck
+ * must be of one of them. Setup, not an action: a replay passes the same sets
+ * (`replay::ReplayInput.deckSets`). Omitted, or a seat's list empty, the seat names none.
+ */
+deckSets?: PerPlayerOpt<Array<SetName>>, };

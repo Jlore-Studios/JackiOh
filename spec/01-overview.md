@@ -34,4 +34,4 @@ The game on one page, for a first read and for finding the section a question be
 - **Keywords** each map to one engine primitive, and a card's script only composes them ([[§6]]): unit keywords ([[§6.1]]), triggers and timing ([[§6.2]]), actions and verbs ([[§6.3]]).
 - **The engine** is pure and seeded, so any match replays exactly: every random draw comes from the state's seed, and every choice a player makes is a prompt held in state ([[§9.3]], [[§10]], [[§10.6]], [[§10.7]]).
 - **A rule the spec does not make** follows Hearthstone and becomes a ruling ([[§11]]).
-- **Beyond the duel.** Accounts, matchmaking, the practice AI, the tutorial and the ladder ([[§9]]); Duos ([[§13]]); the collection economy ([[§14]]); dungeon runs ([[§15]]).
+- **Beyond the duel.** Accounts, matchmaking, the practice AI, the tutorial and the ladder ([[§9]]); Duos ([[§13]]); the collection economy ([[§14]]); dungeon runs ([[§15]]); the Infinite Assault, a daily gauntlet against the AI ([[§16]]).

@@ -14,6 +14,7 @@ import { LONG_PRESS_MS } from "../../cards/inspect/index.ts";
 import Prompt from "../Prompt.tsx";
 import { CraftEditor } from "./CraftEditor.tsx";
 import { HAT_LABELS } from "./recipe.ts";
+import { resetLocaleForTests, setLocale } from "../../i18n/i18n.ts";
 
 afterEach(cleanup);
 
@@ -125,6 +126,22 @@ describe("the block editor (R880)", () => {
 
     fireEvent.click(screen.getByTestId("prompt-submit"));
     expect(props.onAction).not.toHaveBeenCalled();
+  });
+
+  it("R880 a stat past the cap is refused in the reader's language (#4827)", async () => {
+    // The engine's own reasons for a 24/24 Unit, each read through the zh-CN dictionary.
+    const over: CraftRecipe = { ...unitPreset(), attack: 24, health: 24 };
+    const props = editorProps({ options: [presetOption(over, 0)] });
+    await setLocale("zh-CN");
+    try {
+      render(<CraftEditor pending={props.pending} onAction={props.onAction} />);
+      const reasons = screen.getByRole("status").textContent;
+      expect(reasons).toContain("攻击力为24，高于23");
+      expect(reasons).toContain("生命值为24，高于23");
+      expect(reasons).not.toContain("above");
+    } finally {
+      resetLocaleForTests();
+    }
   });
 
   it("R883 clicking a palette block snaps it under the selected hat", () => {

@@ -160,7 +160,7 @@ impl Start {
 }
 
 /// R747000: a skill is in `AI_SKILL_MIN..=AI_SKILL_MAX`; a NaN is outside it.
-fn parse_skill(text: &str) -> Result<f64, String> {
+pub(crate) fn parse_skill(text: &str) -> Result<f64, String> {
     let skill: f64 = text
         .parse()
         .map_err(|e: std::num::ParseFloatError| e.to_string())?;

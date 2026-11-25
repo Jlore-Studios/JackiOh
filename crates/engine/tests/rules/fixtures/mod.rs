@@ -5,6 +5,7 @@ pub mod activate;
 pub mod ai_wheel;
 pub mod anomalies;
 pub mod aura_deaths;
+pub mod batch;
 pub mod blueprint;
 pub mod board_geometry;
 pub mod board_history;

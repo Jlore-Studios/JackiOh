@@ -5,9 +5,9 @@
 //!
 //! At skill `s` (R747000) an AI decision follows the agent with chance `s` and is the skill miss
 //! otherwise (R2214000), rolled on the seat's own stream. A paired series (`--paired`, R850000) plays
-//! each deal twice with the seats swapped; `--set improve-dev` is the screens' dev set (R850001).
-//! Each deck is `build_ai_deck`
-//! minus its agent's shadow ban (R186), Easy both (R180), by one rule (R976000). Fallbacks and caught
+//! each deal twice with the seats swapped; `--set improve-dev` is the improve lane's dev set (R850001).
+//! No base may name a training gate's own seeds (`<lane>` or `<lane>:…`). Each deck is `build_ai_deck`
+//! minus its agent's shadow ban (R186), Easy both (R180), unshaped (R976000). Fallbacks and caught
 //! search panics are counted per seat (R1489000). So a game is a function of its seed and its two
 //! agents, whatever the thread count.
 //!
@@ -111,7 +111,7 @@ pub(crate) const SCREEN_GAMES: i32 = 400;
 /// decided deals the keep rule keeps a change that wins 15 of them, three in four.
 pub(crate) const SCREEN_MIN_DECIDED: usize = 20;
 
-/// R4319000: the most games a screen with `--extend` plays.
+/// R4319000: the most games a screen with `--extend` plays: the promotion gate's own maximum.
 pub(crate) const SCREEN_MAX_GAMES: i32 = 2000;
 
 /// R4319000: the deals each `--extend` batch after the first plays (200 games).
@@ -128,7 +128,8 @@ pub struct Args {
     /// Games to play: 1..=N. A seed set plays `SCREEN_GAMES` (400) unless this says more.
     #[arg(long)]
     pub games: Option<i32>,
-    /// The seed base: game n's seed is `<base>:<n>`, or deal d's `<base>:<d>` when paired.
+    /// The seed base: game n's seed is `<base>:<n>`, or deal d's `<base>:<d>` when paired. Never a
+    /// training gate's own (`improve`, `unban`, or either followed by `:`).
     #[arg(long, conflicts_with = "set", required_unless_present = "set")]
     pub seed: Option<String>,
     /// R850001: a fixed seed set to screen on, played paired.
@@ -180,8 +181,23 @@ impl SeedSet {
     }
 }
 
+/// The retired training lanes (#4701, #4702). Each lane's gate played the hold-out deals
+/// `<lane>:<tree>:<d>` its promotions are recorded on (`training/history/`), so no screen and no
+/// self-play run plays a base that names one (R850001, R1006002).
+const GATE_LANES: [&str; 3] = ["improve", "unban", "learn"];
+
+/// R850001: whether a seed base would play a training gate's seeds, a lane's name alone or followed
+/// by `:`.
+pub(crate) fn is_gate_seed_base(base: &str) -> bool {
+    GATE_LANES.into_iter().any(|lane| {
+        base.strip_prefix(lane)
+            .is_some_and(|rest| rest.is_empty() || rest.starts_with(':'))
+    })
+}
+
 /// The series `args` name: its seed base, whether it is paired and its games. A seed set is always
-/// paired and plays at least `SCREEN_GAMES` (R850001); an odd paired count is refused.
+/// paired and plays at least `SCREEN_GAMES`; a base that names a training gate's seeds is refused
+/// (R850001), as is an odd paired count.
 fn series(args: &Args) -> anyhow::Result<(String, bool, i32)> {
     if args.extend && args.set.is_none() {
         bail!("arena: --extend screens a seed set, so it needs --set improve-dev");
@@ -198,6 +214,12 @@ fn series(args: &Args) -> anyhow::Result<(String, bool, i32)> {
             (set.base().to_string(), true, games)
         }
         (None, Some(seed)) => {
+            if is_gate_seed_base(seed) {
+                bail!(
+                    "arena: the seed base \"{seed}\" names a training gate's hold-out seeds, which no \
+                     screen plays (R850001): screen on `--set improve-dev`, or on a base of your own"
+                );
+            }
             let Some(games) = args.games else {
                 bail!("arena: a seed base needs --games");
             };
@@ -493,13 +515,14 @@ pub(crate) fn game_setup(
 
 /// A seat's deck: `buildAiDeck` seeded `<seed>:deck:<seat>` at Easy's resources (R180: no handicap),
 /// over all three sets (R184, R380), minus the entrant's own shadow ban. R976000: both seats by this
-/// one rule, so the arena deals as practice and the quality gates do.
+/// one rule, neither shaped, so the gate deals as practice and the quality gates do.
 fn deck_for(seed: &str, seat: PlayerId, entrant: &Entrant) -> anyhow::Result<Vec<String>> {
     let handicap = AI_DIFFICULTY.easy;
     let mut rng = Rng::new(&format!("{seed}:deck:{}", seat.as_str()), 0);
     let options = AiDeckOptions {
         banned: Some(entrant.shadow_ban.clone()),
         mana_cap: Some(handicap.mana_cap),
+        shape: false,
         ..Default::default()
     };
     catch_unwind(AssertUnwindSafe(|| {
@@ -1792,7 +1815,7 @@ mod tests {
     }
 
     #[test]
-    fn r850001_screens_play_the_dev_set_at_no_fewer_than_its_games() {
+    fn r850001_screens_play_the_dev_set_and_never_a_gates_seeds() {
         assert_eq!(
             series(&screen(None, Some(SeedSet::ImproveDev), None, false, false)).unwrap(),
             ("improve-dev".to_string(), true, SCREEN_GAMES)
@@ -1812,12 +1835,29 @@ mod tests {
             series(&screen(Some("improve-try-3"), None, Some(60), true, false)).unwrap(),
             ("improve-try-3".to_string(), true, 60)
         );
+        // A gate's own seeds, the promotion's hold-out deals, are no screen's.
+        for gate in ["improve", "improve:abc", "unban:abc:7", "unban"] {
+            let refused = series(&screen(Some(gate), None, Some(400), true, false)).unwrap_err();
+            assert!(refused.to_string().contains("R850001"), "{gate}: {refused}");
+        }
         // A base needs its games, a paired series an even count, and every series a game.
         assert!(series(&screen(Some("improve-try-3"), None, None, false, false)).is_err());
         assert!(series(&screen(Some("improve-try-3"), None, Some(5), true, false)).is_err());
         assert!(series(&screen(None, Some(SeedSet::ImproveDev), Some(401), false, false)).is_err());
         assert!(series(&screen(Some("improve-try-3"), None, Some(0), false, false)).is_err());
         assert!(series(&screen(None, None, Some(400), false, false)).is_err());
+        for own in ["improve-dev", "improve-try-3", "unban-try-1", "improvement:1"] {
+            assert!(!is_gate_seed_base(own), "{own}");
+        }
+        // No deal of the dev set is a gate's, whatever the tree.
+        let base = SeedSet::ImproveDev.base();
+        for d in 1..=deal_of(SCREEN_GAMES) {
+            let seed = format!("{base}:{d}");
+            assert!(
+                !seed.starts_with("improve:") && !seed.starts_with("unban:"),
+                "{seed}"
+            );
+        }
     }
 
     #[test]
@@ -2061,9 +2101,10 @@ mod tests {
         }
     }
 
-    /// R976000: an arena's two seats are dealt by one rule, whatever ban list their entrants carry.
+    /// R976000: an arena's two seats are dealt by one rule, whatever ban list their entrants carry,
+    /// and neither is shaped by the unban lane's dealt-quality table.
     #[test]
-    fn r976000_an_arenas_two_seats_are_dealt_by_one_rule() {
+    fn r976000_an_arenas_two_seats_are_dealt_by_one_rule_and_neither_is_shaped() {
         jackioh_cards::register_all();
         let candidate = self_entrant();
         let mut parent = self_entrant();
@@ -2072,18 +2113,20 @@ mod tests {
         parent.shadow_ban.push("core-001".to_string());
         assert_ne!(candidate.shadow_ban, parent.shadow_ban);
         let easy = AI_DIFFICULTY.easy;
-        let dealt = |seed: &str, seat: PlayerId, banned: Option<Vec<String>>| {
+        let dealt = |seed: &str, seat: PlayerId, banned: Option<Vec<String>>, shape: bool| {
             build_ai_deck(
                 &mut Rng::new(&format!("{seed}:deck:{}", seat.as_str()), 0),
                 easy.deck_size,
                 &AiDeckOptions {
                     banned,
                     mana_cap: Some(easy.mana_cap),
+                    shape,
                     ..Default::default()
                 },
             )
         };
         let games = setups(&candidate, &parent, 8, false, |n| format!("r976000:{n}")).unwrap();
+        let mut shaping_changed = 0;
         for game in &games {
             let deck_at = |seat: PlayerId| {
                 if seat == PlayerId::P1 {
@@ -2096,18 +2139,21 @@ mod tests {
             // The candidate's seat is dealt as the daily gates deal, which pass no ban list at all.
             assert_eq!(
                 deck_at(own),
-                &dealt(&game.seed, own, None),
-                "game {}: the candidate's seat is not dealt as the daily gates deal",
+                &dealt(&game.seed, own, None, false),
+                "game {}: the candidate's seat is not dealt unshaped",
                 game.n
             );
-            // The parent's seat, minus its own ban list, by the same rule.
+            // The parent's seat, minus its own ban list and unshaped, by the same rule.
             assert_eq!(
                 deck_at(other),
-                &dealt(&game.seed, other, Some(parent.shadow_ban.clone())),
-                "game {}: the parent's seat is not dealt by the same rule",
+                &dealt(&game.seed, other, Some(parent.shadow_ban.clone()), false),
+                "game {}: the parent's seat is not dealt unshaped",
                 game.n
             );
+            let shaped = dealt(&game.seed, own, Some(candidate.shadow_ban.clone()), true);
+            shaping_changed += i32::from(&shaped != deck_at(own));
         }
+        assert!(shaping_changed > 0, "shaping changed no candidate deal");
     }
 
     #[test]

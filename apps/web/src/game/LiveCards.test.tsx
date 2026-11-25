@@ -116,15 +116,18 @@ describe("R243 a fused card says what it is: name, text, tags, keywords and stat
     renderBoard(fusedView());
     const root = screen.getByTestId(testid.card("u1"));
     expect(text(root, ".card-name")).toBe("Pointmaster + Right-house defender");
+    // R4747000: the chips in the keyword line's order, Taunt before First Strike.
     expect([...root.querySelectorAll("[data-keyword]")].map((chip) => chip.getAttribute("data-keyword"))).toEqual([
-      "First Strike",
       "Taunt",
+      "First Strike",
       "Divine Shield",
       "Reborn",
     ]);
     const preview = hover(root);
     expect(text(preview, ".card-name")).toBe("Pointmaster + Right-house defender");
-    expect(text(preview, ".card-text")).toContain(def("core-003").base.text);
+    // R3941002, R4747000: Pointmaster's "Rush, First Strike" and Right-house defender's line print as one,
+    // in the keyword line's order.
+    expect(text(preview, ".card-text")).toContain("Can't Defend, Rush, Taunt, First Strike, Divine Shield, Reborn");
     const glossary = [...preview.querySelectorAll("[data-glossary-term]")].map((entry) => entry.getAttribute("data-glossary-term"));
     expect(glossary).toEqual(expect.arrayContaining(["First Strike", "Taunt", "Divine Shield", "Reborn"]));
   });

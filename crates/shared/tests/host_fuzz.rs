@@ -1,5 +1,5 @@
 //! The two match host machines on seeded random events (#4392; SPEC §9.3, §9.5, §13, R79, R744, R776000,
-//! R1253000, R1452, R4013000): `DuelHost` and `DuosHost` played the way a server's actor plays them, with a
+//! R1253000, R1452, R4013000, R4848000): `DuelHost` and `DuosHost` played the way a server's actor plays them, with a
 //! harness standing in for the host. It keeps the timers the machine sets and takes back, a virtual clock it
 //! moves forward, the rows the machine asks it to append (written, refused, or taken by another host) and
 //! the last clocks it was asked to persist, and it rebuilds a host from the written rows the way the server
@@ -15,6 +15,9 @@
 //!     and no row after it;
 //!  5. a restart holds the game: a host rebuilt from the log has the game and the next seq of the one it
 //!     replaces;
+//!  6. a silent table moves on (the duel's): while the game is not over and no write is outstanding, a
+//!     clock timer other than the ceiling is armed (R79, R4848000), after each step and after each expiry of
+//!     a copy of the host played on from there with no seat acting;
 //!
 //! and that no output is `Panicked`. Every draw is the engine's `Rng` (CLAUDE.md rule 4 binds a pure
 //! crate's tests too), so a failure's seed alone reproduces it: set `REPRO` and run the `repro_one_seed` test.
@@ -38,7 +41,7 @@ use jackioh_engine::{
 use jackioh_shared::bots::decide::BotChoice;
 use jackioh_shared::config::PersonaName;
 use jackioh_shared::host::bot::{BotSeat, r188_forbidden};
-use jackioh_shared::host::clock::{MatchClocks, initial_clocks};
+use jackioh_shared::host::clock::{MatchClock, MatchClocks, initial_clocks};
 use jackioh_shared::host::duos::DuosAck;
 use jackioh_shared::host::duos::{DuosDecide, DuosLetGo, ai_forbidden};
 use jackioh_shared::host::snapshot::snapshot;
@@ -61,6 +64,9 @@ const HOST_FUZZ_MAX_STEPS: usize = 600;
 const HOST_FUZZ_AFTER_END_STEPS: usize = 30;
 /// Every this many steps, the incremental fold is checked against a fold of the whole log from its start.
 const HOST_FUZZ_FULL_FOLD_EVERY: usize = 25;
+/// How many timers a silent probe lets come due (invariant 6): past a turn clock, a chain of questions for the
+/// seat not on turn and the next turn's clock.
+const HOST_FUZZ_SILENT_EXPIRIES: usize = 8;
 /// The chance, in percent, that an `Append` is left unanswered until a later step.
 const HOST_FUZZ_HOLD_PERCENT: u32 = 25;
 /// Every this many 1v1 matches, one seats a ladder bot at P2.
@@ -99,6 +105,7 @@ enum Invariant {
     Panicked,
     Floor,
     PushedViews,
+    Live,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -409,6 +416,81 @@ fn check_no_panic(panicked_outputs: usize) -> Result<(), Violation> {
             Invariant::Panicked,
             format!("{panicked_outputs} Panicked output(s)"),
         ));
+    }
+    Ok(())
+}
+
+/// Invariant 6 (R79, R4848000): with every seat silent the game still moves on. While it is not over and no
+/// write is outstanding, one of the match clock's own timers other than the ceiling is armed.
+fn check_live(over: bool, held: bool, armed: &[TimerKey]) -> Result<(), Violation> {
+    if over
+        || held
+        || armed
+            .iter()
+            .any(|key| MatchClock::owns(*key) && *key != TimerKey::Ceiling)
+    {
+        return Ok(());
+    }
+    Err(violation(
+        Invariant::Live,
+        format!("only {armed:?} armed: nothing but the ceiling moves the game on"),
+    ))
+}
+
+/// Plays `outputs` out as a host whose every write lands: the timers kept, each row written and each result
+/// recorded. Whether the match ended.
+fn play_out(host: &mut DuelHost, timers: &mut Timers, outputs: Vec<DuelOutput>, now: i64) -> bool {
+    let mut queue: VecDeque<DuelOutput> = outputs.into();
+    while let Some(output) = queue.pop_front() {
+        let next = match output {
+            DuelOutput::Timer { command } => {
+                timers.apply(command);
+                Vec::new()
+            }
+            DuelOutput::Append { .. } => host.step(
+                DuelEvent::Logged {
+                    outcome: LogOutcome::Written,
+                },
+                now,
+            ),
+            DuelOutput::Record { .. } => host.step(DuelEvent::ResultRecorded, now),
+            DuelOutput::CeilingDraw { .. } | DuelOutput::Voided { .. } => return true,
+            _ => Vec::new(),
+        };
+        for output in next.into_iter().rev() {
+            queue.push_front(output);
+        }
+    }
+    host.game().result.is_some()
+}
+
+/// Invariant 6's probe (R79, R4848000), the one that found #4848: a copy of `host` from `now`, with every seat
+/// silent (no action, no bot's answer), its `timers` let come due in deadline order and every row it asks for
+/// written, keeps a clock other than the ceiling armed until the game ends or `HOST_FUZZ_SILENT_EXPIRIES` have
+/// come due. What it is given is left as it was.
+fn check_silent(host: &DuelHost, timers: &Timers, now: i64) -> Result<(), Violation> {
+    let mut host = host.clone();
+    let mut timers = Timers {
+        live: timers.live.clone(),
+        seen: Vec::new(),
+    };
+    let mut now = now;
+    for expiry in 1..=HOST_FUZZ_SILENT_EXPIRIES {
+        let Some((key, id, at)) = timers.take_next() else {
+            return Ok(());
+        };
+        now = now.max(at);
+        let outputs = host.step(DuelEvent::TimerFired { key, id }, now);
+        if play_out(&mut host, &mut timers, outputs, now) {
+            return Ok(());
+        }
+        let armed: Vec<TimerKey> = timers.live.keys().copied().collect();
+        check_live(false, false, &armed).map_err(|silent| {
+            violation(
+                Invariant::Live,
+                format!("{} after {expiry} silent expiries", silent.detail),
+            )
+        })?;
     }
     Ok(())
 }
@@ -884,7 +966,13 @@ impl DuelRig {
             self.check_rebuilds()?;
         }
         let rows_after_end = self.rows_at_end.map_or(0, |at| self.store.rows.len() - at);
-        check_ends_once(self.endings, self.over(), rows_after_end)
+        check_ends_once(self.endings, self.over(), rows_after_end)?;
+        let armed: Vec<TimerKey> = self.timers.live.keys().copied().collect();
+        check_live(self.over(), self.held.is_some(), &armed)?;
+        if self.over() || self.held.is_some() {
+            return Ok(());
+        }
+        check_silent(&self.host, &self.timers, self.now)
     }
 
     /// A restart: the host stops, and a new one is built from what the store holds and armed. Invariant 5.
@@ -2110,6 +2198,101 @@ fn the_panic_checker_fails_a_panicked_output() {
     let error = check_no_panic(1).expect_err("a panic");
     assert_eq!(error.invariant, Invariant::Panicked);
     assert_eq!(check_no_panic(0), Ok(()));
+}
+
+#[test]
+fn the_liveness_checker_fails_a_game_waiting_on_the_ceiling_alone() {
+    for armed in [&[TimerKey::Ceiling][..], &[], &[TimerKey::Hover { player: P1 }]] {
+        let error = check_live(false, false, armed).expect_err("nothing but the ceiling is armed");
+        assert_eq!(error.invariant, Invariant::Live, "{armed:?}");
+    }
+    assert_eq!(
+        check_live(false, false, &[TimerKey::Ceiling, TimerKey::Prompt]),
+        Ok(())
+    );
+    assert_eq!(
+        check_live(true, false, &[TimerKey::Ceiling]),
+        Ok(()),
+        "a game over waits on nothing"
+    );
+    assert_eq!(
+        check_live(false, true, &[]),
+        Ok(()),
+        "a write outstanding moves it on"
+    );
+}
+
+/// Invariant 6's probe meets #4848's board: p1's Mr. Vanilla attacks into p2's face-down S #22 Gatinsir, whose
+/// two Phalanxes' Cries ask p2 four Discovers on p1's turn (R2176000). Silent, each has a clock of its own
+/// (R4848000), so the probe finds the table moving on; with one clock per seat, the second had none.
+#[test]
+fn r4848000_the_silent_probe_passes_a_chain_of_questions_for_the_seat_not_on_turn() {
+    use jackioh_engine::testkit::{cursor_where, json, scenario};
+    const GATINSIR: &str = "stinkyscape-022";
+    const MR_VANILLA: &str = "core-008";
+    jackioh_cards::register_all();
+    let filler = json!([MR_VANILLA, MR_VANILLA, MR_VANILLA, MR_VANILLA]);
+    let mut built = scenario(json!({
+        "seed": "host-fuzz-silent-probe",
+        "active": "p1",
+        "p1": { "field": [{ "def": MR_VANILLA, "lane": 1 }], "library": filler },
+        "p2": { "backrow": [{ "def": GATINSIR, "lane": 5 }], "library": filler },
+    }));
+    // Gatinsir's 30% roll is the match rng's next draw: the cursor is put where it reveals.
+    let seed = built.state().seed.clone();
+    built.state_mut().rng_cursor = cursor_where(&seed, |cursor| Rng::new(&seed, cursor).next() < 0.30);
+    let attacker = built.unit(P1, 1).expect("p1's Mr. Vanilla").id;
+    let (mut host, outputs) = DuelHost::new(
+        DuelSetup {
+            match_id: "match-silent".to_string(),
+            seed: "seed-silent".to_string(),
+            created_at: EPOCH,
+            game: built.state().clone(),
+            ranked: false,
+            series_game: false,
+            finished: false,
+            next_seq: 1,
+            acked: Vec::new(),
+            clocks: initial_clocks(EPOCH),
+            bots: PerPlayer::new(None, None),
+            bot_moved_turn: PerPlayer::new(None, None),
+        },
+        EPOCH,
+    );
+    let mut timers = Timers::default();
+    play_out(&mut host, &mut timers, outputs, EPOCH);
+    let mut events = vec![DuelEvent::Arm];
+    for home in [P1, P2] {
+        events.extend([DuelEvent::Connected { home }, DuelEvent::Attached { home }]);
+    }
+    for event in events {
+        let outputs = host.step(event, EPOCH);
+        play_out(&mut host, &mut timers, outputs, EPOCH);
+    }
+    let attack = host
+        .legal(P1)
+        .into_iter()
+        .find(|body| matches!(body, ActionBody::Attack { attacker_id, .. } if *attacker_id == attacker))
+        .expect("Mr. Vanilla may attack");
+    let outputs = host.step(
+        DuelEvent::Action {
+            by: ActionBy::Home { home: P1 },
+            nonce: "attack".to_string(),
+            body: attack,
+        },
+        EPOCH,
+    );
+    play_out(&mut host, &mut timers, outputs, EPOCH);
+    let game = host.game();
+    assert_eq!(
+        (
+            game.active,
+            game.pending.as_ref().map(|pending| pending.player_id)
+        ),
+        (P1, Some(P2)),
+        "PREMISE: Gatinsir revealed and its Phalanxes ask p2 on p1's turn"
+    );
+    assert_eq!(check_silent(&host, &timers, EPOCH), Ok(()));
 }
 
 #[test]

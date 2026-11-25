@@ -13,8 +13,7 @@ through the night bot as an issue with a measured acceptance, measured with the 
 - **The sweep of record** (`.github/workflows/sweep.yml`, R1678000): the shadow ban measured again after
   every promotion and every set that ships, so the table keeps step with the AI on `main`. #1675's took
   it from 17 cards to 1 and #1889's to none.
-- **The arena** (`cargo jackioh arena`, `agent`), below: the screens a change to the AI is measured
-  with. The promotion gate that stood beside it is removed (The gate, below).
+- **The arena** (`cargo jackioh arena`, `agent`), where a change to the AI is screened, below.
 - **The history** of every promotion (`training/history/`, Reading the history).
 
 The design is docs/v0.3.0/README.md §8; the interfaces are docs/v0.3.0/SURFACE.md §14.
@@ -34,8 +33,8 @@ the first AI dealt the Meditative set, beat random in at least 90 of 100 (R73200
 measure a candidate against its parent alone: `unban` at 60 of 100, and `improve` at 65 of 100 until
 issue #850 lowered its bar to 220 of 400 paired games (R850000), so that the few points a change
 gains can bank and compound. From #1679 every lane's gate was a sequential test on paired deals
-(R1679000), which banked a 53% gain about nine times in ten where 220 of 400 banked
-it about one time in seven. The daily quality gates (`cargo jackioh gate --full`) still hold the AI
+(R1679000), which banked a 53% gain about nine times in ten where 220 of 400 banked it about one time
+in seven. The daily quality gates (`cargo jackioh gate --full`) still hold the AI
 on `main` to their floor against random, so an AI that forgets how to beat random fails the daily
 run.
 
@@ -46,36 +45,27 @@ for move and the server's test folds and pays (R2560000). Every change to the AI
 so the change records it again (`JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run
 src/practice/claim.test.ts`, after `sh scripts/build-wasm.sh`) and commits it with the change.
 
-## The gate
-
-Removed (#4702, R4702000). `cargo jackioh promote --lane <lane> --parent-bin <parent>` played a lane's
-hold-out deals against its parent, each twice with the seats swapped, until a sequential test decided
-(R850000, R850001, R1679000); a pass wrote `crates/ai/generation.json` and appended the lane's line to
-`training/history/<lane>.jsonl`, and CI's `rust (training gate)` played it again on a lane's `ai/*`
-branch. No lane has run since 2026-10-25 and the last promotion is generation 13 (2026-10-21), so the
-command, the job and the engine's `TRAINING_GATE` went; `git show 3a83bd7:crates/tools/src/promote.rs`
-holds the gate as it stood. Nothing writes `generation.json` now, so the sweep of record (R1678000)
-starts when a set ships, or when a person moves the file's `generation`.
-
 ## The arena and the agent
 
 - `cargo jackioh arena --a self|random|bin:<path> --b self|random|bin:<path> --games N --seed <base>
   [--paired] [--out <dir>]` plays games `1..=N` with seeds `<base>:<n>`, agent `a` on p1 in odd
-  games. With `--paired` (R850000) it plays deals instead: deal `d` is `<base>:<d>`, played twice with the
+  games, on any base of your own.
+  With `--paired` (R850000) it plays deals instead: deal `d` is `<base>:<d>`, played twice with the
   seats swapped, so `N` is even. Per game it prints duel.ts's line (who won, why, the hash, whether
   the log replays, decision times) and a tally at the end: the wins, draws and games without a
   result, and agent `a`'s win share with its 95% Wilson interval (`aShare`, `aLow`, `aHigh`); a
   paired series adds `deals` and `edge`, the mean over deals of `a`'s wins less `b`'s over the deal's
   two games (−1 to 1), with its 95% interval (`edgeLow`, `edgeHigh`), then `decided` (the deals
   whose edge is not 0, split into `wonBoth` and `lostBoth`) and `diverged` (the deals whose two
-  games end on different hashes).
+  games end on different hashes). A base that is a retired lane's name, or one followed by `:`, is
+  refused: those were the gates' own seeds (R850001).
 - `cargo jackioh arena --a … --b … --set improve-dev [--games N] [--extend]` plays the improve
   lane's fixed dev set, deals `improve-dev:1` to `:200`, paired, 400 games unless `--games` says
   more, never fewer (R850001). A screen with fewer than `SCREEN_MIN_DECIDED` (20) decided deals
   prints `inconclusive: true` and says nothing: it neither keeps nor drops the change (R4319000).
   `--extend` plays on in 100-deal batches until `SCREEN_MIN_DECIDED` deals are decided or
   `SCREEN_MAX_GAMES` (2,000) games are played, reading the edge only at the end. A change to the AI
-  screens on it (`improve.md`, How you measure).
+  screens on it (`improve.md`, How you measure); the gate's hold-out deals are never a screen's.
 - `cargo jackioh arena --a … --b … --set improve-dev --forks [--extend] [--save <path>]` is
   the fork screen (R4397000): the trunk plays each dev-set deal once with the control on both
   seats, and wherever the candidate would have made a different move that position is played out
@@ -190,21 +180,22 @@ change to the AI does not wait for it.
 |---|---|
 | Every game the arena plays: one `GameRecord` (R376) per line, `source: "dev"`, `mode: "random"` | `$JACKIOH_TRAINING_OUT/<date>.jsonl`; without it, stdout |
 | The gather lane's records, a file a batch | the run's artifacts, `gather-<run>-<part>`, and both projects' card statistics as totals (`stats-import --totals-only`, R1976000) |
-| A past promotion's gate numbers | `training/history/<lane>.jsonl`; the last one's are `crates/ai/generation.json` |
+| A retired lane's promotions | `training/history/<lane>.jsonl` and `crates/ai/generation.json` |
 
 ## Reading the history
 
-`crates/ai/generation.json` is the AI on `main`. `training/history/<lane>.jsonl` holds one line per
-promotion of that lane, oldest first:
+`crates/ai/generation.json` is the AI on `main`, as the last promotion left it. `training/history/<lane>.jsonl`
+holds one line per promotion of that lane, oldest first; no lane promotes since #4701, and the gate
+that measured them (`promote`) is gone since #4702 (R4702000), in git history:
 
 ```json
 {"generation":8,"lane":"improve","parent":"<main commit>","tree":"<crates/ai/src tree>","vsRandom":"93/100","vsParent":"87/100","shadowBan":11,"parentShadowBan":11,"date":"2026-11-02"}
 ```
 
 - `generation`: the parent's plus one. Generations count across both lanes: they share `main`.
-- `parent`: the `main` commit the parent was built from; `tree`: the AI's source tree, which names
-  the seeds (`<lane>:<tree>:1` … `:100`, or the improve lane's deals `:1` … `:200`). The gate that
-  read them is removed (R4702000); the promotion's own commit still holds it.
+- `parent`: the `main` commit the parent was built from; `tree`: the AI's source tree, which named
+  the gate's seeds (`<lane>:<tree>:1` … `:100`, or the improve lane's deals `:1` … `:200`). The arena
+  and self-play still refuse a base that names a lane (R850001, R1006002).
 - `vsRandom`, `vsParent`: the candidate's wins out of the games played, `"<wins>/<games>"`: out of
   400 for the improve lane since issue #850 (R850000), out of 100 for the unban lane and every
   promotion before. `vsRandom` is `null` from generation 10 on: the lanes play no random games

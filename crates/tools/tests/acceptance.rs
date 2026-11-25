@@ -29,8 +29,9 @@
 //!    `register_all();` on the line above a `scenario(`, as `crate::scenario` registers the cards (#2930);
 //!  - Preview (R1420, #2257): every `preview_sets(&[…])` under `crates/` names a set `SHIPPED_SETS` does not
 //!    list: a preview of a set that ships opens nothing, so the patch that ships it takes its previews out.
-//!  - Dungeon (DR14 B33, #2709): `spec/15-dungeon-run.md`'s table of constants has one row per `pub const`
-//!    of `crates/run/src/config.rs`, and `spec/README.md` maps the note.
+//!  - Dungeon (DR14 B33, #2709): `spec/15-dungeon-run.md`'s and `spec/16-infinite-assault.md`'s tables of
+//!    constants together have one row per `pub const` of `crates/run/src/config.rs`, and `spec/README.md`
+//!    maps both notes (#4584).
 //!  - Discards (#3914): no test under the card scripts or `crates/engine/tests` notes a value and drops it with
 //!    a bare `let _ = <identifier>;`.
 //!  - Shared tests (#4610): every Rust file directly under `crates/shared/tests` is declared by its one
@@ -249,8 +250,9 @@ const STRUCTURAL_READERS: &[&str] = &[
     // one row per card (#3804).
     "crates/cards/tests/cross/radiant_stats.rs",
     // This file names the patterns it looks for, and reads `crates/tools/README.md`'s command
-    // table (#1720) and `spec/15-dungeon-run.md`'s table of constants (B33), the first cell of each
-    // row only, and the line of `spec/README.md`'s map that links §15.
+    // table (#1720) and `spec/15-dungeon-run.md`'s and `spec/16-infinite-assault.md`'s tables of
+    // constants (B33), the first cell of each row only, and the lines of `spec/README.md`'s map that
+    // link §15 and §16.
     "crates/tools/tests/acceptance.rs",
 ];
 
@@ -3013,7 +3015,7 @@ fn preview_the_scan_finds_each_preview_of_shipped_sets_only() {
     assert_eq!(previews_of_shipped_sets_only(text), [1, 3]);
 }
 
-/// The constants `spec/15-dungeon-run.md`'s table names, the first cell of each row, in order.
+/// The constants a run's spec section's table names (§15's, §16's), the first cell of each row, in order.
 fn spec_table_constants(section: &str) -> Vec<String> {
     section
         .lines()
@@ -3023,13 +3025,41 @@ fn spec_table_constants(section: &str) -> Vec<String> {
         .collect()
 }
 
-// B33 (DR14, #2709): the dungeon run's spec section holds one row per `pub const` of the run's
-// `config.rs` and no other, and the spec's map links the note.
+// §8 is one note a subsection (`spec/08-catalog/`), and the cards' radiant_stats.rs reads them with
+// `include_str!`, a list a pure crate's test cannot build from the folder (CLAUDE.md rule 4). A note
+// added without joining that list would leave its rows' Radiant stats unchecked, so this holds the
+// list to the folder.
+#[test]
+fn every_catalog_note_is_read_by_the_radiant_stats_test() {
+    let root = repo();
+    let reader = fs::read_to_string(root.join("crates/cards/tests/cross/radiant_stats.rs"))
+        .expect("crates/cards/tests/cross/radiant_stats.rs");
+    let mut notes: Vec<String> = fs::read_dir(root.join("spec/08-catalog"))
+        .expect("spec/08-catalog")
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .collect();
+    notes.sort();
+    assert!(notes.len() >= 13, "only {} notes in spec/08-catalog", notes.len());
+    let unread: Vec<&String> = notes
+        .iter()
+        .filter(|note| !reader.contains(&format!("include_str!(\"../../../../spec/08-catalog/{note}\")")))
+        .collect();
+    assert!(
+        unread.is_empty(),
+        "crates/cards/tests/cross/radiant_stats.rs reads no {unread:?} of spec/08-catalog: add each to CATALOG_NOTE"
+    );
+}
+
+// B33 (DR14, #2709): the dungeon run's and the Infinite Assault's spec sections (§15, §16, #4584)
+// together hold one row per `pub const` of the run's `config.rs` and no other, and the spec's map
+// links both notes.
 #[test]
 fn dungeon_the_spec_section_tables_every_run_constant_and_the_map_links_it() {
     let root = repo();
     let config = fs::read_to_string(root.join("crates/run/src/config.rs")).expect("the run's config.rs");
-    let section = fs::read_to_string(root.join("spec/15-dungeon-run.md")).expect("spec/15-dungeon-run.md");
+    let section = fs::read_to_string(root.join("spec/15-dungeon-run.md")).expect("spec/15-dungeon-run.md")
+        + &fs::read_to_string(root.join("spec/16-infinite-assault.md")).expect("spec/16-infinite-assault.md");
     let map = fs::read_to_string(root.join("spec/README.md")).expect("spec/README.md");
     let constants: BTreeSet<String> = config_constants(&config).into_iter().collect();
     let rows: BTreeSet<String> = spec_table_constants(&section).into_iter().collect();
@@ -3042,13 +3072,15 @@ fn dungeon_the_spec_section_tables_every_run_constant_and_the_map_links_it() {
     let stale: Vec<&String> = rows.difference(&constants).collect();
     assert!(
         missing.is_empty() && stale.is_empty(),
-        "spec/15-dungeon-run.md's constants table and crates/run/src/config.rs disagree: rows to add {missing:?}, rows naming no constant {stale:?}"
+        "spec/15-dungeon-run.md's and spec/16-infinite-assault.md's constants tables and crates/run/src/config.rs disagree: rows to add {missing:?}, rows naming no constant {stale:?}"
     );
-    assert!(
-        map.lines()
-            .any(|line| line.starts_with("- [[§15]]") && line.contains("(15-dungeon-run.md)")),
-        "spec/README.md does not map spec/15-dungeon-run.md"
-    );
+    for (id, note) in [("§15", "15-dungeon-run.md"), ("§16", "16-infinite-assault.md")] {
+        assert!(
+            map.lines()
+                .any(|line| line.starts_with(&format!("- [[{id}]]")) && line.contains(&format!("({note})"))),
+            "spec/README.md does not map spec/{note}"
+        );
+    }
 }
 
 #[test]
@@ -3371,6 +3403,65 @@ const RETIRED_NETWORK_NAMES: [&str; 6] = [
     "learned_parity",
 ];
 
+/// R4702000: the commands only the retired training lanes ran are gone (#4702). The promotion gate,
+/// `promote`, and CI's replay of it (R732001, R1012000, R1679000) go first.
+#[test]
+fn r4702000_r732001_r1012000_r1679000_the_tools_have_no_promotion_gate() {
+    let root = repo();
+    assert!(
+        !root.join("crates/tools/src/promote.rs").exists(),
+        "crates/tools/src/promote.rs is back"
+    );
+    let main = fs::read_to_string(root.join("crates/tools/src/main.rs")).expect("crates/tools/src/main.rs");
+    assert!(
+        !main.contains("mod promote") && !main.contains("Promote("),
+        "crates/tools/src/main.rs mounts `promote` again"
+    );
+    let ci = fs::read_to_string(root.join(".github/workflows/ci.yml")).expect(".github/workflows/ci.yml");
+    assert!(
+        !ci.contains("training-gate") && !ci.contains("jackioh promote"),
+        "ci.yml replays a training lane's promotion again"
+    );
+}
+
+/// R4702000: no `positions` command folds self-play logs into training rows (R1006003, R1006004,
+/// R1006006, R1171000, R3112002, R4070000), and no `stats from-selfplay` files them. `selfplay` stays:
+/// `classify` plays it on two builds (R1365000).
+#[test]
+fn r4702000_r1006003_r1006004_r1006006_r1171000_r3112002_r4070000_no_positions_command() {
+    let root = repo();
+    for gone in [
+        "crates/tools/src/positions.rs",
+        "crates/tools/src/selfplay_records.rs",
+    ] {
+        assert!(!root.join(gone).exists(), "{gone} is back");
+    }
+    let main = fs::read_to_string(root.join("crates/tools/src/main.rs")).expect("crates/tools/src/main.rs");
+    for mounted in ["mod positions", "Positions(", "mod selfplay_records"] {
+        assert!(!main.contains(mounted), "crates/tools/src/main.rs: `{mounted}`");
+    }
+    assert!(
+        main.contains("mod selfplay;"),
+        "`selfplay` is gone, and `classify` plays it"
+    );
+}
+
+/// R4702000: the AI extracts no features: the learned evaluation they fed is retired (R4159000), and
+/// `positions` was their last reader (R1006000, R1012004, R3112000).
+#[test]
+fn r4702000_r1006000_r1012004_r3112000_the_ai_extracts_no_features() {
+    let root = repo();
+    assert!(
+        !root.join("crates/ai/src/features.rs").exists(),
+        "crates/ai/src/features.rs is back"
+    );
+    let lib = fs::read_to_string(root.join("crates/ai/src/lib.rs")).expect("crates/ai/src/lib.rs");
+    assert!(
+        !lib.contains("mod features"),
+        "crates/ai/src/lib.rs: `mod features`"
+    );
+}
+
 /// R4159000, R1010000, R1010001, R1011000, R1171001, R3112001: the AI compiles no network and no prior.
 /// `crates/ai` has no build script, no `learned` or `policy` module and no weights file, and no source of
 /// the AI or of the three WebAssembly crates names what only they used.
@@ -3420,229 +3511,6 @@ fn r4159000_r1010000_r1010001_r1011000_r1171001_r3112001_the_ai_compiles_no_netw
     assert!(
         found.is_empty(),
         "the retired network is named again (R4159000): {found:?}"
-    );
-}
-
-/// The names that only the retired training lanes' commands used (R4702000): the features and their
-/// layout, the prices `positions` read outside a decision, the unban lane's deck shaping and the two
-/// `stats` subcommands.
-const RETIRED_LANE_NAMES: [&str; 10] = [
-    "features_of",
-    "FEATURES_VERSION",
-    "dense_names",
-    "decision_prices_at",
-    "AI_DECISION_PRICE_NODES",
-    "shaped_weight",
-    "DEALT_Q",
-    "UNBANNED_PREFER",
-    "FromSelfplay",
-    "FitDealt",
-];
-
-/// R4702000, and the rulings it retires (R1006000, R1006003, R1006004, R1006006, R1012004, R3112000,
-/// R4070000; R1171000 and R3112002 were retired with the learned evaluation): `positions`, the features,
-/// `stats from-selfplay` and the deck shaping with `stats fit-dealt` are gone, and no source of the AI, the
-/// tools or the three WebAssembly crates names what only they used. `selfplay` stays, since `classify`
-/// plays its AI check with it.
-#[test]
-fn r4702000_r1006000_r1006003_r1006004_r1006006_r1012004_r1171000_r3112000_r3112002_r4070000_what_only_the_retired_lanes_read_is_gone()
- {
-    let root = repo();
-    for gone in [
-        "crates/ai/src/features.rs",
-        "crates/ai/tests/ai/features.rs",
-        "crates/tools/src/positions.rs",
-        "crates/tools/src/selfplay_records.rs",
-        "crates/tools/src/dealt_fit.rs",
-        "docs/learned-eval.md",
-    ] {
-        assert!(!root.join(gone).exists(), "{gone} is back");
-    }
-    let mut files = Vec::new();
-    for dir in [
-        "crates/ai/src",
-        "crates/tools/src",
-        "crates/wasm/src",
-        "crates/wasm/c/src",
-        "crates/wasm/core/src",
-    ] {
-        sources(&root.join(dir), &mut files);
-    }
-    assert!(files.len() > 60, "only {} source files found", files.len());
-    let mut found: Vec<String> = Vec::new();
-    for file in &files {
-        let text = fs::read_to_string(file).unwrap_or_default();
-        for name in RETIRED_LANE_NAMES {
-            if text.contains(name) {
-                found.push(format!(
-                    "{}: `{name}`",
-                    file.strip_prefix(&root).unwrap_or(file).display()
-                ));
-            }
-        }
-    }
-    assert!(
-        found.is_empty(),
-        "what only the retired lanes read is named again (R4702000): {found:?}"
-    );
-    let read =
-        |path: &str| fs::read_to_string(root.join(path)).unwrap_or_else(|error| panic!("{path}: {error}"));
-    let main = read("crates/tools/src/main.rs");
-    for module in ["mod positions", "mod selfplay_records", "mod dealt_fit"] {
-        assert!(!main.contains(module), "crates/tools/src/main.rs: `{module}`");
-    }
-    assert!(
-        main.contains("Selfplay(selfplay::Args)")
-            && read("crates/tools/src/classify.rs").contains("\"selfplay\""),
-        "`selfplay` stays while `classify` runs it for its AI check"
-    );
-}
-
-/// R4702000, and the rulings the gate's removal retires (R732001, R1679000; R1012000 was retired with
-/// the learn lane): `cargo jackioh promote` is gone, and neither the CLI nor the engine's config names
-/// the training gate.
-#[test]
-fn r4702000_r732001_r1012000_r1679000_the_promotion_gate_is_gone() {
-    let root = repo();
-    assert!(
-        !root.join("crates/tools/src/promote.rs").exists(),
-        "crates/tools/src/promote.rs is back"
-    );
-    let read =
-        |path: &str| fs::read_to_string(root.join(path)).unwrap_or_else(|error| panic!("{path}: {error}"));
-    let main = read("crates/tools/src/main.rs");
-    assert!(
-        !main.contains("mod promote") && !main.contains("Promote("),
-        "`jackioh promote` is back"
-    );
-    let config = read("crates/engine/src/config.rs");
-    assert!(
-        !config.contains(concat!("TRAINING", "_GATE")) && !config.contains(concat!("Training", "Gate")),
-        "the engine's config names the training gate again"
-    );
-}
-
-/// R4702001: the AI's four switches that shipped at one value are gone, with the code only the other
-/// value ran: no source of the AI names a switch, the replay fill or the open-lethal reply.
-#[test]
-fn r4702001_the_ais_one_valued_switches_are_gone() {
-    let root = repo();
-    let mut files = Vec::new();
-    sources(&root.join("crates/ai/src"), &mut files);
-    assert!(files.len() > 15, "only {} source files found", files.len());
-    let gone = [
-        concat!("replay_fill", "_steps"),
-        concat!("open", "_lethal"),
-        concat!("confirm_lone", "_win"),
-        concat!("spread", "_activations"),
-        concat!("fill", "_turn"),
-        concat!("Replay", "Fill"),
-        concat!("simulate_reply", "_with"),
-    ];
-    let mut found: Vec<String> = Vec::new();
-    for file in &files {
-        let text = fs::read_to_string(file).unwrap_or_default();
-        for name in gone {
-            if text.contains(name) {
-                found.push(format!(
-                    "{}: `{name}`",
-                    file.strip_prefix(&root).unwrap_or(file).display()
-                ));
-            }
-        }
-    }
-    assert!(
-        found.is_empty(),
-        "a one-valued switch of the AI is back (R4702001): {found:?}"
-    );
-}
-
-/// R4702002, R1085: the engine's verbs, reads and tables that no card, rule or other crate reached are
-/// gone, Keenus's old verb among them: no source of the engine defines one.
-#[test]
-fn r4702002_r1085_the_engines_unreached_verbs_reads_and_tables_are_gone() {
-    let root = repo();
-    let mut files = Vec::new();
-    sources(&root.join("crates/engine/src"), &mut files);
-    assert!(files.len() > 100, "only {} source files found", files.len());
-    let functions = [
-        "convert_healing",
-        "lock_own_zone",
-        "grant_keywords_random_unit",
-        "swap_health",
-        "steal_all",
-        "shuffle_copies_of_self",
-        "consume_modifier",
-        "drop_delayed",
-        "peek_work",
-        "is_owed",
-        "unpark_work",
-        "enchantments_of_kind",
-        "trigger_holders_for_event",
-        "grade_name_of",
-        "chaos_effect_by_name",
-        "card_drills_of",
-        "hand_leftmost",
-        "hand_rightmost",
-        "hand_neighbor",
-        "is_rightmost_in_hand",
-    ];
-    let mut gone: Vec<String> = functions.iter().map(|name| format!("fn {name}(")).collect();
-    gone.extend(
-        [
-            concat!("const ", "PORTRAITS:"),
-            concat!("struct ", "PortraitEntry"),
-            concat!("type ", "VoiceEmoteId"),
-            concat!("const ", "PARAM_PLACEHOLDER"),
-        ]
-        .map(String::from),
-    );
-    let mut found: Vec<String> = Vec::new();
-    for file in &files {
-        let text = fs::read_to_string(file).unwrap_or_default();
-        for name in &gone {
-            if text.contains(name.as_str()) {
-                found.push(format!(
-                    "{}: `{name}`",
-                    file.strip_prefix(&root).unwrap_or(file).display()
-                ));
-            }
-        }
-    }
-    assert!(
-        found.is_empty(),
-        "an item nothing reaches is back in the engine (R4702002): {found:?}"
-    );
-}
-
-/// R4702003: the evaluation's two terms that shipped at weight 0 are gone: no source of the AI names
-/// either weight or the read only they used.
-#[test]
-fn r4702003_the_evaluations_zero_weight_terms_are_gone() {
-    let root = repo();
-    let mut files = Vec::new();
-    sources(&root.join("crates/ai/src"), &mut files);
-    assert!(files.len() > 15, "only {} source files found", files.len());
-    let gone = [
-        concat!("enemy_face_down", "_per_cost"),
-        concat!("fatigue", "_draw:"),
-        concat!("fn shown", "_cost("),
-    ];
-    let mut found: Vec<String> = Vec::new();
-    for file in &files {
-        let text = fs::read_to_string(file).unwrap_or_default();
-        for name in gone {
-            if text.contains(name) {
-                found.push(format!(
-                    "{}: `{name}`",
-                    file.strip_prefix(&root).unwrap_or(file).display()
-                ));
-            }
-        }
-    }
-    assert!(
-        found.is_empty(),
-        "a zero-weight term of the evaluation is back (R4702003): {found:?}"
     );
 }
 
@@ -3763,5 +3631,63 @@ fn ts_the_dev_dependency_scan_finds_a_dropped_feature() {
     assert_eq!(
         dev_dependencies_missing_ts("[package]\nname = \"x\"\n"),
         ["jackioh-run", "jackioh-shared"]
+    );
+}
+
+/// R4702002, R1085: the engine's verbs, reads and tables that no card, rule or other crate reached are
+/// gone, Keenus's old verb among them: no source of the engine defines one.
+#[test]
+fn r4702002_r1085_the_engines_unreached_verbs_reads_and_tables_are_gone() {
+    let root = repo();
+    let mut files = Vec::new();
+    sources(&root.join("crates/engine/src"), &mut files);
+    assert!(files.len() > 100, "only {} source files found", files.len());
+    let functions = [
+        "convert_healing",
+        "lock_own_zone",
+        "grant_keywords_random_unit",
+        "swap_health",
+        "steal_all",
+        "shuffle_copies_of_self",
+        "consume_modifier",
+        "drop_delayed",
+        "peek_work",
+        "is_owed",
+        "unpark_work",
+        "enchantments_of_kind",
+        "trigger_holders_for_event",
+        "grade_name_of",
+        "chaos_effect_by_name",
+        "card_drills_of",
+        "hand_leftmost",
+        "hand_rightmost",
+        "hand_neighbor",
+        "is_rightmost_in_hand",
+    ];
+    let mut gone: Vec<String> = functions.iter().map(|name| format!("fn {name}(")).collect();
+    gone.extend(
+        [
+            concat!("const ", "PORTRAITS:"),
+            concat!("struct ", "PortraitEntry"),
+            concat!("type ", "VoiceEmoteId"),
+            concat!("const ", "PARAM_PLACEHOLDER"),
+        ]
+        .map(String::from),
+    );
+    let mut found: Vec<String> = Vec::new();
+    for file in &files {
+        let text = fs::read_to_string(file).unwrap_or_default();
+        for name in &gone {
+            if text.contains(name.as_str()) {
+                found.push(format!(
+                    "{}: `{name}`",
+                    file.strip_prefix(&root).unwrap_or(file).display()
+                ));
+            }
+        }
+    }
+    assert!(
+        found.is_empty(),
+        "an item nothing reaches is back in the engine (R4702002): {found:?}"
     );
 }

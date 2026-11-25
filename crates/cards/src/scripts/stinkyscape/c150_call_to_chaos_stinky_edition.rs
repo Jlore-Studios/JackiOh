@@ -370,6 +370,28 @@ mod tests {
         }
 
         #[test]
+        fn r4599000_entry_freeze_passes_an_enemy_unit_immune_to_spells_by() {
+            let s = chaos(
+                "freeze",
+                side(false, json!([])),
+                json!({
+                    "hand": [VANILLA],
+                    "field": [
+                        { "def": VANILLA, "lane": 1, "position": "DEF" },
+                        { "def": "stand-in (1) 4/4 Immune to Spells", "lane": 2, "position": "DEF" },
+                    ],
+                }),
+            );
+            let plain = s.unit(P2, 1).expect("an enemy Unit");
+            assert_eq!(plain.position.unwrap_or(Position::Atk), Position::Atk);
+            assert!(plain.frozen.is_some());
+            let immune = s.unit(P2, 2).expect("the immune Unit");
+            assert_eq!(immune.position, Some(Position::Def));
+            assert!(immune.frozen.is_none());
+            assert_eq!(events_of(&s, "positionSwitched").len(), 1);
+        }
+
+        #[test]
         fn entry_humans_fills_the_board_with_human_stinkyscape_units() {
             // A Human may move or end a unit as it arrives, and which Humans arrive moves with every card joining
             // the pool (#848): the seed is one whose Humans leave the board as they filled it.

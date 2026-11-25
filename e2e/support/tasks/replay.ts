@@ -1,5 +1,5 @@
 // `cy.task("replayHash", …)` folds recorded actions through `jackioh replay` outside the browser
-// and compares `hashState` (BUILD M8 spec 01, BUILD M5-T3; docs/v0.3.0/SURFACE.md §12).
+// and compares the hashes `jackioh hash-state` gives (BUILD M8 spec 01, BUILD M5-T3; docs/v0.3.0/SURFACE.md §12).
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";

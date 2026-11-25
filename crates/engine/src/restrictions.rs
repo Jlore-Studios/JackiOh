@@ -195,12 +195,15 @@ pub const SLASH_REFUSAL: &str = "that unit is across the slash";
 /// E35: this unit may make no attack, declared or forced ("can't attack or be attacked").
 pub fn cannot_attack(state: &GameState, unit: &CardInstance) -> bool {
     crate::scripts::flags_of(state, unit).cant_attack_or_be_attacked == Some(true)
+        || crate::effects::firewall::is_contained(state, unit)
 }
 
 /// E35: no attack may be made on this unit, declared or forced. Effects still target and hit it.
 pub fn cannot_be_attacked(state: &GameState, unit: &CardInstance) -> bool {
     let flags = crate::scripts::flags_of(state, unit);
-    flags.cant_be_attacked == Some(true) || flags.cant_attack_or_be_attacked == Some(true)
+    flags.cant_be_attacked == Some(true)
+        || flags.cant_attack_or_be_attacked == Some(true)
+        || crate::effects::firewall::is_contained(state, unit)
 }
 
 /// E35: only a unit standing in this unit's lane may attack it.

@@ -5,4 +5,8 @@ import type { DuosAiMode } from "./DuosAiMode";
 /**
  * The AI's search in flight for a seat: what it was asked on, and the move to fall back on.
  */
-export type DuosJob = { version: number, mode: DuosAiMode, fallback: DuosActionBody | null, cursor: number, };
+export type DuosJob = { version: number, mode: DuosAiMode, fallback: DuosActionBody | null, cursor: number, 
+/**
+ * R4813000: the instance ids of the seat's hand when it was asked.
+ */
+hand: Array<string>, };

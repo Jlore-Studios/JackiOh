@@ -825,7 +825,9 @@ B46. With the match route's chrome (BackLink and the match bar) and with the hot
 390×844, 844×390, 768×1024, 1280×720, 1024×768 and 390×664: nothing scrolls either way, End turn
 is on the screen, and the top of every hand card is on the screen. At 1024×768 the controls sit
 in a sidebar right of the field. `board-layout.cy.tsx` runs at 1024×768 and 390×664 too, and
-asserts no vertical scroll.
+asserts no vertical scroll. While a game is mounted the page never scrolls or overscrolls on
+touch — no board swipe, rubber-band bounce or pull-to-refresh moves it, and no drag or aim moves
+it at all (R4773000) — and every menu and the log scroll inside themselves.
 
 B47. Every card picker (`data-prompt-layout="cards"`) has "View the board", `prompt-peek` (`aria-pressed`, at least 44 px tall on a phone); no board picker has one. Pressing it folds the picker to a bar of its title and "Back to the choice", sets `data-collapsed` on `prompt-modal` and `prompt-scrim`, takes the options, Confirm and Cancel out of the page and clears the scrim's dim; pressing it again brings the picker back with the same options chosen. Folding sends nothing, and a new prompt opens unfolded. At 390×844 a folded Discover is a bar at most 72 px tall below the field, over a transparent scrim.
 

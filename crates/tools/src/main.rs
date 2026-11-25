@@ -5,6 +5,7 @@
 
 mod agent;
 mod arena;
+mod assault_sim;
 mod board;
 mod card_lists;
 mod carried;
@@ -12,6 +13,7 @@ mod catalog;
 mod changed;
 mod claims;
 mod classify;
+mod dealt_fit;
 mod duos_fuzz;
 mod duos_gate;
 mod fork_screen;
@@ -61,10 +63,14 @@ enum Command {
     Carried(carried::Args),
     /// Whole dungeon runs with the AI in the player's seat, and how each kind of fight goes (#3065).
     RunSim(run_sim::Args),
+    /// Whole Infinite Assault days with the AI in the player's seat, and how each level goes (#4583).
+    AssaultSim(assault_sim::Args),
     /// What each card's plays and hooks do on the board, from seeded games, with a suggested motif (#2788).
     Fx(fx_census::Args),
     /// Fold `{seed, decks, log, …}` from stdin; print `{"hash", "errors"}` (part 22).
     Replay(replay::Args),
+    /// Hash one state object from stdin by the engine's hash_state; print `{"hash"}` (#4766).
+    HashState(replay::HashStateArgs),
     /// Print one gate game turn by turn (part 22).
     Trace(trace::Args),
     /// Fold `{seed, decks, log, …}` to one position and print it and the AI's decision there (#834).
@@ -95,7 +101,7 @@ enum Command {
     Arena(arena::Args),
     /// The agent protocol on stdin and stdout (part 29).
     Agent(agent::Args),
-    /// Self-play game logs (#1006): `classify`'s AI check plays the head and its base with it (#2651).
+    /// Self-play game logs (#1006), which `classify` compares across two builds (R1365000).
     Selfplay(selfplay::Args),
     /// `winrates --refresh <report.json>`: the win rates of record from production's windowed card figures, once per patch (R3882000).
     Winrates(winrates::Args),
@@ -108,8 +114,10 @@ fn main() -> ExitCode {
         Command::FusedPairs(args) => fused_pairs::run(args),
         Command::Carried(args) => carried::run(args),
         Command::RunSim(args) => run_sim::run(args),
+        Command::AssaultSim(args) => assault_sim::run(args),
         Command::Fx(args) => fx_census::run(args),
         Command::Replay(args) => replay::run(args),
+        Command::HashState(args) => replay::run_hash_state(args),
         Command::Trace(args) => trace::run(args),
         Command::Think(args) => think::run(args),
         Command::Catalog(args) => catalog::run(args),

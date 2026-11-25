@@ -45,16 +45,11 @@ fn on_turn(turn: i32, hand: &[&str], mana: i32) -> GameState {
 
 /// The line that ends the turn from `state`, scored as the search scores a passed line.
 fn passed(state: &GameState) -> f64 {
-    static_score(
-        &close_line(
-            state,
-            AI,
-            state.turn,
-            &create_node_counter(10, None),
-            Prices::NONE,
-        ),
+    terminal_score(
+        state,
         AI,
         state.turn,
+        &create_node_counter(10, None),
         Prices::NONE,
     )
 }

@@ -11,7 +11,9 @@ import type { Handicap } from "./Handicap";
 import type { HeroState } from "./HeroState";
 import type { ManaState } from "./ManaState";
 import type { PlayerModifier } from "./PlayerModifier";
+import type { RecursionLog } from "./RecursionLog";
 import type { RowFlags } from "./RowFlags";
+import type { SetName } from "./SetName";
 import type { StarscapeMap } from "./StarscapeMap";
 import type { TipsyCounter } from "./TipsyCounter";
 import type { TurnLog } from "./TurnLog";
@@ -41,6 +43,12 @@ aiTurn: boolean,
  */
 handicap?: Handicap, 
 /**
+ * R4595000: the sets this seat's deck was dealt from, public, as the setup named them
+ * (`CreateGameOptions.deckSets`). Determinization samples the seat's unseen cards from these sets'
+ * non-token cards. Absent, the seat names none and samples as before, so no other game's hash moves.
+ */
+deckSets?: Array<SetName>, 
+/**
  * R345: `false` once this player has turned R82's automatic turn end off (`setAutoEndTurn`).
  * Absent means on, and turning it back on deletes the field, so a game in which nobody touched
  * the setting hashes exactly as it did before this field existed. Only ever `Some(false)`.
@@ -68,6 +76,13 @@ carried?: Array<CardInstance | null>,
  * before this field existed.
  */
 gameLog?: GameLog, 
+/**
+ * R4589000: what this player's plays and deaths leave for the Recursion cards to read back
+ * (`recursion_log.rs`): every face-up play this game and every Unit that died under them.
+ * Absent until the game holds an Infinite Assault card, so a game without one hashes as it did
+ * before this field existed (D14).
+ */
+recursion?: RecursionLog, 
 /**
  * B5 E3, E4, R457: how many draws this player has made on turn `turn`, whoever's turn it is — a
  * fatigue draw included, a draw a limit stopped not. A count kept for an earlier turn reads as 0,

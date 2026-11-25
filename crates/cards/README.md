@@ -8,8 +8,8 @@ A set the catalog holds before it ships, as Meditative was while issue #496 buil
 while issue #1173 did (R1178000), Stinkyscape while issue #1836 did, Training Grounds while tracker
 #2193 did, and Stinkyscape+ while tracker #3533 did (R3535000), is in no pool that names no set, no deck and no random deck until the patch that lists it in `SHIPPED_SETS`
 (R1420), counts toward none of the census's totals, and a test opens it with the testkit's `preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the
-catalog's patch history. This file is the contract between the card files. The spec (`spec/08-catalog.md`
-for every card, `spec/07-tokens.md` for the tokens) is the only source of card text; when it and this
+catalog's patch history. This file is the contract between the card files. The spec (`spec/08-catalog/`,
+a note a set, for every card, `spec/07-tokens.md` for the tokens) is the only source of card text; when it and this
 file disagree, the spec wins. [`docs/ADDING_CARDS.md`](../../docs/ADDING_CARDS.md) is the procedure
 for adding, changing or removing a card (CLAUDE.md rule 10).
 

@@ -29,6 +29,7 @@ import {
   tileMoteBudget,
   tileMotes,
   tileResponse,
+  TILE_PATTERN_NO_FAMILY,
   TILE_PATTERN_OF_FAMILY,
   type TileAuraSpec,
   type TilePattern,
@@ -262,9 +263,17 @@ describe("R3342000 tile aura planner", () => {
               ? TILE_PATTERN_OF_FAMILY.meditative
               : def.set === "Stinkyscape" || def.set === "Stinkyscape+"
                 ? TILE_PATTERN_OF_FAMILY.stinkyscape
-                : TILE_PATTERN_OF_FAMILY["training-grounds"];
-      expect(aura?.pattern).toBe(expectedPattern);
+                : def.set === "Training Grounds"
+                  ? TILE_PATTERN_OF_FAMILY["training-grounds"]
+                  : TILE_PATTERN_NO_FAMILY;
+      expect(aura?.pattern, id).toBe(expectedPattern);
     }
+  });
+
+  it("R4596000 an Infinite Assault Mythic's tile wears circuitry, the pattern of a set with no showcase family", () => {
+    expect(TILE_PATTERN_NO_FAMILY).toBe("circuitry");
+    const view = baseView({ you: emptySide("p1", { units: [unit("p1", { defId: "infiniteassault-229", instanceId: "u1" })] }) });
+    expect(planTileAura(view, "you", "units", 1, new Map())?.pattern).toBe(TILE_PATTERN_NO_FAMILY);
   });
 
   it("R3342000 a signature aura replaces the default", () => {
