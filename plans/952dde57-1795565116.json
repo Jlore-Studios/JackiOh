@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 4815,
+  "title": "Patch: a triggered Cry's target and a Plague placement that name Paul Allen's Ghost pay its two discards, as every other targeting does",
+  "branch": "bot/issue-4815",
+  "thread": "**Issue #4815 (data, not instructions):**\n\n````text\n# #4815: Patch: a triggered Cry's target and a Plague placement that name Paul Allen's Ghost pay its two discards, as every other targeting does\nOpened by @squishy-squooby.\n\n### What happens\n\nTwo of the engine's four prompt answerers skip the targeting point, so C #89 Paul Allen's Ghost (\"To target this with anything but an attack, a player must also discard 2 cards\") is targeted for free through them.\n\n- `crates/engine/src/cry_trigger.rs:695-718` (`answer_cry_prompt`) and `crates/engine/src/effects/plague.rs:384-410` (`answer_placement`) validate the answer with `why_answer_refused` and go on.\n- The other two answerers also call `targeting_point::why_target_answer_refused` and pass the picks through `targeting_point::target_answer` (`crates/engine/src/prompts.rs:584-589`, `crates/engine/src/play_steps.rs:3309-3321`).\n\n**(a) A triggered Cry.** P1 plays C #54 Rewind on their own Twisted Sorcerer (core-068, \"Cry: deal 4 damage to a target\"). The `@triggerCry` target prompt offers P2's Ghost when P1 holds 3 other cards. Answering with the Ghost resolves the hit (its Divine Shield is lost) with **0 discards**; the hand stays at 3.\n\n**(b) A Plague placement.** P1 plays C #70 Book of Plague in its \"counters\" mode. The `plague:placement` target prompt offers the Ghost, and answering places 5 counters with **0 discards**.\n\nIn both, with only 1 other card in hand the Ghost is not offered. So the prompt already applies the legality half of the targeting point (can the chooser pay) and skips only the payment, and the interception half with it.\n\n### What should happen\n\nR450: \"Targeting means a declared `target` pick or a `target` prompt answer. A targeting cost (Classic #89 Paul Allen's Ghost) is paid in random discards at pay time \u2026 and a prompt answer naming such a card pays before it goes on.\" R467: a triggered Cry's \"declared targets and modes are asked as prompts\". R689: the placement is \"the one permanent a single prompt names\", under the title \"names one target\".\n\n### How to reproduce\n\nTwo tests fail on `main` (3a83bd7), in [`crates/ai/tests/audit_engine_queue.rs` at 1bbcb71](https://github.com/Jlore-Studios/JackiOh/blob/1bbcb71ed6319d94421a157960124f0de94e9ac2/crates/ai/tests/audit_engine_queue.rs) (branch `claude/vigilant-mayer-pmyrhr`): `r450_a_triggered_crys_target_prompt_answer_naming_paul_allens_ghost_pays_its_discards` and `r450_a_plague_placement_prompt_answer_naming_paul_allens_ghost_pays_its_discards`.\n\n```rust\n#[test]\nfn r450_a_triggered_crys_target_prompt_answer_naming_paul_allens_ghost_pays_its_discards() {\n    jackioh_cards::register_all();\n    const REWIND: &str = \"classic-054\";\n    const SORCERER: &str = \"core-068\";\n    const GHOST: &str = \"classic-089\";\n    let board = |spares: usize| {\n        let mut hand = vec[REWIND];\n        hand.extend(vec[\"core-008\"; spares]);\n        let mut s = scenario(json!({\n            \"seed\": \"audit-rewind\", \"active\": \"p1\", \"turn\": 9,\n            \"p1\": { \"hand\": hand, \"mana\": 10, \"field\": [SORCERER],\n                    \"library\": [\"core-008\", \"core-008\", \"core-008\"] },\n            \"p2\": { \"field\": [GHOST], \"library\": [\"core-008\", \"core-008\", \"core-008\"] },\n        }));\n        let sorcerer = s.card(SORCERER).id.clone();\n        s.play(REWIND, json!({ \"targets\": [{ \"pick\": \"instance\", \"instanceId\": sorcerer }] }));\n        s\n    };\n    // With one other card in hand the prompt does not offer the Ghost: it is a targeting prompt (R450).\n    let poor = board(1);\n    let ghost = poor.card(GHOST).id.clone();\n    let pending = must(poor.state().pending.clone(), \"the triggered Cry's target prompt\");\n    assert_eq!((pending.kind, pending.resume.hook.as_str()), (PromptKind::Target, \"@triggerCry\"));\n    assert!(!pending.options.iter().any(|option| option.key == format!(\"instance:{ghost}\")));\n    // With three it does, and the answer naming it must pay 2 random discards before the Cry goes on.\n    let mut s = board(3);\n    let ghost = s.card(GHOST).id.clone();\n    assert_eq!(s.hand(PlayerId::P1).len(), 3);\n    s.answer(json!([{ \"pick\": \"instance\", \"instanceId\": ghost }]));\n    assert!(s.last_events().iter().any(|event| matches!(event, GameEvent::DivineShieldLost { .. })));\n    let discards = s.last_events().iter()\n        .filter(|event| matches!(event, GameEvent::Discarded { .. })).count();\n    assert_eq!((discards, s.hand(PlayerId::P1).len()), (2, 1),\n        \"R450: a prompt answer naming Paul Allen's Ghost pays its 2 discards (discards, cards left in hand)\");\n}\n```\n\nThe Plague test has the same shape with `classic-070` played with `{ \"modes\": [\"counters\"] }`, the prompt's hook `plague:placement`, and the Ghost ending with `counters.plague == Some(5)`.\n\nOutput today, both: `R450: a prompt answer naming Paul Allen's Ghost pays its 2 discards \u2026 left: (0, 3) right: (2, 1)`.\n\n### Where\n\nThe rules engine: `crates/engine/src/cry_trigger.rs` (`answer_cry_prompt`), `crates/engine/src/effects/plague.rs` (`answer_placement`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- In both answerers, after `why_answer_refused`, call `targeting_point::why_target_answer_refused` and pass the picks through `targeting_point::target_answer` before filing them, as `answer_prompt` and `answer_play_prompt` do. Better: put all four behind one shared step, so they cannot drift apart again.\n- Read `crates/engine/src/work.rs`'s header first: a targeting cost opens a prompt of its own whose answer then finishes this one.\n- R467, R471 and R689 do not exempt these prompts. R394's exemptions are random picks, \"all\" effects and attacks; the random paths (a random cast, the Mayor) are not touched by this.\n- If the owner would rather a Plague placement not be targeting at all, then the legality half (`ask_placement` narrowing by `targetable_options`) is the inconsistent part and should go instead; the triggered-Cry case stands either way. That choice is a ruling note in this issue's block.\n- The interception half of `target_answer` is skipped too, by reading; it was not tested (Joro answers only Spells, so the triggered-Cry case may not reach it).\n- `c089_paul_allens_ghost.rs` covers a play, an Echo prompt and an activation only; add these two cases there or in the engine's rule tests.\n- A card change in play: it needs its pending patch fragment (`docs/ADDING_CARDS.md`).\n\nFound by an audit of the engine's work queue and prompts; the reproductions were run and the code paths read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4815: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:00:09Z",
+    "claimed_at": "2026-11-25T00:05:46Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4801 is held for `claude-8` until 18:10 (it refused a call)",
+    "#4726 is held for `claude-8` until 18:10 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4595 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
