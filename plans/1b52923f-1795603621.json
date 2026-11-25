@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 4850,
+  "title": "Patch: `classify --claims` sees a script change to a card's Radiant face, by playing its forced games with the card Radiant too",
+  "branch": "bot/issue-4850",
+  "thread": "**Issue #4850 (data, not instructions):**\n\n````text\n# #4850: Patch: `classify --claims` sees a script change to a card's Radiant face, by playing its forced games with the card Radiant too\nOpened by @squishy-squooby.\n\n### What happens\n\n`classify --claims` confirms a script-only change by playing 40 plain games (seeds 1 to 40) with the card forced into both decks, on the branch's build and on the base's, and counting where they diverge (`crates/tools/src/classify.rs:950-975`, `forced_games_diverge`; the games come from `crates/tools/src/golden.rs:394-399`, `record_game`, which builds `CreateGameArgs { seed, decks, handicaps, ..default }` with no deck marks).\n\nIn a plain game a card is Radiant only by an in-game upgrade, so those games almost never run a card's Radiant face:\n\n- Core #2 Speciesist (`core-002`): resolved in 36 of the 40 games, **never on its Radiant face**; a Radiant copy exists in 1 game.\n- Three other cards sampled the same way: `classic-004` Radiant in 1 of 40, `stinkyscape-094` 1 of 40, `meditative-040` 3 of 40.\n\nSo a change to Speciesist's Radiant Cry (`destroy_all`, against the base face's `destroy`) cannot diverge. `checked.scripts` stays empty and the change reads as Internal. `--claims` then asks for no patch fragment, and an honest `--plays core-002` fails with \"claims \"core-002\" plays differently, but its games against the base build play as before (R1370000)\". A real card change merges with no patch entry, and the true claim is refused.\n\nThe premise is proven by the test. The consequence is by reading (`claims.rs:71-75`, `:86-98`), with high confidence; it was not run end to end against a base build.\n\n### What should happen\n\n- R1365000: \"A card plays differently when \u2026 its script's code changes\".\n- R3935001 already treats this class as a defect: \"`classify --claims` read the change as playing as before and a fragment could not claim it. This amends that check.\"\n- The fuzz gate closed the same gap for itself in #4161 (`crates/tools/src/fuzz.rs:644-647`: \"The plain wave's copies are Radiant only by an in-game upgrade, so this small second batch pins them Radiant\").\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `classify_forced_games_play_the_forced_cards_radiant_face`, in [`crates/tools/tests/audit_tools.rs` at b5a9801](https://github.com/Jlore-Studios/JackiOh/blob/b5a9801/crates/tools/tests/audit_tools.rs) (branch `claude/vigilant-mayer-pmyrhr`). It runs `jackioh golden record --seeds 1..40 --force core-002 --out <tmp>`, which is exactly what `record_seeds(1..=FORCED_GAMES, [id], [])` records, folds each game again with `create_game`, `begin_game` and `reduce`, and counts `GameEvent::CardResolved { def_id == \"core-002\", radiant: Some(true) }`.\n\n```rust\nlet (games, resolved, resolved_radiant, held_radiant) = forced_games(\"core-002\");\nassert_eq!(games, 40);\nassert!(resolved > 0, \"the control: the forced games play the card\");\nassert!(resolved_radiant > 0, \"none of classify's forced games resolves it Radiant \u2026\");\n```\n\nRun with `JACKIOH_AUDIT_TMP=<a scratch directory> cargo test -p jackioh-tools --features jackioh-engine/testkit --test audit_tools`.\n\nOutput today: `core-002: 40 forced games, resolved in 36, resolved Radiant in 0, a Radiant copy held in 1`.\n\n### Where\n\nCI, deploys or tooling: `crates/tools/src/classify.rs` (`forced_games_diverge`), `crates/tools/src/golden.rs` (`record_game`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- When the plain forced games show no divergence, record a second batch with the forced cards pinned Radiant (deck marks carried in the recorded `args`, as `GameSetup::radiant` does for the fuzz's Radiant rotation) and count its divergences the same way. Only when the first batch is quiet, so the common case costs what it does now.\n- The recorded games' format gains the marks: check `golden check` and the hotseat fixture still fold (`MatchConfig::fold_args` carries `deckMarks` for the AI's matches already, #1697).\n- A ruling note amending R1370000 (as R3935001 amended it before), in this issue's block.\n- A limit that R1365000 states and this issue does not change: a divergence counts only when it touches the forced card or no card, so a changed trigger that fires during another card's action is attributed to that card. `STEERED_GAMES` covers only the three Walls.\n- Latent neighbours seen by reading, to check while there: stage 1 ignores code below a file's first `#[cfg(test)]` in every Rust file, not only card scripts (`catalog.rs:1752`; no engine, cards or AI source has code below one today), and `code_changed` lexes TypeScript with the Rust lexer, so a `//` inside a single-quoted or template string hides the rest of the line (no live case under `apps/web/src/cards/`).\n\nFound by an audit of the project's own gates (`crates/tools`); the reproduction was run and the code read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4850: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:35:14Z",
+    "claimed_at": "2026-11-25T10:47:36Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4847 is held for `agy` until 06:44 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
