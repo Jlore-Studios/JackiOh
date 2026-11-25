@@ -86,3 +86,8 @@ jobs:
         run: cargo test -p jackioh-engine --features testkit --test 'rules*' i21 2>&1 | grep -E 'test result|FAILED|panicked|failures:|error|^test .*r4599' | tail -60
       - name: the cross tests of I21's rulings
         run: cargo test -p jackioh-cards --test cards -- r4599 r4601000 2>&1 | grep -E 'test result|FAILED|panicked|error|^test ' | tail -30
+      - name: the cards and engine rules this branch touches
+        run: |
+          cargo test -p jackioh-cards --lib -- c050_glowy c138_social c033_ivory c021_steal 2>&1 | grep -E 'test result|FAILED|panicked|error' | tail -20
+          cargo test -p jackioh-engine --features testkit --test 'rules*' -- steal swap carri r446 r653 r4590003 r4834000 2>&1 | grep -E 'test result|FAILED|panicked|error' | tail -20
+
