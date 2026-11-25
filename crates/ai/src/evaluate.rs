@@ -1555,7 +1555,8 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 /// read as they will stand when the attacks come (R4064000, R4064001). With `w.strike_back_survival_read`
 /// (R4402000), an attacker a Taunt's strike back destroys swings no more, and a Frenzy one that destroys the
 /// Taunt it attacked and survives has its swings back to `attacks_per_turn`; an exile and a Cleave splash's
-/// kill free none.
+/// kill free none. With `w.splash_trample_read` (R4805000), a Cleave splash lands on every unit it strikes,
+/// and a Trample attacker's tramples over each onto the hero.
 pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) -> i32 {
     face_threat_from(state, attacker, w, false)
 }
@@ -1626,6 +1627,7 @@ const REBORN_HEALTH: i32 = 1;
 
 /// One Taunt's standing while `damage_past_taunts` walks it: the unit, its view, and the shield
 /// and health its attackers (and their splashes) have left it with.
+#[derive(Clone)]
 struct TauntStand {
     unit: CardInstance,
     view: UnitView,
@@ -1693,7 +1695,10 @@ pub fn damage_past_taunts(
 /// With `w.strike_back_survival_read` (R4402000), each hit takes the Taunt's strike back (§4.3,
 /// `strike_back_spares`): an attacker it destroys swings no more, and a Frenzy one that destroys the Taunt
 /// it attacked and survives has its swings back to `attacks_per_turn` (R3543003); an exile and a Cleave
-/// splash's kill free none.
+/// splash's kill free none. With `w.splash_trample_read` (R4805000), a Cleave splash also meets each unit
+/// that binds nothing more (one without Taunt, a Taunt the walk has passed) as the walk left it, spending
+/// the pools, and a Trample attacker's sends what it deals beyond that unit's health to the hero (§4.4
+/// step 9).
 pub fn damage_past_taunts_with(
     state: &GameState,
     defender: PlayerId,
@@ -1802,6 +1807,9 @@ fn soak_past_taunts(
     let mut pool = pools.defender;
     // R4402000: each attacker's standing once a Taunt's strike back meets it, with `w`'s flag only.
     let mut standing: IndexMap<&str, AttackerStand> = IndexMap::new();
+    // R4805000: the units a splash meets that bind nothing more (no Taunt, a Taunt the walk has passed, a
+    // later one a splash destroyed), by id, as the walk has left them: `None` once destroyed with no body back.
+    let mut bystanders: IndexMap<String, Option<TauntStand>> = IndexMap::new();
     let mut i = 0;
     while i < stands.len() {
         // R4402000, R636: an attacker a strike back destroyed makes none of its later swings.
@@ -1931,13 +1939,12 @@ fn soak_past_taunts(
                     subsystems::projected_hero_damage(state, defender, dealt - stands[i].health, pierce);
                 total += soaked(&mut pool, excess);
             }
-            // The splash belongs to the attack rather than to the hit (R63), so it lands even when
-            // the hit on the Taunt itself is stopped below. Only live neighbouring Taunts matter:
-            // the target itself and the stands already walked bind nothing more.
+            // The splash belongs to the attack rather than to the hit (R63), so it lands even when the hit on
+            // the Taunt itself is stopped below. Only a later Taunt binds: the target takes no splash, and with
+            // `w.splash_trample_read` a unit that binds nothing more takes it as the walk left it (R4805000).
             if has_keyword(&keywords, KeywordKind::Cleave) {
-                // Combat-only bonuses stay out of the threat model, so the splash is Poisonous
-                // from the attacker's own keyword alone.
-                let poisonous = has_keyword(&keywords, KeywordKind::Poisonous);
+                // Combat-only bonuses stay out of the threat model, so the splash is Poisonous from the
+                // attacker's own keyword alone (`side_of`).
                 let mut from = side_of(state, attacker);
                 from.converts = if pools.read {
                     converts_to(state, attacker)
@@ -1946,62 +1953,58 @@ fn soak_past_taunts(
                 };
                 // R4065001: an exiling splash by these weights' flag, not `side_of`'s `AI_EVAL`.
                 from.exiles = exiling;
+                let tramples = has_keyword(&keywords, KeywordKind::Trample);
                 for neighbour in cleaved_neighbours_with(state, attacker, &stands[i].unit, w.giga_cleave_read)
                 {
-                    let Some(j) = stands.iter().position(|stand| stand.unit.id == neighbour.id) else {
+                    let at = stands.iter().position(|stand| stand.unit.id == neighbour.id);
+                    let Some(j) = at.filter(|&j| j > i) else {
+                        if w.splash_trample_read && at != Some(i) {
+                            let met = bystanders.entry(neighbour.id.clone()).or_insert_with(|| {
+                                Some(at.map_or_else(
+                                    || TauntStand::of(neighbour.clone(), unit_view(state, &neighbour)),
+                                    |j| stands[j].clone(),
+                                ))
+                            });
+                            if let Some(stand) = met.as_mut() {
+                                let (to_hero, kills) =
+                                    splash_onto(state, defender, &from, attack, tramples, stand, &mut pool);
+                                total += to_hero;
+                                if kills {
+                                    let left = left_behind(state, stand, exiling);
+                                    *met = left;
+                                }
+                            }
+                        }
                         continue;
                     };
-                    if j <= i || !has_keyword(&stands[j].view.keywords, KeywordKind::Taunt) {
+                    if !has_keyword(&stands[j].view.keywords, KeywordKind::Taunt) {
                         continue;
                     }
-                    // The stand's tracked shield and health, not the state's: an earlier splash
-                    // may already have popped or hurt it.
-                    let mut damaged = stands[j].view.clone();
-                    damaged.health = stands[j].health;
-                    let to = Side {
-                        view: damaged,
-                        shield: stands[j].shield,
-                        indestructible: has_keyword(&stands[j].view.keywords, KeywordKind::Indestructible),
-                        first_strike: false,
-                        poisonous: false,
-                        pierce: false,
-                        cap: unit_damage_cap(state, &stands[j].unit),
-                        exiles: false,
-                        converts: None,
-                        pool,
-                    };
-                    let splash = blow(&from, attack, poisonous, &to);
-                    pool -= splash.soaked;
-                    if splash.pops_shield {
-                        stands[j].shield = false;
-                    } else {
-                        // Step 9: what Trample lands beyond the neighbour's health is a hit on
-                        // the hero (R63), as for the main hit above.
-                        if has_keyword(&keywords, KeywordKind::Trample) && splash.dealt > stands[j].health {
-                            let excess = subsystems::projected_hero_damage(
-                                state,
-                                defender,
-                                splash.dealt - stands[j].health,
-                                pierce,
-                            );
-                            total += soaked(&mut pool, excess);
-                        }
-                        if splash.kills {
-                            // §4.5 step 4: a destroyed Reborn neighbour comes back and binds what
-                            // is left, unless its body has no Taunt. Only a later stand is ever
-                            // removed, so `i` stays valid. An exiled one never comes back (R1124).
-                            if !exiling && has_keyword(&stands[j].view.keywords, KeywordKind::Reborn) {
-                                match reborn_body(state, &stands[j].unit) {
-                                    Some((body, view)) => stands[j] = TauntStand::of(body, view),
-                                    None => {
-                                        stands.remove(j);
-                                    }
-                                }
-                            } else {
-                                stands.remove(j);
-                            }
+                    let (to_hero, kills) = splash_onto(
+                        state,
+                        defender,
+                        &from,
+                        attack,
+                        tramples,
+                        &mut stands[j],
+                        &mut pool,
+                    );
+                    total += to_hero;
+                    if kills {
+                        // §4.5 step 4: a destroyed Reborn neighbour comes back and binds what is left, unless
+                        // its body has no Taunt. Only a later stand is ever removed, so `i` stays valid. An
+                        // exiled one never comes back (R1124).
+                        if !exiling
+                            && has_keyword(&stands[j].view.keywords, KeywordKind::Reborn)
+                            && let Some((body, view)) = reborn_body(state, &stands[j].unit)
+                        {
+                            stands[j] = TauntStand::of(body, view);
                         } else {
-                            stands[j].health -= splash.dealt;
+                            let gone = stands.remove(j);
+                            // R4805000: a later splash meets its body without Taunt, or nothing.
+                            if w.splash_trample_read {
+                                bystanders.insert(gone.unit.id.clone(), left_behind(state, &gone, exiling));
+                            }
                         }
                     }
                 }
@@ -2046,6 +2049,11 @@ fn soak_past_taunts(
             stands[i] = TauntStand::of(body, view);
             continue;
         }
+        // R4805000: a later splash meets what the walk leaves of a Taunt it destroyed: its body without
+        // Taunt, or nothing.
+        if w.splash_trample_read && (stands[i].health <= 0 || poisoned || exiled) {
+            bystanders.insert(stands[i].unit.id.clone(), left_behind(state, &stands[i], exiled));
+        }
         i += 1;
     }
 
@@ -2073,6 +2081,65 @@ fn dealt_to(state: &GameState, attack: i32, stand: &TauntStand, pierce: bool) ->
         (attack - stand.view.armor).max(0)
     };
     unit_damage_cap(state, &stand.unit).map_or(after_armor, |cap| after_armor.min(cap))
+}
+
+/// One Cleave splash of `attack` from `from` on `stand` as the walk left it (§4.4 step 10), through `pool`
+/// (R4064000); with `tramples`, what it deals beyond the stand's health hits `defender`'s hero (step 9, R63).
+/// It pops a shield or takes what it deals off the health. The hero damage, and whether it destroys the stand.
+fn splash_onto(
+    state: &GameState,
+    defender: PlayerId,
+    from: &Side,
+    attack: i32,
+    tramples: bool,
+    stand: &mut TauntStand,
+    pool: &mut i32,
+) -> (i32, bool) {
+    let splash = blow(from, attack, from.poisonous, &splashed(state, stand, *pool));
+    *pool -= splash.soaked;
+    if splash.pops_shield {
+        stand.shield = false;
+        return (0, false);
+    }
+    let to_hero = if tramples && splash.dealt > stand.health {
+        let excess =
+            subsystems::projected_hero_damage(state, defender, splash.dealt - stand.health, from.pierce);
+        soaked(pool, excess)
+    } else {
+        0
+    };
+    if !splash.kills {
+        stand.health -= splash.dealt;
+    }
+    (to_hero, splash.kills)
+}
+
+/// The side a Cleave splash meets on `stand`: its tracked shield and health, not the state's, since an
+/// earlier splash may already have popped or hurt it, and what the defender's pools have left.
+fn splashed(state: &GameState, stand: &TauntStand, pool: i32) -> Side {
+    let mut view = stand.view.clone();
+    view.health = stand.health;
+    Side {
+        view,
+        shield: stand.shield,
+        indestructible: has_keyword(&stand.view.keywords, KeywordKind::Indestructible),
+        first_strike: false,
+        poisonous: false,
+        pierce: false,
+        cap: unit_damage_cap(state, &stand.unit),
+        exiles: false,
+        converts: None,
+        pool,
+    }
+}
+
+/// R4805000: what a later Cleave splash meets of a unit the walk destroyed. That is the body a Reborn unit
+/// comes back as (`reborn_return`, §4.5 step 4), unless it was exiled (R1124); otherwise nothing.
+fn left_behind(state: &GameState, stand: &TauntStand, exiled: bool) -> Option<TauntStand> {
+    (!exiled && has_keyword(&stand.view.keywords, KeywordKind::Reborn)).then(|| {
+        let (body, view) = reborn_return(state, &stand.unit);
+        TauntStand::of(body, view)
+    })
 }
 
 /// R3937000: whether `attacker`'s one hit of `attack` destroys `stand` as the walk left it: no Divine Shield

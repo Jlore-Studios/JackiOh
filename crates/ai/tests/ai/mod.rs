@@ -13,6 +13,7 @@ pub mod attack_order;
 pub mod brittle;
 pub mod budget;
 pub mod cleave;
+pub mod cleave_trample;
 pub mod combat_mods;
 pub mod commanders;
 pub mod deaths;

@@ -456,6 +456,12 @@ pub struct EvalWeights {
     /// (R3543003); an exiling hit's removal and a Cleave splash's kill free none. Off, every swing counts and
     /// Frenzy frees none, as before.
     pub strike_back_survival_read: bool,
+    /// R4805000, #4805: whether the Taunt walk of `damage_past_taunts_with` (so `face_threat`, `ready_gap` and
+    /// all that read them) lands a Cleave splash on every unit it strikes: one without Taunt, or a Taunt the
+    /// walk has passed, as its earlier hits and splashes left it (gone, or back as its Reborn body), spending the
+    /// pools in the engine's order, a Trample attacker's excess going to the hero (§4.4 step 9). Off, a splash
+    /// on such a unit counts nothing, as before.
+    pub splash_trample_read: bool,
     /// Per point of unitView.health (current).
     pub health: f64,
     /// Per point of unitView.armor.
@@ -688,6 +694,7 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // edge 0.0 (-0.028 to 0.028); inconclusive (R4319000): 8 decided of 200 (won 4, lost 4), 33 diverged;
     // its scene tests settle it (training/improve.md, A screen).
     strike_back_survival_read: true,
+    splash_trample_read: true,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -950,7 +957,7 @@ pub const AI_DECISION_PRICE_NODES: usize = AI_DEATH_PROBE_NODES
 /// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`,
 /// `affliction_kills_before_swing`, `frozen_sick_before_swing`, `static_attack_flags_read`,
 /// `best_attack_order_past_taunts`, `exile_on_damage_read`, `pool_and_conversion_read`,
-/// `giga_cleave_read`, `strike_back_survival_read`) is off.
+/// `giga_cleave_read`, `strike_back_survival_read`, `splash_trample_read`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -972,6 +979,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     pool_and_conversion_read: false,
     giga_cleave_read: false,
     strike_back_survival_read: false,
+    splash_trample_read: false,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {

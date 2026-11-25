@@ -157,6 +157,10 @@ swing; a Ranged attacker takes none from a non-Ranged Taunt (R783000). A Frenzy 
 the Taunt it attacked, and that survives, has its swings back to `attacks_per_turn`, each with the hit's own
 hero permission; an exiled Taunt and one a Cleave splash destroys free none (R3543003)
 (`strike_back_survival_read`, R4402000, #4402; off in `GREEDY_EVAL`).
+A Cleave splash in the walk lands on every unit it strikes. A unit without Taunt, or a Taunt the walk has
+passed, is met as its earlier hits and splashes left it: gone once destroyed, or back as its Reborn body. Each
+splash spends the pools in the engine's order, and a Trample attacker's sends what it deals beyond the unit's
+health to the hero (§4.4 step 9) (`splash_trample_read`, R4805000, #4805; off in `GREEDY_EVAL`).
 A hit on a Taunt, its Cleave splash and a First Strike Taunt's strike back are
 each capped after Armor by the struck unit's own guard (C+ #11 Anime Armor, R2179005), as `blow` caps the
 static trader's. Past the caps, every static read of a hit takes §4.4 steps 3a and 3b
