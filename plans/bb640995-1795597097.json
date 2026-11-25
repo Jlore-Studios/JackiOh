@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4812,
+  "title": "Patch: the AI reads a Tradable card as dead when a maximum lowered for the rest of the game will never pay for it",
+  "branch": "bot/issue-4812",
+  "thread": "**Issue #4812 (data, not instructions):**\n\n````text\n# #4812: Patch: the AI reads a Tradable card as dead when a maximum lowered for the rest of the game will never pay for it\nOpened by @squishy-squooby.\n\n### What happens\n\n`dead_in_hand` (R4154400) calls a Tradable card dead when its own cost is above the crystals the seat's next refresh brings, so the AI trades it away before its plays and holds it at a discount. `next_turn_crystals` (`crates/ai/src/evaluate.rs:1006-1014`) reads that refresh as \"this turn's maximum, one more while it is under `MAX_MANA`\":\n\n```rust\nlet max = side.mana.max;\nlet grown = if max < MAX_MANA { max + CRYSTALS_PER_TURN } else { max };\n```\n\nAfter \"lose N mana for the rest of the game\" (`effects::change_max_mana` writes `mana.perm_mod`; S+ #95 JC Backed, and S+ #82 Endless Expedition through `lose_max_mana`), the maximum sits below `MAX_MANA` for good and never grows: the engine's `mana::max_mana_for` gives `min(turns, MAX_MANA) + perm_mod` at every refresh. `next_turn_crystals` still sees a maximum under `MAX_MANA` and answers one more.\n\nConcrete: the AI at turn 9 with `mana.perm_mod = -1`, so its maximum is 3 at every refresh from now on. M #11 Double Header, a (4) Tradable card, is in its hand. `next_turn_crystals` answers 4, so the card is not dead: the AI keeps it at full price and never tries its Trade first, for the rest of the game.\n\n### What should happen\n\nR4154400: a card is \"dead while it is Tradable now \u2026 and its own cost \u2026 is above the crystals its next refresh brings \u2026 So neither this turn's crystals nor the next turn's pay for it.\" The engine's next refresh brings 3.\n\nThe ruling's own formula sentence (\"this turn's maximum, one more while under `MAX_MANA`, moved by the next-turn rider\") is what the code implements, and it contradicts the ruling's conclusion in this case. The ruling needs amending in the same pull request.\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `a_tradable_card_is_dead_when_the_lowered_maximum_never_pays_for_it` in [`crates/ai/tests/audit_eval.rs` at bf24a52](https://github.com/Jlore-Studios/JackiOh/blob/bf24a52273bd5c0e7d6f9c740b28a8d7cb7f2b3e/crates/ai/tests/audit_eval.rs) (branch `claude/vigilant-mayer-pmyrhr`).\n\n```rust\n#[test]\nfn a_tradable_card_is_dead_when_the_lowered_maximum_never_pays_for_it() {\n    let mut state = board(\"audit-eval-dead\",\n        json!({ \"hand\": [\"meditative-011\", \"core-008\"], \"mana\": 0 }),\n        json!({ \"hand\": [\"core-008\"], \"field\": [\"core-008\"] }));\n    {\n        // \"Lose 1 mana for the rest of the game\", as `effects::change_max_mana` writes it.\n        let side = &mut state.players[AI];\n        side.mana.perm_mod -= 1;\n        side.mana.max = jackioh_engine::max_mana_for(side);\n    }\n    let card = state.players[AI].hand[0].clone();\n    let cost = jackioh_engine::own_cost(&state, &card).expect(\"a cost\");\n    assert!(is_tradable(&state, &card));\n    // What the engine's next refresh brings: the maximum once one more turn has started.\n    let mut next = state.players[AI].clone();\n    next.turns_started += 1;\n    let brings = jackioh_engine::max_mana_for(&next);\n    assert!(cost > state.players[AI].mana.max && cost > brings,\n        \"neither this turn's {} crystals nor the next refresh's {brings} pay for its ({cost})\", state.players[AI].mana.max);\n    assert!(dead_in_hand(&state, AI, &card),\n        \"R4154400: its cost ({cost}) is above the crystals its next refresh brings ({brings})\");\n}\n```\n\n(`board(seed, p1, p2)` registers the cards and builds a scenario with a four-card library each.) Output today: `R4154400: its cost (4) is above the crystals its next refresh brings (3)`. The flag is written by hand; a version that plays JC Backed through `reduce` would pin it on the shipped card.\n\n### Where\n\nThe AI: `crates/ai/src/evaluate.rs` (`next_turn_crystals`, read by `dead_in_hand`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Grow by one only while the capped base is under `MAX_MANA` (the maximum less `perm_mod` and less stolen crystals, all public counts), not while `mana.max` is. Better still, ask the engine: a read helper that answers what `max_mana_for` will give at the seat's next refresh, so the AI and the engine cannot drift apart again. The handicap stays unread (R180): that exclusion is deliberate and is not this.\n- `perm_mod` is a public count, so reading it leaks nothing.\n- By reading, not tested: with \"lose all mana next N turns\" pending, the next refresh brings 0 but the read says `max + 1`. It errs only toward \"not dead\"; decide whether the amended ruling covers it.\n- The opposite error (a live card read as dead) would need stolen crystals above the cap before the cap is reached; not tested.\n- `crates/ai/tests/ai/tradable.rs`'s boards move the crystal count with the maximum and never meet `perm_mod`, so nothing pins the current reading. Only negative `perm_mod` cards exist in `crates/cards` today.\n\nFound by an audit of the AI crate; the reproduction was run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4812: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T20:57:19Z",
+    "claimed_at": "2026-11-25T08:58:50Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4902 is held for `claude-1` until 03:50 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
