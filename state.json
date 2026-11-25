@@ -24392,7 +24392,7 @@
       "provider": "claude-4",
       "queued_at": "2026-11-25T17:18:12Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "pending:416ca1fb-1795629800",
+      "run_id": "45671307244",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-25T18:04:04Z",
       "stop_requested": false,
