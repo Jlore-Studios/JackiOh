@@ -23891,6 +23891,9 @@
         "c:7169259482"
       ]
     },
+    "4925": {
+      "suggestion": true
+    },
     "4927": {
       "action": "review",
       "asks": [],
@@ -48611,6 +48614,13 @@
         "at": "2026-11-25T19:08:51Z",
         "number": 4921,
         "title": "Patch: the AI without its learned evaluation is generation 14, so the shadow ban is swept on it and the ladder bots' ratings re-settle",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-25T19:09:39Z",
+        "number": 4925,
+        "title": "Patch: fold the e2e replay check through one jackioh call instead of tsx plus two",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
       }
