@@ -20187,7 +20187,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-25T09:22:59Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 7160922362
     },
     "4824": {
       "action": "plan",
