@@ -11314,7 +11314,7 @@
       "verdict_rounds": 3
     },
     "4463": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -11337,14 +11337,14 @@
       "interruptions": 0,
       "issue": 4446,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
       "queued_at": "2026-11-24T23:52:13Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "44995874916",
+      "run_id": "pending:ebefc170-1795566401",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "session": {
@@ -11365,7 +11365,7 @@
         "run": "44989577074"
       },
       "source": "conflict",
-      "started_at": "2026-11-22T06:55:12Z",
+      "started_at": "2026-11-25T00:27:13Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -20992,9 +20992,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T00:17:20Z",
+    "at": "2026-11-25T00:27:13Z",
     "url": "",
-    "what": "plan #4816 on claude-3"
+    "what": "revise #4463 on muse"
   },
   "last_sweep": {
     "at": "2026-11-25T00:12:35Z",
