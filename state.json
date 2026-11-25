@@ -21069,15 +21069,8 @@
       "verdict_rounds": 1
     },
     "4850": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45598365689",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-25T10:57:39Z",
-        "until": "2026-11-25T11:27:39Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -21089,10 +21082,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- );\n- }\n- Some(marks)\n- }\n- ```\n- 5. Thread the flag through: `record_forced(k, forced, steer, radiant: bool)` sets `spec.deck_marks = radiant_marks(forced.len())` when `radiant`, after the `force_into` loop. `record_game` copies `spec.deck_marks` into both `CreateGameArgs.deck_marks` (clone, as `decks` does) and `LineArgs.deck_mar\u2026\n- ```rust\n- /// Pin the forced cards Radiant in every recorded game (R4850000).\n- #[arg(long)]\n- radiant: bool,\n- ```\n- and pass `args.radiant` in `run_record`. Update the `steer.rs` test call site with `false`.\n- 6. In `crates/tools/src/classify.rs`, extract the parent-report loop of `forced_games_diverge` into `fn diverged_in(report: &str, games: &HashMap<String, Value>, watch: &BTreeSet<String>, head: &Side) -> Result<bool>` (same body, same attribution: touches a `watch` family or no card). Rewrite `forc\u2026\n- 7. Write `spec/rulings/R4850000.md` with front matter `id: R4850000`, a title in R3935001's style, `cards: \"\u00a79.4, R1365000, R1370000, R3935001; C #2\"`, `proven_in` listing `crates/tools/src/golden.rs` and `crates/tools/tests/golden.rs`. Body: the plain batch resolves Radiant only by in-game upgrade\u2026\n- 8. Add the `r4850000` unit test in `golden.rs`'s `tests` module (copy the fold loop in `steer.rs`'s `steered_plays`): `record_seeds(&(1..=40).collect(), &[\"core-002\"], &[], true, &out)`; assert 40 lines; assert each line's `args` deserializes to `CreateGameArgs` whose `deck_marks` pins index 0 Radi\u2026\n- 9. Add the integration test in `crates/tools/tests/golden.rs`, following the file's `record` helper pattern: `golden record --seeds 1..5 --force core-055,core-024 --radiant --out`; assert 5 lines each containing `deckMarks`; assert `golden check --file` succeeds with `5 of 5 games replayed identica\u2026\n- 10. Update the `golden record` row in `crates/tools/README.md` with `[--radiant]`.\n- 11. Verify-only latent neighbours from the issue (no fixes in this diff): confirm no `crates/engine/src`, `crates/cards/src`, `crates/ai/src` file holds code below its first `#[cfg(test)]`, and no live `//`-inside-single-quoted-or-template-string case under `apps/web/src/cards/` fools the lexer. A \u2026\n- 12. Run: `cargo test -p jackioh-tools r4850000`, `cargo test -p jackioh-tools --test golden`, `cargo test -p jackioh-tools classify`, `cargo test -p jackioh-tools steer`, `cargo fmt --check`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings`, `cargo jackioh catalog check`, `cargo jackioh\u2026\n- ## Tests\n- - `crates/tools/src/golden.rs`, `fn r4850000_a_radiant_batch_pins_the_forced_cards_and_resolves_them_radiant`: 40 radiant games forcing `core-002`; asserts marks pin index 0 Radiant both seats, all replay via `replay_game`, and the fold resolves `core-002` Radiant at least once. Run `cargo test -p \u2026\n- - `crates/tools/tests/golden.rs`, `fn r4850000_golden_record_radiant_pins_the_forced_cards_and_replays_clean`: CLI `--radiant` record carries `deckMarks` and `golden check` replays 5 of 5. Run `cargo test -p jackioh-tools --test golden`.\n- - Existing suites guard the refactor: `cargo test -p jackioh-tools classify`, `cargo test -p jackioh-tools steer`, plus `cargo jackioh spec check` for the ruling/tests linkage.\n- ## Done when\n- - [ ] Quiet plain batch triggers a same-seed Radiant batch; divergences counted identically; common-case cost unchanged.\n- - [ ] `r4850000` unit and integration tests pass; existing `classify`, `steer`, `golden` tests pass.\n- - [ ] `cargo fmt --check`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings`, `cargo jackioh catalog check`, `cargo jackioh spec check` pass.\n- - [ ] `spec/rulings/R4850000.md` and `spec/pending/4850.md` exist; no other spec file touched.\n- - [ ] Latent-neighbour checks run; any live case filed separately, not fixed here.\n- ## Risks\n- - Replay compatibility: old files lack `deckMarks` and still parse (`CreateGameArgs.deck_marks` defaults); plain new lines are byte-identical (`skip_serializing_if`). The parent build is recent enough to know `deckMarks` (R2702000); proved by the integration test.\n- - Determinism: same seeds mean same decks, streams, and policies; marks are positional and sorted, so the Radiant batch is bit-stable like the plain one.\n- - Hidden information: marks are setup over public deck lists, applied before the shuffle; both builds replay the same file, so hashes stay comparable.\n- - Cost: the second 40-game batch runs only after a quiet first batch, including quiet R4145000 groups.\n- ## Open questions\n- None. No person-only step: all files are editable by the bot, no secret or dashboard setting is involved.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4850 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4850/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-25T10:47:36Z",
       "owner_why": "it plans it",
@@ -21105,9 +21097,9 @@
       "provider": "muse",
       "queued_at": "2026-11-24T21:35:14Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45598365689",
+      "run_id": "pending:26845ccd-1795604474",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-25T10:47:36Z",
+      "started_at": "2026-11-25T11:01:48Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -23424,9 +23416,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T11:01:01Z",
+    "at": "2026-11-25T11:01:48Z",
     "url": "",
-    "what": "review #4890 on claude-1"
+    "what": "build #4850 on muse"
   },
   "last_sweep": {
     "at": "2026-11-25T10:39:56Z",
