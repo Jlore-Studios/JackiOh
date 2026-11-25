@@ -1,0 +1,68 @@
+{
+  "action": "plan",
+  "number": 4843,
+  "title": "Patch: the admin audit pages every recorded action exactly once, and Older continues the list that is on screen",
+  "branch": "bot/issue-4843",
+  "thread": "**Issue #4843 (data, not instructions):**\n\n````text\n# #4843: Patch: the admin audit pages every recorded action exactly once, and Older continues the list that is on screen\nOpened by @squishy-squooby.\n\n### What happens\n\nTwo defects in the admin dashboard's Audit section. Both are found by reading (no test was run: the admin app's dependencies are not installed where this audit ran, and the server suite was not built), with high confidence in the code paths.\n\n**1. Paging skips or repeats rows when the order of `at` and the order of `id` disagree.**\nThe page is sorted by `(at desc, id desc)`, but the cursor is `id < before_id`:\n\n```sql\n-- crates/server/src/admin/store.rs:438-447 (the fake at :703-729 does the same)\nwhere ($2::bigint is null or id < $2) \u2026\norder by at desc, id desc\nlimit $1::bigint\n```\n\n`nextBeforeId` is the last row's id (`crates/server/src/api/admin.rs:425-429`). The two agree only while `at` rises with `id`, and they need not:\n\n- `jackioh-server moderate ban|unban|revoke-code|redemption` stamps `now_ms()` from the operator's machine, not the server's clock (`crates/server/src/cli/moderate.rs:149-155`, and at 180-185, 206-211, 230-235);\n- every handler reads `let at = now_ms();` before `app.db.begin()` (for example `api/admin.rs:177-178`, `api/quests.rs:126-127`), so two concurrent requests can insert in the opposite order to their `at`.\n\nA row written later with an earlier `at`, falling just past a page boundary, has an `id` above the cursor and is never listed on any later page: a recorded admin action is missing from the paged audit. The mirror case lists a row on two pages (and gives React a duplicate `key={action.id}`, `apps/admin/src/Audit.tsx:192`). Through HTTP it takes more than `ADMIN_AUDIT_PAGE` (200) matching rows and an inverted pair straddling a boundary.\n\n**2. The list and its cursor are not tied to the filter that produced them, so Older can mix two queries.**\nIn `apps/admin/src/Audit.tsx`, `older()` (`:66-90`) sends the cursor of the list on screen with whatever filter is applied *now*, and appends whatever comes back, with no guard against a stale answer.\n\n- (a) The unfiltered first page is shown with `next = X`. Type a route or an account, press Apply, and that read fails (a timeout, a 5xx). The error shows, but the failure handler (`:55-59`) keeps the old rows and the old `next`. Pressing Older now sends `before_id=X` with the new filter and appends filtered rows under the unfiltered ones. Deterministic once a read fails.\n- (b) Press Older, then Apply, Clear, Refresh or any dashboard write before it answers. If the Older answer lands after the new first page, line 80 appends the old query's rows to the new list and line 81 overwrites `next` with the old query's cursor. Apply (`:145-153`) and Refresh (`:96-104`) stay enabled while a request is out.\n\nThe table then shows rows that correspond to no single query, with no sign of it.\n\n### What should happen\n\n- `crates/server/src/api/admin.rs:387-388`: \"a following read with it as `before_id` answers the next older page\". The store contract's own test is titled \"pages newest first with no gaps or repeats\" (`crates/server/tests/store/contract.rs:13211`).\n- `apps/admin/README.md`: \"A filter row narrows the list to one acting account or one route \u2026 and Older appends the next page past `nextBeforeId`\": the next page of the list on screen.\n\n### How to reproduce\n\nAn unrun sketch for `crates/server/tests/store/contract.rs`, using the helpers of `audit_pages_by_cursor_and_filter` (line 13213):\n\n```rust\nasync fn audit_pages_when_at_and_id_disagree(harness: &StoreHarness) {\n    let dev = active_profile(harness, None).await;\n    let now = harness.now();\n    let mut ids = Vec::new();\n    for at in [now + 1, now, now + 2] { // ids ascend, `at` does not\n        ids.push(q!(harness, t => t.admin_actions_append(&action(dev.id.as_str(), \"POST /api/dev/jlore\", at))));\n    }\n    let first = q!(harness, t => t.admin_actions_page(&AdminActionFilter::default(), 2));\n    let second = q!(harness, t => t.admin_actions_page(\n        &AdminActionFilter { before_id: Some(first[1].id), ..AdminActionFilter::default() }, 2));\n    let mut seen: Vec<i64> = first.iter().chain(second.iter()).map(|row| row.id).collect();\n    seen.sort_unstable();\n    let mut all = ids.clone();\n    all.sort_unstable();\n    assert_eq!(seen, all, \"{}: every row exactly once\", harness.name);\n}\n```\n\nExpected today: `first` is `[ids[2], ids[0]]`, the cursor is `ids[0]`, `second` is empty, so `ids[1]` is never returned. With `at` as `[now, now+2, now+1]`, `first` is `[ids[1], ids[2]]` and `second` returns `ids[1]` again.\n\nFor the dashboard: a test in `apps/admin/src/Dashboard.test.tsx` (it has none of Older after a filter change) that fails the filtered read and then presses Older, and one that resolves an Older request after a new first page.\n\n### Where\n\nThe server's admin store and the admin app: `crates/server/src/admin/store.rs` (both stores), `apps/admin/src/Audit.tsx`.\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- **Paging:** make the cursor follow the sort key. Keep `before_id` on the wire and compare `(at, id) < (select at, id from admin_actions where id = $2)` in Postgres, with the same tuple comparison in the fake; add the contract test above (CLAUDE.md, Architecture: a store change goes in `tests/store/contract.rs`). R3074000 and `crates/server/README.md` describe `before_id` only as \"an exclusive upper bound on the row id\"; update that sentence, since nothing says gaps are accepted.\n- **Dashboard:** keep the filter the shown rows were read with beside `actions` and `next`, and have `older()` use that one. Drop an Older answer whose generation (a counter the first-page effect bumps) is no longer current. Keeping the last rows on a failed read is intended (`section.ts`'s `Read`); the cursor outliving its filter is not.\n- The existing tests use an `at` that rises with `id` only (`tests/api/admin.rs:420-431`, `:606-611`; `contract.rs:13213-13260`, `:13350-13363`).\n- The same audit read the edge Worker (`apps/edge`) whole and found nothing to file: routing on the normalised path, the cache keyed on a query-less versioned catalog only, `X-Forwarded-For` replaced by `CF-Connecting-IP`, bounded wake and health checks, and every admin route guarded on the server.\n- A smaller neighbour in the same dashboard, not part of this: `GET /api/admin/news` returns the newest `NEWS_POSTS_PAGE` (100) posts while the README says \"every post\", so a live post older than the newest 100 could not be taken down from the dashboard.\n\nFound by an audit of the admin app and the edge Worker, by reading.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4843: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:27:48Z",
+    "claimed_at": "2026-11-25T07:16:28Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4864 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4805 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4816 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4821 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4831 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4734 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4676 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4891 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4779 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4785 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4802 is held for `claude-3` until 02:20 (it refused a call)",
+    "#4804 is held for `claude-3` until 02:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
