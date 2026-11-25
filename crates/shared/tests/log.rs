@@ -1361,12 +1361,31 @@ fn glitch_marks_and_the_rest_of_the_late_sets_read_as_one_sentence_each() {
             "Opponent escaped the universe, leaving the other side a loss",
             "Opponent bought a card for 4 Credits",
             "Opponent stole a card from your deck",
-            "Your deck is full: a card ceased to exist",
+            "A card could not go into your deck: it ceased to exist",
             "A unit plague counters: 2",
             "Opponent emoted",
         ]
         .map(String::from)
     );
+}
+
+/// R4821002: a ceased card may come from a deck with room (R4821000), so neither locale calls the deck
+/// full for it.
+#[test]
+fn r4821002_a_ceased_card_is_logged_as_ceased_never_as_a_full_deck() {
+    let view = bare(json!([
+        { "type": "libraryOverflow", "player": "p2", "instanceId": "t1", "defId": "core-t-sheep", "outcome": "ceased" },
+    ]));
+    assert_eq!(
+        english(&view),
+        vec![format!(
+            "{} could not go into the opponent's deck: it ceased to exist",
+            name_of("core-t-sheep")
+        )]
+    );
+    let chinese = &said(&view, Locale::ZhCn)[0];
+    assert!(chinese.contains("不复存在"), "{chinese}");
+    assert!(!chinese.contains("已满"), "{chinese}");
 }
 
 /// R437: a mark's line says the name its badge does, each mark its own.

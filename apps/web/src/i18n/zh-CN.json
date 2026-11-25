@@ -1911,6 +1911,7 @@
   "Fatigue {count}": "疲劳{count}",
   "{label}, Fatigue {count}": "{label}，疲劳{count}",
   "Deck full": "牌库已满",
+  "Ceased to exist": "不复存在",
   "Hand full": "手牌已满",
   "Canceled": "已取消",
   "Countered": "被反制",
