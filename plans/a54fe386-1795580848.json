@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4802,
+  "title": "Patch: the lethal solver keeps to the allowance its caller gave on a board that is not wide, where a floor meant for wide boards now raises it to 60 nodes",
+  "branch": "bot/issue-4802",
+  "thread": "**Issue #4802 (data, not instructions):**\n\n````text\n# #4802: Patch: the lethal solver keeps to the allowance its caller gave on a board that is not wide, where a floor meant for wide boards now raises it to 60 nodes\nOpened by @squishy-squooby.\n\n### What happens\n\n`scaled_budget` (`crates/ai/src/decide.rs:278-300`) floors the lethal solver's allowance at `AI_SEARCH.fat_min_lethal` (60) on every state, not only on a wide (\"fat\") one whose budget it scaled down:\n\n```rust\nlet lethal_nodes = if budget.lethal_nodes == 0 { 0 } else {\n    (budget.lethal_nodes * nodes / budget.nodes.max(1))\n        .max(AI_SEARCH.fat_min_lethal.max(0) as usize)\n        .min(nodes)\n};\n```\n\nOn a state that is not fat, `nodes == budget.nodes`, so the first term is the caller's own figure and the `.max(60)` raises any allowance below 60.\n\n- The weakest ladder bot's shipped budget (`BOT_STRENGTHS[0]`, `crates/shared/src/config.rs`: 150 nodes, 40 for the solver) spends 60 of its 150 on the solver, and gains a best-first pass its 40-node allowance was never meant to reach (`lethal_quick_nodes` is 40).\n- `AI_BUDGET` with `lethal_nodes: 10`: the solver spends 60.\n- `{ nodes: 30, lethal_nodes: 7 }`: the solver takes all 30 and the decision is `Fallback endTurn` with 0 lines, stopped by Budget. The same 30 nodes with `lethal_nodes: 0` search 11 lines.\n- The test and tool budgets below 60 are hit the same way (`skill.rs` tests' 60/15, `dev_run.rs` tests' 30/10, `sim_panics.rs` 120/20).\n\nA smaller defect in the same arithmetic: a `SearchBudget` field at a huge value (`usize::MAX` for \"no limit\" in `max_depth`, `finalists`, `root_branching`, `branching` or `lethal_nodes`) overflows at `decide.rs:292`, `:616`, `:618`, `:626` and `search.rs:300`. With overflow checks that is a caught panic and a `Fallback endTurn` with `simPanics` 1; in the shipped build the sums wrap (a `root_branching + 1` floor of 0, an arbitrary solver allowance). No shipped budget reaches it; `SearchBudget` is plain caller data, deserialized from JSON by the WASM binding where `usize` is 32 bits.\n\n### What should happen\n\n- `SearchBudget.lethal_nodes` (`crates/ai/src/types.rs`): \"Of `nodes`, the most the lethal solver may spend before the beam starts.\"\n- `AiSearch.fat_min_lethal` (`crates/ai/src/config.rs`): \"The least of the scaled budget the lethal solver's allowance shrinks to\": a floor for a fat state's shrunk allowance, and `scaled_budget`'s own doc says the same.\n- A budget field at any value must not panic or wrap: every result there is already bounded by a `.min(\u2026)` or a counter's limit.\n\n### How to reproduce\n\nFour tests fail on `main` (3a83bd7), in [`crates/ai/tests/audit_decide.rs` at bf24a52](https://github.com/Jlore-Studios/JackiOh/blob/bf24a52273bd5c0e7d6f9c740b28a8d7cb7f2b3e/crates/ai/tests/audit_decide.rs) (branch `claude/vigilant-mayer-pmyrhr`): `lethal_nodes_caps_the_solver_on_a_state_that_is_not_fat`, `the_weakest_ladder_bots_solver_keeps_to_its_40_nodes`, `a_small_budget_still_leaves_the_beam_its_nodes`, `a_budget_field_at_its_largest_value_does_not_overflow`.\n\nThe measure they use: with `max_depth: 0` the beam takes no node, so a decision's nodes are its price probes' plus the solver's, and the probes' are what the same decision spends with `lethal_nodes: 0`. The board is 12 cards and 7 candidates, well under `fat_reference` (30), with no lethal on it.\n\n```rust\nfn solver_nodes(budget: SearchBudget) -> usize {\n    let state = mid_board();\n    let no_beam = SearchBudget { max_depth: 0, ..budget };\n    let prices = decided(&state, SearchBudget { lethal_nodes: 0, ..no_beam }).stats.nodes;\n    decided(&state, no_beam).stats.nodes - prices\n}\n#[test]\nfn lethal_nodes_caps_the_solver_on_a_state_that_is_not_fat() {\n    assert_eq!(solver_nodes(SearchBudget { lethal_nodes: 300, ..AI_BUDGET }), 300, \"PREMISE: the solver spends its allowance here\");\n    let asked = SearchBudget { lethal_nodes: 10, ..AI_BUDGET };\n    assert!(solver_nodes(asked) <= 10, \"lethal_nodes 10 of 1200: the solver spent {}\", solver_nodes(asked));\n}\n```\n\nOutput today: `lethal_nodes 10 of 1200: the solver spent 60`; `the solver spent 60` (the weakest bot); `7 of 30 nodes were the solver's, yet the beam searched no line`; and for the overflow test five entries such as `\"max_depth: Fallback, Some(\\\"attempt to add with overflow\\\")\"`.\n\n### Where\n\nThe AI: `crates/ai/src/decide.rs` (`scaled_budget`, `plan`), `crates/ai/src/search.rs:300`.\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Apply the floors only when the budget was actually scaled (`fat > reference`), and never above the caller's own figures: `.max(fat_min_lethal).min(budget.lethal_nodes)`. The same goes for `fat_min_nodes`, which raises a fat state's `nodes` to 150 even when the caller's `nodes` is smaller; the root counter still caps the spend, but `remaining` and the reserve are then worked out on nodes that do not exist.\n- Use saturating arithmetic at the five overflow sites.\n- At `AI_BUDGET` and `AI_GATE_BUDGET` (300 of 1,200) nothing changes on a state that is not fat, so practice and the gates play node for node as before. Say so in the pull request, with the gate smoke.\n- **The weakest ladder bot moves.** `BOT_SEED_RATINGS` were calibrated on the code as it runs, with that bot's solver at 60. Restoring 40 changes it slightly. Either re-check its rating (`crates/server/tests/bots/calibrate.rs`) or, if a person prefers, set `BOT_STRENGTHS[0].lethal_nodes` to 60 so the bot plays as it does today and the constant says what runs.\n- **Mind #4788** (the AI audit tracker #4787's wide-board finding), which changes how far the solver may reach past a *scaled* allowance. This issue is the other side of `scaled_budget`: the unscaled case. Whichever lands second rebases on the first.\n- No test or ruling pins the floor on an unscaled budget (the only ruling on these constants is R2575000, on `fat_budget_nodes`).\n\nFound by an audit of the AI crate; the reproduction was run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4802: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T20:53:57Z",
+    "claimed_at": "2026-11-25T04:28:02Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
