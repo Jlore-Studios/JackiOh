@@ -22229,15 +22229,16 @@
       "merge_owner": "claude-7",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-1",
       "queued_at": "2026-11-25T06:27:02Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "45565005260",
+      "run_id": "pending:4da9a945-1795593522",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 535,
-      "started_at": "2026-11-25T07:01:58Z",
+      "started_at": "2026-11-25T07:59:19Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -22936,9 +22937,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T07:42:12Z",
+    "at": "2026-11-25T07:59:19Z",
     "url": "",
-    "what": "review #4904 on claude-4"
+    "what": "spot-check #4895 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-25T07:49:33Z",
@@ -45461,7 +45462,15 @@
         "n": 535,
         "pr": 4895,
         "queued_at": "2026-11-25T07:30:47Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "pending:4da9a945-1795593522",
         "sha": "56bddc1a7cf09981764888ee53fcc0ff17df7731",
+        "started_at": "2026-11-25T07:59:19Z",
         "status": "queued",
         "title": "Patch: the Duos host decides an AI seat's pass or End turn again when the game moved on since it was asked, so the two AI seats stop wasting the pass between them",
         "tries": 0
