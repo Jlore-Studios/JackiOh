@@ -4091,6 +4091,92 @@ mod i21 {
     }
 
     #[test]
+    fn r4828001_the_settle_collecting_an_affliction_s_kill_is_no_spell_s_and_i21_allows_it() {
+        let (before, id) = immune_board("r4828001");
+        let after = moved(&before, &id, OffFieldZone::Graveyard);
+        // The turn ends, a Spell's hand trigger runs (S #34 Drone Core VIII's Float), then Burn or
+        // Toxic ticks on the immune Unit and the settle after it collects the kill, with no killer
+        // and no marker of its own (fuzz Radiant rotation, seed 4 with C #3, C #98, S #148, S #169).
+        let ended: GameEvent =
+            json_as(json!({ "type": "turnEnded", "player": "p1", "turn": before.turn, "unspentMana": 0 }));
+        let hand_trigger: GameEvent = json_as(json!({
+            "type": "hookResolving",
+            "sourceId": "i21-held",
+            "defId": SPELL,
+            "controller": "p1",
+            "hook": "whenever",
+        }));
+        let tick = |target: &str, via: &str, absorbed: bool| -> GameEvent {
+            if absorbed {
+                json_as(json!({
+                    "type": "damageAbsorbed",
+                    "sourceId": null,
+                    "targetId": target,
+                    "absorbed": 5,
+                    "combat": false,
+                    "via": via,
+                }))
+            } else {
+                json_as(json!({
+                    "type": "damage",
+                    "sourceId": null,
+                    "targetId": target,
+                    "amount": 5,
+                    "combat": false,
+                    "via": via,
+                }))
+            }
+        };
+        let cleared: GameEvent =
+            json_as(json!({ "type": "counterChanged", "instanceId": id, "counter": "burn", "value": 0 }));
+        let death = |killer: Option<&str>| -> GameEvent {
+            json_as(json!({
+                "type": "destroyed",
+                "instanceId": id,
+                "defId": IMMUNE,
+                "owner": "p2",
+                "controller": "p2",
+                "attack": 4,
+                "maxHealth": 4,
+                "killerId": killer,
+            }))
+        };
+        let burned = [
+            ended.clone(),
+            hand_trigger.clone(),
+            tick(&id, "Burn", false),
+            cleared.clone(),
+            death(None),
+        ];
+        assert_eq!(i21(&before, &burned, &after), Vec::<String>::new());
+        let poisoned = [marker(SPELL), tick(&id, "Toxic", false), death(None)];
+        assert_eq!(i21(&before, &poisoned, &after), Vec::<String>::new());
+        // A hit the tick never landed, a tick on another Unit, a tick before the Spell's own marker
+        // and a death with a killer leave the death the Spell's.
+        let absorbed = [
+            hand_trigger.clone(),
+            tick(&id, "Burn", true),
+            cleared.clone(),
+            death(None),
+        ];
+        let elsewhere = [
+            hand_trigger.clone(),
+            tick("i21-other", "Burn", false),
+            death(None),
+        ];
+        let earlier = [
+            tick(&id, "Burn", false),
+            cleared,
+            hand_trigger.clone(),
+            death(None),
+        ];
+        let killed = [hand_trigger, tick(&id, "Burn", false), death(Some("i21-source"))];
+        for events in [&absorbed[..], &elsewhere, &earlier, &killed] {
+            only(&i21(&before, events, &after), &id, &["I21", "destroyed", SPELL]);
+        }
+    }
+
+    #[test]
     fn r4623000_the_state_check_s_evolution_of_an_immune_unit_is_no_spell_s_and_i21_allows_it() {
         use crate::rules::fixtures::evolution::{FULL, register_evolution_fixtures};
 
