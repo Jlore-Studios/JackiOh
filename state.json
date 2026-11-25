@@ -19336,7 +19336,7 @@
       "stop_requested": false
     },
     "4803": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -19351,22 +19351,22 @@
       },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-24T21:27:45Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-4",
+      "owner_since": "2026-11-25T01:02:16Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-24T22:01:22Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-4",
       "queued_at": "2026-11-24T20:54:17Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45491342603",
+      "run_id": "pending:498668c6-1795568505",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-24T21:27:45Z",
+      "started_at": "2026-11-25T01:02:16Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -20998,9 +20998,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T00:46:31Z",
+    "at": "2026-11-25T01:02:16Z",
     "url": "",
-    "what": "plan #4831 on claude-3"
+    "what": "build #4803 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-25T00:53:13Z",
