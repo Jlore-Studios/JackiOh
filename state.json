@@ -20399,6 +20399,7 @@
         "by": "`claude` (strong)",
         "sha": "12a05446c7a30d85bcb701a7636138f8798f2a82"
       },
+      "closed_at": "2026-11-25T22:34:42Z",
       "died": 0,
       "difficulty": "hard",
       "feedback_since": "2026-11-25T18:18:46Z",
@@ -20416,6 +20417,7 @@
       "issue": 4823,
       "last_findings": [],
       "live": "reviewing",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-8",
       "question": "A person needs to re-run the failed job `web (unit 8/8)` of https://github.com/Jlore-Studios/JackiOh/actions/runs/45688148824 (Re-run failed jobs), or re-run CI on head 4d1940c14c some other way. If it fails again with the same timeout, please link a run of the same check failing on main, or file an issue about that test's speed on CI. Once the check is green, the PR can be marked ready and auto-merge turned on.",
