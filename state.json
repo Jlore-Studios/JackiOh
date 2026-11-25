@@ -24664,15 +24664,9 @@
     "what": "review #4939 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-25T15:47:14Z",
+    "at": "2026-11-25T16:02:15Z",
     "notes": [
-      "#4940: `e2e smoke (4/4)` red in CI run 45647032060; its other early jobs have until 2026-11-25T15:49:26Z to report",
-      "#4939 is held for `claude-7` until 09:50 (5-hour usage is 69%, too close to its 70% cap to start a long run (it starts under 65%))",
-      "delivered review #4918 on claude-7 (run 45647738175): interrupted",
-      "could not deliver review #4929 on claude-1 (run 45647559185), try 1 of 3 (GitHubError: POST /repos/Jlore-Studios/JackiOh/issues/4929/labels: HTTP 500: ): it is tried again next tick (2 more)",
-      "could not deliver plan #4842 on agy (run 45641128638), try 1 of 3 (GitHubError: POST /repos/Jlore-Studios/JackiOh/issues/4842/labels: HTTP 500: ): it is tried again next tick (2 more)",
-      "could not deliver build #4676 on claude-3 (run 45622897728), try 1 of 3 (GitHubError: POST /repos/Jlore-Studios/JackiOh/pulls: HTTP 500: ): it is tried again next tick (2 more)",
-      "night_run: could not finish (GitHubError: POST /repos/Jlore-Studios/JackiOh/issues/4939/comments: HTTP 500: )"
+      "night_run: could not finish (GitHubError: POST /repos/Jlore-Studios/JackiOh/actions/workflows/bot-night.yml/dispatches: HTTP 500: )"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
