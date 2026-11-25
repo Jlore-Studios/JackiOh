@@ -20949,6 +20949,8 @@
       }
     },
     "4874": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T23:12:48Z",
@@ -20962,8 +20964,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a game's payout moves only the quests held when the game ended, not one that arrived after it\"} -->\n- What changed: `pay_game` in [rewards.rs](/home/agent-muse/actions-runner-fill/_work/_temp/work/item-4841/crates/shared/src/economy/rewards.rs) now skips any held quest with `arrived_at > summary.at`, right after the `quest_def` lookup and before any progress is computed, so a late arrival gets no p\u2026\n- How tested, all observed: `cargo test -p jackioh-shared --features jackioh-engine/testkit r1304001` \u2014 5 passed, including the new test and the `arrived_at == at` boundary neighbor. With the guard temporarily removed, the new test fails with the issue's exact output (`Quest { quest_id: \"win-3\", chan\u2026\n- Decisions the issue did not settle: the guard is strictly `>` (not `>=`), so a quest dated exactly at the game's end still counts \u2014 the alternative would break the top-up's same-millisecond arrival, and the two neighboring tests lock the boundary in. Skipping before `progress_of` (rather than filte\u2026\n- Reviewer, look twice at: the guard's placement relative to the `completed`/`QuestPaid` bookkeeping (a skipped quest correctly appears in neither), and the final diff scope \u2014 two files only, 72 insertions, 1 deletion.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-fill/_work/_temp/work/item-4841 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-fill/_work/_temp/work/item-4841/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4841,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-25T01:19:20Z",
         "from_run": "45508010899",
         "gates": [
           {
@@ -21022,8 +21027,15 @@
         "source": "build",
         "until": "2026-11-25T01:48:15Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-25T01:18:15Z",
+      "run_id": "pending:b464eafa-1795569523",
+      "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
+      "started_at": "2026-11-25T01:19:20Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -21037,9 +21049,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T01:02:16Z",
+    "at": "2026-11-25T01:19:20Z",
     "url": "",
-    "what": "build #4803 on claude-4"
+    "what": "review #4874 on muse"
   },
   "last_sweep": {
     "at": "2026-11-25T01:08:57Z",
