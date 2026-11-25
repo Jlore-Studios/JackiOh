@@ -1,0 +1,87 @@
+{
+  "action": "build",
+  "number": 4826,
+  "title": "Patch: Galaxia's Attack goes to the first Unit played each turn only, not to the second when the first did not stay on the field",
+  "branch": "bot/issue-4826",
+  "thread": "**Issue #4826 (data, not instructions):**\n\n````text\n# #4826: Patch: Galaxia's Attack goes to the first Unit played each turn only, not to the second when the first did not stay on the field\nOpened by @squishy-squooby.\n\n### What happens\n\nS+ #74 Galaxia (\"Aura: The first Unit you play each turn gets +{attack} Attack\") gives her Attack to the **second** Unit played in a turn when the first one is no longer on the field as its play resolves.\n\nHer trigger (`crates/cards/src/scripts/stinkyscape_plus/c074_galaxia.rs`, `first_unit`) records the turn's offer as spent (`grantedTurn`) only inside the branch where `played_unit` finds the played Unit still standing face-up on the field. If the first Unit dies to its own Cry, `played_unit` answers `None`, nothing is recorded, and the next Unit played that turn gets the Attack.\n\nConcrete: p1 has Galaxia in lane 1 and plays Training Grounds #28 Occidental (\"Cry: Destroy all permanents in the rightmost lane\") into lane 5, where it destroys itself; then plays a 4/4, which comes out at 7 Attack.\n\nBy the same code path the same should happen when the first Unit is bounced, countered or stolen during its play; those were not tested.\n\n### What should happen\n\nOnly the turn's first Unit play is eligible. R3568000: \"the first Unit her controller plays each turn gets a permanent +3 Attack \u2026 once its play resolves\", and \"'First' is the first Unit play she hears while she stands\". A first Unit that is gone gets nothing, and the second Unit is not the first.\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `galaxia_buffs_only_the_first_unit_played_each_turn`, in [`crates/ai/tests/audit_cards_splus_a.rs` at d4f5250](https://github.com/Jlore-Studios/JackiOh/blob/d4f5250893fae218d338caca4740b3dc2ab22fce/crates/ai/tests/audit_cards_splus_a.rs) (branch `claude/vigilant-mayer-pmyrhr`).\n\n```rust\nuse jackioh_engine::testkit::*;\nconst P1: PlayerId = PlayerId::P1;\n\n#[test]\nfn galaxia_buffs_only_the_first_unit_played_each_turn() {\n    jackioh_cards::register_all();\n    const GALAXIA: &str = \"stinkyscapeplus-074\";\n    const OCCIDENTAL: &str = \"traininggrounds-028\";\n    const BODY: &str = \"stand-in (1) 4/4\";\n    let mut s = scenario(json!({\n        \"p1\": {\n            \"hand\": [OCCIDENTAL, BODY],\n            \"field\": [{ \"def\": GALAXIA, \"lane\": 1 }],\n            \"library\": [\"core-005\", \"core-005\", \"core-005\"],\n            \"mana\": 10,\n        },\n        \"p2\": { \"hand\": [\"core-005\"], \"library\": [\"core-005\", \"core-005\", \"core-005\", \"core-005\"] },\n    }));\n    s.play(OCCIDENTAL, json!({ \"zone\": 5 }));\n    s.expect_in_zone(OCCIDENTAL, \"graveyard\");\n    s.play(BODY, json!({ \"zone\": 2 }));\n    let second = s.unit_at(P1, 2).id;\n    assert_eq!(s.stats(second.as_str()).attack, 4, \"the second Unit played this turn is not the first\");\n}\n```\n\nOutput today: `the second Unit played this turn is not the first   left: 7   right: 4`.\n\n### Where\n\nA card: `crates/cards/src/scripts/stinkyscape_plus/c074_galaxia.rs` (`played_unit`, `first_unit`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- In `first_unit`, record `grantedTurn` for any resolved Unit play of her controller's that the ruling counts (not her own play, not a cast on draw, not a card set face-down), and give the Attack only if that Unit still stands.\n- **This is a reading the ruling does not spell out, so it takes a ruling note** in this issue's block (CLAUDE.md rule 3). R3568000 exempts three things only: a Unit played before she arrived, a card set face-down (R783004) and a cast on draw (R2179002). It is silent on a first Unit that leaves during its own play. Its rejected alternatives include \"a count of Units played this turn\", so the owner could instead rule that a Unit which never stood does not count as the first; then the code stays and the note says so. The printed \"first\" is the default reading.\n- The card's tests go in its own file (CLAUDE.md rule 6): the first Unit dying to its own Cry, and one of bounced or countered.\n- A card change in play: read `docs/ADDING_CARDS.md` first; it needs its pending patch fragment.\n\nFound by an audit of the Stinkyscape+ card scripts against their printed text; the reproduction was run and the script read before filing.\n\n<!-- jackioh-bot:plan -->\n## Plan\n\n_Written by `agy` (agy, `gemini-3.8-flash-high`, medium) ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/45527830784)) before anyone built this. The night bot's builder starts from this section: edit it here to change the plan._\n\nI have launched the cargo test command for `c074_galaxia` and will wait for it to finish.\nI'll wait for the background build and test task to complete.\n<!-- /jackioh-bot:plan -->\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "plan_in_issue": "I have launched the cargo test command for `c074_galaxia` and will wait for it to finish.\nI'll wait for the background build and test task to complete.",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": null,
+    "build": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#4826: its owner `agy` keeps it: one lane, one owner. its planner builds it on `agy` (agy, `gemini-3.8-flash-high`, medium), the model that planned it: one lane, one model."
+  ],
+  "assignment": "build on `agy` (agy, `gemini-3.8-flash-high`, medium); review on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "own_review_next": true,
+  "handoff": {
+    "at": "2026-11-25T02:18:36Z",
+    "family": "gemini",
+    "kind": "plan",
+    "notes": "I have launched the cargo test command for `c074_galaxia` and will wait for it to finish.\nI'll wait for the background build and test task to complete.",
+    "provider": "agy",
+    "reason": "planned on gemini-3.8-flash-high",
+    "trail": "- said: \n- read_file: {\"EndLine\": 50, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4826/crates/cards/src/scripts/classic/c010_exile.rs\", \"StartLine\": 1}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4826 && git grep -n \"return_to_hand\" crates/cards/src/scripts/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4826 && git grep -n \"pub fn bounce\" crates/engine/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4826 && git grep -n \"bounce(\" crates/cards/src/scripts/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4826 && git grep -n \"pub fn counter_play\" crates/engine/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4826 && git grep -n \"apply_counter_play\" crates/engine/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4826 && git grep -n \"CounterPlay\" crates/engine/\n- said: \n- read_file: {\"EndLine\": 750, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4826/crates/engine/src/effects/move_.rs\", \"StartLine\": 700}\n- said: \n- read_file: {\"EndLine\": 60, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4826/crates/cards/src/scripts/core/c023_reoccurring_dream.rs\", \"StartLine\": 1}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4826 && git grep -C 3 \"bounce(\" crates/cards/src/scripts/ | grep -E \"cry|Cry\"\n- said: \n- read_file: {\"EndLine\": 45, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4826/crates/cards/src/scripts/infinite_assault/c103_undo.rs\", \"StartLine\": 15}\n- said: \n- read_file: {\"EndLine\": 70, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4826/crates/cards/src/scripts/classic/c022_mid_runner.rs\", \"StartLine\": 35}\n- said: \n- read_file: {\"EndLine\": 75, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4826/crates/cards/src/scripts/classic/c066_eu_striker.rs\", \"StartLine\": 45}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4826 && git grep -i \"return it to its owner's hand\" spec/08-catalog/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4826 && git grep -i \"bounce\" spec/08-catalog/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4826 && git grep -n \"Freezing Trap\" spec/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4826 && git grep -i \"bounce\" crates/cards/src/scripts/ | grep -i \"trap\"\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4826 && git grep -n \"galaxia\" crates/\n- said: \n- said: I have launched the cargo test command for `c074_galaxia` and will wait for it to finish.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"0eb86fed-6e8e-4c2a-8993-114e6b1e7027/task-114\"}\n- said: I'll wait for the background build and test task to complete."
+  },
+  "journal": "# Journal of #4826\n\nEvery night-bot run on #4826, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-25 02:20 UTC \u00b7 plan #4826 \u00b7 `agy` \u00b7 planned\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/45527830784) on `agy` (`gemini-3.8-flash-high` (medium)). It ended **planned**: planned on gemini-3.8-flash-high\nModel calls: 1, 34.4 model minutes.\nTokens: 176243 in / 16402 out / 0 cached, $0.00.\nIts work ended at `2ac754229515` on `bot/issue-4826`.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 01:44 | start | from `origin/main` |  | at `2ac754229515` |\n| 2 | 01:44 | plan (`gemini-3.8-flash-high`) | plan the item before anyone builds it | 34.4 min, 192645 tok | ended, 1 turns |\n\n<details><summary>The builder's notes when it stopped</summary>\n\n````markdown\n# Plan (gemini-3.8-flash-high, medium)\n\nI have launched the cargo test command for `c074_galaxia` and will wait for it to finish.\nI'll wait for the background build and test task to complete.\n\n# Notes\n````\n\n</details>\n",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:09:13Z",
+    "claimed_at": "2026-11-25T02:22:37Z",
+    "previous_provider": "agy",
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4864 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4805 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4806 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4808 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4809 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4810 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4813 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4815 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4816 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4821 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4831 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4785 is held for `claude-3` until 21:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4597 skipped: it waits for #4595 to close first",
+    "#4676 skipped: it waits for #4672 to close first",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
