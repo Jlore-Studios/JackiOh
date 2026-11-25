@@ -20096,15 +20096,8 @@
       "stop_requested": false
     },
     "4834": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45530348810",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-25T02:19:39Z",
-        "until": "2026-11-25T02:49:39Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -20116,10 +20109,9 @@
         "reason": "planned on opus",
         "trail": "engine/tests/ | head; sed -n 80,148p crates/engine/tests/rules/tribute.rs; ls crates/engine/tests/; grep -n \\\"mod \\\" crates/engine/tests/rules.rs | hea\u2026\n- Bash: {\"command\": \"grep -n -i \\\"equip\\\" crates/engine/src/play_steps.rs | head -40\", \"description\": \"Grep equip in play_steps.rs\"}\n- Bash: {\"command\": \"grep -rn -i \\\"equip\\\" crates/ai/src --include=*.rs | head -10; grep -rn \\\"handed_over\\\\|hands_over\\\\|hand-over\\\\|hand over\\\" apps/web/src --include=*.ts --include=*.tsx -il | head\", \"des\u2026\n- Bash: {\"command\": \"grep -n \\\"^#\\\" spec/README.md | head -40\", \"description\": \"List spec README sections\"}\n- Bash: {\"command\": \"sed -n 48,140p spec/README.md\", \"description\": \"Read note format and adding a ruling\"}\n- Bash: {\"command\": \"ls spec/; grep -n \\\"Equip\\\" spec/06-keywords.md | cut -c1-400 | head -10\", \"description\": \"Find Equip in spec keywords section\"}\n- Bash: {\"command\": \"grep -rn \\\"Equip\\\" spec/06-keywords/ | cut -c1-600 | head -10; grep -rln \\\"R1086\\\\]\\\\]\\\" spec/0*/ spec/0*.md spec/10-engine-guide | head\", \"description\": \"Find Equip definition in spec s\u2026\n- Bash: {\"command\": \"sed -n 52p spec/06-keywords/6.1-unit-keywords.md; echo; grep -n \\\"R1086\\\\]\\\\]\\\" spec/10-engine-guide/10.5-playing-card.md | cut -c1-900; grep -n \\\"#55\\\\b\\\\|R360\\\" spec/08-catalog/8.3-cor\u2026\n- Bash: {\"command\": \"sed -n 10p spec/08-catalog/8.3-core-51-80.md | cut -c590-2000; grep -n \\\"| 16 |\\\" spec/08-catalog/8.10-stinkyscape.md | cut -c1-1800\", \"description\": \"Read #55 and S#16 catalog rows\"}\n- Bash: {\"command\": \"ls crates/tools/src/ | head -80; grep -n \\\"claims more\\\\|claim more\\\\|claims less\\\\|more than\\\\|fn check_claims\\\\|plays_claimed\\\" crates/tools/src/classify*.rs | head -30\", \"description\"\u2026\n- Bash: {\"command\": \"sed -n 1,80p crates/tools/src/claims.rs\", \"description\": \"Read claims.rs header\"}\n- Bash: {\"command\": \"sed -n 80,160p crates/tools/src/claims.rs\", \"description\": \"Read rest of claims problems\"}\n- Bash: {\"command\": \"sed -n 1,80p crates/tools/src/classify.rs\", \"description\": \"Read classify.rs header\"}\n- Bash: {\"command\": \"grep -n \\\"forced\\\\|claimed_plays\\\\|fragment\\\" crates/tools/src/classify.rs | head -60\", \"description\": \"Find forced game selection in classify\"}\n- Bash: {\"command\": \"for c in 79474b2d38 978ccfceda 32dec5b59f 65538df6ca; do echo \\\"== $c\\\"; git show --stat --format=%s $c | grep -E \\\"patches/pending|^Patch|^bot\\\" ; done; git log --format=\\\"%h %s\\\" --dif\u2026\n- Bash: {\"command\": \"for c in d96d7a8f28 1eee3d7a67; do echo \\\"== $c\\\"; git show --stat --format=%s $c | head -30; git show $c -- 'crates/cards/patches/pending/*.json' | grep -E '\\\"plays\\\"|\\\"rule\\\"|\\\"cards\\\"\u2026\n- Bash: {\"command\": \"sed -n 82,100p crates/tools/src/classify.rs; grep -n \\\"parent-bin\\\\|parent_bin\\\" .github/workflows/ci.yml | head -10\", \"description\": \"Read UNFORCED_GAMES and CI's classify setup\"}\n- Bash: {\"command\": \"git rev-parse --short origin/main 2>&1; git merge-base --is-ancestor af2fed168e origin/main && echo base-in-main; ls target/release/jackioh 2>&1 | head -2\", \"description\": \"Check origin/\u2026\n- Bash: {\"command\": \"grep -n \\\"face_up\\\\|pub backrow\\\\|pub fn backrow\\\\|pub fn unit\\\\b\\\\|pub fn unit(\\\\|pub fn unit_at\\\\|pub fn last_events\\\\|pub fn plays_of\\\" crates/engine/src/testkit/scenario.rs | head -2\u2026\n- Bash: {\"command\": \"sed -n 425,445p crates/engine/src/testkit/scenario.rs; sed -n 955,975p crates/engine/src/testkit/scenario.rs\", \"description\": \"Read BackrowSetup and face-up handling\"}\n- Bash: {\"command\": \"head -2 spec/08-catalog/8.3-core-51-80.md | cut -c1-100; head -2 spec/06-keywords/6.1-unit-keywords.md | cut -c1-100; sed -n 10p spec/08-catalog/8.3-core-51-80.md | grep -o \\\"still the p\u2026\n- Bash: {\"command\": \"grep -c \\\"the card on top ceases to exist with no Death\\\\.\\\" spec/06-keywords/6.1-unit-keywords.md; grep -c \\\"still the player's card and play (\\\\[\\\\[R360\\\\]\\\\]);\\\" spec/08-catalog/8.3-c\u2026\n- said: Now let me write the first draft of the plan file.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4834/.bot-plan.md\", \"content\": \"# Draft plan for #4834 (planner notes)\\n\\n## Findings\\n- Bug path confirmed by reading: `crates/engine/src/play_steps.\u2026\n- Bash: {\"command\": \"grep -n \\\"pub fn flush\\\" -A15 crates/engine/tests/rules/fixtures/field.rs; grep -n \\\"pub fn put\\\\b\\\\|pub fn put(\\\" -A20 crates/engine/tests/rules/fixtures/harness.rs | head -30; grep -n \u2026\n- Bash: {\"command\": \"grep -rn \\\"pub fn plays_in\\\\|pub fn is_play_of\\\\|pub fn can_play\\\" crates/engine/src/testkit/ | head; grep -n \\\"fn of_type\\\\|fn both\\\\b\\\\|pub fn both\\\" crates/engine/tests/rules/tribute.\u2026\n- Bash: {\"command\": \"sed -n 120,300p crates/cards/src/scripts/classic_plus/c033_ivory_tower.rs\", \"description\": \"Read Ivory Tower test helpers\"}\n- Bash: {\"command\": \"grep -n -i \\\"equip\\\\|hand.over\\\\|handed\\\" crates/engine/README.md crates/cards/README.md | head; grep -n \\\"fn ids\\\\b\\\\|pub fn ids\\\" crates/engine/tests/rules/fixtures/harness.rs; sed -n \u2026\n- Bash: {\"command\": \"grep -rln \\\"core-055+\\\\|+core-055\\\" crates e2e apps/web/src 2>/dev/null | head; ls crates/tools/fuzz-corpus | head -3\", \"description\": \"Search for pinned fused Golem results\"}\n- Bash: {\"command\": \"grep -rn \\\"pub fn scenario\\\\|pub(crate) fn scenario\\\" crates/cards/src | head -3; grep -n \\\"pub struct ZoneChoice\\\" -A6 crates/engine/src/*.rs crates/engine/src/*/*.rs 2>/dev/null | head\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4834/.bot-plan.md\", \"content\": \"## Goal\\n\\nWhen [\\u00a710.5] step 4 hands a played card to the opponent (R360: Lava Golem's base face paid with an opp\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; grep -n \\\"fn r360_lands_it_in\\\\|fn r360_stays_with_the_player_when_the_opponents_row\\\" crates/engine/tests/rules/tribute.rs\", \"description\": \"Count plan words and con\u2026\n- said: ## Goal When [\u00a710.5] step 4 hands a played card to the opponent (R360: Lava Golem's base face paid with an opposing Unit), an Equip play's host is dropped. The card lands on the opponent's side under their control, and step 7 fuses nothing into the player's host (Rod of Ages or any other). A new ru\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-25T02:04:39Z",
       "owner_why": "it plans it",
@@ -20132,9 +20124,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-24T21:20:39Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45530348810",
+      "run_id": "pending:c8cb85bd-1795573289",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-25T02:04:39Z",
+      "started_at": "2026-11-25T02:21:58Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -21149,9 +21141,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T02:04:39Z",
+    "at": "2026-11-25T02:21:58Z",
     "url": "",
-    "what": "plan #4834 on claude-8"
+    "what": "build #4834 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-25T02:11:35Z",
