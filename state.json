@@ -22899,15 +22899,16 @@
     "what": "plan #4812 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-25T08:42:00Z",
+    "at": "2026-11-25T08:53:54Z",
     "notes": [
-      "delivered plan #4846 on muse (run 45577550173): planned",
-      "delivered review #4902 on claude-1 (run 45570112770): interrupted",
-      "delivered review #4899 on claude-8 (run 45564654932): approved",
-      "started build #4846 on muse (run 45579218210)",
-      "started build #4816 on claude-8 (run 45579336840)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` it refused a call; its limit resets at 2026-11-25T09:50:00Z; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4902 held for `claude-1` until 03:50 (it refused a call)",
-      "pruned 1 plan file(s) older than 7 days"
+      "#4902 is held for `claude-1` until 03:50 (it refused a call)",
+      "delivered plan #4807 on claude-3 (run 45576583173): planned",
+      "delivered plan #4891 on claude-3 (run 45576454790): planned",
+      "delivered review #4904 on claude-4 (run 45570218425): approved",
+      "started build #4821 on claude-4 (run 45580851310)",
+      "started plan #4811 on claude-3 (run 45580964481)",
+      "started plan #4812 on claude-3 (run 45581073945)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` it refused a call; its limit resets at 2026-11-25T09:50:00Z; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4902 held for `claude-1` until 03:50 (it refused a call)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -23613,7 +23614,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T08:42:00Z",
+  "loop_tick": "2026-11-25T08:53:54Z",
   "machine_disk": {
     "issue": null,
     "reading": {
