@@ -20345,7 +20345,9 @@
     "4944": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "ci_early": false,
+      "ci_fixed_head": "1ca679a1484d71d7bbd3cfede7ce37e512f898e3",
       "ci_fixes": 1,
       "ci_on_head": true,
       "ci_reruns": {
@@ -20369,7 +20371,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-25T19:33:54Z",
+      "feedback_since": "2026-11-25T21:21:39Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-25T20:41:39Z",
@@ -20397,7 +20399,7 @@
       "run_id": "45703632742",
       "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
-      "source": "ci",
+      "source": "",
       "started_at": "2026-11-25T21:21:39Z",
       "stop_requested": false,
       "taken_asks": [],
