@@ -113,7 +113,6 @@ const WRAPPERS: readonly (readonly [string, (wasm: Wasm) => unknown])[] = [
   ["runReduce", (w) => w.runReduce(ANY, ANY, ANY)],
   ["runFold", (w) => w.runFold(ANY, ANY)],
   ["runFightSetup", (w) => w.runFightSetup(ANY, ANY)],
-  ["runFightReport", (w) => w.runFightReport(ANY, ANY)],
   ["runScore", (w) => w.runScore(ANY, ANY)],
   ["runEmbers", (w) => w.runEmbers(ANY)],
   ["runMaxHp", (w) => w.runMaxHp(ANY, ANY)],

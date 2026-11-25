@@ -20,7 +20,7 @@ import {
 } from "./coach.ts";
 import { TUTORIAL_STEP_TURNS_MAX } from "./config.ts";
 import { LESSON_SCRIPTS } from "./scripts/index.ts";
-import { attackWith, endTurn, info, keepHand, playCard, tip } from "./steps.ts";
+import { attackWith, endTurn, info, keepHand, playCard } from "./steps.ts";
 import { coachTargets } from "./targets.ts";
 
 const VANILLA = "core-008";
@@ -225,7 +225,7 @@ describe("R292 the coach", () => {
         info({ id: "a", title: "A", text: "A." }),
         info({ id: "b", title: "B", text: "B." }),
       ],
-      tips: [tip({ id: "t", title: "T", text: "T.", when: () => true })],
+      tips: [{ id: "t", title: "T", text: "T.", when: () => true }],
     };
     const over = myTurn(9, [], { result: { winner: "p1", reason: "hero-death" } });
     const state = coachObserve(script, coachObserve(script, COACH_START, ctx(myTurn(3))), ctx(over));
@@ -245,14 +245,14 @@ describe("R292 the coach", () => {
         endTurn({ id: "end", title: "End turn", text: "End your turn." }),
       ],
       tips: [
-        tip({
+        {
           id: "coin",
           title: "The Coin",
           text: "The AI played The Coin.",
           holdAi: true,
           anchor: { kind: "hero", side: "opponent" },
           when: (c) => c.fresh.some((event) => event.type === "cardPlayed" && event.defId === "core-t-coin"),
-        }),
+        },
       ],
     };
     const legal = [PLAY_VANILLA, { type: "endTurn" } as ActionBody];
@@ -280,12 +280,12 @@ describe("R292 the coach", () => {
       lessonId: "t",
       steps: [info({ id: "only", title: "Only", text: "The only step.", final: true })],
       tips: [
-        tip({
+        {
           id: "coin",
           title: "The Coin",
           text: "The AI played The Coin.",
           when: (c) => c.fresh.some((event) => event.type === "cardPlayed" && event.defId === "core-t-coin"),
-        }),
+        },
       ],
     };
     let state = coachObserve(script, COACH_START, ctx(myTurn(3)));

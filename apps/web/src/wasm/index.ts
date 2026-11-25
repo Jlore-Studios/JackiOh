@@ -228,7 +228,7 @@ export type ReduceResult = { state: GameState; events: GameEvent[]; error?: stri
 
 export type FoldInput = CreateGameArgs & { log: readonly Action[] };
 
-/** A finished or unfinished game's record, as `runFightReport` reads it. */
+/** A finished or unfinished game's record, as a replay and the run's fight report read it. */
 export type ReplayInput = FoldInput;
 
 /** `fold`'s answer: the state the log folds to, and every action the engine refused on the way. */
@@ -404,13 +404,6 @@ export function runFold(file: RunFile, content: RunContent): RunResult {
 export function runFightSetup(state: RunState, content: RunContent): RunFightSetup | null {
   return call("runFightSetup", () =>
     parsed<RunFightSetup | null>(normal.run_fight_setup(json(state), json(content))),
-  );
-}
-
-/** The `FightOver` a finished fight sends, or why the game reports none. */
-export function runFightReport(game: ReplayInput, human: PlayerId): { action: RunAction } | { error: string } {
-  return call("runFightReport", () =>
-    parsed<{ action: RunAction } | { error: string }>(normal.run_fight_report(json(game), json(human))),
   );
 }
 

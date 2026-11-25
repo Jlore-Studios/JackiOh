@@ -4,7 +4,7 @@ import type { ActionBody, CardView, GameEvent, PlayerView, UnitView } from "@jac
 
 import { sideView, type Side } from "../game/contract.ts";
 import type { Params } from "../i18n/i18n.ts";
-import type { CoachAnchor, CoachCtx, CoachStep, CoachTip } from "./coach.ts";
+import type { CoachAnchor, CoachCtx, CoachStep } from "./coach.ts";
 
 export function isMyTurn(view: PlayerView): boolean {
   return view.active === view.viewer;
@@ -112,10 +112,6 @@ export function moment(
   const ready = (ctx: CoachCtx): boolean =>
     prompt === true ? ctx.view.pending !== null && ctx.view.pending.forYou : myMain(ctx);
   return { kind: "moment", ...rest, when: (ctx) => ready(ctx) && (when === undefined || when(ctx)) };
-}
-
-export function tip(options: CoachTip): CoachTip {
-  return options;
 }
 
 /** Wait for an offered play; a card gone before display is moot. */
