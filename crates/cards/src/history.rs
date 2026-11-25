@@ -1405,30 +1405,30 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     // #4665's Ticketed (R4665000): the Cry that held a permanent beneath it in its own zone.
     (c009_ticketed::ID, "v0.6.12c", c009_ticketed::script_v0_6_12c),
     // #4844 (R656's help aims): the aim-less targets of eight buff Spells, before they aimed help.
-    (c012_fortify::ID, "v0.6.13e", c012_fortify::script_v0_6_13e),
+    (c012_fortify::ID, "v0.6.13h", c012_fortify::script_v0_6_13h),
     (
         c027_hopeful_jelly_bean::ID,
-        "v0.6.13e",
-        c027_hopeful_jelly_bean::script_v0_6_13e,
+        "v0.6.13h",
+        c027_hopeful_jelly_bean::script_v0_6_13h,
     ),
     (
         c010_2_divine_spirit::ID,
-        "v0.6.13e",
-        c010_2_divine_spirit::script_v0_6_13e,
+        "v0.6.13h",
+        c010_2_divine_spirit::script_v0_6_13h,
     ),
     (
         c010_3_power_word_shield::ID,
-        "v0.6.13e",
-        c010_3_power_word_shield::script_v0_6_13e,
+        "v0.6.13h",
+        c010_3_power_word_shield::script_v0_6_13h,
     ),
     (
         c045_surge_alloy::ID,
-        "v0.6.13e",
-        c045_surge_alloy::script_v0_6_13e,
+        "v0.6.13h",
+        c045_surge_alloy::script_v0_6_13h,
     ),
-    (c047_plastanium::ID, "v0.6.13e", c047_plastanium::script_v0_6_13e),
-    (c049_metaglass::ID, "v0.6.13e", c049_metaglass::script_v0_6_13e),
-    (c050_graphite::ID, "v0.6.13e", c050_graphite::script_v0_6_13e),
+    (c047_plastanium::ID, "v0.6.13h", c047_plastanium::script_v0_6_13h),
+    (c049_metaglass::ID, "v0.6.13h", c049_metaglass::script_v0_6_13h),
+    (c050_graphite::ID, "v0.6.13h", c050_graphite::script_v0_6_13h),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

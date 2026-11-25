@@ -62,9 +62,9 @@ pub fn script_v0_6_6d() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.13e the target declared no aim (issue #4844); `KEPT_SCRIPTS` folds
+/// R767000: through v0.6.13h the target declared no aim (issue #4844); `KEPT_SCRIPTS` folds
 /// those replays under it.
-pub fn script_v0_6_13e() -> CardScripts {
+pub fn script_v0_6_13h() -> CardScripts {
     CardScripts {
         base: Script { targets: old_targets(), ..divine_spirit(false, true) },
         radiant: Script { targets: old_targets(), ..divine_spirit(true, true) },
@@ -259,14 +259,14 @@ mod tests {
         }
     }
 
-    mod v0_6_13e {
+    mod v0_6_13h {
         use super::*;
-        use crate::scripts::stinkyscape::c010_2_divine_spirit::{ID, script_v0_6_13e};
+        use crate::scripts::stinkyscape::c010_2_divine_spirit::{ID, script_v0_6_13h};
 
-        /// R767000: a game on v0.6.13e, before the aim, doubles the caster's enemy with a stolen Spirit.
+        /// R767000: a game on v0.6.13h, before the aim, doubles the caster's enemy with a stolen Spirit.
         #[test]
-        fn r767000_a_game_on_v0_6_13e_doubles_the_casters_enemy_with_a_stolen_spirit() {
-            crate::under_kept(ID, script_v0_6_13e(), || {
+        fn r767000_a_game_on_v0_6_13h_doubles_the_casters_enemy_with_a_stolen_spirit() {
+            crate::under_kept(ID, script_v0_6_13h(), || {
                 let (mut s, mine, theirs) = stolen_rig(json!({ "def": SPIRIT }));
                 assert!(s.pile(P2, "graveyard").iter().any(|card| card.def_id == SPIRIT), "P2 stole and cast it");
                 s.expect_stats(&mine, json!({ "attack": 3, "health": 6, "maxHealth": 6 }));

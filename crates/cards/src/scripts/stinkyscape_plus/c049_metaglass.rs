@@ -46,9 +46,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.13e the target declared no aim (issue #4844); `KEPT_SCRIPTS` folds
+/// R767000: through v0.6.13h the target declared no aim (issue #4844); `KEPT_SCRIPTS` folds
 /// those replays under it.
-pub fn script_v0_6_13e() -> CardScripts {
+pub fn script_v0_6_13h() -> CardScripts {
     let old = vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))];
     let now = script();
     CardScripts {
@@ -203,15 +203,15 @@ mod tests {
         }
     }
 
-    mod v0_6_13e {
+    mod v0_6_13h {
         use super::*;
 
-        use crate::scripts::stinkyscape_plus::c049_metaglass::{ID, script_v0_6_13e};
+        use crate::scripts::stinkyscape_plus::c049_metaglass::{ID, script_v0_6_13h};
 
-        /// R767000: a game on v0.6.13e, before the aim, gives the caster's enemy Ranged with a stolen cast.
+        /// R767000: a game on v0.6.13h, before the aim, gives the caster's enemy Ranged with a stolen cast.
         #[test]
-        fn r767000_a_game_on_v0_6_13e_gives_the_casters_enemy_ranged_with_a_stolen_cast() {
-            crate::under_kept(ID, script_v0_6_13e(), || {
+        fn r767000_a_game_on_v0_6_13h_gives_the_casters_enemy_ranged_with_a_stolen_cast() {
+            crate::under_kept(ID, script_v0_6_13h(), || {
                 let (s, mine, theirs) = stolen_rig();
                 assert!(s.pile(P2, "graveyard").iter().any(|card| card.def_id == METAGLASS), "P2 stole and cast it");
                 assert_eq!(keyword_count(&s, &mine, KeywordKind::Ranged), 1, "the caster's enemy takes Ranged");
