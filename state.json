@@ -23753,6 +23753,7 @@
       "run_id": "45617042115",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 555,
       "started_at": "2026-11-25T12:46:41Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -46645,9 +46646,33 @@
         "title": "Patch: the lethal solver keeps to the allowance its caller gave on a board that is not wide, where a floor meant for wide boards now raises it to 60 nodes",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-4"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "91029295c6b46ac5f488ed723d32ffb33aea407a",
+        "issue": 4805,
+        "merged_at": "2026-11-25T15:12:52Z",
+        "n": 555,
+        "pr": 4918,
+        "queued_at": "2026-11-25T15:12:52Z",
+        "sha": "daee3b7b411241506d95243436e980ab2c7f38df",
+        "status": "queued",
+        "title": "Patch: the AI's count of a board's coming damage includes a Cleave splash's Trample excess over a neighbour that has no Taunt",
+        "tries": 0
       }
     ],
-    "count": 554
+    "count": 555
   },
   "statistics": {
     "at": "2026-11-25T15:10:45Z"
