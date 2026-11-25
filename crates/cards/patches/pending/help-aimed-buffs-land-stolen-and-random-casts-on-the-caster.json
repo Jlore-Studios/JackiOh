@@ -9,7 +9,8 @@
     "changes": [],
     "text": [],
     "fixes": [
-      "Fortify, Hopeful Jelly Bean, Divine Spirit, Power Word Shield, Plastanium, Metaglass, Surge Alloy and Graphite now land on the caster's own side when a stolen or random cast aims them at enemies, instead of buffing the enemy."
+      "Stolen or random casts that aim at enemies now land Fortify, Hopeful Jelly Bean, Divine Spirit and Power Word Shield on the caster's own side.",
+      "Surge Alloy, Plastanium, Metaglass and Graphite land the same way now, instead of buffing the enemy."
     ]
   },
   "cards": [],

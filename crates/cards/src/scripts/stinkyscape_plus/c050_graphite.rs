@@ -68,7 +68,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const GRAPHITE: &str = "stinkyscapeplus-050";
-    const PALANTIR: &str = "classic-004"; // Palantir: steals a (2) Cost Spell and casts it at enemies (R831001).
+    const PALANTIR: &str = "classic-004"; // Palantir: steals the play and casts it at enemies (R831001).
     const MINE: &str = "stand-in (1) 3/3";
     const THEIRS: &str = "stand-in (1) 4/4";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
