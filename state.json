@@ -40975,42 +40975,6 @@
         "approver": {
           "family": "claude",
           "model": "opus",
-          "provider": "claude-3",
-          "tier": "strong"
-        },
-        "builder": {
-          "family": "claude",
-          "provider": "claude-3"
-        },
-        "difficulty": "hard",
-        "done_at": "2026-11-03T22:12:30Z",
-        "every": 5,
-        "findings": 0,
-        "head": "a368a8dd912d8ef1ce8362db509eb6f078bfb899",
-        "issue": 2930,
-        "last_why": "stopped: #2961 was closed",
-        "merged_at": "2026-11-03T21:33:06Z",
-        "n": 30,
-        "pr": 2961,
-        "queued_at": "2026-11-03T21:33:06Z",
-        "reason": "stopped: #2961 was closed",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-8",
-          "tier": "strong"
-        },
-        "sha": "a1bcc2af170bc25ac91309f1375519ac73577c83",
-        "started_at": "2026-11-03T22:03:48Z",
-        "status": "done",
-        "title": "Patch: card tests use the crate's scenario helper instead of registering the catalog before every scenario",
-        "tries": 3,
-        "verdict": "failed"
-      },
-      {
-        "approver": {
-          "family": "claude",
-          "model": "opus",
           "provider": "claude-6",
           "tier": "strong"
         },
@@ -44511,7 +44475,9 @@
           "provider": "claude-8"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-25T05:23:31Z",
         "every": 5,
+        "findings": 0,
         "head": "0019fac76611cf6e8cdd70177cf9bd33995b7403",
         "issue": 4834,
         "merged_at": "2026-11-25T05:03:51Z",
@@ -44524,12 +44490,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:263e0fdc-1795583350",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45551644568",
         "sha": "97e85e4a2ea94a41fa8b721f78bcfaa99a6ddb9f",
         "started_at": "2026-11-25T05:09:47Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: a Lava Golem handed to the opponent by its Tribute is not fused back into its player's Rod of Ages by an Equip play",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 531
