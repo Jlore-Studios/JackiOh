@@ -252,7 +252,7 @@ account, its presence to friends, written at most once a `PRESENCE_TOUCH_EVERY_M
 | `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436); each card over its own window, through the engine's `windowed_card_stats` (R1367000); every window and history is cut from one snapshot of every patch's totals, kept `CARD_STATS_CACHE_TTL_SECONDS` and loaded once, and a patch the server does not ship reads only its own totals and is never kept (R3067000); anyone but a dev account reads the newest patches alone, a patch past them 403 `patch_dev_only` and the patch list and the drill-down's history cut to them, and a dev account's answer, told by its token, is `private, no-store` (R4677000); both card routes take `face=all\|normal\|radiant`, All when missing, reading one face against its own field and band, and the drill-down answers the card's Normal and Radiant figures and their gap at its `patch=`, past the caller's patches 403 `patch_dev_only` (R4673000, R4673001) |
 | `GET` | `/api/stats/play-rates` | none | each card's play rate, the share of the human seats of every live game that played it, for cards `PLAY_RATES_MIN_GAMES` seats held; kept `PLAY_RATES_REFRESH_SECONDS` (R1583000) |
 | `GET` | `/api/stats/games` | none | the patch's game figures (the first seat's wins with their interval, the endings, the turns, R1256000's counts) over the window every card shares, under R654's gate, split by both seats' pilots, through the engine's `windowed_game_figures`; kept and cached as the cards', and a patch past the caller's 403 `patch_dev_only` as there (R1994000, R4677000) |
-| `GET` | `/api/stats/versions` | none | every deck card's play versions (R4675000), in catalog order, each with its figures summed over the versions it spans and read against a field of every play version's, figures only and no source (`?pilot=`, `?mode=`); through the engine's `play_version_figures`, one table per pilot and mode cut from the cards' snapshot and cached as theirs (R4675001) |
+| `GET` | `/api/stats/versions` | none | every deck card's play versions (R4675000), in catalog order, each with its figures summed over the versions it spans and read against a field of every play version's, figures only and no source (`?pilot=`, `?mode=`); through the engine's `play_version_figures`, one table per pilot and mode cut from the cards' snapshot and cached as theirs (R4675001); each row also counts `patches`, the windows every card shares that its versions reach, which `/stats`' Experimental tab shows (R4678001) |
 | `GET` | `/api/stats/ci` | none | the daily super run's last `CI_RUNS_LISTED` runs on `main` and a failed run's jobs that did not pass, read from GitHub's Actions API (with `CREATE_ISSUES_TOKEN` when set) and kept `CI_RUNS_CACHE_TTL_SECONDS`; `unavailable` when GitHub cannot be read; none on the end-to-end server (`api/ci_runs.rs`, R1935000) |
 | `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654); a PUT keeps only R1142000's summary inputs, for catalog cards (R1771000) |
 | `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768), or the sharer's seat's to a friend holding a share (§9.5), each page with both seats' frozen `loadouts` and the `cardLoadouts` of the cards its steps show (R1834003) and both seats' `portraits` (R3976000, `vanilla` before them); a page of a replay kept in memory waits for nothing, while an opening that is not kept folds its whole game behind `REPLAY_FOLDS_RUNNING_MAX` folds at once for the whole server (the co-op replays' too), a concurrent opening of the same match sharing that fold, and one that waits past `REPLAY_FOLD_WAIT_MS` is 429 `rate_limited` with `retryAfterMs` (`REPLAY_FOLD_RETRY_AFTER_MS`, R192, R3500000) |
@@ -637,6 +637,11 @@ the deck's, `--json` as `created`, `--card` filtering both, and `GET /api/stats/
 `created` (R2089000), each row only its games, an adjusted win rate, its range and a tier (R4083000), read
 against the other Created cards (`created_field`, answered as `tiers.created`), or against the average deck for The Coin, Glitch and
 the Dormant Starship, which a rule makes (R4082000).
+Each play also records what was chosen for it (its Choose One options, X and Embiggen, R4672000), each
+Created card the card whose effect made it (R4672001) and each Discover-like choice what it offered and
+picked (R4672002); the totals keep each card's `variants`, `outputs` and `offers` in the same row's `stats`,
+a seat once a game by face, no migration (R4672003). `stats-cards --card=<id>` prints its variants and
+outputs tables after its other tables, and `--json` writes them as `choices`; no public route reads them yet.
 
 `stats-cards` takes `--source=live|dev|all` (live unless told otherwise), `--mode=bo1|bo3|random`,
 `--patch=<version>`, `--pilot=human|ai|unified`, `--card=<id>` and `--json`. With no `--pilot` it
@@ -814,7 +819,7 @@ has failed on at least `LOOP_FAILING_ALERT_PASSES` passes in a row over at least
 pass), with the failure's text in the line's `message` (the issue shows only the event name, the email every
 field); `ALERT_WINDOW_MS` then holds the event to one notice an hour. The steps are `matchmaker`,
 `matches.reaper`, `matches.open_reaper`, `seats.reconcile`, `series.sweeper`, `duos.sweeper`, `challenges.sweeper`, `daily.sweeper` and the retention
-purge's ten, `game_records.fold`, `game_records.refile`, `retention.purge`, `shares.purge`, `chat.purge`, `duos.logs.purge`,
+purge's eleven, `game_records.fold`, `game_records.refile`, `retention.purge`, `shares.purge`, `tickets.purge`, `chat.purge`, `duos.logs.purge`,
 `idempotency.sweep`, `lobbies.sweep`, `practice.sweep` and `practice.prune`. Each step's text in `alerts::meaning` names its job and what
 players notice while it fails (for the matchmaker, that nobody who queues gets a game), and says that the
 email's `message` field holds the error. A reaper pass in which any match would not reap counts as failed,
@@ -1163,7 +1168,9 @@ the server's alone, as a 1v1 match's are: a room's host and guest may read it (b
 choices), and no client role reads a co-op match or its log (no grant, no policy). The retention
 loop deletes a co-op match's log `MATCH_ACTION_RETENTION_DAYS` after the match ended, as a 1v1
 match's (`duos::purge_expired_logs`); the match row and its result stay. The loop also deletes a replay
-share whose match's log is gone (`shares.purge`, R4390001).
+share whose match's log is gone (`shares.purge`, R4390001). It also deletes a cancelled queue ticket
+enqueued more than `QUEUE_TICKET_CANCELLED_KEEP_SECONDS` ago (`tickets.purge`, R4446000); queued and
+claimed tickets stay, as a queue match's mode is read from its claimed ticket (`matches_mode_of`).
 
 Migration 0041 adds the card statistics' totals (R1044000): `record_totals`, `card_totals` and
 `decklist_totals`, server-only like `game_records` (RLS on, no policy, no grant), and

@@ -484,18 +484,23 @@ pub fn play_match(config: &MatchConfig, hooks: &mut MatchHooks) -> MatchRecord {
     }
 }
 
-/// decide → reduce until !ai_to_act(state, seat) or AI_TURN_MAX_ACTIONS; nonces `t${n}`.
+/// decide → reduce until !ai_to_act(state, seat) or AI_TURN_MAX_ACTIONS; nonces `t${n}`,
+/// skipping any the game already applied (a second turn on one game must not replay the first).
 pub fn play_ai_turn(state: &GameState, seat: PlayerId, options: &mut AiOptions) -> AiTurnResult {
     let mut actions: Vec<Action> = Vec::new();
     let mut decisions: Vec<Decision> = Vec::new();
     let mut current = state.clone();
 
     let mut n = 0usize;
-    while n < AI_TURN_MAX_ACTIONS && ai_to_act(&current, seat) {
+    while actions.len() < AI_TURN_MAX_ACTIONS && ai_to_act(&current, seat) {
         let Some(decision) = decide(&current, seat, options) else {
             break;
         };
+        while current.applied.iter().any(|entry| entry.nonce == format!("t{n}")) {
+            n += 1;
+        }
         let action = Action::new(decision.action.clone(), seat, format!("t{n}"));
+        n += 1;
         decisions.push(decision);
         let result = reduce(&current, &action);
         // A refusal would be offered again on the unchanged state, so the turn stops here instead.
@@ -504,7 +509,6 @@ pub fn play_ai_turn(state: &GameState, seat: PlayerId, options: &mut AiOptions) 
         }
         actions.push(action);
         current = result.state;
-        n += 1;
     }
 
     AiTurnResult {

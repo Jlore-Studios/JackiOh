@@ -597,6 +597,9 @@ mod pg {
     }
 
     pub async fn posts_get(t: &mut PgTx<'_>, id: &str) -> Result<Option<NewsPost>, StoreError> {
+        if id.contains('\0') {
+            return Ok(None);
+        }
         run_as(t, None).await?;
         let row = sqlx::query(concat!(
             "select ",
@@ -651,6 +654,9 @@ mod pg {
         id: &str,
         at: i64,
     ) -> Result<Option<NewsPost>, StoreError> {
+        if id.contains('\0') {
+            return Ok(None);
+        }
         run_as(t, None).await?;
         let row = sqlx::query(concat!(
             "update public.news_posts
@@ -797,6 +803,9 @@ mod fake {
     }
 
     pub fn posts_get(f: &mut FakeTx<'_>, id: &str) -> Result<Option<NewsPost>, StoreError> {
+        if id.contains('\0') {
+            return Ok(None);
+        }
         let tables = call(f, "admin.posts.get")?;
         Ok(tables.posts.iter().find(|post| post.id == id).cloned())
     }
@@ -826,6 +835,9 @@ mod fake {
     }
 
     pub fn posts_take_down(f: &mut FakeTx<'_>, id: &str, at: i64) -> Result<Option<NewsPost>, StoreError> {
+        if id.contains('\0') {
+            return Ok(None);
+        }
         let tables = call(f, "admin.posts.takeDown")?;
         let Some(post) = tables
             .posts

@@ -371,8 +371,9 @@ because practice saves on players' devices store it (the practice session, `crat
 save that does not fold to its hash), `packages/cards/test/fixtures/01-hotseat-full-game.json` pins
 `"a798906b"`, and e2e specs 01, 13 and 22 compare browser and Node hashes:
 
-1. Serialize the state to `serde_json::Value`; remove the top-level keys `applied`, `opening` and
-   `generators` (the Created cards' generators, presentation only, R1956001).
+1. Serialize the state to `serde_json::Value`; remove the top-level keys `applied`, `opening`,
+   `generators` (the Created cards' generators, presentation only, R1956001) and `makers` (the Created
+   cards' makers, the game record's, R4672001).
 2. `canonical(v)`: a string, number, bool or null as `JSON.stringify` writes it (serde_json writes the
    same for integers and for the escapes `\" \\ \b \f \n \r \t \u00xx`, lower-case hex, non-ASCII
    raw); an array as `[` + items joined by `,` + `]`; an object as `{` + `"key":canonical(value)`
@@ -758,7 +759,8 @@ pub fn wrap_up_after_ms(limit_ms: i64) -> i64;      // R3498000: the ms into a h
 pub fn build_ai_deck(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> Vec<String>;
     // AiDeckOptions { banned, include, theme, mana_cap, boost, lean_set: Option<SetName> } (serde camelCase;
     // `leanSet`, R1370: at least ceil(size × AI_DECK.lean_min_share) of the deck from that set; absent, the
-    // draw is exactly the pre-R1370 one)
+    // pre-R1370 draw, a pick that would cost the theme's and the units' floors drawn again from the same
+    // roll, R4784000)
 pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> TracedAiDeck;  // { deck, lean_forced }
 pub fn redact(state: &GameState, seat: PlayerId) -> GameState;
 pub fn ai_to_act(state: &GameState, seat: PlayerId) -> bool;
@@ -1154,7 +1156,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
 | `stats [--games N] [--patch v] [--out file]` | `stats.rs` | 22 | `pnpm ai:stats` | R378's development run |
 | `golden check`, `golden bless [--seeds N]` (retired in #2578), `golden record` | `golden.rs` | 23 | — | §13 |
 | `spec check`, `spec index` | `spec.rs` | 28 | `pnpm rulings:coverage`, `rulings.test.ts` | §15 |
-| `arena …`, `agent`, `promote …` | `arena.rs`, `agent.rs`, `promote.rs` | 29 | `ladder/`, `duel.ts` | §14 |
+| `arena …`, `agent` | `arena.rs`, `agent.rs` | 29 | `ladder/`, `duel.ts` | §14 |
 
 ## 13. Golden traces
 
@@ -1227,11 +1229,10 @@ The referee holds the true state and sends each agent only `redact(state, seat)`
 must share an engine version: an `ai/*` branch differs from `main` only under `crates/ai/` and
 `training/history/` (CI enforces it, part 30).
 
-### 14.2 `arena` and `promote`
+### 14.2 `arena`
 
 ```
 cargo jackioh arena --a self|random|bin:<path> --b self|random|bin:<path> (--set improve-dev [--games N] [--extend] [--forks [--save <path>]] | --seed <base> --games N [--paired]) [--out <dir>]
-cargo jackioh promote --lane improve|unban --parent-bin <path to main's jackioh> [--dry-run] [--verify]
 ```
 
 `arena` plays game `n` on the seed `<base>:<n>`, agent `a` on `p1` in odd games. `--paired` (R850000)
@@ -1268,53 +1269,9 @@ label and `info` answer, then one JSON line a deal. A rerun of the same command 
 file by field name, replays the first saved deal's trunk once as an identity check, and plays only
 the deals still missing; a finished save, run again, plays nothing and prints its tally again.
 
-`promote` plays the lane's deals against the parent, seeds `"<lane>:<tree>:<d>"` where `<tree>` is
-`git rev-parse HEAD:crates/ai/src` (so committing `generation.json` does not change the seeds), each
-deal played twice with the seats swapped as `arena --paired` plays one (candidate `p1` in its first
-game), each seat's deck `build_ai_deck` over every set that ships minus **its own** AI's shadow-ban
-list, no handicap (Easy both). The deals are the lane's hold-out set, read only by the committed AI
-they are named for: a dry run refuses uncommitted changes in `crates/ai/src`, as a promotion and a
-verification do (R850001). Every lane's gate is the sequential test `TRAINING_GATE` (R1679000): the
-deals are played `batch_deals` (100) at a time and read in deal order as the candidate's edge, and from
-deal `min_deals` (100) on it stops at the first whose log-likelihood ratio, H0 a mean edge of
-`edge_h0` (0) against H1 `edge_h1` (+0.06) with errors `alpha` and `beta` (5% each), reaches
-`ln((1 − β) / α)` (a pass) or falls to `ln(β / (1 − α))` (a fail); undecided at `max_deals` (1,000)
-it fails. A promotion's `vsParent` is the wins out of the games of the deals it read. It promotes when:
-
-| Lane | vs parent | shadow bans |
-|---|---|---|
-| `improve` | the test passes | — |
-| `unban` | the test passes | strictly fewer than the parent's |
-| `learn` | the test passes, on deals of its own (R1012000); retired with the learned evaluation by #4159 (R4159000); no workflow runs it since #4701 (R4701000) | — |
-
-The improve lane's bar was 65 of 100 until issue #850 (R732001), then 220 of 400 paired games until
-issue #1679 (R850000), and the unban lane's 60 of 100 unpaired games.
-
-It played 100 more against `random` (SPEC §10.7's policy, `jackioh_ai::random_action`),
-needing 90, until generation 9, the first AI dealt the Meditative set, had beaten random in at least
-90 of 100 (issue #732, R732001); since then it plays none and a promotion records `"vsRandom": null`.
-The daily quality gates (`cargo jackioh gate --full`) still play random.
-
-A draw is not a win. `TRAINING_GATE` (`TrainingGate { min_deals, max_deals, batch_deals, edge_h0,
-edge_h1, alpha, beta, variance_floor }`) is a constant in `crates/engine/src/config.rs` next to
-`AI_GATE` (CLAUDE.md rule 9; part 1 wrote its predecessors, `TRAINING_IMPROVE` and `TRAINING_UNBAN`). Without
-`--dry-run` or `--verify`, a pass writes `crates/ai/generation.json` and appends the same object to
-`training/history/<lane>.jsonl`:
-
-```json
-{"generation":8,"lane":"improve","parent":"<main commit>","tree":"<crates/ai/src tree>","vsRandom":"93/100","vsParent":"87/100","shadowBan":11,"parentShadowBan":11,"date":"2026-11-02"}
-```
-
-`--verify` (CI) recomputes and compares with the branch's `generation.json`. Exit 0 on a pass, 1 on
-a failed gate. The report (Markdown, stdout) gives the wins, the bar and their 95% Wilson interval,
-and for a paired gate the edge over its deals with its interval, as `arena`'s tally computes it, in
-points of the games.
-
-Every run that plays its games, in any mode and whether or not it passes, rewrites
-`$JACKIOH_TRAINING_OUT/last-pass.md` when that directory is set: the pass in Markdown (the games the
-candidate won, lost and drew against the parent and those without a result, as `p1`, as `p2` and in
-all, and one square per game), which `training/loop.sh` put at the top of the lane's draft pull
-request until #4701 removed the lanes.
+`promote`, the training lanes' gate (a sequential test on each lane's hold-out deals, R1679000), is
+gone since #4702 (R4702000), with `TRAINING_GATE`; git history holds it. Its promotions' records are
+§14.3's.
 
 ### 14.3 `crates/ai/generation.json`
 
@@ -1331,7 +1288,7 @@ spec/README.md            the map: one line per section note, the note format, h
 spec/01-overview.md … spec/10-engine-guide.md      one note per SPEC § (its ### subsections inside)
 spec/11-rulings.md        §11's provenance paragraphs (the prose above the table), verbatim
 spec/rulings/R0001.md … spec/rulings/R0762.md      one note per §11 row (4-digit, zero-padded; 561 files)
-spec/INDEX.md             generated by `cargo jackioh spec index`: id | title | note | proven in
+spec/INDEX.md             generated by `cargo jackioh spec index`: id | title | note | touches
 ```
 
 A ruling note:

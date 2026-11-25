@@ -17,6 +17,7 @@
 //!  - a spend's idempotency key and kept answer `IDEMPOTENCY_KEY_TTL_HOURS` after it was written (R2124000).
 //!  - an expired private lobby, started or not, once its format's TTL past its last change has passed (SPEC §9.5, §13.9, R3730004). Reads already answer 404 for it; the sweep deletes the row, as lobby creation already does opportunistically.
 //!  - a replay share whose match holds no action-log row, in a step of its own right after the purge (`purge_shares`, R4390001).
+//!  - a cancelled queue ticket (left, unheard from for `QUEUE_TICKET_STALE_MS`, or cleared at a match end) once it was enqueued more than `QUEUE_TICKET_CANCELLED_KEEP_SECONDS` ago, in a step of its own (`purge_tickets`, R4446000). A queued ticket and a claimed one stay.
 //!
 //! In Postgres it is one call to `app.purge_expired_rows` (migration 0013, with 0029's third cutoff
 //! and 0041's fourth). A practice seed is a step of its own, after the sweep of unsettled claims: every
@@ -34,7 +35,7 @@ use crate::app::App;
 use crate::config::{
     CODE_ATTEMPT_RETENTION_DAYS, GAME_RECORD_RAW_RETENTION_DAYS, GAME_RECORD_REFILE_GRACE_SECONDS,
     GAME_RECORD_REFILE_WINDOW_SECONDS, MATCH_ACTION_RETENTION_DAYS, MS_PER_DAY, MS_PER_SECOND,
-    PLAY_TELEMETRY_RETENTION_DAYS, RETENTION_PURGE_INTERVAL_SECONDS,
+    PLAY_TELEMETRY_RETENTION_DAYS, QUEUE_TICKET_CANCELLED_KEEP_SECONDS, RETENTION_PURGE_INTERVAL_SECONDS,
 };
 use crate::db::store::{RetentionPurgeInput, RetentionPurgeResult, StoreError};
 use crate::loops::FailingStreak;
@@ -77,6 +78,16 @@ pub async fn purge_shares(app: &App) -> Result<i64, StoreError> {
     Ok(purged)
 }
 
+/// R4446000: deletes every cancelled queue ticket enqueued more than `QUEUE_TICKET_CANCELLED_KEEP_SECONDS`
+/// ago. Answers how many it took.
+pub async fn purge_tickets(app: &App) -> Result<i64, StoreError> {
+    let cutoff = now_ms() - QUEUE_TICKET_CANCELLED_KEEP_SECONDS * MS_PER_SECOND;
+    let mut tx = app.db.begin(None).await?;
+    let purged = tx.tickets_purge(cutoff).await?;
+    tx.commit().await?;
+    Ok(purged)
+}
+
 /// R1596000: refiles every finished match whose record never landed, while its log is held: each
 /// pass, those that ended inside the window but past the grace, and, a last time, those whose log
 /// the purge takes before its next pass. Answers how many it wrote.
@@ -115,6 +126,7 @@ pub async fn run_purge(app: Arc<App>) {
     let mut refiling = FailingStreak::new("game_records.refile");
     let mut purging = FailingStreak::new("retention.purge");
     let mut sharing = FailingStreak::new("shares.purge");
+    let mut ticketing = FailingStreak::new("tickets.purge");
     let mut chatting = FailingStreak::new("chat.purge");
     let mut logging = FailingStreak::new("duos.logs.purge");
     let mut expiring = FailingStreak::new("idempotency.sweep");
@@ -164,6 +176,12 @@ pub async fn run_purge(app: Arc<App>) {
             Ok(0) => {}
             Ok(purged) => log_info("shares.purged", json!({ "shares": purged })),
             Err(error) => log_warn("shares.purge_failed", json!({ "message": error.to_string() })),
+        }
+        // R4446000: cancelled queue tickets, apart too.
+        match ticketing.track(purge_tickets(&app).await) {
+            Ok(0) => {}
+            Ok(purged) => log_info("tickets.purged", json!({ "tickets": purged })),
+            Err(error) => log_warn("tickets.purge_failed", json!({ "message": error.to_string() })),
         }
         // Play together (#941): B53's chat retention, apart, so one failure never holds the other.
         match chatting.track(crate::social::chat::purge(&app).await) {

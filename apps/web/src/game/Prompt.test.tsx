@@ -13,7 +13,7 @@ import Prompt from "./Prompt.tsx";
 import { IDLE, type Interaction } from "./actions.ts";
 import { DISCOVER_OPTION_LIMIT, X_CARD_LIMIT, testid } from "./contract.ts";
 import { withCatalog } from "../test/board.tsx";
-import { baseView, card, emptySide, pendingFor, unit, waitingPending } from "../test/fixtures.ts";
+import { baseView, card, emptySide, faceDownBackrow, pendingFor, unit, waitingPending } from "../test/fixtures.ts";
 
 afterEach(cleanup);
 
@@ -819,6 +819,83 @@ describe("R821000 a Plague Counter placement is answered on the board, not from 
 
     expect(screen.getByTestId("prompt-modal").getAttribute("data-board-only")).toBeNull();
     expect(optionTestids()).toContain("prompt-option-instance:e1");
+  });
+});
+
+describe("R4781000 a target prompt keeps its list and also answers on the board", () => {
+  const options: PendingOption[] = [
+    { key: "instance:e1", label: "Enemy unit", instanceId: "e1" },
+    { key: "instance:u1", label: "Your unit", instanceId: "u1" },
+    { key: "instance:t1", label: "Face-down card", instanceId: "t1", player: "p2", row: "backrow", lane: 3 },
+    { key: "hero:p2", label: "Enemy hero", player: "p2" },
+  ];
+  const targetView = (pending: PendingView): PlayerView =>
+    baseView({
+      you: emptySide("p1", {
+        hand: [card({ instanceId: "h1", defId: "core-002" })],
+        units: [unit("p1", { instanceId: "u1" }), null, null, null, null],
+      }),
+      opponent: emptySide("p2", {
+        hand: { count: 3 },
+        units: [unit("p2", { instanceId: "e1" }), null, null, null, null],
+        backrow: [null, null, faceDownBackrow, null, null],
+      }),
+      pending,
+    });
+
+  it("a single target prompt keeps its list and marks the board, and a list click still sends at once", () => {
+    const onAction = vi.fn();
+    render(
+      <Prompt
+        view={targetView(pendingFor("target", options, { prompt: "Choose a target" }))}
+        legal={[]}
+        onAction={onAction}
+      />,
+    );
+
+    expect(kindOfModal()).toBe("target");
+    expect(optionTestids()).toContain("prompt-option-instance:e1");
+    expect(screen.getByTestId("prompt-submit")).toBeInTheDocument();
+    const blessed = (screen.getByTestId("prompt-modal").getAttribute("data-board-testids") ?? "").split(" ");
+    expect(blessed).toContain(testid.card("e1"));
+    expect(blessed).toContain(testid.card("u1"));
+    expect(blessed).toContain(testid.hero("opponent"));
+    expect(blessed).toContain(testid.zone("opponent", "backrow", 3));
+    expect(screen.getByTestId("prompt-modal")).toHaveTextContent("Highlighted on the board as well.");
+
+    fireEvent.click(screen.getByTestId("prompt-option-instance:e1"));
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith({
+      type: "answer",
+      choiceId: "ch1",
+      selection: [{ pick: "instance", instanceId: "e1" }],
+    });
+  });
+
+  it("a several-pick target prompt keeps its list with Confirm gating", () => {
+    const onAction = vi.fn();
+    render(
+      <Prompt
+        view={targetView(pendingFor("target", options, { prompt: "Choose two targets", min: 1, max: 2 }))}
+        legal={[]}
+        onAction={onAction}
+      />,
+    );
+
+    expect(kindOfModal()).toBe("target");
+    expect(optionTestids()).toContain("prompt-option-instance:e1");
+    expect(screen.getByTestId("prompt-modal")).toHaveTextContent("Highlighted on the board as well.");
+
+    // A list click stages the pick and sends nothing until Confirm.
+    fireEvent.click(screen.getByTestId("prompt-option-instance:e1"));
+    expect(onAction).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId("prompt-submit"));
+    expect(onAction).toHaveBeenCalledTimes(1);
+    expect(onAction).toHaveBeenCalledWith({
+      type: "answer",
+      choiceId: "ch1",
+      selection: [{ pick: "instance", instanceId: "e1" }],
+    });
   });
 });
 

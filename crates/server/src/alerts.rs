@@ -528,6 +528,10 @@ pub fn meaning(event: &str) -> &'static str {
             "The replay share purge (R4390001), which deletes shares whose replay's log the retention purge took, is failing.",
             "Nothing players see yet: dead replay shares pile up in the database."
         ),
+        "tickets.purge.failing" => failing_step!(
+            "The queue ticket purge (R4446000), which deletes cancelled queue tickets enqueued over `QUEUE_TICKET_CANCELLED_KEEP_SECONDS` ago, is failing.",
+            "Nothing players see yet: cancelled tickets, each a copy of a deck, pile up in the database."
+        ),
         "practice.sweep.failing" => failing_step!(
             "The practice settle sweep (R2422000), which settles practice claims unsettled after `PRACTICE_SETTLE_GRACE_SECONDS`, is failing.",
             "Practice claims are not paid or refused, so rewards are late."
@@ -861,7 +865,7 @@ mod tests {
         names
     }
 
-    const FAILING_STEPS: [&str; 18] = [
+    const FAILING_STEPS: [&str; 19] = [
         "matchmaker",
         "matches.reaper",
         "seats.reconcile",
@@ -870,6 +874,7 @@ mod tests {
         "game_records.refile",
         "retention.purge",
         "shares.purge",
+        "tickets.purge",
         "chat.purge",
         "duos.logs.purge",
         "idempotency.sweep",

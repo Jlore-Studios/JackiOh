@@ -1690,68 +1690,6 @@ pub const STARSCAPE_REWARDS: &[(StarscapeReward, i32)] = &[
 ];
 
 // ---------------------------------------------------------------------------------------------
-// The AI training lanes (SURFACE §14.2; docs/v0.3.0/README.md §8).
-// ---------------------------------------------------------------------------------------------
-
-/// R1679000: a training lane's promotion gate (SURFACE §14.2), a sequential probability ratio test
-/// on paired hold-out deals. `cargo jackioh promote` plays deal after deal against the parent, the AI
-/// on `main`, each twice with the seats swapped (R850000), and reads each deal's edge for the
-/// candidate: its wins less the parent's over the two games, halved, from −1 to 1 (a draw, or a game
-/// without a result, is nobody's win). The test weighs H0, a true mean edge of `edge_h0` (a successor
-/// no stronger than its parent), against H1, `edge_h1` (the smallest gain worth banking), by the log
-/// of their likelihood ratio, read as two normal laws with the deals' own variance: after `n` deals of
-/// edges summing to `S`, `(edge_h1 − edge_h0) · (S − n · (edge_h0 + edge_h1) / 2) / σ²`, the
-/// variance `σ²` the deals' own, never below `variance_floor`. From deal `min_deals` on it stops at
-/// the first deal whose ratio reaches `ln((1 − beta) / alpha)`, a pass, or falls to
-/// `ln(beta / (1 − alpha))`, a fail; one still between the two at `max_deals` fails. So an equal
-/// successor passes about `alpha` of the time and one at H1 fails about `beta` of it, and a clear
-/// loser stops early. The deals are played `batch_deals` at a time and read in deal order, so where it
-/// stops never depends on the thread count, and CI's `promote --verify` plays the same deals again.
-///
-/// The lanes play no games against SPEC §10.7's random policy: they dropped them once generation 9,
-/// the first AI dealt the Meditative set (issue #732), had beaten random in at least 90 of 100
-/// (R732001). The daily quality gates (`cargo jackioh gate --full`) still hold every AI on `main` to
-/// their floor against random.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct TrainingGate {
-    /// The deals the test reads before it may stop: the variance it reads needs this many.
-    pub min_deals: i32,
-    /// The most deals it plays; a test undecided at the last one fails.
-    pub max_deals: i32,
-    /// The deals played at once (on rayon's pool) before the test reads them.
-    pub batch_deals: i32,
-    /// H0's mean edge: a successor no stronger than its parent.
-    pub edge_h0: f64,
-    /// H1's mean edge: the gain the gate is built to bank, +0.06 (a 53% win rate, about +21 Elo).
-    pub edge_h1: f64,
-    /// The chance it promotes a successor at H0.
-    pub alpha: f64,
-    /// The chance it fails one at H1.
-    pub beta: f64,
-    /// The least variance the ratio divides by: deals that all come out alike (an AI against
-    /// itself splits every deal) have none.
-    pub variance_floor: f64,
-}
-
-/// R1679000: every lane's gate, the `improve`, `unban` and `learn` lanes' alike (the unban lane adds
-/// strictly fewer shadow bans than the parent's). On #1058's paired deals, whose edges had a variance
-/// of about 0.27 (of 200 deals, 25 won twice, 146 split and 29 lost twice), it promotes an equal
-/// successor about 4.5% of the time and one that truly wins 52%, 53% or 55% about 60%, 91% or all of
-/// it, where 220 of 400 (R850000) let those through about 6%, 15% and 53% of the time; it averages
-/// about 800 games at H0 and H1, 1,050 between them, and 300 for a clear loser, never more than 2,000.
-pub const TRAINING_GATE: TrainingGate = TrainingGate {
-    min_deals: 100,
-    max_deals: 1000,
-    batch_deals: 100,
-    edge_h0: 0.0,
-    edge_h1: 0.06,
-    alpha: 0.05,
-    beta: 0.05,
-    variance_floor: 0.01,
-};
-
-// ---------------------------------------------------------------------------------------------
 // Replays (R768, issue #508).
 // ---------------------------------------------------------------------------------------------
 
@@ -1829,6 +1767,13 @@ pub const CRAFT_MAX_N: i32 = 10;
 pub const CRAFT_RADIANT_MULTIPLIER: i32 = 2;
 /// What one Echo costs, per N.
 pub const CRAFT_ECHO_POINTS_PER_N: i32 = 4;
+/// #4827 (R880): the highest attack or health a crafted Unit may have, one over the largest budget
+/// (`craft_points_budget(CRAFT_MAX_COST)`, 22), which a 0/23 Unit spends whole, so no recipe within its
+/// budget meets it. With it and `recipe_points` saturating, no recipe's points wrap under a budget.
+pub const CRAFT_MAX_STAT: i32 = CRAFT_POINTS_BASE + CRAFT_POINTS_PER_MANA * CRAFT_MAX_COST + 1;
+/// #4827 (R883): what a keyword with no `CRAFT_KEYWORD_PRICES` row prices at, on the card's keyword line
+/// or granted by a block: more than any budget, beside the validator's "… is not a craft block".
+pub const CRAFT_UNPRICED_POINTS: i32 = i32::MAX;
 /// What a crafted definition's id starts with, before the recipe's digest (R882).
 pub const CRAFT_ID_PREFIX: &str = "craft:";
 /// The first words of a crafted card's name; the designer may replace them (R883).
@@ -2655,6 +2600,9 @@ pub const BLACK_HOLE_CAPACITY: i32 = 10;
 pub const SLASH_BASE_LANE: i32 = 3;
 /// R3554002: the lanes the Radiant face may slash.
 pub const SLASH_LANES: [i32; 3] = [2, 3, 4];
+
+/// R4589001: "since your last turn" reaches back this many player-turns.
+pub const SINCE_LAST_TURN: i32 = 1;
 
 #[cfg(test)]
 mod tests {

@@ -138,6 +138,8 @@ async fn r3335001_a_ladder_game_pays_each_fleet_source_once() {
             card: stinky.clone(),
             turn: 2,
             radiant: false,
+            variant: None,
+            source: None,
         }]),
         starship_pieces_fused: Some(3),
         starships_launched: Some(1),

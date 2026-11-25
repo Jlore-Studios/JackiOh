@@ -519,6 +519,12 @@ pub fn played_this_game_with_tag(state: &GameState, player: PlayerId, tag: Tag) 
         .unwrap_or(0)
 }
 
+/// R4593001 (Infinite Assault #196 Emergent Behavior): how many turns `player` has started this
+/// game, the current turn included (`PlayerState.turns_started`, R845).
+pub fn turns_started_of(state: &GameState, player: PlayerId) -> i32 {
+    state.players[player].turns_started
+}
+
 /// B5 E4, R451: the last Spell either player played (Classic #57 Echo) as its play recorded it (a
 /// played Echo is the Spell it copied), or `None`. A copy.
 pub fn last_spell_played(state: &GameState) -> Option<PlayRecord> {
@@ -1581,8 +1587,11 @@ fn exiles_on_damage(state: &GameState, source: &CardInstance) -> bool {
 }
 
 /// Whether a unit's Divine Shield is up (§6.1): the view drops a spent one.
+/// Whether a hit on `unit` pops its Divine Shield: one immune to damage keeps it (R4591004).
 fn is_shielded(state: &GameState, unit: &CardInstance) -> bool {
-    unit_has(state, unit, KeywordKind::DivineShield) && unit.divine_shield_spent != Some(true)
+    unit_has(state, unit, KeywordKind::DivineShield)
+        && unit.divine_shield_spent != Some(true)
+        && !crate::effects::firewall::units_immune_now(state, unit)
 }
 
 /// §4.4 steps 1 to 4 on a unit, read as `damage.rs`'s pipeline reads them (`damage::project_hit`,

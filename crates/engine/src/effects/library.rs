@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use crate::effects::targets::{PlayerSpec, player_of};
 use crate::script::Effect;
 use crate::state::{CardInstance, find_instance};
+use crate::wire::{PLAYER_IDS, Selection};
 use crate::zones::{OffFieldZone, exile_to_pile, move_to_zone, report_graveyard_landing};
 
 /// `exileRandomFromLibrary`'s arguments: `count` defaults to 1, `player` to "self".
@@ -74,6 +75,42 @@ pub fn exile_bottom_of_library(args: ExileBottomOfLibraryArgs) -> Effect {
 pub struct DiscardLibraryArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub player: Option<PlayerSpec>,
+}
+
+/// `putOnLibraryBottom`'s arguments: none.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct PutOnLibraryBottomArgs {}
+
+/// R4586005 (Infinite Assault #31 Unreliable Narrator): each picked card still in a library goes to
+/// that library's bottom, in pick order; the rest keep their order. No rng, no event: nobody
+/// reads a library (R177).
+pub fn put_on_library_bottom(_args: PutOnLibraryBottomArgs) -> Effect {
+    Effect::new("putOnLibraryBottom", move |ctx| {
+        let ids: Vec<String> = ctx
+            .targets
+            .iter()
+            .filter_map(|selection| match selection {
+                Selection::Instance { instance_id } => Some(instance_id.clone()),
+                _ => None,
+            })
+            .collect();
+        for id in ids {
+            for player in PLAYER_IDS {
+                let Some(at) = ctx.state.players[player]
+                    .library
+                    .iter()
+                    .position(|card| card.id == id)
+                else {
+                    continue;
+                };
+                let card = ctx.state.players[player].library.remove(at);
+                ctx.state.players[player].library.push(card);
+                break;
+            }
+        }
+    })
 }
 
 /// R3951001: "discard your deck" (Classic #28 Second Wind's Radiant face): every card of a library goes to
