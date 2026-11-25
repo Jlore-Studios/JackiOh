@@ -9,6 +9,7 @@
 //! and the `tributeWorth` flag its script declares.
 
 use jackioh_engine::effects::{damage, sacrifice};
+use jackioh_engine::play_choices::equip_onto_at;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
@@ -124,6 +125,11 @@ fn reborn_body() -> CardDef {
         }),
     )
 }
+/// S #16 Rod of Ages's lending shape (R1869000): a Unit that lends Equip, so any Unit card of its
+/// controller's may be played onto it as an Equip play.
+fn lender() -> CardDef {
+    unit("lender", 2, 2, 1562, json!({ "cost": 1 }))
+}
 
 fn defs() -> Vec<CardDef> {
     vec![
@@ -138,6 +144,7 @@ fn defs() -> Vec<CardDef> {
         hand_over_golem(),
         reborn_body(),
         summoned_for_opponent(),
+        lender(),
     ]
 }
 
@@ -247,6 +254,13 @@ fn scripts() -> IndexMap<String, CardScripts> {
             cry: Some(hook(|_ctx| {
                 vec![sacrifice(json_as(json!({ "target": { "of": "chosen" } })))]
             })),
+            ..Script::default()
+        }),
+    );
+    scripts.insert(
+        lender().id,
+        both(Script {
+            static_flags: flags(json!({ "lendsEquip": true })),
             ..Script::default()
         }),
     );
@@ -1042,6 +1056,135 @@ mod r360_a_tribute_that_takes_an_opposing_unit_summons_55s_base_face_for_the_opp
         assert_eq!(
             top(&after.players.p1.units[2]).map(|unit| unit.controller),
             Some(PlayerId::P1)
+        );
+    }
+}
+
+mod r4834000_an_equip_play_whose_card_is_handed_to_the_opponent_fuses_nothing {
+    use super::*;
+
+    /// A lender in p1's unit zone 1 and two plain Units of p1's beside it (the Tribute's own picks),
+    /// with #55's base face in hand.
+    fn lending(seed: &str) -> (GameState, CardInstance, [CardInstance; 2], CardInstance) {
+        let mut state = playing(seed);
+        let host = put(
+            &mut state,
+            &lender().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let mine2 = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 2),
+            json!({}),
+        );
+        let mine3 = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P1, Row::Units, 3),
+            json!({}),
+        );
+        let card = hand_card(&mut state, &hand_over_golem().id, PlayerId::P1);
+        (state, host, [mine2, mine3], card)
+    }
+
+    /// p1's Equip play of `card` onto the lender in unit zone 1, paid with `tributes`.
+    fn equip_play(card: &CardInstance, tributes: &[&str]) -> Value {
+        json!({
+            "type": "play",
+            "instanceId": card.id,
+            "zone": { "row": "units", "lane": 1 },
+            "equip": true,
+            "tributes": tributes,
+            "playerId": "p1",
+        })
+    }
+
+    #[test]
+    fn r4834000_the_card_lands_on_the_opponents_side_and_its_host_is_left_unfused_and_still_lends() {
+        let (mut state, host, [mine2, mine3], card) = lending("equip-hand-over");
+        let theirs = put(
+            &mut state,
+            &plain.id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
+        // The play is listed, as R360 and R1869000 each allow it.
+        assert!(
+            plays_in(&state, PlayerId::P1, &card.id)
+                .iter()
+                .any(|play| matches!(
+                    play,
+                    ActionBody::Play { zone: Some(zone), equip: Some(true), tributes: Some(paid), .. }
+                        if zone.row == Row::Units && zone.lane == 1 && paid.contains(&theirs.id)
+                )),
+            "an Equip play onto the lender paid with the opposing unit is listed"
+        );
+
+        let result = act_result(&state, equip_play(&card, &[&mine2.id, &mine3.id, &theirs.id]));
+        assert_eq!(result.error, None);
+        let after = &result.state;
+        let golem = top(&after.players.p2.units[0]);
+        assert_eq!(golem.map(|unit| unit.id.clone()), Some(card.id.clone()));
+        assert_eq!(golem.map(|unit| unit.controller), Some(PlayerId::P2));
+        let pile = after.players.p1.units[0].as_ref().expect("the lender's pile");
+        assert_eq!(pile.len(), 1, "nothing stands on the lender");
+        assert_eq!(pile[0].id, host.id);
+        assert_eq!(pile[0].def_id, lender().id, "the lender holds no fusion");
+        assert!(events_of_type(&result.events, GameEventType::Fused).is_empty());
+        assert!(matches_object(
+            &of_type(&result.events, GameEventType::Summoned),
+            &json!([{ "player": "p2", "instanceId": card.id, "lane": 1 }])
+        ));
+        // Left as it was, the lender still takes a plain Unit as an Equip play (R1869000).
+        let mut next = after.clone();
+        let another = hand_card(&mut next, &plain.id, PlayerId::P1);
+        assert_eq!(
+            equip_onto_at(
+                &next,
+                PlayerId::P1,
+                &another,
+                &slot(PlayerId::P1, Row::Units, 1),
+                &[]
+            ),
+            Some(host.id.clone())
+        );
+    }
+
+    #[test]
+    fn r4834000_with_no_open_zone_on_the_opponents_side_it_lands_on_its_host_as_the_play_named_and_fuses() {
+        let (mut state, host, [mine2, mine3], card) = lending("equip-hand-over-full");
+        // p2's row is full, and the one unit of theirs tributed comes back through Reborn into its zone.
+        let phoenix = put(
+            &mut state,
+            &reborn_body().id,
+            slot(PlayerId::P2, Row::Units, 1),
+            json!({}),
+        );
+        for lane in [2, 3, 4, 5] {
+            put(
+                &mut state,
+                &plain.id,
+                slot(PlayerId::P2, Row::Units, lane),
+                json!({}),
+            );
+        }
+
+        let result = act_result(&state, equip_play(&card, &[&mine2.id, &mine3.id, &phoenix.id]));
+        assert_eq!(result.error, None);
+        let after = &result.state;
+        assert_eq!(events_of_type(&result.events, GameEventType::Fused).len(), 1);
+        assert!(
+            find_instance(after, &card.id).is_none(),
+            "the Golem fused into the lender"
+        );
+        let kept = top(&after.players.p1.units[0]);
+        assert_eq!(kept.map(|unit| unit.id.clone()), Some(host.id.clone()));
+        assert_eq!(kept.map(|unit| unit.controller), Some(PlayerId::P1));
+        assert_eq!(
+            top(&after.players.p2.units[0]).map(|unit| unit.def_id.clone()),
+            Some(reborn_body().id)
         );
     }
 }
