@@ -19022,6 +19022,7 @@
     "4779": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-25T04:36:35Z",
         "difficulty": "hard",
