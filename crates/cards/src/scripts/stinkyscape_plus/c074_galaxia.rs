@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #74 Galaxia (§6.2, §10.5 step 7; R119, R1420, R2179002, R3568000): (2) Unit, Epic,
+//! SPEC §8.12 S+ #74 Galaxia (§6.2, §10.5 step 7; R119, R1420, R2179002, R3568000, R4826000): (2) Unit, Epic,
 //! 4/6 → 8/12, a card of the Stinkyscape+ set. Built by S20 (#3568).
 //!   Base:    "Aura: The first Unit you play each turn gets +{attack} Attack." (attack 3)
 //!   Radiant: the same at +6 attack.
@@ -13,8 +13,9 @@
 //! her own play (R119), nor a play that resolved as she arrived, so she never buffs herself. She remembers
 //! the turn she last gave the attack, which ends that turn's offer; a new turn, or a new arrival after she
 //! left, is a new offer. A card set face-down is no Unit (R783004), a cast on draw is no play (R2179002),
-//! and only her controller's plays count. Both faces are one script: the Radiant face's 6 is her declared
-//! `attack`.
+//! and only her controller's plays count. A first Unit that leaves the field before resolving spends the
+//! turn's offer without receiving the buff, and the next Unit played that turn is not the first (R4826000).
+//! Both faces are one script: the Radiant face's 6 is her declared `attack`.
 
 use jackioh_engine::prelude::*;
 
@@ -23,12 +24,12 @@ pub const ID: &str = "stinkyscapeplus-074";
 /// The memory key of the turn she last gave her attack: once a turn (R3568000).
 const GRANTED_TURN: &str = "grantedTurn";
 
-/// The Unit this event is her controller's play of, standing face-up on the field as a Unit, or `None`.
+/// Whether this event is her controller's resolved play of a Unit that the ruling counts
+/// (R119, R783004, R2179002, R3568000, R4826000), returning its instance id.
 fn played_unit(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
     let GameEvent::CardResolved {
         player,
         instance_id,
-        permanent,
         ..
     } = event
     else {
@@ -36,34 +37,41 @@ fn played_unit(ctx: &EffectContext<'_>, event: &GameEvent) -> Option<String> {
     };
     // R2179002: a card cast on draw is no play. R119: she does not answer her own play.
     let this = ctx.self_.as_ref()?;
-    if *player != ctx.controller || !*permanent || cast_on_draw_event(event) || *instance_id == this.id {
+    if *player != ctx.controller
+        || cast_on_draw_event(event)
+        || *instance_id == this.id
+        || played_type_of(&*ctx.state, event) != Some(CardType::Unit)
+    {
         return None;
     }
-    let state: &GameState = &*ctx.state;
-    let unit = find_instance(state, instance_id)?;
-    // R383, R783004: what stands in a unit zone is a Unit, a card set face-down is a trap.
-    (unit.zone.z() == ZoneName::Field
-        && unit.controller == ctx.controller
-        && card_type_of(state, unit) == CardType::Unit)
-        .then(|| instance_id.clone())
+    Some(instance_id.clone())
 }
 
 fn first_unit() -> TriggerDef {
     TriggerDef::new("g74-first-unit", &[GameEventType::CardResolved], |ctx, event| {
-        let Some(unit) = played_unit(&*ctx, event) else {
+        let Some(unit_id) = played_unit(&*ctx, event) else {
             return vec![];
         };
         let turn = ctx.state.turn;
         if recalled(&*ctx, GRANTED_TURN) == Some(json!(turn)) {
             return vec![];
         }
-        vec![
-            remember(json_as(json!({ "key": GRANTED_TURN, "value": turn }))),
-            buff(json_as(json!({
-                "target": { "of": "instance", "instanceId": unit },
+        let mut effects = vec![remember(json_as(json!({ "key": GRANTED_TURN, "value": turn })))];
+        // R4826000: the attack buff is given only if the played Unit still stands face-up on the field
+        // under her controller's control once its play resolves.
+        let state: &GameState = &*ctx.state;
+        let standing = find_instance(state, &unit_id).is_some_and(|unit| {
+            unit.zone.z() == ZoneName::Field
+                && unit.controller == ctx.controller
+                && card_type_of(state, unit) == CardType::Unit
+        });
+        if standing {
+            effects.push(buff(json_as(json!({
+                "target": { "of": "instance", "instanceId": unit_id },
                 "attack": param(&*ctx, "attack"),
-            }))),
-        ]
+            }))));
+        }
+        effects
     })
 }
 
@@ -81,7 +89,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-// S+ #74 Galaxia — SPEC §8.12 row 74 (R119, R2179002, R3568000).
+// S+ #74 Galaxia — SPEC §8.12 row 74 (R119, R2179002, R3568000, R4826000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::*;
@@ -89,6 +97,7 @@ mod tests {
     use super::ID;
     use crate::scenario;
 
+    const P1: PlayerId = PlayerId::P1;
     const FIRST: &str = "stand-in (1) 2/2";
     const SECOND: &str = "stand-in (1) 3/3";
     const THIRD: &str = "stand-in (1) 4/4";
@@ -96,6 +105,9 @@ mod tests {
     const ENEMY: &str = "stand-in (1) 6/6"; // p2's own Unit
     const SPELL: &str = "stand-in (0) Spell";
     const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
+    // Issue #4826: a first Unit that left the field before resolving spends the offer all the same (R4826000).
+    const OCCIDENTAL: &str = "traininggrounds-028"; // Occidental
+    const EXILE: &str = "classic-010"; // Exile
 
     /// The attack a face adds: `attack` 3, Radiant 6.
     fn bonus(radiant: bool) -> i32 {
@@ -195,5 +207,59 @@ mod tests {
         // p2's turn: their first Unit is not her controller's play.
         s.play(ENEMY, json!({}));
         s.expect_stats(ENEMY, json!({ "attack": 6 }));
+    }
+
+    #[test]
+    fn r4826000_first_unit_dying_to_its_cry_spends_the_buff_so_second_unit_gets_nothing() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": {
+                "hand": [OCCIDENTAL, SECOND, FILLER],
+                "field": [{ "def": ID, "lane": 1 }],
+                "mana": 10,
+                "library": [FILLER, FILLER, FILLER],
+            },
+            "p2": { "hand": [FILLER], "library": [FILLER, FILLER] },
+        }));
+        // Occidental destroys all permanents in lane 5, destroying itself upon arrival.
+        s.play(OCCIDENTAL, json!({ "zone": 5 }));
+        s.expect_in_zone(OCCIDENTAL, "graveyard");
+        // The second Unit played this turn is not the first, so it receives no buff.
+        s.play(SECOND, json!({ "zone": 2 }));
+        let second_id = s.unit_at(P1, 2).id;
+        assert_eq!(
+            s.stats(second_id.as_str()).attack,
+            3,
+            "the second Unit played this turn is not the first"
+        );
+    }
+
+    #[test]
+    fn r4826000_a_countered_first_unit_never_resolved_so_second_unit_gets_the_buff() {
+        crate::register_all();
+        let mut s = scenario(json!({
+            "p1": {
+                "hand": [FIRST, SECOND, FILLER],
+                "field": [{ "def": ID, "lane": 1 }],
+                "mana": 10,
+                "library": [FILLER, FILLER, FILLER],
+            },
+            "p2": {
+                "backrow": [{ "def": EXILE, "faceUp": false, "lane": 2 }],
+                "hand": [FILLER],
+                "library": [FILLER, FILLER],
+            },
+        }));
+        // p1 plays FIRST (cost 1) into lane 2; p2's Exile trap counters and exiles it.
+        s.play(FIRST, json!({ "zone": 2 }));
+        s.expect_in_zone(FIRST, "exile");
+        // R448: a countered play was never resolved and never played; the next Unit to resolve is the first.
+        s.play(SECOND, json!({ "zone": 3 }));
+        let second_id = s.unit_at(P1, 3).id;
+        assert_eq!(
+            s.stats(second_id.as_str()).attack,
+            3 + bonus(false),
+            "the first Unit to resolve gets the buff"
+        );
     }
 }
