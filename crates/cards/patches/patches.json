@@ -36398,5 +36398,62 @@
     ],
     "fragment": "a-unit-token-sent-into-a-deck-is-reported-as-gone-not",
     "changes": []
+  },
+  {
+    "version": "v0.6.14e",
+    "date": "2026-11-25",
+    "title": "Patch: Help-aimed buffs land stolen and random casts on the caster's side",
+    "source": "#4844",
+    "notes": "Fortify, Hopeful Jelly Bean, Divine Spirit, Power Word Shield, Plastanium, Metaglass, Surge Alloy and Graphite declare aim Help on their side-any targets (R656), so Palantir steals, Solarius Prime casts, Appropriations targets and Lucky rerolls land them on the caster's side; each keeps its aim-less script in KEPT_SCRIPTS, keyed by this fragment (R4779000). Sweep of every side-any target with no aim (98 files; 26 match only in a scope or effect such as damage_all, fill_board or set_stats_all, with no TargetDecl to aim, and are untouched): changed traininggrounds-012, traininggrounds-027, stinkyscape-010-2, stinkyscape-010-3, stinkyscapeplus-045, stinkyscapeplus-047, stinkyscapeplus-049, stinkyscapeplus-050 (every effect on the target can only help it: buffs, Radiant, Divine Shield, Ranged, Rush, Charge, Windfury, Pierce, Deft, Frenzy, First Strike). Left: damage to the target (classic-019, classic-036, classic-059, classic-083, classicplus-059, classicplus-076-1, core-031, core-035, core-044, core-068, core-070, core-093-1, core-074, meditative-005, meditative-039-3, stinkyscape-003, stinkyscape-011-1, stinkyscapeplus-001, stinkyscapeplus-038, traininggrounds-011, traininggrounds-058); destroy, exile, bounce or shuffle of the target (classic-048, classicplus-012-1, classicplus-032-1, classicplus-032-2, core-016, core-034, core-036, meditative-024, stinkyscape-009, stinkyscape-012-1, stinkyscape-012-2, stinkyscape-020, stinkyscape-099, stinkyscapeplus-004, stinkyscapeplus-085, stinkyscapeplus-104, traininggrounds-026, traininggrounds-046); Freeze (stinkyscape-001, stinkyscape-002, stinkyscapeplus-022); removal of what the target has, Vanilla, De-Radiant or Plague Counters (classicplus-009, classic-039, classic-078, meditative-053, stinkyscapeplus-019); Brittle, lock, Dormant, kill-deadline, Immutable or Immune to Spells (stinkyscapeplus-048, stinkyscapeplus-044, stinkyscapeplus-051, stinkyscapeplus-094, stinkyscapeplus-046, all of which can harm the target); set-stats or shift whose help depends on the target (traininggrounds-034, stinkyscape-010-1); damage-or-heal duals and hero setters whose help depends on the mode or target (classicplus-012-2, classicplus-065-2, classicplus-065-3, core-024, classic-029); copies that leave the target unchanged (core-061, traininggrounds-053, traininggrounds-037); Duo plus Radiant (stinkyscape-110, the Duo can harm); a random Fruit that can harm (stinkyscape-141). No plays claimed: all eight change only a stolen or random cast, which none of classify's forced games against the base build reaches (stage 2 found none playing differently on three successive bases), so no card's statistics restart (R1370000); the fragment ships for the kept scripts keyed by it (R4844000).",
+    "player": {
+      "title": "Stolen buffs help the thief",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Stolen or random casts that aim at enemies now land Fortify, Hopeful Jelly Bean, Divine Spirit and Power Word Shield on the caster's own side.",
+        "Surge Alloy, Plastanium, Metaglass and Graphite land the same way now, instead of buffing the enemy."
+      ]
+    },
+    "commits": [
+      "492a4363ecb4b9c8b4667cdbb7cf63ea8a2b56dc"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "help-aimed-buffs-land-stolen-and-random-casts-on-the-caster",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14f",
+    "date": "2026-11-25",
+    "title": "Patch: tributing a GIGA empties all four zones it covers for the play that pays it, so a GIGA Tribute card can take its place",
+    "source": "issue #4836",
+    "notes": "Issue #4836: freed_by_tribute (play_choices.rs) now counts the three zones a GIGA covers, as well as its anchor, as emptied by a play that tributes that GIGA (R391, R3546000), so legal_actions lists, reduce accepts and the default zone takes those zones, and the view's playReason clears with them. Engine change only, no catalog change; classify stage 2 against main's build (a83795ab15) finds Jlockeed's Evil Blueprints, A Very Dandy Lad, Zenith and Exponential Reconstructor play differently, claimed with --plays; no script changed, so no KEPT_SCRIPTS entry. A play logged before that names its zone stays legal and lands there; one that names none may now take a zone further left, and a replay this alters is refused by its final hash (R767000).",
+    "player": {
+      "title": "Tributing a GIGA frees every zone it stood in",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Tributing a GIGA Unit frees all four zones it stood in for the card you pay with it, so a GIGA card with a Tribute cost can take its place.",
+        "A Tribute card that tributes a GIGA Unit may go into either of the GIGA's lanes, not only its left one."
+      ]
+    },
+    "commits": [
+      "734cb44ed56b827029edd2fc0adda1685dcf149c"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "meditative-097",
+      "stinkyscape-113",
+      "stinkyscapeplus-117",
+      "stinkyscapeplus-130"
+    ],
+    "fragment": "tributing-a-giga-empties-all-four-zones-it-covers-for-the",
+    "changes": []
   }
 ]
