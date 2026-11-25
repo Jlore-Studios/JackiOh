@@ -21692,16 +21692,12 @@
       "verdict_rounds": 0,
       "votes": {
         "approvals": [],
-        "builder": "muse",
-        "built_by": "muse",
-        "rejections": [
-          "claude"
-        ],
+        "builder": "claude",
+        "built_by": "claude-7",
+        "rejections": [],
         "reviews": [],
-        "sha": "bc6d63ccc3d3fcedbfd77b6d3534344cb8542bf7",
-        "tiers": {
-          "claude": "medium"
-        }
+        "sha": "8bd71a11541890374663ae2d9fcd31d08a25f919",
+        "tiers": {}
       }
     },
     "4885": {
