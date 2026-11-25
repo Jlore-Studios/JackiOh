@@ -891,6 +891,7 @@ mod actions {
 
 mod the_ai {
     use super::*;
+    use jackioh_shared::host::duos::acting_round_seat;
 
     #[test]
     fn b36_an_ai_seat_pauses_then_asks_for_its_search_once_and_plays_what_it_is_told_under_a_server_nonce() {
@@ -1122,6 +1123,164 @@ mod the_ai {
             table.timer(TimerKey::DuosAi { seat: stale.seat }),
             Some(table.now + DUOS_AI_STEP_DELAY_MS)
         );
+    }
+
+    const B1: DuosSeat = DuosSeat::B1;
+    const B2: DuosSeat = DuosSeat::B2;
+
+    /// The newest search `seat` was asked for.
+    fn newest_ask(table: &Table, seat: DuosSeat) -> DuosDecide {
+        table
+            .decides
+            .iter()
+            .rev()
+            .find(|request| request.seat == seat)
+            .cloned()
+            .unwrap_or_else(|| panic!("{seat} was never asked: {:?}", table.decides))
+    }
+
+    /// The first move legal for `seat` that `pick` takes.
+    fn legal_where(table: &Table, seat: DuosSeat, pick: impl Fn(&DuosActionBody) -> bool) -> DuosActionBody {
+        table
+            .host
+            .legal(seat)
+            .into_iter()
+            .find(|body| pick(body))
+            .unwrap_or_else(|| panic!("PREMISE: {seat} has such a move"))
+    }
+
+    fn is_pass(body: &DuosActionBody) -> bool {
+        matches!(body, DuosActionBody::Pass { .. })
+    }
+
+    fn is_play(body: &DuosActionBody) -> bool {
+        matches!(
+            body,
+            DuosActionBody::Duel {
+                body: ActionBody::Play { .. }
+            }
+        )
+    }
+
+    /// Both people kept their hands and ended round 1: past the AI team's first pause of round 2, b1's and b2's
+    /// searches are out, asked on one state.
+    fn asked_in_team_bs_round(seed: &str) -> (Table, DuosDecide, DuosDecide) {
+        let mut table = Table::new(setup(opening(seed)));
+        table.connect(A1);
+        table.connect(A2);
+        table.feed(DuosHostEvent::Arm);
+        table.through_the_mulligans();
+        assert_eq!(table.round(), 1, "PREMISE");
+        assert!(table.decides.is_empty(), "PREMISE: {:?}", table.decides);
+        for (seat, nonce) in [(A1, "a1-end"), (A2, "a2-end")] {
+            let answer = table.act(seat, nonce, end_turn());
+            assert!(matches!(answer, ActionAnswer::Ack { .. }), "PREMISE: {answer:?}");
+        }
+        assert_eq!(table.round(), 2, "PREMISE: team B's round");
+        table.sleep(DUOS_AI_STEP_DELAY_MS);
+        let (b1, b2) = (newest_ask(&table, B1), newest_ask(&table, B2));
+        assert_eq!(b1.version, b2.version, "PREMISE: both asked on one state");
+        assert_eq!(b1.version, table.host.next_seq(), "PREMISE");
+        (table, b1, b2)
+    }
+
+    fn decided(table: &mut Table, seat: DuosSeat, body: DuosActionBody, cursor: u32) {
+        table.feed(DuosHostEvent::Decided {
+            seat,
+            body: Some(body),
+            cursor,
+            failed: false,
+        });
+    }
+
+    /// R4813000: b1's pass, decided while b2 could still play the card, comes back after b2 ended its turn on
+    /// the same state: it is not played (the card would reach a seat that has ended), and b1 pauses and is
+    /// asked again on the state as it stands, its AI stream moved on.
+    #[test]
+    fn r4813000_a_pass_decided_before_its_teammate_ended_is_dropped_and_the_seat_decides_again() {
+        let (mut table, b1, b2) = asked_in_team_bs_round("duos-ai-4813");
+        let rows = table.log.len();
+        let pass = legal_where(&table, B1, is_pass);
+        decided(&mut table, B2, end_turn(), b2.cursor + 1);
+        assert_eq!(table.log.len(), rows + 1, "PREMISE: b2 ended");
+        assert!(!acting_round_seat(table.host.game(), B2), "PREMISE: b2 ended");
+        decided(&mut table, B1, pass, 7);
+        assert_eq!(
+            table.log.len(),
+            rows + 1,
+            "the stale pass was played: {:?}",
+            table.nonces()
+        );
+        assert_eq!(
+            table.timer(TimerKey::DuosAi { seat: B1 }),
+            Some(table.now + DUOS_AI_STEP_DELAY_MS)
+        );
+        table.sleep(DUOS_AI_STEP_DELAY_MS);
+        let again = newest_ask(&table, B1);
+        assert_eq!(again.version, b1.version + 1);
+        assert_eq!(again.version, table.host.next_seq());
+        assert_eq!(again.cursor, 7, "the dropped search's stream moved on");
+    }
+
+    /// R4813000: b2's end of turn, decided before b1's pass reached it, comes back after the pass: b2 does not
+    /// end with the card just passed to it unplayed, but pauses and is asked again, its AI stream moved on.
+    #[test]
+    fn r4813000_an_end_turn_decided_before_a_pass_reached_the_seat_is_dropped_and_the_seat_decides_again() {
+        let (mut table, b1, b2) = asked_in_team_bs_round("duos-ai-4813");
+        let rows = table.log.len();
+        let pass = legal_where(&table, B1, is_pass);
+        decided(&mut table, B1, pass, b1.cursor + 1);
+        assert_eq!(table.log.len(), rows + 1, "PREMISE: b1 passed");
+        decided(&mut table, B2, end_turn(), 5);
+        assert_eq!(
+            table.log.len(),
+            rows + 1,
+            "the stale end of turn was played: {:?}",
+            table.nonces()
+        );
+        assert!(acting_round_seat(table.host.game(), B2));
+        assert_eq!(
+            table.timer(TimerKey::DuosAi { seat: B2 }),
+            Some(table.now + DUOS_AI_STEP_DELAY_MS)
+        );
+        table.sleep(DUOS_AI_STEP_DELAY_MS);
+        let again = newest_ask(&table, B2);
+        assert_eq!(again.version, b2.version + 1);
+        assert_eq!(again.version, table.host.next_seq());
+        assert_eq!(again.cursor, 5, "the dropped search's stream moved on");
+    }
+
+    /// R4813000: an end of turn on a hand that has not changed since it was asked is played on the newer state,
+    /// as before: the teammate's move did not reach it.
+    #[test]
+    fn r4813000_an_end_turn_on_a_hand_that_has_not_changed_is_played_on_a_newer_state() {
+        let (mut table, b1, b2) = asked_in_team_bs_round("duos-ai-4813");
+        let rows = table.log.len();
+        decided(&mut table, B1, end_turn(), b1.cursor + 1);
+        assert_eq!(table.log.len(), rows + 1, "PREMISE: b1 ended");
+        decided(&mut table, B2, end_turn(), b2.cursor + 1);
+        assert_eq!(table.log.len(), rows + 2, "{:?}", table.nonces());
+        let (_, action) = &table.log[rows + 1];
+        assert_eq!(action.seat, B2);
+        assert_eq!(action.body, end_turn());
+        assert_eq!(action.nonce, format!("srv-ai-{}", b2.version + 1));
+    }
+
+    /// R4813000: a play in the seat's own duel is played on the newer state, as before, even after its
+    /// teammate passed it a card: dropping every stale move would starve one seat while the other acts.
+    #[test]
+    fn r4813000_a_play_in_the_seats_own_duel_is_played_on_a_newer_state() {
+        let (mut table, b1, b2) = asked_in_team_bs_round("duos-ai-4813");
+        let rows = table.log.len();
+        let pass = legal_where(&table, B1, is_pass);
+        let play = legal_where(&table, B2, is_play);
+        decided(&mut table, B1, pass, b1.cursor + 1);
+        assert_eq!(table.log.len(), rows + 1, "PREMISE: b1 passed");
+        decided(&mut table, B2, play.clone(), b2.cursor + 1);
+        assert_eq!(table.log.len(), rows + 2, "{:?}", table.nonces());
+        let (_, action) = &table.log[rows + 1];
+        assert_eq!(action.seat, B2);
+        assert_eq!(action.body, play);
     }
 
     /// B36: a search that comes back after the host stopped plays nothing.

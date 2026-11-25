@@ -11,7 +11,7 @@
 //! "Next to it" is read as the Spell resolves: §3.1's adjacency on the pick's own side and row
 //! (an empty or dormant neighbour is nothing), or the hand cards at the indices either side of it.
 
-use jackioh_engine::effects::{BoardScope, TargetSpec, adjacent_to, instance_of, set_radiant};
+use jackioh_engine::effects::{BoardScope, TargetSpec, adjacent_permanents_to, instance_of, set_radiant};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "classicplus-065-4";
@@ -25,10 +25,11 @@ fn chosen() -> TargetSpec {
     json_as(json!({ "of": "chosen" }))
 }
 
-/// "The cards next to it": its row neighbours on the field, or its neighbours by index in your hand.
+/// "The cards next to it": its row neighbours on the field (a Ticketed lying there among them, R4665000),
+/// or its neighbours by index in your hand.
 fn neighbours_of(ctx: &EffectContext<'_>, picked: &CardInstance) -> Vec<CardInstance> {
     if picked.zone.z() == ZoneName::Field {
-        return adjacent_to(ctx, &chosen(), &BoardScope::default());
+        return adjacent_permanents_to(ctx, &chosen(), &BoardScope::default());
     }
     if picked.zone.z() != ZoneName::Hand {
         return Vec::new();
