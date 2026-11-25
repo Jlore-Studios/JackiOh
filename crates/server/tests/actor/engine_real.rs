@@ -5,7 +5,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use jackioh_engine::{Action, ActionBody, CardDef, CreateGameArgs, FoldArgs, GameState, Phase, PlayerId};
 use jackioh_server::actor::engine::{
     Pinned, begin_game, create_game, deal_random_deck, hash_state, legal_actions, reduce, snapshot,
-    summarize_game, view_for,
+    summarize_with_swing_turns, view_for,
 };
 use serde_json::{Value, json};
 
@@ -257,11 +257,13 @@ mod a_finished_matchs_record_r376_src_match_engine_real_ts {
         act(&mut state, &mut log, PlayerId::P1, ActionBody::Mulligan { keep });
         let keep = hand_ids(&state, PlayerId::P2);
         act(&mut state, &mut log, PlayerId::P2, ActionBody::Mulligan { keep });
-        assert!(summarize_game(Pinned::default(), &fold_args("r376-real", &decks, &log)).is_none());
+        assert!(
+            summarize_with_swing_turns(Pinned::default(), &fold_args("r376-real", &decks, &log)).is_none()
+        );
         act(&mut state, &mut log, PlayerId::P1, ActionBody::EndTurn);
         act(&mut state, &mut log, PlayerId::P2, ActionBody::Concede);
 
-        let summary = summarize_game(Pinned::default(), &fold_args("r376-real", &decks, &log))
+        let summary = summarize_with_swing_turns(Pinned::default(), &fold_args("r376-real", &decks, &log))
             .expect("a finished game's summary");
         let summary: Value = serde_json::to_value(&summary).expect("GameSummary serializes");
         assert_eq!(summary["first"], json!("p1"));

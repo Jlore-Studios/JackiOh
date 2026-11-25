@@ -171,22 +171,13 @@ fn skipped(match_id: &str, found: bool) {
     tracing::warn!(event = "game.record.skipped", matchId = %match_id, reason = %reason);
 }
 
-/// Files one finished match for the card statistics: the record it wrote, or `None` when no series,
-/// room or ticket made the match, the log reaches no result, the record exists already, or
-/// something failed (logged, except the existing record).
-pub async fn record_live_game(app: &App, match_id: &str) -> Option<GameRecord> {
-    file_live_game(app, match_id, app.env.deployed_commit.as_deref()).await
-}
-
-/// R1596000: `record_live_game` for the retention loop's refile (`retention::refile_unfiled`). The
-/// filing server may be a later deploy than the one that played, so no build (R1367000).
+/// R1596000: files one finished match for the card statistics, for the retention loop's refile
+/// (`retention::refile_unfiled`): the record it wrote, or `None` when no series, room or ticket made
+/// the match, the log reaches no result, the record exists already, or something failed (logged,
+/// except the existing record). The filing server may be a later deploy than the one that played, so
+/// no build (R1367000).
 pub async fn refile_live_game(app: &App, match_id: &str) -> Option<GameRecord> {
-    file_live_game(app, match_id, None).await
-}
-
-/// The filing's body; an `Err` is the failure to log.
-async fn file_live_game(app: &App, match_id: &str, played_on: Option<&str>) -> Option<GameRecord> {
-    match record_live_game_inner(app, match_id, played_on).await {
+    match refile_live_game_inner(app, match_id).await {
         Ok(record) => record,
         Err(message) => {
             tracing::error!(event = "game.record.failed", matchId = %match_id, message = %message);
@@ -195,13 +186,9 @@ async fn file_live_game(app: &App, match_id: &str, played_on: Option<&str>) -> O
     }
 }
 
-/// `file_live_game`'s body, the refile path (R1596000) and `record_live_game`'s: it reads the match
-/// and folds its log for itself; an `Err` is the failure to log.
-async fn record_live_game_inner(
-    app: &App,
-    match_id: &str,
-    played_on: Option<&str>,
-) -> Result<Option<GameRecord>, String> {
+/// `refile_live_game`'s body: it reads the match and folds its log for itself; an `Err` is the
+/// failure to log.
+async fn refile_live_game_inner(app: &App, match_id: &str) -> Result<Option<GameRecord>, String> {
     let mut tx = app.db.begin(None).await.map_err(message_of)?;
     let found = tx.matches_get(match_id).await.map_err(message_of)?;
     let mode = match &found {
@@ -238,13 +225,13 @@ async fn record_live_game_inner(
     } else {
         PerPlayer::new(began.0, began.1)
     };
-    file_game(app, &row, &log, folded, mode, pilots, played_on).await
+    file_game(app, &row, &log, folded, mode, pilots, None).await
 }
 
 /// #2213: `record_result`'s filing of a finished match, once its result has committed: the fold is
 /// `read_finished`'s, made before the result's transaction, so the filing folds nothing. `finished`
 /// is `None` when that read found no match row. Each seat is filed under the account the result
-/// credits it to (`seats`, R677, R1451). Answers like `record_live_game`.
+/// credits it to (`seats`, R677, R1451). Answers like `refile_live_game`.
 pub(crate) async fn record_finished_game(
     app: &App,
     match_id: &str,

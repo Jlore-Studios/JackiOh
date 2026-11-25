@@ -47,7 +47,7 @@ use crate::db::store::{
     CollectionGrant, ConsentRow, DailyGameRow, DailyInviteKind, DailyInviteRow, DailyInviteState,
     DailyNotifyRow, DeckVersion, DeckVersionOutcome, EmoteEventRow, FoldedRecords, FrozenDeck, FrozenTrio,
     GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, LoadoutSample, MatchActionRow,
-    MatchCheckpointRow, MatchClocks, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode,
+    MatchCheckpointRow, MatchClocks, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, NewBot,
     PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
     PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile,
     ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus, PublicPlayerSummary, PushSubRow,
@@ -3940,22 +3940,6 @@ pub async fn tickets_count_open(t: &mut PgTx<'_>) -> Result<i64, StoreError> {
         .await
         .map_err(db_error)?;
     row.map_or(Ok(0), |row| get::<i32>(&row, "n").map(i64::from))
-}
-
-pub async fn tickets_count_open_by_mode(t: &mut PgTx<'_>) -> Result<PerMode<i64>, StoreError> {
-    run_as(t, None).await?;
-    let rows = sqlx::query(
-        "select mode, count(*)::int as n from public.tickets where status = 'queued' group by mode",
-    )
-    .fetch_all(&mut **t)
-    .await
-    .map_err(db_error)?;
-    let mut counts: PerMode<i64> = PerMode::default();
-    for row in &rows {
-        let mode = queue_mode_of(&get::<String>(row, "mode")?)?;
-        counts[mode] = i64::from(get::<i32>(row, "n")?);
-    }
-    Ok(counts)
 }
 
 pub async fn tickets_recent_waits(t: &mut PgTx<'_>, since: i64) -> Result<Vec<TicketWait>, StoreError> {

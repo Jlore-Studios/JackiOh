@@ -5,9 +5,8 @@
 //!   `open::open_cosmetic_pack`, #3104): the pure roll from the shipped sets' pool, the account's holdings and
 //!   a seed to what each slot grants (R1306000, R1306001), and every write an opening makes. This module
 //!   reads the records, calls the decision and writes its grants.
-//! - [`open_cosmetic_pack`] and [`buy_chase`], either under an optional `Idempotency-Key`
-//!   ([`open_cosmetic_pack_once`], [`buy_chase_once`]), under which a retry answers as its first try
-//!   did and spends nothing again (R2124000).
+//! - [`open_cosmetic_pack_once`] and [`buy_chase_once`], each under an optional `Idempotency-Key`,
+//!   under which a retry answers as its first try did and spends nothing again (R2124000).
 //! - The routes, all `AuthLevel::Active`, each spend in the account's turn (`economy::spend_slots`,
 //!   R2378000).
 //!
@@ -87,22 +86,10 @@ fn no_pack_held() -> ApiError {
 /// writes every grant: the pack spent, the new cards (the collection and its ledger, reason `pack`), the cosmetics, the
 /// Chase Shard bar's one, and both token bars' points, each full bar paying its tokens with the overflow
 /// kept (R1305000, R1306001). Every economy row's `ref` is the opening's log; the collection's rows have no
-/// `ref` and share the opening's `at`. No pack held is 409, writing nothing. With no key,
-/// [`open_cosmetic_pack_once`]'s opening.
-pub async fn open_cosmetic_pack(
-    app: &App,
-    profile_id: &str,
-    registry: &[Cosmetic],
-    seed: &str,
-) -> Result<OpenedCosmeticPack, ApiError> {
-    open_cosmetic_pack_once(app, profile_id, registry, seed, None)
-        .await?
-        .now()
-}
-
-/// [`open_cosmetic_pack`] under an `Idempotency-Key` (R2124000): right after the account's lock,
-/// before the pack held is read (a retry finds the pack its first try spent gone), a key already
-/// committed answers the opening it kept, and an opening's answer is kept in its own transaction.
+/// `ref` and share the opening's `at`. No pack held is 409, writing nothing. Under an
+/// `Idempotency-Key` (R2124000): right after the account's lock, before the pack held is read (a retry
+/// finds the pack its first try spent gone), a key already committed answers the opening it kept, and
+/// an opening's answer is kept in its own transaction.
 pub async fn open_cosmetic_pack_once(
     app: &App,
     profile_id: &str,
@@ -192,25 +179,11 @@ pub async fn open_cosmetic_pack_once(
 /// account, in one transaction: the cosmetic's grant, then the bar emptied (R1306002). An unknown cosmetic
 /// id is 400. Refuses with 409, writing nothing, when the bar is not full, the cosmetic sits below
 /// Legendary, a per-card cosmetic names no owned card, an account cosmetic is given one, or it is already
-/// owned (a ledger row, or a default or starter, which §14.2 gives every account), in that order. With no
-/// key, [`buy_chase_once`]'s purchase.
-pub async fn buy_chase(
-    app: &App,
-    profile_id: &str,
-    registry: &[Cosmetic],
-    cosmetic_id: &str,
-    card_id: Option<&str>,
-) -> Result<(), ApiError> {
-    buy_chase_once(app, profile_id, registry, cosmetic_id, card_id, None)
-        .await?
-        .now()?;
-    Ok(())
-}
-
-/// [`buy_chase`] under an `Idempotency-Key` (R2124000), answering the bar and packs after it, read
-/// in its transaction: right after the account's lock, before the bar is read (a retry finds the
-/// bar its first try emptied), a key already committed answers what it kept, and a purchase's
-/// answer is kept in its own transaction.
+/// owned (a ledger row, or a default or starter, which §14.2 gives every account), in that order.
+/// Under an `Idempotency-Key` (R2124000), answering the bar and packs after it, read in its
+/// transaction: right after the account's lock, before the bar is read (a retry finds the bar its
+/// first try emptied), a key already committed answers what it kept, and a purchase's answer is kept
+/// in its own transaction.
 pub async fn buy_chase_once(
     app: &App,
     profile_id: &str,
@@ -316,7 +289,7 @@ pub async fn get_cosmetic_packs(app: &Arc<App>, req: Req) -> ApiResult {
     ok_of(&read_cosmetic_packs(app, &profile.id).await?)
 }
 
-/// `POST /api/cosmetic-packs/open` (`AuthLevel::Active`): [`open_cosmetic_pack`] over the shipped
+/// `POST /api/cosmetic-packs/open` (`AuthLevel::Active`): [`open_cosmetic_pack_once`] over the shipped
 /// registry, from a fresh seed (`SystemIds::seed`, 16 random bytes), so no seed the account can
 /// read foretells a later roll (§14.11), with an optional `Idempotency-Key` (R2124000);
 /// [`open_cosmetic_pack_once`], in the account's spend turn (R2378000).

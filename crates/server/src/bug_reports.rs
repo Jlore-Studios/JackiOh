@@ -381,11 +381,6 @@ impl BugReports {
         }
     }
 
-    /// Logs only.
-    pub fn off() -> BugReports {
-        BugReports::with(Sink::Off)
-    }
-
     /// A test's: records what it would file.
     pub fn recording() -> BugReports {
         BugReports::with(Sink::Recording)
@@ -958,7 +953,7 @@ mod tests {
 
     #[test]
     fn logs_only_without_a_token() {
-        let reports = BugReports::off();
+        let reports = BugReports::with(Sink::Off);
         reports.file(None, finding("m-0"));
         assert!(reports.recorded().is_empty());
         assert_eq!(reports.readiness(), Readiness::Off);
@@ -966,7 +961,7 @@ mod tests {
 
     #[tokio::test]
     async fn probes_nothing_without_a_token() {
-        let reports = BugReports::off();
+        let reports = BugReports::with(Sink::Off);
         reports.probe().await;
         assert_eq!(reports.readiness().as_str(), "off");
     }

@@ -42,12 +42,12 @@ use crate::db::store::{
     CollectionEntry, CollectionGrant, ConsentRow, Db, DeckVersion, DeckVersionOutcome, EmoteEventRow,
     FavoriteCard, FoldedRecords, FrozenTrio, FunStats, GameRecordQuery, InviteCluster, InviteCode,
     LastBoardEntry, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks,
-    MatchPhase, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode,
-    PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
-    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
-    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput,
-    RedeemResult, ReplayListRow, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room,
-    SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
+    MatchPhase, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PlayTelemetry,
+    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
+    PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
+    ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult,
+    ReplayListRow, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck,
+    SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
     StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
     TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord,
     UpsertOutcome, UsernameClaim, UsernameClaimOutcome, deck_version_step,
@@ -1817,18 +1817,6 @@ pub fn tickets_count_open(f: &mut FakeTx<'_>) -> Result<i64, StoreError> {
         .iter()
         .filter(|ticket| ticket.status == TicketStatus::Open)
         .count() as i64)
-}
-
-/// R257: open tickets per mode. Every mode is present, in the order `bo1`, `bo3`, `random`.
-pub fn tickets_count_open_by_mode(f: &mut FakeTx<'_>) -> Result<PerMode<i64>, StoreError> {
-    call(f, "tickets.countOpenByMode")?;
-    let mut counts: PerMode<i64> = PerMode::default();
-    for ticket in &f.tables().tickets {
-        if ticket.status == TicketStatus::Open {
-            counts[ticket.mode] += 1;
-        }
-    }
-    Ok(counts)
 }
 
 pub fn tickets_recent_waits(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<TicketWait>, StoreError> {

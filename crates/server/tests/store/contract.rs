@@ -4571,7 +4571,7 @@ mod tickets {
         );
     }
 
-    async fn r257_keeps_a_ticket_s_mode_and_a_best_of_3_ticket_s_trio_and_counts_open_tickets_per_mode(
+    async fn r257_keeps_a_ticket_s_mode_and_a_best_of_3_ticket_s_trio_and_counts_the_open_tickets(
         harness: &StoreHarness,
     ) {
         let a = active_profile(harness, None).await;
@@ -4589,15 +4589,9 @@ mod tickets {
 
         assert_eq!(q!(harness, t => t.tickets_get(&bo3.id)), Some(bo3.clone()));
         assert_eq!(q!(harness, t => t.tickets_get(&random.id)), Some(random.clone()));
-        assert_eq!(
-            j(&q!(harness, t => t.tickets_count_open_by_mode())),
-            json!({ "bo1": 1, "bo3": 1, "random": 1 })
-        );
+        assert_eq!(q!(harness, t => t.tickets_count_open()), 3);
         q!(harness, t => t.tickets_cancel(&random.id, harness.now()));
-        assert_eq!(
-            j(&q!(harness, t => t.tickets_count_open_by_mode())),
-            json!({ "bo1": 1, "bo3": 1, "random": 0 })
-        );
+        assert_eq!(q!(harness, t => t.tickets_count_open()), 2);
     }
 
     async fn r642_keeps_a_best_of_3_ticket_s_per_deck_portraits_and_absence_stays_absent(
@@ -4926,7 +4920,7 @@ mod tickets {
 
     both_stores!(
         inserts_a_ticket_and_finds_the_profile_s_open_one,
-        r257_keeps_a_ticket_s_mode_and_a_best_of_3_ticket_s_trio_and_counts_open_tickets_per_mode,
+        r257_keeps_a_ticket_s_mode_and_a_best_of_3_ticket_s_trio_and_counts_the_open_tickets,
         r642_keeps_a_best_of_3_ticket_s_per_deck_portraits_and_absence_stays_absent,
         r1372_r924000_keeps_an_all_random_ticket_s_lean_until_it_is_paired,
         refuses_a_second_open_ticket_for_one_profile,
@@ -13333,7 +13327,7 @@ mod dev_dashboard {
             "{}: {first} {second} {third}",
             harness.name
         );
-        let recent = q!(harness, t => t.admin_actions_recent(10));
+        let recent = q!(harness, t => t.admin_actions_page(&AdminActionFilter::default(), 10));
         let order: Vec<(i64, &str)> = recent.iter().map(|row| (row.id, row.route.as_str())).collect();
         assert_eq!(
             order,
@@ -13350,7 +13344,10 @@ mod dev_dashboard {
         assert_eq!(recent[0].before, json!({ "jlore": 0 }));
         assert_eq!(recent[0].after, json!({ "jlore": 5 }));
         assert_eq!(recent[0].at, now);
-        assert_eq!(q!(harness, t => t.admin_actions_recent(1)).len(), 1);
+        assert_eq!(
+            q!(harness, t => t.admin_actions_page(&AdminActionFilter::default(), 1)).len(),
+            1
+        );
         for refused in [
             "GET /api/news",
             "POST /api/dev",
@@ -13365,7 +13362,7 @@ mod dev_dashboard {
         }
 
         assert!(q!(harness, t => t.profiles_remove(&dev.id)));
-        let kept = q!(harness, t => t.admin_actions_recent(10));
+        let kept = q!(harness, t => t.admin_actions_page(&AdminActionFilter::default(), 10));
         assert_eq!(kept.len(), 3, "{}: the rows outlive the account", harness.name);
         let owners: Vec<Option<&str>> = kept.iter().map(|row| row.profile_id.as_deref()).collect();
         assert_eq!(
@@ -13811,8 +13808,8 @@ mod moderate_audit {
 
     use super::*;
     use jackioh_server::admin::store::{
-        AdminAction, MODERATE_BAN_ROUTE, MODERATE_REDEMPTION_ROUTE, MODERATE_REVOKE_CODE_ROUTE,
-        MODERATE_ROUTES, MODERATE_UNBAN_ROUTE, NewAdminAction,
+        AdminAction, AdminActionFilter, MODERATE_BAN_ROUTE, MODERATE_REDEMPTION_ROUTE,
+        MODERATE_REVOKE_CODE_ROUTE, MODERATE_ROUTES, MODERATE_UNBAN_ROUTE, NewAdminAction,
     };
     use jackioh_server::api::codes::{MintDeps, MintInput, mint_invite_code};
     use jackioh_server::api::crypto::{canonical_invite_code, hashes_for_pepper};
@@ -13824,7 +13821,7 @@ mod moderate_audit {
 
     /// The audit, newest first.
     async fn audit(harness: &StoreHarness) -> Vec<AdminAction> {
-        q!(harness, t => t.admin_actions_recent(10))
+        q!(harness, t => t.admin_actions_page(&AdminActionFilter::default(), 10))
     }
 
     /// `row` is a lever's: no profile, `route`, and the request and the states before and after.

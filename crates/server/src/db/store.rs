@@ -2018,11 +2018,6 @@ impl Tx<'_> {
         dispatch!(self, tickets_count_open())
     }
 
-    /// R257: open tickets per mode. Every mode is present. No route answers it (R640002).
-    pub async fn tickets_count_open_by_mode(&mut self) -> StoreResult<PerMode<i64>> {
-        dispatch!(self, tickets_count_open_by_mode())
-    }
-
     /// R640002: the wait of every ticket claimed at or after `since` (epoch ms), whether a person's
     /// or a bot's claim, oldest claim first, ties on ticket id.
     pub async fn tickets_recent_waits(&mut self, since: i64) -> StoreResult<Vec<TicketWait>> {
