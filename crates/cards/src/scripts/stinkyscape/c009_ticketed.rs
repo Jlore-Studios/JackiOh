@@ -1,17 +1,18 @@
-//! S #9 Ticketed (SPEC §8.10 row 9; R4665000, R1850003, R1875001): (2) Field Spell, Common, of the
-//! Stinkyscape set.
+//! S #9 Ticketed (SPEC §8.10 row 9; R4665000, R4835000, R1850003, R1875001): (2) Field Spell, Common,
+//! of the Stinkyscape set.
 //!   Base:    "Brittle 3 / Stack this on a permanent anywhere."
 //!   Radiant: the same without Brittle 3.
 //! Engine: Brittle 3 is a catalog keyword (R638). Since issue #4665 (R4665000) its play takes no zone of
 //! its own (`StaticFlags.stacks_on_target`): it declares one permanent on the field (R81), either side's,
 //! a Unit or a backrow card, face-down or not, and lands on top of that permanent's pile, in its zone and
-//! that side's control (§3.2 Stack). The permanent lies beneath it as a card beneath a Stack does, out
-//! of play and keeping its damage, and resumes when Ticketed leaves the field, any way it leaves. On a
-//! unit zone it lies there, no Unit (`zones::lies_on_unit_zone`): it fills the zone, nothing attacks it,
-//! no health judges it, and an effect that names a backrow card may name it. With no permanent left to
-//! stack on it lands in its graveyard (R138). Radiant: no Brittle, so it stays until it leaves. Through
-//! v0.6.12c its Cry held another face-up permanent beneath it in its own zone (`hold_beneath`,
-//! R1850003, R1875001), which `script_v0_6_12c` keeps (R767000). Declares no numbers.
+//! that side's control (§3.2 Stack). Its play is offered only a permanent whose zone a card played onto
+//! it may enter: no GIGA, none in a Locked zone (R4835000). The permanent lies beneath it as a card
+//! beneath a Stack does, out of play and keeping its damage, and resumes when Ticketed leaves the field,
+//! any way it leaves. On a unit zone it lies there, no Unit (`zones::lies_on_unit_zone`): it fills the
+//! zone, nothing attacks it, no health judges it, and an effect that names a backrow card may name it.
+//! With no permanent left to stack on it lands in its graveyard (R138). Radiant: no Brittle, so it stays
+//! until it leaves. Through v0.6.12c its Cry held another face-up permanent beneath it in its own zone
+//! (`hold_beneath`, R1850003, R1875001), which `script_v0_6_12c` keeps (R767000). Declares no numbers.
 
 use jackioh_engine::effects::{HoldArgs, hold_beneath};
 use jackioh_engine::preview::is_face_down;
@@ -40,7 +41,8 @@ fn preview() -> PreviewHook {
 }
 
 /// R4665000: "Stack this on a permanent anywhere": one permanent on the field, either side's, either
-/// row, face-down or not, its pile the one this lands on.
+/// row, face-down or not, its pile the one this lands on. R4835000: never a permanent whose zone refuses a
+/// card played onto it (a GIGA, a Locked zone).
 fn stacks_anywhere() -> Script {
     Script {
         targets: vec![TargetDecl::target(
@@ -104,6 +106,10 @@ mod tests {
     const COLLATERAL: &str = "core-034"; // Collateral Damage: "Exile a permanent and a random card …"
     const TRAP: &str = "core-041"; // Sheepish: a Trap, to set face-down
     const CORE_SYSTEM: &str = "stinkyscape-117"; // Core System: "Bounce all permanents. …"
+    const LASER_DRILL: &str = "stinkyscapeplus-053"; // Laser Drill: a GIGA Field Spell
+    const LLM: &str = "stinkyscapeplus-t-ai-04"; // Jlockeed Large Language Model: a GIGA Unit token
+    const LOCKDOWN: &str = "classic-084"; // Lockdown: a Crater Field Spell, Locked in its zone
+    const MAYOR: &str = "meditative-086"; // Mayor Medinamogger: "Aura: All targets are chosen at random."
 
     fn board(radiant: bool, hand: Value, field: Value, backrow: Value) -> Scenario {
         let mut cards = vec![json!({ "def": ID, "radiant": radiant }), json!(FILLER)];
@@ -283,6 +289,92 @@ mod tests {
             s.play(ID, json!({}));
             s.expect_in_zone(ID, "graveyard");
             assert!(s.backrow(P1, 1).is_none());
+        }
+
+        /// R4835000, R3546000: no GIGA, its own side's or the enemy's, is offered, and a play naming one is
+        /// refused, nothing paid and Ticketed still in hand; a permanent it can stack on still takes it.
+        #[test]
+        fn r4835000_it_is_offered_no_giga_and_a_play_naming_one_is_refused() {
+            let mut s = crate::scenario(json!({
+                "seed": "ticketed-giga",
+                "p1": {
+                    "hand": [ID, FILLER],
+                    "field": [{ "def": VANILLA, "lane": 5 }],
+                    "backrow": [{ "def": LASER_DRILL, "lane": 1, "faceUp": true }],
+                    "library": crate::filler(8),
+                    "mana": 10,
+                },
+                "p2": {
+                    "hand": [FILLER],
+                    "field": [{ "def": LLM, "lane": 1 }, { "def": VANILLA, "lane": 5 }],
+                    "library": crate::filler(8),
+                },
+            }));
+            for player in [P1, P2] {
+                s.state_mut().players[player].auto_end_turn = Some(false);
+            }
+            let own = s.unit_at(P1, 5).id;
+            let enemy = s.unit_at(P2, 5).id;
+            assert_eq!(pick::instance_ids(&s.play_targets(ID)), vec![own, enemy.clone()]);
+            let drill = s.backrow(P1, 1).expect("the Laser Drill").id;
+            let llm = s.unit_at(P2, 1).id;
+            for giga in [drill, llm] {
+                s.expect_refused_with(|s| s.play(ID, json!({ "targets": pick::id(&giga) })), "not a legal target");
+            }
+            s.expect_in_zone(ID, "hand");
+            assert_eq!(s.state().players[P1].mana.current, 10, "nothing paid");
+            stack_on(&mut s, &enemy);
+            assert_eq!(s.unit(P2, 5).map(|top| top.def_id), Some(ID.to_string()));
+        }
+
+        /// R4835000, R688: no permanent in a Locked zone is offered, Lockdown in the zone its Crater Locked
+        /// among them, and a play naming one is refused; an unlocked one still takes it.
+        #[test]
+        fn r4835000_it_is_offered_no_permanent_in_a_locked_zone() {
+            let mut s = board(
+                false,
+                json!([]),
+                json!([{ "def": VANILLA, "lane": 2 }, { "def": VANILLA, "lane": 4 }]),
+                json!([{ "def": LOCKDOWN, "lane": 3, "faceUp": true }]),
+            );
+            for (row, lane) in [(Row::Units, 2), (Row::Backrow, 3)] {
+                jackioh_engine::zones::lock_zone(
+                    s.state_mut(),
+                    jackioh_engine::zones::ZoneSlot { player: P2, row, lane },
+                );
+            }
+            let locked = s.unit_at(P2, 2).id;
+            let lockdown = s.backrow(P2, 3).expect("Lockdown").id;
+            let open = s.unit_at(P2, 4).id;
+            assert_eq!(pick::instance_ids(&s.play_targets(ID)), vec![open.clone()]);
+            for named in [locked, lockdown] {
+                s.expect_refused_with(|s| s.play(ID, json!({ "targets": pick::id(&named) })), "not a legal target");
+            }
+            stack_on(&mut s, &open);
+            assert_eq!(s.unit(P2, 4).map(|top| top.def_id), Some(ID.to_string()));
+            assert_eq!(beneath(&s, P2, Row::Units, 4), vec![open]);
+        }
+
+        /// R4835000, R1200: while a Mayor acts the target drawn for it is one it can stack on, never a GIGA:
+        /// with the Mayor and an enemy GIGA on the field, every seed stacks it on the Mayor.
+        #[test]
+        fn r4835000_under_a_mayor_the_drawn_target_is_never_a_giga() {
+            for n in 0..12 {
+                let mut s = crate::scenario(json!({
+                    "seed": format!("ticketed-mayor-{n}"),
+                    "p1": {
+                        "hand": [ID, FILLER],
+                        "field": [{ "def": MAYOR, "lane": 5 }],
+                        "library": crate::filler(8),
+                        "mana": 10,
+                    },
+                    "p2": { "hand": [FILLER], "field": [{ "def": LLM, "lane": 1 }], "library": crate::filler(8) },
+                }));
+                let mayor = s.unit_at(P1, 5).id;
+                s.play(ID, json!({}));
+                assert_eq!(s.unit(P1, 5).map(|top| top.def_id), Some(ID.to_string()), "seed {n}");
+                assert_eq!(beneath(&s, P1, Row::Units, 5), vec![mayor], "seed {n}");
+            }
         }
     }
 

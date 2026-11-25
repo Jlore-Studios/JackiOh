@@ -375,6 +375,16 @@ pub fn stacks_on_target(state: &GameState, card: &CardInstance) -> bool {
     card.set_as.is_none() && crate::scripts::flags_of(state, card).stacks_on_target == Some(true)
 }
 
+/// R4835000: whether a card that stacks on its target (S #9 Ticketed) may name `candidate`: the zone it
+/// tops takes a card played onto it (`zones::accepts_stack_card`, the test a Stack play's zone and an
+/// Equip play's host pass), so never a GIGA (R3546000), a permanent in a Locked zone (R688), or a
+/// carrier holding a Unit or the Unit it carries (R446). `legal_selections_for` asks it, so the listing,
+/// `refuse_targets`, the view and a Mayor's draw agree.
+fn stackable_target(state: &GameState, candidate: &CardInstance) -> bool {
+    crate::zones::slot_of(state, candidate)
+        .is_some_and(|slot| crate::zones::accepts_stack_card(state, slot, Default::default()))
+}
+
 /// §6.2 Stack: "may be played onto an occupied zone" (§3.2), read off the card's keywords where it is
 /// (§10.4, B5 E38). A backrow card with Stack tops an occupied backrow zone too (B5 E21, R447).
 pub fn plays_on_stack(state: &GameState, card: &CardInstance) -> bool {
@@ -1207,8 +1217,12 @@ pub fn legal_selections_for(
         out.push(selection);
     };
 
+    // R4835000: a card that stacks on its target names only a permanent its play can land on.
+    let stacks = stacks_on_target(state, card);
     let on_field = |held: &CardInstance| -> bool {
-        card_allowed(state, filter, held, card, player) && reachable(state, player, card, decl, held)
+        card_allowed(state, filter, held, card, player)
+            && reachable(state, player, card, decl, held)
+            && (!stacks || stackable_target(state, held))
     };
 
     for side in sides_for(player, decl) {
