@@ -21,6 +21,7 @@ import type { CardLookup } from "../game/catalog.ts";
 import { formatDateTime, t, useLocale } from "../i18n/i18n.ts";
 import { getReplays } from "../net/api.ts";
 import type { OnlineReplayListing } from "../net/api.ts";
+import { BackLayer } from "../net/backLayers.ts";
 import { useAccount } from "../net/gate.ts";
 import { paths } from "../net/navigate.ts";
 import { createPracticeHost } from "../practice/host.ts";
@@ -279,6 +280,8 @@ export function ReplaysRoute({ hostFactory = createPracticeHost }: { hostFactory
     return (
       <CatalogContext.Provider value={lookup}>
         <FullArtOwned owned={FULL_ART_GATED && !practice ? NO_FULL_ART : "every"}>
+          {/* R4619000: Back means the replay's corner arrow; first, so what the replay opens is a layer above it. */}
+          <BackLayer onClose={() => setOpen(null)} />
           {/* This screen does not wait for the module (#778), and the board's cards are faces it works out. */}
           <WhenEngineReady fallback={<Skeleton variant="panel" label={t("Loading the replay…")} />}>
             {() =>

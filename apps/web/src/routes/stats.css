@@ -115,7 +115,14 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-6) var(--space-8);
+  gap: var(--space-6);
+}
+
+/* R4673001: Sort, View, Face, the ranges, Plain text and Columns stay one row at 1280 wide: the row's buttons keep
+   the tavern's bare-button height and face (tavern.css) with narrower sides, nearer the Segmented's own. As heavy as
+   that rule, and later, so it wins. */
+.tavern.app-shell.stats-page .stats-options button.segmented__item.stats-view-btn {
+  padding-inline: var(--space-5);
 }
 
 .stats-sort,
@@ -522,6 +529,20 @@
   flex: 1 1 auto;
 }
 
+/* R4673001: the Normal and Radiant rates and the Radiant gap under the faces, wrapping inside the column, whose
+   gap spaces it; and the face the details read, at their top. */
+.stats-drilldown-face-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+  font-size: var(--type-sm);
+}
+
+.stats-drilldown-details > .stats-sample-hint {
+  margin: 0;
+}
+
 /* Pressed, it wears the Radiant gold. As long as the tavern's bare-button size rule, and later, so it wins. */
 .tavern.app-shell.stats-page .stats-drilldown-actions button.stats-drilldown-action[aria-pressed="true"] {
   border-color: var(--radiant, #ffd24a);
@@ -693,6 +714,67 @@
 
 .stats-patch-tab-games {
   font-size: var(--type-xs);
+  color: var(--text-dim);
+}
+
+/* R4677001: the patch search: a magnifier at the bar's end, after the arrows, and its dialog's patches grouped by
+   line, newest first, each a button with its name over its games, the patch shown marked. The lines scroll inside
+   the dialog, so a dev account's every patch never pushes the box or the closing line off the screen. */
+.stats-patch-search-icon {
+  display: block;
+  width: 1em;
+  height: 1em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+}
+
+.stats-patch-search-dialog .stats-patch-search-input {
+  width: 100%;
+}
+
+.stats-patch-search-lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+  max-height: 50vh;
+  overflow-y: auto;
+  text-align: start;
+}
+
+.stats-patch-search-line-name {
+  margin: 0 0 var(--space-2);
+  font-size: var(--type-sm);
+  color: var(--text-dim);
+}
+
+.stats-patch-search-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stats-patch-search-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.stats-patch-search-option[aria-current="true"] {
+  border-color: var(--selected);
+}
+
+.stats-patch-search-none,
+.stats-patch-search-devs,
+.stats-patch-refused {
+  margin: 0;
+  font-size: var(--type-sm);
   color: var(--text-dim);
 }
 

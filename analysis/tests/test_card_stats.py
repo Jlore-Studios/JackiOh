@@ -326,11 +326,14 @@ def test_load_sweep_reads_the_fixtures_lines_one_row_per_card_and_tier():
         assert row["affordable_turns"] == line["affordableTurns"]
         assert row["plays"] == line["plays"]
         assert row["errors"] == line["errors"] and row["timeouts"] == line["timeouts"]
+        assert row["raw_timeouts"] == line.get("rawTimeouts", 0)
         assert row["eval_delta_sum"] == line["evalDeltaSum"] and row["eval_delta_count"] == line["evalDeltaCount"]
         assert row["eval_delta_mean"] == pytest.approx(line["evalDeltaSum"] / line["evalDeltaCount"])
         assert row["flags"] == line["flags"] and row["unswept"] == line["unswept"]
     assert sweep["games"].dtype == "int64" and sweep["eval_delta_mean"].dtype == "float64"
     assert sweep["unswept"].dtype == "bool"
+    # The fixture's pass-1 lines predate `rawTimeouts` (R977000): every one reads 0.
+    assert sweep["raw_timeouts"].dtype == "int64" and set(sweep["raw_timeouts"]) == {0}
     assert set(sweep["card"]) <= set(load_catalog().index)
 
 
@@ -351,6 +354,29 @@ def test_load_sweep_keeps_the_flags_as_a_list_and_no_plays_as_no_mean(tmp_path):
     # A card with no plays has no mean (the Rust divides by one there; a table must not show a mean of zero).
     assert math.isnan(sweep.loc[("b", "easy"), "eval_delta_mean"])
     assert sweep.loc[("c", "easy"), "unswept"]
+
+
+def test_load_sweep_reads_the_raw_timeouts_beside_the_counted_ones_and_0_for_a_line_with_none(tmp_path):
+    path = write_records(
+        tmp_path / "raw.jsonl",
+        [
+            # Twelve slow decisions, all cleared by the re-timer: nothing counted, nothing flagged.
+            sweep_line("a", "easy", rawTimeouts=12),
+            sweep_line("a", "hard", flags=["timeout"], timeouts=2, rawTimeouts=5),
+            # A line that predates the field.
+            sweep_line("b", "easy"),
+        ],
+    )
+    table = load_sweep(path)
+    columns = list(table.columns)
+    assert columns.index("raw_timeouts") == columns.index("timeouts") + 1
+    assert table["raw_timeouts"].dtype == "int64"
+    sweep = table.set_index(["card", "tier"])
+    counted_and_raw = sweep[["timeouts", "raw_timeouts"]].itertuples(index=False, name=None)
+    assert list(counted_and_raw) == [(0, 12), (2, 5), (0, 0)]
+    # Raw bans, watches and clears nothing: the flags stay as the lines wrote them.
+    assert sweep.loc[("a", "easy"), "flags"] == []
+    assert sweep.loc[("a", "hard"), "flags"] == ["timeout"]
 
 
 def test_load_sweep_reads_several_files_skips_pass_2_lines_and_ignores_fields_it_does_not_know(tmp_path):
@@ -496,11 +522,12 @@ def test_load_sweep_pass2_sums_a_card_over_every_game_it_was_dealt_in_forced_or_
     assert math.isnan(load_sweep_pass2(write_records(tmp_path / "none.jsonl", no_plays)).loc[0, "eval_delta_mean"])
     assert list(table.columns) == [
         "card", "tier", "face", "forced", "games", "drawn_games", "affordable_turns", "playable_turns", "plays",
-        "errors", "timeouts", "eval_delta_sum", "eval_delta_count", "eval_delta_mean", "losing_plays", "flags",
-        "half_flags", "status",
+        "errors", "timeouts", "raw_timeouts", "eval_delta_sum", "eval_delta_count", "eval_delta_mean",
+        "losing_plays", "flags", "half_flags", "status",
     ]  # fmt: skip
     for name in ("games", "drawn_games", "affordable_turns", "playable_turns", "plays", "errors", "timeouts"):
         assert table[name].dtype == "int64"
+    assert table["raw_timeouts"].dtype == "int64"
     assert table["eval_delta_sum"].dtype == "float64" and table["eval_delta_mean"].dtype == "float64"
     assert table["forced"].dtype == "bool"
 
@@ -527,6 +554,8 @@ def test_load_sweep_pass2_flags_at_the_sweeps_thresholds_and_names_the_status(tm
         "kill-short": (dict(losingPlays=ban_losing - 1), [], ["selfKill"], "watched"),
         "error": (dict(errors=1), ["error"], [], "banned"),
         "timeout": (dict(timeouts=1), ["timeout"], [], "banned"),
+        # Raw timeouts the re-timer cleared raise nothing at any strength.
+        "raw-only": (dict(rawTimeouts=12), [], [], "cleared"),
         "fine": ({}, [], [], "cleared"),
         "dormant": (
             dict(affordableTurns=0, playableTurns=0, plays=0, evalDeltaSum=0.0, evalDeltaCount=0),
@@ -546,7 +575,37 @@ def test_load_sweep_pass2_reads_older_slices(tmp_path):
     del entry["playableTurns"], entry["losingPlays"]
     path = write_records(tmp_path / "old.jsonl", [pass2_line("a", "easy", entry)])
     row = load_sweep_pass2(path).iloc[0]
-    assert (row["playable_turns"], row["losing_plays"], row["face"]) == (0, 0, "base")
+    assert (row["playable_turns"], row["losing_plays"], row["raw_timeouts"], row["face"]) == (0, 0, 0, "base")
+
+
+def test_load_sweep_pass2_shows_the_fixtures_raw_timeouts_beside_the_counted_ones():
+    fixture = FIXTURES / "sweep-small.jsonl"
+    lines = [json.loads(line) for line in fixture.read_text(encoding="utf-8").splitlines()]
+    entries = [card for line in lines if "forced" in line for card in line["cards"]]
+    table = load_sweep_pass2(fixture)
+    assert table["raw_timeouts"].sum() == sum(card.get("rawTimeouts", 0) for card in entries) == 8
+
+    by_key = table.set_index(["card", "tier", "face"])
+    # The Radiant face of the forced core-001 at hard: eight slow decisions, none counted, so no timeout flag.
+    radiant = by_key.loc[("core-001", "hard", "radiant")]
+    assert (radiant["timeouts"], radiant["raw_timeouts"]) == (0, 8)
+    assert "timeout" not in radiant["flags"]
+    assert (by_key["raw_timeouts"] > 0).sum() == 1
+    assert by_key.loc[("core-001", "hard", "base"), "raw_timeouts"] == 0
+
+
+def test_load_sweep_pass2_sums_raw_timeouts_over_every_game_and_reads_0_for_an_entry_with_none(tmp_path):
+    path = write_records(
+        tmp_path / "raw.jsonl",
+        [
+            pass2_line("a", "easy", pass2_entry("a", rawTimeouts=7), pass2_entry("b")),
+            pass2_line("b", "easy", pass2_entry("b", rawTimeouts=3), pass2_entry("a", rawTimeouts=1)),
+            pass2_line("c", "hard", pass2_entry("c")),
+        ],
+    )
+    by_card = load_sweep_pass2(path).set_index("card")
+    assert dict(by_card["raw_timeouts"]) == {"a": 8, "b": 3, "c": 0}
+    assert set(by_card["timeouts"]) == {0}
 
 
 def test_load_sweep_pass2_skips_pass_1_lines_and_load_sweep_is_unchanged_by_pass_2_lines(tmp_path):

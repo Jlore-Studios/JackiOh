@@ -3,8 +3,10 @@ package deliver
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/asks"
+	"github.com/Jlore-Studios/JackiOh/bot/go/internal/clock"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/config"
 	"github.com/Jlore-Studios/JackiOh/bot/go/internal/declined"
 	planmod "github.com/Jlore-Studios/JackiOh/bot/go/internal/plan"
@@ -86,8 +88,35 @@ func (x *Deliverer) Suggestions() {
 			labels = append(labels, "priority:"+level)
 			footer += fmt.Sprintf("\n\nClass: `%s` → `priority:%s`; relabel to change it.", kind, level)
 		}
+		// The judge's word on it (`suggestions.auto_approve`): one it would approve goes ahead by
+		// itself once it has waited with no one's vote, comment or 👎 (`plan.AutoApprove`).
+		judge := pyjson.Obj(entry.Get("judge"))
+		auto := x.Cfg.AutoApprove
+		approve := auto.Enabled && judge != nil && judge.Truthy("approve")
+		if judge != nil && auto.Enabled {
+			why := py.OrStr(judge.Get("why"), "")
+			if why != "" {
+				why = ": " + strings.TrimRight(why, ".")
+			}
+			if approve {
+				due := x.Ctx.Now().Add(time.Duration(auto.WaitHours) * time.Hour)
+				footer += fmt.Sprintf("\n\n**Judge:** would approve it%s. With no vote, no comment and no 👎 on "+
+					"this issue by %s, it is approved by itself at `priority:low` (at most %d a day); "+
+					"comment `reject`, or anything at all, to decide it yourself.", why,
+					planmod.DecisionClock(x.Ctx, due), auto.PerDay)
+			} else {
+				footer += fmt.Sprintf("\n\n**Judge:** leaves it to a person%s.", why)
+			}
+		}
 		issue := x.GH.CreateIssue(title, body+footer, labels)
 		made = append(made, issue.Get("number"))
+		if approve {
+			number := py.MustInt(issue.Get("number"))
+			x.Ctx.Store.Update(func(s *pyjson.Object) any {
+				planmod.MarkAutoApprove(s, number, clock.ISO(x.Ctx.Now()), py.OrStr(judge.Get("why"), ""))
+				return nil
+			}, fmt.Sprintf("suggestion #%d may approve itself", number))
+		}
 	}
 	x.log("opened suggestions: " + py.Repr(made))
 }

@@ -8,7 +8,7 @@ The rules are pure Rust in `crates/run`, and its `README.md` is the contract. Ev
 
 The content (`RunContent`: pool, starting cards, enemies, artifacts, blessings, events, curses) is passed in. Until the designer's lists land it is placeholders (`run_placeholder_content()`, `crates/run/src/placeholder.json`).
 
-Every value is a constant of `crates/run/src/config.rs`. One the plan marks a strawman is to be tuned ([[§15.13]]).
+Every value is a constant of `crates/run/src/config.rs`. One the plan marks a strawman is to be tuned ([[§15.13]]). The Infinite Assault's (issue #4578) are the last rows until its own section holds them.
 
 | Constant | What it holds | Where |
 | --- | --- | --- |
@@ -69,6 +69,24 @@ Every value is a constant of `crates/run/src/config.rs`. One the plan marks a st
 | `RUN_SCORE_FINAL_BOSS_PERCENT` | Beating the final boss multiplies the score by this percent | [[§15.10]] |
 | `RUN_SCORE_CURSE_POINT_PERCENT` | Each curse point adds this percent to the score; a strawman | [[§15.9]], [[§15.10]] |
 | `RUN_SCORE_PER_EMBER` | The score one Ember is worth; a strawman | [[§15.10]] |
+| `ASSAULT_SET` | The set the Infinite Assault deals | [[R4579001]] |
+| `ASSAULT_COMMANDER_TAG` | The tag a Commander's cards carry | [[R4579001]] |
+| `ASSAULT_SEED_PREFIX` | The prefix of a day's seed | [[R4579002]] |
+| `ASSAULT_LEVELS` | The Infinite Assault's levels a day; a strawman | [[R4579000]] |
+| `ASSAULT_COMMANDER_LEVELS` | The Commander levels, ranks I to IV in order; a strawman | [[R4579000]] |
+| `ASSAULT_HISTORY_DAYS` | The days of records the device keeps | [[R4579002]] |
+| `ASSAULT_BASE_HANDICAP` | The resources every level starts from: Easy's | [[R4579000]] |
+| `ASSAULT_HERO_HEALTH` | A normal level's hero health, `(base, per level)`; a strawman | [[R4579000]] |
+| `ASSAULT_COMMANDER_HEALTH` | A Commander level's hero health, `(base, per level)`; a strawman | [[R4579000]] |
+| `ASSAULT_FEWER_OPENING` | The cards fewer in the opening draw on the first levels; a strawman | [[R4579000]] |
+| `ASSAULT_FEWER_OPENING_LEVELS` | The last level dealing fewer opening cards; a strawman | [[R4579000]] |
+| `ASSAULT_DECK_SIZE` | The deck's size before Bigger Dataset; a strawman | [[R4579000]] |
+| `ASSAULT_START_SLOTS` | Level 1's deck as Common, Rare, Epic, Legendary and Mythic slots; a strawman | [[R4579000]] |
+| `ASSAULT_CARD_STEP` | The slots a card step promotes; a strawman | [[R4579000]] |
+| `ASSAULT_RARITY_CEILING` | The rarest slot a level may hold, each `(from level, rarest slot)`; a strawman | [[R4579000]] |
+| `ASSAULT_CARD_STEP_PERCENT` | The chance, in percent, that a normal level's escalation is a card step; a strawman | [[R4579000]] |
+| `ASSAULT_DOCTRINE_SHARE` | The percent of a deck dealt from its doctrine; a strawman | [[R4579001]] |
+| `ASSAULT_UPGRADES` | The upgrades, each `(kind, per stack, most stacks, from level, weight)`; strawmen | [[R4579000]] |
 
 ### 15.1 Sandbox and Campaign
 
@@ -180,7 +198,7 @@ Between fights the top bar shows HP, Coins, Tickets, the deck's size, the relics
 
 **The enemy:** its deck, with its tier's handicap and hero health ([[R3586001]]). A fight node's tier is set by its row ([[R3586000]]): each act's `RUN_ACT_ROWS` rows spread evenly over its `RUN_ACT_TIERS` tiers, from its lowest on its first row to its highest on its last row before the boss, and its boss stands one tier higher, so the mini-bosses are tiers 5 and 10 and the final boss is tier 15. Every route meets the tiers in rising order, and a route with fewer fights skips some. An elite plays its tier's row of `RUN_ELITE_TIERS`, each stronger than the same tier's normal row; every other fight, ghosts and bosses included, plays its row of `RUN_TIERS`, and tiers 5, 10 and 15 are `AI_DIFFICULTY`'s Easy, Medium and Hard resources ([[R180]]) with their own hero health. Its deck size is its deck's length. The map labels each fight node with its tier, and the fight shows it beside the enemy's relics, an elite's as "Elite, tier N". An enemy's own artifacts change nothing in a fight.
 
-The game seed is the run's seed, row and column. A fight left unfinished waits where it stood: when the run, still on its fight, starts it again, the kept fight is resumed on its turn ([[R3476000]]). Leaving still asks first ([[R2706000]], [[R2972000]]). The fight's controls carry Menu, which leaves to the Play menu after asking ([[R3932000]], [[R2972000]]). The fight's rail lists every live modifier in full, under You and the enemy's name, as every other table's does ([[R3912000]], [[R169]]).
+The game seed is the run's seed, row and column. A fight left unfinished waits where it stood: when the run, still on its fight, starts it again, the kept fight is resumed on its turn ([[R3476000]]). Leaving still asks first ([[R2706000]], [[R2972000]]). The fight's controls carry Menu, which leaves to the Play menu after asking ([[R3932000]], [[R2972000]]). Its result panel's Continue is followed by Main menu, which does what Menu does once the fight is over ([[R4742000]]). The fight's rail lists every live modifier in full, under You and the enemy's name, as every other table's does ([[R3912000]], [[R169]]).
 
 Enemy decks are random for now: the enemy's own cards, then the open pool up to `RUN_ENEMY_DECK_SIZE`.
 

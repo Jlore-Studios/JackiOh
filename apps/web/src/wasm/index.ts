@@ -26,6 +26,15 @@ import type { WinRateTable } from "../wire/generated/WinRateTable.ts";
 import type { CardInstance } from "../wire/generated/CardInstance.ts";
 import type { CombatForecast } from "../wire/generated/CombatForecast.ts";
 import type {
+  AssaultAction,
+  AssaultConstants,
+  AssaultContent,
+  AssaultDay,
+  AssaultFightSetup,
+  AssaultFile,
+  AssaultRecord,
+  AssaultSetup,
+  AssaultState,
   RunAction,
   RunConstants,
   RunContent,
@@ -65,8 +74,8 @@ import type { LogCall } from "../wire/generated/LogCall.ts";
  * `Content-Encoding: br` with no type) is given the type. A body that arrives still compressed (no
  * `Content-Encoding`: the request missed the Worker) cannot be compiled, and says why.
  */
-async function moduleResponse(url: URL): Promise<Response> {
-  const fetched = await fetch(url);
+async function moduleResponse(url: URL, priority: RequestPriority): Promise<Response> {
+  const fetched = await fetch(url, { priority });
   if (!fetched.ok || fetched.body === null) {
     throw new Error(`failed to fetch the engine: ${String(fetched.status)} ${fetched.statusText} fetching '${url.href}'`);
   }
@@ -102,15 +111,23 @@ export function whenWasmLoaded(run: () => void): void {
 }
 
 /**
- * Idempotent: a second call, or a call after `loadWasmSync`, resolves at once. A failed fetch is not
- * cached; the next call tries again.
+ * #4714: the Fetch Priority the boot's download of the module asks for (`startWasmLoad`): low, so the route's own
+ * chunks, which draw its first screen, come first.
  */
-export function loadWasm(): Promise<void> {
+export const BOOT_MODULE_FETCH_PRIORITY: RequestPriority = "low";
+
+/**
+ * Idempotent: a second call, or a call after `loadWasmSync`, resolves at once. A failed fetch is not
+ * cached; the next call tries again. `priority` is the download's Fetch Priority, which only the call that
+ * starts the download sets: a call while the module is already on its way waits on that download, at the
+ * priority it was asked at, and never fetches it twice (#4714).
+ */
+export function loadWasm(priority: RequestPriority = "auto"): Promise<void> {
   if (loaded) return Promise.resolve();
   if (loading === null) {
     // The literal `new URL(…, import.meta.url)` is what Vite recognizes and emits as an asset, in
     // the page's bundle and in the practice worker's alike: the .br, and no .wasm (#3183).
-    loading = initWasm({ module_or_path: moduleResponse(new URL("./pkg/jackioh_wasm_bg.wasm.br", import.meta.url)) })
+    loading = initWasm({ module_or_path: moduleResponse(new URL("./pkg/jackioh_wasm_bg.wasm.br", import.meta.url), priority) })
       .then(() => {
         ready();
       })
@@ -120,6 +137,16 @@ export function loadWasm(): Promise<void> {
       });
   }
   return loading;
+}
+
+/**
+ * #778, #4714: the boot's start of the module's download (`main.tsx`), on every route, at BOOT_MODULE_FETCH_PRIORITY.
+ * A priority orders the downloads in flight and holds none back, so a screen that waits on the engine (`EngineGate`,
+ * `useEngineReady`) waits on this one download, never a second one asked louder, and has it once the bytes ahead of
+ * it, its own code first, are in. A failed download is forgotten, so the next `loadWasm()` asks again, at its own priority.
+ */
+export function startWasmLoad(): void {
+  void loadWasm(BOOT_MODULE_FETCH_PRIORITY).catch(() => undefined);
 }
 
 /** Instantiate the module from its bytes (jsdom tests, `test/setup.ts`). Idempotent. */
@@ -434,6 +461,130 @@ export function runSeed(source: string): string {
 /** The daily run's seed: the date's and the day's run number. */
 export function runDailySeed(date: string, n: number): string {
   return call("runDailySeed", () => parsed<string>(normal.run_daily_seed(json(date), json(n))));
+}
+
+// The Infinite Assault (docs/infinite-assault.md IA1, IA5, IA9)
+
+/**
+ * `assaultCreate`, `assaultReduce` and `assaultFold`'s answer: the state, or the refusal, never thrown
+ * (only malformed JSON throws, as everywhere else here).
+ */
+export type AssaultResult = { state: AssaultState } | { error: string };
+
+/** "2026-11-23" -> "assault-2026-11-23", or throws if invalid date. */
+export function assaultDaySeed(date: string): string {
+  return call("assaultDaySeed", () => parsed<string>(normal.assault_day_seed(json(date))));
+}
+
+/** The set's cards by tag + assault.json. */
+export function assaultCatalogContent(catalog: CardDefs): AssaultContent {
+  return call("assaultCatalogContent", () =>
+    parsed<AssaultContent>(normal.assault_catalog_content(json(catalog))),
+  );
+}
+
+/** Shipped stand-ins until the release. */
+export function assaultPlaceholderContent(catalog: CardDefs): AssaultContent {
+  return call("assaultPlaceholderContent", () =>
+    parsed<AssaultContent>(normal.assault_placeholder_content(json(catalog))),
+  );
+}
+
+/** The Assault's content for the browser: `assault_placeholder_content` until the release. */
+export function assaultContent(): AssaultContent {
+  return call("assaultContent", () => parsed<AssaultContent>(normal.assault_content()));
+}
+
+/** R3496000: `AssaultContent` for a catalog version: the build's own, a carried version's, or null. */
+export function assaultContentAt(version: string): AssaultContent | null {
+  return call("assaultContentAt", () =>
+    parsed<AssaultContent | null>(normal.assault_content_at(json(version))),
+  );
+}
+
+/** The day's deal: 20 levels and their escalations. */
+export function assaultDay(date: string, content: AssaultContent): AssaultDay {
+  return call("assaultDay", () =>
+    parsed<AssaultDay>(normal.assault_day(json(date), json(content))),
+  );
+}
+
+/** Start an attempt: its state, or the setup's refusal. */
+export function assaultCreate(
+  setup: AssaultSetup,
+  record: AssaultRecord,
+  day: AssaultDay,
+): AssaultResult {
+  return call("assaultCreate", () =>
+    parsed<AssaultResult>(normal.assault_create(json(setup), json(record), json(day))),
+  );
+}
+
+/** The attempt after one action, or the action's refusal. */
+export function assaultReduce(
+  state: AssaultState,
+  day: AssaultDay,
+  action: AssaultAction,
+): AssaultResult {
+  return call("assaultReduce", () =>
+    parsed<AssaultResult>(normal.assault_reduce(json(state), json(day), json(action))),
+  );
+}
+
+/** The fight being played, or null outside one. */
+export function assaultFightSetup(
+  state: AssaultState,
+  day: AssaultDay,
+): AssaultFightSetup | null {
+  return call("assaultFightSetup", () =>
+    parsed<AssaultFightSetup | null>(normal.assault_fight_setup(json(state), json(day))),
+  );
+}
+
+/** The `FightOver` a finished fight sends, or why the game reports none. */
+export function assaultFightReport(
+  game: ReplayInput,
+  human: PlayerId,
+): { action: AssaultAction } | { error: string } {
+  return call("assaultFightReport", () =>
+    parsed<{ action: AssaultAction } | { error: string }>(
+      normal.assault_fight_report(json(game), json(human)),
+    ),
+  );
+}
+
+/** The day's record folded with the attempt's progress. */
+export function assaultRecord(
+  record: AssaultRecord,
+  state: AssaultState,
+): AssaultRecord {
+  return call("assaultRecord", () =>
+    parsed<AssaultRecord>(normal.assault_record(json(record), json(state))),
+  );
+}
+
+/** An attempt file folded from its start, or the first refused step. */
+export function assaultFold(
+  file: AssaultFile,
+  day: AssaultDay,
+): AssaultResult {
+  return call("assaultFold", () =>
+    parsed<AssaultResult>(normal.assault_fold(json(file), json(day))),
+  );
+}
+
+/** The Assault's numbers the screens show, so the client states none (CLAUDE.md rule 9). */
+export function assaultConstants(): AssaultConstants {
+  return call("assaultConstants", () =>
+    parsed<AssaultConstants>(normal.assault_constants()),
+  );
+}
+
+/** The day's Assault deck: practice's fresh random deck for a human, seeded `{day seed}-deck`. */
+export function assaultDayDeck(date: string): string[] {
+  return call("assaultDayDeck", () =>
+    parsed<string[]>(normal.assault_day_deck(json(date))),
+  );
 }
 
 // Duos co-op (#936 S4, S8): the wrapper over two duels, for `/dev/duos`'s four-seat hotseat

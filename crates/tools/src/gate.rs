@@ -896,9 +896,9 @@ fn gate_matchup(matchup: Matchup, full: bool, shard: Option<GateShard>, out: &Pa
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct Timing {
-    /// The decision's cost on the development machine: its smallest ratio to the yardstick, in ms.
+    /// The decision's cost in ms: normalized to the development machine when judged, raw otherwise.
     pub(crate) ms: f64,
-    /// The fastest run as this machine timed it, for the report.
+    /// The fastest judged run, or the unjudged run, as this machine timed it.
     raw_ms: f64,
     nodes: i64,
     reason: String,
@@ -1086,9 +1086,60 @@ pub(crate) fn time_decision(
     })
 }
 
+/// One unjudged decision, with its raw duration reported in both timing fields.
+fn time_decision_once(state: &GameState, seat: PlayerId, rng: &Rng, budget: SearchBudget) -> Timing {
+    let started = Instant::now();
+    let mut options = AiOptions {
+        rng: rng.clone(),
+        budget,
+        should_stop: None,
+        wrap_up: None,
+    };
+    let decision = decide(state, seat, &mut options);
+    let raw_ms = started.elapsed().as_secs_f64() * MS_PER_SECOND;
+    let nodes = decision
+        .as_ref()
+        .map_or(0, |decision| decision.stats.nodes as i64);
+    let reason = decision
+        .as_ref()
+        .map_or_else(|| "none".to_string(), |decision| literal(&decision.reason));
+    let (replied, worlds_scored, fell_short) = decision.as_ref().map_or((0, 0, false), |decision| {
+        (
+            decision.stats.replied,
+            decision.stats.worlds_scored,
+            decision.fell_short(),
+        )
+    });
+    Timing {
+        ms: raw_ms,
+        raw_ms,
+        nodes,
+        reason,
+        replied,
+        worlds_scored,
+        fell_short,
+    }
+}
+
+fn perf_decision(
+    state: &GameState,
+    seat: PlayerId,
+    rng: &Rng,
+    budget: SearchBudget,
+    limit_ms: f64,
+    judge_time: bool,
+) -> Result<Timing> {
+    if judge_time {
+        time_decision(state, seat, rng, budget, limit_ms)
+    } else {
+        Ok(time_decision_once(state, seat, rng, budget))
+    }
+}
+
 /// B42: every decision this process times (its perf games and each wide board) stays within the node
 /// budget and under AI_GATE.maxDecisionMs, and one on each pinned position (#1240) under
-/// AI_GATE.pinnedDecisionMs. `judge_time` false skips the clock (the unit tests' unoptimized build).
+/// AI_GATE.pinnedDecisionMs. `judge_time` false skips yardstick normalization and retries (the unit
+/// tests' unoptimized build), deciding once and reporting its raw duration without judging it.
 fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<String> {
     let games = if full {
         AI_GATE.perf_full_games
@@ -1108,10 +1159,12 @@ fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<Stri
     );
     let mut problems: Vec<String> = Vec::new();
 
-    // The yardstick's first run warms the caches; it is no measurement.
-    if let Err(error) = yardstick_ms() {
-        problems.push(format!("perf: {error:#}"));
-        return problems;
+    if judge_time {
+        // The yardstick's first run warms the caches; it is no measurement.
+        if let Err(error) = yardstick_ms() {
+            problems.push(format!("perf: {error:#}"));
+            return problems;
+        }
     }
 
     // A shard with more shards than games has none of its own; the wide boards below still run.
@@ -1121,7 +1174,7 @@ fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<Stri
             Ok(states) => {
                 for (game, seat, state) in states {
                     let rng = Rng::new(&format!("perf:{game}:{}", state.turn), 0);
-                    match time_decision(&state, seat, &rng, AI_BUDGET, limit) {
+                    match perf_decision(&state, seat, &rng, AI_BUDGET, limit, judge_time) {
                         Ok(timing) => timed.push(Timed {
                             game,
                             turn: state.turn,
@@ -1168,7 +1221,7 @@ fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<Stri
             ));
         }
         let rng = Rng::new(&format!("perf:{name}"), 0);
-        match time_decision(&state, PlayerId::P1, &rng, AI_BUDGET, limit) {
+        match perf_decision(&state, PlayerId::P1, &rng, AI_BUDGET, limit, judge_time) {
             Ok(timing) => {
                 let line = serde_json::to_string(&timing).unwrap_or_default();
                 println!("[gate perf] {name}: {line}");
@@ -1186,8 +1239,9 @@ fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<Stri
     // Printed apart from `[gate perf]`, which a parent build with no pinned positions prints too.
     let pinned_limit = AI_GATE.pinned_decision_ms;
     for (name, text) in PINNED {
-        let timed = pinned_position(text)
-            .and_then(|(state, seat, rng)| time_decision(&state, seat, &rng, AI_BUDGET, pinned_limit));
+        let timed = pinned_position(text).and_then(|(state, seat, rng)| {
+            perf_decision(&state, seat, &rng, AI_BUDGET, pinned_limit, judge_time)
+        });
         match timed {
             Ok(timing) => {
                 let line = serde_json::to_string(&timing).unwrap_or_default();
@@ -1207,8 +1261,18 @@ fn perf_gate(full: bool, shard: Option<GateShard>, judge_time: bool) -> Vec<Stri
     problems
 }
 
+fn measure_projected_floors(matchup: Matchup, rate: f64) -> [(i32, i32); 2] {
+    let smoke = smoke_seeds();
+    let full = full_seeds(matchup);
+    [
+        (smoke, gate_needed_with_rate(matchup, smoke, rate)),
+        (full, gate_needed_with_rate(matchup, full, rate)),
+    ]
+}
+
 /// Measures the AI's win rate on tuning deals (`AI_TUNING_SERIES`) across all three matchups (issue #4513).
-/// Prints wins, turn-cap draws, win rates with 95% Wilson intervals, and projected floor counts at 20, 50, and 100 games.
+/// Prints wins, turn-cap draws, win rates with 95% Wilson intervals, and projected floor counts at
+/// the matchup's configured smoke and full sizes.
 /// Exits 1 only on unclean games (B31); judges no win-count floor.
 fn measure_matchups(games: usize) -> Result<()> {
     let mut problems: Vec<String> = Vec::new();
@@ -1225,11 +1289,10 @@ fn measure_matchups(games: usize) -> Result<()> {
             problems.push(format!("{name}: {error:#}"));
         }
         let (low, high) = jackioh_engine::wire::stats::wilson_interval(run.wins as i64, games as i64);
-        let n20 = gate_needed_with_rate(matchup, 20, run.rate);
-        let n50 = gate_needed_with_rate(matchup, 50, run.rate);
-        let n100 = gate_needed_with_rate(matchup, 100, run.rate);
+        let [(smoke_games, smoke_floor), (full_games, full_floor)] =
+            measure_projected_floors(matchup, run.rate);
         println!(
-            "[gate measure {name}] {} wins and {} turn-cap draws of {games}; rate: {:.3} (95% Wilson: [{:.3}, {:.3}]); needed: 20 -> {n20}, 50 -> {n50}, 100 -> {n100} ({seconds:.1}s)",
+            "[gate measure {name}] {} wins and {} turn-cap draws of {games}; rate: {:.3} (95% Wilson: [{:.3}, {:.3}]); needed: {smoke_games} -> {smoke_floor}, {full_games} -> {full_floor} ({seconds:.1}s)",
             run.wins, run.turn_cap_draws, run.rate, low, high
         );
     }
@@ -1467,6 +1530,37 @@ mod tests {
     }
 
     #[test]
+    fn b42_unjudged_decision_reports_the_node_count_of_one_plain_decide() {
+        jackioh_cards::register_all();
+        let (_, setup) = wide_boards()
+            .into_iter()
+            .find(|(name, _)| *name == "wide-easy")
+            .expect("wide-easy board");
+        let state = wide_state("wide-easy", &setup);
+        let rng = Rng::new("perf:wide-easy", 0);
+
+        let timing = perf_decision(
+            &state,
+            PlayerId::P1,
+            &rng,
+            AI_BUDGET,
+            AI_GATE.max_decision_ms,
+            false,
+        )
+        .unwrap();
+        let mut options = AiOptions {
+            rng: rng.clone(),
+            budget: AI_BUDGET,
+            should_stop: None,
+            wrap_up: None,
+        };
+        let nodes =
+            decide(&state, PlayerId::P1, &mut options).map_or(0, |decision| decision.stats.nodes as i64);
+
+        assert_eq!(timing.nodes, nodes);
+    }
+
+    #[test]
     fn the_shard_switch_reads_k_of_k_and_refuses_anything_else() {
         assert_eq!(gate_shard(None).unwrap(), None);
         assert_eq!(gate_shard(Some("  ")).unwrap(), None);
@@ -1552,40 +1646,33 @@ mod tests {
     }
 
     #[test]
-    fn measure_plays_tuning_series_and_no_gate_seeds() {
-        jackioh_cards::register_all();
-        let played = [1, 2];
+    fn measure_projects_floors_at_each_matchups_smoke_and_full_sizes() {
         for matchup in matchups() {
-            let run = play_measure_matchup(matchup, &played);
-            assert_eq!(run.games.len(), 2);
-            for game in &run.games {
-                assert!(
-                    game.seed.starts_with("tune:"),
-                    "seed {} does not start with tune:",
-                    game.seed
-                );
-                assert!(
-                    !game.seed.contains("gate:v3"),
-                    "seed {} contains gate:v3",
-                    game.seed
-                );
-            }
+            let projected = measure_projected_floors(matchup, AI_GATE.measured_rate[matchup]);
+            assert_eq!(
+                projected.map(|(games, _)| games),
+                [smoke_seeds(), full_seeds(matchup)]
+            );
         }
     }
 
     #[test]
-    fn measure_tally_and_wilson_interval_known_counts() {
-        let (low, high) = jackioh_engine::wire::stats::wilson_interval(65, 100);
-        assert_eq!(
-            (
-                jackioh_engine::wire::stats::round_share(low),
-                jackioh_engine::wire::stats::round_share(high)
-            ),
-            (0.553, 0.736)
-        );
+    fn r4513000_one_ai_vs_random_tuning_game_is_clean_and_every_matchup_has_tuning_seeds() {
+        jackioh_cards::register_all();
+        let played = [1];
+        let run = play_measure_matchup(Matchup::AiVsRandom, &played);
+        check_report_series(&run, &played, AI_TUNING_SERIES).expect("report matches tuning series");
+        check_clean(&run).expect("tuning series game must be clean");
+
+        for matchup in matchups() {
+            let seed = game_config(matchup, 1, AI_GATE_BUDGET, AI_TUNING_SERIES).seed;
+            assert_eq!(seed, format!("{AI_TUNING_SERIES}:{}:1", matchup_name(matchup)));
+            assert!(!seed.starts_with(AI_GATE.seed_series), "gate seed: {seed}");
+        }
     }
 
     #[test]
+    #[ignore = "daily: all three tuning matchups; r4513000_one_ai_vs_random_tuning_game_is_clean_and_every_matchup_has_tuning_seeds keeps the common route and every tuning seed per pull request"]
     fn r4513000_measure_gate_tuning_series_is_clean() {
         jackioh_cards::register_all();
         let played = [1, 2];

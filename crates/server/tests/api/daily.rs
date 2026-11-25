@@ -3,7 +3,8 @@
 //! started on (R3727005), its open challenges cancelled by a block (R3727007), holding its accounts
 //! from deletion while it runs (R3727008), and "your move" sent by email and Web Push, to a browser's
 //! push service only. A finished game whose moves the retention purge took opens as its stored result
-//! and refuses every move (R3934000).
+//! and refuses every move (R3934000). A finished game stays for the other player when one of its
+//! players deletes their account, naming that opponent by nobody (R4621000).
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
@@ -28,7 +29,8 @@ use jackioh_server::api::queue::try_pair;
 use jackioh_server::api::retention::purge_expired;
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
-    DAILY_MAX_ACTIVE_GAMES, DAILY_PLAYER_EMAILS_PER_DAY, MATCH_ACTION_RETENTION_DAYS, MS_PER_DAY,
+    DAILY_MAX_ACTIVE_GAMES, DAILY_PLAYER_EMAILS_PER_DAY, DAILY_REMINDER_HOURS, MATCH_ACTION_RETENTION_DAYS,
+    MS_PER_DAY, MS_PER_HOUR, NOTIFICATIONS_KEEP_DAYS,
 };
 use jackioh_server::daily::notify::sweep;
 use jackioh_server::db::store::{DailyNotifyRow, MatchStatus, ProfileStatus, PushSubRow};
@@ -1397,6 +1399,95 @@ async fn r3727008_an_account_playing_a_daily_game_is_deleted_only_once_the_game_
             .expect("the match stays");
         tx.commit().await.expect("commit");
         assert_eq!(row.status, MatchStatus::Finished, "by time {by_time}");
+    }
+}
+
+// R4621000: a finished daily game stays for the other player when one deletes their account
+
+#[tokio::test]
+async fn r4621000_a_finished_daily_game_stays_for_the_other_player_when_one_deletes_their_account() {
+    let gone = json!({ "profileId": "", "username": "" });
+    for purged in [false, true] {
+        let (app, ada, bo) = two_friends().await;
+        let match_id = daily_game(&app, &ada, &bo, 3).await;
+        past_the_mulligan(&app, [&ada, &bo], &match_id).await;
+        let seq = read(&app, &ada, &match_id).await["seq"].as_i64().expect("a seq");
+        let (status, body) = send(
+            &app,
+            &ada,
+            &match_id,
+            seq,
+            "concede",
+            json!({ "type": "concede" }),
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        assert_eq!(match_status(&app, &match_id).await, MatchStatus::Finished);
+
+        let (status, body) = api(&app, "DELETE", "/api/account", &ada.token, Value::Null).await;
+        assert_eq!(status, 204, "purged {purged}: {body}");
+        if purged {
+            assert!(purge_its_log(&app, &match_id).await > 0, "the purge took the log");
+        }
+
+        // Bo's list still holds the game, its opponent named by nobody.
+        let (status, list) = api(&app, "GET", "/api/daily", &bo.token, Value::Null).await;
+        assert_eq!(status, 200, "purged {purged}: {list}");
+        let row = &list["games"][0];
+        assert_eq!(row["matchId"], match_id.as_str(), "purged {purged}: {list}");
+        assert_eq!(row["over"], true, "purged {purged}: {list}");
+        assert_eq!(row["result"]["outcome"], "win", "purged {purged}: {list}");
+        assert_eq!(row["opponent"], gone, "purged {purged}: {list}");
+
+        // Its board opens with the result, as before.
+        let game = read(&app, &bo, &match_id).await;
+        assert_eq!(game["opponent"], gone, "purged {purged}: {game}");
+        assert_eq!(game["over"], true, "purged {purged}: {game}");
+        if purged {
+            assert_eq!(game["expired"], true, "{game}");
+            assert_eq!(game["result"]["outcome"], "win", "{game}");
+        } else {
+            assert!(game["view"].is_object(), "{game}");
+            assert!(!game["view"]["result"].is_null(), "{game}");
+            assert!(game.get("expired").is_none(), "{game}");
+        }
+
+        // A move is refused as over, the game it answers naming nobody either.
+        let (status, body) = send(
+            &app,
+            &bo,
+            &match_id,
+            seq + 1,
+            "after-the-delete",
+            json!({ "type": "endTurn" }),
+        )
+        .await;
+        assert_eq!((status, code_of(&body)), (409, "over"), "purged {purged}: {body}");
+        assert_eq!(body["game"]["opponent"], gone, "purged {purged}: {body}");
+
+        // R768: its replay still opens from Bo's seat while its log is kept.
+        if !purged {
+            let (status, replay) = api(
+                &app,
+                "GET",
+                &format!("/api/replays/{match_id}"),
+                &bo.token,
+                Value::Null,
+            )
+            .await;
+            assert_eq!(status, 200, "{replay}");
+        }
+
+        // No rematch against an account that is gone: it is nobody's friend now.
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/daily/challenges",
+            &bo.token,
+            random_challenge(&ada, 3),
+        )
+        .await;
+        assert_eq!(status, 404, "purged {purged}: {body}");
     }
 }
 
@@ -3574,4 +3665,110 @@ async fn list_reads_every_games_portraits_in_one_match_read() {
         want.sort();
         assert_eq!(both, want, "{match_id}");
     }
+}
+
+// R4691000: when a sweep next has something to do, which the Worker asks as the server goes to sleep
+
+/// `GET /daily-next`'s time, or `None`.
+async fn next_due_at(app: &Arc<App>) -> Option<i64> {
+    let (status, _headers, body) = call(app, "GET", "/daily-next", None, Value::Null).await;
+    assert_eq!(status, 200, "{body}");
+    body["nextDueAt"].as_i64()
+}
+
+/// The earliest deadline of `match_id` as the store holds it.
+async fn deadline_of(app: &Arc<App>, match_id: &str) -> i64 {
+    fake_lock(app)
+        .await
+        .tables
+        .daily
+        .games
+        .iter()
+        .find(|game| game.match_id == match_id)
+        .and_then(|game| game.next_deadline_at)
+        .expect("a running game's deadline")
+}
+
+/// Asserts `due` is the daily clock's now, read around the call that answered it.
+fn due_now(due: Option<i64>, before: i64, after: i64) {
+    let due = due.expect("something due");
+    assert!(before <= due && due <= after, "{before} <= {due} <= {after}");
+}
+
+#[tokio::test]
+async fn r4691000_next_due_is_the_first_deadline_lapse_or_purge_a_sweep_has() {
+    let empty = app_with(None, TestAppOptions::default()).await;
+    assert_eq!(next_due_at(&empty).await, None, "nothing stored, nothing due");
+    let (app, ada, bo) = two_friends().await;
+
+    // No mail key and no device: the game's deadline comes before the accepted challenge's lapse
+    // (a week) and the feed's oldest row's keep.
+    let match_id = daily_game(&app, &ada, &bo, 1).await;
+    let deadline = deadline_of(&app, &match_id).await;
+    assert_eq!(next_due_at(&app).await, Some(deadline));
+
+    // Past it, due at once; settled, the invite's lapse is next.
+    app.daily.set_offset(2 * MS_PER_DAY);
+    let before = app.daily.now();
+    let due = next_due_at(&app).await;
+    due_now(due, before, app.daily.now());
+    let (status, _headers, swept) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
+    assert_eq!((status, swept["settled"].as_i64()), (200, Some(1)), "{swept}");
+    let lapse = fake_lock(&app)
+        .await
+        .tables
+        .daily
+        .invites
+        .iter()
+        .map(|invite| invite.expires_at)
+        .min();
+    assert!(lapse.is_some(), "the accepted challenge is kept to its lapse");
+    assert_eq!(next_due_at(&app).await, lapse);
+
+    // Purged, the feed's oldest row is next, a millisecond past its keep.
+    app.daily
+        .set_offset(jackioh_server::config::DAILY_CHALLENGE_TTL_DAYS * MS_PER_DAY + 1);
+    let (status, _headers, swept) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
+    assert_eq!(status, 200, "{swept}");
+    let oldest = fake_lock(&app)
+        .await
+        .tables
+        .notifications
+        .rows
+        .iter()
+        .map(|row| row.created_at)
+        .min()
+        .expect("the game's feed rows");
+    assert_eq!(
+        next_due_at(&app).await,
+        Some(oldest + NOTIFICATIONS_KEEP_DAYS * MS_PER_DAY + 1)
+    );
+}
+
+#[tokio::test]
+async fn r4691000_next_due_counts_a_waiting_accounts_next_email() {
+    // The game starts on a server with no mail key, so nobody has been emailed of it.
+    let (quiet, ada, bo) = two_friends().await;
+    let match_id = daily_game(&quiet, &ada, &bo, 3).await;
+    let (mail_api, _seen) = fake_service(StatusCode::OK).await;
+    let app = app_with(
+        Some(quiet.db.clone()),
+        TestAppOptions {
+            mail_api: Some(format!("{mail_api}/emails")),
+            ..TestAppOptions::default()
+        },
+    )
+    .await;
+    let before = app.daily.now();
+    let due = next_due_at(&app).await;
+    due_now(due, before, app.daily.now());
+
+    // Emailed: the next is the game's reminder, before its deadline.
+    let (status, _headers, swept) = call(&app, "POST", "/daily-sweep", None, Value::Null).await;
+    assert_eq!((status, swept["emailed"].as_i64()), (200, Some(2)), "{swept}");
+    let deadline = deadline_of(&app, &match_id).await;
+    assert_eq!(
+        next_due_at(&app).await,
+        Some(deadline - DAILY_REMINDER_HOURS * MS_PER_HOUR)
+    );
 }

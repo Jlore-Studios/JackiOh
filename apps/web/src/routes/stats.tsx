@@ -16,7 +16,9 @@
 // the Full-art cards setting is on, R3011000), patch history, turn curve and co-played synergy. R3838000: its
 // "Show card text" button, the Almanac's, prints every face's words, no full art (cardText.tsx). R3887000: the
 // Cards and Tokens tabs' "Plain text" button prints each card they list, and the drill-down's text and its
-// Reference cards, as readable text, no face (PlainText.tsx).
+// Reference cards, as readable text, no face (PlainText.tsx). R4673000, R4673001: their Face control (All, Normal
+// or Radiant, kept in the address) reads every figure they and the Sets tab show on one face, against that face's
+// own field and band, and the drill-down on the page's face and patch, with each face's rate and the Radiant gap.
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { KEYWORD_KINDS, SHIPPED_SETS, type CardDef, type CardDefs, type KeywordKind } from "@jackioh/shared";
@@ -33,17 +35,21 @@ import { currentCatalog } from "../game/currentCatalog.ts";
 import { useFaceModel } from "../game/faces.ts";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
+  ApiRequestError,
   cardStatsPath,
   getCardDrillDown,
   getCardStats,
   getPublicPlayers,
   type CardDrillDownResponse,
+  type CardFaces,
   type CardStatsOptions,
+  type PublicFaceFigures,
   type PublicPlayerSummary,
   type PublicStatsCardsResponse,
 } from "../net/api.ts";
 import { navigate, paths } from "../net/navigate.ts";
 import { cachedRead } from "../net/readCache.ts";
+import { readSession } from "../net/session.ts";
 import { Skeleton } from "../skeleton/Skeleton.tsx";
 import {
   ADJUSTED_RANGE_DIGITS,
@@ -55,6 +61,7 @@ import {
 } from "../stats/config.ts";
 import { CREATED_SORT_COLUMNS, CreatedPanel, createdSortOf, type CreatedSort } from "../stats/CreatedPanel.tsx";
 import { GamesPanel } from "../stats/GamesPanel.tsx";
+import { FindPatchIcon, PatchSearch, olderPatchesLine } from "../stats/PatchSearch.tsx";
 import {
   currentVersion,
   isCollecting,
@@ -70,8 +77,9 @@ import { RangeText, TierFitText } from "../stats/RangeText.tsx";
 import { changes, leaders, outliers, setRows, type RatedCard } from "../stats/sets.ts";
 import { TableScroll } from "../stats/TableScroll.tsx";
 import { statsTestid } from "../stats/testids.ts";
-import { TierChip, adjustedText, tierRank } from "../stats/TierChip.tsx";
+import { TierChip, adjustedText, decisivenessText, tierRank } from "../stats/TierChip.tsx";
 import { cardTierFit } from "../stats/tierFit.ts";
+import type { StatsFace } from "../wire/generated/StatsFace.ts";
 import { CardTextButton, CardTextFaces, cardTextTestid, useCardText, type CardText } from "./cardText.tsx";
 import { BackLink, followInApp } from "./nav.tsx";
 import { Segmented, Tabs } from "../tabs/index.ts";
@@ -189,6 +197,14 @@ function previousPatchOf(res: PublicStatsCardsResponse): { name: string; target:
   return res.previousPatch ? { name: res.previousPatch, target: res.previousPatch } : null;
 }
 
+/** R4677000: the code the server refuses a patch past the caller's with, an older patch for dev accounts alone. */
+const PATCH_DEV_ONLY = "patch_dev_only";
+
+/** R4677000: the signed-in token the statistics reads carry, so the server can tell a dev account; none signed out. */
+function statsToken(): string | null {
+  return readSession()?.accessToken ?? null;
+}
+
 /** R1966000: a set's win rate, or its change, to `SET_STATS_DIGITS` places: sets differ by tenths of a point. */
 function setPercent(rate: number, signed = false): string {
   return formatNumber(rate, {
@@ -201,16 +217,17 @@ function setPercent(rate: number, signed = false): string {
 
 type TabKey = "cards" | "tokens" | "sets" | "players";
 type ViewKey = "table" | "grid";
-type SortColumn = "name" | "games" | "tier" | "adjustedWinRate" | "winRate" | "playRate";
+type SortColumn = "name" | "games" | "tier" | "adjustedWinRate" | "decisiveness" | "winRate" | "playRate";
 type SortDirection = "asc" | "desc";
 
-const SORT_COLUMNS: readonly SortColumn[] = ["name", "games", "tier", "adjustedWinRate", "winRate", "playRate"] as const;
+const SORT_COLUMNS: readonly SortColumn[] = ["name", "games", "tier", "adjustedWinRate", "decisiveness", "winRate", "playRate"] as const;
 
 const SORT_LABELS: Record<SortColumn, string> = {
   name: "Name",
   games: "Games",
   tier: "Tier",
   adjustedWinRate: "Adjusted",
+  decisiveness: "Decisiveness",
   winRate: "Win rate",
   playRate: "Play rate",
 };
@@ -255,15 +272,81 @@ function modeOf(params: URLSearchParams): StatsMode {
   return MODES.find((known) => known === asked) ?? DEFAULT_MODE;
 }
 
+/** R4673001: the faces the Cards and Tokens tabs read. All, every seat as before, comes first and is what the page opens on. */
+const FACES: readonly StatsFace[] = ["all", "normal", "radiant"];
+const DEFAULT_FACE: StatsFace = "all";
+
+/** R4673001: the face an address asks for; none, or one the page does not offer, is All. */
+function faceOf(params: URLSearchParams): StatsFace {
+  const asked = params.get("face");
+  return FACES.find((known) => known === asked) ?? DEFAULT_FACE;
+}
+
+/** R4673001: the face a read asks for: none on All, so All's requests and their kept answers stay as they were. */
+function askedFace(face: StatsFace): StatsFace | undefined {
+  return face === DEFAULT_FACE ? undefined : face;
+}
+
 /** The Cards tab's read for these filters; an empty filter asks for nothing, as `fetchCardStats` always did. */
-function cardStatsOptionsOf(patch: string, set: string, rarity: string, cost: string, mode: string): CardStatsOptions {
+function cardStatsOptionsOf(
+  patch: string,
+  set: string,
+  rarity: string,
+  cost: string,
+  mode: string,
+  face: StatsFace,
+): CardStatsOptions {
   return {
     patch: patch ? patch : undefined,
     set: set ? set : undefined,
     rarity: rarity ? rarity : undefined,
     cost: cost ? Number(cost) : undefined,
     mode: mode ? mode : undefined,
+    face: askedFace(face),
   };
+}
+
+/** R4673001: a face's adjusted rate on the drill-down's face line, as Adjusted reads; not enough games below its floor. */
+function faceRateText(figures: PublicFaceFigures): string {
+  return figures.hasEnoughGames && typeof figures.adjustedWinRate === "number"
+    ? adjustedText(figures.adjustedWinRate)
+    : t("not enough games");
+}
+
+/** R4673000: one end of the Radiant gap, signed, to a tenth of a point as Adjusted reads. */
+function gapPercent(share: number): string {
+  return formatNumber(share, {
+    style: "percent",
+    minimumFractionDigits: ADJUSTED_RANGE_DIGITS,
+    maximumFractionDigits: ADJUSTED_RANGE_DIGITS,
+    signDisplay: "exceptZero",
+  });
+}
+
+/**
+ * R4673001: the drill-down's line under the faces, on every face: the card's Normal and Radiant adjusted rates,
+ * each read against its own face's field, and Radiant's minus Normal's with its 95% range.
+ */
+function FaceLine({ faces }: { faces: CardFaces }): ReactElement {
+  const { gap } = faces;
+  return (
+    <p className="stats-drilldown-face-line" data-testid={statsTestid.drillDownFaceLine}>
+      <span data-testid={statsTestid.drillDownFaceNormal}>{t("Normal {rate}", { rate: faceRateText(faces.normal) })}</span>
+      <span data-testid={statsTestid.drillDownFaceRadiant}>{t("Radiant {rate}", { rate: faceRateText(faces.radiant) })}</span>
+      <span data-testid={statsTestid.drillDownFaceGap}>
+        {t("Radiant gap {gap}", {
+          gap:
+            gap === null
+              ? t("not enough games")
+              : t("{gap} ({low} to {high})", {
+                  gap: gapPercent(gap.gap),
+                  low: gapPercent(gap.low),
+                  high: gapPercent(gap.high),
+                }),
+        })}
+      </span>
+    </p>
+  );
 }
 
 /**
@@ -327,6 +410,8 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   // R2895000: the 95% ranges under Win rate and Adjusted, off by default.
   const [showRanges, setShowRanges] = useState(initialParams.get("ranges") === "1");
   const [mode, setMode] = useState<StatsMode>(() => modeOf(initialParams));
+  // R4673001: the face the Cards and Tokens tabs read, one state for both, as the view and the ranges are.
+  const [face, setFace] = useState<StatsFace>(() => faceOf(initialParams));
 
   const [visibleCols, setVisibleCols] = useState({
     thumbnail: true,
@@ -335,11 +420,12 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     playRate: true,
   });
 
-  // R2125000: a revisit starts on the table these filters last read and reads it again behind it.
+  // R2125000: a revisit starts on the table these filters last read and reads it again behind it, kept under the
+  // account that read it (R4677000).
   const [cardStatsKept] = useState(() =>
     cachedRead<PublicStatsCardsResponse>(
-      null,
-      cardStatsPath(cardStatsOptionsOf(patch, setFilter, rarityFilter, costFilter, mode)),
+      statsToken(),
+      cardStatsPath(cardStatsOptionsOf(patch, setFilter, rarityFilter, costFilter, mode, face)),
     ),
   );
   const [cardStatsLoading, setCardStatsLoading] = useState(cardStatsKept === undefined);
@@ -347,6 +433,9 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const [cardStatsData, setCardStatsData] = useState<PublicStatsCardsResponse | null>(cardStatsKept ?? null);
   // Bumped by Retry: the effect asks again, so its cleanup cancels a retry like any other request.
   const [cardStatsAttempt, setCardStatsAttempt] = useState(0);
+  // R4677001: the patch search's dialog; R4677000: the address named a patch the server keeps for dev accounts.
+  const [patchSearchOpen, setPatchSearchOpen] = useState(false);
+  const [patchRefused, setPatchRefused] = useState(false);
 
   const [playersLoading, setPlayersLoading] = useState(false);
   const [playersError, setPlayersError] = useState(false);
@@ -389,12 +478,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     if (view !== "table") params.set("view", view);
     if (cardDrillDownId) params.set("card", cardDrillDownId);
     if (mode !== DEFAULT_MODE) params.set("mode", mode);
+    if (face !== DEFAULT_FACE) params.set("face", face);
     if (showRanges) params.set("ranges", "1");
 
     const query = params.toString();
     const target = query ? `${paths.stats}?${query}` : paths.stats;
     navigate(target, { replace: true });
-  }, [tab, patch, search, sortCol, sortDir, setFilter, rarityFilter, costFilter, keywordFilter, view, cardDrillDownId, mode, showRanges]);
+  }, [tab, patch, search, sortCol, sortDir, setFilter, rarityFilter, costFilter, keywordFilter, view, cardDrillDownId, mode, face, showRanges]);
 
   useEffect(() => {
     updateUrl();
@@ -402,9 +492,10 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
 
   const fetchCardStats = useCallback(
     () => {
-      const options = cardStatsOptionsOf(patch, setFilter, rarityFilter, costFilter, mode);
+      const options = cardStatsOptionsOf(patch, setFilter, rarityFilter, costFilter, mode, face);
+      const token = statsToken();
       // R2125000: a table kept for these filters draws at once; only a first visit to them waits behind a skeleton.
-      const kept = cachedRead<PublicStatsCardsResponse>(null, cardStatsPath(options));
+      const kept = cachedRead<PublicStatsCardsResponse>(token, cardStatsPath(options));
       if (kept === undefined) {
         setCardStatsLoading(true);
       } else {
@@ -414,14 +505,20 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       setCardStatsError(false);
       const controller = new AbortController();
 
-      getCardStats({ ...options, signal: controller.signal })
+      getCardStats({ ...options, token, signal: controller.signal })
         .then((res) => {
           if (controller.signal.aborted) return;
           setCardStatsData(res);
           setCardStatsLoading(false);
         })
-        .catch(() => {
+        .catch((cause: unknown) => {
           if (controller.signal.aborted) return;
+          // R4677000: a patch the server keeps for dev accounts opens the current patch, with a line saying so.
+          if (cause instanceof ApiRequestError && cause.code === PATCH_DEV_ONLY) {
+            setPatchRefused(true);
+            setPatch("");
+            return;
+          }
           // A read that fails behind a kept table leaves it and says nothing.
           if (kept !== undefined) return;
           setCardStatsError(true);
@@ -430,7 +527,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
 
       return () => controller.abort();
     },
-    [patch, setFilter, rarityFilter, costFilter, mode],
+    [patch, setFilter, rarityFilter, costFilter, mode, face],
   );
 
   useEffect(() => {
@@ -480,7 +577,10 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const shownPatch = cardStatsData ? patchIndex(patchList, cardStatsData.patch) : -1;
   const pickable = offeredPatches(patchList, shownPatch);
   const { previous: previousWindow, next: nextWindow } = neighbours(patchList, shownPatch);
-  const choosePatch = (window: PatchWindow): void => setPatch(patchList.indexOf(window) === 0 ? "" : patchTarget(window));
+  const choosePatch = (window: PatchWindow): void => {
+    setPatchRefused(false);
+    setPatch(patchList.indexOf(window) === 0 ? "" : patchTarget(window));
+  };
   // R3324000: the newest patch, short of games, shows no figures: its Cards and Sets tabs say it is collecting.
   const collecting = isCollecting(patchList, shownPatch);
   const shownPatchName = shownPatch >= 0 ? patchName(patchList[shownPatch]!) : (cardStatsData?.patch ?? "");
@@ -494,13 +594,21 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       : shownPatchName;
 
   // R1966000: the Sets tab reads the patch's every card, whatever the Cards tab filters, then the previous
-  // patch's for each set's change; a previous patch that fails to load only leaves the change out.
+  // patch's for each set's change; a previous patch that fails to load only leaves the change out. R4673001:
+  // both on the page's face.
   useEffect(() => {
     // R3324000: a patch still collecting its data has no sets to read.
     if (tab !== "sets" || collecting) return;
     setSetsError(false);
     const controller = new AbortController();
-    getCardStats({ patch: patch ? patch : undefined, mode: mode ? mode : undefined, signal: controller.signal })
+    const token = statsToken();
+    getCardStats({
+      patch: patch ? patch : undefined,
+      mode: mode ? mode : undefined,
+      face: askedFace(face),
+      token,
+      signal: controller.signal,
+    })
       .then((res) => {
         if (controller.signal.aborted) return;
         setSetsData(res);
@@ -508,7 +616,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
         // R1973002: the patch before, not the version before, which may be a micro of the same patch.
         const before = previousPatchOf(res);
         if (!before) return;
-        getCardStats({ patch: before.target, mode: mode ? mode : undefined, signal: controller.signal })
+        getCardStats({ patch: before.target, mode: mode ? mode : undefined, face: askedFace(face), token, signal: controller.signal })
           .then((previous) => {
             if (!controller.signal.aborted) setSetsPrevious(previous);
           })
@@ -519,8 +627,9 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
         setSetsError(true);
       });
     return () => controller.abort();
-  }, [tab, patch, mode, setsAttempt, collecting]);
+  }, [tab, patch, mode, face, setsAttempt, collecting]);
 
+  // R4673001: a card's details on the page's match type, face and patch (none asked for the newest patch).
   useEffect(() => {
     if (!cardDrillDownId) {
       setDrillDownData(null);
@@ -529,7 +638,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     setDrillDownLoading(true);
     setDrillDownError(false);
     const controller = new AbortController();
-    getCardDrillDown(cardDrillDownId, mode ? mode : undefined, controller.signal)
+    getCardDrillDown(cardDrillDownId, {
+      mode: mode ? mode : undefined,
+      face: askedFace(face),
+      patch: patch ? patch : undefined,
+      token: statsToken(),
+      signal: controller.signal,
+    })
       .then((data) => {
         if (controller.signal.aborted) return;
         setDrillDownData(data);
@@ -542,7 +657,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       });
 
     return () => controller.abort();
-  }, [cardDrillDownId, mode, drillDownAttempt]);
+  }, [cardDrillDownId, mode, face, patch, drillDownAttempt]);
 
   // The drill-down is a modal like the client's others (docs/polish/6-cards.md, B25), drawn through
   // Dialog.tsx (R3221000), whose keys close it and keep Tab inside, and Back too (R2127000). The control
@@ -641,12 +756,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
         const aRate = a.adjustedWinRate ?? null;
         const bRate = b.adjustedWinRate ?? null;
         if (aRate !== null && bRate !== null && aRate !== bRate) return (aRate - bRate) * flip;
-      } else if (sortCol === "adjustedWinRate") {
-        // R2777000: a card with no adjusted rate (nothing seen, or never unseen) sorts after those with one.
+      } else if (sortCol === "adjustedWinRate" || sortCol === "decisiveness") {
+        // R2777000: a card with no adjusted rate (nothing seen, or never unseen) sorts after those with one;
+        // R4552001: Decisiveness sorts the same way.
         if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
         if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
-        const aRate = a.adjustedWinRate ?? null;
-        const bRate = b.adjustedWinRate ?? null;
+        const aRate = (sortCol === "decisiveness" ? a.decisiveness : a.adjustedWinRate) ?? null;
+        const bRate = (sortCol === "decisiveness" ? b.decisiveness : b.adjustedWinRate) ?? null;
         if (aRate !== null && bRate === null) return -1;
         if (aRate === null && bRate !== null) return 1;
         if (aRate !== null && bRate !== null && aRate !== bRate) {
@@ -695,6 +811,9 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       drillDownDef && drillDownRadiant ? faceModel({ defId: drillDownDef.id, def: drillDownDef, radiant: true }) : null,
     [drillDownDef, drillDownRadiant, locale],
   );
+  // R4673001: the open card's face line, never the card before's while its details load or after they fail;
+  // none from a server deployed before it.
+  const drillDownFaces = drillDownLoading || drillDownError ? undefined : drillDownData?.faces;
   const drillDownTokens = drillDownDef ? tokensOf(drillDownDef) : [];
   // R3887000: every card its text names, for the breakdown's Reference cards while Plain text is on.
   const drillDownRefs = drillDownDef ? referencesOf(drillDownDef) : [];
@@ -843,6 +962,23 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
           />
         </div>
 
+        {/* R4673001: the face every figure of both tabs reads, kept in the address; its buttons carry their words alone (R3184000) */}
+        <div className="stats-view-toggle">
+          <span className="stats-sort-label" aria-hidden="true">
+            {t("Face")}
+          </span>
+          <Segmented
+            label={t("Face")}
+            value={face}
+            onChange={setFace}
+            options={[
+              { value: "all", label: t("All"), testId: statsTestid.faceAll, className: "stats-view-btn" },
+              { value: "normal", label: t("Normal"), testId: statsTestid.faceNormal, className: "stats-view-btn" },
+              { value: "radiant", label: t("Radiant"), testId: statsTestid.faceRadiant, className: "stats-view-btn" },
+            ]}
+          />
+        </div>
+
         {/* R2895000: the 95% ranges, off by default; R3324003: an on/off button in the Segmented's look */}
         <div className="segmented">
           <button
@@ -906,17 +1042,17 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
           </BackLink>
         </header>
 
-        {/* R1973002, R3324000: a tab for each offered patch, between the patch before and the patch after */}
+        {/* R1973002, R3324000, R4674000: a tab for each offered patch; the arrows follow the tabs: left steps newer, right steps older */}
         {patchList.length > 0 && (
           <nav className="stats-patch-bar" data-testid={statsTestid.patchBar} aria-label={t("Patches")}>
             <button
               type="button"
               className="stats-patch-step"
-              data-testid={statsTestid.patchPrevious}
-              disabled={previousWindow === null}
-              aria-label={previousWindow ? t("Previous patch ({patch})", { patch: patchName(previousWindow) }) : t("Previous patch")}
-              title={previousWindow ? t("Previous patch ({patch})", { patch: patchName(previousWindow) }) : t("Previous patch")}
-              onClick={() => previousWindow && choosePatch(previousWindow)}
+              data-testid={statsTestid.patchNext}
+              disabled={nextWindow === null}
+              aria-label={nextWindow ? t("Newer patch ({patch})", { patch: patchName(nextWindow) }) : t("Newer patch")}
+              title={nextWindow ? t("Newer patch ({patch})", { patch: patchName(nextWindow) }) : t("Newer patch")}
+              onClick={() => nextWindow && choosePatch(nextWindow)}
             >
               ←
             </button>
@@ -947,15 +1083,45 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
             <button
               type="button"
               className="stats-patch-step"
-              data-testid={statsTestid.patchNext}
-              disabled={nextWindow === null}
-              aria-label={nextWindow ? t("Next patch ({patch})", { patch: patchName(nextWindow) }) : t("Next patch")}
-              title={nextWindow ? t("Next patch ({patch})", { patch: patchName(nextWindow) }) : t("Next patch")}
-              onClick={() => nextWindow && choosePatch(nextWindow)}
+              data-testid={statsTestid.patchPrevious}
+              disabled={previousWindow === null}
+              aria-label={previousWindow ? t("Older patch ({patch})", { patch: patchName(previousWindow) }) : t("Older patch")}
+              title={previousWindow ? t("Older patch ({patch})", { patch: patchName(previousWindow) }) : t("Older patch")}
+              onClick={() => previousWindow && choosePatch(previousWindow)}
             >
               →
             </button>
+            {/* R4677001: one button at the bar's end opens the search through every patch the caller may read */}
+            <button
+              type="button"
+              className="stats-patch-step stats-patch-search"
+              data-testid={statsTestid.patchSearch}
+              aria-label={t("Find a patch")}
+              title={t("Find a patch")}
+              aria-haspopup="dialog"
+              onClick={() => setPatchSearchOpen(true)}
+            >
+              <FindPatchIcon />
+            </button>
           </nav>
+        )}
+        {/* R4677000: the address named a patch the server keeps for dev accounts; the page shows the current one */}
+        {patchRefused && (
+          <p className="stats-patch-refused" role="status" data-testid={statsTestid.patchRefused}>
+            {olderPatchesLine()}
+          </p>
+        )}
+        {patchSearchOpen && (
+          <PatchSearch
+            patches={patchList}
+            shown={shownPatch}
+            olderPatchesForDevs={cardStatsData?.olderPatchesForDevs === true}
+            onPick={(window) => {
+              setPatchSearchOpen(false);
+              choosePatch(window);
+            }}
+            onClose={() => setPatchSearchOpen(false)}
+          />
         )}
 
         {/* The summary: the patch's games alone (R661); R1646000 took the top and lowest card tiles off the fixed top;
@@ -1041,6 +1207,8 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                             <RangeText low={card.adjustedLow} high={card.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
                           )}
                         </dd>
+                        <dt>{t("Decisiveness")}</dt>
+                        <dd>{card.hasEnoughGames ? decisivenessText(card.decisiveness) : t("not enough games")}</dd>
                         <dt>{t("Win rate")}</dt>
                         <dd>
                           {card.hasEnoughGames && card.winRate !== null
@@ -1130,6 +1298,25 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                       <th
                         scope="col"
                         className="stats-th stats-th--sortable"
+                        title={t(
+                          "Decisiveness: how far playing a card typically moves your chance of winning, one way or the other; ± is the swing itself, not a margin of error. A typical card: {typical}.",
+                          { typical: decisivenessText(tiers?.decisiveness) },
+                        )}
+                        aria-sort={sortCol === "decisiveness" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                        onClick={() => handleSort("decisiveness")}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleSort("decisiveness");
+                          }
+                        }}
+                        tabIndex={0}
+                      >
+                        {t("Decisiveness")} {sortCol === "decisiveness" && (sortDir === "asc" ? "↑" : "↓")}
+                      </th>
+                      <th
+                        scope="col"
+                        className="stats-th stats-th--sortable"
                         aria-sort={sortCol === "winRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                         onClick={() => handleSort("winRate")}
                         onKeyDown={(e) => {
@@ -1211,6 +1398,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                               </div>
                             ) : (
                               "—"
+                            )}
+                          </td>
+                          <td className="stats-td" data-testid={statsTestid.decisivenessCell}>
+                            {card.hasEnoughGames ? (
+                              decisivenessText(card.decisiveness)
+                            ) : (
+                              <span className="stats-not-enough">{t("not enough games")}</span>
                             )}
                           </td>
                           <td className="stats-td stats-td--winrate">
@@ -1617,6 +1811,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         </div>
                       </FullArtShown>
                     </OwnCopy>
+                    {drillDownFaces && <FaceLine faces={drillDownFaces} />}
                     <div className="stats-drilldown-actions">
                       <button
                         type="button"
@@ -1667,6 +1862,12 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                 )}
 
                 <div className="stats-drilldown-details">
+                  {/* R4673001: on Normal or Radiant, the details read that face's games alone */}
+                  {face !== DEFAULT_FACE && (
+                    <p className="stats-sample-hint" data-testid={statsTestid.drillDownFaceShown}>
+                      {face === "normal" ? t("Normal faces only") : t("Radiant faces only")}
+                    </p>
+                  )}
                   {/* R3887000: with Plain text on, the card's base and Radiant text, then every card it names */}
                   {plain.shown && drillDownDef && (
                     <>

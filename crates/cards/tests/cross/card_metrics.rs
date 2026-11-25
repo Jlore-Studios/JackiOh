@@ -9,11 +9,13 @@
 //! (`without_comments`) and the readers of the lists (R2173000) and of the win rates of record
 //! (R3882000) are held on fixture sources at the end (#3836).
 
-use jackioh_cards::code_lines::{owes_extra_turn, reads_card_lists, reads_win_rate_record, without_comments};
+use jackioh_cards::code_lines::{
+    owes_extra_turn, reads_card_lists, reads_win_rate_record, rewrites_text, without_comments,
+};
 use jackioh_cards::query::{CardQuery, query};
 use jackioh_cards::{
-    BUSTED, CATALOG, CODE_LINES, COMPLICATED, EXTRA_TURN_CARDS, carried_versions, register_all,
-    shipped_catalog,
+    BUSTED, CATALOG, CODE_LINES, COMPLICATED, EXTRA_TURN_CARDS, TEXT_REWRITERS, carried_versions,
+    register_all, shipped_catalog,
 };
 use jackioh_engine::catalog::set_is_open;
 use jackioh_engine::{
@@ -396,4 +398,87 @@ mod tests {
         !reads_win_rate_record(neither),
         "named in a comment and its tests only"
     );
+}
+
+/// #4609, R4609000: a script rewrites a card's text once its code, above its tests and outside its
+/// comments, calls one of the verbs Immutable stops; a `"vanilla": true` field (a Vanilla copy's), the
+/// `use` bringing a verb in, a comment and a test's call are not one.
+#[test]
+fn rewrites_text_reads_a_rewriting_call_above_the_tests_and_outside_comments() {
+    let calls = r#"
+pub const ID: &str = "fixture-unit";
+use jackioh_engine::prelude::*;
+pub fn script() -> CardScripts {
+    CardScripts {
+        cry: Some(hook(|_ctx| vec![degrade (json_as(json!({ "target": "enemy" })))])),
+        ..CardScripts::default()
+    }
+}
+"#;
+    assert!(rewrites_text(calls), "a call, spaced or not");
+    for verb in ["transform_random", "vanilla", "fuse_cards", "equip_picks"] {
+        let source = format!("pub fn script() -> CardScripts {{ hook(|_ctx| vec![{verb}(args)]) }}");
+        assert!(rewrites_text(&source), "{verb}");
+    }
+    let field = r#"
+use jackioh_engine::effects::{summon_copy, vanilla};
+pub fn script() -> CardScripts {
+    // vanilla(Default::default())
+    /* degrade(json_as(json!({}))) */
+    hook(|_ctx| vec![summon_copy(json_as(json!({ "vanilla": true, "from": "enemy" })))])
+}
+pub fn devanilla(x: i32) -> i32 { x }
+#[cfg(test)]
+mod tests {
+    fn plays() { vanilla(Default::default()); }
+}
+"#;
+    assert!(
+        !rewrites_text(field),
+        "a field, a use, a comment, a longer name and a test's call"
+    );
+}
+
+/// #4609, R4609000: the build lists every catalog script that calls a verb rewriting a card's text,
+/// sorted by id: Core #83 Transmogulate's Transform, Meditative #24 Polymorph's and C+ #9 Silence's
+/// Vanilla, but not Core #8 Mr. Vanilla or Core #61 Prejudiced Postdoc, whose Vanilla copy is a field.
+#[test]
+fn text_rewriters_lists_the_scripts_that_call_a_rewriting_verb_sorted_by_id() {
+    let mut sorted = TEXT_REWRITERS.to_vec();
+    sorted.sort_unstable();
+    sorted.dedup();
+    assert_eq!(TEXT_REWRITERS, sorted.as_slice(), "sorted by id, each once");
+    for id in TEXT_REWRITERS {
+        assert!(CATALOG.contains_key(*id), "{id}: a catalog card");
+    }
+    for (id, source) in [
+        (
+            "core-083",
+            include_str!("../../src/scripts/core/c083_transmogulate.rs"),
+        ),
+        (
+            "meditative-024",
+            include_str!("../../src/scripts/meditative/c024_polymorph.rs"),
+        ),
+        (
+            "classicplus-009",
+            include_str!("../../src/scripts/classic_plus/c009_silence.rs"),
+        ),
+    ] {
+        assert!(rewrites_text(source), "{id}: its script rewrites a card's text");
+        assert!(TEXT_REWRITERS.contains(&id), "{id}: the build lists it");
+    }
+    for (id, source) in [
+        (
+            "core-008",
+            include_str!("../../src/scripts/core/c008_mr_vanilla.rs"),
+        ),
+        (
+            "core-061",
+            include_str!("../../src/scripts/core/c061_prejudiced_postdoc.rs"),
+        ),
+    ] {
+        assert!(!rewrites_text(source), "{id}: its script calls no rewriting verb");
+        assert!(!TEXT_REWRITERS.contains(&id), "{id}: the build leaves it out");
+    }
 }

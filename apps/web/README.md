@@ -283,6 +283,8 @@ game's paid result, which `announceWallet()` with no balance calls), and a dev t
 
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
 
+A tab left open across a deploy loads the next build on its next menu move (R4605000): the build writes `dist/version.json` naming its entry script, the tab checks it when it wakes (at most once per `UPDATE_CHECK_MIN_MS`), and with an update waiting the move is a full page load to the target instead — the cross-fade above is skipped and the tab-memory read cache starts empty, one extra read per screen once. Never over a board: moves stay in place until it is gone. A screen that still fails on a stale chunk reloads once by itself, bounded by a `sessionStorage` key per entry.
+
 An `<a>` to a screen of the app (`href={paths.…}` or an address starting with `/`) carries `onClick={followInApp(…)}` (`routes/nav.tsx`), which moves in place and leaves a modified or middle click to the browser, or opens a new tab (`target="_blank"`); a bare one reloads the site, emptying the read cache and reloading the engine. `src/in-app-links.test.ts` holds it, with the links that load the page on purpose (`FULL_LOADS`) and why.
 
 **Back closes the top overlay** (R2127000): `net/backLayers.ts` keeps the open sheets and dialogs as layers, newest on top, through `useBackLayer`, which `useModalOverlay` (`cards/inspect/store.ts`), `useModalKeys` (`together/modalKeys.ts`; `Dialog` in `game/Dialog.tsx`, the board's confirms, the practice result and, since #3221 (R3221000), `SettingsPanel`, `ChatPanel`, the Collection's `CardCosmeticsView`, `/stats`'s card breakdown and the menus' other dialogs, through it) and, through `BackLayer` mounted with their panels, the match's `Marketplace`, the deck builder's `DeckHistory`, `DeckCosmeticsPicker` and `PortraitPicker`, the home screen's `QuestsBookmark` and `NewsBookmark`, the match's `ModifierList` and the hero's `EmoteMenu` and `MuteMenu` (not drawn `inline` in hero inspect, which owns them) call with their own close. Where the browser has `CloseWatcher` the top layer holds one, and Escape is left to the layers' own keys; elsewhere the first layer pushes one history entry copying the address, spent when a layer closes another way, never piled up and stepped back off on Forward. `navigate.ts`'s `onPop` asks `popBackLayer` before the leave guard and the view transition, and its `go` lets `moveOverBackEntry` move over the entry. A prompt, a play being built and the mulligan are no layers, so Back leaves the screen over them as before.
@@ -666,6 +668,14 @@ The GIF code still loads on demand, never in the main bundle.
 Each `/replays` row that can be watched also offers "Download JSON" (R1141000): every step's view through the
 row's own source, the row's facts and the build's catalog version, no account named, made in memory and saved
 to the browser's downloads, for a bug report.
+Every mode's end-of-game result offers one **Main menu** button after its own ways on (R4742000, issue #4742):
+`game/MainMenuButton.tsx` draws it for the result panels and screens (the dungeon run-over screen and fights, the
+Infinite Assault fight, the daily game's result, the co-op result), and `mainMenuAction` is the same label as a
+`DialogAction` for the two Dialog results (practice's and a lesson's). The button decides nothing: each result's
+`onClick` is where it leaves for (a fight's is its board Menu's handler, so Assault's still reports the fight
+first; Duos' comes from `DuosChrome.onMenu`, and `/dev/duos` hangs none). Practice's Menu, its leave
+question's Save and leave and both Dialog results leave for `playSoloPath()` (`/play#solo`): `PlayHub` reads
+that fragment once on arrival, scrolls its Solo group into view and focuses the Practice card.
 A finished co-op game's result panel offers "Watch the replay" too (§13.9): `duos/DuosReplay.tsx` reads
 `GET /api/duos/matches/:matchId/replay` once and steps the seat's `DuosView`s on `DuosBoard`'s replay mode,
 with the player's controls, a round standing for a turn; it is never in `/replays`.
@@ -1190,14 +1200,15 @@ src/practice/
   controller.ts       one request in flight, and the pacing loop that plays the AI's turn one
                       visible action at a time (think indicator, gaps from config.ts)
   aiTable.ts          the hooks that pace the AI at a table (controller state, board busy, the voice and
-                      showcase holds), shared by the route and a dungeon fight's screen
+                      showcase holds), shared by the route, a dungeon fight's screen and an Infinite Assault fight's screen
   config.ts testids.ts PracticeSetup.tsx ThinkIndicator.tsx PracticeLeave.tsx PracticeResult.tsx practice.css
   decks.ts            random, the three named practice decks (hand-built lists), the account's saved decks by name
   lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage
                       `jackioh.practice.lastBoard`, try/catch
   saveStore.ts        the worker's save of a free game in progress (R668): config, log, AI cursor,
-                      catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom), and the last
-                      PRACTICE_REPLAYS_KEPT finished free games (R768)
+                      catalog version, hash, in IndexedDB `jackioh.practice` (memory in jsdom), and a dungeon
+                      run's fight and an Infinite Assault fight each in a slot of its own (R3476000, R4582001),
+                      and the last PRACTICE_REPLAYS_KEPT finished free games (R768)
   resume.ts           the page's half (R668): only the setup it chose, in localStorage
                       `jackioh.practice.game`, try/catch, marked `saved` once left with Save and leave (R765)
   todaysDeal.ts       today's deal (R2882000): the UTC day's seed daily-YYYY-MM-DD and seat, on a random deck
@@ -1288,8 +1299,8 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   `practice/aiTable.ts`; it has no `?pace=fast`. The controller's general form is `setHold(reason, held)`. The settings panel's "Reduce motion" gives the reduced pacing,
   as the media query does.
 - A lesson in progress asks before a reload or a closed tab ends it (`beforeunload`), and the HUD's
-  Menu leaves for the landing page, asking first (Save and leave, or Leave without saving) while the
-  game is on.
+  Menu leaves for the Play hub's Solo group (`/play#solo`, R4742000), asking first (Save and leave, or Leave
+  without saving) while the game is on.
 
 ## The tutorial
 
@@ -1464,7 +1475,14 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   the shop's pack reveal do; `routes/engine-gate.test.tsx` holds the landing to it with a played game's stats.
   The scene kits and both recipe tables load in a chunk beside the module (#4222:
   `src/cards/art/sceneLoader.ts`): `EngineGate` and `useEngineReady` wait for both before a face draws,
-  and `test/setup.ts` installs the tables synchronously. The sound-effect recipes load the same way
+  and `test/setup.ts` installs the tables synchronously. The cosmetic offers (`COSMETIC_OFFERS`, each
+  version's offered cards, `wire/generated/cosmeticOffers.ts`) load in the same step from a chunk of their
+  own (#4714, `loadCosmeticOffers` in `cards/versions.ts`, whose offer queries throw before they are in): the
+  shop's route chunk and the ownership read (`cards/ownedFullArt.ts`) await them too, and `test/setup.ts`
+  installs them. `main.tsx` starts the module's download at boot on every route with a low Fetch Priority
+  (`startWasmLoad`), so the route's own chunks come first; a screen that awaits the engine shares that one
+  download and never fetches it again. The full-screen art view imports the music player when it opens, never
+  with the faces that open it (`cards/FullScreenArt.tsx`). The sound-effect recipes load the same way
   (#4428: `src/audio/sfxLoader.ts`): `main.tsx` starts them off the first paint beside the page-wide
   sound, and the engine's `unlock()` is the backstop, never behind the module; a sound asked for
   before they land is skipped silently, and `test/setup.ts` installs them synchronously. The
@@ -1491,7 +1509,7 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   `crates/cards` (the second and third generated from its `card-text.yaml`, #2498, each with a `"//"`
   entry that `flavour.ts` and `chinese.ts` drop).
 - The generated files (`src/wire/generated/`, `engineConfig.ts`, `serverConfig.ts`; among the first,
-  `generated/cosmetics.ts` is the server's cosmetics registry, the card slots, the deck slots and the full arts, R1295000, R1297000, R1313000) are written by
+  `generated/cosmetics.ts` is the server's cosmetics registry, the card slots, the deck slots and the full arts, R1295000, R1297000, R1313000, and `generated/cosmeticOffers.ts` beside it each version's offered cards, R2725001, #4714) are written by
   `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`; CI fails when they
   differ from what is committed, so a Rust change that moves the wire commits them in the same change.
 - Three files hold a game's state, and nothing else imports the engine's game functions: `game/engine.ts`
@@ -1506,7 +1524,9 @@ Every word the client shows a player follows [`WRITING.md`](WRITING.md), the cli
 client shows (a string or JSX text in a source that `src/i18n/zh-CN.json` translates), no curly
 apostrophe there or in a dictionary key, and no straight double quote there. Its glossary sets
 sentence case, one name per page, one verb per action, and bans arrow characters in translations,
-held by guards against Title Case labels outside their allowlist.
+held by guards against Title Case labels outside their allowlist. The site and its images carry
+no tagline (#4653): where a sentence is needed, write a plain description of the game, and do
+not add one back.
 
 ## Internationalisation
 

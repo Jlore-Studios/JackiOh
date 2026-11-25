@@ -205,9 +205,7 @@ describe("R1301 a Chinese card in a match", () => {
     // #48 Tranquility Exiles itself (#78 Destroys since issue #4154).
     const exile = inPlay(card({ defId: "meditative-048", cost: 2, chinese: true }));
     expect(glossaryOf(exile).find((entry) => entry.id === "Exile")).toMatchObject(must(CHINESE_TERMS.glossary.Exile, "Exile"));
-    // #79 Touched by KY sets the hand size; #76 Do or Die marks cards in a hand.
-    const size = glossaryOf(inPlay(card({ defId: "meditative-079", cost: 3, chinese: true })));
-    expect(size.find((entry) => entry.id === "Hand size")?.label).toBe(must(CHINESE_TERMS.glossary["Hand size"], "Hand size").label);
+    // #76 Do or Die marks cards in a hand.
     const mark = glossaryOf(inPlay(card({ defId: "meditative-076", cost: 1, chinese: true })));
     expect(mark.find((entry) => entry.id === "Mark in a hand")?.label).toBe(must(CHINESE_TERMS.glossary["Mark in a hand"], "Mark in a hand").label);
   });

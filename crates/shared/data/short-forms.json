@@ -411,10 +411,10 @@
     },
     "stinkyscapeplus-007": {
       "base": {
-        "en": "Armor 4\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
+        "en": "Armor 4, Tribute 1\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
       },
       "radiant": {
-        "en": "Armor 8\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
+        "en": "Armor 8, Tribute 1\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
       }
     },
     "stinkyscapeplus-024": {
@@ -451,10 +451,10 @@
     },
     "stinkyscapeplus-072": {
       "base": {
-        "en": "Tribute 5, Indestructible, Can't attack, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nAttacks each summoned enemy; lose {mana} mana next turn."
+        "en": "Tribute 5, Indestructible, Can't attack, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nAttacks each summoned enemy; Overload ({mana})."
       },
       "radiant": {
-        "en": "Tribute 5, Indestructible, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nAttacks each summoned enemy; lose {mana} mana next turn."
+        "en": "Tribute 5, Indestructible, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nAttacks each summoned enemy; Overload ({mana})."
       }
     },
     "stinkyscapeplus-080": {

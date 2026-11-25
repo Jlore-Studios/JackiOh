@@ -14,6 +14,7 @@ import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 import type { CardTier } from "../wire/generated/CardTier.ts";
 import type { CosmeticRarity } from "../wire/generated/cosmetics.ts";
 import type { FleetTrackView } from "../wire/generated/FleetTrackView.ts";
+import type { StatsFace } from "../wire/generated/StatsFace.ts";
 import { stripTrailingSlashes } from "./navigate.ts";
 import {
   forgetRead,
@@ -1685,6 +1686,8 @@ export type PublicCardStat = {
   winRateHigh?: number | null;
   adjustedLow?: number | null;
   adjustedHigh?: number | null;
+  /** R4552001: how far playing the card typically moves its player's chance of winning, a fraction; null with no data. */
+  decisiveness?: number | null;
   /**
    * R3022000: the card's balance tier from its adjusted rate and range: S above the band and sure of it (a nerf
    * candidate), F below it and sure of it (a buff candidate), A to D the band's quarters. Null below the sample
@@ -1723,6 +1726,8 @@ export type PublicCreatedStat = {
   adjustedWinRate?: number | null;
   adjustedLow?: number | null;
   adjustedHigh?: number | null;
+  /** R4552001: how far playing the card typically moves its player's chance of winning, a fraction; null with no data. */
+  decisiveness?: number | null;
   /** R4082000: the card's balance tier from its adjusted rate and range (R3022000); null below the floor. */
   tier?: CardTier | null;
   hasEnoughGames: boolean;
@@ -1739,6 +1744,8 @@ type PublicCreatedTiers = {
   cards: number;
   /** The win rate of the seats that make an average Created card, which reads 50%. */
   baseline: number;
+  /** R4552001: the typical Created card's decisiveness, a fraction. */
+  decisiveness?: number;
 };
 
 /** R3022000: what the tiers are read against: the field of every card in the report, and the band, as fractions. */
@@ -1755,6 +1762,8 @@ export type PublicStatsTiers = {
   bandHigh: number;
   /** R4082000: the field the Created cards are read against; absent from a server deployed before it. */
   created?: PublicCreatedTiers;
+  /** R4552001: the typical deck card's decisiveness, a fraction. */
+  decisiveness?: number;
 };
 
 /** R654, R1367000: which records a window's figures count. */
@@ -1784,6 +1793,11 @@ export type PublicStatsCardsResponse = {
    * figures are asked for at the last). An older server omits it.
    */
   patches?: { versions: string[]; games: number; liveGames: number }[];
+  /**
+   * R4677000: the caller is no dev account, so `patches` lists the newest patches alone and the older ones are
+   * for dev accounts. An older server omits it.
+   */
+  olderPatchesForDevs?: boolean;
   /** R3022000: the field and band the cards' tiers are read against; absent from a server deployed before it. */
   tiers?: PublicStatsTiers;
   summary: {
@@ -1805,9 +1819,32 @@ export type CardDrillDownResponse = {
     cost: number;
     rarity: string;
   };
+  /** R4673001: these three read the face's games alone on Normal or Radiant, none over totals kept before the drills were split by face. */
   patches: { patch: string; games: number; winRate: number | null }[];
   byTurn: { turn: number; games: number; winRate: number | null }[];
   coPlayed: { id: string; name: string; games: number; winRate: number | null }[];
+  /** R4673001: the face the details answered, `all` when none was asked; absent from a server deployed before it. */
+  face?: StatsFace;
+  /** R4673001: the card's Normal and Radiant figures and the gap between them, on every face; absent from an older server. */
+  faces?: CardFaces;
+};
+
+/** R4673000: one face's figures in the drill-down, read against that face's own field and band. */
+export type PublicFaceFigures = {
+  games: number;
+  adjustedWinRate: number | null;
+  adjustedLow: number | null;
+  adjustedHigh: number | null;
+  tier: CardTier | null;
+  hasEnoughGames: boolean;
+};
+
+/** R4673000, R4673001: a card's Normal and Radiant figures, and Radiant's adjusted rate minus Normal's with its 95% range. */
+export type CardFaces = {
+  normal: PublicFaceFigures;
+  radiant: PublicFaceFigures;
+  /** Null when either face is short of games. */
+  gap: { gap: number; low: number; high: number } | null;
 };
 
 export type CardStatsOptions = {
@@ -1819,10 +1856,14 @@ export type CardStatsOptions = {
   cost?: number;
   card?: string;
   mode?: string;
+  /** R4673001: one face's figures; left out on All, so All's path and its kept read stay as before. */
+  face?: StatsFace;
+  /** R4677000: the signed-in token, when there is one: a dev account reads every patch. */
+  token?: string | null;
   signal?: AbortSignal;
 };
 
-/** The path of one filter's table, query included; its kept answer is a public one. */
+/** The path of one filter's table, query included; its kept answer is kept under the token's account. */
 export function cardStatsPath(options: CardStatsOptions = {}): string {
   const params = new URLSearchParams();
   if (options.source) params.set("source", options.source);
@@ -1833,22 +1874,34 @@ export function cardStatsPath(options: CardStatsOptions = {}): string {
   if (options.cost !== undefined) params.set("cost", String(options.cost));
   if (options.card) params.set("card", options.card);
   if (options.mode) params.set("mode", options.mode);
+  if (options.face) params.set("face", options.face);
   const query = params.toString();
   return `/api/stats/cards${query ? `?${query}` : ""}`;
 }
 
 export function getCardStats(options: CardStatsOptions = {}): Promise<PublicStatsCardsResponse> {
-  return keptGet<PublicStatsCardsResponse>(cardStatsPath(options), null, options.signal);
+  return keptGet<PublicStatsCardsResponse>(cardStatsPath(options), options.token ?? null, options.signal);
 }
 
-export function getCardDrillDown(
-  cardId: string,
-  mode?: string,
-  signal?: AbortSignal,
-): Promise<CardDrillDownResponse> {
-  const query = mode ? `?mode=${encodeURIComponent(mode)}` : "";
-  return apiRequest<CardDrillDownResponse>(`/api/stats/cards/${encodeURIComponent(cardId)}${query}`, {
-    signal,
+/** R4673001: a card's details on a match type, a face and a patch, each asked only when given (none is the newest patch's All). */
+export type CardDrillDownOptions = {
+  mode?: string;
+  face?: StatsFace;
+  patch?: string;
+  /** R4677000: the signed-in token, when there is one, lists a dev account every patch's win rate. */
+  token?: string | null;
+  signal?: AbortSignal;
+};
+
+export function getCardDrillDown(cardId: string, options: CardDrillDownOptions = {}): Promise<CardDrillDownResponse> {
+  const params = new URLSearchParams();
+  if (options.mode) params.set("mode", options.mode);
+  if (options.face) params.set("face", options.face);
+  if (options.patch) params.set("patch", options.patch);
+  const query = params.toString();
+  return apiRequest<CardDrillDownResponse>(`/api/stats/cards/${encodeURIComponent(cardId)}${query ? `?${query}` : ""}`, {
+    token: options.token,
+    signal: options.signal,
   });
 }
 
@@ -1898,6 +1951,8 @@ export type PublicStatsGamesResponse = {
 export type GameStatsOptions = {
   patch?: string;
   mode?: string;
+  /** R4677000: the signed-in token, when there is one: a dev account reads every patch. */
+  token?: string | null;
   signal?: AbortSignal;
 };
 
@@ -1907,6 +1962,7 @@ export function getGameStats(options: GameStatsOptions = {}): Promise<PublicStat
   if (options.mode) params.set("mode", options.mode);
   const query = params.toString();
   return apiRequest<PublicStatsGamesResponse>(`/api/stats/games${query ? `?${query}` : ""}`, {
+    token: options.token,
     signal: options.signal,
   });
 }

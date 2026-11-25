@@ -11,6 +11,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import type { CardDef } from "@jackioh/shared";
 
+import { setMusicPlayerForTests, type MusicPlayer } from "../audio/music.ts";
+import { loadSoundTables } from "../audio/soundTablesLoader.ts";
 import Card from "../game/Card.tsx";
 import { CatalogContext, lookupFromDefs } from "../game/catalog.ts";
 import { WearerProvider } from "../game/wearer.ts";
@@ -772,5 +774,66 @@ describe("R3345000 a fused card's full-screen hold", () => {
     const onClose = vi.fn();
     render(<FullScreenArt defId="t-9:#abc" onClose={onClose} />);
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe("#4714 the full-screen view's intro", () => {
+  /** A music player that records the intros it is asked to play and the stops, and plays nothing. */
+  function recordingMusic(): MusicPlayer & { intros: string[]; stops: () => number } {
+    const intros: string[] = [];
+    let stops = 0;
+    return {
+      intros,
+      stops: () => stops,
+      request: () => undefined,
+      playIntro: (id) => {
+        intros.push(id);
+      },
+      stopIntro: () => {
+        stops += 1;
+      },
+      playSting: () => undefined,
+      preloadIntros: () => undefined,
+      intro: () => intros.at(-1) ?? null,
+      resetResume: () => undefined,
+      preload: () => undefined,
+      setBusy: () => undefined,
+      current: () => null,
+      wanted: () => null,
+      opponentTurn: () => false,
+      log: () => [],
+      dispose: () => undefined,
+    };
+  }
+
+  afterEach(() => {
+    setMusicPlayerForTests(null);
+  });
+
+  it("#4714 plays the card's intro once the player's module is in, and stops it on a pause and on close", async () => {
+    vi.useRealTimers();
+    const tables = await loadSoundTables();
+    const defId = Object.keys(tables.musicCards).find((id) => CATALOG[id] !== undefined && tables.musicCards[id]?.intro !== undefined);
+    if (defId === undefined) throw new Error("no shipped card has an intro");
+    const intro = tables.musicCards[defId]?.intro;
+    const music = recordingMusic();
+    setMusicPlayerForTests(music);
+
+    const { unmount } = render(<FullScreenArt defId={defId} onClose={vi.fn()} />);
+    await vi.waitFor(() => {
+      expect(music.intros).toEqual([intro]);
+    });
+
+    // A tap pauses the view, which cuts the intro short and plays nothing more.
+    fireEvent.click(screen.getByTestId("fullscreen-art"), { detail: 1 });
+    await vi.waitFor(() => {
+      expect(music.stops()).toBe(1);
+    });
+
+    unmount();
+    await vi.waitFor(() => {
+      expect(music.stops()).toBe(2);
+    });
+    expect(music.intros).toEqual([intro]);
   });
 });

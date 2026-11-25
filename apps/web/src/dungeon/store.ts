@@ -44,6 +44,7 @@ import {
   DUNGEON_ELAPSED_START_MS,
   DUNGEON_FIRST_LEVEL,
   DUNGEON_FIRST_RUN,
+  DUNGEON_HELD_KEY,
   DUNGEON_HISTORY_KEY,
   DUNGEON_LEVEL_STEP,
   DUNGEON_PROGRESS_KEY,
@@ -97,6 +98,11 @@ export type Dungeon = {
   start(setup: RunSetup): string | null;
   /** The refusal, or null. */
   act(action: RunAction): string | null;
+  /**
+   * R4733000: hold a finished fight's report beside the kept run, for the fight screen's arrival
+   * effect. Silent unless a run stands on a fight: only the fight's own `fightOver` is ever held.
+   */
+  holdReport(action: RunAction): void;
   abandon(): void;
   /** The refusal, or null. */
   buyLevel(): string | null;
@@ -243,6 +249,37 @@ function parseHistory(raw: unknown): RunRecord[] {
   });
 }
 
+/**
+ * R4733000: a finished fight's report, held beside the kept run keyed to its fight: the fight's
+ * own `fightOver` with the run's row and column. The row is null only where the run's is.
+ */
+type HeldReport = { row: number | null; col: number; action: RunAction };
+
+function parseHeldReport(raw: unknown): HeldReport | null {
+  if (!isRecord(raw)) return null;
+  const { row, col, action } = raw;
+  if (row !== null && !isCount(row)) return null;
+  if (!isCount(col)) return null;
+  if (!isRecord(action) || action.type !== "fightOver") return null;
+  return { row, col, action: action as RunAction };
+}
+
+function readHeldReport(): HeldReport | null {
+  const raw = readJson(DUNGEON_HELD_KEY);
+  if (raw === null) return null;
+  const held = parseHeldReport(raw);
+  if (held === null) removeStored(DUNGEON_HELD_KEY);
+  return held;
+}
+
+function writeHeldReport(held: HeldReport): void {
+  writeJson(DUNGEON_HELD_KEY, held);
+}
+
+function clearHeldReport(): void {
+  removeStored(DUNGEON_HELD_KEY);
+}
+
 function readJson(key: string): unknown {
   const raw = getStored(key);
   if (raw === null) return null;
@@ -384,6 +421,8 @@ function loadCore(): Core {
     if (kept === null) {
       // A run that cannot be read is dropped alone: the progress and the history stay.
       removeStored(DUNGEON_RUN_KEY);
+      // R4733000: no run stands on the held report's fight, so the hold goes with it.
+      clearHeldReport();
     } else {
       const folded = foldKept(kept);
       if (folded === null) {
@@ -395,10 +434,25 @@ function loadCore(): Core {
         persistProgress(settled);
         persistHistory(settled);
         removeStored(DUNGEON_RUN_KEY);
+        // R4733000: the run is gone, so nothing stands on the held report's fight.
+        clearHeldReport();
         // The key is gone, so the notice shows once.
         return { ...settled, notice: t("The patch ended your last run as lost. What you had extracted is kept.") };
       } else {
         live = folded;
+        // R4733000: a held report for this fight is the fight's result, left before Continue sent
+        // it: apply it once, as Continue would, in the same tick that clears the hold. A refused
+        // or mismatched hold is dropped, and the fight is dealt fresh from its seed as today.
+        const held = readHeldReport();
+        if (held !== null) {
+          if (live.run.phase.phase === "fight" && live.run.row === held.row && live.run.col === held.col) {
+            const applied = step({ progress, daily, history, live: null, notice: null }, live, held.action);
+            clearHeldReport();
+            if (typeof applied !== "string") return { ...applied, notice: null };
+          } else {
+            clearHeldReport();
+          }
+        }
       }
     }
   }
@@ -489,7 +543,9 @@ function setSession(running: boolean): void {
 }
 
 function onStorage(event: StorageEvent): void {
-  const keys = [DUNGEON_PROGRESS_KEY, DUNGEON_RUN_KEY, DUNGEON_HISTORY_KEY];
+  // R4733000: another tab holding or clearing a report reloads this tab too, so a report is
+  // applied once no matter which tab left the fight.
+  const keys = [DUNGEON_PROGRESS_KEY, DUNGEON_RUN_KEY, DUNGEON_HISTORY_KEY, DUNGEON_HELD_KEY];
   if (typeof event.key === "string" && !keys.includes(event.key)) return;
   // Another tab changed what is kept: read it all again, but for a finished run this tab still shows.
   const kept = core?.live ?? null;
@@ -644,6 +700,8 @@ function startRun(setup: RunSetup): string | null {
     if (daily) persistProgress(next);
     // R3476000: a new run's first fight finds no kept fight.
     clearStoredRunFight();
+    // R4733000: a new run stands on no fight the hold names.
+    clearHeldReport();
     commit(next);
     return null;
   } catch (cause) {
@@ -668,6 +726,8 @@ function step(from: Core, live: Live, action: RunAction): Core | string {
     // R3502000: every save banks the session so far.
     const kept = banked(next, Date.now());
     persistRun(kept);
+    // R4733000: the act took, so any hold for its fight goes in the same tick.
+    clearHeldReport();
     return { ...from, live: kept };
   }
   try {
@@ -675,6 +735,8 @@ function step(from: Core, live: Live, action: RunAction): Core | string {
     persistProgress(settled);
     persistHistory(settled);
     removeStored(DUNGEON_RUN_KEY);
+    // R4733000: the run settled, so any hold for its fight goes with it.
+    clearHeldReport();
     return settled;
   } catch (cause) {
     return messageOf(cause);
@@ -692,6 +754,17 @@ function actOn(action: RunAction): string | null {
   return null;
 }
 
+/**
+ * R4733000: hold a finished fight's report beside the kept run, keyed to its fight. Only the
+ * fight's own `fightOver` is ever held, and only while the run still stands on a fight.
+ */
+function holdFightReport(action: RunAction): void {
+  const live = current().live;
+  if (live === null || live.run.phase.phase !== "fight") return;
+  if (action.type !== "fightOver") return;
+  writeHeldReport({ row: live.run.row, col: live.run.col, action });
+}
+
 function abandonRun(): void {
   const from = current();
   const { live } = from;
@@ -701,6 +774,8 @@ function abandonRun(): void {
   if (typeof settled !== "string") commit({ ...settled, live: null, notice: null });
   // R3476000: an abandoned run keeps no fight.
   clearStoredRunFight();
+  // R4733000: an abandoned run stands on no fight the hold names.
+  clearHeldReport();
 }
 
 function buyNextLevel(): string | null {
@@ -749,6 +824,7 @@ export function useDungeon(): Dungeon {
       notice,
       start: startRun,
       act: actOn,
+      holdReport: holdFightReport,
       abandon: abandonRun,
       buyLevel: buyNextLevel,
     }),

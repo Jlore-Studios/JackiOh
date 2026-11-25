@@ -74,8 +74,6 @@ var Workflows = map[string]string{
 	"gather.yml":             "the newest version's dev games without a pause, filed as totals every hour (GATHER_ON_PATCH)",
 	"hygiene-delete.yml":     "deletes the branches a person ticked in the hygiene issue",
 	"hygiene.yml":            "weekly: the hygiene issues for the night bot and Squishy",
-	"learn-set.yml":          "a new patch or set stops a learn export still early on the version before",
-	"learn.yml":              "the learn lane: self-play, retrain and gate of the learned evaluation, back to back",
 	"lock-conversations.yml": "locks every conversation to collaborators",
 	"mutants.yml":            "weekly: a shard of every area's mutation testing, each area's score in its summary",
 	"patches-ship.yml":       "ships the pending card-patch fragments after a merge",
@@ -83,8 +81,6 @@ var Workflows = map[string]string{
 	"promote-production.yml": "production daily, from a passing super run on staging; /promote sooner",
 	"promote-staging.yml":    "every two hours: staging takes main's newest commit whose CI passed",
 	"releases.yml":           "a GitHub release per shipped patch, a pre-release while only staging has it",
-	"selfplay-shards.yml":    "one round of a self-play export's shards",
-	"selfplay.yml":           "a self-play export in shards: the learn lane's, or one dispatched by hand",
 	"spec-fold.yml":          "folds the pending §11 paragraphs and rewrites the rulings index once a day",
 	"squishy-commands.yml":   "Squishy's ears and its sweep",
 	"squishy-run.yml":        "Squishy: gate, plan, `work` on its own Claude account, deliver",
@@ -552,37 +548,6 @@ func gatherBox(ctx *hctx.Context, found *Found) Box {
 // runners, so a part's time so far reads as how far it has played (`Progress`, #3740).
 var GatherHours = 5
 
-// hostedShards is the learn lane's export on GitHub's runners as `hostedLearn` reads it: its
-// shards played, those playing and all of them.
-type hostedShards struct{ done, playing, total int }
-
-// hostedLearn is the export of the learn run that `found` read the jobs of, its shards on GitHub's
-// runners (#3740): each shard's job, played once it has ended well. Nil while no such run was read.
-func hostedLearn(found *Found) *hostedShards {
-	for _, read := range found.Read {
-		if !strings.HasSuffix(py.OrStr(read.Run.Get("path"), ""), "/"+LearnWorkflow) {
-			continue
-		}
-		h := &hostedShards{}
-		for _, job := range read.Jobs {
-			if !strings.Contains(job.Str("name"), "shard from") {
-				continue
-			}
-			h.total++
-			switch {
-			case job.Str("status") == "completed" && job.Str("conclusion") == "success":
-				h.done++
-			case job.Str("status") == "in_progress":
-				h.playing++
-			}
-		}
-		if h.total > 0 {
-			return h
-		}
-	}
-	return nil
-}
-
 // hostedGather is the parts of the gather runs that `found` read playing on GitHub's runners
 // (#3740), each its name's part ("part 1") and when it started.
 func hostedGather(found *Found) [][2]string {
@@ -621,10 +586,9 @@ var ProgressChart = `%%{init: {"xyChart": {"height": 220}, "themeVariables": {"x
 	`{"plotColorPalette": "#d0d7de, #1f883d"}}}}%%`
 
 // Progress is progress: the top of the issue, between `PROGRESS_START` and `PROGRESS_END`: how far
-// the training lanes have played on GitHub's runners (#3740), as a Mermaid bar chart in percent,
-// with a line under it: the learn lane's export is its shards played of all of them, and each part
-// of gather its time so far of `GatherHours`; a lane playing nothing has a bar at 0 that says so.
-// Without `found` neither lane reads as playing.
+// the gather lane has played on GitHub's runners (#3740), as a Mermaid bar chart in percent, with a
+// line under it: each part of gather its time so far of `GatherHours`, or a bar at 0 that says it
+// is not playing. Without `found` it reads as not playing.
 func Progress(ctx *hctx.Context, found *Found /* = None */) string {
 	if found == nil {
 		found = &Found{}
@@ -635,13 +599,6 @@ func Progress(ctx *hctx.Context, found *Found /* = None */) string {
 	}
 	var bars []bar
 	var notes []string
-	if h := hostedLearn(found); h != nil {
-		bars = append(bars, bar{"learn: shard " + py.Thousands(h.done) + " of " + py.Thousands(h.total) +
-			" played", float64(h.done) / float64(h.total)})
-		notes = append(notes, fmt.Sprintf("learn plays %d shards at once on GitHub's runners", h.playing))
-	} else {
-		bars = append(bars, bar{"learn: not playing", 0.0})
-	}
 	gather := hostedGather(found)
 	for _, part := range gather {
 		played, label := 0.0, "gather "+part[0]+": started"
@@ -658,9 +615,9 @@ func Progress(ctx *hctx.Context, found *Found /* = None */) string {
 		bars = append(bars, bar{"gather: not playing", 0.0})
 	}
 	if len(notes) == 0 {
-		notes = []string{"neither lane is playing on GitHub's runners now"}
+		notes = []string{"gather is not playing on GitHub's runners now"}
 	}
-	title := "How far the training lanes have played, %"
+	title := "How far the gather lane has played, %"
 	var labels, full, values []string
 	for _, b := range bars {
 		labels = append(labels, `"`+Text(b.label, 40)+`"`)

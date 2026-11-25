@@ -1026,6 +1026,31 @@ describe("B31 the run-over screen settles the run", () => {
     expectHud();
   });
 
+  // #4742
+  it("R4742000 the run-over screen's Main menu sits with Start a new run and goes to Play, keeping the run", () => {
+    at("/");
+    const { dungeon, act, abandon } = fakeDungeon(runWith({ phase: "dead" }));
+    render(<RunScreen dungeon={dungeon} />);
+    const menu = screen.getByTestId(dungeonMapTestid.mainMenu);
+    expect(menu).toHaveTextContent("Main menu");
+    const actions = screen.getByTestId(dungeonMapTestid.newRun).closest(".dungeon-run-actions");
+    expect(actions).not.toBeNull();
+    expect(menu.closest(".dungeon-run-actions")).toBe(actions);
+    // After the other two ways on, and Start a new run is still the first.
+    expect(Array.from(actions?.children ?? [], (child) => child.getAttribute("data-testid"))).toEqual([
+      dungeonMapTestid.newRun,
+      dungeonMapTestid.statsLink,
+      dungeonMapTestid.mainMenu,
+    ]);
+
+    fireEvent.click(menu);
+    expect(window.location.pathname).toBe("/play");
+    // The run stays saved: only Start a new run gives it up, and nothing is sent to the run.
+    expect(abandon).not.toHaveBeenCalled();
+    expect(act).not.toHaveBeenCalled();
+    at("/");
+  });
+
   // B31
   it("B31 the run's end shows its time and turns beside the score", () => {
     const dead = runWith({ phase: "dead" }, { stats: statsWith({ turns: 17 }) });

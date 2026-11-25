@@ -77,6 +77,10 @@ pub const AI_GATE_BUDGET: SearchBudget = AI_BUDGET;
 /// const, not an `AiSearch` field, since that struct derives `Eq`.
 pub const AI_WRAP_UP_SHARE: f64 = 0.6;
 
+/// R4608000: a world's score above this share of `AI_EVAL.win` is a game the seat won there (`win − turn`,
+/// evaluate.rs `evaluate_priced`; no position comes near it). Not an `AiSearch` field: that derives `Eq`.
+pub const AI_WON_SCORE_SHARE: f64 = 0.5;
+
 /// R2102000: the stream the practice AI's lethal hint (`lethal::lethal_hint`, SPEC §9.9) draws
 /// its worlds from, its own: never the match's, nor the AI's, so asking it moves no other stream.
 pub const LETHAL_HINT_SEED: &str = "ai:lethal-hint";
@@ -178,6 +182,10 @@ pub struct AiSearch {
     pub lethal_width: i32,
     /// Lines per first action scored after the opponent's reply on determinization 0.
     pub lines_per_action: i32,
+    /// R4608000: a finalist whose line won on determinization 0, the world the beam searched, and on no
+    /// other scored determinization is ranked by its mean on those others (`decide::finalist_means`).
+    /// `false` ranks every finalist by the plain mean of all its worlds, as before.
+    pub confirm_lone_win: bool,
     /// Seed of the throwaway determinization that lists candidates for the forced check.
     pub probe_seed: &'static str,
     /// R90, R1282: the most sets a shipped card lists, #55's 3 of ten units.
@@ -233,6 +241,9 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     lethal_quick_nodes: 40,
     lethal_width: 60,
     lines_per_action: 2,
+    // R4608000: on. No fork screen was played (training/improve.md, A screen); its scene tests
+    // (crates/ai/tests/ai/lone_win.rs) settle it, as an inconclusive screen's would (R4319000).
+    confirm_lone_win: true,
     probe_seed: "ai:probe",
     tribute_sets: 120,
     fat_reference: 30,
@@ -570,6 +581,14 @@ pub struct EvalWeights {
     /// trigger (`evaluate::awaken_price`) that `slumber_worth` adds, inside its slumber share, the seat's
     /// sleepers and the enemy's alike.
     pub awaken: f64,
+    /// R4648000: the share of an unevolved card's probed evolution (`evaluate::evolve_price`: one run of
+    /// its Evolve text's price × the runs its text takes now × `evaluate::evolve_closeness`) that
+    /// `unit_worth` adds, inside the Brittle share, the seat's units and the enemy's alike. At 0 nothing
+    /// reads it and the root spends no probe node on it.
+    pub evolve: f64,
+    /// R4648000: how close a card counts as standing to evolving when it waits on an event (its own
+    /// trigger, a Stack, or a hand the seat cannot see: `evaluate::EvolveCondition::Event`).
+    pub evolve_event_share: f64,
     /// R3822000: for each point of damage a unit's Burn and Toxic will deal it over `AI_AFFLICTION_TICKS`
     /// of its controller's turn starts (`evaluate::afflicted`), up to its health, the share of a `health`
     /// point taken off its worth; a Divine Shield a tick takes costs the same share of
@@ -784,6 +803,11 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // play a lone Imprisoned Ship Smith and plays a Felinor Token over Imprisoned Cosmality. At 1.0 the
     // smoke gate read 20, 19 and 20 of 20; at 0, 20, 19 and 20.
     awaken: 1.0,
+    // R4648000: untuned starts for the training lanes, as R2688000's are: half of the evolution a card's
+    // closeness reaches, and a card waiting on an event at a quarter of the way there. At 0.5 and 0.25 the
+    // smoke gate read 20, 16 and 18 of 20.
+    evolve: 0.5,
+    evolve_event_share: 0.25,
     // R3822000: untuned starts, to revisit after #3574's sweep. A point of damage still to come at half a
     // point of health now, a hero's coming life at half its cost on the curve, and a unit a tick kills at
     // Brittle's own `brittle_discount`, since both ends come at the same stage. At 0.5 the smoke gate read
@@ -840,6 +864,8 @@ const _: () = assert!(AI_EVAL.feng_shui_outlook >= 0.0 && AI_EVAL.feng_shui_outl
 const _: () = assert!(AI_EVAL.dead_tradable_discount >= 0.0 && AI_EVAL.dead_tradable_discount <= 1.0);
 // R4440002: a share, so a card that pays Credits is never worth less than nothing in hand.
 const _: () = assert!(AI_EVAL.credits_card_discount >= 0.0 && AI_EVAL.credits_card_discount <= 1.0);
+// R4648000: a share, so a card waiting on an event never counts for more than its whole evolution.
+const _: () = assert!(AI_EVAL.evolve_event_share >= 0.0 && AI_EVAL.evolve_event_share <= 1.0);
 
 /// R4154402: the cards whose turn hooks destroy every permanent with a Plague Counter that the player whose
 /// turn starts controls (Classic #62 Living Bomb, R400): its start-of-turn hook its controller's, its
@@ -888,6 +914,11 @@ pub const AI_ATTACK_HOOK_PROBE_NODES: usize = 24;
 /// each own hand Unit with one, and a spawn more per such hand Unit (one node, two on a full unit row).
 pub const AI_AWAKEN_PROBE_NODES: usize = 16;
 
+/// R4648000: the most nodes a decision's evolution probes (`evaluate::evolve_prices`) spend: one evolve
+/// for each unevolved Evolve card on either field, and a spawn (one node, two on a full unit row) and an
+/// evolve for each own hand Unit with an Evolve text.
+pub const AI_EVOLVE_PROBE_NODES: usize = 16;
+
 /// R4070000: the most nodes a decision's root prices spend, every probe's cap above together: the counter
 /// `decide::decision_prices_at` prices a state on outside a decision (`cargo jackioh positions`), so each
 /// probe runs to its own cap, as it does in a decision whose budget leaves it that many.
@@ -897,7 +928,8 @@ pub const AI_DECISION_PRICE_NODES: usize = AI_DEATH_PROBE_NODES
     + AI_HAND_ACTIVATION_PROBE_NODES
     + AI_PROMPT_ACTIVATION_PROBE_NODES
     + AI_ATTACK_HOOK_PROBE_NODES
-    + AI_AWAKEN_PROBE_NODES;
+    + AI_AWAKEN_PROBE_NODES
+    + AI_EVOLVE_PROBE_NODES;
 
 /// The greedy baseline's own evaluation (baselines.rs): AI_EVAL exactly as it stood when the quality
 /// gates were fixed on the seed series `gate:v2`, frozen here, so tuning AI_EVAL changes the AI and never
@@ -989,6 +1021,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     activation: 0.0,
     attack_hook: 0.0,
     awaken: 0.0,
+    evolve: 0.0,
+    evolve_event_share: 0.0,
     unit_affliction: 0.0,
     unit_doomed: 0.0,
     hero_affliction: 0.0,

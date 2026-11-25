@@ -19,7 +19,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import { SHIPPED_SETS } from "@jackioh/shared";
 
-import { COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
+import { COSMETIC_OFFERS } from "../wire/generated/cosmeticOffers.ts";
 import { showcaseFamilyOf, type ShowcaseFamily } from "./art/pictures.ts";
 import { CardFace } from "./CardFace.tsx";
 import { OUT_OF_FRAME_SUBJECT_PCT, OUT_OF_FRAME_SUBJECT_SINK_PCT, OUT_OF_FRAME_WINDOW_SIDE_PCT, OUT_OF_FRAME_WINDOW_TOP_PCT } from "./constants.ts";

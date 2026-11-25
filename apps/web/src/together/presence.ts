@@ -7,13 +7,14 @@
 // server's (CLAUDE.md rule 7). A session the server refuses outright is not asked again until the tab
 // holds another one; any other failure is the next beat's to retry. R3576000: a tab hidden for
 // `HIDDEN_QUIET_MS` sends no beat, so its server can sleep and its friends see it offline
-// `PRESENCE_TTL_MS` after its last request; the beat comes back when it shows.
+// `PRESENCE_TTL_MS` after its last request; the beat comes back when it shows. R4691001: so does a shown
+// tab with no input for `IDLE_QUIET_MS`, whose beat comes back at its next input.
 
 import { useEffect } from "react";
 
 import { PRESENCE_HEARTBEAT_MS } from "@jackioh/server-config";
 
-import { quietWhileHidden } from "../game/net.ts";
+import { quietWhileAway } from "../game/net.ts";
 import { onSignedInRequest } from "../net/api.ts";
 import { heartbeat } from "../net/social.ts";
 import { readSession } from "../net/session.ts";
@@ -46,7 +47,7 @@ export function usePresenceHeartbeat(active: boolean): void {
       }, PRESENCE_HEARTBEAT_MS);
     };
     const stopHearing = onSignedInRequest(rearm);
-    const stopQuiet = quietWhileHidden((next) => {
+    const stopQuiet = quietWhileAway((next) => {
       quiet = next;
       rearm();
     }, HIDDEN_QUIET_MS);

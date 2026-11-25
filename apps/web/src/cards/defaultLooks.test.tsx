@@ -17,7 +17,7 @@ import { setShips } from "@jackioh/shared";
 import { unit } from "../test/fixtures.ts";
 import { daily } from "../test/daily.ts";
 import { legacyText } from "../test/faceData.ts";
-import { COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
+import { COSMETIC_OFFERS } from "../wire/generated/cosmeticOffers.ts";
 import { CardFace } from "./CardFace.tsx";
 import { resetCosmeticsForTests, writeCardLevel } from "./cosmetics.ts";
 import { FullArtOwned, isFullArtCard } from "./fullArt.ts";

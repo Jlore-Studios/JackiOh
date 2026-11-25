@@ -19,6 +19,7 @@ package commands
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 	"unicode"
@@ -159,6 +160,8 @@ type Command struct {
 	Line  string
 	// For a `typo`: the verb or alias the word was probably meant to be.
 	Meant string // default: ""
+	// For a `reject` vote: the rest of its comment, the person's reason (`VoteReason`).
+	Reason string // default: ""
 }
 
 // Level is Command.level.
@@ -495,6 +498,33 @@ func Vote(body string, botLogin string) (string, string) {
 		}
 	}
 	return "", ""
+}
+
+var reasonLead = regexp.MustCompile(`(?i)^\s*why\b[^:\n]{0,40}:\s*`)
+
+// VoteReason is the reason a vote's comment gives: its text without the vote's line, quoted lines,
+// HTML comments and whatever follows a `---` rule (a signature, a tool's footer), with a leading
+// "Why …:" dropped. "" when it says nothing else.
+func VoteReason(body string, voteLine string) string {
+	var kept []string
+	voted := false
+	for _, raw := range py.Splitlines(body) {
+		line := py.Strip(raw)
+		if line == "---" {
+			break
+		}
+		if !voted && line == py.Strip(voteLine) {
+			voted = true
+			continue
+		}
+		if strings.HasPrefix(line, ">") || (strings.HasPrefix(line, "<!--") && strings.HasSuffix(line, "-->")) {
+			continue
+		}
+		if line != "" {
+			kept = append(kept, line)
+		}
+	}
+	return py.Strip(reasonLead.ReplaceAllString(strings.Join(kept, " "), ""))
 }
 
 // namesHandle is `(?<![\w-])@<login>(?![\w-])` searched in `line`, case-insensitive.

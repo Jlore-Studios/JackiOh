@@ -5,6 +5,7 @@ import type { DecksRouteProps } from "./decks.tsx";
 import type { InviteRouteProps } from "./invite.tsx";
 import { loadSoundTables } from "../audio/soundTablesLoader.ts";
 import { loadSceneData } from "../cards/art/sceneLoader.ts";
+import { loadCosmeticOffers } from "../cards/versions.ts";
 import { savingData } from "../net/saveData.ts";
 import { routeChunk } from "./routeChunk.tsx";
 
@@ -38,6 +39,8 @@ export const routeChunks = {
   // #2705: the Dungeon run and its stats, played offline on the engine in the browser.
   dungeon: routeChunk(() => import("../dungeon/DungeonPage.tsx")),
   dungeonStats: routeChunk(() => import("../dungeon/DungeonStatsPage.tsx")),
+  // #4581: the daily Infinite Assault, played offline on the engine in the browser.
+  assault: routeChunk(() => import("../assault/AssaultPage.tsx")),
   privacy: routeChunk(() => import("./privacy.tsx")),
   terms: routeChunk(() => import("./terms.tsx")),
   purchases: routeChunk(() => import("./purchases.tsx")),
@@ -46,7 +49,9 @@ export const routeChunks = {
   almanac: routeChunk(() => import("./almanac.tsx")),
   leaderboard: routeChunk(() => import("./leaderboard.tsx")),
   collection: routeChunk(() => import("./collection.tsx")),
-  shop: routeChunk(() => import("./shop.tsx")),
+  // #4714: the shop draws no gate, but its chase choice reads the cosmetic offers (`fittingCards`), which ride a
+  // chunk of their own: its code arrives with them.
+  shop: routeChunk(() => Promise.all([import("./shop.tsx"), loadCosmeticOffers()]).then(([screen]) => screen)),
   // #4517: `/account` draws inside `EngineGate`, so its screen rides this chunk while the gate's
   // Sign out stays entry-static (`auth/signOut.ts`).
   account: routeChunk(() => import("./account.tsx")),
@@ -71,6 +76,7 @@ const ENGINE_CHUNKS: ReadonlySet<RouteChunkName> = new Set<RouteChunkName>([
   "watch",
   "dungeon",
   "dungeonStats",
+  "assault",
   // The board's card faces and log lines, and the list's numbers (`dailyConstants`), are the module's.
   "daily",
   "dailyGame",

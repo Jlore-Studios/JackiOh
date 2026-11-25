@@ -5262,7 +5262,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "33",
         "Drone Core VII",
-        c(5),
+        c(6),
         T::Spell,
         &[G::DroneCore],
         R::Epic,
@@ -5909,8 +5909,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Common,
-        st(7, 5),
-        st(14, 10),
+        st(7, 4),
+        st(14, 8),
     ),
     row(
         "109",
@@ -7406,7 +7406,7 @@ const TRAINING_GROUNDS: &[SpecRow] = &[
     row(
         "50",
         "Legacy: Glowy Jelly Bean",
-        c(3),
+        c(2),
         T::Spell,
         &[G::JellyBean, G::Legacy],
         R::Rare,
@@ -7708,8 +7708,8 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Rare,
-        st(2, 1),
-        st(4, 2),
+        st(5, 3),
+        st(10, 6),
     ),
     row(
         "17",
@@ -7947,7 +7947,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "41",
         "Mend Projector",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[G::Mindustrial],
         R::Rare,
@@ -8138,12 +8138,12 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "61",
         "Jayaad",
-        c(2),
+        c(4),
         T::Unit,
         &[G::Human, G::Acclaimed],
         R::Epic,
-        st(2, 6),
-        st(4, 12),
+        st(9, 11),
+        st(18, 22),
     ),
     row(
         "61.1",
@@ -8158,7 +8158,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "62",
         "Overdrive Projector",
-        c(1),
+        c(3),
         T::FieldSpell,
         &[G::Mindustrial],
         R::Epic,
@@ -8168,7 +8168,7 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
     row(
         "63",
         "Overdrive Dome",
-        c(2),
+        c(4),
         T::FieldSpell,
         &[G::Mindustrial],
         R::Epic,
@@ -10857,9 +10857,9 @@ mod rarity_distribution_spec_8_b2_5_build_m4_t1 {
         let speciesist = &CATALOG["traininggrounds-041"];
         assert_eq!(speciesist.name, format!("Legacy: {}", core.name));
         assert_eq!(speciesist.tags, [Tag::Human, Tag::Legacy]);
-        // R2195003: issue #4353 gave Core #2's Cry "You have {mana} less mana next turn", which the Legacy
-        // card, frozen against later Core patches, does not print.
-        let frozen = |text: &str| text.replace(" You have {mana} less mana next turn.", "");
+        // R2195003: issue #4353 gave Core #2's Cry §6.3 Overload X ("Overload ({mana})."), which the
+        // Legacy card, frozen against later Core patches, does not print.
+        let frozen = |text: &str| text.replace(" Overload ({mana}).", "");
         assert_eq!(
             (
                 speciesist.rarity,
@@ -11838,4 +11838,32 @@ fn r4285001_no_entry_prints_both_starship_piece_and_equip() {
         })
         .count();
     assert!(pieces >= 53, "{pieces}");
+}
+
+/// R4751000 (issue #4751): Overload (X) is the printed name of the next-turn mana loss: both faces
+/// of each of the 12 cards print Overload, and none keeps the old "mana next turn" / "less mana"
+/// phrasing. Wording only: no script, number or rule changed.
+#[test]
+fn r4751000_overload_is_the_printed_name_of_the_next_turn_mana_loss() {
+    for id in [
+        "core-002",
+        "core-021",
+        "meditative-018",
+        "meditative-019",
+        "meditative-022-1",
+        "meditative-082",
+        "meditative-089",
+        "stinkyscape-117",
+        "stinkyscape-118",
+        "traininggrounds-052",
+        "stinkyscapeplus-056",
+        "stinkyscapeplus-072",
+    ] {
+        let def = &CATALOG[id];
+        for face in [&def.base, &def.radiant] {
+            assert!(face.text.contains("Overload"), "{id}");
+            assert!(!face.text.contains("mana next turn"), "{id}: {}", face.text);
+            assert!(!face.text.contains("less mana"), "{id}: {}", face.text);
+        }
+    }
 }

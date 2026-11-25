@@ -9,6 +9,7 @@ import { manualClock } from "../game/deckbuilder/testkit.ts";
 import { openFriendMenu, pressFriendMenuItem } from "../test/friendMenu.ts";
 import type { Friend, FriendRequest, PlayerRef, RecentOpponent, SharedReplay } from "../net/social.ts";
 import { skeletonTestid } from "../skeleton/Skeleton.tsx";
+import { pressBack } from "../test/history.ts";
 import { settle } from "../test/settle.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { at, meBody, must, refusal, signIn, stubServer, wholeText, type Call, type Reply, type StubServer } from "../test/stubServer.ts";
@@ -1353,6 +1354,41 @@ describe("R3729002 ?replay= opens a shared replay", () => {
     await waitFor(() => {
       expect(replayReads(server, SHARED.matchId)).toBe(2);
     }, SLOW);
+  });
+
+  it("R4619000 one Back on a shared replay opened by Watch returns to Shared with me; the next leaves", async () => {
+    at("/play");
+    window.history.pushState(null, "", sharedWithMePath());
+    signIn("tok-together");
+    serve(world(ONLY_CY));
+    render(<TogetherRoute />);
+    fireEvent.click(await screen.findByTestId(togetherTestid.sharedOpen, undefined, SLOW));
+    await screen.findByTestId("replay-back", undefined, SLOW);
+
+    await pressBack();
+    expect(await screen.findByTestId(TESTID.sharedRow, undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByTestId("replay-back")).toBeNull();
+    expect(window.location.search).toBe("?section=shared");
+
+    await pressBack();
+    expect(window.location.pathname).toBe("/play");
+  });
+
+  it("R4619000 one Back on a replay a link opened returns to Shared with me, and the next to the page before the link", async () => {
+    at("/play");
+    window.history.pushState(null, "", sharedWithMePath(SHARED.matchId));
+    signIn("tok-together");
+    serve(world(ONLY_CY));
+    render(<TogetherRoute />);
+    await screen.findByTestId("replay-back", undefined, SLOW);
+
+    await pressBack();
+    expect(await screen.findByTestId(togetherTestid.root, undefined, SLOW)).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/together");
+    expect(window.location.search).toBe("?section=shared");
+
+    await pressBack();
+    expect(window.location.pathname).toBe("/play");
   });
 
   it("R3729002 a link to a replay already on the page opens it too (the inbox's Watch from Play together)", async () => {

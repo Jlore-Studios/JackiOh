@@ -1,5 +1,5 @@
 //! S #4.4 Last Word (SPEC §8.10 row S 4.4, SPEC §7; §3.2, §4.4 step 4a, §6.1 Charge, §6.2
-//! Replacement, §6.3 End the turn, Extra turn, Mana, R456, R845, R846, R850, R1181000, R1204,
+//! Replacement, §2.2 End the turn, Extra turn, Mana, R456, R845, R846, R850, R1181000, R1204,
 //! R1704001, R1857002, R1870004): (4) Trap, Terminus, Token (printed Mythic), one of Olivian Expanse's
 //! picks.
 //!   Base:    "Reveals when your hero would take lethal damage: Prevent it and end the turn. The next

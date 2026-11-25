@@ -156,7 +156,8 @@ pub fn take_target_draws() -> Vec<TargetDraw> {
 }
 
 /// Keeps one random `target` draw made on `state` while a record is open; nothing else. What the engine
-/// calls where it draws (`prompts::answer_at_random`, `play_steps`, `cry_trigger`, `play_choices`).
+/// calls where it draws (`prompts::answer_at_random`, `play_steps`, `cry_trigger`, `play_choices`,
+/// `effects::plague`).
 pub fn record_target_draw(
     state: &GameState,
     source: Option<&CardInstance>,

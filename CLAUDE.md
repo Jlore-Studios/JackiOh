@@ -94,7 +94,7 @@ trap backrow. This file binds every agent, not only Claude.
 12. No agent merges a pull request, or reports one green or done, while a required check on its head is red
     or has not run, and none calls a failure pre-existing or environmental without a link to the same check
     failing on `main`. A report names every red check by its name. #825 was merged with its golden replay
-    red and closed as "all gates green" (`reviews/2026-10-14-issue-814-first-pass.md`).
+    red and closed as "all gates green" (#950's audit).
 13. Ask a person before you delete or disable anything called from outside this codebase: a
     webhook, a scheduled job (a workflow's `schedule:`), an auth callback, an HTTP route that a deploy probes
     or a person or another service calls (`/readyz` is the site Worker's daily wake-up, `/healthz` its

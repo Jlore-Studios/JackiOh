@@ -56,6 +56,8 @@ export const practiceTestid = {
   playAgain: "practice-play-again",
   changeSetup: "practice-change-setup",
   viewBoard: "practice-view-board",
+  /** #4742, in the result dialog: out to the main menu, as `menu` does once the game is over. */
+  mainMenu: "practice-main-menu",
   /** R768000: in the result dialog of a kept game, its replay from step 0. */
   watchReplay: "practice-watch-replay",
   /** R768000: in the result dialog of a kept game, its last turn's GIF. */

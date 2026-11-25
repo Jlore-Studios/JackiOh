@@ -182,9 +182,8 @@ version strings (R105, R388).
   `patches check` holds every catalog change to exactly one claim (R646) and every `includes` to the
   micros between its entry and the major or patch before it (R3944000).
 - **A shipped version never reopens.** Every later change takes a later name.
-- **Codebase projects take no version.** `docs/v0.3.0/` (the Rust rewrite) and `docs/v0.4.0/` (the
-  Luau scripts) keep their folder names, which code comments cite, but they name codebase projects,
-  not catalog versions.
+- **Codebase projects take no version.** `docs/v0.3.0/` (the Rust rewrite) keeps its folder name,
+  which code comments cite, but it names a codebase project, not a catalog version.
 - **Older names.** #290 renamed the history once (R743): v0.2.4, v0.2.5, v0.2.10, v0.2.11, v0.2.12,
   v0.2.13, v0.2.14, v0.2.14b, v0.2.16, v0.2.16b and v0.2.17 are v0.2.1 to v0.2.7, v0.2.7b, v0.2.8,
   v0.2.8b and v0.2.9, and #88's v0.2.15 is v0.2.10; #85 renamed v0.1.0-r1, -r2 and -r3 to v0.1.0b,
@@ -352,7 +351,7 @@ through `aliases.json`'s `marked`; `versions: 4` is today's.
 An issue that asks for a pass over the whole catalog (every card, every face, every term) is where
 a run most easily does less than was asked and still reports it done: #814's first pass shortened
 no card, decided nothing about bold, and checked consistency with a text-similarity threshold that
-could not find what it was looking for (`reviews/2026-10-14-issue-814-first-pass.md`). Such an
+could not find what it was looking for (#950's audit). Such an
 issue:
 
 - **Names the deliverable that proves the pass**: a table in the pull request with a row per card

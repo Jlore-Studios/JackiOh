@@ -2237,18 +2237,23 @@ mod make_radiant_targets_1143 {
 
     /// #1143: at 3 crystals the 4-cost 7/7 cannot be played, so the turn is the Bean or Brother Lar: the
     /// Bean, which makes the 7/7 a 14/14 Reborn. Brother Lar comes first in hand, so a tie between the
-    /// Bean's targets would pick him.
+    /// Bean's targets would pick him. The Bean is Tradable since issue #4665, so the turn's one Trade is
+    /// spent first: the choice read here is the play's.
     #[test]
     fn glowy_jelly_bean_is_cast_on_the_hand_unit_whose_radiant_face_adds_most() {
         jackioh_cards::register_all();
         let library = ["core-008", "core-011", "core-008", "core-011"];
-        let state = scenario(json!({
+        let mut state = scenario(json!({
             "seed": "search-bean-uplift",
             "p1": { "hand": [BEAN, LAR, BIG], "mana": 3, "library": library },
             "p2": { "library": library },
         }))
         .state()
         .clone();
+        state.players.p1.trades = Some(jackioh_engine::state::DrawCount {
+            turn: state.turn,
+            count: jackioh_engine::config::TRADES_PER_TURN,
+        });
         let bean = hand_id(&state, BEAN);
         let big = hand_id(&state, BIG);
 

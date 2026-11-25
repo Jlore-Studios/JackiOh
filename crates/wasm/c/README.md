@@ -153,6 +153,16 @@ argument and answer is `crates/wasm/README.md`'s, the same as the browser module
 | `run_fight_setup(state, content)`, `run_fight_report(game, human)` | strings | the fight being played, the `FightOver` it sends |
 | `run_score(state, content)`, `run_embers(score)`, `run_max_hp(state, content)`, `run_shop_prices(state, content)`, `run_level_cost(level)` | strings | the score, the Embers it pays, the max HP, a shop's prices, a level's cost |
 | `run_seed(source)`, `run_daily_seed(date, n)` | strings | a seed, the daily run's seed |
+| `assault_day_seed(date)` | string | `"2026-11-23"` -> `"assault-2026-11-23"`, or refused |
+| `assault_catalog_content(catalog)`, `assault_placeholder_content(catalog)` | strings | the set's cards by tag + assault.json, shipped stand-ins |
+| `assault_content()` | none | the Infinite Assault's content for the browser: placeholder content until the release |
+| `assault_content_at(version)` | string | R3496000: the Assault's content for a catalog version: the build's own, a carried version's, or `null` |
+| `assault_day(date, content)` | strings | the day's deal: 20 levels and their escalations |
+| `assault_create(setup, record, day)` | strings | an attempt started |
+| `assault_reduce(state, day, action)`, `assault_fold(file, day)` | strings | an attempt after one action, an attempt file folded |
+| `assault_fight_setup(state, day)`, `assault_fight_report(game, human)` | strings | the fight being played, the `FightOver` it sends |
+| `assault_record(record, state)`, `assault_constants()` | strings / none | the day's record folded, the mode's numbers |
+| `assault_day_deck(date)` | string | practice's fresh random deck for a human, seeded `{day seed}-deck` |
 | `duos_create(options)`, `duos_begin(state)`, `duos_reduce(state, action)`, `duos_legal_actions(state, seat)`, `duos_view_for(state, seat)` | strings | #936's co-op wrapper; built without the `duos` feature each is status `1` with the reason |
 
 The module's own Cargo features are the browser module's: `preview` (`preview_sets` can preview a set that

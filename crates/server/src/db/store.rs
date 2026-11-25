@@ -691,13 +691,45 @@ pub struct ReplayRow {
     pub actions: i64,
 }
 
-/// R768: one `replays_list` row already paired with what `matches_mode_of` answers for its match,
-/// as the batched `replays_list_with_modes` reads them in one query.
+/// R768: one `replays_list` row as the batched `replays_list_with_modes` reads it in one query, for the
+/// replays list (`GET /api/replays`) and the recently played list (`GET /api/friends/recent`): the
+/// match's seats, catalog version, ranked flag and portraits, its result, its log's length and what
+/// `matches_mode_of` answers for it. The decks, boards, loadouts and win-rate snapshot a replay's fold
+/// reads are left out (#4712): a list opens no replay, and `replays_get` reads the whole row of the one
+/// opened.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct ReplayWithMode {
-    pub replay: ReplayRow,
+pub struct ReplayListRow {
+    /// The match's id.
+    pub id: String,
+    /// Seat order, as `MatchRow.players` reads them: a deleted seat is the empty id.
+    pub players: (String, String),
+    pub catalog_version: String,
+    /// As `MatchRow.ranked`: a false flag reads as an absent one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ranked: Option<bool>,
+    /// As `MatchRow.portraits`: absent on a match from before portraits.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub portraits: Option<(PortraitId, PortraitId)>,
+    pub result: ResultRow,
+    pub actions: i64,
     pub mode: Option<QueueMode>,
+}
+
+impl ReplayListRow {
+    /// The list's row of a whole replay and its mode, as both stores read it.
+    pub fn of(replay: ReplayRow, mode: Option<QueueMode>) -> ReplayListRow {
+        ReplayListRow {
+            id: replay.row.id,
+            players: replay.row.players,
+            catalog_version: replay.row.catalog_version,
+            ranked: replay.row.ranked,
+            portraits: replay.row.portraits,
+            result: replay.result,
+            actions: replay.actions,
+            mode,
+        }
+    }
 }
 
 // The deadlines both clients render and `matches.clocks` stores: the match host's (#3101), whose clock
@@ -1841,9 +1873,17 @@ impl Tx<'_> {
         dispatch!(self, matches_finish(match_id, at))
     }
 
-    /// For the reaper (§9.5).
+    /// Every `live` match but a daily game's (§9.5). The reaper reads `matches_past_ceiling` instead
+    /// (#4712), and a restart rebuilds a match when its first socket comes (R744), so no server path
+    /// reads the whole set today; the store suites read it as the live set.
     pub async fn matches_live(&mut self) -> StoreResult<Vec<MatchRow>> {
         dispatch!(self, matches_live())
+    }
+
+    /// The reaper's read (§9.5, R112): the `live` matches `matches_live` answers whose
+    /// `clocks.ceiling_at` is at or before `now`, and no other (#4712).
+    pub async fn matches_past_ceiling(&mut self, now: i64) -> StoreResult<Vec<MatchRow>> {
+        dispatch!(self, matches_past_ceiling(now))
     }
 
     /// R257, R376: the mode a match was made in, read off what made it: `bo3` for a game of a
@@ -1909,14 +1949,15 @@ impl Tx<'_> {
         dispatch!(self, replays_get(match_id))
     }
 
-    /// R768: the same rows, order, limit and offset semantics as `replays_list`, each paired with
-    /// what `matches_mode_of` answers for its match, in one query rather than one per row.
+    /// R768: the same rows, order, limit and offset semantics as `replays_list`, each as the list reads
+    /// it (`ReplayListRow`, no deck, board, loadout or win-rate snapshot) with what `matches_mode_of`
+    /// answers for its match, in one query rather than one per row.
     pub async fn replays_list_with_modes(
         &mut self,
         profile_id: &str,
         limit: i64,
         offset: i64,
-    ) -> StoreResult<Vec<ReplayWithMode>> {
+    ) -> StoreResult<Vec<ReplayListRow>> {
         dispatch!(self, replays_list_with_modes(profile_id, limit, offset))
     }
 
@@ -2420,8 +2461,9 @@ impl Tx<'_> {
     }
 
     /// R678: up to `count` non-empty `server` boards of profiles NOT in `exclude_profile_ids`, each
-    /// from a different profile, chosen at random (the fake takes them in table order). Fewer when
-    /// fewer exist.
+    /// from a different profile, chosen at random (Postgres: the boards from a random key on in profile
+    /// order, `pg::last_boards_sample_others` says what that costs in evenness; the fake takes them in
+    /// table order). Fewer when fewer exist.
     pub async fn last_boards_sample_others(
         &mut self,
         exclude_profile_ids: &[String],
@@ -3079,7 +3121,8 @@ store_union! {
 /// §9.13: a daily game beside its match (`public.daily_games`): the accounts at p1 and p2 as the
 /// game began (seat order, like `MatchRow.players`), its mode (`bo1` or `random`) and days per
 /// move, its clock and its public board, the earliest deadline its clock holds, and when it began
-/// and ended. Running while `ended_at` is `None`.
+/// and ended. Running while `ended_at` is `None`. A seat whose account was deleted after the game
+/// ended reads back as the empty id in both stores (migration 0100, R4621000).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct DailyGameRow {
@@ -3285,6 +3328,12 @@ impl Tx<'_> {
     /// its state; answers how many.
     pub async fn daily_invites_purge(&mut self, now: i64) -> StoreResult<i64> {
         dispatch!(self, daily_invites_purge(now))
+    }
+
+    /// R4691000: when the next invite lapses, whatever its state (the sweep deletes it then,
+    /// R4390000): the least `expires_at`, or `None` while there is none.
+    pub async fn daily_invites_next_lapse(&mut self) -> StoreResult<Option<i64>> {
+        dispatch!(self, daily_invites_next_lapse())
     }
 
     // daily notices

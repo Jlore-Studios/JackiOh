@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GIS_BUTTON, GIS_SCRIPT_URL, type GisButtonConfiguration, type GisIdConfiguration } from "../auth/googleIdentity.ts";
 import { challengeForRequest, storedVerifiers } from "../auth/pkce.ts";
 import { clearConsumedAuthRedirect, recoverySession, releaseRecoverySession, takeLinkResult } from "../auth/redirect.ts";
-import { loginTestid } from "../auth/testids.ts";
+import { codeFieldSegmentTestid, codeFieldTestid, loginTestid } from "../auth/testids.ts";
 import { AUTH_MESSAGES, AUTH_NOTICES } from "../net/auth.ts";
 import { paths } from "../net/navigate.ts";
 import { linkAfterSignIn, readSession, rememberLinkAfterSignIn, rememberPendingReset } from "../net/session.ts";
@@ -315,6 +315,58 @@ describe("R665 the second step for an account with an authenticator app", () => 
     await settle();
     expect(readSession()?.accessToken).toBe(AAL1);
     expect(window.location.pathname).toBe(paths.landing);
+  });
+});
+
+describe("R4669000 the second step's six boxes", () => {
+  function signInWithPassword(): void {
+    setField(loginTestid.email, EMAIL);
+    setField(loginTestid.password, PASSWORD);
+    submitForm();
+  }
+
+  it("R4669000 the second step draws one one-time-code input as six boxes", async () => {
+    const calls = serve({ "/auth/v1/token": tokens(AAL1, VERIFIED_APP), ...MFA_ANSWERS });
+    const { container } = render(<LoginRoute />);
+    signInWithPassword();
+    await settle();
+
+    expect(screen.getByTestId(loginTestid.form)).toHaveAttribute("data-mode", "mfa");
+    expect(container.querySelectorAll("input")).toHaveLength(1);
+    const input = screen.getByTestId(loginTestid.code);
+    expect(input.tagName).toBe("INPUT");
+    expect(input).toHaveAttribute("autocomplete", "one-time-code");
+    expect(input).toHaveAttribute("inputmode", "numeric");
+    expect(screen.getByTestId(codeFieldTestid.root)).toContainElement(input);
+    for (let index = 0; index < 6; index += 1) {
+      expect(screen.getByTestId(codeFieldSegmentTestid(index))).toHaveAttribute("aria-hidden", "true");
+    }
+    expect(screen.queryByTestId(codeFieldSegmentTestid(6))).toBeNull();
+
+    setField(loginTestid.code, "123456");
+    submitForm();
+    await settle();
+    expect(paths_(calls)).toEqual([
+      "POST /auth/v1/token",
+      "POST /auth/v1/factors/factor-1/challenge",
+      "POST /auth/v1/factors/factor-1/verify",
+    ]);
+    expect(readSession()?.accessToken).toBe(AAL2);
+    expect(window.location.pathname).toBe(paths.landing);
+  });
+
+  it("R4669000 the email code step keeps its plain field", async () => {
+    serve({ "/auth/v1/otp": { status: 200, body: {} } });
+    render(<LoginRoute />);
+    fireEvent.click(screen.getByTestId(loginTestid.emailCodeStart));
+    setField(loginTestid.email, EMAIL);
+    submitForm();
+    await screen.findByTestId(loginTestid.code);
+
+    const input = screen.getByTestId(loginTestid.code);
+    expect(input.tagName).toBe("INPUT");
+    expect(input.closest(".code-field")).toBeNull();
+    expect(screen.queryByTestId(codeFieldTestid.root)).toBeNull();
   });
 });
 

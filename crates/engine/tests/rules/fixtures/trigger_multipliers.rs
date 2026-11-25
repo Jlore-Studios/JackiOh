@@ -73,6 +73,10 @@ pub const ASKER: &str = "tm-asker";
 /// A Spell: trigger the Cry of a declared Unit of yours (C #54 Rewind's shape).
 pub const TRIGGERER: &str = "tm-triggerer";
 pub const FEAR: &str = "tm-fear";
+/// A Spell that grants the Death `tm-giver#hit`: 1 damage to the enemy hero (R1107's shape).
+pub const GIVER: &str = "tm-giver";
+/// A Field Spell whose aura makes its controller's Cries and Deaths run 2 more times.
+pub const DOUBLE_TWO: &str = "tm-double-two";
 
 fn field_spell(index: u32, name: &str) -> CardDef {
     def(index, name, "Field Spell", json!({}))
@@ -101,6 +105,8 @@ pub fn catalog() -> CardDefs {
         unit(9015, "asker", 1, 3),
         spell(9016, "triggerer"),
         unit(9017, "fear", 2, 2),
+        spell(9018, "giver"),
+        field_spell(9019, "double-two"),
     ]
     .into_iter()
     .map(|card| (card.id.clone(), card))
@@ -240,6 +246,20 @@ pub fn scripts() -> IndexMap<String, CardScripts> {
                         times: 2,
                     })]
                 })),
+                ..Script::default()
+            },
+        ),
+        (
+            GIVER,
+            Script {
+                grants: IndexMap::from([("hit", hook(|_ctx| vec![hit_enemy_hero(1)]))]),
+                ..Script::default()
+            },
+        ),
+        (
+            DOUBLE_TWO,
+            Script {
+                cry_death_extra: Some(read_hook(|_args| 2)),
                 ..Script::default()
             },
         ),

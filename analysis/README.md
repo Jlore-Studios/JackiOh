@@ -23,7 +23,7 @@ A record file is one `GameRecord` (R376) per line, `source` `live` or `dev`, who
 |---|---|
 | Live games, off `public.game_records` | `jackioh-server stats-export --out=analysis/data/live.jsonl` (`DATABASE_URL` set; `--source`, `--mode` and `--patch` narrow it, `crates/server/README.md`). The database keeps each game's detail a week (`GAME_RECORD_RAW_RETENTION_DAYS`, R1044001), so export what a notebook will want before then |
 | An AI development run on this checkout | `cargo jackioh stats --games 200 --out analysis/data/dev.jsonl` (R378) |
-| The training lanes' games | `~/training-out/<lane>/*.jsonl` on the training box (`training/README.md`) |
+| The gather lane's games | a `gather.yml` run's artifacts, `gather-<run>-<part>` (`gh run download <run> --pattern 'gather-*'`; `training/README.md`, The gather lane) |
 
 `analysis/data/` is git-ignored: records are data, and a live game's id is a match id. Only the fixture below is
 committed.
@@ -67,23 +67,26 @@ generations = load_generations(".")  # a repository root
 ```
 
 `load_sweep` is one row per card, tier and face (`card`, `tier`, `face` (`base` or `radiant`; `base` when a line
-has none), `games`, `drawn_games`, `affordable_turns`, `plays`, `errors`, `timeouts`, `eval_delta_sum`,
-`eval_delta_count`, `eval_delta_mean` (NaN with no plays), `flags` (a list of `error`, `timeout`, `neverPlayed`,
-`selfHarm`) and `unswept`). It skips a pass-2 line, so the files of a whole sweep may be named together, and
-refuses a card, tier and face it has already read.
+has none), `games`, `drawn_games`, `affordable_turns`, `plays`, `errors`, `timeouts` (what flags a card, after the
+sweep re-timed each slow decision, R977000), `raw_timeouts` (the slow decisions before the re-timer, shown beside
+`timeouts` and read by no flag; 0 for a line that predates it), `eval_delta_sum`, `eval_delta_count`,
+`eval_delta_mean` (NaN with no plays), `flags` (a list of `error`, `timeout`, `neverPlayed`, `selfHarm`) and
+`unswept`). It skips a pass-2 line, so the files of a whole sweep may be named together, and refuses a card, tier
+and face it has already read.
 
 `load_sweep_pass2` reads the pass-2 lines `load_sweep` skips, the pass that bans (SPEC §9.9, R390), and skips
 pass 1's in turn, so the same files may be named to both. A pass-2 line forces one at-risk card and lists that
 card and every other at-risk card the AI was dealt as filler; a row is one card, tier and face (`card`, `tier`,
 `face`) summed over every pass-2 game it was dealt in, forced or filler, as the verdict sums it, with `forced`
 (some line forced it; a filler-only row is false), `games`, `drawn_games`, `affordable_turns`, `playable_turns`,
-`plays`, `errors`, `timeouts`, `eval_delta_sum`, `eval_delta_count`, `eval_delta_mean` (NaN with no plays) and
-`losing_plays`. `flags` are what pass 2's own numbers raise at ban strength (`error`, `timeout`, `neverPlayed`,
-`selfHarm`, `selfKill`), `half_flags` the same at half strength, and `status` reads them: `banned` (a flag),
-`watched` (cleared of a ban, but a half flag keeps it on `SHADOW_WATCH`), `unswept` (never affordable in these
-games) or `cleared`. The status reads pass 2 alone: `cargo jackioh sweep --report` over the pass-1 files too is
-the verdict of record (a pass-1 error or timeout also bans, pass-1 half flags also watch). It refuses a line
-that is not a pass-1 or pass-2 result, and a second line forcing a card, tier and face, naming file and line.
+`plays`, `errors`, `timeouts`, `raw_timeouts` (as in pass 1: only `timeouts` raises the `timeout` flag),
+`eval_delta_sum`, `eval_delta_count`, `eval_delta_mean` (NaN with no plays) and `losing_plays`. `flags` are what
+pass 2's own numbers raise at ban strength (`error`, `timeout`, `neverPlayed`, `selfHarm`, `selfKill`),
+`half_flags` the same at half strength, and `status` reads them: `banned` (a flag), `watched` (cleared of a ban,
+but a half flag keeps it on `SHADOW_WATCH`), `unswept` (never affordable in these games) or `cleared`. The status
+reads pass 2 alone: `cargo jackioh sweep --report` over the pass-1 files too is the verdict of record (a pass-1
+error or timeout also bans, pass-1 half flags also watch). It refuses a line that is not a pass-1 or pass-2
+result, and a second line forcing a card, tier and face, naming file and line.
 
 `load_generations` is one row per
 generation, oldest first, from `training/history/*.jsonl` and `crates/ai/generation.json` under the root (the
@@ -127,8 +130,8 @@ JACKIOH_RECORDS=analysis/data/live.jsonl,analysis/data/dev.jsonl uv run --projec
 # A development run of this checkout alone
 JACKIOH_SOURCE=dev JACKIOH_RECORDS=analysis/data/dev.jsonl uv run --project analysis jupyter lab
 
-# The training lanes' games, copied off the training box (training/README.md), and its checkout's history
-JACKIOH_SOURCE=dev JACKIOH_RECORDS="$(ls analysis/data/training/*.jsonl | paste -sd, -)" uv run --project analysis jupyter lab
+# The gather lane's games, downloaded from a gather.yml run (training/README.md), and a checkout's history
+JACKIOH_SOURCE=dev JACKIOH_RECORDS="$(ls analysis/data/gather-*/*.jsonl | paste -sd, -)" uv run --project analysis jupyter lab
 JACKIOH_REPO=/path/to/the/training/checkout JACKIOH_SWEEP=sweep-1.jsonl,sweep-2.jsonl uv run --project analysis jupyter lab
 ```
 

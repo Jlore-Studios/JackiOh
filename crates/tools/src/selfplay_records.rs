@@ -17,10 +17,10 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
 
 use anyhow::Context;
-use jackioh_ai::dev_record_id;
+use jackioh_ai::{dev_record_id, summarize_with_swing_turns};
 use jackioh_engine::{
     FoldArgs, GameMode, GameRecord, GameSource, PerPlayer, Pilot, RecordBuild, catalog_for, fold, hash_state,
-    summarize_game, with_shipped,
+    with_shipped,
 };
 use rayon::prelude::*;
 use serde::Serialize;
@@ -95,7 +95,11 @@ pub(crate) fn record_of(game: &SelfplayGame, build_catalog: &str) -> Result<Game
             let reached = replay.errors.is_empty()
                 && hash_state(&replay.state) == game.hash
                 && replay.state.result == game.result;
-            if reached { summarize_game(&args) } else { None }
+            if !reached {
+                return None;
+            }
+            // R4552000: the turn rows beside the summary, under the same catalog.
+            summarize_with_swing_turns(&args)
         })
     }));
     let summary = summary.ok().flatten().ok_or(Dropped::NotReplayed)?;
@@ -184,9 +188,10 @@ pub fn run(args: &Args) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jackioh_ai::{attach_swing_turns, swing_turns};
     use jackioh_engine::{
         CardStatsFilter, DEV_RECORD_ID_PREFIX, PLAYER_IDS, PilotFilter, SeatOutcome, SourceFilter, Tally,
-        card_stats, forced_series, game_report, seat_outcome,
+        card_stats, forced_series, game_report, seat_outcome, summarize_game,
     };
 
     use crate::arena::TEST_BUDGET;
@@ -245,13 +250,18 @@ mod tests {
         assert!(game.faults.is_empty(), "{:?}", game.faults);
 
         let record = record_of(&game, build).expect("the game files");
-        let summary = summarize_game(&FoldArgs {
+        let args = FoldArgs {
             seed: game.seed.clone(),
             decks: game.decks.clone(),
             log: game.log.clone(),
             ..FoldArgs::default()
-        })
-        .unwrap();
+        };
+        // R4552000: the record carries the AI's turn rows beside the engine's summary.
+        let mut summary = summarize_game(&args).unwrap();
+        attach_swing_turns(
+            &mut summary,
+            swing_turns(&args).expect("a finished game has rows"),
+        );
         let expected = GameRecord {
             id: format!("dev:{build}:selfplay:records-test:1"),
             source: GameSource::Dev,
@@ -395,7 +405,9 @@ mod tests {
             card: None,
             games: false,
             window: None,
+            versions: false,
             json: false,
+            swing: false,
         };
         let cards = report(&args).unwrap();
         assert_eq!((cards.games, cards.decks), (2, 4));

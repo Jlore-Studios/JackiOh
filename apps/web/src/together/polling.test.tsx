@@ -21,7 +21,7 @@ import { settle } from "../test/settle.ts";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { must, stubServer, type StubServer } from "../test/stubServer.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
-import { FRIENDS_POLL_MS, HIDDEN_QUIET_MS, SOCIAL_POLL_MS } from "./config.ts";
+import { FRIENDS_POLL_MS, HIDDEN_QUIET_MS, IDLE_QUIET_MS, SOCIAL_POLL_MS } from "./config.ts";
 import { FriendsButton } from "./FriendsButton.tsx";
 import { friendsDrawerChunk } from "./friendsDrawerChunk.ts";
 import { setSocialSocketFactory } from "./socialSocket.ts";
@@ -557,6 +557,43 @@ describe("R3214000 the social socket stands in for the polls", () => {
     await goLive();
     await settle({ advance: 3 * SOCIAL_POLL_MS });
     expect(reads(server).social, "live again: no poll").toBe(before + 1);
+  });
+
+  it("R4691001 a shown tab with no input for IDLE_QUIET_MS lets its socket go and reads nothing, and opens one again at its next input", async () => {
+    const server = serve();
+    render(<ChallengeToast />);
+    await settle({ advance: 0 });
+    await goLive();
+    const before = reads(server).social;
+
+    await settle({ advance: IDLE_QUIET_MS - 1 });
+    expect(socket().closedWith, "idle for less, the socket stays").toBeNull();
+    await settle({ advance: 1 });
+    expect(socket().closedWith, "idle: the socket is let go").not.toBeNull();
+
+    await settle({ advance: 5 * SOCIAL_POLL_MS });
+    expect(reads(server).social, "idle: the poll reads nothing").toBe(before);
+    expect(sockets, "and no socket opens while nobody uses the tab").toHaveLength(1);
+
+    fireEvent.keyDown(document.body, { key: "a" });
+    await settle({ advance: 0 });
+    expect(sockets, "used again: a socket opens").toHaveLength(2);
+    expect(reads(server).social, "used again: one read").toBe(before + 1);
+  });
+
+  it("R4691001 input inside IDLE_QUIET_MS keeps the socket, and the count starts over", async () => {
+    serve();
+    render(<ChallengeToast />);
+    await settle({ advance: 0 });
+    await goLive();
+
+    for (let touch = 0; touch < 3; touch += 1) {
+      await settle({ advance: IDLE_QUIET_MS - 1 });
+      fireEvent.pointerMove(document.body);
+    }
+    await settle({ advance: 0 });
+    expect(sockets).toHaveLength(1);
+    expect(socket().closedWith).toBeNull();
   });
 
   it("R3576000 a tab that shows again before HIDDEN_QUIET_MS keeps its socket, and the count starts over", async () => {

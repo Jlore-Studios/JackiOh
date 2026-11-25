@@ -371,8 +371,12 @@ async fn r2092000_a_stale_catalog_answers_update_required_and_makes_nothing() {
         assert_eq!(refused["error"]["details"]["received"], json!("0.0.0-stale"));
     }
     assert!(live_duos(&app).await.is_empty());
-    let (_, seen) = status(&app, &a1.token, &finished_id).await;
-    assert_eq!(seen["matchId"], Value::Null);
+    // R1638000: the status reports the offer's refusal, so the panel stops offering Play again.
+    let (code, read) = status(&app, &a1.token, &finished_id).await;
+    assert_eq!(code, 409, "{read}");
+    assert_eq!(read["error"]["code"], "update_required");
+    assert_eq!(read["error"]["details"]["expected"], json!(app.catalog.version));
+    assert_eq!(read["error"]["details"]["received"], json!("0.0.0-stale"));
 }
 
 #[tokio::test(start_paused = true)]
@@ -489,5 +493,55 @@ async fn r2092000_an_emptied_seat_refuses_the_remaining_seats_offer() {
         refused["error"]["message"],
         "that co-op game cannot be played again"
     );
+    assert!(live_duos(&app).await.is_empty());
+}
+
+#[tokio::test(start_paused = true)]
+async fn r2092000_status_on_an_emptied_seat_answers_conflict_and_makes_no_game() {
+    let (app, a1, a2) = app_with_pair().await;
+    // R1497000: the deleted account's seat emptied when the game was over.
+    for (empty_a1, empty_a2, who) in [("", a2.id.as_str(), &a2), (a1.id.as_str(), "", &a1)] {
+        let finished_id = uuid(if empty_a1.is_empty() { 112 } else { 113 });
+        finished_row(&app, &finished_id, empty_a1, empty_a2, json!({})).await;
+
+        let (code, read) = status(&app, &who.token, &finished_id).await;
+        assert_eq!(code, 409, "{read}");
+        assert_eq!(read["error"]["message"], "that co-op game cannot be played again");
+        assert!(live_duos(&app).await.is_empty());
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn r2092000_status_on_a_current_two_seat_match_answers_offers_presence_and_available() {
+    let (app, a1, a2) = app_with_pair().await;
+    let finished_id = uuid(114);
+    finished_row(&app, &finished_id, &a1.id, &a2.id, json!({})).await;
+
+    let (code, seen) = status(&app, &a1.token, &finished_id).await;
+    assert_eq!(code, 200, "{seen}");
+    assert_eq!(seen["youOffered"], false);
+    assert_eq!(seen["teammateOffered"], false);
+    assert_eq!(seen["teammateHere"], false);
+    assert_eq!(seen["matchId"], Value::Null);
+    assert_eq!(seen["unavailable"], Value::Null);
+
+    offer(&app, &a1.token, &finished_id, json!({})).await;
+
+    let (code, seen_by_a1) = status(&app, &a1.token, &finished_id).await;
+    assert_eq!(code, 200, "{seen_by_a1}");
+    assert_eq!(seen_by_a1["youOffered"], true);
+    assert_eq!(seen_by_a1["teammateOffered"], false);
+    assert_eq!(seen_by_a1["teammateHere"], false);
+    assert_eq!(seen_by_a1["matchId"], Value::Null);
+    assert_eq!(seen_by_a1["unavailable"], Value::Null);
+
+    let (code, seen_by_a2) = status(&app, &a2.token, &finished_id).await;
+    assert_eq!(code, 200, "{seen_by_a2}");
+    assert_eq!(seen_by_a2["youOffered"], false);
+    assert_eq!(seen_by_a2["teammateOffered"], true);
+    assert_eq!(seen_by_a2["teammateHere"], false);
+    assert_eq!(seen_by_a2["matchId"], Value::Null);
+    assert_eq!(seen_by_a2["unavailable"], Value::Null);
+
     assert!(live_duos(&app).await.is_empty());
 }
