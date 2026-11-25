@@ -38,12 +38,12 @@ export default defineConfig({
     specPattern: "cypress/e2e/**/*.cy.ts",
     supportFile: "support/e2e.ts",
     fixturesFolder: "fixtures",
-    // E2E_ARTIFACTS moves the screenshots and videos (and E2E_KEEP_ASSETS=1 stops the trash at the
-    // start of a run), so two runs on one machine never delete each other's evidence (e2e/README.md).
+    // E2E_ARTIFACTS moves the screenshots, videos and downloads (and E2E_KEEP_ASSETS=1 stops the
+    // trash at the start of a run), so two runs on one machine never delete each other's evidence (e2e/README.md).
     screenshotsFolder: `${process.env.E2E_ARTIFACTS ?? "artifacts"}/screenshots`,
     videosFolder: `${process.env.E2E_ARTIFACTS ?? "artifacts"}/videos`,
     trashAssetsBeforeRuns: process.env.E2E_KEEP_ASSETS !== "1",
-    downloadsFolder: "artifacts/downloads",
+    downloadsFolder: `${process.env.E2E_ARTIFACTS ?? "artifacts"}/downloads`,
     video: false,
     screenshotOnRunFailure: true,
     // BUILD M5-T1 renders at 1280x720; the responsive case (390x844) is a component test there,
@@ -82,8 +82,9 @@ export default defineConfig({
     async setupNodeEvents(on, config) {
       registerTasks(on, config);
       // Chrome 155's network service dies under Cypress's DevTools interception, dropping the page's
-      // requests and sockets mid-spec; on CI `chrome` is then Chrome for Testing 154 instead
-      // (support/chrome-pin.ts). Any other Chrome is launched exactly as found.
+      // requests and sockets mid-spec, and Chrome 158 fails every spec at its start; on CI `chrome` is
+      // then Chrome for Testing 154 instead (support/chrome-pin.ts). Any other Chrome is launched
+      // exactly as found.
       config.browsers = await pinChrome(config.browsers, resolve(config.projectRoot, ".."));
       launchAtWindowSize(on);
       return config;
@@ -168,8 +169,8 @@ export default defineConfig({
     // test is isolated by construction — each one mounts a fresh `fullBoardView()` of its own.
     async setupNodeEvents(on, config) {
       // Same Chrome 155 network-service crash as the e2e block above: component specs fetch
-      // Vite modules through the same DevTools interception, so `chrome` is pinned the same way
-      // (support/chrome-pin.ts).
+      // Vite modules through the same DevTools interception, and Chrome 158 fails them at their start
+      // the same way, so `chrome` is pinned the same way (support/chrome-pin.ts).
       config.browsers = await pinChrome(config.browsers, resolve(config.projectRoot, ".."));
       // #3730: the lobby's shots at #3728's device sizes are whole only in a window that holds them.
       launchAtWindowSize(on);

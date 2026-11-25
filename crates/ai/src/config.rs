@@ -131,7 +131,13 @@ pub const DUOS_PASS_PROBE_SEED: &str = "ai:duos-pass";
 
 /// R1127000: the most of the teammate's legal `Play` follow-ups one passed card is scored on, the
 /// card's own plays first, then the rest in `legal_actions` order: bounds scoring at one hand of
-/// cards times this many single `reduce` calls per `duos_passes` call.
+/// cards times this many single `reduce` calls per `duos_passes` call. It also bounds the hand cards
+/// the teammate's baseline is scored on (R1723000). R4932000: when more are listed than the room
+/// left, the kept ones are the first plays of the teammate's best-valued hand cards
+/// (`hand_card_value`), not the first in list order. The bound is not a hand size, which an effect
+/// moves (R1143). Its screen (#4932), `gate --duos --games 40` against the base build: random 39 and
+/// 39 won, greedy 36 and 36, 1 of 80 games played differently, 0 decided: inconclusive (R4319000),
+/// its scene tests settle it.
 pub const DUOS_PASS_MAX_FOLLOWUPS: usize = 8;
 
 /// R1723000: what each crystal of a team's `pass_cost` charges a pass, in `evaluate`'s points: the
