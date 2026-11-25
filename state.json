@@ -22157,6 +22157,8 @@
     "4890": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "e7d2e9d316f323885833d057ccd51d084613e91b",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-25T02:22:37Z",
