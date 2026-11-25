@@ -24212,6 +24212,9 @@
         "tiers": {}
       }
     },
+    "4938": {
+      "suggestion": true
+    },
     "4939": {
       "action": "review",
       "asks": [],
@@ -47651,6 +47654,13 @@
         "title": "Patch: a 1v1 replay's viewer offers Download JSON for the game's own replays, as its list rows and the Duos viewer already do",
         "verdict": "came to nothing",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-25T17:15:43Z",
+        "number": 4938,
+        "title": "Patch: give the Jlockeed-Unit pool a named function and call it from Headquarters",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
       }
     ],
     "declined": [
