@@ -16,7 +16,7 @@
 //! turns (R3556000), and while it acts awake its `infinite_mana` flag spends no mana (R3548004).
 //!
 //! Issue #4783 (Stinkyscape+ Balance Changes VIII) made the Cry one Overload of 2 (Radiant 1). Through
-//! v0.6.13c (`script_v0_6_13c`, R767000) it queued two stacking losses (R3556006): minus `mana`, 4
+//! v0.6.13h (`script_v0_6_13h`, R767000) it queued two stacking losses (R3556006): minus `mana`, 4
 //! (Radiant 2), at the next refresh, and a `delay` of minus `mana2`, 2 (Radiant 1), to the start of
 //! its controller's next turn, queued unwatched, so it stood if the Reactor left.
 
@@ -27,10 +27,10 @@ pub const ID: &str = "stinkyscapeplus-056";
 
 /// "Dormant for 2 turns".
 const DORMANT_TURNS: i32 = 2;
-/// The delayed second loss's resume step (through v0.6.13c).
+/// The delayed second loss's resume step (through v0.6.13h).
 const THE_TURN_AFTER: &str = "the-turn-after";
 
-/// A number the v0.6.13c Cry carried into the delayed entry's data.
+/// A number the v0.6.13h Cry carried into the delayed entry's data.
 fn stored(ctx: &EffectContext<'_>, key: &str) -> Option<i32> {
     ctx.data
         .get(key)
@@ -38,8 +38,8 @@ fn stored(ctx: &EffectContext<'_>, key: &str) -> Option<i32> {
         .and_then(|value| i32::try_from(value).ok())
 }
 
-/// The face: today's when `through_v0_6_13c` is false, else the one v0.6.13c and before ran.
-fn impact_reactor(through_v0_6_13c: bool) -> Script {
+/// The face: today's when `through_v0_6_13h` is false, else the one v0.6.13h and before ran.
+fn impact_reactor(through_v0_6_13h: bool) -> Script {
     let mut script = Script {
         static_flags: Some(StaticFlags {
             slumber: Some(SlumberText {
@@ -55,10 +55,10 @@ fn impact_reactor(through_v0_6_13c: bool) -> Script {
         })),
         ..Script::default()
     };
-    if !through_v0_6_13c {
+    if !through_v0_6_13h {
         return script;
     }
-    // R3556006 (through v0.6.13c): minus `mana` next refresh, then minus `mana2` the turn after.
+    // R3556006 (through v0.6.13h): minus `mana` next refresh, then minus `mana2` the turn after.
     script.cry = Some(hook(|ctx| {
         let mana2 = param(&*ctx, "mana2");
         let name = def_of(Some(&*ctx.state), ID).name.clone();
@@ -93,9 +93,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: what it ran through v0.6.13c, before issue #4783: the Cry's second loss, `mana2`, the
+/// R767000: what it ran through v0.6.13h, before issue #4783: the Cry's second loss, `mana2`, the
 /// turn after (R3556006).
-pub fn script_v0_6_13c() -> CardScripts {
+pub fn script_v0_6_13h() -> CardScripts {
     CardScripts {
         base: impact_reactor(true),
         radiant: impact_reactor(true),
@@ -208,23 +208,23 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.6.13c and before (issue #4783), under its v0.6.13c
+    /// R767000: the script kept for the replays of v0.6.13h and before (issue #4783), under its v0.6.13h
     /// numbers: `mana` 4 (Radiant 2) and `mana2` 2 (Radiant 1).
-    mod kept_v0_6_13c {
+    mod kept_v0_6_13h {
         use super::*;
 
-        fn v0_6_13c(def: &mut CardDef) {
+        fn v0_6_13h(def: &mut CardDef) {
             def.params = serde_json::from_value(json!([
                 { "key": "mana", "base": 4, "radiant": 2, "better": "down", "step": 1, "min": 1, "read": "cry" },
                 { "key": "mana2", "base": 2, "radiant": 1, "better": "down", "step": 1, "min": 1, "read": "cry" },
                 { "key": "dormant", "base": 2, "radiant": 2, "better": "down", "step": 1, "min": 1 }
             ]))
-            .expect("the v0.6.13c params");
+            .expect("the v0.6.13h params");
         }
 
         #[test]
         fn r767000_r3556006_the_cry_cost_4_next_turn_and_2_the_turn_after() {
-            crate::under_kept_as(ID, script_v0_6_13c(), v0_6_13c, || {
+            crate::under_kept_as(ID, script_v0_6_13h(), v0_6_13h, || {
                 let mut s = reactor_board("s56-kept", false);
                 assert_eq!(losses(&mut s), (4, 2));
             });
@@ -232,7 +232,7 @@ mod tests {
 
         #[test]
         fn r767000_r3556006_radiant_cost_2_then_1() {
-            crate::under_kept_as(ID, script_v0_6_13c(), v0_6_13c, || {
+            crate::under_kept_as(ID, script_v0_6_13h(), v0_6_13h, || {
                 let mut s = reactor_board("s56-kept-radiant", true);
                 assert_eq!(losses(&mut s), (2, 1));
             });

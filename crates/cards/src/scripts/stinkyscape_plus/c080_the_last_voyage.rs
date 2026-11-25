@@ -15,8 +15,8 @@
 //! (`launch_random_starship`, kept by `for_rest_of_game` with `atEnd`, R3539002, R1861002, R4440053), a
 //! free launch (R1852006), and one at once as well. The number summoned is the declared `starships`.
 //! Issue #4783 gave the base face its launch at once back and has its end-of-turn launches begin at the
-//! end of its caster's next turn, not the turn it is cast on (R4783030); `script_v0_6_13c` keeps the
-//! base face after v0.6.9n through v0.6.13c, which launched none at once and one at the end of the cast turn.
+//! end of its caster's next turn, not the turn it is cast on (R4783030); `script_v0_6_13h` keeps the
+//! base face after v0.6.9n through v0.6.13h, which launched none at once and one at the end of the cast turn.
 //! Issue #4440 moved the launch from the start of each of its caster's turns from the next on to the end
 //! of each; `script_v0_6_9n` keeps the start for the replays of v0.6.9n and before. Issue #4154 took the
 //! base face's launch at once out; `script_v0_6_6h` keeps it for the replays of v0.6.6h and before
@@ -211,10 +211,10 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: after v0.6.9n through v0.6.13c the base face launched none at once and one at the end of
+/// R767000: after v0.6.9n through v0.6.13h the base face launched none at once and one at the end of
 /// each of its caster's turns, the turn it is cast on included (issue #4783, R4783030). `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_6_13c() -> CardScripts {
+pub fn script_v0_6_13h() -> CardScripts {
     CardScripts {
         base: voyage(false, false, Launches::AtEnd, blueprints),
         radiant: voyage(true, true, Launches::AtEnd, blueprints),
@@ -298,7 +298,7 @@ pub(crate) fn assert_terminus(id: &str, pieces: &[&str], radiant: bool) {
 
 #[cfg(test)]
 mod tests {
-    use super::{BADGE, ID, TERMINUS_STARSHIPS, blueprints, script_v0_6_6h, script_v0_6_9n, script_v0_6_13c};
+    use super::{BADGE, ID, TERMINUS_STARSHIPS, blueprints, script_v0_6_6h, script_v0_6_9n, script_v0_6_13h};
     use crate::built_starship;
     use jackioh_engine::testkit::*;
 
@@ -479,11 +479,11 @@ mod tests {
         assert_eq!(launched_count(&s), 3, "and another at its caster's next end of turn");
     }
 
-    /// R767000, R4440053: after v0.6.9n through v0.6.13c the base face launched none at once and one at
+    /// R767000, R4440053: after v0.6.9n through v0.6.13h the base face launched none at once and one at
     /// the end of each of its caster's turns, the turn it is cast on included (issue #4783).
     #[test]
-    fn r767000_r4440053_the_script_kept_for_v0_6_13c_launches_none_now_and_one_at_the_end_of_the_cast_turn() {
-        crate::under_kept(ID, script_v0_6_13c(), || {
+    fn r767000_r4440053_the_script_kept_for_v0_6_13h_launches_none_now_and_one_at_the_end_of_the_cast_turn() {
+        crate::under_kept(ID, script_v0_6_13h(), || {
             let (mut s, _, _, _, _, _, _) = voyaging(false);
             s.play(VOYAGE, json!({}));
             assert_eq!(launched_count(&s), 0, "none as it is cast");

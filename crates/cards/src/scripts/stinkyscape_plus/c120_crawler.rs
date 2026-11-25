@@ -13,7 +13,7 @@
 //! R767000) it was a 1/3 (Radiant 2/6) with Can't Defend whose first arrival each game added a Toxopid
 //! (R3560000), which died after it attacked (R3560002) and whose Death hit the last Unit it damaged
 //! (R3560003). Issue #4783 (Stinkyscape+ Balance Changes VIII) gave both faces Flashback, a catalog keyword,
-//! in place of "May be played from your graveyard for (1)": through v0.6.13c (`script_v0_6_13c`, R767000)
+//! in place of "May be played from your graveyard for (1)": through v0.6.13h (`script_v0_6_13h`, R767000)
 //! its own `graveyardPrice` played it from there at (1) any number of times (R3560001).
 //!
 //! R4783022: Flashback plays it from its owner's graveyard once, at its cost, at least (1) (§6.1, R783012,
@@ -32,7 +32,7 @@ const TOXOPID: &str = "stinkyscapeplus-121";
 const BOARD_KEY: &str = "stinkyscapeplus-120:board";
 /// R3560003: the last Unit this damaged (through v0.6.6h).
 const LAST_DAMAGED: &str = "lastDamaged";
-/// R3560001: "May be played from your graveyard for (1)" (through v0.6.13c).
+/// R3560001: "May be played from your graveyard for (1)" (through v0.6.13h).
 const GRAVEYARD_PRICE: i32 = 1;
 
 /// This card arrived on the field (played or summoned): its `Summoned` names its own id.
@@ -83,7 +83,7 @@ fn toxopid_or_discount(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect
     }
 }
 
-/// R3560001 (through v0.6.13c): its own price in the graveyard, any number of times.
+/// R3560001 (through v0.6.13h): its own price in the graveyard, any number of times.
 fn priced_in_graveyard(mut script: Script) -> Script {
     script.static_flags = Some(StaticFlags {
         graveyard_price: Some(GRAVEYARD_PRICE),
@@ -160,9 +160,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: what it ran through v0.6.13c, before issue #4783: today's Death, and its own graveyard price
+/// R767000: what it ran through v0.6.13h, before issue #4783: today's Death, and its own graveyard price
 /// of (1) any number of times in place of Flashback (R3560001).
-pub fn script_v0_6_13c() -> CardScripts {
+pub fn script_v0_6_13h() -> CardScripts {
     CardScripts {
         base: priced_in_graveyard(crawler(false, false)),
         radiant: priced_in_graveyard(crawler(true, false)),
@@ -368,19 +368,19 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.6.13c and before (issue #4783), under its v0.6.13c
+    /// R767000: the script kept for the replays of v0.6.13h and before (issue #4783), under its v0.6.13h
     /// definition, which printed no Flashback.
-    mod kept_v0_6_13c {
+    mod kept_v0_6_13h {
         use super::*;
 
-        fn v0_6_13c(def: &mut CardDef) {
+        fn v0_6_13h(def: &mut CardDef) {
             def.base.keywords = Vec::new();
             def.radiant.keywords = Vec::new();
         }
 
         #[test]
         fn r767000_r3560001_it_was_played_from_the_graveyard_for_1_any_number_of_times() {
-            crate::under_kept_as(ID, script_v0_6_13c(), v0_6_13c, || {
+            crate::under_kept_as(ID, script_v0_6_13h(), v0_6_13h, || {
                 for radiant in [false, true] {
                     // No Flashback, played for (1), and offered again once it is back in the graveyard.
                     assert_eq!(

@@ -2,7 +2,7 @@
 //! Unit directly across from it (S+ #37 Scorch, `attacksOnlyAcross`) may attack no hero (R3550001,
 //! `attack_restriction`), so `face_threat` counts none of its swings (one a turn since issue #3951, ten
 //! before) and `wall_switches` offers no wall against them. An attacker that Ignores Taunt (S+ #121 Toxopid, `ignoresTaunt`) skips §4.2 step 3
-//! (R3560007), so no Taunt binds it, Defense Position's included. Toxopid printed it through v0.6.13c and
+//! (R3560007), so no Taunt binds it, Defense Position's included. Toxopid printed it through v0.6.13h and
 //! no card prints it since issue #4783 (R4783021), so its tests run under the script kept for those replays
 //! (R767000), which carries the flag. The stand-ins: Mr. Vanilla, a 4/4; Core #25, a 7/7 with Armor 7; and
 //! Midrange Menace, a 9/9 with Taunt.
@@ -35,7 +35,7 @@ fn duel(ai: Value, enemy: Value) -> GameState {
         .clone()
 }
 
-/// `run` with Toxopid on the script kept for v0.6.13c, the last that ignored Taunt (R4783021, R767000).
+/// `run` with Toxopid on the script kept for v0.6.13h, the last that ignored Taunt (R4783021, R767000).
 fn ignoring_taunt<T>(run: impl FnOnce() -> T) -> T {
     register_cards();
     let kept: &'static jackioh_engine::ShippedCatalog =
@@ -44,7 +44,7 @@ fn ignoring_taunt<T>(run: impl FnOnce() -> T) -> T {
             jackioh_cards::CATALOG.clone(),
             jackioh_engine::prelude::IndexMap::from([(
                 TOXOPID.to_string(),
-                jackioh_cards::scripts::stinkyscape_plus::c121_toxopid::script_v0_6_13c(),
+                jackioh_cards::scripts::stinkyscape_plus::c121_toxopid::script_v0_6_13h(),
             )]),
         )));
     jackioh_engine::with_shipped(Some(kept), run)

@@ -8,8 +8,8 @@
 //! face casts it Radiant. R4783025: the base face then discards `discards` random cards of its caster's
 //! own hand (R682), once the Spell has resolved; the number is the base face's alone (`tunedOn`, R1431).
 //!
-//! Issue #4783 (Stinkyscape+ Balance Changes VIII) gave the base face the discard; through v0.6.13c
-//! (`script_v0_6_13c`, R767000) it discarded nothing and declared no numbers.
+//! Issue #4783 (Stinkyscape+ Balance Changes VIII) gave the base face the discard; through v0.6.13h
+//! (`script_v0_6_13h`, R767000) it discarded nothing and declared no numbers.
 
 use jackioh_engine::effects::{CastRandomArgs, CastRandomCount, CastRandomQuery, cast_random};
 use jackioh_engine::prelude::*;
@@ -51,8 +51,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: what it ran through v0.6.13c, before issue #4783: the base face discarded nothing.
-pub fn script_v0_6_13c() -> CardScripts {
+/// R767000: what it ran through v0.6.13h, before issue #4783: the base face discarded nothing.
+pub fn script_v0_6_13h() -> CardScripts {
     CardScripts {
         base: quick_chaos(false, false),
         radiant: quick_chaos(true, false),
@@ -64,7 +64,7 @@ pub fn script_v0_6_13c() -> CardScripts {
 mod tests {
     use jackioh_engine::testkit::*;
 
-    use super::{ID, script_v0_6_13c};
+    use super::{ID, script_v0_6_13h};
     use crate::{filler, scenario};
 
     const P1: PlayerId = PlayerId::P1;
@@ -108,10 +108,10 @@ mod tests {
     }
 
     /// The draw of `seed` with Quick Chaos of `radiant`'s face on top, run on today's script and on the
-    /// one kept for v0.6.13c: each run's discards of p1's cards, and whether the kept run left p1's turn
+    /// one kept for v0.6.13h: each run's discards of p1's cards, and whether the kept run left p1's turn
     /// going with cards in hand (its hand ids), the hand today's discard reads.
     fn both_runs(seed: &str, radiant: bool) -> (Vec<String>, Vec<String>, Option<Vec<String>>) {
-        let (kept, held) = crate::under_kept(ID, script_v0_6_13c(), || {
+        let (kept, held) = crate::under_kept(ID, script_v0_6_13h(), || {
             let s = drawn(seed, radiant);
             let going = s.state().active == P1 && !s.hand(P1).is_empty();
             let held: Vec<String> = s.hand(P1).iter().map(|card| card.id.clone()).collect();
@@ -140,7 +140,7 @@ mod tests {
         }
     }
 
-    /// R4783025: against the same draw on the script kept for v0.6.13c, the base face discards one card
+    /// R4783025: against the same draw on the script kept for v0.6.13h, the base face discards one card
     /// more, after every discard the random Spell made, and it is a card of the hand that Spell left.
     #[test]
     fn r4783025_the_base_face_discards_a_random_card_of_its_hand_once_its_spell_has_resolved() {
@@ -196,16 +196,16 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.6.13c and before (issue #4783), under its v0.6.13c
+    /// R767000: the script kept for the replays of v0.6.13h and before (issue #4783), under its v0.6.13h
     /// definition, which declared no numbers.
-    mod kept_v0_6_13c {
+    mod kept_v0_6_13h {
         use super::*;
 
         #[test]
         fn r767000_r3557005_its_base_face_cast_a_random_spell_and_discarded_nothing_of_its_own() {
             crate::under_kept_as(
                 ID,
-                script_v0_6_13c(),
+                script_v0_6_13h(),
                 |def| def.params = None,
                 || {
                     for n in 0..3 {

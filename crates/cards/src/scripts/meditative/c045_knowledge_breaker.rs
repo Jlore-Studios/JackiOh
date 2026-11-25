@@ -14,8 +14,8 @@
 //! - Death: `shuffle_into` the Prime, Radiant on the Radiant face (C+ #38's shape).
 //!
 //! Issue #4783 took "Aura: Your Units are Cloaked." off both faces and gave the card Cloaked itself;
-//! `script_v0_6_13c` keeps the Aura, Cloaked for the Units in its controller's hand while it acts
-//! (`cloak_hand_aura`, R1040), for the replays after v0.5.2 through v0.6.13c (R767000).
+//! `script_v0_6_13h` keeps the Aura, Cloaked for the Units in its controller's hand while it acts
+//! (`cloak_hand_aura`, R1040), for the replays after v0.5.2 through v0.6.13h (R767000).
 
 use jackioh_engine::alt_play::cloak_hand_aura;
 use jackioh_engine::prelude::*;
@@ -30,7 +30,7 @@ const NERFED_ZONES: &[&str] = &["field", "hand"];
 const NERFED_ZONES_V0_5_2: &[&str] = &["field", "hand", "library"];
 
 /// One face: `zones` are where the Cry Nerfs, and `aura` whether it lends its controller's hand Units
-/// Cloaked, as through v0.6.13c.
+/// Cloaked, as through v0.6.13h.
 fn breaker(radiant: bool, zones: &'static [&'static str], aura: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
@@ -64,9 +64,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: after v0.5.2 through v0.6.13c its Aura lent its controller's hand Units Cloaked (issue
+/// R767000: after v0.5.2 through v0.6.13h its Aura lent its controller's hand Units Cloaked (issue
 /// #4783); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_13c() -> CardScripts {
+pub fn script_v0_6_13h() -> CardScripts {
     CardScripts {
         base: breaker(false, NERFED_ZONES, true),
         radiant: breaker(true, NERFED_ZONES, true),
@@ -209,13 +209,13 @@ mod tests {
             .collect()
     }
 
-    /// R767000: `run` under the scripts kept for v0.6.13c, whose Aura lent its controller's hand Units
+    /// R767000: `run` under the scripts kept for v0.6.13h, whose Aura lent its controller's hand Units
     /// Cloaked while it acted (R1040); issue #4783 took the Aura away. The face-down plays and reveals
     /// the tests below make through it are every Cloaked card's (R783004, R1041, R1046, R4237000).
     fn under_aura<T>(run: impl FnOnce() -> T) -> T {
         crate::under_kept(
             BREAKER,
-            crate::scripts::meditative::c045_knowledge_breaker::script_v0_6_13c(),
+            crate::scripts::meditative::c045_knowledge_breaker::script_v0_6_13h(),
             run,
         )
     }
@@ -379,7 +379,7 @@ mod tests {
         }
 
         /// Issue #4783: it has no Aura, so the Units in its controller's hand are not Cloaked while it
-        /// acts (R1040 holds only for the replays of v0.6.13c and before).
+        /// acts (R1040 holds only for the replays of v0.6.13h and before).
         #[test]
         fn it_lends_its_hand_units_no_cloaked_since_issue_4783() {
             for radiant_face in [false, true] {

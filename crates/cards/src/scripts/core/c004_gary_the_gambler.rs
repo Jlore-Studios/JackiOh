@@ -3,7 +3,7 @@
 //! Radiant: "12 times; +1 per heads, +1 per tails" — the cell changes only the numbers (§8 Conventions).
 //! Issue #4783 took the rider, "Flip a coin. If heads, gain Divine Shield; if tails, gain Rush.", off
 //! both faces and gave the stat flips one more coin (base 5 → 6) and two more on the Radiant face
-//! (10 → 12); `script_v0_6_13c` keeps the rider for the replays of v0.6.13c and before (R767000).
+//! (10 → 12); `script_v0_6_13h` keeps the rider for the replays of v0.6.13h and before (R767000).
 //!
 //! R1440 (revising R32/R130): a coin is a luck-based roll whose better side is heads, so a Lucky X
 //! given to Gary (R1438) flips each coin X more times and keeps heads; the verbs read that Lucky, so
@@ -27,7 +27,7 @@ fn stat_coins(ctx: &EffectContext<'_>) -> Effect {
 }
 
 /// Both faces; `rider`: whether a last coin grants Divine Shield on heads or Rush on tails, as through
-/// v0.6.13c.
+/// v0.6.13h.
 fn scripts(rider: bool) -> CardScripts {
     let base = Script {
         cry: Some(hook(move |ctx| {
@@ -53,9 +53,9 @@ pub fn script() -> CardScripts {
     scripts(false)
 }
 
-/// R767000: through v0.6.13c both faces flipped a last coin after the stat coins (5, Radiant 10, catalog
+/// R767000: through v0.6.13h both faces flipped a last coin after the stat coins (5, Radiant 10, catalog
 /// data): Divine Shield on heads, Rush on tails. `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_13c() -> CardScripts {
+pub fn script_v0_6_13h() -> CardScripts {
     scripts(true)
 }
 
@@ -356,16 +356,16 @@ mod tests {
             assert_eq!(attack + health, 11);
         }
 
-        /// R767000: the scripts kept for v0.6.13c and before, with the 5 coins (Radiant 10) they
+        /// R767000: the scripts kept for v0.6.13h and before, with the 5 coins (Radiant 10) they
         /// declared then: the stat coins, then a rider coin granting Divine Shield on heads and Rush on
         /// tails, identical on both faces.
-        mod kept_v0_6_13c {
+        mod kept_v0_6_13h {
             use super::*;
 
             fn kept<T>(run: impl FnOnce() -> T) -> T {
                 crate::under_kept_as(
                     "core-004",
-                    crate::scripts::core::c004_gary_the_gambler::script_v0_6_13c(),
+                    crate::scripts::core::c004_gary_the_gambler::script_v0_6_13h(),
                     |def| {
                         for declared in def.params.iter_mut().flatten() {
                             if declared.key == "coins" {

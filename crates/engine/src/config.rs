@@ -1270,14 +1270,14 @@ pub const CHAOS_TG_ARMY_TOKENS_V0_6_6H: i32 = 3;
 
 // §8.12 row 142 S+ #142 Call to Chaos (Mindustrial-Swarm Edition), R3570000–R3570005.
 /// §8.12 row 142 entries 1, 2 and 6, R3570000: the price the cards the edition adds cost, `costOverride` (R65);
-/// entry 6's only under a definition that declares no `toxopidCost`, as every one through v0.6.13c (R4783032).
+/// entry 6's only under a definition that declares no `toxopidCost`, as every one through v0.6.13h (R4783032).
 pub const CHAOS_MS_CARD_COST: i32 = 0;
 /// §8.12 row 142 entry 1: "Refresh 2 mana" after the Paperclip cards (§6.3 Refresh, R364).
 pub const CHAOS_MS_PAPERCLIP_REPLENISH: i32 = 2;
 /// §8.12 row 142 entry 3: "Summon two random Radiant units, make them GIGA".
 pub const CHAOS_MS_GIGA_UNITS: i32 = 2;
 /// §8.12 row 142 entry 5: "Refresh 4 mana" after the Terminus cards (§6.3 Refresh, R364), under a definition
-/// that declares no `replenish`, as every one through v0.6.13c (R4783032).
+/// that declares no `replenish`, as every one through v0.6.13h (R4783032).
 pub const CHAOS_MS_TERMINUS_REPLENISH: i32 = 4;
 /// §8.12 row 142 entry 8: the cost of the Weapon the launch watch summons, "a random (2) cost Weapon".
 pub const CHAOS_MS_WEAPON_COST: i32 = 2;

@@ -12,16 +12,16 @@
 //! `buff` on the base face and `buff2` on the Radiant (the faces print different numbers, so each reads its
 //! own key, R1748003); the buffs it had stay and the damage it took stays taken. R78's reset takes the buff
 //! off as it leaves the field. Until issue #4783 (Stinkyscape+ Balance Changes VIII) it was a 1/1 (Radiant
-//! 2/2) whose Evolve set its stats to 10/10 (Radiant 20/20), which `script_v0_6_13c` keeps (R767000).
+//! 2/2) whose Evolve set its stats to 10/10 (Radiant 20/20), which `script_v0_6_13h` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-101";
 
-/// v0.6.13c's "Set stats to 10/10": the base face's Attack and Health.
+/// v0.6.13h's "Set stats to 10/10": the base face's Attack and Health.
 const KEPT_BASE_SET: i32 = 10;
 
-/// v0.6.13c's "Set stats to 20/20": the Radiant face's.
+/// v0.6.13h's "Set stats to 20/20": the Radiant face's.
 const KEPT_RADIANT_SET: i32 = 20;
 
 /// R3536001, R2396000: the trigger of a kill whose killer is this card, for a card still on the field.
@@ -69,7 +69,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// v0.6.13c's "Evolve: Set stats to N/N": `set_stats` on this card, layer 1, so its buffs and the stat
+/// v0.6.13h's "Evolve: Set stats to N/N": `set_stats` on this card, layer 1, so its buffs and the stat
 /// half of its tuning go and its damage is healed (R2198000, §10.4).
 fn kept_set_to(stats: i32) -> Hook {
     hook(move |_ctx| {
@@ -81,10 +81,10 @@ fn kept_set_to(stats: i32) -> Hook {
     })
 }
 
-/// R767000: the script through v0.6.13c, before issue #4783 (Stinkyscape+ Balance Changes VIII): its
+/// R767000: the script through v0.6.13h, before issue #4783 (Stinkyscape+ Balance Changes VIII): its
 /// Evolve set its stats to 10/10 (Radiant 20/20), literals rather than params, kept so the replays of
 /// those versions fold as they were played.
-pub fn script_v0_6_13c() -> CardScripts {
+pub fn script_v0_6_13h() -> CardScripts {
     CardScripts {
         base: Script {
             evolve: Some(kept_set_to(KEPT_BASE_SET)),
@@ -102,7 +102,7 @@ pub fn script_v0_6_13c() -> CardScripts {
 // S+ #101 A Wee Whelp — SPEC §8.12 row 101.
 #[cfg(test)]
 mod tests {
-    use super::{ID, script_v0_6_13c};
+    use super::{ID, script_v0_6_13h};
     use jackioh_engine::testkit::PlayerId::{P1, P2};
     use jackioh_engine::testkit::*;
 
@@ -241,13 +241,13 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for v0.6.13c, its Evolve setting the stats to 10/10 (Radiant 20/20).
-    mod kept_v0_6_13c {
+    /// R767000: the script kept for v0.6.13h, its Evolve setting the stats to 10/10 (Radiant 20/20).
+    mod kept_v0_6_13h {
         use super::*;
 
         #[test]
         fn its_evolve_sets_the_stats_to_10_10_and_drops_a_buff() {
-            crate::under_kept(ID, script_v0_6_13c(), || {
+            crate::under_kept(ID, script_v0_6_13h(), || {
                 let mut s = board(false, FRAGILE);
                 let whelp = s.unit_at(P1, 1);
                 s.card_mut(&whelp).buffs.attack += 3;
@@ -260,7 +260,7 @@ mod tests {
 
         #[test]
         fn its_radiant_evolve_sets_the_stats_to_20_20_and_heals() {
-            crate::under_kept(ID, script_v0_6_13c(), || {
+            crate::under_kept(ID, script_v0_6_13h(), || {
                 let mut s = board(true, EQUAL);
                 let whelp = s.unit_at(P1, 1);
                 let foe = s.unit_at(P2, 1);

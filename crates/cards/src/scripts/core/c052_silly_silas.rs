@@ -285,7 +285,7 @@ mod tests {
             crate::under_kept(super::super::ID, super::super::script_v0_6_8b(), run);
         }
 
-        /// R4265000: Silas set by the Cloaked M #45.1 lends (M #45's did through v0.6.13c) stays on p1's side and
+        /// R4265000: Silas set by the Cloaked M #45.1 lends (M #45's did through v0.6.13h) stays on p1's side and
         /// reveals there, sick (fuzz seed 9854).
         #[test]
         fn r4265000_a_cloaked_play_sets_him_on_his_players_side_and_his_reveal_keeps_him_there() {

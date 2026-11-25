@@ -11,7 +11,7 @@
 //! host's and a launched Starship carries it.
 //! Issue #4783 (Stinkyscape+ Balance Changes VIII) took the rider to 4 (Radiant 8) from 3 (6). The engine
 //! reads the flag through `declared_or`, which moves it only by what a tune moved the declared number, so
-//! the flag's own N is the script's: `script_v0_6_13c` keeps 3 (6) for the replays of those versions
+//! the flag's own N is the script's: `script_v0_6_13h` keeps 3 (6) for the replays of those versions
 //! (R767000).
 
 use jackioh_engine::prelude::*;
@@ -24,7 +24,7 @@ const BURNS: i32 = 4;
 /// "Damage also Burns 8": the Radiant face's rider (R3540002).
 const RADIANT_BURNS: i32 = 8;
 
-/// Burns 3 (Radiant 6), through v0.6.13c (issue #4783).
+/// Burns 3 (Radiant 6), through v0.6.13h (issue #4783).
 const BURNS_V0_6_13C: i32 = 3;
 const RADIANT_BURNS_V0_6_13C: i32 = 6;
 
@@ -45,9 +45,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: Burns 3 (Radiant 6) through v0.6.13c (issue #4783): the flag's printed number, which the
+/// R767000: Burns 3 (Radiant 6) through v0.6.13h (issue #4783): the flag's printed number, which the
 /// declared `burns` only moves by a tune, so the replays of those versions fold under it (`KEPT_SCRIPTS`).
-pub fn script_v0_6_13c() -> CardScripts {
+pub fn script_v0_6_13h() -> CardScripts {
     CardScripts {
         base: rounds(BURNS_V0_6_13C),
         radiant: rounds(RADIANT_BURNS_V0_6_13C),
@@ -170,11 +170,11 @@ mod tests {
             );
         }
 
-        /// R767000: `run` under the script v0.6.13c ran and the `burns` it declared, 3 (Radiant 6).
-        fn through_v0_6_13c<T>(run: impl FnOnce() -> T) -> T {
+        /// R767000: `run` under the script v0.6.13h ran and the `burns` it declared, 3 (Radiant 6).
+        fn through_v0_6_13h<T>(run: impl FnOnce() -> T) -> T {
             crate::under_kept_as(
                 ID,
-                script_v0_6_13c(),
+                script_v0_6_13h(),
                 |def| {
                     def.params = Some(vec![json_as(json!({
                         "key": "burns",
@@ -190,8 +190,8 @@ mod tests {
         }
 
         #[test]
-        fn r767000_the_script_kept_for_v0_6_13c_burns_3_and_6_on_the_radiant_face() {
-            through_v0_6_13c(|| {
+        fn r767000_the_script_kept_for_v0_6_13h_burns_3_and_6_on_the_radiant_face() {
+            through_v0_6_13h(|| {
                 strikes(false, ATTACK, BURNS_V0_6_13C);
                 strikes(true, RADIANT_ATTACK, RADIANT_BURNS_V0_6_13C);
             });

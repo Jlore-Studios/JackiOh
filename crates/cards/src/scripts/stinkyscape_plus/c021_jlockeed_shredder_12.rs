@@ -12,8 +12,8 @@
 //! deck (R2657002), never below 0 (`float_lowers_tribute`, R1841003, as S #86 Prototype-X2's). The end of
 //! turn is #13's shape: one `damage_all` per pass (R51, R59), and "twice" is two passes, so every enemy
 //! takes two damage instances, the hero last in each (R3553000).
-//! Issue #4783 (Stinkyscape+ Balance Changes VIII) raised the Tribute from 3, which `script_v0_6_13c`
-//! keeps, Float line and all, for the replays of v0.6.13c and before; issue #4154 had raised it from 2
+//! Issue #4783 (Stinkyscape+ Balance Changes VIII) raised the Tribute from 3, which `script_v0_6_13h`
+//! keeps, Float line and all, for the replays of v0.6.13h and before; issue #4154 had raised it from 2
 //! and given it the Float line, and `script_v0_6_6h` keeps Tribute 2 with no Float for the replays of
 //! v0.6.6h and before; issue #3996 had raised it from 1, which `script_v0_6_5b` keeps for the replays of
 //! v0.6.5b and before (R767000).
@@ -25,7 +25,7 @@ pub const ID: &str = "stinkyscapeplus-021";
 
 /// "Tribute 4" (R101, R366: printed, declared nowhere), since issue #4783.
 const TRIBUTE: i32 = 4;
-/// "Tribute 3", after v0.6.6h through v0.6.13c (issue #4154), with the Float line.
+/// "Tribute 3", after v0.6.6h through v0.6.13h (issue #4154), with the Float line.
 const TRIBUTE_V0_6_13C: i32 = 3;
 /// "Tribute 2", after v0.6.5b through v0.6.6h (issue #3996).
 const TRIBUTE_V0_6_6H: i32 = 2;
@@ -64,9 +64,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: after v0.6.6h through v0.6.13c it was Tribute 3, each Float lowering it by 1 as now (issue
+/// R767000: after v0.6.6h through v0.6.13h it was Tribute 3, each Float lowering it by 1 as now (issue
 /// #4783); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_13c() -> CardScripts {
+pub fn script_v0_6_13h() -> CardScripts {
     let base = shredder(TRIBUTE_V0_6_13C, true);
     let radiant = base.clone();
     CardScripts { base, radiant }
@@ -89,7 +89,7 @@ pub fn script_v0_6_5b() -> CardScripts {
 
 // S+ #21 Jlockeed Shredder-12 — SPEC §8.12 row S+ 21 (R3553000; R51, R59, R101, R366, R1841003).
 // End-of-turn double AoE over enemy units and hero; Tribute 4 to play, each Float lowering it by 1 (3
-// through v0.6.13c, 2 with no Float through v0.6.6h, 1 through v0.6.5b).
+// through v0.6.13h, 2 with no Float through v0.6.6h, 1 through v0.6.5b).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -275,14 +275,14 @@ mod tests {
             }
         }
 
-        /// R767000: after v0.6.6h through v0.6.13c three Units paid it, a Float lowering it as now (issue
+        /// R767000: after v0.6.6h through v0.6.13h three Units paid it, a Float lowering it as now (issue
         /// #4783).
         #[test]
-        fn r767000_the_script_kept_for_v0_6_13c_needs_tribute_3_and_a_float_lowers_it() {
-            crate::under_kept(ID, script_v0_6_13c(), || {
+        fn r767000_the_script_kept_for_v0_6_13h_needs_tribute_3_and_a_float_lowers_it() {
+            crate::under_kept(ID, script_v0_6_13h(), || {
                 let mut s = to_play(false);
                 assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE_V0_6_13C);
-                assert!(!script_v0_6_13c().base.hand_triggers.is_empty(), "its Float");
+                assert!(!script_v0_6_13h().base.hand_triggers.is_empty(), "its Float");
                 let two = [1, 2].map(|lane| s.unit_at(PlayerId::P1, lane).id);
                 let three = [1, 2, 3].map(|lane| s.unit_at(PlayerId::P1, lane).id);
                 s.expect_refused(|s| s.play(ID, json!({ "zone": 5, "tributes": two })));

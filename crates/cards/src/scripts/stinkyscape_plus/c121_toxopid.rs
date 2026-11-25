@@ -23,8 +23,8 @@
 //! Indestructible while any Leg stands. Float and Toxic are the engine's. R4783021: a Taunt binds it as
 //! it binds any attacker.
 //!
-//! Issue #4783 (Stinkyscape+ Balance Changes VIII) took "Ignores Taunt" off both faces; through v0.6.13c
-//! (`script_v0_6_13c`, R767000) it carried the `ignoresTaunt` flag, so no Taunt bound it (R3560007).
+//! Issue #4783 (Stinkyscape+ Balance Changes VIII) took "Ignores Taunt" off both faces; through v0.6.13h
+//! (`script_v0_6_13h`, R767000) it carried the `ignoresTaunt` flag, so no Taunt bound it (R3560007).
 //! Issue #4154 placed the Legs at random and took out its first-hand-arrival Crawler and the discount
 //! each friendly Crawler death gave it. Through v0.6.6h (`script_v0_6_6h`, R767000) its first hand arrival
 //! each game added a Crawler (R3560000), each friendly Crawler death took 1 off it in hand and deck
@@ -184,7 +184,7 @@ fn ask_leg(ctx: &EffectContext<'_>, left: i32, taken: Vec<String>) -> Vec<Effect
     })]
 }
 
-/// R3560007 (through v0.6.13c): "Ignores Taunt", the attacker's flag no Taunt binds.
+/// R3560007 (through v0.6.13h): "Ignores Taunt", the attacker's flag no Taunt binds.
 fn ignoring_taunt(mut script: Script) -> Script {
     script.static_flags = Some(StaticFlags {
         ignores_taunt: Some(true),
@@ -269,9 +269,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: what it ran through v0.6.13c, before issue #4783: today's script, ignoring Taunt
+/// R767000: what it ran through v0.6.13h, before issue #4783: today's script, ignoring Taunt
 /// (R3560007).
-pub fn script_v0_6_13c() -> CardScripts {
+pub fn script_v0_6_13h() -> CardScripts {
     CardScripts {
         base: ignoring_taunt(toxopid(false)),
         radiant: ignoring_taunt(toxopid(false)),
@@ -508,13 +508,13 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.6.13c and before (issue #4783).
-    mod kept_v0_6_13c {
+    /// R767000: the script kept for the replays of v0.6.13h and before (issue #4783).
+    mod kept_v0_6_13h {
         use super::*;
 
         #[test]
         fn r767000_r3560007_it_ignored_taunt_on_both_faces() {
-            crate::under_kept(ID, script_v0_6_13c(), || {
+            crate::under_kept(ID, script_v0_6_13h(), || {
                 for radiant in [false, true] {
                     assert_eq!(past_taunt("s121-kept-taunt", radiant), (true, true, true), "radiant {radiant}");
                 }
@@ -523,7 +523,7 @@ mod tests {
 
         #[test]
         fn r767000_r4154300_its_cry_still_landed_its_legs_at_random() {
-            crate::under_kept(ID, script_v0_6_13c(), || {
+            crate::under_kept(ID, script_v0_6_13h(), || {
                 let mut s = weapon_board(
                     "s121-kept-cry",
                     json!({ "mana": 10, "hand": [ID], "library": filler(4) }),

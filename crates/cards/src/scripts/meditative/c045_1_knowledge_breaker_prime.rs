@@ -157,10 +157,10 @@ mod tests {
 
         #[test]
         fn r1042_destroys_other_cn_ky_permanents_face_down_included_indestructible_stays() {
-            // The Breaker's Aura, kept for v0.6.13c (issue #4783), Cloaks the spare CN Unit in hand.
+            // The Breaker's Aura, kept for v0.6.13h (issue #4783), Cloaks the spare CN Unit in hand.
             crate::under_kept(
                 BREAKER,
-                crate::scripts::meditative::c045_knowledge_breaker::script_v0_6_13c(),
+                crate::scripts::meditative::c045_knowledge_breaker::script_v0_6_13h(),
                 || {
                     let mut s = scenario(json!({
                         "seed": "prime-destroy",

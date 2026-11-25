@@ -1,13 +1,13 @@
 //! The AI's static reads of a hit through §4.4 steps 3a and 3b (#4064). Each side's damage pools (S+ #42
 //! Force Projector, S+ #123 Oct) soak what they have left, once across the hits the walk counts (R4064000),
 //! and a hit from a source whose damage is Toxic (S+ #153 Noxious Rounds) or Burns (S+ #151 Volcanic Rounds
-//! through v0.6.13c, R4783001) deals nothing and is its target's counter (R4064001). Each board is also
+//! through v0.6.13h, R4783001) deals nothing and is its target's counter (R4064001). Each board is also
 //! played through the engine, which deals what the static read says. The stand-ins: Mr. Vanilla, a 4/4, and
 //! the `stand-in (1)` bodies.
 
 use jackioh_ai::*;
-use jackioh_engine::testkit::*;
 use jackioh_engine::hero_toxic_of;
+use jackioh_engine::testkit::*;
 
 use super::support::{AI, HUMAN, close, register_cards};
 

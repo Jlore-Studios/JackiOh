@@ -3,8 +3,8 @@
 //! #1563. Through v0.5.9f it cost (10), had Can't attack and "Start of turn: Make [a random permanent
 //! / {radiants} random permanents] of yours Radiant" (`script_v0_5_9f`, kept for those replays,
 //! R767000). Issue #4783 cut its cost (8) → (4) and gave both faces' Cry "Overload ({mana})." first,
-//! `mana` 2 on both faces; `script_v0_6_13c` keeps the Cry without it for the replays after v0.5.9f
-//! through v0.6.13c (R767000).
+//! `mana` 2 on both faces; `script_v0_6_13h` keeps the Cry without it for the replays after v0.5.9f
+//! through v0.6.13h (R767000).
 //!
 //! "Float reduces cost." plus "Cry: Overload ({mana}). Do {picks} of these at random …" / Radiant
 //! "Cry: Overload ({mana}). [all five] …"
@@ -125,7 +125,7 @@ fn entries(ctx: &EffectContext, radiant: bool) -> Vec<RandomEntry> {
 
 /// One face. `v0_5_9f` builds the face v0.5.9f shipped: its start-of-turn Radiant and its Float deck
 /// trigger, both gone since #2657. `overload`: whether the Cry begins with "Overload ({mana})." (issue
-/// #4783; not through v0.6.13c).
+/// #4783; not through v0.6.13h).
 fn unleashed(radiant: bool, v0_5_9f: bool, overload: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
@@ -170,9 +170,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: after v0.5.9f through v0.6.13c the Cry paid no Overload (issue #4783); `KEPT_SCRIPTS`
+/// R767000: after v0.5.9f through v0.6.13h the Cry paid no Overload (issue #4783); `KEPT_SCRIPTS`
 /// folds those replays under it.
-pub fn script_v0_6_13c() -> CardScripts {
+pub fn script_v0_6_13h() -> CardScripts {
     CardScripts {
         base: unleashed(false, false, false),
         radiant: unleashed(true, false, false),
@@ -579,12 +579,12 @@ mod tests {
                 assert_eq!(s.state().players.p2.mana.next_turn_mod, 0);
             }
 
-            /// R767000: after v0.5.9f through v0.6.13c the Cry paid no Overload, on either face.
+            /// R767000: after v0.5.9f through v0.6.13h the Cry paid no Overload, on either face.
             #[test]
-            fn r767000_the_script_kept_for_v0_6_13c_overloads_nothing() {
+            fn r767000_the_script_kept_for_v0_6_13h_overloads_nothing() {
                 crate::under_kept(
                     UNLEASHED,
-                    crate::scripts::meditative::c049_1_yilegpt_unleashed::script_v0_6_13c(),
+                    crate::scripts::meditative::c049_1_yilegpt_unleashed::script_v0_6_13h(),
                     || {
                         for radiant in [false, true] {
                             let mut s = holding("unleashed-overload-kept", radiant);

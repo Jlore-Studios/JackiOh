@@ -18,7 +18,7 @@ use jackioh_engine::testkit::{
 use super::support::{AI, HUMAN, ai_options, register_cards, run_puzzle, scenario, trace};
 
 /// M #45.1 Knowledge Breaker Prime, whose Aura lends its controller's hand Units Cloaked (Knowledge
-/// Breaker's did through v0.6.13c, issue #4783).
+/// Breaker's did through v0.6.13h, issue #4783).
 const BREAKER: &str = "meditative-045-1";
 const VANILLA: &str = "core-008";
 const SHEEPISH: &str = "core-041";

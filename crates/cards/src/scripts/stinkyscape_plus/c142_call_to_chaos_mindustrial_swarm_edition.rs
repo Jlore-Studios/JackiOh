@@ -14,7 +14,7 @@
 //!   3 → 2, `card3` 4 → 3 and `burn` 2 → 1, so a replay of v0.6.6h reads its own as well. Issue #4783 cut
 //!   the two entries it judged out of line by about a fifth (R4783032): the Terminus entry's replenish 4
 //!   → 3 and the Toxopid's price (0) → (2), declared since then as `replenish` and `toxopidCost` on both
-//!   faces and read with `param_or`, so a replay of a definition that declares neither (v0.6.13c and
+//!   faces and read with `param_or`, so a replay of a definition that declares neither (v0.6.13h and
 //!   before) reads 4 and (0) and no script is kept (R2657006).
 //!
 //! Core #95's subsystem (`subsystems::call_to_chaos`) with this edition's table (`CHAOS_MS_EFFECTS`,
@@ -219,7 +219,7 @@ mod tests {
     }
 
     /// R4783032, R2657006: under a definition that declares neither number, as every one through
-    /// v0.6.13c, the Terminus entry replenishes 4 and the Toxopid costs (0), as they printed then.
+    /// v0.6.13h, the Terminus entry replenishes 4 and the Toxopid costs (0), as they printed then.
     #[test]
     fn r4783032_r2657006_a_definition_declaring_neither_number_replenishes_4_and_adds_the_toxopid_at_0() {
         crate::under_kept_as(

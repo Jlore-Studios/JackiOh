@@ -2,7 +2,7 @@
 //!
 //! A Unit, Spell or Field Spell that has Cloaked in its controller's hand (printed, given, or lent by
 //! an aura there, §10.4 layer 5: Knowledge Breaker Prime (#45.1) to Units, as Knowledge Breaker (#45)
-//! did through v0.6.13c, Paranoia (#99) to Spells, `cloak_hand_aura`) may be set face-down at its own
+//! did through v0.6.13h, Paranoia (#99) to Spells, `cloak_hand_aura`) may be set face-down at its own
 //! price (R783005). A set card is a Field
 //! Trap or a Trap until it reveals, hidden like any set Trap (R33, R1046), its text dormant. It reveals
 //! only when its controller activates its Reveal (`CLOAKED_REVEAL`), offered only while the card can

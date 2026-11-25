@@ -43,7 +43,7 @@ const TERMINUS_COUNT_KEY: &str = "card4";
 const TOXIC_KEY: &str = "toxic";
 const BURN_KEY: &str = "burn";
 /// R4783032: entry 5's replenish and entry 6's Toxopid price, declared since issue #4783 (3 and 2); a
-/// definition that declares neither, as every one through v0.6.13c, reads the numbers it printed,
+/// definition that declares neither, as every one through v0.6.13h, reads the numbers it printed,
 /// `CHAOS_MS_TERMINUS_REPLENISH` and `CHAOS_MS_CARD_COST` (`param_or`, R2657006).
 const TERMINUS_REPLENISH_KEY: &str = "replenish";
 const TOXOPID_COST_KEY: &str = "toxopidCost";
@@ -146,7 +146,7 @@ fn build_jlockeed() -> Effect {
 
 /// 5. R3570000: `card4` random Terminus cards, tokens among them (S+ #142's designer text names no
 ///    printed set: SP5), each at its printed price (the card prints no `(0)`), then Refresh `replenish`
-///    (R4783032; 4 through v0.6.13c).
+///    (R4783032; 4 through v0.6.13h).
 fn build_terminus() -> Effect {
     entry("terminus", |ctx| {
         let mut query = tag_pool(Tag::Terminus);
@@ -163,7 +163,7 @@ fn build_terminus() -> Effect {
 }
 
 /// 6. R3570000: S+ #121 Toxopid, a fresh hand card costing `toxopidCost` (R4783032; `CHAOS_MS_CARD_COST`
-///    through v0.6.13c); a full hand burns it (§2.4).
+///    through v0.6.13h); a full hand burns it (§2.4).
 fn build_toxopid() -> Effect {
     entry("toxopid", |ctx| match def_id_by_index(SET, TOXOPID_INDEX) {
         None => vec![],

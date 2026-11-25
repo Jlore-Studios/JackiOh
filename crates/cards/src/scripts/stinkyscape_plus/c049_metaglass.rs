@@ -8,7 +8,7 @@
 //! declared `attack` of the face (R386, R4783024).
 //!
 //! Issue #4783 (Stinkyscape+ Balance Changes VIII) gave the base face the attack too, 1, and made the
-//! Radiant face's 5, from 3. Through v0.6.13c (`script_v0_6_13c`, R767000) the base face gave Ranged
+//! Radiant face's 5, from 3. Through v0.6.13h (`script_v0_6_13h`, R767000) the base face gave Ranged
 //! alone and `attack` was declared for the Radiant face only (`tunedOn`, R2261001).
 
 use jackioh_engine::prelude::*;
@@ -20,7 +20,7 @@ fn targets() -> Vec<TargetDecl> {
     vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))]
 }
 
-/// Ranged, and, when `buffs`, the declared attack: both faces today; through v0.6.13c the Radiant face
+/// Ranged, and, when `buffs`, the declared attack: both faces today; through v0.6.13h the Radiant face
 /// alone.
 fn metaglass(buffs: bool) -> Script {
     Script {
@@ -49,8 +49,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: what it ran through v0.6.13c, before issue #4783: the base face gave Ranged alone.
-pub fn script_v0_6_13c() -> CardScripts {
+/// R767000: what it ran through v0.6.13h, before issue #4783: the base face gave Ranged alone.
+pub fn script_v0_6_13h() -> CardScripts {
     CardScripts {
         base: metaglass(false),
         radiant: metaglass(true),
@@ -175,21 +175,21 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.6.13c and before (issue #4783), under its v0.6.13c
+    /// R767000: the script kept for the replays of v0.6.13h and before (issue #4783), under its v0.6.13h
     /// `attack`: 3, the Radiant face's alone.
-    mod kept_v0_6_13c {
-        use super::super::script_v0_6_13c;
+    mod kept_v0_6_13h {
+        use super::super::script_v0_6_13h;
         use super::*;
 
         fn kept<T>(run: impl FnOnce() -> T) -> T {
             crate::under_kept_as(
                 METAGLASS,
-                script_v0_6_13c(),
+                script_v0_6_13h(),
                 |def| {
                     def.params = serde_json::from_value(json!([
                         { "key": "attack", "base": 3, "radiant": 3, "better": "up", "step": 1, "min": 1, "tunedOn": "radiant" }
                     ]))
-                    .expect("the v0.6.13c params");
+                    .expect("the v0.6.13h params");
                 },
                 run,
             )

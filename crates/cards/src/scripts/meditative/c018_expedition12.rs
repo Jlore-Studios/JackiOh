@@ -10,8 +10,8 @@
 //!
 //! Issue #4783 added "then Buff it" to both faces: one Buff (`upgrade`, §6.3, R386) on each card the
 //! Spell makes Radiant, right after it turns, the pick first and then the Cleave's neighbours, a
-//! neighbour already Radiant Buffed all the same (R4783031). `script_v0_6_13c` keeps the faces with no
-//! Buff for the replays after v0.4.0f through v0.6.13c (R767000).
+//! neighbour already Radiant Buffed all the same (R4783031). `script_v0_6_13h` keeps the faces with no
+//! Buff for the replays after v0.4.0f through v0.6.13h (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -99,9 +99,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: after v0.4.0f through v0.6.13c each card made Radiant was not Buffed (issue #4783,
+/// R767000: after v0.4.0f through v0.6.13h each card made Radiant was not Buffed (issue #4783,
 /// R4783031); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_13c() -> CardScripts {
+pub fn script_v0_6_13h() -> CardScripts {
     CardScripts {
         base: face(false, false),
         radiant: face(true, false),
@@ -391,13 +391,13 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays after v0.4.0f through v0.6.13c: no Buff on the cards made Radiant.
-    mod v0_6_13c {
+    /// R767000: the script kept for the replays after v0.4.0f through v0.6.13h: no Buff on the cards made Radiant.
+    mod v0_6_13h {
         use super::*;
 
         #[test]
         fn r767000_the_kept_faces_make_cards_radiant_and_buff_none() {
-            crate::under_kept(EXPEDITION, script_v0_6_13c(), || {
+            crate::under_kept(EXPEDITION, script_v0_6_13h(), || {
                 for radiant in [false, true] {
                     let mut s = board(json!([{ "def": EXPEDITION, "radiant": radiant }, VANILLA, FILLER, TIMMY]));
                     s.play(EXPEDITION, pick::targets(pick::card(&s, FILLER)));

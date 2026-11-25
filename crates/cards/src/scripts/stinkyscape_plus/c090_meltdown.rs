@@ -11,7 +11,7 @@
 //! script; both numbers are the declared ones (R386), read through `param`. R4783023: a freeze heals nothing.
 //!
 //! Issue #4783 (Stinkyscape+ Balance Changes VIII) took "When this is Frozen, fully heal it" off both faces.
-//! Through v0.6.13c (`script_v0_6_13c`, R767000) it was a trigger on the Frozen mark landing on it
+//! Through v0.6.13h (`script_v0_6_13h`, R767000) it was a trigger on the Frozen mark landing on it
 //! (R3550002), answering every freeze that landed, a re-freeze included, and healing it to full.
 
 use jackioh_engine::effects::{buff, damage, heal};
@@ -19,11 +19,11 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-090";
 
-/// R3550002: the id of the Frozen trigger (through v0.6.13c).
+/// R3550002: the id of the Frozen trigger (through v0.6.13h).
 const THAW: &str = "meltdown-thaw";
 
-/// The face: today's when `through_v0_6_13c` is false, else the one v0.6.13c and before ran.
-fn meltdown(through_v0_6_13c: bool) -> Script {
+/// The face: today's when `through_v0_6_13h` is false, else the one v0.6.13h and before ran.
+fn meltdown(through_v0_6_13h: bool) -> Script {
     let mut script = Script {
         // R3559002: gain first, then take the damage, both before the strike.
         when_attacks: Some(hook(|ctx| {
@@ -34,8 +34,8 @@ fn meltdown(through_v0_6_13c: bool) -> Script {
         })),
         ..Script::default()
     };
-    if through_v0_6_13c {
-        // R3550002 (through v0.6.13c): every freeze that lands on it heals it to full.
+    if through_v0_6_13h {
+        // R3550002 (through v0.6.13h): every freeze that lands on it heals it to full.
         script.triggers = vec![
             TriggerDef::new(THAW, &[GameEventType::Marked], |_ctx, _event| {
                 vec![heal(json_as(json!({ "target": { "of": "self" }, "toFull": true })))]
@@ -57,9 +57,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: what it ran through v0.6.13c, before issue #4783: "When this is Frozen, fully heal it"
+/// R767000: what it ran through v0.6.13h, before issue #4783: "When this is Frozen, fully heal it"
 /// (R3550002).
-pub fn script_v0_6_13c() -> CardScripts {
+pub fn script_v0_6_13h() -> CardScripts {
     CardScripts {
         base: meltdown(true),
         radiant: meltdown(true),
@@ -193,13 +193,13 @@ mod tests {
         }
     }
 
-    /// R767000: the script kept for the replays of v0.6.13c and before (issue #4783).
-    mod kept_v0_6_13c {
+    /// R767000: the script kept for the replays of v0.6.13h and before (issue #4783).
+    mod kept_v0_6_13h {
         use super::*;
 
         #[test]
         fn r767000_r3550002_a_freeze_healed_it_to_full_on_both_faces() {
-            crate::under_kept(ID, script_v0_6_13c(), || {
+            crate::under_kept(ID, script_v0_6_13h(), || {
                 for radiant in [false, true] {
                     assert_eq!(frozen_damage(radiant, "s090-kept-thaw"), 0, "radiant {radiant}");
                 }
@@ -208,7 +208,7 @@ mod tests {
 
         #[test]
         fn r767000_r3550002_every_freeze_that_landed_healed_it_again() {
-            crate::under_kept(ID, script_v0_6_13c(), || {
+            crate::under_kept(ID, script_v0_6_13h(), || {
                 let mut s = board(false, "s090-kept-rethaw");
                 let id = s.card(ID).id.clone();
                 s.card_mut(ID).damage = 6;

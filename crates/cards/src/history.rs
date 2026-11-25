@@ -43,13 +43,13 @@ use crate::scripts::classic_plus::{
     c078_claudes_datacenter,
 };
 use crate::scripts::core::{
-    c002_speciesist, c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c032_prem_panther,
-    c033_unstable_clone_machine, c042_eugenics, c043_big_felinor, c049_snom_bunny_mind_control,
-    c050_k_pop_fanatic, c051_1_kys_empty_notebook, c052_silly_silas, c054_straaza, c059_unbiased_immigration,
-    c065_1_spikey_pillow, c065_masochism_mask, c069_call_to_arms, c070_spiteful_stab,
-    c073_anti_oneshot_armor, c074_adaptive_ui, c075_infinite_reserves, c079_twinspell, c080_zao_gao,
-    c081_radiant_saintess, c083_transmogulate, c084_going_long, c085_unlicensed_experimentation,
-    c089_corpse_eater, c098_heroic_power,
+    c002_speciesist, c004_gary_the_gambler, c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean,
+    c032_prem_panther, c033_unstable_clone_machine, c042_eugenics, c043_big_felinor,
+    c049_snom_bunny_mind_control, c050_k_pop_fanatic, c051_1_kys_empty_notebook, c052_silly_silas,
+    c054_straaza, c059_unbiased_immigration, c065_1_spikey_pillow, c065_masochism_mask, c069_call_to_arms,
+    c070_spiteful_stab, c073_anti_oneshot_armor, c074_adaptive_ui, c075_infinite_reserves, c079_twinspell,
+    c080_zao_gao, c081_radiant_saintess, c083_transmogulate, c084_going_long,
+    c085_unlicensed_experimentation, c089_corpse_eater, c098_heroic_power,
 };
 use crate::scripts::meditative::{
     c001_disruptive_disruptor, c005_death_by_1000_cuts, c007_introspection, c009_joint_filing,
@@ -87,13 +87,14 @@ use crate::scripts::stinkyscape::{
 use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c007_churnwalker, c009_drone_assembler_v4, c010_drone_assembler_v5, c017_smoothie,
     c018_large_smoothie, c021_jlockeed_shredder_12, c024_forced_propagation, c025_snom_bunny, c037_scorch,
-    c039_mindustrial_cross_over, c041_mend_projector, c046_phase_fabric, c061_1_shawarma_law,
-    c062_overdrive_projector, c063_overdrive_dome, c064_surge_wall, c065_thorium_wall, c066_plastanium_wall,
-    c067_phase_wall, c076_ayys_lmao, c077_black_hole, c079_a_glimpse_into_the_endless_sea,
-    c080_the_last_voyage, c082_endless_expedition, c093_recessive_replicators, c097_selective_enrollment,
-    c104_tireless_cultivation, c119_eclipse, c120_crawler, c121_1_toxopid_leg, c121_toxopid,
-    c131_tetrative_reconstructor, c145_fire_beam_v5, c155_the_far_vagabond, c159_raven,
-    c166_mindustrial_revolution,
+    c039_mindustrial_cross_over, c041_mend_projector, c046_phase_fabric, c049_metaglass, c056_impact_reactor,
+    c061_1_shawarma_law, c062_overdrive_projector, c063_overdrive_dome, c064_surge_wall, c065_thorium_wall,
+    c066_plastanium_wall, c067_phase_wall, c076_ayys_lmao, c077_black_hole,
+    c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage, c082_endless_expedition, c090_meltdown,
+    c093_recessive_replicators, c097_selective_enrollment, c101_a_wee_whelp, c104_tireless_cultivation,
+    c119_eclipse, c120_crawler, c121_1_toxopid_leg, c121_toxopid, c131_tetrative_reconstructor,
+    c145_fire_beam_v5, c150_scorching_rounds, c151_volcanic_rounds, c155_the_far_vagabond, c158_quick_chaos,
+    c159_raven, c166_mindustrial_revolution,
 };
 use crate::scripts::training_grounds::{
     c015_in_a_hurry, c031_level_up, c035_corpse_recycler, c036_training_dummy, c038_tutorial_master,
@@ -1403,6 +1404,72 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     ),
     // #4665's Ticketed (R4665000): the Cry that held a permanent beneath it in its own zone.
     (c009_ticketed::ID, "v0.6.12c", c009_ticketed::script_v0_6_12c),
+    // #4783 Stinkyscape+ Balance Changes VIII: the scripts before it, the newest shipped version that ran
+    // each: Shredder-12's Tribute 3, Metaglass's base Ranged alone (R4783024), Impact Reactor's two
+    // Overloads (R4783020), The Last Voyage's base end-of-turn launches alone (R4783030), Meltdown's Frozen
+    // heal (R4783023), A Wee Whelp's Evolve to 10/10, Crawler's graveyard price (R4783022), Toxopid's
+    // Ignores Taunt (R4783021), Scorching Rounds' Burns 3, Volcanic Rounds' conversion (R4783001), Quick
+    // Chaos without its discard (R4783025), Gary's keyword coin, Expedition12 without its Buff (R4783031),
+    // Knowledge Breaker's Aura and YileGPT Prime without its Overload.
+    (
+        c021_jlockeed_shredder_12::ID,
+        "v0.6.13h",
+        c021_jlockeed_shredder_12::script_v0_6_13h,
+    ),
+    (c049_metaglass::ID, "v0.6.13h", c049_metaglass::script_v0_6_13h),
+    (
+        c056_impact_reactor::ID,
+        "v0.6.13h",
+        c056_impact_reactor::script_v0_6_13h,
+    ),
+    (
+        c080_the_last_voyage::ID,
+        "v0.6.13h",
+        c080_the_last_voyage::script_v0_6_13h,
+    ),
+    (c090_meltdown::ID, "v0.6.13h", c090_meltdown::script_v0_6_13h),
+    (
+        c101_a_wee_whelp::ID,
+        "v0.6.13h",
+        c101_a_wee_whelp::script_v0_6_13h,
+    ),
+    (c120_crawler::ID, "v0.6.13h", c120_crawler::script_v0_6_13h),
+    (c121_toxopid::ID, "v0.6.13h", c121_toxopid::script_v0_6_13h),
+    (
+        c150_scorching_rounds::ID,
+        "v0.6.13h",
+        c150_scorching_rounds::script_v0_6_13h,
+    ),
+    (
+        c151_volcanic_rounds::ID,
+        "v0.6.13h",
+        c151_volcanic_rounds::script_v0_6_13h,
+    ),
+    (
+        c158_quick_chaos::ID,
+        "v0.6.13h",
+        c158_quick_chaos::script_v0_6_13h,
+    ),
+    (
+        c004_gary_the_gambler::ID,
+        "v0.6.13h",
+        c004_gary_the_gambler::script_v0_6_13h,
+    ),
+    (
+        c018_expedition12::ID,
+        "v0.6.13h",
+        c018_expedition12::script_v0_6_13h,
+    ),
+    (
+        c045_knowledge_breaker::ID,
+        "v0.6.13h",
+        c045_knowledge_breaker::script_v0_6_13h,
+    ),
+    (
+        c049_1_yilegpt_unleashed::ID,
+        "v0.6.13h",
+        c049_1_yilegpt_unleashed::script_v0_6_13h,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`

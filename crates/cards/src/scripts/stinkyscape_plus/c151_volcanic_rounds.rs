@@ -8,8 +8,8 @@
 //! hit this card deals lands as damage, and then, if its target survived it, adds Burn equal to the damage
 //! it dealt (§4.4 step 7, beside R3540002's riders); a hit that dealt nothing or killed its target adds
 //! none. The flag holds on both faces, so an Equip carries it to its host and a launched Starship carries
-//! it. Through v0.6.13c its text was "Damage dealt Burns": each hit turned into its target's Burn and dealt
-//! nothing (R3540003), which `script_v0_6_13c` keeps (R767000).
+//! it. Through v0.6.13h its text was "Damage dealt Burns": each hit turned into its target's Burn and dealt
+//! nothing (R3540003), which `script_v0_6_13h` keeps (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -33,8 +33,8 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R3540003: "Damage dealt Burns", the conversion v0.6.13c and before printed.
-fn rounds_v0_6_13c() -> Script {
+/// R3540003: "Damage dealt Burns", the conversion v0.6.13h and before printed.
+fn rounds_v0_6_13h() -> Script {
     Script {
         static_flags: Some(StaticFlags {
             damage_burns: Some(true),
@@ -44,12 +44,12 @@ fn rounds_v0_6_13c() -> Script {
     }
 }
 
-/// R767000: through v0.6.13c each hit it dealt turned into its target's Burn and dealt nothing (R3540003,
+/// R767000: through v0.6.13h each hit it dealt turned into its target's Burn and dealt nothing (R3540003,
 /// issue #4783); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_13c() -> CardScripts {
+pub fn script_v0_6_13h() -> CardScripts {
     CardScripts {
-        base: rounds_v0_6_13c(),
-        radiant: rounds_v0_6_13c(),
+        base: rounds_v0_6_13h(),
+        radiant: rounds_v0_6_13h(),
     }
 }
 
@@ -116,7 +116,7 @@ mod tests {
         s.expect_stats(target.as_str(), json!({ "health": TARGET_HEALTH - attack }));
     }
 
-    /// R3540003, the script kept for v0.6.13c: the attack deals nothing and Burns the attack's attack.
+    /// R3540003, the script kept for v0.6.13h: the attack deals nothing and Burns the attack's attack.
     fn converts(radiant: bool, attack: i32) {
         let mut s = rounds_on(radiant, json!({ "field": [TARGET] }));
         let target = s.unit_at(P2, 1).id;
@@ -194,8 +194,8 @@ mod tests {
         }
 
         #[test]
-        fn r767000_r3540003_the_script_kept_for_v0_6_13c_converts_each_hit_into_burn() {
-            crate::under_kept(ID, script_v0_6_13c(), || {
+        fn r767000_r3540003_the_script_kept_for_v0_6_13h_converts_each_hit_into_burn() {
+            crate::under_kept(ID, script_v0_6_13h(), || {
                 converts(false, ATTACK);
                 converts(true, RADIANT_ATTACK);
             });
