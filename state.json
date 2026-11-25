@@ -24638,6 +24638,7 @@
       "run_id": "45647361971",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 560,
       "started_at": "2026-11-25T15:37:55Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -47844,9 +47845,33 @@
         "title": "Patch: the AI's count of a board's coming damage includes a Cleave splash's Trample excess over a neighbour that has no Taunt",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-3"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "8f3c804b848c7bfe8e82e20e875929f641d578dd",
+        "issue": 4804,
+        "merged_at": "2026-11-25T18:03:34Z",
+        "n": 560,
+        "pr": 4940,
+        "queued_at": "2026-11-25T18:03:34Z",
+        "sha": "324379057abaa7af130fd5546cb9ce2c3fae573e",
+        "status": "queued",
+        "title": "Patch: the AI's redaction hides the tags of the opponent's face-down Trap in the play counts, and the hidden card an interrupted trap firing remembers",
+        "tries": 0
       }
     ],
-    "count": 559
+    "count": 560
   },
   "statistics": {
     "at": "2026-11-25T18:00:53Z"
