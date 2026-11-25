@@ -25850,6 +25850,14 @@
         "sha": "ccb2321f3f93e5550432bec192fbeceb48932b8c",
         "tiers": {}
       }
+    },
+    "4955": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-25T19:16:12Z",
+      "issue": 4926,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
