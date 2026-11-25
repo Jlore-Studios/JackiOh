@@ -771,7 +771,7 @@ fn an_attempt_file_folds_back_to_its_state_and_names_a_refused_step() {
 }
 
 #[test]
-fn r4595000_the_fight_setup_answers_only_in_a_fight_with_its_seed_decks_handicaps_and_sets() {
+fn the_fight_setup_answers_only_in_a_fight_with_its_seed_decks_and_handicaps() {
     let content = set_content();
     let date = "2027-05-06";
     let day = day_for(&content, date);
@@ -796,8 +796,8 @@ fn r4595000_the_fight_setup_answers_only_in_a_fight_with_its_seed_decks_handicap
     assert_eq!(answered.enemy_deck, day.levels[0].deck);
     assert_eq!(answered.enemy_handicap, day.levels[0].handicap);
     assert_eq!(answered.enemy_marks, day.levels[0].marks);
-    // R4595000: the enemy's deck is the Assault's set, and the setup says so.
-    assert_eq!(answered.enemy_sets, vec![ASSAULT_SET]);
+    // R4595000: these synthetic cards are of no set, so the setup names none.
+    assert!(answered.enemy_sets.is_empty());
     assert_eq!(answered.level, day.levels[0]);
     // Another day answers nothing, nor does a level it does not hold.
     let other = day_for(&content, "2027-05-07");
@@ -823,4 +823,24 @@ fn the_constants_are_the_configs() {
     assert_eq!(checkpoints(), vec![6, 11, 16]);
     assert_eq!(ASSAULT_COMMANDER_LEVELS.len(), 4);
     assert!(PrintedRarity::ALL.len() == 5, "five slots");
+}
+
+/// R4595000: a fight whose enemy deck is the set's own cards names the set for the enemy, and one
+/// of the shipped stand-ins dealt while the set is held names none, so its game samples every set
+#[test]
+fn r4595000_the_fight_setup_names_the_assault_set_only_for_a_deck_of_its_cards() {
+    jackioh_cards::register_all();
+    let date = "2027-05-06";
+    let ids = |prefix: &str| -> Vec<String> { (1..=12).map(|n| format!("{prefix}-{n:03}")).collect() };
+    let sets_for = |deck: Vec<String>| {
+        let mut day = day_for(&set_content(), date);
+        day.levels[0].deck = deck;
+        let briefing = assault_create(&setup_for(date, 1, 1), &record_for(date, 0), &day).unwrap();
+        let fighting = assault_reduce(&briefing, &day, &AssaultAction::Fight).unwrap();
+        assault_fight_setup(&fighting, &day)
+            .expect("a setup while fighting")
+            .enemy_sets
+    };
+    assert_eq!(sets_for(ids("infiniteassault")), vec![ASSAULT_SET]);
+    assert!(sets_for(ids("core")).is_empty());
 }

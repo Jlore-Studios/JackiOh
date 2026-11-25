@@ -182,8 +182,17 @@ pub fn assault_fight_setup(state: &AssaultState, day: &AssaultDay) -> Option<Ass
         enemy_deck: level.deck.clone(),
         enemy_handicap: level.handicap,
         enemy_marks: level.marks.clone(),
-        // R4595000: the enemy's deck is the Assault's set, and the game says so.
-        enemy_sets: vec![ASSAULT_SET],
+        // R4595000: the enemy's deck is the Assault's set, and the game says so; a deck of the shipped
+        // stand-ins dealt while the set is held names none, and samples every set as any game does.
+        enemy_sets: if level.deck.iter().all(|id| {
+            registered_catalog()
+                .get(id)
+                .is_some_and(|def| def.set == ASSAULT_SET)
+        }) {
+            vec![ASSAULT_SET]
+        } else {
+            Vec::new()
+        },
         level,
     })
 }
