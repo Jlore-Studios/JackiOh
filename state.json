@@ -20535,6 +20535,8 @@
     "4861": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "2bf8d651b4a72b9ec33b37433502b9fca5adc548",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T19:14:32Z",
