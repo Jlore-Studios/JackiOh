@@ -16,7 +16,7 @@ use jackioh_engine::wire::{
     keyword_key,
 };
 
-use crate::config::TEMPORARY_LAST_COUNT;
+use crate::config::{TEMPORARY_LAST_COUNT, keyword_line_rank};
 
 use super::chinese::{
     CHINESE_COMMA, all_tribes_word, chinese_def, chinese_keyword, chinese_name, chinese_preview_label,
@@ -153,13 +153,17 @@ fn face_in(words: Words, source: &FaceSource, lookup: &Lookup<'_>, chinese: bool
         None => printed_text.clone(),
         Some(play) => text_in_play(words, def.as_ref(), radiant, &live_text, play, chinese),
     };
-    let keywords: Vec<Keyword> = source
+    // R4747000: live keywords print in the one fixed line order (a stable sort, so repeats of a
+    // numbered keyword stay together in arrival order), index for index with their words; the
+    // gained line and the glossary kinds below are computed from this order too.
+    let mut keywords: Vec<Keyword> = source
         .live
         .as_ref()
         .map(|live| live.keywords.clone())
         .or_else(|| in_play.and_then(|play| play.hand_keywords.clone()))
         .or_else(|| printed.map(|face| face.keywords.clone()))
         .unwrap_or_default();
+    keywords.sort_by_key(|keyword| keyword_line_rank(keyword.kind()));
     // The values belong to the card's own words, its numbers as they stand included: a formula play does
     // not print (Vanilla, "???", a rolled power) has no value to show.
     let prints_its_text = text.full == live_text.full;
@@ -730,14 +734,23 @@ fn text_in_play(
             .params
             .clone()
             .unwrap_or_else(|| printed_values(def, radiant));
+        // R4747000: the power text reads the printed def's unsorted keywords, so it sorts them
+        // into the line order before joining.
         let kinds = |list: &[Keyword]| -> String {
+            let mut ordered: Vec<&Keyword> = list.iter().collect();
+            ordered.sort_by_key(|keyword| keyword_line_rank(keyword.kind()));
             if reader {
-                list.iter()
-                    .map(chinese_keyword)
+                ordered
+                    .iter()
+                    .map(|keyword| chinese_keyword(keyword))
                     .collect::<Vec<_>>()
                     .join(CHINESE_COMMA)
             } else {
-                list.iter().map(keyword_key).collect::<Vec<_>>().join(", ")
+                ordered
+                    .iter()
+                    .map(|keyword| keyword_key(keyword))
+                    .collect::<Vec<_>>()
+                    .join(", ")
             }
         };
         let translate = reader.then_some(words);

@@ -66,6 +66,7 @@ const SETUP: AssaultFightSetup = {
   enemyDeck: ENEMY_DECK,
   enemyHandicap: { ...AI_DIFFICULTY.easy, deckSize: ENEMY_DECK.length },
   enemyMarks: MARKS,
+  enemySets: [],
   level: LEVEL,
 };
 

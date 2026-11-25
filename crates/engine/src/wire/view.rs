@@ -1366,6 +1366,11 @@ pub struct SideView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub luck: Option<i32>,
+    /// R4595000: the sets this seat's deck is dealt from, public on both seats, as its setup named
+    /// them. Absent when it names none, so every other game sends the view it always did (D14).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub deck_sets: Option<Vec<crate::wire::SetName>>,
     /// R1847000: this seat's starscape map, shown to both seats. Absent until the player first
     /// travels, so a game without one sends the view it always did (D14).
     #[serde(default, skip_serializing_if = "Option::is_none")]

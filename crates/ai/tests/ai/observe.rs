@@ -266,6 +266,31 @@ mod redact_b9 {
         );
     }
 
+    /// R4672001: the Created cards' makers are the game record's alone, the seat's own cards' among them,
+    /// and redact drops every one
+    #[test]
+    fn r4672001_redact_drops_every_maker() {
+        let (a, _) = pair();
+        let hidden = a.players[PlayerId::P2].hand[0].id.clone();
+        let own = a.players[AI].hand[0].id.clone();
+        let mut made = a.clone();
+        for (id, card) in [(own, "core-019"), (hidden, "core-011")] {
+            made.makers.insert(
+                id,
+                MadeBy {
+                    card: card.to_string(),
+                    radiant: false,
+                },
+            );
+        }
+        let public = redact(&made, AI);
+        assert!(public.makers.is_empty());
+        assert_eq!(
+            serde_json::to_value(&public).expect("serializable"),
+            serde_json::to_value(redact(&a, AI)).expect("serializable")
+        );
+    }
+
     #[test]
     fn r185_b9_the_hidden_set_is_the_opponents_hand_and_library_plus_the_backrow_the_seat_cannot_read() {
         let (a, _) = pair();

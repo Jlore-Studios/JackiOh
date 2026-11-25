@@ -618,12 +618,11 @@ fn plan(
     let reserve = (remaining / 2).min(finalist_count * per_finalist);
     // The beam's own slice of the counter. Its stop reason is read as the beam ends: nothing takes a
     // node through the slice afterwards. R3498000: the host's wrap-up stops this slice alone, so that the
-    // reply and the other determinizations below still run until the hard stop. It is first polled once
-    // the root has been expanded (root_branching and endTurn): a wrap-up that fired before the beam would
-    // otherwise leave it no line and the decision would fall back.
+    // reply and the other determinizations below still run until the hard stop. R4801000: it is first
+    // polled once the beam has tried every move at its root (`end_root`), however many nodes those cost,
+    // so a wrap-up that fired before the beam still leaves it a line, the root's End turn among them.
     let (found, beam_stopped_by) = {
-        let beam_counter =
-            create_wrap_up_counter(counter, remaining - reserve, wrap_up, budget.root_branching + 1);
+        let beam_counter = create_wrap_up_counter(counter, remaining - reserve, wrap_up);
         let found = beam_search(det0, seat, &beam_counter, budget, &prices);
         (found, beam_counter.stopped_by())
     };

@@ -637,6 +637,11 @@ the deck's, `--json` as `created`, `--card` filtering both, and `GET /api/stats/
 `created` (R2089000), each row only its games, an adjusted win rate, its range and a tier (R4083000), read
 against the other Created cards (`created_field`, answered as `tiers.created`), or against the average deck for The Coin, Glitch and
 the Dormant Starship, which a rule makes (R4082000).
+Each play also records what was chosen for it (its Choose One options, X and Embiggen, R4672000), each
+Created card the card whose effect made it (R4672001) and each Discover-like choice what it offered and
+picked (R4672002); the totals keep each card's `variants`, `outputs` and `offers` in the same row's `stats`,
+a seat once a game by face, no migration (R4672003). `stats-cards --card=<id>` prints its variants and
+outputs tables after its other tables, and `--json` writes them as `choices`; no public route reads them yet.
 
 `stats-cards` takes `--source=live|dev|all` (live unless told otherwise), `--mode=bo1|bo3|random`,
 `--patch=<version>`, `--pilot=human|ai|unified`, `--card=<id>` and `--json`. With no `--pilot` it
@@ -814,7 +819,7 @@ has failed on at least `LOOP_FAILING_ALERT_PASSES` passes in a row over at least
 pass), with the failure's text in the line's `message` (the issue shows only the event name, the email every
 field); `ALERT_WINDOW_MS` then holds the event to one notice an hour. The steps are `matchmaker`,
 `matches.reaper`, `matches.open_reaper`, `seats.reconcile`, `series.sweeper`, `duos.sweeper`, `challenges.sweeper`, `daily.sweeper` and the retention
-purge's ten, `game_records.fold`, `game_records.refile`, `retention.purge`, `shares.purge`, `chat.purge`, `duos.logs.purge`,
+purge's eleven, `game_records.fold`, `game_records.refile`, `retention.purge`, `shares.purge`, `tickets.purge`, `chat.purge`, `duos.logs.purge`,
 `idempotency.sweep`, `lobbies.sweep`, `practice.sweep` and `practice.prune`. Each step's text in `alerts::meaning` names its job and what
 players notice while it fails (for the matchmaker, that nobody who queues gets a game), and says that the
 email's `message` field holds the error. A reaper pass in which any match would not reap counts as failed,
@@ -1163,7 +1168,9 @@ the server's alone, as a 1v1 match's are: a room's host and guest may read it (b
 choices), and no client role reads a co-op match or its log (no grant, no policy). The retention
 loop deletes a co-op match's log `MATCH_ACTION_RETENTION_DAYS` after the match ended, as a 1v1
 match's (`duos::purge_expired_logs`); the match row and its result stay. The loop also deletes a replay
-share whose match's log is gone (`shares.purge`, R4390001).
+share whose match's log is gone (`shares.purge`, R4390001). It also deletes a cancelled queue ticket
+enqueued more than `QUEUE_TICKET_CANCELLED_KEEP_SECONDS` ago (`tickets.purge`, R4446000); queued and
+claimed tickets stay, as a queue match's mode is read from its claimed ticket (`matches_mode_of`).
 
 Migration 0041 adds the card statistics' totals (R1044000): `record_totals`, `card_totals` and
 `decklist_totals`, server-only like `game_records` (RLS on, no policy, no grant), and

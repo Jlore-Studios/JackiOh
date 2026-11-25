@@ -160,7 +160,10 @@ pub(crate) fn no_content() -> Response {
 }
 
 pub(crate) fn param(req: &Req, name: &str) -> String {
-    req.params.get(name).cloned().unwrap_or_default()
+    req.params
+        .get(name)
+        .map(|s| s.to_ascii_lowercase())
+        .unwrap_or_default()
 }
 
 #[cfg(test)]

@@ -76,6 +76,7 @@ pub mod damage_routing;
 pub mod death_pause;
 pub mod deck_bottom;
 pub mod deck_marks;
+pub mod deck_sets;
 pub mod delayed_kinds;
 pub mod destroyed_face;
 pub mod discard_guard;

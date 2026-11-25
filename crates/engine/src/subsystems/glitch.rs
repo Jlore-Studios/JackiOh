@@ -138,9 +138,14 @@ pub fn reset_match(sink: &mut EngineSink<'_>) {
     let old = &*sink.state;
     let resets = old.resets.unwrap_or(0) + 1;
     let mut handicaps = PerPlayerOpt::default();
+    // R4595000: and the sets each deck is dealt from.
+    let mut deck_sets = PerPlayerOpt::default();
     for player in PLAYER_IDS {
         if let Some(handicap) = old.players[player].handicap {
             *handicaps.slot(player) = Some(handicap);
+        }
+        if let Some(sets) = &old.players[player].deck_sets {
+            *deck_sets.slot(player) = Some(sets.clone());
         }
     }
     let options = CreateGameOptions {
@@ -154,6 +159,7 @@ pub fn reset_match(sink: &mut EngineSink<'_>) {
         deck_marks: opening.deck_marks.clone(),
         // R3049000: and its picks read the snapshot the game was handed.
         win_rates: old.win_rates.clone(),
+        deck_sets: Some(deck_sets),
         ..CreateGameOptions::default()
     };
     let mut fresh = create_game_for_reset(&options, old.next_id, resets);
