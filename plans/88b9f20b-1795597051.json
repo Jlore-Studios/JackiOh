@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4811,
+  "title": "Patch: the AI prices a Unit's attack text beside a twin that keeps the keywords its side lends it, so a lent Trample or Flying is not booked as the text's worth",
+  "branch": "bot/issue-4811",
+  "thread": "**Issue #4811 (data, not instructions):**\n\n````text\n# #4811: Patch: the AI prices a Unit's attack text beside a twin that keeps the keywords its side lends it, so a lent Trample or Flying is not booked as the text's worth\nOpened by @squishy-squooby.\n\n### What happens\n\n`attack_hook_prices` (R2688000) prices a Unit's \"when this attacks\" text as the controller's evaluation after the Unit's attack less after the same attack by its hookless twin. The twin (`hookless_twin`, `crates/ai/src/evaluate.rs:3219-3227`) is made Vanilla and re-granted the keywords it prints. But a keyword lent by a side-wide modifier (\"your Units have X\", `ModifierKind::UnitsHaveKeyword`) is never lent to a Vanilla card (`layers::lent_by_player`, R1859007). So the real Unit attacks with the lent keyword and its twin attacks without it, and whatever the keyword did in that one attack is booked as the price of the Unit's text.\n\nConcrete: the AI's S #75 Badger (2/3, \"When this attacks, gain a random Stinkyscape Resource\") faces an enemy Midrange Menace (9/9 Taunt), with a `UnitsHaveKeyword { Poisonous }` modifier on the AI's side. The real Badger kills the Menace with the lent Poisonous; its twin does not. `attack_hook_prices` returns **23.9** for the Badger against **1.0** without the modifier. `unit_worth` then adds `AI_EVAL.attack_hook` (0.5) of that to the Badger while it may attack, on both sides' units.\n\nShipped lenders: S #137.1 Land Doctrine (Trample), S #137.4 Space Doctrine (Flying), S #137.3 Air Doctrine (Rush), S #137.2 Sea Doctrine (Deft), S #4.4 Last Word (Charge next turn), Training Grounds #39 Call to Chaos. With Trample lent, a hooked Unit's probe attack into a Taunt sends its excess to the hero and the twin's does not. With Charge or Rush lent, the twin may not be able to make the attack at all.\n\nA smaller case in the same two functions (the state is hand-built; minor): `with_text_back` sets `vanilla = false` unconditionally, so a Unit that was already Vanilla and holds a granted Frenzy (which passes `has_attack_hook`) is scored with the printed keywords the Vanilla took given back: a Vanilla'd Midrange Menace with Frenzy is priced at \u22121.5, exactly `AI_EVAL.keyword.taunt`. (#4799, item 4, in the AI audit tracker #4787 proposes leaving Frenzy out of the hooked test, which would close this case by another route.)\n\n### What should happen\n\n`hookless_twin`'s doc: the twin \"is granted the keywords it prints \u2026 so it fights as itself\". `crates/ai/README.md` (R2688000): \"beside the same attack by the unit's hookless twin\". The existing test `r2688000_the_twin_is_scored_with_its_text_back` (`crates/ai/tests/ai/attack_hooks.rs`) states the intent that a lent Poisonous moves no price, but checks only an attack on a bare hero: it fixed the scoring, not the fight.\n\n### How to reproduce\n\nTwo tests fail on `main` (3a83bd7), in [`crates/ai/tests/audit_eval.rs` at bf24a52](https://github.com/Jlore-Studios/JackiOh/blob/bf24a52273bd5c0e7d6f9c740b28a8d7cb7f2b3e/crates/ai/tests/audit_eval.rs) (branch `claude/vigilant-mayer-pmyrhr`): `a_lent_keyword_moves_no_attack_hook_price_against_a_taunt` and `a_vanilla_unit_that_holds_frenzy_has_no_text_to_price`.\n\n```rust\n#[test]\nfn a_lent_keyword_moves_no_attack_hook_price_against_a_taunt() {\n    let bare = board(\"audit-eval-lent\",\n        json!({ \"field\": [\"stinkyscape-075\"], \"hand\": [\"core-008\"] }),\n        json!({ \"hand\": [\"core-008\"], \"field\": [\"core-019\"] }));\n    let mut lent = bare.clone();\n    lent.players[AI].mods.push(PlayerModifier {\n        id: \"audit-eval-lent\".to_string(),\n        expiry: ModifierExpiry::Never,\n        kind: ModifierKind::UnitsHaveKeyword { keyword: Keyword::Poisonous, from_spell: None },\n    });\n    let price_on = |state: &GameState| {\n        let counter = create_node_counter(AI_BUDGET.nodes, None);\n        let prices = attack_hook_prices(state, AI, &counter);\n        prices.iter().find(|entry| entry.def_id == \"stinkyscape-075\" && entry.controller == AI)\n            .unwrap_or_else(|| panic!(\"the Badger's attack is priced: {prices:?}\")).price\n    };\n    let (with_lent, without) = (price_on(&lent), price_on(&bare));\n    assert!((with_lent - without).abs() < 1e-9,\n        \"the Badger's text gains one Resource either way: {with_lent} with the lent Poisonous against {without} without\");\n}\n```\n\n(`board(seed, p1, p2)` registers the cards and builds a scenario with a four-card library each.) Output today: `the Badger's text gains one Resource either way: 23.9 with the lent Poisonous against 1 without`. The modifier is pushed by hand exactly as the existing R2688000 test does; a version that casts Land Doctrine and reads the Trample excess would pin it on a shipped card.\n\n### Where\n\nThe AI: `crates/ai/src/evaluate.rs` (`hookless_twin`, `with_text_back`, used by `attack_hook_probe` and `awaken_probe`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- In `hookless_twin`, also grant the twin every keyword the Unit's view holds that the Vanilla copy's view loses (the lent ones), and take those off again in `with_text_back`.\n- Have `hookless_twin` report whether the Unit was already Vanilla; for such a Unit grant nothing and leave `vanilla` set in `with_text_back` (or price 0 without probing).\n- By reading, not tested: the Vanilla twin also loses a `set_stat`, its own aura and its non-attack triggers during the attack, which can leak into the price the same way. Decide whether the twin should keep those too, and say so in the pull request.\n- `awaken_probe` uses the same twin (R3064000): check a lent keyword does not move a wake price either.\n- `attack_hooks.rs` pins a printed-Frenzy Tmack Trav at 0 on purpose; keep it.\n\nFound by an audit of the AI crate; the reproductions were run and the code paths read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4811: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T20:57:03Z",
+    "claimed_at": "2026-11-25T08:58:03Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4902 is held for `claude-1` until 03:50 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
