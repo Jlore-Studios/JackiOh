@@ -19549,7 +19549,7 @@
       "waiting_comment": 7149565989
     },
     "4807": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -19562,32 +19562,24 @@
         "reason": "planned on opus",
         "trail": " the AI crate has in-\u2026\n- Bash: {\"command\": \"grep -n \\\"#\\\\[cfg(test)\\\\]\\\" -A 25 crates/ai/src/candidates.rs | head -50\", \"description\": \"See an in-source AI unit test's setup\"}\n- Bash: {\"command\": \"grep -n \\\"FUSED_ZEPHYRS\\\\|nodes\\\\|fn \\\\|assert\\\" crates/ai/tests/ai/pinned.rs | head -40\", \"description\": \"See what the pinned Zephrys test asserts\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4807/.bot-plan.md\", \"content\": \"# Draft plan #4807 (planner notes)\\n\\n## Found\\n- lethal.rs depth_first: `Some(Err(_)) => continue`; ends `Walk::Exhau\u2026\n- Bash: {\"command\": \"grep -n \\\"backrow\\\" crates/engine/src/testkit/scenario.rs | head -30\", \"description\": \"Check how scenarios place backrow cards\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4807/crates/engine/src/testkit/scenario.rs\", \"offset\": 1160, \"limit\": 25}\n- Bash: {\"command\": \"grep -n \\\"deny\\\\|warn\\\\|forbid\\\" crates/ai/src/lib.rs | head; grep -n \\\"lints\\\" -A 12 crates/ai/Cargo.toml; grep -n \\\"\\\\[workspace.lints\\\" -A 25 Cargo.toml | head -40; cat crates/ai/clip\u2026\n- Bash: {\"command\": \"grep -l \\\" - crates/ai/src/\\\" spec/rulings/*.md | head -3; python3 -I -c \\\"\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\nfor k in ['classicplus-027','core-096','core-097\u2026\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | head -12\", \"description\": \"Read what classify requires of a change\"}\n- Bash: {\"command\": \"grep -n \\\"ZEPHRYS\\\\|nodes\\\\|171\\\\|fn r\\\\|fn [a-z]\\\" crates/ai/tests/ai/replay_fill.rs | head -30\", \"description\": \"Check replay_fill's pinned node counts\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4807/crates/ai/tests/ai/replay_fill.rs\", \"offset\": 20, \"limit\": 120}\n- Bash: {\"command\": \"sed -n 1980,2040p crates/ai/tests/ai/search.rs; grep -n \\\"nodes\\\\|assert\\\" crates/ai/tests/ai/sim_memo.rs | head -30\", \"description\": \"Read the Zephrys search test and sim_memo assertion\u2026\n- Bash: {\"command\": \"sed -n 2040,2140p crates/ai/tests/ai/search.rs\", \"description\": \"Read the r4801000 Zephrys decision tests\"}\n- Bash: {\"command\": \"cargo test -p jackioh-ai 2>&1 | grep -E \\\"test result|FAILED|panicked|failures:\\\" | head -20\", \"description\": \"Run the whole AI crate test suite as a baseline\", \"timeout\": 1800000, \"run_\u2026\n- Grep: {\"pattern\": \"xp-selfplay\", \"path\": \"/home/runner/work/_temp/work/item-4807/crates\", \"output_mode\": \"content\"}\n- Bash: {\"command\": \"grep -c \\\"pays the same once it has run, since nothing in its action says so before.\\\" spec/09-architecture/9.9-practice-ai.md; grep -n \\\"read off its \\\\`cardAnnounced\\\\` events; #1347).\u2026\n- Bash: {\"command\": \"grep -n \\\"mutants\\\" .github/workflows/*.yml | head -5; grep -n \\\"unpaid\\\\|in-diff\\\" scripts/mutants.sh | head -5\", \"description\": \"Check whether CI runs mutation testing on the diff\"}\n- Bash: {\"command\": \"tail -5 /tmp/claude-1001/-home-runner-work--temp-work-item-4807/88cff68a-44bf-4005-b96e-d7fa91e22cfd/tasks/bipn931w0.output\", \"description\": \"Check the baseline AI suite progress\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4807/.bot-plan.md\", \"content\": \"## Goal\\n\\nWhen `simulate` refuses a step because its up-front surcharge (`surcharge_nodes`) does not fit the quick sl\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4807/88cff68a-44bf-4005-b96e-d7fa91e22cfd/tasks/bipn931w0.output\", \"description\": \"Read the baseline AI suite results\"}\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Check the plan's length\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4807/.bot-plan.md\", \"old_string\": \" then a body in prose with `[[\\u2026]]` links, as R4806000's on `bot/issue-4806` reads: (a) t\u2026\n- tool error: <tool_use_error>String to replace not found in file. String: then a body in prose with `[[\u2026]]` links, as R4806000's on `bot/issue-4806` reads: (a) the bug: [[\u00a79.9]]'s solver walks depth-first for `AI\u2026\n- Bash: {\"command\": \"grep -n \\\"then a body\\\\|Then write the body\\\\|^14\\\\.\\\\|^15\\\\.\\\" .bot-plan.md | head; sed -n '/^14\\\\./,/^15\\\\./p' .bot-plan.md | wc -w\", \"description\": \"Locate step 14 in the draft\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4807/.bot-plan.md\", \"offset\": 88, \"limit\": 10}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nstart=s.index(\\\" Then write the body as prose\\\")\\nend=s.index(\\\"15. **`spec/pending/4807.md`**\\\")\\nnew=''' Then a prose body wit\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4807/.bot-plan.md\", \"offset\": 1, \"limit\": 60}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nold_goal=s[s.index(\\\"## Goal\\\\n\\\\n\\\")+9:s.index(\\\"\\\\n\\\\n## Files to touch\\\")]\\nnew_goal=\\\"When `simulate` refuses a step because\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4807/.bot-plan.md\", \"offset\": 60, \"limit\": 95}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\na=\\\"is the issue's test body verbatim, with `register_cards()` in place of `jackioh_cards::register_all()`. After it:\\\\n- Take t\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nreps=[\\n(\\\"rulings (`cargo jackioh spec check` passes with R4807000's note, its two `proven_in` files, and the R4807000 citation\u2026\n- Bash: {\"command\": \"grep -n \\\"pub const NONE\\\" crates/ai/src/evaluate.rs; grep -n \\\"pub fn opponent\\\\b\\\\|pub fn opponent(\\\" crates/engine/src/*.rs | head -3\", \"description\": \"Confirm Prices::NONE and Player\u2026\n- Bash: {\"command\": \"grep -rn \\\"fn opponent(\\\" crates/engine/src/ | head -3\", \"description\": \"Find PlayerId::opponent\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4807/.bot-plan.md\", \"offset\": 1, \"limit\": 20}\n- said: ## Goal When `simulate` refuses a step because its up-front surcharge (`surcharge_nodes`) does not fit the quick slice, the lethal solver's depth-first walk still skips the step. It then ends `Walk::Cut` instead of `Walk::Exhausted`, so `find_lethal_with_quick_nodes` goes on to run the best-first w\u2026"
       },
-      "hold": {
-        "ends": "2026-11-25T13:20:13Z",
-        "lifted": "2026-11-25T13:21:32Z",
-        "owner": "claude-3",
-        "since": "2026-11-25T11:20:13Z",
-        "until": "2026-11-25T13:20:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-25T08:28:28Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-6",
+      "owner_since": "2026-11-25T13:36:27Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-25T08:54:49Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-6",
       "queued_at": "2026-11-24T20:56:05Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45576583173",
+      "run_id": "pending:58cccada-1795613752",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-25T08:28:28Z",
+      "started_at": "2026-11-25T13:36:27Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 7160912219
@@ -23994,9 +23986,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T13:35:38Z",
+    "at": "2026-11-25T13:36:27Z",
     "url": "",
-    "what": "revise #4907 on muse"
+    "what": "build #4807 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-25T13:17:55Z",
