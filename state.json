@@ -22575,7 +22575,7 @@
       "provider": "claude-3",
       "question": "Should this week's hygiene pull request delete `docs/speed-and-cost-audit.md` as the shipped #4691 audit's record, or should #4891 close with no change (nothing to remove)?",
       "queued_at": "2026-11-25T17:17:38Z",
-      "run_id": "pending:e6eefc2e-1795627282",
+      "run_id": "45664009378",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
