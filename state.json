@@ -20486,15 +20486,8 @@
       "stop_requested": false
     },
     "4840": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45562937877",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-25T06:54:52Z",
-        "until": "2026-11-25T07:24:52Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -20506,10 +20499,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- // #4840 (R1867002): the buffs before the unfloored-Attack reading.\n- (\n- c010_1_inner_fire::ID,\n- \"v0.6.13h\",\n- c010_1_inner_fire::script_v0_6_13h,\n- ),\n- ```\n- `v0.6.13h` is the newest shipped version (tail of `crates/cards/patches/shipped.json`).\n- 5. **Claim the card change with a pending fragment** (docs/ADDING_CARDS.md \u00a73). Run:\n- ```\n- cargo jackioh patches \"Inner Fire reads Attack below 0\" --source \"#4840\" --notes \"Inner Fire took its buff off the shown Attack, so a Unit below 0 came up short; it now reads Attack before layer 5's floor\" --plays stinkyscape-010-1\n- ```\n- This creates `crates/cards/patches/pending/<slug>.json`. Then hand-edit that file's `player` note (R724001: a short title plus one fact per line under `fixes`; running the command again keeps it). If step 7 shows a `loc` move, the fragment must also claim the catalog entry \u2014 follow `cargo jackioh c\u2026\n- 6. **Grep for a third instance of the same bug** (the issue's note, bounded): run `grep -rn -- \"- view.attack\\|- stats\\|attack: -\" crates/cards/src/scripts/` and confirm each hit either is the fixed line or reads shown Attack for a threshold, cost, or multiplier (those correctly use the floored val\u2026\n- 7. **Reconcile `loc`**. Run `cargo jackioh catalog loc crates/cards/src/scripts/stinkyscape/c010_1_inner_fire.rs`. If the number differs from the catalog entry's `loc` (34), write the new number into `crates/cards/catalog.json`'s `stinkyscape-010-1` entry and re-check step 5's claim. (`count_loc` c\u2026\n- ## Tests\n- All tests live in the card's own file per CLAUDE.md rule 6 (`crates/cards/src/scripts/stinkyscape/c010_1_inner_fire.rs`, `mod tests`); add no test files elsewhere.\n- - `mod base`: new `r1867002_a_unit_below_0_attack_becomes_exactly_its_health` \u2014 copy the issue's reproduction verbatim: field a `stand-in (1) 1/5` in lane 1 and `core-065-1` (Spikey Pillow, \u22122 aura) in lane 3, assert shown attack is 0 before the play, play base Inner Fire on the unit, assert `attac\u2026\n- - `mod radiant`: new `r1867002_a_friendly_unit_below_0_attack_gains_health_plus_shift` \u2014 same board with the Radiant face (`{ \"def\": INNER_FIRE, \"radiant\": true }`), assert the unit shows 9 (5 + shift 4). Fails before the fix at 8.\n- - `mod v0_6_13h` (new module, copy `c119_unsecure_system.rs` lines 176\u2013191): new `r767000_a_game_on_v0_6_13h_lands_short_under_an_aura` \u2014 inside `crate::under_kept(ID, script_v0_6_13h(), || { \u2026 })`, replay the base-face Pillow board and assert the unit shows 4/5 (the old wrong value), proving the k\u2026\n- - Do not add tests for Unsecure System (ruled to stay at 0 by R1868001) or for other cards from step 6's grep.\n- - Commands, in order: `cargo test -p jackioh-cards c010_1_inner_fire` (all tests in the file must pass, kept-script test included); `cargo jackioh catalog check`; `cargo jackioh patches check`; `cargo jackioh spec check`; `cargo fmt --check`; `cargo clippy -p jackioh-cards --all-targets -- -D warni\u2026\n- ## Done when\n- - [ ] Base Inner Fire on a unit below 0 shows exactly Health; Radiant on its caster's own unit shows Health + 4 (both new tests green).\n- - [ ] Old behavior is preserved under the kept script (`v0_6_13h` test green) and `KEPT_SCRIPTS` names `(c010_1_inner_fire::ID, \"v0.6.13h\", \u2026)`.\n- - [ ] Step 6's grep is done and no third card is changed.\n- - [ ] `catalog check`, `patches check`, `spec check`, `fmt --check`, and `clippy -p jackioh-cards` are all green; `classify --claims` agrees with the fragment.\n- - [ ] The pending fragment exists with a hand-written player note under `fixes`.\n- - [ ] No file outside the **Files to touch** table is modified (`git status --porcelain` shows only those rows).\n- ## Risks\n- - **Replay determinism (R767000):** the fix changes folded games that cast Inner Fire on a below-0 unit; the kept-script entry plus its `under_kept` test is what keeps old finals hashing. Do not skip step 4.\n- - **`loc` drift:** the kept fn silently moves the counted `loc`; step 7 plus `catalog check` catches it. Do not hand-edit `loc` to any number but the tool's output.\n- - **Over-claiming the fragment:** a `--cards` claim where `--plays` suffices (or vice versa) fails CI's `rust (classify)`; treat `classify --claims` as authoritative over step 5's draft flags.\n- - **Purity (CLAUDE.md rule 4):** the script only swaps one read helper for another; no new imports, no state access outside the prelude helpers, no `#[allow]` additions (never add any per the Never list).\n- ## Open questions\n- None. The task is fully decided by R1867002/R1868001 plus the issue's reproduction; the two noted alternatives \u2014 adding a new ruling (rejected: the point is already ruled, and a decided point is not ruled again) and touching Unsecure System (rejected: R1868001 rules its doubling to stay at 0) \u2014 are\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4840 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4840/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-25T06:45:08Z",
       "owner_why": "it plans it",
@@ -20522,9 +20514,9 @@
       "provider": "muse",
       "queued_at": "2026-11-24T21:23:32Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45562937877",
+      "run_id": "pending:1c60f907-1795590023",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-25T06:45:08Z",
+      "started_at": "2026-11-25T07:01:03Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -22585,9 +22577,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T07:00:09Z",
+    "at": "2026-11-25T07:01:03Z",
     "url": "",
-    "what": "review #4900 on muse"
+    "what": "build #4840 on muse"
   },
   "last_sweep": {
     "at": "2026-11-25T06:43:30Z",
