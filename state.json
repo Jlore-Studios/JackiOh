@@ -22835,6 +22835,7 @@
           }
         ],
         "head": "0aaa568a005d3c2ff5addf15fe9059ffe3369013",
+        "interruptions": 0,
         "kind": "build",
         "model": "opus",
         "provider": "claude-1",
