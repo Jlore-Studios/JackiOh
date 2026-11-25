@@ -20417,7 +20417,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-25T09:45:43Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 7160927053
     },
     "4831": {
       "action": "build",
