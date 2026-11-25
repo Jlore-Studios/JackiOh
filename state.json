@@ -24043,11 +24043,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-25T17:48:48Z",
+        "at": "2026-11-25T18:44:03Z",
         "difficulty": "hard",
         "provider": "claude-3",
-        "tier": "medium",
-        "why": "Rule 2: it changes which plays the Duos AI's pass scoring weighs (`crates/ai/src/duos.rs`), so it changes the AI's decisions."
+        "tier": "strong",
+        "why": "Rule 2, the AI: it changes the Duos AI's pass decisions in crates/ai/src/duos.rs"
       },
       "failures": 0,
       "forced": false,
