@@ -18489,6 +18489,7 @@
     "4759": {
       "action": "revise",
       "asks": [],
+      "closed_at": "2026-11-25T01:03:41Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -18507,6 +18508,7 @@
       "issue": 4747,
       "kind": "revise",
       "live": "revising",
+      "merged": true,
       "pending_request": false,
       "provider": "muse",
       "question": "How should the pre-existing duos seed-5 I21 failure be routed: keep this PR words-only and handle the engine bug as its own issue, or widen this PR to fix the engine interaction?",
