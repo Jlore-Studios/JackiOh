@@ -77,7 +77,10 @@
     "4892": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "failures": 0,
+      "forced": false,
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "live": "building",
