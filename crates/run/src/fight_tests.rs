@@ -6,13 +6,18 @@ use crate::config::{
     RUN_WIN_MAX_HP,
 };
 use jackioh_engine::catalog::{deckable, registered_catalog};
-use jackioh_engine::config::{AI_DIFFICULTY, DRAW_EVERY_TURN, HUMAN_HANDICAP, Handicap, LIBRARY_CAP};
+use jackioh_engine::config::{
+    AI_DIFFICULTY, DRAW_EVERY_TURN, GLITCH_DEF_ID, HUMAN_HANDICAP, Handicap, LIBRARY_CAP,
+};
 use jackioh_engine::reduce::{begin_game, legal_actions, reduce, seat_to_act};
-use jackioh_engine::replay::ReplayInput;
+use jackioh_engine::replay::{ReplayInput, fold};
 use jackioh_engine::state::{CreateGameOptions, SetupKind, create_recorded_game, validate_setup};
 use jackioh_engine::wire::{
-    Action, ActionBody, DeckMark, PerPlayerOpt, PlayerId, Rarity, SHIPPED_SETS, Selection,
+    Action, ActionBody, DeckMark, GameOverReason, PerPlayerOpt, PlayerId, Rarity, SHIPPED_SETS, SandboxOp,
+    Selection, SpawnZone, Winner,
 };
+
+use crate::fight::VOIDED_FIGHT;
 
 pub(crate) fn catalog_content() -> RunContent {
     jackioh_cards::register_all();
@@ -488,6 +493,121 @@ fn b10_an_unfinished_game_and_a_setup_the_engine_refuses_are_refused() {
     refused.decks.0.pop();
     let error = run_fight_report(&refused, PlayerId::P1).unwrap_err();
     assert!(error.contains("deck"), "{error}");
+}
+
+/// `scripted_game`'s decks and handicaps; both hands kept, P1 ends its turns, P2 puts a Glitch in its
+/// hand and plays it, on the first seed whose Glitch voids. A sandbox only to put the Glitch in hand; a
+/// run's fight is never one.
+fn voided_game() -> ReplayInput {
+    jackioh_cards::register_all();
+    let decks = (
+        ["058", "042", "043", "001", "008"].map(tg).to_vec(),
+        ["006", "007", "047", "054", "048"].map(tg).to_vec(),
+    );
+    let handicap = |hero_health| Handicap {
+        deck_size: 5,
+        hero_health: Some(hero_health),
+        ..HUMAN_HANDICAP
+    };
+    let handicaps = PerPlayerOpt {
+        p1: Some(handicap(20)),
+        p2: Some(handicap(10)),
+    };
+    for n in 0..200 {
+        let seed = format!("glitch-void-{n}");
+        let options = CreateGameOptions {
+            seed: seed.clone(),
+            decks: decks.clone(),
+            handicaps: Some(handicaps.clone()),
+            sandbox: Some(true),
+            ..Default::default()
+        };
+        let mut state = begin_game(&create_recorded_game(&options)).state;
+        let mut log: Vec<Action> = Vec::new();
+        let mut spawned = false;
+        loop {
+            assert!(log.len() < 12, "the Glitch is played");
+            let seat = seat_to_act(&state).expect("a seat acts");
+            let legal = legal_actions(&state, seat);
+            let hand = &state.players[seat].hand;
+            let body = if legal.iter().any(|b| matches!(b, ActionBody::Mulligan { .. })) {
+                ActionBody::Mulligan {
+                    keep: hand.iter().map(|c| c.id.clone()).collect(),
+                }
+            } else if seat == PlayerId::P1 {
+                ActionBody::EndTurn
+            } else if !spawned {
+                spawned = true;
+                ActionBody::Sandbox {
+                    op: SandboxOp::Spawn {
+                        player: PlayerId::P2,
+                        def_id: GLITCH_DEF_ID.into(),
+                        radiant: None,
+                        to: SpawnZone::Hand,
+                    },
+                }
+            } else {
+                legal
+                    .iter()
+                    .find(|b| {
+                        matches!(b, ActionBody::Play { instance_id, .. }
+                            if hand.iter().any(|c| &c.id == instance_id && c.def_id == GLITCH_DEF_ID))
+                    })
+                    .cloned()
+                    .expect("the Glitch is playable")
+            };
+            let played = matches!(body, ActionBody::Play { .. });
+            let action = Action::new(body, seat, format!("n{}", log.len()));
+            let result = reduce(&state, &action);
+            assert_eq!(result.error, None, "{action:?}");
+            log.push(action);
+            state = result.state;
+            if played {
+                break;
+            }
+        }
+        if state.result.map(|r| (r.winner, r.reason)) == Some((Winner::Draw, GameOverReason::Voided)) {
+            return ReplayInput {
+                seed,
+                decks,
+                log,
+                handicaps: Some(handicaps),
+                sandbox: Some(true),
+                ..Default::default()
+            };
+        }
+    }
+    panic!("no seed's Glitch draws the void");
+}
+
+#[test]
+fn r4852000_a_fight_a_glitch_voided_is_refused_not_reported_as_a_lost_fight() {
+    // R4852000: a void has no result (§2.5, R679), so it is none of §15.6's "other ends": the human at
+    // full health is not reported as having lost, and neither seat reports at all.
+    let game = voided_game();
+    let folded = fold(&game).state;
+    assert_eq!(
+        folded.result.map(|r| (r.winner, r.reason)),
+        Some((Winner::Draw, GameOverReason::Voided))
+    );
+    assert_eq!(folded.players[PlayerId::P1].hero.health, 20);
+    assert_eq!(
+        run_fight_report(&game, PlayerId::P1),
+        Err(VOIDED_FIGHT.to_string())
+    );
+    assert_eq!(
+        run_fight_report(&game, PlayerId::P2),
+        Err(VOIDED_FIGHT.to_string())
+    );
+}
+
+#[test]
+fn a_voided_game_still_reads_as_a_lost_assault_fight_until_4576_rules_on_it() {
+    // #4852 left the Infinite Assault's reading of a void to #4576: until then it is a lost fight.
+    assert!(matches!(
+        assault_fight_report(&voided_game(), PlayerId::P1),
+        Ok(AssaultAction::FightOver { won: false, .. })
+    ));
 }
 
 #[test]

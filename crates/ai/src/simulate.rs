@@ -748,6 +748,11 @@ pub fn own_prompt_score(
     })
 }
 
+/// `simulate`'s refusal of a step whose up-front surcharge (`surcharge_nodes`) the counter's slice
+/// cannot pay once the step's own node is taken: a refusal of the slice, not of the step. The lethal
+/// solver's first walk reads it as a cut, not a searched tree (R4807000).
+pub(crate) const UNPAID_SURCHARGE: &str = "the step's surcharge does not fit the budget's slice";
+
 /// Simulates one AI action on determinized state and auto-answers subsequent opponent prompts.
 /// Returns `None` when node counter exhausts.
 pub fn simulate(
@@ -785,13 +790,12 @@ fn simulate_answering(
     // return `None`: `None` is the callers' "the budget is spent, stop the wave" signal, so one
     // expensive step would stop every cheaper sibling beside it. Refuse the step like any refused
     // action instead (Some(Err): the beam's `continue`). The reply checks a try's surcharge before
-    // it calls this and cuts instead (`best_try`, R4809000).
+    // it calls this and cuts instead (`best_try`, R4809000). The lethal solver's first walk tells it
+    // apart by `UNPAID_SURCHARGE` (R4807000).
     let surcharge = surcharge_nodes(state, seat, action);
     if counter.used() + surcharge > counter.limit() {
         note_sim_error(counter);
-        return Some(Err(
-            "the step's surcharge does not fit the budget's slice".to_string()
-        ));
+        return Some(Err(UNPAID_SURCHARGE.to_string()));
     }
     for _ in 0..surcharge {
         if !counter.take() {
