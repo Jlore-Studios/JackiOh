@@ -23910,6 +23910,13 @@
     "4925": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-25T19:24:55Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Medium: a tools-crate CLI mode, its one e2e caller and a README row; no engine, AI or migration, and the crates and apps involved meet only at a call site (rule 3 does not apply)."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
