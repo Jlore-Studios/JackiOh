@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4807,
+  "title": "Patch: a step the lethal solver's first walk cannot pay for hands the proof on to the second walk instead of ending it",
+  "branch": "bot/issue-4807",
+  "thread": "**Issue #4807 (data, not instructions):**\n\n````text\n# #4807: Patch: a step the lethal solver's first walk cannot pay for hands the proof on to the second walk instead of ending it\nOpened by @squishy-squooby.\n\n### What happens\n\n`find_lethal` runs a depth-first walk on a small slice (`AI_SEARCH.lethal_quick_nodes`, 40) and then a best-first walk on the rest of its allowance. When a step's surcharge does not fit the quick slice, `simulate` refuses it as `Some(Err(_))` (`crates/ai/src/simulate.rs:772-778`: \"the step's surcharge does not fit the budget's slice\"), the depth-first walk skips it (`crates/ai/src/lethal.rs:259`, `Some(Err(_)) => continue`), its stack empties, and it reports `Walk::Exhausted`. `find_lethal` reads that as \"the whole tree was walked and holds no lethal\" and returns `None` (`lethal.rs:386`) without ever starting the second walk.\n\nConcrete: the enemy hero at 3, the AI holds only #97 Zephrys (one of `AI_SEARCH.expensive_def_ids`, 100 extra nodes a play). `find_lethal(.., 300, ..)` returns `None` after **1 of 300 nodes**. With the same state and limit, `find_lethal_with_quick_nodes(.., 300, 0, ..)` proves the lethal (Zephrys, pick classic-069, play it, attack) in 107 nodes.\n\nThe other trigger is My Pawn's surcharge (`ai_turn_trap_nodes`, 40: with the step's own node, 41 never fits a 40-node slice): every attack by a unit whose attack reaches the defender's life is refused in the first walk while a sampled or revealed My Pawn is in that backrow, and if those were the only moves left the tree reads as exhausted.\n\n### What should happen\n\n`lethal.rs`'s header and `crates/ai/README.md`: a depth-first walk for `lethal_quick_nodes`, then the best-first walk on the rest of the allowance. A refusal caused by the size of the quick slice is a cut, not an exhausted tree.\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `a_step_the_quick_slice_cannot_pay_for_leaves_the_rest_of_the_allowance_to_the_second_walk` in [`crates/ai/tests/audit_lethal.rs` at bf24a52](https://github.com/Jlore-Studios/JackiOh/blob/bf24a52273bd5c0e7d6f9c740b28a8d7cb7f2b3e/crates/ai/tests/audit_lethal.rs) (branch `claude/vigilant-mayer-pmyrhr`).\n\n```rust\n#[test]\nfn a_step_the_quick_slice_cannot_pay_for_leaves_the_rest_of_the_allowance_to_the_second_walk() {\n    jackioh_cards::register_all();\n    let state = scenario(json!({\n        \"seed\": \"audit-zephrys\", \"active\": AI, \"turn\": 9,\n        \"p1\": { \"hand\": [\"core-097\"], \"library\": [\"core-008\", \"core-008\"] },\n        \"p2\": { \"health\": 3, \"library\": [\"core-008\", \"core-008\"] },\n    })).state().clone();\n    let limit = AI_BUDGET.lethal_nodes;\n\n    // With no depth-first stage the lethal is proved well inside the allowance.\n    let counter = create_node_counter(limit, None);\n    let second_walk = find_lethal_with_quick_nodes(std::slice::from_ref(&state), AI, &counter, limit, 0, Prices::NONE);\n    assert!(second_walk.is_some(), \"the best-first walk proves it\");\n    assert!(counter.used() < limit);\n\n    // The solver as `decide`, `lethal_hint` and `unstoppable_lethal` call it.\n    let counter = create_node_counter(limit, None);\n    let found = find_lethal(std::slice::from_ref(&state), AI, &counter, limit, Prices::NONE);\n    assert!(found.is_some(), \"find_lethal gave up after {} of {limit} nodes\", counter.used());\n}\n```\n\nOutput today: `find_lethal gave up after 1 of 300 nodes`.\n\n### Where\n\nThe AI: `crates/ai/src/lethal.rs` (`depth_first`, `find_lethal_with_quick_nodes`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Have `depth_first` return `Walk::Cut` when it skipped a step whose `surcharge_nodes` exceeded what its slice had left (compare `counter.used() + surcharge` with the slice's limit before simulating, or have `simulate` report that refusal distinctly from an engine refusal).\n- The refusal-as-`Err` is deliberate for the beam (the comment at `simulate.rs:768` says so); only the solver's reading of it is wrong. Leave the beam as it is.\n- Reach at shipped budgets is small: a Zephrys lethal costs about 104 nodes a world, so three worlds at 300 nodes cannot prove it even with the fix. It matters for one or two worlds, for `lethal_hint` and `unstoppable_lethal`'s single proofs, for the public `find_lethal_with_quick_nodes`, and for My Pawn boards.\n- **Mind #4790** (the AI audit tracker #4787's finding on what the best-first walk costs per step), which reworks the same two walks. Build this on top of it, or fold it in if #4790 is built first.\n\nFound by an audit of the AI crate; the reproduction was run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4807: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T20:56:05Z",
+    "claimed_at": "2026-11-25T08:28:28Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
