@@ -222,8 +222,9 @@ seat, a nonce and a `DuosActionBody`) through them:
   duel's own `concede` are refused; `Concede` is the team's, offered and confirmed, one offer per team
   (`DuosState.concede_offer` is a `PerTeam`).
 - **The shared life** (§13.4). A duel side's `PlayerState.duos` (`DuosLife`: `pool`, `pool_cap`,
-  `spent`) is absent outside Duos and skipped when absent, so a 1v1 state serializes, hashes and
-  folds exactly as before and every golden trace and fuzz seed is unchanged. Every write to a hero's
+  `spent`, and `own_start`, the own HP it started on, absent at `DUOS_OWN_HEALTH`, R4831000) is absent
+  outside Duos and skipped when absent, so a 1v1 state serializes, hashes and folds exactly as before
+  and every golden trace and fuzz seed is unchanged. Every write to a hero's
   health (`damage.rs`'s deal, heal, lose and set, `effects/swap.rs`) goes through `duos_life.rs`
   (`hero_loses`, `hero_heals`, `hero_set`, `effective_life`), which without `duos` is exactly the 1v1
   arithmetic. After every step the wrapper copies each team's pool into the other duel.
