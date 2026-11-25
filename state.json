@@ -20020,6 +20020,7 @@
     "4821": {
       "action": "build",
       "asks": [],
+      "died": 1,
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -20044,7 +20045,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-4",
-      "queued_at": "2026-11-24T21:01:17Z",
+      "queued_at": "2026-11-25T11:11:34Z",
       "requested_by": "squishy-squooby",
       "run_id": "45580851310",
       "runs_on": "ubuntu-latest",
