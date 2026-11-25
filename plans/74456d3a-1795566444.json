@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4821,
+  "title": "Patch: a Unit token sent into a deck is reported as gone, not shuffled in, and a Unit-token card cannot be traded, so no Trade ends in fatigue",
+  "branch": "bot/issue-4821",
+  "thread": "**Issue #4821 (data, not instructions):**\n\n````text\n# #4821: Patch: a Unit token sent into a deck is reported as gone, not shuffled in, and a Unit-token card cannot be traded, so no Trade ends in fatigue\nOpened by @squishy-squooby.\n\n### What happens\n\nA Unit token that an effect sends into a deck with room ceases to exist (R11), but the engine reports it `shuffledIn` at a deck position. Through a Trade, that lets a player trade a token card away and take fatigue for it.\n\n- `crates/engine/src/draw.rs:288-312` (`into_library`) calls `zones::move_to_zone(\u2026, Library)` and ignores its result. `move_to_zone` ends a Unit token that leaves the field or a hand (`crates/engine/src/zones.rs:1569-1584`) and answers `MoveResult::Vanished`. `into_library` then emits `GameEvent::ShuffledIn` with a position, runs the arrival hooks and returns `ShuffleInOutcome::Library`.\n- `crates/engine/src/trade.rs:139-168` (`why_trade_refused`) never asks whether the card can go into the deck at all.\n\nThree cases:\n\n- **1a.** S #12.3 Psychic Scream with a Sheep Token on the field and room in the opponent's deck: the token is gone, the deck still holds 3 cards, and the engine reports `shuffledIn { player: p2, instanceId: <the token>, position: 0 }`.\n- **1b.** S #164 The Syndicate on the field lends Tradable to every hand card, a Rush Token card among them. Trading it ends the token and reports `traded`, then `shuffledIn` for a card that is in no deck.\n- **1c.** The same Trade with an empty deck: the token vanishes, the Trade's draw finds an empty library, and the trader takes fatigue (fatigue count 0 to 1, hero 30 to 29). An empty deck is exactly where #75 Infinite Reserves' Rush Token cards come from once Reserves has left the field.\n\nThe false event is read by the client's animation and audio cues (`apps/web/src/game/animations.ts`, `audio/cues.ts`), by `game_summary.rs`, and by `view_for.rs`'s `in_library_of`, which treats the id as a library card.\n\n### What should happen\n\n- R11: \"Unit tokens cease to exist when they leave the field\u2026 A unit-token card can sit in hand or library\u2026 and ceases to exist if it leaves that zone other than by being drawn or played\". So nothing was shuffled in, and no `shuffledIn` should say so. The full-deck path already reports the same token honestly (`libraryOverflow` with outcome `ceased`, `draw.rs:250-262`).\n- R1838001: \"`shuffledIn` names a card now in a library\".\n- R1838002: \"Fatigue cannot follow, since the deck holds at least the traded card.\"\n- R1838000: \"a deck at R80's cap would turn the card away, so no Trade is offered into it\". The same reasoning applies to a card R11 ends on the way in.\n\n### How to reproduce\n\nThree tests fail on `main` (3a83bd7), in [`crates/ai/tests/audit_engine_turns.rs` at 1bbcb71](https://github.com/Jlore-Studios/JackiOh/blob/1bbcb71ed6319d94421a157960124f0de94e9ac2/crates/ai/tests/audit_engine_turns.rs) (branch `claude/vigilant-mayer-pmyrhr`).\n\n```rust\nuse jackioh_engine::testkit::{GameEvent, PlayerId, Scenario, json, scenario};\nconst P1: PlayerId = PlayerId::P1;\nconst P2: PlayerId = PlayerId::P2;\nconst FILLER: &str = \"core-005\";\nconst SHEEP: &str = \"core-t-sheep\";\nconst RUSH: &str = \"core-t-rush\";\nconst SCREAM: &str = \"stinkyscape-012-3\";\nconst SYNDICATE: &str = \"stinkyscape-164\";\n\nfn shuffled_in(s: &Scenario) -> Vec<(PlayerId, String, i32)> {\n    s.events().iter().filter_map(|event| match event {\n        GameEvent::ShuffledIn { player, instance_id, position, .. } => Some((*player, instance_id.clone(), *position)),\n        _ => None,\n    }).collect()\n}\n\n#[test]\nfn a_unit_token_shuffled_into_a_deck_with_room_is_not_reported_shuffled_in() {\n    jackioh_cards::register_all();\n    let mut s = scenario(json!({\n        \"p1\": { \"hand\": [SCREAM, FILLER], \"field\": [SHEEP], \"mana\": 10 },\n        \"p2\": { \"hand\": [FILLER], \"library\": [FILLER, FILLER, FILLER] },\n    }));\n    let token = s.unit_at(P1, 1).id.clone();\n    s.play(SCREAM, json!({}));\n    s.expect_in_zone(&token, \"gone\"); // R11\n    assert_eq!(s.pile(P2, \"library\").len(), 3);\n    let reported: Vec<_> = shuffled_in(&s).into_iter().filter(|(_, id, _)| *id == token).collect();\n    assert!(reported.is_empty(), \"the token ceased (R11) but was reported shuffled in: {reported:?}\");\n}\n\n#[test]\nfn trading_a_unit_token_card_into_an_empty_deck_fatigues_nobody() {\n    jackioh_cards::register_all();\n    let mut s = scenario(json!({\n        \"p1\": { \"hand\": [RUSH, FILLER], \"field\": [{ \"def\": SYNDICATE, \"lane\": 1 }], \"library\": [] },\n        \"p2\": { \"hand\": [FILLER], \"library\": [FILLER, FILLER] },\n    }));\n    let token = s.hand(P1).into_iter().find(|c| c.def_id == RUSH).map(|c| c.id).expect(\"a Rush Token card\");\n    let health = s.state().players.p1.hero.health;\n    let fatigue = s.state().players.p1.fatigue_count;\n    s.trade(&token);\n    // R1838002: \"Fatigue cannot follow, since the deck holds at least the traded card.\"\n    assert_eq!((s.state().players.p1.fatigue_count, s.state().players.p1.hero.health), (fatigue, health),\n        \"a Trade fatigued its player\");\n}\n```\n\nOutput today: `\u2026 the engine reported it shuffled in: [(P2, \"c3\", 0)]`; `\u2026 [(P1, \"c1\", 1)]` for the Trade with a deck; `a Trade fatigued its player \u2026 left: (1, 29)   right: (0, 30)`.\n\n### Where\n\nThe rules engine: `crates/engine/src/draw.rs` (`into_library`), `crates/engine/src/trade.rs` (`why_trade_refused`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- In `into_library`, read `move_to_zone`'s result; on `Vanished` emit `libraryOverflow` with outcome `ceased`, as the full-deck branch does, skip `shuffledIn` and the arrival hooks, and return `Dropped`.\n- In `why_trade_refused`, refuse a Unit-token card as a full deck is refused, so `legal_actions`, the reducer and the view's `tradeReason` all agree (they share that one function today; keep it so).\n- No ruling covers a token Trade (R1838000 to R1838003, R2657003 and R1864002 to R1864004 say nothing of tokens), so this takes a ruling note in this issue's block. If the owner would rather a traded token live on in the deck, that is an exception to R11 and a different ruling: say which was chosen.\n- Reachable in a legal game: The Syndicate or The Trade Union, with any Unit-token card in hand (Infinite Reserves, or a copy from Unstable Clone Machine, Recycling Initiative or Combo-Index); Psychic Scream with any Unit token on the field.\n- No caller guards it: the only callers with an existing card are `effects/shuffle_card.rs` and `trade.rs`. The hand funnels do check tokens first (`bounce_card`, `take_into_hand`), which is why only the library funnel leaks. The Syndicate's roll is unaffected (it checks the card is in the deck), and no card triggers on `shuffledIn`.\n- `crates/engine/tests/rules/tradable.rs` has no token case; Psychic Scream's own token test covers only the full-deck path and asserts nothing about `shuffledIn`.\n- The client reads `shuffledIn` for its animation; check `apps/web/src/game/animations.ts` handles the `libraryOverflow` it will now get here, as it does for a full deck.\n- A card change in play: it needs its pending patch fragment (`docs/ADDING_CARDS.md`).\n\nFound by an audit of the engine's turns, drawing and zones; the reproductions were run and the code paths read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4821: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:01:17Z",
+    "claimed_at": "2026-11-25T00:27:57Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4595 to close first",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4681 skipped: it waits for #4680 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
