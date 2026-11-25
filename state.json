@@ -21218,6 +21218,8 @@
       }
     },
     "4959": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-25T19:36:58Z",
@@ -21231,8 +21233,11 @@
         "trail": "- Bash: {\"command\": \"head -60 .bot-notes.md; git rev-parse d40d3a457d^1; git rev-parse HEAD:crates/ai/src; date -u +%F; cat crates/ai/generation.json; tail -2 training/history/learn.jsonl; git status --short\u2026\n- Bash: {\"command\": \"printf '%s\\\\n' '{\\\"generation\\\":14,\\\"lane\\\":\\\"hand\\\",\\\"parent\\\":\\\"7d2cf6960b0060bd642827baa5fb4a52de7a082a\\\",\\\"tree\\\":\\\"420e4a199be7f9b4e8373b98bef7d694b01378fd\\\",\\\"vsRandom\\\":null,\\\"vsP\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4921/crates/ai/tests/ai/dev_run.rs\", \"limit\": 125}\n- Bash: {\"command\": \"grep -n \\\"serde_json\\\" crates/ai/Cargo.toml\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/ai/tests/ai/dev_run.rs'\\ns=open(p).read()\\ns=s.replace('''/// Every field named holds''','''// A pure crate reads data at compile time only (rule 4).\\nconst \u2026\n- said: Fails as expected. Now generation.json, config, ci-scope.\n- Bash: {\"command\": \"cat > crates/ai/generation.json <<'EOF'\\n{\\n \\\"generation\\\": 14,\\n \\\"lane\\\": \\\"hand\\\",\\n \\\"parent\\\": \\\"7d2cf6960b0060bd642827baa5fb4a52de7a082a\\\",\\n \\\"tree\\\": \\\"420e4a199be7f9b4e8373b98b\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='scripts/ci-scope.sh'\\ns=open(p).read()\\na=\\\"# (the tools' test that holds crates/ai/src/shadow_ban.rs to its reports of record) tools, wasm;\\\\n\\\"\\nassert a in s\\ns=\u2026\n- Bash: {\"command\": \"sed -n 25,45p training/README.md; sed -n 493,505p crates/ai/README.md; ls spec/rulings | tail -3; cat spec/rulings/R4552000.md | head -12 | cut -c1-300\"}\n- Bash: {\"command\": \"cargo jackioh sweep --due origin/main > /tmp/due.json 2>/tmp/due.err; tail -3 /tmp/due.err; python3 -c \\\"\\nimport json;d=json.load(open('/tmp/due.json'));print({k:(v if not isinstance(v,\u2026\n- said: Count is 189. Now the spec and docs.\n- Bash: {\"command\": \"cat > spec/rulings/R4921000.md <<'EOF'\\n---\\nid: R4921000\\ntitle: \\\"The AI without its learned evaluation is generation 14, recorded by hand in lane `hand` (issue #4921)\\\"\\ncards: \\\"\\u00\u2026\n- Bash: {\"command\": \"(cargo test -p jackioh-ai --test ai -- r4921000 dev_run:: shadow_ban:: 2>&1 | grep -E \\\"test result|FAILED|failed\\\"; cargo test -p jackioh-tools win_probability 2>&1 | grep -E \\\"test res\u2026\n- Bash: {\"command\": \"(cargo clippy -p jackioh-ai -p jackioh-tools -p jackioh-engine --all-targets -- -D warnings 2>&1 | tail -3; cargo jackioh classify --base origin/main --claims 2>&1 | tail -6; which uv; p\u2026\n- Bash: {\"command\": \"cd analysis && python3 -m pytest tests -q -k \\\"load_generations or notebooks\\\" 2>&1 | tail -5\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the AI without its learned evaluation is generation 14, so the shadow ban is swept on it and the ladder bots' ratings re-settle\"} --> ## What changed The AI without its learned evaluation is now generation 14, in lane `hand`. This follows the plan in th\u2026"
       },
       "issue": 4921,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-25T20:44:00Z",
         "from_run": "45686967383",
         "gates": [
           {
@@ -21324,7 +21329,11 @@
         "source": "build",
         "until": "2026-11-25T21:12:23Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-25T20:42:23Z",
+      "run_id": "pending:5ff219c6-1795639390",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -21343,6 +21352,9 @@
         "provider": "claude-6",
         "run": "45686967383"
       },
+      "started_at": "2026-11-25T20:44:00Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -21356,9 +21368,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T20:30:48Z",
+    "at": "2026-11-25T20:44:00Z",
     "url": "",
-    "what": "build #4931 on claude-3"
+    "what": "review #4959 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-25T20:19:09Z",
