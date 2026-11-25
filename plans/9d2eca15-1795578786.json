@@ -1,0 +1,68 @@
+{
+  "action": "build",
+  "number": 4833,
+  "title": "Patch: Omura's Activate is not offered with no enemy Unit to aim at, so it cannot be spent on nothing and start its cooldown",
+  "branch": "bot/issue-4833",
+  "thread": "**Issue #4833 (data, not instructions):**\n\n````text\n# #4833: Patch: Omura's Activate is not offered with no enemy Unit to aim at, so it cannot be spent on nothing and start its cooldown\nOpened by @squishy-squooby.\n\n### What happens\n\nS+ #125 Omura's Activate aims at one enemy Unit and has a 3-turn cooldown. Its target is declared without `required`, and the ability has no `can_activate` (`crates/cards/src/scripts/stinkyscape_plus/c125_omura.rs:44-54`). So with no enemy Unit on the field:\n\n- `legal_actions` lists `Activate { ability: \"omura\", targets: [] }`;\n- `reduce` accepts it; it deals nothing;\n- the cooldown starts, and on Omura's next turn, with an enemy Unit now standing, the Activate is still not offered.\n\nA player (or the AI, which tries every listed Activate) can burn the ability for three turns by pressing it on an empty board.\n\n### What should happen\n\nNot offered with nothing to aim at, as its siblings are.\n\n- R3560008: \"Sei's and Omura's \"Deal N \u2026\" aims at one declared enemy Unit.\"\n- Sei's script (`c124_sei.rs:73`) marks the same target `required: Some(true)`, with the comment \"R703: the Activate needs its Unit, so it is never offered with no enemy Unit to aim at.\"\n- \u00a78.12 rows 143 to 148 (Fire Beam, Scourge Mortar): \"the Activate is not offered while the opponent has no Unit (R430).\"\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `r3560008_omura_activate_is_not_offered_with_no_enemy_unit_to_aim_at`, in [`crates/ai/tests/audit_cards_splus_b.rs` at 89644cb](https://github.com/Jlore-Studios/JackiOh/blob/89644cb/crates/ai/tests/audit_cards_splus_b.rs) (branch `claude/vigilant-mayer-pmyrhr`).\n\n```rust\nuse jackioh_engine::testkit::PlayerId::{P1, P2};\nuse jackioh_engine::testkit::*;\nconst OMURA: &str = \"stinkyscapeplus-125\";\nconst FILLER: &str = \"core-005\";\n\n#[test]\nfn r3560008_omura_activate_is_not_offered_with_no_enemy_unit_to_aim_at() {\n    jackioh_cards::register_all();\n    let mut s = scenario(json!({\n        \"p1\": { \"field\": [{ \"def\": OMURA, \"lane\": 1 }], \"hand\": [FILLER], \"library\": [FILLER, FILLER, FILLER, FILLER] },\n        \"p2\": { \"mana\": 10, \"hand\": [\"stand-in (1) 1/10\"], \"library\": [FILLER, FILLER, FILLER, FILLER] },\n    }));\n    let offered = s.activations_of(OMURA);\n    if !offered.is_empty() {\n        s.activate(OMURA, json!({ \"ability\": \"omura\" }));\n        s.end_turn();\n        s.play(\"stand-in (1) 1/10\", json!({ \"zone\": 1 }));\n        s.end_turn();\n        assert_eq!(s.state().active, P1);\n        assert_eq!(s.unit_at(P2, 1).damage, 0, \"the fizzled use dealt nothing\");\n        assert!(s.activations_of(OMURA).is_empty(), \"and the cooldown it started is still running\");\n    }\n    assert!(offered.is_empty(),\n        \"R3560008, R703: with no enemy Unit to aim at, Omura's Activate is not offered; got {offered:?}\");\n}\n```\n\nOutput today: `R3560008, R703: with no enemy Unit to aim at, Omura's Activate is not offered; got [Activate { instance_id: \"c2\", ability: Some(\"omura\"), targets: Some([]), .. }]`. The two inner assertions pass: the fizzle dealt nothing and the cooldown was still running a turn later.\n\n### Where\n\nA card: `crates/cards/src/scripts/stinkyscape_plus/c125_omura.rs`.\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Mark Omura's target `required: Some(true)`, as Sei does, or give it Fire Beam's `can_activate`.\n- **The other reading, for whoever triages this:** R90 and R703 let a declaration that is not marked needed \"play and fizzle\", so the engine is behaving by rule and the gap is the card's declaration. No ruling or spec line says Omura's Activate may be spent on nothing; row 125 is silent. If the owner reads R90 as covering it, close this as intended.\n- It is the only Activate in the second half of the set that aims at an enemy Unit without a guard, and the only such one with a cooldown.\n- The card's tests go in its own file (CLAUDE.md rule 6).\n- A card change in play: read `docs/ADDING_CARDS.md` first; it needs its pending patch fragment.\n\nFound by an audit of the Stinkyscape+ card scripts against their printed text; the reproduction was run and the script read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#4833: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "own_review_next": true,
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:20:13Z",
+    "claimed_at": "2026-11-25T03:53:42Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4597 skipped: it waits for #4595 to close first",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
