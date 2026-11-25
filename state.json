@@ -19495,7 +19495,7 @@
       "stop_requested": false
     },
     "4808": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -19508,32 +19508,24 @@
         "reason": "planned on opus",
         "trail": "\"command\": \"sleep 120; tail -5 /tmp/claude-1001/-home-runner-work--temp-work-item-4808/78ce2ead-7883-4497-abda-506d5adb6925/tasks/be6fky7ga.output; ls /home/runner/work/JackiOh/JackiOh/target/debug/\u2026\n- tool error: <tool_use_error>Blocked: sleep 120 followed by: tail -5 /tmp/claude-1001/-home-runner-work--temp-work-item-4808/78ce2ead-7883-4497-abda-506d5adb6925/tasks/be6fky7ga.output ls /home/runner/work/JackiO\u2026\n- Bash: {\"command\": \"ls /home/runner/work/JackiOh/JackiOh/target/debug/deps 2>/dev/null | wc -l; ls -t /home/runner/work/JackiOh/JackiOh/target/debug/deps | head -3\", \"description\": \"Check build progress via\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4808/.bot-plan.md\", \"content\": \"# Draft plan, issue #4808 (planner notes)\\n\\n## Found\\n- `crates/ai/src/simulate.rs`: `unit_play_signature` (l.961), `\u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"until grep -qE \\\"test result|error(\\\\[|:)|could not compile\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-4808/78ce2ead-7883-4497-abda-506d5adb6925/tasks/be6fky7ga.output; do slee\u2026\n- Bash: {\"command\": \"until grep -qE \\\"test result|error(\\\\[|:)|could not compile\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-4808/78ce2ead-7883-4497-abda-506d5adb6925/tasks/be6fky7ga.output; do slee\u2026\n- Bash: {\"command\": \"tail -30 /tmp/claude-1001/-home-runner-work--temp-work-item-4808/78ce2ead-7883-4497-abda-506d5adb6925/tasks/be6fky7ga.output\", \"description\": \"Show scratch test result\"}\n- Bash: {\"command\": \"cd /tmp/plan-4808 && timeout 3000 cargo test -p jackioh-ai --lib --test ai 2>&1 | grep -E \\\"^test .*FAILED|^test result|panicked|failures:|^ ai::\\\" | head -60\", \"description\": \"Run the A\u2026\n- Bash: {\"command\": \"ls crates/ai/tests/fixtures | head; grep -rln \\\"decide(\\\\|play_match\\\\|ai_turn\\\" crates/server/tests crates/tools/tests crates/run/tests crates/shared 2>/dev/null | head\", \"description\":\u2026\n- Bash: {\"command\": \"until grep -qE \\\"test result: .* (filtered out|measured); finished\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-4808/78ce2ead-7883-4497-abda-506d5adb6925/tasks/b0hz8hl4a.output &\u2026\n- Bash: {\"command\": \"cd /tmp/plan-4808 && cp crates/ai/src/simulate.rs /tmp/plan-4808-notes/simulate.fixed.rs && cp /home/runner/work/_temp/work/item-4808/crates/ai/src/simulate.rs crates/ai/src/simulate.rs \u2026\n- Bash: {\"command\": \"cd /tmp/plan-4808 && rustfmt --edition 2024 --check crates/ai/src/simulate.rs crates/ai/tests/ai/signature_gaps.rs 2>&1 | head -80\", \"description\": \"Check formatting of scratch changes\"}\n- Bash: {\"command\": \"cd /tmp/plan-4808 && cargo fmt -p jackioh-ai 2>&1 | tail -3; timeout 1500 cargo clippy -p jackioh-ai --all-targets -- -D warnings 2>&1 | grep -E \\\"^(warning|error)|-->|Finished\\\" | head \u2026\n- Bash: {\"command\": \"cd /tmp && diff -rq /home/runner/work/_temp/work/item-4808/crates/ai /tmp/plan-4808/crates/ai | grep -v \\\"Only in /home\\\" ; cp /tmp/plan-4808/crates/ai/tests/ai/signature_gaps.rs /tmp/pl\u2026\n- said: Now the slow AI binary and the shared crate's AI-game tests, in the background.\n- Bash: {\"command\": \"cd /tmp/plan-4808 && (timeout 2400 cargo test -p jackioh-ai --test ai_slow 2>&1; timeout 2400 cargo test -p jackioh-shared 2>&1) | grep -E \\\"^test .*FAILED|^test result|panicked at|error\u2026\n- Bash: {\"command\": \"cd /tmp && git diff --no-index /home/runner/work/_temp/work/item-4808/crates/ai/src/simulate.rs /tmp/plan-4808-notes/simulate.fixed.rs | grep \\\"^[+-]\\\" | head -70\", \"description\": \"Show \u2026\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-4808/.bot-plan.md <<'EOF'\\n\\n## Experiment results (scratch /tmp/plan-4808, notes /tmp/plan-4808-notes/)\\n- Fixed simulate.rs saved at /tmp/plan-\u2026\n- Bash: {\"command\": \"until [ $(grep -c \\\"^test result\\\\|could not compile\\\\|error\\\\[\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-4808/78ce2ead-7883-4497-abda-506d5adb6925/tasks/bvw1jyd0h.output) -ge\u2026\n- said: ai_slow passed. The shared crate needs the testkit feature; rerun that one.\n- Bash: {\"command\": \"cd /tmp/plan-4808 && timeout 2400 cargo test -p jackioh-shared --features jackioh-engine/testkit 2>&1 | grep -E \\\"^test .*FAILED|^test result|panicked at|error\\\\[|could not compile\\\" | h\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4808/.bot-plan.md\", \"content\": \"# Plan draft for #4808 (final text below; experiment notes at the end)\\n\\n## Goal\\n\\nThe AI's position keys stop mergi\u2026\n- Bash: {\"command\": \"sed -n 1,80p /tmp/plan-4808-notes/signature_gaps.rs\", \"description\": \"Read formatted scratch test helpers\"}\n- Bash: {\"command\": \"wc -w -c -l /tmp/plan-4808-notes/signature_gaps.rs\", \"description\": \"Measure the test file size\"}\n- Bash: {\"command\": \"sed -n 80,237p /tmp/plan-4808-notes/signature_gaps.rs\", \"description\": \"Read the rest of the scratch test file\"}\n- Bash: {\"command\": \"until grep -qE \\\"^test result.*finished|could not compile\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-4808/78ce2ead-7883-4497-abda-506d5adb6925/tasks/bznfomdjx.output && ! pgrep\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4808/78ce2ead-7883-4497-abda-506d5adb6925/tasks/bznfomdjx.output\", \"description\": \"Show shared crate test results\"}\n- ToolSearch: {\"query\": \"select:TaskStop\", \"max_results\": 1}\n- TaskStop: {\"task_id\": \"blurbkqdi\"}\n- Bash: {\"command\": \"rm -rf /tmp/plan-4808 && ls /tmp/plan-4808-notes && git -C /home/runner/work/_temp/work/item-4808 status --porcelain\", \"description\": \"Remove scratch copy and confirm the worktree is cle\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4808/.bot-plan.md\", \"content\": \"# Plan draft for #4808: final, see the planner's final message (identical text)\\n\\nExperiment (scratch copy, since rem\u2026\n- said: ## Goal Stop the AI's search from treating two different positions as one. Three changes: 1. `search_signature` adds the last Spell played (`state.last_spell`: its definition and its Radiant face). It does this only while a card that copies the last Spell (C #57 Echo, `subsystems::copies_text`) sit\u2026"
       },
-      "hold": {
-        "ends": "2026-11-25T03:27:27Z",
-        "lifted": "2026-11-25T03:22:06Z",
-        "owner": "claude-3",
-        "since": "2026-11-25T01:27:27Z",
-        "until": "2026-11-25T03:20:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-24T22:28:40Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-8",
+      "owner_since": "2026-11-25T05:10:39Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-24T23:08:04Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-8",
       "queued_at": "2026-11-24T20:56:08Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45501296869",
+      "run_id": "pending:bbab48b7-1795583400",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-24T22:28:40Z",
+      "started_at": "2026-11-25T05:10:39Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 7149567984
@@ -21993,9 +21985,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T05:09:47Z",
+    "at": "2026-11-25T05:10:39Z",
     "url": "",
-    "what": "spot-check #4886 on claude-1"
+    "what": "build #4808 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-25T04:46:46Z",
