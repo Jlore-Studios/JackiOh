@@ -20931,10 +20931,16 @@
       },
       "interruptions": 1,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "agy",
       "owner_since": "2026-11-25T09:23:47Z",
       "owner_why": "it plans it",
+      "paused": {
+        "at": "2026-11-25T10:42:09Z",
+        "interrupt": "usage",
+        "provider": "agy"
+      },
       "pending_request": false,
       "planned_at": "2026-11-25T10:12:28Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
@@ -20944,11 +20950,13 @@
       "provider": "agy",
       "queued_at": "2026-11-24T21:31:02Z",
       "requested_by": "squishy-squooby",
+      "round_tier": "medium",
       "run_id": "45592960190",
       "runs_on": "night-vm-agy",
       "started_at": "2026-11-25T10:13:49Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "verdict_rounds": 0
     },
     "4848": {
       "action": "build",
