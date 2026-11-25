@@ -146,8 +146,8 @@
     "params": [
       {
         "key": "coins",
-        "base": 5,
-        "radiant": 10,
+        "base": 6,
+        "radiant": 12,
         "better": "up",
         "step": 1,
         "min": 1,
@@ -177,13 +177,13 @@
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} Attack per heads and +{perTails} Health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
+      "text": "Cry: Flip a coin {coins|time|times}. Gain +{perHeads} Attack per heads and +{perTails} Health per tails."
     },
     "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} Attack per heads and +{perTails} Health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
+      "text": "Cry: Flip a coin {coins|time|times}. Gain +{perHeads} Attack per heads and +{perTails} Health per tails."
     }
   },
   "core-005": {
@@ -12417,7 +12417,7 @@
     "loc": 39,
     "base": {
       "keywords": [],
-      "text": "Overload ({loss}). Make a card in your hand Radiant."
+      "text": "Overload ({loss}). Make a card in your hand Radiant, then Buff it."
     },
     "radiant": {
       "keywords": [
@@ -12425,7 +12425,7 @@
           "kind": "Cleave"
         }
       ],
-      "text": "Cleave\nOverload ({loss}). Make a card in your hand Radiant."
+      "text": "Cleave\nOverload ({loss}). Make a card in your hand Radiant, then Buff it."
     }
   },
   "meditative-019": {
@@ -13852,14 +13852,22 @@
     "base": {
       "attack": 1,
       "health": 3,
-      "keywords": [],
-      "text": "Cry: Nerf all other CN and KY cards on the field and in hands.\nAura: Your Units are Cloaked.\nDeath: Shuffle a Knowledge Breaker Prime into your deck."
+      "keywords": [
+        {
+          "kind": "Cloaked"
+        }
+      ],
+      "text": "Cloaked\nCry: Nerf all other CN and KY cards on the field and in hands.\nDeath: Shuffle a Knowledge Breaker Prime into your deck."
     },
     "radiant": {
       "attack": 2,
       "health": 6,
-      "keywords": [],
-      "text": "Cry: Nerf all other CN and KY cards on the field and in hands {times|time|times}.\nAura: Your Units are Cloaked.\nDeath: Shuffle a Radiant Knowledge Breaker Prime into your deck."
+      "keywords": [
+        {
+          "kind": "Cloaked"
+        }
+      ],
+      "text": "Cloaked\nCry: Nerf all other CN and KY cards on the field and in hands {times|time|times}.\nDeath: Shuffle a Radiant Knowledge Breaker Prime into your deck."
     }
   },
   "meditative-045-1": {
@@ -14064,7 +14072,7 @@
     "printedRarity": "Mythic",
     "flavor": "Tech",
     "token": true,
-    "cost": 8,
+    "cost": 4,
     "refs": [
       "classic-018",
       "classic-t-glitch",
@@ -14129,6 +14137,15 @@
         "min": 1,
         "tunedOn": "radiant",
         "read": "cry"
+      },
+      {
+        "key": "mana",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
       }
     ],
     "loc": 149,
@@ -14136,13 +14153,13 @@
       "attack": 8,
       "health": 20,
       "keywords": [],
-      "text": "Float reduces cost.\nCry: Do {picks} of these at random: summon {datacenters|Claude's Datacenter|Claude's Datacenters}; add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand, which cost ({setCost}); summon an AI Girlfriend; fill your opponent's board with Yile's Viruses; Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
+      "text": "Float reduces cost.\nCry: Overload ({mana}). Do {picks} of these at random: summon {datacenters|Claude's Datacenter|Claude's Datacenters}; add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand, which cost ({setCost}); summon an AI Girlfriend; fill your opponent's board with Yile's Viruses; Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
     },
     "radiant": {
       "attack": 16,
       "health": 40,
       "keywords": [],
-      "text": "Float reduces cost.\nCry: Summon {datacenters|Claude's Datacenter|Claude's Datacenters}. Add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand; they cost ({setCost}). Summon an AI Girlfriend. Summon {viruses|Radiant Yile's Virus|Radiant Yile's Viruses} for your opponent. Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
+      "text": "Float reduces cost.\nCry: Overload ({mana}). Summon {datacenters|Claude's Datacenter|Claude's Datacenters}. Add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand; they cost ({setCost}). Summon an AI Girlfriend. Summon {viruses|Radiant Yile's Virus|Radiant Yile's Viruses} for your opponent. Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
     }
   },
   "meditative-049-2": {
@@ -32099,7 +32116,7 @@
     "loc": 85,
     "base": {
       "keywords": [],
-      "text": "Exile your hand, deck and board, Dormant cards included. Summon {starships|random Terminus Starship|random Terminus Starships}. They can't be launched by hand. Launch a random one at the end of each of your turns."
+      "text": "Exile your hand, deck and board, Dormant cards included. Summon {starships|random Terminus Starship|random Terminus Starships}. They can't be launched by hand. Launch a random one now and at the end of each of your turns after this one."
     },
     "radiant": {
       "keywords": [],
@@ -35313,11 +35330,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "One random effect: Add {card|random Paperclip card|random Paperclip cards} to your hand, they cost (0), replenish 2 mana; add {card2|random Evolved Swarm card|random Evolved Swarm cards} to your hand, they cost (0); summon two random Radiant Units, make them GIGA; summon or cast {card3|random Jlockeed card|random Jlockeed cards}; add {card4|random Terminus card|random Terminus cards} to your hand, replenish 4 mana; add the Toxopid to your hand, it costs (0); Toxic {toxic} and Burn {burn} all enemies; for the rest of the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) Cost Weapon; summon a Mindustrial Golem and a Swarm Golem; cast a random Call to Chaos."
+      "text": "One random effect: Add {card|random Paperclip card|random Paperclip cards} to your hand, they cost (0), replenish 2 mana; add {card2|random Evolved Swarm card|random Evolved Swarm cards} to your hand, they cost (0); summon two random Radiant Units, make them GIGA; summon or cast {card3|random Jlockeed card|random Jlockeed cards}; add {card4|random Terminus card|random Terminus cards} to your hand, replenish {replenish} mana; add the Toxopid to your hand, it costs ({toxopidCost}); Toxic {toxic} and Burn {burn} all enemies; for the rest of the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) Cost Weapon; summon a Mindustrial Golem and a Swarm Golem; cast a random Call to Chaos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Three different random effects, resolved in the order listed: Add {card|random Paperclip card|random Paperclip cards} to your hand, they cost (0), replenish 2 mana; add {card2|random Evolved Swarm card|random Evolved Swarm cards} to your hand, they cost (0); summon two random Radiant Units, make them GIGA; summon or cast {card3|random Jlockeed card|random Jlockeed cards}; add {card4|random Terminus card|random Terminus cards} to your hand, replenish 4 mana; add the Toxopid to your hand, it costs (0); Toxic {toxic} and Burn {burn} all enemies; for the rest of the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) Cost Weapon; summon a Mindustrial Golem and a Swarm Golem; cast a random Call to Chaos."
+      "text": "Three different random effects, resolved in the order listed: Add {card|random Paperclip card|random Paperclip cards} to your hand, they cost (0), replenish 2 mana; add {card2|random Evolved Swarm card|random Evolved Swarm cards} to your hand, they cost (0); summon two random Radiant Units, make them GIGA; summon or cast {card3|random Jlockeed card|random Jlockeed cards}; add {card4|random Terminus card|random Terminus cards} to your hand, replenish {replenish} mana; add the Toxopid to your hand, it costs ({toxopidCost}); Toxic {toxic} and Burn {burn} all enemies; for the rest of the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) Cost Weapon; summon a Mindustrial Golem and a Swarm Golem; cast a random Call to Chaos."
     },
     "params": [
       {
@@ -35367,6 +35384,22 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "replenish",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "toxopidCost",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 0
       }
     ],
     "refs": [

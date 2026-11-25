@@ -3,15 +3,19 @@
 //!   Base:    "One of the following random effects: add 2 random Paperclip cards to your hand, they cost
 //!            (0), replenish 2 mana; add 2 random Evolved Swarm cards to your hand, they cost (0); summon
 //!            two random Radiant Units, make them GIGA; summon or cast 3 random Jlockeed cards; add 2
-//!            random Terminus cards to your hand, replenish 4 mana; add the Toxopid to your hand, it costs
-//!            (0); Toxic 3 and Burn 1 all enemies; for the rest of the game, when you launch a Starship,
+//!            random Terminus cards to your hand, replenish 3 mana; add the Toxopid to your hand, it costs
+//!            (2); Toxic 3 and Burn 1 all enemies; for the rest of the game, when you launch a Starship,
 //!            cast a random Call to Chaos and summon a random (2) Cost Weapon; summon a Mindustrial Golem
 //!            and a Swarm Golem; cast a random Call to Chaos."
 //!   Radiant: "Three different random effects, resolved in the order listed: …" (the same ten).
 //!   Issue #3996 cut the two strongest entries' declared numbers (R3996200): `card3` 5 → 4 and `burn`
 //!   3 → 2, on both faces; the numbers are catalog data, so a replay of v0.6.5b reads its own. Issue #4154
 //!   cut every entry with a count of 3 or more and the Burn by one (R4154303): `card`, `card2` and `card4`
-//!   3 → 2, `card3` 4 → 3 and `burn` 2 → 1, so a replay of v0.6.6h reads its own as well.
+//!   3 → 2, `card3` 4 → 3 and `burn` 2 → 1, so a replay of v0.6.6h reads its own as well. Issue #4783 cut
+//!   the two entries it judged out of line by about a fifth (R4783032): the Terminus entry's replenish 4
+//!   → 3 and the Toxopid's price (0) → (2), declared since then as `replenish` and `toxopidCost` on both
+//!   faces and read with `param_or`, so a replay of a definition that declares neither (v0.6.13c and
+//!   before) reads 4 and (0) and no script is kept (R2657006).
 //!
 //! Core #95's subsystem (`subsystems::call_to_chaos`) with this edition's table (`CHAOS_MS_EFFECTS`,
 //! `subsystems/call_to_chaos_mindustrial_swarm.rs`): the roll, the announcement both players read (R436), the
@@ -194,6 +198,58 @@ mod tests {
                 .unwrap_or_else(|| panic!("{key} is declared"));
             assert_eq!((declared.base, declared.radiant), (value, value), "{key}");
         }
+    }
+
+    /// R4783032: issue #4783 cut the Terminus entry's replenish 4 → 3 and raised the Toxopid's price
+    /// (0) → (2), both declared on both faces.
+    #[test]
+    fn r4783032_the_terminus_replenish_is_3_and_the_toxopid_costs_2_on_both_faces() {
+        crate::register_all();
+        let def = card_def(ID);
+        for (key, value) in [("replenish", 3), ("toxopidCost", 2)] {
+            let declared = def
+                .params
+                .as_ref()
+                .and_then(|params| params.iter().find(|param| param.key == key))
+                .unwrap_or_else(|| panic!("{key} is declared"));
+            assert_eq!((declared.base, declared.radiant), (value, value), "{key}");
+        }
+        assert_eq!(label_of("terminus"), "Add 2 random Terminus cards to your hand, replenish 3 mana");
+        assert_eq!(label_of("toxopid"), "Add the Toxopid to your hand, it costs (2)");
+    }
+
+    /// R4783032, R2657006: under a definition that declares neither number, as every one through
+    /// v0.6.13c, the Terminus entry replenishes 4 and the Toxopid costs (0), as they printed then.
+    #[test]
+    fn r4783032_r2657006_a_definition_declaring_neither_number_replenishes_4_and_adds_the_toxopid_at_0() {
+        crate::under_kept_as(
+            ID,
+            script(),
+            |def| {
+                def.params = def.params.take().map(|params| {
+                    params
+                        .into_iter()
+                        .filter(|param| param.key != "replenish" && param.key != "toxopidCost")
+                        .collect()
+                });
+            },
+            || {
+                let mut p1 = side(false, json!([]));
+                p1["mana"] = json!(CALL_PRICE);
+                let s = chaos("terminus", p1, json!({ "hand": [VANILLA] }));
+                let mana = &s.state().players.p1.mana;
+                assert_eq!(mana.current, CHAOS_MS_TERMINUS_REPLENISH.min(mana.max));
+                assert_eq!(CHAOS_MS_TERMINUS_REPLENISH, 4);
+
+                let s = chaos("toxopid", side(false, json!([])), json!({ "hand": [VANILLA] }));
+                let toxopid = added_to(&s, P1)
+                    .into_iter()
+                    .find(|card| card.def_id == TOXOPID)
+                    .expect("the Toxopid");
+                assert_eq!(toxopid.cost_override, Some(CHAOS_MS_CARD_COST));
+                assert_eq!(cost_of(&s, &toxopid), 0);
+            },
+        );
     }
 
     #[test]
@@ -385,9 +441,10 @@ mod tests {
             assert!(summons > 0 && casts > 0, "{summons} summoned, {casts} cast");
         }
 
+        /// R4783032: the replenish is the declared `replenish`, 3 since issue #4783 (4 before).
         #[test]
-        fn r3570000_r4154303_entry_terminus_adds_two_terminus_cards_then_replenishes_four() {
-            assert_eq!(CHAOS_MS_TERMINUS_REPLENISH, 4);
+        fn r3570000_r4154303_r4783032_entry_terminus_adds_two_terminus_cards_then_replenishes_three() {
+            const REPLENISH: i32 = 3;
             let mut tokens = 0;
             for n in 0..GAMES {
                 let mut p1 = side(false, json!([]));
@@ -408,19 +465,22 @@ mod tests {
                     tokens += usize::from(def.token);
                 }
                 let mana = &s.state().players.p1.mana;
-                assert_eq!(mana.current, CHAOS_MS_TERMINUS_REPLENISH.min(mana.max));
+                assert_eq!(mana.current, REPLENISH.min(mana.max));
+                assert!(mana.max >= REPLENISH, "the board's max lets 3 come back");
             }
             assert!(tokens > 0, "R3570000: the Terminus pool takes tokens");
         }
 
+        /// R4783032: the Toxopid's price is the declared `toxopidCost`, (2) since issue #4783 ((0) before).
         #[test]
-        fn r3570000_r4154300_entry_toxopid_adds_the_toxopid_at_zero_and_nothing_else() {
+        fn r3570000_r4154300_r4783032_entry_toxopid_adds_the_toxopid_at_2_and_nothing_else() {
+            const PRICE: i32 = 2;
             let s = chaos("toxopid", side(false, json!([])), json!({ "hand": [VANILLA] }));
             let added = added_to(&s, P1);
             let toxopids: Vec<&CardInstance> = added.iter().filter(|card| card.def_id == TOXOPID).collect();
             assert_eq!(toxopids.len(), 1);
-            assert_eq!(toxopids[0].cost_override, Some(0));
-            assert_eq!(cost_of(&s, toxopids[0]), 0);
+            assert_eq!(toxopids[0].cost_override, Some(PRICE));
+            assert_eq!(cost_of(&s, toxopids[0]), PRICE);
             // Since issue #4154 its first hand arrival adds no Crawler (R4154300; through v0.6.6h it did,
             // R3560000).
             let others: Vec<&CardInstance> = added.iter().filter(|card| card.def_id != TOXOPID).collect();

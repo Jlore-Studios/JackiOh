@@ -157,46 +157,53 @@ mod tests {
 
         #[test]
         fn r1042_destroys_other_cn_ky_permanents_face_down_included_indestructible_stays() {
-            let mut s = scenario(json!({
-                "seed": "prime-destroy",
-                "p1": {
-                    "mana": 8,
-                    "hand": [PRIME, CN_UNIT],
-                    "field": [
-                        { "def": BREAKER, "lane": 1 },
-                        { "def": KY_UNIT, "lane": 2 },
-                        { "def": ROCK, "lane": 3 },
-                    ],
-                    "library": [VANILLA],
+            // The Breaker's Aura, kept for v0.6.13c (issue #4783), Cloaks the spare CN Unit in hand.
+            crate::under_kept(
+                BREAKER,
+                crate::scripts::meditative::c045_knowledge_breaker::script_v0_6_13c(),
+                || {
+                    let mut s = scenario(json!({
+                        "seed": "prime-destroy",
+                        "p1": {
+                            "mana": 8,
+                            "hand": [PRIME, CN_UNIT],
+                            "field": [
+                                { "def": BREAKER, "lane": 1 },
+                                { "def": KY_UNIT, "lane": 2 },
+                                { "def": ROCK, "lane": 3 },
+                            ],
+                            "library": [VANILLA],
+                        },
+                        "p2": {
+                            "hand": [VANILLA],
+                            "field": [
+                                { "def": CN_UNIT, "lane": 1 },
+                                { "def": BEAUTY, "lane": 2 },
+                            ],
+                            "library": [VANILLA],
+                        },
+                    }));
+                    // The Beauty prints no Indestructible since issue #4285: it is given it, the CN permanent that stays.
+                    let beauty = s.unit(P2, 2).expect("the Beauty").id;
+                    s.card_mut(beauty.as_str()).granted_keywords.push(Keyword::Indestructible);
+                    // A CN/KY unit set face-down is a permanent too: set the spare CN Unit first, Cloaked by
+                    // the Breaker's kept Aura.
+                    let spare = s.hand(P1).iter().find(|card| card.def_id == CN_UNIT).cloned().unwrap();
+                    s.play(&spare.id, json!({ "zone": 1, "row": "backrow", "faceDown": "cloaked" }));
+                    let prime = s.hand(P1).iter().find(|card| card.def_id == PRIME).cloned().unwrap();
+                    s.play(&prime.id, json!({ "zone": 4 }));
+                    // Every other CN or KY permanent is gone, the set CN Unit and the Breaker included.
+                    assert!(s.unit(P1, 1).is_none());
+                    assert!(s.unit(P1, 2).is_none());
+                    assert!(s.unit(P2, 1).is_none());
+                    assert!(s.backrow(P1, 1).is_none());
+                    // The Indestructible (given) Jade Beauty, CN, stays (R46); the untagged Rock is not reached;
+                    // the Prime is not "other".
+                    assert_eq!(s.unit(P2, 2).map(|card| card.def_id), Some(BEAUTY.to_string()));
+                    assert_eq!(s.unit(P1, 3).map(|card| card.def_id), Some(ROCK.to_string()));
+                    assert_eq!(s.unit(P1, 4).map(|card| card.def_id), Some(PRIME.to_string()));
                 },
-                "p2": {
-                    "hand": [VANILLA],
-                    "field": [
-                        { "def": CN_UNIT, "lane": 1 },
-                        { "def": BEAUTY, "lane": 2 },
-                    ],
-                    "library": [VANILLA],
-                },
-            }));
-            // The Beauty prints no Indestructible since issue #4285: it is given it, the CN permanent that stays.
-            let beauty = s.unit(P2, 2).expect("the Beauty").id;
-            s.card_mut(beauty.as_str()).granted_keywords.push(Keyword::Indestructible);
-            // A CN/KY unit set face-down is a permanent too: set the spare CN Unit first, Cloaked by
-            // the Breaker's Aura.
-            let spare = s.hand(P1).iter().find(|card| card.def_id == CN_UNIT).cloned().unwrap();
-            s.play(&spare.id, json!({ "zone": 1, "row": "backrow", "faceDown": "cloaked" }));
-            let prime = s.hand(P1).iter().find(|card| card.def_id == PRIME).cloned().unwrap();
-            s.play(&prime.id, json!({ "zone": 4 }));
-            // Every other CN or KY permanent is gone, the set CN Unit and the Breaker included.
-            assert!(s.unit(P1, 1).is_none());
-            assert!(s.unit(P1, 2).is_none());
-            assert!(s.unit(P2, 1).is_none());
-            assert!(s.backrow(P1, 1).is_none());
-            // The Indestructible (given) Jade Beauty, CN, stays (R46); the untagged Rock is not reached;
-            // the Prime is not "other".
-            assert_eq!(s.unit(P2, 2).map(|card| card.def_id), Some(BEAUTY.to_string()));
-            assert_eq!(s.unit(P1, 3).map(|card| card.def_id), Some(ROCK.to_string()));
-            assert_eq!(s.unit(P1, 4).map(|card| card.def_id), Some(PRIME.to_string()));
+            );
         }
 
         #[test]

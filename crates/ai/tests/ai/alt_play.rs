@@ -2,7 +2,7 @@
 //!
 //! A set card redacts to a placeholder with no `setAs`, and `determinize` samples for a hidden backrow
 //! card a Trap, a card that prints Cloaked whatever acts (R783009), or a card an aura lends Cloaked to
-//! in that side's hand now: every Unit while Knowledge Breaker acts there (R1046). A Unit the AI reveals
+//! in that side's hand now: every Unit while Knowledge Breaker Prime acts there (R1046). A Unit the AI reveals
 //! is summoning sick that turn, so it plans an attack by it only with Rush or Charge (R4237000). A card a
 //! summon set face-down by its Cloaked (S+ #76 Ayys LMAO) is offered its Reveal like a played one, and
 //! which card it is changes no decision of its opponent's (R4327000).
@@ -17,11 +17,13 @@ use jackioh_engine::testkit::{
 
 use super::support::{AI, HUMAN, ai_options, register_cards, run_puzzle, scenario, trace};
 
-const BREAKER: &str = "meditative-045";
+/// M #45.1 Knowledge Breaker Prime, whose Aura lends its controller's hand Units Cloaked (Knowledge
+/// Breaker's did through v0.6.13c, issue #4783).
+const BREAKER: &str = "meditative-045-1";
 const VANILLA: &str = "core-008";
 const SHEEPISH: &str = "core-041";
 
-/// p1 with a face-up Breaker acting and a vanilla set by the Cloaked it lends in the backrow, seen by p2.
+/// p1 with a face-up Breaker Prime acting and a vanilla set by the Cloaked it lends in the backrow, seen by p2.
 fn set_state(seed: &str) -> GameState {
     register_cards();
     let mut state = scenario(json!({

@@ -1,11 +1,16 @@
-//! M #49.1 YileGPT Prime (SPEC §8.8 row 49.1): (8) Unit, CN, Acclaimed, Prime, Token (printed
+//! M #49.1 YileGPT Prime (SPEC §8.8 row 49.1): (4) Unit, CN, Acclaimed, Prime, Token (printed
 //! Mythic), 8/20 → 16/40 (Radiant: no keyword; Armor 5 until issue #4292). YileGPT Unleashed until
 //! #1563. Through v0.5.9f it cost (10), had Can't attack and "Start of turn: Make [a random permanent
 //! / {radiants} random permanents] of yours Radiant" (`script_v0_5_9f`, kept for those replays,
-//! R767000).
+//! R767000). Issue #4783 cut its cost (8) → (4) and gave both faces' Cry "Overload ({mana})." first,
+//! `mana` 2 on both faces; `script_v0_6_13c` keeps the Cry without it for the replays after v0.5.9f
+//! through v0.6.13c (R767000).
 //!
-//! "Float reduces cost." plus "Cry: Do {picks} of these at random …" / Radiant "Cry: [all five] …"
+//! "Float reduces cost." plus "Cry: Overload ({mana}). Do {picks} of these at random …" / Radiant
+//! "Cry: Overload ({mana}). [all five] …"
 //! Engine:
+//! - "Overload ({mana})" (§6.3 Overload X, R1848004) is paid where the text puts it, as the Cry
+//!   begins: `next_turn_mana` of minus the declared `mana`, so a Cry that never runs pays nothing.
 //! - "Float reduces cost" (§6.2, R1563000) is the engine's `float_reduces_cost`, a hand trigger (R464)
 //!   on its owner's `turnEnded`: the event's `unspentMana`, the Float, becomes a `costMod` of minus
 //!   that (MD-C22). The `costMod` keeps in hand and deck until a graveyard or exile (R766), and the
@@ -119,21 +124,24 @@ fn entries(ctx: &EffectContext, radiant: bool) -> Vec<RandomEntry> {
 }
 
 /// One face. `v0_5_9f` builds the face v0.5.9f shipped: its start-of-turn Radiant and its Float deck
-/// trigger, both gone since #2657.
-fn unleashed(radiant: bool, v0_5_9f: bool) -> Script {
+/// trigger, both gone since #2657. `overload`: whether the Cry begins with "Overload ({mana})." (issue
+/// #4783; not through v0.6.13c).
+fn unleashed(radiant: bool, v0_5_9f: bool, overload: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
+            let mut effects = Vec::new();
+            if overload {
+                effects.push(next_turn_mana(json_as(json!({ "amount": -param(&*ctx, "mana") }))));
+            }
             if radiant {
-                entries(&*ctx, true)
-                    .into_iter()
-                    .flat_map(|entry| entry.effects)
-                    .collect()
+                effects.extend(entries(&*ctx, true).into_iter().flat_map(|entry| entry.effects));
             } else {
-                vec![do_random_entries(DoRandomEntriesArgs {
+                effects.push(do_random_entries(DoRandomEntriesArgs {
                     entries: entries(&*ctx, false),
                     count: param(&*ctx, "picks"),
-                })]
+                }));
             }
+            effects
         })),
         start_of_turn: v0_5_9f.then(|| {
             hook(move |ctx| {
@@ -157,8 +165,17 @@ fn unleashed(radiant: bool, v0_5_9f: bool) -> Script {
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: unleashed(false, false),
-        radiant: unleashed(true, false),
+        base: unleashed(false, false, true),
+        radiant: unleashed(true, false, true),
+    }
+}
+
+/// R767000: after v0.5.9f through v0.6.13c the Cry paid no Overload (issue #4783); `KEPT_SCRIPTS`
+/// folds those replays under it.
+pub fn script_v0_6_13c() -> CardScripts {
+    CardScripts {
+        base: unleashed(false, false, false),
+        radiant: unleashed(true, false, false),
     }
 }
 
@@ -166,8 +183,8 @@ pub fn script() -> CardScripts {
 /// Float lowered its cost in the deck too; `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_5_9f() -> CardScripts {
     CardScripts {
-        base: unleashed(false, true),
-        radiant: unleashed(true, true),
+        base: unleashed(false, true, false),
+        radiant: unleashed(true, true, false),
     }
 }
 
@@ -550,6 +567,33 @@ mod tests {
                 pairs.dedup();
                 assert!(pairs.len() > 1, "more than one pair comes up: {pairs:?}");
             }
+
+            /// Issue #4783: the Cry begins with "Overload (2)." (§6.3 Overload X, R1848004): its
+            /// controller's next refresh gives 2 less.
+            #[test]
+            fn r1848004_its_cry_overloads_its_controller_by_2() {
+                let mut s = holding("unleashed-overload", false);
+                assert_eq!(s.state().players.p1.mana.next_turn_mod, 0);
+                s.play(UNLEASHED, json!({ "zone": 1 }));
+                assert_eq!(s.state().players.p1.mana.next_turn_mod, -2);
+                assert_eq!(s.state().players.p2.mana.next_turn_mod, 0);
+            }
+
+            /// R767000: after v0.5.9f through v0.6.13c the Cry paid no Overload, on either face.
+            #[test]
+            fn r767000_the_script_kept_for_v0_6_13c_overloads_nothing() {
+                crate::under_kept(
+                    UNLEASHED,
+                    crate::scripts::meditative::c049_1_yilegpt_unleashed::script_v0_6_13c(),
+                    || {
+                        for radiant in [false, true] {
+                            let mut s = holding("unleashed-overload-kept", radiant);
+                            s.play(UNLEASHED, json!({ "zone": 1 }));
+                            assert_eq!(s.state().players.p1.mana.next_turn_mod, 0, "radiant {radiant}");
+                        }
+                    },
+                );
+            }
         }
 
         mod radiant {
@@ -623,6 +667,14 @@ mod tests {
                 }
                 // Every enemy card Nerfed twice: the hand card alone drew two Degrades.
                 assert!(degraded(&s) >= 2, "every enemy card Nerfed twice");
+            }
+
+            /// Issue #4783: the Radiant face's Cry begins with the same "Overload (2)." (R1848004).
+            #[test]
+            fn r1848004_radiant_its_cry_overloads_its_controller_by_2_as_well() {
+                let mut s = holding("unleashed-radiant-overload", true);
+                s.play(UNLEASHED, json!({ "zone": 1 }));
+                assert_eq!(s.state().players.p1.mana.next_turn_mod, -2);
             }
         }
     }

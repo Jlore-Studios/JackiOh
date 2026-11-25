@@ -63,8 +63,8 @@ core-004: # Gary the Gambler
     death: House always wins.
   zh:
     name: 赌徒加里
-    base: 战吼：抛{coins}枚硬币。每出现一次正面，获得+{perHeads}攻击力；每出现一次反面，获得+{perTails}生命值。抛一枚硬币。如果为正面，获得圣盾；如果为反面，获得突袭。
-    radiant: 战吼：抛{coins}枚硬币。每出现一次正面，获得+{perHeads}攻击力；每出现一次反面，获得+{perTails}生命值。抛一枚硬币。如果为正面，获得圣盾；如果为反面，获得突袭。
+    base: 战吼：抛一枚硬币{coins}次。每出现一次正面，获得+{perHeads}攻击力；每出现一次反面，获得+{perTails}生命值。
+    radiant: 战吼：抛一枚硬币{coins}次。每出现一次正面，获得+{perHeads}攻击力；每出现一次反面，获得+{perTails}生命值。
 core-005: # Stockpile
   flavour: Two cards, a snack, and a nap. Planning at its finest.
   voice:
@@ -3026,8 +3026,8 @@ meditative-018: # Expedition12
     cast: Sacrifice now, shine later.
   zh:
     name: 远征12
-    base: 过载({loss})。使你手牌中的一张牌变为光辉。
-    radiant: "顺劈\n过载({loss})。使你手牌中的一张牌变为光辉。"
+    base: 过载({loss})。使你手牌中的一张牌变为光辉，然后强化它。
+    radiant: "顺劈\n过载({loss})。使你手牌中的一张牌变为光辉，然后强化它。"
 meditative-019: # Expedition123
   flavour: Four days out, the map started drawing itself.
   voice:
@@ -3337,8 +3337,8 @@ meditative-045: # Knowledge Breaker
     death: What I knew returns.
   zh:
     name: 知识破坏者
-    base: "战吼：削弱场上和双方手牌中的每张其他中国或KY牌。\n光环：你的单位拥有隐匿。\n亡语：将一张至尊知识破坏者洗入你的牌库。"
-    radiant: "战吼：削弱场上和双方手牌中的每张其他中国或KY牌{times}次。\n光环：你的单位拥有隐匿。\n亡语：将一张光辉至尊知识破坏者洗入你的牌库。"
+    base: "隐匿\n战吼：削弱场上和双方手牌中的每张其他中国或KY牌。\n亡语：将一张至尊知识破坏者洗入你的牌库。"
+    radiant: "隐匿\n战吼：削弱场上和双方手牌中的每张其他中国或KY牌{times}次。\n亡语：将一张光辉至尊知识破坏者洗入你的牌库。"
 meditative-045-1: # Knowledge Breaker Prime
   flavour: It broke through thinking about breaking through.
   voice:
@@ -3393,8 +3393,8 @@ meditative-049-1: # YileGPT Prime
     death: You cannot uninstall me.
   zh:
     name: 至尊YileGPT
-    base: "结余减费。\n战吼：随机执行以下{picks}项：召唤{datacenters}个Claude的数据中心；将{glitches}张光辉系统故障牌置入你的手牌，其法力值消耗为({setCost})；召唤一个AI女友；用义乐病毒填满你对手的场地；削弱你对手场上、手牌和牌库中的每张牌{nerfs}次。"
-    radiant: "结余减费。\n战吼：召唤{datacenters}个Claude的数据中心。将{glitches}张光辉系统故障牌置入你的手牌；其法力值消耗为({setCost})。召唤一个AI女友。为你的对手召唤{viruses}个光辉义乐病毒。削弱你对手场上、手牌和牌库中的每张牌{nerfs}次。"
+    base: "结余减费。\n战吼：过载({mana})。随机执行以下{picks}项：召唤{datacenters}个Claude的数据中心；将{glitches}张光辉系统故障牌置入你的手牌，其法力值消耗为({setCost})；召唤一个AI女友；用义乐病毒填满你对手的场地；削弱你对手场上、手牌和牌库中的每张牌{nerfs}次。"
+    radiant: "结余减费。\n战吼：过载({mana})。召唤{datacenters}个Claude的数据中心。将{glitches}张光辉系统故障牌置入你的手牌；其法力值消耗为({setCost})。召唤一个AI女友。为你的对手召唤{viruses}个光辉义乐病毒。削弱你对手场上、手牌和牌库中的每张牌{nerfs}次。"
 meditative-049-2: # Yile's Virus
   flavour: Have you tried turning it off and on?
   voice:
@@ -7801,7 +7801,7 @@ stinkyscapeplus-080: # The Last Voyage
     cast: All ships, last voyage. Sail!
   zh:
     name: 最后的航行
-    base: 放逐你的手牌、牌库和场上，包括休眠的牌。召唤{starships}艘随机终点星舰。它们无法通过手牌发射。在你的每个回合结束时，发射一艘随机的。
+    base: 放逐你的手牌、牌库和场上，包括休眠的牌。召唤{starships}艘随机终点星舰。它们无法通过手牌发射。现在发射一艘随机的，并在此后你的每个回合结束时再发射一艘。
     radiant: 放逐你的手牌、牌库、场上以及你对手的场上，包括休眠的牌。召唤{starships}艘随机终点星舰。它们无法通过手牌发射。现在发射一艘随机的，并在你的每个回合结束时再发射一艘。
 stinkyscapeplus-081: # Doomsayer
   flavour: He predicts the end every morning. Technically he keeps being early.
@@ -8431,8 +8431,8 @@ stinkyscapeplus-142: # Call to Chaos (Mindustrial-Swarm Edition)
     cast: Roll the dice. Pray to the dice!
   zh:
     name: 混沌召唤（智工虫群版）
-    base: 一个随机效果：将{card}张随机回形针牌置入你的手牌，它们的法力值消耗为(0)，回复2点法力值；将{card2}张随机已进化的虫群牌置入你的手牌，它们的法力值消耗为(0)；召唤2个随机光辉单位，使其获得巨型；召唤或施放{card3}张随机Jlockeed牌；将{card4}张随机终点牌置入你的手牌，回复4点法力值；将巨毒蛛置入你的手牌，其法力值消耗为(0)；对所有敌人施加毒素{toxic}和燃烧{burn}；在本局对战的剩余时间内，每当你发射一艘星舰时，施放一张随机混沌召唤并召唤一把随机法力值消耗为(2)的武器；召唤一个智工魔像和一个虫群魔像；施放一张随机混沌召唤。
-    radiant: 三个不同的随机效果，按所列顺序结算：将{card}张随机回形针牌置入你的手牌，它们的法力值消耗为(0)，回复2点法力值；将{card2}张随机已进化的虫群牌置入你的手牌，它们的法力值消耗为(0)；召唤2个随机光辉单位，使其获得巨型；召唤或施放{card3}张随机Jlockeed牌；将{card4}张随机终点牌置入你的手牌，回复4点法力值；将巨毒蛛置入你的手牌，其法力值消耗为(0)；对所有敌人施加毒素{toxic}和燃烧{burn}；在本局对战的剩余时间内，每当你发射一艘星舰时，施放一张随机混沌召唤并召唤一把随机法力值消耗为(2)的武器；召唤一个智工魔像和一个虫群魔像；施放一张随机混沌召唤。
+    base: 一个随机效果：将{card}张随机回形针牌置入你的手牌，它们的法力值消耗为(0)，回复2点法力值；将{card2}张随机已进化的虫群牌置入你的手牌，它们的法力值消耗为(0)；召唤2个随机光辉单位，使其获得巨型；召唤或施放{card3}张随机Jlockeed牌；将{card4}张随机终点牌置入你的手牌，回复{replenish}点法力值；将巨毒蛛置入你的手牌，其法力值消耗为({toxopidCost})；对所有敌人施加毒素{toxic}和燃烧{burn}；在本局对战的剩余时间内，每当你发射一艘星舰时，施放一张随机混沌召唤并召唤一把随机法力值消耗为(2)的武器；召唤一个智工魔像和一个虫群魔像；施放一张随机混沌召唤。
+    radiant: 三个不同的随机效果，按所列顺序结算：将{card}张随机回形针牌置入你的手牌，它们的法力值消耗为(0)，回复2点法力值；将{card2}张随机已进化的虫群牌置入你的手牌，它们的法力值消耗为(0)；召唤2个随机光辉单位，使其获得巨型；召唤或施放{card3}张随机Jlockeed牌；将{card4}张随机终点牌置入你的手牌，回复{replenish}点法力值；将巨毒蛛置入你的手牌，其法力值消耗为({toxopidCost})；对所有敌人施加毒素{toxic}和燃烧{burn}；在本局对战的剩余时间内，每当你发射一艘星舰时，施放一张随机混沌召唤并召唤一把随机法力值消耗为(2)的武器；召唤一个智工魔像和一个虫群魔像；施放一张随机混沌召唤。
 stinkyscapeplus-142-1: # Mindustrial Golem
   flavour: Built by committee, so it walks in three directions at once.
   voice:
