@@ -17481,15 +17481,6 @@
       "failures": 0,
       "feedback_since": "2026-11-24T19:15:18Z",
       "forced": false,
-      "handoff": {
-        "at": "2026-11-24T23:25:37Z",
-        "family": "claude",
-        "kind": "work",
-        "notes": "## State\n\n- Pass 4 (conflict, earlier run): resolved main's #4574 merge (read_acted_steps wrapper; swing.rs literals). Approved.\n- Pass 5 (ci): CI run 45455090397 failed `e2e smoke (1/4)` = spec 01-hotseat-full-game, \"engine replay hash\n  equals the browser's final state hash\". Cause: e2e/support/tasks/replay-runner.ts `hashState` (TS mirror of\n  replay::hash_state) did not drop the branch's new `GameState.makers`. Fixed (drops `makers`, R4672001 doc).\n  Reproduced locally before the fix (8b911098 vs 8552aefa); spec 01 passes after it, spec 13 (also replayHash) 6/6.\n- Main moved again (764c367 -> f62ca60, #4673 face drills). Conflict only in crates/server/tests/store/contract.rs:\n  imports unioned, both tests kept (r4672003_\u2026 and r4673001_\u2026), both registered. main's new r4673000_faces test\n  CardStats literal needed `choices: CardChoices::default()` (wire/stats.rs).\n- Green after all of it: workspace check, engine lib 587, server_store r4672003/r4673/card_stats, server stats 74,\n  tools stats:: 29, cards game_summary 30, fmt, clippy, spec check, golden 512357ea, e2e typecheck, eslint,\n  db suite (Postgres, all 796 store tests incl. both postgres::r467*).\n- Done. Nothing left but the harness's checks.\n\n## Log\n\n- pass 5: contract.rs resolved; cargo check found r4673000_faces CardStats literal missing choices; fixed.\n- e2e smoke shard 1/4 = spec 01 only; built release server+tools, wasm, e2e client, admin; servers as CI starts them.\n- spec 01 failed before the fix (replay 8b911098 vs browser 8552aefa), passed after; spec 13 passed.\n- Rust tests, fmt, clippy, spec check, golden, e2e typecheck, eslint: green.\n- db suite (sh crates/server/tests/db/run.sh): 266 + 265 + 265 passed across 3 shards, exit 0.\n",
-        "provider": "claude-8",
-        "reason": "`claude-8` reached its usage limit",
-        "trail": ""
-      },
       "interruptions": 0,
       "issue": 4672,
       "kind": "review",
