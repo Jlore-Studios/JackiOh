@@ -24042,6 +24042,9 @@
       },
       "waiting_comment": 7166267601
     },
+    "4932": {
+      "suggestion": true
+    },
     "4933": {
       "action": "review",
       "asks": [],
@@ -47703,6 +47706,13 @@
         "at": "2026-11-25T17:16:44Z",
         "number": 4924,
         "title": "Patch: pin the perf corpus so card additions stop re-dealing it",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-25T17:17:27Z",
+        "number": 4932,
+        "title": "Patch: the Duos AI weighs the teammate's whole hand before it passes",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
       }
