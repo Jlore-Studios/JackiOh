@@ -20710,13 +20710,13 @@
         "approver": {
           "family": "claude",
           "model": "opus",
-          "provider": "claude-6",
+          "provider": "claude-3",
           "tier": "strong"
         },
-        "at": "2026-11-25T19:45:21Z",
-        "built_by": "claude-6",
+        "at": "2026-11-25T22:46:17Z",
+        "built_by": "claude-3",
         "by": "`claude` (strong)",
-        "sha": "aa666d9c92528d875c94b827557699908b201fcb"
+        "sha": "e88d1a9f58865cd7850b1e33da111f10163155f3"
       },
       "died": 0,
       "difficulty": "hard",
@@ -20737,7 +20737,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
-      "merge_owner": "claude-6",
+      "merge_owner": "claude-3",
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
