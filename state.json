@@ -45307,7 +45307,8 @@
       "2026-11-25T23:41:04Z,claude-3,refusal,call,45720953647,101,2026-11-26T04:20:00Z,,,rejected,,,2026-11-26T04:20:00Z"
     ],
     "runs": [
-      "2026-11-25T23:34:43Z,45721160122,claude-6,opus,suggest,,,interrupted,5-hour cap,7.5,0,0,0,,7,50,,,,,none,,1"
+      "2026-11-25T23:34:43Z,45721160122,claude-6,opus,suggest,,,interrupted,5-hour cap,7.5,0,0,0,,7,50,,,,,none,,1",
+      "2026-11-25T23:41:04Z,45720953647,claude-3,opus,suggest,,,interrupted,refusal,14.1,66,23259,3115135,29.7434,1,101,,,,,none,,1"
     ]
   },
   "version": 1
