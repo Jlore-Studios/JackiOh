@@ -618,8 +618,9 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
   zone its Tribute frees), when the seat can pay the pass; with `pass_cost` 0 also a card the
   teammate can afford next turn and the seat cannot; never more than the passes left or the
   teammate's free hand slots. Immediate passes rank by the teammate's best bounded follow-up
-  (R1127000; at most `DUOS_PASS_MAX_FOLLOWUPS` plays on a fixed-seed probe), ties by cost then
-  hand order; free-pass next-turn cards keep cost order. An immediate pass is named only when it is
+  (R1127000; at most `DUOS_PASS_MAX_FOLLOWUPS` plays on a fixed-seed probe, past it the first plays
+  of the teammate's best-valued hand cards, R4932000), ties by cost then hand order; free-pass
+  next-turn cards keep cost order. An immediate pass is named only when it is
   worth it (R1723000): the teammate's best follow-up with the card, also tried after the teammate's
   own best play, beats its best without it by more than the card's `hand_card_value` in the seat's
   hand, `DUOS_PASS_MARGIN_PER_COST` per crystal of `pass_cost` and `DUOS_PASS_MIN_GAIN`. A card the
