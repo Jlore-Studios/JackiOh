@@ -29,8 +29,9 @@
 //!    `register_all();` on the line above a `scenario(`, as `crate::scenario` registers the cards (#2930);
 //!  - Preview (R1420, #2257): every `preview_sets(&[…])` under `crates/` names a set `SHIPPED_SETS` does not
 //!    list: a preview of a set that ships opens nothing, so the patch that ships it takes its previews out.
-//!  - Dungeon (DR14 B33, #2709): `spec/15-dungeon-run.md`'s table of constants has one row per `pub const`
-//!    of `crates/run/src/config.rs`, and `spec/README.md` maps the note.
+//!  - Dungeon (DR14 B33, #2709): `spec/15-dungeon-run.md`'s and `spec/16-infinite-assault.md`'s tables of
+//!    constants together have one row per `pub const` of `crates/run/src/config.rs`, and `spec/README.md`
+//!    maps both notes (#4584).
 //!  - Discards (#3914): no test under the card scripts or `crates/engine/tests` notes a value and drops it with
 //!    a bare `let _ = <identifier>;`.
 //!  - Shared tests (#4610): every Rust file directly under `crates/shared/tests` is declared by its one
@@ -249,8 +250,9 @@ const STRUCTURAL_READERS: &[&str] = &[
     // one row per card (#3804).
     "crates/cards/tests/cross/radiant_stats.rs",
     // This file names the patterns it looks for, and reads `crates/tools/README.md`'s command
-    // table (#1720) and `spec/15-dungeon-run.md`'s table of constants (B33), the first cell of each
-    // row only, and the line of `spec/README.md`'s map that links §15.
+    // table (#1720) and `spec/15-dungeon-run.md`'s and `spec/16-infinite-assault.md`'s tables of
+    // constants (B33), the first cell of each row only, and the lines of `spec/README.md`'s map that
+    // link §15 and §16.
     "crates/tools/tests/acceptance.rs",
 ];
 
@@ -3013,7 +3015,7 @@ fn preview_the_scan_finds_each_preview_of_shipped_sets_only() {
     assert_eq!(previews_of_shipped_sets_only(text), [1, 3]);
 }
 
-/// The constants `spec/15-dungeon-run.md`'s table names, the first cell of each row, in order.
+/// The constants a run's spec section's table names (§15's, §16's), the first cell of each row, in order.
 fn spec_table_constants(section: &str) -> Vec<String> {
     section
         .lines()
@@ -3023,13 +3025,41 @@ fn spec_table_constants(section: &str) -> Vec<String> {
         .collect()
 }
 
-// B33 (DR14, #2709): the dungeon run's spec section holds one row per `pub const` of the run's
-// `config.rs` and no other, and the spec's map links the note.
+// §8 is one note a subsection (`spec/08-catalog/`), and the cards' radiant_stats.rs reads them with
+// `include_str!`, a list a pure crate's test cannot build from the folder (CLAUDE.md rule 4). A note
+// added without joining that list would leave its rows' Radiant stats unchecked, so this holds the
+// list to the folder.
+#[test]
+fn every_catalog_note_is_read_by_the_radiant_stats_test() {
+    let root = repo();
+    let reader = fs::read_to_string(root.join("crates/cards/tests/cross/radiant_stats.rs"))
+        .expect("crates/cards/tests/cross/radiant_stats.rs");
+    let mut notes: Vec<String> = fs::read_dir(root.join("spec/08-catalog"))
+        .expect("spec/08-catalog")
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.file_name().to_string_lossy().into_owned())
+        .collect();
+    notes.sort();
+    assert!(notes.len() >= 13, "only {} notes in spec/08-catalog", notes.len());
+    let unread: Vec<&String> = notes
+        .iter()
+        .filter(|note| !reader.contains(&format!("include_str!(\"../../../../spec/08-catalog/{note}\")")))
+        .collect();
+    assert!(
+        unread.is_empty(),
+        "crates/cards/tests/cross/radiant_stats.rs reads no {unread:?} of spec/08-catalog: add each to CATALOG_NOTE"
+    );
+}
+
+// B33 (DR14, #2709): the dungeon run's and the Infinite Assault's spec sections (§15, §16, #4584)
+// together hold one row per `pub const` of the run's `config.rs` and no other, and the spec's map
+// links both notes.
 #[test]
 fn dungeon_the_spec_section_tables_every_run_constant_and_the_map_links_it() {
     let root = repo();
     let config = fs::read_to_string(root.join("crates/run/src/config.rs")).expect("the run's config.rs");
-    let section = fs::read_to_string(root.join("spec/15-dungeon-run.md")).expect("spec/15-dungeon-run.md");
+    let section = fs::read_to_string(root.join("spec/15-dungeon-run.md")).expect("spec/15-dungeon-run.md")
+        + &fs::read_to_string(root.join("spec/16-infinite-assault.md")).expect("spec/16-infinite-assault.md");
     let map = fs::read_to_string(root.join("spec/README.md")).expect("spec/README.md");
     let constants: BTreeSet<String> = config_constants(&config).into_iter().collect();
     let rows: BTreeSet<String> = spec_table_constants(&section).into_iter().collect();
@@ -3042,13 +3072,15 @@ fn dungeon_the_spec_section_tables_every_run_constant_and_the_map_links_it() {
     let stale: Vec<&String> = rows.difference(&constants).collect();
     assert!(
         missing.is_empty() && stale.is_empty(),
-        "spec/15-dungeon-run.md's constants table and crates/run/src/config.rs disagree: rows to add {missing:?}, rows naming no constant {stale:?}"
+        "spec/15-dungeon-run.md's and spec/16-infinite-assault.md's constants tables and crates/run/src/config.rs disagree: rows to add {missing:?}, rows naming no constant {stale:?}"
     );
-    assert!(
-        map.lines()
-            .any(|line| line.starts_with("- [[§15]]") && line.contains("(15-dungeon-run.md)")),
-        "spec/README.md does not map spec/15-dungeon-run.md"
-    );
+    for (id, note) in [("§15", "15-dungeon-run.md"), ("§16", "16-infinite-assault.md")] {
+        assert!(
+            map.lines()
+                .any(|line| line.starts_with(&format!("- [[{id}]]")) && line.contains(&format!("({note})"))),
+            "spec/README.md does not map spec/{note}"
+        );
+    }
 }
 
 #[test]

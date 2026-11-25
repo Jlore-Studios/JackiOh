@@ -929,15 +929,16 @@ each window against `ALT_PICTURE_CHANGE_MIN` and screenshots each normal face be
 ## The Infinite Assault set's placeholder scenes (R4577009)
 
 The held Infinite Assault set (an AI war machine: drones, factories, generated cards) draws placeholder scenes until
-a brief pass gives each card a scene of its own. Every entry, its two Drone tokens included, has a recipe in
-`infiniteAssaultRecipes.ts`, merged into `SCENE_RECIPES`, so the procedural painter draws it as it draws any recipe
-card and no dispatch site, painter or kit is new. A recipe is its type's template, in every layer: a unit's drone
-bay (a combat robot stepping off its racks under alarm lights), a spell's or a trap's swarm (drones and interceptors
-pouring through a gate over a city, the machine's eye behind), a field's production line (an AI core fed by printers
-and robot arms). Every part is of the space, craft and gear kits; `hashId(id)` varies the offsets, flips and drone
-counts, so no two recipes are alike; no part turns and no paint is gold. Each picture draws about 115 to 130
-elements and stays under `ART_DETAIL_MAX_BYTES` with room to spare, so every entry clears its rarity's floor, and
-the two Legendaries (The Generator, Mass Deployment) move by `RARE_CARDS` recipes of their own (`motion.ts`).
+a brief pass gives each card a scene of its own. Every entry, its fifteen tokens included (240 cards, C1's 24 and
+CF's 229; #4602), has a recipe in `infiniteAssaultRecipes.ts`, merged into `SCENE_RECIPES`, so the procedural
+painter draws it as it draws any recipe card and no dispatch site, painter or kit is new. A recipe is its type's
+template, in every layer: a unit's drone bay (a combat robot stepping off its racks under alarm lights), a spell's
+or a trap's swarm (drones and interceptors pouring through a gate over a city, the machine's eye behind), a field's
+production line (an AI core fed by printers and robot arms). Every part is of the space, craft and gear kits;
+`hashId(id)` varies the offsets, flips and drone counts, so no two recipes are alike; no part turns and no paint
+is gold. Each picture draws about 115 to 130 elements and stays under `ART_DETAIL_MAX_BYTES` with room to spare,
+so every entry clears its rarity's floor, and the forty-four Legendaries and Mythics move by `RARE_CARDS` recipes
+of their own (`motion.ts`).
 Only `infiniteassault-` ids are keys, so no shipped card's picture moves (R503). `infiniteassault.test.ts` holds
 the set to all of this.
 

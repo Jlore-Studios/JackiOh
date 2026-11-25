@@ -279,7 +279,7 @@ read keeps it with `keepRead`, which is no write. `apiRequest` shares a `GET` of
 counts every spend that settles (it sends an `Idempotency-Key`) and every `rememberRead`, fold, `forgetRead` and
 `clearReadCache`: a read asked after it moved never joins an earlier one, and one that finished after it moved is
 not kept. A write that changes a kept read without carrying it drops it (`forgetRead`; `forgetPaidReads` for a
-game's paid result, which `announceWallet()` with no balance calls), and a dev tool's success empties the cache.
+game's paid result, which `announceWallet()` with no balance calls; it also has the mounted ownership providers read the owned cosmetics again, `forgetOwnedCosmetics`, R4780000), and a dev tool's success empties the cache.
 
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
 
@@ -873,7 +873,7 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000, #3734, R3734000): f
 routes/QuestsPanel.tsx  /collection's Progress tab's quests (§14.9) from GET /api/quests: each held quest's progress and
                         reward, and the countdown to the next; moved from /account (#1307), and Replace on each, behind
                         a confirm, while a replace is left today (R2210000). The landing's bookmark
-                        shares `useQuests` and `QuestsView` (R2035000)
+                        shares `useQuests` and `QuestsView` (R2035000), and both read again once when the next quest falls due (R4818000)
 routes/NewsPanel.tsx    the landing's news (§14.13, #2875) from GET /api/news: the live entries, newest first (R2875001),
                         each with its reward in words (R2875003) and Claim, POST /api/news/:id/claim, a spend sent
                         once (R2875000); the bookmark's count is the entries the server says are unclaimed (R2875002)

@@ -59,6 +59,7 @@ const SETUP: AssaultFightSetup = {
   enemyDeck: ["core-003"],
   enemyHandicap: { ...AI_DIFFICULTY.medium, deckSize: 1, heroHealth: 30 },
   enemyMarks: [{ index: 1, radiant: true, upgrades: 0 }],
+  enemySets: [],
   level: LEVEL,
 };
 

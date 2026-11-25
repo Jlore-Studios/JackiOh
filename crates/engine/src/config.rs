@@ -1767,6 +1767,13 @@ pub const CRAFT_MAX_N: i32 = 10;
 pub const CRAFT_RADIANT_MULTIPLIER: i32 = 2;
 /// What one Echo costs, per N.
 pub const CRAFT_ECHO_POINTS_PER_N: i32 = 4;
+/// #4827 (R880): the highest attack or health a crafted Unit may have, one over the largest budget
+/// (`craft_points_budget(CRAFT_MAX_COST)`, 22), which a 0/23 Unit spends whole, so no recipe within its
+/// budget meets it. With it and `recipe_points` saturating, no recipe's points wrap under a budget.
+pub const CRAFT_MAX_STAT: i32 = CRAFT_POINTS_BASE + CRAFT_POINTS_PER_MANA * CRAFT_MAX_COST + 1;
+/// #4827 (R883): what a keyword with no `CRAFT_KEYWORD_PRICES` row prices at, on the card's keyword line
+/// or granted by a block: more than any budget, beside the validator's "… is not a craft block".
+pub const CRAFT_UNPRICED_POINTS: i32 = i32::MAX;
 /// What a crafted definition's id starts with, before the recipe's digest (R882).
 pub const CRAFT_ID_PREFIX: &str = "craft:";
 /// The first words of a crafted card's name; the designer may replace them (R883).
@@ -2593,6 +2600,9 @@ pub const BLACK_HOLE_CAPACITY: i32 = 10;
 pub const SLASH_BASE_LANE: i32 = 3;
 /// R3554002: the lanes the Radiant face may slash.
 pub const SLASH_LANES: [i32; 3] = [2, 3, 4];
+
+/// R4589001: "since your last turn" reaches back this many player-turns.
+pub const SINCE_LAST_TURN: i32 = 1;
 
 #[cfg(test)]
 mod tests {

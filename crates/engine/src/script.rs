@@ -573,6 +573,12 @@ pub struct StaticFlags {
     /// B5 E35: this unit neither attacks nor is attacked, declared or forced.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cant_attack_or_be_attacked: Option<bool>,
+    /// R4591002 (IA #152 Rate Limiter): while this card acts on the field, its controller's
+    /// opponent can't attack with more than this many Units each turn — declared attacks only,
+    /// counted in turn order across the field, so a Unit already counted may attack again. With
+    /// several limits, the lowest holds.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub opponent_attack_limit: Option<i32>,
     /// MD-B1, R940: while this card acts on the field, harmful effects whose card filter names a tribal tag
     /// can neither pick it nor reach it through scopes; combat bonuses against defender tags do not apply.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -666,6 +672,10 @@ pub struct StaticFlags {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mana_per_turn: Option<i32>,
     // Meditative
+    /// R4590001 (IA #142 The Jailbreaker): while this card acts on the field, its controller's
+    /// opponent's Spells have their targets chosen randomly.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub random_opponent_spell_targets: Option<bool>,
     /// R981–R984, Meditative #40 Feng Shui: while this card acts on the field, it judges every face-up
     /// play at §10.5 step 3 by its element against its player's last (`subsystems::feng_shui`). On its
     /// Radiant face it rewards only its controller's plays and punishes only the opponent's.
@@ -769,6 +779,21 @@ pub struct StaticFlags {
     /// set (`traps::chance_admits`). The card's declared number `chance` where it declares it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reveal_chance: Option<i32>,
+    /// R4586004 (Infinite Assault #42 Paranoia Engine): while this card acts on its controller's
+    /// field, its controller's face-down cards are warded: `destroy`, `destroyAll` and `reveal`
+    /// run by an effect the opponent controls pass over them (`face_down::face_down_warded`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub face_down_ward: Option<bool>,
+    /// R4592003 (Infinite Assault #191 Ground Truth): while this card acts on its controller's
+    /// field, the opponent plays with their hand revealed to this card's controller (`revealed_hand::hand_revealed_to`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reveals_opponents_hand: Option<bool>,
+    /// R4594001 (Infinite Assault #218 Thousand Faces): while this card acts on its controller's
+    /// field, its controller's face-down cards cannot be destroyed, by either side's effects
+    /// (`face_down::face_down_indestructible`); reveal, Exile, bounce, steal and transform are
+    /// not stopped. Read at §4.5 step 1 beside Indestructible.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub face_down_indestructible: Option<bool>,
     // Stinkyscape (issue #1844)
     /// R1844000 (Stinkyscape #46 Circadian Halfcycler): while this card acts on the field, the
     /// autopilot plays the first this-many R456 actions of each of its controller's turns, then hands
@@ -1124,6 +1149,10 @@ pub struct Script {
     /// Ceaseless Void's computed cost (R55); everything else uses the printed cost.
     pub cost: Option<CostHook>,
     pub cry: Option<Hook>,
+    /// R4590000 (IA #134 Rootkit Runner): "When this is revealed", run once a Unit set face-down
+    /// by its Cloaked has come out and its Cry has run, as its controller. It never runs on a
+    /// face-up play.
+    pub revealed: Option<Hook>,
     pub death: Option<Hook>,
     /// After the mulligan, before turn 1: only Heroic Power uses it (§6.2, R43).
     pub start_of_game: Option<Hook>,
@@ -1316,6 +1345,12 @@ pub struct Script {
     /// ME-TRIG, R822, R823 (Meditative #10 Double Counting): N extra runs of its controller's Cry and Death
     /// effects, asked as a permanent's Cry runs and as a state check's dead have left; the highest N holds.
     pub cry_death_extra: Option<TriggerExtraHook>,
+    /// R4589003 (IA #118 The Recursionist): N extra runs of its controller's Death effects alone, asked
+    /// where `cry_death_extra` is; the highest N holds with it (R820).
+    pub death_extra: Option<TriggerExtraHook>,
+    /// R4589003 (IA #118 The Recursionist): whether its controller's Reborns happen twice more, read
+    /// where the return is collected; the highest N holds.
+    pub reborn_extra: Option<TriggerExtraHook>,
     /// R1487000, R767000: the card's lasting text works while it is set face-down, as R403's first
     /// reading had it. Only a kept script sets it (C #88 Siphon Squad's v0.3.7b), so its replays fold
     /// as they played; every other card's sleeps there (`preview::lasting_text_dormant`).
@@ -1356,6 +1391,7 @@ impl Script {
     pub fn hook_named(&self, name: &str) -> Option<&Hook> {
         match name {
             "cry" => self.cry.as_ref(),
+            "revealed" => self.revealed.as_ref(),
             "death" => self.death.as_ref(),
             "startOfGame" => self.start_of_game.as_ref(),
             "entersHand" => self.enters_hand.as_ref(),

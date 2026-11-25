@@ -797,5 +797,6 @@ pub(super) fn replay_input(options: &CreateGameOptions, log: Vec<Action>) -> Rep
         sandbox: options.sandbox,
         deck_marks: options.deck_marks.clone(),
         win_rates: options.win_rates.clone(),
+        deck_sets: options.deck_sets.clone(),
     }
 }

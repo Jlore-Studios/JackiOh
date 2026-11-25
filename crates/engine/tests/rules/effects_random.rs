@@ -1399,3 +1399,159 @@ mod r1085_grant_keywords_random_unit {
         assert_eq!(draws(&ran), 0);
     }
 }
+
+/// #4763: `enemy_permanent_pool`, the one pool every "random enemy permanent" draws from.
+mod enemy_permanent_pool_draws {
+    use super::*;
+    use jackioh_engine::effects::enemy_permanent_pool;
+    use jackioh_engine::state::Slumber;
+
+    /// The pool's ids, read under a context p1 controls with `self_` as the source. It rolls nothing.
+    fn pool_ids(state: &mut GameState, self_: Option<&CardInstance>) -> (Vec<String>, u32) {
+        let mut rng = Rng::new(&state.seed, state.rng_cursor);
+        let mut events = Vec::new();
+        let ids = {
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
+            let ctx = make_context(
+                &mut sink,
+                self_,
+                HookOptions {
+                    controller: Some(PlayerId::P1),
+                    ..Default::default()
+                },
+            );
+            enemy_permanent_pool(&ctx)
+                .into_iter()
+                .map(|card| card.id)
+                .collect()
+        };
+        (ids, rng.cursor())
+    }
+
+    /// p2 holds Units in lanes 1 and 2, a face-up backrow card in lane 1 and a face-down one in lane
+    /// 2; p1 holds a Unit and a backrow card of its own. The ids: p2's, in R68 order.
+    fn mixed_board(state: &mut GameState) -> Vec<String> {
+        put(state, &gary().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        put(
+            state,
+            &backdrop().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+        let first = put(state, &gary().id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let second = put(state, &body().id, slot(PlayerId::P2, Row::Units, 2), json!({}));
+        let shown = put(
+            state,
+            &backdrop().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
+        let hidden = put(
+            state,
+            &backdrop().id,
+            slot(PlayerId::P2, Row::Backrow, 2),
+            json!({}),
+        );
+        find_instance_mut(state, &hidden.id)
+            .expect("the face-down card")
+            .face_up = Some(false);
+        vec![first.id, second.id, shown.id, hidden.id]
+    }
+
+    #[test]
+    fn it_holds_each_enemy_unit_and_backrow_card_once_face_down_included_and_none_of_yours() {
+        let mut state = game("enemy-pool-mixed");
+        let expected = mixed_board(&mut state);
+        let (ids, cursor) = pool_ids(&mut state, None);
+        assert_eq!(ids, expected);
+        // R60: a shuffle of it draws distinct cards, as each one is in it once.
+        let mut unique = ids.clone();
+        unique.sort();
+        unique.dedup();
+        assert_eq!(unique.len(), ids.len());
+        // It only reads: the draw is the caller's, inside its own effect.
+        assert_eq!(cursor, state.rng_cursor);
+    }
+
+    #[test]
+    fn an_empty_enemy_board_pools_nothing() {
+        let mut state = game("enemy-pool-empty");
+        put(
+            &mut state,
+            &gary().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let (ids, _) = pool_ids(&mut state, None);
+        assert!(ids.is_empty());
+    }
+
+    #[test]
+    fn a_dormant_card_is_never_in_it() {
+        let mut state = game("enemy-pool-dormant");
+        let expected = mixed_board(&mut state);
+        // R4322000: Dormant cards, a Unit and a backrow card, stamped by hand (white-box).
+        let sleeper = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P2, Row::Units, 3),
+            json!({}),
+        );
+        let sleeping_trap = put(
+            &mut state,
+            &backdrop().id,
+            slot(PlayerId::P2, Row::Backrow, 3),
+            json!({}),
+        );
+        for id in [&sleeper.id, &sleeping_trap.id] {
+            find_instance_mut(&mut state, id)
+                .expect("the Dormant card")
+                .slumber = Some(Slumber { turns: Some(2) });
+        }
+        let (ids, _) = pool_ids(&mut state, None);
+        assert_eq!(ids, expected);
+    }
+
+    #[test]
+    fn on_a_slashed_board_it_holds_only_the_sources_half() {
+        let mut state = game("enemy-pool-slash");
+        let source = put(
+            &mut state,
+            &gary().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let near = put(
+            &mut state,
+            &gary().id,
+            slot(PlayerId::P2, Row::Units, 2),
+            json!({}),
+        );
+        let near_back = put(
+            &mut state,
+            &backdrop().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
+        put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P2, Row::Units, 4),
+            json!({}),
+        );
+        put(
+            &mut state,
+            &backdrop().id,
+            slot(PlayerId::P2, Row::Backrow, 5),
+            json!({}),
+        );
+        // R3554003: the slash at lane 3 splits lanes 1-2 from 4-5.
+        state.slashed_lane = Some(3);
+        let source = live(&state, &source.id);
+        let (ids, _) = pool_ids(&mut state, Some(&source));
+        assert_eq!(ids, vec![near.id, near_back.id]);
+        // With no source on the board, both halves are in it.
+        let (unsourced, _) = pool_ids(&mut state, None);
+        assert_eq!(unsourced.len(), 4);
+    }
+}

@@ -209,7 +209,7 @@ never state, so a hidden card cannot be named by it.
   definitions a view carries (`PlayerView.defs`) consulted next.
 - **The oracle.** `data/glossary.json`, `power-words.json` and `short-forms.json` are the tables the web
   held in `glossary.ts`, `inPlay.ts` and `shortText.ts`; the web's `rules.test.ts` still holds the glossary
-  to `spec/06-keywords.md`, and `src/face/power.rs` holds the powers to the engine's own table.
+  to `spec/06-keywords/`, and `src/face/power.rs` holds the powers to the engine's own table.
 
 ## `src/log/`: the game log's lines
 
@@ -300,11 +300,11 @@ order. Nothing in the machine reads a clock, draws from the OS or does I/O.
 
 What the machine decides:
 
-- **The clocks** (`clock.rs`): the turn clock, a non-active holder's prompt clock, the mulligan clock both
-  seats share, the disconnect grace, the ceiling and a question sequence's clock (R79, R265, R268, R147,
-  R744, R1563006), and the retry of a clock whose action the log did not take (R776000). `expiry`: a
-  clock that runs out is a server action under a `srv-` nonce (R270), so `(seed, log)` still folds; a
-  mulligan expiry times out each seat still owing, in seat order.
+- **The clocks** (`clock.rs`): the turn clock, a non-active holder's prompt clock, fresh for each prompt
+  (R4848000), the mulligan clock both seats share, the disconnect grace, the ceiling and a question
+  sequence's clock (R79, R265, R268, R147, R744, R1563006), and the retry of a clock whose action the log did
+  not take (R776000). `expiry`: a clock that runs out is a server action under a `srv-` nonce (R270), so
+  `(seed, log)` still folds; a mulligan expiry times out each seat still owing, in seat order.
 - **The flow of a change**: the order every view, prompt and clock goes out in, the `prompt` frames a
   change in who owes an answer sends (§10.6, R266), a Glitch's swap and the grace that moves with it
   (R677), the end of the game (R679, R1253000) and what a ranked game with a bot does after it (R639000).
@@ -785,8 +785,10 @@ the real catalog), `tests/rematch.rs` (the book), `tests/duos.rs` and `tests/aga
 book) and `tests/host_boundary.rs`; `tests/host_fuzz.rs` plays both host machines on seeded random events (#4392: a clock
 running out, a socket dropping and returning, a refused or taken log write, a resent or copied nonce, a restart rebuilt
 from the written rows) and checks after every step that the log rebuilds the game, that it is well formed, that a stale
-timer changes nothing, that a match ends once and that a restart holds the game. `HOST_FUZZ_SEEDS` matches per machine
-run on every pull request and `daily_host_fuzz_sweep` plays `HOST_FUZZ_DAILY_SEEDS`; to rerun one failing seed, set
+timer changes nothing, that a match ends once, that a restart holds the game and, on the 1v1 machine, that a silent
+table moves on: a clock other than the ceiling stays armed, and stays so while a copy of the host plays on from there
+with no seat acting (R4848000). `HOST_FUZZ_SEEDS` matches per machine run on every pull request and
+`daily_host_fuzz_sweep` plays `HOST_FUZZ_DAILY_SEEDS`; to rerun one failing seed, set
 `REPRO = Some((Machine::Duel, <seed>))` (or `Duos`) in the file, as the failure's text says, and run `cargo test -p
 jackioh-shared --features jackioh-engine/testkit --test shared host_soak::repro`. The files under `tests/` are
 modules of the one binary `tests/shared.rs`; a new file is declared there, which `crates/tools/tests/acceptance.rs`

@@ -122,7 +122,10 @@ describe("R277 the word diff", () => {
     // (§8.12) adds four of the designer's: #31 Soul Read's (less the Tribute when another seen card comes first), #72
     // Foreshadow's and #73 Ripple's (less Can't attack) and #85 Body Snatch's (less "in Defense Position"). Classic+
     // #73.1 Classic Golem's is its base text less "Radiant" since issue #4292 gave it First Strike back in place of
-    // Divine Shield: the Unit it attacks becomes a base-face one, and its doubled stats carry its marks.
+    // Divine Shield: the Unit it attacks becomes a base-face one, and its doubled stats carry its marks. The
+    // Infinite Assault (§8.13, #4601) adds five of the designer's: #36 Deepfake's, #86 Replica Hatchery's, #94 Batch
+    // Monarch's and #189 Clone Vat's (less the copy's Brittle) and #166 Aegis Prime's (less "While you control
+    // another Taunt Unit,").
     expect(silent).toEqual([
       "core-055",
       "core-079",
@@ -144,6 +147,11 @@ describe("R277 the word diff", () => {
       "stinkyscapeplus-072",
       "stinkyscapeplus-073",
       "stinkyscapeplus-085",
+      "infiniteassault-036",
+      "infiniteassault-086",
+      "infiniteassault-094",
+      "infiniteassault-166",
+      "infiniteassault-189",
     ]);
   });
 });

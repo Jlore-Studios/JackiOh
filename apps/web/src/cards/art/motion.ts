@@ -391,6 +391,49 @@ const RARE_CARDS: readonly (readonly [string, Archetype, ParticleKind])[] = [
   ["stinkyscapeplus-157", "unit", "bubble"], // Phantom Shipyard
   ["stinkyscapeplus-160", "unit", "bubble"], // Icarus
   // R4577009: the held Infinite Assault set's two Legendaries, after every earlier entry so none of theirs moves.
+  // #4602: the set's other Legendaries and Mythics, in card order.
+  ["infiniteassault-046", "unit", "ember"], // Mirage Sovereign
+  ["infiniteassault-047", "trap", "note"], // Unreal Estate
+  ["infiniteassault-048", "spell", "bubble"], // Ego Death
+  ["infiniteassault-070", "unit", "ember"], // Redline Overlord
+  ["infiniteassault-071", "unit", "ember"], // Thermal Throttler
+  ["infiniteassault-072", "spell", "bubble"], // Overclock to Infinity
+  ["infiniteassault-094", "unit", "ember"], // Batch Monarch
+  ["infiniteassault-095", "field", "drop"], // The Botnet
+  ["infiniteassault-096", "spell", "bubble"], // Exponential Growth
+  ["infiniteassault-118", "unit", "ember"], // The Recursionist
+  ["infiniteassault-119", "unit", "ember"], // Snapshot Lich
+  ["infiniteassault-120", "spell", "bubble"], // Eternal Return
+  ["infiniteassault-142", "unit", "ember"], // The Jailbreaker
+  ["infiniteassault-143", "spell", "bubble"], // Zero-Click
+  ["infiniteassault-144", "spell", "bubble"], // Total Compromise
+  ["infiniteassault-166", "unit", "ember"], // Aegis Prime
+  ["infiniteassault-167", "spell", "bubble"], // Fortress Protocol
+  ["infiniteassault-168", "spell", "bubble"], // Impenetrable
+  ["infiniteassault-190", "unit", "ember"], // Total Recall
+  ["infiniteassault-191", "unit", "ember"], // Ground Truth
+  ["infiniteassault-192", "spell", "bubble"], // Become the Data
+  ["infiniteassault-214", "unit", "ember"], // Emergent Mind
+  ["infiniteassault-215", "unit", "ember"], // The Optimizer
+  ["infiniteassault-216", "spell", "bubble"], // The Singularity
+  ["infiniteassault-217", "unit", "ember"], // Echo-1, First Hallucination
+  ["infiniteassault-219", "unit", "ember"], // Redline, the Overclocked
+  ["infiniteassault-221", "unit", "ember"], // Hivemaster Batch-01
+  ["infiniteassault-223", "unit", "ember"], // Loopback, Who Returns
+  ["infiniteassault-225", "unit", "ember"], // Root Kit, the Exploiter
+  ["infiniteassault-227", "unit", "ember"], // Bastion.exe
+  ["infiniteassault-229", "unit", "ember"], // The Harvester
+  ["infiniteassault-230", "spell", "bubble"], // Everything You've Ever Played
+  ["infiniteassault-231", "unit", "ember"], // The Black Box
+  ["infiniteassault-232", "spell", "bubble"], // Spaghettification
+  ["infiniteassault-233", "unit", "ember"], // Model Collapse
+  ["infiniteassault-234", "spell", "bubble"], // Degenerate Output
+  ["infiniteassault-235", "unit", "ember"], // The Prime Generator
+  ["infiniteassault-236", "spell", "bubble"], // Infinite Assault
+  ["infiniteassault-237", "unit", "ember"], // Thermal Runaway
+  ["infiniteassault-238", "field", "drop"], // Critical Temperature
+  ["infiniteassault-239", "unit", "ember"], // Zero-Day
+  ["infiniteassault-240", "trap", "note"], // Unpatched
   ["infiniteassault-023", "unit", "ember"], // The Generator
   ["infiniteassault-024", "spell", "bubble"], // Mass Deployment
 ];

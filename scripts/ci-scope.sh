@@ -60,8 +60,8 @@
 # `rust (classify)` (#1370) reads every change to the cards, the engine and the AI, and runs exactly
 # when `full` does. The other docs are
 # not: `spec check` reads spec/, the radiant-standard test reads docs/radiant-audit.md, the catalog
-# test reads spec/07-tokens.md's table of tokens, radiant_stats.rs reads spec/08-catalog.md, web tests
-# read two spec/ notes (06-keywords.md and 05-card-types.md), and the tools' test of shadow_ban.rs
+# test reads spec/07-tokens.md's table of tokens, radiant_stats.rs reads spec/08-catalog/, web tests
+# read spec/06-keywords/ and spec/05-card-types.md, and the tools' test of shadow_ban.rs
 # reads training/history/'s sweep-*.md reports. A
 # `full=false` diff prints every other line false too.
 #
@@ -110,7 +110,8 @@
 #    (the engine's and the server's export tests write it, and jackioh-wasm-core's constants test reads
 #    engineConfig.ts, #3093) engine and server, and tools, wasm; docs/radiant-audit.md
 #    (radiant_standard.rs), spec/07-tokens.md (the catalog test's table of tokens, R1177001) and
-#    spec/08-catalog.md (radiant_stats.rs, a row's two Radiant stats cells, #3804) cards; e2e/support/config.ts (the server's tests/api/e2e.rs) server;
+#    spec/08-catalog/ (radiant_stats.rs, a row's two Radiant stats cells, #3804) cards, the folder tools, wasm too
+#    (acceptance.rs holds radiant_stats.rs's list of its notes to it); e2e/support/config.ts (the server's tests/api/e2e.rs) server;
 #    crates/server/.env.example and apps/web/.env.production (the catalog version's sites, which the
 #    tools' patches tests read; the ship case above takes precedence) tools, wasm, the first as well as server; crates/server/tests/'s
 #    actor/, api/, bots/, loops/ and support/ run server only because the server binary checks their
@@ -126,8 +127,9 @@
 #    wasm; apps/web/src/audio/voice-text.json (the
 #    tools' export_card_text.rs writes it from crates/cards/card-text.yaml, #2498) tools, wasm; and
 #    apps/web/src/game/cardModes.json (the tools' export_card_modes.rs writes it from the card
-#    scripts, #2646) tools, wasm; and spec/15-dungeon-run.md and spec/README.md (acceptance.rs holds
-#    the first's table of constants to crates/run/src/config.rs, and the second's map to it, B33)
+#    scripts, #2646) tools, wasm; and spec/15-dungeon-run.md, spec/16-infinite-assault.md and
+#    spec/README.md (acceptance.rs holds the first two's tables of constants to
+#    crates/run/src/config.rs, and the third's map to them, B33, #4584)
 #    tools, wasm. scripts/ci-shards.toml, the shard counts of ci.yml's sharded jobs (#3072), runs
 #    every Rust group, and web and e2e as any file outside the lists below does, so a count it
 #    changes is seen running.
@@ -357,13 +359,16 @@ for file in $files; do
       on $RUST
       ;;
     apps/web/src/wire/*) on rust_engine rust_server rust_tools_wasm ;;
-    docs/radiant-audit.md | spec/07-tokens.md | spec/08-catalog.md) on rust_cards ;;
+    docs/radiant-audit.md | spec/07-tokens.md) on rust_cards ;;
+    # §8 is one note a subsection: radiant_stats.rs reads each, and the tools' acceptance test holds its
+    # list to the folder.
+    spec/08-catalog/*) on rust_cards rust_tools_wasm ;;
     e2e/support/config.ts) on rust_server ;;
     e2e/cypress/e2e/01-* | e2e/cypress/e2e/13-*) on rust_tools_wasm ;;
     apps/web/.env.production | packages/* | apps/server/* | ladder/* | training/history/sweep-*.md) on rust_tools_wasm ;;
     apps/web/src/audio/voice-text.json) on rust_tools_wasm ;;
     apps/web/src/game/cardModes.json) on rust_tools_wasm ;;
-    spec/15-dungeon-run.md | spec/README.md) on rust_tools_wasm ;;
+    spec/15-dungeon-run.md | spec/16-infinite-assault.md | spec/README.md) on rust_tools_wasm ;;
     scripts/ci-shards.toml) on $RUST ;;
     analysis/fixtures/dev-40.jsonl | analysis/fixtures/live-40.jsonl | analysis/fixtures/games.report.json) on rust_tools_wasm ;;
     analysis/fixtures/counts.jsonl | analysis/fixtures/counts.report.json) on rust_tools_wasm ;;

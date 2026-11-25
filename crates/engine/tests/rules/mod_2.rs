@@ -30,6 +30,7 @@ pub mod queued_when;
 pub mod random_entries;
 pub mod ranged_flying;
 pub mod recruit_variants;
+pub mod recursion_log;
 pub mod reduce;
 pub mod replacements;
 pub mod replay;
