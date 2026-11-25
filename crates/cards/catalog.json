@@ -20608,8 +20608,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 5,
-        "radiant": 10,
+        "base": 4,
+        "radiant": 8,
         "better": "up",
         "step": 1,
         "min": 1
@@ -20800,8 +20800,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 7,
-        "radiant": 14,
+        "base": 6,
+        "radiant": 12,
         "better": "up",
         "step": 2,
         "min": 1
@@ -20992,8 +20992,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 9,
-        "radiant": 18,
+        "base": 8,
+        "radiant": 16,
         "better": "up",
         "step": 2,
         "min": 1
@@ -25698,7 +25698,7 @@
     "cost": 1,
     "loc": 6,
     "base": {
-      "attack": 2,
+      "attack": 3,
       "health": 2,
       "keywords": [
         {
@@ -25714,7 +25714,7 @@
       "text": "Starship Piece, Cloaked, Immutable"
     },
     "radiant": {
-      "attack": 4,
+      "attack": 6,
       "health": 4,
       "keywords": [
         {
@@ -29478,7 +29478,7 @@
     "loc": 21,
     "base": {
       "attack": 1,
-      "health": 4,
+      "health": 5,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -29488,7 +29488,7 @@
     },
     "radiant": {
       "attack": 2,
-      "health": 8,
+      "health": 10,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -29521,8 +29521,8 @@
     "cost": 2,
     "loc": 6,
     "base": {
-      "attack": 5,
-      "health": 3,
+      "attack": 3,
+      "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -29534,8 +29534,8 @@
       "text": "Starship Piece, Windfury"
     },
     "radiant": {
-      "attack": 10,
-      "health": 6,
+      "attack": 6,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -35790,7 +35790,7 @@
     "cost": 2,
     "loc": 18,
     "base": {
-      "attack": 3,
+      "attack": 4,
       "health": 1,
       "keywords": [
         {
@@ -35800,7 +35800,7 @@
       "text": "Starship Piece\nDamage also Burns {burns}."
     },
     "radiant": {
-      "attack": 6,
+      "attack": 8,
       "health": 2,
       "keywords": [
         {
@@ -35812,8 +35812,8 @@
     "params": [
       {
         "key": "burns",
-        "base": 3,
-        "radiant": 6,
+        "base": 4,
+        "radiant": 8,
         "better": "up",
         "step": 1,
         "min": 1
@@ -35833,24 +35833,24 @@
     "cost": 4,
     "loc": 16,
     "base": {
-      "attack": 5,
+      "attack": 6,
       "health": 1,
       "keywords": [
         {
           "kind": "Starship Piece"
         }
       ],
-      "text": "Starship Piece\nDamage dealt Burns."
+      "text": "Starship Piece\nDamage dealt also Burns."
     },
     "radiant": {
-      "attack": 10,
+      "attack": 12,
       "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
         }
       ],
-      "text": "Starship Piece\nDamage dealt Burns."
+      "text": "Starship Piece\nDamage dealt also Burns."
     }
   },
   "stinkyscapeplus-152": {
@@ -35866,8 +35866,8 @@
     "cost": 2,
     "loc": 18,
     "base": {
-      "attack": 2,
-      "health": 1,
+      "attack": 1,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -35876,8 +35876,8 @@
       "text": "Starship Piece\nDamage also applies Toxic {toxic}."
     },
     "radiant": {
-      "attack": 4,
-      "health": 2,
+      "attack": 2,
+      "health": 8,
       "keywords": [
         {
           "kind": "Starship Piece"

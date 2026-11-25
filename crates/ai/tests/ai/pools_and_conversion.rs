@@ -1,18 +1,18 @@
 //! The AI's static reads of a hit through §4.4 steps 3a and 3b (#4064). Each side's damage pools (S+ #42
 //! Force Projector, S+ #123 Oct) soak what they have left, once across the hits the walk counts (R4064000),
-//! and a hit from a source whose damage Burns or is Toxic (S+ #151 Volcanic Rounds, S+ #153 Noxious Rounds)
-//! deals nothing and is its target's counter (R4064001). Each board is also played through the engine,
-//! which deals what the static read says. The stand-ins: Mr. Vanilla, a 4/4, and the `stand-in (1)` bodies.
+//! and a hit from a source whose damage is Toxic (S+ #153 Noxious Rounds) or Burns (S+ #151 Volcanic Rounds
+//! through v0.6.13c, R4783001) deals nothing and is its target's counter (R4064001). Each board is also
+//! played through the engine, which deals what the static read says. The stand-ins: Mr. Vanilla, a 4/4, and
+//! the `stand-in (1)` bodies.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
-use jackioh_engine::{hero_burn_of, hero_toxic_of};
+use jackioh_engine::hero_toxic_of;
 
 use super::support::{AI, HUMAN, close, register_cards};
 
 const PROJECTOR: &str = "stinkyscapeplus-042";
 const OCT: &str = "stinkyscapeplus-123";
-const VOLCANIC: &str = "stinkyscapeplus-151";
 const NOXIOUS: &str = "stinkyscapeplus-153";
 const VANILLA: &str = "core-008";
 const THREE_THREE: &str = "stand-in (1) 3/3";
@@ -252,52 +252,44 @@ fn r4064000_ticks_meet_a_refilled_pool() {
     assert_eq!(unit_view(s.state(), s.card(vanilla.id.as_str())).health, before);
 }
 
-/// R4064001: a unit equipped with Volcanic Rounds (or Noxious Rounds) Burns (or Toxics) a hero for its
-/// attack instead of hurting it, so against a hero at exactly that much life the lethal solver's gap and
-/// the Taunt walk read no damage, where the old reading reads lethal. The engine's attack deals nothing.
+/// R4064001: a unit equipped with Noxious Rounds Toxics a hero for its attack instead of hurting it, so
+/// against a hero at exactly that much life the lethal solver's gap and the Taunt walk read no damage,
+/// where the old reading reads lethal. The engine's attack deals nothing. Volcanic Rounds Burned the same
+/// way until issue #4783, since when its hits land and also Burn (R4783001).
 #[test]
 fn r4064001_an_equipped_rounds_unit_has_no_lethal() {
-    for (rounds, host) in [(VOLCANIC, THREE_THREE), (NOXIOUS, "stand-in (1) 5/5")] {
-        let mut s = board(
-            "ai-rounds-lethal",
-            json!({ "hand": [rounds], "field": [host], "mana": 10 }),
-            json!({}),
-        );
-        let host = s.unit_at(AI, 1).id;
-        // R4285001: the Rounds print no Equip since issue #4285; one given in hand (R1878003) equips them.
-        let held = s
-            .hand(AI)
-            .into_iter()
-            .find(|card| card.def_id == rounds)
-            .expect("in hand")
-            .id;
-        s.card_mut(held.as_str()).granted_keywords.push(Keyword::Equip);
-        s.play(rounds, json!({ "zone": 1, "equip": true }));
-        let attack = s.stats(host.as_str()).attack;
-        assert!(attack > 0, "{rounds}");
-        s.state_mut().players[HUMAN].hero.health = attack;
+    let mut s = board(
+        "ai-rounds-lethal",
+        json!({ "hand": [NOXIOUS], "field": ["stand-in (1) 5/5"], "mana": 10 }),
+        json!({}),
+    );
+    let host = s.unit_at(AI, 1).id;
+    // R4285001: the Rounds print no Equip since issue #4285; one given in hand (R1878003) equips them.
+    let held = s
+        .hand(AI)
+        .into_iter()
+        .find(|card| card.def_id == NOXIOUS)
+        .expect("in hand")
+        .id;
+    s.card_mut(held.as_str()).granted_keywords.push(Keyword::Equip);
+    s.play(NOXIOUS, json!({ "zone": 1, "equip": true }));
+    let attack = s.stats(host.as_str()).attack;
+    assert!(attack > 0);
+    s.state_mut().players[HUMAN].hero.health = attack;
 
-        let state = s.state();
-        assert_eq!(ready_gap(state, AI), f64::from(attack), "{rounds}");
-        let unit = s.card(host.as_str());
-        assert_eq!(
-            damage_past_taunts_with(state, HUMAN, &[(unit, attack, true)], &OFF),
-            attack,
-            "{rounds}"
-        );
-        assert_eq!(
-            damage_past_taunts_with(state, HUMAN, &[(unit, attack, true)], &AI_EVAL),
-            0,
-            "{rounds}"
-        );
+    let state = s.state();
+    assert_eq!(ready_gap(state, AI), f64::from(attack));
+    let unit = s.card(host.as_str());
+    assert_eq!(
+        damage_past_taunts_with(state, HUMAN, &[(unit, attack, true)], &OFF),
+        attack
+    );
+    assert_eq!(
+        damage_past_taunts_with(state, HUMAN, &[(unit, attack, true)], &AI_EVAL),
+        0
+    );
 
-        s.attack(host.as_str(), "hero");
-        assert_eq!(health(&s, HUMAN), attack, "{rounds}");
-        let counter = if rounds == VOLCANIC {
-            hero_burn_of(s.state(), HUMAN)
-        } else {
-            hero_toxic_of(s.state(), HUMAN)
-        };
-        assert_eq!(counter, attack, "{rounds}");
-    }
+    s.attack(host.as_str(), "hero");
+    assert_eq!(health(&s, HUMAN), attack);
+    assert_eq!(hero_toxic_of(s.state(), HUMAN), attack);
 }

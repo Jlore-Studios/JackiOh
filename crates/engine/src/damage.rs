@@ -758,9 +758,9 @@ fn land(
     }
 
     // R3540002: "Damage also Burns N / applies Toxic N" adds N to a target the hit left standing, after
-    // Poisonous and the exile have had their say.
+    // Poisonous and the exile have had their say; R4783001: "Damage dealt also Burns" adds what it dealt.
     if let Some(source_card) = source {
-        crate::afflictions::ride_damage(sink, source_card, target);
+        crate::afflictions::ride_damage(sink, source_card, target, dealt);
     }
 
     // Step 8: Lifesteal heals the source's controller's hero by the amount dealt; R85: an effect may

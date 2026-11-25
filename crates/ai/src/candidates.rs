@@ -1949,8 +1949,6 @@ mod tests {
 
     /// S+ #42 Force Projector, a Field Spell: the first 5 damage its side would take each turn is nullified.
     const PROJECTOR: &str = "stinkyscapeplus-042";
-    /// S+ #151 Volcanic Rounds, a 3/1: "Damage dealt Burns."
-    const VOLCANIC: &str = "stinkyscapeplus-151";
     /// S+ #153 Noxious Rounds, a 1/1: "Damage dealt is Toxic."
     const NOXIOUS: &str = "stinkyscapeplus-153";
     /// A 3/3 with no text.
@@ -2010,85 +2008,80 @@ mod tests {
         assert_eq!((second.dealt, second.soaked, second.kills), (2, 1, false));
     }
 
-    /// R4064001, §4.4 step 3a: a 6/2 Rounds unit's hit on a 3/3 is its Burn (or Toxic) 6, no damage: no kill
+    /// R4064001, §4.4 step 3a: a 6/2 Noxious Rounds unit's hit on a 3/3 is its Toxic 6, no damage: no kill
     /// in `blow`, `kills_and_survives` or `trade_value`, whose Lifesteal heals nothing, and the counter is
-    /// worth something. A Divine Shield still takes the hit (step 1), and the engine plays it alike.
+    /// worth something. A Divine Shield still takes the hit (step 1), and the engine plays it alike. (S+ #151
+    /// Volcanic Rounds Burned alike until issue #4783 made its hits land and also Burn, R4783001.)
     #[test]
     fn r4064001_a_converted_blow_kills_nothing_and_heals_nothing() {
-        for rounds in [VOLCANIC, NOXIOUS] {
+        let rounds = NOXIOUS;
+        let (s, attacker, target) = armed(
+            rounds_six_two(rounds),
+            &[],
+            json!(THREE_THREE),
+            &[],
+            (false, false),
+        );
+        let (state, a, t) = (s.state(), s.card(attacker.as_str()), s.card(target.as_str()));
+        let read = blow(&side_of(state, a), 6, false, &side_of(state, t));
+        assert_eq!(
+            (read.dealt, read.kills, read.soaked, read.converted),
+            (0, false, 0, 6),
+            "{rounds}"
+        );
+        assert!(!kills_and_survives(state, a, t), "{rounds}");
+        assert!(!trade_value(state, a, &target, Prices::NONE).kills, "{rounds}");
+
+        let shielded = |keywords: &[Keyword]| {
             let (s, attacker, target) = armed(
                 rounds_six_two(rounds),
-                &[],
+                keywords,
                 json!(THREE_THREE),
                 &[],
                 (false, false),
             );
-            let (state, a, t) = (s.state(), s.card(attacker.as_str()), s.card(target.as_str()));
-            let read = blow(&side_of(state, a), 6, false, &side_of(state, t));
-            assert_eq!(
-                (read.dealt, read.kills, read.soaked, read.converted),
-                (0, false, 0, 6),
-                "{rounds}"
-            );
-            assert!(!kills_and_survives(state, a, t), "{rounds}");
-            assert!(!trade_value(state, a, &target, Prices::NONE).kills, "{rounds}");
+            trade_value(s.state(), s.card(attacker.as_str()), &target, Prices::NONE)
+        };
+        let plain = shielded(&[Keyword::DivineShield]);
+        let lifesteal = shielded(&[Keyword::DivineShield, Keyword::Lifesteal]);
+        assert!(!plain.kills && plain.value > 0.0, "{rounds}: {}", plain.value);
+        assert!((lifesteal.value - plain.value).abs() < 1e-9, "{rounds}");
 
-            let shielded = |keywords: &[Keyword]| {
-                let (s, attacker, target) = armed(
-                    rounds_six_two(rounds),
-                    keywords,
-                    json!(THREE_THREE),
-                    &[],
-                    (false, false),
-                );
-                trade_value(s.state(), s.card(attacker.as_str()), &target, Prices::NONE)
-            };
-            let plain = shielded(&[Keyword::DivineShield]);
-            let lifesteal = shielded(&[Keyword::DivineShield, Keyword::Lifesteal]);
-            assert!(!plain.kills && plain.value > 0.0, "{rounds}: {}", plain.value);
-            assert!((lifesteal.value - plain.value).abs() < 1e-9, "{rounds}");
+        let (s, attacker, target) = armed(
+            rounds_six_two(rounds),
+            &[],
+            json!(THREE_THREE),
+            &[Keyword::DivineShield],
+            (false, false),
+        );
+        let popped = blow(
+            &side_of(s.state(), s.card(attacker.as_str())),
+            6,
+            false,
+            &side_of(s.state(), s.card(target.as_str())),
+        );
+        assert!(popped.pops_shield && popped.converted == 0, "{rounds}");
 
-            let (s, attacker, target) = armed(
-                rounds_six_two(rounds),
-                &[],
-                json!(THREE_THREE),
-                &[Keyword::DivineShield],
-                (false, false),
-            );
-            let popped = blow(
-                &side_of(s.state(), s.card(attacker.as_str())),
-                6,
-                false,
-                &side_of(s.state(), s.card(target.as_str())),
-            );
-            assert!(popped.pops_shield && popped.converted == 0, "{rounds}");
-
-            let (mut s, attacker, target) = armed(
-                rounds_six_two(rounds),
-                &[Keyword::DivineShield, Keyword::Lifesteal],
-                json!(THREE_THREE),
-                &[],
-                (false, false),
-            );
-            s.attack(attacker.as_str(), target.as_str());
-            let struck = s.card(target.as_str());
-            assert_eq!(unit_view(s.state(), struck).health, 3, "{rounds}");
-            let counter = if rounds == VOLCANIC {
-                jackioh_engine::burn_on(struck)
-            } else {
-                jackioh_engine::toxic_on(struck)
-            };
-            assert_eq!(counter, 6, "{rounds}");
-            assert_eq!(
-                s.state().players[PlayerId::P1].hero.health,
-                ARMED_LIFE,
-                "{rounds}"
-            );
-        }
+        let (mut s, attacker, target) = armed(
+            rounds_six_two(rounds),
+            &[Keyword::DivineShield, Keyword::Lifesteal],
+            json!(THREE_THREE),
+            &[],
+            (false, false),
+        );
+        s.attack(attacker.as_str(), target.as_str());
+        let struck = s.card(target.as_str());
+        assert_eq!(unit_view(s.state(), struck).health, 3, "{rounds}");
+        assert_eq!(jackioh_engine::toxic_on(struck), 6, "{rounds}");
+        assert_eq!(
+            s.state().players[PlayerId::P1].hero.health,
+            ARMED_LIFE,
+            "{rounds}"
+        );
     }
 
-    /// R4064001, R4064000: against a hero at 6, a 6/2 Rounds unit's hit is no win but is worth the life
-    /// its counter's ticks take; a 6/4 Mr. Vanilla's is the win, and behind p2's Force Projector it deals
+    /// R4064001, R4064000: against a hero at 6, a 6/2 Noxious Rounds unit's hit is no win but is worth the
+    /// life its counter's ticks take; a 6/4 Mr. Vanilla's is the win, and behind p2's Force Projector it deals
     /// 1, as the engine deals it.
     #[test]
     fn r4064001_r4064000_face_value_reads_the_counter_and_the_pool() {
@@ -2098,11 +2091,9 @@ mod tests {
             s.state_mut().players[PlayerId::P2].hero.health = LIFE;
             (s, attacker)
         };
-        for rounds in [VOLCANIC, NOXIOUS] {
-            let (s, attacker) = at_six(rounds_six_two(rounds), false);
-            let value = face_value(s.state(), s.card(attacker.as_str()), PlayerId::P2, false);
-            assert!(value > 0.0 && value < AI_EVAL.win, "{rounds}: {value}");
-        }
+        let (s, attacker) = at_six(rounds_six_two(NOXIOUS), false);
+        let value = face_value(s.state(), s.card(attacker.as_str()), PlayerId::P2, false);
+        assert!(value > 0.0 && value < AI_EVAL.win, "{value}");
         let vanilla = json!({ "def": VANILLA, "statsOverride": { "attack": 6, "health": 4 } });
         let (s, attacker) = at_six(vanilla.clone(), false);
         let value = face_value(s.state(), s.card(attacker.as_str()), PlayerId::P2, false);
@@ -2120,17 +2111,12 @@ mod tests {
     fn pool_bodies() -> Vec<(&'static str, &'static str, Vec<Keyword>)> {
         vec![
             ("Mr. Vanilla", VANILLA, vec![]),
-            ("Volcanic Rounds", VOLCANIC, vec![]),
             ("Noxious Rounds", NOXIOUS, vec![]),
             ("Divine Shield", VANILLA, vec![Keyword::DivineShield]),
             ("Poisonous", VANILLA, vec![Keyword::Poisonous]),
             ("First Strike", VANILLA, vec![Keyword::FirstStrike]),
             ("Indestructible", VANILLA, vec![Keyword::Indestructible]),
-            (
-                "First Strike Volcanic Rounds",
-                VOLCANIC,
-                vec![Keyword::FirstStrike],
-            ),
+            ("First Strike Noxious", NOXIOUS, vec![Keyword::FirstStrike]),
             ("Poisonous Noxious Rounds", NOXIOUS, vec![Keyword::Poisonous]),
         ]
     }
