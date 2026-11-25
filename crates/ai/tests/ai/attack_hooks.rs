@@ -2,7 +2,9 @@
 //! decision's root plays each visible unit's next attack beside the same attack by its hookless twin
 //! (`attack_hook_prices`), and `unit_worth` adds `AI_EVAL.attack_hook` of the difference while the unit
 //! may attack, for either side's units alike. A face-down or hand card is never probed, hidden cards
-//! change no decision (R185), and a zero weight, the frozen baseline's, reads no price.
+//! change no decision (R185), and a zero weight, the frozen baseline's, reads no price. Its twin keeps
+//! every keyword the unit holds, a lent one among them, and a unit already Vanilla is its own twin
+//! (R4811000).
 //!
 //! The cards: The Propagation's Wasp, (1) 3/3, "After this attacks, summon a copy of this, then evolve.
 //! / Evolve: Gain Flying."; The Propagation's Hornet, (2) 3/4, Rush and the Wasp's text; Badger, (1)
@@ -248,6 +250,73 @@ fn r2688000_a_taunt_takes_the_attack_the_hero_cannot() {
         price_of(&prices, BADGER, AI) > 0.0,
         "it gains its Resource before it dies on the Taunt: {prices:?}"
     );
+}
+
+/// `state` with "your Units have `keyword`" on the AI's side, as a War Doctrine leaves it (R1859007).
+fn with_lent(state: &GameState, keyword: Keyword) -> GameState {
+    let mut lent = state.clone();
+    lent.players[AI].mods.push(PlayerModifier {
+        id: "ai-attack-hook-lent".to_string(),
+        expiry: ModifierExpiry::Never,
+        kind: ModifierKind::UnitsHaveKeyword {
+            keyword,
+            from_spell: None,
+        },
+    });
+    lent
+}
+
+#[test]
+fn r4811000_a_lent_poisonous_moves_no_attack_hook_price_against_a_taunt() {
+    // The Badger dies on the 9/9 Taunt either way; with Poisonous lent it takes the Menace with it, and
+    // so does its twin.
+    let bare = board(
+        "ai-attack-hook-lent-poisonous",
+        json!({ "field": [BADGER], "hand": [VANILLA] }),
+        json!({ "hand": [VANILLA], "field": [MENACE] }),
+    );
+    let lent = with_lent(&bare, Keyword::Poisonous);
+    assert!(unit_has(&lent, unit(&lent, AI, BADGER), KeywordKind::Poisonous));
+    close(
+        price_of(&priced(&lent).0, BADGER, AI),
+        price_of(&priced(&bare).0, BADGER, AI),
+    );
+}
+
+#[test]
+fn r4811000_a_lent_trample_moves_no_attack_hook_price_against_a_taunt() {
+    // 1 of the Badger's 2 Attack tramples over the 1/1 Taunt to the hero, from its twin too.
+    let mut bare = board(
+        "ai-attack-hook-lent-trample",
+        json!({ "field": [BADGER] }),
+        json!({ "field": [plain(1, 1)] }),
+    );
+    let guard = unit(&bare, HUMAN, VANILLA).id.clone();
+    find_instance_mut(&mut bare, &guard)
+        .expect("the 1/1")
+        .granted_keywords
+        .push(Keyword::Taunt);
+    let lent = with_lent(&bare, Keyword::Trample);
+    assert!(unit_has(&lent, unit(&lent, AI, BADGER), KeywordKind::Trample));
+    close(
+        price_of(&priced(&lent).0, BADGER, AI),
+        price_of(&priced(&bare).0, BADGER, AI),
+    );
+}
+
+#[test]
+fn r4811000_a_vanilla_unit_that_holds_frenzy_has_no_text_to_price() {
+    // Frenzy counts as an attack hook (R3551004), but a Vanilla unit runs no text: it is its own twin.
+    let mut state = board(
+        "ai-attack-hook-vanilla-frenzy",
+        json!({ "field": [MENACE] }),
+        json!({}),
+    );
+    let menace = unit(&state, AI, MENACE).id.clone();
+    let card = find_instance_mut(&mut state, &menace).expect("the Menace");
+    card.vanilla = true;
+    card.granted_keywords.push(Keyword::Frenzy);
+    close(price_of(&priced(&state).0, MENACE, AI), 0.0);
 }
 
 #[test]
