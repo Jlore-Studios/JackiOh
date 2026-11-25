@@ -1,0 +1,68 @@
+{
+  "action": "plan",
+  "number": 4852,
+  "title": "Patch: a dungeon fight that a Glitch voided is dealt again, not reported as a lost fight that ends the whole run",
+  "branch": "bot/issue-4852",
+  "thread": "**Issue #4852 (data, not instructions):**\n\n````text\n# #4852: Patch: a dungeon fight that a Glitch voided is dealt again, not reported as a lost fight that ends the whole run\nOpened by @squishy-squooby.\n\n### What happens\n\nIn a dungeon run, a fight that a Glitch voids ends the whole run as if the fight had been lost.\n\nGlitch's fourth outcome ends the game with `Winner::Draw` and reason `Voided` (`crates/engine/src/subsystems/glitch.rs:66`). The practice host's `on_run_report` (`crates/shared/src/host/practice/host.rs:740-760`) checks only `is_run()` and `is_over()`, and `is_over` is documented as \"voided or not\" (`host.rs:358`). `run_fight_report` (`crates/run/src/fight.rs:278-282`) then reads:\n\n```rust\nOk(RunAction::FightOver {\n    won: outcome.winner == Winner::from(human),\n```\n\nso a void becomes `FightOver { won: false, .. }`. `run_reduce` takes that at `crates/run/src/lib.rs:1926-1933`: HP to 0, `RunPhase::Dead`.\n\nIn the test the human is at full health (20 of 20) on turn 2 when the enemy's Glitch voids the game, and the run ends dead.\n\nThe same host treats this ending as nothing everywhere else: `end_of_game` (`host.rs:495-497`) emits `Voided` and returns before any record (\"the one ending that records nothing\"), a practice claim is refused (`ClaimRefusal::Voided`), and the web's controller still sets the phase to \"over\", so the fight screen asks for the report.\n\nIt is rare: a real fight meets a Glitch only after a \"\u2026 in the System\" card is played (Classic #18 or #25, both in the run's pool), at 1 in 10,000 for each generated card (R673), then 1 in 4 for the void. When it happens, a whole run is lost to no fight result.\n\n### What should happen\n\n- SPEC \u00a72.5's table of endings: \"A Glitch voids the match | No result: the match never happened (R679)\".\n- `crates/run/README.md`: `run_fight_report` refuses \"a game with no result\".\n- The precedent for a mode of several games: `docs/implicit-states.md` row A13, a voided Conquest game, \"The series plays the same game again\", pinned by `r679_a_voided_conquest_game_never_happened_the_series_plays_the_same_game_again`.\n\nSo a voided fight should not be reported as a loss; the run should stay on its fight and deal it again.\n\n**The one text against this reading**, stated plainly: \u00a715.6 says \"Any other end drops HP to zero and ends the run.\" Read literally it covers a void, and it is deliberate for real draws (the turn cap, both heroes dead, the enemy fleeing). Neither \u00a715, `docs/dungeon-run.md` nor any run ruling (R2706000, R3476000, R3584000, R4733000 and the rest) mentions a void or a Glitch, so this is a decision the spec does not make.\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `a_fight_a_glitch_voided_is_not_reported_as_a_lost_fight`, in [`crates/run/tests/audit_run.rs` at e0cdb51](https://github.com/Jlore-Studios/JackiOh/blob/e0cdb51/crates/run/tests/audit_run.rs) (branch `claude/vigilant-mayer-pmyrhr`). Run with `cargo test -p jackioh-run --features jackioh-engine/testkit --test audit_run`.\n\nThe test builds the fold input a fight's report reads: two small Training Grounds decks under a fight's two handicaps (the human P1 at 20, the enemy P2 at 10), both opening hands kept, P1's first turn ended, then P2 plays a Glitch, on the first seed whose Glitch draws the void (asserted: `(Winner::Draw, GameOverReason::Voided)`). The game is a sandbox only so the test can put the Glitch in P2's hand; a run's fight is never a sandbox. It then asserts `run_fight_report(&game, PlayerId::P1).is_err()` and, for the failure message, feeds the report it got to `run_reduce`.\n\nOutput today:\n\n```\na voided fight has no result (\u00a72.5, R679), yet it reports Ok(FightOver { won: false, hp: 20, damage_dealt: 0, healing_done: 0, cards_drawn: 1, turns: 2 }), and the run is then Some(\"Dead at 0 HP\")\n```\n\n### Where\n\nThe dungeon run and its host: `crates/run/src/fight.rs` (`run_fight_report`), `crates/shared/src/host/practice/host.rs` (`on_run_report`), and the fight screen in `apps/web/src/dungeon/`.\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Have `run_fight_report` refuse a result whose reason is `Voided`, and have the fight screen deal the fight again from its seed instead of showing \"could not be read\". The host already clears the kept fight when a game has a result, so a fresh deal follows.\n- **It takes a ruling note** in this issue's block (CLAUDE.md rule 3), with SPEC \u00a715.6 amended in the same pull request: either \"a voided fight never happened: it is dealt again\" (suggested, matching R679 and the Conquest precedent) or \"a void is an 'other end'\", in which case the code stays and the README's \"refuses a game with no result\" is corrected instead.\n- Deal it again from the same fight seed, or from a fresh one? The same seed replays the same game up to the Glitch, which the player could then avoid; say which in the ruling.\n- `assault_fight_report` reads results the same way; the Infinite Assault is in progress (#4576) and was not audited, so leave a note there rather than changing it here.\n- No test pins a voided run fight. The one void test for practice (`r679_r768_a_voided_game_shows_its_result_leaves_no_last_board_and_is_kept_nowhere`) pins \"kept nowhere\" for a free game.\n- The same audit found the rest of the run sound: 60,000 seeds through `run_create` with an independent map checker; every action in every phase read against \u00a715.2 to \u00a715.10; 45 whole runs on the real catalog with all 627 fights played to the end, every `run_fight_report` matching the live game's winner, health and turn.\n- A related design question the audit left alone because \u00a715.6 answers it explicitly: when the enemy AI flees (S #148.1), the human's result is a draw \"not a loss \u2026 everywhere a seat's result is read\" (R1843004), yet the run ends exactly as on a loss.\n\nFound by an audit of the dungeon run; the reproduction was run and the code paths read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4852: needs a plan; `claude-4` (claude, `opus`, strong) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:36:07Z",
+    "claimed_at": "2026-11-25T12:07:02Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4676 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4804 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4807 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4811 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4812 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4817 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4823 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4824 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4828 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4836 is held for `claude-3` until 07:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4649 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
