@@ -7,7 +7,8 @@
 //! R74): the flag only, so damage and buffs are kept, no Cry fires again (R22), and a face-down card's
 //! change reaches its opponent as a change alone (R97, R177). A Radiant pick is allowed, so no pick check
 //! leaks a face-down card's face. Radiant's Cleave (R2198003): the permanents beside the pick in its row
-//! and side (`adjacent_to`, §3.1), read as the clause begins; a neighbour Immune to Spells is passed by.
+//! and side (`adjacent_permanents_to`, §3.1), a Ticketed lying there among them (R4665000), read as the
+//! clause begins; a neighbour Immune to Spells is passed by.
 
 use jackioh_engine::prelude::*;
 
@@ -44,7 +45,7 @@ pub fn script() -> CardScripts {
             targets: targets(),
             cry: Some(hook(|ctx| {
                 // R2198003: the neighbours as the pick stands now, then the pick.
-                let mut effects: Vec<Effect> = adjacent_to(&*ctx, &chosen(), &BoardScope::default())
+                let mut effects: Vec<Effect> = adjacent_permanents_to(&*ctx, &chosen(), &BoardScope::default())
                     .iter()
                     .map(|card| set_radiant(json_as(json!({ "instanceId": card.id }))))
                     .collect();
