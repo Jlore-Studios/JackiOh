@@ -17501,6 +17501,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 525,
       "started_at": "2026-11-25T00:15:55Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -44119,9 +44120,33 @@
         "status": "queued",
         "title": "Patch: a wrap-up that fired before the beam still leaves the AI a line when its first root move carries a surcharge, so it does not end its turn by fallback",
         "tries": 0
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-8"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "8b3b5b7b1f36d5f7416675b35050b090929ba858",
+        "issue": 4672,
+        "merged_at": "2026-11-25T03:11:23Z",
+        "n": 525,
+        "pr": 4726,
+        "queued_at": "2026-11-25T03:11:23Z",
+        "sha": "eeea5aacb6b2b800515b3f45fdd3b1bdbe43d57c",
+        "status": "queued",
+        "title": "Patch: deeper card stats, S0, each play's choice and each made card's maker in the record",
+        "tries": 0
       }
     ],
-    "count": 524
+    "count": 525
   },
   "statistics": {
     "at": "2026-11-25T03:08:40Z"
