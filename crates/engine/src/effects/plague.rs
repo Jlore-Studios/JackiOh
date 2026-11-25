@@ -20,10 +20,7 @@ use crate::catalog::def_of;
 use crate::effects::targets::{BoardScope, TargetSpec, cards_in_scope_aimed, instance_of};
 use crate::plague::{place_plague_on, reachable_permanents_on_field, remove_plague};
 use crate::prelude::json_as;
-use crate::prompts::{
-    AnswerInput, OpenPromptArgs, close_prompt, in_offered_order, open_prompt, resume_at, resume_of,
-    why_answer_refused,
-};
+use crate::prompts::{AnswerInput, OpenPromptArgs, open_prompt, resume_at, resume_of, take_answer};
 use crate::random_cast::{cast_mode_for_prompt, is_enemy_pick, prefer_enemies};
 use crate::script::{Effect, EngineSink};
 use crate::state::{CardInstance, EngineError, GameState, PromptOption, Resume, find_instance};
@@ -379,20 +376,19 @@ pub fn place_plague_tokens(args: PlacePlagueTokensArgs) -> Effect {
     })
 }
 
-/// R122, R689: the answer to the placement prompt: validated, closed, every placement made on the
-/// pick, then what the prompt interrupted resumes (R113).
+/// R122, R689: the answer to the placement prompt, taken through `prompts::take_answer` (R450: its random
+/// discards, then an interception); every placement is made on the pick, then what the prompt interrupted
+/// resumes (R113).
 pub fn answer_placement(sink: &mut EngineSink<'_>, answer: &AnswerInput) -> Result<(), EngineError> {
     let Some(pending) = sink.state.pending.clone() else {
         return Err(EngineError::new("no prompt is open"));
     };
-    why_answer_refused(&pending, answer)?;
     let resume = resume_of(&pending.resume);
     let Some(data) = placement_data(&resume.data) else {
         return Err(EngineError::new("that prompt carries no placement"));
     };
-    let picked = in_offered_order(&pending, &answer.selection).into_iter().next();
-
-    close_prompt(sink);
+    // R450, R689: the placement names one target, so its answer meets the targeting point (#4815).
+    let picked = take_answer(sink, &pending, answer)?.into_iter().next();
     begin_work_cascade(sink);
     let card = match &picked {
         Some(Selection::Instance { instance_id }) => find_instance(sink.state, instance_id).cloned(),

@@ -1557,6 +1557,8 @@ fn side_view(state: &GameState, auras: &AuraTable<'_>, player: PlayerId, viewer:
             0 => None,
             luck => Some(luck),
         },
+        // R4595000: the sets the seat's deck is dealt from, public on both seats.
+        deck_sets: side.deck_sets.clone(),
         // R169: the badge list beside the hero, public on both seats.
         modifiers: modifier_views(state, player),
         mana: ManaView {

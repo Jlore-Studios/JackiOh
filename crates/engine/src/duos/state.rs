@@ -213,10 +213,11 @@ fn create_duel(
         last_boards: None,
         glitch_boards: None,
         // A co-op game is never a sandbox (R923000), holds no deck mark (R2702000), and is handed no
-        // win-rate snapshot (R3049000).
+        // win-rate snapshot (R3049000), nor names its decks' sets (R4595000).
         sandbox: None,
         deck_marks: None,
         win_rates: None,
+        deck_sets: None,
     };
     let mut game = match kind {
         SetupKind::New => create_game(&duel_options),

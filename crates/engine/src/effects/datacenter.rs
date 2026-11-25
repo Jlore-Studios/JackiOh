@@ -17,7 +17,7 @@ use crate::restrictions::{immune_to_spells, is_spell_source};
 use crate::script::{ConditionContext, Effect, EffectContext};
 use crate::state::{CardInstance, GameState};
 use crate::wire::{CardType, KeywordKind, PLAYER_IDS, PlayerId, Row, ZoneName, opponent_of};
-use crate::zones::{card_at, slots_of};
+use crate::zones::{card_at, lying_on_unit_zones_of, slots_of};
 
 // T-AI-4 Chain of Thought
 
@@ -127,8 +127,9 @@ fn reader_unaffected_by(reader: &SweepReader<'_>, card: &CardInstance) -> bool {
 
 /// T-AI-6: the Field Spells "destroy all (enemy) Field Spells" would destroy now: each backrow zone's
 /// acting card (an Ivory Tower beneath its Unit counts, R418; a dormant one does not, §3.2), except
-/// Indestructible (R46) or unaffected (B5 E35). An animated one in a unit zone is a Unit (R383, R588).
-/// A pure read, so `preview` (R280) and resolution agree.
+/// Indestructible (R46) or unaffected (B5 E35). An animated one in a unit zone is a Unit (R383, R588); one
+/// lying on a unit zone is a backrow card, read after the backrow zones (R4665000). A pure read, so
+/// `preview` (R280) and resolution agree.
 pub fn field_spells_doomed(reader: SweepReader<'_>, side: FieldSpellSide) -> Vec<CardInstance> {
     let sides: Vec<PlayerId> = if side == FieldSpellSide::Enemy {
         vec![opponent_of(reader.controller)]
@@ -137,10 +138,11 @@ pub fn field_spells_doomed(reader: SweepReader<'_>, side: FieldSpellSide) -> Vec
     };
     let mut out: Vec<CardInstance> = Vec::new();
     for player in sides {
-        for slot in slots_of(player, Row::Backrow) {
-            let Some(card) = card_at(reader.state, slot) else {
-                continue;
-            };
+        // R4665000: a Field Spell lying on a unit zone is one the sweep destroys (after the backrow lanes).
+        let backrow = slots_of(player, Row::Backrow)
+            .into_iter()
+            .filter_map(|slot| card_at(reader.state, slot));
+        for card in backrow.chain(lying_on_unit_zones_of(reader.state, player)) {
             if card_type_of(reader.state, card) != CardType::FieldSpell {
                 continue;
             }
