@@ -42531,42 +42531,6 @@
       {
         "approver": {
           "family": "claude",
-          "model": "opus",
-          "provider": "claude-3",
-          "tier": "strong"
-        },
-        "builder": {
-          "family": "claude",
-          "provider": "claude-6"
-        },
-        "difficulty": "hard",
-        "done_at": "2026-11-04T09:07:53Z",
-        "every": 5,
-        "findings": 0,
-        "head": "4539713ba5f9605f54b6927c5dcfb2dc863e19ae",
-        "issue": 2983,
-        "last_why": "stopped: #2996 was closed",
-        "merged_at": "2026-11-04T08:17:17Z",
-        "n": 45,
-        "pr": 2996,
-        "queued_at": "2026-11-04T08:17:17Z",
-        "reason": "stopped: #2996 was closed",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-4",
-          "tier": "strong"
-        },
-        "sha": "3809c73ce671c88facee6311ffa38899a5db3adc",
-        "started_at": "2026-11-04T08:51:25Z",
-        "status": "done",
-        "title": "Patch: Google sign-in through Google's own button, so it says jackioh.com",
-        "tries": 3,
-        "verdict": "failed"
-      },
-      {
-        "approver": {
-          "family": "claude",
           "model": "sonnet",
           "provider": "claude-4",
           "tier": "medium"
@@ -46065,7 +46029,9 @@
           "provider": "claude-1"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-25T12:02:54Z",
         "every": 5,
+        "findings": 0,
         "head": "3fd4464dd4aa411e4fa1bdf5c40a8d6e12484b39",
         "issue": 4826,
         "merged_at": "2026-11-25T11:42:26Z",
@@ -46078,12 +46044,13 @@
           "provider": "claude-7",
           "tier": "strong"
         },
-        "run_id": "pending:a4c43914-1795607628",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45608733680",
         "sha": "6dbc748ffd6b1f2d7a1f274d08a0779ff40e911b",
         "started_at": "2026-11-25T11:54:21Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: Galaxia's Attack goes to the first Unit played each turn only, not to the second when the first did not stay on the field",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 545
