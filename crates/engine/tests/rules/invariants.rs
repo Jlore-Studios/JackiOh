@@ -3743,6 +3743,74 @@ mod i21 {
     }
 
     #[test]
+    fn r4863000_a_killerless_death_in_a_play_a_unit_cast_is_its_casting_card_s_mark_and_i21_allows_it() {
+        let (before, id) = immune_board("r4863000");
+        let after = moved(&before, &id, OffFieldZone::Graveyard);
+        let death = |killer: Option<&str>| -> GameEvent {
+            json_as(json!({
+                "type": "destroyed",
+                "instanceId": id,
+                "defId": IMMUNE,
+                "owner": "p2",
+                "controller": "p2",
+                "attack": 4,
+                "maxHealth": 4,
+                "killerId": killer,
+            }))
+        };
+        let cast: GameEvent = json_as(json!({
+            "type": "cardPlayed",
+            "player": "p1",
+            "instanceId": "i21-cast",
+            "defId": SPELL,
+            "costPaid": 0,
+        }));
+        let cast_resolved: GameEvent = json_as(json!({
+            "type": "cardResolved",
+            "player": "p1",
+            "instanceId": "i21-cast",
+            "defId": SPELL,
+            "permanent": false,
+            "costPaid": 0,
+        }));
+        let inside = |outer: Option<&str>, killer: Option<&str>| -> Vec<GameEvent> {
+            outer
+                .map(marker)
+                .into_iter()
+                .chain([
+                    cast.clone(),
+                    marker_of("i21-cast", SPELL),
+                    death(killer),
+                    cast_resolved.clone(),
+                ])
+                .collect()
+        };
+        // A Unit's hook marked the immune Unit destroyed (R59), then cast a Spell before any state check:
+        // the Spell's state check collects the Unit's mark, with no killer and no marker of its own.
+        assert_eq!(
+            i21(&before, &inside(Some(PLAIN), None), &after),
+            Vec::<String>::new()
+        );
+        // Cast inside a Spell's run, or played by a seat with no run open, the death is the Spell's.
+        only(
+            &i21(&before, &inside(Some(SPELL), None), &after),
+            &id,
+            &["I21", "destroyed", SPELL],
+        );
+        only(
+            &i21(&before, &inside(None, None), &after),
+            &id,
+            &["I21", "destroyed", SPELL],
+        );
+        // A death that names its killer is a hit's, judged where the hit landed, not a collected mark.
+        only(
+            &i21(&before, &inside(Some(PLAIN), Some("i21-cast")), &after),
+            &id,
+            &["I21", "destroyed", SPELL],
+        );
+    }
+
+    #[test]
     fn i21_a_spell_set_face_down_runs_as_a_trap_as_it_is_set_and_as_it_reveals() {
         let (before, id) = immune_board("i21-set");
         let mut set = before.clone();
