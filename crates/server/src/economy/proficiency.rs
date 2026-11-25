@@ -149,6 +149,8 @@ mod tests {
                 card: x.clone(),
                 turn: 3,
                 radiant: false,
+                variant: None,
+                source: None,
             }]),
             ..SeatSummary::default()
         };

@@ -1,6 +1,6 @@
 //! SPEC §8.13 IA #66 Afterimage Sprinter ((3) Unit, Epic, 8/3 → 16/6), a card of the held Infinite Assault set (R4577000).
-//!   Base:    "Charge, Windfury, Brittle 1"
-//!   Radiant: "Charge, Windfury, Brittle 1, First Strike"
+//!   Base:    "Brittle 1, Charge, Windfury"
+//!   Radiant: "Brittle 1, Charge, Windfury, First Strike"
 //!
 //! Keywords only: Charge, Windfury, Brittle 1 and, on the Radiant face, First Strike are the
 //! catalog's, so there is nothing to run (`Script::default` on both faces, as C+ #6

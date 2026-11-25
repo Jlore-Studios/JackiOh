@@ -13,8 +13,9 @@ use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
 use jackioh_engine::wire::{
-    CardStatsFilter, CardTotal, DrillCount, GAME_SOURCES, GameMode, GameReport, PilotFilter, SourceFilter,
-    StatsTotals, card_stats, card_stats_of, game_figures_of, game_report, parse_game_record, sources_of,
+    CardStatsFilter, CardTotal, DrillCount, FaceTally, GAME_SOURCES, GameMode, GameReport, PilotFilter,
+    SourceFilter, StatsTotals, Tally, card_stats, card_stats_of, game_figures_of, game_report,
+    parse_game_record, sources_of,
 };
 use jackioh_engine::{Action, DECK_SIZE, GameRecord, LastBoardEntry, PlayerId};
 use jackioh_server::config::PersonaName;
@@ -30,8 +31,8 @@ use jackioh_server::db::store::{
     PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput,
     ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ReplayListRow, ResultRow,
     RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, StatsTotalsQuery,
-    StoreError, TermsSource, Ticket, TutorialMergeInput, TutorialProgressRow, Tx, UnreadableGameRecord,
-    UsernameClaim, UsernameClaimOutcome,
+    StoreError, TermsSource, Ticket, TicketStatus, TutorialMergeInput, TutorialProgressRow, Tx,
+    UnreadableGameRecord, UsernameClaim, UsernameClaimOutcome,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{
@@ -4836,6 +4837,93 @@ mod tickets {
         assert!(q!(harness, t => t.tickets_recent_waits(now + 1)).is_empty());
     }
 
+    /// R4446000: the purge deletes a cancelled ticket enqueued before its cutoff and nothing else: a
+    /// ticket enqueued at the cutoff or after it stays (so does a queued one, and a claimed one, whose
+    /// match still reads its mode from it).
+    async fn r4446000_purges_only_the_cancelled_tickets_enqueued_before_the_cutoff(harness: &StoreHarness) {
+        let cutoff = harness.now();
+        let queuer = active_profile(harness, None).await;
+        let first = active_profile(harness, None).await;
+        let second = active_profile(harness, None).await;
+        let leaver = active_profile(harness, None).await;
+        let old = cutoff - 9_000;
+
+        let queued = ticket(harness, &queuer.id, json!({ "enqueuedAt": old }));
+        q!(harness, t => t.tickets_insert(&queued));
+
+        let claimers: Vec<Ticket> = [&first, &second]
+            .iter()
+            .map(|profile| {
+                ticket(
+                    harness,
+                    &profile.id,
+                    json!({ "mode": "random", "deck": [], "enqueuedAt": old }),
+                )
+            })
+            .collect();
+        for row in &claimers {
+            q!(harness, t => t.tickets_insert(row));
+        }
+        let match_id = id();
+        assert!(
+            q!(harness, t => t.tickets_claim_pair(&claimers[0].id, &claimers[1].id, &match_id, cutoff)),
+            "{}",
+            harness.name
+        );
+        q!(harness, t => t.matches_create(&match_row(&match_id, &first.id, &second.id, harness, cutoff)));
+
+        // One at a time: a profile holds one queued ticket at once.
+        let mut cancelled = Vec::new();
+        for enqueued_at in [cutoff - 1, cutoff, cutoff + 1] {
+            let row = ticket(harness, &leaver.id, json!({ "enqueuedAt": enqueued_at }));
+            q!(harness, t => t.tickets_insert(&row));
+            q!(harness, t => t.tickets_cancel(&row.id, cutoff));
+            cancelled.push(row);
+        }
+
+        assert_eq!(q!(harness, t => t.tickets_purge(cutoff)), 1, "{}", harness.name);
+        assert!(
+            q!(harness, t => t.tickets_get(&cancelled[0].id)).is_none(),
+            "{}",
+            harness.name
+        );
+        for row in &cancelled[1..] {
+            assert_eq!(
+                q!(harness, t => t.tickets_get(&row.id)).map(|held| held.status),
+                Some(TicketStatus::Canceled),
+                "{}",
+                harness.name
+            );
+        }
+        assert_eq!(q!(harness, t => t.tickets_get(&queued.id)), Some(queued.clone()));
+        for row in &claimers {
+            assert_eq!(
+                q!(harness, t => t.tickets_get(&row.id)).map(|held| held.status),
+                Some(TicketStatus::Matched),
+                "{}",
+                harness.name
+            );
+        }
+        assert_eq!(
+            j(&q!(harness, t => t.matches_mode_of(&match_id))),
+            json!("random")
+        );
+
+        assert_eq!(q!(harness, t => t.tickets_purge(cutoff)), 0, "{}", harness.name);
+        assert_eq!(
+            q!(harness, t => t.tickets_purge(cutoff + 2)),
+            2,
+            "{}",
+            harness.name
+        );
+        assert_eq!(q!(harness, t => t.tickets_get(&queued.id)), Some(queued));
+        assert!(q!(harness, t => t.tickets_get(&claimers[0].id)).is_some());
+        assert_eq!(
+            j(&q!(harness, t => t.matches_mode_of(&match_id))),
+            json!("random")
+        );
+    }
+
     both_stores!(
         inserts_a_ticket_and_finds_the_profile_s_open_one,
         r257_keeps_a_ticket_s_mode_and_a_best_of_3_ticket_s_trio_and_counts_open_tickets_per_mode,
@@ -4848,6 +4936,7 @@ mod tickets {
         becomes_a_live_match_once_the_pair_is_claimed_and_the_match_created,
         r1450_reaps_a_pair_s_reservation_claimed_before_the_cutoff_and_lets_both_players_go,
         r640002_lists_the_waits_of_tickets_claimed_since_and_no_others,
+        r4446000_purges_only_the_cancelled_tickets_enqueued_before_the_cutoff,
     );
 }
 
@@ -5365,6 +5454,67 @@ mod game_records {
         assert!(card_stats(&before, &filter).created.is_empty());
     }
 
+    /// R4672003: a record's variants, its Created cards' makers and its picks are folded into the same
+    /// rows by card, inside each card's stats, and the store loads them as the records give them, a
+    /// second record adding to the first; a record written without them adds none.
+    async fn r4672003_folds_the_choices_and_loads_them_as_the_records_give(harness: &StoreHarness) {
+        let mut records = mixed_records();
+        let deck = json!(["core-001", "core-002"]);
+        let made_by = json!({ "card": "core-001", "radiant": false });
+        for (id, winner) in [("m-g", "p1"), ("m-h", "p2")] {
+            records.push(game_record(
+                id,
+                json!({ "game": { "first": "p1", "winner": winner, "reason": "hero-death", "turns": 6, "seats": {
+                    "p1": { "deck": deck, "opening": ["core-001"], "drawn": [], "played": ["core-001", "core-002"],
+                            "playedRadiant": [true, false],
+                            "playedVariants": [{ "modes": ["one"] }, { "x": 2 }],
+                            "createdUsed": [{ "card": "core-t-rush", "turn": 3, "radiant": false, "source": made_by }],
+                            "createdUnused": ["core-t-rush", "core-t-coin"],
+                            "createdUnusedSources": [made_by, null],
+                            "picks": [{ "source": made_by, "offered": ["core-003", "core-004"], "picked": ["core-004"] }] },
+                    "p2": { "deck": deck, "opening": [], "drawn": [], "played": [] },
+                } } }),
+            ));
+        }
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&records)),
+            vec![true; records.len()]
+        );
+        let totals = q!(harness, t => t.stats_totals_load(&every_total()));
+        assert_eq!(totals, loaded(&records));
+        let filter = CardStatsFilter {
+            source: SourceFilter::Live,
+            mode: None,
+            patch: None,
+            pilot: PilotFilter::Unified,
+        };
+        let report = card_stats_of(&totals, &filter);
+        assert_eq!(report, card_stats(&records, &filter));
+        let cards: Vec<&str> = report.choices.iter().map(|row| row.card.as_str()).collect();
+        assert_eq!(cards, ["core-001", "core-002"]);
+        let one = &report.choices[0].choices;
+        let split = |radiant: (i32, i32), normal: (i32, i32)| FaceTally {
+            radiant: Tally {
+                games: radiant.0,
+                wins: radiant.1,
+                draws: 0,
+            },
+            normal: Tally {
+                games: normal.0,
+                wins: normal.1,
+                draws: 0,
+            },
+        };
+        assert_eq!(one.variants["one"], split((2, 1), (0, 0)));
+        assert_eq!(one.outputs["core-t-rush"], split((0, 0), (2, 1)));
+        assert_eq!(one.outputs.len(), 1, "The Coin names no maker");
+        assert_eq!(one.offers["core-003"].offered, split((0, 0), (2, 1)));
+        assert_eq!(one.offers["core-003"].picked, FaceTally::default());
+        assert_eq!(one.offers["core-004"].picked, split((0, 0), (2, 1)));
+        assert_eq!(report.choices[1].choices.variants["X=2"], split((0, 0), (2, 1)));
+        assert!(card_stats(&mixed_records(), &filter).choices.is_empty());
+    }
+
     /// R4673001: a record whose plays carry their face is folded into each face's drills too, kept in the
     /// same rows (`turns` and `co`) beside the card's own and loaded as the records give them, a later fold
     /// adding to what an earlier one wrote; a record without face flags adds to neither face.
@@ -5727,6 +5877,7 @@ mod game_records {
         r1976000_folds_a_batch_once_with_no_record_and_leaves_out_the_ids_the_table_holds,
         r1994000_a_records_game_figures_read_the_same_once_the_purge_empties_its_detail,
         r2089000_folds_the_created_figures_and_loads_them_as_the_records_give,
+        r4672003_folds_the_choices_and_loads_them_as_the_records_give,
         r4673001_keeps_each_faces_drills_and_loads_them_as_the_records_give,
     );
 }
@@ -8640,6 +8791,10 @@ mod social {
             call!(harness, t => t.blocks_add(&a.id, &a.id, now)).is_err(),
             "a block of oneself"
         );
+        assert!(
+            call!(harness, t => t.blocks_add(&a.id, &a.id.to_ascii_uppercase(), now)).is_err(),
+            "a block of oneself with uppercase id"
+        );
 
         assert!(q!(harness, t => t.blocks_remove(&a.id, &b.id)));
         assert!(!q!(harness, t => t.blocks_remove(&a.id, &b.id)));
@@ -8666,6 +8821,15 @@ mod social {
             must(q!(harness, t => t.profiles_find(&a.id)), "the profile").id,
             a.id
         );
+        assert_eq!(
+            must(
+                q!(harness, t => t.profiles_find(&a.id.to_ascii_uppercase())),
+                "the profile with uppercase id"
+            )
+            .id,
+            a.id
+        );
+        assert!(q!(harness, t => t.profiles_find("urn:uuid:67e55044-10b1-426f-9247-bb680e5fe0c8")).is_none());
         assert!(q!(harness, t => t.profiles_find("not-a-uuid")).is_none());
         assert!(q!(harness, t => t.profiles_find(&id())).is_none());
     }
@@ -8786,6 +8950,10 @@ mod social {
         assert_eq!(
             ids_of(&q!(harness, t => t.chat_page(&a.id, &b.id, Some(&ChatCursor::of(&m3)), 10))),
             vec![m1.id.clone(), m2.id.clone()]
+        );
+        assert!(
+            q!(harness, t => t.chat_page("urn:uuid:67e55044-10b1-426f-9247-bb680e5fe0c8", &b.id, None, 10))
+                .is_empty()
         );
 
         let unread = |rows: IndexMap<String, i64>| rows.into_iter().collect::<Vec<(String, i64)>>();
@@ -14848,6 +15016,9 @@ mod daily {
         assert!(q!(harness, t => t.daily_notify_get(&c.id)).email_on);
         assert!(!q!(harness, t => t.daily_notify_unsubscribe(&id())));
         assert!(!q!(harness, t => t.daily_notify_unsubscribe("not-a-token")));
+        assert!(
+            !q!(harness, t => t.daily_notify_unsubscribe("urn:uuid:67e55044-10b1-426f-9247-bb680e5fe0c8"))
+        );
         assert!(
             call!(harness, t => t.daily_notify_get(&id())).is_err(),
             "{}: notice settings for no account",

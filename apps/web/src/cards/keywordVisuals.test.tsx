@@ -579,7 +579,8 @@ describe("R2577000 a unit on the field draws only the keywords that can still ac
     expect(keywordChips(keywords, 0)).toEqual({ shown: [{ kind: "Poisonous" }, { kind: "Lifesteal" }, { kind: "Windfury" }], folded: [] });
     const cf = renderUnit({ keywords });
     const visible = [...cf.querySelectorAll<HTMLElement>(".keywords > [data-keyword]:not([data-chip='hidden'])")];
-    expect(visible.map((chip) => chip.textContent)).toEqual(["PO", "LS", "WF"]);
+    // R4747000: the face draws them in the keyword line's order, Windfury before Poisonous and Lifesteal.
+    expect(visible.map((chip) => chip.textContent)).toEqual(["WF", "PO", "LS"]);
     expect(cf.querySelector(".cf-kw-more")).toBeNull();
     expect(cf.querySelectorAll(".keywords > [data-keyword]")).toHaveLength(keywords.length);
   });

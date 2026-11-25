@@ -645,6 +645,10 @@ pub const QUEUE_TICKET_STALE_MS: i64 = 12_000;
 /// before the client stops waiting with a rejoin message. Two, so one failed or slow read cannot
 /// end a live queue.
 pub const QUEUE_ENDED_AFTER_READS: usize = 2;
+/// R4446000: seconds a cancelled queue ticket is kept, counted from its enqueue, before the hourly
+/// retention purge may delete it. An hour: the enqueue's read-back and the pairing's re-read both
+/// happen inside one request, long before.
+pub const QUEUE_TICKET_CANCELLED_KEEP_SECONDS: i64 = 3600;
 
 /// SPEC §11 R640002: the window the queue readout counts over, in seconds: the waits of the tickets
 /// claimed in it and the games that ended in it.
@@ -1370,6 +1374,10 @@ pub const CHAT_MESSAGES_PER_MINUTE: usize = 20;
 pub const CHAT_RETENTION_DAYS: i64 = 30;
 /// B53: the messages one page of `GET /api/chat/:friendId` holds, newest last.
 pub const CHAT_PAGE: i64 = 50;
+/// #4838: how far into the future a chat cursor timestamp may reach before it is refused as
+/// malformed: one day, so slight client clock drift is tolerated but timestamps beyond any real
+/// message are rejected before PostgreSQL to_timestamp errors.
+pub const CHAT_CURSOR_FUTURE_MAX_MS: i64 = MS_PER_DAY;
 /// B52 (#1825): the most shares one `GET /api/replays/shared` lists, newest first, so that list is
 /// bounded like the friends (`MAX_FRIENDS`) and a chat page (`CHAT_PAGE`); fifty is a chat page's.
 pub const SHARED_REPLAYS_LIST_MAX: i64 = 50;

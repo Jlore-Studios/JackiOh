@@ -1,6 +1,6 @@
 //! SPEC §8.13 IA #97 Retry Bot ((1) Unit, Common, 2/1 → 4/2), a card of the held Infinite Assault set (R4577000).
 //!   Base:    "Reborn"
-//!   Radiant: "Reborn, Rush"
+//!   Radiant: "Rush, Reborn"
 //!
 //! Reborn and Rush are the catalog's: the script is empty, as C+ #6 Wrong-House Attacker's is, and
 //! the Radiant face only adds Rush. Reborn's return is the engine's (§6.1); the log the Recursion

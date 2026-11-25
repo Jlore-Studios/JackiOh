@@ -1,6 +1,6 @@
 //! SPEC §8.13 IA #150 Wall of Static ((3) Unit, Common, 3/10 → 6/20), a card of the held Infinite Assault set (R4577000).
-//!   Base:    "Taunt, Can't attack"
-//!   Radiant: "Taunt, Can't attack. After this is attacked: Deal {damage} damage to the attacker." (damage 2)
+//!   Base:    "Can't attack, Taunt"
+//!   Radiant: "Can't attack, Taunt. After this is attacked: Deal {damage} damage to the attacker." (damage 2)
 //!
 //! Engine: the base face is keywords only (the catalog's data). The Radiant face's `afterAttacked`
 //! (MD-C26, R1026) deals the declared {damage} to the attacker — declared or forced alike — once
