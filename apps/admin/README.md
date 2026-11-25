@@ -59,7 +59,9 @@ section again.
   pull request.
 - **Audit** (`src/Audit.tsx`): every admin action, newest first, its request and the state before and
   after as `JSON.stringify` text. A filter row narrows the list to one acting account or one route
-  (`?profile_id=`, `?route=`), and Older appends the next page past `nextBeforeId` (`?before_id=`).
+  (`?profile_id=`, `?route=`), and Older appends the next page past the shown list's `nextBeforeId`
+  (`?before_id=`), read with the filter that produced the shown rows; an Older answer overtaken by a
+  newer first page is dropped.
 
 ## Sign-in and the session
 
