@@ -20095,9 +20095,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "",
-      "owner_since": "2026-11-25T15:19:01Z",
-      "owner_why": "its own review was handed off to its final audit: `claude-1` is busy: its lanes are all taken",
+      "owner": "claude-1",
+      "owner_since": "2026-11-25T16:31:14Z",
+      "owner_why": "it took it up; its own review was handed off to its final audit: `claude-1` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-25T00:54:26Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -24297,7 +24297,7 @@
       }
     },
     "4935": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_early": false,
       "ci_fixes": 1,
@@ -24320,12 +24320,12 @@
       "interruptions": 0,
       "issue": 4821,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "fixing-ci",
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-1",
       "queued_at": "2026-11-25T15:34:01Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "45644499187",
+      "run_id": "pending:13f45811-1795624201",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -24346,7 +24346,7 @@
         "run": "45605312214"
       },
       "source": "ci",
-      "started_at": "2026-11-25T15:22:45Z",
+      "started_at": "2026-11-25T16:31:14Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -24665,9 +24665,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T16:29:47Z",
+    "at": "2026-11-25T16:31:14Z",
     "url": "",
-    "what": "spot-check #4918 on claude-6"
+    "what": "revise #4935 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-25T16:05:55Z",
