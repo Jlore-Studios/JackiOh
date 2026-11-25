@@ -21095,11 +21095,6 @@
       "owner": "muse",
       "owner_since": "2026-11-25T11:43:17Z",
       "owner_why": "it took it up; released from its hold: `agy` has no runner free where it runs",
-      "paused": {
-        "at": "2026-11-25T10:42:09Z",
-        "interrupt": "usage",
-        "provider": "agy"
-      },
       "pending_request": false,
       "planned_at": "2026-11-25T10:12:28Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
