@@ -812,6 +812,9 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     // R602: what a hidden card visibly does stays. A face-down trap's aura is live (R403), and a unit's
     // Attack and Health are on the board for both players to read, so every unit keeps the stats it
     // shows: the difference its placeholder made goes on the unit's buffs.
+    // R4803000: the difference is taken on the Attack the unit shows, floored at 0 (§10.4). A unit whose
+    // shown Attack the placeholders left alone keeps its raw Attack, below 0 included (R150), and one whose
+    // shown Attack they changed takes the shown value, never how far below 0 a hidden aura took it (R185).
     for player in PLAYER_IDS {
         let ids: Vec<String> = active_units_of(&next, player)
             .iter()
@@ -823,7 +826,14 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
             };
             let truth = unit_view(state, shown);
             let attack_delta = match find_instance(&next, &id) {
-                Some(unit) => truth.attack - unclamped_attack(&next, unit),
+                Some(unit) => {
+                    let raw = unclamped_attack(&next, unit);
+                    if raw.max(0) == truth.attack {
+                        0
+                    } else {
+                        truth.attack - raw
+                    }
+                }
                 None => continue,
             };
             if let Some(unit) = find_instance_mut(&mut next, &id) {
