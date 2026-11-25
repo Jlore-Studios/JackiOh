@@ -1,0 +1,52 @@
+# TEMPORARY (#4599): super.yml's fuzz waves, plain and handicapped in jobs of their own so a failure in
+# one never hides the other, on this branch's head. Deleted before the branch's pull request opens.
+name: tmp fuzz 4599
+on:
+  push:
+    branches: [claude/charming-bell-p8etig]
+    paths: [".github/workflows/tmp-fuzz-4599.yml", "crates/**"]
+  workflow_dispatch:
+env:
+  CARGO_TERM_COLOR: never
+  FUZZ_SEEDS: "13200"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          node: "false"
+      - run: cargo build --release -p jackioh-tools
+      - run: tar -czf "$RUNNER_TEMP/bin.tgz" target/release/jackioh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bin
+          path: ${{ runner.temp }}/bin.tgz
+          retention-days: 1
+  fuzz:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+        wave: [plain, handicap]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: bin
+          path: ${{ runner.temp }}
+      - run: tar -xzf "$RUNNER_TEMP/bin.tgz"
+      - env:
+          SHARD: ${{ matrix.shard }}
+          WAVE: ${{ matrix.wave }}
+        run: |
+          per=$(( FUZZ_SEEDS / 4 ))
+          from=$(( (SHARD - 1) * per + 1 ))
+          flag=""
+          [ "$WAVE" = handicap ] && flag=--handicap
+          target/release/jackioh fuzz --from "$from" --seeds "$per" $flag
