@@ -220,7 +220,7 @@ impl NodeCounter for CountingNodeCounter<'_> {
     }
 }
 
-/// R3575603: one step a decision simulated and found expensive (`is_expensive_step`): the state it
+/// R3575603: one step a decision simulated and found expensive (`surcharge_nodes`, `announced_surcharge_nodes`): the state it
 /// stepped from, the seat and the action, and the engine's answer.
 struct MemoEntry {
     state: GameState,
@@ -306,12 +306,6 @@ impl SimMemo {
         }
         self.entries.set(entries);
     }
-}
-
-/// R3575603: whether the step `action` took from `state` to `stepped` is one the search pays more than
-/// its node for (`surcharge_nodes`, `announced_surcharge_nodes`): the only steps `SimMemo` keeps.
-fn is_expensive_step(state: &GameState, seat: PlayerId, action: &ActionBody, stepped: &ReduceResult) -> bool {
-    surcharge_nodes(state, seat, action) > 0 || announced_surcharge_nodes(state, action, stepped) > 0
 }
 
 pub fn create_node_counter<'a>(
@@ -576,9 +570,6 @@ pub(crate) fn best_auto_answer(
 /// sequence is answered right until its streak is the face's expected one, then Stopped, which summons
 /// that Kenny (R1184000). `None` for any other prompt, which keeps `best_auto_answer`.
 pub(crate) fn worked_step(state: &GameState, seat: PlayerId) -> Option<(GameState, ActionBody)> {
-    if state.result.is_some() {
-        return None;
-    }
     let pending = state.pending.as_ref()?;
     if pending.player_id != seat || pending.kind != PromptKind::Answer {
         return None;
@@ -748,9 +739,11 @@ fn simulate_answering(
             Some(stepped) => stepped,
             None => {
                 let stepped = reduce_unpiloted(state, &Action::new(action.clone(), seat, nonce));
+                // R3575603: the memo keeps only a step the search pays more than its node for.
                 if let Some(memo) = memo
                     && stepped.error.is_none()
-                    && is_expensive_step(state, seat, action, &stepped)
+                    && (surcharge_nodes(state, seat, action) > 0
+                        || announced_surcharge_nodes(state, action, &stepped) > 0)
                 {
                     memo.keep(state, seat, action, &stepped);
                 }
@@ -817,25 +810,6 @@ fn passed_score(state: &GameState, seat: PlayerId, prices: &Prices) -> f64 {
         + float_credit(state, seat, unspent, &AI_EVAL)
 }
 
-/// `closeLine`'s step: the line's turn ended here, or `None` where the line stays as it stands.
-fn close_line_step(
-    state: &GameState,
-    seat: PlayerId,
-    root_turn: i32,
-    counter: &dyn NodeCounter,
-    prices: &Prices,
-) -> Option<GameState> {
-    if line_status(state, seat, root_turn) == LineStatus::Open
-        && state.pending.is_none()
-        && state.active == seat
-        && state.phase == Phase::Main
-        && let Some(Ok(next)) = simulate(state, seat, &ActionBody::EndTurn, counter, prices)
-    {
-        return Some(next);
-    }
-    None
-}
-
 /// Where a line stops: a line still open in the seat's main phase ends its turn here (one node, when
 /// one is left). Anything else stops where it stands.
 pub fn close_line(
@@ -845,7 +819,15 @@ pub fn close_line(
     counter: &dyn NodeCounter,
     prices: &Prices,
 ) -> GameState {
-    close_line_step(state, seat, root_turn, counter, prices).unwrap_or_else(|| state.clone())
+    // An open line with no prompt is the seat's own turn (`line_status`).
+    if line_status(state, seat, root_turn) == LineStatus::Open
+        && state.pending.is_none()
+        && state.phase == Phase::Main
+        && let Some(Ok(next)) = simulate(state, seat, &ActionBody::EndTurn, counter, prices)
+    {
+        return next;
+    }
+    state.clone()
 }
 
 /// The static value of a line that stopped at `state`: a passed turn pays for its unspent mana.
@@ -855,25 +837,6 @@ pub fn static_score(state: &GameState, seat: PlayerId, root_turn: i32, prices: &
     } else {
         evaluate_priced(state, seat, NextSwing::Enemy, &AI_EVAL, prices)
     }
-}
-
-/// A line's value: `static_score`, but an open line is first closed with an endTurn if the seat is in its
-/// main phase and a node is left.
-pub fn terminal_score(
-    state: &GameState,
-    seat: PlayerId,
-    root_turn: i32,
-    counter: &dyn NodeCounter,
-    prices: &Prices,
-) -> f64 {
-    let status = line_status(state, seat, root_turn);
-    if status == LineStatus::Open {
-        return match close_line_step(state, seat, root_turn, counter, prices) {
-            None => evaluate_priced(state, seat, NextSwing::Enemy, &AI_EVAL, prices),
-            Some(closed) => static_score(&closed, seat, root_turn, prices),
-        };
-    }
-    static_score(state, seat, root_turn, prices)
 }
 
 /// `items` sorted and joined by commas: a part of `search_signature` that two orders of the same moves

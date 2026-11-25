@@ -27,7 +27,8 @@ use jackioh_engine::{
 };
 
 use crate::candidates::{
-    Blow, Exchange, Side, blow, candidate_actions_in, cleaved_neighbours, exchange, side_of, wall_switches,
+    Blow, Exchange, Side, blow, candidate_actions_in, cleaved_neighbours, exchange, front_value, side_of,
+    wall_switches,
 };
 use crate::config::{AI_EVAL, AI_GUESS_SEED, AI_REPLY};
 use crate::evaluate::{
@@ -331,28 +332,18 @@ fn ranked_attacks(
     legal: &[ActionBody],
     prices: &Prices,
 ) -> Vec<ActionBody> {
-    let hero = format!("hero-{}", seat.as_str());
-    let mut ranked: Vec<(ActionBody, f64)> = Vec::new();
-    for action in legal.iter().cloned() {
-        let ActionBody::Attack {
-            attacker_id,
-            target_id,
-        } = &action
-        else {
-            continue;
-        };
-        let Some(attacker) = find_instance(state, attacker_id) else {
-            continue;
-        };
-        let value = if *target_id == hero {
-            face_value(state, attacker, seat, false)
-        } else {
-            trade_value(state, attacker, target_id, prices).value
-        };
-        if value > 0.0 {
-            ranked.push((action, value));
-        }
-    }
+    // The attacker's own read of each hit (`front_value`): anything else, and a hit worth nothing, is left out.
+    let attacker_side = seat.opponent();
+    let mut ranked: Vec<(ActionBody, f64)> = legal
+        .iter()
+        .map(|action| {
+            (
+                action.clone(),
+                front_value(state, attacker_side, action, false, prices),
+            )
+        })
+        .filter(|(_, value)| *value > 0.0)
+        .collect();
     ranked.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
     ranked.into_iter().map(|(action, _)| action).collect()
 }

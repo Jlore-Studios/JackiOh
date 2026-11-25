@@ -617,9 +617,8 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
   (0.8) against random and `DUOS_GATE_GREEDY_WIN_FLOOR` (0.7) against greedy, of
   `DUOS_GATE_GAMES_SMOKE` (20) games with no action of either team refused, no AI action off a
   fallback path and no panic an AI seat's search caught (`cargo jackioh gate --duos` plays both);
-  `duos_gate_game_at` plays a game at another budget, and `duos_gate_game_with` one with a stand-in
-  decider (`DuosGateDecider`) for the AI team, which the tests use to show the gate catching a
-  weakened pass.
+  `duos_gate_game_with` plays a game at another budget or with a stand-in decider (`DuosGateDecider`)
+  for the AI team, which the tests use to show the gate catching a weakened pass.
 
 ## Commands
 

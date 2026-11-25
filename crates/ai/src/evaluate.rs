@@ -3,7 +3,7 @@
 //! a discount), cards in hand, library, the enemy's face damage next turn against our life and the
 //! reverse (in a Duos duel own HP and the team's pool, R964000), and, late in the game, the turn cap.
 //! #1086 prices what a side has banked in public state, #1224 what its coming refreshes will or will
-//! not give, #1506 the cards dormant under its Stack piles, #1602 three facts both seats see, #2928
+//! not give, #1506 the cards dormant under its Stack piles, #1602 a Windfury unit's second attack, #2928
 //! the cards a side may still play from its graveyard. The decision's root prices each Death the seat
 //! can read by what it leaves behind (#2424; a Starship Piece's by the copy it fuses into, #2566; a
 //! backrow card's, either side's, and a hand Field Spell's, #2687), each turn hook by one firing
@@ -117,16 +117,6 @@ pub(crate) fn heal_converted(state: &GameState, player: PlayerId) -> bool {
 /// (`backrow_is_public`). A placeholder never is, and is asked first: the rule reads the definition.
 fn readable_by(state: &GameState, card: &CardInstance, seat: PlayerId) -> bool {
     find_def(Some(state), &card.def_id).is_some() && backrow_is_public(state, card, seat)
-}
-
-/// R351: the cost a backrow card the seat cannot read shows both players (`view_for`'s number): a
-/// placeholder's `cost_override` from `redact`, any other card's `effective_cost`. A determinization
-/// keeps the parked price on the trap it samples (R762), so every world shows what the true board does.
-fn shown_cost(state: &GameState, card: &CardInstance) -> i32 {
-    if find_def(Some(state), &card.def_id).is_none() {
-        return card.cost_override.unwrap_or(0);
-    }
-    effective_cost(state, card, CostOptions::default())
 }
 
 /// B3.3: the share of itself a card keeps under its Brittle count (`active_brittle_count`), 1 with none.
@@ -799,14 +789,7 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights, price
         };
         value += w.attack * f64::from(view.attack) * share;
     }
-    for keyword in &view.keywords {
-        if let Some(weight) = weights.of(keyword.kind()) {
-            value += weight;
-        }
-        if let Keyword::SpellDamage { n } = keyword {
-            value += w.spell_damage * f64::from(*n);
-        }
-    }
+    value = with_keywords(value, &view.keywords, w);
     // §4.1: Defense Position's Taunt and Armor +1 are the position's, not the unit's: their worth is the
     // damage they soak, which `face_threat` and the reply already count, so here they count for only
     // `positionGrants`. `defenseOwnTauntKept` keeps a unit's own Taunt in full and discounts Armor only
@@ -894,6 +877,11 @@ fn face_worth(attack: i32, health: i32, keywords: &[Keyword], w: &EvalWeights) -
     if !has_keyword(keywords, KeywordKind::CantAttack) {
         value += w.attack * f64::from(attack);
     }
+    with_keywords(value, keywords, w)
+}
+
+/// `value` with each keyword's weight added, in the order the keywords stand, and Spell Damage's by its n.
+fn with_keywords(mut value: f64, keywords: &[Keyword], w: &EvalWeights) -> f64 {
     for keyword in keywords {
         if let Some(weight) = w.keyword.of(keyword.kind()) {
             value += weight;
@@ -1476,13 +1464,8 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
                     }
                 }
             }
-            // R351: the cost it shows is public; nothing else of it is (no call at a zero weight).
-            _ => {
-                value += w.enemy_face_down;
-                if w.enemy_face_down_per_cost != 0.0 {
-                    value += w.enemy_face_down_per_cost * f64::from(shown_cost(state, card));
-                }
-            }
+            // A card the seat cannot read counts alike whatever cost it shows (R4702003).
+            _ => value += w.enemy_face_down,
         }
     }
 
@@ -1515,10 +1498,7 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
         }
     }
 
-    value += w.library_card * (side.library.len() as f64).min(w.library_comfort);
-    // §2.4: every fatigue draw taken adds a point to each one still to come.
-    value -= w.fatigue_draw * f64::from(side.fatigue_count);
-    value
+    value + w.library_card * (side.library.len() as f64).min(w.library_comfort)
 }
 
 /// The face damage `attacker`'s board could deal the other hero next turn, as AI_EVAL reads it
@@ -2322,6 +2302,14 @@ fn death_probe(
     ))
 }
 
+/// Whether `card` is one the hand probes spawn: a Unit or a Field Spell, by the face it holds.
+fn stays_once_played(world: &GameState, card: &CardInstance) -> bool {
+    matches!(
+        card_type_of_face(world, &card.def_id, card.radiant),
+        CardType::Unit | CardType::FieldSpell
+    )
+}
+
 /// R923001: `card`, a Unit in `seat`'s hand, spawned onto `world`'s field (a fresh card of its definition
 /// and face) in the zone a summon would take (`first_entry_zone`); on a full unit row the first zone whose
 /// pile is a single card is cleared first, by the sandbox's remove. `None` when the counter refuses a
@@ -2445,12 +2433,7 @@ pub fn death_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter
     let hand = world.players[seat]
         .hand
         .iter()
-        .filter(|card| {
-            matches!(
-                card_type_of_face(world, &card.def_id, card.radiant),
-                CardType::Unit | CardType::FieldSpell
-            )
-        })
+        .filter(|card| stays_once_played(world, card))
         .map(|card| (card, true));
     let listed: Vec<(&CardInstance, bool)> = field.chain(backrow).chain(hand).collect();
     let mut candidates: Vec<(DeathPrice, &CardInstance, bool)> = Vec::new();
@@ -2994,12 +2977,8 @@ fn rekeyed_activation_prices(
         .into_iter()
         .filter(|card| acts_to_awaken(world, card));
     let mut cards: Vec<&CardInstance> = Vec::new();
-    for card in sleepers.chain(world.players[seat].hand.iter().filter(|card| {
-        matches!(
-            card_type_of_face(world, &card.def_id, card.radiant),
-            CardType::Unit | CardType::FieldSpell
-        )
-    })) {
+    let hand = world.players[seat].hand.iter();
+    for card in sleepers.chain(hand.filter(|card| stays_once_played(world, card))) {
         if !subsystems::abilities_of(world, card).is_empty()
             && !priced.iter().any(|entry| entry.is_for(card))
             && !cards.iter().any(|seen| ActivationPrice::key(seen).is_for(card))
@@ -3029,30 +3008,14 @@ fn rekeyed_activation_prices(
         let Some((placed, unit)) = spawned else {
             continue;
         };
-        let Some(enemy_turn) = next_turn(&placed, seat, &probes) else {
+        // Only the spawned card is tried.
+        let Some((price, cut)) = uses_two_turns_on(&placed, seat, &unit.id, &hidden, &probes) else {
             return;
         };
-        let Some(enemy_turn) = enemy_turn else {
-            continue;
-        };
-        let Some(own_turn) = next_turn(&enemy_turn, seat.opponent(), &probes) else {
-            return;
-        };
-        let Some(own_turn) = own_turn else {
-            continue;
-        };
-        // Only the spawned card is tried: every other card of the seat's is marked tried.
-        let mut tried: Vec<ActivationPrice> = activate_sources(&own_turn, seat)
-            .into_iter()
-            .filter(|other| other.id != unit.id)
-            .map(ActivationPrice::key)
-            .collect();
-        let mut fresh: Vec<ActivationPrice> = Vec::new();
-        let cut = !price_uses(&own_turn, seat, &hidden, &probes, &mut tried, &mut fresh);
         // R3575400: the price is the hand card's, keyed by the card as the seat would play it: by its
         // own definition, never the one the probe's two turns made of it (a shipyard that fused a piece
         // in, R3539004), which no line of this decision holds.
-        if let Some(price) = fresh.into_iter().map(|entry| entry.price).reduce(f64::max) {
+        if let Some(price) = price {
             priced.push(ActivationPrice {
                 price,
                 ..ActivationPrice::key(card)
@@ -3062,6 +3025,32 @@ fn rekeyed_activation_prices(
             return;
         }
     }
+}
+
+/// Two turn ends on from `from`, then the uses of the card `id` alone, every other card of the seat's
+/// marked tried: the best of their prices, if it has a use, and whether the probes ran out pricing them.
+/// `None` when they ran out on the way there; no price and no cut where a turn would not end.
+fn uses_two_turns_on(
+    from: &GameState,
+    seat: PlayerId,
+    id: &str,
+    hidden: &IndexSet<String>,
+    probes: &dyn NodeCounter,
+) -> Option<(Option<f64>, bool)> {
+    let Some(enemy_turn) = next_turn(from, seat, probes)? else {
+        return Some((None, false));
+    };
+    let Some(own_turn) = next_turn(&enemy_turn, seat.opponent(), probes)? else {
+        return Some((None, false));
+    };
+    let mut tried: Vec<ActivationPrice> = activate_sources(&own_turn, seat)
+        .into_iter()
+        .filter(|other| other.id != id)
+        .map(ActivationPrice::key)
+        .collect();
+    let mut fresh: Vec<ActivationPrice> = Vec::new();
+    let cut = !price_uses(&own_turn, seat, hidden, probes, &mut tried, &mut fresh);
+    Some((fresh.into_iter().map(|entry| entry.price).reduce(f64::max), cut))
 }
 
 /// R4197000: the card `seat`'s own open prompt resumes on (`resume.instance_id`) when it is one of the
@@ -3140,27 +3129,11 @@ pub fn prompt_activation_prices(
         {
             continue;
         }
-        // From here as `rekeyed_activation_prices`' tail: two turn ends, the card's uses alone.
-        let Some(enemy_turn) = next_turn(&answered, seat, &probes) else {
+        // As `rekeyed_activation_prices`: two turn ends, the card's uses alone.
+        let Some((price, cut)) = uses_two_turns_on(&answered, seat, &now.id, &hidden, &probes) else {
             break;
         };
-        let Some(enemy_turn) = enemy_turn else {
-            continue;
-        };
-        let Some(own_turn) = next_turn(&enemy_turn, seat.opponent(), &probes) else {
-            break;
-        };
-        let Some(own_turn) = own_turn else {
-            continue;
-        };
-        let mut tried: Vec<ActivationPrice> = activate_sources(&own_turn, seat)
-            .into_iter()
-            .filter(|other| other.id != now.id)
-            .map(ActivationPrice::key)
-            .collect();
-        let mut fresh: Vec<ActivationPrice> = Vec::new();
-        let cut = !price_uses(&own_turn, seat, &hidden, &probes, &mut tried, &mut fresh);
-        if let Some(price) = fresh.into_iter().map(|entry| entry.price).reduce(f64::max) {
+        if let Some(price) = price {
             priced.push(ActivationPrice {
                 price,
                 ..ActivationPrice::key(now)

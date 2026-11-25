@@ -144,7 +144,7 @@ fn r4447000_a_decision_counts_the_finalist_replays_its_worlds_cut() {
 }
 
 /// R4447000: a line that plays a card it drew is cut on a world that drew other cards, and not on the
-/// world it was found on; `score_line` is `replay_line`'s score. A counter that runs out before the
+/// world it was found on. A counter that runs out before the
 /// replay's closing endTurn ends it with no score.
 #[test]
 fn r4447000_a_line_that_plays_a_card_it_drew_is_cut_on_a_world_that_drew_another() {
@@ -154,7 +154,7 @@ fn r4447000_a_line_that_plays_a_card_it_drew_is_cut_on_a_world_that_drew_another
     assert!(!replayed(&a, &line).0.cut);
     let counter = create_node_counter(AI_BUDGET.nodes, None);
     assert_eq!(
-        score_line(&b, AI, &line, &counter, false, None, Prices::NONE),
+        replay_line(&b, AI, &line, &counter, None, Prices::NONE).map(|replay| replay.score),
         Some(cut.score)
     );
     let short = create_node_counter(used - 1, None);

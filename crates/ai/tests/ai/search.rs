@@ -1227,17 +1227,21 @@ mod lanes_that_play_differently {
     }
 
     /// #1635: a finalist that opens with a play only the root offers is replayed on another world, not
-    /// cut at its first action: `score_line` checks a line's first action against the root's set.
+    /// cut at its first action: `replay_line` checks a line's first action against the root's set.
     #[test]
-    fn score_line_replays_a_first_action_only_the_root_offers() {
+    fn replay_line_replays_a_first_action_only_the_root_offers() {
         let state = lane_eater_board();
         let play = root_candidate_actions(&state, AI, Prices::NONE)
             .into_iter()
             .find(|action| lane_of(action) == Some(4))
             .expect("the root offers lane 4");
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        let played = score_line(&state, AI, &[play], &counter, false, None, Prices::NONE).expect("in budget");
-        let passed = score_line(&state, AI, &[], &counter, false, None, Prices::NONE).expect("in budget");
+        let played = replay_line(&state, AI, &[play], &counter, None, Prices::NONE)
+            .map(|replay| replay.score)
+            .expect("in budget");
+        let passed = replay_line(&state, AI, &[], &counter, None, Prices::NONE)
+            .map(|replay| replay.score)
+            .expect("in budget");
         assert!(played > passed, "{played} > {passed}");
     }
 
@@ -2313,7 +2317,15 @@ mod rescored_own_prompts_1636 {
 
     /// `line` scored on `world` after the opponent's reply, as `decide` re-scores a finalist.
     fn rescore(world: &GameState, line: &[ActionBody], counter: &dyn NodeCounter) -> Option<f64> {
-        score_line(world, AI, line, counter, true, None, Prices::NONE)
+        replay_line(
+            world,
+            AI,
+            line,
+            counter,
+            Some(&hidden_card_ids(world, AI)),
+            Prices::NONE,
+        )
+        .map(|replay| replay.score)
     }
 
     /// #1636: the line [Scarab, its answer] found on one world, scored on a world whose offer lacks

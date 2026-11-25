@@ -15,7 +15,7 @@ use crate::candidates::{
 };
 use crate::config::{AI_EVAL, AI_SEARCH};
 use crate::evaluate::{NextSwing, Prices, evaluate_priced};
-use crate::reply::{hidden_card_ids, reply_score};
+use crate::reply::reply_score;
 use crate::simulate::{
     AnswersTried, LineStatus, best_auto_answer, close_line, lane_free_signature, line_status,
     own_prompt_score, search_signature, simulate, static_score, unit_lanes,
@@ -87,18 +87,15 @@ fn expand(
         .filter(|action| !matches!(action, ActionBody::EndTurn))
         .collect();
     moves.truncate(width);
-    let left_out: Vec<ActionBody> = stand_downs
-        .into_iter()
-        .filter(|stand_down| !moves.contains(stand_down))
-        .take(AI_SEARCH.position_switches.max(0) as usize)
-        .collect();
-    moves.extend(left_out);
-    let walls_left_out: Vec<ActionBody> = walls
-        .into_iter()
-        .filter(|wall| !moves.contains(wall))
-        .take(AI_SEARCH.position_switches.max(0) as usize)
-        .collect();
-    moves.extend(walls_left_out);
+    // Past the cut: the first stand-downs it left out, then the first walls.
+    for switches in [stand_downs, walls] {
+        let left_out: Vec<ActionBody> = switches
+            .into_iter()
+            .filter(|switch| !moves.contains(switch))
+            .take(AI_SEARCH.position_switches.max(0) as usize)
+            .collect();
+        moves.extend(left_out);
+    }
     if let Some(end) = end {
         moves.push(end);
     }
@@ -246,13 +243,9 @@ pub fn beam_search(
         if actions.is_empty() {
             continue;
         }
+        // Every line here is open, so one `close_line` left where it stood scores as the hand eval.
         let end = close_line(&state, seat, root_turn, counter, prices);
-        // Equality means `close_line` took no step: a step always moves the state on.
-        let score = if end == state {
-            evaluate_priced(&end, seat, NextSwing::Enemy, &AI_EVAL, prices)
-        } else {
-            static_score(&end, seat, root_turn, prices)
-        };
+        let score = static_score(&end, seat, root_turn, prices);
         let status = line_status(&end, seat, root_turn);
         complete.push(Line {
             actions,
@@ -363,27 +356,4 @@ pub fn replay_line(
         None => static_score(&state, seat, root_turn, prices),
     };
     Some(LineReplay { score, cut })
-}
-
-/// `replay_line`'s score: cut at the first step its world does not offer (R4447000). `hidden` defaults
-/// to `det`'s hidden cards when `reply` is set.
-pub fn score_line(
-    det: &GameState,
-    seat: PlayerId,
-    actions: &[ActionBody],
-    counter: &dyn NodeCounter,
-    reply: bool,
-    hidden: Option<&IndexSet<String>>,
-    prices: &Prices,
-) -> Option<f64> {
-    let default_hidden;
-    let reply = match (reply, hidden) {
-        (false, _) => None,
-        (true, Some(hidden)) => Some(hidden),
-        (true, None) => {
-            default_hidden = hidden_card_ids(det, seat);
-            Some(&default_hidden)
-        }
-    };
-    replay_line(det, seat, actions, counter, reply, prices).map(|replay| replay.score)
 }

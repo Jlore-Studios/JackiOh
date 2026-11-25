@@ -423,19 +423,6 @@ pub async fn open_packs_once(
     Ok(Spent::Now(opened))
 }
 
-/// [`open_packs_once`] with no key.
-pub async fn open_packs(
-    app: &App,
-    profile_id: &str,
-    pack: PackKind,
-    registry: &[Cosmetic],
-    seeds: &[String],
-) -> Result<OpenedPacks, ApiError> {
-    open_packs_once(app, profile_id, pack, registry, seeds, None)
-        .await?
-        .now()
-}
-
 /// The error a decision's refusal answers: no pack held is a conflict, writing nothing; a pool with no card
 /// is the catalog's fault.
 fn refused(refusal: EconomyRefusal) -> ApiError {

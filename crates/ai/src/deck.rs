@@ -259,40 +259,25 @@ fn curve_shares(mana_cap: i32) -> ByBucket<f64> {
 
 /// Integers summing to size (largest remainder).
 pub fn curve_targets(size: i32, mana_cap: i32) -> ByBucket<i32> {
-    struct Remainder {
-        bucket: CostBucket,
-        fraction: f64,
-        order: usize,
-    }
     let shares = curve_shares(mana_cap);
     let mut targets: ByBucket<i32> = ByBucket::default();
-    let mut remainders: Vec<Remainder> = Vec::new();
+    let mut remainders: Vec<(CostBucket, f64)> = Vec::new();
     let mut assigned = 0;
-    for (order, bucket) in BUCKET_ORDER.into_iter().enumerate() {
+    for bucket in BUCKET_ORDER {
         let raw = shares[bucket] * f64::from(size);
         let whole = raw.floor();
         targets[bucket] = whole as i32;
         assigned += whole as i32;
-        remainders.push(Remainder {
-            bucket,
-            fraction: raw - whole,
-            order,
-        });
+        remainders.push((bucket, raw - whole));
     }
-    // Largest fractional part first; a tie goes to the cheaper bucket, so the result is a total order.
-    remainders.sort_by(|a, b| {
-        if a.fraction != b.fraction {
-            b.fraction.partial_cmp(&a.fraction).unwrap_or(Ordering::Equal)
-        } else {
-            a.order.cmp(&b.order)
-        }
-    });
+    // Largest fractional part first; a tie keeps curve order, the cheaper bucket first (the sort is stable).
+    remainders.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
     let mut i = 0usize;
     while assigned < size && !remainders.is_empty() {
-        let Some(entry) = remainders.get(i) else {
+        let Some((bucket, _)) = remainders.get(i) else {
             break;
         };
-        targets[entry.bucket] += 1;
+        targets[*bucket] += 1;
         assigned += 1;
         i = (i + 1) % remainders.len();
     }

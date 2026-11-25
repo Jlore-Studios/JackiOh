@@ -3613,6 +3613,37 @@ fn r4702002_r1085_the_engines_unreached_verbs_reads_and_tables_are_gone() {
     );
 }
 
+/// R4702003: the evaluation's two terms that shipped at weight 0 are gone: no source of the AI names
+/// either weight or the read only they used.
+#[test]
+fn r4702003_the_evaluations_zero_weight_terms_are_gone() {
+    let root = repo();
+    let mut files = Vec::new();
+    sources(&root.join("crates/ai/src"), &mut files);
+    assert!(files.len() > 15, "only {} source files found", files.len());
+    let gone = [
+        concat!("enemy_face_down", "_per_cost"),
+        concat!("fatigue", "_draw:"),
+        concat!("fn shown", "_cost("),
+    ];
+    let mut found: Vec<String> = Vec::new();
+    for file in &files {
+        let text = fs::read_to_string(file).unwrap_or_default();
+        for name in gone {
+            if text.contains(name) {
+                found.push(format!(
+                    "{}: `{name}`",
+                    file.strip_prefix(&root).unwrap_or(file).display()
+                ));
+            }
+        }
+    }
+    assert!(
+        found.is_empty(),
+        "a zero-weight term of the evaluation is back (R4702003): {found:?}"
+    );
+}
+
 /// The crates among `jackioh-run` and `jackioh-shared` that the manifest's `[dev-dependencies]` do not
 /// name, on one line, with the `ts` feature (#4426).
 fn dev_dependencies_missing_ts(manifest: &str) -> Vec<&'static str> {

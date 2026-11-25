@@ -313,10 +313,15 @@ fn open_round_seat(state: &DuosState, seat: DuosSeat) -> bool {
 /// of `redact` on the fixed probe seed, so the seat's own legal plays are read with no hidden card in
 /// reach and without touching any caller's stream.
 fn own_probe(duel: &GameState, player: PlayerId) -> GameState {
+    probe_on(duel, player, AI_SEARCH.probe_seed)
+}
+
+/// One determinization of `redact` from `player`'s seat on the fixed `seed`.
+fn probe_on(duel: &GameState, player: PlayerId, seed: &str) -> GameState {
     determinize(
         &redact(duel, player),
         player,
-        &mut Rng::new(AI_SEARCH.probe_seed, 0),
+        &mut Rng::new(seed, 0),
         DeterminizeOptions::default(),
     )
 }
@@ -556,12 +561,7 @@ fn pass_gain(
 /// seat on the fixed `DUOS_PASS_PROBE_SEED`, built exactly like `own_probe`, so its own hand and
 /// face-down cards (the team's to share, B29) are there and no hidden opponent card is.
 fn mate_probe(mate_duel: &GameState, mate: PlayerId) -> GameState {
-    determinize(
-        &redact(mate_duel, mate),
-        mate,
-        &mut Rng::new(DUOS_PASS_PROBE_SEED, 0),
-        DeterminizeOptions::default(),
-    )
+    probe_on(mate_duel, mate, DUOS_PASS_PROBE_SEED)
 }
 
 /// `card` passed into a copy of the teammate's probe, as B20's pass moves it: its match-made
@@ -606,10 +606,13 @@ pub fn duos_random_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
     let mut end_turn: Option<DuosActionBody> = None;
     let mut others: Vec<DuosActionBody> = Vec::new();
     for body in duos_legal_actions(state, seat) {
-        match policy_kind(&body) {
-            PolicyKind::Skipped => {}
-            PolicyKind::EndTurn => end_turn = Some(body),
-            PolicyKind::Other => others.push(body),
+        match &body {
+            DuosActionBody::Concede => {}
+            DuosActionBody::Duel { body: duel } if AI_SKIPPED_ACTIONS.contains(&duel.action_type()) => {}
+            DuosActionBody::Duel {
+                body: ActionBody::EndTurn,
+            } => end_turn = Some(body),
+            _ => others.push(body),
         }
     }
     if others.is_empty() {
@@ -620,26 +623,6 @@ pub fn duos_random_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
     }
     let at = rng.int(others.len() as i32);
     usize::try_from(at).ok().and_then(|at| others.into_iter().nth(at))
-}
-
-/// How §10.7's policy treats one offered action.
-enum PolicyKind {
-    Skipped,
-    EndTurn,
-    Other,
-}
-
-fn policy_kind(body: &DuosActionBody) -> PolicyKind {
-    match body {
-        DuosActionBody::Concede => PolicyKind::Skipped,
-        DuosActionBody::Duel { body } if AI_SKIPPED_ACTIONS.contains(&body.action_type()) => {
-            PolicyKind::Skipped
-        }
-        DuosActionBody::Duel {
-            body: ActionBody::EndTurn,
-        } => PolicyKind::EndTurn,
-        _ => PolicyKind::Other,
-    }
 }
 
 /// B32's second opponent (#1760): the 1v1 gates' one-ply greedy baseline (`greedy_action`) on the
@@ -813,19 +796,10 @@ pub fn duos_gate_report(opponent: DuosOpponent, played: &[DuosGateGame]) -> Duos
     }
 }
 
-/// Game n of the series against `opponent` at AI_GATE_BUDGET (`duos_gate_game_at`), the gate's own.
+/// Game n of the series against `opponent`, the gate's own: the AI team on `duos_decision` at
+/// AI_GATE_BUDGET (`duos_gate_game_with`).
 pub fn duos_gate_game(n: usize, series: &str, opponent: DuosOpponent) -> DuosGateGame {
-    duos_gate_game_at(n, series, opponent, AI_GATE_BUDGET)
-}
-
-/// Game n of the series at `budget`, the AI team on `duos_decision` (`duos_gate_game_with`).
-pub fn duos_gate_game_at(
-    n: usize,
-    series: &str,
-    opponent: DuosOpponent,
-    budget: SearchBudget,
-) -> DuosGateGame {
-    duos_gate_game_with(n, series, opponent, budget, duos_decision)
+    duos_gate_game_with(n, series, opponent, AI_GATE_BUDGET, duos_decision)
 }
 
 /// How an AI-team seat decides in a gate game: `duos_decision`, or a test's weakened stand-in that
