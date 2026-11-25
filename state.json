@@ -23882,7 +23882,16 @@
       "feedback_since": "2026-11-25T10:46:48Z",
       "issue": 4779,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-6",
+        "rejections": [],
+        "reviews": [],
+        "sha": "f8fc33cde4781a697b225a13e4a37565f8f7cbb0",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
