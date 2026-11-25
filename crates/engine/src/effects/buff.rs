@@ -464,13 +464,26 @@ pub fn aura_combat_keywords(args: &HookArgs<'_>, number: &str, key: Option<&str>
 /// row, a number set outright, the card made Radiant) once it has: a card whose text follows the number
 /// (`Script::combat_keywords_follow`) draws what the number, read as its Aura reads it, asks beyond
 /// its list, as the change resolves. Nothing is queued, and every other card is left as it was. A card
-/// holding no list yet has its arrival draw (or its fusion's) still to come, which reads the number as
-/// it is then, so it draws nothing here.
+/// holding no list yet has its arrival draw (or its fusion's, or its copy's, R4839000) still to come,
+/// which reads the number as it is then, so it draws nothing here.
 pub(crate) fn follow_combat_keywords(ctx: &mut EffectContext<'_>, card_id: &str) {
+    if find_instance(ctx.sink.state, card_id)
+        .is_some_and(|card| card.memory.contains_key(COMBAT_KEYWORDS_KEY))
+    {
+        top_up_to_number(ctx, card_id);
+    }
+}
+
+/// R3778000, R4839000: tops the list of `card_id`, a card on the field, up to the number its text
+/// follows (`Script::combat_keywords_follow`), read as its Aura reads it (`top_up_onto`); a card off the
+/// field, or whose text follows no number, draws nothing. `follow_combat_keywords` runs it on a card
+/// holding a list; `copy_unit_text` on the copier as the copied text lands, as a Fuse's kept card draws
+/// its own.
+pub(crate) fn top_up_to_number(ctx: &mut EffectContext<'_>, card_id: &str) {
     let Some(card) = find_instance(ctx.sink.state, card_id).cloned() else {
         return;
     };
-    if card.zone.z() != ZoneName::Field || !card.memory.contains_key(COMBAT_KEYWORDS_KEY) {
+    if card.zone.z() != ZoneName::Field {
         return;
     }
     let Some(number) = crate::scripts::script_of(ctx.sink.state, &card).combat_keywords_follow else {
