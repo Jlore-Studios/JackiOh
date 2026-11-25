@@ -29,8 +29,14 @@ const NAMES_A_HELD_CARD: &[&str] = &[
 ];
 /// A held card the text of another card names, so it reaches a game wherever that other card stands, not
 /// only as it is played: Toxopid (S+ #121) comes with each Crawler (#120), which any Mindustrial pool
-/// can generate and which adds it by name as it dies, however it arrived.
-const NAMED_BY_A_CARD_IN_PLAY: &[(&str, &str)] = &[("stinkyscapeplus-121", "stinkyscapeplus-120")];
+/// can generate and which adds it by name as it dies, however it arrived; and Jogg's Box (C+ #47) with
+/// The Enigmata, a Terminus token whose rest-of-game effect casts it by name each turn, however The
+/// Enigmata was cast (a launch of The Last Voyage's, which since issue #4783 launches one as it is cast,
+/// R4783030), its record holding The Enigmata's id for the rest of the game.
+const NAMED_BY_A_CARD_IN_PLAY: &[(&str, &str)] = &[
+    ("stinkyscapeplus-121", "stinkyscapeplus-120"),
+    ("classicplus-047", "stinkyscapeplus-t-the-enigmata"),
+];
 
 /// Whether `def_id` is one of `ids`, or a fused card (R179) with one of them among its ingredients:
 /// a fused card runs every ingredient's scripts (R77), so it names whatever they name.

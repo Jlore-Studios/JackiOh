@@ -722,7 +722,8 @@ mod r1370_a_deck_that_leans_on_a_set {
         // move cost; #4440's second part the human, easy and hard pins: Suppressive Aura costs (1), and the
         // Toe Cracker, Professor Curvature and Wardrum change the deck builder's reads of them). #4784 adds
         // the Book pin, a theme holding no Unit, dealt before R4784000 where it held the units' floor, so
-        // R4784000 leaves it as it was.
+        // R4784000 leaves it as it was. #4783 the pins it re-deals: Mommy Barker 2/1, Outbreak (4), Chaos
+        // Machine (3), Yuma (1) and the other cost and stat moves of Stinkyscape+ Balance Changes VIII.
         let pins: [(&str, i32, Value, u32, &[&str]); 5] = [
             (
                 "r1370-pin:human",
@@ -746,10 +747,10 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-019",
                     "core-012",
                     "core-053",
-                    "classic-085",
-                    "classicplus-031",
+                    "classic-081",
+                    "classicplus-030",
                     "core-077",
-                    "classicplus-019",
+                    "classicplus-017",
                 ],
             ),
             (
@@ -772,11 +773,11 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classicplus-001",
                     "classicplus-045",
                     "core-032",
-                    "classic-048",
+                    "classic-049",
                     "classicplus-067",
                     "classic-009",
-                    "classicplus-069",
-                    "core-046",
+                    "classicplus-066",
+                    "core-042",
                     "core-053",
                 ],
             ),
@@ -814,7 +815,7 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-026",
                     "classic-013",
                     "classic-009",
-                    "classic-018",
+                    "classic-020",
                     "classic-086",
                 ],
             ),
@@ -840,10 +841,10 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-066",
                     "core-061",
                     "core-085",
-                    "classicplus-063",
+                    "classicplus-064",
                     "core-094",
-                    "classic-071",
-                    "classicplus-019",
+                    "classic-083",
+                    "classicplus-026",
                 ],
             ),
             (
@@ -867,7 +868,7 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classic-048",
                     "classicplus-038",
                     "core-071",
-                    "classicplus-040",
+                    "classicplus-041",
                     "classicplus-049",
                     "classicplus-054",
                     "classic-027",

@@ -1128,8 +1128,8 @@ fn b11_a_buffed_piece_fuses_with_its_printed_numbers_not_its_buffed_ones() {
         if !radiant {
             assert_eq!(
                 params_view(s.state(), &ship).and_then(|numbers| numbers.get("damage").copied()),
-                Some(5),
-                "the Starship's Cannon v3 deals its printed 5"
+                Some(4),
+                "the Starship's Cannon v3 deals its printed 4"
             );
         }
     }
