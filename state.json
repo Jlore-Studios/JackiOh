@@ -20849,23 +20849,24 @@
       "verdict_rounds": 1
     },
     "4842": {
-      "action": "build",
+      "action": "plan",
       "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "building",
-      "owner": "muse",
-      "owner_since": "2026-11-25T06:46:01Z",
-      "owner_why": "it took it up",
+      "live": "planning",
+      "owner": "agy",
+      "owner_since": "2026-11-25T15:04:57Z",
+      "owner_why": "handed off from `muse`: `muse` is busy: its lanes are all taken",
       "pending_request": false,
-      "provider": "muse",
+      "provider": "agy",
       "queued_at": "2026-11-24T21:24:42Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45563047091",
-      "runs_on": "night-vm-muse-fill",
-      "started_at": "2026-11-25T06:46:01Z",
+      "run_id": "pending:249bd5ea-1795619032",
+      "runs_on": "night-vm-agy",
+      "started_at": "2026-11-25T15:04:57Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -24131,9 +24132,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T14:53:59Z",
+    "at": "2026-11-25T15:04:57Z",
     "url": "",
-    "what": "suggestions (ai) on muse"
+    "what": "plan #4842 on agy"
   },
   "last_sweep": {
     "at": "2026-11-25T14:50:57Z",
