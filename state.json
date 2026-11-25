@@ -19992,9 +19992,7 @@
       "started_at": "2026-11-25T19:32:49Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:7171838037"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "4938": {
