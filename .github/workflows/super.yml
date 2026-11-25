@@ -36,6 +36,9 @@
 # opens its own issue, CANDIDATE_TITLE, handed to the night bot as `priority:high` and
 # `difficulty:hard`, since production waits on it; the pull request stays open, and re-running the
 # failed jobs merges it once they pass. A run that passes on one closes that issue, never the daily one.
+# One red staging is one issue, so one lane of the bot fixes it, not two (`report`): a red promotion
+# is reported on the daily issue while that one is open, and a red run on `_staging` that finds
+# CANDIDATE_TITLE open takes that issue over, retitled DAILY_TITLE.
 #
 # A failed run on `_staging` (or on the default branch, whose commits reach `_staging` within two
 # hours) hands the issue to the night bot (.harness/config.json's bot_login), as ci-duration.yml hands
@@ -587,8 +590,12 @@ jobs:
             gate=true
           fi
 
-          open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$TITLE\"" \
-            --json number,title --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
+          # The open issue titled $1, or nothing.
+          open_issue() {
+            T=$1 gh issue list --repo "$REPO" --state open --search "in:title \"$1\"" \
+              --json number,title --jq "map(select(.title == env.T)) | .[0].number // empty"
+          }
+          open=$(open_issue "$TITLE")
           where="[super run $RUN_ID]($RUN_URL) on \`$REF\` (\`${SHA:0:7}\`, $EVENT)"
           [ "$candidate" = false ] || where="[super run $RUN_ID]($RUN_URL) on #$PR, the promotion of \`${SHA:0:12}\` into production,"
 
@@ -618,12 +625,40 @@ jobs:
           fi
           echo "$failed"
 
+          # One red staging, one issue, one fix. On 2026-11-23 the daily run and a promotion's run went
+          # red on the same commit of staging, each opened its own issue (#4599, #4604), and two lanes
+          # of the night bot built the same fix side by side (#4649, #4629). A promotion pull request's
+          # head is a commit of staging, so a red promotion is reported on the daily issue while that
+          # one is open; and a red run on staging that finds a promotion's issue open takes that issue
+          # over, retitled, since the freeze (scripts/promote-staging.sh) finds staging's issue by its
+          # title and waits for it to close. A retitle that fails opens the daily issue as before.
+          fold=""
+          if [ "$candidate" = true ]; then
+            daily=$(open_issue "$DAILY_TITLE")
+            if [ -n "$daily" ]; then
+              fold=daily
+              open=$daily
+            fi
+          elif [ "$gate" = true ] && [ -z "$open" ]; then
+            promotion=$(open_issue "$CANDIDATE_TITLE")
+            if [ -n "$promotion" ] && gh issue edit "$promotion" --repo "$REPO" --title "$DAILY_TITLE"; then
+              echo "retitled #$promotion \"$DAILY_TITLE\""
+              fold=candidate
+              open=$promotion
+            fi
+          fi
+
           # Staging's red run, main's and a promotion's are the night bot's to fix, first; a branch's is
           # its author's.
-          if [ "$candidate" = true ]; then
+          if [ "$fold" = daily ]; then
+            owner="Night bot: #$PR promotes \`${SHA:0:12}\`, a commit of \`$STAGING_BRANCH\`, and its run is red while this issue, \`$STAGING_BRANCH\`'s red run, is open, so it is reported here and not in an issue of its own: one red \`$STAGING_BRANCH\`, one issue, one fix. Fix these jobs too, in the pull request on \`$DEFAULT_BRANCH\` that closes this, building on it if one is open. When it closes this, \`$STAGING_BRANCH\` takes main's first green commit after the close and the super run starts on it at once; a run there that passes every job promotes it to production by itself. Root-cause each failed job from its log: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and give a person the exact lines for the rest."
+          elif [ "$candidate" = true ]; then
             owner="Night bot: production waits on this run, so it is yours and it comes first (\`priority:high\`, and you take it before every other queued item). #$PR promotes \`${SHA:0:12}\`, a commit of \`$STAGING_BRANCH\` (and so of \`$DEFAULT_BRANCH\`), so the fix lands on \`$DEFAULT_BRANCH\` like any other. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). Say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them. Once the fix is on \`$DEFAULT_BRANCH\`, promote-staging.yml brings it to \`$STAGING_BRANCH\` within two hours; the next daily run there that passes promotes it, or a \`/promote\` on the production issue tests staging's newer commit sooner."
           elif [ "$gate" = true ]; then
             owner="Night bot: this run is on \`$REF\`, so it is yours, and it comes first (\`priority:high\`, and you take it before every other queued item): production promotes itself only from a daily run on \`$STAGING_BRANCH\` that passes every job, so it waits on this fix, and \`$STAGING_BRANCH\` holds still until this issue closes (scripts/promote-staging.sh, the freeze). Fix every failed job here, in the one pull request on \`$DEFAULT_BRANCH\` that closes this: when it closes, \`$STAGING_BRANCH\` takes main's first green commit after the close and the super run starts on it at once, and a run still red opens a new issue. Before you start, look for an open pull request or issue already fixing one of these jobs, and build on it instead of fixing the same test twice. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked \`#[ignore = \"daily: …\"]\` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them."
+            if [ "$fold" = candidate ]; then
+              owner="This issue was a promotion's red run (\"$CANDIDATE_TITLE\") and now stands for \`$REF\`'s too, retitled so the freeze waits on its fix: one red \`$STAGING_BRANCH\`, one issue, one fix. If a pull request for it is open, build on that one. $owner"
+            fi
           else
             owner="This run is on \`$REF\`, not \`$STAGING_BRANCH\` or \`$DEFAULT_BRANCH\`: it tests that branch's change, so the branch's author fixes it, and it is not handed to the night bot."
           fi

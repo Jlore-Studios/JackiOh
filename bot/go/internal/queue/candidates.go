@@ -27,9 +27,12 @@ var NoPriority int = 2
 // GATE_TITLES: the issues super.yml's `report` opens when the super run production waits on fails
 // (#3275): the daily run on `_staging`, and a promotion pull request's
 // (scripts/promote-production.sh's SUPER_TITLE). Production moves only once that run passes, so
-// the queue takes such an issue's build before every priority tier, `priority:high` included.
+// the queue takes such an issue's build before every priority tier, `priority:high` included. And
+// the one promote-production.yml's `report` opens when the promotion or its deploy fails
+// (PROMOTION_TITLE): that run passed, but players get it only once this is fixed.
 var GateTitles = map[string]bool{"CI: daily super run failed": true,
-	"CI: super run failed on a production candidate": true}
+	"CI: super run failed on a production candidate": true,
+	"CI: production promotion failed":                true}
 
 // GATE_PRIORITY: a GateTitles issue's pickup tier, ahead of `priority:high`'s.
 var GatePriority int = -1
