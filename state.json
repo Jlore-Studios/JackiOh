@@ -25130,7 +25130,16 @@
       "feedback_since": "2026-11-25T16:43:51Z",
       "issue": 4824,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-6",
+        "rejections": [],
+        "reviews": [],
+        "sha": "8b1e4d881519fcaf38e915e5cc590943fee2ea66",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
