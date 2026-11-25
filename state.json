@@ -24156,6 +24156,8 @@
       }
     },
     "4919": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-25T11:02:33Z",
@@ -24169,8 +24171,11 @@
         "trail": "- The fix and tests are in place; the spec-test run is still going in the background, so I'll pick this up when its result arrives.Still compiling \u2014 I'll continue once the test result is delivered.\n- `spec check` is still building in release mode \u2014 I'll report once its result lands.\n- Waiting on the check result \u2014 will finalize once it lands.The check is still compiling (release + LTO on a loaded shared machine) \u2014 nothing wrong, just slow. Waiting for its terminal result before finalizing.Final check is rebuilding \u2014 waiting for its terminal result to close out.\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: `spec check` credits only a proof that runs: a TypeScript test or an SQL heading that is commented out no longer proves its ruling\"} -->\n- ## What changed and why\n- Only [`crates/tools/src/spec.rs`](crates/tools/src/spec.rs) changed (+410/\u221258). `sql_headings` now skips an `\\echo` whose line starts with `--` (exactly the issue's prescription), and `ts_test_titles` was rebuilt as a small TypeScript-aware scanner (`TsScan`) that no longer counts a test named insi\u2026\n- ## Departure from the plan, and why it was required\n- The plan's naive blanking (skip `//`, `/* */`, strings at the scan position) passes the new unit tests but newly flagged 37 rulings with live proofs when run over the real repository \u2014 so it could not ship as written. Bisecting each failure to its line showed three real constructs a naive blanker m\u2026\n- ## How tested\n- - `cargo test -p jackioh-tools --bin jackioh spec::`: 44 passed, 0 failed, including the two new tests and the untouched `reads_typescript_test_titles`, `refuses_a_typescript_title_that_does_not_run`, `credits_an_sql_proof_only_from_a_heading`.\n- - Fail-without-fix proven: a scratch harness built from the pre-fix functions (extracted from `HEAD`, run under `/tmp`, never in the repo) counts all 6 deadproof variants from the issue as proofs (0/6 refused); the fixed code refuses all 6 while its live controls prove.\n- - Equivalence proven on the real tree: an old-vs-new title diff over all 2847 TypeScript files under the citing roots shows zero dropped R-titles \u2014 every live title the old scanner found is still found, so no live case was silently reclassified (intermediate diffs read 15 files, then 2, then 0 as e\u2026\n- - `cargo fmt --check`: clean. `cargo clippy -p jackioh-tools --all-targets -- -D warnings`: clean (one `collapsible_if` fixed, no allows added).\n- - `cargo jackioh spec check` over the real repository: `spec check: 2588 rulings, 6401 proofs, 78307 citations in 5027 files, 35341 links: ok` \u2014 it still passes with no newly flagged rulings, as the issue predicted. No ruling note or pending file was added: `spec/README.md` Note format already requ\u2026\n- ## Decisions the issue did not settle\n- - Template `${}` holes are scanned for titles (code there runs; the old scanner counted it too) rather than skipped.\n- - `}`/`)`/`]` after an expression mean division; every `{`-hole opens a fresh expression regardless of surrounding state.\n- - Postfix `++`/`--` keeps value position; postfix `!` (non-null assertion) got no special case \u2014 no tree occurrence.\n- - `ts_call_end` (skipped-group skipping) left untouched: its regex/template blindness predates this change and only ever adds titles, which cannot fail the check.\n- ## Reviewer: look twice at\n- - The regex-vs-division heuristic and the JSX tag/text tracking \u2014 the tree-wide zero-drop diff is the evidence, but both encode grammar assumptions worth a second pair of eyes.\n- - A title inside a template `${}` hole still counts (it runs), and an `it(` inside JSX text no longer counts \u2014 if any ruling's only proof ever lived in JSX text, the check will now (correctly) flag it for a real proof.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4851 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4851/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4851,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-25T12:58:19Z",
         "from_run": "45600688183",
         "gates": [
           {
@@ -24229,8 +24234,15 @@
         "source": "build",
         "until": "2026-11-25T13:27:10Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-25T12:57:10Z",
+      "run_id": "pending:e2496ef2-1795611464",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-25T12:58:19Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -24244,9 +24256,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T12:49:05Z",
+    "at": "2026-11-25T12:58:19Z",
     "url": "",
-    "what": "build #4833 on claude-6"
+    "what": "review #4919 on muse"
   },
   "last_sweep": {
     "at": "2026-11-25T12:39:55Z",
