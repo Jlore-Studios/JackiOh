@@ -21095,6 +21095,7 @@
       "run_id": "45692318580",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 565,
       "started_at": "2026-11-25T20:10:00Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -44101,9 +44102,33 @@
         "title": "Patch: the AI's redaction hides the tags of the opponent's face-down Trap in the play counts, and the hidden card an interrupted trap firing remembers",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-7"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "3e0e228b5eedff38911bc74b95e602e35745bd46",
+        "issue": 4924,
+        "merged_at": "2026-11-25T21:25:10Z",
+        "n": 565,
+        "pr": 4958,
+        "queued_at": "2026-11-25T21:25:10Z",
+        "sha": "40b477a91f6db55d2f798e8079b8e2054eb24c39",
+        "status": "queued",
+        "title": "Patch: pin the perf corpus so card additions stop re-dealing it",
+        "tries": 0
       }
     ],
-    "count": 564
+    "count": 565
   },
   "statistics": {
     "at": "2026-11-25T21:20:53Z"
