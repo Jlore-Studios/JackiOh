@@ -20879,6 +20879,13 @@
     "4847": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45584996635",
+        "model": "gemini-3.8-flash-high",
+        "provider": "agy",
+        "since": "2026-11-25T10:12:34Z",
+        "until": "2026-11-25T10:42:34Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
