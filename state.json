@@ -21655,7 +21655,7 @@
       }
     },
     "4884": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "medium",
       "cross_rounds": 1,
@@ -21681,17 +21681,17 @@
           "where": "crates/cards/src/scripts/training_grounds/c012_fortify.rs:43"
         }
       ],
-      "live": "reviewing",
+      "live": "revising",
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-11-25T07:25:51Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "45566739729",
+      "run_id": "pending:cc01d72a-1795591588",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "cross-review",
-      "started_at": "2026-11-25T07:15:35Z",
+      "started_at": "2026-11-25T07:27:06Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -22584,9 +22584,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T07:16:28Z",
+    "at": "2026-11-25T07:27:06Z",
     "url": "",
-    "what": "plan #4843 on muse"
+    "what": "revise #4884 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-25T07:09:54Z",
