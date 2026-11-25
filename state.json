@@ -42320,12 +42320,12 @@
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-25T15:06:00Z",
-          "utilization": 0.03
+          "utilization": 0.06
         },
-        "observed_at": "2026-11-25T11:29:35Z",
+        "observed_at": "2026-11-25T11:39:26Z",
         "seven_day": {
           "resets_at": "2026-11-30T00:00:00Z",
-          "utilization": 0.78
+          "utilization": 0.79
         },
         "status": "allowed"
       }
@@ -47046,7 +47046,8 @@
       "2026-11-25T10:31:39Z,muse,usage-command,call,45582793699,1,2026-11-25T15:06:00Z,77,2026-11-30T00:00:00Z,allowed,100,100,",
       "2026-11-25T10:45:05Z,muse,usage-command,call,45582793699,1,2026-11-25T15:06:00Z,77,2026-11-30T00:00:00Z,allowed,100,100,",
       "2026-11-25T10:55:10Z,muse,usage-command,call,45582793699,2,2026-11-25T15:06:00Z,77,2026-11-30T00:00:00Z,allowed,100,100,",
-      "2026-11-25T11:03:48Z,muse,usage-command,after,45582793699,3,2026-11-25T15:06:00Z,78,2026-11-30T00:00:00Z,allowed,100,100,"
+      "2026-11-25T11:03:48Z,muse,usage-command,after,45582793699,3,2026-11-25T15:06:00Z,78,2026-11-30T00:00:00Z,allowed,100,100,",
+      "2026-11-25T11:31:57Z,muse,usage-command,before,45605185708,6,2026-11-25T15:06:00Z,79,2026-11-30T00:00:00Z,allowed,100,100,"
     ],
     "runs": [
       "2026-11-25T11:27:38Z,45600440603,claude-1,sonnet+opus,review,4890,medium,approved,,22.7,68,15088,2431908,1.3549,4,6,,,2.7,claude-1,none,,1",
