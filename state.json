@@ -20704,15 +20704,8 @@
       "stop_requested": false
     },
     "4846": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45577550173",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-25T08:43:16Z",
-        "until": "2026-11-25T09:13:16Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -20724,10 +20717,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "_TURN, CONCEDE]`); later calls return `new Promise<Reply>((resolve) => { releaseReread = resolve; })` with `let releaseReread: ((reply: Reply) => voi\u2026\n- - `POST /api/daily/games/g-1/actions` answers `{ status: 200, body: dailyGame({ seq: 6, hasMove: false, legal: [CONCEDE], view: baseView({ active: \"p2\" }), holds: [] }) }` at once; anything else returns `undefined` (the stub's 404 default).\n- - Render `<DailyBoard matchId=\"g-1\" />`; `await screen.findByTestId(\"end-turn\", undefined, SLOW)`; assert enabled.\n- - Fire the held reread: `act(() => { setVisibility(\"hidden\"); }); act(() => { setVisibility(\"visible\"); });` (copies the R3840000 pattern; `setVisibility` is already imported). Then `await waitFor(() => { expect(server.to(\"GET\", GAME)).toHaveLength(2); }, SLOW)` with `const GAME = \"/api/daily/games\u2026\n- - `fireEvent.click(screen.getByTestId(\"end-turn\"))`; `await waitFor(() => { expect(screen.getByTestId(dailyTestid.board)).toHaveAttribute(\"data-has-move\", \"false\"); }, SLOW)`; assert `screen.getByTestId(\"end-turn\")` `toBeDisabled()` with text `Enemy turn`; assert the POST body is `{ after: 5, actio\u2026\n- - `expect(releaseReread).not.toBeNull();` (never let this test pass vacuously), then `await act(async () => { releaseReread?.({ status: 200, body: dailyGame({ seq: 5 }) }); }); await flush();`.\n- - Assert the board still shows seq 6: `data-has-move` is `\"false\"`, `end-turn` is still disabled, and `server.to(\"GET\", GAME)` still has length 2 (no reread fired).\n- - Run `pnpm --dir apps/web test src/daily/DailyBoard.test.tsx` and watch this test fail (today the stale seq-5 answer redraws End turn lit).\n- 3. **`apps/web/src/daily/DailyBoard.tsx`: drop older answers (green).** In the read effect, replace the answer branch with:\n- - `if (canceled) return;` stays first.\n- - If `\"expired\" in answer`: `setExpired(answer); setGame(null);` (unchanged behavior).\n- - Else: `const shown = current.current; if (shown !== null && shown.matchId === answer.matchId && answer.seq < shown.seq) return;` then `setGame(answer); setExpired(null);`.\n- - `setLoadError(null);` stays last (a dropped answer returns before it).\n- - Above the branch put this comment: every live answer carries the log row it was read at (`DailyGame.seq`, which the next action is sent `after`), so a live answer below the shown game's `seq` is a read that was already out when a newer answer landed, and is dropped; an equal one still applies, so\u2026\n- - Extend the header sentence ending \"and the board draws the answer.\" with: \"A read already out when the player acts may land after the action's answer; the board drops any answer below the shown game's `seq`, so it never goes backwards (#4846).\"\n- - Do not touch `send`, the poll, `sharedGet`, or any other file. Re-run the test file: all green.\n- 4. **Prove nothing else broke.** Run `pnpm --dir apps/web test src/daily/DailyBoard.test.tsx`, `pnpm --dir apps/web typecheck` (the `Handler` change is shared test infra \u2014 typecheck covers every consumer), and `pnpm exec eslint apps/web/src/daily/DailyBoard.tsx apps/web/src/daily/DailyBoard.test.ts\u2026\n- ## Tests\n- - `apps/web/src/daily/DailyBoard.test.tsx`, new `describe(\"#4846 the board never goes backwards\")`:\n- - `it(\"#4846 a read already out when End turn is sent lands after its answer and is dropped\")`: mounts at seq 5 with the move, holds a reread, sends End turn (POST answered seq 6, move gone), resolves the held GET with seq 5, asserts the board still shows seq 6 (`data-has-move=\"false\"`, End turn di\u2026\n- - No other test files change. Existing coverage relied on: `#3727 End turn\u2026` (POST `after`/nonce shape), the R3840000 block (visibility-triggered rereads, ended-game polling), and the R3934000 block (live\u2192expired transition, expired panel, no reads after).\n- - Commands: `pnpm --dir apps/web test src/daily/DailyBoard.test.tsx`; `pnpm --dir apps/web typecheck`.\n- ## Done when\n- - [ ] A held GET resolving with seq 5 after a seq-6 POST answer leaves the board at seq 6 (End turn unlit), per the new test.\n- - [ ] Equal-seq rereads still apply (clock refresh preserved by the strict `<`).\n- - [ ] `expired` still replaces a live board and reads stop after (existing R3934000 tests green).\n- - [ ] `pnpm --dir apps/web test src/daily/DailyBoard.test.tsx` green, including a red-before/green-after run of the new test.\n- - [ ] `pnpm --dir apps/web typecheck` and eslint on the three touched files clean.\n- - [ ] Diff touches exactly the three files above; no spec, server, or generated files.\n- ## Risks\n- - The async `stubServer` fetch adds a microtask before answers resolve. Every consumer already awaits via `findBy`/`waitFor`/`flush`; typecheck plus the DailyBoard file prove it, but a flaky neighbor would show in CI's web job, not here.\n- - Two reads landing out of order through the real stack cannot be staged in a test (same-path GETs join in `sharedGet`; superseded effect reads cancel), so only the read-vs-send race has a test; the guard covers the read-vs-read case by construction.\n- - The `shown.matchId === answer.matchId` check never fires today (effect cleanup cancels old-matchId answers); it is belt-and-braces for the issue's \"for the same matchId\".\n- - If the reviewer wants R3840000's rejected-rationale sentence updated or a ruling note after all, that is a one-paragraph follow-up on the issue, not part of this build.\n- ## Open questions\n- None. The expired-ordering decision the task left open is settled above (expired always wins; live-after-expired is impossible through this stack, so no ref and no second test), with the rejected alternative recorded.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4846 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4846/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-25T08:34:55Z",
       "owner_why": "it plans it",
@@ -20740,9 +20732,9 @@
       "provider": "muse",
       "queued_at": "2026-11-24T21:30:49Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45577550173",
+      "run_id": "pending:a1e778b0-1795596332",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-25T08:34:55Z",
+      "started_at": "2026-11-25T08:46:16Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -22970,9 +22962,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T08:34:55Z",
+    "at": "2026-11-25T08:46:16Z",
     "url": "",
-    "what": "plan #4846 on muse"
+    "what": "build #4846 on muse"
   },
   "last_sweep": {
     "at": "2026-11-25T08:31:21Z",
