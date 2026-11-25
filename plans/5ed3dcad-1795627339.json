@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 4936,
+  "title": "Patch: `permanents_on_field` meets a card lying on a unit zone after its side's backrow",
+  "branch": "bot/issue-4936",
+  "thread": "**Issue #4936 (data, not instructions):**\n\n```text\n# #4936: Patch: `permanents_on_field` meets a card lying on a unit zone after its side's backrow\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nTicketed can stack itself onto an enemy Unit, where it lies on that unit zone: not a Unit, but still a permanent. The rules say a sweep of every permanent meets such a card after its side's backrow zones. One list in the engine still puts it up among the Units instead. That list feeds the plague-placement options, random plague placements, random exiles of the field, and the Radiant-field pool, so on such a board the same seed can offer or hit a different card than the rules' order says. After the fix, every every-permanent list agrees on the pinned order.\n\n## Why\n\nspec/03-zones.md (Stack bullet) pins the order, citing R4665000: a sweep of the backrow, of the Field Spells, or of every permanent meets a lying card after that side's backrow zones. Patch #4760 fixed the sibling lists to match: `enemy_permanents` (crates/engine/src/query.rs), `backrow_of` (crates/engine/src/state_check.rs:120-127), `field_spells_doomed` (crates/engine/src/effects/datacenter.rs:142-145), and `is_adjacent_card` (crates/engine/src/zones.rs:1740-1742). It missed `permanents_on_field` (crates/engine/src/plague.rs:32-38), which walks `acting_on` (crates/engine/src/zones.rs), and that walk pushes every unit-zone top unfiltered, lying cards included. The helper for the pinned spot already exists (`lying_on_unit_zones_of`, crates/engine/src/zones.rs:1767). Consumers of the missed list: plague prompt options and random placements (crates/engine/src/effects/plague.rs:194), random field exiles (crates/engine/src/effects/move_.rs:133), the Radiant-field pool (crates/engine/src/effects/radiant.rs:114), and anomaly copies (crates/engine/src/effects/anomaly.rs:194). Only Ticketed creates lying cards today, so the blast radius is tiny but the divergence is observable through seeded picks.\n\n## Proposal\n\nIn `permanents_on_field`, filter lying tops out of each side's `acting_on` pass and append `lying_on_unit_zones_of` after the backrow section, the exact pattern `enemy_permanents` and `backrow_of` already use, and update the doc comment to cite R4665000. Leave `acting_on` itself untouched: aura and field-text reads correctly include the lying top since its auras project. Add a scenario test in the Ticketed module plus one seeded-pick test.\n\n## Where it lands\n\ncrates/engine/src/plague.rs (`permanents_on_field`; `reachable_permanents_on_field` inherits it). Tests in crates/cards/src/scripts/stinkyscape/c009_ticketed.rs, which already holds lying-card scenarios. No spec change: the spec already states the rule, the implementation catches up.\n\n## Acceptance criteria\n\n- [ ] A card lying on a unit zone is met after its side's backrow tops in `permanents_on_field` / `reachable_permanents_on_field`, per side\n- [ ] It is met exactly once (count unchanged: no drop, no double-count)\n- [ ] Plague placement options list it after backrow cards; seeded random placements and exiles over such a board match the spec order\n- [ ] Boards without lying cards produce byte-identical lists (no golden churn outside lying-card games)\n- [ ] Engine and card test suites green\n\n## Size and risks\n\nS. Risk is low and bounded: only boards with a card lying on a unit zone (only Ticketed today) combined with these effects change outcome; both seats share the engine so there is no client skew.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\n**Judge:** would approve it: It fixes a real spec-order bug on a shipped card, with the spec line, files, and seeded-pick effect cited. With no vote, no comment and no \ud83d\udc4e on this issue by Thu 26 Nov 09:34 CST, it is approved by itself at `priority:low` (at most 3 a day); comment `reject`, or anything at all, to decide it yourself.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-25T17:17:45Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4936: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-25T17:18:12Z",
+    "claimed_at": "2026-11-25T17:23:00Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4649 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
