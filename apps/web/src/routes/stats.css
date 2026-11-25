@@ -558,7 +558,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-dim, #9aa1b8);
+  color: var(--text-dim);
   text-align: left;
 }
 
@@ -569,7 +569,7 @@
 .stats-extended-table th,
 .stats-extended-table td {
   padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--line, #2c3245);
+  border-bottom: 1px solid var(--line);
   vertical-align: top;
 }
 
