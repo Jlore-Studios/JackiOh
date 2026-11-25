@@ -96,8 +96,10 @@ too, #3858; an attacker a First Strike defender destroys first earning no chip a
 `fight` reads a blow that never lands as none, R4171000), and once none is worth making, or facing lethal
 against its best attack (R4187000), the switches to Defense Position its own evaluation prefers, and
 in the first case its switches back to Attack Position of units without Deft too, up to
-`AI_REPLY.attack_switches`, R4433000) on every determinization, and plays the first action of the
-best mean. When none
+`AI_REPLY.attack_switches`, R4433000; known plays and Activates together take at most
+`AI_REPLY.play_steps` of its `AI_REPLY.max_steps` steps, so its attacks keep the rest, and a reply
+whose steps run out still ends its turn, in up to `AI_REPLY.close_steps` more, R4810000) on every
+determinization, and plays the first action of the best mean. When none
 of the lines `shortlist_lines` takes for the reply hands the turn over with an effect of the seat's own
 waiting that the root did not hold (a countdown, a next-turn reward), the best line that does is replied
 to as well, last, on a slice of the counter that leaves the other determinizations' share of the
@@ -157,6 +159,10 @@ swing; a Ranged attacker takes none from a non-Ranged Taunt (R783000). A Frenzy 
 the Taunt it attacked, and that survives, has its swings back to `attacks_per_turn`, each with the hit's own
 hero permission; an exiled Taunt and one a Cleave splash destroys free none (R3543003)
 (`strike_back_survival_read`, R4402000, #4402; off in `GREEDY_EVAL`).
+A Cleave splash in the walk lands on every unit it strikes. A unit without Taunt, or a Taunt the walk has
+passed, is met as its earlier hits and splashes left it: gone once destroyed, or back as its Reborn body. Each
+splash spends the pools in the engine's order, and a Trample attacker's sends what it deals beyond the unit's
+health to the hero (§4.4 step 9) (`splash_trample_read`, R4805000, #4805; off in `GREEDY_EVAL`).
 A hit on a Taunt, its Cleave splash and a First Strike Taunt's strike back are
 each capped after Armor by the struck unit's own guard (C+ #11 Anime Armor, R2179005), as `blow` caps the
 static trader's. Past the caps, every static read of a hit takes §4.4 steps 3a and 3b

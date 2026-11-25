@@ -14,7 +14,7 @@
 //! **Activate 1:** Deal 24 **Pierce Trample** damage. Has a 3-turn cooldown.
 //!
 //! Tribute 3 is the script's `tribute` (R101). R3560008: the Activate aims at one declared enemy
-//! Unit (R1862000); Pierce is `ignoreArmor`, Trample's excess hits that Unit's controller's hero
+//! Unit (R1862000); R703: it is not offered while there is none; Pierce is `ignoreArmor`, Trample's excess hits that Unit's controller's hero
 //! (R346). R3550003: a 3-turn cooldown sits out two turns after a use.
 
 use jackioh_engine::effects::{DamageEffectArgs, DamageFlagArgs, TargetSpec, damage};
@@ -45,11 +45,11 @@ fn omura() -> Script {
                 cooldown_turns: Some(COOLDOWN_TURNS),
                 ..ActivationCost::default()
             }),
-            targets: vec![TargetDecl::target(
-                1,
-                1,
-                json!({ "side": "enemy", "of": ["unit"] }),
-            )],
+            // R703: the Activate needs its Unit, so it is never offered with no enemy Unit to aim at.
+            targets: vec![TargetDecl {
+                required: Some(true),
+                ..TargetDecl::target(1, 1, json!({ "side": "enemy", "of": ["unit"] }))
+            }],
             modes: vec![],
             can_activate: None,
             has: None,
@@ -81,6 +81,7 @@ pub fn script() -> CardScripts {
 mod tests {
     use super::*;
     use crate::{hits, next_turn_of, weapon_board};
+    use jackioh_engine::subsystems::activate::activate_actions_for;
     use jackioh_engine::testkit::*;
 
     const P1: PlayerId = PlayerId::P1;
@@ -153,6 +154,39 @@ mod tests {
         next_turn_of(&mut s, P1);
         s.activate(ID, at(&second));
         assert_eq!(hits(s.last_events()).len(), 2);
+    }
+
+    fn offers(s: &Scenario) -> usize {
+        activate_actions_for(s.state(), P1, s.card(ID)).len()
+    }
+
+    #[test]
+    fn r3560008_not_offered_without_an_enemy_unit() {
+        for radiant in [false, true] {
+            let mut s = if radiant {
+                omura_radiant_on(json!({}))
+            } else {
+                omura_on(json!({}))
+            };
+            assert_eq!(offers(&s), 0, "radiant {radiant}");
+            assert!(s.activations_of(ID).is_empty(), "radiant {radiant}");
+            s.expect_refused(|s| s.activate(ID, at("hero")));
+        }
+    }
+
+    #[test]
+    fn r3560008_no_cooldown_starts_while_nothing_is_there_to_aim_at() {
+        let mut s = omura_on(json!({}));
+        assert_eq!(offers(&s), 0);
+        s.expect_refused(|s| s.activate(ID, at("hero")));
+        next_turn_of(&mut s, P1);
+        assert_eq!(offers(&s), 0);
+        s.expect_refused(|s| s.activate(ID, at("hero")));
+        // With an enemy Unit it is offered at once: the refusals left no cooldown behind.
+        let mut s = omura_on(json!({ "field": [BODY] }));
+        assert_eq!(s.activations_of(ID).len(), 1);
+        let target = s.unit_at(P2, 1).id;
+        s.activate(ID, at(&target));
     }
 
     mod radiant {
