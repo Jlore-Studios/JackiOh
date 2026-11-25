@@ -22201,6 +22201,14 @@
         "sha": "d4f693627435c2a615b6af45f46eb5ea19d14e51",
         "tiers": {}
       }
+    },
+    "4896": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-25T05:10:39Z",
+      "issue": 4808,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
