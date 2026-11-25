@@ -13,12 +13,24 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "traininggrounds-027";
 
+/// R656: making Radiant helps, so a random cast that targets enemies aims this at friends.
 fn targets() -> Vec<TargetDecl> {
-    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow"] }))]
+    vec![TargetDecl { aim: Some(TargetAim::Help), ..TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow"] })) }]
 }
 
 fn chosen() -> TargetSpec {
     json_as(json!({ "of": "chosen" }))
+}
+
+/// R767000: through v0.6.13e the target declared no aim, so a stolen or random cast aimed it at
+/// enemies (issue #4844); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_13e() -> CardScripts {
+    let old = vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow"] }))];
+    let now = script();
+    CardScripts {
+        base: Script { targets: old.clone(), ..now.base },
+        radiant: Script { targets: old, ..now.radiant },
+    }
 }
 
 pub fn script() -> CardScripts {
@@ -55,6 +67,10 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const BEAN: &str = "traininggrounds-027";
+    const PALANTIR: &str = "classic-004"; // Palantir: steals a (2) Cost Spell and casts it at enemies (R831001).
+    const MINE: &str = "stand-in (1) 3/3";
+    const THEIRS: &str = "stand-in (1) 4/4";
+    const FILLER: &str = "core-005";
     const FELINORS: &str = "core-012"; // Duplicating Felinors: Cry: summon a copy of this
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your Units have +1 Attack (Radiant +3).
@@ -79,6 +95,35 @@ mod tests {
             .filter_map(|lane| s.unit(player, lane))
             .filter(|card| card.def_id == FELINORS)
             .count()
+    }
+
+    /// A (4) Cost Spell made a (2) Cost one by a `costMod` of -2: Palantir steals and casts it (R831001).
+    fn cheap(def: &str) -> Value {
+        json!({ "def": def, "costMod": -2 })
+    }
+
+    /// P1 holds the Spell and a Unit, P2 a Unit and a face-up Palantir: P1 plays it on their own
+    /// Unit, Palantir steals it and casts it at enemies.
+    fn stolen_rig(spell: Value) -> (Scenario, CardInstance, CardInstance) {
+        let mut s = scenario(json!({
+            "seed": "audit-aim",
+            "p1": { "hand": [spell], "field": [{ "def": MINE, "lane": 1 }], "library": [FILLER, FILLER, FILLER], "mana": 10 },
+            "p2": { "hand": [FILLER], "field": [{ "def": THEIRS, "lane": 1 }],
+                    "backrow": [{ "def": PALANTIR, "faceUp": true }], "library": [FILLER, FILLER, FILLER] },
+        }));
+        let mine = s.unit_at(P1, 1);
+        let theirs = s.unit_at(P2, 1);
+        let cast = s.hand(P1)[0].id.clone();
+        s.play(cast.as_str(), pick::targets(pick::instance(&mine)));
+        (s, mine, theirs)
+    }
+
+    #[test]
+    fn r656_stolen_bean_radiants_its_casters_permanent() {
+        let (s, mine, theirs) = stolen_rig(cheap(BEAN));
+        assert!(s.pile(P2, "graveyard").iter().any(|card| card.def_id == BEAN), "P2 stole and cast it");
+        assert!(s.card(&theirs).radiant, "the caster's own Unit becomes Radiant");
+        assert!(!s.card(&mine).radiant, "the caster's enemy stays as it was");
     }
 
     mod base {
@@ -195,6 +240,23 @@ mod tests {
             s.play(BEAN, pick::targets(pick::instance(&pick)));
             assert!(s.card(&pick).radiant && s.card(&right).radiant);
             assert!(!s.card(&immune).radiant);
+        }
+    }
+
+    mod v0_6_13e {
+        use super::*;
+
+        use crate::scripts::training_grounds::c027_hopeful_jelly_bean::{ID, script_v0_6_13e};
+
+        /// R767000: a game on v0.6.13e, before the aim, radiants the caster's enemy with a stolen Bean.
+        #[test]
+        fn r767000_a_game_on_v0_6_13e_radiants_the_casters_enemy_with_a_stolen_bean() {
+            crate::under_kept(ID, script_v0_6_13e(), || {
+                let (s, mine, theirs) = stolen_rig(cheap(BEAN));
+                assert!(s.pile(P2, "graveyard").iter().any(|card| card.def_id == BEAN), "P2 stole and cast it");
+                assert!(s.card(&mine).radiant, "the caster's enemy becomes Radiant");
+                assert!(!s.card(&theirs).radiant, "the caster's own Unit stays as it was");
+            });
         }
     }
 }

@@ -14,8 +14,9 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "stinkyscape-010-2";
 
 /// R81: any Unit on either side, picked with the play.
+/// R656: doubling Health helps, so a random cast that targets enemies aims this at friends.
 fn targets() -> Vec<TargetDecl> {
-    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))]
+    vec![TargetDecl { aim: Some(TargetAim::Help), ..TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] })) }]
 }
 
 /// `capped` (R4079000): the multiplied Health stops at `MULTIPLIED_STAT_CAP`.
@@ -49,11 +50,24 @@ pub fn script() -> CardScripts {
 }
 
 /// R767000: through v0.6.6d the multiplying had no cap (R4079000, issue #4079); `KEPT_SCRIPTS` folds
-/// those replays under it.
+/// those replays under it. The target declared no aim then either (issue #4844 read it as Harm).
+fn old_targets() -> Vec<TargetDecl> {
+    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))]
+}
+
 pub fn script_v0_6_6d() -> CardScripts {
     CardScripts {
-        base: divine_spirit(false, false),
-        radiant: divine_spirit(true, false),
+        base: Script { targets: old_targets(), ..divine_spirit(false, false) },
+        radiant: Script { targets: old_targets(), ..divine_spirit(true, false) },
+    }
+}
+
+/// R767000: through v0.6.13e the target declared no aim (issue #4844); `KEPT_SCRIPTS` folds
+/// those replays under it.
+pub fn script_v0_6_13e() -> CardScripts {
+    CardScripts {
+        base: Script { targets: old_targets(), ..divine_spirit(false, true) },
+        radiant: Script { targets: old_targets(), ..divine_spirit(true, true) },
     }
 }
 
@@ -65,8 +79,12 @@ mod tests {
     use crate::{js, scenario};
 
     const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
 
     const SPIRIT: &str = "stinkyscape-010-2";
+    const PALANTIR: &str = "classic-004"; // Palantir: steals a (2) Cost Spell and casts it at enemies (R831001).
+    const MINE: &str = "stand-in (1) 3/3";
+    const THEIRS: &str = "stand-in (1) 4/4";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const IMMUNE: &str = "classicplus-019-1"; // Top Loser: Radiant: Immune to Spells.
     const FILLER: &str = "core-005";
@@ -194,6 +212,39 @@ mod tests {
         s.expect_stats(&unit, json!({ "health": 900, "maxHealth": 900 }));
     }
 
+    /// P1 holds the Spell and a Unit, P2 a Unit and a face-up Palantir: P1 plays it on their own
+    /// Unit, Palantir steals it and casts it at enemies.
+    fn stolen_rig(spell: Value) -> (Scenario, CardInstance, CardInstance) {
+        let mut s = scenario(json!({
+            "seed": "audit-aim",
+            "p1": { "hand": [spell], "field": [{ "def": MINE, "lane": 1 }], "library": [FILLER, FILLER, FILLER], "mana": 10 },
+            "p2": { "hand": [FILLER], "field": [{ "def": THEIRS, "lane": 1 }],
+                    "backrow": [{ "def": PALANTIR, "faceUp": true }], "library": [FILLER, FILLER, FILLER] },
+        }));
+        let mine = s.unit_at(P1, 1);
+        let theirs = s.unit_at(P2, 1);
+        let cast = s.hand(P1)[0].id.clone();
+        s.play(cast.as_str(), pick::targets(pick::instance(&mine)));
+        (s, mine, theirs)
+    }
+
+    #[test]
+    fn r656_the_target_aims_help() {
+        let scripts = super::script();
+        for face in [&scripts.base, &scripts.radiant] {
+            assert_eq!(
+                serde_json::to_value(&face.targets).unwrap(),
+                json!([{
+                    "kind": "target",
+                    "min": 1,
+                    "max": 1,
+                    "aim": "help",
+                    "filter": { "side": "any", "of": ["unit"] },
+                }]),
+            );
+        }
+    }
+
     mod v0_6_6d {
         use super::*;
         use crate::scripts::stinkyscape::c010_2_divine_spirit::{ID, script_v0_6_6d};
@@ -204,6 +255,22 @@ mod tests {
             crate::under_kept(ID, script_v0_6_6d(), || {
                 let (mut s, unit) = spirited(false, 600);
                 s.expect_stats(&unit, json!({ "health": 1200, "maxHealth": 1200 }));
+            });
+        }
+    }
+
+    mod v0_6_13e {
+        use super::*;
+        use crate::scripts::stinkyscape::c010_2_divine_spirit::{ID, script_v0_6_13e};
+
+        /// R767000: a game on v0.6.13e, before the aim, doubles the caster's enemy with a stolen Spirit.
+        #[test]
+        fn r767000_a_game_on_v0_6_13e_doubles_the_casters_enemy_with_a_stolen_spirit() {
+            crate::under_kept(ID, script_v0_6_13e(), || {
+                let (mut s, mine, theirs) = stolen_rig(json!({ "def": SPIRIT }));
+                assert!(s.pile(P2, "graveyard").iter().any(|card| card.def_id == SPIRIT), "P2 stole and cast it");
+                s.expect_stats(&mine, json!({ "attack": 3, "health": 6, "maxHealth": 6 }));
+                s.expect_stats(&theirs, json!({ "attack": 4, "health": 4, "maxHealth": 4 }));
             });
         }
     }

@@ -254,6 +254,14 @@ mod tests {
                 "core-047",
                 "core-063",
                 "meditative-035",
+                "stinkyscape-010-2",
+                "stinkyscape-010-3",
+                "stinkyscapeplus-045",
+                "stinkyscapeplus-047",
+                "stinkyscapeplus-049",
+                "stinkyscapeplus-050",
+                "traininggrounds-012",
+                "traininggrounds-027",
             ]
             .into_iter()
             .collect();
