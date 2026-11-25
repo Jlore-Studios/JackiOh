@@ -20879,15 +20879,8 @@
       "verdict_rounds": 0
     },
     "4847": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45584996635",
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-25T10:12:34Z",
-        "until": "2026-11-25T10:42:34Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -20899,10 +20892,9 @@
         "reason": "planned on gemini-3.8-flash-high",
         "trail": "- schedule: {\"DurationSeconds\": 30, \"Prompt\": \"Check task-268 status\"}\n- said: Waiting for repository checks to complete.\n- manage_task: {\"Action\": \"list\"}\n- said: I am waiting for the checks to complete.\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"f8817100-cf1a-4a76-92c9-db4ffeb70554/task-268\"}\n- said: \n- run_command: ps aux | grep -E \"cargo|jackioh\"\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"f8817100-cf1a-4a76-92c9-db4ffeb70554/task-268\"}\n- said: \n- read_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4847/.bot-plan.md\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"f8817100-cf1a-4a76-92c9-db4ffeb70554/task-268\"}\n- said: \n- read_file: {\"ByteOffset\": 0, \"EndLine\": 100, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4847/apps/web/src/dungeon/store.test.ts\", \"StartLine\": 1}\n- said: \n- read_file: {\"ByteOffset\": 0, \"EndLine\": 790, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4847/apps/web/src/dungeon/store.ts\", \"StartLine\": 760}\n- said: \n- read_file: {\"ByteOffset\": 0, \"EndLine\": 605, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4847/apps/web/src/dungeon/store.ts\", \"StartLine\": 530}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"f8817100-cf1a-4a76-92c9-db4ffeb70554/task-268\"}\n- said: \n- read_file: {\"ByteOffset\": 0, \"EndLine\": 520, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4847/apps/web/src/dungeon/store.ts\", \"StartLine\": 490}\n- said: \n- read_file: {\"ByteOffset\": 0, \"EndLine\": 833, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4847/apps/web/src/dungeon/store.ts\", \"StartLine\": 790}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4847 && git grep -n \"current\" apps/web/src/dungeon\n- said: \n- read_file: {\"ByteOffset\": 0, \"EndLine\": 880, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4847/apps/web/src/dungeon/store.test.ts\", \"StartLine\": 860}\n- said: \n- read_file: {\"ByteOffset\": 0, \"EndLine\": 930, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4847/apps/web/src/dungeon/store.test.ts\", \"StartLine\": 915}\n- said: \n- manage_task: {\"Action\": \"list\"}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4847/.bot-plan.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4847 && git status\n- said: # Plan issue #4847: Reload Dungeon Run on Page Reopen ## Goal Ensure the Dungeon client store (`apps/web/src/dungeon/store.ts`) reloads its state from `localStorage` whenever a Dungeon page is reopened and the first subscriber joins in `subscribe()`, while preserving an unsaved finished run if this\u2026\n- said: # Plan issue #4847: Reload Dungeon Run on Page Reopen ## Goal Ensure the Dungeon client store (`apps/web/src/dungeon/store.ts`) reloads its state from `localStorage` whenever a Dungeon page is reopened and the first subscriber joins in `subscribe()`, while preserving an unsaved finished run if this\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "agy",
       "owner_since": "2026-11-25T09:23:47Z",
       "owner_why": "it plans it",
@@ -20915,9 +20907,9 @@
       "provider": "agy",
       "queued_at": "2026-11-24T21:31:02Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45584996635",
+      "run_id": "pending:bbe237d0-1795601591",
       "runs_on": "night-vm-agy",
-      "started_at": "2026-11-25T09:23:47Z",
+      "started_at": "2026-11-25T10:13:49Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -23229,9 +23221,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T09:56:46Z",
+    "at": "2026-11-25T10:13:49Z",
     "url": "",
-    "what": "revise #4890 on claude-1"
+    "what": "build #4847 on agy"
   },
   "last_sweep": {
     "at": "2026-11-25T10:03:58Z",
