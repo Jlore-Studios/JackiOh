@@ -3841,3 +3841,7 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-25T09:35:38Z,45584746974,claude-3,opus,plan,4817,hard,planned,,10.3,148,60273,8853933,4.2437,51,64,,,741.3,,fresh,,1
 2026-11-25T09:38:08Z,45576206364,claude-8,opus,revise,4887,hard,approved,,28.6,44,11347,3004283,6.1979,18,28,,,1.4,claude-8,resumed,,2
 2026-11-25T09:49:49Z,45579218210,muse,muse-spark-1.3-contributor,build,4846,medium,built,,22.1,0,0,0,,6,8,75,76,675.5,muse,none,,1
+2026-11-25T10:06:37Z,45588480794,claude-3,opus,plan,4828,hard,planned,,17.6,195,103754,14642807,6.7443,71,94,,,750.9,,fresh,,1
+2026-11-25T10:06:51Z,45584996635,agy,gemini-3.8-flash-high,plan,4847,medium,planned,,42.2,604183,79419,0,,67,87,43,48,712.8,,none,,1
+2026-11-25T10:21:28Z,45593095632,claude-3,opus,plan,4836,hard,interrupted,refusal,3.6,91,18537,4009631,2.0264,96,100,,,773.4,,fresh,,1
+2026-11-25T10:19:19Z,45583070900,claude-4,opus,build,4734,hard,built,,21,92,23271,3571378,1.8336,11,16,,,681.1,claude-3,fresh,other,1
