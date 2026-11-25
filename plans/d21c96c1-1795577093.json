@@ -1,0 +1,82 @@
+{
+  "action": "plan",
+  "number": 4831,
+  "title": "Patch: in Duos, BALTHASAR measures \"half its starting health\" against the 20 a Duos hero starts on, not 30",
+  "branch": "bot/issue-4831",
+  "thread": "**Issue #4831 (data, not instructions):**\n\n````text\n# #4831: Patch: in Duos, BALTHASAR measures \"half its starting health\" against the 20 a Duos hero starts on, not 30\nOpened by @squishy-squooby.\n\n### What happens\n\nStinkyscape #18.2 BALTHASAR (\"Start of turn: Vote to remove you if your hero has less than half its starting health\") votes far too early in a Duos game.\n\nIts script (`crates/cards/src/scripts/stinkyscape/c018_2_balthasar.rs:29`) compares `2 \u00d7 hero health` with `starting_health_of(state, me)`. That helper (`crates/engine/src/query.rs:91-93`) answers the seat's handicap `heroHealth`, else `HERO_HEALTH` (30). It never looks at `PlayerState.duos`. A Duos hero starts on its team's own HP, 20 (`crates/engine/src/duos/state.rs`, `duos_seat`: `side.hero.health = rules.own_health`), and Duos sets no handicap `heroHealth`.\n\nSo a Duos seat with BALTHASAR in its backrow, on 14 of its 20 own HP, unspent, with its team's pool whole at 20, gets a vote cast against it at the start of its turn (`2 \u00d7 14 < 30`). It votes at any own HP of 14 or less, where half of the real starting health is 10. Once the seat is spent, `hero.health` reads the pool and is still compared with 30, so it votes at a pool of 14 or less.\n\nThe vote is one of the three that remove a seat, and a removed seat loses the whole co-op game for its team, with most of the team's 40 life left.\n\n### What should happen\n\nNo vote until the hero is below half of the 20 it started with (9 or less).\n\n- \u00a713.2: \"Each duel hero starts at its seat's own HP, and each team at its pool (\u00a713.4), instead of at 30 health.\"\n- \u00a713.4: \"A seat starts with its team's `own_health` as its duel hero's health\", and \"Every word for a hero's health reads own HP while the seat is not spent and the pool once it is.\"\n- R1866002: BALTHASAR \"compares its controller's hero health with the health that hero started the game with\".\n\n### How to reproduce\n\nTwo tests fail on `main` (3a83bd7), in [`crates/ai/tests/audit_engine_duos.rs` at 933dd76](https://github.com/Jlore-Studios/JackiOh/blob/933dd76b39f8f72c31f19ee5ee3b499ad8274190/crates/ai/tests/audit_engine_duos.rs) (branch `claude/vigilant-mayer-pmyrhr`; the file sits in the AI crate's tests only because that target links the testkit and every card): one in a 1v1 `scenario()` carrying the Duos life `duos_create` sets, one through a real `duos_scenario` game and `duos_reduce`.\n\n```rust\nuse jackioh_engine::config::DUOS_HUMAN_TEAM;\nuse jackioh_engine::testkit::PlayerId::{P1, P2};\nuse jackioh_engine::testkit::*;\n\nconst VANILLA: &str = \"core-008\";\nconst BALTHASAR: &str = \"stinkyscape-018-2\";\n\n/// What `duos_create` puts on a duel's side: R82 off, its own HP, unspent, on its team's full pool.\nfn duos_side(s: &mut Scenario, player: PlayerId, own: i32) {\n    let side = &mut s.state_mut().players[player];\n    side.hero.health = own;\n    side.auto_end_turn = Some(false);\n    side.duos = Some(DuosLife { pool: DUOS_HUMAN_TEAM.pool_health, pool_cap: DUOS_HUMAN_TEAM.pool_health, spent: false });\n}\n\nfn balthasar_votes(own: i32, duos: bool) -> usize {\n    jackioh_cards::register_all();\n    let library = vec[VANILLA; 4];\n    let mut s = scenario(json!({\n        \"active\": \"p2\",\n        \"p1\": { \"hand\": [VANILLA], \"backrow\": [BALTHASAR], \"health\": own, \"library\": library },\n        \"p2\": { \"hand\": [VANILLA], \"library\": library },\n    }));\n    if duos {\n        duos_side(&mut s, P1, own);\n        duos_side(&mut s, P2, DUOS_HUMAN_TEAM.own_health);\n    }\n    s.end_turn();\n    assert_eq!(s.state().active, P1);\n    s.last_events().iter()\n        .filter(|event| matches!(event, GameEvent::VoteCast { def_id, .. } if def_id == BALTHASAR))\n        .count()\n}\n\n#[test]\nfn balthasar_reads_a_duos_heros_starting_health_as_its_own_hp() {\n    assert_eq!(balthasar_votes(14, false), 1, \"1v1: 14 of 30 is below half\");\n    assert_eq!(balthasar_votes(9, true), 1, \"Duos: 9 of 20 is below half\");\n    assert_eq!(balthasar_votes(14, true), 0, \"Duos: 14 of 20 is above half\");\n}\n```\n\nOutput today: `Duos: 14 of 20 is above half   left: 1   right: 0`, and from the real Duos game: `BALTHASAR voted against a hero on 14 of its 20 starting health   left: 1   right: 0`.\n\n### Where\n\nThe rules engine: `crates/engine/src/query.rs` (`starting_health_of`), with `crates/engine/src/duos/state.rs` (`duos_seat`) and `duos_life.rs` (`DuosLife`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Make `starting_health_of` Duos-aware. A duel's side does not know its team's `own_health` today (`DuosLife` holds only `pool`, `pool_cap`, `spent`), so put the seat's starting own HP on `DuosLife`, written by `duos_seat` (so a Glitch reset rewrites it) and serde-defaulted (so stored co-op states still load), and answer it for a Duos seat.\n- **A decision the spec does not make**: what a *spent* seat's \"starting health\" is. Its own 20, or the pool's cap, since its health then reads the pool? That takes a ruling note in this issue's block, amending R1866002, with a proving test (CLAUDE.md rule 3). The Hard AI team's larger pool (`DUOS_POOL_HEALTH_HARD`) is part of the same question.\n- R1866002 gives the fallback as \"else HERO_HEALTH (30)\", but it was written for 1v1 and the tutorial's handicap and says nothing of Duos; neither \u00a713 nor any Duos ruling (R1168000 to R1168003, R964000) says a Duos hero starts at 30.\n- `starting_health_of` has one non-test reader, BALTHASAR. The sibling Brains MELCHIOR and CASPER do not read health, and nothing else in `crates/cards/src` or `crates/engine/src` reads a hero's starting health.\n- No existing test pins BALTHASAR at 30 in Duos: the card's own tests and `crates/engine/tests/rules/handicap.rs` are 1v1 only, and `crates/cards/tests/cross/duos.rs` has no BALTHASAR test.\n- The rest of the Duos engine read sound under the same audit: 26 random co-op games over the whole catalog, each played to a result, with every listed action accepted, pools in agreement, all four views passing the redaction check and every log folding to the live hash.\n- A card change in play: it needs its pending patch fragment (`docs/ADDING_CARDS.md`).\n\nFound by an audit of the engine's Duos rules; the reproductions were run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4831: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "at": "2026-11-25T00:51:28Z",
+    "family": "claude",
+    "kind": "draft",
+    "notes": "",
+    "provider": "claude-3",
+    "reason": "`claude-3` reached its usage limit",
+    "trail": "- Bash: {\"command\": \"ls .bot-plan.md 2>/dev/null; sed -n 70,110p crates/engine/src/query.rs; cat crates/cards/src/scripts/stinkyscape/c018_2_balthasar.rs | head -80\", \"description\": \"Read starting_health_of \u2026\n- Bash: {\"command\": \"ls crates/engine/src/duos/; cat crates/engine/src/duos/duos_life.rs 2>/dev/null || grep -rn \\\"struct DuosLife\\\" crates/engine/src\", \"description\": \"Find DuosLife struct\"}\n- Bash: {\"command\": \"sed -n 1470,1560p crates/engine/src/state.rs; grep -n \\\"fn starting_hero_health\\\" -A15 crates/engine/src/state.rs\", \"description\": \"Read DuosLife and starting_hero_health\"}\n- Bash: {\"command\": \"grep -n \\\"DuosLife\\\\|own_health\\\\|fn duos_seat\\\" -n crates/engine/src/duos/state.rs | head -50\", \"description\": \"Find duos_seat in duos/state.rs\"}\n- Bash: {\"command\": \"sed -n 1,60p crates/engine/src/duos/state.rs; echo ----; sed -n 180,300p crates/engine/src/duos/state.rs\", \"description\": \"Read duos/state.rs header and duos_seat\"}\n- Bash: {\"command\": \"grep -rn \\\"DuosLife {\\\" --include=*.rs . | grep -v target/ ; echo ---; grep -rn \\\"duos_seat(\\\" --include=*.rs crates | grep -v target/; echo ---; grep -rn \\\"DUOS_POOL_HEALTH_HARD\\\\|own_h\u2026\n- Bash: {\"command\": \"sed -n 380,440p crates/engine/src/duos/reduce.rs; echo ----; sed -n 1,60p crates/engine/src/duos_life.rs; echo ...; sed -n 120,200p crates/engine/src/duos_life.rs\", \"description\": \"Read \u2026\n- Bash: {\"command\": \"sed -n 2235,2295p crates/engine/src/config.rs\", \"description\": \"Read Duos config constants\"}\n- Bash: {\"command\": \"grep -rln \\\"poolCap\\\\|pool_cap\\\" --include=*.ts --include=*.tsx --include=*.rs --include=*.c --include=*.h --include=*.json --include=*.lua . 2>/dev/null | grep -v \\\"target/\\\\|node_modul\u2026\n- Bash: {\"command\": \"grep -rn \\\"starting_health_of\\\\|starting_hero_health\\\" --include=*.rs crates | grep -v target/\", \"description\": \"Find starting health readers\"}\n- Bash: {\"command\": \"sed -n 1,60p crates/cards/src/scripts/infinite_assault/c071_thermal_throttler.rs; grep -n \\\"fn \\\\|#\\\\[test\\\\]\\\" crates/cards/src/scripts/infinite_assault/c071_thermal_throttler.rs | head\u2026\n- Bash: {\"command\": \"cat spec/rulings/R1866002.md; echo ----; cat spec/rulings/R4587004.md; echo ----; head -30 spec/rulings/R4577000.md; ls spec/rulings | grep \\\"^R4831\\\" ; ls spec/pending | head -30\", \"des\u2026\n- Bash: {\"command\": \"git show --stat 05df436db7 | head -40; git show --stat 088f4705fa | head -30\", \"description\": \"See files in recent patch commits\"}\n- Bash: {\"command\": \"git show --stat --format=\\\"%s\\\" 05df436db7 | tail -30; ls patches* 2>/dev/null | head; ls docs | head -50\", \"description\": \"See file list for patch commit\"}\n- Bash: {\"command\": \"grep -n -i \\\"fragment\\\" docs/ADDING_CARDS.md | head -40\", \"description\": \"Find patch fragment guidance\"}\n- Bash: {\"command\": \"sed -n 195,245p docs/ADDING_CARDS.md\", \"description\": \"Read patch section of ADDING_CARDS\"}\n- Bash: {\"command\": \"sed -n 1,12p spec/rulings/R767000.md | cut -c1-1500; grep -rn \\\"fn folding_version\\\\|pub fn folding\\\\|fn rules_era\\\\|fn played_on\\\" crates/engine/src --include=*.rs | head\", \"description\u2026\n- Bash: {\"command\": \"sed -n 12,40p spec/rulings/R767000.md | cut -c1-2500\", \"description\": \"Read R767000 body\"}\n- Bash: {\"command\": \"grep -rn \\\"pub fn hash_state\\\\|pub fn state_hash\\\\|fn hash_of\\\\|pub fn game_hash\\\" crates/engine/src --include=*.rs | head; grep -rn \\\"fn duos_hash\\\\|pub fn .*hash\\\" crates/engine/src/du\u2026\n- Bash: {\"command\": \"sed -n 100,160p crates/engine/src/replay.rs; sed -n 1,80p crates/engine/src/duos/replay.rs\", \"description\": \"Read hash_state and duos_hash\"}\n- Bash: {\"command\": \"grep -rn \\\"duos_fold\\\\|duos_hash\\\" --include=*.rs crates apps 2>/dev/null | grep -v \\\"target/\\\\|crates/engine/src/duos/replay.rs\\\" | head -20; sed -n 170,200p crates/engine/src/wire/duos\u2026\n- Bash: {\"command\": \"grep -rln \\\"DuosReplayInput\\\\|duos_fold_from\\\\|DuosState\\\" crates/server/src | head; grep -rn \\\"duos_fold_from\\\\|final_hash\\\\|rules_changed\\\" crates/server/src --include=*.rs | grep -i d\u2026\n- Bash: {\"command\": \"sed -n 215,260p crates/server/src/duos/engine.rs; sed -n 55,100p crates/server/src/duos/replay.rs\", \"description\": \"Read server Duos replay checks\"}\n- Bash: {\"command\": \"grep -n \\\"hash\\\" crates/server/src/duos/checkpoint.rs crates/server/src/duos/engine.rs | head -20; grep -rn \\\"duos\\\" crates/tools/tests/*.rs -il | head; ls crates/tools/tests/fixtures 2>\u2026\n- said: You've hit your 5-hour limit \u00b7 resets 3:20am (UTC)"
+  },
+  "session": {
+    "action": "plan",
+    "artifact": 14980471391,
+    "artifact_bytes": 154070,
+    "artifact_name": "work",
+    "at": "2026-11-25T00:54:04Z",
+    "bytes": 201180,
+    "cwd": "/home/runner/work/_temp/work/item-4831",
+    "ended": "interrupted: `claude-3` reached its usage limit",
+    "head": "088f4705fa93300bd9cbba4f8186307f93ae790c",
+    "id": "e2012ee9-4275-4e20-98ed-cbdfcaaa9b8c",
+    "kind": "plan",
+    "model": "opus",
+    "project": "-home-runner-work--temp-work-item-4831",
+    "provider": "claude-3",
+    "run": "45520705836"
+  },
+  "journal": "# Journal of #4831\n\nEvery night-bot run on #4831, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-25 00:54 UTC \u00b7 plan #4831 \u00b7 `claude-3` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/45520705836) on `claude-3` (`opus` (strong)). It ended **interrupted**: `claude-3` reached its usage limit\nModel calls: 1, 1.7 model minutes.\nTokens: 38 in / 8716 out / 1112368 cached, $0.83.\nSession: fresh: none was kept for this item. This run's: kept session `e2012ee9-4275-4e20-98ed-cbdfcaaa9b8c` of #4831 on claude-3 (201,180 bytes) in run 45520705836's `work` artifact, for its next run there.\nIts work ended at `088f4705fa93` on `bot/issue-4831`.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 00:49 | start | from `origin/main` |  | at `088f4705fa93` |\n| 2 | 00:49 | plan (`opus`) | plan the item before anyone builds it | 1.7 min, 8754 tok, $0.83 | refused: the usage limit |\n| 3 | 00:51 | stop | `claude-3` reached its usage limit |  |  |\n",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:19:52Z",
+    "claimed_at": "2026-11-25T03:25:29Z",
+    "previous_provider": "claude-3",
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4595 to close first",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
