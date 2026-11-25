@@ -39675,42 +39675,6 @@
   "spot_checks": {
     "checks": [
       {
-        "approver": {
-          "family": "claude",
-          "model": "sonnet",
-          "provider": "claude-7",
-          "tier": "medium"
-        },
-        "builder": {
-          "family": "claude",
-          "provider": "claude-7"
-        },
-        "difficulty": "medium",
-        "done_at": "2026-11-03T17:17:17Z",
-        "every": 5,
-        "findings": 0,
-        "head": "c44f4a80f12d9450ed8a3f87dd08be10cc110549",
-        "issue": 2927,
-        "last_why": "stopped: #2935 was closed",
-        "merged_at": "2026-11-03T16:05:15Z",
-        "n": 15,
-        "pr": 2935,
-        "queued_at": "2026-11-03T16:05:15Z",
-        "reason": "stopped: #2935 was closed",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-6",
-          "tier": "strong"
-        },
-        "sha": "46b50bf36d30c4e2890999e2bd644bc591feccbe",
-        "started_at": "2026-11-03T17:07:37Z",
-        "status": "done",
-        "title": "Patch: the matchmaker's bot check reads a few columns every three seconds, not every bot's decks",
-        "tries": 3,
-        "verdict": "failed"
-      },
-      {
         "approver": {},
         "builder": {},
         "difficulty": "hard",
@@ -43209,7 +43173,9 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-25T00:01:34Z",
         "every": 5,
+        "findings": 0,
         "head": "754c7691a046c62eb789f48480bf2c13682a90b4",
         "issue": 4781,
         "merged_at": "2026-11-24T23:14:15Z",
@@ -43222,12 +43188,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:9e645ed8-1795564412",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45513786494",
         "sha": "bbfaed40be9982fa1fa66a948525090221b50a2d",
         "started_at": "2026-11-24T23:54:01Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: a card or hero an open target prompt lights on the board answers it when clicked, as the Plague Counter placement already does",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 516
