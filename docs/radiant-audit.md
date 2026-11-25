@@ -1040,14 +1040,14 @@ A card added after the sections above has one row here, keyed by its id. A perso
 | stinkyscapeplus-046 | Phase Fabric | Meets | The Radiant face gives Can't be Attacked on top of Immutable, Immune to Spells and Divine Shield, a keyword more, and doubles the Armor 2 → 4 (issue #3996). |
 | stinkyscapeplus-047 | Plastanium | Meets | The health given rises +2 → +6 (3×); Divine Shield is the same on both faces. |
 | stinkyscapeplus-048 | Thorium | Meets | The buff rises +5/+5 → +10/+10 (2×); Brittle 1 is the same on both faces. |
-| stinkyscapeplus-049 | Metaglass | Meets | The Radiant face gives +3 attack on top of Ranged, a rider on an effect with no number. |
+| stinkyscapeplus-049 | Metaglass | Meets | Both faces give Ranged, and the attack beside it rises +1 → +5 (5×; until issue #4783 the base face gave Ranged alone and the Radiant face +3): past twice on a one-mana rider, the designer's numbers. |
 | stinkyscapeplus-050 | Graphite | Meets | The Radiant face adds First Strike to Pierce, Deft and the extra attack from Frenzy: a keyword more. |
 | stinkyscapeplus-051 | Chains Bind Me | Meets | The Buff or Nerf applied when the permanent awakens rises 2 → 5 times (2.5×); the Dormant for 2 turns is the same on both faces. |
 | stinkyscapeplus-052 | Airblast Drill | Meets | The hand fills with Radiant Minerals (still costing (0)) and Radiant Resources instead of plain ones; Tribute 1 and GIGA are unchanged: a rider-level raise. |
 | stinkyscapeplus-053 | Laser Drill | Meets | The three cards added each End of turn are Radiant Minerals (costing (0)) or Radiant Resources instead of plain ones: a rider-level raise. |
 | stinkyscapeplus-054 | Pneumatic Drill | Meets | The card added each End of turn is a Radiant Mineral or Radiant Resource instead of a plain one: a rider-level raise. |
 | stinkyscapeplus-055 | Thorium Reactor | Meets | Its numbers are identical (4 mana, 1 card, 12% blow-up for 30), but the Radiant face adds Lucky 1 to its luck-based blow-up chance: a keyword rider. |
-| stinkyscapeplus-056 | Impact Reactor | Meets | The mana lost after the Cry halves, 4 → 2 next turn and 2 → 1 after, while the Dormant for 2 turns and the infinite mana are the same: a lighter drawback is the upgrade. |
+| stinkyscapeplus-056 | Impact Reactor | Meets | The Cry's Overload halves, 2 → 1 (4 → 2 next turn and 2 → 1 after until issue #4783), while the Dormant for 2 turns and the infinite mana are the same: a drawback half as heavy is the upgrade. |
 | stinkyscapeplus-057 | Phase Weaver | Meets | The Phase Fabric added at the end of its owner's turn costs (0) on the Radiant face: a cost rider on an effect with no number. |
 | stinkyscapeplus-058 | Phase Conveyer | Meets | 0 attack stays 0 and health doubles 3 → 6. The Start of turn adds a Radiant Mineral and a Radiant Resource instead of plain ones: a rider-level raise. |
 | stinkyscapeplus-059 | Mass Driver | Meets | The Activate still waits 2 turns, but then adds two Radiant Minerals costing (0) and a Radiant Resource instead of plain ones: a rider-level raise. |
@@ -1161,7 +1161,7 @@ A card added after the sections above has one row here, keyed by its id. A perso
 | stinkyscapeplus-155 | The Far Vagabond | Meets | The Terminus Starship it summons can be launched for (0) instead of (3): the whole launch price removed, a lighter cost that meets R275. |
 | stinkyscapeplus-156 | Horizon Breaker | Meets | Stats double 4/6 → 8/12 (3/6 → 6/12 through v0.6.7k, issue #4285), and the Terminus card it casts when launched is a random Radiant one instead of a plain one: a Radiant rider that meets R275. |
 | stinkyscapeplus-157 | Phantom Shipyard | Meets | Attack and health stay 0/0. The shipyard fuses a random Radiant Starship Piece each turn instead of a plain one, a Radiant rider that meets R275; the Activate 3 launch is unchanged. |
-| stinkyscapeplus-158 | Quick Chaos | Meets | The Spell cast on draw is a random Radiant Spell instead of a plain one, still with random targets: a Radiant rider that meets R275. |
+| stinkyscapeplus-158 | Quick Chaos | Meets | The Spell cast on draw is a random Radiant Spell instead of a plain one, still with random targets, and the base face's discard of a random card (issue #4783) is gone: a Radiant rider and a drawback dropped, which meets R275. |
 | stinkyscapeplus-159 | Raven | Meets | Stats double 2/2 → 4/4 (1/1 → 2/2 until issue #4440, both faces Tribute 2 since then, Tribute 1 before), and the Cry discovers an Epic Weapon instead of a Rare one (the same 1 pick) to equip into it: a higher rarity that meets R275. |
 | stinkyscapeplus-160 | Icarus | Meets | Stats double 4/12 → 8/24 (2/8 → 4/16 until issue #3996); the Activate summons a Radiant Radi, and the Cry discovers a Legendary Weapon instead of an Epic one: two raises that meet R275. |
 | stinkyscapeplus-161 | Space Invader | Meets | Stats double 2/2 → 4/4, and the Radiant face gains Starship Piece (a copy fuses into your Dormant Starship when it dies): one keyword more, which meets R275. Evolve is unchanged. |

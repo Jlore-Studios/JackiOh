@@ -1,9 +1,11 @@
 //! SPEC §8.12 S+ #137 The Perfect Pair (§2.4, §6.3 Add to hand; R60, R1420, R3535000, R3565004): (0) Spell
 //! ((1) until issue #3996), Mindustrial, Rare, a card of the Stinkyscape+ set.
-//!   Base:    "Add an Automa-δ and its paired Automa-Ω card to your hand.
-//!            The pairs are Scepter and Reign, Antumbra and Eclipse, Quad and Oct, Sei and Omura, Vela and
-//!            Corvus."
+//!   Base:    "Add an Automa-δ and its paired Automa-Ω card to your hand."
 //!   Radiant: "Add a Radiant Automa-δ and its paired Radiant Automa-Ω card to your hand."
+//!
+//! Issue #4783 (Stinkyscape+ Balance Changes VIII) took "The pairs are Scepter and Reign, Antumbra and
+//! Eclipse, Quad and Oct, Sei and Omura, Vela and Corvus." off both faces' text; the pairs, `PAIRS`, are
+//! the same, and no word of the text reaches the state, so no script is kept for it.
 //!
 //! Engine: one of the five pairs, picked from the match rng (R60, R3565004), then the Automa-δ card and the
 //! Automa-Ω card of the pair, in the text's order, each its own `addToHand`: both keep their printed
@@ -84,6 +86,16 @@ mod tests {
         for (delta, omega) in PAIRS {
             assert!(crate::card_def(delta).tags.contains(&Tag::AutomaDelta), "{delta}");
             assert!(crate::card_def(omega).tags.contains(&Tag::AutomaOmega), "{omega}");
+        }
+    }
+
+    /// Issue #4783: the player-facing text names no pair on either face.
+    #[test]
+    fn issue_4783_neither_face_lists_the_pairs() {
+        crate::register_all();
+        let def = crate::card_def(ID);
+        for text in [&def.base.text, &def.radiant.text] {
+            assert!(!text.contains("The pairs are"), "{text}");
         }
     }
 

@@ -30739,7 +30739,7 @@
     "loc": 29,
     "base": {
       "keywords": [],
-      "text": "Give a Unit Ranged."
+      "text": "Give a Unit Ranged and +{attack} Attack."
     },
     "radiant": {
       "keywords": [],
@@ -30748,12 +30748,11 @@
     "params": [
       {
         "key": "attack",
-        "base": 3,
-        "radiant": 3,
+        "base": 1,
+        "radiant": 5,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ]
   },
@@ -30999,7 +30998,7 @@
           "kind": "GIGA"
         }
       ],
-      "text": "GIGA\nCry: Overload ({mana}), then ({mana2}) the turn after.\nDormant for {dormant|turn|turns}.\nWhen this awakens: Gain infinite mana."
+      "text": "GIGA\nCry: Overload ({mana}).\nDormant for {dormant|turn|turns}.\nWhen this awakens: Gain infinite mana."
     },
     "radiant": {
       "keywords": [
@@ -31007,20 +31006,11 @@
           "kind": "GIGA"
         }
       ],
-      "text": "GIGA\nCry: Overload ({mana}), then ({mana2}) the turn after.\nDormant for {dormant|turn|turns}.\nWhen this awakens: Gain infinite mana."
+      "text": "GIGA\nCry: Overload ({mana}).\nDormant for {dormant|turn|turns}.\nWhen this awakens: Gain infinite mana."
     },
     "params": [
       {
         "key": "mana",
-        "base": 4,
-        "radiant": 2,
-        "better": "down",
-        "step": 1,
-        "min": 1,
-        "read": "cry"
-      },
-      {
-        "key": "mana2",
         "base": 2,
         "radiant": 1,
         "better": "down",
@@ -32452,7 +32442,7 @@
           "kind": "Windfury"
         }
       ],
-      "text": "Flexible, Ranged, Can't Defend, Windfury\nWhen this attacks, gain +{attack} Attack and take {damage} damage.\nWhen this is Frozen, fully heal it."
+      "text": "Flexible, Ranged, Can't Defend, Windfury\nWhen this attacks, gain +{attack} Attack and take {damage} damage."
     },
     "radiant": {
       "attack": 4,
@@ -32468,7 +32458,7 @@
           "kind": "Windfury"
         }
       ],
-      "text": "Flexible, Ranged, Windfury\nWhen this attacks, gain +{attack} Attack and take {damage} damage.\nWhen this is Frozen, fully heal it."
+      "text": "Flexible, Ranged, Windfury\nWhen this attacks, gain +{attack} Attack and take {damage} damage."
     },
     "params": [
       {
@@ -33932,14 +33922,22 @@
     "base": {
       "attack": 2,
       "health": 1,
-      "keywords": [],
-      "text": "May be played from your graveyard for (1).\nDeath: Add a Toxopid to your hand. If you already have one there, reduce its cost by ({reduce}) instead."
+      "keywords": [
+        {
+          "kind": "Flashback"
+        }
+      ],
+      "text": "Flashback\nDeath: Add a Toxopid to your hand. If you already have one there, reduce its cost by ({reduce}) instead."
     },
     "radiant": {
       "attack": 4,
       "health": 2,
-      "keywords": [],
-      "text": "May be played from your graveyard for (1).\nDeath: Add a Radiant Toxopid to your hand. If you already have one there, reduce its cost by ({reduce}) instead."
+      "keywords": [
+        {
+          "kind": "Flashback"
+        }
+      ],
+      "text": "Flashback\nDeath: Add a Radiant Toxopid to your hand. If you already have one there, reduce its cost by ({reduce}) instead."
     },
     "params": [
       {
@@ -33984,7 +33982,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Crater, Immutable, Rush\nFloat reduces cost.\nCry: Summon {legs|Toxopid Leg|Toxopid Legs} in random empty unit zones on the field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+      "text": "Crater, Immutable, Rush\nFloat reduces cost.\nCry: Summon {legs|Toxopid Leg|Toxopid Legs} in random empty unit zones on the field.\nIndestructible while Toxopid Legs are on the field.\nEnd of turn: Toxic {toxic} all enemies."
     },
     "radiant": {
       "attack": 20,
@@ -34000,7 +33998,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Crater, Immutable, Rush\nFloat reduces cost.\nCry: Summon {legs|Radiant Toxopid Leg|Radiant Toxopid Legs} in random empty unit zones on your opponent's field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+      "text": "Crater, Immutable, Rush\nFloat reduces cost.\nCry: Summon {legs|Radiant Toxopid Leg|Radiant Toxopid Legs} in random empty unit zones on your opponent's field.\nIndestructible while Toxopid Legs are on the field.\nEnd of turn: Toxic {toxic} all enemies."
     },
     "params": [
       {
@@ -35125,11 +35123,11 @@
     "loc": 28,
     "base": {
       "keywords": [],
-      "text": "Add an Automa-δ and its paired Automa-Ω card to your hand. The pairs are Scepter and Reign, Antumbra and Eclipse, Quad and Oct, Sei and Omura, Vela and Corvus."
+      "text": "Add an Automa-δ and its paired Automa-Ω card to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add a Radiant Automa-δ and its paired Radiant Automa-Ω card to your hand. The pairs are Scepter and Reign, Antumbra and Eclipse, Quad and Oct, Sei and Omura, Vela and Corvus."
+      "text": "Add a Radiant Automa-δ and its paired Radiant Automa-Ω card to your hand."
     },
     "refs": [
       "stinkyscapeplus-113",
@@ -36042,12 +36040,24 @@
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: Cast a random Spell with random targets."
+      "text": "Cast on draw: Cast a random Spell with random targets. Discard {discards|random card|random cards}."
     },
     "radiant": {
       "keywords": [],
       "text": "Cast on draw: Cast a random Radiant Spell with random targets."
-    }
+    },
+    "params": [
+      {
+        "key": "discards",
+        "base": 1,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "base",
+        "read": "castOnDraw"
+      }
+    ]
   },
   "stinkyscapeplus-159": {
     "id": "stinkyscapeplus-159",
