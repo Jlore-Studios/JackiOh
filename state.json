@@ -25472,6 +25472,8 @@
     "4950": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "2a57af6014e01bba5e93fbbde8f2ab7711ed921b",
+      "ci_fixes": 1,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-25T16:27:44Z",
