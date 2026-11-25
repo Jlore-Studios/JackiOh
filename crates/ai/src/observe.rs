@@ -3,13 +3,15 @@
 
 use std::cmp::Ordering;
 
-use indexmap::IndexSet;
+use indexmap::{IndexMap, IndexSet};
+use jackioh_engine::faces::card_type_of;
+use jackioh_engine::query::tags_of;
 use jackioh_engine::view_for::{
     HIDDEN_COST, HIDDEN_ID, HIDDEN_OPTION_LABEL, HIDDEN_POSITION, other_seats_option_count,
 };
 use jackioh_engine::{
     ANSWER_KEY, AttackHealth, CardInstance, CardType, Counters, GameEvent, GameState, PLAYER_IDS,
-    PendingChoice, PlayerId, PromptOption, Resume, Row, SETUP_WORK, Selection, Zone, active_units_of,
+    PendingChoice, PlayerId, PromptOption, Resume, Row, SETUP_WORK, Selection, Tag, Zone, active_units_of,
     announced_face_down_to, backrow_is_public, effective_cost, find_def, find_instance, find_instance_mut,
     handicap_of, mulligan_prompt_for, unclamped_attack, unit_view,
 };
@@ -473,10 +475,22 @@ fn belongs_to_hidden(instance_id: Option<&str>, resume: Option<&Resume>, hidden:
     is_hidden_id(instance_id, hidden) || is_hidden_id(resume.and_then(|r| r.instance_id.as_deref()), hidden)
 }
 
-/// A kept entry's captured event (a trigger's `resume.data.event`) is scrubbed like a dispatch event,
-/// so a face-up card's trigger cannot carry a hidden card's identity through the queue.
+/// A kept entry's captured event (a trigger's `resume.data.event`, or the event an interrupted trap
+/// firing keeps under `data.firing.event`) is scrubbed like a dispatch event, so a face-up card's
+/// trigger cannot carry a hidden card's identity through the queue.
 fn scrub_resume(state: &GameState, seat: PlayerId, resume: &mut Resume, hidden: &IndexSet<String>) {
     if let Some(event) = resume.data.get_mut("event")
+        && event.is_object()
+    {
+        scrub_event_value(state, seat, event, hidden);
+    }
+    // R113, R185: a trap firing that a prompt interrupted (`traps::owe_firing`, `@trapFiring`) keeps
+    // its event inside its payload, and `traps::run_owed_firing` hands that event to the trap's
+    // remaining triggers.
+    if let Some(event) = resume
+        .data
+        .get_mut("firing")
+        .and_then(|firing| firing.get_mut("event"))
         && event.is_object()
     {
         scrub_event_value(state, seat, event, hidden);
@@ -536,6 +550,60 @@ fn scrub_owed_mulligan(resume: &mut Resume, opp: PlayerId) {
     if opps_own && let Some(Value::Array(returned)) = copy.get_mut("returned") {
         for card in returned.iter_mut() {
             to_placeholder_json(card);
+        }
+    }
+}
+
+/// One count less of `key`; a count reaching 0 is removed (R4804000).
+fn take_one<K: std::hash::Hash + Eq>(counts: &mut IndexMap<K, i32>, key: &K) {
+    match counts.get_mut(key) {
+        Some(count) if *count > 1 => *count -= 1,
+        Some(_) => {
+            counts.shift_remove(key);
+        }
+        None => {}
+    }
+}
+
+/// R4804000, R451: the opponent's play counts as the seat saw them. A card the seat cannot see on the
+/// opponent's backrow (its top or a pile beneath it, B5 E21) that they own is taken for a face-down
+/// play of theirs, which the seat saw only as a Trap being set (R33, R448): its tags and its
+/// single-player set come off their per-game counts, and a play of it this turn (its R227 id among
+/// `playedIds`) counts as a Trap. A card waiting in the resolving zone to be set has not been counted
+/// yet (§10.5 step 4). A placeholder (a state already redacted) has nothing left to take.
+fn forget_face_down_plays(state: &GameState, next: &mut GameState, opp: PlayerId, hidden: &IndexSet<String>) {
+    let side = &state.players[opp];
+    let tops = side.backrow.iter().flatten();
+    let dormant = side.backrow_piles.iter().flatten().flatten();
+    for card in tops.chain(dormant) {
+        if card.owner != opp || !hidden.contains(&card.id) {
+            continue;
+        }
+        let Some(def) = find_def(Some(state), &card.def_id) else {
+            continue;
+        };
+        let tags: IndexSet<Tag> = tags_of(state, card).into_iter().collect();
+        let type_ = card_type_of(state, card);
+        let played_now = side.turn_log.played_ids.contains(&card.id);
+        let counts = &mut next.players[opp];
+        if let Some(log) = counts.game_log.as_mut() {
+            for tag in &tags {
+                take_one(&mut log.played_by_tag, tag);
+            }
+            if let Some(by_set) = log.played_by_set.as_mut() {
+                take_one(by_set, &def.set);
+                if by_set.is_empty() {
+                    log.played_by_set = None;
+                }
+            }
+        }
+        if played_now
+            && type_ != CardType::Trap
+            && let Some(types) = counts.turn_log.played_by_type.as_mut()
+            && types.get(&type_).is_some_and(|count| *count > 0)
+        {
+            take_one(types, &type_);
+            *types.entry(CardType::Trap).or_insert(0) += 1;
         }
     }
 }
@@ -611,6 +679,9 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
             next.radiance_lends = None;
         }
     }
+
+    // R4804000: the opponent's play counts drop what only their face-down plays told them.
+    forget_face_down_plays(state, &mut next, opp, &hidden);
 
     // Step 3: every hidden card becomes a placeholder (R351 face-down backrow cost, SURFACE §14.1 idempotence).
     for (player, place) in every_place(&next) {

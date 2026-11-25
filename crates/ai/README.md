@@ -54,7 +54,7 @@ them (its option reads the view's `Face-down card`, R177), its own library's ord
 it that came from the opponent or that it was never shown (R312), what changed on its other cards there, each read
 as its owner's list shows it, by the definition and face it went in with and its Created mark, unless its own
 prompt offers it (R2691000), the seed, the event history, every card's hidden Nerfs, its own
-hand's too (R1845000), what the opponent bought at the Marketplace (R1853004), the opponent's Created cards' generators (R1956001), and every Created card's maker, the game record's alone (R4672001)), and strips from the events its queues keep what `view_for` strips of a
+hand's too (R1845000), what the opponent bought at the Marketplace (R1853004), the opponent's Created cards' generators (R1956001), every Created card's maker, the game record's alone (R4672001), and what the opponent's play counts say of their face-down plays: a hidden card on their backrow takes its tags and its set off their counts and counts as a Trap among this turn's plays (R4804000)), and strips from the events its queues keep (an interrupted trap firing's under `data.firing` among them) what `view_for` strips of a
 hidden card. Every simulation runs on a `determinize`d copy whose hidden cards are resampled from the
 non-token cards of every set their own side has not shown (R185, R380, R2826000: the opponent's hidden
 cards and a card of the seat's library from the opponent's deck, R73, against what the opponent shows,
