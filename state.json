@@ -19628,7 +19628,7 @@
       "stop_requested": false
     },
     "4813": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -19641,32 +19641,24 @@
         "reason": "planned on opus",
         "trail": "-rn \\\"\\\\\\\"default\\\\\\\"\\\" ~/.cargo/registry/src/*/ts-rs-macros-12*/src/attr/*.rs 2>/dev/null | head\", \"description\"\u2026\n- Bash: {\"command\": \"grep -o \\\"teamB[^,]*,\\\" apps/web/src/wire/generated/DuosHost.ts apps/web/src/wire/generated/DuosSetup.ts\", \"description\": \"See how a serde-default field renders in TS\"}\n- Bash: {\"command\": \"head -c 1500 apps/web/src/wire/generated/DuosHost.ts\", \"description\": \"Peek at generated DuosHost format\"}\n- Bash: {\"command\": \"cat .cargo/config.toml 2>/dev/null | head -30; ls .cargo 2>/dev/null\", \"description\": \"Read cargo config for ts-rs export dir\"}\n- Bash: {\"command\": \"sleep 240; tail -5 /tmp/claude-1001/-home-runner-work--temp-work-item-4813/b69d64f0-a726-41c7-91d1-63405d838ef1/tasks/b355mhr8y.output; tail -3 /tmp/probe4813-run1.log\", \"description\": \"\u2026\n- tool error: <tool_use_error>Blocked: sleep 240 followed by: tail -5 /tmp/claude-1001/-home-runner-work--temp-work-item-4813/b69d64f0-a726-41c7-91d1-63405d838ef1/tasks/b355mhr8y.output tail -3 /tmp/probe4813-run1\u2026\n- Bash: {\"command\": \"tail -3 /tmp/probe4813-run1.log\", \"description\": \"Check probe build log\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4813/.bot-plan.md\", \"content\": \"# Draft plan, issue #4813 (planner's notes)\\n\\n## Found\\n- `crates/shared/src/host/duos.rs`: `start_job` (~1531) makes\u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"tail -3 /tmp/probe4813-run1.log; grep -rn \\\"too_many_arguments\\\\|too-many-arguments\\\" crates/*/clippy.toml clippy.toml 2>/dev/null | head -3\", \"description\": \"Check probe progress and ar\u2026\n- Bash: {\"command\": \"until grep -qE \\\"test result|error(\\\\[|:)|could not compile|panicked\\\" /tmp/probe4813-run1.log; do sleep 5; done; grep -E \\\"test result|error|panicked|^A |^B |^C |^D |rows after|play \\\" \u2026\n- Bash: {\"command\": \"until grep -qE \\\"test result|could not compile\\\" /tmp/probe4813-run1.log; do sleep 5; done; tail -5 /tmp/probe4813-run1.log\", \"description\": \"Wait until probe test run ends\", \"timeout\": \u2026\n- Bash: {\"command\": \"cd /tmp/probe4813 && timeout 1500 cargo test -p jackioh-shared --features jackioh-engine/testkit --test shared probe4813 -- --nocapture --test-threads 1 > /tmp/probe4813-run2.log 2>&1; e\u2026\n- Bash: {\"command\": \"grep -E \\\"rows after|play |timer\\\" /tmp/probe4813-run2.log\", \"description\": \"Show all probe output lines\"}\n- Bash: {\"command\": \"cd /tmp/probe4813/crates/shared/src/host && python3 - <<'EOF'\\nimport re\\np='duos.rs'\\ns=open(p).read()\\ns=s.replace('''fn is_answer(body: &DuosActionBody) -> bool {''','''/// R4813000: \u2026\n- Bash: {\"command\": \"cd /tmp/probe4813/crates/shared/tests && cp /home/runner/work/_temp/work/item-4813/crates/shared/tests/shared.rs shared.rs && cp /home/runner/work/_temp/work/item-4813/crates/shared/test\u2026\n- Bash: {\"command\": \"cd /tmp/probe4813 && cargo fmt --check -p jackioh-shared >/tmp/probe-fmt.log 2>&1; echo fmt $?; head -60 /tmp/probe-fmt.log\", \"description\": \"Check formatting of scratch changes\"}\n- Bash: {\"command\": \"cd /tmp/probe4813 && diff -u /home/runner/work/_temp/work/item-4813/crates/shared/src/host/duos.rs crates/shared/src/host/duos.rs\", \"description\": \"Show the formatted source diff in scra\u2026\n- said: Now run the duos module and the host soak on the fixed scratch copy.\n- Bash: {\"command\": \"cd /tmp/probe4813 && timeout 1500 cargo test -p jackioh-shared --features jackioh-engine/testkit --test shared -- duos:: host_soak > /tmp/probe4813-run3.log 2>&1; echo exit $?; grep -E \\\u2026\n- Bash: {\"command\": \"cd /tmp/probe4813 && grep -E \\\"r4813000\\\" /tmp/probe4813-run3.log; cp crates/shared/src/host/duos.rs /tmp/duos-fixed.rs && cp /home/runner/work/_temp/work/item-4813/crates/shared/src/hos\u2026\n- Bash: {\"command\": \"cd /tmp/probe4813 && timeout 1500 cargo clippy -p jackioh-shared --all-targets --features jackioh-engine/testkit -- -D warnings > /tmp/probe-clippy.log 2>&1; echo clippy $?; grep -E \\\"^(\u2026\n- Bash: {\"command\": \"cd /tmp/probe4813 && mkdir -p apps/web/src/wire/generated && timeout 1500 cargo test -p jackioh-shared --features ts --lib export_bindings_duosjob > /tmp/probe-ts.log 2>&1; echo ts $?; g\u2026\n- Bash: {\"command\": \"diff /home/runner/work/_temp/work/item-4813/apps/web/src/wire/generated/DuosJob.ts /tmp/probe4813/apps/web/src/wire/generated/DuosJob.ts; ls /tmp/probe4813/apps/web/src/wire/generated/\",\u2026\n- Bash: {\"command\": \"cd /tmp/probe4813/apps/web/src/wire/generated && for f in *.ts; do if [ -f /home/runner/work/_temp/work/item-4813/apps/web/src/wire/generated/$f ]; then cmp -s $f /home/runner/work/_temp\u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\[\\\\[test\\\\]\\\\]\\\" -A3 crates/server/Cargo.toml | head; grep -n \\\"mod duos\\\\|path = \\\\\\\"actor\\\" crates/server/tests/*.rs crates/server/tests/actor/mod.rs 2>/dev/null | head\", \"\u2026\n- Bash: {\"command\": \"cd /tmp/probe4813 && timeout 2400 cargo test -p jackioh-server --test server actor::duos > /tmp/probe-server.log 2>&1; echo exit $?; grep -E \\\"test result|FAILED|panicked at\\\" /tmp/probe\u2026\n- Bash: {\"command\": \"sed -n 1180,1260p /tmp/probe4813/crates/shared/tests/duos.rs\", \"description\": \"Review formatted test helper code in scratch copy\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4813/.bot-plan.md\", \"content\": \"# Draft plan, issue #4813 (planner's notes)\\n\\nStatus: fix + 4 tests VERIFIED in a scratch copy (/tmp/probe4813, outsi\u2026\n- Bash: {\"command\": \"until grep -qE \\\"test result|could not compile\\\" /tmp/probe-server.log; do sleep 10; done; grep -E \\\"test result|FAILED|panicked at\\\" /tmp/probe-server.log | head -20\", \"description\": \"W\u2026\n- Bash: {\"command\": \"cat >> /home/runner/work/_temp/work/item-4813/.bot-plan.md <<'EOF'\\n- Server `cargo test -p jackioh-server --test server actor::duos` on the fixed copy: 84 passed.\\nEOF\", \"description\": \u2026\n- said: ## Goal When an AI seat's answer arrives after the game has moved on from the state it was asked on (`self.next_seq != job.version`), the Duos host drops the answer and asks the seat again on the current state, if the answer is either: - a `Pass`, or - an End turn while the seat's hand is no longer\u2026"
       },
-      "hold": {
-        "ends": "2026-11-25T03:27:44Z",
-        "lifted": "2026-11-25T03:22:19Z",
-        "owner": "claude-3",
-        "since": "2026-11-25T01:27:44Z",
-        "until": "2026-11-25T03:20:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-24T23:33:37Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-4",
+      "owner_since": "2026-11-25T05:13:21Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-25T00:13:30Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-4",
       "queued_at": "2026-11-24T20:57:43Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45510998473",
+      "run_id": "pending:f38e89ee-1795583560",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-24T23:33:37Z",
+      "started_at": "2026-11-25T05:13:21Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 7149573400
@@ -21974,9 +21966,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T05:12:25Z",
+    "at": "2026-11-25T05:13:21Z",
     "url": "",
-    "what": "build #4810 on claude-1"
+    "what": "build #4813 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-25T04:46:46Z",
