@@ -22218,6 +22218,7 @@
       "run_id": "45565005260",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 535,
       "started_at": "2026-11-25T07:01:58Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -45056,9 +45057,33 @@
         "title": "Patch: a Lava Golem handed to the opponent by its Tribute is not fused back into its player's Rod of Ages by an Equip play",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-4"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "d4f693627435c2a615b6af45f46eb5ea19d14e51",
+        "issue": 4813,
+        "merged_at": "2026-11-25T07:30:47Z",
+        "n": 535,
+        "pr": 4895,
+        "queued_at": "2026-11-25T07:30:47Z",
+        "sha": "56bddc1a7cf09981764888ee53fcc0ff17df7731",
+        "status": "queued",
+        "title": "Patch: the Duos host decides an AI seat's pass or End turn again when the game moved on since it was asked, so the two AI seats stop wasting the pass between them",
+        "tries": 0
       }
     ],
-    "count": 534
+    "count": 535
   },
   "statistics": {
     "at": "2026-11-25T07:24:04Z"
