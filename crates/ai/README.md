@@ -305,7 +305,9 @@ first (#1778). Its root tries a play in every distinct placement (the zones besi
 across it), each in its lowest lane, or its midlane lane when it has one, which a Cry may read (R2203001);
 deeper levels, the lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). The beam
 drops an open line whose position an earlier one reached (two orders of the same moves into the same lanes
-are one position). A line that differs from an earlier one only in where its cards stand is a lane variant
+are one position). A position also holds the last Spell played while a card that copies it (C #57 Echo) is
+in the seat's hand or graveyard, and each unit's Churnwalker chain; its units' lanes include a Dormant card's
+lane and an animated card's home zone (R4808000). A line that differs from an earlier one only in where its cards stand is a lane variant
 (#1797; R4132000: a backrow card's lane, and which side of a standing unit a new one goes, included, read off
 `lane_free_signature`, which sorts each side's units and backrow cards and leaves out its empty zones): the
 evaluation reads no lane but through a unit's stats, which that signature keeps, so it takes no place in the
