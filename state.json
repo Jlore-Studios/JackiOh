@@ -22486,6 +22486,7 @@
         "by": "`claude` (strong)",
         "sha": "66466ed86a72858ab40105477a7016487bed6e2a"
       },
+      "closed_at": "2026-11-25T09:17:13Z",
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -22496,6 +22497,7 @@
       "kind": "review",
       "live": "reviewing",
       "merge_owner": "claude-8",
+      "merged": true,
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-25T06:56:46Z",
