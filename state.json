@@ -20671,6 +20671,10 @@
       "runs_on": "night-vm-muse",
       "started_at": "2026-11-24T23:53:20Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-7` (claude, opus) rejected it: `crates/cards/src/history.rs:1408`: All eight new KEPT_SCRIPTS rows are filed under \"v0.6.13e\", but the aim-less scripts also ran in v0.6.13f, v0.6.13g and v0.6."
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 3
     },
