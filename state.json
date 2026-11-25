@@ -20886,9 +20886,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "muse",
-      "owner_since": "2026-11-25T19:23:56Z",
-      "owner_why": "its approval shipped `f785784e00b4`, and the last approver owns the merge, so it fixes what CI found",
+      "owner": "agy",
+      "owner_since": "2026-11-25T19:33:54Z",
+      "owner_why": "handed off from `muse`: `muse` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-25T16:09:59Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
@@ -24911,7 +24911,7 @@
       }
     },
     "4944": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_early": false,
       "ci_fixes": 1,
@@ -24939,19 +24939,19 @@
       "interruptions": 0,
       "issue": 4842,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "fixing-ci",
       "merge_owner": "muse",
       "pending_request": false,
-      "provider": "muse",
+      "provider": "agy",
       "queued_at": "2026-11-25T19:23:54Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "45680735080",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:7561e193-1795635183",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-11-25T18:59:41Z",
+      "started_at": "2026-11-25T19:33:54Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -25845,9 +25845,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T19:32:49Z",
+    "at": "2026-11-25T19:33:54Z",
     "url": "",
-    "what": "build #4937 on muse"
+    "what": "revise #4944 on agy"
   },
   "last_sweep": {
     "at": "2026-11-25T19:06:55Z",
