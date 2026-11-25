@@ -25753,6 +25753,8 @@
       }
     },
     "4953": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-25T16:42:50Z",
@@ -25766,8 +25768,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Radiant Cosmic Bard leaves both drawn Units at the cheapest price, even one that carries a cost raise larger than that price\"} -->\n- ## What changed\n- S+ #102 Cosmic Bard's Radiant face set each drawn Unit's price with a lone cost override of `cheapest \u2212 cost_mod`, but an override clamps at 0, so a Unit carrying a raise larger than the cheapest price kept its excess (a (0) Unit with +2 priced at 2 instead of 1 when the cheapest drawn was 1).\n- - [c102_cosmic_bard.rs](crates/cards/src/scripts/stinkyscape_plus/c102_cosmic_bard.rs): when a drawn card's `cost_mod` exceeds the cheapest drawn price, the Cry now emits `setCostOverride` 0 plus a hand-only `setCostMod` of `cheapest \u2212 cost_mod`, so the excess comes off the change itself and the ca\u2026\n- - [history.rs](crates/cards/src/history.rs): `KEPT_SCRIPTS` row for the card keyed `fragment:radiant-cosmic-bard-leaves-both-drawn-units-at-the-cheapest`.\n- - New pending fragment `crates/cards/patches/pending/radiant-cosmic-bard-leaves-both-drawn-units-at-the-cheapest.json` (`--plays stinkyscapeplus-102`, no catalog change) with a hand-written `player` note under `fixes`.\n- No engine change, no spec change (R3568001 already states this behavior; `spec check` confirms the card file is in its `proven_in`).\n- ## How I tested it\n- - `cargo test -p jackioh-cards c102_cosmic_bard`: 12 lib tests + 4 cross tests pass, including the new `r3568001_radiant_sets_a_drawn_unit_carrying_a_larger_raise_to_the_cheapest` (raised (0)+2 and plain (1) both price 1; pins `cost_override == Some(0)`, `cost_mod == 1`) and `kept_script_before_483\u2026\n- - `cargo clippy -p jackioh-cards --all-targets -- -D warnings`: clean. `cargo fmt --check`: clean (after one reflow of the lengthened import line).\n- - `cargo jackioh patches check`, `cargo jackioh catalog check`, `cargo jackioh spec check` (2598 rulings, 6419 proofs): all ok.\n- ## Decisions\n- - Card-script fix only; rejected the engine-verb alternative (one caller, smallest change, per plan).\n- - Both new effects ride the existing hand-zone `emit_cost` path, so opponent redaction of `CostChanged` is unchanged; both are `inHandOnly`, so a hand-cap-burned draw still fizzles exactly like today's override, and drawn-order emission keeps replays deterministic.\n- Reviewers may want a second look at the two-`CostChanged`-event sequence for a raised card (override then mod): the intermediate event reports the pre-adjustment price, the final state is exact, and ordering is deterministic.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4832 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4832/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files\n- muse: retrying meta model stream in 60000ms (attempt 2/10)"
       },
       "issue": 4832,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-25T19:31:48Z",
         "from_run": "45656900416",
         "gates": [
           {
@@ -25826,8 +25831,15 @@
         "source": "build",
         "until": "2026-11-25T20:00:21Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-25T19:30:21Z",
+      "run_id": "pending:bce5a3e9-1795635060",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-25T19:31:48Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -25841,9 +25853,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T19:16:12Z",
+    "at": "2026-11-25T19:31:48Z",
     "url": "",
-    "what": "build #4926 on muse"
+    "what": "review #4953 on muse"
   },
   "last_sweep": {
     "at": "2026-11-25T19:06:55Z",
