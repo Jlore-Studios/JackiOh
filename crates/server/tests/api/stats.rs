@@ -4252,4 +4252,37 @@ mod r4552003_decisiveness {
             "{keys:?}"
         );
     }
+
+    #[tokio::test]
+    async fn stats_queries_refuse_nul_characters_with_bad_request() {
+        let app = test_app().await;
+
+        let (status, _, body) = get_public(&app, "/api/stats/players?search=%00").await;
+        assert_eq!(status, 400);
+        assert_eq!(
+            body["error"]["message"],
+            "a query parameter may not contain a NUL character"
+        );
+
+        let (status, _, body) = get_public(&app, "/api/stats/cards?patch=%00").await;
+        assert_eq!(status, 400);
+        assert_eq!(
+            body["error"]["message"],
+            "a query parameter may not contain a NUL character"
+        );
+
+        let (status, _, body) = get_public(&app, "/api/stats/cards/core-001?patch=%00").await;
+        assert_eq!(status, 400);
+        assert_eq!(
+            body["error"]["message"],
+            "a query parameter may not contain a NUL character"
+        );
+
+        let (status, _, body) = get_public(&app, "/api/stats/games?patch=%00").await;
+        assert_eq!(status, 400);
+        assert_eq!(
+            body["error"]["message"],
+            "a query parameter may not contain a NUL character"
+        );
+    }
 }

@@ -981,6 +981,8 @@ mod tests {
             card: card.to_owned(),
             turn: 3,
             radiant,
+            variant: None,
+            source: None,
         };
         // A Created Unit played from the hand, and a token the seat only summoned, which is used but
         // no play.

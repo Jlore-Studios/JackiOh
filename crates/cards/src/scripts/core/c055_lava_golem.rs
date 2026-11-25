@@ -312,6 +312,62 @@ mod tests {
         }
     }
 
+    /// R4834000: an Equip play onto S #16 Rod of Ages that R360 hands to the opponent fuses nothing.
+    mod r4834000_an_equip_play_onto_rod_of_ages_s_16 {
+        use super::*;
+
+        const ROD: &str = "stinkyscape-016"; // Rod of Ages: lends Equip (R1869000)
+
+        /// Rod of Ages face-up in p1's backrow zone 1, the Golem in hand, three of p2's units to pay with;
+        /// the Golem's and Rod's ids, and p2's three units.
+        fn onto_rod(golem: Value) -> (Scenario, String, String, Vec<String>) {
+            let s = scenario(json!({
+                "p1": { "mana": 10, "hand": [golem], "backrow": [{ "def": ROD, "lane": 1, "faceUp": true }] },
+                "p2": { "field": fodder() },
+            }));
+            let golem = s.card("core-055").id.clone();
+            let rod = s.backrow(P1, 1).expect("Rod of Ages").id;
+            let theirs = ids_at(&s, P2, &[1, 2, 3]);
+            (s, golem, rod, theirs)
+        }
+
+        #[test]
+        fn r4834000_base_paid_with_opposing_units_it_is_handed_over_and_rod_of_ages_fuses_nothing() {
+            let (mut s, golem, rod, theirs) = onto_rod(json!("core-055"));
+            assert!(
+                s.plays_of("core-055").iter().any(|play| matches!(
+                    play,
+                    ActionBody::Play { zone: Some(zone), equip: Some(true), tributes: Some(paid), .. }
+                        if zone.row == Row::Backrow && zone.lane == 1 && paid.iter().all(|id| theirs.contains(id))
+                )),
+                "the Equip play onto Rod of Ages paid with p2's units is listed"
+            );
+
+            s.play("core-055", json!({ "zone": 1, "row": "backrow", "equip": true, "tributes": theirs }));
+
+            // R360: summoned for p2 in the lane the play named, and no card stood on Rod to fuse.
+            assert_eq!(s.unit(P2, 1).map(|unit| unit.id), Some(golem.clone()));
+            assert_eq!(s.card("core-055").controller, P2);
+            let rod_after = s.backrow(P1, 1).expect("Rod of Ages, left as it was");
+            assert_eq!(rod_after.id, rod);
+            assert_eq!(rod_after.def_id, ROD);
+            assert!(!s.last_events().iter().any(|event| matches!(event, GameEvent::Fused { .. })));
+            assert_eq!(s.pile(P2, "graveyard").len(), 3);
+        }
+
+        #[test]
+        fn r4834000_radiant_paid_with_opposing_units_it_stays_and_fuses_into_rod_of_ages() {
+            let (mut s, golem, rod, theirs) = onto_rod(json!({ "def": "core-055", "radiant": true }));
+
+            s.play("core-055", json!({ "zone": 1, "row": "backrow", "equip": true, "tributes": theirs }));
+
+            assert!(find_instance(s.state(), &golem).is_none(), "the Golem fused into Rod of Ages");
+            assert!(s.last_events().iter().any(|event| matches!(event, GameEvent::Fused { .. })));
+            assert_eq!(find_instance(s.state(), &rod).map(|card| card.controller), Some(P1));
+            assert!(s.state().players.p2.units.iter().all(Option::is_none));
+        }
+    }
+
     mod printed_keywords_s6_1_s10_4_layer_1 {
         use super::*;
 

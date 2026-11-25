@@ -1005,8 +1005,8 @@ pub fn discover_power() -> Effect {
 }
 
 /// R3134002: R151's arrival roll for a copy that reaches the field with no Cry to choose: Summoned,
-/// Recruited, fused onto a card on the field, Reborn or Flickered back (`summon_onto`'s and the fuse's
-/// arrival clause), so it is never dead. A copy in a hand or a library rolls nothing: playing it runs
+/// Recruited, fused onto a card on the field, Reborn, Flickered back or made by a Transform
+/// (`summon_onto`'s, the fuse's and the Transform's arrival clause, R4816000), so it is never dead. A copy in a hand or a library rolls nothing: playing it runs
 /// the Cry, which asks.
 pub fn roll_power_on_field() -> Effect {
     Effect::new("rollPowerOnField", |ctx| {

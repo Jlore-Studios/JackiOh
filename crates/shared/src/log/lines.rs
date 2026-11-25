@@ -579,10 +579,12 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
             outcome,
             ..
         } => {
+            // R4821002: a ceased card may come from a deck with room (R4821000), so its line says nothing
+            // of a full deck.
             let english = match outcome {
                 LibraryOverflowOutcome::NotCreated => "{whose} deck is full: {card} was not created",
                 LibraryOverflowOutcome::Graveyard => "{whose} deck is full: {card} went to the graveyard",
-                LibraryOverflowOutcome::Ceased => "{whose} deck is full: {card} ceased to exist",
+                LibraryOverflowOutcome::Ceased => "{card} could not go into {whose} deck: it ceased to exist",
             };
             cap(s(
                 english,

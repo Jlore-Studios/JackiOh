@@ -202,9 +202,9 @@ mod tests {
     }
 
     #[test]
-    fn hash_state_mode_leaves_out_applied_opening_and_generators() {
+    fn hash_state_mode_leaves_out_applied_opening_generators_and_makers() {
         let (_, value) = folded_hotseat();
-        let changed: [Change; 3] = [
+        let changed: [Change; 4] = [
             ("applied", |v| {
                 v["applied"]
                     .as_array_mut()
@@ -217,6 +217,10 @@ mod tests {
             ("generators", |v| {
                 v["generators"] = json!({ "hash-state-test": "c001" })
             }),
+            (
+                "makers",
+                |v| v["makers"] = json!({ "hash-state-test": { "card": "c001", "radiant": false } }),
+            ),
         ];
         for (field, change) in changed {
             let mut copy = value.clone();

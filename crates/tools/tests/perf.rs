@@ -2,6 +2,7 @@
 //! the work budget, which needs no clock, is held (#4196), and daily with every median held to
 //! the test profile's budgets.
 
+use std::fs;
 use std::io::Write as _;
 use std::process::{Command, Output};
 
@@ -10,6 +11,8 @@ use serde_json::Value;
 use jackioh_engine::testkit::golden::HOTSEAT;
 
 const BIN: &str = env!("CARGO_BIN_EXE_jackioh");
+/// The pinned games' records (#4924), `perf.rs`'s `PERF_CORPUS_DIR`.
+const PERF_CORPUS: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/perf-corpus");
 
 /// The report's measures, in its order.
 const MEASURES: [&str; 12] = [
@@ -37,6 +40,49 @@ fn stdout(output: &Output) -> String {
 
 fn stderr(output: &Output) -> String {
     String::from_utf8_lossy(&output.stderr).into_owned()
+}
+
+/// The corpus's records by file name, sorted, and each parsed: the live ones, then the retired ones.
+fn pinned_records() -> (Vec<(String, Value)>, Vec<String>) {
+    let mut names: Vec<String> = fs::read_dir(PERF_CORPUS)
+        .expect("perf-corpus/ reads")
+        .map(|entry| {
+            entry
+                .expect("an entry")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
+        .filter(|name| name.ends_with(".json"))
+        .collect();
+    names.sort();
+    let mut live = Vec::new();
+    let mut retired = Vec::new();
+    for name in names {
+        let text = fs::read_to_string(format!("{PERF_CORPUS}/{name}")).expect("a record reads");
+        let record: Value = serde_json::from_str(&text).unwrap_or_else(|error| panic!("{name}: {error}"));
+        if record.get("retired").is_some() {
+            retired.push(name);
+        } else {
+            live.push((name, record));
+        }
+    }
+    (live, retired)
+}
+
+fn names(value: &Value) -> Vec<String> {
+    let mut names: Vec<String> = value
+        .as_array()
+        .unwrap_or_else(|| panic!("{value} is no list"))
+        .iter()
+        .map(|name| {
+            name.as_str()
+                .unwrap_or_else(|| panic!("{name} is no name"))
+                .to_string()
+        })
+        .collect();
+    names.sort();
+    names
 }
 
 #[test]
@@ -67,6 +113,29 @@ fn perf_smoke_times_the_corpus_once() {
     );
     assert!(report["fold"]["actions"].as_u64() >= Some(1), "{report:#}");
     assert!(report["duosFold"]["actions"].as_u64() >= Some(1), "{report:#}");
+
+    // #4924: the games played are the pinned records, every live one and no retired one; each replayed
+    // with no refused action, which would have failed the run above.
+    let (live, retired) = pinned_records();
+    let live_names: Vec<String> = live.iter().map(|(name, _)| name.clone()).collect();
+    assert_eq!(names(&corpus["games"]), live_names, "{report:#}");
+    assert_eq!(names(&corpus["retired"]), retired, "{report:#}");
+    for kind in ["plain", "handicapped", "run-start", "coop"] {
+        assert!(
+            live.iter()
+                .any(|(name, record)| record["kind"] == kind && name.starts_with(&format!("{kind}-"))),
+            "no live {kind} record in perf-corpus/: {live_names:#?}"
+        );
+    }
+    let plain_seeds: Vec<u64> = live
+        .iter()
+        .filter(|(_, record)| record["kind"] == "plain")
+        .filter_map(|(_, record)| record["seed"].as_u64())
+        .collect();
+    let lowest = plain_seeds.iter().min().copied();
+    let highest = plain_seeds.iter().max().copied();
+    assert_eq!(corpus["seeds"][0].as_u64(), lowest, "{report:#}");
+    assert_eq!(corpus["seeds"][1].as_u64(), highest, "{report:#}");
 
     let rows = report["measures"].as_array().expect("the measures");
     let names: Vec<&str> = rows.iter().filter_map(|row| row["measure"].as_str()).collect();

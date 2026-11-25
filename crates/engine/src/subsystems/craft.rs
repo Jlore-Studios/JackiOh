@@ -20,10 +20,11 @@ use crate::catalog::FUSED_DIGEST_MARK;
 use crate::config::{
     CRAFT_ADJECTIVES, CRAFT_ECHO_POINTS_PER_N, CRAFT_HAT_PRICES, CRAFT_HUGE_POTION_BUDGET_MULTIPLE,
     CRAFT_HUGE_POTION_COST, CRAFT_ID_PREFIX, CRAFT_KEYWORD_PRICES, CRAFT_LOC_BUDGET, CRAFT_LOC_SKELETON,
-    CRAFT_MAX_COST, CRAFT_MAX_EFFECTS, CRAFT_MAX_N, CRAFT_NOUNS, CRAFT_OFFER_HATS, CRAFT_OFFER_KEYWORDS,
-    CRAFT_OFFER_VERBS, CRAFT_POTION_COST, CRAFT_POTION_POINTS, CRAFT_PRESET_BASE_HEALTH,
-    CRAFT_PRESET_KEYWORD_MIN_POINTS, CRAFT_PRESETS, CRAFT_RADIANT_MULTIPLIER, CRAFT_RETIRED_VERBS,
-    CRAFT_VERB_PRICES, craft_points_budget, true_craft_points_budget,
+    CRAFT_MAX_COST, CRAFT_MAX_EFFECTS, CRAFT_MAX_N, CRAFT_MAX_STAT, CRAFT_NOUNS, CRAFT_OFFER_HATS,
+    CRAFT_OFFER_KEYWORDS, CRAFT_OFFER_VERBS, CRAFT_POTION_COST, CRAFT_POTION_POINTS,
+    CRAFT_PRESET_BASE_HEALTH, CRAFT_PRESET_KEYWORD_MIN_POINTS, CRAFT_PRESETS, CRAFT_RADIANT_MULTIPLIER,
+    CRAFT_RETIRED_VERBS, CRAFT_UNPRICED_POINTS, CRAFT_VERB_PRICES, craft_points_budget,
+    true_craft_points_budget,
 };
 use indexmap::IndexMap;
 
@@ -109,6 +110,15 @@ fn keyword_price(kind: KeywordKind) -> Option<&'static CraftKeywordPrice> {
     CRAFT_KEYWORD_PRICES.iter().find(|row| row.kind == kind)
 }
 
+/// A keyword's points at `n` (R883): its row's `points + per_n × n`; a kind with no row is no block and
+/// prices at `CRAFT_UNPRICED_POINTS`. Saturating, so no number a recipe carries wraps it (#4827).
+fn keyword_points(kind: KeywordKind, n: Option<i32>) -> i32 {
+    keyword_price(kind).map_or(CRAFT_UNPRICED_POINTS, |row| {
+        row.points
+            .saturating_add(row.per_n.saturating_mul(n.unwrap_or(0)))
+    })
+}
+
 fn hat_price(hat: CraftHatKind) -> &'static crate::wire::CraftHatPrice {
     CRAFT_HAT_PRICES
         .iter()
@@ -116,35 +126,38 @@ fn hat_price(hat: CraftHatKind) -> &'static crate::wire::CraftHatPrice {
         .expect("every CraftHatKind has a price row")
 }
 
-/// One verb's points; a `grantKeyword` costs what its keyword costs.
+/// One verb's points; a `grantKeyword` costs what its keyword costs (`keyword_points`), and one naming
+/// none nothing, which the validator refuses. Saturating (#4827).
 fn effect_points(effect: &CraftEffect) -> i32 {
     if effect.verb == CraftVerb::GrantKeyword {
-        return effect
-            .keyword
-            .and_then(keyword_price)
-            .map(|row| row.points + row.per_n * effect.n.unwrap_or(0))
-            .unwrap_or(0);
+        return effect.keyword.map_or(0, |kind| keyword_points(kind, effect.n));
     }
     let row = verb_price(effect.verb);
-    let price = row.points + row.per_n * effect.n.unwrap_or(0);
-    if row.halve { (price + 1) / 2 } else { price }
+    let price = row
+        .points
+        .saturating_add(row.per_n.saturating_mul(effect.n.unwrap_or(0)));
+    if row.halve {
+        price.saturating_add(1) / 2
+    } else {
+        price
+    }
 }
 
 /// A recipe's points: stats, keywords, Echo, and each effect's price times its hat's multiplier.
+/// Saturating, so any numbers price at most `i32::MAX` and never wrap under a budget (#4827).
 pub fn recipe_points(recipe: &CraftRecipe) -> i32 {
-    let mut points = 0;
+    let mut points: i32 = 0;
     if recipe.type_ == CardType::Unit {
-        points += recipe.attack + recipe.health - 1;
+        points = points.saturating_add(recipe.attack.saturating_add(recipe.health).saturating_sub(1));
     }
     for keyword in &recipe.keywords {
-        points += keyword_price(keyword.kind)
-            .map(|row| row.points + row.per_n * keyword.n.unwrap_or(0))
-            .unwrap_or(0);
+        points = points.saturating_add(keyword_points(keyword.kind, keyword.n));
     }
-    points += recipe.echo * CRAFT_ECHO_POINTS_PER_N;
+    points = points.saturating_add(recipe.echo.saturating_mul(CRAFT_ECHO_POINTS_PER_N));
     for hat in &recipe.hats {
         let multiplier = hat_price(hat.hat).multiplier;
-        points += multiplier * hat.effects.iter().map(effect_points).sum::<i32>();
+        let effects = hat.effects.iter().map(effect_points).fold(0, i32::saturating_add);
+        points = points.saturating_add(multiplier.saturating_mul(effects));
     }
     points
 }
@@ -217,8 +230,14 @@ pub fn validate_recipe(recipe: &CraftRecipe, cost: i32, mode: Option<CraftMode>)
         if recipe.attack < 0 {
             reasons.push(format!("attack is {}, below 0", recipe.attack));
         }
+        if recipe.attack > CRAFT_MAX_STAT {
+            reasons.push(format!("attack is {}, above {CRAFT_MAX_STAT}", recipe.attack));
+        }
         if recipe.health < 1 {
             reasons.push(format!("health is {}, below 1", recipe.health));
+        }
+        if recipe.health > CRAFT_MAX_STAT {
+            reasons.push(format!("health is {}, above {CRAFT_MAX_STAT}", recipe.health));
         }
     } else if recipe.attack != 0 || recipe.health != 1 {
         reasons.push("only a Unit has stats".to_string());
@@ -328,6 +347,10 @@ pub fn validate_recipe(recipe: &CraftRecipe, cost: i32, mode: Option<CraftMode>)
                     None => reasons.push("granting a keyword needs one".to_string()),
                     Some(KeywordKind::Armor) => {
                         reasons.push("Armor is a face number, not a granted keyword".to_string())
+                    }
+                    // R883: a keyword outside the table is no block, granted as on the keyword line (#4827).
+                    Some(kind) if keyword_price(kind).is_none() => {
+                        reasons.push(format!("{} is not a craft block", kind.as_str()))
                     }
                     Some(_) => {}
                 }
@@ -498,7 +521,10 @@ fn key_of(numbered: &[(usize, usize, String)], hi: usize, ei: usize) -> Option<S
 fn keyword_of(block: &CraftKeyword, doubled: bool) -> Keyword {
     match block.kind {
         KeywordKind::Armor => Keyword::Armor {
-            n: block.n.unwrap_or(1) * if doubled { CRAFT_RADIANT_MULTIPLIER } else { 1 },
+            n: block
+                .n
+                .unwrap_or(1)
+                .saturating_mul(if doubled { CRAFT_RADIANT_MULTIPLIER } else { 1 }),
         },
         KeywordKind::Taunt => Keyword::Taunt,
         KeywordKind::Rush => Keyword::Rush,
@@ -522,7 +548,10 @@ fn keyword_text(block: &CraftKeyword, doubled: bool) -> String {
     match block.kind {
         KeywordKind::Armor => format!(
             "Armor {}",
-            block.n.unwrap_or(1) * if doubled { CRAFT_RADIANT_MULTIPLIER } else { 1 }
+            block
+                .n
+                .unwrap_or(1)
+                .saturating_mul(if doubled { CRAFT_RADIANT_MULTIPLIER } else { 1 })
         ),
         kind => kind.as_str().to_string(),
     }
@@ -639,7 +668,9 @@ fn face_text(recipe: &CraftRecipe, radiant: bool) -> String {
     if recipe.type_ == CardType::Spell && recipe.echo > 0 {
         keywords.push(format!(
             "Echo {}",
-            recipe.echo * if radiant { CRAFT_RADIANT_MULTIPLIER } else { 1 }
+            recipe
+                .echo
+                .saturating_mul(if radiant { CRAFT_RADIANT_MULTIPLIER } else { 1 })
         ));
     }
     if !keywords.is_empty() {
@@ -653,7 +684,7 @@ fn face_text(recipe: &CraftRecipe, radiant: bool) -> String {
 }
 
 /// The transient definition a recipe compiles to (R882). Total: it never panics, so the preview
-/// and the reducer agree on every recipe, valid or not.
+/// and the reducer agree on every recipe, valid or not (its multiplications saturate, #4827).
 pub fn compile_crafted_def(recipe: &CraftRecipe) -> CardDef {
     let id = craft_id(recipe);
     let numbered = numbered(recipe);
@@ -674,7 +705,7 @@ pub fn compile_crafted_def(recipe: &CraftRecipe) -> CardDef {
             Param {
                 key: key.clone(),
                 base: n,
-                radiant: n * CRAFT_RADIANT_MULTIPLIER,
+                radiant: n.saturating_mul(CRAFT_RADIANT_MULTIPLIER),
                 better: ParamBetter::Up,
                 step: None,
                 min: Some(1),
@@ -689,7 +720,10 @@ pub fn compile_crafted_def(recipe: &CraftRecipe) -> CardDef {
     let face = |radiant: bool| {
         let (attack, health) = if recipe.type_ == CardType::Unit {
             let times = if radiant { CRAFT_RADIANT_MULTIPLIER } else { 1 };
-            (Some(recipe.attack * times), Some(recipe.health * times))
+            (
+                Some(recipe.attack.saturating_mul(times)),
+                Some(recipe.health.saturating_mul(times)),
+            )
         } else {
             (None, None)
         };
@@ -828,7 +862,8 @@ fn effect_of(ctx: &mut EffectContext<'_>, compiled: &CompiledEffect) -> Vec<Effe
             target: TargetSpec::Chosen {
                 index: compiled.target,
             },
-            // Armor never reaches here (the validator refuses it); every other kind grants at 1.
+            // Armor and a kind with no price row never reach here (the validator refuses both, R883); every
+            // other kind grants at 1.
             keyword: Keyword::of_kind(effect.keyword.unwrap_or(KeywordKind::Taunt), 1),
         })],
         CraftVerb::Destroy => vec![destroy(json_as(json!({ "target": chosen() })))],
@@ -985,7 +1020,11 @@ fn compile_face(recipe: &CraftRecipe, numbered: &[(usize, usize, String)], radia
         );
     }
     let echo = if recipe.echo > 0 {
-        Some(recipe.echo * if radiant { CRAFT_RADIANT_MULTIPLIER } else { 1 })
+        Some(
+            recipe
+                .echo
+                .saturating_mul(if radiant { CRAFT_RADIANT_MULTIPLIER } else { 1 }),
+        )
     } else {
         None
     };

@@ -132,6 +132,36 @@ fn is_end_turn(body: &DuosActionBody) -> bool {
     )
 }
 
+/// R4813000: the instance ids of `seat`'s hand, in order.
+fn hand_ids(state: &DuosState, seat: DuosSeat) -> Vec<String> {
+    state
+        .duels
+        .get(seat.duel())
+        .map(|duel| {
+            duel.players[seat.player()]
+                .hand
+                .iter()
+                .map(|card| card.id.clone())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// R4813000: whether `body`, decided for `seat` when its hand was `hand`, is decided again once the game has
+/// moved past the state it was decided on: a pass, which reads the teammate's duel, or an end of turn once
+/// the seat's hand has changed (a card passed to it may be one it can play).
+fn decide_again_when_stale(
+    state: &DuosState,
+    seat: DuosSeat,
+    body: &DuosActionBody,
+    hand: &[String],
+) -> bool {
+    match body {
+        DuosActionBody::Pass { .. } => true,
+        _ => is_end_turn(body) && hand_ids(state, seat).as_slice() != hand,
+    }
+}
+
 fn is_answer(body: &DuosActionBody) -> bool {
     matches!(
         body,
@@ -525,6 +555,9 @@ struct DuosJob {
     mode: DuosAiMode,
     fallback: Option<DuosActionBody>,
     cursor: u32,
+    /// R4813000: the instance ids of the seat's hand when it was asked.
+    #[serde(default)]
+    hand: Vec<String>,
 }
 
 /// Where a log write stands: the action reduced, the row asked for, the state not yet moved (§9.3).
@@ -1560,6 +1593,7 @@ impl DuosHost {
                     mode: mode_now.clone(),
                     fallback: fallback(&legal),
                     cursor,
+                    hand: hand_ids(&self.game, seat),
                 });
                 self.emit(DuosHostOutput::Decide {
                     request: DuosDecide {
@@ -1573,7 +1607,9 @@ impl DuosHost {
         }
     }
 
-    /// The AI's search came back (or threw): what it found, or the job's fallback, is played.
+    /// The AI's search came back (or threw): what it found, or the job's fallback, is played, unless it is a
+    /// pass, or an end of turn once the seat's hand has changed, decided on a state since moved past, which is
+    /// decided again (R4813000).
     fn on_decided(
         &mut self,
         seat: DuosSeat,
@@ -1591,6 +1627,10 @@ impl DuosHost {
         } else {
             (body.filter(|body| !ai_forbidden(body)).or(job.fallback), cursor)
         };
+        // R4813000: decided on a state the game has since moved past, a pass, or an end of turn the seat's
+        // hand has outgrown, is played as nothing found: the seat decides again on the state as it stands.
+        let stale = self.next_seq != job.version;
+        let body = body.filter(|body| !(stale && decide_again_when_stale(&self.game, seat, body, &job.hand)));
         self.on_ai_move(seat, job.version, cursor, Some(job.mode), body, now);
     }
 

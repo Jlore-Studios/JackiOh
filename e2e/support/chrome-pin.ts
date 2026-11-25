@@ -1,28 +1,30 @@
 // The Chrome the Cypress run (e2e and component) launches as `chrome`, when the one Cypress found is a major known to break under it.
 // Node-side only: cypress.config.ts's setupNodeEvents calls `pinChrome`.
 //
-// Chrome 158, in GitHub's runner image 20261122.9.1 (rolling out from 2026-11-25): Cypress 16.1.0 fails each spec as it
-// starts, before any test runs, with `* is not a valid URL` thrown while it reads a DevTools message. The same specs pass
-// on Chrome 157 (image 20261116.202.1): on 2026-11-25, `e2e smoke (2/4)` failed so on 158 in runs 45694220631,
-// 45691516527 and 45696395574 and passed on 157 in 45696513111 and 45696509561. So on CI (or with E2E_CHROME_PIN=1) such
-// a `chrome` entry is replaced, keeping its name since Cypress picks a name's highest version, by Chrome for Testing
-// PINNED_CHROME_MILESTONE cached in .cache/; a failed download keeps the system Chrome and says why. Remove 158 from
-// BROKEN_CHROME_MAJORS once a Cypress release runs on it (e2e/package.json), and this file with it if the list is empty.
-//
-// Before it, 155: Cypress 16 answers every request the page makes over the DevTools protocol (`Fetch.enable`;
-// `forceHttp1: true` never delivered the engine's .wasm). Chrome 155 made a request id reused under that interception
-// fatal (Chromium CL 8359730), and a restarted request reuses one, so now and then the browser killed its network
-// service; CL 8411428 (crbug.com/559770861) fixed it in 156, and the runner image has shipped 157 since.
+// Cypress 16 answers every request the page makes over the DevTools protocol (`Fetch.enable`; `forceHttp1: true` never
+// delivered the engine's .wasm). Chrome 155 made a request id reused under that interception fatal (Chromium CL
+// 8359730), and a restarted request reuses one, so now and then the browser kills its network service; CL 8411428
+// (crbug.com/559770861) fixed it in 156. Chrome 158, which the runner image started shipping on 2026-11-25, fails every
+// spec at its start under Cypress 16.1.0: the browser answers a DevTools call with "* is not a valid URL", which Cypress
+// does not catch, before any test runs (#4952: run 45682322780's e2e smoke shards 1 and 3, run 45698691753's shard 2,
+// merge-queue builds 45694220631 and 45691516527; on a runner not yet on 158 the same specs pass). So on CI (or with
+// E2E_CHROME_PIN=1) such a `chrome` entry is replaced, keeping its name since Cypress picks a name's highest version, by
+// Chrome for Testing PINNED_CHROME_MILESTONE cached in .cache/; a failed download keeps the system Chrome and says why.
+// Remove 155 from BROKEN_CHROME_MAJORS now the runner image ships 156 and later, and 158 once e2e/package.json's Cypress
+// runs the smoke specs on it; the file goes with the last.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-/** Google Chrome majors that Cypress breaks on: 158 fails every spec as it starts (the header says how). */
-export const BROKEN_CHROME_MAJORS: readonly number[] = [158];
+/**
+ * Google Chrome majors that break under Cypress: 155's network service dies under its DevTools interception, and 158
+ * refuses one of its DevTools calls at every spec's start ("* is not a valid URL").
+ */
+export const BROKEN_CHROME_MAJORS: readonly number[] = [155, 158];
 
 /** The Chrome for Testing milestone launched in their place: the last major this suite passed on. */
-export const PINNED_CHROME_MILESTONE = "157";
+export const PINNED_CHROME_MILESTONE = "154";
 
 /** Chrome for Testing's index of the newest build of every milestone, with its downloads. */
 const CFT_MILESTONES_URL =
@@ -103,7 +105,7 @@ export async function pinChrome(
   const found = broken.map((browser) => browser.version).join(", ");
   if (!pinWanted(env)) {
     console.warn(
-      `[e2e] Chrome ${found} is a major Cypress breaks on (support/chrome-pin.ts); ` +
+      `[e2e] Chrome ${found} breaks under Cypress (support/chrome-pin.ts); ` +
         `E2E_CHROME_PIN=1 runs Chrome for Testing ${PINNED_CHROME_MILESTONE} as \`chrome\` instead.`,
     );
     return [...browsers];

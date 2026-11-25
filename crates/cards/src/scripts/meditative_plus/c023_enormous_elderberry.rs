@@ -11,7 +11,7 @@
 //! so every modifier (R65) moves both prices alike, and under Mountaintop Garden its dearer choice
 //! costs the normal price too (R1181002); the normal version keeps its price. A full hand burns the
 //! rest (§2.4, R4), and R766 takes the mark off a card that reaches a graveyard or an exile pile.
-//! Through v0.6.8d each carried a price for its Embiggened version alone instead, `EMBIGGENED_COST`
+//! Through v0.6.9 each carried a price for its Embiggened version alone instead, `EMBIGGENED_COST`
 //! (R1181003, `embiggenCostOverride`), the script `KEPT_SCRIPTS` keeps (`script_v0_6_8d`). Tunes: cards
 //! 1 ↑; embiggenedCards 3 ↑.
 
@@ -48,7 +48,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000, R1181003: each card added priced its Embiggened version at (0), through v0.6.8d (issue
+/// R767000, R1181003: each card added priced its Embiggened version at (0), through v0.6.9 (issue
 /// #4350); `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_8d() -> CardScripts {
     CardScripts {
@@ -218,7 +218,7 @@ mod tests {
             assert_eq!((view.cost, view.embiggen_cost), (base + 3, Some(base + 3)), "a costOverride");
         }
 
-        /// R1181003, R767000: through v0.6.8d each card added priced its Embiggened version alone at (0),
+        /// R1181003, R767000: through v0.6.9 each card added priced its Embiggened version alone at (0),
         /// and a replay of those games folds under that script.
         #[test]
         fn r1181003_r767000_the_kept_v0_6_8d_script_prices_the_embiggened_version_at_0() {
