@@ -24311,6 +24311,13 @@
     "4936": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-25T17:35:08Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "rule 1 (Engine rules): the fix changes ordering in crates/engine/src/plague.rs"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
