@@ -1019,8 +1019,9 @@ const NEWS_REWARD_READS: Readonly<Record<NewsReward["kind"], readonly string[]>>
 
 /**
  * R3206000: what a game's payout (Jlore, XP, a level's or a quest's reward) and its ladder move change,
- * which no answer carries: the wallet, the quests, the tracks, the packs held, the tokens and both
- * ladders' boards. Dropped when a paid result arrives (`economy/wallet.ts` `announceWallet`).
+ * which no answer carries: the wallet, the quests, the tracks, the packs held, the tokens, the owned
+ * cosmetics (a Fleet level pays one, R3335001; R4780000) and both ladders' boards. Dropped when a paid
+ * result arrives (`economy/wallet.ts` `announceWallet`).
  */
 export function forgetPaidReads(token: string): void {
   forgetReads(token, [
@@ -1029,6 +1030,7 @@ export function forgetPaidReads(token: string): void {
     keptPaths.tracks,
     keptPaths.packs,
     keptPaths.tokens,
+    keptPaths.cosmetics,
     ladderPath(keptPaths.leaderboard, "constructed"),
     ladderPath(keptPaths.leaderboard, "random"),
   ]);
@@ -1903,6 +1905,46 @@ export function getCardDrillDown(cardId: string, options: CardDrillDownOptions =
     token: options.token,
     signal: options.signal,
   });
+}
+
+/**
+ * R4675001: one play version's figures (R4675000), the runs of shipped versions over which its card plays the
+ * same, read against a field of every play version's.
+ */
+export type PublicPlayVersion = {
+  /** `<card>~<first>`. */
+  id: string;
+  card: string;
+  /** Its card's name at its last version. */
+  name: string;
+  first: string;
+  last: string;
+  /** Whether it is its card's version in the newest shipped catalog. */
+  live: boolean;
+  /** R4678001: the patches its versions reach (the patch bar's windows); absent from a server deployed before it. */
+  patches?: number;
+  games: number;
+  adjustedWinRate: number | null;
+  adjustedLow: number | null;
+  adjustedHigh: number | null;
+  tier: CardTier | null;
+  hasEnoughGames: boolean;
+};
+
+/** R4675001: `GET /api/stats/versions`: every deck card's play versions in catalog order, and the band their tiers read. */
+export type PublicStatsVersionsResponse = {
+  pilot: "merged" | "human" | "ai";
+  mode: "all" | "bo1" | "bo3" | "random" | "constructed";
+  bandLow: number;
+  bandHigh: number;
+  minSample: number;
+  versions: PublicPlayVersion[];
+};
+
+/** R4675001, R4678001: every play version's figures on a match type, every one when none is asked; open to everyone. */
+export function getStatsVersions(options: { mode?: string; signal?: AbortSignal } = {}): Promise<PublicStatsVersionsResponse> {
+  const query = options.mode ? `?${new URLSearchParams({ mode: options.mode }).toString()}` : "";
+  return apiRequest<PublicStatsVersionsResponse>(`/api/stats/versions${query}`, { signal: options.signal });
 }
 
 /**

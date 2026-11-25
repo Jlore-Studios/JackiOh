@@ -42,6 +42,7 @@ import {
   WATERMARK_OPACITY_ON_DARK,
   WATERMARK_SIZE_PCT,
   glyphUri,
+  setAccentOf,
   setMarkOf,
   watermarkOf,
 } from "./setMark.ts";
@@ -1044,6 +1045,17 @@ describe("R503: the set mark and a token's printed rarity", () => {
     expect(svg).not.toContain("<text");
     expect(svg).not.toContain("<title");
     expect(one(catalogFace("stinkyscapeplus-001"), ".cf-set").getAttribute("data-set-mark")).toBe("stinkyscape-plus");
+  });
+
+  it("R4596000 an Infinite Assault face wears the glitch accent, base and Radiant, and no other set's face does", () => {
+    expect(setAccentOf("Infinite Assault")).toBe("glitch");
+    for (const set of ["Core", "Classic", "Stinkyscape+", "Training Grounds", "Boss"]) expect(setAccentOf(set), set).toBeUndefined();
+    expect(setAccentOf(null)).toBeUndefined();
+    for (const radiant of [false, true]) {
+      expect(catalogFace("infiniteassault-217", radiant).getAttribute("data-set-accent")).toBe("glitch");
+      cleanup();
+    }
+    expect(catalogFace("core-002").getAttribute("data-set-accent")).toBeNull();
   });
 
   it("R503 a set with no glyph of its own gets the fallback, still named; an unknown card shows no set", () => {
