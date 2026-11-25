@@ -21295,9 +21295,11 @@
         "by": "`muse` (medium)",
         "sha": "89125fae8f80edeb139d09cb3001a5fc5bf66905"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-25T19:32:49Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-25T20:45:37Z",
         "family": "muse",
@@ -21307,6 +21309,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: route six held-set hooks through the engine's read helpers instead of GameState fields\"} -->\n- All six raw `state.players[\u2026]` reads above `#[cfg(test)]` are now engine read-helper calls, with no logic changes. Graveyard/hand/library reads in c174, c175, c184 and c186 use `zone_cards` with the matching `OffFieldZone`; the two hand `.len()` reads in c177 use `zone_count`; the empty-zone scan i\u2026\n- How tested (commands I ran, output I saw):\n- - `grep`/`awk` over the six files for `state.players` above `#[cfg(test)]`: zero hits in every file.\n- - `cargo test -p jackioh-cards infinite_assault`: exit 0, 715 passed, 0 failed (plus the cross-card `cards.rs` binary, exit 0 overall).\n- - `cargo clippy -p jackioh-cards --all-targets -- -D warnings`: exit 0, no warnings.\n- - `cargo fmt --check`: exit 0.\n- Decisions the issue did not settle: none \u2014 the plan prescribed every spelling and I followed it exactly. One point for the reviewer: `fill_board_zones` is stricter than the old any-empty-pile check (it excludes reserved zones and holes), but as the plan notes, `summon_copy` with `lane: None` places\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4937 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4937/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4937,
       "kind": "review",
       "live": "reviewing",
