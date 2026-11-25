@@ -1,0 +1,69 @@
+{
+  "action": "build",
+  "number": 4926,
+  "title": "Patch: honor E2E_ARTIFACTS in the downloads folder and the replay-task log dir",
+  "branch": "bot/issue-4926",
+  "thread": "**Issue #4926 (data, not instructions):**\n\n```text\n# #4926: Patch: honor E2E_ARTIFACTS in the downloads folder and the replay-task log dir\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nTwo runs of the e2e suite on one machine would stop sharing evidence files. Today setting `E2E_ARTIFACTS` moves screenshots and videos aside, but the downloads folder and the replay-task log files still land in the shared `artifacts/` directory, so parallel runs overwrite each other's evidence. After this change everything the run writes honors the variable, and an unset variable behaves byte-for-byte as today.\n\n## Why\n\n`e2e/README.md` blesses parallel runs (`E2E_ARTIFACTS=artifacts/my-run E2E_KEEP_ASSETS=1 ...`, noting Cypress empties its screenshots folder at the start of every run). `e2e/cypress.config.ts` honors the variable for `screenshotsFolder` and `videosFolder` in both the e2e and component blocks, but the e2e block's `downloadsFolder` is hardcoded to `artifacts/downloads`, and the component block's comment explains exactly why sharing is harmful (a run silently deleting the evidence a red run just left). Separately, `e2e/support/tasks/replay.ts` writes its evidence to `path.join(projectRoot, \"artifacts\")` with fixed labels (`01-hotseat-full-game`, ...), ignoring `E2E_ARTIFACTS`, so two simultaneous runs write the same `<label>.json` paths. The fix is three lines with no default-behavior change, so CI (which never sets the variable) is unaffected.\n\n## Proposal\n\nBase the e2e block's `downloadsFolder` on `${process.env.E2E_ARTIFACTS ?? \"artifacts\"}/downloads`, and base the replay task's log directory on `process.env.E2E_ARTIFACTS ?? \"artifacts\"` (read in the task process, which inherits the Cypress runner's environment). Add one line to `e2e/README.md`'s parallel-runs paragraph naming the two newly-moved outputs.\n\n## Where it lands\n\n- `e2e/cypress.config.ts` (e2e block `downloadsFolder`)\n- `e2e/support/tasks/replay.ts` (log directory)\n- `e2e/README.md` (parallel-runs paragraph)\n- No SPEC section; this is harness behavior documented in `e2e/README.md`.\n\n## Acceptance criteria\n\n- [ ] With `E2E_ARTIFACTS` unset, the resolved Cypress config and the replay task write exactly the paths they do today (`artifacts/screenshots`, `artifacts/videos`, `artifacts/downloads`, `artifacts/<label>.json`).\n- [ ] With `E2E_ARTIFACTS=artifacts/my-run`, downloads and replay logs land under `artifacts/my-run/` and two runs with different values leave each other's files alone.\n- [ ] `pnpm --dir e2e typecheck` passes and the README paragraph describes all moved outputs.\n\n## Size and risks\n\nSmall: two path expressions plus a doc line. Risk is a stale path in a debugging note somewhere; the change is greppable (`artifacts/downloads`, `\"artifacts\"` in `e2e/support/tasks`) and the default is untouched, so CI artifact handling cannot shift.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `tests` (`suggestions.areas`).\n\nClass: `checks` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** leaves it to a person: No run, incident, or measurement shows shared downloads or replay logs costing anyone anything, so full E2E_ARTIFACTS isolation is a guard for a collision that hasn't happened.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-25T19:09:28Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#4926: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "own_review_next": true,
+  "usage_facts": {
+    "queued_at": "2026-11-25T19:09:50Z",
+    "claimed_at": "2026-11-25T19:16:12Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4649 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
