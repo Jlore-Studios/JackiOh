@@ -501,7 +501,7 @@ ships now and did not. Its report goes under `training/history/`, `--write` read
 changed table arrives as a `Patch: the shadow ban swept again after …` pull request with auto-merge
 on, `generation.json`'s `shadowBan` and the practice-claim fixture with it. So the sweep after a
 promotion may ban a card of those four sets again when the new AI is slow with it, within each
-set's ceiling; a record `--write` refuses opens an issue for a person instead.
+set's ceiling; a record `--write` refuses opens an issue for a person instead. A change that retires or replaces part of what the generation names (its evaluation or its search) moves the generation by hand, in lane `hand`, under an issue and a ruling of its own and with no gate numbers (generation 14, R4921000; `training/README.md`, Reading the history); an ordinary fix to the AI keeps the generation.
 
 `FIXTURE_BANNED_IDS` (issue #1113) is the frozen fixture pool: a copy of the table as it stood
 when the seeded fixtures were dealt from it. It is never updated with the table; a fixture that
