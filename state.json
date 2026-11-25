@@ -24348,7 +24348,7 @@
       "queued_at": "2026-11-25T18:45:13Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "pending:bef37994-1795632357",
+      "run_id": "45678587895",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
