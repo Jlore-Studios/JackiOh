@@ -1,0 +1,3 @@
+[ai:sweep] pass 1 1/18 infiniteassault-172 Training Data @easy base: clean (82.9s)
+[ai:sweep] pass 1 1/18 infiniteassault-172 Training Data @easy radiant: clean (67.3s)
+[ai:sweep] pass 1 1/18 infiniteassault-172 Training Data @hard base: neverPlayed (32.1s)
