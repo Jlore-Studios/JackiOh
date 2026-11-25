@@ -21104,15 +21104,8 @@
       "taken_asks": []
     },
     "4851": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45598487025",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-25T10:56:59Z",
-        "until": "2026-11-25T11:26:59Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -21124,10 +21117,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- ## Goal\n- Close the `spec check` proof hole so a TypeScript proof inside a `//` or `/* */` comment or inside a string/template literal no longer proves its ruling, and an SQL `\\echo` heading commented out with `--` no longer proves its ruling. A live `it`/`test`/`describe` title and a live `\\echo` heading ke\u2026\n- ## Files to touch\n- | Path | New / change | What changes there |\n- | --- | --- | --- |\n- | `crates/tools/src/spec.rs` | change | `ts_test_titles` becomes comment- and string-aware; `sql_headings` skips `--`-commented headings; two new unit tests in its `tests` module |\n- | `spec/README.md`, `spec/rulings/`, `spec/pending/`, `spec/history/`, `spec/INDEX.md`, `spec/CARDS.md` | touch none | No new ruling and no doc change: `spec/README.md` Note format already requires that only a test that runs counts (#1718); this change enforces it |\n- Do not touch `.github/`, `.harness/`, `.squishy/`, `bot/`, `crates/engine/`, `crates/cards/`, `crates/ai/`, or `apps/web/src/wire/`. Governing text: `spec/README.md` Note format (`proven_in`, #1718) and CLAUDE.md rule 3.\n- ## Steps\n- 1. Re-read `spec/README.md` Note format and `crates/tools/src/spec.rs` lines 940\u20131115 (`ts_test_titles`, `ts_call_end`, `sql_headings`, `sql_heading_names`, `proves`) before editing.\n- 2. In `crates/tools/src/spec.rs`, rewrite the `while` loop of `ts_test_titles` so the `it`/`test`/`describe` keyword search only fires in code. At the top of each iteration, before the keyword match, add three skips on the raw `bytes`: if `bytes[i..]` starts with `//`, advance `i` to the next `\\n` \u2026\n- 3. In `crates/tools/src/spec.rs`, fix `sql_headings` so a commented heading is skipped: for each `\\echo` at byte offset `at`, compute the line start as `src[..at].rfind('\\n').map(|p| p + 1).unwrap_or(0)`, take `before = src[line_start..at]`, and if `before.trim_start().starts_with(\"--\")` skip that \u2026\n- 4. Add unit test `refuses_a_typescript_proof_in_comments_and_strings` in the `tests` module next to `refuses_a_typescript_title_that_does_not_run`: assert `ts_test_titles` on `\"// it(\\\"R1 line commented\\\", () => {});\\n\"` returns empty; on `\"/* it(\\\"R1 block commented\\\", () => {}); */\"` returns empt\u2026\n- 5. Add unit test `refuses_an_sql_heading_that_is_commented_out` next to `credits_an_sql_proof_only_from_a_heading`: assert `!proves(\"x.sql\", \"-- \\\\echo '### R1: the fixture ###'\\n\", 1)` and `!proves(\"x.sql\", \" -- \\\\echo '### R1: the fixture ###'\\n\", 1)` (leading whitespace still commented), and `pr\u2026\n- 6. Run the checks in Tests below, then run the fixed check over the real repository and confirm it still passes with no new problems (a grep found no live commented case, so any newly flagged ruling needs a real proof, never an exemption).\n- ## Tests\n- - `crates/tools/src/spec.rs`, `refuses_a_typescript_proof_in_comments_and_strings`: line-comment, block-comment, single/double-quote and template-literal dead `it(\"R1 \u2026\")` proofs are refused (`proves` false, `ts_test_titles` empty); a live `it(\"R1 live\")` still proves.\n- - `crates/tools/src/spec.rs`, `refuses_an_sql_heading_that_is_commented_out`: `-- \\echo '### R1: \u2026 ###'` (with and without leading spaces) is refused; a line-initial `\\echo` still proves.\n- - Keep existing `reads_typescript_test_titles`, `refuses_a_typescript_title_that_does_not_run` (including `describe(\"R1 after\", () => {})` proving R1), and `credits_an_sql_proof_only_from_a_heading` green unchanged.\n- - Commands: `cargo test -p jackioh-tools spec`, `cargo fmt --check`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings`, `cargo jackioh spec check`.\n- ## Done when\n- - [ ] Each of the four dead proofs from the issue (line comment, block comment, string-held title, `-- \\echo`) is refused while its live control passes.\n- - [ ] The two new unit tests fail without the fix and pass with it.\n- - [ ] `cargo test -p jackioh-tools spec`, `cargo fmt --check`, `cargo clippy -p jackioh-tools --all-targets -- -D warnings`, and `cargo jackioh spec check` over the real repository all pass.\n- - [ ] No file outside `crates/tools/src/spec.rs` changed; no test ignored, deleted, or weakened; no new ruling note or pending file added.\n- - [ ] The pull request states the real-repository `spec check` result.\n- ## Risks\n- - Template literals with `${ \u2026 }` containing a real `it(` call would be skipped as string content; no such proof exists in the tree, and the issue's blanking prescription accepts this.\n- - TS block comments end at the first `*/` (they do not nest); do not copy the Rust nested `block_comment_end` for this scan.\n- - The empty or all-skipped `describe(\"R<n> \u2026\")` still counts, and the Rust `macro_rules!` / `cfg(any())` / `cfg_attr(all(), ignore)` neighbours still count; all are deliberate and out of scope, so do not \"fix\" them.\n- - New tests must cite only R ids that have notes (`R1` is safe); a literal `R999`-style id in this file would itself fail rule 3.\n- ## Open questions\n- None. Difficulty is medium: one crate's tooling plus its unit tests, no engine, AI, cross-crate, migration, or large change.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-3/_work/_temp/work/item-4851 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-3/_work/_temp/work/item-4851/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-25T10:48:23Z",
       "owner_why": "it plans it",
@@ -21140,9 +21132,9 @@
       "provider": "muse",
       "queued_at": "2026-11-24T21:35:24Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45598487025",
+      "run_id": "pending:fe2b1870-1795604521",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-25T10:48:23Z",
+      "started_at": "2026-11-25T11:02:33Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -23416,9 +23408,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T11:01:48Z",
+    "at": "2026-11-25T11:02:33Z",
     "url": "",
-    "what": "build #4850 on muse"
+    "what": "build #4851 on muse"
   },
   "last_sweep": {
     "at": "2026-11-25T10:39:56Z",
