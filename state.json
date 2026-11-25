@@ -20779,6 +20779,13 @@
     "4839": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45608849297",
+        "model": "opus",
+        "provider": "claude-1",
+        "since": "2026-11-25T12:15:14Z",
+        "until": "2026-11-25T12:45:14Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
