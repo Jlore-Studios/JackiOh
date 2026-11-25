@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4804,
+  "title": "Patch: the AI's redaction hides the tags of the opponent's face-down Trap in the play counts, and the hidden card an interrupted trap firing remembers",
+  "branch": "bot/issue-4804",
+  "thread": "**Issue #4804 (data, not instructions):**\n\n````text\n# #4804: Patch: the AI's redaction hides the tags of the opponent's face-down Trap in the play counts, and the hidden card an interrupted trap firing remembers\nOpened by @squishy-squooby.\n\n### What happens\n\nTwo places where `redact` (`crates/ai/src/observe.rs`) keeps something the seat may not see, so two true states that look alike to the seat redact differently. Neither was turned into a changed decision; both break R185's invariant on `redact`'s own output, and both are read by simulated steps.\n\n**1. The opponent's `gameLog.playedByTag` counts a face-down Trap by its tags.**\n`crates/engine/src/play_counts.rs` `record_play` counts every play by `tags_of(card)`, a face-down Trap's included, and never resets it (only `last_face_up_play` skips Traps). `redact` never touches `players[opp].game_log.played_by_tag`. So after the opponent sets a (1) Trap face-down, the redacted state says which tags it carries: core-041 Sheepish (no tag) against classic-063 Crop Dusting (Plague) differ at exactly `.players.p2.gameLog.playedByTag.Plague`, while `view_for(state, seat)` is identical for the two (the test asserts that first). Every simulated card that reads `query::played_this_game_with_tag` of that player gets the true count (C+ #64 Mulch Muncher reads Fruit, T-AI-02 Scaling Law reads AI). By reading only: `turn_log.played_by_type` leaks the same way for the turn of the set (Trap against Field Trap against a Cloaked card's type), which `view_for` scrubs to `Trap`.\n\n**2. An interrupted trap firing keeps the whole event under `resume.data.firing.event`.**\n`scrub_resume` (`observe.rs:473-479`) scrubs only `resume.data[\"event\"]`. When a trap's firing is interrupted by a prompt, `crates/engine/src/traps.rs` `owe_firing` parks the rest of it on `state.work` as `@trapFiring` with the full `TrapFiring`, its `event: GameEvent` included, under `data[\"firing\"]`. Scene: the AI holds a face-down C #9 Income Tax; the opponent plays Stockpile, its second draw fires the Tax, and the opponent's keep prompt interrupts the firing. The parked item carries the `drawn` event with the `instanceId` and `defId` of a card now in the opponent's hand: two worlds that differ only in that card redact differently at exactly `.work[0].resume.data.firing.event.defId`. The copy of the same event in the prompt's own `resume.data.event` is scrubbed correctly. `run_owed_firing` hands the unscrubbed event to the trap's remaining triggers when a simulation continues the item.\n\n### What should happen\n\n`crates/ai/README.md`, \"`decide` reads only `redact`\": \"two states that differ only in hidden cards give the same decision under the same rng\", and `redact` \"strips from the events its queues keep what `view_for` strips of a hidden card\". R185. `view_for` sends neither `playedByTag` nor the `instanceId` and `defId` of a `drawn` the viewer may not read.\n\n### How to reproduce\n\nTwo differential tests fail on `main` (3a83bd7), in [`crates/ai/tests/audit_hidden.rs` at bf24a52](https://github.com/Jlore-Studios/JackiOh/blob/bf24a52273bd5c0e7d6f9c740b28a8d7cb7f2b3e/crates/ai/tests/audit_hidden.rs) (branch `claude/vigilant-mayer-pmyrhr`): `redact_hides_the_tags_of_the_opponents_face_down_trap` and `redact_scrubs_the_event_an_interrupted_trap_firing_keeps`. Each builds two worlds through `reduce` that differ only in a hidden card, serializes `redact` of both, and lists every JSON path where they differ (the file's `diff_paths` helper).\n\nOutput today:\n\n```\nredact tells the two worlds apart at: [\n    \".players.p2.gameLog.playedByTag.Plague (one side only)\",\n]\nredact tells the two worlds apart at: [\n    \".work[0].resume.data.firing.event.defId: \\\"core-016\\\" vs \\\"core-053\\\"\",\n]\n```\n\nThe second scene, for reference:\n\n```rust\nlet start = scenario(json!({\n    \"seed\": \"audit-hidden-owed-firing\", \"active\": \"p2\", \"turn\": 8,\n    \"p1\": { \"hand\": [\"core-008\"], \"backrow\": [{ \"def\": \"classic-009\", \"faceUp\": false }],\n            \"library\": [\"core-020\", \"core-053\", \"core-019\"] },\n    \"p2\": { \"hand\": [\"core-005\", \"core-011\"], \"mana\": 5, \"library\": [\"core-012\", second, \"core-012\"] },\n})).state().clone();\n// p2 plays core-005 Stockpile; its keep prompt opens with the Tax's firing parked on `state.work`.\n```\n\n### Where\n\nThe AI: `crates/ai/src/observe.rs` (`redact`, `scrub_resume`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- For 1: for each hidden backrow, backrow-pile or resolving card the opponent played, take its tags off `players[opp].game_log.played_by_tag` (dropping keys that reach zero) and count its entry in `turn_log.played_by_type` as `Trap`, before the card becomes a placeholder. The seat's own log is not affected.\n- For 2: in `scrub_resume`, also run `scrub_event_value` on `resume.data[\"firing\"][\"event\"]` when it is an object.\n- The existing tests pin neighbours of both, not these: `redact_play_records.rs` covers `last_spell` and `last_face_up_play`; `redact_queues.rs` and `redact_view_mirror.rs` cover `data.event` and dispatch events.\n- A third place seen but not proven by a test, worth checking in the same change: at the opponent's open prompt, `redact` blanks the options but keeps `pending.resume` (`def_id`, `instance_id`, `data`); a scan of random games found states where `pending.resume.defId` named a card hidden from the seat, and one where `pending.resume.data.codeOffers[]` held the offered definitions. `decide` returns `None` there, so nothing reads it today.\n- Add each field to the mutation property in `crates/ai/tests/ai/observe.rs` (`mutate_hidden`) if it fits there.\n- Not among the findings of the AI audit tracker #4787, which read the redaction as clean.\n\nFound by an audit of the AI crate; the reproductions were run and the code paths read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4804: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T20:54:29Z",
+    "claimed_at": "2026-11-25T04:39:50Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
