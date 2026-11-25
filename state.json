@@ -23886,11 +23886,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-25T17:49:35Z",
+        "at": "2026-11-25T18:12:30Z",
         "difficulty": "hard",
         "provider": "claude-3",
-        "tier": "medium",
-        "why": "Rule 5 (big): the pinned corpus is 52 record files plus a README, the code, its tests and two READMEs, about 57 files in all; the code itself stays in crates/tools, with no engine, AI or cross-crate change."
+        "tier": "strong",
+        "why": "rule 5 (big): 52 pinned corpus records plus perf.rs, its tests and three docs make about 57 files; already rated hard"
       },
       "failures": 0,
       "forced": false,
