@@ -63,6 +63,7 @@ pub mod redact_fusion;
 pub mod redact_hand_order;
 pub mod redact_last_boards;
 pub mod redact_live_face_down;
+pub mod redact_negative_attack;
 pub mod redact_once_a_game;
 pub mod redact_play_records;
 pub mod redact_queues;
