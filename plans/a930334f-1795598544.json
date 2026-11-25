@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4823,
+  "title": "Patch: My Pawn stays set when a First Strike defender exiles the attacker before its blow, as the combat forecast already reads it",
+  "branch": "bot/issue-4823",
+  "thread": "**Issue #4823 (data, not instructions):**\n\n````text\n# #4823: Patch: My Pawn stays set when a First Strike defender exiles the attacker before its blow, as the combat forecast already reads it\nOpened by @squishy-squooby.\n\n### What happens\n\nCore #96 My Pawn fires on an attack that deals its hero nothing, when the attacked Unit has First Strike and exiles what it damages.\n\nThe lethal projection (`crates/engine/src/subsystems/lethal.rs`) asks `falls_to_first_strike` whether a First Strike defender destroys the attacker before its blow lands (`projected_damage_with`, `:133-142`). `falls_to_first_strike` (`:202-237`) knows two ways the attacker falls: the hit reaches its health, or the defender is Poisonous. It does not know a defender whose damage exiles (`flags.exiles_on_damage`, M #72 The Banisher: \"Whenever this damages a Unit, exile that Unit\").\n\nConcrete: p2's Banisher (2/1) has First Strike and p2's hero has 5 life, with My Pawn set. p1's 10/10 Trample Unit attacks the Banisher.\n\n- The combat: the Banisher strikes first, the attacker is marked for exile and never lands its blow (`crates/engine/src/combat.rs`, `has_fallen`). The hero stays at 5 and the Banisher stands.\n- The projection: 2 damage does not fell a 10-health attacker, so it counts 9 Trample excess against 5 life, and My Pawn fires: the trap is spent on a harmless attack and the turn is handed over.\n\nThe combat forecast's own entry already reads this right: `crates/engine/src/query.rs:1243-1248` (`exiled_first`), added by R4111000 for `forecast_attack` only.\n\n### What should happen\n\nR176: \"An attacker that a First Strike defender destroys in \u00a74.3's step 1 deals nothing at all, so none of its Trample excess can reach the hero and the attack is not lethal\". My Pawn's text: \"When the opponent declares an attack that would be lethal to your hero: cancel it\". R4111000 made the forecast count \"an exile on damage as [it counts] Poisonous\" for a First Strike defender's blow; the lethal projection, which My Pawn, its glow and the forecast's `overflow.kills` all read, was left out.\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `r176_my_pawn_stays_set_when_a_first_strike_banisher_exiles_the_attacker_first`, in [`crates/ai/tests/audit_engine_combat.rs` at 405bbec](https://github.com/Jlore-Studios/JackiOh/blob/405bbecf9d16e4d805805f0f7e1b3ce70e8678b9/crates/ai/tests/audit_engine_combat.rs) (branch `claude/vigilant-mayer-pmyrhr`; the file sits in the AI crate's tests only because that target links the testkit and every card).\n\nThe board, in short:\n\n```rust\n// p1: a 10/10 in lane 3, granted Trample. p2: The Banisher in lane 3, granted First Strike; hero at 5; My Pawn in the backrow.\nlet s = scenario(json!({ \"seed\": \"f2\", \"active\": \"p1\", \"turn\": 9,\n    \"p1\": { \"field\": [{ \"def\": \"core-008\", \"lane\": 3, \"statsOverride\": { \"attack\": 10, \"health\": 10 } }],\n            \"hand\": [\"core-008\"], \"library\": [\"core-008\", \"core-008\", \"core-008\"] },\n    \"p2\": { \"field\": [{ \"def\": \"meditative-072\", \"lane\": 3 }], \"health\": 5, \"backrow\": [\"core-096\"],\n            \"hand\": [\"core-008\"], \"library\": [\"core-008\", \"core-008\", \"core-008\"] } }));\n// grant Trample to the attacker and First Strike to the Banisher, then reduce the attack:\n// without My Pawn the hero stays at 5 and the Banisher stands (asserted first);\n// with My Pawn set, no `TrapFired` event may follow.\n```\n\nOutput today: `My Pawn fired on an attack that deals its hero nothing` (the assertions that the hero is at 5 and the Banisher is still on the field pass first).\n\n### Where\n\nThe rules engine: `crates/engine/src/subsystems/lethal.rs` (`falls_to_first_strike`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Teach `falls_to_first_strike` that a defender whose damage exiles fells the attacker with any hit of 1 or more, as it already does for Poisonous. Then `forecast_attack` can drop its separate `exiled_first` and ask the one function, so the two cannot drift apart again.\n- `strike_back_heal` in the same file calls `falls_to_first_strike` with the sides swapped (does a First Strike attacker fell the Lifesteal defender first); the same exile read applies there.\n- First Strike is in the random combat keyword pool (\u00a76.1), so a First Strike Banisher is reachable; the test grants it by hand.\n- R4111000 does not mention My Pawn, R44 or the lethal projection, so nothing rules this out. It takes a ruling note in this issue's block, or an amendment of R4111000.\n- **For whoever triages this:** #1637 (the heal half of the same projection: a Lifesteal strike back under a lane multiplier, a doubled heal, or Blood Moon's conversion) was closed as not planned on 2026-10-22. The same audit re-found those three with failing tests (the other six tests in the linked file); they are not refiled. This issue is the other half, who falls first, which R4111000 has since fixed in the forecast but not here. Close it the same way if the answer is the same.\n- A card change in play (My Pawn): it needs its pending patch fragment (`docs/ADDING_CARDS.md`).\n\nFound by an audit of the engine's combat and damage; the reproduction was run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4823: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:04:11Z",
+    "claimed_at": "2026-11-25T09:22:59Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4902 is held for `claude-1` until 03:50 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
