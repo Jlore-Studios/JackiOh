@@ -8649,6 +8649,9 @@ stinkyscapeplus-162: # Edwin Van’Spacechief
     name: 埃德温·范太空长官
     base: 连击X：获得+2X/+2X。
     radiant: 连击X：获得+4X/+4X。
+    previews:
+      "+2X": "+2X"
+      "+4X": "+4X"
 stinkyscapeplus-163: # Accelerationist
   flavour: Whatever it was, he wants it faster. Mostly the meeting.
   voice:

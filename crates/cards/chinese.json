@@ -4954,7 +4954,11 @@
   "stinkyscapeplus-162": {
     "name": "埃德温·范太空长官",
     "base": "连击X：获得+2X/+2X。",
-    "radiant": "连击X：获得+4X/+4X。"
+    "radiant": "连击X：获得+4X/+4X。",
+    "previews": {
+      "+2X": "+2X",
+      "+4X": "+4X"
+    }
   },
   "stinkyscapeplus-163": {
     "name": "加速主义者",
