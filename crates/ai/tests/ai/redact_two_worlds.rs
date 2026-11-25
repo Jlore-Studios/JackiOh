@@ -314,3 +314,55 @@ fn r185_redact_scrubs_the_event_an_interrupted_trap_firing_keeps() {
         "the drawn card's definition"
     );
 }
+
+/// B5 E21: a face-down Trap the opponent set lies beneath another in a backrow pile, Sheepish in one world
+/// and Crop Dusting in the other, after a face-up Plague play both seats watched. Only the hidden card's
+/// Plague comes off the opponent's count; the watched one stays.
+#[test]
+fn r4804000_redact_hides_the_tags_of_the_opponents_face_down_trap_beneath_a_pile() {
+    jackioh_cards::register_all();
+    let world = |beneath: &str, plagues: i32| {
+        let mut state = scenario(json!({
+            "seed": "redact-two-worlds-pile",
+            "p2": {
+                "backrow": [
+                    { "def": beneath, "faceUp": false },
+                    { "def": SHEEPISH, "faceUp": false, "stack": true },
+                ],
+            },
+        }))
+        .state()
+        .clone();
+        state.players[HUMAN].game_log = Some(GameLog {
+            played_by_tag: IndexMap::from([(Tag::Plague, plagues)]),
+            ..Default::default()
+        });
+        state
+    };
+    let sheepish = world(SHEEPISH, 1);
+    let dusting = world(CROP_DUSTING, 2);
+    assert!(
+        dusting.players[HUMAN]
+            .backrow_piles
+            .iter()
+            .flatten()
+            .flatten()
+            .any(|card| card.def_id == CROP_DUSTING),
+        "Crop Dusting lies beneath the pile's top"
+    );
+    assert_eq!(
+        shown(&sheepish),
+        shown(&dusting),
+        "the two worlds look alike to the seat"
+    );
+    let differs = differences(&sheepish, &dusting);
+    assert!(
+        differs.is_empty(),
+        "redact tells the two worlds apart at: {differs:#?}"
+    );
+    assert_eq!(
+        played_this_game_with_tag(&redact(&dusting, AI), HUMAN, Tag::Plague),
+        1,
+        "the watched Plague play"
+    );
+}
