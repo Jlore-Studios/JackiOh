@@ -22067,10 +22067,14 @@
         "approvals": [],
         "builder": "muse",
         "built_by": "muse",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "8ea21c930bcdac02a60d3e96096781314e431113",
-        "tiers": {}
+        "tiers": {
+          "claude": "medium"
+        }
       }
     },
     "4885": {
