@@ -24352,11 +24352,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-25T17:35:08Z",
+        "at": "2026-11-25T18:00:17Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "rule 1 (Engine rules): the fix changes ordering in crates/engine/src/plague.rs"
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "Rule 1, engine rules: it changes the order of a rules list in crates/engine/src/plague.rs that plague prompts, seeded random draws and the Radiant pool all read"
       },
       "failures": 0,
       "forced": false,
