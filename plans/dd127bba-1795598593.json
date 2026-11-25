@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 4847,
+  "title": "Patch: the Dungeon page reads its saved run again when it is reopened, so a run finished in another tab is not written over",
+  "branch": "bot/issue-4847",
+  "thread": "**Issue #4847 (data, not instructions):**\n\n```text\n# #4847: Patch: the Dungeon page reads its saved run again when it is reopened, so a run finished in another tab is not written over\nOpened by @squishy-squooby.\n\n### What happens\n\nThe dungeon run's client store (`apps/web/src/dungeon/store.ts`) keeps what it read from `localStorage` in a module-level cache and follows other tabs through a `storage` listener, but only while a Dungeon page is mounted. Once the page unmounts, the listener is removed and the cache is kept; nothing reloads it when the page is opened again. A later write from that stale cache erases what another tab did: Embers, unlocks, a level purchase and the run's history record, all of which live on the device only.\n\n- `core ??= loadCore()` (`:493-500`): loaded once.\n- `subscribe` (`:581-598`) adds the `storage` listener for the first listener and removes it with the last; `DungeonPage` is the only subscriber (`apps/web/src/dungeon/DungeonPage.tsx:16`).\n- `onStorage` (`:545-554`) is the only other caller of `loadCore`.\n- `step` and `settle` (`:716-744`), `abandonRun` (`:768-779`) and `buyNextLevel` (`:781-795`) all persist from the cached state.\n\nThe sequence:\n\n1. Tab B opens `/dungeon` with a run in progress, then navigates elsewhere inside the app. The cache stays; the listener is gone.\n2. Tab A opens `/dungeon`, finishes that run (Embers added, extractions added to the unlocks, a history record appended, the run's key removed), and perhaps buys a level.\n3. Tab B returns to `/dungeon`. `current()` hands back the stale cache: the start screen offers \"Continue the run\" and Abandon for a run that no longer exists, with the old Ember count.\n4. Abandon in Tab B runs `step` then `settle` from the stale state: `persistProgress` and `persistHistory` write the old unlocks, Embers and history plus this second settlement. Tab A's win record, Embers, extracted cards and level purchase are gone from the device. Continue instead re-creates the run's key from the stale log, rewinding the run. Buying a level from the stale state overwrites in the same way.\n\nBy reading, with high confidence. It needs two tabs; there is no single-tab trigger.\n\n### What should happen\n\nThe store means to follow other tabs: `:550` says \"Another tab changed what is kept: read it all again\", and `:546-547` says a held report \"is applied once no matter which tab left the fight\" (R4733000). Both hold only while a Dungeon page is mounted. A page that is opened should start from what the device holds now.\n\n### How to reproduce\n\nA test in `apps/web/src/dungeon/store.test.ts` (it has no storage-event or two-tab test):\n\n1. Subscribe, start a run, unsubscribe.\n2. Write different progress and history, and no run key, straight to `localStorage` (the other tab), with no `storage` event, since nothing is listening.\n3. Subscribe again and call `abandon()`.\n4. Read `jackioh.dungeon.progress` and `jackioh.dungeon.history`: today the other tab's values have been overwritten.\n\n### Where\n\nThe client: `apps/web/src/dungeon/store.ts` (`subscribe`, `current`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- In `subscribe`, when the first listener joins (the `!pageListening` branch), drop or reload the cache, keeping `onStorage`'s existing rule for a finished run this tab still shows. Or leave the `storage` listener installed for the module's life; then the cache is always current and `subscribe` need not reload.\n- The run's clock (R3502000) is set from the same subscribe and unsubscribe: check a reload there does not restart or double-count a session.\n- No other module writes these keys, and `spec/15-dungeon-run.md` says nothing of tabs, so the fix needs no ruling; R4733000 already states the intent for the held report.\n- Run with `pnpm --dir apps/web test src/dungeon/store.test.ts`.\n\nFound by an audit of the web client's logic, by reading (the client's tests could not be run where the audit ran).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4847: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) writes it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:31:02Z",
+    "claimed_at": "2026-11-25T09:23:47Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4902 is held for `claude-1` until 03:50 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
