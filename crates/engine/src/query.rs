@@ -86,10 +86,15 @@ pub fn hero_of(state: &GameState, player: PlayerId) -> HeroView {
     }
 }
 
-/// R290, R180: the health this player's hero started the game with: its seat's handicap `heroHealth`,
-/// else HERO_HEALTH (Stinkyscape #18.2 BALTHASAR, R1866002).
+/// R290, R180, R4831000: the health this player's hero started the game with: a Duos seat's own HP
+/// at setup, spent or not (`DuosLife::own_start`, absent at DUOS_OWN_HEALTH), else its seat's handicap
+/// `heroHealth`, else HERO_HEALTH (Stinkyscape #18.2 BALTHASAR, R1866002; IA #71, R4587004).
 pub fn starting_health_of(state: &GameState, player: PlayerId) -> i32 {
-    crate::state::starting_hero_health(state.players[player].handicap.as_ref())
+    let side = &state.players[player];
+    match side.duos {
+        Some(life) => life.own_start.unwrap_or(crate::config::DUOS_OWN_HEALTH),
+        None => crate::state::starting_hero_health(side.handicap.as_ref()),
+    }
 }
 
 /// The live pile, for this module only: `zones.rs` keeps `pile_for` private because a live pile hands

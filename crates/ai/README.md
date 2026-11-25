@@ -96,8 +96,10 @@ too, #3858; an attacker a First Strike defender destroys first earning no chip a
 `fight` reads a blow that never lands as none, R4171000), and once none is worth making, or facing lethal
 against its best attack (R4187000), the switches to Defense Position its own evaluation prefers, and
 in the first case its switches back to Attack Position of units without Deft too, up to
-`AI_REPLY.attack_switches`, R4433000) on every determinization, and plays the first action of the
-best mean. When none
+`AI_REPLY.attack_switches`, R4433000; known plays and Activates together take at most
+`AI_REPLY.play_steps` of its `AI_REPLY.max_steps` steps, so its attacks keep the rest, and a reply
+whose steps run out still ends its turn, in up to `AI_REPLY.close_steps` more, R4810000) on every
+determinization, and plays the first action of the best mean. When none
 of the lines `shortlist_lines` takes for the reply hands the turn over with an effect of the seat's own
 waiting that the root did not hold (a countdown, a next-turn reward), the best line that does is replied
 to as well, last, on a slice of the counter that leaves the other determinizations' share of the

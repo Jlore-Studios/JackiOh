@@ -54,9 +54,13 @@ mod tests {
 
     const SEED_DRONE: &str = "infiniteassault-001"; // Seed Drone
     const BIG: &str = "stand-in (4) 4/4";
+    // Stockpile: a play always open, so no turn ends by itself while the new Unit is Dormant (R4816000).
+    const FILLER: &str = "core-005";
 
     fn recompiled(radiant: bool, unit: Value, seed: &str) -> (Scenario, CardInstance) {
-        let mut s = scenario(json!({ "seed": seed, "p1": { "hand": [{ "def": ID, "radiant": radiant }], "field": [unit] } }));
+        let mut s = scenario(
+            json!({ "seed": seed, "p1": { "hand": [{ "def": ID, "radiant": radiant }, FILLER], "field": [unit] } }),
+        );
         let before = s.unit_at(P1, 1);
         s.play(ID, pick::targets(pick::instance(&before)));
         let after = s.unit_at(P1, 1);
