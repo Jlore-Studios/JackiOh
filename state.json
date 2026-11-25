@@ -21126,6 +21126,7 @@
     "4864": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "cleared": {
         "approver": {
           "family": "claude",
@@ -21141,7 +21142,7 @@
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-24T21:26:14Z",
+      "feedback_since": "2026-11-25T08:25:00Z",
       "forced": false,
       "handoff": {
         "at": "2026-11-25T06:09:30Z",
@@ -21160,6 +21161,7 @@
       "merge_owner": "claude-3",
       "pending_request": false,
       "provider": "claude-3",
+      "question": "",
       "queued_at": "2026-11-25T00:36:44Z",
       "round_tier": "strong",
       "run_id": "45576082742",
@@ -21182,11 +21184,11 @@
         "provider": "claude-3",
         "run": "45539587105"
       },
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-25T08:25:00Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0,
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "claude"
