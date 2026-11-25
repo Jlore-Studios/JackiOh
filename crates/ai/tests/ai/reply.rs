@@ -857,6 +857,34 @@ mod open_lethal_1634 {
         assert_eq!(shipped.result.is_some(), AI_REPLY.open_lethal);
     }
 
+    /// #4931: short of lethal the switch changes nothing. At 20 the two 7/7s reach 14 together, so the
+    /// reply is the one it plays one hit at a time: the kill, then a 7 at the face.
+    #[test]
+    fn a_reply_short_of_lethal_is_the_same_with_the_switch_on_or_off() {
+        let state = handed_over(json!({
+            "p1": { "health": 20, "field": ["core-008"] },
+            "p2": { "field": ["core-025", "core-025"] },
+        }));
+        assert!(ready_gap(&state, HUMAN) > 0.0);
+        let hidden = hidden_card_ids(&state, AI);
+        let reply = |open_lethal: bool| {
+            simulate_reply_with(
+                &state,
+                AI,
+                &create_node_counter(20, None),
+                &hidden,
+                open_lethal,
+                Prices::NONE,
+            )
+            .expect("a reply")
+        };
+        let open = reply(true);
+        assert!(open.result.is_none());
+        assert!(in_graveyard(&open, AI, "core-008"));
+        assert_eq!(open.players[AI].hero.health, 13);
+        assert_eq!(hash_state(&open), hash_state(&reply(false)));
+    }
+
     /// #1634: at 8 health with Mr. Vanilla against two 4-mana 7/7s, lethal only together, the AI puts
     /// Mr. Vanilla in Defense Position, whose Taunt takes one swing, and survives the swing back. One
     /// hit at a time, the reply sees a kill and a 7, and the AI swings at the face and dies.
