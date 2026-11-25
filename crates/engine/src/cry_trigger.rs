@@ -16,8 +16,7 @@ use crate::play_choices::{
 };
 use crate::prompts::{
     AnswerInput, HookResumableOptions, OpenPromptArgs, ResumeAtArgs, ResumeOptions, cell_option_label,
-    close_prompt, hero_option_label, in_offered_order, open_prompt, resume_at, run_hook_resumable,
-    run_resume, why_answer_refused,
+    hero_option_label, open_prompt, resume_at, run_hook_resumable, run_resume, take_answer,
 };
 use crate::random_cast::{
     RANDOM_CHOICES_KEY, prefer_enemies, prefer_friends, random_cast_of, random_picks, with_cast_mode,
@@ -690,18 +689,18 @@ fn run_of(data: &IndexMap<String, Value>) -> Option<CryRun> {
 }
 
 /// R122: the answer to a prompt whose `resume.hook` is `TRIGGER_CRY_HOOK` (`prompts.rs`, SURFACE §6.6),
-/// validated like any answer and filed into the run (picks in offered order, R221); then the next
-/// question or the Cry, and the rest drains in R113's order, as `prompts::answer_prompt` does.
+/// taken through `prompts::take_answer` like any answer (R221's order; R450's discards and interception)
+/// and filed into the run; then the next question or the Cry, and the rest drains in R113's order, as
+/// `prompts::answer_prompt` does.
 pub fn answer_cry_prompt(sink: &mut EngineSink, answer: &AnswerInput) -> Result<(), EngineError> {
     let Some(pending) = sink.state.pending.clone() else {
         return Err(EngineError::new("no prompt is open"));
     };
-    why_answer_refused(&pending, answer)?;
     let run = run_of(&pending.resume.data);
-    close_prompt(sink);
+    // R450, R467: a triggered Cry's `target` prompt is a targeting like any other (#4815).
+    let picks = take_answer(sink, &pending, answer)?;
     begin_work_cascade(sink);
     if let Some(mut run) = run {
-        let picks = in_offered_order(&pending, &answer.selection);
         for pick in picks {
             match pick {
                 Selection::Mode { option } if run.awaiting == Some(CryAwaiting::Mode) => {
