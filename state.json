@@ -21374,18 +21374,19 @@
     "what": "build #4931 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-25T20:01:35Z",
+    "at": "2026-11-25T20:19:09Z",
     "notes": [
-      "delivered review #4955 on muse (run 45689314360): approved",
-      "delivered review #4952 on claude-4 (run 45682657485): blocked",
-      "delivered revise #4939 on claude-3 (run 45678759237): approved",
-      "delivered build #4924 on claude-7 (run 45676607115): built",
-      "delivered revise #4946 on claude-8 (run 45676430741): built",
-      "delivered review #4950 on claude-3 (run 45676242468): approved",
-      "started review #4958 on claude-7 (run 45692318580)",
-      "started review #4946 on claude-8 (run 45692510644)",
+      "#4956: `e2e smoke (4/4)` red in CI run 45688463489; its other early jobs have until 2026-11-25T20:21:06Z to report",
+      "#4955: green and waiting for a person to merge it, so `muse` gives up its claim on it",
+      "delivered review #4956 on claude-4 (run 45688965769): approved",
+      "delivered plan #4931 on claude-1 (run 45686790795): planned",
+      "started revise #4956 on claude-4 (run 45695147246)",
+      "started revise #4893 on muse (run 45695319956)",
+      "started revise #4948 on claude-3 (run 45695498451)",
+      "started build #4931 on claude-3 (run 45695679777)",
       "nothing more to start: nothing is queued",
-      "runner gate: started 0 of 3 waiting run(s); 3 wait for a slot"
+      "pruned 2 plan file(s) older than 7 days",
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22087,7 +22088,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T20:01:35Z",
+  "loop_tick": "2026-11-25T20:19:09Z",
   "machine_disk": {
     "issue": null,
     "reading": {
