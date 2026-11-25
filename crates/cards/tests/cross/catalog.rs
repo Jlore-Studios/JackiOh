@@ -8564,8 +8564,8 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Swarm],
         R::Common,
-        st(1, 1),
-        st(2, 2),
+        st(2, 1),
+        st(4, 2),
     ),
     row(
         "102",

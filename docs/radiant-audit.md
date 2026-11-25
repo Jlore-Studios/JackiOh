@@ -1096,7 +1096,7 @@ A card added after the sections above has one row here, keyed by its id. A perso
 | stinkyscapeplus-098 | Doomed Ship | Meets | It still adds one of its three card pairs to the left and right ends of your hand, which become Radiant when they meet; the Radiant face also makes both cost (0): an added rider that meets R275. |
 | stinkyscapeplus-099 | Big Time Recruits | Meets | It still draws the 3 most expensive permanents and makes them GIGA; the Radiant face makes them Radiant as well: an added rider that meets R275. |
 | stinkyscapeplus-100 | Plesiosize | Meets | The buff rises +8/+8 → +16/+16 (2×; +6/+6 → +12/+12 until issue #4783) and the Unit is still made GIGA, so it meets R275. |
-| stinkyscapeplus-101 | A Wee Whelp | Meets | Stats double 1/1 → 2/2 and the Evolve sets the stats to 20/20 against 10/10 (2×), so both halves meet R275. |
+| stinkyscapeplus-101 | A Wee Whelp | Meets | Stats double 2/1 → 4/2 and the Evolve gain rises +8/+8 → +16/+16 (2×), so both halves meet R275. Until issue #4783 it was a 1/1 → 2/2 whose Evolve set the stats to 10/10 → 20/20. |
 | stinkyscapeplus-102 | Cosmic Bard | Meets | Stats double 3/2 → 6/4. The Combo still draws 2 Units, and the Radiant face also sets both their costs to the cheapest drawn: an added rider that meets R275. |
 | stinkyscapeplus-103 | Transcend | Meets | The permanents it transforms cost (2) more instead of (1) more, twice the step, so it meets R275. |
 | stinkyscapeplus-104 | Tireless Cultivation | Meets | The transformed permanent costs (2) more instead of (1) more (2×); Temporary and the return to hand are unchanged, so it meets R275. |
