@@ -116,7 +116,7 @@ mod tests {
         let ids: Vec<String> = [WALL, SETTER, BUFFER].map(String::from).to_vec();
         let out = std::env::temp_dir().join(format!("jackioh-steer-test-{}.jsonl", std::process::id()));
         let seeds: Vec<u32> = (1..=40).collect();
-        record_seeds(&seeds, &ids, &ids, &out).expect("recorded");
+        record_seeds(&seeds, &ids, &ids, false, &out).expect("recorded");
         let text = fs::read_to_string(&out).expect("the traces");
         let _ = fs::remove_file(&out);
         text.lines()

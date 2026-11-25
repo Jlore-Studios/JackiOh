@@ -4,7 +4,8 @@
 //!
 //! Core #6 Mana Well's shape with a count: at its controller's start of turn (§2.2, §6.2, R68) the
 //! declared `mana` for each declared `health` its hero is missing — missing from the hero's
-//! starting health (R290, a handicap's `heroHealth`, R4587004), floored at 0, so a hero above its
+//! starting health (R290, a handicap's `heroHealth`, R4587004; a Duos seat's own HP at setup,
+//! R4831000), floored at 0, so a hero above its
 //! start gives nothing. The gain is this turn's mana (`gain_mana`, §2.3).
 
 use jackioh_engine::prelude::*;
@@ -35,6 +36,7 @@ pub fn script() -> CardScripts {
 #[cfg(test)]
 mod tests {
     use super::ID;
+    use jackioh_engine::config::DUOS_POOL_HEALTH;
     use jackioh_engine::testkit::PlayerId::P1;
     use jackioh_engine::testkit::*;
 
@@ -83,6 +85,24 @@ mod tests {
             s.start_turn();
             // 10 missing from the handicap's 40: one tick of 1.
             s.expect_health(P1, 30);
+            s.expect_mana(P1, 5);
+        }
+
+        #[test]
+        fn r4831000_a_duos_hero_counts_from_the_own_hp_it_started_on() {
+            let mut s = scenario(json!({
+                "p1": { "field": [ID], "health": 9, "library": crate::filler(2) },
+                "p2": { "library": crate::filler(2) },
+            }));
+            s.state_mut().players[P1].duos = Some(DuosLife {
+                pool: DUOS_POOL_HEALTH,
+                pool_cap: DUOS_POOL_HEALTH,
+                spent: false,
+                own_start: None,
+            });
+            s.start_turn();
+            // 11 missing from its own 20, not 21 from 30: one tick of 1.
+            s.expect_health(P1, 9);
             s.expect_mana(P1, 5);
         }
     }

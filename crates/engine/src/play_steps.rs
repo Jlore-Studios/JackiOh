@@ -46,8 +46,8 @@ use crate::play_choices::{
 };
 use crate::play_counts::record_play;
 use crate::prompts::{
-    AnswerInput, HookResumableOptions, OpenPromptArgs, cell_option_label, close_prompt, hero_option_label,
-    in_offered_order, open_prompt, run_hook_resumable, why_answer_refused,
+    AnswerInput, HookResumableOptions, OpenPromptArgs, cell_option_label, hero_option_label, open_prompt,
+    run_hook_resumable, take_answer,
 };
 use crate::query::played_earlier;
 use crate::random_cast::{
@@ -68,9 +68,7 @@ use crate::subsystems::feng_shui::FengShuiVerdict;
 use crate::subsystems::fuse::{FuseArgs, fuse};
 use crate::subsystems::glitch::count_system_play;
 use crate::targeting::target_aim;
-use crate::targeting_point::{
-    InterceptArgs, intercept_targeting, pay_targeting_discards, target_answer, why_target_answer_refused,
-};
+use crate::targeting_point::{InterceptArgs, intercept_targeting, pay_targeting_discards};
 use crate::triggers::{
     OWED_TO_TRAPS, SETTLE_PASS_CAP, SettleOptions, TriggerHolder, dispatch_pending, event_of_queued,
     run_queued_trigger, settle, trigger_holder_for, trigger_holders_with_hook,
@@ -622,10 +620,16 @@ pub fn validate_play(
     }
 
     // R1200: while a Mayor acts the action carries no targets, so draw each at random before anything
-    // is checked or paid; the targeting point, costs and Joro's replacements meet the drawn target
+    // is paid; the targeting point, costs and Joro's replacements meet the drawn target
     // (MD-E9). A face-down play (ME-ALTPLAY, R1044) declares nothing, so draws nothing. R4590001:
     // a Spell played under a random-targets modifier or a Jailbreaker's aura draws the same way.
     let mut owned = action.clone();
+    // R348: the play's own numbers are checked before any script can read them. R1200's draw
+    // below runs the declarations' named checks against the X-stamped face, so an unbounded X
+    // would reach them (S #99's check multiplies by it). A Plague spend travels on no face the
+    // draw reads, so its check stays below.
+    crate::play_choices::refuse_x(sink.state, player, &card, owned.x)?;
+    crate::play_choices::refuse_embiggen(sink.state, &card, owned.embiggen)?;
     if crate::random_targets::play_targets_random(sink.state, player, &card) && owned.face_down.is_none() {
         let face = crate::play_choices::face_for_action(sink.state, player, &card, &owned);
         let given = owned.targets.clone().unwrap_or_default();
@@ -3338,16 +3342,12 @@ pub fn answer_play_prompt(sink: &mut EngineSink<'_>, answer: &AnswerInput) -> Re
         return Err(EngineError::new("no prompt is open"));
     };
 
-    why_answer_refused(&pending, answer)?;
-
     let Some(mut run) = run_of(&pending.resume) else {
         return Err(EngineError::new("that prompt is not a play's own"));
     };
-    let picks = in_offered_order(&pending, &answer.selection);
-    // B5 E5, R450: picks that cost more discards than the chooser holds are no answer.
-    why_target_answer_refused(sink.state, &pending, &picks)?;
-
-    close_prompt(sink);
+    // B5 E5, E9, R450: the targeting point of an Echo repeat's or a cast's fresh pick — refused when it
+    // costs more discards than the chooser holds, else its random discards first, then an interception.
+    let targeted = take_answer(sink, &pending, answer)?;
 
     // The answered prompt is this run's, so any tail owed for it earlier would repeat this step.
     let instance_id = run.instance_id.clone();
@@ -3355,9 +3355,6 @@ pub fn answer_play_prompt(sink: &mut EngineSink<'_>, answer: &AnswerInput) -> Re
         is_play_resume(&item.resume)
             && run_of(&item.resume).is_some_and(|owed| owed.instance_id == instance_id)
     });
-    // B5 E5, E9, R450: the targeting point of an Echo repeat's or a cast's fresh pick — a random
-    // discard cost it pays first, and an interception.
-    let targeted = target_answer(sink, &pending, &picks);
     continue_play_answer(sink, &mut run, &targeted);
     Ok(())
 }
