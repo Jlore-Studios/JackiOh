@@ -25920,6 +25920,14 @@
         "sha": "7c010f5e0999884c86ff61165ee5a531532e1c11",
         "tiers": {}
       }
+    },
+    "4958": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-25T18:34:48Z",
+      "issue": 4924,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
