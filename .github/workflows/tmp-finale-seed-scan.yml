@@ -1,0 +1,29 @@
+# TEMPORARY (issue #4783), deleted before its pull request merges: the session building it cannot run the
+# web's tests (its container's network policy denies the registries), so this scans the tutorial finale's
+# seeds on the pull request's merge commit for one that passes lessonSuite's checks, and prints them.
+name: tmp finale seed scan
+
+on:
+  pull_request:
+    paths: [".github/workflows/tmp-finale-seed-scan.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        range: ["1 50", "51 100", "101 150", "151 200"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+      - name: the WASM module
+        run: sh scripts/build-wasm.sh
+      - name: scan
+        run: |
+          set -- ${{ matrix.range }}
+          SCAN_FROM=$1 SCAN_TO=$2 pnpm --dir apps/web exec vitest run src/tutorial/scripts/finale-seedscan.test.ts
