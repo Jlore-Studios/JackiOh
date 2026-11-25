@@ -20990,7 +20990,8 @@
       "started_at": "2026-11-25T10:13:49Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 0,
+      "waiting_comment": 7160140472
     },
     "4848": {
       "action": "build",
