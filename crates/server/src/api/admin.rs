@@ -381,11 +381,12 @@ pub async fn delete_post(app: &Arc<App>, req: Req) -> ApiResult {
 
 /// `GET /api/admin/audit`: `{ actions, nextBeforeId }`, the newest `ADMIN_AUDIT_PAGE` audit
 /// rows matching `?before_id=<id>&profile_id=<id>&route=<METHOD path>&since=<ms>&until=<ms>`
-/// (all optional: `before_id` is an exclusive upper bound on the row id, the other two exact
-/// matches, `since`/`until` inclusive bounds on `at` in epoch milliseconds, an empty one no
-/// constraint), newest first, each with its author's username (`""` once the account is gone).
-/// `nextBeforeId` is the last row's id when the page is full, else `null`: a following read
-/// with it as `before_id` answers the next older page, staying inside the window.
+/// (all optional: `before_id` is the cursor naming the shown page's last row, answered in the
+/// `(at, id)` sort key's order, the other two exact matches, `since`/`until` inclusive bounds
+/// on `at` in epoch milliseconds, an empty one no constraint), newest first, each with its
+/// author's username (`""` once the account is gone). `nextBeforeId` is the last row's id when
+/// the page is full, else `null`: a following read with it as `before_id` answers the next
+/// older page, staying inside the window.
 pub async fn get_audit(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = admin_caller(app, &req)?;
     let before_id = match req.query.get("before_id") {

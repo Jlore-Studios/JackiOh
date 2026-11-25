@@ -207,6 +207,7 @@ fn duos_side(s: &mut Scenario, player: PlayerId, own: i32, pool: i32, cap: i32, 
         pool,
         pool_cap: cap,
         spent,
+        own_start: None,
     });
 }
 

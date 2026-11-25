@@ -186,8 +186,9 @@ pub struct Decision {
 }
 
 impl Decision {
-    /// R3498000: a searched decision that left its finalists unscored on a sampled world. A refused
-    /// reply refuses every later node, so it shows here too, except at one determinization.
+    /// R3498000: a searched decision that left its finalists unscored on a sampled world. A reply the
+    /// counter ran out for refuses every later node, so it shows here too, except at one
+    /// determinization; one cut short of a step's surcharge (R4809000) need not.
     pub fn fell_short(&self) -> bool {
         matches!(self.reason, DecisionReason::Search | DecisionReason::Prompt)
             && self.stats.determinizations > 0

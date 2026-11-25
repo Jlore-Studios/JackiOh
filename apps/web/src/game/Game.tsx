@@ -416,6 +416,13 @@ export default function Game({
   const [shown, setShown] = useState<PlayerView>(view);
   const latest = useRef<PlayerView>(view);
   latest.current = view;
+  // R4734000: whether this board has shown the game unfinished. The effects layer plays the killing blow and
+  // Victory / Defeat only when the shown view goes from no result to one on a mounted board (FxLayer.tsx), and
+  // a silent board has no effects layer, so only then does the result wait for them (`GameResult`'s `arrived`).
+  // A board mounted on a finished game (Back from Watch the replay, a reload) shows its result at once. React's
+  // "adjust state while rendering" pattern, as the concede dialog below does.
+  const [sawLive, setSawLive] = useState(view.result === null);
+  if (!sawLive && shown.result === null) setSawLive(true);
 
   const [animating, setAnimating] = useState(() => new Map<string, never>());
   /**
@@ -1171,6 +1178,7 @@ export default function Game({
             theirHand={theirHandOf(shown)}
             onOpenResult={onOpenResult}
             openResultTestId={openResultTestId}
+            arrived={sawLive && !silent}
           />
         </WearerProvider>
       ) : null}

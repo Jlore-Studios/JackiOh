@@ -195,9 +195,11 @@ pub struct AiSearch {
     /// hand and a full board (R186's sweep flags a decision over 2 s) cost about an ordinary one.
     pub fat_reference: i32,
     /// The least the scaled budget ever holds (the lethal walk still gets its depth-first pass and
-    /// the beam a few expansions at the widest states).
+    /// the beam a few expansions at the widest states), unless the budget's own `nodes` is less
+    /// (R4802000).
     pub fat_min_nodes: i32,
-    /// The least of the scaled budget the lethal solver's allowance shrinks to.
+    /// The least of the scaled budget the lethal solver's allowance shrinks to, unless the budget's own
+    /// `lethal_nodes` is less (R4802000). A state that is not fat keeps the budget's own allowance.
     pub fat_min_lethal: i32,
     /// R2575000: the most nodes a fat state's allowance is scaled from: the practice budget before
     /// issue #2575 doubled it, so a state whose every step costs the most spends what it did.
@@ -214,12 +216,13 @@ pub struct AiSearch {
     /// holds two states, and a decision meets a few at most.
     pub memo_steps: i32,
     /// The cards an armed backrow copy of which makes a simulated Attack cost `ai_turn_trap_nodes`
-    /// (§8.5 core-096: a whole random AI turn inside one reduce), asked only of an attack that could be
-    /// the lethal one the trap answers, so an ordinary poke is not priced like losing the turn. A fused
+    /// (§8.5 core-096: a whole random AI turn inside one reduce), asked only of an attack the trap
+    /// would answer, one its own projection calls lethal (`subsystems::is_lethal`, R4809001), so an
+    /// ordinary poke or an attack on a Defense Position Unit is not priced like losing the turn. A fused
     /// card holding one is charged the same (`stands_for_any`, #1240).
     pub ai_turn_trap_ids: &'static [&'static str],
-    /// Nodes an Attack into an armed `ai_turn_trap_ids` card pays beyond the one every `simulate`
-    /// takes — the playout's rough share of the nodes it burns.
+    /// Nodes an Attack an armed `ai_turn_trap_ids` card would answer pays beyond the one every
+    /// `simulate` takes — the playout's rough share of the nodes it burns.
     pub ai_turn_trap_nodes: i32,
     /// #1240: nodes a Play pays for each card in its player's hand while a card of the other side
     /// judges that player's plays (Pareto Optimality, `subsystems::watching`): the judge runs §10.7's
@@ -1067,8 +1070,19 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct AiReply {
-    /// Engine steps one reply may take: plays, attacks, prompt answers and the closing endTurn.
+    /// Engine steps one reply's turn may take: plays, Activates, switches, attacks, prompt answers and
+    /// its own endTurn. R4810000: a turn whose steps run out with the opponent still on turn is ended
+    /// in up to `close_steps` more.
     pub max_steps: i32,
+    /// R4810000: the most of `max_steps` that known plays (reply.rs `known_play`) and visible
+    /// Activates (`visible_activation`) take together. Past it a step tries neither, so a card with
+    /// many uses, or one whose every use gains a card the reply then plays (S #66 Miner v5), leaves
+    /// the attacks the rest.
+    pub play_steps: i32,
+    /// R4810000: the steps past `max_steps` a reply whose steps ran out with the opponent still on
+    /// turn takes to end that turn: its endTurn and the prompts the turn's end opens, answered as
+    /// every reply prompt is. The line is then scored at the seat's next decision.
+    pub close_steps: i32,
     /// Nodes `decide` reserves per reply when it splits the budget (a typical reply, not the most).
     pub reserve_steps: i32,
     /// Plays of cards the line put in the opponent's hand that one reply step tries, in move order.
@@ -1111,6 +1125,14 @@ pub struct AiReply {
 /// The opponent's reply that the best lines are scored after (reply.rs, SPEC §9.9).
 pub const AI_REPLY: AiReply = AiReply {
     max_steps: 12,
+    // R4810000: 6, so the 12 steps keep one attack for each of the engine's `UNIT_ZONES` (5) Units and
+    // the endTurn. With `close_steps` its screen, 400 games on improve-dev against the control at
+    // e3fe5705e3, read 199-201, edge -0.005 (-0.022 to 0.012); inconclusive (R4319000): 3 decided of 200
+    // (won 1, lost 2), 17 diverged, every game clean; its scene tests settle it (training/improve.md,
+    // A screen).
+    play_steps: 6,
+    // R4810000: 3, the endTurn and two prompts its turn's end may open.
+    close_steps: 3,
     reserve_steps: 5,
     known_plays: 8,
     visible_activations: 4,

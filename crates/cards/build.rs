@@ -42,7 +42,8 @@
 //! (`patches/card_metrics/<version>.json`, R2173000), an index into `cardLists`, which holds each
 //! version's BUSTED and complicated lists once. Each patch is `{ set, unset }`: the snapshot's top-level keys whose value
 //! differs, with that value, and the keys only `catalog.json`'s entry has. An id the catalog no longer
-//! has is not carried. `src/history.rs` reads it.
+//! has is not carried. `src/history.rs` reads it. R4779000: `fragments` holds, by version, the stem of
+//! the pending fragment `patches ship` recorded each shipped from, which a kept script's key names.
 //!
 //! The browser's module (a `wasm32` target) carries only the versions from `BROWSER_CARRIED_FROM` on:
 //! it folds only practice games, and a practice game folds on a carried version only with the setup
@@ -425,9 +426,11 @@ fn history_json(
     from: Option<&str>,
 ) -> String {
     let list = patches_dir.join("patches.json");
-    let versions: Vec<String> = read_json(&list)
+    let shipped = read_json(&list);
+    let shipped = shipped
         .as_array()
-        .unwrap_or_else(|| panic!("{}: not a JSON array", list.display()))
+        .unwrap_or_else(|| panic!("{}: not a JSON array", list.display()));
+    let versions: Vec<String> = shipped
         .iter()
         .map(|patch| {
             patch
@@ -435,6 +438,16 @@ fn history_json(
                 .and_then(|version| version.as_str())
                 .unwrap_or_else(|| panic!("{}: an entry with no string \"version\"", list.display()))
                 .to_string()
+        })
+        .collect();
+    // R4779000: the pending fragment each version shipped from, by version, wherever `patches ship`
+    // recorded it, over every version (not only the carried ones) since a kept script's key reads `order`.
+    let fragments: serde_json::Map<String, serde_json::Value> = shipped
+        .iter()
+        .zip(&versions)
+        .filter_map(|(patch, version)| {
+            let stem = patch.get("fragment")?.as_str()?;
+            Some((version.clone(), serde_json::Value::from(stem)))
         })
         .collect();
     let mut patches: Vec<serde_json::Value> = Vec::new();
@@ -525,6 +538,7 @@ fn history_json(
         "versions": carried,
         "aliases": aliases,
         "marked": marked,
+        "fragments": fragments,
     })
     .to_string()
 }

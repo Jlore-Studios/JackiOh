@@ -425,6 +425,7 @@ mod duos_life_r964000 {
             pool: 20,
             pool_cap: 20,
             spent,
+            own_start: None,
         });
         out
     }
@@ -1169,5 +1170,310 @@ mod defense_switch_1696 {
             "{}",
             trace(&run.turn)
         );
+    }
+}
+
+/// R4810000: the reply's step caps. `ARMORY`'s free Activate ♾️ gains its controller's hero 1 Armor, a
+/// use the opponent's evaluation always prefers to standing still, so it takes every step it is let.
+mod step_caps_r4810000 {
+    use jackioh_engine::config::HERO_HEALTH;
+
+    use super::*;
+
+    /// A test-only Field Spell token, "Activate ♾️: Gain 1 Armor.", free.
+    const ARMORY: &str = "ai-test-armory";
+    /// #8 Mr. Vanilla, a vanilla 4/4.
+    const VANILLA: &str = "core-008";
+    /// S #66 Miner v5: "Activate 5: Gain a random Stinkyscape Resource" (R1872000).
+    const MINER: &str = "stinkyscape-066";
+    /// A 1/1 with Windfury: two attacks a turn.
+    const WINDFURY: &str = "stand-in (1) 1/1 Windfury";
+
+    fn armory_def() -> CardDef {
+        let face = json!({ "keywords": [], "text": "Activate ♾️: Gain 1 Armor." });
+        json_as(json!({
+            "id": ARMORY, "index": "ai-test-armory-1", "name": "Armory (AI test)", "set": "Core",
+            "type": "Field Spell", "tags": [], "rarity": "Token", "token": true, "cost": 1,
+            "base": face, "radiant": face,
+        }))
+    }
+
+    /// `ARMORY` on top of the real catalog and scripts, for this thread, as `install_two_guns` does.
+    fn install_armory() {
+        jackioh_cards::register_all();
+        let mut catalog = (*jackioh_cards::CATALOG).clone();
+        catalog.insert(ARMORY.to_string(), armory_def());
+        register_catalog_as(catalog, jackioh_cards::catalog_version());
+        let script = Script {
+            activations: vec![ActivationDecl {
+                id: "armor".to_string(),
+                label: "Gain 1 Armor".to_string(),
+                uses: ActivationUses::Unlimited,
+                cost: None,
+                targets: vec![],
+                modes: vec![],
+                can_activate: None,
+                has: None,
+                run: hook(|_ctx| vec![effects::gain_hero_armor(json_as(json!({ "amount": 1 })))]),
+            }],
+            ..Script::default()
+        };
+        let mut scripts = jackioh_cards::scripts_of();
+        scripts.insert(
+            ARMORY.to_string(),
+            CardScripts {
+                base: script.clone(),
+                radiant: script,
+            },
+        );
+        register_scripts(scripts);
+    }
+
+    /// p2's reply on 600 nodes, and the nodes it used.
+    fn replied(state: &GameState) -> (GameState, usize) {
+        let counter = create_node_counter(600, None);
+        let reply =
+            simulate_reply(state, AI, &counter, &hidden_card_ids(state, AI), Prices::NONE).expect("a reply");
+        (reply, counter.used())
+    }
+
+    /// A free Activate with no limit to its uses takes `AI_REPLY.play_steps` of the reply's steps and no
+    /// more, so the three 4/4s still swing for the AI's 12 health: on 3a83bd7 it took all twelve and the
+    /// line read as survived.
+    #[test]
+    fn r4810000_a_free_activate_takes_at_most_play_steps_so_the_lethal_attacks_still_come() {
+        install_armory();
+        let state = handed_over(json!({
+            "p1": { "health": 12 },
+            "p2": { "field": [VANILLA, VANILLA, VANILLA], "backrow": [ARMORY] },
+        }));
+        let (reply, used) = replied(&state);
+        assert_eq!(
+            reply.result.map(|result| result.winner),
+            Some(Winner::from(HUMAN))
+        );
+        assert_eq!(reply.players[HUMAN].hero.armor, AI_REPLY.play_steps);
+        assert_eq!(
+            used,
+            (AI_REPLY.play_steps + 3) as usize,
+            "six Armor uses and three attacks"
+        );
+    }
+
+    /// Ten Windfury attacks are more than the steps the Armor uses leave: the reply makes the attacks
+    /// its steps allow and then ends the opponent's turn, so the line is scored at the AI's next main
+    /// phase, as every other reply's is.
+    #[test]
+    fn r4810000_a_reply_whose_steps_run_out_still_ends_the_opponents_turn() {
+        install_armory();
+        let state = handed_over(json!({
+            "p2": { "field": [WINDFURY, WINDFURY, WINDFURY, WINDFURY, WINDFURY], "backrow": [ARMORY] },
+        }));
+        let (reply, used) = replied(&state);
+        assert!(reply.result.is_none());
+        assert_eq!(
+            (reply.active, reply.turn, reply.phase),
+            (AI, TURN + 2, Phase::Main)
+        );
+        assert!(reply.pending.is_none());
+        assert_eq!(reply.players[HUMAN].hero.armor, AI_REPLY.play_steps);
+        assert_eq!(
+            reply.players[AI].hero.health,
+            HERO_HEALTH - (AI_REPLY.max_steps - AI_REPLY.play_steps),
+            "one point for each step the Armor uses left"
+        );
+        assert_eq!(
+            used,
+            (AI_REPLY.max_steps + 1) as usize,
+            "the twelve steps and the endTurn"
+        );
+    }
+
+    /// The issue's board: beside S #66 Miner v5, whose every use gains a Resource the reply then
+    /// plays, the three 4/4s still swing for the AI's 12 health, as they do without it.
+    #[test]
+    fn r4810000_beside_a_miner_v5_the_reply_still_makes_its_lethal_attacks() {
+        for field in [
+            json!([VANILLA, VANILLA, VANILLA]),
+            json!([VANILLA, VANILLA, VANILLA, MINER]),
+        ] {
+            let state = handed_over(json!({
+                "seed": "audit-reply-miner-7",
+                "p1": { "health": 12 },
+                "p2": { "field": field },
+            }));
+            let (reply, _) = replied(&state);
+            assert_eq!(
+                reply.result.map(|result| result.winner),
+                Some(Winner::from(HUMAN)),
+                "{field}: active {:?}, turn {}, the AI at {}",
+                reply.active,
+                reply.turn,
+                reply.players[AI].hero.health
+            );
+        }
+    }
+}
+
+/// R4809000: a step of the reply whose surcharge the node counter cannot pay cuts the reply
+/// (`simulate_reply` answers `None`, as for a spent counter) instead of being skipped, which reads as
+/// an opponent who passed its turn or held a play back. R4809001: the My Pawn surcharge is charged only
+/// for an attack the trap would answer, one its own projection calls lethal (`subsystems::is_lethal`).
+mod surcharge_r4809000 {
+    use indexmap::IndexSet;
+
+    use super::super::support::unit;
+    use super::*;
+
+    /// #96 My Pawn, the `AI_SEARCH.ai_turn_trap_ids` card.
+    const MY_PAWN: &str = "core-096";
+    /// #8 Mr. Vanilla, a vanilla 4/4.
+    const VANILLA: &str = "core-008";
+    /// #67 Zoomerbin Oomen, a 1/2, set here in Defense Position, which gives it Taunt (§4.1).
+    const OOMEN: &str = "core-067";
+    /// C+ #64 Mulch Muncher, a 9/9 with Rush and Trample.
+    const MUNCHER: &str = "classicplus-064";
+    /// #97 Zephrys, an `AI_SEARCH.expensive_def_ids` card.
+    const ZEPHRYS: &str = "core-097";
+    /// Nodes the reply's steps fit in, but not a 40- or 100-node surcharge.
+    const SHORT: usize = 30;
+    /// Nodes that pay a My Pawn surcharge.
+    const ROOMY: usize = 400;
+
+    fn reply(state: &GameState, nodes: usize, hidden: &IndexSet<String>) -> Option<GameState> {
+        simulate_reply(state, AI, &create_node_counter(nodes, None), hidden, Prices::NONE)
+    }
+
+    fn unseen_reply(state: &GameState, nodes: usize) -> Option<GameState> {
+        reply(state, nodes, &hidden_card_ids(state, AI))
+    }
+
+    fn attack_on(state: &GameState, attacker: &str, target_id: String) -> ActionBody {
+        ActionBody::Attack {
+            attacker_id: unit(state, HUMAN, attacker).id.clone(),
+            target_id,
+        }
+    }
+
+    fn at_face(state: &GameState, attacker: &str) -> ActionBody {
+        attack_on(state, attacker, format!("hero-{}", AI.as_str()))
+    }
+
+    fn at_unit(state: &GameState, attacker: &str, target: &str) -> ActionBody {
+        let target_id = unit(state, AI, target).id.clone();
+        attack_on(state, attacker, target_id)
+    }
+
+    fn trap_nodes() -> usize {
+        AI_SEARCH.ai_turn_trap_nodes as usize
+    }
+
+    #[test]
+    fn r4809000_a_reply_short_of_an_attacks_surcharge_is_cut_not_played_as_a_passed_turn() {
+        let state = handed_over(json!({
+            "p1": { "health": 4, "backrow": [MY_PAWN] },
+            "p2": { "field": [VANILLA] },
+        }));
+        assert_eq!(
+            surcharge_nodes(&state, HUMAN, &at_face(&state, VANILLA)),
+            trap_nodes()
+        );
+        assert!(
+            unseen_reply(&state, SHORT).is_none(),
+            "a reply cut by the counter came back whole"
+        );
+        assert!(unseen_reply(&state, ROOMY).is_some());
+    }
+
+    #[test]
+    fn r4809000_a_known_play_whose_surcharge_the_counter_cannot_pay_cuts_the_reply() {
+        let state = handed_over(json!({ "p2": { "hand": [ZEPHRYS] } }));
+        let id = state.players[HUMAN]
+            .hand
+            .iter()
+            .find(|card| card.def_id == ZEPHRYS)
+            .map(|card| card.id.clone())
+            .expect("Zephrys is in p2's hand");
+        let play = legal_actions(&state, HUMAN)
+            .into_iter()
+            .find(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == id))
+            .expect("p2 may play Zephrys");
+        assert_eq!(
+            surcharge_nodes(&state, HUMAN, &play),
+            AI_SEARCH.expensive_def_nodes as usize
+        );
+        let unseen = hidden_card_ids(&state, AI);
+        let mut seen = unseen.clone();
+        assert!(seen.shift_remove(&id));
+        assert!(
+            reply(&state, SHORT, &unseen).is_some(),
+            "an unseen Zephrys is never tried"
+        );
+        assert!(
+            reply(&state, SHORT, &seen).is_none(),
+            "a reply too short for the known Zephrys came back as one that held it back"
+        );
+    }
+
+    #[test]
+    fn r4809001_an_attack_pays_the_my_pawn_surcharge_only_when_the_trap_would_answer_it() {
+        let open = |health: i32, backrow: Value| {
+            handed_over(json!({
+                "p1": { "health": health, "backrow": backrow },
+                "p2": { "field": [VANILLA] },
+            }))
+        };
+        let lethal = open(4, json!([MY_PAWN]));
+        assert_eq!(
+            surcharge_nodes(&lethal, HUMAN, &at_face(&lethal, VANILLA)),
+            trap_nodes()
+        );
+        let unarmed = open(4, json!([]));
+        assert_eq!(surcharge_nodes(&unarmed, HUMAN, &at_face(&unarmed, VANILLA)), 0);
+        let poke = open(30, json!([MY_PAWN]));
+        assert_eq!(surcharge_nodes(&poke, HUMAN, &at_face(&poke, VANILLA)), 0);
+
+        let guarded = handed_over(json!({
+            "p1": {
+                "health": 4,
+                "backrow": [MY_PAWN],
+                "field": [{ "def": OOMEN, "position": "DEF" }],
+            },
+            "p2": { "field": [VANILLA, MUNCHER] },
+        }));
+        assert_eq!(
+            surcharge_nodes(&guarded, HUMAN, &at_unit(&guarded, VANILLA, OOMEN)),
+            0,
+            "My Pawn answers nothing about an attack on a Defense Position Unit"
+        );
+        assert_eq!(
+            surcharge_nodes(&guarded, HUMAN, &at_unit(&guarded, MUNCHER, OOMEN)),
+            trap_nodes(),
+            "a Trample excess lethal to the hero is the trap's to answer (R44, R176)"
+        );
+    }
+
+    #[test]
+    fn r4809001_behind_my_pawn_a_short_reply_still_makes_an_attack_the_trap_cannot_answer() {
+        let board = |backrow: Value| {
+            handed_over(json!({
+                "p1": {
+                    "health": 4,
+                    "field": [{ "def": OOMEN, "position": "DEF" }],
+                    "backrow": backrow,
+                },
+                "p2": { "field": [VANILLA] },
+            }))
+        };
+        for backrow in [json!([MY_PAWN]), json!([])] {
+            let state = board(backrow.clone());
+            let short = unseen_reply(&state, SHORT).expect("a reply");
+            assert!(
+                !on_field(&short, AI, OOMEN),
+                "with backrow {backrow}, the 4/4 kills the 1/2: active {:?}, turn {}",
+                short.active,
+                short.turn
+            );
+        }
     }
 }

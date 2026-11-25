@@ -4,7 +4,7 @@
 //!  - R173: a forced attack is made on an enemy. When #86 "Miss" Mrow dies to #9 Moths to the
 //!    Flame's strike back and its Death steals Moths, the rest of the run is on Moths's new side and
 //!    does not attack it; radiant #60 Bear Honeypot's tokens do not attack a played unit on their
-//!    own side, #52 Silly Silas summoned for them by his script through v0.6.8b (R3837000; since issue
+//!    own side, #52 Silly Silas summoned for them by his script through v0.6.8d (R3837000; since issue
 //!    #4353 he stays with his player, R4353025).
 //!  - R174: a run stops once its target has left the field, even when Reborn puts it straight back;
 //!    and (round 4, lens L2) an attacker the run named that died in an earlier combat of the run and
@@ -33,14 +33,14 @@ const LIBRARY: [&str; 6] = [VANILLA; 6];
 
 use super::scenario;
 
-/// R767000: `run` with #52 Silly Silas folding under his script kept for v0.6.8b, whose base face is
+/// R767000: `run` with #52 Silly Silas folding under his script kept for v0.6.8d, whose base face is
 /// summoned for the opponent (R3837000); since issue #4353 the build's stays with its player (R4353025).
 fn under_silas_v0_6_8b<T>(run: impl FnOnce() -> T) -> T {
     jackioh_cards::register_all();
     let (_, _, kept) = jackioh_cards::KEPT_SCRIPTS
         .iter()
-        .find(|(id, version, _)| *id == SILAS && *version == "v0.6.8b")
-        .expect("Silly Silas's v0.6.8b script is kept");
+        .find(|(id, version, _)| *id == SILAS && *version == "v0.6.8d")
+        .expect("Silly Silas's v0.6.8d script is kept");
     let shipped: &'static jackioh_engine::ShippedCatalog =
         Box::leak(Box::new(jackioh_engine::ShippedCatalog::new(
             "kept",

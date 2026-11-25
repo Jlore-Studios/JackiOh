@@ -75,6 +75,7 @@ mod tests {
     const STOCKPILE: &str = "core-005"; // Stockpile: a Spell, a spare card (§2.5)
     const SPECIESIST: &str = "core-002"; // Speciesist: "Cry: Destroy an enemy non-Human Unit.", a declared target.
     const BRINGER: &str = "classic-076"; // Plague Bringer: "Cry: Place 2 Plague Counters; draw 1."
+    const BOOK: &str = "classic-070"; // Book of Plague: "Choose one: Place 5 Plague Counters, or add 3 random Plague cards."
     const PUNISH: &str = "classic-020"; // The Power to Punish: "Activate: Choose one: Deal 2 damage..."
     const TESLA: &str = "classic-005"; // Tesla: "Activates when your opponent summons a Unit: Deal 4 damage to it."
 
@@ -337,6 +338,29 @@ mod tests {
                 assert!(redirects(&s).is_empty());
                 s.expect_in_zone(JORO, "hand");
                 assert_eq!(s.unit(PlayerId::P1, 1).and_then(|unit| unit.counters.plague), Some(2));
+            }
+
+            #[test]
+            fn r651_a_spells_placement_prompt_answer_naming_your_unit_moves_to_joro_book_of_plagues_counters() {
+                // R689's placement prompt is a Spell's prompt answer, so it meets the targeting point (R450, #4815).
+                let mut s = scenario(json!({
+                    "active": "p2",
+                    "p1": { "hand": [JORO, STOCKPILE], "field": [MENACE] },
+                    "p2": { "hand": [BOOK, STOCKPILE] },
+                }));
+                let joro = s.card(JORO).id.clone();
+                let menace = s.card(MENACE).id.clone();
+                s.play(BOOK, json!({ "modes": ["counters"] }));
+                assert_eq!(js(&s.state().pending)["kind"], "target");
+                s.answer(json!([{ "pick": "instance", "instanceId": menace }]));
+                let seen: Vec<Value> = redirects(&s)
+                    .iter()
+                    .map(|event| json!([event["what"], event["fromId"], event["toId"]]))
+                    .collect();
+                assert_eq!(seen, vec![json!(["target", menace, joro])]);
+                s.expect_in_zone(&joro, "field");
+                assert_eq!(s.card(&joro).counters.plague, Some(5));
+                assert_eq!(s.card(&menace).counters.plague.unwrap_or(0), 0);
             }
 
             #[test]

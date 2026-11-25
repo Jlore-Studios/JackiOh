@@ -13460,6 +13460,28 @@ mod dev_dashboard {
         assert!(unknown.is_empty(), "{}", harness.name);
     }
 
+    /// Every audit row appears exactly once when `at` and `id` disagree: the `before_id`
+    /// cursor follows the `(at desc, id desc)` sort key, not the row id.
+    async fn audit_pages_when_at_and_id_disagree(harness: &StoreHarness) {
+        let dev = active_profile(harness, None).await;
+        let now = harness.now();
+        let mut ids = Vec::new();
+        for at in [now + 1, now, now + 2] {
+            // ids ascend, `at` does not.
+            ids.push(
+                q!(harness, t => t.admin_actions_append(&action(dev.id.as_str(), "POST /api/dev/jlore", at))),
+            );
+        }
+        let first = q!(harness, t => t.admin_actions_page(&AdminActionFilter::default(), 2));
+        let second = q!(harness, t => t.admin_actions_page(
+            &AdminActionFilter { before_id: Some(first[1].id), ..AdminActionFilter::default() }, 2));
+        let mut seen: Vec<i64> = first.iter().chain(second.iter()).map(|row| row.id).collect();
+        seen.sort_unstable();
+        let mut all = ids.clone();
+        all.sort_unstable();
+        assert_eq!(seen, all, "{}: every row exactly once", harness.name);
+    }
+
     /// The audit reads back by window: `since` and `until` bound `at` on both ends, inclusive,
     /// composed with the other filters and `before_id` paging, newest first inside the window.
     async fn audit_pages_by_since_and_until(harness: &StoreHarness) {
@@ -13775,6 +13797,7 @@ mod dev_dashboard {
     both_stores!(
         r3074000_an_audit_row_is_kept_newest_first_and_outlives_its_account,
         audit_pages_by_cursor_and_filter,
+        audit_pages_when_at_and_id_disagree,
         audit_pages_by_since_and_until,
         r3074001_a_hand_set_rating_keeps_the_first_earned_one_and_clears_once,
         r3074001_standings_mark_a_hand_set_ladder,
