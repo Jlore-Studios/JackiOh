@@ -282,7 +282,7 @@ mod tests {
             crate::under_kept(ID, script_v0_6_13c(), || {
                 let mut s = to_play(false);
                 assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE_V0_6_13C);
-                assert!(!script_v0_6_13c().base.hand_triggers.is_empty(), "the Float line");
+                assert!(!script_v0_6_13c().base.hand_triggers.is_empty(), "its Float");
                 let two = [1, 2].map(|lane| s.unit_at(PlayerId::P1, lane).id);
                 let three = [1, 2, 3].map(|lane| s.unit_at(PlayerId::P1, lane).id);
                 s.expect_refused(|s| s.play(ID, json!({ "zone": 5, "tributes": two })));

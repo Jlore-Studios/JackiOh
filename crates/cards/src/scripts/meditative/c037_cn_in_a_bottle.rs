@@ -504,7 +504,11 @@ mod tests {
                 s.play(&held.id, json!({}));
                 let new_card = s.hand(P1).last().cloned().expect("the card it added");
                 assert_ne!(new_card.def_id, BOTTLE);
-                assert_eq!(new_card.cost_mod, raise_on(&new_card, surcharge), "buffed {buffed}");
+                assert_eq!(
+                    new_card.cost_mod,
+                    raise_on(&new_card, surcharge),
+                    "buffed {buffed}"
+                );
             }
         }
 
