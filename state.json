@@ -20783,15 +20783,8 @@
       "verdict_rounds": 2
     },
     "4839": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45608849297",
-        "model": "opus",
-        "provider": "claude-1",
-        "since": "2026-11-25T12:15:14Z",
-        "until": "2026-11-25T12:45:14Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -20803,10 +20796,9 @@
         "reason": "planned on opus",
         "trail": "eywords\\\" -A30 crates/engine/src | head -45\", \"description\": \"Read random combat keyword pool\"}\n- Bash: {\"command\": \"grep -rn \\\"RANDOM_KEYWORD_POOL\\\" -A6 crates/engine/src/config.rs | head -12\", \"description\": \"Read the random keyword pool constant\"}\n- Bash: {\"command\": \"sed -n 300,340p crates/engine/src/config.rs\", \"description\": \"Read full random pool\"}\n- Bash: {\"command\": \"grep -rn \\\"Copy a Unit's text\\\\|copy_unit_text\\\\|copyUnitText\\\" spec/*.md spec/0*/ spec/1*/ 2>/dev/null | cut -c1-400 | head -20\", \"description\": \"Find spec text for copy a unit's text\"}\n- Bash: {\"command\": \"sed -n 111p spec/06-keywords/6.3-actions-and-verbs.md; echo; sed -n 45p spec/08-catalog/8.10-stinkyscape.md; grep -n \\\"65 |\\\\|| 65\\\" spec/08-catalog/8.8*.md | cut -c1-900 | head -3; grep\u2026\n- Bash: {\"command\": \"ls spec/rulings/R4839* 2>/dev/null; cat spec/pending/4835.md | cut -c1-900; echo; cat spec/rulings/R4835000.md; grep -n \\\"Adding a ruling\\\" -A30 spec/README.md | cut -c1-400 | head -45\",\u2026\n- Bash: {\"command\": \"grep -n \\\"random_pool_keywords\\\\|drawn_combat_keywords\\\\|pub use buff\\\\|pub mod buff\\\\|mod copy_text\\\\|pub use copy_text\\\" crates/engine/src/effects/mod.rs | head; grep -rn \\\"random_pool\u2026\n- Bash: {\"command\": \"grep -n \\\"pub use\\\" crates/engine/src/testkit/mod.rs | head -20; grep -n \\\"pub fn keywords_of\\\" crates/engine/src/layers*.rs crates/engine/src/layers/*.rs 2>/dev/null | head -3\", \"descri\u2026\n- Bash: {\"command\": \"grep -n \\\"pub use\\\" crates/engine/src/lib.rs | head -30\", \"description\": \"Check engine root re-exports\"}\n- Bash: {\"command\": \"grep -n \\\"pub use layers\\\\|pub mod layers\\\\|pub mod effects\\\\|pub use effects\\\" crates/engine/src/lib.rs\", \"description\": \"Verify layers and effects exports\"}\n- Bash: {\"command\": \"ls crates/engine/tests/*.rs; grep -n \\\"unit_text\\\\|effects_buff\\\\|card_on_card\\\\|mod fixtures\\\" crates/engine/tests/rules*.rs crates/engine/tests/rules/mod.rs 2>/dev/null | head\", \"descr\u2026\n- Bash: {\"command\": \"cat crates/engine/tests/rules.rs | head -20; grep -n \\\"unit_text\\\" crates/engine/tests/rules_2.rs crates/engine/tests/rules_3.rs crates/engine/tests/rules_2/*.rs crates/engine/tests/rule\u2026\n- Bash: {\"command\": \"grep -n \\\"unit_text\\\\|cfg\\\\|^#\\\\[path\\\" crates/engine/tests/rules/mod.rs | head -20; cat crates/engine/tests/rules_3.rs | head -30\", \"description\": \"See how rules_3 includes unit_text\"}\n- Bash: {\"command\": \"sed -n 1,30p crates/engine/tests/rules/effects_buff.rs; grep -n \\\"pub fn both\\\\|pub fn put\\\\b\\\\|pub fn put(\\\" crates/engine/tests/rules/fixtures/harness.rs\", \"description\": \"Read effects\u2026\n- Bash: {\"command\": \"sed -n 1,30p crates/tools/src/names.rs 2>/dev/null | cut -c1-250\", \"description\": \"Check what names --check verifies\"}\n- Bash: {\"command\": \"grep -rn \\\"names::check\\\\|fn r3486\\\\|names_check\\\\|names::run\\\" crates/tools/src crates/tools/tests 2>/dev/null | head -5; grep -n \\\"fn .*helper\\\\|stats\\\\|cost\\\" crates/tools/src/names.r\u2026\n- Bash: {\"command\": \"sed -n 305,365p crates/tools/src/names.rs\", \"description\": \"Read helper line checking rules\"}\n- Bash: {\"command\": \"ls crates/ai/tests/ | head -30; git log --oneline -1 origin/main 2>/dev/null; git rev-parse --abbrev-ref HEAD\", \"description\": \"Check AI tests dir and origin/main\"}\n- Bash: {\"command\": \"grep -n \\\"pub fn unit_view_as_it_died\\\" -B6 -A30 crates/engine/src/layers.rs | head -50\", \"description\": \"Read unit_view_as_it_died\"}\n- Bash: {\"command\": \"ls crates/wasm/ 2>/dev/null; sed -n 1,25p crates/wasm/c/README.md 2>/dev/null | cut -c1-300\", \"description\": \"Check the wasm C module nature\"}\n- Bash: {\"command\": \"sed -n 1,30p scripts/worktree.sh\", \"description\": \"Read worktree script usage\"}\n- Bash: {\"command\": \"cat crates/engine/clippy.toml | head -30; grep -n \\\"\\\\[workspace.lints\\\\|\\\\[lints\\\" -A15 Cargo.toml | head -30\", \"description\": \"Check lint configuration\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4839/.bot-plan.md\", \"content\": \"# Draft plan #4839 (planner notes)\\n\\n## Found\\n- copy_unit_text (crates/engine/src/effects/copy_text.rs:31-71) writes\u2026\n- Bash: {\"command\": \"grep -c \\\"reported by an in-place \\\\`transformed\\\\`, as a Vanilla is. A Vanilla Unit has no text to copy\\\" spec/06-keywords/6.3-actions-and-verbs.md; grep -c \\\"the copied Cry does not ru\u2026\n- Bash: {\"command\": \"grep -rn \\\"follow_combat_keywords\\\\|copy_unit_text\\\\|copy_text\\\" crates/engine/README.md docs/architecture.md docs/v0.3.0/SURFACE.md 2>/dev/null | head\", \"description\": \"Check READMEs me\u2026\n- Bash: {\"command\": \"grep -rn \\\"pub enum KeywordKind\\\" -B4 crates/engine/src/wire/*.rs | head; grep -n \\\"pub fn unit_has\\\" -A3 crates/engine/src/layers.rs\", \"description\": \"Check KeywordKind derives and unit\u2026\n- Bash: {\"command\": \"grep -n \\\"macro_rules! string_union\\\" -A12 crates/engine/src/wire/*.rs | grep -n \\\"derive\\\" | head -3\", \"description\": \"Check string_union derives\"}\n- Bash: {\"command\": \"sed -n 50,60p crates/engine/src/wire/mod.rs\", \"description\": \"Read string_union derive list\"}\n- Bash: {\"command\": \"sed -n 1,8p crates/engine/tests/rules/fixtures/staged_quests.rs; grep -rn \\\"\\\\\\\"index\\\\\\\": \\\\\\\"4839\\\\|48390\\\" crates/engine/tests | head -3\", \"description\": \"Check fixture index range us\u2026\n- Bash: {\"command\": \"sed -n 1,12p crates/engine/tests/rules/unit_text.rs >/dev/null; grep -n \\\"pub fn read_hook\\\\|pub fn registered_catalog\\\\|pub fn registered_scripts\\\" crates/engine/src -r | head -4\", \"des\u2026\n- Bash: {\"command\": \"grep -n \\\"fn aura_game\\\\|fn aura()\\\" crates/engine/tests/rules/effects_buff.rs\", \"description\": \"Line numbers for fixture pattern\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4839/.bot-plan.md\", \"content\": \"# Draft plan #4839 (planner notes) \\u2014 final plan written as the run's final message\\n\\n## Found\\n- copy_unit_text \u2026\n- said: ## Goal When a copier lands a copied text holding the Aura \"Has {keywords} random combat keywords\", it draws its own keywords at that moment. Today S #20 Tnack Trav copies M #65 Keymaster Keenus or S #111 Shockwave447 and gets the Aura but no keywords. Requirements: 1. `copy_unit_text` runs the sam\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-25T11:55:05Z",
       "owner_why": "it plans it",
@@ -20819,9 +20811,9 @@
       "provider": "claude-1",
       "queued_at": "2026-11-24T21:23:19Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45608849297",
+      "run_id": "pending:18a9437d-1795609172",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-25T11:55:05Z",
+      "started_at": "2026-11-25T12:20:13Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -23992,9 +23984,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T12:19:18Z",
+    "at": "2026-11-25T12:20:13Z",
     "url": "",
-    "what": "review #4914 on muse"
+    "what": "build #4839 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-25T12:01:55Z",
