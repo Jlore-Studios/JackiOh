@@ -21410,15 +21410,12 @@
     "what": "suggestions (tests) on agy"
   },
   "last_sweep": {
-    "at": "2026-11-25T21:55:33Z",
+    "at": "2026-11-25T22:08:11Z",
     "notes": [
-      "delivered review #4956 on claude-4 (run 45707286190): approved",
-      "started suggest on claude-4 (run 45709212335)",
-      "started suggest on claude-1 (run 45709348030)",
-      "started suggest on agy (run 45709513222)",
+      "delivered suggest on claude-1 (run 45709348030): interrupted",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
-      "runner gate: started 1 of 1 waiting run(s) (run 45707287672 on claude/charming-bell-p8etig)"
+      "pruned 2 plan file(s) older than 7 days",
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22120,7 +22117,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T21:55:33Z",
+  "loop_tick": "2026-11-25T22:08:11Z",
   "machine_disk": {
     "issue": null,
     "reading": {
