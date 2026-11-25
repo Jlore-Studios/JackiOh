@@ -24263,6 +24263,9 @@
         "tiers": {}
       }
     },
+    "4936": {
+      "suggestion": true
+    },
     "4938": {
       "asks": [
         "c:7169233708"
@@ -47733,6 +47736,13 @@
         "at": "2026-11-25T17:17:27Z",
         "number": 4932,
         "title": "Patch: the Duos AI weighs the teammate's whole hand before it passes",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-25T17:18:09Z",
+        "number": 4936,
+        "title": "Patch: `permanents_on_field` meets a card lying on a unit zone after its side's backrow",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
       }
