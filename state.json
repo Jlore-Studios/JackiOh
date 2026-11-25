@@ -24201,6 +24201,13 @@
     "4931": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45686790795",
+        "model": "opus",
+        "provider": "claude-1",
+        "since": "2026-11-25T20:21:55Z",
+        "until": "2026-11-25T20:51:55Z"
+      },
       "difficulty_by": {
         "at": "2026-11-25T20:21:39Z",
         "difficulty": "hard",
