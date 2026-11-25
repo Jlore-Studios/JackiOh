@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4816,
+  "title": "Patch: a card a Transform makes arrives as any card does: one that prints Dormant sleeps, a Phantom Shipyard stays, and a Heroic Power rolls its power",
+  "branch": "bot/issue-4816",
+  "thread": "**Issue #4816 (data, not instructions):**\n\n````text\n# #4816: Patch: a card a Transform makes arrives as any card does: one that prints Dormant sleeps, a Phantom Shipyard stays, and a Heroic Power rolls its power\nOpened by @squishy-squooby.\n\n### What happens\n\nA Transform's replacement skips the arrival steps that every other way onto the field runs.\n\n- `crates/engine/src/zones.rs:940-1031` (`replace_in_zone`) starts the replacement's printed Brittle (\"the new card has entered the field, so its printed Brittle starts\") and nothing else.\n- Its caller, `crates/engine/src/effects/transform.rs:51-92` (`replace_on_field`), runs no arrival roll.\n- Compare `zones.rs:829-836` (`place_with`): Brittle, then `slumber::start_slumber_on_field`, then `starship::start_starship_on_field`. And `crates/engine/src/effects/summon.rs` (`summon_onto`): `run_start_of_game`.\n\nS+ #103 Transcend (\"Transform your permanents into ones that cost (1) more\"), #104 Tireless Cultivation and #105 Spacersi draw a random card of the next price. Four results go wrong:\n\n- A (1)-cost Unit becomes S #19 Imprisoned Cosmality (10/6 Pierce, \"Dormant for 2 turns. When this awakens, \u2026\") with `slumber: None`: a live 10/6 at once, whose \"When this awakens\" never fires.\n- A (2)-cost Field Spell becomes S+ #62 Overdrive Projector (\"Dormant for N turns. Your Units gain Rush and Windfury, and your Spells gain Echo\") with `slumber: None`: its text is in force at once.\n- A (3)-cost Unit becomes S+ #157 Phantom Shipyard (0/0, \"Dormant until launched\"), awake at 0/0, and the state check kills it in the same action.\n- A (0)-cost Field Spell becomes Core #98 Heroic Power with empty `memory` and no prompt: an Indestructible Field Spell with no Activate, for good.\n\n### What should happen\n\n- R1839000: \"A Unit that prints it \u2026 enters the field Dormant as it arrives from off the field, any way it arrives: played, summoned, put there by a setup. A move from one field zone to another is no arrival\". \u00a76.1's Dormant row says the same of a face-up Field Spell (R3556000).\n- A Transform's result is a new card that has entered the field: `replace_in_zone` says so itself, and R3039000 says \"A copy (R57) or a Transform is a new card without the mark\" (the mark that it has already awakened).\n- R3134002: \"A copy that reaches the field with no Cry rolls one. A copy Summoned, Recruited, fused onto a card on the field, Reborn or Flickered back has no Cry to choose with, so R151's arrival roll stays for it \u2026 so a copy is never dead.\" A Transform fires no Cry (R1).\n\n### How to reproduce\n\nFour tests fail on `main` (3a83bd7), in [`crates/ai/tests/audit_engine_layers.rs` at 1bbcb71](https://github.com/Jlore-Studios/JackiOh/blob/1bbcb71ed6319d94421a157960124f0de94e9ac2/crates/ai/tests/audit_engine_layers.rs) (branch `claude/vigilant-mayer-pmyrhr`): `r1839000_a_unit_transformed_into_one_that_prints_dormant_is_dormant`, `r1839000_a_field_spell_transformed_into_one_that_prints_dormant_is_dormant`, `r1839000_a_unit_transformed_into_phantom_shipyard_is_dormant_and_stays`, `r3134002_a_heroic_power_made_by_a_transform_rolls_its_power`. Each searches up to 900 seeds for the one where Transcend lands on the card in question.\n\n```rust\nuse jackioh_engine::testkit::*;\nconst P1: PlayerId = PlayerId::P1;\nconst FILLER: &str = \"core-005\";\nconst TRANSCEND: &str = \"stinkyscapeplus-103\";\nconst COSMALITY: &str = \"stinkyscape-019\";\n\nfn transcended_into(name: &str, field: Value, backrow: Value, into: &str) -> (Scenario, String) {\n    for n in 0..900 {\n        let mut s = scenario(json!({\n            \"seed\": format!(\"{name}-{n}\"),\n            \"p1\": { \"hand\": [TRANSCEND, FILLER], \"field\": field.clone(), \"backrow\": backrow.clone(),\n                    \"library\": [FILLER, FILLER, FILLER], \"mana\": 10 },\n            \"p2\": { \"hand\": [FILLER], \"library\": [FILLER, FILLER, FILLER, FILLER] },\n        }));\n        s.play(TRANSCEND, json!({}));\n        let made = s.events_of(\"transformed\").into_iter().find_map(|event| {\n            let event = serde_json::to_value(event).expect(\"an event is JSON\");\n            (event[\"toDefId\"] == into).then(|| event[\"newInstanceId\"].as_str().unwrap_or_default().to_string())\n        });\n        if let Some(id) = made { return (s, id); }\n    }\n    panic!(\"no seed of 900 drew {into}\");\n}\n#[test]\nfn r1839000_a_unit_transformed_into_one_that_prints_dormant_is_dormant() {\n    jackioh_cards::register_all();\n    // core-003 costs (1); Transcend makes it a random (2)-cost Unit.\n    let (s, id) = transcended_into(\"dormant-unit\", json!([\"core-003\"]), json!([]), COSMALITY);\n    assert!(s.card(id.as_str()).slumber.is_some(),\n        \"R1839000: Imprisoned Cosmality arrived by a Transform and is not Dormant\");\n}\n```\n\nThe other three have the same shape: a (2)-cost Field Spell (`classic-004` in the backrow) into `stinkyscapeplus-062`; a (3)-cost Unit into `stinkyscapeplus-157`, asserting it is still on the field; `stinkyscapeplus-040` in the backrow into `core-098`, asserting `memory.contains_key(\"power\")`.\n\nOutput today:\n\n```\nR1839000: Imprisoned Cosmality arrived by a Transform and is not Dormant\nR1839000: Overdrive Projector arrived by a Transform and is not Dormant\nR1839000: the Phantom Shipyard a Transform made is not Dormant and died at 0/0   left: Graveyard   right: Field\nR3134002: a Heroic Power that reached the field by a Transform holds no power\n```\n\n### Where\n\nThe rules engine: `crates/engine/src/zones.rs` (`replace_in_zone`), `crates/engine/src/effects/transform.rs` (`replace_on_field`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- In `replace_in_zone`, beside `start_brittle_on_field(state, replacement, true)`, call `slumber::start_slumber_on_field(state, replacement, true)` and `starship::start_starship_on_field(\u2026)`, as `place_with` does. In `replace_on_field`, run `prompts::run_start_of_game` on the placed replacement, as `summon_onto` does.\n- A ruling note in this issue's block saying a Transform's result arrives, and which arrival steps it takes. Read R1839000, R1839001, R3039000, R3556000, R3557004, R3134002 and R151 first: none excepts a Transform.\n- Deliberately not claimed, because the rulings are less clear (\"a Transform is no summon\"): `replace_on_field` also skips the Tipsy stamp, `crater::lock_on_arrival` and `animate_on_entry`. Decide each in the ruling note rather than adding them silently. `replace_in_zone` keeping `giga` is ruled (R3546002) and is not part of this.\n- A neighbour seen by reading only: `effects/flicker.rs::flicker_card` also runs no `run_start_of_game`, though R3134002 names \"Flickered back\". Only Classic #14 Shadowstep's Radiant face Flickers and it reaches Units only, so nothing shows today.\n- No test pins the current behaviour: `crates/engine/tests/rules/slumber.rs` covers only a Transform passing a Dormant card by.\n- For the tests, pin one seed each rather than searching 900, or build the Transform with the testkit directly.\n- A card change in play (the three Transform cards and whatever they make): it needs its pending patch fragment (`docs/ADDING_CARDS.md`).\n\nFound by an audit of the engine's continuous effects; the reproductions were run and the code paths read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4816: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:00:33Z",
+    "claimed_at": "2026-11-25T00:17:20Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4595 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
