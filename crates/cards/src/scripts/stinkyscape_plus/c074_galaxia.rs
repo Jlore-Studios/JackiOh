@@ -217,7 +217,6 @@ mod tests {
 
     #[test]
     fn r4826000_first_unit_dying_to_its_cry_spends_the_buff_so_second_unit_gets_nothing() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "hand": [OCCIDENTAL, SECOND, FILLER],
@@ -242,7 +241,6 @@ mod tests {
 
     #[test]
     fn r4826000_a_countered_first_unit_never_resolved_so_second_unit_gets_the_buff() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "hand": [FIRST, SECOND, FILLER],
@@ -271,7 +269,6 @@ mod tests {
 
     #[test]
     fn r174_r4826000_first_unit_with_reborn_dying_to_its_cry_is_not_buffed() {
-        crate::register_all();
         let mut s = scenario(json!({
             "p1": {
                 "hand": [OCCIDENTAL, SECOND, FILLER],
