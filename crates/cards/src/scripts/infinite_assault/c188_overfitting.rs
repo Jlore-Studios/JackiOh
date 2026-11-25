@@ -57,10 +57,7 @@ fn overfitting(radiant: bool) -> Script {
             && played_type_of(&*ctx.state, event) == Some(CardType::Unit)
             && *permanent
             && !left_field_since_resolved(&*ctx.state, event)
-            && ctx.state.players[ctx.controller]
-                .units
-                .iter()
-                .any(|pile| pile.is_none())
+            && !fill_board_zones(ctx.state, ctx.controller).is_empty()
     });
 
     Script {
