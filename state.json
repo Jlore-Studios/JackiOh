@@ -21764,6 +21764,8 @@
       }
     },
     "4887": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-25T02:41:40Z",
@@ -21777,8 +21779,11 @@
         "trail": "description\": \"Show the generated fragment\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4835/crates/cards/patches/pending/ticketed-is-offered-no-permanent-it-cannot-stack-on.json\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4835/crates/cards/patches/pending/ticketed-is-offered-no-permanent-it-cannot-stack-on.json\", \"old_string\": \" \\\"title\\\": \\\"\\\",\\n \u2026\n- said: Correcting the player note: per the issue, Ticketed was lost only on a GIGA, while on a Locked zone it actually landed.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4835/crates/cards/patches/pending/ticketed-is-offered-no-permanent-it-cannot-stack-on.json\", \"old_string\": \" \\\"Ticketed is no lo\u2026\n- said: Now `classify --claims` against the base build, to see whether games confirm the `stinkyscape-009` claim:\n- Bash: {\"command\": \"echo \\\"- Fragment written (plays stinkyscape-009, player note by hand). Running classify --claims vs base.\\\" >> .bot-notes.md; git fetch -q origin main 2>/dev/null; git rev-parse origin/\u2026\n- Bash: {\"command\": \"grep -n 'fn .*fragment\\\\|pending' crates/tools/src/claims.rs | head -30; grep -n '\\\"--head\\\"\\\\|head_rev\\\\|fn head' crates/tools/src/classify.rs | head -10\", \"description\": \"Inspect how c\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4835/crates/tools/src/claims.rs\", \"offset\": 1, \"limit\": 100}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4835/crates/cards/patches/pending/ticketed-is-offered-no-permanent-it-cannot-stack-on.json\", \"old_string\": \"the catalog is untou\u2026\n- Bash: {\"command\": \"grep -n 'stage\\\\|unchecked\\\\|games' /tmp/classify-4835.txt | grep -v Compiling | head -20\", \"description\": \"Check classify stage 2 details\"}\n- said: Stage 2 did run (the Edwin message is only emitted when it ran and replayed). Next: `patches check`, `catalog check`, then clippy.\n- Bash: {\"command\": \"cargo jackioh patches check 2>&1 | tail -2; cargo jackioh catalog check 2>&1 | tail -2\", \"description\": \"Run patches and catalog checks\", \"timeout\": 600000}\n- Bash: {\"command\": \"echo \\\"- classify: stinkyscape-009 plays differently, nothing else (edwin complaint = origin/main moved past base). patches/catalog check ok. Running clippy.\\\" >> .bot-notes.md; cargo cl\u2026\n- said: Clippy is clean. Now the whole cards crate and the tools' acceptance scan (it lints test code patterns):\n- Bash: {\"command\": \"cargo test -p jackioh-cards 2>&1 | grep -E 'FAILED|panicked|test result|^error' | head -20\", \"description\": \"Run the full cards crate tests\", \"timeout\": 2400000}\n- Bash: {\"command\": \"cargo test -p jackioh-tools --test acceptance 2>&1 | grep -E 'FAILED|panicked|test result|^error' | head -20\", \"description\": \"Run tools acceptance tests\", \"timeout\": 2400000}\n- said: Both pass. Now the fuzz wave dealing Ticketed, as the plan asks:\n- Bash: {\"command\": \"cargo jackioh fuzz --cards stinkyscape-009 --seeds 50 2>&1 | grep -v Compiling | tail -8\", \"description\": \"Fuzz games dealing Ticketed\", \"timeout\": 1800000}\n- Bash: {\"command\": \"cargo jackioh fuzz --cards stinkyscape-009 --seeds 50 2>&1 | grep -v Compiling | grep -iE 'fail|fault|panic|ok|games|seeds|violation|mismatch' | head -10\", \"description\": \"Get fuzz pass/\u2026\n- said: Fuzz: 50 of 50 seeds passed. Now the golden replay fold, plus the engine's and the AI's remaining test suites, since the change sits in a shared listing path:\n- Bash: {\"command\": \"echo \\\"- clippy ok; cards 11006+1255 ok; tools acceptance ok; fuzz --cards stinkyscape-009 50/50. Running golden, engine full, ai.\\\" >> .bot-notes.md; cargo jackioh golden check 2>&1 | g\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-engine --features testkit 2>&1 | grep -E 'FAILED|panicked|test result|^error' | head -20; cargo test -p jackioh-ai 2>&1 | grep -E 'FAILED|panicked|test result|^erro\u2026\n- said: All green. Reviewing the full diff:\n- Bash: {\"command\": \"git status --short; git diff -- crates/engine | head -60\", \"description\": \"Show status and engine diff\"}\n- said: The doc comment and the ruling also claim a carrier holding a Unit, and the carried Unit, are left out. Checking that against `carried_at` before I rely on it:\n- Bash: {\"command\": \"grep -n 'pub fn carried_at' -A14 crates/engine/src/zones.rs\", \"description\": \"Read carried_at definition\"}\n- Bash: {\"command\": \"grep -n '\\\"carried\\\"\\\\|carried' crates/engine/src/testkit/scenario.rs | head -8\", \"description\": \"Check scenario support for carried units\"}\n- Bash: {\"command\": \"grep -rln 'carrier: Some(true)' crates/cards/src/scripts | head -3; grep -rn 'R446' crates/cards/src/scripts --include=*.rs | grep 'fn r446' | head -3\", \"description\": \"Find a carrier ca\u2026\n- Bash: {\"command\": \"grep -rn 'carrier' crates/engine/src/script.rs | head -3; grep -rln 'carrier' crates/cards/src/scripts | head -3; grep -rn 'fn r446' crates/engine/tests | head -3\", \"description\": \"Locat\u2026\n- Bash: {\"command\": \"sed -n '1,25p' crates/cards/src/scripts/stinkyscape/c140_rush_token_launcher.rs; grep -n 'fn \\\\|\\\"zone\\\": ' crates/cards/src/scripts/stinkyscape/c140_rush_token_launcher.rs | head -20\", \u2026\n- Bash: {\"command\": \"grep -n 'fn carried\\\\|fn board\\\\|\\\"zone\\\"\\\\|carried' crates/cards/src/scripts/infinite_assault/c010_assault_carrier.rs | head -20\", \"description\": \"See how Assault Carrier tests carry a \u2026\n- Bash: {\"command\": \"grep -n 'carrier\\\\|row\\\\b\\\\|Backrow\\\\|play(' crates/cards/src/scripts/infinite_assault/c010_assault_carrier.rs | head -20\", \"description\": \"Look at Assault Carrier tests\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport pathlib, re\\np = pathlib.Path(\\\".bot-notes.md\\\"); t = p.read_text()\\nstart = t.index(\\\"## State\\\"); end = t.index(\\\"## Log\\\")\\nstate = \\\"\\\"\\\"## State\\n\\n- Build\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Ticketed is not offered a GIGA permanent it cannot stack on, where the play is now accepted, paid for and lost\"} --> ## What changed Ticketed (S #9) is now offered only permanents it can actually be stacked on. Before this, its play could name a GIGA on\u2026"
       },
       "issue": 4835,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-25T04:39:01Z",
         "from_run": "45534784616",
         "gates": [
           {
@@ -21870,7 +21875,11 @@
         "source": "build",
         "until": "2026-11-25T05:07:46Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-25T04:37:46Z",
+      "run_id": "pending:2b21271a-1795581507",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -21889,6 +21898,9 @@
         "provider": "claude-8",
         "run": "45534784616"
       },
+      "started_at": "2026-11-25T04:39:01Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -21902,9 +21914,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T04:28:02Z",
+    "at": "2026-11-25T04:39:01Z",
     "url": "",
-    "what": "plan #4802 on claude-3"
+    "what": "review #4887 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-25T04:24:40Z",
