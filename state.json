@@ -24675,17 +24675,25 @@
           "claude"
         ],
         "builder": "claude",
-        "built_by": "claude-7",
+        "built_by": "claude-3",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "spec/09-architecture/9.9-practice-ai.md"
+          ],
+          "from": "a707e48276a6fd0896ac82cea522a0b916f969b6",
+          "main": "12f393b679225f1743a67b299d5007ca440d6530"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "provider": "claude-7",
-            "run": "45659275015",
+            "provider": "claude-3",
+            "run": "45678759237",
             "tier": "strong"
           }
         ],
-        "sha": "a707e48276a6fd0896ac82cea522a0b916f969b6",
+        "sha": "69cd94f37e90282026fd7a1f6dc59364eb905f2f",
         "tiers": {
           "claude": "strong"
         }
