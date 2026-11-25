@@ -21485,15 +21485,16 @@
     "what": "suggestions (ai) on muse"
   },
   "last_sweep": {
-    "at": "2026-11-25T23:41:30Z",
+    "at": "2026-11-25T23:51:57Z",
     "notes": [
-      "delivered suggest on claude-6 (run 45721160122): interrupted",
-      "delivered suggest on claude-3 (run 45720953647): interrupted",
-      "delivered revise #4950 on claude-7 (run 45701754102): built",
-      "started review #4950 on claude-7 (run 45723710646)",
+      "delivered suggest on claude-8 (run 45721268619): suggested",
+      "delivered suggest on claude-3 (run 45721058352): interrupted",
+      "delivered review #4944 on muse (run 45718092534): approved",
+      "started suggest on claude-8 (run 45724984995)",
+      "started suggest on muse (run 45725082250)",
       "nothing more to start: nothing is queued",
-      "pruned 4 plan file(s) older than 7 days",
-      "runner gate: started 0 of 3 waiting run(s); 3 wait for a slot"
+      "#4977: typed it Task",
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22195,7 +22196,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T23:41:30Z",
+  "loop_tick": "2026-11-25T23:51:57Z",
   "machine_disk": {
     "issue": null,
     "reading": {
