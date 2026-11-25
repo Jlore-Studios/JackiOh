@@ -1377,6 +1377,9 @@ struct ImmuneMark {
     /// pull at a turn's end reads.
     side: PlayerId,
     lanes: Vec<i32>,
+    /// R4783000: the Allure waiting on it as the step begins (R963, `DELAYED_ALLURE_HOOK`), by its entry's
+    /// id, with the player whose turn's start it waits for.
+    allure: Option<(String, PlayerId)>,
 }
 
 /// I21: the Units Immune to Spells a step begins with, by instance id; the cards then set face-down on
@@ -1392,6 +1395,8 @@ struct ImmuneStep {
     pending_instance: Option<String>,
     /// R4599004: whether a card laying an exile aura acts on the field as the step begins.
     board_exiles: bool,
+    /// R4783000: whose turn's start stage the step begins in (a stage a prompt paused, R62).
+    start_of: Option<PlayerId>,
 }
 
 /// I21: the state a step begins on, as I21 reads it: every Unit on either field (`zones::active_units_of`,
@@ -1419,6 +1424,15 @@ fn immune_step(state: &GameState) -> ImmuneStep {
                     _ => unit.controller,
                 },
                 lanes: crate::giga::lanes_of(unit),
+                allure: state
+                    .delayed
+                    .iter()
+                    .find(|entry| {
+                        entry.resume.hook == crate::effects::delay::DELAYED_ALLURE_HOOK
+                            && entry.at.phase == Phase::Start
+                            && entry.watch.as_deref() == Some(unit.id.as_str())
+                    })
+                    .map(|entry| (entry.id.clone(), entry.at.player)),
             };
             (unit.id.clone(), mark)
         })
@@ -1436,6 +1450,7 @@ fn immune_step(state: &GameState) -> ImmuneStep {
         pending_def: resume.map(|resume| resume.def_id.clone()),
         pending_instance: resume.and_then(|resume| resume.instance_id.clone()),
         board_exiles: exile_aura_stands(state),
+        start_of: (state.phase == Phase::Start).then_some(state.active),
     }
 }
 
@@ -1641,7 +1656,10 @@ fn pulled_into_the_hole(
 ///   whose state check collects that card's marks (R4863000, `collects_a_casters_marks`);
 /// - a `destroyed` credited to another card than the running one (R4599001), or killerless with its max
 ///   health at most the damage it holds, the layers' (R4599008); an `exiled` while an exile aura stood or
-///   arrived in the step (R4599004), or after a board restore or replacement (R4599010, R4599014).
+///   arrived in the step (R4599004), or after a board restore or replacement (R4599010, R4599014);
+/// - the one `controlChanged` or killerless `destroyed` of a Unit its Allure takes in the turn's start
+///   stage once its mark came off (R4783000, `allure_resolved`): the engine runs it with no marker, after
+///   whatever Spell the stage ran last.
 ///
 /// A card announced face-down in the step runs as a Trap (R4599002); from a turn's end to the next turn's
 /// start a Spell's standing trigger opens no run (R4599007); and once an event moves a Unit off the field,
@@ -1700,6 +1718,10 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
     let mut exile_aura = step.board_exiles;
     // R4599008: the damage each Unit took in the step so far, on top of its mark's.
     let mut taken: IndexMap<&str, i32> = IndexMap::new();
+    // R4783000: whose turn's start stage the walk is in, and the Units whose Allure mark came off in it,
+    // which the Allure's steal (or its destroy for want of room) names next.
+    let mut stage = step.start_of;
+    let mut allure_off: IndexSet<&str> = IndexSet::new();
     for (at, event) in events.iter().enumerate() {
         match event {
             GameEvent::HookResolving {
@@ -1745,12 +1767,28 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
             }
             GameEvent::TurnEnded { player, .. } => {
                 ended = Some(*player);
+                stage = None;
                 run = ImmuneRun::NONE;
                 continue;
             }
-            GameEvent::TurnStarted { .. } | GameEvent::AutopilotEngaged { .. } => {
+            GameEvent::TurnStarted { player, .. } => {
+                ended = None;
+                stage = Some(*player);
+                run = ImmuneRun::NONE;
+                continue;
+            }
+            GameEvent::AutopilotEngaged { .. } => {
                 ended = None;
                 run = ImmuneRun::NONE;
+                continue;
+            }
+            GameEvent::Marked {
+                instance_id,
+                mark,
+                added: false,
+                ..
+            } if mark == crate::effects::delay::ALLURE_MARK => {
+                allure_off.insert(instance_id);
                 continue;
             }
             // A play begins its own run (its `onPlayHook`s and its arrival are no Spell's), and the run it
@@ -1806,6 +1844,12 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
         }
         // R4599015: an event that moves a Unit off the field, after which its id names no field Unit.
         let leaving = leaves_the_field(event);
+        // R4783000: the Units whose Allure mark came off, this event the first to name them since: the
+        // Allure's steal, or its destroy for want of room, whatever runs.
+        let allured: Vec<&str> = reached_ids(event)
+            .into_iter()
+            .filter(|id| allure_off.swap_remove(*id))
+            .collect();
         if !run.spell {
             released.extend(leaving);
             continue;
@@ -1818,9 +1862,20 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
             if released.contains(id) || !judged.contains(id) {
                 continue;
             }
+            let by_allure = allured.contains(&id) && allure_resolved(mark, stage, after);
             let lawful = match event {
                 // R4508002: an attack, the Spell's forced one included.
                 _ if run.window == Some(ImmuneWindow::Combat) => true,
+                // R4783000: a Unit's Allure due in the turn's start stage takes it, or destroys it with no
+                // room for it (R4205000), with no marker of its own after the Spell the stage ran last.
+                _ if by_allure
+                    && matches!(
+                        event,
+                        GameEvent::ControlChanged { .. } | GameEvent::Destroyed { killer_id: None, .. }
+                    ) =>
+                {
+                    true
+                }
                 // R4508005: an affliction's tick.
                 _ if ticks_on(event, at.checked_sub(1).and_then(|before| events.get(before)), id) => true,
                 // R4508001: a board move carries it whole, or bounces it on the way.
@@ -1883,6 +1938,17 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
         released.extend(leaving);
     }
     found
+}
+
+/// I21, R4783000: whether `mark`'s Unit was taken by its Allure (R963) in the step: the step began with an
+/// Allure waiting on it at the start of `stage`'s turn, the walk is in that turn's start stage (R62's
+/// delayed stage, which runs an engine Allure with no `hookResolving`, so it follows whatever Spell the
+/// stage ran last), and the entry is gone after the step. Its mark comes off as the entry resolves, before
+/// the steal names the Unit, where a Spell's destroy drops the entry only after naming it.
+fn allure_resolved(mark: &ImmuneMark, stage: Option<PlayerId>, after: &GameState) -> bool {
+    mark.allure.as_ref().is_some_and(|(entry, player)| {
+        stage == Some(*player) && !after.delayed.iter().any(|due| due.id == *entry)
+    })
 }
 
 /// I21, R4599015: the Unit an event moves off the field (destroyed, exiled, bounced, shuffled into a
