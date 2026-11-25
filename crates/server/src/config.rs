@@ -1374,6 +1374,10 @@ pub const CHAT_MESSAGES_PER_MINUTE: usize = 20;
 pub const CHAT_RETENTION_DAYS: i64 = 30;
 /// B53: the messages one page of `GET /api/chat/:friendId` holds, newest last.
 pub const CHAT_PAGE: i64 = 50;
+/// #4838: how far into the future a chat cursor timestamp may reach before it is refused as
+/// malformed: one day, so slight client clock drift is tolerated but timestamps beyond any real
+/// message are rejected before PostgreSQL to_timestamp errors.
+pub const CHAT_CURSOR_FUTURE_MAX_MS: i64 = MS_PER_DAY;
 /// B52 (#1825): the most shares one `GET /api/replays/shared` lists, newest first, so that list is
 /// bounded like the friends (`MAX_FRIENDS`) and a chat page (`CHAT_PAGE`); fifty is a chat page's.
 pub const SHARED_REPLAYS_LIST_MAX: i64 = 50;

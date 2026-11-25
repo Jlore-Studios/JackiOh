@@ -8728,6 +8728,10 @@ mod social {
             call!(harness, t => t.blocks_add(&a.id, &a.id, now)).is_err(),
             "a block of oneself"
         );
+        assert!(
+            call!(harness, t => t.blocks_add(&a.id, &a.id.to_ascii_uppercase(), now)).is_err(),
+            "a block of oneself with uppercase id"
+        );
 
         assert!(q!(harness, t => t.blocks_remove(&a.id, &b.id)));
         assert!(!q!(harness, t => t.blocks_remove(&a.id, &b.id)));
@@ -8754,6 +8758,15 @@ mod social {
             must(q!(harness, t => t.profiles_find(&a.id)), "the profile").id,
             a.id
         );
+        assert_eq!(
+            must(
+                q!(harness, t => t.profiles_find(&a.id.to_ascii_uppercase())),
+                "the profile with uppercase id"
+            )
+            .id,
+            a.id
+        );
+        assert!(q!(harness, t => t.profiles_find("urn:uuid:67e55044-10b1-426f-9247-bb680e5fe0c8")).is_none());
         assert!(q!(harness, t => t.profiles_find("not-a-uuid")).is_none());
         assert!(q!(harness, t => t.profiles_find(&id())).is_none());
     }
@@ -8874,6 +8887,10 @@ mod social {
         assert_eq!(
             ids_of(&q!(harness, t => t.chat_page(&a.id, &b.id, Some(&ChatCursor::of(&m3)), 10))),
             vec![m1.id.clone(), m2.id.clone()]
+        );
+        assert!(
+            q!(harness, t => t.chat_page("urn:uuid:67e55044-10b1-426f-9247-bb680e5fe0c8", &b.id, None, 10))
+                .is_empty()
         );
 
         let unread = |rows: IndexMap<String, i64>| rows.into_iter().collect::<Vec<(String, i64)>>();
@@ -14936,6 +14953,9 @@ mod daily {
         assert!(q!(harness, t => t.daily_notify_get(&c.id)).email_on);
         assert!(!q!(harness, t => t.daily_notify_unsubscribe(&id())));
         assert!(!q!(harness, t => t.daily_notify_unsubscribe("not-a-token")));
+        assert!(
+            !q!(harness, t => t.daily_notify_unsubscribe("urn:uuid:67e55044-10b1-426f-9247-bb680e5fe0c8"))
+        );
         assert!(
             call!(harness, t => t.daily_notify_get(&id())).is_err(),
             "{}: notice settings for no account",

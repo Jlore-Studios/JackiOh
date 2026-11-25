@@ -727,7 +727,7 @@ pub async fn leave(app: &Arc<App>, req: Req) -> ApiResult {
 /// The removed guest may enter again.
 pub async fn remove(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
-    let removed = str(&req.body, "profileId")?;
+    let removed = str(&req.body, "profileId")?.to_ascii_lowercase();
     let lobby = load_open(app, &req, &profile.id).await?;
     if lobby.host != profile.id {
         return Err(not_host());
@@ -884,7 +884,7 @@ pub async fn team_switch(app: &Arc<App>, req: Req) -> ApiResult {
 /// `404`.
 pub async fn move_member(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
-    let moved = str(&req.body, "profileId")?;
+    let moved = str(&req.body, "profileId")?.to_ascii_lowercase();
     let seat = str(&req.body, "seat")?;
     let lobby = load_open(app, &req, &profile.id).await?;
     if lobby.host != profile.id {
@@ -920,7 +920,7 @@ pub async fn move_member(app: &Arc<App>, req: Req) -> ApiResult {
 /// the lobby `already_in`, a lobby with no empty seat `full`. `204`.
 pub async fn invite(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
-    let friend_id = str(&req.body, "profileId")?;
+    let friend_id = str(&req.body, "profileId")?.to_ascii_lowercase();
     let now = now_ms();
     let key = account_key(&profile.id);
     if !app.social.challenges.allow(&key, now) {
