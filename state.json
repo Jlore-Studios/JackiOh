@@ -17760,9 +17760,7 @@
       "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [
-        "c:7133330054"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0,
       "waiting_comment": 7154758341
     },
