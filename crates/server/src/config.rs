@@ -1174,6 +1174,10 @@ pub const CARD_STATS_KEPT_REPORTS: usize = 256;
 /// most games first.
 pub const CARD_STATS_CO_PLAYED_TOP: usize = 10;
 
+/// SPEC §11 R4681001: how many entries each of the Hall of Fame's four lists
+/// (`GET /api/stats/hall-of-fame`) holds.
+pub const HALL_OF_FAME_LIST_LEN: usize = 10;
+
 /// SPEC §11 R1583000: how long the server keeps the play rates (`GET /api/stats/play-rates`) before
 /// reading them off the totals again, and the `Cache-Control` max-age it answers with, in seconds.
 pub const PLAY_RATES_REFRESH_SECONDS: i64 = 3600;

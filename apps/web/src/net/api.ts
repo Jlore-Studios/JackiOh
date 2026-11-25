@@ -1947,6 +1947,35 @@ export function getStatsVersions(options: { mode?: string; signal?: AbortSignal 
   return apiRequest<PublicStatsVersionsResponse>(`/api/stats/versions${query}`, { signal: options.signal });
 }
 
+/** R4681001: one Hall of Fame entry: its before and after play-version rows with figures, their ship dates, the balance line, and, on the changed list alone, how many changes lie between. */
+export type PublicHallEntry = {
+  before: PublicPlayVersion;
+  after: PublicPlayVersion;
+  beforeDate: string | null;
+  afterDate: string | null;
+  balance: string | null;
+  changesBetween: number | null;
+};
+
+/** R4681001: `GET /api/stats/hall-of-fame`: the four lists over a match type, every one when none is asked; open to everyone. */
+export type PublicHallOfFameResponse = {
+  pilot: "merged" | "human" | "ai";
+  mode: "all" | "bo1" | "bo3" | "random" | "constructed";
+  minSample: number;
+  bandLow: number;
+  bandHigh: number;
+  broken: PublicHallEntry[];
+  nerfed: PublicHallEntry[];
+  buffed: PublicHallEntry[];
+  changed: PublicHallEntry[];
+};
+
+/** R4681001: the Hall of Fame's four lists (R4681000) on a match type, every one when none is asked; open to everyone. */
+export function getHallOfFame(options: { mode?: string; signal?: AbortSignal } = {}): Promise<PublicHallOfFameResponse> {
+  const query = options.mode ? `?${new URLSearchParams({ mode: options.mode }).toString()}` : "";
+  return apiRequest<PublicHallOfFameResponse>(`/api/stats/hall-of-fame${query}`, { signal: options.signal });
+}
+
 /**
  * R388, R4680000: `GET /api/catalog/:version`, the catalog a shipped patch left, open to everyone and kept by the
  * Worker's edge cache (R4691002); 404 for a version the server has none of.
