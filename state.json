@@ -44859,6 +44859,9 @@
     "readings": [
       "2026-11-25T01:43:17Z,muse,usage-command,before,45527746325,5,2026-11-25T05:05:00Z,68,2026-11-30T00:00:00Z,allowed,100,100,",
       "2026-11-25T01:46:03Z,muse,usage-command,after,45527746325,6,2026-11-25T05:05:00Z,68,2026-11-30T00:00:00Z,allowed,100,100,"
+    ],
+    "runs": [
+      "2026-11-25T01:46:03Z,45527746325,muse,muse-spark-1.3-contributor,plan,4681,medium,planned,,2.6,0,0,0,,5,6,68,68,75.1,,none,,1"
     ]
   },
   "version": 1
