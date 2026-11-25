@@ -21459,19 +21459,11 @@
     "what": "suggestions (tests) on agy"
   },
   "last_sweep": {
-    "at": "2026-11-25T23:20:50Z",
+    "at": "2026-11-25T23:33:36Z",
     "notes": [
-      "delivered review #4939 on claude-6 (run 45719716695): reviewed",
-      "started suggest on claude-3 (run 45720953647)",
-      "started suggest on claude-3 (run 45721058352)",
-      "started suggest on claude-6 (run 45721160122)",
-      "started suggest on claude-8 (run 45721268619)",
-      "started suggest on agy (run 45721374682)",
       "nothing more to start: nothing is queued",
-      "pruned 5 plan file(s) older than 7 days",
-      "#4974: typed it Task",
-      "#4974: the production countdown, so `tracking`",
-      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
+      "pruned 1 plan file(s) older than 7 days",
+      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22173,7 +22165,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T23:20:50Z",
+  "loop_tick": "2026-11-25T23:33:36Z",
   "machine_disk": {
     "issue": null,
     "reading": {
