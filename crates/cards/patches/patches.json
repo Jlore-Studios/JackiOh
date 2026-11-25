@@ -36240,5 +36240,67 @@
       "stinkyscapeplus-103"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.14",
+    "date": "2026-11-25",
+    "title": "Patch: the daily patch, rolling up v0.6.13b to v0.6.13k",
+    "source": "patches cut at c9562b6ec883f13e2f09b093078dcee83b7f05ea: v0.6.13b, v0.6.13c, v0.6.13d, v0.6.13e, v0.6.13f, v0.6.13g, v0.6.13h, v0.6.13i, v0.6.13j, v0.6.13k",
+    "notes": "The day's patch (R3944000): it rolls up the micros shipped since v0.6.13, each a snapshot of its own: v0.6.13b (Patch: clearer rules text for S+ #20 B-Patch); v0.6.13c (Overload); v0.6.13d (Patch: the Infinite Assault, the cards, IA-25 to IA-240); v0.6.13e (Patch: the Infinite Assault, L, the set's look and sound); v0.6.13f (One fixed order for every card's keyword line); v0.6.13g (Patch: Edwin Van’Spacechief previews its Combo gain); v0.6.13h (Forced Propagation: one Buff per copy when Echo repeats it); v0.6.13i (Patch: board scopes and Cleave treat a card lying on a unit zone as backrow, not a Unit); v0.6.13j (Patch: Ticketed is offered no permanent it cannot stack on); v0.6.13k (Patch: a card a Transform makes arrives as any card does: one that prints Dormant sleeps, a Phantom Shipyard stays, and a Heroic Power rolls its power).",
+    "player": {
+      "title": "Forced Propagation no longer double-Buffs its copies, and 9 more changes",
+      "new": [
+        "Overload (X) is a new keyword: you have X less mana next turn."
+      ],
+      "balance": [],
+      "changes": [
+        "Groundwork for future content. No card you can play looks or plays any differently.",
+        "Edwin Van’Spacechief in your hand shows the Combo gain it would get if played now."
+      ],
+      "text": [
+        "B-Patch's text now spells out the coin: Heads Buffs every card on the field and in both hands, Tails Nerfs them.",
+        "Speciesist, Medina Outfitter, Expedition12, Expedition123 and Fortify Mind print their next-turn loss as Overload.",
+        "Core System, Secure System, Legacy: Snom Bunny Mind Control, Impact Reactor and Foreshadow do too.",
+        "Hinder reads \"Overload your opponent\".",
+        "Jlarna's credit line is repaid as Overload over the next turns.",
+        "Every card's keyword line now prints its keywords in one fixed order, from cost and card flow down through combat.",
+        "No card plays differently: only the order of the words changed, in English and Chinese."
+      ],
+      "fixes": [
+        "Radiant Forced Propagation repeated by Echo no longer re-Buffs the first ten copies.",
+        "Effects that hit every Unit no longer destroy, bounce or damage a Ticketed stacked on a Unit, so the Unit beneath it stays beneath.",
+        "Cleave, and effects that reach the Units beside a card, no longer reach a Ticketed stacked on the Unit next to it.",
+        "Effects that destroy every backrow card or every Field Spell now destroy a Ticketed stacked on a Unit, and Datacenter Fire counts it in its damage.",
+        "Snom Bunny and MC Tech now count a Ticketed stacked on an enemy Unit among the enemy's permanents.",
+        "Ticketed is no longer offered a GIGA permanent, where the play was paid for and Ticketed was lost, nor a permanent in a Locked zone, which a play may not enter.",
+        "A card a Transform makes that prints Dormant is Dormant.",
+        "A Phantom Shipyard a Transform makes stays Dormant.",
+        "A Heroic Power a Transform makes rolls its power."
+      ]
+    },
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classicplus-065",
+      "stinkyscape-009",
+      "stinkyscape-109",
+      "stinkyscape-111",
+      "stinkyscapeplus-024",
+      "stinkyscapeplus-103",
+      "stinkyscapeplus-162"
+    ],
+    "includes": [
+      "v0.6.13b",
+      "v0.6.13c",
+      "v0.6.13d",
+      "v0.6.13e",
+      "v0.6.13f",
+      "v0.6.13g",
+      "v0.6.13h",
+      "v0.6.13i",
+      "v0.6.13j",
+      "v0.6.13k"
+    ],
+    "changes": []
   }
 ]
