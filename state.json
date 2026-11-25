@@ -16901,9 +16901,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-6",
-      "owner_since": "2026-11-25T20:19:18Z",
-      "owner_why": "its approval shipped `aa666d9c9252`, and the last approver owns the merge, so it fixes what CI found",
+      "owner": "claude-3",
+      "owner_since": "2026-11-25T20:29:42Z",
+      "owner_why": "handed off from `claude-6`: `claude-6` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-25T14:41:12Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -20677,7 +20677,7 @@
       }
     },
     "4948": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_early": true,
       "ci_fixes": 1,
@@ -20704,13 +20704,13 @@
       "interruptions": 0,
       "issue": 4824,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "fixing-ci",
       "merge_owner": "claude-6",
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-3",
       "queued_at": "2026-11-25T20:19:15Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "45673513422",
+      "run_id": "pending:0dd20e6a-1795638529",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -20731,7 +20731,7 @@
         "run": "45673513422"
       },
       "source": "ci",
-      "started_at": "2026-11-25T18:16:46Z",
+      "started_at": "2026-11-25T20:29:42Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -21372,9 +21372,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T20:28:35Z",
+    "at": "2026-11-25T20:29:42Z",
     "url": "",
-    "what": "revise #4893 on muse"
+    "what": "revise #4948 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-25T20:01:35Z",
