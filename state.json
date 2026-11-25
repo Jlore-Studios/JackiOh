@@ -19423,6 +19423,8 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-25T13:23:10Z",
       "stop_requested": false,
+      "strike_log": [],
+      "strikes": 0,
       "taken_asks": [],
       "verdict_rounds": 3,
       "waiting_comment": 7154768881
