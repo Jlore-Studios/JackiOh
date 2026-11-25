@@ -19819,6 +19819,9 @@
       "requested_by": "squishy-squooby",
       "stop_requested": false
     },
+    "4818": {
+      "suggestion": true
+    },
     "4821": {
       "action": "plan",
       "asks": [],
@@ -43963,6 +43966,13 @@
         "title": "Patch: the C module's tests preview a set that has not shipped, pinning the accept and refusal paths",
         "verdict": "came to nothing",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-25T02:04:37Z",
+        "number": 4818,
+        "title": "Patch: the quests panel reads again when the next quest falls due, as the landing bookmark already does",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
       }
     ],
     "declined": [
