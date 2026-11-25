@@ -40,9 +40,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.13i the target declared no aim, so a stolen or random cast aimed it at
+/// R767000: until its help aim shipped, the target declared no aim, so a stolen or random cast aimed it at
 /// enemies (issue #4844); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_13i() -> CardScripts {
+pub fn script_before_help_aim() -> CardScripts {
     let old = vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))];
     let now = script();
     CardScripts {
@@ -245,15 +245,15 @@ mod tests {
         }
     }
 
-    mod v0_6_13i {
+    mod before_help_aim {
         use super::*;
 
-        use crate::scripts::training_grounds::c012_fortify::{ID, script_v0_6_13i};
+        use crate::scripts::training_grounds::c012_fortify::{ID, script_before_help_aim};
 
-        /// R767000: a game on v0.6.13i, before the aim, lands a stolen Fortify on the caster's enemy.
+        /// R767000: a game from before the help aim lands a stolen Fortify on the caster's enemy.
         #[test]
-        fn r767000_a_game_on_v0_6_13i_lands_a_stolen_fortify_on_the_casters_enemy() {
-            crate::under_kept(ID, script_v0_6_13i(), || {
+        fn r767000_a_game_before_the_help_aim_lands_a_stolen_fortify_on_the_casters_enemy() {
+            crate::under_kept(ID, script_before_help_aim(), || {
                 let (s, mine, theirs) = stolen_rig(dear(FORTIFY));
                 assert!(s.pile(P2, "graveyard").iter().any(|card| card.def_id == FORTIFY), "P2 stole and cast it");
                 assert_eq!(s.stats(&mine).max_health, 8, "the caster's enemy takes the +5 Health");

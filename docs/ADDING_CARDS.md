@@ -227,8 +227,14 @@ shipped version's definitions, rebuilt from the snapshots, and the frozen win-ra
 if any (R1329000), which its games read unless they hold a snapshot (R3049000), and runs
 its own scripts for them. A patch
 that changes what a card's script does, not only a number in its definition, keeps the script it
-replaces: add `(ID, the newest shipped version, a fn that builds the old scripts)` to
-`KEPT_SCRIPTS` in `crates/cards/src/history.rs`. Without it, the replays that script would change are
+replaces: add `(ID, "fragment:<stem>", a fn that builds the old scripts)`, `<stem>` your fragment's
+file name in `crates/cards/patches/pending/` without `.json`, to `KEPT_SCRIPTS` in
+`crates/cards/src/history.rs`. `patches ship` records each version's fragment, and the build reads the
+key as the version just before the one your fragment shipped as, or the newest shipped version while it
+is pending, so a version shipped while you wait in the merge queue is covered (R4779000). A later part
+of a split patch keys by a fragment still pending or by its own. Rows keyed by a version stay;
+`patches check` fails a key naming no shipped version nor fragment, and a pending fragment named as one
+already shipped. Without it, the replays that script would change are
 refused by their final hash rather than shown wrong. `cargo jackioh carried` plays every era of every carried
 catalog and folds it back, so a kept script that is missing and panics there fails it (R4382000, R4382001). A script that writes its card's words into the
 state (a badge, a prompt) reads them with `def_of(Some(&*ctx.state), ID)`, the definition the game

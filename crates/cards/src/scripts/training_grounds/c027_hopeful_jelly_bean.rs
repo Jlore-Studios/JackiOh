@@ -23,9 +23,9 @@ fn chosen() -> TargetSpec {
     json_as(json!({ "of": "chosen" }))
 }
 
-/// R767000: through v0.6.13i the target declared no aim, so a stolen or random cast aimed it at
+/// R767000: until its help aim shipped, the target declared no aim, so a stolen or random cast aimed it at
 /// enemies (issue #4844); `KEPT_SCRIPTS` folds those replays under it.
-pub fn script_v0_6_13i() -> CardScripts {
+pub fn script_before_help_aim() -> CardScripts {
     let old = vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit", "backrow"] }))];
     let now = script();
     CardScripts {
@@ -244,15 +244,15 @@ mod tests {
         }
     }
 
-    mod v0_6_13i {
+    mod before_help_aim {
         use super::*;
 
-        use crate::scripts::training_grounds::c027_hopeful_jelly_bean::{ID, script_v0_6_13i};
+        use crate::scripts::training_grounds::c027_hopeful_jelly_bean::{ID, script_before_help_aim};
 
-        /// R767000: a game on v0.6.13i, before the aim, radiants the caster's enemy with a stolen Bean.
+        /// R767000: a game from before the help aim radiants the caster's enemy with a stolen Bean.
         #[test]
-        fn r767000_a_game_on_v0_6_13i_radiants_the_casters_enemy_with_a_stolen_bean() {
-            crate::under_kept(ID, script_v0_6_13i(), || {
+        fn r767000_a_game_before_the_help_aim_radiants_the_casters_enemy_with_a_stolen_bean() {
+            crate::under_kept(ID, script_before_help_aim(), || {
                 let (s, mine, theirs) = stolen_rig(cheap(BEAN));
                 assert!(s.pile(P2, "graveyard").iter().any(|card| card.def_id == BEAN), "P2 stole and cast it");
                 assert!(s.card(&mine).radiant, "the caster's enemy becomes Radiant");

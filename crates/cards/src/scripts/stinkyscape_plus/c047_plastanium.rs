@@ -38,9 +38,9 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: through v0.6.13i the target declared no aim (issue #4844); `KEPT_SCRIPTS` folds
+/// R767000: until its help aim shipped, the target declared no aim (issue #4844); `KEPT_SCRIPTS` folds
 /// those replays under it.
-pub fn script_v0_6_13i() -> CardScripts {
+pub fn script_before_help_aim() -> CardScripts {
     let old = vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))];
     let now = script();
     CardScripts {
@@ -200,15 +200,15 @@ mod tests {
         }
     }
 
-    mod v0_6_13i {
+    mod before_help_aim {
         use super::*;
 
-        use crate::scripts::stinkyscape_plus::c047_plastanium::{ID, script_v0_6_13i};
+        use crate::scripts::stinkyscape_plus::c047_plastanium::{ID, script_before_help_aim};
 
-        /// R767000: a game on v0.6.13i, before the aim, plastaniums the caster's enemy with a stolen cast.
+        /// R767000: a game from before the help aim plastaniums the caster's enemy with a stolen cast.
         #[test]
-        fn r767000_a_game_on_v0_6_13i_plastaniums_the_casters_enemy_with_a_stolen_cast() {
-            crate::under_kept(ID, script_v0_6_13i(), || {
+        fn r767000_a_game_before_the_help_aim_plastaniums_the_casters_enemy_with_a_stolen_cast() {
+            crate::under_kept(ID, script_before_help_aim(), || {
                 let (s, mine, theirs) = stolen_rig();
                 assert!(s.pile(P2, "graveyard").iter().any(|card| card.def_id == PLASTANIUM), "P2 stole and cast it");
                 assert_eq!(s.stats(&mine).max_health, 5, "the caster's enemy takes the +2 Health");
