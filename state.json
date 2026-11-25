@@ -40531,41 +40531,6 @@
         "approver": {
           "family": "claude",
           "model": "opus",
-          "provider": "claude-4",
-          "tier": "strong"
-        },
-        "builder": {
-          "family": "claude",
-          "provider": "claude-4"
-        },
-        "difficulty": "hard",
-        "done_at": "2026-11-05T09:21:50Z",
-        "every": 5,
-        "findings": 0,
-        "head": "5f0046ca73281580d1a79847fee981247258a3c6",
-        "issue": 3061,
-        "merged_at": "2026-11-05T08:49:43Z",
-        "n": 70,
-        "pr": 3123,
-        "queued_at": "2026-11-05T08:49:43Z",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-6",
-          "tier": "strong"
-        },
-        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/41999067882",
-        "sha": "2d7d2fffdeb59301398368256ac58a0ae8114ef1",
-        "started_at": "2026-11-05T09:02:02Z",
-        "status": "done",
-        "title": "Patch: an Activate the game won't let you use says why, and the fuzz holds every ability to it",
-        "tries": 0,
-        "verdict": "clean"
-      },
-      {
-        "approver": {
-          "family": "claude",
-          "model": "opus",
           "provider": "claude-3",
           "tier": "strong"
         },
@@ -44060,7 +44025,9 @@
           "provider": "claude-8"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-25T23:22:01Z",
         "every": 5,
+        "findings": 0,
         "head": "aa2248629360f0bd25b0ce65400c1932f521fe2d",
         "issue": 4811,
         "merged_at": "2026-11-25T23:06:59Z",
@@ -44073,12 +44040,13 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:efbdb38e-1795648386",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45719716695",
         "sha": "c1b1371cde1147dbe6ed8f1028d992d099633b73",
         "started_at": "2026-11-25T23:13:46Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: the AI prices a Unit's attack text beside a twin that keeps the keywords its side lends it, so a lent Trample or Flying is not booked as the text's worth",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 572
