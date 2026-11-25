@@ -4265,11 +4265,18 @@ mod r4552003_decisiveness {
             "a query parameter may not contain a NUL character"
         );
 
-        let (status, _, body) = get_public(&app, "/api/stats/cards/%00").await;
+        let (status, _, body) = get_public(&app, "/api/stats/cards/core-001?patch=%00").await;
         assert_eq!(status, 400);
         assert_eq!(
             body["error"]["message"],
-            "a path segment may not contain a NUL character"
+            "a query parameter may not contain a NUL character"
+        );
+
+        let (status, _, body) = get_public(&app, "/api/stats/games?patch=%00").await;
+        assert_eq!(status, 400);
+        assert_eq!(
+            body["error"]["message"],
+            "a query parameter may not contain a NUL character"
         );
     }
 }
