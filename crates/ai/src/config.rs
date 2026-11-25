@@ -195,9 +195,11 @@ pub struct AiSearch {
     /// hand and a full board (R186's sweep flags a decision over 2 s) cost about an ordinary one.
     pub fat_reference: i32,
     /// The least the scaled budget ever holds (the lethal walk still gets its depth-first pass and
-    /// the beam a few expansions at the widest states).
+    /// the beam a few expansions at the widest states), unless the budget's own `nodes` is less
+    /// (R4802000).
     pub fat_min_nodes: i32,
-    /// The least of the scaled budget the lethal solver's allowance shrinks to.
+    /// The least of the scaled budget the lethal solver's allowance shrinks to, unless the budget's own
+    /// `lethal_nodes` is less (R4802000). A state that is not fat keeps the budget's own allowance.
     pub fat_min_lethal: i32,
     /// R2575000: the most nodes a fat state's allowance is scaled from: the practice budget before
     /// issue #2575 doubled it, so a state whose every step costs the most spends what it did.
