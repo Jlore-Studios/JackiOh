@@ -20123,14 +20123,26 @@
       "taken_asks": []
     },
     "4835": {
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "claude-8",
+      "owner_since": "2026-11-25T02:23:16Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-24T21:21:02Z",
       "requested_by": "squishy-squooby",
-      "stop_requested": false
+      "run_id": "pending:3750808c-1795573368",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-25T02:23:16Z",
+      "stop_requested": false,
+      "taken_asks": []
     },
     "4836": {
       "failures": 0,
@@ -21133,9 +21145,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T02:22:37Z",
+    "at": "2026-11-25T02:23:16Z",
     "url": "",
-    "what": "build #4826 on agy"
+    "what": "plan #4835 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-25T02:11:35Z",
