@@ -20251,9 +20251,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "agy",
-      "owner_since": "2026-11-25T09:35:41Z",
-      "owner_why": "its approval shipped `e7d2e9d316f3`, and the last approver owns the merge, so it fixes what CI found",
+      "owner": "claude-1",
+      "owner_since": "2026-11-25T09:56:46Z",
+      "owner_why": "handed off from `agy`: `agy` has no runner free where it runs",
       "pending_request": false,
       "planned_at": "2026-11-25T02:20:11Z",
       "planned_by": "`agy` (agy, `gemini-3.8-flash-high`, medium)",
@@ -22228,7 +22228,7 @@
       }
     },
     "4890": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_early": false,
       "ci_fixed_head": "e7d2e9d316f323885833d057ccd51d084613e91b",
@@ -22256,17 +22256,17 @@
       "interruptions": 0,
       "issue": 4826,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "fixing-ci",
       "merge_owner": "agy",
       "pending_request": false,
-      "provider": "agy",
+      "provider": "claude-1",
       "queued_at": "2026-11-25T09:35:38Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "45549869402",
-      "runs_on": "night-vm-agy",
+      "run_id": "pending:49abbfd8-1795600566",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-11-25T04:53:49Z",
+      "started_at": "2026-11-25T09:56:46Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -23218,9 +23218,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T09:55:53Z",
+    "at": "2026-11-25T09:56:46Z",
     "url": "",
-    "what": "review #4908 on muse"
+    "what": "revise #4890 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-25T09:40:33Z",
