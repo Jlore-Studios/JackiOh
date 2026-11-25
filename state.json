@@ -24118,6 +24118,14 @@
         "tiers": {}
       },
       "waiting_comment": 7166267601
+    },
+    "4933": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-25T13:36:27Z",
+      "issue": 4807,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
