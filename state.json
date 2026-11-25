@@ -21763,6 +21763,7 @@
       "run_id": "45544332583",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 530,
       "started_at": "2026-11-25T04:05:03Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -44696,9 +44697,33 @@
         "status": "queued",
         "title": "Patch: deeper card stats, S0, each play's choice and each made card's maker in the record",
         "tries": 0
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-8"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "0019fac76611cf6e8cdd70177cf9bd33995b7403",
+        "issue": 4834,
+        "merged_at": "2026-11-25T05:03:51Z",
+        "n": 530,
+        "pr": 4886,
+        "queued_at": "2026-11-25T05:03:51Z",
+        "sha": "97e85e4a2ea94a41fa8b721f78bcfaa99a6ddb9f",
+        "status": "queued",
+        "title": "Patch: a Lava Golem handed to the opponent by its Tribute is not fused back into its player's Rod of Ages by an Equip play",
+        "tries": 0
       }
     ],
-    "count": 529
+    "count": 530
   },
   "statistics": {
     "at": "2026-11-25T04:52:55Z"
