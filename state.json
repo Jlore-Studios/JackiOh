@@ -43993,6 +43993,7 @@
       {
         "at": "2026-11-25T02:04:37Z",
         "number": 4818,
+        "reason": "confirmed. The default `QuestsPanel` holds `reread` from `useQuests` and passes it as `onRetry` but not as `onArrived`, so when the next quest falls due the page asks the player to reopen it, while the landing bookmark (`landing.tsx:487`) refreshes by itself. The quests page is where Replace lives (R2210000), so the stale page blocks the one decision it exists for. The fix is one prop and a test.",
         "title": "Patch: the quests panel reads again when the next quest falls due, as the landing bookmark already does",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
