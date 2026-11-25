@@ -220,9 +220,10 @@ slumber share, which that probe's own evaluation already applied (R3575402).
 A unit's "when this attacks" and "after this attacks" hooks count by one attack (R2688000):
 `attack_hook_prices` walks the same two turns, within `AI_ATTACK_HOOK_PROBE_NODES`; at the start of each
 player's next turn it plays each of that player's units with a hook at the enemy hero, or at the first
-target `legal_actions` lists, beside the same attack by the unit's hookless twin (Vanilla, its printed
-keywords granted, its text given back before scoring), and prices the controller's evaluation after the
-one attack less after the other, each crystal gained at `next_turn_mana`; `unit_worth` adds
+target `legal_actions` lists, beside the same attack by the unit's hookless twin (Vanilla, granted its
+printed keywords and every other keyword the unit holds, a lent one among them, R4811000; a unit already
+Vanilla is its own twin; its text given back before scoring), and prices the controller's evaluation
+after the one attack less after the other, each crystal gained at `next_turn_mana`; `unit_worth` adds
 `AI_EVAL.attack_hook` of it for both sides' units, inside the Brittle share, while the unit may attack.
 A Dormant card's "When this awakens" counts by its awakening (R3064000): `awaken_prices` wakes each Dormant
 card with a wake trigger on either field, and each Unit with one in the seat's own hand, placed first
