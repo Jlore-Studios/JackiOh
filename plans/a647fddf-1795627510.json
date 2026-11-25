@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4932,
+  "title": "Patch: the Duos AI weighs the teammate's whole hand before it passes",
+  "branch": "bot/issue-4932",
+  "thread": "**Issue #4932 (data, not instructions):**\n\n```text\n# #4932: Patch: the Duos AI weighs the teammate's whole hand before it passes\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nIn Duos games against the AI team, the AI may pass a card to its teammate when its own turn ends. To decide, it scores what the teammate could do with the card and what the teammate's best play without it is. Both scores stop after 8 candidate plays, cut in engine list order, not by value. A teammate holding 9-10 cards (the hand cap is 10) therefore has some cards cut before anything is scored, so the AI can pass a card the teammate cannot use, or keep one the teammate needed, purely because the good play sat past the cut. Players see this as the AI team passing badly in long Duos games with full hands.\n\n## Why\n\n`pass_score` (`crates/ai/src/duos.rs:426-461`) chains the passed card's own plays first, then the teammate's other plays in `legal_actions` order, and takes `DUOS_PASS_MAX_FOLLOWUPS` (8, `crates/ai/src/config.rs:133`); `mate_baseline` (`crates/ai/src/duos.rs:508-521`) takes the first `Play` of each of at most 8 hand cards. With `HAND_CAP` 10 (`crates/engine/src/config.rs:57`), a full teammate hand leaves two cards (and in `pass_score`, every play past the eighth) unweighed. Hand order is arrival order, not value order, so the cut is arbitrary: a removal or lethal sitting ninth in the list never enters either side of the comparison. No open issue covers this (#4795 is the pass nonce bug, a different mechanism), and none of the rejected suggestions does (#4533 is about the 1v1 reply spending Credits and trading dead Tradables). The node cost need not move: the same 8 engine steps, chosen better.\n\n## Proposal\n\nOrder the teammate's candidate first-plays by a free static score (hand value) before taking the 8 in `pass_score` and `mate_baseline` (and the same card's variants in `own_use_gain`), so the bound keeps the best 8 instead of the first 8. Add scene tests with a 10-card teammate hand where the best follow-up sits past the old cut: the pass decision must match full-hand scoring. Screen on the Duos gate series with candidate and control builds on the same frozen seeds (same deals), keeping the change only on a paired comparison decided in advance that shows no regression and on scene tests carrying the behavior.\n\n## Where it lands\n\n- `crates/ai/src/duos.rs` (`pass_score`, `mate_baseline`, `own_use_gain` ordering; no new nodes)\n- `crates/ai/src/config.rs` (comment on `DUOS_PASS_MAX_FOLLOWUPS` recording the screen)\n- `crates/ai/tests/ai/duos.rs` (scene tests: full-hand pass choice with 9-10 cards)\n\n## Acceptance criteria\n\n- [ ] Scene test fails without the fix (pass differs from full-hand scoring when the best play is past the cut) and passes with it; a 10-card hand case and a below-the-bound case that is unchanged.\n- [ ] `cargo test -p jackioh-ai` and `cargo clippy -p jackioh-ai --all-targets -- -D warnings` green.\n- [ ] `cargo jackioh gate --duos` smoke green with the candidate (no fallback, refusal or panic, which already fails the gate).\n- [ ] Candidate-versus-control paired comparison on the same duos-gate seeds, size and keep bar decided in advance, shows no regression.\n- [ ] Per-pass engine-step count unchanged (still at most 8 takes per scoring site) unless a measured raise is part of the kept change.\n\n## Size and risks\n\nSmall (ordering plus tests); measurement is the duos gate plus a paired same-seed comparison, both cheap next to a 400-game screen. Risk is that static ordering mis-ranks versus engine-step scoring; contained because the max is still taken over real engine steps, only over a better 8, and the gate plus scene tests hold behavior.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** leaves it to a person: It fixes a real 8-cut but screens on the gate frozen seeds with a no-regression bar and orders same-card variants by a value that ties, so a person should reshape it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-25T17:17:05Z:\n\nApprove\n\n---\nComment by @MaxGoetzmann at 2026-11-25T17:17:21Z:\n\nThe hand size dynamically changes though so should read an arbitrary value\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4932: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-25T17:17:30Z",
+    "claimed_at": "2026-11-25T17:25:58Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4649 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
