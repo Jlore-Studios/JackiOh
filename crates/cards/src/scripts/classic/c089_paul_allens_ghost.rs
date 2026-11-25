@@ -48,6 +48,9 @@ mod tests {
     const SPARE: &str = "core-010";
     const MUTATE: &str = "classic-078";
     const MID_RUNNER: &str = "classic-022";
+    const REWIND: &str = "classic-054"; // Rewind: triggers a Unit's Cry (R467)
+    const SORCERER: &str = "core-068"; // Twisted Sorcerer: "Cry: Deal 4 damage to a target."
+    const BOOK: &str = "classic-070"; // Book of Plague: "Choose one: Place 5 Plague Counters, or ..."
 
     fn at(card: &CardInstance) -> Selection {
         Selection::Instance {
@@ -419,6 +422,73 @@ mod tests {
                     .collect();
                 assert_eq!(at_ghost.len(), 1);
                 assert!(at_ghost.iter().all(carries_no_discards));
+            }
+
+            #[test]
+            fn r450_a_triggered_crys_target_prompt_answer_naming_paul_allens_ghost_pays_its_discards() {
+                // C #54 Rewind triggers Twisted Sorcerer's "Cry: Deal 4 damage to a target", whose target a
+                // `@triggerCry` prompt asks (R467): an answer naming the Ghost pays like any other (#4815).
+                let board = |spare_count: usize| {
+                    let mut hand = vec![REWIND];
+                    hand.extend(std::iter::repeat_n(SPARE, spare_count));
+                    let mut s = scenario(json!({
+                        "seed": "c89-rewind", "active": "p1", "turn": 9,
+                        "p1": { "hand": hand, "mana": 10, "field": [SORCERER], "library": [VANILLA, VANILLA, VANILLA] },
+                        "p2": { "field": [GHOST], "library": [VANILLA, VANILLA, VANILLA] },
+                    }));
+                    let sorcerer = s.card(SORCERER).clone();
+                    s.play(REWIND, json!({ "targets": [at(&sorcerer)] }));
+                    s
+                };
+                let poor = board(1);
+                let pending = must(poor.state().pending.clone(), "the triggered Cry's target prompt");
+                assert_eq!((pending.kind, pending.resume.hook.as_str()), (PromptKind::Target, "@triggerCry"));
+                assert!(!pending_selections(&poor).contains(&at(poor.card(GHOST))));
+                let mut s = board(3);
+                let spare_ids = spares(&s, P1);
+                assert_eq!(spare_ids.len(), 3);
+                assert!(pending_selections(&s).contains(&at(s.card(GHOST))));
+                let ghost = s.card(GHOST).clone();
+                s.answer(json!([at(&ghost)]));
+                assert!(
+                    s.last_events()
+                        .iter()
+                        .any(|event| matches!(event, GameEvent::DivineShieldLost { .. }))
+                );
+                let discarded = discarded_ids(s.last_events());
+                assert_eq!((discarded.len(), s.hand(P1).len()), (2, 1));
+                assert!(discarded.iter().all(|id| spare_ids.contains(id)));
+            }
+
+            #[test]
+            fn r450_a_plague_placement_prompt_answer_naming_paul_allens_ghost_pays_its_discards() {
+                // C #70 Book of Plague's counters go on the one permanent a prompt names (R689): an answer
+                // naming the Ghost pays like any other (#4815). Mr. Vanilla keeps the poor board's prompt open.
+                let board = |spare_count: usize| {
+                    let mut hand = vec![BOOK];
+                    hand.extend(std::iter::repeat_n(SPARE, spare_count));
+                    let mut s = scenario(json!({
+                        "seed": "c89-plague", "active": "p1", "turn": 9,
+                        "p1": { "hand": hand, "mana": 10, "field": [VANILLA], "library": [VANILLA, VANILLA, VANILLA] },
+                        "p2": { "field": [GHOST], "library": [VANILLA, VANILLA, VANILLA] },
+                    }));
+                    s.play(BOOK, json!({ "modes": ["counters"] }));
+                    s
+                };
+                let poor = board(1);
+                let pending = must(poor.state().pending.clone(), "the placement prompt");
+                assert_eq!((pending.kind, pending.resume.hook.as_str()), (PromptKind::Target, "plague:placement"));
+                assert!(!pending_selections(&poor).contains(&at(poor.card(GHOST))));
+                let mut s = board(3);
+                let spare_ids = spares(&s, P1);
+                assert_eq!(spare_ids.len(), 3);
+                assert!(pending_selections(&s).contains(&at(s.card(GHOST))));
+                let ghost = s.card(GHOST).clone();
+                s.answer(json!([at(&ghost)]));
+                assert_eq!(s.card(GHOST).counters.plague, Some(5));
+                let discarded = discarded_ids(s.last_events());
+                assert_eq!((discarded.len(), s.hand(P1).len()), (2, 1));
+                assert!(discarded.iter().all(|id| spare_ids.contains(id)));
             }
         }
 
