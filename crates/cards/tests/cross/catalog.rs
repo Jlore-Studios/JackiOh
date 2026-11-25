@@ -3733,7 +3733,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "49.1",
         "YileGPT Prime",
-        c(8),
+        c(4),
         T::Unit,
         &[G::Cn, G::Acclaimed, G::Prime, G::Token],
         R::Token,

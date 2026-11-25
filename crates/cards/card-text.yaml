@@ -3393,8 +3393,8 @@ meditative-049-1: # YileGPT Prime
     death: You cannot uninstall me.
   zh:
     name: 至尊YileGPT
-    base: "结余减费。\n战吼：随机执行以下{picks}项：召唤{datacenters}个Claude的数据中心；将{glitches}张光辉系统故障牌置入你的手牌，其法力值消耗为({setCost})；召唤一个AI女友；用义乐病毒填满你对手的场地；削弱你对手场上、手牌和牌库中的每张牌{nerfs}次。"
-    radiant: "结余减费。\n战吼：召唤{datacenters}个Claude的数据中心。将{glitches}张光辉系统故障牌置入你的手牌；其法力值消耗为({setCost})。召唤一个AI女友。为你的对手召唤{viruses}个光辉义乐病毒。削弱你对手场上、手牌和牌库中的每张牌{nerfs}次。"
+    base: "结余减费。\n战吼：过载({mana})。随机执行以下{picks}项：召唤{datacenters}个Claude的数据中心；将{glitches}张光辉系统故障牌置入你的手牌，其法力值消耗为({setCost})；召唤一个AI女友；用义乐病毒填满你对手的场地；削弱你对手场上、手牌和牌库中的每张牌{nerfs}次。"
+    radiant: "结余减费。\n战吼：过载({mana})。召唤{datacenters}个Claude的数据中心。将{glitches}张光辉系统故障牌置入你的手牌；其法力值消耗为({setCost})。召唤一个AI女友。为你的对手召唤{viruses}个光辉义乐病毒。削弱你对手场上、手牌和牌库中的每张牌{nerfs}次。"
 meditative-049-2: # Yile's Virus
   flavour: Have you tried turning it off and on?
   voice:

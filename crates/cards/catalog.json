@@ -14064,7 +14064,7 @@
     "printedRarity": "Mythic",
     "flavor": "Tech",
     "token": true,
-    "cost": 8,
+    "cost": 4,
     "refs": [
       "classic-018",
       "classic-t-glitch",
@@ -14129,6 +14129,15 @@
         "min": 1,
         "tunedOn": "radiant",
         "read": "cry"
+      },
+      {
+        "key": "mana",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
       }
     ],
     "loc": 149,
@@ -14136,13 +14145,13 @@
       "attack": 8,
       "health": 20,
       "keywords": [],
-      "text": "Float reduces cost.\nCry: Do {picks} of these at random: summon {datacenters|Claude's Datacenter|Claude's Datacenters}; add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand, which cost ({setCost}); summon an AI Girlfriend; fill your opponent's board with Yile's Viruses; Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
+      "text": "Float reduces cost.\nCry: Overload ({mana}). Do {picks} of these at random: summon {datacenters|Claude's Datacenter|Claude's Datacenters}; add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand, which cost ({setCost}); summon an AI Girlfriend; fill your opponent's board with Yile's Viruses; Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
     },
     "radiant": {
       "attack": 16,
       "health": 40,
       "keywords": [],
-      "text": "Float reduces cost.\nCry: Summon {datacenters|Claude's Datacenter|Claude's Datacenters}. Add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand; they cost ({setCost}). Summon an AI Girlfriend. Summon {viruses|Radiant Yile's Virus|Radiant Yile's Viruses} for your opponent. Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
+      "text": "Float reduces cost.\nCry: Overload ({mana}). Summon {datacenters|Claude's Datacenter|Claude's Datacenters}. Add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand; they cost ({setCost}). Summon an AI Girlfriend. Summon {viruses|Radiant Yile's Virus|Radiant Yile's Viruses} for your opponent. Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
     }
   },
   "meditative-049-2": {

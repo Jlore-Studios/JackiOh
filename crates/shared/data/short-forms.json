@@ -124,10 +124,10 @@
     },
     "meditative-049-1": {
       "base": {
-        "en": "Float reduces cost.\nCry: Do {picks} at random: Datacenters, Glitches, an AI Girlfriend, Viruses for them, or Nerf their cards."
+        "en": "Float reduces cost.\nCry: Overload ({mana}). Do {picks} at random: Datacenters, Glitches, an AI Girlfriend, Viruses for them, or Nerf their cards."
       },
       "radiant": {
-        "en": "Float reduces cost.\nCry: Datacenters, Glitches, an AI Girlfriend, Viruses for them, and Nerf their cards."
+        "en": "Float reduces cost.\nCry: Overload ({mana}). Datacenters, Glitches, an AI Girlfriend, Viruses for them, and Nerf their cards."
       }
     },
     "meditative-049-2": {
