@@ -20243,7 +20243,8 @@
       },
       "started_at": "2026-11-25T09:44:52Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 7160924607
     },
     "4825": {
       "action": "build",
