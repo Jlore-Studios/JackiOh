@@ -2,7 +2,7 @@
 
 use jackioh_shared::config::{GLICKO_TAU, RATING_DEVIATION_START, RATING_START, RATING_VOLATILITY_START};
 use jackioh_shared::ranked::glicko2::{
-    Glicko, RatedOpponent, START_GLICKO, Score, glicko2_period, rate_game,
+    Glicko, RatedOpponent, START_GLICKO, Score, glicko2_period, rate_game_scored,
 };
 
 fn glicko(rating: f64, deviation: f64) -> Glicko {
@@ -29,7 +29,7 @@ fn period(player: Glicko, games: &[RatedOpponent]) -> Glicko {
 
 /// Rates game between two players.
 fn rate(a: Glicko, b: Glicko, score_a: Score) -> (Glicko, Glicko) {
-    let rated = rate_game(&a, &b, score_a);
+    let rated = rate_game_scored(&a, &b, score_a, 1.0 - score_a);
     (rated.a, rated.b)
 }
 
