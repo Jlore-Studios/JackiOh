@@ -20929,9 +20929,10 @@
       "stop_requested": false,
       "strike_log": [
         "`claude-7` (claude, opus) rejected it: `crates/cards/src/history.rs:1408`: All eight new KEPT_SCRIPTS rows are filed under \"v0.6.13e\", but the aim-less scripts also ran in v0.6.13f, v0.6.13g and v0.6.",
-        "CI still failed after 1 fix(es)"
+        "CI still failed after 1 fix(es)",
+        "`claude-7` (claude, opus) rejected it: `crates/cards/src/history.rs:1407`: All eight new KEPT_SCRIPTS rows are keyed at v0.6.13i, but v0.6.13j shipped with the aim-less scripts and is the newest shipp"
       ],
-      "strikes": 2,
+      "strikes": 3,
       "taken_asks": [],
       "verdict_rounds": 3
     },
