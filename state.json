@@ -23956,9 +23956,11 @@
         "by": "`claude` (strong)",
         "sha": "9f0cb824af99f3477c92dc46c8fadd84c768388a"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-25T12:49:05Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-25T13:55:27Z",
         "family": "claude",
@@ -23968,6 +23970,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -50; git status --short; cat crates/cards/src/scripts/stinkyscape_plus/c125_omura.rs\"}\n- Bash: {\"command\": \"sed -n 60,80p crates/cards/src/scripts/stinkyscape_plus/c124_sei.rs; sed -n 140,185p crates/cards/src/scripts/stinkyscape_plus/c124_sei.rs; grep -n \\\"use \\\" crates/cards/src/scripts/stin\u2026\n- Bash: {\"command\": \"grep -n \\\"fn offers\\\" -A4 crates/cards/src/scripts/stinkyscape_plus/c124_sei.rs\\npython3 - <<'E'\\np='crates/cards/src/scripts/stinkyscape_plus/c125_omura.rs'\\ns=open(p).read()\\ns=s.repla\u2026\n- Bash: {\"command\": \"cargo fmt && cargo test -p jackioh-cards c125_omura 2>&1 | tail -20\", \"timeout\": 600000}\n- said: Now the patch fragment.\n- Bash: {\"command\": \"cargo run --release -p jackioh-tools -- patches \\\"Patch: Omura's Activate is not offered with no enemy Unit to aim at, so it cannot be spent on nothing and start its cooldown\\\" --source \u2026\n- Bash: {\"command\": \"cat crates/cards/patches/pending/*.json\"}\n- Bash: {\"command\": \"cd crates/cards/patches/pending && python3 - <<'E'\\nimport json,glob\\np=glob.glob('*.json')[0]\\nd=json.load(open(p))\\nd['player']['title']=\\\"Omura's Activate is offered only with an enem\u2026\n- Bash: {\"command\": \"cargo run --release -p jackioh-tools -- classify --base origin/main --claims 2>&1 | tail -30; echo rc=$?\", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo clippy -p jackioh-cards --all-targets -- -D warnings 2>&1 | tail -5\", \"timeout\": 900000}\n- Bash: {\"command\": \"git rev-parse origin/main 2>&1 | head -1; grep -n \\\"base\\\\|working\\\\|HEAD\\\" crates/tools/README.md | grep -i classif | head\"}\n- Bash: {\"command\": \"cargo test -p jackioh-cards 2>&1 | grep -E \\\"^test result|FAILED|failed\\\" | head; cargo run --release -p jackioh-tools -- fuzz --seeds 200 2>&1 | tail -4\", \"timeout\": 900000}\n- Bash: {\"command\": \"cat > .bot-notes.md <<'E'\\n## State\\nDone: Omura target `required: Some(true)` (c125_omura.rs), two new tests, spec row 125 cites R703, pending fragment written with hand player note. Gr\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: Omura's Activate is not offered with no enemy Unit to aim at, so it cannot be spent on nothing and start its cooldown\"} --> Omura's Activate is no longer offered when the opponent has no Unit, and `reduce` refuses it then. It can't be spent on an empty \u2026"
       },
+      "interruptions": 0,
       "issue": 4833,
       "kind": "review",
       "live": "reviewing",
