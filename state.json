@@ -21996,7 +21996,7 @@
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
-      "ci_fixed_head": "09fffc31119fd30c8d0f83d2977664ac919754e9",
+      "ci_fixed_head": "8ea21c930bcdac02a60d3e96096781314e431113",
       "ci_fixes": 2,
       "ci_on_head": true,
       "ci_run_id": 45600216069,
@@ -22017,7 +22017,7 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-25T07:27:06Z",
+      "feedback_since": "2026-11-25T11:31:09Z",
       "forced": false,
       "interruptions": 0,
       "issue": 4844,
@@ -22032,7 +22032,7 @@
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
-      "round_tier": "medium",
+      "round_tier": "",
       "run_id": "45605185708",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
@@ -22053,11 +22053,11 @@
         "provider": "claude-7",
         "run": "45577438939"
       },
-      "source": "ci",
+      "source": "",
       "started_at": "2026-11-25T11:31:09Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 3,
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [
           "claude"
