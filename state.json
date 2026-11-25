@@ -24041,6 +24041,9 @@
       },
       "waiting_comment": 7166267601
     },
+    "4931": {
+      "suggestion": true
+    },
     "4932": {
       "action": "plan",
       "asks": [
@@ -48394,6 +48397,13 @@
         "at": "2026-11-25T19:07:13Z",
         "number": 4937,
         "title": "Patch: route six held-set hooks through the engine's read helpers instead of `GameState` fields",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-25T19:07:48Z",
+        "number": 4931,
+        "title": "Patch: screen the reply's open-lethal switch again on today's reply",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
       }
