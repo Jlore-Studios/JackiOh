@@ -3,12 +3,14 @@
 //!
 //! The corpus is the hotseat fixture's states (its opening and the state after each action of its log),
 //! the AI gate's two wide boards (`gate::wide_boards`), the heaviest states by the fuzz's growth
-//! measures (`fuzz::weigh`, #1254) of plain golden seeds PERF_SEED_FIRST..=PERF_SEED_LAST and handicapped
-//! golden seeds PERF_HANDICAP_SEED_FIRST..=PERF_HANDICAP_SEED_LAST, one run-start game (§15), and one
-//! seeded Duos co-op game (§13). Every state is dealt from seeds and fixed streams, so the corpus is the
-//! same on every run of a build. On each 1v1 state a pass times `legal_actions`, `view_for` and
-//! `combat_forecast` for each seat, `hash_state`, and `reduce` of PERF_ACTIONS_PER_SEAT evenly spread
-//! listed actions of each seat; on each Duos state it times `duos_legal_actions` and `duos_view_for` for
+//! measures (`fuzz::weigh`, #1254) of the pinned games of `perf-corpus/` (#4924): plain golden seeds
+//! PERF_SEED_FIRST..=PERF_SEED_LAST, handicapped golden seeds
+//! PERF_HANDICAP_SEED_FIRST..=PERF_HANDICAP_SEED_LAST, one run-start game (§15), and one seeded Duos
+//! co-op game (§13). Each game is played from its record's decks under fixed streams, never dealt from
+//! the live pools, so the corpus is the same on every run of a build and a new card re-deals none of it;
+//! `--pin` writes a missing record, the only deal from the live pools. On each 1v1 state a pass times
+//! `legal_actions`, `view_for` and `combat_forecast` for each seat, `hash_state`, and `reduce` of
+//! PERF_ACTIONS_PER_SEAT evenly spread listed actions of each seat; on each Duos state it times `duos_legal_actions` and `duos_view_for` for
 //! all four seats, `combat_forecast` on each seat's underlying duel, and `duos_reduce` of
 //! PERF_ACTIONS_PER_SEAT evenly spread listed actions; then it folds the longest 1v1 game and the Duos
 //! game from their logs and hashes the results. After PERF_WARMUP_PASSES passes whose samples are
@@ -23,23 +25,26 @@
 //! work, so an engine slowdown would slow it as much and hide itself.
 
 use std::fmt::Write as _;
+use std::fs;
+use std::io::Write as _;
+use std::path::Path;
 use std::time::Instant;
 
-use anyhow::{Result, anyhow, bail};
+use anyhow::{Context, Result, anyhow, bail};
 use rayon::prelude::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-use jackioh_cards::register_all;
+use jackioh_cards::{CATALOG, CATALOG_VERSION, register_all, shipped_versions};
 use jackioh_engine::replay::{FoldArgs, fold};
 use jackioh_engine::rng::Rng;
 use jackioh_engine::subsystems::{AI_SKIPPED_ACTIONS, choose_action};
 use jackioh_engine::testkit::golden::{HOTSEAT, HOTSEAT_HASH};
 use jackioh_engine::{
     Action, CreateGameArgs, CreateGameOptions, DUOS_SEATS, DeckMark, DuosAction, DuosActionBody,
-    DuosCreateOptions, DuosReplayInput, DuosState, GameState, HUMAN_HANDICAP, PLAYER_IDS, PerPlayerOpt,
-    begin_game, combat_forecast, create_game, create_recorded_game, duos_begin, duos_create, duos_fold,
-    duos_hash, duos_legal_actions, duos_reduce, duos_seats_to_act, duos_view_for, hash_state, legal_actions,
-    reduce, view_for,
+    DuosCreateOptions, DuosDecks, DuosReplayInput, DuosState, GameState, HUMAN_HANDICAP, Handicap,
+    PLAYER_IDS, PerPlayerOpt, begin_game, combat_forecast, create_game, create_recorded_game, duos_begin,
+    duos_create, duos_fold, duos_hash, duos_legal_actions, duos_reduce, duos_seats_to_act, duos_view_for,
+    hash_state, legal_actions, reduce, view_for,
 };
 
 use crate::duos_fuzz::duos_decks_for_seed_from;
@@ -49,16 +54,23 @@ use crate::golden::{STEP_CAP, spec_for_seed};
 
 // The corpus and the passes
 
-/// The first golden seed whose game the corpus plays (§13.1: 1–200 are the plain fuzz's games).
+/// The first golden seed whose game the corpus pins (§13.1: 1–200 are the plain fuzz's games).
 pub const PERF_SEED_FIRST: u32 = 1;
-/// The last golden seed whose game the corpus plays. Forty games keep the smoke test to seconds.
+/// The last golden seed whose game the corpus pins. Forty games keep the smoke test to seconds.
 pub const PERF_SEED_LAST: u32 = 40;
-/// The first golden seed whose game the handicapped wave sample plays (§13.1: 201–240 are handicapped).
+/// The first golden seed whose game the handicapped wave sample pins (§13.1: 201–240 are handicapped).
 pub const PERF_HANDICAP_SEED_FIRST: u32 = 201;
 /// Ten seeds keep the handicapped sample bounded.
 pub const PERF_HANDICAP_SEED_LAST: u32 = 210;
 /// How many of the games' heaviest states each growth measure adds to the corpus.
 pub const PERF_HEAVIEST_PER_MEASURE: usize = 5;
+/// The run-start game's record seed: a label (its streams are `perf-run-start`'s own), 0 so no golden
+/// seed shares it.
+pub const PERF_RUN_START_SEED: u32 = 0;
+/// The Duos co-op game's seed: its deal's and its streams' (`perf-duos-<seed>`).
+pub const PERF_COOP_SEED: u32 = 1;
+/// The pinned games' records (#4924; `perf-corpus/README.md`).
+pub const PERF_CORPUS_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/perf-corpus");
 /// How many of each seat's listed actions `reduce` is timed on in each state, evenly spread over the
 /// list: the wide boards list hundreds, so all of them would make the pass the wide boards' alone.
 pub const PERF_ACTIONS_PER_SEAT: usize = 4;
@@ -75,13 +87,13 @@ const P95: f64 = 0.95;
 // each profile: `cargo test -p jackioh-tools --test perf perf_holds_every_budget -- --ignored` for
 // `cargo test`'s, `target/release/jackioh perf` for release's. Six ran on #4501's branch, over main's
 // corpus at v0.6.9l (99a9c84d), and six on main at 98bb1823, after v0.6.9m, v0.6.9n and #4465: a card
-// change deals the corpus's games again, and between those two corpora the 1v1 medians moved by up to
-// 1.8x and the Duos ones, three states of one co-op game, by up to 5.6x. The runners' CPUs (Intel Xeon
-// 6975P-C, 8370C and 8573C, AMD EPYC 7763 and 9V74) moved them by up to 1.3x more. Each time budget is
-// 5x the largest of its twelve medians, rounded up to two significant figures, so a runner several
-// times slower still passes and a slowdown of that size fails; each work budget is 2x its value,
-// rounded up the same way. A budget crossed by a change that meant to cost more, or by a card change
-// that made the corpus heavier, is measured again the same way.
+// change dealt the corpus's games again until #4924 pinned them in `perf-corpus/`, and between those two
+// corpora the 1v1 medians moved by up to 1.8x and the Duos ones, three states of one co-op game, by up
+// to 5.6x. The runners' CPUs (Intel Xeon 6975P-C, 8370C and 8573C, AMD EPYC 7763 and 9V74) moved them
+// by up to 1.3x more. Each time budget is 5x the largest of its twelve medians, rounded up to two
+// significant figures, so a runner several times slower still passes and a slowdown of that size fails;
+// each work budget is 2x its value, rounded up the same way. A budget crossed by a change that meant to
+// cost more is measured again the same way.
 
 /// `reduce` of one listed action, in microseconds, at `cargo test`'s profile: twelve medians from 185.6 to
 /// 298.3, 5x headroom.
@@ -153,7 +165,7 @@ const PROFILE: &str = if cfg!(debug_assertions) { "test" } else { "release" };
 
 // The command line
 
-/// `perf [--smoke] [--json]`.
+/// `perf [--smoke] [--json]` and `perf --pin`.
 #[derive(clap::Args, Debug)]
 pub struct Args {
     /// Time the corpus once and judge only the work budget (the per-pull-request smoke test).
@@ -162,12 +174,23 @@ pub struct Args {
     /// Print the report as one JSON object instead of the table.
     #[arg(long)]
     pub json: bool,
+    /// Write a record, dealt from the shipped pools, for each pinned game with no live record; time nothing.
+    #[arg(long, conflicts_with_all = ["smoke", "json"])]
+    pub pin: bool,
 }
 
 /// `cargo jackioh perf`: the table (or `--json`'s object) on stdout, exit 1 when a median passes its
-/// budget.
+/// budget; `--pin` prints each record it writes instead.
 pub fn run(args: Args) -> Result<()> {
     register_all();
+    if args.pin {
+        let written = pin(Path::new(PERF_CORPUS_DIR))?;
+        for name in &written {
+            println!("pinned {name}");
+        }
+        println!("perf --pin: {} record(s) written", written.len());
+        return Ok(());
+    }
     let report = measure(args.smoke)?;
     if args.json {
         println!("{}", serde_json::to_string_pretty(&report)?);
@@ -362,6 +385,375 @@ fn fold_us_per_action(elapsed_secs: f64, actions: usize) -> f64 {
     elapsed_secs * US_PER_SECOND / actions.max(1) as f64
 }
 
+// The pinned corpus (#4924)
+
+/// Which of the corpus's games a record pins, and so which inputs it holds.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+enum PerfKind {
+    /// A plain golden seed, PERF_SEED_FIRST..=PERF_SEED_LAST.
+    Plain,
+    /// A handicapped golden seed, PERF_HANDICAP_SEED_FIRST..=PERF_HANDICAP_SEED_LAST.
+    Handicapped,
+    /// The run-start game (§15), PERF_RUN_START_SEED.
+    RunStart,
+    /// The Duos co-op game (§13), PERF_COOP_SEED.
+    Coop,
+}
+
+impl PerfKind {
+    fn as_str(self) -> &'static str {
+        match self {
+            PerfKind::Plain => "plain",
+            PerfKind::Handicapped => "handicapped",
+            PerfKind::RunStart => "run-start",
+            PerfKind::Coop => "coop",
+        }
+    }
+}
+
+/// One pinned game (`perf-corpus/README.md`): what its deal drew from the live pools the day it was
+/// pinned, kept literally, so a new card re-deals none of it.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct PerfRecord {
+    /// Which game it is.
+    kind: PerfKind,
+    /// A plain or handicapped game's golden seed, which names its streams; the co-op game's, which
+    /// names its streams too; the run-start game's label, PERF_RUN_START_SEED.
+    seed: u32,
+    /// What `cargo jackioh catalog-version` printed the day it was pinned.
+    catalog_version: String,
+    /// p1's deck then p2's: every kind but co-op.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    decks: Option<(Vec<String>, Vec<String>)>,
+    /// The four seats' decks: co-op alone.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    duos_decks: Option<DuosDecks>,
+    /// R180: the seats' handicaps: handicapped and run-start.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    handicaps: Option<PerPlayerOpt<Handicap>>,
+    /// R2702000: the decks' marks: run-start alone.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    deck_marks: Option<PerPlayerOpt<Vec<DeckMark>>>,
+    /// Which ids left the catalog, and in which patch: a retired record is listed and not played,
+    /// never edited.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    retired: Option<String>,
+}
+
+/// A record and its file's name.
+type NamedRecord = (String, PerfRecord);
+
+/// The games the PERF_* constants name, in the order the corpus plays them.
+fn wanted() -> Vec<(PerfKind, u32)> {
+    (PERF_SEED_FIRST..=PERF_SEED_LAST)
+        .map(|seed| (PerfKind::Plain, seed))
+        .chain((PERF_HANDICAP_SEED_FIRST..=PERF_HANDICAP_SEED_LAST).map(|seed| (PerfKind::Handicapped, seed)))
+        .chain([
+            (PerfKind::RunStart, PERF_RUN_START_SEED),
+            (PerfKind::Coop, PERF_COOP_SEED),
+        ])
+        .collect()
+}
+
+/// A plain or handicapped game's streams, as `golden::spec_for_seed` names them: the game's, the
+/// policy's and the mulligan order's (R265).
+fn golden_streams(kind: PerfKind, seed: u32) -> (String, String, String) {
+    if kind == PerfKind::Handicapped {
+        (
+            format!("jackioh-fuzz-handicap-{seed}"),
+            format!("jackioh-fuzz-handicap-policy-{seed}"),
+            format!("jackioh-fuzz-handicap-policy-order-{seed}"),
+        )
+    } else {
+        (
+            format!("jackioh-fuzz-{seed}"),
+            format!("jackioh-fuzz-policy-{seed}"),
+            format!("jackioh-fuzz-policy-order-{seed}"),
+        )
+    }
+}
+
+/// The first record of `records` pinning `kind`'s game `seed` that is not retired.
+fn live_record(records: &[NamedRecord], kind: PerfKind, seed: u32) -> Option<&NamedRecord> {
+    records
+        .iter()
+        .find(|(_, record)| record.retired.is_none() && record.kind == kind && record.seed == seed)
+}
+
+/// One line per problem with `record`: its shape, then its ids against the live catalog. Deck sizes
+/// and handicaps are the engine's to refuse (`begin_game`), which fails the run.
+fn lint_record(record: &PerfRecord) -> Vec<String> {
+    let mut problems: Vec<String> = Vec::new();
+    if !shipped_versions().contains(&record.catalog_version.as_str()) {
+        problems.push(format!(
+            "catalogVersion \"{}\" is no version in crates/cards/patches/patches.json",
+            record.catalog_version
+        ));
+    }
+
+    let kind = record.kind;
+    let fields = [
+        ("decks", record.decks.is_some(), kind != PerfKind::Coop),
+        ("duosDecks", record.duos_decks.is_some(), kind == PerfKind::Coop),
+        (
+            "handicaps",
+            record.handicaps.is_some(),
+            matches!(kind, PerfKind::Handicapped | PerfKind::RunStart),
+        ),
+        (
+            "deckMarks",
+            record.deck_marks.is_some(),
+            kind == PerfKind::RunStart,
+        ),
+    ];
+    for (name, present, required) in fields {
+        if required && !present {
+            problems.push(format!("{} requires {name}", kind.as_str()));
+        } else if present && !required {
+            problems.push(format!("{} cannot set {name}", kind.as_str()));
+        }
+    }
+
+    match &record.retired {
+        Some(why) if why.trim().is_empty() => {
+            problems.push("retired is empty: say which ids left the catalog, and in which patch".to_string());
+        }
+        Some(_) => {}
+        None => {
+            let duos = record
+                .duos_decks
+                .iter()
+                .flat_map(|decks| [&decks.a1, &decks.a2, &decks.b1, &decks.b2]);
+            let decks = record.decks.iter().flat_map(|(p1, p2)| [p1, p2]);
+            for id in decks.chain(duos).flatten() {
+                if !CATALOG.contains_key(id) {
+                    problems.push(format!(
+                        "\"{id}\" names no catalog card: mark the record retired (add \"retired\": \"<which ids, \
+                         which patch>\"), never edit its decks, then run `cargo jackioh perf --pin` for its \
+                         replacement"
+                    ));
+                }
+            }
+        }
+    }
+    problems
+}
+
+/// Every `.json` file of `dir`, sorted by name, parsed; with every problem found, one line each, led by
+/// the file's name: a file that is no record, a record's lint, a live record of no game the PERF_*
+/// constants name, and a second live record of one game.
+fn read_corpus(dir: &Path) -> Result<(Vec<NamedRecord>, Vec<String>)> {
+    let mut paths: Vec<_> = fs::read_dir(dir)
+        .with_context(|| format!("reading {}", dir.display()))?
+        .map(|entry| entry.map(|entry| entry.path()))
+        .collect::<Result<_, _>>()
+        .with_context(|| format!("reading {}", dir.display()))?;
+    paths.retain(|path| path.extension().is_some_and(|extension| extension == "json"));
+    paths.sort();
+    let mut records = Vec::new();
+    let mut problems = Vec::new();
+    for path in paths {
+        let name = path
+            .file_name()
+            .map_or_else(String::new, |name| name.to_string_lossy().into_owned());
+        let text = fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
+        match serde_json::from_str::<PerfRecord>(&text) {
+            Ok(record) => {
+                problems.extend(
+                    lint_record(&record)
+                        .into_iter()
+                        .map(|problem| format!("{name}: {problem}")),
+                );
+                records.push((name, record));
+            }
+            Err(error) => problems.push(format!("{name}: not a perf record: {error}")),
+        }
+    }
+
+    let wanted = wanted();
+    for (at, (name, record)) in records.iter().enumerate() {
+        if record.retired.is_some() {
+            continue;
+        }
+        let (kind, seed) = (record.kind, record.seed);
+        if !wanted.contains(&(kind, seed)) {
+            problems.push(format!(
+                "{name}: {} seed {seed} is no game the PERF_* constants name: delete the file",
+                kind.as_str()
+            ));
+        } else if live_record(&records[..at], kind, seed).is_some() {
+            problems.push(format!(
+                "{name}: a second live record of {} seed {seed}: keep one",
+                kind.as_str()
+            ));
+        }
+    }
+    Ok((records, problems))
+}
+
+/// The corpus's games: each wanted game's one live record, in play order, and the retired records'
+/// names.
+struct Pinned {
+    games: Vec<NamedRecord>,
+    retired: Vec<String>,
+}
+
+impl Pinned {
+    /// The games of `kind`, in play order.
+    fn of(&self, kind: PerfKind) -> Vec<&PerfRecord> {
+        self.games
+            .iter()
+            .filter(|(_, record)| record.kind == kind)
+            .map(|(_, record)| record)
+            .collect()
+    }
+}
+
+/// `dir`'s records as the corpus plays them, or every problem with them, a wanted game with no live
+/// record among them.
+fn pinned_games(dir: &Path) -> Result<Pinned> {
+    let (records, mut problems) = read_corpus(dir)?;
+    let mut games = Vec::new();
+    for (kind, seed) in wanted() {
+        match live_record(&records, kind, seed) {
+            Some(game) => games.push(game.clone()),
+            None => problems.push(format!(
+                "no live record of {} seed {seed}: `cargo jackioh perf --pin` deals one",
+                kind.as_str()
+            )),
+        }
+    }
+    if !problems.is_empty() {
+        bail!(
+            "perf-corpus ({}): {} problem(s):\n{}",
+            dir.display(),
+            problems.len(),
+            problems.join("\n")
+        );
+    }
+    let retired = records
+        .iter()
+        .filter(|(_, record)| record.retired.is_some())
+        .map(|(name, _)| name.clone())
+        .collect();
+    Ok(Pinned { games, retired })
+}
+
+// Dealing: `perf --pin` alone reads the live pools
+
+/// The run-start game's inputs, as the corpus dealt them live before #4924: seed 1's fuzz decks, hero
+/// health, armor, an extra opening card and a mana bonus, and a deck mark dealing each deck's first card
+/// Radiant with an upgrade.
+fn run_start_inputs() -> PerfRecord {
+    let decks = decks_for_seed_from(1, &SHIPPED_FUZZ_POOL);
+    let mut handicaps = PerPlayerOpt::default();
+    let mut marks = PerPlayerOpt::default();
+    for player in PLAYER_IDS {
+        let mut handicap = HUMAN_HANDICAP;
+        handicap.hero_health = Some(35);
+        handicap.hero_armor = Some(5);
+        handicap.extra_opening_cards = 1;
+        handicap.mana_bonus = 1;
+        *handicaps.slot(player) = Some(handicap);
+        *marks.slot(player) = Some(vec![DeckMark {
+            index: 0,
+            radiant: true,
+            upgrades: 1,
+        }]);
+    }
+    PerfRecord {
+        decks: Some(decks),
+        handicaps: Some(handicaps),
+        deck_marks: Some(marks),
+        ..unpinned(PerfKind::RunStart, PERF_RUN_START_SEED)
+    }
+}
+
+/// A record of `kind`'s game `seed` holding no inputs yet.
+fn unpinned(kind: PerfKind, seed: u32) -> PerfRecord {
+    PerfRecord {
+        kind,
+        seed,
+        catalog_version: CATALOG_VERSION.to_string(),
+        decks: None,
+        duos_decks: None,
+        handicaps: None,
+        deck_marks: None,
+        retired: None,
+    }
+}
+
+/// `kind`'s game `seed` dealt from the shipped pools, as the corpus dealt it live before #4924.
+fn deal(kind: PerfKind, seed: u32) -> Result<PerfRecord> {
+    Ok(match kind {
+        PerfKind::Plain | PerfKind::Handicapped => {
+            let spec = spec_for_seed(seed)?;
+            PerfRecord {
+                decks: Some(spec.decks),
+                handicaps: spec.handicaps,
+                ..unpinned(kind, seed)
+            }
+        }
+        PerfKind::RunStart => PerfRecord {
+            seed,
+            ..run_start_inputs()
+        },
+        PerfKind::Coop => PerfRecord {
+            duos_decks: Some(duos_decks_for_seed_from(seed, &SHIPPED_FUZZ_POOL)),
+            ..unpinned(kind, seed)
+        },
+    })
+}
+
+/// `perf --pin`: for each wanted game with no live record, its `deal`, written to the first free name of
+/// `<kind>-<seed>-<catalogVersion>.json`, `…-2.json`, `…-3.json` and on. It never rewrites a file, and
+/// writes nothing while `dir` has a problem. The names written.
+fn pin(dir: &Path) -> Result<Vec<String>> {
+    fs::create_dir_all(dir).with_context(|| format!("creating {}", dir.display()))?;
+    let (records, problems) = read_corpus(dir)?;
+    if !problems.is_empty() {
+        bail!(
+            "perf --pin: fix {} problem(s) first:\n{}",
+            problems.len(),
+            problems.join("\n")
+        );
+    }
+    let mut written = Vec::new();
+    for (kind, seed) in wanted() {
+        if live_record(&records, kind, seed).is_some() {
+            continue;
+        }
+        let record = deal(kind, seed)?;
+        let problems = lint_record(&record);
+        if !problems.is_empty() {
+            bail!(
+                "perf --pin: the deal of {} seed {seed} does not lint clean:\n{}",
+                kind.as_str(),
+                problems.join("\n")
+            );
+        }
+        let stem = format!("{}-{seed}-{}", kind.as_str(), record.catalog_version);
+        let name = (1u32..)
+            .map(|n| {
+                if n == 1 {
+                    format!("{stem}.json")
+                } else {
+                    format!("{stem}-{n}.json")
+                }
+            })
+            .find(|name| !dir.join(name).exists())
+            .ok_or_else(|| anyhow!("perf --pin: no free name for {stem}"))?;
+        let path = dir.join(&name);
+        let mut file = fs::File::create_new(&path).with_context(|| format!("creating {}", path.display()))?;
+        file.write_all((serde_json::to_string_pretty(&record)? + "\n").as_bytes())
+            .with_context(|| format!("writing {}", path.display()))?;
+        written.push(name);
+    }
+    Ok(written)
+}
+
 // The corpus
 
 /// The hotseat fixture's states: the opening, then the state after each action of its log.
@@ -402,28 +794,33 @@ struct Played {
     heaviest: [Option<(i64, usize, GameState)>; 3],
 }
 
-/// Golden seed k's game: `golden::record_game`'s loop (nonce `perf-<n>`, stopped at the game's end or
-/// STEP_CAP), with no hashing on the way.
-fn play_seed(k: u32) -> Result<Played> {
-    let spec = spec_for_seed(k)?;
+/// A plain or handicapped record's golden seed's game: `golden::record_game`'s loop (nonce `perf-<n>`,
+/// stopped at the game's end or STEP_CAP) on the record's pinned decks and handicaps, with no hashing on
+/// the way.
+fn play_seed(record: &PerfRecord) -> Result<Played> {
+    let (game, policy_stream, order_stream) = golden_streams(record.kind, record.seed);
+    let decks = record
+        .decks
+        .clone()
+        .ok_or_else(|| anyhow!("perf-corpus: a {} record has no decks", record.kind.as_str()))?;
     let args = CreateGameArgs {
-        seed: spec.seed.clone(),
-        decks: spec.decks.clone(),
-        handicaps: spec.handicaps.clone(),
+        seed: game.clone(),
+        decks: decks.clone(),
+        handicaps: record.handicaps.clone(),
         ..CreateGameArgs::default()
     };
     let begun = begin_game(&create_game(&args));
     if let Some(error) = begun.error {
-        bail!("{}: beginGame refused: {error}", spec.seed);
+        bail!("{game}: beginGame refused: {error}");
     }
     let mut state = begun.state;
-    let mut policy = Rng::new(&spec.policy, 0);
+    let mut policy = Rng::new(&policy_stream, 0);
     // R265: the stream that picks which seat answers first while both mulligans are open.
-    let mut order = Rng::new(&spec.order, 0);
+    let mut order = Rng::new(&order_stream, 0);
     let mut input = FoldArgs {
-        seed: spec.seed.clone(),
-        decks: spec.decks,
-        handicaps: spec.handicaps,
+        seed: game.clone(),
+        decks,
+        handicaps: record.handicaps.clone(),
         ..FoldArgs::default()
     };
     let mut heaviest: [Option<(i64, usize, GameState)>; 3] = [None, None, None];
@@ -433,9 +830,8 @@ fn play_seed(k: u32) -> Result<Played> {
         let player = actor_of(&state, &mut order);
         let chosen = choose_action(&state, player, &mut policy).ok_or_else(|| {
             anyhow!(
-                "{} step {n}: no legal action for {player} while the game is live (turn {}): R82 auto-ends \
+                "{game} step {n}: no legal action for {player} while the game is live (turn {}): R82 auto-ends \
                  a turn with nothing left to do, so this is a stall",
-                spec.seed,
                 state.turn
             )
         })?;
@@ -443,8 +839,7 @@ fn play_seed(k: u32) -> Result<Played> {
         let result = reduce(&state, &action);
         if let Some(error) = result.error {
             bail!(
-                "{} step {n}: legalActions offered \"{}\" but reduce refused it: {error}",
-                spec.seed,
+                "{game} step {n}: legalActions offered \"{}\" but reduce refused it: {error}",
                 action.action_type()
             );
         }
@@ -458,32 +853,20 @@ fn play_seed(k: u32) -> Result<Played> {
     }
 
     Ok(Played {
-        seed: k,
+        seed: record.seed,
         input,
         hash: hash_state(&state),
         heaviest,
     })
 }
 
-/// A run-start game (§15): decks from fuzz pool, hero health, armor, extra opening cards, mana bonus,
-/// and deck marks deal Radiant cards with upgrades.
-fn play_run_start() -> Result<Played> {
-    let decks = decks_for_seed_from(1, &SHIPPED_FUZZ_POOL);
-    let mut handicaps = PerPlayerOpt::default();
-    let mut marks = PerPlayerOpt::default();
-    for player in PLAYER_IDS {
-        let mut handicap = HUMAN_HANDICAP;
-        handicap.hero_health = Some(35);
-        handicap.hero_armor = Some(5);
-        handicap.extra_opening_cards = 1;
-        handicap.mana_bonus = 1;
-        *handicaps.slot(player) = Some(handicap);
-        *marks.slot(player) = Some(vec![DeckMark {
-            index: 0,
-            radiant: true,
-            upgrades: 1,
-        }]);
-    }
+/// The run-start game (§15) on its record's pinned decks, handicaps and deck marks
+/// (`run_start_inputs`).
+fn play_run_start(record: &PerfRecord) -> Result<Played> {
+    let missing = |field: &str| anyhow!("perf-corpus: a {} record has no {field}", record.kind.as_str());
+    let decks = record.decks.clone().ok_or_else(|| missing("decks"))?;
+    let handicaps = record.handicaps.clone().ok_or_else(|| missing("handicaps"))?;
+    let marks = record.deck_marks.clone().ok_or_else(|| missing("deckMarks"))?;
     let options = CreateGameOptions {
         seed: "perf-run-start".to_string(),
         decks: decks.clone(),
@@ -535,7 +918,7 @@ fn play_run_start() -> Result<Played> {
     }
 
     Ok(Played {
-        seed: 0,
+        seed: record.seed,
         input,
         hash: hash_state(&state),
         heaviest,
@@ -548,10 +931,15 @@ struct PlayedDuos {
     heaviest: [Option<(i64, usize, DuosState)>; 3],
 }
 
-fn play_coop_game(seed: u32) -> Result<PlayedDuos> {
+/// The Duos co-op game on its record's pinned decks.
+fn play_coop_game(record: &PerfRecord) -> Result<PlayedDuos> {
+    let seed = record.seed;
     let options = DuosCreateOptions {
         seed: format!("perf-duos-{seed}"),
-        decks: duos_decks_for_seed_from(seed, &SHIPPED_FUZZ_POOL),
+        decks: record
+            .duos_decks
+            .clone()
+            .ok_or_else(|| anyhow!("perf-corpus: a {} record has no duosDecks", record.kind.as_str()))?,
         ..DuosCreateOptions::default()
     };
     let begun = duos_begin(&duos_create(&options));
@@ -672,9 +1060,21 @@ struct Corpus {
     fold_hash: String,
     duos_fold: DuosReplayInput,
     duos_fold_hash: String,
+    /// The pinned games' records played, by file name, in play order.
+    games: Vec<String>,
+    /// The retired records, listed and not played.
+    retired: Vec<String>,
 }
 
 fn corpus() -> Result<Corpus> {
+    let pinned = pinned_games(Path::new(PERF_CORPUS_DIR))?;
+    let only = |kind: PerfKind| {
+        pinned
+            .of(kind)
+            .first()
+            .copied()
+            .ok_or_else(|| anyhow!("perf-corpus: no {} record", kind.as_str()))
+    };
     let mut states = hotseat_states()?;
     let hotseat = states.len();
     let wide_boards = gate::wide_boards();
@@ -685,17 +1085,19 @@ fn corpus() -> Result<Corpus> {
             .map(|(name, setup)| gate::wide_state(name, setup)),
     );
 
-    let plain_games: Vec<Played> = (PERF_SEED_FIRST..=PERF_SEED_LAST)
+    let plain_games: Vec<Played> = pinned
+        .of(PerfKind::Plain)
         .into_par_iter()
         .map(play_seed)
         .collect::<Result<Vec<_>>>()?;
 
-    let handicapped_games: Vec<Played> = (PERF_HANDICAP_SEED_FIRST..=PERF_HANDICAP_SEED_LAST)
+    let handicapped_games: Vec<Played> = pinned
+        .of(PerfKind::Handicapped)
         .into_par_iter()
         .map(play_seed)
         .collect::<Result<Vec<_>>>()?;
 
-    let run_start_game = play_run_start()?;
+    let run_start_game = play_run_start(only(PerfKind::RunStart)?)?;
 
     let plain_states = take_heaviest(&plain_games);
     let plain = plain_states.len();
@@ -709,7 +1111,7 @@ fn corpus() -> Result<Corpus> {
     let run_start = run_start_states.len();
     states.extend(run_start_states);
 
-    let coop_game = play_coop_game(1)?;
+    let coop_game = play_coop_game(only(PerfKind::Coop)?)?;
     let coop_states = take_heaviest_duos(std::slice::from_ref(&coop_game));
     let coop = coop_states.len();
 
@@ -741,6 +1143,8 @@ fn corpus() -> Result<Corpus> {
         fold_hash: longest.hash.clone(),
         duos_fold: coop_game.input,
         duos_fold_hash: coop_game.hash,
+        games: pinned.games.iter().map(|(name, _)| name.clone()).collect(),
+        retired: pinned.retired,
     })
 }
 
@@ -927,6 +1331,10 @@ struct CorpusCounts {
     duos_forecast_attacks: usize,
     /// The golden seeds whose games were played, first and last.
     seeds: [u32; 2],
+    /// The pinned games' records played (`perf-corpus/`), by file name, in play order.
+    games: Vec<String>,
+    /// The retired records, listed and not played.
+    retired: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -1059,6 +1467,8 @@ fn measure(smoke: bool) -> Result<Report> {
             max_forecast_attacks: samples.max_forecast_attacks,
             duos_forecast_attacks: samples.duos_forecast_attacks / passes,
             seeds: [PERF_SEED_FIRST, PERF_SEED_LAST],
+            games: corpus.games.clone(),
+            retired: corpus.retired.clone(),
         },
         fold: FoldInfo {
             seed: corpus.fold_seed,
@@ -1108,7 +1518,7 @@ fn judge_smoke(rows: &[Row]) -> Vec<String> {
 fn perf_table(report: &Report) -> String {
     let corpus = &report.corpus;
     let mut out = format!(
-        "perf: {} profile, {} timed pass(es) over {} states ({} hotseat, {} wide, {} plain, {} handicapped, {} run-start, {} co-op); forecast: {} attacks (max {}); duos forecast: {} attacks; fold: fuzz seed {}, {} actions; duos fold: {} actions",
+        "perf: {} profile, {} timed pass(es) over {} states ({} hotseat, {} wide, {} plain, {} handicapped, {} run-start, {} co-op) from {} pinned games ({} retired); forecast: {} attacks (max {}); duos forecast: {} attacks; fold: fuzz seed {}, {} actions; duos fold: {} actions",
         report.profile,
         report.passes,
         corpus.states,
@@ -1118,6 +1528,8 @@ fn perf_table(report: &Report) -> String {
         corpus.handicapped,
         corpus.run_start,
         corpus.coop,
+        corpus.games.len(),
+        corpus.retired.len(),
         corpus.forecast_attacks,
         corpus.max_forecast_attacks,
         corpus.duos_forecast_attacks,
@@ -1146,7 +1558,386 @@ fn perf_table(report: &Report) -> String {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use super::*;
+
+    /// A fresh, empty directory of this process's own.
+    fn scratch(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("jackioh-perf-{name}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).expect("a scratch directory");
+        dir
+    }
+
+    fn write(dir: &Path, name: &str, record: &PerfRecord) {
+        let text = serde_json::to_string_pretty(record).expect("a record serializes") + "\n";
+        fs::write(dir.join(name), text).expect("the record is written");
+    }
+
+    /// Every file of `dir` and its bytes, sorted by name.
+    fn files(dir: &Path) -> Vec<(PathBuf, Vec<u8>)> {
+        let mut paths: Vec<PathBuf> = fs::read_dir(dir)
+            .expect("the directory reads")
+            .map(|entry| entry.expect("an entry").path())
+            .collect();
+        paths.sort();
+        paths
+            .into_iter()
+            .map(|path| {
+                let bytes = fs::read(&path).expect("the file reads");
+                (path, bytes)
+            })
+            .collect()
+    }
+
+    fn dealt(kind: PerfKind, seed: u32) -> PerfRecord {
+        deal(kind, seed).unwrap_or_else(|error| panic!("{error:#}"))
+    }
+
+    fn kinds_and_seeds(pinned: &Pinned) -> Vec<(PerfKind, u32)> {
+        pinned
+            .games
+            .iter()
+            .map(|(_, record)| (record.kind, record.seed))
+            .collect()
+    }
+
+    #[test]
+    fn every_dealt_record_lints_clean_and_round_trips() {
+        register_all();
+        let games = wanted();
+        let plain = PERF_SEED_LAST - PERF_SEED_FIRST + 1;
+        let handicapped = PERF_HANDICAP_SEED_LAST - PERF_HANDICAP_SEED_FIRST + 1;
+        assert_eq!(games.len(), (plain + handicapped) as usize + 2, "{games:?}");
+        for (kind, seed) in games {
+            let record = dealt(kind, seed);
+            assert_eq!(lint_record(&record), Vec::<String>::new(), "{kind:?} seed {seed}");
+            let text = serde_json::to_string_pretty(&record).expect("a record serializes");
+            let back: PerfRecord = serde_json::from_str(&text).expect("a record parses");
+            assert_eq!(back, record, "{kind:?} seed {seed}");
+        }
+        for kind in [
+            PerfKind::Plain,
+            PerfKind::Handicapped,
+            PerfKind::RunStart,
+            PerfKind::Coop,
+        ] {
+            assert_eq!(
+                serde_json::to_value(kind).expect("a kind serializes"),
+                kind.as_str()
+            );
+        }
+        let mut found =
+            serde_json::to_value(dealt(PerfKind::Plain, PERF_SEED_FIRST)).expect("a record serializes");
+        found["found"] = "a fuzz record's key".into();
+        let error = serde_json::from_value::<PerfRecord>(found).expect_err("an unknown key is refused");
+        assert!(error.to_string().contains("unknown field `found`"), "{error}");
+    }
+
+    #[test]
+    fn the_streams_are_the_golden_seeds() {
+        register_all();
+        for (kind, seed) in [
+            (PerfKind::Plain, PERF_SEED_FIRST),
+            (PerfKind::Plain, PERF_SEED_LAST),
+            (PerfKind::Handicapped, PERF_HANDICAP_SEED_FIRST),
+            (PerfKind::Handicapped, PERF_HANDICAP_SEED_LAST),
+        ] {
+            let spec = spec_for_seed(seed).unwrap_or_else(|error| panic!("{error:#}"));
+            assert_eq!(golden_streams(kind, seed), (spec.seed, spec.policy, spec.order));
+            let record = dealt(kind, seed);
+            assert_eq!(record.decks, Some(spec.decks), "{kind:?} seed {seed}");
+            assert_eq!(record.handicaps, spec.handicaps, "{kind:?} seed {seed}");
+        }
+    }
+
+    #[test]
+    fn a_record_plays_its_pinned_decks_whatever_cards_join_the_live_pool() {
+        register_all();
+        // The pool before its last cards landed: the grown pool re-deals seed 1.
+        const EXTRA_CARDS: usize = 3;
+        let before = &SHIPPED_FUZZ_POOL[..SHIPPED_FUZZ_POOL.len() - EXTRA_CARDS];
+        let record = PerfRecord {
+            decks: Some(decks_for_seed_from(PERF_SEED_FIRST, before)),
+            ..dealt(PerfKind::Plain, PERF_SEED_FIRST)
+        };
+        assert_eq!(lint_record(&record), Vec::<String>::new());
+        let live = spec_for_seed(PERF_SEED_FIRST).unwrap_or_else(|error| panic!("{error:#}"));
+        assert_ne!(record.decks.as_ref(), Some(&live.decks));
+
+        let played = play_seed(&record).unwrap_or_else(|error| panic!("{error:#}"));
+        assert_eq!(Some(&played.input.decks), record.decks.as_ref());
+        assert_eq!(played.input.seed, live.seed);
+        assert!(!played.input.log.is_empty());
+        let folded = fold(&played.input);
+        assert!(folded.errors.is_empty(), "{:?}", folded.errors.first());
+        assert_eq!(hash_state(&folded.state), played.hash);
+    }
+
+    #[test]
+    fn a_record_naming_a_removed_id_is_told_to_add_the_retired_marker() {
+        register_all();
+        let dir = scratch("removed");
+        let mut record = dealt(PerfKind::Plain, PERF_SEED_FIRST);
+        if let Some((p1, _)) = record.decks.as_mut() {
+            p1[0] = "core-gone".to_string();
+        }
+        let name = format!("plain-{PERF_SEED_FIRST}-{CATALOG_VERSION}.json");
+        write(&dir, &name, &record);
+        let (records, problems) = read_corpus(&dir).unwrap_or_else(|error| panic!("{error:#}"));
+        assert_eq!(records.len(), 1);
+        assert_eq!(problems.len(), 1, "{problems:#?}");
+        assert!(problems[0].starts_with(&format!("{name}: ")), "{problems:#?}");
+        for needed in [
+            "\"core-gone\" names no catalog card",
+            "add \"retired\": \"<which ids, which patch>\"",
+            "never edit its decks",
+            "cargo jackioh perf --pin",
+        ] {
+            assert!(problems[0].contains(needed), "{problems:#?} lacks {needed:?}");
+        }
+        let Err(error) = pinned_games(&dir) else {
+            panic!("a record naming a removed id must fail the corpus");
+        };
+        assert!(
+            format!("{error:#}").contains("\"core-gone\" names no catalog card"),
+            "{error:#}"
+        );
+
+        let retired = PerfRecord {
+            retired: Some("core-gone left the catalog in a test's patch".to_string()),
+            ..record.clone()
+        };
+        assert_eq!(lint_record(&retired), Vec::<String>::new());
+        let blank = PerfRecord {
+            retired: Some("  ".to_string()),
+            ..record
+        };
+        assert_eq!(
+            lint_record(&blank),
+            ["retired is empty: say which ids left the catalog, and in which patch"]
+        );
+
+        let coop = dealt(PerfKind::Coop, PERF_COOP_SEED);
+        let mut first_seat = coop.clone();
+        let mut last_seat = coop;
+        if let (Some(first), Some(last)) = (first_seat.duos_decks.as_mut(), last_seat.duos_decks.as_mut()) {
+            first.a1[0] = "core-gone".to_string();
+            last.b2[0] = "core-gone".to_string();
+        }
+        for record in [first_seat, last_seat] {
+            let problems = lint_record(&record);
+            assert_eq!(problems.len(), 1, "{problems:#?}");
+            assert!(
+                problems[0].starts_with("\"core-gone\" names no catalog card: mark the record retired"),
+                "{problems:#?}"
+            );
+        }
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn a_record_holds_only_its_kinds_fields() {
+        register_all();
+        let plain = dealt(PerfKind::Plain, PERF_SEED_FIRST);
+        let handicapped = dealt(PerfKind::Handicapped, PERF_HANDICAP_SEED_FIRST);
+        let run_start = dealt(PerfKind::RunStart, PERF_RUN_START_SEED);
+        let coop = dealt(PerfKind::Coop, PERF_COOP_SEED);
+        let cases = [
+            (
+                PerfRecord {
+                    handicaps: handicapped.handicaps.clone(),
+                    ..plain.clone()
+                },
+                "plain cannot set handicaps",
+            ),
+            (
+                PerfRecord {
+                    decks: None,
+                    ..plain.clone()
+                },
+                "plain requires decks",
+            ),
+            (
+                PerfRecord {
+                    duos_decks: coop.duos_decks.clone(),
+                    ..plain.clone()
+                },
+                "plain cannot set duosDecks",
+            ),
+            (
+                PerfRecord {
+                    handicaps: None,
+                    ..handicapped.clone()
+                },
+                "handicapped requires handicaps",
+            ),
+            (
+                PerfRecord {
+                    deck_marks: run_start.deck_marks.clone(),
+                    ..handicapped
+                },
+                "handicapped cannot set deckMarks",
+            ),
+            (
+                PerfRecord {
+                    deck_marks: None,
+                    ..run_start
+                },
+                "run-start requires deckMarks",
+            ),
+            (
+                PerfRecord {
+                    decks: plain.decks.clone(),
+                    ..coop.clone()
+                },
+                "coop cannot set decks",
+            ),
+            (
+                PerfRecord {
+                    duos_decks: None,
+                    ..coop
+                },
+                "coop requires duosDecks",
+            ),
+            (
+                PerfRecord {
+                    catalog_version: "v9.9.9".to_string(),
+                    ..plain
+                },
+                "catalogVersion \"v9.9.9\" is no version in crates/cards/patches/patches.json",
+            ),
+        ];
+        for (record, problem) in cases {
+            assert_eq!(
+                lint_record(&record),
+                [problem],
+                "{:?} seed {}",
+                record.kind,
+                record.seed
+            );
+        }
+    }
+
+    #[test]
+    fn the_corpus_names_a_broken_a_stray_and_a_second_live_record() {
+        register_all();
+        let dir = scratch("strays");
+        let version = CATALOG_VERSION;
+        let stray = PERF_SEED_LAST + 1;
+        write(
+            &dir,
+            &format!("plain-{stray}-{version}.json"),
+            &dealt(PerfKind::Plain, stray),
+        );
+        let first = dealt(PerfKind::Plain, PERF_SEED_FIRST);
+        write(&dir, &format!("plain-{PERF_SEED_FIRST}-{version}.json"), &first);
+        write(&dir, &format!("plain-{PERF_SEED_FIRST}-{version}-2.json"), &first);
+        fs::write(dir.join("broken.json"), "{\"seed\": 1}").expect("the file is written");
+        fs::write(dir.join("notes.txt"), "not a record").expect("the file is written");
+        let (records, problems) = read_corpus(&dir).unwrap_or_else(|error| panic!("{error:#}"));
+        assert_eq!(records.len(), 3, "{problems:#?}");
+        assert_eq!(problems.len(), 3, "{problems:#?}");
+        assert!(
+            problems[0].starts_with("broken.json: not a perf record: missing field `kind`"),
+            "{problems:#?}"
+        );
+        // By name `…-2.json` sorts before `….json`, so the second of the two is the unnumbered one.
+        assert_eq!(
+            problems[1],
+            format!(
+                "plain-{PERF_SEED_FIRST}-{version}.json: a second live record of plain seed {PERF_SEED_FIRST}: keep one"
+            )
+        );
+        assert_eq!(
+            problems[2],
+            format!(
+                "plain-{stray}-{version}.json: plain seed {stray} is no game the PERF_* constants name: delete the file"
+            )
+        );
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn pin_writes_each_missing_game_once_and_never_rewrites_a_file() {
+        register_all();
+        let dir = scratch("pin");
+        let written = pin(&dir).unwrap_or_else(|error| panic!("{error:#}"));
+        assert_eq!(written.len(), wanted().len(), "{written:#?}");
+        let pinned = pinned_games(&dir).unwrap_or_else(|error| panic!("{error:#}"));
+        assert_eq!(kinds_and_seeds(&pinned), wanted());
+        assert!(pinned.retired.is_empty(), "{:?}", pinned.retired);
+
+        let before = files(&dir);
+        assert_eq!(
+            pin(&dir).unwrap_or_else(|error| panic!("{error:#}")),
+            Vec::<String>::new()
+        );
+        assert_eq!(files(&dir), before);
+
+        // Retire the first game's record: the corpus names the missing game, and `--pin` deals it anew.
+        let first = format!("plain-{PERF_SEED_FIRST}-{CATALOG_VERSION}.json");
+        let path = dir.join(&first);
+        let mut record: PerfRecord =
+            serde_json::from_str(&fs::read_to_string(&path).expect("the record reads"))
+                .expect("a record parses");
+        record.retired = Some("a test's retirement".to_string());
+        write(&dir, &first, &record);
+        let retired_bytes = fs::read(&path).expect("the record reads");
+        let Err(error) = pinned_games(&dir) else {
+            panic!("a game with no live record must fail the corpus");
+        };
+        let message = format!("{error:#}");
+        assert!(
+            message.contains(&format!(
+                "no live record of plain seed {PERF_SEED_FIRST}: `cargo jackioh perf --pin` deals one"
+            )),
+            "{message}"
+        );
+        let second = format!("plain-{PERF_SEED_FIRST}-{CATALOG_VERSION}-2.json");
+        assert_eq!(
+            pin(&dir).unwrap_or_else(|error| panic!("{error:#}")),
+            std::slice::from_ref(&second)
+        );
+        assert_eq!(fs::read(&path).expect("the record reads"), retired_bytes);
+        let pinned = pinned_games(&dir).unwrap_or_else(|error| panic!("{error:#}"));
+        assert_eq!(kinds_and_seeds(&pinned), wanted());
+        assert_eq!(pinned.games[0].0, second);
+        assert_eq!(pinned.retired, [first]);
+
+        // With a problem in the corpus `--pin` writes nothing, not even a missing game.
+        let coop = dir.join(format!("coop-{PERF_COOP_SEED}-{CATALOG_VERSION}.json"));
+        fs::remove_file(&coop).expect("the record is removed");
+        fs::write(dir.join("broken.json"), "{}").expect("the file is written");
+        let before = files(&dir);
+        let Err(error) = pin(&dir) else {
+            panic!("--pin must refuse a corpus with a problem");
+        };
+        assert!(
+            format!("{error:#}")
+                .starts_with("perf --pin: fix 1 problem(s) first:\nbroken.json: not a perf record"),
+            "{error:#}"
+        );
+        assert_eq!(files(&dir), before);
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn the_checked_in_corpus_pins_every_game() {
+        register_all();
+        let pinned = pinned_games(Path::new(PERF_CORPUS_DIR)).unwrap_or_else(|error| panic!("{error:#}"));
+        assert_eq!(kinds_and_seeds(&pinned), wanted());
+        for (name, record) in &pinned.games {
+            let stem = format!(
+                "{}-{}-{}",
+                record.kind.as_str(),
+                record.seed,
+                record.catalog_version
+            );
+            assert!(name.starts_with(&stem), "{name} is not named {stem}.json");
+        }
+    }
 
     fn row_at(measure: Measure, value: f64) -> Row {
         let (budget, budget_name) = measure.budget();
@@ -1269,6 +2060,8 @@ mod tests {
                 max_forecast_attacks: 14,
                 duos_forecast_attacks: 15,
                 seeds: [PERF_SEED_FIRST, PERF_SEED_LAST],
+                games: vec![format!("plain-1-{CATALOG_VERSION}.json")],
+                retired: Vec::new(),
             },
             fold: FoldInfo {
                 seed: 7,
@@ -1291,6 +2084,10 @@ mod tests {
             "{table}"
         );
         assert!(lines[0].contains("fuzz seed 7, 12 actions"), "{table}");
+        assert!(
+            lines[0].contains("1 co-op) from 1 pinned games (0 retired); "),
+            "{table}"
+        );
         assert!(lines[0].contains("duos fold: 18 actions"), "{table}");
         assert!(lines[0].contains("forecast: 13 attacks (max 14)"), "{table}");
         assert!(lines[0].contains("duos forecast: 15 attacks"), "{table}");
