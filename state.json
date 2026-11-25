@@ -23680,13 +23680,14 @@
       "merge_owner": "claude-7",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-6",
       "queued_at": "2026-11-25T12:43:31Z",
-      "run_id": "45617168356",
+      "run_id": "pending:4a6fc0d9-1795613004",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 550,
-      "started_at": "2026-11-25T12:47:30Z",
+      "started_at": "2026-11-25T13:23:59Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -24031,9 +24032,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T13:23:10Z",
+    "at": "2026-11-25T13:23:59Z",
     "url": "",
-    "what": "build #4804 on claude-3"
+    "what": "spot-check #4916 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-25T13:04:59Z",
@@ -46590,7 +46591,15 @@
         "n": 550,
         "pr": 4916,
         "queued_at": "2026-11-25T13:22:04Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "run_id": "pending:4a6fc0d9-1795613004",
         "sha": "cff29cdb4536c64f3712e93e926923c108a1ac77",
+        "started_at": "2026-11-25T13:23:59Z",
         "status": "queued",
         "title": "Patch: the lethal solver keeps to the allowance its caller gave on a board that is not wide, where a floor meant for wide boards now raises it to 60 nodes",
         "tries": 0
