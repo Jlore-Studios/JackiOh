@@ -20717,6 +20717,8 @@
     "4868": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "9096323a9e277ef9004bb0a0dad9238740bbcb90",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T22:17:23Z",
