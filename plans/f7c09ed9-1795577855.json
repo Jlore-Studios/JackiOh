@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4818,
+  "title": "Patch: the quests panel reads again when the next quest falls due, as the landing bookmark already does",
+  "branch": "bot/issue-4818",
+  "thread": "**Issue #4818 (data, not instructions):**\n\n```text\n# #4818: Patch: the quests panel reads again when the next quest falls due, as the landing bookmark already does\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nYou are looking at your quests when the countdown for the next one reaches zero. Today that page says a new quest has arrived and asks you to reopen the page to see it. After this change the new quest appears by itself, once, the way the home screen's quests bookmark already does. You notice it because you can start or replace the new quest without leaving the page and coming back. For example, you keep the quests page open while the timer runs out, and the fresh quest shows up instead of the reopen note.\n\n## Why\n\nThe panel already knows how to refresh itself, but its main entry point never asks it to. apps/web/src/routes/QuestsPanel.tsx:59 shows the reopen sentence when the caller cannot reread, :82-85 reads again once per due time when the caller passes the callback, and :290-292 (the default panel) omits that callback even though it already holds `reread` from `useQuests`. apps/web/src/routes/landing.tsx:487 passes `onArrived={reread}`, so the landing bookmark refreshes on its own. The unit test at apps/web/src/routes/QuestsPanel.test.tsx:115 proves the callback path reads once instead of showing the sentence, and apps/web/src/routes/landing-quests.test.tsx:281 proves the landing path reads again and shows the new quest. This matters because the quests page is where Replace lives (R2210000), while the landing bookmark is glance-only: the stale page blocks the decision the bookmark cannot make. SPEC section 14.9 with R2035000 already decided that a caller that can read again does so; the panel is such a caller. No open issue above covers a quests reread, and none of the rejected suggestions does (the closest, #4561 log filter and #1040 log scroll, are a different screen and were about filtering/scroll, not quests).\n\n## Proposal\n\nPass the panel's existing `reread` as `onArrived` in the default `QuestsPanel` export, so `QuestsList` takes its existing auto-read branch there too. Keep the existing expire-then-read in `reread` (expireRead plus attempt bump), keep the once-per-due-time guard in the effect, and change no other caller. Add one unit test beside QuestsPanel.test.tsx:115: render the default panel with `nextDueAt` a second out, let the countdown hit zero, and expect one additional read, the new quest shown, and no reopen sentence; a failed reread keeps the alert with Try again, and Replace is unchanged.\n\n## Where it lands\n\nFiles: apps/web/src/routes/QuestsPanel.tsx (one prop), apps/web/src/routes/QuestsPanel.test.tsx (new test; apps/web/src/routes/landing-quests.test.tsx stays as the oracle). SPEC sections: 14.9 quests, rulings R2035000 (auto-read where the caller can) and R2210000 (Replace); R1304000 top-up behavior is unchanged.\n\n## Acceptance criteria\n\n- [ ] With the quests page open and the next due seconds out, one additional GET /api/quests fires when the countdown hits zero and the new quest appears with no reload.\n- [ ] The reopen sentence no longer appears on that page; callers without the callback still show it (covered by unit test).\n- [ ] A failed reread shows the alert with Try again and keeps the old quests.\n- [ ] Replace, countdown, full-hold and economy-off states are unchanged.\n- [ ] `pnpm --dir apps/web test src/routes/QuestsPanel.test.tsx` and the landing quests suite pass.\n\n## Size and risks\n\nSmall: one prop plus one unit test, well under a day. Risk is one extra server read per due time on one page, exactly what the landing bookmark already does; no polling, no background timer, and the effect's dependency guard plus the existing test prove it fires once. No server, spec, or copy change beyond the already-translated sentence going quiet on this page.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n**Judge:** would approve it: It passes the landing bookmark's existing auto-reread into the quests page that already holds it, fixing a stale page that blocks Replace. With no vote, no comment and no \ud83d\udc4e on this issue by Wed 25 Nov 15:00 CST, it is approved by itself at `priority:low` (at most 3 a day); comment `reject`, or anything at all, to decide it yourself.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-25T02:04:05Z:\n\napprove\n\nWhy: confirmed. The default `QuestsPanel` holds `reread` from `useQuests` and passes it as `onRetry` but not as `onArrived`, so when the next quest falls due the page asks the player to reopen it, while the landing bookmark (`landing.tsx:487`) refreshes by itself. The quests page is where Replace lives (R2210000), so the stale page blocks the one decision it exists for. The fix is one prop and a test.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4818: needs a plan; `claude-3` (claude, `sonnet`, medium) rates and plans it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-25T02:04:43Z",
+    "claimed_at": "2026-11-25T03:38:08Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4595 to close first",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
