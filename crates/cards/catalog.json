@@ -146,8 +146,8 @@
     "params": [
       {
         "key": "coins",
-        "base": 5,
-        "radiant": 10,
+        "base": 6,
+        "radiant": 12,
         "better": "up",
         "step": 1,
         "min": 1,
@@ -177,13 +177,13 @@
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} Attack per heads and +{perTails} Health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
+      "text": "Cry: Flip a coin {coins|time|times}. Gain +{perHeads} Attack per heads and +{perTails} Health per tails."
     },
     "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} Attack per heads and +{perTails} Health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
+      "text": "Cry: Flip a coin {coins|time|times}. Gain +{perHeads} Attack per heads and +{perTails} Health per tails."
     }
   },
   "core-005": {

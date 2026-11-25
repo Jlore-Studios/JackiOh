@@ -52,7 +52,7 @@ mod tests {
 
     const PILE_ON: &str = "classic-060";
     const VANILLA: &str = "core-008"; // Mr. Vanilla
-    const GARY: &str = "core-004"; // Gary the Gambler: Cry: flip 5 coins
+    const GARY: &str = "core-004"; // Gary the Gambler: Cry: flip a coin 6 times
     const SPECIESIST: &str = "core-002"; // Speciesist: Cry: destroy target enemy non-Human Unit
     const MANA_WELL: &str = "core-006"; // Mana Well: a Field Spell
     const SHEEPISH: &str = "core-041"; // Sheepish: a Trap

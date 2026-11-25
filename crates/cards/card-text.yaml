@@ -63,8 +63,8 @@ core-004: # Gary the Gambler
     death: House always wins.
   zh:
     name: 赌徒加里
-    base: 战吼：抛{coins}枚硬币。每出现一次正面，获得+{perHeads}攻击力；每出现一次反面，获得+{perTails}生命值。抛一枚硬币。如果为正面，获得圣盾；如果为反面，获得突袭。
-    radiant: 战吼：抛{coins}枚硬币。每出现一次正面，获得+{perHeads}攻击力；每出现一次反面，获得+{perTails}生命值。抛一枚硬币。如果为正面，获得圣盾；如果为反面，获得突袭。
+    base: 战吼：抛一枚硬币{coins}次。每出现一次正面，获得+{perHeads}攻击力；每出现一次反面，获得+{perTails}生命值。
+    radiant: 战吼：抛一枚硬币{coins}次。每出现一次正面，获得+{perHeads}攻击力；每出现一次反面，获得+{perTails}生命值。
 core-005: # Stockpile
   flavour: Two cards, a snack, and a nap. Planning at its finest.
   voice:
