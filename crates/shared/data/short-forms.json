@@ -459,7 +459,7 @@
     },
     "stinkyscapeplus-080": {
       "base": {
-        "en": "Exile your hand, deck and board. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one each turn end."
+        "en": "Exile your hand, deck and board. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one now and each later turn end."
       },
       "radiant": {
         "en": "Exile your hand, deck and both boards. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one now and each turn end."

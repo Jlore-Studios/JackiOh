@@ -32118,7 +32118,7 @@
     "loc": 85,
     "base": {
       "keywords": [],
-      "text": "Exile your hand, deck and board, Dormant cards included. Summon {starships|random Terminus Starship|random Terminus Starships}. They can't be launched by hand. Launch a random one at the end of each of your turns."
+      "text": "Exile your hand, deck and board, Dormant cards included. Summon {starships|random Terminus Starship|random Terminus Starships}. They can't be launched by hand. Launch a random one now and at the end of each of your turns after this one."
     },
     "radiant": {
       "keywords": [],
