@@ -19739,6 +19739,13 @@
     "4818": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-25T03:46:28Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "None of the rule's five lines holds: the change is one prop in apps/web plus tests and a small ruling note, about 6 files, with no engine, AI, cross-crate or migration work."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
