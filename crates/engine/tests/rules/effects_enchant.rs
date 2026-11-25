@@ -111,8 +111,11 @@ mod b5_e39_enchant_r443 {
         ));
         assert!(!add_enchantment(card, &RETURN));
         assert_eq!(
-            enchantments_of_kind(&live(&state, &deck_card.id), EnchantmentKind::ReturnAfterResolve).to_vec(),
-            vec![RETURN, Enchantment::ReturnAfterResolve { floor: 1 }]
+            enchantments_of(&live(&state, &deck_card.id))
+                .iter()
+                .filter(|entry| enchantment_kind(entry) == EnchantmentKind::ReturnAfterResolve)
+                .collect::<Vec<_>>(),
+            vec![&RETURN, &Enchantment::ReturnAfterResolve { floor: 1 }]
         );
     }
 

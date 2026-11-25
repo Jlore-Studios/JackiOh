@@ -3557,6 +3557,62 @@ fn r4702001_the_ais_one_valued_switches_are_gone() {
     );
 }
 
+/// R4702002, R1085: the engine's verbs, reads and tables that no card, rule or other crate reached are
+/// gone, Keenus's old verb among them: no source of the engine defines one.
+#[test]
+fn r4702002_r1085_the_engines_unreached_verbs_reads_and_tables_are_gone() {
+    let root = repo();
+    let mut files = Vec::new();
+    sources(&root.join("crates/engine/src"), &mut files);
+    assert!(files.len() > 100, "only {} source files found", files.len());
+    let functions = [
+        "convert_healing",
+        "lock_own_zone",
+        "grant_keywords_random_unit",
+        "swap_health",
+        "consume_modifier",
+        "drop_delayed",
+        "peek_work",
+        "is_owed",
+        "unpark_work",
+        "enchantments_of_kind",
+        "trigger_holders_for_event",
+        "grade_name_of",
+        "chaos_effect_by_name",
+        "card_drills_of",
+        "hand_leftmost",
+        "hand_rightmost",
+        "hand_neighbor",
+        "is_rightmost_in_hand",
+    ];
+    let mut gone: Vec<String> = functions.iter().map(|name| format!("fn {name}(")).collect();
+    gone.extend(
+        [
+            concat!("const ", "PORTRAITS:"),
+            concat!("struct ", "PortraitEntry"),
+            concat!("type ", "VoiceEmoteId"),
+            concat!("const ", "PARAM_PLACEHOLDER"),
+        ]
+        .map(String::from),
+    );
+    let mut found: Vec<String> = Vec::new();
+    for file in &files {
+        let text = fs::read_to_string(file).unwrap_or_default();
+        for name in &gone {
+            if text.contains(name.as_str()) {
+                found.push(format!(
+                    "{}: `{name}`",
+                    file.strip_prefix(&root).unwrap_or(file).display()
+                ));
+            }
+        }
+    }
+    assert!(
+        found.is_empty(),
+        "an item nothing reaches is back in the engine (R4702002): {found:?}"
+    );
+}
+
 /// The crates among `jackioh-run` and `jackioh-shared` that the manifest's `[dev-dependencies]` do not
 /// name, on one line, with the `ts` feature (#4426).
 fn dev_dependencies_missing_ts(manifest: &str) -> Vec<&'static str> {

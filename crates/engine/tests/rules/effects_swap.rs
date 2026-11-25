@@ -2,7 +2,7 @@
 //! the board lane by lane, and the libraries — with R12's ownership rule and its one exception,
 //! R33's face-down trap and §3.2's Stack pile. Its fixture Trap is registered here (BUILD §0).
 
-use jackioh_engine::effects::{swap, swap_board, swap_health, swap_library};
+use jackioh_engine::effects::{swap, swap_board, swap_library};
 use jackioh_engine::testkit::*;
 
 use super::fixtures::catalog as catalog_fx;
@@ -101,7 +101,11 @@ mod swap_s6_3_r73_m3_t1 {
         state.players.p1.hero = HeroState { health: 12, armor: 3 };
         state.players.p2.hero = HeroState { health: 27, armor: 5 };
 
-        let events = run(&mut state, swap_health(), HookOptions::default());
+        let events = run(
+            &mut state,
+            swap(json_as(json!({ "what": "health" }))),
+            HookOptions::default(),
+        );
 
         assert_eq!(state.players.p1.hero.health, 27);
         assert_eq!(state.players.p2.hero.health, 12);

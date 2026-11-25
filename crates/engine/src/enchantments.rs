@@ -48,15 +48,6 @@ pub fn enchantments_of(instance: &CardInstance) -> &[Enchantment] {
     instance.enchantments.as_deref().unwrap_or(&[])
 }
 
-/// The card's enchantments of one kind, in the order they were given.
-pub fn enchantments_of_kind(instance: &CardInstance, kind: EnchantmentKind) -> Vec<Enchantment> {
-    enchantments_of(instance)
-        .iter()
-        .filter(|entry| enchantment_kind(entry) == kind)
-        .cloned()
-        .collect()
-}
-
 pub fn has_enchantment(instance: &CardInstance, kind: EnchantmentKind) -> bool {
     enchantments_of(instance)
         .iter()

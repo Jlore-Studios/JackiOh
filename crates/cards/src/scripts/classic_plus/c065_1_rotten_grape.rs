@@ -74,7 +74,6 @@ mod tipsy {
 
 #[cfg(test)]
 mod tests {
-    use jackioh_engine::effects::convert_healing;
     use jackioh_engine::testkit::*;
 
     const ROTTEN: &str = "classicplus-065-1";
@@ -168,19 +167,15 @@ mod tests {
                 "p1": { "hand": [ROTTEN, FILLER] },
                 "p2": { "hand": [FILLER], "field": [MENACE] },
             }));
-            let menace = s.unit(PlayerId::P2, 1);
+            let converter_id = s.unit(PlayerId::P2, 1).expect("p2's unit").id;
             let mut rng = create_rng(&s.state().seed, s.state().rng_cursor);
             let mut events: Vec<GameEvent> = Vec::new();
             {
                 let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
-                let mut ctx = make_context(
-                    &mut sink,
-                    menace.as_ref(),
-                    HookOptions { controller: Some(PlayerId::P2), ..HookOptions::default() },
-                );
-                apply_effects(&[convert_healing(json_as(json!({})))], &mut ctx);
+                let turn = sink.state.turn;
+                let kind = ModifierKind::HealToDamage { converter_id };
+                add_modifier(&mut sink, PlayerId::P2, ModifierExpiry::ThisTurn { turn }, kind);
             }
-            s.state_mut().rng_cursor = rng.cursor();
             assert!(
                 s.state()
                     .players

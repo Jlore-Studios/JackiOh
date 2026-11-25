@@ -414,11 +414,6 @@ pub fn triggers_on_event(holder: &TriggerHolder, event_type: GameEventType) -> V
         .collect()
 }
 
-/// Every card that answers this event type, in R68's order. Traps included: they fire first.
-pub fn trigger_holders_for_event(state: &GameState, event_type: GameEventType) -> Vec<TriggerHolder> {
-    holders_answering(state, event_type)
-}
-
 /// The registry keyed by hook: every card whose zone lets it answer that hook (R153; a graveyard's only
 /// answer is the `returnToHandAtEndOfTurn` return, R68), in R68's order. `only` narrows it to one
 /// controller: start-of-turn and end-of-turn hooks fire on their own controller's turn alone (§6.2).

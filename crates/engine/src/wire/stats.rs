@@ -1514,17 +1514,9 @@ pub struct CardDrill {
 /// R978000, R1044000: every card's drill-down over the totals whose key `counts`, each turn's and
 /// each other card's counts summed across those keys and each pair keeping its earliest meeting, so
 /// a tie lists in the order the records first met it, as counting the records themselves did.
-pub fn card_drills_of(
-    totals: &StatsTotals,
-    counts: impl Fn(&TotalsKey) -> bool,
-    top: usize,
-) -> IndexMap<String, CardDrill> {
-    face_drills_of(totals, counts, top, StatsFace::All)
-}
-
-/// R4673001: `card_drills_of` on one face: on All the card's drills, on Normal or Radiant those of the seats
-/// that played it on that face (`CardTotal::face`), a tie among the co-played cards listed in the order the
-/// card first met them on any face. Totals folded before R4673001 give a face no drills.
+/// R4673001: on All the card's drills, on Normal or Radiant those of the seats that played it on that
+/// face (`CardTotal::face`), a tie among the co-played cards listed in the order the card first met
+/// them on any face. Totals folded before R4673001 give a face no drills.
 pub fn face_drills_of(
     totals: &StatsTotals,
     counts: impl Fn(&TotalsKey) -> bool,
@@ -4194,7 +4186,7 @@ mod tests {
                     for live_pilot in PILOT_FILTERS {
                         for top in [1, 2, 3, 10] {
                             let expected = reference_card_drills(&counted, *live_pilot, top);
-                            let drills = card_drills_of(
+                            let drills = face_drills_of(
                                 &totals,
                                 |key| {
                                     key.patch == patch
@@ -4202,6 +4194,7 @@ mod tests {
                                         && seat_counted(key.source, key.pilot, *live_pilot)
                                 },
                                 top,
+                                StatsFace::All,
                             );
                             assert_eq!(drills.len(), expected.len(), "{patch} {source} {live_pilot}");
                             for (card, (by_turn, co_played)) in &expected {
@@ -5160,7 +5153,7 @@ mod tests {
             assert_eq!(not_drawn(a), tally(0, 0, 0));
             let mut totals = StatsTotals::default();
             totals.fold(&lost, true);
-            let drills = card_drills_of(&totals, |_: &TotalsKey| true, 10);
+            let drills = face_drills_of(&totals, |_: &TotalsKey| true, 10, StatsFace::All);
             let once = DrillCount { games: 1, wins: 0 };
             assert_eq!(drills["a"].by_turn, vec![(4, once), (6, once)]);
         }
@@ -5572,10 +5565,6 @@ mod tests {
 
             // The drill-down reads each face's drills, its co-played ties in the order first met.
             let drills = |face| face_drills_of(&totals, |_: &TotalsKey| true, 10, face);
-            assert_eq!(
-                drills(StatsFace::All),
-                card_drills_of(&totals, |_: &TotalsKey| true, 10)
-            );
             let radiant = &drills(StatsFace::Radiant)["a"];
             assert_eq!(radiant.by_turn, vec![(2, game(2, 1))]);
             assert_eq!(
