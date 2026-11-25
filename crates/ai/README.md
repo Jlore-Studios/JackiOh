@@ -277,7 +277,8 @@ two positions; with no Feng Shui acting neither changes. `GREEDY_EVAL` keeps 0.
 While a Feng Shui of the seat's own acts, its Activate (a free Auspicious Rock) is tier 2's first source,
 before the rewarded plays (`Auspice::Judge`, R4154403), so a busy turn's `branching` cut never drops it.
 A Tradable card in the seat's own hand whose own cost is above the crystals its next refresh brings (this
-turn's `mana.max`, one more under `MAX_MANA`, moved by the rider; never the handicap) is dead
+turn's `mana.max`, one more while its crystal count under the cap, `mana.max` less `perm_mod` and the crystals
+stolen past the cap, is under `MAX_MANA` (R4812000), moved by the rider; never the handicap) is dead
 (`dead_in_hand`): `material` holds it at `AI_EVAL.dead_tradable_discount` off its hand price, and its Trade
 is tried before the plays, so a line can play what it draws (R4154400). S #89 Spice in the seat's own
 hand is priced as any (1) card, and the Credits it pays as it is played or discarded count at
