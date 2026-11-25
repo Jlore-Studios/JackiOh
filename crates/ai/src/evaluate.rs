@@ -505,16 +505,24 @@ pub type AttackHookPrice = ActivationPrice;
 /// an ability to use (`abilities_of`: a Vanilla card has none). 0 with `Prices::NONE`, for a card its root
 /// did not price, and at a zero `activation` weight (no reading).
 fn activation_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices: &Prices) -> f64 {
-    if w.activation == 0.0 {
+    keyed_price(w.activation, &prices.activations, unit, || {
+        !subsystems::abilities_of(state, unit).is_empty()
+    })
+}
+
+/// The price `entries` hold for `unit` while `live` says its face still earns it: 0 at a zero `weight`
+/// (no reading), for a card its root did not price, and for one whose face earns it no more.
+fn keyed_price(
+    weight: f64,
+    entries: &[ActivationPrice],
+    unit: &CardInstance,
+    live: impl FnOnce() -> bool,
+) -> f64 {
+    if weight == 0.0 {
         return 0.0;
     }
-    let price = prices
-        .activations
-        .iter()
-        .find(|entry| entry.is_for(unit))
-        .map(|entry| entry.price);
-    match price {
-        Some(price) if !subsystems::abilities_of(state, unit).is_empty() => price,
+    match entries.iter().find(|entry| entry.is_for(unit)) {
+        Some(entry) if live() => entry.price,
         _ => 0.0,
     }
 }
@@ -533,18 +541,9 @@ fn has_attack_hook(state: &GameState, card: &CardInstance) -> bool {
 /// while its face has one (`has_attack_hook`). 0 with `Prices::NONE`, for a card its root did not
 /// price, and at a zero `attack_hook` weight (no reading).
 fn attack_hook_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices: &Prices) -> f64 {
-    if w.attack_hook == 0.0 {
-        return 0.0;
-    }
-    let price = prices
-        .attack_hooks
-        .iter()
-        .find(|entry| entry.is_for(unit))
-        .map(|entry| entry.price);
-    match price {
-        Some(price) if has_attack_hook(state, unit) => price,
-        _ => 0.0,
-    }
+    keyed_price(w.attack_hook, &prices.attack_hooks, unit, || {
+        has_attack_hook(state, unit)
+    })
 }
 
 /// R3064000: what a Dormant card's awakening gives its controller through its "When this awakens"
@@ -566,18 +565,9 @@ fn has_wake_trigger(state: &GameState, card: &CardInstance) -> bool {
 /// its face has one (`has_wake_trigger`). 0 with `Prices::NONE`, for a card its root did not price, and
 /// at a zero `awaken` weight (no reading).
 fn awaken_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices: &Prices) -> f64 {
-    if w.awaken == 0.0 {
-        return 0.0;
-    }
-    let price = prices
-        .awakenings
-        .iter()
-        .find(|entry| entry.is_for(unit))
-        .map(|entry| entry.price);
-    match price {
-        Some(price) if has_wake_trigger(state, unit) => price,
-        _ => 0.0,
-    }
+    keyed_price(w.awaken, &prices.awakenings, unit, || {
+        has_wake_trigger(state, unit)
+    })
 }
 
 /// R4648000: how the root read an Evolve card's road to evolving (`evolve_condition`).
@@ -2436,22 +2426,34 @@ fn spawn_hand_unit(
             (&cleared, slot)
         }
     };
+    spawn_at(room, seat, card, slot, counter)
+}
+
+/// `card` spawned on `slot` of `room`, a sandbox (one node, `sandbox_step`), and the card standing there.
+/// `None` when the counter is spent; `Some(None)` when the spawn is refused.
+fn spawn_at(
+    room: &GameState,
+    seat: PlayerId,
+    card: &CardInstance,
+    slot: jackioh_engine::ZoneSlot,
+    counter: &dyn NodeCounter,
+) -> Option<Option<(GameState, CardInstance)>> {
     let spawn = SandboxOp::Spawn {
         player: seat,
         def_id: card.def_id.clone(),
         radiant: card.radiant.then_some(true),
         to: SpawnZone::Field {
-            row: Row::Units,
+            row: slot.row,
             lane: slot.lane,
         },
     };
     let Some(placed) = sandbox_step(room, seat, spawn, counter)? else {
         return Some(None);
     };
-    let Some(unit) = card_at(&placed, slot).cloned() else {
+    let Some(standing) = card_at(&placed, slot).cloned() else {
         return Some(None);
     };
-    Some(Some((placed, unit)))
+    Some(Some((placed, standing)))
 }
 
 /// R923001, R2565000, R2687000: `card`, a Field Spell in `seat`'s hand, spawned into the backrow zone a
@@ -2467,22 +2469,7 @@ fn spawn_hand_field_spell(
     let Some(slot) = first_entry_zone(world, seat, Row::Backrow) else {
         return Some(None);
     };
-    let spawn = SandboxOp::Spawn {
-        player: seat,
-        def_id: card.def_id.clone(),
-        radiant: card.radiant.then_some(true),
-        to: SpawnZone::Field {
-            row: Row::Backrow,
-            lane: slot.lane,
-        },
-    };
-    let Some(placed) = sandbox_step(world, seat, spawn, counter)? else {
-        return Some(None);
-    };
-    let Some(set) = card_at(&placed, slot).cloned() else {
-        return Some(None);
-    };
-    Some(Some((placed, set)))
+    spawn_at(world, seat, card, slot, counter)
 }
 
 /// R2424000, R2687000: `death_probe` for a Unit or a Field Spell in `seat`'s hand, placed on its field
@@ -2555,11 +2542,7 @@ pub fn death_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter
     if candidates.is_empty() {
         return Vec::new();
     }
-    let mut sandbox = world.clone();
-    sandbox.sandbox = Some(true);
-    for player in PLAYER_IDS {
-        sandbox.players[player].auto_end_turn = Some(false);
-    }
+    let sandbox = sandbox_copy(world);
     let probes = create_sub_counter(counter, AI_DEATH_PROBE_NODES);
     let mut priced = Vec::new();
     for (key, card, in_hand) in candidates {
@@ -2586,12 +2569,20 @@ const TURN_HOOKS: [HookName; 3] = [
     HookName::StartOfOpponentTurn,
 ];
 
-/// R2477000: `before` after one firing of `holder`'s `hook`, queued as its controller's turn would queue
-/// it (`queue_hook`, R68) and drained by the resolution loop (`settled_after`).
-fn fire_turn_hook(before: &GameState, holder: &TriggerHolder, hook: HookName) -> GameState {
-    settled_after(before, |sink| {
-        queue_hook(sink, holder, hook);
-    })
+/// A copy of `world` on which no turn ends by itself (R345), for a probe to step.
+fn held_copy(world: &GameState) -> GameState {
+    let mut start = world.clone();
+    for player in PLAYER_IDS {
+        start.players[player].auto_end_turn = Some(false);
+    }
+    start
+}
+
+/// `held_copy` of `world` as a sandbox (R923000).
+fn sandbox_copy(world: &GameState) -> GameState {
+    let mut sandbox = held_copy(world);
+    sandbox.sandbox = Some(true);
+    sandbox
 }
 
 /// R2477000, R3064000: `before` after `step` and the resolution loop (`settle`) that drains what it
@@ -2613,36 +2604,50 @@ fn settled_after(before: &GameState, step: impl FnOnce(&mut EngineSink<'_>)) -> 
     })
 }
 
-/// R2477000: what one firing of `holder`'s `hook` on `before` gives its controller: the controller's
-/// evaluation after it less before it, and `AI_EVAL.next_turn_mana` for each crystal it gained, which the
-/// evaluation does not count. One node of `counter`: `None` when the counter refuses it; `Some(None)`
-/// when the firing panics (`note_sim_panic`), or leaves a prompt open or the game over.
+/// `before` after `step` and the resolution loop that drains it (`settled_after`), for one node of
+/// `counter`: `None` when the counter refuses it; `Some(None)` when the step panics (`note_sim_panic`),
+/// or leaves a prompt open or the game over, which a probe neither answers nor prices.
+fn settled_once(
+    before: &GameState,
+    counter: &dyn NodeCounter,
+    step: impl FnOnce(&mut EngineSink<'_>),
+) -> Option<Option<GameState>> {
+    if !counter.take() {
+        return None;
+    }
+    match catch_unwind(AssertUnwindSafe(|| settled_after(before, step))) {
+        Ok(after) => Some((after.pending.is_none() && after.result.is_none()).then_some(after)),
+        Err(payload) => {
+            note_sim_panic(counter, payload.as_ref());
+            Some(None)
+        }
+    }
+}
+
+/// What `after` gives `owner` over `before`: its evaluation after less before, and
+/// `AI_EVAL.next_turn_mana` for each crystal it gained, which the evaluation does not count.
+fn gain_over(after: &GameState, before: &GameState, owner: PlayerId) -> f64 {
+    let gained = after.players[owner].mana.current - before.players[owner].mana.current;
+    evaluate(after, owner, NextSwing::Enemy, &AI_EVAL) - evaluate(before, owner, NextSwing::Enemy, &AI_EVAL)
+        + AI_EVAL.next_turn_mana * f64::from(gained)
+}
+
+/// R2477000: what one firing of `holder`'s `hook` on `before` gives its controller (`gain_over`), queued
+/// as its controller's turn would queue it (`queue_hook`, R68). One node of `counter`: `None` when the
+/// counter refuses it; `Some(None)` when the firing is not priced (`settled_once`).
 fn hook_firing_price(
     before: &GameState,
     holder: &TriggerHolder,
     hook: HookName,
     counter: &dyn NodeCounter,
 ) -> Option<Option<f64>> {
-    if !counter.take() {
-        return None;
-    }
-    let after = match catch_unwind(AssertUnwindSafe(|| fire_turn_hook(before, holder, hook))) {
-        Ok(after) => after,
-        Err(payload) => {
-            note_sim_panic(counter, payload.as_ref());
-            return Some(None);
-        }
-    };
-    if after.pending.is_some() || after.result.is_some() {
+    let Some(after) = settled_once(before, counter, |sink| {
+        queue_hook(sink, holder, hook);
+    })?
+    else {
         return Some(None);
-    }
-    let owner = holder.controller;
-    let gained = after.players[owner].mana.current - before.players[owner].mana.current;
-    Some(Some(
-        evaluate(&after, owner, NextSwing::Enemy, &AI_EVAL)
-            - evaluate(before, owner, NextSwing::Enemy, &AI_EVAL)
-            + AI_EVAL.next_turn_mana * f64::from(gained),
-    ))
+    };
+    Some(Some(gain_over(&after, before, holder.controller)))
 }
 
 /// R2477000, R2565000, R2689000: what one firing of each turn hook of `owner`'s card `instance_id`, in
@@ -2737,21 +2742,9 @@ fn yard_probe(
     if !yards.iter().any(|card| card.id == instance_id) {
         return Some(None);
     }
-    if !counter.take() {
-        return None;
-    }
-    let after = match catch_unwind(AssertUnwindSafe(|| {
-        settled_after(before, |sink| yard_at_turn_start(sink, owner))
-    })) {
-        Ok(after) => after,
-        Err(payload) => {
-            note_sim_panic(counter, payload.as_ref());
-            return Some(None);
-        }
-    };
-    if after.pending.is_some() || after.result.is_some() {
+    let Some(after) = settled_once(before, counter, |sink| yard_at_turn_start(sink, owner))? else {
         return Some(None);
-    }
+    };
     let gained = evaluate(&after, owner, NextSwing::Enemy, &AI_EVAL)
         - evaluate(before, owner, NextSwing::Enemy, &AI_EVAL);
     Some(Some(gained / yards.len() as f64))
@@ -2834,11 +2827,7 @@ pub fn turn_hook_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCou
     if candidates.is_empty() {
         return Vec::new();
     }
-    let mut sandbox = world.clone();
-    sandbox.sandbox = Some(true);
-    for player in PLAYER_IDS {
-        sandbox.players[player].auto_end_turn = Some(false);
-    }
+    let sandbox = sandbox_copy(world);
     let probes = create_sub_counter(counter, AI_TURN_HOOK_PROBE_NODES);
     let mut priced = Vec::new();
     for (key, owner, card, in_hand) in candidates {
@@ -2868,11 +2857,12 @@ fn next_turn(before: &GameState, player: PlayerId, counter: &dyn NodeCounter) ->
     let Ok(next) = simulate(before, player, &ActionBody::EndTurn, counter, Prices::NONE)? else {
         return Some(None);
     };
-    let ready = next.pending.is_none()
-        && next.result.is_none()
-        && next.active == player.opponent()
-        && next.phase == Phase::Main;
-    Some(ready.then_some(next))
+    Some(in_own_main(&next, player.opponent()).then_some(next))
+}
+
+/// Whether `player` stands in its own main phase with no prompt open and the game on.
+fn in_own_main(state: &GameState, player: PlayerId) -> bool {
+    state.pending.is_none() && state.result.is_none() && state.active == player && state.phase == Phase::Main
 }
 
 /// R2564000: what the use of `unit`'s Activate that took `turn` to `after` gives its controller: the
@@ -2890,11 +2880,7 @@ fn use_price(turn: &GameState, after: &GameState, unit: &CardInstance) -> Option
     if !wakes && !find_instance(after, &unit.id).is_some_and(|card| card.zone.z() == ZoneName::Field) {
         return None;
     }
-    let owner = unit.controller;
-    let gained = after.players[owner].mana.current - turn.players[owner].mana.current;
-    let price = evaluate(after, owner, NextSwing::Enemy, &AI_EVAL)
-        - evaluate(turn, owner, NextSwing::Enemy, &AI_EVAL)
-        + AI_EVAL.next_turn_mana * f64::from(gained);
+    let price = gain_over(after, turn, unit.controller);
     (price > 0.0).then_some(price)
 }
 
@@ -3019,22 +3005,14 @@ fn root_prices<P>(
     nodes: usize,
     price: PriceTurn<P>,
 ) -> Vec<P> {
-    if weight == 0.0
-        || world.pending.is_some()
-        || world.result.is_some()
-        || world.active != seat
-        || world.phase != Phase::Main
-    {
+    if weight == 0.0 || !in_own_main(world, seat) {
         return Vec::new();
     }
     let own = has(world, seat);
     if !own && !has(world, seat.opponent()) {
         return Vec::new();
     }
-    let mut start = world.clone();
-    for player in PLAYER_IDS {
-        start.players[player].auto_end_turn = Some(false);
-    }
+    let start = held_copy(world);
     let probes = create_sub_counter(counter, nodes);
     probe_turns(&start, seat, own, &probes, price)
 }
@@ -3078,12 +3056,7 @@ fn rekeyed_activation_prices(
     counter: &dyn NodeCounter,
     priced: &mut Vec<ActivationPrice>,
 ) {
-    if AI_EVAL.activation == 0.0
-        || world.pending.is_some()
-        || world.result.is_some()
-        || world.active != seat
-        || world.phase != Phase::Main
-    {
+    if AI_EVAL.activation == 0.0 || !in_own_main(world, seat) {
         return;
     }
     // R3575404: the seat's own Dormant cards acting for their awakening, whose definition the probe's
@@ -3110,11 +3083,7 @@ fn rekeyed_activation_prices(
     if cards.is_empty() {
         return;
     }
-    let mut sandbox = world.clone();
-    sandbox.sandbox = Some(true);
-    for player in PLAYER_IDS {
-        sandbox.players[player].auto_end_turn = Some(false);
-    }
+    let sandbox = sandbox_copy(world);
     let hidden = hidden_card_ids(world, seat);
     let probes = create_sub_counter(counter, AI_HAND_ACTIVATION_PROBE_NODES);
     for card in cards {
@@ -3220,10 +3189,7 @@ pub fn prompt_activation_prices(
     answers.sort_by_cached_key(action_key);
     // R345: automatic turn end off before the answer, else a pick that leaves nothing to play ends the
     // turn inside the answer's own reduce.
-    let mut start = world.clone();
-    for player in PLAYER_IDS {
-        start.players[player].auto_end_turn = Some(false);
-    }
+    let start = held_copy(world);
     let hidden = hidden_card_ids(world, seat);
     let probes = create_sub_counter(counter, AI_PROMPT_ACTIVATION_PROBE_NODES);
     for answer in &answers {
@@ -3232,11 +3198,7 @@ pub fn prompt_activation_prices(
             Some(Err(_)) => continue,
             Some(Ok(answered)) => answered,
         };
-        if answered.pending.is_some()
-            || answered.result.is_some()
-            || answered.active != seat
-            || answered.phase != Phase::Main
-        {
+        if !in_own_main(&answered, seat) {
             continue;
         }
         let Some(now) = activate_sources(&answered, seat)
@@ -3360,12 +3322,7 @@ fn attack_hook_probe(
         return Some(None);
     }
     let plain = with_text_back(plain, &unit.id, &printed);
-    let gained = hooked.players[owner].mana.current - plain.players[owner].mana.current;
-    Some(Some(
-        evaluate(&hooked, owner, NextSwing::Enemy, &AI_EVAL)
-            - evaluate(&plain, owner, NextSwing::Enemy, &AI_EVAL)
-            + AI_EVAL.next_turn_mana * f64::from(gained),
-    ))
+    Some(Some(gain_over(&hooked, &plain, owner)))
 }
 
 /// R2688000: prices into `priced` the next attack of each of `controller`'s units with an attack hook
@@ -3437,21 +3394,9 @@ pub fn attack_hook_prices(
 /// wake panics (`note_sim_panic`), or leaves a prompt open or the game over, which the probe neither
 /// answers nor prices.
 fn wake_once(before: &GameState, instance_id: &str, counter: &dyn NodeCounter) -> Option<Option<GameState>> {
-    if !counter.take() {
-        return None;
-    }
-    let woken = catch_unwind(AssertUnwindSafe(|| {
-        settled_after(before, |sink| {
-            awaken_card(sink, instance_id);
-        })
-    }));
-    match woken {
-        Ok(after) => Some((after.pending.is_none() && after.result.is_none()).then_some(after)),
-        Err(payload) => {
-            note_sim_panic(counter, payload.as_ref());
-            Some(None)
-        }
-    }
+    settled_once(before, counter, |sink| {
+        awaken_card(sink, instance_id);
+    })
 }
 
 /// R3064000: what `unit`'s awakening on `before`, a sandbox (R923000), gives its controller through its
@@ -3470,12 +3415,7 @@ fn awaken_probe(before: &GameState, unit: &CardInstance, counter: &dyn NodeCount
         return Some(None);
     };
     let plain = with_text_back(plain, &unit.id, &printed);
-    let gained = hooked.players[owner].mana.current - plain.players[owner].mana.current;
-    Some(Some(
-        evaluate(&hooked, owner, NextSwing::Enemy, &AI_EVAL)
-            - evaluate(&plain, owner, NextSwing::Enemy, &AI_EVAL)
-            + AI_EVAL.next_turn_mana * f64::from(gained),
-    ))
+    Some(Some(gain_over(&hooked, &plain, owner)))
 }
 
 /// R3064000, R923001: `awaken_probe` for `card`, a Unit in `seat`'s hand, placed on its field first
@@ -3528,11 +3468,7 @@ pub fn awaken_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounte
     if candidates.is_empty() {
         return Vec::new();
     }
-    let mut sandbox = world.clone();
-    sandbox.sandbox = Some(true);
-    for player in PLAYER_IDS {
-        sandbox.players[player].auto_end_turn = Some(false);
-    }
+    let sandbox = sandbox_copy(world);
     let probes = create_sub_counter(counter, AI_AWAKEN_PROBE_NODES);
     let mut priced = Vec::new();
     for (key, card, in_hand) in candidates {
@@ -3640,23 +3576,11 @@ fn evolve_once(
     instance_id: &str,
     counter: &dyn NodeCounter,
 ) -> Option<Option<GameState>> {
-    if !counter.take() {
-        return None;
-    }
-    let evolved = catch_unwind(AssertUnwindSafe(|| {
-        settled_after(before, |sink| {
-            if let Some(card) = find_instance(sink.state, instance_id).cloned() {
-                evolve_now(sink, &card);
-            }
-        })
-    }));
-    match evolved {
-        Ok(after) => Some((after.pending.is_none() && after.result.is_none()).then_some(after)),
-        Err(payload) => {
-            note_sim_panic(counter, payload.as_ref());
-            Some(None)
+    settled_once(before, counter, |sink| {
+        if let Some(card) = find_instance(sink.state, instance_id).cloned() {
+            evolve_now(sink, &card);
         }
-    }
+    })
 }
 
 /// R4648000: what one run of `unit`'s Evolve text on `before`, a sandbox (R923000), gives its controller,
@@ -3676,10 +3600,7 @@ fn evolve_probe(
     };
     let owner = unit.controller;
     let runs = 1 + extra_runs(before, owner, Multiplied::Evolutions).max(0);
-    let gained = after.players[owner].mana.current - before.players[owner].mana.current;
-    let gain = evaluate(&after, owner, NextSwing::Enemy, &AI_EVAL)
-        - evaluate(before, owner, NextSwing::Enemy, &AI_EVAL)
-        + AI_EVAL.next_turn_mana * f64::from(gained);
+    let gain = gain_over(&after, before, owner);
     Some(Some((
         gain / f64::from(runs),
         evolve_condition(before, seat, unit),
@@ -3737,11 +3658,7 @@ pub fn evolve_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounte
     if candidates.is_empty() {
         return Vec::new();
     }
-    let mut sandbox = world.clone();
-    sandbox.sandbox = Some(true);
-    for player in PLAYER_IDS {
-        sandbox.players[player].auto_end_turn = Some(false);
-    }
+    let sandbox = sandbox_copy(world);
     let probes = create_sub_counter(counter, AI_EVOLVE_PROBE_NODES);
     let mut priced = Vec::new();
     for (key, card, in_hand) in candidates {

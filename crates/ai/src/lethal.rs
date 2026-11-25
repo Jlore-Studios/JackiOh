@@ -241,11 +241,9 @@ fn judge(
     if line_status(next, seat, root_turn) != LineStatus::Open {
         return Some(Verdict::Dead);
     }
-    let key = position_key(next, seat);
-    if visited.contains(&key) {
+    if !visited.insert(position_key(next, seat)) {
         return Some(Verdict::Dead);
     }
-    visited.insert(key);
     Some(Verdict::Deeper)
 }
 

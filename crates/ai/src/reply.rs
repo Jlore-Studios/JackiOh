@@ -41,7 +41,7 @@ use crate::evaluate::{
 use crate::lethal::{deft_ready_switch, ready_gap};
 use crate::simulate::{
     AnswersTried, LineStatus, SimStep, best_auto_answer, charge_announced, line_status, note_sim_panic,
-    simulate, static_score, surcharge_nodes,
+    simulate, surcharge_nodes,
 };
 use crate::types::NodeCounter;
 
@@ -966,30 +966,23 @@ pub fn simulate_reply_with(
         let legal = legal_actions(&current, opp);
         // R4810000: past `AI_REPLY.play_steps` known plays and Activates a step tries neither, so the
         // attacks keep the rest of the turn's steps.
+        let mut tried = Known::Nothing;
         if plays < AI_REPLY.play_steps {
-            match known_play(&current, seat, &legal, hidden, counter, prices) {
-                Known::Cut => return None,
-                Known::Played(played) => {
-                    current = *played;
-                    plays += 1;
-                    continue;
-                }
-                Known::Nothing => {}
+            tried = known_play(&current, seat, &legal, hidden, counter, prices);
+            if matches!(tried, Known::Nothing) {
+                tried = visible_activation(&current, seat, &legal, hidden, counter, prices);
             }
-            match visible_activation(&current, seat, &legal, hidden, counter, prices) {
-                Known::Cut => return None,
-                Known::Played(played) => {
-                    current = *played;
-                    plays += 1;
-                    continue;
-                }
-                Known::Nothing => {}
+            if matches!(tried, Known::Played(_)) {
+                plays += 1;
             }
         }
-        match deft_switch(&current, seat, &legal, counter, prices) {
+        if matches!(tried, Known::Nothing) {
+            tried = deft_switch(&current, seat, &legal, counter, prices);
+        }
+        match tried {
             Known::Cut => return None,
-            Known::Played(switched) => {
-                current = *switched;
+            Known::Played(played) => {
+                current = *played;
                 continue;
             }
             Known::Nothing => {}
@@ -1049,11 +1042,9 @@ pub fn reply_score(
     prices: &Prices,
 ) -> Option<f64> {
     let status = line_status(end, seat, root_turn);
-    if status == LineStatus::Over {
-        return Some(static_score(end, seat, root_turn, prices));
-    }
-    // A line that stopped on the seat's own prompt keeps its static score, the hand eval's.
-    if status == LineStatus::Open {
+    // A line that ended the game, or stopped on the seat's own prompt, keeps its static score, the
+    // hand eval's.
+    if matches!(status, LineStatus::Over | LineStatus::Open) {
         return Some(evaluate_priced(end, seat, NextSwing::Enemy, &AI_EVAL, prices));
     }
     let unspent = if status == LineStatus::Passed {
