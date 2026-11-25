@@ -43,7 +43,10 @@ fn glowy_jelly_bean(picks: i32, surcharges: bool) -> Script {
                 let chosen = json!({ "of": "chosen", "index": index });
                 effects.push(set_radiant(json_as(json!({ "target": chosen }))));
                 if surcharge != 0 {
-                    effects.push(set_cost_mod(json_as(json!({ "target": chosen, "amount": surcharge }))));
+                    // R4: only a card still in a hand is priced; one taken from it before the Cry (a
+                    // Backdoor's steal into a full hand burns it) holds no price where it went (R766).
+                    let price = json!({ "target": chosen, "amount": surcharge, "inHandOnly": true });
+                    effects.push(set_cost_mod(json_as(price)));
                 }
             }
             effects
@@ -103,6 +106,28 @@ mod tests {
 
     mod n26_glowy_jelly_bean_base {
         use super::*;
+        /// R4, R766: the pick IA #133 Backdoor steals into a full hand before the Cry resolves burns to its
+        /// new owner's graveyard, where neither the flag nor the surcharge reaches it (`inHandOnly`, as #72
+        /// Reminisce prices its pick): the daily fuzz's handicapped seed 13173 left a price on it there.
+        #[test]
+        fn a_pick_stolen_into_a_full_hand_before_the_cry_is_neither_made_radiant_nor_priced() {
+            crate::register_all();
+            // p2's hand is full, so the card Backdoor steals burns.
+            let full = vec!["core-005"; usize::try_from(jackioh_engine::config::HAND_CAP).unwrap_or(10)];
+            let mut s = scenario(json!({
+                "p1": { "hand": ["traininggrounds-050", TWO_FACED], "mana": 3 },
+                "p2": {
+                    "hand": full,
+                    "backrow": [{ "def": "infiniteassault-133", "faceUp": false, "lane": 2 }],
+                },
+            }));
+            let chosen = hand_id_of(s.state(), TWO_FACED);
+            s.play("traininggrounds-050", json!({ "targets": [{ "pick": "instance", "instanceId": chosen }] }));
+            let pick = find_instance(s.state(), &chosen).expect("the pick");
+            assert_eq!(pick.zone.z(), ZoneName::Graveyard, "it burned");
+            assert_eq!(pick.cost_mod, 0, "no price on a card in a graveyard");
+            assert!(!pick.radiant);
+        }
 
         #[test]
         fn r81_flags_the_hand_card_the_play_chose_with_no_prompt_opened() {

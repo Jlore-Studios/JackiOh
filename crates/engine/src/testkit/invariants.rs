@@ -2985,12 +2985,33 @@ pub fn hidden_information_violations(
     );
 
     let mut found: Vec<String> = Vec::new();
+    // TEMPORARY (#4599 diagnosis, reverted before the pull request): the view's events around a leak.
+    let tmp_view = |path: &str| -> String {
+        let Some(n) = path
+            .strip_prefix("view.events[")
+            .and_then(|rest| rest.split(']').next())
+            .and_then(|n| n.parse::<usize>().ok())
+        else {
+            return String::new();
+        };
+        let Some(events) = scanned.get("events").and_then(Value::as_array) else {
+            return String::new();
+        };
+        let from = n.saturating_sub(12);
+        events[from..events.len().min(n + 3)]
+            .iter()
+            .enumerate()
+            .map(|(i, e)| format!("#{} {}", from + i, e.to_string().chars().take(300).collect::<String>()))
+            .collect::<Vec<_>>()
+            .join(" ¦ ")
+    };
     let mut report = |kind: &str, into: &str, needle: &str, path: &str, where_: &str| {
         found.push(format!(
             "I6 hidden {kind} in {into}: {viewer} is sent \"{needle}\" at {path}, a card in {where_}, on turn {} \
-             (§9.1, §10.8, R97{})",
+             (§9.1, §10.8, R97{}) TMPVIEW {}",
             state.turn,
-            if into == "legalActions" { ", R177" } else { "" }
+            if into == "legalActions" { ", R177" } else { "" },
+            tmp_view(path)
         ));
     };
     for (id, where_) in &ids {
