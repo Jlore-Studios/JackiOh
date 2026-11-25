@@ -23988,27 +23988,19 @@
     "what": "build #4811 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-25T13:17:55Z",
+    "at": "2026-11-25T13:32:19Z",
     "notes": [
-      "#4676 is held for `claude-3` until 07:20 (it refused a call)",
-      "#4804 is held for `claude-3` until 07:20 (it refused a call)",
-      "#4807 is held for `claude-3` until 07:20 (it refused a call)",
-      "#4811 is held for `claude-3` until 07:20 (it refused a call)",
-      "#4812 is held for `claude-3` until 07:20 (it refused a call)",
-      "#4817 is held for `claude-3` until 07:20 (it refused a call)",
-      "#4823 is held for `claude-3` until 07:20 (it refused a call)",
-      "#4824 is held for `claude-3` until 07:20 (it refused a call)",
-      "#4828 is held for `claude-3` until 07:20 (it refused a call)",
-      "#4836 is held for `claude-3` until 07:20 (it refused a call)",
-      "delivered suggest on muse (run 45620912273): suggested",
-      "delivered review #4917 on claude-6 (run 45617299118): approved",
-      "delivered review #4911 on muse (run 45606823309): approved",
-      "started build #4676 on claude-3 (run 45622897728)",
-      "started build #4804 on claude-3 (run 45623046846)",
-      "started review #4916 on claude-6 (run 45623183069)",
-      "started plan #4824 on claude-3 (run 45623328878)",
-      "started plan #4836 on claude-3 (run 45623474481)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` waits for its lane on its box, which `muse` fills now; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)"
+      "#4907: its turn came (it waited 120 minutes for #4884, the most a pull request waits its turn (`hold_minutes`), so it goes ahead anyway)",
+      "delivered review #4916 on claude-6 (run 45623183069): reviewed",
+      "delivered suggest on claude-8 (run 45620735726): interrupted",
+      "delivered suggest on claude-7 (run 45620587693): suggested",
+      "delivered suggest on claude-8 (run 45620444392): interrupted",
+      "started revise #4907 on muse (run 45625193117)",
+      "started build #4807 on claude-6 (run 45625329547)",
+      "started build #4811 on claude-7 (run 45625479881)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` 5-hour usage is 86%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-25T15:10:00Z; it can start a build or a plan again in 31m; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` waits for its lane on its box, which `muse` fills now; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
+      "#4922: typed it Feature",
+      "#4921: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -24714,7 +24706,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T13:17:55Z",
+  "loop_tick": "2026-11-25T13:32:19Z",
   "machine_disk": {
     "issue": null,
     "reading": {
