@@ -66,16 +66,16 @@ time, for the super run's component jobs. All 78 in one job took 45 of its 60 mi
 super.yml runs them in three shards.
 Electron is no longer run.
 
-Chrome 155 kills its own network service now and then under Cypress 16, whose Chrome runs pause
-every request over the DevTools protocol (crbug.com/559770861, fixed in 156): every fetch in
-flight fails at once and every socket drops, so a lobby shows "Couldn't reach JackiOh" while
-`cy.request`, which runs in Node, is fine. When the `chrome` Cypress finds is a major in
-`support/chrome-pin.ts`'s `BROKEN_CHROME_MAJORS` and `CI` is set, `cypress.config.ts` points
-`chrome` at Chrome for Testing `PINNED_CHROME_MILESTONE` (154), downloaded once into the repo's
+Chrome 158, in GitHub's runner image from 2026-11-25, fails every spec under Cypress 16.1.0 as it
+starts, with `* is not a valid URL`, before any test runs; 157 passes. (Before it, Chrome 155
+killed its own network service now and then under Cypress's DevTools interception,
+crbug.com/559770861, fixed in 156.) When the `chrome` Cypress finds is a major in
+`support/chrome-pin.ts`'s `BROKEN_CHROME_MAJORS` (158) and `CI` is set, `cypress.config.ts` points
+`chrome` at Chrome for Testing `PINNED_CHROME_MILESTONE` (157), downloaded once into the repo's
 `.cache/chrome-for-testing/` (Linux x64 only); the run header then says `Chrome for Testing`.
 `E2E_CHROME_PIN=1` does the same off CI, `E2E_CHROME_PIN=0` keeps the system Chrome. Every other
 Chrome and browser launches as found, and a failed download keeps the system Chrome and says why.
-Drop 155 from the list once the runner image ships 156.
+Drop 158 from the list once a Cypress release runs on it.
 
 Endpoints are overridable, so nothing in a spec has to change when a port moves:
 

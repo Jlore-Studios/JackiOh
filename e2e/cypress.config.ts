@@ -81,9 +81,9 @@ export default defineConfig({
     },
     async setupNodeEvents(on, config) {
       registerTasks(on, config);
-      // Chrome 155's network service dies under Cypress's DevTools interception, dropping the page's
-      // requests and sockets mid-spec; on CI `chrome` is then Chrome for Testing 154 instead
-      // (support/chrome-pin.ts). Any other Chrome is launched exactly as found.
+      // Chrome 158 fails every spec under Cypress 16.1.0 as it starts (`* is not a valid URL`); on CI
+      // `chrome` is then Chrome for Testing 157 instead (support/chrome-pin.ts, which lists the
+      // broken majors). Any other Chrome is launched exactly as found.
       config.browsers = await pinChrome(config.browsers, resolve(config.projectRoot, ".."));
       launchAtWindowSize(on);
       return config;
@@ -167,8 +167,8 @@ export default defineConfig({
     // No `testIsolation` here: Cypress rejects the option outright for component testing, where a
     // test is isolated by construction — each one mounts a fresh `fullBoardView()` of its own.
     async setupNodeEvents(on, config) {
-      // Same Chrome 155 network-service crash as the e2e block above: component specs fetch
-      // Vite modules through the same DevTools interception, so `chrome` is pinned the same way
+      // The same broken Chrome majors as the e2e block above: component specs run in the same
+      // Chrome under the same DevTools connection, so `chrome` is pinned the same way
       // (support/chrome-pin.ts).
       config.browsers = await pinChrome(config.browsers, resolve(config.projectRoot, ".."));
       // #3730: the lobby's shots at #3728's device sizes are whole only in a window that holds them.
