@@ -11,7 +11,7 @@
 # mutant no test can or should kill is left out below, by file or by name, each with its reason.
 
 # Each mutant is tested by its own package's tests alone: the engine's rules are its own tests' to
-# prove (CLAUDE.md, Architecture: the engine's tests use fixture scripts), never the cards'.
+# prove (crates/engine/README.md: the engine's tests use fixture scripts), never the cards'.
 test_workspace = false
 
 # The engine's testkit, which its `rules*` and `golden` tests require and every other crate's tests
