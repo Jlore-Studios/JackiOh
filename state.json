@@ -21018,6 +21018,8 @@
     "4871": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "d06cedd4d9f265ba396a3066fe6ba1336987e74d",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-24T21:39:47Z",
