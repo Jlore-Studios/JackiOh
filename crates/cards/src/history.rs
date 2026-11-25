@@ -69,7 +69,7 @@ use crate::scripts::meditative_plus::{
     c022_mountaintop_garden, c023_enormous_elderberry,
 };
 use crate::scripts::stinkyscape::{
-    c004_olivian_expanse, c007_the_greatest_heist, c009_ticketed, c010_2_divine_spirit,
+    c004_olivian_expanse, c007_the_greatest_heist, c009_ticketed, c010_1_inner_fire, c010_2_divine_spirit,
     c011_2_arcane_missiles, c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior, c018_3_casper,
     c018_imitated_instrumentality, c023_warp_disruptor, c024_warp_disruptor_ii, c026_zolarketh,
     c033_drone_core_vii, c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x, c042_core_researcher,
@@ -1403,6 +1403,12 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     ),
     // #4665's Ticketed (R4665000): the Cry that held a permanent beneath it in its own zone.
     (c009_ticketed::ID, "v0.6.12c", c009_ticketed::script_v0_6_12c),
+    // #4840 (R1867002): the buffs before the unfloored-Attack reading.
+    (
+        c010_1_inner_fire::ID,
+        "v0.6.13h",
+        c010_1_inner_fire::script_v0_6_13h,
+    ),
 ];
 
 /// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
