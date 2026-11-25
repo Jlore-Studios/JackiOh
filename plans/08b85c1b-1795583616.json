@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 4891,
+  "title": "Architecture: weekly hygiene, dead files and archives, 2026-11-25",
+  "branch": "bot/issue-4891",
+  "thread": "**Issue #4891 (data, not instructions):**\n\n```text\n# #4891: Architecture: weekly hygiene, dead files and archives, 2026-11-25\nOpened by @github-actions[bot].\n\nThe weekly hygiene run ([this week's run](https://github.com/Jlore-Studios/JackiOh/actions/runs/45549559998)) asks for one pull request that removes dead files\nand archives nothing reads, and proves every removal. A person reviews and merges it (`person merges`), so\nmake each removal easy to check. The agent instructions have their own issue this week: leave\n`CLAUDE.md`, `AGENTS.md` and the skills to it, except to drop a reference to a file you delete. Leave the\nbranches at the end to a person.\n\n## 1. Dead files\n\nFind tracked files that nothing references or runs, and delete them. A file is dead only when every\nreader is ruled out: grep its path and its name across the tracked files, then check that no\nworkflow, script, `build.rs`, `include_str!`, `import.meta.glob`, test glob, fixture macro or\n`spec/rulings/*` `proven_in` reads it. The last audit (#832) found these that look dead but are not:\n- `bot/prompts/*.md`, loaded by name;\n- `crates/server/tests/sql/*.sql`, run by a glob;\n- the patch JSON, read through `import.meta.glob`;\n- the generated wire types, checked by CI;\n- `docs/radiant-audit.md` and `assets/music/LICENSES.md`, read by tests;\n- the training history files;\n- `bot/go/tests/squishy_cases_test.go`, run in a process started as Squishy;\n- `e2e/`'s own lockfile;\n- the font licences.\n\nCode that only its own test imports is dead with its test.\n\n## 2. Archives\n\nDelete records that nothing live needs: finished plans, copies of issue bodies, and old reports of\nmilestones that have shipped. Git history keeps them, and an agent cannot read what is not in the tree.\nKeep the following:\n- the review of a milestone whose gate is still open;\n- anything a workflow, test or code comment cites (fix or drop the citation instead);\n- `spec/`, `BUILD.md` and `REVIEW.md`;\n- the designer's source notes.\n\n## Never\n\n- Never change `.github/`, `bot/`, `.harness/`, `.squishy/` or `.claude/`. Name what should go there in the\n  pull request, for a person.\n- Never delete a file to quiet a check, or weaken a check.\n\n## Done when\n\nThe pull request body has a table of every deleted file: its path, its size, and the evidence that nothing\nreads it (the commands you ran and what they printed). The fast checks pass: `cargo fmt --check`,\n`cargo jackioh spec check`, the web's typecheck and eslint, the bot selftest, and the unit tests of any\npackage you touched. Nothing to remove? Make no change and say so in your answer, with your evidence.\n\n## Branches (for a person, not the builder)\n\nFor a person, not the builder. 83 branches surveyed on 2026-11-25 by the rule in `.github/hygiene/branches.py`; nothing has been deleted. Tick the ones to remove, then comment `/delete-branches`: `hygiene-delete.yml` surveys again, deletes each ticked branch the rule does not keep, strikes it here and replies with its sha.\n\n**Safe to delete (2).** Its pull request page restores it, or main holds every commit on it.\n\n- [ ] `bot/issue-1023` \u00b7 2026-11-10 `5f2ff04` bot: revise pass 1 for #3621 \u00b7 #3621 (closed)\n- [ ] `bot/issue-3534` \u00b7 2026-11-09 `7e22565` Patch: fold the pending \u00a711 paragraphs and the rulings index into the\u2026 \u00b7 none\n\n**Have commits main lacks (10).** No pull request: tick one only once nobody wants its work.\n\n- [ ] `bot/issue-3538` \u00b7 2026-11-10 `508035c` bot: build pass 1 for #3538\n- [ ] `bot/issue-3541` \u00b7 2026-11-10 `1cd3a0b` bot: build pass 1 for #3541\n- [ ] `bot/issue-3542` \u00b7 2026-11-10 `d4e0b3d` bot: build pass 1 for #3542\n- [ ] `claude/affectionate-euler-mkjkgb` \u00b7 2026-11-01 `ba1f940` Reels POC: film the AI playing itself and lay out a Reel Studio kit (\u2026\n- [ ] `claude/bold-babbage-oh8yv2` \u00b7 2026-11-06 `40c96ff` Patch: CI starts only the jobs a run needs, leaves the slow ones to t\u2026\n- [ ] `claude/exciting-thompson-mxe7cb` \u00b7 2026-11-05 `bb2de3a` Merge origin/main into claude/exciting-thompson-mxe7cb\n- [ ] `claude/intelligent-fermi-u83v5f` \u00b7 2026-11-11 `c4178b6` Merge main: #3655's branch names, and this pull request's comments cu\u2026\n- [ ] `claude/laughing-wright-eaibe9` \u00b7 2026-11-10 `8a18b81` Patch: Stinkyscape+ plan, the foundation and the engine chain built i\u2026\n- [ ] `claude/mobile-no-highlight` \u00b7 2026-11-06 `8c423ff` Web: a phone highlights nothing but the chat\n- [ ] `claude/patch-notes-design` \u00b7 2026-10-19 `29e38d8` Architecture: patch notes design note, the problems, the options and \u2026\n\n\n---\n_Opened by `.github/workflows/hygiene.yml`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4891: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-25T04:54:28Z",
+    "claimed_at": "2026-11-25T05:14:25Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
