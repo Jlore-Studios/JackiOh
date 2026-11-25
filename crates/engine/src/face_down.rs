@@ -10,13 +10,17 @@ use crate::preview::{is_face_down, lasting_text_off};
 use crate::state::{CardInstance, GameState};
 use crate::wire::PlayerId;
 
-/// `player`'s backrow cards that are face-down, in lane order.
+/// `player`'s backrow cards that are face-down, in lane order. R185, R4595000: on a redacted state a
+/// backrow card the seat cannot read is the AI's def-less placeholder, and only a hidden card is one,
+/// so it counts as face-down without a definition to read.
 pub fn face_down_cards(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     state.players[player]
         .backrow
         .iter()
         .filter_map(|slot| slot.as_ref())
-        .filter(|card| is_face_down(state, card))
+        .filter(|card| {
+            crate::catalog::find_def(Some(state), &card.def_id).is_none() || is_face_down(state, card)
+        })
         .cloned()
         .collect()
 }

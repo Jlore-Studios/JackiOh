@@ -1550,6 +1550,12 @@ pub struct PlayerState {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub handicap: Option<Handicap>,
+    /// R4595000: the sets this seat's deck was dealt from, public, as the setup named them
+    /// (`CreateGameOptions.deckSets`). Determinization samples the seat's unseen cards from these sets'
+    /// non-token cards. Absent, the seat names none and samples as before, so no other game's hash moves.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub deck_sets: Option<Vec<SetName>>,
     /// R345: `false` once this player has turned R82's automatic turn end off (`setAutoEndTurn`).
     /// Absent means on, and turning it back on deletes the field, so a game in which nobody touched
     /// the setting hashes exactly as it did before this field existed. Only ever `Some(false)`.
@@ -2505,6 +2511,7 @@ pub fn create_player_state() -> PlayerState {
         owed_instalments: None,
         ai_turn: false,
         handicap: None,
+        deck_sets: None,
         auto_end_turn: None,
         backrow_piles: None,
         carried: None,
@@ -2599,6 +2606,13 @@ pub struct CreateGameOptions {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub win_rates: Option<crate::win_rates::WinRateTable>,
+    /// R4595000: per seat, the sets its deck is dealt from, public (the view shows them), so
+    /// determinization samples that seat's unseen cards from those sets. Every card of the seat's deck
+    /// must be of one of them. Setup, not an action: a replay passes the same sets
+    /// (`replay::ReplayInput.deckSets`). Omitted, or a seat's list empty, the seat names none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub deck_sets: Option<PerPlayerOpt<Vec<SetName>>>,
 }
 
 /// SURFACE §6.1's name for `CreateGameOptions`.
@@ -2941,7 +2955,39 @@ pub fn validate_setup(
             .unwrap_or(MAX_COPIES);
         validate_deck_with(deck_of(options, seat), catalog, player.as_str(), size, copies)?;
     }
-    validate_deck_marks(options)
+    validate_deck_marks(options)?;
+    validate_deck_sets(options, catalog)
+}
+
+/// R4595000: a seat's named sets, when it names any, hold every card of its deck. Checked last, so a
+/// bad deck or mark is named first.
+fn validate_deck_sets(options: &CreateGameOptions, catalog: &CardDefs) -> Result<(), EngineError> {
+    for (seat, player) in PLAYER_IDS.into_iter().enumerate() {
+        let Some(sets) = named_deck_sets(options, player) else {
+            continue;
+        };
+        for def_id in deck_of(options, seat) {
+            if let Some(def) = catalog.get(def_id)
+                && !sets.contains(&def.set)
+            {
+                return Err(EngineError::new(format!(
+                    "{}: \"{def_id}\" is of {}, not of the sets its deck is dealt from (R4595000)",
+                    player.as_str(),
+                    def.set.as_str()
+                )));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// R4595000: the sets `player`'s deck is dealt from, when its setup names any.
+fn named_deck_sets(options: &CreateGameOptions, player: PlayerId) -> Option<&Vec<SetName>> {
+    options
+        .deck_sets
+        .as_ref()
+        .and_then(|sets| sets.get(player))
+        .filter(|sets| !sets.is_empty())
 }
 
 /// TS's `Pick<GameState, "nextId">`: whatever hands out instance ids. The state does; so does a
@@ -3223,6 +3269,8 @@ fn build_game(options: &CreateGameOptions, first_id: u32, stream: &str, kind: Se
         }
         let side = &mut state.players[player];
         side.library = library;
+        // R4595000: the sets the seat's deck is dealt from, when its setup names any.
+        side.deck_sets = named_deck_sets(options, player).cloned();
 
         // R180: a copy of the five fields and nothing else, so no stray key reaches the state or its hash.
         // R290: `heroHealth` joins them only when it moves the hero off HERO_HEALTH, so a tier that does
