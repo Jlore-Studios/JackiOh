@@ -361,8 +361,9 @@ pub const ASSAULT_HISTORY_DAYS: u32 = 30;
 pub const ASSAULT_BASE_HANDICAP: Handicap = AI_DIFFICULTY.easy;
 /// IA2: a normal level's hero health, `(base, per level)`; a strawman.
 pub const ASSAULT_HERO_HEALTH: (i32, i32) = (20, 1);
-/// IA2: a Commander level's hero health, `(base, per level)`; a strawman.
-pub const ASSAULT_COMMANDER_HEALTH: (i32, i32) = (30, 2);
+/// IA2: a Commander level's hero health, `(base, per level)`; a strawman. 3 a level since issue #4783,
+/// whose card balance let level 20 be won 2 of 6 in the band (R4583000), from 2.
+pub const ASSAULT_COMMANDER_HEALTH: (i32, i32) = (30, 3);
 /// IA2: the cards fewer in the opening draw on the first levels; a strawman.
 pub const ASSAULT_FEWER_OPENING: i32 = 1;
 /// IA2: the last level dealing fewer opening cards; a strawman.
