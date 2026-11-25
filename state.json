@@ -20883,7 +20883,7 @@
         "provider": "claude-3",
         "round_tier": "strong",
         "rounds_on": 4827,
-        "rounds_used": 0,
+        "rounds_used": 1,
         "since": "2026-11-25T00:02:40Z",
         "source": "build",
         "until": "2026-11-25T01:17:24Z"
