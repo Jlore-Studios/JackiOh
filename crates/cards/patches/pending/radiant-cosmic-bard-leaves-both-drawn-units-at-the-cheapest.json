@@ -1,0 +1,17 @@
+{
+  "title": "Patch: Radiant Cosmic Bard leaves both drawn Units at the cheapest price, even one that carries a cost raise larger than that price",
+  "sources": "#4832",
+  "notes": "Cosmic Bard's Radiant face took a carried cost raise off the cost override, which bottoms out at 0; a raise larger than the cheapest price survived and the card cost more. Now the override is 0 for such a card and the excess comes off its cost change in hand, so every drawn Unit still in the hand ends at the cheapest drawn price.",
+  "player": {
+    "title": "Radiant Cosmic Bard prices both drawn Units at the cheapest",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": ["Radiant Cosmic Bard's Combo no longer leaves a drawn Unit that carries a cost raise larger than the cheapest price above it: both drawn Units cost the cheapest drawn price."]
+  },
+  "cards": [],
+  "plays": [
+    "stinkyscapeplus-102"
+  ]
+}

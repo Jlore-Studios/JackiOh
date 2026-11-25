@@ -31,7 +31,54 @@ fn topmost_units(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
         .collect()
 }
 
-fn bard(radiant: bool) -> Script {
+/// R65: the set price replaces the printed one and the card's own cost change still adds to
+/// it, so the override takes that change off to leave each card at the cheapest price. A raise
+/// larger than the cheapest cannot fit under an override (one bottoms out at 0), so the override
+/// is 0 and the excess comes off the change itself, in the hand only.
+fn set_to_cheapest(drawn: &[CardInstance], cheapest: i32) -> Vec<Effect> {
+    drawn
+        .iter()
+        .flat_map(|card| {
+            if card.cost_mod > cheapest {
+                vec![
+                    set_cost_override(json_as(json!({
+                        "target": { "of": "instance", "instanceId": card.id },
+                        "cost": 0,
+                        "inHandOnly": true,
+                    }))),
+                    set_cost_mod(json_as(json!({
+                        "target": { "of": "instance", "instanceId": card.id },
+                        "amount": cheapest - card.cost_mod,
+                        "inHandOnly": true,
+                    }))),
+                ]
+            } else {
+                vec![set_cost_override(json_as(json!({
+                    "target": { "of": "instance", "instanceId": card.id },
+                    "cost": (cheapest - card.cost_mod).max(0),
+                    "inHandOnly": true,
+                })))]
+            }
+        })
+        .collect()
+}
+
+/// R65: the pre-#4832 set price, an override alone, which leaves a Unit carrying a raise larger
+/// than the cheapest above it; `KEPT_SCRIPTS` folds those replays under it.
+fn set_to_cheapest_kept(drawn: &[CardInstance], cheapest: i32) -> Vec<Effect> {
+    drawn
+        .iter()
+        .map(|card| {
+            set_cost_override(json_as(json!({
+                "target": { "of": "instance", "instanceId": card.id },
+                "cost": (cheapest - card.cost_mod).max(0),
+                "inHandOnly": true,
+            })))
+        })
+        .collect()
+}
+
+fn bard_with(radiant: bool, set_prices: fn(&[CardInstance], i32) -> Vec<Effect>) -> Script {
     Script {
         // R4189000: in hand the card glows once a card was played earlier this turn, the same
         // count the Cry reads, as Core #10 Rapid Replenish reads it.
@@ -52,15 +99,7 @@ fn bard(radiant: bool) -> Script {
                 .iter()
                 .map(|card| effective_cost(ctx.state, card, Default::default()));
             if radiant && let Some(cheapest) = prices.min() {
-                // R65: the set price replaces the printed one and the card's own cost change still adds
-                // to it, so the override takes that change off to leave each card at the cheapest price.
-                effects.extend(drawn.iter().map(|card| {
-                    set_cost_override(json_as(json!({
-                        "target": { "of": "instance", "instanceId": card.id },
-                        "cost": (cheapest - card.cost_mod).max(0),
-                        "inHandOnly": true,
-                    })))
-                }));
+                effects.extend(set_prices(&drawn, cheapest));
             }
             effects
         })),
@@ -68,10 +107,23 @@ fn bard(radiant: bool) -> Script {
     }
 }
 
+fn bard(radiant: bool) -> Script {
+    bard_with(radiant, set_to_cheapest)
+}
+
 pub fn script() -> CardScripts {
     CardScripts {
         base: bard(false),
         radiant: bard(true),
+    }
+}
+
+/// R767000: the script #4832 replaced, an override alone; `KEPT_SCRIPTS` folds the replays that
+/// ran it under it.
+pub fn script_kept_4832() -> CardScripts {
+    CardScripts {
+        base: bard_with(false, set_to_cheapest_kept),
+        radiant: bard_with(true, set_to_cheapest_kept),
     }
 }
 
@@ -89,6 +141,7 @@ mod tests {
     const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself
     const SPELL: &str = "stand-in (2) Spell"; // a library card that is no Unit
     const DEAR: &str = "stand-in (3) 3/3";
+    const FREE_UNIT: &str = "stand-in (0) 1/1";
     const CHEAPEST: &str = "stand-in (1) 1/1";
     const MIDDLING: &str = "stand-in (2) 2/2";
     const X_UNIT: &str = "classicplus-069"; // Buff Billy: an X-cost Unit
@@ -225,6 +278,41 @@ mod tests {
         s.play(CHEAP, json!({})).play(ID, json!({}));
         assert_eq!(price(&s, DEAR), 1);
         assert_eq!(price(&s, CHEAPEST), 1);
+    }
+
+    #[test]
+    fn r3568001_radiant_sets_a_drawn_unit_carrying_a_larger_raise_to_the_cheapest() {
+        crate::register_all();
+        // The (0) Unit carries a raise of (2), so it costs (2) in the deck: the cheapest drawn is
+        // still the plain (1).
+        let mut s = board(true, json!([{ "def": FREE_UNIT, "costMod": 2 }, CHEAPEST, FILLER, FILLER]));
+        s.play(CHEAP, json!({})).play(ID, json!({}));
+        assert_eq!(price(&s, CHEAPEST), 1, "the cheapest drawn stays at its price");
+        assert_eq!(
+            price(&s, FREE_UNIT),
+            1,
+            "each drawn Unit ends at the cheapest drawn price, the raise it carried taken off"
+        );
+        let raised = s
+            .hand(P1)
+            .into_iter()
+            .find(|card| card.def_id == FREE_UNIT)
+            .expect("drawn into the hand");
+        // The excess came off the change itself, with the override at 0: the carried +2 took
+        // a −1, leaving a change of exactly the cheapest price.
+        assert_eq!(raised.cost_override, Some(0));
+        assert_eq!(raised.cost_mod, 1);
+    }
+
+    #[test]
+    fn kept_script_before_4832_still_prices_the_raised_unit_at_2() {
+        crate::under_kept(ID, super::script_kept_4832(), || {
+            let mut s = board(true, json!([{ "def": FREE_UNIT, "costMod": 2 }, CHEAPEST, FILLER, FILLER]));
+            s.play(CHEAP, json!({})).play(ID, json!({}));
+            assert_eq!(price(&s, CHEAPEST), 1);
+            // The old override alone bottomed out at 0 and the carried +2 still added.
+            assert_eq!(price(&s, FREE_UNIT), 2);
+        });
     }
 
     #[test]
