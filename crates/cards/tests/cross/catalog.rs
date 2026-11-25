@@ -5386,8 +5386,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Epic,
-        st(8, 12),
-        st(16, 24),
+        st(4, 8),
+        st(8, 16),
     ),
     row(
         "46",
