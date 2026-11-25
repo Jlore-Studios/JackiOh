@@ -23412,11 +23412,9 @@
     "what": "spot-check #4864 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-25T10:21:16Z",
+    "at": "2026-11-25T10:31:14Z",
     "notes": [
-      "delivered plan #4836 on claude-3 (run 45593095632): interrupted",
-      "delivered build #4734 on claude-4 (run 45583070900): built",
-      "started review #4910 on claude-4 (run 45594636679)",
+      "started review #4864 on claude-6 (run 45596047686)",
       "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -24123,7 +24121,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T10:21:16Z",
+  "loop_tick": "2026-11-25T10:31:14Z",
   "machine_disk": {
     "issue": null,
     "reading": {
