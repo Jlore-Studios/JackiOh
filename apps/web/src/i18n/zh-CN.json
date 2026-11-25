@@ -3966,6 +3966,8 @@
   "This fight could not be set up.": "这场战斗无法开始。",
   "The fight stopped": "战斗中断了",
   "The fight's result could not be read: {reason}": "没能读取战斗结果：{reason}",
+  "A Glitch voided this fight, so it never happened. Your run stands where it was.": "一次故障让这场战斗作废，它从未发生。你的探险停在原处。",
+  "Deal it again": "重新发牌",
   "Fight against {enemy}": "与{enemy}的战斗",
   "Run time": "探险用时",
   "Map": "地图",

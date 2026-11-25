@@ -7,12 +7,13 @@ use jackioh_engine::replay::ReplayInput;
 use jackioh_engine::state::validate_deck_with;
 use jackioh_engine::wire::PlayerId;
 
+use crate::RunAction;
 use crate::assault::{
     AssaultAction, AssaultDay, AssaultFightSetup, AssaultFile, AssaultPhase, AssaultRecord, AssaultSetup,
     AssaultState, checkpoints, commander_rank,
 };
 use crate::config::{ASSAULT_LEVELS, ASSAULT_SET};
-use crate::{RunAction, run_fight_report};
+use crate::fight::fight_report;
 
 /// IA6: an attempt at its start: the setup checked against the day and the record. The deck is
 /// checked at create, as a dungeon run's starting deck is: an attempt lasts one day, so
@@ -200,7 +201,9 @@ pub fn assault_fight_setup(state: &AssaultState, day: &AssaultDay) -> Option<Ass
 /// IA6, IA15: the `AssaultAction::FightOver` a finished fight sends, folded from its record as a
 /// dungeon fight's is. A draw at the turn cap is a loss: no winner is the human's win.
 pub fn assault_fight_report(game: &ReplayInput, human: PlayerId) -> Result<AssaultAction, String> {
-    let RunAction::FightOver { won, turns, .. } = run_fight_report(game, human)? else {
+    // #4852: a void still reads as a lost fight here, as it did before R4852000 dealt a voided dungeon
+    // fight again; the Assault's own reading is #4576's to make.
+    let (_, RunAction::FightOver { won, turns, .. }) = fight_report(game, human)? else {
         return Err("the fight is not over: only a finished fight reports".into());
     };
     Ok(AssaultAction::FightOver { won, turns })
