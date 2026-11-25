@@ -16,7 +16,7 @@ const VANILLA: &str = "core-008";
 /// Zephrys (#97): (1), a Play of which `simulate` surcharges `AI_SEARCH.expensive_def_nodes`.
 const ZEPHRYS: &str = "core-097";
 
-/// The fill the tests replay with: `AI_SEARCH.replay_fill_steps` at 3, as screened, whatever it ships at.
+/// The fill the tests replay with: `AI_SEARCH.replay_fill_steps` at 3, the value it ships at (R4697000).
 const FILL: ReplayFill = ReplayFill {
     steps: 3,
     width: AI_BUDGET.branching,
@@ -93,8 +93,8 @@ fn replayed(world: &GameState, line: &[ActionBody], fill: ReplayFill) -> (LineRe
     (replay, counter.used())
 }
 
-/// R4447000: with the switch at 0, as shipped, a decision is node for node what it was before the
-/// count and the fill existed: its action, its line and its nodes are the base's.
+/// R4447000, R4697000: the decision on `draw_turn(&[VANILLA])` as shipped, the fill at 3: its action, its
+/// line and its nodes.
 #[test]
 fn r4447000_a_pinned_decision_keeps_its_action_line_and_nodes() {
     // A recorded decision, so it reads the pools as they are, not as the pool probe (#3117) rotates them:
@@ -112,21 +112,24 @@ fn r4447000_a_pinned_decision_keeps_its_action_line_and_nodes() {
         decision.line.iter().map(action_key).collect::<Vec<_>>(),
         decision.stats.nodes,
     );
-    // Recorded on the base before R4447000 (3af8296300): the 4/4 first, then Stockpile, then a card
-    // Stockpile drew on determinization 0.
-    let vanilla = r#"{"instanceId":"c2","type":"play","zone":{"lane":1,"row":"units"}}"#;
+    // Recorded with the fill at 3 (R4697000): Stockpile first, then the 1-drop it drew on
+    // determinization 0, then the 4/4. At 0 (3af8296300) it was the 4/4, then Stockpile, then a drawn
+    // card, in 137 nodes: the other worlds' cut replays of the Stockpile line ended their turn with
+    // its crystals unspent.
+    let stockpile = r#"{"instanceId":"c1","type":"play"}"#;
     let line = [
-        vanilla,
-        r#"{"instanceId":"c1","type":"play"}"#,
-        r#"{"instanceId":"c2","type":"switchPosition"}"#,
-        r#"{"instanceId":"c5","type":"play","zone":{"lane":2,"row":"units"}}"#,
+        stockpile,
+        r#"{"instanceId":"c5","type":"play","zone":{"lane":1,"row":"units"}}"#,
+        r#"{"instanceId":"c2","type":"play","zone":{"lane":3,"row":"units"}}"#,
+        r#"{"instanceId":"c5","type":"switchPosition"}"#,
+        r#"{"type":"endTurn"}"#,
     ];
     assert_eq!(
         pinned,
         (
-            vanilla.to_string(),
+            stockpile.to_string(),
             line.iter().map(|key| key.to_string()).collect(),
-            137
+            171
         )
     );
 }

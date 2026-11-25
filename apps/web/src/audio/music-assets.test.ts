@@ -1,6 +1,7 @@
 // R631 (SPEC §10.11 "Music"): the rendered music on disk, its manifest, its size cap, its license
 // record, the cards that play it, and `gen-music.mjs --check`. R1352: every Legendary's and Mythic's
 // own intro, tokens printed so included, over the sets that ship; R2722000: a Mythic's outlasts them all.
+// R4596000: the single-player Infinite Assault set's 44, which never ships to a deck, have theirs too.
 
 import { spawnSync } from "node:child_process";
 import { copyFileSync, mkdirSync, mkdtempSync, openSync, closeSync, ftruncateSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -136,6 +137,13 @@ describe("R631 the cards that play music", () => {
     for (const id of cards) expect(MUSIC_CARDS[id]?.intro, id).toBeDefined();
     const intros = cards.map((id) => MUSIC_CARDS[id]?.intro);
     expect(new Set(intros).size, "no two cards share an intro").toBe(cards.length);
+  });
+
+  it("R4596000 gives every Legendary and Mythic of the single-player Infinite Assault set an intro of its own, before it ships", () => {
+    const cards = introCards(["Infinite Assault"]);
+    expect(cards).toHaveLength(44);
+    for (const id of cards) expect(MUSIC_CARDS[id]?.intro, id).toBe(`intro-${id}`);
+    for (const id of cards) expect(MUSIC_MANIFEST.files[`intro-${id}`], id).toBeDefined();
   });
 
   it("R1352 gives an intro to no card that is not printed Legendary or Mythic", () => {

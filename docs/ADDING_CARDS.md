@@ -15,7 +15,7 @@ index in three digits after a `c`, then its slug with every `-` and `.` an `_` (
 
 | # | File | What changes | A gate fails without it |
 |---|---|---|---|
-| 1 | `spec/08-catalog.md` §8.7 (§8.1 Core, §8.6 Classic; `spec/07-tokens.md` for a token) | the card's row: the only source of card text (CLAUDE.md) | none |
+| 1 | `spec/08-catalog/`, the note of the card's set: `8.7-classic-plus.md` for §8.7 (`8.1` to `8.5` Core, `8.6-classic.md`; `spec/07-tokens.md` for a token) | the card's row: the only source of card text (CLAUDE.md) | none |
 | 2 | `crates/cards/catalog.json` | the entry, after the set's highest card index and before its shared tokens (`T-AI-…`); a token follows its card; it carries a `flavor`, chosen by [docs/polish/8-flavor.md](polish/8-flavor.md) (a change to a flavor alone needs no fragment, R1437000) | `catalog check`, `tests/cross/catalog.rs` |
 | 3 | `crates/cards/src/scripts/classic_plus/cNNN_slug.rs` | the script and its tests in one file ([§2](#2-templates)) | the build: `build.rs` refuses a catalog id with no file |
 | 4 | `crates/cards/tests/cross/catalog.rs` and `crates/cards/src/census.rs` | the card's fixture row in `CLASSIC_PLUS`; in `CENSUS` its set's `cards` (a token: its index in `card_defined_tokens` or `shared_tokens`) and its rarity's count, and in `tag_count` each tag it carries but Token. Every total and each set's fixture-row count is the census's sum | `tests/cross/catalog.rs`, `catalog check`, `cargo test -p jackioh-tools` |
@@ -53,8 +53,8 @@ BUILD's must-pass tables take no row for a new card; its own tests are the recor
 - Its `card-audio.json5` and `card-text.yaml` entries are written as for any card, but no voice file is expected for it until the set ships
   (`gen-voice.mjs --check` leaves it out), so [§7](#7-what-cannot-be-done-on-linux)'s rendering is owed by the release, not by the card.
   Its intro (row 10) is the release's too: the intros' totality test reads the sets that ship. (The Stinkyscape set's intros
-  came early, with its look-and-sound part, issue #1883, R1883000, and the Stinkyscape+ set's with its own, issue #3572,
-  R3572000, so neither's release owes any.)
+  came early, with its look-and-sound part, issue #1883, R1883000, the Stinkyscape+ set's with its own, issue #3572,
+  R3572000, and the single-player Infinite Assault set's with its own, issue #4596, R4596000, so no such release owes any.)
 - Its picture is not the release's: the web's art tests hold every catalog entry, a held set's included, to its rarity's
   detail floor (R3331001) and every Legendary and Mythic to a motion recipe of its own (R3340000), so a held set's cards draw
   placeholder scenes from the day they land (`apps/web/src/cards/art/infiniteAssaultRecipes.ts`, R4577009; Stinkyscape+'s,
