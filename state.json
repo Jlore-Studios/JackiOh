@@ -100,7 +100,27 @@
       "feedback_since": "2026-11-25T05:01:14Z",
       "issue": 4892,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [
+          "claude"
+        ],
+        "builder": "claude",
+        "built_by": "claude-squishy",
+        "rejections": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-squishy",
+            "run": "45550301971",
+            "tier": "strong"
+          }
+        ],
+        "sha": "17fcc29690c41cc1e8f99e3cf3cd7711c0eb3131",
+        "tiers": {
+          "claude": "strong"
+        }
+      }
     }
   },
   "labels_synced": "ad570512878062b5",
