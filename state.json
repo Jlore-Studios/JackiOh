@@ -24422,6 +24422,9 @@
         "c:7169293311"
       ]
     },
+    "4937": {
+      "suggestion": true
+    },
     "4938": {
       "action": "build",
       "asks": [],
@@ -48367,6 +48370,13 @@
         "at": "2026-11-25T17:18:09Z",
         "number": 4936,
         "title": "Patch: `permanents_on_field` meets a card lying on a unit zone after its side's backrow",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-25T19:07:13Z",
+        "number": 4937,
+        "title": "Patch: route six held-set hooks through the engine's read helpers instead of `GameState` fields",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
       }
