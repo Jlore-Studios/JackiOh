@@ -20399,7 +20399,7 @@
       "action": "revise",
       "asks": [],
       "ci_early": false,
-      "ci_fixes": 0,
+      "ci_fixes": 1,
       "ci_on_head": true,
       "ci_reruns": {
         "f785784e00b454b513f8218acf310770ff2e46c8": 1
@@ -20442,7 +20442,7 @@
       "pending_request": false,
       "provider": "agy",
       "question": "",
-      "queued_at": "2026-11-25T19:23:54Z",
+      "queued_at": "2026-11-25T21:13:26Z",
       "requested_by": "jgoetzmann-bot",
       "review_floor": "",
       "review_notes": "",
@@ -20450,7 +20450,7 @@
       "run_id": "45686457890",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
-      "source": "",
+      "source": "ci",
       "started_at": "2026-11-25T19:33:54Z",
       "stop_requested": false,
       "taken_asks": [],
