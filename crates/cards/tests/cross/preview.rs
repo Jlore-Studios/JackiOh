@@ -54,7 +54,7 @@ const FROZEN_WASTES: &str = "classicplus-012-6"; // Frozen Wastes: C+ #12.6's ex
 const BOOK_WORM: &str = "classicplus-039"; // Book Worm: C+ #39 Book Worm's N: test/classic-plus/039-book-worm.test.ts
 const CLASSIC_PLUS_C_PREVIEWED: [&str; 3] = [SNAKE, FROZEN_WASTES, BOOK_WORM];
 
-const EDWIN: &str = "stinkyscapeplus-162"; // Edwin Van'Spacechief: Combo gain
+const EDWIN: &str = "stinkyscapeplus-162"; // Edwin Van’Spacechief: Combo gain
 /// R280 formula cards from Stinkyscape+, each proved in its own script file.
 const STINKYSCAPE_PLUS_R280: [&str; 1] = [EDWIN];
 
