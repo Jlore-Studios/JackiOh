@@ -1261,7 +1261,7 @@ mod tests {
 
     /// The Jlockeed Large Language Model token, a 2/5 GIGA Taunt.
     const LLM: &str = "stinkyscapeplus-t-ai-04";
-    /// S #77 Yuma, a 1/8 Flying, so it stands in a backrow zone (R1081000).
+    /// S #77 Yuma, a 1/3 Flying, so it stands in a backrow zone (R1081000).
     const YUMA: &str = "stinkyscape-077";
     /// S #79 Orca, a 3/3 Flying.
     const ORCA: &str = "stinkyscape-079";

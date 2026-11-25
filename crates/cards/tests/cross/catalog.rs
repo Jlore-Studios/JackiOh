@@ -5654,7 +5654,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         st(2, 5),
         st(4, 10),
     ),
-    row("77", "Yuma", c(2), T::Unit, &[], R::Epic, st(1, 8), st(2, 16)),
+    row("77", "Yuma", c(1), T::Unit, &[], R::Epic, st(1, 3), st(2, 6)),
     row("78", "Ozark", c(3), T::Unit, &[], R::Epic, st(4, 4), st(8, 8)),
     row("79", "Orca", emb(4, 5), T::Unit, &[], R::Epic, st(3, 1), st(6, 2)),
     row(
