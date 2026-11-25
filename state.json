@@ -25446,17 +25446,15 @@
     "what": "revise #4939 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-25T18:25:54Z",
+    "at": "2026-11-25T18:41:58Z",
     "notes": [
-      "delivered review #4940 on claude-8 (run 45673669796): reviewed",
-      "delivered build #4891 on claude-3 (run 45664009378): built",
-      "delivered review #4939 on claude-7 (run 45659275015): approved",
-      "delivered build #4676 on claude-3 (run 45654120833): built",
-      "started review #4949 on claude-3 (run 45676083233)",
-      "started review #4950 on claude-3 (run 45676242468)",
-      "started revise #4946 on claude-8 (run 45676430741)",
-      "started build #4924 on claude-7 (run 45676607115)",
-      "nothing more to start: nothing is queued",
+      "#4950: `web (unit 4/8)`, `web` red in CI run 45675795031; its other early jobs have until 2026-11-25T18:43:28Z to report",
+      "delivered review #4949 on claude-3 (run 45676083233): approved",
+      "delivered plan #4932 on claude-3 (run 45669258092): planned",
+      "delivered revise #4935 on claude-1 (run 45654765320): built",
+      "started review #4935 on claude-1 (run 45678587895)",
+      "started revise #4939 on claude-3 (run 45678759237)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
       "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -26159,7 +26157,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T18:25:54Z",
+  "loop_tick": "2026-11-25T18:41:58Z",
   "machine_disk": {
     "issue": null,
     "reading": {
