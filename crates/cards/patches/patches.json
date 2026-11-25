@@ -36329,5 +36329,43 @@
     ],
     "fragment": "omura-s-activate-is-not-offered-with-no-enemy-unit-to-aim-at",
     "changes": []
+  },
+  {
+    "version": "v0.6.14c",
+    "date": "2026-11-25",
+    "title": "Inner Fire reads Attack below 0",
+    "source": "#4840",
+    "notes": "Inner Fire took its buff off the shown Attack, so a Unit below 0 came up short; it now reads Attack before layer 5's floor",
+    "player": {
+      "title": "Inner Fire fixed below 0 Attack",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Inner Fire on a Unit with negative Attack (under an aura such as Spikey Pillow) now sets it to exactly its Health, instead of coming up short."
+      ]
+    },
+    "commits": [
+      "b6b3421bb7080050792171f4cbd3b6b655d16ca7"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-010",
+      "stinkyscape-109",
+      "stinkyscape-111"
+    ],
+    "fragment": "inner-fire-reads-attack-below-0",
+    "changes": [
+      {
+        "id": "stinkyscape-010-1",
+        "name": "Inner Fire",
+        "kind": "changed",
+        "fields": [
+          "loc"
+        ]
+      }
+    ]
   }
 ]
