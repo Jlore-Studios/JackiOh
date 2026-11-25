@@ -624,33 +624,47 @@ mod r1370_a_deck_that_leans_on_a_set {
         themes
     }
 
-    /// Over `seeds` seeds, with the deck leaning on `lean`: the deck is whole and distinct, at least
-    /// `leanMinShare` of it is of the set it leans on (`lean`, or under the AI's soft gate the newest
-    /// set that ships and is not gated, R1390), at least `minUnitShare` of it are units, and a theme
-    /// the pool holds enough cards of for its floor is at least `themeMinShare` of it.
-    fn every_floor_holds(size: i32, base: Value, lean: SetName, theme: Option<(&str, usize)>, seeds: usize) {
+    /// Over `seeds` seeds, with the deck leaning on `lean`, or on no set when `None` (R4784000): the
+    /// deck is whole and distinct, at least `leanMinShare` of it is of the set it leans on (`lean`, or
+    /// under the AI's soft gate the newest set that ships and is not gated, R1390), at least
+    /// `minUnitShare` of it are units, and a theme the pool holds enough cards of for its floor is at
+    /// least `themeMinShare` of it.
+    fn every_floor_holds(
+        size: i32,
+        base: Value,
+        lean: Option<SetName>,
+        theme: Option<(&str, usize)>,
+        seeds: usize,
+    ) {
         register_cards();
         let mut literal = base;
-        literal["leanSet"] = json!(lean);
+        if let Some(lean) = lean {
+            literal["leanSet"] = json!(lean);
+        }
         if let Some((tag, _)) = theme {
             literal["theme"] = json!(tag);
         }
-        let leaned = ungated_lean(Some(lean), &gate_of(&literal))
-            .unwrap_or_else(|| panic!("{literal}: the gate leaves a set that ships"));
+        let leaned = lean.map(|lean| {
+            ungated_lean(Some(lean), &gate_of(&literal))
+                .unwrap_or_else(|| panic!("{literal}: the gate leaves a set that ships"))
+        });
+        let lean_label = lean.map_or_else(|| "none".to_string(), |set| set.to_string());
         let opts = options(literal.clone());
         for n in 1..=seeds {
             let deck = build_ai_deck(
-                &mut create_rng(&format!("r1370:{size}:{lean}:{theme:?}:{n}"), 0),
+                &mut create_rng(&format!("r1370:{size}:{lean_label}:{theme:?}:{n}"), 0),
                 size,
                 &opts,
             );
             let at = format!("{literal} seed {n}");
             assert_eq!(deck.len(), size as usize, "{at}");
             assert_eq!(deck.iter().collect::<IndexSet<_>>().len(), size as usize, "{at}");
-            assert!(
-                of_set(&deck, leaned) >= floor_of(size, AI_DECK.lean_min_share),
-                "{at}: {deck:?}"
-            );
+            if let Some(leaned) = leaned {
+                assert!(
+                    of_set(&deck, leaned) >= floor_of(size, AI_DECK.lean_min_share),
+                    "{at}: {deck:?}"
+                );
+            }
             assert!(
                 units_in(&deck) >= floor_of(size, AI_DECK.min_unit_share),
                 "{at}: {deck:?}"
@@ -706,8 +720,10 @@ mod r1370_a_deck_that_leans_on_a_set {
         // less, Felinor Feelings and Heroic Power one more; #4154 the human pin: Living Bomb (3), Snom
         // Bunny Mind Control (6), K-Pop Fanatic (3), Lockdown and Memory Leak (1), Field of Dreams (0) and others
         // move cost; #4440's second part the human, easy and hard pins: Suppressive Aura costs (1), and the
-        // Toe Cracker, Professor Curvature and Wardrum change the deck builder's reads of them).
-        let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
+        // Toe Cracker, Professor Curvature and Wardrum change the deck builder's reads of them). #4784 adds
+        // the Book pin, a theme holding no Unit, dealt before R4784000 where it held the units' floor, so
+        // R4784000 leaves it as it was.
+        let pins: [(&str, i32, Value, u32, &[&str]); 5] = [
             (
                 "r1370-pin:human",
                 20,
@@ -830,6 +846,39 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classicplus-019",
                 ],
             ),
+            (
+                "r4784000-pin:book:6",
+                25,
+                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"], "theme": "Book" }),
+                25,
+                &[
+                    "core-043",
+                    "classicplus-044",
+                    "core-019",
+                    "core-087",
+                    "classic-012",
+                    "classicplus-039",
+                    "classic-077",
+                    "classicplus-035",
+                    "classic-080",
+                    "classic-053",
+                    "classic-067",
+                    "core-045",
+                    "classic-048",
+                    "classicplus-038",
+                    "core-071",
+                    "classicplus-040",
+                    "classicplus-049",
+                    "classicplus-054",
+                    "classic-027",
+                    "classic-003",
+                    "classicplus-056",
+                    "classicplus-057",
+                    "classic-016",
+                    "classic-024",
+                    "classicplus-055",
+                ],
+            ),
         ];
         // These pins are recorded deals, so they read the pools as they are, not as the pool probe (#3117)
         // rotates them: `gatedSets` (R1390) and R1420 keep a later set out of the pool they name, and a
@@ -863,6 +912,88 @@ mod r1370_a_deck_that_leans_on_a_set {
     }
 
     #[test]
+    fn r4784000_without_a_lean_set_every_theme_keeps_its_floor_and_the_units_floor_on_every_deck_at_every_tier()
+     {
+        let banned: Vec<String> = SHADOW_BAN_IDS.iter().map(|id| id.to_string()).collect();
+        let themes = themes(&banned, AI_DECK_GATED_SETS);
+        // Book holds no Unit, so a Book deck's units all come from outside its theme (#4784).
+        assert!(themes.iter().any(|(tag, _)| tag == "Book"), "{themes:?}");
+        for difficulty in [Difficulty::Easy, Difficulty::Medium, Difficulty::Hard] {
+            let h = AI_DIFFICULTY[difficulty];
+            for (tag, in_pool) in &themes {
+                every_floor_holds(
+                    h.deck_size,
+                    json!({ "manaCap": h.mana_cap }),
+                    None,
+                    Some((tag, *in_pool)),
+                    50,
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn r4784000_without_a_lean_set_a_rolled_theme_or_none_keeps_the_units_floor_on_every_deck_at_every_tier()
+    {
+        for difficulty in [Difficulty::Easy, Difficulty::Medium, Difficulty::Hard] {
+            let h = AI_DIFFICULTY[difficulty];
+            // The AI's own deck (its shadow ban and soft gate) and a player's random deck (neither).
+            every_floor_holds(h.deck_size, json!({ "manaCap": h.mana_cap }), None, None, SEEDS);
+            every_floor_holds(
+                h.deck_size,
+                json!({ "manaCap": h.mana_cap, "banned": [], "gatedSets": [] }),
+                None,
+                None,
+                SEEDS,
+            );
+        }
+    }
+
+    #[test]
+    fn r4784000_every_deck_the_quality_gates_deal_holds_the_units_floor() {
+        use jackioh_ai::{AI_GATE, AI_GATE_BUDGET, Matchup, fixture_game_config, game_config};
+        register_cards();
+        for matchup in Matchup::ALL {
+            for n in 1..=AI_GATE.full_seeds[*matchup] {
+                for config in [
+                    game_config(*matchup, n, AI_GATE_BUDGET, AI_GATE.seed_series),
+                    fixture_game_config(*matchup, n, AI_GATE_BUDGET, AI_GATE.seed_series),
+                ] {
+                    for (seat, deck) in [("p1", &config.decks.0), ("p2", &config.decks.1)] {
+                        let floor = floor_of(deck.len() as i32, AI_DECK.min_unit_share);
+                        assert!(
+                            units_in(deck) >= floor,
+                            "{} {seat}: {} units of {}, the floor is {floor}: {deck:?}",
+                            config.seed,
+                            units_in(deck),
+                            deck.len()
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn r4784000_a_book_deck_holds_the_units_floor_on_every_seed_and_a_card_drawn_again_takes_no_extra_rng_draw()
+     {
+        register_cards();
+        let book = options(json!({ "theme": "Book" }));
+        for n in 1..=SEEDS {
+            let seed = format!("r4784000:book:{n}");
+            let mut rng = create_rng(&seed, 0);
+            let deck = build_ai_deck(&mut rng, DECK_SIZE, &book);
+            assert!(
+                units_in(&deck) >= floor_of(DECK_SIZE, AI_DECK.min_unit_share),
+                "{seed}: {} units: {deck:?}",
+                units_in(&deck)
+            );
+            // An explicit theme rolls nothing, so the deal takes one draw a card.
+            assert_eq!(rng.cursor(), DECK_SIZE as u32, "{seed}");
+        }
+    }
+
+    #[test]
     fn r1370_lean_set_reads_and_writes_as_lean_set_naming_the_set() {
         let leaning = options(json!({ "leanSet": "Classic+" }));
         assert_eq!(leaning.lean_set, Some(SetName::ClassicPlus));
@@ -883,14 +1014,14 @@ mod r1370_a_deck_that_leans_on_a_set {
         every_floor_holds(
             DECK_SIZE,
             json!({ "banned": [], "gatedSets": [] }),
-            newest,
+            Some(newest),
             None,
             SEEDS,
         );
         every_floor_holds(
             DECK_SIZE,
             json!({ "banned": [], "gatedSets": [], "theme": null }),
-            newest,
+            Some(newest),
             None,
             SEEDS,
         );
@@ -905,7 +1036,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             every_floor_holds(
                 DECK_SIZE,
                 json!({ "banned": [], "gatedSets": [] }),
-                newest,
+                Some(newest),
                 Some((tag, *in_pool)),
                 40,
             );
@@ -923,9 +1054,9 @@ mod r1370_a_deck_that_leans_on_a_set {
         for difficulty in [Difficulty::Medium, Difficulty::Hard] {
             let h = AI_DIFFICULTY[difficulty];
             let base = json!({ "manaCap": h.mana_cap });
-            every_floor_holds(h.deck_size, base.clone(), newest, None, SEEDS);
+            every_floor_holds(h.deck_size, base.clone(), Some(newest), None, SEEDS);
             for (tag, in_pool) in themes(&banned, AI_DECK_GATED_SETS) {
-                every_floor_holds(h.deck_size, base.clone(), newest, Some((&tag, in_pool)), 20);
+                every_floor_holds(h.deck_size, base.clone(), Some(newest), Some((&tag, in_pool)), 20);
             }
             // The shadow ban still applies to the AI's own decks (R186).
             for n in 1..=50 {
@@ -954,7 +1085,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             every_floor_holds(
                 DECK_SIZE,
                 json!({ "banned": [], "gatedSets": [] }),
-                set,
+                Some(set),
                 None,
                 100,
             );
@@ -974,7 +1105,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             every_floor_holds(
                 DECK_SIZE,
                 json!({ "banned": [], "gatedSets": [] }),
-                pick.resolve(),
+                Some(pick.resolve()),
                 None,
                 25,
             );

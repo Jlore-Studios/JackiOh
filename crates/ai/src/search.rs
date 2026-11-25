@@ -216,6 +216,11 @@ pub fn beam_search(
                 });
             }
         }
+        // R4801000: every move at the root has been tried; a host's wrap-up is polled from here, so one
+        // that fired before the beam still leaves it lines, the root's End turn among them.
+        if depth == 0 {
+            counter.end_root();
+        }
 
         if stopped {
             left_open = std::mem::take(&mut frontier);
@@ -295,9 +300,10 @@ impl ReplayFill {
         }
     }
 
-    /// The most nodes one replay's fill may take, `steps × (width + 1)`; 0 when off.
+    /// The most nodes one replay's fill may take, `steps × (width + 1)`; 0 when off. R4802000: saturating,
+    /// so a `branching` of "no limit" overflows nothing.
     pub fn ceiling(self) -> usize {
-        self.steps * (self.width + 1)
+        self.steps.saturating_mul(self.width.saturating_add(1))
     }
 }
 

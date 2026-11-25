@@ -48,7 +48,7 @@ pub struct Challenge {
 /// `POST /api/challenges` (B48): `201 {challengeId, roomCode}`.
 pub async fn create(app: &Arc<App>, req: Req) -> ApiResult {
     let me = caller_profile(&req)?.id;
-    let friend_id = str(&req.body, "friendId")?;
+    let friend_id = str(&req.body, "friendId")?.to_ascii_lowercase();
     let now = now_ms();
 
     // Counted on every attempt, before anything is read (as B43 counts friend requests).

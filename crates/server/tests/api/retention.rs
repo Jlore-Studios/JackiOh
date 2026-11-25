@@ -2,22 +2,25 @@
 //! (docs/v0.3.0/SURFACE.md §11.2). What the store then deletes is asserted in `tests/store/contract.rs`
 //! and `tests/sql/07_retention_purge.sql`.
 
+use std::time::Duration;
+
 use serde_json::{Value, json};
 
 use jackioh_engine::wire::GameRecord;
-use jackioh_server::api::retention::{purge_expired, purge_shares, sweep_lobbies};
+use jackioh_server::api::retention::{purge_expired, purge_shares, purge_tickets, run_purge, sweep_lobbies};
 use jackioh_server::app::{App, now_ms};
 use jackioh_server::config::{
     CODE_ATTEMPT_RETENTION_DAYS, GAME_RECORD_RAW_RETENTION_DAYS, IDEMPOTENCY_KEY_TTL_HOURS,
-    MATCH_ACTION_RETENTION_DAYS, PLAY_TELEMETRY_RETENTION_DAYS,
+    MATCH_ACTION_RETENTION_DAYS, MS_PER_SECOND, PLAY_TELEMETRY_RETENTION_DAYS,
+    QUEUE_TICKET_CANCELLED_KEEP_SECONDS,
 };
 use jackioh_server::db::store::{CodeAttempt, MatchActionRow, MatchRow, MatchSignalRow, ReplayShare};
 use jackioh_server::economy::idempotency::sweep_expired;
 use jackioh_server::economy::store::IdempotencyRow;
 use jackioh_server::lobby::store::Lobby;
 
-use crate::support::deps::{call, test_app};
-use crate::support::store::{account, fake_lock, from, to_json, uuid};
+use crate::support::deps::{call, record_logs, test_app};
+use crate::support::store::{account, advance, fake_lock, from, to_json, uuid};
 
 const DAY_MS: i64 = 86_400_000;
 const HOUR_MS: i64 = 3_600_000;
@@ -110,6 +113,14 @@ async fn log_attempt(app: &App, ip_hash: &str, at: i64) {
     let mut t = app.db.begin(None).await.expect("begin");
     t.codes_log_attempt(&attempt).await.expect("codes.logAttempt");
     t.commit().await.expect("commit");
+}
+
+/// Whether the ticket's row is still held.
+async fn holds_ticket(app: &App, ticket_id: &str) -> bool {
+    let mut tx = app.db.begin(None).await.expect("begin");
+    let held = tx.tickets_get(ticket_id).await.expect("tickets.get").is_some();
+    tx.commit().await.expect("commit");
+    held
 }
 
 // The retention purge
@@ -404,5 +415,94 @@ mod the_retention_purge {
             .collect();
         assert_eq!(shared, vec!["m-recent".to_string()]);
         assert_eq!(purge_shares(&app).await.expect("the share step"), 0);
+    }
+
+    /// R4446000: the ticket step deletes a ticket `DELETE /api/queue` cancelled once it was enqueued
+    /// more than `QUEUE_TICKET_CANCELLED_KEEP_SECONDS` ago, and not a moment before; the account then
+    /// queues, leaves and queues again as it did.
+    #[tokio::test(start_paused = true)]
+    async fn r4446000_the_ticket_step_takes_a_ticket_left_by_delete_queue_once_past_its_keep_and_the_account_queues_again()
+     {
+        let app = test_app().await;
+        let ana = account(&app, 61, "Ana").await;
+        let body = json!({ "mode": "random" });
+
+        let (status, _, queued) = call(&app, "POST", "/api/queue", Some(&ana.token), body.clone()).await;
+        assert_eq!(status, 200);
+        assert_eq!(queued["status"], json!("open"));
+        let ticket_id = queued["ticketId"].as_str().expect("a ticket id").to_string();
+        let (status, _, left) = call(&app, "DELETE", "/api/queue", Some(&ana.token), Value::Null).await;
+        assert_eq!(status, 200);
+        assert_eq!(left["cancelled"], json!(true));
+
+        assert_eq!(purge_tickets(&app).await.expect("the ticket step"), 0);
+        assert!(
+            holds_ticket(&app, &ticket_id).await,
+            "a ticket just cancelled stays"
+        );
+
+        advance(QUEUE_TICKET_CANCELLED_KEEP_SECONDS * MS_PER_SECOND - MS_PER_SECOND).await;
+        assert_eq!(purge_tickets(&app).await.expect("the ticket step"), 0);
+        assert!(
+            holds_ticket(&app, &ticket_id).await,
+            "a ticket a second inside its keep stays"
+        );
+
+        advance(2 * MS_PER_SECOND).await;
+        assert_eq!(purge_tickets(&app).await.expect("the ticket step"), 1);
+        assert!(
+            !holds_ticket(&app, &ticket_id).await,
+            "a ticket past its keep is gone"
+        );
+        assert_eq!(purge_tickets(&app).await.expect("the ticket step"), 0);
+
+        let (status, _, second) = call(&app, "POST", "/api/queue", Some(&ana.token), body.clone()).await;
+        assert_eq!(status, 200);
+        assert_eq!(second["status"], json!("open"));
+        let (status, _, _) = call(&app, "DELETE", "/api/queue", Some(&ana.token), Value::Null).await;
+        assert_eq!(status, 200);
+        let (status, _, third) = call(&app, "POST", "/api/queue", Some(&ana.token), body).await;
+        assert_eq!(status, 200);
+        assert_eq!(third["status"], json!("open"));
+        assert!(
+            holds_ticket(&app, second["ticketId"].as_str().expect("a ticket id")).await,
+            "the ticket cancelled just now stays"
+        );
+        assert!(holds_ticket(&app, third["ticketId"].as_str().expect("a ticket id")).await);
+    }
+
+    /// R4446000: the hourly loop runs the ticket step and logs what it took.
+    #[tokio::test(start_paused = true)]
+    async fn r4446000_the_purge_loop_runs_the_ticket_step_and_logs_what_it_took() {
+        let logs = record_logs();
+        let app = test_app().await;
+        let ana = account(&app, 62, "Ana").await;
+        let (status, _, queued) = call(
+            &app,
+            "POST",
+            "/api/queue",
+            Some(&ana.token),
+            json!({ "mode": "random" }),
+        )
+        .await;
+        assert_eq!(status, 200);
+        let ticket_id = queued["ticketId"].as_str().expect("a ticket id").to_string();
+        let (status, _, _) = call(&app, "DELETE", "/api/queue", Some(&ana.token), Value::Null).await;
+        assert_eq!(status, 200);
+        advance(QUEUE_TICKET_CANCELLED_KEEP_SECONDS * MS_PER_SECOND + MS_PER_SECOND).await;
+
+        let purge = tokio::spawn(run_purge(app.clone()));
+        for _ in 0..500 {
+            if !logs.named("tickets.purged").is_empty() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+        purge.abort();
+
+        let purged = logs.named("tickets.purged");
+        assert_eq!(purged.len(), 1);
+        assert_eq!(purged[0].data["data"]["tickets"], json!(1));
+        assert!(!holds_ticket(&app, &ticket_id).await);
     }
 }

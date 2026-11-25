@@ -92,6 +92,15 @@ pub fn jlockeed_cards() -> CardQuery {
     }
 }
 
+/// R278: "random Jlockeed Units" (M #97.9 Jlockeed's Headquarters): the Units of `jlockeed_cards`,
+/// every non-token card tagged Jlockeed narrowed to Units, from the sets that ship (R380, R1420).
+pub fn jlockeed_units() -> CardQuery {
+    CardQuery {
+        type_: Some(OneOrMany::One(CardType::Unit)),
+        ..jlockeed_cards()
+    }
+}
+
 /// R1862002: "Discover N `rarity` Weapons" (Stinkyscape #81 to #83, #85, #86): the Weapon-tagged cards
 /// of that rarity. It names its set, so it reaches them whether or not the set ships (R1420).
 pub fn weapons_of(rarity: Rarity) -> CardQuery {
@@ -230,6 +239,12 @@ pub const POOLS: &[NamedPool] = &[
         rule: "The Jlockeed cards (R278): every non-token card tagged Jlockeed, from the sets that ship (R380, R1420); the card drawing it leaves itself out (R387).",
         call: "jlockeed_cards",
         parts: || whole(jlockeed_cards()),
+    },
+    NamedPool {
+        name: "jlockeed-units",
+        rule: "The Jlockeed Units (R278): every non-token Unit tagged Jlockeed, from the sets that ship (R380, R1420).",
+        call: "jlockeed_units",
+        parts: || whole(jlockeed_units()),
     },
     NamedPool {
         name: "weapons",

@@ -62,7 +62,7 @@ async fn shares_as_seat(tx: &mut Tx<'_>, match_id: &str, profile_id: &str) -> Re
 pub async fn share_replay(app: &Arc<App>, req: Req) -> ApiResult {
     let profile = caller_profile(&req)?;
     let match_id = param(&req, "matchId");
-    let friend_id = str(&req.body, "friendId")?;
+    let friend_id = str(&req.body, "friendId")?.to_ascii_lowercase();
 
     // R4391000: counted on every attempt, before any lookup.
     let now = now_ms();

@@ -455,7 +455,7 @@ pub async fn remove_friend(app: &Arc<App>, req: Req) -> ApiResult {
 /// 404. Blocking again changes nothing.
 pub async fn post_block(app: &Arc<App>, req: Req) -> ApiResult {
     let me = caller_profile(&req)?.id;
-    let target = str(&req.body, "profileId")?;
+    let target = str(&req.body, "profileId")?.to_ascii_lowercase();
     if target == me {
         return Err(bad_request("you cannot block yourself"));
     }

@@ -7,4 +7,4 @@ import type { PlayerId } from "./PlayerId";
  * The match clock's state: the countdowns, which of them is armed by which timer, and what is paused
  * or spent. It is part of the host's state, so a host that resumes from a checkpoint resumes the clocks.
  */
-export type MatchClock = { ceilingAt: number, stopped: boolean, owner: PlayerId | null, turnKey: string | null, remaining: number, turn: Countdown, holder: PlayerId | null, prompt: Countdown, mulligan: Countdown, mulliganOpen: boolean, mulliganExpired: boolean, grace: PerPlayer<Countdown>, sequence: Countdown, sequenceFirst: string | null, sequencePlayer: PlayerId | null, ceiling: number | null, };
+export type MatchClock = { ceilingAt: number, stopped: boolean, owner: PlayerId | null, turnKey: string | null, remaining: number, turn: Countdown, holder: PlayerId | null, promptFor: string | null, prompt: Countdown, mulligan: Countdown, mulliganOpen: boolean, mulliganExpired: boolean, grace: PerPlayer<Countdown>, sequence: Countdown, sequenceFirst: string | null, sequencePlayer: PlayerId | null, ceiling: number | null, };

@@ -192,7 +192,7 @@ A mini-boss always drops its content's artifact, or else one of `RUN_MINI_BOSS_D
 
 **The report:** won or not, the human's final health, damage dealt to the enemy's hero and units, healing on the human's side, cards drawn, turns.
 
-A win of any kind adds `RUN_WIN_MAX_HP` to the max for the rest of the run, then refills HP to the new max, whatever the hero's final health was ([[R3584000]]). Any other end drops HP to zero and ends the run.
+A win of any kind adds `RUN_WIN_MAX_HP` to the max for the rest of the run, then refills HP to the new max, whatever the hero's final health was ([[R3584000]]). Any other end but a void drops HP to zero and ends the run. A fight a Glitch voids never happened ([[R679]]): it reports nothing, and the run, its HP as it was, deals it again fresh from the same seed ([[R4852000]]).
 
 **Curses and Combat artifacts** change the two handicaps after the tier's row ([[R2922001]]). Each curse taken changes the enemy's once: more hero health, more opening cards, or more crystals every turn, bonus and cap together ([[R181]]). Each Combat artifact held changes the human's once per level: more opening cards ([[R182]]) or starting Armor ([[R2922000]]). A negative amount counts as none, and an enemy's own artifacts change nothing. The placeholders' numbers are strawmen ([[§15.13]]).
 

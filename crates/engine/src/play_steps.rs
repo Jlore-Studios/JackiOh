@@ -46,8 +46,8 @@ use crate::play_choices::{
 };
 use crate::play_counts::record_play;
 use crate::prompts::{
-    AnswerInput, HookResumableOptions, OpenPromptArgs, cell_option_label, close_prompt, hero_option_label,
-    in_offered_order, open_prompt, run_hook_resumable, why_answer_refused,
+    AnswerInput, HookResumableOptions, OpenPromptArgs, cell_option_label, hero_option_label, open_prompt,
+    run_hook_resumable, take_answer,
 };
 use crate::query::played_earlier;
 use crate::random_cast::{
@@ -68,9 +68,7 @@ use crate::subsystems::feng_shui::FengShuiVerdict;
 use crate::subsystems::fuse::{FuseArgs, fuse};
 use crate::subsystems::glitch::count_system_play;
 use crate::targeting::target_aim;
-use crate::targeting_point::{
-    InterceptArgs, intercept_targeting, pay_targeting_discards, target_answer, why_target_answer_refused,
-};
+use crate::targeting_point::{InterceptArgs, intercept_targeting, pay_targeting_discards};
 use crate::triggers::{
     OWED_TO_TRAPS, SETTLE_PASS_CAP, SettleOptions, TriggerHolder, dispatch_pending, event_of_queued,
     run_queued_trigger, settle, trigger_holder_for, trigger_holders_with_hook,
@@ -409,6 +407,7 @@ pub struct PlayRun {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub from_deck: Option<bool>,
     /// R1086: the host an Equip play fuses into at step 7 (ME-EQUIP), read at step 1 (D14).
+    /// R4834000: cleared at step 4 when the card is handed to the opponent.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub equip_host: Option<String>,
     // B5 E14 (Classic #57 Echo; R399, R546)
@@ -621,10 +620,16 @@ pub fn validate_play(
     }
 
     // R1200: while a Mayor acts the action carries no targets, so draw each at random before anything
-    // is checked or paid; the targeting point, costs and Joro's replacements meet the drawn target
+    // is paid; the targeting point, costs and Joro's replacements meet the drawn target
     // (MD-E9). A face-down play (ME-ALTPLAY, R1044) declares nothing, so draws nothing. R4590001:
     // a Spell played under a random-targets modifier or a Jailbreaker's aura draws the same way.
     let mut owned = action.clone();
+    // R348: the play's own numbers are checked before any script can read them. R1200's draw
+    // below runs the declarations' named checks against the X-stamped face, so an unbounded X
+    // would reach them (S #99's check multiplies by it). A Plague spend travels on no face the
+    // draw reads, so its check stays below.
+    crate::play_choices::refuse_x(sink.state, player, &card, owned.x)?;
+    crate::play_choices::refuse_embiggen(sink.state, &card, owned.embiggen)?;
     if crate::random_targets::play_targets_random(sink.state, player, &card) && owned.face_down.is_none() {
         let face = crate::play_choices::face_for_action(sink.state, player, &card, &owned);
         let given = owned.targets.clone().unwrap_or_default();
@@ -1483,6 +1488,9 @@ fn played_events(sink: &mut EngineSink<'_>, run: &PlayRun, card: &CardInstance, 
         cost_paid: run.cost_paid,
         x: card.x,
         embiggened: card.embiggened,
+        // R4672000: the declared choices for the game record, already one per declaration in the card's
+        // order (`play_choices::refuse_modes`, R81); `None` for a play with none.
+        modes: (!run.modes.is_empty()).then(|| run.modes.clone()),
         former_id: former_id.clone(),
         // R454: a play from the graveyard says so (public), for a client to animate it from there.
         from: run.source.map(|PlaySource::Graveyard| PlayedFrom::Graveyard),
@@ -1639,8 +1647,11 @@ fn place_card(sink: &mut EngineSink<'_>, run: &mut PlayRun) -> bool {
     } else {
         // R360: #55's base face, paid for with an opposing unit, is summoned for the opponent: still
         // this player's play and card (§3.2), in the opponent's zone and control (`place_on_field`).
+        // R4834000: the hand-over cancels an Equip play: the card never stands on its host, so it
+        // lands as a plain arrival and step 7 fuses nothing (`fuse_equip`).
         if let Some(theirs) = handed_over_zone(sink.state, run, &card) {
             run.zone = Some(theirs);
+            run.equip_host = None;
         }
         // R4665000: a card that stacks on its target (S #9 Ticketed) takes the zone of the permanent
         // the play named, either side's; with none left it lands in its graveyard, as R138's does.
@@ -2896,7 +2907,7 @@ fn finish_step(sink: &mut EngineSink<'_>, run: &mut PlayRun) {
 
 /// R1086 (ME-EQUIP): fuse the Equip card on top into its host, which keeps its zone, damage,
 /// exertion and arrival turn; the Equip card ceases to exist with no Death. If either left the field
-/// first, nothing fuses.
+/// first, or step 4 handed the card to the opponent (R4834000), nothing fuses.
 fn fuse_equip(sink: &mut EngineSink<'_>, run: &PlayRun) {
     let Some(host_id) = run.equip_host.clone() else {
         return;
@@ -3331,16 +3342,12 @@ pub fn answer_play_prompt(sink: &mut EngineSink<'_>, answer: &AnswerInput) -> Re
         return Err(EngineError::new("no prompt is open"));
     };
 
-    why_answer_refused(&pending, answer)?;
-
     let Some(mut run) = run_of(&pending.resume) else {
         return Err(EngineError::new("that prompt is not a play's own"));
     };
-    let picks = in_offered_order(&pending, &answer.selection);
-    // B5 E5, R450: picks that cost more discards than the chooser holds are no answer.
-    why_target_answer_refused(sink.state, &pending, &picks)?;
-
-    close_prompt(sink);
+    // B5 E5, E9, R450: the targeting point of an Echo repeat's or a cast's fresh pick — refused when it
+    // costs more discards than the chooser holds, else its random discards first, then an interception.
+    let targeted = take_answer(sink, &pending, answer)?;
 
     // The answered prompt is this run's, so any tail owed for it earlier would repeat this step.
     let instance_id = run.instance_id.clone();
@@ -3348,9 +3355,6 @@ pub fn answer_play_prompt(sink: &mut EngineSink<'_>, answer: &AnswerInput) -> Re
         is_play_resume(&item.resume)
             && run_of(&item.resume).is_some_and(|owed| owed.instance_id == instance_id)
     });
-    // B5 E5, E9, R450: the targeting point of an Echo repeat's or a cast's fresh pick — a random
-    // discard cost it pays first, and an interception.
-    let targeted = target_answer(sink, &pending, &picks);
     continue_play_answer(sink, &mut run, &targeted);
     Ok(())
 }

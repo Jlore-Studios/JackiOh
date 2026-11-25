@@ -15,7 +15,7 @@ export default {
   // repository's root (the spec's notes, the stylesheets, the voice and music manifests). Stryker
   // puts each file back when it ends.
   inPlace: true,
-  // Game.tsx's layers (CLAUDE.md, Architecture: animations, effects, audio, cards, drag, settings)
+  // Game.tsx's layers (apps/web/README.md: animations, effects, audio, cards, drag, settings)
   // and the client's two adapters, the wire and the WebAssembly module's, without their tests, the
   // generated (ts-rs's types and the engine's and the server's constants) or the built module.
   mutate: [

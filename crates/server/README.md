@@ -234,7 +234,7 @@ account, its presence to friends, written at most once a `PRESENCE_TOUCH_EVERY_M
 | `GET` | `/api/admin/leaderboard` | active | `?ladder=`: every season row of the ladder, highest rating first, `{ season, ladder, rows: [{ profileId, username, kind: person \| bot, rating, games, wins, losses, draws, rank, handSet, you, bot: { strength, persona, retired } \| null }] }`: the one read that marks a bot (R3074002) |
 | `GET`, `POST` | `/api/admin/news` | active | the newest `NEWS_POSTS_PAGE` posts, `{ posts: [{ id, title, summary, postedAt, postedBy, takenDownAt }] }`; `POST { title, summary }` posts one with no reward, checked as `news.json`'s entries are, 201 `{ post }`, 400 naming every problem (R3074003) |
 | `DELETE` | `/api/admin/news/:postId` | active | takes a post down, `{ post }`; 404 for no such post, 409 for one down already (R3074003) |
-| `GET` | `/api/admin/audit` | active | the newest `ADMIN_AUDIT_PAGE` audit rows matching `?before_id=<id>&profile_id=<id>&route=<METHOD path>` (all optional: `before_id` an exclusive upper bound on the row id, the other two exact matches), `{ actions: [{ id, profileId, username, route, request, before, after, at }], nextBeforeId: <id> \| null }`, newest first; `nextBeforeId` is the last row's id when the page is full, else `null` (R3074000); a moderation lever's row (`CLI moderate …`, #4141) has `profileId` and `username` empty |
+| `GET` | `/api/admin/audit` | active | the newest `ADMIN_AUDIT_PAGE` audit rows matching `?before_id=<id>&profile_id=<id>&route=<METHOD path>` (all optional: `before_id` the cursor naming the shown page's last row, answered in the `(at, id)` sort key's order, the other two exact matches), `{ actions: [{ id, profileId, username, route, request, before, after, at }], nextBeforeId: <id> \| null }`, newest first; `nextBeforeId` is the last row's id when the page is full, else `null` (R3074000); a moderation lever's row (`CLI moderate …`, #4141) has `profileId` and `username` empty |
 | `POST` | `/api/dev/bar/:bar` | active | a dev tool: fills the caller's `card` or `cosmetic` token bar so it pays at once, a card token or the cosmetic token cycle's next step, the cosmetic bar to its current step's size (R1305000, R1305001, R2728000), every row reason `dev`, marked `dev`; 404 `no such bar` for any other `:bar`. 403 `forbidden` to any account that is not a dev account (R1310003) |
 | `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641), a portrait the account owns (R1827000), and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000), and a playmat, backdrop and card back the account owns (R1833000, R1834001) |
 | `POST` | `/api/decks/sync` | active | the deck workshop's autosave pass in one request (R3212001): `{ decks, trios, deletedTrios, deletedDecks }`, each deck and trio its `PUT` body with its `id`, each deletion an id, at most `DECK_SYNC_ITEMS_MAX` items in all (else 400, running none); run in that order, each as its own `PUT` or `DELETE` in its own transaction; answers the four lists index-aligned, each item `{ id, deck }`, `{ id, trio }`, `{ id, deleted }` or, refused, `{ id, status, error }` as its route would answer; a refused item refuses alone, and a server fault fails the request. No spend: no turn, no key |
@@ -637,6 +637,11 @@ the deck's, `--json` as `created`, `--card` filtering both, and `GET /api/stats/
 `created` (R2089000), each row only its games, an adjusted win rate, its range and a tier (R4083000), read
 against the other Created cards (`created_field`, answered as `tiers.created`), or against the average deck for The Coin, Glitch and
 the Dormant Starship, which a rule makes (R4082000).
+Each play also records what was chosen for it (its Choose One options, X and Embiggen, R4672000), each
+Created card the card whose effect made it (R4672001) and each Discover-like choice what it offered and
+picked (R4672002); the totals keep each card's `variants`, `outputs` and `offers` in the same row's `stats`,
+a seat once a game by face, no migration (R4672003). `stats-cards --card=<id>` prints its variants and
+outputs tables after its other tables, and `--json` writes them as `choices`; no public route reads them yet.
 
 `stats-cards` takes `--source=live|dev|all` (live unless told otherwise), `--mode=bo1|bo3|random`,
 `--patch=<version>`, `--pilot=human|ai|unified`, `--card=<id>` and `--json`. With no `--pilot` it
@@ -814,7 +819,7 @@ has failed on at least `LOOP_FAILING_ALERT_PASSES` passes in a row over at least
 pass), with the failure's text in the line's `message` (the issue shows only the event name, the email every
 field); `ALERT_WINDOW_MS` then holds the event to one notice an hour. The steps are `matchmaker`,
 `matches.reaper`, `matches.open_reaper`, `seats.reconcile`, `series.sweeper`, `duos.sweeper`, `challenges.sweeper`, `daily.sweeper` and the retention
-purge's ten, `game_records.fold`, `game_records.refile`, `retention.purge`, `shares.purge`, `chat.purge`, `duos.logs.purge`,
+purge's eleven, `game_records.fold`, `game_records.refile`, `retention.purge`, `shares.purge`, `tickets.purge`, `chat.purge`, `duos.logs.purge`,
 `idempotency.sweep`, `lobbies.sweep`, `practice.sweep` and `practice.prune`. Each step's text in `alerts::meaning` names its job and what
 players notice while it fails (for the matchmaker, that nobody who queues gets a game), and says that the
 email's `message` field holds the error. A reaper pass in which any match would not reap counts as failed,
@@ -1163,7 +1168,9 @@ the server's alone, as a 1v1 match's are: a room's host and guest may read it (b
 choices), and no client role reads a co-op match or its log (no grant, no policy). The retention
 loop deletes a co-op match's log `MATCH_ACTION_RETENTION_DAYS` after the match ended, as a 1v1
 match's (`duos::purge_expired_logs`); the match row and its result stay. The loop also deletes a replay
-share whose match's log is gone (`shares.purge`, R4390001).
+share whose match's log is gone (`shares.purge`, R4390001). It also deletes a cancelled queue ticket
+enqueued more than `QUEUE_TICKET_CANCELLED_KEEP_SECONDS` ago (`tickets.purge`, R4446000); queued and
+claimed tickets stay, as a queue match's mode is read from its claimed ticket (`matches_mode_of`).
 
 Migration 0041 adds the card statistics' totals (R1044000): `record_totals`, `card_totals` and
 `decklist_totals`, server-only like `game_records` (RLS on, no policy, no grant), and

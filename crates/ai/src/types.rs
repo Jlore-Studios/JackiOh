@@ -186,8 +186,9 @@ pub struct Decision {
 }
 
 impl Decision {
-    /// R3498000: a searched decision that left its finalists unscored on a sampled world. A refused
-    /// reply refuses every later node, so it shows here too, except at one determinization.
+    /// R3498000: a searched decision that left its finalists unscored on a sampled world. A reply the
+    /// counter ran out for refuses every later node, so it shows here too, except at one
+    /// determinization; one cut short of a step's surcharge (R4809000) need not.
     pub fn fell_short(&self) -> bool {
         matches!(self.reason, DecisionReason::Search | DecisionReason::Prompt)
             && self.stats.determinizations > 0
@@ -205,6 +206,9 @@ pub trait NodeCounter {
     /// R3498000: from here the beam only ends its open lines' turns, which a wrap-up no longer refuses;
     /// a counter with no wrap-up ignores it.
     fn end_exploring(&self) {}
+    /// R4801000: the beam has tried every move at its root; a wrap-up is polled from here. A counter
+    /// with no wrap-up ignores it.
+    fn end_root(&self) {}
     /// The failed simulations this counter tallies (`SearchStats.simErrors`), if it tallies them.
     fn sim_error_tally(&self) -> Option<usize> {
         None

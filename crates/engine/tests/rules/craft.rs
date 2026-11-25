@@ -201,6 +201,87 @@ fn r880_the_preview_and_the_reducer_agree() {
 }
 
 #[test]
+fn r880_a_crafted_units_stats_past_the_budget_are_refused_however_large() {
+    // #4827: summed in `i32`, two stats of 2147483647 wrapped to −3 points, under every budget, and
+    // minted a (0)-cost giant (a build with overflow checks panicked). The cap refuses each stat
+    // before the sum, which saturates.
+    let budget = true_craft_points_budget(0);
+    let max = i32::MAX;
+    let (attack, health) = (
+        format!("attack is {max}, above {CRAFT_MAX_STAT}"),
+        format!("health is {max}, above {CRAFT_MAX_STAT}"),
+    );
+    // (case, recipe, what the refusal says besides the budget)
+    for (case, recipe, too_large) in [
+        ("ten-ten", unit_recipe(0, 10, 10), vec![]),
+        ("max-both", unit_recipe(0, max, max), vec![&attack, &health]),
+        ("max-attack", unit_recipe(0, max, 1), vec![&attack]),
+    ] {
+        let mut state = crafting(&format!("craft-stats-{case}"), "mode:0");
+        let before = hash_state(&state);
+        let error = must(answer_recipe(&mut state, recipe).error, case);
+        assert!(error.contains("cannot be crafted"), "{case}: {error}");
+        assert!(
+            error.contains(&format!("over the budget of {budget}")),
+            "{case}: {error}"
+        );
+        for reason in too_large {
+            assert!(error.contains(reason.as_str()), "{case}: {error}");
+        }
+        assert_eq!(open_as(&state, PromptKind::Craft, P1).budget, Some(0));
+        assert_eq!(hash_state(&state), before, "{case}: the state is unchanged");
+    }
+}
+
+#[test]
+fn r880_r883_a_recipe_with_every_number_at_i32_max_is_refused_and_its_preview_saturates() {
+    // #4827: every number a recipe carries at its largest. Each is refused in its own words, the
+    // points saturate at `i32::MAX` rather than wrap, and the preview compiles the card without a panic.
+    let max = i32::MAX;
+    let recipe = json!({
+        "cost": 0, "type": "Unit", "adjective": "Pure", "noun": "Closure",
+        "attack": max, "health": max,
+        "keywords": [{ "kind": "Armor", "n": max }], "echo": max,
+        "hats": [
+            { "hat": "cry", "effects": [{ "verb": "damageTarget", "n": max }, { "verb": "healTarget", "n": max }] },
+            { "hat": "startOfTurn", "effects": [{ "verb": "draw", "n": max }] },
+        ],
+    });
+    let preview = craft_preview(&json_as(recipe.clone()), 0, None);
+    assert!(!preview.valid);
+    assert_eq!(preview.points, max);
+    for reason in [
+        format!("attack is {max}, above {CRAFT_MAX_STAT}"),
+        format!("health is {max}, above {CRAFT_MAX_STAT}"),
+        format!("Armor is {max}, outside 1 to {CRAFT_MAX_N}"),
+        format!("Echo is {max}, outside 0 to {CRAFT_MAX_N}"),
+        format!("dealing damage to a target needs a number from 1 to {CRAFT_MAX_N}"),
+        format!("drawing cards needs a number from 1 to {CRAFT_MAX_N}"),
+        format!(
+            "it costs {max} points, over the budget of {}",
+            true_craft_points_budget(0)
+        ),
+    ] {
+        assert!(
+            preview.reasons.contains(&reason),
+            "{reason}: {:?}",
+            preview.reasons
+        );
+    }
+    assert_eq!(
+        preview.def.radiant.attack,
+        Some(max),
+        "the Radiant face's doubling saturates"
+    );
+
+    let mut state = crafting("craft-every-number-max", "mode:0");
+    let before = hash_state(&state);
+    let error = must(answer_recipe(&mut state, recipe).error, "the answer is refused");
+    assert!(error.contains("over the budget"), "{error}");
+    assert_eq!(hash_state(&state), before, "the state is unchanged");
+}
+
+#[test]
 fn r3043000_the_crafter_has_80_percent_of_the_points_and_one_over_them_is_refused() {
     // The crafter's 2, 7, 12, 17, 22 at 80%, to the nearest point.
     assert_eq!(TRUE_CRAFT_POINTS_PERCENT, 80);

@@ -13,6 +13,7 @@ import type { ManaState } from "./ManaState";
 import type { PlayerModifier } from "./PlayerModifier";
 import type { RecursionLog } from "./RecursionLog";
 import type { RowFlags } from "./RowFlags";
+import type { SetName } from "./SetName";
 import type { StarscapeMap } from "./StarscapeMap";
 import type { TipsyCounter } from "./TipsyCounter";
 import type { TurnLog } from "./TurnLog";
@@ -41,6 +42,12 @@ aiTurn: boolean,
  * to it, so a game without handicaps hashes exactly as it did before this field existed.
  */
 handicap?: Handicap, 
+/**
+ * R4595000: the sets this seat's deck was dealt from, public, as the setup named them
+ * (`CreateGameOptions.deckSets`). Determinization samples the seat's unseen cards from these sets'
+ * non-token cards. Absent, the seat names none and samples as before, so no other game's hash moves.
+ */
+deckSets?: Array<SetName>, 
 /**
  * R345: `false` once this player has turned R82's automatic turn end off (`setAutoEndTurn`).
  * Absent means on, and turning it back on deletes the field, so a game in which nobody touched

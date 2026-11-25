@@ -26,7 +26,7 @@ use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
 use crate::evaluate::Prices;
 use crate::lethal::find_lethal;
 use crate::observe::{HIDDEN_DEF_ID, redact};
-use crate::simulate::{LineStatus, create_node_counter, line_status, search_signature, simulate, unit_lanes};
+use crate::simulate::{LineStatus, create_node_counter, line_status, position_key, simulate};
 use crate::types::NodeCounter;
 
 /// R2660000: whether `seat`, at its own turn, faces a lethal showing on the opponent's board that nothing
@@ -146,12 +146,6 @@ fn step_from<'a>(state: &'a GameState, action: &ActionBody) -> Cow<'a, GameState
     } else {
         Cow::Borrowed(state)
     }
-}
-
-/// A position of the walk: the search's own identity for it (`search_signature`) and the units'
-/// lanes, which that leaves out, so a unit played into another lane is another position.
-fn position_key(state: &GameState, seat: PlayerId) -> String {
-    format!("{}|{}", search_signature(state, seat), unit_lanes(state))
 }
 
 /// R2660000: whether one step from `before` to `after` left nothing to chance: it drew no random

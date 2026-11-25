@@ -21,6 +21,9 @@ pub struct MatchSnapshot {
     pub active: PlayerId,
     /// Who owes the open prompt an answer, or null (§10.6).
     pub pending_for: Option<PlayerId>,
+    /// R4848000: the open prompt's id, or null; the prompt clock keys on it. Host bookkeeping: a seat's view
+    /// shows the other seat only who holds a prompt (§10.6).
+    pub pending_id: Option<String>,
     /// R265: while both mulligans are open (phase `mulligan`, `pending_for` null), the seats that
     /// still owe theirs, in seat order; empty otherwise. Public (R266: that a seat is ready is
     /// public, what it kept is not), and the mulligan clock (R268) and its expiry read nothing else.
@@ -42,6 +45,7 @@ pub fn snapshot(state: &GameState) -> MatchSnapshot {
         turn: state.turn,
         active: state.active,
         pending_for: state.pending.as_ref().map(|pending| pending.player_id),
+        pending_id: state.pending.as_ref().map(|pending| pending.id.clone()),
         // R265: the engine's own answer to "who still owes a mulligan", not a read of its fields.
         mulligan_owed: jackioh_engine::mulligan_owed(state),
         phase: state.phase,
@@ -69,6 +73,7 @@ pub fn clock_view_for(snapshot: &MatchSnapshot) -> ClockView {
         turn: snapshot.turn,
         active: snapshot.active,
         pending_for: snapshot.pending_for,
+        prompt_id: snapshot.pending_id.clone(),
         mulligan_owed: snapshot.mulligan_owed.clone(),
         over: snapshot.result.is_some() || snapshot.phase == Phase::Over,
         sequence: snapshot.sequence.as_ref().map(|question| SequenceClockView {
@@ -99,6 +104,7 @@ mod tests {
             turn: 1,
             active: PlayerId::P1,
             pending_for,
+            pending_id: None,
             mulligan_owed: vec![PlayerId::P1],
             phase,
             result,
@@ -131,5 +137,16 @@ mod tests {
         assert!(!clock_view_for(&at(None, Phase::Main, None)).over);
         assert!(clock_view_for(&at(None, Phase::Main, won())).over);
         assert!(clock_view_for(&at(None, Phase::Over, None)).over);
+    }
+
+    /// R4848000: the clock reads the open prompt's id.
+    #[test]
+    fn r4848000_the_clock_reads_the_open_prompts_id() {
+        let asked = MatchSnapshot {
+            pending_id: Some("q7".to_string()),
+            ..at(Some(PlayerId::P2), Phase::Main, None)
+        };
+        assert_eq!(clock_view_for(&asked).prompt_id.as_deref(), Some("q7"));
+        assert_eq!(clock_view_for(&at(None, Phase::Main, None)).prompt_id, None);
     }
 }

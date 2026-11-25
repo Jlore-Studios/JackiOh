@@ -171,7 +171,7 @@ async fn reopen_seek(app: &Arc<App>, claimed: &DailyInviteRow, now: i64) {
 /// `POST /api/daily/challenges`: `201 {id}`.
 pub async fn challenge(app: &Arc<App>, req: Req) -> ApiResult {
     let me = caller_profile(&req)?.id;
-    let friend_id = crate::api::http::str(&req.body, "friendId")?;
+    let friend_id = crate::api::http::str(&req.body, "friendId")?.to_ascii_lowercase();
     // §9.8: counted with the live challenges, on every attempt, before anything is read.
     let key = account_key(&me);
     if !app.social.challenges.allow(&key, now_ms()) {
