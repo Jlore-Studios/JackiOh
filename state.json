@@ -24043,6 +24043,17 @@
       "waiting_comment": 7166267601
     },
     "4932": {
+      "asks": [
+        "c:7169276667"
+      ],
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-25T17:17:30Z",
+      "requested_by": "MaxGoetzmann",
+      "stop_requested": false,
       "suggestion": true
     },
     "4933": {
