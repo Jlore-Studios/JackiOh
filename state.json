@@ -20471,6 +20471,7 @@
         "by": "`claude` (strong)",
         "sha": "68d163f2505128e156150383b6b579ba66ef263b"
       },
+      "cross_rounds": 0,
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
