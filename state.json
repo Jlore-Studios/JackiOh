@@ -24942,6 +24942,14 @@
         "sha": "f785784e00b454b513f8218acf310770ff2e46c8",
         "tiers": {}
       }
+    },
+    "4946": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-25T15:21:41Z",
+      "issue": 4817,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
