@@ -19678,8 +19678,8 @@
       "last_findings": [],
       "live": "building",
       "owner": "claude-7",
-      "owner_since": "2026-11-25T13:37:19Z",
-      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
+      "owner_since": "2026-11-25T18:44:38Z",
+      "owner_why": "its turn came (#4942, which it waited behind, closed), and the lane that approved it resolves it",
       "pending_request": false,
       "planned_at": "2026-11-25T09:20:05Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -24392,12 +24392,12 @@
       "forced": false,
       "interruptions": 0,
       "issue": 4811,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner": "claude-7",
       "pending_request": false,
       "provider": "claude-7",
-      "queued_at": "2026-11-25T15:35:13Z",
+      "queued_at": "2026-11-25T18:44:38Z",
       "run_id": "45659275015",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -24418,9 +24418,17 @@
         "provider": "claude-7",
         "run": "45659275015"
       },
+      "source": "conflict",
       "started_at": "2026-11-25T16:55:57Z",
       "stop_requested": false,
       "taken_asks": [],
+      "turn": {
+        "model": "opus",
+        "provider": "claude-7",
+        "since": "2026-11-25T18:44:38Z",
+        "until": "2026-11-25T19:14:38Z",
+        "why": "#4942, which it waited behind, closed"
+      },
       "votes": {
         "approvals": [
           "claude"
@@ -24441,18 +24449,7 @@
           "claude": "strong"
         }
       },
-      "waiting_comment": 7167136028,
-      "waiting_turn": {
-        "behind": [
-          4942
-        ],
-        "ends": "2026-11-25T20:29:17Z",
-        "from_run": "45659275015",
-        "head": "a707e48276a6fd0896ac82cea522a0b916f969b6",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-25T18:29:17Z"
-      }
+      "waiting_comment": 7167136028
     },
     "4940": {
       "action": "review",
