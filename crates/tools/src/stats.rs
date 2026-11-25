@@ -38,7 +38,7 @@ use indexmap::{IndexMap, IndexSet};
 use rayon::prelude::*;
 use serde_json::Value;
 
-use jackioh_ai::{AI_DEV_RUN, DevRunOptions, MatchSetup, SHADOW_BAN, SHADOW_WATCH, dev_game_record};
+use jackioh_ai::{AI_DEV_RUN, DevRunOptions, SHADOW_BAN, SHADOW_WATCH, dev_game_record};
 use jackioh_engine::config::SWING_FIELD_MIN_ROWS;
 use jackioh_engine::{
     CardChoicesRow, CardStats, CardStatsFilter, CardStatsReport, CardWindow, CreatedStats,
@@ -993,7 +993,6 @@ fn run_options(args: &Args, patch: String) -> Result<DevRunOptions> {
         budget: None,
         force,
         commit: None,
-        setup: MatchSetup::default(),
     })
 }
 
@@ -2495,7 +2494,6 @@ mod tests {
                 budget: Some(FEW),
                 force: None,
                 commit: None,
-                setup: MatchSetup::default(),
             },
             DevRunOptions {
                 series: "dev-force-core-090".to_string(),
@@ -2503,7 +2501,6 @@ mod tests {
                 budget: Some(FEW),
                 force: Some("core-090".to_string()),
                 commit: None,
-                setup: MatchSetup::default(),
             },
         ] {
             let expected = serial_lines(1, 6, &options);
@@ -2541,7 +2538,6 @@ mod tests {
             budget: Some(FEW),
             force: None,
             commit: None,
-            setup: MatchSetup::default(),
         };
         let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
         let mut kept = String::new();

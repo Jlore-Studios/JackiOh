@@ -493,7 +493,6 @@ mod surface_sweep_cards_clock {
                 retime: None,
                 tier: None,
                 banned: None,
-                setup: None,
                 face: None,
             },
         );
