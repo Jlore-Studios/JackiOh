@@ -20378,6 +20378,13 @@
     "4849": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45526399176",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "muse",
+        "since": "2026-11-25T01:39:34Z",
+        "until": "2026-11-25T02:09:34Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
