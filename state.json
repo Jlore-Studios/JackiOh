@@ -21687,18 +21687,16 @@
     "what": "review #4972 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-25T22:17:44Z",
+    "at": "2026-11-25T22:33:31Z",
     "notes": [
-      "delivered suggest on claude-4 (run 45709212335): interrupted",
-      "delivered revise #4939 on claude-8 (run 45697947940): built",
-      "delivered review #4959 on claude-6 (run 45697773951): approved",
-      "delivered revise #4948 on claude-3 (run 45695498451): built",
-      "delivered revise #4893 on muse (run 45695319956): built",
-      "started review #4893 on muse (run 45712930808)",
-      "started review #4939 on claude-8 (run 45713064893)",
-      "started review #4948 on claude-3 (run 45713207327)",
+      "delivered suggest on agy (run 45709513222): suggested",
+      "delivered build #4925 on muse (run 45689684326): built",
+      "started review #4972 on muse (run 45714784415)",
       "nothing more to start: nothing is queued",
-      "runner gate: started 0 of 4 waiting run(s); 4 wait for a slot"
+      "#4971: typed it Task",
+      "#4970: typed it Task",
+      "#4969: typed it Task",
+      "runner gate: started 0 of 5 waiting run(s); 5 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22400,7 +22398,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T22:17:44Z",
+  "loop_tick": "2026-11-25T22:33:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
