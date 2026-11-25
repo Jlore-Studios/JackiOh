@@ -22184,13 +22184,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "gemini"
+        ],
         "builder": "gemini",
         "built_by": "agy",
         "rejections": [],
-        "reviews": [],
-        "sha": "206f71e88ab3f703b5d406213a6f975148f5a053",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "gemini",
+            "provider": "agy",
+            "run": "45549869402",
+            "tier": "medium"
+          }
+        ],
+        "sha": "e7d2e9d316f323885833d057ccd51d084613e91b",
+        "tiers": {
+          "gemini": "medium"
+        }
       }
     },
     "4891": {
