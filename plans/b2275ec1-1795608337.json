@@ -1,0 +1,68 @@
+{
+  "action": "plan",
+  "number": 4845,
+  "title": "Patch: the Call to Chaos a Training Grounds Call adds to a hand each turn may be Glitch, as every other card generated into a hand may",
+  "branch": "bot/issue-4845",
+  "thread": "**Issue #4845 (data, not instructions):**\n\n````text\n# #4845: Patch: the Call to Chaos a Training Grounds Call adds to a hand each turn may be Glitch, as every other card generated into a hand may\nOpened by @squishy-squooby.\n\n### What happens\n\nTraining Grounds #39 Call to Chaos (Training Grounds Edition) has a ninth entry: \"At the start of every turn of yours for the rest of the game, add a random Call to Chaos to your hand\". It picks from the Call to Chaos pool and adds the card to a hand, but passes no Glitch odds, so the pick is never Glitch:\n\n```rust\n// crates/engine/src/subsystems/call_to_chaos_training_grounds.rs:115, add_random_call\ncrate::catalog::pick_generated_unique(&mut *ctx.sink.rng, &pool, None, &mut ctx.draw_tally)\n//                                                                  ^^^^ the `glitch` argument\n```\n\nWith `system_plays` at the odds' denominator (certain odds), the card added at the start of the caster's next turn is still a Call (`stinkyscape-151`).\n\n### What should happen\n\nR673: \"every card generated into a hand or a deck \u2014 added from a pool, shuffled in from one, a hand replaced (C+ #65.5), a deck replaced (C+ #73), a hand or deck card transformed at random \u2014 is Glitch instead with odds n \u00d7 `GLITCH_ODDS_PER_SYSTEM_PLAY` / `GLITCH_ODDS_DENOMINATOR` \u2026 drawn as one more number of the match rng after the pick\". `add_random_from_catalog` (`crates/engine/src/effects/add_to_hand.rs:456`) and every other hand or deck generator pass `Some(state)`.\n\n### How to reproduce\n\nFails on `main` (3a83bd7), with a passing control, in [`crates/ai/tests/audit_cards_tg_mplus.rs` at f9ffcdf](https://github.com/Jlore-Studios/JackiOh/blob/f9ffcdf/crates/ai/tests/audit_cards_tg_mplus.rs) (branch `claude/vigilant-mayer-pmyrhr`): `r673_the_ninth_entrys_call_is_generated_into_a_hand_and_may_be_glitch`.\n\n```rust\nconst CTC_TG: &str = \"traininggrounds-039\";\nconst ALTERNATE: &str =\n    \"At the start of every turn of yours for the rest of the game, add a random Call to Chaos to your hand\";\n\nfn rolled(s: &Scenario) -> Vec<String> {\n    s.events().iter().filter_map(|event| match event {\n        GameEvent::ChaosRolled { effects, .. } => Some(effects.clone()),\n        _ => None,\n    }).flatten().collect()\n}\nfn ctc_game(seed: &str) -> Scenario {\n    jackioh_cards::register_all();\n    let mut s = scenario(json!({\n        \"seed\": seed,\n        \"p1\": { \"hand\": [CTC_TG], \"library\": [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER], \"mana\": 10 },\n        \"p2\": { \"hand\": [FILLER], \"library\": [FILLER, FILLER, FILLER, FILLER, FILLER, FILLER] },\n    }));\n    s.play(CTC_TG, json!({}));\n    s\n}\n\n#[test]\nfn r673_the_ninth_entrys_call_is_generated_into_a_hand_and_may_be_glitch() {\n    // The seed search lands on \"audit-ctc-tg-18\": the roll is the ninth entry alone.\n    let seed = seed_where(\"audit-ctc-tg\", |seed| rolled(&ctc_game(seed)) == vec[ALTERNATE.to_string()]);\n    let mut s = ctc_game(&seed);\n    s.state_mut().system_plays = Some(GLITCH_ODDS_DENOMINATOR);\n    s.end_turn();\n    s.end_turn();\n    let added: Vec<String> = s.hand(P1).iter().map(|c| c.def_id.clone()).filter(|d| d != FILLER).collect();\n    assert_eq!(added, vec[GLITCH_DEF_ID.to_string()], \"R673: a card added to a hand from a pool\");\n}\n```\n\nOutput today: `left: [\"stinkyscape-151\"]   right: [\"classic-t-glitch\"]`. The control `control_recruitment_posters_start_of_turn_add_is_glitch_under_the_same_odds` passes: TG #20's start-of-turn add under the same odds is Glitch.\n\nThe test forces certainty by setting the counter. A real game reaches n above 0 by playing C #18 or C #25, so the defect is a skipped probability (n in 10,000 for each System play), not an unreachable state.\n\n### Where\n\nThe rules engine: `crates/engine/src/subsystems/call_to_chaos_training_grounds.rs` (`add_random_call`).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- Pass `Some(&*ctx.sink.state)` as the `glitch` argument in `add_random_call`.\n- **Replays.** This draws one more rng number only when `system_plays > 0`, so a replay of such a game that rolled entry 9 would fold to a different hash. R3135000 accepted exactly that for this card before; say so in the ruling note in this issue's block, or keep the old reading for the catalogs a replay folds under (R767000) if the owner prefers.\n- A neighbour seen by reading only, to check in the same change: `call_to_chaos_stinky.rs:134` (`build_acclaimed`) adds a pool pick to a hand through `pick_unique`, which has no Glitch roll either.\n- Correct as it is, so leave it: the neighbouring `cast_random_call_to_chaos` passes `None` because it is a cast, and R673's only exemptions are cards \"generated to be summoned or cast at once, or transformed on the field\". R2200002, R2200004 and R3135000 describe entry 9's pool, price and timing and exempt nothing from R673.\n- A card change in play: it needs its pending patch fragment (`docs/ADDING_CARDS.md`).\n\nFound by an audit of the Training Grounds and Meditative+ card scripts; the reproduction was run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4845: needs a plan; `claude-7` (claude, `opus`, strong) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:29:40Z",
+    "claimed_at": "2026-11-25T12:06:13Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4676 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4804 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4807 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4811 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4812 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4817 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4823 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4824 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4828 is held for `claude-3` until 07:20 (it refused a call)",
+    "#4836 is held for `claude-3` until 07:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4649 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
