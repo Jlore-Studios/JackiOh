@@ -53,6 +53,34 @@ fn no_form() -> CardDef {
     }
 }
 
+/// R4817001: Divine Shield and Reborn on the Radiant face only, as C+ #6 Wrong-House Attacker's Reborn.
+fn keyword_glow() -> CardDef {
+    CardDef {
+        radiant: json_as(json!({
+            "attack": 4, "health": 4,
+            "keywords": [{ "kind": "Divine Shield" }, { "kind": "Reborn" }], "text": "radiant",
+        })),
+        ..unit_def(
+            734,
+            json!({ "id": "rd-keyword-glow", "name": "Keyword Glow (fixture)", "attack": 2, "health": 2 }),
+        )
+    }
+}
+
+/// R4817001: the same keywords printed on both faces, so the Radiant face gains neither.
+fn keyword_both() -> CardDef {
+    CardDef {
+        radiant: keyword_glow().radiant,
+        ..unit_def(
+            735,
+            json!({
+                "id": "rd-keyword-both", "name": "Keyword Both (fixture)", "attack": 2, "health": 2,
+                "keywords": [{ "kind": "Divine Shield" }, { "kind": "Reborn" }],
+            }),
+        )
+    }
+}
+
 fn scripts() -> IndexMap<String, CardScripts> {
     let mut scripts = IndexMap::new();
     scripts.insert(
@@ -82,7 +110,7 @@ fn scripts() -> IndexMap<String, CardScripts> {
 fn game(seed: &str) -> GameState {
     let state = new_game(seed, None);
     let mut catalog = registered_catalog().clone();
-    for def in [crier(), glow_up(), no_form()] {
+    for def in [crier(), glow_up(), no_form(), keyword_glow(), keyword_both()] {
         catalog.insert(def.id.clone(), def);
     }
     register_catalog(catalog);
@@ -484,5 +512,52 @@ mod r60_make_radiant_at_random_m3_t1 {
             as_p1(),
         );
         assert!(state.rng_cursor > 0);
+    }
+}
+
+/// R4817001, §5.2, §10.4: a Radiant face that newly prints Divine Shield or Reborn gives a spent one
+/// back to a card made Radiant where it stands, as a grant does; one printed on both faces stays spent.
+mod r4817001_a_radiant_face_newly_printing_a_spent_keyword_puts_it_up {
+    use super::*;
+
+    /// The card `def` on p1's unit lane 2, its Divine Shield spent and its Reborn used.
+    fn spent(state: &mut GameState, def: &CardDef) -> String {
+        let unit = put(state, &def.id, slot(PlayerId::P1, Row::Units, 2), json!({}));
+        let card = find_instance_mut(state, &unit.id).expect("the unit");
+        card.divine_shield_spent = Some(true);
+        card.reborn_spent = Some(true);
+        unit.id
+    }
+
+    #[test]
+    fn r4817001_a_used_reborn_and_a_spent_shield_come_back_when_only_the_radiant_face_prints_them() {
+        let mut state = game("radiant-keywords");
+        let id = spent(&mut state, &keyword_glow());
+        assert!(!unit_has(&state, &live(&state, &id), KeywordKind::Reborn));
+        assert!(!unit_has(&state, &live(&state, &id), KeywordKind::DivineShield));
+
+        run(&mut state, named(&id), None, as_p1());
+
+        let now = live(&state, &id);
+        assert!(now.radiant);
+        assert_eq!(now.divine_shield_spent, None);
+        assert_eq!(now.reborn_spent, None);
+        assert!(unit_has(&state, &now, KeywordKind::Reborn));
+        assert!(unit_has(&state, &now, KeywordKind::DivineShield));
+    }
+
+    #[test]
+    fn r4817001_printed_on_both_faces_they_stay_spent() {
+        let mut state = game("radiant-keywords");
+        let id = spent(&mut state, &keyword_both());
+
+        run(&mut state, named(&id), None, as_p1());
+
+        let now = live(&state, &id);
+        assert!(now.radiant);
+        assert_eq!(now.divine_shield_spent, Some(true));
+        assert_eq!(now.reborn_spent, Some(true));
+        assert!(!unit_has(&state, &now, KeywordKind::Reborn));
+        assert!(!unit_has(&state, &now, KeywordKind::DivineShield));
     }
 }
