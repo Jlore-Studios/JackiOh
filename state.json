@@ -21800,9 +21800,11 @@
         "by": "`muse` (medium)",
         "sha": "bdfb02e49e640ffbc1a52b8d267102526a65c717"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-25T03:52:51Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-25T04:46:08Z",
         "family": "muse",
@@ -21812,6 +21814,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Still running with no output yet. I'll pick up the results when they arrive and finish the remaining verification (landing/collection suites, spec check, typecheck rerun) then.<!-- bot: {\"status\": \"done\", \"title\": \"Patch: the quests panel reads again when the next quest falls due, as the landing bo\u2026\n- The quests page now refreshes itself at the due time instead of asking for a reopen.\n- What changed:\n- - [QuestsPanel.tsx](apps/web/src/routes/QuestsPanel.tsx): the default export passes its existing `reread` as `onArrived`, so `QuestsList` takes its auto-read branch once per due time, exactly like the landing bookmark. One header-comment line cites the new ruling. Nothing else in the file changed.\n- - [QuestsPanel.test.tsx](apps/web/src/routes/QuestsPanel.test.tsx): three new `R4818000` tests beside the existing callback test \u2014 read-once plus new quest shown with no reopen sentence (and still once after more time passes), failed reread showing the alert with Try again that recovers, and failed\u2026\n- - New ruling [R4818000.md](spec/rulings/R4818000.md), its [\u00a711 paragraph](spec/pending/4818.md), a one-clause addition to [\u00a714.9](spec/14-economy.md), and a one-clause addition to the `routes/QuestsPanel.tsx` entry in [apps/web/README.md](apps/web/README.md). Per the plan I recorded R4818000 as its\u2026\n- How I tested it (all commands I ran, what they printed):\n- - `pnpm --dir apps/web test src/routes/QuestsPanel.test.tsx` \u2014 19/19 passed (16 existing + 3 new).\n- - `pnpm --dir apps/web test src/routes/landing-quests.test.tsx src/routes/collection.test.tsx` \u2014 49/49 passed, oracle file unedited.\n- - `cargo jackioh spec check` \u2014 ok: 2577 rulings, 6382 proofs.\n- - `cargo fmt --check` \u2014 clean; `pnpm exec eslint` on both touched files \u2014 clean.\n- - `pnpm --dir apps/web typecheck` \u2014 exit 0. Note for the reviewer: on this shared box `tsc` OOMs at the default 2GB heap (V8 \"heap out of memory\", exit 134) even with nothing else running, so I reran it with `NODE_OPTIONS=--max-old-space-size=6144` and it passed; environmental, unrelated to the cha\u2026\n- - `git status` shows exactly the six planned files, nothing else.\n- Decisions the issue didn't settle: none beyond the plan's recorded one (new ruling vs. reusing R2035000 \u2014 I kept the plan's choice).\n- Worth a second look: the Try-again path intentionally fires one extra superseded read on remount (the old due time is still past), matching the landing bookmark \u2014 the tests assert recovery, not an exact call count, there.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4818 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4818/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "interruptions": 0,
       "issue": 4818,
       "kind": "review",
       "live": "reviewing",
