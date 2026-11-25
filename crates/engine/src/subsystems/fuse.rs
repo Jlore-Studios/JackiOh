@@ -1165,6 +1165,8 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 toxic_on_damage: sum_defined(defined.iter().map(|f| f.toxic_on_damage)),
                 damage_burns: flags(|f| f.damage_burns),
                 damage_is_toxic: flags(|f| f.damage_is_toxic),
+                // R4783001: a flag, so a fusion of two such cards adds the hit's Burn once.
+                damage_also_burns: flags(|f| f.damage_also_burns),
                 infinite_mana: flags(|f| f.infinite_mana),
                 // Stinkyscape+ E8 (issue #3558).
                 starts_at_bottom: flags(|f| f.starts_at_bottom),
