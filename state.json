@@ -24357,17 +24357,8 @@
       }
     },
     "4936": {
-      "action": "plan",
-      "asks": [
-        "c:7169293311"
-      ],
-      "build_next": {
-        "from_run": "45667255960",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-25T18:00:28Z",
-        "until": "2026-11-25T18:30:28Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-25T18:00:17Z",
         "difficulty": "hard",
@@ -24386,10 +24377,9 @@
         "reason": "planned on opus",
         "trail": "s/worktree.sh; git rev-parse --verify -q origin/main; git merge-base origin/main HEAD\", \"description\": \"Read worktree script and check origin/main\"}\n- Bash: {\"command\": \"grep -n \\\"const [A-Z_]*GAMES\\\\|const RULE_MIN_GAMES\\\\|play-code\\\" crates/tools/src/classify.rs | head -20\", \"description\": \"Find classify game counts\"}\n- Bash: {\"command\": \"sed -n '55,100p' crates/tools/src/classify.rs; sed -n '615,645p' crates/tools/src/classify.rs\", \"description\": \"Read classify constants and unchecked logic\"}\n- Bash: {\"command\": \"grep -n \\\"cfg(test)\\\\|catalog_loc\\\\|fn script_changes\\\\|code_of\\\\|strip_tests\\\" crates/tools/src/classify.rs | head -20\", \"description\": \"Check whether classify ignores test code\"}\n- Bash: {\"command\": \"grep -rn \\\"fn code_lines\\\\|test module\\\\|mod tests\\\\b\\\" crates/tools/src/classify*.rs crates/tools/src/classify/ 2>/dev/null | head; ls crates/tools/src | head -80\", \"description\": \"Loca\u2026\n- Bash: {\"command\": \"sed -n '1995,2020p' crates/tools/src/classify.rs; sed -n '2515,2535p' crates/tools/src/classify.rs\", \"description\": \"Read classify tests on test-only edits\"}\n- Bash: {\"command\": \"grep -n \\\"parent_bin\\\\|parent-bin\\\" crates/tools/src/classify.rs | head -30\", \"description\": \"Check classify's use of parent-bin\"}\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\ncards=c['cards'] if isinstance(c,dict) and 'cards' in c else c\\nfor d in cards:\\n if d.get('id') in ('stink\u2026\n- tool error: Exit code 1 Traceback (most recent call last): File \"<string>\", line 6, in <module> if d.get('id') in ('stinkyscape-009','classic-076','core-096','meditative-086','infinite-assault-231','infiniteassa\u2026\n- Bash: {\"command\": \"python3 -I -c \\\"\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\nprint(type(c), list(c)[:5] if isinstance(c,dict) else '')\\ncards=c.get('defs') or c.get('cards') or c\\nif i\u2026\n- Bash: {\"command\": \"grep -rn \\\"pub fn make_context\\\" crates/engine/src | head -3; grep -rn \\\"pub fn new\\\" crates/engine/src/script.rs | head -5; grep -rn \\\"fn expect_in_zone\\\" -A 12 crates/engine/src/testki\u2026\n- Bash: {\"command\": \"sed -n '25,60p' crates/engine/src/resolve.rs; grep -rn \\\"apply_effects(&\\\\[\\\" crates/cards/src/scripts | head -5; grep -rn \\\"fn locate\\\" -A 15 crates/engine/src/testkit/scenario.rs | hea\u2026\n- Bash: {\"command\": \"sed -n '270,305p' crates/cards/src/scripts/classic_plus/c070_chaos_machine.rs\", \"description\": \"Read an existing direct apply_effects test\"}\n- Bash: {\"command\": \"sed -n '1500,1525p' crates/engine/src/testkit/scenario.rs; grep -n \\\"expect_in_zone(.*\\\\\\\"field\\\\\\\")\\\" -r crates/cards/src/scripts | head -3\", \"description\": \"Check that locate reports f\u2026\n- Bash: {\"command\": \"ls target 2>/dev/null | head; ls target/debug 2>/dev/null | head -3; du -sh target 2>/dev/null; nproc\", \"description\": \"Check for an existing build directory\"}\n- Bash: {\"command\": \"grep -n \\\"lies_on_unit_zone\\\\|fn targetable_options\\\" crates/engine/src/targeting_point.rs crates/engine/src/effects/targets.rs crates/engine/src/prompt*.rs 2>/dev/null | head\", \"descrip\u2026\n- Bash: {\"command\": \"sed -n '160,240p' crates/engine/src/targeting_point.rs\", \"description\": \"Read targetable_options\"}\n- Bash: {\"command\": \"grep -n \\\"^ use \\\\|^use \\\\|^ use \\\" crates/cards/src/scripts/meditative_plus/c022_mountaintop_garden.rs | head; grep -n \\\"^pub use\\\" crates/engine/src/lib.rs | head -20; grep -n \\\"pub us\u2026\n- Bash: {\"command\": \"cat rustfmt.toml; grep -n -A 30 \\\"\\\\[workspace.lints\\\" Cargo.toml | head -40\", \"description\": \"Check rustfmt config and workspace lints\"}\n- Bash: {\"command\": \"grep -rl \\\"stinkyscape-009\\\" crates/*/tests e2e apps/web/src 2>/dev/null | grep -v \\\"audio/\\\\|art/fixtures\\\" | head\", \"description\": \"Search golden fixtures for Ticketed\"}\n- Bash: {\"command\": \"grep -n \\\"stinkyscape-009\\\" -B3 -A3 crates/cards/tests/cross/invariants.rs | head -30\", \"description\": \"See Ticketed reference in cross invariants\"}\n- Bash: {\"command\": \"sed -n '3200,3244p' crates/cards/tests/cross/invariants.rs; sed -n '3249,3320p' crates/cards/tests/cross/invariants.rs | grep -n \\\"fn \\\\|permanents\\\\|TICKETED\\\" | head -20\", \"description\u2026\n- Bash: {\"command\": \"sed -n '2495,2530p' crates/engine/tests/rules/invariants.rs\", \"description\": \"Read invariant usage of reachable list\"}\n- Bash: {\"command\": \"grep -rln \\\"permanents_on_field\\\\|permanentsOnField\\\\|lying_on_unit\\\" luau apps/web/src crates/wasm 2>/dev/null | head; ls luau\", \"description\": \"Check for ports that mirror the engine l\u2026\n- Bash: {\"command\": \"grep -rn \\\"R4665000\\\\|lying\\\\|lie_down\\\\|lies_on\\\" luau --include=*.lua* | head -5; grep -n \\\"translat\\\\|mirror\\\\|port\\\" luau/README.md 2>/dev/null | head -10\", \"description\": \"Check whe\u2026\n- Bash: {\"command\": \"grep -rn \\\"permanents_on_field\\\" crates/*/README.md docs/*.md docs/v0.3.0/SURFACE.md spec/*.md spec/09-architecture/*.md 2>/dev/null | head\", \"description\": \"Check docs mentioning perman\u2026\n- Bash: {\"command\": \"sed -n '440,447p' crates/engine/src/query.rs; grep -n \\\"pub mod plague\\\\|pub mod query\\\" crates/engine/src/lib.rs\", \"description\": \"Verify query re-exports plague reads\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4936/.bot-plan.md\", \"content\": \"# Draft plan #4936 (opus planner) \\u2014 shape settled, final being written\\n\\nFindings (from code):\\n- plague.rs:33-3\u2026\n- Bash: {\"command\": \"grep -rn \\\"pub fn option_ids\\\\|pub fn permanent_ids\\\\|pub fn ids\\\\b\\\" crates/engine/src/testkit/ crates/cards/src/lib.rs crates/cards/src/*.rs 2>/dev/null | head; grep -n \\\"pub options\\\"\u2026\n- Bash: {\"command\": \"grep -rn \\\"pub plague:\\\" crates/engine/src | head -3; grep -n \\\"pub pending:\\\" crates/engine/src/state.rs | head -2\", \"description\": \"Confirm plague counter and pending fields\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Rule 1, engine rules: it changes the order of a rules list in crates/engine/src/plague.rs that plague prompts, seeded random draws and the Radiant pool all read\"} --> ## Goal `permanents_on_field` in `crates/engine/src/plague.rs`, and through it `reachable_p\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-25T17:40:31Z",
       "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
@@ -24402,12 +24392,14 @@
       "provider": "claude-4",
       "queued_at": "2026-11-25T17:18:12Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45667255960",
+      "run_id": "pending:416ca1fb-1795629800",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-25T17:40:31Z",
+      "started_at": "2026-11-25T18:04:04Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7169293311"
+      ]
     },
     "4938": {
       "action": "build",
@@ -25287,9 +25279,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T18:03:01Z",
+    "at": "2026-11-25T18:04:04Z",
     "url": "",
-    "what": "review #4947 on claude-6"
+    "what": "build #4936 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-25T17:47:38Z",
