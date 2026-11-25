@@ -1,6 +1,6 @@
 //! SPEC §8.13 IA #153 Bastion Node ((4) Unit, Common, 4/12 → 8/24), a card of the held Infinite Assault set (R4577000).
 //!   Base:    "Taunt, Armor 3"
-//!   Radiant: "Taunt, Armor 6, Immune to Spells"
+//!   Radiant: "Immune to Spells, Taunt, Armor 6"
 //!
 //! Keywords only, so the script is empty: they are the catalog's data (§6.1).
 

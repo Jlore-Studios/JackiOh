@@ -1,8 +1,8 @@
 //! IA #216.1 Singularity (SPEC §8.13 row 216.1), the token IA #216 The Singularity
 //! summons, a card of the held Infinite Assault set (R4577000).
-//!   Base:    "Taunt, Can't attack\nIn {turns|turn|turns}: If this is still on the field, you win
+//!   Base:    "Can't attack, Taunt\nIn {turns|turn|turns}: If this is still on the field, you win
 //!            the game."
-//!   Radiant: "Taunt, Can't attack\nIn {turns|turn|turns}: If this is still on the field, you win
+//!   Radiant: "Can't attack, Taunt\nIn {turns|turn|turns}: If this is still on the field, you win
 //!            the game."
 //!
 //! Engine: Taunt and Can't attack are the catalog's. "In N turns" starts when the token arrives

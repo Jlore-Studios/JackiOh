@@ -7,7 +7,11 @@
 //! The web's art code reads the same shapes in `apps/web/src/cards/fused.ts` (which ingredient a fused card is
 //! drawn as); the two walk an id the same way.
 
-use jackioh_engine::wire::CardDef;
+use std::str::FromStr;
+
+use jackioh_engine::wire::{CardDef, KeywordKind};
+
+use crate::config::keyword_line_rank;
 
 /// The Dormant Starship's catalog id (Stinkyscape, R1852000); `tests/face.rs` holds both to the catalog's.
 pub const DORMANT_STARSHIP_ID: &str = "stinkyscape-t-dormant-starship";
@@ -138,10 +142,34 @@ fn is_keyword_line(line: &str) -> bool {
     !line.is_empty() && line.split(", ").all(is_keyword_item)
 }
 
+/// R4747000: an item's place in the merged line: Tribute counts first, Echo counts next, then
+/// every keyword kind in the line order (a numbered item ranks by its kind, mirroring
+/// `is_keyword_item`'s split).
+fn merged_item_rank(item: &str) -> (u8, usize) {
+    let counted = item.rsplit_once(' ').filter(|(_, n)| {
+        let digits = n.strip_prefix('+').unwrap_or(*n);
+        *n == "X" || (!digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit()))
+    });
+    let name = counted.map_or(item, |(name, _)| name);
+    if counted.is_some() {
+        if name == "Tribute" {
+            return (0, 0);
+        }
+        if name == "Echo" {
+            return (1, 0);
+        }
+    }
+    match KeywordKind::from_str(name) {
+        Ok(kind) => (2, keyword_line_rank(kind)),
+        // Unreachable: only items of keyword lines are ranked, and `is_keyword_line` checked them.
+        Err(_) => (2, usize::MAX),
+    }
+}
+
 /// R3941002 (issue #3941): a fused text with its ingredients' keyword lines as one, at its head. Each ingredient's
 /// text opens with its own keyword line (R366) and a fusion joins the texts (R77, R102), so an Equipped Unit
 /// printed `Equip` and `Starship Piece` again on a line of their own, and a keyword its host has twice. The items
-/// keep their order, one printed twice printing once, and every other line keeps its place after them. A text
+/// print once each, in the line order (R4747000), and every other line keeps its place after them. A text
 /// with fewer than two keyword lines is unchanged. The fusion's keywords are their union already (R77): only the
 /// words change.
 pub fn merged_keyword_lines(text: &str) -> String {
@@ -157,6 +185,8 @@ pub fn merged_keyword_lines(text: &str) -> String {
             }
         }
     }
+    // R4747000: a stable sort, so repeats of a numbered keyword stay together in arrival order.
+    items.sort_by_key(|item| merged_item_rank(item));
     let merged = items.join(", ");
     std::iter::once(merged.as_str())
         .chain(lines.iter().copied().filter(|line| !is_keyword_line(line)))
@@ -196,17 +226,18 @@ mod tests {
     }
 
     /// R3941002: a fusion's keyword lines print as one at its head, each item once, its other lines in order.
+    /// R4747000: the merged line is in the line order, not first-seen order.
     #[test]
     fn r3941002_a_fused_text_prints_its_ingredients_keyword_lines_as_one() {
         assert_eq!(
             merged_keyword_lines(
                 "Rush, Pierce\nCry: Deal 2 damage.\nStarship Piece, Equip, Pierce\nDamage also Burns 2."
             ),
-            "Rush, Pierce, Starship Piece, Equip\nCry: Deal 2 damage.\nDamage also Burns 2."
+            "Equip, Starship Piece, Rush, Pierce\nCry: Deal 2 damage.\nDamage also Burns 2."
         );
         assert_eq!(
             merged_keyword_lines("Tribute 1, Armor 3\nTaunt, Spell Damage +1, Armor X, Can't Defend"),
-            "Tribute 1, Armor 3, Taunt, Spell Damage +1, Armor X, Can't Defend"
+            "Tribute 1, Spell Damage +1, Can't Defend, Taunt, Armor 3, Armor X"
         );
         // One keyword line or none: unchanged, and a sentence is never a keyword line.
         assert_eq!(
