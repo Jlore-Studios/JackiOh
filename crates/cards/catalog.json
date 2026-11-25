@@ -43468,7 +43468,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 30,
+    "loc": 29,
     "base": {
       "keywords": [],
       "text": "Add copies of two random cards in your opponent's graveyard to your hand."
@@ -43492,7 +43492,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 44,
+    "loc": 43,
     "base": {
       "attack": 1,
       "health": 3,
@@ -43724,7 +43724,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 122,
+    "loc": 121,
     "base": {
       "keywords": [],
       "text": "Look at the top three cards of your opponent's deck. Add a copy of one to your hand and exile another."
@@ -43776,7 +43776,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 33,
+    "loc": 32,
     "base": {
       "keywords": [],
       "text": "Shuffle copies of the cards in your opponent's hand into your deck. Draw two cards."
@@ -43838,7 +43838,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 61,
+    "loc": 58,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays a Unit: Summon a copy of it for yourself with +2/+2."
