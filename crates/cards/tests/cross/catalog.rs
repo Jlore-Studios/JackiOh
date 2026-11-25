@@ -2917,7 +2917,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "70",
         "Chaos Machine",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[],
         R::Rare,
