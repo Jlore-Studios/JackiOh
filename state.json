@@ -11316,6 +11316,7 @@
     "4463": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "cleared": {
         "approver": {
           "family": "muse",
@@ -11332,18 +11333,21 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-22T04:13:24Z",
+      "feedback_since": "2026-11-25T00:27:13Z",
       "forced": false,
       "interruptions": 0,
       "issue": 4446,
       "kind": "revise",
+      "last_findings": [],
       "live": "resolving",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-11-24T23:52:13Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "medium",
       "run_id": "45518200679",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
@@ -11364,10 +11368,11 @@
         "provider": "claude-7",
         "run": "44989577074"
       },
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-25T00:27:13Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "muse"
