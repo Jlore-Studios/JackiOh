@@ -20626,24 +20626,13 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "claude"
-        ],
+        "approvals": [],
         "builder": "claude",
         "built_by": "claude-6",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "claude",
-            "provider": "claude-6",
-            "run": "45671122200",
-            "tier": "strong"
-          }
-        ],
-        "sha": "68d163f2505128e156150383b6b579ba66ef263b",
-        "tiers": {
-          "claude": "strong"
-        }
+        "reviews": [],
+        "sha": "543880d2fb845ac95fcbba2a2920c3d225646c8e",
+        "tiers": {}
       }
     },
     "4948": {
