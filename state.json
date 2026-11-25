@@ -19531,7 +19531,7 @@
       "waiting_comment": 7149567984
     },
     "4809": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -19544,32 +19544,24 @@
         "reason": "planned on opus",
         "trail": "d -n 2840,2875p crates/ai/src/evaluate.rs\", \"description\": \"Read shadow_\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4809/crates/ai/src/simulate.rs\", \"offset\": 96, \"limit\": 56}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; grep -rn \\\"fell_short\\\\|fellShort\\\" crates apps/web/src --include=*.rs --include=*.ts | grep -v \\\"^crates/ai/src/types.rs\\\" | head; grep -n \\\"r\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; grep -rn \\\"simulate_reply\\\\b\\\\|simulate_reply(\\\\|simulate_reply_with(\\\\|reply_score(\\\" crates --include=*.rs | grep -v \\\"^crates/ai/tests\\\\|^cr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; grep -n \\\"surcharge\\\\|My Pawn\\\\|exhaust\\\\|refused attack\\\\|ends the turn instead\\\" docs/polish/3-ai.md crates/ai/README.md | cut -c1-400\", \"des\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; sed -n 600,615p crates/ai/README.md; grep -n \\\"reply\\\" crates/ai/README.md | cut -c1-200 | head -30\", \"description\": \"Read README Duos My Pawn \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; sed -n 398,420p crates/ai/README.md; sed -n 86,110p crates/ai/README.md\", \"description\": \"Read README budget and reply paragraphs\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; ls spec/rulings | grep -c .; ls spec/rulings/R4809* spec/pending/4809.md 2>&1 | head; grep -n \\\"Adding a ruling\\\" -A30 spec/README.md | cut -c1\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; git show 1e58d39c8a:spec/pending/4515.md | cut -c1-700; echo; git show 3af8296300 -- spec/09-architecture.md | head -30 | cut -c1-300\", \"descri\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; git show --stat --format='%s' 98cb53242f | head -20; git show --stat --format='%s' 928e68ba56 | head -20\", \"description\": \"Check files of prior\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; sed -n 255,270p crates/ai/tests/ai/activations.rs; echo ----; sed -n 268,290p crates/ai/tests/ai/attack_hooks.rs; echo ----; sed -n 540,556p cr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; sed -n 1,60p crates/ai/src/reply.rs; sed -n 605,625p crates/engine/src/combat.rs\", \"description\": \"Read reply.rs header and attack_target_of\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; grep -n \\\"IndexSet\\\\|hidden\\\\b\\\\|fn .*known\\\\|let hidden\\\" crates/ai/tests/ai/reply.rs | head -30\", \"description\": \"Find known-play test patter\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; sed -n 205,260p crates/ai/tests/ai/reply.rs\", \"description\": \"Read a known-play reply test\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; grep -n \\\"pub(crate) fn candidate_actions_in\\\\|pub fn candidate_actions_in\\\" -A40 crates/ai/src/candidates.rs | head -60\", \"description\": \"Read\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; sed -n 61p spec/README.md | cut -c300-1500; grep -n \\\"Ruling numbers\\\" -A12 docs/issues-and-patches.md | cut -c1-400 | head -20\", \"description\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; for r in R1240 R0044 R0176 R0186 R964000 R2201000 R3498000 R4608000 R0061; do ls spec/rulings/$r.md >/dev/null 2>&1 && echo \\\"$r ok\\\" || echo \\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; grep -rn \\\"surcharge_nodes\\\\|ai_turn_trap\\\" crates/tools crates/server crates/wasm apps/web/src 2>/dev/null | head; grep -rn \\\"My Pawn\\\\|core-0\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; grep -n \\\"Kind::Ai\\\\|kind:ai\\\\|AI change\\\\|Ai =>\\\" crates/tools/src/claims.rs crates/tools/src/classify.rs | head -20\", \"description\": \"Check h\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; grep -n \\\"unit_view\\\\|opponent_of\\\\|find_instance\\\" crates/ai/src/simulate.rs | head; grep -n \\\"AttackTarget\\\\|attack_target_of\\\" crates/engine\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; grep -n \\\"^mod \\\\|^ mod \\\\|^}\\\" crates/ai/tests/ai/reply.rs | head -20; sed -n 258,290p crates/ai/tests/ai/reply.rs\", \"description\": \"See modul\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; python3 -I -c \\\"\\nimport json\\nd=json.load(open('crates/cards/catalog.json'))\\nfor k in ('core-011','core-019','classicplus-064'):\\n c=d[k]; pr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; grep -rn \\\"pub fn reduce_unpiloted\\\" -A25 crates/engine/src | head -40\", \"description\": \"Read reduce_unpiloted\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; grep -n \\\"oneshot\\\\|ONESHOT\\\\|ONE_SHOT\\\" -i crates/engine/src/config.rs | head -5\", \"description\": \"Check the anti-oneshot cap constant\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; sed -n '/dev-dependencies/,$p' crates/ai/Cargo.toml | head -15; cat rustfmt.toml 2>/dev/null\", \"description\": \"Check AI dev-dependencies and ru\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; sed -n 216,236p crates/ai/tests/ai/support.rs; grep -n \\\"fn unit\\\\b\\\\|let unit\\\\b\\\\|unit(\\\" crates/ai/tests/ai/reply.rs | head -5\", \"descriptio\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4809/.bot-plan.md\", \"content\": \"# Draft plan #4809 (planner notes) \\u2014 shape settled, writing final\\n\\n## Findings\\n- reply.rs `reduce_for` (361-39\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; grep -rn \\\"max_mana\\\\|maxMana\\\" crates/engine/src/testkit*.rs crates/engine/src/testkit/ 2>/dev/null | head -10\", \"description\": \"Check scenari\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4809; sed -n 2320,2345p crates/engine/src/testkit/scenario.rs\", \"description\": \"Read scenario default mana test\"}\n- said: **Goal.** The opponent model (`crates/ai/src/reply.rs`) stops returning a whole reply when it ran out of nodes for a step's surcharge. The reply is cut instead: `simulate_reply` returns `None`, which is what its contract promises when the counter is spent. This holds for an attack (today the oppone\u2026"
       },
-      "hold": {
-        "ends": "2026-11-25T03:27:33Z",
-        "lifted": "2026-11-25T03:22:11Z",
-        "owner": "claude-3",
-        "since": "2026-11-25T01:27:33Z",
-        "until": "2026-11-25T03:20:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-24T23:12:04Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-4",
+      "owner_since": "2026-11-25T05:11:31Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-24T23:31:22Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-4",
       "queued_at": "2026-11-24T20:56:24Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45507902250",
+      "run_id": "pending:b93129f9-1795583453",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-24T23:12:04Z",
+      "started_at": "2026-11-25T05:11:31Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 7149569804
@@ -21985,9 +21977,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T05:10:39Z",
+    "at": "2026-11-25T05:11:31Z",
     "url": "",
-    "what": "build #4808 on claude-8"
+    "what": "build #4809 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-25T04:46:46Z",
