@@ -1314,6 +1314,8 @@ pub struct Scenario {
     /// Set by `refuse` just before a step panics with a refusal, and read by `expect_refused` and
     /// `expect_refused_with` once the step has unwound: any other panic is no refusal (#1247).
     refused: bool,
+    /// R4672000: the action the last step sent `reduce` (`last_action`).
+    last_action: Option<Action>,
 }
 
 impl Scenario {
@@ -1324,6 +1326,7 @@ impl Scenario {
             last: Vec::new(),
             step: 0,
             refused: false,
+            last_action: None,
         }
     }
 
@@ -1578,7 +1581,14 @@ impl Scenario {
         self.current = result.state;
         self.last = result.events.clone();
         self.log.extend(result.events);
+        self.last_action = Some(action);
         None
+    }
+
+    /// R4672000: the action the last step sent `reduce`, as a game's log holds it, which the game
+    /// record's reader reads a prompt's answer off (`SummaryReader::step`); `None` after a direct call.
+    pub fn last_action(&self) -> Option<&Action> {
+        self.last_action.as_ref()
     }
 
     fn action(&mut self, body: ActionBody, player: PlayerId, what: &str) {
@@ -1606,6 +1616,7 @@ impl Scenario {
         self.current.rng_cursor = rng.cursor();
         self.last = events.clone();
         self.log.extend(events);
+        self.last_action = None;
     }
 
     // Steps
