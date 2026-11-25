@@ -394,8 +394,7 @@ pub struct Prices {
 }
 
 impl Prices {
-    /// No price: what every call outside a decision reads (the probes, the baselines, the tools), but
-    /// `decision_prices_at`, which prices a state as its decision would (R4070000).
+    /// No price: what every call outside a decision reads (the probes, the baselines, the tools).
     pub const NONE: &'static Prices = &Prices {
         deaths: Vec::new(),
         turn_hooks: Vec::new(),

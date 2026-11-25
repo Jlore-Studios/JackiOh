@@ -931,18 +931,6 @@ pub const AI_AWAKEN_PROBE_NODES: usize = 16;
 /// evolve for each own hand Unit with an Evolve text.
 pub const AI_EVOLVE_PROBE_NODES: usize = 16;
 
-/// R4070000: the most nodes a decision's root prices spend, every probe's cap above together: the counter
-/// `decide::decision_prices_at` prices a state on outside a decision, so each
-/// probe runs to its own cap, as it does in a decision whose budget leaves it that many.
-pub const AI_DECISION_PRICE_NODES: usize = AI_DEATH_PROBE_NODES
-    + AI_TURN_HOOK_PROBE_NODES
-    + AI_ACTIVATION_PROBE_NODES
-    + AI_HAND_ACTIVATION_PROBE_NODES
-    + AI_PROMPT_ACTIVATION_PROBE_NODES
-    + AI_ATTACK_HOOK_PROBE_NODES
-    + AI_AWAKEN_PROBE_NODES
-    + AI_EVOLVE_PROBE_NODES;
-
 /// The greedy baseline's own evaluation (baselines.rs): AI_EVAL exactly as it stood when the quality
 /// gates were fixed on the seed series `gate:v2`, frozen here, so tuning AI_EVAL changes the AI and never
 /// its yardstick. Every term and keyword AI_EVAL gained after that (R346, #1602, #1886, …) is 0 here, and
