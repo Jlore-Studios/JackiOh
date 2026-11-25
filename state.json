@@ -19725,7 +19725,7 @@
       "verdict_rounds": 2
     },
     "4815": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -19738,32 +19738,24 @@
         "reason": "planned on opus",
         "trail": "ash: {\"command\": \"sed -n 23,26p crates/engine/src/effects/plague.rs; grep -n \\\"close_prompt\\\\|in_offered_order\\\\|why_answer_refused\\\" crates/engine/src/effects/plague.rs crates/engine/src/cry_trigger.rs c\u2026\n- Bash: {\"command\": \"ls crates/ai/tests/ | head -30; grep -n \\\"pub fn scenario\\\" -A 6 crates/cards/src/lib.rs | head -12; grep -n \\\"pub fn last_events\\\\|pub fn events\\\\|pub fn hand\\\\b\\\\|pub fn hand(\\\\|pub fn\u2026\n- Bash: {\"command\": \"sed -n 1335,1360p crates/engine/src/testkit/scenario.rs; grep -rn \\\"fn scenario\\\" crates/cards/src/*.rs | head -3\", \"description\": \"Read events vs last_events semantics\"}\n- Bash: {\"command\": \"grep -n \\\"impl From<.*> for CardRef\\\" -A 3 crates/engine/src/testkit/*.rs | head -20; grep -n \\\"pub fn expect_in_zone\\\" -A3 crates/engine/src/testkit/scenario.rs\", \"description\": \"Check \u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4815/crates/cards/src/scripts/classic/c089_paul_allens_ghost.rs\", \"offset\": 28, \"limit\": 112}\n- Bash: {\"command\": \"sed -n 220,235p crates/cards/src/lib.rs; grep -n \\\"PromptKind\\\\|pub use\\\" crates/engine/src/testkit/mod.rs | head -20\", \"description\": \"Check the cards scenario helper and testkit export\u2026\n- Bash: {\"command\": \"sed -n 1,60p crates/engine/src/testkit/mod.rs | grep -n \\\"prelude\\\\|pub use\\\"; grep -n \\\"PromptKind\\\" crates/engine/src/prelude.rs | head -3\", \"description\": \"Check whether testkit re-ex\u2026\n- Bash: {\"command\": \"grep -n \\\"PromptKind\\\" crates/engine/src/lib.rs | head -3; grep -n \\\"pub use wire\\\\|pub use crate::wire\\\\|pub use wire::\\\\*\\\" crates/engine/src/lib.rs | head; grep -rn \\\"pub fn must\\\\b\\\\\u2026\n- Bash: {\"command\": \"grep -rn \\\"target_answer\\\\|answer_cry_prompt\\\\|answer_placement\\\\|answer_play_prompt\\\" docs/ crates/engine/README.md spec/10-engine-guide/ 2>/dev/null | head -10\", \"description\": \"Find d\u2026\n- Bash: {\"command\": \"grep -n \\\"head\\\\b\\\\|\\\\\\\"HEAD\\\\\\\"\\\\|working tree\\\\|worktree\\\" crates/tools/src/classify.rs | head -30\", \"description\": \"Check classify's default head handling\"}\n- Bash: {\"command\": \"git log --format='%h %s' -60 -- crates/engine/src | head -40\", \"description\": \"List recent engine-touching commits\"}\n- Bash: {\"command\": \"for c in f5a5cc1ffa 3de2d02ce5 646b0c1abb 8637328447 f0e9d782e4; do echo \\\"== $c\\\"; git show --stat --format='%s' $c | grep -E \\\"pending|spec/rulings|^Patch|^bot\\\" | head -8; done\", \"des\u2026\n- Bash: {\"command\": \"for c in f5a5cc1ffa 3de2d02ce5 646b0c1abb 8637328447 f0e9d782e4 dd441f06ba 522d09e94e; do echo \\\"== $c $(git show --stat --format='' $c | grep -c 'patches/pending')\\\"; done\", \"descriptio\u2026\n- Bash: {\"command\": \"grep -n \\\"targeting_discards\\\\|Discarded\\\\|target_answer\\\\|answer_cry\\\\|plague:placement\\\\|@triggerCry\\\" crates/engine/src/testkit/invariants.rs crates/engine/src/testkit/seams.rs | head\u2026\n- Bash: {\"command\": \"sed -n 420,470p crates/engine/src/testkit/invariants.rs\", \"description\": \"Read the invariant around Discarded\"}\n- Bash: {\"command\": \"grep -rn \\\"continue_answer\\\\|answer_owned\\\\|answer_cry_prompt\\\\|answer_placement\\\\|fn answer_at_random\\\" crates/engine/src --include=*.rs | grep -v \\\"^\\\\s*//\\\" | head -20\", \"description\"\u2026\n- Bash: {\"command\": \"sed -n 1285,1420p crates/engine/src/prompts.rs\", \"description\": \"Read the random-answer path in open_prompt\"}\n- Bash: {\"command\": \"grep -rn \\\"fn folding\\\\|folding()\\\" crates/engine/src --include=*.rs | head -8\", \"description\": \"Check whether engine rules are gated on the folding version\"}\n- Bash: {\"command\": \"ls -la target/release/jackioh 2>&1 | head -2; ls target 2>&1 | head\", \"description\": \"Check for an existing release build\"}\n- Bash: {\"command\": \"grep -n \\\"\\\\.head\\\\b\\\\|&args.head\\\\|args\\\\.head\\\" crates/tools/src/classify.rs | head -20\", \"description\": \"See how classify uses --head\"}\n- Bash: {\"command\": \"sed -n 1370,1470p crates/tools/src/classify.rs\", \"description\": \"Read classify's run function\"}\n- Bash: {\"command\": \"sed -n 1253,1300p crates/tools/src/classify.rs; grep -n \\\"const .*GAMES\\\\|const UNFORCED\\\" crates/tools/src/classify.rs | head\", \"description\": \"Read stage 2's game counts\"}\n- Bash: {\"command\": \"grep -rln \\\"place_plague_tokens\\\" crates/cards/src/scripts | head -20\", \"description\": \"Find every card that opens a placement prompt\"}\n- Bash: {\"command\": \"for f in c062_living_bomb c090_in_too_deep; do sed -n 1,4p crates/cards/src/scripts/classic/$f.rs; done; sed -n 1,4p crates/cards/src/scripts/stinkyscape/c040_poison_capsule.rs\", \"descri\u2026\n- Bash: {\"command\": \"sed -n 686,695p crates/engine/src/cry_trigger.rs; sed -n 380,384p crates/engine/src/effects/plague.rs; sed -n 1,12p crates/engine/src/effects/plague.rs\", \"description\": \"Read the answere\u2026\n- Bash: {\"command\": \"cat .cargo/config.toml 2>/dev/null | head -20; grep -n \\\"classify\\\" .github/workflows/ci.yml | head -10\", \"description\": \"Check cargo alias and CI's classify invocation\"}\n- Bash: {\"command\": \"sed -n 700,740p .github/workflows/ci.yml\", \"description\": \"Read CI's classify step\"}\n- Bash: {\"command\": \"cat rust-toolchain.toml 2>/dev/null | head -5; grep -rn \\\"repeat_n\\\" crates/cards/src | head -2\", \"description\": \"Check toolchain and repeat_n usage\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4815/.bot-plan.md\", \"content\": \"## Goal\\n\\nEvery prompt answer goes through the targeting point (R450, R682), whichever engine sequence owns the promp\u2026\n- Bash: {\"command\": \"ls crates/cards/src/scripts/classic/ | grep -E \\\"c054|c076|c070|c089|c033\\\"; ls crates/cards/src/scripts/core/ | grep c068; grep -n \\\"^| 54 \\\\|^| 68 \\\" spec/08-catalog/*.md | cut -c1-200\u2026\n- Bash: {\"command\": \"sed -i 's/^cargo test -p jackioh-cards c070_book_of_plague c076_plague_bringer c054_rewind$/cargo test -p jackioh-cards -- c070_book_of_plague c076_plague_bringer c054_rewind/' .bot-plan\u2026\n- said: ## Goal Every prompt answer goes through the targeting point (R450, R682), whichever engine sequence owns the prompt. A triggered Cry's `target` prompt (`@triggerCry`, R467) and a Plague placement prompt (`plague:placement`, R689) that name C #89 Paul Allen's Ghost pay its 2 random discards before \u2026"
       },
-      "hold": {
-        "ends": "2026-11-25T03:27:50Z",
-        "lifted": "2026-11-25T03:22:24Z",
-        "owner": "claude-3",
-        "since": "2026-11-25T01:27:50Z",
-        "until": "2026-11-25T03:20:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-25T00:05:46Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-1",
+      "owner_since": "2026-11-25T05:27:16Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-25T00:25:25Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-1",
       "queued_at": "2026-11-24T21:00:09Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45515350586",
+      "run_id": "pending:be48f5fe-1795584399",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-25T00:05:46Z",
+      "started_at": "2026-11-25T05:27:16Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 7149575219
@@ -22114,9 +22106,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T05:26:25Z",
+    "at": "2026-11-25T05:27:16Z",
     "url": "",
-    "what": "review #4893 on muse"
+    "what": "build #4815 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-25T05:03:37Z",
