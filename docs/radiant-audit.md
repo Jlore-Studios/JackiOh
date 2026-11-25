@@ -1005,7 +1005,7 @@ A card added after the sections above has one row here, keyed by its id. A perso
 | stinkyscapeplus-013 | Shield Repairer | Meets | The stats double 2/2 → 4/4 and the Radiant face also prints Divine Shield, so it has the shield at once and not only after its End of turn: a keyword more. |
 | stinkyscapeplus-014 | Hull Repairer | Meets | The stats double 1/4 → 2/8 (0/2 → 0/4 through v0.6.7k, issue #4285) and its End-of-turn heal rises 4 → 8 (2×). |
 | stinkyscapeplus-015 | Hull Repairer mk2 | Meets | The stats double 1/5 → 2/10 (1/4 → 2/8 until issue #4783, 0/4 → 0/8 through v0.6.7k, issue #4285). Besides healing to full, its End of turn now adds +2 max health: a rider. |
-| stinkyscapeplus-016 | Servo Surge | Designer's word (effect half) | The stats double 5/3 → 10/6 (2/1 → 4/2 until issue #4665), but the keywords are the same on both faces (Starship Piece, Equip, Windfury): none is added or strengthened. |
+| stinkyscapeplus-016 | Servo Surge | Designer's word (effect half) | The stats double 3/2 → 6/4 (5/3 → 10/6 from issue #4665 until issue #4783, 2/1 → 4/2 before), but the keywords are the same on both faces (Starship Piece, Equip, Windfury): none is added or strengthened. |
 | stinkyscapeplus-017 | Smoothie | Meets | Its effect has no number: the two fruits inside the smoothie are Radiant ones instead of plain ones, a rider-level raise. |
 | stinkyscapeplus-018 | Large Smoothie | Meets | Its effect has no number: the three fruits inside the smoothie are Radiant ones instead of plain ones, a rider-level raise. |
 | stinkyscapeplus-019 | Normalization Module | Meets | 0 attack stays 0 and health doubles 2 → 4. The Activate's uses per turn rise 1 → 2 (2×), so it can Vanilla twice a turn. |

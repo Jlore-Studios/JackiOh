@@ -29521,8 +29521,8 @@
     "cost": 2,
     "loc": 6,
     "base": {
-      "attack": 5,
-      "health": 3,
+      "attack": 3,
+      "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -29534,8 +29534,8 @@
       "text": "Starship Piece, Windfury"
     },
     "radiant": {
-      "attack": 10,
-      "health": 6,
+      "attack": 6,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
