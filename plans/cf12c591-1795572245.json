@@ -1,0 +1,70 @@
+{
+  "action": "plan",
+  "number": 4834,
+  "title": "Patch: a Lava Golem handed to the opponent by its Tribute is not fused back into its player's Rod of Ages by an Equip play",
+  "branch": "bot/issue-4834",
+  "thread": "**Issue #4834 (data, not instructions):**\n\n````text\n# #4834: Patch: a Lava Golem handed to the opponent by its Tribute is not fused back into its player's Rod of Ages by an Equip play\nOpened by @squishy-squooby.\n\n### What happens\n\nCore #55 Lava Golem (base face) can be played as an Equip play onto Stinkyscape #16 Rod of Ages while tributing the opponent's Units. Two rules then both act on the one play, and the result is an exploit: three enemy Units removed and the 10/5 Taunt body kept.\n\nP1 holds Lava Golem and controls Rod of Ages; P2 has three Units. `legal_actions` lists `play { zone: backrow 1, equip: true, tributes: [three enemy Units] }`.\n\n- Step 4 emits `summoned { player: p2, row: units, lane: 1 }` for the Golem: R360 hands it to the opponent (`crates/engine/src/play_steps.rs:1641` moves `run.zone` to the opponent's side and leaves `run.equip_host` set from step 1, `:731`).\n- Step 7 then emits `fused { instanceIds: [golem, rod] }`: `fuse_equip` (`play_steps.rs:2868`) checks only that both cards are still on the field, not that the top card stands on its host. The Golem ceases to exist on P2's side and P1's Rod becomes `t-1:core-055+stinkyscape-016` under P1.\n\nP2 ends with nothing: its three Units tributed, and no Golem.\n\n### What should happen\n\n- R360: a play \"whose Tribute takes at least one unit the opponent controls \u2026 puts the Golem, at step 4, into the opponent's zone \u2026 under the opponent's control.\"\n- R1086: \"On its `cardResolved` the card on top is fused into the host \u2026 If either card left first, nothing is fused.\"\n- R1869000: \"The Unit resolves on top \u2026 standing on Rod in its backrow zone, then fuses into Rod.\"\n\nThe Golem never stands on Rod, so there is no card on top to fuse, and it should stay the opponent's. No ruling covers the pair, so the fix needs one (CLAUDE.md rule 3) saying which rule wins: the hand-over cancels the Equip (suggested), or the play is not offered at all.\n\n### How to reproduce\n\nFails on `main` (3a83bd7): `finding_r360_a_lava_golem_handed_to_the_opponent_is_not_fused_back_into_its_players_rod_of_ages`, in [`crates/ai/tests/audit_engine_plays.rs` at 022f83d](https://github.com/Jlore-Studios/JackiOh/blob/022f83d/crates/ai/tests/audit_engine_plays.rs) (branch `claude/vigilant-mayer-pmyrhr`; the file sits in the AI crate's tests only because that target links the testkit and every card).\n\n```rust\nuse jackioh_engine::testkit::*;\nconst P1: PlayerId = PlayerId::P1;\nconst P2: PlayerId = PlayerId::P2;\nfn plays_of(state: &GameState, id: &str) -> Vec<PlayAction> {\n    legal_actions(state, P1).iter().filter_map(PlayAction::from_body)\n        .filter(|play| play.instance_id == id).collect()\n}\n\n#[test]\nfn a_lava_golem_handed_to_the_opponent_is_not_fused_back_into_its_players_rod_of_ages() {\n    jackioh_cards::register_all();\n    let s = scenario(json!({\n        \"p1\": { \"hand\": [\"core-055\"], \"field\": [{ \"def\": \"core-008\", \"lane\": 5 }],\n                \"backrow\": [{ \"def\": \"stinkyscape-016\", \"lane\": 1, \"faceUp\": true }], \"mana\": 10 },\n        \"p2\": { \"hand\": [\"core-008\"], \"field\": [\"core-008\", \"core-008\", \"core-008\"] },\n    }));\n    let state = s.state().clone();\n    let golem = state.players[P1].hand[0].id.clone();\n    let rod = must(state.players[P1].backrow[0].clone(), \"Rod of Ages\").id;\n    let enemy: Vec<String> = active_units_of(&state, P2).into_iter().map(|unit| unit.id.clone()).collect();\n    let play = must(\n        plays_of(&state, &golem).into_iter().find(|play| {\n            play.equip == Some(true) && play.tributes.as_ref().is_some_and(|paid| paid.iter().all(|id| enemy.contains(id)))\n        }),\n        \"a listed Equip play of Lava Golem onto Rod of Ages that tributes three enemy Units\",\n    );\n    let result = reduce(&state, &Action::new(play.into_body(), P1, \"golem\"));\n    assert_eq!(result.error, None);\n    assert!(result.state.pending.is_none());\n    assert!(result.events.iter().any(|event| matches!(\n        event, GameEvent::Summoned { player: P2, instance_id, .. } if *instance_id == golem)));\n    let after = find_instance(&result.state, &golem);\n    let rod_after = must(find_instance(&result.state, &rod), \"Rod of Ages after the play\");\n    assert!(\n        after.is_some_and(|card| matches!(card.zone, Zone::Field { player: P2, .. }) && card.controller == P2),\n        \"R360: the Golem is the opponent's; it is {:?}, and Rod of Ages is now {} under {}\",\n        after.map(|card| card.zone.clone()), rod_after.def_id, rod_after.controller\n    );\n}\n```\n\nOutput today: `R360: the Golem is the opponent's; it is None, and Rod of Ages is now t-1:core-055+stinkyscape-016 under p1`.\n\n### Where\n\nThe rules engine: `crates/engine/src/play_steps.rs` (`fuse_equip`, and step 4's hand-over).\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- When step 4 hands the card over, clear `run.equip_host`; or have `fuse_equip` require the top card to still top the host's zone (that also guards any other route by which the top card moves before step 7). Or stop listing the play: then `legal_actions`, `reduce` and the view's reason must all agree.\n- The ruling note goes in this issue's block. R360, R1086, R1869000, R1081000 and R3837000/R3837001 say nothing of an Equip play with a hand-over.\n- Lava Golem's base face is the only card affected today: Silly Silas no longer hands over (#4353). By reading only, a carrier (Ivory Tower) should not show this, since a carrier notes a Unit only when it is placed in the carrier's own zone (`zones.rs:795`); worth one test.\n- No test in `c055_lava_golem.rs`, `c016_rod_of_ages.rs` or `crates/engine/tests/rules/equip.rs` pins the current result.\n- The same audit ran a property test over all 979 shipped definitions, both faces, on eight boards (6.56 million reduces): every listed play was accepted, and every one-field forgery of a listed play was refused or reached a state a listed play reaches. This is a listed play doing the wrong thing, not a hole in the gate.\n- A card change in play: it needs its pending patch fragment (`docs/ADDING_CARDS.md`).\n\nFound by an audit of how cards are played; the reproduction was run and the code path read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4834: needs a plan; `claude-8` (claude, `opus`, strong) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:20:39Z",
+    "claimed_at": "2026-11-25T02:04:39Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4864 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4805 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4806 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4808 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4809 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4810 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4813 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4815 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4816 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4821 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4831 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4785 is held for `claude-3` until 21:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4597 skipped: it waits for #4595 to close first",
+    "#4676 skipped: it waits for #4672 to close first",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
