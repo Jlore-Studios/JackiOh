@@ -11,7 +11,7 @@
 //! `ignoreArmor` (R346). Activate 4 is four uses a turn (R384, R1857003), each hit its own state check;
 //! issue #4154 cut it from four to three, which `script_v0_6_6h` keeps for the replays of v0.6.6h and
 //! before (R767000), and issue #4353 put it back to four, its three kept by `script_v0_6_8b` for the
-//! replays from v0.6.6i through v0.6.8b. The number is the declared `damage` (R386), read through `param`.
+//! replays from v0.6.6i through v0.6.8d. The number is the declared `damage` (R386), read through `param`.
 
 use jackioh_engine::effects::{DamageEffectArgs, DamageFlagArgs, TargetSpec, damage};
 use jackioh_engine::prelude::*;
@@ -21,7 +21,7 @@ pub const ID: &str = "stinkyscape-059";
 /// Activate 4 (R1857003): four uses a turn (issue #4353).
 const USES: i32 = 4;
 
-/// R767000: Activate 3 (R1857003): the three uses a turn it had after v0.6.6h through v0.6.8b (issue
+/// R767000: Activate 3 (R1857003): the three uses a turn it had after v0.6.6h through v0.6.8d (issue
 /// #4154).
 const USES_V0_6_8B: i32 = 3;
 
@@ -72,7 +72,7 @@ pub fn script() -> CardScripts {
     scripts(USES)
 }
 
-/// R767000: after v0.6.6h through v0.6.8b its Activate had `USES_V0_6_8B` uses a turn; `KEPT_SCRIPTS`
+/// R767000: after v0.6.6h through v0.6.8d its Activate had `USES_V0_6_8B` uses a turn; `KEPT_SCRIPTS`
 /// folds those replays under it.
 pub fn script_v0_6_8b() -> CardScripts {
     scripts(USES_V0_6_8B)
@@ -173,7 +173,7 @@ mod tests {
             });
         }
 
-        /// R767000: after v0.6.6h through v0.6.8b it had three uses a turn (issue #4353 made it four).
+        /// R767000: after v0.6.6h through v0.6.8d it had three uses a turn (issue #4353 made it four).
         #[test]
         fn r767000_the_script_kept_for_v0_6_8b_has_three_uses_a_turn() {
             crate::under_kept(ID, script_v0_6_8b(), || {

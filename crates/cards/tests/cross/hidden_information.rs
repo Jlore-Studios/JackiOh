@@ -87,6 +87,7 @@ fn as_a_duel(s: &mut Scenario) {
             pool: DUOS_POOL_HEALTH,
             pool_cap: DUOS_POOL_HEALTH,
             spent: false,
+            own_start: None,
         });
     }
 }

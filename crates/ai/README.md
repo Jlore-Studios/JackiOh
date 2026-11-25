@@ -54,7 +54,7 @@ them (its option reads the view's `Face-down card`, R177), its own library's ord
 it that came from the opponent or that it was never shown (R312), what changed on its other cards there, each read
 as its owner's list shows it, by the definition and face it went in with and its Created mark, unless its own
 prompt offers it (R2691000), the seed, the event history, every card's hidden Nerfs, its own
-hand's too (R1845000), what the opponent bought at the Marketplace (R1853004), the opponent's Created cards' generators (R1956001), and every Created card's maker, the game record's alone (R4672001)), and strips from the events its queues keep what `view_for` strips of a
+hand's too (R1845000), what the opponent bought at the Marketplace (R1853004), the opponent's Created cards' generators (R1956001), every Created card's maker, the game record's alone (R4672001), and what the opponent's play counts say of their face-down plays: a hidden card on their backrow takes its tags and its set off their counts and counts as a Trap among this turn's plays (R4804000)), and strips from the events its queues keep (an interrupted trap firing's under `data.firing` among them) what `view_for` strips of a
 hidden card. Every simulation runs on a `determinize`d copy whose hidden cards are resampled from the
 non-token cards of every set their own side has not shown (R185, R380, R2826000: the opponent's hidden
 cards and a card of the seat's library from the opponent's deck, R73, against what the opponent shows,
@@ -105,8 +105,10 @@ too, #3858; an attacker a First Strike defender destroys first earning no chip a
 `fight` reads a blow that never lands as none, R4171000), and once none is worth making, or facing lethal
 against its best attack (R4187000), the switches to Defense Position its own evaluation prefers, and
 in the first case its switches back to Attack Position of units without Deft too, up to
-`AI_REPLY.attack_switches`, R4433000) on every determinization, and plays the first action of the
-best mean. When none
+`AI_REPLY.attack_switches`, R4433000; known plays and Activates together take at most
+`AI_REPLY.play_steps` of its `AI_REPLY.max_steps` steps, so its attacks keep the rest, and a reply
+whose steps run out still ends its turn, in up to `AI_REPLY.close_steps` more, R4810000) on every
+determinization, and plays the first action of the best mean. When none
 of the lines `shortlist_lines` takes for the reply hands the turn over with an effect of the seat's own
 waiting that the root did not hold (a countdown, a next-turn reward), the best line that does is replied
 to as well, last, on a slice of the counter that leaves the other determinizations' share of the
@@ -166,6 +168,10 @@ swing; a Ranged attacker takes none from a non-Ranged Taunt (R783000). A Frenzy 
 the Taunt it attacked, and that survives, has its swings back to `attacks_per_turn`, each with the hit's own
 hero permission; an exiled Taunt and one a Cleave splash destroys free none (R3543003)
 (`strike_back_survival_read`, R4402000, #4402; off in `GREEDY_EVAL`).
+A Cleave splash in the walk lands on every unit it strikes. A unit without Taunt, or a Taunt the walk has
+passed, is met as its earlier hits and splashes left it: gone once destroyed, or back as its Reborn body. Each
+splash spends the pools in the engine's order, and a Trample attacker's sends what it deals beyond the unit's
+health to the hero (§4.4 step 9) (`splash_trample_read`, R4805000, #4805; off in `GREEDY_EVAL`).
 A hit on a Taunt, its Cleave splash and a First Strike Taunt's strike back are
 each capped after Armor by the struck unit's own guard (C+ #11 Anime Armor, R2179005), as `blow` caps the
 static trader's. Past the caps, every static read of a hit takes §4.4 steps 3a and 3b
@@ -286,7 +292,8 @@ play may be, so a hand the element punishes costs nothing while that Rock is not
 Feng Shui judges whose element generates another hand card's is a bridge (`Auspice::Bridge`), tried after
 the rewarded plays and before the other plain ones (R4783041).
 A Tradable card in the seat's own hand whose own cost is above the crystals its next refresh brings (this
-turn's `mana.max`, one more under `MAX_MANA`, moved by the rider; never the handicap) is dead
+turn's `mana.max`, one more while its crystal count under the cap, `mana.max` less `perm_mod` and the crystals
+stolen past the cap, is under `MAX_MANA` (R4812000), moved by the rider; never the handicap) is dead
 (`dead_in_hand`): `material` holds it at `AI_EVAL.dead_tradable_discount` off its hand price, and its Trade
 is tried before the plays, so a line can play what it draws (R4154400). S #89 Spice in the seat's own
 hand is priced as any (1) card, and the Credits it pays as it is played or discarded count at
@@ -328,7 +335,9 @@ beam, but when the beam keeps the earlier line, the first `AI_SEARCH.zone_varian
 turn where they stand after it, below that line on a tie. So the placements the beam tries reach the reply,
 which prices a Cleave into a unit's neighbours; a lane the reply scores the same as a better one of that
 play is not a finalist of its own. The
-lethal solver's visited set still reads a position without its units' lanes. Position
+lethal solver's visited set reads a position with its units' lanes, as the concession check's walk does
+(`simulate::position_key`, R4806000): a play tried in two lanes reaches two positions, so a lethal that
+stands only in the second (across a slash, outside The Gauntlet) is found. Position
 switches are the last tier of the move order, so a level's `branching` cut drops them from a busy board;
 the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit that could attack it next turn would kill and survive, `kills_and_survives`; R2021000) it cuts are
 kept (#1759), so a unit that cannot win its next fight can stand down however many earlier moves the board offers. While the
@@ -404,10 +413,18 @@ calls it; the ladder bots ask it before conceding.
 
 A decision's cost is counted in nodes: one node is one `reduce` call the AI makes, the reply's
 included, or one turn hook its root fires (R2477000, R2565000). A step whose `reduce` does far more work than most is charged extra nodes up front
-(`surcharge_nodes`: a play that ranks every shipped card, an attack into an armed My Pawn, a fused
-card holding either, and a play the other side's Pareto Optimality judges, per card held; #1240),
+(`surcharge_nodes`: a play that ranks every shipped card, an attack an armed My Pawn would answer, one
+its own projection calls lethal (`subsystems::is_lethal`, R4809001), a fused card holding either, and a
+play the other side's Pareto Optimality judges, per card held; #1240),
 and once a step has run, for each such card it cast without playing it, from a graveyard or at random
 (`announced_surcharge_nodes`, read off its `cardAnnounced` events; #1347).
+A step whose surcharge the counter cannot pay is refused in the beam (`simulate` answers `Some(Err)` and
+the beam tries the next), but cuts the opponent's reply (`simulate_reply` answers `None`, as for a spent
+counter: `reduce_for`, `best_try`), since a skipped reply step reads as an opponent who passed it up
+(R4809000). The lethal solver's first walk, depth-first on `AI_SEARCH.lethal_quick_nodes`, skips such a
+step too (`simulate`'s refusal is `UNPAID_SURCHARGE`), and a line whose replay on another
+determinization meets one, but then ends cut rather than searched, so the best-first walk still runs on
+the rest of the solver's allowance (R4807000).
 Such a step, once run, is kept for the rest of its decision (`SimMemo` on the root counter, at most
 `AI_SEARCH.memo_steps`), and the same step from the same state, nonce records aside, is answered from
 it without the engine, its nonce record rebuilt as the engine builds it and its nodes charged as before,

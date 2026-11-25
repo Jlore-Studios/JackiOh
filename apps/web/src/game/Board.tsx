@@ -542,7 +542,7 @@ function ControlButton({
   /** `"armed"` while End turn is waiting for its confirming second click (B25). */
   confirm?: "armed";
   /** End-turn's physical housing state; this is presentation over engine-provided legality. */
-  turnState?: "ready" | "waiting" | "enemy" | "locked";
+  turnState?: "ready" | "waiting" | "enemy" | "locked" | "over";
   /** A dispatched turn-end stays visibly depressed until the next rendered view takes over. */
   pressed?: boolean;
   /** A tooltip, where the label is a short form of it (Offer draw while R36 blocks it). */
@@ -630,7 +630,8 @@ export default function Board({
   const pressed = pressedFor === view;
   const endTurnLegal = isLegal(highlight, testid.endTurn);
   const ownTurn = view.result === null && view.active === view.viewer;
-  const endTurnState = !ownTurn ? "enemy" : !endTurnLegal ? "locked" : actionsRemain ? "ready" : "waiting";
+  // R4734000: a finished game's End turn is its own state, so it never reads Enemy turn after a game.
+  const endTurnState = view.result !== null ? "over" : !ownTurn ? "enemy" : !endTurnLegal ? "locked" : actionsRemain ? "ready" : "waiting";
   const offerDrawText = offerDrawControlText(view);
   // #2645: on a phone the bar holds End turn, the Marketplace's toggle, the log's, ⋯ and the gear, and
   // Offer draw, Concede and Friends are rows of ⋯'s menu (MatchMenu.tsx).
@@ -819,7 +820,7 @@ export default function Board({
             <ControlButton
               control="end-turn"
               testId={testid.endTurn}
-              label={endTurnState === "enemy" ? t("Enemy turn") : armed ? t("Confirm end turn") : (endTurnLabel ?? t("End turn"))}
+              label={endTurnState === "over" ? t("Game over") : endTurnState === "enemy" ? t("Enemy turn") : armed ? t("Confirm end turn") : (endTurnLabel ?? t("End turn"))}
               highlight={highlight}
               animating={animating}
               confirm={armed ? "armed" : undefined}

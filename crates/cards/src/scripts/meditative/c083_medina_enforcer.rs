@@ -5,7 +5,7 @@
 //! Engine: M #82's effect as an Activate, once a turn on its controller's own turn (R384, §6.2), with no
 //! cost, target or mode; summoning sickness does not stop it. The count is the declared `times` (R386),
 //! 1, and 3 on the Radiant face. The designer's Radiant face kept 4/4 until issue #4353; R275's stat half
-//! made it 8/8 (⚠ designer). Through v0.6.8b it Buffed the hand at its controller's end of turn (R62),
+//! made it 8/8 (⚠ designer). Through v0.6.8d it Buffed the hand at its controller's end of turn (R62),
 //! which `script_v0_6_8b` keeps (R767000).
 
 use jackioh_engine::prelude::*;
@@ -48,7 +48,7 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
-/// R767000: through v0.6.8b it Buffed the hand at its controller's end of turn (R62), with no Activate
+/// R767000: through v0.6.8d it Buffed the hand at its controller's end of turn (R62), with no Activate
 /// (issue #4353); `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_8b() -> CardScripts {
     let base = Script {
@@ -156,7 +156,7 @@ mod tests {
                 assert_eq!(upgraded_count(s.events()), 0);
             }
 
-            /// R767000: through v0.6.8b it Buffed the hand at its controller's end of turn, never the
+            /// R767000: through v0.6.8d it Buffed the hand at its controller's end of turn, never the
             /// opponent's, and had no Activate (issue #4353).
             #[test]
             fn r767000_the_script_kept_for_v0_6_8b_buffs_at_its_controllers_end_of_turn() {
