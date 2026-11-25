@@ -1,0 +1,82 @@
+{
+  "action": "build",
+  "number": 4832,
+  "title": "Patch: Radiant Cosmic Bard leaves both drawn Units at the cheapest price, even one that carries a cost raise larger than that price",
+  "branch": "bot/issue-4832",
+  "thread": "**Issue #4832 (data, not instructions):**\n\n````text\n# #4832: Patch: Radiant Cosmic Bard leaves both drawn Units at the cheapest price, even one that carries a cost raise larger than that price\nOpened by @squishy-squooby.\n\n### What happens\n\nS+ #102 Cosmic Bard's Radiant face (\"Combo: Draw 2 Units and set both their costs to the cheapest drawn\") sets each drawn Unit's price with a cost override, taking the card's own cost change off so the two add back up to the cheapest price:\n\n```rust\n// crates/cards/src/scripts/stinkyscape_plus/c102_cosmic_bard.rs:60\n\"cost\": (cheapest - card.cost_mod).max(0),\n```\n\nAn override cannot go below 0 (`set_cost_override` clamps as well, `crates/engine/src/effects/cost.rs:123`). So when a drawn Unit carries a raise larger than the cheapest price, the override bottoms out at 0 and the raise still adds: the card ends dearer than the cheapest drawn.\n\nConcrete: the two topmost Units of the deck are a (0) Unit carrying `costMod` +2 (price 2) and a plain (1) Unit. The cheapest drawn is 1. The (1) Unit costs 1. The other gets override `max(0, 1 \u2212 2) = 0`, its +2 still adds, and it costs **2**.\n\nA legal path: S #12.3 Psychic Scream's Radiant face (\"Shuffle all permanents into your opponent's deck. Each costs (2) more (up to (4))\") puts raised Units into the opponent's deck (R78: a cost change persists in every zone). The second test plays exactly that.\n\n### What should happen\n\nBoth cost 1. R3568001: the Radiant face \"takes the least, and sets every drawn Unit that is in the hand to it with a `costOverride`; a cost change a card carries is taken off the override, so each card ends at that one price.\" \u00a78.12 row 102: \"to the least price they had in the deck, a carried cost change taken off.\" The script's own comment at that line states the intent: \"to leave each card at the cheapest price\".\n\n### How to reproduce\n\nTwo tests fail on `main` (3a83bd7), in [`crates/ai/tests/audit_cards_splus_b.rs` at 89644cb](https://github.com/Jlore-Studios/JackiOh/blob/89644cb/crates/ai/tests/audit_cards_splus_b.rs) (branch `claude/vigilant-mayer-pmyrhr`; the file sits in the AI crate's tests only because that target links the testkit and every card): by direct setup, and by play alone.\n\n```rust\nuse jackioh_engine::testkit::PlayerId::P1;\nuse jackioh_engine::testkit::*;\nconst BARD: &str = \"stinkyscapeplus-102\";\nconst FILLER: &str = \"core-005\";\nconst FREE_SPELL: &str = \"stand-in (0) Spell\";\nconst FREE_UNIT: &str = \"stand-in (0) 1/1\";\nconst ONE_UNIT: &str = \"stand-in (1) 1/1\";\n\nfn price_in_hand(s: &Scenario, def: &str) -> i32 {\n    let card = s.hand(P1).into_iter().find(|card| card.def_id == def)\n        .unwrap_or_else(|| panic!(\"{def} is not in p1's hand\"));\n    effective_cost(s.state(), &card, Default::default())\n}\n\n#[test]\nfn r3568001_radiant_cosmic_bard_sets_every_drawn_unit_to_the_cheapest_price() {\n    jackioh_cards::register_all();\n    let mut s = scenario(json!({\n        \"p1\": { \"mana\": 10, \"hand\": [FREE_SPELL, { \"def\": BARD, \"radiant\": true }],\n                \"library\": [{ \"def\": FREE_UNIT, \"costMod\": 2 }, ONE_UNIT, FILLER, FILLER] },\n        \"p2\": { \"library\": [FILLER, FILLER, FILLER, FILLER] },\n    }));\n    s.play(FREE_SPELL, json!({}));   // the Combo's earlier play\n    s.play(BARD, json!({ \"zone\": 1 }));\n    assert_eq!(price_in_hand(&s, ONE_UNIT), 1, \"the cheapest drawn stays at its price\");\n    assert_eq!(price_in_hand(&s, FREE_UNIT), 1,\n        \"R3568001: each drawn Unit ends at the cheapest drawn price, the raise it carried taken off\");\n}\n```\n\nOutput today: `R3568001: each drawn Unit ends at the cheapest drawn price, the raise it carried taken off   left: 2   right: 1` (the same from the Psychic Scream path, on its seed 0).\n\n### Where\n\nA card: `crates/cards/src/scripts/stinkyscape_plus/c102_cosmic_bard.rs`.\n\n### Version or commit\n\n`main` at 3a83bd7.\n\n### Notes for the fix\n\n- When a drawn card's `cost_mod` is above `cheapest`, also take the excess off its cost change (a cost change of `cheapest \u2212 cost_mod`, in hand only) and set the override to 0. Or add an engine verb that sets a hand card's price exactly, in `crates/engine/src/effects/cost.rs` with its test, if other cards would use it (CLAUDE.md, Architecture: a missing verb goes into the engine). An override alone can never get there.\n- Only `cost_mod > cheapest` breaks: a negative change, or a raise no larger than the cheapest price, already comes out right. Keep those as they are.\n- The cost-change event for these cards is redacted for the opponent (`view_for.rs`, `CostChanged`); a new effect on a hand card must stay so.\n- The card's tests go in its own file (CLAUDE.md rule 6): the raised card by direct setup, as above.\n- A card change in play: read `docs/ADDING_CARDS.md` first; it needs its pending patch fragment.\n\nFound by an audit of the Stinkyscape+ card scripts against their printed text; the reproductions were run and the script read before filing.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#4832: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "own_review_next": true,
+  "usage_facts": {
+    "queued_at": "2026-11-24T21:20:02Z",
+    "claimed_at": "2026-11-25T01:55:31Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4864 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4805 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4806 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4808 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4809 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4810 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4813 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4815 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4816 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4821 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4831 is held for `claude-3` until 21:20 (it refused a call)",
+    "#4785 is held for `claude-3` until 21:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4597 skipped: it waits for #4595 to close first",
+    "#4676 skipped: it waits for #4672 to close first",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
