@@ -22013,13 +22013,24 @@
       "taken_asks": [],
       "verdict_rounds": 3,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-7",
         "rejections": [],
-        "reviews": [],
-        "sha": "8bd71a11541890374663ae2d9fcd31d08a25f919",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-7",
+            "run": "45577438939",
+            "tier": "strong"
+          }
+        ],
+        "sha": "09fffc31119fd30c8d0f83d2977664ac919754e9",
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "4885": {
