@@ -24621,6 +24621,13 @@
     "4937": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-25T19:27:29Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard line holds: card scripts only, not engine/AI/cross-crate/migration/big (6 files)."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
