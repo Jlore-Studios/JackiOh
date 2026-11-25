@@ -44021,6 +44021,14 @@
         "title": "Patch: the quests panel reads again when the next quest falls due, as the landing bookmark already does",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-25T02:18:48Z",
+        "number": 4819,
+        "reason": "a convenience, not a fix. Each replay's row in the list already saves its JSON (R1141000), and since #4619 one Back closes the viewer onto that list. A second save control in the viewer, with game facts carried into it and its own saving and failure states, is a nice-to-have nobody asked for.",
+        "title": "Patch: a 1v1 replay's viewer offers Download JSON for the game's own replays, as its list rows and the Duos viewer already do",
+        "verdict": "came to nothing",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "declined": [
@@ -44827,6 +44835,13 @@
         "number": 4829,
         "reason": "no leak or misbuilt flag is cited. The accept-path test would be gated on `preview`, which no test build turns on, so it would run nowhere. The refusal test guards the C module that ports use, not the browser module players load, which the issue leaves untested. That's a guard against something that hasn't happened.",
         "title": "Patch: the C module's tests preview a set that has not shipped, pinning the accept and refusal paths",
+        "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-25T02:18:48Z",
+        "number": 4819,
+        "reason": "a convenience, not a fix. Each replay's row in the list already saves its JSON (R1141000), and since #4619 one Back closes the viewer onto that list. A second save control in the viewer, with game facts carried into it and its own saving and failure states, is a nice-to-have nobody asked for.",
+        "title": "Patch: a 1v1 replay's viewer offers Download JSON for the game's own replays, as its list rows and the Duos viewer already do",
         "why": "rejected by @jgoetzmann"
       }
     ],
