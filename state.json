@@ -20752,6 +20752,8 @@
       }
     },
     "4870": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-24T22:27:53Z",
@@ -20765,8 +20767,11 @@
         "trail": "^\\\\s*[0-9]+:\\\\s*//\\\" | grep -vE \\\"=>|->\\\" ; grep -nE \\\"\\\\+= |\\\\* \\\" crates/engine/src/subsystems\u2026\n- Bash: {\"command\": \"grep -rn \\\"validate_answer\\\\|recipe_points\\\\|craft_preview\\\" crates/engine/src crates/shared/src crates/wasm crates/ai/src crates/server/src --include=*.rs | grep -v \\\"subsystems/craft.r\u2026\n- said: The engine change is in; now the tests. Let me check what the testkit prelude exports.\n- Bash: {\"command\": \"grep -n \\\"pub use\\\\|config::\\\\*\\\\|nonempty\\\\|KeywordKind\\\" crates/engine/src/testkit/mod.rs 2>/dev/null | head -30; ls crates/engine/src/testkit* -d; grep -rn \\\"pub fn nonempty\\\" crates/\u2026\n- Bash: {\"command\": \"sed -n 55,75p crates/engine/src/wire/mod.rs; grep -n \\\"KeywordKind\\\" crates/engine/src/wire/*.rs | grep -i \\\"enum\\\\|string_enum\\\\|macro\\\" | head; grep -n \\\"pub use\\\" crates/engine/src/li\u2026\n- Bash: {\"command\": \"sed -n 470,500p crates/engine/src/prompts.rs\", \"description\": \"Read how a craft refusal is worded\"}\n- Bash: {\"command\": \"sed -n '/^fn verb_name/,/^}/p' crates/engine/src/subsystems/craft.rs | head -30; sed -n '/^pub fn compile_crafted_def/,/^}/p' crates/engine/src/subsystems/craft.rs | grep -n \\\"radiant\\\\|\u2026\n- Bash: {\"command\": \"grep -n \\\"pub struct CraftEffect\\\\|pub struct CraftHat \\\\|pub struct CraftHat\\\\b\\\\|pub keyword\\\\|pub effects\\\\|pub hats\\\" crates/engine/src/wire/craft.rs; grep -n \\\"Cry\\\\b.*multiplier\\\\|\u2026\n- said: Now write tests A and B into `craft.rs`.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4827/crates/engine/tests/rules/craft.rs\", \"old_string\": \" assert_eq!(refused.error.is_none(), valid, \\\"{preview:?}\\\");\\n assert_\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4827/crates/engine/tests/rules/craft_modes.rs\", \"old_string\": \"/// An N/1 Unit at `cost`: N points.\\nfn unit_of(\", \"new_string\":\u2026\n- Bash: {\"command\": \"echo \\\"- build run 2: engine + tests A\\u2013D written; running cargo fmt and the engine's craft rules tests.\\\" >> .bot-notes.md; cargo fmt && git diff --stat\", \"description\": \"Format the\u2026\n- Bash: {\"command\": \"timeout 1500 cargo test -p jackioh-engine --features testkit --test 'rules*' craft 2>&1 | grep -E \\\"^test result|FAILED|panicked|error(\\\\[|:)|failures:|^test .*(FAIL|ok)$\\\" | grep -v \\\" \u2026\n- Bash: {\"command\": \"timeout 500 cargo test -p jackioh-engine --features testkit --test 'rules*' -- r880_a_crafted r880_r883_a_recipe r880_r1182002_from_scratch r883_r1182002 2>&1 | grep -E \\\"^test |test res\u2026\n- Bash: {\"command\": \"cp crates/engine/src/subsystems/craft.rs /tmp/craft.rs.fixed && git show HEAD:crates/engine/src/subsystems/craft.rs > crates/engine/src/subsystems/craft.rs && timeout 500 cargo test -p j\u2026\n- Bash: {\"command\": \"echo \\\"- build run 2: 4 new tests pass with the fix and all 4 fail without it (panic at craft.rs:137 / accepted grant / no cap). Next: cards+server tests, clippy, spec check, classify.\\\"\u2026\n- said: Formatting and engine clippy are clean. Now the cards' and server's craft tests.\n- Bash: {\"command\": \"timeout 590 cargo test -p jackioh-cards meditative 2>&1 | grep -E \\\"test result|FAILED|panicked\\\" | grep -v \\\"0 passed; 0 failed\\\" | head -20\", \"description\": \"Run the Meditative cards' \u2026\n- Bash: {\"command\": \"timeout 590 cargo test -p jackioh-server --test server craft 2>&1 | grep -E \\\"test result|FAILED|panicked|error\\\" | head -20\", \"description\": \"Run the server's craft tests\", \"timeout\": 6\u2026\n- Bash: {\"command\": \"timeout 590 cargo jackioh spec check 2>&1 | tail -5\", \"description\": \"Run the rulings check\", \"timeout\": 600000}\n- Bash: {\"command\": \"echo \\\"- build run 2: fmt, engine clippy, cards meditative (1803+21), server craft, spec check all ok. Running classify --claims.\\\" >> .bot-notes.md; git rev-parse --verify origin/main 2\u2026\n- Bash: {\"command\": \"timeout 590 cargo jackioh classify --base origin/main --claims > /tmp/classify.out 2>&1; echo \\\"exit $?\\\"; grep -v \\\"Compiling\\\\|Running\\\\|Finished\\\" /tmp/classify.out | tail -40\", \"desc\u2026\n- Bash: {\"command\": \"timeout 590 pnpm --dir apps/web test src/game/craft/CraftEditor.test.tsx > /tmp/web-craft.out 2>&1; echo \\\"exit $?\\\"; grep -E \\\"Test Files|Tests |FAIL|\\u2717|\\u00d7\\\" /tmp/web-craft.out \u2026\n- said: Classify reports `Internal` (no card plays differently, so no patch fragment needed). While the web test builds WASM, let me review the full diff.\n- Bash: {\"command\": \"git diff crates/engine/src\", \"description\": \"Review the engine source diff\"}\n- Bash: {\"command\": \"grep -n \\\"FOLDING\\\\|folding\\\\|version\\\" crates/engine/src/subsystems/craft.rs | head\", \"description\": \"Check craft.rs reads no catalog version\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=s[s.index('## State'):s.index('## Log')]\\nnew='''## State\\n\\n- Run 2 (build, opus): plan steps 1\\u20138 and tests A\\u2013D are\u2026\n- ToolSearch: {\"query\": \"select:Monitor\", \"max_results\": 1}\n- Bash: {\"command\": \"tail -c 1500 /tmp/web-craft.out\", \"description\": \"Peek at the web test's progress\"}\n- Bash: {\"command\": \"until grep -qE \\\"Test Files|exit [0-9]|ERR|error\\\" /tmp/web-craft.out; do sleep 10; done; tail -c 800 /tmp/web-craft.out\", \"description\": \"Wait for the web test to finish\", \"timeout\": 90\u2026\n- said: The WASM build for the web's craft editor test is still compiling. Every other check has passed. I'll wait for it to finish.\n- Bash: {\"command\": \"until grep -qE \\\"Test Files|exit [0-9]|ERR_|error:\\\" /tmp/web-craft.out; do sleep 15; done; grep -E \\\"Test Files|Tests |FAIL|exit\\\" /tmp/web-craft.out | head\", \"description\": \"Wait for t\u2026\n- Bash: {\"command\": \"git status --porcelain; python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Left: the web CraftEditor test (running), then the final report.\\\",\\\"- Web `CraftEditor.te\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the craft validator refuses a crafted Unit whose stats overflow its points and a granted keyword the block table does not price\"} --> ## What changed Both holes are fixed in `validate_recipe` (`crates/engine/src/subsystems/craft.rs`). A hand-written `cr\u2026"
       },
       "issue": 4827,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-25T00:03:39Z",
         "from_run": "45501184843",
         "gates": [
           {
@@ -20858,7 +20863,11 @@
         "source": "build",
         "until": "2026-11-25T00:32:40Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-25T00:02:40Z",
+      "run_id": "pending:560a9486-1795564988",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -20877,6 +20886,9 @@
         "provider": "claude-3",
         "run": "45501184843"
       },
+      "started_at": "2026-11-25T00:03:39Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -20890,9 +20902,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-24T23:54:01Z",
+    "at": "2026-11-25T00:03:39Z",
     "url": "",
-    "what": "spot-check #4859 on claude-1"
+    "what": "review #4870 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-24T23:49:53Z",
