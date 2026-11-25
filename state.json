@@ -23218,6 +23218,17 @@
         "tiers": {
           "muse": "medium"
         }
+      },
+      "waiting_turn": {
+        "behind": [
+          4884
+        ],
+        "ends": "2026-11-25T13:29:58Z",
+        "from_run": "45582793699",
+        "head": "6b63d33d1d80ce33b0f4eb3aecc7939bfa051396",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "muse",
+        "since": "2026-11-25T11:29:58Z"
       }
     },
     "4908": {
