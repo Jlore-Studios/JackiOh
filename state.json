@@ -21292,10 +21292,10 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "at": "2026-11-25T03:35:30Z",
-        "built_by": "claude-1",
+        "at": "2026-11-25T05:06:04Z",
+        "built_by": "claude-4",
         "by": "`claude` (strong)",
-        "sha": "0fb08179cabec0f5470f957678b5ebcccc0e4c48"
+        "sha": "d61855ccab730f66ef3a87be5bfca80ed25db46d"
       },
       "cross_rounds": 0,
       "died": 0,
