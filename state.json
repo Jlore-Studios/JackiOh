@@ -20993,13 +20993,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [],
-        "sha": "ccb2321f3f93e5550432bec192fbeceb48932b8c",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "muse",
+            "provider": "muse",
+            "run": "45686104317",
+            "tier": "medium"
+          }
+        ],
+        "sha": "20f9e7d00d6bdaae902d609902e54fad5fa0e75a",
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "4955": {
