@@ -21151,6 +21151,7 @@
       "run_id": "45526303484",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 520,
       "started_at": "2026-11-25T01:30:52Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -43660,9 +43661,33 @@
         "title": "Patch: a card or hero an open target prompt lights on the board answers it when clicked, as the Plague Counter placement already does",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-8"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "8988a6ed261256b84bbdecf975155075d16f5998",
+        "issue": 4801,
+        "merged_at": "2026-11-25T02:05:05Z",
+        "n": 520,
+        "pr": 4875,
+        "queued_at": "2026-11-25T02:05:05Z",
+        "sha": "69bc0fc88b5f452b16c213077c51538a3f3e80d3",
+        "status": "queued",
+        "title": "Patch: a wrap-up that fired before the beam still leaves the AI a line when its first root move carries a surcharge, so it does not end its turn by fallback",
+        "tries": 0
       }
     ],
-    "count": 519
+    "count": 520
   },
   "statistics": {
     "at": "2026-11-25T01:59:16Z"
