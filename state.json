@@ -23160,6 +23160,8 @@
     "4907": {
       "action": "review",
       "asks": [],
+      "ci_fixed_head": "6b63d33d1d80ce33b0f4eb3aecc7939bfa051396",
+      "ci_fixes": 1,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-25T07:01:03Z",
