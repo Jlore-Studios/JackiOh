@@ -23733,6 +23733,14 @@
           "claude": "strong"
         }
       }
+    },
+    "4916": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-25T11:04:04Z",
+      "issue": 4802,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
