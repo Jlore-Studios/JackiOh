@@ -545,7 +545,9 @@ pub struct EvalWeights {
     /// R3951100: while a Feng Shui acts (Meditative #40, R981–R985), the share that counts of what the
     /// seat's next face-up play is worth to it (`evaluate::feng_shui_outlook`): of its own hand's cards a
     /// Feng Shui would judge, the best verdict its last element gives one, a reward at what the card would
-    /// gain in hand as Radiant and a punishment at the hit's cost on the hero curve. At 0 nothing is read.
+    /// gain in hand as Radiant and a punishment at the hit's cost on the hero curve. While a Feng Shui of
+    /// the seat's own acts, the Auspicious Rock its Activate adds next turn is one more such card
+    /// (`AI_FENG_SHUI_ROCK`, R4783041). At 0 nothing is read.
     pub feng_shui_outlook: f64,
     /// §3.2, R13, R3695001: the share of its `unit_worth` a card dormant under one of the seat's own
     /// unit piles counts. It resumes when the cards above it leave.
@@ -891,6 +893,12 @@ pub const AI_LAST_RESORT_REFILLED: &[&str] = &["stinkyscapeplus-079"];
 /// R4783040: the life at or under which the seat's times are dire and it may play a last-resort card, a
 /// third of a hero's starting `HERO_HEALTH`: one Feng Shui punishment (`FENG_SHUI_DAMAGE`) from dead.
 pub const AI_LAST_RESORT_DIRE_LIFE: i32 = HERO_HEALTH / 3;
+
+/// R4783041: the card a Feng Shui's Activate adds to its controller's hand, Meditative #39.1 Auspicious Rock
+/// (水), Radiant on the Radiant face. While a Feng Shui of the seat's own acts, the one its next turn's
+/// Activate adds is a card its next play may be (`evaluate::feng_shui_outlook`), and a play that leaves an
+/// element generating a card of its hand bridges to it (`candidates::Auspice::Bridge`).
+pub const AI_FENG_SHUI_ROCK: &str = "meditative-039-1";
 
 /// R2424000, R2687000: the most nodes a decision's Death probes (`evaluate::death_prices`) spend: two
 /// per field unit or readable backrow card with a Death, three per own hand Field Spell with one, three

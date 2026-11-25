@@ -279,6 +279,11 @@ element is part of `search_signature`, so two orders of the same plays that end 
 two positions; with no Feng Shui acting neither changes. `GREEDY_EVAL` keeps 0.
 While a Feng Shui of the seat's own acts, its Activate (a free Auspicious Rock) is tier 2's first source,
 before the rewarded plays (`Auspice::Judge`, R4154403), so a busy turn's `branching` cut never drops it.
+While a Feng Shui of the seat's own acts, `feng_shui_outlook` also counts the Auspicious Rock its next turn's
+Activate adds (`coming_rock`, `AI_FENG_SHUI_ROCK`, Radiant on a Radiant Feng Shui) among the cards the next
+play may be, so a hand the element punishes costs nothing while that Rock is not punished, and a play no
+Feng Shui judges whose element generates another hand card's is a bridge (`Auspice::Bridge`), tried after
+the rewarded plays and before the other plain ones (R4783041).
 A Tradable card in the seat's own hand whose own cost is above the crystals its next refresh brings (this
 turn's `mana.max`, one more under `MAX_MANA`, moved by the rider; never the handicap) is dead
 (`dead_in_hand`): `material` holds it at `AI_EVAL.dead_tradable_discount` off its hand price, and its Trade

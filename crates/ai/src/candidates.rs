@@ -8,12 +8,12 @@ use jackioh_engine::afflictions::Affliction;
 use jackioh_engine::effects::PLAGUE_PLACEMENT_HOOK;
 use jackioh_engine::{
     ActionBody, ActionType, AttackTarget, CardInstance, CostOptions, FengShuiOutcome, GameState, KeywordKind,
-    PlayerId, Position, Row, Selection, SetAs, UnitView, ZoneChoice, ZoneSlot, active_units_of, adjacent,
-    attack_mod_for, attack_restriction, beneath_at, canonical, card_at, carried_at, cleave_struck,
-    converts_to, damage_pool_of, effective_cost, effective_life, find_def, find_instance, find_instance_mut,
-    flags_of, has_keyword, is_locked, lane_multiplier_for, legal_actions, midlane_lanes_of, pierces,
-    position_after_switch, row_size, slot_of, strike_back_multiplier_for, subsystems, takes_strike_back,
-    unit_damage_cap, unit_view, units_on_field_of,
+    PlayerId, Position, Row, Selection, SetAs, UnitView, ZoneChoice, ZoneSlot, acting_with_flag,
+    active_units_of, adjacent, attack_mod_for, attack_restriction, beneath_at, canonical, card_at,
+    carried_at, cleave_struck, converts_to, damage_pool_of, effective_cost, effective_life, find_def,
+    find_instance, find_instance_mut, flags_of, has_keyword, is_locked, lane_multiplier_for, legal_actions,
+    midlane_lanes_of, pierces, position_after_switch, row_size, slot_of, strike_back_multiplier_for,
+    subsystems, takes_strike_back, unit_damage_cap, unit_view, units_on_field_of,
 };
 use serde_json::Value;
 
@@ -497,13 +497,17 @@ enum Auspice {
     /// R4154403: the seat's own acting Feng Shui's Activate, a free Auspicious Rock, before every play.
     Judge,
     Rewarded,
+    /// R4783041: a play judged neither way whose element generates another card of the hand's, while a
+    /// Feng Shui of the seat's own acts (`bridges`), before the other plain sources.
+    Bridge,
     Plain,
     Punished,
 }
 
 /// R3951100: the `Auspice` of `action`'s source while a Feng Shui acts (`judging`): a play by the verdict
-/// its card would get now (`feng_shui_verdict`), an Activate or a power, which no Feng Shui judges, plain.
-/// Plain for every source with none acting, so the move order is unchanged without one.
+/// its card would get now (`feng_shui_verdict`), a plain one that bridges to a reward (`bridges`, R4783041)
+/// before the rest, an Activate or a power, which no Feng Shui judges, plain. Plain for every source with
+/// none acting, so the move order is unchanged without one.
 fn auspice(state: &GameState, seat: PlayerId, action: &ActionBody, judging: bool) -> Auspice {
     if judging && judges_own_rock(state, seat, action) {
         return Auspice::Judge;
@@ -514,11 +518,40 @@ fn auspice(state: &GameState, seat: PlayerId, action: &ActionBody, judging: bool
     if !judging {
         return Auspice::Plain;
     }
-    match find_instance(state, instance_id).and_then(|card| feng_shui_verdict(state, seat, card)) {
+    let Some(card) = find_instance(state, instance_id) else {
+        return Auspice::Plain;
+    };
+    match feng_shui_verdict(state, seat, card) {
         Some((FengShuiOutcome::Positive, _)) => Auspice::Rewarded,
         Some((FengShuiOutcome::Negative, _)) => Auspice::Punished,
+        None if bridges(state, seat, card) => Auspice::Bridge,
         None => Auspice::Plain,
     }
+}
+
+/// R4783041: while a Feng Shui of `seat`'s own acts, whether its face-up play of `card` would leave an element
+/// that generates the element of another card in its hand a Feng Shui would judge (R981), so that card's play
+/// next is rewarded: the free Auspicious Rock (水) before a 木 card, a 金 card before the Rock. An own Feng Shui
+/// rewards its controller on either face (R984); a card a play leaves no record of (R982), or one without a
+/// definition, bridges nothing. Two plays are the chain the search plays through; this only keeps its first
+/// step ahead of the other plain sources, so a level's `branching` cut does not drop it.
+fn bridges(state: &GameState, seat: PlayerId, card: &CardInstance) -> bool {
+    if !acting_with_flag(state, seat, |flags| flags.feng_shui)
+        || find_def(Some(state), &card.def_id).is_none()
+        || !subsystems::feng_shui::judged(state, card)
+    {
+        return false;
+    }
+    let left = subsystems::feng_shui::element_of(state, &card.def_id);
+    state.players[seat].hand.iter().any(|next| {
+        next.id != card.id
+            && find_def(Some(state), &next.def_id).is_some()
+            && subsystems::feng_shui::judged(state, next)
+            && subsystems::feng_shui::reaction(
+                Some(left),
+                subsystems::feng_shui::element_of(state, &next.def_id),
+            ) == Some(FengShuiOutcome::Positive)
+    })
 }
 
 /// R4154403: whether `action` is an Activate of a Feng Shui of `seat`'s own (a card whose running face holds
