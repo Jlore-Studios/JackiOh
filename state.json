@@ -46913,6 +46913,9 @@
       "2026-11-25T10:03:59Z,claude-3,stream,call,45588480794,92,2026-11-25T13:20:00Z,,,allowed_warning,,,",
       "2026-11-25T10:05:14Z,claude-3,stream,call,45588480794,93,2026-11-25T13:20:00Z,,,allowed_warning,,,",
       "2026-11-25T10:05:44Z,claude-3,stream,call,45588480794,94,2026-11-25T13:20:00Z,,,allowed_warning,,,"
+    ],
+    "runs": [
+      "2026-11-25T10:06:37Z,45588480794,claude-3,opus,plan,4828,hard,planned,,17.6,195,103754,14642807,6.7443,71,94,,,750.9,,fresh,,1"
     ]
   },
   "version": 1
