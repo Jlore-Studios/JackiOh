@@ -24664,21 +24664,15 @@
     "what": "review #4939 on claude-7"
   },
   "last_sweep": {
-    "at": "2026-11-25T15:31:45Z",
+    "at": "2026-11-25T15:47:14Z",
     "notes": [
-      "delivered review #4934 on claude-1 (run 45644740946): reviewed",
-      "delivered review #4935 on claude-7 (run 45644499187): interrupted",
-      "delivered suggest on muse (run 45638933614): suggested",
-      "delivered build #4811 on claude-7 (run 45625479881): built",
-      "delivered build #4804 on claude-3 (run 45623046846): built",
-      "started review #4940 on claude-3 (run 45647361971)",
-      "started review #4929 on claude-1 (run 45647559185)",
-      "started review #4918 on claude-7 (run 45647738175)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` 5-hour usage is 69%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-25T16:50:00Z; it takes reviews only; it can start a build or a plan again in 9m; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #4939 held for `claude-7` until 09:50 (5-hour usage is 69%, too close to its 70% cap to start a long run (it starts under 65%))",
-      "pruned 2 plan file(s) older than 7 days",
-      "#4938: typed it Task",
-      "#4937: typed it Task",
-      "#4936: typed it Task"
+      "#4940: `e2e smoke (4/4)` red in CI run 45647032060; its other early jobs have until 2026-11-25T15:49:26Z to report",
+      "#4939 is held for `claude-7` until 09:50 (5-hour usage is 69%, too close to its 70% cap to start a long run (it starts under 65%))",
+      "delivered review #4918 on claude-7 (run 45647738175): interrupted",
+      "could not deliver review #4929 on claude-1 (run 45647559185), try 1 of 3 (GitHubError: POST /repos/Jlore-Studios/JackiOh/issues/4929/labels: HTTP 500: ): it is tried again next tick (2 more)",
+      "could not deliver plan #4842 on agy (run 45641128638), try 1 of 3 (GitHubError: POST /repos/Jlore-Studios/JackiOh/issues/4842/labels: HTTP 500: ): it is tried again next tick (2 more)",
+      "could not deliver build #4676 on claude-3 (run 45622897728), try 1 of 3 (GitHubError: POST /repos/Jlore-Studios/JackiOh/pulls: HTTP 500: ): it is tried again next tick (2 more)",
+      "night_run: could not finish (GitHubError: POST /repos/Jlore-Studios/JackiOh/issues/4939/comments: HTTP 500: )"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -25378,7 +25372,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T15:31:45Z",
+  "loop_tick": "2026-11-25T15:47:14Z",
   "machine_disk": {
     "issue": null,
     "reading": {
