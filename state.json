@@ -25094,21 +25094,17 @@
     "what": "plan #4936 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-25T17:16:55Z",
+    "at": "2026-11-25T17:33:07Z",
     "notes": [
-      "#4924 needs a plan",
-      "#4938 needs a plan",
-      "#4891: @MaxGoetzmann answered its question, so it is queued again with the answer",
-      "delivered build #4842 on agy (run 45654315366): built",
-      "delivered review #4940 on claude-3 (run 45647361971): approved",
-      "started review #4944 on agy (run 45663838742)",
-      "started build #4891 on claude-3 (run 45664009378)",
-      "started plan #4936 on muse (run 45664175000)",
-      "started plan #4938 on muse (run 45664348162)",
-      "started plan #4924 on claude-3 (run 45664526610)",
-      "started plan #4932 on claude-3 (run 45664712619)",
+      "delivered plan #4938 on muse (run 45664348162): planned",
+      "delivered plan #4936 on muse (run 45664175000): planned",
+      "delivered review #4943 on claude-4 (run 45661714289): approved",
+      "delivered build #4817 on claude-8 (run 45644288740): built",
+      "started review #4946 on claude-8 (run 45666915194)",
+      "started build #4938 on muse (run 45667075511)",
+      "started plan #4936 on claude-4 (run 45667255960)",
       "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days"
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -25810,7 +25806,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T17:16:55Z",
+  "loop_tick": "2026-11-25T17:33:07Z",
   "machine_disk": {
     "issue": null,
     "reading": {
