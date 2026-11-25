@@ -22942,20 +22942,28 @@
     "what": "plan #4807 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-25T08:14:11Z",
+    "at": "2026-11-25T08:21:28Z",
     "notes": [
-      "#4864 is held for `claude-3` until 02:20 (it refused a call)",
-      "#4805 is held for `claude-3` until 02:20 (it refused a call)",
-      "#4816 is held for `claude-3` until 02:20 (it refused a call)",
-      "#4821 is held for `claude-3` until 02:20 (it refused a call)",
-      "#4831 is held for `claude-3` until 02:20 (it refused a call)",
-      "#4734 is held for `claude-3` until 02:20 (it refused a call)",
-      "#4676 is held for `claude-3` until 02:20 (it refused a call)",
-      "#4891 is held for `claude-3` until 02:20 (it refused a call)",
-      "#4779 is held for `claude-3` until 02:20 (it refused a call)",
-      "#4785 is held for `claude-3` until 02:20 (it refused a call)",
-      "#4802 is held for `claude-3` until 02:20 (it refused a call)",
-      "#4804 is held for `claude-3` until 02:20 (it refused a call)"
+      "#4864: `claude-3` can start again, so its hold is lifted",
+      "#4805: `claude-3` can start again, so its hold is lifted",
+      "#4816: `claude-3` can start again, so its hold is lifted",
+      "#4821: `claude-3` can start again, so its hold is lifted",
+      "#4831: `claude-3` can start again, so its hold is lifted",
+      "#4734: `claude-3` can start again, so its hold is lifted",
+      "#4676: `claude-3` can start again, so its hold is lifted",
+      "#4891: `claude-3` can start again, so its hold is lifted",
+      "#4779: `claude-3` can start again, so its hold is lifted",
+      "#4785: `claude-3` can start again, so its hold is lifted",
+      "#4802: `claude-3` can start again, so its hold is lifted",
+      "#4804: `claude-3` can start again, so its hold is lifted",
+      "delivered revise #4887 on claude-8 (run 45566625729): approved",
+      "started revise #4864 on claude-3 (run 45576082742)",
+      "started revise #4887 on claude-8 (run 45576206364)",
+      "started build #4805 on claude-3 (run 45576332552)",
+      "started plan #4891 on claude-3 (run 45576454790)",
+      "started plan #4807 on claude-3 (run 45576583173)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` 5-hour usage is 98%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-25T09:50:00Z; it takes reviews only; it can start a build or a plan again in 1h 20m; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -23661,7 +23669,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T08:14:11Z",
+  "loop_tick": "2026-11-25T08:21:28Z",
   "machine_disk": {
     "issue": null,
     "reading": {
