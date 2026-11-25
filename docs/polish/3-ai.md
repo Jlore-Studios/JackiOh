@@ -641,8 +641,7 @@ export function beamSearch(det: GameState, seat: PlayerId, counter: NodeCounter,
  * is left ends its turn and is scored: after the
  * opponent's reply when `reply` is set (`replyScore`, with `hidden` as there), statically otherwise.
  * null if the counter ran out. R4447000: `replay_line` is this replay reporting its cut, which `decide`
- * counts in `stats.replaysCut` and, with `AI_SEARCH.replay_fill_steps` above 0, finishes greedily;
- * `scoreLine` keeps the cut.
+ * counts in `stats.replaysCut`; `scoreLine` is its score.
  */
 export function scoreLine(
   det: GameState, seat: PlayerId, actions: readonly ActionBody[], counter: NodeCounter,
@@ -679,8 +678,7 @@ export function decide(state: GameState, seat: PlayerId, options: AiOptions): De
    with `replay_line` (`scoreLine`'s replay, after the reply) on `dets[1..K-1]`; a line's answer that
    a world does not offer (each world draws its own Discover) gives way to that world's best answer
    (#1636), so every finalist is scored after the reply. Any other step a world does not offer cuts
-   the replay there, counted in `stats.replaysCut`, and with `AI_SEARCH.replay_fill_steps` above 0
-   that world's turn is played on greedily before it ends (R4447000). The best mean over all K wins, a
+   the replay there, counted in `stats.replaysCut` (R4447000). The best mean over all K wins, a
    finalist that won on `dets[0]` alone taking its mean on the others (R4608000) (ties go to det-0
    order). If the counter ran out before any reply was scored, the static scores decide as
    they would without the reply. Reason `"prompt"` if `pub.pending` was the seat's, else `"search"`.

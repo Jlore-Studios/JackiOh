@@ -333,7 +333,7 @@ which is `decide_styled` at `AI_STYLE_EXACT`, draws only for its determinization
 
 R4608000: a finalist whose line won on determinization 0, the one searched, and on no other scored world
 (a score above `AI_WON_SCORE_SHARE` of `AI_EVAL.win`) takes its mean on those others (`finalist_means`).
-Every other finalist keeps the plain mean, which `AI_SEARCH.confirm_lone_win` off restores bit for bit.
+Every other finalist keeps the plain mean.
 The solver, the hint and the concession check never read the means.
 
 ## The lethal hint (R2102000, R2291000)
@@ -418,13 +418,8 @@ R4447000: `decide` replays each finalist's world-0 line on the other determiniza
 `replay_line`, which says whether the line was cut there: whether it met a step that world does not
 offer (a card the line drew is another card there, since each world shuffles the seat's own library,
 or a random effect rolled otherwise), an answer to the seat's own prompt (#1636) aside.
-`SearchStats.replaysCut` counts those cuts over the worlds every finalist was scored on. With
-`AI_SEARCH.replay_fill_steps` above 0, a cut replay drops the rest of its line and plays that world's
-turn on greedily (`fill_turn`: up to that many steps, each the best by `static_score` of the first
-`branching` candidates that are not endTurn, taken only when it beats standing still, never one that
-leaves the seat's own prompt open), on a slice of `steps × (branching + 1)` nodes, which `decide` keeps
-back beside each other world's reserve. At 0, as shipped, a cut replay ends its turn where it stands
-and a decision is node for node what it was; `score_line` keeps the cut whatever the switch.
+`SearchStats.replaysCut` counts those cuts over the worlds every finalist was scored on. A cut replay
+ends its turn where it stands (the greedy fill past the cut, never switched on, is removed: R4702001).
 
 ## Decks and the shadow ban (R184, R186, R390, R1370, R1390, R817000, R976000)
 

@@ -3522,6 +3522,41 @@ fn r4702000_r732001_r1012000_r1679000_the_promotion_gate_is_gone() {
     );
 }
 
+/// R4702001: the AI's four switches that shipped at one value are gone, with the code only the other
+/// value ran: no source of the AI names a switch, the replay fill or the open-lethal reply.
+#[test]
+fn r4702001_the_ais_one_valued_switches_are_gone() {
+    let root = repo();
+    let mut files = Vec::new();
+    sources(&root.join("crates/ai/src"), &mut files);
+    assert!(files.len() > 15, "only {} source files found", files.len());
+    let gone = [
+        concat!("replay_fill", "_steps"),
+        concat!("open", "_lethal"),
+        concat!("confirm_lone", "_win"),
+        concat!("spread", "_activations"),
+        concat!("fill", "_turn"),
+        concat!("Replay", "Fill"),
+        concat!("simulate_reply", "_with"),
+    ];
+    let mut found: Vec<String> = Vec::new();
+    for file in &files {
+        let text = fs::read_to_string(file).unwrap_or_default();
+        for name in gone {
+            if text.contains(name) {
+                found.push(format!(
+                    "{}: `{name}`",
+                    file.strip_prefix(&root).unwrap_or(file).display()
+                ));
+            }
+        }
+    }
+    assert!(
+        found.is_empty(),
+        "a one-valued switch of the AI is back (R4702001): {found:?}"
+    );
+}
+
 /// The crates among `jackioh-run` and `jackioh-shared` that the manifest's `[dev-dependencies]` do not
 /// name, on one line, with the `ts` feature (#4426).
 fn dev_dependencies_missing_ts(manifest: &str) -> Vec<&'static str> {

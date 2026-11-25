@@ -1,8 +1,7 @@
 //! R4447000 (issue #4447): a finalist's line replayed on another determinization meets a step that world
 //! does not offer when the line's own earlier step drew a card that is another card there (each world
 //! shuffles the seat's own library) or rolled otherwise (each world has a seed of its own). `replay_line`
-//! reports that cut, `decide` counts it in `SearchStats.replaysCut`, and with `AI_SEARCH.replay_fill_steps`
-//! above 0 the replay plays that world's turn on greedily (`ReplayFill`) instead of ending it at the cut.
+//! reports that cut and `decide` counts it in `SearchStats.replaysCut`; the line ends its turn at the cut.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -13,14 +12,6 @@ use super::support::{AI, act, ai_options, det, ids, js};
 const STOCKPILE: &str = "core-005";
 /// Mr. Vanilla (#8): (1) 4/4.
 const VANILLA: &str = "core-008";
-/// Zephrys (#97): (1), a Play of which `simulate` surcharges `AI_SEARCH.expensive_def_nodes`.
-const ZEPHRYS: &str = "core-097";
-
-/// The fill the tests replay with: `AI_SEARCH.replay_fill_steps` at 3, as screened, whatever it ships at.
-const FILL: ReplayFill = ReplayFill {
-    steps: 3,
-    width: AI_BUDGET.branching,
-};
 
 /// The AI's turn 5 at 3 crystals, Stockpile and `extra` in hand over a library of 1-drops and a few
 /// dearer cards, against one 4/4.
@@ -84,17 +75,17 @@ fn cut_scene(extra: &[&str]) -> (Vec<ActionBody>, GameState, GameState) {
     (vec![stockpile, play_drawn], a, b)
 }
 
-/// `line` replayed on `world` with `fill` on a fresh counter of `AI_BUDGET.nodes`, scored statically,
-/// and the nodes it spent.
-fn replayed(world: &GameState, line: &[ActionBody], fill: ReplayFill) -> (LineReplay, usize) {
+/// `line` replayed on `world` on a fresh counter of `AI_BUDGET.nodes`, scored statically, and the nodes
+/// it spent.
+fn replayed(world: &GameState, line: &[ActionBody]) -> (LineReplay, usize) {
     let counter = create_node_counter(AI_BUDGET.nodes, None);
-    let replay = replay_line(world, AI, line, &counter, None, Prices::NONE, fill)
+    let replay = replay_line(world, AI, line, &counter, None, Prices::NONE)
         .unwrap_or_else(|| panic!("the counter ran out"));
     (replay, counter.used())
 }
 
-/// R4447000: with the switch at 0, as shipped, a decision is node for node what it was before the
-/// count and the fill existed: its action, its line and its nodes are the base's.
+/// R4447000: a decision is node for node what it was before its replays' cuts were counted: its
+/// action, its line and its nodes are the base's.
 #[test]
 fn r4447000_a_pinned_decision_keeps_its_action_line_and_nodes() {
     // A recorded decision, so it reads the pools as they are, not as the pool probe (#3117) rotates them:
@@ -152,89 +143,20 @@ fn r4447000_a_decision_counts_the_finalist_replays_its_worlds_cut() {
     assert_eq!(js(stats)["replaysCut"], json!(stats.replays_cut));
 }
 
-/// R4447000: a line that plays a card it drew is cut on a world that drew other cards, the fill on or
-/// off, and not on the world it was found on; `score_line` is `replay_line` with the fill off.
+/// R4447000: a line that plays a card it drew is cut on a world that drew other cards, and not on the
+/// world it was found on; `score_line` is `replay_line`'s score. A counter that runs out before the
+/// replay's closing endTurn ends it with no score.
 #[test]
 fn r4447000_a_line_that_plays_a_card_it_drew_is_cut_on_a_world_that_drew_another() {
     let (line, a, b) = cut_scene(&[VANILLA]);
-    let (off, _) = replayed(&b, &line, ReplayFill::OFF);
-    let (on, _) = replayed(&b, &line, FILL);
-    assert!(off.cut);
-    assert!(on.cut);
-    assert!(!replayed(&a, &line, ReplayFill::OFF).0.cut);
-    assert!(!replayed(&a, &line, FILL).0.cut);
+    let (cut, used) = replayed(&b, &line);
+    assert!(cut.cut);
+    assert!(!replayed(&a, &line).0.cut);
     let counter = create_node_counter(AI_BUDGET.nodes, None);
     assert_eq!(
         score_line(&b, AI, &line, &counter, false, None, Prices::NONE),
-        Some(off.score)
+        Some(cut.score)
     );
-}
-
-/// R4447000: off, the cut replay ends its turn after the draw with two crystals unspent; on, it plays
-/// on and spends one, so it is scored by what the turn really gives.
-#[test]
-fn r4447000_with_the_fill_on_a_cut_replay_plays_a_card_after_the_draw() {
-    let (line, _, b) = cut_scene(&[VANILLA]);
-    let (off, _) = replayed(&b, &line, ReplayFill::OFF);
-    let (on, _) = replayed(&b, &line, FILL);
-    assert_eq!(off.closed.players[AI].turn_log.unspent_at_end, Some(2));
-    let unspent = on.closed.players[AI].turn_log.unspent_at_end;
-    assert!(unspent.is_some_and(|left| left < 2), "{unspent:?} unspent");
-    assert!(
-        on.closed.players[AI].hand.len() < off.closed.players[AI].hand.len(),
-        "the fill played no card"
-    );
-    assert_ne!(on.score, off.score);
-}
-
-/// R4447000: the fill spends at most its ceiling of nodes past the cut replay's, even with a card in
-/// hand whose Play costs more than the whole slice: that step is refused like any the slice cannot pay.
-#[test]
-fn r4447000_a_fill_never_spends_more_than_its_ceiling_of_nodes() {
-    assert_eq!(FILL.ceiling(), 21);
-    assert_eq!(ReplayFill::OFF.ceiling(), 0);
-    assert!(AI_SEARCH.expensive_def_nodes as usize > FILL.ceiling());
-    let (line, _, b) = cut_scene(&[ZEPHRYS]);
-    let after = act(&b, AI, &line[0]);
-    let zephrys = after.players[AI]
-        .hand
-        .iter()
-        .find(|card| card.def_id == ZEPHRYS)
-        .map(|card| card.id.clone())
-        .unwrap_or_else(|| panic!("Zephrys is not in hand"));
-    let tried: Vec<ActionBody> = candidate_actions(&after, AI, Prices::NONE)
-        .into_iter()
-        .filter(|action| !matches!(action, ActionBody::EndTurn))
-        .take(FILL.width)
-        .collect();
-    assert!(
-        tried
-            .iter()
-            .any(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == zephrys)),
-        "the fill does not try Zephrys: {tried:?}"
-    );
-    let (_, off_used) = replayed(&b, &line, ReplayFill::OFF);
-    let (_, on_used) = replayed(&b, &line, FILL);
-    assert!(on_used > off_used, "{on_used} against {off_used}");
-    assert!(
-        on_used - off_used <= FILL.ceiling(),
-        "{on_used} against {off_used}"
-    );
-}
-
-/// R4447000: a counter that runs out mid-fill ends the replay as a counter that runs out anywhere in a
-/// replay does: with no score.
-#[test]
-fn r4447000_a_counter_that_runs_out_mid_fill_ends_the_replay_as_before() {
-    let (line, _, b) = cut_scene(&[VANILLA]);
-    let (_, n) = replayed(&b, &line, ReplayFill::OFF);
-    let short = create_node_counter(n - 1, None);
-    assert_eq!(
-        replay_line(&b, AI, &line, &short, None, Prices::NONE, ReplayFill::OFF),
-        None
-    );
-    // The fill takes the node the closing endTurn took, then runs out.
-    let exact = create_node_counter(n, None);
-    assert_eq!(replay_line(&b, AI, &line, &exact, None, Prices::NONE, FILL), None);
-    assert!(replayed(&b, &line, FILL).1 > n);
+    let short = create_node_counter(used - 1, None);
+    assert_eq!(replay_line(&b, AI, &line, &short, None, Prices::NONE), None);
 }

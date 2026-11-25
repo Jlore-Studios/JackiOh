@@ -44,7 +44,7 @@ use crate::match_::replacements_for;
 use crate::mulligan::mulligan_keep_curved;
 use crate::observe::{HIDDEN_DEF_ID, ai_to_act, redact, unanswered_draw_offer};
 use crate::reply::{hidden_card_ids, reply_score};
-use crate::search::{Line, ReplayFill, beam_search, replay_line};
+use crate::search::{Line, beam_search, replay_line};
 use crate::simulate::{
     CountingNodeCounter, LineStatus, create_node_counter, create_sub_counter, create_wrap_up_counter,
     note_sim_panic,
@@ -356,18 +356,15 @@ pub fn pick_finalist(means: &[f64], temperature: f64, rng: &mut Rng) -> usize {
     best_index
 }
 
-/// R4608000: each finalist's mean from its row of scores, determinization 0's first. With `confirm`, a row
-/// whose first score is a won game (above `AI_WON_SCORE_SHARE` of `AI_EVAL.win`) and whose other scores, at
-/// least one, are none won takes the mean of those others; every other row the mean of all its scores.
-pub fn finalist_means(rows: &[Vec<f64>], confirm: bool) -> Vec<f64> {
+/// R4608000: each finalist's mean from its row of scores, determinization 0's first. A row whose first
+/// score is a won game (above `AI_WON_SCORE_SHARE` of `AI_EVAL.win`) and whose other scores, at least one,
+/// are none won takes the mean of those others; every other row the mean of all its scores.
+pub fn finalist_means(rows: &[Vec<f64>]) -> Vec<f64> {
     let won = AI_EVAL.win * AI_WON_SCORE_SHARE;
     rows.iter()
         .map(|row| match row.split_first() {
             Some((first, others))
-                if confirm
-                    && *first > won
-                    && !others.is_empty()
-                    && others.iter().all(|score| *score <= won) =>
+                if *first > won && !others.is_empty() && others.iter().all(|score| *score <= won) =>
             {
                 mean_of(others)
             }
@@ -607,10 +604,8 @@ fn plan(
     let root_turn = det0.turn;
     let remaining = budget.nodes.saturating_sub(counter.used());
     let finalist_count = budget.finalists.max(1);
-    // What one finalist's scores on every other determinization keep back (R3696000's `keep`, below),
-    // R4447000's fill slice included.
-    let fill = ReplayFill::configured(budget.branching);
-    let other_worlds = (k - 1) * (budget.max_depth + 1 + AI_REPLY.reserve_steps as usize + fill.ceiling());
+    // What one finalist's scores on every other determinization keep back (R3696000's `keep`, below).
+    let other_worlds = (k - 1) * (budget.max_depth + 1 + AI_REPLY.reserve_steps as usize);
     let per_finalist = (AI_SEARCH.lines_per_action * AI_REPLY.reserve_steps) as usize + other_worlds;
     let reserve = (remaining / 2).min(finalist_count * per_finalist);
     // The beam's own slice of the counter. Its stop reason is read as the beam ends: nothing takes a
@@ -714,7 +709,6 @@ fn plan(
                 counter,
                 (!replied.is_empty()).then_some(&hidden),
                 &prices,
-                fill,
             ) else {
                 break;
             };
@@ -736,7 +730,7 @@ fn plan(
     scratch.worlds_scored = usize::try_from(scored_on).unwrap_or(0);
 
     // R4608000: a finalist that won on determinization 0 alone is ranked by its mean on the others.
-    let means = finalist_means(&rows, AI_SEARCH.confirm_lone_win);
+    let means = finalist_means(&rows);
     let chosen_index = pick_finalist(&means, style.temperature, rng);
     let chosen_mean = means.get(chosen_index).copied().unwrap_or(0.0);
 
