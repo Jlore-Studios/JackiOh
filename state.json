@@ -21102,13 +21102,14 @@
       "merge_owner": "claude-7",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-8",
       "queued_at": "2026-11-25T20:06:03Z",
-      "run_id": "45692318580",
+      "run_id": "pending:27cfdda9-1795642439",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 565,
-      "started_at": "2026-11-25T20:10:00Z",
+      "started_at": "2026-11-25T21:34:42Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -21410,9 +21411,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T21:22:43Z",
+    "at": "2026-11-25T21:34:42Z",
     "url": "",
-    "what": "review #4947 on claude-8"
+    "what": "spot-check #4958 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-25T21:17:34Z",
@@ -44018,7 +44019,15 @@
         "n": 565,
         "pr": 4958,
         "queued_at": "2026-11-25T21:25:10Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:27cfdda9-1795642439",
         "sha": "40b477a91f6db55d2f798e8079b8e2054eb24c39",
+        "started_at": "2026-11-25T21:34:42Z",
         "status": "queued",
         "title": "Patch: pin the perf corpus so card additions stop re-dealing it",
         "tries": 0
