@@ -25242,7 +25242,11 @@
       "issue": 4891,
       "kind": "review",
       "live": "reviewing",
-      "merge_owner": "claude-3",
+      "merge_owner_gave_up": {
+        "at": "2026-11-25T18:55:45Z",
+        "provider": "claude-3",
+        "sha": "6295c043ad25432a0b81273791306c30807a4d49"
+      },
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-11-25T18:27:44Z",
