@@ -1,4 +1,4 @@
-//! The match clock (SPEC §9.5, R79, R268, R744, R776000, R1563006), pure: these tests moved from
+//! The match clock (SPEC §9.5, R79, R268, R744, R776000, R1563006, R4848000), pure: these tests moved from
 //! `crates/server`'s actor tests, where they ran on tokio's paused clock, unchanged but for the time
 //! they keep themselves. `Sim` plays the part of a host: it keeps the timers the clock asks for, advances
 //! its own time and tells the clock which came due, in deadline order, as tokio does.
@@ -158,6 +158,7 @@ fn view() -> ClockView {
         turn: 1,
         active: P1,
         pending_for: None,
+        prompt_id: None,
         mulligan_owed: vec![],
         over: false,
         sequence: None,
@@ -170,6 +171,15 @@ fn mulligan_window(owed: &[PlayerId]) -> ClockView {
         turn: 0,
         active: P1,
         mulligan_owed: owed.to_vec(),
+        ..view()
+    }
+}
+
+/// R4848000: p1's turn, the prompt `id` open for p2.
+fn asking_p2(id: &str) -> ClockView {
+    ClockView {
+        pending_for: Some(P2),
+        prompt_id: Some(id.to_string()),
         ..view()
     }
 }
@@ -284,28 +294,71 @@ mod match_clock {
         );
     }
 
-    /// R79: a second prompt for the same non-active holder, met with no prompt-less sync between the two,
-    /// is one prompt to the clock: it keeps the first one's deadline, and only that clock runs out
-    /// (#4550, docs/implicit-states.md §13 T8; whether a second prompt should get a fresh clock is unspecified).
+    /// R4848000: a second prompt for the same non-active holder, met with no prompt-less sync between the two,
+    /// is a new question to the clock: it gets 30 s of its own, and only its clock runs out, at its own
+    /// deadline (docs/implicit-states.md §13 T8, which kept the first one's deadline until #4848).
     #[test]
-    fn a_second_prompt_for_the_same_non_active_holder_keeps_the_first_ones_deadline() {
+    fn r4848000_a_second_prompt_for_the_same_non_active_holder_gets_its_own_30_seconds() {
         let mut h = Sim::new(0);
         h.sync(&view());
-        let asking_p2 = ClockView {
-            pending_for: Some(P2),
-            ..view()
-        };
-        h.sync(&asking_p2);
-        let first = h.deadline("promptDeadline");
-        assert_eq!(first, Some(h.now + h.prompt_ms));
+        h.sync(&asking_p2("q1"));
+        assert_eq!(h.deadline("promptDeadline"), Some(h.now + h.prompt_ms));
         h.sleep(20 * SECOND);
-        h.sync(&asking_p2);
-        assert_eq!(h.deadline("promptDeadline"), first);
-        h.sleep(h.prompt_ms - 20 * SECOND - 1);
+        h.sync(&asking_p2("q2"));
+        let second = Some(h.now + h.prompt_ms);
+        assert_eq!(h.deadline("promptDeadline"), second);
+        assert_eq!(
+            h.deadline("turnDeadline"),
+            None,
+            "R79: the turn clock stays paused"
+        );
+        h.sleep(h.prompt_ms - 1);
         assert_eq!(h.expiries, vec![]);
         h.sleep(1);
         assert_eq!(h.expiries, vec![ClockExpiry::Prompt { player: P2 }]);
-        assert_eq!(Some(h.now), first);
+        assert_eq!(Some(h.now), second);
+    }
+
+    /// R4848000: the same prompt met again keeps its clock: a sync on it asks for no prompt timer.
+    #[test]
+    fn r4848000_the_same_prompt_synced_again_keeps_its_deadline() {
+        let mut h = Sim::new(0);
+        h.sync(&view());
+        h.sync(&asking_p2("q1"));
+        let first = h.deadline("promptDeadline");
+        h.clock.sync(&asking_p2("q1"), h.now + 20 * SECOND, &mut h.fx);
+        assert!(!sets(&h.fx.take()).contains(&TimerKey::Prompt));
+        assert_eq!(h.deadline("promptDeadline"), first);
+    }
+
+    /// R4848000, R776000: a prompt whose clock ran out is not re-armed by a sync on it, only by the retry;
+    /// the next prompt for the same holder gets a fresh 30 s.
+    #[test]
+    fn r4848000_a_spent_prompts_clock_waits_for_the_retry_and_the_next_prompt_gets_a_fresh_one() {
+        let mut h = Sim::new(0);
+        h.sync(&view());
+        h.sync(&asking_p2("q1"));
+        h.sleep(h.prompt_ms);
+        assert_eq!(h.expiries, vec![ClockExpiry::Prompt { player: P2 }]);
+
+        h.sync(&asking_p2("q1"));
+        assert_eq!(h.deadline("promptDeadline"), None);
+        assert!(!h.timers.iter().any(|(key, _, _)| *key == TimerKey::Prompt));
+
+        let retry_ms = int(MATCH_SERVER_ACTION_RETRY_MS);
+        h.retry(ClockExpiry::Prompt { player: P2 }, retry_ms);
+        assert_eq!(h.deadline("promptDeadline"), Some(h.now + retry_ms));
+
+        h.sync(&asking_p2("q2"));
+        assert_eq!(h.deadline("promptDeadline"), Some(h.now + h.prompt_ms));
+        h.sleep(h.prompt_ms);
+        assert_eq!(
+            h.expiries,
+            vec![
+                ClockExpiry::Prompt { player: P2 },
+                ClockExpiry::Prompt { player: P2 }
+            ]
+        );
     }
 
     #[test]

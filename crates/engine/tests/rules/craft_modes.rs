@@ -536,6 +536,118 @@ fn r1182002_a_card_from_scratch_is_the_card_the_free_crafter_makes_of_that_recip
     assert!(def.tags.is_empty());
 }
 
+#[test]
+fn r880_r1182002_from_scratch_the_largest_stats_the_budget_buys_craft_and_the_cap_refuses_past_them() {
+    // #4827: the stat cap is one over the largest budget, so it refuses no Unit a budget buys.
+    let budget = craft_points_budget(CRAFT_MAX_COST);
+    assert_eq!(CRAFT_MAX_STAT, budget + 1);
+    let mut state = crafting("scratch-stat-cap", "pm-scratch-crafter", false);
+    assert_eq!(
+        answer_keys(&mut state, &[&format!("mode:{CRAFT_MAX_COST}")]).error,
+        None
+    );
+    let unit = |attack: i32, health: i32| {
+        json!({
+            "cost": CRAFT_MAX_COST, "type": "Unit", "adjective": "Lazy", "noun": "Iterator",
+            "attack": attack, "health": health, "keywords": [], "echo": 0, "hats": [],
+        })
+    };
+    // A 0/23 and a 22/1 each spend the whole 22 points.
+    assert_eq!(answered(&state, unit(0, CRAFT_MAX_STAT)).error, None);
+    assert_eq!(answered(&state, unit(budget, 1)).error, None);
+    // A 23/1 is refused by its points alone: the cap is not below 23.
+    assert_eq!(
+        craft_preview(
+            &json_as(unit(CRAFT_MAX_STAT, 1)),
+            CRAFT_MAX_COST,
+            Some(CraftMode::Scratch)
+        )
+        .reasons,
+        vec![format!(
+            "it costs {CRAFT_MAX_STAT} points, over the budget of {budget}"
+        )]
+    );
+    let past = CRAFT_MAX_STAT + 1;
+    refused(
+        &state,
+        unit(past, 1),
+        &format!("attack is {past}, above {CRAFT_MAX_STAT}"),
+    );
+    refused(
+        &state,
+        unit(0, past),
+        &format!("health is {past}, above {CRAFT_MAX_STAT}"),
+    );
+    refused(
+        &state,
+        unit(i32::MAX, i32::MAX),
+        &format!("over the budget of {budget}"),
+    );
+}
+
+#[test]
+fn r883_r1182002_r1563007_a_granted_keyword_the_block_table_does_not_price_is_refused_with_or_without_an_offer()
+ {
+    let mut state = crafting("scratch-unpriced-grant", "pm-scratch-crafter", false);
+    assert_eq!(answer_keys(&mut state, &["mode:0"]).error, None);
+    assert_eq!(
+        open_as(&state, PromptKind::Craft, P1).craft_offer,
+        None,
+        "from scratch draws no offer to narrow the answer"
+    );
+    let unit = |attack: i32, health: i32, keywords: Value, hats: Value| {
+        json!({
+            "cost": 0, "type": "Unit", "adjective": "Pure", "noun": "Closure",
+            "attack": attack, "health": health, "keywords": keywords, "echo": 0, "hats": hats,
+        })
+    };
+    let granting = |keyword: &str| json!([{ "hat": "cry", "effects": [{ "verb": "grantKeyword", "keyword": keyword }] }]);
+    // The control: Indestructible on the card's own keyword line is no craft block.
+    refused(
+        &state,
+        unit(1, 1, json!([{ "kind": "Indestructible" }]), json!([])),
+        "Indestructible is not a craft block",
+    );
+    // #4827: a 1/2 spends the whole budget of 2, and its Cry granted Indestructible on top, at 0 points.
+    refused(
+        &state,
+        unit(1, 2, json!([]), granting("Indestructible")),
+        "Indestructible is not a craft block",
+    );
+    // A keyword the table prices still grants: a 0/1's 0 points and Taunt's 2.
+    let taunt = unit(0, 1, json!([]), granting("Taunt"));
+    assert_eq!(answered(&state, taunt.clone()).error, None);
+
+    // Every kind the table does not price, from scratch and under an offer that holds it: the
+    // validator does not lean on the offer (R1563007), and the kind prices past every budget.
+    let mut everything = whole_palette();
+    everything.keywords = KeywordKind::ALL.to_vec();
+    let unpriced: Vec<KeywordKind> = KeywordKind::ALL
+        .iter()
+        .copied()
+        .filter(|kind| CRAFT_KEYWORD_PRICES.iter().all(|row| row.kind != *kind))
+        .collect();
+    let mut recipe: CraftRecipe = json_as(taunt);
+    for kind in nonempty(unpriced, "the kinds the block table does not price") {
+        recipe.hats[0].effects[0].keyword = Some(kind);
+        let wanted = format!("{} is not a craft block", kind.as_str());
+        for (case, verdict) in [
+            (
+                "from scratch",
+                validate_recipe(&recipe, 0, Some(CraftMode::Scratch)),
+            ),
+            (
+                "under an offer holding it",
+                validate_answer(&recipe, 0, None, Some(&everything)),
+            ),
+        ] {
+            let reasons = verdict.err().unwrap_or_default();
+            assert!(reasons.contains(&wanted), "{case}: {reasons:?}");
+        }
+        assert_eq!(recipe_points(&recipe), CRAFT_UNPRICED_POINTS, "{wanted}");
+    }
+}
+
 /// An N/1 Unit at `cost`: N points.
 fn unit_of(cost: i32, points: i32) -> Value {
     json!({

@@ -10,6 +10,7 @@ import type { ModifierView } from "./ModifierView";
 import type { PlayerId } from "./PlayerId";
 import type { RowFlags } from "./RowFlags";
 import type { SecretView } from "./SecretView";
+import type { SetName } from "./SetName";
 import type { StarscapeView } from "./StarscapeView";
 import type { UnitView } from "./UnitView";
 
@@ -106,6 +107,11 @@ secrets?: Array<SecretView>,
  * game with no Feng Shui looks as it did (D14).
  */
 luck?: number, 
+/**
+ * R4595000: the sets this seat's deck is dealt from, public on both seats, as its setup named
+ * them. Absent when it names none, so every other game sends the view it always did (D14).
+ */
+deckSets?: Array<SetName>, 
 /**
  * R1847000: this seat's starscape map, shown to both seats. Absent until the player first
  * travels, so a game without one sends the view it always did (D14).

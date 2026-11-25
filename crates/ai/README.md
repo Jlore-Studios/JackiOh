@@ -54,7 +54,7 @@ them (its option reads the view's `Face-down card`, R177), its own library's ord
 it that came from the opponent or that it was never shown (R312), what changed on its other cards there, each read
 as its owner's list shows it, by the definition and face it went in with and its Created mark, unless its own
 prompt offers it (R2691000), the seed, the event history, every card's hidden Nerfs, its own
-hand's too (R1845000), what the opponent bought at the Marketplace (R1853004), and the opponent's Created cards' generators (R1956001)), and strips from the events its queues keep what `view_for` strips of a
+hand's too (R1845000), what the opponent bought at the Marketplace (R1853004), the opponent's Created cards' generators (R1956001), and every Created card's maker, the game record's alone (R4672001)), and strips from the events its queues keep what `view_for` strips of a
 hidden card. Every simulation runs on a `determinize`d copy whose hidden cards are resampled from the
 non-token cards of every set their own side has not shown (R185, R380, R2826000: the opponent's hidden
 cards and a card of the seat's library from the opponent's deck, R73, against what the opponent shows,
@@ -303,7 +303,9 @@ first (#1778). Its root tries a play in every distinct placement (the zones besi
 across it), each in its lowest lane, or its midlane lane when it has one, which a Cry may read (R2203001);
 deeper levels, the lethal solver and the reply try the first `AI_SEARCH.zone_variants` (#1635). The beam
 drops an open line whose position an earlier one reached (two orders of the same moves into the same lanes
-are one position). A line that differs from an earlier one only in where its cards stand is a lane variant
+are one position). A position also holds the last Spell played while a card that copies it (C #57 Echo) is
+in the seat's hand or graveyard, and each unit's Churnwalker chain; its units' lanes include a Dormant card's
+lane and an animated card's home zone (R4808000). A line that differs from an earlier one only in where its cards stand is a lane variant
 (#1797; R4132000: a backrow card's lane, and which side of a standing unit a new one goes, included, read off
 `lane_free_signature`, which sorts each side's units and backrow cards and leaves out its empty zones): the
 evaluation reads no lane but through a unit's stats, which that signature keeps, so it takes no place in the
@@ -311,7 +313,9 @@ beam, but when the beam keeps the earlier line, the first `AI_SEARCH.zone_varian
 turn where they stand after it, below that line on a tie. So the placements the beam tries reach the reply,
 which prices a Cleave into a unit's neighbours; a lane the reply scores the same as a better one of that
 play is not a finalist of its own. The
-lethal solver's visited set still reads a position without its units' lanes. Position
+lethal solver's visited set reads a position with its units' lanes, as the concession check's walk does
+(`simulate::position_key`, R4806000): a play tried in two lanes reaches two positions, so a lethal that
+stands only in the second (across a slash, outside The Gauntlet) is found. Position
 switches are the last tier of the move order, so a level's `branching` cut drops them from a busy board;
 the first `AI_SEARCH.position_switches` stand-downs (Attack to Defense of a unit an enemy unit that could attack it next turn would kill and survive, `kills_and_survives`; R2021000) it cuts are
 kept (#1759), so a unit that cannot win its next fight can stand down however many earlier moves the board offers. While the
@@ -387,10 +391,15 @@ calls it; the ladder bots ask it before conceding.
 
 A decision's cost is counted in nodes: one node is one `reduce` call the AI makes, the reply's
 included, or one turn hook its root fires (R2477000, R2565000). A step whose `reduce` does far more work than most is charged extra nodes up front
-(`surcharge_nodes`: a play that ranks every shipped card, an attack into an armed My Pawn, a fused
-card holding either, and a play the other side's Pareto Optimality judges, per card held; #1240),
+(`surcharge_nodes`: a play that ranks every shipped card, an attack an armed My Pawn would answer, one
+its own projection calls lethal (`subsystems::is_lethal`, R4809001), a fused card holding either, and a
+play the other side's Pareto Optimality judges, per card held; #1240),
 and once a step has run, for each such card it cast without playing it, from a graveyard or at random
 (`announced_surcharge_nodes`, read off its `cardAnnounced` events; #1347).
+A step whose surcharge the counter cannot pay is refused in the beam (`simulate` answers `Some(Err)` and
+the beam tries the next), but cuts the opponent's reply (`simulate_reply` answers `None`, as for a spent
+counter: `reduce_for`, `best_try`), since a skipped reply step reads as an opponent who passed it up
+(R4809000).
 Such a step, once run, is kept for the rest of its decision (`SimMemo` on the root counter, at most
 `AI_SEARCH.memo_steps`), and the same step from the same state, nonce records aside, is answered from
 it without the engine, its nonce record rebuilt as the engine builds it and its nodes charged as before,
@@ -432,13 +441,15 @@ back beside each other world's reserve. It ships at 3 (R4697000), so `decide` ke
 cut replay ends its turn where it stands and a decision is node for node what it was before R4447000;
 `score_line` keeps the cut whatever the switch.
 
-## Decks and the shadow ban (R184, R186, R390, R1370, R1390, R817000, R976000)
+## Decks and the shadow ban (R184, R186, R390, R1370, R4784000, R1390, R817000, R976000)
 
 `build_ai_deck(rng, size, &AiDeckOptions)` deals `size` distinct non-token ids from every set by
 weighted sampling without replacement (`AI_DECK`), leaving out `SHADOW_BAN_IDS` unless `banned` says
 otherwise. `lean_set` (R1370) names a set at least `AI_DECK.lean_min_share` of the deck comes from, a
-hard floor kept together with the units' and the theme's; absent, the draw is exactly the one it always
-was. `build_ai_deck_traced` also counts the picks that floor forced, the measurement `lean_boost` was
+hard floor kept together with the units' and the theme's; absent, the draw is the one it always was,
+except that a card which would leave the theme's and the units' floors out of reach together is drawn
+again from the same roll (R4784000), so only a deck that lost the units' floor deals differently.
+`build_ai_deck_traced` also counts the picks that floor forced, the measurement `lean_boost` was
 chosen by. Every deck holds at most `AI_DECK.max_quickdraw` (2) Quickdraw cards, an `include`d one
 counted and always dealt, and Quickdraw is never a theme (R817000). `gated_sets` (R1390) names the sets the draw never deals from: its default is the soft gate
 `AI_DECK_GATED_SETS` in `src/config.rs`, so every AI deck holds none of them whatever ships or a
