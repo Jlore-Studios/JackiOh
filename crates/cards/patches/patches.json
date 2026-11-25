@@ -36212,5 +36212,33 @@
       "stinkyscape-009"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.13k",
+    "date": "2026-11-25",
+    "title": "Patch: a card a Transform makes arrives as any card does: one that prints Dormant sleeps, a Phantom Shipyard stays, and a Heroic Power rolls its power",
+    "source": "issue #4816",
+    "notes": "R4816000: a Transform's new card on the field (zones::replace_in_zone) now starts its printed Dormant (R1839000, R3556000) and a hull's Starship memory (R1852000) beside its printed Brittle, as every arrival from off the field does (zones::place_with), and runs its start-of-game clause after its transformed (effects::transform::run_arrival_clause), so a #98 Heroic Power it makes rolls its power (R3134002). Still no summon (R1): no Tipsy stamp, no Crater Lock (R783010), no entry animation. classify stage 2 against main's build (6fea683ac5) finds S+ #103 Transcend plays differently; its own script is unchanged, so no KEPT_SCRIPTS entry: the verbs change for every catalog, and replays this change alters are refused as rules_changed (R767000).",
+    "player": {
+      "title": "A card a Transform makes arrives as any card does",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A card a Transform makes that prints Dormant is Dormant.",
+        "A Phantom Shipyard a Transform makes stays Dormant.",
+        "A Heroic Power a Transform makes rolls its power."
+      ]
+    },
+    "commits": [
+      "784ef8529e1468a3eb70f4757464f7f62bf268b5"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscapeplus-103"
+    ],
+    "changes": []
   }
 ]
