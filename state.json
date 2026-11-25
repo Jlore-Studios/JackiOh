@@ -21680,13 +21680,14 @@
       "merge_owner": "claude-8",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-1",
       "queued_at": "2026-11-25T04:02:22Z",
-      "run_id": "45544332583",
+      "run_id": "pending:263e0fdc-1795583350",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 530,
-      "started_at": "2026-11-25T04:05:03Z",
+      "started_at": "2026-11-25T05:09:47Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -21992,9 +21993,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T05:08:56Z",
+    "at": "2026-11-25T05:09:47Z",
     "url": "",
-    "what": "revise #4760 on claude-6"
+    "what": "spot-check #4886 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-25T04:46:46Z",
@@ -44518,7 +44519,15 @@
         "n": 530,
         "pr": 4886,
         "queued_at": "2026-11-25T05:03:51Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "pending:263e0fdc-1795583350",
         "sha": "97e85e4a2ea94a41fa8b721f78bcfaa99a6ddb9f",
+        "started_at": "2026-11-25T05:09:47Z",
         "status": "queued",
         "title": "Patch: a Lava Golem handed to the opponent by its Tribute is not fused back into its player's Rod of Ages by an Equip play",
         "tries": 0
