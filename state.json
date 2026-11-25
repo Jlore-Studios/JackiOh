@@ -24336,6 +24336,13 @@
     "4938": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-25T17:34:17Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "No hard line holds: two-file refactor inside crates/cards only, no engine rules, AI, migration, or cross-crate design."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
