@@ -21459,16 +21459,13 @@
     "what": "spot-check #4939 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-25T22:56:48Z",
+    "at": "2026-11-25T23:10:50Z",
     "notes": [
-      "delivered revise #4947 on claude-8 (run 45707471417): approved",
-      "delivered revise #4944 on muse (run 45703632742): built",
-      "delivered review #4953 on muse (run 45686104317): approved",
-      "started review #4944 on muse (run 45718092534)",
-      "started revise #4947 on claude-8 (run 45718215934)",
-      "started revise #4953 on muse (run 45718341984)",
+      "delivered review #4973 on claude-3 (run 45716459311): approved",
+      "started review #4939 on claude-6 (run 45719716695)",
       "nothing more to start: nothing is queued",
-      "runner gate: started 0 of 4 waiting run(s); 4 wait for a slot"
+      "pruned 1 plan file(s) older than 7 days",
+      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22170,7 +22167,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T22:56:48Z",
+  "loop_tick": "2026-11-25T23:10:50Z",
   "machine_disk": {
     "issue": null,
     "reading": {
