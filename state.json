@@ -22213,6 +22213,8 @@
       }
     },
     "4895": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-25T05:13:21Z",
@@ -22226,8 +22228,13 @@
         "trail": "_string\": \"the card that gives the teammate the best bounded legal follow-up.\\n\", \"new_string\": \"the \u2026\n- Bash: {\"command\": \"grep -n 'a refused move deciding again' crates/shared/README.md; n=$(grep -n 'a refused move deciding again' crates/shared/README.md | cut -d: -f1); sed -n \\\"$((n-4)),$((n+4))p\\\" crates/\u2026\n- tool error: Exit code 1 sed: invalid option -- '4' Usage: sed [OPTION]... {script-only-if-no-other-script} [input-file]... -n, --quiet, --silent suppress automatic printing of pattern space --debug annotate prog\u2026\n- Grep: {\"pattern\": \"refused move|Who plays a seat\", \"path\": \"/home/runner/work/_temp/work/item-4813/crates/shared/README.md\", \"output_mode\": \"content\", \"-n\": true}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4813/crates/shared/README.md\", \"offset\": 408, \"limit\": 12}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4813/crates/shared/README.md\", \"old_string\": \" turn simply ended does not), the move it falls back on and R188's forbidden ones,\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- code, tests (4 pass; 1 and 2 fail without fix), DuosJob.ts, ruling note, pending, \\u00a713.7, README done. Next: fmt, clippy, spec check, duos::/host_soak\u2026\n- Bash: {\"command\": \"cargo fmt -p jackioh-shared && cargo fmt --check && git status --porcelain\", \"description\": \"Format shared crate and confirm clean\"}\n- said: Formatting is clean. Running clippy, spec check, and the shared and server Duos suites.\n- Bash: {\"command\": \"cargo clippy -p jackioh-shared --all-targets -- -D warnings 2>&1 | tail -3; cargo jackioh spec check 2>&1 | tail -5\", \"description\": \"Run clippy on shared and spec check\", \"timeout\": 600\u2026\n- Bash: {\"command\": \"cargo clippy -p jackioh-shared --all-targets -- -D warnings 2>&1 | grep -E '^(error|warning)' -A4 | head -40\", \"description\": \"Show clippy errors\", \"timeout\": 600000}\n- Bash: {\"command\": \"cargo clippy -p jackioh-shared --all-targets -- -D warnings 2>&1 | grep -v '^\\\\s*Compiling\\\\|Checking' | head -40\", \"description\": \"Show full clippy output\", \"timeout\": 600000}\n- said: Those errors are in files I didn't touch (`bots_decide.rs`, `duel.rs`): that crate's tests need the engine's `testkit` feature, which a workspace clippy run turns on. Rerunning with it:\n- Bash: {\"command\": \"cargo clippy -p jackioh-shared --all-targets --features jackioh-engine/testkit -- -D warnings 2>&1 | grep -v '^\\\\s*Compiling\\\\|^\\\\s*Checking' | tail -5\", \"description\": \"Clippy shared wi\u2026\n- said: Clippy is clean, and `spec check` passed. Now the suites:\n- Bash: {\"command\": \"cargo test -p jackioh-shared --features jackioh-engine/testkit --test shared -- duos:: host_soak 2>&1 | grep -E 'test result|FAILED|panicked' | head; cargo test -p jackioh-server --test \u2026\n- said: Both pass (64 shared, 84 server). Checking whether any stored checkpoint fixture holds a `DuosJob` that the new field could break:\n- Bash: {\"command\": \"grep -rl '\\\"aiJobs\\\"' --include=*.json --include=*.rs --include=*.ts . 2>/dev/null | grep -v node_modules | grep -v '^./target' | head\", \"description\": \"Search fixtures holding aiJobs\"}\n- Bash: {\"command\": \"echo \\\"- fmt, clippy (with testkit), spec check, duos::/host_soak (64), server actor::duos (84) green. Next: full jackioh-shared + wasm-core tests.\\\" >> .bot-notes.md; cargo test -p jack\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-shared --features ts,jackioh-engine/testkit --lib 2>&1 | grep -E 'test result|FAILED' | head -3; git status --porcelain -- apps/web/src/wire\", \"description\": \"Regen\u2026\n- said: Wire diff is only `DuosJob.ts`. Running the web typecheck, since that file is a TS type:\n- Bash: {\"command\": \"timeout 500 pnpm --dir apps/web typecheck 2>&1 | tail -8\", \"description\": \"Run the web typecheck\", \"timeout\": 560000}\n- said: The only errors come from the WebAssembly package not being built in this worktree (`./pkg/jackioh_wasm.js`). I'll build it and run the typecheck again:\n- Bash: {\"command\": \"timeout 590 sh scripts/build-wasm.sh > /tmp/wasm-build.log 2>&1; echo \\\"exit $?\\\"; tail -3 /tmp/wasm-build.log\", \"description\": \"Build the WASM engine package\", \"timeout\": 600000}\n- Bash: {\"command\": \"timeout 500 pnpm --dir apps/web typecheck 2>&1 | tail -4; git status --porcelain\", \"description\": \"Rerun web typecheck and show status\", \"timeout\": 560000}\n- said: Typecheck passes. Last, CI's `rust (classify)` step, which checks whether the change needs a patch fragment:\n- Bash: {\"command\": \"git rev-parse --verify -q origin/main >/dev/null && echo has-origin-main; grep -n 'classify' crates/tools/README.md | head -5\", \"description\": \"Check origin/main and classify docs\"}\n- Bash: {\"command\": \"timeout 500 cargo jackioh classify --base origin/main --claims 2>&1 | grep -v '^\\\\s*Compiling\\\\|Finished\\\\|Running' | tail -15\", \"description\": \"Run classify with claims against origin/m\u2026\n- said: `classify` says Internal, so no patch fragment is needed. Final look at the host diff:\n- Bash: {\"command\": \"git diff -- crates/shared/src/host/duos.rs | head -90\", \"description\": \"Show the host code diff\"}\n- said: One case to check: if B1's answer arrives while B2's row is still being written, does `next_seq` already show that the game moved on?\n- Bash: {\"command\": \"grep -n 'next_seq' crates/shared/src/host/duos.rs | head -30; grep -n 'fn apply(' crates/shared/src/host/duos.rs\", \"description\": \"Find next_seq updates and apply\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4813/crates/shared/src/host/duos.rs\", \"offset\": 1261, \"limit\": 80}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-notes.md'\\ns=open(p).read()\\nnew_state=\\\"\\\"\\\"## State\\n\\n- Run 2 (build, opus): DONE. Built exactly per the plan; no departures.\\n- Green: r4813000 \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the Duos host decides an AI seat's pass or End turn again when the game moved on since it was asked, so the two AI seats stop wasting the pass between them\"} --> ## What changed In a Duos game, when an AI seat's answer arrives after the game has moved o\u2026"
       },
       "issue": 4813,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
+      "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-25T06:27:02Z",
+      "run_id": "pending:705ee19b-1795590076",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -22246,6 +22253,9 @@
         "provider": "claude-4",
         "run": "45552064545"
       },
+      "started_at": "2026-11-25T07:01:58Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -22577,9 +22587,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T07:01:03Z",
+    "at": "2026-11-25T07:01:58Z",
     "url": "",
-    "what": "build #4840 on muse"
+    "what": "review #4895 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-25T06:43:30Z",
