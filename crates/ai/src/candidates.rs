@@ -2174,7 +2174,8 @@ mod tests {
     /// R4171000: the seeded random-policy games the agreement test below plays, and its floors: the
     /// Unit-target attacks it judged, the distinct cards (`def_id`s) at either end of one, and the
     /// attacks a First Strike defender stopped whose blow would otherwise deal damage or pop a shield.
-    const FORECAST_AGREEMENT_GAMES: usize = 16;
+    /// 24 since issue #4783, whose cards and main's at the time left 16 games four stopped blows.
+    const FORECAST_AGREEMENT_GAMES: usize = 24;
     const FORECAST_AGREEMENT_MIN_ATTACKS: usize = 1000;
     const FORECAST_AGREEMENT_MIN_CARDS: usize = 150;
     const FORECAST_AGREEMENT_MIN_STOPPED: usize = 5;
