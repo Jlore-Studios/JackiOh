@@ -21010,15 +21010,8 @@
       "verdict_rounds": 3
     },
     "4845": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45610578833",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-25T12:29:26Z",
-        "until": "2026-11-25T12:59:26Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -21030,10 +21023,9 @@
         "reason": "planned on opus",
         "trail": "json,re\\nd=json.load(open('crates/cards/patches/patches.json'))\\npl = d if isinstance(d,list) else d.get('patches',d)\\nfor p in pl:\\n notes=p.get('notes','') or\u2026\n- Bash: {\"command\": \"f=crates/cards/src/scripts/training_grounds/c039_call_to_chaos_training_grounds_edition.rs; wc -l $f; grep -n \\\"fn \\\\|^use\\\\|^ use\\\\|mod tests\\\\|const \\\" $f | head -80\", \"description\": \"\u2026\n- Bash: {\"command\": \"f=crates/cards/src/scripts/training_grounds/c039_call_to_chaos_training_grounds_edition.rs; sed -n 1,190p $f\", \"description\": \"Read the card file's header and helpers\"}\n- Bash: {\"command\": \"f=crates/cards/src/scripts/training_grounds/c039_call_to_chaos_training_grounds_edition.rs; sed -n 295,320p $f; sed -n 505,600p $f\", \"description\": \"Read entry 9 tests in the card file\"}\n- Bash: {\"command\": \"grep -rn \\\"system_plays = Some\\\" crates/cards/src crates/engine/tests | head -10; grep -rn \\\"GLITCH_DEF_ID\\\\|GLITCH_ODDS_DENOMINATOR\\\" crates/engine/src/prelude.rs crates/engine/src/lib.\u2026\n- Bash: {\"command\": \"sed -n 405,445p crates/cards/src/scripts/meditative/c037_cn_in_a_bottle.rs; grep -n \\\"pub use crate::config\\\\|config::\\\\*\\\\|pub use\\\" crates/engine/src/prelude.rs | head; grep -n \\\"Glitc\u2026\n- Bash: {\"command\": \"f=crates/cards/src/scripts/stinkyscape/c150_call_to_chaos_stinky_edition.rs; wc -l $f; grep -n \\\"fn \\\\|mod \\\\|const \\\" $f | head -60; grep -n \\\"acclaimed\\\" $f | head -30\", \"description\":\u2026\n- Bash: {\"command\": \"f=crates/cards/src/scripts/stinkyscape/c150_call_to_chaos_stinky_edition.rs; sed -n 1,60p $f; sed -n 110,180p $f; sed -n 300,345p $f\", \"description\": \"Read Stinky #150 helpers and acclai\u2026\n- Bash: {\"command\": \"grep -rn \\\"pick_generated_unique(\\\\|pick_generated(\\\\|pick_unique(\\\" crates/engine/src crates/cards/src --include=*.rs | grep -v \\\"^\\\\S*:\\\\s*//\\\" | grep -v \\\"fn pick\\\" | head -60\", \"desc\u2026\n- Bash: {\"command\": \"sed -n 165,205p crates/engine/src/subsystems/call_to_chaos_scape.rs; echo ----; sed -n 40,100p crates/engine/src/effects/played_copies.rs\", \"description\": \"Check other pick_unique neighb\u2026\n- Bash: {\"command\": \"cat spec/pending/4835.md; echo; cat spec/rulings/R4835000.md; echo; grep -n \\\"Adding a ruling\\\" -A30 spec/README.md | head -50\", \"description\": \"Read pending and ruling format\"}\n- Bash: {\"command\": \"sed -n 1,40p scripts/worktree.sh; ls spec/pending/4845.md spec/rulings/R4845* 2>&1 | head; sed -n 165,175p crates/engine/src/config.rs; grep -n \\\"fn is_grape_def_id\\\" -A6 crates/engine/s\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4845/.bot-plan.md\", \"content\": \"# Draft plan, issue #4845 (planner notes)\\n\\nFound so far:\\n- Defect: crates/engine/src/subsystems/call_to_chaos_train\u2026\n- Bash: {\"command\": \"grep -rln \\\"traininggrounds-039\\\\|stinkyscape-150\\\\\\\"\\\" crates/tools/tests crates/engine/tests crates/ai/tests crates/server/tests apps/web/src e2e 2>/dev/null | head -20; grep -rn \\\"sys\u2026\n- Bash: {\"command\": \"grep -rl \\\"systemPlays\\\" --include=*.json --include=*.jsonl . 2>/dev/null | grep -v node_modules | grep -v target | head\", \"description\": \"Find fixtures with system plays recorded\"}\n- Bash: {\"command\": \"ls spec/08-catalog/ | head -30; grep -n '^| 39 |' spec/08-catalog/8.11-*.md | cut -c1-3000\", \"description\": \"Read \\u00a78.11 row 39\"}\n- Bash: {\"command\": \"grep -n '^| 39 |' spec/08-catalog/8.11-*.md | cut -c3000-4500; echo; grep -n '^| 150 |' spec/08-catalog/8.10-stinkyscape.md | grep -o \\\"(4)[^;]*;\\\" | head -3\", \"description\": \"Read rest \u2026\n- Bash: {\"command\": \"grep -n '^| 150 |' spec/08-catalog/8.10-stinkyscape.md | grep -o \\\"(4) a random Acclaimed.\\\\{0,400\\\\}\\\"; grep -c \\\"extra turns counted, and nothing when the entry resolves\\\" spec/08-cata\u2026\n- Bash: {\"command\": \"grep -n -i \\\"fragment\\\" docs/issues-and-patches.md | cut -c1-400 | head -20\", \"description\": \"Check fragment rules in issues-and-patches doc\"}\n- Bash: {\"command\": \"sed -n 175,185p docs/issues-and-patches.md; sed -n 318,332p docs/issues-and-patches.md\", \"description\": \"Read claims and going-live paragraphs\"}\n- Bash: {\"command\": \"wc -c spec/08-catalog/8.10-stinkyscape.md spec/08-catalog/8.11-training-grounds.md; head -3 spec/08-catalog/8.11-training-grounds.md | cut -c1-200; tail -c 600 spec/rulings/R1882002.md\",\u2026\n- Bash: {\"command\": \"grep -rln \\\"08-catalog\\\" crates/*/tests crates/*/src 2>/dev/null | head; \", \"description\": \"Find code reading spec catalog notes\"}\n- Bash: {\"command\": \"grep -n \\\"08-catalog\\\" -B3 -A12 crates/cards/tests/cross/radiant_stats.rs | head -40; grep -n \\\"08-catalog\\\" crates/tools/tests/acceptance.rs | head\", \"description\": \"See how tests read \u2026\n- Bash: {\"command\": \"grep -n \\\"^use\\\\|^ use\\\\|^ use\\\\|GLITCH\\\" crates/cards/src/scripts/meditative/c037_cn_in_a_bottle.rs | head -20\", \"description\": \"Confirm Glitch constants come from prelude\"}\n- Bash: {\"command\": \"grep -n \\\"fixtures\\\\|\\\\.jsonl\\\\|include_str\\\" crates/tools/src/golden.rs | head -8; ls crates/tools/tests/ | head -30\", \"description\": \"Locate golden replay fixtures\"}\n- Bash: {\"command\": \"ls crates/tools/tests/fixtures | head; for f in $(ls crates/tools/tests/fixtures/* 2>/dev/null | head -50); do if grep -q \\\"traininggrounds-039\\\\|stinkyscape-150\\\" $f 2>/dev/null && grep\u2026\n- Bash: {\"command\": \"sed -n 1,30p crates/tools/tests/golden.rs | grep -n \\\"//\\\\|const\\\\|include\\\" | head -20\", \"description\": \"Read golden test header\"}\n- Bash: {\"command\": \"ls crates/ai/tests/ | head; grep -n \\\"^\\\\[\\\\[test\\\\]\\\\]\\\" -A3 crates/ai/Cargo.toml | head -20; grep -n \\\"fn \\\\|R673\\\\|system\\\" crates/ai/tests/ai/training_grounds.rs | head -20\", \"descri\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4845/.bot-plan.md\", \"content\": \"# Draft plan, issue #4845 (planner notes; final plan = the planner's last message)\\n\\nState: research done, plan writt\u2026\n- said: ## Goal Two engine generators add a card from a pool to a hand but skip R673's Glitch roll. When this is done, both make that roll: - **TG #39, entry 9.** The random Call to Chaos that TG #39's ninth entry adds at the start of each of its caster's turns passes `Some(state)` as the Glitch odds. Once\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-25T12:06:13Z",
       "owner_why": "it plans it",
@@ -21046,9 +21038,9 @@
       "provider": "claude-7",
       "queued_at": "2026-11-24T21:29:40Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45610578833",
+      "run_id": "pending:5da481ad-1795609848",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-25T12:06:13Z",
+      "started_at": "2026-11-25T12:31:29Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -23862,9 +23854,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-25T12:20:13Z",
+    "at": "2026-11-25T12:31:29Z",
     "url": "",
-    "what": "build #4839 on claude-1"
+    "what": "build #4845 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-25T12:14:05Z",
