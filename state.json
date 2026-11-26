@@ -44582,6 +44582,7 @@
       {
         "at": "2026-11-26T01:03:29Z",
         "number": 4969,
+        "reason": "confirmed. `scripts/ci-scope.sh:422` leaves e2e off for `crates/tools/fuzz-corpus/*`, for the reason its header gives at :173, but `crates/tools/perf-corpus/*`, added later by #4924 and the same kind of record, falls through to the default arm and starts all four e2e smoke shards. Nothing in `e2e/` or `apps/` reads it. It's a one-line fix that follows the file's own written rule, plus its test.",
         "title": "Patch: leave e2e off in ci-scope for crates/tools/perf-corpus",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
