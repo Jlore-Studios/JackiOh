@@ -21659,11 +21659,13 @@
     "what": "suggestions (ai) on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-26T22:20:30Z",
+    "at": "2026-11-26T22:27:57Z",
     "notes": [
-      "delivered suggest on claude-3 (run 45901262529): suggested",
-      "#5123: typed it Feature",
-      "#5122: typed it Task"
+      "delivered suggest on claude-8 (run 45901192624): suggested",
+      "started suggest on claude-3 (run 45905121001)",
+      "started suggest on claude-4 (run 45905193868)",
+      "started suggest on claude-8 (run 45905272636)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22369,7 +22371,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T22:20:30Z",
+  "loop_tick": "2026-11-26T22:27:57Z",
   "machine_disk": {
     "issue": null,
     "reading": {
