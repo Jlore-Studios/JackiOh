@@ -22,11 +22,6 @@ export type InboxItem =
   | { kind: "request"; key: string; request: FriendRequest }
   | { kind: "replay"; key: string; replay: SharedReplay };
 
-export type InboxItemKind = InboxItem["kind"];
-
-/** The kinds in the order the inbox lists them. */
-export const INBOX_KINDS: readonly InboxItemKind[] = ["challenge", "invite", "dailyMove", "dailyChallenge", "request", "replay"];
-
 export type InboxInput = {
   /** The live challenges to the player, as the social read holds them. */
   challenges: readonly Challenge[];

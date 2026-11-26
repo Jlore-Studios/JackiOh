@@ -7,7 +7,7 @@ use serde::Serialize;
 use jackioh_engine::effects::animate;
 use jackioh_engine::effects::destroy::destroy_all;
 use jackioh_engine::effects::move_::bounce_card;
-use jackioh_engine::effects::swap::swap_board;
+use jackioh_engine::effects::swap::{SwapArgs, swap};
 use jackioh_engine::effects::targets::cards_in_scope;
 use jackioh_engine::effects::transform::transform;
 use jackioh_engine::subsystems::activate::why_cannot_activate_ability;
@@ -391,7 +391,10 @@ mod r447_b5_e21_backrow_piles {
         );
         let top = stack_onto(&mut state, &cover.id, &flag);
         let mut sink = sink_for(&mut state);
-        (swap_board().apply)(&mut make_context(&mut sink, None, by(P1)));
+        (swap(SwapArgs {
+            what: Some(SwapWhat::Board),
+        })
+        .apply)(&mut make_context(&mut sink, None, by(P1)));
         assert_eq!(id_at(sink.state, slot(P2, Row::Backrow, 5)), Some(top.id.clone()));
         assert_eq!(
             beneath_ids(sink.state, slot(P2, Row::Backrow, 5)),

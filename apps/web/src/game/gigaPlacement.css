@@ -1,0 +1,36 @@
+/* #4995: a playable GIGA card's offered placements (GigaPlacement.tsx). One green rounded
+   oblong per offered anchor over the four zones the card would take, in the placement glow's
+   green (`--glow-ready`), not LanePick's blue selection color. It takes no hit: the anchor zone
+   under it takes the click, the focus and the drop. No animation, so Reduce Motion is satisfied
+   by construction (nothing here moves, and no keyframes run under any motion setting). */
+
+.giga-placement,
+.giga-placement * {
+  pointer-events: none;
+}
+
+.giga-placement-oblong {
+  position: fixed;
+  box-sizing: border-box;
+  border: 2px solid var(--glow-ready);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--glow-ready) 10%, transparent);
+  box-shadow: 0 0 10px 2px color-mix(in srgb, var(--glow-ready) 45%, transparent);
+}
+
+/* Hovered or focused: brighter and thicker, while the other offers dim beside it. */
+.giga-placement-oblong[data-active="true"] {
+  border-width: 3px;
+  background: color-mix(in srgb, var(--glow-ready) 24%, transparent);
+  box-shadow: 0 0 16px 4px color-mix(in srgb, var(--glow-ready) 70%, transparent);
+}
+
+.giga-placement-oblong[data-dim="true"] {
+  opacity: 0.45;
+}
+
+/* While dragging, pointer capture suppresses `pointerover`, so no oblong goes active: they all
+   dim and the drag reticle (DragLayer.tsx) leads as the hovered anchor's whole 2×2 block. */
+:root[data-dragging] .giga-placement-oblong {
+  opacity: 0.45;
+}

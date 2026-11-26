@@ -4,8 +4,8 @@
 
 use jackioh_engine::effects::{
     TargetSpec, add_random_from_graveyard, add_to_hand, damage, draw, gain_mana, lose_health, next_turn_mana,
-    player_of, refresh_mana as refresh_effect, remember, remember_random, resolve_target,
-    shuffle_copies_of_self, shuffle_into, switch_all_positions, switch_position_of,
+    player_of, refresh_mana as refresh_effect, remember, remember_random, resolve_target, shuffle_into,
+    switch_all_positions, switch_position_of,
 };
 use jackioh_engine::mana::{max_mana_for, refresh_mana};
 use jackioh_engine::testkit::*;
@@ -664,48 +664,6 @@ mod s6_3_draw_add_to_hand_shuffle_into_m3_t1 {
         );
         assert!(theirs.radiant);
         assert_eq!(theirs.owner, P2);
-    }
-
-    #[test]
-    fn c90_1_shuffle_copies_of_self_copies_the_running_cards_definition_and_its_radiant_flag() {
-        let mut state = game("shuffle-copies");
-        let self_card = must(
-            in_hand(&mut state, &taunter.id, P1, 1).into_iter().next(),
-            "the running card",
-        );
-        live_mut(&mut state, &self_card).radiant = true;
-
-        run(
-            &mut state,
-            vec![shuffle_copies_of_self(json_as(json!({ "count": 3 })))],
-            RunOptions {
-                controller: Some(P1),
-                self_: Some(self_card.clone()),
-                ..Default::default()
-            },
-        );
-        let copies: Vec<&CardInstance> = state
-            .players
-            .p1
-            .library
-            .iter()
-            .filter(|card| card.def_id == taunter.id)
-            .collect();
-        assert_eq!(copies.len(), 3);
-        assert!(copies.iter().all(|card| card.radiant));
-        assert!(copies.iter().all(|card| card.id != self_card.id));
-
-        let mut bare = game("shuffle-copies-bare");
-        set_library(&mut bare, P1, &[] as &[&str]);
-        assert_eq!(
-            run(
-                &mut bare,
-                vec![shuffle_copies_of_self(json_as(json!({ "count": 2 })))],
-                RunOptions::as_p(P1)
-            ),
-            Vec::<GameEvent>::new()
-        );
-        assert!(bare.players.p1.library.is_empty());
     }
 }
 

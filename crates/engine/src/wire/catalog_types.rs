@@ -1157,14 +1157,12 @@ impl Param {
     }
 }
 
-/// A tunable number in a face's text (B3.4 rule 5, R482): `{key}` is the number alone ("Deal {damage}
-/// damage."); `{key|singular|plural}` is the number and the words that agree with it ("Draw
-/// {draw|card|cards}." prints "Draw 1 card." and "Draw 2 cards."), so a text reads right at every
-/// value a Degrade or an Upgrade can move it to.
-///
-/// The TS regular expression, kept as text for the record: `param_placeholders` and `fill_params`
-/// scan for exactly what it matches (there is no regex crate in the pure crates, SURFACE §3).
-pub const PARAM_PLACEHOLDER: &str = r"\{([A-Za-z][A-Za-z0-9]*)(?:\|([^|{}]*)\|([^|{}]*))?\}";
+// A tunable number in a face's text (B3.4 rule 5, R482): `{key}` is the number alone ("Deal {damage}
+// damage."); `{key|singular|plural}` is the number and the words that agree with it ("Draw
+// {draw|card|cards}." prints "Draw 1 card." and "Draw 2 cards."), so a text reads right at every
+// value a Degrade or an Upgrade can move it to. `param_placeholders` and `fill_params` scan for
+// exactly what the client's regular expression `PARAM_PLACEHOLDER` matches (there is no regex crate
+// in the pure crates, SURFACE §3).
 
 /// One placeholder `paramPlaceholders` found: its key and, for the agreeing form, both wordings.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]

@@ -7,7 +7,7 @@ use jackioh_engine::effects::{damage_random_enemies, damage_split};
 use jackioh_engine::resolve::{HookOptions, apply_effects, make_context};
 use jackioh_engine::rng::Rng;
 use jackioh_engine::script::EngineSink;
-use jackioh_engine::state::{CardInstance, GameState, clone_state, find_instance_mut};
+use jackioh_engine::state::{CardInstance, GameState, find_instance_mut};
 use jackioh_engine::state_check::state_check;
 
 use super::fixtures::damage_combat::{bolt, grunt, playing, rattle, snake, wall, warded};
@@ -177,7 +177,7 @@ mod e37_damage_split {
                 json!([target.id, 1])
             ]
         );
-        let mut empty = clone_state(&state);
+        let mut empty = state.clone();
         for zone in empty.players.p2.units.iter_mut() {
             *zone = None;
         }

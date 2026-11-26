@@ -194,7 +194,6 @@ fn r331_each_refusal_reason_is_its_wire_literal() {
         (SeriesRefusalReason::PicksMissing, "picks_missing"),
     ];
     for (reason, literal) in reasons {
-        assert_eq!(reason.as_str(), literal);
         assert_eq!(to_json(&reason), json!(literal));
     }
 }

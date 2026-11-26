@@ -5,17 +5,16 @@
 //!
 //! Engine: Can't attack is the catalog's. "In N turns" starts when the card arrives on the field,
 //! played or summoned (R4593005): the arrival's `Summoned` names it, and the trigger plants the
-//! arrival controller's watched `delay` (R1181000) of the declared `turns` with its badge, so it
-//! drops when the card leaves the field (R174); due, it deals the declared `damage` to the enemy
-//! hero. Built by C9 (#4593).
+//! arrival controller's watched `delay` (R1181000) of the declared `turns` with its badge, built from
+//! the declared `damage`, which the view follows with the countdown (R4992000), so it drops when the
+//! card leaves the field (R174); due, it deals the declared `damage` to the enemy hero. Built by C9
+//! (#4593).
 
 use jackioh_engine::effects::{damage, delay};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "infiniteassault-205";
 
-/// The countdown's badge (R169).
-const BADGE: &str = "Doomsday Clock: 10 damage to the enemy hero in 4 turns";
 /// The delayed step, which the `delayed` hook runs.
 const STEP: &str = "doomsday";
 
@@ -35,13 +34,16 @@ fn doomsday() -> Script {
                     return vec![];
                 };
                 let id = me.id.clone();
+                // The badge (R169) names the effect: the view adds " in N turns" (R4992000).
+                let damage = param(&*ctx, "damage");
+                let name = def_of(Some(&*ctx.state), ID).name.clone();
                 vec![delay(json_as(json!({
                     "at": { "phase": "start", "player": "self" },
                     "step": STEP,
                     "turns": param(&*ctx, "turns"),
-                    "label": BADGE,
+                    "label": format!("{name}: {damage} damage to the enemy hero"),
                     "watch": id,
-                    "data": { "damage": param(&*ctx, "damage") },
+                    "data": { "damage": damage },
                 })))]
             })
             .with_when(arrived),
@@ -58,7 +60,7 @@ fn doomsday() -> Script {
 }
 
 pub fn script() -> CardScripts {
-    // The same script: the Radiant face's 20 is its declared `damage`.
+    // The same script: the Radiant face's 20, in its badge too, is its declared `damage`.
     let radiant = doomsday();
     CardScripts {
         base: doomsday(),
@@ -66,7 +68,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-// IA #205 Doomsday Clock — SPEC §8.13 row 205 (R4593005).
+// IA #205 Doomsday Clock — SPEC §8.13 row 205 (R4593005, R4992000).
 #[cfg(test)]
 mod tests {
     use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -78,8 +80,8 @@ mod tests {
     const FILLER: &str = "core-005"; // Stockpile: a play always open, so no turn ends by itself.
     const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
 
-    fn played(radiant: bool, seed: &str) -> Scenario {
-        let mut s = scenario(json!({
+    fn dealt(radiant: bool, seed: &str) -> Scenario {
+        scenario(json!({
             "seed": seed,
             "p1": {
                 "hand": [{ "def": ID, "radiant": radiant }, HIT_JOB, FILLER],
@@ -87,9 +89,45 @@ mod tests {
                 "mana": 10,
             },
             "p2": { "hand": [FILLER], "library": crate::filler(8) },
-        }));
+        }))
+    }
+
+    fn played(radiant: bool, seed: &str) -> Scenario {
+        let mut s = dealt(radiant, seed);
         s.play(ID, json!({ "zone": 1 }));
         s
+    }
+
+    /// The Clock's badges on `viewer`'s view of the board (both seats see the same ones).
+    fn badges(s: &Scenario, viewer: PlayerId) -> Vec<String> {
+        let view = s.view(viewer);
+        let seat = if viewer == P1 { view.you } else { view.opponent };
+        seat.modifiers
+            .into_iter()
+            .map(|modifier| modifier.label)
+            .filter(|label| label.starts_with("Doomsday Clock"))
+            .collect()
+    }
+
+    /// R4992000: both seats read `damage` and the countdown once, then the next turn's.
+    fn assert_badge_counts_down_once(s: &mut Scenario, damage: i32) {
+        for viewer in [P1, P2] {
+            assert_eq!(
+                badges(s, viewer),
+                vec![format!("Doomsday Clock: {damage} damage to the enemy hero in 4 turns")],
+                "{viewer:?} reads the damage and the countdown once"
+            );
+        }
+        next_turn_of(s, P1);
+        for viewer in [P1, P2] {
+            let shown = badges(s, viewer);
+            assert_eq!(
+                shown,
+                vec![format!("Doomsday Clock: {damage} damage to the enemy hero in 3 turns")],
+                "{viewer:?} reads the next turn's countdown once"
+            );
+            assert!(shown.iter().all(|label| !label.contains("turns in")), "no doubled count");
+        }
     }
 
     fn hero(s: &Scenario) -> i32 {
@@ -108,6 +146,25 @@ mod tests {
             }
             next_turn_of(&mut s, P1);
             assert_eq!(hero(&s), HERO_HEALTH - 10);
+        }
+
+        #[test]
+        fn r4992000_the_badge_says_10_damage_and_counts_down_once() {
+            let mut s = played(false, "doomsday-badge");
+            assert_badge_counts_down_once(&mut s, 10);
+        }
+
+        #[test]
+        fn r4992000_a_buff_to_damage_changes_the_badge_and_the_hit() {
+            let mut s = dealt(false, "doomsday-buff");
+            // One better step of the declared `damage` (the card's step is 2, higher is better).
+            s.card_mut(ID).tuning = Some(json_as(json!({ "numbers": { "damage": 1 } })));
+            s.play(ID, json!({ "zone": 1 }));
+            assert_badge_counts_down_once(&mut s, 12);
+            for _ in 0..3 {
+                next_turn_of(&mut s, P1);
+            }
+            assert_eq!(hero(&s), HERO_HEALTH - 12);
         }
 
         #[test]
@@ -133,6 +190,12 @@ mod tests {
             }
             next_turn_of(&mut s, P1);
             assert_eq!(hero(&s), HERO_HEALTH - 20);
+        }
+
+        #[test]
+        fn r4992000_the_badge_says_20_damage_on_the_radiant_face() {
+            let mut s = played(true, "doomsday-badge-radiant");
+            assert_badge_counts_down_once(&mut s, 20);
         }
     }
 }

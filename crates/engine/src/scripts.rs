@@ -270,16 +270,6 @@ impl std::ops::Deref for ScriptRef {
     }
 }
 
-impl ScriptRef {
-    /// The script, owned: a copy of a borrowed or a shared one.
-    pub fn into_owned(self) -> Script {
-        match self {
-            ScriptRef::Static(script) => script.clone(),
-            ScriptRef::Composed(script) => Arc::unwrap_or_clone(script),
-        }
-    }
-}
-
 /// A definition's two scripts: the registry's entry borrowed, a fused or crafted definition's built
 /// from the state, or the empty ones.
 pub fn scripts_ref(state: &GameState, def_id: &str) -> Cow<'static, CardScripts> {

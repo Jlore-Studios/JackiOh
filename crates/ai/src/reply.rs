@@ -31,7 +31,8 @@ use jackioh_engine::{
 };
 
 use crate::candidates::{
-    Blow, Exchange, Side, blow, candidate_actions_in, cleaved_neighbours, exchange, side_of, wall_switches,
+    Blow, Exchange, Side, blow, candidate_actions_in, cleaved_neighbours, exchange, front_value, side_of,
+    wall_switches,
 };
 use crate::config::{AI_EVAL, AI_GUESS_SEED, AI_REPLY};
 use crate::evaluate::{
@@ -41,7 +42,7 @@ use crate::evaluate::{
 use crate::lethal::{deft_ready_switch, ready_gap};
 use crate::simulate::{
     AnswersTried, LineStatus, SimStep, best_auto_answer, charge_announced, line_status, note_sim_panic,
-    simulate, static_score, surcharge_nodes,
+    simulate, surcharge_nodes,
 };
 use crate::types::NodeCounter;
 
@@ -336,28 +337,18 @@ fn ranked_attacks(
     face_is_lethal: bool,
     prices: &Prices,
 ) -> Vec<ActionBody> {
-    let hero = format!("hero-{}", seat.as_str());
-    let mut ranked: Vec<(ActionBody, f64)> = Vec::new();
-    for action in legal.iter().cloned() {
-        let ActionBody::Attack {
-            attacker_id,
-            target_id,
-        } = &action
-        else {
-            continue;
-        };
-        let Some(attacker) = find_instance(state, attacker_id) else {
-            continue;
-        };
-        let value = if *target_id == hero {
-            face_value(state, attacker, seat, face_is_lethal)
-        } else {
-            trade_value(state, attacker, target_id, prices).value
-        };
-        if value > 0.0 {
-            ranked.push((action, value));
-        }
-    }
+    // The attacker's own read of each hit (`front_value`): anything else, and a hit worth nothing, is left out.
+    let attacker_side = seat.opponent();
+    let mut ranked: Vec<(ActionBody, f64)> = legal
+        .iter()
+        .map(|action| {
+            (
+                action.clone(),
+                front_value(state, attacker_side, action, face_is_lethal, prices),
+            )
+        })
+        .filter(|(_, value)| *value > 0.0)
+        .collect();
     ranked.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
     ranked.into_iter().map(|(action, _)| action).collect()
 }
@@ -966,30 +957,23 @@ pub fn simulate_reply_with(
         let legal = legal_actions(&current, opp);
         // R4810000: past `AI_REPLY.play_steps` known plays and Activates a step tries neither, so the
         // attacks keep the rest of the turn's steps.
+        let mut tried = Known::Nothing;
         if plays < AI_REPLY.play_steps {
-            match known_play(&current, seat, &legal, hidden, counter, prices) {
-                Known::Cut => return None,
-                Known::Played(played) => {
-                    current = *played;
-                    plays += 1;
-                    continue;
-                }
-                Known::Nothing => {}
+            tried = known_play(&current, seat, &legal, hidden, counter, prices);
+            if matches!(tried, Known::Nothing) {
+                tried = visible_activation(&current, seat, &legal, hidden, counter, prices);
             }
-            match visible_activation(&current, seat, &legal, hidden, counter, prices) {
-                Known::Cut => return None,
-                Known::Played(played) => {
-                    current = *played;
-                    plays += 1;
-                    continue;
-                }
-                Known::Nothing => {}
+            if matches!(tried, Known::Played(_)) {
+                plays += 1;
             }
         }
-        match deft_switch(&current, seat, &legal, counter, prices) {
+        if matches!(tried, Known::Nothing) {
+            tried = deft_switch(&current, seat, &legal, counter, prices);
+        }
+        match tried {
             Known::Cut => return None,
-            Known::Played(switched) => {
-                current = *switched;
+            Known::Played(played) => {
+                current = *played;
                 continue;
             }
             Known::Nothing => {}
@@ -1049,11 +1033,9 @@ pub fn reply_score(
     prices: &Prices,
 ) -> Option<f64> {
     let status = line_status(end, seat, root_turn);
-    if status == LineStatus::Over {
-        return Some(static_score(end, seat, root_turn, prices));
-    }
-    // A line that stopped on the seat's own prompt keeps its static score, the hand eval's.
-    if status == LineStatus::Open {
+    // A line that ended the game, or stopped on the seat's own prompt, keeps its static score, the
+    // hand eval's.
+    if matches!(status, LineStatus::Over | LineStatus::Open) {
         return Some(evaluate_priced(end, seat, NextSwing::Enemy, &AI_EVAL, prices));
     }
     let unspent = if status == LineStatus::Passed {

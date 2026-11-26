@@ -6,7 +6,7 @@
 //! Fixtures: the vanilla catalog (`fx-1` up), and effects run through `make_context` and settled, as
 //! `alt_wins.rs` runs them, so the state check's game-end point runs after each.
 
-use jackioh_engine::effects::{alt_win, damage, draw, flee, lose_health, set_health, swap_health, win_game};
+use jackioh_engine::effects::{alt_win, damage, draw, flee, lose_health, set_health, swap, win_game};
 use jackioh_engine::resolve::{HookOptions, make_context};
 use jackioh_engine::rng::Rng;
 use jackioh_engine::script::{Effect, EngineSink};
@@ -168,7 +168,7 @@ mod r2201000_a_seat_that_cannot_lose {
 
         // R73's swap with a hero at 0 or less: the floored side still reads its floor.
         state.players[OTHER].hero.health = -3;
-        run_settled(&mut state, &[swap_health()], OTHER);
+        run_settled(&mut state, &[swap(json_as(json!({ "what": "health" })))], OTHER);
         assert_eq!(health(&state, FLOORED), 1, "the swap");
     }
 
