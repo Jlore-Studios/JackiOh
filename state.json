@@ -21611,10 +21611,8 @@
       "suggestion": true
     },
     "4991": {
-      "action": "build",
-      "asks": [
-        "c:7181103198"
-      ],
+      "action": "plan",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-26T03:05:17Z",
         "difficulty": "hard",
@@ -21633,27 +21631,30 @@
         "reason": "rated difficulty:hard, which needs a stronger model than this run's to plan it",
         "trail": "| new | fragment via the `patches` command, `player` note by hand |\n- Do not touch: `.github/`, `.harness/`, `.squishy/`, `bot/`, `spec/history/`, `spec/INDEX.md`, `spec/CARDS.md`, either `script_v0_6_0c()` constructor, `crates/cards/src/history.rs` (`KEPT_SCRIPTS`), or any other card. Governing spec: \u00a76.1 Brittle row, \u00a76.3 Flicker and Transform rows, \u00a710.4 (layers r\u2026\n- ## Steps\n- 1. In `flicker_in_place` (`crates/engine/src/zones.rs:1957`), restructure the fixup to an owned copy. `start_brittle_on_field` takes `&GameState` while `live` is `&mut` borrowed from `state`, so calling it on `live` does not compile. Instead: clone `current` into a local, run the existing fixup lin\u2026\n- 2. In `crates/engine/tests/rules/brittle.rs`, using the existing helpers (`at`, `put`, `slot`, `live`, `with_live`, `tick_at`, `counter`, `brittle_unit` which prints Brittle 2) plus `use jackioh_engine::zones::flicker_in_place;`, add the two tests named in Tests. Run `cargo test -p jackioh-engine -\u2026\n- 3. In `c065_keymaster_keenus.rs`, extend `arrived` (line 24): keep the `Summoned` match returning true, then match `GameEvent::Transformed { instance_id, new_instance_id, .. }` and return true only when `*new_instance_id == me.id && *instance_id != *new_instance_id && me.zone.z() == ZoneName::Field\u2026\n- 4. Add the card-script tests named in Tests. Drive Transforms with real cards through the full loop: S+ #104 Tireless Cultivation (`stinkyscapeplus-104`, cost 1, targets one permanent of either side, +1 cost; Radiant +2) on Core #19 Midrange Menace (cost 3) for base-face cases and on Core #2 Specie\u2026\n- 5. In `c014_shadowstep.rs` `mod radiant`, copy the `wipe`/`walled` setup pattern (lines 208-260; radiant set is `backrow: [{ \"def\": SHADOWSTEP, \"faceUp\": false, \"radiant\": true }]`). Note the issue's \"Brittle 2\" is the engine fixture's value, not a real card: Core #89 Corpse Eater is cost 4, base 2\u2026\n- 6. Write `spec/rulings/R4991000.md` (R4991000 is verified free: no `R4991*` file exists; issue #4991 owns R4991000\u2013R4991999). Front matter: `id: R4991000`, a title naming the Transform draw, `cards` naming `\u00a76.1, \u00a76.3, \u00a710.4, R21, R78, R386, R4816000, R781004, Meditative #65, Stinkyscape #111`, `pr\u2026\n- 7. Create the fragment: `cargo jackioh patches \"A Flickered card restarts its printed Brittle, and a Keenus or Shockwave447 made by a Transform draws its Aura's keywords\" --source \"issue #4991\" --notes \"R441; R4991000\" --plays meditative-065,stinkyscape-111`, then hand-write its `player.fixes` line\u2026\n- 8. Run: `cargo fmt --check`; `cargo clippy -p jackioh-engine --all-targets -- -D warnings`; `cargo clippy -p jackioh-cards --all-targets -- -D warnings`; `cargo jackioh catalog check`; `cargo jackioh patches check`; `cargo jackioh spec check`; `cargo jackioh fuzz --seeds 200` once at the end.\n- ## Tests\n- - `crates/engine/tests/rules/brittle.rs`: `r441_flicker_restarts_a_spent_printed_brittle_afresh` \u2014 Brittle-2 fixture unit at turn 7 with a spent count flickered via `flicker_in_place` holds `counter(2, 7, true)`; one `tick_at(9, P1)` drops it to 1. `r441_flicker_keeps_a_running_count_and_restarts_i\u2026\n- - `c065_keymaster_keenus.rs`: `r4991000_a_transform_of_a_field_unit_into_keenus_draws_5_from_the_match_rng` (also assert same-seed replay equality, mirroring the existing replay test); `r4991000_a_radiant_transform_draws_10`; `r4991000_a_transform_of_a_hand_card_into_keenus_draws_nothing`. Command:\u2026\n- - `c111_shockwave447.rs`: `r4991000_a_transform_of_a_field_unit_into_shockwave447_draws_3_and_fires_no_cry` (assert both hands unchanged \u2014 a Transform is no summon, R1). Command: `cargo test -p jackioh-cards shockwave447`.\n- - `c014_shadowstep.rs`: `r441_radiant_shadowstep_saving_a_crumbling_eater_restarts_its_printed_brittle` \u2014 base Eater crumbles at its controller's turn start, is flickered, still holds Brittle 1 started that turn, and crumbles again after a full cycle. `r441_an_eater_with_1_left_saved_from_a_combat_\u2026\n- ## Done when\n- - [ ] Flickered Brittle restarts (spent \u2192 printed afresh; running \u2192 kept count, restarted cycle).\n- - [ ] Transform into Keenus draws 5 (10 Radiant) and into Shockwave447 draws 3 from the match rng, deterministically; hand/library Transforms draw nothing; no Cry fires.\n- - [ ] R4991000 note, `R781004`/`R0441` edits and `spec/pending/4991.md` exist and agree with the test names.\n- - [ ] Fragment claims every card `classify --claims` names.\n- - [ ] Green: fmt, clippy on both crates, `catalog check`, `patches check`, `spec check`, the four test commands above, `classify --base origin/main --claims`, `fuzz --seeds 200`.\n- ## Risks\n- - Rng order: the Transform's def draw consumes rng before the keyword draw; both are seeded, so same-seed replays stay stable, but any recorded game that made Keenus/Shockwave447 by Transform diverges and is refused as `rules_changed` \u2014 intended, covered by the fragment.\n- - Hunted seeds rot if the cost-4 Unit pool or Legendary pool changes; the tests then fail loudly, which is correct.\n- - If open PR #4934 lands first, re-check the same-id guard against its copy-text handling; the guard is designed to keep both paths disjoint.\n- - No new named constants are needed (rule 9): counts come from the `keywords` param, cycles from existing config.\n- ## Open questions\n- None. Every choice above is settled by the spec sections and code cited; the only deviations from the issue text are corrections, not decisions: Corpse Eater prints Brittle 1/3 (the \"Brittle 2\" is the engine fixture's value), and the `flicker_in_place` edit needs the owned-copy shape for the borrow\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-4991 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-fill-2/_work/_temp/work/item-4991/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "building",
-      "owner": "muse",
-      "owner_since": "2026-11-26T02:57:06Z",
-      "owner_why": "it took it up",
+      "live": "planning",
+      "owner": "claude-1",
+      "owner_since": "2026-11-26T03:10:26Z",
+      "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
       "pending_request": false,
       "planned_at": "2026-11-26T03:05:26Z",
       "planned_by": "`muse` (muse, `muse-spark-1.3-contributor`, medium)",
       "planned_by_id": "muse",
       "planned_model": "muse-spark-1.3-contributor",
       "planned_tier": "medium",
-      "provider": "muse",
+      "provider": "claude-1",
       "queued_at": "2026-11-26T02:46:40Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45745770351",
-      "runs_on": "night-vm-muse-fill",
-      "started_at": "2026-11-26T02:57:06Z",
+      "run_id": "pending:4ca60a7b-1795662593",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-26T03:10:26Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7181103198"
+      ]
     },
     "4992": {
       "action": "build",
@@ -22027,9 +22028,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T03:09:38Z",
+    "at": "2026-11-26T03:10:26Z",
     "url": "",
-    "what": "build #4992 on claude-7"
+    "what": "plan #4991 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-26T02:51:15Z",
