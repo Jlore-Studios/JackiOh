@@ -160,8 +160,11 @@
     "what": "build #4892 on claude-squishy"
   },
   "last_sweep": {
-    "at": "2026-11-26T02:58:10Z",
-    "notes": [],
+    "at": "2026-11-26T03:08:20Z",
+    "notes": [
+      "#4999: typed it Task",
+      "#4998: typed it Task"
+    ],
     "since": "2026-10-06T07:15:07Z"
   },
   "needs_decision_synced": "d4c5f9 A bot asks a person to decide: its comment explains the problem and suggests; a reply revises it",
