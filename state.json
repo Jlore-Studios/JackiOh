@@ -21485,7 +21485,8 @@
       "started_at": "2026-11-26T20:22:48Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 0,
+      "waiting_comment": 7202947703
     },
     "5115": {
       "action": "review",
