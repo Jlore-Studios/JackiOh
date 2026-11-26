@@ -21603,6 +21603,13 @@
     "4990": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-26T03:30:39Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Engine rules: the change rewrites the replacement/summon path in crates/engine/src (rule 1)."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
