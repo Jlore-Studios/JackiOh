@@ -1276,7 +1276,9 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   The same lobby shows the live online game's banner (Rejoin) for a signed-in player in a match.
 - A finished free game is kept for its replay (R768): when it ends the worker adds its config, log,
   catalog version, final hash and a summary to the store, the newest PRACTICE_REPLAYS_KEPT of them, but
-  not a lesson or a game Glitch voided (R679). `{ type: "replays" }` answers the summaries, newest
+  not a lesson, a dungeon run's fight (R2706000) or a game Glitch voided (R679). An Infinite Assault
+  fight is kept with them, its summary naming its level and enemy (`assault`), and its result offers
+  Watch the replay (R5125000). `{ type: "replays" }` answers the summaries, newest
   first, and folds none of them: each has `unavailable` set to `earlier_patch` when it was played on
   another catalog, or to `rules_changed` once opening it found that it no longer folds to its hash;
   `{ type: "replay", game, from, count }` answers a page of `{ step, turn, view }` in the seat the

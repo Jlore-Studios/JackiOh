@@ -1,6 +1,7 @@
 // R768000 (#768): `/replays`, the recent games: the device's practice games and, signed in, the
 // account's online games a page at a time. R970000: an owed consent screen comes before the online half.
 // R1141000: a watchable row downloads as one JSON file, which opens again in the player or is refused (#1160).
+// R5125000: an Infinite Assault fight is kept with them, named by its level and enemy.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -8,7 +9,9 @@ import { fileURLToPath } from "node:url";
 
 import { AI_GATE_BUDGET } from "@jackioh/ai";
 import { CATALOG_VERSION } from "@jackioh/cards";
+import { AI_DIFFICULTY, HUMAN_HANDICAP } from "@jackioh/engine/config";
 import { REPLAY_PAGE_STEPS } from "@jackioh/engine/config";
+import type { AssaultFightSetup } from "@jackioh/run";
 import type { PlayerId } from "@jackioh/shared";
 import { TERMS_VERSION } from "@jackioh/server-config";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -28,6 +31,7 @@ import { documentTitleFor, screenNameFor } from "../net/head.ts";
 import { paths } from "../net/navigate.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import type { PracticeDriverEnv } from "../practice/driver.ts";
+import { PRACTICE_PRESETS } from "../practice/decks.ts";
 import { createPracticeHost } from "../practice/host.ts";
 import type { PracticeHost } from "../practice/host.ts";
 import { memorySaveStore } from "../practice/saveStore.ts";
@@ -73,6 +77,39 @@ async function storeWithGame(portraits?: SeatPortraits): Promise<PracticeSaveSto
   });
   const done = await host.request({ type: "act", action: { type: "concede" } });
   if (done.type !== "snapshot" || done.snapshot.view.result === null) throw new Error("the conceded game did not end");
+  return saves;
+}
+
+/** R5125000: a store holding one finished Infinite Assault fight, level 7 against Rogue Model, conceded at once. */
+async function storeWithAssaultFight(): Promise<PracticeSaveStore> {
+  const [human, enemy] = PRACTICE_PRESETS.map((preset) => [...preset.cards]);
+  if (human === undefined || enemy === undefined) throw new Error("two practice presets are needed");
+  const setup: AssaultFightSetup = {
+    seed: "replays-assault-L7-A1",
+    humanDeck: human,
+    humanHandicap: { ...HUMAN_HANDICAP, deckSize: human.length },
+    enemyDeck: enemy,
+    enemyHandicap: { ...AI_DIFFICULTY.easy, deckSize: enemy.length },
+    enemyMarks: [{ index: 0, radiant: true, upgrades: 1 }],
+    enemySets: [],
+    level: {
+      level: 7,
+      enemy: "Rogue Model",
+      doctrine: null,
+      commander: null,
+      escalations: [],
+      upgrades: [],
+      rarities: [enemy.length, 0, 0, 0, 0],
+      deck: enemy,
+      marks: [],
+      handicap: { ...AI_DIFFICULTY.easy, deckSize: enemy.length },
+    },
+  };
+  const saves = memorySaveStore();
+  const host = hostOn(saves);
+  await host.request({ type: "start", config: { seed: setup.seed, difficulty: "easy", humanSeat: "p1", deck: { kind: "random" }, assault: setup } });
+  const done = await host.request({ type: "act", action: { type: "concede" } });
+  if (done.type !== "snapshot" || done.snapshot.view.result === null) throw new Error("the conceded fight did not end");
   return saves;
 }
 
@@ -246,6 +283,16 @@ describe("R768000 /replays", () => {
     fireEvent.click(within(row).getByRole("button", { name: "Watch" }));
     await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
     expect(screen.getByTestId("hero-opponent").querySelector(".hero-seat")).toHaveTextContent("AI");
+  });
+
+  it("R5125000 a kept Infinite Assault fight is listed by its level and enemy, and its replay names the enemy", async () => {
+    renderRoute(await storeWithAssaultFight());
+    const row = await screen.findByTestId(replaysTestid.practice(1));
+    expect(row).toHaveTextContent(/^Loss · Infinite Assault · Level 7 · Rogue Model · \d+ turns? · /u);
+
+    fireEvent.click(within(row).getByRole("button", { name: "Watch" }));
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+    expect(screen.getByTestId("hero-opponent").querySelector(".hero-seat")).toHaveTextContent("Rogue Model");
   });
 
   it("R768000 shows older online games a page at a time", async () => {

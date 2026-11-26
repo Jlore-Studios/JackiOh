@@ -11,6 +11,7 @@ use serde_json::Value;
 use jackioh_engine::{
     Action, ActionBody, CombatForecast, DeckMark, Difficulty, GameResult, GameState, Handicap,
     LastBoardEntry, LeanPick, PerPlayer, PerPlayerOpt, PlayerId, PlayerView, PortraitId, ReplayRefusal,
+    SetName,
 };
 use jackioh_run::{AssaultFightSetup, RunAction, RunFightSetup};
 
@@ -182,7 +183,8 @@ impl PracticeConfig {
         self.assault.is_some()
     }
 
-    /// A fight a mode writes, a run's or the Assault's: no last board either way, never kept, never dealt.
+    /// A fight a mode writes, a run's or the Assault's: no last board either way, never dealt. Only a run's
+    /// is never kept (R2706000); an Assault fight is (R5125000).
     pub fn is_mode_fight(&self) -> bool {
         self.is_run() || self.is_assault()
     }
@@ -304,6 +306,28 @@ pub struct PracticeReplaySetup {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub dealt: Option<Vec<PlayerId>>,
+    /// R5125000: an Assault fight's enemy marks (R2702000) and sets (R4595000), as `create_game` had
+    /// them; absent on every other game, whose kept file is as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub deck_marks: Option<PerPlayerOpt<Vec<DeckMark>>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub deck_sets: Option<PerPlayerOpt<Vec<SetName>>>,
+}
+
+/// R5125000: the Infinite Assault level a kept fight was, as the replay list names it.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct KeptAssault {
+    pub level: u8,
+    /// The enemy's name, untranslated, as `AssaultLevel.enemy` holds it.
+    pub enemy: String,
 }
 
 /// R768: one kept practice game as the replay list shows it: never its log, seed or decks.
@@ -327,9 +351,13 @@ pub struct PracticeReplaySummary {
     /// The replay's steps: step 0 and one per accepted action.
     pub steps: u32,
     pub portraits: PerPlayer<PortraitId>,
+    /// R5125000: an Infinite Assault fight's level and enemy; absent on every other kept game.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub assault: Option<KeptAssault>,
 }
 
-/// R768: a finished free game, kept on the device.
+/// R768: a finished free game, or R5125000's Assault fight, kept on the device.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[cfg_attr(
     feature = "ts",
