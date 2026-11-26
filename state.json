@@ -21245,17 +21245,8 @@
       }
     },
     "4977": {
-      "action": "plan",
-      "asks": [
-        "c:7179115536"
-      ],
-      "build_next": {
-        "from_run": "45791874963",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-26T09:35:50Z",
-        "until": "2026-11-26T10:05:50Z"
-      },
+      "action": "build",
+      "asks": [],
       "died": 0,
       "difficulty_by": {
         "at": "2026-11-26T09:35:39Z",
@@ -21275,10 +21266,9 @@
         "reason": "planned on opus",
         "trail": "- Bash: {\"command\": \"ls -la .bot-* 2>/dev/null; sed -n '/## State/,/^## [^S]/p' .bot-notes.md 2>/dev/null | head -50\", \"description\": \"List bot notes files and show state section\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4977/apps/web/src/cards/proficiencySync.ts\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4977/apps/web/src/cards/proficiencySync.test.ts\"}\n- Bash: {\"command\": \"grep -n \\\"^## \\\\|^### \\\" .bot-journal.md | head -60\", \"description\": \"List journal headings\"}\n- Bash: {\"command\": \"git log --oneline -n 5 --grep=\\\"4780\\\\|4857\\\" ; ls spec/rulings/ | grep -E \\\"R4780|R4977|R3013|R3206\\\" ; ls spec/pending/ | head -50\", \"description\": \"Find the R4780000 commit and relate\u2026\n- Bash: {\"command\": \"git show 5375c4f755 --stat; cat spec/rulings/R4780000.md; git show 5375c4f755 -- spec/pending/ spec/14-economy.md spec/*.md | head -80\", \"description\": \"Show the #4780 commit's files and\u2026\n- Bash: {\"command\": \"git show 5375c4f755 -- spec/rulings/R3206000.md apps/web/README.md; cat spec/rulings/R3013001.md\", \"description\": \"Show how R3206000 and README were amended; read R3013001\"}\n- Bash: {\"command\": \"grep -rn \\\"proficiencySync\\\\|useProficiencyAccountSync\\\\|reloadOwnProficiency\\\" --include=*.md --include=*.ts --include=*.tsx . 2>/dev/null | grep -v node_modules | grep -v \\\"^./.bot-\\\"\"\u2026\n- Bash: {\"command\": \"sed -n 860,880p apps/web/README.md; grep -n \\\"14.14\\\" spec/14-economy.md | head; grep -n \\\"Stamps\\\\.\\\\|proficiency\\\" spec/14-economy.md | head -20\", \"description\": \"Read web README stamp\u2026\n- Bash: {\"command\": \"sed -n 1,120p apps/web/src/routes/match.tsx | grep -n \\\"import\\\" ; sed -n 240,270p apps/web/src/routes/match.tsx\", \"description\": \"Show match.tsx imports and the paid effect\"}\n- Bash: {\"command\": \"grep -n \\\"import/order\\\\|simple-import-sort\\\\|sort-imports\\\" eslint.config.js | head; grep -n \\\"announceWallet\\\\|economy\\\\|describe(\\\\\\\"the XP reveal\\\\|vi.mock\\\\|^import\\\\|onTestFinished\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4977/apps/web/src/routes/match.test.tsx\", \"offset\": 1120, \"limit\": 100}\n- Bash: {\"command\": \"sed -n 1,80p apps/web/src/settings/accountSync.ts\", \"description\": \"Read requestQueue and useAccountSync\"}\n- Bash: {\"command\": \"grep -n \\\"export function useAccountSync\\\" -A 40 apps/web/src/settings/accountSync.ts\", \"description\": \"Read useAccountSync\"}\n- Bash: {\"command\": \"sed -n 1,120p apps/web/src/cards/stamps.ts; cat apps/web/src/test/settle.ts | head -30; grep -n \\\"ProficiencyResponse\\\\|ProficiencyEntry\\\" apps/web/src/net/api.ts | head\", \"description\":\u2026\n- Bash: {\"command\": \"sed -n 36,140p apps/web/src/routes/match.test.tsx\", \"description\": \"Read match test harness setup\"}\n- Bash: {\"command\": \"ls apps/web/src/test/; grep -rln \\\"export function deferred\\\\|export function defer\\\" apps/web/src | head; grep -n \\\"unbound-method\\\\|require-await\\\\|no-unused-vars\\\\|no-floating\\\" eslin\u2026\n- Bash: {\"command\": \"sed -n 1,80p eslint.config.js; grep -n \\\"settle\\\\|own .settle\\\\|defines its own\\\" apps/web/src/test/helpers.test.ts | head\", \"description\": \"Read the eslint config and settle-helper scan\u2026\n- Bash: {\"command\": \"sed -n 22,60p apps/web/src/test/settle.ts; grep -rn \\\"settle({ act: false\\\" apps/web/src | head -3\", \"description\": \"Read the rest of settle and its act:false uses\"}\n- Bash: {\"command\": \"grep -n \\\"Adding a ruling\\\" -A 30 spec/README.md | head -50; cat spec/pending/4984.md | head -5\", \"description\": \"Read spec README's adding-a-ruling section and a sample pending note\"}\n- Bash: {\"command\": \"grep -n \\\"announceWallet\\\\|paid result\\\" apps/web/README.md | head; sed -n 864,872p apps/web/README.md | cat -A | cut -c1-130 | head -3\", \"description\": \"Find paid-result mentions in the\u2026\n- said: Now let me record the verified findings in the draft before going further.\n- Bash: {\"command\": \"grep -n \\\"export type Account\\\\b\\\\|export type Account =\\\" -A 12 apps/web/src/net/gate.ts | head -30; grep -rn \\\"classify\\\" docs/issues-and-patches.md | head -5\", \"description\": \"Check t\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4977/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"The bot already rated it hard (step-up) and a plan may not rate lower;\u2026\n- Bash: {\"command\": \"grep -n \\\"prettier\\\\|\\\\\\\"format\\\\|\\\\\\\"lint\\\" package.json apps/web/package.json | head; grep -n \\\"useProficiencyAccountSync\\\\|Gated\\\" apps/web/src/main.tsx | head -5\", \"description\": \"Ch\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4977/.bot-plan.md\", \"old_string\": \"- Imports: add `reloadOwnProficiency` to the `./proficiencySync.ts` import list (alphabetical\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Count the plan's words and characters\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"The bot already rated it hard (step-up) and a plan may not rate lower; on its own no line of the rule holds (web-only, 8 files, no engine, AI, cross-crate design or migration)\"} --> ## Goal When a counted game pays its result, the page loads the account's ca\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-26T09:25:41Z",
       "owner_why": "handed off from `agy`: its owner `agy` has no strong seat, which it needs",
@@ -21292,14 +21282,16 @@
       "queued_at": "2026-11-26T08:56:53Z",
       "requested_by": "jgoetzmann",
       "round_tier": "",
-      "run_id": "45791874963",
+      "run_id": "pending:8d3ddfaf-1795685920",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-26T09:25:41Z",
+      "started_at": "2026-11-26T09:39:10Z",
       "stop_requested": false,
       "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:7179115536"
+      ],
       "verdict_rounds": 0
     },
     "4981": {
@@ -23246,9 +23238,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T09:38:27Z",
+    "at": "2026-11-26T09:39:10Z",
     "url": "",
-    "what": "review #5055 on claude-7"
+    "what": "build #4977 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-26T09:21:28Z",
