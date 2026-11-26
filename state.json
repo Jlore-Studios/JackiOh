@@ -22216,6 +22216,14 @@
       "started_at": "2026-11-26T04:26:11Z",
       "stop_requested": false,
       "taken_asks": []
+    },
+    "5008": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-26T03:12:03Z",
+      "issue": 4995,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
