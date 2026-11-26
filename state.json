@@ -24368,11 +24368,10 @@
       "kind": "revise",
       "last_findings": [],
       "live": "resolving",
-      "merge_owner": "claude-8",
       "merge_owner_gave_up": {
-        "at": "2026-11-26T14:27:25Z",
-        "provider": "claude-7",
-        "sha": "7e226461bf4f4ff275272b9761caf32b86b48e7c"
+        "at": "2026-11-26T17:15:23Z",
+        "provider": "claude-8",
+        "sha": "c1b5aaa72f5e6d9afc2a8402e73b2bd928af7fe9"
       },
       "pending_request": false,
       "provider": "claude-8",
