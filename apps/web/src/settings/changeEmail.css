@@ -34,7 +34,7 @@
 }
 
 .settings-email__error {
-  color: #fca5a5;
+  color: var(--pal-lacquer-300);
 }
 
 .settings-account__action {
@@ -58,6 +58,6 @@
 }
 
 .settings-account__action:focus-visible {
-  outline: 2px solid #7dd3fc;
+  outline: 2px solid var(--pal-ink-300);
   outline-offset: 2px;
 }

@@ -4506,3 +4506,194 @@ describe("R4679000 R4679001 Extended stats' Outputs", () => {
     await opensSchool((row) => fireEvent.keyDown(row, { key: "Enter" }));
   });
 });
+
+describe("R4707001 R4707002 Extended stats' rolled outcomes", () => {
+  // A card statistics read kept by an earlier test would answer for these filters without asking (R3206000).
+  beforeEach(() => {
+    clearReadCache();
+  });
+
+  const FACES = {
+    normal: { games: 30, adjustedWinRate: 0.512, adjustedLow: 0.48, adjustedHigh: 0.544, tier: "B", hasEnoughGames: true },
+    radiant: { games: 25, adjustedWinRate: 0.58, adjustedLow: 0.552, adjustedHigh: 0.608, tier: "A", hasEnoughGames: true },
+    gap: { gap: 0.068, low: 0.012, high: 0.124 },
+  };
+  const rolledRow = (key: string, label: string, expected: number, share: number, games: number, rate: number, tier: string | null) => ({
+    key,
+    label,
+    expected,
+    share,
+    games,
+    adjustedWinRate: rate,
+    adjustedLow: rate - 0.02,
+    adjustedHigh: rate + 0.02,
+    tier,
+    hasEnoughGames: tier !== null,
+  });
+  /** Gary the Gambler's six coins: three heads read best, and six heads too seldom to read. */
+  const GARY = [
+    {
+      kind: "coin",
+      rows: [
+        rolledRow("core-004:3/6", "3 of 6 heads", 0.3125, 0.32, 64, 0.55, "A"),
+        rolledRow("core-004:2/6", "2 of 6 heads", 0.234375, 0.25, 50, 0.49, "C"),
+        rolledRow("core-004:6/6", "6 of 6 heads", 0.015625, 0.02, 4, 0.6, null),
+      ],
+    },
+  ];
+  /** Call to Chaos's ten effects, a tenth each; in neither share's nor the labels' order. */
+  const CHAOS = [
+    {
+      kind: "effect",
+      rows: [
+        rolledRow("core-095:4", "Make your hand Radiant", 0.1, 0.11, 44, 0.63, "S"),
+        rolledRow("core-095:7", "Summon a Chaos Golem", 0.1, 0.09, 36, 0.55, "A"),
+        rolledRow("core-095:1", "Heal your hero 30", 0.1, 0.12, 48, 0.5, "B"),
+        rolledRow("core-095:9", "Cast a random Call to Chaos", 0.1, 0.08, 5, 0.4, null),
+      ],
+    },
+  ];
+  /** The Chaos Golem Call to Chaos summoned. */
+  const GOLEM = [
+    {
+      key: "core-095-1",
+      label: "Chaos Golem",
+      cost: 10,
+      rarity: "Token",
+      games: 36,
+      share: 1,
+      adjustedWinRate: 0.55,
+      adjustedLow: 0.53,
+      adjustedHigh: 0.57,
+      tier: "A",
+      hasEnoughGames: true,
+    },
+  ];
+  /** Dice of Doom's 100-sided die: a hit on 67, rare and the best, and every miss. */
+  const DOOM = [
+    {
+      kind: "die",
+      rows: [
+        rolledRow("stinkyscape-154:hit", "Lands on 67", 0.01, 0.012, 24, 0.71, "S"),
+        rolledRow("stinkyscape-154:miss", "Misses 67", 0.99, 0.988, 1976, 0.48, "C"),
+      ],
+    },
+  ];
+
+  /** Stubs the reads; an older server sends no `rolled`. */
+  function serve(older = false): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        const json = (body: unknown): Promise<Response> => Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+        if (url.pathname === "/api/stats/cards") return json(MOCK_CARD_STATS_PROVISIONAL);
+        if (url.pathname.startsWith("/api/stats/cards/")) {
+          const id = decodeURIComponent(url.pathname.slice("/api/stats/cards/".length));
+          const outputs = id === "core-095" ? GOLEM : [];
+          const rolled = id === "core-004" ? GARY : id === "core-095" ? CHAOS : id === "stinkyscape-154" ? DOOM : [];
+          const body = { ...MOCK_DRILL_DOWN, face: "all", faces: FACES, variants: [], outputs };
+          return json(older ? body : { ...body, rolled });
+        }
+        return json({});
+      }),
+    );
+  }
+
+  const rolledTables = (scope: HTMLElement): Promise<HTMLElement[]> =>
+    within(scope).findAllByTestId(statsTestid.extendedRolled, undefined, SLOW);
+  const rolledRows = (table: HTMLElement): HTMLElement[] => within(table).getAllByTestId(statsTestid.extendedRolledRow);
+  const cells = (row: HTMLElement): (string | null)[] => [...row.querySelectorAll("th, td")].map((cell) => cell.textContent);
+  const headers = (scope: HTMLElement): (string | null)[] => [...scope.querySelectorAll("thead th")].map((cell) => cell.textContent);
+
+  it("R4707002 a coin card's flips show in Outputs alone under Coin flips, Expected beside Share", async () => {
+    serve();
+    // Gary names no token and made nothing: its flips alone earn the Outputs segment.
+    at("/stats?card=core-004&extended=outputs");
+    render(<StatsRoute />);
+    const panel = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    const [coins, ...more] = await rolledTables(panel);
+    expect(more).toHaveLength(0);
+    expect(within(panel).getByTestId(statsTestid.extendedOutputsTab)).toHaveAttribute("aria-pressed", "true");
+    expect(window.location.search).toContain("extended=outputs");
+    expect(coins).toHaveAttribute("data-kind", "coin");
+    expect(coins!.querySelector("caption")).toHaveTextContent("Coin flips");
+    // No outputs table and no empty line beside the flips.
+    expect(within(panel).queryByTestId(statsTestid.extendedOutputs)).toBeNull();
+    expect(panel).not.toHaveTextContent("No outputs recorded yet.");
+    // Expected comes right before Share.
+    expect(headers(coins!)).toEqual(["Outcome", "Expected", "Share", "Games", "Tier", "Adjusted"]);
+    const rows = rolledRows(coins!);
+    expect(rows.map((one) => one.getAttribute("data-key"))).toEqual(["core-004:3/6", "core-004:2/6", "core-004:6/6"]);
+    expect(cells(rows[0]!)).toEqual(["3 of 6 heads", "31.3%", "32.0%", "64", "A", "55.0%"]);
+    expect(within(rows[0]!).getByTestId(statsTestid.extendedTier)).toHaveTextContent("A");
+    expect(cells(rows[2]!).slice(0, 3)).toEqual(["6 of 6 heads", "1.6%", "2.0%"]);
+    expect(rows[2]).toHaveTextContent("not enough games");
+    // A row opens nothing.
+    expect(rows[0]).not.toHaveAttribute("role");
+    expect(rows[0]).not.toHaveAttribute("tabindex");
+    expect(within(panel).queryByTestId(statsTestid.adjustedRange)).toBeNull();
+    cleanup();
+
+    // With the ranges shown, each row that reads a rate shows its range under it.
+    at("/stats?card=core-004&extended=outputs&ranges=1");
+    render(<StatsRoute />);
+    const ranged = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    await rolledTables(ranged);
+    expect(within(ranged).getAllByTestId(statsTestid.adjustedRange)).toHaveLength(2);
+    cleanup();
+
+    // An older server sends no rolled outcomes, and Gary has no Outputs segment.
+    clearReadCache();
+    serve(true);
+    at("/stats?card=core-004&extended=outputs");
+    render(<StatsRoute />);
+    const older = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    await within(older).findByTestId(statsTestid.drillDownFaceLine, undefined, SLOW);
+    expect(within(older).queryByTestId(statsTestid.extendedOutputsTab)).toBeNull();
+    expect(within(older).queryByTestId(statsTestid.extendedRolled)).toBeNull();
+  });
+
+  it("R4707002 Call to Chaos's rolled effects follow its outputs under Rolled effects", async () => {
+    serve();
+    at("/stats?card=core-095&extended=outputs");
+    render(<StatsRoute />);
+    const panel = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    const [effects, ...more] = await rolledTables(panel);
+    expect(more).toHaveLength(0);
+    const outputs = within(panel).getByTestId(statsTestid.extendedOutputs);
+    expect(within(outputs).getByTestId(statsTestid.extendedOutputRow)).toHaveTextContent("Chaos Golem");
+    // The outputs table first, then the rolled effects.
+    expect(outputs.compareDocumentPosition(effects!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(effects).toHaveAttribute("data-kind", "effect");
+    expect(effects!.querySelector("caption")).toHaveTextContent("Rolled effects");
+    // The server's order, its words as they are.
+    const rows = rolledRows(effects!);
+    expect(rows.map((one) => one.getAttribute("data-key"))).toEqual(["core-095:4", "core-095:7", "core-095:1", "core-095:9"]);
+    expect(rows.map((one) => one.querySelector("th")?.textContent ?? null)).toEqual([
+      "Make your hand Radiant",
+      "Summon a Chaos Golem",
+      "Heal your hero 30",
+      "Cast a random Call to Chaos",
+    ]);
+    expect(cells(rows[2]!)).toEqual(["Heal your hero 30", "10.0%", "12.0%", "48", "B", "50.0%"]);
+    expect(rows[3]).toHaveTextContent("not enough games");
+  });
+
+  it("R4707002 Dice of Doom's dice under Dice", async () => {
+    serve();
+    at("/stats?card=stinkyscape-154&extended=outputs");
+    render(<StatsRoute />);
+    const panel = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    const [dice, ...more] = await rolledTables(panel);
+    expect(more).toHaveLength(0);
+    expect(dice).toHaveAttribute("data-kind", "die");
+    expect(dice!.querySelector("caption")).toHaveTextContent("Dice");
+    expect(within(panel).queryByTestId(statsTestid.extendedOutputs)).toBeNull();
+    const rows = rolledRows(dice!);
+    expect(rows.map(cells)).toEqual([
+      ["Lands on 67", "1.0%", "1.2%", "24", "S", "71.0%"],
+      ["Misses 67", "99.0%", "98.8%", "1,976", "C", "48.0%"],
+    ]);
+  });
+});

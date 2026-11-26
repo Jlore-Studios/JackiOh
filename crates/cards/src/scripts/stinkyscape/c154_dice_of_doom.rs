@@ -44,8 +44,9 @@ fn roll(ctx: &mut EffectContext<'_>, kept: bool) -> Vec<Effect> {
         .map(|_| roll_die(ctx, sides, lucky, |face| face == HIT))
         .collect();
     let hit = dice.iter().any(|die| die.kept_face() == HIT);
-    // R2652001: the dice are shown, every Lucky roll of each, before anything they decided.
-    let mut effects = vec![report_rolls(RollKind::Die, sides, dice)];
+    // R2652001: the dice are shown, every Lucky roll of each, before anything they decided; R4707000: with
+    // the face they are checked for, which the game record splits them by.
+    let mut effects = vec![report_die_hits(sides, dice, RollHit { from: HIT, to: HIT })];
     if gain > 0 {
         effects.push(gain_keyword_for_good(json_as(
             json!({ "keyword": { "kind": "Lucky", "n": gain } }),

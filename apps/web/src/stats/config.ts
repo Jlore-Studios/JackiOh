@@ -86,6 +86,12 @@ export const ADJUSTED_RANGE_DIGITS = 1;
 export const WIN_RATE_RANGE_DIGITS = 0;
 
 /**
+ * R4707002: decimal places of a rolled outcome's Expected and Share percents, a tenth of a point, so a 1-in-100 face
+ * reads 1.0% beside the share it was rolled.
+ */
+export const ROLLED_SHARE_DIGITS = 1;
+
+/**
  * R1973002: the games, live and AI, a patch needs before its tab is offered; R3324000: the newest patch, whose
  * tab is always offered, is collecting its data until it has them.
  */

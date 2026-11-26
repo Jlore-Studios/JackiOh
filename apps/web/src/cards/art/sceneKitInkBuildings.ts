@@ -5,7 +5,7 @@
 // bottom centre (a brick schoolhouse, a glass megachurch, a bunker in its mound, a stone university hall, a prison on
 // a sea crag, a gunmetal corporate fortress, a soot-black factory, a mountain-road diner, a railway platform), and so
 // does a desk; the Great Wall spans the box as terrain does, its anchor's height its mean, its anchor's x shifting its
-// towers. sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a palette.css name, none in Radiant's gold
+// towers. sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a SCENE_PALETTE name, none in Radiant's gold
 // window; a glow is a stack of translucent shapes, never a gradient; shapes are filled even-odd, so a hole is a second
 // sub-path and no two sub-paths of one shape overlap otherwise.
 

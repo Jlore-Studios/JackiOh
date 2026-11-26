@@ -1,7 +1,7 @@
 //! SPEC §8.12 S+ #62 Overdrive Projector (R3556000, R3556001, R3556008, R4665002; R62, R1420):
 //! (3) Field Spell, Mindustrial, Epic, a card of the Stinkyscape+ set.
 //!   Base:    "Dormant for {dormant|turn|turns}.
-//!            Your Units gain Rush and Windfury, and your Spells gain Echo +{spellEcho}." (2 turns)
+//!            Aura: Your Units gain Rush and Windfury, and your Spells gain Echo +{spellEcho}." (2 turns)
 //!   Radiant: the same (1 turn).
 //!
 //! It enters Dormant for `dormant` turns (R3556000), 2 on the base face and 1 on the Radiant one since

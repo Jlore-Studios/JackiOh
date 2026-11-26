@@ -37,8 +37,8 @@
   overflow-y: auto;
   border: 1px solid var(--tavern-brass);
   border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, var(--tavern-wood-deep), var(--tavern-night));
-  box-shadow: 0 18px 60px color-mix(in srgb, var(--tavern-night) 80%, transparent);
+  background: var(--tavern-night);
+  box-shadow: var(--shadow-3);
   text-align: start;
 }
 

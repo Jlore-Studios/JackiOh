@@ -25,7 +25,7 @@
   font-size: var(--type-2xl);
   font-weight: 700;
   line-height: 1.2;
-  color: var(--tavern-gold-pale, var(--pal-gold-200));
+  color: var(--tavern-gold-pale, var(--pal-brass-200));
   text-shadow: 0 1px 0 color-mix(in srgb, var(--pal-black) 80%, transparent);
 }
 

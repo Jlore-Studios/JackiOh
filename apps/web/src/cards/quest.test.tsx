@@ -216,7 +216,7 @@ describe("R404 In Too Deep's quest line in the inspect overlays", () => {
 
     render(withCatalog(<Board view={boardWith(questCard({ open: [], auras: DEEPER.auras }))} />));
     const preview = hover(screen.getByTestId(testid.card("itd")));
-    expect(within(preview).getByTestId(INSPECT_STATES).textContent).toBe("✦Aura: your Units have Indestructible");
+    expect(within(preview).getByTestId(INSPECT_STATES).textContent).toBe("Aura: your Units have Indestructible");
   });
 });
 

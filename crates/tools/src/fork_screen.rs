@@ -40,8 +40,8 @@ use serde::{Deserialize, Serialize};
 use crate::agent::AgentInfo;
 use crate::arena::{
     AgentSpec, ArenaGame, ArenaOutcome, Entrant, FinishCtx, Live, SCREEN_EXTEND_DEALS, SCREEN_MAX_GAMES,
-    SCREEN_MIN_DECIDED, accept, append_records, choose_for, duel_line, entrant_at, finish_from, game_setup,
-    paired_interval, play_game_probed, records_of, records_path, replays, round_share, screen_done, won_by,
+    SCREEN_MIN_DECIDED, accept, choose_for, duel_line, entrant_at, finish_from, game_setup, paired_interval,
+    play_game_probed, replays, round_share, screen_done, won_by, write_duel_output,
 };
 
 /// R4397000: the most forks one trunk game keeps, its first ones.
@@ -1204,37 +1204,7 @@ pub fn run(args: crate::arena::Args) -> anyhow::Result<()> {
         }
     }
     let tally = fork_tally(&a.label, &b.label, trunk.len(), &edges, rollouts, faults);
-    let records = records_of(&trunk)?;
-
-    let path = records_path(args.out.as_deref());
-    let mut lines = Vec::new();
-    for outcome in &trunk {
-        lines.push(duel_line(outcome, replays(outcome)?)?);
-    }
-    let totals = serde_json::to_string(&tally)?;
-
-    match &path {
-        Some(path) => {
-            append_records(path, &records)?;
-            let mut stdout = std::io::stdout().lock();
-            for line in &lines {
-                writeln!(stdout, "{line}")?;
-            }
-            writeln!(stdout, "{totals}")?;
-            writeln!(stdout, "{} records appended to {}", records.len(), path.display())?;
-        }
-        None => {
-            let mut stdout = std::io::stdout().lock();
-            for record in &records {
-                writeln!(stdout, "{}", jackioh_cards::versions::game_record_line(record))?;
-            }
-            for line in &lines {
-                eprintln!("{line}");
-            }
-            eprintln!("{totals}");
-        }
-    }
-    Ok(())
+    write_duel_output(args.out.as_deref(), &trunk, &tally)
 }
 
 #[cfg(test)]

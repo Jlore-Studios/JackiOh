@@ -1,0 +1,17 @@
+{
+  "title": "One SVG icon set in place of Unicode glyphs",
+  "sources": "#5016",
+  "notes": "Replace Unicode glyphs with inline SVG Icon component across the client, including card inspect notes",
+  "player": {
+    "title": "One SVG icon set in place of Unicode glyphs",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [],
+    "fixes": [
+      "Card inspect state notes and client UI components render consistent SVG icons instead of device-dependent Unicode character glyphs."
+    ]
+  },
+  "cards": [],
+  "visual": true
+}

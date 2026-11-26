@@ -99,7 +99,7 @@
 .cf .kw-taunt-shield {
   clip-path: polygon(50% 0, 97% 9%, 95% 56%, 50% 100%, 5% 56%, 3% 9%);
   background:
-    linear-gradient(90deg, rgb(255 255 255 / 0.18), transparent 30% 70%, rgb(0 0 0 / 0.25)),
+    linear-gradient(90deg, color-mix(in srgb, var(--pal-white) 18%, transparent), transparent 30% 70%, color-mix(in srgb, var(--pal-black) 25%, transparent)),
     linear-gradient(180deg, #e3e7ef, #9aa3b8 40%, #5a6275 75%, #3a404e);
 }
 
@@ -113,7 +113,7 @@
   border: max(1px, 0.9cqmin) solid rgb(222 229 244 / 0.9);
   border-radius: var(--radius-card-edge);
   background: linear-gradient(180deg, #454036, #1d1a14);
-  box-shadow: 0 0 0 max(1px, 0.5cqmin) rgb(0 0 0 / 0.7);
+  box-shadow: 0 0 0 max(1px, 0.5cqmin) color-mix(in srgb, var(--pal-black) 70%, transparent);
 }
 
 .cf .kw-edge--far {
@@ -258,7 +258,7 @@
   font-size: max(8px, 13cqmin);
   font-weight: 900;
   line-height: 1;
-  text-shadow: 0 0 0.8cqmin #0b1638, 0 0 1.6cqmin #3a6cff, 0 0.4cqmin 0.6cqmin #000;
+  text-shadow: 0 0 0.8cqmin #0b1638, 0 0 1.6cqmin #3a6cff, 0 0.4cqmin 0.6cqmin var(--pal-black);
 }
 
 /* Animated on your turn: a brass clock dial at the portrait's foot, its hand ticking round. */
@@ -308,9 +308,9 @@
   border-radius: var(--radius-round);
   background: radial-gradient(circle at 40% 32%, #4a5370, #141826 72%);
   box-shadow:
-    0 0 0 1px rgb(0 0 0 / 0.9),
+    0 0 0 1px color-mix(in srgb, var(--pal-black) 90%, transparent),
     inset 0 0 0 max(1px, 0.6cqmin) #d8b25a,
-    0 1px 2px rgb(0 0 0 / 0.6);
+    0 1px 2px color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
 
 .cf .kw-glyphs .kw-part {
@@ -341,8 +341,8 @@
   padding: 0 1px;
   border-radius: var(--radius-pill);
   background: #16693a;
-  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.85);
-  color: #fff;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pal-black) 85%, transparent);
+  color: var(--pal-white);
   font-size: max(7px, 8cqmin);
   font-weight: 900;
   line-height: 1.1;
@@ -352,89 +352,89 @@
 /* ------------------------------------------------------------------------------- motion ---- */
 
 .cf .kw-fx[data-keyword-fx="Can't attack"][data-kw-motion="on"] .kw-anim {
-  animation: kw-chain-sway var(--kw-period-chain) ease-in-out infinite alternate;
+  animation: kw-chain-sway var(--kw-period-chain) ease-in-out 2 alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Immune to Spells"][data-kw-motion="on"] .kw-anim {
-  animation: kw-ward-shimmer var(--kw-period-ward) ease-in-out infinite;
+  animation: kw-ward-shimmer var(--kw-period-ward) ease-in-out 1;
 }
 
 .cf .kw-fx[data-keyword-fx="Poisonous"][data-kw-motion="on"] .kw-anim {
-  animation: kw-venom-drip var(--kw-period-venom) ease-in infinite;
+  animation: kw-venom-drip var(--kw-period-venom) ease-in 1;
 }
 
 .cf .kw-fx[data-keyword-fx="Charge"][data-kw-motion="on"] .kw-anim {
-  animation: kw-streak-rush var(--kw-period-streak) linear infinite;
+  animation: kw-streak-rush var(--kw-period-streak) linear 1;
 }
 
 .cf .kw-fx[data-keyword-fx="Rush"][data-kw-motion="on"] .kw-anim {
-  animation: kw-dash-trail var(--kw-period-dash) ease-out infinite;
+  animation: kw-dash-trail var(--kw-period-dash) ease-out 1;
 }
 
 .cf .kw-fx[data-keyword-fx="Brittle"][data-kw-motion="on"] .kw-anim {
-  animation: kw-crack-flicker var(--kw-period-crack) linear infinite;
+  animation: kw-crack-flicker var(--kw-period-crack) linear 1;
 }
 
 .cf .kw-fx[data-keyword-fx="Lifesteal"][data-kw-motion="on"] .kw-anim {
-  animation: kw-vein-pulse var(--kw-period-vein) ease-in-out infinite;
+  animation: kw-vein-pulse var(--kw-period-vein) ease-in-out 1;
 }
 
 .cf .kw-fx[data-keyword-fx="Reborn"][data-kw-motion="on"] .kw-anim {
-  animation: kw-echo-rise var(--kw-period-echo) ease-out infinite;
+  animation: kw-echo-rise var(--kw-period-echo) ease-out 1;
 }
 
 .cf .kw-fx[data-keyword-fx="Indestructible"][data-kw-motion="on"] .kw-anim {
-  animation: kw-rune-glow var(--kw-period-rune-glow) ease-in-out infinite alternate;
+  animation: kw-rune-glow var(--kw-period-rune-glow) ease-in-out 2 alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="First Strike"][data-kw-motion="on"] .kw-anim {
-  animation: kw-glint-twinkle var(--kw-period-glint) ease-in-out infinite;
+  animation: kw-glint-twinkle var(--kw-period-glint) ease-in-out 1;
 }
 
 .cf .kw-fx[data-keyword-fx="Trample"][data-kw-motion="on"] .kw-anim {
-  animation: kw-shockwave var(--kw-period-shock) ease-out infinite;
+  animation: kw-shockwave var(--kw-period-shock) ease-out 1;
 }
 
 .cf .kw-fx[data-keyword-fx="Cleave"][data-kw-motion="on"] .kw-anim {
-  animation: kw-crescent-swing var(--kw-period-swing) ease-in-out infinite alternate;
+  animation: kw-crescent-swing var(--kw-period-swing) ease-in-out 2 alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Pierce"][data-kw-motion="on"] .kw-anim {
-  animation: kw-spear-thrust var(--kw-period-thrust) ease-in-out infinite;
+  animation: kw-spear-thrust var(--kw-period-thrust) ease-in-out 1;
 }
 
 .cf .kw-fx[data-keyword-fx="Windfury"][data-kw-motion="on"] .kw-anim {
-  animation: kw-gust-sway var(--kw-period-gust) ease-in-out infinite alternate;
+  animation: kw-gust-sway var(--kw-period-gust) ease-in-out 2 alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Temporary"][data-kw-motion="on"] .kw-anim {
-  animation: kw-sand-fall var(--kw-period-sand) linear infinite;
+  animation: kw-sand-fall var(--kw-period-sand) linear 1;
 }
 
 .cf .kw-fx[data-keyword-fx="Deft"][data-kw-motion="on"] .kw-anim {
-  animation: kw-deft-dart var(--kw-period-dart) ease-in-out infinite alternate;
+  animation: kw-deft-dart var(--kw-period-dart) ease-in-out 2 alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Untributable"][data-kw-motion="on"] .kw-anim {
-  animation: kw-untributable-anchor var(--kw-period-anchor) ease-in-out infinite alternate;
+  animation: kw-untributable-anchor var(--kw-period-anchor) ease-in-out 2 alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Equip"][data-kw-motion="on"] .kw-anim {
-  animation: kw-magnet-pull var(--kw-period-magnet) ease-in-out infinite alternate;
+  animation: kw-magnet-pull var(--kw-period-magnet) ease-in-out 2 alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Ranged"][data-kw-motion="on"] .kw-anim {
-  animation: kw-ranged-aim var(--kw-period-aim) ease-in-out infinite alternate;
+  animation: kw-ranged-aim var(--kw-period-aim) ease-in-out 2 alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Flying"][data-kw-motion="on"] .kw-anim {
-  animation: kw-flying-hover var(--kw-period-hover) ease-in-out infinite alternate;
+  animation: kw-flying-hover var(--kw-period-hover) ease-in-out 2 alternate;
 }
 
 /* R1081000: a Flying minion out of Defense hovers above the board, in either row. */
 .cf--minion[data-flying="true"] {
   transform: translateY(-6%);
-  filter: drop-shadow(0 12px 12px rgb(0 0 0 / 0.35));
+  filter: drop-shadow(0 12px 12px color-mix(in srgb, var(--pal-black) 35%, transparent));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -450,81 +450,81 @@
 }
 
 .cf .kw-fx[data-keyword-fx="Cloaked"][data-kw-motion="on"] .kw-anim {
-  animation: kw-cloaked-fade var(--kw-period-cloak) ease-in-out infinite alternate;
+  animation: kw-cloaked-fade var(--kw-period-cloak) ease-in-out 2 alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Crater"][data-kw-motion="on"] .kw-anim {
-  animation: kw-crater-quake var(--kw-period-quake) ease-in-out infinite;
+  animation: kw-crater-quake var(--kw-period-quake) ease-in-out 1;
 }
 
 .cf .kw-fx[data-keyword-fx="Flashback"][data-kw-motion="on"] .kw-anim {
-  animation: kw-flashback-rewind var(--kw-period-rewind) ease-in-out infinite;
+  animation: kw-flashback-rewind var(--kw-period-rewind) ease-in-out 1;
 }
 
 /* R1838000: Tradable's two arrows nudge past each other, a card in and a card out. */
 .cf .kw-fx[data-keyword-fx="Tradable"][data-kw-motion="on"] .kw-anim {
-  animation: kw-trade-swap var(--kw-period-rewind) ease-in-out infinite;
+  animation: kw-trade-swap var(--kw-period-rewind) ease-in-out 1;
 }
 
 /* R1852000: a Starship Piece's hull plate glints as it waits to be built in. */
 .cf .kw-fx[data-keyword-fx="Starship Piece"][data-kw-motion="on"] .kw-anim {
-  animation: kw-starship-piece-glint var(--kw-period-plate) ease-in-out infinite alternate;
+  animation: kw-starship-piece-glint var(--kw-period-plate) ease-in-out 2 alternate;
 }
 
 /* R1852003: a launched Starship's rocket rides its thrust. */
 .cf .kw-fx[data-keyword-fx="Starship"][data-kw-motion="on"] .kw-anim {
-  animation: kw-starship-thrust var(--kw-period-launch) ease-in-out infinite;
+  animation: kw-starship-thrust var(--kw-period-launch) ease-in-out 1;
 }
 
 /* R2657000: Can't Defend's split shield, its halves easing apart and back. */
 .cf .kw-fx[data-keyword-fx="Can't Defend"][data-kw-motion="on"] .kw-anim {
-  animation: kw-cant-defend-split var(--kw-period-split) ease-in-out infinite alternate;
+  animation: kw-cant-defend-split var(--kw-period-split) ease-in-out 2 alternate;
 }
 
 /* R3572000: the Stinkyscape+ kinds. GIGA's four zones breathe, Frenzy's claws flicker, Evasive's arrow slips round its ring; the
    rest are off the field (keywordVisuals.ts `onField`) and keep their loops for the day a card draws them. */
 .cf .kw-fx[data-keyword-fx="GIGA"][data-kw-motion="on"] .kw-anim {
-  animation: kw-giga-pulse var(--kw-period-giga) var(--ease-in-out) infinite alternate;
+  animation: kw-giga-pulse var(--kw-period-giga) var(--ease-in-out) 2 alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Flexible"][data-kw-motion="on"] .kw-anim {
-  animation: kw-flexible-slide var(--kw-period-flexible) var(--ease-in-out) infinite alternate;
+  animation: kw-flexible-slide var(--kw-period-flexible) var(--ease-in-out) 2 alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Frenzy"][data-kw-motion="on"] .kw-anim {
-  animation: kw-frenzy-slash var(--kw-period-frenzy) var(--ease-in-out) infinite;
+  animation: kw-frenzy-slash var(--kw-period-frenzy) var(--ease-in-out) 1;
 }
 
 .cf .kw-fx[data-keyword-fx="Evasive"][data-kw-motion="on"] .kw-anim {
-  animation: kw-evasive-slip var(--kw-period-evasive) var(--ease-in-out) infinite alternate;
+  animation: kw-evasive-slip var(--kw-period-evasive) var(--ease-in-out) 2 alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Tipsy"][data-kw-motion="on"] .kw-anim {
-  animation: kw-tipsy-sway var(--kw-period-tipsy) var(--ease-in-out) infinite alternate;
+  animation: kw-tipsy-sway var(--kw-period-tipsy) var(--ease-in-out) 2 alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Evolve"][data-kw-motion="on"] .kw-anim {
-  animation: kw-evolve-twist var(--kw-period-evolve) var(--ease-in-out) infinite alternate;
+  animation: kw-evolve-twist var(--kw-period-evolve) var(--ease-in-out) 2 alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Burn"][data-kw-motion="on"] .kw-anim {
-  animation: kw-burn-flicker var(--kw-period-burn) var(--ease-in-out) infinite alternate;
+  animation: kw-burn-flicker var(--kw-period-burn) var(--ease-in-out) 2 alternate;
 }
 
 .cf .kw-fx[data-keyword-fx="Toxic"][data-kw-motion="on"] .kw-anim {
-  animation: kw-toxic-drip var(--kw-period-toxic) var(--ease-in) infinite;
+  animation: kw-toxic-drip var(--kw-period-toxic) var(--ease-in) 1;
 }
 
 .cf .kw-fx[data-keyword-fx="Spell Damage"][data-kw-motion="on"] .kw-anim {
-  animation: kw-rune-turn var(--kw-period-rune-turn) linear infinite;
+  animation: kw-rune-turn var(--kw-period-rune-turn) linear 1;
 }
 
 .cf .kw-fx[data-keyword-fx="Animated on your turn"][data-kw-motion="on"] .kw-anim {
-  animation: kw-clock-sweep var(--kw-period-clock) steps(12, end) infinite;
+  animation: kw-clock-sweep var(--kw-period-clock) steps(12, end) 1;
 }
 
 .cf .kw-fx[data-keyword-fx="Animated"][data-kw-motion="on"] .kw-anim {
-  animation: kw-cog-turn var(--kw-period-cog) linear infinite;
+  animation: kw-cog-turn var(--kw-period-cog) linear 1;
 }
 
 .cf .kw-fx[data-keyword-fx="Animated"][data-kw-motion="on"] .kw-cog--small {
@@ -533,15 +533,15 @@
 }
 
 .cf .kw-fx[data-keyword-fx="Lucky"][data-kw-motion="on"] .kw-anim {
-  animation: kw-clover-sparkle var(--kw-period-sparkle) ease-in-out infinite;
+  animation: kw-clover-sparkle var(--kw-period-sparkle) ease-in-out 1;
 }
 
 .cf .kw-fx[data-keyword-fx="Immutable"][data-kw-motion="on"] .kw-anim {
-  animation: kw-seal-glint var(--kw-period-seal) ease-in-out infinite;
+  animation: kw-seal-glint var(--kw-period-seal) ease-in-out 1;
 }
 
 .cf .kw-fx[data-keyword-fx="Stack"][data-kw-motion="on"] .kw-anim {
-  animation: kw-edge-shift var(--kw-period-edge) ease-in-out infinite;
+  animation: kw-edge-shift var(--kw-period-edge) ease-in-out 1;
 }
 
 @keyframes kw-chain-sway {

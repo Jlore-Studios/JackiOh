@@ -30,6 +30,7 @@ describe("R3729000 the Play hub's catalog", () => {
       "solo",
       "solo",
       "solo",
+      "solo",
     ]);
   });
 
@@ -45,7 +46,7 @@ describe("R3729000 the Play hub's catalog", () => {
 
   it("R3729000 a signed-out visitor gets the solo cards alone, and the engine's module is not asked", () => {
     const visitor = playCards({ signedIn: false, dailyWaiting: 5 });
-    expect(visitor.map((card) => card.id)).toEqual(["practice", "dungeon", "tutorial"]);
+    expect(visitor.map((card) => card.id)).toEqual(["practice", "dungeon", "assault", "tutorial"]);
     expect(visitor.every((card) => card.group === "solo")).toBe(true);
   });
 
