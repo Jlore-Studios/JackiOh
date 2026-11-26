@@ -21713,17 +21713,8 @@
       }
     },
     "5122": {
-      "action": "plan",
-      "asks": [
-        "c:7204762409"
-      ],
-      "build_next": {
-        "from_run": "45906462556",
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-26T23:20:19Z",
-        "until": "2026-11-26T23:50:19Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-26T23:20:10Z",
         "difficulty": "medium",
@@ -21742,10 +21733,9 @@
         "reason": "planned on gemini-3.8-flash-high",
         "trail": "- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && sed -n '30,60p' crates/cards/src/scripts/infinite_assault/c144_total_compromise.rs\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && sed -n '65,85p' crates/cards/src/scripts/infinite_assault/c225_root_kit_the_exploiter.rs\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && sed -n '10,30p' crates/cards/src/scripts/meditative/c015_smelly_steven.rs\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && sed -n '30,55p' crates/cards/src/scripts/infinite_assault/c072_overclock_to_infinity.rs\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && cargo jackioh sweep infiniteassault-123\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5122/.bot-plan.md\"}\n- said: Waiting for `cargo jackioh sweep infiniteassault-123` to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && find training/history/ -type f\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && cargo jackioh spec check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && grep -rn \"Alignment Tax\" spec/rulings/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && head -n 10 spec/rulings/R4590004.md\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && grep -rn \"c225\" crates/cards/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && head -n 5 crates/cards/src/scripts/infinite_assault/c225_root_kit_the_exploiter.rs\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && grep -i \"Root Kit\" spec/CARDS.md\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && grep \"infiniteassault-123\" crates/server/tests/fixtures/practice-claim.json || echo \"Not found in claim fixture\"\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && grep -E \"classicplus-t-ai-07|infiniteassault-144|infiniteassault-225\" crates/server/tests/fixtures/practice-claim.json || echo \"None fo\u2026\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && target/release/jackioh gate --help\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && cat crates/ai/tests/ai/mod.rs\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5122/.bot-plan.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5122 && wc -w -c .bot-plan.md\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Line 2: The AI: its decisions or its search (crates/ai/src/).\"} --> ## Goal The AI evaluates unconditional next-turn price hikes (CostRule modifiers with positive amount, no card type restrictions, no minimum cost threshold, and no created-only filter, whose\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "agy",
       "owner_since": "2026-11-26T22:42:11Z",
       "owner_why": "it plans it",
@@ -21758,12 +21748,14 @@
       "provider": "agy",
       "queued_at": "2026-11-26T22:32:18Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45906462556",
+      "run_id": "pending:dbbf6055-1795735247",
       "runs_on": "night-vm-agy",
-      "started_at": "2026-11-26T22:42:11Z",
+      "started_at": "2026-11-26T23:21:03Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7204762409"
+      ]
     },
     "5123": {
       "failures": 0,
@@ -21779,9 +21771,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T22:53:48Z",
+    "at": "2026-11-26T23:21:03Z",
     "url": "",
-    "what": "build #5109 on claude-7"
+    "what": "build #5122 on agy"
   },
   "last_sweep": {
     "at": "2026-11-26T23:14:04Z",
