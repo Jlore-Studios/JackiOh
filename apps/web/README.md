@@ -415,7 +415,7 @@ each have a soft sound (`audio/sfx.ts`), and lifting a card buzzes a phone (`hap
 deal), effects off is `calm` (the sounds stay, the flourishes go), the rest `full`. `Game.tsx` writes it as
 `data-card-motion` and board.css reads it.
 
-**Back in a live online match asks first** (R2479000). While `/match/<id>` shows a view with no result on a socket neither voided nor refused, `routes/match.tsx` holds `guardLeaving`: every way off opens `ConfirmLeaveMatch.tsx`'s `leave-match-dialog`, naming `DISCONNECT_GRACE_SECONDS`. `leave-match-stay` has the focus and is what Escape, Back and a click outside do; `leave-match-leave` makes the held move. A result or leaving the route releases the guard. The co-op board asks too (R2973000, §13.8): DuosRoute.tsx holds the same guard while its view is live, and its line names the teammate playing on and the AI taking the seat after DISCONNECT_GRACE_SECONDS.
+**Back in a live online match asks first** (R2479000). While `/match/<id>` shows a view with no result on a socket neither voided nor refused, `routes/match.tsx` holds the leave guard (`useLeaveGuard`, `net/navigate.ts`): every way off opens `ConfirmLeaveMatch.tsx`'s `leave-match-dialog`, naming `DISCONNECT_GRACE_SECONDS`. `leave-match-stay` has the focus and is what Escape, Back and a click outside do; `leave-match-leave` makes the held move. A result or leaving the route releases the guard. The co-op board asks too (R2973000, §13.8): DuosRoute.tsx holds the same guard while its view is live, and its line names the teammate playing on and the AI taking the seat after DISCONNECT_GRACE_SECONDS.
 
 **A draw offer is a question with two answers** (SPEC §2.5, R36, R269). Only the active player
 offers, and `view.drawOffer = { by }` stands on both seats until the offer is answered or lapses at
@@ -695,7 +695,8 @@ src/replay/
                   `start` and `shareOnOpen` for a result screen's two buttons (R768000)
   ReplayToolbar.tsx  the controls both replays share (#2025): step and turn buttons, Play, the scrubber (the board
                   moves when it is let go), the readout and an actions slot; `replayTestid`, `isTyping`
-  OpenedReplay.tsx  a source loaded first (a finished match's first page), then the player
+  OpenedReplay.tsx  a source loaded first (a finished match's first page), then the player; `ReplayLoadStatus`, the
+                  loading or failure both loaded replays show (this one and the co-op replay)
   ShareGif.tsx    "Share as GIF" (#513, R513000): the clip, the shape, progress, cancel, Share or Download
   download.ts     "Download JSON" (#1141, R1141000): every step of a source and the row's facts as one file, and
                   `readReplayJsonFile`, then `replayStepsOf`, opens one again (#1160);
@@ -1204,6 +1205,9 @@ src/practice/
                       visible action at a time (think indicator, gaps from config.ts)
   aiTable.ts          the hooks that pace the AI at a table (controller state, board busy, the voice and
                       showcase holds), shared by the route, a dungeon fight's screen and an Infinite Assault fight's screen
+  FightStages.tsx     the screens around a dungeon fight's and an Infinite Assault fight's board: the shell, the
+                      no-setup, stopped and shuffling stages and the board's Menu, each screen passing its test ids
+  savedDecks.ts       `savedDecksFor`: the saved decks the route's and the Assault's deck pickers offer
   config.ts testids.ts PracticeSetup.tsx ThinkIndicator.tsx PracticeLeave.tsx PracticeResult.tsx practice.css
   decks.ts            random, the three named practice decks (hand-built lists), the account's saved decks by name
   lastBoard.ts        the human's last practice board (C+ #29, R417, R508) in localStorage

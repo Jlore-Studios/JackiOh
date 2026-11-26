@@ -26,7 +26,7 @@ import { formatSeconds, t, useLocale } from "../i18n/i18n.ts";
 import { Loading, SITE_NAME, ShellPanel, documentTitleFor } from "../main.tsx";
 import { BackLayer } from "../net/backLayers.ts";
 import { getDuosAgain, offerDuosAgain, type DuosAgainStatus } from "../net/duos.ts";
-import { guardLeaving, navigate, paths } from "../net/navigate.ts";
+import { navigate, paths, useLeaveGuard } from "../net/navigate.ts";
 import { BackLink, followInApp } from "../routes/nav.tsx";
 import { useSetting } from "../settings/index.ts";
 import { useSideline } from "../sideline/useSideline.ts";
@@ -225,19 +225,9 @@ export function DuosRoute({ matchId, token }: { matchId: string; token: string }
   // in-app move but a forced one) asks first and names the teammate playing on and the AI taking the
   // seat after the disconnect grace (§13.8). A finished game, or a closed or refused socket, has
   // nothing to come back to, so it is left at once.
-  const [leaving, setLeaving] = useState<{ leave: () => void } | null>(null);
   const atStake =
     view !== null && view.result === null && match.connection !== "closed" && match.connection !== "refused";
-  useEffect(() => {
-    if (!atStake) return;
-    const release = guardLeaving((leave) => {
-      setLeaving({ leave });
-    });
-    return () => {
-      release();
-      setLeaving(null);
-    };
-  }, [atStake]);
+  const [leaving, setLeaving] = useLeaveGuard(atStake);
 
   const refusedWith = match.connection === "refused" ? (match.error ?? "no reason given") : null;
   useEffect(() => {
