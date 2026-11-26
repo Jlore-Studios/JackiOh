@@ -23902,24 +23902,13 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "gemini"
-        ],
+        "approvals": [],
         "builder": "gemini",
         "built_by": "agy",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "gemini",
-            "provider": "agy",
-            "run": "45811708284",
-            "tier": "medium"
-          }
-        ],
-        "sha": "d058d21e310edb96b4fa7b7e5a6f26e471f1168b",
-        "tiers": {
-          "gemini": "medium"
-        }
+        "reviews": [],
+        "sha": "f1899a101d79a5da0a6affb2b0b1e6590b8b527d",
+        "tiers": {}
       },
       "waiting_comment": 7192366278
     },
