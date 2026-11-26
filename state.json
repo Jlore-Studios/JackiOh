@@ -21719,17 +21719,8 @@
       ]
     },
     "4991": {
-      "action": "plan",
-      "asks": [
-        "c:7181103198"
-      ],
-      "build_next": {
-        "from_run": "45747206492",
-        "model": "opus",
-        "provider": "claude-1",
-        "since": "2026-11-26T03:55:07Z",
-        "until": "2026-11-26T04:25:07Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-26T03:54:58Z",
         "difficulty": "hard",
@@ -21748,10 +21739,9 @@
         "reason": "planned on opus",
         "trail": ": \"Check for an existing release jackioh binary\"}\n- Bash: {\"command\": \"tail -3 /tmp/probe-cards2.log; cd /tmp/probe-4991 && git diff crates/cards/src/scripts/classic/c014_shadowstep.rs | head -80\", \"description\": \"Check probe progress and Shadowstep test di\u2026\n- Bash: {\"command\": \"tail -3 /tmp/probe-cards2.log; tail -3 /tmp/probe-clippy.log 2>/dev/null\", \"description\": \"Check probe rerun progress\"}\n- tool error: Exit code 1 \u001b[1m\u001b[92m Compiling\u001b[0m jackioh-cards v0.5.0 (/tmp/probe-4991/crates/cards) \u001b[1m\u001b[92m Compiling\u001b[0m jackioh-engine v0.5.0 (/tmp/probe-4991/crates/engine)\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4991/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"Engine rules: the change edits crates/engine/src/zones.rs (flicker_in_\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; tail -3 /tmp/probe-cards2.log; tail -3 /tmp/probe-clippy.log 2>/dev/null\", \"description\": \"Count plan words and check probe\"}\n- tool error: Exit code 1 2363 .bot-plan.md \u001b[1m\u001b[92m Compiling\u001b[0m jackioh-cards v0.5.0 (/tmp/probe-4991/crates/cards) \u001b[1m\u001b[92m Compiling\u001b[0m jackioh-engine v0.5.0 (/tmp/probe-4991/crates/engine)\n- Monitor: {\"command\": \"until grep -q 'CLIPPY EXIT' /tmp/probe-clippy.log 2>/dev/null; do sleep 15; done; tail -5 /tmp/probe-clippy.log\", \"description\": \"Wait for probe tests and clippy to finish\", \"timeout_ms\"\u2026\n- tool error: This Bash command contains multiple operations. The following parts require approval: grep -q 'CLIPPY EXIT' /tmp/probe-clippy.log, tail -5 /tmp/probe-clippy.log\n- Bash: {\"command\": \"sed -n '/fn r767000_the_script_kept_for_v0_6_0c_keeps_its_3/,/^ }/p' crates/cards/src/scripts/stinkyscape/c111_shockwave447.rs | head -20; tail -2 /tmp/probe-cards2.log\", \"description\": \u2026\n- Bash: {\"command\": \"tail -2 /tmp/probe-cards2.log; tail -2 /tmp/probe-clippy.log 2>/dev/null\", \"description\": \"Poll probe progress\"}\n- tool error: Exit code 1 \u001b[1m\u001b[92m Compiling\u001b[0m jackioh-cards v0.5.0 (/tmp/probe-4991/crates/cards) \u001b[1m\u001b[92m Compiling\u001b[0m jackioh-engine v0.5.0 (/tmp/probe-4991/crates/engine)\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4991/.bot-plan.md\", \"old_string\": \"new query `self_arrived_on_field` \\u2026; nothing reaches the client.`\", \"new_string\": \"new q\u2026\n- Bash: {\"command\": \"grep -n 'brittle' crates/engine/src/testkit/invariants.rs | sed -n 1,30p | cut -c1-160\", \"description\": \"Scan invariants for Brittle checks\"}\n- Bash: {\"command\": \"tail -2 /tmp/probe-cards2.log; tail -2 /tmp/probe-clippy.log 2>/dev/null; true\", \"description\": \"Poll probe progress\"}\n- Bash: {\"command\": \"ls luau | head; sed -n 1,25p luau/README.md 2>/dev/null | cut -c1-300\", \"description\": \"Check whether the luau port mirrors engine code\"}\n- Bash: {\"command\": \"sed -n 1,30p crates/tools/perf-corpus/README.md 2>/dev/null | cut -c1-400\", \"description\": \"Read the perf corpus README\"}\n- Bash: {\"command\": \"tail -2 /tmp/probe-cards2.log; tail -2 /tmp/probe-clippy.log 2>/dev/null; true\", \"description\": \"Poll probe progress\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4991/.bot-plan.md\", \"old_string\": \"- [ ] fmt, `clippy -p jackioh-engine -p jackioh-cards --all-targets -- -D warnings`, catalog,\u2026\n- Bash: {\"command\": \"tail -2 /tmp/probe-cards2.log; tail -2 /tmp/probe-clippy.log 2>/dev/null; true\", \"description\": \"Poll probe progress\"}\n- Bash: {\"command\": \"ls -la /tmp/probe-cards2.log /tmp/probe-clippy.log 2>&1; date\", \"description\": \"Check probe log timestamps\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4991/.bot-plan.md\", \"offset\": 1, \"limit\": 40}\n- Bash: {\"command\": \"ls spec/rulings/R2173001.md spec/rulings/R1846000.md spec/rulings/R4844000.md spec/rulings/R4779000.md spec/rulings/R0687.md spec/rulings/R0638.md 2>&1; tail -1 /tmp/probe-cards2.log\", \"\u2026\n- Bash: {\"command\": \"tail -1 /tmp/probe-cards2.log; date\", \"description\": \"Poll probe progress\"}\n- Bash: {\"command\": \"until grep -q 'CLIPPY EXIT' /tmp/probe-clippy.log 2>/dev/null; do sleep 20; done; echo done\", \"description\": \"Wait in background for probe clippy to finish\", \"timeout\": 3000000, \"run_in_\u2026\n- said: I'm waiting for the second probe run (tests with the engine-helper version, then clippy) to finish before finalizing the plan.\n- Bash: {\"command\": \"tail -1 /tmp/probe-cards2.log\", \"description\": \"Poll probe progress\"}\n- said: Waiting on the background probe; the plan draft is in `.bot-plan.md`.\n- Bash: {\"command\": \"grep -c '\\\\.\\\\.\\\\. ok' /tmp/probe-cards2.log; grep -n 'FAILED\\\\|failed\\\\|panicked\\\\|test result\\\\|CARDS EXIT' /tmp/probe-cards2.log | head; grep -n 'r4991000\\\\|r441_\\\\|v0_6_14i' /tmp/pro\u2026\n- Bash: {\"command\": \"grep -c 'Checking jackioh-cards\\\\|Checking jackioh' /tmp/probe-clippy.log; grep 'jackioh' /tmp/probe-clippy.log; grep -c 'warning\\\\|error' /tmp/probe-clippy.log\", \"description\": \"Confirm\u2026\n- Bash: {\"command\": \"cd /tmp/probe-4991 && cargo clippy -p jackioh-cards --all-targets -- -D warnings 2>&1 | tail -4\", \"description\": \"Run clippy on the cards crate alone in the probe\", \"timeout\": 1800000}\n- Bash: {\"command\": \"git worktree remove --force /tmp/probe-4991 && git worktree prune && rm -rf /tmp/staging-4991 && git worktree list | head -5; git status --short | head\", \"description\": \"Remove the probe\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4991/.bot-plan.md\", \"offset\": 40}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4991/.bot-plan.md\", \"old_string\": \"## Tests\\n\\n- `crates/engine/tests/rules/brittle.rs`, mod `r385_r441_b3_3_rule_5_vanilla_and_\u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; git status --short | head -3\", \"description\": \"Check plan length and that the worktree is clean\"}\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"Engine rules: the change edits crates/engine/src/zones.rs (flicker_in_place) and adds a read in crates/engine/src/query.rs\"} --> ## Goal Two ways onto the field stop skipping a step that every other arrival takes. 1. **Flicker and Brittle.** A card a Flicker\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-26T03:10:26Z",
       "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
@@ -21764,12 +21754,14 @@
       "provider": "claude-1",
       "queued_at": "2026-11-26T02:46:40Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45747206492",
+      "run_id": "pending:226f0320-1795665354",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-26T03:10:26Z",
+      "started_at": "2026-11-26T03:56:27Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7181103198"
+      ]
     },
     "4992": {
       "action": "build",
@@ -22197,9 +22189,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T03:46:56Z",
+    "at": "2026-11-26T03:56:27Z",
     "url": "",
-    "what": "plan #4990 on claude-4"
+    "what": "build #4991 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-26T03:41:28Z",
