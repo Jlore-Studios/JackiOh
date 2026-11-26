@@ -46,7 +46,7 @@ use crate::observe::{HIDDEN_DEF_ID, ai_to_act, redact, unanswered_draw_offer};
 use crate::reply::{hidden_card_ids, reply_score};
 use crate::search::{Line, ReplayFill, beam_search, replay_line};
 use crate::simulate::{
-    CountingNodeCounter, LineStatus, create_node_counter, create_sub_counter, create_wrap_up_counter,
+    CountingNodeCounter, LineStatus, create_beam_counter, create_node_counter, create_sub_counter,
     note_sim_panic,
 };
 use crate::types::{
@@ -609,8 +609,9 @@ fn plan(
     // reply and the other determinizations below still run until the hard stop. R4801000: it is first
     // polled once the beam has tried every move at its root (`end_root`), however many nodes those cost,
     // so a wrap-up that fired before the beam still leaves it a line, the root's End turn among them.
+    // R4604014: and so is the slice's own limit, so a root move dearer than the slice still closes one.
     let (found, beam_stopped_by) = {
-        let beam_counter = create_wrap_up_counter(counter, remaining - reserve, wrap_up);
+        let beam_counter = create_beam_counter(counter, remaining - reserve, wrap_up);
         let found = beam_search(det0, seat, &beam_counter, budget, &prices);
         (found, beam_counter.stopped_by())
     };
