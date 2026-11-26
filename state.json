@@ -22426,15 +22426,8 @@
       "waiting_comment": 7183917669
     },
     "5013": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45768629012",
-        "model": "opus",
-        "provider": "claude-8",
-        "since": "2026-11-26T06:44:10Z",
-        "until": "2026-11-26T07:14:10Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -22446,10 +22439,9 @@
         "reason": "planned on opus",
         "trail": "ty:game/Hand.tsx\\\" \\\"card-type:game/Card.tsx\\\" \\\u2026\n- Bash: {\"command\": \"grep -n \\\"SIDE_LABEL\\\\s*=\\\\|GRACE_LABEL\\\\s*=\\\\|function urgencyLabel\\\" -A4 game/Clock.tsx | head -24; grep -rn \\\"FACE_DOWN_TAG\\\\s*=\\\\|THEIR_HAND_TITLE\\\\s*=\\\\|RESULT_WORD\\\\b.*=\\\\|CHAOS_TE\u2026\n- Bash: {\"command\": \"grep -n -A8 \\\"^\\\\.fx-chaos::before\\\\|^\\\\.fx-roll::before\\\\|^\\\\.fx-result::after\\\\|^\\\\.fx-banner {\\\" fx/fx.css | grep -n \\\"content\\\\|{\\\" ; grep -n -B2 -A10 \\\"prompt-rewards > button::befo\u2026\n- Bash: {\"command\": \"grep -rn \\\"fx-chaos\\\\|fx-roll\\\\b\\\\|fx-result\\\" --include=*.ts fx | grep -v test | grep -i \\\"text\\\\|data-text\\\" | head -8; grep -rn \\\"\\\\\\\"fx-banner\\\\\\\"\\\\|fx-banner'\\\" --include=*.ts --inc\u2026\n- Bash: {\"command\": \"grep -rln \\\"fx-chaos\\\\|fx-roll\\\\|fx-result\\\\|fx-banner\\\" --include=*.ts --include=*.tsx . | grep -v \\\"\\\\.test\\\\.\\\" | head; grep -rn \\\"data-text\\\" --include=*.ts fx/*.ts | grep -v test | \u2026\n- Bash: {\"command\": \"g(){ grep -rn -A1 \\\"$1\\\" $2 2>/dev/null | grep -v \\\"^\\\\s*$\\\" | head -${3:-3} | cut -c1-180; }; g 'FACE_DOWN_TAG =' game; g '\\\"db-new\\\"' game/deckbuilder/PoolGrid.tsx; g 'collection-tile_\u2026\n- Bash: {\"command\": \"grep -rln --include=*.test.ts --include=*.test.tsx -e \\\"font-size\\\\|fontSize\\\\|letter-spacing\\\\|font-family\\\" . | head -20; grep -rn --include=*.test.ts --include=*.test.tsx -e \\\"font-si\u2026\n- Bash: {\"command\": \"for f in auth/oauth-row.test.ts cards/versionLooks5.test.tsx cards/versionLooks4.test.tsx cards/fit.test.tsx cards/cosmetics.test.tsx; do echo \\\"== $f\\\"; grep -n -e \\\"font-size\\\\|fontSiz\u2026\n- Bash: {\"command\": \"sed -n 50,100p auth/oauth-row.test.ts\", \"description\": \"Read oauth-row test font check\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5013 && grep -rn -E \\\"contains\\\\([^)]*\\\\\\\"[A-Z]{3,}[ \\\\\\\"]\\\" e2e/cypress | grep -v \\\"TODO\\\\|EMAIL\\\\|URL\\\\|JSON\\\" | head -10\", \"description\": \"Find e2\u2026\n- Bash: {\"command\": \"cd apps/web/src && for l in \\\"game/board.css:182\\\" \\\"game/board.css:610\\\" \\\"game/clock.css:47\\\" \\\"game/modifierList.css:52\\\" \\\"routes/stats.css:229\\\" \\\"routes/stats.css:559\\\" \\\"patches/p\u2026\n- Bash: {\"command\": \"sed -n 176,186p game/board.css; sed -n 604,612p game/board.css; sed -n 40,48p game/clock.css; sed -n 220,230p routes/stats.css; sed -n 553,560p routes/stats.css\", \"description\": \"Read ke\u2026\n- Bash: {\"command\": \"grep -rn -B8 \\\"font-family: var(--font-text)\\\" --include=*.css . | grep -E \\\"\\\\{|font-family\\\" | head -20; grep -rn \\\"prompt-title\\\\b\\\" --include=*.css . | head -5; grep -rn \\\"^\\\\s*h[1-3\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5013 && grep -rln \\\"type-md\\\\|type-3xs\\\\|type-2xs\\\\|typescale\\\" spec docs apps/web/README.md e2e/README.md 2>/dev/null; grep -rn \\\"13px\\\\b\\\" spec/*.m\u2026\n- Bash: {\"command\": \"cd apps/web/src && grep -n \\\"letter-spacing\\\\|text-transform\\\" spacing.test.ts surfaces.test.ts palette.test.ts motion.test.ts buttons.test.ts 2>/dev/null | head; grep -rln --include=*.t\u2026\n- Bash: {\"command\": \"cd apps/web/src && grep -n \\\"result-overlay__word\\\\|letter\\\\|uppercase\\\\|type-\\\" game/animations.test.ts static-pages.test.ts game/hasSelectors.test.ts dialogs.test.ts routes/top-bar.tes\u2026\n- Bash: {\"command\": \"grep -rn --include=*.tsx --include=*.ts -e \\\"textTransform\\\\|text-transform\\\" . | grep -v \\\"\\\\.test\\\\.\\\" | head; grep -rn \\\"uppercase\\\" --include=*.html ../ 2>/dev/null | grep -v node_mo\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5013 && sed -n 288,306p e2e/cypress/component/deckbuilder-layout.cy.tsx; grep -n \\\"LABEL_MIN_PX =\\\" e2e/cypress/component/emotes-layout.cy.tsx\", \"des\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5013/apps/web/src && grep -rn \\\"documentElement.lang\\\\|setAttribute(\\\\\\\"lang\\\\\\\"\\\\|lang=\\\" --include=*.ts --include=*.tsx i18n main.tsx 2>/dev/null |\u2026\n- Bash: {\"command\": \"grep -n \\\"locale\\\\b.*=\\\\|type Locale\\\\|LOCALES\\\\s*=\\\" i18n/i18n.ts | head -8\", \"description\": \"Find the locale codes\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5013 && grep -n \\\"Patch notes players read\\\" -A25 docs/issues-and-patches.md | head -45\", \"description\": \"Read player note rules\"}\n- Bash: {\"command\": \"f=$(ls crates/cards/patches.json 2>/dev/null || find crates/cards -name patches.json | head -1); echo $f; python3 -I - \\\"$f\\\" <<'EOF'\\nimport json,sys\\nd=json.load(open(sys.argv[1]))\\nps\u2026\n- Bash: {\"command\": \"python3 -I - crates/cards/patches/patches.json <<'EOF'\\nimport json,sys\\nd=json.load(open(sys.argv[1]))\\nprint(type(d), list(d.keys())[:5] if isinstance(d,dict) else len(d))\\nps=d if isi\u2026\n- Bash: {\"command\": \"python3 -I - crates/cards/patches/patches.json <<'EOF'\\nimport json,sys\\nps=json.load(open(sys.argv[1]))\\nn=0\\nfor p in reversed(ps):\\n s=json.dumps(p)\\n if '\\\"visual\\\"' in s or 'look' i\u2026\n- Bash: {\"command\": \"cd apps/web/src && sed -n 94,108p game/showcase/showcase.css; sed -n 158,168p game/showcase/showcase.css; sed -n 1766,1778p game/animations.css; grep -n \\\"hero-inspect-title\\\" --include=\u2026\n- Bash: {\"command\": \"sed -n 86,93p game/showcase/showcase.css; sed -n 232,250p emotes/portrait.css\", \"description\": \"Read showcase ribbon selector and hero inspect title rule\"}\n- Bash: {\"command\": \"sed -n 180,203p index.css\", \"description\": \"Read index.css balanced headline block\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5013 && cat >> .bot-plan.md <<'EOF'\\n\\n## Status (resumed run)\\n- Casing survey done by hand: labels render t(\\\"Sentence case\\\") strings; removing up\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5013/.bot-plan.md\", \"content\": \"**Goal.** `typescale.css` becomes a 9-step scale around a 16px body: `--type-2xs` 10 (card faces only), `xs` 11, `sm` \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- said: **Goal.** `typescale.css` becomes a 9-step scale around a 16px body: `--type-2xs` 10 (card faces only), `xs` 11, `sm` 12, `md` 14 (the board's base, which the em forms are fractions of), `lg` 16 (the body), `xl` 18, `2xl` 20, `3xl` 24, `4xl` 30. `TYPE_MAX` drops to 9, and no sheet outside `cards/` \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-26T05:25:31Z",
       "owner_why": "it plans it",
@@ -22462,9 +22454,9 @@
       "provider": "claude-8",
       "queued_at": "2026-11-26T05:20:24Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45768629012",
+      "run_id": "pending:70fcdb59-1795675488",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-26T06:30:07Z",
+      "started_at": "2026-11-26T06:45:19Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 7183919190
@@ -22744,9 +22736,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T06:39:47Z",
+    "at": "2026-11-26T06:45:19Z",
     "url": "",
-    "what": "plan #5015 on claude-6"
+    "what": "build #5013 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-26T06:37:52Z",
