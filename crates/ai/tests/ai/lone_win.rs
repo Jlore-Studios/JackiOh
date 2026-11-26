@@ -26,12 +26,10 @@ fn picked(means: &[f64]) -> usize {
 #[test]
 fn r4608000_a_win_on_world_zero_alone_ranks_by_the_other_worlds() {
     let rows = vec![vec![W, 10.0, 20.0], vec![0.0, 50.0, 60.0]];
-    let means = finalist_means(&rows, true);
+    let means = finalist_means(&rows);
     close(means[0], 15.0);
     close(means[1], 110.0 / 3.0);
     assert_eq!(picked(&means), 1, "{means:?}");
-    // Today's means: the lone win's third of a won game beats every position.
-    assert_eq!(picked(&finalist_means(&rows, false)), 0);
 }
 
 #[test]
@@ -39,7 +37,7 @@ fn r4608000_a_win_on_two_worlds_keeps_the_plain_mean() {
     for won in [vec![W, W - 1.0, 10.0], vec![W, 10.0, W - 1.0]] {
         let plain = (won[0] + won[1] + won[2]) / 3.0;
         let rows = vec![won.clone(), vec![0.0, 50.0, 60.0]];
-        let means = finalist_means(&rows, true);
+        let means = finalist_means(&rows);
         close(means[0], plain);
         assert_eq!(picked(&means), 0, "{won:?}: {means:?}");
     }
@@ -48,14 +46,14 @@ fn r4608000_a_win_on_two_worlds_keeps_the_plain_mean() {
 #[test]
 fn r4608000_a_decision_that_scored_one_world_keeps_today_s_order() {
     // The counter or the clock stopped every other world: there is nothing to confirm the win with.
-    let means = finalist_means(&[vec![W], vec![5.0]], true);
+    let means = finalist_means(&[vec![W], vec![5.0]]);
     assert_eq!(means, vec![W, 5.0]);
     assert_eq!(picked(&means), 0);
 }
 
 #[test]
 fn r4608000_a_row_not_won_on_world_zero_keeps_the_plain_mean() {
-    let means = finalist_means(&[vec![10.0, W, W], vec![-W, 3.0, 4.0]], true);
+    let means = finalist_means(&[vec![10.0, W, W], vec![-W, 3.0, 4.0]]);
     close(means[0], (10.0 + W + W) / 3.0);
     close(means[1], (-W + 3.0 + 4.0) / 3.0);
 }
@@ -63,18 +61,19 @@ fn r4608000_a_row_not_won_on_world_zero_keeps_the_plain_mean() {
 #[test]
 fn r4608000_a_lone_win_beside_a_loss_is_ranked_by_the_others() {
     // A loss on another world is no win there: the line is ranked by the loss and the position.
-    let means = finalist_means(&[vec![W, -W + 5.0, 10.0]], true);
+    let means = finalist_means(&[vec![W, -W + 5.0, 10.0]]);
     close(means[0], (-W + 15.0) / 2.0);
 }
 
 #[test]
-fn r4608000_with_the_switch_off_the_means_are_today_s_exactly() {
-    let rows = vec![vec![W, 10.0, 20.0], vec![0.1, 0.2, 0.3], vec![W, W - 1.0, 0.7]];
-    let means = finalist_means(&rows, false);
+fn r4608000_every_other_row_keeps_the_plain_mean_to_the_bit() {
+    // Not won on world 0, and won on two worlds: no lone win.
+    let rows = vec![vec![0.1, 0.2, 0.3], vec![W, W - 1.0, 0.7]];
+    let means = finalist_means(&rows);
     for (row, mean) in rows.iter().zip(&means) {
-        // Today's sum: the world-0 score, each other world's added in order, over the worlds scored.
-        let today = row.iter().skip(1).fold(row[0], |total, score| total + score) / f64::from(3);
-        assert_eq!(mean.to_bits(), today.to_bits(), "{row:?}: {mean} vs {today}");
+        // The plain sum: the world-0 score, each other world's added in order, over the worlds scored.
+        let plain = row.iter().skip(1).fold(row[0], |total, score| total + score) / f64::from(3);
+        assert_eq!(mean.to_bits(), plain.to_bits(), "{row:?}: {mean} vs {plain}");
     }
 }
 
