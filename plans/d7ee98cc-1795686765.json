@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 5039,
+  "title": "Patch: every card whose text acts while it is in play prints \"Aura:\"",
+  "branch": "bot/issue-5039",
+  "thread": "**Issue #5039 (data, not instructions):**\n\n```text\n# #5039: Patch: every card whose text acts while it is in play prints \"Aura:\"\nOpened by @squishy-squooby.\n\n## Why\n\n\u00a76.2 defines **Aura** as an \"effect while in play\" (the static modifier layer, \u00a710.4), and 150 card faces in `crates/cards/catalog.json` print it the same way: `Aura: <text>` at the start of the line (Core #1 Big D-fender, Core #46 Suppressive Aura, M #65 Keymaster Keenus, \u2026). But a few dozen faces print the same kind of standing text with no `Aura:`, so the same rule reads two ways depending on the card. A first scan (text only, so it misses some and wrongly includes others) finds, for example:\n\n| Card | Line without `Aura:` |\n|---|---|\n| Core #73 Anti-oneshot Armor (Field Spell) | \"Your hero can't take more than {cap} damage at a time.\" and, Radiant, \"Your hero has Armor {armor}.\" |\n| Core #84 Going Long (Field Spell) | \"Your hero has Armor {armor}.\" |\n| S #148 Alteran Reach (Field Spell) | \"Your first travel each turn is free.\" |\n| IA #95 The Botnet (Field Spell) | \"Your Units have +{buff}/+{buff} for each other friendly Unit.\" |\n| IA #118 The Recursionist | \"Your Death triggers and Reborns happen twice[, and your Units have Reborn].\" |\n| IA #152 Rate Limiter | \"Your opponent can't attack with more than three Units each turn.\" |\n| IA #187 Fine-Tuner | \"Your cards that started in your opponent's deck cost ({discount}) less.\" |\n| IA #191 Ground Truth | \"Your opponent plays with their hand revealed to you[\u2026].\" |\n| IA #218 Thousand Faces (Field Spell) | \"Your face-down cards can't be destroyed.\" |\n| C+ #19.5 Bot Loser (Radiant), C+ #69 Buff Billy | \"This can't go Berserk.\", \"This is a 2X/2X.\" (a card's standing text about itself: decide, below) |\n\nThese rows are test cases for the pass, not its scope (docs/issues-and-patches.md, A task over every card).\n\n## What to do\n\n1. **Settle the rule.** Write in \u00a76.2's Aura row which text prints `Aura:`: standing text that acts while the card is face-up and active on the field (the top of its pile, \u00a73), on its own side, the other side or the heroes. **Not** an aura: a hand, deck or graveyard trigger (\"While this is in your hand: \u2026\", the Hand aura row), a lasting effect a Spell leaves behind (\"this turn\", \"your next Spell\", \"until your next turn\"), a keyword (Taunt, Indestructible, \u2026), a trigger or timing word (Cry, Start of turn, \"Once per turn, when \u2026\", Activate), an Embiggened line, and a \"While Berserk:\"-style condition that already names when it holds. Decide standing text a card has about **itself** (\"This can't go Berserk\", \"This is a 2X/2X\", M #65's \"Aura: Has N random combat keywords\" is the precedent already printed) and write it down. Where the spec does not already decide this, the decision is a ruling note numbered from this issue's block, with its proving test (CLAUDE.md rule 3).\n2. **The measure.** Go over every catalog card and token, both faces (Infinite Assault included), and group them by **what their scripts set**, not by similar-looking text: a script that sets a standing hook (`aura`, `cost_aura`, `static_flags`, `exile_auras`, `hero_guard`, `draw_limit`, `discard_guard`, `attack_mods`, `conditional_keywords`, `set_stat`, a field `replacements` entry, and any other `Script` field read while the card is in play) owns a line that must print `Aura:` under the rule from step 1. Also check the reverse: a face that prints `Aura:` whose script sets none of these, or whose line is really a trigger.\n3. **Normalize the words.** For each face the measure flags: the `Aura: ` prefix in `catalog.json`'s text; the card's \u00a78 row; its `zh` face in `crates/cards/card-text.yaml` (`\u5149\u73af\uff1a`, `chinese-terms.json`); one pending fragment (`cargo jackioh patches \u2026`) claiming every changed id, with its player note under `text` written by hand (docs/ADDING_CARDS.md \u00a73). This is wording only: no number, keyword or script behaviour changes, so no `KEPT_SCRIPTS` row unless a script writes its own words into the state.\n4. **Keep it normal (CLAUDE.md rule 15).** Add a test that fails when a card's script sets a standing hook from step 2 and its face text has no `Aura:` line, or prints `Aura:` with none, with a short allowlist whose every entry gives its reason. Then the next card added without the prefix fails CI rather than waiting for another pass.\n\n## Deliverable\n\nA table in the pull request with **a row for every face the measure flagged in either direction**: card, face, the line, verdict (`Aura:` added / already printed / not an aura) and why, plus a count of every face the measure checked. \"Every card checked\" on its own is not enough.\n\n## Acceptance\n\n- \u00a76.2's Aura row states the rule; any ruling it takes has its note and a proving test, and `cargo jackioh spec check` is green.\n- Every flagged face prints `Aura:` or appears in the table with a reason it does not; `catalog.json`, the \u00a78 rows and the `zh` faces agree.\n- The step 4 test runs per pull request and fails on a scripted standing hook printed without `Aura:` (prove it by removing one prefix locally).\n- `cargo jackioh catalog check`, `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` are green, and so are the cards' and tools' tests.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5039: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T07:53:00Z",
+    "claimed_at": "2026-11-26T09:53:18Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5005 is held for `claude-1` until 05:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4953 skipped: labelled `human`, so no model takes it, whatever its tier"
+  ]
+}
