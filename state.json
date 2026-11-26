@@ -23873,22 +23873,21 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "crates/server/src/api/stats.rs",
-            "spec/09-architecture/9.11-card-statistics.md"
+            "crates/engine/src/game_summary.rs"
           ],
-          "from": "a3ac3a6ef4f5f3fadb74984e1cfa080606a3e136",
-          "main": "d7f8bbf22c7c3d156c40fb455d7cfa597d8b493a"
+          "from": "dd7c1015ebf2789d47ef33f5ab6da4c765692c09",
+          "main": "4dabf5c94ff444f2643ee99f75070561b090e45e"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-4",
-            "run": "45844550800",
+            "run": "45857821886",
             "tier": "strong"
           }
         ],
-        "sha": "dd7c1015ebf2789d47ef33f5ab6da4c765692c09",
+        "sha": "c3bf6fe4cc8d3bc79cbc5277f821f7e20c00d04e",
         "tiers": {
           "claude": "strong"
         }
