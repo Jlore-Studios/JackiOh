@@ -22145,6 +22145,9 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "5006": {
+      "suggestion": true
+    },
     "5008": {
       "action": "review",
       "asks": [],
@@ -45491,6 +45494,13 @@
         "title": "Patch: a GIGA Joro or Lava Golem is summoned only where all four of its zones are free, so neither is lost when the one zone picked for it is too small",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-26T04:59:13Z",
+        "number": 5006,
+        "title": "Patch: revisit the AI's Burn and Toxic weights after the Stinkyscape+ sweep",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
       }
     ],
     "declined": [
