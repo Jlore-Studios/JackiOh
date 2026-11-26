@@ -1862,6 +1862,37 @@ fn r4221000_i18_an_attack_a_would_die_replacement_can_answer_is_not_judged() {
     assert_eq!(monitor.forecast_judged(), 0);
 }
 
+/// R4984000 (the fused pair stinkyscapeplus-160+classic-088): a permanent with a "When …, Tribute this"
+/// (Classic #88 Siphon Squad's "When your opponent has no Units", R403) on either side may be sacrificed
+/// at the state check after the combat, which the forecast does not model (R4379000), so I18 does not
+/// judge the attack; with no such text, the same attack is judged.
+#[test]
+fn r4984000_i18_an_attack_beside_a_tribute_condition_is_not_judged() {
+    let (state, attacker, defender) = i18_board("r4984000-i18-tribute-when");
+    let (judged, found) = judged_drift(&state, &attacker, &defender);
+    assert_eq!(judged, 1, "the plain attack is judged");
+    assert!(
+        found.iter().any(|finding| finding.contains("I18 forecast drift")),
+        "{found:?}"
+    );
+
+    let (state, attacker, defender) = i18_board("r4984000-i18-tribute-when");
+    register_i18_script(
+        &big_body.id,
+        Script {
+            tribute_when: Some(read_hook(|args| {
+                active_units_of(args.state, opponent_of(args.self_.controller)).is_empty()
+            })),
+            ..Script::default()
+        },
+    );
+    assert_eq!(
+        judged_drift(&state, &attacker, &defender),
+        (0, Vec::new()),
+        "a Tribute condition on the target"
+    );
+}
+
 /// I18 on `attacker`'s attack on `defender`, its `damage` into the defender drifted one more than the
 /// forecast: how many attacks it judged, and what it found.
 fn judged_drift(state: &GameState, attacker: &str, defender: &str) -> (usize, Vec<String>) {
