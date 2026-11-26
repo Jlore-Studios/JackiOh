@@ -24358,6 +24358,14 @@
         "sha": "3338e3b8c15bc4c90802fe61c5063c4493c1ec61",
         "tiers": {}
       }
+    },
+    "5071": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-26T08:23:51Z",
+      "issue": 4991,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
