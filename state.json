@@ -21501,11 +21501,17 @@
     "what": "suggestions (tests) on claude-1"
   },
   "last_sweep": {
-    "at": "2026-11-26T00:31:54Z",
+    "at": "2026-11-26T00:40:45Z",
     "notes": [
-      "delivered revise #4947 on claude-8 (run 45718215934): approved",
+      "delivered suggest on agy (run 45727476671): suggested",
+      "delivered review #4960 on muse (run 45726405664): approved",
+      "started suggest on claude-1 (run 45730776462)",
+      "started suggest on claude-1 (run 45730867593)",
       "nothing more to start: nothing is queued",
-      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
+      "pruned 3 plan file(s) older than 7 days",
+      "#4982: typed it Task",
+      "#4981: typed it Task",
+      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22207,7 +22213,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T00:31:54Z",
+  "loop_tick": "2026-11-26T00:40:45Z",
   "machine_disk": {
     "issue": null,
     "reading": {
