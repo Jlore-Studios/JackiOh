@@ -57,10 +57,10 @@ use jackioh_engine::wire::stats::{
     SwingRows, SwingTally, Tally, TotalsKey, VariantKind, WindowQuery, WindowRequest, WindowSource,
     WindowedCreated, WindowedGames, WindowedReport, add_created, add_stats, card_family, card_stats_of,
     card_window, collapse_gameless, created_face_adjusted, created_face_field, created_face_side,
-    face_adjusted, face_drills_of, face_side, face_stats_field, held_adjusted, not_drawn, patch_windows,
-    play_version_figures, radiant_gap, round_share, seen, sources_of, stats_field, swing_baseline,
-    swing_report, tier_in, variant_field, variant_figures, variant_rows, wilson_interval, win_rate,
-    windowed_card_stats, windowed_game_figures, windowed_swing_rows,
+    face_adjusted, face_drills_of, face_side, face_stats_field, held_adjusted, not_drawn, output_field,
+    output_figures, patch_windows, play_version_figures, radiant_gap, round_share, seen, sources_of,
+    stats_field, swing_baseline, swing_report, tier_in, variant_field, variant_figures, variant_rows,
+    wilson_interval, win_rate, windowed_card_stats, windowed_game_figures, windowed_swing_rows,
 };
 use jackioh_engine::{
     CardCost, CardDef, CardDefs, Pilot, WinRateTable, made_by_a_rule, win_rates_from_report,
@@ -740,6 +740,9 @@ pub struct CardDrillDownResponse {
     /// R4676000: the card's choices at the page's patch on the face asked, one group per kind it has; empty
     /// for a card that offers none.
     pub variants: Vec<PublicVariantGroup>,
+    /// R4679000: each card it made or offered at the page's patch on the face asked, best adjusted first;
+    /// empty for a card that made and offered none.
+    pub outputs: Vec<PublicOutputRow>,
 }
 
 /// R4676000: one choice of a card, as Extended stats shows it.
@@ -768,6 +771,31 @@ pub struct PublicVariantRow {
 pub struct PublicVariantGroup {
     pub kind: VariantKind,
     pub rows: Vec<PublicVariantRow>,
+}
+
+/// R4679000: one card a card made or offered, as Extended stats' Outputs shows it.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicOutputRow {
+    /// The output's catalog id, which its drill-down opens.
+    pub key: String,
+    pub label: String,
+    pub cost: i32,
+    pub rarity: String,
+    pub games: i64,
+    /// Its games over every output's on the face: how often the card gives it.
+    pub share: f64,
+    pub adjusted_win_rate: Option<f64>,
+    pub adjusted_low: Option<f64>,
+    pub adjusted_high: Option<f64>,
+    pub tier: Option<CardTier>,
+    pub has_enough_games: bool,
+    /// A Discover-like card's: the seat-games the output was offered in; absent for a card that offers none.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offered: Option<i64>,
+    /// Picked over offered; absent when it was never offered.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pick_rate: Option<f64>,
 }
 
 /// R4676000: a card's baseline, the games a variant is read against, and its played games on `face`, a
@@ -846,6 +874,47 @@ fn card_variants(app: &App, report: &WindowedReport, id: &str, face: StatsFace) 
         group.rows.sort_by_key(|row| std::cmp::Reverse(row.games));
     }
     groups
+}
+
+/// R4679000: each card the card made or offered on `face` over the windowed report, read against its other
+/// outputs and the output field of every source of the report the catalog holds, whatever the page filters
+/// (`output_field`), in `output_figures`' order. A card the catalog lacks is left out, so every row's
+/// drill-down opens.
+fn card_outputs(app: &App, report: &WindowedReport, id: &str, face: StatsFace) -> Vec<PublicOutputRow> {
+    let Some(choices) = report.choices.get(id) else {
+        return Vec::new();
+    };
+    let floor = i32::try_from(CARD_STATS_MIN_SAMPLE).unwrap_or(i32::MAX);
+    let field = output_field(
+        report
+            .choices
+            .iter()
+            .filter(|(card, _)| app.catalog.defs.contains_key(*card))
+            .map(|(_, choices)| choices),
+        face,
+        floor,
+    );
+    output_figures(choices, face, &field)
+        .into_iter()
+        .filter_map(|row| {
+            let def = app.catalog.defs.get(&row.card)?;
+            Some(PublicOutputRow {
+                label: def.name.clone(),
+                cost: numeric_cost(def),
+                rarity: def.rarity.as_str().to_string(),
+                games: i64::from(row.games),
+                share: row.share,
+                adjusted_win_rate: row.adjusted.map(|(rate, _)| rate),
+                adjusted_low: row.adjusted.map(|(_, (low, _))| low),
+                adjusted_high: row.adjusted.map(|(_, (_, high))| high),
+                tier: row.tier,
+                has_enough_games: row.has_enough_games,
+                offered: row.offered.map(i64::from),
+                pick_rate: row.pick_rate,
+                key: row.card,
+            })
+        })
+        .collect()
 }
 
 /// A `public, max-age=…` answer for a route that knows nothing about its caller.
@@ -2030,6 +2099,8 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
     let faces = card_faces(app, &window.report, &card_id, def, mode);
     // R4676000: its choices off the same window, on the face asked.
     let variants = card_variants(app, &window.report, &card_id, face);
+    // R4679000: what it made and offered, off the same window, on the face asked.
+    let outputs = card_outputs(app, &window.report, &card_id, face);
 
     let body = CardDrillDownResponse {
         card: DrillDownCard {
@@ -2044,6 +2115,7 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
         face,
         faces,
         variants,
+        outputs,
     };
     Ok(reader_ok(to_json(&body)?, reader))
 }

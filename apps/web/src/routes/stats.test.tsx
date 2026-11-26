@@ -4203,3 +4203,176 @@ describe("R4676000 R4676001 Extended stats", () => {
     expect(window.location.search).not.toContain("extended=");
   });
 });
+
+describe("R4679000 R4679001 Extended stats' Outputs", () => {
+  // A card statistics read kept by an earlier test would answer for these filters without asking (R3206000).
+  beforeEach(() => {
+    clearReadCache();
+  });
+
+  const FACES = {
+    normal: { games: 30, adjustedWinRate: 0.512, adjustedLow: 0.48, adjustedHigh: 0.544, tier: "B", hasEnoughGames: true },
+    radiant: { games: 25, adjustedWinRate: 0.58, adjustedLow: 0.552, adjustedHigh: 0.608, tier: "A", hasEnoughGames: true },
+    gap: { gap: 0.068, low: 0.012, high: 0.124 },
+  };
+  const output = (key: string, label: string, cost: number, games: number, share: number, rate: number, tier: string | null) => ({
+    key,
+    label,
+    cost,
+    rarity: "Token",
+    games,
+    share,
+    adjustedWinRate: rate,
+    adjustedLow: rate - 0.02,
+    adjustedHigh: rate + 0.02,
+    tier,
+    hasEnoughGames: tier !== null,
+  });
+  /** Jlockeed's Evil Blueprints built School most, offered and picked, and Empty Plot too few times to read. */
+  const BLUEPRINTS = [
+    { ...output("meditative-097-3", "School", 2, 30, 0.5, 0.56, "A"), offered: 60, pickRate: 0.667 },
+    { ...output("meditative-097-1", "Empty Plot", 0, 10, 0.167, 0.47, null), offered: 40, pickRate: 0.25 },
+  ];
+  /** The Mother Pancake's Pancakes, made at random: none was offered. */
+  const PANCAKES = [
+    output("classicplus-012-1", "Devour", 0, 40, 0.571, 0.53, "B"),
+    output("classicplus-012-2", "Death Boil", 1, 30, 0.429, 0.47, "C"),
+  ];
+
+  function serve(): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        const json = (body: unknown): Promise<Response> => Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+        if (url.pathname === "/api/stats/cards") return json(MOCK_CARD_STATS_PROVISIONAL);
+        if (url.pathname.startsWith("/api/stats/cards/")) {
+          const id = decodeURIComponent(url.pathname.slice("/api/stats/cards/".length));
+          const outputs = id === "meditative-097" ? BLUEPRINTS : id === "classicplus-012" ? PANCAKES : [];
+          return json({ ...MOCK_DRILL_DOWN, face: "all", faces: FACES, variants: [], outputs });
+        }
+        return json({});
+      }),
+    );
+  }
+
+  const openModal = async (): Promise<HTMLElement> => {
+    const modal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+    await within(modal).findByText("Win rate by turn played", undefined, SLOW);
+    return modal;
+  };
+  const toggle = (modal: HTMLElement): HTMLElement => within(modal).getByTestId(statsTestid.extendedToggle);
+  const outputRows = (scope: HTMLElement): Promise<HTMLElement[]> =>
+    within(scope).findAllByTestId(statsTestid.extendedOutputRow, undefined, SLOW);
+  const headers = (scope: HTMLElement): (string | null)[] => [...scope.querySelectorAll("thead th")].map((cell) => cell.textContent);
+
+  it("R4679001 the Outputs segment lists each output with its thumbnail, name, share, games, tier and adjusted in the server's order, and a Discover's offered and pick rate", async () => {
+    serve();
+    at("/stats?card=meditative-097");
+    render(<StatsRoute />);
+    const modal = await openModal();
+    // A card with no choice opens the panel on its first section, Outputs, before Radiant vs normal.
+    fireEvent.click(toggle(modal));
+    const panel = within(modal).getByTestId(statsTestid.extendedPanel);
+    expect(within(panel).getByTestId(statsTestid.extendedOutputsTab)).toHaveAttribute("aria-pressed", "true");
+    expect(within(panel).getByTestId(statsTestid.extendedOutputsTab).nextElementSibling).toBe(
+      within(panel).getByTestId(statsTestid.extendedFacesTab),
+    );
+    expect(window.location.search).toContain("extended=outputs");
+    const rows = await outputRows(panel);
+    expect(rows.map((one) => one.getAttribute("data-key"))).toEqual(["meditative-097-3", "meditative-097-1"]);
+    const badge = rows[0]!.querySelector(".stats-card-thumb-badge");
+    expect(badge).toHaveAttribute("data-rarity", "Token");
+    expect(badge).toHaveTextContent("2");
+    expect(headers(panel)).toEqual(["Card", "Name", "Share", "Games", "Tier", "Adjusted", "Offered", "Pick rate"]);
+    expect([...rows[0]!.querySelectorAll("th, td")].map((cell) => cell.textContent)).toEqual([
+      "2",
+      "School",
+      "50%",
+      "30",
+      "A",
+      "56.0%",
+      "60",
+      "67%",
+    ]);
+    expect(within(rows[0]!).getByTestId(statsTestid.extendedTier)).toHaveTextContent("A");
+    expect(rows[1]).toHaveTextContent("not enough games");
+    expect(rows[1]).toHaveTextContent("25%");
+    expect(within(panel).queryByTestId(statsTestid.adjustedRange)).toBeNull();
+    cleanup();
+
+    // With the ranges shown, the row that reads a rate shows its range under it.
+    at("/stats?card=meditative-097&extended=outputs&ranges=1");
+    render(<StatsRoute />);
+    const ranged = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    await outputRows(ranged);
+    expect(within(ranged).getAllByTestId(statsTestid.adjustedRange)).toHaveLength(1);
+    cleanup();
+
+    // A card that offers nothing shows neither Offered nor Pick rate.
+    at("/stats?card=classicplus-012&extended=outputs");
+    render(<StatsRoute />);
+    const pancakes = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    const made = await outputRows(pancakes);
+    expect(made.map((one) => one.getAttribute("data-key"))).toEqual(["classicplus-012-1", "classicplus-012-2"]);
+    expect(made[0]).toHaveTextContent("Devour");
+    expect(headers(pancakes)).toEqual(["Card", "Name", "Share", "Games", "Tier", "Adjusted"]);
+  });
+
+  it("R4679001 the segment shows for a card whose text names a token with none recorded, and not for a card with neither", async () => {
+    serve();
+    // Call to Chaos names its Chaos Golem and Rush Token, and nothing it made was recorded.
+    at("/stats?card=core-095&extended=outputs");
+    render(<StatsRoute />);
+    const panel = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    const outputs = await within(panel).findByTestId(statsTestid.extendedOutputs, undefined, SLOW);
+    expect(within(panel).getByTestId(statsTestid.extendedOutputsTab)).toHaveAttribute("aria-pressed", "true");
+    expect(outputs).toHaveTextContent("No outputs recorded yet.");
+    expect(within(outputs).queryByTestId(statsTestid.extendedOutputRow)).toBeNull();
+    cleanup();
+
+    // A card that made nothing and names no token: a link to its Outputs opens the section it has.
+    at("/stats?card=core-002&extended=outputs");
+    render(<StatsRoute />);
+    const plain = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    await within(plain).findByTestId(statsTestid.drillDownFaceLine, undefined, SLOW);
+    expect(within(plain).queryByTestId(statsTestid.extendedOutputsTab)).toBeNull();
+    expect(within(plain).queryByTestId(statsTestid.extendedOutputs)).toBeNull();
+  });
+
+  it("R4679001 pressing an output row opens that output's drill-down, and the tokens section gives way while the panel is open", async () => {
+    serve();
+    at("/stats?card=meditative-097");
+    render(<StatsRoute />);
+    const modal = await openModal();
+    // The buildings its text names show until the panel opens, and come back once it closes.
+    expect(within(modal).getByTestId(statsTestid.drillDownTokens)).toBeInTheDocument();
+    fireEvent.click(toggle(modal));
+    expect(within(modal).queryByTestId(statsTestid.drillDownTokens)).toBeNull();
+    fireEvent.click(toggle(modal));
+    expect(within(modal).getByTestId(statsTestid.drillDownTokens)).toBeInTheDocument();
+
+    const opensSchool = async (open: (row: HTMLElement) => void): Promise<void> => {
+      const panel = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+      const [school] = await outputRows(panel);
+      open(school!);
+      await waitFor(() => expect(new URLSearchParams(window.location.search).get("card")).toBe("meditative-097-3"), SLOW);
+      expect(window.location.search).not.toContain("extended=");
+      await waitFor(() => expect(requested("/api/stats/cards/meditative-097-3")).not.toHaveLength(0), SLOW);
+      const opened = await openModal();
+      expect(within(opened).queryByTestId(statsTestid.extendedPanel)).toBeNull();
+      expect(toggle(opened)).toHaveAttribute("aria-pressed", "false");
+      // The row went with the panel: the focus is on the toggle, inside the dialog.
+      expect(toggle(opened)).toHaveFocus();
+    };
+    // A click on a row.
+    fireEvent.click(toggle(modal));
+    await opensSchool((row) => fireEvent.click(row));
+    cleanup();
+
+    // Enter on a row.
+    at("/stats?card=meditative-097&extended=outputs");
+    render(<StatsRoute />);
+    await opensSchool((row) => fireEvent.keyDown(row, { key: "Enter" }));
+  });
+});

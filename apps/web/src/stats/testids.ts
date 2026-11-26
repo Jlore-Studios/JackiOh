@@ -128,6 +128,10 @@ export const statsTestid = {
   extendedKind: "stats-extended-kind",
   extendedRow: "stats-extended-row",
   extendedTier: "stats-extended-tier",
+  // R4679001: the panel's Outputs: its segment, its table and each row, which opens that output.
+  extendedOutputsTab: "stats-extended-outputs-tab",
+  extendedOutputs: "stats-extended-outputs",
+  extendedOutputRow: "stats-extended-output-row",
   /** R3887000: the Cards tab's Plain text button, a card as plain text, and the breakdown's plain text and Reference cards. */
   plainTextToggle: "stats-plain-text-toggle",
   plainCard: "stats-plain-card",
