@@ -2,11 +2,13 @@
 //! 0.0 it plays the skill miss (R2214000) on the same stream, in between each decision rolls the seat's
 //! own seeded stream, and every run reproduces.
 //! R4216000: the miss reads only what its seat may know.
+//! R4799000: the miss simulates each candidate on a counter of its own that pays its surcharge.
 
 use jackioh_ai::{
-    AI_BUDGET, AI_SKILL_MAX, AI_SKILL_MIN, MatchConfig, MatchHooks, MatchSetup, SearchBudget, SeatController,
-    action_key, candidate_set, clamp_skill, det_ground, play_match, plays_best, probe_world, redact,
-    skill_miss_action,
+    AI_BUDGET, AI_SEARCH, AI_SKILL_MAX, AI_SKILL_MIN, GREEDY_EVAL, MatchConfig, MatchHooks, MatchSetup,
+    NextSwing, SearchBudget, SeatController, action_key, candidate_set, clamp_skill, create_node_counter,
+    det_ground, evaluate, one_ply_scores, play_match, plays_best, probe_world, redact,
+    simulate_first_answers, skill_miss_action, surcharge_nodes,
 };
 use jackioh_engine::testkit::{ActionBody, GameState, PerPlayer, create_rng, json};
 
@@ -338,5 +340,53 @@ fn r4216000_the_miss_never_swings_into_a_face_down_doom_shroom_showing_4() {
     assert_eq!(
         swings, 0,
         "the miss swung into the face-down card showing (4) in {swings} of 200"
+    );
+}
+
+/// R4799000: the miss scores a #97 Zephrys play one ply ahead, its 100-node surcharge paid, though one
+/// counter of `1 + max_auto_answers` a candidate for the two candidates, 18, could never pay it, and
+/// the play was refused and scored as standing still.
+#[test]
+fn r4799000_the_miss_scores_a_zephrys_play_one_ply_ahead() {
+    register_cards();
+    let state = scenario(json!({
+        "seed": "ai-r4799000-zephrys",
+        "active": AI,
+        "turn": 5,
+        "p1": { "hand": ["core-097"], "mana": 1, "library": ["core-008", "core-020"] },
+        "p2": { "field": ["core-008"], "library": ["core-005", "core-016"] },
+    }))
+    .state()
+    .clone();
+    let candidates = candidate_set(&state, AI);
+    let play = candidates
+        .iter()
+        .position(|action| matches!(action, ActionBody::Play { .. }))
+        .expect("the Zephrys play");
+    assert_eq!(
+        candidates.len(),
+        2,
+        "PREMISE: the play and endTurn: {candidates:?}"
+    );
+    assert!(
+        surcharge_nodes(&state, AI, &candidates[play])
+            > candidates.len() * (1 + AI_SEARCH.max_auto_answers as usize),
+        "PREMISE: the surcharge is more than the old counter held"
+    );
+    let next = simulate_first_answers(
+        &state,
+        AI,
+        &candidates[play],
+        &create_node_counter(AI_BUDGET.nodes, None),
+    )
+    .expect("a node")
+    .expect("the play applies");
+    let played = evaluate(&next, AI, NextSwing::Enemy, &GREEDY_EVAL);
+    let standing = evaluate(&state, AI, NextSwing::Enemy, &GREEDY_EVAL);
+    assert_ne!(played, standing, "PREMISE: the play moves the greedy evaluation");
+    let scores = one_ply_scores(&state, AI, &candidates);
+    assert_eq!(
+        scores[play], played,
+        "the play is simulated, not scored as standing still"
     );
 }
