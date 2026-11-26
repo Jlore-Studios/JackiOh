@@ -6,7 +6,7 @@ use crate::assault::content::content_file;
 use crate::assault::day::MONTH_DAYS;
 use crate::config::{
     ASSAULT_COMMANDER_HEALTH, ASSAULT_COMMANDER_LEVELS, ASSAULT_DECK_SIZE, ASSAULT_HERO_HEALTH,
-    ASSAULT_HISTORY_DAYS, ASSAULT_LEVELS, ASSAULT_SET, ASSAULT_UPGRADES,
+    ASSAULT_COMMANDER_UPGRADES, ASSAULT_HISTORY_DAYS, ASSAULT_LEVELS, ASSAULT_SET, ASSAULT_UPGRADES,
 };
 use jackioh_engine::catalog::{deckable, registered_catalog};
 use jackioh_engine::config::{HUMAN_HANDICAP, Handicap};
@@ -286,7 +286,7 @@ fn a_year_of_days_deals_twenty_levels_of_the_right_shape() {
 }
 
 #[test]
-fn each_normal_level_adds_one_escalation_and_a_commander_a_card_step_and_an_upgrade() {
+fn r4597002_each_normal_level_adds_one_escalation_and_a_commander_a_card_step_and_its_upgrades() {
     let content = set_content();
     for date in year() {
         let day = assault_day(&date, &content).unwrap();
@@ -294,21 +294,18 @@ fn each_normal_level_adds_one_escalation_and_a_commander_a_card_step_and_an_upgr
             if level.level == 1 {
                 assert!(level.escalations.is_empty(), "{date}");
             } else if commander_rank(level.level).is_some() {
+                // A card step, then `ASSAULT_COMMANDER_UPGRADES` upgrades (R4597002).
                 assert_eq!(
-                    level.escalations,
-                    vec![
-                        AssaultEscalation::Cards,
-                        AssaultEscalation::Upgrade {
-                            upgrade: level
-                                .escalations
-                                .iter()
-                                .find_map(|escalation| match escalation {
-                                    AssaultEscalation::Upgrade { upgrade } => Some(*upgrade),
-                                    AssaultEscalation::Cards => None,
-                                })
-                                .expect("a Commander level takes an upgrade"),
-                        }
-                    ],
+                    level.escalations.len(),
+                    1 + ASSAULT_COMMANDER_UPGRADES,
+                    "{date} level {}",
+                    level.level
+                );
+                assert_eq!(level.escalations[0], AssaultEscalation::Cards, "{date} level {}", level.level);
+                assert!(
+                    level.escalations[1..]
+                        .iter()
+                        .all(|escalation| matches!(escalation, AssaultEscalation::Upgrade { .. })),
                     "{date} level {}",
                     level.level
                 );

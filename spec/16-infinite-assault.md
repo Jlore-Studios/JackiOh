@@ -20,7 +20,8 @@ Every value is a constant of `crates/run/src/config.rs`, and every one is a stra
 | `ASSAULT_HISTORY_DAYS` | The days of records the device keeps: 30 | [[§16.6]], [[R4581001]] |
 | `ASSAULT_BASE_HANDICAP` | The resources every level starts from: Easy's ([[§9.9]]) | [[§16.2]], [[R4579000]] |
 | `ASSAULT_HERO_HEALTH` | A normal level's hero health, `(base, per level)`: 20 + the level | [[§16.2]], [[R4579000]] |
-| `ASSAULT_COMMANDER_HEALTH` | A Commander level's hero health, `(base, per level)`: 30 + five times the level (twice until issue #4783) | [[§16.2]], [[R4579000]] |
+| `ASSAULT_COMMANDER_HEALTH` | A Commander level's hero health, `(base, per level)`: 40 + five times the level (30 + twice the level until issue #4783, 30 + five times until the release) | [[§16.2]], [[R4579000]], [[R4597002]] |
+| `ASSAULT_COMMANDER_UPGRADES` | The upgrades a Commander level takes after its card step: 2 (1 until the release) | [[§16.2]], [[R4597002]] |
 | `ASSAULT_FEWER_OPENING` | The cards fewer in the opening draw on the first levels: 1 ([[R3582000]]) | [[§16.2]], [[R4579000]] |
 | `ASSAULT_FEWER_OPENING_LEVELS` | The last level dealing fewer opening cards: 3 | [[§16.2]], [[R4579000]] |
 | `ASSAULT_DECK_SIZE` | The deck's size before Bigger Dataset: `DECK_SIZE` (25) | [[§16.2]], [[R4579000]] |
@@ -43,7 +44,7 @@ Every value is a constant of `crates/run/src/config.rs`, and every one is a stra
 
 **The base row.** Every level starts from `ASSAULT_BASE_HANDICAP`, Easy's resources ([[§9.9]], [[R180]]), with:
 
-- hero health `ASSAULT_HERO_HEALTH` on a normal level (21 to 39) and `ASSAULT_COMMANDER_HEALTH` on a Commander's (55, 80, 105, 130), plus Redundancy's stacks ([[R290]]);
+- hero health `ASSAULT_HERO_HEALTH` on a normal level (21 to 39) and `ASSAULT_COMMANDER_HEALTH` on a Commander's (65, 90, 115, 140), plus Redundancy's stacks ([[R290]]);
 - `ASSAULT_FEWER_OPENING` card fewer in the opening draw on levels 1 to `ASSAULT_FEWER_OPENING_LEVELS` (`fewer_opening_cards`, [[R3582000]]);
 - a deck of `ASSAULT_DECK_SIZE` cards plus Bigger Dataset's, dealt from slots of each rarity, level 1's being `ASSAULT_START_SLOTS`.
 
@@ -52,7 +53,7 @@ Every value is a constant of `crates/run/src/config.rs`, and every one is a stra
 - **A card step** promotes `ASSAULT_CARD_STEP` of the deck's slots one rarity each, lowest rarity first, never past the level's `ASSAULT_RARITY_CEILING`.
 - **An upgrade** is one stack of one upgrade ([[§16.3]]), drawn by the upgrades' weights among those allowed at the level that hold fewer than their most stacks.
 
-A normal level's kind is the seed's, a card step at `ASSAULT_CARD_STEP_PERCENT`; a card step with nothing left to promote under the ceiling is an upgrade instead, and a level with no upgrade left takes a card step. A Commander level takes two escalations: a card step (or an upgrade when no slot can move) and then an upgrade (or a card step when no upgrade is left), and its Commander's cards join its deck ([[§16.4]]).
+A normal level's kind is the seed's, a card step at `ASSAULT_CARD_STEP_PERCENT`; a card step with nothing left to promote under the ceiling is an upgrade instead, and a level with no upgrade left takes a card step. A Commander level takes three escalations ([[R4597002]]): a card step (or an upgrade when no slot can move) and then `ASSAULT_COMMANDER_UPGRADES` upgrades (each a card step when no upgrade is left), and its Commander's cards join its deck ([[§16.4]]).
 
 **It never gets weaker** ([[R4579000]]). No handicap field but health and `fewer_opening_cards` falls from one level to the next; `fewer_opening_cards` drops off after level 3; no upgrade's stacks fall; and the count of slots at or above each rarity never falls (`AssaultLevel.rarities` holds the slots). Health is compared within a kind: a Commander's base is a peak, so the level after it goes back to the normal base and keeps every Redundancy stack. Each level's deck is dealt afresh from its own slots, never the previous level's deck plus a card.
 

@@ -190,6 +190,11 @@ fn fight_config(setup: &AssaultFightSetup, skill: f64, budget: SearchBudget) -> 
                 p1: None,
                 p2: Some(setup.enemy_marks.clone()),
             }),
+            // R4597001: the enemy's seat names the Assault's set, so its deck may hold the set's cards.
+            deck_sets: (!setup.enemy_sets.is_empty()).then(|| PerPlayerOpt {
+                p1: None,
+                p2: Some(setup.enemy_sets.clone()),
+            }),
             ..MatchSetup::default()
         },
     }
@@ -225,6 +230,7 @@ fn play_fight(
         decks: config.decks.clone(),
         handicaps: config.handicaps.clone(),
         deck_marks: config.setup.deck_marks.clone(),
+        deck_sets: config.setup.deck_sets.clone(),
         ..CreateGameOptions::default()
     };
     validate_setup(&options, registered_catalog(), SetupKind::New)

@@ -12,7 +12,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use jackioh_engine::{
     Action, ActionBody, ActionType, CreateGameOptions, DeckMark, FoldArgs, GameResult, GameState, Handicap,
-    LastBoardInput, PerPlayer, PerPlayerOpt, PlayerId, Rng, begin_game, create_game, hash_state,
+    LastBoardInput, PerPlayer, PerPlayerOpt, PlayerId, Rng, SetName, begin_game, create_game, hash_state,
     legal_actions, reduce, seat_to_act, subsystems,
 };
 use serde::{Deserialize, Serialize};
@@ -89,6 +89,10 @@ pub struct MatchSetup {
     /// run's fight, #3065).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deck_marks: Option<PerPlayerOpt<Vec<DeckMark>>>,
+    /// R4595000, R4597001: the sets each seat's deck is dealt from (an Assault enemy's, which may then
+    /// hold the Infinite Assault's cards).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deck_sets: Option<PerPlayerOpt<Vec<SetName>>>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -102,7 +106,7 @@ pub struct MatchConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_actions: Option<usize>,
     /// #1697: the setup inputs the game is created with beyond its decks and handicaps. Its keys
-    /// (`dealt`, `lastBoards`, `glitchBoards`, `deckMarks`) are written beside the others, and it is none
+    /// (`dealt`, `lastBoards`, `glitchBoards`, `deckMarks`, `deckSets`) are written beside the others, and it is none
     /// by default.
     #[serde(flatten)]
     pub setup: MatchSetup,
@@ -121,6 +125,7 @@ impl MatchConfig {
             last_boards: self.setup.last_boards.clone(),
             glitch_boards: self.setup.glitch_boards.clone(),
             deck_marks: self.setup.deck_marks.clone(),
+            deck_sets: self.setup.deck_sets.clone(),
             ..FoldArgs::default()
         }
     }
@@ -306,6 +311,7 @@ pub fn play_match(config: &MatchConfig, hooks: &mut MatchHooks) -> MatchRecord {
         last_boards: config.setup.last_boards.clone(),
         glitch_boards: config.setup.glitch_boards.clone(),
         deck_marks: config.setup.deck_marks.clone(),
+        deck_sets: config.setup.deck_sets.clone(),
         ..CreateGameOptions::default()
     });
     let mut state = begin_game(&created).state;

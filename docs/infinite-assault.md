@@ -109,7 +109,7 @@ everything the levels before it added, the seed choosing which:
 - **An upgrade** is one stack of one upgrade (IA3), drawn by the upgrades' weights among those not at
   their most stacks and allowed at this level. A level with no upgrade left takes a card step.
 
-A Commander level takes a card step *and* an upgrade, and its Commander's cards join the deck (IA4).
+A Commander level takes a card step *and* two upgrades (one until the release, R4597002), and its Commander's cards join the deck (IA4).
 
 **The deck.** A level's deck is dealt from its slots: each slot a distinct Infinite Assault card of its
 rarity, `ASSAULT_DOCTRINE_SHARE` percent from the level's doctrine and the rest from the neutral cards and
@@ -265,7 +265,7 @@ Every part's "Done when" names its tests; together they hold the mode to this:
   no doctrine on two levels in a row; every deck distinct, token-free, all Infinite Assault cards, of its
   handicap's size, within its level's ceiling; `createGame` accepts every level's setup on the real
   catalog, for 365 consecutive days.
-- **Escalation:** one escalation a normal level, two at a Commander; nothing ever falls (IA2), over 365 days.
+- **Escalation:** one escalation a normal level, three at a Commander (a card step and two upgrades, R4597002); nothing ever falls (IA2), over 365 days.
 - **Attempts:** a start at a checkpoint the record lacks is refused; a loss ends the attempt; a win moves on;
   level 20 repels; an ended attempt refuses every action; a refusal leaves the state unchanged.
 - **Difficulty:** `cargo jackioh assault-sim --days N` plays whole days with the AI in the player's seat at
