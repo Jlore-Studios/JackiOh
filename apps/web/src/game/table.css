@@ -75,7 +75,7 @@
 .board-backdrop[data-backdrop="field-embers"] .board-backdrop-particle {
   width: 4px;
   height: 4px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: #ff8a3d;
   box-shadow: 0 0 6px 2px rgb(255 138 61 / 60%);
 }
@@ -123,7 +123,7 @@
 .board-backdrop[data-backdrop="field-fireflies"] .board-backdrop-particle {
   width: 5px;
   height: 5px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: #d8ff52;
   box-shadow: 0 0 8px 3px rgb(216 255 82 / 50%);
   opacity: 0.85;
@@ -140,7 +140,7 @@
 .board-backdrop[data-backdrop="field-snow"] .board-backdrop-particle {
   width: 5px;
   height: 5px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: #f4f8ff;
   box-shadow: 0 0 4px 1px rgb(244 248 255 / 55%);
   opacity: 0.85;
@@ -167,7 +167,7 @@
 .board-backdrop[data-backdrop="field-cherry-blossoms"] .board-backdrop-particle {
   width: 9px;
   height: 6px;
-  border-radius: 80% 0;
+  border-radius: var(--radius-petal);
   background: linear-gradient(135deg, #ffe0ec, #f78fb3);
   opacity: 0.9;
 }
@@ -194,7 +194,7 @@
 .board-backdrop[data-backdrop="field-autumn-leaves"] .board-backdrop-particle {
   width: 10px;
   height: 10px;
-  border-radius: 0 100%;
+  border-radius: var(--radius-leaf);
   background: linear-gradient(135deg, #f0a040, #c4521f);
   opacity: 0.9;
 }
@@ -227,7 +227,7 @@
   top: calc(var(--y) * 0.45);
   width: 16px;
   height: 140px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: linear-gradient(180deg, transparent, rgb(90 255 190 / 50%) 35%, rgb(80 200 255 / 26%) 70%, transparent);
   transform-origin: 50% 0;
   opacity: 0.6;
@@ -292,7 +292,7 @@
 .board-backdrop[data-backdrop="field-cosmic-drift"] .board-backdrop-particle {
   width: 3px;
   height: 3px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: #ffffff;
   box-shadow: 0 0 6px 1px rgb(200 210 255 / 70%);
   transform-origin: -40px 18px;
@@ -332,7 +332,7 @@
   position: absolute;
   inset: 50% 0 0;
   z-index: 0;
-  border-radius: 0 0 15px 15px;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
   pointer-events: none;
 }
 

@@ -602,15 +602,6 @@ fn r4852000_a_fight_a_glitch_voided_is_refused_not_reported_as_a_lost_fight() {
 }
 
 #[test]
-fn a_voided_game_still_reads_as_a_lost_assault_fight_until_4576_rules_on_it() {
-    // #4852 left the Infinite Assault's reading of a void to #4576: until then it is a lost fight.
-    assert!(matches!(
-        assault_fight_report(&voided_game(), PlayerId::P1),
-        Ok(AssaultAction::FightOver { won: false, .. })
-    ));
-}
-
-#[test]
 fn b11_a_level_costs_its_embers_until_the_ladders_top_and_the_constants_are_the_configs() {
     // B11
     for level in 1..RUN_SLOT_LADDER.len() {

@@ -23,7 +23,7 @@
   gap: 4px;
   padding: 12px 16px;
   border: 1px solid var(--line-bright, #454d66);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: rgba(18, 22, 34, 0.7);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
@@ -43,7 +43,7 @@
 /* R1994000: the Games panel, boxed, at the head of the Cards tab's panel. */
 .stats-games-panel {
   border: 1px solid var(--line, #2c3245);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: rgba(11, 13, 19, 0.5);
   padding: 10px 14px;
 }
@@ -92,7 +92,7 @@
 .stats-search-input {
   min-height: var(--hit-min);
   padding: 8px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--line-bright, #454d66);
   background: rgba(11, 13, 19, 0.8);
   color: var(--text, #fff);
@@ -198,7 +198,7 @@
 .stats-table-wrapper {
   overflow-x: auto;
   border: 1px solid var(--line, #2c3245);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: rgba(11, 13, 19, 0.6);
   margin-top: 16px;
 }
@@ -275,7 +275,7 @@
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid var(--line-bright, #454d66);
   font-size: var(--type-sm);
@@ -335,7 +335,7 @@
   flex: 1;
   height: 6px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   overflow: hidden;
   max-width: 80px;
 }
@@ -396,7 +396,7 @@
 .stats-retry-btn {
   margin-top: 8px;
   padding: 6px 14px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid #f87171;
   background: rgba(248, 113, 113, 0.15);
   color: #fff;
@@ -413,7 +413,7 @@
 
 .stats-pager-btn {
   padding: 6px 14px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--line-bright, #454d66);
   background: rgba(18, 22, 34, 0.8);
   color: var(--text, #fff);
@@ -651,7 +651,7 @@
 .stats-drilldown-item {
   font-size: var(--type-md);
   padding: 6px 10px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.04);
 }
 
@@ -922,5 +922,117 @@
   border-color: var(--selected);
   background: color-mix(in srgb, var(--selected) 12%, var(--bg-raised));
   box-shadow: inset 0 0 0 1px var(--selected);
+}
+
+/* R4681001: the Hall of Fame's four sections, each entry one row: its rank, the before/after faces with the
+   arrow between, and the versions, figures and balance line beside them. */
+.hall-title {
+  font-size: var(--type-md);
+  margin: var(--space-3) 0 var(--space-1);
+}
+
+.hall-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.hall-entry {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  width: 100%;
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--line-bright);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  color: var(--text);
+  text-align: left;
+  cursor: var(--cursor-glove-point, pointer);
+}
+
+.hall-rank {
+  flex: none;
+  width: 2ch;
+  font-weight: 700;
+  color: var(--text-dim);
+}
+
+.hall-faces {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.hall-face {
+  display: block;
+  width: 96px;
+}
+
+.hall-face .patch-face {
+  display: block;
+  width: 100%;
+}
+
+.hall-face-card--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 5 / 7;
+  font-size: var(--type-sm);
+  color: var(--text-dim);
+}
+
+.hall-arrow {
+  color: var(--text-dim);
+}
+
+.hall-details {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.hall-versions {
+  font-weight: 600;
+}
+
+.hall-figures {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.hall-changes {
+  font-size: var(--type-sm);
+  color: var(--text-dim);
+}
+
+.hall-balance {
+  font-size: var(--type-md);
+  font-style: italic;
+}
+
+/* R4681001: on a phone each entry stacks the faces above the figures. */
+@media (max-width: 600px) {
+  .hall-entry {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hall-rank {
+    width: auto;
+  }
+
+  .hall-faces {
+    justify-content: center;
+  }
 }
 

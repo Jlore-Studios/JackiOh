@@ -118,7 +118,7 @@
   gap: 10px;
   padding: 10px;
   border: 1px solid var(--line-bright);
-  border-radius: calc(var(--radius) + 3px);
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
 }
@@ -131,7 +131,7 @@
   gap: 8px;
   padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   background: var(--bg-raised);
   min-width: 0;
 }
@@ -158,7 +158,7 @@
   align-items: center;
   justify-content: center;
   padding: 5px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: var(--type-sm);
   white-space: nowrap;
 }
@@ -189,7 +189,7 @@
   color: inherit;
   background: var(--bg-sunken);
   border: 1px solid var(--line-bright);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 7px 14px;
 }
 
@@ -231,7 +231,7 @@
   color: inherit;
   background: var(--bg-sunken);
   border: 1px solid var(--line-bright);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   padding: 5px 8px;
 }
 
@@ -260,7 +260,7 @@
 .deckbuilder.app-shell .db-chip {
   min-height: 28px;
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: var(--type-sm);
   line-height: 1.2;
   white-space: nowrap;
@@ -276,7 +276,7 @@
 .deckbuilder.app-shell .db-chip--cost {
   min-width: 30px;
   padding: 3px 6px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   font-weight: 750;
   font-variant-numeric: tabular-nums;
 }
@@ -294,7 +294,7 @@
   width: 8px;
   height: 8px;
   margin-right: 5px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--db-rarity, var(--text-dim));
   vertical-align: 0;
 }
@@ -326,7 +326,7 @@
   gap: 10px;
   padding: 10px;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   background:
     radial-gradient(90% 260px at 50% 0, rgb(201 149 63 / 0.1), transparent 75%),
     var(--bg-sunken);
@@ -369,7 +369,7 @@
   aspect-ratio: 5 / 7;
   padding: 0;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: transparent;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
@@ -485,7 +485,7 @@
   transform: translateX(-50%);
   padding: 2px 9px;
   border: 1px solid rgb(255 255 255 / 0.35);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--you) 85%, #000);
   box-shadow: 0 1px 5px rgb(0 0 0 / 0.65);
   color: #fff;
@@ -513,7 +513,7 @@
   top: 44%;
   left: -3px;
   padding: 1px 7px 1px 6px;
-  border-radius: 0 999px 999px 0;
+  border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
   background: #c8322b;
   box-shadow: 0 1px 5px rgb(0 0 0 / 0.65);
   color: #fff;
@@ -539,7 +539,7 @@
   height: 28px;
   padding: 0;
   border: 1px solid rgb(255 255 255 / 0.45);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--legal) 70%, #fff 10%), color-mix(in srgb, var(--legal) 55%, #000));
   box-shadow: 0 1px 4px rgb(0 0 0 / 0.65);
   color: #fff;
@@ -553,7 +553,7 @@
   content: "";
   position: absolute;
   inset: min(-8px, (100% - var(--hit-min)) / 2);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
 }
 
 .deckbuilder.app-shell .db-add:hover,
@@ -589,7 +589,7 @@
   margin: 0;
   padding: 8px 14px;
   border: 1px solid color-mix(in srgb, var(--legal) 60%, var(--line-bright));
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--bg-raised) 92%, #000);
   box-shadow: 0 6px 18px rgb(0 0 0 / 0.55);
   color: var(--text);
@@ -630,7 +630,7 @@
   margin: 0;
   padding: 24px 12px;
   border: 1px dashed var(--line-bright);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   color: var(--text-dim);
   text-align: center;
 }
@@ -667,7 +667,7 @@
   display: block;
   height: 5px;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgb(255 255 255 / 0.06);
   box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.6);
 }
@@ -698,7 +698,7 @@
 .deckbuilder.app-shell .db-deck-fold {
   display: none;
   padding: 4px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: var(--type-sm);
   font-weight: 650;
   white-space: nowrap;
@@ -708,7 +708,7 @@
   margin: 0;
   padding: 14px 8px;
   border: 1px dashed var(--line-bright);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   color: var(--text-dim);
   font-size: var(--type-sm);
   text-align: center;
@@ -725,7 +725,7 @@
   height: 88px;
   padding: 6px 4px 0;
   border: 1px solid rgb(255 255 255 / 0.05);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   background: linear-gradient(180deg, rgb(0 0 0 / 0.25), rgb(0 0 0 / 0.1));
 }
 
@@ -754,7 +754,7 @@
   flex: 1 1 auto;
   width: 100%;
   max-width: 22px;
-  border-radius: 4px 4px 1px 1px;
+  border-radius: var(--radius-xs);
   background: rgb(255 255 255 / 0.04);
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.03);
 }
@@ -762,7 +762,7 @@
 .db-bar-fill {
   display: block;
   width: 100%;
-  border-radius: 4px 4px 1px 1px;
+  border-radius: var(--radius-xs);
   background:
     linear-gradient(90deg, rgb(255 255 255 / 0.28), transparent 45%, rgb(0 0 0 / 0.2)),
     linear-gradient(180deg, color-mix(in srgb, var(--mana) 45%, #fff), var(--mana) 55%, color-mix(in srgb, var(--mana) 60%, #000));
@@ -837,7 +837,7 @@
   padding: 0 10px 0 3px;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
   font-weight: 400;
@@ -953,7 +953,7 @@
   flex: none;
   width: 9px;
   height: 9px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--db-rarity, var(--text-dim));
   box-shadow:
     0 0 0 1px rgb(0 0 0 / 0.65),
@@ -1043,7 +1043,7 @@
   padding: 6px 10px 6px 28px;
   border: 1px solid color-mix(in srgb, var(--opponent) 55%, var(--line));
   border-left: 3px solid var(--opponent);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   background: linear-gradient(90deg, color-mix(in srgb, var(--opponent) 14%, var(--bg-raised)), var(--bg-raised) 60%);
 }
 
@@ -1071,7 +1071,7 @@
   left: 6px;
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   clip-path: none;
   background: #e0a93b;
 }

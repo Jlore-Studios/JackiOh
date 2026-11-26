@@ -23,7 +23,7 @@
   gap: 8px 16px;
   padding: 8px 12px 8px 16px;
   border: 1px dashed color-mix(in srgb, var(--coach) 30%, var(--line));
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--bg-raised) 60%, transparent);
 }
 
@@ -51,7 +51,7 @@
   min-height: 44px;
   padding: 8px 16px;
   border-color: color-mix(in srgb, var(--coach) 55%, var(--line));
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   color: var(--coach);
   font-size: 14px;
   font-weight: 700;

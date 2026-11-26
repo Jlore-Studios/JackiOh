@@ -1,0 +1,25 @@
+{
+  "title": "Toxopid's Legs are Flexible and crush the Units they land on",
+  "sources": "#5048",
+  "notes": "S+ #121.1 Toxopid Leg gains Flexible. S+ #121 Toxopid's Cry draws its Legs' zones from every unit and backrow zone of both sides (Radiant: the opponent's) that holds nothing or only Units, destroys the Units there, and lands a Leg in each zone once the deaths resolve (R5048000). Claimed with --plays as classify's stage 2 against the merge base names them: M #8 Reach the Summit (its random Radiant cards can be a Toxopid) and S+ #127 Corvus (its line now meets Legs standing in the backrow).",
+  "player": {
+    "title": "Toxopid's Legs crush what they land on",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Toxopid Leg is now Flexible, so it can stand in the backrow as well as the unit row.",
+      "Toxopid's Legs now land in random zones of either row, empty or holding Units, and destroy the Units there before they land.",
+      "Radiant Toxopid's Legs still land only on your opponent's side, now in either row, destroying the Units there."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [
+    "stinkyscapeplus-121",
+    "stinkyscapeplus-121-1"
+  ],
+  "plays": [
+    "meditative-008",
+    "stinkyscapeplus-127"
+  ]
+}

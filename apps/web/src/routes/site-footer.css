@@ -45,5 +45,5 @@
 .tavern .site-footer a:focus-visible {
   outline: 2px solid var(--tavern-gold-pale);
   outline-offset: 3px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }

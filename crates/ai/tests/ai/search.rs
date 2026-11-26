@@ -2024,6 +2024,32 @@ mod r3498000_wrap_up {
         root_expansion(state, AI, AI_BUDGET.root_branching, Prices::NONE)
     }
 
+    /// R4604014: the beam's slice lets the moves at its root draw on the parent however many nodes they
+    /// cost, and binds once the root is tried; the parent's own limit still stops it, and a plain slice
+    /// (`create_wrap_up_counter`'s) binds at once.
+    #[test]
+    fn r4604014_the_beam_s_slice_binds_once_its_root_is_tried_and_the_parent_s_limit_always() {
+        let root = create_node_counter(10, None);
+        let beam = create_beam_counter(&root, 2, None);
+        for _ in 0..5 {
+            assert!(beam.take(), "the root takes past its slice of 2");
+        }
+        assert_eq!(beam.limit(), 10, "the root reads the parent's limit");
+        beam.end_root();
+        assert!(!beam.take(), "past its slice once the root is tried");
+        assert!(root.take(), "the parent runs on");
+
+        let root = create_node_counter(10, None);
+        let plain = create_wrap_up_counter(&root, 2, None);
+        assert!(plain.take() && plain.take());
+        assert!(!plain.take(), "a plain slice binds before its root is tried");
+
+        let small = create_node_counter(3, None);
+        let beam = create_beam_counter(&small, 2, None);
+        assert!(beam.take() && beam.take() && beam.take());
+        assert!(!beam.take(), "the parent's limit stops the root");
+    }
+
     #[test]
     fn r4801000_a_wrap_up_counter_is_first_polled_once_the_root_is_tried_and_the_hard_stop_still_is() {
         let root = create_node_counter(100, None);
