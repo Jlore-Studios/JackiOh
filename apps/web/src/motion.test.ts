@@ -108,7 +108,7 @@ const UNTOKENED_MOTION: Record<string, number> = {
   "game/table.css": 27,
   "packs/pack-object.css": 12,
   "packs/packs.css": 4,
-  "practice/practice.css": 42,
+  "practice/practice.css": 41,
   "rank/rankCrest.css": 2,
   "routes/game-banner.css": 6,
   "routes/landing.css": 25,

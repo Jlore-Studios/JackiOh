@@ -31,6 +31,7 @@ import {
   type RefObject,
 } from "react";
 
+import { Icon } from "../icons/Icon.tsx";
 import { t, useLocale } from "../i18n/i18n.ts";
 import { useModalKeys } from "../together/modalKeys.ts";
 import "./dialog.css";
@@ -123,7 +124,7 @@ export function DialogClose({
       onPointerDown={onPointerDown}
       onClick={onClick}
     >
-      <span aria-hidden="true">✕</span>
+      <Icon name="close" />
     </button>
   );
 }

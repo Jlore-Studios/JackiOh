@@ -4,7 +4,7 @@
 // anchor, a colossal glowing tree, a bamboo trellis, and the weather of a scroll: a sumi cloud bank with curled
 // edges, a shimmering tear in the air and thought made visible as shapes orbiting a point. The vine, the tree and the
 // trellis stand on their anchor (it is their bottom centre); the lotus, the cloud, the tear and the shapes centre on
-// it; the branch grows out from it. sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a palette.css name,
+// it; the branch grows out from it. sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a SCENE_PALETTE name,
 // none in Radiant's gold window; a glow or a wash is a stack of translucent shapes, never a gradient; shapes are
 // filled even-odd, so a hole is a second sub-path and no two sub-paths of one shape overlap otherwise.
 

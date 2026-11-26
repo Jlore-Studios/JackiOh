@@ -18,6 +18,8 @@ pub const ID: &str = "infiniteassault-047";
 
 /// The die: 1 to 100.
 const SIDES: i32 = 100;
+/// R4707000: a die's lowest face, where the faces that cancel begin (1 to `chance`).
+const LOWEST_FACE: i32 = 1;
 
 /// A declared enemy attack's attacker, if this answers it.
 fn answered_attacker(ctx: &mut EffectContext<'_>, event: &GameEvent) -> Option<String> {
@@ -51,8 +53,13 @@ fn estate() -> Script {
                     + luck_of(&*ctx.state, ctx.controller);
                 let die = roll_die(ctx, SIDES, lucky, |face| face <= chance);
                 let hit = die.kept_face() <= chance;
-                // R2652001: the die is shown before anything it decided.
-                let mut effects = vec![report_rolls(RollKind::Die, SIDES, vec![die])];
+                // R2652001: the die is shown before anything it decided; R4707000: with the faces that
+                // cancel, which the game record splits it by.
+                let cancels = RollHit {
+                    from: LOWEST_FACE,
+                    to: chance,
+                };
+                let mut effects = vec![report_die_hits(SIDES, vec![die], cancels)];
                 if hit {
                     effects.push(cancel_attack(CancelAttackArgs {
                         destroy_attacker: None,
@@ -128,6 +135,27 @@ mod tests {
             s.expect_stats(VANILLA, json!({ "health": 7 }));
             // A Field Trap stays set and fires again (R2657001).
             s.expect_in_zone(ID, "field");
+        }
+
+        /// R4707000: the die names the faces that cancel, 1 to the declared chance, for the game record.
+        #[test]
+        fn r4707000_its_die_names_the_faces_that_cancel() {
+            let seed = seed_where("estate-hit", |probe| canceled(&{
+                let mut s = armed(false, probe);
+                s.attack(ATTACKER, VANILLA);
+                s
+            }));
+            let mut s = armed(false, &seed);
+            s.attack(ATTACKER, VANILLA);
+            let hits: Vec<(RollKind, Option<RollHit>)> = s
+                .events()
+                .iter()
+                .filter_map(|event| match event {
+                    GameEvent::Rolled { kind, hit, .. } => Some((*kind, *hit)),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(hits, vec![(RollKind::Die, Some(RollHit { from: 1, to: 50 }))]);
         }
 
         #[test]

@@ -260,7 +260,7 @@
   padding: 0 5px;
   border-radius: var(--radius-pill);
   background: var(--opponent);
-  color: #fff;
+  color: var(--pal-white);
   font-size: 11px;
   font-weight: 700;
   line-height: 18px;

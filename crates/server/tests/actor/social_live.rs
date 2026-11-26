@@ -648,6 +648,53 @@ mod r3730000_lobbies {
         assert_eq!(next_of(&bob_ws, from_bob, "lobby", "Bob").await, word);
     }
 
+    // #5005 (J19): an account's deletion takes the lobbies it hosts or sits in with it (0090's
+    // cascade), so their other members are told, as every other change of a lobby tells them.
+    #[tokio::test(start_paused = true)]
+    async fn r3730000_an_account_deletion_closes_its_lobbies_and_tells_their_members() {
+        let app = empty_test_app().await;
+        let (ana, bob, cy) = three_friends(&app).await;
+        let served = serve(&app);
+        let (ana_ws, cy_ws) = (connected(&served, &ana).await, connected(&served, &cy).await);
+        let (status, body) = api(
+            &app,
+            "POST",
+            "/api/lobbies",
+            &ana.token,
+            json!({ "format": "duel", "mode": "random" }),
+        )
+        .await;
+        assert_eq!(status, 201, "{body}");
+        let code = body["code"].as_str().expect("a lobby code").to_string();
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/lobbies/{code}/enter"),
+            &bob.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+        let word = json!({ "type": "lobby", "code": code });
+        assert_eq!(next_of(&ana_ws, 0, "lobby", "Ana").await, word);
+        let (from_ana, from_cy) = (ana_ws.received(), cy_ws.received());
+
+        let (status, body) = api(&app, "DELETE", "/api/account", &bob.token, Value::Null).await;
+        assert_eq!(status, 204, "{body}");
+
+        assert_eq!(next_of(&ana_ws, from_ana, "lobby", "Ana").await, word);
+        assert_told_nothing(&cy_ws, from_cy, "Cy").await;
+        let (status, body) = api(
+            &app,
+            "GET",
+            &format!("/api/lobbies/{code}"),
+            &ana.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 404, "{body}");
+    }
+
     // R4072000: the move onto the running catalog tells every member over `/ws/social`.
     #[tokio::test(start_paused = true)]
     async fn r4072000_the_move_reaches_every_member() {

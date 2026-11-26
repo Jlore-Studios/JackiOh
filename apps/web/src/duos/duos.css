@@ -139,7 +139,7 @@
   padding: 3px 6px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: rgb(24 14 8 / 48%);
+  background: color-mix(in srgb, var(--pal-wood-900) 48%, transparent);
 }
 
 .duos-life__team[data-side="team"] {
@@ -186,7 +186,7 @@
   position: absolute;
   inset: 0 auto 0 0;
   border-radius: inherit;
-  background: #d24b45;
+  background: var(--pal-red-600);
   transition: width calc(240ms * var(--anim-scale)) ease-out;
 }
 
@@ -195,7 +195,7 @@
 }
 
 .duos-life__bar--pool .duos-life__fill {
-  background: #c084fc;
+  background: var(--pal-amethyst-300);
 }
 
 .duos-life__value {
@@ -209,7 +209,7 @@
 }
 
 .duos-life__pool[data-carrying="true"] .duos-life__bar {
-  box-shadow: inset 0 0 0 1px #c084fc, 0 0 6px rgb(192 132 252 / 45%);
+  box-shadow: inset 0 0 0 1px var(--pal-amethyst-300), 0 0 6px color-mix(in srgb, var(--pal-amethyst-300) 45%, transparent);
 }
 
 .duos-teammate {
@@ -239,7 +239,7 @@
 
 .duos-teammate__away {
   flex: 1 1 100%;
-  color: color-mix(in srgb, var(--opponent) 70%, white);
+  color: color-mix(in srgb, var(--opponent) 70%, var(--pal-white));
   font-weight: 650;
 }
 
@@ -336,7 +336,7 @@
   padding: 2px;
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-pill);
-  background: rgb(14 9 5 / 88%);
+  background: color-mix(in srgb, var(--pal-wood-950) 88%, transparent);
   box-shadow: var(--shadow-2);
 }
 
@@ -357,7 +357,7 @@
 
 .duos-ping-wheel__ping:hover,
 .duos-ping-wheel__ping:focus-visible {
-  background: rgb(255 255 255 / 14%);
+  background: color-mix(in srgb, var(--pal-white) 14%, transparent);
 }
 
 .duos-pass {
@@ -409,7 +409,7 @@
   font-size: 22px;
   line-height: 1;
   transform: translate(-50%, -60%);
-  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 70%));
+  filter: drop-shadow(0 2px 3px color-mix(in srgb, var(--pal-black) 70%, transparent));
 }
 
 @keyframes duos-ping-pulse {
@@ -527,7 +527,7 @@
 
 .coop-panel__error {
   margin: 0;
-  color: color-mix(in srgb, var(--opponent) 60%, white);
+  color: color-mix(in srgb, var(--opponent) 60%, var(--pal-white));
   font-weight: 650;
 }
 

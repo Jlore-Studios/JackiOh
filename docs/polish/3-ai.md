@@ -725,15 +725,14 @@ The rule, one step at a time, each step one `reduce` (one node):
    Power to Punish, a Heroic Power's rolled Ping) is information too. The opponent tries up to
    `AI_REPLY.visibleActivations` of them, those aimed at the seat's hero first, then those aimed at
    a card the seat controls, one per pick, dealt out over every source and ability in turn, each
-   one's best target by the seat's `unitWorth` first (R4515000; `AI_REPLY.spreadActivations` off
-   gives back the first ones listed), and takes the one its own `evaluate` likes best, if that
-   beats standing still (#1036). A face-down card's Reveal is never tried: its card is a sample.
+   one's best target by the seat's `unitWorth` first (R4515000), and takes the one its own
+   `evaluate` likes best, if that beats standing still (#1036). A face-down card's Reveal is never
+   tried: its card is a sample.
 3. **Trades.** Otherwise it takes the legal attack of highest static value, when that value is
    positive: an attack that kills the seat's hero is worth `AI_EVAL.win`; so is every attack on the
    hero while the attacks the opponent has left would reach it together past the seat's Taunts
-   (`readyGap` at most zero; #1634, behind `AI_REPLY.openLethal`, switched off until a screen keeps
-   it); one on the hero is worth `facePerDamage` per point of `projectedHeroDamage`, and a Lifesteal
-   attacker's also what healing its own hero by that much is worth on the hero curve unless the hit is
+   (`readyGap` at most zero; #1634, R5027000); one on the hero is worth `facePerDamage` per point
+   of `projectedHeroDamage`, and a Lifesteal attacker's also what healing its own hero by that much is worth on the hero curve unless the hit is
    lethal (§4.4 step 8, #3858); one on a unit
    is worth the target's `unitWorth` if it dies (First Strike deciding who strikes first, Divine
    Shield popped for its keyword weight, Poisonous killing), less the `unitWorth` of the body it

@@ -129,16 +129,16 @@ fn r1846000_the_query_draws_the_busted_and_complicated_pools_from_the_sets_that_
 #[test]
 fn r1846001_every_set_adds_the_single_player_sets() {
     setup();
-    assert_eq!(SINGLE_PLAYER_SETS, [SetName::Boss, SetName::BossX]);
+    assert_eq!(
+        SINGLE_PLAYER_SETS,
+        [SetName::Boss, SetName::BossX, SetName::InfiniteAssault]
+    );
     assert!(SINGLE_PLAYER_SETS.iter().all(|set| !set_ships(*set)));
-    // R4577000: a single-player set held while it is built (the Infinite Assault) is not one of them
-    // until its release opens its row; `everySet` passes it by (r4577000_… below).
-    assert!(!SINGLE_PLAYER_SETS.contains(&SetName::InfiniteAssault));
     // "Every BUSTED card the catalog holds, the single-player sets' included": the sets that ship,
     // then Boss and Boss-X, in `query`'s order.
     assert_eq!(
         pool(json!({ "busted": true, "everySet": true })),
-        vec!["core-001", "boss-001", "bossx-001"]
+        vec!["core-001", "boss-001", "bossx-001", "infiniteassault-001"]
     );
     assert_eq!(
         pool(json!({ "everySet": true })),
@@ -149,7 +149,8 @@ fn r1846001_every_set_adds_the_single_player_sets() {
             "core-004",
             "core-005",
             "boss-001",
-            "bossx-001"
+            "bossx-001",
+            "infiniteassault-001"
         ]
     );
     // `false` is the default: the sets that ship.
@@ -169,7 +170,13 @@ fn r1846001_every_set_adds_the_single_player_sets() {
     // Tokens keep §5.1's rule.
     assert_eq!(
         pool(json!({ "busted": true, "everySet": true, "withTokens": true })),
-        vec!["core-001", "core-005-1", "boss-001", "bossx-001"]
+        vec![
+            "core-001",
+            "core-005-1",
+            "boss-001",
+            "bossx-001",
+            "infiniteassault-001"
+        ]
     );
     // A set a thread previews is open, so it joins without `everySet` (R1420).
     let _preview = preview_sets(&[SetName::Boss]);
@@ -177,18 +184,15 @@ fn r1846001_every_set_adds_the_single_player_sets() {
     clear_overrides();
 }
 
-/// R4577000: a single-player set held while it is built is in no pool but one that names it or its
-/// cards, `everySet` included, until a thread previews it.
+/// R4577000: the release turns the Infinite Assault's row to `SinglePlayer` (#4597), so no set is held
+/// for single-player and its cards join the `everySet` pools, while a pool that names no set keeps to
+/// the sets that ship and one that names the set or its cards keeps to them.
 #[test]
-fn r4577000_a_held_single_player_set_is_in_no_pool_but_one_that_names_it() {
+fn r4577000_a_released_single_player_set_joins_every_set_pool() {
     setup();
-    assert_eq!(HELD_SINGLE_PLAYER_SETS, [SetName::InfiniteAssault]);
-    assert_eq!(
-        pool(json!({ "busted": true, "everySet": true })),
-        vec!["core-001", "boss-001", "bossx-001"]
-    );
+    assert!(HELD_SINGLE_PLAYER_SETS.is_empty());
     assert!(!pool(json!({})).contains(&"infiniteassault-001".to_string()));
-    assert!(!pool(json!({ "everySet": true })).contains(&"infiniteassault-001".to_string()));
+    assert!(pool(json!({ "everySet": true })).contains(&"infiniteassault-001".to_string()));
     assert_eq!(
         pool(json!({ "busted": true, "set": "Infinite Assault" })),
         vec!["infiniteassault-001"]
@@ -197,11 +201,6 @@ fn r4577000_a_held_single_player_set_is_in_no_pool_but_one_that_names_it() {
         pool(json!({ "defId": ["infiniteassault-001"] })),
         vec!["infiniteassault-001"]
     );
-    {
-        // The testkit's every-set preview opens it, as it opens a held set (R1420).
-        let _preview = preview_every_set();
-        assert!(pool(json!({ "busted": true })).contains(&"infiniteassault-001".to_string()));
-    }
     assert_eq!(pool(json!({ "busted": true })), vec!["core-001"]);
     clear_overrides();
 }

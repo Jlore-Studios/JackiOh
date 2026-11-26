@@ -580,9 +580,9 @@
     var(--bg-sunken) 0%,
     var(--bg-sunken) 36%,
     var(--pal-wood-800) 40%,
-    var(--pal-red-500) 43%,
+    var(--pal-red-600) 43%,
     color-mix(in srgb, var(--radiant) 80%, var(--pal-white)) 45%,
-    color-mix(in srgb, var(--pal-orange-400) 40%, transparent) 47%,
+    color-mix(in srgb, var(--pal-copper-400) 40%, transparent) 47%,
     transparent 50%
   );
   animation-name: jk-burn-climb;
@@ -1841,12 +1841,12 @@
 }
 
 [data-outcome="loss"] > .result-overlay__word {
-  color: var(--pal-red-400);
+  color: var(--pal-lacquer-400);
   text-shadow: 0 0 18px color-mix(in srgb, var(--pal-red-600) 45%, transparent), 0 2px 0 var(--pal-wood-800);
 }
 
 [data-outcome="draw"] > .result-overlay__word {
-  color: var(--pal-blue-200);
+  color: var(--pal-ink-200);
   text-shadow: 0 2px 0 var(--pal-slate-800);
 }
 

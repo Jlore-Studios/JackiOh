@@ -48,7 +48,7 @@
      `HAND_LIFT_SCALE` in game/config.ts state them. */
   --hand-lift-scale: 1.22;
   --hand-lift-rise: 0.1;
-  --selected: var(--pal-sky-300);
+  --selected: var(--pal-ink-300);
   --seat-radius: var(--radius-md);
   --board-notices-max-w: 480px;
   --board-notices-bottom: var(--space-2);
@@ -214,13 +214,13 @@
 }
 
 .hero-armor {
-  border: 1px solid color-mix(in srgb, var(--pal-blue-200) 50%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pal-ink-200) 50%, transparent);
   background: var(--pal-slate-700);
 }
 
 .hero-jade {
   border: 1px solid color-mix(in srgb, var(--pal-jade-400) 55%, transparent);
-  background: var(--pal-green-700);
+  background: var(--pal-jade-700);
 }
 
 /* R3540000: the hero's Burn and Toxic, ember and green beside the Jade Counter's. #4251: the
@@ -315,7 +315,7 @@
 }
 
 .power-x {
-  color: var(--pal-sky-300);
+  color: var(--pal-ink-300);
   font-weight: 700;
 }
 
@@ -530,11 +530,11 @@ button.modifier-badge[data-open="true"] {
 
 .mana-crystal[data-filled="true"] {
   background: var(--pal-blue-600);
-  box-shadow: 0 0 6px color-mix(in srgb, var(--pal-sky-400) 70%, transparent);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--pal-ink-400) 70%, transparent);
 }
 
 .mana-text {
-  color: var(--pal-blue-200);
+  color: var(--pal-ink-200);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -979,7 +979,7 @@ button.modifier-badge[data-open="true"] {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   background:
-    radial-gradient(circle at 12% 23%, color-mix(in srgb, var(--pal-gold-200) 9%, transparent) 0 1px, transparent 2px),
+    radial-gradient(circle at 12% 23%, color-mix(in srgb, var(--pal-brass-200) 9%, transparent) 0 1px, transparent 2px),
     radial-gradient(circle at 71% 61%, color-mix(in srgb, var(--pal-wood-800) 18%, transparent) 0 1px, transparent 2px),
     radial-gradient(110% 80% at 50% 50%, color-mix(in srgb, var(--pal-brass-500) 46%, transparent), transparent 72%),
     linear-gradient(180deg, var(--pal-wood-600), var(--pal-brass-800) 50%, var(--pal-wood-600));
@@ -1030,8 +1030,8 @@ button.modifier-badge[data-open="true"] {
     radial-gradient(ellipse at 38% 34%, color-mix(in srgb, var(--pal-wood-900) 58%, transparent), transparent 54%),
     radial-gradient(ellipse at 66% 68%, color-mix(in srgb, var(--pal-gold-400) 36%, transparent), transparent 60%);
   box-shadow:
-    calc(var(--sand-size) * 0.42) calc(var(--sand-size) * -0.16) 0 -1px color-mix(in srgb, var(--pal-gold-200) 45%, transparent),
-    calc(var(--sand-size) * -0.55) calc(var(--sand-size) * 0.4) 0 -1px color-mix(in srgb, var(--pal-gold-200) 38%, transparent);
+    calc(var(--sand-size) * 0.42) calc(var(--sand-size) * -0.16) 0 -1px color-mix(in srgb, var(--pal-brass-200) 45%, transparent),
+    calc(var(--sand-size) * -0.55) calc(var(--sand-size) * 0.4) 0 -1px color-mix(in srgb, var(--pal-brass-200) 38%, transparent);
   opacity: 0.88;
   rotate: calc(var(--sand-variation) * 47deg);
   translate: -50% -50%;
@@ -1067,7 +1067,7 @@ button.modifier-badge[data-open="true"] {
 .sand-mark--crater {
   width: calc(var(--sand-zone) * 1.25);
   background:
-    radial-gradient(circle, color-mix(in srgb, var(--pal-wood-800) 55%, transparent) 0 46%, color-mix(in srgb, var(--pal-gold-200) 38%, transparent) 54%, transparent 68%);
+    radial-gradient(circle, color-mix(in srgb, var(--pal-wood-800) 55%, transparent) 0 46%, color-mix(in srgb, var(--pal-brass-200) 38%, transparent) 54%, transparent 68%);
 }
 
 @keyframes sand-settle {
@@ -1414,7 +1414,7 @@ button.modifier-badge[data-open="true"] {
 
 .black-hole-count {
   align-self: center;
-  color: var(--pal-violet-300);
+  color: var(--pal-amethyst-300);
   font-size: var(--type-sm);
 }
 
@@ -1429,9 +1429,9 @@ button.modifier-badge[data-open="true"] {
 }
 
 .lane[data-lane-mark="slashed"] {
-  border-left: 3px solid var(--pal-red-900);
-  border-right: 3px solid var(--pal-red-900);
-  background: color-mix(in srgb, var(--pal-blue-900) 40%, var(--pal-black));
+  border-left: 3px solid var(--pal-lacquer-900);
+  border-right: 3px solid var(--pal-lacquer-900);
+  background: color-mix(in srgb, var(--pal-ink-900) 40%, var(--pal-black));
 }
 
 .lane[data-lane-mark="slashed"] > .zone {
@@ -1439,17 +1439,17 @@ button.modifier-badge[data-open="true"] {
 }
 
 .zone[data-chain="shared"] > .card {
-  outline: 2px dashed var(--pal-sky-400);
+  outline: 2px dashed var(--pal-ink-400);
   outline-offset: 2px;
 }
 
 .zone[data-chain="split"] > .card {
-  outline: 2px dashed var(--pal-orange-400);
+  outline: 2px dashed var(--pal-copper-400);
   outline-offset: 2px;
 }
 
 .zone[data-chain="both"] > .card {
-  outline: 2px dashed var(--pal-purple-400);
+  outline: 2px dashed var(--pal-amethyst-300);
   outline-offset: 2px;
 }
 
@@ -1548,9 +1548,9 @@ button.modifier-badge[data-open="true"] {
   margin: auto;
   width: 34%;
   aspect-ratio: 1;
-  border: 2px solid color-mix(in srgb, var(--pal-yellow-400) 55%, transparent);
+  border: 2px solid color-mix(in srgb, var(--pal-gold-400) 55%, transparent);
   border-radius: var(--radius-xs);
-  background: color-mix(in srgb, var(--pal-yellow-400) 25%, transparent);
+  background: color-mix(in srgb, var(--pal-gold-400) 25%, transparent);
   transform: rotate(45deg);
 }
 
@@ -1569,7 +1569,7 @@ button.modifier-badge[data-open="true"] {
   height: 1.44em;
   border: 1px solid color-mix(in srgb, var(--pal-slate-100) 80%, transparent);
   border-radius: var(--radius-round);
-  background: var(--pal-blue-700);
+  background: var(--pal-blue-800);
   color: var(--pal-white);
   font-size: var(--type-xs-em);
   font-weight: 800;
@@ -1622,7 +1622,7 @@ button.modifier-badge[data-open="true"] {
    to half a line when the text below runs long. The text is what gives way. */
 .card-type {
   flex: 0 0 auto;
-  color: color-mix(in srgb, var(--pal-violet-300) 70%, var(--text-dim));
+  color: color-mix(in srgb, var(--pal-amethyst-300) 70%, var(--text-dim));
   font-size: var(--type-xs-em);
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -1697,7 +1697,7 @@ button.modifier-badge[data-open="true"] {
 }
 
 .stat-armor {
-  background: var(--pal-grey-500);
+  background: var(--pal-stone-500);
 }
 
 /* ATK is the default and says nothing; DEF is already a sideways card, and keeps its tag. */
@@ -1736,9 +1736,9 @@ button.modifier-badge[data-open="true"] {
 .shield-icon {
   position: absolute;
   inset: 0;
-  border: 2px solid var(--pal-blue-200);
+  border: 2px solid var(--pal-ink-200);
   border-radius: var(--radius-sm);
-  box-shadow: inset 0 0 10px color-mix(in srgb, var(--pal-blue-200) 45%, transparent);
+  box-shadow: inset 0 0 10px color-mix(in srgb, var(--pal-ink-200) 45%, transparent);
   pointer-events: none;
 }
 
@@ -1955,7 +1955,7 @@ button.modifier-badge[data-open="true"] {
 }
 
 .damage-pop {
-  color: var(--pal-red-400);
+  color: var(--pal-lacquer-400);
 }
 
 /* Damage feel is data-driven in game/damageFeel.ts. The number stays readable at the old size for
@@ -1991,7 +1991,7 @@ button.modifier-badge[data-open="true"] {
   z-index: var(--z-clock);
   inset: 0;
   pointer-events: none;
-  background: color-mix(in srgb, var(--pal-red-900) 38%, transparent);
+  background: color-mix(in srgb, var(--pal-lacquer-900) 38%, transparent);
   mask-image: radial-gradient(ellipse at center, transparent 48%, var(--pal-black));
   -webkit-mask-image: radial-gradient(ellipse at center, transparent 48%, var(--pal-black));
   animation: giga-vignette-flash 400ms var(--ease-out) both;
@@ -2281,13 +2281,13 @@ button.modifier-badge[data-open="true"] {
 /* R3389000: a Mythic whose takeover has a look of its own stills in it: In Too Deep's "abyss", the spiral
    shaft's shrine lights in rings of violet over black-blue water. Static: nothing here animates. */
 .takeover-still[data-takeover-look="abyss"] {
-  background: color-mix(in srgb, var(--pal-blue-900) 55%, transparent);
+  background: color-mix(in srgb, var(--pal-ink-900) 55%, transparent);
 }
 
 .takeover-still[data-takeover-look="abyss"] .takeover-still-rays {
   background: repeating-radial-gradient(
     circle,
-    color-mix(in srgb, var(--pal-violet-500) 40%, transparent) 0 2%,
+    color-mix(in srgb, var(--pal-amethyst-500) 40%, transparent) 0 2%,
     transparent 3% 9%
   );
   opacity: 0.6;
@@ -2359,11 +2359,11 @@ button.modifier-badge[data-open="true"] {
 }
 
 .heal-pop {
-  color: var(--pal-green-400);
+  color: var(--pal-jade-400);
 }
 
 .loss-pop {
-  color: var(--pal-purple-400);
+  color: var(--pal-amethyst-300);
 }
 
 /* ----------------------------------------------------------------- controls and the log --- */
@@ -2424,7 +2424,7 @@ button.modifier-badge[data-open="true"] {
   width: 8px;
   height: 8px;
   border-radius: var(--radius-round);
-  background: var(--pal-red-500);
+  background: var(--pal-red-600);
 }
 
 .match-menu {
@@ -2517,7 +2517,7 @@ button.modifier-badge[data-open="true"] {
 
 .board-rail .series-banner {
   padding: var(--space-1) var(--space-3);
-  border-color: color-mix(in srgb, var(--pal-gold-200) 28%, transparent);
+  border-color: color-mix(in srgb, var(--pal-brass-200) 28%, transparent);
   background: color-mix(in srgb, var(--pal-wood-900) 48%, transparent);
 }
 
@@ -2629,7 +2629,7 @@ button.modifier-badge[data-open="true"] {
 }
 
 .board .control.control-end-turn[data-turn-state="ready"] {
-  box-shadow: var(--primary-shadow), 0 0 13px color-mix(in srgb, var(--pal-yellow-400) 36%, transparent);
+  box-shadow: var(--primary-shadow), 0 0 13px color-mix(in srgb, var(--pal-gold-400) 36%, transparent);
 }
 
 /* The waiting pulse is a yellow halo drawn once on the button's `::after`, whose opacity breathes
@@ -2639,7 +2639,7 @@ button.modifier-badge[data-open="true"] {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: 0 0 18px color-mix(in srgb, var(--pal-yellow-400) 62%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--pal-gold-400) 62%, transparent);
   opacity: 0;
   pointer-events: none;
   animation: end-turn-ready-pulse 1.2s var(--ease-in-out) infinite;
@@ -2694,10 +2694,10 @@ button.modifier-badge[data-open="true"] {
   right: 8px;
   bottom: 5px;
   padding: 0 var(--space-2);
-  border: 1px solid color-mix(in srgb, var(--pal-gold-200) 28%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pal-brass-200) 28%, transparent);
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--pal-wood-900) 65%, transparent);
-  color: var(--pal-gold-200);
+  color: var(--pal-brass-200);
   font-size: var(--type-xs-em);
   font-weight: 750;
 }
@@ -2708,7 +2708,7 @@ button.modifier-badge[data-open="true"] {
   bottom: 4px;
   gap: var(--space-1);
   max-width: calc(100% - 12px);
-  color: var(--pal-gold-200);
+  color: var(--pal-brass-200);
   font-size: var(--type-xs-em);
 }
 

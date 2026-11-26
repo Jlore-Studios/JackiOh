@@ -3,6 +3,7 @@
 // it began (R4675001), pooled across the patches. Card, Name, Tier and Adjusted as the Created tables show them
 // (R4083000), then R5037000's Win rate, and Play rate behind the tab's Columns toggle as the Cards tab's are (R3185000,
 // R3950000), Games behind it too, and Since: the version it began at and the patches it reaches.
+// R5033000: its header sorts by Date, when the version it began at shipped.
 // It sorts, views and ranges by the page's one state, as the Tokens tab does, and a row opens the card's drill-down.
 // Every figure is the server's (CLAUDE.md rule 7); the tier fit only measures its range against its band (R3184001).
 // R4680000: the same table and grid draw the Versions view, one row per play version of each card the Cards tab lists,
@@ -26,9 +27,17 @@ const PERCENT = 100;
 
 /**
  * R4678001: the columns Running sorts by, in the deck table's order: its sort select. It has no Decisiveness.
- * R5037000: it has the Cards tab's Win rate and Play rate.
+ * R5037000: it has the Cards tab's Win rate and Play rate. R5033000 adds Date, which the Since header also sets.
  */
-export const RUNNING_SORT_COLUMNS: readonly CreatedColumn[] = ["name", "games", "tier", "adjustedWinRate", "winRate", "playRate"];
+export const RUNNING_SORT_COLUMNS: readonly CreatedColumn[] = [
+  "name",
+  "games",
+  "tier",
+  "adjustedWinRate",
+  "winRate",
+  "playRate",
+  "date",
+];
 
 /** R4678001: the page's one sort as Running reads it: a column it lacks (Decisiveness) reads as Adjusted, keeping its direction. */
 export function runningSortOf(col: string, dir: "asc" | "desc"): CreatedSort {
@@ -88,6 +97,7 @@ export function runningRows(
         patches: version.patches,
         winRate: version.winRate,
         playRate: version.playRate,
+        firstShipped: version.firstShipped,
       },
     ];
   });
@@ -135,6 +145,7 @@ export function versionRows(
         patches: version.patches,
         winRate: version.winRate,
         playRate: version.playRate,
+        firstShipped: version.firstShipped,
         needs: version.live || def ? undefined : version.last,
       };
     }),
@@ -335,9 +346,7 @@ export function RunningPanel({
             <SortHeader col="adjustedWinRate" label={t("Adjusted")} {...header} />
             <SortHeader col="winRate" label={t("Win rate")} {...header} />
             {visiblePlayRate && <SortHeader col="playRate" label={t("Play rate")} {...header} />}
-            <th scope="col" className="stats-th">
-              {t("Since")}
-            </th>
+            <SortHeader col="date" label={t("Since")} {...header} />
           </tr>
         </thead>
         <tbody>

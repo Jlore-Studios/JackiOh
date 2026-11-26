@@ -4,6 +4,7 @@
 // `.field`) and the named texture keeps below. Every other stylesheet, the menus' included, is held to its
 // count of them in UNTOKENED_SURFACES (#3224). #5015: no stylesheet but surfaces.css writes a border-radius length,
 // the table's and the card faces' included, and the pill is held to the rules PILL_RULES lists.
+// R5091000: every ::before and ::after a sheet makes paints something, but the hit areas and spacers EMPTY_PSEUDO names.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -47,7 +48,7 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "cards/art/artLive.css": 3,
   "cards/cards.css": 145,
   "cards/cardstate.css": 16,
-  "cards/cosmetics.css": 38,
+  "cards/cosmetics.css": 37,
   // R3344000: the glare's two radial gradients, over a card face's art and its frame, where a gradient means something.
   "cards/depth.css": 2,
   "cards/dormant.css": 5,
@@ -361,6 +362,88 @@ function offSurface(css: string): string[] {
   return found;
 }
 
+/**
+ * R5091000: the pseudo-elements that paint nothing by design, keyed as `pseudoKey` keys them: hit areas
+ * that give a small control a finger-sized target, and floats that keep a name clear of its cost gem.
+ */
+const EMPTY_PSEUDO: Record<string, string> = {
+  ".activate-control::before": "the Activate control's touch band (game/activate.css)",
+  ".card-name::before": "the float that keeps a card name's first line clear of its cost gem (game/board.css)",
+  ".coach__more::before": "the lesson's More control's target (tutorial/tutorial.css)",
+  ".db-add::before": "the deck builder's add button's target (game/deckbuilder/deckbuilder.css)",
+  ".db-chip::before": "a cost filter crystal's target on a phone (game/deckbuilder/deckbuilder.css)",
+  ".drag-ghost-name::before": "the float that keeps the drag ghost name's first line clear of its cost gem (game/drag/drag.css)",
+  ".pile--browsable::after": "a pile's finger-sized target on a touch screen (game/inspectable.css)",
+  "a::before": "a link's finger-sized target in running text (auth/tavern.css) and the site footer (routes/site-footer.css)",
+};
+
+/** Each rule's selector list and body in `css` (comments out), split as `withoutTable` splits them. */
+function rulesOf(css: string): { selector: string; body: string }[] {
+  return css.split("}").flatMap((chunk) => {
+    const open = chunk.lastIndexOf("{");
+    if (open === -1) return [];
+    const before = chunk.slice(0, open);
+    return [{ selector: before.slice(before.lastIndexOf("{") + 1).trim(), body: chunk.slice(open + 1) }];
+  });
+}
+
+/** `list` split at its top-level commas. */
+function selectorsOf(list: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let part = "";
+  for (const char of list) {
+    if (char === "(" || char === "[") depth += 1;
+    if (char === ")" || char === "]") depth -= 1;
+    if (char === "," && depth === 0) {
+      out.push(part.trim());
+      part = "";
+    } else {
+      part += char;
+    }
+  }
+  out.push(part.trim());
+  return out;
+}
+
+/** A `::before` or `::after` selector's last compound without its attributes, its functional pseudo-classes' arguments or its pseudo-classes: `.skeleton[data-motion="full"] .skeleton__block::after` is `.skeleton__block::after`. */
+function pseudoKey(selector: string): string | null {
+  const pseudo = /::(before|after)$/.exec(selector);
+  if (pseudo === null) return null;
+  let base = selector.slice(0, pseudo.index).replace(/\[[^[\]]*\]/g, "");
+  for (let before = ""; before !== base; ) {
+    before = base;
+    base = base.replace(/\([^()]*\)/g, "");
+  }
+  const parts = base.split(/[\s>+~]+/);
+  return `${(parts[parts.length - 1] ?? "").replace(/:[\w-]+/g, "")}::${pseudo[1]}`;
+}
+
+const CONTENT = /(?<![\w-])content\s*:\s*([^;]+)/;
+/** A declaration that paints a pseudo-element's box. */
+const PAINT =
+  /(?<![\w-])(?:background(?:-color|-image)?|border(?:-(?:top|right|bottom|left|block|inline)(?:-(?:start|end))?)?(?:-(?:color|width|style|image))?|outline|box-shadow|backdrop-filter)\s*:\s*([^;]+)/g;
+
+/** R5091000: the `pseudoKey`s the sheets (`css`, comments out) make with a `content` other than none or normal and paint in no rule of theirs: no text of their own, no fill, border, outline, shadow or backdrop. */
+function emptyPseudos(sheets: string[]): string[] {
+  const made = new Set<string>();
+  const painted = new Set<string>();
+  for (const css of sheets)
+    for (const { selector, body } of rulesOf(css))
+      for (const one of selectorsOf(selector)) {
+        const key = pseudoKey(one);
+        if (key === null) continue;
+        const content = CONTENT.exec(body)?.[1]?.trim();
+        if (content !== undefined && content !== "none" && content !== "normal") {
+          made.add(key);
+          if (content !== '""' && content !== "''") painted.add(key);
+        }
+        for (const match of body.matchAll(PAINT))
+          if (!/^(?:none|0|transparent)(?:\s*!important)?$/.test((match[1] ?? "").trim())) painted.add(key);
+      }
+  return [...made].filter((key) => !painted.has(key)).sort();
+}
+
 describe("#2109 the surface scale", () => {
   it("#2109 #5015 surfaces.css names 38 radii, 4 shadows and 21 layers in order, and nothing else", () => {
     expect(RADII).toEqual([
@@ -564,5 +647,34 @@ describe("#5015 one corner language", () => {
 
   it("#5015 only the rules in PILL_RULES take the pill", () => {
     expect(pillRules()).toEqual(PILL_RULES);
+  });
+});
+
+describe("#5091 no empty pseudo-elements", () => {
+  it("R5091000 every ::before and ::after a sheet makes paints something, but EMPTY_PSEUDO's hit areas and spacers", () => {
+    expect(
+      emptyPseudos(SHEETS.map(codeOf)),
+      "give the pseudo-element a fill, or delete it with its rule; a hit area or a spacer joins EMPTY_PSEUDO with its reason",
+    ).toEqual(Object.keys(EMPTY_PSEUDO).sort());
+  });
+
+  it("R5091000 the check finds a pseudo-element no rule of it paints, wherever its rules sit", () => {
+    expect(emptyPseudos(['.a::after { content: ""; animation: spin 1s linear 1; }'])).toEqual([".a::after"]);
+    expect(
+      emptyPseudos(['.a::after { content: ""; }', '.x .a[data-on="true"]::after { background: var(--opponent); }']),
+    ).toEqual([]);
+    expect(
+      emptyPseudos(['.a::before { content: "→"; }', "@media (x) { .b::after { content: ''; border-bottom: 1px solid; } }"]),
+    ).toEqual([]);
+    expect(
+      emptyPseudos([
+        '.a::before { content: none; }',
+        '.c::before { content: ""; background: none; box-shadow: none; }',
+        '.d::after { content: ""; border-radius: var(--radius-round); }',
+      ]),
+    ).toEqual([".c::before", ".d::after"]);
+    expect(
+      emptyPseudos([':where(button, a[href]):where(:not(:is(p, label) a, tr))::before { content: ""; inset: -8px; }']),
+    ).toEqual(["::before"]);
   });
 });

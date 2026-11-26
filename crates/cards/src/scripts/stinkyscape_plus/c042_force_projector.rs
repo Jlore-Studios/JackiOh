@@ -1,8 +1,8 @@
 //! SPEC §8.12 S+ #42 Force Projector (R3550004, R3556004, R4292001; R1420):
 //! (3) Field Spell, Mindustrial, Rare, a card of the Stinkyscape+ set.
-//!   Base:    "The first {pool} damage allies would take per turn is nullified."
-//!   Radiant: "The first {pool} damage allies would take per turn is nullified." (issue #4292 took
-//!            its Armor 2)
+//!   Base:    "Aura: The first {pool} damage allies would take per turn is nullified."
+//!   Radiant: "Aura: The first {pool} damage allies would take per turn is nullified." (issue #4292
+//!            took its Armor 2)
 //!
 //! The pool is the E6 per-turn damage pool (`StaticFlags.damagePool`, R3550004): the first N damage
 //! its side would take each turn is nullified after Armor, refilling at the start of its

@@ -1,5 +1,5 @@
-//! #38 Quickstriker (SPEC §8.2): Field Spell, "Your cards gain 'Combo X: deal X damage to the enemy
-//! hero', X = cards you played earlier this turn"; radiant "… deal 2X damage …" (R275, R281).
+//! #38 Quickstriker (SPEC §8.2): Field Spell, "Aura: Your cards gain 'Combo X: deal X damage to the
+//! enemy hero', X = cards you played earlier this turn"; radiant "… deal 2X damage …" (R275, R281).
 //! ROUTE: §10.5 step 5 resolves it with the Combo checks for every play and cast (R70), before the card's
 //! own text, off this card's static flag (`playSteps.quickstrikerCombo`). X is `turnLog.cardsPlayed`
 //! before the card being played (§8.2's Engine cell). A `cardPlayed` trigger would read the count late:

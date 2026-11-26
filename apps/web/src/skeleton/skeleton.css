@@ -11,7 +11,7 @@
 .skeleton {
   --skeleton-ink: color-mix(in srgb, var(--pal-brass-500) 18%, transparent);
   --skeleton-edge: color-mix(in srgb, var(--pal-brass-500) 30%, transparent);
-  --skeleton-sheen: color-mix(in srgb, var(--pal-gold-200) 28%, transparent);
+  --skeleton-sheen: color-mix(in srgb, var(--pal-brass-200) 28%, transparent);
 
   position: relative;
   box-sizing: border-box;
@@ -121,9 +121,10 @@
   width: 60%;
 }
 
-/* The sheen is one band, drawn once on each block's `::after` and slid across it by transform alone
-   (R3608000); the block clips it. The blocks are positioned for that, so the mark above (`.skeleton`
-   isolates its layers) takes a layer of its own to stay over them. */
+/* The sheen is one flat band (R5091000), drawn on each block's `::after` and slid across it once
+   by transform alone (R3608000, R5014000); the block clips it, so it rests unseen past the block's
+   left edge. The blocks are positioned for that, so the mark above (`.skeleton` isolates its
+   layers) takes a layer of its own to stay over them. */
 @media (prefers-reduced-motion: no-preference) {
   .skeleton[data-motion="full"] .skeleton__block {
     position: relative;
@@ -134,6 +135,7 @@
     content: "";
     position: absolute;
     inset: 0;
+    background: var(--skeleton-sheen);
     transform: translateX(-100%);
     pointer-events: none;
     animation: skeleton-shimmer 1.6s ease-in-out 1;
