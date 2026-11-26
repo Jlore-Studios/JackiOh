@@ -22213,15 +22213,15 @@
     "what": "plan #4996 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-26T03:19:17Z",
+    "at": "2026-11-26T03:29:28Z",
     "notes": [
-      "delivered suggest on claude-8 (run 45744261348): suggested",
-      "delivered build #4982 on claude-4 (run 45740067296): built",
-      "started review #5003 on claude-4 (run 45748494190)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-26T04:20:00Z; `claude-7` is busy; `claude-8` 5-hour usage is 81%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-26T06:20:00Z; it takes reviews only; it can start a build or a plan again in 1h 56m; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
-      "#5002: typed it Task",
-      "#5001: typed it Task",
-      "runner gate: started 0 of 1 waiting run(s); run 45748552015 on claude/charming-bell-p8etig: it waits on nothing this account may approve"
+      "delivered plan #4990 on muse (run 45747292145): planned",
+      "delivered review #4997 on muse (run 45745518287): approved",
+      "delivered plan #4977 on agy (run 45732225022): failed",
+      "started plan #4977 on agy (run 45749699658)",
+      "started plan #4996 on muse (run 45749789504)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-26T04:20:00Z; `claude-7` is busy; `claude-8` 5-hour usage is 81%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-26T06:20:00Z; it takes reviews only; it can start a build or a plan again in 1h 44m; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is idle, but nothing queued is for it; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22927,7 +22927,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T03:19:17Z",
+  "loop_tick": "2026-11-26T03:29:28Z",
   "machine_disk": {
     "issue": null,
     "reading": {
