@@ -23,3 +23,6 @@ ts = ["dep:ts-rs", "jackioh-engine/ts"]
 # The tests' real catalog (`run_catalog_content`, the starting cards, a scripted fight). No cycle: the
 # cards take nothing of this crate.
 jackioh-cards = { workspace = true }
+
+[lints]
+workspace = true

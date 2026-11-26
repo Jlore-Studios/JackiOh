@@ -415,7 +415,7 @@ for file in $files; do
     crates/*/tests/* | crates/*/README.md | crates/wasm/c/src/* | apps/web/*.test.ts | apps/web/*.test.tsx) ;;
     docs/* | spec/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
-    crates/server/Dockerfile | wrangler.jsonc | apps/edge/* | apps/admin/* | eslint.config.js | vitest.config.ts) ;;
+    crates/server/Dockerfile | wrangler.jsonc | apps/edge/* | apps/admin/* | eslint.config.js | eslint-suppressions.json | vitest.config.ts) ;;
     scripts/browse.sh | scripts/promote-production.sh | scripts/promote-staging.sh | scripts/server-image.sh | scripts/worktree.sh) ;;
     scripts/fuzz-slice.sh) ;;
     crates/tools/src/main.rs | crates/tools/src/replay.rs | crates/tools/src/catalog.rs | crates/tools/src/patches.rs) on e2e ;;

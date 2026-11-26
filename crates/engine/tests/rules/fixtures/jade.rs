@@ -3,7 +3,10 @@
 //! Jade Beauty and the three rolled tokens are stand-ins with the CN tag and Token rarity the real ones
 //! carry.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

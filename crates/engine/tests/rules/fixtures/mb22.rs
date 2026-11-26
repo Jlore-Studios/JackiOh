@@ -4,7 +4,10 @@
 //! never imports `crates/cards`, so each system is proved through a card shaped like the one that
 //! will use it. Ids are `mb22-…`, indexed from 9200, so they collide with no other test file.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

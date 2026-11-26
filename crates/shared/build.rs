@@ -16,7 +16,10 @@
 //!
 //! The crate's `clippy.toml` bans file and environment reads; a build script runs at compile time,
 //! which is where data may reach a pure crate, as `crates/cards/build.rs` does.
-#![allow(clippy::disallowed_methods)]
+#![expect(
+    clippy::disallowed_methods,
+    reason = "a build script runs at compile time, where data may reach a pure crate (SURFACE §3)"
+)]
 
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};

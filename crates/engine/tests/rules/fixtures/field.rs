@@ -3,7 +3,10 @@
 //! `crates/cards`: each a Classic or Classic+ card's shape, cut to the part the engine test exercises.
 //! Defs are prefixed `fd-` and indexed from 9400, so they collide with no other file's catalog (BUILD §0).
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

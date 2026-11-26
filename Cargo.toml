@@ -11,6 +11,12 @@ edition = "2024"
 rust-version = "1.97.0"
 publish = false
 
+# A suppression says why and expires (CLAUDE.md rule 15): `#[expect(lint, reason = "…")]`, which fails once
+# it suppresses nothing, never an `#[allow]`, which outlives its cause and is copied (#4978).
+[workspace.lints.clippy]
+allow_attributes = "deny"
+allow_attributes_without_reason = "deny"
+
 [workspace.dependencies]
 # Path dependencies (SURFACE §2, crate edges).
 jackioh-engine = { path = "crates/engine" }

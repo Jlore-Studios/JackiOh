@@ -2,7 +2,10 @@
 //! each echoing the §8 card its doc names on both faces alike, so `{ radiant: true }` never silently
 //! changes what the fixture means.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

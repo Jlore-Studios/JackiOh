@@ -147,7 +147,7 @@ pub fn alternate_effects_held(state: &GameState, player: PlayerId) -> i32 {
 /// R2200002, R3135000: entry 9's step at the start of each of its player's turns: it adds only when the
 /// turns begun since the effect was made are a positive multiple of `CHAOS_TG_EVERY`, 1 now, so on each of
 /// them, the turn the entry resolved in not counted (extra turns, R846).
-#[allow(
+#[expect(
     clippy::modulo_one,
     reason = "CHAOS_TG_EVERY is the designer's tunable and 1 now: the turns between two adds"
 )]

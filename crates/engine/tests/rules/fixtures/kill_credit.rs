@@ -2,7 +2,10 @@
 //! shaped like Classic+ #19.2 Jungle Loser, #19.5 Bot Loser and #26 Tommy Tempo, without `crates/cards`.
 //! Ids `kc-…`, indexed from 5800 so they collide with no other fixture file.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::{Arc, LazyLock};
 

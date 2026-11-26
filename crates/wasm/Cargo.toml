@@ -29,3 +29,6 @@ jackioh-wasm-core = { path = "core" }
 wasm-bindgen = { workspace = true }
 js-sys = { workspace = true }
 console_error_panic_hook = { workspace = true }
+
+[lints]
+workspace = true

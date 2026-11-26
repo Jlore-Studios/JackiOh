@@ -1,5 +1,7 @@
+import comments from "@eslint-community/eslint-plugin-eslint-comments";
 import js from "@eslint/js";
 import { defineConfig } from "eslint/config";
+import reactHooks from "eslint-plugin-react-hooks";
 import regexp from "eslint-plugin-regexp";
 import tseslint from "typescript-eslint";
 
@@ -25,6 +27,31 @@ export default defineConfig(
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_", ignoreRestSiblings: true },
       ],
     },
+  },
+  {
+    // A suppression says why and expires (CLAUDE.md rule 15, #4978): a directive names its rules and
+    // gives its reason after ` -- `, and one that suppresses nothing fails.
+    linterOptions: { reportUnusedDisableDirectives: "error", reportUnusedInlineConfigs: "error" },
+    plugins: { "@eslint-community/eslint-comments": comments },
+    rules: {
+      "@eslint-community/eslint-comments/require-description": "error",
+      "@eslint-community/eslint-comments/no-unlimited-disable": "error",
+      // The hooks rules below have no inline way out: the fix is the code (`useEffectEvent`, a key, a
+      // value derived during render), never a disable that the next agent copies.
+      "@eslint-community/eslint-comments/no-restricted-disable": ["error", "react-hooks/*"],
+    },
+  },
+  {
+    // React's own hooks rules, the React Compiler's included, all errors (#4978): agents get effects
+    // wrong more than anything else in the client. `eslint-suppressions.json` holds the violations
+    // already in the tree, so a new one fails CI, and so does a fixed one left unpruned
+    // (`pnpm exec eslint --prune-suppressions apps/web apps/edge apps/admin e2e`): the list only
+    // shrinks. Never add to it.
+    files: ["apps/web/src/**/*.{ts,tsx}", "apps/admin/src/**/*.{ts,tsx}", "e2e/**/*.{ts,tsx}"],
+    plugins: { "react-hooks": reactHooks },
+    rules: Object.fromEntries(
+      Object.keys(reactHooks.configs["recommended-latest"].rules).map((rule) => [rule, "error"]),
+    ),
   },
   {
     // A test that proves something did not happen moves a fake clock past the moment it would

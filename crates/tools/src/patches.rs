@@ -453,8 +453,13 @@ pub mod patch {
 
     /// One match of a site's pattern: its byte span, and where the version starts inside it (everything before is kept).
     struct SiteMatch {
-        /// Read only by `versions_at_sites`, which only the tests call.
-        #[cfg_attr(not(test), allow(dead_code))]
+        #[cfg_attr(
+            not(test),
+            expect(
+                dead_code,
+                reason = "read only by `versions_at_sites`, which only the tests call"
+            )
+        )]
         start: usize,
         value_start: usize,
         end: usize,

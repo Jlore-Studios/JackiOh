@@ -101,6 +101,14 @@ trap backrow. This file binds every agent, not only Claude.
 14. A Claude session outside the bots' harness that works an issue or pull request reads its handoffs before
     it starts and leaves its own, one comment edited in place, at the end of every turn that pushes or leaves
     the work unfinished, as `.claude/skills/handoff/SKILL.md` says. The bots' runs are exempt (#2748 section 10).
+15. Every correction becomes a check (#4978). When a review, an issue or a revert corrects an agent's mistake, the
+    fix lands with the lint, type or test that fails on it (a scan in `crates/tools/tests/acceptance.rs`, a ban in
+    `clippy.toml` or `eslint.config.js`, a ruling's proving test), never as a line of Markdown alone: Markdown
+    enforces nothing, and agents copy what the code does. A suppression says why and expires: Rust takes
+    `#[expect(lint, reason = "…")]`, never `#[allow]` (the workspace's lints deny it), and an ESLint directive names
+    its rules and gives its reason after ` -- `; either fails once it suppresses nothing. No React hooks rule is
+    disabled inline, and `eslint-suppressions.json`, the hooks violations already in the tree, only shrinks: prune
+    it when you fix one, never add to it.
 
 <!-- Code comments cite these rules by number ("CLAUDE.md rule 7"), so add new rules at the end and never renumber. -->
 
@@ -128,6 +136,7 @@ pnpm --dir apps/web build          # the production bundle
 pnpm --dir apps/web typecheck      # CI also runs apps/edge's and apps/admin's typecheck, and e2e's typecheck and typecheck:component
 pnpm --dir apps/web test           # the web's unit tests (vitest, jsdom)
 pnpm exec eslint apps/web apps/edge apps/admin e2e
+pnpm exec eslint --prune-suppressions apps/web apps/edge apps/admin e2e   # after you fix a hooks violation eslint-suppressions.json holds (rule 15)
 cd bot/go && go test ./...                             # the bot selftest's harness suite, the skills' frontmatter included; inside a bot's run, unset HARNESS_HOME and HARNESS_DRY_RUN first
 cd bot && python3 -m unittest discover -s tests -t .   # the bot selftest's Python suites (bot/tests/)
 sh crates/server/tests/sql/run.sh          # schema, RLS and trigger invariants (Docker: a throwaway postgres:16)

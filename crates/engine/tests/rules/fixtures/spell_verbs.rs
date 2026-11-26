@@ -2,7 +2,10 @@
 //! the set card that will use a verb. Ids `sv-…` from 18480 (#1868's from 18680), so they collide with
 //! no other fixture file's.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

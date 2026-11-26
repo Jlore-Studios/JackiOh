@@ -1004,7 +1004,7 @@ pub struct HiddenTargetView {
     ts(export, export_to = "../../../apps/web/src/wire/generated/")
 )]
 #[serde(untagged)]
-#[allow(
+#[expect(
     clippy::large_enum_variant,
     reason = "a view is built, serialized and dropped; a Box buys nothing"
 )]

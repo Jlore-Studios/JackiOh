@@ -228,7 +228,10 @@ impl RematchBook {
     /// `seat`'s offer of `stakes` (and its lean) for the finished match `match_id`, whose end was at
     /// `finished_at`, at `now`. `new_match_id` is the id the game gets if this offer meets an equal
     /// one: the host mints it, as it mints every id.
-    #[allow(clippy::too_many_arguments)]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the host contract's fields, each passed as the host holds it"
+    )]
     pub fn offer(
         &mut self,
         match_id: &str,

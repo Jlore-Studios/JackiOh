@@ -67,3 +67,6 @@ path = "tests/server.rs"
 [[test]]
 name = "server_store"
 path = "tests/server_store.rs"
+
+[lints]
+workspace = true

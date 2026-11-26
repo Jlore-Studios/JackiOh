@@ -156,7 +156,6 @@ impl FakeSocket {
     }
 
     /// Simulate the transport dropping: no close frame, code 1006, and the actor sees the stream end.
-    #[allow(clippy::should_implement_trait)]
     pub fn drop(&self) {
         let mut state = self.drain();
         if state.close_code.is_some() {

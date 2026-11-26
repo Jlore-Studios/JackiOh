@@ -3,7 +3,10 @@
 //! `crates/cards`), driven through `reduce`. Ids are `gen-*` and indexes 4601 upward, so nothing collides
 //! with another fixture file's.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::cell::Cell;
 use std::sync::LazyLock;

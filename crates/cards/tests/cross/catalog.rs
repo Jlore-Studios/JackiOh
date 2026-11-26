@@ -51,7 +51,10 @@ struct SpecRow {
     radiant: StatPair,
 }
 
-#[allow(clippy::too_many_arguments)]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one argument per column of the table it builds"
+)]
 const fn row(
     index: &'static str,
     name: &'static str,
