@@ -33,7 +33,7 @@ use crate::config::{
     BALANCE_WATCH_MIN_GAMES, BALANCE_WATCH_PLAYED_DELTA_THRESHOLD, BALANCE_WATCH_Z_THRESHOLD,
     CARD_STATS_MIN_SAMPLE, PUBLIC_STATS_MIN_LIVE_GAMES,
 };
-use crate::db::store::{Db, StatsTotalsQuery, StoreError};
+use crate::db::store::{CardRows, Db, StatsTotalsQuery, StoreError};
 use crate::env::quoted;
 
 const USAGE: &str =
@@ -159,6 +159,7 @@ pub async fn balance_watch_report(
         mode: None,
         patch: Some(options.patch.clone()),
         drills: false,
+        cards: CardRows::All,
     };
     let mut tx = db.begin(None).await?;
     let totals = tx.stats_totals_load(&query).await?;
