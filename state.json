@@ -22274,6 +22274,13 @@
     "5006": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45759916888",
+        "model": "opus",
+        "provider": "claude-7",
+        "since": "2026-11-26T05:35:34Z",
+        "until": "2026-11-26T06:05:34Z"
+      },
       "difficulty_by": {
         "at": "2026-11-26T05:35:24Z",
         "difficulty": "hard",
