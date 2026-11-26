@@ -25162,7 +25162,7 @@
     "what": "plan #5109 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-26T19:46:18Z",
+    "at": "2026-11-26T19:53:15Z",
     "notes": [
       "#5088 is held for `claude-1` until 14:20 (5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
     ],
@@ -25870,7 +25870,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T19:46:18Z",
+  "loop_tick": "2026-11-26T19:53:15Z",
   "machine_disk": {
     "issue": null,
     "reading": {
