@@ -21617,18 +21617,29 @@
       "suggestion": true
     },
     "4992": {
-      "asks": [
-        "c:7181098640"
-      ],
+      "action": "plan",
+      "asks": [],
       "failures": 0,
       "forced": false,
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
+      "live": "planning",
+      "owner": "claude-7",
+      "owner_since": "2026-11-26T02:56:16Z",
+      "owner_why": "it plans it",
       "pending_request": false,
+      "provider": "claude-7",
       "queued_at": "2026-11-26T02:46:26Z",
       "requested_by": "MaxGoetzmann",
+      "run_id": "pending:dd3e5ec4-1795661742",
+      "runs_on": "ubuntu-latest",
+      "started_at": "2026-11-26T02:56:16Z",
       "stop_requested": false,
-      "suggestion": true
+      "suggestion": true,
+      "taken_asks": [
+        "c:7181098640"
+      ]
     },
     "4993": {
       "action": "review",
@@ -21823,9 +21834,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T02:55:29Z",
+    "at": "2026-11-26T02:56:16Z",
     "url": "",
-    "what": "build #4679 on claude-6"
+    "what": "plan #4992 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-26T02:40:32Z",
