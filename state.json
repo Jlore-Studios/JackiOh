@@ -22156,6 +22156,7 @@
       "planned_at": "2026-11-26T06:54:10Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
       "planned_by_id": "claude-1",
+      "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-1",
       "run_id": "45768430419",
