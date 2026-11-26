@@ -37,6 +37,8 @@ pub use swing::*;
 pub use window::*;
 pub mod play_versions;
 pub use play_versions::*;
+pub mod hall_of_fame;
+pub use hall_of_fame::*;
 pub mod sparse;
 pub use sparse::*;
 

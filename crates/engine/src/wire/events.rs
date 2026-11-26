@@ -1089,6 +1089,19 @@ pub enum GameEvent {
         #[cfg_attr(feature = "ts", ts(optional))]
         via: Option<KeywordKind>,
     },
+    /// R5045000: a damage pool (`StaticFlags.damage_pool`, R3550004) nullified `amount` of a hit on
+    /// `target_id` at §4.4 step 3b — `instance_id` is the card whose pool took it, S+ #42 Force Projector
+    /// or S+ #123 Oct, one report per pool card in R68's order, emitted as the hit lands (R4022000)
+    /// whether the pool took it whole or only part. A report nothing answers: it takes no number in
+    /// R68's order and moves no hash. `source_id`, `target_id` and `combat` are `damage`'s, redacted as
+    /// `damage`'s are (R97); the pool card is on the field face up, public.
+    DamageNullified {
+        instance_id: String,
+        source_id: Option<String>,
+        target_id: String,
+        amount: i32,
+        combat: bool,
+    },
     /// R3857000: `player`'s hero gained `amount` Armor it keeps (`effects::gain_hero_armor`); `armor` is
     /// its Armor after, as the view's badge reads it (`damage::hero_armor_of`, §10.8). A report nothing
     /// answers: it takes no number in R68's order. Public: a player and two numbers.
@@ -1474,6 +1487,7 @@ string_union! {
         Deradianted = "deradianted",
         ManaSpent = "manaSpent",
         DamageAbsorbed = "damageAbsorbed",
+        DamageNullified = "damageNullified",
         ArmorGained = "armorGained",
         LoopCapped = "loopCapped",
         JadeChanged = "jadeChanged",
@@ -1796,6 +1810,7 @@ impl GameEvent {
             GameEvent::Deradianted { .. } => GameEventType::Deradianted,
             GameEvent::ManaSpent { .. } => GameEventType::ManaSpent,
             GameEvent::DamageAbsorbed { .. } => GameEventType::DamageAbsorbed,
+            GameEvent::DamageNullified { .. } => GameEventType::DamageNullified,
             GameEvent::ArmorGained { .. } => GameEventType::ArmorGained,
             GameEvent::LoopCapped { .. } => GameEventType::LoopCapped,
             GameEvent::JadeChanged { .. } => GameEventType::JadeChanged,
@@ -1913,8 +1928,8 @@ mod tests {
         // `marketBought` and `marketSold` (R1853003); and #1855's `boardReplaced` (R1855000); and
         // #2652's `rolled` (R2652001); and #2783's `hookResolving` (R2783000); and Stinkyscape+'s
         // `evolved` (R3536005); and E7's `lineDrawn` (R3554005); and #3857's `armorGained` (R3857000);
-        // and #3925's `loopCapped` (R3925000).
-        assert_eq!(GAME_EVENT_TYPES.len(), 97);
+        // and #3925's `loopCapped` (R3925000); and #5045's `damageNullified` (R5045000).
+        assert_eq!(GAME_EVENT_TYPES.len(), 98);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no
@@ -1962,6 +1977,28 @@ mod tests {
         // Appended to the list (later sets append after it: M #39's `jadeChanged`, R961, and MB05's
         // secret events, R860–R865).
         assert!(GAME_EVENT_TYPES.contains(&GameEventType::DamageAbsorbed));
+    }
+
+    /// R5045000: a pool's soak names the pool card, the hit's source and target, the amount and
+    /// whether it was combat's, and the rules read it as it is.
+    #[test]
+    fn r5045000_damage_nullified_serializes_with_its_pool_card_and_damages_fields() {
+        let event = GameEvent::DamageNullified {
+            instance_id: "c132".into(),
+            source_id: Some("c136".into()),
+            target_id: "c26".into(),
+            amount: 4,
+            combat: false,
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert_eq!(
+            json,
+            r#"{"type":"damageNullified","instanceId":"c132","sourceId":"c136","targetId":"c26","amount":4,"combat":false}"#
+        );
+        assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), event);
+        assert_eq!(event.event_type().as_str(), "damageNullified");
+        assert_eq!(event.as_rules_read(), event);
+        assert!(GAME_EVENT_TYPES.contains(&GameEventType::DamageNullified));
     }
 
     /// R3857000: a kept Armor gain names its player, the amount and the hero's Armor after, and the

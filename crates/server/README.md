@@ -618,7 +618,11 @@ one pointer while empty: every patch's totals, which the public routes keep (`ke
 329,000 rows on staging by 2026-11-25, and read whole with those parts inline they outgrew the game
 server's 1 GiB, which was killed loading them. A read a patch at a time instead took minutes there,
 past the client's `API_REQUEST_TIMEOUT_SECONDS`, since each patch's rows lie scattered through the
-table. `stats-import` writes and
+table. So the read files each row as it arrives (`StatsTotalsQuery::cards`, R4965000): the snapshot
+reads the records first, keeps as filed the card totals of the patches anyone may read and of the window
+before them (`api::stats::snapshot_filing`), folds each deck card's older totals into one per play
+version, and drops the rest; a dev account's older patch reads its own reach when asked, and the play
+rates keep one total per card and key. `stats-import` writes and
 folds `STATS_FOLD_BATCH_RECORDS` (500) records to a transaction. A record written before migration
 0041 is not folded until the retention loop folds it at boot or `stats-fold` does (R1044000). Once
 folded, a record's detail is emptied `GAME_RECORD_RAW_RETENTION_DAYS` (7) after it was written by the

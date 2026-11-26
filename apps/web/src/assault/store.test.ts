@@ -1,7 +1,7 @@
 // R4581000–R4581001: the Assault's two device values, their fold and bounded history.
 
 import { act, cleanup, renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AssaultFile, AssaultRecord } from "@jackioh/run";
 
@@ -188,4 +188,113 @@ it("R4581001 the records keep the last history_days days", () => {
   expect(kept).toHaveLength(CONSTANTS.historyDays);
   expect(kept[0]).toBe("2026-11-04");
   expect(Object.keys((JSON.parse(window.localStorage.getItem(ASSAULT_RECORDS_KEY) ?? "null") as { days: object }).days)).toEqual(kept);
+});
+
+describe("reopening the Assault page", () => {
+  function begin(assault: { current: Assault }): void {
+    expect(press(() => assault.current.start({ date: DAY.date, deck: ["core-001"], source: "dayDeck", startLevel: 1 }))).toBeNull();
+  }
+
+  function playToLost(assault: { current: Assault }): void {
+    begin(assault);
+    expect(press(() => assault.current.act({ kind: "fight" }))).toBeNull();
+    expect(press(() => assault.current.act({ kind: "fightOver", won: false, turns: 3 }))).toBeNull();
+    expect(assault.current.state?.phase).toBe("lost");
+    expect(window.localStorage.getItem(ASSAULT_ATTEMPT_KEY)).toBeNull();
+  }
+
+  function otherTabRecords(record: AssaultRecord): void {
+    window.localStorage.setItem(ASSAULT_RECORDS_KEY, JSON.stringify({ v: 1, days: { [DAY.date]: record } }));
+  }
+
+  function storedRecord(): unknown {
+    return (JSON.parse(window.localStorage.getItem(ASSAULT_RECORDS_KEY) ?? "null") as { days: Record<string, unknown> }).days[DAY.date];
+  }
+
+  function storedFile(): AssaultFile {
+    return (JSON.parse(window.localStorage.getItem(ASSAULT_ATTEMPT_KEY) ?? "null") as { file: AssaultFile }).file;
+  }
+
+  it("reads the device again, so another tab's attempts and checkpoints are not written over", () => {
+    mount();
+    cleanup();
+    otherTabRecords({ ...RECORD, best: 3, attempts: 4 });
+
+    const assault = mount();
+    expect(assault.current.state).toBeNull();
+    expect(assault.current.records[DAY.date]?.attempts).toBe(4);
+
+    begin(assault);
+    expect(storedRecord()).toEqual({ ...RECORD, best: 3, attempts: 5 });
+    expect(storedFile().setup.attempt).toBe(5);
+  });
+
+  it("applies the held report of an attempt another tab left open, and refuses a start over it", () => {
+    mount();
+    cleanup();
+    const file: AssaultFile = { version: "test-catalog", setup: setupOf(), record: RECORD, actions: [{ kind: "fight" }] };
+    window.localStorage.setItem(ASSAULT_ATTEMPT_KEY, JSON.stringify({ v: 1, file }));
+    window.localStorage.setItem(
+      ASSAULT_HELD_KEY,
+      JSON.stringify({ attempt: 1, level: 1, action: { kind: "fightOver", won: true, turns: 7 } }),
+    );
+
+    const assault = mount();
+    expect(assault.current.state?.phase).toBe("briefing");
+    expect(assault.current.state?.level).toBe(2);
+    expect(window.localStorage.getItem(ASSAULT_HELD_KEY)).toBeNull();
+    expect(storedFile().actions).toHaveLength(2);
+
+    expect(press(() => assault.current.start({ date: DAY.date, deck: ["core-001"], source: "dayDeck", startLevel: 1 }))).not.toBeNull();
+    expect(storedFile().actions).toHaveLength(2);
+  });
+
+  it("keeps a finished attempt this tab still shows, over another tab's newer records", () => {
+    const assault = mount();
+    playToLost(assault);
+    cleanup();
+    otherTabRecords({ ...RECORD, attempts: 4 });
+
+    const again = mount();
+    expect(again.current.state?.phase).toBe("lost");
+    expect(again.current.record.attempts).toBe(4);
+
+    expect(press(() => again.current.tryAgain())).toBeNull();
+    expect(storedFile().setup.attempt).toBe(5);
+    expect(storedFile().setup.startLevel).toBe(2);
+    expect(storedRecord()).toEqual({ ...RECORD, attempts: 5 });
+    expect(again.current.state?.phase).toBe("briefing");
+  });
+
+  it("shows an attempt another tab started instead of this tab's finished one", () => {
+    const assault = mount();
+    playToLost(assault);
+    cleanup();
+    const file: AssaultFile = { version: "test-catalog", setup: setupOf({ attempt: 5 }), record: RECORD, actions: [] };
+    window.localStorage.setItem(ASSAULT_ATTEMPT_KEY, JSON.stringify({ v: 1, file }));
+
+    const again = mount();
+    expect(again.current.state?.phase).toBe("briefing");
+    expect(again.current.state?.setup.attempt).toBe(5);
+  });
+
+  it("reads the device once on the first mount", () => {
+    const file: AssaultFile = { version: "test-catalog", setup: setupOf(), record: RECORD, actions: [] };
+    window.localStorage.setItem(ASSAULT_ATTEMPT_KEY, JSON.stringify({ v: 1, file }));
+
+    mount();
+
+    expect(bindingFixtures.assaultFold).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a finished attempt when another tab's write fires a storage event", () => {
+    const assault = mount();
+    playToLost(assault);
+
+    act(() => {
+      window.dispatchEvent(new StorageEvent("storage", { key: ASSAULT_RECORDS_KEY }));
+    });
+
+    expect(assault.current.state?.phase).toBe("lost");
+  });
 });

@@ -2500,14 +2500,17 @@ fn redact_event(
         }
 
         // R1361: the report of a hit Armor took whole names what `damage` names, and hides it alike.
-        GameEventType::Damage | GameEventType::DamageAbsorbed => {
+        // R5045000: so does a pool's soak, and its pool card besides, judged as any card is.
+        GameEventType::Damage | GameEventType::DamageAbsorbed | GameEventType::DamageNullified => {
             if nullable_at(&shown, "sourceId").is_some_and(|source| hidden(&source)) {
                 // R2783001: the hit's keyword is its source's, so it goes with the source.
                 shown.remove("via");
                 hide(&mut shown, &["sourceId"]);
             }
-            if hidden(&text_at(&shown, "targetId")) {
-                hide(&mut shown, &["targetId"]);
+            for key in ["targetId", "instanceId"] {
+                if nullable_at(&shown, key).is_some_and(|id| hidden(&id)) {
+                    hide(&mut shown, &[key]);
+                }
             }
             rebuild(shown)
         }
@@ -2940,11 +2943,14 @@ fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
     // R2783000: a `hookResolving` marker takes no room in R168's floor, so the window holds the events
     // it would had no hook been marked, each marker among them beside them, and the markers just before
     // its first event with it (a hook's marker comes before its first effect). R3857000: an `armorGained`
-    // report likewise takes none, so the window holds what it held before the report existed.
+    // report likewise takes none, so the window holds what it held before the report existed, and so
+    // does a pool's `damageNullified` (R5045000).
     let marker = |at: &usize| {
         matches!(
             all[*at],
-            GameEvent::HookResolving { .. } | GameEvent::ArmorGained { .. }
+            GameEvent::HookResolving { .. }
+                | GameEvent::ArmorGained { .. }
+                | GameEvent::DamageNullified { .. }
         )
     };
     let counted: Vec<usize> = read.iter().copied().filter(|at| !marker(at)).collect();

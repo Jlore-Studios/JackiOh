@@ -21,6 +21,13 @@ export const statsTestid = {
   versionsGrid: "stats-versions-grid",
   versionsSpan: "stats-versions-span",
   versionsPastOnly: "stats-versions-past-only",
+  /** R4681001: the Experimental tab's Hall of Fame view: its four sections, each entry's faces and balance line. */
+  experimentalHall: "stats-experimental-hall",
+  hallSection: "stats-hall-section",
+  hallEntry: "stats-hall-entry",
+  hallBefore: "stats-hall-before",
+  hallAfter: "stats-hall-after",
+  hallBalance: "stats-hall-balance",
   /** R4680001: an old version's drill-down: its faces, figures, the versions before and after it and a neighbour's open button. */
   versionDrillDown: "stats-version-drilldown",
   versionFaces: "stats-version-faces",
