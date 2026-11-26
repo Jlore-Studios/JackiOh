@@ -21047,21 +21047,26 @@
         "carried": {
           "by": "`claude` (strong)",
           "conflicts": [
-            "spec/09-architecture/9.11-card-statistics.md"
+            "apps/web/src/net/api.ts",
+            "apps/web/src/routes/stats.test.tsx",
+            "apps/web/src/stats/RunningPanel.tsx",
+            "crates/server/README.md",
+            "crates/server/tests/api/stats.rs",
+            "spec/rulings/R4678001.md"
           ],
-          "from": "ea2e569d47ebbe37f2d5ea4bad6e48cadd8b3baf",
-          "main": "480256e74e965e08681eaa41c940b9c0360e78ce"
+          "from": "8ecd526c138a85a972a036ea074f50fd4517facf",
+          "main": "c5ba7cef347f0629d5a72a7eba16ad0ce32f5d81"
         },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-3",
-            "run": "45876639675",
+            "run": "45888621716",
             "tier": "strong"
           }
         ],
-        "sha": "8ecd526c138a85a972a036ea074f50fd4517facf",
+        "sha": "a1e98717859e021a5c52d590a59e25c870756014",
         "tiers": {
           "claude": "strong"
         }
