@@ -22240,6 +22240,13 @@
     "5007": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-26T05:20:51Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "The AI: changes AI_EVAL.attack_hook in crates/ai/src/config.rs, which prices every attack-hook unit and changes decide's choices"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
