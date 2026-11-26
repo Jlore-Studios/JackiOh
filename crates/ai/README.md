@@ -394,8 +394,9 @@ pub const UNSTOPPABLE_LETHAL_REPLY_NODES: usize;        // AI_BUDGET.lethal_node
 
 Whether `seat`, at its own turn, faces a lethal showing on the opponent's board that nothing it does
 this turn stops. Like `lethal_hint` it reads the true state only through `redact`, and it counts only
-what shows: the opponent's hand and face-down cards are taken out, so no unseen trap stops the seat's
-answer and no unseen card makes the lethal. It fills the rest in as
+what shows: the opponent's hand, face-down cards and unrevealed secrets are taken out, so no unseen
+trap stops the seat's answer and no unseen card or guessed secret makes the lethal (a secret's reward
+finds no choice and does nothing, R4796000). It fills the rest in as
 `UNSTOPPABLE_LETHAL_DETERMINIZATIONS` worlds from `UNSTOPPABLE_LETHAL_SEED`'s stream and, on each,
 plays every line of the seat's turn through the engine (every legal action but R84's and the
 mulligan, "end turn" first, a position once), and for each line that hands the turn over asks
@@ -403,7 +404,9 @@ mulligan, "end turn" first, a position once), and for each line that hands the t
 line again. It holds only when every line on every world ends lost. Every doubt answers false: a cut
 walk (`UNSTOPPABLE_LETHAL_NODES`, `should_stop`), a failed step, a step that rolls the game's random
 numbers or moves a card of the seat's library (one outcome of a roll, one guessed order, could hide
-the escape), an opponent's lethal that rolls, moves a card of its own library or opens a prompt for
+the escape), a step that returns the board to a snapshot (its `rolledBack`: the worlds' board history
+is one stand-in snapshot, the field as it shows, for the one `redact` drops, so a seat that can play a
+Rollback plays on, R4796000), an opponent's lethal that rolls, moves a card of its own library or opens a prompt for
 the seat, a panic, and every moment but the seat's own main phase with no prompt open. A turn that ends with the
 Marketplace open ends without it, so the opponent's turn start rolls no offers (R1853000), and a lethal
 that needs the opponent's turn to end is not counted: both err only towards playing on. `decide` never
