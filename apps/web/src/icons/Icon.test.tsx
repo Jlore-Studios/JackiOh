@@ -1,7 +1,7 @@
 // Tests and acceptance criteria for Icon component and Unicode glyph-as-icon replacement (#5016).
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { render } from "@testing-library/react";
@@ -42,16 +42,89 @@ describe("Icon component", () => {
   });
 });
 
+/** Collect all non-test ts and tsx files under dir */
+function nonTestSourceFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const full = join(dir, name);
+    if (statSync(full).isDirectory()) {
+      if (name === "test" || name === "pkg" || name === "testkit" || name === "node_modules") return [];
+      return nonTestSourceFiles(full);
+    }
+    return (name.endsWith(".tsx") || name.endsWith(".ts")) && !name.includes(".test.") && !name.endsWith(".d.ts")
+      ? [full]
+      : [];
+  });
+}
+
 /** Collect all non-test tsx files under dir */
 function nonTestTsxFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
     const full = join(dir, name);
     if (statSync(full).isDirectory()) {
-      if (name === "test" || name === "pkg" || name === "testkit") return [];
+      if (name === "test" || name === "pkg" || name === "testkit" || name === "node_modules") return [];
       return nonTestTsxFiles(full);
     }
     return name.endsWith(".tsx") && !name.includes(".test.") ? [full] : [];
   });
+}
+
+const sourceFileCache = new Map<string, ts.SourceFile>();
+function getCachedSourceFile(filePath: string): ts.SourceFile | null {
+  if (sourceFileCache.has(filePath)) return sourceFileCache.get(filePath)!;
+  if (!existsSync(filePath)) return null;
+  const content = readFileSync(filePath, "utf8");
+  const kind = filePath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+  const sf = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true, kind);
+  sourceFileCache.set(filePath, sf);
+  return sf;
+}
+
+function getStringsFromInitializer(init: ts.Expression | undefined): string[] {
+  if (!init) return [];
+  if (ts.isStringLiteral(init) || ts.isNoSubstitutionTemplateLiteral(init)) {
+    return [init.text];
+  }
+  if (ts.isObjectLiteralExpression(init)) {
+    const strings: string[] = [];
+    for (const prop of init.properties) {
+      if (ts.isPropertyAssignment(prop) && (ts.isStringLiteral(prop.initializer) || ts.isNoSubstitutionTemplateLiteral(prop.initializer))) {
+        strings.push(prop.initializer.text);
+      }
+    }
+    return strings;
+  }
+  if (ts.isArrayLiteralExpression(init)) {
+    const strings: string[] = [];
+    for (const el of init.elements) {
+      if (ts.isStringLiteral(el) || ts.isNoSubstitutionTemplateLiteral(el)) {
+        strings.push(el.text);
+      }
+    }
+    return strings;
+  }
+  return [];
+}
+
+function resolveImportedStrings(importInfo: { spec: string; importedName: string }, fromFile: string): string[] {
+  const dir = dirname(fromFile);
+  let targetPath = resolve(dir, importInfo.spec);
+  if (!existsSync(targetPath)) {
+    if (existsSync(targetPath + ".ts")) targetPath += ".ts";
+    else if (existsSync(targetPath + ".tsx")) targetPath += ".tsx";
+  }
+  const targetSf = getCachedSourceFile(targetPath);
+  if (!targetSf) return [];
+  const strings: string[] = [];
+  for (const stmt of targetSf.statements) {
+    if (ts.isVariableStatement(stmt)) {
+      for (const decl of stmt.declarationList.declarations) {
+        if (ts.isIdentifier(decl.name) && decl.name.text === importInfo.importedName) {
+          strings.push(...getStringsFromInitializer(decl.initializer));
+        }
+      }
+    }
+  }
+  return strings;
 }
 
 function i18nJsonFiles(dir: string): string[] {
@@ -70,6 +143,9 @@ const ALLOWED_TEXT_SYMBOLS = new Set([
   "▲", "▼", "▸", "▾", "◆", "·", "“", "”", "⟳",
   "•", "–", "—", "…", "‹", "›", "。", "：", "¥", "§",
   "⌊", "⌋",
+  // Pings and markdown release notes in .ts files
+  "👍", "👎", "🌀", "⚠️", "⚠", "🎯",
+  "✨", "⚖️", "⚖", "🔄", "📝", "🩹", "⚙️", "⚙", "📸",
 ]);
 
 function isEmojiOrSymbol(ch: string): boolean {
@@ -87,30 +163,45 @@ function isEmojiOrSymbol(ch: string): boolean {
 }
 
 describe("Issue #5016 acceptance", () => {
-  it("fails on any forbidden glyphs or unlisted emoji ranges in apps/web/src/**/*.tsx outside tests and in i18n strings", () => {
-    const files = nonTestTsxFiles(SRC);
+  it("fails on any forbidden glyphs or unlisted emoji ranges in apps/web/src/**/*.{ts,tsx} outside tests and in i18n strings", () => {
+    const files = nonTestSourceFiles(SRC);
     const violations: { file: string; char: string; code: string; text: string }[] = [];
 
     for (const file of files) {
-      const content = readFileSync(file, "utf8");
-      const sf = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+      const isTsx = file.endsWith(".tsx");
+      const sf = getCachedSourceFile(file);
+      if (!sf) continue;
 
-      function checkText(text: string) {
+      function checkText(text: string, context?: string) {
         for (const ch of text) {
           if (FORBIDDEN_GLYPHS.has(ch)) {
             violations.push({
               file: relative(SRC, file),
               char: ch,
               code: (ch.codePointAt(0) ?? 0).toString(16),
-              text: text.trim(),
+              text: context ?? text.trim(),
             });
           } else if (isEmojiOrSymbol(ch) && !ALLOWED_TEXT_SYMBOLS.has(ch)) {
             violations.push({
               file: relative(SRC, file),
               char: ch,
               code: (ch.codePointAt(0) ?? 0).toString(16),
-              text: text.trim(),
+              text: context ?? text.trim(),
             });
+          }
+        }
+      }
+
+      const imports = new Map<string, { spec: string; importedName: string }>();
+      if (isTsx) {
+        for (const stmt of sf.statements) {
+          if (ts.isImportDeclaration(stmt) && stmt.importClause?.namedBindings && ts.isNamedImports(stmt.importClause.namedBindings)) {
+            const spec = (stmt.moduleSpecifier as ts.StringLiteral).text;
+            for (const elem of stmt.importClause.namedBindings.elements) {
+              const localName = elem.name.text;
+              const importedName = elem.propertyName ? elem.propertyName.text : localName;
+              imports.set(localName, { spec, importedName });
+            }
           }
         }
       }
@@ -126,6 +217,24 @@ describe("Issue #5016 acceptance", () => {
         ) {
           checkText(node.text);
         }
+
+        if (isTsx && ts.isJsxExpression(node) && node.expression) {
+          let id: string | null = null;
+          if (ts.isIdentifier(node.expression)) {
+            id = node.expression.text;
+          } else if (ts.isElementAccessExpression(node.expression) && ts.isIdentifier(node.expression.expression)) {
+            id = node.expression.expression.text;
+          } else if (ts.isPropertyAccessExpression(node.expression) && ts.isIdentifier(node.expression.expression)) {
+            id = node.expression.expression.text;
+          }
+          if (id && imports.has(id)) {
+            const strings = resolveImportedStrings(imports.get(id)!, file);
+            for (const str of strings) {
+              checkText(str, `imported {${id}} from "${imports.get(id)!.spec}"`);
+            }
+          }
+        }
+
         ts.forEachChild(node, walk);
       }
 

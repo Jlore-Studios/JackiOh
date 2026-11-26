@@ -7,7 +7,7 @@ import type { ReactElement } from "react";
 
 import { Icon } from "../../icons/Icon.tsx";
 import { t, useLocale } from "../../i18n/i18n.ts";
-import { MARK_GLYPH, markWords } from "../marks.ts";
+import { markWords } from "../marks.ts";
 import { Icon as CardIcon } from "../icons.tsx";
 import type { FaceModel } from "../model.ts";
 import { locWords } from "./locWords.ts";
@@ -223,7 +223,7 @@ export function StateNotes({ face }: { face: FaceModel }): ReactElement | null {
           {marks.map((mark) => (
             <li key={`mark:${mark.mark}`} className="inspect-state" data-state="mark" data-mark={mark.mark} data-mark-color={mark.color}>
               <span className="inspect-state-glyph" aria-hidden="true">
-                {MARK_GLYPH}
+                <Icon name="spark" />
               </span>
               <span className="inspect-state-words">{t(markWords(mark.mark).text)}</span>
             </li>
