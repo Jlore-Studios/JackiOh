@@ -24154,30 +24154,25 @@
     "5074": {
       "action": "revise",
       "asks": [],
-      "audit_tier": "strong",
+      "audit_tier": "",
       "cross_rounds": 1,
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
-      "feedback_since": "2026-11-26T11:22:29Z",
+      "feedback_since": "2026-11-26T13:16:11Z",
       "forced": false,
       "interruptions": 0,
       "issue": 5025,
       "kind": "revise",
-      "last_findings": [
-        {
-          "claim": "The branch conflicts with main in game_summary.rs, so it cannot merge as it stands. Main has since added a `held_radiant` field to `Reading`, and the struct literals this PR moves into `Reading::new` do not set it, so the resolved tree must add it there.",
-          "evidence": "`git merge-tree --write-tree HEAD 0c4a11d63c` reports `CONFLICT (content): Merge conflict in crates/engine/src/game_summary.rs`. On main (`0c4a11d63c`, after #5063 and R5054000), `Reading` has `held_radiant: PerPlayer<IndexSet<String>>` at line 85, and both literals the branch replaces set it: `SummaryReader::new` at :832 and the tests' `reading()` at :989, each as `held_radiant: PerPlayer::new(IndexSet::new(), IndexSet::new())`. The fix: merge origin/main and, in `Reading::new`, add `held_radiant: PerPlayer::new(IndexSet::new(), IndexSet::new()),` after `played_radiant`. Keep both callers going through `Reading::new`, then re-run the r5054000 tests and the dups scan.",
-          "severity": "blocking",
-          "where": "crates/engine/src/game_summary.rs:116"
-        }
-      ],
+      "last_findings": [],
       "live": "revising",
       "pending_request": false,
       "provider": "claude-8",
+      "question": "",
       "queued_at": "2026-11-26T13:13:53Z",
       "review_floor": "",
       "review_notes": "",
+      "round_tier": "strong",
       "run_id": "45827520037",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -24198,10 +24193,11 @@
         "provider": "claude-1",
         "run": "45810018045"
       },
-      "source": "cross-review",
+      "source": "",
       "started_at": "2026-11-26T13:16:11Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [],
         "builder": "claude",
