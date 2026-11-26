@@ -25300,10 +25300,11 @@
     "what": "review #5094 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-26T17:14:42Z",
+    "at": "2026-11-26T17:22:43Z",
     "notes": [
-      "#5078: green and waiting for a person to merge it, so `claude-8` gives up its claim on it",
-      "delivered review #5093 on claude-3 (run 45861048724): approved"
+      "delivered build #5036 on claude-3 (run 45844702464): built",
+      "started review #5094 on claude-3 (run 45867625398)",
+      "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -26009,7 +26010,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T17:14:42Z",
+  "loop_tick": "2026-11-26T17:22:43Z",
   "machine_disk": {
     "issue": null,
     "reading": {
