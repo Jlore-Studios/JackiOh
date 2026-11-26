@@ -30,6 +30,7 @@ indexmap = { workspace = true }
 axum = { workspace = true }
 tokio = { workspace = true }
 sqlx = { workspace = true }
+futures-util = { workspace = true }
 jsonwebtoken = { workspace = true }
 reqwest = { workspace = true }
 hmac = { workspace = true }

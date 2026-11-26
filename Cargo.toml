@@ -37,6 +37,8 @@ axum = { version = "0.8.9", features = ["ws", "macros"] }
 tokio = { version = "1.53.2", features = ["full", "test-util"] }
 tower = { version = "0.5.3", features = ["util"] }
 sqlx = { version = "0.9.0", features = ["runtime-tokio", "tls-rustls", "postgres", "json", "time", "uuid"] }
+# The statistics' totals read as a stream (`db::pg::stats_totals_load`). Already in the lock through sqlx.
+futures-util = { version = "0.3.34", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["rust_crypto"] }
 reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls"] }
 hmac = { version = "0.13.0" }
