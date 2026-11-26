@@ -21484,17 +21484,8 @@
       ]
     },
     "4982": {
-      "action": "plan",
-      "asks": [
-        "c:7179116677"
-      ],
-      "build_next": {
-        "from_run": "45733597718",
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-26T01:23:08Z",
-        "until": "2026-11-26T01:53:08Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-26T01:23:00Z",
         "difficulty": "medium",
@@ -21513,18 +21504,9 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"ls .bot-plan.md 2>/dev/null; wc -l crates/server/src/duos/actor.rs crates/server/src/duos/mod.rs; sed -n 80,200p crates/server/src/duos/mod.rs\"}\n- Bash: {\"command\": \"sed -n 730,840p crates/server/src/duos/actor.rs\"}\n- Bash: {\"command\": \"sed -n 1130,1260p crates/server/src/actor/match_actor.rs\"}\n- Bash: {\"command\": \"sed -n 840,880p crates/server/src/duos/actor.rs; grep -n \\\"load_jlore_caps\\\\|jlore_capped\\\\|fn person\\\\b\\\\|fn person(\\\" crates/server/src/duos/actor.rs\"}\n- Bash: {\"command\": \"sed -n 225,260p crates/server/src/duos/actor.rs; sed -n 325,400p crates/server/src/duos/actor.rs; sed -n 440,475p crates/server/src/duos/actor.rs; sed -n 685,725p crates/server/src/duos/\u2026\n- Bash: {\"command\": \"grep -rn \\\"fn people\\\\|fn team_b\\\\|fn team_a\\\\|fn slot\\\\b\\\\|pub fn slot\\\" crates/server/src crates/engine/src | head -20\"}\n- Bash: {\"command\": \"sed -n 90,200p crates/server/src/duos/store.rs; grep -n \\\"DuosTeamB\\\" -r crates --include=*.rs | head -20\"}\n- Bash: {\"command\": \"sed -n 1,80p crates/server/src/duos/mod.rs\"}\n- Bash: {\"command\": \"grep -rn \\\"enum DuosTeamB\\\" crates/shared/src; grep -n \\\"pub fn people\\\\|pub fn person\\\\|pub fn slot\\\\|DUOS_SEATS\\\" crates/shared/src/host/*.rs | head\"}\n- Bash: {\"command\": \"sed -n 45,100p crates/shared/src/host/duos.rs\"}\n- Bash: {\"command\": \"grep -n \\\"jlore_capped\\\\|jlore_caps\\\\|duos_game_jlore_caps\\\" -r crates/server/tests crates/server/src --include=*.rs | grep -v \\\"^crates/server/src/actor/match_actor.rs\\\" | head -60\"}\n- Bash: {\"command\": \"ls crates/server/tests crates/server/tests/* | head -80; grep -rln \\\"duos\\\" crates/server/tests | head -20\"}\n- Bash: {\"command\": \"grep -rn \\\"jlore_cap\\\\|jloreCap\\\\|JloreCap\\\" crates/server/tests crates/server/src/duos | grep -v \\\"^crates/server/tests/api/rewards.rs\\\" | head -40; git log --oneline -3 -- crates/serve\u2026\n- Bash: {\"command\": \"sed -n 1660,1900p crates/server/tests/actor/duos.rs\"}\n- Bash: {\"command\": \"grep -n \\\"4711\\\\|R4711\\\\|store calls\\\\|store_calls\\\\|calls_per\\\\|CALLS\\\" -r crates/server/tests crates/server/src spec/rulings 2>/dev/null | head -30\"}\n- Bash: {\"command\": \"sed -n 4670,4720p crates/server/tests/actor/match_actor.rs; sed -n 4770,4930p crates/server/tests/actor/match_actor.rs\"}\n- Bash: {\"command\": \"sed -n 1,120p crates/server/tests/actor/duos.rs\"}\n- Bash: {\"command\": \"grep -rn \\\"on_call\\\" crates/server/src crates/server/tests | head -20; grep -n \\\"fn duos_matches_get\\\\|fn economy_game_jlore_totals\\\" -r crates/server/src | head; grep -n \\\"async fn duos\u2026\n- Bash: {\"command\": \"sed -n 60,100p crates/server/tests/support/store.rs; sed -n 600,800p crates/server/tests/actor/duos.rs; sed -n 270,285p crates/server/src/duos/store.rs; sed -n 685,720p crates/server/src\u2026\n- Bash: {\"command\": \"grep -rn \\\"\\\\\\\"economy.wallets.gameTotals\\\\\\\"\\\\|\\\\\\\"duos\\\\.[a-zA-Z.]*\\\\\\\"\\\" crates/server/src/db crates/server/src/duos crates/server/src/economy 2>/dev/null | head -30; grep -n \\\"record\u2026\n- Bash: {\"command\": \"sed -n 540,600p crates/server/src/api/results.rs; grep -n \\\"economy_live\\\" crates/server/tests/support/deps.rs | head\"}\n- Bash: {\"command\": \"sed -n 190,230p crates/shared/src/economy/rewards.rs; grep -n \\\"jlore_capped\\\" crates/shared/src/economy/rewards.rs crates/server/src/economy/rewards.rs\"}\n- Bash: {\"command\": \"sed -n 570,660p crates/shared/src/economy/rewards.rs; grep -n \\\"pub async fn pay_game_rewards\\\" -A30 crates/server/src/economy/rewards.rs | head -70\"}\n- Bash: {\"command\": \"grep -rn \\\"economy_live\\\" crates/server/tests/support crates/server/src/app.rs | head -20; sed -n 1,60p crates/server/src/duos/actor.rs | grep -n \\\"^use\\\\|slot\\\\|HUMAN_SEATS\\\"; grep -n \\\u2026\n- Bash: {\"command\": \"git show 445ccaa547 --stat --format= | grep -v \\\"^ crates/server/tests\\\\|apps/\\\" | head -50; grep -rn \\\"4711\\\" spec docs crates/server/README.md 2>/dev/null | head\"}\n- Bash: {\"command\": \"grep -n \\\"R1483000\\\\|jlore_caps\\\\|JloreCap\\\" -r spec/rulings/R1483000.md crates/server/README.md docs/architecture.md 2>/dev/null | head; ls spec/pending | head; ls patches 2>/dev/null |\u2026\n- Bash: {\"command\": \"git show 445ccaa547 -- crates/server/README.md | grep -n \\\"^[+-]\\\" | grep -i \\\"jlore\\\\|4711\\\\|total\\\" | cut -c1-900; grep -n \\\"71\\\\b.*65\\\\|4711\\\\|game_jlore_caps\\\\|jlore\\\" docs/speed-and\u2026\n- Bash: {\"command\": \"sed -n 1520,1532p crates/server/README.md | cut -c1-1200; grep -n \\\"duos\\\" crates/server/README.md | grep -i \\\"jlore\\\" | cut -c1-300\"}\n- Bash: {\"command\": \"grep -rn \\\"duos_matches_get\\\\|economy_game_jlore_totals\\\" crates/server/src | grep -v \\\"pub async fn\\\"; grep -n \\\"on_record\\\" crates/server/src/duos/actor.rs\"}\n- Bash: {\"command\": \"ls target 2>/dev/null | head -3; ls ~/.cargo 2>/dev/null | head -2; sed -n 920,935p crates/server/src/duos/store.rs; grep -rn \\\"gameTotals\\\" crates/server/src | head -3\"}\n- Bash: {\"command\": \"sed -n 595,625p crates/server/src/duos/actor.rs; sed -n 455,470p crates/server/src/seats.rs; sed -n 390,402p crates/server/src/social/watch.rs\"}\n- Bash: {\"command\": \"cat spec/rulings/R1483000.md | head -40; ls spec/pending; cat spec/pending/4821.md | head -20\"}\n- Bash: {\"command\": \"sed -n 40,60p spec/rulings/R1483000.md; grep -n \\\"4711\\\" spec/rulings/*.md | head\"}\n- Bash: {\"command\": \"git show 40d6f59664 --stat --format=%s | head -20; git show b961329197 --stat --format=%s | head -12; grep -n \\\"fragment\\\" docs/issues-and-patches.md | head -12 | cut -c1-300\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4982/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"medium\\\", \\\"why\\\": \\\"One crate (jackioh-server), one actor file plus one test file; no en\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"One crate (jackioh-server): a helper and a branch in one actor file, plus one test file. It touches no engine, AI or migration, and no contract between crates, so none of the five hard lines holds.\"} --> ## Goal When a Duos match is recorded, `DuosActor::o\u2026"
       },
-      "hold": {
-        "ends": "2026-11-26T03:24:39Z",
-        "lifted": "2026-11-26T02:03:50Z",
-        "owner": "claude-4",
-        "since": "2026-11-26T01:24:39Z",
-        "until": "2026-11-26T02:00:00Z",
-        "why": "5-hour usage is 52%, too close to its 50% cap outside its hours to start a long run (it starts under 45%)"
-      },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-26T01:07:39Z",
       "owner_why": "it plans it",
@@ -21537,12 +21519,14 @@
       "provider": "claude-4",
       "queued_at": "2026-11-26T01:03:18Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45733597718",
+      "run_id": "pending:d510eb62-1795658684",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-26T01:07:39Z",
+      "started_at": "2026-11-26T02:05:17Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:7179116677"
+      ],
       "waiting_comment": 7179746010
     },
     "4984": {
@@ -21609,9 +21593,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T01:55:58Z",
+    "at": "2026-11-26T02:05:17Z",
     "url": "",
-    "what": "suggestions (client) on claude-7"
+    "what": "build #4982 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-26T01:53:59Z",
