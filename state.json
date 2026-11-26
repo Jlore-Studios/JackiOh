@@ -24172,13 +24172,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-4",
         "rejections": [],
-        "reviews": [],
-        "sha": "3efe9bec0839ba0015def83de6b4bcbbfcc75a8b",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-4",
+            "run": "45817912605",
+            "tier": "strong"
+          }
+        ],
+        "sha": "68a1ae0bbfc987624c4930c0290f86493845cf1a",
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "5074": {
