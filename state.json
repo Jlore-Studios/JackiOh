@@ -21775,6 +21775,7 @@
     "4992": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-26T03:06:09Z",
         "difficulty": "medium",
