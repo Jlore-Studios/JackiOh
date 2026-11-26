@@ -14325,15 +14325,8 @@
       "stop_requested": false
     },
     "4707": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45767245710",
-        "model": "opus",
-        "provider": "claude-4",
-        "since": "2026-11-26T06:55:46Z",
-        "until": "2026-11-26T07:25:46Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -14345,10 +14338,9 @@
         "reason": "planned on opus",
         "trail": "/dev/null | head; grep -n 'stats-import\\\\|^| `stats`\\\\|cargo jackioh stats \u2026\n- Bash: {\"command\": \"sed -n 644,652p crates/server/README.md | cut -c1-400; grep -n 'R4672\\\\|playedVariants\\\\|picks' crates/engine/README.md | head -5\", \"description\": \"Read server README totals paragraph\"}\n- Bash: {\"command\": \"grep -n 'function shareText\\\\|function adjustedText\\\\|function gapPercent\\\\|function formatPercent\\\\|const ADJUSTED_RANGE_DIGITS\\\\|SHARE_DIGITS' -A8 apps/web/src/routes/stats.tsx | head \u2026\n- Bash: {\"command\": \"grep -n 'ADJUSTED_RANGE_DIGITS =\\\\|function adjustedText' -A6 apps/web/src/routes/stats.tsx | head -20; grep -n 'export type PublicVariantGroup' -A6 apps/web/src/net/api.ts; grep -n 'Var\u2026\n- Bash: {\"command\": \"grep -n 'ADJUSTED_RANGE_DIGITS\\\\b' apps/web/src/routes/stats.tsx | head -3; grep -rn 'export const ADJUSTED_RANGE_DIGITS\\\\|function adjustedText' apps/web/src | head\", \"description\": \"Lo\u2026\n- Bash: {\"command\": \"sed -n 200,300p crates/cards/src/scripts/meditative/c049_1_yilegpt_unleashed.rs\", \"description\": \"Read YileGPT test setup\"}\n- Bash: {\"command\": \"grep -n 's.play(\\\\|g.play(\\\\|scenario(json' crates/cards/src/scripts/classic/c065_ace_in_the_hole.rs | head -5; grep -n 's.play(\\\\|fn holding\\\\|scenario(json' crates/cards/src/scripts/cl\u2026\n- Bash: {\"command\": \"sed -n 195,215p crates/cards/src/scripts/classic/c065_ace_in_the_hole.rs; sed -n 185,203p crates/cards/src/scripts/classic_plus/c019_3_mid_loser.rs\", \"description\": \"Read Ace and Mid Los\u2026\n- Bash: {\"command\": \"sed -n '/\\\\[workspace.lints/,/^\\\\[/p' Cargo.toml | head -40; cat crates/engine/clippy.toml | head -30\", \"description\": \"Check workspace lints and engine clippy config\"}\n- Bash: {\"command\": \"grep -rn 'ChaosRolled\\\\|chaosRolled\\\\|GameEvent::Rolled\\\\|\\\"rolled\\\"' crates/shared/tests/log.rs crates/shared/src/log/*.rs | head; grep -rn 'GameEvent::Rolled {$' -A9 crates --include=*\u2026\n- Bash: {\"command\": \"grep -rn '\\\"type\\\": \\\"rolled\\\"\\\\|\\\"type\\\":\\\"rolled\\\"\\\\|type: \\\"rolled\\\"\\\\|\\\"type\\\": \\\"chaosRolled\\\"\\\\|type: \\\"chaosRolled\\\"' crates apps/web/src --include=*.rs --include=*.ts --include=*\u2026\n- Bash: {\"command\": \"sed -n 665,685p crates/engine/tests/rules/call_to_chaos.rs; sed -n 540,558p crates/engine/tests/rules/call_to_chaos_plus.rs; sed -n 378,392p crates/engine/tests/rules/call_to_chaos_medit\u2026\n- Bash: {\"command\": \"cat spec/rulings/R1365000.md | sed -n 1,30p | cut -c1-900\", \"description\": \"Read the classify ruling\"}\n- Bash: {\"command\": \"sed -n 1,12p spec/rulings/R1370000.md | cut -c1-1200; grep -n 'fn diverge\\\\|hash_state\\\\|events_text\\\\|fn divergence' crates/tools/src/classify.rs | head\", \"description\": \"Read classify \u2026\n- Bash: {\"command\": \"sed -n 940,1000p crates/tools/src/classify.rs; grep -n 'parent-bin\\\\|parent_bin' .github/workflows/ci.yml | head -5\", \"description\": \"Read classify divergence detection and CI use\"}\n- Bash: {\"command\": \"sed -n 790,830p .github/workflows/ci.yml\", \"description\": \"Read CI classify step\"}\n- Bash: {\"command\": \"sed -n 760,791p .github/workflows/ci.yml\", \"description\": \"Read classify stage1 condition\"}\n- Bash: {\"command\": \"grep -rn 'report_rolls\\\\|flip_coin' crates/tools/tests/acceptance.rs docs/*.md docs/v0.3.0/*.md crates/engine/README.md crates/cards/README.md 2>/dev/null | head\", \"description\": \"Check \u2026\n- Bash: {\"command\": \"sed -n 1300,1345p crates/engine/src/wire/catalog_types.rs | grep -n 'pub struct\\\\|pub tags' \", \"description\": \"Confirm CardDef has tags\"}\n- Bash: {\"command\": \"grep -rn '\\\"outputs\\\"\\\\|outputs:' crates/server/tests/api/*.rs crates/server/src/api/stats.rs | grep -v 'r4679000\\\\|fn outputs' | head; grep -rn 'outputs' apps/web/src --include=*.ts --i\u2026\n- Bash: {\"command\": \"grep -rhoE '^cards: .*' spec/rulings/ | grep -oE '(S\\\\+|TG|IA|MS|SS\\\\+|Training Grounds|Infinite Assault) #[0-9.]+' | sort | uniq -c | sort -rn | head; grep -rhoE '^cards: .*' spec/rulin\u2026\n- Bash: {\"command\": \"grep -rhoE '^cards: .*' spec/rulings/ | grep -oE 'IA #[0-9.]+|Infinite Assault #[0-9]+|I #47|A #47' | sort | uniq -c | head -5; grep -rhoE '^cards: .*' spec/rulings/R4586010.md 2>/dev/nu\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Survey result (agent): IN = 7 Call to Chaos editions (all via call_to_chaos(), 10 entries, Radiant 3, uniform), M #49.1 YileGPT (do_random_entries 2 of \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4707/.bot-plan.md\", \"content\": \"## Goal\\n\\nEvery play's record keeps the outcomes it rolled (a Call to Chaos or pick-N list's entries by table index, \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md; wc -c .bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- Bash: {\"command\": \"ls crates/cards/tests/ | head; grep -n '^\\\\[\\\\[test\\\\]\\\\]' -A3 crates/cards/Cargo.toml crates/server/Cargo.toml | head -30; ls crates/server/tests/ | head\", \"description\": \"Check test bi\u2026\n- Bash: {\"command\": \"grep -rln 'playedVariants\\\\|\\\"variants\\\"' crates/*/tests/fixtures crates/tools/tests 2>/dev/null | head; grep -rn 'summarize_game' crates/tools/src/*.rs crates/server/src --include=*.rs \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\ns=s.replace(\\\"`cargo test -p jackioh-cards --test cross r4707000`\\\",\\\"`cargo test -p jackioh-cards --test cards r4707000\u2026\n- Bash: {\"command\": \"grep -n 'variants\\\\|outputs\\\\|stats/cards/:id' docs/v0.3.0/SURFACE.md | head -5; grep -n 'R4679\\\\|R4676' crates/engine/README.md apps/web/README.md docs/architecture.md 2>/dev/null | hea\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4707/.bot-plan.md\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\ns=s.replace(\\\"`cargo test -p jackioh-cards c154_dice_of_doom c047_unreal_estate`, then once the full ts run.\\\",\\\"`cargo test -p jac\u2026\n- said: ## Goal Every play's record keeps the outcomes it rolled: - a Call to Chaos or pick-N list's entries, by table index; - how many coins in a batch landed heads; - a die's face, or whether it landed on the faces its card checks for. A Recursion's rolls go to the play that started the chain. The total\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-26T06:18:04Z",
       "owner_why": "it plans it",
@@ -14361,9 +14353,9 @@
       "provider": "claude-4",
       "queued_at": "2026-11-24T10:17:42Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45767245710",
+      "run_id": "pending:50387450-1795678072",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-26T06:18:04Z",
+      "started_at": "2026-11-26T07:28:25Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -22861,9 +22853,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T07:09:40Z",
+    "at": "2026-11-26T07:28:25Z",
     "url": "",
-    "what": "build #5015 on claude-6"
+    "what": "build #4707 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-26T07:16:51Z",
