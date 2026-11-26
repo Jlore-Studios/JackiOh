@@ -675,7 +675,7 @@ draws too; a source with none draws the default.
 The GIF code still loads on demand, never in the main bundle.
 Each `/replays` row that can be watched also offers "Download JSON" (R1141000): every step's view through the
 row's own source, the row's facts and the build's catalog version, no account named, made in memory and saved
-to the browser's downloads, for a bug report. The file is packed (`replay/pack.ts`): the first step whole and
+to the browser's downloads, for a bug report. The file is packed (`replay/pack.ts`, R5124000): the first step whole and
 each later one as its change from the one before, gzipped by the browser's CompressionStream into
 `.json.gz`, about a fiftieth to a hundredth of the plain JSON; a browser without CompressionStream saves plain
 `.json`, and Open replay JSON opens either.

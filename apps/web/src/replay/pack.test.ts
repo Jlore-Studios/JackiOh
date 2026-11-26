@@ -1,5 +1,6 @@
-// R1141000, R1242000: a downloaded replay file is packed (each step as its change from the one before,
-// gzipped) and opens again as the very steps it was made of; a broken or oversized one is refused.
+// R5124000 (amending R1141000, R1242000): a downloaded replay file is packed (each step as its change
+// from the one before, gzipped) and opens again as the very steps it was made of; a broken or
+// oversized one is refused.
 
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
@@ -44,12 +45,12 @@ async function gzip(bytes: Uint8Array<ArrayBuffer>): Promise<Uint8Array<ArrayBuf
 /** JSON values with no key that may never become an object key (`isSafeKey`). */
 const json = fc.jsonValue().filter((value) => !/"(?:__proto__|constructor|prototype)":/u.test(JSON.stringify(value)));
 
-describe("R1141000 a replay file's packed steps", () => {
-  it("R1141000 a folded game's steps unpack to the very steps they were packed from", () => {
+describe("R5124000 a replay file's packed steps", () => {
+  it("R5124000 a folded game's steps unpack to the very steps they were packed from", () => {
     expect(unpackSteps(throughJson(packSteps(steps)))).toEqual([...steps]);
   });
 
-  it("R1141000 any JSON value changed by its diff from another is that other, through a file's JSON", () => {
+  it("R5124000 any JSON value changed by its diff from another is that other, through a file's JSON", () => {
     fc.assert(
       fc.property(json, json, (prev, next) => {
         const change = diff(prev, next);
@@ -59,14 +60,14 @@ describe("R1141000 a replay file's packed steps", () => {
     );
   });
 
-  it("R1141000 a changed array element is a change, not the element again, and kept elements cost nothing", () => {
+  it("R5124000 a changed array element is a change, not the element again, and kept elements cost nothing", () => {
     const card = { instanceId: "c1", attack: 2, health: 3, keywords: ["Armor"], text: "a long rules text ".repeat(4) };
     const prev = [card, { instanceId: "c2" }, { instanceId: "c3" }];
     expect(diff(prev, [{ ...card, health: 1 }, ...prev.slice(1)])).toEqual({ e: [{ health: [1] }] });
     expect(diff(prev, [card, { instanceId: "c3" }, { instanceId: "c4" }])).toEqual({ e: [1, -1, 1, [{ instanceId: "c4" }]] });
   });
 
-  it("R1141000 the file is gzip and opens again as the same object, at a small share of its plain JSON", async () => {
+  it("R5124000 the file is gzip and opens again as the same object, at a small share of its plain JSON", async () => {
     const file = { format: "jackioh-replay", version: 4, catalogVersion: "v", savedAt: 0, game: {}, steps };
     const bytes = await packedReplay(file);
     expect(isGzip(bytes)).toBe(true);
@@ -76,13 +77,13 @@ describe("R1141000 a replay file's packed steps", () => {
     expect(bytes.byteLength).toBeLessThan(JSON.stringify(file).length * PACKED_SHARE_AT_MOST);
   });
 
-  it("R1141000 plain JSON bytes read as their text, and an object with no packed steps is left as it is", async () => {
+  it("R5124000 plain JSON bytes read as their text, and an object with no packed steps is left as it is", async () => {
     const plain = { steps: [1, 2] };
     expect(await replayText(new TextEncoder().encode(JSON.stringify(plain)))).toBe(JSON.stringify(plain));
     expect(unpackedReplay(plain)).toBe(plain);
   });
 
-  it("R1141000 gzip that unzips past REPLAY_JSON_MAX_BYTES is refused as too big, and broken gzip as no replay", async () => {
+  it("R5124000 gzip that unzips past REPLAY_JSON_MAX_BYTES is refused as too big, and broken gzip as no replay", async () => {
     const bomb = await gzip(new Uint8Array(REPLAY_JSON_MAX_BYTES + 1));
     expect(bomb.byteLength).toBeLessThan(REPLAY_JSON_MAX_BYTES);
     expect(await refusal(() => replayText(bomb))).toBe(TOO_BIG);
@@ -90,13 +91,13 @@ describe("R1141000 a replay file's packed steps", () => {
     expect(await refusal(() => replayText(broken))).toBe(NOT_A_REPLAY);
   });
 
-  it("R1141000 more packed steps than REPLAY_JSON_MAX_STEPS are refused before any is rebuilt", async () => {
+  it("R5124000 more packed steps than REPLAY_JSON_MAX_STEPS are refused before any is rebuilt", async () => {
     const many = [{ step: 0 }, ...Array.from({ length: REPLAY_JSON_MAX_STEPS }, () => ({ step: [1] }))];
     expect(await refusal(() => unpackedReplay({ [PACKED_STEPS_KEY]: many }))).toBe(TOO_BIG);
     expect(unpackSteps(many.slice(0, REPLAY_JSON_MAX_STEPS))).toHaveLength(REPLAY_JSON_MAX_STEPS);
   });
 
-  it("R1141000 a change of any other shape is refused as no replay", async () => {
+  it("R5124000 a change of any other shape is refused as no replay", async () => {
     const broken: [unknown, unknown][] = [
       [{ a: 1 }, [1, 2]],
       [{ a: 1 }, 7],

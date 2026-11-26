@@ -1,4 +1,4 @@
-// Packing a downloaded replay file (R1141000, R1242000): its steps as the first one whole and each later
+// Packing a downloaded replay file (R5124000, amending R1141000 and R1242000): its steps as the first one whole and each later
 // one as its change from the one before, gzipped by the browser's own CompressionStream. A replay's
 // steps are full views that differ by a few fields and a few new events, so the change is a small
 // fraction of a view, and gzip squeezes what is left: a game's file is a fiftieth to a hundredth of its

@@ -52,7 +52,7 @@ describe("R1141000 opening a downloaded replay", () => {
     expect(replayStepsOf(await readReplayJsonFile(await written()))).toEqual([...steps]);
   });
 
-  it("R1141000 the file is packed and gzipped, a fraction of the plain JSON it opens as", async () => {
+  it("R5124000 the file is packed and gzipped, a fraction of the plain JSON it opens as", async () => {
     const file = await written();
     expect(file.name).toBe("jackioh-replay-practice-1.json.gz");
     expect(file.type).toBe("application/gzip");
@@ -60,7 +60,7 @@ describe("R1141000 opening a downloaded replay", () => {
     expect(file.size).toBeLessThan(JSON.stringify(steps).length / 10);
   });
 
-  it("R1141000 a browser without CompressionStream saves plain JSON, which opens again as the same steps", async () => {
+  it("R5124000 a browser without CompressionStream saves plain JSON, which opens again as the same steps", async () => {
     vi.stubGlobal("CompressionStream", undefined);
     const file = await written();
     expect(file.name).toBe("jackioh-replay-practice-1.json");

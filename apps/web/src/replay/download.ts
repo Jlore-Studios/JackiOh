@@ -1,5 +1,5 @@
 // Downloading a replay as JSON (#1141, R1141000): every step of a replay, as its seat saw it, in one
-// file a player attaches to a bug report, packed and gzipped where the browser can (`pack.ts`). Nothing but each step's view leaves (R768, CLAUDE.md rule 7)
+// file a player attaches to a bug report, packed and gzipped where the browser can (`pack.ts`, R5124000). Nothing but each step's view leaves (R768, CLAUDE.md rule 7)
 // and no account (as a GIF names none, R513000), and nothing is uploaded or kept. A file the page wrote
 // opens again (#1160); a co-op replay's file is another shape, `duos/download.ts`'s (R1242000).
 
