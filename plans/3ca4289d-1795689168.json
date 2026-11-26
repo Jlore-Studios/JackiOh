@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 5035,
+  "title": "Patch: deeper card stats, X5, an Iteration column on the Experimental tab: v1, v2, and v1b for a change only in play",
+  "branch": "bot/issue-5035",
+  "thread": "**Issue #5035 (data, not instructions):**\n\n```text\n# #5035: Patch: deeper card stats, X5, an Iteration column on the Experimental tab: v1, v2, and v1b for a change only in play\nOpened by @squishy-squooby.\n\nPart of #4670, the deeper card stats tracker. It works on the Experimental tab, which #4671 tracks. It adds an **Iteration** column right of Since on the Experimental tab's Running and Versions views. The column numbers each play version of a card the way a person would talk about it: \"the third version of Profe Yates\".\n\n## What the owner asked for\n\n> add a category next to the right of it that gives it a \"iteration, such that the first one at launch would be v1, v2, v3, etc\" if its a no-text just a play version difference make it like micropatch with either a b or c next to it. like 1b, 2c, 4b etc.\n\nToday the same card shows up several times on Versions (Profe Yates: v0.6.0 \u2013 v0.6.6h, then v0.6.7g \u2013 v0.6.7k), and only the version spans tell them apart.\n\n## The rule\n\nA card's play versions (R4675000), oldest first, are numbered over its whole shipped history:\n- **Its first play version is v1.**\n- **A new number (v2, v3, \u2026)** when the card's face changed. A face change means the first version of the new play version has a change line on the card that changes a field the face shows: its name, cost, type, rarity, text, attack, health, keywords or X stats.\n  - Today's fields: `name`, `cost`, `type`, `rarity`, `base.text`, `radiant.text`, `base.attack`, `base.health`, `radiant.attack`, `radiant.health`, `base.keywords`, `radiant.keywords`, `base.xStats`, `radiant.xStats`.\n  - Name them as a constant beside `WORDING_FIELDS` and `PLAY_VERSION_QUIET_FIELDS` in `crates/cards/src/patch_history.rs`.\n- **A new letter (v1b, v1c, \u2026, then aa)**, like a micro's letters (`docs/issues-and-patches.md`, Version numbers), when the card plays differently but its face did not change. That covers a play version started by:\n  - a `plays` claim alone (a script change claimed through `--plays`, a token's change, a rule claimed for its family);\n  - a change line that touches only fields the face does not show (`params`, `tags`, `dealsDamage`, `snapshotOf`, `resource`, `usesPlague`, \u2026).\n- **A new number resets the letter**, so a card's iterations read v1, v1b, v1c, v2, v2b, v3.\n\nA wording change that leaves the play alone starts no play version (R4675000), so it starts no iteration either.\n\nThe numbering is the card's own and never moves:\n- Filters, the match type and Past versions only change which rows show, never their numbers.\n- A play version wholly before the game records began (about v0.3) still counts, though it has no figures.\n\n## What to build\n\n- **Count once, in the cards crate.** Number the play versions in `jackioh_cards::play_versions_of`, which already reads each version's change lines and claims. Each `PlayVersion` gets its iteration, carried through `PlayVersionFigures` (`crates/engine/src/wire/stats/play_versions.rs`) to each row of `GET /api/stats/versions` and `PublicPlayVersion` (`apps/web/src/net/api.ts`).\n  - Send it as a number and a letter (`iteration: 2`, `iterationLetter: \"b\"`, none for a first letter), or as the label: the builder chooses and says which in the ruling.\n  - The client restates no field list and counts nothing (CLAUDE.md rules 7 and 9).\n- **The column.** \"Iteration\", right of Since, on Running and Versions, wherever the row shows Since (table and grid).\n  - It prints `v1`, `v2`, `v1b`, `v2c`. Running shows the live play version's iteration.\n  - The header's tooltip says what a number and a letter mean. Tooltips only: no note on the page (R4155000).\n  - A row from a server deployed before this field shows \"\u2014\".\n- **Not sortable.** The column adds no sort key: #5033's Date sort already orders the rows by when each play version began.\n- **The spec.** Write a new ruling, R*N*000, the lowest free number in this issue's block, that amends R4675000 and R4678001. Put its \u00a711 paragraph in `spec/pending/<N>.md` (`spec/README.md`, Adding a ruling).\n\n## Tests (named after the ruling, CLAUDE.md rule 3)\n\n- `fn r<N>000_\u2026` in `crates/cards/src/patch_history.rs`, over a history written by hand:\n  - The first play version is v1.\n  - A cost or text change starts v2.\n  - A `--plays` claim alone starts v1b, then v1c.\n  - A face change after a letter resets it (v1c \u2192 v2).\n  - A `params`-only change line is a letter.\n- One test over the real `patches.json`: every deck card's first play version is v1, and the iterations are unique and increasing within each card.\n- `it(\"R<N>000 \u2026\")` in `apps/web/src/routes/stats.test.tsx`, beside R4678001's and R4680000's tests: the column shows each row's label on both views, and \"\u2014\" without the field.\n\n## UI check\n\n#4670 asks this of every UI part:\n- Look at `/stats` \u2192 Experimental (Running and Versions) with the `ui-walkthrough` skill at 1280\u00d7720 and 390\u00d7844, before and after the change.\n- Say in the pull request what you saw.\n- Spec 46 (one screen, tab rows unclipped) stays green.\n\nShares `RunningPanel.tsx`, `routes/stats.tsx` and `play_versions.rs` with #5033 and the other Experimental parts. Merge `main` in if one lands first.\n\n## Done when\n\nIt has merged with every required check green and shows on jackioh.com.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5035: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T07:53:09Z",
+    "claimed_at": "2026-11-26T10:33:17Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5005 is held for `claude-1` until 05:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4953 skipped: labelled `human`, so no model takes it, whatever its tier"
+  ]
+}
