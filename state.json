@@ -21941,7 +21941,7 @@
       "started_at": "2026-11-26T03:12:03Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 1
     },
     "4996": {
       "action": "build",
