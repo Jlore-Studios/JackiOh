@@ -22556,15 +22556,8 @@
       "verdict_rounds": 0
     },
     "5016": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45796290036",
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-26T10:16:23Z",
-        "until": "2026-11-26T10:46:23Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -22576,10 +22569,9 @@
         "reason": "planned on gemini-3.8-flash-high",
         "trail": "- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && git grep -n \"\u2713\" apps/web/src/lobby/\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && git grep -n \"deckWords\" apps/web/src\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && grep -n \"Ready\" apps/web/src/i18n/zh-CN.json\n- said: \n- read_file: {\"EndLine\": 595, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5016/apps/web/src/lobby/LobbyScreen.tsx\", \"StartLine\": 570}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && grep -n '\"Shared\"' apps/web/src/i18n/zh-CN.json\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && grep -n \"Share\" apps/web/src/i18n/zh-CN.json\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && head -n 50 apps/web/src/i18n/i18n.test.ts\n- said: \n- read_file: {\"EndLine\": 120, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5016/apps/web/src/i18n/i18n.test.ts\", \"StartLine\": 50}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && git grep -n \"lobby-verdict\" apps/web/src\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && git grep -n \"playTestid.verdict\" apps/web/src/routes/\n- said: \n- run_command: ls -la /home/agent-agy/actions-runner/_work/_temp/work/item-5016/.bot-plan.md\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && git check-ignore .bot-plan.md\n- said: \n- run_command: python3 -c ' import glob chars = [\"\u2715\", \"\u2713\", \"\u2726\", \"\u2605\", \"\u265b\", \"\u2620\", \"\u2691\"] files = glob.glob(\"/home/agent-agy/actions-runner/_work/_temp/work/item-5016/apps/web/src/**/*.css\", recursive=True) for f in sort\u2026\n- said: \n- run_command: python3 -c ' import glob chars = [\"\u2715\", \"\u2713\", \"\u2726\", \"\u2605\", \"\u265b\", \"\u2620\", \"\u2691\"] files = glob.glob(\"/home/agent-agy/actions-runner/_work/_temp/work/item-5016/apps/web/src/**/*.css\", recursive=True) for f in sort\u2026\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && pnpm --dir apps/web test src/game/Dialog.test.tsx\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5016/.bot-plan.md\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"4ed5fc87-a157-485c-9d53-7493ce48fc58/task-197\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"4ed5fc87-a157-485c-9d53-7493ce48fc58/task-197\"}\n- said: Waiting for task-197 (WASM build and Dialog.test.tsx run) to complete.\n- manage_task: {\"Action\": \"status\", \"TaskId\": \"4ed5fc87-a157-485c-9d53-7493ce48fc58/task-197\"}\n- said: The WASM compilation and test run are executing in the background. I will await completion before delivering the final plan.\n- said: ## Goal Replace Unicode character glyphs (`\u2715`, `\u2713`, `\u2726`, `\u2605`, `\u265b`, `\u2620`, `\u2691`) across client UI components with a bespoke inline SVG `<Icon name>` component drawn with a unified stroke weight, `currentColor`, and sizing from the type scale. Ensure icon-only buttons maintain accessible names via i18n-\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "agy",
       "owner_since": "2026-11-26T09:54:09Z",
       "owner_why": "it plans it",
@@ -22592,9 +22584,9 @@
       "provider": "agy",
       "queued_at": "2026-11-26T05:20:42Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45796290036",
+      "run_id": "pending:b9a3c5d9-1795688326",
       "runs_on": "night-vm-agy",
-      "started_at": "2026-11-26T09:54:09Z",
+      "started_at": "2026-11-26T10:19:16Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -23583,9 +23575,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T10:18:31Z",
+    "at": "2026-11-26T10:19:16Z",
     "url": "",
-    "what": "review #5060 on claude-8"
+    "what": "build #5016 on agy"
   },
   "last_sweep": {
     "at": "2026-11-26T10:01:48Z",
