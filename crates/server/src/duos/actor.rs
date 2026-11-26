@@ -42,7 +42,7 @@ use jackioh_shared::host::{
 use crate::actor::clock::{Timer, after};
 use crate::actor::contracts::{SocketHandlers, one_tx};
 use crate::actor::guard::{CLOSE_POLICY_VIOLATED, SeatGuard, alert_unusual_rejections};
-use crate::actor::protocol::{ACTION_PANICKED_MESSAGE, SocketErrorCode};
+use crate::actor::protocol::{SocketErrorCode, answer_frame};
 use crate::actor::registry::panic_text;
 use crate::actor::ws_server::{CLOSE_GOING_AWAY, CLOSE_NORMAL, Socket};
 use crate::app::{App, now_ms};
@@ -198,35 +198,9 @@ fn timer_name(key: TimerKey) -> &'static str {
     }
 }
 
-/// R1253000: the answer a panicked action gets, first and on every resend of its nonce.
-fn panicked_answer(nonce: &str) -> DuosServerMessage {
-    error_message(SocketErrorCode::Internal, ACTION_PANICKED_MESSAGE, Some(nonce))
-}
-
 /// The frame the machine's answer to an action is sent as (§9.3).
 fn answer_message(nonce: &str, answer: ActionAnswer) -> DuosServerMessage {
-    match answer {
-        ActionAnswer::Ack { seq } => ack_message(nonce, seq),
-        ActionAnswer::Illegal { reason } => {
-            error_message(SocketErrorCode::IllegalAction, &reason, Some(nonce))
-        }
-        ActionAnswer::MatchOver => error_message(
-            SocketErrorCode::MatchOver,
-            "this match already has a result",
-            Some(nonce),
-        ),
-        ActionAnswer::Panicked => panicked_answer(nonce),
-        ActionAnswer::NotRecorded => error_message(
-            SocketErrorCode::Internal,
-            "the action could not be recorded; try again",
-            Some(nonce),
-        ),
-        ActionAnswer::NonceTaken => error_message(
-            SocketErrorCode::Malformed,
-            "that nonce is already taken",
-            Some(nonce),
-        ),
-    }
+    answer_frame(nonce, answer, ack_message, error_message)
 }
 
 struct Core {
@@ -1341,14 +1315,13 @@ impl DuosActor {
 
 use std::collections::BTreeMap;
 
-use jackioh_engine::{EmoteId, emote_gate_within, hand_holds};
+use jackioh_engine::{EmoteId, hand_holds};
 
-use crate::actor::match_actor::{MATCH_OVER_CLOSE_REASON, WATCH_NOT_ALLOWED, WatchRefused};
+use crate::actor::match_actor::{MATCH_OVER_CLOSE_REASON, WatchRefused, make_room, refuse_watchers};
 use crate::actor::protocol::{spectator_emote_message, spectator_hand_message, watchers_frame};
-use crate::actor::ws_server::WS_CLOSE;
-use crate::config::{SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH};
+use crate::config::SPECTATE_DELAY_MS;
 use crate::social::watch::{
-    SPECTATOR_EMOTE_LIMITS, WatchFrame, deal_spectator_emote_hand, parse_watch_frame, send_spectator_emote,
+    WatchFrame, deal_spectator_emote_hand, parse_watch_frame, send_spectator_emote, spectator_emote_allowed,
 };
 
 /// What a recorded view is kept as: the view the person was sent, until a watcher is first due it, then
@@ -1460,15 +1433,9 @@ impl DuosActor {
             if core.host.is_stopped() || core.spectate.closed {
                 return Err(WatchRefused::Closed);
             }
-            let at = core
-                .spectate
-                .watchers
-                .iter()
-                .position(|watcher| watcher.profile_id == profile_id);
-            let replaced = at.map(|at| core.spectate.watchers.remove(at));
-            if replaced.is_none() && core.spectate.watchers.len() >= SPECTATORS_PER_MATCH {
-                return Err(WatchRefused::Full);
-            }
+            let replaced = make_room(&mut core.spectate.watchers, |watcher| {
+                watcher.profile_id == profile_id
+            })?;
             // Those already watching are sent what has come due first, so each record is down to the
             // view the newcomer starts from.
             self.spectate_flush(&mut core, now_ms());
@@ -1578,19 +1545,7 @@ impl DuosActor {
             gone
         };
         // Already out of the list, so their close handlers find nothing to take off.
-        let refusal = encode(&error_message(
-            SocketErrorCode::Forbidden,
-            WATCH_NOT_ALLOWED,
-            None,
-        ));
-        for watcher in &gone {
-            if watcher.socket.is_open() {
-                watcher.socket.send(&refusal);
-                watcher
-                    .socket
-                    .close(Some(WS_CLOSE.forbidden), Some(WATCH_NOT_ALLOWED));
-            }
-        }
+        refuse_watchers(gone.iter().map(|watcher| &watcher.socket));
         gone.len()
     }
 
@@ -1674,19 +1629,9 @@ impl DuosActor {
             }
             let sender_id = watcher.profile_id.clone();
             let frame = encode(&spectator_emote_message(&watcher.name, emote));
-            let now = now_ms();
-            let history = core
-                .spectate
-                .emote_sent_at
-                .get(&sender_id)
-                .map_or(&[][..], Vec::as_slice);
-            let gate = emote_gate_within(history, now, SPECTATOR_EMOTE_LIMITS);
-            if !gate.ok {
+            if !spectator_emote_allowed(&mut core.spectate.emote_sent_at, &sender_id, now_ms()) {
                 return;
             }
-            let mut sent_at = gate.sent_at;
-            sent_at.push(now);
-            core.spectate.emote_sent_at.insert(sender_id.clone(), sent_at);
             let people = self
                 .shared
                 .row

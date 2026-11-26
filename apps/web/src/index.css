@@ -39,9 +39,6 @@
   --card-w: 82px;
   --card-h: 112px;
   --gap: var(--space-3);
-  /* Frozen for non-board sheets (duos/, the deck builder): board sheets name surfaces.css.
-     Nothing in board scope uses it. */
-  --radius: 7px;
 
   /* R2122000: the least a control's hit area spans on a phone, either way (WCAG 2.5.5); e2e
      spec 47's HIT_MIN_PX is the same number. */

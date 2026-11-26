@@ -34021,7 +34021,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Immutable, Crater, Rush\nFloat reduces cost.\nCry: Summon {legs|Toxopid Leg|Toxopid Legs} in random empty unit zones on the field.\nIndestructible while Toxopid Legs are on the field.\nEnd of turn: Toxic {toxic} all enemies."
+      "text": "Immutable, Crater, Rush\nFloat reduces cost.\nCry: Summon {legs|Toxopid Leg|Toxopid Legs} in random zones on the field, destroying the Units there.\nIndestructible while Toxopid Legs are on the field.\nEnd of turn: Toxic {toxic} all enemies."
     },
     "radiant": {
       "attack": 20,
@@ -34037,7 +34037,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Immutable, Crater, Rush\nFloat reduces cost.\nCry: Summon {legs|Radiant Toxopid Leg|Radiant Toxopid Legs} in random empty unit zones on your opponent's field.\nIndestructible while Toxopid Legs are on the field.\nEnd of turn: Toxic {toxic} all enemies."
+      "text": "Immutable, Crater, Rush\nFloat reduces cost.\nCry: Summon {legs|Radiant Toxopid Leg|Radiant Toxopid Legs} in random zones on your opponent's field, destroying the Units there.\nIndestructible while Toxopid Legs are on the field.\nEnd of turn: Toxic {toxic} all enemies."
     },
     "params": [
       {
@@ -34085,6 +34085,9 @@
       "health": 8,
       "keywords": [
         {
+          "kind": "Flexible"
+        },
+        {
           "kind": "Crater"
         },
         {
@@ -34094,13 +34097,16 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Can't attack, Crater, Taunt\nImmune to Toxic."
+      "text": "Flexible, Can't attack, Crater, Taunt\nImmune to Toxic."
     },
     "radiant": {
       "attack": 4,
       "health": 16,
       "keywords": [
         {
+          "kind": "Flexible"
+        },
+        {
           "kind": "Crater"
         },
         {
@@ -34110,7 +34116,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Can't attack, Crater, Taunt\nImmune to Toxic."
+      "text": "Flexible, Can't attack, Crater, Taunt\nImmune to Toxic."
     }
   },
   "stinkyscapeplus-122": {

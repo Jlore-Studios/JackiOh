@@ -639,6 +639,10 @@ outlive the purge; a record folded before 0063 counts in `record_totals` alone, 
 (R1994000). A finished match whose record failed to write after its result is filed again by the retention loop, each pass for a day after it ended (`GAME_RECORD_REFILE_WINDOW_SECONDS`) and once more before the purge takes its log, naming no build (R1596000).
 Records track the face each card was played on, and `playedRadiant` and `playedNormal` split the played
 decks into those that played the card Radiant at least once and those that never did (R1147000).
+Records written since R5054000 also list the dealt cards each seat held Radiant in its hand
+(`heldRadiant`), and `seenRadiant` and `seenNormal` split the seen decks the same way, played or not:
+the Face control's Normal and Radiant read those, so a win-more card's plays are not its whole face. A
+total folded before them reads empty on a face, with no back-fill.
 A Created card (R943: a token, a generated or copied card, a transform's result, The Coin) is no deck
 card: a record lists each seat's Created cards apart, those it made and used and those it made and never
 used, and its figures (`createdPlayed`, `createdNotPlayed` and the used ones split by face) ride in the

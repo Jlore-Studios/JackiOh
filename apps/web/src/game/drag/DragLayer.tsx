@@ -12,6 +12,7 @@ import type { ActionBody, CardView, PlayerView } from "@jackioh/shared";
 import { getFxSettings, normalizeSpeed } from "../../fx/settings.ts";
 import { readSettings } from "../../settings/index.ts";
 import { IDLE, boardKeyOf, isBuilding, type Interaction } from "../actions.ts";
+import { arrowCurve } from "../arrowCurve.ts";
 import { currentCardMotion } from "../cardMotion.ts";
 import { CatalogContext, MatchCardsProvider, useCardInfo, useCopiedDef, type CardLookup } from "../catalog.ts";
 import { byTestid, testid, type ClickTarget } from "../contract.ts";
@@ -747,25 +748,7 @@ function DragArrow(props: {
   stop: ArrowStop | null;
 }): ReactElement {
   const { from, to } = props;
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const length = Math.hypot(dx, dy) || 1;
-
-  const bend = Math.min(ARROW_BEND_MAX_PX, length * ARROW_BEND_SHARE);
-  let nx = -dy / length;
-  let ny = dx / length;
-  if (ny > 0) {
-    nx = -nx;
-    ny = -ny;
-  }
-  const cx = (from.x + to.x) / 2 + nx * bend;
-  const cy = (from.y + to.y) / 2 + ny * bend;
-
-  const tx = to.x - cx;
-  const ty = to.y - cy;
-  const tangent = Math.hypot(tx, ty) || 1;
-  const ux = tx / tangent;
-  const uy = ty / tangent;
+  const { length, cx, cy, ux, uy } = arrowCurve(from, to, ARROW_BEND_SHARE, ARROW_BEND_MAX_PX);
 
   const withHead = props.stop === null;
   const head = Math.min(ARROW_HEAD_PX, length);
