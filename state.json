@@ -21071,12 +21071,10 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "at": "2026-11-26T20:04:13Z",
+        "at": "2026-11-26T22:12:05Z",
         "built_by": "claude-3",
         "by": "`claude` (strong)",
-        "carried_from": "e61690cff8d7b41aacc223cb8aa025b9ab29ca1c",
-        "resolved_by": "`claude` (strong)",
-        "sha": "f56c14becb3f0ead58f2df7069e78bfb4517b9f5"
+        "sha": "be301a8f4f663666cdaeaa9dad3e6dc5c3ba8ca5"
       },
       "died": 0,
       "difficulty": "hard",
