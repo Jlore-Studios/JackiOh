@@ -1953,6 +1953,8 @@ export type PublicPlayVersion = {
   live: boolean;
   /** R4678001: the patches its versions reach (the patch bar's windows); absent from a server deployed before it. */
   patches?: number;
+  /** R5033000: the position of its first version in the shipped history; absent from a server deployed before it. */
+  firstShipped?: number | null;
   games: number;
   adjustedWinRate: number | null;
   adjustedLow: number | null;

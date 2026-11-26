@@ -189,6 +189,7 @@ mod tests {
             last: first.to_string(),
             live,
             patches: 1,
+            first_shipped: None,
             games,
             adjusted_win_rate: Some(rate),
             adjusted_low: Some(rate - 0.02),
