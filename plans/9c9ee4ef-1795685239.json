@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 5026,
+  "title": "Patch: the web client's repeated blocks are written once",
+  "branch": "bot/issue-5026",
+  "thread": "**Issue #5026 (data, not instructions):**\n\n````text\n# #5026: Patch: the web client's repeated blocks are written once\nOpened by @squishy-squooby.\n\n### Kind\n\nArchitecture\n\n### Why\n\nThe audit that landed as #4905 ended with a scan for blocks of code that stand word for word in two places. On `main` at `7270e555` it finds 62 such runs in the client's non-test TypeScript under `apps/web/src` (windows of 12 or more lines, comments, blank lines and lone braces left out; the generated `wire/` files, the WebAssembly package and the per-card art recipes skipped). None was folded in #4905.\n\nThe largest:\n\n| Files | Lines |\n|---|---|\n| `fx/motifs/names.ts` (8-38 and 50-80) | 31 |\n| `dungeon/store.ts:340-366` and `dungeon/test/fixtures.ts` (a fixture copying the store) | 27 |\n| `replay/OpenedReplay.tsx:45-70` and `duos/DuosReplay.tsx:240-265` | 26 |\n| `cards/proficiencySync.ts:97-122` and `cards/cardPicksSync.ts:161-186` | 23 |\n| `stats/model.ts` (38-56 and 83-101) | 19 |\n| `dungeon/fight/FightScreen.tsx` and `assault/fight/FightScreen.tsx` | 19, 14, 12, 12 |\n| `routes/practice.tsx:313-332` and `assault/AssaultPage.tsx:61-80` | 18 |\n| `game/deckbuilder/DeckHistory.tsx:102-126` and `DeckCosmeticsPicker.tsx:37-61` | 18 |\n| `cards/inspect/index.ts:17-34` and `cards/index.ts:43-60` | 18 |\n| `game/net.ts` and `duos/socket.ts` | 17, 14 |\n| `dungeon/fight/ArtifactTray.tsx:40-62` and `assault/fight/UpgradeTray.tsx:74-96` | 17 |\n| `fx/exits.ts:140-154` and `fx/entrances.ts:385-399` | 15 |\n| `cards/art/sceneKitGear.ts` and `sceneKitCraft.ts`; `sceneKitNature.ts` and `sceneKitInkCharacters.ts`; `sceneKitSpace.ts` and `sceneKitPlaces.ts`; `kitDraw.ts` and `procedural.ts` | 15, 13, 12, 12 |\n\nThe rest are runs of 12 to 14 lines in `game/deckbuilder/` (`TrioEditor.tsx` and `DeckEditor.tsx`, `DeckDrag.tsx` and `game/drag/OptionDrag.tsx`), `collection/` (`CardCosmeticsView.tsx` and `AccountCosmeticTiles.tsx`), `duos/DuosBoard.tsx`, `dungeon/map/RewardScreens.tsx`, `routes/stats.tsx`, `routes/landing.tsx`, `routes/match.tsx` and `duos/DuosRoute.tsx`, `rank/RankCrest.tsx`, `game/drag/DragLayer.tsx` and `game/aim/OpponentAim.tsx`, `game/LanePick.tsx` and `game/GigaPlacement.tsx`, `daily/NotificationSettings.tsx` and `daily/DailyRoute.tsx`, `auth/UsernamePrompt.tsx` and `auth/ConsentPrompt.tsx`. The script under \"How to list them\" prints every run's lines.\n\n### What to change\n\nRead each pair side by side and decide:\n\n- **Fold** it when one function, hook or component serves both sites and what renders and what is sent stay exactly the same: the same DOM, class names and test ids, the same order of effects and network calls. Both sites use it. The result is shorter and no harder to read.\n- **Leave** data tables, type declarations that merely look alike, re-export lists, and repeats where a shared form needs more parameters than the lines it saves. Say which in the pull request, with file and line.\n- A test fixture that copies product code imports it instead.\n- CLAUDE.md rules 7 and 9: the client enforces no rule and restates no engine or server number.\n- Any non-test change under `apps/web/src/cards/` is a card-visual change (R2529000) and needs a pending fragment with `--visual` and a player note (`docs/ADDING_CARDS.md`); nothing a card face renders may change. If that version is not worth it, leave the `cards/` pairs and say so.\n\n### Acceptance\n\n- The pull request has a table of every run: folded into what, or left and why.\n- `pnpm --dir apps/web typecheck`, `pnpm exec eslint apps/web apps/edge apps/admin e2e`, `pnpm --dir apps/web test`, `pnpm --dir e2e typecheck` and `typecheck:component` pass; CI's `web` and `e2e smoke` pass.\n- `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` pass if `apps/web/src/cards/` changed.\n- The scan below, run again, lists only the runs the table says were left.\n\n### How to list them\n\n```bash\npython3 dups.py . 12 ts,tsx apps/web/src apps/edge apps/admin\n```\n\n<details><summary><code>dups.py</code></summary>\n\n```python\n# Verbatim duplicate blocks in non-test source: windows of W normalized lines seen in 2+ places,\n# merged into maximal runs. Usage: dups.py <root> <W> <ext,ext> <dir>...\nimport sys, os, re, hashlib, collections\nroot, W, exts = sys.argv[1], int(sys.argv[2]), tuple('.'+e for e in sys.argv[3].split(','))\ndirs = sys.argv[4:]\ndef norm(l):\n    l = l.strip()\n    if not l or l.startswith(('//', '/*', '*', '#[', '#!')) or l in ('{', '}', '};', '),', ')', '});', '],', ']', 'else {', '} else {'): return None\n    return re.sub(r'\\s+', ' ', l)\nfiles = {}\nfor d in dirs:\n    for dp, dn, fs in os.walk(os.path.join(root, d)):\n        if any(x in dp for x in ('/target', 'node_modules', '/tests', '/testkit', '/scripts/', '/pkg', '/generated', '/wire/', '/test/', '/__')): continue\n        for f in fs:\n            if not f.endswith(exts) or '.test.' in f or f.endswith('_test.go') or f.endswith('.d.ts'): continue\n            p = os.path.join(dp, f); t = open(p, encoding='utf-8', errors='replace').read()\n            if p.endswith('.rs'):\n                m = re.search(r'^#\\[cfg\\(test\\)\\]\\n(pub(\\([a-z]+\\))?\\s+)?mod\\s+\\w+\\s*\\{', t, re.M)\n                if m: t = t[:m.start()]\n            lines = [(i+1, norm(l)) for i, l in enumerate(t.split('\\n'))]\n            files[os.path.relpath(p, root)] = [(i, n) for i, n in lines if n]\nseen = collections.defaultdict(list)\nfor p, ls in files.items():\n    for k in range(len(ls) - W + 1):\n        h = hashlib.md5('\\n'.join(n for _, n in ls[k:k+W]).encode()).hexdigest()\n        seen[h].append((p, k))\ndup = {h: v for h, v in seen.items() if len(v) > 1}\nmarks = collections.defaultdict(set)\nfor h, v in dup.items():\n    for p, k in v: marks[p].add(k)\nruns = []\nfor p, ks in marks.items():\n    ks = sorted(ks); s = ks[0]; prev = ks[0]\n    for k in ks[1:] + [None]:\n        if k is None or k != prev + 1:\n            ls = files[p]; a = ls[s][0]; b = ls[prev + W - 1][0]\n            h = hashlib.md5('\\n'.join(n for _, n in ls[s:s+W]).encode()).hexdigest()\n            others = sorted({q for q, _ in dup[h] if q != p}) or [p + ' (itself)']\n            runs.append((prev - s + W, p, a, b, others))\n            if k is not None: s = k\n        prev = k if k is not None else prev\nruns.sort(reverse=True)\nprint(f'{len(runs)} duplicated runs, {sum(r[0] for r in runs)} normalized lines in them (each side counted)')\nfor n, p, a, b, others in runs:\n    print(f'{n:4} {p}:{a}-{b}  ~ {\", \".join(others[:2])}')\n```\n\n</details>\n\n### Blocked by, part of\n\nFollow-up to #4905 (its handoff is on #4702). The Rust pairs are #5024 and #5025. The scheduled audit #5005 asks for duplicates in general in its part 2; this issue takes the client's listed pairs, so that audit can leave them.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5026: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T06:29:06Z",
+    "claimed_at": "2026-11-26T09:27:47Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5005 is held for `claude-1` until 05:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4953 skipped: labelled `human`, so no model takes it, whatever its tier"
+  ]
+}
