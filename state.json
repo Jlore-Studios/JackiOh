@@ -44466,6 +44466,14 @@
         "title": "Patch: WebSocket match, co-op and watch routes normalize match and profile UUIDs to lowercase, so uppercase hex connects to in-memory actors and seats",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-26T00:48:08Z",
+        "number": 4980,
+        "reason": "a large new tool (a Duos agent-protocol op, a paired deal runner and its tally, hours per screen) whose own inconclusive rule would still leave the cited #4932 screen inconclusive, since that one decided 0 deals. It buys no keep-or-revert decision the scene tests don't already settle. Worth building when a Duos AI change comes along that scene tests can't judge.",
+        "title": "Patch: a paired Duos screen measures a Duos AI change against a control build",
+        "verdict": "came to nothing",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "declined": [
@@ -45300,6 +45308,13 @@
         "number": 4971,
         "reason": "same as #4688, rejected two days ago. Nothing breaks today (`SMOKE` names neither 56 spec, and a shared weight only nudges the nightly shards), and the new uniqueness check is one more rule every future spec has to satisfy. No new evidence since.",
         "title": "Patch: renumber colliding e2e spec 56 and hold spec prefixes unique in shard-specs",
+        "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-26T00:48:08Z",
+        "number": 4980,
+        "reason": "a large new tool (a Duos agent-protocol op, a paired deal runner and its tally, hours per screen) whose own inconclusive rule would still leave the cited #4932 screen inconclusive, since that one decided 0 deals. It buys no keep-or-revert decision the scene tests don't already settle. Worth building when a Duos AI change comes along that scene tests can't judge.",
+        "title": "Patch: a paired Duos screen measures a Duos AI change against a control build",
         "why": "rejected by @jgoetzmann"
       }
     ],
