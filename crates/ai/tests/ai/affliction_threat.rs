@@ -5,6 +5,8 @@
 //! board is then stepped through the engine, which destroys exactly the units the read leaves out. The cards:
 //! Mr. Vanilla, a 4/4; Core #30 Archivist set to a 3/3; Core #25, a 4-mana 7/7 with Armor 7; and Classic+ #6
 //! Wrong-House Attacker, whose Radiant face is a 2/2 with Rush, Lifesteal, Poisonous and Reborn.
+//! Below them, #5006's two scenes hold `AI_EVAL.unit_affliction` at the 0.5 its screen left (R3822000):
+//! a point of damage a Burn or Toxic will deal counts half a point dealt now.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -24,6 +26,18 @@ const LIBRARY: &[&str] = &["core-008", "core-011", "core-008", "core-011"];
 /// AI_EVAL with the affliction read off: every unit that may swing counts, as before #4065.
 const OFF: EvalWeights = EvalWeights {
     affliction_kills_before_swing: false,
+    ..AI_EVAL
+};
+
+/// AI_EVAL with a point of damage still to come priced as a point dealt now: the arm #5006 screened.
+const FULL: EvalWeights = EvalWeights {
+    unit_affliction: 1.0,
+    ..AI_EVAL
+};
+
+/// AI_EVAL with the damage still to come priced at nothing.
+const UNPRICED: EvalWeights = EvalWeights {
+    unit_affliction: 0.0,
     ..AI_EVAL
 };
 
@@ -86,6 +100,21 @@ fn wall(state: &GameState) -> ActionBody {
 /// The walls the AI is offered on `state`.
 fn walls(state: &GameState) -> Vec<ActionBody> {
     wall_switches(state, AI, &candidate_actions(state, AI, Prices::NONE))
+}
+
+/// The human's one unit `entry` against the AI's empty field.
+fn lone(entry: Value) -> Scenario {
+    game(side(30, json!([])), side(30, json!([entry])))
+}
+
+/// The worth of the human's unit in lane 3 under `w`.
+fn worth(s: &Scenario, w: &EvalWeights) -> f64 {
+    unit_worth(s.state(), &theirs(s, 3), w, Prices::NONE)
+}
+
+/// The AI's score of the board under `w`, the enemy swinging next.
+fn score(s: &Scenario, w: &EvalWeights) -> f64 {
+    evaluate(s.state(), AI, NextSwing::Enemy, w)
 }
 
 /// Burn 3 leaves the 4/4 at 1 health, so it still swings and the 7/7 still walls; Burn 5 destroys it at the
@@ -335,4 +364,30 @@ fn r4065000_greedy_eval_and_boards_without_counters_read_as_before() {
             evaluate(plain.state(), AI, next, &OFF),
         );
     }
+}
+
+/// #5006: a point of damage a Burn will deal counts `AI_EVAL.unit_affliction` of a point dealt now
+/// (R3822000), the 0.5 its screen of 1.0 left: Mr. Vanilla on Burn 2 is worth, and its board scores, as
+/// Mr. Vanilla with 1 damage. At 1.0 it would be worth as with 2, and at 0 as with none.
+#[test]
+fn a_burn_still_to_come_counts_half_a_point_of_damage_dealt_now() {
+    let burning = lone(json!({ "def": VANILLA, "lane": 3, "counters": { "burn": 2 } }));
+    let hit = |damage: i32| lone(json!({ "def": VANILLA, "lane": 3, "damage": damage }));
+    close(worth(&burning, &AI_EVAL), worth(&hit(1), &AI_EVAL));
+    close(score(&burning, &AI_EVAL), score(&hit(1), &AI_EVAL));
+    close(worth(&burning, &FULL), worth(&hit(2), &FULL));
+    close(worth(&burning, &UNPRICED), worth(&hit(0), &UNPRICED));
+}
+
+/// #5006: Toxic pierces Armor and never fades (R3540001), so Core #25, a 7/7 with Armor 7, on Toxic 1
+/// takes 4 over `AI_AFFLICTION_TICKS` turn starts and lives: it is worth, and its board scores, as the
+/// 7/7 with 2 damage. At 1.0 it would be worth as with 4.
+#[test]
+fn a_toxic_through_armor_counts_half_of_each_tick_to_come() {
+    const { assert!(AI_AFFLICTION_TICKS == 4) };
+    let poisoned = lone(json!({ "def": BIG, "lane": 3, "counters": { "toxic": 1 } }));
+    let hit = |damage: i32| lone(json!({ "def": BIG, "lane": 3, "damage": damage }));
+    close(worth(&poisoned, &AI_EVAL), worth(&hit(2), &AI_EVAL));
+    close(score(&poisoned, &AI_EVAL), score(&hit(2), &AI_EVAL));
+    close(worth(&poisoned, &FULL), worth(&hit(4), &FULL));
 }
