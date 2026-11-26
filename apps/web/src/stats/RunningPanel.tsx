@@ -6,6 +6,7 @@
 // Every figure is the server's (CLAUDE.md rule 7); the tier fit only measures its range against its band (R3184001).
 // R4680000: the same table and grid draw the Versions view, one row per play version of each card the Cards tab lists,
 // its Card as that version printed it and its span in Since; a row near the screen asks for its version's catalog.
+// R5036000: each view shows its play versions' Decisiveness after Adjusted, as the Cards tab does, and sorts by it.
 
 import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 import type { CardCost, CardDef } from "@jackioh/shared";
@@ -17,14 +18,14 @@ import { SortHeader, pressedSort, sortCreated, type CreatedColumn, type CreatedS
 import { RangeText, TierFitText } from "./RangeText.tsx";
 import { TableScroll } from "./TableScroll.tsx";
 import { statsTestid } from "./testids.ts";
-import { TierChip, adjustedText } from "./TierChip.tsx";
+import { TierChip, adjustedText, decisivenessText } from "./TierChip.tsx";
 import { cardTierFit } from "./tierFit.ts";
 
 /** Unit conversion, not configuration: a share of 0..1 as a percentage. */
 const PERCENT = 100;
 
-/** R4678001: the columns Running sorts by, in the deck table's order: its sort select. It has no Decisiveness. */
-export const RUNNING_SORT_COLUMNS: readonly CreatedColumn[] = ["name", "games", "tier", "adjustedWinRate"];
+/** R4678001: the columns Running sorts by, in the deck table's order: its sort select. R5036000: Decisiveness among them. */
+export const RUNNING_SORT_COLUMNS: readonly CreatedColumn[] = ["name", "games", "tier", "adjustedWinRate", "decisiveness"];
 
 /** R4678001: the page's one sort as Running reads it: a column it lacks reads as Adjusted, keeping its direction. */
 export function runningSortOf(col: string, dir: "asc" | "desc"): CreatedSort {
@@ -75,6 +76,7 @@ export function runningRows(
         adjustedWinRate: version.adjustedWinRate,
         adjustedLow: version.adjustedLow,
         adjustedHigh: version.adjustedHigh,
+        decisiveness: version.decisiveness,
         tier: version.tier,
         hasEnoughGames: version.hasEnoughGames,
         since: version.first,
@@ -119,6 +121,7 @@ export function versionRows(
         adjustedWinRate: version.adjustedWinRate,
         adjustedLow: version.adjustedLow,
         adjustedHigh: version.adjustedHigh,
+        decisiveness: version.decisiveness,
         tier: version.tier,
         hasEnoughGames: version.hasEnoughGames,
         since: version.first,
@@ -159,6 +162,16 @@ function Since({ row, testid }: { row: RunningRow; testid: string }): ReactEleme
   );
 }
 
+/**
+ * R5036000: a row's Decisiveness: "—" from a server deployed before it, "not enough games" below the floor or with no
+ * turns (every version played before games recorded them), else ±X%.
+ */
+function decisivenessCell(row: RunningRow): ReactNode {
+  if (row.decisiveness === undefined) return "—";
+  if (!row.hasEnoughGames || row.decisiveness === null) return <span className="stats-not-enough">{t("not enough games")}</span>;
+  return decisivenessText(row.decisiveness);
+}
+
 /** A row's card, and on Versions its play version, whether it is live, and the catalog it still needs (R4680000). */
 function rowData(row: RunningRow): Record<string, string | undefined> {
   if (row.until === undefined) return { "data-card-id": row.card };
@@ -184,6 +197,7 @@ export function RunningPanel({
   view,
   showRanges,
   band,
+  typical,
   labeledBy,
   nameOf,
   faceOf,
@@ -203,6 +217,8 @@ export function RunningPanel({
   showRanges: boolean;
   /** R3184001: the band a tier fit reads: the play versions' own (R4675001). */
   band: Pick<PublicStatsVersionsResponse, "bandLow" | "bandHigh">;
+  /** R5036000: the typical play version's Decisiveness, which its header names; none from an older server. */
+  typical?: number;
   /** The id of what names the table: the tab. */
   labeledBy: string;
   nameOf: (id: string, name: string) => string;
@@ -272,6 +288,8 @@ export function RunningPanel({
                     <RangeText low={row.adjustedLow} high={row.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
                   )}
                 </dd>
+                <dt>{t("Decisiveness")}</dt>
+                <dd data-testid={statsTestid.decisivenessCell}>{decisivenessCell(row)}</dd>
                 <dt>{t("Games")}</dt>
                 <dd>{row.games}</dd>
                 <dt>{t("Since")}</dt>
@@ -300,6 +318,15 @@ export function RunningPanel({
             {visibleGames && <SortHeader col="games" label={t("Games")} {...header} />}
             <SortHeader col="tier" label={t("Tier")} {...header} />
             <SortHeader col="adjustedWinRate" label={t("Adjusted")} {...header} />
+            <SortHeader
+              col="decisiveness"
+              label={t("Decisiveness")}
+              title={t(
+                "Decisiveness: how far playing a card typically moves your chance of winning, one way or the other; ± is the swing itself, not a margin of error. A typical card: {typical}. Versions played before games recorded their turns have none.",
+                { typical: decisivenessText(typical) },
+              )}
+              {...header}
+            />
             <th scope="col" className="stats-th">
               {t("Since")}
             </th>
@@ -354,6 +381,9 @@ export function RunningPanel({
                       )}
                     </div>
                   )}
+                </td>
+                <td className="stats-td" data-testid={statsTestid.decisivenessCell}>
+                  {decisivenessCell(row)}
                 </td>
                 <td className="stats-td">
                   <Since row={row} testid={testids.since} />

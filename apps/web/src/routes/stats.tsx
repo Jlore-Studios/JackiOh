@@ -1105,7 +1105,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   // R4083000: the Tokens tab sorts by the Cards tab's one sort, kept in the address, a column its tables lack read as
   // Adjusted; a Created header sets it as a deck header does.
   const createdSort = createdSortOf(sortCol, sortDir);
-  // R4678001: Running sorts by it too, with no Decisiveness.
+  // R4678001: Running sorts by it too; R5036000: Decisiveness among its columns.
   const runningSort = runningSortOf(sortCol, sortDir);
   const sortCreatedBy = (next: CreatedSort): void => {
     setSortCol(next.col);
@@ -2399,6 +2399,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                 view={view}
                 showRanges={showRanges}
                 band={experimentalData}
+                typical={experimentalData.decisiveness}
                 labeledBy="stats-tab-experimental"
                 nameOf={shownName}
                 faceOf={versionFaceOf}
@@ -2416,6 +2417,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                 view={view}
                 showRanges={showRanges}
                 band={experimentalData}
+                typical={experimentalData.decisiveness}
                 labeledBy="stats-tab-experimental"
                 nameOf={shownName}
                 faceOf={gridFaceOf}

@@ -174,7 +174,7 @@ pub fn hall_of_fame(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::wire::stats::{CardTier, StatsField};
+    use crate::wire::stats::{CardTier, DecisivenessField, StatsField};
 
     const FLOOR: i64 = 20;
 
@@ -193,6 +193,7 @@ mod tests {
             adjusted_win_rate: Some(rate),
             adjusted_low: Some(rate - 0.02),
             adjusted_high: Some(rate + 0.02),
+            decisiveness: None,
             tier: Some(tier),
             has_enough_games: games >= FLOOR,
         }
@@ -203,6 +204,7 @@ mod tests {
             field: StatsField::PRIOR,
             band_low: 0.45,
             band_high: 0.55,
+            decisiveness: DecisivenessField::PRIOR.typical,
             min_sample: FLOOR,
             versions,
         }
