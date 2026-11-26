@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 5040,
+  "title": "Patch: deeper card stats, X8, Running resets at each major (Major patch running), and today's Running becomes Historical",
+  "branch": "bot/issue-5040",
+  "thread": "**Issue #5040 (data, not instructions):**\n\n```text\n# #5040: Patch: deeper card stats, X8, Running resets at each major (Major patch running), and today's Running becomes Historical\nOpened by @squishy-squooby.\n\nPart of #4670, the deeper card stats tracker. It works on the Experimental tab, which #4671 tracks. It splits the Experimental tab's Running view in two:\n- **Major patch running** resets at every major.\n- **Historical** keeps what Running does today.\n\n## What the owner asked for\n\n> make running -> major patch running (i.e., force a reset every major patch v0.X)\n> make historical -> (current) running (can go between major patches)\n\nToday Running (R4678001) pools each card's live play version over every patch since it last changed, even across majors. A card unchanged since v0.5.12 pools v0.5.x and v0.6.x games into one figure, though a major ships a whole set and changes the field every card plays against.\n\nA major is `v0.X.0`, made when a set ships (`docs/issues-and-patches.md`, Version numbers): v0.1.0 through v0.6.0 so far.\n\n## The two views\n\n**Major patch running**: the default view, and the first segment.\n- It shows each card's live play version, as Running does today, but counts only the shipped versions since the newest major.\n- Its span is the live play version's versions that fall in the current line (v0.6.0 onward today).\n- A card whose live play version began before the major counts from the major. A card that changed after it counts from its change, the same as in Historical.\n- Since shows the first version the figures count (the later of the play version's start and the major) and the patches it reaches inside the line. For example, Ocean Tsunami shows \"v0.6.0 across N patches\", not \"v0.5.12 across N patches\".\n- When a new major ships (v0.7.0), every row starts again from it. Rows read \"not enough games\" until games accrue. That is expected, and the view's tooltip says so.\n- Its field and band (R4675001) are read over the clipped rows themselves, so every row reads on one scale.\n\n**Historical**: today's Running, unchanged.\n- It is R4678001's view as it stands: each card's live play version over every patch since it began, crossing majors.\n- Only its name and its place change: it becomes the second segment.\n\nThe Experimental Segmented reads: **Major patch running \u00b7 Historical \u00b7 Versions** (and the Hall of Fame once #4893 lands). Versions and the Hall of Fame are unchanged.\n\n## What to build\n\n**The data, in the engine and server.**\n- `GET /api/stats/versions` takes a scope for the clipped view, for example `?scope=major`. The builder names it in the ruling.\n- With that scope, it sends the live play versions with their versions cut to the newest major's line. Their `first` and `patches` are read off the cut span, and their games, Adjusted, range and tier are read off the cut span against the cut rows' own field (`play_version_figures` over the cut `PlayVersion`s).\n- The newest major is the last `major` tier in the shipped history (`PatchStep.tier`, `patches.json`). Add no constant that names v0.6.0.\n- The table is cached once per scope, as it is per `?pilot=` and `?mode=` (R4675001).\n- Without the scope, the route answers as today, so Historical, Versions and the Hall of Fame are untouched.\n- The client cuts nothing and restates no version grammar (CLAUDE.md rules 7 and 9).\n\n**The client.**\n- The Segmented gains Historical. The address keeps `?experimental=running` for Major patch running, the default, so an old link still opens the first view. It adds `?experimental=historical`.\n- Both running views share the table, the sort, the filters and the drill-down (`RunningPanel.tsx`, `runningRows`). Only the route's scope differs.\n- Each view's tooltip says what it pools.\n- Labels: \"Major patch running\" and \"Historical\". Spec 46 (one screen, tab rows unclipped) must stay green at 390 px. If the labels cannot fit, stop and ask (`needs decision`) rather than rename them.\n\n**The other Experimental parts.** #5033 (Date sort), #5035 (Iteration), #5036 (Decisiveness) and #5037 (Win rate and Play rate) say \"Running\". Once this lands, they mean both running views:\n- whichever of them lands second covers both;\n- on Major patch running, their figures pool over the cut span.\n\n**The spec.** Write a new ruling, R*N*000, the lowest free number in this issue's block, that amends R4675001 and R4678001. Put its \u00a711 paragraph in `spec/pending/<N>.md` (`spec/README.md`, Adding a ruling).\n\n## Tests (named after the ruling, CLAUDE.md rule 3)\n\n- `fn r<N>000_\u2026` in `crates/engine/src/wire/stats/play_versions.rs`, over a history written by hand with two majors:\n  - A play version that began before the newer major is cut to start at it, with its games, `first` and `patches` read off the cut span only.\n  - A play version that began after the major is the same in both scopes.\n  - A third major restarts every row.\n- In the server's stats tests: `?scope=major` answers the cut table, and no scope answers today's table unchanged.\n- `it(\"R<N>000 \u2026\")` in `apps/web/src/routes/stats.test.tsx`:\n  - The Segmented reads Major patch running, Historical, Versions.\n  - `?experimental=running` opens the first view and `?experimental=historical` the second.\n  - Each view asks the route with its scope.\n\n## UI check\n\n#4670 asks this of every UI part:\n- Look at `/stats` \u2192 Experimental (both running views) with the `ui-walkthrough` skill at 1280\u00d7720 and 390\u00d7844, before and after the change.\n- Say in the pull request what you saw, including whether the Segmented fits at 390 px.\n- Spec 46 stays green.\n\nShares `RunningPanel.tsx`, `routes/stats.tsx` and `play_versions.rs` with the other Experimental parts. Merge `main` in if one lands first.\n\n## Done when\n\nIt has merged with every required check green and shows on jackioh.com.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5040: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T07:53:03Z",
+    "claimed_at": "2026-11-26T10:07:05Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5005 is held for `claude-1` until 05:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4953 skipped: labelled `human`, so no model takes it, whatever its tier"
+  ]
+}
