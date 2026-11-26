@@ -36047,10 +36047,6 @@
       "refused_until": "2026-11-20T04:20:00Z",
       "spent": [
         {
-          "at": "2026-11-12T08:29:54Z",
-          "minutes": 150.0
-        },
-        {
           "at": "2026-11-12T09:17:48Z",
           "minutes": 7.5
         },
@@ -36845,16 +36841,13 @@
         {
           "at": "2026-11-26T07:06:40Z",
           "minutes": 2.4
+        },
+        {
+          "at": "2026-11-26T07:44:22Z",
+          "minutes": 79.0
         }
       ],
       "tokens_spent": [
-        {
-          "at": "2026-11-11T11:34:25Z",
-          "cache": 12986242,
-          "cost": 6.3152,
-          "input": 161,
-          "output": 87020
-        },
         {
           "at": "2026-11-11T15:02:37Z",
           "cache": 13936953,
@@ -38247,14 +38240,21 @@
           "cost": 0.5184,
           "input": 25,
           "output": 19942
+        },
+        {
+          "at": "2026-11-26T07:44:22Z",
+          "cache": 6391062,
+          "cost": 2.9041,
+          "input": 134,
+          "output": 34699
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-26T07:50:00Z",
-          "utilization": 0.24
+          "utilization": 0.22
         },
-        "observed_at": "2026-11-26T07:06:40Z",
+        "observed_at": "2026-11-26T07:44:22Z",
         "status": "allowed"
       }
     },
@@ -46858,7 +46858,14 @@
     "pinned": true
   },
   "usage_spool": {
-    "readings": [],
+    "readings": [
+      "2026-11-26T05:42:37Z,claude-7,ping,before,45763019670,17,2026-11-26T07:50:00Z,,,allowed,50,,",
+      "2026-11-26T05:43:38Z,claude-7,stream,call,45763019670,18,2026-11-26T07:50:00Z,,,allowed,50,,",
+      "2026-11-26T05:47:53Z,claude-7,stream,call,45763019670,19,2026-11-26T07:50:00Z,,,allowed,50,,",
+      "2026-11-26T06:05:24Z,claude-7,stream,call,45763019670,20,2026-11-26T07:50:00Z,,,allowed,50,,",
+      "2026-11-26T06:36:55Z,claude-7,stream,call,45763019670,21,2026-11-26T07:50:00Z,,,allowed,50,,",
+      "2026-11-26T06:55:56Z,claude-7,stream,call,45763019670,22,2026-11-26T07:50:00Z,,,allowed,100,,"
+    ],
     "runs": [
       "2026-11-26T07:13:03Z,45768345270,claude-1,opus,build,4991,hard,interrupted,refusal,42,64,16647,8926236,11.3719,10,100,,,220.9,claude-1,resumed,,1"
     ]
