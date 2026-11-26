@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 5027,
+  "title": "Patch: settle the AI's three switches that ship at one value",
+  "branch": "bot/issue-5027",
+  "thread": "**Issue #5027 (data, not instructions):**\n\n```text\n# #5027: Patch: settle the AI's three switches that ship at one value\nOpened by @squishy-squooby.\n\n### Kind\n\nArchitecture\n\n### Why\n\nThree of the AI's switches ship at one value everywhere, and each still carries the code for its other value and the tests that pin it:\n\n| Switch | Ships | Its ruling | The other value |\n|---|---|---|---|\n| `AI_REPLY.open_lethal` | off | R4187000 names a misplay it would fix | the open-lethal reply (`simulate_reply_with`), never shipped |\n| `AI_SEARCH.confirm_lone_win` | on | R4608000: no fork screen was played, the scene tests settled it | every finalist ranked by the plain mean, as before it |\n| `AI_REPLY.spread_activations` | on | R4515000 | the tries sorted by aim alone, as before it |\n\nThe audit in #4905 first removed all three with a fourth, `AI_SEARCH.replay_fill_steps`, as switches that ship at one value (its commit `6aef63d9`, on the AI as it was then). A day later `main` turned `replay_fill_steps` on after a screen (R4697000), so that removal would have deleted a feature about to ship, and #4905 left the other three in. They are the fork screens' knobs (R4319000), so whether each stays is a decision before it is a change.\n\n### What to change\n\nAsk a person first (`needs decision`), one answer per switch:\n\n1. **Keep it** as a knob for a later screen. Nothing changes for that switch.\n2. **Remove it** at the value it ships: the switch, the branch only its other value ran, and the tests that exercised only that value; the tests that prove the shipped behaviour stay. The ruling's note says the switch is gone and where the other branch is in git.\n3. For `open_lethal` only: **screen it** as R4319000 describes, then turn it on (as R4697000 did for the replay fill) or remove it by the screen's result.\n\nA suggestion, not a decision: remove `confirm_lone_win` and `spread_activations`, whose rulings call them settled, and keep or screen `open_lethal`, which is an unshipped feature as the replay fill was.\n\n### Acceptance\n\n- The decision is recorded on this issue, one line per switch.\n- For each switch removed: `cargo test -p jackioh-ai` passes; `cargo jackioh selfplay --games 60 --seed <any>` writes the same games on the head as on its base (every record but its `commit`); its ruling note is amended, with a retirement test in `crates/tools/tests/acceptance.rs` named after the ruling, and `cargo jackioh spec check` passes.\n- For `open_lethal` screened and turned on: the screen's result is in its ruling note, and the quality gates pass (`cargo jackioh gate`).\n- `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings` and `cargo jackioh classify --base origin/main --claims` pass.\n\n### Blocked by, part of\n\nFollow-up to #4905 (its handoff is on #4702).\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5027: needs a plan; `claude-3` (claude, `opus`, strong) writes it in a lane of `claude-3`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T06:29:30Z",
+    "claimed_at": "2026-11-26T09:39:54Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5005 is held for `claude-1` until 05:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4953 skipped: labelled `human`, so no model takes it, whatever its tier"
+  ]
+}
