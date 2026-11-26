@@ -560,15 +560,9 @@ mod tests {
 
     /// The days, from `DEFAULT_FROM`, whose fights the bands play.
     const BAND_DAYS: u32 = 6;
-    /// R4583000: level 1 plays twice the band days. One date is a sixth of six fights, so a single
-    /// date's AI-search artifact trips the floor on its own: #4832's Radiant Cosmic Bard fix flips
-    /// 2026-11-28 from won to lost (the base line never resolves Bard), while twelve days measure
-    /// 4 of 12 with the fix against 5 of 12 without it. The floor stands.
-    const LEVEL_ONE_DAYS: u32 = 12;
     /// R4583000: the fewest level-1 fights, in percent, the day's Assault deck may win before level 1 is
     /// no longer clearly winnable (an AI mirror at one skill is about even; measured at `TEST_BUDGET`:
-    /// 3 of 6, 4 of 12 and 7 of 16 from `DEFAULT_FROM`, 18 of 32 from 2027-01-01; at full budget 5 of 8;
-    /// with #4832's fix 1 of 6 and 4 of 12, without it 2 of 6 and 5 of 12).
+    /// 3 of 6, 4 of 12 and 7 of 16 from `DEFAULT_FROM`, 18 of 32 from 2027-01-01; at full budget 5 of 8).
     const LEVEL_ONE_WIN_PERCENT_MIN: usize = 25;
     /// R4583000: the most level-20 fights, in percent, it may win before level 20 is no longer clearly
     /// hard (measured: none of 12, none of 8 at full budget).
@@ -649,10 +643,10 @@ mod tests {
         broken
     }
 
-    /// `levels` on each of `days` days, played to its end at `TEST_BUDGET` and full skill, every
+    /// `levels` on each of `BAND_DAYS` days, played to its end at `TEST_BUDGET` and full skill, every
     /// fight on its own core, back in input order.
-    fn play_bands_days(content: &AssaultContent, levels: &[u8], days: u32) -> Vec<FightRow> {
-        let dates = dates(DEFAULT_FROM, days).expect("the band days");
+    fn play_bands(content: &AssaultContent, levels: &[u8]) -> Vec<FightRow> {
+        let dates = dates(DEFAULT_FROM, BAND_DAYS).expect("the band days");
         let jobs: Vec<(u8, &String)> = levels
             .iter()
             .flat_map(|&level| dates.iter().map(move |date| (level, date)))
@@ -682,13 +676,8 @@ mod tests {
     /// own fights on the content the browser deals, as `assault-sim --levels` plays them, and `band`
     /// must hold. Each band is a test of its own, so the shards of ci.yml's `tools, wasm` share them.
     fn hold_band(levels: &[u8], band: impl Fn(&[FightRow]) -> Option<String>) {
-        hold_band_days(levels, band, BAND_DAYS)
-    }
-
-    /// `hold_band` on each of `days` days from `DEFAULT_FROM`.
-    fn hold_band_days(levels: &[u8], band: impl Fn(&[FightRow]) -> Option<String>, days: u32) {
         let content = content();
-        let rows = play_bands_days(&content, levels, days);
+        let rows = play_bands(&content, levels);
         if let Some(broken) = band(&rows) {
             panic!(
                 "the Assault broke its band (change the bands only with a deliberate retune):\n{broken}\n{}",
@@ -699,7 +688,7 @@ mod tests {
 
     #[test]
     fn r4583000_level_1_is_clearly_winnable() {
-        hold_band_days(&[1], level_one_band, LEVEL_ONE_DAYS);
+        hold_band(&[1], level_one_band);
     }
 
     #[test]
