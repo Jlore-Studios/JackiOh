@@ -22043,17 +22043,8 @@
       }
     },
     "4999": {
-      "action": "plan",
-      "asks": [
-        "c:7183069760"
-      ],
-      "build_next": {
-        "from_run": "45761605395",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-26T05:34:44Z",
-        "until": "2026-11-26T06:04:44Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-26T05:34:33Z",
         "difficulty": "medium",
@@ -22072,10 +22063,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- 5. `crates/run/src/assault/fight_tests.rs`, imports. Add `GLITCH_DEF_ID` to the `jackioh_engine::config` import (line 9), `GameOverReason, SandboxOp, SpawnZone, Winner` to the `wire` import (line 15), `fold` to the `replay` import (line 11), and `use crate::fight::VOIDED_FIGHT;`.\n- 6. Same file, add a `voided_game()` helper copied from `crates/run/src/fight_tests.rs:498-581` (sandbox game, P1 ends turns, P2 spawns and plays Glitch, first seed that folds to `(Winner::Draw, GameOverReason::Voided)`). Copy verbatim except the path to `VOIDED_FIGHT` if referenced. It cannot be im\u2026\n- 7. Same file, add `fn r4999000_a_glitch_voided_assault_fight_is_refused_and_dealt_again`. Build a fighting attempt on the placeholder content: `assault_placeholder_content`, `assault_day(\"2027-01-02\", &content)`, setup with `first_deckable(25)` deck / `AssaultDeckSource::Saved` / start level 1 / at\u2026\n- 8. Same file, add `fn r4999000_a_real_loss_still_reports_a_loss`. Same options and `keep_all`, but P1 concedes on its first turn (mirror the step-7 loop with the seats swapped); assert `assault_fight_report(&game, P1)` is `Ok(AssaultAction::FightOver { won: false, .. })`. The turn-cap draw case sta\u2026\n- 9. `spec/rulings/R4999000.md`, new, front matter exactly:\n- ```markdown\n- ---\n- id: R4999000\n- title: An Infinite Assault fight a Glitch voided never happened, and the attempt deals it again from its setup\n- cards: \"\u00a716.6, \u00a72.5, R679, R4852000\"\n- proven_in:\n- - crates/run/src/assault/fight_tests.rs\n- ---\n- ```\n- Body (\u2248R4852000's shape): a voided fight has no result ([[\u00a72.5]]) and is no loss under [[\u00a716.6]]'s fight result; `assault_fight_report` refuses it with the dungeon's sentence, so the attempt sends no `fightOver`, keeps its level, `beaten` and `turns`, stays in its fight and deals the same level fre\u2026\n- 10. `spec/pending/4999.md`, new, one paragraph: `**[[R4999000]] <title> (issue #4999, 2026-11-26)**: \u2026` \u2014 what asked (the Assault read a void as a loss though [[R679]] says it never happened), that it edits [[\u00a716.6]], and that it takes R4999000, the first number of the issue's block. Follow `spec/p\u2026\n- 11. `spec/16-infinite-assault.md`, \u00a716.6 bullet starting `- **A briefing** fights.` Append to its fight-result sentence: ` A fight a Glitch voids never happened ([[R679]]): it reports nothing, and the attempt, still in its fight, deals it again fresh from the same setup ([[R4999000]]).`\n- 12. `crates/run/README.md`. In the Assault table, change the `assault_fight_report` row's tail to `a draw at the turn cap is a loss (IA6, IA15); a fight a Glitch voided is refused and dealt again from the same setup (R4999000)`; under Assault \"Fights.\" add `A fight a Glitch voided never happened (R\u2026\n- ## Tests\n- - `crates/run/src/assault/fight_tests.rs`: `r4999000_a_glitch_voided_assault_fight_is_refused_and_dealt_again` asserts the void refusal for both seats, setup identity across the void, and a redealt setup playing to a reported end.\n- - Same file: `r4999000_a_real_loss_still_reports_a_loss` asserts a conceded fight still reports `won: false`.\n- - Existing `r4579002_a_draw_at_the_turn_cap_reports_a_loss_and_a_concession_a_win` in the same file must pass unchanged (draws still losses).\n- - Commands: `cargo test -p jackioh-run r4999000`, then `cargo test -p jackioh-run r4579002`, then `cargo test -p jackioh-run`, `cargo fmt --check`, `cargo clippy -p jackioh-run --all-targets -- -D warnings`, and `cargo jackioh spec check`.\n- ## Done when\n- - [ ] A Glitch-voided Assault fight returns the void refusal, not a `FightOver` loss, for both seats\n- - [ ] The same setup answered before the void is answered after it, and a game started from it reports an end\n- - [ ] A real loss and the turn-cap draw still report as losses (`r4999000` loss test and `r4579002` green)\n- - [ ] The stale old-reading test is gone; `cargo test -p jackioh-run` is green\n- - [ ] `spec check` is green (note, test names, `[[R4999000]]` cites, pending paragraph); fmt and clippy clean\n- ## Risks\n- - `crates/tools/src/assault_sim.rs:264` propagates the new refusal as an error. Intended: it matches `run_sim`'s treatment of a void as a fault, and Assault decks hold no Glitch, so sim games cannot void in practice.\n- - Settled records folded under the old loss reading stand; the ruling note says so. No `assault_reduce` change is needed: the refusal happens before any action exists, so replay and `assault_fold` are unaffected.\n- - The web shows a voided Assault fight through its generic report-error retry, which re-asks the same finished game. No loss is recorded, but a dungeon-style \"Deal it again\" panel for the Assault is left to a follow-up; it is out of this issue's landing list.\n- - Redeal identity rests on the setup seed `{day seed}-L{level}-A{attempt}` (`assault_fight_setup`), which the test pins by equality.\n- ## Open questions\n- None. Every behavior is settled by the spec sections and rulings above; the only deferred piece (an Assault void panel in the web client) is a separate change, not a question blocking this one.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4999 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4999/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-26T05:26:21Z",
       "owner_why": "it plans it",
@@ -22088,12 +22078,14 @@
       "provider": "muse",
       "queued_at": "2026-11-26T05:19:35Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45761605395",
+      "run_id": "pending:3810028f-1795671481",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-26T05:26:21Z",
+      "started_at": "2026-11-26T05:38:35Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7183069760"
+      ]
     },
     "5000": {
       "action": "review",
@@ -22855,9 +22847,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T05:37:42Z",
+    "at": "2026-11-26T05:38:35Z",
     "url": "",
-    "what": "review #5019 on muse"
+    "what": "build #4999 on muse"
   },
   "last_sweep": {
     "at": "2026-11-26T05:19:11Z",
