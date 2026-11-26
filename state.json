@@ -22154,6 +22154,13 @@
     "5006": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-26T05:08:28Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "The AI: its decisions or its search (crates/ai/src/) \u2014 the change retunes AI_EVAL weights in crates/ai/src/config.rs"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
