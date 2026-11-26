@@ -21373,7 +21373,8 @@
       "started_at": "2026-11-26T01:08:26Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 7179591065
     },
     "4972": {
       "action": "review",
