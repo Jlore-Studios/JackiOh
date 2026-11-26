@@ -36482,5 +36482,36 @@
     ],
     "fragment": "permanents-on-field-meets-a-card-lying-on-a-unit-zone-after",
     "changes": []
+  },
+  {
+    "version": "v0.6.14h",
+    "date": "2026-11-26",
+    "title": "End Times gives back its cuts after leaving the field",
+    "source": "issue #4828",
+    "notes": "R4828000: End Times' record of its cuts moves from the card's memory (memory.endTimesTaken, which R78 cleared on leaving the field while the cut stayed in the tuning) into its tuning beside the cut (Tuning.taken), so a bounced, copied or fused End Times keeps both and its next use gives every cut back; a returning card is still cut. A cut is banked only as far as it moved the price. The v0.6.14 script is kept (script_v0_6_14, KEPT_SCRIPTS keyed by this fragment, R4779000). The claimed plays are the families classify's stage 2 names against main's build (e39c5da087): core-098 by its forced games, and C #3, S #148 and S #169 because two of its 200 unforced games (seeds 86 and 91) differ only in a Heroic Power's End Times record, held in a board history snapshot, so every card on that board is named; none of the three plays differently.",
+    "player": {
+      "title": "End Times remembers its cuts",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Heroic Power's End Times costs (10) again after a use, even if the card left the field or was copied after its cost went down.",
+        "End Times no longer costs more than (10) after a use when it was Immutable at some of its ends of turn."
+      ]
+    },
+    "commits": [
+      "9be0adf6e2b78a66afc82cd6ae13109e0fe68c84"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "core-003",
+      "core-098",
+      "stinkyscape-148",
+      "stinkyscape-169"
+    ],
+    "fragment": "end-times-gives-back-its-cuts-after-leaving-the-field",
+    "changes": []
   }
 ]
