@@ -20338,6 +20338,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 590,
       "started_at": "2026-11-25T20:11:10Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -45724,9 +45725,25 @@
         "title": "Patch: PIP's text says \"performance improvement plan\"",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {},
+        "builder": {},
+        "difficulty": "hard",
+        "every": 5,
+        "head": "75790655c00ba8b9a0b325e198b708679756b7a1",
+        "issue": 4817,
+        "merged_at": "2026-11-26T08:57:37Z",
+        "n": 590,
+        "pr": 4946,
+        "queued_at": "2026-11-26T08:57:37Z",
+        "sha": "22a9db19dd2732f368f4612dff9ddf08a9dbfc0b",
+        "status": "queued",
+        "title": "Patch: a card made Radiant where it stands starts the Brittle its Radiant face newly prints, and regains a Reborn that face newly prints",
+        "tries": 0
       }
     ],
-    "count": 589
+    "count": 590
   },
   "statistics": {
     "at": "2026-11-26T08:48:43Z"
