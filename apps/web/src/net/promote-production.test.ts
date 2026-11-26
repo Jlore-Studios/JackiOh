@@ -1281,3 +1281,199 @@ describe("the super run as production's gate", () => {
     expect(SUPER).toContain('if [ "$EVENT" = pull_request ] && [ "$BASE" = _production ]; then');
   });
 });
+
+// super.yml's `report` step, run for real against a stand-in for `gh` that keeps the issues in a
+// JSON file: one red staging is one issue, so one lane of the night bot fixes it (on 2026-11-23 the
+// daily run and a promotion's run went red on the same commit of staging, and two lanes built the
+// same fix, #4649 and #4629).
+describe("super's report: one red staging, one issue", () => {
+  const REPORT_GH = String.raw`#!/usr/bin/env node
+const fs = require("fs");
+const path = require("path");
+const cp = require("child_process");
+const file = path.join(process.env.FAKE_GH_DIR, "state.json");
+const st = JSON.parse(fs.readFileSync(file, "utf8"));
+const argv = process.argv.slice(2);
+const VALUE = new Set(["--repo", "--state", "--search", "--json", "--jq", "--title", "--body", "--add-assignee", "--reason", "--comment"]);
+const pos = [];
+const flag = {};
+const labels = [];
+for (let i = 0; i < argv.length; i++) {
+  if (argv[i] === "--add-label") labels.push(argv[++i]);
+  else if (argv[i] === "--paginate") continue;
+  else if (VALUE.has(argv[i])) flag[argv[i]] = argv[++i];
+  else pos.push(argv[i]);
+}
+const save = () => fs.writeFileSync(file, JSON.stringify(st));
+function out(data) {
+  const r = cp.spawnSync("jq", ["-r", flag["--jq"]], { input: JSON.stringify(data), encoding: "utf8" });
+  if (r.status !== 0) { process.stderr.write(r.stderr); process.exit(1); }
+  process.stdout.write(r.stdout);
+}
+const issue = (n) => st.issues.find((i) => i.number === Number(n));
+if (pos[0] === "api") {
+  out({ jobs: st.jobs });
+} else if (pos[0] === "issue" && pos[1] === "list") {
+  // GitHub's search matches words, so a longer title holding them is listed too; the step keeps
+  // the exact one.
+  const words = /in:title "([^"]+)"/.exec(flag["--search"])[1];
+  out(st.issues.filter((i) => i.state === flag["--state"] && i.title.includes(words)));
+} else if (pos[0] === "issue" && pos[1] === "view") {
+  out(issue(pos[2]));
+} else if (pos[0] === "issue" && pos[1] === "create") {
+  const number = st.issues.reduce((n, i) => Math.max(n, i.number), 0) + 1;
+  st.issues.push({ number, title: flag["--title"], state: "open", assignees: [], labels: [], comments: [flag["--body"]] });
+  save();
+  process.stdout.write("https://github.com/acme/game/issues/" + number + "\n");
+} else if (pos[0] === "issue" && pos[1] === "edit") {
+  const i = issue(pos[2]);
+  if (flag["--title"] !== undefined) {
+    if (st.refuseRetitle) { process.stderr.write("refused\n"); process.exit(1); }
+    i.title = flag["--title"];
+  }
+  if (flag["--add-assignee"] !== undefined) i.assignees.push({ login: flag["--add-assignee"] });
+  i.labels.push(...labels);
+  save();
+} else if (pos[0] === "issue" && pos[1] === "comment") {
+  issue(pos[2]).comments.push(flag["--body"]);
+  save();
+} else if (pos[0] === "issue" && pos[1] === "close") {
+  const i = issue(pos[2]);
+  i.state = "closed";
+  i.comments.push(flag["--comment"]);
+  save();
+} else {
+  process.stderr.write("fake gh: unexpected " + argv.join(" ") + "\n");
+  process.exit(2);
+}
+`;
+
+  type ReportIssue = { number: number; title: string; state: string; assignees: { login: string }[]; labels: string[]; comments: string[] };
+  type ReportState = { issues: ReportIssue[]; jobs: unknown[]; refuseRetitle?: boolean };
+
+  // The step's script and its fixed settings, as super.yml has them.
+  const reportBlock = SUPER.slice(SUPER.indexOf("\n  report:\n"));
+  const step = reportBlock.slice(reportBlock.indexOf("        run: |\n") + "        run: |\n".length);
+  const STEP = step.split("\n").map((line) => line.slice(10)).join("\n");
+  const setting = (name: string): string => new RegExp(`^ {10}${name}: "?([^"\\n]+)"?$`, "mu").exec(reportBlock)?.[1] ?? "";
+  const DAILY = setting("DAILY_TITLE");
+  const CANDIDATE = setting("CANDIDATE_TITLE");
+  const BOT = setting("BOT_LOGIN");
+
+  const dirs: string[] = [];
+  afterEach(() => {
+    for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
+  });
+
+  const open = (number: number, title: string, assignees: string[] = []): ReportIssue =>
+    ({ number, title, state: "open", assignees: assignees.map((login) => ({ login })), labels: [], comments: [] });
+
+  /** Runs the step on staging (`staging`) or on promotion pull request #9 (`promotion`). */
+  function report(on: "staging" | "promotion", red: boolean, state: ReportState): { status: number | null; output: string; state: ReportState } {
+    const dir = mkdtempSync(join(tmpdir(), "super-report-"));
+    dirs.push(dir);
+    mkdirSync(join(dir, "bin"));
+    writeFileSync(join(dir, "bin/gh"), REPORT_GH);
+    chmodSync(join(dir, "bin/gh"), 0o755);
+    writeFileSync(join(dir, "state.json"), JSON.stringify(state));
+    writeFileSync(join(dir, "step.sh"), STEP);
+    const promotion = on === "promotion";
+    const r = spawnSync("bash", [join(dir, "step.sh")], {
+      encoding: "utf8",
+      env: {
+        PATH: `${join(dir, "bin")}:${process.env.PATH ?? ""}`,
+        FAKE_GH_DIR: dir,
+        REPO: "acme/game",
+        RUN_ID: "88",
+        RUN_ATTEMPT: "1",
+        RUN_URL: "https://github.com/acme/game/actions/runs/88",
+        REF: promotion ? "promote/20261123-4443938" : "_staging",
+        DEFAULT_BRANCH: "main",
+        SHA: "44439387f0000000000000000000000000000000",
+        EVENT: promotion ? "pull_request" : "workflow_dispatch",
+        BASE: promotion ? "_production" : "",
+        PR: promotion ? "9" : "",
+        RESULTS: red ? "success failure success" : "success success",
+        DAILY_TITLE: DAILY,
+        CANDIDATE_TITLE: CANDIDATE,
+        BOT_LOGIN: BOT,
+        STAGING_BRANCH: "_staging",
+      },
+    });
+    const after = JSON.parse(readFileSync(join(dir, "state.json"), "utf8")) as ReportState;
+    return { status: r.status, output: r.stdout + r.stderr, state: after };
+  }
+
+  const FUZZ = [{ name: "fuzz (1/4)", status: "completed", conclusion: "failure", html_url: "https://github.com/acme/game/actions/runs/88/job/1" }];
+  const handed = (i: ReportIssue): boolean =>
+    i.assignees.some((a) => a.login === BOT) && ["bot:build", "priority:high", "difficulty:hard"].every((l) => i.labels.includes(l));
+
+  it("reads its titles and who fixes them from the step's settings", () => {
+    expect(DAILY).toBe("CI: daily super run failed");
+    expect(CANDIDATE).toBe("CI: super run failed on a production candidate");
+    expect(BOT).toBe("jgoetzmann-bot");
+    expect(STEP).toContain("set -euo pipefail");
+  });
+
+  it("reports a red promotion on staging's open issue, opening no issue of its own", () => {
+    const r = report("promotion", true, { issues: [open(4, DAILY, [BOT])], jobs: FUZZ });
+    expect(r.status, r.output).toBe(0);
+    expect(r.state.issues.map((i) => i.title)).toEqual([DAILY]);
+    const daily = r.state.issues[0] as ReportIssue;
+    expect(daily.comments).toHaveLength(1);
+    expect(daily.comments[0]).toContain("on #9, the promotion of `44439387f000` into production, failed:");
+    expect(daily.comments[0]).toContain("[fuzz (1/4)](https://github.com/acme/game/actions/runs/88/job/1)");
+    expect(daily.comments[0]).toContain("one red `_staging`, one issue, one fix");
+    // Already the bot's: nothing is added.
+    expect(daily.labels).toEqual([]);
+  });
+
+  it("hands staging's open issue to the bot when a red promotion reports on it and nobody has it", () => {
+    const r = report("promotion", true, { issues: [open(4, DAILY)], jobs: FUZZ });
+    expect(r.status, r.output).toBe(0);
+    expect(r.state.issues).toHaveLength(1);
+    expect(handed(r.state.issues[0] as ReportIssue)).toBe(true);
+  });
+
+  it("opens a red promotion's own issue for the bot when staging has none open", () => {
+    const r = report("promotion", true, { issues: [], jobs: FUZZ });
+    expect(r.status, r.output).toBe(0);
+    expect(r.state.issues.map((i) => i.title)).toEqual([CANDIDATE]);
+    expect(handed(r.state.issues[0] as ReportIssue)).toBe(true);
+  });
+
+  it("takes a promotion's open issue over for a red run on staging, retitled so the freeze finds it", () => {
+    const r = report("staging", true, { issues: [open(5, CANDIDATE, [BOT])], jobs: FUZZ });
+    expect(r.status, r.output).toBe(0);
+    expect(r.state.issues.map((i) => [i.number, i.title])).toEqual([[5, DAILY]]);
+    const taken = r.state.issues[0] as ReportIssue;
+    expect(taken.comments).toHaveLength(1);
+    expect(taken.comments[0]).toContain("on `_staging` (`4443938`, workflow_dispatch) failed:");
+    expect(taken.comments[0]).toContain(`This issue was a promotion's red run ("${CANDIDATE}")`);
+    expect(taken.comments[0]).toContain("`_staging` holds still until this issue closes");
+  });
+
+  it("opens staging's issue as before when the promotion's will not take a new title", () => {
+    const r = report("staging", true, { issues: [open(5, CANDIDATE, [BOT])], jobs: FUZZ, refuseRetitle: true });
+    expect(r.status, r.output).toBe(0);
+    expect(r.state.issues.map((i) => [i.number, i.title])).toEqual([[5, CANDIDATE], [6, DAILY]]);
+    expect(handed(r.state.issues[1] as ReportIssue)).toBe(true);
+    expect(r.state.issues[1]?.comments[0]).not.toContain("This issue was a promotion's red run");
+  });
+
+  it("opens staging's issue for the bot when neither is open, and comments on it when it is", () => {
+    const first = report("staging", true, { issues: [], jobs: FUZZ });
+    expect(first.status, first.output).toBe(0);
+    expect(first.state.issues.map((i) => i.title)).toEqual([DAILY]);
+    expect(handed(first.state.issues[0] as ReportIssue)).toBe(true);
+    const again = report("staging", true, first.state);
+    expect(again.state.issues).toHaveLength(1);
+    expect(again.state.issues[0]?.comments).toHaveLength(2);
+  });
+
+  it("closes a promotion's issue when its run passes, never staging's", () => {
+    const r = report("promotion", false, { issues: [open(4, DAILY, [BOT]), open(5, CANDIDATE, [BOT])], jobs: [] });
+    expect(r.status, r.output).toBe(0);
+    expect(r.state.issues.map((i) => [i.number, i.state])).toEqual([[4, "open"], [5, "closed"]]);
+  });
+});

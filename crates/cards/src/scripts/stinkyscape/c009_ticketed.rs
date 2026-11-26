@@ -119,6 +119,7 @@ mod tests {
     const LLM: &str = "stinkyscapeplus-t-ai-04"; // Jlockeed Large Language Model: a GIGA Unit token
     const LOCKDOWN: &str = "classic-084"; // Lockdown: a Crater Field Spell, Locked in its zone
     const MAYOR: &str = "meditative-086"; // Mayor Medinamogger: "Aura: All targets are chosen at random."
+    const BRINGER: &str = "classic-076"; // Plague Bringer: "Cry: Place 2 Plague Counters. Draw 1."
 
     fn board(radiant: bool, hand: Value, field: Value, backrow: Value) -> Scenario {
         let mut cards = vec![json!({ "def": ID, "radiant": radiant }), json!(FILLER)];
@@ -213,6 +214,29 @@ mod tests {
         jackioh_engine::effects::cards_in_scope(&ctx, &scope)
             .into_iter()
             .map(|card| card.id)
+            .collect()
+    }
+
+    /// The ids `permanents_on_field` lists (`reachable_permanents_on_field` with `reachable`), `first`'s
+    /// side first.
+    fn permanent_ids(s: &Scenario, first: PlayerId, reachable: bool) -> Vec<String> {
+        let cards = if reachable {
+            jackioh_engine::query::reachable_permanents_on_field(s.state(), first)
+        } else {
+            jackioh_engine::query::permanents_on_field(s.state(), first)
+        };
+        cards.into_iter().map(|card| card.id.clone()).collect()
+    }
+
+    /// The instance ids the open prompt offers, in order.
+    fn option_ids(s: &Scenario) -> Vec<String> {
+        must(s.state().pending.as_ref(), "an open prompt")
+            .options
+            .iter()
+            .filter_map(|option| match &option.selection {
+                Selection::Instance { instance_id } => Some(instance_id.clone()),
+                _ => None,
+            })
             .collect()
     }
 
@@ -472,6 +496,66 @@ mod tests {
                 .map(|card| card.id)
                 .collect();
             assert_eq!(permanents, vec![left, pawn, ticketed]);
+        }
+
+        /// R4665000: every permanent on the field meets it once, after its own side's backrow and before
+        /// the other side, whichever side is met first.
+        #[test]
+        fn r4665000_every_permanent_meets_it_after_that_sides_backrow_and_once() {
+            let (mut s, [left, pawn, ticketed, _]) = stacked(json!([BRINGER]));
+            s.play(BRINGER, json!({}));
+            let bringer = s.card(BRINGER).id.clone();
+            let theirs_last = vec![bringer.clone(), left.clone(), pawn.clone(), ticketed.clone()];
+            let theirs_first = vec![left, pawn, ticketed, bringer];
+            for reachable in [false, true] {
+                assert_eq!(permanent_ids(&s, P1, reachable), theirs_last, "reachable {reachable}");
+                assert_eq!(permanent_ids(&s, P2, reachable), theirs_first, "reachable {reachable}");
+            }
+        }
+
+        /// R4665000: a Plague Counter placement offers it after that side's backrow, and may land on it.
+        #[test]
+        fn r4665000_a_plague_placement_offers_it_after_that_sides_backrow() {
+            let (mut s, [left, pawn, ticketed, _]) = stacked(json!([BRINGER]));
+            s.play(BRINGER, json!({}));
+            let bringer = s.card(BRINGER).id.clone();
+            assert_eq!(option_ids(&s), vec![bringer, left, pawn, ticketed.clone()]);
+            s.answer(json!(ticketed));
+            assert_eq!(s.card(ticketed.as_str()).counters.plague, Some(2));
+        }
+
+        /// R4665000, R60: a random exile of the field draws over that order: at a cursor where it and the
+        /// order that met it among the Units part ways, the card the spec's order draws goes.
+        #[test]
+        fn r4665000_a_random_exile_of_the_field_draws_over_the_spec_order() {
+            let (mut s, [left, pawn, ticketed, _]) = stacked(json!([]));
+            let spec = vec![left.clone(), pawn.clone(), ticketed.clone()];
+            let among_units = vec![left, ticketed, pawn]; // where the list met it before R4665000's order
+            let seed = s.state().seed.clone();
+            let cursor = cursor_where(&seed, |cursor| {
+                create_rng(&seed, cursor).shuffle(&spec)[0] != create_rng(&seed, cursor).shuffle(&among_units)[0]
+            });
+            let hit = create_rng(&seed, cursor).shuffle(&spec)[0].clone();
+            let spared = create_rng(&seed, cursor).shuffle(&among_units)[0].clone();
+            let mut events: Vec<GameEvent> = Vec::new();
+            let mut rng = create_rng(&seed, cursor);
+            {
+                let mut sink = EngineSink::new(s.state_mut(), &mut events, &mut rng);
+                let mut ctx = make_context(
+                    &mut sink,
+                    None,
+                    HookOptions {
+                        controller: Some(P1),
+                        ..HookOptions::default()
+                    },
+                );
+                let exile = jackioh_engine::effects::exile_random_from(json_as(json!({
+                    "player": "enemy", "from": "field", "count": 1,
+                })));
+                jackioh_engine::resolve::apply_effects(&[exile], &mut ctx);
+            }
+            s.expect_in_zone(hit.as_str(), "exile");
+            s.expect_in_zone(spared.as_str(), "field");
         }
 
         /// R90, R138, R4665000: with no permanent on the field to stack on, it lands in its graveyard.

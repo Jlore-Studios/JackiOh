@@ -37,7 +37,7 @@ function isCheckAnswer(answer: unknown): answer is CheckAnswer {
 
 export function replayHash(projectRoot: string, payload: ReplayHashPayload): ReplayHashResult {
   const repoRoot = path.join(projectRoot, "..");
-  const artifacts = path.join(projectRoot, "artifacts");
+  const artifacts = path.join(projectRoot, process.env.E2E_ARTIFACTS ?? "artifacts");
   mkdirSync(artifacts, { recursive: true });
   const logFile = path.join(artifacts, `${payload.label}.json`);
   const game = {

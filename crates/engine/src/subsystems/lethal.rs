@@ -196,7 +196,8 @@ pub(crate) fn swept_units(
 /// strikes first, and an attacker that falls there never lands its own hit. §4.4's stops apply to the
 /// strike back as `damage::project_hit` reads them, the attacker's own cap (R2179005), a conversion and
 /// the attacker's side's damage pool included (R4032000), and a Poisonous defender destroys with any
-/// damage at all (step 7). `multiplier` is the one on `defender`'s hit: `combat::strike_back_multiplier_for`
+/// damage at all (step 7), as one whose damage exiles marks the attacker for exile with any (R1124,
+/// R4823000). `multiplier` is the one on `defender`'s hit: `combat::strike_back_multiplier_for`
 /// when it strikes back (R4156000), `combat::lane_multiplier_for` when it is the attacker
 /// (`strike_back_heal`, sides swapped).
 pub(crate) fn falls_to_first_strike(
@@ -230,17 +231,21 @@ pub(crate) fn falls_to_first_strike(
     if dealt <= 0 {
         return false;
     }
-    if has_keyword(&theirs.keywords, KeywordKind::Poisonous) {
+    // Step 7: a Poisonous hit destroys the attacker, and one from a source whose damage exiles marks it
+    // for exile; either way it has fallen before its blow (R1124, R4823000).
+    if has_keyword(&theirs.keywords, KeywordKind::Poisonous)
+        || crate::query::exiles_on_damage(state, defender)
+    {
         return true;
     }
     dealt >= mine.health
 }
 
 /// §4.3, §4.4 step 8: what the defender's Lifesteal strike back heals the hero the attack's Trample
-/// reaches: nothing for a hero target, a defender a First Strike attacker destroys first (§4.3 step 1),
-/// one a Ranged attacker takes nothing back from (R783000), or a hit `damage::project_hit` stops
-/// (Divine Shield, Armor, a cap, a conversion, the attacker's side's damage pool or Indestructible,
-/// R4032000). A strike back never tramples (R1750000 over R176), so all it deals heals.
+/// reaches: nothing for a hero target, a defender a First Strike attacker destroys or marks for exile
+/// first (§4.3 step 1, R4823000), one a Ranged attacker takes nothing back from (R783000), or a hit
+/// `damage::project_hit` stops (Divine Shield, Armor, a cap, a conversion, the attacker's side's damage
+/// pool or Indestructible, R4032000). A strike back never tramples (R1750000 over R176), so all it deals heals.
 fn strike_back_heal(state: &GameState, attacker: &CardInstance, target: &AttackTarget) -> i32 {
     let defender = match target {
         DamageTarget::Unit { instance } => instance,
