@@ -21445,6 +21445,9 @@
           "claude": "strong"
         }
       }
+    },
+    "4981": {
+      "suggestion": true
     }
   },
   "labels_synced": "e752b3263433d01e",
@@ -44444,6 +44447,13 @@
         "title": "Patch: renumber colliding e2e spec 56 and hold spec prefixes unique in shard-specs",
         "verdict": "came to nothing",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-26T00:48:02Z",
+        "number": 4981,
+        "title": "Patch: WebSocket match, co-op and watch routes normalize match and profile UUIDs to lowercase, so uppercase hex connects to in-memory actors and seats",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
       }
     ],
     "declined": [
