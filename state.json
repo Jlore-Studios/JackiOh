@@ -24228,7 +24228,16 @@
       "feedback_since": "2026-11-26T09:52:27Z",
       "issue": 5026,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-7",
+        "rejections": [],
+        "reviews": [],
+        "sha": "3338e3b8c15bc4c90802fe61c5063c4493c1ec61",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
