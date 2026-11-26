@@ -1,0 +1,53 @@
+{
+  "action": "plan",
+  "number": 5107,
+  "title": "Patch: a Cloaked Spell dropped outside the backrow zones casts face-up at once",
+  "branch": "bot/issue-5107",
+  "thread": "**Issue #5107 (data, not instructions):**\n\n````text\n# #5107: Patch: a Cloaked Spell dropped outside the backrow zones casts face-up at once\nOpened by @MaxGoetzmann.\n\n## What it does\n\nWhen you drag a Cloaked Spell out of your hand (printed Cloaked, given by a Buff, or lent by M #99 Paranoia's Aura: \u00a76.1 Cloaked, R783004, R783007, R2727000), its open backrow zones light up, since setting it face-down is one of its legal plays. Today, dropping it anywhere else on the board does nothing: the card goes back to the hand, and the only way to cast it face-up is to click it and answer the **\"Play it how?\"** prompt (Face-up / Cloaked). That's a lot of steps when you just want to cast the spell.\n\n**Change:** dropping a Cloaked Spell on the board, but **outside** the highlighted backrow zones, casts it **face-up** right away, the same as a drop casts a Spell that has no Cloaked. Dropping it **on** a highlighted backrow zone still sets it face-down, as it does now. Clicking the card still opens the \"Play it how?\" picker as it does now.\n\nThis is client-only (CLAUDE.md rule 7). The engine already lists the face-up play, so the client just has to pick it. No engine, card or AI change.\n\n### Where it goes wrong\n\n`apps/web/src/game/drag/model.ts`, `planPlay`:\n\n```ts\nconst dropTestids = dropSetFor(view, legal, lifted);\nconst freeDrop = dropTestids.size === 0 || outstandingNeed(lifted) === null;\n```\n\nFor an untargeted Cloaked Spell, `dropTestids` holds the backrow zones of the set plays, and `outstandingNeed(lifted)` returns the `faceDown` need (`actions.ts`, \"ME-ALTPLAY: how it is played is asked before anything else\"). So `freeDrop` is false, and `resolveDrop` treats a board drop as a miss. Yet `resolveDrop` already says \"ME-ALTPLAY: a free drop casts face-up\" and picks `{ faceDown: \"up\" }`. That path just never runs when set plays are present. The arrow logic in the same function already skips set candidates (`if (candidate.faceDown !== undefined) continue;`). `freeDrop` should follow the same rule: it should be decided by the **face-up** candidates alone. If those would be a free drop (no zone and no targets for a face-up play), a board drop is free, and the backrow zones stay in `dropTestids` so they still set the card.\n\nAfter a board drop picks face-up, any need the face-up play still has (X, embiggen, Plague Counters, modes) is asked as usual through the picker, the same as for a non-Cloaked Spell.\n\n### Out of scope / should still work\n\n- A **targeted** Cloaked Spell keeps the arrow (test \"R1044 a targeted spell that may also be set face-down still draws the arrow\"): a drop on a target casts it face-up, and a drop on a backrow zone sets it. Check that this still passes, and that a drop on empty board space with an arrow is still a miss.\n- A Cloaked **Unit** or **Field Spell** whose face-up play needs a zone: its own zones already take the face-up drop. Leave it as it is unless the same `freeDrop` fix covers it for free.\n- The click path and the \"Play it how?\" prompt (`Prompt.tsx`, `case \"faceDown\"`) stay as they are.\n\n## Acceptance\n\n- [ ] `apps/web/src/game/drag/model.test.ts`: for an untargeted Spell whose legal plays are face-up plus a `faceDown: \"cloaked\"` set into backrow zones, `planDrag` gives `freeDrop: true`, `arrow: false`, and `dropTestids` still lists the backrow zones.\n- [ ] `resolveDrop` for that plan with `{ at: \"board\" }` sends the face-up `play` (no `faceDown`, no zone). With a backrow zone as the target, it sends the `cloaked` set into that zone.\n- [ ] A Cloaked Spell with X (or modes) dropped on the board skips the face-up/set question and goes straight to the X/mode picker.\n- [ ] The existing R1044 targeted-arrow test and the other `model.test.ts` / `DragLayer.test.tsx` / `Prompt.test.tsx` cases stay green.\n- [ ] If the builder treats this as a ruling the spec doesn't make yet (a drag-drop rule for alternative plays), it adds a note in this issue's R-block with a proving `it(\"R<n> \u2026\")` test, and puts its \u00a711 paragraph in `spec/pending/<this issue>.md` (CLAUDE.md rule 3).\n- [ ] `pnpm --dir apps/web test src/game/drag`, `pnpm --dir apps/web typecheck` and `pnpm exec eslint apps/web` pass.\n\n## Links\n\nNone blocking. Background: #781 / #783 (Cloaked), R658 and B34 (drag-to-play, free drops).\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5107: needs a plan; `claude-3` (claude, `sonnet`, medium) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T19:14:44Z",
+    "claimed_at": "2026-11-26T19:18:11Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5088 is held for `claude-1` until 14:20 (5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
