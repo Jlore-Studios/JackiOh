@@ -180,5 +180,41 @@ mod tests {
             s.expect_in_zone(&wrong, "graveyard");
             assert!(s.unit(P1, 1).is_none());
         }
+
+        /// R4817001, §5.2, §10.4: a base one back through a Reborn an effect gave it (the grant gone with
+        /// R78's reset, its Reborn used) and then made Radiant where it stands (C+ #65.4 Golden Grape)
+        /// has the Reborn its Radiant face newly prints, as a Reborn granted again would be.
+        #[test]
+        fn r4817001_a_base_one_back_through_a_granted_reborn_and_made_radiant_has_its_radiant_faces_reborn() {
+            const GRAPE: &str = "classicplus-065-4"; // Golden Grape: "Make a card … Radiant."
+            let mut s = scenario(json!({
+                "seed": "reborn-face",
+                "p1": { "hand": [GRAPE, STOCKPILE], "field": [WRONG],
+                        "library": [STOCKPILE, STOCKPILE, STOCKPILE], "mana": 10 },
+                "p2": { "hand": [STOCKPILE], "field": [{ "def": VANILLA, "lane": 1 }],
+                        "library": [STOCKPILE, STOCKPILE, STOCKPILE, STOCKPILE] },
+            }));
+            // An effect's grant, as `buff::grant_onto` writes it (Core #63 Plastic Surgery's and #80 Zao
+            // Gao's random keywords are drawn from R21's pool, which holds Reborn).
+            let id = s.card(WRONG).id.clone();
+            s.card_mut(id.as_str()).granted_keywords.push(Keyword::Reborn);
+            s.card_mut(id.as_str()).summoned_turn = None;
+            let enemy = s.unit_at(P2, 1).id;
+            s.attack(id.as_str(), enemy.as_str());
+            let back = s.unit(P1, 1).expect("the Reborn body is back in its lane");
+            assert_eq!(back.reborn_spent, Some(true), "it came back through Reborn");
+            assert!(!back.radiant && back.granted_keywords.is_empty(), "base, the grant gone (R78)");
+            assert!(!kinds(&s.stats(&back).keywords).contains(&KeywordKind::Reborn));
+
+            s.play(GRAPE, json!({ "targets": pick::card(&s, back.id.as_str()) }));
+            let now = s.unit_at(P1, 1);
+            assert!(now.radiant, "Golden Grape made it Radiant");
+            assert_eq!(now.reborn_spent, None);
+            assert!(
+                kinds(&s.stats(&now).keywords).contains(&KeywordKind::Reborn),
+                "the Radiant face newly prints Reborn, so the card has it; it has {:?}",
+                s.stats(&now).keywords
+            );
+        }
     }
 }
