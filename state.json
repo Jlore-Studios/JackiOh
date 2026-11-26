@@ -23036,9 +23036,11 @@
         "by": "`claude` (strong)",
         "sha": "7f33b3a7d285dec05ec6bcd589af11272d4f0aee"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-26T07:08:53Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-26T07:59:38Z",
         "family": "claude",
@@ -23048,6 +23050,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Bash: {\"command\": \"ls -a | head -50 && sed -n 1,80p .bot-notes.md | head -120\", \"description\": \"Read bot notes\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5011/apps/web/src/assault/store.ts\", \"offset\": 300, \"limit\": 200}\n- Bash: {\"command\": \"sed -n 80,140p .bot-notes.md; echo ----; cat .bot-journal.md | tail -20; echo ----; sed -n 1,80p apps/web/src/dungeon/store.ts | head -5; grep -n \\\"reloadCore\\\\|pageWasOpen\\\" -n apps/web\u2026\n- Bash: {\"command\": \"sed -n 490,500p apps/web/src/dungeon/store.ts; sed -n 540,625p apps/web/src/dungeon/store.ts; grep -n \\\"^## \\\" .bot-notes.md\", \"description\": \"View dungeon reloadCore and subscribe\"}\n- said: Now the store edits.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/assault/store.ts'\\ns=open(p).read()\\ndef rep(a,b):\\n global s\\n assert s.count(a)==1,a\\n s=s.replace(a,b)\\nrep(\\\"\\\"\\\"let pageListening = false;\\n\\nfunc\u2026\n- Bash: {\"command\": \"cd apps/web/src/assault; wc -l store.test.ts; sed -n 1,140p store.test.ts\", \"description\": \"Read assault store tests head\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5011 && sed -n 140,191p apps/web/src/assault/store.test.ts; cat apps/web/src/assault/test/fixtures.ts\", \"description\": \"Read rest of tests and fixtur\u2026\n- Bash: {\"command\": \"sed -n 195,300p apps/web/src/assault/store.ts; grep -n \\\"dismiss\\\\|tryAgain\\\" apps/web/src/assault/store.ts | head -20\", \"description\": \"Read loadCore\"}\n- Bash: {\"command\": \"cat >> apps/web/src/assault/store.test.ts <<'EOF'\\n\\ndescribe(\\\"reopening the Assault page\\\", () => {\\n function begin(assault: { current: Assault }): void {\\n expect(press(() => assault\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/assault/store.test.ts'\\ns=open(p).read()\\na=\\\"\\\"\\\" expect(storedRecord()).toEqual({ ...RECORD, attempts: 5 });\\n\\n press(() => again.current.dismiss())\u2026\n- said: Now confirm the tests fail without the fix (stash-free: revert store.ts temporarily via a copy), then typecheck and lint.\n- Bash: {\"command\": \"cp apps/web/src/assault/store.ts /tmp/store.fixed.ts && git show HEAD:apps/web/src/assault/store.ts > apps/web/src/assault/store.ts && (pnpm --dir apps/web test src/assault/store.test.ts\u2026\n- said: Tests 1\u20134 and 6 fail without the fix and pass with it, as the plan predicted. Now typecheck, lint and the suppressions check.\n- Bash: {\"command\": \"(pnpm --dir apps/web typecheck 2>&1 | tail -8); (pnpm exec eslint apps/web/src/assault 2>&1 | tail -15); git status --short\", \"description\": \"Typecheck and eslint\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -rln \\\"assault/store\\\\|__resetAssaultForTests\\\" apps/web/src | head; cat > /tmp/notes_state.md <<'EOF'\\n## State\\n\\nPlan below (the issue's Plan section). **Built and green** (run 2\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: the Assault page reads its saved attempt again when it is reopened\"} --> Reopening the Assault page after leaving it now re-reads the attempt, held report and records from the device. It no longer serves the stale in-memory copy. This is the fix #4914 m\u2026"
       },
+      "interruptions": 0,
       "issue": 5011,
       "kind": "review",
       "live": "reviewing",
