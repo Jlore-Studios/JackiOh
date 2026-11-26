@@ -21457,6 +21457,7 @@
     "5117": {
       "action": "plan",
       "asks": [],
+      "failures": 1,
       "kind": "build",
       "live": "planning",
       "owner": "claude-3",
