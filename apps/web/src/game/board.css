@@ -144,7 +144,7 @@
   border: 1px solid var(--line-bright);
   /* Round at a pill's height, but a hero whose power and badges wrap to a second line stays a
      rounded plate instead of swelling into a capsule. */
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   background: var(--bg-sunken);
   box-shadow: var(--shadow-inset-top), var(--shadow-2);
 }
@@ -1030,7 +1030,7 @@ button.modifier-badge[data-open="true"] {
   width: var(--sand-size);
   height: calc(var(--sand-size) * (0.64 + var(--sand-variation) * 0.2));
   border: 1px solid color-mix(in srgb, var(--pal-wood-800) 48%, transparent);
-  border-radius: 50% 43% 52% 45%;
+  border-radius: var(--radius-sand);
   background:
     radial-gradient(ellipse at 38% 34%, color-mix(in srgb, var(--pal-wood-900) 58%, transparent), transparent 54%),
     radial-gradient(ellipse at 66% 68%, color-mix(in srgb, var(--pal-gold-400) 36%, transparent), transparent 60%);
@@ -1139,7 +1139,7 @@ button.modifier-badge[data-open="true"] {
 }
 
 .tap-mark--parchment {
-  border-radius: 52% 46% 55% 44%;
+  border-radius: var(--radius-parchment);
   background: radial-gradient(circle, color-mix(in srgb, var(--pal-brass-800) 62%, transparent), color-mix(in srgb, var(--pal-wood-600) 38%, transparent) 55%, transparent 75%);
   rotate: calc(var(--sand-variation) * 90deg);
   animation: tap-bleed 2400ms var(--ease-out) forwards;

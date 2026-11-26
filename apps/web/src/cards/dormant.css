@@ -98,7 +98,7 @@
   width: 10.5cqmin;
   height: 7cqmin;
   border: 0.5cqmin solid var(--pal-slate-900);
-  border-radius: 0.8cqmin;
+  border-radius: var(--radius-card-plate);
   background: center / 100% 100% no-repeat var(--pal-slate-700);
   box-shadow:
     inset 0 0.5cqmin 0 color-mix(in srgb, var(--pal-orange-400) 80%, transparent),

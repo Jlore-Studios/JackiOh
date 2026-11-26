@@ -168,7 +168,7 @@
   position: absolute;
   inset: 0;
   display: block;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-sm);
   box-shadow: 0 0 1.5rem var(--pack-glow, var(--pack-accent));
   transform-origin: 50% 70%;
   transition: transform 80ms ease-out;
@@ -188,7 +188,7 @@
   gap: 0.35rem;
   padding: 16% 0.5rem;
   border: 2px solid var(--pack-accent);
-  border-radius: 0.5rem;
+  border-radius: var(--radius-sm);
   background:
     radial-gradient(circle at 50% 38%, rgb(255 255 255 / 0.16), transparent 55%),
     linear-gradient(160deg, var(--pack-foil-a), var(--pack-foil-b));
@@ -224,13 +224,13 @@
 
 .pack-object__seal--top {
   top: 0;
-  border-radius: 0.5rem 0.5rem 0 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   transform-origin: 0 100%;
 }
 
 .pack-object__seal--bottom {
   bottom: 0;
-  border-radius: 0 0 0.5rem 0.5rem;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
   box-shadow: inset 0 0.2rem 0.25rem rgb(0 0 0 / 0.35);
 }
 
@@ -241,7 +241,7 @@
   inset: 0;
   display: block;
   overflow: hidden;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-sm);
   pointer-events: none;
 }
 
@@ -258,7 +258,7 @@
   position: absolute;
   inset: -20%;
   display: block;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle, rgb(255 255 255 / 0.95), transparent 62%);
   opacity: 0;
   pointer-events: none;

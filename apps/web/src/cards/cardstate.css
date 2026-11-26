@@ -46,7 +46,7 @@
   flex: none;
   width: var(--cf-state-size);
   height: var(--cf-state-size);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle at 40% 35%, #2b3142, #0d1018 75%);
   box-shadow:
     0 0 0 max(1px, 0.5cqw) rgb(232 236 248 / 0.75),
@@ -70,7 +70,7 @@
 
 /* R385: the cracked pane, square rather than round so Brittle reads apart from the rest. */
 .cf .cf-state[data-state="brittle"] {
-  border-radius: 18%;
+  border-radius: var(--radius-card-brittle);
   background: none;
   box-shadow: 0 0.3cqh 0.8cqh rgb(0 0 0 / 0.6);
 }
@@ -132,7 +132,7 @@
   width: auto;
   min-width: var(--cf-state-size);
   padding: 0 0.3em;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   box-shadow:
     0 0 0 max(1px, 0.5cqw) var(--radiant, #ffd24a),
     0 0.3cqh 0.8cqh rgb(0 0 0 / 0.6);
@@ -147,7 +147,7 @@
   width: auto;
   min-width: var(--cf-state-size);
   padding: 0 0.3em;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   box-shadow:
     0 0 0 max(1px, 0.5cqw) var(--text-dim, #9aa1b8),
     0 0.3cqh 0.8cqh rgb(0 0 0 / 0.6);
@@ -164,7 +164,7 @@
   min-width: var(--cf-state-size);
   height: calc(var(--cf-state-size) * 0.8);
   padding: 0 0.2em;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: #0d1018;
   box-shadow: 0 0 0 1px rgb(232 236 248 / 0.75);
   color: #fff;
@@ -222,7 +222,7 @@
 /* A dotted box round the number, and ▲ or ▼ after it; the tooltip says what it was printed as. */
 .cf-tuned {
   padding: 0 0.12em;
-  border-radius: 0.2em;
+  border-radius: var(--radius-card-inline);
   outline: 0.09em dotted currentColor;
   outline-offset: -0.02em;
   font-weight: 800;
@@ -275,7 +275,7 @@
   place-items: center;
   width: 1.25em;
   height: 1.25em;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: #0d1018;
   box-shadow: 0 0 0 1px rgb(232 236 248 / 0.8);
   font-size: max(5cqw, 7px);
@@ -324,7 +324,7 @@
 .cf .cf-kw-chip {
   display: inline-block;
   padding: 0 0.3em;
-  border-radius: 0.3em;
+  border-radius: var(--radius-card-kw-chip);
   border: 0.1em solid currentColor;
   font-weight: 800;
   white-space: nowrap;

@@ -41,7 +41,7 @@
   gap: 14px;
   padding: 14px 16px 16px;
   border: 1px solid color-mix(in srgb, var(--coach) 30%, var(--line));
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(90% 120% at 0% 0%, color-mix(in srgb, var(--coach) 11%, transparent), transparent 65%),
     color-mix(in srgb, var(--bg-raised) 78%, transparent);
@@ -91,7 +91,7 @@
 .tutorial-path__meter i {
   width: 14px;
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: var(--line-bright);
 }
 
@@ -104,7 +104,7 @@
 .app-shell .tutorial-path__toggle {
   min-height: 44px;
   padding: 8px 16px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
@@ -147,7 +147,7 @@
   z-index: 0;
   width: calc(100% + var(--path-gap));
   height: 3px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--line-bright);
 }
 
@@ -164,7 +164,7 @@
   width: var(--node);
   height: var(--node);
   border: 2px solid var(--line-bright);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--bg-sunken);
   color: var(--text-dim);
   font-size: 15px;
@@ -201,7 +201,7 @@
   margin-top: calc(var(--node) / -2);
   padding: calc(var(--node) / 2 + 4px) 12px 10px;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, var(--bg-raised), color-mix(in srgb, var(--bg-raised) 55%, var(--bg-sunken)));
 }
 
@@ -261,7 +261,7 @@
 .tutorial-lesson__chip {
   padding: 0 6px;
   border: 1px solid color-mix(in srgb, var(--coach) 24%, var(--line));
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bg-sunken);
   color: color-mix(in srgb, var(--coach) 30%, var(--text-dim));
   font-size: 10.5px;
@@ -307,7 +307,7 @@
   min-height: 44px;
   margin-left: auto;
   padding: 8px 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-size: 14px;
   font-weight: 700;
 }
@@ -357,7 +357,7 @@
   width: 24px;
   height: 24px;
   border: 1px solid var(--coach);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: color-mix(in srgb, var(--coach) 22%, var(--bg-sunken));
   color: var(--coach);
   font-size: 12px;
@@ -403,7 +403,7 @@
   width: 76px;
   height: 4px;
   overflow: hidden;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--line);
 }
 
@@ -412,7 +412,7 @@
   position: absolute;
   inset: 0 auto 0 0;
   width: calc(var(--done, 0) * 100%);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--coach);
   transition: width calc(240ms * var(--anim-scale, 1)) ease-out;
 }
@@ -460,7 +460,7 @@
   position: fixed;
   z-index: 55;
   border: 3px solid var(--coach);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   box-shadow:
     0 0 0 4px color-mix(in srgb, var(--coach) 22%, transparent),
     0 0 26px 4px color-mix(in srgb, var(--coach) 45%, transparent);
@@ -516,7 +516,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   border: 1px solid color-mix(in srgb, var(--coach) 60%, var(--line));
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: linear-gradient(180deg, color-mix(in srgb, var(--coach) 12%, var(--bg-raised)), var(--bg-raised) 70%);
   box-shadow:
     0 0 0 1px rgb(0 0 0 / 35%),
@@ -621,7 +621,7 @@
   min-height: 40px;
   padding: 7px 16px;
   border-color: color-mix(in srgb, var(--coach) 70%, white);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, color-mix(in srgb, var(--coach) 85%, white), var(--coach));
   color: var(--coach-ink);
   font-size: 14px;
@@ -706,7 +706,7 @@
   margin-top: 4px;
   padding: 4px 6px 6px 12px;
   overflow: visible;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   box-shadow:
     0 10px 22px -14px rgb(0 0 0 / 90%),
     0 0 22px -12px color-mix(in srgb, var(--coach) 70%, transparent);
@@ -929,7 +929,7 @@
   margin: 2px 0 0;
   padding: 10px 12px;
   border-left: 3px solid var(--coach);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--bg-sunken);
   color: var(--text);
   font-size: 14px;
@@ -946,7 +946,7 @@
   margin: 2px 0 0;
   padding: 10px 12px;
   border-left: 3px solid var(--coach);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--bg-sunken);
   text-align: left;
 }
@@ -1127,7 +1127,7 @@
   min-height: 44px;
   padding: 7px 14px;
   border-color: color-mix(in srgb, var(--coach) 55%, var(--line));
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text);
   font-size: var(--type-lg);
@@ -1138,7 +1138,7 @@
 /* A discovery names a rule the player found themselves: its eyebrow is the coach's color on a pill. */
 .coach[data-coach-mode="discovery"] .coach__eyebrow {
   padding: 0 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--coach);
   color: var(--coach-ink);
 }
@@ -1188,7 +1188,7 @@
   grid-template-columns: minmax(7.5em, auto) minmax(0, 1fr);
   gap: 2px 12px;
   padding: 8px 10px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-sunken);
   font-size: var(--type-lg);
 }
