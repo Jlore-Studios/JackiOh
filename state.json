@@ -21736,6 +21736,9 @@
       "taken_asks": [
         "c:7204762409"
       ]
+    },
+    "5123": {
+      "suggestion": true
     }
   },
   "labels_synced": "e752b3263433d01e",
@@ -45048,6 +45051,13 @@
         "title": "Patch: the AI counts a price hike it puts on the opponent's next turn, so the Assault enemy casts Cost Injection",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-26T23:19:36Z",
+        "number": 5123,
+        "title": "Patch: a fork screen resumed after a cut inside an --extend batch plays that batch out, as an uncut run does",
+        "verdict": "auto-approved",
+        "why": "approved by itself: no one voted on it"
       }
     ],
     "declined": [
