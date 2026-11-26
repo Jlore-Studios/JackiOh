@@ -24201,15 +24201,11 @@
       "votes": {
         "approvals": [],
         "builder": "claude",
-        "built_by": "claude-1",
-        "rejections": [
-          "claude"
-        ],
+        "built_by": "claude-8",
+        "rejections": [],
         "reviews": [],
-        "sha": "23e3cc443d4bd5d503ea9f14b5495ac947cd07ad",
-        "tiers": {
-          "claude": "strong"
-        }
+        "sha": "163792daa427d02c716193eec551055d67d876e3",
+        "tiers": {}
       }
     },
     "5077": {
