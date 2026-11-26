@@ -18545,7 +18545,8 @@
       "live": "reviewing",
       "merge_owner": "muse",
       "own_review": {
-        "claimed_at": "2026-11-25T22:24:10Z",
+        "claimed": true,
+        "claimed_at": "2026-11-26T04:08:16Z",
         "from_run": "45695319956",
         "gates": [
           {
@@ -18610,11 +18611,11 @@
       "queued_at": "2026-11-25T22:22:46Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "45712930808",
+      "run_id": "pending:94324c71-1795666061",
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-11-25T22:24:10Z",
+      "started_at": "2026-11-26T04:08:16Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -22198,9 +22199,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T04:07:26Z",
+    "at": "2026-11-26T04:08:16Z",
     "url": "",
-    "what": "build #4990 on claude-4"
+    "what": "review #4893 on muse"
   },
   "last_sweep": {
     "at": "2026-11-26T03:54:00Z",
