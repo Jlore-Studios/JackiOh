@@ -1470,6 +1470,45 @@ pub(crate) fn records_of(outcomes: &[ArenaOutcome]) -> anyhow::Result<Vec<GameRe
     Ok(records)
 }
 
+/// A duel's records and lines, `arena`'s and the fork screen's alike: appended to the records file
+/// (`records_path`) with the lines and `totals` on stdout, or, with none, the records on stdout and the
+/// rest on stderr.
+pub(crate) fn write_duel_output(
+    out: Option<&Path>,
+    outcomes: &[ArenaOutcome],
+    totals: &impl Serialize,
+) -> anyhow::Result<()> {
+    let records = records_of(outcomes)?;
+    let path = records_path(out);
+    let mut lines = Vec::new();
+    for outcome in outcomes {
+        lines.push(duel_line(outcome, replays(outcome)?)?);
+    }
+    let totals = serde_json::to_string(totals)?;
+    match &path {
+        Some(path) => {
+            append_records(path, &records)?;
+            let mut stdout = std::io::stdout().lock();
+            for line in &lines {
+                writeln!(stdout, "{line}")?;
+            }
+            writeln!(stdout, "{totals}")?;
+            writeln!(stdout, "{} records appended to {}", records.len(), path.display())?;
+        }
+        None => {
+            let mut stdout = std::io::stdout().lock();
+            for record in &records {
+                writeln!(stdout, "{}", jackioh_cards::versions::game_record_line(record))?;
+            }
+            for line in &lines {
+                eprintln!("{line}");
+            }
+            eprintln!("{totals}");
+        }
+    }
+    Ok(())
+}
+
 pub fn run(args: Args) -> anyhow::Result<()> {
     if args.save.is_some() && !args.forks {
         bail!("arena: --save resumes only the fork screen, so it needs --forks");
@@ -1516,37 +1555,11 @@ pub fn run(args: Args) -> anyhow::Result<()> {
             break;
         }
     }
-    let records = records_of(&outcomes)?;
-
-    let path = records_path(args.out.as_deref());
-    let mut lines = Vec::new();
-    for outcome in &outcomes {
-        lines.push(duel_line(outcome, replays(outcome)?)?);
-    }
-    let totals = serde_json::to_string(&tally(&a.label, &b.label, &outcomes, paired, screen))?;
-
-    match &path {
-        Some(path) => {
-            append_records(path, &records)?;
-            let mut stdout = std::io::stdout().lock();
-            for line in &lines {
-                writeln!(stdout, "{line}")?;
-            }
-            writeln!(stdout, "{totals}")?;
-            writeln!(stdout, "{} records appended to {}", records.len(), path.display())?;
-        }
-        None => {
-            let mut stdout = std::io::stdout().lock();
-            for record in &records {
-                writeln!(stdout, "{}", jackioh_cards::versions::game_record_line(record))?;
-            }
-            for line in &lines {
-                eprintln!("{line}");
-            }
-            eprintln!("{totals}");
-        }
-    }
-    Ok(())
+    write_duel_output(
+        args.out.as_deref(),
+        &outcomes,
+        &tally(&a.label, &b.label, &outcomes, paired, screen),
+    )
 }
 
 #[cfg(test)]

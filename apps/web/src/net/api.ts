@@ -1973,9 +1973,15 @@ export type PublicStatsVersionsResponse = {
   versions: PublicPlayVersion[];
 };
 
-/** R4675001, R4678001: every play version's figures on a match type, every one when none is asked; open to everyone. */
-export function getStatsVersions(options: { mode?: string; signal?: AbortSignal } = {}): Promise<PublicStatsVersionsResponse> {
-  const query = options.mode ? `?${new URLSearchParams({ mode: options.mode }).toString()}` : "";
+/** R4675001, R4678001: every play version's figures on a match type, every one when none is asked; open to everyone. R5040000: `scope: "major"` asks for the live ones alone, the server cutting each to the newest major's line. */
+export function getStatsVersions(
+  options: { mode?: string; scope?: "major"; signal?: AbortSignal } = {},
+): Promise<PublicStatsVersionsResponse> {
+  const params = new URLSearchParams();
+  if (options.mode) params.set("mode", options.mode);
+  if (options.scope) params.set("scope", options.scope);
+  const text = params.toString();
+  const query = text ? `?${text}` : "";
   return apiRequest<PublicStatsVersionsResponse>(`/api/stats/versions${query}`, { signal: options.signal });
 }
 

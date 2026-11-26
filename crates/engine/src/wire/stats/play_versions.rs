@@ -17,11 +17,15 @@
 //! (`patch_windows`, R1973002) as the statistics page's patch bar lists them, which the Experimental
 //! tab's Running view names beside the version a card's current play version began at. R5033000: and the
 //! position of its first version in the shipped history, which the Date sort reads.
+//!
+//! R5040000: `major_line_versions` cuts each live play version to the newest major's line;
+//! `play_version_figures` over the cut versions is the Major patch running view's table, its field read
+//! over the cut rows alone.
 
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
-use super::window::{Part, PatchStep, part_of, patch_windows, split_by_version};
+use super::window::{Part, PatchStep, PatchTier, part_of, patch_windows, split_by_version};
 use super::{
     CardStats, CardTier, CreatedStats, DECIMALS, GameMode, GameSource, ModeFilter, NO_FIGURE, PERCENT,
     PilotFilter, StatsField, StatsTotals, Tally, add_created, add_stats, adjusted_interval,
@@ -249,6 +253,35 @@ pub fn play_version_figures(totals: &StatsTotals, query: &PlayVersionQuery) -> P
     }
 }
 
+/// R5040000: the Major patch running view's play versions: the live ones of `versions`, each cut to its
+/// versions in the newest major's line, from the last `PatchTier::Major` step of `history` through its
+/// newest, in `history`'s order (R105: a version is matched, never parsed). A closed play version has no
+/// row; a cut one keeps its id, card, name and `live`, so it begins at the later of its own first version
+/// and the major. With no major in `history` the line is all of it.
+pub fn major_line_versions(versions: &[PlayVersion], history: &[PatchStep]) -> Vec<PlayVersion> {
+    let from = history
+        .iter()
+        .rposition(|step| step.tier == PatchTier::Major)
+        .unwrap_or(0);
+    let line: IndexSet<&str> = history[from..].iter().map(|step| step.version.as_str()).collect();
+    versions
+        .iter()
+        .filter(|version| version.live)
+        .filter_map(|version| {
+            let cut: Vec<String> = version
+                .versions
+                .iter()
+                .filter(|shipped| line.contains(shipped.as_str()))
+                .cloned()
+                .collect();
+            (!cut.is_empty()).then(|| PlayVersion {
+                versions: cut,
+                ..version.clone()
+            })
+        })
+        .collect()
+}
+
 /// R4678001: how many of the shared windows `window_of` names `version`'s versions reach. A play
 /// version's versions run in order and a window's are consecutive, so each window is a run of them.
 fn patches_of(version: &PlayVersion, window_of: &IndexMap<&str, usize>) -> usize {
@@ -387,6 +420,8 @@ mod tests {
 
     const A: &str = "core-001";
     const B: &str = "core-002";
+    const C: &str = "core-003";
+    const D: &str = "core-004";
     /// The card the opponent holds, which no play version reads.
     const OTHER: &str = "core-099";
 
@@ -776,6 +811,191 @@ mod tests {
         );
         // No history holds none.
         assert_eq!(read(&[]), owned(&[("v1c", None), ("v1b", None), ("v1", None)]));
+    }
+
+    fn shipped(version: &str, tier: PatchTier) -> PatchStep {
+        PatchStep {
+            version: version.to_string(),
+            tier,
+            plays: Vec::new(),
+        }
+    }
+
+    /// R5040000: a history written by hand with two majors, v1 and v3.
+    fn two_majors() -> Vec<PatchStep> {
+        vec![
+            shipped("v1", PatchTier::Major),
+            shipped("v1b", PatchTier::Micro),
+            shipped("v2", PatchTier::Patch),
+            shipped("v3", PatchTier::Major),
+            shipped("v3b", PatchTier::Micro),
+            shipped("v4", PatchTier::Patch),
+        ]
+    }
+
+    /// R5040000: A spans both lines; B changed at v2 and its live version crosses v3; C began after v3;
+    /// D's version closed inside the newer line.
+    fn line_versions() -> [PlayVersion; 5] {
+        [
+            version(A, &["v1", "v1b", "v2", "v3", "v3b", "v4"], true),
+            version(B, &["v1", "v1b"], false),
+            version(B, &["v2", "v3", "v3b", "v4"], true),
+            version(C, &["v3b", "v4"], true),
+            version(D, &["v2", "v3"], false),
+        ]
+    }
+
+    /// R5040000: the games before the newer major, and those from it on.
+    fn line_games() -> (Vec<GameRecord>, Vec<GameRecord>) {
+        let before = vec![
+            game("m1", GameSource::Live, "v1", &[A, B], true),
+            game("m2", GameSource::Live, "v2", &[A, B, D], false),
+        ];
+        let after = vec![
+            game("m3", GameSource::Live, "v3", &[A, B, D], true),
+            game("m4", GameSource::Live, "v3b", &[A, B, C], true),
+            game("m5", GameSource::Live, "v4", &[A, B, C], false),
+        ];
+        (before, after)
+    }
+
+    fn ids(versions: &[PlayVersion]) -> Vec<&str> {
+        versions.iter().map(|version| version.id.as_str()).collect()
+    }
+
+    // R5040000: Major patch running cuts each live play version to the newest major's line: one begun
+    // before the major counts from it, its games, first version and patches read off the cut span alone,
+    // and the field is read over the cut rows.
+    #[test]
+    fn r5040000_a_version_begun_before_the_newest_major_is_cut_to_start_at_it_and_read_off_the_cut_span_alone()
+     {
+        let history = two_majors();
+        let (before, after) = line_games();
+        let totals = folded(&[&before[..], &after].concat());
+        let every = line_versions();
+        let cut = major_line_versions(&every, &history);
+        assert_eq!(ids(&cut), ["core-001~v1", "core-002~v2", "core-003~v3b"]);
+        assert!(cut.iter().all(|version| version.live));
+        assert_eq!(cut[0].versions, ["v3", "v3b", "v4"]);
+        assert_eq!(cut[1].versions, ["v3", "v3b", "v4"]);
+        assert_eq!((cut[0].card.as_str(), cut[0].name.as_str()), (A, "core-001 name"));
+
+        let read = |versions: &[PlayVersion]| {
+            play_version_figures(
+                &totals,
+                &PlayVersionQuery {
+                    history: &history,
+                    ..query(versions, 1)
+                },
+            )
+        };
+        let whole = read(&every);
+        let major = read(&cut);
+        let span = |table: &PlayVersionTable, id: &str| {
+            let row = row(table, id);
+            (row.first.clone(), row.last.clone(), row.games, row.patches)
+        };
+        // The windows are v1–v1b, v2, v3–v3b and v4: A reaches two of them from the major, four in all.
+        assert_eq!(span(&major, "core-001~v1"), ("v3".into(), "v4".into(), 3, 2));
+        assert_eq!(span(&whole, "core-001~v1"), ("v1".into(), "v4".into(), 5, 4));
+        assert_eq!(span(&major, "core-002~v2"), ("v3".into(), "v4".into(), 3, 2));
+        assert_eq!(span(&whole, "core-002~v2"), ("v2".into(), "v4".into(), 4, 3));
+        // D's version closed: it has no row, nor has B's first.
+        assert_eq!(major.versions.len(), 3);
+        assert_eq!(whole.versions.len(), 5);
+
+        let field = stats_field([&by_hand(&after, A), &by_hand(&after, B), &by_hand(&after, C)], 1);
+        assert_eq!(major.field, field);
+        assert_ne!(major.field, whole.field);
+        let a = by_hand(&after, A);
+        assert_eq!(
+            row(&major, "core-001~v1").adjusted_win_rate,
+            adjusted_win_rate(&a, &field)
+        );
+    }
+
+    // R5040000: a play version begun after the newest major spans its line already, so it is the same
+    // in both scopes, as it reads against each scope's field.
+    #[test]
+    fn r5040000_a_version_begun_after_the_newest_major_is_the_same_in_both_scopes() {
+        let history = two_majors();
+        let (before, after) = line_games();
+        let totals = folded(&[&before[..], &after].concat());
+        let every = line_versions();
+        let cut = major_line_versions(&every, &history);
+        assert_eq!(cut[2], every[3]);
+        for versions in [&every[..], &cut] {
+            let table = play_version_figures(
+                &totals,
+                &PlayVersionQuery {
+                    history: &history,
+                    ..query(versions, 1)
+                },
+            );
+            let c = row(&table, "core-003~v3b");
+            assert_eq!(
+                (
+                    c.first.as_str(),
+                    c.last.as_str(),
+                    c.games,
+                    c.patches,
+                    c.has_enough_games
+                ),
+                ("v3b", "v4", 2, 2, true)
+            );
+        }
+    }
+
+    // R5040000: a new major starts every row again from it: no games on it yet, so no tier.
+    #[test]
+    fn r5040000_a_third_major_restarts_every_row() {
+        let mut history = two_majors();
+        history.push(shipped("v5", PatchTier::Major));
+        let every = line_versions().map(|mut version| {
+            if version.live {
+                version.versions.push("v5".to_string());
+            }
+            version
+        });
+        let (before, after) = line_games();
+        let totals = folded(&[&before[..], &after].concat());
+        let cut = major_line_versions(&every, &history);
+        assert_eq!(ids(&cut), ["core-001~v1", "core-002~v2", "core-003~v3b"]);
+        assert!(cut.iter().all(|version| version.versions == ["v5"]));
+        let table = play_version_figures(
+            &totals,
+            &PlayVersionQuery {
+                history: &history,
+                ..query(&cut, 1)
+            },
+        );
+        for row in &table.versions {
+            assert_eq!(
+                (
+                    row.first.as_str(),
+                    row.last.as_str(),
+                    row.games,
+                    row.patches,
+                    row.has_enough_games,
+                    row.tier
+                ),
+                ("v5", "v5", 0, 1, false, None),
+                "{}",
+                row.id
+            );
+        }
+        // With no major in the history the line is all of it: only the closed versions go.
+        let unmajored: Vec<PatchStep> = history
+            .iter()
+            .map(|step| shipped(&step.version, PatchTier::Patch))
+            .collect();
+        let live: Vec<PlayVersion> = every.iter().filter(|version| version.live).cloned().collect();
+        assert_eq!(major_line_versions(&every, &unmajored), live);
+        // A live version none of whose versions the line holds has no row: C, against the history up to v2.
+        assert_eq!(
+            ids(&major_line_versions(&line_versions(), &two_majors()[..3])),
+            ["core-001~v1", "core-002~v2"]
+        );
     }
 
     #[test]

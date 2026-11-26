@@ -49,10 +49,10 @@ use jackioh_engine::{
     is_dormant_starship, is_extra_turn_card, is_giga, is_sick, is_slumbering, is_standing_unit,
     is_starship_piece, is_temporary_card, is_tradable, left_field_after, legal_actions, lost_refreshes_left,
     modifier_is_live, new_instance, outcome_for, owed_mana_of, own_cost, pays_credits_like_a_resource,
-    pierces, pile_at, plague_on, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of,
-    settle, slots_of, stats_with_buffs, stolen_mana_crystals_of, subsystems, sync_fused_scripts,
-    takes_strike_back, toxic_on, trigger_holders_with_hook, unit_damage_cap, unit_has, unit_view,
-    units_on_field_of, why_sandbox_refused, with_pool_hold, yard_at_turn_start,
+    pierces, pile_at, plague_on, playable_from_graveyard, query_cost, queue_hook, reborn_body_of,
+    reset_instance, script_of, settle, slots_of, stats_with_buffs, stolen_mana_crystals_of, subsystems,
+    sync_fused_scripts, takes_strike_back, toxic_on, trigger_holders_with_hook, unit_damage_cap, unit_has,
+    unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold, yard_at_turn_start,
 };
 use serde::{Deserialize, Serialize};
 
@@ -264,7 +264,7 @@ pub(crate) fn afflicted_before_swing(
     if burned >= view.health {
         return false;
     }
-    let (_, body) = reborn_return(state, unit);
+    let (_, body) = reborn_return(state, unit, w);
     !(has_keyword(&body.keywords, KeywordKind::Charge)
         || (!at_hero && has_keyword(&body.keywords, KeywordKind::Rush)))
 }
@@ -1991,7 +1991,7 @@ fn soak_past_taunts(
                                     splash_onto(state, defender, &from, attack, tramples, stand, &mut pool);
                                 total += to_hero;
                                 if kills {
-                                    let left = left_behind(state, stand, exiling);
+                                    let left = left_behind(state, stand, exiling, w);
                                     *met = left;
                                 }
                             }
@@ -2015,14 +2015,15 @@ fn soak_past_taunts(
                         // exiled one never comes back (R1124).
                         if !exiling
                             && has_keyword(&stands[j].view.keywords, KeywordKind::Reborn)
-                            && let Some((body, view)) = reborn_body(state, &stands[j].unit)
+                            && let Some((body, view)) = reborn_body(state, &stands[j].unit, w)
                         {
                             stands[j] = TauntStand::of(body, view);
                         } else {
                             let gone = stands.remove(j);
                             // R4805000: a later splash meets its body without Taunt, or nothing.
                             if w.splash_trample_read {
-                                bystanders.insert(gone.unit.id.clone(), left_behind(state, &gone, exiling));
+                                bystanders
+                                    .insert(gone.unit.id.clone(), left_behind(state, &gone, exiling, w));
                             }
                         }
                     }
@@ -2063,7 +2064,7 @@ fn soak_past_taunts(
         if (stands[i].health <= 0 || poisoned)
             && !exiled
             && has_keyword(&stands[i].view.keywords, KeywordKind::Reborn)
-            && let Some((body, view)) = reborn_body(state, &stands[i].unit)
+            && let Some((body, view)) = reborn_body(state, &stands[i].unit, w)
         {
             stands[i] = TauntStand::of(body, view);
             continue;
@@ -2071,7 +2072,10 @@ fn soak_past_taunts(
         // R4805000: a later splash meets what the walk leaves of a Taunt it destroyed: its body without
         // Taunt, or nothing.
         if w.splash_trample_read && (stands[i].health <= 0 || poisoned || exiled) {
-            bystanders.insert(stands[i].unit.id.clone(), left_behind(state, &stands[i], exiled));
+            bystanders.insert(
+                stands[i].unit.id.clone(),
+                left_behind(state, &stands[i], exiled, w),
+            );
         }
         i += 1;
     }
@@ -2154,9 +2158,9 @@ fn splashed(state: &GameState, stand: &TauntStand, pool: i32) -> Side {
 
 /// R4805000: what a later Cleave splash meets of a unit the walk destroyed. That is the body a Reborn unit
 /// comes back as (`reborn_return`, §4.5 step 4), unless it was exiled (R1124); otherwise nothing.
-fn left_behind(state: &GameState, stand: &TauntStand, exiled: bool) -> Option<TauntStand> {
+fn left_behind(state: &GameState, stand: &TauntStand, exiled: bool, w: &EvalWeights) -> Option<TauntStand> {
     (!exiled && has_keyword(&stand.view.keywords, KeywordKind::Reborn)).then(|| {
-        let (body, view) = reborn_return(state, &stand.unit);
+        let (body, view) = reborn_return(state, &stand.unit, w);
         TauntStand::of(body, view)
     })
 }
@@ -2311,10 +2315,21 @@ fn struck_down(standing: &IndexMap<&str, AttackerStand>, attacker: &CardInstance
 
 /// §4.5 step 4: the body a destroyed Reborn unit comes back as, a reset instance (R78) without Reborn
 /// at `REBORN_HEALTH`, and its view. A printed Divine Shield comes back with it; a granted keyword, a
-/// buff, or Defense Position's Taunt, is gone.
-pub(crate) fn reborn_return(state: &GameState, unit: &CardInstance) -> (CardInstance, UnitView) {
-    let mut body = unit.clone();
-    reset_instance(&mut body);
+/// buff, or Defense Position's Taunt, is gone. With `w.reborn_body_read` (R4798000) the reset instance is
+/// the engine's own (`reborn_body_of`): its keeper's card, on the side it died on (R2618000), and a unit
+/// token keeps the X/X it was summoned as (R175); off, it is the unit reset to its owner.
+pub(crate) fn reborn_return(
+    state: &GameState,
+    unit: &CardInstance,
+    w: &EvalWeights,
+) -> (CardInstance, UnitView) {
+    let mut body = if w.reborn_body_read {
+        reborn_body_of(state, unit)
+    } else {
+        let mut body = unit.clone();
+        reset_instance(&mut body);
+        body
+    };
     body.reborn_spent = Some(true);
     body.damage = (unit_view(state, &body).max_health - REBORN_HEALTH).max(0);
     let view = unit_view(state, &body);
@@ -2323,8 +2338,8 @@ pub(crate) fn reborn_return(state: &GameState, unit: &CardInstance) -> (CardInst
 
 /// §4.5 step 4: the body a destroyed Reborn Taunt comes back as (`reborn_return`), or nothing when
 /// the body has no Taunt.
-fn reborn_body(state: &GameState, taunt: &CardInstance) -> Option<(CardInstance, UnitView)> {
-    let (body, view) = reborn_return(state, taunt);
+fn reborn_body(state: &GameState, taunt: &CardInstance, w: &EvalWeights) -> Option<(CardInstance, UnitView)> {
+    let (body, view) = reborn_return(state, taunt, w);
     has_keyword(&view.keywords, KeywordKind::Taunt).then_some((body, view))
 }
 
@@ -2337,7 +2352,7 @@ pub fn kill_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights, price
     if !unit_has(state, unit, KeywordKind::Reborn) {
         return worth;
     }
-    let (body, _) = reborn_return(state, unit);
+    let (body, _) = reborn_return(state, unit, w);
     worth - unit_worth(state, &body, w, prices)
 }
 
@@ -2391,7 +2406,12 @@ fn death_probe(
         return Some(None);
     };
     let reborn = if unit_has(before, unit, KeywordKind::Reborn) {
-        unit_worth(before, &reborn_return(before, unit).0, &AI_EVAL, Prices::NONE)
+        unit_worth(
+            before,
+            &reborn_return(before, unit, &AI_EVAL).0,
+            &AI_EVAL,
+            Prices::NONE,
+        )
     } else {
         0.0
     };

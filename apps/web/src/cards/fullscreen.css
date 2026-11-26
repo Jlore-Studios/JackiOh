@@ -42,22 +42,22 @@
 
 .fullscreen-art-plane[data-plane="far"] {
   translate: calc(var(--cf-tilt-x, 0) * -12px) calc(var(--cf-tilt-y, 0) * -12px);
-  animation: fullscreen-dolly-far var(--fs-dolly-period, 12s) var(--ease-in-out) infinite alternate;
+  animation: fullscreen-dolly-far var(--fs-dolly-period, 12s) var(--ease-in-out) 2 alternate;
 }
 
 .fullscreen-art-plane[data-plane="middle"] {
   translate: calc(var(--cf-tilt-x, 0) * -4px) calc(var(--cf-tilt-y, 0) * -4px);
-  animation: fullscreen-dolly-middle var(--fs-dolly-period, 12s) var(--ease-in-out) infinite alternate;
+  animation: fullscreen-dolly-middle var(--fs-dolly-period, 12s) var(--ease-in-out) 2 alternate;
 }
 
 .fullscreen-art-plane[data-plane="near"] {
   translate: calc(var(--cf-tilt-x, 0) * 8px) calc(var(--cf-tilt-y, 0) * 8px);
-  animation: fullscreen-dolly-near var(--fs-dolly-period, 12s) var(--ease-in-out) infinite alternate;
+  animation: fullscreen-dolly-near var(--fs-dolly-period, 12s) var(--ease-in-out) 2 alternate;
 }
 
 .fullscreen-art-plane[data-plane="nearest"] {
   translate: calc(var(--cf-tilt-x, 0) * 20px) calc(var(--cf-tilt-y, 0) * 20px);
-  animation: fullscreen-dolly-nearest var(--fs-dolly-period, 12s) var(--ease-in-out) infinite alternate;
+  animation: fullscreen-dolly-nearest var(--fs-dolly-period, 12s) var(--ease-in-out) 2 alternate;
 }
 
 /* R3350000: a Mythic's diorama: each slice shifts with the tilt by its depth (`--fs-slice-shift`, FullScreenArt `sliceShiftPx`),
