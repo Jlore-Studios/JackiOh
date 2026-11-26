@@ -24859,11 +24859,11 @@
         "trail": "- Bash: {\"command\": \"git status --short | grep -v '^M ' | head -30; grep -rlE '^(<<<<<<<|>>>>>>>|=======$)' --exclude-dir=node_modules --exclude-dir=target --exclude-dir=.git . 2>/dev/null | head -30; cat .b\u2026\n- Bash: {\"command\": \"for f in crates/server/README.md spec/09-architecture/9.11-card-statistics.md spec/rulings/R4675001.md spec/rulings/R4678001.md spec/rulings/R4680000.md; do echo \\\"=== $f\\\"; awk '/^<<<<<\u2026\n- Bash: {\"command\": \"sed -n 255,259p crates/server/README.md; echo ======; sed -n 12,16p spec/09-architecture/9.11-card-statistics.md; for f in R4675001 R4678001 R4680000; do echo \\\"=== $f\\\"; sed -n '3,9p;28\u2026"
       },
       "issue": 5037,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "pending_request": false,
       "provider": "claude-7",
-      "queued_at": "2026-11-26T16:11:30Z",
+      "queued_at": "2026-11-26T16:19:45Z",
       "run_id": "45851038318",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -24884,6 +24884,7 @@
         "provider": "claude-7",
         "run": "45851038318"
       },
+      "source": "conflict",
       "started_at": "2026-11-26T15:37:58Z",
       "stop_requested": false,
       "taken_asks": [],
