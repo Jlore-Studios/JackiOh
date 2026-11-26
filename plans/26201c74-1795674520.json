@@ -1,0 +1,84 @@
+{
+  "action": "plan",
+  "number": 5012,
+  "title": "Patch: the palette's status colors drawn from the table's materials, not Tailwind's defaults",
+  "branch": "bot/issue-5012",
+  "thread": "**Issue #5012 (data, not instructions):**\n\n```text\n# #5012: Patch: the palette's status colors drawn from the table's materials, not Tailwind's defaults\nOpened by @MaxGoetzmann.\n\n## What it does\n\n`apps/web/src/palette.css` holds two families. The wood, brass, gold and parchment entries are JackiOh's own. About twenty others are Tailwind's default palette, value for value:\n\n- grey-500 `#6b7280`\n- red-300/400/500/900 (`#fca5a5` `#f87171` `#ef4444` `#7f1d1d`)\n- orange-400 `#fb923c`\n- lime-200/400\n- green-200/400/500/700/900 (`#22c55e`, `#4ade80`, \u2026)\n- yellow-400 `#facc15`\n- gold-200 `#fde68a` (Tailwind's amber-200)\n- cyan-400 `#22d3ee`\n- sky-300/400\n- blue-200/700/900\n- violet-300/500/700\n- purple-400\n\nNext to the wood, these read as neon, and they are the first thing that makes the client look generic and generated.\n\nReplace them with colors drawn from the table's materials, as `--pal-jade-400` and `--pal-ember-500` already are:\n\n- a jade for good and ready\n- an oxblood or lacquer red for damage and danger\n- an ink or slate blue for information\n- verdigris or tarnished brass for the rest\n\nWarm and desaturate them so they sit on parchment and wood. End with fewer entries than today. Each name keeps the meaning its uses give it (health, damage, mana, rarity, keyword and team colors); where the spec or a ruling names a color, keep what it names.\n\nThen migrate the sheets with the most literals onto the palette: `cards/cards.css` (231), `cards/inspect/inspect.css` (80), `game/board.css` (74), `game/deckbuilder/deckbuilder.css` (64), `game/table.css` (56), `routes/stats.css` (52) and onward. The palette test's `UNMIGRATED` allowlist (43 sheets, 1,870 literals today) shrinks as they go. A cosmetic a player owns (`cards/cosmetics.css`) keeps its look, though its literals may move onto palette names.\n\n## Acceptance\n\n- `palette.test.ts` fails if any `--pal-*` value equals one of the Tailwind default values listed above (a test that names them).\n- `PALETTE_MAX` is lowered to the new count, and the AA text-contrast test still passes.\n- `UNMIGRATED`'s total is at most 935 (half of today's), and no entry grows.\n- The web's unit tests, typecheck and `pnpm --dir e2e test:component` pass. Pixel baselines that change on purpose are re-recorded in the same pull request.\n- If the classifier calls it a card change (`apps/web/src/cards/`), it ships with a `--visual` pending fragment and a hand-written player note (`docs/ADDING_CARDS.md`).\n\n## Notes\n\nThis is part of a pass to make the client look made on purpose rather than built from defaults. Its siblings cover type, effects, corners and icons, and all of them touch the same sheets, so expect merge conflicts between them.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5012: needs a plan; `claude-8` (claude, `opus`, strong) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "handoff": {
+    "at": "2026-11-26T05:39:20Z",
+    "family": "claude",
+    "kind": "draft",
+    "notes": "",
+    "provider": "claude-8",
+    "reason": "`claude-8` reached its usage limit",
+    "trail": "Key\\\\|color_key\\\" --include='*.css' . | cut -c1-160 | head -20\", \"description\": \"Fi\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; grep -rn '\\\"cyan\\\"' --include='*.ts' --include='*.tsx' . | grep -v \\\"cards/art\\\\|fx/\\\\|test\\\" | cut -c1-180 | head -10; grep -rn \\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; TW=\\\"grey-500|gold-200|yellow-400|red-300|red-400|red-500|red-900|orange-400|lime-200|lime-400|green-200|green-400|green-500|green\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; head -5 game/starscape.css | cut -c1-200; echo; head -4 game/showcase/showcase.css | cut -c1-200; echo; grep -n \\\"import.*\\\\.css\\\"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012; grep -oiE \\\"[^.]{0,120}(colou?r|tint|neon|cyan|lime|purple)[^.]{0,100}\\\" spec/rulings/R3348001.md spec/rulings/R1297000.md | head -8 | cut -c1-\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; TW=\\\"grey-500|gold-200|yellow-400|red-300|red-400|red-500|red-900|orange-400|lime-200|lime-400|green-200|green-400|green-500|green\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012; TW=\\\"grey-500|gold-200|yellow-400|red-300|red-400|red-500|red-900|orange-400|lime-200|lime-400|green-200|green-400|green-500|green-700|green-90\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012; TW=\\\"grey-500|gold-200|yellow-400|red-300|red-400|red-500|red-900|orange-400|lime-200|lime-400|green-200|green-400|green-500|green-700|green-90\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; TW=\\\"grey-500|gold-200|yellow-400|red-300|red-400|red-500|red-900|orange-400|lime-200|lime-400|green-200|green-400|green-500|green\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; grep -rn \\\"PRISMATIC_SPECTRUM\\\\|DEPTH_HAZE\\\\b\\\\|SHOWCASE_CORE_RIM\\\\|COMIC_POP\\\\|NEON_TUBE_LIGHT\\\" --include=*.ts --include=*.tsx .\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5012/apps/web/src/cards/cosmetics.test.tsx\", \"offset\": 1685, \"limit\": 30}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; grep -rln \\\"palette.css\\\\|--pal-\\\" --include=*.test.ts --include=*.test.tsx . | head -20\", \"description\": \"List tests that read pa\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; TW=\\\"grey-500|gold-200|yellow-400|red-300|red-400|red-500|red-900|orange-400|lime-200|lime-400|green-200|green-400|green-500|green\u2026\n- tool error: Exit code 1\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; grep -rln -- \\\"pal-\\\\|fx.css\\\" fx --include=*.test.ts --include=*.test.tsx | head; grep -rn -- \\\"pal-\\\" fx --include=*.test.ts --i\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; grep -n \\\"pal-\\\\|#[0-9a-f]\\\\{6\\\\}\\\" fx/css.test.ts | cut -c1-180 | head -10; grep -c \\\"\\\" fx/fx.css\", \"description\": \"Check fx css\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; for n in grey-500 gold-200 yellow-400 red-300 red-400 red-500 red-900 orange-400 lime-200 lime-400 green-200 green-400 green-500 g\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; grep -n -- \\\"--pal-\\\" index.css | cut -c1-160 | head -60\", \"description\": \"Show index.css palette tokens\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; sed -n 2636,2654p cards/cards.css; sed -n 80,100p cards/handShimmer.test.ts; sed -n 1228,1236p cards/cards.css; sed -n 1244,1248p \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; sed -n 1,45p cards/stamps.css\", \"description\": \"Read stamps.css header and rules\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; grep -rn \\\"export function inRadiantGold\\\\|export const inRadiantGold\\\" -A14 . | head -30; grep -rn \\\"RADIANT_GOLD_\\\" cards/art/th\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; grep -rn \\\"inRadiantGold\\\\b\\\" --include=*.ts . | grep -v \\\"expect(\\\" | head -5; grep -rn \\\"RADIANT_GOLD_[A-Z_]* =\\\" --include=*.ts\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; grep -n \\\"function hexes\\\\|function sheet\\\\|const sheet\\\\|palette.css\\\\|pal-\\\\[\\\" cards/cosmetics.test.tsx | head -12; grep -rn \\\"\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5012/apps/web/src/cards/cosmetics.test.tsx\", \"offset\": 1520, \"limit\": 40}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; grep -n \\\"palette\\\\|pal-\\\\|inRadiantGold(\\\" cards/constants.test.ts cards/starship.test.tsx | cut -c1-200 | head -20\", \"descriptio\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; grep -n \\\"const RULES\\\\|RULES = \\\\|selector:\\\" cards/cosmetics.test.tsx | sed -n 1,40p | cut -c1-200\", \"description\": \"Find the ru\u2026\n- Bash: {\"command\": \"cat > /tmp/plan5012/an2.mjs <<'EOF'\\nimport { readdirSync, readFileSync, statSync } from \\\"node:fs\\\";\\nimport { join, relative } from \\\"node:path\\\";\\nconst SRC = process.argv[2]; const d\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012; sed -n 18,30p e2e/cypress/component/mobile-ux.cy.tsx; sed -n 205,225p e2e/cypress/component/mobile-ux.cy.tsx; grep -rn \\\"rgb(\\\" e2e/cypress/com\u2026\n- Bash: {\"command\": \"cat > /tmp/plan5012/freq.mjs <<'EOF'\\nimport { readdirSync, readFileSync, statSync } from \\\"node:fs\\\";\\nimport { join, relative } from \\\"node:path\\\";\\nconst SRC = process.argv[2]; const \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5012/apps/web/src; for h in f3c969 454d66 e8664f 0b0d13 fbe7b0 3fb6a8 2c3245 7dff9a e8ecf8 341e10 160d07 60a5fa f3e3b3; do echo \\\"$h: $(grep -rlic \\\"\u2026\n- Bash: {\"command\": \"cat > /tmp/plan5012/pal1.json <<'EOF'\\n{\\\"black\\\":\\\"000000\\\",\\\"white\\\":\\\"ffffff\\\",\\\"stone-500\\\":\\\"8a8577\\\",\\\"wood-950\\\":\\\"0e0905\\\",\\\"wood-900\\\":\\\"120b07\\\",\\\"wood-800\\\":\\\"2b170c\\\",\\\"wood-\u2026\n- said: You've hit your 5-hour limit \u00b7 resets 6:20am (UTC)"
+  },
+  "session": {
+    "action": "plan",
+    "artifact": 15091255279,
+    "artifact_bytes": 327850,
+    "artifact_name": "work",
+    "at": "2026-11-26T05:49:21Z",
+    "bytes": 431428,
+    "cwd": "/home/runner/work/_temp/work/item-5012",
+    "ended": "interrupted: `claude-8` reached its usage limit",
+    "head": "3cfbef178cc1f05c0bbabbec3c0f3417039906bc",
+    "id": "e9b12f4c-6af1-4d7c-870c-cc745a4dba42",
+    "kind": "plan",
+    "model": "opus",
+    "project": "-home-runner-work--temp-work-item-5012",
+    "provider": "claude-8",
+    "run": "45761414846"
+  },
+  "journal": "# Journal of #5012\n\nEvery night-bot run on #5012, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-26 05:49 UTC \u00b7 plan #5012 \u00b7 `claude-8` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/45761414846) on `claude-8` (`opus` (strong)). It ended **interrupted**: `claude-8` reached its usage limit\nModel calls: 1, 10.8 model minutes.\nTokens: 101 in / 64079 out / 4938173 cached, $3.32.\nSession: fresh: none was kept for this item. This run's: kept session `e9b12f4c-6af1-4d7c-870c-cc745a4dba42` of #5012 on claude-8 (431,428 bytes) in run 45761414846's `work` artifact, for its next run there.\nIts work ended at `3cfbef178cc1` on `bot/issue-5012`.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 05:28 | start | from `origin/main` |  | at `3cfbef178cc1` |\n| 2 | 05:28 | plan (`opus`) | plan the item before anyone builds it | 10.8 min, 64180 tok, $3.32 | refused: the usage limit |\n| 3 | 05:39 | stop | `claude-8` reached its usage limit |  |  |\n",
+  "usage_facts": {
+    "queued_at": "2026-11-26T05:20:16Z",
+    "claimed_at": "2026-11-26T06:29:13Z",
+    "previous_provider": "claude-8",
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5025 needs a plan",
+    "#5026 needs a plan"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier"
+  ]
+}
