@@ -22024,14 +22024,6 @@
         "reason": "`claude-1` stops mid-call: 5-hour usage is 100%, at or over its 100% cap; it resets at 2026-11-26T11:20:00Z",
         "trail": " cut -c1-170 | head -50\", \"description\": \"I\u2026\n- Write: {\"file_path\": \"/tmp/pr_body.md\", \"content\": \"The 2026-11-26 code audit (#5005): eight dead exports unexported, six duplicated helpers merged, the zombie routes flagged (none deleted), three new impli\u2026\n- Bash: {\"command\": \"grep -n 'export const paths' -A80 apps/web/src/*.ts apps/web/src/**/*.ts 2>/dev/null | head -5; git grep -ln 'export const paths\\\\b\\\\|export const paths =' -- apps/web/src | head\", \"desc\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-5005/d8226db6-8449-4dca-877a-b86cd10341f9/tasks/brjbd8flv.output; tail -2 /tmp/wasm_build.txt\", \"description\": \"Check engine test a\u2026\n- Bash: {\"command\": \"git log --oneline 6e1450bf6f.. -- crates/run/src/assault apps/web/src/assault; git log --oneline -5 -- apps/web/src/assault/store.ts crates/run/src/assault/attempt.rs\", \"description\": \"C\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re,subprocess\\ns=open('apps/web/src/net/navigate.ts').read()\\ni=s.index('export const paths = {')\\nj=s.index('\\\\n};',i)\\nbody=s[i:j]\\nkeys=re.findall(r'^\\\\s{2}(\u2026\n- tool error: Exit code 1 Traceback (most recent call last): File \"<stdin>\", line 4, in <module> ValueError: substring not found\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5005; for t in r4848000_a_second_prompt_for_the_same_non_active_holder_gets_its_own_30_seconds r4848000_the_same_prompt_synced_again_keeps_its_deadli\u2026\n- Bash: {\"command\": \"sed -n 256,310p apps/web/src/net/navigate.ts\", \"description\": \"Read the paths table\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re,subprocess\\nlines=open('apps/web/src/net/navigate.ts').read().split('\\\\n')\\nstart=[i for i,l in enumerate(lines) if l.startswith('export const paths = {')][0\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5005; awk '/^mod [a-z_0-9]+/ {m=$2} /fn r4848000_/ {match($0,/fn [a-z0-9_]+/); print FILENAME\\\": \\\"m\\\"::\\\"substr($0,RSTART+3,RLENGTH-3)}' crates/shar\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5005; grep -n \\\"^mod \\\\|^ mod \\\\|fn r4848000_the_silent_probe\\\" crates/shared/tests/host_fuzz.rs | head\", \"description\": \"Check host_fuzz module layo\u2026\n- Bash: {\"command\": \"ls spec/history | grep -c .; cut -c1-400 spec/pending/4783.md 2>/dev/null | head -5\", \"description\": \"Check the #4783 pending fragment for the retune\"}\n- Bash: {\"command\": \"git grep -hoE '\\\"type\\\": ?\\\"[a-zA-Z]+\\\"' -- 'crates/server/src/*.rs' 'crates/server/src/**/*.rs' 'crates/shared/src/**/*.rs' | sed -E 's/.*\\\"type\\\": ?\\\"([a-zA-Z]+)\\\"/\\\\1/' | sort -u > /t\u2026\n- Bash: {\"command\": \"git grep -nE '\\\"type\\\": ?\\\"(bogus|joinRoom)\\\"' -- crates/server/src crates/shared/src | cut -c1-200\", \"description\": \"Locate the two unmatched type strings\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5005; F=\\\"crates/shared/src/host/rematch.rs crates/shared/src/host/again.rs crates/shared/src/host/boundary.rs crates/server/src/api/rematch.rs\\\"; fo\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='/tmp/pr_body.md'\\ns=open(p).read()\\nold=\\\"- Clean: every `paths.*` page (36) is linked, and the client handles all 27 `type` frames the server sends.\\\"\\nnew=\\\"- Cle\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5005; git show --format= 73279f09d5 -- crates/shared/src/host/rematch.rs; git show --format= 764c367406 -- crates/server/src/api/rematch.rs; git show\u2026\n- Bash: {\"command\": \"git grep -n 'duos/rooms' -- apps/web/src e2e | cut -c1-140 | head -5; git log -S'\\\"/api/duos/rooms\\\"' --oneline -- apps/web/src | head -3; git log -S'stats/ci' --oneline -- apps/web/src/\u2026\n- Bash: {\"command\": \"grep -n 'implicit' crates/tools/tests/acceptance.rs crates/tools/src/*.rs 2>/dev/null | head\", \"description\": \"Check scans referencing implicit-states doc\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5005; git log --oneline 35993a84f6..HEAD -- spec/rulings/R2685000.md; grep -n -i \\\"read\\\\|4686\\\" spec/rulings/R2685000.md | cut -c1-300; awk '/^mod |\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5005; sed -n 1,14p spec/rulings/R2685000.md | cut -c1-700\", \"description\": \"Read R2685000 ruling body\"}\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-5005/d8226db6-8449-4dca-877a-b86cd10341f9/tasks/brjbd8flv.output; tail -1 /tmp/wasm_build.txt\", \"description\": \"Check builds\"}\n- Bash: {\"command\": \"grep -rn '\\\"changed\\\"' crates/server/tests/ | head; grep -rn 'lobby.start_revert_failed\\\\|start_record_failed\\\\|guest_dropped' crates/server/tests | head\", \"description\": \"Look for tests\u2026\n- Bash: {\"command\": \"git status --short | grep -v '^ M apps/web/src/\\\\(assault/fight\\\\|audio\\\\|net\\\\|stats\\\\|fx\\\\)' ; ls -la /tmp/state1*.md /tmp/recheck.md 2>/dev/null\", \"description\": \"See what the agents \u2026\n- tool error: Exit code 2 M apps/web/src/assault/store.test.ts M apps/web/src/assault/store.ts M apps/web/src/assault/test/fixtures.ts M apps/web/src/dungeon/store.ts M apps/web/src/wire/json.test.ts M apps/web/sr\u2026\n- Bash: {\"command\": \"ls spec/09-architecture/ | head -30; grep -ln -i 'lobby' spec/09-architecture/*.md spec/13-duos.md 2>/dev/null | head\", \"description\": \"List architecture spec notes mentioning lobby\"}\n- Bash: {\"command\": \"grep -n -i 'lobby\\\\|lobbies' spec/09-architecture/9.5-matchmaking-lifecycle.md spec/09-architecture/9.4-accounts-collection-loadouts.md | cut -c1-400 | head -20\", \"description\": \"Lobby l\u2026\n- Bash: {\"command\": \"sed -n 10p spec/09-architecture/9.5-matchmaking-lifecycle.md\", \"description\": \"Read \\u00a79.5 private lobbies line\"}\n- Bash: {\"command\": \"git diff crates/wasm/core/src/lib.rs | head -60\", \"description\": \"Review the wasm core diff\"}\n- Bash: {\"command\": \"mkdir -p /tmp/rc && cat > /tmp/rc/check_rust.py <<'EOF'\\nimport re, sys, os\\nroot = sys.argv[1]\\ndoc = open(os.path.join(root, \\\"docs/implicit-states.md\\\")).read()\\n# walk through cites \u2026\n- said: You've hit your 5-hour limit \u00b7 resets 11:20am (UTC)\n- said: You've hit your 5-hour limit \u00b7 resets 11:20am (UTC)\n- said: You've hit your 5-hour limit \u00b7 resets 11:20am (UTC)"
       },
-      "hold": {
-        "ends": "2026-11-26T11:21:54Z",
-        "lifted": "2026-11-26T11:20:48Z",
-        "owner": "claude-1",
-        "since": "2026-11-26T09:21:54Z",
-        "until": "2026-11-26T11:20:00Z",
-        "why": "it refused a call"
-      },
       "interruptions": 0,
       "kind": "build",
       "last_findings": [],
@@ -22052,7 +22044,7 @@
       "planned_tier": "strong",
       "provider": "claude-1",
       "round_tier": "strong",
-      "run_id": "45771745877",
+      "run_id": "pending:7fef8c72-1795692075",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -22071,7 +22063,7 @@
         "provider": "claude-1",
         "run": "45771745877"
       },
-      "started_at": "2026-11-26T06:56:54Z",
+      "started_at": "2026-11-26T11:21:44Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -23975,9 +23967,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T11:06:04Z",
+    "at": "2026-11-26T11:21:44Z",
     "url": "",
-    "what": "revise #5063 on claude-6"
+    "what": "build #5005 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-26T11:12:58Z",
