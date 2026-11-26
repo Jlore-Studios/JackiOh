@@ -23,7 +23,7 @@
 
 .lobby .lobby-modes__legend {
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
   padding: 0;
   margin-bottom: 4px;
 }
@@ -61,12 +61,12 @@
 
 .lobby .lobby-mode__name {
   font-weight: 700;
-  font-size: 15px;
+  font-size: var(--type-lg);
 }
 
 .lobby .lobby-mode__hint {
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .lobby .lobby-select {
@@ -83,7 +83,7 @@
 .lobby .lobby-note {
   margin: 4px 0 0;
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .lobby .lobby-verdict {
@@ -91,7 +91,7 @@
   padding: 8px 12px;
   border-radius: 8px;
   border: 1px solid var(--line);
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .lobby .lobby-verdict[data-ready="true"] {
@@ -198,15 +198,15 @@
   align-items: center;
   gap: 10px;
   margin: 0;
-  font-family: var(--tavern-serif);
-  font-size: 20px;
+  font-family: var(--font-display);
+  font-size: var(--type-2xl);
   font-weight: 700;
   color: var(--tavern-gold-pale);
 }
 
 .tavern.play-screen .play-panel__heading--sub {
   margin-top: 8px;
-  font-size: 17px;
+  font-size: var(--type-xl);
 }
 
 .tavern.play-screen .play-step {
@@ -219,7 +219,7 @@
   border-radius: 50%;
   background: radial-gradient(circle at 40% 35%, #fff0bf, var(--tavern-gold) 45%, #a86a1f);
   color: var(--tavern-ink);
-  font-size: 14px;
+  font-size: var(--type-md);
   font-weight: 800;
   box-shadow: 0 2px 0 #4a2a0e;
 }
@@ -345,15 +345,15 @@
 }
 
 .tavern.play-screen .play-mode-tile .lobby-mode__name {
-  font-family: var(--tavern-serif);
-  font-size: 17px;
+  font-family: var(--font-display);
+  font-size: var(--type-xl);
   font-weight: 700;
   color: var(--tavern-gold-pale);
 }
 
 .tavern.play-screen .play-mode-tile .lobby-mode__hint {
   color: var(--tavern-text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
   line-height: 1.4;
 }
 
@@ -363,7 +363,7 @@
   border: 1px solid rgba(63, 182, 168, 0.45);
   border-radius: 999px;
   color: #9fe3da;
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-variant-numeric: tabular-nums;
 }
 
@@ -377,7 +377,7 @@
 
 .tavern.play-screen .play-pick label {
   color: color-mix(in srgb, var(--tavern-parchment) 80%, transparent);
-  font-size: 13px;
+  font-size: var(--type-md);
   font-weight: 600;
   letter-spacing: 0.03em;
 }
@@ -407,7 +407,7 @@
 
 .tavern.play-screen .play-pick-summary {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--type-md);
   font-variant-numeric: tabular-nums;
 }
 
@@ -431,7 +431,7 @@
   border-radius: 999px;
   background: rgba(14, 9, 5, 0.7);
   color: var(--tavern-parchment);
-  font-size: 13px;
+  font-size: var(--type-md);
   overflow-wrap: anywhere;
 }
 
@@ -443,7 +443,7 @@
 .tavern.play-screen .lobby-note {
   margin: 0;
   color: var(--tavern-text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .tavern.play-screen .lobby-verdict {
@@ -457,7 +457,7 @@
   border-radius: 10px;
   background: rgba(14, 9, 5, 0.6);
   color: var(--tavern-parchment);
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .tavern.play-screen .lobby-verdict[data-ready="true"] {
@@ -477,7 +477,7 @@
   border-radius: 50%;
   background: var(--play-ready);
   color: var(--tavern-ink);
-  font-size: 12px;
+  font-size: var(--type-sm);
 }
 
 .tavern.play-screen .lobby-verdict__lead {
@@ -492,7 +492,7 @@
 
 .tavern.play-screen .play-leave {
   align-self: center;
-  font-size: 14px;
+  font-size: var(--type-md);
 }
 
 .tavern.play-screen .play-search {
@@ -583,8 +583,8 @@
 .tavern.play-screen .series-panel__label {
   margin: 4px 0 0;
   color: var(--tavern-gold-pale);
-  font-family: var(--tavern-serif);
-  font-size: 15px;
+  font-family: var(--font-display);
+  font-size: var(--type-lg);
   font-weight: 700;
 }
 
@@ -595,13 +595,13 @@
   gap: 4px 12px;
   margin: 0;
   color: var(--tavern-parchment);
-  font-size: 22px;
+  font-size: var(--type-3xl);
   font-weight: 800;
 }
 
 .tavern.play-screen .series-score__first {
   color: var(--tavern-text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
   font-weight: 500;
 }
 
@@ -624,7 +624,7 @@
 
 .tavern.play-screen .series-deck__standing {
   color: var(--tavern-text-dim);
-  font-size: 12px;
+  font-size: var(--type-sm);
 }
 
 .tavern.play-screen .play-trio-deck.series-deck[data-won="true"] {
@@ -680,7 +680,7 @@
 
 .tavern.play-screen .series-picker__clock {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--type-md);
 }
 
 .tavern.play-screen .series-history {
@@ -702,8 +702,8 @@
 }
 
 .tavern.play-screen .series-result__word {
-  font-family: var(--tavern-serif);
-  font-size: 26px;
+  font-family: var(--font-display);
+  font-size: var(--type-3xl);
   font-weight: 800;
   color: var(--tavern-gold-pale);
 }
@@ -725,7 +725,7 @@
 }
 
 .tavern.play-screen .conquest-explainer__dismiss {
-  font-size: 14px;
+  font-size: var(--type-md);
 }
 
 .tavern.play-screen .conquest-explainer__list {
@@ -734,14 +734,14 @@
   margin: 4px 0 0;
   padding-left: 18px;
   color: var(--tavern-parchment);
-  font-size: 14px;
+  font-size: var(--type-md);
   line-height: 1.45;
 }
 
 .tavern.play-screen .series-explainer-toggle {
   align-self: center;
   margin: 0 auto 16px;
-  font-size: 14px;
+  font-size: var(--type-md);
 }
 
 /* --- the board's series banner -------------------------------------------------------------- */
@@ -755,7 +755,7 @@
   border: 1px solid var(--line-bright);
   border-radius: 10px;
   background: var(--bg-raised);
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .series-banner__score {

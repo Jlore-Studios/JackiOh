@@ -485,8 +485,6 @@
   color: var(--text-dim);
   font: inherit;
   font-size: 0.66em;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   cursor: var(--cursor-glove-point, pointer);
 }
 

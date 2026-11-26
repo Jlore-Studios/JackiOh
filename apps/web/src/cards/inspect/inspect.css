@@ -89,7 +89,7 @@
   width: 280px; /* PREVIEW_EXTENDED_WIDTH_PX */
   max-height: 80vh;
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--type-sm);
   line-height: 1.35;
 }
 
@@ -145,7 +145,7 @@
   border-radius: 10px;
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
   color: var(--text, #e8eaf2);
-  font-size: 12.5px;
+  font-size: var(--type-sm);
   line-height: 1.4;
   text-align: left;
 }
@@ -153,10 +153,8 @@
 .inspect-printed-label {
   margin: 0 0 4px;
   color: var(--text-dim, #9aa1b8);
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .inspect-printed-text {
@@ -205,10 +203,8 @@
 .inspect-refs-label {
   margin: 0 0 6px;
   color: var(--text-dim, #9aa1b8);
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .inspect-refs-faces {
@@ -234,7 +230,7 @@
   border-radius: 10px;
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
   color: var(--text, #e8eaf2);
-  font-size: 12.5px;
+  font-size: var(--type-sm);
   line-height: 1.4;
   text-align: left;
 }
@@ -460,10 +456,8 @@
 
 .inspect-detail-caption {
   color: var(--text-dim, #9aa1b8);
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .inspect-detail-face--radiant .inspect-detail-caption {
@@ -473,7 +467,7 @@
 .inspect-meta {
   margin: 0;
   color: var(--text-dim, #9aa1b8);
-  font-size: 13px;
+  font-size: var(--type-md);
   text-align: center;
 }
 
@@ -488,7 +482,7 @@
   border: 1px solid color-mix(in srgb, #e3d2ac 35%, var(--line-bright, #454d66));
   border-radius: 10px;
   background: linear-gradient(180deg, rgb(246 236 212 / 0.08), rgb(246 236 212 / 0.03));
-  font-size: 13.5px;
+  font-size: var(--type-md);
   line-height: 1.45;
   text-align: left;
 }
@@ -506,10 +500,8 @@
   min-width: 4.6em;
   margin-right: 6px;
   color: var(--text-dim, #9aa1b8);
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .inspect-rules-line--radiant {
@@ -550,7 +542,7 @@
 }
 
 .inspect-detail-meta {
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 /* Card stats block in CardDetail (R654) */
@@ -562,7 +554,7 @@
   border: 1px solid var(--line-bright, #454d66);
   border-radius: 10px;
   background: rgba(11, 13, 19, 0.6);
-  font-size: 13px;
+  font-size: var(--type-md);
   color: var(--text, #e8eaf2);
 }
 
@@ -573,10 +565,8 @@
 }
 
 .inspect-stats-title {
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--text-dim, #9aa1b8);
 }
 
@@ -593,17 +583,17 @@
 }
 
 .inspect-stats-metric-label {
-  font-size: 11px;
+  font-size: var(--type-xs);
   color: var(--text-dim, #9aa1b8);
 }
 
 .inspect-stats-metric-value {
-  font-size: 13.5px;
+  font-size: var(--type-md);
   font-weight: 600;
 }
 
 .inspect-stats-sample-hint {
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 400;
   color: var(--text-dim, #9aa1b8);
 }
@@ -611,7 +601,7 @@
 .inspect-stats-personal {
   padding-top: 6px;
   border-top: 1px dashed var(--line, #2c3245);
-  font-size: 12px;
+  font-size: var(--type-sm);
   color: var(--text, #e8eaf2);
 }
 
@@ -625,7 +615,7 @@
 
 .inspect-stats-link {
   color: var(--accent, #60a5fa);
-  font-size: 12px;
+  font-size: var(--type-sm);
   text-decoration: none;
 }
 
@@ -636,7 +626,7 @@
 .inspect-stats-loading,
 .inspect-stats-unavailable {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--type-sm);
   color: var(--text-dim, #9aa1b8);
 }
 
@@ -847,7 +837,7 @@
   border: 1px solid var(--line-bright, #454d66);
   border-radius: 10px;
   color: var(--text, #e8eaf2);
-  font-size: 12.5px;
+  font-size: var(--type-sm);
   line-height: 1.4;
   text-align: left;
 }
@@ -871,10 +861,8 @@
 
 .inspect-tuned-ribbon {
   margin: 0 0 4px;
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .inspect-tuned-changes,
@@ -963,7 +951,7 @@
 .inspect-flavour-text {
   margin: 0;
   color: var(--text-dim, #9aa1b8);
-  font-size: 12.5px;
+  font-size: var(--type-sm);
   font-style: italic;
   line-height: 1.4;
 }
@@ -971,7 +959,7 @@
 .inspect-artist {
   margin: 4px 0 0;
   color: var(--text-dim, #9aa1b8);
-  font-size: 11px;
+  font-size: var(--type-xs);
   letter-spacing: 0.04em;
 }
 
@@ -996,7 +984,7 @@
   background: rgba(11, 13, 19, 0.94);
   border: 1px solid var(--line-bright, #454d66);
   border-radius: 10px;
-  font-size: 12px;
+  font-size: var(--type-sm);
   text-align: left;
 }
 
@@ -1047,21 +1035,21 @@
 
 .inspect-list-title {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--type-md);
   font-weight: 700;
   letter-spacing: 0.02em;
 }
 
 .inspect-list-count {
   color: var(--radiant, #ffd24a);
-  font-size: 13px;
+  font-size: var(--type-md);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 
 .inspect-list-order {
   color: var(--text-dim, #9aa1b8);
-  font-size: 12px;
+  font-size: var(--type-sm);
 }
 
 .inspect-list-grid {
@@ -1083,7 +1071,7 @@
 
 .inspect-list-more {
   color: var(--text-dim, #9aa1b8);
-  font-size: 12.5px;
+  font-size: var(--type-sm);
 }
 
 /* A card back in a library's list (R312): the back fills the tile, and it opens nothing. */
@@ -1105,7 +1093,7 @@
   background: var(--radiant, #ffd24a);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
   color: #16131f;
-  font-size: 14px;
+  font-size: var(--type-md);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
@@ -1148,7 +1136,7 @@
 }
 
 .inspect-list-sheet .inspect-list-title {
-  font-size: 17px;
+  font-size: var(--type-xl);
 }
 
 /* R3221000: the header keeps clear of the ✕ at the sheet's top right (DialogClose) and is as tall as it,
@@ -1296,7 +1284,7 @@
   border-radius: 8px;
   background: rgb(10 13 22 / 0.92);
   color: #f1f4fb;
-  font-size: 12.5px;
+  font-size: var(--type-sm);
   font-weight: 700;
   line-height: 1.25;
   text-align: left;
@@ -1333,7 +1321,7 @@
   inset: 0;
   display: block;
   border-radius: inherit;
-  font-size: 16px;
+  font-size: var(--type-lg);
 }
 
 .inspect-facedown-words {
@@ -1347,13 +1335,13 @@
   border-radius: 10px;
   background: rgb(11 13 19 / 0.94);
   color: var(--text, #e8eaf2);
-  font-size: 13px;
+  font-size: var(--type-md);
   line-height: 1.4;
   text-align: left;
 }
 
 .inspect-facedown-title {
-  font-size: 15px;
+  font-size: var(--type-lg);
   font-weight: 800;
 }
 
@@ -1380,8 +1368,7 @@
   display: block;
   margin-top: 4px;
   color: var(--text-dim, #9aa1b8);
-  font-size: 11px;
-  text-transform: uppercase;
+  font-size: var(--type-xs);
 }
 
 .inspect-quest-rewards {

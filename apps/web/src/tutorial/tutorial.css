@@ -79,7 +79,7 @@
   gap: 8px;
   margin: 0;
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
   white-space: nowrap;
 }
 
@@ -105,7 +105,7 @@
   min-height: 44px;
   padding: 8px 16px;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: var(--type-md);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -167,7 +167,7 @@
   border-radius: 50%;
   background: var(--bg-sunken);
   color: var(--text-dim);
-  font-size: 15px;
+  font-size: var(--type-lg);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
@@ -225,10 +225,8 @@
 .app-shell .tutorial-lesson__kicker {
   margin: 0;
   color: var(--text-dim);
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .tutorial-lesson__next {
@@ -238,14 +236,14 @@
 .app-shell .tutorial-lesson__title {
   margin: 0;
   color: var(--text);
-  font-size: 16px;
+  font-size: var(--type-lg);
   font-weight: 750;
   line-height: 1.25;
 }
 
 .app-shell .tutorial-lesson__summary {
   color: var(--text-dim);
-  font-size: 15px;
+  font-size: var(--type-lg);
   line-height: 1.4;
 }
 
@@ -264,7 +262,7 @@
   border-radius: 999px;
   background: var(--bg-sunken);
   color: color-mix(in srgb, var(--coach) 30%, var(--text-dim));
-  font-size: 10.5px;
+  font-size: var(--type-xs);
   line-height: 17px;
   white-space: nowrap;
 }
@@ -287,7 +285,7 @@
   gap: 4px;
   min-width: 0;
   color: var(--text-dim);
-  font-size: 12px;
+  font-size: var(--type-sm);
   line-height: 1.3;
 }
 
@@ -308,7 +306,7 @@
   margin-left: auto;
   padding: 8px 14px;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: var(--type-md);
   font-weight: 700;
 }
 
@@ -360,7 +358,7 @@
   border-radius: 50%;
   background: color-mix(in srgb, var(--coach) 22%, var(--bg-sunken));
   color: var(--coach);
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-weight: 800;
 }
 
@@ -375,7 +373,7 @@
 .tutorial-hud__title {
   overflow: hidden;
   color: color-mix(in srgb, var(--coach) 70%, var(--text));
-  font-size: 14px;
+  font-size: var(--type-md);
   font-weight: 700;
   text-overflow: ellipsis;
 }
@@ -388,7 +386,7 @@
   padding-left: 14px;
   border-left: 1px solid var(--line);
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -423,7 +421,7 @@
   padding: 6px 14px;
   border-color: var(--line-bright);
   background: transparent;
-  font-size: 13px;
+  font-size: var(--type-md);
   white-space: nowrap;
 }
 
@@ -523,7 +521,7 @@
     0 18px 44px -12px rgb(0 0 0 / 85%),
     0 0 28px -10px color-mix(in srgb, var(--coach) 70%, transparent);
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--type-md);
   transition:
     left calc(180ms * var(--anim-scale, 1)) ease-out,
     top calc(180ms * var(--anim-scale, 1)) ease-out,
@@ -574,15 +572,13 @@
 
 .coach__eyebrow {
   color: var(--coach);
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 750;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
 }
 
 .coach__count {
   color: var(--text-dim);
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 650;
   font-variant-numeric: tabular-nums;
 }
@@ -590,7 +586,7 @@
 .app-shell .coach__title {
   margin: 0;
   color: var(--text);
-  font-size: 16px;
+  font-size: var(--type-lg);
   font-weight: 750;
   line-height: 1.25;
 }
@@ -599,7 +595,7 @@
   max-width: none;
   margin: 0;
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--type-md);
   line-height: 1.45;
 }
 
@@ -624,7 +620,7 @@
   border-radius: 10px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--coach) 85%, white), var(--coach));
   color: var(--coach-ink);
-  font-size: 14px;
+  font-size: var(--type-md);
   font-weight: 750;
   white-space: nowrap;
 }
@@ -657,7 +653,7 @@
 
 .app-shell .coach--slim .coach__text {
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 @media (max-width: 1024px), (pointer: coarse) {
@@ -710,7 +706,7 @@
   box-shadow:
     0 10px 22px -14px rgb(0 0 0 / 90%),
     0 0 22px -12px color-mix(in srgb, var(--coach) 70%, transparent);
-  font-size: 13px;
+  font-size: var(--type-md);
   transition: opacity calc(160ms * var(--anim-scale, 1));
 }
 
@@ -733,7 +729,7 @@
    panel taller than the last one's. The heading names the region in full for a screen reader. */
 .app-shell .coach--panel .coach__title {
   overflow: hidden;
-  font-size: 15px;
+  font-size: var(--type-lg);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -750,7 +746,7 @@
 
 .app-shell .coach--panel .coach__ack {
   padding-inline: 11px;
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .coach--panel .coach__body {
@@ -767,7 +763,7 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: var(--coach-lines);
   line-clamp: var(--coach-lines);
-  font-size: 13px;
+  font-size: var(--type-md);
   line-height: var(--coach-line);
 }
 
@@ -784,7 +780,7 @@
   border-radius: 0;
   background: linear-gradient(90deg, transparent, var(--bg-raised) 22px);
   color: var(--coach);
-  font-size: 13px;
+  font-size: var(--type-md);
   font-weight: 750;
   line-height: var(--coach-line);
 }
@@ -919,7 +915,7 @@
 
 .tutorial-result__seal-number {
   fill: var(--glow);
-  font-size: 28px;
+  font-size: var(--type-4xl);
   font-weight: 800;
 }
 
@@ -932,7 +928,7 @@
   border-radius: 8px;
   background: var(--bg-sunken);
   color: var(--text);
-  font-size: 14px;
+  font-size: var(--type-md);
   line-height: 1.4;
   text-align: left;
 }
@@ -954,10 +950,8 @@
 .app-shell .tutorial-result__next-title {
   margin: 0;
   color: var(--coach);
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-weight: 750;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .tutorial-result__next-list {
@@ -967,7 +961,7 @@
   margin: 0;
   padding: 0 0 0 16px;
   color: var(--text);
-  font-size: 13.5px;
+  font-size: var(--type-md);
   line-height: 1.4;
 }
 
@@ -1001,7 +995,7 @@
 
   .tutorial-lesson__node {
     margin-top: 12px;
-    font-size: 14px;
+    font-size: var(--type-md);
   }
 
   .tutorial-lesson__card {
