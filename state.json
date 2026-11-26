@@ -22436,6 +22436,7 @@
           }
         ],
         "head": "991f619e735794b5184303620518266a1bf1355e",
+        "interruptions": 0,
         "kind": "build",
         "model": "muse-spark-1.3-contributor",
         "provider": "muse",
