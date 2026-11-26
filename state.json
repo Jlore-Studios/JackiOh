@@ -21520,13 +21520,14 @@
       "merge_owner": "agy",
       "merged": true,
       "pending_request": false,
-      "provider": "agy",
+      "provider": "claude-8",
       "queued_at": "2026-11-26T20:02:15Z",
-      "run_id": "45888452153",
-      "runs_on": "night-vm-agy",
+      "run_id": "pending:1ccc20fb-1795726610",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 615,
-      "started_at": "2026-11-26T20:05:23Z",
+      "started_at": "2026-11-26T20:57:17Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -21641,9 +21642,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T20:41:17Z",
+    "at": "2026-11-26T20:57:17Z",
     "url": "",
-    "what": "plan #5117 on claude-3"
+    "what": "spot-check #5115 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-26T20:48:05Z",
@@ -44420,7 +44421,15 @@
         "n": 615,
         "pr": 5115,
         "queued_at": "2026-11-26T20:50:42Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:1ccc20fb-1795726610",
         "sha": "cd5380f08472b80a439b9a85f31fa87d86a61167",
+        "started_at": "2026-11-26T20:57:17Z",
         "status": "queued",
         "title": "Patch: a pull request that changes a card also runs the e2e specs whose seeded games deal or name that card, within a time cap",
         "tries": 0
