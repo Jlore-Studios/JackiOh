@@ -44550,49 +44550,10 @@
   },
   "suggest": {
     "asks": [],
-    "auto": {
-      "4977": {
-        "at": "2026-11-25T23:53:07Z",
-        "why": "Confirmed on main: the page loads card proficiency once when the shared sync starts (`proficiencySync.ts:67`), the sync survives the move from the match to the Collection, and the match's paid result calls only `announceWallet()`, so a level or stamp a counted game earned stays stale and can't be picked until a reload; this is the same small fix #4780 made for cosmetics, which was approved."
-      },
-      "4982": {
-        "at": "2026-11-26T00:41:53Z",
-        "why": "Confirmed; Duos match finish unnecessarily opens a second transaction and re-queries the ledger for Jlore caps that pay_coop already returned in memory, retaining the exact waste eliminated for 1v1 in #4711."
-      },
-      "4999": {
-        "at": "2026-11-26T03:07:01Z",
-        "why": "A Glitch-voided Assault fight is recorded as a loss today though R679 says it never happened, and the fix mirrors the shipped dungeon reading with the void helper and test already in the tree."
-      },
-      "5001": {
-        "at": "2026-11-26T03:20:25Z",
-        "why": "Confirmed: spec 36 deletes a card from its module-level `remaining` set (:139) before `afterPlay` checks it, and `before` does not run again on Cypress's one retry, so the retry deals a game without the failing card and the daily run passes. The test hides a deterministic failure today, and the fix is a few lines in one spec."
-      },
-      "5006": {
-        "at": "2026-11-26T04:34:43Z",
-        "why": "It deal-screens the untuned affliction weight the sweep was meant to revisit, keeping 1.0 only on a measured edge."
-      },
-      "5007": {
-        "at": "2026-11-26T04:34:46Z",
-        "why": "It deal-screens the untuned attack-hook share the smoke gate cannot distinguish, keeping it only on a measured edge."
-      },
-      "5010": {
-        "at": "2026-11-26T04:57:29Z",
-        "why": "It fixes a real touch-only dead end where a greyed Buy shows nothing, matching the R3768000 rule every other greyed control already follows."
-      },
-      "5011": {
-        "at": "2026-11-26T04:57:31Z",
-        "why": "It ports yesterday's proven Dungeon stale-cache fix to the sibling Assault store, preventing another tab's attempts and reports from being overwritten."
-      },
-      "5122": {
-        "at": "2026-11-26T22:21:23Z",
-        "why": "Confirmed: nothing under crates/ai/src/ reads a CostRule, coming_refreshes (evaluate.rs:1153) prices only the mana rider and lost refreshes, the enemy hand is a flat rate (evaluate.rs:1535) and the reply plays no unseen card, so the AI scores Cost Injection's cast as a lost card; the sweep shows it never played on all four pass-1 lines (assault-sweep-2026-11-26.md:1599-1602) and its eval falling a"
-      },
-      "5123": {
-        "at": "2026-11-26T22:21:26Z",
-        "why": "Confirmed: resume_save's live_of (fork_screen.rs:1016) counts the forks of every saved deal, including the deals of a cut --extend batch past target, before it calls next_batch(target, \u2026) at :1025 and :1067, so a save holding deals 1-200 with 18 live forks plus 15 cut deals holding 2 more reads as finished at 215 deals, while the uncut loop (:1170-1203) tallies all 300; that breaks R4607000's prom"
-      }
-    },
-    "auto_approved": [],
+    "auto": {},
+    "auto_approved": [
+      "2026-11-26T23:19:32Z"
+    ],
     "decided": [
       {
         "at": "2026-11-24T09:18:09Z",
