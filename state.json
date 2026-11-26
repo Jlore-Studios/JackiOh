@@ -24218,6 +24218,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 605,
       "started_at": "2026-11-26T13:45:56Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -47624,9 +47625,33 @@
         "title": "Patch: a counted game's result reloads the card proficiency the Collection shows, so a level the game earned and its stamp appear without a reload",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-4"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "09e493b5b424ede8ca4f55d7d770c5fe9222d110",
+        "issue": 5014,
+        "merged_at": "2026-11-26T15:32:52Z",
+        "n": 605,
+        "pr": 5073,
+        "queued_at": "2026-11-26T15:32:52Z",
+        "sha": "8a54a004551a2b60950db15928c73e9470aba12d",
+        "status": "queued",
+        "title": "Patch: a motion and glow budget, idle effects only on what the player can act on",
+        "tries": 0
       }
     ],
-    "count": 604
+    "count": 605
   },
   "statistics": {
     "at": "2026-11-26T15:27:49Z"
