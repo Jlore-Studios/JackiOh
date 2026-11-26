@@ -22420,6 +22420,13 @@
     "5010": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-26T08:12:39Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "None of the five hard lines holds: the change is client-only (one component, a testid, one CSS rule, two doc sentences and its tests, about 6 files), with no engine, AI, cross-crate or migration work."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
