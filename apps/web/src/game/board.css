@@ -1403,7 +1403,7 @@ button.modifier-badge[data-open="true"] {
   z-index: var(--z-below);
   pointer-events: none;
   background: radial-gradient(ellipse at center, var(--pal-black) 0%, var(--pal-slate-900) 55%, transparent 75%);
-  animation: jk-hole-breath 6s linear infinite alternate;
+  animation: jk-hole-breath 6s linear 2 alternate;
 }
 
 .lane[data-lane-mark="blackHole"] > .zone {

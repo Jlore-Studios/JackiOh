@@ -36,7 +36,7 @@
   border: 1px solid var(--line, #4a4335);
   border-radius: var(--radius-md);
   background: var(--bg-raised, #2a241c);
-  box-shadow: 0 8px 28px rgb(0 0 0 / 45%);
+  box-shadow: var(--shadow-3);
 }
 
 .sandbox-panel__head {

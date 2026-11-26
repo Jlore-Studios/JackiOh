@@ -52,6 +52,14 @@
 # job already runs at 8): each shard's tests run in about half the old three minutes at most here,
 # so every shard should finish well under eight. Any count other than 8 needs
 # bot/tests/test_ci_matrix.py's pin changed.
+# #5046 flagged `rust (test tools, wasm 4/4)` at 10m 19s. That run (d9fb4d6) predates #4739
+# (#4721's fix, the count of 8), so its copy of this file still said 4: no change was needed.
+# The three slow tests above land in shards 5, 8 and 1 of 8 (matrix.py's `shard` hash,
+# zlib.crc32(name) % total + 1); at 4 shards two of them shared shard 1 and the third sat in
+# shard 4, which is why 1/4 and 4/4 were the slow ones. The count is at its cap, so if a
+# `tools, wasm k/8` shard still passes eight minutes on a base that holds #4739, split the
+# group's tests across more binaries or daily-move the slowest, with a cheaper per-pull-request
+# test keeping each rule.
 "tools, wasm" = 8
 
 # `web (unit k/K)`: Vitest's `--shard=k/K` over the web's and the Worker's unit tests.

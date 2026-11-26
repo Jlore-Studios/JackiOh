@@ -61,6 +61,7 @@ pub mod position_model;
 pub mod prompts_v020;
 pub mod puzzles;
 pub mod ranged_flying;
+pub mod reborn_body;
 pub mod redact_announce;
 pub mod redact_backrow_piles;
 pub mod redact_board_history;

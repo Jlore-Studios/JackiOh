@@ -69,7 +69,7 @@
 .ws-sync[data-state="saving"] .ws-sync-dot {
   background: var(--mana);
   box-shadow: 0 0 6px color-mix(in srgb, var(--mana) 70%, transparent);
-  animation: ws-pulse 900ms ease-in-out infinite alternate;
+  animation: ws-pulse 900ms ease-in-out 2 alternate;
 }
 
 .deckbuilder.app-shell .ws-sync[data-state="offline"] {
@@ -210,13 +210,13 @@
   padding: 7px 22px 7px 10px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
+  background: var(--bg-sunken);
   text-align: left;
 }
 
 .deckbuilder.app-shell .ws-row[aria-current="true"] {
   border-color: color-mix(in srgb, var(--selected) 75%, var(--line-bright));
-  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-raised) 80%, var(--line-bright)), var(--bg-raised));
+  background: var(--bg-raised);
   box-shadow: inset 3px 0 0 var(--selected);
 }
 
@@ -511,7 +511,7 @@
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-lg);
   background: var(--bg-raised);
-  box-shadow: 0 10px 30px rgb(0 0 0 / 60%);
+  box-shadow: var(--shadow-3);
 }
 
 /* --- the deck's history popover (R2100000) ------------------------------------------------------- */
@@ -789,7 +789,7 @@
 
 .deckbuilder.app-shell .ws-ctile:hover {
   border-color: var(--line);
-  background: linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
+  background: var(--bg-sunken);
 }
 
 .deckbuilder.app-shell .ws-ctile[data-conflict="true"],

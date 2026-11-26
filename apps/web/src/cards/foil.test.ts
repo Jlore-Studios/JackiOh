@@ -129,7 +129,7 @@ describe("the animated foil sweep", () => {
       /:root:not\(\[data-reduce-motion="true"\]\) \.cf\[data-foil="animated"\]::after/,
     );
     expect(animated).toMatch(/will-change:\s*transform/);
-    expect(animated).toMatch(/animation:\s*cf-foil-sweep 8s linear infinite/);
+    expect(animated).toMatch(/animation:\s*cf-foil-sweep 8s linear 1;/);
     const keyframes = ruleBody(/@keyframes cf-foil-sweep/);
     expect(keyframes).toMatch(/transform:\s*translateX\(-150%\) skewX\(-25deg\)/);
     expect(keyframes).toMatch(/transform:\s*translateX\(110%\) skewX\(-25deg\)/);
