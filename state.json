@@ -22103,11 +22103,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-26T05:20:51Z",
+        "at": "2026-11-26T14:39:33Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "The AI: changes AI_EVAL.attack_hook in crates/ai/src/config.rs, which prices every attack-hook unit and changes decide's choices"
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "rule 2, the AI: it changes AI_EVAL in crates/ai/src/config.rs, a weight every decision's evaluation reads"
       },
       "failures": 0,
       "forced": false,
