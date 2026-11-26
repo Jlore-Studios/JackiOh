@@ -2418,3 +2418,139 @@ mod r3941000_printed_text_conventions_issue_3941 {
         }
     }
 }
+
+/// R5038000: a face whose script answers from where the card waits prints that trigger as §6.2 writes it,
+/// "While this is in your <zone>: …", naming exactly the zones the script answers from. R3941000's sweep
+/// retires the openings it knew; this one reads the script, so a trigger worded any other way fails too (S+ #89
+/// Animosity's "When your exile has 5 cards, cast this, wherever in your deck it is." and Core #89 Corpse Eater's
+/// "While this is in your hand, it gains …" did). Three printings name their moment without the zone: §6.2's
+/// Float term ("Float reduces cost.", a hand trigger on its owner's Float), a discard ("When you discard this",
+/// a graveyard trigger on the discard) and a Spell's turn hook, read from the hand, the one place a Spell waits.
+mod r5038000_a_trigger_from_where_the_card_waits_reads_while_this_is_in_your {
+    use super::*;
+    use jackioh_engine::CardType;
+    use jackioh_engine::script::{ReplacementWhere, Script};
+
+    const OPENING: &str = "While this is in your ";
+    const FLOAT_TERM: &str = "Float reduces ";
+    const DISCARDS: &[&str] = &["discard this", "this is discarded"];
+    const TURN_HOOKS: &[&str] = &["End of turn:", "Start of turn:"];
+
+    /// The zones `script` answers from, in the order a face names them.
+    fn zones_answered(script: &Script) -> Vec<&'static str> {
+        let mut zones = Vec::new();
+        let from_hand = script
+            .replacements
+            .iter()
+            .any(|replacement| replacement.where_ == Some(ReplacementWhere::Hand));
+        if !script.hand_triggers.is_empty() || from_hand {
+            zones.push("hand");
+        }
+        if !script.deck_triggers.is_empty() || script.cast_from_deck_when.is_some() {
+            zones.push("deck");
+        }
+        if !script.graveyard_triggers.is_empty() {
+            zones.push("graveyard");
+        }
+        zones
+    }
+
+    /// The zones each "While this is in your <zone>: …" line of `text` names.
+    fn zones_printed(text: &str) -> Vec<String> {
+        text.split('\n')
+            .filter_map(|line| line.strip_prefix(OPENING)?.split_once(':'))
+            .map(|(zone, _)| zone.to_string())
+            .collect()
+    }
+
+    /// Whether `text`, on a card of type `card_type`, names the moment of a trigger answered from `zones`
+    /// another way §6.2 prints: the Float term, a discard, or a Spell's turn hook.
+    fn named_another_way(text: &str, card_type: CardType, zones: &[&str]) -> bool {
+        let lines = || text.split('\n');
+        match zones {
+            ["hand"] => {
+                lines().any(|line| line.starts_with(FLOAT_TERM))
+                    || (card_type == CardType::Spell
+                        && lines().any(|line| TURN_HOOKS.iter().any(|hook| line.starts_with(hook))))
+            }
+            ["graveyard"] => DISCARDS.iter().any(|discard| text.contains(discard)),
+            _ => false,
+        }
+    }
+
+    #[test]
+    fn r5038000_the_other_printings_are_only_the_float_term_a_discard_and_a_spell_s_turn_hook() {
+        assert!(named_another_way(
+            "Float reduces cost.\nSteal an enemy card.",
+            CardType::Unit,
+            &["hand"]
+        ));
+        assert!(named_another_way(
+            "Deal 4 damage.\nEnd of turn: Become a random other Book.",
+            CardType::Spell,
+            &["hand"]
+        ));
+        assert!(named_another_way(
+            "When you discard this, take all three penalties.",
+            CardType::Spell,
+            &["graveyard"]
+        ));
+        // A Unit waits on the field too, so its "End of turn:" is a field hook, never its hand's.
+        assert!(!named_another_way(
+            "End of turn: Return this to hand.",
+            CardType::Unit,
+            &["hand"]
+        ));
+        assert!(!named_another_way(
+            "When your exile has 5 cards, cast this, wherever in your deck it is.",
+            CardType::Spell,
+            &["deck"]
+        ));
+        assert!(!named_another_way(
+            "While this is in your hand, it gains the attack and health of each Unit that dies.",
+            CardType::Unit,
+            &["hand"]
+        ));
+        assert_eq!(
+            zones_printed(
+                "While this is in your hand, it gains the attack and health of each Unit that dies."
+            ),
+            Vec::<String>::new(),
+            "an aura's comma is no trigger's colon"
+        );
+    }
+
+    #[test]
+    fn r5038000_every_face_prints_its_waiting_trigger_as_while_this_is_in_your_zone() {
+        jackioh_cards::register_all();
+        let scripts = jackioh_engine::registered_scripts();
+        let mut wrong: Vec<String> = Vec::new();
+        let mut checked = 0;
+        for face in faces_of(&entries()) {
+            let Some(card_scripts) = scripts.get(&face.card.id) else {
+                continue;
+            };
+            let script = match face.face {
+                FaceKind::Base => &card_scripts.base,
+                FaceKind::Radiant => &card_scripts.radiant,
+            };
+            let answered = zones_answered(script);
+            if answered.is_empty() {
+                continue;
+            }
+            checked += 1;
+            let printed = zones_printed(&face.text);
+            if printed.is_empty() && named_another_way(&face.text, face.card.type_, &answered) {
+                continue;
+            }
+            if printed != [answered.join(" or ")] {
+                wrong.push(format!(
+                    "{} {} answers from {answered:?} but prints {printed:?}: {}",
+                    face.card.id, face.face, face.text
+                ));
+            }
+        }
+        assert_eq!(wrong, Vec::<String>::new());
+        assert!(checked > 0, "PREMISE: some face answers from where it waits");
+    }
+}

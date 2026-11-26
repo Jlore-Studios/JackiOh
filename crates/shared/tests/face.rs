@@ -806,7 +806,6 @@ fn r3134001_the_faces_the_balance_pass_put_over_the_limit_clamp() {
     // Issues #3138, #3139 and #3140, and R3134001's Radiant Cry and Aura.
     let both = [
         "core-065",
-        "core-089",
         "classicplus-037",
         "meditative-020",
         "meditative-040",
@@ -822,6 +821,10 @@ fn r3134001_the_faces_the_balance_pass_put_over_the_limit_clamp() {
             assert!(written(id, radiant), "{id} {radiant}");
         }
     }
+    // Issue #5038 (R5038000) wrote Core #89's hand trigger "While this is in your hand: When a Unit dies, …", a
+    // line shorter, and both its faces fit whole again.
+    assert_eq!(short_form_of("core-089", false), None);
+    assert_eq!(short_form_of("core-089", true), None);
     // Issue #4440 put an Activate in Meditative #9's Cry's place, and both its faces fit whole again.
     assert_eq!(short_form_of("meditative-009", true), None);
     assert_eq!(short_form_of("meditative-009", false), None);
@@ -1274,6 +1277,71 @@ fn r3941001_every_written_face_names_only_its_faces_numbers() {
         }
     }
     assert!(written > 0, "PREMISE: some face has written words");
+}
+
+/// R5038000: written words keep a whole text's trigger from where the card waits, "While this is in your
+/// <zone>: …", word for word, so C+ #37 Wardrum's deck trigger reads in game as M #87 Tatches the Totem's, which
+/// prints its whole text, and S+ #89 Animosity's as its whole text does. A "While this is in your hand, …" with
+/// no colon after the zone is an aura, no trigger.
+#[test]
+fn r5038000_written_words_keep_a_while_in_your_trigger_line_whole() {
+    use jackioh_shared::face::data::{SHORT_FORMS, ShortForm};
+    const OPENING: &str = "While this is in your ";
+    let trigger = |line: &str| {
+        line.strip_prefix(OPENING)
+            .and_then(|rest| rest.split_once(':'))
+            .is_some_and(|(zone, _)| !zone.contains(','))
+    };
+    assert!(trigger(
+        "While this is in your hand or deck: After you play 3 non-Units in a turn, summon this."
+    ));
+    assert!(!trigger("While this is in your hand, it costs (1) less."));
+    ready();
+    let mut kept = Vec::new();
+    for (id, (base, radiant)) in SHORT_FORMS {
+        let def = registered_catalog()
+            .get(*id)
+            .unwrap_or_else(|| panic!("{id} is in the catalog"));
+        for (form, face) in [(base, &def.base), (radiant, &def.radiant)] {
+            let Some(ShortForm::Written { en, .. }) = form else {
+                continue;
+            };
+            for line in face.text.lines().filter(|line| trigger(line)) {
+                assert!(
+                    en.lines().any(|own| own == line),
+                    "{id}: {en:?} rewords or drops {line:?}"
+                );
+                kept.push(*id);
+            }
+        }
+    }
+    for held in ["classicplus-037", "stinkyscapeplus-089"] {
+        assert_eq!(
+            kept.iter().filter(|id| **id == held).count(),
+            2,
+            "PREMISE: both of {held}'s written faces hold its deck trigger"
+        );
+    }
+    let tatches = printed("meditative-087", false, Locale::En);
+    assert!(!tatches.has_short_form, "Tatches the Totem prints its whole text");
+    assert!(
+        tatches
+            .text
+            .full
+            .starts_with("While this is in your deck: After you play")
+    );
+    for radiant in [false, true] {
+        let wardrum = printed("classicplus-037", radiant, Locale::En)
+            .short
+            .expect("Wardrum has written words")
+            .full;
+        assert!(
+            wardrum.starts_with(
+                "While this is in your hand or deck: After you play 3 non-Units in a turn, summon this.\nEnd of turn: Recast "
+            ),
+            "{radiant}: {wardrum}"
+        );
+    }
 }
 
 /// R3941001: a written face says what the face does in fewer words, never a rule its whole text lacks.

@@ -1,6 +1,6 @@
 //! Casts from the deck (Stinkyscape+ E8, R3558007): a card whose `castFromDeckWhen` holds is cast
 //! from its owner's library the moment its owner's condition holds at a settled state check —
-//! "when your exile has 5 cards, cast this (wherever in your deck this is)". The cast is the
+//! "While this is in your deck: When your exile has 5 cards, cast this.". The cast is the
 //! owner's own (R453): they make its choices. It is a cast and no play, as a cast on draw is
 //! (R3920001). Like every standing rule it draws no rng, and the per-action cap keeps a card that
 //! returns itself to its deck from casting for ever.
