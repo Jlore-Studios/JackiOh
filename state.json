@@ -22493,6 +22493,13 @@
     "5014": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45767326277",
+        "model": "opus",
+        "provider": "claude-4",
+        "since": "2026-11-26T06:55:04Z",
+        "until": "2026-11-26T07:25:04Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
