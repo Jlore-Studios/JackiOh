@@ -201,5 +201,23 @@ mod tests {
             s.expect_in_zone(ID, "field");
             assert_eq!(active_units_of(s.state(), P1).len(), 5);
         }
+
+        /// R4985000: the gate counts unit zones only; a Flying copy that could stand in the backrow
+        /// (R2248000) does not open it.
+        #[test]
+        fn r4985000_a_full_unit_row_keeps_the_trap_set_even_for_a_flying_unit() {
+            let mut s = scenario(json!({
+                "active": "p2",
+                "p1": {
+                    "backrow": [{ "def": ID, "faceUp": false, "lane": 1 }],
+                    "field": (1..=5).map(|lane| json!({ "def": UNIT, "lane": lane })).collect::<Vec<_>>(),
+                    "mana": 10,
+                },
+                "p2": { "hand": ["stand-in (1) 0/40 Flying"], "mana": 10 },
+            }));
+            s.play("stand-in (1) 0/40 Flying", json!({ "zone": 1 }));
+            s.expect_in_zone(ID, "field");
+            assert_eq!(active_units_of(s.state(), P1).len(), 5);
+        }
     }
 }
