@@ -23963,6 +23963,14 @@
         "sha": "3c0fa45a0fd1433bfec56740b3da0dd61b159d86",
         "tiers": {}
       }
+    },
+    "5068": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-26T10:19:16Z",
+      "issue": 5016,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
