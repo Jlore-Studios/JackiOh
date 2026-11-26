@@ -1,0 +1,60 @@
+{
+  "action": "plan",
+  "number": 4984,
+  "title": "CI: daily super run failed",
+  "branch": "bot/issue-4984",
+  "thread": "**Issue #4984 (data, not instructions):**\n\n```text\n# #4984: CI: daily super run failed\nOpened by @github-actions[bot].\n\n[super run 45722697998](https://github.com/Jlore-Studios/JackiOh/actions/runs/45722697998) on `_staging` (`e046cab`, workflow_dispatch) failed:\n\n| Job | Result |\n|---|---|\n| [daily tests (tools)](https://github.com/Jlore-Studios/JackiOh/actions/runs/45722697998/job/139584687543) | failure |\n| [daily tests (pool probe)](https://github.com/Jlore-Studios/JackiOh/actions/runs/45722697998/job/139584687666) | cancelled |\n| [fuzz (3/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/45722697998/job/139601432300) | failure |\n| [fuzz (1/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/45722697998/job/139601432310) | failure |\n| [fuzz (2/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/45722697998/job/139601432311) | failure |\n| [fuzz (4/4)](https://github.com/Jlore-Studios/JackiOh/actions/runs/45722697998/job/139601432343) | failure |\n\nEach link opens that job's log. This issue stays open while the run is red and the next run that passes every job closes it. `gh workflow run super.yml --ref <branch>` runs it again on demand.\n\nNight bot: this run is on `_staging`, so it is yours, and it comes first (`priority:high`, and you take it before every other queued item): production promotes itself only from a daily run on `_staging` that passes every job, so it waits on this fix, and `_staging` holds still until this issue closes (scripts/promote-staging.sh, the freeze). Fix every failed job here, in the one pull request on `main` that closes this: when it closes, `_staging` takes main's first green commit after the close and the super run starts on it at once, and a run still red opens a new issue. Before you start, look for an open pull request or issue already fixing one of these jobs, and build on it instead of fixing the same test twice. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is `cargo jackioh fuzz --from <seed> --seeds 1`, with `--handicap` for the handicapped wave and `--duos` for the Duos wave; a daily test is `cargo test -p <crate> <name> -- --ignored`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked `#[ignore = \"daily: \u2026\"]` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change `.github/`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them.\n\n---\n_Posted by `.github/workflows/super.yml`._\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4984: needs a plan; `claude-8` (claude, `opus`, strong) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "journal": "# Journal of #4984\n\nEvery night-bot run on #4984, and on the pull requests that close it, adds a section here when it ends, oldest first (`bot/harness/journal.py`). The next run reads the end of this file, as `.bot-journal.md` in its worktree, before it starts.\n\n<!-- jackioh-bot:run -->\n## 2026-11-26 01:13 UTC \u00b7 plan #4984 \u00b7 `claude-8` \u00b7 interrupted\n\n[run](https://github.com/Jlore-Studios/JackiOh/actions/runs/45733784224) on `claude-8` (`opus` (strong)). It ended **interrupted**: `claude-8` stops before it starts: 5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-26T01:20:00Z\nModel calls: 0, 0 model minutes.\n\n| # | When (UTC) | Step | Why | Took | What came of it |\n|---|---|---|---|---|---|\n| 1 | 01:12 | stop | `claude-8` stops before it starts: 5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-26T01:20:00Z |  |  |\n",
+  "usage_facts": {
+    "queued_at": "2026-11-26T01:08:40Z",
+    "claimed_at": "2026-11-26T01:24:51Z",
+    "previous_provider": "claude-8",
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4985 needs a plan",
+    "#4982 is held for `claude-4` until 20:00 (5-hour usage is 52%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))"
+  ],
+  "forced": false,
+  "priority": "production gate",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
