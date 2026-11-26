@@ -23932,13 +23932,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-4",
         "rejections": [],
-        "reviews": [],
-        "sha": "3c0fa45a0fd1433bfec56740b3da0dd61b159d86",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-4",
+            "run": "45806007838",
+            "tier": "strong"
+          }
+        ],
+        "sha": "4e3d263546831001aa08db188a2c9d30fc8ca331",
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "5068": {
