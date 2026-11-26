@@ -23647,6 +23647,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 607,
       "started_at": "2026-11-26T15:38:42Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -47971,7 +47972,7 @@
         "verdict": "findings"
       }
     ],
-    "count": 606
+    "count": 607
   },
   "statistics": {
     "at": "2026-11-26T17:35:19Z"
