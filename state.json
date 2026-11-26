@@ -24676,15 +24676,16 @@
         "reason": "RuntimeError: the planner on opus wrote no plan: claude exited 1",
         "trail": "est 6475ms > 5000ms => FAILS deterministically-ish on a 4-core box. Alone:\u2026\n- Bash: {\"command\": \"export CARGO_PROFILE_TEST_DEBUG=0; (time cargo test --workspace --exclude jackioh-tools --tests --features jackioh-engine/testkit,jackioh-engine/ts -- --ignored) > /tmp/daily-crates.log \u2026\n- Bash: {\"command\": \"cat package.json | head -40; grep -rn \\\"it.each\\\\|describe.each\\\" apps/web/src --include=*.test.ts | head -3\", \"description\": \"Check root scripts and existing it.each usage\"}\n- Bash: {\"command\": \"sed -n 1,20p apps/web/src/fx/layerBudget.test.ts | head -3; grep -n \\\"parseSheet\\\\|readSheet\\\" apps/web/src/fx/layerBudget.test.ts | head; sed -n 355,362p apps/web/src/test/layerEstimate\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n## Plan skeleton (near final)\\nFiles: apps/web/src/fx/layerBudget.test.ts (TOKENS/TOKENED/installTokens; R4493000 it.each per kind, name \\\"R4493000 no elemen\u2026\n- Bash: {\"command\": \"until grep -q -E \\\"^real\\\" /tmp/daily-crates.log; do sleep 15; done; grep -E \\\"^test result|FAILED|panicked|^failures:|Running\\\" /tmp/daily-crates.log | grep -v \\\"0 passed; 0 failed; [0-\u2026\n- Bash: {\"command\": \"grep -n -i \\\"postgres\\\\|database\\\\|DATABASE_URL\\\\|in-memory\\\\|memory store\\\" e2e/README.md | head -10\", \"description\": \"Check whether e2e needs a database\"}\n- Bash: {\"command\": \"until grep -q -E \\\"^real\\\" /tmp/daily-crates.log; do sleep 15; done; echo finished\", \"description\": \"Block until the daily crates leg finishes\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -E \\\"^test result|FAILED|panicked\\\" /tmp/daily-crates.log | grep -v \\\" 0 passed; 0 failed\\\" | head -30 | cut -c1-200; grep -E \\\"Running\\\" /tmp/daily-crates.log | tail -2 | cut -c1-1\u2026\n- Bash: {\"command\": \"grep -a -E \\\"test result|FAILED|panicked|test .* \\\\.\\\\.\\\\. \\\" /tmp/daily-crates.log | tail -20 | cut -c1-200\", \"description\": \"Show the last daily test lines\"}\n- Bash: {\"command\": \"until grep -q -E \\\"^real\\\" /tmp/daily-crates.log; do sleep 15; done; echo finished\", \"description\": \"Block until the daily crates leg finishes\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -a -E \\\"test result|FAILED|panicked|has been running\\\" /tmp/daily-crates.log | tail -8 | cut -c1-200; date -u +%H:%M\", \"description\": \"Check what the daily crates leg is running now\u2026\n- Bash: {\"command\": \"grep -a -E \\\"^test result: (ok|FAILED)\\\\. [1-9]|FAILED|panicked\\\" /tmp/daily-crates.log | cut -c1-200\", \"description\": \"Show the daily test binaries that ran tests\"}\n- Bash: {\"command\": \"until grep -q -E \\\"^real\\\" /tmp/daily-crates.log; do sleep 15; done; echo finished\", \"description\": \"Block until the daily crates leg finishes\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -a -E \\\"^test result: (ok|FAILED)\\\\. [1-9]|^test result: FAILED|FAILED|panicked|^real\\\" /tmp/daily-crates.log | cut -c1-200; git status --porcelain | head\", \"description\": \"Summariz\u2026\n- Bash: {\"command\": \"grep -a -n -E \\\"Running|test result\\\" /tmp/daily-crates.log | grep -a -B1 -E \\\"[1-9][0-9]* passed\\\" | cut -c1-160; grep -n -B2 -A2 'ignore = \\\"daily' crates/server/tests/actor/perf.rs | \u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n- daily tests (every crate but the tools) on main: ALL PASS, 22.5 min (ai.rs 15 incl. R290 tutorial tier 658s; ai_slow 1; run 1; server 1; shared 2). \\nEOF\\n\u2026\n- Bash: {\"command\": \"grep -n -B3 'ignore = \\\"daily' crates/tools/tests/perf.rs | head -8; grep -n -A3 'ignore = \\\"daily' crates/tools/src/assault_sim.rs | head -6\", \"description\": \"Read the tools leg's timin\u2026\n- Bash: {\"command\": \"until grep -q -E \\\"^real\\\" /tmp/daily-tools.log; do sleep 15; done; echo finished\", \"description\": \"Block until the tools leg finishes\", \"timeout\": 600000}\n- Bash: {\"command\": \"tail -3 /tmp/daily-tools.log | cut -c1-160\", \"description\": \"Check tools leg progress\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5085/.bot-plan.md.final\", \"content\": \"(see .bot-plan.md; final plan composed in the planner's final message)\\n\"}\n- Bash: {\"command\": \"rm -f .bot-plan.md.final; git status --porcelain\", \"description\": \"Remove the stray extra draft file\"}\n- Bash: {\"command\": \"grep -rln \\\"layerEstimate\\\\|installTokens\\\" apps e2e --include=*.ts --include=*.tsx | grep -v node_modules\", \"description\": \"Find every importer of the layer estimate\"}\n- Bash: {\"command\": \"until grep -q -E \\\"^real\\\" /tmp/daily-tools.log; do sleep 15; done; echo finished\", \"description\": \"Block until the tools leg finishes\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -a -E \\\"\\\\.\\\\.\\\\. (ok|FAILED)|test result|panicked\\\" /tmp/daily-tools.log | cut -c1-170 | tail -30; date -u +%H:%M\", \"description\": \"Show tools leg results so far\"}\n- Bash: {\"command\": \"until grep -q -E \\\"^real\\\" /tmp/daily-tools.log; do sleep 15; done; echo finished\", \"description\": \"Block until the tools leg finishes\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -a -E \\\"\\\\.\\\\.\\\\. (ok|FAILED)|test result|panicked|running for over\\\" /tmp/daily-tools.log | cut -c1-170 | tail -8; date -u +%H:%M\", \"description\": \"Show the latest tools leg lines\"}\n- Bash: {\"command\": \"until grep -q -E \\\"^real\\\" /tmp/daily-tools.log; do sleep 15; done; echo finished\", \"description\": \"Block until the tools leg finishes\", \"timeout\": 600000}\n- Bash: {\"command\": \"grep -a -E \\\"^test result: (ok|FAILED)\\\\. [1-9]|^test result: FAILED|FAILED|panicked|^real\\\" /tmp/daily-tools.log | cut -c1-200; grep -a -c \\\"\\\\.\\\\.\\\\. ok\\\" /tmp/daily-tools.log; git sta\u2026\n- Bash: {\"command\": \"grep -a -E \\\"Running|^test result\\\" /tmp/daily-tools.log | cut -c1-150; grep -n -A2 'ignore = \\\"daily' crates/tools/tests/acceptance.rs | head -4\", \"description\": \"Map tools leg binaries\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n- daily tests (tools) on main: ALL 26 PASS (incl. run_sim, assault_sim, fuzz top-up), 38 min incl. build.\\nEOF\\n(time (JACKIOH_CACHE_DIR=/home/runner/work/Ja\u2026\n- Bash: {\"command\": \"grep -i -E \\\"error|built in\\\" /tmp/e2e-build.log | head; ls apps/web/dist | head -5; ls apps/admin/dist | head -3; git status --porcelain | head\", \"description\": \"Confirm both e2e builds\u2026"
       },
+      "in_lane": true,
       "kind": "build",
       "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-26T14:45:32Z",
-      "owner_why": "it plans it",
+      "owner": "claude-8",
+      "owner_since": "2026-11-26T17:07:10Z",
+      "owner_why": "handed off from `claude-3`: its owner `claude-3` cannot take it now",
       "pending_request": false,
-      "provider": "claude-3",
+      "provider": "claude-8",
       "round_tier": "",
-      "run_id": "45842230680",
+      "run_id": "pending:913b0f8c-1795712803",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -24703,7 +24704,7 @@
         "provider": "claude-3",
         "run": "45842230680"
       },
-      "started_at": "2026-11-26T14:45:32Z",
+      "started_at": "2026-11-26T17:07:10Z",
       "stop_requested": false,
       "strike_log": [
         "the run failed: RuntimeError: the planner on opus wrote no plan: claude exited 1"
@@ -25223,9 +25224,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T16:54:43Z",
+    "at": "2026-11-26T17:07:10Z",
     "url": "",
-    "what": "build #5091 on claude-6"
+    "what": "plan #5085 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-26T16:48:42Z",
