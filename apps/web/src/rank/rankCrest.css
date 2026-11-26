@@ -46,7 +46,7 @@
 
 .rank-crest__shimmer {
   opacity: 0;
-  animation: rank-crest-shimmer 2.4s ease-in-out infinite;
+  animation: rank-crest-shimmer 2.4s ease-in-out 1;
 }
 
 @keyframes rank-crest-shimmer {

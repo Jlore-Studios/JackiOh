@@ -23,6 +23,6 @@
 
 @media (prefers-reduced-motion: no-preference) {
   :root:not([data-reduce-motion="true"]) .spend-wait[aria-busy="true"]::after {
-    animation: spend-wait-turn 900ms linear infinite;
+    animation: spend-wait-turn 900ms linear 1;
   }
 }

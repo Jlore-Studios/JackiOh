@@ -12,14 +12,14 @@
   min-height: 44px;
   padding: 0 14px 0 10px;
   border: 1px solid var(--tavern-brass, #c9953f);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(18, 11, 7, 0.65);
   color: var(--tavern-gold-pale, #fbe7b0);
   font-weight: 600;
   letter-spacing: 0.02em;
   text-decoration: none;
   text-shadow: none;
-  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.15), 0 4px 14px rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.15), var(--shadow-2);
 }
 
 .jlore-pill.jlore-pill:hover,

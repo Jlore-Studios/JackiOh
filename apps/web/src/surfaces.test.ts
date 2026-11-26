@@ -41,9 +41,9 @@ const BOARD_SHEETS = SHEETS.filter(
 const UNTOKENED_SURFACES: Record<string, number> = {
   "audio/audio.css": 4,
   "auth/auth.css": 1,
-  "auth/code-field.css": 23,
-  "auth/consent.css": 3,
-  "auth/tavern.css": 27,
+  "auth/code-field.css": 7,
+  "auth/consent.css": 2,
+  "auth/tavern.css": 12,
   "auth/two-step.css": 1,
   "cards/art/art.css": 7,
   "cards/art/artLive.css": 3,
@@ -61,12 +61,12 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "cards/setmark.css": 6,
   "cards/stamps.css": 1,
   "cards/wheel/wheel.css": 6,
-  "collection/collection.css": 24,
+  "collection/collection.css": 18,
   "collection/cosmeticLook.css": 1,
   "collection/tokenOffer.css": 1,
-  "duos/duos.css": 22,
-  "economy/economy.css": 8,
-  "economy/jlore-pill.css": 4,
+  "duos/duos.css": 10,
+  "economy/economy.css": 4,
+  "economy/jlore-pill.css": 2,
   "economy/spend.css": 1,
   "emotes/emotes.css": 17,
   "emotes/portrait.css": 20,
@@ -74,37 +74,39 @@ const UNTOKENED_SURFACES: Record<string, number> = {
   "fx/aura/aura.css": 3,
   "fx/aura/tile.css": 2,
   "fx/fx.css": 106,
-  "game/deckbuilder/deckbuilder.css": 66,
-  "game/deckbuilder/workshop.css": 30,
+  "game/deckbuilder/deckbuilder.css": 25,
+  "game/deckbuilder/workshop.css": 13,
   "game/table.css": 43,
-  "notfound/notfound.css": 2,
   "packs/pack-object.css": 12,
-  "packs/packs.css": 7,
-  "patches/patches.css": 25,
-  "practice/practice.css": 62,
-  "practice/sandbox.css": 7,
+  "packs/packs.css": 6,
+  "patches/patches.css": 9,
+  "practice/practice.css": 24,
+  "practice/sandbox.css": 4,
   "rank/rankCrest.css": 1,
   "routes/account.css": 1,
   "routes/command-menu.css": 1,
-  "routes/dev-panel.css": 4,
+  "routes/dev-panel.css": 1,
   "routes/entry-card.css": 3,
-  "routes/game-banner.css": 7,
-  "routes/landing.css": 61,
-  "routes/lobby.css": 29,
+  "routes/game-banner.css": 4,
+  "routes/landing.css": 31,
+  "routes/lobby.css": 11,
   "routes/replays.css": 1,
   "routes/site-footer.css": 1,
-  "routes/stats.css": 10,
-  "routes/top-bar.css": 3,
+  "routes/stats.css": 6,
+  "routes/top-bar.css": 2,
   "settings/changeEmail.css": 2,
-  "settings/settings.css": 20,
+  "settings/settings.css": 13,
   "shop/shop.css": 1,
-  "skeleton/skeleton.css": 4,
+  "skeleton/skeleton.css": 2,
   "stats/tier.css": 1,
-  "together/together.css": 6,
+  "together/together.css": 4,
   "tutorial/path-visibility.css": 2,
-  "tutorial/tutorial.css": 42,
-  "undo/undo.css": 3,
+  "tutorial/tutorial.css": 18,
+  "undo/undo.css": 2,
 };
+
+/** #5014: UNTOKENED_SURFACES's total, a quarter under the 1,063 it held; it only falls. */
+const UNTOKENED_SURFACES_CEILING = 797;
 
 /**
  * A token line's captures (#4009: `/^\s*--…$/gm` line patterns rescan newline runs from every line
@@ -341,6 +343,13 @@ describe("#2109 no one-off surfaces", () => {
     }
     expect(counts, "name a radius, a shadow and a layer (surfaces.css) instead; a sheet that loses some lowers its number in UNTOKENED_SURFACES").toEqual(
       UNTOKENED_SURFACES,
+    );
+  });
+
+  it("#5014 the untokened surfaces total at most UNTOKENED_SURFACES_CEILING", () => {
+    const total = Object.values(UNTOKENED_SURFACES).reduce((sum, count) => sum + count, 0);
+    expect(total, "a sheet that gains a surface raises the total: name a radius, a shadow and a layer (surfaces.css) instead").toBeLessThanOrEqual(
+      UNTOKENED_SURFACES_CEILING,
     );
   });
 
