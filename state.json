@@ -21607,6 +21607,13 @@
     "4991": {
       "action": "build",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-26T03:05:17Z",
+        "difficulty": "hard",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "Engine rules: the fix changes the resolution loop in crates/engine/src/zones.rs (flicker_in_place)"
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
