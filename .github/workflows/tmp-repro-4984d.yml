@@ -1,0 +1,68 @@
+# TEMPORARY (staging's red super run 45746855347), deleted before any pull request of this branch
+# merges: R290's tutorial tier and run-sim's seed 0 at the two AI commits of #4897 (R4783040's
+# last-resort hold, R4783041's Feng Shui bridging), the commit before them and their merge; and the
+# numbers decide.rs's empty-beam fallback reads, on main, for run-sim's seed 0.
+name: tmp repro 4984 ai
+
+on:
+  push:
+    branches: [claude/charming-bell-p8etig]
+    paths: [".github/workflows/tmp-repro-4984d.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bisect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        ref:
+          - 2564f77a8fe09c7c3a9e4fd14bdf2e76177981b0
+          - c04ca37fac243da348eabf0414222cc457297ade
+          - 52068f7c40fd2ffd969dbdf14d19ae758eefc03e
+          - fc86167bd4f87e853b246dc5a4bd5faa8b70e7ea
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+      - uses: ./.github/actions/setup
+        with:
+          node: "false"
+          cache-key: tmp-bisect-${{ matrix.ref }}
+      - name: R290's tutorial tier
+        run: |
+          cargo test -p jackioh-ai --tests --features jackioh-engine/testkit -- --ignored r290_the_greedy_baseline --nocapture 2>&1 | grep -E "R290 tutorial tier|test result: FAILED|not won" | cut -c1-400 || true
+      - name: run-sim seed 0 at full budget
+        run: |
+          cargo run --release -p jackioh-tools -- run-sim --from 0 --seeds 1 --skill 0.5 --budget full 2>&1 | grep -E "fell back|runs won|run 0 " | tail -5 || true
+
+  fallback-detail:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: ./.github/actions/setup
+        with:
+          node: "false"
+      - name: log the empty beam's numbers
+        run: |
+          python3 - <<'PY'
+          p = 'crates/ai/src/decide.rs'
+          t = open(p).read()
+          a = "    if found.is_empty() {\n        let action = fallback_action(&scratch.candidates);\n        let stopped_by = if counter.stopped_by() != StoppedBy::Exhausted {\n"
+          assert t.count(a) == 1, 'empty-beam anchor'
+          log = ("    if found.is_empty() {\n"
+                 "        eprintln!(\"TMP-EMPTY nodes {} used {} remaining {} reserve {} candidates {} beam {:?} counter {:?} passed_over {} turn {} seat {}\", budget.nodes, counter.used(), remaining, reserve, scratch.candidates.len(), beam_stopped_by, counter.stopped_by(), passed_over.is_some(), det0.turn, seat.as_str());\n"
+                 "        eprintln!(\"TMP-CANDIDATES {}\", serde_json::to_string(&scratch.candidates).unwrap_or_default().chars().take(3000).collect::<String>());\n")
+          t = t.replace(a, a.replace("    if found.is_empty() {\n", log, 1))
+          open(p, 'w').write(t)
+          PY
+      - name: run-sim seed 0 at full budget
+        run: |
+          cargo run --release -p jackioh-tools -- run-sim --from 0 --seeds 1 --skill 0.5 --budget full 2>&1 | grep -E "TMP-|fell back" | cut -c1-3200 | head -12 || true
