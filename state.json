@@ -23140,7 +23140,7 @@
       "stop_requested": false
     },
     "5039": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "failures": 0,
       "forced": false,
@@ -23155,22 +23155,22 @@
       },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-26T09:53:18Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-6",
+      "owner_since": "2026-11-26T11:54:23Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-26T14:20:00Z; it can start again only in 2h 25m, more than the 120 minutes an item waits for its owner",
       "pending_request": false,
       "planned_at": "2026-11-26T10:29:44Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-6",
       "queued_at": "2026-11-26T07:53:00Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45796155941",
+      "run_id": "pending:701e1f2d-1795694033",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-26T09:53:18Z",
+      "started_at": "2026-11-26T11:54:23Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -24418,9 +24418,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T11:45:09Z",
+    "at": "2026-11-26T11:54:23Z",
     "url": "",
-    "what": "review #5071 on claude-7"
+    "what": "build #5039 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-26T11:40:48Z",
