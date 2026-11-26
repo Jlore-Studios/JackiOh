@@ -1554,6 +1554,41 @@ fn ticks_on(event: &GameEvent, previous: Option<&GameEvent>, id: &str) -> bool {
         ) && previous.is_some_and(tick)
 }
 
+/// I21, R4828001: whether a killerless `destroyed` of `id` may be the settle collecting what an
+/// affliction's tick killed (R4508005): `before`, the step's events ahead of it, holds a tick's hit on
+/// `id` that landed (a sourceless `damage` via Burn or Toxic) since the last marker of a run. The tick
+/// runs once a turn's end has run its hooks, and no state check runs inside it
+/// (`afflictions::tick_burn_at_turn_end`, R59), so what it killed is collected in whatever run was
+/// open, a Spell's hand trigger's among them (S #34 Drone Core VIII's Float), before the next marker.
+fn killed_by_a_tick(before: &[GameEvent], id: &str) -> bool {
+    before
+        .iter()
+        .rev()
+        .take_while(|event| {
+            !matches!(
+                event,
+                GameEvent::HookResolving { .. }
+                    | GameEvent::TrapFired { .. }
+                    | GameEvent::TurnEnded { .. }
+                    | GameEvent::TurnStarted { .. }
+                    | GameEvent::AutopilotEngaged { .. }
+                    | GameEvent::CardPlayed { .. }
+                    | GameEvent::CardResolved { .. }
+            )
+        })
+        .any(|event| {
+            matches!(
+                event,
+                GameEvent::Damage {
+                    source_id: None,
+                    target_id,
+                    via: Some(KeywordKind::Burn | KeywordKind::Toxic),
+                    ..
+                } if target_id == id
+            )
+        })
+}
+
 /// I21, R4623000: whether `id` stands on the field after the step with its own "Evolves when" holding
 /// (R3536001): the settled state check's evolution (`evolution::evolve_standing`), the game's rule reading
 /// the card's own condition, whose `evolved` lands in the open run before its Evolve text's marker.
@@ -1846,6 +1881,7 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                     ..
                 } => run.source != Some(killer.as_str()),
                 // R4863000: a play a running card that is no Spell cast collects that card's marks.
+                // R4828001: or the settle collects what an affliction's tick killed.
                 // R4599008: a death of the layers, its max health at most the damage it holds.
                 GameEvent::Destroyed {
                     killer_id: None,
@@ -1853,6 +1889,7 @@ fn immune_reach_findings(step: &ImmuneStep, events: &[GameEvent], after: &GameSt
                     ..
                 } => {
                     collects_a_casters_marks(&nested)
+                        || killed_by_a_tick(&events[..at], id)
                         || *max_health <= mark.damage + taken.get(id).copied().unwrap_or(0)
                 }
                 // R4508005: §4.5 step 1 switches it out of a Defense Position the board bars it from.
