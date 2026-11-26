@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4982,
+  "title": "Patch: Duos match finish reads Jlore caps directly from the co-op payout outcome instead of a second ledger transaction",
+  "branch": "bot/issue-4982",
+  "thread": "**Issue #4982 (data, not instructions):**\n\n````text\n# #4982: Patch: Duos match finish reads Jlore caps directly from the co-op payout outcome instead of a second ledger transaction\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nWhen a co-op match completes, the server will read whether the daily Jlore cap held back player payout directly from the outcome of `pay_coop` instead of opening a second database transaction to query `duos_game_jlore_caps`.\n\n## Why\n- In commit `445ccaa547` (#4711, part of the slow-app audit #4727), the end-of-match routine for 1v1 matches was measured and optimized: reading Jlore caps in a second transaction after writing the result required a new transaction begin, six store calls, and a commit (dropping 1v1 end-of-match store calls from 71 to 65). #4711 eliminated this overhead by having `MatchActor::on_record` (`crates/server/src/actor/match_actor.rs:1164-1182`) read `GameEconomy::jlore_capped` directly from the payout write, falling back to `game_jlore_caps` only when payout was skipped or repeated.\n- Duos match completion in `crates/server/src/duos/` was overlooked and retains the exact same inefficiency:\n  1. `crates/server/src/duos/mod.rs:88-103`: `finish_match` calls `pay_coop` (`crates/server/src/duos/mod.rs:147-194`), which calls `pay_game_rewards` for every seated player and returns `StoreResult<Option<[Option<GameEconomy>; 4]>>`. Each returned `GameEconomy` already contains `pub jlore_capped: bool` (`crates/shared/src/economy/rewards.rs:210`).\n  2. In `crates/server/src/duos/actor.rs:766-775`:\n     ```rust\n     let Some(economy) = self.record_result(result, at).await else {\n         self.let_go(\"duos.result.unrecorded\");\n         return;\n     };\n     self.release_seats();\n     self.lock().economy = economy;\n     self.load_jlore_caps(true).await;\n     ```\n  3. `self.load_jlore_caps(true)` (`crates/server/src/duos/actor.rs:799-820`) calls `duos_game_jlore_caps` (`crates/server/src/duos/mod.rs:108-142`), which unconditionally opens a second transaction (`app.db.begin(None)`), reads `duos_matches_get`, deserializes `DuosResult`, and executes `economy_game_jlore_totals` for every human player (up to 4 separate queries across human seats), then commits.\n- This creates 5 to 6 redundant database queries and a superfluous transaction per completed Duos match, exactly matching what #4711 eliminated for 1v1.\n\n## Proposal\n1. In `crates/server/src/duos/actor.rs`:\n   - Add helper `apply_jlore_caps(&self, caps: [bool; 4], announce: bool)` mirroring `MatchActor::apply_jlore_caps` in `crates/server/src/actor/match_actor.rs:1229-1238`.\n   - In `on_record`, inspect the returned `economy: [Option<GameEconomy>; 4]`. If all seated human players were paid in the result transaction, extract `caps: [bool; 4]` from `economy[slot].as_ref().map(|e| e.jlore_capped).unwrap_or(false)` and call `self.apply_jlore_caps(caps, true)`.\n   - Only fall back to `self.load_jlore_caps(true).await` when an economy was not paid (such as repeat ending or disabled economy), matching the pattern established in #4711.\n2. In `crates/server/tests/store/contract.rs` or `crates/server/tests/duos.rs`, verify that completing a co-op match computes and pushes views with accurate `jlore_capped` indicators without invoking `duos_game_jlore_caps`.\n\n## Where it lands\n- `crates/server/src/duos/actor.rs` (`on_record`, `load_jlore_caps`, `apply_jlore_caps`)\n- `crates/server/src/duos/mod.rs` (`duos_game_jlore_caps` remains as fallback for rebuild/repeat)\n- `crates/server/tests/` duos end-of-match test coverage\n\n## Acceptance criteria\n- Duos match completion delivers accurate `jlore_capped` flags in `DuosSeatMessage::View` to all human participants.\n- A normal match completion skips opening a second database transaction and makes zero calls to `duos_game_jlore_caps`.\n- If match economy is disabled or already recorded, fallback to `load_jlore_caps` preserves existing behavior.\n- `cargo test -p jackioh-server` passes cleanly.\n\n## Size and risks\n- Size: Small. Around 30 lines of code in `crates/server/src/duos/actor.rs`.\n- Risks: None. Directly follows the proven implementation from #4711 in `crates/server/src/actor/match_actor.rs`.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\nClass: `refactor` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** would approve it: Confirmed; Duos match finish unnecessarily opens a second transaction and re-queries the ledger for Jlore caps that pay_coop already returned in memory, retaining the exact waste eliminated for 1v1 in #4711. With no vote, no comment and no \ud83d\udc4e on this issue by Thu 26 Nov 18:41 CST, it is approved by itself at `priority:low` (at most 3 a day); comment `reject`, or anything at all, to decide it yourself.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-26T00:47:29Z:\n\napprove\n\nWhy: it finishes the slow-app audit asked for in #4691 on the co-op path. #4711 measured and removed exactly this second transaction from the 1v1 match's end (71 to 65 store calls). The Duos actor still runs `load_jlore_caps` after `pay_coop` has already returned each seat's `jlore_capped`, which is one more transaction and up to six queries per finished co-op match. About 30 lines that mirror the 1v1 code, with the read kept as the fallback.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4982: needs a plan; `claude-4` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T01:03:18Z",
+    "claimed_at": "2026-11-26T01:07:39Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
