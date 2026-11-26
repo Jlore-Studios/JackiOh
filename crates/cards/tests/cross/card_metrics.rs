@@ -323,6 +323,9 @@ fn r1846000_a_comment_goes_and_a_string_or_character_literal_stays_code() {
         // A raw string ends at its own quote and hashes, and a backslash in it escapes nothing.
         (r#"let s = r"a\"; // c"#, &[r#"let s = r"a\"; "#]),
         (r#"let b = br"a\"; // c"#, &[r#"let b = br"a\"; "#]),
+        // A name run into a quote opens a plain string, not a raw one: classify reads TypeScript
+        // here (R2050000).
+        (r#"x = bar"a\" // b"; // c"#, &[r#"x = bar"a\" // b"; "#]),
         (r##"let s = r#"a\"#; // c"##, &[r##"let s = r#"a\"#; "##]),
         (
             r##"let s = r#"say "hi" // x"#; // c"##,
