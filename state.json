@@ -23739,17 +23739,18 @@
       "merge_owner": "claude-6",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-7",
       "question": "",
       "queued_at": "2026-11-26T12:12:02Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "45817783866",
+      "run_id": "pending:be1ee4ab-1795698987",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 600,
-      "started_at": "2026-11-26T12:14:16Z",
+      "started_at": "2026-11-26T13:16:55Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -24321,9 +24322,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T13:16:11Z",
+    "at": "2026-11-26T13:16:55Z",
     "url": "",
-    "what": "revise #5074 on claude-8"
+    "what": "spot-check #5063 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-26T13:02:39Z",
@@ -47041,7 +47042,15 @@
         "n": 600,
         "pr": 5063,
         "queued_at": "2026-11-26T12:49:08Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "run_id": "pending:be1ee4ab-1795698987",
         "sha": "0c4a11d63c1a94b9a46d19b0ddf79bdc093962e0",
+        "started_at": "2026-11-26T13:16:55Z",
         "status": "queued",
         "title": "Patch: a counted game's result reloads the card proficiency the Collection shows, so a level the game earned and its stamp appear without a reload",
         "tries": 0
