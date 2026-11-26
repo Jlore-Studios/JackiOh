@@ -44887,6 +44887,10 @@
       "5001": {
         "at": "2026-11-26T03:20:25Z",
         "why": "Confirmed: spec 36 deletes a card from its module-level `remaining` set (:139) before `afterPlay` checks it, and `before` does not run again on Cypress's one retry, so the retry deals a game without the failing card and the daily run passes. The test hides a deterministic failure today, and the fix is a few lines in one spec."
+      },
+      "5006": {
+        "at": "2026-11-26T04:34:43Z",
+        "why": "It deal-screens the untuned affliction weight the sweep was meant to revisit, keeping 1.0 only on a measured edge."
       }
     },
     "auto_approved": [],
