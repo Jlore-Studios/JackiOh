@@ -1,0 +1,67 @@
+{
+  "action": "build",
+  "number": 4991,
+  "title": "Patch: a Flickered card starts its printed Brittle again, and a Keymaster Keenus or Shockwave447 made by a Transform draws its Aura's keywords",
+  "branch": "bot/issue-4991",
+  "thread": "**Issue #4991 (data, not instructions):**\n\n```text\n# #4991: Patch: a Flickered card starts its printed Brittle again, and a Keymaster Keenus or Shockwave447 made by a Transform draws its Aura's keywords\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nThere are two ways a card can come back onto the board that skip a step every ordinary arrival takes.\n\n- **Brittle.** Radiant Shadowstep saves your Units that would die by blinking them out and straight back. A Brittle Unit (one that crumbles after a few turns) that Shadowstep saves from crumbling comes back with no Brittle count at all, so it never crumbles again. It loses its drawback for the rest of the game. The rules already say a card that comes back starts its Brittle over.\n- **Keenus and Shockwave447.** Keymaster Keenus ('Has 5 random combat keywords', 10 on its Radiant face) and Shockwave447 ('Has 3') pick their keywords as they arrive. When a Transform turns one of your cards into one of them (Transcend, Tireless Cultivation, Transmogulate Embiggened), it stands on the board with its text and no keywords at all.\n\nOnce built, the saved Brittle Unit counts down again from its printed Brittle, and a Keenus or Shockwave447 made by a Transform has its keywords. The same kind of gap was just closed for Dormant cards, Phantom Shipyard and Heroic Power made by a Transform.\n\n## Why\n**Brittle and Flicker**\n- What the spec says:\n  - R441: 'a card that re-enters the field starts its printed Brittle afresh'.\n  - \u00a76.1's Brittle row: 'a printed Brittle starts when the card enters the field; either way the count's turn cycle starts at that arrival'.\n  - \u00a76.3's Flicker row: the card 'leaves the field then re-enters the same zone'.\n- `zones.rs:1957` (`flicker_in_place`) calls `reset_instance`, whose `drop_spent_brittle` (`zones.rs:1262`, `brittle_count.rs:106`) drops a count that has reached 0.\n- It never calls `start_brittle_on_field`. `place_with` runs that for every other arrival (`zones.rs:830`), and `replace_in_zone` runs it for a Transform's card (`zones.rs:999`).\n- A crumble is an ordinary destroy (`brittle.rs:58-74`), so Radiant C #14 Shadowstep's 'would die' Flicker answers it (`classic/c014_shadowstep.rs`, `effects/flicker.rs:41`). A Trap fires on either player's turn (\u00a75.1).\n- Brittle Units that reach it include Core #89 Corpse Eater and S #101 Overdrive Module.\n- Neither `effects_flicker.rs` nor `brittle.rs` tests a Brittle card being flickered.\n\n**Keenus and Shockwave447 after a Transform**\n- What the spec says:\n  - R781004: the keywords 'are drawn with the match rng as the card arrives on the field'.\n  - R4816000: a card a Transform makes arrives on the field, though it is no summon.\n- Both scripts draw only on a `summoned` that names them, or on a fuse (`meditative/c065_keymaster_keenus.rs:24-43`, `stinkyscape/c111_shockwave447.rs:27-39`).\n- A Transform emits `transformed`, which carries `new_instance_id` (`wire/events.rs:655`), and runs only the new card's start-of-game clause (`effects/transform.rs:98`).\n- Cards that reach it:\n  - S+ #103 Transcend and S+ #104 Tireless Cultivation turn a card into one costing 1 or 2 more from the shipped sets, and both Aura cards cost (4).\n  - Core #83 Transmogulate Embiggened turns board cards into random Legendaries, and Keenus is one.\n- No test makes either card by a Transform.\n\n**The same class, lately**\n- #4913: a Transform's card arrives (Dormant, a hull, Heroic Power).\n- Open #4946: a Radiant face that newly prints Brittle or Reborn.\n- PR #4934: Tnack Trav's copied Aura draws keywords. Its branch changes only the copy-text path, not the Transform path.\n\n## Proposal\n1. In `flicker_in_place`, call `start_brittle_on_field(state, live, true)` after the reset, as `place_with` does. A spent count then starts the printed Brittle again, and a count still running restarts its turn cycle. This is R441 as written; its tests are named `r441_...` in `crates/engine/tests/rules/brittle.rs`.\n2. Keenus and Shockwave447 also draw when a `transformed` names them as its `new_instance_id` and they stand on the field. A Transform in a hand or a library is no arrival and draws nothing.\n3. Add a ruling in the issue's block that adds the Transform path to R781004, with its \u00a711 paragraph in `spec/pending/<N>.md`.\n4. Recorded games that move (`cargo jackioh classify --base origin/main --claims`) keep the old behaviour for their versions, as R767000 does. The cards that play differently get a patch fragment.\n\n## Where it lands\n- `crates/engine/src/zones.rs` (`flicker_in_place`)\n- `crates/cards/src/scripts/meditative/c065_keymaster_keenus.rs` and `crates/cards/src/scripts/stinkyscape/c111_shockwave447.rs`, with their tests\n- `crates/engine/tests/rules/brittle.rs` or `effects_flicker.rs`\n- `spec/rulings/`, `spec/pending/`; SPEC \u00a76.1 Brittle, \u00a76.3 Flicker and Transform, R441, R781004, R4816000\n\n## Acceptance criteria\n- [ ] A Brittle 2 Unit whose count reaches 0 at its controller's turn start, with Radiant Shadowstep set, is flickered. It then holds Brittle 2 started that turn, and crumbles again after a full cycle. This test fails on main.\n- [ ] A Brittle Unit with 1 left, saved from a combat death by Radiant Shadowstep, keeps 1, and its cycle restarts on the turn of the flicker.\n- [ ] A Transform of a Unit on the field into Keymaster Keenus leaves it with 5 combat keywords (10 Radiant), drawn from the match rng. Into Shockwave447, it has 3.\n- [ ] A Transform of a card in a hand or a library into Keenus draws nothing.\n- [ ] `cargo jackioh spec check`, `cargo jackioh fuzz --seeds 200` and `cargo jackioh classify --base origin/main --claims` are green.\n\n## Size and risks\nSmall to medium: one engine function, two card scripts, about five tests and one ruling. difficulty:hard (engine rules).\n\nThe new draw on a Transform moves the rng of any game that made a Keenus by a Transform, so a recorded one folds only if its version keeps the old behaviour. The Flicker change only adds the start that every other arrival already does.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-26T02:46:14Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#4991: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "own_review_next": true,
+  "usage_facts": {
+    "queued_at": "2026-11-26T02:46:40Z",
+    "claimed_at": "2026-11-26T02:57:06Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
