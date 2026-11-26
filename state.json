@@ -22551,6 +22551,23 @@
       "requested_by": "MaxGoetzmann",
       "run_id": "45761414846",
       "runs_on": "ubuntu-latest",
+      "session": {
+        "action": "plan",
+        "artifact": 15091255279,
+        "artifact_bytes": 327850,
+        "artifact_name": "work",
+        "at": "2026-11-26T05:49:21Z",
+        "bytes": 431428,
+        "cwd": "/home/runner/work/_temp/work/item-5012",
+        "ended": "interrupted: `claude-8` reached its usage limit",
+        "head": "3cfbef178cc1f05c0bbabbec3c0f3417039906bc",
+        "id": "e9b12f4c-6af1-4d7c-870c-cc745a4dba42",
+        "kind": "plan",
+        "model": "opus",
+        "project": "-home-runner-work--temp-work-item-5012",
+        "provider": "claude-8",
+        "run": "45761414846"
+      },
       "started_at": "2026-11-26T05:24:38Z",
       "stop_requested": false,
       "taken_asks": []
