@@ -23750,6 +23750,7 @@
       "ci_on_head": true,
       "ci_run_id": 45803851336,
       "ci_sha": "4f0d08a4fc657ff1f077341894a909525fc38cf1",
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-26T11:06:04Z",
