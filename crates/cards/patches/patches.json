@@ -37027,5 +37027,71 @@
     "plays": [],
     "fragment": "card-face-code-cleanup",
     "changes": []
+  },
+  {
+    "version": "v0.6.14l",
+    "date": "2026-11-26",
+    "title": "PIP says performance improvement plan",
+    "source": "#4996",
+    "notes": "Stinkyscape+ #94 PIP's text reads 'performance improvement plan' (was 'performance enhancement plan').",
+    "player": {
+      "title": "PIP says performance improvement plan",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "PIP: now says \"performance improvement plan\"."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "6e1450bf6f9dbfbbe603f7d38ae0fe523daebae9"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "pip-says-performance-improvement-plan",
+    "changes": [
+      {
+        "id": "stinkyscapeplus-094",
+        "name": "PIP",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.14m",
+    "date": "2026-11-26",
+    "title": "Patch: the tier cards and KPIs read the newest win rates",
+    "source": "winrates-refresh.yml: production's windowed card figures at v0.6.14k (R3882000)",
+    "notes": "The win rates of record refresh from the card statistics at v0.6.14k: 794 cards with at least 20 games over their own windows (provisional figures). The tier pools and KPIs read them from this version on (R3538000, R3538001); earlier versions keep theirs, and CN Tech and NA Tech still read each game's snapshot (R3049000).",
+    "player": {
+      "title": "Win rates refreshed",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "xxFreshJack, JC Backed, Open Enrollment, Selective Enrollment and KPIs now read the win rates of this patch's games."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "61758a8b61caae7b24f87b4562792ba161f9f1bc"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-109",
+      "stinkyscapeplus-095",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-097",
+      "stinkyscapeplus-164"
+    ],
+    "fragment": "the-tier-cards-and-kpis-read-the-newest-win-rates",
+    "changes": []
   }
 ]

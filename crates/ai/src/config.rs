@@ -857,10 +857,15 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // smoke gate read 20, 16 and 18 of 20.
     evolve: 0.5,
     evolve_event_share: 0.25,
-    // R3822000: untuned starts, to revisit after #3574's sweep. A point of damage still to come at half a
-    // point of health now, a hero's coming life at half its cost on the curve, and a unit a tick kills at
-    // Brittle's own `brittle_discount`, since both ends come at the same stage. At 0.5 the smoke gate read
-    // 20, 18 and 18 of 20; at 0, 19, 18 and 18.
+    // R3822000: untuned starts. A point of damage still to come at half a point of health now, a hero's
+    // coming life at half its cost on the curve, and a unit a tick kills at Brittle's own `brittle_discount`,
+    // since both ends come at the same stage. At 0.5 the smoke gate read 20, 18 and 18 of 20; at 0, 19, 18
+    // and 18. After #3574's sweep, #5006 screened `unit_affliction` at 1.0 (training/improve.md, A screen):
+    // 400 games on improve-dev, 202-198, edge +0.010 (-0.021 to +0.041), 10 decided (6-4), 33 diverged vs
+    // control 0f3e8f961e: inconclusive (R4319000), so its scenes settle it, and those in
+    // `tests/ai/affliction_threat.rs` hold 0.5. At 1.0 a unit its first tick kills is worth the same at
+    // every health, which R3822000's monotone test refuses. `unit_doomed` and `hero_affliction` are
+    // unscreened, and another arm of any of the three is a screen of its own.
     unit_affliction: 0.5,
     unit_doomed: 0.5,
     hero_affliction: 0.5,

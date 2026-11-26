@@ -53,6 +53,8 @@ enum CounterKind<'a> {
         wrap_up: Option<&'a dyn Fn() -> bool>,
         /// R4801000: `end_root` was called: the beam has tried every move at its root.
         root_tried: Cell<bool>,
+        /// R4604014: the beam's slice (`create_beam_counter`), whose own limit binds once `root_tried`.
+        root_free: bool,
         /// The wrap-up fired: no node is taken until `closing`.
         wrapped: Cell<bool>,
         /// `end_exploring` was called: the wrap-up no longer refuses.
@@ -76,6 +78,13 @@ impl NodeCounter for CountingNodeCounter<'_> {
     fn limit(&self) -> usize {
         match &self.kind {
             CounterKind::Root { limit, .. } => *limit,
+            // R4604014: the beam's root draws on the parent alone.
+            CounterKind::Sub {
+                parent,
+                root_free: true,
+                root_tried,
+                ..
+            } if !root_tried.get() => parent.limit(),
             CounterKind::Sub {
                 parent, start, limit, ..
             } => parent.limit().min(start + *limit),
@@ -114,10 +123,12 @@ impl NodeCounter for CountingNodeCounter<'_> {
                 capped,
                 wrap_up,
                 root_tried,
+                root_free,
                 wrapped,
                 closing,
             } => {
-                if parent.used().saturating_sub(*start) >= *limit {
+                // R4604014: the beam's root takes the parent's nodes however many its moves cost.
+                if parent.used().saturating_sub(*start) >= *limit && !(*root_free && !root_tried.get()) {
                     capped.set(true);
                     return false;
                 }
@@ -356,10 +367,28 @@ pub fn create_wrap_up_counter<'a>(
             capped: Cell::new(false),
             wrap_up,
             root_tried: Cell::new(false),
+            root_free: false,
             wrapped: Cell::new(false),
             closing: Cell::new(false),
         },
     }
+}
+
+/// R4604014: the beam's slice, `create_wrap_up_counter`'s, whose own `limit` binds, as its wrap-up does
+/// (R4801000), only once `end_root` is called: the moves at the beam's root draw on the parent however
+/// many nodes they cost, so a root move dearer than the whole slice still closes a line (run-sim seed 0's
+/// turn 31, two answers of a prompt at 206 nodes each against a slice of 193, fell back with none).
+/// The parent's own limit and clock still stop it.
+pub fn create_beam_counter<'a>(
+    parent: &'a dyn NodeCounter,
+    limit: usize,
+    wrap_up: Option<&'a dyn Fn() -> bool>,
+) -> CountingNodeCounter<'a> {
+    let mut counter = create_wrap_up_counter(parent, limit, wrap_up);
+    if let CounterKind::Sub { root_free, .. } = &mut counter.kind {
+        *root_free = true;
+    }
+    counter
 }
 
 /// #1429: a caught panic is a failed simulation, counted apart too, its message kept when first;
