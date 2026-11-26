@@ -21360,7 +21360,9 @@
     },
     "4977": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:7179115536"
+      ],
       "died": 0,
       "difficulty_by": {
         "at": "2026-11-26T08:56:53Z",
@@ -21400,9 +21402,7 @@
       "strike_log": [],
       "strikes": 0,
       "suggestion": true,
-      "taken_asks": [
-        "c:7179115536"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "4981": {
