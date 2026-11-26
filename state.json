@@ -24989,10 +24989,8 @@
       }
     },
     "5099": {
-      "action": "plan",
-      "asks": [
-        "c:7200966059"
-      ],
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-26T19:16:25Z",
         "difficulty": "medium",
@@ -25013,25 +25011,27 @@
       },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-26T18:58:58Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "agy",
+      "owner_since": "2026-11-26T19:19:38Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-26T19:16:28Z",
       "planned_by": "`claude-3` (claude, `sonnet`, medium)",
       "planned_by_id": "claude-3",
       "planned_model": "sonnet",
       "planned_tier": "medium",
-      "provider": "claude-3",
+      "provider": "agy",
       "queued_at": "2026-11-26T18:54:19Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45880144245",
-      "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-26T18:58:58Z",
+      "run_id": "pending:a750dce3-1795720750",
+      "runs_on": "night-vm-agy",
+      "started_at": "2026-11-26T19:19:38Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7200966059"
+      ]
     },
     "5101": {
       "action": "review",
@@ -25147,9 +25147,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T19:18:54Z",
+    "at": "2026-11-26T19:19:38Z",
     "url": "",
-    "what": "plan #5109 on claude-3"
+    "what": "build #5099 on agy"
   },
   "last_sweep": {
     "at": "2026-11-26T19:05:46Z",
