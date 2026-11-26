@@ -21887,15 +21887,8 @@
       "taken_asks": []
     },
     "4996": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45749789504",
-        "model": "muse-spark-1.3-contributor",
-        "provider": "muse",
-        "since": "2026-11-26T03:42:42Z",
-        "until": "2026-11-26T04:12:42Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -21907,10 +21900,9 @@
         "reason": "planned on muse-spark-1.3-contributor",
         "trail": "- .get(&yaml_serde::Value::String(face.to_string()))\n- .and_then(|v| v.as_str())\n- .unwrap_or_else(|| panic!(\"card-text.yaml: {ID}.{field} has no {face}\"))\n- };\n- for face in [get(\"base\"), get(\"radiant\")] {\n- assert!(face.contains(term(field)), \"R4996000: {ID}.{field} lacks its term\");\n- }\n- seen.push(field);\n- }\n- let mut want: Vec<&str> = TERMS.iter().map(|(code, _)| *code).collect();\n- seen.sort_unstable();\n- want.sort_unstable();\n- assert_eq!(seen, want, \"R4996000: locales shown and locales in TERMS differ\");\n- }\n- ```\n- A locale added to `card-text.yaml` later reaches the loop as a non-`META` mapping and fails on the missing `TERMS` row instead of passing silently; a removed locale fails the final equality.\n- 10. Prove the test locks the wording (temporary flips, each restored immediately, running only the new test between): `sed -i 's/performance improvement plan: it has/performance enhancement plan: it has/' crates/cards/catalog.json`, then `cargo test -p jackioh-tools --test export_card_text r4996000\u2026\n- ## Tests\n- - `crates/tools/tests/export_card_text.rs`, `r4996000_pip_names_the_plan_in_every_locale`: asserts both CATALOG English faces contain `performance improvement plan` and none of `enhancement`/`PEP`/contiguous `performance plan`; both `zh` faces from `card-text.yaml` contain \u7ee9\u6548\u6539\u8fdb\u8ba1\u5212; every locale key \u2026\n- - `crates/cards/src/scripts/stinkyscape_plus/c094_pip.rs`, existing `mod tests` (`a_unit_that_gets_a_kill_in_time_lives`, `a_unit_without_a_kill_is_destroyed_and_the_base_face_adds_no_coin`, `radiant_adds_three_coins_when_it_fails`, `r3557006_\u2026`): rules unchanged, must stay green. Run `cargo test -\u2026\n- - `crates/cards/tests/cross/` (unchanged files, guards the catalog edit): run `cargo test -p jackioh-cards --test cross`.\n- - Checks: `cargo fmt --check`; `cargo clippy -p jackioh-cards --all-targets -- -D warnings`; `cargo clippy -p jackioh-tools --all-targets -- -D warnings`; `cargo clippy -p jackioh-engine --all-targets -- -D warnings`; `cargo jackioh catalog check`; `cargo jackioh patches check`; `cargo jackioh spec\u2026\n- - Greps: `git grep -n \"performance enhancement\"` must list only `crates/cards/patches/v*.json` lines; `git grep -n \"performance improvement plan\"` must list the spec row, both catalog texts, the script header, the fixture comment and both designer lines.\n- ## Done when\n- - [ ] Both PIP faces read \"performance improvement plan\" in the \u00a78.12 row, `catalog.json`, the script header, the fixture comment and the designer source; `git grep -n \"performance enhancement\"` finds nothing outside `crates/cards/patches/v*.json`.\n- - [ ] `spec/rulings/R4996000.md` and `spec/pending/4996.md` exist and `cargo jackioh spec check` passes.\n- - [ ] `r4996000_pip_names_the_plan_in_every_locale` passes, and was seen to fail on the flipped English text and on the flipped `zh` face.\n- - [ ] `cargo jackioh catalog check`, `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` pass, the last with no card playing differently (no `--plays`).\n- - [ ] `cargo test -p jackioh-cards c094_pip`, `cargo test -p jackioh-cards --test cross` and `cargo test -p jackioh-tools --test export_card_text` pass; `cargo fmt --check` and the three `clippy -p` runs are clean; no generated sidecar was rewritten.\n- ## Risks\n- - `classify` unexpectedly naming playing cards: the script and params are untouched, so this should not happen; if it does, stop and report rather than adding `--plays` blindly.\n- - `export_card_text` rewriting `chinese.json`, `flavour.json` or `voice-text.json`: `card-text.yaml` is untouched, so it should rewrite nothing; a rewrite means an unrelated YAML drift \u2014 stop and report.\n- - The temporary-flip seds in step 10 must be restored exactly; the closing greps and test runs verify the restore.\n- - The `[[R4996000]]` sentence added to the \u00a78.12 row sits in the rules-description cell, not a face-text cell, so REVIEW Part A (spec versus designer source) still compares identical face texts.\n- ## Open questions\n- None. No step needs a person, a secret, a dashboard or a forbidden path; difficulty stays medium (a wording change plus one ruling and its tests, no engine rules, no AI, no migration, nine files).\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4996 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4996/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "muse",
       "owner_since": "2026-11-26T03:34:25Z",
       "owner_why": "it plans it",
@@ -21923,9 +21915,9 @@
       "provider": "muse",
       "queued_at": "2026-11-26T02:51:03Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45749789504",
+      "run_id": "pending:ae95e36a-1795664735",
       "runs_on": "night-vm-muse",
-      "started_at": "2026-11-26T03:34:25Z",
+      "started_at": "2026-11-26T03:46:09Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -22210,9 +22202,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T03:45:21Z",
+    "at": "2026-11-26T03:46:09Z",
     "url": "",
-    "what": "review #4953 on muse"
+    "what": "build #4996 on muse"
   },
   "last_sweep": {
     "at": "2026-11-26T03:29:28Z",
