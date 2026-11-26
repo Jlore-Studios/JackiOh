@@ -21354,11 +21354,6 @@
       "owner": "claude-8",
       "owner_since": "2026-11-26T21:22:20Z",
       "owner_why": "handed off from `claude-1`: `claude-1` is busy: its lanes are all taken",
-      "paused": {
-        "at": "2026-11-26T20:35:30Z",
-        "interrupt": "usage",
-        "provider": "claude-1"
-      },
       "pending_at": "2026-11-26T19:18:59Z",
       "pending_by": "MaxGoetzmann",
       "pending_request": false,
