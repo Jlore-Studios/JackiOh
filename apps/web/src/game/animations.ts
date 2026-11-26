@@ -102,6 +102,12 @@ function heroSide(view: PlayerView, targetId: string): Side | null {
   return sideOf(view, player as PlayerId);
 }
 
+/** Where a hit on `targetId` lands: its hero, or the instance where it is rendered (R1361, R5045000). */
+export function hitTestid(view: PlayerView, targetId: string): string | null {
+  const side = heroSide(view, targetId);
+  return side !== null ? testid.hero(side) : locateInstance(view, targetId);
+}
+
 /**
  * Where an instance is rendered right now, or `null` if nowhere. Face-down backrow cards are
  * skipped on purpose: they have no `instanceId` in the view, so they cannot be matched.
@@ -745,10 +751,19 @@ export const ANIMATIONS: { [K in GameEventType]: AnimationRow<K> } = {
     durationMs: 300,
     testid: "card-<targetId> | hero-<side>",
     fx: { recipe: "armor" },
-    target: (e, view) => {
-      const side = heroSide(view, e.targetId);
-      return side !== null ? testid.hero(side) : locateInstance(view, e.targetId);
-    },
+    target: (e, view) => hitTestid(view, e.targetId),
+  },
+  // R5045000: a damage pool nullified part of a hit. The pool's card (S+ #42 Force Projector, S+ #123
+  // Oct) pulses, and the effects layer carries the soak from it to the hit's target, where a shield
+  // blooms with the nullified number (fx/cues.ts `nullify`), so a hit that seemed to do nothing shows
+  // where it went.
+  damageNullified: {
+    animation: "jk-pool-pulse",
+    durationMs: 400,
+    testid: "card-<instanceId>",
+    fx: { recipe: "nullify" },
+    // A pool card the view does not show (R97) leaves the hit's target to carry the shield alone.
+    target: (e, view) => locateInstance(view, e.instanceId) ?? hitTestid(view, e.targetId),
   },
   // R3857000: a hero kept Armor; its Armor badge ticks and the effects layer blooms a full shield
   // over the hero (fx/shield.ts), with no shake, since nothing struck it.

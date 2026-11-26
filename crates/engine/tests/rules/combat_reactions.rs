@@ -355,6 +355,227 @@ mod r3550004_a_per_turn_damage_pool {
     }
 }
 
+/// Issue #5045: a pool's soak is reported, `damageNullified`, so the client can show where a hit went.
+mod r5045000_a_pools_soak_is_reported {
+    use super::*;
+    use jackioh_engine::testkit::golden::events_text;
+
+    fn with_sink<R>(state: &mut GameState, run: impl FnOnce(&mut EngineSink) -> R) -> R {
+        let mut events: Vec<GameEvent> = Vec::new();
+        let mut rng = Rng::new(&state.seed, state.rng_cursor);
+        let mut sink = EngineSink::new(state, &mut events, &mut rng);
+        run(&mut sink)
+    }
+
+    /// A non-combat hit of `amount` from `source` on `target` (a Unit's id, or `None` for p1's hero).
+    fn hit(sink: &mut EngineSink, source: Option<&str>, target: Option<&str>, amount: i32) -> i32 {
+        let source = source.map(|id| find_instance(sink.state, id).expect("a source").clone());
+        let target = match target {
+            Some(id) => DamageTarget::Unit {
+                instance: find_instance(sink.state, id).expect("a target").clone(),
+            },
+            None => DamageTarget::Hero { player: P1 },
+        };
+        deal_damage(
+            sink,
+            DamageArgs {
+                source,
+                target,
+                amount,
+                flags: None,
+            },
+        )
+    }
+
+    fn report(pool: &str, source: Option<&str>, target: &str, amount: i32, combat: bool) -> GameEvent {
+        GameEvent::DamageNullified {
+            instance_id: pool.to_string(),
+            source_id: source.map(str::to_string),
+            target_id: target.to_string(),
+            amount,
+            combat,
+        }
+    }
+
+    fn pooled() -> Scenario {
+        board(
+            "r5045000-pool",
+            json!({ "field": [PLAIN], "hand": [PLAIN], "backrow": face_up(POOL) }),
+            json!({ "field": [RANGER, RANGER] }),
+        )
+    }
+
+    #[test]
+    fn r5045000_a_whole_soak_and_a_partial_one_each_name_the_pool_the_source_the_target_and_the_amount() {
+        let mut s = pooled();
+        let pool = backrow_id(&s, P1, 1);
+        let plain = id_at(&s, P1, 1);
+        s.end_turn();
+        let rangers: Vec<String> = (1..=2).map(|lane| id_at(&s, P2, lane)).collect();
+        // Whole: the ranger's 3 goes into the pool, and nothing reaches the Unit.
+        s.attack(rangers[0].as_str(), plain.as_str());
+        assert_eq!(
+            s.last_events_of("damageNullified"),
+            vec![report(&pool, Some(&rangers[0]), &plain, 3, true)]
+        );
+        assert!(
+            !s.last_events()
+                .iter()
+                .any(|event| matches!(event, GameEvent::Damage { target_id, .. } if *target_id == plain))
+        );
+        // Partial: the pool's last 2 are reported, then the 1 that lands on the hero.
+        s.attack(rangers[1].as_str(), "hero");
+        let hits: Vec<GameEvent> = s
+            .last_events()
+            .iter()
+            .filter(|event| {
+                matches!(
+                    event,
+                    GameEvent::DamageNullified { .. } | GameEvent::Damage { .. }
+                )
+            })
+            .cloned()
+            .collect();
+        assert_eq!(
+            hits,
+            vec![
+                report(&pool, Some(&rangers[1]), "hero-p1", 2, true),
+                GameEvent::Damage {
+                    source_id: Some(rangers[1].clone()),
+                    target_id: "hero-p1".into(),
+                    amount: 1,
+                    combat: true,
+                    absorbed: 0,
+                    via: None,
+                },
+            ]
+        );
+        s.expect_health(P1, HERO_HEALTH - 1);
+    }
+
+    #[test]
+    fn r5045000_the_report_takes_no_number_in_r68s_order_and_the_golden_texts_leave_it_out() {
+        let mut s = pooled();
+        let pool = backrow_id(&s, P1, 1);
+        let plain = id_at(&s, P1, 1);
+        let source = hand_id(&s, P1, PLAIN);
+        let seq = s.state().next_seq;
+        with_sink(s.state_mut(), |sink| {
+            assert_eq!(hit(sink, Some(&source), Some(&plain), 3), 0);
+            settle(sink, Default::default());
+            assert_eq!(
+                sink.events.to_vec(),
+                vec![report(&pool, Some(&source), &plain, 3, false)]
+            );
+            assert_eq!(sink.state.next_seq, seq);
+            assert!(sink.state.dispatch.is_empty());
+            assert_eq!(events_text(sink.events), events_text(&[]));
+        });
+        let report = report(&pool, None, &plain, 3, false);
+        assert_eq!(report.as_rules_read(), report);
+    }
+
+    #[test]
+    fn r5045000_a_fatigue_draw_a_pool_soaks_takes_no_number_but_its_fatigue() {
+        let mut s = pooled();
+        let pool = backrow_id(&s, P1, 1);
+        s.state_mut().players.p1.library = Vec::new();
+        let seq = s.state().next_seq;
+        with_sink(s.state_mut(), |sink| {
+            assert!(matches!(draw::draw_one(sink, P1, None), DrawOutcome::Fatigue));
+            settle(sink, Default::default());
+            assert_eq!(
+                sink.events.to_vec(),
+                vec![
+                    GameEvent::Fatigue {
+                        player: P1,
+                        count: 1,
+                        amount: 1,
+                    },
+                    report(&pool, None, "hero-p1", 1, false),
+                ]
+            );
+            assert_eq!(sink.state.next_seq, seq + 1);
+            assert_eq!(sink.state.players.p1.hero.health, HERO_HEALTH);
+        });
+    }
+
+    #[test]
+    fn r5045000_two_pools_split_a_hit_one_report_each_and_an_indestructible_unit_s_hit_has_none() {
+        let mut s = board(
+            "r5045000-two",
+            json!({
+                "field": [PLAIN],
+                "backrow": [{ "def": POOL, "faceUp": true }, { "def": POOL, "faceUp": true }],
+            }),
+            json!({}),
+        );
+        let pools = [backrow_id(&s, P1, 1), backrow_id(&s, P1, 2)];
+        let plain = id_at(&s, P1, 1);
+        with_sink(s.state_mut(), |sink| {
+            assert_eq!(hit(sink, None, None, POOL_SIZE + 2), 0);
+            let soaks: Vec<(String, i32)> = sink
+                .events
+                .iter()
+                .filter_map(|event| match event {
+                    GameEvent::DamageNullified {
+                        instance_id, amount, ..
+                    } => Some((instance_id.clone(), *amount)),
+                    _ => None,
+                })
+                .collect();
+            // R68's order: the first pool soaks what it has, the next the rest.
+            assert_eq!(
+                soaks.iter().map(|(_, amount)| *amount).collect::<Vec<_>>(),
+                vec![POOL_SIZE, 2]
+            );
+            let mut ids: Vec<String> = soaks.into_iter().map(|(id, _)| id).collect();
+            ids.sort();
+            let mut both = pools.to_vec();
+            both.sort();
+            assert_eq!(ids, both);
+        });
+        apply_now(
+            s.state_mut(),
+            effects::grant_keyword(json_as(json!({
+                "target": { "of": "instance", "instanceId": plain },
+                "keyword": { "kind": "Indestructible" },
+            }))),
+        );
+        with_sink(s.state_mut(), |sink| {
+            assert_eq!(hit(sink, None, Some(&plain), 2), 0);
+            assert!(
+                !sink
+                    .events
+                    .iter()
+                    .any(|event| matches!(event, GameEvent::DamageNullified { .. }))
+            );
+        });
+    }
+
+    #[test]
+    fn r5045000_r97_each_seat_reads_the_report_as_it_reads_damage() {
+        let mut s = pooled();
+        let pool = backrow_id(&s, P1, 1);
+        let plain = id_at(&s, P1, 1);
+        // A card in p1's hand dealt the hit: p1 reads it, p2 may not.
+        let source = hand_id(&s, P1, PLAIN);
+        s.state_mut().applied.push(AppliedAction {
+            nonce: "r5045000-view".into(),
+            events: vec![report(&pool, Some(&source), &plain, 3, false)],
+        });
+        let seen = |viewer: PlayerId| -> Vec<GameEvent> {
+            s.view(viewer)
+                .events
+                .into_iter()
+                .filter(|event| matches!(event, GameEvent::DamageNullified { .. }))
+                .collect()
+        };
+        assert_eq!(seen(P1), vec![report(&pool, Some(&source), &plain, 3, false)]);
+        assert_eq!(seen(P2), vec![report(&pool, Some(HIDDEN_ID), &plain, 3, false)]);
+    }
+}
+
 mod r4064000_a_sides_damage_pool {
     use super::*;
 
