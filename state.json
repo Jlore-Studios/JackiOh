@@ -24206,13 +24206,24 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-8",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-8",
+            "run": "45841853674",
+            "tier": "strong"
+          }
+        ],
         "sha": "163792daa427d02c716193eec551055d67d876e3",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "5077": {
