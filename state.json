@@ -24917,13 +24917,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-7",
         "rejections": [],
-        "reviews": [],
-        "sha": "532ee85667a40ce441a1072ff072b1a22896b2fc",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-7",
+            "run": "45862866541",
+            "tier": "strong"
+          }
+        ],
+        "sha": "4d1168de1014ac1dd6a3b0f5c92c5003ab3eeeb1",
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "5093": {
