@@ -22275,11 +22275,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-26T05:08:28Z",
+        "at": "2026-11-26T05:35:24Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "The AI: its decisions or its search (crates/ai/src/) \u2014 the change retunes AI_EVAL weights in crates/ai/src/config.rs"
+        "provider": "claude-7",
+        "tier": "strong",
+        "why": "Rule 2 (the AI): it tunes an evaluation weight in crates/ai/src/config.rs that the search's decisions read; the bot already rated it hard"
       },
       "failures": 0,
       "forced": false,
