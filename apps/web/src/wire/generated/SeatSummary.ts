@@ -35,6 +35,13 @@ playedTurns?: Array<number>,
  */
 playedRadiant?: Array<boolean>, 
 /**
+ * R5054000: the dealt cards this seat held Radiant in its hand at some point from its opening hand on,
+ * each once, in the order it first held one so: they entered the hand Radiant, or turned Radiant there.
+ * Present on every record written since, empty when there were none; absent from every record written
+ * before, whose seen games have no face.
+ */
+heldRadiant?: Array<string>, 
+/**
  * R4672000: what was chosen for each card in `played`, in the same order, `None` for a play whose
  * card offered no choice. Absent when no play had one, and from every record written before it.
  */

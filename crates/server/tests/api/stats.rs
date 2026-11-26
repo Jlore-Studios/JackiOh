@@ -84,6 +84,15 @@ fn seat(
         "playedTurns": played_turns.unwrap_or_else(|| (1..=played.len()).collect()),
     });
     if let Some(flags) = played_radiant {
+        // R5054000: a record written since also lists the cards its seat held Radiant, each once; a play from the
+        // hand on its Radiant face was held so.
+        let mut held: Vec<&str> = Vec::new();
+        for (card, _) in played.iter().zip(&flags).filter(|(_, radiant)| **radiant) {
+            if !held.contains(card) {
+                held.push(card);
+            }
+        }
+        val["heldRadiant"] = json!(held);
         val["playedRadiant"] = json!(flags);
     }
     val
@@ -3920,6 +3929,54 @@ mod r4673000_card_faces {
             created(&radiant)["adjustedWinRate"],
             created(&normal)["adjustedWinRate"]
         );
+    }
+
+    #[tokio::test]
+    async fn r5054000_a_face_reads_the_games_its_card_was_seen_on_that_face_not_only_its_plays() {
+        let app = test_app().await;
+        let mut records = games("radiant", Met::Radiant, 24, 30);
+        records.extend(games("normal", Met::Normal, 18, 30));
+        records.extend(games("unseen", Met::Unseen, 12, 30));
+        // A win-more card: core-001 also sat Radiant in p1's hand through 30 lost games and was never played.
+        for i in 0..30 {
+            let mut record = make_game_record(
+                &format!("faces-held-{i}"),
+                RecordOptions {
+                    source: Some("live"),
+                    mode: Some("bo1"),
+                    p1_deck: Some(vec!["core-001"]),
+                    p1_hand: Some(vec!["core-001"]),
+                    p1_played: Some(Vec::new()),
+                    p2_deck: Some(vec!["core-100"]),
+                    p2_played: Some(Vec::new()),
+                    winner: Some("p2"),
+                    ..RecordOptions::default()
+                },
+            );
+            record["game"]["seats"]["p1"]["heldRadiant"] = json!(["core-001"]);
+            records.push(record);
+        }
+        insert_records(&app, records).await;
+
+        let (status, _, radiant) =
+            get_public(&app, "/api/stats/cards?source=live&mode=bo1&face=radiant").await;
+        assert_eq!(status, 200);
+        let held = card(&radiant, "core-001");
+        let typical = card(&radiant, "core-002");
+        // Its Radiant face is its 60 seen games at 40%, not its 30 plays at 80%, as every other card's plays are.
+        assert_eq!(
+            (held["games"].clone(), typical["games"].clone()),
+            (json!(60), json!(30))
+        );
+        assert!(close(held["winRate"].as_f64().unwrap(), 0.4), "{held}");
+        assert!(close(typical["winRate"].as_f64().unwrap(), 0.8), "{typical}");
+        assert!(
+            held["adjustedWinRate"].as_f64().unwrap() < typical["adjustedWinRate"].as_f64().unwrap(),
+            "{held} {typical}"
+        );
+        // Its normal face is untouched: it was never seen normal in those games.
+        let (_, _, normal) = get_public(&app, "/api/stats/cards?source=live&mode=bo1&face=normal").await;
+        assert_eq!(card(&normal, "core-001")["games"], json!(30));
     }
 
     #[tokio::test]
