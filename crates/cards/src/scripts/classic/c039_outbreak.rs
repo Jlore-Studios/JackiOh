@@ -1,4 +1,4 @@
-//! C #39 Outbreak (SPEC §8.6 row 39). (3) Spell, Epic ((1) until issue #4154).
+//! C #39 Outbreak (SPEC §8.6 row 39). (4) Spell, Epic ((3) until issue #4783, (1) until issue #4154).
 //!   Base:    "Place {tokens|Plague Counter|Plague Counters} on a permanent. If it's an enemy's with at
 //!            least its cost in Plague Counters, steal it. Otherwise, draw 1 per Plague Counter on it."
 //!            — 2 tokens (1 until issue #4154)
@@ -369,7 +369,7 @@ mod tests {
                 assert_eq!(drawn_in(s.last_events()), 2);
             }
 
-            /// Played for 2, not 3: a Chalice holding 3 counters would counter Outbreak, a (3) since issue #4154.
+            /// Played for 2, not 4: a Chalice holding 4 counters would counter Outbreak, a (4) since issue #4783.
             #[test]
             fn r396_c_87_a_plague_chalice_played_for_2_enters_with_2_plague_counters_so_2_more_reach_its_x_and_steal_it() {
                 let mut s = scenario(json!({

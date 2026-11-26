@@ -1,29 +1,30 @@
 //! SPEC §8.12 S+ #90 Meltdown (Unit 2/12 → 4/28, Mindustrial, Legendary, cost 3), a card of the Stinkyscape+ set (R1420).
 //!   Base:    "Flexible, Ranged, Can't Defend, Windfury
-//!            When this attacks, gain +{attack} attack and take {damage} damage.
-//!            When this is Frozen, fully heal it." — attack 2, damage 2
+//!            When this attacks, gain +{attack} attack and take {damage} damage." — attack 2, damage 2
 //!   Radiant: "Flexible, Ranged, Windfury
-//!            When this attacks, gain +{attack} attack and take {damage} damage.
-//!            When this is Frozen, fully heal it." — attack 4, damage 2
+//!            When this attacks, gain +{attack} attack and take {damage} damage." — attack 4, damage 2
 //!
 //! Engine: the keywords are catalog data (Flexible, R3543000: it attacks from the backrow as a Unit). R3559002:
 //! "When this attacks" is the `whenAttacks` hook, not the brief's `afterAttack` (R2396000, R2285000): on each
 //! attack, declared or forced, Meltdown first gains a lasting +`attack` attack, then takes `damage` damage from
-//! itself, then strikes with the raised attack; one the damage kills does not fight (R220). "When this is
-//! Frozen, fully heal it" is a trigger on the Frozen mark landing on it (R3550002): it answers every freeze that
-//! lands, a re-freeze included, and heals to full. Both faces share the script; both numbers are the declared
-//! ones (R386), read through `param`.
+//! itself, then strikes with the raised attack; one the damage kills does not fight (R220). Both faces share the
+//! script; both numbers are the declared ones (R386), read through `param`. R4783023: a freeze heals nothing.
+//!
+//! Issue #4783 (Stinkyscape+ Balance Changes VIII) took "When this is Frozen, fully heal it" off both faces.
+//! Through v0.6.13h (`script_v0_6_13h`, R767000) it was a trigger on the Frozen mark landing on it
+//! (R3550002), answering every freeze that landed, a re-freeze included, and healing it to full.
 
 use jackioh_engine::effects::{buff, damage, heal};
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-090";
 
-/// R3550002: the id of the Frozen trigger.
+/// R3550002: the id of the Frozen trigger (through v0.6.13h).
 const THAW: &str = "meltdown-thaw";
 
-fn meltdown() -> Script {
-    Script {
+/// The face: today's when `through_v0_6_13h` is false, else the one v0.6.13h and before ran.
+fn meltdown(through_v0_6_13h: bool) -> Script {
+    let mut script = Script {
         // R3559002: gain first, then take the damage, both before the strike.
         when_attacks: Some(hook(|ctx| {
             vec![
@@ -31,8 +32,11 @@ fn meltdown() -> Script {
                 damage(json_as(json!({ "to": { "of": "self" }, "amount": param(&*ctx, "damage") }))),
             ]
         })),
-        // R3550002: every freeze that lands on it heals it to full.
-        triggers: vec![
+        ..Script::default()
+    };
+    if through_v0_6_13h {
+        // R3550002 (through v0.6.13h): every freeze that lands on it heals it to full.
+        script.triggers = vec![
             TriggerDef::new(THAW, &[GameEventType::Marked], |_ctx, _event| {
                 vec![heal(json_as(json!({ "target": { "of": "self" }, "toFull": true })))]
             })
@@ -41,19 +45,28 @@ fn meltdown() -> Script {
                     .as_ref()
                     .is_some_and(|card| is_frozen_event(event, card.id.as_str()))
             }),
-        ],
-        ..Script::default()
+        ];
     }
+    script
 }
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: meltdown(),
-        radiant: meltdown(),
+        base: meltdown(false),
+        radiant: meltdown(false),
     }
 }
 
-// S+ #90 Meltdown — SPEC §8.12 row 90 (R3559002; R220, R386, R2285000, R2396000, R3543000, R3550002).
+/// R767000: what it ran through v0.6.13h, before issue #4783: "When this is Frozen, fully heal it"
+/// (R3550002).
+pub fn script_v0_6_13h() -> CardScripts {
+    CardScripts {
+        base: meltdown(true),
+        radiant: meltdown(true),
+    }
+}
+
+// S+ #90 Meltdown — SPEC §8.12 row 90 (R3559002, R4783023; R220, R386, R2285000, R2396000, R3543000).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -85,6 +98,16 @@ mod tests {
             json!({ "field": [{ "def": ID, "radiant": radiant }], "hand": [FREEZE_RAY, FREEZE_RAY] }),
             json!({ "field": [TOUGH] }),
         )
+    }
+
+    /// The damage Meltdown of `radiant`'s face carries once Freeze Ray has frozen it with 6 on it.
+    fn frozen_damage(radiant: bool, seed: &str) -> i32 {
+        let mut s = board(radiant, seed);
+        s.card_mut(ID).damage = 6;
+        let id = s.card(ID).id.clone();
+        s.play(FREEZE_RAY, json!({ "targets": pick::id(id.as_str()) }));
+        assert!(s.card(ID).frozen.is_some(), "Freeze Ray froze it");
+        s.card(ID).damage
     }
 
     mod base {
@@ -138,26 +161,8 @@ mod tests {
         }
 
         #[test]
-        fn r3550002_a_freeze_heals_it_to_full() {
-            let mut s = board(false, "s090-thaw");
-            s.card_mut(ID).damage = 6;
-            let id = s.card(ID).id.clone();
-            s.play(FREEZE_RAY, json!({ "targets": pick::id(id.as_str()) }));
-            assert!(s.card(ID).frozen.is_some(), "Freeze Ray froze it");
-            assert_eq!(s.card(ID).damage, 0, "and it healed to full");
-        }
-
-        #[test]
-        fn r3550002_every_freeze_that_lands_heals_it_again() {
-            let mut s = board(false, "s090-rethaw");
-            let id = s.card(ID).id.clone();
-            s.card_mut(ID).damage = 6;
-            s.play(FREEZE_RAY, json!({ "targets": pick::id(id.as_str()) }));
-            assert_eq!(s.card(ID).damage, 0);
-            // Frozen already, a second Freeze Ray lands again and heals it again.
-            s.card_mut(ID).damage = 5;
-            s.play(FREEZE_RAY, json!({ "targets": pick::id(id.as_str()) }));
-            assert_eq!(s.card(ID).damage, 0, "a re-freeze heals it too");
+        fn r4783023_a_freeze_heals_nothing() {
+            assert_eq!(frozen_damage(false, "s090-thaw"), 6);
         }
     }
 
@@ -175,13 +180,8 @@ mod tests {
         }
 
         #[test]
-        fn r3550002_a_freeze_heals_it_to_full() {
-            let mut s = board(true, "s090-radiant-thaw");
-            s.card_mut(ID).damage = 9;
-            let id = s.card(ID).id.clone();
-            s.play(FREEZE_RAY, json!({ "targets": pick::id(id.as_str()) }));
-            assert!(s.card(ID).frozen.is_some());
-            assert_eq!(s.card(ID).damage, 0);
+        fn r4783023_a_freeze_heals_nothing() {
+            assert_eq!(frozen_damage(true, "s090-radiant-thaw"), 6);
         }
 
         #[test]
@@ -190,6 +190,35 @@ mod tests {
             let radiant = board(true, "s090-radiant-health");
             assert_eq!(base.stats(ID).health, HEALTH);
             assert_eq!(radiant.stats(ID).health, RADIANT_HEALTH);
+        }
+    }
+
+    /// R767000: the script kept for the replays of v0.6.13h and before (issue #4783).
+    mod kept_v0_6_13h {
+        use super::*;
+
+        #[test]
+        fn r767000_r3550002_a_freeze_healed_it_to_full_on_both_faces() {
+            crate::under_kept(ID, script_v0_6_13h(), || {
+                for radiant in [false, true] {
+                    assert_eq!(frozen_damage(radiant, "s090-kept-thaw"), 0, "radiant {radiant}");
+                }
+            });
+        }
+
+        #[test]
+        fn r767000_r3550002_every_freeze_that_landed_healed_it_again() {
+            crate::under_kept(ID, script_v0_6_13h(), || {
+                let mut s = board(false, "s090-kept-rethaw");
+                let id = s.card(ID).id.clone();
+                s.card_mut(ID).damage = 6;
+                s.play(FREEZE_RAY, json!({ "targets": pick::id(id.as_str()) }));
+                assert_eq!(s.card(ID).damage, 0);
+                // Frozen already, a second Freeze Ray lands again and heals it again.
+                s.card_mut(ID).damage = 5;
+                s.play(FREEZE_RAY, json!({ "targets": pick::id(id.as_str()) }));
+                assert_eq!(s.card(ID).damage, 0, "a re-freeze heals it too");
+            });
         }
     }
 }

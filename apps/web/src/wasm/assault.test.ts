@@ -139,8 +139,9 @@ describe("assault WebAssembly exports", () => {
 
     const hash = fnv1a(day1);
     // The deal of 2026-11-23 on this build's stand-ins, as the module answered it; a change to the
-    // catalog's deckable cards or to the deal moves it.
-    expect(hash).toBe("88d6c333");
+    // catalog's deckable cards or to the deal moves it (#4783: a Commander's health, 30 + five times
+    // the level).
+    expect(hash).toBe("a26a9567");
   });
 
   it("the day deck has DECK_SIZE distinct ids, is equal twice, and every id is in the catalog", () => {

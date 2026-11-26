@@ -1,12 +1,17 @@
 //! Meditative #18 Expedition12 (SPEC §8.8 row 18). (1) Spell, Quickdraw, Epic.
-//!   Base:    "Overload ({loss}). Make a card in your hand Radiant."
-//!   Radiant: "Cleave. Overload ({loss}). Make a card in your hand Radiant."
+//!   Base:    "Overload ({loss}). Make a card in your hand Radiant, then Buff it."
+//!   Radiant: "Cleave. Overload ({loss}). Make a card in your hand Radiant, then Buff it."
 //!
 //! The loss is a next-turn rider (§6.3 Mana, `next_turn_mana`, #1563): your next refresh gives `loss`
 //! less, never below 0, as #21 Hinder's does to the opponent's. The pick is a declared hand pick (R81,
 //! as C+ #41's): your other non-Radiant hand cards, made Radiant (§5.2). With no other non-Radiant hand
 //! card the pick has nothing and the Spell still resolves (§8 Conventions). The Radiant face's Cleave
 //! (R1563001) also makes the cards beside the pick in your hand Radiant.
+//!
+//! Issue #4783 added "then Buff it" to both faces: one Buff (`upgrade`, §6.3, R386) on each card the
+//! Spell makes Radiant, right after it turns, the pick first and then the Cleave's neighbours, a
+//! neighbour already Radiant Buffed all the same (R4783031). `script_v0_6_13h` keeps the faces with no
+//! Buff for the replays after v0.4.0f through v0.6.13h (R767000).
 
 use jackioh_engine::prelude::*;
 
@@ -54,22 +59,27 @@ fn beside_the_pick(ctx: &EffectContext<'_>) -> Vec<String> {
         .collect()
 }
 
-fn cry(ctx: &mut EffectContext<'_>, cleave: bool) -> Vec<Effect> {
+/// `buff`: whether each card made Radiant is then Buffed once (R4783031), as since issue #4783.
+fn cry(ctx: &mut EffectContext<'_>, cleave: bool, buff: bool) -> Vec<Effect> {
     let mut effects = vec![
         next_turn_mana(json_as(json!({ "amount": -param(&*ctx, "loss") }))),
         set_radiant(json_as(json!({ "target": { "of": "chosen" } }))),
     ];
+    if buff {
+        effects.push(upgrade(json_as(json!({ "target": { "of": "chosen" } }))));
+    }
     if cleave {
-        effects.extend(
-            beside_the_pick(&*ctx)
-                .iter()
-                .map(|id| set_radiant(json_as(json!({ "instanceId": id })))),
-        );
+        for id in beside_the_pick(&*ctx) {
+            effects.push(set_radiant(json_as(json!({ "instanceId": &id }))));
+            if buff {
+                effects.push(upgrade(json_as(json!({ "instanceId": &id }))));
+            }
+        }
     }
     effects
 }
 
-fn face(cleave: bool) -> Script {
+fn face(cleave: bool, buff: bool) -> Script {
     Script {
         static_flags: Some(StaticFlags {
             quickdraw: Some(true),
@@ -77,15 +87,24 @@ fn face(cleave: bool) -> Script {
         }),
         targets: targets(),
         target_checks: target_checks(),
-        cry: Some(hook(move |ctx| cry(ctx, cleave))),
+        cry: Some(hook(move |ctx| cry(ctx, cleave, buff))),
         ..Script::default()
     }
 }
 
 pub fn script() -> CardScripts {
     CardScripts {
-        base: face(false),
-        radiant: face(true),
+        base: face(false, true),
+        radiant: face(true, true),
+    }
+}
+
+/// R767000: after v0.4.0f through v0.6.13h each card made Radiant was not Buffed (issue #4783,
+/// R4783031); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_13h() -> CardScripts {
+    CardScripts {
+        base: face(false, false),
+        radiant: face(true, false),
     }
 }
 
@@ -156,6 +175,14 @@ mod tests {
 
     fn radiant_hand(state: &GameState) -> Vec<String> {
         state.players.p1.hand.iter().filter(|card| card.radiant).map(|card| card.id.clone()).collect()
+    }
+
+    /// How many Buffs (`upgraded`) the card took.
+    fn buffs_on(s: &Scenario, id: &str) -> usize {
+        s.events()
+            .iter()
+            .filter(|event| matches!(event, GameEvent::Upgraded { instance_id, .. } if instance_id == id))
+            .count()
     }
 
     /// p1's next turn: the opponent's turn passes, and p1's refresh has run.
@@ -256,6 +283,26 @@ mod tests {
             assert!(s.card(FILLER).radiant, "the pick becomes Radiant");
         }
 
+        /// R4783031: since issue #4783 the pick turns Radiant and then takes one Buff.
+        #[test]
+        fn r4783031_the_pick_becomes_radiant_then_takes_one_buff() {
+            crate::register_all();
+            let mut s = board(json!([EXPEDITION, VANILLA, FILLER, TIMMY]));
+            let chosen = s.card(FILLER).id.clone();
+            s.play(EXPEDITION, pick::targets(pick::card(&s, FILLER)));
+            assert!(s.card(FILLER).radiant);
+            assert_eq!(buffs_on(&s, &chosen), 1);
+            let radiant_at = s.events().iter().position(
+                |event| matches!(event, GameEvent::RadiantSet { instance_id, .. } if *instance_id == chosen),
+            );
+            let buff_at = s.events().iter().position(
+                |event| matches!(event, GameEvent::Upgraded { instance_id, .. } if *instance_id == chosen),
+            );
+            assert!(radiant_at.is_some() && radiant_at < buff_at, "made Radiant, then Buffed");
+            // No Cleave on the base face: the cards beside the pick take nothing.
+            assert_eq!(s.count(GameEventType::Upgraded), 1);
+        }
+
         #[test]
         fn base_face_has_no_cleave_only_the_pick_becomes_radiant() {
             crate::register_all();
@@ -308,6 +355,31 @@ mod tests {
             assert_eq!(s.state().players.p1.mana.next_turn_mod, -2);
         }
 
+        /// R4783031, R1563001: the cards beside the pick are made Radiant and Buffed too, once each, and
+        /// one already Radiant takes its Buff all the same; a card two away takes nothing.
+        #[test]
+        fn r4783031_cleave_buffs_the_pick_and_each_card_beside_it_once() {
+            crate::register_all();
+            let mut s = board(json!([
+                { "def": EXPEDITION, "radiant": true },
+                { "def": VANILLA, "radiant": true },
+                FILLER,
+                TIMMY,
+                MENACE,
+            ]));
+            let before = s.card(VANILLA).id.clone();
+            let chosen = s.card(FILLER).id.clone();
+            let after = s.card(TIMMY).id.clone();
+            let far = s.card(MENACE).id.clone();
+            s.play(EXPEDITION, pick::targets(pick::card(&s, FILLER)));
+            for id in [&before, &chosen, &after] {
+                assert!(s.card(id.as_str()).radiant, "{id} is Radiant");
+                assert_eq!(buffs_on(&s, id), 1, "{id} is Buffed once");
+            }
+            assert!(!s.card(far.as_str()).radiant);
+            assert_eq!(buffs_on(&s, &far), 0);
+        }
+
         #[test]
         fn r1563001_a_pick_at_the_end_of_the_hand_has_one_card_beside_it() {
             crate::register_all();
@@ -316,6 +388,24 @@ mod tests {
             assert!(s.card(FILLER).radiant);
             assert!(s.card(VANILLA).radiant);
             assert!(!s.card(MENACE).radiant);
+        }
+    }
+
+    /// R767000: the script kept for the replays after v0.4.0f through v0.6.13h: no Buff on the cards made Radiant.
+    mod v0_6_13h {
+        use super::*;
+
+        #[test]
+        fn r767000_the_kept_faces_make_cards_radiant_and_buff_none() {
+            crate::under_kept(EXPEDITION, script_v0_6_13h(), || {
+                for radiant in [false, true] {
+                    let mut s = board(json!([{ "def": EXPEDITION, "radiant": radiant }, VANILLA, FILLER, TIMMY]));
+                    s.play(EXPEDITION, pick::targets(pick::card(&s, FILLER)));
+                    assert!(s.card(FILLER).radiant, "radiant {radiant}: the pick");
+                    assert_eq!(s.card(VANILLA).radiant, radiant, "the Cleave on the Radiant face alone");
+                    assert_eq!(s.count(GameEventType::Upgraded), 0, "radiant {radiant}: no Buff");
+                }
+            });
         }
     }
 

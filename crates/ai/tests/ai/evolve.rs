@@ -9,8 +9,8 @@
 //!
 //! The cards: Lone Drifter, (1) 2/2, Radiant 4/4, "Evolves when all your Unit zones are full. / Evolve:
 //! Gain +4/+4." (Radiant +8/+8); Jay Fungus, (2) 3/6 Taunt, "… Evolves when your hand has at least 3 (0)
-//! Cost cards. / Evolve: Gain Poisonous."; A Wee Whelp, (1) 1/1, "Evolves after this destroys a Unit. /
-//! Evolve: Set stats to 10/10."; High Evolutionary, (3) 7/7, "Aura: Your evolutions trigger twice.";
+//! Cost cards. / Evolve: Gain Poisonous."; A Wee Whelp, (1) 2/1, "Evolves after this destroys a Unit. /
+//! Evolve: Gain +8/+8."; High Evolutionary, (3) 7/7, "Aura: Your evolutions trigger twice.";
 //! The Propagation's Wasp, Space Invader and Lantern Distiller, whose own attack or turn text evolves them;
 //! the Felinor Token, a (1) 1/1 with no text; Hotfix, (1) "Give a friendly Unit +2/+2."; Polymorph, (3)
 //! "Transform a Unit into a Sheep Token"; Rapid Replenish, a (0) Spell; Hit Job, a (3) Spell; and Mr.

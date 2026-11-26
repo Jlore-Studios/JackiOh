@@ -55,6 +55,8 @@ pub const TOXICANT: &str = "bt-toxicant";
 pub const SCOURGE: &str = "bt-scourge";
 /// A (0) 2/20 Unit: "Immune to Toxic." (R4154001)
 pub const IMMUNE: &str = "bt-immune";
+/// A (0) 4/8 Unit: "Damage dealt also Burns." (R4783001)
+pub const MAGMA: &str = "bt-magma";
 
 fn card(index: u32, id: &str, type_: &str, stats: Option<(i32, i32)>, keywords: Value) -> CardDef {
     let (base, radiant) = match stats {
@@ -155,6 +157,13 @@ pub fn scripts() -> IndexMap<String, CardScripts> {
             }),
         ),
         (
+            MAGMA,
+            flagged(StaticFlags {
+                damage_also_burns: Some(true),
+                ..StaticFlags::default()
+            }),
+        ),
+        (
             BURNER,
             aimed(|| {
                 vec![effects::burn(json_as(
@@ -244,6 +253,7 @@ pub fn defs() -> Vec<CardDef> {
         card(35415, TOXICANT, "Spell", None, json!([])),
         card(35416, SCOURGE, "Spell", None, json!([])),
         card(35417, IMMUNE, "Unit", Some((2, 20)), json!([])),
+        card(35418, MAGMA, "Unit", Some((4, 8)), json!([])),
     ]
 }
 

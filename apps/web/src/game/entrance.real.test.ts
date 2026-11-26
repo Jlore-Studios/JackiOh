@@ -39,7 +39,7 @@ import { lookupFromDefs } from "./catalog.ts";
 import { firstReveal, isFaceDownSet } from "./entrance.ts";
 
 const SEATS = ["p1", "p2"] as const;
-/** Meditative #45 Knowledge Breaker (Legendary; its Aura lends Units Cloaked), #99 Paranoia (lends Spells Cloaked). */
+/** Meditative #45 Knowledge Breaker (Legendary; prints Cloaked since issue #4783, its Aura lent Units Cloaked before), #99 Paranoia (lends Spells Cloaked). */
 const KNOWLEDGE_BREAKER = "meditative-045";
 const PARANOIA = "meditative-099";
 /** Meditative #8 Reach the Summit (a Mythic Spell), Classic #6 Cloaked Toe Cracker (a Common Unit that prints Cloaked). */

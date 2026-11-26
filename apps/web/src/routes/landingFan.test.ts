@@ -313,7 +313,8 @@ describe("R1017002 the fan deals only cards that print whole on it", () => {
       const words = [false, true].every((radiant) => !overLimit(text(def.id, radiant), FAN_TEXT_LIMIT));
       expect(fitsTheFan(def, false), def.name).toBe(words);
     }
-    expect(fitsTheFan(card("core-004"), false)).toBe(false);
+    // Gary the Gambler fits by its text too since #4783 took its keyword coin off.
+    expect(fitsTheFan(card("core-004"), false)).toBe(true);
     // R2511000: a Legacy card of a hero's card is held to its text, full art on or off.
     expect(HERO_LEGACY.map((def) => def.id).sort()).toEqual(["traininggrounds-043", "traininggrounds-044", "traininggrounds-048"]);
     for (const def of HERO_LEGACY) {

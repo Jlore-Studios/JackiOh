@@ -1488,7 +1488,7 @@ const CLASSIC: &[SpecRow] = &[
     row(
         "39",
         "Outbreak",
-        c(3),
+        c(4),
         T::Spell,
         &[G::Plague],
         R::Epic,
@@ -2190,8 +2190,8 @@ const CLASSIC_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Human, G::Pancake],
         R::Legendary,
-        st(2, 2),
-        st(4, 4),
+        st(2, 1),
+        st(4, 2),
     ),
     row("14", "Forever&", c(1), T::Spell, &[], R::Epic, NO_STATS, NO_STATS),
     row(
@@ -2917,7 +2917,7 @@ const CLASSIC_PLUS: &[SpecRow] = &[
     row(
         "70",
         "Chaos Machine",
-        c(2),
+        c(3),
         T::FieldSpell,
         &[],
         R::Rare,
@@ -3733,7 +3733,7 @@ const MEDITATIVE: &[SpecRow] = &[
     row(
         "49.1",
         "YileGPT Prime",
-        c(8),
+        c(4),
         T::Unit,
         &[G::Cn, G::Acclaimed, G::Prime, G::Token],
         R::Token,
@@ -5091,7 +5091,7 @@ const STINKYSCAPE: &[SpecRow] = &[
     row(
         "18",
         "Imitated Instrumentality",
-        c(3),
+        c(4),
         T::Spell,
         &[],
         R::Legendary,
@@ -5386,8 +5386,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[G::Human],
         R::Epic,
-        st(8, 12),
-        st(16, 24),
+        st(4, 8),
+        st(8, 16),
     ),
     row(
         "46",
@@ -5654,7 +5654,7 @@ const STINKYSCAPE: &[SpecRow] = &[
         st(2, 5),
         st(4, 10),
     ),
-    row("77", "Yuma", c(2), T::Unit, &[], R::Epic, st(1, 8), st(2, 16)),
+    row("77", "Yuma", c(1), T::Unit, &[], R::Epic, st(1, 3), st(2, 6)),
     row("78", "Ozark", c(3), T::Unit, &[], R::Epic, st(4, 4), st(8, 8)),
     row("79", "Orca", emb(4, 5), T::Unit, &[], R::Epic, st(3, 1), st(6, 2)),
     row(
@@ -6672,8 +6672,8 @@ const STINKYSCAPE: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Rare,
-        st(2, 2),
-        st(4, 4),
+        st(3, 2),
+        st(6, 4),
     ),
     row(
         "T-dormant-starship",
@@ -7698,8 +7698,8 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Rare,
-        st(0, 4),
-        st(0, 8),
+        st(1, 5),
+        st(2, 10),
     ),
     row(
         "16",
@@ -7708,8 +7708,8 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Rare,
-        st(5, 3),
-        st(10, 6),
+        st(3, 2),
+        st(6, 4),
     ),
     row(
         "17",
@@ -8564,8 +8564,8 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
         T::Unit,
         &[G::Swarm],
         R::Common,
-        st(1, 1),
-        st(2, 2),
+        st(2, 1),
+        st(4, 2),
     ),
     row(
         "102",
@@ -9134,8 +9134,8 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Rare,
-        st(3, 1),
-        st(6, 2),
+        st(4, 1),
+        st(8, 2),
     ),
     row(
         "151",
@@ -9144,8 +9144,8 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Epic,
-        st(3, 1),
-        st(6, 2),
+        st(6, 1),
+        st(12, 2),
     ),
     row(
         "152",
@@ -9154,8 +9154,8 @@ const STINKYSCAPE_PLUS: &[SpecRow] = &[
         T::Unit,
         &[],
         R::Rare,
-        st(2, 1),
-        st(4, 2),
+        st(1, 4),
+        st(2, 8),
     ),
     row(
         "153",

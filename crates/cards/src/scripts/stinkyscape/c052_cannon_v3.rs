@@ -1,7 +1,7 @@
 //! Stinkyscape #52 Cannon v3 (SPEC §8.10 row 52). Unit 0/2 → 0/4, Weapon, cost 2, Rare.
 //!   Base:    "Starship Piece
-//!            Activate: Deal {damage} damage to an enemy Unit." — damage 5
-//!   Radiant: the same text — damage 10
+//!            Activate: Deal {damage} damage to an enemy Unit." — damage 4
+//!   Radiant: the same text — damage 8
 //!
 //! Starship Piece is a catalog keyword the engine plays, and Equip was one through v0.6.7k (R4285001): Equipped onto one of your Units it
 //! fuses into it (R1086), which then takes the Activate (R1751000) and is a piece only if it was one
@@ -10,7 +10,8 @@
 //! hero is no legal target, and the old "deals half damage to heroes" is gone. Once a turn (R384). The
 //! number is the declared `damage` (R386), read through `param`.
 //! Through v0.5.11 the enemy hero was a target too, its hit halved (R1841001), which `script_v0_5_11`
-//! keeps (R767000).
+//! keeps (R767000). Issue #4783 (Stinkyscape+ Balance Changes VIII) took the damage to 4 (Radiant 8)
+//! from 5 (10), catalog data the shipped catalogs keep (R767000).
 
 use jackioh_engine::effects::{DamageEffectArgs, DamageFlagArgs, TargetSpec, damage};
 use jackioh_engine::prelude::*;
@@ -100,8 +101,8 @@ mod tests {
     use crate::stinkyscape_family as fam;
 
     /// The printed `damage`, and the Radiant face's.
-    const DAMAGE: i32 = 5;
-    const RADIANT_DAMAGE: i32 = 10;
+    const DAMAGE: i32 = 4;
+    const RADIANT_DAMAGE: i32 = 8;
 
     mod base {
         use super::*;

@@ -1,7 +1,7 @@
 //! SPEC §8.12 S+ #100 Plesiosize, a card of the Stinkyscape+ set (R1420, R3535000). Built by S08 (#3555).
-//! Give a unit in your hand \+6/+6 and make it GIGA.  
+//! Give a unit in your hand \+8/+8 and make it GIGA.  
 //! \~\~\~  
-//! Give a unit in your hand \+12/+12 and make it GIGA.
+//! Give a unit in your hand \+16/+16 and make it GIGA.
 //!
 //! "A Unit in your hand" is a declared hand pick (R81, R3555000). In the text's order it gains +N/+N
 //! (`buff`, carried onto the field) and GIGA (`grant_keyword`), kept onto the field (R1878003),
@@ -68,13 +68,13 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r3555000_the_chosen_unit_gains_6_6_and_giga_onto_the_field() {
+        fn r3555000_the_chosen_unit_gains_8_8_and_giga_onto_the_field() {
             let mut s = holding(false, "s100-base", json!([UNIT]));
             let unit = held_id(&s, UNIT);
             s.play(ID, json!({ "targets": [{ "pick": "instance", "instanceId": unit }] }));
             assert!(s.state().pending.is_none());
-            assert_eq!(s.card(unit.as_str()).buffs.attack, 6);
-            assert_eq!(s.card(unit.as_str()).buffs.health, 6);
+            assert_eq!(s.card(unit.as_str()).buffs.attack, 8);
+            assert_eq!(s.card(unit.as_str()).buffs.health, 8);
             assert!(
                 s.card(unit.as_str())
                     .granted_keywords
@@ -83,7 +83,7 @@ mod tests {
             );
             s.play(unit.as_str(), json!({ "zone": 1 }));
             assert_eq!(s.card(unit.as_str()).giga, Some(true));
-            s.expect_stats(unit.as_str(), json!({ "attack": 10, "maxHealth": 10 }));
+            s.expect_stats(unit.as_str(), json!({ "attack": 12, "maxHealth": 12 }));
         }
 
         #[test]
@@ -102,13 +102,13 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r3555000_the_chosen_unit_gains_12_12_and_giga_onto_the_field() {
+        fn r3555000_the_chosen_unit_gains_16_16_and_giga_onto_the_field() {
             let mut s = holding(true, "s100-radiant", json!([UNIT]));
             let unit = held_id(&s, UNIT);
             s.play(ID, json!({ "targets": [{ "pick": "instance", "instanceId": unit }] }));
             assert!(s.state().pending.is_none());
-            assert_eq!(s.card(unit.as_str()).buffs.attack, 12);
-            assert_eq!(s.card(unit.as_str()).buffs.health, 12);
+            assert_eq!(s.card(unit.as_str()).buffs.attack, 16);
+            assert_eq!(s.card(unit.as_str()).buffs.health, 16);
             assert!(
                 s.card(unit.as_str())
                     .granted_keywords
@@ -117,7 +117,7 @@ mod tests {
             );
             s.play(unit.as_str(), json!({ "zone": 1 }));
             assert_eq!(s.card(unit.as_str()).giga, Some(true));
-            s.expect_stats(unit.as_str(), json!({ "attack": 16, "maxHealth": 16 }));
+            s.expect_stats(unit.as_str(), json!({ "attack": 20, "maxHealth": 20 }));
         }
     }
 }

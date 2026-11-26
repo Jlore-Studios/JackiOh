@@ -1,5 +1,5 @@
 //! S #45 Drone Commander (SPEC §8.10 row 45; §2.4, R1, R60, R380, R3142002): (4) Unit, Human, Epic,
-//! 8/12 → 16/24, a card of the Stinkyscape set.
+//! 4/8 → 8/16 (8/12 → 16/24 until issue #4783, catalog data), a card of the Stinkyscape set.
 //!   Base:    "Cry: Fill your hand with random Drone Core cards."
 //!   Radiant: "Cry: Fill your hand with random Radiant Drone Core cards."
 //! Engine: Cry (R1; the list prints no trigger, the plan's fix ST8). It counts the room in its
@@ -146,12 +146,12 @@ mod tests {
     }
 
     #[test]
-    fn radiant_16_24_fills_the_hand_with_radiant_ones() {
+    fn radiant_8_16_fills_the_hand_with_radiant_ones() {
         let mut s = setup(true, 1);
         s.play(COMMANDER, json!({}));
         let commander = s.unit(P1, 1).expect("the Commander");
         let stats = s.stats(commander.id.as_str());
-        assert_eq!((stats.attack, stats.health), (16, 24));
+        assert_eq!((stats.attack, stats.health), (8, 16));
         assert_eq!(cores(&s), vec![(true, 0, None); HAND_CAP as usize - 1]);
     }
 

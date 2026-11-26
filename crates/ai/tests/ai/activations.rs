@@ -7,8 +7,9 @@
 //! (`crates/ai/tests/ai/starship_equip.rs` is that ruling's own file). R2603000 prices a face-up backrow card's Activate, a
 //! Field Spell's, the same way.
 //!
-//! Cannon v3 is a Starship Piece: when it dies, a copy of it fuses into its owner's Dormant Starship
-//! (R1852000), which can fire it again. So the removal below is a transform, which is no death. The
+//! The Cannons are Starship Pieces: when one dies, a copy of it fuses into its owner's Dormant Starship
+//! (R1852000), which can fire it again. A board whose Cannon must destroy a Twisted Sorcerer (5/5) holds a
+//! Cannon v4, whose 6 damage does, since issue #4783 took Cannon v3's to 4. So the removal below is a transform, which is no death. The
 //! tribute is made beside a Voidwalker, whose aura exiles the tributed card; a tributed Cannon has still
 //! died, so it fuses all the same (R4207000), into a Dormant Starship the probes never try, and the AI
 //! keeps the Cannon for its Activate (at `AI_EVAL.activation` 0 it gives the Cannon up).
@@ -67,23 +68,23 @@ fn price_of(prices: &[ActivationPrice], def_id: &str, controller: PlayerId) -> f
         .unwrap_or_else(|| panic!("{controller}'s {def_id}'s Activate is priced: {prices:?}"))
 }
 
-/// A Mr. Vanilla cut to 3/3. Cannon v3 is a 0/2 since #3040: unpriced it is the smaller kill (2 against
-/// 6.6), with its shot the bigger one (8.5), which the printed 4/4's 8.8 would outweigh.
+/// A Mr. Vanilla cut to 3/3. Cannon v4 is a 0/3: unpriced it is the smaller kill (3 against 6.6), with
+/// its shot, which destroys the 5/5, the bigger one, which the printed 4/4's 8.8 could outweigh.
 fn smaller_vanilla() -> Value {
     json!({ "def": VANILLA, "statsOverride": { "attack": 3, "health": 3 } })
 }
 
-/// The AI's Sorcerer and `hand` against the human's Cannon v3, a 3/3 Vanilla and `backrow`.
+/// The AI's Sorcerer and `hand` against the human's Cannon v4, a 3/3 Vanilla and `backrow`.
 fn cannon_against_vanilla(seed: &str, hand: Value, backrow: Value) -> GameState {
     board(
         seed,
         json!({ "hand": hand, "field": [SORCERER] }),
-        json!({ "hand": [VANILLA], "field": [CANNON, smaller_vanilla()], "backrow": backrow }),
+        json!({ "hand": [VANILLA], "field": [CANNON_V4, smaller_vanilla()], "backrow": backrow }),
     )
 }
 
-/// The Postdoc as a 1/2, a vanilla on the field (its Cry fires only as it is played). Beside Cannon v3's
-/// 0/2 and its shot (7.1) the printed 2/4 (6.4) is no longer the plain loss the AI tributes first.
+/// The Postdoc as a 1/2, a vanilla on the field (its Cry fires only as it is played). Beside a Cannon's
+/// body and its shot the printed 2/4 (6.4) is no longer the plain loss the AI tributes first.
 fn lesser_postdoc() -> Value {
     json!({ "def": POSTDOC, "statsOverride": { "attack": 1, "health": 2 } })
 }
@@ -102,14 +103,14 @@ fn sorcerer_resting(mut state: GameState) -> GameState {
 fn r2564000_an_own_cannon_is_priced_by_the_unit_its_shot_destroys() {
     let state = board(
         "ai-activation-own",
-        json!({ "field": [CANNON] }),
+        json!({ "field": [CANNON_V4] }),
         json!({ "field": [SORCERER] }),
     );
-    let cannon = unit(&state, AI, CANNON);
+    let cannon = unit(&state, AI, CANNON_V4);
     let sorcerer = unit_worth(&state, unit(&state, HUMAN, SORCERER), &AI_EVAL, Prices::NONE);
     let body = unit_worth(&state, cannon, &AI_EVAL, Prices::NONE);
     let (prices, used) = priced(&state);
-    let price = price_of(&prices, CANNON, AI);
+    let price = price_of(&prices, CANNON_V4, AI);
     assert!(
         price >= sorcerer,
         "its shot destroys the enemy's 5/5: {price} against {sorcerer}"
@@ -128,18 +129,18 @@ fn r2564000_an_own_cannon_is_priced_by_the_unit_its_shot_destroys() {
 #[test]
 fn r2564000_an_enemy_cannon_is_worth_more_to_destroy_than_a_bigger_vanilla() {
     let state = cannon_against_vanilla("ai-activation-enemy", json!([]), json!([]));
-    let (cannon, vanilla) = (unit(&state, HUMAN, CANNON), unit(&state, HUMAN, VANILLA));
+    let (cannon, vanilla) = (unit(&state, HUMAN, CANNON_V4), unit(&state, HUMAN, VANILLA));
     let (unpriced_cannon, unpriced_vanilla) = (
         kill_worth(&state, cannon, &AI_EVAL, Prices::NONE),
         kill_worth(&state, vanilla, &AI_EVAL, Prices::NONE),
     );
     assert!(
         unpriced_cannon < unpriced_vanilla,
-        "unpriced, the 0/2 is the smaller kill: {unpriced_cannon} against {unpriced_vanilla}"
+        "unpriced, the 0/3 is the smaller kill: {unpriced_cannon} against {unpriced_vanilla}"
     );
     let unpriced_eval = evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL);
     let (prices, _) = priced(&state);
-    assert!(price_of(&prices, CANNON, HUMAN) > 0.0);
+    assert!(price_of(&prices, CANNON_V4, HUMAN) > 0.0);
     let prices = prices_of(prices);
     let cannon_kill = kill_worth(&state, cannon, &AI_EVAL, &prices);
     let vanilla_kill = kill_worth(&state, vanilla, &AI_EVAL, &prices);
@@ -171,7 +172,7 @@ fn r2564000_given_one_removal_the_ai_removes_the_enemy_cannon() {
         json!([POLYMORPH]),
         json!([]),
     ));
-    let cannon = unit(&state, HUMAN, CANNON).id.clone();
+    let cannon = unit(&state, HUMAN, CANNON_V4).id.clone();
     let polymorph = state.players[AI].hand[0].id.clone();
     let turn = play_ai_turn(
         &state,
@@ -199,14 +200,14 @@ fn r2564000_the_ai_tributes_its_vanilla_before_its_cannon() {
         "seed": "ai-activation-tribute",
         "p1": {
             "hand": [THE_ROCK],
-            "field": [CANNON, lesser_postdoc(), { "def": MENACE, "position": "DEF" }],
+            "field": [CANNON_V4, lesser_postdoc(), { "def": MENACE, "position": "DEF" }],
             "library": LIBRARY,
         },
         "p2": { "hand": [VANILLA], "field": [SORCERER, VOIDWALKER], "library": LIBRARY },
     }));
     let target = s.unit_at(HUMAN, 1).id.clone();
     s.activate(
-        CANNON,
+        CANNON_V4,
         json!({ "ability": "cannon", "targets": pick::id(&target) }),
     );
     let state = s.state().clone();
@@ -231,7 +232,7 @@ fn r2564000_the_ai_tributes_its_vanilla_before_its_cannon() {
         _ => None,
     });
     assert_eq!(tributes, Some(Some(vec![postdoc])), "{:?}", turn.actions);
-    assert!(on_field(&turn.state, AI, CANNON), "the Cannon stays");
+    assert!(on_field(&turn.state, AI, CANNON_V4), "the Cannon stays");
 }
 
 #[test]
@@ -297,12 +298,12 @@ fn r2564000_the_frozen_baseline_and_a_finished_decision_read_no_price() {
     assert_eq!(GREEDY_EVAL.activation, 0.0);
     let state = board(
         "ai-activation-decide",
-        json!({ "hand": [VANILLA], "field": [CANNON] }),
+        json!({ "hand": [VANILLA], "field": [CANNON_V4] }),
         json!({ "field": [SORCERER] }),
     );
-    let cannon = unit(&state, AI, CANNON);
+    let cannon = unit(&state, AI, CANNON_V4);
     let (prices, _) = priced(&state);
-    assert!(price_of(&prices, CANNON, AI) > 0.0);
+    assert!(price_of(&prices, CANNON_V4, AI) > 0.0);
     let prices = prices_of(prices);
     let greedy = unit_worth(&state, cannon, &GREEDY_EVAL, Prices::NONE);
     let held = unit_worth(&state, cannon, &GREEDY_EVAL, &prices);

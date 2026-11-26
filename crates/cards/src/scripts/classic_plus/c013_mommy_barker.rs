@@ -1,4 +1,5 @@
-//! C+ #13 Mommy Barker (SPEC §8.7 row 13): (1) Unit, Human, Pancake, Legendary, 2/2 → 4/4.
+//! C+ #13 Mommy Barker (SPEC §8.7 row 13): (1) Unit, Human, Pancake, Legendary, 2/1 → 4/2 (2/2 → 4/4
+//! until issue #4783, catalog data).
 //!   Base:    "Death: Add {tokens} random Pancake token(s) to your hand."
 //!   Radiant: Reborn, and the same Death, which fires on both deaths (§4.5).
 //! The pool is C+ #12's, the eight Pancake tokens, on their base faces (R60); a full hand burns it.
@@ -138,14 +139,14 @@ mod tests {
     mod radiant {
         use super::*;
 
-        /// 4/4 with Reborn; a token on each of both deaths (R8)
+        /// 4/2 with Reborn; a token on each of both deaths (R8)
         #[test]
-        fn four_4_with_reborn_a_token_on_each_of_both_deaths_r8() {
+        fn four_2_with_reborn_a_token_on_each_of_both_deaths_r8() {
             let mut s = scenario(json!({
                 "p1": { "hand": [FILLER], "field": [{ "def": MOMMY, "radiant": true }], "library": [FILLER] },
                 "p2": { "hand": [FILLER], "field": [MENACE] },
             }));
-            s.expect_stats(MOMMY, json!({ "attack": 4, "health": 4 }));
+            s.expect_stats(MOMMY, json!({ "attack": 4, "health": 2 }));
             assert!(s.stats(MOMMY).keywords.contains(&Keyword::Reborn));
             s.attack(MOMMY, MENACE); // first death: Reborn brings it back
             assert_eq!(pancakes_in(&s).len(), 1);

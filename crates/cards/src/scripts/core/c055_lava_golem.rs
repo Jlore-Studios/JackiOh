@@ -224,11 +224,12 @@ mod tests {
             assert_eq!(golem.summoned_turn, Some(turn));
         }
 
-        /// R4265000: set by M #45's lent Cloaked, the Golem paid with an opposing unit stays in p1's backrow (fuzz handicapped seed 6928).
+        /// R4265000: set by the Cloaked M #45.1 lends (M #45's did through v0.6.13h), the Golem paid with an opposing
+        /// unit stays in p1's backrow (fuzz handicapped seed 6928).
         #[test]
         fn r4265000_a_cloaked_play_paid_with_an_opposing_unit_is_set_in_the_player_s_own_backrow() {
             let mut s = scenario(json!({
-                "p1": { "mana": 10, "hand": ["core-055"], "field": [{ "def": "core-053", "lane": 1 }, { "def": "core-053", "lane": 2 }, { "def": "meditative-045", "lane": 4 }] },
+                "p1": { "mana": 10, "hand": ["core-055"], "field": [{ "def": "core-053", "lane": 1 }, { "def": "core-053", "lane": 2 }, { "def": "meditative-045-1", "lane": 4 }] },
                 "p2": { "field": [{ "def": "core-053", "lane": 1 }] },
             }));
             let golem = s.card("core-055").id.clone();

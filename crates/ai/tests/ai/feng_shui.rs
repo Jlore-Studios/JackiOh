@@ -3,7 +3,10 @@
 //! see was the element it ends on, which judges its next play. While a Feng Shui acts, the evaluation now
 //! counts the best verdict that element gives a card in the AI's own hand (`feng_shui_outlook`), the
 //! move order tries a rewarded play first and a punished one last, and the beam keeps apart two orders
-//! of the same plays that end on different elements (`search_signature`).
+//! of the same plays that end on different elements (`search_signature`). Issue #4783 (R4783041): while its
+//! own Feng Shui acts, the Auspicious Rock its Activate adds next turn counts among the cards its next play
+//! may be, and a plain play that leaves an element generating another hand card's is tried before the other
+//! plain plays.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -383,4 +386,70 @@ fn r4154403_the_ai_takes_its_rock_on_a_turn_it_spends_on_plays() {
                 .collect::<Vec<_>>()
         );
     }
+}
+
+/// `evaluate` of the AI holding `hand` after `last`, under `judge`'s Feng Shui.
+fn holding(judge: Option<(PlayerId, bool)>, last: CardElement, hand: Value) -> f64 {
+    let state = scene("ai-feng-shui-coming-rock", judge, 0, hand, Some(last));
+    evaluate(&state, AI, NextSwing::Enemy, &AI_EVAL)
+}
+
+#[test]
+fn r4783041_the_rock_its_own_feng_shui_adds_next_turn_spares_a_punished_hand() {
+    // 金 overcomes 木 (R981), so the Vanilla is punished after 金; but the Auspicious Rock (水) its own Feng
+    // Shui's Activate adds next turn is rewarded after 金 and may be played first, so the AI counts the
+    // Rock's reward, not the Vanilla's hit. After 火 neither is judged.
+    let own = Some((AI, false));
+    let rock_gain = AI_EVAL.feng_shui_outlook * AI_EVAL.radiant_in_hand;
+    close(
+        holding(own, CardElement::Metal, json!([WOOD])) - holding(own, CardElement::Fire, json!([WOOD])),
+        rock_gain,
+    );
+    // With an empty hand the Rock alone counts.
+    close(
+        holding(own, CardElement::Metal, json!([])) - holding(own, CardElement::Fire, json!([])),
+        rock_gain,
+    );
+    // The human's Feng Shui adds the AI no Rock: the Vanilla's hit counts as it did (R3951100).
+    let human = Some((HUMAN, false));
+    let hit = f64::from(FENG_SHUI_DAMAGE.on(false));
+    let life = f64::from(HERO_HEALTH);
+    let curve =
+        AI_EVAL.hero_health * (life * life).sqrt() - AI_EVAL.hero_health * ((life - hit) * life).sqrt();
+    close(
+        holding(human, CardElement::Metal, json!([WOOD])) - holding(human, CardElement::Fire, json!([WOOD])),
+        -AI_EVAL.feng_shui_outlook * curve,
+    );
+    // An own Radiant Feng Shui adds a Radiant Rock, which a reward makes no better, and punishes only the
+    // opponent (R984).
+    let radiant = Some((AI, true));
+    close(
+        holding(radiant, CardElement::Metal, json!([WOOD])),
+        holding(radiant, CardElement::Fire, json!([WOOD])),
+    );
+}
+
+#[test]
+fn r4783041_the_move_order_tries_a_play_that_bridges_to_a_reward_before_the_other_plain_plays() {
+    // After 木 the Vanilla (木) and the 5/2 (水) are plain and the 7/7 (土) punished (木 overcomes 土). The 5/2
+    // leaves 水, which generates 木: with its own Feng Shui acting, the AI tries it before the Vanilla, so the
+    // chain that makes the Vanilla a 12/12 is not cut.
+    let hand = json!([WOOD, WATER, EARTH]);
+    let own = scene(
+        "ai-feng-shui-bridge",
+        Some((AI, false)),
+        2,
+        hand.clone(),
+        Some(CardElement::Wood),
+    );
+    assert_eq!(play_order(&own), vec![WATER, WOOD, EARTH]);
+    // Under the human's Feng Shui no bridge is tried: the plain plays keep tier 2's order.
+    let theirs = scene(
+        "ai-feng-shui-bridge",
+        Some((HUMAN, false)),
+        2,
+        hand,
+        Some(CardElement::Wood),
+    );
+    assert_eq!(play_order(&theirs), vec![WOOD, WATER, EARTH]);
 }
