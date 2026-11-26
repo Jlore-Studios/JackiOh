@@ -22552,6 +22552,13 @@
     "5016": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45796290036",
+        "model": "gemini-3.8-flash-high",
+        "provider": "agy",
+        "since": "2026-11-26T10:16:23Z",
+        "until": "2026-11-26T10:46:23Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
