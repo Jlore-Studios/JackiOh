@@ -21563,15 +21563,8 @@
       "waiting_comment": 7179589674
     },
     "4985": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45735773678",
-        "model": "sonnet",
-        "provider": "claude-1",
-        "since": "2026-11-26T01:34:24Z",
-        "until": "2026-11-26T02:04:24Z"
-      },
       "difficulty_by": {
         "at": "2026-11-26T01:34:14Z",
         "difficulty": "medium",
@@ -21590,10 +21583,9 @@
         "reason": "planned on sonnet",
         "trail": "- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4985/crates/cards/src/scripts/infinite_assault/c188_overfitting.rs\"}\n- Bash: {\"command\": \"git show 40d6f59664 --stat | head -30; ls .bot-plan.md 2>&1\"}\n- tool error: Exit code 2 commit 40d6f5966458dbb2c93c823f2749dce3d53c729e Author: jgoetzmann-bot <in33dh3@gmail.com> Date: Thu Nov 26 00:46:16 2026 +0000 Patch: route six held-set hooks through the engine's read h\u2026\n- Bash: {\"command\": \"git show 40d6f59664 -- crates/cards/src/scripts/infinite_assault/c188_overfitting.rs; sed -n 195,230p crates/engine/src/zones.rs; sed -n 440,480p crates/engine/src/zones.rs; sed -n 1840,\u2026\n- Bash: {\"command\": \"grep -rn \\\"reserved\\\\|in_hole\\\\|\\\\\\\"hole\\\\|voided\\\\|giga\\\" crates/cards/src/scripts --include=*.rs -il | head -20; grep -n \\\"pub fn \\\\(reserve\\\\|hole\\\\|void\\\\)\\\\|reserved\\\" crates/engine\u2026\n- Bash: {\"command\": \"ls spec/rulings | grep -E \\\"R(4592|4985|4960|4937)\\\"; ls spec/pending | head; grep -rln \\\"Overfitting\\\\|infiniteassault-188\\\" spec docs crates --include=*.md --include=*.rs | head; grep \u2026\n- Bash: {\"command\": \"cd spec; grep -n \\\"188\\\" 08-catalog/8.13-infinite-assault.md | head -5; grep -l \\\"R4592\\\\|Overfitting\\\" rulings/R4592*.md; grep -n -i \\\"overfit\\\\|fill\\\\|reveal\\\" rulings/R4592000.md | he\u2026\n- Bash: {\"command\": \"cd spec/rulings; head -12 R4592000.md; grep -il \\\"full board\\\\|no open\\\\|fizzle\\\\|open unit zone\\\\|empty unit zone\\\" R4592*.md R4577*.md 2>/dev/null; ls | tail -3; ls | grep -E \\\"^R49\\\" \u2026\n- Bash: {\"command\": \"cat spec/rulings/R4932000.md | head -12; grep -rn \\\"\\\\\\\"reserved\\\\\\\"\\\\|\\\\\\\"hole\\\\\\\"\\\\|\\\\\\\"void\\\\|\\\\\\\"giga\\\\\\\"\\\" crates/engine/src/testkit/*.rs | head; grep -rln \\\"fill_board_zones\\\\|is_r\u2026\n- Bash: {\"command\": \"sed -n 1,60p crates/cards/src/scripts/infinite_assault/c091_flood_the_zone.rs; grep -n \\\"reserved\\\\|hole\\\\|void\\\\|fn test\\\\|#\\\\[test\\\\]\\\" crates/cards/src/scripts/infinite_assault/c091_f\u2026\n- Bash: {\"command\": \"grep -rn \\\"fn reserve_zone\\\\|pub fn state_mut\\\\|pub fn edit_state\\\\|pub fn with_state\\\\|pub fn mutate\\\" crates/engine/src | head; grep -n \\\"ZONES\\\\|LANES\\\" crates/engine/src/config.rs | \u2026\n- Bash: {\"command\": \"sed -n 520,545p crates/engine/src/zones.rs; grep -rn \\\"reserve_zone\\\\|state_mut()\\\" crates/cards/src/scripts --include=*.rs | head -8; grep -n \\\"\\\\\\\"field\\\\\\\"\\\\|\\\\\\\"lane\\\\\\\"\\\\|\\\\\\\"board\\\u2026\n- Bash: {\"command\": \"grep -n \\\"pub struct ZoneSlot\\\" -A6 crates/engine/src/*.rs | head -12; grep -n \\\"pub fn in_hole\\\\|pub fn is_void\\\\|pub fn open_hole\\\\|pub fn void_\\\\|pub fn set_hole\\\\|pub fn .*hole\\\" cra\u2026\n- Bash: {\"command\": \"grep -rn \\\"struct ZoneSlot\\\" -B2 -A6 crates/engine/src | head -15; sed -n 100,130p crates/engine/src/geometry.rs; grep -n \\\"fn unit_at\\\\|fn expect_in_zone\\\\|fn expect_\\\" crates/engine/sr\u2026\n- Bash: {\"command\": \"grep -n \\\"black_hole\\\\|slashed_lane\\\" crates/engine/src/state.rs | head -4; grep -rn \\\"pub struct BlackHole\\\" -A8 crates/engine/src | head -12; grep -rn \\\"black_hole = Some\\\" crates/ --i\u2026\n- Bash: {\"command\": \"sed -n 205,230p crates/engine/tests/rules/board_geometry.rs; grep -n \\\"ZoneSlot {\\\" crates/cards/src/scripts -r | head -3; grep -n \\\"pub struct ZoneSlot\\\" -r crates/engine/src crates/sha\u2026\n- Bash: {\"command\": \"grep -n -i \\\"pending\\\" spec/README.md | head -15; cat spec/pending/4921.md | head -5; cat spec/rulings/R4921000.md | head -8; grep -n \\\"Rating\\\\|difficulty\\\" docs/issues-and-patches.md |\u2026\n- Bash: {\"command\": \"git show 40d6f59664 -- crates/cards/catalog.json | head -30; ls crates/cards/patches/pending | head -4; grep -rn \\\"catalog.json\\\" crates/cards/build.rs | head -3\"}\n- Bash: {\"command\": \"grep -rn \\\"\\\\\\\"loc\\\\\\\"\\\\|\\\\.loc\\\\b\\\\|fn .*loc\\\" crates/tools/src --include=*.rs | head -8; grep -n -B2 -A3 '\\\"infiniteassault-188\\\"' crates/cards/catalog.json | grep -n loc; git diff 40d\u2026\n- Bash: {\"command\": \"sed -n 150,175p crates/cards/src/scripts/stinkyscape/c009_ticketed.rs; sed -n 1,12p crates/cards/src/scripts/stinkyscape/c009_ticketed.rs | grep use; grep -n \\\"mod tests\\\" -A8 crates/car\u2026\n- Bash: {\"command\": \"echo \\\"Plan draft: tests-only in c188_overfitting.rs tests + ruling R4985000 + spec/pending/4985.md; see final message.\\\" > .bot-plan.md; grep -n \\\"fn active_units_of\\\" -r crates/engine/\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Tests in one card script plus one ruling note and its pending paragraph; no engine, AI or cross-crate change, and about 3 files.\"} --> ## Goal Pin Overfitting's reveal gate (`crates/cards/src/scripts/infinite_assault/c188_overfitting.rs:60`, `!fill_board_z\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-1",
       "owner_since": "2026-11-26T01:26:20Z",
       "owner_why": "it plans it",
@@ -21606,19 +21598,19 @@
       "provider": "claude-1",
       "queued_at": "2026-11-26T01:23:44Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "45735773678",
+      "run_id": "pending:adc5b567-1795656953",
       "runs_on": "ubuntu-latest",
       "spot_check_of": 4960,
-      "started_at": "2026-11-26T01:26:20Z",
+      "started_at": "2026-11-26T01:36:24Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T01:26:20Z",
+    "at": "2026-11-26T01:36:24Z",
     "url": "",
-    "what": "plan #4985 on claude-1"
+    "what": "build #4985 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-26T01:21:54Z",
