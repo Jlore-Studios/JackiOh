@@ -45097,6 +45097,10 @@
       "5010": {
         "at": "2026-11-26T04:57:29Z",
         "why": "It fixes a real touch-only dead end where a greyed Buy shows nothing, matching the R3768000 rule every other greyed control already follows."
+      },
+      "5011": {
+        "at": "2026-11-26T04:57:31Z",
+        "why": "It ports yesterday's proven Dungeon stale-cache fix to the sibling Assault store, preventing another tab's attempts and reports from being overwritten."
       }
     },
     "auto_approved": [],
