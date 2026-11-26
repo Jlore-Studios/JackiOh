@@ -7,7 +7,8 @@
 //! 4. a single candidate is played with no search, listed on a throwaway determinization (the seat's own
 //!    legal actions never depend on the hidden cards, so `options.rng` is untouched).
 //! 5. the exact lethal solver, verified on every determinization and trimmed (R1965000), unless a style
-//!    passes over it (R1452).
+//!    passes over it (R1452). On a state whose budget was scaled down, its walk runs on to the caller's own
+//!    allowance while it stands at a position that already reads as lethal (R4788000).
 //! 6. the beam on determinization 0, its best lines scored after the opponent's reply and its best first
 //!    actions re-scored on the other determinizations; the best mean wins, a finalist that won on
 //!    determinization 0 alone taking its mean on the others (R4608000). A host's wrap-up stops the beam and
@@ -39,7 +40,7 @@ use crate::evaluate::{
     NextSwing, Prices, activation_prices, attack_hook_prices, awaken_prices, death_prices, evaluate_priced,
     evolve_prices, prompt_activation_prices, turn_hook_prices,
 };
-use crate::lethal::{find_lethal, trim_lethal};
+use crate::lethal::{find_lethal_reaching, trim_lethal};
 use crate::match_::replacements_for;
 use crate::mulligan::mulligan_keep_curved;
 use crate::observe::{HIDDEN_DEF_ID, ai_to_act, redact, unanswered_draw_offer};
@@ -279,6 +280,7 @@ fn fat_width(probe: &GameState, candidates: usize) -> usize {
 /// lethal solver keeps its share of it, floored at fat_min_lethal. R4802000: neither floor raises a
 /// figure above the caller's own, so a solver the caller gave nothing keeps nothing, and the share's
 /// product saturates, so a field at any value overflows nothing. The search's shape is unchanged.
+/// R4788000: `plan` lets the solver's walk reach past that share while it is closing on a lethal.
 fn scaled_budget(budget: SearchBudget, fat: usize) -> SearchBudget {
     let reference = AI_SEARCH.fat_reference.max(1) as usize;
     if fat <= reference {
@@ -300,6 +302,25 @@ fn scaled_budget(budget: SearchBudget, fat: usize) -> SearchBudget {
         lethal_nodes,
         ..budget
     }
+}
+
+/// R4788000: the lethal solver's reach on a decision `scaled_budget` gave `scaled` of the caller's `budget`,
+/// and the searched section with room for it. On a state scaled down, its walk may go on to the allowance
+/// the caller gave, at most its `nodes` (R4802000), while it stands at a position that already reads as
+/// lethal (`find_lethal_reaching`); a state that is not fat keeps that allowance, so it has no reach, and
+/// a caller that gives the solver nothing gives it no reach either. The section is the scaled `nodes` and
+/// what the reach adds, never past the caller's `nodes`.
+fn lethal_reach(budget: SearchBudget, scaled: SearchBudget) -> (usize, usize) {
+    let reach = if AI_SEARCH.lethal_reach && scaled.lethal_nodes > 0 {
+        budget.lethal_nodes.min(budget.nodes).max(scaled.lethal_nodes)
+    } else {
+        scaled.lethal_nodes
+    };
+    let section = scaled
+        .nodes
+        .saturating_add(reach - scaled.lethal_nodes)
+        .min(budget.nodes);
+    (reach, section)
 }
 
 /// R1452: whether this decision passes over the lethal line the solver found. A style that never
@@ -556,9 +577,14 @@ fn plan(
     // where the state is fat (AI_SEARCH.fat_*, R186). The whole searched section (the lethal solver's
     // slice, the beam's, the replies') is drawn from one sub-counter of that size, so the replies
     // cannot spend what the beam was denied.
-    let budget = scaled_budget(budget, fat_width(&probe, scratch.candidates.len()));
-    let stage = create_sub_counter(counter, budget.nodes);
-    let counter: &dyn NodeCounter = &stage;
+    let scaled = scaled_budget(budget, fat_width(&probe, scratch.candidates.len()));
+    // R4788000: the lethal solver's reach (`lethal_reach`). `wide` is the searched section with room for
+    // it; everything else draws from `narrow`, the scaled budget, or from `stage` below.
+    let (reach, section) = lethal_reach(budget, scaled);
+    let wide = create_sub_counter(counter, section);
+    let narrow = create_sub_counter(&wide, scaled.nodes);
+    let budget = scaled;
+    let counter: &dyn NodeCounter = &narrow;
 
     // R2424000, R2477000, R2564000, R2688000, R3064000, R4648000: the decision's prices (`decision_prices`,
     // each Evolve card's evolution among them), from the searched section's nodes, passed to every step
@@ -588,7 +614,19 @@ fn plan(
     // actions it needs (R1965000), else a lethal behind a free step that changes nothing would play that
     // step at every decision; a trim the counter stops short of a first action leaves no lethal to play.
     let mut passed_over: Option<ActionBody> = None;
-    if let Some(lethal) = find_lethal(&dets, seat, counter, budget.lethal_nodes, &prices)
+    let before_lethal = counter.used();
+    let found_lethal = find_lethal_reaching(&dets, seat, counter, budget.lethal_nodes, &wide, reach, &prices);
+    // R4788000: what the walk spent past its scaled allowance is added to the searched section, so the beam
+    // and the replies keep the nodes they had: with nothing spent past it, `stage` is `narrow`'s rest, node
+    // for node.
+    let extended = (counter.used() - before_lethal).saturating_sub(budget.lethal_nodes);
+    let budget = SearchBudget {
+        nodes: budget.nodes.saturating_add(extended),
+        ..budget
+    };
+    let stage = create_sub_counter(&wide, budget.nodes.saturating_sub(wide.used()));
+    let counter: &dyn NodeCounter = &stage;
+    if let Some(lethal) = found_lethal
         && let Some(first_lethal) = lethal.first().cloned()
     {
         if passes_over_lethal(style, rng) {
@@ -1053,6 +1091,51 @@ mod tests {
         assert_eq!(scaled.nodes, 300);
         assert!(scaled.lethal_nodes <= scaled.nodes, "{scaled:?}");
         assert_eq!(scaled_budget(huge, 1), huge);
+    }
+
+    #[test]
+    fn r4788000_a_reach_never_passes_the_callers_own_figures() {
+        let reference = AI_SEARCH.fat_reference as usize;
+        // The practice budget at twice the reference: 300 nodes, 75 of them the solver's, which reaches
+        // to the caller's 300 in a section of 525.
+        let fat = 2 * reference;
+        assert_eq!(lethal_reach(AI_BUDGET, scaled_budget(AI_BUDGET, fat)), (300, 525));
+        let none = SearchBudget {
+            lethal_nodes: 0,
+            ..AI_BUDGET
+        };
+        let past = SearchBudget {
+            nodes: 200,
+            lethal_nodes: 400,
+            ..AI_BUDGET
+        };
+        let huge = SearchBudget {
+            nodes: usize::MAX,
+            lethal_nodes: usize::MAX,
+            ..AI_BUDGET
+        };
+        for budget in [AI_BUDGET, SMALL_BUDGET, none, past, huge] {
+            for width in [reference, fat, 1000] {
+                let scaled = scaled_budget(budget, width);
+                let (reach, section) = lethal_reach(budget, scaled);
+                assert!(reach >= scaled.lethal_nodes, "{budget:?} at {width}");
+                assert!(
+                    reach <= budget.lethal_nodes.min(budget.nodes),
+                    "{budget:?} at {width}"
+                );
+                assert!(
+                    section >= scaled.nodes && section <= budget.nodes,
+                    "{budget:?} at {width}"
+                );
+                if width <= reference || budget.lethal_nodes == 0 {
+                    assert_eq!(
+                        (reach, section),
+                        (scaled.lethal_nodes, scaled.nodes),
+                        "{budget:?} at {width}"
+                    );
+                }
+            }
+        }
     }
 
     /// The AI (p1) at 3 mana with a (3) and a (1) Unit in hand. With `lobbyist`, C #68 stands on the
