@@ -140,7 +140,7 @@
     min-width: 18px;
     height: 16px;
     padding: 0 var(--space-1) 0 0;
-    font-size: var(--type-3xs);
+    font-size: var(--type-xs);
   }
 
   .board .activate-glyph {

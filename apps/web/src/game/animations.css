@@ -1833,8 +1833,6 @@
   font-size: var(--type-4xl-em);
   font-weight: 800;
   line-height: 1;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 [data-outcome="win"] > .result-overlay__word {

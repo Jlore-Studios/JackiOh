@@ -13,7 +13,7 @@ import { CatalogContext } from "./catalog.ts";
 import { type Highlight } from "./contract.ts";
 import { placeOf } from "./drag/targets.ts";
 import { anchorOfTestid, gigaFootprintTestids, isGigaHandCard, type GigaAnchor } from "./giga.ts";
-import { LANE_PICK_OUTSET_PX, measureBoxes, type Box } from "./LanePick.tsx";
+import { LANE_PICK_OUTSET_PX, listenZoneHover, measureBoxes, type Box } from "./LanePick.tsx";
 import "./gigaPlacement.css";
 
 const HAND_CARD = "hand-card-";
@@ -140,24 +140,7 @@ export default function GigaPlacement(props: { view: PlayerView; highlight?: Hig
       const key = keyOf(anchor);
       return lit.has(key) ? key : null;
     };
-    const onOver = (event: PointerEvent): void => setHovered(anchorAt(event.target));
-    const onOut = (event: PointerEvent): void => {
-      if (event.relatedTarget === null) setHovered(null);
-    };
-    const onFocusIn = (event: FocusEvent): void => setFocused(anchorAt(event.target));
-    const onFocusOut = (): void => setFocused(null);
-    document.addEventListener("pointerover", onOver);
-    document.addEventListener("pointerout", onOut);
-    document.addEventListener("focusin", onFocusIn);
-    document.addEventListener("focusout", onFocusOut);
-    return () => {
-      document.removeEventListener("pointerover", onOver);
-      document.removeEventListener("pointerout", onOut);
-      document.removeEventListener("focusin", onFocusIn);
-      document.removeEventListener("focusout", onFocusOut);
-      setHovered(null);
-      setFocused(null);
-    };
+    return listenZoneHover(anchorAt, setHovered, setFocused);
   }, [anchorsKey, gigaId]);
 
   if (gigaId === undefined || anchors.length === 0) return null;

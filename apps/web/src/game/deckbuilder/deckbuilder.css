@@ -159,7 +159,7 @@
   justify-content: center;
   padding: 5px 12px;
   border-radius: var(--radius-pill);
-  font-size: 12px;
+  font-size: var(--type-sm);
   white-space: nowrap;
 }
 
@@ -251,10 +251,8 @@
 
 .db-group-label {
   margin-right: 4px;
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 650;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--text-dim);
 }
 
@@ -263,7 +261,7 @@
   min-height: 28px;
   padding: 3px 10px;
   border-radius: var(--radius-pill);
-  font-size: 12px;
+  font-size: var(--type-sm);
   line-height: 1.2;
   white-space: nowrap;
 }
@@ -313,7 +311,7 @@
 
 .deckbuilder.app-shell .db-filter-clear {
   padding: 4px 10px;
-  font-size: 12px;
+  font-size: var(--type-sm);
 }
 
 /* --- the pool grid ------------------------------------------------------------------------------ */
@@ -491,7 +489,7 @@
   background: color-mix(in srgb, var(--you) 85%, var(--pal-black));
   box-shadow: 0 1px 5px color-mix(in srgb, var(--pal-black) 65%, transparent);
   color: var(--pal-white);
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 750;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -519,10 +517,8 @@
   background: var(--pal-red-600);
   box-shadow: 0 1px 5px color-mix(in srgb, var(--pal-black) 65%, transparent);
   color: var(--pal-white);
-  font-size: 10px;
+  font-size: var(--type-xs);
   font-weight: 750;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   white-space: nowrap;
   pointer-events: none;
 }
@@ -547,7 +543,7 @@
   background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--legal) 70%, var(--pal-white) 10%), color-mix(in srgb, var(--legal) 55%, var(--pal-black)));
   box-shadow: 0 1px 4px color-mix(in srgb, var(--pal-black) 65%, transparent);
   color: var(--pal-white);
-  font-size: 18px;
+  font-size: var(--type-xl);
   font-weight: 800;
   line-height: 1;
   text-shadow: 0 1px 1px color-mix(in srgb, var(--pal-black) 60%, transparent);
@@ -597,7 +593,7 @@
   background: color-mix(in srgb, var(--bg-raised) 92%, var(--pal-black));
   box-shadow: 0 6px 18px color-mix(in srgb, var(--pal-black) 55%, transparent);
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--type-md);
   font-weight: 650;
   text-align: center;
   white-space: nowrap;
@@ -660,7 +656,7 @@
 
 .db-deck-title {
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: var(--type-lg);
   font-weight: 700;
   color: var(--pal-brass-200);
 }
@@ -703,7 +699,7 @@
   display: none;
   padding: 4px 12px;
   border-radius: var(--radius-pill);
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-weight: 650;
   white-space: nowrap;
 }
@@ -714,7 +710,7 @@
   border: 1px dashed var(--line-bright);
   border-radius: var(--radius-sm);
   color: var(--text-dim);
-  font-size: 12px;
+  font-size: var(--type-sm);
   text-align: center;
 }
 
@@ -746,7 +742,7 @@
 .db-bar-count {
   min-height: 11px;
   color: #cfe0ff;
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 750;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -788,7 +784,7 @@
     radial-gradient(circle at 36% 26%, var(--pal-slate-100) 0 9%, transparent 32%),
     radial-gradient(circle at 45% 40%, #6aa7ff, var(--mana) 50%, #173a80 88%);
   color: var(--pal-white);
-  font-size: 10px;
+  font-size: var(--type-xs);
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.02em;
@@ -897,7 +893,7 @@
     radial-gradient(circle at 36% 26%, var(--pal-slate-100) 0 9%, transparent 32%),
     radial-gradient(circle at 45% 40%, #6aa7ff, var(--mana) 50%, #173a80 88%);
   color: var(--pal-white);
-  font-size: 14px;
+  font-size: var(--type-md);
   font-weight: 850;
   line-height: 1;
   text-shadow:
@@ -908,7 +904,7 @@
 
 /* Ceaseless Void's 100 steps down to stay inside the crystal. */
 .db-tile-cost[data-digits="3"] {
-  font-size: 10px;
+  font-size: var(--type-xs);
   letter-spacing: -0.04em;
 }
 
@@ -1029,7 +1025,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 12.5px;
+  font-size: var(--type-sm);
   line-height: 1.35;
 }
 
@@ -1086,7 +1082,7 @@
 
 .db-save-error {
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--type-sm);
 }
 
 /* --- the detail view's slots (CardDetail draws the dialog itself) ------------------------------ */

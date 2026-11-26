@@ -214,7 +214,7 @@
   background: color-mix(in srgb, var(--pal-black) 32%, transparent);
   box-shadow: var(--shadow-inset-top);
   color: var(--pal-ink-200);
-  font-size: var(--type-2xs-em);
+  font-size: var(--type-xs-em);
   font-weight: 600;
   line-height: 1.2;
   -webkit-box-orient: vertical;

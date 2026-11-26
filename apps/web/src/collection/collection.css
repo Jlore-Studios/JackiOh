@@ -316,8 +316,6 @@
 .tavern.app-shell .collection-tile__lock {
   font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   color: var(--tavern-text-dim);
 }
 

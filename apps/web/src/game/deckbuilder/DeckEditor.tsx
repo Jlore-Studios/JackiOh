@@ -22,6 +22,7 @@ import DeckDrag from "./DeckDrag.tsx";
 import DeckSidebar from "./DeckSidebar.tsx";
 import { DECK_SIZE } from "./deckSize.ts";
 import { visiblePool, type PoolFilter, type PoolSort } from "./filters.ts";
+import { LoadoutErrorList } from "./LoadoutErrorList.tsx";
 import { UNTITLED_DECK, type DeckItem, type TrioItem, type WorkshopLimits } from "./sync.ts";
 import { useCardWinRates } from "./useCardWinRates.ts";
 import {
@@ -39,10 +40,8 @@ import {
   DECK_STATUS,
   DECK_TO_PRACTICE,
   DECK_VERDICT,
-  LOADOUT_ERRORS,
   WORKSHOP_BACK,
   deckCompareChipId,
-  loadoutErrorId,
 } from "./testids.ts";
 import {
   NO_COMPARE,
@@ -433,29 +432,7 @@ export default function DeckEditor(props: DeckEditorProps): ReactElement {
             <h3 className="ws-verdict-title" id={verdictTitleId}>
               {verdict.ok ? (collection === null ? t("Complete") : t("Ready to queue")) : t("Before you can queue this deck")}
             </h3>
-            <ul
-              className="db-errors"
-              data-testid={LOADOUT_ERRORS}
-              data-count={String(errors.length)}
-              data-tone="hint"
-              aria-labelledby={verdictTitleId}
-            >
-              {errors.map((issue, position) => (
-                <li
-                  key={`${issue.rule}:${issue.cardId ?? ""}:${String(position)}`}
-                  data-testid={loadoutErrorId(issue.rule)}
-                  data-rule={issue.rule}
-                  data-deck={issue.deck === undefined ? undefined : String(issue.deck)}
-                  data-card={issue.cardId}
-                  data-source="client"
-                >
-                  {t(issue.message)}
-                </li>
-              ))}
-            </ul>
-            {collection === null ? (
-              <p className="ws-hint">{t("Your collection couldn't be loaded, so cards you don't own aren't flagged here.")}</p>
-            ) : null}
+            <LoadoutErrorList errors={errors} labelledBy={verdictTitleId} collectionRead={collection !== null} />
           </section>
 
           <div className="ws-actions">

@@ -101,9 +101,7 @@
   font-size: clamp(var(--type-md), 2.4vh, var(--type-2xl));
   font-weight: 900;
   line-height: 1.1;
-  letter-spacing: 0.06em;
   text-align: center;
-  text-transform: uppercase;
   white-space: nowrap;
   rotate: -4deg;
 }
@@ -159,10 +157,9 @@
 
 .chaos-banner-title {
   color: var(--radiant);
+  font-family: var(--font-display);
   font-size: var(--type-md);
   font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .chaos-banner-lines {
