@@ -23963,6 +23963,17 @@
         "tiers": {
           "claude": "strong"
         }
+      },
+      "waiting_turn": {
+        "behind": [
+          5068
+        ],
+        "ends": "2026-11-26T14:44:42Z",
+        "from_run": "45806007838",
+        "head": "4e3d263546831001aa08db188a2c9d30fc8ca331",
+        "model": "opus",
+        "provider": "claude-4",
+        "since": "2026-11-26T12:44:42Z"
       }
     },
     "5068": {
