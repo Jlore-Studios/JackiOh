@@ -49430,7 +49430,9 @@
       "2026-11-26T16:33:08Z,claude-1,stream,call,45859321678,4,2026-11-26T21:20:00Z,,,allowed,40,,",
       "2026-11-26T16:55:56Z,claude-1,stream,call,45859321678,4,2026-11-26T21:20:00Z,,,allowed,40,,"
     ],
-    "runs": []
+    "runs": [
+      "2026-11-26T17:37:34Z,45859321678,claude-1,sonnet+opus,revise,5088,medium,built,,23,42,8322,1595798,0.517,3,4,,,10.2,claude-7,fresh,,1"
+    ]
   },
   "version": 1
 }
