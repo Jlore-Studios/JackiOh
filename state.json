@@ -24270,7 +24270,16 @@
       "feedback_since": "2026-11-26T12:03:51Z",
       "issue": 5040,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-7",
+        "rejections": [],
+        "reviews": [],
+        "sha": "d42f1cd0429a144905a03b93b045d660a9c32344",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
