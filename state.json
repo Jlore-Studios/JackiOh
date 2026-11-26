@@ -24437,6 +24437,7 @@
         "by": "`claude` (strong)",
         "sha": "0172ad208ff6da68cd69ef2d95f58b0f1e4d386e"
       },
+      "closed_at": "2026-11-26T18:52:55Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -24457,6 +24458,7 @@
       "last_findings": [],
       "live": "fixing-ci",
       "merge_owner": "claude-6",
+      "merged": true,
       "pending_request": false,
       "provider": "agy",
       "question": "",
