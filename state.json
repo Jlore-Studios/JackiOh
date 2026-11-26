@@ -22281,13 +22281,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
-        "builder": "muse",
-        "built_by": "muse",
+        "approvals": [
+          "claude"
+        ],
+        "builder": "",
+        "built_by": "",
         "rejections": [],
-        "reviews": [],
-        "sha": "991f619e735794b5184303620518266a1bf1355e",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-6",
+            "run": "45764789039",
+            "tier": "medium"
+          }
+        ],
+        "sha": "0b21beef149dee7e076da496f654b374dacc1ab5",
+        "tiers": {
+          "claude": "medium"
+        }
       }
     },
     "5009": {
