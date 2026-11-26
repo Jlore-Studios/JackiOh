@@ -49,19 +49,22 @@ use serde::Serialize;
 use serde_json::{Map, Value, json};
 use tokio::sync::OnceCell;
 
-use jackioh_cards::{deck_play_versions, patch_history};
+use jackioh_cards::{
+    change_totals_since, deck_play_versions, patch_balance_lines, patch_history, patch_ship_dates,
+};
 use jackioh_engine::wire::stats::PlayVersion;
 use jackioh_engine::wire::stats::{
     CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardTier, CardWindow, CreatedStats, GameFigures,
-    GameMode, GameSource, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures,
-    PlayVersionQuery, PlayVersionTable, SourceFilter, StatsFace, StatsField, StatsTotals, SwingReport,
-    SwingRows, SwingTally, Tally, TotalsKey, VariantKind, WindowQuery, WindowRequest, WindowSource,
-    WindowedCreated, WindowedGames, WindowedReport, add_created, add_stats, card_family, card_stats_of,
-    card_window, collapse_gameless, created_face_adjusted, created_face_field, created_face_side,
-    face_adjusted, face_drills_of, face_side, face_stats_field, held_adjusted, not_drawn, output_field,
-    output_figures, patch_windows, play_version_figures, radiant_gap, round_share, seen, sources_of,
-    stats_field, swing_baseline, swing_report, tier_in, variant_field, variant_figures, variant_rows,
-    wilson_interval, win_rate, windowed_card_stats, windowed_game_figures, windowed_swing_rows,
+    GameMode, GameSource, HallPair, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures,
+    PlayVersionFigures, PlayVersionQuery, PlayVersionTable, SourceFilter, StatsFace, StatsField, StatsTotals,
+    SwingReport, SwingRows, SwingTally, Tally, TotalsKey, VariantKind, WindowQuery, WindowRequest,
+    WindowSource, WindowedCreated, WindowedGames, WindowedReport, add_created, add_stats, card_family,
+    card_stats_of, card_window, collapse_gameless, created_face_adjusted, created_face_field,
+    created_face_side, face_adjusted, face_drills_of, face_side, face_stats_field, hall_of_fame,
+    held_adjusted, not_drawn, output_field, output_figures, patch_windows, play_version_figures, radiant_gap,
+    round_share, seen, sources_of, stats_field, swing_baseline, swing_report, tier_in, variant_field,
+    variant_figures, variant_rows, wilson_interval, win_rate, windowed_card_stats, windowed_game_figures,
+    windowed_swing_rows,
 };
 use jackioh_engine::{
     CardCost, CardDef, CardDefs, Pilot, WinRateTable, made_by_a_rule, win_rates_from_report,
@@ -77,9 +80,10 @@ use crate::api::http::{
 use crate::app::App;
 use crate::config::{
     CARD_STATS_CACHE_TTL_SECONDS, CARD_STATS_CO_PLAYED_TOP, CARD_STATS_CURVE_TOP, CARD_STATS_KEPT_REPORTS,
-    CARD_STATS_MIN_SAMPLE, MS_PER_SECOND, PLAY_RATES_MIN_GAMES, PLAY_RATES_REFRESH_SECONDS,
-    PLAYER_STATS_BYTES_MAX, PLAYER_STATS_CACHE_TTL_SECONDS, PLAYER_STATS_PAGE_LIMIT,
-    PUBLIC_STATS_MIN_LIVE_GAMES, PUBLIC_STATS_PATCHES_LINE_BEFORE, PUBLIC_STATS_PATCHES_NEWEST,
+    CARD_STATS_MIN_SAMPLE, HALL_OF_FAME_LIST_LEN, MS_PER_SECOND, PLAY_RATES_MIN_GAMES,
+    PLAY_RATES_REFRESH_SECONDS, PLAYER_STATS_BYTES_MAX, PLAYER_STATS_CACHE_TTL_SECONDS,
+    PLAYER_STATS_PAGE_LIMIT, PUBLIC_STATS_MIN_LIVE_GAMES, PUBLIC_STATS_PATCHES_LINE_BEFORE,
+    PUBLIC_STATS_PATCHES_NEWEST,
 };
 use crate::db::store::{CardFiling, CardRows, PlayerStatsListOptions, StatsTotalsQuery};
 use crate::env::js_number;
@@ -1382,6 +1386,8 @@ pub struct KeptReports {
     histories: Kept<(PublicStatsPilot, PublicStatsMode, StatsFace), Arc<KeptHistory>>,
     /// R4675001: the play versions' tables `GET /api/stats/versions` reads, one per `?pilot=` and `?mode=`.
     versions: Kept<(PublicStatsPilot, PublicStatsMode), Arc<PlayVersionTable>>,
+    /// R4681001: the Hall of Fame's bodies `GET /api/stats/hall-of-fame` reads, one per `?mode=`.
+    hall: Kept<PublicStatsMode, Arc<HallOfFameBody>>,
     /// R3067000: every patch's totals, which every kept window and history is cut from, with when they
     /// were first asked for.
     totals: Mutex<Option<(i64, KeptTotalsCell)>>,
@@ -1423,6 +1429,10 @@ impl KeptReports {
 
     fn versions_cell(&self, key: (PublicStatsPilot, PublicStatsMode), now: i64) -> KeptVersionsCell {
         kept_cell(&self.versions, key, now)
+    }
+
+    fn hall_cell(&self, key: PublicStatsMode, now: i64) -> KeptHallCell {
+        kept_cell(&self.hall, key, now)
     }
 
     /// R3067000: the cell of every patch's totals made less than `CARD_STATS_CACHE_TTL_SECONDS` before
@@ -1848,6 +1858,115 @@ pub async fn get_versions(app: &Arc<App>, req: Req) -> ApiResult {
         table: &table,
     };
     Ok(cached_ok(to_json(&response)?, CARD_STATS_CACHE_TTL_SECONDS))
+}
+
+/// R4681001: one Hall of Fame entry: its before and after play-version rows with figures, their ship
+/// dates, the patch's player-facing balance line, and, on the changed list alone, how many changes
+/// lie between.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicHallEntry {
+    pub before: PlayVersionFigures,
+    pub after: PlayVersionFigures,
+    pub before_date: Option<String>,
+    pub after_date: Option<String>,
+    pub balance: Option<String>,
+    pub changes_between: Option<usize>,
+}
+
+/// R4681001: `GET /api/stats/hall-of-fame`'s body: the query it answers and the four lists.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct HallOfFameBody {
+    pub pilot: PublicStatsPilot,
+    pub mode: PublicStatsMode,
+    pub min_sample: i64,
+    pub band_low: f64,
+    pub band_high: f64,
+    pub broken: Vec<PublicHallEntry>,
+    pub nerfed: Vec<PublicHallEntry>,
+    pub buffed: Vec<PublicHallEntry>,
+    pub changed: Vec<PublicHallEntry>,
+}
+
+type KeptHallCell = Arc<OnceCell<Arc<HallOfFameBody>>>;
+
+/// R4681001: the Hall of Fame's body over `table`: R4681000's lists, each entry joined to its rows,
+/// dates from `patches.json`, and the balance line matched per R4681001.
+fn hall_body_of(table: &PlayVersionTable, mode: PublicStatsMode) -> HallOfFameBody {
+    let dates = patch_ship_dates();
+    let mut firsts: IndexMap<String, String> = IndexMap::new();
+    for row in &table.versions {
+        firsts
+            .entry(row.card.clone())
+            .or_insert_with(|| row.first.clone());
+    }
+    let hall = hall_of_fame(table, HALL_OF_FAME_LIST_LEN, &change_totals_since(&firsts));
+    let by_id: IndexMap<&str, &PlayVersionFigures> =
+        table.versions.iter().map(|row| (row.id.as_str(), row)).collect();
+    let entry = |pair: &HallPair, changes_between: Option<usize>| {
+        let before = by_id[pair.before.as_str()].clone();
+        let after = by_id[pair.after.as_str()].clone();
+        // The first `player.balance` line of the after patch naming the card; a line that names no
+        // card is no entry's line rather than a wrong one, and none where before equals after.
+        let balance = if pair.before == pair.after {
+            None
+        } else {
+            let wanted = after.name.to_lowercase();
+            if wanted.is_empty() {
+                None
+            } else {
+                patch_balance_lines(&after.first)
+                    .into_iter()
+                    .find(|line| line.to_lowercase().contains(&wanted))
+            }
+        };
+        PublicHallEntry {
+            before_date: dates.get(&before.first).cloned(),
+            after_date: dates.get(&after.first).cloned(),
+            before,
+            after,
+            balance,
+            changes_between,
+        }
+    };
+    HallOfFameBody {
+        pilot: PublicStatsPilot::Merged,
+        mode,
+        min_sample: table.min_sample,
+        band_low: table.band_low,
+        band_high: table.band_high,
+        broken: hall.broken.iter().map(|pair| entry(pair, None)).collect(),
+        nerfed: hall.nerfed.iter().map(|pair| entry(pair, None)).collect(),
+        buffed: hall.buffed.iter().map(|pair| entry(pair, None)).collect(),
+        changed: hall
+            .changed
+            .iter()
+            .map(|(pair, lines)| entry(pair, Some(*lines)))
+            .collect(),
+    }
+}
+
+/// R4681001: one `?mode=`'s Hall of Fame body, as kept: R4681000's lists over the kept versions'
+/// table (`kept_versions`, the one load the cards' windows and histories share), kept as long as
+/// that snapshot, once however many requests miss it together.
+async fn kept_hall(app: &App, mode: PublicStatsMode) -> Result<Arc<HallOfFameBody>, ApiError> {
+    let table = kept_versions(app, PublicStatsPilot::Merged, mode).await?;
+    let snapshot = kept_snapshot(app).await?;
+    let cell = app.card_stats.hall_cell(mode, snapshot.made_at);
+    let kept = cell
+        .get_or_try_init(|| async { Ok::<_, ApiError>(Arc::new(hall_body_of(&table, mode))) })
+        .await?;
+    Ok(Arc::clone(kept))
+}
+
+/// GET /api/stats/hall-of-fame (R4681001): the Hall of Fame's four lists (R4681000) over `?mode=`
+/// (R377), open to everyone and cached as the versions are. The merged pilots, as the tab's versions
+/// fetch: only `?mode=` is read.
+pub async fn get_hall_of_fame(app: &Arc<App>, req: Req) -> ApiResult {
+    let mode = PublicStatsMode::parse(req.query.get("mode").map(String::as_str));
+    let body = kept_hall(app, mode).await?;
+    Ok(cached_ok(to_json(&body)?, CARD_STATS_CACHE_TTL_SECONDS))
 }
 
 /// GET /api/stats/cards: public card win rates (R654, R1367000).
