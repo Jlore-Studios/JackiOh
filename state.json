@@ -24321,6 +24321,8 @@
       }
     },
     "5083": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-26T12:46:45Z",
@@ -24334,8 +24336,11 @@
         "trail": "\u2026\n- said: Now the ruling note and pending paragraph.\n- Bash: {\"command\": \"cat > spec/rulings/R5033000.md <<'EOF'\\n---\\nid: R5033000\\ntitle: \\\"A Date sort on the Experimental tab's Running and Versions views: each play version's first version's position in the \u2026\n- said: Meanwhile, the server test.\n- Bash: {\"command\": \"sed -n 2370,2415p crates/server/tests/api/stats.rs\"}\n- Bash: {\"command\": \"sed -n 2345,2370p crates/server/tests/api/stats.rs; grep -n \\\"shipped_versions\\\" crates/cards/src/*.rs | head -3\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/server/tests/api/stats.rs'\\ns=open(p).read()\\ns=s.replace(''' \\\"first\\\",\\n \\\"games\\\",\\n \\\"hasEnoughGames\\\",\\n \\\"id\\\",\\n \\\"last\\\",\\n \\\"live\\\",\\n \\\"name\\\",\\n \\\u2026\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-5033/*/tasks/bunjmy9xr.output | tail -12; echo ---; tail -15 /tmp/claude-1001/-home-runner-work--temp-work-item-5033/*/tasks/bod8z7\u2026\n- Bash: {\"command\": \"grep -h \\\"r5033000\\\\|test result\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-5033/*/tasks/bunjmy9xr.output | head -5\"}\n- Bash: {\"command\": \"cargo test -p jackioh-engine --features testkit --lib r5033000 2>&1 | tail -8\"}\n- Bash: {\"command\": \"sleep 100; ls -la /tmp/claude-1001/-home-runner-work--temp-work-item-5033/*/tasks/; tail -5 /tmp/claude-1001/-home-runner-work--temp-work-item-5033/*/tasks/buqvvc4fj.output\"}\n- tool error: <tool_use_error>Blocked: sleep 100 followed by: ls -la /tmp/claude-1001/-home-runner-work--temp-work-item-5033/*/tasks/ tail -5 /tmp/claude-1001/-home-runner-work--temp-work-item-5033/*/tasks/buqvvc4\u2026\n- Monitor: {\"query\": \"select:Monitor\"}\n- tool error: <tool_use_error>InputValidationError: Monitor failed due to the following issue: The required parameter `description` is missing This tool's schema was not sent to the API \u2014 it was not in the discove\u2026\n- Bash: {\"command\": \"cd /tmp/claude-1001/-home-runner-work--temp-work-item-5033/*/tasks/; timeout 110 sh -c 'until [ -s bod8z7cj2.output ] && [ -s buqvvc4fj.output ]; do sleep 3; done'; tail -c 1500 buqvvc4f\u2026\n- Bash: {\"command\": \"sed -n 56,75p apps/web/src/stats/RunningPanel.tsx; grep -n \\\"runningRows(\\\\|versionRows(\\\" apps/web/src/routes/stats.tsx\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/routes/stats.test.tsx'\\ns=open(p).read()\\ns=s.replace(''' fireEvent.click(screen.getByTestId(statsTestid.sortDir));\\n expect(rowsOf(table).ids).toEqual\u2026\n- Bash: {\"command\": \"cd /tmp/claude-1001/-home-runner-work--temp-work-item-5033/*/tasks/; timeout 115 sh -c 'until [ -s biko8yfhk.output ] && [ -s buqvvc4fj.output ]; do sleep 3; done'; tail -c 600 buqvvc4fj\u2026\n- Bash: {\"command\": \"sed -n 4026,4034p apps/web/src/routes/stats.test.tsx\"}\n- said: The address still holds `dir=asc` after the cleanup, so the nulled read renders ascending.\n- Bash: {\"command\": \"sed -i '4032s/\\\\[\\\"core-001\\\", \\\"core-003\\\", \\\"core-002\\\"\\\\]/[\\\"core-003\\\", \\\"core-001\\\", \\\"core-002\\\"]/' apps/web/src/routes/stats.test.tsx; sed -i '4028s/.*/ \\\\/\\\\/ A null position is \u2026\n- said: Now the remaining checks: fmt, clippy, server test, eslint, classify, CreatedPanel test, wire status.\n- Bash: {\"command\": \"cargo fmt --check 2>&1 | head -20; pnpm exec eslint apps/web/src/routes/stats.tsx apps/web/src/routes/stats.test.tsx apps/web/src/stats 2>&1 | tail -15; git status --porcelain\"}\n- Bash: {\"command\": \"cargo fmt && git status --porcelain | wc -l; (timeout 900 cargo clippy -p jackioh-engine -p jackioh-server --all-targets -- -D warnings 2>&1 | tail -5) \", \"run_in_background\": true}\n- Bash: {\"command\": \"cargo jackioh classify --base origin/main --claims 2>&1 | tail -15\", \"timeout\": 300000}\n- Bash: {\"command\": \"cd /tmp/claude-1001/-home-runner-work--temp-work-item-5033/*/tasks/; timeout 118 sh -c 'until [ -s bnaatsth2.output ]; do sleep 3; done'; cat bnaatsth2.output | tail -8\"}\n- Bash: {\"command\": \"cd /tmp/claude-1001/-home-runner-work--temp-work-item-5033/*/tasks/; timeout 118 sh -c 'until [ $(wc -l < bnaatsth2.output) -gt 1 ]; do sleep 3; done'; tail -5 bnaatsth2.output\"}\n- Bash: {\"command\": \"cd /tmp/claude-1001/-home-runner-work--temp-work-item-5033/*/tasks/; timeout 118 sh -c 'until [ $(wc -l < bnaatsth2.output) -gt 1 ]; do sleep 3; done'; tail -5 bnaatsth2.output\"}\n- Bash: {\"command\": \"cargo jackioh patches check 2>&1 | tail -3; grep -n \\\"async fn.*versions\\\\|fn .*versions\\\" crates/server/tests/api/stats.rs | head -4\"}\n- Bash: {\"command\": \"grep -n \\\"api/stats/versions\\\" crates/server/tests/api/stats.rs | head -3; awk 'NR<2330 && /fn [a-z_0-9]*\\\\(/ {l=NR\\\": \\\"$0} END{print l}' crates/server/tests/api/stats.rs\"}\n- Bash: {\"command\": \"awk 'NR<2325 && /fn [a-z_0-9]+\\\\(/ {l=NR\\\": \\\"$0} END{print l}' crates/server/tests/api/stats.rs; cd /tmp/claude-1001/-home-runner-work--temp-work-item-5033/*/tasks/; timeout 100 sh -c '\u2026\n- Bash: {\"command\": \"sed -n 2315,2325p crates/server/tests/api/stats.rs; cd /tmp/claude-1001/-home-runner-work--temp-work-item-5033/*/tasks/; timeout 100 sh -c 'until [ -s bj95ot18v.output ]; do sleep 3; don\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-server --test server r4675001_play_versions 2>&1 | tail -15\", \"run_in_background\": true}\n- Bash: {\"command\": \"python3 - <<'EOF'\\ns=open('.bot-notes.md').read()\\ni=s.find('## State')\\nstate='''## State\\n\\nBuilt (run 2, sonnet): engine field + 2 r5033000 tests (pass), api.ts, CreatedPanel/RunningP\u2026\n- Bash: {\"command\": \"cd /tmp/claude-1001/-home-runner-work--temp-work-item-5033/*/tasks/; timeout 115 sh -c 'until [ -s bey0b7ro1.output ]; do sleep 3; done'; tail -8 bey0b7ro1.output\"}\n- Bash: {\"command\": \"cd /tmp/claude-1001/-home-runner-work--temp-work-item-5033/*/tasks/; timeout 118 sh -c 'until [ -s bey0b7ro1.output ]; do sleep 3; done'; tail -8 bey0b7ro1.output\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: deeper card stats, X4, a Date sort on the Experimental tab's Running and Versions\"} --> Running and Versions on the Experimental tab now sort by Date, in the Sort select and by the Since header. I did not do the `/stats` \u2192 Experimental look in a browser\u2026"
       },
       "issue": 5033,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-26T14:17:51Z",
         "from_run": "45822856327",
         "gates": [
           {
@@ -24427,7 +24432,11 @@
         "source": "build",
         "until": "2026-11-26T14:45:34Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-26T14:15:34Z",
+      "run_id": "pending:e151c0fe-1795702642",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -24446,6 +24455,9 @@
         "provider": "claude-6",
         "run": "45822856327"
       },
+      "started_at": "2026-11-26T14:17:51Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -24459,9 +24471,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T14:06:11Z",
+    "at": "2026-11-26T14:17:51Z",
     "url": "",
-    "what": "review #5078 on claude-7"
+    "what": "review #5083 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-26T14:00:38Z",
