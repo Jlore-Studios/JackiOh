@@ -507,7 +507,10 @@ a toggle (`marketplace-button`) in the board's control bar (the pill at the bott
 its sidebar; #2645) that opens its panel (`marketplace-panel`), upward from the bar's top edge: the viewer's
 Credits, the turn the offering re-rolls on, and each lot on its face with the price and the copies left
 the view gives and its "Buy" (`market-buy-<offer>`), live exactly when `legal` lists its `marketBuy` and
-sending that body; otherwise it is greyed, its tooltip the engine's `reason`. There is no "Sell": a
+sending that body; otherwise it is greyed (`aria-disabled`, so a touch press reaches it), its tooltip the
+engine's `reason`, and a press shows that reason in a line under it (`market-reason-<offer>`, nothing when
+the view gives none) and sends nothing (R3768000); the line goes with the next view or when the shop
+closes. There is no "Sell": a
 Resource or Spice pays its Credits as it is played or discarded, and shows its quote in braces in the hand
 while the Marketplace is open (R3047004, R4410000).
 
