@@ -1512,6 +1512,8 @@ pub mod versions {
 
     use super::js::is_digits;
     use crate::classify::Tier;
+    /// R3631000: a micro's letters, which a play version's iteration counts too (R5035000).
+    pub(crate) use jackioh_cards::versions::next_letters;
 
     /// `^v(\d+)\.(\d+)\.` and the rest: a version's A, B and what follows the second dot.
     pub(crate) fn split_version(text: &str) -> Option<(&str, &str, &str)> {
@@ -1529,27 +1531,6 @@ pub mod versions {
         let cut = tail.trim_end_matches(|c: char| c.is_ascii_lowercase()).len();
         let (c, letters) = tail.split_at(cut);
         is_digits(c).then_some((a, b, c, letters))
-    }
-
-    /// R3631000: the letters a micro takes after `letters`, counted as a spreadsheet counts its
-    /// columns, the line's own name standing for `a`: `""` is followed by `b`, `y` by `z`, `z` by
-    /// `aa`, `az` by `ba` and `zz` by `aaa`. Never runs out.
-    pub(crate) fn next_letters(letters: &str) -> String {
-        if letters.is_empty() {
-            return "b".to_string();
-        }
-        let mut bytes = letters.as_bytes().to_vec();
-        match bytes.iter().rposition(|&byte| byte != b'z') {
-            Some(at) => {
-                bytes[at] += 1;
-                bytes[at + 1..].fill(b'a');
-            }
-            None => {
-                bytes.fill(b'a');
-                bytes.push(b'a');
-            }
-        }
-        bytes.into_iter().map(char::from).collect()
     }
 
     fn bump(number: &str) -> anyhow::Result<u64> {
