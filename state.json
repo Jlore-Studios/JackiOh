@@ -42742,41 +42742,6 @@
         "approver": {
           "family": "claude",
           "model": "opus",
-          "provider": "claude-4",
-          "tier": "strong"
-        },
-        "builder": {
-          "family": "claude",
-          "provider": "claude-4"
-        },
-        "difficulty": "medium",
-        "done_at": "2026-11-06T11:22:46Z",
-        "every": 5,
-        "findings": 0,
-        "head": "718dcedda95758450c96da1fddfd94e73b5dd59c",
-        "issue": 3206,
-        "merged_at": "2026-11-06T10:53:38Z",
-        "n": 95,
-        "pr": 3259,
-        "queued_at": "2026-11-06T10:53:38Z",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-3",
-          "tier": "strong"
-        },
-        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42206434816",
-        "sha": "db9d2dfab90659de50fad5877f096ed85b2f9f42",
-        "started_at": "2026-11-06T10:56:10Z",
-        "status": "done",
-        "title": "Patch (part 2 of 3): share a read already in flight, and keep a fresh answer for a short window",
-        "tries": 0,
-        "verdict": "clean"
-      },
-      {
-        "approver": {
-          "family": "claude",
-          "model": "opus",
           "provider": "claude-8",
           "tier": "strong"
         },
@@ -46264,7 +46229,9 @@
           "provider": "claude-7"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-26T10:28:36Z",
         "every": 5,
+        "findings": 0,
         "head": "b0e1254ccac9e4c652a916b58a77ed015c9f942f",
         "issue": 5010,
         "merged_at": "2026-11-26T10:15:55Z",
@@ -46277,12 +46244,13 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:7aa7cebe-1795688371",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45800339182",
         "sha": "9a1dbb8f75b36120e052f0b4b33ef73051471f00",
         "started_at": "2026-11-26T10:19:59Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: a greyed Marketplace Buy answers a press with the engine's reason",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 595
