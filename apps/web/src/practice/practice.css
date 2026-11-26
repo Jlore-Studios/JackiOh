@@ -683,7 +683,9 @@
     var(--hud-band);
 }
 
-/* While the AI thinks, a light runs along the HUD's lower edge. */
+/* While the AI thinks, a light runs once along the HUD's lower edge (R5014000): a flat bar
+   (R5091000) that the HUD's overflow hides while it rests past the left end, and that lies along
+   the whole edge under Reduce Motion. */
 .practice-hud::after {
   content: "";
   position: absolute;
@@ -691,6 +693,7 @@
   left: 0;
   width: 35%;
   height: 2px;
+  background: var(--opponent);
   opacity: 0;
   transform: translateX(-100%);
   pointer-events: none;
@@ -819,14 +822,16 @@
   height: 20px;
 }
 
+/* The orb's ring: one flat color (R5091000), so it has nothing to turn and stands still; the core's
+   pulse is what plays once (R5014000). */
 .practice-thinking__orb::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: var(--radius-round);
+  background: color-mix(in srgb, var(--opponent) 70%, transparent);
   -webkit-mask: radial-gradient(circle, transparent 6px, #000 6.5px);
   mask: radial-gradient(circle, transparent 6px, #000 6.5px);
-  animation: practice-spin calc(0.9s * var(--anim-scale, 1)) linear 1;
 }
 
 .practice-thinking__core {
@@ -1086,7 +1091,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .practice-thinking,
-  .practice-thinking__orb::before,
   .practice-thinking__core,
   .practice-hud[data-thinking="true"]::after,
   .practice-shuffle span,

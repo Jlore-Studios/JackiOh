@@ -239,20 +239,6 @@
   height: calc(var(--fan-card-h) * 1.5);
 }
 
-/* The pool of hearth light the hand is held over, so it sits in the room instead of floating. */
-.landing .landing-fan::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  width: calc(var(--fan-card-w) * 5.2);
-  max-width: 100%;
-  height: calc(var(--fan-card-h) * 0.7);
-  transform: translateX(-50%);
-  border-radius: var(--radius-round);
-  pointer-events: none;
-}
-
 .landing .landing-fan-slot {
   --fan-offset: 0;
   --deal-delay: 0ms;

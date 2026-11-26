@@ -63,6 +63,7 @@
   right: 0;
   bottom: 0;
   height: 1px;
+  background: color-mix(in srgb, var(--pal-gold-400) 55%, transparent);
 }
 
 /* --- rarity color, per element that carries data-rarity --------------------------------------- */
