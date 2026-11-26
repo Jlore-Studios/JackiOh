@@ -23192,9 +23192,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "",
-      "owner_since": "2026-11-26T16:11:30Z",
-      "owner_why": "its own review was handed off to its final audit: `claude-7` is busy: its lanes are all taken",
+      "owner": "claude-1",
+      "owner_since": "2026-11-26T16:29:55Z",
+      "owner_why": "it took it up; its own review was handed off to its final audit: `claude-7` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-26T13:40:26Z",
       "planned_by": "`claude-7` (claude, `sonnet`, medium)",
@@ -24845,7 +24845,7 @@
       }
     },
     "5088": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "difficulty": "medium",
       "failures": 0,
@@ -24861,11 +24861,11 @@
       },
       "issue": 5037,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-1",
       "queued_at": "2026-11-26T16:19:45Z",
-      "run_id": "45851038318",
+      "run_id": "pending:7a6ba391-1795710566",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -24886,7 +24886,7 @@
         "run": "45851038318"
       },
       "source": "conflict",
-      "started_at": "2026-11-26T15:37:58Z",
+      "started_at": "2026-11-26T16:29:55Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -25068,9 +25068,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T16:20:56Z",
+    "at": "2026-11-26T16:29:55Z",
     "url": "",
-    "what": "spot-check #5073 on claude-1"
+    "what": "revise #5088 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-26T16:17:46Z",
