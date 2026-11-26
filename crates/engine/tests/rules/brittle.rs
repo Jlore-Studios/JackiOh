@@ -503,6 +503,51 @@ mod r385_r441_b3_3_rule_5_vanilla_and_the_count {
         assert_eq!(live(&state, &unit.id).brittle, Some(counter(2, 7, true)));
     }
 
+    /// B3.3 rule 1: a Flicker re-enters the field, so a count its crumble spent starts afresh from the
+    /// printed Brittle (C #14's Radiant face saving a crumbling Unit).
+    #[test]
+    fn r441_a_flickered_card_whose_count_is_spent_starts_its_printed_brittle_afresh() {
+        let mut state = at(7, P1);
+        let unit = put(
+            &mut state,
+            &brittle_unit.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        live_mut(&mut state, &unit.id).brittle = Some(counter(0, 5, true));
+
+        let standing = live(&state, &unit.id);
+        assert!(jackioh_engine::zones::flicker_in_place(&mut state, &standing));
+
+        assert_eq!(live(&state, &unit.id).brittle, Some(counter(2, 7, true)));
+        tick_at(&mut state, 9, P1);
+        assert_eq!(count_of(&state, &unit.id), Some(1));
+        tick_at(&mut state, 11, P1);
+        assert_eq!(zone_of(&state, &unit.id), ZoneName::Graveyard);
+    }
+
+    /// A count still running keeps its number, and its turn cycle restarts at the Flicker, as on any
+    /// arrival from off the field: its first tick waits a whole round.
+    #[test]
+    fn r441_a_flickered_card_keeps_a_running_count_and_its_cycle_restarts() {
+        let mut state = at(7, P1);
+        let unit = put(
+            &mut state,
+            &brittle_unit.id,
+            slot(P1, Row::Units, 1),
+            Default::default(),
+        );
+        live_mut(&mut state, &unit.id).brittle = Some(counter(1, 5, true));
+
+        let standing = live(&state, &unit.id);
+        assert!(jackioh_engine::zones::flicker_in_place(&mut state, &standing));
+
+        assert_eq!(live(&state, &unit.id).brittle, Some(counter(1, 7, true)));
+        tick_at(&mut state, 7, P1);
+        assert_eq!(zone_of(&state, &unit.id), ZoneName::Field);
+        assert_eq!(count_of(&state, &unit.id), Some(1));
+    }
+
     #[test]
     fn r441_gain_n_on_a_card_with_no_count_starts_one_now_at_n_more_than_it_prints_a_vanilla_keeps_it() {
         let mut state = at(4, P1);

@@ -134,10 +134,9 @@
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, transparent, var(--skeleton-sheen), transparent);
     transform: translateX(-100%);
     pointer-events: none;
-    animation: skeleton-shimmer 1.6s ease-in-out infinite;
+    animation: skeleton-shimmer 1.6s ease-in-out 1;
   }
 }
 

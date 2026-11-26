@@ -406,16 +406,16 @@ fn owe_deaths(sink: &mut EngineSink<'_>, pass: &DeathPass, step: Option<&PausedS
     crate::work::push_work(sink, resume, None);
 }
 
-/// What §4.5 step 4 and R175 do to a body on its way back: no Reborn, no Vanilla, and an X/X token's
-/// X/X kept as its printed face.
-fn prepare_body(card: &mut CardInstance, entry: &RebornEntry) {
+/// What §4.5 step 4 and R175 do to a body on its way back: no Reborn unless the return `keeps` it
+/// (R4589003), no Vanilla, and an X/X token's X/X kept as its printed `face`.
+fn prepare_body(card: &mut CardInstance, keeps: bool, face: Option<RebornFace>) {
     // R4589003: a kept Reborn stays, so the body comes back Reborn and returns again.
-    if entry.keeps != Some(true) {
+    if !keeps {
         card.granted_keywords
             .retain(|keyword| keyword.kind() != KeywordKind::Reborn);
     }
     card.vanilla = false;
-    if let Some(face) = &entry.face {
+    if let Some(face) = face {
         if let Some(stats) = face.stats_override {
             card.stats_override = Some(stats);
         }
@@ -464,7 +464,7 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
         if entry.token.is_none() && copy.zone.z() != pile {
             continue;
         }
-        prepare_body(&mut copy, entry);
+        prepare_body(&mut copy, entry.keeps == Some(true), entry.face);
         // R3996100: Brittle N whatever its count was as it died (a crumble's spent count went with the
         // move, R441), its turn cycle started by the return (R638).
         if let Some(count) = entry.brittle {
@@ -474,7 +474,7 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
         if entry.token.is_none()
             && let Some(card) = find_instance_mut(sink.state, &entry.id)
         {
-            prepare_body(card, entry);
+            prepare_body(card, entry.keeps == Some(true), entry.face);
         }
         // R175: a unit that died atop a Stack pile returns on top of it, and the card beneath, which never
         // left the zone R64 reserved (§3.2, R1829000), goes dormant again; with no pile the reservation
@@ -545,6 +545,31 @@ fn reborn_step(sink: &mut EngineSink<'_>, pass: &DeathPass) {
         // R783010: a Crater body Locks the zone it came back into.
         crate::crater::lock_on_arrival(sink, id);
     }
+}
+
+/// R4798000: the card `unit`, a Unit on the field with its Reborn unspent, would come back as were it
+/// destroyed now into its graveyard, as `reborn_step` makes it before placing it: the card the move to
+/// the graveyard leaves, its keeper's (R2618000) and reset (R78, `reset_price`), or a unit token's
+/// snapshot reset the same way (`reborn_token`, R175), then `prepare_body`'s: no Reborn, no Vanilla, and
+/// a token's summoned X/X face (`reborn_face_of`, read off `unit` before the reset clears it). What the
+/// return does as it places the card is not read here: its zone, position and summoning sickness, its
+/// spent Reborn, its 1 health, a doubled Reborn's keep (R4589003) and a Reborn Brittle (R3996100). The
+/// AI prices a kill by it (`crates/ai`, `reborn_return`).
+pub fn reborn_body_of(state: &GameState, unit: &CardInstance) -> CardInstance {
+    let face = reborn_face_of(state, unit);
+    let kept = crate::recursion_log::kept(state);
+    let mut body = if crate::zones::is_unit_token(state, unit) {
+        let mut snapshot = unit.clone();
+        crate::zones::forget_set_stats(&mut snapshot);
+        reborn_token(kept, &snapshot)
+    } else {
+        // `move_to_zone`'s landing in the keeper's graveyard is `reborn_token`'s reset, and its price.
+        let mut card = reborn_token(kept, unit);
+        crate::zones::reset_price(&mut card);
+        card
+    };
+    prepare_body(&mut body, false, face);
+    body
 }
 
 /// R175: the body a unit token with Reborn comes back as. The snapshot is the token as it left the field, so

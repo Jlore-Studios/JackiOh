@@ -1,6 +1,7 @@
 // R3013001: a signed-in account's card proficiency (§14.14) lives on the account alone: the server counts the plays
 // and levels (R3013000), and this page holds a copy for the faces and the Collection (`stamps.ts`). The sync loads
-// it once an active account is on a gated screen, sends each stamp picked here (`PUT /api/proficiency/stamp`) and
+// it once an active account is on a gated screen, and again when a counted game's result pays the account
+// (`reloadOwnProficiency`, R4977000), sends each stamp picked here (`PUT /api/proficiency/stamp`) and
 // puts the account's answer in place of the copy; a pick the server refuses, or one that never reached it, loads
 // the account's copy again, so the page never shows a stamp the account does not wear. Nothing is uploaded: the
 // device holds no proficiency of its own. Stopping clears the copy, so no other account sees it. A failed request
@@ -28,6 +29,8 @@ export type ProficiencyAccountSync = {
   stop(): void;
   /** Resolves once no request is in flight (tests; nothing in the app waits on it). */
   settled(): Promise<void>;
+  /** R4977000: load the account's copy again, after any request already queued (a stamp pick in flight). */
+  reload(): void;
 };
 
 /** The account's answer's cards; an answer of another shape is a failed request. */
@@ -73,6 +76,9 @@ export function startProficiencyAccountSync(options: { token: () => string; api:
       replaceOwnProficiency([]);
     },
     settled,
+    reload: () => {
+      if (!stopped) enqueue(reload);
+    },
   };
 }
 
@@ -126,6 +132,11 @@ function attach(profileId: string, token: () => string, api: () => ProficiencyAc
 /** R3013001: an active account's proficiency and stamps are loaded and kept level, on every gated screen. */
 export function useProficiencyAccountSync(account: Account, api: ProficiencyAccountApi = proficiencyAccountApi): void {
   useAccountSync(account, api, attach);
+}
+
+/** R4977000: a counted game's result changed the account's plays and levels (R3013000): load its copy again. No sync running, no request. */
+export function reloadOwnProficiency(): void {
+  shared?.sync.reload();
 }
 
 /** Test seam: a new page, with no sync running. */

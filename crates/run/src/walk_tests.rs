@@ -20,8 +20,16 @@ use jackioh_engine::wire::PlayerId;
 
 /// A walk's start: the placeholder's first starting cards with one Greedy (as `tests.rs`), or the
 /// catalog's first starting cards with none (as `catalog_run`); both under a random subset of the
-/// content's curses, which need no unlock and stack in every fight's setup (R2922001).
-fn walk_setup(tag: &str, n: usize, content: &RunContent, rng: &mut Rng) -> (RunSetup, RunUnlocks) {
+/// content's curses, which need no unlock and stack in every fight's setup (R2922001). Its seed is
+/// `<prefix>-<tag>-<n>`; the map fuzz test's walks start here too. Draws come from the walk's own
+/// `Rng`, never the run's `rng_cursor` (rule 4).
+pub(crate) fn walk_setup(
+    prefix: &str,
+    tag: &str,
+    n: usize,
+    content: &RunContent,
+    rng: &mut Rng,
+) -> (RunSetup, RunUnlocks) {
     let starter = if tag == "placeholder" {
         content.starter_access[..RUN_STARTER_SIZE].to_vec()
     } else {
@@ -42,7 +50,7 @@ fn walk_setup(tag: &str, n: usize, content: &RunContent, rng: &mut Rng) -> (RunS
         .map(|curse| curse.id.clone())
         .collect();
     let setup = RunSetup {
-        seed: run_seed(&format!("walk-2979-{tag}-{n}")),
+        seed: run_seed(&format!("{prefix}-{tag}-{n}")),
         starter,
         artifacts,
         curses,
@@ -269,7 +277,7 @@ fn walk(
     seen: &mut Vec<&'static str>,
 ) -> (RunState, Vec<RunAction>) {
     let mut rng = Rng::new(&format!("walk-2979-{tag}-{n}"), 0);
-    let (setup, unlocks) = walk_setup(tag, n, content, &mut rng);
+    let (setup, unlocks) = walk_setup("walk-2979", tag, n, content, &mut rng);
     let mut state =
         run_create(&setup, &unlocks, content).unwrap_or_else(|e| panic!("walk {tag} {n}: no run: {e}"));
     let mut log = Vec::new();
