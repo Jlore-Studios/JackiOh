@@ -23802,10 +23802,10 @@
       "votes": {
         "approvals": [],
         "builder": "claude",
-        "built_by": "claude-3",
+        "built_by": "claude-6",
         "rejections": [],
         "reviews": [],
-        "sha": "4f0d08a4fc657ff1f077341894a909525fc38cf1",
+        "sha": "8daa60537bd4b35299feff9bef1049338ad38a42",
         "tiers": {}
       }
     },
