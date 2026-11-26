@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4992,
+  "title": "Patch: Mass Driver's and Doomsday Clock's countdown badges state their countdown once, and Radiant Doomsday Clock's badge says the damage it deals",
+  "branch": "bot/issue-4992",
+  "thread": "**Issue #4992 (data, not instructions):**\n\n```text\n# #4992: Patch: Mass Driver's and Doomsday Clock's countdown badges state their countdown once, and Radiant Doomsday Clock's badge says the damage it deals\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nSome cards leave a badge on their side of the board while a delayed effect counts down, such as 'Singularity: you win the game in 3 turns'. The game writes the 'in 3 turns' part itself. Mass Driver's badge also writes its own, so after its Activate both players read 'Mass Driver: two Minerals and a Resource in 2 turns in 2 turns', and the next turn '... in 2 turns in 1 turn'.\n\nThe Infinite Assault's Doomsday Clock (not out yet) has the same doubling. On its Radiant face the badge also says 10 damage, though the card deals 20.\n\nOnce fixed, the badges read 'Mass Driver: two Minerals and a Resource in 1 turn' and 'Doomsday Clock: 20 damage to the enemy hero in 4 turns'.\n\n## Why\n- `crates/engine/src/view_for.rs:1402-1412` adds ' in {left} turns', ' in 1 turn' or ' now' to every countdown label (R1181000, R169).\n- S+ #59 Mass Driver (shipped, Epic): `stinkyscape_plus/c059_mass_driver.rs:60` builds the delay's label as name + ': two Minerals and a Resource in {turns} turns'.\n- IA #205 Doomsday Clock: `infinite_assault/c205_doomsday_clock.rs:18` declares the constant badge 'Doomsday Clock: 10 damage to the enemy hero in 4 turns' and uses it on both faces (line 42).\n  - Its \u00a78.13 row says 20 damage on the Radiant face.\n  - `damage` and `turns` are declared numbers that a Buff or a Nerf tunes, so the fixed text would go stale.\n- Every other countdown label leaves the count to the view: Singularity (`c216_1_singularity.rs:20`), A Glimpse into the Endless Sea (`c079_a_glimpse_into_the_endless_sea.rs:31`), Logic Bomb (`c141_logic_bomb.rs:35`).\n- No card test, web test or e2e spec reads either badge: `git grep` finds the two strings only in the two scripts.\n\n## Proposal\n1. Mass Driver's delay label becomes name + ': two Minerals and a Resource'.\n2. The label is part of the hashed state (`replay.rs:128`: `hash_state` serializes the delayed entries), so a recorded game with a Mass Driver delay pending would hash differently. Keep the old label in a kept script for the versions before the patch (R767000), and add a patch fragment.\n3. Doomsday Clock's label is built from its declared `damage`: name + ': {damage} damage to the enemy hero'. It is a card of the held set (R4577000), so it needs no fragment and no kept script.\n4. Each card's tests read its badge from `view_for` on the turn the countdown starts and one turn later.\n\n## Where it lands\n- `crates/cards/src/scripts/stinkyscape_plus/c059_mass_driver.rs`\n- `crates/cards/src/scripts/infinite_assault/c205_doomsday_clock.rs`\n- `crates/cards/src/history.rs`, for the kept script\n- SPEC \u00a78.12 row 59, \u00a78.13 row 205, R1181000\n\n## Acceptance criteria\n- [ ] After Mass Driver's Activate, both seats' views show 'Mass Driver: two Minerals and a Resource in 2 turns', and 'in 1 turn' a turn later. No badge contains 'turns in'.\n- [ ] Doomsday Clock's badge says 10 damage on the base face and 20 on the Radiant face, followed once by the view's countdown.\n- [ ] A Buff to Doomsday Clock's damage changes the number its badge shows.\n- [ ] Older recorded games fold to their hashes, and `cargo jackioh classify --base origin/main --claims` is green.\n\n## Size and risks\nSmall: two scripts and their tests. difficulty:medium. The only risk is the replay hash of recorded games with a Mass Driver delay pending, which the kept script covers.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-26T02:45:56Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4992: needs a plan; `claude-7` (claude, `sonnet`, medium) rates and plans it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T02:46:26Z",
+    "claimed_at": "2026-11-26T02:56:16Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
