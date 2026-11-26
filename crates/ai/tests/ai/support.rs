@@ -14,8 +14,8 @@ use std::borrow::Borrow;
 use std::cell::Cell;
 
 use jackioh_ai::{
-    AI_BUDGET, AI_GATE_BUDGET, AiOptions, AiTurnResult, DeterminizeOptions, SearchBudget, action_key,
-    determinize, play_ai_turn,
+    AI_BUDGET, AI_GATE_BUDGET, AiOptions, AiTurnResult, DeterminizeOptions, Prices, SearchBudget, action_key,
+    create_node_counter, decision_prices, det_ground, determinize, play_ai_turn, probe_world, redact,
 };
 use jackioh_engine::testkit::{
     Action, ActionBody, ActionType, ActivationDecl, ActivationUses, CardDef, CardInstance, CardScripts,
@@ -30,6 +30,14 @@ pub use jackioh_engine::testkit::scenario;
 /// The cards' ids, in order (#2930).
 pub fn ids(cards: &[CardInstance]) -> Vec<String> {
     cards.iter().map(|card| card.id.clone()).collect()
+}
+
+/// The prices a decision of `seat`'s at `state` passes its search: `decision_prices` on the probe world
+/// of the state redacted for the seat, on a counter that leaves every probe its own cap.
+pub fn decision_prices_at(state: &GameState, seat: PlayerId) -> Prices {
+    let public = redact(state, seat);
+    let probe = probe_world(&public, seat, &det_ground(&public, seat));
+    decision_prices(&probe, seat, &create_node_counter(AI_BUDGET.nodes, None))
 }
 
 /// `determinize` with the default options.

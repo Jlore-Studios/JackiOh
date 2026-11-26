@@ -207,6 +207,12 @@ pub struct AiSearch {
     pub lethal_width: i32,
     /// Lines per first action scored after the opponent's reply on determinization 0.
     pub lines_per_action: i32,
+    /// R4788000: on a state whose allowance was scaled down (`fat_*`, below), the lethal solver's best-first
+    /// walk goes on past its scaled allowance, up to the budget's own `lethal_nodes` (at most its `nodes`,
+    /// R4802000), while it stands at a position whose ready attacks already reach lethal, and finishes the
+    /// proof of a line that won on determinization 0 (`lethal::find_lethal_reaching`). `false` stops it at
+    /// the scaled allowance, as before.
+    pub lethal_reach: bool,
     /// Seed of the throwaway determinization that lists candidates for the forced check.
     pub probe_seed: &'static str,
     /// R90, R1282: the most sets a shipped card lists, #55's 3 of ten units.
@@ -270,6 +276,11 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     lethal_quick_nodes: 40,
     lethal_width: 60,
     lines_per_action: 2,
+    // R4788000: on. Its deal screen, 400 games on improve-dev against the control at 3a83bd7741, read
+    // 200-200, edge 0.0 (0.0 to 0.0), inconclusive (R4319000): 0 decided of 200 (won 0, lost 0), 6
+    // diverged, every game clean; its scene tests (crates/ai/tests/ai/wide_lethal.rs) settle it
+    // (training/improve.md, A screen). false stops every walk at its scaled allowance.
+    lethal_reach: true,
     probe_seed: "ai:probe",
     tribute_sets: 120,
     fat_reference: 30,
