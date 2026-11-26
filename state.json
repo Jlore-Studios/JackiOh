@@ -25163,15 +25163,10 @@
     "what": "revise #5083 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-26T17:01:31Z",
+    "at": "2026-11-26T17:14:42Z",
     "notes": [
-      "delivered review #5090 on claude-8 (run 45854990796): approved",
-      "delivered revise #5060 on claude-4 (run 45851156774): approved",
-      "delivered review #5068 on agy (run 45844412265): approved",
-      "delivered plan #5085 on claude-3 (run 45842230680): failed",
-      "started plan #5085 on claude-8 (run 45864946105)",
-      "started revise #5083 on agy (run 45865059685)",
-      "nothing more to start: nothing is queued"
+      "#5078: green and waiting for a person to merge it, so `claude-8` gives up its claim on it",
+      "delivered review #5093 on claude-3 (run 45861048724): approved"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -25877,7 +25872,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T17:01:31Z",
+  "loop_tick": "2026-11-26T17:14:42Z",
   "machine_disk": {
     "issue": null,
     "reading": {
