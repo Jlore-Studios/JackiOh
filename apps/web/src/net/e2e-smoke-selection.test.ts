@@ -39,6 +39,7 @@ interface Script {
   shardSpecs: (specs: string[], k: number, count: number, weight?: (spec: string) => number) => string[];
   smokeSpecs: (specs: string[]) => string[];
   smokeSelection: (every: string[], ids: string[], count: number, world: World) => Selection;
+  reachedSpecs: (ids: string[], specs: string[], world: World) => Map<string, ReachedInfo>;
   readWorld: (root: string, ids: string[]) => World;
 }
 
@@ -114,7 +115,7 @@ describe("e2e-smoke-selection", () => {
     }
   });
 
-  it.each([1, 4, 8])("#5099 partitions specs into %i shards without duplicates, excluding 46 and 47", (count) => {
+  it.each([1, 4, 8])("#5099 partitions specs into %i shards without duplicates", (count) => {
     for (const ids of [["core-077"], ["core-025"]]) {
       const res = select(ids, count);
       const partitioned: string[] = [];
@@ -123,14 +124,45 @@ describe("e2e-smoke-selection", () => {
       }
       expect([...partitioned].sort()).toEqual([...res.specs].sort());
       expect(new Set(partitioned).size).toBe(partitioned.length);
-
-      for (const spec of res.specs) {
-        expect(spec.startsWith("46-") || spec.startsWith("47-")).toBe(false);
-      }
-      for (const spec of res.left) {
-        expect(spec.startsWith("46-") || spec.startsWith("47-")).toBe(false);
-      }
     }
+  });
+
+  it("#5120 specs 46 and 47 are never added even when sources quote changed cards and decks", () => {
+    const changedCard = "core-077";
+    const deckId = "fixture-deck";
+    const base = script.readWorld(E2E, [changedCard]);
+    const world: World = {
+      sources: {
+        ...base.sources,
+        "46-menus-fit-one-screen.cy.ts": `"${changedCard}" "${deckId}"`,
+        "47-tap-areas.cy.ts": `"${deckId}"`,
+        "29-animated-trap.cy.ts": `"${changedCard}"`,
+      },
+      decks: {
+        ...base.decks,
+        [deckId]: [changedCard],
+      },
+      names: base.names,
+    };
+
+    const candidateSpecs = ["46-menus-fit-one-screen.cy.ts", "47-tap-areas.cy.ts", "29-animated-trap.cy.ts"];
+    const reached = script.reachedSpecs([changedCard], candidateSpecs, world);
+    expect(reached.has("46-menus-fit-one-screen.cy.ts")).toBe(false);
+    expect(reached.has("47-tap-areas.cy.ts")).toBe(false);
+    expect(reached.has("29-animated-trap.cy.ts")).toBe(true);
+
+    const res = script.smokeSelection(every, [changedCard], 4, world);
+    expect(res.reached.has("46-menus-fit-one-screen.cy.ts")).toBe(false);
+    expect(res.reached.has("47-tap-areas.cy.ts")).toBe(false);
+    expect(res.added).not.toContain("46-menus-fit-one-screen.cy.ts");
+    expect(res.added).not.toContain("47-tap-areas.cy.ts");
+    expect(res.left).not.toContain("46-menus-fit-one-screen.cy.ts");
+    expect(res.left).not.toContain("47-tap-areas.cy.ts");
+    expect(res.specs).not.toContain("46-menus-fit-one-screen.cy.ts");
+    expect(res.specs).not.toContain("47-tap-areas.cy.ts");
+
+    expect(res.reached.has("29-animated-trap.cy.ts")).toBe(true);
+    expect(res.added).toContain("29-animated-trap.cy.ts");
   });
 
   it("#5099 CLI without binary prints SMOKE shard 1 and shards together are SMOKE", () => {
