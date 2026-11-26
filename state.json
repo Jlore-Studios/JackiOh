@@ -25958,12 +25958,12 @@
   "machine_disk": {
     "issue": null,
     "reading": {
-      "at": "2026-11-26T14:39:40Z",
-      "free": 59036434432,
-      "percent": 52,
+      "at": "2026-11-26T16:54:22Z",
+      "free": 57962053632,
+      "percent": 53,
       "total": 123690532864
     },
-    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45835502324",
+    "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45844412265",
     "runner": "night-vm-agy",
     "shown": null
   },
