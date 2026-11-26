@@ -44466,10 +44466,6 @@
   "suggest": {
     "asks": [],
     "auto": {
-      "4969": {
-        "at": "2026-11-25T22:34:58Z",
-        "why": "Confirmed: line 414 of scripts/ci-scope.sh omitted crates/tools/perf-corpus/* when #4924 pinned it, unnecessarily running all 4 shards of e2e smoke for files no e2e spec reads."
-      },
       "4977": {
         "at": "2026-11-25T23:53:07Z",
         "why": "Confirmed on main: the page loads card proficiency once when the shared sync starts (`proficiencySync.ts:67`), the sync survives the move from the match to the Collection, and the match's paid result calls only `announceWallet()`, so a level or stamp a counted game earned stays stale and can't be picked until a reload; this is the same small fix #4780 made for cosmetics, which was approved."
