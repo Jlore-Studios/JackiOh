@@ -16,6 +16,8 @@
 use jackioh_cards::{CATALOG, card_def, scripts_of};
 use jackioh_engine::{CardType, FaceKind, FlagOrCount, ReplacementWhere, Script, StaticFlags};
 
+use super::radiant_stats::{CATALOG_NOTE, TABLE_HEADER};
+
 /// The static flags that are standing text reaching beyond their card.
 const AURA_FLAGS: &[&str] = &[
     "antiOneshot",
@@ -387,5 +389,87 @@ fn r5039000_the_measure_flags_a_bare_aura_and_passes_own_text() {
     assert!(
         !prints_aura(&unlabeled),
         "Big D-fender without its label prints no \"Aura:\""
+    );
+}
+
+/// Every row of `note`'s §8 card tables whose Base effect cell says "Aura:" where its catalog entry's
+/// base face prints no "Aura:" line, or the reverse, as `<id>: …`; and every row that names no catalog
+/// entry by its index and name. A row's cell restates the face in prose, keywords and lines run
+/// together, so the label may stand anywhere in it (`Armor 4. Aura: Lethal damage …`).
+fn section_eight_mismatches(note: &str) -> Vec<String> {
+    let header: Vec<&str> = TABLE_HEADER
+        .trim_matches('|')
+        .split(" | ")
+        .map(str::trim)
+        .collect();
+    let index_at = header.iter().position(|cell| *cell == "#").unwrap();
+    let name_at = header.iter().position(|cell| *cell == "Name").unwrap();
+    let base_at = header.iter().position(|cell| *cell == "Base effect").unwrap();
+    let same_name = |name: &str| name.replace('’', "'");
+    let mut problems = Vec::new();
+    let mut in_table = false;
+    for line in note.lines() {
+        if line == TABLE_HEADER {
+            in_table = true;
+            continue;
+        }
+        if !line.starts_with('|') {
+            in_table = false;
+            continue;
+        }
+        if !in_table || line.starts_with("| ---") {
+            continue;
+        }
+        let cells: Vec<&str> = line.trim_matches('|').split(" | ").map(str::trim).collect();
+        let (Some(index), Some(name), Some(base)) =
+            (cells.get(index_at), cells.get(name_at), cells.get(base_at))
+        else {
+            problems.push(format!("a row too short to read: {line}"));
+            continue;
+        };
+        let Some((id, def)) = CATALOG
+            .iter()
+            .find(|(_, def)| def.index == *index && same_name(&def.name) == same_name(name))
+        else {
+            problems.push(format!(
+                "#{index} {name}: no catalog entry has this index and name"
+            ));
+            continue;
+        };
+        let printed = prints_aura(&def.base.text);
+        if printed != base.contains("Aura:") {
+            problems.push(format!(
+                "{id}: the catalog's base face {} \"Aura:\" but its §8 row's Base effect cell {} (\"{base}\")",
+                if printed { "prints" } else { "prints no" },
+                if printed { "does not" } else { "does" },
+            ));
+        }
+    }
+    problems
+}
+
+#[test]
+fn r5039000_every_section_eight_row_says_aura_where_its_card_prints_it() {
+    let problems = section_eight_mismatches(CATALOG_NOTE);
+    assert!(
+        problems.is_empty(),
+        "§8 rows that disagree with catalog.json on \"Aura:\":\n{}",
+        problems.join("\n")
+    );
+}
+
+#[test]
+fn r5039000_a_drone_row_left_with_its_old_aura_fails_the_section_eight_check() {
+    let row = CATALOG_NOTE
+        .lines()
+        .find(|line| line.starts_with("| T-drone-interceptor |"))
+        .expect("§8.10 has the Drone Interceptor's row");
+    let old = row.replacen("Ranged, Flying. Has 1", "Ranged, Flying. Aura: has 1", 1);
+    assert_ne!(old, row, "the row prints its keywords line bare");
+    let problems = section_eight_mismatches(&format!("{TABLE_HEADER}\n| --- |\n{old}"));
+    assert_eq!(problems.len(), 1, "{problems:?}");
+    assert!(
+        problems[0].starts_with("stinkyscape-t-drone-interceptor: "),
+        "{problems:?}"
     );
 }
