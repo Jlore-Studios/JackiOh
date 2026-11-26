@@ -55,8 +55,8 @@
   overflow: hidden;
   pointer-events: none;
   background:
-    radial-gradient(ellipse 90% 60% at 50% 0%, rgba(90, 52, 27, 0.35), transparent 70%),
-    linear-gradient(180deg, #1c110a 0%, var(--tavern-night) 55%, #0c0704 100%);
+    radial-gradient(ellipse 90% 60% at 50% 0%, color-mix(in srgb, var(--pal-wood-700) 35%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--pal-wood-900) 0%, var(--tavern-night) 55%, var(--pal-wood-950) 100%);
 }
 
 /* Hearth light from below the table: warm, and slowly breathing. */
@@ -68,7 +68,7 @@
   height: 90%;
   transform: translateX(-50%);
   background:
-    radial-gradient(ellipse 45% 55% at 50% 70%, rgba(255, 179, 71, 0.5), transparent 70%),
+    radial-gradient(ellipse 45% 55% at 50% 70%, color-mix(in srgb, var(--pal-gold-400) 50%, transparent), transparent 70%),
     radial-gradient(ellipse 70% 60% at 50% 80%, rgba(255, 122, 47, 0.28), transparent 75%);
   animation: landing-hearth 5.5s ease-in-out 2 alternate;
 }
@@ -83,21 +83,21 @@
   transform: perspective(700px) rotateX(58deg);
   transform-origin: 50% 100%;
   background:
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.5) 0 3px, transparent 3px 12.5%),
-    repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.14) 0 1px, transparent 1px 17px),
-    repeating-linear-gradient(90deg, rgba(251, 231, 176, 0.05) 0 2px, transparent 2px 29px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--pal-black) 50%, transparent) 0 3px, transparent 3px 12.5%),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--pal-black) 14%, transparent) 0 1px, transparent 1px 17px),
+    repeating-linear-gradient(90deg, color-mix(in srgb, var(--pal-brass-200) 5%, transparent) 0 2px, transparent 2px 29px),
     linear-gradient(180deg, var(--tavern-wood-deep) 0%, var(--tavern-wood) 55%, var(--tavern-wood-light) 100%);
   box-shadow: none;
   opacity: 0.9;
   /* The far edge fades into the dark rather than ending in a hard line across the room. */
-  -webkit-mask-image: linear-gradient(0deg, #000 45%, transparent 100%);
-  mask-image: linear-gradient(0deg, #000 45%, transparent 100%);
+  -webkit-mask-image: linear-gradient(0deg, var(--pal-black) 45%, transparent 100%);
+  mask-image: linear-gradient(0deg, var(--pal-black) 45%, transparent 100%);
 }
 
 .landing .landing-vignette {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 85% 75% at 50% 45%, transparent 45%, rgba(8, 4, 2, 0.8) 100%);
+  background: radial-gradient(ellipse 85% 75% at 50% 45%, transparent 45%, color-mix(in srgb, var(--pal-wood-950) 80%, transparent) 100%);
 }
 
 .landing .landing-embers {
@@ -223,7 +223,7 @@
   filter:
     drop-shadow(0 0 14px rgba(255, 170, 60, 0.45))
     drop-shadow(0 3px 0 #3a1f0c)
-    drop-shadow(0 10px 14px rgba(0, 0, 0, 0.75));
+    drop-shadow(0 10px 14px color-mix(in srgb, var(--pal-black) 75%, transparent));
 }
 
 /* --- the card fan ---------------------------------------------------------------------------- */
@@ -289,15 +289,15 @@
 }
 
 .landing .landing-fan-card > .cf {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.55), 0 10px 22px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--pal-black) 55%, transparent), 0 10px 22px color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
 
 /* The radiant card: CardFace gilds it; the hearth adds a warm halo round it. */
 .landing .landing-fan-card[data-radiant="true"] > .cf {
   box-shadow:
-    0 0 18px rgba(243, 201, 105, 0.55),
-    0 1px 3px rgba(0, 0, 0, 0.55),
-    0 10px 22px rgba(0, 0, 0, 0.6);
+    0 0 18px color-mix(in srgb, var(--pal-brass-300) 55%, transparent),
+    0 1px 3px color-mix(in srgb, var(--pal-black) 55%, transparent),
+    0 10px 22px color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
 
 /* R639: a face is a control — a click or a tap opens the card at full size. */
@@ -306,13 +306,13 @@
 }
 
 .landing .landing-fan-card--face:focus-visible {
-  outline: 3px solid var(--tavern-gold, #f3c969);
+  outline: 3px solid var(--tavern-gold, var(--pal-brass-300));
   outline-offset: 3px;
 }
 
 /* The face-down card: CardBack fills the box, which gives it the face's corners and shadow. */
 .landing .landing-fan-card--back {
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
 
 /* R704: a swap. The card going out stays over the new one for `--fan-swap` (ROTATION_SWAP_MS, set
@@ -361,10 +361,10 @@
   padding: 18px;
   border: 1px solid var(--tavern-brass);
   border-radius: var(--radius-lg);
-  background: rgba(18, 11, 7, 0.9);
+  background: color-mix(in srgb, var(--pal-wood-900) 90%, transparent);
   box-shadow:
-    inset 0 0 0 3px rgba(18, 11, 7, 0.9),
-    inset 0 0 0 4px rgba(201, 149, 63, 0.45),
+    inset 0 0 0 3px color-mix(in srgb, var(--pal-wood-900) 90%, transparent),
+    inset 0 0 0 4px color-mix(in srgb, var(--pal-brass-500) 45%, transparent),
     var(--shadow-3);
 }
 
@@ -393,35 +393,35 @@
   font-size: clamp(22px, 6vw, 28px);
   letter-spacing: 0.02em;
   color: var(--tavern-ink);
-  border: 2px solid #6b4212;
+  border: 2px solid var(--pal-wood-600);
   background: var(--tavern-gold);
   text-shadow: 0 1px 0 rgba(255, 246, 214, 0.65);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.65),
-    inset 0 -3px 0 rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 color-mix(in srgb, var(--pal-white) 65%, transparent),
+    inset 0 -3px 0 color-mix(in srgb, var(--pal-black) 22%, transparent),
     0 5px 0 #4a2a0e,
     var(--shadow-2),
-    0 0 26px rgba(243, 201, 105, 0.35);
+    0 0 26px color-mix(in srgb, var(--pal-brass-300) 35%, transparent);
 }
 
 .landing a.landing-cta--primary:hover {
   color: var(--tavern-ink);
   filter: brightness(1.07);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.7),
-    inset 0 -3px 0 rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 color-mix(in srgb, var(--pal-white) 70%, transparent),
+    inset 0 -3px 0 color-mix(in srgb, var(--pal-black) 22%, transparent),
     0 5px 0 #4a2a0e,
     var(--shadow-2),
-    0 0 38px rgba(255, 179, 71, 0.6);
+    0 0 38px color-mix(in srgb, var(--pal-gold-400) 60%, transparent);
 }
 
 .landing a.landing-cta--primary:active {
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.5),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 color-mix(in srgb, var(--pal-white) 50%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, var(--pal-black) 22%, transparent),
     0 1px 0 #4a2a0e,
     var(--shadow-2),
-    0 0 20px rgba(243, 201, 105, 0.35);
+    0 0 20px color-mix(in srgb, var(--pal-brass-300) 35%, transparent);
 }
 
 /* The static shell's notes in index.html, shown before the script replaces #root. */
@@ -444,10 +444,10 @@
   color: var(--tavern-parchment);
   border: 2px solid var(--tavern-brass);
   background: var(--tavern-wood-deep);
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.8);
+  text-shadow: 0 1px 1px color-mix(in srgb, var(--pal-black) 80%, transparent);
   box-shadow:
-    inset 0 1px 0 rgba(251, 231, 176, 0.3),
-    0 4px 0 #1f1008,
+    inset 0 1px 0 color-mix(in srgb, var(--pal-brass-200) 30%, transparent),
+    0 4px 0 var(--pal-wood-900),
     var(--shadow-2);
 }
 
@@ -455,16 +455,16 @@
   color: var(--tavern-gold-pale);
   border-color: var(--tavern-gold);
   box-shadow:
-    inset 0 1px 0 rgba(251, 231, 176, 0.35),
-    0 4px 0 #1f1008,
+    inset 0 1px 0 color-mix(in srgb, var(--pal-brass-200) 35%, transparent),
+    0 4px 0 var(--pal-wood-900),
     var(--shadow-2),
-    0 0 18px rgba(243, 201, 105, 0.3);
+    0 0 18px color-mix(in srgb, var(--pal-brass-300) 30%, transparent);
 }
 
 .landing a.landing-cta--secondary:active {
   box-shadow:
-    inset 0 1px 0 rgba(251, 231, 176, 0.25),
-    0 0 0 #1f1008,
+    inset 0 1px 0 color-mix(in srgb, var(--pal-brass-200) 25%, transparent),
+    0 0 0 var(--pal-wood-900),
     var(--shadow-2);
 }
 
@@ -541,7 +541,7 @@
   inset: 0;
   z-index: var(--z-below); /* the ribbon: dark wood, a swallowtail notch */
   background: var(--tavern-wood);
-  box-shadow: inset 2px 0 0 rgba(201, 149, 63, 0.45), inset -2px 0 0 rgba(201, 149, 63, 0.45);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--pal-brass-500) 45%, transparent), inset -2px 0 0 color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
   clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
 }
 
@@ -977,7 +977,7 @@
 .landing .landing-stats {
   position: relative;
   padding: 32px var(--tavern-gutter) 40px;
-  border-top: 1px solid rgba(201, 149, 63, 0.55);
+  border-top: 1px solid color-mix(in srgb, var(--pal-brass-500) 55%, transparent);
   background: var(--tavern-night);
   text-align: center;
   /* R1584000: clip the showcase's painting at the gold rule, so its fixed `.fx-layer`

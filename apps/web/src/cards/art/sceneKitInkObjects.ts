@@ -6,7 +6,7 @@
 // on its tip, a teapot, an abacus, a tripod censer and its smoke, a go board, a clepsydra) or lying on it (a drift
 // of sealed envelopes); a hand of cards and a folding fan opened from a pivot at their anchor; and a lacquered cane
 // centred on its anchor. R3404000: Meditative's Alt art (#3404) added a fisherman's oar lying level, centred on its
-// anchor, and a sofa standing on it. sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a palette.css name, none in
+// anchor, and a sofa standing on it. sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a SCENE_PALETTE name, none in
 // Radiant's gold window; a glow is a stack of translucent shapes, never a gradient; shapes are filled even-odd, so
 // a hole is a second sub-path and no two sub-paths of one shape overlap otherwise.
 

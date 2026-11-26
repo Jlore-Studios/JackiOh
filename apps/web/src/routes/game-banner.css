@@ -18,9 +18,9 @@
   max-width: var(--tavern-content);
   margin: 0;
   padding: 12px 14px;
-  border: 1px solid rgba(201, 149, 63, 0.45);
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
   border-radius: var(--radius-md);
-  background: rgba(18, 11, 7, 0.82);
+  background: color-mix(in srgb, var(--pal-wood-900) 82%, transparent);
   color: color-mix(in srgb, var(--tavern-parchment) 90%, transparent);
   line-height: 1.45;
   text-align: left;
@@ -105,7 +105,7 @@
   padding: 12px 18px;
   border: 1px solid var(--tavern-gold);
   border-radius: var(--radius-md);
-  background: rgba(18, 11, 7, 0.95);
+  background: color-mix(in srgb, var(--pal-wood-900) 95%, transparent);
   color: var(--tavern-parchment);
   font-weight: 700;
   box-shadow: var(--shadow-3);

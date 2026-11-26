@@ -3,7 +3,7 @@
 // mech, a spirit, a crowd, an alien, a dog, a jelly blob, a scrap golem, a gloved hand, a mining arm, an AI's eye)
 // and the ships and machines (a starship, a fighter, a freighter, a dropship, a shuttle, a rocket, a tank, probes,
 // satellites, a rover, a buoy, a ship's module, a missile). sceneKit.ts spreads them into `SCENE_KIT`. Every colour
-// is a palette.css name, none in Radiant's gold window; a glow is a stack of translucent shapes, never a gradient;
+// is a SCENE_PALETTE name, none in Radiant's gold window; a glow is a stack of translucent shapes, never a gradient;
 // shapes are filled even-odd, so a hole is a second sub-path and no two sub-paths of one shape overlap otherwise.
 
 import { between, DEGREES, INKED, leant, local, MAIN, MAIN_INKED, shape, sparkle, turned, whole, type Local, type Point } from "./kitDraw.ts";

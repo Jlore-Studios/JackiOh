@@ -3,7 +3,7 @@
 // regolith, a crater, a hive's honeycomb, a ventilation duct, a planet's limb, an auditorium's tiers, a scrap heap)
 // and a moon-sized asteroid centred on its anchor; and the buildings, rooms and fittings of stations and ships that
 // stand on their anchor, hang from it or centre on it. sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a
-// palette.css name, none in Radiant's gold window; a glow is a stack of translucent shapes, never a gradient; shapes
+// SCENE_PALETTE name, none in Radiant's gold window; a glow is a stack of translucent shapes, never a gradient; shapes
 // are filled even-odd, so a hole is a second sub-path and no two sub-paths of one shape overlap otherwise.
 
 import { fmt } from "./hash.ts";

@@ -135,8 +135,8 @@
    than the plain lobby rules above, which the series screen still relies on. */
 
 .tavern.play-screen {
-  --play-panel-edge: rgba(201, 149, 63, 0.55);
-  --play-tile: linear-gradient(180deg, rgba(58, 34, 18, 0.9), rgba(26, 15, 8, 0.95));
+  --play-panel-edge: color-mix(in srgb, var(--pal-brass-500) 55%, transparent);
+  --play-tile: linear-gradient(180deg, rgba(58, 34, 18, 0.9), color-mix(in srgb, var(--pal-wood-900) 95%, transparent));
   --play-ready: var(--tavern-teal);
 }
 
@@ -185,11 +185,11 @@
   border: 1px solid var(--play-panel-edge);
   border-radius: var(--radius-lg);
   background:
-    radial-gradient(ellipse 90% 40% at 50% 0%, rgba(255, 190, 110, 0.08), transparent 70%),
-    linear-gradient(180deg, rgba(52, 30, 16, 0.94), rgba(22, 13, 7, 0.96));
+    radial-gradient(ellipse 90% 40% at 50% 0%, color-mix(in srgb, var(--pal-brass-300) 8%, transparent), transparent 70%),
+    linear-gradient(180deg, color-mix(in srgb, var(--pal-wood-800) 94%, transparent), color-mix(in srgb, var(--pal-wood-900) 96%, transparent));
   box-shadow:
-    inset 0 0 0 3px rgba(18, 11, 7, 0.85),
-    inset 0 0 0 4px rgba(201, 149, 63, 0.22),
+    inset 0 0 0 3px color-mix(in srgb, var(--pal-wood-900) 85%, transparent),
+    inset 0 0 0 4px color-mix(in srgb, var(--pal-brass-500) 22%, transparent),
     var(--shadow-3);
 }
 
@@ -217,7 +217,7 @@
   height: 26px;
   border: 1px solid var(--tavern-brass);
   border-radius: var(--radius-round);
-  background: #a86a1f;
+  background: var(--pal-brass-600);
   color: var(--tavern-ink);
   font-size: var(--type-md);
   font-weight: 800;
@@ -261,7 +261,7 @@
   gap: 4px 12px;
   min-height: 100%;
   padding: 12px 40px 12px 14px;
-  border: 1px solid rgba(201, 149, 63, 0.35);
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 35%, transparent);
   border-radius: var(--radius-md);
   background: var(--play-tile);
   color: var(--tavern-parchment);
@@ -299,9 +299,9 @@
 .tavern.play-screen .play-mode-tile[data-selected="true"] {
   border-color: var(--tavern-gold);
   background:
-    radial-gradient(ellipse 100% 60% at 50% 0%, rgba(243, 201, 105, 0.16), transparent 70%),
+    radial-gradient(ellipse 100% 60% at 50% 0%, color-mix(in srgb, var(--pal-brass-300) 16%, transparent), transparent 70%),
     var(--play-tile);
-  box-shadow: 0 0 0 1px var(--tavern-gold), 0 0 24px rgba(243, 201, 105, 0.22);
+  box-shadow: 0 0 0 1px var(--tavern-gold), 0 0 24px color-mix(in srgb, var(--pal-brass-300) 22%, transparent);
 }
 
 .tavern.play-screen .play-mode-tile:has(input:focus-visible) {
@@ -333,7 +333,7 @@
 .tavern.play-screen .play-mode-tile__icon {
   width: 34px;
   height: 34px;
-  fill: rgba(243, 201, 105, 0.16);
+  fill: color-mix(in srgb, var(--pal-brass-300) 16%, transparent);
   stroke: var(--tavern-gold);
   stroke-width: 1.6;
   stroke-linejoin: round;
@@ -360,7 +360,7 @@
 .tavern.play-screen .play-mode-tile__waiting {
   grid-area: wait;
   padding: 2px 9px;
-  border: 1px solid rgba(63, 182, 168, 0.45);
+  border: 1px solid color-mix(in srgb, var(--pal-verdigris-400) 45%, transparent);
   border-radius: var(--radius-pill);
   color: #9fe3da;
   font-size: var(--type-sm);
@@ -386,7 +386,7 @@
   width: 100%;
   min-height: 46px;
   padding: 10px 14px;
-  border: 1px solid rgba(201, 149, 63, 0.5);
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 50%, transparent);
   border-radius: var(--radius-md);
   background: var(--tavern-well);
   color: var(--tavern-parchment);
@@ -402,7 +402,7 @@
 .tavern.play-screen .lobby-select:focus-visible {
   outline: none;
   border-color: var(--tavern-gold);
-  box-shadow: 0 0 0 3px rgba(243, 201, 105, 0.25);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pal-brass-300) 25%, transparent);
 }
 
 .tavern.play-screen .play-pick-summary {
@@ -427,9 +427,9 @@
 .tavern.play-screen .play-trio-deck {
   max-width: 100%;
   padding: 3px 10px;
-  border: 1px solid rgba(201, 149, 63, 0.45);
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
   border-radius: var(--radius-pill);
-  background: rgba(14, 9, 5, 0.7);
+  background: color-mix(in srgb, var(--pal-wood-950) 70%, transparent);
   color: var(--tavern-parchment);
   font-size: var(--type-md);
   overflow-wrap: anywhere;
@@ -453,9 +453,9 @@
   gap: 4px;
   margin: 2px 0 0;
   padding: 10px 14px;
-  border: 1px solid rgba(232, 102, 79, 0.55);
+  border: 1px solid color-mix(in srgb, var(--pal-lacquer-400) 55%, transparent);
   border-radius: var(--radius-md);
-  background: rgba(14, 9, 5, 0.6);
+  background: color-mix(in srgb, var(--pal-wood-950) 60%, transparent);
   color: var(--tavern-parchment);
   font-size: var(--type-md);
 }
@@ -464,7 +464,7 @@
   flex-direction: row;
   align-items: center;
   gap: 8px;
-  border-color: rgba(63, 182, 168, 0.6);
+  border-color: color-mix(in srgb, var(--pal-verdigris-400) 60%, transparent);
   color: #9fe3da;
   font-weight: 700;
 }
@@ -500,9 +500,9 @@
   align-items: center;
   gap: 14px;
   padding: 12px 14px;
-  border: 1px solid rgba(63, 182, 168, 0.45);
+  border: 1px solid color-mix(in srgb, var(--pal-verdigris-400) 45%, transparent);
   border-radius: var(--radius-md);
-  background: rgba(14, 9, 5, 0.6);
+  background: color-mix(in srgb, var(--pal-wood-950) 60%, transparent);
 }
 
 .tavern.play-screen .play-search__beacon {
@@ -628,7 +628,7 @@
 }
 
 .tavern.play-screen .play-trio-deck.series-deck[data-won="true"] {
-  border-color: rgba(63, 182, 168, 0.75);
+  border-color: color-mix(in srgb, var(--pal-verdigris-400) 75%, transparent);
   color: #9fe3da;
 }
 
@@ -649,7 +649,7 @@
 }
 
 .tavern.play-screen .play-mode-tile.series-picker__deck[data-won="true"]:hover {
-  border-color: rgba(201, 149, 63, 0.35);
+  border-color: color-mix(in srgb, var(--pal-brass-500) 35%, transparent);
   transform: none;
 }
 
@@ -658,7 +658,7 @@
 }
 
 .tavern.play-screen .series-picker__standing[data-won="false"] {
-  border-color: rgba(201, 149, 63, 0.45);
+  border-color: color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
   color: var(--tavern-text-dim);
 }
 

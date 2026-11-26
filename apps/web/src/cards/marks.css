@@ -113,7 +113,7 @@
   height: 20px;
   border: 2px solid var(--mark-rim);
   border-radius: var(--radius-round);
-  background: radial-gradient(circle, color-mix(in srgb, var(--mark-glow) 70%, black) 0%, #0b0d13 100%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--mark-glow) 70%, var(--pal-black)) 0%, #0b0d13 100%);
   box-shadow: 0 0 8px 1px color-mix(in srgb, var(--mark-glow) 85%, transparent);
   color: var(--mark-core);
   font: 900 12px / 1 ui-sans-serif, system-ui, sans-serif;

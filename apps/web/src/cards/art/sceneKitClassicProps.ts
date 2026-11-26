@@ -1,7 +1,7 @@
 // R3352000: the scene kit's Classic props (ART.md, "Scene recipes and kits"), which Classic's scenes (#3352) added
 // for the things their briefs name and the kit lacked. sceneKitClassic.ts spreads them into `CLASSIC_KIT`, after
 // its creatures. Each part keeps the kit's rules: one to twelve filled shapes drawn in its own frame (`local`),
-// varied by the scene's stream alone, every colour a palette.css name none in Radiant's gold window, a glow or a
+// varied by the scene's stream alone, every colour a SCENE_PALETTE name none in Radiant's gold window, a glow or a
 // wash a stack of translucent shapes, never a gradient, and every shape filled even-odd, so a hole is a second
 // sub-path and no two sub-paths of one shape overlap otherwise.
 
