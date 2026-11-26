@@ -23977,6 +23977,8 @@
       }
     },
     "5068": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-26T10:19:16Z",
@@ -23990,8 +23992,11 @@
         "trail": "- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"58b16c94-98f6-4749-88df-80857f0e6aee/task-380\"}\n- said: I will wait for `task-380` (`cargo jackioh patches check`) to finish.\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5016/crates/cards/patches/pending/one-svg-icon-set-in-place-of-unicode-glyphs.json\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && cargo jackioh patches check\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"58b16c94-98f6-4749-88df-80857f0e6aee/task-388\"}\n- said: I will wait for `task-388` (`cargo jackioh patches check`) to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && cargo jackioh catalog check && cargo jackioh spec check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && cargo fmt --check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && pnpm --dir e2e test:component\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && pnpm --dir e2e typecheck && pnpm --dir e2e typecheck:component\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"58b16c94-98f6-4749-88df-80857f0e6aee/task-400\"}\n- said: I will wait for `task-400` (e2e typechecks) to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && cargo test -p jackioh-cards test_patches\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"58b16c94-98f6-4749-88df-80857f0e6aee/task-406\"}\n- said: I will wait for `task-406` to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && cargo fmt --check && cargo jackioh catalog check && cargo jackioh patches check && cargo jackioh spec check\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"58b16c94-98f6-4749-88df-80857f0e6aee/task-414\"}\n- said: I will wait for `task-414` (harness checks) to finish.\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5016/.bot-notes.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5016 && git diff --stat\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: one SVG icon set in place of Unicode glyphs\"} --> ### What changed and why Replaced device-dependent Unicode character glyphs (`\u2715`, `\u2713`, `\u2726`, `\u2605`, `\u265b`, `\u2620`, `\u2691`) across client UI components with a bespoke inline SVG [`Icon`](file:///home/agent-agy/actio\u2026"
       },
       "issue": 5016,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-26T11:33:39Z",
         "from_run": "45800226479",
         "gates": [
           {
@@ -24050,8 +24055,15 @@
         "source": "build",
         "until": "2026-11-26T12:00:46Z"
       },
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-26T11:30:46Z",
+      "run_id": "pending:139a278b-1795692789",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "started_at": "2026-11-26T11:33:39Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gemini",
@@ -24213,9 +24225,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T11:32:55Z",
+    "at": "2026-11-26T11:33:39Z",
     "url": "",
-    "what": "review #5069 on claude-6"
+    "what": "review #5068 on agy"
   },
   "last_sweep": {
     "at": "2026-11-26T11:20:16Z",
