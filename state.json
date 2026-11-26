@@ -22496,7 +22496,7 @@
       "started_at": "2026-11-26T09:06:50Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 2
     },
     "5015": {
       "action": "build",
