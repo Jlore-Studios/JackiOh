@@ -730,8 +730,11 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // read 200-200, edge 0.0 (0.0 to 0.0); inconclusive (R4319000): 0 decided of 200 (won 0, lost 0), 1
     // diverged; its scene tests settle it (training/improve.md, A screen).
     splash_trample_read: true,
-    // #4798: on. Its screen, 400 games on improve-dev against the control at 61758a8b61, is still being
-    // played as this is committed; its scene tests (crates/ai/tests/ai/reborn_body.rs) hold it.
+    // #4798: on. Its fork screen on improve-dev against the control at 61758a8b61 read 200 trunk games,
+    // 0 forks, 0 live, edge 0.0 (-1.0 to 1.0); inconclusive (R4319000), the change altering no decision
+    // there; its scene tests (crates/ai/tests/ai/reborn_body.rs) settle it (training/improve.md, A
+    // screen). A deal screen started first was cut by the session's two-hour limit before its tally, with
+    // nothing read, so the fork screen, which resumes after a cut, is its one screen.
     reborn_body_read: true,
     health: 1.0,
     armor_point: 0.8,
