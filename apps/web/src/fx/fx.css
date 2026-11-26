@@ -242,7 +242,7 @@
   display: grid;
   place-items: center;
   z-index: 4;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--fx-steel) 30%, var(--fx-ink)) 0%, var(--fx-ink) 100%);
   border: 2px solid var(--fx-gold);
   box-shadow: 0 3px 4px color-mix(in srgb, var(--fx-ink) 80%, transparent);
@@ -307,7 +307,7 @@
   width: min(max(240px, calc(max(var(--fx-w, 0px), var(--fx-h, 0px)) * 2.8)), 100vmax);
   aspect-ratio: 1;
   translate: -50% -50%;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   z-index: 1;
   /* Two fans with different periods, each ray ramping in and out rather than hard-stopped, so the
      light reads as soft god rays of uneven width instead of a stamped starburst. */
@@ -439,7 +439,7 @@
   top: var(--fx-y);
   width: var(--fx-w);
   height: var(--fx-h);
-  border-radius: var(--radius, 7px);
+  border-radius: var(--radius-sm);
   z-index: 2;
   overflow: hidden;
   animation: fx-sheen-glow var(--fx-ms) ease-in-out both;
@@ -502,7 +502,7 @@
   translate: -50% -50%;
   z-index: 2;
   border: 1px solid var(--line-bright, #454d66);
-  border-radius: var(--radius, 7px);
+  border-radius: var(--radius-sm);
   background:
     radial-gradient(circle at 50% 50%, transparent 0 18%, var(--line-bright, #454d66) 19% 21%, transparent 22%),
     repeating-linear-gradient(
@@ -854,7 +854,7 @@
   width: min(92vw, 720px);
   aspect-ratio: 2.4;
   translate: -50% -50%;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(
     ellipse closest-side,
     color-mix(in srgb, var(--fx-gold-pale) 80%, transparent) 0%,
@@ -1040,7 +1040,7 @@
   width: 100%;
   height: 100%;
   border: 1px solid color-mix(in srgb, var(--fx-gold) 45%, white);
-  border-radius: var(--radius, 7px);
+  border-radius: var(--radius-sm);
   background:
     radial-gradient(ellipse at 50% 38%, rgb(255 255 255 / 70%), transparent 68%),
     linear-gradient(160deg, color-mix(in srgb, var(--fx-gold) 40%, #2a3050), #171a24);
@@ -1188,7 +1188,7 @@
   width: calc(var(--fx-w) * 2);
   height: calc(var(--fx-h) * 2);
   z-index: 3;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   border: 1px solid color-mix(in srgb, var(--fx-frost) 60%, white);
   background:
     linear-gradient(115deg, transparent 43%, rgb(236 252 255 / 95%) 45%, transparent 48%),
@@ -1303,7 +1303,7 @@
   content: "";
   position: absolute;
   inset: -3px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: radial-gradient(circle, rgb(190 238 255 / 55%), transparent 70%);
   pointer-events: none;
   animation: fx-hindered-glint 1.6s ease-in-out 2 alternate;
@@ -1359,7 +1359,7 @@
   z-index: 3;
   display: grid;
   place-items: center;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle, color-mix(in srgb, var(--fx-mark-glow) 55%, transparent) 0%, transparent 68%);
   animation: fx-brand-slam var(--fx-ms) cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
@@ -1368,7 +1368,7 @@
   content: "";
   position: absolute;
   inset: 8%;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   border: 3px dashed var(--fx-mark-rim);
   box-shadow:
     0 0 14px 3px color-mix(in srgb, var(--fx-mark-glow) 80%, transparent),
@@ -1504,7 +1504,7 @@
   width: max-content;
   max-width: 94vw;
   padding: 0.45em 1em 0.6em;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   border: 2px solid transparent;
   background:
     linear-gradient(color-mix(in srgb, var(--fx-ink) 92%, transparent), color-mix(in srgb, var(--fx-ink) 92%, transparent)) padding-box,
@@ -1534,7 +1534,7 @@
   min-width: min(22em, 90vw);
   height: 1.3em;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: linear-gradient(180deg, rgb(0 0 0 / 55%), rgb(255 255 255 / 6%) 50%, rgb(0 0 0 / 55%));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--fx-gold) 45%, transparent);
   text-align: center;
@@ -1680,7 +1680,7 @@
   width: max-content;
   max-width: 94vw;
   padding: 0.45em 1em 0.7em;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   border: 2px solid transparent;
   background:
     linear-gradient(color-mix(in srgb, var(--fx-ink) 92%, transparent), color-mix(in srgb, var(--fx-ink) 92%, transparent)) padding-box,
@@ -1723,7 +1723,7 @@
   width: 3.2em;
   height: 1.6em;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: linear-gradient(180deg, var(--fx-gold-deep), var(--fx-ink));
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--fx-gold) 70%, transparent);
   text-align: center;
@@ -1733,13 +1733,13 @@
 .fx-roll-item[data-kind="coin"] .fx-roll-face {
   width: 3.4em;
   height: 1.6em;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: radial-gradient(circle at 35% 30%, var(--fx-gold-pale), var(--fx-gold) 55%, var(--fx-gold-deep));
   animation: fx-roll-spin var(--fx-land-ms, 0ms) cubic-bezier(0.2, 0.6, 0.3, 1) both;
 }
 
 .fx-roll-item[data-kind="die"] .fx-roll-face {
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: linear-gradient(160deg, var(--fx-white), var(--fx-steel));
   animation: fx-roll-tumble var(--fx-land-ms, 0ms) ease-out both;
 }
@@ -1748,7 +1748,7 @@
   content: "";
   position: absolute;
   inset: -0.15em;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   box-shadow:
     0 0 0 2px var(--fx-gold),
     0 0 14px color-mix(in srgb, var(--fx-gold) 70%, transparent);
@@ -1786,7 +1786,7 @@
 .fx-roll-kept,
 .fx-roll-extra {
   padding: 0 0.35em;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   white-space: nowrap;
 }
 
@@ -1866,7 +1866,7 @@
   width: var(--fx-w);
   height: var(--fx-h);
   z-index: 2;
-  border-radius: 45% / 50%;
+  border-radius: var(--radius-fog);
   background: radial-gradient(
     ellipse 65% 75% at 50% 55%,
     color-mix(in srgb, var(--fx-tint-glow) 40%, transparent) 0%,
@@ -1882,7 +1882,7 @@
   left: calc(var(--fx-puff) / var(--fx-puffs) * 88%);
   width: 34%;
   height: 84%;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(
     closest-side,
     color-mix(in srgb, var(--fx-tint-core) 70%, transparent) 0%,
@@ -2003,7 +2003,7 @@
   height: var(--fx-h);
   z-index: 3;
   overflow: hidden;
-  border-radius: var(--radius, 7px);
+  border-radius: var(--radius-sm);
   box-shadow:
     inset 0 0 0 2px var(--fx-tint-rim),
     inset 0 0 14px 3px color-mix(in srgb, var(--fx-tint-glow) 70%, transparent),
@@ -2597,7 +2597,7 @@
   width: min(42vmin, 320px);
   aspect-ratio: 5 / 7;
   translate: -50% -50%;
-  border-radius: 6%;
+  border-radius: var(--radius-sweep);
   background: linear-gradient(
     160deg,
     color-mix(in srgb, var(--fx-tint-rim) 85%, var(--pal-white)) 0%,
@@ -2939,7 +2939,7 @@
   width: 92vmax;
   aspect-ratio: 1;
   translate: -50% -50%;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: repeating-conic-gradient(
     from 0deg,
     color-mix(in srgb, var(--fx-tint-core) 55%, transparent) 0deg 4deg,
@@ -2978,7 +2978,7 @@
   width: 23vmax;
   aspect-ratio: 1;
   translate: -50% -50%;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   box-shadow:
     0 0 0 6px color-mix(in srgb, var(--fx-tint-rim) 80%, var(--pal-white)),
     0 0 30px 14px color-mix(in srgb, var(--fx-tint-glow) 70%, transparent),
@@ -9900,7 +9900,7 @@
   width: 70vmax;
   aspect-ratio: 1;
   translate: -50% -50%;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   /* Soft arms that blend into one another, so the turning spiral reads as a swirl, not a starburst. */
   background: repeating-conic-gradient(
     from 0deg,
@@ -9941,7 +9941,7 @@
   width: 28vmin;
   aspect-ratio: 1;
   translate: -50% -50%;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(
     circle,
     var(--pal-white) 0,
@@ -10002,7 +10002,7 @@
   width: 46vmin;
   aspect-ratio: 1;
   translate: -50% -50%;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(
     circle,
     color-mix(in srgb, var(--fx-tint-glow) 70%, var(--pal-white)) 0,
@@ -10763,7 +10763,7 @@
   height: calc(55% * var(--fx-launch-reach));
   translate: -50% 0;
   transform-origin: 50% 0;
-  border-radius: 50% 50% 45% 45% / 30% 30% 70% 70%;
+  border-radius: var(--radius-flame);
   background: radial-gradient(
     ellipse 50% 80% at 50% 10%,
     var(--fx-tint-glow) 0%,
@@ -10802,7 +10802,7 @@
   height: calc(150% * var(--fx-launch-reach));
   translate: -50% 0;
   transform-origin: 50% 100%;
-  border-radius: 50% 50% 0 0 / 20% 20% 0 0;
+  border-radius: var(--radius-trail);
   background: linear-gradient(
     to top,
     color-mix(in srgb, var(--fx-tint-core) 70%, transparent) 0%,

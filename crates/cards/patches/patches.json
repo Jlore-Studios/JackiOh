@@ -37093,5 +37093,139 @@
     ],
     "fragment": "the-tier-cards-and-kpis-read-the-newest-win-rates",
     "changes": []
+  },
+  {
+    "version": "v0.6.14n",
+    "date": "2026-11-26",
+    "title": "Patch: a card made Radiant where it stands starts the Brittle its Radiant face newly prints, and regains a Reborn that face newly prints",
+    "source": "issue #4817",
+    "notes": "Issue #4817 (R4817000, R4817001): Make Radiant and De-Radiant on a card where it stands refit its Brittle count to the new face (a count its printed Brittle started goes when the new face prints none; a card on the field with no count starts the one the new face prints), and a Radiant face that newly prints Reborn gives a used Reborn back, as it already did a spent Divine Shield. Engine change only, no catalog or script change; claimed with --plays as classify's stage 2 against daee3b7's build names it.",
+    "player": {
+      "title": "A card made Radiant where it stands follows its new face's Brittle and Reborn",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A Sack made Radiant on the field now crumbles at its Radiant face's Brittle 1, as one played Radiant does.",
+        "A Ticketed made Radiant on the field no longer crumbles, since its Radiant face has no Brittle; one De-Radianted by Prestige starts its Brittle 3.",
+        "A Unit that already used a Reborn regains it when made Radiant, if only its Radiant face has Reborn (Wrong-House Attacker, 4-mana 7/7, Jilliax and others)."
+      ]
+    },
+    "commits": [
+      "22a9db19dd2732f368f4612dff9ddf08a9dbfc0b"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "core-091"
+    ],
+    "fragment": "a-card-made-radiant-where-it-stands-starts-the-brittle-its",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14o",
+    "date": "2026-11-26",
+    "title": "Patch: Radiant Cosmic Bard leaves both drawn Units at the cheapest price, even one that carries a cost raise larger than that price",
+    "source": "#4832",
+    "notes": "Cosmic Bard's Radiant face took a carried cost raise off the cost override, which bottoms out at 0; a raise larger than the cheapest price survived and the card cost more. Now the override is 0 for such a card and the excess comes off its cost change in hand, so every drawn Unit still in the hand ends at the cheapest drawn price. The longer script makes Cosmic Bard complicated (R1846000), so Stinkyscape #109 and #111 read new pools (R2173001); `plays` claims those two, the families classify's games show playing differently. Cosmic Bard itself meets no raiser in those games, so its own play is unobservable there and goes unclaimed.",
+    "player": {
+      "title": "Radiant Cosmic Bard prices both drawn Units at the cheapest",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Radiant Cosmic Bard's Combo no longer leaves a drawn Unit that carries a cost raise larger than the cheapest price above it: both drawn Units cost the cheapest drawn price."
+      ]
+    },
+    "commits": [
+      "f9b18868b35013858635c73fe397f3a11ea7c469"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-109",
+      "stinkyscape-111"
+    ],
+    "fragment": "radiant-cosmic-bard-leaves-both-drawn-units-at-the-cheapest",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14p",
+    "date": "2026-11-26",
+    "title": "Toxopid's Legs are Flexible and crush the Units they land on",
+    "source": "#5048",
+    "notes": "S+ #121.1 Toxopid Leg gains Flexible. S+ #121 Toxopid's Cry draws its Legs' zones from every unit and backrow zone of both sides (Radiant: the opponent's) that holds nothing or only Units, destroys the Units there, and lands a Leg in each zone once the deaths resolve (R5048000). Claimed with --plays as classify's stage 2 against the merge base names them: M #8 Reach the Summit (its random Radiant cards can be a Toxopid) and S+ #127 Corvus (its line now meets Legs standing in the backrow).",
+    "player": {
+      "title": "Toxopid's Legs crush what they land on",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Toxopid Leg is now Flexible, so it can stand in the backrow as well as the unit row.",
+        "Toxopid's Legs now land in random zones of either row, empty or holding Units, and destroy the Units there before they land.",
+        "Radiant Toxopid's Legs still land only on your opponent's side, now in either row, destroying the Units there."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "4d0564418fbf44e5db0f52fd11a04902f98fdba2"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "meditative-008",
+      "stinkyscapeplus-121",
+      "stinkyscapeplus-127"
+    ],
+    "fragment": "toxopid-s-legs-are-flexible-and-crush-the-units-they-land-on",
+    "changes": [
+      {
+        "id": "stinkyscapeplus-121",
+        "name": "Toxopid",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-121-1",
+        "name": "Toxopid Leg",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.14q",
+    "date": "2026-11-26",
+    "title": "One corner language for the table",
+    "source": "issue #5015",
+    "notes": "Every border-radius in the web client is a surfaces.css token: the corner scale is retuned to 2, 4, 6 and 10 px (xl dropped), the settings switch keeps its track's pill as --radius-switch, and the card faces' cuts and the effects' shapes are named tokens that keep their values.",
+    "player": {
+      "title": "One corner language for the table",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Menus, panels, buttons, badges and the card inspector have tighter corners; card faces keep the corner their frame is cut to."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "7a32473e328105b864cc63b8ac241d22d5c025d2"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "one-corner-language-for-the-table",
+    "changes": []
   }
 ]

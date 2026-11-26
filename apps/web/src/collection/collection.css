@@ -17,7 +17,7 @@
   aspect-ratio: 5 / 7;
   padding: 0;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: transparent;
 }
 
@@ -242,7 +242,7 @@
   min-height: 0;
   padding: 6px 4px;
   border: 2px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: rgba(239, 224, 191, 0.06);
   box-shadow: none;
   text-shadow: none;
@@ -274,7 +274,7 @@
 
 .tavern.app-shell .collection-strip__picture--full-art {
   overflow: hidden;
-  border-radius: 7% / 5%;
+  border-radius: var(--radius-card);
 }
 
 .tavern.app-shell .collection-strip__picture--full-art .cf-art {
@@ -407,7 +407,7 @@
   gap: 3px;
   width: 128px;
   padding: 6px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: rgba(239, 224, 191, 0.06);
   font-size: 12px;
   font-weight: 600;
@@ -421,7 +421,7 @@
   min-height: 0;
   padding: 0;
   border: 2px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: transparent;
   box-shadow: none;
   cursor: var(--cursor-glove-point, pointer);
@@ -442,7 +442,7 @@
   height: 84px;
   aspect-ratio: 5 / 7;
   overflow: hidden;
-  border-radius: 7% / 5%;
+  border-radius: var(--radius-card);
 }
 
 /* A mini board: the viewer's half on the playmat, the backdrop over it, a row of pads each side.
@@ -459,7 +459,7 @@
   aspect-ratio: 16 / 10;
   overflow: hidden;
   border: 1px solid #000;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: #1c110a;
 }
 
@@ -617,7 +617,7 @@
   flex: 1 1 0;
   aspect-ratio: 5 / 6;
   border: 1px solid var(--mini-line);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: var(--mini-zone);
 }
 
@@ -862,7 +862,7 @@
   min-height: 0;
   padding: 6px 4px;
   border: 2px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   box-shadow: none;
   font-family: inherit;
   font-size: var(--type-xs);

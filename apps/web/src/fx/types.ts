@@ -528,6 +528,7 @@ export type FxRecipe =
   | "brand"
   | "rewind"
   | "armor"
+  | "nullify"
   | "curve"
   | "line";
 

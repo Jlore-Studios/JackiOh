@@ -91,7 +91,7 @@
 .tutorial-path__meter i {
   width: 14px;
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: var(--line-bright);
 }
 
@@ -104,7 +104,7 @@
 .app-shell .tutorial-path__toggle {
   min-height: 44px;
   padding: 8px 16px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
@@ -147,7 +147,7 @@
   z-index: var(--z-base);
   width: calc(100% + var(--path-gap));
   height: 3px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--line-bright);
 }
 
@@ -307,7 +307,7 @@
   min-height: 44px;
   margin-left: auto;
   padding: 8px 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-size: 14px;
   font-weight: 700;
 }
@@ -403,7 +403,7 @@
   width: 76px;
   height: 4px;
   overflow: hidden;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--line);
 }
 
@@ -412,7 +412,7 @@
   position: absolute;
   inset: 0 auto 0 0;
   width: calc(var(--done, 0) * 100%);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--coach);
   transition: width calc(240ms * var(--anim-scale, 1)) ease-out;
 }
@@ -460,7 +460,7 @@
   position: fixed;
   z-index: 55;
   border: 3px solid var(--coach);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   box-shadow:
     0 0 0 4px color-mix(in srgb, var(--coach) 22%, transparent),
     0 0 26px 4px color-mix(in srgb, var(--coach) 45%, transparent);
@@ -516,7 +516,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   border: 1px solid color-mix(in srgb, var(--coach) 60%, var(--line));
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: var(--bg-raised);
   box-shadow:
     0 0 0 1px rgb(0 0 0 / 35%),
@@ -620,7 +620,7 @@
   min-height: 40px;
   padding: 7px 16px;
   border-color: color-mix(in srgb, var(--coach) 70%, white);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--coach);
   color: var(--coach-ink);
   font-size: 14px;
@@ -1124,7 +1124,7 @@
   min-height: 44px;
   padding: 7px 14px;
   border-color: color-mix(in srgb, var(--coach) 55%, var(--line));
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text);
   font-size: var(--type-lg);
@@ -1185,7 +1185,7 @@
   grid-template-columns: minmax(7.5em, auto) minmax(0, 1fr);
   gap: 2px 12px;
   padding: 8px 10px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-sunken);
   font-size: var(--type-lg);
 }

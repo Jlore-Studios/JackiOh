@@ -61,7 +61,7 @@
 .skeleton__block {
   display: block;
   min-width: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--skeleton-ink);
   box-shadow: inset 0 0 0 1px var(--skeleton-edge);
 }

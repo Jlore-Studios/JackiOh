@@ -72,7 +72,7 @@
   translate: -50% 0;
   z-index: 2;
   padding: 0 3px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: linear-gradient(180deg, #c9d2e3, #6b7891);
   color: #0d1220;
   font-size: 0.55em;
@@ -195,7 +195,7 @@
   aspect-ratio: 5 / 7;
   max-width: 100%;
   margin-inline: auto;
-  border-radius: 7% / 5%;
+  border-radius: var(--radius-card);
   background: var(--cf-edge);
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.55);
   color: var(--cf-ink);
@@ -312,7 +312,7 @@
   overflow: hidden;
   container-type: size;
   container-name: cardface;
-  border-radius: 6% / 4.3%;
+  border-radius: var(--radius-card-scale);
   /* The panel's bevel: a dark inner rim, a lit upper edge and a shaded foot, so the frame reads as
      a raised plate rather than a flat fill. */
   box-shadow:
@@ -428,7 +428,7 @@
   place-items: center;
   width: 9.5cqw;
   height: 9.5cqw;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle at 38% 32%, #d7a8ff, #7a2fb3 60%, #3d1060);
   box-shadow: 0 0 0 0.5cqw #1a1030;
   color: #fff;
@@ -466,7 +466,7 @@
   place-items: center;
   width: 52cqw;
   height: 13cqh;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: rgb(20 24 40 / 0.85);
   color: #f2e9c9;
   font-size: 8cqh;
@@ -593,7 +593,7 @@
   height: 4.6cqh;
   translate: -50% 0;
   rotate: 45deg;
-  border-radius: 0.6cqh;
+  border-radius: var(--radius-card-gem);
   background: radial-gradient(
     circle at 35% 30%,
     #fff 0 10%,
@@ -630,7 +630,7 @@
   margin: 0;
   padding: 1.6cqh 3cqw;
   overflow: hidden;
-  border-radius: 2.5cqw;
+  border-radius: var(--radius-card-text);
   background:
     radial-gradient(120% 90% at 50% 40%, #f6ecd4, #e3d2ac 70%, #c9b48a),
     #eadcb8;
@@ -791,7 +791,7 @@
 .cf-ref[tabindex] {
   pointer-events: auto;
   cursor: help;
-  border-radius: 0.2em;
+  border-radius: var(--radius-card-inline);
 }
 
 .cf-ref[tabindex]:focus-visible {
@@ -826,7 +826,7 @@
   pointer-events: auto;
   cursor: help;
   -webkit-touch-callout: none;
-  border-radius: 0.2em;
+  border-radius: var(--radius-card-inline);
 }
 
 /* ...but only where its card takes the pointer. A descendant's own `pointer-events` beats every
@@ -852,7 +852,7 @@
   z-index: 80;
   max-width: min(260px, calc(100vw - 16px));
   padding: 6px 9px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--bg-sunken) 96%, transparent);
   color: var(--text);
   font-size: 0.85rem;
@@ -1259,7 +1259,7 @@
 /* Core's capsule: a rounded banner, the name in the text face at its boldest. */
 .cf[data-showcase="core"] .card-name {
   clip-path: none;
-  border-radius: 3.8cqh;
+  border-radius: var(--radius-card-name-core);
   font-family: var(--font-text);
   font-weight: 900;
 }
@@ -1362,7 +1362,7 @@
 /* Training Grounds' plank: a square banner, the name in capitals at its boldest, as if burnt into the wood. */
 .cf[data-showcase="training-grounds"] .card-name {
   clip-path: none;
-  border-radius: 0.6cqh;
+  border-radius: var(--radius-card-gem);
   text-transform: uppercase;
   font-weight: 900;
 }
@@ -1513,7 +1513,7 @@
   height: 4.6cqh;
   padding: 0 2.2cqw;
   overflow: hidden;
-  border-radius: 2.3cqh;
+  border-radius: var(--radius-card-tag);
   background: linear-gradient(180deg, #3a3326, #1d1911);
   box-shadow: inset 0 0 0 0.25cqh color-mix(in srgb, var(--cf-rarity) 60%, #8a7650);
   color: #f3e7c3;
@@ -1720,7 +1720,7 @@
     justify-content: center;
     height: 25cqh;
     padding: 0 3.5cqw;
-    border-radius: 2.2cqh;
+    border-radius: var(--radius-card-name);
     white-space: normal;
     line-height: 1.04;
     font-size: calc(10.4cqh * var(--cf-band-scale, 1) * var(--cf-fit, 1));
@@ -1918,7 +1918,7 @@
   height: 100%;
   aspect-ratio: auto;
   margin: 0;
-  border-radius: 12% / 9%;
+  border-radius: var(--radius-card-minion);
 }
 
 .cf[data-layout="minion"] .cf-scale {
@@ -1970,7 +1970,7 @@
      is a 4-6px name nobody can read. Below 7.5px the name stays readable and ends in an ellipsis
      instead (useFitText marks it data-clamped), and the hover preview shows it whole. */
   font-size: max(7.5px, calc(7.4cqh * var(--cf-fit, 1)));
-  border-radius: 1.2cqh;
+  border-radius: var(--radius-card-name-minion);
   box-shadow:
     0 0.4cqh 0.8cqh rgb(0 0 0 / 0.55),
     inset 0 0.3cqh 0 rgb(255 255 255 / 0.18);
@@ -1989,7 +1989,7 @@
    above and the full face's `data-full-art` rules whatever the source order. */
 .cf[data-layout="minion"][data-full-art="true"] .cf-scale {
   inset: 1.2% 1.7%;
-  border-radius: 10.7% / 8%;
+  border-radius: var(--radius-card-minion-scale);
 }
 
 .cf[data-layout="minion"][data-full-art="true"] .cf-portrait {
@@ -2033,7 +2033,7 @@
 /* R3339000: Art-first cards in play drop name bands and text to let art stand edge-to-edge. */
 .cf[data-layout="minion"][data-art-first="true"] .cf-scale {
   inset: 1.2% 1.7%;
-  border-radius: 10.7% / 8%;
+  border-radius: var(--radius-card-minion-scale);
 }
 
 .cf[data-layout="minion"][data-art-first="true"] .cf-portrait {
@@ -2184,7 +2184,7 @@
   left: 3cqw;
   right: 3cqw;
   height: var(--mf-plate);
-  border-radius: 1.2cqh;
+  border-radius: var(--radius-card-name-minion);
   line-height: var(--mf-plate);
 }
 
@@ -2203,7 +2203,7 @@
   top: calc(0.5cqh + 2cqmin);
   right: 0.5cqw;
   padding: max(1.5px, 0.8cqmin) max(2.5px, 1.4cqmin);
-  border-radius: max(3px, 2cqmin);
+  border-radius: var(--radius-card-chip);
   background: linear-gradient(180deg, #fbf5e6, #d9ccb0);
   box-shadow:
     0 0 0 1px rgb(0 0 0 / 0.75),
@@ -2248,7 +2248,7 @@
   top: 30cqh;
   right: 2cqw;
   padding: 0 max(2.5px, 1.4cqmin);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: radial-gradient(circle at 40% 35%, #2b3142, #0d1018 75%);
   box-shadow:
     0 0 0 max(1px, 0.5cqw) rgb(232 236 248 / 0.75),
@@ -2304,7 +2304,7 @@
   height: var(--mf-stat, 28cqmin);
   padding: 0 calc(var(--mf-stat, 28cqmin) * 0.12);
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: #fff;
   font-size: calc(var(--mf-stat, 28cqmin) * 0.6);
   font-weight: 900;
@@ -2335,7 +2335,7 @@
   min-width: calc(var(--mf-stat, 28cqmin) * 0.7);
   height: calc(var(--mf-stat, 28cqmin) * 0.7);
   margin-right: calc(var(--mf-stat, 28cqmin) * -0.14);
-  border-radius: 20% 20% 45% 45%;
+  border-radius: var(--radius-card-armor);
   background: linear-gradient(180deg, #dfe7f3, #8190aa 55%, #465169);
   font-size: calc(var(--mf-stat, 28cqmin) * 0.42);
   line-height: calc(var(--mf-stat, 28cqmin) * 0.7);
@@ -2422,7 +2422,7 @@
   min-width: 2.1em;
   padding: max(1.5px, 0.8cqmin) max(2.5px, 1.4cqmin);
   border: 0;
-  border-radius: max(3px, 2cqmin);
+  border-radius: var(--radius-card-chip);
   background: linear-gradient(180deg, color-mix(in srgb, var(--kw) 88%, #fff), color-mix(in srgb, var(--kw) 80%, #000));
   box-shadow:
     0 0 0 1px rgb(0 0 0 / 0.75),
@@ -2487,7 +2487,7 @@
   right: 5cqw;
   bottom: calc(var(--mf-stat, 28cqmin) + var(--mf-plate, 11cqh) * 0.3);
   border: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(
     closest-side,
     transparent 66%,
@@ -2701,7 +2701,7 @@
   aspect-ratio: 1;
   margin: 0;
   border: 1px solid rgb(255 214 120 / 0.75);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
 }
 
 /* ------------------------------------------------------------ a face-down card's cost --- */

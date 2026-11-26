@@ -134,7 +134,7 @@
   padding: 28px 26px 30px;
   gap: 14px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(ellipse 90% 40% at 50% 0%, rgba(255, 190, 110, 0.1), transparent 70%),
     linear-gradient(180deg, rgba(52, 30, 16, 0.96), rgba(22, 13, 7, 0.97));
@@ -172,7 +172,7 @@
 .tavern.app-shell .auth-signed-in {
   padding: 11px 14px;
   border: 1px solid rgba(201, 149, 63, 0.3);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: rgba(239, 224, 191, 0.05);
 }
 
@@ -203,7 +203,7 @@
 .tavern.app-shell .notice {
   max-width: none;
   border: 1px solid rgba(201, 149, 63, 0.45);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: rgba(201, 149, 63, 0.04);
   color: color-mix(in srgb, var(--tavern-parchment) 90%, transparent);
   line-height: 1.45;
@@ -253,7 +253,7 @@
   min-height: 46px;
   padding: 10px 14px;
   border: 1px solid rgba(201, 149, 63, 0.5);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--tavern-well);
   color: var(--tavern-parchment);
   caret-color: var(--tavern-gold);
@@ -299,7 +299,7 @@
    way, so the field does not jump when it is pressed. */
 .tavern.app-shell .affix-button {
   min-width: 68px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-weight: 600;
 }
 
@@ -344,7 +344,7 @@
 .tavern.app-shell:where(:not(.deckbuilder)) button:where(:not(.top-bar-button)):not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]):where(:not(.dialog__close, .together-group__toggle)) {
   min-height: 44px;
   padding: 8px 18px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-family: var(--tavern-serif);
   font-size: 16px;
   font-weight: 700;
@@ -357,7 +357,7 @@
   justify-content: center;
   min-height: 44px;
   padding: 8px 18px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-family: var(--tavern-serif);
   font-size: 16px;
   font-weight: 700;
@@ -546,7 +546,7 @@
   gap: 4px;
   padding: 12px 14px;
   border: 1px solid rgba(201, 149, 63, 0.3);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: rgba(239, 224, 191, 0.05);
 }
 

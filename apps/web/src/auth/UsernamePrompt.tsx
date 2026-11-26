@@ -8,13 +8,13 @@ import { useState, type ReactElement } from "react";
 import { t } from "../i18n/i18n.ts";
 import { skipUsernamePrompt } from "../net/api.ts";
 import { announceAccountChange } from "../net/gate.ts";
-import { signOut, signOutLabel, useSigningOut } from "./signOut.ts";
 import { PageTitle } from "../routes/PageTitle.tsx";
 import { Wordmark } from "../routes/Wordmark.tsx";
 import { tokenMetadata } from "./claims.ts";
+import { SignOutButton } from "./SignOutButton.tsx";
 import Username from "./Username.tsx";
 import UsernameField from "./UsernameField.tsx";
-import { shellTestid, usernameTestid } from "./testids.ts";
+import { usernameTestid } from "./testids.ts";
 
 import "./tavern.css";
 
@@ -46,7 +46,6 @@ export function providerUsername(token: string): string {
 }
 
 export default function UsernamePrompt({ token, name, onAnswered }: UsernamePromptProps): ReactElement {
-  const leaving = useSigningOut();
   const [suggested] = useState(() => providerUsername(token));
   const [skipping, setSkipping] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,18 +106,7 @@ export default function UsernamePrompt({ token, name, onAnswered }: UsernameProm
           >
             {skipping ? t("Skipping…") : t("Skip for now")}
           </button>
-          <button
-            type="button"
-            className="link-button"
-            data-testid={shellTestid.signOut}
-            disabled={leaving}
-            aria-busy={leaving}
-            onClick={() => {
-              signOut();
-            }}
-          >
-            {signOutLabel(leaving)}
-          </button>
+          <SignOutButton />
         </div>
       </section>
     </div>

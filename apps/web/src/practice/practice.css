@@ -136,7 +136,7 @@
   gap: 10px;
   padding: 22px 18px 18px;
   border: 1px solid color-mix(in srgb, var(--tier) 22%, color-mix(in srgb, var(--tavern-brass) 30%, transparent));
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--tier) 10%, transparent), transparent 70%),
     var(--tier-face);
@@ -201,7 +201,7 @@
   content: "";
   width: 9px;
   height: 9px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--tier);
   box-shadow: none;
   transform: rotate(45deg) scale(0);
@@ -292,7 +292,7 @@
   gap: 16px 20px;
   padding: 16px 18px;
   border: 1px solid color-mix(in srgb, var(--tavern-brass) 30%, transparent);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--tavern-wood-deep) 72%, transparent);
 }
 
@@ -380,7 +380,7 @@
   min-height: 48px;
   padding: 10px 42px 10px 14px;
   border: 1px solid color-mix(in srgb, var(--tavern-brass) 55%, transparent);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--tavern-well) 70%, var(--tavern-wood-deep));
   color: var(--tavern-parchment);
   font: inherit;
@@ -463,7 +463,7 @@
   align-self: end;
   width: 100%;
   min-height: 2px;
-  border-radius: 3px 3px 0 0;
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
   background: #2f6fd6;
 }
 
@@ -510,7 +510,7 @@
   place-items: center;
   width: 20px;
   height: 20px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: #1c3f86;
   color: #fff;
   font-size: 11px;
@@ -887,7 +887,7 @@
   width: min(420px, 100%);
   padding: 26px 24px 20px;
   border: 1px solid color-mix(in srgb, var(--glow) 45%, var(--line));
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(120% 60% at 50% 0%, color-mix(in srgb, var(--glow) 16%, transparent), transparent 70%),
     linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
@@ -1127,7 +1127,7 @@
     max-width: none;
     padding: 14px;
     border: 1px solid color-mix(in srgb, var(--tavern-brass) 30%, transparent);
-    border-radius: 14px;
+    border-radius: var(--radius-lg);
     background: color-mix(in srgb, var(--tavern-wood-deep) 72%, transparent);
   }
 
@@ -1208,7 +1208,7 @@
     max-width: none;
     padding: 14px 18px;
     border: 1px solid color-mix(in srgb, var(--tavern-brass) 30%, transparent);
-    border-radius: 14px;
+    border-radius: var(--radius-lg);
     background: color-mix(in srgb, var(--tavern-wood-deep) 72%, transparent);
   }
 

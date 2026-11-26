@@ -44,7 +44,7 @@
   inset: 0;
   overflow: hidden;
   border: 1px solid rgb(201 149 63 / 0.45);
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: var(--tavern-well, #0e0905);
 }
 

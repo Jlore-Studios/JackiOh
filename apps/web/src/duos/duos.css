@@ -393,7 +393,7 @@
   position: absolute;
   z-index: 65;
   border: 2px solid var(--radiant);
-  border-radius: var(--radius);
+  border-radius: var(--radius-sm);
   box-shadow: 0 0 10px var(--radiant);
   pointer-events: none;
   animation: duos-ping-pulse calc(700ms * var(--anim-scale)) ease-in-out 2 alternate;

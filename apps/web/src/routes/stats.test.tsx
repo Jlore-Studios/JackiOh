@@ -3841,7 +3841,7 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
     await waitFor(() => expect(address().get("tab")).toBe("experimental"), SLOW);
   });
 
-  it("R4678000 R4680000 on the Experimental tab the patch bar, the games tile and Face are hidden, one line above the tabs names what it shows, and its Segmented offers Running and Versions", async () => {
+  it("R4678000 R4680000 R4681001 on the Experimental tab the patch bar, the games tile and Face are hidden, one line above the tabs names what it shows, and its Segmented offers Running, Versions and Hall of Fame", async () => {
     at("/stats?patch=0.1.0&face=radiant");
     serveRunning();
     render(<StatsRoute />);
@@ -3867,11 +3867,11 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
     expect(line).toHaveTextContent(/^Every card's current version, over every patch since it last changed$/);
     const tablist = screen.getByRole("tablist", { name: "Statistics views" });
     expect(line.compareDocumentPosition(tablist) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // R4680000: two views, so the Segmented of views shows, Running first and pressed; the options row keeps its
-    // View, ranges, Plain text and Columns.
+    // R4680000, R4681001: three views, so the Segmented of views shows, Running first and pressed; the options row
+    // keeps its View, ranges, Plain text and Columns.
     const panel = screen.getByRole("tabpanel");
     const views = within(panel).getByRole("group", { name: "Experimental views" });
-    expect(within(views).getAllByRole("button").map((button) => button.textContent)).toEqual(["Running", "Versions"]);
+    expect(within(views).getAllByRole("button").map((button) => button.textContent)).toEqual(["Running", "Versions", "Hall of fame"]);
     expect(within(views).getByRole("button", { name: "Running" })).toHaveAttribute("aria-pressed", "true");
     expect(within(panel).queryByRole("group", { name: "Face" })).toBeNull();
     expect(within(panel).getByRole("group", { name: "View" })).toBeInTheDocument();

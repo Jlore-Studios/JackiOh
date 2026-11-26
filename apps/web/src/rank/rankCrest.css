@@ -30,7 +30,7 @@
   width: 4px;
   height: 4px;
   border: 1px solid currentcolor;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   opacity: 0.6;
 }
 

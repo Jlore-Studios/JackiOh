@@ -26,7 +26,7 @@
   text-decoration-thickness: 0.08em;
   text-underline-offset: 0.18em;
   background: var(--patch-mark-band);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
@@ -190,7 +190,7 @@
   min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--line-bright, rgb(201 149 63 / 55%));
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-sunken, #0e0905);
   color: var(--text, #efe0bf);
   font: inherit;
@@ -245,7 +245,7 @@
   gap: 8px;
   padding: 10px 12px;
   border: 1px solid var(--line, rgb(201 149 63 / 30%));
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: rgb(0 0 0 / 0.22);
 }
 
@@ -345,7 +345,7 @@
   padding: 18px 20px 20px;
   overflow-wrap: anywhere;
   border: 1px solid var(--tavern-brass);
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(ellipse 90% 40% at 50% 0%, rgba(255, 190, 110, 0.08), transparent 70%),
     linear-gradient(180deg, rgba(52, 30, 16, 0.96), rgba(22, 13, 7, 0.97));
@@ -607,7 +607,7 @@
   min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--tavern-well);
   color: var(--tavern-parchment);
   font: inherit;
@@ -820,7 +820,7 @@
   overflow-wrap: anywhere;
   padding: 12px 10px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: rgba(22, 13, 7, 0.97);
   box-shadow: var(--shadow-3);
   color: var(--tavern-parchment);
@@ -966,7 +966,7 @@
   padding: var(--space-7) var(--space-8);
   overflow-wrap: anywhere;
   border: 1px dashed var(--tavern-brass);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   background: var(--tavern-well);
 }
 
@@ -1010,7 +1010,7 @@
   gap: 6px;
   padding: 10px 12px;
   border-left: 3px solid var(--tavern-brass);
-  border-radius: 4px 10px 10px 4px;
+  border-radius: var(--radius-xs) var(--radius-md) var(--radius-md) var(--radius-xs);
   background: rgba(14, 9, 5, 0.55);
 }
 

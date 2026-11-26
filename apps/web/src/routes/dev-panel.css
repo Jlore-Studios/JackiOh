@@ -36,7 +36,7 @@
   padding: var(--space-8) var(--space-9) var(--space-9);
   overflow-y: auto;
   border: 1px solid var(--tavern-brass);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: var(--tavern-night);
   box-shadow: var(--shadow-3);
   text-align: start;

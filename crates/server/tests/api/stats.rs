@@ -84,6 +84,15 @@ fn seat(
         "playedTurns": played_turns.unwrap_or_else(|| (1..=played.len()).collect()),
     });
     if let Some(flags) = played_radiant {
+        // R5054000: a record written since also lists the cards its seat held Radiant, each once; a play from the
+        // hand on its Radiant face was held so.
+        let mut held: Vec<&str> = Vec::new();
+        for (card, _) in played.iter().zip(&flags).filter(|(_, radiant)| **radiant) {
+            if !held.contains(card) {
+                held.push(card);
+            }
+        }
+        val["heldRadiant"] = json!(held);
         val["playedRadiant"] = json!(flags);
     }
     val
@@ -3940,6 +3949,54 @@ mod r4673000_card_faces {
     }
 
     #[tokio::test]
+    async fn r5054000_a_face_reads_the_games_its_card_was_seen_on_that_face_not_only_its_plays() {
+        let app = test_app().await;
+        let mut records = games("radiant", Met::Radiant, 24, 30);
+        records.extend(games("normal", Met::Normal, 18, 30));
+        records.extend(games("unseen", Met::Unseen, 12, 30));
+        // A win-more card: core-001 also sat Radiant in p1's hand through 30 lost games and was never played.
+        for i in 0..30 {
+            let mut record = make_game_record(
+                &format!("faces-held-{i}"),
+                RecordOptions {
+                    source: Some("live"),
+                    mode: Some("bo1"),
+                    p1_deck: Some(vec!["core-001"]),
+                    p1_hand: Some(vec!["core-001"]),
+                    p1_played: Some(Vec::new()),
+                    p2_deck: Some(vec!["core-100"]),
+                    p2_played: Some(Vec::new()),
+                    winner: Some("p2"),
+                    ..RecordOptions::default()
+                },
+            );
+            record["game"]["seats"]["p1"]["heldRadiant"] = json!(["core-001"]);
+            records.push(record);
+        }
+        insert_records(&app, records).await;
+
+        let (status, _, radiant) =
+            get_public(&app, "/api/stats/cards?source=live&mode=bo1&face=radiant").await;
+        assert_eq!(status, 200);
+        let held = card(&radiant, "core-001");
+        let typical = card(&radiant, "core-002");
+        // Its Radiant face is its 60 seen games at 40%, not its 30 plays at 80%, as every other card's plays are.
+        assert_eq!(
+            (held["games"].clone(), typical["games"].clone()),
+            (json!(60), json!(30))
+        );
+        assert!(close(held["winRate"].as_f64().unwrap(), 0.4), "{held}");
+        assert!(close(typical["winRate"].as_f64().unwrap(), 0.8), "{typical}");
+        assert!(
+            held["adjustedWinRate"].as_f64().unwrap() < typical["adjustedWinRate"].as_f64().unwrap(),
+            "{held} {typical}"
+        );
+        // Its normal face is untouched: it was never seen normal in those games.
+        let (_, _, normal) = get_public(&app, "/api/stats/cards?source=live&mode=bo1&face=normal").await;
+        assert_eq!(card(&normal, "core-001")["games"], json!(30));
+    }
+
+    #[tokio::test]
     async fn r4673001_face_all_and_no_face_answer_the_same_bytes_and_an_unknown_face_reads_all() {
         let app = test_app().await;
         let mut records = games("radiant", Met::Radiant, 24, 30);
@@ -4311,6 +4368,209 @@ mod r4552003_decisiveness {
             body["error"]["message"],
             "a query parameter may not contain a NUL character"
         );
+    }
+}
+
+mod r4681001_hall_of_fame {
+    use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::Duration;
+
+    use jackioh_server::api::catalog::load_patch_versions;
+    use jackioh_server::config::HALL_OF_FAME_LIST_LEN;
+
+    /// The cache's time to live, in milliseconds.
+    fn ttl_ms() -> u64 {
+        u64::try_from(CARD_STATS_CACHE_TTL_SECONDS).expect("the TTL is not negative") * 1000
+    }
+
+    /// What the fake store was asked to read: every `statsTotals.load`, and among them the loads of
+    /// every patch's totals (R3067000), which it charges as `statsTotals.loadAllPatches` too.
+    #[derive(Default)]
+    struct Loads {
+        all: AtomicUsize,
+        full: AtomicUsize,
+    }
+
+    /// Counts the fake store's totals loads from here on, through its `on_call` hook.
+    async fn count_loads(app: &App) -> Arc<Loads> {
+        use jackioh_server::db::store::{Db, StoreError};
+        let loads = Arc::new(Loads::default());
+        let counter = Arc::clone(&loads);
+        match &app.db {
+            Db::Fake(data) => {
+                data.lock().await.on_call = Some(Arc::new(move |method: &str| -> Result<(), StoreError> {
+                    match method {
+                        "statsTotals.load" => counter.all.fetch_add(1, Ordering::SeqCst),
+                        "statsTotals.loadAllPatches" => counter.full.fetch_add(1, Ordering::SeqCst),
+                        _ => 0,
+                    };
+                    Ok(())
+                }));
+            }
+            Db::Pg(_) => panic!("the API tests run on the fake store"),
+        }
+        loads
+    }
+
+    /// The loads one request to `path` made, which answers 200, as (every load, those of every
+    /// patch's totals); the counts start again after it.
+    async fn reads_of(app: &Arc<App>, loads: &Loads, path: &str) -> (usize, usize) {
+        let (status, _, _) = get_public(app, path).await;
+        assert_eq!(status, 200, "{path}");
+        (
+            loads.all.swap(0, Ordering::SeqCst),
+            loads.full.swap(0, Ordering::SeqCst),
+        )
+    }
+
+    /// A live Best of 1 game on `patch` whose first seat, on `core-001` and `core-002`, `winner` wins.
+    fn game(id: String, patch: &str, winner: &'static str) -> Value {
+        make_game_record(
+            &id,
+            RecordOptions {
+                source: Some("live"),
+                mode: Some("bo1"),
+                patch: Some(patch.to_string()),
+                p1_deck: Some(vec!["core-001", "core-002"]),
+                winner: Some(winner),
+                ..RecordOptions::default()
+            },
+        )
+    }
+
+    /// A past shipped patch, which is not the current one: the newest, which anyone may read (R4677000).
+    async fn past_patch() -> String {
+        let current = current_patch();
+        load_patch_versions()
+            .await
+            .into_iter()
+            .rev()
+            .find(|version| *version != current)
+            .expect("a past patch")
+    }
+
+    /// One entry's two rows, their dates, and its balance line: the shape every list shares.
+    fn assert_entry(entry: &Value) {
+        for side in ["before", "after"] {
+            let row = &entry[side];
+            for key in [
+                "id",
+                "card",
+                "name",
+                "first",
+                "last",
+                "live",
+                "patches",
+                "games",
+                "adjustedWinRate",
+                "adjustedLow",
+                "adjustedHigh",
+                "tier",
+                "hasEnoughGames",
+            ] {
+                assert!(row.get(key).is_some(), "{side}.{key} of {entry}");
+            }
+        }
+        assert_eq!(entry["before"]["card"], entry["after"]["card"]);
+        for key in ["beforeDate", "afterDate"] {
+            assert!(entry[key].is_null() || entry[key].is_string(), "{key} of {entry}");
+        }
+        assert!(
+            entry["balance"].is_null() || entry["balance"].is_string(),
+            "balance of {entry}"
+        );
+        if entry["before"]["id"] == entry["after"]["id"] {
+            assert_eq!(entry["balance"], Value::Null, "one face needs no line: {entry}");
+        }
+    }
+
+    fn rate(row: &Value) -> Option<f64> {
+        row["adjustedWinRate"].as_f64()
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r4681001_hall_of_fame_is_public_cached_and_shaped() {
+        let past = past_patch().await;
+        let current = current_patch();
+        let app = test_app().await;
+        // The floor's games on the past patch, all won, and on the current one, all lost: the live
+        // versions read both spans, and versions closed before today read the past one's.
+        let floor = count(CARD_STATS_MIN_SAMPLE);
+        let mut records: Vec<Value> = (0..floor)
+            .map(|i| game(format!("hall-old-{i}"), &past, "p1"))
+            .collect();
+        records.extend((0..floor).map(|i| game(format!("hall-now-{i}"), &current, "p2")));
+        insert_records(&app, records).await;
+        let loads = count_loads(&app).await;
+
+        // The lists are cut from the snapshot the cards read: one load of every patch's totals.
+        assert_eq!(reads_of(&app, &loads, "/api/stats/hall-of-fame").await, (1, 1));
+        let (status, headers, data) = get_public(&app, "/api/stats/hall-of-fame").await;
+        assert_eq!(status, 200);
+        let ttl = format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}");
+        assert_eq!(cache_control(&headers), Some(ttl.as_str()));
+        assert_eq!((&data["pilot"], &data["mode"]), (&json!("merged"), &json!("all")));
+        assert_eq!(data["minSample"], json!(CARD_STATS_MIN_SAMPLE));
+        assert!(data["bandLow"].as_f64().is_some());
+        assert!(data["bandHigh"].as_f64().is_some());
+        let top = count(HALL_OF_FAME_LIST_LEN);
+        for list in ["broken", "nerfed", "buffed", "changed"] {
+            let entries = data[list].as_array().expect("{list} is a list");
+            assert!(entries.len() <= top, "{list}");
+            for entry in entries {
+                assert_entry(entry);
+            }
+        }
+        // The definition cases live in the engine's tests on fabricated versions; here the shape of
+        // what ranks: broken and changed are never empty on a history that changed cards, and every
+        // ranked pair runs the ranked way.
+        assert!(!data["broken"].as_array().expect("a list").is_empty());
+        assert!(!data["changed"].as_array().expect("a list").is_empty());
+        let broken = data["broken"].as_array().expect("a list");
+        assert_eq!(broken[0]["before"]["hasEnoughGames"], json!(true));
+        let lows: Vec<f64> = broken
+            .iter()
+            .map(|entry| entry["before"]["adjustedLow"].as_f64().expect("a bound"))
+            .collect();
+        let mut ordered = lows.clone();
+        ordered.sort_by(|a, b| b.partial_cmp(a).expect("no NaN"));
+        assert_eq!(lows, ordered, "Most broken ranks by the lower bound");
+        for entry in data["nerfed"].as_array().expect("a list") {
+            let (before, after) = (&entry["before"], &entry["after"]);
+            assert!(
+                rate(before).expect("a rate") > rate(after).expect("a rate"),
+                "{entry}"
+            );
+            assert_eq!(entry["changesBetween"], Value::Null);
+        }
+        for entry in data["buffed"].as_array().expect("a list") {
+            let (before, after) = (&entry["before"], &entry["after"]);
+            assert!(
+                rate(after).expect("a rate") > rate(before).expect("a rate"),
+                "{entry}"
+            );
+            assert_eq!(entry["changesBetween"], Value::Null);
+        }
+        for entry in data["changed"].as_array().expect("a list") {
+            assert!(entry["changesBetween"].as_u64().is_some(), "{entry}");
+        }
+
+        // `?mode=` names what the figures count; every game here is a Best of 1.
+        let (_, _, bo1) = get_public(&app, "/api/stats/hall-of-fame?mode=bo1").await;
+        assert_eq!((&bo1["pilot"], &bo1["mode"]), (&json!("merged"), &json!("bo1")));
+
+        // Within the TTL a repeat read folds nothing new, whatever its key, and the versions read
+        // off the same snapshot: the Hall of Fame's table is the versions' table.
+        assert_eq!(reads_of(&app, &loads, "/api/stats/hall-of-fame").await, (0, 0));
+        assert_eq!(
+            reads_of(&app, &loads, "/api/stats/hall-of-fame?mode=bo1").await,
+            (0, 0)
+        );
+        assert_eq!(reads_of(&app, &loads, "/api/stats/versions").await, (0, 0));
+        // At the TTL the snapshot is loaded again.
+        tokio::time::advance(Duration::from_millis(ttl_ms())).await;
+        assert_eq!(reads_of(&app, &loads, "/api/stats/hall-of-fame").await, (1, 1));
     }
 }
 

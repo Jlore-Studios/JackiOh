@@ -58,7 +58,7 @@
   top: 50%;
   width: 6px;
   height: 2px;
-  border-radius: 1px;
+  border-radius: var(--radius-xs);
   background: var(--line-bright);
 }
 
@@ -106,7 +106,7 @@
   top: 5%;
   bottom: 5%;
   width: 2px;
-  border-radius: 1px;
+  border-radius: var(--radius-xs);
   background: var(--radiant);
   animation: code-field-blink 1s steps(1, end) 1;
 }
@@ -122,7 +122,7 @@
 /* A selection: the input's own highlight is transparent (its text is), so the cells draw it, and
    the next keystroke visibly replaces what is marked. */
 .code-field__cell[data-selected="true"] {
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--you) 45%, transparent);
   color: var(--text);
 }
@@ -173,7 +173,7 @@
 
 /* Focus is shown on the segments instead, since the input draws nothing. */
 .code-field:focus-within .code-field__segments {
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   outline: 2px solid color-mix(in srgb, var(--radiant) 55%, transparent);
   outline-offset: 4px;
 }
@@ -354,7 +354,7 @@
 .tavern .code-field__segment {
   min-height: 54px;
   border: 1px solid rgba(201, 149, 63, 0.45);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--tavern-well);
   color: var(--tavern-gold-pale);
   font-size: clamp(16px, 4.4vw, 21px);
@@ -532,7 +532,7 @@
   padding: 11px 14px;
   border: 1px solid rgba(232, 102, 79, 0.35);
   border-left: 3px solid var(--tavern-danger);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: rgba(232, 102, 79, 0.05);
 }
 

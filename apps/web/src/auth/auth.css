@@ -116,7 +116,7 @@
   padding: 0 var(--auth-oauth-pad);
   gap: var(--auth-oauth-mark-gap);
   border: 1px solid var(--pal-grey-500);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   font-family: var(--font-text);
   font-size: var(--type-md);
   font-weight: 500;

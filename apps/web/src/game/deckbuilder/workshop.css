@@ -141,7 +141,7 @@
   min-width: 0;
   padding: 10px;
   border: 1px solid var(--line-bright);
-  border-radius: calc(var(--radius) + 3px);
+  border-radius: var(--radius-md);
   background: var(--ws-panel);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
 }
@@ -285,7 +285,7 @@
   width: 9px;
   height: 11px;
   border: 1.5px solid currentColor;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .ws-row-duplicate::before {
@@ -422,7 +422,7 @@
   min-width: 0;
   padding: 7px 10px;
   border: 1px solid var(--line-bright);
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: var(--bg-sunken);
   color: #f3e3b3;
   font-family: var(--font-display);
@@ -450,7 +450,7 @@
   min-width: 0;
   padding: 6px 8px;
   border: 1px solid var(--line-bright);
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: var(--bg-sunken);
   color: var(--text);
   font: inherit;
@@ -511,7 +511,7 @@
   min-width: 220px;
   padding: 12px;
   border: 1px solid var(--line-bright);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: var(--bg-raised);
   box-shadow: var(--shadow-3);
 }
@@ -683,7 +683,7 @@
   min-width: 0;
   padding: 6px 8px;
   border: 1px dashed var(--line-bright);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--bg-sunken);
   color: var(--text);
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
@@ -700,7 +700,7 @@
   min-width: 0;
   padding: 12px;
   border: 1px solid var(--line-bright);
-  border-radius: calc(var(--radius) + 3px);
+  border-radius: var(--radius-md);
   background: var(--ws-panel);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
 }

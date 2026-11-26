@@ -34,7 +34,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   border: 1px solid var(--line, #4a4335);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-raised, #2a241c);
   box-shadow: var(--shadow-3);
 }
@@ -80,7 +80,7 @@
 .sandbox-panel__close {
   min-height: 32px;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font: inherit;
 }
 
@@ -158,6 +158,6 @@
     left: 0;
     width: auto;
     max-height: 60vh;
-    border-radius: 10px 10px 0 0;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
   }
 }

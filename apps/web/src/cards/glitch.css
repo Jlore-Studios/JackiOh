@@ -37,7 +37,7 @@
   width: 60%;
   height: 46%;
   display: block;
-  border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%;
+  border-radius: var(--radius-blob-a);
   animation: cf-glitch-morph 2.6s steps(7, jump-none) 1;
 }
 
@@ -75,10 +75,10 @@
 }
 
 @keyframes cf-glitch-morph {
-  0% { border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%; }
-  33% { border-radius: 63% 37% 41% 59% / 58% 36% 64% 42%; }
-  66% { border-radius: 37% 63% 55% 45% / 35% 62% 38% 65%; }
-  100% { border-radius: 42% 58% 63% 37% / 41% 44% 56% 59%; }
+  0% { border-radius: var(--radius-blob-a); }
+  33% { border-radius: var(--radius-blob-b); }
+  66% { border-radius: var(--radius-blob-c); }
+  100% { border-radius: var(--radius-blob-a); }
 }
 
 @keyframes cf-glitch-jitter-red {

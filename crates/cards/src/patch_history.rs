@@ -44,6 +44,9 @@ pub const PLAY_VERSION_QUIET_FIELDS: &[&str] = &["loc"];
 #[derive(Deserialize)]
 struct Entry {
     version: String,
+    /// R4681000, R4681001: when the patch shipped, for the Hall of Fame's dates.
+    #[serde(default)]
+    date: String,
     #[serde(default)]
     tier: Option<PatchTier>,
     #[serde(default)]
@@ -53,8 +56,18 @@ struct Entry {
     /// R3944000: the micros a major or a patch rolls up.
     #[serde(default)]
     includes: Vec<String>,
+    /// R4681001: the player-facing notes, whose `balance` lines the Hall of Fame reads.
+    #[serde(default)]
+    player: PlayerNotes,
     #[serde(default)]
     changes: Vec<Change>,
+}
+
+/// R4681001: a `patches.json` entry's player-facing notes; the Hall of Fame reads `balance` alone.
+#[derive(Deserialize, Default)]
+struct PlayerNotes {
+    #[serde(default)]
+    balance: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -227,6 +240,65 @@ pub fn play_versions_of(patches_json: &str) -> Result<IndexMap<String, Vec<PlayV
 /// R4675000: the play versions of the shipped history this build compiles in, by card id.
 pub fn play_versions() -> IndexMap<String, Vec<PlayVersion>> {
     play_versions_of(include_str!("../patches/patches.json")).expect("patches.json reads as play versions")
+}
+
+/// R4681001: each shipped version's ship date, in `patches.json`'s order.
+pub fn patch_ship_dates() -> IndexMap<String, String> {
+    let entries: Vec<Entry> = serde_json::from_str(include_str!("../patches/patches.json"))
+        .expect("patches.json reads for ship dates");
+    entries
+        .into_iter()
+        .map(|entry| (entry.version, entry.date))
+        .collect()
+}
+
+/// R4681001: the player-facing balance lines of `version`, oldest first; none where it ships none.
+pub fn patch_balance_lines(version: &str) -> Vec<String> {
+    let entries: Vec<Entry> = serde_json::from_str(include_str!("../patches/patches.json"))
+        .expect("patches.json reads for balance lines");
+    entries
+        .into_iter()
+        .find(|entry| entry.version == version)
+        .map(|entry| entry.player.balance)
+        .unwrap_or_default()
+}
+
+/// R4681000: every named card's change lines, and its summed `fields` lengths, in shipped versions
+/// strictly after its first version's first (`after_firsts`), in one pass over the compiled history.
+/// A card whose first version is missing from the history counts nothing.
+pub fn change_totals_since(after_firsts: &IndexMap<String, String>) -> IndexMap<String, (usize, usize)> {
+    let entries: Vec<Entry> = serde_json::from_str(include_str!("../patches/patches.json"))
+        .expect("patches.json reads for change totals");
+    let mut passed: IndexSet<String> = IndexSet::new();
+    let mut out: IndexMap<String, (usize, usize)> =
+        after_firsts.keys().map(|card| (card.clone(), (0, 0))).collect();
+    for entry in &entries {
+        for (card, first) in after_firsts {
+            if entry.version == *first {
+                passed.insert(card.clone());
+            } else if passed.contains(card) {
+                for change in &entry.changes {
+                    if change.id == *card
+                        && let Some(held) = out.get_mut(card)
+                    {
+                        held.0 += 1;
+                        held.1 += change.fields.len();
+                    }
+                }
+            }
+        }
+    }
+    out
+}
+
+/// R4681000: one card's change lines, and its summed `fields` lengths, in shipped versions strictly
+/// after `after_first` in file order: the changes between its first version and today.
+pub fn card_change_totals(card: &str, after_first: &str) -> (usize, usize) {
+    let mut after_firsts = IndexMap::new();
+    after_firsts.insert(card.to_string(), after_first.to_string());
+    change_totals_since(&after_firsts)
+        .shift_remove(card)
+        .unwrap_or((0, 0))
 }
 
 /// R4675000: the play versions of every card a deck can hold, in catalog order: the catalog's cards that
@@ -504,6 +576,28 @@ mod tests {
         // The branch's deck cards are the shipped ones and its own: the new card has none, and every card
         // the history holds still has contiguous versions.
         assert_every_held_card_contiguous(&deck_play_versions(), &branch, newest);
+    }
+
+    // R4681000, R4681001: the Hall of Fame's dates, balance lines and change counts, read off the
+    // compiled `patches.json`.
+    #[test]
+    fn hall_dates_balance_and_totals_read_the_compiled_history() {
+        let dates = patch_ship_dates();
+        assert_eq!(dates.len(), crate::shipped_versions().len());
+        assert_eq!(dates.get("v0.1.0").map(String::as_str), Some("2026-09-18"));
+        let lines = patch_balance_lines("v0.1.0b");
+        assert!(
+            lines.iter().any(|line| line.contains("Taunt")),
+            "v0.1.0b names a balance change: {lines:?}"
+        );
+        assert!(patch_balance_lines("v0.0.0-made-up").is_empty());
+        // core-003 shipped in v0.1.0 and changed since (its wording among it), but nothing ships
+        // after the newest version.
+        let (lines, fields) = card_change_totals("core-003", "v0.1.0");
+        assert!(lines > 0, "core-003 changed since v0.1.0");
+        assert!(fields > 0, "its counted lines name fields");
+        assert_eq!(card_change_totals("core-003", crate::CATALOG_VERSION), (0, 0));
+        assert_eq!(card_change_totals("core-003", "v0.0.0-made-up"), (0, 0));
     }
 
     // R2529000: a patch a named system alone made one restarts no card's window but its own families'.

@@ -161,7 +161,7 @@
   gap: 8px;
   padding: 8px 10px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-sunken);
   min-width: 0;
 }
@@ -260,7 +260,7 @@
   min-width: 18px;
   margin-left: 6px;
   padding: 0 5px;
-  border-radius: 9px;
+  border-radius: var(--radius-pill);
   background: var(--opponent);
   color: #fff;
   font-size: 11px;
@@ -334,7 +334,7 @@
 .chat-message {
   max-width: 85%;
   padding: 6px 10px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-sunken);
 }
 
@@ -507,7 +507,7 @@
   margin: 0;
   padding: 12px 14px;
   border: 1px solid var(--selected);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-raised);
   color: var(--text);
   box-shadow: var(--shadow-3);

@@ -105,7 +105,7 @@
   padding: 0 14px;
   border: 0;
   border-bottom: 3px solid transparent;
-  border-radius: 6px 6px 0 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   background: none;
   color: var(--text-dim);
   font: inherit;
@@ -249,7 +249,7 @@
 
 .settings-slider::-webkit-slider-runnable-track {
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: linear-gradient(
     90deg,
     #7dd3fc calc(var(--fx-speed-fill) * 100%),
@@ -259,13 +259,13 @@
 
 .settings-slider::-moz-range-track {
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: var(--line-bright);
 }
 
 .settings-slider::-moz-range-progress {
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: #7dd3fc;
 }
 
@@ -342,7 +342,7 @@
   margin: 0;
   padding: 7px 0;
   border: 0;
-  border-radius: 15px / 22px;
+  border-radius: var(--radius-switch);
   background-color: var(--line-bright);
   background-image: radial-gradient(circle closest-side, var(--text-dim) 0 calc(100% - 4px), transparent calc(100% - 3px));
   background-repeat: no-repeat;
@@ -368,9 +368,9 @@
 }
 
 /* The switch: a 44 px tall input whose visible track is the 30 px content box. The asymmetric
-   radius (15px horizontal, 22px vertical) leaves the content box a true pill once the 7 px of
-   vertical padding is taken off, and the knob is a background layer, so no pseudo-element is
-   needed on the <input>. */
+   radius (--radius-switch: 15px horizontal, 22px vertical) leaves the content box a true pill once
+   the 7 px of vertical padding is taken off, and the knob is a background layer, so no
+   pseudo-element is needed on the <input>. */
 .settings-switch {
   appearance: none;
   -webkit-appearance: none;
@@ -381,7 +381,7 @@
   margin: 0;
   padding: 7px 0;
   border: 0;
-  border-radius: 15px / 22px;
+  border-radius: var(--radius-switch);
   background-color: var(--line-bright);
   background-image: radial-gradient(
     circle closest-side,

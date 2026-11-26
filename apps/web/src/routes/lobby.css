@@ -35,7 +35,7 @@
   margin: 0;
   padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-sunken);
   color: var(--text);
   cursor: var(--cursor-glove-point, pointer);
@@ -387,7 +387,7 @@
   min-height: 46px;
   padding: 10px 14px;
   border: 1px solid rgba(201, 149, 63, 0.5);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--tavern-well);
   color: var(--tavern-parchment);
   font: inherit;
@@ -454,7 +454,7 @@
   margin: 2px 0 0;
   padding: 10px 14px;
   border: 1px solid rgba(232, 102, 79, 0.55);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: rgba(14, 9, 5, 0.6);
   color: var(--tavern-parchment);
   font-size: 13px;
@@ -753,7 +753,7 @@
   gap: 8px 14px;
   padding: 6px 12px;
   border: 1px solid var(--line-bright);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-raised);
   font-size: 13px;
 }

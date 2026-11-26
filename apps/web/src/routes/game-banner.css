@@ -19,7 +19,7 @@
   margin: 0;
   padding: 12px 14px;
   border: 1px solid rgba(201, 149, 63, 0.45);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: rgba(18, 11, 7, 0.82);
   color: color-mix(in srgb, var(--tavern-parchment) 90%, transparent);
   line-height: 1.45;
@@ -59,7 +59,7 @@
   margin: 0;
   padding: 8px 20px;
   border-width: 2px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-family: var(--tavern-serif);
   font-size: 16px;
   font-weight: 700;
@@ -104,7 +104,7 @@
   margin: 0;
   padding: 12px 18px;
   border: 1px solid var(--tavern-gold);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: rgba(18, 11, 7, 0.95);
   color: var(--tavern-parchment);
   font-weight: 700;
