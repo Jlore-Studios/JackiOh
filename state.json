@@ -45093,6 +45093,10 @@
       "5007": {
         "at": "2026-11-26T04:34:46Z",
         "why": "It deal-screens the untuned attack-hook share the smoke gate cannot distinguish, keeping it only on a measured edge."
+      },
+      "5010": {
+        "at": "2026-11-26T04:57:29Z",
+        "why": "It fixes a real touch-only dead end where a greyed Buy shows nothing, matching the R3768000 rule every other greyed control already follows."
       }
     },
     "auto_approved": [],
