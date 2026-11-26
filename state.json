@@ -25003,7 +25003,7 @@
       }
     },
     "5091": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
       "difficulty_by": {
         "at": "2026-11-26T16:50:09Z",
@@ -25025,23 +25025,23 @@
       },
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
-      "owner": "claude-3",
-      "owner_since": "2026-11-26T16:30:46Z",
-      "owner_why": "it plans it",
+      "live": "building",
+      "owner": "claude-6",
+      "owner_since": "2026-11-26T16:54:43Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-26T16:50:12Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-6",
       "queued_at": "2026-11-26T16:28:54Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "45859461484",
+      "run_id": "pending:60d8ce94-1795712057",
       "runs_on": "ubuntu-latest",
       "spot_check_of": 5073,
-      "started_at": "2026-11-26T16:30:46Z",
+      "started_at": "2026-11-26T16:54:43Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -25328,9 +25328,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T16:53:58Z",
+    "at": "2026-11-26T16:54:43Z",
     "url": "",
-    "what": "build #5027 on claude-8"
+    "what": "build #5091 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-26T16:37:46Z",
