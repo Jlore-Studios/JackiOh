@@ -1,0 +1,17 @@
+{
+  "title": "One corner language for the table",
+  "sources": "issue #5015",
+  "notes": "Every border-radius in the web client is a surfaces.css token: the corner scale is retuned to 2, 4, 6 and 10 px (xl dropped), the settings switch keeps its track's pill as --radius-switch, and the card faces' cuts and the effects' shapes are named tokens that keep their values.",
+  "player": {
+    "title": "One corner language for the table",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Menus, panels, buttons, badges and the card inspector have tighter corners; card faces keep the corner their frame is cut to."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

@@ -142,7 +142,7 @@
   padding: 10px 12px;
   background: rgba(11, 13, 19, 0.94);
   border: 1px solid var(--line-bright, #454d66);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
   color: var(--text, #e8eaf2);
   font-size: 12.5px;
@@ -197,7 +197,7 @@
   padding: 10px 12px;
   background: rgba(11, 13, 19, 0.94);
   border: 1px solid var(--line-bright, #454d66);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
   color: var(--text, #e8eaf2);
 }
@@ -231,7 +231,7 @@
   list-style: none;
   background: rgba(11, 13, 19, 0.94);
   border: 1px solid var(--line-bright, #454d66);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
   color: var(--text, #e8eaf2);
   font-size: 12.5px;
@@ -286,7 +286,7 @@
   min-height: 44px;
   padding: 0 18px;
   border: 1px solid var(--line-bright, #454d66);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bg-sunken, #0b0d13);
   color: var(--text, #e8eaf2);
   font: inherit;
@@ -325,7 +325,7 @@
     max(16px, env(safe-area-inset-left));
   background: var(--bg-raised, #1a1d28);
   border-top: 1px solid var(--line-bright, #454d66);
-  border-radius: 18px 18px 0 0;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   box-shadow: 0 -12px 32px rgba(0, 0, 0, 0.5);
   color: var(--text, #e8eaf2);
   animation: inspect-rise 180ms ease-out;
@@ -345,7 +345,7 @@
   content: "";
   width: 40px;
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--line-bright, #454d66);
 }
 
@@ -405,7 +405,7 @@
   padding: 16px;
   background: var(--bg-raised, #1a1d28);
   border: 1px solid var(--line-bright, #454d66);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.6);
   color: var(--text, #e8eaf2);
   transform: translate(-50%, -50%);
@@ -486,7 +486,7 @@
   margin: 0;
   padding: 10px 12px;
   border: 1px solid color-mix(in srgb, #e3d2ac 35%, var(--line-bright, #454d66));
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, rgb(246 236 212 / 0.08), rgb(246 236 212 / 0.03));
   font-size: 13.5px;
   line-height: 1.45;
@@ -560,7 +560,7 @@
   gap: 8px;
   padding: 10px 12px;
   border: 1px solid var(--line-bright, #454d66);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: rgba(11, 13, 19, 0.6);
   font-size: 13px;
   color: var(--text, #e8eaf2);
@@ -845,7 +845,7 @@
   padding: 10px 12px;
   background: rgba(11, 13, 19, 0.94);
   border: 1px solid var(--line-bright, #454d66);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   color: var(--text, #e8eaf2);
   font-size: 12.5px;
   line-height: 1.4;
@@ -981,7 +981,7 @@
   padding: 6px 12px;
   background: rgba(11, 13, 19, 0.94);
   border: 1px solid var(--line-bright, #454d66);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
 }
 
 .inspect-hover .inspect-flavour {
@@ -995,7 +995,7 @@
   padding: 6px 12px;
   background: rgba(11, 13, 19, 0.94);
   border: 1px solid var(--line-bright, #454d66);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-size: 12px;
   text-align: left;
 }
@@ -1029,7 +1029,7 @@
   max-width: calc(100vw - 16px);
   padding: 10px; /* LIST_PREVIEW_PADDING_PX */
   border: 1px solid var(--line-bright, #454d66);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: rgba(11, 13, 19, 0.95);
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.6);
   color: var(--text, #e8eaf2);
@@ -1089,7 +1089,7 @@
 /* A card back in a library's list (R312): the back fills the tile, and it opens nothing. */
 .inspect-list-face--unknown {
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
 }
 
 /* How many cards one face stands for in a library's list (R310): "×2" on its lower right corner.
@@ -1101,7 +1101,7 @@
   z-index: 1;
   min-width: 26px;
   padding: 2px 7px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--radiant, #ffd24a);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
   color: #16131f;
@@ -1134,7 +1134,7 @@
   padding: 16px;
   background: var(--bg-raised, #1a1d28);
   border: 1px solid var(--line-bright, #454d66);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.6);
   color: var(--text, #e8eaf2);
   transform: translate(-50%, -50%);
@@ -1177,7 +1177,7 @@
   box-sizing: content-box;
   padding: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: none;
   color: inherit;
   font: inherit;
@@ -1239,7 +1239,7 @@
     max-height: min(88dvh, calc(100dvh - env(safe-area-inset-top)));
     padding: 12px max(12px, env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom))
       max(12px, env(safe-area-inset-left));
-    border-radius: 18px 18px 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     transform: none;
     animation: inspect-rise 180ms ease-out;
   }
@@ -1293,7 +1293,7 @@
   gap: 6px;
   padding: 4px 8px;
   border: 1px dashed rgb(232 236 248 / 0.9);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: rgb(10 13 22 / 0.92);
   color: #f1f4fb;
   font-size: 12.5px;
@@ -1320,7 +1320,7 @@
   display: block;
   flex: none;
   aspect-ratio: 5 / 7;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
@@ -1344,7 +1344,7 @@
   max-width: 240px;
   padding: 10px 12px;
   border: 1px solid var(--line-bright, #454d66);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: rgb(11 13 19 / 0.94);
   color: var(--text, #e8eaf2);
   font-size: 13px;

@@ -15,7 +15,7 @@
   max-width: 100%;
   padding: 12px 14px;
   border: 1px dashed color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--pal-wood-800) 35%, transparent);
 }
 
