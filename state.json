@@ -24195,7 +24195,7 @@
       }
     },
     "5073": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "cleared": {
@@ -24220,22 +24220,23 @@
       "forced": false,
       "interruptions": 0,
       "issue": 5014,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "resolving",
+      "live": "reviewing",
       "merge_owner": "claude-4",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-1",
       "question": "",
       "queued_at": "2026-11-26T13:44:40Z",
       "round_tier": "strong",
-      "run_id": "45832338464",
+      "run_id": "pending:91ca1d20-1795710031",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 605,
-      "started_at": "2026-11-26T13:45:56Z",
+      "started_at": "2026-11-26T16:20:56Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -25049,9 +25050,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T16:20:13Z",
+    "at": "2026-11-26T16:20:56Z",
     "url": "",
-    "what": "revise #5064 on claude-4"
+    "what": "spot-check #5073 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-26T16:09:20Z",
@@ -47774,7 +47775,15 @@
         "n": 605,
         "pr": 5073,
         "queued_at": "2026-11-26T15:32:52Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-1",
+          "tier": "strong"
+        },
+        "run_id": "pending:91ca1d20-1795710031",
         "sha": "8a54a004551a2b60950db15928c73e9470aba12d",
+        "started_at": "2026-11-26T16:20:56Z",
         "status": "queued",
         "title": "Patch: a motion and glow budget, idle effects only on what the player can act on",
         "tries": 0
