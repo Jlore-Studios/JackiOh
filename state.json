@@ -12880,6 +12880,7 @@
       "action": "review",
       "asks": [],
       "audit_tier": "",
+      "closed_at": "2026-11-26T09:13:46Z",
       "died": 0,
       "difficulty": "hard",
       "failures": 0,
@@ -12899,6 +12900,7 @@
       "kind": "review",
       "last_findings": [],
       "live": "reviewing",
+      "merged": true,
       "own_review": {
         "claimed_at": "2026-11-25T04:27:15Z",
         "from_run": "45345578620",
