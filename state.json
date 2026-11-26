@@ -21567,6 +21567,9 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "4990": {
+      "suggestion": true
+    },
     "4991": {
       "asks": [
         "c:7181103198"
@@ -44718,6 +44721,13 @@
         "at": "2026-11-26T02:46:37Z",
         "number": 4991,
         "title": "Patch: a Flickered card starts its printed Brittle again, and a Keymaster Keenus or Shockwave447 made by a Transform draws its Aura's keywords",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-26T02:47:37Z",
+        "number": 4990,
+        "title": "Patch: a GIGA Joro or Lava Golem is summoned only where all four of its zones are free, so neither is lost when the one zone picked for it is too small",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
       }
