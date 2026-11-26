@@ -1576,6 +1576,19 @@ runs.
   so it sits on the limit on both builds, and two of three lone runs read `"timeouts":0` on all four lines.
   The fixes did not cause it, and by Step 7's rule it is contention.
 
+The re-measure above ran on the first reading of R4595002 and R4595003. The fork screen (R4397000,
+`arena --a self --b bin:<main> --set improve-dev --forks`) forked shipped decks' games under it: 20 forks
+over 200 games, `forkEdge` -0.031 (interval -0.127 to 0.064), inconclusive. Both rulings were narrowed
+(their Scope paragraphs): R4595002 reads only `AI_SEARCH.discount_def_ids` (Overclock), and R4595003 charges
+only events past the first thousand (`AI_SEARCH.free_events`). On that build, against a control built from the
+same `main`:
+
+- the fork screen read `"forks":0` over 200 games;
+- pass 1 of False Positive (#29) and Overclock to Infinity (#72) read clean on all eight lines, at
+  `"timeouts":0` and `"errors":0`, with Overclock played on every face and tier (1 to 4 times a line);
+- `cargo jackioh gate` at smoke size passed: ai-vs-random 19/20, ai-vs-greedy 19/20, hard-vs-easy 18/20,
+  no search panics.
+
 Run 2026-11-26 (UTC): pass 1 over 8 card(s) at easy and hard, 8 seeds each (`sweep:<tier>:<id>:<n>`), pass 2 over 8 at-risk card(s), 24 seeds each (`sweep2:<tier>:<id>:<n>`, at-risk filler ×4), each card also on its Radiant face (`sweep:<tier>:<id>:radiant:<n>`, `sweep2:<tier>:<id>:radiant:<n>`), budget AI_GATE_BUDGET {"nodes":1200,"lethalNodes":300,"determinizations":3,"beamWidth":4,"rootBranching":20,"branching":6,"maxDepth":8,"finalists":3}; 3 banned, 5 watched, 0 unswept, 0 suspect line(s).
 
 ### Pass 1 flags (a `neverPlayed`, `selfHarm` or `selfKill` here only puts a card at risk)
