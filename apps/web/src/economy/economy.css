@@ -51,7 +51,7 @@
 .fill-bar__fill {
   width: 100%;
   height: 100%;
-  background: var(--tavern-gold, var(--pal-brass-300));
+  background: linear-gradient(90deg, var(--tavern-brass, var(--pal-brass-500)), var(--tavern-gold, var(--pal-brass-300)));
   transform-origin: 0 50%;
 }
 

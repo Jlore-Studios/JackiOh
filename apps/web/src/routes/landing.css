@@ -41,7 +41,7 @@
 .landing .landing-hero {
   position: relative;
   /* R2035000: unclipped and above the floor, so the quests' parchment hangs over the stats; the backdrop clips itself. */
-  z-index: var(--z-content);
+  z-index: 1;
   isolation: isolate;
   padding: 12px var(--tavern-gutter) 44px;
   min-height: min(100vh, 900px);
@@ -51,7 +51,7 @@
 .landing .landing-backdrop {
   position: absolute;
   inset: 0;
-  z-index: var(--z-below);
+  z-index: -1;
   overflow: hidden;
   pointer-events: none;
   background:
@@ -70,7 +70,7 @@
   background:
     radial-gradient(ellipse 45% 55% at 50% 70%, color-mix(in srgb, var(--pal-gold-400) 50%, transparent), transparent 70%),
     radial-gradient(ellipse 70% 60% at 50% 80%, rgba(255, 122, 47, 0.28), transparent 75%);
-  animation: landing-hearth 5.5s ease-in-out 2 alternate;
+  animation: landing-hearth 5.5s ease-in-out infinite alternate;
 }
 
 /* The table: wood planks laid away from the viewer, in perspective. */
@@ -87,7 +87,7 @@
     repeating-linear-gradient(90deg, color-mix(in srgb, var(--pal-black) 14%, transparent) 0 1px, transparent 1px 17px),
     repeating-linear-gradient(90deg, color-mix(in srgb, var(--pal-brass-200) 5%, transparent) 0 2px, transparent 2px 29px),
     linear-gradient(180deg, var(--tavern-wood-deep) 0%, var(--tavern-wood) 55%, var(--tavern-wood-light) 100%);
-  box-shadow: none;
+  box-shadow: inset 0 40px 60px color-mix(in srgb, var(--pal-wood-900) 85%, transparent);
   opacity: 0.9;
   /* The far edge fades into the dark rather than ending in a hard line across the room. */
   -webkit-mask-image: linear-gradient(0deg, var(--pal-black) 45%, transparent 100%);
@@ -120,7 +120,7 @@
   background: radial-gradient(circle, #fff3d6 0%, var(--tavern-flame) 45%, var(--tavern-ember) 70%, transparent 72%);
   box-shadow: 0 0 6px 2px rgba(255, 122, 47, 0.55);
   opacity: 0;
-  animation: landing-ember var(--ember-duration) linear var(--ember-delay) 1;
+  animation: landing-ember var(--ember-duration) linear var(--ember-delay) infinite;
 }
 
 .landing .landing-ember:nth-child(1) { --ember-x: 8%; --ember-drift: 30px; --ember-duration: 7.5s; --ember-delay: 0s; }
@@ -139,7 +139,7 @@
 
 .landing .landing-topbar {
   position: relative;
-  z-index: var(--z-raised);
+  z-index: 2;
   display: flex;
   justify-content: flex-end;
   align-items: center;
@@ -163,7 +163,7 @@
    by routes/game-banner.css), between the corner and the wordmark, as wide as the page's column. */
 .landing .landing-banners {
   position: relative;
-  z-index: var(--z-raised);
+  z-index: 2;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -178,7 +178,7 @@
 
 .landing .landing-hero-inner {
   position: relative;
-  z-index: var(--z-content);
+  z-index: 1;
   max-width: var(--tavern-content);
   margin: 0 auto;
   display: grid;
@@ -214,7 +214,15 @@
   letter-spacing: 0.01em;
   padding: 0 0.06em 0.08em;
   max-width: 100%;
-  background: #d9a44c;
+  background: linear-gradient(
+    180deg,
+    var(--tavern-gold-pale) 0%,
+    var(--pal-brass-200) 22%,
+    var(--tavern-gold) 44%,
+    var(--tavern-brass) 62%,
+    var(--pal-brass-600) 82%,
+    var(--pal-brass-500) 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -237,6 +245,21 @@
   width: 100%;
   max-width: 100%;
   height: calc(var(--fan-card-h) * 1.5);
+}
+
+/* The pool of hearth light the hand is held over, so it sits in the room instead of floating. */
+.landing .landing-fan::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: calc(var(--fan-card-w) * 5.2);
+  max-width: 100%;
+  height: calc(var(--fan-card-h) * 0.7);
+  transform: translateX(-50%);
+  border-radius: var(--radius-round);
+  background: radial-gradient(ellipse at 50% 55%, color-mix(in srgb, var(--pal-gold-400) 30%, transparent), color-mix(in srgb, var(--pal-ember-500) 10%, transparent) 45%, transparent 70%);
+  pointer-events: none;
 }
 
 .landing .landing-fan-slot {
@@ -271,7 +294,7 @@
   transition: translate 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
   animation:
     landing-deal 720ms cubic-bezier(0.18, 0.9, 0.25, 1.05) var(--deal-delay) both,
-    landing-float 6s ease-in-out calc(var(--deal-delay) + 720ms) 1;
+    landing-float 6s ease-in-out calc(var(--deal-delay) + 720ms) infinite;
 }
 
 .landing .landing-fan-card > .cf {
@@ -315,7 +338,7 @@
 .landing .landing-fan-card[data-entry="swap"] {
   animation:
     landing-apparition var(--fan-swap) ease-in-out backwards,
-    landing-float 6s ease-in-out var(--fan-swap) 1;
+    landing-float 6s ease-in-out var(--fan-swap) infinite;
 }
 
 /* The spread: only where a pointer can hover, so a tap on a phone never leaves it stuck open. */
@@ -325,7 +348,7 @@
   }
 
   .landing .landing-fan-slot:hover {
-    z-index: var(--z-raised);
+    z-index: 2;
   }
 
   .landing .landing-fan-slot:hover .landing-fan-card {
@@ -347,11 +370,11 @@
   padding: 18px;
   border: 1px solid var(--tavern-brass);
   border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--pal-wood-900) 90%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pal-wood-800) 88%, transparent), color-mix(in srgb, var(--pal-wood-900) 90%, transparent));
   box-shadow:
     inset 0 0 0 3px color-mix(in srgb, var(--pal-wood-900) 90%, transparent),
     inset 0 0 0 4px color-mix(in srgb, var(--pal-brass-500) 45%, transparent),
-    var(--shadow-3);
+    0 18px 40px color-mix(in srgb, var(--pal-black) 55%, transparent);
 }
 
 .landing a.landing-cta {
@@ -380,13 +403,13 @@
   letter-spacing: 0.02em;
   color: var(--tavern-ink);
   border: 2px solid var(--pal-wood-600);
-  background: var(--tavern-gold);
+  background: linear-gradient(180deg, var(--pal-brass-200) 0%, var(--tavern-gold) 42%, var(--pal-brass-500) 58%, var(--pal-brass-600) 100%);
   text-shadow: 0 1px 0 rgba(255, 246, 214, 0.65);
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, var(--pal-white) 65%, transparent),
     inset 0 -3px 0 color-mix(in srgb, var(--pal-black) 22%, transparent),
     0 5px 0 #4a2a0e,
-    var(--shadow-2),
+    0 12px 24px color-mix(in srgb, var(--pal-black) 55%, transparent),
     0 0 26px color-mix(in srgb, var(--pal-brass-300) 35%, transparent);
 }
 
@@ -397,7 +420,7 @@
     inset 0 1px 0 color-mix(in srgb, var(--pal-white) 70%, transparent),
     inset 0 -3px 0 color-mix(in srgb, var(--pal-black) 22%, transparent),
     0 5px 0 #4a2a0e,
-    var(--shadow-2),
+    0 12px 24px color-mix(in srgb, var(--pal-black) 55%, transparent),
     0 0 38px color-mix(in srgb, var(--pal-gold-400) 60%, transparent);
 }
 
@@ -406,7 +429,7 @@
     inset 0 1px 0 color-mix(in srgb, var(--pal-white) 50%, transparent),
     inset 0 -1px 0 color-mix(in srgb, var(--pal-black) 22%, transparent),
     0 1px 0 #4a2a0e,
-    var(--shadow-2),
+    0 4px 10px color-mix(in srgb, var(--pal-black) 55%, transparent),
     0 0 20px color-mix(in srgb, var(--pal-brass-300) 35%, transparent);
 }
 
@@ -429,12 +452,12 @@
   font-size: 17px;
   color: var(--tavern-parchment);
   border: 2px solid var(--tavern-brass);
-  background: var(--tavern-wood-deep);
+  background: linear-gradient(180deg, var(--tavern-wood-light), var(--tavern-wood) 55%, var(--tavern-wood-deep));
   text-shadow: 0 1px 1px color-mix(in srgb, var(--pal-black) 80%, transparent);
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, var(--pal-brass-200) 30%, transparent),
     0 4px 0 var(--pal-wood-900),
-    var(--shadow-2);
+    0 8px 16px color-mix(in srgb, var(--pal-black) 50%, transparent);
 }
 
 .landing a.landing-cta--secondary:hover {
@@ -443,7 +466,7 @@
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, var(--pal-brass-200) 35%, transparent),
     0 4px 0 var(--pal-wood-900),
-    var(--shadow-2),
+    0 8px 16px color-mix(in srgb, var(--pal-black) 50%, transparent),
     0 0 18px color-mix(in srgb, var(--pal-brass-300) 30%, transparent);
 }
 
@@ -451,7 +474,7 @@
   box-shadow:
     inset 0 1px 0 color-mix(in srgb, var(--pal-brass-200) 25%, transparent),
     0 0 0 var(--pal-wood-900),
-    var(--shadow-2);
+    0 3px 8px color-mix(in srgb, var(--pal-black) 50%, transparent);
 }
 
 .landing a.landing-dev-link {
@@ -502,7 +525,7 @@
   position: absolute;
   top: -12px;
   left: 22px;
-  z-index: var(--z-below); /* tucked under the box's rim */
+  z-index: -1; /* tucked under the box's rim */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -525,8 +548,8 @@
   content: "";
   position: absolute;
   inset: 0;
-  z-index: var(--z-below); /* the ribbon: dark wood, a swallowtail notch */
-  background: var(--tavern-wood);
+  z-index: -1; /* the ribbon: dark wood, a swallowtail notch */
+  background: linear-gradient(180deg, var(--tavern-wood-deep), var(--tavern-wood) 70%);
   box-shadow: inset 2px 0 0 color-mix(in srgb, var(--pal-brass-500) 45%, transparent), inset -2px 0 0 color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
   clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%);
 }
@@ -553,16 +576,16 @@
   top: 48px;
   left: 0;
   right: 0;
-  z-index: var(--z-overlay);
+  z-index: 3;
   max-height: min(420px, 60dvh);
   overflow-y: auto;
   padding: 14px 16px 16px;
   border: 1px solid var(--tavern-brass);
   border-radius: var(--radius-xs) var(--radius-xs) var(--radius-md) var(--radius-md);
-  background: color-mix(in srgb, var(--tavern-parchment) 80%, var(--tavern-wood-light));
+  background: linear-gradient(180deg, var(--tavern-parchment), color-mix(in srgb, var(--tavern-parchment) 80%, var(--tavern-wood-light)));
   color: var(--tavern-ink);
   text-align: left;
-  box-shadow: var(--shadow-3);
+  box-shadow: 0 14px 30px color-mix(in srgb, var(--pal-black) 55%, transparent);
   transform-origin: top;
   animation: landing-quests-unroll var(--quests-unroll) ease-out both;
 }
@@ -964,7 +987,7 @@
   position: relative;
   padding: 32px var(--tavern-gutter) 40px;
   border-top: 1px solid color-mix(in srgb, var(--pal-brass-500) 55%, transparent);
-  background: var(--tavern-night);
+  background: linear-gradient(180deg, var(--tavern-night), var(--pal-wood-900) 60%, var(--tavern-night));
   text-align: center;
   /* R1584000: clip the showcase's painting at the gold rule, so its fixed `.fx-layer`
      and the card's keyframes paint nothing over the hero above (clip-path, unlike

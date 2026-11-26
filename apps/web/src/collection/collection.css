@@ -81,8 +81,8 @@
   padding: 18px;
   border: 1px solid var(--tavern-brass);
   border-radius: var(--radius-lg);
-  background: rgba(22, 13, 7, 0.99);
-  box-shadow: var(--shadow-3);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pal-wood-800) 98%, transparent), color-mix(in srgb, var(--pal-wood-900) 99%, transparent));
+  box-shadow: 0 24px 60px color-mix(in srgb, var(--pal-black) 60%, transparent);
   text-align: start;
 }
 
@@ -784,8 +784,8 @@
   padding: 10px 12px;
   border: 1px solid var(--tavern-brass);
   border-radius: var(--radius-md);
-  background: var(--tavern-night);
-  box-shadow: var(--shadow-3);
+  background: linear-gradient(180deg, var(--tavern-wood-deep), var(--tavern-night));
+  box-shadow: 0 18px 40px color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
 
 .tavern.app-shell .collection-look-hover .collection-look {
