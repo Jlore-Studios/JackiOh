@@ -21658,11 +21658,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-26T01:23:44Z",
+        "at": "2026-11-26T01:34:14Z",
         "difficulty": "medium",
-        "provider": "claude-4",
-        "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #4960, a medium change"
+        "provider": "claude-1",
+        "tier": "medium",
+        "why": "Tests in one card script plus one ruling note and its pending paragraph; no engine, AI or cross-crate change, and about 3 files."
       },
       "failures": 0,
       "forced": false,
