@@ -24305,7 +24305,16 @@
       "feedback_since": "2026-11-26T12:46:45Z",
       "issue": 5033,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-6",
+        "rejections": [],
+        "reviews": [],
+        "sha": "518e1e60116ed6d00bfde288ab7758dd699f5a87",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
