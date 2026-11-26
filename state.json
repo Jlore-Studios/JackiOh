@@ -49306,9 +49306,9 @@
         "why": "closed unbuilt by a person (not planned)"
       }
     ],
-    "idle_since": "2026-11-26T18:03:05Z",
+    "idle_since": "2026-11-26T18:02:11Z",
     "last_area": "client",
-    "last_run": "2026-11-26T18:03:05Z",
+    "last_run": "2026-11-26T18:02:11Z",
     "provider": null,
     "requested": false,
     "run_id": null,
@@ -49319,14 +49319,6 @@
         "last_run": "2026-11-26T18:02:11Z",
         "provider": "claude-7",
         "run_id": "45872672261",
-        "taken_asks": []
-      },
-      "2": {
-        "area": "rules",
-        "count": 2,
-        "last_run": "2026-11-26T18:03:05Z",
-        "provider": "claude-4",
-        "run_id": "45872793005",
         "taken_asks": []
       }
     },
