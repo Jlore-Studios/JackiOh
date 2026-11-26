@@ -27,7 +27,8 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     CardStatsFilter, CardTotal, GameRecord, GameSummary, Outcome, RecordsKey, SparsePart, StatsTotals,
-    TotalsKey, made_by_the_rules, outcome_for, pilot_counts, random_effects, sources_of, table, to_fixed,
+    TotalsKey, format_delta, made_by_the_rules, outcome_for, pilot_counts, random_effects, sources_of, table,
+    to_fixed,
 };
 use crate::config::{
     ADJUSTED_FIELD_MIN_CARDS, DECISIVENESS_PRIOR_CENTER, DECISIVENESS_PRIOR_SPREAD, SWING_EVAL_SCALE,
@@ -880,17 +881,6 @@ pub fn swing_report<'a>(
     }
 }
 
-/// A fraction of win chance in points with its sign, "+3.2", or "—".
-fn points(value: Option<f64>) -> String {
-    match value {
-        None => "—".to_string(),
-        Some(value) => {
-            let shown = to_fixed(value * 100.0, 1);
-            if value > 0.0 { format!("+{shown}") } else { shown }
-        }
-    }
-}
-
 /// R4552001: Decisiveness as the page shows it, "±14.2%", or "—".
 pub fn format_decisiveness(value: Option<f64>) -> String {
     value.map_or_else(
@@ -934,9 +924,9 @@ pub fn format_swing(report: &SwingReport, name_of: impl Fn(&str) -> Option<Strin
                     named(card),
                     figures.plays.to_string(),
                     figures.acting.to_string(),
-                    points(figures.play),
-                    points(figures.board),
-                    points(figures.swing),
+                    format_delta(figures.play),
+                    format_delta(figures.board),
+                    format_delta(figures.swing),
                     format_decisiveness(figures.rms),
                     format_decisiveness(figures.decisiveness),
                 ]

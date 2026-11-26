@@ -1,7 +1,7 @@
 //! SPEC §8.12 S+ #89 Animosity (2) Spell, Terminus, Mythic, a card of the Stinkyscape+ set
 //! (R1420, R3535000; R3569007).
 //!   Base:    "Always starts on the bottom of your deck. If several cards do, their order is random.
-//!            When your exile has {card} cards, cast this, wherever in your deck it is.
+//!            While this is in your deck: When your exile has {card} cards, cast this.
 //!            Add a random Terminus card to your hand."
 //!   Radiant: "… Add a random Radiant Terminus card to your hand."
 //!

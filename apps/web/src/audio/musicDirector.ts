@@ -87,7 +87,7 @@ const startedMusicKeys = new WeakSet<object>();
  * key (a replay step, a co-op portal flip) share one rotation: the first mount moves it on, later
  * ones reuse it.
  */
-export function rotationForKey(key: object): number {
+function rotationForKey(key: object): number {
   const known = keyRotations.get(key);
   if (known !== undefined) return known;
   const n = nextRotation();

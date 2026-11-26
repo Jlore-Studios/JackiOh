@@ -176,19 +176,8 @@ describe("R3331000 the scene kits", () => {
     }
   });
 
-  it("R3331000 SCENE_PALETTE is palette.css's, and no base-face scene colour is in Radiant's gold window", { timeout: SWEEP_TIMEOUT_MS }, () => {
-    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../palette.css"), "utf8");
-    // Token lines as entries (#4009: the `/^\s*--pal-…$/gm` pattern rescans newline runs).
-    const declared = Object.fromEntries(
-      css
-        .split("\n")
-        .map((line) => /^\s*--pal-([a-z0-9-]+):\s*(#[0-9a-f]{6});$/.exec(line))
-        .filter((match) => match !== null)
-        .map((match) => [match[1] ?? "", match[2] ?? ""]),
-    );
-    expect(Object.keys(declared).length).toBeGreaterThan(0);
-    expect(SCENE_PALETTE).toEqual(declared);
-    // The window holds palette.css's golds, so the test can fail.
+  it("R3331000 no base-face scene colour is in Radiant's gold window", { timeout: SWEEP_TIMEOUT_MS }, () => {
+    // The window holds SCENE_PALETTE's golds, so the test can fail.
     for (const gold of ["gold-400", "gold-300", "yellow-400"] as const) expect(inRadiantGold(SCENE_PALETTE[gold]), gold).toBe(true);
 
     const painted = new Set<PaletteName>();
@@ -221,6 +210,25 @@ describe("R3331000 the scene kits", () => {
       const colors = [spec.sky.from, spec.sky.to, spec.glow.color, ...spec.ridges.flatMap((ridge) => [ridge.fill, ...(ridge.stroke === undefined ? [] : [ridge.stroke])])];
       for (const hex of colors) expect(inRadiantGold(hex), `${id}: ${hex}`).toBe(false);
     }
+  });
+
+  it("R5012000 SCENE_PALETTE keeps the art's own 50 colours, and agrees with palette.css on every name both declare", () => {
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../../palette.css"), "utf8");
+    // Token lines as entries (#4009: the `/^\s*--pal-…$/gm` pattern rescans newline runs).
+    const declared = new Map(
+      css
+        .split("\n")
+        .map((line) => /^\s*--pal-([a-z0-9-]+):\s*(#[0-9a-f]{6});$/.exec(line))
+        .filter((match) => match !== null)
+        .map((match): [string, string] => [match[1] ?? "", match[2] ?? ""]),
+    );
+    const shared = Object.keys(SCENE_PALETTE).filter((name) => declared.has(name));
+    expect(shared).toHaveLength(25);
+    for (const name of shared) expect(declared.get(name), name).toBe(SCENE_PALETTE[name as PaletteName]);
+    const colours = Object.values(SCENE_PALETTE);
+    expect(new Set(colours).size).toBe(50);
+    expect(colours).toHaveLength(50);
+    for (const hex of colours) expect(hex).toMatch(/^#[0-9a-f]{6}$/);
   });
 
   it("R3331000 a figure reads as its tag", () => {

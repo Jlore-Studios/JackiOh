@@ -54,7 +54,7 @@
 }
 
 .xp-reveal__quest-pay {
-  color: var(--tavern-text-dim, rgb(239 224 191 / 0.72));
+  color: var(--tavern-text-dim, color-mix(in srgb, var(--pal-parchment) 72%, transparent));
   font-variant-numeric: tabular-nums;
 }
 

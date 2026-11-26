@@ -37548,5 +37548,265 @@
     "plays": [],
     "fragment": "motion-and-glow-budget",
     "changes": []
+  },
+  {
+    "version": "v0.6.15c",
+    "date": "2026-11-26",
+    "title": "The palette's colours come from the table's materials",
+    "source": "issue #5012",
+    "notes": "palette.css trades its 25 Tailwind default colours for jade, lacquer, ink, verdigris, copper, amethyst and pale brass (43 colours, from 50); the board's and menus' status colours follow, and 903 literal colours move onto the palette. Card art, owned cosmetics, playmats and card versions keep their colours.",
+    "player": {
+      "title": "Warmer status colours",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Glows, damage, healing, timers, map nodes and proficiency stamps are redrawn in jade, lacquer red, ink blue and verdigris, to sit on the table's wood and parchment.",
+        "Card art and the cosmetics you own keep their colours."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "26ec15b7cb2715e0950d758f097767f02a011ce7"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "the-palette-s-colours-come-from-the-table-s-materials",
+    "changes": []
+  },
+  {
+    "version": "v0.6.15d",
+    "date": "2026-11-26",
+    "title": "One SVG icon set in place of Unicode glyphs",
+    "source": "#5016",
+    "notes": "Replace Unicode glyphs with inline SVG Icon component across the client, including card inspect notes",
+    "player": {
+      "title": "One SVG icon set in place of Unicode glyphs",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Card inspect state notes and client UI components render consistent SVG icons instead of device-dependent Unicode character glyphs."
+      ]
+    },
+    "commits": [
+      "ffc2614a7bf1095cd2a639762e793aa183a71600"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "one-svg-icon-set-in-place-of-unicode-glyphs",
+    "changes": []
+  },
+  {
+    "version": "v0.6.15e",
+    "date": "2026-11-26",
+    "title": "Aura on every standing text",
+    "source": "#5039",
+    "notes": "R5039000: Aura: added to the standing line of Core #38, #64, #73, #75, #84, M #11, #92, S #148, #157, T-shield-layer, S+ #30, #42, #62, #63; removed from the own-text line of M #65, S #111, T-drone-interceptor, T-drone-corvette, S+ #87, #163. English and Chinese, wording only.",
+    "player": {
+      "title": "Aura on every standing text",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "Every line that keeps working while its card is on the field and changes other cards, a player or a hero now starts with \"Aura:\".",
+        "Fourteen cards gain it, among them Anti-oneshot Armor, Going Long, Unan, The Gauntlet and Force Projector.",
+        "Keymaster Keenus, Shockwave447, Frontier Flora, Accelerationist and the Drones lose it: text about the card itself reads like a keyword.",
+        "No card plays differently: only the words changed, in English and Chinese."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "5aebbb5f5e70bac9474b4c70c1634fac5dd8da04"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "aura-on-every-standing-text",
+    "changes": [
+      {
+        "id": "core-038",
+        "name": "Quickstriker",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-064",
+        "name": "Gifted Program",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-073",
+        "name": "Anti-oneshot Armor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-075",
+        "name": "Infinite Reserves",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "core-084",
+        "name": "Going Long",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-011",
+        "name": "Double Header",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-065",
+        "name": "Keymaster Keenus",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-092",
+        "name": "Unan",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-111",
+        "name": "Shockwave447",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-148",
+        "name": "Alteran Reach",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-157",
+        "name": "The Gauntlet",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-drone-interceptor",
+        "name": "Drone Interceptor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-drone-corvette",
+        "name": "Drone Corvette",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-t-shield-layer",
+        "name": "Drone Battleship (Shield Layer)",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-030",
+        "name": "Yeah I’m a War Hero",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-042",
+        "name": "Force Projector",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-062",
+        "name": "Overdrive Projector",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-063",
+        "name": "Overdrive Dome",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-087",
+        "name": "Frontier Flora",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-163",
+        "name": "Accelerationist",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]

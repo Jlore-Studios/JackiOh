@@ -71,9 +71,9 @@ mod tests {
     /// C+ #73.1 Classic Golem, a unit token printed Legendary: its rarity is Token.
     const GOLEM: &str = "classicplus-073-1";
     const CORE_SYSTEM: &str = "stinkyscape-117"; // Core System: "Bounce all permanents. …"
-    /// M #65 Keymaster Keenus, Legendary: "Equip. Aura: Has {keywords} random combat keywords."
+    /// M #65 Keymaster Keenus, Legendary: "Equip. Has {keywords} random combat keywords."
     const KEENUS: &str = "meditative-065";
-    /// S #111 Shockwave447, Mythic: "Aura: Has {keywords} random combat keywords. Cry: …"
+    /// S #111 Shockwave447, Mythic: "Has {keywords} random combat keywords. Cry: …"
     const SHOCKWAVE: &str = "stinkyscape-111";
     /// Keenus's `keywords`, base and Radiant, and Shockwave447's base one.
     const KEENUS_KEYWORDS: usize = 5;

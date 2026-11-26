@@ -11,8 +11,8 @@
    preference or the settings panel's switch alike (the block at the end). */
 
 .practice {
-  --coach: #c4b5fd;
-  --coach-ink: #1d1233;
+  --coach: var(--pal-amethyst-300);
+  --coach-ink: var(--pal-slate-900);
 }
 
 /* Read by a screen reader, not drawn. */
@@ -46,7 +46,7 @@
     radial-gradient(90% 120% at 0% 0%, color-mix(in srgb, var(--coach) 11%, transparent), transparent 65%),
     color-mix(in srgb, var(--bg-raised) 78%, transparent);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 4%),
+    inset 0 1px 0 color-mix(in srgb, var(--pal-white) 4%, transparent),
     var(--shadow-2);
 }
 
@@ -517,7 +517,7 @@
   border-radius: var(--radius-lg);
   background: var(--bg-raised);
   box-shadow:
-    0 0 0 1px rgb(0 0 0 / 35%),
+    0 0 0 1px color-mix(in srgb, var(--pal-black) 35%, transparent),
     var(--shadow-3);
   color: var(--text);
   font-size: var(--type-md);
@@ -615,7 +615,7 @@
 .app-shell .coach__ack {
   min-height: 40px;
   padding: 7px 16px;
-  border-color: color-mix(in srgb, var(--coach) 70%, white);
+  border-color: color-mix(in srgb, var(--coach) 70%, var(--pal-white));
   border-radius: var(--radius-md);
   background: var(--coach);
   color: var(--coach-ink);
@@ -625,8 +625,8 @@
 }
 
 .app-shell .coach__ack:hover:not(:disabled) {
-  border-color: white;
-  background: color-mix(in srgb, var(--coach) 85%, white);
+  border-color: var(--pal-white);
+  background: color-mix(in srgb, var(--coach) 85%, var(--pal-white));
 }
 
 /* The slim bubble while the coach waits (the AI's turn, a step whose moment has not come): one
@@ -791,7 +791,7 @@
 .app-shell .coach__more:hover:not(:disabled) {
   border-color: transparent;
   background: linear-gradient(90deg, transparent, var(--bg-raised) 22px);
-  color: color-mix(in srgb, var(--coach) 70%, white);
+  color: color-mix(in srgb, var(--coach) 70%, var(--pal-white));
 }
 
 .app-shell .coach__more:focus-visible {

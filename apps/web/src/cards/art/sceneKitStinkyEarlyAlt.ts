@@ -2,7 +2,7 @@
 // Alt art restaged"), so an early Starship Piece's and the Dormant Starship's Alt art draws its own piece in a scene of
 // the kit and a brief's subject is no stand-in: a chrome face mask, a bare chassis frame, a beam emitter, a repeater
 // gun, an orca-shaped mining hull, a pair of solar panels and a dormant hull. sceneKit.ts spreads them into `SCENE_KIT`
-// after every other module, #3406's (sceneKitStinkyAlt.ts) among them. Every colour is a palette.css name, none in
+// after every other module, #3406's (sceneKitStinkyAlt.ts) among them. Every colour is a SCENE_PALETTE name, none in
 // Radiant's gold window; a glow is a stack of translucent shapes, never a gradient; shapes are filled even-odd, so a
 // hole is a second sub-path and no two sub-paths of one shape overlap otherwise.
 

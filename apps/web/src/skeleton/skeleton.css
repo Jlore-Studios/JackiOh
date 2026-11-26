@@ -11,7 +11,7 @@
 .skeleton {
   --skeleton-ink: color-mix(in srgb, var(--pal-brass-500) 18%, transparent);
   --skeleton-edge: color-mix(in srgb, var(--pal-brass-500) 30%, transparent);
-  --skeleton-sheen: color-mix(in srgb, var(--pal-gold-200) 28%, transparent);
+  --skeleton-sheen: color-mix(in srgb, var(--pal-brass-200) 28%, transparent);
 
   position: relative;
   box-sizing: border-box;

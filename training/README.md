@@ -88,8 +88,8 @@ src/practice/claim.test.ts`, after `sh scripts/build-wasm.sh`) and commits it wi
 ## The gather lane
 
 `.github/workflows/gather.yml` plays without a pause since #3740
-(it played 5,000 games of each new patch or set, once, on the PC's gather half, before): two of
-GitHub's runners each play `GATHER_HOURS` (5) hours of the newest version on `main`, `GATHER_FILE_GAMES`
+(it played 5,000 games of each new patch or set, once, on the PC's gather half, before): five of
+GitHub's runners (two until 2026-11-26) each play `GATHER_HOURS` (5) hours of the newest version on `main`, `GATHER_FILE_GAMES`
 (400, about an hour) at a time, and file each batch the same way as it finishes, so the card statistics
 take fresh games of the version that is live every hour. As a run ends it starts the next on `main` as
 it is then, so a version shipped meanwhile is played from the next run on, within five hours, and a
@@ -103,8 +103,8 @@ the number before), so its 95% interval is about ±5 points. `cargo jackioh stat
 this build's deal pool, and the number grows with the catalog: 29000 at 633 cards when it landed.
 `--explain` shows the working, `--sigma` and `--rho` set its two guesses, and
 `crates/tools/README.md` has the formula. The lane playing without a pause reaches it for a version
-that stays the newest about a day and a half (two runners at about 400 games an hour). A change to `gather.yml` is a person's, since the bots never edit `.github/`;
-so is growing `GATHER_STRIDE` (100,000), which a run's games pass only past about 50,000 a part.
+that stays the newest about 15 hours (five runners at about 400 games an hour). A change to `gather.yml` is a person's, since the bots never edit `.github/`;
+so is growing `GATHER_STRIDE` (100,000), which a run's games pass only past 20,000 a part.
 
 The games are `stats --series gather` (R378): the AI on `main` against itself on R258's All Random
 deals at the browser's budget, each finished game a record with `source: "dev"`, mode `random`, both

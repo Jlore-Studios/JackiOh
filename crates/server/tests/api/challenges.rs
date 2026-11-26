@@ -520,6 +520,54 @@ mod b49_accept_decline_cancel_and_expiry {
         let (status, body) = join_room(&p.app, &p.friend, &code, random_room()).await;
         assert_eq!((status, &body), (404, &unknown));
     }
+
+    // #5005 (Q14, unspecified): a join that loses a seat's compare-and-set after its claim (R890000)
+    // deletes the claim, its room with it, and answers 409, but the challenge it accepted in the
+    // claim's transaction stays accepted with no game: neither side lists it, nothing is pushed
+    // (R3214000 pushes an accept once its game has started), the code joins as an unknown one does,
+    // and the challenger may challenge the friend again.
+    #[tokio::test]
+    async fn a_join_that_loses_its_seat_after_the_claim_leaves_no_room_and_its_challenge_accepted() {
+        let p = pair().await;
+        let (challenge_id, room_code) = p.challenged().await;
+        let (_, unknown) = join_room(&p.app, &p.friend, "ZZZZZZ", random_room()).await;
+
+        // The claim and the accept commit; then the host's seat, the first one set, loses.
+        fake(&p.app).lock().await.before_call = Some(Arc::new(|method: &str, _tables: &mut FakeTables| {
+            if method == "profiles.setInMatch" {
+                CallOutcome::Lose
+            } else {
+                CallOutcome::Proceed
+            }
+        }));
+        let (status, body) = join_room(&p.app, &p.friend, &room_code, random_room()).await;
+        fake(&p.app).lock().await.before_call = None;
+
+        assert_eq!(status, 409, "{body}");
+        assert!(code_is(&body, "conflict"), "{body}");
+        {
+            let store = fake(&p.app);
+            let data = store.lock().await;
+            assert!(data.tables.matches.is_empty(), "no game started");
+            assert!(
+                !data.tables.rooms.iter().any(|room| room.code == room_code),
+                "the claim went with its room"
+            );
+            let row = data
+                .tables
+                .social
+                .challenges
+                .iter()
+                .find(|row| row.id == challenge_id)
+                .expect("the challenge's row");
+            assert_eq!(row.state, ChallengeState::Accepted);
+        }
+        assert!(p.none_listed().await);
+        let (status, body) = join_room(&p.app, &p.friend, &room_code, random_room()).await;
+        assert_eq!((status, &body), (404, &unknown));
+        // The accepted row holds no open challenge's place between the pair.
+        p.challenged().await;
+    }
 }
 
 // R1689000 — a challenge lives only as long as its friendship
@@ -581,6 +629,26 @@ mod r1689000_a_challenge_lives_only_as_long_as_its_friendship {
         assert_eq!((status, &body), (404, &unknown));
         let (status, body) = join_room(&p.app, &p.challenger, &received, random_room()).await;
         assert_eq!((status, &body), (404, &unknown));
+    }
+
+    // #5005 (Q15): an account's deletion ends every friendship it held, so an open challenge to or
+    // from it goes (0038's cascade) and its unjoined room is freed, as an unfriend frees it; the room
+    // is not left open to anyone with its code.
+    #[tokio::test]
+    async fn r1689000_a_challenge_whose_friend_deletes_the_account_frees_its_room() {
+        let p = pair().await;
+        let outsider = account(&p.app, 3, "Otto").await;
+        let (_, code) = p.challenged().await;
+        let unknown = unknown_code(&p.app, &outsider).await;
+
+        let (status, body) = api(&p.app, "DELETE", "/api/account", &p.friend.token, Value::Null).await;
+        assert_eq!(status, 204, "{body}");
+
+        assert!(!room_open(&p.app, &code).await);
+        let (status, body) = join_room(&p.app, &outsider, &code, random_room()).await;
+        assert_eq!((status, &body), (404, &unknown));
+        let mine = listed(&p.app, &p.challenger).await;
+        assert_eq!(len(&mine["incoming"]) + len(&mine["outgoing"]), 0, "{mine}");
     }
 
     #[tokio::test]

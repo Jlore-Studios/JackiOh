@@ -488,7 +488,7 @@ export function assaultPlaceholderContent(catalog: CardDefs): AssaultContent {
   );
 }
 
-/** The Assault's content for the browser: `assault_placeholder_content` until the release. */
+/** R4597000: the Assault's content for the browser: `assault_catalog_content`, since the release. */
 export function assaultContent(): AssaultContent {
   return call("assaultContent", () => parsed<AssaultContent>(normal.assault_content()));
 }

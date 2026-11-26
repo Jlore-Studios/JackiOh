@@ -2823,6 +2823,20 @@ pub fn validate_deck_with(
     size: i32,
     copies: i32,
 ) -> Result<(), EngineError> {
+    validate_seat_deck(deck, catalog, label, size, copies, &[])
+}
+
+/// `validate_deck_with` for a seat whose setup names the sets its deck is dealt from (R4595000):
+/// R4597001, a card of an open single-player set (`SINGLE_PLAYER_SETS`) that `named` holds is in
+/// reach of that seat's deck, as an Assault enemy's deck holds the Infinite Assault's cards.
+fn validate_seat_deck(
+    deck: &[String],
+    catalog: &CardDefs,
+    label: &str,
+    size: i32,
+    copies: i32,
+    named: &[SetName],
+) -> Result<(), EngineError> {
     if deck.len() as i32 != size {
         if size == DECK_SIZE {
             return Err(EngineError::new(format!(
@@ -2849,8 +2863,11 @@ pub fn validate_deck_with(
                 "{label}: \"{def_id}\" is a Token card and cannot be in a deck (§2.6 L3)"
             )));
         }
-        // R1420: nor is a card of a set that has not shipped, unless the testkit previews it.
-        if !crate::catalog::set_is_open(def.set) {
+        // R1420: nor is a card of a set that has not shipped, unless the testkit previews it, or
+        // (R4597001) an open single-player set the seat's deck is dealt from.
+        let named_single_player =
+            named.contains(&def.set) && crate::wire::SINGLE_PLAYER_SETS.contains(&def.set);
+        if !crate::catalog::set_is_open(def.set) && !named_single_player {
             return Err(EngineError::new(format!(
                 "{label}: \"{def_id}\" is a card of {}, which has not shipped yet (§2.6 L3, R1420)",
                 def.set.as_str()
@@ -2960,7 +2977,15 @@ pub fn validate_setup(
             .get(player)
             .and_then(|h| h.deck_copies)
             .unwrap_or(MAX_COPIES);
-        validate_deck_with(deck_of(options, seat), catalog, player.as_str(), size, copies)?;
+        let named = named_deck_sets(options, player).map_or(&[][..], |sets| sets.as_slice());
+        validate_seat_deck(
+            deck_of(options, seat),
+            catalog,
+            player.as_str(),
+            size,
+            copies,
+            named,
+        )?;
     }
     validate_deck_marks(options)?;
     validate_deck_sets(options, catalog)

@@ -17,14 +17,6 @@
         "en": "Start of turn: Choose twice: nothing, exile your deck's bottom card, lose {loss} health or a Spikey Pillow.\nAfter {downsides|downside|downsides}, make your hand Radiant."
       }
     },
-    "core-089": {
-      "base": {
-        "en": "Brittle 1, Rush\nIn your hand, gains the stats of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
-      },
-      "radiant": {
-        "en": "Brittle 3, Rush\nIn hand: gains twice each dead Unit's stats.\nMay attack again after attacking a Unit."
-      }
-    },
     "core-095": {
       "base": "colon",
       "radiant": "colon"
@@ -67,10 +59,10 @@
     },
     "classicplus-037": {
       "base": {
-        "en": "In hand or deck, summoned after {threshold} non-Units in a turn.\nEnd of turn: Recast a random non-Unit you played this turn."
+        "en": "While this is in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Recast a random non-Unit played this turn."
       },
       "radiant": {
-        "en": "In hand or deck, summoned after {threshold} non-Units in a turn.\nEnd of turn: Recast each non-Unit you played this turn."
+        "en": "While this is in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Recast each non-Unit played this turn."
       }
     },
     "classicplus-073": {
@@ -325,10 +317,10 @@
     },
     "stinkyscape-148": {
       "base": {
-        "en": "Indestructible\nYour first travel a turn is free.\nActivate ♾️: Pay (1) to travel a node. Node 20 is the edge."
+        "en": "Indestructible\nAura: Your first travel a turn is free.\nActivate ♾️: Pay (1) to travel a node. Node 20 is the edge."
       },
       "radiant": {
-        "en": "Indestructible\nFirst 2 travels a turn are free.\nActivate ♾️: Pay (1) to travel a node. Node 20 is the edge."
+        "en": "Indestructible\nAura: First 2 travels a turn are free.\nActivate ♾️: Pay (1) to travel a node. Node 20 is the edge."
       }
     },
     "stinkyscape-150": {
@@ -357,10 +349,10 @@
     },
     "stinkyscape-157": {
       "base": {
-        "en": "Brittle 3\nGauntlet: Units in lanes 2–4 fight only each other."
+        "en": "Brittle 3\nAura: Lanes 2–4 are a Gauntlet; Units there fight only each other."
       },
       "radiant": {
-        "en": "Brittle 3\nGauntlet: Units in lanes 2–4 fight only each other.\nActivate: +{brittleGain} Brittle, or Tribute this."
+        "en": "Brittle 3\nAura: Lanes 2–4 are a Gauntlet; Units there fight only each other.\nActivate: +{brittleGain} Brittle, or Tribute this."
       }
     },
     "stinkyscape-164": {
@@ -467,18 +459,18 @@
     },
     "stinkyscapeplus-087": {
       "base": {
-        "en": "Animated\nEvolves when a Starship launches.\nEvolve: {counters|Plague Counter|Plague Counters}.\nAura: 3X/3X, X its Plague Counters."
+        "en": "Animated\nEvolves when a Starship launches.\nEvolve: {counters|Plague Counter|Plague Counters}.\nHas 3X/3X, X its Plague Counters."
       },
       "radiant": {
-        "en": "Animated\nEvolves when a Starship launches.\nEvolve: {counters|Plague Counter|Plague Counters}.\nAura: 3X/3X, X its Plague Counters."
+        "en": "Animated\nEvolves when a Starship launches.\nEvolve: {counters|Plague Counter|Plague Counters}.\nHas 3X/3X, X its Plague Counters."
       }
     },
     "stinkyscapeplus-089": {
       "base": {
-        "en": "Starts on the bottom of your deck.\nCast from your deck once your exile has {card|card|cards}.\nAdd a random Terminus card to your hand."
+        "en": "Starts last in your deck.\nWhile this is in your deck: When your exile has {card|card|cards}, cast this.\nAdd a random Terminus card to your hand."
       },
       "radiant": {
-        "en": "Starts on the bottom of your deck.\nCast from your deck once your exile has {card|card|cards}.\nAdd a random Radiant Terminus card."
+        "en": "Starts last in your deck.\nWhile this is in your deck: When your exile has {card|card|cards}, cast this.\nAdd a random Radiant Terminus card to your hand."
       }
     },
     "stinkyscapeplus-098": {

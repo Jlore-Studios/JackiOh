@@ -194,6 +194,37 @@ fn create_game_takes_every_level_of_a_year_on_the_placeholder() {
     }
 }
 
+/// R4597001: since the release every level of a year dealt from the set's real cards is a setup
+/// `createGame` takes, the enemy's seat naming the Assault's set (`enemy_sets`, R4595000), and refused
+/// when it names none: the set is single-player, so no other deck may hold its cards.
+#[test]
+fn r4597001_create_game_takes_every_level_of_a_year_on_the_catalog_content() {
+    jackioh_cards::register_all();
+    let catalog = registered_catalog();
+    let content = assault_catalog_content(catalog);
+    assert_eq!(content.commanders.len(), 12);
+    let human = first_deckable(25);
+    for date in year() {
+        let day = assault_day(&date, &content).unwrap();
+        assert_eq!(day.levels.len(), ASSAULT_LEVELS as usize, "{date}");
+        for level in &day.levels {
+            let (unnamed, _) = fight_options(&human, level, &format!("{}-L{}-A1", day.seed, level.level));
+            let error = validate_setup(&unnamed, catalog, SetupKind::New)
+                .expect_err("an Assault deck needs its seat to name the set");
+            assert!(error.message.starts_with("p2:"), "{date}: {}", error.message);
+            let options = CreateGameOptions {
+                deck_sets: Some(PerPlayerOpt {
+                    p1: None,
+                    p2: Some(vec![crate::config::ASSAULT_SET]),
+                }),
+                ..unnamed
+            };
+            validate_setup(&options, catalog, SetupKind::New)
+                .unwrap_or_else(|error| panic!("{date} level {}: {error}", level.level));
+        }
+    }
+}
+
 #[test]
 fn every_level_of_a_week_folds_back_to_its_hash() {
     jackioh_cards::register_all();

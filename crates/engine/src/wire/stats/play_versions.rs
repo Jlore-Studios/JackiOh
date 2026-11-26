@@ -15,7 +15,8 @@
 //!
 //! R4678001: each row also counts the patches its span reaches, the windows every card shares
 //! (`patch_windows`, R1973002) as the statistics page's patch bar lists them, which the Experimental
-//! tab's Running view names beside the version a card's current play version began at.
+//! tab's Running view names beside the version a card's current play version began at. R5033000: and the
+//! position of its first version in the shipped history, which the Date sort reads.
 //!
 //! R5040000: `major_line_versions` cuts each live play version to the newest major's line;
 //! `play_version_figures` over the cut versions is the Major patch running view's table, its field read
@@ -28,7 +29,7 @@ use super::window::{Part, PatchStep, PatchTier, part_of, patch_windows, split_by
 use super::{
     CardStats, CardTier, CreatedStats, DECIMALS, GameMode, GameSource, ModeFilter, NO_FIGURE, PERCENT,
     PilotFilter, StatsField, StatsTotals, Tally, add_created, add_stats, adjusted_interval,
-    adjusted_win_rate, held_adjusted, seen, stats_field, tier_of, to_fixed,
+    adjusted_win_rate, held_adjusted, percent, seen, stats_field, tier_of, to_fixed,
 };
 use crate::catalog::RULE_MADE_DEF_IDS;
 use crate::config::{PUBLIC_STATS_MIN_LIVE_GAMES, TIER_BAND_HIGH, TIER_BAND_LOW};
@@ -97,6 +98,10 @@ pub struct PlayVersionFigures {
     /// R4678001: the patches its versions reach: the windows every card shares (`patch_windows`,
     /// R1973002, a gameless patch folded into the one before as R1973001 folds it), counted once each.
     pub patches: usize,
+    /// R5033000: the position of its first version in the shipped history (`PlayVersionQuery::history`,
+    /// `patches.json`'s order, which is ship order), or `None` when the history does not hold it. The
+    /// client sorts by it and never orders version names (R105).
+    pub first_shipped: Option<usize>,
     /// The games its figures count: the decks that held it, under All Random the decks that saw it
     /// (R2777002), and for a card only a rule makes the seats that made one (R3070000).
     pub games: i64,
@@ -226,11 +231,18 @@ pub fn play_version_figures(totals: &StatsTotals, query: &PlayVersionQuery) -> P
                 .map(move |version| (version.as_str(), index))
         })
         .collect();
+    // R5033000: each shipped version's position, which is the order the versions shipped in.
+    let position_of: IndexMap<&str, usize> = query
+        .history
+        .iter()
+        .enumerate()
+        .map(|(index, step)| (step.version.as_str(), index))
+        .collect();
     let versions = query
         .versions
         .iter()
         .zip(&sums)
-        .map(|(version, sum)| figures_of(version, sum, &field, query, &window_of))
+        .map(|(version, sum)| figures_of(version, sum, &field, query, &window_of, &position_of))
         .collect();
     PlayVersionTable {
         field,
@@ -289,6 +301,7 @@ fn figures_of(
     field: &StatsField,
     query: &PlayVersionQuery,
     window_of: &IndexMap<&str, usize>,
+    position_of: &IndexMap<&str, usize>,
 ) -> PlayVersionFigures {
     let stats = sum.stats.as_ref();
     // R3070000: a card only a rule makes is in no deck: it reads the seats that made one (R2089000).
@@ -328,6 +341,7 @@ fn figures_of(
         last: version.last().to_string(),
         live: version.live,
         patches: patches_of(version, window_of),
+        first_shipped: position_of.get(version.first()).copied(),
         games,
         adjusted_win_rate: adjusted,
         adjusted_low: range.map(|(low, _)| low),
@@ -335,14 +349,6 @@ fn figures_of(
         tier,
         has_enough_games,
     }
-}
-
-/// A fraction as "52.1%", or `NO_FIGURE`.
-fn percent(rate: Option<f64>) -> String {
-    rate.map_or_else(
-        || NO_FIGURE.to_string(),
-        |rate| format!("{}%", to_fixed(rate * PERCENT, DECIMALS)),
-    )
 }
 
 /// R4675001: the table as text: the field and band, one line per play version, and how many have games
@@ -723,6 +729,80 @@ mod tests {
         assert_eq!(reached, [1, 4, 4, 2, 1, 0]);
         // No history names no window.
         assert_eq!(read(&[]), [0; 6]);
+    }
+
+    // R5033000: a row's `first_shipped` is its first version's position in the history, ship order and never
+    // name order: v0.6.12b shipped before v0.6.4d here.
+    #[test]
+    fn r5033000_a_rows_first_shipped_is_its_first_versions_position_in_the_history() {
+        let step = |version: &str, tier: PatchTier| PatchStep {
+            version: version.to_string(),
+            tier,
+            plays: Vec::new(),
+        };
+        let history = [
+            step("v0.6.0", PatchTier::Major),
+            step("v0.6.12b", PatchTier::Micro),
+            step("v0.6.4d", PatchTier::Micro),
+        ];
+        let versions = [
+            version(A, &["v0.6.0"], false),
+            version(A, &["v0.6.12b", "v0.6.4d"], true),
+            version(B, &["v0.6.4d"], true),
+            version(B, &["v9"], true),
+        ];
+        let query = PlayVersionQuery {
+            history: &history,
+            ..query(&versions, 1)
+        };
+        let positions: Vec<Option<usize>> = play_version_figures(&folded(&[]), &query)
+            .versions
+            .iter()
+            .map(|row| row.first_shipped)
+            .collect();
+        assert_eq!(positions, [Some(0), Some(1), Some(2), None]);
+    }
+
+    #[test]
+    fn r5033000_play_versions_shipped_on_one_day_keep_their_ship_order() {
+        let step = |version: &str, tier: PatchTier| PatchStep {
+            version: version.to_string(),
+            tier,
+            plays: Vec::new(),
+        };
+        let history = [
+            step("v1", PatchTier::Major),
+            step("v1b", PatchTier::Micro),
+            step("v1c", PatchTier::Micro),
+        ];
+        let versions = [
+            version(A, &["v1c"], true),
+            version(B, &["v1b"], true),
+            version(A, &["v1"], false),
+        ];
+        let read = |history: &[PatchStep]| -> Vec<(String, Option<usize>)> {
+            let query = PlayVersionQuery {
+                history,
+                ..query(&versions, 1)
+            };
+            play_version_figures(&folded(&[]), &query)
+                .versions
+                .into_iter()
+                .map(|row| (row.first, row.first_shipped))
+                .collect()
+        };
+        let owned = |rows: &[(&str, Option<usize>)]| -> Vec<(String, Option<usize>)> {
+            rows.iter()
+                .map(|(first, position)| ((*first).to_string(), *position))
+                .collect()
+        };
+        // Micros of one day are told apart by position, and the table keeps the query's order.
+        assert_eq!(
+            read(&history),
+            owned(&[("v1c", Some(2)), ("v1b", Some(1)), ("v1", Some(0))])
+        );
+        // No history holds none.
+        assert_eq!(read(&[]), owned(&[("v1c", None), ("v1b", None), ("v1", None)]));
     }
 
     fn shipped(version: &str, tier: PatchTier) -> PatchStep {

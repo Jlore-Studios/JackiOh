@@ -103,7 +103,7 @@ when that is):
   only **`approve`**, while **`reject`** closes the suggestion unbuilt (as not planned), which
   makes room for the next survey (#760). Say why on the lines after `reject`, or in a comment
   after it: the surveys and the judge read the reasons. One the judge would approve goes ahead by
-  itself after a day if no one votes on it, comments or reacts 👎
+  itself as it opens (#5104), so a vote is for the ones it leaves to a person
   ([Suggestions that approve themselves](#suggestions-that-approve-themselves));
 - **assign** `@jgoetzmann-bot`;
 - comment **`/harness build`**, or **`@jgoetzmann-bot <what you want>`**. Your words become part
@@ -322,22 +322,28 @@ waiting for a person, and keeps the rest for one:
    reject (a guard against a bug that hasn't happened, a speed-up nobody measured, a report nothing
    acts on, upkeep for every future change, a design call, polish only the maintainer sees, undoing
    a decision made on purpose, overlap) and the evidence that clears a guard or a speed-up.
-2. **A judge reads each new suggestion.** After a survey, a second model call
-   (`prompts/judge.md`; the subscription's review seat where it has one, else the survey's) checks
-   the claim each of the survey's suggestions rests on, in the code, and looks for overlap. It reads
-   them against `prompts/judge.md`'s lists of what gets rejected and what gets approved, and against
-   the latest `window` (100) decisions on suggestions, newest
+2. **An adversarial judge reads each new suggestion.** After a survey, a second model call
+   (`prompts/judge.md`; the subscription's review seat where it has one, else the survey's) argues
+   against each of the survey's suggestions, standing in for the maintainer who would vote on it
+   (#5104): it tries to refute the claim each rests on in the code, looks for the same work among
+   the open issues and pull requests the survey read (`existing`) and the other suggestions, reads
+   the rulings it would undo, and tests it against `prompts/judge.md`'s lists of what gets rejected
+   and what gets approved. It also reads the latest `window` (100) decisions on suggestions, newest
    first, with their reasons (`suggest.decided`: each one a person approved, and each that came to
    nothing, rejected, closed unbuilt, handed to people or failed for good, as it ended). Those
    decisions are its rolling window of what people want now: where they disagree with the prompt's
    lists, they win. It says of each suggestion `approve` or `person`, and why, and the issue's
    footer says so. A judge call that fails or stops leaves every suggestion to a person and loses
    none.
-3. **One it would approve goes ahead by itself.** The sweep (`plan.AutoApprove`) queues a
-   suggestion the judge would approve once it has waited `wait_hours` (24) with no one taking it
-   up: a vote, a comment that is not the bot's, or a 👎 on the issue leaves it to a person, for
-   good. It is queued as a person's `approve` queues it, so it is planned, built, reviewed and
-   merged under every gate, and `/harness stop` takes it back out; the bot says so on it.
+3. **One it would approve goes ahead by itself, as it opens.** With `wait_hours` at 0, as
+   committed (#5104), delivery queues each suggestion the judge would approve as soon as it opens
+   it (`plan.AutoApprove`, called at the end of the survey's delivery), with no wait for a person.
+   With `wait_hours` above 0, the sweep (`plan.AutoApprove`) queues it instead once it has waited
+   that many hours with no one taking it up: a vote, a comment that is not the bot's, or a 👎 on the
+   issue leaves it to a person, for good. Either way it is queued as a person's `approve` queues
+   it, so it is planned, built, reviewed and merged under every gate, and `/harness stop` takes it
+   back out; the bot says so on it. One the judge leaves to a person waits for a person's vote, as
+   any suggestion does.
 4. **At `priority:low`, a few a day.** Each goes ahead at `priority:low`, whatever its class
    opened it with, so it waits behind everything a person asked for, and at most `per_day` (3) go
    ahead in any 24 hours (`suggest.auto_approved`, the times they did); one past the cap waits for
@@ -638,7 +644,7 @@ in place of the `bot:*` ones.
 | `bot:stuck` | beside `bot:blocked`: a hard build or revision used every review round (`max_review_cycles`, 10 for hard) without an approval. Its comment says why, round by round (`go/internal/failures/`): the builder's sessions, the checks that were red, the reviewer's verdicts and the findings that kept coming back. A person reads it before anyone tries again; an approval takes the label off |
 | `bot:pr-open` | the issue has an open bot pull request |
 | `bot:pr` | a pull request the bot opened |
-| `bot:suggestion` | an improvement the bot proposes; comment `approve` (or add `bot:build`, assign the bot, or `/harness build`) to have it built, which takes this label off and leaves its `priority:*` label on; comment `reject` (or close it) to say no. It opens with the priority its class sets ([One night](#one-night-step-by-step), step 1). One the judge would approve goes ahead by itself, at `priority:low`, after a day with no one's vote, comment or 👎 ([Suggestions that approve themselves](#suggestions-that-approve-themselves)) |
+| `bot:suggestion` | an improvement the bot proposes; comment `approve` (or add `bot:build`, assign the bot, or `/harness build`) to have it built, which takes this label off and leaves its `priority:*` label on; comment `reject` (or close it) to say no. It opens with the priority its class sets ([One night](#one-night-step-by-step), step 1). One the judge would approve goes ahead by itself, at `priority:low`, as it opens (`wait_hours` 0, #5104; above 0, after that many hours with no one's vote, comment or 👎) ([Suggestions that approve themselves](#suggestions-that-approve-themselves)) |
 | `ready for merge` | the reviews approved the pull request's head, but auto-merge could not turn on (a review-only path, a migration that loses data (an `UPDATE` with no `WHERE` counts), changes access or edits one `main` has, a new package in a lock, `main`'s protection, GitHub refusing it, or `auto_merge` off; its comment names which), so the bot @-mentions the operator to merge it. It comes off when the pull request goes back into the queue (a revision, a review run, a run that holds it, `bot:blocked`); triage never adds it |
 | `tracking` | a tracker or status issue, a type label: the bot comments on it and rewrites its own, but never queues, plans, builds or splits it ([above](#priority-and-human)) |
 | `difficulty:medium`, `difficulty:hard` | the weakest tier that may plan, build and approve it: medium, strong. A person may set one; otherwise the planner rates the item, by [how hard it is](#how-hard-it-is), and the bot labels it; three failures of its own raise it a step ([below](#rating-strikes-and-the-step-up)). With none it counts as medium, and with several the hardest counts. `difficulty:easy` is retired (#2748): the sweep moves it to `difficulty:medium` on every open thread, then deletes it (`config.Relabelled`), and until then it reads as medium |
@@ -860,8 +866,8 @@ once its secret is in `providers.SecretNames` and the workflow's `HARNESS_SECRET
 
 At the top level, `max_parallel` is how many run at once on GitHub's runners, planning runs
 included (16, #3740: the organization runs 60 hosted jobs at once on GitHub's Team plan since
-2026-11-11, split as 2 for the status loop and the bots' short jobs, 2 for the gather lane (12 for the
-training lanes until #4701), 16 for these runs, and the rest for CI; it was 8 of the Free plan's 20, #1455). It stays at
+2026-11-11, split as 2 for the status loop and the bots' short jobs, 5 for the gather lane (2 until 2026-11-26, and
+12 for the training lanes until #4701), 16 for these runs, and the rest for CI; it was 8 of the Free plan's 20, #1455). It stays at
 16, not the 24 #3740 planned: at 16 the bot's token ran out of REST calls near the end of every
 hour (#3760), so more runs wait until what spends them is cut. Since #4059 every GET the client
 sends is conditional, so a read GitHub answers 304 Not Modified costs nothing, and the state file's
@@ -2021,8 +2027,8 @@ pruned after a week ([`go/internal/controller/`](go/internal/controller/)).
    saw them). Every survey also reads the log of suggestions that came to nothing (`suggest.declined`:
    rejected by a vote, closed unbuilt, or approved and then handed to people or failed for good,
    [`go/internal/declined/`](go/internal/declined/)) and never offers one again; one it offers anyway,
-   by the same title, is not opened, and the reasons people gave for them. After it, a judge reads
-   its suggestions, and one it would approve goes ahead by itself after a day with no one's vote
+   by the same title, is not opened, and the reasons people gave for them. After it, an adversarial judge reads
+   its suggestions, and one it would approve goes ahead by itself as it opens
    ([Suggestions that approve themselves](#suggestions-that-approve-themselves)). The survey files each suggestion under one class
    (`prompts/suggest.md`: `fuzz`, `checks`, `telemetry`, `refactor`, `ai`, `fairness`,
    `security`, `data`, `polish`, `feature`, the one picked up first when two fit), and

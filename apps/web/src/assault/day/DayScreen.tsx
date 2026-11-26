@@ -54,11 +54,16 @@ export function DayScreen({ assault, saved, onResume }: DayScreenProps): ReactEl
   useLocale();
   const { constants, content, day, record, records } = assault;
   const checkpoint = highestCheckpoint(record.checkpoints);
-  const [startLevel, setStartLevel] = useState(checkpoint);
-  const [choice, setChoice] = useState<AssaultDeckChoice>(() => dayDeckChoice(day.date));
+  const starts = checkpoint === ASSAULT_FIRST_LEVEL ? [ASSAULT_FIRST_LEVEL] : [ASSAULT_FIRST_LEVEL, checkpoint];
+  const dayDeck = useMemo(() => dayDeckChoice(day.date), [day.date]);
+  const [pickedLevel, setStartLevel] = useState(checkpoint);
+  const [picked, setChoice] = useState<AssaultDeckChoice>(dayDeck);
+  // R4581000: a screen the store moved on to a new day (a Start refused past UTC midnight) offers that
+  // day's deck and a start level its record holds, never the picks it made from the day before (#5005).
+  const startLevel = starts.includes(pickedLevel) ? pickedLevel : checkpoint;
+  const choice = picked.source === "dayDeck" && picked.key !== dayDeck.key ? dayDeck : picked;
   const [refusal, setRefusal] = useState<string | null>(null);
   const secondsToNextDay = useSecondsUntil(nextUtcDay(day.date));
-  const starts = checkpoint === ASSAULT_FIRST_LEVEL ? [ASSAULT_FIRST_LEVEL] : [ASSAULT_FIRST_LEVEL, checkpoint];
   const strength = day.levels.find((level) => level.level === startLevel) ?? day.levels[0];
   const history = useMemo(
     () => Object.values(records).sort((a, b) => b.date.localeCompare(a.date)),

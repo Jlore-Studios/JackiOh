@@ -12,9 +12,10 @@
 //! #26's base faces take lines or a colon (#2067); the held Training Grounds set (R2194000,
 //! docs/training-grounds-set.md TG5), Call to Chaos #39 "colon" and the Radiant face of #16 clamping (#38's did
 //! until issue #3139 made its text one short line); #2521: Classic+ #34, Meditative+ #1 and ZolarKeth's Radiant
-//! face; issue #3139: Core #65 and #89, whose new last lines put both their faces over the limit, and Core
-//! #52's Radiant face; issue #3140: Meditative #40, #54 and #81 and Meditative+ #22, whose new Activate, Cry and
-//! draw lines put them over; issue #3138: Classic+ #37 Wardrum and Meditative #20 Aestheticize the Game, whose
+//! face; issue #3139: Core #65 and #89, whose new last lines put both their faces over the limit (#89's fit
+//! whole again once issue #5038 wrote its hand trigger a line shorter, R5038000), and Core #52's Radiant face;
+//! issue #3140: Meditative #40, #54 and #81 and Meditative+ #22, whose new Activate, Cry and draw lines put them
+//! over; issue #3138: Classic+ #37 Wardrum and Meditative #20 Aestheticize the Game, whose
 //! new keyword line (Divine Shield, Tradable) makes a seventh line; and Meditative #9's Radiant face, whose Cry
 //! and Aura ran to seven lines (R3134001) until issue #4440 put an Activate in the Cry's place; issue #4440:
 //! Classic #28 Second Wind's faces, whose Aura gained a mana line.

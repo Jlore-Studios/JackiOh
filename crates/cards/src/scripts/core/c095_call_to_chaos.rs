@@ -909,6 +909,14 @@ mod tests {
                 .map_or(-1, |found| found as isize);
             assert!((at as isize) < summon_at);
 
+            // R4707000: the roll's place in the table and the table's size are the game record's, which
+            // no view forwards; the rest each seat reads as it is.
+            assert_eq!((&event["indices"], &event["tableSize"]), (&json!([7]), &json!(10)));
+            let mut shown = event.clone();
+            if let Some(fields) = shown.as_object_mut() {
+                fields.remove("indices");
+                fields.remove("tableSize");
+            }
             for viewer in [P1, P2] {
                 let seen: Vec<Value> = js(&s.view(viewer))["events"]
                     .as_array()
@@ -917,7 +925,7 @@ mod tests {
                     .into_iter()
                     .filter(|entry| entry["type"] == "chaosRolled")
                     .collect();
-                assert_eq!(seen, vec![event.clone()]);
+                assert_eq!(seen, vec![shown.clone()]);
             }
         }
 

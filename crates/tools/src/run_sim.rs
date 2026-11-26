@@ -175,7 +175,7 @@ pub(crate) fn parse_skill(text: &str) -> Result<f64, String> {
 
 /// The search budget `--budget` names: `tiny` is the tests' (`arena.rs`'s `TEST_BUDGET`, which decides
 /// clean at a fraction of the time), `full` the practice AI's.
-fn budget_of(name: &str) -> SearchBudget {
+pub(crate) fn budget_of(name: &str) -> SearchBudget {
     match name {
         "tiny" => TEST_BUDGET,
         _ => AI_BUDGET,
@@ -243,6 +243,7 @@ pub(crate) fn play_clean_match(config: &MatchConfig) -> Result<(FoldArgs, FoldRe
         decks: config.decks.clone(),
         handicaps: config.handicaps.clone(),
         deck_marks: config.setup.deck_marks.clone(),
+        deck_sets: config.setup.deck_sets.clone(),
         ..CreateGameOptions::default()
     };
     validate_setup(&options, registered_catalog(), SetupKind::New)
@@ -853,7 +854,7 @@ fn tally(outcomes: &[RunOutcome], content: &RunContent) -> Tally {
 }
 
 /// `sum / n` to one decimal, or `-` for none.
-fn mean(sum: i64, n: usize) -> String {
+pub(crate) fn mean(sum: i64, n: usize) -> String {
     if n == 0 {
         "-".to_string()
     } else {
