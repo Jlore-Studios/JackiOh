@@ -1296,7 +1296,10 @@ pub async fn dispatch(app: &Arc<App>, routes: &[Route], request: Request) -> Res
 }
 
 /// One matched route, from the address hash to the handler.
-#[allow(clippy::too_many_arguments)]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the request's parts as the router splits them"
+)]
 async fn run_route(
     app: &Arc<App>,
     auth: AuthLevel,

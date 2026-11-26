@@ -17,6 +17,7 @@
 use std::ops::{Deref, DerefMut};
 use std::time::Duration;
 
+use futures_util::TryStreamExt;
 use indexmap::{IndexMap, IndexSet};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -28,9 +29,9 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 
 use jackioh_engine::wire::{
-    CardTotal, CoCount, DrillCount, FaceDrills, FirstMet, FirstSeen, GameEventType, GameRecord, ListTotal,
-    PortraitId, RecordsKey, StatsFace, StatsTotals, TotalsKey, parse_game_record, portrait_or_default,
-    sources_of,
+    CardStats, CardTotal, CoCount, DrillCount, FaceDrills, FirstMet, FirstSeen, GameEventType, GameRecord,
+    ListTotal, PortraitId, RecordsKey, StatsFace, StatsTotals, TotalsKey, parse_game_record,
+    portrait_or_default, sources_of,
 };
 use jackioh_engine::{Action, LastBoardEntry, LeanPick, PlayerId, WinRateTable};
 use jackioh_shared::host::daily::{DailyBoard, DailyClock};
@@ -4918,9 +4919,10 @@ const STORED_FACES: [StatsFace; 2] = [StatsFace::Radiant, StatsFace::Normal];
 /// R4673001: one turn's or co-played card's counts on each stored face, `[games, wins]` per face in
 /// `STORED_FACES`' order, or none when no face counted it (as every total folded before R4673001).
 fn face_counts(total: &CardTotal, count: impl Fn(&FaceDrills) -> Option<DrillCount>) -> Vec<i64> {
+    let empty = FaceDrills::default();
     let counts: Vec<Option<DrillCount>> = STORED_FACES
         .iter()
-        .map(|face| total.face(*face).and_then(&count))
+        .map(|face| total.face(*face, &empty).and_then(&count))
         .collect();
     if counts.iter().all(Option::is_none) {
         return Vec::new();
@@ -4938,8 +4940,9 @@ fn face_counts(total: &CardTotal, count: impl Fn(&FaceDrills) -> Option<DrillCou
 /// order; a face that counted no game gets no entry.
 fn add_face_counts(total: &mut CardTotal, counts: &[i64], mut add: impl FnMut(&mut FaceDrills, DrillCount)) {
     for (face, pair) in STORED_FACES.iter().zip(counts.chunks(2)) {
-        if let ([games, wins], Some(drills)) = (pair, total.face_mut(*face))
+        if let [games, wins] = pair
             && *games > 0
+            && let Some(drills) = total.face_mut(*face)
         {
             add(
                 drills,
@@ -5405,7 +5408,11 @@ pub async fn stats_totals_load(
             .game_totals
             .insert(records_key_of(row)?, from_json(get::<Value>(row, "total")?)?);
     }
-    let rows = sqlx::query(
+    // One read, taken a row at a time as it arrives and each card's `stats` read straight into its
+    // figures, so no raw row is held past its own and no JSON tree stands between. A read a patch at a
+    // time cost minutes on staging (2026-11-26): each patch's rows lie scattered through the table, so
+    // every patch's read went through most of its pages.
+    let mut rows = sqlx::query(
         "select patch, source, mode, pilot, card, stats,
                 case when $4::boolean then turns end as turns,
                 case when $4::boolean then co end as co
@@ -5418,28 +5425,30 @@ pub async fn stats_totals_load(
     .bind(mode.as_deref())
     .bind(query.patch.as_deref())
     .bind(query.drills)
-    .fetch_all(&mut **t)
-    .await
-    .map_err(db_error)?;
-    for row in &rows {
+    .fetch(&mut **t);
+    while let Some(row) = rows.try_next().await.map_err(db_error)? {
         let key = TotalsKey {
-            patch: get(row, "patch")?,
-            source: from_literal(&get::<String>(row, "source")?)?,
-            mode: from_literal(&get::<String>(row, "mode")?)?,
-            pilot: from_literal(&get::<String>(row, "pilot")?)?,
+            patch: get(&row, "patch")?,
+            source: from_literal(&get::<String>(&row, "source")?)?,
+            mode: from_literal(&get::<String>(&row, "mode")?)?,
+            pilot: from_literal(&get::<String>(&row, "pilot")?)?,
         };
-        let card: String = get(row, "card")?;
+        let card: String = get(&row, "card")?;
         let mut total = CardTotal {
-            stats: from_json(get::<Value>(row, "stats")?)?,
+            stats: get::<Json<CardStats>>(&row, "stats")?.0,
             ..CardTotal::new(&card)
         };
-        if let Some(turns) = get::<Option<Value>>(row, "turns")? {
+        if let Some(turns) = get::<Option<Value>>(&row, "turns")? {
             turns_of(turns, &mut total)?;
         }
-        if let Some(co) = get::<Option<Value>>(row, "co")? {
+        if let Some(co) = get::<Option<Value>>(&row, "co")? {
             co_of(co, &mut total)?;
         }
         totals.cards.entry(key).or_default().insert(card, total);
+    }
+    drop(rows);
+    for cards in totals.cards.values_mut() {
+        cards.shrink_to_fit();
     }
     Ok(totals)
 }

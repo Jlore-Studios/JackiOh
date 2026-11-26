@@ -434,6 +434,44 @@ mod r1181002_mountaintop_garden_plays_embiggen_cards_embiggened_and_its_dearer_p
         assert!(!set.radiant, "a set card is not played Radiant");
     }
 
+    /// A set card is no play a Garden reaches, so a Radiant one keeps its Embiggened price set
+    /// face-down: the listing offers it and the play goes through (seed 5430 of the fuzz wave).
+    #[test]
+    fn r1181002_a_radiant_card_set_face_down_keeps_its_embiggened_price() {
+        let mut s = board(
+            "r1181002-radiant-face-down",
+            json!({
+                "hand": [{ "def": SWELL.id, "radiant": true }, plain.id],
+                "backrow": [GARDEN.id],
+                "mana": 10,
+            }),
+            json!({}),
+        );
+        let id = swells_in_hand(&s)[0].clone();
+        s.card_mut(&id).granted_keywords.push(Keyword::Cloaked);
+        assert!(
+            plays_in(s.state(), P1, &id).iter().any(|action| matches!(
+                action,
+                ActionBody::Play {
+                    embiggen: Some(true),
+                    face_down: Some(_),
+                    ..
+                }
+            )),
+            "the set play is listed at its Embiggened price"
+        );
+        let before = s.state().players.p1.mana.current;
+        s.play(
+            id.as_str(),
+            json!({ "zone": 3, "faceDown": "cloaked", "embiggen": true }),
+        );
+        assert_eq!(
+            before - s.state().players.p1.mana.current,
+            SWELL_EMBIGGEN,
+            "the printed Embiggened price"
+        );
+    }
+
     #[test]
     fn r1181002_without_a_garden_the_prices_are_printed() {
         let s = board(

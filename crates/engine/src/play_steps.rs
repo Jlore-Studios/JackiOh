@@ -629,7 +629,11 @@ pub fn validate_play(
     // would reach them (S #99's check multiplies by it). A Plague spend travels on no face the
     // draw reads, so its check stays below.
     crate::play_choices::refuse_x(sink.state, player, &card, owned.x)?;
-    crate::play_choices::refuse_embiggen(sink.state, &card, owned.embiggen)?;
+    // R1181002: a face-down play's embiggen is read off the card stamped set, which no Garden
+    // reaches (`why_face_down_refused`), so only a face-up play's is read off the card in hand here.
+    if owned.face_down.is_none() {
+        crate::play_choices::refuse_embiggen(sink.state, &card, owned.embiggen)?;
+    }
     if crate::random_targets::play_targets_random(sink.state, player, &card) && owned.face_down.is_none() {
         let face = crate::play_choices::face_for_action(sink.state, player, &card, &owned);
         let given = owned.targets.clone().unwrap_or_default();

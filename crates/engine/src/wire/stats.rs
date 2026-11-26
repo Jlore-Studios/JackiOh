@@ -23,7 +23,7 @@ use crate::config::{
     ADJUSTED_WIN_RATE_PRIOR_SPREAD, COIN_DEF_ID, NORMAL_TIER_A_FROM, NORMAL_TIER_BAND_HIGH,
     NORMAL_TIER_BAND_LOW, NORMAL_TIER_C_FROM, RADIANT_TIER_A_FROM, RADIANT_TIER_BAND_HIGH,
     RADIANT_TIER_BAND_LOW, RADIANT_TIER_C_FROM, STATS_INTERVAL_Z, STATS_SHARE_PRECISION, TIER_A_FROM,
-    TIER_BAND_HIGH, TIER_BAND_LOW, TIER_C_FROM,
+    TIER_BAND_HIGH, TIER_BAND_LOW, TIER_C_FROM, VARIANT_X_GROUP_FROM,
 };
 use crate::state::EngineError;
 use crate::wire::catalog_types::{PLAYER_IDS, PerPlayer, PlayerId};
@@ -37,6 +37,8 @@ pub use swing::*;
 pub use window::*;
 pub mod play_versions;
 pub use play_versions::*;
+pub mod sparse;
+pub use sparse::*;
 
 // ---------------------------------------------------------------------------
 // The record (R376)
@@ -256,6 +258,13 @@ pub const VARIANT_MODE_JOIN: &str = " + ";
 /// R4672003: how a variant's parts are joined in its label.
 pub const VARIANT_PART_JOIN: &str = ", ";
 
+/// R4672003: the start of a variant label's X part, `X=<x>`.
+pub const VARIANT_X_PREFIX: &str = "X=";
+
+/// R4672003: a variant label's Embiggen part.
+pub const VARIANT_EMBIGGENED: &str = "Embiggened";
+pub const VARIANT_NOT_EMBIGGENED: &str = "Not Embiggened";
+
 impl PlayVariant {
     /// R4672003: the key a variant is totalled under and the name it is printed with: its options, then
     /// `X=<x>`, then whether it was Embiggened.
@@ -265,14 +274,14 @@ impl PlayVariant {
             parts.push(self.modes.join(VARIANT_MODE_JOIN));
         }
         if let Some(x) = self.x {
-            parts.push(format!("X={x}"));
+            parts.push(format!("{VARIANT_X_PREFIX}{x}"));
         }
         if let Some(embiggened) = self.embiggened {
             parts.push(
                 if embiggened {
-                    "Embiggened"
+                    VARIANT_EMBIGGENED
                 } else {
-                    "Not Embiggened"
+                    VARIANT_NOT_EMBIGGENED
                 }
                 .to_string(),
             );
@@ -603,21 +612,21 @@ pub struct CardStats {
     /// R4552001: the turns of the seats that held the card it was played on, acted on their field and
     /// acted against the other's, which its Swing and Decisiveness are read off. Absent while empty, and
     /// sent to no client.
-    #[serde(default, skip_serializing_if = "SwingTally::is_empty")]
+    #[serde(default, skip_serializing_if = "Sparse::is_empty")]
     #[cfg_attr(feature = "ts", ts(skip))]
-    pub swing: SwingTally,
+    pub swing: Sparse<SwingTally>,
     /// R4552002: the same of the card's Created copies, kept beside the deck's as the four Created tallies
     /// are and read apart from them (`CreatedStats::of`).
-    #[serde(default, skip_serializing_if = "SwingTally::is_empty")]
+    #[serde(default, skip_serializing_if = "Sparse::is_empty")]
     #[cfg_attr(feature = "ts", ts(skip))]
-    pub created_swing: SwingTally,
+    pub created_swing: Sparse<SwingTally>,
     /// R4672003: the card's variants, what its copies made and what they offered, kept beside the deck's
     /// tallies under the same key and read apart from them (`card_stats_of`'s `choices`). Absent while
     /// empty, so a total written before it, or with none, reads and is stored as before; no report a
     /// client reads carries it.
-    #[serde(default, skip_serializing_if = "CardChoices::is_empty")]
+    #[serde(default, skip_serializing_if = "Sparse::is_empty")]
     #[cfg_attr(feature = "ts", ts(skip))]
-    pub choices: CardChoices,
+    pub choices: Sparse<CardChoices>,
 }
 
 /// R4672003: a tally split by a card's face: Radiant at that play (or when it made the card), or not.
@@ -719,6 +728,16 @@ impl CardChoices {
     }
 }
 
+impl SparsePart for CardChoices {
+    fn is_empty_part(&self) -> bool {
+        self.is_empty()
+    }
+
+    fn add_part(&mut self, other: &Self) {
+        self.add(other);
+    }
+}
+
 /// R4672003: one card's choices in a report, by catalog id.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -760,7 +779,7 @@ impl CreatedStats {
             created_not_played: stats.created_not_played,
             created_played_radiant: stats.created_played_radiant,
             created_played_normal: stats.created_played_normal,
-            swing: stats.created_swing.clone(),
+            swing: stats.created_swing.get().cloned().unwrap_or_default(),
         }
     }
 
@@ -846,9 +865,9 @@ fn empty_stats(card: &str) -> CardStats {
         created_not_played: empty_tally(),
         created_played_radiant: empty_tally(),
         created_played_normal: empty_tally(),
-        swing: SwingTally::default(),
-        created_swing: SwingTally::default(),
-        choices: CardChoices::default(),
+        swing: Sparse::default(),
+        created_swing: Sparse::default(),
+        choices: Sparse::default(),
     }
 }
 
@@ -981,6 +1000,16 @@ impl FaceDrills {
     }
 }
 
+impl SparsePart for FaceDrills {
+    fn is_empty_part(&self) -> bool {
+        self.is_empty()
+    }
+
+    fn add_part(&mut self, other: &Self) {
+        self.add(other);
+    }
+}
+
 /// R1044000: one card's totals under one key: R377's breakdowns, and the drill-down's games by the
 /// turn the card was played on and with each card that shared its deck. R4673001: the same drills of
 /// the seats that played it Radiant, and of those that played it normal.
@@ -989,10 +1018,10 @@ pub struct CardTotal {
     pub stats: CardStats,
     pub turns: IndexMap<i32, DrillCount>,
     pub co: IndexMap<String, CoCount>,
-    #[serde(default, skip_serializing_if = "FaceDrills::is_empty")]
-    pub radiant: FaceDrills,
-    #[serde(default, skip_serializing_if = "FaceDrills::is_empty")]
-    pub normal: FaceDrills,
+    #[serde(default, skip_serializing_if = "Sparse::is_empty")]
+    pub radiant: Sparse<FaceDrills>,
+    #[serde(default, skip_serializing_if = "Sparse::is_empty")]
+    pub normal: Sparse<FaceDrills>,
 }
 
 impl CardTotal {
@@ -1001,17 +1030,18 @@ impl CardTotal {
             stats: empty_stats(card),
             turns: IndexMap::new(),
             co: IndexMap::new(),
-            radiant: FaceDrills::default(),
-            normal: FaceDrills::default(),
+            radiant: Sparse::default(),
+            normal: Sparse::default(),
         }
     }
 
-    /// R4673001: a face's drills; `None` for All, whose drills are `turns` and `co`.
-    pub fn face(&self, face: StatsFace) -> Option<&FaceDrills> {
+    /// R4673001: a face's drills, `empty` for a face that counted none; `None` for All, whose drills are
+    /// `turns` and `co`.
+    pub fn face<'a>(&'a self, face: StatsFace, empty: &'a FaceDrills) -> Option<&'a FaceDrills> {
         match face {
             StatsFace::All => None,
-            StatsFace::Normal => Some(&self.normal),
-            StatsFace::Radiant => Some(&self.radiant),
+            StatsFace::Normal => Some(self.normal.or(empty)),
+            StatsFace::Radiant => Some(self.radiant.or(empty)),
         }
     }
 
@@ -1019,8 +1049,8 @@ impl CardTotal {
     pub fn face_mut(&mut self, face: StatsFace) -> Option<&mut FaceDrills> {
         match face {
             StatsFace::All => None,
-            StatsFace::Normal => Some(&mut self.normal),
-            StatsFace::Radiant => Some(&mut self.radiant),
+            StatsFace::Normal => Some(self.normal.get_mut()),
+            StatsFace::Radiant => Some(self.radiant.get_mut()),
         }
     }
 
@@ -1329,11 +1359,12 @@ impl<'a> SeatChoices<'a> {
 
 /// R4672003: a card's choices among one key's cards, a total begun for it when it has none.
 fn choices_of<'a>(cards: &'a mut IndexMap<String, CardTotal>, card: &str) -> &'a mut CardChoices {
-    &mut cards
+    cards
         .entry(card.to_string())
         .or_insert_with(|| CardTotal::new(card))
         .stats
         .choices
+        .get_mut()
 }
 
 /// A seat's place in `PLAYER_IDS`, as `FirstMet` and `FirstSeen` keep it.
@@ -1723,8 +1754,8 @@ impl StatsTotals {
                                 stats: total.stats.clone(),
                                 turns: IndexMap::new(),
                                 co: IndexMap::new(),
-                                radiant: FaceDrills::default(),
-                                normal: FaceDrills::default(),
+                                radiant: Sparse::default(),
+                                normal: Sparse::default(),
                             }
                         };
                         (card.clone(), total)
@@ -1828,7 +1859,7 @@ pub fn card_stats_of(totals: &StatsTotals, filter: &CardStatsFilter) -> CardStat
     let mut choices: Vec<CardChoicesRow> = Vec::new();
     for mut stats in by_card.into_values() {
         // R4672003: the choices apart from both, and neither row with them.
-        let mut held = std::mem::take(&mut stats.choices);
+        let mut held = stats.choices.take();
         if !held.is_empty() {
             held.sort();
             choices.push(CardChoicesRow {
@@ -1845,7 +1876,7 @@ pub fn card_stats_of(totals: &StatsTotals, filter: &CardStatsFilter) -> CardStat
             stats.created_not_played = Tally::default();
             stats.created_played_radiant = Tally::default();
             stats.created_played_normal = Tally::default();
-            stats.created_swing = SwingTally::default();
+            stats.created_swing = Sparse::default();
             cards.push(stats);
         }
     }
@@ -1897,6 +1928,7 @@ pub fn face_drills_of(
         IndexMap<i32, DrillCount>,
         IndexMap<&'a str, (DrillCount, FirstMet)>,
     );
+    let empty = FaceDrills::default();
     let mut merged: IndexMap<&str, Merged> = IndexMap::new();
     for (key, cards) in &totals.cards {
         if !counts(key) {
@@ -1904,7 +1936,7 @@ pub fn face_drills_of(
         }
         for (card, total) in cards {
             let (turns, co) = merged.entry(card.as_str()).or_default();
-            let faced = total.face(face);
+            let faced = total.face(face, &empty);
             for (turn, count) in faced.map_or(&total.turns, |faced| &faced.turns) {
                 turns.entry(*turn).or_default().add(count);
             }
@@ -2151,6 +2183,12 @@ pub fn face_stats_field<'a>(
         })
         .collect();
     let baseline = win_rate(&held).unwrap_or(ADJUSTED_WIN_RATE_CENTER);
+    field_of_lifts(&lifts, baseline, drawn_floor)
+}
+
+/// R3022000: the field of `(lift, noise)` pairs: their random-effects centre and spread, or
+/// `StatsField::PRIOR`'s below `ADJUSTED_FIELD_MIN_CARDS` pairs, with `baseline` and `drawn_floor` as given.
+fn field_of_lifts(lifts: &[(f64, f64)], baseline: f64, drawn_floor: i32) -> StatsField {
     if lifts.len() < ADJUSTED_FIELD_MIN_CARDS {
         return StatsField {
             baseline,
@@ -2158,7 +2196,7 @@ pub fn face_stats_field<'a>(
             ..StatsField::PRIOR
         };
     }
-    let (center, spread_squared) = random_effects(&lifts);
+    let (center, spread_squared) = random_effects(lifts);
     StatsField {
         center,
         spread: spread_squared.sqrt(),
@@ -2241,8 +2279,14 @@ fn face_posterior(stats: &CardStats, face: StatsFace, field: &StatsField) -> Opt
             StatsFace::Normal | StatsFace::Radiant => None,
         };
     }
-    let delta = win_rate(&seen)? - win_rate(&never)?;
-    let noise = delta_noise(&seen, &never);
+    lift_posterior(&seen, &never, field)
+}
+
+/// R2777000: the posterior of a lift read from an even game, `(mean, variance)`: `seen`'s win rate less
+/// `never`'s kept in the share `τ²/(τ² + SE²)` about `field.center`. `None` when either side has no games.
+fn lift_posterior(seen: &Tally, never: &Tally, field: &StatsField) -> Option<(f64, f64)> {
+    let delta = win_rate(seen)? - win_rate(never)?;
+    let noise = delta_noise(seen, never);
     let prior = field.spread * field.spread;
     let weight = prior / (prior + noise);
     Some((
@@ -2301,6 +2345,207 @@ pub fn radiant_gap(normal: (f64, (f64, f64)), radiant: (f64, (f64, f64))) -> (f6
     let half = |(_, (low, high)): (f64, (f64, f64))| (high - low) / 2.0;
     let spread = half(normal).hypot(half(radiant));
     (gap, (gap - spread, gap + spread))
+}
+
+string_union! {
+    /// R4676000: the kinds of choice Extended stats splits a card's variants (R4672000) by, in the order it
+    /// shows them:
+    ///  - `mode`: the options chosen with the play (its Choose One options and its own prompts' answers), each
+    ///    set of options one row, so a "choose two" is one row per pair;
+    ///  - `x`: the X paid, every X from `VARIANT_X_GROUP_FROM` up one row;
+    ///  - `embiggen`: Embiggened or not.
+    pub enum VariantKind {
+        Mode = "mode",
+        X = "x",
+        Embiggen = "embiggen",
+    }
+}
+
+/// R4676000: the key of the row every X from `VARIANT_X_GROUP_FROM` up is counted in.
+pub const VARIANT_X_GROUP_KEY: &str = "top";
+
+/// R4676000: the keys of the Embiggen rows.
+pub const VARIANT_EMBIGGENED_KEY: &str = "embiggened";
+pub const VARIANT_NOT_EMBIGGENED_KEY: &str = "notEmbiggened";
+
+/// R4676000: one row of a card's choices: its kind, its key (the options as recorded, the X paid or
+/// `VARIANT_X_GROUP_KEY`, or an Embiggen key), the words a page shows, and the seats that played the card
+/// with it, by face. A seat that played two variants of one row's kind with the same part (two Choose One
+/// options at the same X, say) counts once in each of its labels, so the row adds both, as R4672003 already
+/// counts a seat in each of its variants.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct VariantRow {
+    pub kind: VariantKind,
+    pub key: String,
+    pub label: String,
+    pub games: FaceTally,
+}
+
+impl VariantRow {
+    /// R4676000: a `mode` row's options as recorded, one or a "choose two"'s pair (its key joins them with
+    /// `VARIANT_MODE_JOIN`, as `PlayVariant::label` does), for a page to name in the card's own words; none
+    /// for the other kinds.
+    pub fn options(&self) -> Vec<String> {
+        match self.kind {
+            VariantKind::Mode => self.key.split(VARIANT_MODE_JOIN).map(str::to_string).collect(),
+            VariantKind::X | VariantKind::Embiggen => Vec::new(),
+        }
+    }
+}
+
+impl FaceTally {
+    /// R4676000: the seats a face reads: both faces on All.
+    pub fn on(&self, face: StatsFace) -> Tally {
+        match face {
+            StatsFace::All => self.both(),
+            StatsFace::Normal => self.normal,
+            StatsFace::Radiant => self.radiant,
+        }
+    }
+}
+
+/// R4676000: a variant label's parts (`PlayVariant::label`), read from its end, `(kind, key, label)`: an
+/// Embiggen word, then `X=<x>`, and what is left is the options.
+fn variant_parts(label: &str) -> Vec<(VariantKind, String, String)> {
+    let mut parts = Vec::new();
+    let mut rest = label;
+    let take = |rest: &mut &str, word: &str| -> bool {
+        let Some(head) = rest.strip_suffix(word) else {
+            return false;
+        };
+        if head.is_empty() || head.ends_with(VARIANT_PART_JOIN) {
+            *rest = head.strip_suffix(VARIANT_PART_JOIN).unwrap_or(head);
+            true
+        } else {
+            false
+        }
+    };
+    if take(&mut rest, VARIANT_NOT_EMBIGGENED) {
+        parts.push((
+            VariantKind::Embiggen,
+            VARIANT_NOT_EMBIGGENED_KEY.to_string(),
+            VARIANT_NOT_EMBIGGENED.to_string(),
+        ));
+    } else if take(&mut rest, VARIANT_EMBIGGENED) {
+        parts.push((
+            VariantKind::Embiggen,
+            VARIANT_EMBIGGENED_KEY.to_string(),
+            VARIANT_EMBIGGENED.to_string(),
+        ));
+    }
+    let (head, last) = match rest.rsplit_once(VARIANT_PART_JOIN) {
+        Some((head, last)) => (head, last),
+        None => ("", rest),
+    };
+    if let Some(x) = last
+        .strip_prefix(VARIANT_X_PREFIX)
+        .and_then(|x| x.parse::<i32>().ok())
+    {
+        parts.push(if x >= VARIANT_X_GROUP_FROM {
+            (
+                VariantKind::X,
+                VARIANT_X_GROUP_KEY.to_string(),
+                format!("X ≥ {VARIANT_X_GROUP_FROM}"),
+            )
+        } else {
+            (VariantKind::X, x.to_string(), format!("X = {x}"))
+        });
+        rest = head;
+    }
+    if !rest.is_empty() {
+        parts.push((VariantKind::Mode, rest.to_string(), rest.to_string()));
+    }
+    parts
+}
+
+/// R4676000: a card's choices as Extended stats lists them: each variant's parts (`variant_parts`) summed by
+/// kind and key, in `VariantKind`'s order, then by X paid, then by key.
+pub fn variant_rows(choices: &CardChoices) -> Vec<VariantRow> {
+    let mut rows: IndexMap<(VariantKind, String), VariantRow> = IndexMap::new();
+    for (label, games) in &choices.variants {
+        for (kind, key, label) in variant_parts(label) {
+            rows.entry((kind, key.clone()))
+                .or_insert_with(|| VariantRow {
+                    kind,
+                    key,
+                    label,
+                    games: FaceTally::default(),
+                })
+                .games
+                .add(games);
+        }
+    }
+    let mut rows: Vec<VariantRow> = rows.into_values().collect();
+    let x_order = |row: &VariantRow| row.key.parse::<i32>().unwrap_or(VARIANT_X_GROUP_FROM);
+    rows.sort_by(|a, b| {
+        a.kind
+            .cmp(&b.kind)
+            .then_with(|| x_order(a).cmp(&x_order(b)))
+            .then_with(|| a.key.cmp(&b.key))
+    });
+    rows
+}
+
+/// R4676000: the field a variant is read against: `stats_field`'s estimate over every row (`variant_rows`)
+/// of every card given, each with its card's baseline (its never-drawn games, or a Created card's made but
+/// never used), the row's games on `face` against it, from the rows with `drawn_floor` games on both sides.
+/// Its centre is what a typical card's play with a choice is worth over the card never drawn, so a variant
+/// at an even game plays as a typical play does. `baseline` is unused here and an even game.
+pub fn variant_field<'a>(
+    cards: impl IntoIterator<Item = (&'a CardChoices, Tally)>,
+    face: StatsFace,
+    drawn_floor: i32,
+) -> StatsField {
+    let drawn_floor = drawn_floor.max(1);
+    let lifts: Vec<(f64, f64)> = cards
+        .into_iter()
+        .filter(|(_, never)| never.games >= drawn_floor)
+        .flat_map(|(choices, never)| {
+            variant_rows(choices).into_iter().filter_map(move |row| {
+                let seen = row.games.on(face);
+                if seen.games < drawn_floor {
+                    return None;
+                }
+                let delta = win_rate(&seen)? - win_rate(&never)?;
+                Some((delta, delta_noise(&seen, &never)))
+            })
+        })
+        .collect();
+    field_of_lifts(&lifts, ADJUSTED_WIN_RATE_CENTER, drawn_floor)
+}
+
+/// R4676000: one variant's figures on a face, as Extended stats shows them.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct VariantFigures {
+    pub games: i32,
+    /// R2777000, R2895000: the adjusted win rate and its 95% range, `(rate, (low, high))`.
+    pub adjusted: Option<(f64, (f64, f64))>,
+    /// R3022000: null below the floor, as the rate is shown.
+    pub tier: Option<CardTier>,
+    pub has_enough_games: bool,
+}
+
+/// R4676000: a variant's figures: `seen` (its games on `face`) against `never` (its card's baseline), read
+/// as R2777000 reads a card against `field` (`variant_field` of the same face), its tier in the face's band
+/// (`StatsFace::band`). It has no rate when its card has fewer than `field.drawn_floor` baseline games, and
+/// no tier below `field.drawn_floor` games of its own (R654).
+pub fn variant_figures(seen: &Tally, never: &Tally, face: StatsFace, field: &StatsField) -> VariantFigures {
+    let has_enough_games = seen.games >= field.drawn_floor.max(1);
+    let adjusted = (never.games >= field.drawn_floor.max(1))
+        .then(|| lift_posterior(seen, never, field))
+        .flatten()
+        .map(|(mean, variance)| {
+            let half = STATS_INTERVAL_Z * variance.sqrt();
+            (mean, (mean - half, mean + half))
+        });
+    VariantFigures {
+        games: seen.games,
+        adjusted,
+        tier: adjusted
+            .filter(|_| has_enough_games)
+            .map(|(rate, (low, high))| tier_in(rate, low, high, face.band())),
+        has_enough_games,
+    }
 }
 
 string_union! {
@@ -3589,9 +3834,9 @@ mod tests {
                 created_not_played: tally(0, 0, 0),
                 created_played_radiant: tally(0, 0, 0),
                 created_played_normal: tally(0, 0, 0),
-                swing: SwingTally::default(),
-                created_swing: SwingTally::default(),
-                choices: CardChoices::default(),
+                swing: Sparse::default(),
+                created_swing: Sparse::default(),
+                choices: Sparse::default(),
             };
             assert_eq!(win_rate(&stats.played), Some(0.75));
             assert_eq!(win_rate(&stats.drawn_not_played), Some(0.4));
@@ -3626,9 +3871,9 @@ mod tests {
                 created_not_played: tally(0, 0, 0),
                 created_played_radiant: tally(0, 0, 0),
                 created_played_normal: tally(0, 0, 0),
-                swing: SwingTally::default(),
-                created_swing: SwingTally::default(),
-                choices: CardChoices::default(),
+                swing: Sparse::default(),
+                created_swing: Sparse::default(),
+                choices: Sparse::default(),
             };
             assert_eq!(not_drawn(&stats), tally(8, 2, 1));
             let delta = drawn_delta(&stats).unwrap();
@@ -3668,9 +3913,9 @@ mod tests {
                 created_not_played: tally(0, 0, 0),
                 created_played_radiant: tally(0, 0, 0),
                 created_played_normal: tally(0, 0, 0),
-                swing: SwingTally::default(),
-                created_swing: SwingTally::default(),
-                choices: CardChoices::default(),
+                swing: Sparse::default(),
+                created_swing: Sparse::default(),
+                choices: Sparse::default(),
             }
         }
 
@@ -5820,7 +6065,7 @@ mod tests {
             assert_eq!(
                 older,
                 CardStats {
-                    choices: CardChoices::default(),
+                    choices: Sparse::default(),
                     ..stats
                 }
             );
@@ -6121,9 +6366,9 @@ mod tests {
                 created_not_played: tally(0, 0, 0),
                 created_played_radiant: tally(0, 0, 0),
                 created_played_normal: tally(0, 0, 0),
-                swing: SwingTally::default(),
-                created_swing: SwingTally::default(),
-                choices: CardChoices::default(),
+                swing: Sparse::default(),
+                created_swing: Sparse::default(),
+                choices: Sparse::default(),
             }
         }
 
@@ -6459,16 +6704,19 @@ mod tests {
             // R1147000's tallies and the face drills count the same seats.
             assert_eq!(a.stats.played_radiant, tally(2, 1, 0));
             assert_eq!(a.stats.played_normal, tally(2, 1, 0));
-            assert_eq!(a.radiant.turns, IndexMap::from([(2, game(2, 1))]));
-            assert_eq!(a.normal.turns, IndexMap::from([(2, game(2, 1))]));
+            assert_eq!(a.radiant.get().unwrap().turns, IndexMap::from([(2, game(2, 1))]));
+            assert_eq!(a.normal.get().unwrap().turns, IndexMap::from([(2, game(2, 1))]));
             assert_eq!(
-                a.radiant.co,
+                a.radiant.get().unwrap().co,
                 IndexMap::from([("b".to_string(), game(2, 1)), ("c".to_string(), game(2, 1))])
             );
             // All counts every seat that held it, the flagless one among them.
             assert_eq!(a.turns, IndexMap::from([(2, game(5, 3))]));
             assert_eq!(a.co["b"].games, 6);
-            assert_eq!(a.face(StatsFace::All), None);
+            assert_eq!(a.face(StatsFace::All, &FaceDrills::default()), None);
+            // An empty face is that face's, empty, never All's.
+            let empty = FaceDrills::default();
+            assert_eq!(CardTotal::new("a").face(StatsFace::Radiant, &empty), Some(&empty));
 
             // The drill-down reads each face's drills, its co-played ties in the order first met.
             let drills = |face| face_drills_of(&totals, |_: &TotalsKey| true, 10, face);
@@ -6488,8 +6736,8 @@ mod tests {
             let mut old = totals.clone();
             for cards in old.cards.values_mut() {
                 for total in cards.values_mut() {
-                    total.radiant = FaceDrills::default();
-                    total.normal = FaceDrills::default();
+                    total.radiant = Sparse::default();
+                    total.normal = Sparse::default();
                 }
             }
             let empty = &face_drills_of(&old, |_: &TotalsKey| true, 10, StatsFace::Radiant)["a"];
@@ -6511,6 +6759,171 @@ mod tests {
             let written = &totals.cards.values().next().unwrap()["a"];
             let back: CardTotal = serde_json::from_value(serde_json::to_value(written).unwrap()).unwrap();
             assert_eq!(&back, written);
+        }
+    }
+
+    // R4676000: each choice a card offers read against a field of every card's variants.
+    mod r4676000_variants {
+        use super::*;
+
+        fn close(a: f64, b: f64) -> bool {
+            (a - b).abs() < 1e-9
+        }
+
+        fn won(games: i32, rate: f64) -> Tally {
+            tally(games, (f64::from(games) * rate).round() as i32, 0)
+        }
+
+        /// A card's choices, each `(label, radiant tally, normal tally)`.
+        fn choices(rows: &[(&str, Tally, Tally)]) -> CardChoices {
+            CardChoices {
+                variants: rows
+                    .iter()
+                    .map(|(label, radiant, normal)| {
+                        (
+                            label.to_string(),
+                            FaceTally {
+                                radiant: *radiant,
+                                normal: *normal,
+                            },
+                        )
+                    })
+                    .collect(),
+                ..CardChoices::default()
+            }
+        }
+
+        #[test]
+        fn r4676000_rows_split_a_label_by_kind_and_group_the_top_x() {
+            let a = won(10, 0.5);
+            let none = Tally::default();
+            let card = choices(&[
+                ("deal + heal, X=1, Embiggened", a, none),
+                ("deal + heal, X=2, Not Embiggened", a, none),
+                ("gain, X=7", a, a),
+                ("gain, X=5", a, none),
+                ("X=3", none, a),
+            ]);
+            let rows = variant_rows(&card);
+            let keys: Vec<(VariantKind, &str, &str)> = rows
+                .iter()
+                .map(|row| (row.kind, row.key.as_str(), row.label.as_str()))
+                .collect();
+            assert_eq!(
+                keys,
+                [
+                    (VariantKind::Mode, "deal + heal", "deal + heal"),
+                    (VariantKind::Mode, "gain", "gain"),
+                    (VariantKind::X, "1", "X = 1"),
+                    (VariantKind::X, "2", "X = 2"),
+                    (VariantKind::X, "3", "X = 3"),
+                    (VariantKind::X, VARIANT_X_GROUP_KEY, "X ≥ 5"),
+                    (VariantKind::Embiggen, VARIANT_EMBIGGENED_KEY, VARIANT_EMBIGGENED),
+                    (
+                        VariantKind::Embiggen,
+                        VARIANT_NOT_EMBIGGENED_KEY,
+                        VARIANT_NOT_EMBIGGENED
+                    ),
+                ]
+            );
+            // X=5 and X=7 are one row: their seats added, by face.
+            let top = &rows[5];
+            assert_eq!(top.games.radiant.games, 20);
+            assert_eq!(top.games.normal.games, 10);
+            assert_eq!(top.games.on(StatsFace::All).games, 30);
+            // The options' row adds every label that holds them, and names each option apart.
+            assert_eq!(rows[0].games.on(StatsFace::All).games, 20);
+            assert_eq!(rows[0].options(), ["deal", "heal"]);
+            assert_eq!(rows[1].options(), ["gain"]);
+            assert!(rows[2].options().is_empty());
+            assert!(rows[6].options().is_empty());
+            // A label is what `PlayVariant::label` writes.
+            let label = PlayVariant {
+                modes: vec!["deal".to_string(), "heal".to_string()],
+                x: Some(1),
+                embiggened: Some(true),
+            }
+            .label();
+            assert_eq!(label, "deal + heal, X=1, Embiggened");
+        }
+
+        #[test]
+        fn r4676000_a_variant_that_wins_more_than_its_sibling_reads_above_it() {
+            let never = won(400, 0.45);
+            let card = choices(&[
+                ("bounce all units", won(200, 0.60), Tally::default()),
+                ("destroy all enemy units", won(200, 0.50), Tally::default()),
+            ]);
+            let field = variant_field([(&card, never)], StatsFace::All, 20);
+            // Too few rows for a field of its own: the prior's centre and spread.
+            assert_eq!(field.cards, 0);
+            let rows = variant_rows(&card);
+            let read = |at: usize| {
+                variant_figures(&rows[at].games.on(StatsFace::All), &never, StatsFace::All, &field)
+            };
+            let (better, worse) = (read(0), read(1));
+            assert!(better.has_enough_games && worse.has_enough_games);
+            assert!(better.adjusted.unwrap().0 > worse.adjusted.unwrap().0);
+            assert!(
+                better.tier.unwrap() <= worse.tier.unwrap(),
+                "{better:?} {worse:?}"
+            );
+        }
+
+        #[test]
+        fn r4676000_the_field_is_read_over_every_cards_variants() {
+            // Forty cards, each two options 4 and 8 points over its never-drawn games: the field's centre is the
+            // typical play's 6 points, so a variant at 6 points reads an even game.
+            let never = won(1000, 0.50);
+            let cards: Vec<CardChoices> = (0..40)
+                .map(|_| {
+                    choices(&[
+                        ("a", won(1000, 0.54), Tally::default()),
+                        ("b", won(1000, 0.58), Tally::default()),
+                    ])
+                })
+                .collect();
+            let field = variant_field(cards.iter().map(|card| (card, never)), StatsFace::All, 20);
+            assert_eq!(field.cards, 80);
+            assert!(close(field.center, 0.06), "{}", field.center);
+            let typical = variant_figures(&won(1000, 0.56), &never, StatsFace::All, &field);
+            assert!(close(typical.adjusted.unwrap().0, ADJUSTED_WIN_RATE_CENTER));
+            // A card with too few never-drawn games gives the field nothing.
+            let short = variant_field(cards.iter().map(|card| (card, won(19, 0.5))), StatsFace::All, 20);
+            assert_eq!(short.cards, 0);
+        }
+
+        #[test]
+        fn r4676000_a_variant_below_the_floor_reads_none_and_faces_split_them() {
+            let never = won(400, 0.5);
+            let card = choices(&[("a", won(30, 0.6), won(10, 0.4))]);
+            let field = variant_field([(&card, never)], StatsFace::All, 20);
+            let row = &variant_rows(&card)[0];
+            // All reads both faces' 40 seats; Normal its 10, below the floor: no tier.
+            let all = variant_figures(&row.games.on(StatsFace::All), &never, StatsFace::All, &field);
+            assert_eq!(all.games, 40);
+            assert!(all.has_enough_games && all.tier.is_some());
+            let normal = variant_figures(
+                &row.games.on(StatsFace::Normal),
+                &never,
+                StatsFace::Normal,
+                &field,
+            );
+            assert_eq!(normal.games, 10);
+            assert!(!normal.has_enough_games);
+            assert_eq!(normal.tier, None);
+            let radiant = variant_figures(
+                &row.games.on(StatsFace::Radiant),
+                &never,
+                StatsFace::Radiant,
+                &field,
+            );
+            assert_eq!(radiant.games, 30);
+            assert!(radiant.adjusted.unwrap().0 > normal.adjusted.unwrap().0);
+            // A card with too few never-drawn games reads no rate at all.
+            let short = variant_figures(&won(30, 0.6), &won(19, 0.5), StatsFace::All, &field);
+            assert_eq!(short.adjusted, None);
+            assert_eq!(short.tier, None);
         }
     }
 

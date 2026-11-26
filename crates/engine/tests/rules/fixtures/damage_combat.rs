@@ -3,7 +3,10 @@
 //! engine never imports the cards crate. Ids are `dc-…`, indexed from 4700, so they collide with no other
 //! test file. The action nonce is a per-thread counter (each test runs on its own thread).
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

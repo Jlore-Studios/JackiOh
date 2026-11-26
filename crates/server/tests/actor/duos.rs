@@ -1006,6 +1006,64 @@ mod b35_the_socket {
             assert!(view.is_none(), "{:?}", client.frames());
         }
     }
+
+    #[tokio::test(start_paused = true)]
+    async fn b35_an_uppercase_hello_match_id_attaches_to_the_running_actor() {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let upper = h.match_id.to_ascii_uppercase();
+        assert_ne!(upper, h.match_id, "no hex letters to uppercase");
+        let from = a1.received();
+        let guest = h.served.connect(DUOS_PATH, &h.guest.token).await;
+        guest.send_json(hello(&upper)).await;
+        let (_, _, view) = guest
+            .wait_for(0, PROMPTLY, |frame| frame["type"] == "view")
+            .await
+            .expect("the guest's view on the running actor");
+        assert_eq!(view["view"]["seat"], "a2", "{view}");
+        a1.wait_for(from, PROMPTLY, |frame| {
+            frame["type"] == "teammate" && frame["connected"] == true && frame["aiPlaying"] == false
+        })
+        .await
+        .unwrap_or_else(|| {
+            panic!(
+                "the host was never told its teammate connected: {:?}",
+                a1.frames()
+            )
+        });
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn b35_an_uppercase_match_id_query_param_attaches_to_the_running_actor() {
+        let h = duos("easy").await;
+        let a1 = h.seat(&h.host).await;
+        let upper = h.match_id.to_ascii_uppercase();
+        assert_ne!(upper, h.match_id, "no hex letters to uppercase");
+        let from = a1.received();
+        let (guest, _) = h
+            .served
+            .connect_offering(
+                &format!("{DUOS_PATH}?matchId={}", encode_query(&upper)),
+                &[WS_SUBPROTOCOL, &bearer_protocol(&h.guest.token)],
+            )
+            .await;
+        guest.send_json(json!({ "type": "hello" })).await;
+        let (_, _, view) = guest
+            .wait_for(0, PROMPTLY, |frame| frame["type"] == "view")
+            .await
+            .expect("the guest's view on the running actor");
+        assert_eq!(view["view"]["seat"], "a2", "{view}");
+        a1.wait_for(from, PROMPTLY, |frame| {
+            frame["type"] == "teammate" && frame["connected"] == true && frame["aiPlaying"] == false
+        })
+        .await
+        .unwrap_or_else(|| {
+            panic!(
+                "the host was never told its teammate connected: {:?}",
+                a1.frames()
+            )
+        });
+    }
 }
 
 // B36 — the AI seats act

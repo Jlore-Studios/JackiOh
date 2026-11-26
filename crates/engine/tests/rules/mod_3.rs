@@ -3,8 +3,10 @@
 //! Both take `fixtures`, so a module reaches it as `crate::rules::fixtures` in either.
 //! (`mod_2.rs` says why the rules tests are three binaries.)
 
-// A fixture only another binary's modules use is dead code in this one.
-#[allow(dead_code)]
+#[expect(
+    dead_code,
+    reason = "a fixture only another binary's modules use is dead code in this one"
+)]
 pub mod fixtures;
 pub mod sandbox;
 pub mod scorer;

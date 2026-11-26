@@ -148,6 +148,7 @@ on this list during Waves 1–3.
 | tower | 0.5.3 | util | server (tests: `oneshot`) |
 | tower-http | 0.7.1 | cors, trace | server |
 | sqlx | 0.9.0 | runtime-tokio, tls-rustls, postgres, json, time, uuid | server |
+| futures-util | 0.3.34 | — (default-features = false) | server (the statistics' totals read as a stream, `db::pg::stats_totals_load`; already in the lock through sqlx) |
 | jsonwebtoken | 11.1.0 | — | server |
 | reqwest | 0.13.5 | json, rustls-tls (default-features = false) | server (JWKS, Supabase Auth `/user` and admin calls) |
 | hmac | 0.13.0 | — | server |
@@ -1381,3 +1382,4 @@ Holes the Wave 2 reconcilers found, each settled once and applied to the code (`
  - **§6.3, Stinkyscape+ S25 (issue #3571, R3571000, R3571001):** `LineRules` gains `pierce: bool` (Lancer, Vela and Corvus set it, KY's Line Search Bot does not); `MarketPool` gains `OpenIds` (the ids named whose set is open, R1420), the AI lot's pool, now 17 ids (`MARKETPLACE_AI_CARDS`); nothing reaches the client.
 - **§6.1 / §10.8, the switch's refusal on the unit view (issue #3821, R3821000):** `UnitView` carries `switchReason` (`combat::why_cannot_switch_in` to `position_after_switch`, spending exertion), gated by `view_for::turn_open_to`. `golden::view_texts` strips it, so no golden hash moves. jackioh-shared's `LiveCard`, `InPlay` and `FaceModel` carry it, `InPlay` dropping it where it repeats `attackReason`.
 - **§4.5 / §6.1 / §6.2, a death into exile (issue #4207, R4207000):** `RebornEntry` gains `exiled: Option<bool>`, set when the body died into its exile pile, which §4.5 step 4 then returns it from; absent otherwise, so old games hash the same. Nothing reaches the client.
+- **§8.5 #98, End Times' bank (issue #4828, R4828000):** `Tuning` gains `taken: Option<IndexMap<String, i32>>`, the cuts End Times' End of Turn made since its last use, by the declared number's key: kept and copied with the rest of the tuning, and taken by a Fuse with the `set` it records (`tuning::taken_of`, `set_taken`); `memory.endTimesTaken` is the kept v0.6.14 script's. Absent until set, so old games hash the same; the web's generated `Tuning.ts` carries it.

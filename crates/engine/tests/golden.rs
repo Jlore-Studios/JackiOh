@@ -158,7 +158,10 @@ mod the_recorded_hotseat_game_replays_in_vitest_build_m5_t3 {
     }
 
     #[test]
-    #[allow(clippy::disallowed_methods)] // reads Cypress's local recording when there is one, as TS's test did; never the rules.
+    #[expect(
+        clippy::disallowed_methods,
+        reason = "reads Cypress's local recording when there is one, as TS's test did"
+    )]
     fn matches_the_last_browser_recording_when_a_local_cypress_run_has_left_one() {
         let recorded = match std::fs::read_to_string(RECORDED) {
             Ok(text) => text,

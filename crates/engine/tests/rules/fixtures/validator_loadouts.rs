@@ -31,8 +31,7 @@ pub const CEASELESS_VOID: &str = "core-100";
 pub const NOT_IN_CATALOG: &str = "core-999";
 
 const DECK_LEN: usize = DECK_SIZE as usize;
-#[allow(clippy::unnecessary_cast)]
-const LOADOUT_LEN: usize = LOADOUT_DECKS as usize;
+const LOADOUT_LEN: usize = LOADOUT_DECKS;
 
 /// Spares beyond the three decks: a whole deck's worth, so a fourth deck can be a legal one.
 const SPARE_COUNT: usize = DECK_LEN;

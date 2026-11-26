@@ -615,7 +615,8 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     let hidden = hidden_instance_ids(state, seat);
     let mut next = state.clone();
 
-    // Step 1: the seed, the cursor and the nonce log (which carries unredacted events).
+    // Step 1: the seed, the cursor and the nonce log (which carries unredacted events); the id counter is
+    // step 8's.
     next.seed = "redacted".to_string();
     next.rng_cursor = 0;
     next.applied = Vec::new();
@@ -959,7 +960,63 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         }
     }
 
+    // Step 8, R4824000: the id counter, numbered from what the redaction still names, so no id minted
+    // where the seat cannot see moves it. Set last, on the redaction as it leaves, so a second pass keeps it.
+    next.next_id = first_unnamed_id(&next);
+
     next
+}
+
+/// R4824000: the prefixes of the ids `GameState.next_id` numbers that a state may name anywhere: instances
+/// (`c`), prompts (`q`) and secret choices (`secret-`). An Echo's waiting repeat is numbered from it too, as
+/// `e<n>`, and read on its queue alone, since `dispatch` numbers its own `e<n>` from `next_seq`.
+const MINTED_ID_PREFIXES: [&str; 3] = ["c", "q", "secret-"];
+const ECHO_ID_PREFIX: &str = "e";
+
+/// R4824000: the number `text` carries after `prefix` when it is all digits after it (`q17` → 17).
+fn number_after(text: &str, prefix: &str) -> Option<u32> {
+    let digits = text.strip_prefix(prefix)?;
+    if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    digits.parse::<u32>().ok()
+}
+
+/// R4824000, R185: one past the highest number of an id `state` names (in a string or a key anywhere in
+/// it, an Echo's on its queue), so an id a simulation mints from it is one nothing in it names. A state
+/// that does not serialize keeps its counter (none does: §10.1 keeps a state JSON-only).
+fn first_unnamed_id(state: &GameState) -> u32 {
+    fn note(text: &str, high: &mut u32) {
+        for prefix in MINTED_ID_PREFIXES {
+            if let Some(number) = number_after(text, prefix) {
+                *high = (*high).max(number);
+            }
+        }
+    }
+    fn walk(value: &Value, high: &mut u32) {
+        match value {
+            Value::String(text) => note(text, high),
+            Value::Array(items) => items.iter().for_each(|item| walk(item, high)),
+            Value::Object(fields) => {
+                for (key, item) in fields {
+                    note(key, high);
+                    walk(item, high);
+                }
+            }
+            _ => {}
+        }
+    }
+    let Ok(value) = serde_json::to_value(state) else {
+        return state.next_id;
+    };
+    let mut high = 0;
+    walk(&value, &mut high);
+    for item in &state.echo_queue {
+        if let Some(number) = number_after(&item.id, ECHO_ID_PREFIX) {
+            high = high.max(number);
+        }
+    }
+    high + 1
 }
 
 /// R188: the opponent offered a draw this turn and nobody has answered it yet.

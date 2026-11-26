@@ -477,7 +477,8 @@ fn unreadable_game_record_detail(id: &str) -> Value {
 /// tables (R254) are written by nothing but are emptied all the same, so a test that wrote one by hand
 /// leaves nothing behind.
 pub const TRUNCATE: &str = "truncate
-  public.game_records, public.record_totals, public.card_totals, public.decklist_totals, public.game_totals,
+  public.game_records, public.game_record_batches, public.record_totals, public.card_totals,
+  public.decklist_totals, public.game_totals,
   public.practice_claim_counts, public.daily_email_days,
   public.tutorial_progress, public.player_settings,
   public.rated_games, public.bot_ratings, public.season_ranks, public.seasons,
@@ -5558,11 +5559,12 @@ mod game_records {
             }
         }
         let game = |games: i64, wins: i64| DrillCount { games, wins };
-        assert_eq!(card.radiant.turns.get(&2), Some(&game(2, 2)));
-        assert_eq!(card.normal.turns.get(&3), Some(&game(1, 0)));
-        assert_eq!(card.radiant.co.get("core-003"), Some(&game(2, 2)));
-        assert_eq!(card.normal.co.get("core-002"), Some(&game(1, 0)));
-        assert!(card.turns[&3].games > card.normal.turns[&3].games);
+        let (radiant, normal) = (card.radiant.get().unwrap(), card.normal.get().unwrap());
+        assert_eq!(radiant.turns.get(&2), Some(&game(2, 2)));
+        assert_eq!(normal.turns.get(&3), Some(&game(1, 0)));
+        assert_eq!(radiant.co.get("core-003"), Some(&game(2, 2)));
+        assert_eq!(normal.co.get("core-002"), Some(&game(1, 0)));
+        assert!(card.turns[&3].games > normal.turns[&3].games);
         // Without drills, no face's either.
         let lean =
             q!(harness, t => t.stats_totals_load(&StatsTotalsQuery { drills: false, ..every_total() }));

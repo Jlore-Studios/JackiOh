@@ -92,7 +92,7 @@ the human's opening draw, one draw a turn), with:
 | --- | --- |
 | `ASSAULT_LEVELS` | 20 |
 | `ASSAULT_COMMANDER_LEVELS` | 5, 10, 15, 20, the ranks I to IV |
-| `ASSAULT_HERO_HEALTH` | 20 + the level at a normal level (21 to 39); 30 + twice the level at a Commander (40, 50, 60, 70) |
+| `ASSAULT_HERO_HEALTH` | 20 + the level at a normal level (21 to 39); 30 + five times the level at a Commander (55, 80, 105, 130) |
 | `ASSAULT_FEWER_OPENING` | 1 card fewer in the opening draw on levels 1 to 3 (`fewer_opening_cards`, R3582000) |
 | `ASSAULT_DECK_SIZE` | 25 (`DECK_SIZE`), before Bigger Dataset |
 | `ASSAULT_START_SLOTS` | level 1's deck: 19 Common and 6 Rare slots |

@@ -218,7 +218,10 @@ pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
 /// What a new position means for the walk: a proved lethal, a position to search on from, a lethal the
 /// slice cannot pay to prove (`Unpaid`), or neither. `None` when the counter ran out while proving a win
 /// on the other determinizations.
-#[allow(clippy::too_many_arguments)]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the walk's position and its counters, each borrowed apart"
+)]
 fn judge(
     dets: &[GameState],
     seat: PlayerId,

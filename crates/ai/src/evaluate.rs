@@ -48,19 +48,19 @@ use jackioh_engine::{
     gauntlet_acts, has_keyword, heal_multiplier_of, hero_armor_of, hero_burn_of, hero_toxic_of, is_asleep,
     is_dormant_starship, is_extra_turn_card, is_giga, is_sick, is_slumbering, is_standing_unit,
     is_starship_piece, is_temporary_card, is_tradable, left_field_after, legal_actions, lost_refreshes_left,
-    modifier_is_live, outcome_for, owed_mana_of, own_cost, pays_credits_like_a_resource, pierces, pile_at,
-    plague_on, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of, settle, slots_of,
-    stats_with_buffs, stolen_mana_crystals_of, subsystems, sync_fused_scripts, takes_strike_back, toxic_on,
-    trigger_holders_with_hook, unit_damage_cap, unit_has, unit_view, units_on_field_of, why_sandbox_refused,
-    with_pool_hold, yard_at_turn_start,
+    modifier_is_live, new_instance, outcome_for, owed_mana_of, own_cost, pays_credits_like_a_resource,
+    pierces, pile_at, plague_on, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of,
+    settle, slots_of, stats_with_buffs, stolen_mana_crystals_of, subsystems, sync_fused_scripts,
+    takes_strike_back, toxic_on, trigger_holders_with_hook, unit_damage_cap, unit_has, unit_view,
+    units_on_field_of, why_sandbox_refused, with_pool_hold, yard_at_turn_start,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::candidates::{Side, action_key, blow, cleaved_neighbours_with, side_of};
 use crate::config::{
     AI_ACTIVATION_PROBE_NODES, AI_AFFLICTION_TICKS, AI_ATTACK_HOOK_PROBE_NODES, AI_AWAKEN_PROBE_NODES,
-    AI_DEATH_PROBE_NODES, AI_EVAL, AI_EVOLVE_PROBE_NODES, AI_HAND_ACTIVATION_PROBE_NODES, AI_PLAGUE_BOMBS,
-    AI_PROMPT_ACTIVATION_PROBE_NODES, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
+    AI_DEATH_PROBE_NODES, AI_EVAL, AI_EVOLVE_PROBE_NODES, AI_FENG_SHUI_ROCK, AI_HAND_ACTIVATION_PROBE_NODES,
+    AI_PLAGUE_BOMBS, AI_PROMPT_ACTIVATION_PROBE_NODES, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
 };
 use crate::reply::{Known, hidden_card_ids, visible_activation};
 use crate::simulate::{create_sub_counter, note_sim_panic, simulate};
@@ -1082,16 +1082,21 @@ pub(crate) fn feng_shui_verdict(
 /// the card would gain in hand as Radiant (`hand_card_value`, R983), a punishment its hits' cost on
 /// `hero_value`'s curve, never below 1 life (R985), and a neutral verdict nothing. The best alone, since
 /// the seat chooses which card it plays first and only that one is judged by this element, so a hand of
-/// rewarded cards is no reason to hold them back. The seat's own hand only: the enemy's is hidden.
+/// rewarded cards is no reason to hold them back. The seat's own hand only: the enemy's is hidden. While a
+/// Feng Shui of the seat's own acts, the Auspicious Rock its next turn's Activate adds (`coming_rock`,
+/// R4783041) is one more card it may play first, so a hand the element punishes costs nothing while that Rock
+/// is not punished, and the Rock's own reward counts.
 fn feng_shui_outlook(state: &GameState, seat: PlayerId, w: &EvalWeights) -> f64 {
     if !feng_shui_acts(state) {
         return 0.0;
     }
     let life = effective_life(state, seat);
     let start = starting_life(state, seat);
+    let rock = coming_rock(state, seat);
     state.players[seat]
         .hand
         .iter()
+        .chain(rock.as_ref())
         .filter(|card| {
             find_def(Some(state), &card.def_id).is_some() && subsystems::feng_shui::judged(state, card)
         })
@@ -1109,6 +1114,28 @@ fn feng_shui_outlook(state: &GameState, seat: PlayerId, w: &EvalWeights) -> f64 
         })
         .reduce(f64::max)
         .unwrap_or(0.0)
+}
+
+/// R4783041: the id of the Rock `coming_rock` makes, which no card of a game takes (theirs are `c<n>`).
+const COMING_ROCK_ID: &str = "ai-coming-rock";
+
+/// R4783041: the Auspicious Rock (`AI_FENG_SHUI_ROCK`) the Activate of a Feng Shui of `seat`'s own adds to
+/// its hand at its next turn (once a turn, free, R384), Radiant when one of its Feng Shuis runs its Radiant
+/// face, as a hand card no state holds; `None` while none of its own acts (a face-down one's text sleeps) or
+/// the catalog has no Rock. A Feng Shui leaving the field before then is not modelled, as R3951100 has it.
+fn coming_rock(state: &GameState, seat: PlayerId) -> Option<CardInstance> {
+    if !acting_with_flag(state, seat, |flags| flags.feng_shui) {
+        return None;
+    }
+    find_def(Some(state), AI_FENG_SHUI_ROCK)?;
+    let mut rock = new_instance(&mut 0u32, AI_FENG_SHUI_ROCK, seat, Zone::Hand { player: seat });
+    rock.id = COMING_ROCK_ID.to_string();
+    rock.radiant = state.players[seat]
+        .backrow
+        .iter()
+        .flatten()
+        .any(|card| card.radiant && flags_of(state, card).feng_shui == Some(true));
+    Some(rock)
 }
 
 /// R962: the steps a Jade Counter at `jade` has climbed toward the next threshold it has not crossed.
@@ -3284,28 +3311,57 @@ pub fn prompt_activation_prices(
     priced
 }
 
-/// R2688000: `turn` with `unit` as its hookless twin, and the keywords it prints: the twin is Vanilla
-/// (§6.3), so `script_of` runs none of its text and neither of its attack hooks fires (nor its wake
-/// trigger, R3064000), and it is
-/// granted the keywords it prints, as tuning leaves them (`face_of`), so it fights as itself.
-fn hookless_twin(turn: &GameState, unit: &CardInstance) -> (GameState, Vec<Keyword>) {
-    let printed = face_of(turn, unit).keywords;
-    let mut twin = turn.clone();
-    if let Some(card) = find_instance_mut(&mut twin, &unit.id) {
-        card.granted_keywords.extend(printed.iter().cloned());
-        card.vanilla = true;
+/// R4811000: the keywords `held` lists that `kept` does not, one for each entry `kept` lacks (two Armor
+/// entries are two, as §6.1 sums them): what a Vanilla copy of a unit loses of the keywords it holds.
+fn keywords_lost(held: &[Keyword], kept: &[Keyword]) -> Vec<Keyword> {
+    let mut left = kept.to_vec();
+    let mut lost = Vec::new();
+    for keyword in held {
+        match left.iter().position(|other| other == keyword) {
+            Some(at) => {
+                left.remove(at);
+            }
+            None => lost.push(keyword.clone()),
+        }
     }
-    (twin, printed)
+    lost
 }
 
-/// R2688000: `after`, the hookless twin's attack, with the unit's text given back before it is scored:
-/// Vanilla off and the printed keywords it was granted taken off again, one of each, so its Brittle,
-/// its lent keywords, its auras and its set stats read on both sides of the price as they do on the
-/// unit's own. A twin the attack took off the field has nothing to give back.
-fn with_text_back(mut after: GameState, unit_id: &str, printed: &[Keyword]) -> GameState {
-    if let Some(card) = find_instance_mut(&mut after, unit_id) {
-        card.vanilla = false;
-        for keyword in printed {
+/// R2688000, R4811000: `turn` with `unit` as its hookless twin, and the keywords the twin was granted:
+/// the twin is Vanilla (§6.3), so `script_of` runs none of its text and neither of its attack hooks
+/// fires (nor its wake trigger, R3064000), and it is granted the keywords it prints, as tuning leaves
+/// them (`face_of`), then every keyword the unit holds (`unit_view`) that this Vanilla copy does not
+/// (`keywords_lost`), a "your Units have X" lend among them, which no Vanilla card takes (R1859007), so
+/// it fights as itself. A unit already Vanilla runs no text: it is its own twin, granted nothing.
+fn hookless_twin(turn: &GameState, unit: &CardInstance) -> (GameState, Vec<Keyword>) {
+    let mut twin = turn.clone();
+    if unit.vanilla {
+        return (twin, Vec::new());
+    }
+    let mut granted = face_of(turn, unit).keywords;
+    if let Some(card) = find_instance_mut(&mut twin, &unit.id) {
+        card.granted_keywords.extend(granted.iter().cloned());
+        card.vanilla = true;
+    }
+    let lost = find_instance(&twin, &unit.id)
+        .map(|card| keywords_lost(&unit_view(turn, unit).keywords, &unit_view(&twin, card).keywords))
+        .unwrap_or_default();
+    if let Some(card) = find_instance_mut(&mut twin, &unit.id) {
+        card.granted_keywords.extend(lost.iter().cloned());
+    }
+    granted.extend(lost);
+    (twin, granted)
+}
+
+/// R2688000, R4811000: `after`, the hookless twin's attack, with the unit's text given back before it
+/// is scored: Vanilla as the unit was (off, unless it was Vanilla already), and the keywords the twin
+/// was granted (`hookless_twin`) taken off again, one of each, so its Brittle, its lent keywords, its
+/// auras and its set stats read on both sides of the price as they do on the unit's own. A twin the
+/// attack took off the field has nothing to give back.
+fn with_text_back(mut after: GameState, unit: &CardInstance, granted: &[Keyword]) -> GameState {
+    if let Some(card) = find_instance_mut(&mut after, &unit.id) {
+        card.vanilla = unit.vanilla;
+        for keyword in granted {
             if let Some(at) = card
                 .granted_keywords
                 .iter()
@@ -3352,14 +3408,14 @@ fn attack_hook_probe(
     if !settled(&hooked) {
         return Some(None);
     }
-    let (twin, printed) = hookless_twin(turn, unit);
+    let (twin, granted) = hookless_twin(turn, unit);
     let Ok(plain) = simulate(&twin, owner, attack, counter, Prices::NONE)? else {
         return Some(None);
     };
     if !settled(&plain) {
         return Some(None);
     }
-    let plain = with_text_back(plain, &unit.id, &printed);
+    let plain = with_text_back(plain, unit, &granted);
     let gained = hooked.players[owner].mana.current - plain.players[owner].mana.current;
     Some(Some(
         evaluate(&hooked, owner, NextSwing::Enemy, &AI_EVAL)
@@ -3465,11 +3521,11 @@ fn awaken_probe(before: &GameState, unit: &CardInstance, counter: &dyn NodeCount
     let Some(hooked) = wake_once(before, &unit.id, counter)? else {
         return Some(None);
     };
-    let (twin, printed) = hookless_twin(before, unit);
+    let (twin, granted) = hookless_twin(before, unit);
     let Some(plain) = wake_once(&twin, &unit.id, counter)? else {
         return Some(None);
     };
-    let plain = with_text_back(plain, &unit.id, &printed);
+    let plain = with_text_back(plain, unit, &granted);
     let gained = hooked.players[owner].mana.current - plain.players[owner].mana.current;
     Some(Some(
         evaluate(&hooked, owner, NextSwing::Enemy, &AI_EVAL)

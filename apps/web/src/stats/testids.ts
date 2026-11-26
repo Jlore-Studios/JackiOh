@@ -119,6 +119,15 @@ export const statsTestid = {
   drillDownFaceRadiant: "stats-drill-down-face-radiant",
   drillDownFaceGap: "stats-drill-down-face-gap",
   drillDownFaceShown: "stats-drill-down-face-shown",
+  // R4676001: the drill-down's Extended stats toggle and panel.
+  extendedToggle: "stats-extended-toggle",
+  extendedPanel: "stats-extended-panel",
+  extendedChoicesTab: "stats-extended-choices-tab",
+  extendedFacesTab: "stats-extended-faces-tab",
+  extendedChoices: "stats-extended-choices",
+  extendedKind: "stats-extended-kind",
+  extendedRow: "stats-extended-row",
+  extendedTier: "stats-extended-tier",
   /** R3887000: the Cards tab's Plain text button, a card as plain text, and the breakdown's plain text and Reference cards. */
   plainTextToggle: "stats-plain-text-toggle",
   plainCard: "stats-plain-card",

@@ -57,27 +57,32 @@ enum MoveOutcome {
 /// R15: the same lane on the stealer's side when that zone is free, else its first free zone.
 /// R3546003: a GIGA takes the same lane whole when all four zones are free (R64), else the
 /// leftmost fit (R64, R688), else nothing (the card is then destroyed by a steal, R4205000).
+/// R4599016: a Unit a carrier held (`carried`, read before it left) crosses to the unit row, the row
+/// its type takes (§5.1): the carrier stays where it stood, and no zone of the backrow holds a Unit
+/// on its own but one standing there.
 fn destination_for(
     ctx: &EffectContext<'_>,
     thief: PlayerId,
     card: &CardInstance,
     from: &ZoneSlot,
+    carried: bool,
 ) -> Option<ZoneSlot> {
+    let row = if carried { Row::Units } else { from.row };
     let same_lane = ZoneSlot {
         player: thief,
-        row: from.row,
+        row,
         lane: from.lane,
     };
     if crate::giga::is_giga(card) {
         if crate::giga::fits(same_lane, |slot| is_open(ctx.state, slot)) {
             return Some(same_lane);
         }
-        return crate::giga::entry_anchor(ctx.state, thief, from.row);
+        return crate::giga::entry_anchor(ctx.state, thief, row);
     }
     if is_open(ctx.state, same_lane) {
         return Some(same_lane);
     }
-    first_entry_zone(ctx.state, thief, from.row)
+    first_entry_zone(ctx.state, thief, row)
 }
 
 /// One card to `ctx.controller`'s side, by `move_control`'s rules; a card it reaches but has no room for
@@ -114,7 +119,8 @@ fn move_control(
     }
     let previous = card.controller;
 
-    let Some(to) = destination_for(ctx, receiver, card, &from) else {
+    let carried = crate::zones::is_carried(ctx.state, card);
+    let Some(to) = destination_for(ctx, receiver, card, &from, carried) else {
         return MoveOutcome::NoRoom;
     };
 
@@ -231,13 +237,16 @@ pub fn swap_control(args: SwapControlArgs) -> Effect {
         }
         let mine_stands = crate::zones::stands_in_backrow(ctx.state, mine);
         let theirs_stands = crate::zones::stands_in_backrow(ctx.state, &theirs);
+        // R4599016: read before both leave, as `destination_for` places a carried Unit by it.
+        let mine_carried = crate::zones::is_carried(ctx.state, mine);
+        let theirs_carried = crate::zones::is_carried(ctx.state, &theirs);
         let mut mine = mine.clone();
         let mut theirs = theirs.clone();
         remove_from_field(ctx.state, &mine, Default::default());
         remove_from_field(ctx.state, &theirs, Default::default());
         // Both are off the field, so each destination is read with both zones free (R15, R4590003).
-        let mine_to = destination_for(ctx, theirs.controller, &mine, &my_slot);
-        let theirs_to = destination_for(ctx, mine.controller, &theirs, &their_slot);
+        let mine_to = destination_for(ctx, theirs.controller, &mine, &my_slot, mine_carried);
+        let theirs_to = destination_for(ctx, mine.controller, &theirs, &their_slot, theirs_carried);
         let (Some(mine_to), Some(theirs_to)) = (mine_to, theirs_to) else {
             // Cannot happen (`to` was open); putting both cards back keeps the board legal, not
             // losing them.

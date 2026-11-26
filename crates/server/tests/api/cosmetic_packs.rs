@@ -10,9 +10,9 @@ use jackioh_server::api::http::AuthLevel;
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
     CARD_TOKEN_BAR_SIZE, CHASE_SHARD_PACKS, COSMETIC_PACK_FLOOR_RARITY, COSMETIC_PACK_SLOTS,
-    COSMETIC_TOKEN_BAR_SIZE_EPIC, COSMETIC_TOKEN_BAR_SIZE_LEGENDARY, COSMETIC_TOKEN_BAR_SIZE_RARE,
-    CosmeticTokenStep, ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX, PACK_FLOORED_SLOT,
-    SPEND_BUSY_RETRY_AFTER_MS,
+    COSMETIC_TOKEN_BAR_SIZE_EPIC, COSMETIC_TOKEN_BAR_SIZE_LEGENDARY, COSMETIC_TOKEN_BAR_SIZE_PACK,
+    COSMETIC_TOKEN_BAR_SIZE_RARE, CosmeticTokenStep, ECONOMY_SPENDS_RUNNING_MAX, ECONOMY_SPENDS_WAITING_MAX,
+    PACK_FLOORED_SLOT, SPEND_BUSY_RETRY_AFTER_MS,
 };
 use jackioh_server::cosmetics::{
     AUGMENT_ANIMATED_ID, Cosmetic, CosmeticKind, CosmeticRarity, FLEET_CAPSTONE, JLORIOUS_CARD_BACK,
@@ -733,6 +733,63 @@ async fn a_cosmetic_pack_answers_the_cycle_s_next_step_when_its_cosmetic_bar_pay
     assert_eq!(counter_of(&app, Counter::CosmeticTokenCycle).await, 2);
     // The card bar only gained.
     assert_eq!(pack.bars.card.pays, 0);
+}
+
+#[tokio::test]
+async fn a_cosmetic_pack_whose_bar_pays_a_cosmetic_pack_answers_the_packs_still_held() {
+    let (app, token) = setup().await;
+    grant_item(&app, InventoryItem::CosmeticPack, "", 1).await;
+    // Step 5 of the cycle is the Cosmetic Pack step (size 100), and the bar one point short
+    // of that step's size: the slots add at least 7 points (R1953000, R2728000), so the bar
+    // pays a cosmetic pack and rests on the Rare step (size 50, cycle step 6 == step 0).
+    set_counter(&app, Counter::CosmeticTokenCycle, 5).await;
+    set_counter(&app, Counter::CosmeticTokenBar, COSMETIC_TOKEN_BAR_SIZE_PACK - 1).await;
+    let (status, _, body) = call_with_key(
+        &app,
+        "POST",
+        "/api/cosmetic-packs/open",
+        Some(&token),
+        json!({}),
+        &uuid(4842001),
+    )
+    .await;
+    assert_eq!(status, 200, "{body}");
+    let pack = opened(&body);
+    let gain = points(&pack);
+    assert_eq!(
+        pack.bars.cosmetic,
+        BarSettle {
+            before: COSMETIC_TOKEN_BAR_SIZE_PACK - 1,
+            after: gain - 1,
+            size: COSMETIC_TOKEN_BAR_SIZE_RARE,
+            pays: 1,
+        }
+    );
+    assert_eq!(pack.bars.cosmetic_paid, vec![CosmeticTokenStep::CosmeticPack]);
+    assert_eq!(
+        pack.bars.cosmetic_sizes,
+        vec![COSMETIC_TOKEN_BAR_SIZE_PACK, COSMETIC_TOKEN_BAR_SIZE_RARE]
+    );
+    assert_eq!(
+        serde_json::to_value(&pack.bars).expect("the bars")["cosmeticPaid"],
+        json!(["cosmeticPack"])
+    );
+    assert_eq!(pack.unopened, 1, "the opening answers the pack the bar paid");
+    assert_eq!(held(&app, InventoryItem::CosmeticPack, "").await, 1);
+    assert_eq!(counter_of(&app, Counter::CosmeticTokenCycle).await, 6);
+
+    // Replay with the same Idempotency-Key answers the same unopened count.
+    let (replay_status, _, replay_body) = call_with_key(
+        &app,
+        "POST",
+        "/api/cosmetic-packs/open",
+        Some(&token),
+        json!({}),
+        &uuid(4842001),
+    )
+    .await;
+    assert_eq!(replay_status, 200, "{replay_body}");
+    assert_eq!(opened(&replay_body).unopened, 1);
 }
 
 /// R1999000: a slot that grants a new cosmetic still adds its rolled cosmetic rarity's points to

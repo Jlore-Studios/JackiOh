@@ -25,6 +25,10 @@ const QUICK: SearchBudget = SearchBudget {
     finalists: 1,
 };
 
+// A pure crate reads data at compile time only (rule 4).
+const GENERATION_JSON: &str = include_str!("../../generation.json");
+const HAND_HISTORY: &str = include_str!("../../../../training/history/hand.jsonl");
+
 /// Every field named holds its value, read as the wire writes it.
 fn assert_matches_object(record: &GameRecord, fields: serde_json::Value) {
     let written = serde_json::to_value(record).expect("a record serializes");
@@ -120,6 +124,39 @@ mod the_ais_development_run_9_11 {
             },
         );
         assert_eq!(plain.expect("the game finished").build, None);
+    }
+
+    #[test]
+    fn r4921000_the_ai_without_its_learned_evaluation_is_generation_14_and_hand_jsonl_holds_its_line() {
+        let held: serde_json::Value = serde_json::from_str(GENERATION_JSON).expect("generation.json parses");
+        assert_eq!(
+            jackioh_ai::ai_generation(),
+            Some(14),
+            "generation 14 is #4921's; a later generation moves this test with its own ruling"
+        );
+        let last = HAND_HISTORY
+            .lines()
+            .rev()
+            .find(|line| !line.trim().is_empty())
+            .expect("hand.jsonl holds a line");
+        let line: serde_json::Value = serde_json::from_str(last).expect("hand.jsonl's last line parses");
+        // `shadowBan` is left out: sweep.yml rewrites it in generation.json alone, so the history line
+        // keeps the 0 it was written with, as learn.jsonl keeps its 17.
+        for key in [
+            "generation",
+            "lane",
+            "parent",
+            "tree",
+            "vsRandom",
+            "vsParent",
+            "parentShadowBan",
+            "date",
+        ] {
+            assert_eq!(line[key], held[key], "{key}");
+        }
+        assert_eq!(held["lane"], "hand");
+        assert!(held["vsRandom"].is_null() && held["vsParent"].is_null());
+        assert_eq!(line["shadowBan"], 0);
     }
 
     #[test]

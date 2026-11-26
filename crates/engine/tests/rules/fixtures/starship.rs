@@ -3,7 +3,10 @@
 //! summons (`DORMANT_STARSHIP_DEF_ID`), Starship Pieces in the shapes Stinkyscape will print, and the
 //! cards that kill, steal, discard, equip, stack onto and launch them. Ids `ss-…` from 18520.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

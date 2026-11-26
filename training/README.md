@@ -38,6 +38,12 @@ in seven. The daily quality gates (`cargo jackioh gate --full`) still hold the A
 on `main` to their floor against random, so an AI that forgets how to beat random fails the daily
 run.
 
+Generation 14 is no lane's either. R4159000's retirement of the learned evaluation moved the AI on
+2026-11-19 without moving the number, so the sweep of record, the ladder bots' re-settling and the
+records' builds read 13 for another AI. It is recorded by hand in lane `hand`
+(`training/history/hand.jsonl`), its parent the last commit that held the evaluation. It has no
+`vsRandom` and no `vsParent`, and its `shadowBan` and `parentShadowBan` are 0 (R4921000).
+
 ## The practice-claim fixture
 
 `crates/server/tests/fixtures/practice-claim.json` is a practice game the web's claim test plays move

@@ -2,7 +2,10 @@
 //! scripts in the card's shape, since the engine never imports the cards crate. Defs are prefixed `bh-`
 //! and indexed from 9700, so they collide with no other file's catalog (BUILD §0).
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 
