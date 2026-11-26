@@ -22048,9 +22048,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "",
-      "owner_since": "2026-11-26T13:44:57Z",
-      "owner_why": "its own review was handed off to its final audit: `claude-1` 5-hour usage is 72%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-26T16:20:00Z; it can start again only in 2h 35m, more than the 120 minutes an item waits for its owner",
+      "owner": "claude-8",
+      "owner_since": "2026-11-26T15:27:44Z",
+      "owner_why": "it took it up; its own review was handed off to its final audit: `claude-1` 5-hour usage is 72%, too close to its 40% cap outside its hours to start a long run (it starts under 35%); it resets at 2026-11-26T16:20:00Z; it can start again only in 2h 35m, more than the 120 minutes an item waits for its",
       "pending_request": false,
       "planned_at": "2026-11-26T06:54:10Z",
       "planned_by": "`claude-1` (claude, `opus`, strong)",
@@ -24390,7 +24390,7 @@
       }
     },
     "5078": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -24413,18 +24413,18 @@
       "interruptions": 0,
       "issue": 5005,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner_gave_up": {
         "at": "2026-11-26T14:27:25Z",
         "provider": "claude-7",
         "sha": "7e226461bf4f4ff275272b9761caf32b86b48e7c"
       },
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-8",
       "queued_at": "2026-11-26T15:17:04Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "45835639105",
+      "run_id": "pending:5276d2d7-1795706834",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -24445,7 +24445,7 @@
         "run": "45809902126"
       },
       "source": "conflict",
-      "started_at": "2026-11-26T14:06:11Z",
+      "started_at": "2026-11-26T15:27:44Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -24932,9 +24932,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T15:26:59Z",
+    "at": "2026-11-26T15:27:44Z",
     "url": "",
-    "what": "review #5087 on claude-4"
+    "what": "revise #5078 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-26T15:15:53Z",
