@@ -23501,6 +23501,10 @@
         {
           "at": "2026-11-26T20:01:48Z",
           "minutes": 34.7
+        },
+        {
+          "at": "2026-11-26T20:36:28Z",
+          "minutes": 20.9
         }
       ],
       "tokens_spent": [
@@ -24679,17 +24683,24 @@
           "cost": 0.0,
           "input": 414700,
           "output": 47033
+        },
+        {
+          "at": "2026-11-26T20:36:28Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 378185,
+          "output": 24873
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-26T23:58:46Z",
-          "utilization": 0.13
+          "utilization": 0.22
         },
-        "observed_at": "2026-11-26T20:01:48Z",
+        "observed_at": "2026-11-26T20:36:28Z",
         "seven_day": {
           "resets_at": "2026-12-03T08:58:46Z",
-          "utilization": 0.52
+          "utilization": 0.54
         },
         "status": "allowed"
       }
@@ -45616,7 +45627,10 @@
       "2026-11-26T19:54:12Z,claude-3,stream,call,45876519514,11,2026-11-27T00:40:00Z,,,allowed,,,",
       "2026-11-26T19:55:38Z,claude-3,stream,call,45876519514,12,2026-11-27T00:40:00Z,,,allowed,,,",
       "2026-11-26T20:26:16Z,claude-1,ping,before,45890616356,93,2026-11-26T21:20:00Z,,,allowed_warning,40,,",
-      "2026-11-26T20:25:24Z,claude-1,ping,before,45890525969,93,2026-11-26T21:20:00Z,,,allowed_warning,40,,"
+      "2026-11-26T20:25:24Z,claude-1,ping,before,45890525969,93,2026-11-26T21:20:00Z,,,allowed_warning,40,,",
+      "2026-11-26T20:05:54Z,agy,usage-command,before,45888452153,13,2026-11-26T23:58:46Z,52,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-26T20:16:06Z,agy,usage-command,call,45888452153,18,2026-11-26T23:58:46Z,53,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-26T20:26:12Z,agy,usage-command,call,45888452153,22,2026-11-26T23:58:46Z,54,2026-12-03T08:58:46Z,allowed,100,100,"
     ],
     "runs": [
       "2026-11-26T19:55:15Z,45885266101,claude-3,opus,plan,5109,hard,planned,,11.2,115,76143,14134215,12.6141,0,10,,,20.9,claude-3,resumed,,1",
