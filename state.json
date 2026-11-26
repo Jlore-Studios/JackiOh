@@ -45987,7 +45987,8 @@
       "2026-11-26T22:36:31Z,45905272636,claude-8,opus,suggest,,,interrupted,5-hour cap,1.8,0,0,0,,81,85,,,,,none,,1",
       "2026-11-26T22:37:58Z,45903356595,agy,gemini-3.8-flash-high,review,5121,medium,approved,,24.2,67817,6660,0,,28,42,56,59,1.9,,none,,1",
       "2026-11-26T22:36:54Z,45897684390,claude-8,opus,build,5109,hard,interrupted,5-hour cap,71.8,0,0,0,,36,85,,,123.8,claude-1,fresh,other,1",
-      "2026-11-26T22:32:13Z,45892844399,claude-3,opus,plan,5117,hard,failed,,107,285,69876,19668358,6.9191,20,77,,,7,,fresh,,1"
+      "2026-11-26T22:32:13Z,45892844399,claude-3,opus,plan,5117,hard,failed,,107,285,69876,19668358,6.9191,20,77,,,7,,fresh,,1",
+      "2026-11-26T22:47:14Z,45905193868,claude-4,opus,suggest,,,interrupted,5-hour cap,13.5,0,0,0,,0,50,,,,,none,,1"
     ]
   },
   "version": 1
