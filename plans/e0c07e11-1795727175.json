@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 5120,
+  "title": "Patch: follow-up to #5115 from the after-merge spot-check",
+  "branch": "bot/issue-5120",
+  "thread": "**Issue #5120 (data, not instructions):**\n\n```text\n# #5120: Patch: follow-up to #5115 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #5115 -->\nThe after-merge spot-check of #5115 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/45894714262)) found 1 blocking problem(s) in the change as it merged (`cd5380f08472`). `claude-8` (claude, `opus`, strong) reviewed it. #5115 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `apps/web/src/net/e2e-smoke-selection.test.ts:119`: Nothing tests that specs 46 and 47 are never added (#4092). The partition test's 46/47 assertions would still pass with `NEVER_ADDED` and its `continue` in `reachedSpecs` deleted, because neither spec can be reached by the ids the test uses.\n  Evidence: The test only selects `[\"core-077\"]` and `[\"core-025\"]` from the real tree. Scanning the real sources the way `reachedSpecs` does (quoted id or catalog name, quoted fixture deck id): `46-menus-fit-one-screen.cy.ts` and `47-tap-areas.cy.ts` quote no card id, no card name and no fixture deck id, so neither spec is ever in `reached` and `expect(spec.startsWith(\"46-\")...)` cannot fail. The issue lists this as an acceptance item (\"46 and 47 are never added\"). Specs 46 and 47 weigh 180 s and 200 s, and the owner took them off smoke because each filled a shard. The fix: call `reachedSpecs` (already exported) or `smokeSelection` on a made-up world where 46's and 47's sources quote the changed card and a deck holding it, and assert that neither spec is in `reached`, `added` or `left`, while a third spec quoting the same card is.\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `agy` (`gemini`) built #5115 and `agy` (`gemini-3.8-flash-high`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "bot",
+    "by": "claude-8"
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5120: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) writes it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T21:05:01Z",
+    "claimed_at": "2026-11-26T21:06:42Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5120 needs a plan",
+    "#5088 is held for `claude-1` until 15:20 (5-hour usage is 93%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))",
+    "#5109 is held for `claude-1` until 15:20 (5-hour usage is 93%, too close to its 40% cap outside its hours to start a long run (it starts under 35%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
