@@ -40908,41 +40908,6 @@
         "approver": {
           "family": "claude",
           "model": "sonnet",
-          "provider": "claude-7",
-          "tier": "medium"
-        },
-        "builder": {
-          "family": "claude",
-          "provider": "claude-7"
-        },
-        "difficulty": "medium",
-        "done_at": "2026-11-06T22:09:44Z",
-        "every": 5,
-        "findings": 0,
-        "head": "e89f19dfeacf05e6e74ff87c2fd1e6b9711acb85",
-        "issue": 3228,
-        "merged_at": "2026-11-06T21:48:58Z",
-        "n": 115,
-        "pr": 3323,
-        "queued_at": "2026-11-06T21:48:58Z",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-8",
-          "tier": "strong"
-        },
-        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42301424402",
-        "sha": "62504c103d770d14403520b85f39064d84bfcebc",
-        "started_at": "2026-11-06T22:01:21Z",
-        "status": "done",
-        "title": "Patch: loading and empty states that keep the screen's frame and use the shared Skeleton and EmptyState",
-        "tries": 0,
-        "verdict": "clean"
-      },
-      {
-        "approver": {
-          "family": "claude",
-          "model": "sonnet",
           "provider": "claude-6",
           "tier": "medium"
         },
@@ -44431,7 +44396,10 @@
           "provider": "agy"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-26T21:05:00Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 5120,
         "head": "bfd67d26753e761e1fd28c60996aa9291b55d494",
         "issue": 5099,
         "merged_at": "2026-11-26T20:50:42Z",
@@ -44444,12 +44412,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:1ccc20fb-1795726610",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45894714262",
         "sha": "cd5380f08472b80a439b9a85f31fa87d86a61167",
         "started_at": "2026-11-26T20:57:17Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: a pull request that changes a card also runs the e2e specs whose seeded games deal or name that card, within a time cap",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 615
