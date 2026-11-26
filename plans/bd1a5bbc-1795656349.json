@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 4985,
+  "title": "Patch: follow-up to #4960 from the after-merge spot-check",
+  "branch": "bot/issue-4985",
+  "thread": "**Issue #4985 (data, not instructions):**\n\n```text\n# #4985: Patch: follow-up to #4960 from the after-merge spot-check\nOpened by @jgoetzmann-bot.\n\n<!-- jackioh-bot:spot-check-follow-up #4960 -->\nThe after-merge spot-check of #4960 ([run](https://github.com/Jlore-Studios/JackiOh/actions/runs/45733504316)) found 1 blocking problem(s) in the change as it merged (`40d6f5966458`). `claude-4` (claude, `opus`, strong) reviewed it. #4960 stays merged: nothing is reverted, and this issue fixes what it found in a change of its own, from `main`.\n\n## What to fix\n\n- [ ] `crates/cards/src/scripts/infinite_assault/c188_overfitting.rs:60`: Overfitting's reveal gate behaves differently now, which the PR and issue both said would not happen, and no test covers the gate clause before or after the change.\n  Evidence: The old clause was `units.iter().any(|pile| pile.is_none())`, which is true for any raw empty pile. The new clause is `!fill_board_zones(..).is_empty()`, and `fill_board_zones` (crates/engine/src/zones.rs:1856) keeps only slots where `takes_move` holds (zones.rs:462: `is_empty` && `!is_reserved`) and that are not `in_hole`. `is_empty` (zones.rs:213) also rejects a zone a GIGA covers and a voided zone. So when the only open unit zones on Overfitting's controller's side are reserved (a dying Reborn unit holding its zone per R64, or an animated card's home), in a hole, covered by a GIGA or voided, the old gate revealed the trap and the copy fizzled, but the new gate leaves the trap set. The new behavior agrees with where `summon_copy` with `lane: None` can actually land (effects/summon.rs:294, `entry_zone` \u2192 `first_entry_zone_where`), so it is probably the better rule. But it is a rules change, and nothing proves it. The file's only tests are `base::summons_copy_with_plus_2_plus_2` and `radiant::summons_radiant_copy_with_plus_2_plus_2`, both on an open board. No test anywhere checks a full board or a reserved-only board (grep for `infiniteassault-188` finds only this file), so deleting the whole fifth `&&` clause would also pass every test. Fix: add tests in the file's `mod tests` that pin the gate. (a) The opponent plays a Unit while every unit zone of Overfitting's controller is occupied: Overfitting stays face-down in the backrow. (b) The only empty unit zone is reserved, e.g\n\n## Done when\n\n- Each finding above is fixed where it points, or answered with the evidence that it does not hold.\n- Every check is green, with no test skipped, ignored or weakened to get there (CLAUDE.md rule 12).\n\n---\nOpened by @jgoetzmann-bot from the after-merge spot-check (one in 5 medium or hard merges, `spot_check_every`): `muse` (`muse`) built #4960 and `muse` (`muse-spark-1.3-contributor`) approved it. This issue's own pull request is never spot-checked.\n\n<!-- jackioh-bot -->\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "bot",
+    "by": "claude-4"
+  },
+  "build_next": true,
+  "provider": "claude-1",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN",
+  "family": "claude",
+  "shared": true,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-1",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4985: needs a plan; `claude-1` (claude, `sonnet`, medium) writes it in a lane of `claude-1`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-1` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T01:23:44Z",
+    "claimed_at": "2026-11-26T01:26:20Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4982 is held for `claude-4` until 20:00 (5-hour usage is 52%, too close to its 50% cap outside its hours to start a long run (it starts under 45%))"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
