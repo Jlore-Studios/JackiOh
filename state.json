@@ -24974,6 +24974,7 @@
     "5099": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-26T19:16:25Z",
         "difficulty": "medium",
