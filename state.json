@@ -21093,6 +21093,11 @@
       "last_findings": [],
       "live": "resolving",
       "merge_owner": "claude-3",
+      "paused": {
+        "at": "2026-11-26T22:51:10Z",
+        "interrupt": "usage",
+        "provider": "claude-3"
+      },
       "pending_request": false,
       "provider": "claude-3",
       "question": "",
