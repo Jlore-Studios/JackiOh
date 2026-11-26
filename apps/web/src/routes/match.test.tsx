@@ -3,7 +3,7 @@
 // the engine's (BUILD M5-T2, CLAUDE.md rule 7).
 
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import type { ReactElement } from "react";
 
 import { registeredCatalog } from "@jackioh/engine";
@@ -12,6 +12,8 @@ import type { ActionBody, PlayerView } from "@jackioh/shared";
 import { DISCONNECT_GRACE_SECONDS, MATCH_OVER_CLOSE_CODE, MULLIGAN_CLOCK_MS, POST_GAME_FRAME_VERSION, RANK_STREAK_FLAME_LENGTH as N, SEAT_TAKEN_CLOSE_CODE, SERIES_MAX_GAMES, SERIES_POLL_SECONDS, SERIES_WINS_NEEDED, TURN_CLOCK_MS } from "@jackioh/server-config";
 
 import { MATCH_RANKS_READ_ATTEMPTS, MATCH_RANKS_RETRY_MS } from "../game/config.ts";
+import { resetProficiencySyncForTests, useProficiencyAccountSync, type ProficiencyAccountApi } from "../cards/proficiencySync.ts";
+import type { Account } from "../net/gate.ts";
 
 import { VOIDED_CLOSE_CODE, type SocketLike } from "../game/net.ts";
 import { baseView, card, emptySide, opponentModifiers, pendingFor, yourModifiers } from "../test/fixtures.ts";
@@ -1207,6 +1209,40 @@ describe("the XP reveal on a finished match (#1664)", () => {
     render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
     attach({ economy });
     expect(screen.queryByTestId("xp-reveal")).toBeNull();
+  });
+
+  it("R4977000 a paid result loads the account's card proficiency again, once however many views carry it", async () => {
+    onTestFinished(() => {
+      resetProficiencySyncForTests();
+    });
+    const load = vi.fn(() => Promise.resolve({ cards: [] }));
+    const api: ProficiencyAccountApi = { load, put: vi.fn(() => Promise.resolve({ cards: [] })) };
+    const account: Account = {
+      kind: "ready",
+      token: "tok",
+      me: { profile: { id: "p1", status: "active" }, needsInviteCode: false, emailVerified: true, currentMatchId: null, email: "p1@example.com" },
+    };
+    // The shared sync every gated screen mounts (`Gated`, main.tsx) has loaded the account's copy once.
+    renderHook(() => {
+      useProficiencyAccountSync(account, api);
+    });
+    await settle();
+    expect(load).toHaveBeenCalledTimes(1);
+
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    push(finished);
+    await settle();
+    expect(load).toHaveBeenCalledTimes(1);
+
+    push(finished, { economy });
+    await settle();
+    expect(load).toHaveBeenCalledTimes(2);
+
+    // Every later view of the seat carries the economy: no further load.
+    push(finished, { economy });
+    await settle();
+    expect(load).toHaveBeenCalledTimes(2);
   });
 });
 

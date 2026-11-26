@@ -871,7 +871,8 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000, #3734, R3734000): f
                         (collection/ProficiencyPanel.tsx, §14.14, R3013001): its level, its plays to the
                         next on serverConfig.ts's curve and a picker of its stamps, a locked one with the
                         level it needs; the account's copy is cards/stamps.ts's, loaded and each pick sent
-                        by cards/proficiencySync.ts (GET /api/proficiency, PUT /api/proficiency/stamp), and
+                        by cards/proficiencySync.ts (GET /api/proficiency, PUT /api/proficiency/stamp),
+                        loaded again when a counted game's result pays (routes/match.tsx, R4977000), and
                         the faces wear the pick (R3013002);
                         collection/
                         holds the panels (OwnedCards, WalletPanel, TracksPanel), their
