@@ -20795,14 +20795,6 @@
       "failures": 0,
       "feedback_since": "2026-11-26T16:29:55Z",
       "forced": false,
-      "hold": {
-        "ends": "2026-11-26T22:39:42Z",
-        "lifted": "2026-11-26T21:20:45Z",
-        "owner": "claude-1",
-        "since": "2026-11-26T20:39:42Z",
-        "until": "2026-11-26T21:20:00Z",
-        "why": "5-hour usage is 93%, too close to its 40% cap outside its hours to start a long run (it starts under 35%)"
-      },
       "interruptions": 0,
       "issue": 5037,
       "kind": "revise",
@@ -20819,7 +20811,7 @@
       "question": "",
       "queued_at": "2026-11-26T18:29:59Z",
       "round_tier": "",
-      "run_id": "45890525969",
+      "run_id": "pending:32af9ee8-1795728077",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -20840,7 +20832,7 @@
         "run": "45859321678"
       },
       "source": "conflict",
-      "started_at": "2026-11-26T20:22:04Z",
+      "started_at": "2026-11-26T21:21:42Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -21570,9 +21562,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T21:06:42Z",
+    "at": "2026-11-26T21:21:42Z",
     "url": "",
-    "what": "plan #5120 on agy"
+    "what": "revise #5088 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-26T21:13:31Z",
