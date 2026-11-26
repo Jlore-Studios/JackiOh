@@ -24903,10 +24903,12 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "at": "2026-11-26T17:50:11Z",
+        "at": "2026-11-26T20:04:13Z",
         "built_by": "claude-3",
         "by": "`claude` (strong)",
-        "sha": "e61690cff8d7b41aacc223cb8aa025b9ab29ca1c"
+        "carried_from": "e61690cff8d7b41aacc223cb8aa025b9ab29ca1c",
+        "resolved_by": "`claude` (strong)",
+        "sha": "f56c14becb3f0ead58f2df7069e78bfb4517b9f5"
       },
       "died": 0,
       "difficulty": "hard",
