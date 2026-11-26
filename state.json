@@ -23131,15 +23131,8 @@
       "waiting_comment": 7191982718
     },
     "5036": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45839608050",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-26T14:55:32Z",
-        "until": "2026-11-26T15:25:32Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -23151,10 +23144,9 @@
         "reason": "planned on opus",
         "trail": "bandHigh\\\",$\\\\|\\\"hasEnoughGames\\\",$\\\\|mod r4675001_play_versions\\\\|mod r5040000\\\\|async fn r5040000\\\\|mod r4552003_decisiveness\\\\|as\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; sed -n 2374,2415p crates/server/tests/api/stats.rs; sed -n 4255,4275p crates/server/tests/api/stats.rs; sed -n 4585,4605p crates/server/tests/a\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; sed -n 2459,2560p crates/server/tests/api/stats.rs | grep -n \\\"keys(\\\\|assert_eq!(.*data\\\\b\\\" | head; sed -n 4405,4460p crates/server/tests/api\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -n \\\"/api/stats/versions\\\" crates/server/README.md | cut -c1-80; grep -n \\\"/api/stats/versions\\\\` |\\\" crates/server/README.md | cut -d: -f\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -rn \\\"DecisivenessRow\\\\|decisiveness_rows\\\\|counted_swing_rows\\\\|fn swing_row\\\" crates apps/web/src | head; grep -n \\\"^ fn fig\\\\|patches: \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -n \\\"^title:\\\\|Amended by\\\\|A sort Running lacks\\\" spec/rulings/R4678001.md spec/rulings/R4675001.md spec/rulings/R4552001.md spec/rulings\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; sed -n 25,45p crates/engine/src/wire/stats.rs; grep -n \\\"fn make_game_record\\\" -A 12 crates/server/tests/api/stats.rs | grep -n \\\"patch\\\" | hea\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5036/.bot-plan.md\", \"content\": \"## Goal\\n\\nEach row of `GET /api/stats/versions` (both scopes) carries `decisiveness`: the play version's R4552001 Dec\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; cat >> .bot-plan.md <<'EOF'\\n\\n## Steps\\n\\n1. **`swing.rs`**, after `swing_report` (~line 881), add:\\n ```rust\\n /// R5036000: a row Decisivene\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; cat >> .bot-plan.md <<'EOF'\\n\\n## Tests\\n\\n**`crates/engine/src/wire/stats/play_versions.rs`** (`mod tests`). Add the imports `SwingTurn`, `Cre\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; ls crates/server/tests/ | head; grep -n \\\"mod stats\\\\|mod api\\\" crates/server/tests/server.rs crates/server/tests/api/mod.rs 2>/dev/null | head\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5036/.bot-plan.md\", \"content\": \"## Goal\\n\\nEvery row of `GET /api/stats/versions`, in both scopes, sends `decisiveness`: its play version's R4552001 D\u2026\n- tool error: <tool_use_error>File has been modified since read, either by the user or by a linter. Read it again before attempting to write it.</tool_use_error>\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5036/.bot-plan.md\", \"limit\": 3}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; cp .bot-plan.md /tmp/plan-long.md; echo saved\", \"description\": \"Back up the long draft\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5036/.bot-plan.md\", \"content\": \"## Goal\\n\\nEvery row of `GET /api/stats/versions`, in both scopes, sends `decisiveness`: its play version's R4552001 D\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; wc -w -c .bot-plan.md\", \"description\": \"Count the plan's words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5036/.bot-plan.md\", \"old_string\": \"4. **`Summed`.**\\n - Add the field `sources: &'static [GameSource]`.\\n - In `summed`, bind `l\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5036/.bot-plan.md\", \"old_string\": \" - The body states, in this order:\\n - why it was asked for;\\n - the figure: the tallies, the\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5036/.bot-plan.md\", \"old_string\": \"## Risks\\n\\n- **Determinism.** Only integer sums go in, and `swing_baseline` and `Read::of` s\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5036/.bot-plan.md\", \"old_string\": \"## Done when\\n\\n- [ ] Every versions row, in both scopes, and the body send `decisiveness`, r\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5036/.bot-plan.md\", \"old_string\": \"Every row of `GET /api/stats/versions`, in both scopes, sends `decisiveness`: its play versio\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; wc -w -c .bot-plan.md\", \"description\": \"Recount the plan's words\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -n \\\"^## \\\\|^### \\\" .bot-plan.md\", \"description\": \"Map plan sections\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5036/.bot-plan.md\", \"offset\": 178, \"limit\": 92}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5036/.bot-plan.md\", \"offset\": 66, \"limit\": 112}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -rn \\\"too-many-arguments\\\\|too_many_arguments\\\" clippy.toml crates/engine/clippy.toml Cargo.toml 2>/dev/null | head\", \"description\": \"Chec\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5036/.bot-plan.md\", \"old_string\": \" - Append `Amended by [[R5036000]] (issue #5036): \\u2026` to four notes, one sentence each, a\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5036/.bot-plan.md\", \"old_string\": \"2. **`play_versions.rs`, imports and header.** Add `DecisivenessRow`, `SwingRows`, `SwingTall\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; wc -w -c .bot-plan.md\", \"description\": \"Recount the plan's words\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5036/.bot-plan.md\", \"limit\": 66}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; sed -n 177,320p .bot-plan.md\", \"description\": \"Print the rest of the plan\"}\n- said: ## Goal Every row of `GET /api/stats/versions`, in both scopes, sends `decisiveness`. That is its play version's R4552001 Decisiveness, read from: - its card's swing tallies, summed over its span; - one baseline over every record the table counts; - a field over the table's own rows. It is `null` b\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-26T10:34:02Z",
       "owner_why": "it plans it",
@@ -23167,9 +23159,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-26T07:53:12Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45839608050",
+      "run_id": "pending:905d859a-1795705192",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-26T14:29:52Z",
+      "started_at": "2026-11-26T15:00:28Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 7191985432
@@ -24777,9 +24769,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T14:59:36Z",
+    "at": "2026-11-26T15:00:28Z",
     "url": "",
-    "what": "revise #5064 on claude-4"
+    "what": "build #5036 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-26T14:38:37Z",
