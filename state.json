@@ -22170,9 +22170,7 @@
       "started_at": "2026-11-26T14:44:46Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:7183070685"
-      ],
+      "taken_asks": [],
       "verdict_rounds": 0
     },
     "5008": {
