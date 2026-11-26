@@ -567,11 +567,12 @@ mod tests {
     /// The days, from `DEFAULT_FROM`, whose fights the bands play.
     const BAND_DAYS: u32 = 6;
     /// R4583000: the fewest level-1 fights, in percent, the day's Assault deck may win before level 1 is
-    /// no longer clearly winnable (an AI mirror at one skill is about even; measured at `TEST_BUDGET`:
-    /// 3 of 6, 4 of 12 and 7 of 16 from `DEFAULT_FROM`, 18 of 32 from 2027-01-01; at full budget 5 of 8).
+    /// no longer clearly winnable (measured at `TEST_BUDGET` from `DEFAULT_FROM` on the set's real cards
+    /// since the release, R4597002: 6 of 6; on the placeholder before it, 3 of 6).
     const LEVEL_ONE_WIN_PERCENT_MIN: usize = 25;
     /// R4583000: the most level-20 fights, in percent, it may win before level 20 is no longer clearly
-    /// hard (measured: none of 12, none of 8 at full budget).
+    /// hard (measured at `TEST_BUDGET` from `DEFAULT_FROM` since the release, R4597002: 1 of 6, from 2 of
+    /// 6 before its re-tune; on the placeholder before it, none of 12).
     const LEVEL_TWENTY_WIN_PERCENT_MAX: usize = 20;
     /// The days the daily sweep walks, at full budget.
     const DAILY_DAYS: u32 = 4;

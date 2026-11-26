@@ -1881,8 +1881,15 @@ fn run_check() -> anyhow::Result<()> {
             .iter()
             .map(|(r, n)| format!("{n} {r}"))
             .collect();
+        let single_player = expectation
+            .set
+            .parse::<jackioh_engine::SetName>()
+            .is_ok_and(|set| jackioh_engine::SINGLE_PLAYER_SETS.contains(&set));
         let shipped = if expectation.ships() {
             ""
+        } else if single_player {
+            // R1846001, R4597001: an open single-player set never ships; its enemies deal it.
+            " (single-player, R1846001)"
         } else {
             " (not shipped yet, R1420)"
         };

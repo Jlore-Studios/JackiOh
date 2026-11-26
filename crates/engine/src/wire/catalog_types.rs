@@ -360,7 +360,8 @@ macro_rules! set_table {
             /// issue #1173, R1178000), Stinkyscape (issue #1836, R1857000; released by #1884) and
             /// Training Grounds (issue #2193, R2194000; released by #2204) and Stinkyscape+ (issue #3535,
             /// R3535000; released by #3573) ship; Boss and Boss-X are reserved; the Infinite Assault
-            /// (tracker #4576, R4577000) is a single-player set held while it is built.
+            /// (tracker #4576, R4577000) is a single-player set, held while it was built and open since
+            /// its release (#4597).
             pub enum SetName { $( $variant = $name ),+ }
         }
 

@@ -340,17 +340,15 @@ pub fn assault_content() -> Result<String, String> {
 }
 
 /// R3496000, R4597000: `AssaultContent` for a catalog version: the build's own answers
-/// `assault_content()`; a carried version answers `assault_catalog_content` over its carried shipped
-/// catalog, as no player held an attempt before the release; any other version answers `null`.
+/// `assault_content()`, and so does a carried version, since a patch's snapshot holds only the sets that
+/// ship (R1420) and the Assault's content is its own set's cards alone, so an open attempt deals the
+/// same day across a daily patch; any other version answers `null`.
 pub fn assault_content_at(version_json: &str) -> Result<String, String> {
     let version: String = parse("assaultContentAt: the version", version_json)?;
-    if version == jackioh_cards::catalog_version() {
+    if version == jackioh_cards::catalog_version() || jackioh_cards::shipped_catalog(&version).is_some() {
         return assault_content();
     }
-    match jackioh_cards::shipped_catalog(&version) {
-        Some(shipped) => to_json(&jackioh_run::assault_catalog_content(shipped.defs())),
-        None => Ok("null".to_owned()),
-    }
+    Ok("null".to_owned())
 }
 
 /// The day's deal: 20 levels and their escalations, or refused.
@@ -1711,7 +1709,7 @@ mod assault_body_tests {
 
     // R4597000: since the release the browser deals from the set's real cards: `assault_content()` is
     // `assault_catalog_content` over the build's catalog, its twelve Commanders among them, and a carried
-    // version answers `assault_catalog_content` over its own shipped catalog.
+    // version answers the same content.
     #[test]
     fn r4597000_the_browser_deals_the_assault_from_the_catalog() {
         jackioh_cards::register_all();
@@ -1725,14 +1723,22 @@ mod assault_body_tests {
                 .iter()
                 .all(|card| card.id.starts_with("infiniteassault-"))
         );
-        if let Some(version) = jackioh_cards::carried_versions().last() {
-            let shipped = jackioh_cards::shipped_catalog(version).expect("a carried version's catalog");
-            let at = assault_content_at(&serde_json::to_string(version).unwrap()).unwrap();
-            assert_eq!(
-                at,
-                to_json(&jackioh_run::assault_catalog_content(shipped.defs())).unwrap()
-            );
-        }
+        // A carried version's snapshot holds no Assault card (R1420: only the sets that ship), so it
+        // answers the build's own content, twelve Commanders and all, and an open attempt folds on.
+        let carried = jackioh_cards::carried_versions();
+        let version = carried.last().expect("the build carries a version");
+        let shipped = jackioh_cards::shipped_catalog(version).expect("a carried version's catalog");
+        assert!(
+            shipped
+                .defs()
+                .keys()
+                .all(|id| !id.starts_with("infiniteassault-"))
+        );
+        let at: jackioh_run::AssaultContent =
+            serde_json::from_str(&assault_content_at(&serde_json::to_string(version).unwrap()).unwrap())
+                .unwrap();
+        assert_eq!(at, expected);
+        assert_eq!(at.commanders.len(), 12);
     }
 }
 

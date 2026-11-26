@@ -420,6 +420,18 @@ fn r4579000_nothing_falls_from_one_level_to_the_next_over_a_year() {
     }
 }
 
+/// R4597002: the re-tune's numbers, written out: a Commander level's health base is 65, 90, 115 and
+/// 140 at levels 5, 10, 15 and 20, and it takes two upgrades after its card step.
+#[test]
+fn r4597002_the_commanders_health_and_upgrades_are_the_retunes() {
+    let bases: Vec<i32> = ASSAULT_COMMANDER_LEVELS
+        .iter()
+        .map(|level| ASSAULT_COMMANDER_HEALTH.0 + ASSAULT_COMMANDER_HEALTH.1 * i32::from(*level))
+        .collect();
+    assert_eq!(bases, vec![65, 90, 115, 140]);
+    assert_eq!(ASSAULT_COMMANDER_UPGRADES, 2);
+}
+
 /// A level's health base: a Commander's is a peak, the next level goes back to the normal base
 /// and keeps every Redundancy stack ([[R4579000]]).
 fn health_base(level: &AssaultLevel) -> i32 {

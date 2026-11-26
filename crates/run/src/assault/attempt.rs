@@ -183,8 +183,8 @@ pub fn assault_fight_setup(state: &AssaultState, day: &AssaultDay) -> Option<Ass
         enemy_deck: level.deck.clone(),
         enemy_handicap: level.handicap,
         enemy_marks: level.marks.clone(),
-        // R4595000: the enemy's deck is the Assault's set, and the game says so; a deck of the shipped
-        // stand-ins dealt while the set is held names none, and samples every set as any game does.
+        // R4595000, R4597001: the enemy's deck is the Assault's set, and the game says so, which lets the
+        // seat hold the set's cards; a deck of the placeholder's shipped stand-ins names none.
         enemy_sets: if level.deck.iter().all(|id| {
             registered_catalog()
                 .get(id)
