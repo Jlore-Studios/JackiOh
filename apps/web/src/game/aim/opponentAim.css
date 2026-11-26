@@ -28,7 +28,7 @@
   stroke-linecap: round;
   stroke-dasharray: 10 18;
   opacity: 0;
-  animation: opponent-aim-run 700ms steps(1, end) 1;
+  animation: opponent-aim-run 700ms steps(1, end) infinite;
 }
 
 /* R3608000: the dashes march by four copies of the shaft, one quarter of the 28-unit dash period apart, each
@@ -64,7 +64,7 @@
   fill: color-mix(in srgb, var(--pal-ember-500) 25%, transparent);
   stroke: color-mix(in srgb, var(--pal-ember-500) 90%, transparent);
   stroke-width: 2.5;
-  animation: opponent-aim-breathe 900ms var(--ease-in-out) 2 alternate;
+  animation: opponent-aim-breathe 900ms var(--ease-in-out) infinite alternate;
   transform-box: fill-box;
   transform-origin: center;
 }

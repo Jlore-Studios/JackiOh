@@ -108,7 +108,7 @@
   width: 2px;
   border-radius: var(--radius-xs);
   background: var(--radiant);
-  animation: code-field-blink 1s steps(1, end) 1;
+  animation: code-field-blink 1s steps(1, end) infinite;
 }
 
 .code-field__cell[data-caret="before"]::after {
@@ -138,7 +138,7 @@
 .code-field .code-field__input {
   position: absolute;
   inset: 0;
-  z-index: var(--z-content);
+  z-index: 1;
   width: 100%;
   height: 100%;
   margin: 0;
@@ -355,10 +355,10 @@
   min-height: 54px;
   border: 1px solid color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
   border-radius: var(--radius-md);
-  background: var(--tavern-well);
+  background: linear-gradient(180deg, var(--pal-wood-950), var(--tavern-well));
   color: var(--tavern-gold-pale);
   font-size: clamp(16px, 4.4vw, 21px);
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--pal-brass-200) 5%, transparent);
+  box-shadow: inset 0 2px 6px color-mix(in srgb, var(--pal-black) 65%, transparent), 0 1px 0 color-mix(in srgb, var(--pal-brass-200) 5%, transparent);
   transition: border-color 140ms, box-shadow 140ms, background-color 140ms;
 }
 
@@ -373,13 +373,16 @@
 
 .tavern .code-field__segment[data-state="complete"] {
   border-color: color-mix(in srgb, var(--tavern-teal) 85%, var(--pal-black));
-  background: var(--tavern-well);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--pal-verdigris-400) 25%, transparent);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--pal-verdigris-400) 18%, transparent), color-mix(in srgb, var(--pal-verdigris-400) 5%, transparent)),
+    var(--tavern-well);
+  box-shadow: inset 0 2px 6px color-mix(in srgb, var(--pal-black) 50%, transparent), 0 0 12px color-mix(in srgb, var(--pal-verdigris-400) 25%, transparent);
 }
 
 .tavern .code-field__segment[data-active="true"] {
   border-color: var(--tavern-gold);
   box-shadow:
+    inset 0 2px 6px color-mix(in srgb, var(--pal-black) 65%, transparent),
     0 0 0 2px color-mix(in srgb, var(--pal-brass-300) 30%, transparent),
     0 0 16px color-mix(in srgb, var(--pal-brass-300) 25%, transparent);
 }
@@ -387,6 +390,7 @@
 .tavern .code-field[data-problem] .code-field__segment[data-active="true"] {
   border-color: var(--tavern-danger);
   box-shadow:
+    inset 0 2px 6px color-mix(in srgb, var(--pal-black) 65%, transparent),
     0 0 0 2px color-mix(in srgb, var(--pal-lacquer-400) 30%, transparent),
     0 0 16px color-mix(in srgb, var(--pal-lacquer-400) 25%, transparent);
 }
@@ -416,7 +420,7 @@
 .tavern.app-shell .code-field__hint {
   border-left-color: var(--tavern-danger);
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--pal-lacquer-400) 5%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pal-lacquer-400) 16%, transparent), color-mix(in srgb, var(--pal-lacquer-400) 5%, transparent));
   color: var(--tavern-parchment);
 }
 
@@ -506,7 +510,7 @@
   height: 9px;
   transform: rotate(45deg);
   border: 1px solid var(--pal-jade-900);
-  background: #1d5b54;
+  background: radial-gradient(circle at 35% 30%, #c6fff6, var(--tavern-teal) 55%, var(--pal-jade-700));
   box-shadow: 0 0 8px color-mix(in srgb, var(--pal-verdigris-400) 50%, transparent);
 }
 
@@ -516,7 +520,7 @@
 
 .tavern.app-shell .invite-screen__attempts[data-remaining="0"]::before {
   border-color: var(--pal-lacquer-900);
-  background: #6d1a16;
+  background: radial-gradient(circle at 35% 30%, #ffc2b2, var(--tavern-danger) 55%, var(--pal-lacquer-900));
   box-shadow: 0 0 8px color-mix(in srgb, var(--pal-lacquer-400) 50%, transparent);
 }
 
@@ -533,7 +537,7 @@
   border: 1px solid color-mix(in srgb, var(--pal-lacquer-400) 35%, transparent);
   border-left: 3px solid var(--tavern-danger);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--pal-lacquer-400) 5%, transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--pal-lacquer-400) 16%, transparent), color-mix(in srgb, var(--pal-lacquer-400) 5%, transparent));
 }
 
 .tavern.app-shell .invite-screen__refusal > .notice {

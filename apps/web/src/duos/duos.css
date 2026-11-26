@@ -195,7 +195,7 @@
 }
 
 .duos-life__bar--pool .duos-life__fill {
-  background: var(--pal-amethyst-300);
+  background: linear-gradient(90deg, var(--pal-amethyst-500), var(--pal-amethyst-300));
 }
 
 .duos-life__value {
@@ -269,7 +269,7 @@
   box-shadow: 0 0 0 4px var(--radiant), 0 0 12px var(--radiant);
   opacity: 0;
   pointer-events: none;
-  animation: duos-portal-flash calc(600ms * var(--anim-scale)) ease-in-out 2 alternate;
+  animation: duos-portal-flash calc(600ms * var(--anim-scale)) ease-in-out infinite alternate;
 }
 
 :root[data-dragging] .duos-board[data-showing="own"] .duos-portal {
@@ -337,7 +337,7 @@
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--pal-wood-950) 88%, transparent);
-  box-shadow: var(--shadow-2);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--pal-black) 50%, transparent);
 }
 
 .duos-ping-wheel__ping {
@@ -394,7 +394,7 @@
   border-radius: var(--radius-sm);
   box-shadow: 0 0 10px var(--radiant);
   pointer-events: none;
-  animation: duos-ping-pulse calc(700ms * var(--anim-scale)) ease-in-out 2 alternate;
+  animation: duos-ping-pulse calc(700ms * var(--anim-scale)) ease-in-out infinite alternate;
 }
 
 .duos-ping-marker[data-mine="true"] {
@@ -437,7 +437,7 @@
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-md);
   background: var(--bg-raised);
-  box-shadow: var(--shadow-3);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--pal-black) 60%, transparent);
   color: var(--text);
   text-align: center;
   transform: translate(-50%, -50%);

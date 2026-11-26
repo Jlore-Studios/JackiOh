@@ -44,7 +44,7 @@
   padding: 8px 10px;
   border: 1px solid color-mix(in srgb, var(--pal-brass-500) 50%, transparent);
   border-radius: var(--radius-md);
-  background: var(--tavern-well, var(--pal-wood-950));
+  background: linear-gradient(180deg, var(--pal-wood-950), var(--tavern-well, var(--pal-wood-950)));
   color: var(--tavern-parchment, var(--pal-parchment));
   font: inherit;
   font-size: max(16px, 1em);

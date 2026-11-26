@@ -100,7 +100,7 @@ describe("R2111000 the set", () => {
 
 describe("R2111000 the wait", () => {
   it("R2111000 every face-down card breathes one breath from one rule", () => {
-    expect(FACEDOWN).toContain(`${BREATHES} { animation: jk-facedown-breathe calc(4.8s * var(--anim-scale, 1)) var(--ease-in-out) 1; }`);
+    expect(FACEDOWN).toContain(`${BREATHES} { animation: jk-facedown-breathe calc(4.8s * var(--anim-scale, 1)) var(--ease-in-out) infinite; }`);
     expect(FACEDOWN.split("jk-facedown-breathe")).toHaveLength(3);
     expect(ANIM + FX).not.toContain("jk-facedown-breathe");
     const breath = keyframes(FACEDOWN, "jk-facedown-breathe");
@@ -110,7 +110,7 @@ describe("R2111000 the wait", () => {
     // on the breath cost every back a raster each frame on a throttled phone.
     expect(FACEDOWN).not.toMatch(/filter:/);
     expect(FACEDOWN).toContain(
-      `${GLOWS} { content: ""; position: absolute; inset: 0; z-index: var(--z-raised); border-radius: inherit; background: color-mix(in srgb, var(--pal-white) 8%, transparent); opacity: 0; pointer-events: none; animation: jk-facedown-glow calc(4.8s * var(--anim-scale, 1)) var(--ease-in-out) 1; }`,
+      `${GLOWS} { content: ""; position: absolute; inset: 0; z-index: var(--z-raised); border-radius: inherit; background: color-mix(in srgb, var(--pal-white) 8%, transparent); opacity: 0; pointer-events: none; animation: jk-facedown-glow calc(4.8s * var(--anim-scale, 1)) var(--ease-in-out) infinite; }`,
     );
     expect(FACEDOWN.split("jk-facedown-glow")).toHaveLength(3);
     expect(ANIM + FX).not.toContain("jk-facedown-glow");

@@ -345,7 +345,7 @@
   stroke-linecap: round;
   stroke-dasharray: 1 27;
   opacity: 0;
-  animation: drag-arrow-march 0.7s steps(1, end) 1;
+  animation: drag-arrow-march 0.7s steps(1, end) infinite;
 }
 
 /* R3608000: the dots march by four copies of the shaft, one quarter of the 28-unit dash period apart, each
