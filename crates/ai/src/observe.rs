@@ -475,9 +475,11 @@ fn belongs_to_hidden(instance_id: Option<&str>, resume: Option<&Resume>, hidden:
     is_hidden_id(instance_id, hidden) || is_hidden_id(resume.and_then(|r| r.instance_id.as_deref()), hidden)
 }
 
-/// A kept entry's captured event (a trigger's `resume.data.event`, or the event an interrupted trap
-/// firing keeps under `data.firing.event`) is scrubbed like a dispatch event, so a face-up card's
-/// trigger cannot carry a hidden card's identity through the queue.
+/// A kept continuation as `seat` may read it. Its captured event (a trigger's `resume.data.event`, or
+/// the event an interrupted trap firing keeps under `data.firing.event`) is scrubbed like a dispatch
+/// event, so a face-up card's trigger cannot carry a hidden card's identity through the queue; it holds
+/// no answer key (R465); and an in-flight play of a `secret_modes` card carries none of its modes in its
+/// run (R865).
 fn scrub_resume(state: &GameState, seat: PlayerId, resume: &mut Resume, hidden: &IndexSet<String>) {
     if let Some(event) = resume.data.get_mut("event")
         && event.is_object()
@@ -495,6 +497,8 @@ fn scrub_resume(state: &GameState, seat: PlayerId, resume: &mut Resume, hidden: 
     {
         scrub_event_value(state, seat, event, hidden);
     }
+    without_answer_key(resume);
+    jackioh_engine::secrets::scrub_secret_modes(state, resume, seat);
 }
 
 /// R465: a multiple-choice problem's key (`ANSWER_KEY`, Classic+ #42) rides in the resume data of the
@@ -615,7 +619,8 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
     let hidden = hidden_instance_ids(state, seat);
     let mut next = state.clone();
 
-    // Step 1: the seed, the cursor and the nonce log (which carries unredacted events).
+    // Step 1: the seed, the cursor and the nonce log (which carries unredacted events); the id counter is
+    // step 8's.
     next.seed = "redacted".to_string();
     next.rng_cursor = 0;
     next.applied = Vec::new();
@@ -769,10 +774,6 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         .retain(|entry| !belongs_to_hidden(Some(entry.instance_id.as_str()), Some(&entry.resume), &hidden));
     for entry in next.trigger_queue.iter_mut() {
         scrub_resume(state, seat, &mut entry.resume, &hidden);
-        without_answer_key(&mut entry.resume);
-        // R865: an in-flight play of a `secret_modes` card carries its modes in the run the queue
-        // holds; the other seat reads none of them.
-        jackioh_engine::secrets::scrub_secret_modes(state, &mut entry.resume, seat);
     }
 
     let mut cursor = next.work_cursor as i64;
@@ -786,9 +787,6 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         }
         scrub_resume(state, seat, &mut item.resume, &hidden);
         scrub_owed_mulligan(&mut item.resume, opp);
-        without_answer_key(&mut item.resume);
-        // R865: as above, for the owed play the work queue holds.
-        jackioh_engine::secrets::scrub_secret_modes(state, &mut item.resume, seat);
         kept_work.push(item);
     }
     next.work_cursor = cursor.min(kept_work.len() as i64).max(0) as usize;
@@ -800,18 +798,12 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         .retain(|entry| !belongs_to_hidden(None, Some(&entry.resume), &hidden));
     for entry in next.delayed.iter_mut() {
         scrub_resume(state, seat, &mut entry.resume, &hidden);
-        without_answer_key(&mut entry.resume);
-        // R865: as above, for a delayed continuation.
-        jackioh_engine::secrets::scrub_secret_modes(state, &mut entry.resume, seat);
     }
     for entry in next.dispatch.iter_mut() {
         entry.event = scrub_event(state, seat, &entry.event, &hidden);
     }
     if let Some(pending) = next.pending.as_mut() {
         scrub_resume(state, seat, &mut pending.resume, &hidden);
-        without_answer_key(&mut pending.resume);
-        // R865: as above, for the open prompt's continuation.
-        jackioh_engine::secrets::scrub_secret_modes(state, &mut pending.resume, seat);
     }
 
     // Step 6: a transient definition only a hidden card uses would name that card.
@@ -959,7 +951,63 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         }
     }
 
+    // Step 8, R4824000: the id counter, numbered from what the redaction still names, so no id minted
+    // where the seat cannot see moves it. Set last, on the redaction as it leaves, so a second pass keeps it.
+    next.next_id = first_unnamed_id(&next);
+
     next
+}
+
+/// R4824000: the prefixes of the ids `GameState.next_id` numbers that a state may name anywhere: instances
+/// (`c`), prompts (`q`) and secret choices (`secret-`). An Echo's waiting repeat is numbered from it too, as
+/// `e<n>`, and read on its queue alone, since `dispatch` numbers its own `e<n>` from `next_seq`.
+const MINTED_ID_PREFIXES: [&str; 3] = ["c", "q", "secret-"];
+const ECHO_ID_PREFIX: &str = "e";
+
+/// R4824000: the number `text` carries after `prefix` when it is all digits after it (`q17` → 17).
+fn number_after(text: &str, prefix: &str) -> Option<u32> {
+    let digits = text.strip_prefix(prefix)?;
+    if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    digits.parse::<u32>().ok()
+}
+
+/// R4824000, R185: one past the highest number of an id `state` names (in a string or a key anywhere in
+/// it, an Echo's on its queue), so an id a simulation mints from it is one nothing in it names. A state
+/// that does not serialize keeps its counter (none does: §10.1 keeps a state JSON-only).
+fn first_unnamed_id(state: &GameState) -> u32 {
+    fn note(text: &str, high: &mut u32) {
+        for prefix in MINTED_ID_PREFIXES {
+            if let Some(number) = number_after(text, prefix) {
+                *high = (*high).max(number);
+            }
+        }
+    }
+    fn walk(value: &Value, high: &mut u32) {
+        match value {
+            Value::String(text) => note(text, high),
+            Value::Array(items) => items.iter().for_each(|item| walk(item, high)),
+            Value::Object(fields) => {
+                for (key, item) in fields {
+                    note(key, high);
+                    walk(item, high);
+                }
+            }
+            _ => {}
+        }
+    }
+    let Ok(value) = serde_json::to_value(state) else {
+        return state.next_id;
+    };
+    let mut high = 0;
+    walk(&value, &mut high);
+    for item in &state.echo_queue {
+        if let Some(number) = number_after(&item.id, ECHO_ID_PREFIX) {
+            high = high.max(number);
+        }
+    }
+    high + 1
 }
 
 /// R188: the opponent offered a draw this turn and nobody has answered it yet.

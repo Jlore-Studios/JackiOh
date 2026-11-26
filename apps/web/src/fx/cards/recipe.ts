@@ -195,9 +195,6 @@ export const ENTRANCE_TRAUMA = {
 /** R3389001: the shake of each Classic signature recipe that shakes the board, on top of nothing (rule 9). */
 export const SIGNATURE_TRAUMA = { taxSeizure: 0.4, graveRise: 0.6, craterLock: 0.5 } as const;
 
-/** R3389001: where a signature's second beat starts, as a fraction of its entry: after the first beat's gather. */
-export const SIGNATURE_BEAT_AT = 0.35;
-
 /** R3389001: how far a signature's run steps on per card it moves (Second Wind's piles, Spell Tyrant's ghosts), a fraction of the entry. */
 export const SIGNATURE_STEP_AT = 0.08;
 

@@ -4,13 +4,10 @@
 use serde::{Deserialize, Serialize};
 
 use crate::damage::{DamageTarget, set_hero_health};
-use crate::effects::targets::{
-    BoardScope, PlayerSpec, TargetSpec, cards_in_scope, player_of, resolve_target,
-};
+use crate::effects::targets::{BoardScope, TargetSpec, cards_in_scope, resolve_target};
 use crate::layers::{unit_view, worn_stats_override};
-use crate::modifiers::add_modifier;
 use crate::script::Effect;
-use crate::state::{ModifierExpiry, ModifierKind, find_instance, find_instance_mut};
+use crate::state::{find_instance, find_instance_mut};
 use crate::wire::{AttackHealth, GameEvent, Tuning};
 
 /// `setHealth`'s argument.
@@ -31,34 +28,6 @@ pub fn set_health(args: SetHealthArgs) -> Effect {
         };
         let source_id = ctx.self_.as_ref().map(|card| card.id.clone());
         set_hero_health(ctx, player, args.value, source_id);
-    })
-}
-
-/// `convertHealing`'s argument.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
-#[serde(rename_all = "camelCase")]
-pub struct ConvertHealingArgs {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub player: Option<PlayerSpec>,
-}
-
-/// B5 E8: this turn, heals on `player`'s enemies deal that much Pierce damage instead, from this card
-/// (a this-turn player modifier). Classic+ #22 Blood Moon does it through a replacement instead, which
-/// also converts the heal that set it off.
-pub fn convert_healing(args: ConvertHealingArgs) -> Effect {
-    Effect::new("convertHealing", move |ctx| {
-        let Some(converter_id) = ctx.self_.as_ref().map(|card| card.id.clone()) else {
-            return;
-        };
-        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
-        let turn = ctx.sink.state.turn;
-        add_modifier(
-            ctx,
-            player,
-            ModifierExpiry::ThisTurn { turn },
-            ModifierKind::HealToDamage { converter_id },
-        );
     })
 }
 

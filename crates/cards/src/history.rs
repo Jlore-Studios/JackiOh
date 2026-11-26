@@ -43,13 +43,13 @@ use crate::scripts::classic_plus::{
     c078_claudes_datacenter,
 };
 use crate::scripts::core::{
-    c002_speciesist, c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c032_prem_panther,
-    c033_unstable_clone_machine, c042_eugenics, c043_big_felinor, c049_snom_bunny_mind_control,
-    c050_k_pop_fanatic, c051_1_kys_empty_notebook, c052_silly_silas, c054_straaza, c059_unbiased_immigration,
-    c065_1_spikey_pillow, c065_masochism_mask, c069_call_to_arms, c070_spiteful_stab,
-    c073_anti_oneshot_armor, c074_adaptive_ui, c075_infinite_reserves, c079_twinspell, c080_zao_gao,
-    c081_radiant_saintess, c083_transmogulate, c084_going_long, c085_unlicensed_experimentation,
-    c089_corpse_eater, c098_heroic_power,
+    c002_speciesist, c004_gary_the_gambler, c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean,
+    c032_prem_panther, c033_unstable_clone_machine, c042_eugenics, c043_big_felinor,
+    c049_snom_bunny_mind_control, c050_k_pop_fanatic, c051_1_kys_empty_notebook, c052_silly_silas,
+    c054_straaza, c059_unbiased_immigration, c065_1_spikey_pillow, c065_masochism_mask, c069_call_to_arms,
+    c070_spiteful_stab, c073_anti_oneshot_armor, c074_adaptive_ui, c075_infinite_reserves, c079_twinspell,
+    c080_zao_gao, c081_radiant_saintess, c083_transmogulate, c084_going_long,
+    c085_unlicensed_experimentation, c089_corpse_eater, c098_heroic_power,
 };
 use crate::scripts::meditative::{
     c001_disruptive_disruptor, c005_death_by_1000_cuts, c007_introspection, c009_joint_filing,
@@ -70,34 +70,36 @@ use crate::scripts::meditative_plus::{
 };
 use crate::scripts::stinkyscape::{
     c004_olivian_expanse, c007_the_greatest_heist, c009_ticketed, c010_1_inner_fire, c010_2_divine_spirit,
-    c011_2_arcane_missiles, c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior, c018_3_casper,
-    c018_imitated_instrumentality, c023_warp_disruptor, c024_warp_disruptor_ii, c026_zolarketh,
-    c033_drone_core_vii, c034_drone_core_viii, c035_drone_core_ix, c036_drone_core_x, c042_core_researcher,
-    c045_drone_commander, c046_circadian_halfcycler, c049_spacemine, c050_beam_v3, c051_repeater_v3,
-    c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5,
-    c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c070_zzoth, c074_paragon_x, c080_galaxy, c083_halo,
-    c086_prototype_x2, c087_siva_1, c094_tmack_trav, c096_ocean_tsunami, c109_xxfreshjack, c111_shockwave447,
-    c112_job_application, c115_scornboi, c116_megabase, c119_unsecure_system, c129_jlockeeds_missile_pod,
-    c134_felinor_containment_chamber, c140_rush_token_launcher, c143_book_launcher, c148_alteran_reach,
-    c149_wildar, c153_stimmycheck, c154_dice_of_doom, c158_stratos_swarm, c163_swear_loyalities,
-    c165_the_trade_union, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid,
-    c172_huge_asteroid, c173_abandoned_spice_tower, t_drone_corvette, t_drone_interceptor, t_narcor,
-    t_red_narcor,
+    c010_3_power_word_shield, c011_2_arcane_missiles, c013_asphyxiants_cloud, c016_rod_of_ages,
+    c018_1_melchior, c018_3_casper, c018_imitated_instrumentality, c023_warp_disruptor,
+    c024_warp_disruptor_ii, c026_zolarketh, c033_drone_core_vii, c034_drone_core_viii, c035_drone_core_ix,
+    c036_drone_core_x, c042_core_researcher, c045_drone_commander, c046_circadian_halfcycler, c049_spacemine,
+    c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4,
+    c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c070_zzoth,
+    c074_paragon_x, c080_galaxy, c083_halo, c086_prototype_x2, c087_siva_1, c094_tmack_trav,
+    c096_ocean_tsunami, c109_xxfreshjack, c111_shockwave447, c112_job_application, c115_scornboi,
+    c116_megabase, c119_unsecure_system, c129_jlockeeds_missile_pod, c134_felinor_containment_chamber,
+    c140_rush_token_launcher, c143_book_launcher, c148_alteran_reach, c149_wildar, c153_stimmycheck,
+    c154_dice_of_doom, c158_stratos_swarm, c163_swear_loyalities, c165_the_trade_union, c168_drone_hanger,
+    c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid,
+    c173_abandoned_spice_tower, t_drone_corvette, t_drone_interceptor, t_narcor, t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c007_churnwalker, c009_drone_assembler_v4, c010_drone_assembler_v5, c017_smoothie,
     c018_large_smoothie, c021_jlockeed_shredder_12, c024_forced_propagation, c025_snom_bunny, c037_scorch,
-    c039_mindustrial_cross_over, c041_mend_projector, c046_phase_fabric, c061_1_shawarma_law,
+    c039_mindustrial_cross_over, c041_mend_projector, c045_surge_alloy, c046_phase_fabric, c047_plastanium,
+    c049_metaglass, c050_graphite, c056_impact_reactor, c059_mass_driver, c061_1_shawarma_law,
     c062_overdrive_projector, c063_overdrive_dome, c064_surge_wall, c065_thorium_wall, c066_plastanium_wall,
     c067_phase_wall, c076_ayys_lmao, c077_black_hole, c079_a_glimpse_into_the_endless_sea,
-    c080_the_last_voyage, c082_endless_expedition, c093_recessive_replicators, c097_selective_enrollment,
-    c104_tireless_cultivation, c119_eclipse, c120_crawler, c121_1_toxopid_leg, c121_toxopid,
-    c131_tetrative_reconstructor, c145_fire_beam_v5, c155_the_far_vagabond, c159_raven,
-    c166_mindustrial_revolution,
+    c080_the_last_voyage, c082_endless_expedition, c090_meltdown, c093_recessive_replicators,
+    c097_selective_enrollment, c101_a_wee_whelp, c104_tireless_cultivation, c119_eclipse, c120_crawler,
+    c121_1_toxopid_leg, c121_toxopid, c131_tetrative_reconstructor, c145_fire_beam_v5, c150_scorching_rounds,
+    c151_volcanic_rounds, c155_the_far_vagabond, c158_quick_chaos, c159_raven, c166_mindustrial_revolution,
 };
 use crate::scripts::training_grounds::{
-    c015_in_a_hurry, c031_level_up, c035_corpse_recycler, c036_training_dummy, c038_tutorial_master,
-    c039_call_to_chaos_training_grounds_edition, c040_goetzmann_game_design, c045_jlockeeds_weapons,
+    c012_fortify, c015_in_a_hurry, c027_hopeful_jelly_bean, c031_level_up, c035_corpse_recycler,
+    c036_training_dummy, c038_tutorial_master, c039_call_to_chaos_training_grounds_edition,
+    c040_goetzmann_game_design, c045_jlockeeds_weapons,
     c050_glowy_jelly_bean as c050_legacy_glowy_jelly_bean,
     c052_snom_bunny_mind_control as c052_legacy_snom_bunny_mind_control,
     c056_corpse_eater as c056_legacy_corpse_eater,
@@ -126,7 +128,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R4382001: Adaptive UI's Rush Token through v0.1.0d), #4396 (R4396000), #4423 (R4423000), #4424
 /// (R4424000), #4440 (R4440003: Profe Yates's exile; R4440050 to R4440055, and the Tributes of
 /// xxFreshJack, Raven, ZolarKeth and Galaxy, Last Hurrah's Flashback and Double Counting's price),
-/// and #4666 (R4666000).
+/// #4666 (R4666000), #4844 (R656's help aims on eight buff Spells' targets) and #4828 (R4828000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 /// R4779000: a row's key is that version, or `"fragment:<stem>"` (`FRAGMENT_KEY`), the stem of the
 /// pending fragment that ships the change, which `resolve_kept_key` reads as the version just before
@@ -1410,12 +1412,150 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     ),
     // #4665's Ticketed (R4665000): the Cry that held a permanent beneath it in its own zone.
     (c009_ticketed::ID, "v0.6.12c", c009_ticketed::script_v0_6_12c),
+    // #4828 (R4828000): End Times' bank in the card's memory, kept until the fragment that moves it into
+    // the card's tuning ships (R4779000).
+    (
+        c098_heroic_power::ID,
+        "fragment:end-times-gives-back-its-cuts-after-leaving-the-field",
+        c098_heroic_power::script_v0_6_14,
+    ),
     // #4840 (R1867002): the buffs before the unfloored-Attack reading (R4779000: keyed by the
     // pending fragment, so versions shipped while the branch waits stay covered).
     (
         c010_1_inner_fire::ID,
         "fragment:inner-fire-reads-attack-below-0",
         c010_1_inner_fire::script_v0_6_13h,
+    ),
+    // #4844 (R656's help aims): the aim-less targets of eight buff Spells, before they aimed help
+    // (R4779000: keyed by the pending fragment, so versions shipped while the branch waits stay covered).
+    (
+        c012_fortify::ID,
+        "fragment:help-aimed-buffs-land-stolen-and-random-casts-on-the-caster",
+        c012_fortify::script_before_help_aim,
+    ),
+    (
+        c027_hopeful_jelly_bean::ID,
+        "fragment:help-aimed-buffs-land-stolen-and-random-casts-on-the-caster",
+        c027_hopeful_jelly_bean::script_before_help_aim,
+    ),
+    (
+        c010_2_divine_spirit::ID,
+        "fragment:help-aimed-buffs-land-stolen-and-random-casts-on-the-caster",
+        c010_2_divine_spirit::script_before_help_aim,
+    ),
+    (
+        c010_3_power_word_shield::ID,
+        "fragment:help-aimed-buffs-land-stolen-and-random-casts-on-the-caster",
+        c010_3_power_word_shield::script_before_help_aim,
+    ),
+    (
+        c045_surge_alloy::ID,
+        "fragment:help-aimed-buffs-land-stolen-and-random-casts-on-the-caster",
+        c045_surge_alloy::script_before_help_aim,
+    ),
+    (
+        c047_plastanium::ID,
+        "fragment:help-aimed-buffs-land-stolen-and-random-casts-on-the-caster",
+        c047_plastanium::script_before_help_aim,
+    ),
+    (
+        c049_metaglass::ID,
+        "fragment:help-aimed-buffs-land-stolen-and-random-casts-on-the-caster",
+        c049_metaglass::script_before_help_aim,
+    ),
+    (
+        c050_graphite::ID,
+        "fragment:help-aimed-buffs-land-stolen-and-random-casts-on-the-caster",
+        c050_graphite::script_before_help_aim,
+    ),
+    // #4783 Stinkyscape+ Balance Changes VIII (R4779000: keyed by its pending fragment): the scripts before
+    // it: Shredder-12's Tribute 3, Metaglass's base Ranged alone (R4783024), Impact Reactor's two
+    // Overloads (R4783020), The Last Voyage's base end-of-turn launches alone (R4783030), Meltdown's Frozen
+    // heal (R4783023), A Wee Whelp's Evolve to 10/10, Crawler's graveyard price (R4783022), Toxopid's
+    // Ignores Taunt (R4783021), Scorching Rounds' Burns 3, Volcanic Rounds' conversion (R4783001), Quick
+    // Chaos without its discard (R4783025), Gary's keyword coin, Expedition12 without its Buff (R4783031),
+    // Knowledge Breaker's Aura and YileGPT Prime without its Overload.
+    (
+        c021_jlockeed_shredder_12::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c021_jlockeed_shredder_12::script_v0_6_13h,
+    ),
+    (
+        c049_metaglass::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c049_metaglass::script_v0_6_13h,
+    ),
+    (
+        c056_impact_reactor::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c056_impact_reactor::script_v0_6_13h,
+    ),
+    (
+        c080_the_last_voyage::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c080_the_last_voyage::script_v0_6_13h,
+    ),
+    (
+        c090_meltdown::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c090_meltdown::script_v0_6_13h,
+    ),
+    (
+        c101_a_wee_whelp::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c101_a_wee_whelp::script_v0_6_13h,
+    ),
+    (
+        c120_crawler::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c120_crawler::script_v0_6_13h,
+    ),
+    (
+        c121_toxopid::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c121_toxopid::script_v0_6_13h,
+    ),
+    (
+        c150_scorching_rounds::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c150_scorching_rounds::script_v0_6_13h,
+    ),
+    (
+        c151_volcanic_rounds::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c151_volcanic_rounds::script_v0_6_13h,
+    ),
+    (
+        c158_quick_chaos::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c158_quick_chaos::script_v0_6_13h,
+    ),
+    (
+        c004_gary_the_gambler::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c004_gary_the_gambler::script_v0_6_13h,
+    ),
+    (
+        c018_expedition12::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c018_expedition12::script_v0_6_13h,
+    ),
+    (
+        c045_knowledge_breaker::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c045_knowledge_breaker::script_v0_6_13h,
+    ),
+    (
+        c049_1_yilegpt_unleashed::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c049_1_yilegpt_unleashed::script_v0_6_13h,
+    ),
+    // #4992 (R4992000): Mass Driver's badge that held its own count, kept until the fragment that drops
+    // it ships (R4779000).
+    (
+        c059_mass_driver::ID,
+        "fragment:mass-driver-s-badge-states-its-countdown-once",
+        c059_mass_driver::script_v0_6_14i,
     ),
 ];
 

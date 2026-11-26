@@ -54,7 +54,7 @@ use crate::config::{
 };
 use crate::db::store::StoreError;
 use crate::duos::checkpoint::{DuosCheckpointBody, checkpoint_row};
-use crate::duos::engine::{self, Pinned};
+use crate::duos::engine::Pinned;
 use crate::duos::protocol::{
     DuosClientMessage, DuosServerMessage, GraceDeadlines, PingAt, PingKind, PingTarget, ack_message, encode,
     error_message, parse_duos_message,
@@ -769,8 +769,29 @@ impl DuosActor {
             return;
         };
         self.release_seats();
-        self.lock().economy = economy;
-        self.load_jlore_caps(true).await;
+        // #4982, as #4711 did for a 1v1 result: a write that paid every person's seat says itself whether
+        // the daily cap held pay back (`GameEconomy::jlore_capped`, what `duos_game_jlore_caps` reads back
+        // off the ledger), so its caps need no second transaction; a repeat, a void result or an economy
+        // that is off paid none and is read.
+        let paid = {
+            let mut core = self.lock();
+            core.economy = economy;
+            self.shared
+                .row
+                .team_b()
+                .people()
+                .iter()
+                .all(|&seat| core.economy[slot(seat)].is_some())
+                .then(|| {
+                    core.economy
+                        .each_ref()
+                        .map(|paid| paid.as_ref().is_some_and(|paid| paid.jlore_capped))
+                })
+        };
+        match paid {
+            Some(caps) => self.apply_jlore_caps(caps, true),
+            None => self.load_jlore_caps(true).await,
+        }
         tracing::info!(event = "duos.over", matchId = %self.match_id_str(), outcome = %result.outcome, reason = %result.reason);
     }
 
@@ -794,8 +815,8 @@ impl DuosActor {
         }
     }
 
-    /// R1483000: checks if daily Jlore cap held back any person's pay. Pushes updated view
-    /// with `jlore_capped` and payment (#1657) to affected seats; a failed read is only logged.
+    /// R1483000: reads off the ledger whether the daily Jlore cap held back any person's pay, for a
+    /// rebuilt actor or a result write that paid nobody (#4982), and applies it; a failed read is only logged.
     async fn load_jlore_caps(&self, announce: bool) {
         let caps = match super::duos_game_jlore_caps(&self.shared.app, self.match_id_str()).await {
             Ok(caps) => caps,
@@ -804,6 +825,12 @@ impl DuosActor {
                 [false; 4]
             }
         };
+        self.apply_jlore_caps(caps, announce);
+    }
+
+    /// R1483000: takes `caps`, by `slot`; with `announce`, capped or paid (`Core::economy`, #1657) seats get
+    /// fresh views.
+    fn apply_jlore_caps(&self, caps: [bool; 4], announce: bool) {
         let mut core = self.lock();
         if caps.iter().any(|capped| *capped) {
             core.jlore_capped = caps;
@@ -1055,11 +1082,6 @@ impl DuosActor {
         );
     }
 
-    /// The match's row as the actor was built with it.
-    pub fn row(&self) -> &DuosMatch {
-        &self.shared.row
-    }
-
     /// The seat `profile_id` holds: a1 for the room's host, a2 for its guest, b1 and b2 for a 2v2's team
     /// B (R3731002), none otherwise.
     pub fn seat_of(&self, profile_id: &str) -> Option<DuosSeat> {
@@ -1216,12 +1238,15 @@ impl DuosActor {
 
     /// `seat`'s view as its socket would get it (without the clock).
     pub fn view_for(&self, seat: DuosSeat) -> DuosView {
-        engine::view(self.shared.pinned, self.lock().host.game(), seat)
+        let core = self.lock();
+        self.shared
+            .pinned
+            .run(|| jackioh_engine::duos::duos_view_for(core.host.game(), seat))
     }
 
     /// `duos_hash` of the live state, for a rebuild's check; never sent to a socket.
     pub fn hash(&self) -> String {
-        engine::hash(self.lock().host.game())
+        jackioh_engine::duos::duos_hash(self.lock().host.game())
     }
 
     /// The next seq the log will take.

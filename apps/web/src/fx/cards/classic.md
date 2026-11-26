@@ -62,7 +62,7 @@ gallery plays every entry.
 | `classic-036` | Burn | Spell | cast bolt | 1.00 | bolt | cast: the census agrees (bolt) |
 | `classic-037` | Last Hurrah | Spell | cast flight | 1.25 | bolt | cast: fatigue; it draws your deck, which flight (#2786) reads |
 | `classic-038` | Jackiestan Auctioneer | Field Trap | cast bolt Hustle/cash | 1.28 | bolt | cast: the census agrees (bolt), in Hustle's cash sub-look |
-| `classic-039` | Outbreak | Spell | cast tally | 1.55 | bolt | cast: it places counters, which tally (#2786) reads |
+| `classic-039` | Outbreak | Spell | cast tally | 1.65 | bolt | cast: it places counters, which tally (#2786) reads |
 | `classic-040` | MC Tech | Unit | cry tether | 1.19 | none: no motif reads controlChanged | cry: no census family reads controlChanged, which tether (#2786) reads |
 | `classic-041` | State of the Game | Unit | none: vanilla | — | none: vanilla | the census agrees |
 | `classic-042` | Transmutable Toxins | Field Spell | cast tally; activate tally; aura toxic board | 1.28 | wipe | cast and activate: it places counters, which tally (#2786) reads; the census's wipe read the deaths they cause |

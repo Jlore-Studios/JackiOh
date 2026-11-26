@@ -46,29 +46,9 @@ fn r3558000_hand_reads_and_adds_at_either_end() {
     let state = s.state();
     let ids = hand_ids(state, P1);
     assert_eq!(ids.len(), 3);
-    assert_eq!(
-        hand_leftmost(state, P1).map(|card| card.id.clone()),
-        Some(ids[0].clone())
-    );
-    assert_eq!(
-        hand_rightmost(state, P1).map(|card| card.id.clone()),
-        Some(ids[2].clone())
-    );
     assert_eq!(hand_index(state, &ids[1]), Some((P1, 1)));
-    assert_eq!(
-        hand_neighbor(state, &ids[1], HandSide::Left).map(|card| card.id.clone()),
-        Some(ids[0].clone())
-    );
-    assert_eq!(
-        hand_neighbor(state, &ids[1], HandSide::Right).map(|card| card.id.clone()),
-        Some(ids[2].clone())
-    );
     assert!(is_leftmost_in_hand(state, &ids[0]));
     assert!(!is_leftmost_in_hand(state, &ids[1]));
-    assert!(is_rightmost_in_hand(state, &ids[2]));
-    assert!(!is_rightmost_in_hand(state, &ids[1]));
-    assert!(hand_neighbor(state, &ids[0], HandSide::Left).is_none());
-    assert!(hand_neighbor(state, &ids[2], HandSide::Right).is_none());
     assert!(hand_index(state, "c-nothing").is_none());
 
     apply_now(

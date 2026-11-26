@@ -419,7 +419,8 @@ describe("hover preview (B22)", () => {
     expect(face.querySelector(".cf-atk")).toHaveAttribute("data-tone", "buffed");
     expect(face.querySelector(".cf-hp")).toHaveAttribute("data-face-health", String(unit.health));
     expect(face.querySelector(".cf-hp")).toHaveAttribute("data-tone", "damaged");
-    expect(glossaryTerms(preview)).toEqual(["Cry", "Divine Shield", "Rush", "Taunt"]);
+    // Gary the Gambler: its text names Cry alone since #4783 took its Divine Shield or Rush coin off.
+    expect(glossaryTerms(preview)).toEqual(["Cry", "Taunt"]);
   });
 
   it("B22 hovering a hand card shows the cost it has now, not the printed one", () => {

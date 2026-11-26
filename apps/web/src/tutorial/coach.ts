@@ -56,20 +56,18 @@ export type CoachStep = {
   /** Values for `{name}` tokens in `title` and `text`, filled where shown. */
   params?: Params;
   anchor?: AnchorOf;
-  /** `info`: "Got it" completes it. `act`: its `done` completes it. `moment`: finding what it `discovers`, or its `done`. */
-  kind: "info" | "act" | "moment";
+  /** `info`: "Got it" completes it. `moment`: finding what it `discovers`, or its `done`. R4702004: there is no act step. */
+  kind: "info" | "moment";
   when?: (ctx: CoachCtx) => boolean;
-  /** Required for `act`; receives the activation view. */
+  /** Completes the step once the view shows it; receives the activation view. */
   done?: (ctx: CoachCtx, since: PlayerView) => boolean;
   /** Retires a no-longer-sensible step without showing it. */
   moot?: (ctx: CoachCtx, since: PlayerView | null) => boolean;
   /** Lesson tests follow this legal-action predicate; the page never decides by it (R293). */
   expect?: (action: ActionBody, ctx: CoachCtx) => boolean;
-  /** Only `info` may hold AI; `coachDisplay` ignores this for `act` and `moment` (R314). */
+  /** Only `info` may hold AI; `coachDisplay` ignores this for a `moment` (R314). */
   holdAi?: boolean;
   final?: boolean;
-  /** Retire if its player turn passes before it shows (R82). */
-  turnBound?: boolean;
   /** `moment`: the Field guide entries it sets up; it is done once each is found in this game. */
   discovers?: readonly string[];
   /** `moment`: the nudge, then the pointed hint, shown as the player stalls or asks (R2205000). */
@@ -107,7 +105,6 @@ export type CoachState = {
   index: number;
   since: PlayerView | null;
   turnsOnStep: number;
-  currentFrom: number | null;
   outcomes: Readonly<Record<string, StepOutcome>>;
   tipsSeen: readonly string[];
   tipQueue: readonly string[];
@@ -132,7 +129,6 @@ export const COACH_START: CoachState = {
   index: 0,
   since: null,
   turnsOnStep: 0,
-  currentFrom: null,
   outcomes: {},
   tipsSeen: [],
   tipQueue: [],
@@ -188,7 +184,7 @@ function bringForward(script: LessonScript, state: CoachState, ctx: CoachCtx): C
     const here = order[state.index] ?? state.index;
     order[state.index] = order[at] ?? at;
     order[at] = here;
-    return { ...state, order, turnsOnStep: 0, currentFrom: null };
+    return { ...state, order, turnsOnStep: 0 };
   }
   return null;
 }
@@ -204,7 +200,6 @@ function retire(state: CoachState, step: CoachStep, outcome: StepOutcome): Coach
     index: state.index + 1,
     since: null,
     turnsOnStep: 0,
-    currentFrom: null,
     shownAt: 0,
     hintsAsked: 0,
     outcomes: { ...state.outcomes, [step.id]: outcome },
@@ -222,14 +217,13 @@ function alreadyKnown(step: CoachStep, state: CoachState): boolean {
   return step.revisit === true && wanted.every((id) => state.known.includes(id) || state.found.includes(id));
 }
 
-/** Retire waiting steps as moot before showing ones as done (R82). */
+/** Retire waiting steps as moot before showing ones as done. */
 function settleSteps(script: LessonScript, start: CoachState, ctx: CoachCtx): CoachState {
   let state = start;
   // Each pass stops or retires a step, bounding the loop by `steps.length`.
   for (;;) {
     const step = stepAt(script, state);
     if (step === undefined) return state.since === null ? state : { ...state, since: null };
-    if (state.currentFrom === null) state = { ...state, currentFrom: ctx.view.turn };
 
     const isMoot = (since: PlayerView | null): boolean =>
       step.moot !== undefined && safely(() => step.moot?.(ctx, since) === true);
@@ -237,8 +231,7 @@ function settleSteps(script: LessonScript, start: CoachState, ctx: CoachCtx): Co
       discovered(step, state) || (step.done !== undefined && safely(() => step.done?.(ctx, since) === true));
 
     if (state.since === null) {
-      const turnPassed = step.turnBound === true && ctx.view.turn !== state.currentFrom;
-      if (turnPassed || isMoot(null) || alreadyKnown(step, state)) {
+      if (isMoot(null) || alreadyKnown(step, state)) {
         state = retire(state, step, "moot");
         continue;
       }

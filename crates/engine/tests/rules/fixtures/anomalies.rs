@@ -4,7 +4,10 @@
 //! engine never imports `crates/cards`. Ids are prefixed `an-` and indexed from 18580, apart from
 //! every other fixture file's.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

@@ -74,8 +74,9 @@ pub type ActorDeps = Arc<crate::app::App>;
 macro_rules! one_tx {
     ($db:expr, |$t:ident| $body:expr) => {
         async {
-            #[allow(unused_mut)]
             let mut $t = $db.begin(None).await?;
+            // A body that only reads needs no `mut`; this borrow keeps `unused_mut` quiet for it.
+            let _ = &mut $t;
             let out = $body;
             $t.commit().await?;
             Ok::<_, $crate::db::store::StoreError>(out)

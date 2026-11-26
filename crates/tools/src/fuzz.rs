@@ -539,7 +539,7 @@ const TERMINAL_REASONS: &[&str] = &[
 /// A card kept out of the pool, with the reason and the issue it waits on.
 pub struct PoolExclusion {
     pub id: &'static str,
-    #[allow(dead_code)]
+    #[expect(dead_code, reason = "read by the person editing the list; nothing prints it")]
     pub why: &'static str,
 }
 

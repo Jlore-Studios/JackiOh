@@ -62,6 +62,10 @@ struct RecordOptions {
     p1_hand: Option<Vec<&'static str>>,
     /// R4552000: p1's turn rows (`swingTurns`), absent by default as from a record written before them.
     p1_swing_turns: Option<Value>,
+    /// R4672000: p1's plays' variants (`playedVariants`), beside `played`.
+    p1_played_variants: Option<Value>,
+    /// R4672002: p1's picks (`picks`), each Discover-like choice a card of its asked.
+    p1_picks: Option<Value>,
 }
 
 /// One seat's summary: the first three cards of `hand` are the opening hand, the rest drawn.
@@ -125,6 +129,12 @@ fn make_game_record(id: &str, options: RecordOptions) -> Value {
     }
     if let Some(rows) = options.p1_swing_turns {
         p1["swingTurns"] = rows;
+    }
+    if let Some(variants) = options.p1_played_variants {
+        p1["playedVariants"] = variants;
+    }
+    if let Some(picks) = options.p1_picks {
+        p1["picks"] = picks;
     }
 
     json!({
@@ -4487,5 +4497,405 @@ mod r4681001_hall_of_fame {
         // At the TTL the snapshot is loaded again.
         tokio::time::advance(Duration::from_millis(ttl_ms())).await;
         assert_eq!(reads_of(&app, &loads, "/api/stats/hall-of-fame").await, (1, 1));
+    }
+}
+
+// R4676000: `GET /api/stats/cards/:id`'s `variants`: each choice of a Choose One, an X and an Embiggen card,
+// at the page's patch and on its face.
+mod r4676000_extended_stats {
+    use super::*;
+
+    const FLOOD: &str = "core-017"; // Flood: Radiant, Choose one of three.
+    const DIVIDEND: &str = "core-024"; // Efficiency Dividend: X, and Choose one.
+    const PREP: &str = "classic-035"; // Prep: an Embiggen Spell.
+    const PLAIN: &str = "core-001";
+    const DECK: [&str; 4] = [FLOOD, DIVIDEND, PREP, PLAIN];
+
+    /// `count` live Best of 1 games, p1 winning the first `won`. With `variants`, p1 plays the four cards with
+    /// them (Flood's, Dividend's, Prep's), Flood on its Radiant face when `radiant`; without, it never draws one.
+    fn games(tag: &str, variants: Option<[Value; 3]>, radiant: bool, won: usize, count: usize) -> Vec<Value> {
+        (0..count)
+            .map(|i| {
+                let (hand, played, flags, chosen) = match &variants {
+                    Some([flood, dividend, prep]) => (
+                        DECK.to_vec(),
+                        DECK.to_vec(),
+                        Some(vec![radiant, false, false, false]),
+                        Some(json!([flood, dividend, prep, null])),
+                    ),
+                    None => (Vec::new(), Vec::new(), None, None),
+                };
+                make_game_record(
+                    &format!("variants-{tag}-{i}"),
+                    RecordOptions {
+                        source: Some("live"),
+                        mode: Some("bo1"),
+                        p1_deck: Some(DECK.to_vec()),
+                        p1_hand: Some(hand),
+                        p1_played: Some(played),
+                        p1_played_radiant: flags,
+                        p1_played_variants: chosen,
+                        p2_deck: Some(vec!["core-100"]),
+                        p2_played: Some(Vec::new()),
+                        winner: Some(if i < won { "p1" } else { "p2" }),
+                        ..RecordOptions::default()
+                    },
+                )
+            })
+            .collect()
+    }
+
+    async fn seeded() -> Arc<App> {
+        let app = test_app().await;
+        let mut records = games(
+            "a",
+            Some([
+                json!({ "modes": ["bounce all units"] }),
+                json!({ "modes": ["deal"], "x": 2 }),
+                json!({ "embiggened": true }),
+            ]),
+            true,
+            24,
+            30,
+        );
+        records.extend(games(
+            "b",
+            Some([
+                json!({ "modes": ["destroy all enemy units"] }),
+                json!({ "modes": ["heal"], "x": 6 }),
+                json!({ "embiggened": false }),
+            ]),
+            false,
+            12,
+            30,
+        ));
+        records.extend(games(
+            "c",
+            Some([
+                json!({ "modes": ["bounce all enemy units"] }),
+                json!({ "modes": ["heal"], "x": 7 }),
+                json!({ "embiggened": false }),
+            ]),
+            false,
+            5,
+            10,
+        ));
+        records.extend(games("unseen", None, false, 15, 30));
+        insert_records(&app, records).await;
+        app
+    }
+
+    fn kinds(drill: &Value) -> Vec<&str> {
+        drill["variants"]
+            .as_array()
+            .expect("variants")
+            .iter()
+            .map(|group| group["kind"].as_str().expect("a kind"))
+            .collect()
+    }
+
+    fn rows<'a>(drill: &'a Value, kind: &str) -> &'a Vec<Value> {
+        drill["variants"]
+            .as_array()
+            .and_then(|groups| groups.iter().find(|group| group["kind"] == json!(kind)))
+            .and_then(|group| group["rows"].as_array())
+            .expect("the kind's rows")
+    }
+
+    fn keys(rows: &[Value]) -> Vec<&str> {
+        rows.iter()
+            .map(|row| row["key"].as_str().expect("a key"))
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn r4676000_a_choose_one_card_answers_each_option_by_share_with_its_figures() {
+        let app = seeded().await;
+        let (status, _, drill) = get_public(&app, &format!("/api/stats/cards/{FLOOD}?mode=bo1")).await;
+        assert_eq!(status, 200);
+        assert_eq!(kinds(&drill), ["mode"]);
+        let modes = rows(&drill, "mode");
+        // By share, most chosen first; the 10-game option below the floor reads no tier.
+        assert_eq!(
+            keys(modes),
+            [
+                "bounce all units",
+                "destroy all enemy units",
+                "bounce all enemy units"
+            ]
+        );
+        assert_eq!(modes[0]["label"], json!("bounce all units"));
+        // Each option apart, for the page to name in the card's own words.
+        assert_eq!(modes[0]["options"], json!(["bounce all units"]));
+        assert_eq!(modes[0]["games"], json!(30));
+        let share = modes[0]["share"].as_f64().expect("a share");
+        assert!((share - 30.0 / 70.0).abs() < 1e-3, "{share}");
+        assert_eq!(modes[0]["hasEnoughGames"], json!(true));
+        assert!(modes[0]["tier"].is_string());
+        // The option that won more reads above its sibling.
+        let rate = |row: &Value| row["adjustedWinRate"].as_f64().expect("a rate");
+        assert!(rate(&modes[0]) > rate(&modes[1]));
+        assert!(modes[0]["adjustedLow"].as_f64().unwrap() < rate(&modes[0]));
+        assert!(modes[0]["adjustedHigh"].as_f64().unwrap() > rate(&modes[0]));
+        assert_eq!(modes[2]["hasEnoughGames"], json!(false));
+        assert_eq!(modes[2]["tier"], Value::Null);
+        // A card with no choice answers an empty list.
+        let (_, _, plain) = get_public(&app, &format!("/api/stats/cards/{PLAIN}?mode=bo1")).await;
+        assert_eq!(plain["variants"], json!([]));
+    }
+
+    #[tokio::test]
+    async fn r4676000_an_x_card_groups_its_top_x_and_an_embiggen_card_splits_both_ways() {
+        let app = seeded().await;
+        let (_, _, dividend) = get_public(&app, &format!("/api/stats/cards/{DIVIDEND}?mode=bo1")).await;
+        assert_eq!(kinds(&dividend), ["mode", "x"]);
+        let x = rows(&dividend, "x");
+        // X=6 and X=7 are one row, X ≥ 5, its 40 seats ahead of X=2's 30.
+        assert_eq!(keys(x), ["top", "2"]);
+        assert_eq!(x[0]["label"], json!("X ≥ 5"));
+        assert_eq!(x[0]["games"], json!(40));
+        assert_eq!(x[1]["label"], json!("X = 2"));
+        // Only a mode row names options.
+        assert!(x[0].get("options").is_none());
+        assert_eq!(keys(rows(&dividend, "mode")), ["heal", "deal"]);
+
+        let (_, _, prep) = get_public(&app, &format!("/api/stats/cards/{PREP}?mode=bo1")).await;
+        assert_eq!(kinds(&prep), ["embiggen"]);
+        let embiggen = rows(&prep, "embiggen");
+        assert_eq!(keys(embiggen), ["notEmbiggened", "embiggened"]);
+        assert_eq!(embiggen[1]["label"], json!("Embiggened"));
+        assert_eq!(embiggen[1]["games"], json!(30));
+    }
+
+    #[tokio::test]
+    async fn r4676000_the_face_and_the_patch_scope_the_variants() {
+        let app = seeded().await;
+        // Flood was played Radiant only with its first option: on Radiant that is its one row, all its plays.
+        let (_, _, radiant) =
+            get_public(&app, &format!("/api/stats/cards/{FLOOD}?mode=bo1&face=radiant")).await;
+        let modes = rows(&radiant, "mode");
+        assert_eq!(keys(modes), ["bounce all units"]);
+        assert_eq!(modes[0]["share"], json!(1.0));
+        let (_, _, normal) =
+            get_public(&app, &format!("/api/stats/cards/{FLOOD}?mode=bo1&face=normal")).await;
+        assert_eq!(
+            keys(rows(&normal, "mode")),
+            ["destroy all enemy units", "bounce all enemy units"]
+        );
+        // At a patch with none of these games, there is nothing to split.
+        let (_, _, page) = get_public(&app, "/api/stats/cards").await;
+        let past = page["patches"][1]["versions"]
+            .as_array()
+            .and_then(|versions| versions.last())
+            .and_then(Value::as_str)
+            .expect("a past patch anyone reads")
+            .to_string();
+        let (status, _, before) =
+            get_public(&app, &format!("/api/stats/cards/{FLOOD}?mode=bo1&patch={past}")).await;
+        assert_eq!(status, 200);
+        assert_eq!(before["variants"], json!([]));
+    }
+}
+
+// R4679000: `GET /api/stats/cards/:id`'s `outputs`: each card a random-output card and a Discover card made,
+// read against the card's other outputs, at the page's patch and on its face.
+mod r4679000_outputs {
+    use super::*;
+
+    const PANCAKE: &str = "classicplus-012"; // The Mother Pancake: a random Pancake each end of turn.
+    const BLUEPRINTS: &str = "meditative-097"; // Jlockeed's Evil Blueprints: Discover a building.
+    const PLAIN: &str = "core-001";
+
+    /// A `createdUsed` entry: `card`, made by `source` on its Radiant face or not.
+    fn made(card: &str, source: &str, radiant: bool) -> Value {
+        json!({ "card": card, "turn": 3, "radiant": false, "source": { "card": source, "radiant": radiant } })
+    }
+
+    /// `count` live Best of 1 games of p1 playing `source`, p1 winning the first `won`, its seat making `used`
+    /// and asking `picks`.
+    fn games(
+        tag: &str,
+        source: &'static str,
+        used: Value,
+        picks: Option<Value>,
+        won: usize,
+        count: usize,
+    ) -> Vec<Value> {
+        (0..count)
+            .map(|i| {
+                make_game_record(
+                    &format!("outputs-{tag}-{i}"),
+                    RecordOptions {
+                        source: Some("live"),
+                        mode: Some("bo1"),
+                        p1_deck: Some(vec![source, PLAIN]),
+                        p1_created_used: Some(used.clone()),
+                        p1_picks: picks.clone(),
+                        p2_deck: Some(vec!["core-100"]),
+                        p2_played: Some(Vec::new()),
+                        winner: Some(if i < won { "p1" } else { "p2" }),
+                        ..RecordOptions::default()
+                    },
+                )
+            })
+            .collect()
+    }
+
+    fn outputs(drill: &Value) -> &Vec<Value> {
+        drill["outputs"].as_array().expect("outputs")
+    }
+
+    fn keys(rows: &[Value]) -> Vec<&str> {
+        rows.iter()
+            .map(|row| row["key"].as_str().expect("a key"))
+            .collect()
+    }
+
+    fn rate(row: &Value) -> f64 {
+        row["adjustedWinRate"].as_f64().expect("a rate")
+    }
+
+    #[tokio::test]
+    async fn r4679000_a_random_output_card_answers_each_output_against_its_siblings() {
+        let app = test_app().await;
+        let pancake = |n: u8| format!("{PANCAKE}-{n}");
+        let mut records = games(
+            "a",
+            PANCAKE,
+            json!([made(&pancake(1), PANCAKE, true)]),
+            None,
+            24,
+            30,
+        );
+        records.extend(games(
+            "b",
+            PANCAKE,
+            json!([made(&pancake(2), PANCAKE, false)]),
+            None,
+            12,
+            30,
+        ));
+        records.extend(games(
+            "c",
+            PANCAKE,
+            json!([made(&pancake(3), PANCAKE, false)]),
+            None,
+            5,
+            10,
+        ));
+        insert_records(&app, records).await;
+
+        let (status, _, drill) = get_public(&app, &format!("/api/stats/cards/{PANCAKE}?mode=bo1")).await;
+        assert_eq!(status, 200);
+        let rows = outputs(&drill);
+        // Best adjusted first; the 10-game Pancake below the floor after both.
+        assert_eq!(keys(rows), [pancake(1), pancake(2), pancake(3)]);
+        let devour = &rows[0];
+        assert_eq!(devour["label"], json!("Devour"));
+        assert_eq!(devour["rarity"], json!("Token"));
+        assert_eq!(devour["cost"], json!(0));
+        assert_eq!(devour["games"], json!(30));
+        let share = devour["share"].as_f64().expect("a share");
+        assert!((share - 30.0 / 70.0).abs() < 1e-3, "{share}");
+        assert_eq!(devour["hasEnoughGames"], json!(true));
+        assert!(devour["tier"].is_string());
+        assert!(devour["adjustedLow"].as_f64().unwrap() < rate(devour));
+        assert!(devour["adjustedHigh"].as_f64().unwrap() > rate(devour));
+        // Devour's seats won more than its siblings': it reads above the Pancake that won less.
+        assert!(rate(devour) > rate(&rows[1]));
+        assert_eq!(rows[2]["hasEnoughGames"], json!(false));
+        assert_eq!(rows[2]["tier"], Value::Null);
+        // No Pancake was offered: no row names offers or a pick rate.
+        assert!(
+            rows.iter()
+                .all(|row| row.get("offered").is_none() && row.get("pickRate").is_none())
+        );
+
+        // Devour was made only by a Radiant Mother Pancake: on Radiant it is every output, with no sibling.
+        let (_, _, radiant) =
+            get_public(&app, &format!("/api/stats/cards/{PANCAKE}?mode=bo1&face=radiant")).await;
+        let rows = outputs(&radiant);
+        assert_eq!(keys(rows), [pancake(1)]);
+        assert_eq!(rows[0]["share"], json!(1.0));
+        assert_eq!(rows[0]["adjustedWinRate"], Value::Null);
+        let (_, _, normal) =
+            get_public(&app, &format!("/api/stats/cards/{PANCAKE}?mode=bo1&face=normal")).await;
+        assert_eq!(keys(outputs(&normal)), [pancake(2), pancake(3)]);
+        // At a patch with none of these games, it made nothing.
+        let (_, _, page) = get_public(&app, "/api/stats/cards").await;
+        let past = page["patches"][1]["versions"]
+            .as_array()
+            .and_then(|versions| versions.last())
+            .and_then(Value::as_str)
+            .expect("a past patch anyone reads")
+            .to_string();
+        let (status, _, before) =
+            get_public(&app, &format!("/api/stats/cards/{PANCAKE}?mode=bo1&patch={past}")).await;
+        assert_eq!(status, 200);
+        assert_eq!(before["outputs"], json!([]));
+
+        // A card that made nothing answers an empty list.
+        let (_, _, plain) = get_public(&app, &format!("/api/stats/cards/{PLAIN}?mode=bo1")).await;
+        assert_eq!(plain["outputs"], json!([]));
+    }
+
+    #[tokio::test]
+    async fn r4679000_a_discover_card_answers_each_offer_with_its_pick_rate() {
+        let app = test_app().await;
+        let building = |n: u8| format!("{BLUEPRINTS}-{n}");
+        let pick = |offered: [u8; 3], picked: u8| {
+            json!([{
+                "source": { "card": BLUEPRINTS, "radiant": false },
+                "offered": offered.map(building),
+                "picked": [building(picked)],
+            }])
+        };
+        let mut records = games(
+            "a",
+            BLUEPRINTS,
+            json!([made(&building(1), BLUEPRINTS, false)]),
+            Some(pick([1, 2, 3], 1)),
+            20,
+            30,
+        );
+        records.extend(games(
+            "b",
+            BLUEPRINTS,
+            json!([made(&building(2), BLUEPRINTS, false)]),
+            Some(pick([1, 2, 4], 2)),
+            8,
+            20,
+        ));
+        records.extend(games(
+            "c",
+            BLUEPRINTS,
+            json!([made(&building(1), BLUEPRINTS, false)]),
+            Some(pick([1, 2, 3], 1)),
+            5,
+            10,
+        ));
+        insert_records(&app, records).await;
+
+        let (status, _, drill) = get_public(&app, &format!("/api/stats/cards/{BLUEPRINTS}?mode=bo1")).await;
+        assert_eq!(status, 200);
+        let rows = outputs(&drill);
+        // The two built read against each other; the two never picked come after, by id.
+        assert_eq!(keys(rows), [building(1), building(2), building(3), building(4)]);
+        assert!(rate(&rows[0]) > rate(&rows[1]));
+        let pick_rate = |row: &Value| row["pickRate"].as_f64().expect("a pick rate");
+        assert_eq!(rows[0]["offered"], json!(60));
+        assert!((pick_rate(&rows[0]) - 40.0 / 60.0).abs() < 1e-3);
+        assert_eq!(rows[1]["offered"], json!(60));
+        assert!((pick_rate(&rows[1]) - 20.0 / 60.0).abs() < 1e-3);
+        // School was offered in 40 seat-games and never picked: no seat built it, so it has no rate.
+        let school = &rows[2];
+        assert_eq!(school["label"], json!("School"));
+        assert_eq!(school["offered"], json!(40));
+        assert_eq!(school["pickRate"], json!(0.0));
+        assert_eq!(school["games"], json!(0));
+        assert_eq!(school["share"], json!(0.0));
+        assert_eq!(school["adjustedWinRate"], Value::Null);
+        assert_eq!(school["tier"], Value::Null);
+        assert_eq!(rows[3]["offered"], json!(20));
     }
 }

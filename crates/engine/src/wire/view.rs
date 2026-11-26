@@ -356,7 +356,8 @@ pub struct CopiedTextView {
 /// `costMod`, not a field here. `x` holds a step per numbered keyword or X ("Armor", "Echo",
 /// "Activate", "Brittle", "Spell Damage", "Tribute", "Lucky", "X"), `numbers` a step per declared
 /// number (`CardDef.params` key), `set` a declared number or numbered keyword set outright (KY's
-/// Constant's "to 3"), which wins over the steps.
+/// Constant's "to 3"), which wins over the steps, and `taken` the cuts End Times' End of Turn made
+/// since its last use (R4828000).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
 #[cfg_attr(
     feature = "ts",
@@ -386,6 +387,11 @@ pub struct Tuning {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub set: Option<IndexMap<String, i32>>,
+    /// R4828000: what the card's own countdown took off a declared number since its last use, by key
+    /// (End Times' `endTimes`, R3551002), so that use gives it back: kept wherever the rest is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub taken: Option<IndexMap<String, i32>>,
 }
 
 /// B5 E39: a lasting instruction that rides a card through every zone. `returnAfterResolve` is Classic+
@@ -998,7 +1004,7 @@ pub struct HiddenTargetView {
     ts(export, export_to = "../../../apps/web/src/wire/generated/")
 )]
 #[serde(untagged)]
-#[allow(
+#[expect(
     clippy::large_enum_variant,
     reason = "a view is built, serialized and dropped; a Box buys nothing"
 )]

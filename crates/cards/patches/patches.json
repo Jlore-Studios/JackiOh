@@ -36367,5 +36367,700 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.6.14d",
+    "date": "2026-11-25",
+    "title": "Patch: a Unit token sent into a deck is reported as gone, not shuffled in, and a Unit-token card cannot be traded, so no Trade ends in fatigue",
+    "source": "issue #4821",
+    "notes": "Issue #4821: a Unit token R11 ends on its way into a deck with room is reported libraryOverflow ceased, never shuffledIn, with no arrival hooks (draw::into_library, R4821000); a Unit-token card cannot be Traded (trade::why_trade_refused's last check, R4821001), so no Trade's draw fatigues; a ceased card reads 'Ceased to exist' on the pile and in the log (R4821002). Engine change; the catalog is untouched, so the cards are claimed with --plays. Classify stage 2 against the base build finds meditative-039, meditative-100, stinkyscape-012 and stinkyscapeplus-133 play differently (in their games a Unit token sent into a deck with room was reported shuffled in), and no rule.",
+    "player": {
+      "title": "A Unit token sent into a deck ceases to exist, and Unit-token cards cannot be Traded",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A Unit token shuffled into a deck no longer shows as going in: it ceases to exist, and the deck pile shows \"Ceased to exist\".",
+        "A Unit-token card can no longer be Traded, so a Trade never puts its player into fatigue."
+      ]
+    },
+    "commits": [
+      "09aa5eb75ce398d494fe3dda4840a351f3595feb"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "meditative-039",
+      "meditative-100",
+      "stinkyscape-012",
+      "stinkyscapeplus-133"
+    ],
+    "fragment": "a-unit-token-sent-into-a-deck-is-reported-as-gone-not",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14e",
+    "date": "2026-11-25",
+    "title": "Patch: Help-aimed buffs land stolen and random casts on the caster's side",
+    "source": "#4844",
+    "notes": "Fortify, Hopeful Jelly Bean, Divine Spirit, Power Word Shield, Plastanium, Metaglass, Surge Alloy and Graphite declare aim Help on their side-any targets (R656), so Palantir steals, Solarius Prime casts, Appropriations targets and Lucky rerolls land them on the caster's side; each keeps its aim-less script in KEPT_SCRIPTS, keyed by this fragment (R4779000). Sweep of every side-any target with no aim (98 files; 26 match only in a scope or effect such as damage_all, fill_board or set_stats_all, with no TargetDecl to aim, and are untouched): changed traininggrounds-012, traininggrounds-027, stinkyscape-010-2, stinkyscape-010-3, stinkyscapeplus-045, stinkyscapeplus-047, stinkyscapeplus-049, stinkyscapeplus-050 (every effect on the target can only help it: buffs, Radiant, Divine Shield, Ranged, Rush, Charge, Windfury, Pierce, Deft, Frenzy, First Strike). Left: damage to the target (classic-019, classic-036, classic-059, classic-083, classicplus-059, classicplus-076-1, core-031, core-035, core-044, core-068, core-070, core-093-1, core-074, meditative-005, meditative-039-3, stinkyscape-003, stinkyscape-011-1, stinkyscapeplus-001, stinkyscapeplus-038, traininggrounds-011, traininggrounds-058); destroy, exile, bounce or shuffle of the target (classic-048, classicplus-012-1, classicplus-032-1, classicplus-032-2, core-016, core-034, core-036, meditative-024, stinkyscape-009, stinkyscape-012-1, stinkyscape-012-2, stinkyscape-020, stinkyscape-099, stinkyscapeplus-004, stinkyscapeplus-085, stinkyscapeplus-104, traininggrounds-026, traininggrounds-046); Freeze (stinkyscape-001, stinkyscape-002, stinkyscapeplus-022); removal of what the target has, Vanilla, De-Radiant or Plague Counters (classicplus-009, classic-039, classic-078, meditative-053, stinkyscapeplus-019); Brittle, lock, Dormant, kill-deadline, Immutable or Immune to Spells (stinkyscapeplus-048, stinkyscapeplus-044, stinkyscapeplus-051, stinkyscapeplus-094, stinkyscapeplus-046, all of which can harm the target); set-stats or shift whose help depends on the target (traininggrounds-034, stinkyscape-010-1); damage-or-heal duals and hero setters whose help depends on the mode or target (classicplus-012-2, classicplus-065-2, classicplus-065-3, core-024, classic-029); copies that leave the target unchanged (core-061, traininggrounds-053, traininggrounds-037); Duo plus Radiant (stinkyscape-110, the Duo can harm); a random Fruit that can harm (stinkyscape-141). No plays claimed: all eight change only a stolen or random cast, which none of classify's forced games against the base build reaches (stage 2 found none playing differently on three successive bases), so no card's statistics restart (R1370000); the fragment ships for the kept scripts keyed by it (R4844000).",
+    "player": {
+      "title": "Stolen buffs help the thief",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Stolen or random casts that aim at enemies now land Fortify, Hopeful Jelly Bean, Divine Spirit and Power Word Shield on the caster's own side.",
+        "Surge Alloy, Plastanium, Metaglass and Graphite land the same way now, instead of buffing the enemy."
+      ]
+    },
+    "commits": [
+      "492a4363ecb4b9c8b4667cdbb7cf63ea8a2b56dc"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "help-aimed-buffs-land-stolen-and-random-casts-on-the-caster",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14f",
+    "date": "2026-11-25",
+    "title": "Patch: tributing a GIGA empties all four zones it covers for the play that pays it, so a GIGA Tribute card can take its place",
+    "source": "issue #4836",
+    "notes": "Issue #4836: freed_by_tribute (play_choices.rs) now counts the three zones a GIGA covers, as well as its anchor, as emptied by a play that tributes that GIGA (R391, R3546000), so legal_actions lists, reduce accepts and the default zone takes those zones, and the view's playReason clears with them. Engine change only, no catalog change; classify stage 2 against main's build (a83795ab15) finds Jlockeed's Evil Blueprints, A Very Dandy Lad, Zenith and Exponential Reconstructor play differently, claimed with --plays; no script changed, so no KEPT_SCRIPTS entry. A play logged before that names its zone stays legal and lands there; one that names none may now take a zone further left, and a replay this alters is refused by its final hash (R767000).",
+    "player": {
+      "title": "Tributing a GIGA frees every zone it stood in",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Tributing a GIGA Unit frees all four zones it stood in for the card you pay with it, so a GIGA card with a Tribute cost can take its place.",
+        "A Tribute card that tributes a GIGA Unit may go into either of the GIGA's lanes, not only its left one."
+      ]
+    },
+    "commits": [
+      "734cb44ed56b827029edd2fc0adda1685dcf149c"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "meditative-097",
+      "stinkyscape-113",
+      "stinkyscapeplus-117",
+      "stinkyscapeplus-130"
+    ],
+    "fragment": "tributing-a-giga-empties-all-four-zones-it-covers-for-the",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14g",
+    "date": "2026-11-25",
+    "title": "Patch: `permanents_on_field` meets a card lying on a unit zone after its side's backrow",
+    "source": "#4936",
+    "notes": "R4665000: query::permanents_on_field and reachable_permanents_on_field (plague placements, random field exiles, the Radiant-field pool, anomaly copies) meet a card lying on a unit zone (S #9 Ticketed stacked on a Unit) after that side's backrow lanes, as the walks #4760 fixed do; a board with no lying card lists as before. Engine change; the catalog is untouched, so the card is claimed with --plays. Classify stage 2 against the merge base's build finds classic-076 (Plague Bringer, whose placement prompt lists every permanent) plays differently, and no rule. No KEPT_SCRIPTS entry: no script changed; replays it alters are refused as rules_changed (R767000).",
+    "player": {
+      "title": "Ticketed on a Unit is met after the backrow",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Random effects over every permanent, and the choice of where a Plague Counter goes, now meet a Ticketed stacked on a Unit after that side's backrow cards, as other such effects do."
+      ]
+    },
+    "commits": [
+      "4f1d75fd922e9d524a599286c936a8f26d973ccb"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-076"
+    ],
+    "fragment": "permanents-on-field-meets-a-card-lying-on-a-unit-zone-after",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14h",
+    "date": "2026-11-26",
+    "title": "End Times gives back its cuts after leaving the field",
+    "source": "issue #4828",
+    "notes": "R4828000: End Times' record of its cuts moves from the card's memory (memory.endTimesTaken, which R78 cleared on leaving the field while the cut stayed in the tuning) into its tuning beside the cut (Tuning.taken), so a bounced, copied or fused End Times keeps both and its next use gives every cut back; a returning card is still cut. A cut is banked only as far as it moved the price. The v0.6.14 script is kept (script_v0_6_14, KEPT_SCRIPTS keyed by this fragment, R4779000). The claimed plays are the families classify's stage 2 names against main's build (e39c5da087): core-098 by its forced games, and C #3, S #148 and S #169 because two of its 200 unforced games (seeds 86 and 91) differ only in a Heroic Power's End Times record, held in a board history snapshot, so every card on that board is named; none of the three plays differently.",
+    "player": {
+      "title": "End Times remembers its cuts",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Heroic Power's End Times costs (10) again after a use, even if the card left the field or was copied after its cost went down.",
+        "End Times no longer costs more than (10) after a use when it was Immutable at some of its ends of turn."
+      ]
+    },
+    "commits": [
+      "9be0adf6e2b78a66afc82cd6ae13109e0fe68c84"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "core-003",
+      "core-098",
+      "stinkyscape-148",
+      "stinkyscape-169"
+    ],
+    "fragment": "end-times-gives-back-its-cuts-after-leaving-the-field",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14i",
+    "date": "2026-11-26",
+    "title": "Stinkyscape+ Balance Changes VIII",
+    "source": "#4783",
+    "notes": "The designer's eighth Stinkyscape+ balance pass (#4783). Plesiosize +8/+8 (Radiant +16/+16); Cloaking Module 3/2 (6/4); Venomous Rounds 1/4 (2/8); Cannon v3, v4 and v5 deal 4, 6 and 8 (Radiant 8, 12, 16); YileGPT Prime (4) with Overload (2) in its Cry; The Last Voyage launches one as it is cast on both faces, its base face skipping the end of the turn it was cast (R4783030); CN in a Bottle's surcharge 2; Jlockeed Shredder-12 Tribute 4, Radiant damage 4; Mommy Barker 2/1 (4/2); Call to Chaos (Mindustrial-Swarm Edition)'s Toxopid costs (2) and its Terminus effect replenishes 3 (R4783032); Impact Reactor Overload (2) (Radiant 1) (R4783020); Toxopid without Ignores Taunt (R4783021); Meltdown without its Frozen heal (R4783023); Gary the Gambler 6 coins (12), no keyword coin; Knowledge Breaker Cloaked itself, no Aura; The Perfect Pair's text lists no pairs; Crawler Flashback (R4783022); Yuma (1) 1/3 (2/6); Volcanic Rounds 6/1 (12/2), its hits dealing damage and also Burning that much (R4783001); Scorching Rounds 4/1 (8/2), Burns 4 (8); Hull Repairer mk2 1/5 (2/10); Servo Surge 3/2 (6/4); A Wee Whelp 2/1 (4/2), its Evolve +8/+8 (+16/+16); Quick Chaos's base face discards a random card (R4783025); Outbreak (4); Drone Commander 4/8 (8/16); Chaos Machine (3); Imitated Instrumentality (4); Expedition12 Buffs what it makes Radiant (R4783031); Metaglass Ranged and +1 Attack (Radiant +5) (R4783024). The AI keeps Last Hurrah and A Glimpse for a last resort (R4783040) and reads Feng Shui's coming Rock (R4783041). The changed scripts keep the ones before them, keyed by this fragment (R767000, R4779000). The held Infinite Assault, whose stand-ins are the shipped cards, gives its Commanders 30 + five times the level in health, so level 20 stays in its band (R4583000).",
+    "player": {
+      "title": "Stinkyscape+ Balance Changes VIII",
+      "new": [],
+      "balance": [
+        "Plesiosize gives +8/+8 (Radiant +16/+16), up from +6/+6 (Radiant +12/+12).",
+        "Cloaking Module is 3/2 (Radiant 6/4), up from 2/2 (Radiant 4/4).",
+        "Venomous Rounds is 1/4 (Radiant 2/8), from 2/1 (Radiant 4/2).",
+        "Cannon v3 deals 4 damage (Radiant 8), down from 5 (Radiant 10).",
+        "Cannon v4 deals 6 damage (Radiant 12), down from 7 (Radiant 14).",
+        "Cannon v5 deals 8 damage (Radiant 16), down from 9 (Radiant 18).",
+        "YileGPT Prime costs (4), down from (8), and its Cry starts with Overload (2).",
+        "The Last Voyage launches a Starship as you cast it, and its base face skips the end-of-turn launch on the turn you cast it.",
+        "CN in a Bottle's card costs (2) more (up to (4)), up from (1) more.",
+        "Jlockeed Shredder-12 has Tribute 4, up from 3; its Radiant face deals 4 damage at the end of your turn, down from 5.",
+        "Mommy Barker is 2/1 (Radiant 4/2), down from 2/2 (Radiant 4/4).",
+        "Call to Chaos (Mindustrial-Swarm Edition): the Toxopid it adds costs (2), up from (0), and its Terminus effect replenishes 3 mana, down from 4.",
+        "Impact Reactor's Cry is Overload (2) (Radiant (1)), down from Overload (4), then (2) the turn after (Radiant (2), then (1)).",
+        "Toxopid no longer ignores Taunt.",
+        "Meltdown no longer heals fully when it is Frozen.",
+        "Gary the Gambler flips 6 coins (Radiant 12), up from 5 (Radiant 10), and no longer flips for Divine Shield or Rush.",
+        "Knowledge Breaker is Cloaked itself and no longer Cloaks your other Units.",
+        "Crawler has Flashback instead of being playable from your graveyard for (1).",
+        "Yuma costs (1) and is 1/3 (Radiant 2/6), down from (2) and 1/8 (Radiant 2/16).",
+        "Volcanic Rounds is 6/1 (Radiant 12/2), up from 5/1 (Radiant 10/2); its hits deal their damage and also Burn that much, instead of becoming Burn.",
+        "Scorching Rounds is 4/1 (Radiant 8/2) and Burns 4 (Radiant 8), up from 3/1 (Radiant 6/2) and Burns 3 (Radiant 6).",
+        "Hull Repairer mk2 is 1/5 (Radiant 2/10), up from 1/4 (Radiant 2/8).",
+        "Servo Surge is 3/2 (Radiant 6/4), down from 5/3 (Radiant 10/6).",
+        "A Wee Whelp is 2/1 (Radiant 4/2), up from 1/1 (Radiant 2/2); its Evolve gives +8/+8 (Radiant +16/+16) instead of setting its stats to 10/10 (Radiant 20/20).",
+        "Quick Chaos's base face also discards a random card from your hand.",
+        "Outbreak costs (4), up from (3).",
+        "Drone Commander is 4/8 (Radiant 8/16), down from 8/12 (Radiant 16/24).",
+        "Chaos Machine costs (3), up from (2).",
+        "Imitated Instrumentality costs (4), up from (3).",
+        "Expedition12 also Buffs the card it makes Radiant.",
+        "Metaglass also gives +1 Attack (Radiant +5, up from +3)."
+      ],
+      "changes": [
+        "The AI saves Last Hurrah and A Glimpse into the Endless Sea for when it has nothing else to play or is about to lose (A Glimpse also when a card in its hand can refill its deck).",
+        "The AI plays Feng Shui better: it counts next turn's Auspicious Rock and plays cards that set up a rewarded element earlier."
+      ],
+      "text": [
+        "The Perfect Pair no longer lists the pairs in its text."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "53c18151f9279df3052c93ee791ee860339a31d1"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "classic-019",
+      "classic-024",
+      "classic-026",
+      "classic-030",
+      "classic-037",
+      "classic-039",
+      "classic-045",
+      "classic-053",
+      "classic-058",
+      "classic-064",
+      "classic-070",
+      "classic-081",
+      "classic-083",
+      "classic-085",
+      "classicplus-006",
+      "classicplus-010",
+      "classicplus-011",
+      "classicplus-013",
+      "classicplus-023",
+      "classicplus-029",
+      "classicplus-046",
+      "classicplus-064",
+      "classicplus-065",
+      "classicplus-070",
+      "core-004",
+      "core-007",
+      "core-023",
+      "core-050",
+      "core-083",
+      "core-084",
+      "meditative-031",
+      "meditative-033",
+      "meditative-037",
+      "meditative-045",
+      "meditative-049",
+      "meditative-051",
+      "meditative-053",
+      "meditative-055",
+      "meditative-058",
+      "meditative-080",
+      "meditative-084",
+      "meditative-087",
+      "meditative-091",
+      "stinkyscape-010",
+      "stinkyscape-018",
+      "stinkyscape-020",
+      "stinkyscape-045",
+      "stinkyscape-048",
+      "stinkyscape-052",
+      "stinkyscape-056",
+      "stinkyscape-060",
+      "stinkyscape-070",
+      "stinkyscape-074",
+      "stinkyscape-077",
+      "stinkyscape-090",
+      "stinkyscape-098",
+      "stinkyscape-109",
+      "stinkyscape-111",
+      "stinkyscape-113",
+      "stinkyscape-130",
+      "stinkyscape-148",
+      "stinkyscape-177",
+      "stinkyscape-t-drone-interceptor",
+      "stinkyscapeplus-015",
+      "stinkyscapeplus-016",
+      "stinkyscapeplus-021",
+      "stinkyscapeplus-035",
+      "stinkyscapeplus-049",
+      "stinkyscapeplus-056",
+      "stinkyscapeplus-066",
+      "stinkyscapeplus-079",
+      "stinkyscapeplus-100",
+      "stinkyscapeplus-101",
+      "stinkyscapeplus-105",
+      "stinkyscapeplus-113",
+      "stinkyscapeplus-120",
+      "stinkyscapeplus-124",
+      "stinkyscapeplus-135",
+      "stinkyscapeplus-136",
+      "stinkyscapeplus-142",
+      "stinkyscapeplus-150",
+      "stinkyscapeplus-151",
+      "stinkyscapeplus-152",
+      "stinkyscapeplus-158",
+      "traininggrounds-040"
+    ],
+    "fragment": "stinkyscape-balance-changes-viii",
+    "changes": [
+      {
+        "id": "core-004",
+        "name": "Gary the Gambler",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "classic-039",
+        "name": "Outbreak",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "classicplus-013",
+        "name": "Mommy Barker",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "classicplus-070",
+        "name": "Chaos Machine",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "meditative-018",
+        "name": "Expedition12",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-037",
+        "name": "CN in a Bottle",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text"
+        ]
+      },
+      {
+        "id": "meditative-045",
+        "name": "Knowledge Breaker",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "meditative-049-1",
+        "name": "YileGPT Prime",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-018",
+        "name": "Imitated Instrumentality",
+        "kind": "changed",
+        "fields": [
+          "cost"
+        ]
+      },
+      {
+        "id": "stinkyscape-045",
+        "name": "Drone Commander",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-052",
+        "name": "Cannon v3",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-056",
+        "name": "Cannon v4",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-060",
+        "name": "Cannon v5",
+        "kind": "changed",
+        "fields": [
+          "params",
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscape-077",
+        "name": "Yuma",
+        "kind": "changed",
+        "fields": [
+          "cost",
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscape-177",
+        "name": "Cloaking Module",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "radiant.attack"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-015",
+        "name": "Hull Repairer mk2",
+        "kind": "changed",
+        "fields": [
+          "base.health",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-016",
+        "name": "Servo Surge",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-021",
+        "name": "Jlockeed Shredder-12",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-049",
+        "name": "Metaglass",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-056",
+        "name": "Impact Reactor",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-080",
+        "name": "The Last Voyage",
+        "kind": "changed",
+        "fields": [
+          "base.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-090",
+        "name": "Meltdown",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-100",
+        "name": "Plesiosize",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-101",
+        "name": "A Wee Whelp",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.text",
+          "radiant.attack",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-120",
+        "name": "Crawler",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-121",
+        "name": "Toxopid",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-137",
+        "name": "The Perfect Pair",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "refs"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-142",
+        "name": "Call to Chaos (Mindustrial-Swarm Edition)",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-150",
+        "name": "Scorching Rounds",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.text",
+          "radiant.attack",
+          "radiant.text",
+          "params"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-151",
+        "name": "Volcanic Rounds",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.text",
+          "radiant.attack",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-152",
+        "name": "Venomous Rounds",
+        "kind": "changed",
+        "fields": [
+          "base.attack",
+          "base.health",
+          "radiant.attack",
+          "radiant.health"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-158",
+        "name": "Quick Chaos",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "params"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.14j",
+    "date": "2026-11-26",
+    "title": "Mass Driver's badge states its countdown once",
+    "source": "issue #4992",
+    "notes": "R4992000: Mass Driver's badge no longer holds the count the view adds, so it reads 'in 2 turns' once; the older label is kept (script_v0_6_14i, KEPT_SCRIPTS keyed by this fragment, R4779000). Doomsday Clock is a card of a held set, so it takes no claim.",
+    "player": {
+      "title": "Mass Driver's countdown reads once",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Mass Driver's countdown badge no longer says \"in 2 turns\" twice."
+      ]
+    },
+    "commits": [
+      "3cfbef178cc1f05c0bbabbec3c0f3417039906bc"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscapeplus-059"
+    ],
+    "fragment": "mass-driver-s-badge-states-its-countdown-once",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14k",
+    "date": "2026-11-26",
+    "title": "Card-face code cleanup",
+    "source": "issue #4702",
+    "notes": "Four exports of the card-face code that nothing read are removed (FIGURE_HEIGHT, FLAVOUR_MAX_CHARS, ARTIST_MAX_CHARS, setFlavourForTests); no card looks or plays differently.",
+    "player": {
+      "title": "Card-face code cleanup",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Unused code behind the card faces is removed. No card looks or plays differently."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "0f3e8f961ec05866d940cd2662f012c22405d762"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "card-face-code-cleanup",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14l",
+    "date": "2026-11-26",
+    "title": "PIP says performance improvement plan",
+    "source": "#4996",
+    "notes": "Stinkyscape+ #94 PIP's text reads 'performance improvement plan' (was 'performance enhancement plan').",
+    "player": {
+      "title": "PIP says performance improvement plan",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "PIP: now says \"performance improvement plan\"."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "6e1450bf6f9dbfbbe603f7d38ae0fe523daebae9"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "pip-says-performance-improvement-plan",
+    "changes": [
+      {
+        "id": "stinkyscapeplus-094",
+        "name": "PIP",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]

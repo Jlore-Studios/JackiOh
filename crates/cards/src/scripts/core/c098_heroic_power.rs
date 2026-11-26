@@ -1,8 +1,9 @@
 //! #98 Heroic Power (SPEC §8.5, §6.2 "Start of Game", Quickdraw, Activate; R43, R103, R352, R752–R761,
-//! R3134002, R3551002). Field Spell, tags Quickdraw, cost (1) ((0) until issue #3996), Mythic. Base:
-//! "Indestructible. Cry: Discover one of 14 powers, each 'Activate: Spend (X)'" (each power's words are
-//! its catalog line).
+//! R3134002, R3551002, R4828000). Field Spell, tags Quickdraw, cost (1) ((0) until issue #3996),
+//! Mythic. Base: "Indestructible. Cry: Discover one of 14 powers, each 'Activate: Spend (X)'" (each
+//! power's words are its catalog line).
 //! Radiant: every power's Radiant words, Armor Up named Tank Up (R757).
+//! Through v0.6.14: End Times banked its cuts in the card's memory (`script_v0_6_14`, kept, R4828000).
 //! Through v0.5.13g: thirteen powers at (1) more each (`script_v0_5_13g`, kept, R767000); through
 //! v0.5.11r: "Start of game: Gain one of 13 random powers" (`script_v0_5_11o`, kept, R767000).
 //! The fourteen powers live in `subsystems/hero_power.rs` (R43); `power_abilities` declares each as an
@@ -11,7 +12,8 @@
 //! stay apart. Discovers resume at `hero_power` (`POWER_RESUME`, §10.6). Indestructible is a §10.4
 //! layer (R46), Quickdraw the flag `setup.rs` step 2 reads (§6.2); Ping's target comes with the
 //! activation (R81). End Times (10) Discovers a Terminus card; each end of its controller's turn takes
-//! its face's cut off the next use's price, until it is used.
+//! its face's cut off the next use's price, until it is used; the cuts and their record are the card's
+//! tuning (R4828000).
 //!   - The Cry is `discover_power` (R3134002): 3 different powers of the edition's as a Choose one, the
 //!     answer the card's power for the game, named by its title on the face (Tank Up on the Radiant one).
 //!   - The arrival roll is `roll_power_on_field` (R151, R3134002): a copy that reaches the field with no
@@ -74,6 +76,27 @@ pub fn script_v0_5_11o() -> CardScripts {
         base: heroic_power(false, false, subsystems::PowerEdition::Thirteen),
         radiant: heroic_power(true, false, subsystems::PowerEdition::Thirteen),
     }
+}
+
+/// R4828000: through v0.6.14 End Times banked its cuts in the card's memory, which leaving the field
+/// cleared while the cut stayed in its tuning; `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_14() -> CardScripts {
+    CardScripts {
+        base: heroic_power_v0_6_14(false),
+        radiant: heroic_power_v0_6_14(true),
+    }
+}
+
+/// The new face with End Times' End of Turn and use as v0.6.14 ran them. The Discover's answer comes
+/// back through `hero_power`, whose answer is the same under both.
+fn heroic_power_v0_6_14(radiant: bool) -> Script {
+    let mut script = heroic_power(radiant, true, subsystems::PowerEdition::EndTimes);
+    script.end_of_turn = Some(hook(|_| vec![subsystems::end_times_tick_v0_6_14()]));
+    let end_times = subsystems::HeroPowerName::EndTimes.as_str();
+    for decl in script.activations.iter_mut().filter(|decl| decl.id == end_times) {
+        decl.run = hook(move |ctx| subsystems::end_times_v0_6_14(ctx, radiant));
+    }
+    script
 }
 
 // BUILD M4-T4 row 98 (SPEC §8.5, §6.2, §10.2, §10.6, §10.8; R43, R46, R81, R103, R352, R752–R761,
@@ -1725,6 +1748,138 @@ mod tests {
                     .find(|(id, _)| id == "recruit")
                     .map(|(_, price)| price);
                 assert_eq!(recruit, Some(Some(3)));
+            });
+        }
+
+        /// End Times' bank in the card's tuning (R4828000), 0 when nothing.
+        fn taken(card: &CardInstance) -> i32 {
+            jackioh_engine::tuning::taken_of(card, subsystems::END_TIMES_PRICE_PARAM)
+        }
+
+        /// End Times cut to (7) over three of p1's ends of turn, then bounced and played again from the
+        /// hand at 10 mana, its Cry's Discover open.
+        fn cut_bounced_and_replayed(seed: &str) -> Scenario {
+            let (mut s, card) = end_times_field(false, seed);
+            for _ in 0..3 {
+                s.end_turn();
+                s.end_turn();
+            }
+            assert_eq!(panel_price(&s), 7);
+            crate::run_as(
+                &mut s,
+                jackioh_engine::effects::bounce(json_as(json!({
+                    "target": { "of": "instance", "instanceId": card.id }
+                }))),
+                P1,
+            );
+            let back = must(
+                s.hand(P1).into_iter().find(|entry| entry.def_id == HEROIC),
+                "the bounced Heroic Power in hand",
+            );
+            // R78 cleared its memory and kept its tuning: the cut and its record both.
+            let tuning = must(back.tuning.as_ref(), "the bounced card's tuning");
+            assert_eq!(tuning.set.as_ref().and_then(|set| set.get("endTimes")), Some(&7));
+            assert_eq!(taken(&back), 3);
+            assert!(!back.memory.contains_key(subsystems::END_TIMES_TAKEN_KEY));
+            s.state_mut().players.p1.mana.current = 10;
+            s.play(&back, json!({ "zone": 1 }));
+            s
+        }
+
+        #[test]
+        fn r4828000_a_bounced_end_times_comes_back_still_cut_and_its_use_gives_every_cut_back() {
+            crate::register_all();
+            let seed = seed_where("hp-endtimes-bounce", |seed| {
+                cut_bounced_and_replayed(seed)
+                    .prompt_modes()
+                    .iter()
+                    .any(|offered| offered == "endTimes")
+            });
+            let mut s = cut_bounced_and_replayed(&seed);
+            s.answer(json!("endTimes"));
+            // The card remembers: End Times is its power again at the price it was cut to.
+            assert_eq!(panel_price(&s), 7);
+            let card = must(s.backrow(P1, 1), "the replayed Heroic Power");
+            s.activate(&card, json!({}));
+            // 10, less the (1) the play cost, less the (7).
+            s.expect_mana(P1, 2);
+            s.answer(json!(must(s.prompt_modes().into_iter().next(), "an offered Terminus card")));
+            // The use gave back all three cuts, though they were taken before the bounce.
+            assert_eq!(panel_price(&s), 10);
+            assert_eq!(taken(s.card(card.id.as_str())), 0);
+        }
+
+        #[test]
+        fn r4828000_a_copy_of_a_cut_end_times_keeps_the_cut_and_its_use_gives_it_back() {
+            crate::register_all();
+            let (mut s, card) = end_times_field(false, "hp-endtimes-copy");
+            for _ in 0..3 {
+                s.end_turn();
+                s.end_turn();
+            }
+            crate::run_as(
+                &mut s,
+                jackioh_engine::effects::summon_copy(json_as(json!({
+                    "of": { "of": "instance", "instanceId": card.id }
+                }))),
+                P1,
+            );
+            let copy = must(s.backrow(P1, 2), "the copy");
+            let copy = set_power(&mut s, &copy, "endTimes");
+            // R443: the copy carries the cut and its record.
+            assert_eq!(subsystems::power_price(s.state(), &copy), Some(7));
+            assert_eq!(taken(&copy), 3);
+            s.state_mut().players.p1.mana.current = 10;
+            s.activate(&copy, json!({}));
+            s.expect_mana(P1, 3);
+            s.answer(json!(must(s.prompt_modes().into_iter().next(), "an offered Terminus card")));
+            assert_eq!(subsystems::power_price(s.state(), s.card(copy.id.as_str())), Some(10));
+            // Each card's bank is its own: the source is still cut.
+            assert_eq!(subsystems::power_price(s.state(), s.card(card.id.as_str())), Some(7));
+            assert_eq!(taken(s.card(card.id.as_str())), 3);
+        }
+
+        #[test]
+        fn r4828000_an_immutable_end_times_banks_nothing_as_its_price_never_moved() {
+            crate::register_all();
+            let (mut s, card) = end_times_field(false, "hp-endtimes-immutable");
+            s.card_mut(card.id.as_str()).granted_keywords.push(Keyword::Immutable);
+            s.end_turn();
+            s.end_turn();
+            // B3.4 rule 2: nothing changes an Immutable card's number, so the cut and its record stay off.
+            assert_eq!(panel_price(&s), 10);
+            assert_eq!(s.card(card.id.as_str()).tuning, None);
+            s.card_mut(card.id.as_str()).granted_keywords.clear();
+            s.end_turn();
+            s.end_turn();
+            assert_eq!(panel_price(&s), 9);
+            assert_eq!(taken(s.card(card.id.as_str())), 1);
+            s.state_mut().players.p1.mana.current = 10;
+            s.activate(&card, json!({}));
+            s.answer(json!(must(s.prompt_modes().into_iter().next(), "an offered Terminus card")));
+            // Only the one cut that moved the price is given back.
+            assert_eq!(panel_price(&s), 10);
+        }
+
+        #[test]
+        fn r4828000_the_kept_v0_6_14_script_banks_the_cuts_in_the_cards_memory() {
+            crate::register_all();
+            crate::under_kept(HEROIC, script_v0_6_14(), || {
+                let (mut s, card) = end_times_field(false, "hp-endtimes-kept");
+                s.end_turn();
+                let now = s.card(card.id.as_str()).clone();
+                assert_eq!(now.memory.get(subsystems::END_TIMES_TAKEN_KEY), Some(&json!(1)));
+                assert_eq!(taken(&now), 0);
+                assert_eq!(panel_price(&s), 9);
+                s.end_turn();
+                s.state_mut().players.p1.mana.current = 10;
+                s.activate(&card, json!({}));
+                s.answer(json!(must(s.prompt_modes().into_iter().next(), "an offered Terminus card")));
+                assert_eq!(panel_price(&s), 10);
+                assert_eq!(
+                    s.card(card.id.as_str()).memory.get(subsystems::END_TIMES_TAKEN_KEY),
+                    Some(&json!(0))
+                );
             });
         }
     }

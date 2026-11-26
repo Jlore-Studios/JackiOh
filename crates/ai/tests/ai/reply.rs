@@ -23,7 +23,7 @@ const PUNISH: &str = "classic-020";
 const HEROIC: &str = "core-098";
 /// C #6 Cloaked Toe Cracker, the card that prints Cloaked.
 const CRACKER: &str = "classic-006";
-/// C+ #13 Mommy Barker, whose Radiant face is a 4/4 Reborn.
+/// C+ #13 Mommy Barker, whose Radiant face is a 4/2 Reborn.
 const BARKER: &str = "classicplus-013";
 /// M #100 Greaser, a vanilla 7/7.
 const GREASER: &str = "meditative-100";
@@ -162,8 +162,8 @@ mod simulate_reply {
     /// #1796: kills a vanilla 4/4 rather than a Reborn 5/5, which comes straight back
     #[test]
     fn kills_a_vanilla_4_4_rather_than_a_reborn_5_5_that_comes_straight_back() {
-        // Professor Curvature's Radiant 6/6 kills either and survives. Mommy Barker's Radiant 4/4
-        // Reborn, buffed to 5/5, comes back at its printed 4/4 on 1 health (§4.5 step 4), so its kill
+        // Professor Curvature's Radiant 6/6 kills either and survives. Mommy Barker's Radiant 4/2
+        // Reborn, buffed to 5/5, comes back at its printed 4/2 on 1 health (§4.5 step 4), so its kill
         // removes less than Mr. Vanilla's does, and Mr. Vanilla's beats 6 to the face.
         let mut state = handed_over(json!({
             "p1": { "field": [{ "def": BARKER, "radiant": true }, "core-008"] },
@@ -175,7 +175,7 @@ mod simulate_reply {
             .map(|unit| unit.id.clone())
             .expect("Mommy Barker is on p1's field");
         let unit = find_instance_mut(&mut state, &barker).expect("Mommy Barker");
-        unit.buffs = AttackHealth { attack: 1, health: 1 };
+        unit.buffs = AttackHealth { attack: 1, health: 3 };
         let view = unit_view(&state, find_instance(&state, &barker).expect("Mommy Barker"));
         assert_eq!((view.attack, view.health), (5, 5));
 
@@ -612,10 +612,11 @@ mod visible_activations {
 
     /// #8 Mr. Vanilla, a vanilla 4/4.
     const VANILLA: &str = "core-008";
-    /// S #52 Cannon v3: "Activate: Deal 5 damage to an enemy Unit."
+    /// S #52 Cannon v3: "Activate: Deal 4 damage to an enemy Unit."
     const CANNON_V3: &str = "stinkyscape-052";
-    /// S #56 Cannon v4: "Activate: Deal 7 damage to an enemy Unit."
-    const CANNON_V4: &str = "stinkyscape-056";
+    /// S #60 Cannon v5: "Activate: Deal 8 damage to an enemy Unit.", enough to destroy a Greaser (S #56
+    /// Cannon v4's 7 until issue #4783 took it to 6).
+    const CANNON_V5: &str = "stinkyscape-060";
 
     /// The reply on `state` at the seat, given room for every step.
     fn replied(state: &GameState) -> GameState {
@@ -632,10 +633,10 @@ mod visible_activations {
     /// R4515000: the four tries were the Cannon's first four targets, lanes 1 to 4, so the Greaser in
     /// lane 5 read as out of its reach; now its best target comes first.
     #[test]
-    fn r4515000_a_cannon_v4_facing_five_units_destroys_the_most_valuable_in_lane_5() {
+    fn r4515000_a_cannon_v5_facing_five_units_destroys_the_most_valuable_in_lane_5() {
         let state = handed_over(json!({
             "p1": { "field": row(json!(VANILLA), GREASER) },
-            "p2": { "field": [CANNON_V4] },
+            "p2": { "field": [CANNON_V5] },
         }));
         let reply = replied(&state);
         assert!(
@@ -645,14 +646,14 @@ mod visible_activations {
         );
     }
 
-    /// R4515000: facing four 3/6s, the first Cannon's (v3, 5 damage) targets filled every try, so the
-    /// v4 behind it was never tried at lane 5; now each Cannon's best target is tried in turn, and the
-    /// v4's 7 damage on the Greaser is the opponent's best move.
+    /// R4515000: facing four 3/6s, the first Cannon's (v3, 4 damage) targets filled every try, so the
+    /// v5 behind it was never tried at lane 5; now each Cannon's best target is tried in turn, and the
+    /// v5's 8 damage on the Greaser is the opponent's best move.
     #[test]
     fn r4515000_of_two_cannons_the_reply_fires_the_second_at_the_lane_5_unit() {
         let state = handed_over(json!({
             "p1": { "field": row(json!({ "def": VANILLA, "statsOverride": { "attack": 3, "health": 6 } }), GREASER) },
-            "p2": { "field": [{ "def": CANNON_V3, "lane": 1 }, { "def": CANNON_V4, "lane": 2 }] },
+            "p2": { "field": [{ "def": CANNON_V3, "lane": 1 }, { "def": CANNON_V5, "lane": 2 }] },
         }));
         let reply = replied(&state);
         assert!(
@@ -855,6 +856,34 @@ mod open_lethal_1634 {
         let shipped = simulate_reply(&state, AI, &create_node_counter(20, None), &hidden, Prices::NONE)
             .expect("a reply");
         assert_eq!(shipped.result.is_some(), AI_REPLY.open_lethal);
+    }
+
+    /// #4931: short of lethal the switch changes nothing. At 20 the two 7/7s reach 14 together, so the
+    /// reply is the one it plays one hit at a time: the kill, then a 7 at the face.
+    #[test]
+    fn a_reply_short_of_lethal_is_the_same_with_the_switch_on_or_off() {
+        let state = handed_over(json!({
+            "p1": { "health": 20, "field": ["core-008"] },
+            "p2": { "field": ["core-025", "core-025"] },
+        }));
+        assert!(ready_gap(&state, HUMAN) > 0.0);
+        let hidden = hidden_card_ids(&state, AI);
+        let reply = |open_lethal: bool| {
+            simulate_reply_with(
+                &state,
+                AI,
+                &create_node_counter(20, None),
+                &hidden,
+                open_lethal,
+                Prices::NONE,
+            )
+            .expect("a reply")
+        };
+        let open = reply(true);
+        assert!(open.result.is_none());
+        assert!(in_graveyard(&open, AI, "core-008"));
+        assert_eq!(open.players[AI].hero.health, 13);
+        assert_eq!(hash_state(&open), hash_state(&reply(false)));
     }
 
     /// #1634: at 8 health with Mr. Vanilla against two 4-mana 7/7s, lethal only together, the AI puts

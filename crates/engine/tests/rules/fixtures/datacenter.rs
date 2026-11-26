@@ -2,7 +2,10 @@
 //! draw, T-AI-6 Datacenter Fire's sweep). The engine does not depend on the cards crate; the real
 //! cards' tests cover the same cases again.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

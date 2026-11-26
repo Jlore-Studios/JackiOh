@@ -80,6 +80,32 @@ mod tests {
 
     mod base {
         use super::*;
+        /// R4599016: played onto a C+ #33 Ivory Tower it stands on the Tower, carried, as its Cry runs; the
+        /// swap takes it to the enemy's unit row as their Unit, and the Tower it left fuses nothing (the
+        /// daily fuzz's plain seed 1576, where the swap sent it to a backrow zone that held nothing and it
+        /// fell out of every pile).
+        #[test]
+        fn r4599016_carried_on_an_ivory_tower_it_crosses_to_the_enemy_s_unit_row() {
+            let mut s = scenario(json!({
+                "seed": "social-engineer-tower",
+                "p1": { "hand": [ID], "backrow": [{ "def": "classicplus-033", "lane": 2 }], "mana": 10 },
+                "p2": { "hand": ["core-005"], "field": [WEAK] },
+            }));
+            let engineer = s.card(ID).id.clone();
+            let tower = s.card("classicplus-033").id.clone();
+            s.play(ID, json!({ "zone": 2, "row": "backrow" }));
+            let crossed = find_instance(s.state(), &engineer).expect("still a card");
+            assert_eq!(crossed.controller, P2);
+            let row = match crossed.zone {
+                Zone::Field { player, row, .. } => Some((player, row)),
+                _ => None,
+            };
+            assert_eq!(row, Some((P2, Row::Units)), "{:?}", crossed.zone);
+            assert!(field(&s, P2).iter().any(|unit| unit.id == engineer));
+            assert_eq!(field(&s, P1).len(), 1, "the enemy Unit came over");
+            let left = find_instance(s.state(), &tower).expect("the Tower");
+            assert_eq!(left.def_id, "classicplus-033", "the Tower fused nothing");
+        }
 
         #[test]
         fn r4590003_cry_swaps_control_with_a_random_enemy_unit() {

@@ -10,8 +10,6 @@
 //! `det`, `ai_options`, `js`, `unit` and `ids` are here so no test file copies them (#1826, #2930;
 //! crates/tools/tests/acceptance.rs refuses a copy).
 
-#![allow(dead_code)]
-
 use std::borrow::Borrow;
 use std::cell::Cell;
 

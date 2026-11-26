@@ -94,8 +94,7 @@ fn pattern_recognition(radiant: bool) -> Script {
                 }
 
                 // If 3 were available, exile the remaining one without prompting
-                let top3: Vec<String> = ctx.state.players[opp]
-                    .library
+                let top3: Vec<String> = zone_cards(&*ctx.state, opp, OffFieldZone::Library)
                     .iter()
                     .take(3)
                     .map(|c| c.id.clone())

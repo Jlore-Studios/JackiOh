@@ -3833,7 +3833,8 @@ mod r4577008_the_black_hole_s_turn_end_pull_is_no_spell_s_reach {
     fn r4577008_a_spell_s_exile_of_an_immune_unit_the_pull_cannot_reach_is_still_a_reach() {
         // One lane from the hole on the side whose turn ended, the pull swallows it; two lanes away it only
         // steps, and at the end of p1's turn p2's Unit is not pulled at all, so a Spell's exile of either is
-        // a reach.
+        // a reach. The Spell is cast at the turn's end: a standing trigger there (Drone Core VII's Float)
+        // opens no run I21 reads, R62's tail following it with no marker of its own (R4599007).
         for (lane, side, owner, reach) in [
             (2, "p1", PlayerId::P1, false),
             (1, "p1", PlayerId::P1, true),
@@ -3856,7 +3857,7 @@ mod r4577008_the_black_hole_s_turn_end_pull_is_no_spell_s_reach {
                     "sourceId": "r4577008-source",
                     "defId": DRONE_CORE_VII,
                     "controller": "p1",
-                    "hook": "whenever",
+                    "hook": "cry",
                 })),
                 event(json!({ "type": "exiled", "instanceId": id, "defId": IMMUNE, "owner": side })),
             ];
@@ -4189,6 +4190,70 @@ mod r4601000_a_standing_exile_aura_s_exile_is_no_spell_s_reach {
             "p2": { "library": library },
         }));
         let found = i21_of(before.state(), without.state(), &id);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains(CALL_TO_CHAOS), "{}", found[0]);
+    }
+}
+
+// R4599004 (#4599): an exile aura that arrives in a Spell's run exiles at its state check as the board's,
+// though the card laying it is gone again by the step's end (the daily fuzz's plain seed 1920: S #150 Call
+// to Chaos (Stinky Edition) filled the board with Humans, S #115 Scornboi among them, which exiled IA #235.1,
+// immune, and was itself gone by the step's end).
+mod r4599004_an_exile_aura_arriving_in_the_step_is_the_board_s {
+    use super::*;
+
+    const SCORNBOI: &str = "stinkyscape-115";
+    const CALL_TO_CHAOS: &str = "stinkyscape-150";
+    const IMMUNE: &str = "stand-in (1) 4/4 Immune to Spells";
+
+    fn i21_of(arrives: bool) -> Vec<String> {
+        let library = json!([VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA]);
+        let before = scenario(json!({
+            "active": "p2",
+            "p1": { "field": [IMMUNE], "library": library },
+            "p2": { "library": library },
+        }));
+        let id = before.unit_at(PlayerId::P1, 1).id;
+        // After the step neither the stand-in nor Scornboi is on the field.
+        let after = scenario(json!({
+            "active": "p2",
+            "p1": { "library": library },
+            "p2": { "library": library },
+        }));
+        let mut monitor = create_invariant_monitor(before.state());
+        monitor.before(before.state(), PlayerId::P2, &ActionBody::EndTurn);
+        let mut events = vec![event(json!({
+            "type": "hookResolving",
+            "sourceId": "r4599004-source",
+            "defId": CALL_TO_CHAOS,
+            "controller": "p2",
+            "hook": "cry",
+        }))];
+        if arrives {
+            events.push(event(json!({
+                "type": "summoned",
+                "player": "p2",
+                "instanceId": "r4599004-scornboi",
+                "defId": SCORNBOI,
+                "row": "units",
+                "lane": 2,
+            })));
+        }
+        events.push(event(
+            json!({ "type": "exiled", "instanceId": id, "defId": IMMUNE, "owner": "p1" }),
+        ));
+        monitor
+            .after(&events, after.state())
+            .into_iter()
+            .filter(|finding| finding.starts_with("I21"))
+            .collect()
+    }
+
+    #[test]
+    fn r4599004_scornboi_arriving_and_gone_in_a_spell_s_run_exiles_as_the_board_and_i21_allows_it() {
+        assert_eq!(i21_of(true), no_violations());
+        // With no exile aura standing or arriving, the Spell's exile of the immune Unit is a reach.
+        let found = i21_of(false);
         assert_eq!(found.len(), 1, "{found:?}");
         assert!(found[0].contains(CALL_TO_CHAOS), "{}", found[0]);
     }

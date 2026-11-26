@@ -1,11 +1,11 @@
 {
-  "generation": 13,
-  "lane": "learn",
-  "parent": "e17c74581a6d8e0f82b80443a839c7e4dfd19129",
-  "tree": "a8d6ab5cfc90a87156592a96f455ff638e6a8026",
+  "generation": 14,
+  "lane": "hand",
+  "parent": "7d2cf6960b0060bd642827baa5fb4a52de7a082a",
+  "tree": "420e4a199be7f9b4e8373b98bef7d694b01378fd",
   "vsRandom": null,
-  "vsParent": "220/400",
+  "vsParent": null,
   "shadowBan": 0,
-  "parentShadowBan": 17,
-  "date": "2026-10-21"
+  "parentShadowBan": 0,
+  "date": "2026-11-25"
 }

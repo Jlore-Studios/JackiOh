@@ -38,6 +38,12 @@ in seven. The daily quality gates (`cargo jackioh gate --full`) still hold the A
 on `main` to their floor against random, so an AI that forgets how to beat random fails the daily
 run.
 
+Generation 14 is no lane's either. R4159000's retirement of the learned evaluation moved the AI on
+2026-11-19 without moving the number, so the sweep of record, the ladder bots' re-settling and the
+records' builds read 13 for another AI. It is recorded by hand in lane `hand`
+(`training/history/hand.jsonl`), its parent the last commit that held the evaluation. It has no
+`vsRandom` and no `vsParent`, and its `shadowBan` and `parentShadowBan` are 0 (R4921000).
+
 ## The practice-claim fixture
 
 `crates/server/tests/fixtures/practice-claim.json` is a practice game the web's claim test plays move
@@ -150,7 +156,7 @@ decision rests on them only with that in view.
 The live games' records are what the gather lane's figures sit beside, and they are filed already:
 
 - Every finished live match files a record, and no switch turns that off: `api::results::record_result`
-  calls `api::game_records::record_live_game` once the result is in, and `LADDER_BOTS` only decides
+  calls `api::game_records::record_finished_game` once the result is in, and `LADDER_BOTS` only decides
   who is seated, not whether the game is filed. The ones that file none are a match no series, room or
   queue ticket made, a log that never reaches a result and one already filed; a failure to file is
   logged as `game.record.failed` and the result stands.
