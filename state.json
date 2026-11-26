@@ -22046,6 +22046,9 @@
         }
       }
     },
+    "5002": {
+      "suggestion": true
+    },
     "5003": {
       "action": "review",
       "asks": [],
@@ -45508,6 +45511,13 @@
         "number": 5007,
         "reason": "`AI_EVAL.attack_hook` (R2688000) is recorded as an untuned start, and the smoke gate reads it the same at 0 and at 0.5, so only a deal screen can say what it's worth. Like #5006, it follows `training/improve.md`'s screen and keep rule exactly: 400 paired games, keep 1.0 only when `edgeLow` is above 0, otherwise revert and record. The probe's nodes are already paid on every decision, so this only measures the share.",
         "title": "Patch: deal-screen the AI's attack-hook price, which the smoke gate reads the same at 0 and 0.5",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-26T05:19:20Z",
+        "number": 5002,
+        "title": "Patch: a pull request that changes only a bot workflow runs the web test that reads every workflow, and the scope test checks each file of a directory a source reads",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
       }
