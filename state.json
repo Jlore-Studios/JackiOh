@@ -22516,7 +22516,8 @@
       },
       "started_at": "2026-11-26T05:25:31Z",
       "stop_requested": false,
-      "taken_asks": []
+      "taken_asks": [],
+      "waiting_comment": 7183919190
     },
     "5014": {
       "failures": 0,
