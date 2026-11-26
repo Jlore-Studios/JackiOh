@@ -860,8 +860,8 @@ once its secret is in `providers.SecretNames` and the workflow's `HARNESS_SECRET
 
 At the top level, `max_parallel` is how many run at once on GitHub's runners, planning runs
 included (16, #3740: the organization runs 60 hosted jobs at once on GitHub's Team plan since
-2026-11-11, split as 2 for the status loop and the bots' short jobs, 2 for the gather lane (12 for the
-training lanes until #4701), 16 for these runs, and the rest for CI; it was 8 of the Free plan's 20, #1455). It stays at
+2026-11-11, split as 2 for the status loop and the bots' short jobs, 5 for the gather lane (2 until 2026-11-26, and
+12 for the training lanes until #4701), 16 for these runs, and the rest for CI; it was 8 of the Free plan's 20, #1455). It stays at
 16, not the 24 #3740 planned: at 16 the bot's token ran out of REST calls near the end of every
 hour (#3760), so more runs wait until what spends them is cut. Since #4059 every GET the client
 sends is conditional, so a read GitHub answers 304 Not Modified costs nothing, and the state file's
