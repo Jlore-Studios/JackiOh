@@ -138,10 +138,10 @@ describe("assault WebAssembly exports", () => {
     expect(day1).not.toBe(otherDay);
 
     const hash = fnv1a(day1);
-    // The deal of 2026-11-23 on this build's stand-ins, as the module answered it; a change to the
-    // catalog's deckable cards or to the deal moves it (#4783: a Commander's health, 30 + five times
-    // the level).
-    expect(hash).toBe("a26a9567");
+    // The deal of 2026-11-23 on the set's real cards (R4597000), as the module answered it; a change to
+    // the set's cards or to the deal moves it (R4597002: a Commander's two upgrades and its health,
+    // 40 + five times the level).
+    expect(hash).toBe("7847881e");
   });
 
   it("the day deck has DECK_SIZE distinct ids, is equal twice, and every id is in the catalog", () => {

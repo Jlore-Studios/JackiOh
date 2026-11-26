@@ -1,6 +1,6 @@
 //! SPEC §8.13 IA #95 The Botnet ((4) Field Spell, Legendary), a card of the held Infinite Assault set (R4577000).
-//!   Base:    "Your Units have +{buff}/+{buff} for each other friendly Unit." (buff 1)
-//!   Radiant: "Your Units have +{buff}/+{buff} for each other friendly Unit and Rush." (buff 1)
+//!   Base:    "Aura: Your Units have +{buff}/+{buff} for each other friendly Unit." (buff 1)
+//!   Radiant: "Aura: Your Units have +{buff}/+{buff} for each other friendly Unit and Rush." (buff 1)
 //!
 //! An aura over every Unit its controller controls (R4588004): the declared `buff` for every other
 //! friendly Unit, read live (§10.4 layer 5), so Health falls as Units leave; the Radiant face lends

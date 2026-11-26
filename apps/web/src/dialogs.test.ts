@@ -252,7 +252,7 @@ describe("R3221000 the menus' dialogs on the one Dialog", () => {
   });
 
   it("R3221000 the ✕ is DialogClose's alone, and no × is a close", () => {
-    expect(countsOf((file) => glyphs(file, "✕"))).toEqual({ "game/Dialog.tsx": 1 });
+    expect(countsOf((file) => glyphs(file, "✕"))).toEqual({});
     // The craft editor's Remove-hat buttons and the deck editor's Stop-comparing chip: each removes a
     // thing from its row, named for it, and closes nothing.
     expect(countsOf((file) => glyphs(file, "×"))).toEqual({ "game/craft/CraftEditor.tsx": 2, "game/deckbuilder/DeckEditor.tsx": 1 });

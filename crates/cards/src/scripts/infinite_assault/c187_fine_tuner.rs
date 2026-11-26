@@ -1,6 +1,6 @@
 //! SPEC §8.13 IA #187 Fine-Tuner ((2) Unit, Epic, 3/4 → 6/8), a card of the held Infinite Assault set (R4577000).
-//!   Base:    "Your cards that started in your opponent's deck cost ({discount}) less." (discount: 1)
-//!   Radiant: "Your cards that started in your opponent's deck cost ({discount}) less." (discount: 2)
+//!   Base:    "Aura: Your cards that started in your opponent's deck cost ({discount}) less." (discount: 1)
+//!   Radiant: "Aura: Your cards that started in your opponent's deck cost ({discount}) less." (discount: 2)
 //!
 //! Built by C8 (#4592). R4592000, R4592002.
 

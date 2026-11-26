@@ -1,5 +1,5 @@
 //! #84 Going Long (SPEC §8.4 row 84): Field Spell, cost 2 embiggen 4, Rare (no Quickdraw since #2521).
-//!   Base:    "Your hero has Armor 2 (Embiggened (4): 5)"
+//!   Base:    "Aura: Your hero has Armor 2 (Embiggened (4): 5)"
 //!   Radiant: "Armor 4 (Embiggened (4): 10)" — the cell changes only the two numbers (§8 Conventions).
 //!   (Embiggened 4 and 8 until #2657.)
 //!   Engine:  "Hero armor in pipeline step 2".

@@ -71,7 +71,7 @@
 }
 
 .tile-answer[data-family="sand"] {
-  --tile-ink: var(--pal-gold-200);
+  --tile-ink: var(--pal-brass-200);
   --tile-wash: var(--pal-wood-900);
 }
 
@@ -121,8 +121,8 @@
 }
 
 .tile-answer[data-family="astral"] {
-  --tile-ink: var(--pal-violet-300);
-  --tile-wash: var(--pal-blue-900);
+  --tile-ink: var(--pal-amethyst-300);
+  --tile-wash: var(--pal-ink-900);
 }
 
 .tile-answer[data-family="astral"]::after {
@@ -276,15 +276,15 @@
 /* Each playmat's props are drawn in its look: three colors from the palette, a body, an edge and a light. */
 .corner-props[data-mat="table-tavern"] { --prop-a: var(--pal-wood-600); --prop-b: var(--pal-brass-500); --prop-c: var(--pal-gold-300); }
 .corner-props[data-mat="table-wood"] { --prop-a: var(--pal-wood-700); --prop-b: var(--pal-parchment); --prop-c: var(--pal-gold-400); }
-.corner-props[data-mat="table-felt"] { --prop-a: var(--pal-green-700); --prop-b: var(--pal-green-200); --prop-c: var(--pal-parchment); }
-.corner-props[data-mat="table-neon-grid"] { --prop-a: var(--pal-purple-400); --prop-b: var(--pal-cyan-400); --prop-c: var(--pal-lime-400); }
+.corner-props[data-mat="table-felt"] { --prop-a: var(--pal-jade-700); --prop-b: var(--pal-jade-200); --prop-c: var(--pal-parchment); }
+.corner-props[data-mat="table-neon-grid"] { --prop-a: var(--pal-amethyst-300); --prop-b: var(--pal-verdigris-400); --prop-c: var(--pal-jade-400); }
 .corner-props[data-mat="table-marble"] { --prop-a: var(--pal-slate-100); --prop-b: var(--pal-slate-400); --prop-c: var(--pal-gold-300); }
 .corner-props[data-mat="table-chessboard"] { --prop-a: var(--pal-parchment); --prop-b: var(--pal-wood-800); --prop-c: var(--pal-gold-400); }
-.corner-props[data-mat="table-desert-sand"] { --prop-a: var(--pal-green-500); --prop-b: var(--pal-gold-200); --prop-c: var(--pal-orange-400); }
-.corner-props[data-mat="table-obsidian-slab"] { --prop-a: var(--pal-slate-800); --prop-b: var(--pal-violet-500); --prop-c: var(--pal-violet-300); }
+.corner-props[data-mat="table-desert-sand"] { --prop-a: var(--pal-jade-500); --prop-b: var(--pal-brass-200); --prop-c: var(--pal-copper-400); }
+.corner-props[data-mat="table-obsidian-slab"] { --prop-a: var(--pal-slate-800); --prop-b: var(--pal-amethyst-500); --prop-c: var(--pal-amethyst-300); }
 .corner-props[data-mat="table-ancient-map"] { --prop-a: var(--pal-brass-800); --prop-b: var(--pal-wood-700); --prop-c: var(--pal-parchment); }
-.corner-props[data-mat="table-astral"] { --prop-a: var(--pal-blue-700); --prop-b: var(--pal-violet-300); --prop-c: var(--pal-white); }
-.corner-props[data-mat="table-stinkyscape"] { --prop-a: var(--pal-slate-400); --prop-b: var(--pal-violet-500); --prop-c: var(--pal-orange-400); }
+.corner-props[data-mat="table-astral"] { --prop-a: var(--pal-blue-800); --prop-b: var(--pal-amethyst-300); --prop-c: var(--pal-white); }
+.corner-props[data-mat="table-stinkyscape"] { --prop-a: var(--pal-slate-400); --prop-b: var(--pal-amethyst-500); --prop-c: var(--pal-copper-400); }
 
 /* A tap: the prop's small motion. */
 .corner-prop[data-play="move"][data-state="tap"] .corner-prop__art {

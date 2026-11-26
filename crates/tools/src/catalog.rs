@@ -28,7 +28,6 @@ use jackioh_engine::wire::{
 
 use crate::patches::js::{self, Json, Object};
 use crate::patches::repo_root;
-use crate::spec::is_ident_char;
 
 /* unions */
 
@@ -1593,44 +1592,6 @@ fn check_catalog_against(catalog: &Object, sets: Vec<SetExpectation>) -> Catalog
 
 /* loc */
 
-/// One string literal the scanner is inside, across lines: a plain `"…"` (with escapes) or a raw
-/// `r#"…"#` closed by that many `#`s.
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub(crate) enum Quote {
-    Plain,
-    Raw(usize),
-}
-
-/// A raw string opening at `i` (`r"`, `r#"`, `br"`, `cr##"` …): its length up to and including
-/// the quote, and its `#` count.
-pub(crate) fn raw_string_open(chars: &[char], i: usize) -> Option<(usize, usize)> {
-    if i > 0 && is_ident_char(chars[i - 1]) {
-        return None;
-    }
-    let r_at = match (chars.get(i), chars.get(i + 1)) {
-        (Some('r'), _) => i,
-        (Some('b' | 'c'), Some('r')) => i + 1,
-        _ => return None,
-    };
-    let hashes = chars[r_at + 1..].iter().take_while(|c| **c == '#').count();
-    (chars.get(r_at + 1 + hashes) == Some(&'"')).then_some((r_at + 2 + hashes - i, hashes))
-}
-
-/// The length of a character literal at `i` (`'x'`, `'\n'`, `'\''`, `'\u{2028}'`), or 1 for a
-/// lone `'` (a lifetime or a label).
-pub(crate) fn char_literal_length(chars: &[char], i: usize) -> usize {
-    match chars.get(i + 1) {
-        Some('\\') => chars
-            .iter()
-            .enumerate()
-            .skip(i + 3)
-            .find(|(_, c)| **c == '\'')
-            .map_or(1, |(close, _)| close - i + 1),
-        Some(_) if chars.get(i + 2) == Some(&'\'') => 3,
-        _ => 1,
-    }
-}
-
 /// A `use` declaration's first line, visibility included (`use`, `pub use`, `pub(crate) use`).
 fn starts_use(code: &str) -> bool {
     let mut rest = code;
@@ -1661,97 +1622,7 @@ pub fn count_loc(source: &str) -> usize {
 /// TypeScript file that is no card script, where an import can change which code a call reaches
 /// (R2050000).
 pub fn code_lines_with_uses(source: &str) -> Vec<String> {
-    let mut code_lines: Vec<String> = Vec::new();
-    let mut block_depth = 0usize;
-    let mut quote: Option<Quote> = None;
-    for line in source.split('\n') {
-        let chars: Vec<char> = line.chars().collect();
-        let mut code = String::new();
-        let mut i = 0;
-        while i < chars.len() {
-            let ch = chars[i];
-            let next = chars.get(i + 1).copied();
-            if block_depth > 0 {
-                if ch == '*' && next == Some('/') {
-                    block_depth -= 1;
-                    i += 2;
-                } else if ch == '/' && next == Some('*') {
-                    block_depth += 1;
-                    i += 2;
-                } else {
-                    i += 1;
-                }
-                continue;
-            }
-            match quote {
-                Some(Quote::Plain) => {
-                    code.push(ch);
-                    if ch == '\\' {
-                        if let Some(next) = next {
-                            code.push(next);
-                        }
-                        i += 2;
-                        continue;
-                    }
-                    if ch == '"' {
-                        quote = None;
-                    }
-                    i += 1;
-                    continue;
-                }
-                Some(Quote::Raw(hashes)) => {
-                    code.push(ch);
-                    let closes = ch == '"'
-                        && chars.len() > i + hashes
-                        && chars[i + 1..=i + hashes].iter().all(|c| *c == '#');
-                    if closes {
-                        code.extend(std::iter::repeat_n('#', hashes));
-                        quote = None;
-                        i += 1 + hashes;
-                    } else {
-                        i += 1;
-                    }
-                    continue;
-                }
-                None => {}
-            }
-            if ch == '/' && next == Some('/') {
-                break;
-            }
-            if ch == '/' && next == Some('*') {
-                block_depth += 1;
-                i += 2;
-                continue;
-            }
-            if ch == '"' {
-                quote = Some(Quote::Plain);
-                code.push(ch);
-                i += 1;
-                continue;
-            }
-            if let Some((length, hashes)) = raw_string_open(&chars, i) {
-                code.extend(&chars[i..i + length]);
-                quote = Some(Quote::Raw(hashes));
-                i += length;
-                continue;
-            }
-            if ch == '\'' {
-                let length = char_literal_length(&chars, i);
-                code.extend(&chars[i..i + length]);
-                i += length;
-                continue;
-            }
-            code.push(ch);
-            i += 1;
-        }
-        code_lines.push(code.trim().to_string());
-    }
-    code_lines
-        .into_iter()
-        // A card's tests sit below its script (SURFACE §7.3) and are not its lines of code.
-        .take_while(|line| !line.starts_with("#[cfg(test)]"))
-        .filter(|line| !line.is_empty())
-        .collect()
+    jackioh_cards::code_lines::script_code(source).collect()
 }
 
 /// The lines `count_loc` counts, each trimmed: `code_lines_with_uses` without its `use`
@@ -1881,8 +1752,15 @@ fn run_check() -> anyhow::Result<()> {
             .iter()
             .map(|(r, n)| format!("{n} {r}"))
             .collect();
+        let single_player = expectation
+            .set
+            .parse::<jackioh_engine::SetName>()
+            .is_ok_and(|set| jackioh_engine::SINGLE_PLAYER_SETS.contains(&set));
         let shipped = if expectation.ships() {
             ""
+        } else if single_player {
+            // R1846001, R4597001: an open single-player set never ships; its enemies deal it.
+            " (single-player, R1846001)"
         } else {
             " (not shipped yet, R1420)"
         };

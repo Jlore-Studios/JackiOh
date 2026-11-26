@@ -245,3 +245,63 @@ describe("#3219 the button roles", () => {
     expect(counts, "draw it with a role (buttons.css); a sheet that loses some lowers its number in UNROLED").toEqual(UNROLED);
   });
 });
+
+/** R5014000: a `linear-gradient(…)`'s color stops, its leading angle or `to …` left out; undefined when `value` is no linear gradient. */
+function gradientStops(value: string): string[] | undefined {
+  const inner = /^linear-gradient\((.*)\)$/.exec(value.trim())?.[1];
+  if (inner === undefined) return undefined;
+  const args = splitTop(inner, ",");
+  return /^(?:-?[\d.]+(?:deg|turn|rad|grad)|to\s.+)$/.test(args[0] ?? "") ? args.slice(1) : args;
+}
+
+/** R5014000: a box-shadow layer's blur, its third length once its function calls' arguments are cut; 0 when it gives none. */
+function blurOf(layer: string): number {
+  let bare = layer;
+  for (let before = ""; before !== bare; ) {
+    before = bare;
+    bare = bare.replace(/\([^()]*\)/g, " ");
+  }
+  const blur = bare.split(/\s+/).filter((word) => /^-?[\d.]+(?:px|r?em)?$/.test(word))[2];
+  return blur === undefined ? 0 : Number.parseFloat(blur);
+}
+
+const insets = (layers: string[]): number => layers.filter((layer) => /(?<![\w-])inset(?![\w-])/.test(layer)).length;
+
+describe("R5014000 the primary button is a flat plate", () => {
+  it("R5014000 the guard counts a gradient's stops, a shadow's insets and its blur", () => {
+    expect(gradientStops("linear-gradient(180deg, var(--a), var(--b))")).toEqual(["var(--a)", "var(--b)"]);
+    expect(gradientStops("linear-gradient(to bottom, var(--a), color-mix(in srgb, var(--b) 9%, white) 40%, var(--c))")?.length).toBe(3);
+    expect(gradientStops("linear-gradient(var(--a), var(--b))")?.length).toBe(2);
+    expect(gradientStops("radial-gradient(var(--a), var(--b))")).toBeUndefined();
+    expect(blurOf("inset 0 1px 0 color-mix(in srgb, var(--pal-white) 45%, transparent)")).toBe(0);
+    expect(blurOf("0 2px 0 var(--pal-wood-600)")).toBe(0);
+    expect(blurOf("0 2px var(--pal-wood-600)")).toBe(0);
+    expect(blurOf("0 4px 12px color-mix(in srgb, var(--pal-black) 45%, transparent)")).toBe(12);
+    expect(blurOf("0 5px 0 #4a2a0e")).toBe(0);
+    expect(insets(splitTop("inset 0 1px 0 red, 0 2px 0 blue", ","))).toBe(1);
+  });
+
+  it("R5014000 the primary face has at most two stops, and its shadow two hard layers with one inset", () => {
+    const tokens = [...code("buttons.css").matchAll(/(--primary-(?:face|shadow)[\w-]*)\s*:\s*([^\s;][^;]*);/g)].map((m) => [m[1] ?? "", (m[2] ?? "").trim()] as const);
+    expect(tokens.map(([name]) => name).sort()).toEqual([
+      "--primary-face",
+      "--primary-face-hover",
+      "--primary-face-ready",
+      "--primary-face-ready-hover",
+      "--primary-shadow",
+      "--primary-shadow-ready",
+    ]);
+    for (const [name, value] of tokens) {
+      if (name.startsWith("--primary-face")) {
+        const stops = gradientStops(value);
+        expect(stops, `${name} is one linear-gradient`).toBeDefined();
+        expect(stops?.length, `${name}: ${value}`).toBeLessThanOrEqual(2);
+        continue;
+      }
+      const layers = splitTop(value, ",");
+      expect(layers.length, `${name}: ${value}`).toBeLessThanOrEqual(2);
+      expect(insets(layers), `${name}: one inset highlight`).toBe(1);
+      for (const layer of layers) expect(blurOf(layer), `${name}: ${layer} has no blur`).toBe(0);
+    }
+  });
+});

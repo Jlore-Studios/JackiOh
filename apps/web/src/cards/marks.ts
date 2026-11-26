@@ -138,9 +138,6 @@ export function markWords(mark: string): MarkWords {
   return Object.prototype.hasOwnProperty.call(MARK_WORDS, mark) ? (MARK_WORDS[mark] ?? UNKNOWN_MARK_WORDS) : UNKNOWN_MARK_WORDS;
 }
 
-/** The sparkle the badge draws, so the mark is a shape as well as a color. */
-export const MARK_GLYPH = "✦";
-
 /** The drifting motes of one aura (marks.css places them by index). */
 export const MARK_MOTES = 6;
 

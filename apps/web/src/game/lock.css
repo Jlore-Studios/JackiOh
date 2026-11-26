@@ -28,14 +28,14 @@
 
 .zone-lock-shackle {
   fill: none;
-  stroke: var(--pal-blue-200);
+  stroke: var(--pal-ink-200);
   stroke-width: 2.4;
   stroke-linecap: round;
 }
 
 .zone-lock-body {
   fill: var(--locked);
-  stroke: var(--pal-blue-200);
+  stroke: var(--pal-ink-200);
   stroke-width: 1.2;
 }
 

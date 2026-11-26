@@ -230,7 +230,7 @@ const PART_FIVE_SHOT_LOOKS = [
   ...PART_FIVE_LOOKS.filter((look) => ["immersive", "prismatic", "prismatic-stack"].includes(look.name)),
 ] as const;
 
-/** R2944001: Prismatic's base bezel, palette.css's `--pal-slate-100`, and the first colour of its edge, `--pal-red-400`. */
+/** R2944001: Prismatic's base bezel, palette.css's `--pal-slate-100`, and the first colour of its edge, the old `--pal-red-400` it keeps (R5012000). */
 const PRISMATIC_BEZEL = "#e8eaf2";
 const PRISMATIC_EDGE_RED = "#f87171";
 /** The Mythic rarity foil's yellow edge stop (cards.css), which Prismatic's base edge replaces. */

@@ -657,7 +657,7 @@ describe("MN02 the hero's inspect view (R1330)", () => {
     const close = screen.getByTestId("hero-inspect-close");
     expect(close).toHaveClass("dialog__close");
     expect(close).toHaveAccessibleName("Close");
-    expect(close).toHaveTextContent("✕");
+    expect(close.querySelector(".icon--close")).not.toBeNull();
     expect(close).toHaveFocus();
     // Last in the view, so Tab ends on it.
     expect(screen.getByTestId("hero-inspect").lastElementChild).toBe(close);

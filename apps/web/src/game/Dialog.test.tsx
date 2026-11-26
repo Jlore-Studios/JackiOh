@@ -332,7 +332,7 @@ describe("R3221000 the menus' dialogs on the one Dialog", () => {
     expect(within(dialog).getByTestId("named").closest("h2")).toHaveClass("dialog__title");
     const close = screen.getByTestId("caller-close");
     expect(close).toHaveAccessibleName("Close the caller");
-    expect(close.textContent).toBe("✕");
+    expect(close.querySelector(".icon--close")).not.toBeNull();
     expect(screen.queryByTestId(dialogTestid.close)).toBeNull();
     expect(screen.getByTestId("caller-input"), "the caller's focus, not the first answer").toHaveFocus();
   });

@@ -2773,9 +2773,10 @@ fn redact_event(
 
         // R2652000: a batch of coins or dice a viewer reads at all (`withheld_rolls` drops the rest)
         // shows every face; the card itself follows R97, as Call to Chaos's does below. `faceDown` is
-        // the engine's, so no view forwards it.
+        // the engine's, and R4707000's `hit` the game record's, so no view forwards either.
         GameEventType::Rolled => {
             shown.remove("faceDown");
+            shown.remove("hit");
             if !instance.is_empty() && hidden(&instance) {
                 hide(&mut shown, &["instanceId", "defId"]);
             }
@@ -2794,11 +2795,13 @@ fn redact_event(
         }
 
         // R436: Call to Chaos names what it rolled to both players; the card itself follows R97.
+        // R4707000: the roll's places in its table are the game record's, so no view forwards them.
         GameEventType::ChaosRolled => {
-            if !hidden(&instance) {
-                return event.clone();
+            shown.remove("indices");
+            shown.remove("tableSize");
+            if hidden(&instance) {
+                hide(&mut shown, &["instanceId", "defId"]);
             }
-            hide(&mut shown, &["instanceId", "defId"]);
             rebuild(shown)
         }
 

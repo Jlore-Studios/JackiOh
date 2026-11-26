@@ -197,6 +197,21 @@ function hexes(text: string): string[] {
   return found;
 }
 
+/** palette.css's `--pal-*` colors by name: what a `var(--pal-…)` in a rule draws. */
+const PALETTE = new Map(
+  [...readFileSync(join(HERE, "..", "palette.css"), "utf8").matchAll(/(--pal-[a-z0-9-]+):\s*(#[0-9a-fA-F]+)/g)].map((match) => [match[1] ?? "", match[2] ?? ""]),
+);
+
+/** Every color `body` draws: its `#…` colors and the palette colors it names, without the `#`. */
+function colorsOf(body: string): string[] {
+  const named = [...body.matchAll(/var\((--pal-[a-z0-9-]+)\)/g)].map((match) => {
+    const hex = PALETTE.get(match[1] ?? "");
+    expect(hex, match[1]).toBeDefined();
+    return hex ?? "";
+  });
+  return [...hexes(body), ...hexes(named.join(" "))];
+}
+
 function face(defId: string, radiant = false): FaceModel {
   return faceModel({ defId, def: CATALOG[defId], radiant });
 }
@@ -418,8 +433,9 @@ describe("R1295000 the cosmetics stylesheet", () => {
     const framed = rules(cosmeticsCss).filter((rule) => rule.selector.includes("[data-frame"));
     expect(framed.length).toBeGreaterThan(0);
     for (const rule of framed) {
-      for (const hex of hexes(rule.body)) expect(inRadiantGold(hex), `${rule.selector}'s #${hex}`).toBe(false);
-      // Every color a border declares is a hex this test can read.
+      // R5012000: a palette name in a frame rule is read as the color palette.css gives it.
+      for (const hex of colorsOf(rule.body)) expect(inRadiantGold(hex), `${rule.selector}'s #${hex}`).toBe(false);
+      // Every color a border declares is a hex or a palette name this test can read.
       for (const way of ["rgb(", "hsl(", "color-mix(", "gold"]) expect(rule.body, rule.selector).not.toContain(way);
     }
   });
@@ -1523,21 +1539,6 @@ describe("R1953001 the chases move everywhere, and a card wears its own picks or
 });
 
 describe("R2725004 no version or augment wears Radiant's gold", () => {
-  /** palette.css's `--pal-*` colors by name: what a `var(--pal-…)` in a rule draws. */
-  const PALETTE = new Map(
-    [...readFileSync(join(HERE, "..", "palette.css"), "utf8").matchAll(/(--pal-[a-z0-9-]+):\s*(#[0-9a-fA-F]+)/g)].map((match) => [match[1] ?? "", match[2] ?? ""]),
-  );
-
-  /** Every color `body` draws: its `#…` colors and the palette colors it names, without the `#`. */
-  function colorsOf(body: string): string[] {
-    const named = [...body.matchAll(/var\((--pal-[a-z0-9-]+)\)/g)].map((match) => {
-      const hex = PALETTE.get(match[1] ?? "");
-      expect(hex, match[1]).toBeDefined();
-      return hex ?? "";
-    });
-    return [...hexes(body), ...hexes(named.join(" "))];
-  }
-
   it("R2725004 no version or augment colour is within the Radiant gold window", () => {
     // The rules that draw the Full art version's band and the augments: the signature, its ink, pen and burst.
     // R2940001: and the Sketch version's pencilled frame.
