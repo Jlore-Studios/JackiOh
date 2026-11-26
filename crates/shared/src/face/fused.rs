@@ -31,25 +31,29 @@ fn fused_head_len(id: &str) -> Option<usize> {
 const DIGEST_MARK: char = '#';
 /// R469: the mark an ingredient that went in on its Radiant face carries in a readable id.
 const RADIANT_MARK: char = '*';
+/// What the Fuse joins its ingredients' texts with (`fuse.rs` `fused_face`), and a Chinese face its table's.
+pub(crate) const FUSED_LINE: &str = "\n";
 const OPEN: char = '(';
 const CLOSE: char = ')';
 const JOIN: char = '+';
 
-/// An ingredient as a fused id spells it (R179: a fused one in parentheses, R469: a Radiant one marked), as its id.
-fn bare_id(spelled: &str) -> &str {
+/// An ingredient as a fused id spells it (R179: a fused one in parentheses, R469: a Radiant one marked), as its id
+/// and whether it carries the Radiant mark.
+fn bare_id(spelled: &str) -> (&str, bool) {
     let unmarked = spelled.strip_suffix(RADIANT_MARK).unwrap_or(spelled);
-    match unmarked
+    let id = match unmarked
         .strip_prefix(OPEN)
         .and_then(|inner| inner.strip_suffix(CLOSE))
     {
         Some(inner) => inner,
         None => unmarked,
-    }
+    };
+    (id, unmarked.len() != spelled.len())
 }
 
-/// R179, R468: the ingredient ids a readable fused id spells, split at its top-level `+` signs; `None` for a
-/// digest, which spells none.
-fn spelled_ingredients(id: &str) -> Option<Vec<String>> {
+/// R179, R468, R469: the ingredients a readable fused id spells, split at its top-level `+` signs, each with its
+/// Radiant mark; `None` for a digest, which spells none.
+fn spelled_ingredients(id: &str) -> Option<Vec<(String, bool)>> {
     let body = fused_head_len(id).map_or(id, |head| &id[head..]);
     if body.starts_with(DIGEST_MARK) {
         return None;
@@ -65,7 +69,8 @@ fn spelled_ingredients(id: &str) -> Option<Vec<String>> {
         } else if at < chars.len() && mark == CLOSE {
             depth -= 1;
         } else if at == chars.len() || (mark == JOIN && depth == 0) {
-            spelled.push(bare_id(&body[from..offset]).to_string());
+            let (bare, marked) = bare_id(&body[from..offset]);
+            spelled.push((bare.to_string(), marked));
             from = offset + JOIN.len_utf8();
         }
     }
@@ -82,10 +87,62 @@ pub fn fused_parts(
     listed: &dyn Fn(&str) -> Option<Vec<String>>,
     inside: &[String],
 ) -> Option<Vec<String>> {
+    let marked = |id: &str| {
+        listed(id).map(|ingredients| ingredients.into_iter().map(|id| (id, false)).collect())
+    };
+    let leaves = leaves_in(id, false, &marked, inside)?;
+    Some(leaves.into_iter().map(|leaf| leaf.def_id).collect())
+}
+
+/// R469, R5049000: one catalog card a fused definition is made of, and whether it went in on its Radiant face:
+/// marked so itself, or inside a fused ingredient that was (`fuse.rs` `fused_face` puts such a fusion in on
+/// its Radiant face, every part of it with it).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FusedLeaf {
+    pub def_id: String,
+    pub radiant: bool,
+}
+
+/// R469, R5049000: `fused_parts` with each leaf's Radiant mark. `listed` answers the ingredients a held
+/// definition lists, each with its mark (`CardDef.ingredients`).
+pub fn fused_leaves(id: &str, listed: &dyn Fn(&str) -> Option<Vec<(String, bool)>>) -> Option<Vec<FusedLeaf>> {
+    leaves_in(id, false, listed, &[])
+}
+
+/// R5049000: the leaves of the definition `def`, the ones inside it read from `lookup` (the definitions the
+/// view carries, R243) or from the ids they spell (R179).
+pub fn leaves_of(def: &CardDef, lookup: &dyn Fn(&str) -> Option<CardDef>) -> Option<Vec<FusedLeaf>> {
+    let listed = |id: &str| -> Option<Vec<(String, bool)>> {
+        let ingredients = if id == def.id {
+            def.ingredients.clone()
+        } else {
+            lookup(id)?.ingredients
+        }?;
+        Some(
+            ingredients
+                .into_iter()
+                .map(|ingredient| (ingredient.def_id, ingredient.radiant == Some(true)))
+                .collect(),
+        )
+    };
+    fused_leaves(&def.id, &listed)
+}
+
+fn leaves_in(
+    id: &str,
+    radiant: bool,
+    listed: &dyn Fn(&str) -> Option<Vec<(String, bool)>>,
+    inside: &[String],
+) -> Option<Vec<FusedLeaf>> {
     let ingredients = match listed(id).filter(|ingredients| !ingredients.is_empty()) {
         Some(ingredients) => Some(ingredients),
         None if fused_head_len(id).is_some() => spelled_ingredients(id),
-        None => return Some(vec![id.to_string()]),
+        None => {
+            return Some(vec![FusedLeaf {
+                def_id: id.to_string(),
+                radiant,
+            }]);
+        }
     };
     let ingredients = ingredients?;
     if inside.iter().any(|seen| seen == id) {
@@ -93,11 +150,11 @@ pub fn fused_parts(
     }
     let mut deeper = inside.to_vec();
     deeper.push(id.to_string());
-    let mut parts = Vec::new();
-    for ingredient in &ingredients {
-        parts.extend(fused_parts(ingredient, listed, &deeper)?);
+    let mut leaves = Vec::new();
+    for (ingredient, marked) in &ingredients {
+        leaves.extend(leaves_in(ingredient, radiant || *marked, listed, &deeper)?);
     }
-    Some(parts)
+    Some(leaves)
 }
 
 /// Whether `def` is a fusion with the Dormant Starship's hull among its ingredients, in any depth. Only `def`

@@ -38,7 +38,7 @@ use super::short::{ascent_level_of, cut_text, in_language, short_form_of, summit
 use super::spans::{Dressing, rich};
 use super::state::{BadgeFacts, state_badges};
 use super::text::{Text, copied_text};
-use super::tuning::{MINUS, face_tuning, filled_text};
+use super::tuning::{MINUS, face_tuning, filled_text, with_part_numbers};
 use super::types::{
     CostTone, DefMap, FaceCost, FaceCredits, FaceModel, FaceSource, FaceStats, Grew, InPlay, LiveStats,
     Mention, QuestBox, StarshipFace, StatTone, TagChip, TuningChip,
@@ -95,8 +95,12 @@ pub fn face_model(words: Words, source: &FaceSource, lookup: &Lookup<'_>) -> Fac
 
 fn face_in(words: Words, source: &FaceSource, lookup: &Lookup<'_>, chinese: bool) -> FaceModel {
     let given = source.def.clone().or_else(|| lookup.def(&source.def_id));
+    // R5049000: a fused definition's parts each print their own numbers, as their texts read them.
+    let view_tuning = source.in_play.as_ref().and_then(|play| play.tuning.as_ref());
+    let find = |id: &str| lookup.def(id);
+    let part_numbers = |def: CardDef| with_part_numbers(&def, &find, view_tuning).unwrap_or(def);
     let filled = with_view_params(
-        given,
+        given.map(part_numbers),
         source.in_play.as_ref().and_then(|play| play.params.as_ref()),
     );
     // R1301: a Chinese card's name and texts are the table's; all else stays the definition's.
@@ -131,6 +135,9 @@ fn face_in(words: Words, source: &FaceSource, lookup: &Lookup<'_>, chinese: bool
     // B5 E14, R511: a copier's own words are the copied Spell's text (in Chinese on a Chinese copier, R1301).
     let copies = in_play.and_then(|play| play.copies.as_ref()).map(|copies| {
         let mut copies = copies.clone();
+        // R5049000: a gained fused text (a Smoothie's Fruits, R4440006) fills as a fused card's own does.
+        let def = part_numbers(copies.def.clone());
+        copies.def = with_view_params(Some(def.clone()), copies.params.as_ref()).unwrap_or(def);
         if chinese {
             copies.def = chinese_def(&copies.def);
         }

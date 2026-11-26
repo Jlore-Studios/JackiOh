@@ -1425,3 +1425,137 @@ fn r4747000_a_gained_keyword_prints_at_its_place_in_the_order() {
     );
     assert_eq!(face.gained_line.full, "Flying");
 }
+
+// ---- A fused text's numbers (issue #5049) ------------------------------------------------------------------
+
+/// `parts` fused as the Fuse joins them, each on the face `forced` marks (R469): the base face prints a marked
+/// part's Radiant text, the Radiant face every part's.
+fn fused_text(n: u32, parts: &[jackioh_engine::wire::CardDef], forced: &[bool]) -> jackioh_engine::wire::CardDef {
+    let refs: Vec<&jackioh_engine::wire::CardDef> = parts.iter().collect();
+    let mut def = fused(n, &refs);
+    def.params = None;
+    if let Some(ingredients) = def.ingredients.as_mut() {
+        for (ingredient, marked) in ingredients.iter_mut().zip(forced) {
+            ingredient.radiant = marked.then_some(true);
+        }
+    }
+    let join = |radiant: bool| {
+        parts
+            .iter()
+            .zip(forced)
+            .map(|(part, marked)| {
+                if radiant || *marked {
+                    part.radiant.text.clone()
+                } else {
+                    part.base.text.clone()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    def.base.text = join(false);
+    def.radiant.text = join(true);
+    def
+}
+
+/// What each part prints filled with its own numbers, `values` by part, joined as the Fuse joins them.
+fn each_filled(
+    parts: &[jackioh_engine::wire::CardDef],
+    faces: &[bool],
+    values: &[Option<indexmap::IndexMap<String, i32>>],
+) -> String {
+    use jackioh_engine::wire::{FaceKind, fill_params};
+    parts
+        .iter()
+        .zip(faces)
+        .zip(values)
+        .map(|((part, radiant), values)| {
+            let face = if *radiant { FaceKind::Radiant } else { FaceKind::Base };
+            fill_params(part, face, values.as_ref())
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// R5049000: a fused text's parts each print their own numbers, two that declare one key included (Normal
+/// Grape's `amount` 2 and Large Grape's 5, All Purpose Apple's `heal` 2 and Fig of Life's 20), never a
+/// placeholder: on the fusion's own face, as a Smoothie's gained text (R4440006), and on the Radiant face a
+/// part went in on (R469).
+#[test]
+fn r5049000_each_part_of_a_fused_text_prints_its_own_numbers() {
+    let parts = ["classicplus-065-2", "classicplus-065-3", "classicplus-059", "core-047"].map(catalog_def);
+    let none = [None, None, None, None];
+    let def = fused_text(5049, &parts, &[false; 4]);
+    assert!(def.base.text.contains("{amount}"), "PREMISE: the Fuse joins the templates");
+    let want = each_filled(&parts, &[false; 4], &none);
+    for wanted in ["Deal 2 damage", "Deal 5 damage", "Heal your hero 2.", "20"] {
+        assert!(want.contains(wanted), "PREMISE: {wanted} in {want}");
+    }
+    let own = face_of_def(&def, false, Locale::En, json!({ "inPlay": {} }));
+    assert_eq!(own.text.full, want);
+    let radiant = face_of_def(&def, true, Locale::En, json!({ "inPlay": {} }));
+    assert_eq!(radiant.text.full, each_filled(&parts, &[true; 4], &none));
+    // A Smoothie runs the Fruits' fusion as its text (R4440006): its copy prints the same, whatever numbers
+    // the view's one map by key would give.
+    for params in [json!(null), json!({ "amount": 2, "heal": 20 })] {
+        let smoothie = in_play(
+            "stinkyscapeplus-018",
+            false,
+            Locale::En,
+            json!({ "inPlay": { "copies": { "def": def, "radiant": false, "params": params } } }),
+        );
+        assert!(smoothie.text.full.contains(&want), "{}", smoothie.text.full);
+        assert!(!smoothie.text.full.contains('{'), "{}", smoothie.text.full);
+    }
+    // R469: a part that went in on its Radiant face prints its Radiant numbers on the base face.
+    let marked = fused_text(5050, &parts[..2], &[true, false]);
+    assert_eq!(
+        face_of_def(&marked, false, Locale::En, json!({ "inPlay": {} })).text.full,
+        each_filled(&parts[..2], &[true, false], &[None, None])
+    );
+}
+
+/// R5049000: an Upgrade moves a fused text's key on every part that declares it, each from its own printed
+/// number by its own step, as the engine reads it (`params::tuned_value`).
+#[test]
+fn r5049000_a_tuned_key_moves_on_each_part_from_its_own_number() {
+    let parts = ["classicplus-065-2", "classicplus-065-3"].map(catalog_def);
+    let def = fused_text(5051, &parts, &[false, false]);
+    let tuning = json!({ "numbers": { "amount": 1 } });
+    let tuned: jackioh_engine::wire::Tuning = serde_json::from_value(tuning.clone()).expect("a tuning");
+    let values: Vec<Option<indexmap::IndexMap<String, i32>>> = parts
+        .iter()
+        .map(|part| {
+            Some(
+                part.params
+                    .iter()
+                    .flatten()
+                    .map(|param| {
+                        let value = jackioh_engine::params::tuned_value(param, false, Some(&tuned));
+                        (param.key.clone(), value)
+                    })
+                    .collect(),
+            )
+        })
+        .collect();
+    let want = each_filled(&parts, &[false, false], &values);
+    assert!(want.contains("Deal 3 damage") && want.contains("Deal 6 damage"), "{want}");
+    let face = face_of_def(&def, false, Locale::En, json!({ "inPlay": { "tuning": tuning } }));
+    assert_eq!(face.text.full, want);
+}
+
+/// R5049000: a fusion of fusions fills each leaf, the inner one read from the id it spells (R179) where the
+/// view carries only the outer definition (R243).
+#[test]
+fn r5049000_a_fusion_of_fusions_fills_each_leaf() {
+    let parts = ["classicplus-065-2", "classicplus-059", "core-047"].map(catalog_def);
+    let inner = fused_text(5052, &parts[1..], &[false, false]);
+    let mut outer = fused(5053, &[&parts[0], &inner]);
+    outer.params = None;
+    outer.base.text = format!("{}\n{}", parts[0].base.text, inner.base.text);
+    outer.radiant.text = format!("{}\n{}", parts[0].radiant.text, inner.radiant.text);
+    assert_eq!(
+        face_of_def(&outer, false, Locale::En, json!({ "inPlay": {} })).text.full,
+        each_filled(&parts, &[false; 3], &[None, None, None])
+    );
+}

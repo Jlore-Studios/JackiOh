@@ -5,9 +5,11 @@
 //! engine's `fill_params` does.
 
 use indexmap::IndexMap;
+use jackioh_engine::params::tuned_value;
 use jackioh_engine::wire::{CardDef, Keyword, KeywordKind, Param, ParamBetter, Tuning};
 
 use super::chinese::{list_separator, reader_keyword};
+use super::fused::{FUSED_LINE, is_fused, leaves_of};
 use super::types::{FaceTuning, TuneChange, TuneVerdict, Way};
 use super::words::Words;
 
@@ -393,6 +395,54 @@ pub fn filled_text(
         &def.base.text
     };
     filled_text_of(def, text, radiant, values)
+}
+
+/// R5049000: `def`, a fused definition that declares no numbers (R77), with each part's `{key}`s filled with that
+/// part's own numbers (R102) on the face it went in on (R469, R4334000), as `tuning` moves them
+/// (`params::tuned_value`, the formula the view's numbers come from): two parts that declare one key, a
+/// Smoothie's Fig of Life and All Purpose Apple, each print their own. A face whose text is not its parts'
+/// joined as the Fuse joins them (`fuse.rs` `fused_face`) is left as it is; `None` for a definition that
+/// declares numbers or is no fusion, and for one holding a part `lookup` cannot find.
+pub fn with_part_numbers(
+    def: &CardDef,
+    lookup: &dyn Fn(&str) -> Option<CardDef>,
+    tuning: Option<&Tuning>,
+) -> Option<CardDef> {
+    if def.params.is_some() || !is_fused(&def.id) {
+        return None;
+    }
+    let leaves: Vec<(CardDef, bool)> = leaves_of(def, lookup)?
+        .into_iter()
+        .map(|leaf| lookup(&leaf.def_id).map(|part| (part, leaf.radiant)))
+        .collect::<Option<_>>()?;
+    let face_text = |radiant_face: bool, filled: bool| -> String {
+        leaves
+            .iter()
+            .map(|(part, forced)| {
+                let radiant = radiant_face || *forced;
+                let text = if radiant { &part.radiant.text } else { &part.base.text };
+                if !filled {
+                    return text.clone();
+                }
+                let values: IndexMap<String, i32> = part
+                    .params
+                    .iter()
+                    .flatten()
+                    .map(|param| (param.key.clone(), tuned_value(param, radiant, tuning)))
+                    .collect();
+                filled_text_of(part, text, radiant, Some(&values)).0
+            })
+            .collect::<Vec<_>>()
+            .join(FUSED_LINE)
+    };
+    let mut out = def.clone();
+    if face_text(false, false) == def.base.text {
+        out.base.text = face_text(false, true);
+    }
+    if face_text(true, false) == def.radiant.text {
+        out.radiant.text = face_text(true, true);
+    }
+    Some(out)
 }
 
 /// `fillParams` over a text of its own (a Chinese template, a copier's sentence): `def`'s declared numbers.

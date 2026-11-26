@@ -17,15 +17,14 @@ use super::data::{
     CHINESE_ALL_TRIBES, CHINESE_CARDS, CHINESE_CREATED, CHINESE_GLOSSARY, CHINESE_KEYWORDS, CHINESE_RADIANT,
     CHINESE_TAGS, CHINESE_TYPES, ChineseRow, find,
 };
-use super::fused::{DORMANT_STARSHIP_ID, holds_dormant_starship};
+use super::fused::{DORMANT_STARSHIP_ID, FUSED_LINE, holds_dormant_starship};
 use super::tuning::fill_params_text;
 use super::words::Words;
 
 /// What joins a list of keywords on a Chinese face, as the table's texts join them ("嘲讽，圣盾，复生").
 pub const CHINESE_COMMA: &str = "，";
 
-/// R102, R468: what joins a fused definition's ingredients' texts (one per line) and names.
-const FUSED_LINE: &str = "\n";
+/// R102, R468: what joins a fused definition's ingredients' names (their texts, one per line: `FUSED_LINE`).
 const FUSED_NAME: &str = " + ";
 
 /// Glitch (issue #170, SPEC §7) wears corrupted words wherever a lookup answers for it (`glitch.rs`).
