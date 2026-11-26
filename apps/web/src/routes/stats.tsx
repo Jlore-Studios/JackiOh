@@ -46,6 +46,7 @@ import { currentCatalog } from "../game/currentCatalog.ts";
 import { useFaceModel } from "../game/faces.ts";
 import { modeText } from "../game/modeText.ts";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
+import { Icon } from "../icons/Icon.tsx";
 import {
   ApiRequestError,
   cardStatsPath,
@@ -2088,7 +2089,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                               {t(row.set)}
                               {row.set === setLeaders.pooled && (
                                 <span className="stats-sets-leader" aria-hidden="true">
-                                  {" ★"}
+                                  {" "}<Icon name="star" />
                                 </span>
                               )}
                             </th>
