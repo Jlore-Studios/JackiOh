@@ -21249,24 +21249,13 @@
       "taken_asks": [],
       "verdict_rounds": 0,
       "votes": {
-        "approvals": [
-          "muse"
-        ],
+        "approvals": [],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "provider": "muse",
-            "run": "45699786407",
-            "tier": "medium"
-          }
-        ],
-        "sha": "89125fae8f80edeb139d09cb3001a5fc5bf66905",
-        "tiers": {
-          "muse": "medium"
-        }
+        "reviews": [],
+        "sha": "93029fec4e6edf743988211b66fc25139048a461",
+        "tiers": {}
       }
     },
     "4961": {
