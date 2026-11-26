@@ -80,6 +80,8 @@ enum Command {
     Catalog(catalog::Args),
     /// What a change between two commits does: its kind, and for cards its tier (#1365, R1365000).
     Classify(classify::Args),
+    /// The cards a pull request changes, as fuzz's gate reads them; none off a merge commit (#5099).
+    ChangedCards(changed::Args),
     /// Print the newest version in `patches.json` (part 22).
     CatalogVersion(catalog::VersionArgs),
     /// The card patch history: `patches <version> <date> "<title>"`, `patches check`, `patches ship` (part 22), `patches log <base>..<head>` (R1369000).
@@ -124,6 +126,7 @@ fn main() -> ExitCode {
         Command::Think(args) => think::run(args),
         Command::Catalog(args) => catalog::run(args),
         Command::Classify(args) => classify::run(args),
+        Command::ChangedCards(args) => changed::run(args),
         Command::CatalogVersion(args) => catalog::run_version(args),
         Command::Patches(args) => patches::run(args),
         Command::Gate(args) => gate::run(args),

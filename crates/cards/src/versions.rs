@@ -61,6 +61,28 @@ fn version_at(bytes: &[u8], at: usize) -> Option<usize> {
     alone(end).then_some(end)
 }
 
+/// R3631000: the letters a micro takes after `letters`, counted as a spreadsheet counts its
+/// columns, the line's own name standing for `a`: `""` is followed by `b`, `y` by `z`, `z` by
+/// `aa`, `az` by `ba` and `zz` by `aaa`. Never runs out. R5035000: a play version's iteration
+/// letters count the same way (`play_versions_of`).
+pub fn next_letters(letters: &str) -> String {
+    if letters.is_empty() {
+        return "b".to_string();
+    }
+    let mut bytes = letters.as_bytes().to_vec();
+    match bytes.iter().rposition(|&byte| byte != b'z') {
+        Some(at) => {
+            bytes[at] += 1;
+            bytes[at + 1..].fill(b'a');
+        }
+        None => {
+            bytes.fill(b'a');
+            bytes.push(b'a');
+        }
+    }
+    bytes.into_iter().map(char::from).collect()
+}
+
 /// R1371000: `text` with every version that stands alone in it (a record id's `dev:<patch>:…`, a
 /// seed's `learned-<version>-…`, a file name) renamed by `new_of`, each once, left to right.
 pub fn rename_versions_with<'a>(text: &str, new_of: impl Fn(&str) -> Option<&'a str>) -> String {

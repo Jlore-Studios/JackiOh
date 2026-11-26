@@ -1985,6 +1985,8 @@ export type PublicPlayVersion = {
   patches?: number;
   /** R5033000: the position of its first version in the shipped history; absent from a server deployed before it. */
   firstShipped?: number | null;
+  /** R5035000: its iteration's label, "v1", "v1b", "v2", the server's count over its card's history; absent from a server deployed before it. */
+  iteration?: string;
   games: number;
   adjustedWinRate: number | null;
   adjustedLow: number | null;

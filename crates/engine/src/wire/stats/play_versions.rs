@@ -22,6 +22,9 @@
 //! `play_version_figures` over the cut versions is the Major patch running view's table, its field read
 //! over the cut rows alone.
 //!
+//! R5035000: each play version's iteration, `v1`, `v1b`, `v2` (`jackioh_cards::play_versions_of` counts
+//! it over its card's whole shipped history), which each row sends as its label.
+//!
 //! R5036000: each row's Decisiveness (R4552001) over its span, against one baseline of every record the
 //! table counts.
 
@@ -41,6 +44,12 @@ use crate::config::{PUBLIC_STATS_MIN_LIVE_GAMES, TIER_BAND_HIGH, TIER_BAND_LOW};
 /// R4675000: what joins a card's id to the first shipped version of a play version in its id.
 pub const PLAY_VERSION_MARK: char = '~';
 
+/// R5035000: what an iteration's label begins with: `v1`, `v1b`.
+pub const ITERATION_MARK: char = 'v';
+
+/// R5035000: a card's first play version's iteration.
+pub const FIRST_ITERATION: u32 = 1;
+
 /// R4675000: the id of `card`'s play version that begins at `first`.
 pub fn play_version_id(card: &str, first: &str) -> String {
     format!("{card}{PLAY_VERSION_MARK}{first}")
@@ -59,6 +68,12 @@ pub struct PlayVersion {
     pub versions: Vec<String>,
     /// Whether it is the card's version in the newest shipped catalog: its last version is still open.
     pub live: bool,
+    /// R5035000: its number among its card's play versions, `FIRST_ITERATION` for the first: a new one
+    /// where its card's face changed.
+    pub iteration: u32,
+    /// R5035000: its letters after the number (R3631000's, b to z, then aa), `""` for a number's first:
+    /// the next ones where only its card's play changed.
+    pub iteration_letters: String,
 }
 
 impl PlayVersion {
@@ -70,6 +85,11 @@ impl PlayVersion {
     /// The last shipped version it spans: the newest shipped one while it is live.
     pub fn last(&self) -> &str {
         self.versions.last().map_or("", String::as_str)
+    }
+
+    /// R5035000: its iteration as the Experimental tab prints it: `v1`, `v1b`, `v2`.
+    pub fn iteration_label(&self) -> String {
+        format!("{ITERATION_MARK}{}{}", self.iteration, self.iteration_letters)
     }
 }
 
@@ -99,6 +119,8 @@ pub struct PlayVersionFigures {
     pub first: String,
     pub last: String,
     pub live: bool,
+    /// R5035000: its play version's `iteration_label()`, the same however the table is read or cut.
+    pub iteration: String,
     /// R4678001: the patches its versions reach: the windows every card shares (`patch_windows`,
     /// R1973002, a gameless patch folded into the one before as R1973001 folds it), counted once each.
     pub patches: usize,
@@ -423,6 +445,7 @@ fn figures_of(
         first: version.first().to_string(),
         last: version.last().to_string(),
         live: version.live,
+        iteration: version.iteration_label(),
         patches: patches_of(version, window_of),
         first_shipped: position_of.get(version.first()).copied(),
         games,
@@ -511,6 +534,8 @@ mod tests {
             name: format!("{card} name"),
             versions: versions.iter().map(|version| version.to_string()).collect(),
             live,
+            iteration: FIRST_ITERATION,
+            iteration_letters: String::new(),
         }
     }
 
@@ -1270,5 +1295,31 @@ mod tests {
             play_version_id("core-001", "v1"),
             format!("core-001{PLAY_VERSION_MARK}v1")
         );
+    }
+
+    // R5035000: each row sends its play version's iteration as its label, and a cut row keeps it: the
+    // number is its card's own, whatever the table reads.
+    #[test]
+    fn r5035000_a_row_sends_its_play_versions_iteration_label() {
+        let numbered =
+            |card: &str, versions: &[&str], live: bool, iteration: u32, letters: &str| PlayVersion {
+                iteration,
+                iteration_letters: letters.to_string(),
+                ..version(card, versions, live)
+            };
+        let versions = [
+            numbered(A, &["v1"], false, FIRST_ITERATION, ""),
+            numbered(A, &["v1b", "v2"], false, FIRST_ITERATION, "b"),
+            numbered(A, &["v3", "v3b", "v4"], true, FIRST_ITERATION + 1, ""),
+        ];
+        assert_eq!(versions[1].iteration_label(), format!("{ITERATION_MARK}1b"));
+        let labels = |table: &PlayVersionTable| -> Vec<String> {
+            table.versions.iter().map(|row| row.iteration.clone()).collect()
+        };
+        let whole = play_version_figures(&StatsTotals::default(), &query(&versions, 1));
+        assert_eq!(labels(&whole), ["v1", "v1b", "v2"]);
+        let cut = major_line_versions(&versions, &two_majors());
+        let major = play_version_figures(&StatsTotals::default(), &query(&cut, 1));
+        assert_eq!(labels(&major), ["v2"]);
     }
 }

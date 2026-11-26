@@ -387,6 +387,9 @@ Every change to card data is a patch, and every patch is kept.
   shipped versions over which the card plays the same, `<card>~<first version>`, a new one starting
   where a change line moves a field other than `WORDING_FIELDS` and `PLAY_VERSION_QUIET_FIELDS` (`loc`)
   or the version's own `plays` claim its family; no tier ends one, and a day's cut restates its micros.
+  Each is numbered over its card's whole history (R5035000): `v1` first, the next number where a line
+  on the card moves a field its face shows (`FACE_FIELDS`), else the next letters (`versions::next_letters`,
+  a micro's): v1, v1b, v2.
   `deck_play_versions()` keeps a deck's cards, which the engine's `play_version_figures` reads
   (`GET /api/stats/versions`, R4675001); a card `catalog.json` holds before the history does, one a
   branch adds or of a set a branch releases, has none until `patches ship`.

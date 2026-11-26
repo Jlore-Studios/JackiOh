@@ -69,9 +69,9 @@ pub use history::{
 mod patch_history;
 
 pub use patch_history::{
-    PLAY_VERSION_QUIET_FIELDS, PRE_TIER_MAJORS, WORDING_FIELDS, card_change_totals, change_totals_since,
-    deck_play_versions, patch_balance_lines, patch_history, patch_history_of, patch_ship_dates,
-    play_versions, play_versions_of,
+    FACE_FIELDS, PLAY_VERSION_QUIET_FIELDS, PRE_TIER_MAJORS, WORDING_FIELDS, card_change_totals,
+    change_totals_since, deck_play_versions, patch_balance_lines, patch_history, patch_history_of,
+    patch_ship_dates, play_versions, play_versions_of,
 };
 
 pub use query::*;

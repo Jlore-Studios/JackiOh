@@ -7,6 +7,8 @@
 // Every figure is the server's (CLAUDE.md rule 7); the tier fit only measures its range against its band (R3184001).
 // R4680000: the same table and grid draw the Versions view, one row per play version of each card the Cards tab lists,
 // its Card as that version printed it and its span in Since; a row near the screen asks for its version's catalog.
+// R5035000: both views show each row's Iteration right of Since, the server's label for its play version ("v1", "v1b",
+// "v2"), "—" from a server deployed before it, with a tooltip and no sort.
 // R5036000: each view shows its play versions' Decisiveness after Adjusted, as the Cards tab does, and sorts by it.
 
 import { useEffect, useState, type ReactElement, type ReactNode } from "react";
@@ -52,6 +54,8 @@ export type RunningRow = SortedRow & {
   until?: string | null;
   /** The patches that play version reaches; none from a server deployed before it. */
   patches: number | undefined;
+  /** R5035000: its play version's iteration; none from a server deployed before it. */
+  iteration: string | undefined;
   /** R4680000: the shipped version whose catalog holds an old version's definition, until that catalog has loaded. */
   needs?: string;
 };
@@ -85,6 +89,7 @@ export function runningRows(
         hasEnoughGames: version.hasEnoughGames,
         since: version.first,
         patches: version.patches,
+        iteration: version.iteration,
         firstShipped: version.firstShipped,
       },
     ];
@@ -132,6 +137,7 @@ export function versionRows(
         since: version.first,
         until: version.live ? null : version.last,
         patches: version.patches,
+        iteration: version.iteration,
         firstShipped: version.firstShipped,
         needs: version.live || def ? undefined : version.last,
       };
@@ -178,6 +184,13 @@ function decisivenessCell(row: RunningRow): ReactNode {
   return decisivenessText(row.decisiveness);
 }
 
+/** R5035000: Iteration's tooltip: what a number and a letter mean. */
+function iterationTitle(): string {
+  return t(
+    "v1 is the card's first version. A new number (v2, v3) means what the card shows changed: its name, cost, text, keywords or stats. A new letter (v1b, v1c) means only how it plays changed.",
+  );
+}
+
 /** A row's card, and on Versions its play version, whether it is live, and the catalog it still needs (R4680000). */
 function rowData(row: RunningRow): Record<string, string | undefined> {
   if (row.until === undefined) return { "data-card-id": row.card };
@@ -189,10 +202,20 @@ function rowData(row: RunningRow): Record<string, string | undefined> {
   };
 }
 
-/** R4678001, R4680000: what each view's table, grid and Since are tested by. */
+/** R4678001, R4680000: what each view's table, grid, Since and Iteration (R5035000) are tested by. */
 const PANEL_TESTIDS = {
-  running: { table: statsTestid.runningTable, grid: statsTestid.runningGrid, since: statsTestid.runningSince },
-  versions: { table: statsTestid.versionsTable, grid: statsTestid.versionsGrid, since: statsTestid.versionsSpan },
+  running: {
+    table: statsTestid.runningTable,
+    grid: statsTestid.runningGrid,
+    since: statsTestid.runningSince,
+    iteration: statsTestid.runningIteration,
+  },
+  versions: {
+    table: statsTestid.versionsTable,
+    grid: statsTestid.versionsGrid,
+    since: statsTestid.versionsSpan,
+    iteration: statsTestid.versionsIteration,
+  },
 } as const;
 
 export function RunningPanel({
@@ -302,6 +325,8 @@ export function RunningPanel({
                 <dd>
                   <Since row={row} testid={testids.since} />
                 </dd>
+                <dt title={iterationTitle()}>{t("Iteration")}</dt>
+                <dd data-testid={testids.iteration}>{row.iteration ?? "—"}</dd>
               </dl>
             </li>
           );
@@ -334,6 +359,9 @@ export function RunningPanel({
               {...header}
             />
             <SortHeader col="date" label={t("Since")} {...header} />
+            <th scope="col" className="stats-th" title={iterationTitle()}>
+              {t("Iteration")}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -391,6 +419,9 @@ export function RunningPanel({
                 </td>
                 <td className="stats-td">
                   <Since row={row} testid={testids.since} />
+                </td>
+                <td className="stats-td" data-testid={testids.iteration}>
+                  {row.iteration ?? "—"}
                 </td>
               </tr>
             );
