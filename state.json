@@ -21714,7 +21714,9 @@
     },
     "5122": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:7204762409"
+      ],
       "build_next": {
         "from_run": "45906462556",
         "model": "gemini-3.8-flash-high",
@@ -21761,9 +21763,7 @@
       "started_at": "2026-11-26T22:42:11Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:7204762409"
-      ]
+      "taken_asks": []
     },
     "5123": {
       "failures": 0,
