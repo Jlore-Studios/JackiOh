@@ -1580,17 +1580,20 @@ scans off.
 cargo test -p jackioh-server                          # the whole suite, on the in-memory store and fixture auth
 cargo test -p jackioh-server --test server actor::    # one area of the general binary: api::, actor::, bots::, loops::
 cargo test -p jackioh-server --test server_store store::   # the store suite, on the in-memory store
+cargo test -p jackioh-server --test stats_memory           # what one kept card total costs, heap included (#5129)
 sh crates/server/tests/sql/run.sh                     # schema, RLS and trigger invariants (Docker)
 sh crates/server/tests/db/run.sh                      # the store contract against Postgres (Docker; KEEP_DB=1 keeps it; DB_SHARDS=n databases at once, 3 by default)
 sh crates/server/tests/deploy/rehearse.sh             # the container's boot rehearsed: the image, a non-superuser migration, a production boot (Docker)
 ```
 
-Two binaries: `tests/server.rs` is the general one over `tests/{api,actor,bots,loops,support}/`, and
+Two main binaries: `tests/server.rs` is the general one over `tests/{api,actor,bots,loops,support}/`, and
 `tests/server_store.rs` the store's, over `tests/store/` and `support/test_app.rs` alone, so that
 `tests/db/run.sh` builds and links only that, the engine, the cards and the AI at opt-level 0 through its
 `PROFILE_FLAGS`, which each of its `cargo` calls repeats, each finding the build fresh because every root
 `build.rs` hashes exists (CI's `db (store contract)` job stays under five minutes, #3162, #3410, #3436). A
-`store::` test lives in `server_store` only, and every other area in `server` only. CI's four
+`store::` test lives in `server_store` only, and every other area in `server` only. `tests/stats_memory.rs`
+(#5129) stands alone because its allocator counts what each thread holds: it holds a kept card total's cost,
+heap included, to a budget, and the count would slow every other test in the binary that holds it. CI's four
 `rust (test server …)` groups split the suite by test name (.github/ci/rust-test.toml says how), so only
 the lib and `server` hold tests whose path has `api::`, and only `server` ones with `api::practice::`.
 `support/test_app.rs` builds a test `App` on `Db::Fake` and `Auth::E2e`; `support/deps.rs` re-exports it and calls the router with
