@@ -21928,6 +21928,13 @@
     "5002": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-26T14:54:34Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "Two files (a shell script's case and its web test), no engine, AI, migration or cross-crate design, and far under 40 files, so none of rule 1-5 holds."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
