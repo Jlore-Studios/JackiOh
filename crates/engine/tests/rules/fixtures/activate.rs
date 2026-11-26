@@ -3,7 +3,10 @@
 //! A fused card's abilities are each read in its ingredient's place (R102). Ids are prefixed `act-`
 //! and indexed from 4100, so they cannot collide with another fixture file's.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::borrow::Borrow;
 use std::sync::LazyLock;

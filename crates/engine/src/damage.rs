@@ -21,9 +21,10 @@ use crate::wire::{
     opponent_of,
 };
 
-/// The unit is carried by value: a target is built once per hit and matched at every card and test
-/// that aims one, where a `Box` would buy nothing but noise.
-#[allow(clippy::large_enum_variant)]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "a target is built once per hit and matched where it lands: a Box buys nothing but noise"
+)]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum DamageTarget {

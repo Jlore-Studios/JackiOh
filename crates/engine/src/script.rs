@@ -322,7 +322,6 @@ pub struct HookArgs<'a> {
 }
 
 /// Builds any `HookArgs` hook whose answer borrows nothing (`read_hook(|a| a.self_.damage > 0)`).
-#[allow(clippy::type_complexity)]
 pub fn read_hook<R: 'static>(
     f: impl for<'a> Fn(HookArgs<'a>) -> R + Send + Sync + 'static,
 ) -> Arc<dyn for<'a> Fn(HookArgs<'a>) -> R + Send + Sync> {
@@ -976,7 +975,6 @@ pub struct UnitTally {
 pub type TallyHook = Arc<dyn for<'a> Fn(ConditionContext<'a>) -> Vec<UnitTally> + Send + Sync>;
 
 /// Builds a `ConditionHook`, a `PreviewHook` or a `TallyHook`.
-#[allow(clippy::type_complexity)]
 pub fn condition_hook<R: 'static>(
     f: impl for<'a> Fn(ConditionContext<'a>) -> R + Send + Sync + 'static,
 ) -> Arc<dyn for<'a> Fn(ConditionContext<'a>) -> R + Send + Sync> {

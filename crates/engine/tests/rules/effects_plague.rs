@@ -147,7 +147,6 @@ macro_rules! sink_for {
     ($sink:ident, $state:expr) => {
         let mut rng = Rng::new(&$state.seed, $state.rng_cursor);
         let mut events: Vec<GameEvent> = Vec::new();
-        #[allow(unused_mut)]
         let mut $sink = EngineSink::new(&mut $state, &mut events, &mut rng);
     };
 }

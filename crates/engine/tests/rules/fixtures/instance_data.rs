@@ -2,7 +2,10 @@
 //! the Classic or Classic+ card its doc names, through the effects library (BUILD §0). `instance_game`
 //! registers them on top of the shared fixture catalog.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

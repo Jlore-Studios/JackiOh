@@ -2,7 +2,10 @@
 //! the Dormant Units Stinkyscape will print, in their shapes, and the cards that try to reach them.
 //! Ids `sl-…` from 18389, so they collide with no other fixture file's.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

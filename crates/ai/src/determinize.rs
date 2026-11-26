@@ -195,7 +195,10 @@ impl TrapSampler<'_> {
         same
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the slot, what it shows and the draw's running sets, each borrowed apart"
+    )]
     fn trap_for(
         &self,
         next: &mut GameState,

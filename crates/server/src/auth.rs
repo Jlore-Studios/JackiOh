@@ -1496,11 +1496,11 @@ impl E2eAuth {
 }
 
 /// The auth provider: Supabase in production, the fixtures under `E2E=1` and in the tests.
-///
-/// SURFACE §11.2 freezes the variants unboxed; there is one `Auth` per `App`, so a `Box` would buy
-/// nothing for the size difference clippy reports.
 #[derive(Debug)]
-#[allow(clippy::large_enum_variant)]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "SURFACE §11.2 freezes the variants unboxed, and there is one `Auth` per `App`"
+)]
 pub enum Auth {
     Supabase(SupabaseAuth),
     E2e(E2eAuth),

@@ -2,7 +2,10 @@
 //! the kept price of a return (R766, issue #557) and R437's mark. Prefixed `cp-` and indexed from 4400,
 //! so they collide with no other file's.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

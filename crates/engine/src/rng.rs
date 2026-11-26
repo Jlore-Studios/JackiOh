@@ -49,7 +49,7 @@ impl Rng {
     }
 
     /// A float in [0, 1).
-    #[allow(
+    #[expect(
         clippy::should_implement_trait,
         reason = "TS's name (SURFACE §6.3); an Rng is not an Iterator"
     )]
