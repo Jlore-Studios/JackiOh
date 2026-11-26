@@ -44261,42 +44261,6 @@
         "approver": {
           "family": "claude",
           "model": "sonnet",
-          "provider": "claude-8",
-          "tier": "medium"
-        },
-        "builder": {
-          "family": "claude",
-          "provider": "claude-8"
-        },
-        "difficulty": "medium",
-        "done_at": "2026-11-06T17:30:38Z",
-        "every": 5,
-        "findings": 1,
-        "follow_up": 3315,
-        "head": "fe836ddb4c2f80e719f6093029fb4430d0608b07",
-        "issue": 3257,
-        "merged_at": "2026-11-06T17:07:33Z",
-        "n": 105,
-        "pr": 3268,
-        "queued_at": "2026-11-06T17:07:33Z",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-3",
-          "tier": "strong"
-        },
-        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42260849923",
-        "sha": "5afc00a43a9e5329cf1a829696420a6e7cdd52be",
-        "started_at": "2026-11-06T17:21:09Z",
-        "status": "done",
-        "title": "Patch: phone board: empty zones keep a card shape, keyword and Activate badges inside their own zone's top-left",
-        "tries": 0,
-        "verdict": "findings"
-      },
-      {
-        "approver": {
-          "family": "claude",
-          "model": "sonnet",
           "provider": "claude-3",
           "tier": "medium"
         },
@@ -47783,7 +47747,10 @@
           "provider": "claude-4"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-26T16:28:52Z",
         "every": 5,
+        "findings": 1,
+        "follow_up": 5091,
         "head": "09e493b5b424ede8ca4f55d7d770c5fe9222d110",
         "issue": 5014,
         "merged_at": "2026-11-26T15:32:52Z",
@@ -47796,12 +47763,13 @@
           "provider": "claude-1",
           "tier": "strong"
         },
-        "run_id": "pending:91ca1d20-1795710031",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45857927245",
         "sha": "8a54a004551a2b60950db15928c73e9470aba12d",
         "started_at": "2026-11-26T16:20:56Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: a motion and glow budget, idle effects only on what the player can act on",
-        "tries": 0
+        "tries": 0,
+        "verdict": "findings"
       }
     ],
     "count": 606
