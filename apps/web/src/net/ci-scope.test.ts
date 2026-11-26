@@ -477,10 +477,11 @@ describe("scripts/ci-scope.sh", () => {
         "crates/cards/README.md",
         "crates/wasm/c/src/lib.rs",
         "crates/wasm/c/README.md",
-        // The fuzz, the classifier and the fuzz's records: no command e2e runs reads them (#4219).
+        // The fuzz, the classifier and the records of the fuzz and the perf: no command e2e runs reads them (#4219).
         "crates/tools/src/fuzz.rs",
         "crates/tools/src/classify.rs",
         "crates/tools/fuzz-corpus/seed-8-v0.4.12d.json",
+        "crates/tools/perf-corpus/plain-1-v0.6.14c.json",
         "apps/web/src/net/ci-scope.test.ts",
         "apps/web/src/game/Board.test.tsx",
         "docs/architecture.md",
@@ -532,6 +533,7 @@ describe("scripts/ci-scope.sh", () => {
   it("#4219 changes only the e2e line for the tools' sources", () => {
     expect(onFor("crates/tools/src/fuzz.rs")).toEqual(["full", "clippy", "rust_tools_wasm"]);
     expect(onFor("crates/tools/fuzz-corpus/seed-8-v0.4.12d.json")).toEqual(["full", "rust_tools_wasm"]);
+    expect(onFor("crates/tools/perf-corpus/plain-1-v0.6.14c.json")).toEqual(["full", "rust_tools_wasm"]);
     expect(onFor("crates/tools/src/replay.rs")).toEqual(["full", "clippy", "rust_tools_wasm", "e2e"]);
     expect(onFor("crates/tools/Cargo.toml")).toEqual(["full", "clippy", "rust_tools_wasm", "web", "e2e"]);
   });
