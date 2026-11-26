@@ -1,7 +1,7 @@
 {
   "title": "Patch: Radiant Cosmic Bard leaves both drawn Units at the cheapest price, even one that carries a cost raise larger than that price",
   "sources": "#4832",
-  "notes": "Cosmic Bard's Radiant face took a carried cost raise off the cost override, which bottoms out at 0; a raise larger than the cheapest price survived and the card cost more. Now the override is 0 for such a card and the excess comes off its cost change in hand, so every drawn Unit still in the hand ends at the cheapest drawn price. The longer script makes Cosmic Bard complicated (R1846000), so Stinkyscape #109 and #111 read new pools (R2173001) and the simulated games move seven more families; `plays` claims those nine. Cosmic Bard itself meets no raiser in those games, so its own play is unobservable there and goes unclaimed.",
+  "notes": "Cosmic Bard's Radiant face took a carried cost raise off the cost override, which bottoms out at 0; a raise larger than the cheapest price survived and the card cost more. Now the override is 0 for such a card and the excess comes off its cost change in hand, so every drawn Unit still in the hand ends at the cheapest drawn price. The longer script makes Cosmic Bard complicated (R1846000), so Stinkyscape #109 and #111 read new pools (R2173001); `plays` claims those two, the families classify's games show playing differently. Cosmic Bard itself meets no raiser in those games, so its own play is unobservable there and goes unclaimed.",
   "player": {
     "title": "Radiant Cosmic Bard prices both drawn Units at the cheapest",
     "new": [],
@@ -12,14 +12,7 @@
   },
   "cards": [],
   "plays": [
-    "core-059",
-    "stinkyscape-095",
     "stinkyscape-109",
-    "stinkyscape-110",
-    "stinkyscape-111",
-    "stinkyscape-113",
-    "stinkyscape-131",
-    "stinkyscape-159",
-    "stinkyscapeplus-160"
+    "stinkyscape-111"
   ]
 }
