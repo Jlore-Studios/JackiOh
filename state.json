@@ -24081,7 +24081,8 @@
         "tiers": {
           "gemini": "medium"
         }
-      }
+      },
+      "waiting_comment": 7192366278
     },
     "5069": {
       "action": "review",
