@@ -4091,6 +4091,11 @@ fn card_label(state: &GameState, id: &str) -> String {
 ///   Reflective Plating, either face, R1849003): its strike back is dealt again to the target's hero
 ///   after any Trample excess and may end the game, and the forecast projects no reflection (R4555001;
 ///   fuzz seed 4338).
+/// - a permanent of either side with a "When …, Tribute this" (Classic #88 Siphon Squad's "When your
+///   opponent has no Units", R403), face-down or fused onto a Unit (Stinkyscape+ #160 Icarus): the
+///   combat's deaths may make it hold at the state check after the combat, which sacrifices it, and the
+///   forecast models no Tribute condition (R4379000, R4984000; the fused pair
+///   stinkyscapeplus-160+classic-088).
 fn foreseeable_attack(state: &GameState, attacker_id: &str, target_id: &str) -> bool {
     let Some(attacker) = find_instance(state, attacker_id) else {
         return false;
@@ -4138,6 +4143,15 @@ fn foreseeable_attack(state: &GameState, attacker_id: &str, target_id: &str) -> 
             .any(|def| def.on == crate::script::ReplacementMoment::WouldDie)
     };
     if attacking_side.iter().chain(&defending_side).any(takes_deaths) {
+        return false;
+    }
+    // R4984000: a "When …, Tribute this" on the field, face-down ones included (R403), which the
+    // combat's deaths may make hold at the state check after it, and the forecast models no Tribute
+    // condition (R4379000).
+    if crate::state_check::permanents_in_play(state)
+        .iter()
+        .any(|card| !card.vanilla && crate::scripts::script_of(state, card).tribute_when.is_some())
+    {
         return false;
     }
     let brings_in = |card: &CardInstance| {
