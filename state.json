@@ -22585,9 +22585,11 @@
         "sha": "a373f70fb5469380228d99063799c8b69f8f4ee5"
       },
       "cross_rounds": 0,
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-26T03:46:09Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-26T05:38:31Z",
         "family": "muse",
@@ -22597,6 +22599,7 @@
         "reason": "`muse` reached its usage limit",
         "trail": ""
       },
+      "interruptions": 0,
       "issue": 4996,
       "kind": "review",
       "live": "reviewing",
