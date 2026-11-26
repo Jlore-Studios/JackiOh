@@ -142,7 +142,7 @@
     var(--tier-face);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 4%),
-    0 12px 24px -16px rgb(0 0 0 / 85%);
+    var(--shadow-2);
   text-align: center;
   cursor: var(--cursor-glove-point, pointer);
   transition:
@@ -163,8 +163,7 @@
     var(--tier-face);
   box-shadow:
     inset 0 0 0 1px var(--tier),
-    0 0 0 3px color-mix(in srgb, var(--tier) 16%, transparent),
-    0 18px 36px -18px color-mix(in srgb, var(--tier) 75%, transparent);
+    0 0 0 3px color-mix(in srgb, var(--tier) 16%, transparent);
 }
 
 /* The radio itself spans its whole tier, so the target is the card a player taps (WCAG 2.5.8): on a
@@ -204,7 +203,7 @@
   height: 9px;
   border-radius: var(--radius-xs);
   background: var(--tier);
-  box-shadow: 0 0 8px var(--tier);
+  box-shadow: none;
   transform: rotate(45deg) scale(0);
   transition: transform calc(140ms * var(--anim-scale, 1)) ease-out;
 }
@@ -382,11 +381,7 @@
   padding: 10px 42px 10px 14px;
   border: 1px solid color-mix(in srgb, var(--tavern-brass) 55%, transparent);
   border-radius: var(--radius-md);
-  background: linear-gradient(
-    180deg,
-    var(--tavern-well),
-    color-mix(in srgb, var(--tavern-well) 70%, var(--tavern-wood-deep))
-  );
+  background: color-mix(in srgb, var(--tavern-well) 70%, var(--tavern-wood-deep));
   color: var(--tavern-parchment);
   font: inherit;
   font-weight: 550;
@@ -469,7 +464,7 @@
   width: 100%;
   min-height: 2px;
   border-radius: var(--radius-xs) var(--radius-xs) 0 0;
-  background: linear-gradient(180deg, #7fb4ff, #2f6fd6);
+  background: #2f6fd6;
 }
 
 .deck-preview__bar[data-count="0"] .deck-preview__bar-fill {
@@ -516,7 +511,7 @@
   width: 20px;
   height: 20px;
   border-radius: var(--radius-sm);
-  background: linear-gradient(160deg, #7fb4ff 0%, #2f6fd6 55%, #1c3f86 100%);
+  background: #1c3f86;
   color: #fff;
   font-size: var(--type-xs);
   font-weight: 800;
@@ -592,31 +587,31 @@
   );
   box-shadow:
     inset 0 0 0 3px color-mix(in srgb, var(--bg-sunken) 55%, transparent),
-    0 8px 18px -8px rgb(0 0 0 / 85%);
+    var(--shadow-2);
 }
 
 .practice-shuffle span:nth-child(1) {
   transform: translateX(-24px) rotate(-10deg);
-  animation: practice-shuffle-a calc(1.2s * var(--anim-scale, 1)) ease-in-out infinite;
+  animation: practice-shuffle-a calc(1.2s * var(--anim-scale, 1)) ease-in-out 1;
 }
 
 .practice-shuffle span:nth-child(2) {
-  z-index: 1;
+  z-index: var(--z-content);
 }
 
 .practice-shuffle span:nth-child(3) {
   transform: translateX(24px) rotate(10deg);
-  animation: practice-shuffle-b calc(1.2s * var(--anim-scale, 1)) ease-in-out infinite;
+  animation: practice-shuffle-b calc(1.2s * var(--anim-scale, 1)) ease-in-out 1;
 }
 
 @keyframes practice-shuffle-a {
   0%,
   100% {
-    z-index: 0;
+    z-index: var(--z-base);
     transform: translateX(-24px) rotate(-10deg);
   }
   50% {
-    z-index: 2;
+    z-index: var(--z-raised);
     transform: translateX(24px) rotate(8deg);
   }
 }
@@ -624,11 +619,11 @@
 @keyframes practice-shuffle-b {
   0%,
   100% {
-    z-index: 2;
+    z-index: var(--z-raised);
     transform: translateX(24px) rotate(10deg);
   }
   50% {
-    z-index: 0;
+    z-index: var(--z-base);
     transform: translateX(-24px) rotate(-8deg);
   }
 }
@@ -671,7 +666,7 @@
   );
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 4%),
-    0 10px 22px -14px rgb(0 0 0 / 90%),
+    var(--shadow-2),
     var(--hud-band);
   color: var(--text-dim);
   backdrop-filter: blur(8px);
@@ -684,8 +679,7 @@
   border-color: color-mix(in srgb, var(--opponent) 60%, var(--line));
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 4%),
-    0 10px 22px -14px rgb(0 0 0 / 90%),
-    0 0 22px -8px color-mix(in srgb, var(--opponent) 70%, transparent),
+    var(--shadow-2),
     var(--hud-band);
 }
 
@@ -697,7 +691,6 @@
   left: 0;
   width: 35%;
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--opponent), transparent);
   opacity: 0;
   transform: translateX(-100%);
   pointer-events: none;
@@ -705,7 +698,7 @@
 
 .practice-hud[data-thinking="true"]::after {
   opacity: 1;
-  animation: practice-scan calc(1.4s * var(--anim-scale, 1)) linear infinite;
+  animation: practice-scan calc(1.4s * var(--anim-scale, 1)) linear 1;
 }
 
 @keyframes practice-scan {
@@ -810,8 +803,8 @@
   padding: 4px 14px 4px 6px;
   border: 1px solid color-mix(in srgb, var(--opponent) 55%, var(--line-bright));
   border-radius: var(--radius-pill);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--opponent) 18%, var(--bg-sunken)), var(--bg-sunken));
-  box-shadow: 0 0 14px -4px color-mix(in srgb, var(--opponent) 70%, transparent);
+  background: var(--bg-sunken);
+  box-shadow: none;
   color: var(--text);
   font-size: var(--type-md);
   font-weight: 600;
@@ -831,15 +824,9 @@
   position: absolute;
   inset: 0;
   border-radius: var(--radius-round);
-  background: conic-gradient(
-    from 0deg,
-    transparent 0 30%,
-    color-mix(in srgb, var(--opponent) 70%, transparent) 65%,
-    color-mix(in srgb, var(--opponent) 35%, white) 100%
-  );
   -webkit-mask: radial-gradient(circle, transparent 6px, #000 6.5px);
   mask: radial-gradient(circle, transparent 6px, #000 6.5px);
-  animation: practice-spin calc(0.9s * var(--anim-scale, 1)) linear infinite;
+  animation: practice-spin calc(0.9s * var(--anim-scale, 1)) linear 1;
 }
 
 .practice-thinking__core {
@@ -847,8 +834,8 @@
   inset: 6.5px;
   border-radius: var(--radius-round);
   background: var(--opponent);
-  box-shadow: 0 0 8px var(--opponent);
-  animation: practice-pulse calc(1.2s * var(--anim-scale, 1)) ease-in-out infinite;
+  box-shadow: none;
+  animation: practice-pulse calc(1.2s * var(--anim-scale, 1)) ease-in-out 1;
 }
 
 @keyframes practice-spin {
@@ -902,8 +889,7 @@
     linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
   box-shadow:
     0 0 0 1px rgb(0 0 0 / 40%),
-    0 30px 80px -20px rgb(0 0 0 / 90%),
-    0 0 70px -24px color-mix(in srgb, var(--glow) 70%, transparent);
+    var(--shadow-3);
   text-align: center;
   animation: practice-result-in calc(420ms * var(--anim-scale, 1)) cubic-bezier(0.2, 1.3, 0.4, 1)
     calc(300ms * var(--anim-scale, 1)) both;
@@ -936,7 +922,7 @@
   );
   -webkit-mask: radial-gradient(circle, #000 18%, transparent 68%);
   mask: radial-gradient(circle, #000 18%, transparent 68%);
-  animation: practice-spin calc(28s * var(--anim-scale, 1)) linear infinite;
+  animation: practice-spin calc(28s * var(--anim-scale, 1)) linear 1;
 }
 
 .practice-result[data-outcome="loss"] .practice-result__rays,
@@ -990,7 +976,7 @@
     top: 62%;
     left: calc(22% + 56% * var(--i) / var(--n));
     animation: practice-ember calc(2.4s * var(--anim-scale, 1)) ease-out
-      calc(0.6s * var(--anim-scale, 1) + 130ms * var(--i)) infinite;
+      calc(0.6s * var(--anim-scale, 1) + 130ms * var(--i)) 1;
   }
 }
 
@@ -1029,12 +1015,7 @@
 
 .app-shell .practice-result .dialog__title {
   margin: 2px 0 0;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--glow) 30%, white),
-    var(--glow) 58%,
-    color-mix(in srgb, var(--glow) 62%, black)
-  );
+  background: var(--glow);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -1148,7 +1129,7 @@
   .tavern.practice--lobby .practice-setup button.practice-play {
     position: sticky;
     bottom: max(12px, env(safe-area-inset-bottom));
-    z-index: 5;
+    z-index: var(--z-popover);
     align-self: center;
     width: min(100%, 440px);
     min-width: 0;
@@ -1226,7 +1207,7 @@
   .tavern.practice--lobby .practice-setup button.practice-play {
     position: sticky;
     bottom: max(14px, env(safe-area-inset-bottom));
-    z-index: 5;
+    z-index: var(--z-popover);
     align-self: center;
     box-shadow: var(--primary-shadow), 0 0 0 14px var(--tavern-night);
   }
@@ -1530,7 +1511,7 @@
 /* While the AI thinks, its hero breathes a ring in the opponent's color: the other seat is
    visibly "on". Not while the hero animates, so animations.css's damage shake and the like win. */
 .practice-table[data-thinking="true"] .hero-opponent:not([data-animating]) {
-  animation: practice-hero-think calc(1.4s * var(--anim-scale, 1)) ease-in-out infinite;
+  animation: practice-hero-think calc(1.4s * var(--anim-scale, 1)) ease-in-out 1;
 }
 
 @keyframes practice-hero-think {

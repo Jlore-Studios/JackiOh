@@ -346,7 +346,7 @@
   box-shadow:
     inset 0 0 0 3px rgba(18, 11, 7, 0.9),
     inset 0 0 0 4px rgba(201, 149, 63, 0.35),
-    0 18px 44px rgba(0, 0, 0, 0.55);
+    var(--shadow-3);
 }
 
 .tavern.app-shell .patch-set__heading {
@@ -480,7 +480,7 @@
   box-shadow:
     inset 0 0 0 3px rgba(18, 11, 7, 0.9),
     inset 0 0 0 4px rgba(201, 149, 63, 0.35),
-    0 18px 44px rgba(0, 0, 0, 0.55);
+    var(--shadow-3);
 }
 
 .tavern.app-shell .patch > * {
@@ -530,7 +530,7 @@
   overflow: hidden;
   border: 1px solid var(--tavern-brass);
   border-radius: var(--radius-md);
-  background: linear-gradient(180deg, var(--tavern-wood-deep), var(--tavern-well));
+  background: var(--tavern-well);
 }
 
 .tavern.app-shell .patch__art-img {
@@ -813,8 +813,8 @@
   padding: 12px 10px;
   border: 1px solid var(--tavern-brass);
   border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, rgba(52, 30, 16, 0.96), rgba(22, 13, 7, 0.97));
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  background: rgba(22, 13, 7, 0.97);
+  box-shadow: var(--shadow-3);
   color: var(--tavern-parchment);
   font-size: var(--type-md);
 }
@@ -1060,7 +1060,7 @@
   }
 
   .tavern.app-shell .patch-legend {
-    z-index: 3;
+    z-index: var(--z-overlay);
     max-width: 100%;
     max-height: none;
     overflow: visible;

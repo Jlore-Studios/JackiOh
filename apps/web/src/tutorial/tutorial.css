@@ -47,7 +47,7 @@
     color-mix(in srgb, var(--bg-raised) 78%, transparent);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 4%),
-    0 14px 30px -20px rgb(0 0 0 / 90%);
+    var(--shadow-2);
 }
 
 .tutorial-path__head {
@@ -144,7 +144,7 @@
   position: absolute;
   top: calc(var(--node) / 2 - 1.5px);
   left: 50%;
-  z-index: 0;
+  z-index: var(--z-base);
   width: calc(100% + var(--path-gap));
   height: 3px;
   border-radius: var(--radius-xs);
@@ -152,12 +152,12 @@
 }
 
 .tutorial-lesson[data-status="completed"]:not(:last-child)::after {
-  background: linear-gradient(90deg, var(--coach), color-mix(in srgb, var(--coach) 55%, var(--line-bright)));
+  background: color-mix(in srgb, var(--coach) 55%, var(--line-bright));
 }
 
 .tutorial-lesson__node {
   position: relative;
-  z-index: 2;
+  z-index: var(--z-raised);
   display: grid;
   flex: none;
   place-items: center;
@@ -191,7 +191,7 @@
 
 .tutorial-lesson__card {
   position: relative;
-  z-index: 1;
+  z-index: var(--z-content);
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
@@ -202,7 +202,7 @@
   padding: calc(var(--node) / 2 + 4px) 12px 10px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  background: linear-gradient(180deg, var(--bg-raised), color-mix(in srgb, var(--bg-raised) 55%, var(--bg-sunken)));
+  background: color-mix(in srgb, var(--bg-raised) 55%, var(--bg-sunken));
 }
 
 .tutorial-lesson[data-next="true"] .tutorial-lesson__card {
@@ -210,7 +210,7 @@
   background:
     radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--coach) 14%, transparent), transparent 70%),
     linear-gradient(180deg, var(--bg-raised), color-mix(in srgb, var(--bg-raised) 55%, var(--bg-sunken)));
-  box-shadow: 0 12px 28px -18px color-mix(in srgb, var(--coach) 80%, transparent);
+  box-shadow: none;
 }
 
 .tutorial-lesson[data-status="locked"] .tutorial-lesson__card {
@@ -515,11 +515,10 @@
   overscroll-behavior: contain;
   border: 1px solid color-mix(in srgb, var(--coach) 60%, var(--line));
   border-radius: var(--radius-lg);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--coach) 12%, var(--bg-raised)), var(--bg-raised) 70%);
+  background: var(--bg-raised);
   box-shadow:
     0 0 0 1px rgb(0 0 0 / 35%),
-    0 18px 44px -12px rgb(0 0 0 / 85%),
-    0 0 28px -10px color-mix(in srgb, var(--coach) 70%, transparent);
+    var(--shadow-3);
   color: var(--text);
   font-size: var(--type-md);
   transition:
@@ -618,7 +617,7 @@
   padding: 7px 16px;
   border-color: color-mix(in srgb, var(--coach) 70%, white);
   border-radius: var(--radius-md);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--coach) 85%, white), var(--coach));
+  background: var(--coach);
   color: var(--coach-ink);
   font-size: var(--type-md);
   font-weight: 750;
@@ -627,7 +626,7 @@
 
 .app-shell .coach__ack:hover:not(:disabled) {
   border-color: white;
-  background: linear-gradient(180deg, white, color-mix(in srgb, var(--coach) 85%, white));
+  background: color-mix(in srgb, var(--coach) 85%, white);
 }
 
 /* The slim bubble while the coach waits (the AI's turn, a step whose moment has not come): one
@@ -703,9 +702,7 @@
   padding: 4px 6px 6px 12px;
   overflow: visible;
   border-radius: var(--radius-md);
-  box-shadow:
-    0 10px 22px -14px rgb(0 0 0 / 90%),
-    0 0 22px -12px color-mix(in srgb, var(--coach) 70%, transparent);
+  box-shadow: var(--shadow-2);
   font-size: var(--type-md);
   transition: opacity calc(160ms * var(--anim-scale, 1));
 }
@@ -990,7 +987,7 @@
   }
 
   .tutorial-lesson[data-status="completed"]:not(:last-child)::after {
-    background: linear-gradient(180deg, var(--coach), color-mix(in srgb, var(--coach) 55%, var(--line-bright)));
+    background: color-mix(in srgb, var(--coach) 55%, var(--line-bright));
   }
 
   .tutorial-lesson__node {

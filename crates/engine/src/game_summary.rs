@@ -128,6 +128,47 @@ struct Reading {
     stolen: Vec<String>,
 }
 
+impl Reading {
+    /// A reading that has read no step yet, from the game's hands, libraries and Radiant cards at
+    /// `current_turn`.
+    fn new(hands: Hands, decks: Decks, radiant: IndexSet<String>, current_turn: i32) -> Reading {
+        let zero = || PerPlayer::new(0, 0);
+        Reading {
+            hands,
+            decks,
+            radiant,
+            first: None,
+            opening: None,
+            drawn: per_seat(),
+            played: per_seat(),
+            played_turns: per_seat(),
+            played_radiant: per_seat(),
+            held_radiant: PerPlayer::new(IndexSet::new(), IndexSet::new()),
+            played_variants: per_seat(),
+            open: IndexMap::new(),
+            rollers: IndexMap::new(),
+            chains: IndexMap::new(),
+            picks: per_seat(),
+            fatigue_draws: zero(),
+            fatigue_damage: zero(),
+            traps_set: zero(),
+            traps_fired: zero(),
+            position_switches: zero(),
+            radiant_upgrades: zero(),
+            starship_pieces_fused: zero(),
+            starships_launched: zero(),
+            radiant_seen: IndexSet::new(),
+            current_turn,
+            made: IndexMap::new(),
+            used: IndexSet::new(),
+            created_used: per_seat(),
+            created_played: per_seat(),
+            cast_or_summoned: per_seat(),
+            stolen: Vec::new(),
+        }
+    }
+}
+
 /// Instance ids of the Radiant cards each seat holds in its hand or resolving zone as an action begins.
 fn radiant_of(state: &GameState, hands: &Hands) -> IndexSet<String> {
     let mut radiant = IndexSet::new();
@@ -950,43 +991,8 @@ impl SummaryReader {
         let hands = hands_of(start, None);
         let decks = decks_of(start, None);
         let radiant = radiant_of(start, &hands);
-        fn zero() -> PerPlayer<i32> {
-            PerPlayer::new(0, 0)
-        }
         SummaryReader {
-            reading: Reading {
-                hands,
-                decks,
-                radiant,
-                first: None,
-                opening: None,
-                drawn: per_seat(),
-                played: per_seat(),
-                played_turns: per_seat(),
-                played_radiant: per_seat(),
-                held_radiant: PerPlayer::new(IndexSet::new(), IndexSet::new()),
-                played_variants: per_seat(),
-                open: IndexMap::new(),
-                rollers: IndexMap::new(),
-                chains: IndexMap::new(),
-                picks: per_seat(),
-                fatigue_draws: zero(),
-                fatigue_damage: zero(),
-                traps_set: zero(),
-                traps_fired: zero(),
-                position_switches: zero(),
-                radiant_upgrades: zero(),
-                starship_pieces_fused: zero(),
-                starships_launched: zero(),
-                radiant_seen: IndexSet::new(),
-                current_turn: start.turn.max(1),
-                made: IndexMap::new(),
-                used: IndexSet::new(),
-                created_used: per_seat(),
-                created_played: per_seat(),
-                cast_or_summoned: per_seat(),
-                stolen: Vec::new(),
-            },
+            reading: Reading::new(hands, decks, radiant, start.turn.max(1)),
         }
     }
 
@@ -1112,40 +1118,12 @@ mod tests {
     use serde_json::json;
 
     fn reading() -> Reading {
-        let zero = || PerPlayer::new(0, 0);
-        Reading {
-            hands: PerPlayer::new(IndexMap::new(), IndexMap::new()),
-            decks: PerPlayer::new(IndexSet::new(), IndexSet::new()),
-            radiant: IndexSet::new(),
-            first: None,
-            opening: None,
-            drawn: per_seat(),
-            played: per_seat(),
-            played_turns: per_seat(),
-            played_radiant: per_seat(),
-            held_radiant: PerPlayer::new(IndexSet::new(), IndexSet::new()),
-            played_variants: per_seat(),
-            open: IndexMap::new(),
-            rollers: IndexMap::new(),
-            chains: IndexMap::new(),
-            picks: per_seat(),
-            fatigue_draws: zero(),
-            fatigue_damage: zero(),
-            traps_set: zero(),
-            traps_fired: zero(),
-            position_switches: zero(),
-            radiant_upgrades: zero(),
-            starship_pieces_fused: zero(),
-            starships_launched: zero(),
-            radiant_seen: IndexSet::new(),
-            current_turn: 1,
-            made: IndexMap::new(),
-            used: IndexSet::new(),
-            created_used: per_seat(),
-            created_played: per_seat(),
-            cast_or_summoned: per_seat(),
-            stolen: Vec::new(),
-        }
+        Reading::new(
+            PerPlayer::new(IndexMap::new(), IndexMap::new()),
+            PerPlayer::new(IndexSet::new(), IndexSet::new()),
+            IndexSet::new(),
+            1,
+        )
     }
 
     /// core-008 "Vanilla": a hand card in a game whose catalog the engine's own tests install.

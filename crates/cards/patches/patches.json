@@ -37523,5 +37523,30 @@
       "v0.6.14t"
     ],
     "changes": []
+  },
+  {
+    "version": "v0.6.15b",
+    "date": "2026-11-26",
+    "title": "Motion and glow budget",
+    "source": "issue #5014",
+    "notes": "Card faces stop looping their decoration (keyword treatments, the Mythic hand shimmer, the zzz, the Dormant seal and shipyard idle, marks, Glitch, the animated rarity foil, the full-screen view's camera); owned cosmetics keep theirs; no card plays differently.",
+    "player": {
+      "title": "A calmer table",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Card faces no longer loop their decorations. Playable cards, legal targets, End turn and the turn timer still pulse; cosmetics you own keep their motion."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "8a54a004551a2b60950db15928c73e9470aba12d"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "motion-and-glow-budget",
+    "changes": []
   }
 ]

@@ -427,6 +427,8 @@ export const FX_STARSHIP_FUSE_TRAUMA = 0.25;
 // R2801000, R3334001: the launch's tile cues ignite its engines at FX_STARSHIP_IGNITE_AT of the hold
 // (R3334001 took out the countdown that ran before it).
 export const FX_STARSHIP_IGNITE_AT = 0.75;
+// R2801000, #5014: the launch flame's flicker each way; it runs until its cue ends
+export const FX_LAUNCH_FLICKER_MS = 110;
 // R2801000: after the hold, as fractions of the launch's own motion: the contrail's flight up, and the landing.
 export const FX_STARSHIP_LIFT_AT = 0.45;
 export const FX_STARSHIP_LAND_AT = 0.8;

@@ -8,12 +8,19 @@
 //
 // What it cannot see: an `animation-iteration-count` set in another rule than its `animation-name`, and
 // an animation set from a style attribute. The sheets set both in one declaration block.
+//
+// #5014, R5014000: a loop that never ends marks only what the player can act on right now, each named in
+// IDLE_LOOPS with the state it marks (at most IDLE_LOOPS_CEILING, and the list only shrinks). The rest play
+// at most once, but an owned cosmetic's look (COSMETIC_SHEETS, COSMETIC_LOOPS) and a picture's own motion
+// (PICTURE_LOOPS) keep theirs.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+
+import type { CosmeticKind } from "./wire/generated/CosmeticKind.ts";
 
 const SRC = dirname(fileURLToPath(import.meta.url));
 
@@ -166,6 +173,73 @@ function paintLoops(css: string, allowed: Record<string, string> = ALLOWED_PAINT
 /** Every stylesheet's code, in one text: a keyframes' name is global, so a sheet may loop what another one declares. */
 const ALL_CSS = SHEETS.map(codeOf).join("\n");
 
+/**
+ * R5014000: the sheets that hold a cosmetic a player owns: a card's foil, finish and border, a portrait, a
+ * table. Their loops, and a loop elsewhere on keyframes they declare (the collection's table preview), are
+ * that cosmetic's look, which #5014 leaves alone.
+ */
+const COSMETIC_SHEETS: readonly string[] = ["cards/cosmetics.css", "emotes/portrait.css", "game/table.css"];
+
+/** R5014000: a loop outside COSMETIC_SHEETS that is a cosmetic's own look, by its keyframes' name and the cosmetic it belongs to. */
+const COSMETIC_LOOPS: Record<string, CosmeticKind> = {
+  // R2944002: the Immersive version's near layer breathes.
+  "cf-immersive-breathe": "version",
+};
+
+/** R5014000: #3674's diorama slices' own loops: the picture's motion, the way an animated picture moves, not the face's decoration. */
+const PICTURE_LOOPS: readonly string[] = [
+  "cf-lift-bob",
+  "cf-lift-breathe",
+  "cf-lift-sway",
+  "cf-lift-hop",
+  "cf-lift-drift",
+  "cf-lift-swell",
+  "cf-lift-pulse",
+  "cf-lift-float",
+  "cf-lift-rise",
+  "cf-lift-fall",
+];
+
+/** R5014000: IDLE_LOOPS holds at most this many loops. It only falls. */
+const IDLE_LOOPS_CEILING = 12;
+
+/**
+ * R5014000: the only loops that run while nothing happens, by their keyframes' name, each with the state it
+ * marks: something the player can act on right now, or the turn timer's warning. The list only shrinks: a
+ * new idle loop takes one of these places or plays at most once.
+ */
+const IDLE_LOOPS: Record<string, string> = {
+  "glow-breathe-ready": "a playable card in hand, or a unit that can attack",
+  "glow-breathe-condition": "a playable card whose condition is met",
+  "lane-pick-breathe": "the lanes the card being placed can take",
+  "drag-reticle-pulse": "the legal target under the aim",
+  "end-turn-ready-pulse": 'End turn when it is the only move (data-turn-state="waiting")',
+  "clock-pill-pulse": "the turn timer's warning: its pill's glow in the final stretch and the last ten seconds",
+  "clock-shiver": "the turn timer's warning: its gauge's shiver in the last ten seconds",
+  "clock-heartbeat": "the turn timer's warning: the heartbeat under the player's hand",
+  "clock-spark-flicker": "the turn timer's warning: the burning fuse's head",
+  "clock-spark-throw": "the turn timer's warning: the sparks the burning fuse throws",
+  "coach-pulse": "the control the lesson asks for next",
+  "map-pulse": "the run map's nodes the player can travel to",
+};
+
+/** Whether a looping `word` is one R5014000 lets run: a cosmetic's, a picture's or an idle loop's. */
+function exempt(word: string, cosmeticNames: ReadonlySet<string>): boolean {
+  return cosmeticNames.has(word) || Object.hasOwn(COSMETIC_LOOPS, word) || PICTURE_LOOPS.includes(word) || Object.hasOwn(IDLE_LOOPS, word);
+}
+
+/** `"<sheet>: <keyframes>"` for every loop outside COSMETIC_SHEETS that no list names, sorted. */
+function strayLoops(sheets: readonly (readonly [string, string])[]): string[] {
+  const cosmeticNames = new Set(sheets.filter(([sheet]) => COSMETIC_SHEETS.includes(sheet)).flatMap(([, code]) => keyframesOf(code).map((frames) => frames.name)));
+  const declared = new Set(sheets.flatMap(([, code]) => keyframesOf(code).map((frames) => frames.name)));
+  const found: string[] = [];
+  for (const [sheet, code] of sheets) {
+    if (COSMETIC_SHEETS.includes(sheet)) continue;
+    for (const word of infiniteWords(code)) if (declared.has(word) && !exempt(word, cosmeticNames)) found.push(`${sheet}: ${word}`);
+  }
+  return found.sort();
+}
+
 describe("R3608000 an infinite animation moves only what the compositor moves", () => {
   it("R3608000 the guard catches an infinite shorthand loop over each paint property", () => {
     for (const prop of PAINT_PROPS) {
@@ -225,17 +299,17 @@ describe("R3608000 an infinite animation moves only what the compositor moves", 
     for (const name of [
       "glow-breathe-ready",
       "glow-breathe-condition",
-      "jk-facedown-breathe",
-      "jk-veil-drift",
-      "cf-mythic-hand-shimmer",
+      "clock-heartbeat",
+      "clock-shiver",
+      "clock-spark-throw",
       "end-turn-ready-pulse",
       "clock-pill-pulse",
       "lane-pick-breathe",
-      "duos-portal-flash",
+      "drag-reticle-pulse",
       "coach-pulse",
-      "skeleton-shimmer",
-      "drag-arrow-march",
-      "opponent-aim-run",
+      "map-pulse",
+      "cf-immersive-breathe",
+      "cf-lift-bob",
     ])
       expect(loops, name).toContain(name);
     expect(paintLoops(ALL_CSS), "move transform and opacity instead, or name the loop in ALLOWED_PAINT_LOOPS with its reason").toEqual([]);
@@ -247,5 +321,52 @@ describe("R3608000 an infinite animation moves only what the compositor moves", 
       expect(reason.trim().length, name).toBeGreaterThan(0);
       expect(standing, `${name} no longer loops a paint property: take it off the allow-list`).toContain(name);
     }
+  });
+});
+
+describe("R5014000 an idle loop marks only what the player can act on", () => {
+  it("R5014000 the guard finds a loop the lists do not name, and passes the ones they do", () => {
+    expect(strayLoops([["a.css", "@keyframes x { to { opacity: 0; } } .y { animation: x 1s infinite; }"]])).toEqual(["a.css: x"]);
+    expect(strayLoops([["a.css", "@keyframes coach-pulse { to { opacity: 0; } } .y { animation: coach-pulse 1s infinite; }"]])).toEqual([]);
+    // A loop on a cosmetic sheet's keyframes is that cosmetic's look, wherever it runs.
+    expect(
+      strayLoops([
+        ["game/table.css", "@keyframes t { to { opacity: 0; } }"],
+        ["b.css", ".y { animation: t 1s infinite; }"],
+      ]),
+    ).toEqual([]);
+    expect(strayLoops([["a.css", "@keyframes x { to { opacity: 0; } } .y { animation-name: x; animation-iteration-count: infinite; }"]])).toEqual(["a.css: x"]);
+    // What ends is no loop.
+    expect(strayLoops([["a.css", "@keyframes x { to { opacity: 0; } } .y { animation: x 1s 2 alternate; }"]])).toEqual([]);
+  });
+
+  it("R5014000 no stylesheet loops outside the cosmetic sheets but what the lists name", () => {
+    expect(
+      strayLoops(SHEETS.map((sheet) => [sheet, codeOf(sheet)] as const)),
+      "play it at most once (`1`, or `2 alternate`), or name the state it marks in IDLE_LOOPS",
+    ).toEqual([]);
+  });
+
+  it("R5014000 IDLE_LOOPS holds at most 12 named states, and every listed loop still loops", () => {
+    expect(Object.keys(IDLE_LOOPS).length).toBeLessThanOrEqual(IDLE_LOOPS_CEILING);
+    expect(IDLE_LOOPS_CEILING).toBeLessThanOrEqual(12);
+    for (const [name, reason] of Object.entries(IDLE_LOOPS)) expect(reason.trim().length, name).toBeGreaterThan(0);
+    const loops = infiniteLoops(ALL_CSS);
+    for (const name of [...Object.keys(IDLE_LOOPS), ...Object.keys(COSMETIC_LOOPS), ...PICTURE_LOOPS])
+      expect(loops, `${name} no longer loops: take it off its list`).toContain(name);
+  });
+
+  it("R5014000 every infinite outside the cosmetic sheets sits on a listed loop", () => {
+    const cosmeticNames = new Set(COSMETIC_SHEETS.flatMap((sheet) => keyframesOf(codeOf(sheet)).map((frames) => frames.name)));
+    const unnamed: string[] = [];
+    for (const sheet of SHEETS) {
+      if (COSMETIC_SHEETS.includes(sheet)) continue;
+      for (const rule of codeOf(sheet).matchAll(/\{([^{}]*)\}/g)) {
+        const body = rule[1] ?? "";
+        if (!/(?<![\w-])infinite(?![\w-])/.test(body)) continue;
+        if (![...infiniteWords(`{${body}}`)].some((word) => exempt(word, cosmeticNames))) unnamed.push(`${sheet}: ${body.trim()}`);
+      }
+    }
+    expect(unnamed, "a rule that repeats forever names a loop none of the lists hold").toEqual([]);
   });
 });
