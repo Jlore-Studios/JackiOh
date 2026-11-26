@@ -21832,6 +21832,7 @@
     "4999": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-26T05:34:33Z",
         "difficulty": "medium",
@@ -21850,7 +21851,7 @@
         "reason": "`muse` reached its usage limit",
         "trail": "- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4999 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4999/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files\n- agent loop failed: model failed: API error 429 [request_id=f904405e-10c4-44f9-9f9d-91351e3552c7]: Subscription quota exhausted. Your usage window resets at 2026-11-30T00:00:00Z. (rate_limit_error)"
       },
-      "interruptions": 1,
+      "interruptions": 0,
       "kind": "build",
       "last_findings": [],
       "live": "building",
