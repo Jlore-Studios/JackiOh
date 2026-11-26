@@ -4062,3 +4062,16 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-26T05:28:47Z,45761605395,muse,muse-spark-1.3-contributor,plan,4999,medium,planned,,1.8,0,0,0,,24,25,99,99,6.8,,none,,1
 2026-11-26T05:26:31Z,45759916888,claude-7,opus,plan,5006,hard,planned,,11.5,119,66266,7793853,4.3175,8,16,,,11.9,muse,fresh,other,1
 2026-11-26T05:24:18Z,45751017198,muse,muse-spark-1.3-contributor,build,4996,medium,built,,96.8,0,0,0,,16,23,96,99,55.1,muse,none,,1
+2026-11-26T05:39:22Z,45762937003,muse,muse-spark-1.3-contributor,build,4999,medium,interrupted,refusal,0,0,0,0,,25,25,99,99,19,muse,none,,1
+2026-11-26T05:38:31Z,45762846261,muse,muse-spark-1.3-contributor,review,5019,medium,interrupted,refusal,0,0,0,0,,25,25,99,99,1.2,,none,,1
+2026-11-26T05:39:02Z,45761516599,claude-8,opus,plan,5013,hard,interrupted,5-hour cap,9,0,0,0,,86,100,,,5.1,,fresh,,1
+2026-11-26T05:39:20Z,45761414846,claude-8,opus,plan,5012,hard,interrupted,refusal,10.8,101,64079,4938173,3.324,85,100,,,4.4,,fresh,,1
+2026-11-26T05:39:34Z,45761328014,claude-6,opus,review,5017,hard,approved,,12,51,11541,2456263,1.483,34,37,,,1.4,,none,,1
+2026-11-26T05:43:00Z,45757621231,muse,muse-spark-1.3-contributor,review,5008,medium,interrupted,refusal,42.5,0,0,0,,19,25,98,99,3.9,,none,,3
+2026-11-26T05:34:25Z,45753288645,muse,muse-spark-1.3-contributor,review,4893,medium,interrupted,refusal,84.8,0,0,0,,18,25,97,99,345.5,muse,none,,2
+2026-11-26T05:35:17Z,45753198188,claude-4,opus,build,4990,hard,built,,46.6,189,47593,11241151,4.3756,11,19,,,79.8,claude-4,fresh,,1
+2026-11-26T05:34:25Z,45750931170,muse,muse-spark-1.3-contributor,review,4953,medium,interrupted,refusal,107.2,0,0,0,,15,25,96,99,1.1,muse,none,,4
+2026-11-26T06:01:01Z,45764789039,claude-6,opus+sonnet,review,5008,medium,reviewed,,0.8,14,5134,443608,0.3067,37,38,,,1.6,muse,none,,1
+2026-11-26T06:10:48Z,45765815886,claude-4,opus+sonnet,review,5019,medium,reviewed,,0.4,4,2565,101871,0.1891,21,22,,,10.9,muse,none,,1
+2026-11-26T06:12:22Z,45764691212,claude-4,opus,review,5023,hard,approved,,13.3,4,2051,97088,1.4219,20,23,,,2.6,,none,,1
+2026-11-26T06:04:55Z,45749699658,agy,gemini-3.8-flash-high,plan,4977,medium,failed,,150.3,184678,30952,0,,0,3,83,84,165.3,agy,none,,1
