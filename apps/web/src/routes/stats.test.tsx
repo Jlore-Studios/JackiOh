@@ -3796,12 +3796,12 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
    * Answers the play versions with `versions`, a drill-down with Spark Pup's, and the card statistics with the cost
    * filter applied as the server applies it, the cards' own band and the patches.
    */
-  function serveRunning(versions: () => Response = () => json(VERSIONS)): void {
+  function serveRunning(versions: (url: URL) => Response = () => json(VERSIONS)): void {
     vi.stubGlobal(
       "fetch",
       vi.fn((input: RequestInfo | URL) => {
         const url = new URL(String(input), window.location.origin);
-        if (url.pathname === "/api/stats/versions") return Promise.resolve(versions());
+        if (url.pathname === "/api/stats/versions") return Promise.resolve(versions(url));
         if (url.pathname.startsWith("/api/stats/cards/")) return Promise.resolve(json(MOCK_DRILL_DOWN));
         if (url.pathname !== "/api/stats/cards") return Promise.resolve(json({}));
         const cost = url.searchParams.get("cost");
@@ -3841,7 +3841,7 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
     await waitFor(() => expect(address().get("tab")).toBe("experimental"), SLOW);
   });
 
-  it("R4678000 R4680000 R4681001 on the Experimental tab the patch bar, the games tile and Face are hidden, one line above the tabs names what it shows, and its Segmented offers Running, Versions and Hall of Fame", async () => {
+  it("R4678000 R4680000 R4681001 R5040000 on the Experimental tab the patch bar, the games tile and Face are hidden, one line above the tabs names what it shows, and its Segmented offers Major patch running, Historical, Versions and Hall of Fame", async () => {
     at("/stats?patch=0.1.0&face=radiant");
     serveRunning();
     render(<StatsRoute />);
@@ -3864,15 +3864,20 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
       expect(screen.queryByTestId(hidden), hidden).toBeNull();
     }
     const line = screen.getByTestId(statsTestid.experimentalLine);
-    expect(line).toHaveTextContent(/^Every card's current version, over every patch since it last changed$/);
+    expect(line).toHaveTextContent(/^Every card's current version, over this major's patches since it last changed$/);
     const tablist = screen.getByRole("tablist", { name: "Statistics views" });
     expect(line.compareDocumentPosition(tablist) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // R4680000, R4681001: three views, so the Segmented of views shows, Running first and pressed; the options row
-    // keeps its View, ranges, Plain text and Columns.
+    // R4680000, R4681001, R5040000: four views, so the Segmented of views shows, Major patch running first and
+    // pressed; the options row keeps its View, ranges, Plain text and Columns.
     const panel = screen.getByRole("tabpanel");
     const views = within(panel).getByRole("group", { name: "Experimental views" });
-    expect(within(views).getAllByRole("button").map((button) => button.textContent)).toEqual(["Running", "Versions", "Hall of fame"]);
-    expect(within(views).getByRole("button", { name: "Running" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(views).getAllByRole("button").map((button) => button.textContent)).toEqual([
+      "Major patch running",
+      "Historical",
+      "Versions",
+      "Hall of fame",
+    ]);
+    expect(within(views).getByRole("button", { name: "Major patch running" })).toHaveAttribute("aria-pressed", "true");
     expect(within(panel).queryByRole("group", { name: "Face" })).toBeNull();
     expect(within(panel).getByRole("group", { name: "View" })).toBeInTheDocument();
     expect(within(panel).getByTestId(statsTestid.rangesToggle)).toBeInTheDocument();
@@ -3905,8 +3910,8 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
     });
     // The cost badge wears the card's rarity, as a deck row's does.
     expect(table.querySelector('tr[data-card-id="core-002"] .stats-card-thumb-badge')).toHaveAttribute("data-rarity", "Rare");
-    // Asked once, on the page's match type.
-    expect(requested("/api/stats/versions").map((url) => url.search)).toEqual(["?mode=all"]);
+    // Asked once, on the page's match type and, on Major patch running, the newest major's line (R5040000).
+    expect(requested("/api/stats/versions").map((url) => url.search)).toEqual(["?mode=all&scope=major"]);
 
     // Games is behind the Columns toggle, which has no Play rate here.
     expect(screen.queryByTestId(statsTestid.columnPlayRate)).toBeNull();
@@ -4044,6 +4049,82 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(await screen.findByTestId(statsTestid.runningTable, undefined, SLOW)).toBeInTheDocument();
     expect(requested("/api/stats/versions")).toHaveLength(2);
+  });
+
+  /** R5040000: the cut table `?scope=major` answers: the live versions alone, Spark Pup's counted from the major. */
+  const MAJOR = {
+    ...VERSIONS,
+    versions: VERSIONS.versions
+      .filter((row) => row.live)
+      .map((row) => (row.card === "core-001" ? { ...row, first: "v0.2.0", patches: 1, games: 40 } : row)),
+  };
+  const MAJOR_TIP =
+    "Each card's current version, over the patches since the newest major or since it last changed, whichever is later. Every row starts again at each major, so it has too few games for a tier until games accrue.";
+  const HISTORICAL_TIP = "Each card's current version, over every patch since it last changed, across majors.";
+
+  it("R5040000 the Segmented reads Major patch running, Historical and Versions, the first pressed, and each running view's tooltip says what it pools", async () => {
+    at("/stats?tab=experimental");
+    serveRunning();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    const views = within(screen.getByRole("tabpanel")).getByRole("group", { name: "Experimental views" });
+    const buttons = within(views).getAllByRole("button");
+    expect(buttons.map((button) => button.textContent).slice(0, 3)).toEqual(["Major patch running", "Historical", "Versions"]);
+    expect(buttons.map((button) => button.getAttribute("aria-pressed"))).toEqual(["true", "false", "false", "false"]);
+    expect(screen.getByTestId(statsTestid.experimentalRunning)).toHaveAttribute("title", MAJOR_TIP);
+    expect(screen.getByTestId(statsTestid.experimentalHistorical)).toHaveAttribute("title", HISTORICAL_TIP);
+  });
+
+  it("R5040000 ?experimental=running opens Major patch running and ?experimental=historical opens Historical, each with its line", async () => {
+    at("/stats?tab=experimental&experimental=running");
+    serveRunning();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.experimentalRunning)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId(statsTestid.experimentalLine)).toHaveTextContent(
+      /^Every card's current version, over this major's patches since it last changed$/,
+    );
+    cleanup();
+
+    at("/stats?tab=experimental&experimental=historical");
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.experimentalHistorical)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByTestId(statsTestid.experimentalRunning)).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTestId(statsTestid.experimentalLine)).toHaveTextContent(/^Every card's current version, over every patch since it last changed$/);
+    expect(address().get("experimental")).toBe("historical");
+
+    // The first view needs no address.
+    fireEvent.click(screen.getByTestId(statsTestid.experimentalRunning));
+    await waitFor(() => expect(address().has("experimental")).toBe(false), SLOW);
+    expect(screen.getByTestId(statsTestid.experimentalLine)).toHaveTextContent(
+      /^Every card's current version, over this major's patches since it last changed$/,
+    );
+  });
+
+  it("R5040000 each running view asks the route with its scope and draws its answer: Major patch running the cut table, Historical the whole", async () => {
+    at("/stats?tab=experimental");
+    serveRunning((url) => json(url.searchParams.get("scope") === "major" ? MAJOR : VERSIONS));
+    render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    await waitFor(() => expect(rowsOf(table).ids).toHaveLength(3), SLOW);
+    expect(rowsOf(table).cells[0]).toEqual(["1", "Spark Pup", "40", "B", "51.2%", "v0.2.0 across 1 patch"]);
+
+    fireEvent.click(screen.getByTestId(statsTestid.experimentalHistorical));
+    await waitFor(
+      () =>
+        expect(rowsOf(screen.getByTestId(statsTestid.runningTable)).cells[0]).toEqual([
+          "1",
+          "Spark Pup",
+          "140",
+          "B",
+          "51.2%",
+          "v0.1.5 across 3 patches",
+        ]),
+      SLOW,
+    );
+    expect(requested("/api/stats/versions").map((url) => url.search)).toEqual(["?mode=all&scope=major", "?mode=all"]);
+    await waitFor(() => expect(address().get("experimental")).toBe("historical"), SLOW);
   });
 });
 

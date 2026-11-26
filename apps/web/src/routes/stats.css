@@ -839,6 +839,11 @@
   color: var(--text-dim);
 }
 
+/* R5040000: the Experimental tab's four views wrap onto a second row where the window is narrower than them. */
+.stats-experimental-views {
+  flex-wrap: wrap;
+}
+
 /* R4680000: a card's live play version, marked in its span as the header marks the current patch. */
 .stats-version-live {
   padding: 0 var(--space-3);
