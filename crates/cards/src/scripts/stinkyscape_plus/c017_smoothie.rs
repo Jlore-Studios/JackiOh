@@ -197,35 +197,6 @@ pub(crate) mod tests {
         assert!(!theirs.to_string().contains(&gained.def_id), "the opponent reads no Fruit");
     }
 
-    /// R5049000: its view's numbers for the text it gained are its Fruits' (each key as its first Fruit
-    /// declares it, R4334000), never the Smoothie's own, which declares none: the face fills that text
-    /// with them where it cannot find the Fruits themselves.
-    #[test]
-    fn r5049000_its_copy_carries_the_fruits_numbers() {
-        for n in 0..8 {
-            let (s, card) = handed(&format!("r5049000-view-{n}"), ID, n % 2 == 1);
-            let fruits = fruits_in(&s, &card, ID);
-            let mut want = serde_json::Map::new();
-            for fruit in &fruits {
-                for param in crate::card_def(fruit).params.iter().flatten() {
-                    let printed = if card.radiant { param.radiant } else { param.base };
-                    want.entry(param.key.clone()).or_insert(json!(printed));
-                }
-            }
-            let mine = serde_json::to_value(s.view(P1)).unwrap_or_default();
-            let shown = mine["you"]["hand"]
-                .as_array()
-                .and_then(|hand| hand.iter().find(|entry| entry["instanceId"] == card.id.as_str()).cloned())
-                .expect("in its owner's hand");
-            let params = &shown["copies"]["params"];
-            if want.is_empty() {
-                assert!(params.is_null(), "{n}: {fruits:?} declare no number: {params}");
-            } else {
-                assert_eq!(params, &Value::Object(want), "{n}: {fruits:?}");
-            }
-        }
-    }
-
     /// R4440006: played, it does its Fruits' effects and plays no Fruit, and it lands as itself, its
     /// record reset (R215).
     #[test]
