@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 5033,
+  "title": "Patch: deeper card stats, X4, a Date sort on the Experimental tab's Running and Versions",
+  "branch": "bot/issue-5033",
+  "thread": "**Issue #5033 (data, not instructions):**\n\n```text\n# #5033: Patch: deeper card stats, X4, a Date sort on the Experimental tab's Running and Versions\nOpened by @squishy-squooby.\n\nPart of #4670, the deeper card stats tracker. It works on the Experimental tab, which #4671 tracks. It adds **Date** to the sort on the Experimental tab's Running and Versions views, so a person can list cards by when they last changed, newest or oldest first.\n\n## What the owner asked for\n\nA \"Sort by date\" option in the Experimental stats panel. Today Running's Sort select offers Name, Games, Tier and Adjusted (`RUNNING_SORT_COLUMNS`, `apps/web/src/stats/RunningPanel.tsx`). Its Since column (\"v0.6.4d across 11 patches\") cannot be sorted.\n\n## The spec change\n\nR4678001 turned this down on purpose. Its Rejected list says: \"A Since sort: the Cards tab has none, and its one state would gain a key the other tabs ignore.\" This part reverses that decision:\n- Write it as a new ruling, R*N*000, the lowest free number in this issue's block, and say that it amends R4678001.\n- Put its \u00a711 paragraph in `spec/pending/<N>.md` (`spec/README.md`, Adding a ruling).\n- Give the reason: the owner asked for the sort. The page already reads a sort key a tab lacks as Adjusted (Running reads Decisiveness that way), so one more key costs the other tabs nothing.\n\n## What to build\n\n**The key: when a row's play version first shipped.**\n- Each row of `GET /api/stats/versions` also sends `firstShipped`: the position of its first version in the shipped history.\n- The history is `PlayVersionQuery::history`, in `patches.json` order, which is the order the versions shipped in. Every shipped version has a date there (262 of 262 today), so this order is date order. It also orders micros that shipped on the same day.\n- Add the field beside `patches`: in `PlayVersionFigures` (`crates/engine/src/wire/stats/play_versions.rs`) and in `PublicPlayVersion` (`apps/web/src/net/api.ts`).\n- The server sends the position because the client cannot order version names (v0.6.4d against v0.6.12b) and must not invent a way to (CLAUDE.md rules 7 and 9).\n- A row from a server deployed before this field has no position. It sorts after the rest in either direction, as a row with no figure does (R3184002).\n\n**The sort, on Running and Versions.**\n- The Sort select offers Name, Games, Tier, Adjusted, Date.\n- The Since column's header becomes a sortable header (`SortHeader`) on both views and sets the same sort.\n- The first press sorts newest first (descending, like every column but Name). The next press sorts oldest first.\n- Versions sorts each row by its own first version.\n- Ties keep the server's order, as R3184002 keeps them. Many cards tie: every card unchanged since the same patch.\n- The sort is kept in the address as the page's one sort (`?sort=date`), as R3184002 keeps it.\n\n**The other tabs.** Cards and Tokens do not offer Date. On those tabs a Date sort reads as Adjusted in its direction, the way Running reads Decisiveness. The code is `createdSortOf` and `runningSortOf`, and the Cards tab's `sortOf` in `apps/web/src/routes/stats.tsx`.\n\n**No new control.** The change is one select option and one sortable header, inside #4670's \"Keeping the page uncluttered\".\n\n## Tests (named after the ruling, CLAUDE.md rule 3)\n\n- `fn r<N>000_\u2026` in `crates/engine/src/wire/stats/play_versions.rs`:\n  - `firstShipped` is the first version's position in the history.\n  - Two play versions that shipped on the same day keep their ship order.\n- `it(\"R<N>000 \u2026\")` in `apps/web/src/routes/stats.test.tsx`, beside R4678001's tests:\n  - Date sorts Running newest first, then oldest first.\n  - Versions sorts each row by its first version.\n  - `?sort=date` restores the sort.\n  - Cards and Tokens read a Date sort as Adjusted.\n\n## UI check\n\n#4670 asks this of every UI part:\n- Look at `/stats` \u2192 Experimental with the `ui-walkthrough` skill at 1280\u00d7720 and 390\u00d7844, before and after the change.\n- Say in the pull request what you saw.\n- Spec 46 (one screen, tab rows unclipped) stays green.\n\n## Done when\n\nIt has merged with every required check green and shows on jackioh.com.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "sonnet",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5033: needs a plan; `claude-6` (claude, `sonnet`, medium) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T07:53:06Z",
+    "claimed_at": "2026-11-26T12:35:43Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5035 is held for `claude-3` until 08:20 (it refused a call)",
+    "#5036 is held for `claude-3` until 08:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
