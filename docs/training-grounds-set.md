@@ -840,8 +840,8 @@ The designer, after #40: "These 20 cards: (SNAP SHOT THEM SO THEY ARE LIKE LABEL
   (`crates/cards/build.rs` on every build, `use` lines in, `BUSTED_CODE_LINES = 100` and `COMPLICATED_CODE_LINES = 60`,
   `crates/engine/src/config.rs:78`, `:82`) follow the copied file; only #49 (≈77 now, with its kept script) and #57 (≈84)
   are over 60, so both snapshots are "complicated" like their Core cards; dropping #49's kept script keeps it over 60.
-- **Other shared facts.** The AI's per-card rows (`crates/ai/src/shadow_ban.rs`: `SHADOW_WATCH` at 369, `DEALT_Q` at 767,
-  keyed by id) have none for a snapshot, which deals at `DEALT_Q_PRIOR` until a sweep. `apps/web/src/audio/card-audio.json5`,
+- **Other shared facts.** The AI's per-card rows (`crates/ai/src/shadow_ban.rs`: `SHADOW_WATCH` at 369, keyed by id)
+  have none for a snapshot until a sweep. `apps/web/src/audio/card-audio.json5`,
   `crates/cards/flavour.json` and `crates/cards/chinese.json` need a row per snapshot (copy the Core card's; the Chinese name
   under TG-P2-4). `apps/web/src/audio/music-cards.json` gives core-023 a `"station": "lofi"`; #49 gets one only if the owner
   wants (no rule reads it). Tags: no new tag; the snapshots add Human ×4, Felinor ×2, Jlockeed ×2, Jelly Bean ×1, Fruit ×1 to

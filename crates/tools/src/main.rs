@@ -13,7 +13,6 @@ mod catalog;
 mod changed;
 mod claims;
 mod classify;
-mod dealt_fit;
 mod duos_fuzz;
 mod duos_gate;
 mod fork_screen;

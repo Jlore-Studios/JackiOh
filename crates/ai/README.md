@@ -484,11 +484,8 @@ gated card in by name. Emptying the list lifts the gate and deals every deck as 
 Stinkyscape set from its release (issue #1884) until issue #1885 measured the AI on it: gating a set that
 ships before the AI is trained on it is listing it there. It held the Stinkyscape+ set from its release
 (issue #3573) until fullsend 2's sweep of record measured the AI on it (issue #3574, R3574000), and is
-empty since. `shape`
-(R976000) multiplies each card's weight by `shaped_weight`, the unban lane's dealt-quality table in
-`src/shadow_ban.rs`; it is off unless a caller sets it, whatever `banned` holds, and no caller does, so
-practice, the quality gates and both seats of an arena or a promotion deal unshaped. Nothing else reads
-`shaped_weight`: the mulligan ranks by `hand_card_value` (R4110000).
+empty since. No deal is shaped: the unban lane's dealt-quality table and the option that read it are
+removed (R4702001), so practice, the quality gates and both seats of an arena deal by one rule (R976000).
 `src/shadow_ban.rs` holds `SHADOW_BAN` (each card with the sweep flags that banned it) and
 `SHADOW_WATCH` (cards found at risk and cleared). Both are decided by the sweep, never by hand, and
 never copied in by hand either: `cargo jackioh sweep --write <report>…` rewrites the file's header block

@@ -3464,10 +3464,19 @@ fn r4702000_r1006000_r1012004_r3112000_the_ai_extracts_no_features() {
 
 /// The sources of the AI (`crates/ai/src`) that name one of `names`, each as "path: `name`".
 fn ai_sources_naming(names: &[&str]) -> Vec<String> {
+    sources_naming("crates/ai/src", 15, names)
+}
+
+/// The sources under `dir`, more than `floor` of them, that name one of `names`, each as "path: `name`".
+fn sources_naming(dir: &str, floor: usize, names: &[&str]) -> Vec<String> {
     let root = repo();
     let mut files = Vec::new();
-    sources(&root.join("crates/ai/src"), &mut files);
-    assert!(files.len() > 15, "only {} source files found", files.len());
+    sources(&root.join(dir), &mut files);
+    assert!(
+        files.len() > floor,
+        "{dir}: only {} source files found",
+        files.len()
+    );
     let mut found: Vec<String> = Vec::new();
     for file in &files {
         let text = fs::read_to_string(file).unwrap_or_default();
@@ -3481,6 +3490,32 @@ fn ai_sources_naming(names: &[&str]) -> Vec<String> {
         }
     }
     found
+}
+
+/// R4702001: the retired unban lane's deck shaping is gone with the command that fitted its table: no
+/// source of the AI or of the tools names the table, its weight, its option or `stats fit-dealt`.
+#[test]
+fn r4702001_the_unban_lanes_deck_shaping_and_its_refit_are_gone() {
+    let names = [
+        concat!("DEALT", "_Q"),
+        concat!("shaped", "_weight"),
+        concat!("UNBANNED", "_PREFER"),
+        concat!("DEAL_SHAPE", "_"),
+        concat!("pub shape", ": bool"),
+        concat!("Fit", "Dealt"),
+        concat!("fit", "-dealt"),
+        concat!("dealt", "_fit"),
+    ];
+    let mut found = ai_sources_naming(&names);
+    found.extend(sources_naming("crates/tools/src", 30, &names));
+    assert!(
+        found.is_empty(),
+        "the unban lane's deck shaping is back (R4702001): {found:?}"
+    );
+    assert!(
+        !repo().join(concat!("crates/tools/src/dealt", "_fit.rs")).exists(),
+        "crates/tools/src: the refit's file is back (R4702001)"
+    );
 }
 
 /// R4702003: the evaluation's two terms that shipped at weight 0 are gone: no source of the AI names
