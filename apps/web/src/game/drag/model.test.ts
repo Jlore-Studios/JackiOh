@@ -10,9 +10,9 @@ import { RANDOM_ATTACK_TARGET } from "@jackioh/engine/config";
 import { describe, expect, it } from "vitest";
 
 import { baseView, card, emptySide, faceUpBackrow, heroPower, unit } from "../../test/fixtures.ts";
-import { IDLE, onClickTarget, pickInPlay, type Interaction } from "../actions.ts";
+import { IDLE, onClickTarget, outstandingNeed, pickInPlay, type Interaction } from "../actions.ts";
 import { testid, type ClickTarget } from "../contract.ts";
-import { DRAG_THRESHOLD_PX, planDrag, resolveDrop } from "./model.ts";
+import { DRAG_THRESHOLD_PX, planDrag, resolveDrop, type DropSpot } from "./model.ts";
 
 describe("DRAG_THRESHOLD_PX", () => {
   it("keeps the press a click below eight CSS px", () => {
@@ -284,5 +284,119 @@ describe("R658 a build lifted again from its picks", () => {
       expect(plan?.arrow).toBe(true);
       expect(plan?.freeDrop).toBe(false);
     }
+  });
+});
+
+describe("R5107000 a Cloaked card dropped on the board", () => {
+  const UP: ActionBody = { type: "play", instanceId: "s1" };
+  const BACK2 = { row: "backrow", lane: 2 } as const;
+  const BACK3 = { row: "backrow", lane: 3 } as const;
+  const set = (instanceId: string, zone: typeof BACK2 | typeof BACK3, extra: { x?: number } = {}): ActionBody => ({
+    type: "play",
+    instanceId,
+    zone,
+    faceDown: "cloaked",
+    ...extra,
+  });
+  const onZone = (lane: number): DropSpot => ({
+    at: "target",
+    target: { on: "zone", side: "you", row: "backrow", lane },
+    testid: testid.zone("you", "backrow", lane),
+  });
+  const board: DropSpot = { at: "board" };
+  const planOf = (legal: ActionBody[], id: string) => {
+    const plan = planDrag(view(), legal, IDLE, hand(id));
+    if (plan === null) throw new Error("no plan");
+    return plan;
+  };
+  const legal: ActionBody[] = [UP, set("s1", BACK2), set("s1", BACK3)];
+
+  it("R5107000 an untargeted Cloaked Spell is a free drop, with no arrow, and its backrow zones still light", () => {
+    const plan = planOf(legal, "s1");
+
+    expect(plan.freeDrop).toBe(true);
+    expect(plan.arrow).toBe(false);
+    expect(sorted(plan.dropTestids)).toEqual(["zone-you-backrow-2", "zone-you-backrow-3"]);
+  });
+
+  it("R5107000 a drop on the board casts it face-up", () => {
+    const got = resolveDrop(view(), legal, planOf(legal, "s1"), board);
+
+    expect(got.action).toStrictEqual({ type: "play", instanceId: "s1" });
+    expect(got.interaction).toEqual(IDLE);
+  });
+
+  it("R5107000 a drop on a lit backrow zone still sets it", () => {
+    const got = resolveDrop(view(), legal, planOf(legal, "s1"), onZone(2));
+
+    expect(got.action).toEqual(set("s1", BACK2));
+    expect(got.interaction).toEqual(IDLE);
+  });
+
+  it("R5107000 a Cloaked Spell with X goes straight to the X picker on a board drop", () => {
+    const withX: ActionBody[] = [{ ...UP, x: 1 }, { ...UP, x: 2 }, set("s1", BACK2, { x: 1 }), set("s1", BACK2, { x: 2 })];
+    const plan = planOf(withX, "s1");
+    expect(plan.freeDrop).toBe(true);
+
+    const got = resolveDrop(view(), withX, plan, board);
+    expect(got.action).toBeUndefined();
+    expect(got.interaction.stage).toBe("playing");
+    expect(got.interaction.stage === "playing" && got.interaction.picked).toEqual({ faceDown: "up" });
+    expect(outstandingNeed(got.interaction)).toEqual({ kind: "x", min: 1, max: 1, values: [1, 2] });
+  });
+
+  it("R5107000 a Cloaked Spell with modes goes straight to the mode picker", () => {
+    const withModes: ActionBody[] = [{ ...UP, modes: ["discard"] }, { ...UP, modes: ["draw"] }, set("s1", BACK2)];
+    const got = resolveDrop(view(), withModes, planOf(withModes, "s1"), board);
+
+    expect(outstandingNeed(got.interaction)).toEqual({ kind: "mode", min: 1, max: 1, options: ["discard", "draw"] });
+  });
+
+  it("R5107000 a targeted Cloaked Spell with two targets keeps its arrow: a board drop is a miss, a drop on a target casts it, a drop on a zone sets it", () => {
+    const targeted: ActionBody[] = [T1_E1, T1_HERO, set("t1", BACK2)];
+    const plan = planOf(targeted, "t1");
+    expect(plan.arrow).toBe(true);
+    expect(plan.freeDrop).toBe(false);
+
+    const miss = resolveDrop(view(), targeted, plan, board);
+    expect(miss.action).toBeUndefined();
+    expect(miss.interaction).toEqual(IDLE);
+
+    const e1: DropSpot = { at: "target", target: { on: "unit", instanceId: "e1", side: "opponent", lane: 1 }, testid: "card-e1" };
+    expect(resolveDrop(view(), targeted, plan, e1).action).toEqual(T1_E1);
+    expect(resolveDrop(view(), targeted, plan, onZone(2)).action).toEqual(set("t1", BACK2));
+  });
+
+  it("R5107000 a Cloaked Spell with one target is a free drop, as the same Spell without Cloaked is", () => {
+    const one: ActionBody[] = [T1_E1, set("t1", BACK2)];
+    const plan = planOf(one, "t1");
+
+    expect(plan.arrow).toBe(true);
+    expect(plan.freeDrop).toBe(true);
+    expect(resolveDrop(view(), one, plan, board).action).toEqual(T1_E1);
+    expect(planDrag(view(), [T1_E1], IDLE, hand("t1"))?.freeDrop).toBe(true);
+  });
+
+  it("R5107000 with no face-up play listed, every play decides: two set zones are not a free drop", () => {
+    const onlySet: ActionBody[] = [set("s1", BACK2), set("s1", BACK3)];
+    const plan = planOf(onlySet, "s1");
+    expect(plan.freeDrop).toBe(false);
+
+    const got = resolveDrop(view(), onlySet, plan, board);
+    expect(got.action).toBeUndefined();
+    expect(got.interaction).toEqual(IDLE);
+  });
+
+  it("R5107000 a Cloaked Unit whose face-up play has two zones is not a free drop", () => {
+    const unitLegal: ActionBody[] = [
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 4 } },
+      { type: "play", instanceId: "h1", zone: { row: "units", lane: 5 } },
+      set("h1", BACK2),
+    ];
+    const plan = planOf(unitLegal, "h1");
+
+    expect(plan.freeDrop).toBe(false);
+    expect(sorted(plan.dropTestids)).toEqual(["zone-you-backrow-2", "zone-you-units-4", "zone-you-units-5"]);
+    expect(resolveDrop(view(), unitLegal, plan, board).interaction).toEqual(IDLE);
   });
 });
