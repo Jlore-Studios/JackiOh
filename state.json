@@ -20226,17 +20226,18 @@
       "merge_owner": "claude-8",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-8",
+      "provider": "claude-3",
       "question": "",
       "queued_at": "2026-11-25T20:07:08Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "strong",
-      "run_id": "45692510644",
+      "run_id": "pending:e7b51864-1795685076",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 590,
-      "started_at": "2026-11-25T20:11:10Z",
+      "started_at": "2026-11-26T09:25:01Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -23048,9 +23049,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T09:24:22Z",
+    "at": "2026-11-26T09:25:01Z",
     "url": "",
-    "what": "review #5052 on agy"
+    "what": "spot-check #4946 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-26T09:13:48Z",
@@ -45722,7 +45723,15 @@
         "n": 590,
         "pr": 4946,
         "queued_at": "2026-11-26T08:57:37Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:e7b51864-1795685076",
         "sha": "22a9db19dd2732f368f4612dff9ddf08a9dbfc0b",
+        "started_at": "2026-11-26T09:25:01Z",
         "status": "queued",
         "title": "Patch: a card made Radiant where it stands starts the Brittle its Radiant face newly prints, and regains a Reborn that face newly prints",
         "tries": 0
