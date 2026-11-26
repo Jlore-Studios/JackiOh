@@ -44484,6 +44484,10 @@
       "5122": {
         "at": "2026-11-26T22:21:23Z",
         "why": "Confirmed: nothing under crates/ai/src/ reads a CostRule, coming_refreshes (evaluate.rs:1153) prices only the mana rider and lost refreshes, the enemy hand is a flat rate (evaluate.rs:1535) and the reply plays no unseen card, so the AI scores Cost Injection's cast as a lost card; the sweep shows it never played on all four pass-1 lines (assault-sweep-2026-11-26.md:1599-1602) and its eval falling a"
+      },
+      "5123": {
+        "at": "2026-11-26T22:21:26Z",
+        "why": "Confirmed: resume_save's live_of (fork_screen.rs:1016) counts the forks of every saved deal, including the deals of a cut --extend batch past target, before it calls next_batch(target, \u2026) at :1025 and :1067, so a save holding deals 1-200 with 18 live forks plus 15 cut deals holding 2 more reads as finished at 215 deals, while the uncut loop (:1170-1203) tallies all 300; that breaks R4607000's prom"
       }
     },
     "auto_approved": [],
