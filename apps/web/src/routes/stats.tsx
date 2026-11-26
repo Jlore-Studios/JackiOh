@@ -1093,7 +1093,8 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     setSortDir(next.dir);
   };
 
-  const filteredCards = useMemo(() => {
+  // The cards the shared filters keep, before any sort.
+  const unsortedCards = useMemo(() => {
     if (!cardStatsData) return [];
     let list = [...cardStatsData.cards];
 
@@ -1104,61 +1105,75 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     if (keywordFilter) {
       list = list.filter((c) => keywordKinds(c.id).includes(keywordFilter as KeywordKind));
     }
-
-    const flip = sortDir === "desc" ? -1 : 1;
-    const language = locale === "en" ? undefined : locale;
-    const compareNames = (a: { id: string; name: string }, b: { id: string; name: string }): number =>
-      shownName(a.id, a.name).localeCompare(shownName(b.id, b.name), language);
-    list.sort((a, b) => {
-      if (cardsCol === "tier") {
-        // R3022000: by tier, S first descending; a card without one after those with one, then by its adjusted rate.
-        if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
-        if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
-        const aRank = tierRank(a.tier);
-        const bRank = tierRank(b.tier);
-        if (aRank >= 0 && bRank < 0) return -1;
-        if (aRank < 0 && bRank >= 0) return 1;
-        if (aRank !== bRank) return (aRank - bRank) * flip;
-        // R3184001: within a tier, by how much of the card's range is in it, a card with no range after; then by its adjusted rate.
-        const aFit = cardTierFit(a, tiers);
-        const bFit = cardTierFit(b, tiers);
-        if (aFit !== null && bFit === null) return -1;
-        if (aFit === null && bFit !== null) return 1;
-        if (aFit !== null && bFit !== null && aFit !== bFit) return (aFit - bFit) * flip;
-        const aRate = a.adjustedWinRate ?? null;
-        const bRate = b.adjustedWinRate ?? null;
-        if (aRate !== null && bRate !== null && aRate !== bRate) return (aRate - bRate) * flip;
-      } else if (cardsCol === "adjustedWinRate" || cardsCol === "decisiveness") {
-        // R2777000: a card with no adjusted rate (nothing seen, or never unseen) sorts after those with one;
-        // R4552001: Decisiveness sorts the same way.
-        if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
-        if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
-        const aRate = (cardsCol === "decisiveness" ? a.decisiveness : a.adjustedWinRate) ?? null;
-        const bRate = (cardsCol === "decisiveness" ? b.decisiveness : b.adjustedWinRate) ?? null;
-        if (aRate !== null && bRate === null) return -1;
-        if (aRate === null && bRate !== null) return 1;
-        if (aRate !== null && bRate !== null && aRate !== bRate) {
-          return (aRate - bRate) * flip;
-        }
-      } else if (cardsCol === "winRate") {
-        if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
-        if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
-        if (a.winRate !== null && b.winRate !== null && a.winRate !== b.winRate) {
-          return (a.winRate - b.winRate) * flip;
-        }
-      } else if (cardsCol === "games") {
-        if (a.games !== b.games) return (a.games - b.games) * flip;
-      } else if (cardsCol === "playRate") {
-        if (a.playRate !== b.playRate) return (a.playRate - b.playRate) * flip;
-      } else if (cardsCol === "name") {
-        const diff = compareNames(a, b);
-        if (diff !== 0) return diff * flip;
-      }
-      return a.games - b.games || compareNames(a, b);
-    });
-
     return list;
-  }, [cardStatsData, search, keywordFilter, cardsCol, sortDir, locale, tiers]);
+  }, [cardStatsData, search, keywordFilter]);
+
+  const sortCards = useCallback(
+    (cards: readonly (typeof unsortedCards)[number][], cardsCol: Exclude<SortColumn, "date">, sortDir: SortDirection) => {
+      const list = [...cards];
+      const flip = sortDir === "desc" ? -1 : 1;
+      const language = locale === "en" ? undefined : locale;
+      const compareNames = (a: { id: string; name: string }, b: { id: string; name: string }): number =>
+        shownName(a.id, a.name).localeCompare(shownName(b.id, b.name), language);
+      list.sort((a, b) => {
+        if (cardsCol === "tier") {
+          // R3022000: by tier, S first descending; a card without one after those with one, then by its adjusted rate.
+          if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
+          if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
+          const aRank = tierRank(a.tier);
+          const bRank = tierRank(b.tier);
+          if (aRank >= 0 && bRank < 0) return -1;
+          if (aRank < 0 && bRank >= 0) return 1;
+          if (aRank !== bRank) return (aRank - bRank) * flip;
+          // R3184001: within a tier, by how much of the card's range is in it, a card with no range after; then by its adjusted rate.
+          const aFit = cardTierFit(a, tiers);
+          const bFit = cardTierFit(b, tiers);
+          if (aFit !== null && bFit === null) return -1;
+          if (aFit === null && bFit !== null) return 1;
+          if (aFit !== null && bFit !== null && aFit !== bFit) return (aFit - bFit) * flip;
+          const aRate = a.adjustedWinRate ?? null;
+          const bRate = b.adjustedWinRate ?? null;
+          if (aRate !== null && bRate !== null && aRate !== bRate) return (aRate - bRate) * flip;
+        } else if (cardsCol === "adjustedWinRate" || cardsCol === "decisiveness") {
+          // R2777000: a card with no adjusted rate (nothing seen, or never unseen) sorts after those with one;
+          // R4552001: Decisiveness sorts the same way.
+          if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
+          if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
+          const aRate = (cardsCol === "decisiveness" ? a.decisiveness : a.adjustedWinRate) ?? null;
+          const bRate = (cardsCol === "decisiveness" ? b.decisiveness : b.adjustedWinRate) ?? null;
+          if (aRate !== null && bRate === null) return -1;
+          if (aRate === null && bRate !== null) return 1;
+          if (aRate !== null && bRate !== null && aRate !== bRate) {
+            return (aRate - bRate) * flip;
+          }
+        } else if (cardsCol === "winRate") {
+          if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
+          if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
+          if (a.winRate !== null && b.winRate !== null && a.winRate !== b.winRate) {
+            return (a.winRate - b.winRate) * flip;
+          }
+        } else if (cardsCol === "games") {
+          if (a.games !== b.games) return (a.games - b.games) * flip;
+        } else if (cardsCol === "playRate") {
+          if (a.playRate !== b.playRate) return (a.playRate - b.playRate) * flip;
+        } else if (cardsCol === "name") {
+          const diff = compareNames(a, b);
+          if (diff !== 0) return diff * flip;
+        }
+        return a.games - b.games || compareNames(a, b);
+      });
+
+      return list;
+    },
+    [locale, tiers],
+  );
+  const filteredCards = useMemo(() => sortCards(unsortedCards, cardsCol, sortDir), [sortCards, unsortedCards, cardsCol, sortDir]);
+  // R5033000: Running and Versions take the Cards tab's order as the order their ties keep. Under a Date sort that is
+  // Adjusted in its default direction whatever the sort's own, so a row tied on Date keeps one place both ways.
+  const rowsInput = useMemo(
+    () => (sortCol === "date" ? sortCards(unsortedCards, DEFAULT_SORT, defaultDirection(DEFAULT_SORT)) : filteredCards),
+    [sortCol, sortCards, unsortedCards, filteredCards],
+  );
 
   // R2089000: the Created cards the search box asks for, as it asks for the deck rows, and R4083000 the keyword;
   // R3324002: the tokens among them in a section of their own, and every other in its own, so no card is in both.
@@ -1171,8 +1186,8 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
 
   // R4678001: the cards the Cards tab lists under the shared filters, each on its live play version.
   const running = useMemo(
-    () => (versionsData ? runningRows(filteredCards, versionsData.versions) : []),
-    [filteredCards, versionsData],
+    () => (versionsData ? runningRows(rowsInput, versionsData.versions) : []),
+    [rowsInput, versionsData],
   );
 
   // R4680000: each old version's definition, from its catalog once a row on screen or its drill-down asks for it; a
@@ -1198,12 +1213,12 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const versionsShown = useMemo(
     () =>
       versionsData
-        ? versionRows(filteredCards, versionsData.versions, pastOnly, (version) => {
+        ? versionRows(rowsInput, versionsData.versions, pastOnly, (version) => {
             const read = readVersion(version);
             return read === undefined ? undefined : (read?.def ?? null);
           })
         : [],
-    [filteredCards, versionsData, pastOnly, readVersion],
+    [rowsInput, versionsData, pastOnly, readVersion],
   );
   // R4681001: whether the Hall of Fame's four lists are all empty.
   const hallEmpty =

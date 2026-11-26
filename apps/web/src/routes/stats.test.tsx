@@ -4020,16 +4020,16 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
     render(<StatsRoute />);
     const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
     expect(rowsOf(table).ids).toEqual(["core-001", "core-003", "core-002"]);
-    // Tied rows keep the order they arrive in, the Cards tab's: Adjusted in the sort's direction.
+    // Tied rows keep one order both ways: the Cards tab's Adjusted, descending, whatever the Date sort's direction.
     fireEvent.click(screen.getByTestId(statsTestid.sortDir));
-    expect(rowsOf(table).ids).toEqual(["core-003", "core-001", "core-002"]);
+    expect(rowsOf(table).ids).toEqual(["core-001", "core-003", "core-002"]);
     cleanup();
 
     // A null position is no position either (the address still asks for oldest first).
     serveRunning(() => json({ ...VERSIONS, versions: versions.map((row) => (row.firstShipped === undefined ? { ...row, firstShipped: null } : row)) }));
     render(<StatsRoute />);
     const nulled = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
-    expect(rowsOf(nulled).ids).toEqual(["core-003", "core-001", "core-002"]);
+    expect(rowsOf(nulled).ids).toEqual(["core-001", "core-003", "core-002"]);
   });
 
   it("R5033000 Versions sorts each row by its own first version", async () => {
