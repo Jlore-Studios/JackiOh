@@ -20859,6 +20859,7 @@
           }
         ],
         "head": "e26297103b3f91fdefca00500a28a053f9fb5b51",
+        "interruptions": 0,
         "kind": "revise",
         "model": "muse-spark-1.3-contributor",
         "provider": "muse",
