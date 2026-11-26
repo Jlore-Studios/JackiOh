@@ -6979,25 +6979,31 @@ mod replays {
         // DIVERGENCES, deleted accounts); either way the player keeps the replay.
         assert!(q!(harness, t => t.profiles_remove(&gone.id)));
 
-        let listed = q!(harness, t => t.replays_list(&a.id, 10, 0));
-        let ids: Vec<&str> = listed.iter().map(|replay| replay.row.id.as_str()).collect();
+        let listed = q!(harness, t => t.replays_list_with_modes(&a.id, 10, 0));
+        let ids: Vec<&str> = listed.iter().map(|replay| replay.id.as_str()).collect();
         assert_eq!(
             ids,
             vec![newer.as_str(), deleted.as_str(), as_p2.as_str(), older.as_str()]
         );
         let actions: Vec<i64> = listed.iter().map(|replay| replay.actions).collect();
         assert_eq!(actions, vec![3, 1, 1, 2]);
-        for replay in listed.iter().filter(|replay| replay.row.id != deleted) {
+        for replay in listed.iter().filter(|replay| replay.id != deleted) {
+            let row = must(q!(harness, t => t.matches_get(&replay.id)), "the match");
             assert_eq!(
-                Some(&replay.row),
-                q!(harness, t => t.matches_get(&replay.row.id)).as_ref()
+                (
+                    &replay.players,
+                    &replay.catalog_version,
+                    &replay.ranked,
+                    &replay.portraits
+                ),
+                (&row.players, &row.catalog_version, &row.ranked, &row.portraits)
             );
             assert_eq!(
                 Some(&replay.result),
-                q!(harness, t => t.results_get_by_match(&replay.row.id)).as_ref()
+                q!(harness, t => t.results_get_by_match(&replay.id)).as_ref()
             );
         }
-        assert_eq!(listed[1].row.players.0, a.id);
+        assert_eq!(listed[1].players.0, a.id);
         assert_eq!(listed[1].result.players.0, a.id);
 
         for (offset, expected) in [
@@ -7005,18 +7011,17 @@ mod replays {
             (2, vec![as_p2.clone(), older.clone()]),
             (4, Vec::new()),
         ] {
-            let page = q!(harness, t => t.replays_list(&a.id, 2, offset));
-            let ids: Vec<String> = page.iter().map(|replay| replay.row.id.clone()).collect();
+            let page = q!(harness, t => t.replays_list_with_modes(&a.id, 2, offset));
+            let ids: Vec<String> = page.iter().map(|replay| replay.id.clone()).collect();
             assert_eq!(ids, expected, "offset {offset}");
         }
-        let for_c = q!(harness, t => t.replays_list(&c.id, 10, 0));
-        assert_eq!(
-            ids_of(&for_c.iter().map(|replay| replay.row.clone()).collect::<Vec<_>>()),
-            vec![others]
-        );
+        let for_c = q!(harness, t => t.replays_list_with_modes(&c.id, 10, 0));
+        let ids: Vec<String> = for_c.iter().map(|replay| replay.id.clone()).collect();
+        assert_eq!(ids, vec![others]);
 
         let read = must(q!(harness, t => t.replays_get(&newer)), "the replay");
-        assert_eq!(read, listed[0]);
+        let mode = q!(harness, t => t.matches_mode_of(&newer));
+        assert_eq!(ReplayListRow::of(read, mode), listed[0]);
         let purged = must(q!(harness, t => t.replays_get(&no_log)), "the purged replay");
         assert_eq!(purged.actions, 0);
         for missing in [no_result, live, id()] {
@@ -7147,6 +7152,24 @@ mod replays {
         let live = a_match(harness, (&a.id, &b.id), 1, None, false).await;
         let others = a_match(harness, (&b.id, &c.id), 1, Some(now - 1_000), true).await;
 
+        // The list's order, each row as `replays_get` and `matches_mode_of` read it by id.
+        let mut ties = [plain.as_str(), tied.as_str()];
+        ties.sort_by(|x, y| y.cmp(x));
+        let order = [
+            deleted.as_str(),
+            series_game.as_str(),
+            queue_match.as_str(),
+            room_match.as_str(),
+            rematch_id.as_str(),
+            ties[0],
+            ties[1],
+        ];
+        let mut whole: Vec<ReplayListRow> = Vec::with_capacity(order.len());
+        for id in order {
+            let replay = must(q!(harness, t => t.replays_get(id)), "the replay");
+            let mode = q!(harness, t => t.matches_mode_of(id));
+            whole.push(ReplayListRow::of(replay, mode));
+        }
         for (limit, offset) in [
             (10, 0),
             (3, 0),
@@ -7161,15 +7184,11 @@ mod replays {
             (0, 0),
             (3, i64::MAX),
         ] {
-            let listed = q!(harness, t => t.replays_list(&a.id, limit, offset));
-            let mut modes = Vec::with_capacity(listed.len());
-            for replay in &listed {
-                modes.push(q!(harness, t => t.matches_mode_of(&replay.row.id)));
-            }
-            let expected: Vec<ReplayListRow> = listed
-                .into_iter()
-                .zip(modes)
-                .map(|(replay, mode)| ReplayListRow::of(replay, mode))
+            let expected: Vec<ReplayListRow> = whole
+                .iter()
+                .skip(usize::try_from(offset).unwrap_or(usize::MAX))
+                .take(usize::try_from(limit).unwrap_or(0))
+                .cloned()
                 .collect();
             assert_eq!(
                 q!(harness, t => t.replays_list_with_modes(&a.id, limit, offset)),
@@ -7180,20 +7199,7 @@ mod replays {
 
         let batched = q!(harness, t => t.replays_list_with_modes(&a.id, 10, 0));
         let ids: Vec<&str> = batched.iter().map(|entry| entry.id.as_str()).collect();
-        let mut ties = [plain.as_str(), tied.as_str()];
-        ties.sort_by(|x, y| y.cmp(x));
-        assert_eq!(
-            ids,
-            [
-                deleted.as_str(),
-                series_game.as_str(),
-                queue_match.as_str(),
-                room_match.as_str(),
-                rematch_id.as_str(),
-                ties[0],
-                ties[1],
-            ]
-        );
+        assert_eq!(ids, order);
         for missing in [&no_result, &no_log, &live, &others] {
             assert!(!ids.contains(&missing.as_str()), "{missing}");
         }

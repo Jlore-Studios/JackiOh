@@ -691,7 +691,7 @@ pub struct ReplayRow {
     pub actions: i64,
 }
 
-/// R768: one `replays_list` row as the batched `replays_list_with_modes` reads it in one query, for the
+/// R768: one row of the replays list as `replays_list_with_modes` reads it in one query, for the
 /// replays list (`GET /api/replays`) and the recently played list (`GET /api/friends/recent`): the
 /// match's seats, catalog version, ranked flag and portraits, its result, its log's length and what
 /// `matches_mode_of` answers for it. The decks, boards, loadouts and win-rate snapshot a replay's fold
@@ -1932,26 +1932,16 @@ impl Tx<'_> {
 
     // replays (R768)
 
-    /// The finished matches `profile_id` held a seat in that have a result and a log the retention
-    /// purge has not taken, newest ended first (the id breaking a tie), `limit` of them from
-    /// `offset`.
-    pub async fn replays_list(
-        &mut self,
-        profile_id: &str,
-        limit: i64,
-        offset: i64,
-    ) -> StoreResult<Vec<ReplayRow>> {
-        dispatch!(self, replays_list(profile_id, limit, offset))
-    }
-
     /// One finished match with a result, whatever is left of its log; `None` for any other id.
     pub async fn replays_get(&mut self, match_id: &str) -> StoreResult<Option<ReplayRow>> {
         dispatch!(self, replays_get(match_id))
     }
 
-    /// R768: the same rows, order, limit and offset semantics as `replays_list`, each as the list reads
-    /// it (`ReplayListRow`, no deck, board, loadout or win-rate snapshot) with what `matches_mode_of`
-    /// answers for its match, in one query rather than one per row.
+    /// R768: the finished matches `profile_id` held a seat in that have a result and a log the
+    /// retention purge has not taken, newest ended first (the id breaking a tie), `limit` of them from
+    /// `offset`, each as the list reads it (`ReplayListRow`, no deck, board, loadout or win-rate
+    /// snapshot) with what `matches_mode_of` answers for its match, in one query rather than one per
+    /// row.
     pub async fn replays_list_with_modes(
         &mut self,
         profile_id: &str,

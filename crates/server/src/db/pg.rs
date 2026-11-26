@@ -3535,42 +3535,6 @@ async fn replay_row(t: &mut PgTx<'_>, match_id: &str, actions: i64) -> Result<Op
     Ok(Some(ReplayRow { row, result, actions }))
 }
 
-pub async fn replays_list(
-    t: &mut PgTx<'_>,
-    profile_id: &str,
-    limit: i64,
-    offset: i64,
-) -> Result<Vec<ReplayRow>, StoreError> {
-    if !is_uuid(profile_id) {
-        return Ok(Vec::new());
-    }
-    run_as(t, None).await?;
-    let rows = sqlx::query(
-        "select m.id, (select count(*) from public.match_actions a where a.match_id = m.id) as actions
-           from public.matches m
-          where m.status = 'over'
-            and (m.p1_profile_id = $1::uuid or m.p2_profile_id = $1::uuid)
-            and exists (select 1 from public.results r where r.match_id = m.id)
-            and exists (select 1 from public.match_actions a where a.match_id = m.id)
-          order by m.ended_at desc nulls last, m.id desc
-          limit $2::bigint offset $3::bigint",
-    )
-    .bind(profile_id)
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(&mut **t)
-    .await
-    .map_err(db_error)?;
-    let mut replays = Vec::with_capacity(rows.len());
-    for row in &rows {
-        let match_id = uuid_text(row, "id")?;
-        if let Some(replay) = replay_row(t, &match_id, get(row, "actions")?).await? {
-            replays.push(replay);
-        }
-    }
-    Ok(replays)
-}
-
 /// R768: one query, the page of matches, their results and their action counts joined, with the mode
 /// derived in Rust by the same precedence `matches_mode_of` uses. #4712: the page is found first, one
 /// arm per seat, each walking its seat's index of finished matches (`matches_p1_over_ended_idx`,
@@ -8048,7 +8012,7 @@ fn from_ticket_status(status: &TicketStatus) -> Result<&'static str, StoreError>
 use crate::db::store::{ReplayShare, SharedReplayRow};
 
 /// B52: what a share `s`, joined to its match `m`, is read through on: the match is over, the
-/// sharer held a seat in it, the retention purge has not taken its action log (as `replays_list`
+/// sharer held a seat in it, the retention purge has not taken its action log (as `replays_list_with_modes`
 /// does), and the two are still friends (`a < b`) with neither blocking the other.
 macro_rules! readable_share {
     () => {

@@ -1618,34 +1618,6 @@ fn replay_row_in(tables: &FakeTables, row: &MatchRow) -> Option<ReplayRow> {
     })
 }
 
-pub fn replays_list(
-    f: &mut FakeTx<'_>,
-    profile_id: &str,
-    limit: i64,
-    offset: i64,
-) -> Result<Vec<ReplayRow>, StoreError> {
-    call(f, "replays.list")?;
-    let tables: &FakeTables = f.tables();
-    let mut rows: Vec<ReplayRow> = tables
-        .matches
-        .iter()
-        .filter(|row| row.players.0 == profile_id || row.players.1 == profile_id)
-        .filter_map(|row| replay_row_in(tables, row))
-        .filter(|replay| replay.actions > 0)
-        .collect();
-    rows.sort_by(|a, b| {
-        b.row
-            .finished_at
-            .cmp(&a.row.finished_at)
-            .then_with(|| b.row.id.cmp(&a.row.id))
-    });
-    Ok(rows
-        .into_iter()
-        .skip(usize::try_from(offset).unwrap_or(0))
-        .take(usize::try_from(limit).unwrap_or(0))
-        .collect())
-}
-
 pub fn replays_list_with_modes(
     f: &mut FakeTx<'_>,
     profile_id: &str,
