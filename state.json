@@ -25027,6 +25027,9 @@
         "tiers": {}
       }
     },
+    "5099": {
+      "suggestion": true
+    },
     "5101": {
       "action": "review",
       "asks": [],
@@ -48437,6 +48440,13 @@
         "title": "Patch: every field arrival restarts what any arrival starts, held by one catalog-wide entry test",
         "verdict": "came to nothing",
         "why": "closed unbuilt by a person (not planned)"
+      },
+      {
+        "at": "2026-11-26T18:54:16Z",
+        "number": 5099,
+        "title": "Patch: a pull request that changes a card also runs the e2e specs whose seeded games deal or name that card, within a time cap",
+        "verdict": "approved",
+        "why": "approved by @squishy-squooby"
       }
     ],
     "declined": [
