@@ -243,6 +243,7 @@ pub(crate) fn play_clean_match(config: &MatchConfig) -> Result<(FoldArgs, FoldRe
         decks: config.decks.clone(),
         handicaps: config.handicaps.clone(),
         deck_marks: config.setup.deck_marks.clone(),
+        deck_sets: config.setup.deck_sets.clone(),
         ..CreateGameOptions::default()
     };
     validate_setup(&options, registered_catalog(), SetupKind::New)

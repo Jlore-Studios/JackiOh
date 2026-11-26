@@ -260,7 +260,7 @@ pub const CENSUS: &[SetCensus] = &[
         ],
     },
     // R4577000: the Infinite Assault (tracker #4576, docs/infinite-assault.md IA11), a single-player set
-    // held while it is built card by card. Its counts are IA11's table: C1 (issue #4577) wrote the Assault
+    // held while it was built card by card and open since its release (#4597). Its counts are IA11's table: C1 (issue #4577) wrote the Assault
     // Core, #1 to #24, and the tokens #4.1 Drone and #10.1 Drone Escort, and CF (issue #4602) wrote every
     // other entry, #25 to #240, and their 13 tokens (the doctrines' and the Commanders'); each card part
     // then corrects its own rows. It ships in no total and no tag count.

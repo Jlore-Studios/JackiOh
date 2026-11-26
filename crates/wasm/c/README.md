@@ -155,7 +155,7 @@ argument and answer is `crates/wasm/README.md`'s, the same as the browser module
 | `run_seed(source)`, `run_daily_seed(date, n)` | strings | a seed, the daily run's seed |
 | `assault_day_seed(date)` | string | `"2026-11-23"` -> `"assault-2026-11-23"`, or refused |
 | `assault_catalog_content(catalog)`, `assault_placeholder_content(catalog)` | strings | the set's cards by tag + assault.json, shipped stand-ins |
-| `assault_content()` | none | the Infinite Assault's content for the browser: placeholder content until the release |
+| `assault_content()` | none | the Infinite Assault's content for the browser: the catalog's content since the release (R4597000) |
 | `assault_content_at(version)` | string | R3496000: the Assault's content for a catalog version: the build's own, a carried version's, or `null` |
 | `assault_day(date, content)` | strings | the day's deal: 20 levels and their escalations |
 | `assault_create(setup, record, day)` | strings | an attempt started |

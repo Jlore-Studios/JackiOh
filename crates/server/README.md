@@ -1542,8 +1542,8 @@ when the list sorts or a ledger filters the day.
 Migration 0099 widens the `cards` tag check once more, as 0088 did, with #4577's nine Infinite Assault tags
 (R4577001) — the eight doctrine tags Hallucination, Overclock, Batch, Recursion, Jailbreak, Firewall, Scraper
 and Singularity, and Commander — so the check names the engine's whole `Tag` union again. The set is a
-single-player set held while it is built (R4577000), so `seed-catalog` writes none of its cards yet; the day
-it does, nothing fails. It rewrites no row. `tests/sql/01_schema_invariants.sql` CHECK 18 probes every tag.
+single-player set (R4577000; held while it was built, open since its release, #4597), which never ships, so
+`seed-catalog` writes none of its cards; the day it does, nothing fails. It rewrites no row. `tests/sql/01_schema_invariants.sql` CHECK 18 probes every tag.
 
 Migration 0100 gives a daily seat 0012's rule for a 1v1 seat (R4621000), as 0051 gave a co-op seat.
 `daily_games.p1_profile_id` and `p2_profile_id` become nullable and `on delete set null`, replacing 0089's

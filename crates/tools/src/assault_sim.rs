@@ -163,7 +163,7 @@ fn day_deck(date: &str) -> Result<Vec<String>, String> {
 /// The match a fight's setup plays: the human (P1) is the AI at `skill`, the enemy (P2) the AI at full
 /// skill, both at `budget`, and the enemy's marks dealt (R2702000).
 fn fight_config(setup: &AssaultFightSetup, skill: f64, budget: SearchBudget) -> MatchConfig {
-    ai_fight_config(
+    let mut config = ai_fight_config(
         setup.seed.clone(),
         (setup.human_deck.clone(), setup.enemy_deck.clone()),
         PerPlayerOpt {
@@ -176,7 +176,13 @@ fn fight_config(setup: &AssaultFightSetup, skill: f64, budget: SearchBudget) -> 
         },
         skill,
         budget,
-    )
+    );
+    // R4597001: the enemy's seat names the Assault's set, so its deck may hold the set's cards.
+    config.setup.deck_sets = (!setup.enemy_sets.is_empty()).then(|| PerPlayerOpt {
+        p1: None,
+        p2: Some(setup.enemy_sets.clone()),
+    });
+    config
 }
 
 /// One fight played: its level's facts and how it went.
@@ -503,11 +509,12 @@ mod tests {
     /// The days, from `DEFAULT_FROM`, whose fights the bands play.
     const BAND_DAYS: u32 = 6;
     /// R4583000: the fewest level-1 fights, in percent, the day's Assault deck may win before level 1 is
-    /// no longer clearly winnable (an AI mirror at one skill is about even; measured at `TEST_BUDGET`:
-    /// 3 of 6, 4 of 12 and 7 of 16 from `DEFAULT_FROM`, 18 of 32 from 2027-01-01; at full budget 5 of 8).
+    /// no longer clearly winnable (measured at `TEST_BUDGET` from `DEFAULT_FROM` on the set's real cards
+    /// since the release, R4597002: 6 of 6; on the placeholder before it, 3 of 6).
     const LEVEL_ONE_WIN_PERCENT_MIN: usize = 25;
     /// R4583000: the most level-20 fights, in percent, it may win before level 20 is no longer clearly
-    /// hard (measured: none of 12, none of 8 at full budget).
+    /// hard (measured at `TEST_BUDGET` from `DEFAULT_FROM` since the release, R4597002: 1 of 6, from 2 of
+    /// 6 before its re-tune; on the placeholder before it, none of 12).
     const LEVEL_TWENTY_WIN_PERCENT_MAX: usize = 20;
     /// The days the daily sweep walks, at full budget.
     const DAILY_DAYS: u32 = 4;
