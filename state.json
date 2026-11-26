@@ -20831,32 +20831,13 @@
       "taken_asks": [],
       "verdict_rounds": 1,
       "votes": {
-        "approvals": [
-          "muse"
-        ],
+        "approvals": [],
         "builder": "muse",
         "built_by": "muse",
-        "carried": {
-          "by": "`muse` (medium)",
-          "conflicts": [
-            "crates/cards/src/history.rs"
-          ],
-          "from": "20f9e7d00d6bdaae902d609902e54fad5fa0e75a",
-          "main": "0d0dd6936af9f60cbe0142a7d0e22c69a0c01d60"
-        },
         "rejections": [],
-        "reviews": [
-          {
-            "family": "muse",
-            "provider": "muse",
-            "run": "45718341984",
-            "tier": "medium"
-          }
-        ],
-        "sha": "a04158bc03f5942c86c7f565a9d6aaf09d84477c",
-        "tiers": {
-          "muse": "medium"
-        }
+        "reviews": [],
+        "sha": "e26297103b3f91fdefca00500a28a053f9fb5b51",
+        "tiers": {}
       }
     },
     "4955": {
