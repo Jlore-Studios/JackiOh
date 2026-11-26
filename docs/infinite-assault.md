@@ -2,7 +2,7 @@
 
 2026-11-23 · written in a Claude session from the owner's request of the same day
 
-> **Status: the plan of record for the issues** (tracker #4576). SPEC is still the only source of rules (CLAUDE.md). This
+> **Status: live.** The Infinite Assault and its set opened to players in the release (issue #4597, tracker #4576); this was the plan of record for the issues. SPEC is still the only source of rules (CLAUDE.md). This
 > file is the mode's design and the set's card list until the mode's spec section (§16) and the set's
 > catalog section (§8.13) hold them; when the two disagree, the spec wins and this file is the bug. The
 > part that builds a rule or a card may change a default here, and records its choice as a ruling note in

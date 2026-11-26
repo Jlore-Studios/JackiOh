@@ -334,23 +334,23 @@ pub fn assault_placeholder_content(catalog_json: &str) -> Result<String, String>
     to_json(&jackioh_run::assault_placeholder_content(&catalog))
 }
 
-/// The Assault's content for the browser: `assault_placeholder_content` until the release.
+/// R4597000: the Assault's content for the browser: `assault_catalog_content`, since the release.
 pub fn assault_content() -> Result<String, String> {
-    to_json(&jackioh_run::assault_placeholder_content(
+    to_json(&jackioh_run::assault_catalog_content(
         engine::registered_catalog(),
     ))
 }
 
-/// R3496000: `AssaultContent` for a catalog version: the build's own answers `assault_content()`; a
-/// carried version answers `assault_placeholder_content` over its carried shipped catalog; any other
-/// version answers `null`.
+/// R3496000, R4597000: `AssaultContent` for a catalog version: the build's own answers
+/// `assault_content()`; a carried version answers `assault_catalog_content` over its carried shipped
+/// catalog, as no player held an attempt before the release; any other version answers `null`.
 pub fn assault_content_at(version_json: &str) -> Result<String, String> {
     let version: String = parse("assaultContentAt: the version", version_json)?;
     if version == jackioh_cards::catalog_version() {
         return assault_content();
     }
     match jackioh_cards::shipped_catalog(&version) {
-        Some(shipped) => to_json(&jackioh_run::assault_placeholder_content(shipped.defs())),
+        Some(shipped) => to_json(&jackioh_run::assault_catalog_content(shipped.defs())),
         None => Ok("null".to_owned()),
     }
 }
@@ -1709,6 +1709,27 @@ mod assault_body_tests {
         let unknown = "\"v0.0.0-unknown\"";
         let at_unknown = assault_content_at(unknown).unwrap();
         assert_eq!(at_unknown, "null");
+    }
+
+    // R4597000: since the release the browser deals from the set's real cards: `assault_content()` is
+    // `assault_catalog_content` over the build's catalog, its twelve Commanders among them, and a carried
+    // version answers `assault_catalog_content` over its own shipped catalog.
+    #[test]
+    fn r4597000_the_browser_deals_the_assault_from_the_catalog() {
+        jackioh_cards::register_all();
+        let catalog = engine::registered_catalog();
+        let expected = jackioh_run::assault_catalog_content(catalog);
+        assert_eq!(assault_content().unwrap(), to_json(&expected).unwrap());
+        assert_eq!(expected.commanders.len(), 12);
+        assert!(expected.cards.iter().all(|card| card.id.starts_with("infiniteassault-")));
+        if let Some(version) = jackioh_cards::carried_versions().last() {
+            let shipped = jackioh_cards::shipped_catalog(version).expect("a carried version's catalog");
+            let at = assault_content_at(&serde_json::to_string(version).unwrap()).unwrap();
+            assert_eq!(
+                at,
+                to_json(&jackioh_run::assault_catalog_content(shipped.defs())).unwrap()
+            );
+        }
     }
 }
 
