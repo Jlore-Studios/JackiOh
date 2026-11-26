@@ -25162,6 +25162,8 @@
       }
     },
     "5094": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-26T15:00:28Z",
@@ -25175,8 +25177,11 @@
         "trail": "er/work/_temp/work/item-5036/.cache/browse/ui5036-before-historical-1280.png\"}\n- Bash: {\"command\": \"grep -n 'Experimental views' apps/web/src/routes/stats.tsx | head -3; git diff d7f8bbf -- apps/web/src/routes/stats.tsx | head -40 | grep '^[-+]' \", \"description\": \"Check what shows the \u2026\n- Bash: {\"command\": \"sed -n 2295,2316p apps/web/src/routes/stats.tsx\", \"description\": \"Read the Segmented's render condition\"}\n- Bash: {\"command\": \"timeout 60 sh scripts/browse.sh -s=ui5036 eval \\\"() => JSON.stringify({ url: location.href, seg: !!document.querySelector('.stats-experimental-views'), text: document.body.innerText.incl\u2026\n- Bash: {\"command\": \"timeout 60 sh scripts/browse.sh -s=ui5036 eval \\\"() => { const e = document.querySelector('.stats-experimental-views'); const r = e.getBoundingClientRect(); return JSON.stringify({ r: [r\u2026\n- Bash: {\"command\": \"timeout 60 sh scripts/browse.sh -s=ui5036 eval \\\"() => { for (const e of document.querySelectorAll('*')) if (e.scrollTop) e.scrollTop = 0; return 'ok'; }\\\" --raw 2>&1 | tail -1; timeout \u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5036/.cache/browse/ui5036-before-historical-1280b.png\"}\n- Bash: {\"command\": \"timeout 60 sh scripts/browse.sh -s=ui5036 resize 390 844 2>&1 | tail -1; timeout 120 sh scripts/browse.sh -s=ui5036 goto \\\"http://localhost:5173/stats?tab=experimental&experimental=histo\u2026\n- Bash: {\"command\": \"timeout 60 sh scripts/browse.sh -s=ui5036 screenshot \\\"getByTestId('stats-running-grid').locator('li').first()\\\" --filename=ui5036-after-grid-390.png 2>&1 | tail -1\", \"description\": \"Scr\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5036/.cache/browse/ui5036-after-grid-390.png\"}\n- Bash: {\"command\": \"sed -n 320,370p e2e/cypress/e2e/46-menus-fit-one-screen.cy.ts\", \"description\": \"Read spec 46's stats section\"}\n- Bash: {\"command\": \"grep -rn '46-menus' .github/workflows/*.yml e2e/*.json e2e/*.ts e2e/README.md 2>/dev/null | head -5\", \"description\": \"Check whether CI's smoke runs spec 46\"}\n- Bash: {\"command\": \"grep -n 'smoke' .github/workflows/ci.yml | head -10; grep -rn 'smoke' e2e/package.json e2e/cypress.config.ts 2>/dev/null | head -5\", \"description\": \"Find how the e2e smoke set is chosen\"}\n- Bash: {\"command\": \"timeout 120 sh scripts/browse.sh -s=ui5036 goto \\\"http://localhost:5173/stats?tab=experimental&experimental=versions\\\" 2>&1 | tail -1; timeout 60 sh scripts/browse.sh -s=ui5036 eval \\\"as\u2026\n- Bash: {\"command\": \"grep -ihE 'error|warn' .cache/browse/out/console-2026-11-26T15-56-15-578Z.log .cache/browse/out/console-2026-11-26T15-53-50-163Z.log | cut -c1-200 | sort | uniq -c | head\", \"description\"\u2026\n- said: Walkthrough done. Now clean up: close the browser, stop both dev servers, remove the before-worktree.\n- Bash: {\"command\": \"timeout 60 sh scripts/browse.sh -s=ui5036 close 2>&1 | tail -1\", \"description\": \"Close the browser session\", \"timeout\": 90000}\n- TaskStop: {\"task_id\": \"baxbxjuro\"}\n- TaskStop: {\"task_id\": \"bw0xwa15p\"}\n- Bash: {\"command\": \"pgrep -fa 'vite --port 517[34]' | grep -v pgrep | head; git worktree remove --force ../jackioh-wt/ui5036-before && git branch -D wt/ui5036-before; git worktree list | head; git status --\u2026\n- Bash: {\"command\": \"timeout 600 pnpm exec vitest list --project web --changed d7f8bbf22c --filesOnly --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' 2>/d\u2026\n- Bash: {\"command\": \"timeout 3000 pnpm exec vitest run --project web --changed d7f8bbf22c --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' > /tmp/ui5036-vi\u2026\n- said: Meanwhile, I'll update the notes' State section.\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5036/.bot-notes.md\", \"old_string\": \"- Left: the UI walkthrough. After-server `pnpm --dir apps/web dev --port 5173` (bg); a befor\u2026\n- Bash: {\"command\": \"git diff apps/web/src/stats/RunningPanel.tsx | grep '^[-+]' | head -80\", \"description\": \"Review the RunningPanel diff\"}\n- Bash: {\"command\": \"until grep -q '^exit' /tmp/ui5036-vitest.log; do sleep 5; done; grep -E 'Test Files|Tests |FAIL|^exit' /tmp/ui5036-vitest.log | head -20\", \"description\": \"Wait for the web test run to fi\u2026\n- Bash: {\"command\": \"grep -cE '\\u2713|\\u2717| \\u276f ' /tmp/ui5036-vitest.log; grep -E 'FAIL|\\u00d7' /tmp/ui5036-vitest.log | head -10\", \"description\": \"Check interim web test progress\"}\n- Bash: {\"command\": \"wc -c /tmp/ui5036-vitest.log; tail -c 400 /tmp/ui5036-vitest.log\", \"description\": \"Peek at the web test log\"}\n- TaskOutput: {\"task_id\": \"bca7zopli\", \"block\": \"true\", \"timeout\": \"600000\"}\n- tool error: <tool_use_error>Error: No such tool available: TaskOutput</tool_use_error>\n- Bash: {\"command\": \"until grep -q '^exit' /tmp/ui5036-vitest.log; do sleep 5; done; grep -E 'Test Files|Tests |FAIL|^exit' /tmp/ui5036-vitest.log | head -20\", \"description\": \"Block until the web tests finis\u2026\n- Bash: {\"command\": \"timeout 590 sh -c 'until grep -q \\\"^exit\\\" /tmp/ui5036-vitest.log; do sleep 5; done'; grep -E 'Test Files|Tests |FAIL|^exit' /tmp/ui5036-vitest.log | head -20\", \"description\": \"Wait up t\u2026\n- Bash: {\"command\": \"grep -n 'almanac-preview-stinkyscapeplus' -A 30 /tmp/ui5036-vitest.log | grep -vE 'Not implemented' | head -40\", \"description\": \"Read the failing test's error\"}\n- Bash: {\"command\": \"cd apps/web && timeout 590 pnpm exec vitest run src/routes/almanac-preview-stinkyscapeplus.test.tsx 2>&1 | grep -E 'Test Files|Tests |\\u00d7|\\u2713' | head\", \"description\": \"Re-run the t\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5036/.bot-notes.md\", \"old_string\": \"- Last: the harness's web set (`vitest --changed`, ~449 files) running once as a final check\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: deeper card stats, X6, Decisiveness on the Experimental tab's Running and Versions\"} --> ## What changed Every row of `GET /api/stats/versions` now sends its play version's **Decisiveness** (R4552001), in both scopes. The Experimental tab's Major patch \u2026"
       },
       "issue": 5036,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-26T17:25:26Z",
         "from_run": "45844702464",
         "gates": [
           {
@@ -25268,8 +25273,15 @@
         "source": "build",
         "until": "2026-11-26T17:54:11Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-26T17:24:11Z",
+      "run_id": "pending:ce530fe5-1795713891",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "started_at": "2026-11-26T17:25:26Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -25283,9 +25295,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T17:07:56Z",
+    "at": "2026-11-26T17:25:26Z",
     "url": "",
-    "what": "revise #5083 on agy"
+    "what": "review #5094 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-26T17:14:42Z",
