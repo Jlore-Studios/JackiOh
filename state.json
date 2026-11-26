@@ -21525,6 +21525,7 @@
       "run_id": "45888452153",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "spot_check_n": 615,
       "started_at": "2026-11-26T20:05:23Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -44472,9 +44473,33 @@
         "title": "Patch: deeper card stats, S4, random-effect splits: each rolled outcome of Call to Chaos, coins and dice",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "gemini",
+          "model": "gemini-3.8-flash-high",
+          "provider": "agy",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "gemini",
+          "provider": "agy"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "bfd67d26753e761e1fd28c60996aa9291b55d494",
+        "issue": 5099,
+        "merged_at": "2026-11-26T20:50:42Z",
+        "n": 615,
+        "pr": 5115,
+        "queued_at": "2026-11-26T20:50:42Z",
+        "sha": "cd5380f08472b80a439b9a85f31fa87d86a61167",
+        "status": "queued",
+        "title": "Patch: a pull request that changes a card also runs the e2e specs whose seeded games deal or name that card, within a time cap",
+        "tries": 0
       }
     ],
-    "count": 614
+    "count": 615
   },
   "statistics": {
     "at": "2026-11-26T20:39:55Z"
