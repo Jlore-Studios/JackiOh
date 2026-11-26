@@ -247,10 +247,12 @@ pub fn beam_search(
                 if status == LineStatus::Open {
                     let score = own_prompt_score(&next, seat, counter, prices)
                         .unwrap_or_else(|| evaluate_priced(&next, seat, NextSwing::Enemy, &AI_EVAL, prices));
+                    // R4595002: End turn plays no card, so the line keeps what it held.
                     children.push(OpenLine {
                         state: next,
                         actions,
                         score,
+                        discounted: line.discounted,
                     });
                 } else {
                     let score = static_score(&next, seat, root_turn, prices);
