@@ -45833,7 +45833,8 @@
       "2026-11-26T22:37:52Z,agy,usage-command,after,45903356595,42,2026-11-26T23:58:46Z,59,2026-12-03T08:58:46Z,allowed,100,100,"
     ],
     "runs": [
-      "2026-11-26T22:36:31Z,45905272636,claude-8,opus,suggest,,,interrupted,5-hour cap,1.8,0,0,0,,81,85,,,,,none,,1"
+      "2026-11-26T22:36:31Z,45905272636,claude-8,opus,suggest,,,interrupted,5-hour cap,1.8,0,0,0,,81,85,,,,,none,,1",
+      "2026-11-26T22:37:58Z,45903356595,agy,gemini-3.8-flash-high,review,5121,medium,approved,,24.2,67817,6660,0,,28,42,56,59,1.9,,none,,1"
     ]
   },
   "version": 1
