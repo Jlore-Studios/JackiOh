@@ -37808,5 +37808,64 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.6.15f",
+    "date": "2026-11-26",
+    "title": "Patch: hand, deck and graveyard triggers read alike",
+    "source": "issue #5038",
+    "notes": "Animosity (S+ #89), Corpse Eater (Core #89) and Legacy: Corpse Eater (TG #56) print their trigger from where the card waits as \"While this is in your <zone>: …\", as every other such card does (R5038000, §6.2); their Chinese faces follow. Corpse Eater's two are wording only. Animosity's `card` number is marked `read: \"handOrDeck\"`, as catalog check infers from its new line, so a Buff or Nerf reaches it only in the hand or deck (R3888000), no longer while it resolves or lies in a graveyard it could be played from.",
+    "player": {
+      "title": "Hand, deck and graveyard triggers read alike",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "A Buff or Nerf changes Animosity's exile count only while it is in your hand or deck, the only places that count is read."
+      ],
+      "text": [
+        "Animosity now reads \"While this is in your deck: When your exile has 5 cards, cast this.\"",
+        "Corpse Eater and Legacy: Corpse Eater now read \"While this is in your hand: When a Unit dies, this gains its attack and health.\""
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "444207ec448498f01347325348ca7e45c54fa585"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscapeplus-089"
+    ],
+    "fragment": "hand-deck-and-graveyard-triggers-read-alike",
+    "changes": [
+      {
+        "id": "core-089",
+        "name": "Corpse Eater",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "traininggrounds-056",
+        "name": "Legacy: Corpse Eater",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-089",
+        "name": "Animosity",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text",
+          "params"
+        ]
+      }
+    ]
   }
 ]
