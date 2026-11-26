@@ -22863,15 +22863,8 @@
       "taken_asks": []
     },
     "5027": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45794077023",
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-26T10:03:00Z",
-        "until": "2026-11-26T10:33:00Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -22883,10 +22876,9 @@
         "reason": "planned on opus",
         "trail": "es/tools/src/classify.rs\", \"description\": \"Read classify's AI check gating\"}\n- Bash: {\"command\": \"git rev-parse origin/main 2>&1 | head -2; git remote -v | head -2\", \"description\": \"Check that origin/main resolves\"}\n- tool error: Permission to use Bash with command head -2; git remote -v has been denied.\n- Bash: {\"command\": \"git rev-parse origin/main\", \"description\": \"Check that origin/main resolves\"}\n- Bash: {\"command\": \"rg -n -i '\\\\bai\\\\b' crates/tools/src/claims.rs | head -20\", \"description\": \"Check claims rules on AI changes\"}\n- Bash: {\"command\": \"git show --stat --format='%s' b961329197 | grep -v '^ crates/cards' | head -20; git show --stat --format='%s' 1e58d39c8a | head -20\", \"description\": \"See which files recent AI-only chang\u2026\n- Bash: {\"command\": \"rg -n 'R4515000|R4608000|lone win|open.lethal|#1634' docs/ | cut -c1-250\", \"description\": \"Search docs for references to the three switches\"}\n- Bash: {\"command\": \"sed -n '680,740p' docs/polish/3-ai.md\", \"description\": \"Read the AI polish doc's reply and finalist notes\"}\n- Bash: {\"command\": \"rg -n 'reply|decide::' crates/ai/src/lib.rs | head; rg -n 'simulate_reply\\\\b|simulate_reply\\\\(' crates --glob '*.rs' | grep -v 'crates/ai/src/reply.rs' | cut -c1-160 | head\", \"descriptio\u2026\n- Bash: {\"command\": \"grep -o '^\\\\*\\\\*\\\\[\\\\[R[0-9]*\\\\]\\\\][^:]*' spec/pending/4702.md spec/pending/4604.md | head -20; git log --format='%h %s' -3 -- spec/rulings/R4447000.md\", \"description\": \"List pending par\u2026\n- Bash: {\"command\": \"git show --stat --format='' 0f3e8f961e -- spec/ | tail -20; git show 0f3e8f961e -- spec/pending/ | head -40\", \"description\": \"See how #4905 recorded amended rulings in the spec\"}\n- Bash: {\"command\": \"git show --format='' 0f3e8f961e -- spec/rulings/R4110000.md spec/rulings/R976000.md | head -60\", \"description\": \"Show how #4905 amended existing ruling notes\"}\n- Bash: {\"command\": \"ls crates/tools/src | grep -i spec; rg -n 'pending' crates/tools/src/spec*.rs | grep -i 'block\\\\|own\\\\|1000\\\\|issue' | head -20\", \"description\": \"Check spec tooling's rules for pending p\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5027/crates/tools/src/selfplay.rs\", \"offset\": 24, \"limit\": 50}\n- Bash: {\"command\": \"cat crates/ai/generation.json 2>/dev/null; rg -n 'generation.json' crates/ai/README.md crates/tools/README.md CLAUDE.md docs/issues-and-patches.md | cut -c1-250 | head\", \"description\": \"\u2026\n- Bash: {\"command\": \"rg -n 'generation\\\\.json' crates --glob '*.rs' | cut -c1-200 | head\", \"description\": \"Find code reading the AI generation file\"}\n- Bash: {\"command\": \"rg -n 'create_dir|fn run' crates/tools/src/selfplay.rs | head; rg -n 'fn is_gate_seed_base' -A12 crates/tools/src/arena.rs | head -20\", \"description\": \"Check selfplay's output dir handli\u2026\n- Bash: {\"command\": \"rg -n 'SELFPLAY_GAMES|selfplay.*games' crates/tools/src/classify.rs crates/tools/src/config.rs 2>/dev/null | head -8\", \"description\": \"Find how many self-play games classify plays\"}\n- Bash: {\"command\": \"rg -n 'selfplay' crates/tools/src/classify.rs | head -20\", \"description\": \"Find classify's self-play invocation\"}\n- Bash: {\"command\": \"rg -n 'spread: bool|confirm: bool|open_lethal: bool' crates/ai/src; rg -n 'fn sources\\\\b' -A15 crates/tools/tests/acceptance.rs | head -20\", \"description\": \"Check retirement-test pattern\u2026\n- Bash: {\"command\": \"sed -n '1,30p' crates/ai/tests/ai/reply.rs; for f in ready_gap hash_state all_out_attack run_puzzle trace on_field in_graveyard handed_over Winner; do printf '%s: ' $f; rg -c \\\"\\\\b$f\\\\b\\\u2026\n- Bash: {\"command\": \"rg -n '\\\\ball_out_attack\\\\b' crates/ai/tests/ | cut -c1-150; rg -n 'ready_gap' crates/ai/tests/ai/reply.rs | cut -c1-150\", \"description\": \"Check where all_out_attack and ready_gap are us\u2026\n- Bash: {\"command\": \"rg -n 'to_value\\\\(&?AI_|to_string\\\\(&?AI_|AI_REPLY\\\\)|AI_SEARCH\\\\)' crates apps --glob '*.rs' --glob '*.ts' | head\", \"description\": \"Check for serialized snapshots of the AI config\"}\n- Bash: {\"command\": \"rg -il 'spread_?activations|lone_?win|open_?lethal' luau crates/wasm 2>/dev/null | head; ls luau\", \"description\": \"Check the Luau port and WASM crates for the switches\"}\n- Bash: {\"command\": \"rg -n 'fn r4187000' crates/ai/tests/ai/reply.rs | head -3; sed -n '18,20p' spec/09-architecture/9.9-practice-ai.md | cut -c1-120\", \"description\": \"Confirm R4187000's proving tests surviv\u2026\n- Bash: {\"command\": \"sed -n '1803,1830p' crates/ai/src/reply.rs | head -5; sed -n '1873,1880p' crates/ai/src/reply.rs\", \"description\": \"Recheck the spread unit tests' headers\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5027/.bot-plan.md\", \"content\": \"**A person decides first.** The issue asks for one answer per switch before anything is built. Step 0 has the builder \u2026\n- Bash: {\"command\": \"wc -w .bot-plan.md\", \"description\": \"Count the draft plan's words\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5027/.bot-plan.md\", \"old_string\": \"## Steps\\n\\n0. **Decision.**\", \"new_string\": \"## Steps\\n\\nLine numbers are the base's. After \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5027/.bot-plan.md\", \"old_string\": \"Head each `**[[R4608000]] removes the lone-win rule's switch (issue #5027, <date -u +%F>)**:`\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5027/.bot-plan.md\", \"old_string\": \"then `Known::Played(after)` from `best_try` (counter 20)\", \"new_string\": \"then `Known::Played\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5027/.bot-plan.md\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5027/.bot-plan.md\", \"old_string\": \"- [ ] `rg -n 'confirm_lone_win|spread_activations' crates spec/rulings spec/09-architecture d\u2026\n- said: **A person decides first.** The issue asks for one answer per switch before anything is built. Step 0 has the builder use an answer already in the thread, or build the default once the harness says nobody answered, and otherwise stop with the question it gives. ## Goal Each of the AI's three switch\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-3",
       "owner_since": "2026-11-26T09:39:54Z",
       "owner_why": "it plans it",
@@ -22899,9 +22891,9 @@
       "provider": "claude-3",
       "queued_at": "2026-11-26T06:29:30Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45794077023",
+      "run_id": "pending:16535e17-1795687549",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-26T09:39:54Z",
+      "started_at": "2026-11-26T10:06:20Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -23370,9 +23362,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T10:05:35Z",
+    "at": "2026-11-26T10:06:20Z",
     "url": "",
-    "what": "build #5024 on claude-6"
+    "what": "build #5027 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-26T09:46:56Z",
