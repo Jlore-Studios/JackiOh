@@ -23855,7 +23855,7 @@
       }
     },
     "5068": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
@@ -23892,11 +23892,13 @@
       },
       "interruptions": 0,
       "issue": 5016,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "fixing-ci",
+      "live": "reviewing",
       "merge_owner": "agy",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-26T14:58:44Z",
         "from_run": "45835502324",
         "gates": [
           {
@@ -23961,11 +23963,11 @@
       "queued_at": "2026-11-26T14:56:38Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "45835502324",
+      "run_id": "pending:76c5ee57-1795705089",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
       "source": "",
-      "started_at": "2026-11-26T14:05:22Z",
+      "started_at": "2026-11-26T14:58:44Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -24775,9 +24777,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T14:45:32Z",
+    "at": "2026-11-26T14:58:44Z",
     "url": "",
-    "what": "plan #5085 on claude-3"
+    "what": "review #5068 on agy"
   },
   "last_sweep": {
     "at": "2026-11-26T14:38:37Z",
