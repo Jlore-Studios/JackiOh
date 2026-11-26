@@ -47025,10 +47025,6 @@
   "suggest": {
     "asks": [],
     "auto": {
-      "4922": {
-        "at": "2026-11-25T13:34:11Z",
-        "why": "Confirmed in fork_screen.rs:1016-1029: on resume, `live_of` and both tallies read every saved deal, so a save cut partway through an `--extend` batch can stop early and print a verdict an uninterrupted run never prints, which breaks R4607000's byte-for-byte promise in the tool that decides whether an AI change is kept; the fix is one function and a test."
-      },
       "4925": {
         "at": "2026-11-25T14:01:29Z",
         "why": "It fixes the documented standalone e2e install, which fails every replay check on the missing tsx, by composing the two engine calls #4766 already provides."
