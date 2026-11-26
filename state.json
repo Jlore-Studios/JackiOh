@@ -22428,6 +22428,13 @@
     "5013": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45768629012",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-26T06:44:10Z",
+        "until": "2026-11-26T07:14:10Z"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
