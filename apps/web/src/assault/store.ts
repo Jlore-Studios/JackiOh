@@ -31,7 +31,7 @@ import {
   assaultReduce,
   catalogVersion,
 } from "../wasm/index.ts";
-import { isRecord, isStringArray } from "../wire/json.ts";
+import { isCount, isRecord, isStringArray } from "../wire/json.ts";
 import {
   ASSAULT_ATTEMPT_KEY,
   ASSAULT_ATTEMPT_STEP,
@@ -83,12 +83,8 @@ type Core = {
   record: AssaultRecord;
 };
 
-export function assaultToday(now: Date = new Date()): string {
+function assaultToday(now: Date = new Date()): string {
   return now.toISOString().slice(0, ASSAULT_DATE_FORMAT.length);
-}
-
-function isCount(value: unknown): value is number {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 
 function isPositiveCount(value: unknown): value is number {

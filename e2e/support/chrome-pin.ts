@@ -21,7 +21,7 @@ import { join } from "node:path";
  * Google Chrome majors that break under Cypress: 155's network service dies under its DevTools interception, and 158
  * refuses one of its DevTools calls at every spec's start ("* is not a valid URL").
  */
-export const BROKEN_CHROME_MAJORS: readonly number[] = [155, 158];
+const BROKEN_CHROME_MAJORS: readonly number[] = [155, 158];
 
 /** The Chrome for Testing milestone launched in their place: the last major this suite passed on. */
 export const PINNED_CHROME_MILESTONE = "154";

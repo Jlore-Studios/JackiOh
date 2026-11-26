@@ -175,7 +175,7 @@ pub(crate) fn parse_skill(text: &str) -> Result<f64, String> {
 
 /// The search budget `--budget` names: `tiny` is the tests' (`arena.rs`'s `TEST_BUDGET`, which decides
 /// clean at a fraction of the time), `full` the practice AI's.
-fn budget_of(name: &str) -> SearchBudget {
+pub(crate) fn budget_of(name: &str) -> SearchBudget {
     match name {
         "tiny" => TEST_BUDGET,
         _ => AI_BUDGET,
@@ -826,7 +826,7 @@ fn tally(outcomes: &[RunOutcome], content: &RunContent) -> Tally {
 }
 
 /// `sum / n` to one decimal, or `-` for none.
-fn mean(sum: i64, n: usize) -> String {
+pub(crate) fn mean(sum: i64, n: usize) -> String {
     if n == 0 {
         "-".to_string()
     } else {

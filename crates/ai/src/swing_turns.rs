@@ -20,8 +20,8 @@
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::config::SWING_EVAL_SCALE;
 use jackioh_engine::{
-    ActingCard, CardInstance, CreatedActing, FoldArgs, GameEvent, GameState, GameSummary, PLAYER_IDS,
-    PerPlayer, Phase, PlayerId, StandingAt, SwingTurn, acting_on, find_instance, is_face_down, read_steps,
+    ActingCard, CreatedActing, FoldArgs, GameEvent, GameState, GameSummary, PLAYER_IDS, PerPlayer, Phase,
+    PlayerId, StandingAt, SwingTurn, acting_on, find_instance, is_created, is_face_down, read_steps,
     recorded_start, summarize_game_with,
 };
 
@@ -41,10 +41,6 @@ pub struct SwingReader {
     /// R4785000: the turn whose start the last step left under way (its seat and turn counter): its
     /// row waits for the first step past the start.
     held: Option<(PlayerId, i32)>,
-}
-
-fn is_created(card: &CardInstance) -> bool {
-    card.created == Some(true)
 }
 
 impl SwingReader {

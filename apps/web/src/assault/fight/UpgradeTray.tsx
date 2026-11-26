@@ -41,7 +41,7 @@ export function upgradeName(kind: AssaultUpgradeKind): string {
 }
 
 /** R4582002: what the upgrade does, through `t()`; no amount is stated (CLAUDE.md rule 9). */
-export function upgradeLine(kind: AssaultUpgradeKind): string {
+function upgradeLine(kind: AssaultUpgradeKind): string {
   switch (kind) {
     case "openingCards":
       return t("More cards in its opening hand.");

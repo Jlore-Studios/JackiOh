@@ -38,7 +38,7 @@ import {
   runReduce,
   runScore,
 } from "../wasm/index.ts";
-import { isRecord, isStringArray } from "../wire/json.ts";
+import { isCount, isRecord, isStringArray } from "../wire/json.ts";
 import {
   DUNGEON_ELAPSED_MIN_MS,
   DUNGEON_ELAPSED_START_MS,
@@ -166,10 +166,6 @@ export function playedMs(elapsedMs: number, resumedAt: number | null, now: numbe
 }
 
 // Reading what the device holds: untrusted data must parse to the current shape or become nothing.
-
-function isCount(value: unknown): value is number {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
-}
 
 function parseUnlocks(raw: unknown): RunUnlocks | null {
   if (!isRecord(raw)) return null;

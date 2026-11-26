@@ -95,7 +95,7 @@ const BOOTS = {
 } as const satisfies Readonly<Record<string, Boot>>;
 
 /** The twelve entrance keys, in catalog order. */
-export type CommanderBootKey = keyof typeof BOOTS;
+type CommanderBootKey = keyof typeof BOOTS;
 
 function boot(key: CommanderBootKey & EntranceKey): Entrance {
   const { figure, palette, preset, beat }: Boot = BOOTS[key];

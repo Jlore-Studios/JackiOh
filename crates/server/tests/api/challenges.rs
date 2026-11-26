@@ -583,6 +583,26 @@ mod r1689000_a_challenge_lives_only_as_long_as_its_friendship {
         assert_eq!((status, &body), (404, &unknown));
     }
 
+    // #5005 (Q15): an account's deletion ends every friendship it held, so an open challenge to or
+    // from it goes (0038's cascade) and its unjoined room is freed, as an unfriend frees it; the room
+    // is not left open to anyone with its code.
+    #[tokio::test]
+    async fn r1689000_a_challenge_whose_friend_deletes_the_account_frees_its_room() {
+        let p = pair().await;
+        let outsider = account(&p.app, 3, "Otto").await;
+        let (_, code) = p.challenged().await;
+        let unknown = unknown_code(&p.app, &outsider).await;
+
+        let (status, body) = api(&p.app, "DELETE", "/api/account", &p.friend.token, Value::Null).await;
+        assert_eq!(status, 204, "{body}");
+
+        assert!(!room_open(&p.app, &code).await);
+        let (status, body) = join_room(&p.app, &outsider, &code, random_room()).await;
+        assert_eq!((status, &body), (404, &unknown));
+        let mine = listed(&p.app, &p.challenger).await;
+        assert_eq!(len(&mine["incoming"]) + len(&mine["outgoing"]), 0, "{mine}");
+    }
+
     #[tokio::test]
     async fn r1689000_a_join_by_anyone_but_a_friend_answers_what_an_unknown_code_does() {
         let p = pair().await;

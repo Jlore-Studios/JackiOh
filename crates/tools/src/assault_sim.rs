@@ -39,7 +39,7 @@ use std::collections::BTreeMap;
 
 use anyhow::bail;
 use jackioh_ai::{
-    AI_BUDGET, AI_SKILL_MAX, MatchConfig, MatchHooks, MatchSetup, SearchBudget, SeatController, play_match,
+    AI_SKILL_MAX, MatchConfig, MatchHooks, MatchSetup, SearchBudget, SeatController, play_match,
 };
 use jackioh_engine::config::PERCENT;
 use jackioh_engine::{
@@ -57,7 +57,7 @@ use jackioh_run::{
 };
 use rayon::prelude::*;
 
-use crate::arena::TEST_BUDGET;
+use crate::run_sim::{budget_of, mean};
 
 /// The first day a sweep plays when `--from` names none: the day the plan was written (IA0).
 const DEFAULT_FROM: &str = "2026-11-23";
@@ -109,15 +109,6 @@ fn levels_of(all_levels: bool, levels: &[u8]) -> Option<Vec<u8>> {
         return Some(levels.to_vec());
     }
     all_levels.then(|| (1..=ASSAULT_LEVELS).collect())
-}
-
-/// The search budget `--budget` names: `tiny` is the tests' (`arena.rs`'s `TEST_BUDGET`), `full` the
-/// practice AI's.
-fn budget_of(name: &str) -> SearchBudget {
-    match name {
-        "tiny" => TEST_BUDGET,
-        _ => AI_BUDGET,
-    }
 }
 
 /// The day after `date` (a date `assault_day_seed` accepts), or why it is refused.
@@ -373,15 +364,6 @@ impl Sums {
     }
 }
 
-/// `sum / n` to one decimal place, or a dash for none.
-fn mean(sum: i64, n: usize) -> String {
-    if n == 0 {
-        return "-".to_string();
-    }
-    let n = n as f64;
-    format!("{:.1}", sum as f64 / n)
-}
-
 /// `won of fights (percent)`, or a dash for none.
 fn rate(won: usize, fights: usize) -> String {
     if fights == 0 {
@@ -557,6 +539,7 @@ pub fn run(args: Args) -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::arena::TEST_BUDGET;
 
     /// The days, from `DEFAULT_FROM`, whose fights the bands play.
     const BAND_DAYS: u32 = 6;
