@@ -45465,16 +45465,7 @@
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {
-      "1": {
-        "area": "rules",
-        "count": 3,
-        "last_run": "2026-11-26T01:45:03Z",
-        "provider": "claude-7",
-        "run_id": "45737850641",
-        "taken_asks": []
-      }
-    },
+    "running": {},
     "taken_asks": []
   },
   "usage": null,
