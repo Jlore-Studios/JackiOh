@@ -23891,6 +23891,8 @@
       }
     },
     "5064": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-26T07:28:25Z",
@@ -23904,8 +23906,11 @@
         "trail": "-i \\\"\\\\`names\\\" | head -3\", \"description\": \"Read names command docs\"}\n- Bash: {\"command\": \"sed -n 700,760p crates/tools/src/names.rs\", \"description\": \"Read names check implementation\"}\n- Bash: {\"command\": \"export CARGO_TERM_COLOR=never; cargo jackioh names 2>&1 | tail -3; git status --porcelain | grep -v \\\"^??\\\" | head -40; git diff crates/cards/tests/cross/game_summary.rs | grep \\\"^[-+] *\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/cards/catalog.json'\\ns=open(p).read()\\nimport re\\ni=s.index('\\\"infiniteassault-047\\\": {')\\nj=s.index('\\\"loc\\\": 50', i)\\nk=s.index('\\\"infiniteassault-048\\\"', \u2026\n- Bash: {\"command\": \"grep -n \\\"members\\\" -A25 Cargo.toml | head -30\", \"description\": \"List workspace members\"}\n- Bash: {\"command\": \"ls crates/wasm; grep -h \\\"^name\\\" crates/tools/Cargo.toml crates/wasm/*/Cargo.toml crates/wasm/Cargo.toml 2>/dev/null\", \"description\": \"Find remaining crate names\"}\n- Bash: {\"command\": \"export CARGO_TERM_COLOR=never; cargo test --no-fail-fast -p jackioh-tools -p jackioh-wasm -p jackioh-wasm-core -p jackioh-wasm-c --features jackioh-engine/testkit,jackioh-engine/ts > /tm\u2026\n- Bash: {\"command\": \"cat apps/web/src/wire/generated/RolledKind.ts apps/web/src/wire/generated/RolledOutcome.ts apps/web/src/wire/generated/RollHit.ts; git diff apps/web/src/wire/generated/ | grep \\\"^[-+]\\\" \u2026\n- Bash: {\"command\": \"git rev-parse --short origin/main HEAD; git merge-base origin/main HEAD | cut -c1-10\", \"description\": \"Check origin/main availability\"}\n- Bash: {\"command\": \"git rev-parse --short origin/main; git branch -a | head -5; git remote -v | head -2\", \"description\": \"Check remote refs\"}\n- tool error: Permission to use Bash with command head -5; git remote -v has been denied.\n- Bash: {\"command\": \"git rev-parse --short origin/main\", \"description\": \"Resolve origin/main\"}\n- Bash: {\"command\": \"git branch -a\", \"description\": \"List branches\"}\n- Bash: {\"command\": \"grep -n \\\"working tree\\\\|worktree\\\\|--head\\\\|fn head\\\" crates/tools/src/classify.rs | head -10\", \"description\": \"Check classify's head handling\"}\n- Bash: {\"command\": \"sed -n 1,40p crates/tools/src/classify.rs | grep -n \\\"head\\\\|HEAD\\\\|tree\\\" \", \"description\": \"Read classify header about head\"}\n- Bash: {\"command\": \"grep -n \\\"\\\\\\\"HEAD\\\\\\\"\\\\|unwrap_or(\\\\\\\"HEAD\\\\|head:\\\" crates/tools/src/classify.rs | head -10\", \"description\": \"Find head default in classify\"}\n- Bash: {\"command\": \"timeout 590 bash -c 'while ! grep -qE \\\"^exit\\\" /tmp/ws-test2.log; do sleep 10; done'; grep -E \\\"^exit|test result|\\\\.\\\\.\\\\. FAILED\\\" /tmp/ws-test2.log | head -20\", \"description\": \"Wait \u2026\n- Bash: {\"command\": \"timeout 590 bash -c 'while ! grep -qE \\\"^exit\\\" /tmp/ws-test2.log; do sleep 10; done'; grep -E \\\"^exit|test result|\\\\.\\\\.\\\\. FAILED\\\" /tmp/ws-test2.log | head -20; tail -1 /tmp/ws-test2.\u2026\n- Bash: {\"command\": \"cat >> .bot-notes.md <<'EOF'\\n- build 1: workspace ts test run: all crates green after two fixes (names: Mid Loser's helper comment via `cargo jackioh names`; IA #47's catalog `loc` 50 -\u2026\n- Bash: {\"command\": \"pnpm exec vitest run --project web --changed origin/main --exclude '**/src/audio/**' --exclude '**/src/fx/**' --exclude '**/src/cards/art/convention.test.ts' > /tmp/web.log 2>&1; echo \\\"\u2026\n- Bash: {\"command\": \"timeout 580 bash -c 'while ! grep -qE \\\"Test Files|Error:\\\" /tmp/web.log; do sleep 10; done'; grep -E \\\"Test Files|Tests |FAIL|\\u2717|\\u00d7\\\" /tmp/web.log | head -20; tail -3 /tmp/web.l\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web typecheck 2>&1 | tail -3; echo \\\"tc exit ${PIPESTATUS[0]}\\\"; pnpm exec eslint apps/web/src/routes/stats.tsx apps/web/src/routes/stats.test.tsx apps/web/src/net/api.ts\u2026\n- Bash: {\"command\": \"export CARGO_TERM_COLOR=never; cargo jackioh fuzz --seeds 200 > /tmp/fuzz.log 2>&1; echo \\\"exit $?\\\"; tail -5 /tmp/fuzz.log\", \"description\": \"Run the 200-seed fuzz gate\", \"timeout\": 1800\u2026\n- Bash: {\"command\": \"grep -iE \\\"fail|diverg|panic|error|games|seeds\\\" /tmp/fuzz.log | head -8; grep -E \\\"golden\\\" /tmp/ws-test.log | grep -E \\\"Running|test result\\\" | head; awk '/tests\\\\/golden.rs/{f=1} f&&/\u2026\n- Bash: {\"command\": \"grep -rn \\\"events_text\\\\|fn forced_diverge\\\" crates/tools/src/classify.rs crates/tools/src/*.rs | head -8\", \"description\": \"Check classify's divergence comparison\"}\n- Bash: {\"command\": \"sed -n 1014,1030p crates/tools/src/classify.rs; grep -n \\\"fn diverge\\\\b\\\\|fn first_divergence\\\\|fn trace_of\\\\|\\\\\\\"trace\\\\\\\"\\\" crates/tools/src/classify.rs | head\", \"description\": \"Read f\u2026\n- Bash: {\"command\": \"date -u +%H:%M; git diff --stat | tail -1\", \"description\": \"Check time and diff size\"}\n- Bash: {\"command\": \"grep -rln \\\"fn seed_e2e\\\\|e2e_seed\\\\|E2E.*records\\\\|seed.*game_records\\\" crates/server/src | head -5; grep -n \\\"stats\\\" e2e/README.md | head -8\", \"description\": \"Check how E2E server see\u2026\n- Bash: {\"command\": \"grep -n \\\"records\\\\|fn seed\\\\|stats\\\" crates/server/src/api/e2e.rs | head -20\", \"description\": \"Look at the E2E seeding of records\"}\n- Bash: {\"command\": \"sed -n 200,300p crates/server/src/api/e2e.rs | grep -n \\\"record\\\\|game\\\\|stat\\\\|fn \\\\|//\\\" | head -30\", \"description\": \"Read E2E seed function summary\"}\n- Bash: {\"command\": \"export CARGO_TERM_COLOR=never; cargo fmt --check && echo FMT-OK; cargo clippy --workspace --all-targets -- -D warnings 2>&1 | grep -E \\\"^(error|warning)\\\" -A10 | head -30; echo \\\"clippy \u2026\n- Bash: {\"command\": \"export CARGO_TERM_COLOR=never; cargo jackioh spec check 2>&1 | tail -1; cargo test -p jackioh-cards --test cards game_summary 2>&1 | grep -E \\\"test result|FAILED\\\"; git status --porcelai\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=s[s.index('## State'):s.index('## Log')]\\nnew='''## State\\n\\nBuild pass 1 (opus), 2026-11-26: DONE, all checks green locally.\\\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: deeper card stats, S4, random-effect splits: each rolled outcome of Call to Chaos, coins and dice\"} --> ## What changed Each play's game record now keeps the outcomes it rolled. The totals add them up, `GET /api/stats/cards/:id` returns them, and the Ex\u2026"
       },
       "issue": 4707,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-26T10:56:44Z",
         "from_run": "45775579652",
         "gates": [
           {
@@ -23997,7 +24002,11 @@
         "source": "build",
         "until": "2026-11-26T11:25:24Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-26T10:55:24Z",
+      "run_id": "pending:4b540f99-1795690567",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -24016,6 +24025,9 @@
         "provider": "claude-4",
         "run": "45775579652"
       },
+      "started_at": "2026-11-26T10:56:44Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -24029,9 +24041,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T10:44:10Z",
+    "at": "2026-11-26T10:56:44Z",
     "url": "",
-    "what": "review #5063 on claude-3"
+    "what": "review #5064 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-26T10:41:36Z",
