@@ -24994,6 +24994,7 @@
       },
       "interruptions": 0,
       "kind": "build",
+      "last_findings": [],
       "live": "building",
       "owner": "agy",
       "owner_since": "2026-11-26T19:19:38Z",
@@ -25004,9 +25005,12 @@
       "planned_by_id": "claude-3",
       "planned_model": "sonnet",
       "planned_tier": "medium",
+      "pr": 5115,
       "provider": "agy",
+      "question": "",
       "queued_at": "2026-11-26T18:54:19Z",
       "requested_by": "squishy-squooby",
+      "round_tier": "medium",
       "run_id": "45882815229",
       "runs_on": "night-vm-agy",
       "started_at": "2026-11-26T19:19:38Z",
@@ -25014,7 +25018,8 @@
       "suggestion": true,
       "taken_asks": [
         "c:7200966059"
-      ]
+      ],
+      "verdict_rounds": 0
     },
     "5101": {
       "action": "review",
