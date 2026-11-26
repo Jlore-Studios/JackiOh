@@ -264,9 +264,10 @@ pub struct AiSearch {
 
 pub const AI_SEARCH: AiSearch = AiSearch {
     zone_variants: 2,
-    // R4793000: on. Its fork screen, on improve-dev against the control at d50a0ce2d2, is still being
-    // played as this is written; its scene tests (position_model.rs's and unstoppable_lethal.rs's
-    // r4793000_ tests) hold it.
+    // R4793000: on. Its fork screen, on improve-dev against the control of R4792000 on 798bc44a80: 200
+    // trunk games, 1 fork, 0 live, edge 0.0 (-1.0 to 1.0), inconclusive (R4319000), every game clean; its
+    // scene tests (position_model.rs's and unstoppable_lethal.rs's r4793000_ tests) settle it
+    // (training/improve.md, A screen).
     hand_grants_signed: true,
     position_switches: 2,
     discount_lines: 1,
@@ -1205,8 +1206,9 @@ pub const AI_REPLY: AiReply = AiReply {
     face_per_damage: 1.0,
     chip_per_damage: 0.3,
     cleave_share: 1.0,
-    // R4792000: on. Its fork screen, on improve-dev against the control at 798bc44a80, is still being
-    // played as this is written; its scene tests (candidates.rs's and reply.rs's r4792000_ tests) hold it.
+    // R4792000: on. Its fork screen, on improve-dev against the control at 798bc44a80: 200 trunk games, 12
+    // forks, 6 live, edge -0.039 (-0.157 to 0.079), inconclusive (R4319000), every game clean; its scene
+    // tests (candidates.rs's and reply.rs's r4792000_ tests) settle it (training/improve.md, A screen).
     drawn_attacks: true,
     // #1696: on. Its screen read 199-199 with deal 136 aborted at the action cap in both seatings (the
     // parent aborts it against itself too), edge 0.0 (-0.057 to 0.057), every other game clean
