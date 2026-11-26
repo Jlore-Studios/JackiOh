@@ -22414,16 +22414,16 @@
     "what": "review #5008 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-26T04:33:13Z",
+    "at": "2026-11-26T04:43:38Z",
     "notes": [
-      "delivered review #5003 on claude-3 (run 45755111222): reviewed",
-      "delivered suggest on muse (run 45754207305): suggested",
-      "started suggest on claude-3 (run 45756218317)",
-      "started suggest on muse (run 45756301990)",
+      "delivered suggest on claude-3 (run 45756218317): interrupted",
+      "delivered build #4995 on muse (run 45747383443): built",
+      "delivered build #4992 on claude-7 (run 45747117283): built",
+      "delivered review #5000 on claude-1 (run 45747034055): approved",
+      "started review #5009 on claude-7 (run 45757541304)",
+      "started review #5008 on muse (run 45757621231)",
       "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days",
-      "#5007: typed it Feature",
-      "#5006: typed it Task"
+      "pruned 3 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -23129,7 +23129,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T04:33:13Z",
+  "loop_tick": "2026-11-26T04:43:38Z",
   "machine_disk": {
     "issue": null,
     "reading": {
