@@ -2304,38 +2304,19 @@ fn cast_x_chosen(
         return true;
     }
     let values: Vec<String> = (MIN_CHOSEN_X..=most).map(|value| value.to_string()).collect();
-    run.awaiting = Some(Awaiting::CastX);
     let name = def_of(Some(&*sink.state), &card.def_id).name.clone();
-    let opened = open_prompt(
+    let prompt = format!("{}: choose X", ask_label(step, &name, None));
+    if ask_mode_options(
         sink,
-        OpenPromptArgs {
-            player: run.player,
-            kind: PromptKind::Number,
-            aim: None,
-            prompt: format!("{}: choose X", ask_label(step, &name, None)),
-            options: values
-                .iter()
-                .map(|option| PromptOption {
-                    key: format!("mode:{option}"),
-                    label: option.clone(),
-                    selection: Selection::Mode {
-                        option: option.clone(),
-                    },
-                    cost: None,
-                    radiant: None,
-                })
-                .collect(),
-            min: None,
-            max: None,
-            budget: None,
-            owner: None,
-            resume: resume_for(run, step_index(step)),
-        },
-    );
-    if opened.is_some() {
+        run,
+        step,
+        Awaiting::CastX,
+        PromptKind::Number,
+        prompt,
+        &values,
+    ) {
         return false;
     }
-    run.awaiting = None;
     set_x(sink.state, &card.id, most);
     true
 }
@@ -2672,6 +2653,52 @@ fn ask_repeat_targets(
     true
 }
 
+/// R81: a play step's prompt over fixed `mode` options, each its own key and label, the run awaiting
+/// `awaiting` and resumed at `step`. True while it waits; when nobody can be asked, false, awaiting
+/// nothing.
+fn ask_mode_options(
+    sink: &mut EngineSink<'_>,
+    run: &mut PlayRun,
+    step: PlayStepName,
+    awaiting: Awaiting,
+    kind: PromptKind,
+    prompt: String,
+    options: &[String],
+) -> bool {
+    run.awaiting = Some(awaiting);
+    let opened = open_prompt(
+        sink,
+        OpenPromptArgs {
+            player: run.player,
+            kind,
+            aim: None,
+            prompt,
+            options: options
+                .iter()
+                .map(|option| PromptOption {
+                    key: format!("mode:{option}"),
+                    label: option.clone(),
+                    selection: Selection::Mode {
+                        option: option.clone(),
+                    },
+                    cost: None,
+                    radiant: None,
+                })
+                .collect(),
+            min: None,
+            max: None,
+            budget: None,
+            owner: None,
+            resume: resume_for(run, step_index(step)),
+        },
+    );
+    if opened.is_some() {
+        return true;
+    }
+    run.awaiting = None;
+    false
+}
+
 /// The repeat's mode declarations, each offered in turn; false while one is waiting (R81).
 fn ask_repeat_modes(
     sink: &mut EngineSink<'_>,
@@ -2707,37 +2734,10 @@ fn ask_repeat_modes(
             }
             continue;
         }
-        run.awaiting = Some(Awaiting::EchoMode);
-        let opened = open_prompt(
-            sink,
-            OpenPromptArgs {
-                player: run.player,
-                kind: decl.kind,
-                aim: None,
-                prompt: ask_label(step, &name, Some(&*run)),
-                options: allowed
-                    .iter()
-                    .map(|option| PromptOption {
-                        key: format!("mode:{option}"),
-                        label: option.clone(),
-                        selection: Selection::Mode {
-                            option: option.clone(),
-                        },
-                        cost: None,
-                        radiant: None,
-                    })
-                    .collect(),
-                min: None,
-                max: None,
-                budget: None,
-                owner: None,
-                resume: resume_for(run, step_index(step)),
-            },
-        );
-        if opened.is_some() {
+        let prompt = ask_label(step, &name, Some(&*run));
+        if ask_mode_options(sink, run, step, Awaiting::EchoMode, decl.kind, prompt, &allowed) {
             return false;
         }
-        run.awaiting = None;
     }
     true
 }

@@ -63,7 +63,6 @@
   right: 0;
   bottom: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--pal-gold-400) 55%, transparent) 18%, color-mix(in srgb, var(--pal-gold-400) 20%, transparent) 70%, transparent);
 }
 
 /* --- rarity color, per element that carries data-rarity --------------------------------------- */
@@ -119,7 +118,7 @@
   padding: 10px;
   border: 1px solid var(--line-bright);
   border-radius: var(--radius-md);
-  background: linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
+  background: var(--bg-sunken);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 5%, transparent);
 }
 
@@ -283,7 +282,7 @@
 
 .deckbuilder.app-shell .db-chip--cost[aria-pressed="true"] {
   border-color: color-mix(in srgb, var(--mana) 55%, var(--pal-white));
-  background: linear-gradient(160deg, color-mix(in srgb, var(--mana) 60%, var(--pal-white)), var(--mana) 60%);
+  background: var(--mana);
   text-shadow: 0 1px 2px color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
 
@@ -330,7 +329,7 @@
   background:
     radial-gradient(90% 260px at 50% 0, color-mix(in srgb, var(--pal-brass-500) 10%, transparent), transparent 75%),
     var(--bg-sunken);
-  box-shadow: inset 0 2px 10px color-mix(in srgb, var(--pal-black) 45%, transparent);
+  box-shadow: none;
   min-width: 0;
 }
 
@@ -363,7 +362,7 @@
 /* The card button is the card: no chrome of its own, the face is the whole look. */
 .deckbuilder.app-shell .db-card {
   position: relative;
-  z-index: 0;
+  z-index: var(--z-base);
   display: block;
   width: 100%;
   aspect-ratio: 5 / 7;
@@ -389,7 +388,7 @@
 .deckbuilder.app-shell .db-card-face {
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: var(--z-base);
   display: block;
   content-visibility: auto;
   overflow-clip-margin: 24px;
@@ -479,7 +478,7 @@
 
 .db-held {
   position: absolute;
-  z-index: 1;
+  z-index: var(--z-content);
   top: 7%;
   left: 50%;
   transform: translateX(-50%);
@@ -487,7 +486,7 @@
   border: 1px solid color-mix(in srgb, var(--pal-white) 35%, transparent);
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--you) 85%, var(--pal-black));
-  box-shadow: 0 1px 5px color-mix(in srgb, var(--pal-black) 65%, transparent);
+  box-shadow: var(--shadow-1);
   color: var(--pal-white);
   font-size: var(--type-xs);
   font-weight: 750;
@@ -509,13 +508,13 @@
    badge at the top and the "+" at the corner, shown for the patch that ships the set and the next. */
 .db-new {
   position: absolute;
-  z-index: 1;
+  z-index: var(--z-content);
   top: 44%;
   left: -3px;
   padding: 1px 7px 1px 6px;
   border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
   background: var(--pal-red-600);
-  box-shadow: 0 1px 5px color-mix(in srgb, var(--pal-black) 65%, transparent);
+  box-shadow: var(--shadow-1);
   color: var(--pal-white);
   font-size: var(--type-xs);
   font-weight: 750;
@@ -530,7 +529,7 @@
    last column laid it 2.9 px past the deck editor's edge, which then panned sideways (#4375). */
 .deckbuilder.app-shell .db-add {
   position: absolute;
-  z-index: 1;
+  z-index: var(--z-content);
   top: 2.5%;
   right: max(3%, (var(--hit-min) - 28px) / 2);
   display: grid;
@@ -540,8 +539,8 @@
   padding: 0;
   border: 1px solid color-mix(in srgb, var(--pal-white) 45%, transparent);
   border-radius: var(--radius-round);
-  background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--legal) 70%, var(--pal-white) 10%), color-mix(in srgb, var(--legal) 55%, var(--pal-black)));
-  box-shadow: 0 1px 4px color-mix(in srgb, var(--pal-black) 65%, transparent);
+  background: color-mix(in srgb, var(--legal) 55%, var(--pal-black));
+  box-shadow: var(--shadow-1);
   color: var(--pal-white);
   font-size: var(--type-xl);
   font-weight: 800;
@@ -559,7 +558,7 @@
 .deckbuilder.app-shell .db-add:hover,
 .deckbuilder.app-shell .db-add:focus-visible {
   border-color: var(--pal-white);
-  background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--legal) 80%, var(--pal-white) 20%), var(--legal));
+  background: var(--legal);
 }
 
 .deckbuilder.app-shell .db-add:focus-visible {
@@ -591,7 +590,7 @@
   border: 1px solid color-mix(in srgb, var(--legal) 60%, var(--line-bright));
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--bg-raised) 92%, var(--pal-black));
-  box-shadow: 0 6px 18px color-mix(in srgb, var(--pal-black) 55%, transparent);
+  box-shadow: var(--shadow-2);
   color: var(--text);
   font-size: var(--type-md);
   font-weight: 650;
@@ -669,19 +668,19 @@
   overflow: hidden;
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--pal-white) 6%, transparent);
-  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--pal-black) 60%, transparent);
+  box-shadow: none;
 }
 
 .db-deck-meter-fill {
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--mana) 70%, var(--pal-black)), color-mix(in srgb, var(--mana) 70%, var(--pal-white)));
+  background: color-mix(in srgb, var(--mana) 70%, var(--pal-white));
   transition: width 200ms ease;
 }
 
 .db-deck-meter[data-full="true"] .db-deck-meter-fill {
-  background: linear-gradient(90deg, color-mix(in srgb, var(--legal) 70%, var(--pal-black)), color-mix(in srgb, var(--legal) 75%, var(--pal-white)));
+  background: color-mix(in srgb, var(--legal) 75%, var(--pal-white));
   box-shadow: 0 0 8px color-mix(in srgb, var(--legal) 60%, transparent);
 }
 
@@ -726,7 +725,7 @@
   padding: 6px 4px 0;
   border: 1px solid color-mix(in srgb, var(--pal-white) 5%, transparent);
   border-radius: var(--radius-sm);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--pal-black) 25%, transparent), color-mix(in srgb, var(--pal-black) 10%, transparent));
+  background: color-mix(in srgb, var(--pal-black) 10%, transparent);
 }
 
 .db-bar {
@@ -838,7 +837,7 @@
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
-  background: linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
+  background: var(--bg-sunken);
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 6%, transparent);
   font-weight: 400;
   text-align: left;
@@ -869,7 +868,7 @@
 
 .deckbuilder.app-shell .db-tile:hover {
   border-color: color-mix(in srgb, var(--opponent) 70%, var(--line-bright));
-  background: linear-gradient(180deg, color-mix(in srgb, var(--bg-raised) 80%, var(--line-bright)), var(--bg-raised));
+  background: var(--bg-raised);
 }
 
 /* Drawn inside the tile: the list scrolls, and an outline outside the tile was clipped by it to a
@@ -882,7 +881,7 @@
 /* The same mana crystal the card faces wear, small. */
 .db-tile-cost {
   position: relative;
-  z-index: 1;
+  z-index: var(--z-content);
   flex: none;
   display: grid;
   place-items: center;
@@ -910,7 +909,7 @@
 
 .db-tile-name {
   position: relative;
-  z-index: 1;
+  z-index: var(--z-content);
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -949,15 +948,13 @@
 
 .db-tile-pip {
   position: relative;
-  z-index: 1;
+  z-index: var(--z-content);
   flex: none;
   width: 9px;
   height: 9px;
   border-radius: var(--radius-round);
   background: var(--db-rarity, var(--text-dim));
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--pal-black) 65%, transparent),
-    0 0 6px var(--db-rarity, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pal-black) 65%, transparent);
 }
 
 /* A card the deck's verdict names (a token, a copy too many, one not owned, banned or gone): an
@@ -980,7 +977,7 @@
 
 .db-tile-flag {
   position: relative;
-  z-index: 1;
+  z-index: var(--z-content);
   flex: none;
   width: 12px;
   height: 11px;
@@ -1044,7 +1041,7 @@
   border: 1px solid color-mix(in srgb, var(--opponent) 55%, var(--line));
   border-left: 3px solid var(--opponent);
   border-radius: var(--radius-sm);
-  background: linear-gradient(90deg, color-mix(in srgb, var(--opponent) 14%, var(--bg-raised)), var(--bg-raised) 60%);
+  background: var(--bg-raised);
 }
 
 /* A small warning mark, drawn, so the verdict's own text stays exactly the validator's. */

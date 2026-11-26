@@ -67,11 +67,7 @@
   height: min(560px, 88dvh);
   padding: 0;
   overflow: hidden;
-  background: linear-gradient(
-    180deg,
-    var(--bg-raised),
-    color-mix(in srgb, var(--bg-raised) 72%, var(--bg))
-  );
+  background: color-mix(in srgb, var(--bg-raised) 72%, var(--bg));
   font: 14px/1.35 var(--font-text);
   text-align: start;
   outline: none;
@@ -280,7 +276,7 @@
   border: 2px solid var(--bg);
   border-radius: var(--radius-round);
   background: var(--pal-slate-100);
-  box-shadow: 0 0 0 1px var(--pal-ink-300), 0 1px 3px color-mix(in srgb, var(--pal-black) 50%, transparent);
+  box-shadow: 0 0 0 1px var(--pal-ink-300), var(--shadow-1);
   appearance: none;
 }
 
@@ -290,7 +286,7 @@
   border: 2px solid var(--bg);
   border-radius: var(--radius-round);
   background: var(--pal-slate-100);
-  box-shadow: 0 0 0 1px var(--pal-ink-300), 0 1px 3px color-mix(in srgb, var(--pal-black) 50%, transparent);
+  box-shadow: 0 0 0 1px var(--pal-ink-300), var(--shadow-1);
 }
 
 .settings-slider:focus-visible {

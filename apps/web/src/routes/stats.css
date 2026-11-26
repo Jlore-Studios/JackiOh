@@ -25,7 +25,7 @@
   border: 1px solid var(--line-bright, var(--pal-slate-700));
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--pal-slate-900) 70%, transparent);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--pal-black) 25%, transparent);
+  box-shadow: var(--shadow-2);
 }
 
 .stats-summary-label {
@@ -837,6 +837,11 @@
   margin: 0;
   font-size: var(--type-sm);
   color: var(--text-dim);
+}
+
+/* R5040000: the Experimental tab's four views wrap onto a second row where the window is narrower than them. */
+.stats-experimental-views {
+  flex-wrap: wrap;
 }
 
 /* R4680000: a card's live play version, marked in its span as the header marks the current patch. */
