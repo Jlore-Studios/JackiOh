@@ -2865,7 +2865,8 @@ fn validate_seat_deck(
         }
         // R1420: nor is a card of a set that has not shipped, unless the testkit previews it, or
         // (R4597001) an open single-player set the seat's deck is dealt from.
-        let named_single_player = named.contains(&def.set) && crate::wire::SINGLE_PLAYER_SETS.contains(&def.set);
+        let named_single_player =
+            named.contains(&def.set) && crate::wire::SINGLE_PLAYER_SETS.contains(&def.set);
         if !crate::catalog::set_is_open(def.set) && !named_single_player {
             return Err(EngineError::new(format!(
                 "{label}: \"{def_id}\" is a card of {}, which has not shipped yet (§2.6 L3, R1420)",
@@ -2977,7 +2978,14 @@ pub fn validate_setup(
             .and_then(|h| h.deck_copies)
             .unwrap_or(MAX_COPIES);
         let named = named_deck_sets(options, player).map_or(&[][..], |sets| sets.as_slice());
-        validate_seat_deck(deck_of(options, seat), catalog, player.as_str(), size, copies, named)?;
+        validate_seat_deck(
+            deck_of(options, seat),
+            catalog,
+            player.as_str(),
+            size,
+            copies,
+            named,
+        )?;
     }
     validate_deck_marks(options)?;
     validate_deck_sets(options, catalog)

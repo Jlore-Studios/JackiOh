@@ -5,8 +5,8 @@ use super::*;
 use crate::assault::content::content_file;
 use crate::assault::day::MONTH_DAYS;
 use crate::config::{
-    ASSAULT_COMMANDER_HEALTH, ASSAULT_COMMANDER_LEVELS, ASSAULT_DECK_SIZE, ASSAULT_HERO_HEALTH,
-    ASSAULT_COMMANDER_UPGRADES, ASSAULT_HISTORY_DAYS, ASSAULT_LEVELS, ASSAULT_SET, ASSAULT_UPGRADES,
+    ASSAULT_COMMANDER_HEALTH, ASSAULT_COMMANDER_LEVELS, ASSAULT_COMMANDER_UPGRADES, ASSAULT_DECK_SIZE,
+    ASSAULT_HERO_HEALTH, ASSAULT_HISTORY_DAYS, ASSAULT_LEVELS, ASSAULT_SET, ASSAULT_UPGRADES,
 };
 use jackioh_engine::catalog::{deckable, registered_catalog};
 use jackioh_engine::config::{HUMAN_HANDICAP, Handicap};
@@ -301,7 +301,12 @@ fn r4597002_each_normal_level_adds_one_escalation_and_a_commander_a_card_step_an
                     "{date} level {}",
                     level.level
                 );
-                assert_eq!(level.escalations[0], AssaultEscalation::Cards, "{date} level {}", level.level);
+                assert_eq!(
+                    level.escalations[0],
+                    AssaultEscalation::Cards,
+                    "{date} level {}",
+                    level.level
+                );
                 assert!(
                     level.escalations[1..]
                         .iter()

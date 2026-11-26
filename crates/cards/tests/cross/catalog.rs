@@ -12432,8 +12432,10 @@ mod catalog_membership_build_m4_t1_b2_1 {
         let ordered: Vec<&str> = CATALOG_SETS
             .iter()
             .chain(SetName::ALL.iter().filter(|set| {
-                matches!(set_row(**set).stage, SetStage::HeldSinglePlayer | SetStage::SinglePlayer)
-                    && CATALOG.values().any(|def| def.set == **set)
+                matches!(
+                    set_row(**set).stage,
+                    SetStage::HeldSinglePlayer | SetStage::SinglePlayer
+                ) && CATALOG.values().any(|def| def.set == **set)
             }))
             .map(|set| set.as_str())
             .collect();

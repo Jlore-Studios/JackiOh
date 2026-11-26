@@ -170,7 +170,13 @@ fn r1846001_every_set_adds_the_single_player_sets() {
     // Tokens keep §5.1's rule.
     assert_eq!(
         pool(json!({ "busted": true, "everySet": true, "withTokens": true })),
-        vec!["core-001", "core-005-1", "boss-001", "bossx-001", "infiniteassault-001"]
+        vec![
+            "core-001",
+            "core-005-1",
+            "boss-001",
+            "bossx-001",
+            "infiniteassault-001"
+        ]
     );
     // A set a thread previews is open, so it joins without `everySet` (R1420).
     let _preview = preview_sets(&[SetName::Boss]);

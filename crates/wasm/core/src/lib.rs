@@ -336,9 +336,7 @@ pub fn assault_placeholder_content(catalog_json: &str) -> Result<String, String>
 
 /// R4597000: the Assault's content for the browser: `assault_catalog_content`, since the release.
 pub fn assault_content() -> Result<String, String> {
-    to_json(&jackioh_run::assault_catalog_content(
-        engine::registered_catalog(),
-    ))
+    to_json(&jackioh_run::assault_catalog_content(engine::registered_catalog()))
 }
 
 /// R3496000, R4597000: `AssaultContent` for a catalog version: the build's own answers
@@ -1721,7 +1719,12 @@ mod assault_body_tests {
         let expected = jackioh_run::assault_catalog_content(catalog);
         assert_eq!(assault_content().unwrap(), to_json(&expected).unwrap());
         assert_eq!(expected.commanders.len(), 12);
-        assert!(expected.cards.iter().all(|card| card.id.starts_with("infiniteassault-")));
+        assert!(
+            expected
+                .cards
+                .iter()
+                .all(|card| card.id.starts_with("infiniteassault-"))
+        );
         if let Some(version) = jackioh_cards::carried_versions().last() {
             let shipped = jackioh_cards::shipped_catalog(version).expect("a carried version's catalog");
             let at = assault_content_at(&serde_json::to_string(version).unwrap()).unwrap();
