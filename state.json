@@ -21624,9 +21624,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T02:42:58Z",
+    "at": "2026-11-26T02:43:45Z",
     "url": "",
-    "what": "suggestions (tests) on claude-8"
+    "what": "suggestions (rules) on muse"
   },
   "last_sweep": {
     "at": "2026-11-26T02:30:30Z",
@@ -45507,9 +45507,9 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": "2026-11-26T02:42:58Z",
-    "last_area": "tests",
-    "last_run": "2026-11-26T02:42:58Z",
+    "idle_since": "2026-11-26T02:43:45Z",
+    "last_area": "rules",
+    "last_run": "2026-11-26T02:43:45Z",
     "provider": null,
     "requested": false,
     "run_id": null,
@@ -45520,6 +45520,14 @@
         "last_run": "2026-11-26T02:42:58Z",
         "provider": "claude-8",
         "run_id": "45744261348",
+        "taken_asks": []
+      },
+      "2": {
+        "area": "rules",
+        "count": 2,
+        "last_run": "2026-11-26T02:43:45Z",
+        "provider": "muse",
+        "run_id": "pending:c1933e5a-1795660991",
         "taken_asks": []
       }
     },
