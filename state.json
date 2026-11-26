@@ -22760,6 +22760,13 @@
     "5024": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45791986131",
+        "model": "opus",
+        "provider": "claude-6",
+        "since": "2026-11-26T10:04:26Z",
+        "until": "2026-11-26T10:34:26Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
