@@ -22320,6 +22320,7 @@
     "5010": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-26T08:12:39Z",
         "difficulty": "medium",
