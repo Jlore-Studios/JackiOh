@@ -98,7 +98,9 @@ R1563005); the greedy baseline's simulation does not.
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates
 it can see on the field (the AI's hero first, then dealt over every card and ability at its most valuable
 cards, R4515000), then its attacks, a kill priced at what it removes (a unit with Reborn unspent
-less the body it comes back as, #1796, and less what its Death leaves behind, R2424000; plus a Trample
+less the body it comes back as, #1796, the engine's own read ahead of that body, `reborn_body_of`: its
+keeper's card on the side it died on and a unit token at its summoned X/X, `reborn_body_read`, R4798000,
+#4798, off in `GREEDY_EVAL`, and less what its Death leaves behind, R2424000; plus a Trample
 attacker's excess on the hero and a Lifesteal attacker's heal, #1820, which its hit on the hero counts
 too, #3858; an attacker a First Strike defender destroys first earning no chip and no shield pop, since
 `fight` reads a blow that never lands as none, R4171000), and once none is worth making, or facing lethal

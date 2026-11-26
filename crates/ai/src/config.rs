@@ -494,6 +494,11 @@ pub struct EvalWeights {
     /// pools in the engine's order, a Trample attacker's excess going to the hero (§4.4 step 9). Off, a splash
     /// on such a unit counts nothing, as before.
     pub splash_trample_read: bool,
+    /// R4798000, #4798: whether the body a Reborn unit comes back as (`reborn_return`, so `kill_worth`, the
+    /// Taunt walk and `afflicted_before_swing`) is the engine's own (`reborn_body_of`): its keeper's card, on
+    /// the side it died on (R2618000), and a unit token's summoned X/X kept (R175). Off, the body is the unit
+    /// reset to its owner with its printed stats, as before.
+    pub reborn_body_read: bool,
     /// Per point of unitView.health (current).
     pub health: f64,
     /// Per point of unitView.armor.
@@ -725,6 +730,12 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // read 200-200, edge 0.0 (0.0 to 0.0); inconclusive (R4319000): 0 decided of 200 (won 0, lost 0), 1
     // diverged; its scene tests settle it (training/improve.md, A screen).
     splash_trample_read: true,
+    // #4798: on. Its fork screen on improve-dev against the control at 61758a8b61 read 200 trunk games,
+    // 0 forks, 0 live, edge 0.0 (-1.0 to 1.0); inconclusive (R4319000), the change altering no decision
+    // there; its scene tests (crates/ai/tests/ai/reborn_body.rs) settle it (training/improve.md, A
+    // screen). A deal screen started first was cut by the session's two-hour limit before its tally, with
+    // nothing read, so the fork screen, which resumes after a cut, is its one screen.
+    reborn_body_read: true,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -996,7 +1007,7 @@ pub const AI_EVOLVE_PROBE_NODES: usize = 16;
 /// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`,
 /// `affliction_kills_before_swing`, `frozen_sick_before_swing`, `static_attack_flags_read`,
 /// `best_attack_order_past_taunts`, `exile_on_damage_read`, `pool_and_conversion_read`,
-/// `giga_cleave_read`, `strike_back_survival_read`, `splash_trample_read`) is off.
+/// `giga_cleave_read`, `strike_back_survival_read`, `splash_trample_read`, `reborn_body_read`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -1019,6 +1030,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     giga_cleave_read: false,
     strike_back_survival_read: false,
     splash_trample_read: false,
+    reborn_body_read: false,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
