@@ -37027,5 +37027,40 @@
     "plays": [],
     "fragment": "card-face-code-cleanup",
     "changes": []
+  },
+  {
+    "version": "v0.6.14l",
+    "date": "2026-11-26",
+    "title": "PIP says performance improvement plan",
+    "source": "#4996",
+    "notes": "Stinkyscape+ #94 PIP's text reads 'performance improvement plan' (was 'performance enhancement plan').",
+    "player": {
+      "title": "PIP says performance improvement plan",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "PIP: now says \"performance improvement plan\"."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "6e1450bf6f9dbfbbe603f7d38ae0fe523daebae9"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "pip-says-performance-improvement-plan",
+    "changes": [
+      {
+        "id": "stinkyscapeplus-094",
+        "name": "PIP",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
   }
 ]
