@@ -47822,6 +47822,7 @@
         "every": 5,
         "head": "c3bf6fe4cc8d3bc79cbc5277f821f7e20c00d04e",
         "issue": 4707,
+        "last_why": "interrupted: `claude-7` stops mid-call: 5-hour usage is 51%, at or over its 50% cap outside its hours; it resets at 2026-11-26T22:50:00Z",
         "merged_at": "2026-11-26T18:22:57Z",
         "n": 610,
         "pr": 5064,
@@ -47832,7 +47833,7 @@
           "provider": "claude-7",
           "tier": "strong"
         },
-        "run_id": "pending:48c7b63a-1795717913",
+        "run_id": "",
         "sha": "480256e74e965e08681eaa41c940b9c0360e78ce",
         "started_at": "2026-11-26T18:32:23Z",
         "status": "queued",
