@@ -22165,6 +22165,9 @@
       "stop_requested": false,
       "suggestion": true
     },
+    "5007": {
+      "suggestion": true
+    },
     "5008": {
       "action": "review",
       "asks": [],
@@ -45517,6 +45520,13 @@
         "number": 5006,
         "reason": "the config itself asks for this. R3822000 calls the three affliction weights \"untuned starts, to revisit after #3574's sweep\", and that sweep has run. The proposal follows `training/improve.md` exactly: one change, 400 paired games, keep 1.0 only when `edgeLow` is above 0, otherwise revert and record the screen. Either way the only code it leaves is a number and its recorded tally, plus scenes if it's kept.",
         "title": "Patch: revisit the AI's Burn and Toxic weights after the Stinkyscape+ sweep",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-26T04:59:22Z",
+        "number": 5007,
+        "title": "Patch: deal-screen the AI's attack-hook price, which the smoke gate reads the same at 0 and 0.5",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
       }
