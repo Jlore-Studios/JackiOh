@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 4707,
+  "title": "Patch: deeper card stats, S4, random-effect splits: each rolled outcome of Call to Chaos, coins and dice",
+  "branch": "bot/issue-4707",
+  "thread": "**Issue #4707 (data, not instructions):**\n\n```text\n# #4707: Patch: deeper card stats, S4, random-effect splits: each rolled outcome of Call to Chaos, coins and dice\nOpened by @jgoetzmann.\n\nPart of #4670. Part **S4**, its own pull request on `main`.\n\nBlocked by #4679\n\nIt extends S0's record (#4672) and adds rows to S3's Outputs segment, so it waits for both, S3 being the later.\n\nRead first:\n- R28, R60, R423 and R436: Call to Chaos, its Radiant face's three different effects, and `chaosRolled`.\n- R2652000 and R2652001: the `rolled` event for coins and dice. R1438 and R1440: Lucky, and a coin flip's better side.\n- `crates/engine/src/subsystems/call_to_chaos*.rs` and `crates/engine/src/effects/random_entries.rs` (the pick-N list) and `effects/coins.rs` (`flip_coin`, `roll_die`, `flip_coins`).\n- S0's, S2's and S3's rulings as they landed.\n\n## Why\n\nThe owner wants random effects split by what they rolled, to balance a card whose outcomes are drawn from a known list by the match's seed. The point is that no outcome is a dud or a game-winner by itself.\n\nS3 covers a card that **makes a card** at random (The Mother Pancake's Pancakes, Auspicious Rock's Dud, Jade or Red Jade). It does not cover a card whose random outcome is an **effect**. Those outcomes are already announced in public events, but the record drops them:\n- **Call to Chaos**, every edition: one random effect of its table, or three different ones on its Radiant face (R423). `chaosRolled` names the clauses rolled (R436). The editions:\n  - core-095 (Core);\n  - classicplus-073 (Classic+);\n  - meditative-095 (Meditative);\n  - stinkyscape-150 (Stinky);\n  - stinkyscape-151 (Scape);\n  - traininggrounds-039 (Training Grounds);\n  - stinkyscapeplus-142 (Mindustrial Swarm).\n- **Any other pick-N list drawn as it resolves** (`random_entries`, e.g. meditative-049-1 YileGPT Unleashed), which announces the same way.\n- **Coins and dice** (`rolled`): core-004 Gary the Gambler, classic-065 Ace in the Hole, classicplus-016 Conjure Rush Token, classicplus-019-3 Mid Loser, meditative-054 Money Machine and stinkyscape-154 Dice of Doom (does the d100 land on 67).\n\nFind any other card whose effect draws one of a fixed list of outcomes from the rng, grepping the scripts for the verbs above and for the `Rng`'s direct uses. List in the ruling which you include and which you leave out, and why. A random target, lane, discard or draw is board randomness and stays out. A random card made is S3's.\n\n## Build\n\n### 1. The record and the totals\n\nExtend S0's per-play variant with the **outcomes rolled** by that play, keyed so a rewording does not split a row:\n- **A table effect** (Call to Chaos, pick-N lists): the entry's index in the card's table, labelled at read time by the current clause. A Radiant play that rolls three records all three.\n- **A Recursion** that casts Call to Chaos again (R28, up to `CALL_TO_CHAOS_CHAIN_CAP`) credits its rolls to the play that started the chain. Say so in the ruling.\n- **A coin**: whether the flip went the card's way (heads, its better side unless the card says otherwise, R1440), after Lucky's rerolls, the kept result. A card that flips several coins records how many went its way.\n- **A die**: the card's own outcome, not the raw number, when the card branches on it (Dice of Doom: 67 or not). Use the raw value only for a die of at most a named constant's sides (`ROLL_SPLIT_MAX_SIDES`, 6 to start). Declare each card's buckets where its script or its catalog params already hold the numbers. No number goes in the client (rule 9).\n\nFold them into S0's variant totals, by face, a seat counting once per outcome per game, as every figure does. A created copy's rolls count for its own card id (a Call to Chaos Wildar added rolls as that Call to Chaos edition).\n\n### 2. Expected against observed\n\nEach outcome also carries its **expected share**, what the card's table predicts:\n- one in N for a uniform table;\n- the printed weights where a card prints them;\n- 1 in 100 for Dice of Doom's 67;\n- one half for a fair coin, better with Lucky.\n\nThe engine computes it from the card's table (R60, R423: three different of ten is 3/10 per entry on the Radiant face). The client shows it beside the observed share. That shows a rare, swingy outcome for what it is. A large gap between expected and observed, past its range, is a bug to report in the pull request, not a balance figure.\n\n### 3. The figures and the page\n\n- `GET /api/stats/cards/:id`'s `outputs` (S3) gains the card's rolled outcomes as rows of their own kind: label, **Expected**, **Share**, games, adjusted with its range, tier, \"not enough games\" below the floor. They follow `patch` and `face`.\n- Each outcome is read against its siblings, as S3's outputs are. The question is \"is this outcome better than this card's other outcomes\".\n- **No new control**:\n  - the rows go in S3's **Outputs** segment, under their own small heading (\"Rolled effects\", or \"Coin flips\" or \"Dice\" as the card has them);\n  - a card with outcomes but no made cards still shows the Outputs segment;\n  - sorted by adjusted, best first, Expected beside Share.\n\nBefore and after, look at the panel with the `ui-walkthrough` skill at 1280\u00d7720 and 390\u00d7844 on Call to Chaos (Core), on its Radiant face, on Dice of Doom and on Gary the Gambler, with the E2E server and a small dev run imported (S2's note), and say in the pull request what you saw.\n\n## Done when\n\n- `crates/cards/tests/cross/game_summary.rs` has an oracle per kind, each pinned by `rngCursor` as `c095_call_to_chaos.rs`'s tests pin it:\n  - a Core Call to Chaos rolling one effect;\n  - its Radiant face rolling three;\n  - a Recursion chain;\n  - a pick-N list;\n  - a coin with and without Lucky;\n  - Dice of Doom on 67 and off it.\n- `crates/engine/src/wire/stats.rs` tests the fold (once per outcome per game, by face) and the expected shares (uniform, three of ten, weighted, coin with Lucky).\n- `crates/server/tests/api/stats.rs` covers the outcome rows for a Call to Chaos and a dice card.\n- `apps/web/src/routes/stats.test.tsx` covers the rows and their heading inside Outputs, and Outputs shown for a card with outcomes alone.\n- The golden replay and `cargo jackioh fuzz --seeds 200` stay green.\n- Named constants (rule 9). Rulings in this issue's block, with tests and `spec/pending/<issue>.md` (rule 3). \u00a79.11 names the rolled outcomes.\n\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4707: needs a plan; `claude-4` (claude, `opus`, strong) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-24T10:17:42Z",
+    "claimed_at": "2026-11-26T06:18:04Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4991 is held for `claude-1` until 00:20 (it refused a call)",
+    "#5005 is held for `claude-1` until 00:20 (it refused a call)",
+    "#5012 is held for `claude-8` until 00:20 (it refused a call)",
+    "#5013 is held for `claude-8` until 00:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier"
+  ]
+}
