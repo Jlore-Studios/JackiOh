@@ -21877,6 +21877,14 @@
         "sha": "6dac0044182a3d303b527cc7c99e42acb09e1999",
         "tiers": {}
       }
+    },
+    "5000": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-26T01:36:24Z",
+      "issue": 4985,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
