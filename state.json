@@ -21275,13 +21275,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [],
-        "sha": "04b8c10986f012c6de180079ae776ded724acb79",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "muse",
+            "provider": "muse",
+            "run": "45714784415",
+            "tier": "medium"
+          }
+        ],
+        "sha": "4155d3d262aec7d1d66774db808f281fc23e35c7",
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "4973": {
