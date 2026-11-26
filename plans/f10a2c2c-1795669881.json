@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 5007,
+  "title": "Patch: deal-screen the AI's attack-hook price, which the smoke gate reads the same at 0 and 0.5",
+  "branch": "bot/issue-5007",
+  "thread": "**Issue #5007 (data, not instructions):**\n\n```text\n# #5007: Patch: deal-screen the AI's attack-hook price, which the smoke gate reads the same at 0 and 0.5\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nOnce per decision the AI fires each unit's `when this attacks` and `after this attacks` text, Frenzy included, on a sandbox copy and prices what the attack gives its controller. A unit's worth counts half of that price (`attack_hook` 0.5), a starting guess from R2688000 that no deal screen has ever measured. Once built, the share becomes what paired games say it is, so attack-text units are traded, developed and answered at a measured price instead of a guessed one.\n\n## Why\n\n- [config.rs](https://github.com/Jlore-Studios/JackiOh/blob/main/crates/ai/src/config.rs) (R2688000) calls `attack_hook` an `untuned start` and records only smoke-gate reads: 20, 20 and 20 of 20 at 0.5 and the identical 20, 20 and 20 at 0. The gate cannot tell them apart, and [SPEC \u00a79.9](https://github.com/Jlore-Studios/JackiOh/blob/main/spec/09-architecture/9.9-practice-ai.md) says strength claims need hundreds of fresh deals, not the gate. No deal screen is recorded, unlike the neighboring probe shares.\n- Concrete cards whose value rides entirely on this probe: Frenzy attackers such as Tmack Trav (Stinkyscape #94, Rush Frenzy), and the Wasp, Space Invader and Lantern Distiller evolutions that run through their own turn or attack text (R4648000). `has_attack_hook` in [evaluate.rs](https://github.com/Jlore-Studios/JackiOh/blob/main/crates/ai/src/evaluate.rs) names Frenzy alongside the hooks.\n- The probe spend (`AI_ATTACK_HOOK_PROBE_NODES`, 24 nodes) is already paid every decision; only the priced share is unmeasured. `GREEDY_EVAL.attack_hook` stays 0 as the frozen yardstick.\n\n## Proposal\n\n- One deal screen exactly as [training/improve.md](https://github.com/Jlore-Studios/JackiOh/blob/main/training/improve.md) (A screen) prescribes: build a control from the tip, then screen `attack_hook` at 1.0 against the 0.5 control (one change, 400 games on improve-dev, size fixed in advance). Keep it only if `edgeLow` is above 0, otherwise revert per R4319000, and record the tally in the `AI_EVAL` comment.\n- Hold the kept value with extended scenes in [attack_hooks.rs](https://github.com/Jlore-Studios/JackiOh/blob/main/crates/ai/tests/ai/attack_hooks.rs) that fail without it; never weaken an existing scene. Leave `GREEDY_EVAL` at 0. Re-record the practice-claim fixture with the change, since decisions change.\n- If the screen is inconclusive, close it out with the screen recorded; it then joins the scene-test-settled knobs per R4319000.\n\n## Where it lands\n\n- `crates/ai/src/config.rs`: `AI_EVAL.attack_hook` only.\n- `crates/ai/tests/ai/attack_hooks.rs`: scenes pinning the kept value.\n- `crates/server/tests/fixtures/practice-claim.json`: re-recorded with the change.\n- No spec change (a number, not a rule) and no ruling.\n\n## Acceptance criteria\n\n- [ ] Deal screen run on improve-dev with its control commit and tally recorded in the config comment.\n- [ ] Kept value has `edgeLow` above 0, or the knob is reverted with the inconclusive screen recorded.\n- [ ] New or extended `attack_hooks.rs` scenes fail without the kept value.\n- [ ] `cargo test -p jackioh-ai`, `cargo clippy -p jackioh-ai --all-targets -- -D warnings` and `cargo fmt --check` are green.\n- [ ] `cargo jackioh gate` (smoke) still clears its floors.\n- [ ] The practice-claim fixture is re-recorded with the change and its tests pass.\n\n## Size and risks\n\nMedium work, difficulty hard (AI tuning): one 400-game deal screen plus config and scene tests. Main risk is an inconclusive screen, the usual outcome for a share the smoke gate reads identically; then the knob is reverted and only the recording remains. No fork screen is needed or proposed, per #4448's lesson that fork screens do not fit bot runs.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** would approve it: It deal-screens the untuned attack-hook share the smoke gate cannot distinguish, keeping it only on a measured edge. With no vote, no comment and no \ud83d\udc4e on this issue by Thu 26 Nov 22:34 CST, it is approved by itself at `priority:low` (at most 3 a day); comment `reject`, or anything at all, to decide it yourself.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-26T04:58:48Z:\n\napprove\n\nWhy: `AI_EVAL.attack_hook` (R2688000) is recorded as an untuned start, and the smoke gate reads it the same at 0 and at 0.5, so only a deal screen can say what it's worth. Like #5006, it follows `training/improve.md`'s screen and keep rule exactly: 400 paired games, keep 1.0 only when `edgeLow` is above 0, otherwise revert and record. The probe's nodes are already paid on every decision, so this only measures the share.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5007: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T04:59:25Z",
+    "claimed_at": "2026-11-26T05:11:56Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5005 is held for `claude-1` until Thu 00:20 (5-hour usage is 97%, too close to its 100% cap to start a long run (it starts under 95%))"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
