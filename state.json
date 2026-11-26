@@ -21700,13 +21700,16 @@
     "what": "plan #5122 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-26T22:27:57Z",
+    "at": "2026-11-26T22:37:36Z",
     "notes": [
-      "delivered suggest on claude-8 (run 45901192624): suggested",
-      "started suggest on claude-3 (run 45905121001)",
-      "started suggest on claude-4 (run 45905193868)",
-      "started suggest on claude-8 (run 45905272636)",
-      "nothing more to start: nothing is queued"
+      "#5122 needs a plan",
+      "delivered suggest on claude-8 (run 45905272636): interrupted",
+      "delivered review #5121 on agy (run 45903356595): approved",
+      "delivered build #5109 on claude-8 (run 45897684390): interrupted",
+      "delivered plan #5117 on claude-3 (run 45892844399): failed",
+      "started plan #5117 on claude-6 (run 45906397991)",
+      "started plan #5122 on agy (run 45906462556)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` 5-hour usage is 59%, too close to its 50% cap outside its hours to start a long run (it starts under 45%); it resets at 2026-11-26T22:50:00Z; it can start a build or a plan again in 7m; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-27T02:30:00Z; it can start a build or a plan again in 2h 47m; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` it refused a call; its limit resets at 2026-11-30T00:00:00Z; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22412,7 +22415,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T22:27:57Z",
+  "loop_tick": "2026-11-26T22:37:36Z",
   "machine_disk": {
     "issue": null,
     "reading": {
