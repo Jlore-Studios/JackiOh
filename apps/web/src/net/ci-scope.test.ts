@@ -832,7 +832,8 @@ const SKIPPED_FN = /^skipped\(\) \{\n[\s\S]*?\n\}$/m.exec(readFileSync(SCRIPT, "
 function skipListed(files: string[]): string[] {
   if (SKIPPED_FN === undefined) throw new Error("scripts/ci-scope.sh no longer declares `skipped() {…}` as ci-scope.test.ts reads it");
   const run = spawnSync("sh", ["-c", `${SKIPPED_FN}\nwhile IFS= read -r file; do if skipped "$file"; then echo "$file"; fi; done`], {
-    input: files.join("\n"),
+    // A trailing newline: `read` fails on a last line without one, and the loop would skip that path.
+    input: `${files.join("\n")}\n`,
     encoding: "utf8",
   });
   if (run.status !== 0) throw new Error(`skipped() failed: ${run.stderr}`);
@@ -932,6 +933,9 @@ describe("scripts/ci-scope.sh against the paths the sources name", () => {
     expect(
       skipListed(["bot/harness/state.py", ".github/workflows/ci.yml", "CLAUDE.md", "training/README.md", "training/history/improve.jsonl"]),
     ).toEqual(["bot/harness/state.py", "CLAUDE.md", "training/README.md"]);
+    // The last path is checked like the others (a `read` without a trailing newline would drop it).
+    expect(skipListed(["CLAUDE.md"])).toEqual(["CLAUDE.md"]);
+    expect(skipListed([".github/workflows/ci.yml", "bot/harness/state.py"])).toEqual(["bot/harness/state.py"]);
   });
 
   // A path on the skip list (`bot/…`) leaves every line off, and its own case above proves it.
