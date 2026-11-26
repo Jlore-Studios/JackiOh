@@ -24990,7 +24990,7 @@
       }
     },
     "5094": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "cleared": {
         "approver": {
@@ -25012,25 +25012,18 @@
       "interruptions": 0,
       "issue": 5036,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-3",
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-11-26T18:29:45Z",
-      "run_id": "45867625398",
+      "run_id": "pending:c3ce927e-1795717773",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "conflict",
-      "started_at": "2026-11-26T17:25:26Z",
+      "started_at": "2026-11-26T18:30:43Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "opus",
-        "provider": "claude-3",
-        "since": "2026-11-26T18:29:45Z",
-        "until": "2026-11-26T18:59:45Z",
-        "why": "it conflicts with `main` now"
-      },
       "votes": {
         "approvals": [
           "claude"
@@ -25109,9 +25102,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T18:17:55Z",
+    "at": "2026-11-26T18:30:43Z",
     "url": "",
-    "what": "review #5097 on claude-6"
+    "what": "revise #5094 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-26T18:13:25Z",
