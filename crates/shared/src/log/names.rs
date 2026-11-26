@@ -423,6 +423,8 @@ impl<'a> Names<'a> {
             GameEvent::Damage { target_id, .. }
             | GameEvent::DamageAbsorbed { target_id, .. }
             | GameEvent::Healed { target_id, .. } => by_instance(target_id),
+            // R5045000: the line opens with the pool card.
+            GameEvent::DamageNullified { instance_id, .. } => by_instance(instance_id),
             GameEvent::DivineShieldLost { instance_id }
             | GameEvent::Buffed { instance_id, .. }
             | GameEvent::KeywordGranted { instance_id, .. }
