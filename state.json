@@ -22223,7 +22223,16 @@
       "feedback_since": "2026-11-26T03:12:03Z",
       "issue": 4995,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "muse",
+        "built_by": "muse",
+        "rejections": [],
+        "reviews": [],
+        "sha": "991f619e735794b5184303620518266a1bf1355e",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
