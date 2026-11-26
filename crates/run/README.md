@@ -101,7 +101,7 @@ Every UTC day deals 20 levels, Commanders on 5, 10, 15 and 20, each one game aga
 | `assault_record(&AssaultRecord, &AssaultState)` | the day's record folded with a finished or running attempt: attempts, best, checkpoints and the first repel (IA6) |
 | `assault_fold(&AssaultFile, &AssaultDay)` | an attempt file replayed from its start, the error naming the first refused step (IA6) |
 | `assault_fight_setup(&AssaultState, &AssaultDay)` | in `Fight`, the game to start: its seed (`{day seed}-L{level}-A{attempt}`), both decks, the human's `HUMAN_HANDICAP` and the level's handicap and marks (IA6) |
-| `assault_fight_report(&ReplayInput, PlayerId)` | the `AssaultAction::FightOver` a finished game sends for that seat, folded from its record: a draw at the turn cap is a loss (IA6, IA15); a Glitch's void still reads as a loss until #4576 rules on it |
+| `assault_fight_report(&ReplayInput, PlayerId)` | the `AssaultAction::FightOver` a finished game sends for that seat, folded from its record: a draw at the turn cap is a loss (IA6, IA15); a fight a Glitch voided is refused and dealt again from the same setup (R4999000) |
 | `assault_constants()` | the numbers the screens show (rule 9) |
 
 What the caller does:
@@ -117,7 +117,9 @@ What the caller does:
   attempt. Leave mid-fight keeps the fight, as a dungeon fight does.
 - **Fights.** In `Fight` the caller starts the game from `assault_fight_setup` (the human P1, the
   enemy P2, the enemy marks as P2's), plays it, and sends the `AssaultAction::FightOver` that
-  `assault_fight_report` folds from the finished game.
+  `assault_fight_report` folds from the finished game. A fight a Glitch voided never happened (R679):
+  it reports nothing, the attempt stays in its fight, and the caller deals it again from the same
+  assault_fight_setup (R4999000).
 - **Files.** Keep the `AssaultFile` with the catalog version the caller folds under, as a dungeon
   run's file does: nothing here reads it.
 
