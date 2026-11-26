@@ -2025,7 +2025,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
               options={[
                 { value: "running", label: t("Running"), testId: statsTestid.experimentalRunning, className: "stats-view-btn" },
                 { value: "versions", label: t("Versions"), testId: statsTestid.experimentalVersions, className: "stats-view-btn" },
-                { value: "hall", label: t("Hall of Fame"), testId: statsTestid.experimentalHall, className: "stats-view-btn" },
+                { value: "hall", label: t("Hall of fame"), testId: statsTestid.experimentalHall, className: "stats-view-btn" },
               ]}
             />
             <div className="stats-filter-bar">

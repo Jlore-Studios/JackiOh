@@ -176,7 +176,7 @@ describe("R4681001 the Experimental tab's Hall of Fame view", () => {
     expect(within(views).getAllByRole("button").map((button) => button.textContent)).toEqual([
       "Running",
       "Versions",
-      "Hall of Fame",
+      "Hall of fame",
     ]);
 
     fireEvent.click(screen.getByTestId(statsTestid.experimentalHall));

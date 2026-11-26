@@ -3861,7 +3861,7 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
     // keeps its View, ranges, Plain text and Columns.
     const panel = screen.getByRole("tabpanel");
     const views = within(panel).getByRole("group", { name: "Experimental views" });
-    expect(within(views).getAllByRole("button").map((button) => button.textContent)).toEqual(["Running", "Versions", "Hall of Fame"]);
+    expect(within(views).getAllByRole("button").map((button) => button.textContent)).toEqual(["Running", "Versions", "Hall of fame"]);
     expect(within(views).getByRole("button", { name: "Running" })).toHaveAttribute("aria-pressed", "true");
     expect(within(panel).queryByRole("group", { name: "Face" })).toBeNull();
     expect(within(panel).getByRole("group", { name: "View" })).toBeInTheDocument();

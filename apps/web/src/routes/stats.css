@@ -906,7 +906,7 @@
   background: var(--bg-raised);
   color: var(--text);
   text-align: left;
-  cursor: pointer;
+  cursor: var(--cursor-glove-point, pointer);
 }
 
 .hall-rank {
