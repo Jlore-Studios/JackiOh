@@ -44418,6 +44418,14 @@
         "title": "Patch: check-fixtures reads MAX_COPIES from engine config and accepts valid handicap fields",
         "verdict": "came to nothing",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-26T00:47:51Z",
+        "number": 4971,
+        "reason": "same as #4688, rejected two days ago. Nothing breaks today (`SMOKE` names neither 56 spec, and a shared weight only nudges the nightly shards), and the new uniqueness check is one more rule every future spec has to satisfy. No new evidence since.",
+        "title": "Patch: renumber colliding e2e spec 56 and hold spec prefixes unique in shard-specs",
+        "verdict": "came to nothing",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "declined": [
@@ -45245,6 +45253,13 @@
         "number": 4970,
         "reason": "all 45 deck fixtures pass today, and none uses `deckCopies`, `heroArmor`, `heroFloor` or `tutorialCardsOnly`. `MAX_COPIES = 1` appears only in the check's comments and messages. Teaching the check fields no fixture has is a guard against something that hasn't happened. Do it in the change that first adds such a fixture.",
         "title": "Patch: check-fixtures reads MAX_COPIES from engine config and accepts valid handicap fields",
+        "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-26T00:47:51Z",
+        "number": 4971,
+        "reason": "same as #4688, rejected two days ago. Nothing breaks today (`SMOKE` names neither 56 spec, and a shared weight only nudges the nightly shards), and the new uniqueness check is one more rule every future spec has to satisfy. No new evidence since.",
+        "title": "Patch: renumber colliding e2e spec 56 and hold spec prefixes unique in shard-specs",
         "why": "rejected by @jgoetzmann"
       }
     ],
