@@ -22418,17 +22418,8 @@
       }
     },
     "5010": {
-      "action": "plan",
-      "asks": [
-        "c:7184768312"
-      ],
-      "build_next": {
-        "from_run": "45780128144",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-26T08:12:49Z",
-        "until": "2026-11-26T08:42:49Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-26T08:12:39Z",
         "difficulty": "medium",
@@ -22447,10 +22438,9 @@
         "reason": "planned on sonnet",
         "trail": "- said: I'll start by reading the Marketplace component, its test, and the sibling controls that already do this.\n- Bash: {\"command\": \"ls .bot-plan.md 2>/dev/null; wc -l apps/web/src/game/Marketplace.tsx apps/web/src/game/Marketplace.test.tsx apps/web/src/game/TradeControl.tsx apps/web/src/game/ActivateControl.tsx\"}\n- Grep: {\"pattern\": \"Marketplace\", \"path\": \"/home/runner/work/_temp/work/item-5010/apps/web/src\", \"output_mode\": \"files_with_matches\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5010/apps/web/src/game/Marketplace.tsx\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5010/apps/web/src/game/Marketplace.test.tsx\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5010/apps/web/src/game/TradeControl.tsx\"}\n- Grep: {\"pattern\": \"onRefused|notice|Marketplace|marketOpen|market\", \"path\": \"/home/runner/work/_temp/work/item-5010/apps/web/src/game/Game.tsx\", \"output_mode\": \"content\", \"-n\": true}\n- Grep: {\"pattern\": \"onRefused|notice|Marketplace|market\", \"path\": \"/home/runner/work/_temp/work/item-5010/apps/web/src/game/Board.tsx\", \"output_mode\": \"content\", \"-n\": true}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5010/apps/web/src/game/Game.tsx\", \"offset\": 1050, \"limit\": 130}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5010/apps/web/src/game/Board.tsx\", \"offset\": 575, \"limit\": 100}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5010/apps/web/src/game/Board.tsx\", \"offset\": 800, \"limit\": 70}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5010/apps/web/src/game/Board.tsx\", \"offset\": 760, \"limit\": 42}\n- Bash: {\"command\": \"cd apps/web/src/game && cat market.css | head -200; grep -n \\\"BoardProps\\\\|market?\\\" Board.tsx | head; grep -n \\\"market\\\" contract.ts | head -20\"}\n- Grep: {\"pattern\": \"R3768000\", \"path\": \"/home/runner/work/_temp/work/item-5010\", \"output_mode\": \"files_with_matches\", \"glob\": \"!{target,node_modules,spec/history}/**\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5010 && cat spec/rulings/R3768000.md; sed -n 1,60p spec/rulings/R3821000.md; grep -n \\\"R3768000\\\" apps/web/README.md apps/web/src/game/contract.ts ap\u2026\n- Bash: {\"command\": \"sed -n 200,330p apps/web/src/game/market.css; sed -n 350,370p apps/web/src/game/contract.ts\"}\n- Bash: {\"command\": \"grep -rn \\\"marketBuy\\\\|market-buy\\\\|marketplace-deal\\\" --include=*.ts --include=*.tsx --include=*.css --include=*.md --include=*.json -l apps e2e docs spec/10-engine-guide 2>/dev/null | \u2026\n- Bash: {\"command\": \"grep -n \\\"Marketplace\\\\|marketplace\\\\|1853003\\\\|R3768000\\\" spec/10-engine-guide/10.10-client-rendering.md | head -30; grep -n \\\"arketplace\\\" apps/web/README.md | head -20\"}\n- Bash: {\"command\": \"cat spec/rulings/R1853003.md | head -30; grep -n \\\"proven_in\\\\|cited\\\\|citation\\\" spec/README.md | head -30\"}\n- Bash: {\"command\": \"sed -n 500,520p apps/web/README.md; sed -n 450,482p apps/web/README.md\"}\n- Bash: {\"command\": \"ls spec/pending | head; sed -n 55,80p spec/README.md; git log --oneline -30 --stat --format='%h %s' -- apps/web/src/game | grep -v \\\"^ \\\" | head -10\"}\n- Bash: {\"command\": \"cat spec/pending/$(ls spec/pending | head -1) | head -20; grep -n \\\"reason\\\" apps/web/src/game/Marketplace.test.tsx | head -3; grep -rn \\\"set-state-in-effect\\\\|react-hooks\\\" eslint.confi\u2026\n- Bash: {\"command\": \"git show --stat --format='%h %s' 7270e555e5 | head -20; git log -8 --format='%h %s' -- spec/rulings | head -8; sed -n 40,70p eslint.config.js\"}\n- Bash: {\"command\": \"grep -n \\\"reason\\\" apps/web/src/game/ActivateControl.test.tsx | head -12; grep -n \\\"attack-reason\\\\|data-testid=\\\\\\\"attack\\\" apps/web/src/game/*.tsx | head; grep -n \\\"describe(\\\\|^ it(\\\"\u2026\n- Bash: {\"command\": \"sed -n 330,400p apps/web/src/game/market.css; grep -rn -A8 \\\"^\\\\.attack-reason\\\" apps/web/src/game/*.css | head -30; grep -n \\\"MarketOfferView\\\" -A25 apps/web/src/wire/generated/MarketOf\u2026\n- Bash: {\"command\": \"sed -n 30,60p apps/web/src/wire/generated/MarketOfferView.ts; grep -rn \\\"attack-reason\\\" apps/web/src --include=*.css | head -5; grep -rn \\\"isLegal\\\\|pressed greyed\\\\|aria-disabled\\\" app\u2026\n- Bash: {\"command\": \"sed -n 2520,2560p apps/web/src/game/board.css; grep -n \\\"testid = {\\\\|^export const testid\\\" apps/web/src/game/contract.ts; sed -n 138,152p apps/web/src/game/contract.ts\"}\n- Bash: {\"command\": \"ls apps/web/src/game | grep -i contract; grep -rln \\\"market-buy\\\\|marketBuy\\\" apps/web/src e2e 2>/dev/null | head; grep -n \\\"testid\\\\b\\\" apps/web/src/game/contract.test.ts 2>/dev/null | \u2026\n- Bash: {\"command\": \"grep -n \\\"const shown\\\\|shown =\\\" apps/web/src/game/Game.tsx | head; grep -n \\\"const dispatch\\\" -A12 apps/web/src/game/Game.tsx | head -30\"}\n- Bash: {\"command\": \"sed -n 740,760p apps/web/src/game/Game.tsx; grep -n \\\"shown\\\" apps/web/src/game/Game.tsx | sed -n 1,12p\"}\n- Bash: {\"command\": \"grep -rli \\\"marketplace\\\" e2e --include=*.ts 2>/dev/null | head; grep -rn \\\"line-bright\\\" apps/web/src/index.css apps/web/src/*.css 2>/dev/null | head -2; grep -rn \\\"ARIA-DISABLED\\\\|aria\u2026\n- Bash: {\"command\": \"grep -c \\\"greyed with the view's \\\\`reason\\\\` otherwise; nothing sells there\\\" spec/10-engine-guide/10.10-client-rendering.md; grep -n \\\"R3768000\\\" spec/10-engine-guide/10.10-client-rend\u2026\n- said: Now I'll write the draft file, then give the final plan.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5010/.bot-plan.md\", \"content\": \"# Draft plan #5010 (planner notes)\\n\\nRead: Marketplace.tsx, Marketplace.test.tsx, TradeControl.tsx (aria-disabled + o\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of the five hard lines holds: the change is client-only (one component, a testid, one CSS rule, two doc sentences and its tests, about 6 files), with no engine, AI, cross-crate or migration work.\"} --> ## Goal A press on a greyed Marketplace \"Buy\" say\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-26T08:04:32Z",
       "owner_why": "it plans it",
@@ -22463,12 +22453,14 @@
       "provider": "claude-7",
       "queued_at": "2026-11-26T06:47:04Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45780128144",
+      "run_id": "pending:9489dab0-1795680811",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-26T08:04:32Z",
+      "started_at": "2026-11-26T08:13:59Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7184768312"
+      ]
     },
     "5011": {
       "action": "build",
@@ -23180,9 +23172,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T08:04:32Z",
+    "at": "2026-11-26T08:13:59Z",
     "url": "",
-    "what": "plan #5010 on claude-7"
+    "what": "build #5010 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-26T08:00:42Z",
