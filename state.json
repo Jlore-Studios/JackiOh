@@ -22190,7 +22190,9 @@
     },
     "45724984995": {
       "at": "2026-11-26T00:04:19Z",
+      "done": true,
       "ref": "d7c6beaf-1795650892",
+      "status": "interrupted",
       "tries": 1
     }
   },
