@@ -22412,6 +22412,13 @@
     "5011": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-26T07:06:43Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "One web store module plus its test file, modeled on a 77-line precedent (#4914); no engine, AI, cross-crate, migration or 40-file change, so no line of the hard rule holds."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
