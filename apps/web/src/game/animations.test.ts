@@ -110,6 +110,8 @@ const BUILD_DURATIONS: Record<GameEventType, number> = {
   // R800: a discard a discard guard stopped shakes the hand once.
   discardPrevented: 300,
   damageAbsorbed: 300,
+  // R5045000: a pool's card pulses as it soaks a hit.
+  damageNullified: 400,
   // R3857000: a hero's kept Armor gain ticks its Armor badge.
   armorGained: 300,
   // Meditative #39.2, R961.
@@ -254,6 +256,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   translated: { type: "translated", instanceId: "u6" },
   discardPrevented: { type: "discardPrevented", player: "p2", count: 1 },
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
+  damageNullified: { type: "damageNullified", instanceId: "u7", sourceId: "u1", targetId: "u6", amount: 2, combat: true },
   armorGained: { type: "armorGained", player: "p2", amount: 2, armor: 2 },
   jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
   secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
@@ -371,6 +374,7 @@ const SAMPLE_TARGETS: Record<GameEventType, string> = {
   translated: testid.card("u6"),
   discardPrevented: animTestid.hand("opponent"),
   damageAbsorbed: testid.card("u6"),
+  damageNullified: testid.card("u7"),
   armorGained: testid.hero("opponent"),
   jadeChanged: testid.hero("you"),
   secretChosen: testid.hero("you"),
@@ -469,9 +473,9 @@ describe("ANIMATIONS covers every event type", () => {
 
     expect(rows).toEqual(types);
     // `GAME_EVENT_TYPES` in @jackioh/shared is the source of truth; the literal is the second
-    // pair of eyes on it, so it moves only when a type is deliberately added there (#3925's
-    // `loopCapped`, R3925000, the latest).
-    expect(rows).toHaveLength(97);
+    // pair of eyes on it, so it moves only when a type is deliberately added there (#5045's
+    // `damageNullified`, R5045000, the latest).
+    expect(rows).toHaveLength(98);
   });
 
   it("gives every row an animation name and a testid template", () => {
@@ -570,6 +574,21 @@ describe("R831003 KY's Papaya's curve", () => {
     expect(row.fx).toEqual({ recipe: "curve" });
     expect(targetFor(SAMPLES.curveDrawn, fullBoardView())).toBe(testid.board);
     expect(animationsCss).toContain('[data-animating="curveDrawn"]');
+  });
+});
+
+describe("R5045000 a damage pool's soak", () => {
+  it("R5045000 damageNullified pulses the pool's card for 400 ms under the nullify recipe, else the hit's target", () => {
+    const row = ANIMATIONS.damageNullified;
+    expect(row.animation).toBe("jk-pool-pulse");
+    expect(row.durationMs).toBe(400);
+    expect(row.fx).toEqual({ recipe: "nullify" });
+    const view = fullBoardView();
+    expect(targetFor(SAMPLES.damageNullified, view)).toBe(testid.card("u7"));
+    // A pool card the view does not show leaves the hit's target, a unit's or a hero's.
+    expect(targetFor({ ...SAMPLES.damageNullified, instanceId: "hidden" }, view)).toBe(testid.card("u6"));
+    expect(targetFor({ ...SAMPLES.damageNullified, instanceId: "hidden", targetId: "hero-p1" }, view)).toBe(testid.hero("you"));
+    expect(animationsCss).toContain('[data-animating="damageNullified"]');
   });
 });
 

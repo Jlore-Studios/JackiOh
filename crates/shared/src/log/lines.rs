@@ -475,6 +475,34 @@ pub fn describe(names: &Names<'_>, event: &GameEvent, aims: Option<&[String]>) -
             by(text, *via)
         }
         // R3857000: a hero's kept Armor gain, named by its side.
+        // R5045000: a pool's soak opens with the card whose pool took it (S+ #42 Force Projector, S+ #123
+        // Oct), so a hit that seemed to do nothing says where it went.
+        GameEvent::DamageNullified {
+            instance_id,
+            source_id,
+            target_id,
+            amount,
+            combat,
+        } => {
+            let mut hit = vec![
+                p("pool", capitalised(&names.instance(instance_id, Some("a card")))),
+                p("amount", *amount),
+                p("target", names.instance(target_id, None)),
+            ];
+            let source = if *combat {
+                None
+            } else {
+                source_id.as_deref().and_then(|id| names.known(id))
+            };
+            match source {
+                Some(source) => {
+                    hit.push(p("source", source));
+                    s("{pool} nullified {amount} damage to {target} from {source}", hit)
+                }
+                None if *combat => s("{pool} nullified {amount} damage to {target} in combat", hit),
+                None => s("{pool} nullified {amount} damage to {target}", hit),
+            }
+        }
         GameEvent::ArmorGained { player, amount, .. } => s(
             "{whose} hero gained {amount} Armor",
             vec![p("whose", capitalised(&whose(*player))), p("amount", *amount)],
