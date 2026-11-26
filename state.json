@@ -22935,6 +22935,66 @@
       "feedback_since": "2026-11-26T08:58:06Z",
       "issue": 4999,
       "kind": "revise",
+      "own_review": {
+        "from_run": "45787675605",
+        "gates": [
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "rustfmt",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo fmt --check",
+            "seconds": 8.8,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "catalog",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh catalog check",
+            "seconds": 0.1,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "patches",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh patches check",
+            "seconds": 4.5,
+            "skipped": "",
+            "tail": ""
+          },
+          {
+            "exit_code": 0,
+            "inconclusive": false,
+            "name": "rulings",
+            "ok": true,
+            "pre_existing": false,
+            "run": "cargo jackioh spec check",
+            "seconds": 4.6,
+            "skipped": "",
+            "tail": ""
+          }
+        ],
+        "head": "cf0e3be65426f2fc2bb60e7dbfdb1591ea6b9349",
+        "kind": "build",
+        "model": "gemini-3.8-flash-high",
+        "provider": "agy",
+        "round_tier": "medium",
+        "rounds_on": 4999,
+        "rounds_used": 0,
+        "since": "2026-11-26T09:22:42Z",
+        "source": "build",
+        "until": "2026-11-26T09:52:42Z"
+      },
+      "queued_at": "2026-11-26T09:22:42Z",
       "self_check_findings": [],
       "votes": {
         "approvals": [],
