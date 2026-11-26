@@ -44,12 +44,12 @@ use crate::config::{
 };
 use crate::db::fake::to_public_player_summary;
 use crate::db::store::{
-    ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, BotState, CodeAttempt, CollectionEntry,
-    CollectionGrant, ConsentRow, DailyGameRow, DailyInviteKind, DailyInviteRow, DailyInviteState,
-    DailyNotifyRow, DeckVersion, DeckVersionOutcome, EmoteEventRow, FoldedRecords, FrozenDeck, FrozenTrio,
-    GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, LoadoutSample, MatchActionRow,
-    MatchCheckpointRow, MatchClocks, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, NewBot,
-    PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
+    ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, BotState, CardRows, CodeAttempt,
+    CollectionEntry, CollectionGrant, ConsentRow, DailyGameRow, DailyInviteKind, DailyInviteRow,
+    DailyInviteState, DailyNotifyRow, DeckVersion, DeckVersionOutcome, EmoteEventRow, FoldedRecords,
+    FrozenDeck, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, LoadoutSample,
+    MatchActionRow, MatchCheckpointRow, MatchClocks, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow,
+    NewBot, PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
     PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile,
     ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus, PublicPlayerSummary, PushSubRow,
     QueueMode, RatedGameRow, RatedSide, RedeemInviteCodeInput, RedeemResult, ReplayListRow, ReplayRow,
@@ -57,7 +57,7 @@ use crate::db::store::{
     SeatedProfile, SeriesRow, SeriesSide, SignalOutcomeRow, StatsTotalsQuery, StoreError, TermsAcceptanceRow,
     TermsSource, Ticket, TicketStatus, TicketWait, TrioUpsertOutcome, TutorialHiddenChoice,
     TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord, UpsertOutcome,
-    UsernameClaim, UsernameClaimOutcome, deck_version_step,
+    UsernameClaim, UsernameClaimOutcome, add_card_total, deck_version_step,
 };
 use crate::loadout::{DeckSlots, Loadout};
 use crate::ranked::glicko2::Glicko;
@@ -5356,10 +5356,14 @@ pub async fn stats_totals_load(
             .game_totals
             .insert(records_key_of(row)?, from_json(get::<Value>(row, "total")?)?);
     }
+    if query.cards == CardRows::None {
+        return Ok(totals);
+    }
     // One read, taken a row at a time as it arrives and each card's `stats` read straight into its
     // figures, so no raw row is held past its own and no JSON tree stands between. A read a patch at a
     // time cost minutes on staging (2026-11-26): each patch's rows lie scattered through the table, so
-    // every patch's read went through most of its pages.
+    // every patch's read went through most of its pages. R4965000: a row the query's `cards` drops is
+    // skipped before its figures are read, and one it folds is added into the total it is kept under.
     let mut rows = sqlx::query(
         "select patch, source, mode, pilot, card, stats,
                 case when $4::boolean then turns end as turns,
@@ -5375,13 +5379,17 @@ pub async fn stats_totals_load(
     .bind(query.drills)
     .fetch(&mut **t);
     while let Some(row) = rows.try_next().await.map_err(db_error)? {
+        let patch: String = get(&row, "patch")?;
+        let card: String = get(&row, "card")?;
+        let Some(patch) = query.cards.file(&patch, &card) else {
+            continue;
+        };
         let key = TotalsKey {
-            patch: get(&row, "patch")?,
+            patch: patch.to_string(),
             source: from_literal(&get::<String>(&row, "source")?)?,
             mode: from_literal(&get::<String>(&row, "mode")?)?,
             pilot: from_literal(&get::<String>(&row, "pilot")?)?,
         };
-        let card: String = get(&row, "card")?;
         let mut total = CardTotal {
             stats: get::<Json<CardStats>>(&row, "stats")?.0,
             ..CardTotal::new(&card)
@@ -5392,7 +5400,7 @@ pub async fn stats_totals_load(
         if let Some(co) = get::<Option<Value>>(&row, "co")? {
             co_of(co, &mut total)?;
         }
-        totals.cards.entry(key).or_default().insert(card, total);
+        add_card_total(totals.cards.entry(key).or_default(), card, total);
     }
     drop(rows);
     for cards in totals.cards.values_mut() {

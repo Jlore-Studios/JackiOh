@@ -8187,8 +8187,8 @@ stinkyscapeplus-121: # Toxopid
     death: Even giants fall.
   zh:
     name: 巨毒蛛
-    base: "不可变，陨坑，突袭\n结余减费。\n战吼：在场上随机的空的单位区中召唤{legs}个巨毒蛛腿。\n场上有巨毒蛛腿时不可摧毁。\n回合结束时：使所有敌人获得毒素{toxic}。"
-    radiant: "不可变，陨坑，突袭\n结余减费。\n战吼：在你对手场上随机的空的单位区中召唤{legs}个光辉巨毒蛛腿。\n场上有巨毒蛛腿时不可摧毁。\n回合结束时：使所有敌人获得毒素{toxic}。"
+    base: "不可变，陨坑，突袭\n结余减费。\n战吼：在场上随机的区域中召唤{legs}个巨毒蛛腿，并消灭那里的单位。\n场上有巨毒蛛腿时不可摧毁。\n回合结束时：使所有敌人获得毒素{toxic}。"
+    radiant: "不可变，陨坑，突袭\n结余减费。\n战吼：在你对手场上随机的区域中召唤{legs}个光辉巨毒蛛腿，并消灭那里的单位。\n场上有巨毒蛛腿时不可摧毁。\n回合结束时：使所有敌人获得毒素{toxic}。"
 stinkyscapeplus-121-1: # Toxopid Leg
   flavour: Strictly a leg. Unreasonably proud of it.
   voice:
@@ -8197,8 +8197,8 @@ stinkyscapeplus-121-1: # Toxopid Leg
     death: Lost a leg.
   zh:
     name: 巨毒蛛腿
-    base: "无法攻击，陨坑，嘲讽\n毒素免疫。"
-    radiant: "无法攻击，陨坑，嘲讽\n毒素免疫。"
+    base: "灵活，无法攻击，陨坑，嘲讽\n毒素免疫。"
+    radiant: "灵活，无法攻击，陨坑，嘲讽\n毒素免疫。"
 stinkyscapeplus-122: # Quad
   flavour: Four rotors, one mission, zero interest in arguments.
   voice:

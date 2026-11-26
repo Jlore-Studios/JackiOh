@@ -190,6 +190,8 @@ export const GAME_EVENT_TYPES = [
   "deradianted",
   "manaSpent",
   "damageAbsorbed",
+  // Issue #5045: a damage pool nullified part of a hit (R5045000).
+  "damageNullified",
   // Issue #3857: a hero kept Armor (R3857000).
   "armorGained",
   // Issue #3925: a resolution loop reached the loop cap (R3925000).

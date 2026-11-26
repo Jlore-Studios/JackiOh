@@ -166,6 +166,23 @@ pub struct AiSearch {
     /// board threatens lethal, as many switches to Defense that lower that threat (`wall_switches`) are
     /// kept after them.
     pub position_switches: i32,
+    /// R4595002: how many lines one of whose steps played a `discount_def_ids` card and made the seat's
+    /// other hand cards cheaper (a "your cards cost less this turn" play) the beam keeps past its width at
+    /// each depth, best first, so the plays the discount pays for are searched; the line's end-of-turn
+    /// score still judges it.
+    pub discount_lines: i32,
+    /// R4595002: the cards whose discount `discount_lines` keeps searching: Infinite Assault #72 Overclock
+    /// to Infinity, the one the sweep found the beam cutting. A shipped card is not listed, so shipped
+    /// decks search as before (#4595's fork screen).
+    pub discount_def_ids: &'static [&'static str],
+    /// R4595003: a simulated step pays one more node for every this many events it emitted past
+    /// `free_events`, so a step that runs a long chain (a summon loop to the engine's cap) costs the
+    /// search what it costs the clock.
+    pub events_per_node: i32,
+    /// R4595003: the events a step emits at no extra charge: past any step of an ordinary game (the
+    /// heaviest of 200 fuzz games of the Infinite Assault emitted 375; the Drone loop the sweep timed out
+    /// on, 2,002), so shipped decks search as before (#4595's fork screen).
+    pub free_events: i32,
     /// Opponent prompts auto-answered inside one simulated step before it counts as an error.
     pub max_auto_answers: i32,
     /// R4447000: the most steps a finalist's replay on another determinization plays past the first step
@@ -241,6 +258,10 @@ pub struct AiSearch {
 pub const AI_SEARCH: AiSearch = AiSearch {
     zone_variants: 2,
     position_switches: 2,
+    discount_lines: 1,
+    discount_def_ids: &["infiniteassault-072"],
+    events_per_node: 100,
+    free_events: 1_000,
     max_auto_answers: 8,
     // R4697000: 3, the value R4447000's tests replay with. At 0 a replay cut where its world drew
     // other cards than the line's ended its turn there, which R4608000 read as evidence against a
@@ -836,10 +857,15 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // smoke gate read 20, 16 and 18 of 20.
     evolve: 0.5,
     evolve_event_share: 0.25,
-    // R3822000: untuned starts, to revisit after #3574's sweep. A point of damage still to come at half a
-    // point of health now, a hero's coming life at half its cost on the curve, and a unit a tick kills at
-    // Brittle's own `brittle_discount`, since both ends come at the same stage. At 0.5 the smoke gate read
-    // 20, 18 and 18 of 20; at 0, 19, 18 and 18.
+    // R3822000: untuned starts. A point of damage still to come at half a point of health now, a hero's
+    // coming life at half its cost on the curve, and a unit a tick kills at Brittle's own `brittle_discount`,
+    // since both ends come at the same stage. At 0.5 the smoke gate read 20, 18 and 18 of 20; at 0, 19, 18
+    // and 18. After #3574's sweep, #5006 screened `unit_affliction` at 1.0 (training/improve.md, A screen):
+    // 400 games on improve-dev, 202-198, edge +0.010 (-0.021 to +0.041), 10 decided (6-4), 33 diverged vs
+    // control 0f3e8f961e: inconclusive (R4319000), so its scenes settle it, and those in
+    // `tests/ai/affliction_threat.rs` hold 0.5. At 1.0 a unit its first tick kills is worth the same at
+    // every health, which R3822000's monotone test refuses. `unit_doomed` and `hero_affliction` are
+    // unscreened, and another arm of any of the three is a screen of its own.
     unit_affliction: 0.5,
     unit_doomed: 0.5,
     hero_affliction: 0.5,

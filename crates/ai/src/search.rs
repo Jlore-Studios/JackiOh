@@ -7,7 +7,9 @@
 use std::cmp::Ordering;
 
 use indexmap::{IndexMap, IndexSet};
-use jackioh_engine::{ActionBody, GameState, Phase, PlayerId};
+use jackioh_engine::{
+    ActionBody, GameState, OffFieldZone, Phase, PlayerId, find_instance, play_cost, zone_cards,
+};
 
 use crate::candidates::{
     candidate_actions, candidate_set, root_candidate_actions, root_candidate_set, stands_down,
@@ -36,6 +38,32 @@ struct OpenLine {
     state: GameState,
     actions: Vec<ActionBody>,
     score: f64,
+    /// R4595002: a step of its line made one of the seat's other hand cards cheaper.
+    discounted: bool,
+}
+
+/// R4595002: whether `action` played an `AI_SEARCH.discount_def_ids` card and `next` prices some card
+/// of `seat`'s hand that `before` also held below what `before` priced it (`play_cost`).
+fn discount_played(
+    before: &GameState,
+    action: Option<&ActionBody>,
+    next: &GameState,
+    seat: PlayerId,
+) -> bool {
+    let Some(ActionBody::Play { instance_id, .. }) = action else {
+        return false;
+    };
+    if !find_instance(before, instance_id)
+        .is_some_and(|card| AI_SEARCH.discount_def_ids.contains(&card.def_id.as_str()))
+    {
+        return false;
+    }
+    let held = zone_cards(before, seat, OffFieldZone::Hand);
+    zone_cards(next, seat, OffFieldZone::Hand).iter().any(|card| {
+        held.iter()
+            .find(|old| old.id == card.id)
+            .is_some_and(|old| play_cost(next, card) < play_cost(before, old))
+    })
 }
 
 /// `b.score - a.score` as a comparator: best first; a NaN difference reads as a tie.
@@ -121,6 +149,7 @@ pub fn beam_search(
         state: det.clone(),
         actions: Vec::new(),
         score: evaluate_priced(det, seat, NextSwing::Enemy, &AI_EVAL, prices),
+        discounted: false,
     }];
     let mut left_open: Vec<OpenLine> = Vec::new();
     // #1797: the lane variants of the children the beam kept, closed after it (each a state and its line).
@@ -146,8 +175,18 @@ pub fn beam_search(
             if stopped {
                 break;
             }
-            for action in moves_of(&line.state, seat, width, prices) {
-                let next = match simulate(&line.state, seat, &action, counter, prices) {
+            let moves = moves_of(&line.state, seat, width, prices);
+            // R5044000: the root's End turn (its last move, `expand`) is simulated before the others and
+            // filed in its own place, so a root move that draws every node the decision has left still
+            // leaves the beam a line. With nodes to spare every line is the one it was, in its order.
+            let mut end_turn = (depth == 0 && moves.last().is_some_and(|m| matches!(m, ActionBody::EndTurn)))
+                .then(|| simulate(&line.state, seat, &ActionBody::EndTurn, counter, prices));
+            for action in moves {
+                let stepped = match end_turn.take_if(|_| matches!(action, ActionBody::EndTurn)) {
+                    Some(stepped) => stepped,
+                    None => simulate(&line.state, seat, &action, counter, prices),
+                };
+                let next = match stepped {
                     None => {
                         stopped = true;
                         break;
@@ -192,11 +231,38 @@ pub fn beam_search(
                 // #1112: a child waiting on the seat's own prompt is ranked where its answers lead.
                 let score = own_prompt_score(&next, seat, counter, prices)
                     .unwrap_or_else(|| evaluate_priced(&next, seat, NextSwing::Enemy, &AI_EVAL, prices));
+                let discounted = line.discounted || discount_played(&line.state, actions.last(), &next, seat);
                 children.push(OpenLine {
                     state: next,
                     actions,
                     score,
+                    discounted,
                 });
+            }
+            // R5044000: a cut before End turn's place files the line End turn already closed.
+            if let Some(Some(Ok(next))) = end_turn {
+                let mut actions = line.actions.clone();
+                actions.push(ActionBody::EndTurn);
+                let status = line_status(&next, seat, root_turn);
+                if status == LineStatus::Open {
+                    let score = own_prompt_score(&next, seat, counter, prices)
+                        .unwrap_or_else(|| evaluate_priced(&next, seat, NextSwing::Enemy, &AI_EVAL, prices));
+                    // R4595002: End turn plays no card, so the line keeps what it held.
+                    children.push(OpenLine {
+                        state: next,
+                        actions,
+                        score,
+                        discounted: line.discounted,
+                    });
+                } else {
+                    let score = static_score(&next, seat, root_turn, prices);
+                    complete.push(Line {
+                        actions,
+                        score,
+                        status,
+                        end: next,
+                    });
+                }
             }
         }
         // R4801000: every move at the root has been tried; a host's wrap-up is polled from here, so one
@@ -214,7 +280,11 @@ pub fn beam_search(
         // Best first; equal scores keep their order (`sort_by` is stable).
         let mut next_frontier = children;
         next_frontier.sort_by(|a, b| by_score_desc(a.score, b.score));
-        next_frontier.truncate(budget.beam_width.max(1));
+        let cut = next_frontier.split_off(budget.beam_width.max(1).min(next_frontier.len()));
+        // R4595002: a discount the beam cut is played on beside it.
+        let kept_discounts = next_frontier.iter().filter(|line| line.discounted).count();
+        let room = (AI_SEARCH.discount_lines.max(0) as usize).saturating_sub(kept_discounts);
+        next_frontier.extend(cut.into_iter().filter(|line| line.discounted).take(room));
         let kept: IndexSet<String> = next_frontier
             .iter()
             .map(|line| lane_free_signature(&line.state, seat))
