@@ -25075,6 +25075,14 @@
         "provider": "claude-3",
         "since": "2026-11-26T17:50:14Z"
       }
+    },
+    "5097": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-26T16:54:43Z",
+      "issue": 5091,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
