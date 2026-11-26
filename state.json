@@ -47082,7 +47082,8 @@
       "2026-11-26T09:17:00Z,agy,usage-command,after,45787675605,6,2026-11-26T13:58:46Z,3,2026-12-03T08:58:46Z,allowed,100,100,"
     ],
     "runs": [
-      "2026-11-26T08:48:23Z,45767162953,agy,gemini-3.8-flash-high,plan,4977,medium,failed,,150.3,293656,36601,0,,3,0,84,0,329.1,agy,none,,1"
+      "2026-11-26T08:48:23Z,45767162953,agy,gemini-3.8-flash-high,plan,4977,medium,failed,,150.3,293656,36601,0,,3,0,84,0,329.1,agy,none,,1",
+      "2026-11-26T09:17:20Z,45787675605,agy,gemini-3.8-flash-high,build,4999,medium,built,,18.2,237166,33703,0,,0,6,0,3,218.5,muse,none,cap,1"
     ]
   },
   "version": 1
