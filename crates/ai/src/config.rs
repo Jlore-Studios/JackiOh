@@ -845,7 +845,10 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // forks, 99 live, edge -0.002 (-0.032 to 0.027); reverted (training/improve.md, A screen).
     activation: 0.5,
     // R2688000: an untuned start for the training lanes, as R2564000's is. At 0.5 the smoke gate read
-    // 20, 20 and 20 of 20; at 0, 20, 20 and 20.
+    // 20, 20 and 20 of 20; at 0, 20, 20 and 20. #5007 screened it at 1.0 (training/improve.md, A
+    // screen): 400 games on improve-dev, 200-200, edge +0.000 (-0.031 to +0.031), 10 decided (5-5), 22
+    // diverged vs control d7f8bbf22c, every game clean: inconclusive (R4319000), so its scenes settle it,
+    // and those in `tests/ai/attack_hooks.rs` hold 0.5. Another arm is a screen of its own.
     attack_hook: 0.5,
     // R3064000: 1.0, not the untuned starts' 0.5: the slumber share already discounts the wait, and no
     // effect reaches a Dormant card, so its wake comes. At 0.5, as at 0, Medium ends its turn rather than
