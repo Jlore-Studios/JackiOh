@@ -146,8 +146,18 @@ pub fn beam_search(
             if stopped {
                 break;
             }
-            for action in moves_of(&line.state, seat, width, prices) {
-                let next = match simulate(&line.state, seat, &action, counter, prices) {
+            let moves = moves_of(&line.state, seat, width, prices);
+            // R5044000: the root's End turn (its last move, `expand`) is simulated before the others and
+            // filed in its own place, so a root move that draws every node the decision has left still
+            // leaves the beam a line. With nodes to spare every line is the one it was, in its order.
+            let mut end_turn = (depth == 0 && moves.last().is_some_and(|m| matches!(m, ActionBody::EndTurn)))
+                .then(|| simulate(&line.state, seat, &ActionBody::EndTurn, counter, prices));
+            for action in moves {
+                let stepped = match end_turn.take_if(|_| matches!(action, ActionBody::EndTurn)) {
+                    Some(stepped) => stepped,
+                    None => simulate(&line.state, seat, &action, counter, prices),
+                };
+                let next = match stepped {
                     None => {
                         stopped = true;
                         break;
@@ -197,6 +207,29 @@ pub fn beam_search(
                     actions,
                     score,
                 });
+            }
+            // R5044000: a cut before End turn's place files the line End turn already closed.
+            if let Some(Some(Ok(next))) = end_turn {
+                let mut actions = line.actions.clone();
+                actions.push(ActionBody::EndTurn);
+                let status = line_status(&next, seat, root_turn);
+                if status == LineStatus::Open {
+                    let score = own_prompt_score(&next, seat, counter, prices)
+                        .unwrap_or_else(|| evaluate_priced(&next, seat, NextSwing::Enemy, &AI_EVAL, prices));
+                    children.push(OpenLine {
+                        state: next,
+                        actions,
+                        score,
+                    });
+                } else {
+                    let score = static_score(&next, seat, root_turn, prices);
+                    complete.push(Line {
+                        actions,
+                        score,
+                        status,
+                        end: next,
+                    });
+                }
             }
         }
         // R4801000: every move at the root has been tried; a host's wrap-up is polled from here, so one
