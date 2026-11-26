@@ -47464,10 +47464,6 @@
   "suggest": {
     "asks": [],
     "auto": {
-      "4931": {
-        "at": "2026-11-25T15:14:37Z",
-        "why": "It re-screens the spec-invited open_lethal switch after the reply changed substantially, keeping only on edgeLow above 0."
-      },
       "4936": {
         "at": "2026-11-25T15:34:23Z",
         "why": "It fixes a real spec-order bug on a shipped card, with the spec line, files, and seeded-pick effect cited."
