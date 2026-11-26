@@ -48540,7 +48540,8 @@
       "2026-11-26T12:30:13Z,claude-6,stream,call,45817783866,58,2026-11-26T12:30:00Z,,,allowed,70,,"
     ],
     "runs": [
-      "2026-11-26T12:18:47Z,45811708284,agy,gemini-3.8-flash-high,review,5068,medium,approved,,44,996888,108713,0,,47,95,12,24,2.9,,none,,3"
+      "2026-11-26T12:18:47Z,45811708284,agy,gemini-3.8-flash-high,review,5068,medium,approved,,44,996888,108713,0,,47,95,12,24,2.9,,none,,3",
+      "2026-11-26T12:30:21Z,45817783866,claude-6,opus,review,5063,hard,approved,,11.7,21,5017,634980,0.6441,56,58,,,2.2,claude-6,none,,1"
     ]
   },
   "version": 1
