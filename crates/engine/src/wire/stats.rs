@@ -127,6 +127,13 @@ pub struct SeatSummary {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub played_radiant: Option<Vec<bool>>,
+    /// R5054000: the dealt cards this seat held Radiant in its hand at some point from its opening hand on,
+    /// each once, in the order it first held one so: they entered the hand Radiant, or turned Radiant there.
+    /// Present on every record written since, empty when there were none; absent from every record written
+    /// before, whose seen games have no face.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub held_radiant: Option<Vec<String>>,
     /// R4672000: what was chosen for each card in `played`, in the same order, `None` for a play whose
     /// card offered no choice. Absent when no play had one, and from every record written before it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -593,6 +600,17 @@ pub struct CardStats {
     /// R1147000: played, never Radiant.
     #[serde(default)]
     pub played_normal: Tally,
+    /// R5054000: seen (`seen`: played, cast or summoned, or reached the hand and never played) and Radiant at
+    /// least once while seen: held Radiant in the hand, played Radiant, or cast or summoned Radiant. Counted
+    /// only from the records that keep the face a card was seen on (`SeatSummary::held_radiant`), and absent
+    /// while empty, so a total folded before it reads and is stored as before.
+    #[serde(default, skip_serializing_if = "Tally::is_empty")]
+    #[cfg_attr(feature = "ts", ts(as = "Option<Tally>", optional))]
+    pub seen_radiant: Tally,
+    /// R5054000: seen, never Radiant, from the same records.
+    #[serde(default, skip_serializing_if = "Tally::is_empty")]
+    #[cfg_attr(feature = "ts", ts(as = "Option<Tally>", optional))]
+    pub seen_normal: Tally,
     /// R2089000: a seat made a Created copy of the card and used one. The four Created tallies are
     /// kept beside the deck's, under the same key, and read apart from them (`card_stats_of`'s
     /// `created`); each is absent while empty, so a deck row reads and is stored as before.
@@ -863,6 +881,8 @@ fn empty_stats(card: &str) -> CardStats {
         drawn_not_played: empty_tally(),
         played_radiant: empty_tally(),
         played_normal: empty_tally(),
+        seen_radiant: empty_tally(),
+        seen_normal: empty_tally(),
         created_played: empty_tally(),
         created_not_played: empty_tally(),
         created_played_radiant: empty_tally(),
@@ -1262,6 +1282,8 @@ pub fn add_stats(into: &mut CardStats, other: &CardStats) {
     add_tally(&mut into.drawn_not_played, &other.drawn_not_played);
     add_tally(&mut into.played_radiant, &other.played_radiant);
     add_tally(&mut into.played_normal, &other.played_normal);
+    add_tally(&mut into.seen_radiant, &other.seen_radiant);
+    add_tally(&mut into.seen_normal, &other.seen_normal);
     add_tally(&mut into.created_played, &other.created_played);
     add_tally(&mut into.created_not_played, &other.created_not_played);
     add_tally(&mut into.created_played_radiant, &other.created_played_radiant);
@@ -1446,6 +1468,21 @@ impl StatsTotals {
                 );
                 radiant
             });
+            // R5054000: the cards the seat saw on their Radiant face, read only from a record that keeps the
+            // cards it held Radiant: those, those it cast or summoned Radiant, and those played Radiant when
+            // its plays carry face flags (a play from the hand on its Radiant face was held so, too).
+            let seen_radiant: Option<IndexSet<&str>> = summary.held_radiant.as_ref().map(|held| {
+                held.iter()
+                    .map(String::as_str)
+                    .chain(
+                        cast_or_summoned
+                            .iter()
+                            .filter(|cast| cast.radiant)
+                            .map(|cast| cast.card.as_str()),
+                    )
+                    .chain(played_radiant.iter().flatten().copied())
+                    .collect()
+            });
 
             let key = TotalsKey {
                 patch: record.patch.clone(),
@@ -1515,6 +1552,18 @@ impl StatsTotals {
                     }
                 } else if in_hand.contains(card) {
                     count(&mut stats.drawn_not_played, outcome);
+                }
+                if let Some(radiant) = &seen_radiant
+                    && (played.contains(card) || in_hand.contains(card))
+                {
+                    count(
+                        if radiant.contains(card) {
+                            &mut stats.seen_radiant
+                        } else {
+                            &mut stats.seen_normal
+                        },
+                        outcome,
+                    );
                 }
                 if !drills {
                     continue;
@@ -2082,13 +2131,15 @@ impl StatsFace {
     }
 }
 
-/// R4673000: the games a face reads as the card's seen side: on All its seen games (`seen`), on Normal the
-/// seats that played it normal, on Radiant those that played it Radiant (R1147000).
+/// R4673000: the games a face reads as the card's seen side: on All its seen games (`seen`). R5054000: on
+/// Normal the seats that saw it and never Radiant, on Radiant those that saw it Radiant at least once, played
+/// or not, so a win-more card's plays are not its whole face; a total folded before the records kept that face
+/// has none.
 pub fn face_side(stats: &CardStats, face: StatsFace) -> Tally {
     match face {
         StatsFace::All => seen(stats),
-        StatsFace::Normal => stats.played_normal,
-        StatsFace::Radiant => stats.played_radiant,
+        StatsFace::Normal => stats.seen_normal,
+        StatsFace::Radiant => stats.seen_radiant,
     }
 }
 
@@ -3538,6 +3589,11 @@ fn seat_summary(value: Option<&Value>, at: &str) -> Result<SeatSummary, EngineEr
         played: ids(record.get("played"), &format!("{at}.played"))?,
         played_turns: None,
         played_radiant: None,
+        // R5054000: absent from a record written before it; present, a list of catalog ids.
+        held_radiant: match record.get("heldRadiant").filter(|value| !value.is_null()) {
+            None => None,
+            held => Some(ids(held, &format!("{at}.heldRadiant"))?),
+        },
         played_variants: optional_at(
             record.get("playedVariants"),
             &format!("{at}.playedVariants"),
@@ -3724,6 +3780,7 @@ mod tests {
             played: list(played),
             played_turns: None,
             played_radiant: None,
+            held_radiant: None,
             fatigue_draws: None,
             fatigue_damage: None,
             traps_set: None,
@@ -3952,6 +4009,8 @@ mod tests {
                 drawn_not_played: tally(5, 2, 1),
                 played_radiant: tally(0, 0, 0),
                 played_normal: tally(0, 0, 0),
+                seen_radiant: tally(0, 0, 0),
+                seen_normal: tally(0, 0, 0),
                 created_played: tally(0, 0, 0),
                 created_not_played: tally(0, 0, 0),
                 created_played_radiant: tally(0, 0, 0),
@@ -3989,6 +4048,8 @@ mod tests {
                 drawn_not_played: tally(4, 1, 1),
                 played_radiant: tally(0, 0, 0),
                 played_normal: tally(0, 0, 0),
+                seen_radiant: tally(0, 0, 0),
+                seen_normal: tally(0, 0, 0),
                 created_played: tally(0, 0, 0),
                 created_not_played: tally(0, 0, 0),
                 created_played_radiant: tally(0, 0, 0),
@@ -4031,6 +4092,8 @@ mod tests {
                 drawn_not_played: tally(0, 0, 0),
                 played_radiant: tally(0, 0, 0),
                 played_normal: tally(0, 0, 0),
+                seen_radiant: tally(0, 0, 0),
+                seen_normal: tally(0, 0, 0),
                 created_played: tally(0, 0, 0),
                 created_not_played: tally(0, 0, 0),
                 created_played_radiant: tally(0, 0, 0),
@@ -4627,6 +4690,79 @@ mod tests {
             assert_eq!(deserialized.played_radiant, tally(0, 0, 0));
             assert_eq!(deserialized.played_normal, tally(0, 0, 0));
         }
+
+        #[test]
+        fn r5054000_splits_the_seen_decks_by_the_face_the_card_was_seen_on_played_or_not() {
+            let cast = |card: &str, radiant: bool| CreatedUse {
+                card: card.to_string(),
+                turn: 3,
+                radiant,
+                variant: None,
+                source: None,
+            };
+            // P1 holds a Radiant and never plays it, sees b and plays it normal, casts c Radiant from its deck and
+            // never draws d; P2 plays a Radiant from its hand, which it held so.
+            let mut s1 = seat(&["a", "b", "c", "d"], &["a"], &["b"], &["b"]);
+            s1.held_radiant = Some(vec!["a".to_string()]);
+            s1.played_radiant = Some(vec![false]);
+            s1.cast_or_summoned = Some(vec![cast("c", true)]);
+            let mut s2 = seat(&["a"], &[], &["a"], &["a"]);
+            s2.held_radiant = Some(vec!["a".to_string()]);
+            s2.played_radiant = Some(vec![true]);
+            let m1 = GameRecord {
+                id: "m1".to_string(),
+                game: game(Winner::P1, GameOverReason::HeroDeath, 5, s1, s2),
+                ..record()
+            };
+            // A record written before the field: its seen cards have no face, even one played Radiant.
+            let mut s1_old = seat(&["a"], &["a"], &[], &["a"]);
+            s1_old.played_radiant = Some(vec![true]);
+            let s2_old = seat(&["b"], &["b"], &[], &[]);
+            let m2 = GameRecord {
+                id: "m2".to_string(),
+                game: game(Winner::P2, GameOverReason::HeroDeath, 5, s1_old, s2_old),
+                ..record()
+            };
+
+            let report = card_stats(&[m1, m2], &live());
+            let a = stats_of(&report, "a");
+            assert_eq!(
+                a.seen_radiant,
+                tally(2, 1, 0),
+                "held and never played, and played Radiant"
+            );
+            assert_eq!(a.seen_normal, tally(0, 0, 0));
+            assert_eq!(
+                a.played_radiant,
+                tally(2, 0, 0),
+                "the played split still counts the older record"
+            );
+            assert_eq!(seen(a), tally(3, 1, 0));
+            let b = stats_of(&report, "b");
+            assert_eq!(
+                b.seen_normal,
+                tally(1, 1, 0),
+                "the older record's seen b is in neither"
+            );
+            assert_eq!(b.seen_radiant, tally(0, 0, 0));
+            let c = stats_of(&report, "c");
+            assert_eq!(c.seen_radiant, tally(1, 1, 0), "cast Radiant from the deck");
+            let d = stats_of(&report, "d");
+            assert_eq!(
+                (d.seen_radiant, d.seen_normal),
+                (tally(0, 0, 0), tally(0, 0, 0)),
+                "never seen"
+            );
+            // A face reads its seen games, not its played ones.
+            assert_eq!(face_side(a, StatsFace::Radiant), a.seen_radiant);
+            assert_eq!(face_side(b, StatsFace::Normal), b.seen_normal);
+            // A total folded before the tallies reads them empty, and an empty one is not stored.
+            let json = serde_json::to_value(d).unwrap();
+            assert!(
+                json.get("seenRadiant").is_none() && json.get("seenNormal").is_none(),
+                "{json}"
+            );
+        }
     }
 
     /// R1044000: the totals read every figure the records gave. Each reference below is the counting
@@ -4894,6 +5030,7 @@ mod tests {
                 played,
                 played_turns,
                 played_radiant,
+                held_radiant: None,
                 fatigue_draws: None,
                 fatigue_damage: None,
                 traps_set: None,
@@ -6470,8 +6607,8 @@ mod tests {
             (a - b).abs() < 1e-9
         }
 
-        /// `games` seats a side: played Radiant won at `radiant`, played normal at `normal`, and never drawn at
-        /// `never`.
+        /// `games` seats a side: played (so seen, R5054000) Radiant won at `radiant`, played normal at `normal`,
+        /// and never drawn at `never`.
         fn faced(games: i32, radiant: f64, normal: f64, never: f64) -> CardStats {
             let wins = |rate: f64| (f64::from(games) * rate).round() as i32;
             let won = wins(radiant) + wins(normal);
@@ -6485,6 +6622,8 @@ mod tests {
                 drawn_not_played: tally(0, 0, 0),
                 played_radiant: tally(games, wins(radiant), 0),
                 played_normal: tally(games, wins(normal), 0),
+                seen_radiant: tally(games, wins(radiant), 0),
+                seen_normal: tally(games, wins(normal), 0),
                 created_played: tally(0, 0, 0),
                 created_not_played: tally(0, 0, 0),
                 created_played_radiant: tally(0, 0, 0),
@@ -6588,9 +6727,10 @@ mod tests {
         fn r4673000_a_face_short_of_games_or_of_never_drawn_games_reads_none() {
             let cards = upgraded_field();
             let field = face_stats_field(&cards, StatsFace::Radiant, 20);
-            // Never played Radiant: no Radiant rate, while its normal face has one.
+            // Never seen Radiant (R5054000): no Radiant rate, while its normal face has one.
             let never_radiant = CardStats {
                 played_radiant: tally(0, 0, 0),
+                seen_radiant: tally(0, 0, 0),
                 ..faced(1000, 0.64, 0.52, 0.50)
             };
             assert_eq!(face_adjusted(&never_radiant, StatsFace::Radiant, &field), None);
@@ -6617,6 +6757,7 @@ mod tests {
             let mut few: Vec<CardStats> = cards[..ADJUSTED_FIELD_MIN_CARDS - 1].to_vec();
             few.push(CardStats {
                 played_radiant: tally(19, 14, 0),
+                seen_radiant: tally(19, 14, 0),
                 ..faced(1000, 0.71, 0.52, 0.50)
             });
             let prior = face_stats_field(&few, StatsFace::Radiant, 20);

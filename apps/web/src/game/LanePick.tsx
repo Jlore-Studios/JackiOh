@@ -87,6 +87,36 @@ export function neighbourZone(lanes: readonly LaneChoice[], from: EventTarget | 
   return to instanceof HTMLElement ? to : null;
 }
 
+/**
+ * Reads hover and focus off the page's zones, as R514's answer is (Prompt.tsx): `at` names what a zone
+ * under the pointer or focus lights, null for none. Returns the cleanup, which also clears both.
+ * The giga placement's oblongs read theirs the same way (GigaPlacement.tsx).
+ */
+export function listenZoneHover<T>(
+  at: (target: EventTarget | null) => T | null,
+  setHovered: (value: T | null) => void,
+  setFocused: (value: T | null) => void,
+): () => void {
+  const onOver = (event: PointerEvent): void => setHovered(at(event.target));
+  const onOut = (event: PointerEvent): void => {
+    if (event.relatedTarget === null) setHovered(null);
+  };
+  const onFocusIn = (event: FocusEvent): void => setFocused(at(event.target));
+  const onFocusOut = (): void => setFocused(null);
+  document.addEventListener("pointerover", onOver);
+  document.addEventListener("pointerout", onOut);
+  document.addEventListener("focusin", onFocusIn);
+  document.addEventListener("focusout", onFocusOut);
+  return () => {
+    document.removeEventListener("pointerover", onOver);
+    document.removeEventListener("pointerout", onOut);
+    document.removeEventListener("focusin", onFocusIn);
+    document.removeEventListener("focusout", onFocusOut);
+    setHovered(null);
+    setFocused(null);
+  };
+}
+
 export default function LanePick(props: { lanes: readonly LaneChoice[]; readOnly: boolean }): ReactElement {
   const { lanes, readOnly } = props;
   const offered = lanes.map((choice) => choice.lane).sort((a, b) => a - b);
@@ -126,24 +156,7 @@ export default function LanePick(props: { lanes: readonly LaneChoice[]; readOnly
       const lane = zone === null ? null : placeOf(zone)?.lane;
       return lane !== null && lane !== undefined && lit.includes(lane) ? lane : null;
     };
-    const onOver = (event: PointerEvent): void => setHovered(laneAt(event.target));
-    const onOut = (event: PointerEvent): void => {
-      if (event.relatedTarget === null) setHovered(null);
-    };
-    const onFocusIn = (event: FocusEvent): void => setFocused(laneAt(event.target));
-    const onFocusOut = (): void => setFocused(null);
-    document.addEventListener("pointerover", onOver);
-    document.addEventListener("pointerout", onOut);
-    document.addEventListener("focusin", onFocusIn);
-    document.addEventListener("focusout", onFocusOut);
-    return () => {
-      document.removeEventListener("pointerover", onOver);
-      document.removeEventListener("pointerout", onOut);
-      document.removeEventListener("focusin", onFocusIn);
-      document.removeEventListener("focusout", onFocusOut);
-      setHovered(null);
-      setFocused(null);
-    };
+    return listenZoneHover(laneAt, setHovered, setFocused);
   }, [offeredKey, readOnly]);
 
   const active = hovered ?? focused;

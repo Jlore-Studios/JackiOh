@@ -19,7 +19,7 @@ use jackioh_engine::{
 
 use crate::actor::contracts::one_tx;
 use crate::actor::engine::{self, EngineState, MatchSnapshot, Pinned};
-use crate::actor::match_actor::last_boards_of;
+use crate::actor::match_actor::opening_state;
 use crate::actor::protocol::SERVER_NONCE_PREFIX;
 use crate::app::App;
 use crate::db::store::{
@@ -262,20 +262,7 @@ pub fn replay(
     log: &[MatchActionRow],
     dealt: Option<Vec<PlayerId>>,
 ) -> (Recorder, usize) {
-    let (last_boards, glitch_boards) = last_boards_of(match_row);
-    let state = engine::fold(
-        pinned,
-        &engine::fold_args(
-            &match_row.seed,
-            &match_row.decks,
-            Vec::new(),
-            last_boards,
-            glitch_boards,
-            dealt,
-            match_row.win_rates.clone(),
-        ),
-    )
-    .state;
+    let state = opening_state(pinned, match_row, dealt);
     let recorder = Recorder::new(
         pinned,
         &match_row.id,

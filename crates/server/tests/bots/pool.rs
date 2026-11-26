@@ -30,8 +30,14 @@ use jackioh_server::db::store::{BotDeck, BotRow, BotState, FrozenTrio, NewBot, R
 use jackioh_server::ranked::ladder::{Ladder, fresh_rank};
 use jackioh_server::ranked::season::season_id_of;
 use jackioh_server::username::normalize_username;
+use jackioh_shared::bots::cosmetics::BotCosmetics;
 use jackioh_shared::bots::fallback::{bot_match_gap_passed, bot_matches, choose_bot_pair, on_schedule};
-use jackioh_shared::bots::pool::{PoolChange, bot_target_strength, deal_bot_deck, plan_pool, pool_target};
+use jackioh_shared::bots::pool::{
+    BotLadder, BotRecord, PoolChange, bot_target_strength, deal_bot_deck, plan_pool, pool_target,
+};
+use jackioh_shared::cosmetics::OwnedCosmetics;
+use jackioh_shared::deck::FrozenDeck;
+use jackioh_shared::loadout::AccountPicks;
 
 /// The pool's deals read the registered catalog, which the server registers before it asks (R388).
 fn draw_decks(
@@ -162,6 +168,71 @@ fn r2778001_the_pool_holds_enough_bots_on_at_any_hour_to_grind_against() {
     }
     assert_eq!(pool_target(0), BOT_POOL_MIN);
     assert_eq!(pool_target(BOT_POOL_MIN as i64 * 2), BOT_POOL_MIN * 2);
+}
+
+/// The server's bot row reads through `BotRecord` (the shared crate's `bot_record_of_fields!`) as its own
+/// fields, each ladder's rating its own (R2778000).
+#[test]
+fn a_bot_row_reads_through_bot_record_as_its_fields() {
+    let deck = BotDeck {
+        cards: playable()[..deck_size()].to_vec(),
+        portrait: "vanilla".to_string(),
+        slots: None,
+    };
+    let frozen = |name: &str| FrozenDeck {
+        name: name.to_string(),
+        cards: Vec::new(),
+        portrait: None,
+        slots: None,
+    };
+    let trio = FrozenTrio {
+        name: "trio".to_string(),
+        decks: (frozen("a"), frozen("b"), frozen("c")),
+    };
+    let cosmetics = BotCosmetics {
+        wardrobe: OwnedCosmetics::default(),
+        account: AccountPicks::default(),
+        cards: Vec::new(),
+        drawn_at: 33,
+        seed: "seed".to_string(),
+    };
+    let row = BotRow {
+        grinding: true,
+        rating: 1234.0,
+        random_rating: 987.0,
+        active_from_hour: 5,
+        active_hours: 7,
+        in_match_id: Some("m-1".to_string()),
+        decks: vec![deck.clone()],
+        decks_catalog_version: Some("v-decks".to_string()),
+        trio: Some(trio.clone()),
+        trio_catalog_version: Some("v-trio".to_string()),
+        cosmetics: Some(cosmetics.clone()),
+        ..bot("b-1", 11, Some(22))
+    };
+    assert_eq!(BotRecord::profile_id(&row), "b-1");
+    assert_eq!(BotRecord::created_at(&row), 11);
+    assert_eq!(BotRecord::retired_at(&row), Some(22));
+    assert!(BotRecord::grinding(&row));
+    assert_eq!(row.rating_for(BotLadder::Constructed), 1234.0);
+    assert_eq!(row.rating_for(BotLadder::Random), 987.0);
+    assert_eq!(BotRecord::active_from_hour(&row), 5);
+    assert_eq!(BotRecord::active_hours(&row), 7);
+    assert_eq!(BotRecord::in_match_id(&row), Some("m-1"));
+    assert_eq!(BotRecord::decks(&row), &[deck][..]);
+    assert_eq!(BotRecord::decks_catalog_version(&row), Some("v-decks"));
+    assert_eq!(BotRecord::trio(&row), Some(&trio));
+    assert_eq!(BotRecord::trio_catalog_version(&row), Some("v-trio"));
+    assert_eq!(BotRecord::cosmetics(&row), Some(&cosmetics));
+
+    let bare = bot("b-2", 0, None);
+    assert_eq!(BotRecord::retired_at(&bare), None);
+    assert!(!BotRecord::grinding(&bare));
+    assert_eq!(BotRecord::in_match_id(&bare), None);
+    assert_eq!(BotRecord::decks_catalog_version(&bare), None);
+    assert_eq!(BotRecord::trio(&bare), None);
+    assert_eq!(BotRecord::trio_catalog_version(&bare), None);
+    assert_eq!(BotRecord::cosmetics(&bare), None);
 }
 
 #[test]
