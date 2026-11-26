@@ -23721,10 +23721,12 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "at": "2026-11-26T12:44:38Z",
+        "at": "2026-11-26T14:16:45Z",
         "built_by": "claude-4",
         "by": "`claude` (strong)",
-        "sha": "4e3d263546831001aa08db188a2c9d30fc8ca331"
+        "carried_from": "4e3d263546831001aa08db188a2c9d30fc8ca331",
+        "resolved_by": "`claude` (strong)",
+        "sha": "a3ac3a6ef4f5f3fadb74984e1cfa080606a3e136"
       },
       "died": 0,
       "difficulty": "hard",
