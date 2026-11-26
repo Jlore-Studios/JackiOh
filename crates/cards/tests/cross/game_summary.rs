@@ -2143,3 +2143,355 @@ mod r4672000_whose_choice {
         });
     }
 }
+
+/// R4707000: what each play rolled, read off `scenario()` steps through `SummaryReader`, one oracle per kind,
+/// each pinned by `rngCursor` as `c095_call_to_chaos.rs`'s tests pin it: a Call to Chaos's entries by their
+/// places in its table (one, its Radiant face's three, a Recursion's chain), a pick-N list's, a batch of
+/// coins' heads with and without Lucky, a Trap's coin, and Dice of Doom by its 67.
+mod r4707000_rolled_outcomes {
+    use super::*;
+    use jackioh_engine::subsystems::{CHAOS_EFFECTS, ChaosEffectDef, roll_chaos_effects};
+
+    const P1: PlayerId = PlayerId::P1;
+    const P2: PlayerId = PlayerId::P2;
+
+    const SEED: &str = "r4707000-rolled";
+    const CURSOR_SEARCH: u32 = 2000;
+    const FILLER: &str = "core-005"; // Stockpile: a cheap Spell that keeps a library or a hand.
+    const CHAOS: &str = "core-095"; // Call to Chaos (Core Edition): one of ten effects, three Radiant.
+    const PRIME: &str = "meditative-049-1"; // YileGPT Prime: Cry, do 2 of 5 at random (Radiant: all 5).
+    const MID_LOSER: &str = "classicplus-019-3"; // Mid Loser: Cry: flip a coin (Radiant: Lucky 1).
+    const GARY: &str = "core-004"; // Gary the Gambler: Cry, flip 6 coins.
+    const ACE: &str = "classic-065"; // Ace in the Hole: a Trap, end of turn flip a coin.
+    const DOOM: &str = "stinkyscape-154"; // Dice of Doom: a d100, a hit on 67.
+    const DOOM_HIT: i32 = 67;
+    const DOOM_SIDES: i32 = 100;
+
+    fn step(reader: &mut SummaryReader, s: &mut Scenario, verb: impl FnOnce(&mut Scenario)) {
+        let before = s.state().clone();
+        let from = s.events().len();
+        verb(s);
+        reader.step(&before, s.last_action(), &s.events()[from..], s.state());
+    }
+
+    /// p1 holds `card` (Radiant when `radiant`) with the mana to play it, the rng pinned at `cursor`.
+    fn holding(card: &str, radiant: bool, cursor: u32) -> Scenario {
+        register_all();
+        let mut s = scenario(json!({
+            "seed": SEED,
+            "p1": {
+                "mana": 10,
+                "hand": [{ "def": card, "radiant": radiant }, FILLER],
+                "library": [FILLER, FILLER, FILLER, FILLER],
+            },
+            "p2": { "hand": [FILLER], "library": [FILLER, FILLER, FILLER, FILLER] },
+        }));
+        s.state_mut().rng_cursor = cursor;
+        s
+    }
+
+    /// p1 plays `card` from the hand (a Unit into its first zone), read through a reader begun before it.
+    fn played(card: &str, radiant: bool, cursor: u32, unit: bool) -> (Scenario, SummaryReader) {
+        let mut s = holding(card, radiant, cursor);
+        let mut reader = SummaryReader::new(s.state());
+        let declared = if unit { json!({ "zone": 1 }) } else { json!({}) };
+        step(&mut reader, &mut s, |s| {
+            s.play(card, declared);
+        });
+        (s, reader)
+    }
+
+    /// What the seat's plays from the hand rolled, play by play.
+    fn rolled_by(reader: &SummaryReader, player: PlayerId) -> Vec<Vec<RolledOutcome>> {
+        reader
+            .seat(player, Vec::new())
+            .played_variants
+            .unwrap_or_default()
+            .into_iter()
+            .map(|variant| variant.map(|variant| variant.rolled).unwrap_or_default())
+            .collect()
+    }
+
+    fn chaos_roll(radiant: bool, cursor: u32) -> Vec<ChaosEffectDef> {
+        roll_chaos_effects(&mut Rng::new(SEED, cursor), radiant, None)
+    }
+
+    /// The outcome a Core Call to Chaos's roll is recorded as: its entries' places and clauses.
+    fn chaos_outcome(rolled: &[ChaosEffectDef]) -> RolledOutcome {
+        RolledOutcome::Effect {
+            card: CHAOS.to_string(),
+            picked: rolled
+                .iter()
+                .filter_map(|entry| CHAOS_EFFECTS.iter().position(|one| one.name == entry.name))
+                .map(|at| i32::try_from(at).unwrap_or(i32::MAX))
+                .collect(),
+            labels: rolled.iter().map(|entry| entry.label.to_string()).collect(),
+            of: i32::try_from(CHAOS_EFFECTS.len()).unwrap_or(i32::MAX),
+        }
+    }
+
+    fn chaos_events(s: &Scenario) -> Vec<&GameEvent> {
+        s.events()
+            .iter()
+            .filter(|event| matches!(event, GameEvent::ChaosRolled { .. }))
+            .collect()
+    }
+
+    /// Neither seat's view names a roll's places, its table's size or a die's faces (CLAUDE.md rule 7).
+    fn no_view_names_the_record_s_fields(s: &Scenario) {
+        for seat in [P1, P2] {
+            let events = serde_json::to_string(&s.view(seat).events).expect("a view serializes");
+            for field in ["\"indices\"", "\"tableSize\"", "\"hit\""] {
+                assert!(
+                    !events.contains(field),
+                    "{}'s view names {field}: {events}",
+                    seat.as_str()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn r4707000_a_core_call_to_chaos_records_the_one_effect_it_rolled() {
+        let cursor = (0..CURSOR_SEARCH)
+            .find(|cursor| {
+                chaos_roll(false, *cursor)
+                    .iter()
+                    .map(|entry| entry.name)
+                    .eq(["heal"])
+            })
+            .expect("a cursor whose base roll is the heal");
+        let (s, reader) = played(CHAOS, false, cursor, false);
+        let rolled = chaos_roll(false, cursor);
+        assert_eq!(rolled_by(&reader, P1), [vec![chaos_outcome(&rolled)]]);
+        assert_eq!(
+            chaos_outcome(&rolled),
+            RolledOutcome::Effect {
+                card: CHAOS.to_string(),
+                picked: vec![1],
+                labels: vec!["Heal your hero 30".to_string()],
+                of: 10,
+            }
+        );
+        let [
+            GameEvent::ChaosRolled {
+                indices, table_size, ..
+            },
+        ] = chaos_events(&s)[..]
+        else {
+            panic!("one chaosRolled: {:?}", chaos_events(&s));
+        };
+        assert_eq!((indices.clone(), *table_size), (Some(vec![1]), Some(10)));
+        no_view_names_the_record_s_fields(&s);
+        // A play whose only variant is its roll is a play like any other.
+        assert_eq!(reader.seat(P1, Vec::new()).played, [CHAOS]);
+        assert_eq!(reader.seat(P2, Vec::new()).played_variants, None);
+    }
+
+    #[test]
+    fn r4707000_a_radiant_call_to_chaos_records_its_three() {
+        let cursor = (0..CURSOR_SEARCH)
+            .find(|cursor| {
+                let rolled = chaos_roll(true, *cursor);
+                rolled.len() == 3 && rolled.iter().all(|entry| entry.name != "recast")
+            })
+            .expect("a cursor whose Radiant roll leaves out the recursion");
+        let (s, reader) = played(CHAOS, true, cursor, false);
+        let rolled = chaos_roll(true, cursor);
+        let outcome = chaos_outcome(&rolled);
+        let RolledOutcome::Effect { picked, .. } = &outcome else {
+            unreachable!("a table's roll");
+        };
+        assert_eq!(picked.len(), 3);
+        assert!(
+            picked.windows(2).all(|pair| pair[0] < pair[1]),
+            "in the table's order: {picked:?}"
+        );
+        assert_eq!(rolled_by(&reader, P1), [vec![outcome]]);
+        assert_eq!(reader.seat(P1, Vec::new()).played_radiant, Some(vec![true]));
+        no_view_names_the_record_s_fields(&s);
+    }
+
+    #[test]
+    fn r4707000_a_recursion_credits_the_chain_s_rolls_to_the_play_that_began_it() {
+        let (s, reader) = (0..CURSOR_SEARCH)
+            .filter(|cursor| {
+                chaos_roll(false, *cursor)
+                    .iter()
+                    .map(|entry| entry.name)
+                    .eq(["recast"])
+            })
+            .map(|cursor| played(CHAOS, false, cursor, false))
+            .find(|(s, _)| chaos_events(s).len() == 2 && s.state().pending.is_none())
+            .expect("a cursor whose recursion casts an edition that rolls once and asks nothing");
+        let events = chaos_events(&s);
+        let GameEvent::ChaosRolled {
+            def_id: cast,
+            effects,
+            indices: Some(indices),
+            table_size: Some(size),
+            ..
+        } = events[1]
+        else {
+            panic!("the cast's roll names its places: {:?}", events[1]);
+        };
+        let recast = RolledOutcome::Effect {
+            card: CHAOS.to_string(),
+            picked: vec![9],
+            labels: vec!["Cast a random Call to Chaos".to_string()],
+            of: 10,
+        };
+        let its_own = RolledOutcome::Effect {
+            card: cast.clone(),
+            picked: indices.clone(),
+            labels: effects.clone(),
+            of: *size,
+        };
+        // Both rolls are the played card's: the cast's own entry under its own edition's table.
+        assert_eq!(rolled_by(&reader, P1), [vec![recast, its_own]]);
+        // The cast is the seat's Created card, used, and holds none of them.
+        let p1 = reader.seat(P1, Vec::new());
+        let used = p1.created_used.expect("the cast is a used Created card");
+        assert!(used.iter().any(|one| one.card == *cast), "{used:?}");
+        assert!(
+            used.iter().all(|one| one
+                .variant
+                .as_ref()
+                .is_none_or(|variant| variant.rolled.is_empty())),
+            "{used:?}"
+        );
+    }
+
+    #[test]
+    fn r4707000_a_pick_n_list_records_the_entries_it_drew() {
+        let cursor = 0;
+        let (s, reader) = played(PRIME, false, cursor, true);
+        // MD-C23's draw: two different of the five, each `int` of what is left, kept in the list's order.
+        let mut rng = Rng::new(SEED, cursor);
+        let mut left: Vec<i32> = (0..5).collect();
+        let mut picked: Vec<i32> = (0..2)
+            .map(|_| left.remove(rng.int(left.len() as i32) as usize))
+            .collect();
+        picked.sort();
+        let [GameEvent::ChaosRolled { effects, .. }] = chaos_events(&s)[..] else {
+            panic!("one announcement: {:?}", chaos_events(&s));
+        };
+        assert_eq!(
+            rolled_by(&reader, P1),
+            [vec![RolledOutcome::Effect {
+                card: PRIME.to_string(),
+                picked,
+                labels: effects.clone(),
+                of: 5,
+            }]]
+        );
+        // The Radiant face does all five, drawing nothing: no outcome of a list, no roll recorded.
+        let (s, reader) = played(PRIME, true, cursor, true);
+        assert!(
+            chaos_events(&s).iter().all(|event| matches!(
+                event,
+                GameEvent::ChaosRolled {
+                    indices: None,
+                    table_size: None,
+                    ..
+                }
+            )),
+            "{:?}",
+            chaos_events(&s)
+        );
+        assert_eq!(reader.seat(P1, Vec::new()).played, [PRIME]);
+        assert_eq!(reader.seat(P1, Vec::new()).played_variants, None);
+    }
+
+    #[test]
+    fn r4707000_a_coin_records_its_heads_with_and_without_lucky() {
+        // Mid Loser's one coin: its base face flips once; its Radiant face's Lucky 1 flips twice, heads kept.
+        for (radiant, lucky) in [(false, 0), (true, 1)] {
+            for cursor in [0, 1, 2, 3] {
+                let mut rng = Rng::new(SEED, cursor);
+                let heads = (0..=lucky).fold(false, |any, _| rng.coin() || any);
+                let (_, reader) = played(MID_LOSER, radiant, cursor, true);
+                assert_eq!(
+                    rolled_by(&reader, P1),
+                    [vec![RolledOutcome::Coin {
+                        card: MID_LOSER.to_string(),
+                        coins: 1,
+                        heads: i32::from(heads),
+                        lucky,
+                    }]],
+                    "radiant {radiant}, cursor {cursor}"
+                );
+            }
+        }
+        // Gary's six coins are one batch: how many landed heads.
+        let cursor = 7;
+        let mut rng = Rng::new(SEED, cursor);
+        let heads = (0..6).filter(|_| rng.coin()).count();
+        let (_, reader) = played(GARY, false, cursor, true);
+        assert_eq!(
+            rolled_by(&reader, P1),
+            [vec![RolledOutcome::Coin {
+                card: GARY.to_string(),
+                coins: 6,
+                heads: i32::try_from(heads).unwrap_or(i32::MAX),
+                lucky: 0,
+            }]]
+        );
+    }
+
+    #[test]
+    fn r4707000_a_trap_s_coin_joins_the_play_that_set_it() {
+        let mut s = holding(ACE, false, 0);
+        let mut reader = SummaryReader::new(s.state());
+        step(&mut reader, &mut s, |s| {
+            s.play(ACE, json!({}));
+        });
+        // Set, it has rolled nothing yet: the play has no variant.
+        assert_eq!(reader.seat(P1, Vec::new()).played, [ACE]);
+        assert_eq!(reader.seat(P1, Vec::new()).played_variants, None);
+        let mut rng = Rng::new(SEED, s.state().rng_cursor);
+        let heads = rng.coin();
+        step(&mut reader, &mut s, |s| {
+            s.end_turn();
+        });
+        assert_eq!(
+            rolled_by(&reader, P1),
+            [vec![RolledOutcome::Coin {
+                card: ACE.to_string(),
+                coins: 1,
+                heads: i32::from(heads),
+                lucky: 0,
+            }]]
+        );
+    }
+
+    #[test]
+    fn r4707000_dice_of_doom_records_67_and_not_67() {
+        let face_at = |cursor: u32| Rng::new(SEED, cursor).int(DOOM_SIDES) + 1;
+        let hit = (0..CURSOR_SEARCH)
+            .find(|cursor| face_at(*cursor) == DOOM_HIT)
+            .expect("a cursor whose d100 lands on 67");
+        let miss = (0..CURSOR_SEARCH)
+            .find(|cursor| face_at(*cursor) != DOOM_HIT)
+            .expect("a cursor whose d100 misses");
+        for (cursor, landed) in [(hit, true), (miss, false)] {
+            let (s, reader) = played(DOOM, false, cursor, false);
+            let roll = RolledOutcome::Die {
+                card: DOOM.to_string(),
+                sides: DOOM_SIDES,
+                lucky: 0,
+                hit: Some(RollHit {
+                    from: DOOM_HIT,
+                    to: DOOM_HIT,
+                }),
+                kept: vec![face_at(cursor)],
+            };
+            assert_eq!(
+                roll.came_up(),
+                [if landed { ROLLED_HIT_KEY } else { ROLLED_MISS_KEY }]
+            );
+            assert_eq!(rolled_by(&reader, P1), [vec![roll]], "cursor {cursor}");
+            no_view_names_the_record_s_fields(&s);
+        }
+    }
+}

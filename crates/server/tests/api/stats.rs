@@ -5100,6 +5100,165 @@ mod r4679000_outputs {
     }
 }
 
+// R4707001: `GET /api/stats/cards/:id`'s `rolled`: each outcome a Call to Chaos and a dice card rolled, read
+// against the card's other outcomes, with its expected share beside its share, at the page's patch and face.
+mod r4707001_rolled {
+    use super::*;
+
+    const CHAOS: &str = "core-095"; // Call to Chaos (Core Edition): one random effect of ten.
+    const CLASSIC_CHAOS: &str = "classicplus-073"; // Call to Chaos (Classic+ Edition), a Recursion's cast.
+    const DOOM: &str = "stinkyscape-154"; // Dice of Doom: a d100, which does something on a 67.
+    const PLAIN: &str = "core-001";
+
+    /// `count` live Best of 1 games of p1 playing `card` on its normal face once, rolling `rolled`, p1
+    /// winning the first `won`.
+    fn games(tag: &str, card: &'static str, rolled: Value, won: usize, count: usize) -> Vec<Value> {
+        (0..count)
+            .map(|i| {
+                make_game_record(
+                    &format!("rolled-{tag}-{i}"),
+                    RecordOptions {
+                        source: Some("live"),
+                        mode: Some("bo1"),
+                        p1_deck: Some(vec![card, PLAIN]),
+                        p1_played: Some(vec![card]),
+                        p1_played_radiant: Some(vec![false]),
+                        p1_played_variants: Some(json!([{ "rolled": rolled }])),
+                        p2_deck: Some(vec!["core-100"]),
+                        p2_played: Some(Vec::new()),
+                        winner: Some(if i < won { "p1" } else { "p2" }),
+                        ..RecordOptions::default()
+                    },
+                )
+            })
+            .collect()
+    }
+
+    fn effect(card: &str, at: i32, label: &str) -> Value {
+        json!({ "kind": "effect", "card": card, "picked": [at], "labels": [label], "of": 10 })
+    }
+
+    fn die(kept: i32) -> Value {
+        json!({ "kind": "die", "card": DOOM, "sides": 100, "lucky": 0, "hit": { "from": 67, "to": 67 }, "kept": [kept] })
+    }
+
+    fn group<'a>(drill: &'a Value, kind: &str) -> &'a Vec<Value> {
+        drill["rolled"]
+            .as_array()
+            .and_then(|groups| groups.iter().find(|group| group["kind"] == json!(kind)))
+            .and_then(|group| group["rows"].as_array())
+            .expect("the kind's rows")
+    }
+
+    fn keys(rows: &[Value]) -> Vec<&str> {
+        rows.iter()
+            .map(|row| row["key"].as_str().expect("a key"))
+            .collect()
+    }
+
+    fn number(row: &Value, field: &str) -> f64 {
+        row[field].as_f64().unwrap_or_else(|| panic!("{field} of {row}"))
+    }
+
+    #[tokio::test]
+    async fn r4707001_a_call_to_chaos_answers_each_rolled_effect_with_its_expected_share() {
+        let app = test_app().await;
+        let mut records = games(
+            "heal",
+            CHAOS,
+            json!([effect(CHAOS, 1, "Heal your hero 30")]),
+            24,
+            30,
+        );
+        records.extend(games(
+            "add",
+            CHAOS,
+            json!([effect(
+                CHAOS,
+                3,
+                "Add 3 random cards to your hand, which cost (0)"
+            )]),
+            32,
+            60,
+        ));
+        // Ten plays rolled the Recursion, whose Classic+ cast rolled one of its own table's (R28).
+        records.extend(games(
+            "chain",
+            CHAOS,
+            json!([
+                effect(CHAOS, 3, "Add 3 random cards to your hand, which cost (0)"),
+                effect(CLASSIC_CHAOS, 2, "Gain 5 mana"),
+            ]),
+            0,
+            10,
+        ));
+        insert_records(&app, records).await;
+
+        let (status, _, drill) = get_public(&app, &format!("/api/stats/cards/{CHAOS}?mode=bo1")).await;
+        assert_eq!(status, 200);
+        let kinds: Vec<&str> = drill["rolled"]
+            .as_array()
+            .expect("rolled")
+            .iter()
+            .map(|group| group["kind"].as_str().expect("a kind"))
+            .collect();
+        assert_eq!(kinds, ["effect"]);
+        let rows = group(&drill, "effect");
+        // Best adjusted first; the Classic+ edition's entry, which has no sibling to read against, last.
+        assert_eq!(keys(rows), ["core-095:1", "core-095:3", "classicplus-073:2"]);
+        let heal = &rows[0];
+        assert_eq!(heal["label"], json!("Heal your hero 30"));
+        assert_eq!(heal["games"], json!(30));
+        assert!((number(heal, "share") - 30.0 / 100.0).abs() < 1e-3, "{heal}");
+        assert!((number(&rows[1], "share") - 70.0 / 100.0).abs() < 1e-3);
+        // One in ten of the Core table's, whatever came up.
+        assert!((number(heal, "expected") - 0.1).abs() < 1e-9, "{heal}");
+        assert!((number(&rows[1], "expected") - 0.1).abs() < 1e-9);
+        assert_eq!(heal["hasEnoughGames"], json!(true));
+        assert!(heal["tier"].is_string());
+        assert!(number(heal, "adjustedWinRate") > number(&rows[1], "adjustedWinRate"));
+        assert!(number(heal, "adjustedLow") < number(heal, "adjustedWinRate"));
+        assert!(number(heal, "adjustedHigh") > number(heal, "adjustedWinRate"));
+        // A Recursion's cast's entry names its edition, as the catalog does.
+        let chain = &rows[2];
+        assert_eq!(
+            chain["label"],
+            json!("Call to Chaos (Classic+ Edition): Gain 5 mana")
+        );
+        assert_eq!(chain["share"], json!(1.0));
+        assert_eq!(chain["adjustedWinRate"], Value::Null);
+        assert_eq!(chain["hasEnoughGames"], json!(false));
+
+        // None of it was rolled on the Radiant face, and a card that rolls nothing answers an empty list.
+        let (_, _, radiant) =
+            get_public(&app, &format!("/api/stats/cards/{CHAOS}?mode=bo1&face=radiant")).await;
+        assert_eq!(radiant["rolled"], json!([]));
+        let (_, _, plain) = get_public(&app, &format!("/api/stats/cards/{PLAIN}?mode=bo1")).await;
+        assert_eq!(plain["rolled"], json!([]));
+    }
+
+    #[tokio::test]
+    async fn r4707001_dice_of_doom_answers_67_and_not_67() {
+        let app = test_app().await;
+        let mut records = games("hit", DOOM, json!([die(67)]), 25, 30);
+        records.extend(games("miss", DOOM, json!([die(12)]), 30, 70));
+        insert_records(&app, records).await;
+
+        let (status, _, drill) = get_public(&app, &format!("/api/stats/cards/{DOOM}?mode=bo1")).await;
+        assert_eq!(status, 200);
+        let rows = group(&drill, "die");
+        assert_eq!(keys(rows), ["stinkyscape-154:hit", "stinkyscape-154:miss"]);
+        assert_eq!(rows[0]["label"], json!("Lands on 67"));
+        assert_eq!(rows[1]["label"], json!("Misses 67"));
+        // Expected 1 in 100 against 30 in 100 observed: the gap a test fixture makes, not a balance figure.
+        assert!((number(&rows[0], "expected") - 0.01).abs() < 1e-9);
+        assert!((number(&rows[1], "expected") - 0.99).abs() < 1e-9);
+        assert!((number(&rows[0], "share") - 0.3).abs() < 1e-9);
+        assert!(number(&rows[0], "adjustedWinRate") > number(&rows[1], "adjustedWinRate"));
+        assert!(drill["rolled"].as_array().is_some_and(|groups| groups.len() == 1));
+    }
+}
+
 mod r4965000_bounded_snapshot {
     use super::*;
     use indexmap::{IndexMap, IndexSet};
