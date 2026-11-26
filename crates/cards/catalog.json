@@ -32628,11 +32628,11 @@
     "loc": 25,
     "base": {
       "keywords": [],
-      "text": "Put a Unit on a performance enhancement plan: it has {count|turn|turns} to get a kill, or it is destroyed."
+      "text": "Put a Unit on a performance improvement plan: it has {count|turn|turns} to get a kill, or it is destroyed."
     },
     "radiant": {
       "keywords": [],
-      "text": "Put a Unit on a performance enhancement plan: it has {count2|turn|turns} to get a kill, or it is destroyed. If it fails, add {the|The Coin|The Coins} to your hand."
+      "text": "Put a Unit on a performance improvement plan: it has {count2|turn|turns} to get a kill, or it is destroyed. If it fails, add {the|The Coin|The Coins} to your hand."
     },
     "params": [
       {
