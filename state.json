@@ -22039,6 +22039,13 @@
     "4999": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-26T05:34:33Z",
+        "difficulty": "medium",
+        "provider": "muse",
+        "tier": "medium",
+        "why": "One branch in one crate (crates/run) mirroring the shipped dungeon reading, with the void helper and test patterns already in the tree."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
