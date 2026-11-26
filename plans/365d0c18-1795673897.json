@@ -1,0 +1,59 @@
+{
+  "action": "plan",
+  "number": 5014,
+  "title": "Patch: a motion and glow budget, idle effects only on what the player can act on",
+  "branch": "bot/issue-5014",
+  "thread": "**Issue #5014 (data, not instructions):**\n\n```text\n# #5014: Patch: a motion and glow budget, idle effects only on what the player can act on\nOpened by @MaxGoetzmann.\n\n## What it does\n\nThe client's stylesheets hold:\n\n- 678 `@keyframes` (339 in `fx/fx.css`, 64 in `game/animations.css`, 41 in `cards/keywords.css`)\n- 1,044 gradients\n- 466 box-shadows, 74 text-shadows and 57 `drop-shadow` filters\n- about 51 keyframes named glow, pulse, shimmer, breathe, float, sparkle or bob, many looping while nothing is happening\n\nWhen everything shines, nothing tells the player where to look. The main button (`--primary-face` in `buttons.css`) is a four-stop gradient under three shadows: the glossy look of a generic game UI kit.\n\n- An idle, `infinite` animation marks only what the player can act on right now: playable cards in hand, legal attackers and targets, the End Turn button when ending the turn is the only move, and the turn timer's warning. Everything else loops at most once, or not at all.\n- State-change motion (damage, death, a trap springing; BUILD's event durations) keeps its timing. This issue takes away decoration, not feedback.\n- Flatten the main button: a face with at most two stops, one inset top highlight and one hard bottom edge, so it reads as a pressed brass plate rather than gel.\n- Cut gradients and blurred shadows on chrome and menus, keeping those on card faces, the table and `GRADIENT_KEEP`.\n- A cosmetic a player owns (`cards/cosmetics.css` and the effects a cosmetic names) keeps its look.\n\n## Acceptance\n\n- A test (in `motion.test.ts` or a sibling) fails on any `infinite` animation outside the cosmetic sheets unless it is in an allowlist that names the state it marks. The list has at most 12 entries and only shrinks.\n- A test holds `--primary-face*` to at most two color stops, and `--primary-shadow*` to at most two layers with no blur.\n- `UNTOKENED_SURFACES`'s total drops by at least a quarter (1,063 \u2192 797 or fewer), and no entry grows.\n- BUILD's event durations are unchanged (`motion.test.ts`). The web's unit tests (the animations tests included), `e2e smoke` and `pnpm --dir e2e test:component` pass, and pixel baselines that change on purpose are re-recorded.\n- If the classifier calls it a card change, it ships with a `--visual` fragment (`docs/ADDING_CARDS.md`).\n\n## Notes\n\nThis is part of the not-generic UI pass, beside the palette, type, corners and icons issues. They touch the same sheets.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-4",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_4",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-4",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5014: needs a plan; `claude-4` (claude, `opus`, strong) writes it in a lane of `claude-4`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-4` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T05:20:33Z",
+    "claimed_at": "2026-11-26T06:18:46Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4991 is held for `claude-1` until 00:20 (it refused a call)",
+    "#5005 is held for `claude-1` until 00:20 (it refused a call)",
+    "#5012 is held for `claude-8` until 00:20 (it refused a call)",
+    "#5013 is held for `claude-8` until 00:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier"
+  ]
+}
