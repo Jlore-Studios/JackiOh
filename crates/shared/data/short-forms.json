@@ -67,10 +67,10 @@
     },
     "classicplus-037": {
       "base": {
-        "en": "In hand or deck, summoned after {threshold} non-Units in a turn.\nEnd of turn: Recast a random non-Unit you played this turn."
+        "en": "While this is in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Recast a random non-Unit played this turn."
       },
       "radiant": {
-        "en": "In hand or deck, summoned after {threshold} non-Units in a turn.\nEnd of turn: Recast each non-Unit you played this turn."
+        "en": "While this is in your hand or deck: After you play {threshold} non-Units in a turn, summon this.\nEnd of turn: Recast each non-Unit played this turn."
       }
     },
     "classicplus-073": {
