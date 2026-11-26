@@ -22146,6 +22146,17 @@
       "taken_asks": []
     },
     "5006": {
+      "asks": [
+        "c:7183070443"
+      ],
+      "failures": 0,
+      "forced": false,
+      "interruptions": 0,
+      "kind": "build",
+      "pending_request": false,
+      "queued_at": "2026-11-26T04:59:15Z",
+      "requested_by": "jgoetzmann",
+      "stop_requested": false,
       "suggestion": true
     },
     "5008": {
