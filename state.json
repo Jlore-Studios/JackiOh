@@ -21927,7 +21927,9 @@
     },
     "5002": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:7183070234"
+      ],
       "difficulty_by": {
         "at": "2026-11-26T14:54:34Z",
         "difficulty": "medium",
@@ -21966,9 +21968,7 @@
       "started_at": "2026-11-26T14:31:22Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:7183070234"
-      ]
+      "taken_asks": []
     },
     "5003": {
       "action": "review",
