@@ -22598,6 +22598,8 @@
       }
     },
     "5023": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-26T04:07:26Z",
@@ -22611,8 +22613,11 @@
         "trail": "d_string\": \" let mut card = cand.card.clone();\\n // \\u00a73.2, R64, R688: the leftmo\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4990/crates/engine/src/replacements.rs\", \"old_string\": \"/// is summoned into their leftmost open unit zone (no Cry, summoning si\u2026\n- Bash: {\"command\": \"grep -n \\\"\\\\bRow\\\\b\\\" crates/engine/src/replacements.rs | head -5; sed -n 770,780p crates/engine/src/replacements.rs\", \"description\": \"Check remaining Row uses in replacements.rs\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-4990/crates/engine/src/replacements.rs\", \"old_string\": \"/// is summoned into their leftmost open unit zone (a GIGA one at its le\u2026\n- said: Step 4, `interceptor_for`:\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/engine/src/targeting.rs'\\ns=open(p).read()\\nold_use=\\\"use crate::wire::{CardType, PlayerId, Row, Selection, TargetAim, TargetDecl, opponent_of};\\\"\\nnew_use=\\\u2026\n- said: Step 5, `interceptor_fits_decl`:\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/engine/src/play_choices.rs'\\ns=open(p).read()\\nold_doc=\\\"\\\"\\\"/// Classic #33 Joro, R450: whether `interceptor`, summoned into its controller's leftmost open \u2026\n- said: Step 6, `handed_over_zone`:\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/engine/src/play_steps.rs'\\ns=open(p).read()\\nold_doc=\\\"\\\"\\\"/// named (R3837001). R360: #55's base face, when its Tribute took an opposing unit, takes the\\n//\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='crates/cards/src/scripts/classic/c033_joro.rs'\\ns=open(p).read()\\nold=\\\"\\\"\\\"//! R651), the engine summons it into the leftmost empty, unlocked, unreserved unit zone\u2026\n- Bash: {\"command\": \"echo \\\"- steps 2-6 done (helper, answer_targeting, interceptor_for, interceptor_fits_decl, handed_over_zone) + header comments in c033/c055; running r4990000 tests post-fix.\\\" >> .bot-no\u2026\n- Bash: {\"command\": \"cargo fmt --check 2>&1 | head -30\", \"description\": \"Check rustfmt\"}\n- Bash: {\"command\": \"cargo fmt && cargo fmt --check && git diff --stat\", \"description\": \"Apply rustfmt and show the diff stat\"}\n- Bash: {\"command\": \"(cargo clippy -p jackioh-engine -p jackioh-cards --all-targets --features jackioh-engine/testkit -- -D warnings 2>&1 | grep -E \\\"^(warning|error)|test result|Finished\\\" | head -20; echo \u2026\n- Bash: {\"command\": \"git diff crates/engine/src/\", \"description\": \"Review the engine source diff\"}\n- Bash: {\"command\": \"grep -rn \\\"interpos\\\\|first_entry_zone\\\" crates/ai/src crates/shared/src 2>/dev/null | head\", \"description\": \"Check whether the AI reads interposition\"}\n- Bash: {\"command\": \"git rev-parse origin/main HEAD 2>&1; git merge-base origin/main HEAD\", \"description\": \"Check origin/main and merge base\"}\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | head -20\", \"description\": \"Find classify docs in the tools README\"}\n- Bash: {\"command\": \"until grep -q \\\"=== cards\\\" /tmp/suite-4990.txt 2>/dev/null; do sleep 15; done; cat /tmp/suite-4990.txt\", \"description\": \"Wait for clippy and the engine rules suites\", \"timeout\": 2400000}\n- Bash: {\"command\": \"echo \\\"- post-fix: 7 new tests pass; clippy engine+cards clean; rules/rules_2/rules_3 all pass (3167/677/850). cards suite running.\\\" >> .bot-notes.md\", \"description\": \"Log suite progres\u2026\n- Bash: {\"command\": \"until grep -q \\\"finished\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-4990/5fe363b4-192d-4ed3-ae01-85edec5721e3/tasks/bhu26v1td.output 2>/dev/null; do sleep 15; done; cat /tmp/su\u2026\n- Bash: {\"command\": \"(cargo jackioh spec check 2>&1 | tail -5; echo \\\"=== patches\\\"; cargo jackioh patches check 2>&1 | tail -5; echo \\\"=== classify\\\"; cargo jackioh classify --base origin/main --parent-bin \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nstart=s.index(\\\"## State\\\")\\nend=s.index(\\\"## Log\\\")\\nstate=\\\"\\\"\\\"## State\\n\\n- 2026-11-26 build run 1 (opus). Plan steps 0-9 DONE\u2026\n- Bash: {\"command\": \"until grep -q \\\"=== classify\\\" /tmp/checks-4990.txt 2>/dev/null; do sleep 15; done; cat /tmp/checks-4990.txt\", \"description\": \"Wait for spec and patches checks\", \"timeout\": 2400000}\n- Bash: {\"command\": \"\\\"$CARGO_TARGET_DIR/release/jackioh\\\" classify --base origin/main --parent-bin /tmp/jackioh-base-4990 --claims --json 2>&1 | python3 -c \\\"import json,sys; d=json.loads(sys.stdin.read());\u2026\n- Bash: {\"command\": \"grep -n \\\"^#\\\" docs/issues-and-patches.md | head -30\", \"description\": \"List sections of the issues and patches doc\"}\n- Bash: {\"command\": \"sed -n 111,134p docs/issues-and-patches.md\", \"description\": \"Read the Titles section\"}\n- Bash: {\"command\": \"echo \\\"- step 10: spec check ok (2641 rulings); patches check ok; classify --claims (stage2 ran): kind internal, no cards, no rule, no problems -> no fragment (the issue's --plays/--rule\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-ai 2>&1 | grep -E \\\"test result|FAILED|panicked\\\" | head -20\", \"description\": \"Run the AI crate's tests\", \"timeout\": 3600000}\n- Bash: {\"command\": \"cat /tmp/claude-1001/-home-runner-work--temp-work-item-4990/5fe363b4-192d-4ed3-ae01-85edec5721e3/tasks/b8g9r41ju.output\", \"description\": \"Read the fuzz output\"}\n- Bash: {\"command\": \"echo \\\"- fuzz 200: 0 panics/mismatches/violations. AI tests green. Running engine golden + tools acceptance.\\\" >> .bot-notes.md; cargo test -p jackioh-engine --features testkit --test go\u2026\n- Bash: {\"command\": \"git diff crates/cards/src/scripts/core/c055_lava_golem.rs | head -30; git status --short\", \"description\": \"Review part of the Golem diff and status\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ns=s.replace(\\\"- Next: step 10 (spec check, patches check, classify --claims with /tmp/jackioh-base-4990; write a fragment only if \u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a GIGA Joro or Lava Golem is summoned only where all four of its zones are free, so neither is lost when the one zone picked for it is too small\"} --> ## What changed A Joro or Lava Golem made GIGA in the hand no longer disappears when the single zone p\u2026"
       },
       "issue": 4990,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-26T05:55:08Z",
         "from_run": "45753198188",
         "gates": [
           {
@@ -22704,7 +22709,11 @@
         "source": "build",
         "until": "2026-11-26T06:22:29Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-26T05:52:29Z",
+      "run_id": "pending:873f8243-1795672436",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -22723,6 +22732,9 @@
         "provider": "claude-4",
         "run": "45753198188"
       },
+      "started_at": "2026-11-26T05:55:08Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -22736,9 +22748,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T05:39:24Z",
+    "at": "2026-11-26T05:55:08Z",
     "url": "",
-    "what": "build #5006 on claude-7"
+    "what": "review #5023 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-26T05:33:25Z",
