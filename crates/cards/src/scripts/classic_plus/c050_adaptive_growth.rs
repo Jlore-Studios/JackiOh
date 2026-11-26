@@ -139,8 +139,10 @@ mod tests {
             );
         }
 
+        /// R5113000: an Indestructible Unit is Immutable (R4353000), so the −2/−2 passes it by and it
+        /// stands at its 2 Health.
         #[test]
-        fn r69_an_indestructible_unit_at_0_max_health_dies_too() {
+        fn r5113000_an_indestructible_unit_takes_none_of_it_and_stands() {
             let mut s = drawn(
                 false,
                 json!([]),
@@ -148,7 +150,8 @@ mod tests {
             );
             let rock = unit_id(&s, PlayerId::P2, 1);
             s.end_turn();
-            s.expect_in_zone(&rock, "graveyard");
+            s.expect_in_zone(&rock, "field");
+            s.expect_stats(&rock, json!({ "attack": 10, "health": 2 }));
         }
 
         #[test]

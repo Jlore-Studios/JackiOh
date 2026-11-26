@@ -367,8 +367,10 @@ mod tests {
             assert_eq!(s.count(GameEventType::TrapFired), 0);
         }
 
+        /// R5113000: an Indestructible Unit is Immutable (R4353000), so Suppressive Aura's −1/−1 never
+        /// reaches it: it does not die, and Shadowstep stays set.
         #[test]
-        fn r69_an_indestructible_unit_whose_max_health_falls_to_0_is_collected_fires_it_and_comes_back() {
+        fn r5113000_an_indestructible_unit_takes_no_aura_so_it_neither_dies_nor_fires_it() {
             let mut s = scenario(json!({
                 "active": "p2",
                 "p1": {
@@ -380,9 +382,9 @@ mod tests {
             }));
             let state = s.card(STATE_OF_GAME).clone();
             s.play(SUPPRESSIVE_AURA, json!({ "zone": 1 }));
-            assert_eq!(s.count(GameEventType::TrapFired), 1);
-            s.expect_in_zone(&state, "hand");
-            assert_eq!(s.card(&state).cost_override, Some(0));
+            assert_eq!(s.count(GameEventType::TrapFired), 0);
+            s.expect_in_zone(&state, "field");
+            assert_eq!(s.card(&state).cost_override, None);
             s.expect_in_zone(VANILLA, "field");
         }
 

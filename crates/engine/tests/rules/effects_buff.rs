@@ -740,14 +740,16 @@ mod r21_random_keywords_m3_t1 {
         );
         let mut b = Bench::new(&state);
 
-        // Its printed Indestructible is no pool entry, and still keeps Taunt out (R347).
+        // Its printed Indestructible is no pool entry, and still keeps Taunt out (R347). The roll is its
+        // own text's: an Indestructible Unit is Immutable (R4353000), which turns away another card's
+        // (R5113000).
         run(
             &mut b,
             &mut state,
             grant_random_keywords(json_as(
                 json!({ "target": { "of": "chosen" }, "count": RANDOM_KEYWORD_POOL.len() }),
             )),
-            None,
+            Some(unit.clone()),
             on_instance(&unit),
         );
 

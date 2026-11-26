@@ -29,13 +29,14 @@ pub fn turn_buff_of<'a>(state: &GameState, card: &'a CardInstance) -> Option<&'a
 }
 
 /// "+N Attack and <keywords> this turn" on one unit on the field: adds to the Attack held for this
-/// turn and pushes each keyword it lacks, stacking within the turn (R4587000).
+/// turn and pushes each keyword it lacks, stacking within the turn (R4587000). R5113000: another
+/// card's passes an Immutable unit by.
 pub fn buff_this_turn(args: BuffThisTurnArgs) -> Effect {
     Effect::new("buffThisTurn", move |ctx| {
         let Some(DamageTarget::Unit { instance }) = resolve_target(ctx, &args.target) else {
             return;
         };
-        if instance.zone.z() != ZoneName::Field {
+        if instance.zone.z() != ZoneName::Field || crate::restrictions::immutable_keeps_off(ctx, &instance) {
             return;
         }
         let attack = args.attack.unwrap_or(0);

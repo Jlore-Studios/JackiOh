@@ -644,7 +644,8 @@ fn has_fallen_now(state: &GameState, id: &str) -> bool {
 
 /// MD-D4, R1120: what the board's combat-only attack modifiers add to this attacker's strike on
 /// this defender. Every acting card's `attack_mods` hook is summed — attacks added, Poisonous or-ed
-/// — over §10.4's aura sources, read with the source's own face, as `aura_mods` does.
+/// — over §10.4's aura sources, read with the source's own face, as `aura_mods` does. R5113000: an
+/// Immutable attacker takes none but its own, as it takes no other card's aura.
 pub fn attack_mod_for(state: &GameState, attacker: &CardInstance, defender: &CardInstance) -> AttackMod {
     let mut out = AttackMod::default();
     for source in crate::layers::aura_sources(state) {
@@ -654,6 +655,9 @@ pub fn attack_mod_for(state: &GameState, attacker: &CardInstance, defender: &Car
         let Some(hook) = crate::scripts::script_of(state, source).attack_mods.clone() else {
             continue;
         };
+        if source.id != attacker.id && crate::layers::is_immutable(state, attacker) {
+            continue;
+        }
         let got = hook(AttackModArgs {
             state,
             self_: source,

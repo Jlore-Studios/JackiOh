@@ -46,7 +46,7 @@ mod tests {
 
     const VANILLA: &str = "core-008"; // Mr. Vanilla
     const FIENDER: &str = "core-092"; // Felinor Fiender: Stack
-    const STATE_OF_THE_GAME: &str = "classic-041"; // State of the Game: Indestructible
+    const WARDED: &str = "stand-in (1) 4/4 Immune to Spells";
     const HIT_JOB: &str = "core-016"; // Hit Job: Destroy a Unit.
     const PLAGUE_NUKE: &str = "classic-043"; // Plague Nuke: Destroy all Units.
     const FILLER: &str = "core-005"; // Stockpile: a card in hand, so no turn ends by itself.
@@ -95,7 +95,7 @@ mod tests {
         fn r89_units_dying_in_the_same_check_get_none() {
             let mut s = board(
                 false,
-                json!([{ "def": VANILLA, "lane": 2 }, { "def": STATE_OF_THE_GAME, "lane": 3 }]),
+                json!([{ "def": VANILLA, "lane": 2 }, { "def": WARDED, "lane": 3 }]),
                 json!([PLAGUE_NUKE, FILLER]),
             );
             let dying = s.unit_at(P1, 2).id;
@@ -103,7 +103,9 @@ mod tests {
             s.play(PLAGUE_NUKE, json!({}));
             s.expect_in_zone(ID, "graveyard");
             s.expect_in_zone(dying.as_str(), "graveyard");
-            assert!(shielded(&s, &warded), "the Indestructible one stood through the check");
+            // Immune to Spells, it stood through the Spell; an Indestructible one would stand too but is
+            // Immutable, which keeps the Protector's grant off it (R4353000, R5113000).
+            assert!(shielded(&s, &warded), "the immune one stood through the check");
             let granted: Vec<String> = s
                 .last_events()
                 .iter()
