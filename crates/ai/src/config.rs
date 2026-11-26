@@ -226,6 +226,12 @@ pub struct AiSearch {
     /// nodes before it replies to it. A beam its slice never refused decides as before. `false` scores
     /// every such line where it stood, unreplied.
     pub close_cut_lines: bool,
+    /// R4797000: every world `decide` samples is played with the opponent's automatic turn end off
+    /// (`decide::search_world`, R82, R345), so the seat's End turn stops where the opponent's turn begins,
+    /// the crystals it left unspent still in its turn log, and the reply ends that turn. `false` plays
+    /// the worlds as sampled, where an opponent with nothing to do ends its turn inside the seat's End
+    /// turn, the seat's next turn rebuilding its log, and floating cost a line nothing.
+    pub hold_opponent_turn: bool,
     /// Seed of the throwaway determinization that lists candidates for the forced check.
     pub probe_seed: &'static str,
     /// R90, R1282: the most sets a shipped card lists, #55's 3 of ten units.
@@ -302,6 +308,10 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     // R4791000: on. Its deal screen, 400 games on improve-dev against the control at 5991e8da39, is still
     // being played as this is written; its scene tests (crates/ai/tests/ai/budget.rs) hold it.
     close_cut_lines: true,
+    // R4797000: on. Its deal screen, 400 games on improve-dev against the control at the R4791000 commit,
+    // is still being played as this is written; its scene tests (crates/ai/tests/ai/float_discount.rs)
+    // hold it.
+    hold_opponent_turn: true,
     probe_seed: "ai:probe",
     tribute_sets: 120,
     fat_reference: 30,

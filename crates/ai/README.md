@@ -93,6 +93,10 @@ one redaction (R1184002); and so is C+ #42 KY's Test's Easy problem (#2929). Ahe
 answers such a question of the AI's own the same way, judged right on its world, a sequence until
 `AI_KY_COMPETITION_EXPECTED_STREAK` (6, Radiant 12) and then Stop (`simulate::worked_step`,
 R1563005); the greedy baseline's simulation does not.
+R4797000: `decide` plays each sampled world with the opponent's automatic turn end off (`search_world`,
+R82, R345, as `unstoppable.rs` does), so a line's End turn stops where the opponent's turn begins, the
+crystals it left unspent still in the seat's turn log for `passed_score` and `reply_score`, even against an
+opponent with nothing to do, and the reply ends that turn (`AI_SEARCH.hold_opponent_turn`).
 
 `decide` runs a bounded lethal solver (`lethal.rs`), then a turn-level beam search, scoring the best
 lines one turn deeper after the opponent's reply (`reply.rs`: the cards it watched arrive, the Activates

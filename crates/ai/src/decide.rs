@@ -519,6 +519,20 @@ pub fn decision_prices(probe: &GameState, seat: PlayerId, counter: &dyn NodeCoun
     }
 }
 
+/// R4797000: a sampled world as `decide` plays it: the opponent's automatic turn end is off (R82, R345),
+/// as the concession check's worlds have it (`unstoppable.rs`), so the seat's End turn, or a play that ends
+/// its turn, stops where the opponent's turn begins, the seat's turn log still holding the crystals it left
+/// unspent (`passed_score`, `reply_score`), and the reply ends that turn itself. Without it, an opponent
+/// with nothing to do ended its turn inside the seat's, whose next turn start rebuilt the log, and a line
+/// that floated every crystal scored as one that spent them. With `AI_SEARCH.hold_opponent_turn` off, the
+/// world as sampled.
+pub fn search_world(mut world: GameState, seat: PlayerId) -> GameState {
+    if AI_SEARCH.hold_opponent_turn {
+        world.players[seat.opponent()].auto_end_turn = Some(false);
+    }
+    world
+}
+
 /// Steps 1–7 on the redacted copy; every number `stats` reads beside the counter goes in `scratch`.
 /// `options` gives the budget, the wrap-up and the stream; its `should_stop` is the counter's.
 /// `pool_loss` is what `decide_with_pool_loss` was given (R4188000), None for every 1v1 decision.
@@ -596,12 +610,9 @@ fn plan(
     let k = budget.determinizations.max(1);
     let mut dets: Vec<GameState> = Vec::new();
     for _ in 0..k {
-        dets.push(determinize_on(
-            &public,
+        dets.push(search_world(
+            determinize_on(&public, seat, rng, DeterminizeOptions::default(), &ground),
             seat,
-            rng,
-            DeterminizeOptions::default(),
-            &ground,
         ));
     }
     scratch.determinizations = k;
