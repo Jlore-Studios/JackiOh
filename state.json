@@ -21715,6 +21715,13 @@
     "5122": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-26T23:20:10Z",
+        "difficulty": "medium",
+        "provider": "agy",
+        "tier": "medium",
+        "why": "the planner gave no rating line"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
