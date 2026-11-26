@@ -21331,7 +21331,7 @@
     "4977": {
       "action": "plan",
       "asks": [],
-      "failures": 1,
+      "failures": 2,
       "forced": false,
       "handoff": {
         "at": "2026-11-26T03:26:44Z",
