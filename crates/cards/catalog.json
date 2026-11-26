@@ -39027,7 +39027,7 @@
         "max": 100
       }
     ],
-    "loc": 50,
+    "loc": 55,
     "base": {
       "keywords": [],
       "text": "Reveals when an enemy Unit attacks: {chance}% chance to cancel the attack."

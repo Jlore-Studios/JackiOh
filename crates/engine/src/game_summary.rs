@@ -25,15 +25,22 @@
 //! action (`step`'s `action`).
 //! R4672001: each Created card names the card whose effect made it (`GameState.makers`). R4672002: a
 //! card's `discover` or `pick` prompt is a pick, its offer and its answer as catalog ids.
+//!
+//! R4707000: each play's variant keeps what it rolled, read off the public reports: a `chaosRolled`'s
+//! places in its card's table, a `rolled` batch's coins, and its dice by the faces their card checks for
+//! (or by face, at most `ROLL_SPLIT_MAX_SIDES` sides). A roll joins the last entry the play of the card
+//! that rolled it listed, whenever it comes (a Trap's coin as it fires, a unit's end-of-turn flip), and a
+//! Call to Chaos a Recursion cast joins the play that began its chain (R28).
 
 use indexmap::{IndexMap, IndexSet};
 
+use crate::config::ROLL_SPLIT_MAX_SIDES;
 use crate::reduce::{begin_game, reduce};
 use crate::replay::FoldArgs;
 use crate::state::{CardInstance, CreateGameOptions, GameState, create_recorded_game, find_instance};
 use crate::wire::{
     Action, ActionBody, CardPick, CounteredTo, CreatedUse, GameEvent, GameSummary, MadeBy, PLAYER_IDS,
-    PerPlayer, PlayVariant, PlayerId, PromptKind, SeatSummary, Selection, Zone,
+    PerPlayer, PlayVariant, PlayerId, PromptKind, RollKind, RolledOutcome, SeatSummary, Selection, Tag, Zone,
 };
 
 /// Each seat's hand as instance id → catalog id, in hand order.
@@ -64,6 +71,8 @@ enum Slot {
 /// nothing.
 struct OpenPlay {
     player: PlayerId,
+    /// R4707000: the card played, which a Recursion's cast names as its maker.
+    def_id: String,
     slots: Vec<Slot>,
     answered: IndexSet<String>,
 }
@@ -85,6 +94,10 @@ struct Reading {
     played_variants: PerPlayer<Vec<Option<PlayVariant>>>,
     /// R4672000: the plays still resolving, by the instance id their card's prompts name.
     open: IndexMap<String, OpenPlay>,
+    /// R4707000: the entry each played card's rolls join, by its instance id: its play's last.
+    rollers: IndexMap<String, Slot>,
+    /// R4707000: a Call to Chaos a Recursion cast, by instance id, and the play that began its chain.
+    chains: IndexMap<String, String>,
     /// R4672002: each seat's Discover-like picks.
     picks: PerPlayer<Vec<CardPick>>,
     /// R1256000: the per-seat counts, read off the events both seats see.
@@ -204,7 +217,12 @@ fn play_variant(modes: Option<&[String]>, x: Option<i32>, embiggened: Option<boo
     if modes.is_empty() && x.is_none() && embiggened.is_none() {
         return None;
     }
-    Some(PlayVariant { modes, x, embiggened })
+    Some(PlayVariant {
+        modes,
+        x,
+        embiggened,
+        ..PlayVariant::default()
+    })
 }
 
 /// R4672000: the variant a list entry holds.
@@ -224,7 +242,16 @@ fn variant_mut(reading: &mut Reading, slot: Slot) -> Option<&mut Option<PlayVari
 }
 
 /// R4672000: a play's entries, open until its `cardResolved`; a play that listed none is no open play.
-fn open(reading: &mut Reading, instance_id: &str, player: PlayerId, slots: Vec<Slot>) {
+/// R4707000: its card's rolls join its last entry from here on, as long as the card keeps its id.
+fn open(reading: &mut Reading, instance_id: &str, player: PlayerId, def_id: &str, slots: Vec<Slot>) {
+    match slots.last() {
+        Some(slot) => {
+            reading.rollers.insert(instance_id.to_string(), *slot);
+        }
+        None => {
+            reading.rollers.shift_remove(instance_id);
+        }
+    }
     if slots.is_empty() {
         reading.open.shift_remove(instance_id);
     } else {
@@ -232,10 +259,80 @@ fn open(reading: &mut Reading, instance_id: &str, player: PlayerId, slots: Vec<S
             instance_id.to_string(),
             OpenPlay {
                 player,
+                def_id: def_id.to_string(),
                 slots,
                 answered: IndexSet::new(),
             },
         );
+    }
+}
+
+/// R4707000: whether a catalog card is of the Call to Chaos family (§10.7's recursion pool).
+fn is_call_to_chaos(state: &GameState, def_id: &str) -> bool {
+    crate::catalog::find_def(Some(state), def_id).is_some_and(|def| def.tags.contains(&Tag::CallToChaos))
+}
+
+/// R4707000, R28: the play whose chain a Call to Chaos cast by a Call to Chaos's Recursion is part of:
+/// the innermost play still resolving of the card that made it, and that play's own chain's first when it
+/// is a cast itself. `None` for any other cast.
+fn chain_root(reading: &Reading, state: &GameState, def_id: &str, maker: Option<&MadeBy>) -> Option<String> {
+    let maker = maker?;
+    if !is_call_to_chaos(state, def_id) || !is_call_to_chaos(state, &maker.card) {
+        return None;
+    }
+    let (parent, _) = reading
+        .open
+        .iter()
+        .rev()
+        .find(|(_, play)| play.def_id == maker.card)?;
+    Some(reading.chains.get(parent).unwrap_or(parent).clone())
+}
+
+/// R4707000: a roll the card `instance_id` made joins its play's entry, or its chain's first play's; a
+/// card no play the record keeps listed (one an effect summoned or set) records none.
+fn credit_roll(reading: &mut Reading, instance_id: &str, roll: RolledOutcome) {
+    let roller = reading
+        .chains
+        .get(instance_id)
+        .map_or(instance_id, String::as_str);
+    let Some(slot) = reading.rollers.get(roller).copied() else {
+        return;
+    };
+    if let Some(variant) = variant_mut(reading, slot) {
+        variant.get_or_insert_with(PlayVariant::default).rolled.push(roll);
+    }
+}
+
+/// R4707000: what a `rolled` batch came up with, as the record keeps it: its coins' heads, or its dice by
+/// the faces their card checks for, else by face when they have at most `ROLL_SPLIT_MAX_SIDES`; a larger
+/// die its card checks no face of is no outcome of a fixed list.
+fn rolled_outcome(
+    def_id: &str,
+    kind: RollKind,
+    sides: i32,
+    rolls: &[crate::wire::RollResult],
+    hit: Option<crate::wire::RollHit>,
+) -> Option<RolledOutcome> {
+    let count = |n: usize| i32::try_from(n).unwrap_or(i32::MAX);
+    // Every coin or die of a batch is thrown at one Lucky, 1 + X draws each (R1440).
+    let lucky = rolls
+        .first()
+        .map_or(0, |roll| count(roll.faces.len()).saturating_sub(1));
+    match kind {
+        RollKind::Coin => Some(RolledOutcome::Coin {
+            card: def_id.to_string(),
+            coins: count(rolls.len()),
+            heads: count(rolls.iter().filter(|roll| roll.heads()).count()),
+            lucky,
+        }),
+        RollKind::Die if hit.is_some() || sides <= ROLL_SPLIT_MAX_SIDES => Some(RolledOutcome::Die {
+            card: def_id.to_string(),
+            sides,
+            lucky,
+            hit,
+            kept: rolls.iter().map(crate::wire::RollResult::kept_face).collect(),
+        }),
+        RollKind::Die => None,
     }
 }
 
@@ -621,12 +718,20 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                     if from_hand {
                         reading.hands[*player].shift_remove(id);
                     }
-                    open(reading, instance_id, *player, slots);
+                    // R4707000, R28: a Recursion's cast rolls for the play that began its chain.
+                    if created
+                        && !from_hand
+                        && let Some(root) =
+                            chain_root(reading, after, def_id, maker_of(before, after, &ids).as_ref())
+                    {
+                        reading.chains.insert(instance_id.clone(), root);
+                    }
+                    open(reading, instance_id, *player, def_id, slots);
                     continue;
                 }
                 if stolen.iter().any(|countered| countered == id) {
                     leave(&mut reading.hands, id);
-                    open(reading, instance_id, *player, slots);
+                    open(reading, instance_id, *player, def_id, slots);
                     continue;
                 }
                 let turn = reading.current_turn;
@@ -653,11 +758,41 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                     reading.traps_set[*player] += 1;
                 }
                 reading.hands[*player].shift_remove(id);
-                open(reading, instance_id, *player, slots);
+                open(reading, instance_id, *player, def_id, slots);
             }
             // R4672000: the play has resolved; a prompt its card asks from here on is no part of it.
             GameEvent::CardResolved { instance_id, .. } => {
                 reading.open.shift_remove(instance_id);
+            }
+            // R4707000: a table's entries rolled, by their places; a list done whole drew none.
+            GameEvent::ChaosRolled {
+                instance_id,
+                def_id,
+                effects,
+                indices: Some(picked),
+                table_size: Some(of),
+                ..
+            } => {
+                let roll = RolledOutcome::Effect {
+                    card: def_id.clone(),
+                    picked: picked.clone(),
+                    labels: effects.clone(),
+                    of: *of,
+                };
+                credit_roll(reading, instance_id, roll);
+            }
+            GameEvent::Rolled {
+                instance_id,
+                def_id,
+                kind,
+                sides,
+                rolls,
+                hit,
+                ..
+            } => {
+                if let Some(roll) = rolled_outcome(def_id, *kind, *sides, rolls, *hit) {
+                    credit_roll(reading, instance_id, roll);
+                }
             }
             GameEvent::Transformed {
                 instance_id,
@@ -800,6 +935,8 @@ impl SummaryReader {
                 played_radiant: per_seat(),
                 played_variants: per_seat(),
                 open: IndexMap::new(),
+                rollers: IndexMap::new(),
+                chains: IndexMap::new(),
                 picks: per_seat(),
                 fatigue_draws: zero(),
                 fatigue_damage: zero(),
@@ -956,6 +1093,8 @@ mod tests {
             played_radiant: per_seat(),
             played_variants: per_seat(),
             open: IndexMap::new(),
+            rollers: IndexMap::new(),
+            chains: IndexMap::new(),
             picks: per_seat(),
             fatigue_draws: zero(),
             fatigue_damage: zero(),

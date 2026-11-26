@@ -53,14 +53,15 @@ use jackioh_cards::{deck_play_versions, patch_history};
 use jackioh_engine::wire::stats::{
     CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardTier, CardWindow, CreatedStats, GameFigures,
     GameMode, GameSource, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures,
-    PlayVersionQuery, PlayVersionTable, SourceFilter, StatsFace, StatsField, StatsTotals, SwingReport,
-    SwingRows, SwingTally, Tally, TotalsKey, VariantKind, WindowQuery, WindowRequest, WindowSource,
-    WindowedCreated, WindowedGames, WindowedReport, add_created, add_stats, card_family, card_stats_of,
-    card_window, collapse_gameless, created_face_adjusted, created_face_field, created_face_side,
-    face_adjusted, face_drills_of, face_side, face_stats_field, held_adjusted, not_drawn, output_field,
-    output_figures, patch_windows, play_version_figures, radiant_gap, round_share, seen, sources_of,
-    stats_field, swing_baseline, swing_report, tier_in, variant_field, variant_figures, variant_rows,
-    wilson_interval, win_rate, windowed_card_stats, windowed_game_figures, windowed_swing_rows,
+    PlayVersionQuery, PlayVersionTable, RolledKind, SourceFilter, StatsFace, StatsField, StatsTotals,
+    SwingReport, SwingRows, SwingTally, Tally, TotalsKey, VariantKind, WindowQuery, WindowRequest,
+    WindowSource, WindowedCreated, WindowedGames, WindowedReport, add_created, add_stats, card_family,
+    card_stats_of, card_window, collapse_gameless, created_face_adjusted, created_face_field,
+    created_face_side, face_adjusted, face_drills_of, face_side, face_stats_field, held_adjusted, not_drawn,
+    output_field, output_figures, patch_windows, play_version_figures, radiant_gap, rolled_field,
+    rolled_figures, round_share, seen, sources_of, stats_field, swing_baseline, swing_report, tier_in,
+    variant_field, variant_figures, variant_rows, wilson_interval, win_rate, windowed_card_stats,
+    windowed_game_figures, windowed_swing_rows,
 };
 use jackioh_engine::{
     CardCost, CardDef, CardDefs, Pilot, WinRateTable, made_by_a_rule, win_rates_from_report,
@@ -743,6 +744,9 @@ pub struct CardDrillDownResponse {
     /// R4679000: each card it made or offered at the page's patch on the face asked, best adjusted first;
     /// empty for a card that made and offered none.
     pub outputs: Vec<PublicOutputRow>,
+    /// R4707001: each outcome its plays rolled at the page's patch on the face asked, one group per kind it
+    /// has (its table's effects, its coins, its dice), best adjusted first; empty for a card that rolls none.
+    pub rolled: Vec<PublicRolledGroup>,
 }
 
 /// R4676000: one choice of a card, as Extended stats shows it.
@@ -796,6 +800,33 @@ pub struct PublicOutputRow {
     /// Picked over offered; absent when it was never offered.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pick_rate: Option<f64>,
+}
+
+/// R4707001: one outcome a card rolled, as Extended stats' Outputs shows it.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicRolledRow {
+    /// `<table>:<outcome>`: the card whose table, coins or dice it is, and the outcome's key there.
+    pub key: String,
+    /// The outcome's words; a Recursion's edition's own entry is prefixed with that edition's name.
+    pub label: String,
+    /// How often its table expects it per roll, and how often it came up.
+    pub expected: f64,
+    pub share: f64,
+    pub games: i64,
+    pub adjusted_win_rate: Option<f64>,
+    pub adjusted_low: Option<f64>,
+    pub adjusted_high: Option<f64>,
+    pub tier: Option<CardTier>,
+    pub has_enough_games: bool,
+}
+
+/// R4707001: one kind of a card's rolled outcomes, its rows best adjusted first.
+#[derive(Serialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PublicRolledGroup {
+    pub kind: RolledKind,
+    pub rows: Vec<PublicRolledRow>,
 }
 
 /// R4676000: a card's baseline, the games a variant is read against, and its played games on `face`, a
@@ -914,6 +945,53 @@ fn card_outputs(app: &App, report: &WindowedReport, id: &str, face: StatsFace) -
                 key: row.card,
             })
         })
+        .collect()
+}
+
+/// R4707001: each outcome the card's plays rolled on `face` over the windowed report, read against its
+/// group's other outcomes and the rolled field of every card of the report the catalog holds, whatever the
+/// page filters (`rolled_field`), one group per kind in `RolledKind`'s order, each in `rolled_figures`'
+/// order. An outcome of another edition's table (a Recursion's cast, R28) names that edition first.
+fn card_rolled(app: &App, report: &WindowedReport, id: &str, face: StatsFace) -> Vec<PublicRolledGroup> {
+    let Some(choices) = report.choices.get(id) else {
+        return Vec::new();
+    };
+    let floor = i32::try_from(CARD_STATS_MIN_SAMPLE).unwrap_or(i32::MAX);
+    let field = rolled_field(
+        report
+            .choices
+            .iter()
+            .filter(|(card, _)| app.catalog.defs.contains_key(*card))
+            .map(|(_, choices)| choices),
+        face,
+        floor,
+    );
+    let rows = rolled_figures(choices, face, &field);
+    RolledKind::ALL
+        .iter()
+        .map(|kind| PublicRolledGroup {
+            kind: *kind,
+            rows: rows
+                .iter()
+                .filter(|row| row.kind == *kind)
+                .map(|row| PublicRolledRow {
+                    key: format!("{}:{}", row.table, row.key),
+                    label: match app.catalog.defs.get(&row.table) {
+                        Some(def) if row.table != id => format!("{}: {}", def.name, row.label),
+                        _ => row.label.clone(),
+                    },
+                    expected: row.expected,
+                    share: row.share,
+                    games: i64::from(row.games),
+                    adjusted_win_rate: row.adjusted.map(|(rate, _)| rate),
+                    adjusted_low: row.adjusted.map(|(_, (low, _))| low),
+                    adjusted_high: row.adjusted.map(|(_, (_, high))| high),
+                    tier: row.tier,
+                    has_enough_games: row.has_enough_games,
+                })
+                .collect(),
+        })
+        .filter(|group| !group.rows.is_empty())
         .collect()
 }
 
@@ -2101,6 +2179,8 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
     let variants = card_variants(app, &window.report, &card_id, face);
     // R4679000: what it made and offered, off the same window, on the face asked.
     let outputs = card_outputs(app, &window.report, &card_id, face);
+    // R4707001: what its plays rolled, off the same window, on the face asked.
+    let rolled = card_rolled(app, &window.report, &card_id, face);
 
     let body = CardDrillDownResponse {
         card: DrillDownCard {
@@ -2116,6 +2196,7 @@ pub async fn get_card(app: &Arc<App>, req: Req) -> ApiResult {
         faces,
         variants,
         outputs,
+        rolled,
     };
     Ok(reader_ok(to_json(&body)?, reader))
 }

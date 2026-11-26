@@ -56,6 +56,7 @@ import {
   type CardDrillDownResponse,
   type CardFaces,
   type PublicOutputRow,
+  type PublicRolledGroup,
   type PublicVariantGroup,
   type PublicVariantRow,
   type CardStatsOptions,
@@ -73,6 +74,7 @@ import {
   ADJUSTED_RANGE_DIGITS,
   CARD_STATS_MIN_SAMPLE,
   PLAYER_SEARCH_DEBOUNCE_MS,
+  ROLLED_SHARE_DIGITS,
   SET_STATS_DIGITS,
   SET_STATS_OUTLIER_Z,
   WIN_RATE_RANGE_DIGITS,
@@ -546,6 +548,74 @@ function OutputsTable({
           </table>
         </TableScroll>
       )}
+    </section>
+  );
+}
+
+/** R4707002: the heading of a kind of rolled outcome's table. */
+function rolledHeading(kind: PublicRolledGroup["kind"]): string {
+  switch (kind) {
+    case "effect":
+      return t("Rolled effects");
+    case "coin":
+      return t("Coin flips");
+    case "die":
+      return t("Dice");
+  }
+}
+
+/** R4707002: a rolled outcome's Expected or Share, a percent to a tenth of a point. */
+function rolledShareText(share: number): string {
+  return formatNumber(share, {
+    style: "percent",
+    minimumFractionDigits: ROLLED_SHARE_DIGITS,
+    maximumFractionDigits: ROLLED_SHARE_DIGITS,
+  });
+}
+
+/**
+ * R4707002: one kind of the card's rolled outcomes under its Outputs, in the server's order, best adjusted first: each
+ * outcome in the server's words, its expected share beside the share it was rolled, its games, the deck table's tier
+ * chip and Adjusted (its 95% range with the ranges shown). A row opens nothing.
+ */
+function RolledTable({ group, showRanges }: { group: PublicRolledGroup; showRanges: boolean }): ReactElement {
+  const titleId = useId();
+  return (
+    <section className="stats-drilldown-section" data-kind={group.kind} data-testid={statsTestid.extendedRolled}>
+      <TableScroll labeledBy={titleId}>
+        <table className="stats-table stats-extended-table">
+          <caption id={titleId}>{rolledHeading(group.kind)}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{t("Outcome")}</th>
+              <th scope="col">{t("Expected")}</th>
+              <th scope="col">{t("Share")}</th>
+              <th scope="col">{t("Games")}</th>
+              <th scope="col">{t("Tier")}</th>
+              <th scope="col">{t("Adjusted")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {group.rows.map((row) => (
+              <tr key={row.key} data-key={row.key} data-testid={statsTestid.extendedRolledRow}>
+                <th scope="row">{row.label}</th>
+                <td>{rolledShareText(row.expected)}</td>
+                <td>{rolledShareText(row.share)}</td>
+                <td>{formatNumber(row.games)}</td>
+                <td>
+                  <TierChip tier={row.hasEnoughGames ? row.tier : null} testid={statsTestid.extendedTier} />
+                </td>
+                <td>
+                  {row.hasEnoughGames ? adjustedText(row.adjustedWinRate) : t("not enough games")}
+                  {showRanges && row.hasEnoughGames && (
+                    <RangeText low={row.adjustedLow} high={row.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </TableScroll>
     </section>
   );
 }
@@ -1210,15 +1280,17 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const drillDownFaces = drillDownLoading || drillDownError ? undefined : drillDownData?.faces;
   const drillDownTokens = drillDownDef ? tokensOf(drillDownDef) : [];
   // R4676001: the panel's sections the open card has, Choices only when it offers a choice, R4679001 Outputs only when
-  // it made or offered a card or its text names a token; the one shown is the one asked for, or the first the card has.
+  // it made or offered a card, R4707002 rolled an outcome, or its text names a token; the one shown is the one asked
+  // for, or the first the card has.
   const drillDownVariants = drillDownLoading || drillDownError ? [] : (drillDownData?.variants ?? []);
   const drillDownOutputs = drillDownLoading || drillDownError ? [] : (drillDownData?.outputs ?? []);
+  const drillDownRolled = drillDownLoading || drillDownError ? [] : (drillDownData?.rolled ?? []);
   const extendedSections = EXTENDED_SECTIONS.filter((section) => {
     switch (section) {
       case "choices":
         return drillDownVariants.length > 0;
       case "outputs":
-        return drillDownOutputs.length > 0 || drillDownTokens.length > 0;
+        return drillDownOutputs.length > 0 || drillDownRolled.length > 0 || drillDownTokens.length > 0;
       case "faces":
         return drillDownFaces !== undefined;
     }
@@ -2498,9 +2570,12 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                           showRanges={showRanges}
                         />
                       )}
-                      {extendedShown === "outputs" && (
+                      {/* R4707002: a card that rolled but made nothing shows its rolled tables alone. */}
+                      {extendedShown === "outputs" && (drillDownOutputs.length > 0 || drillDownRolled.length === 0) && (
                         <OutputsTable outputs={drillDownOutputs} showRanges={showRanges} onOpen={openOutput} />
                       )}
+                      {extendedShown === "outputs" &&
+                        drillDownRolled.map((group) => <RolledTable key={group.kind} group={group} showRanges={showRanges} />)}
                       {extendedShown === "faces" && drillDownFaces && <FacesTable faces={drillDownFaces} showRanges={showRanges} />}
                       {extendedShown === undefined && <p className="stats-empty-sub">{t("Details unavailable.")}</p>}
                     </div>
