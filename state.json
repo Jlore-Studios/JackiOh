@@ -21304,17 +21304,8 @@
       }
     },
     "4969": {
-      "action": "plan",
-      "asks": [
-        "c:7179114636"
-      ],
-      "build_next": {
-        "from_run": "45733689819",
-        "model": "sonnet",
-        "provider": "claude-8",
-        "since": "2026-11-26T01:14:18Z",
-        "until": "2026-11-26T01:44:18Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-26T01:14:09Z",
         "difficulty": "medium",
@@ -21333,18 +21324,9 @@
         "reason": "planned on sonnet",
         "trail": "- Grep: {\"pattern\": \"perf-corpus|fuzz-corpus\", \"path\": \"/home/runner/work/_temp/work/item-4969/scripts/ci-scope.sh\", \"output_mode\": \"content\"}\n- Grep: {\"pattern\": \"perf-corpus|fuzz-corpus\", \"path\": \"/home/runner/work/_temp/work/item-4969/apps/web/src/net/ci-scope.test.ts\", \"output_mode\": \"content\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4969/scripts/ci-scope.sh\", \"offset\": 166, \"limit\": 14}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4969/scripts/ci-scope.sh\", \"offset\": 405, \"limit\": 25}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4969/apps/web/src/net/ci-scope.test.ts\", \"offset\": 470, \"limit\": 70}\n- Bash: {\"command\": \"ls crates/tools/perf-corpus | head -3; grep -rn \\\"perf-corpus\\\" scripts/ci-scope.sh .github/workflows 2>/dev/null | head\"}\n- Bash: {\"command\": \"ls crates/tools/perf-corpus | grep -i plain; grep -rn \\\"perf-corpus\\\" --include=* -l . 2>/dev/null | grep -v target | grep -v node_modules | head -20; grep -n \\\"crates/tools\\\" scripts/ci\u2026\n- Bash: {\"command\": \"grep -n \\\"perf-corpus\\\\|perf_corpus\\\\|PERF_CORPUS\\\" crates/tools/src/*.rs crates/tools/tests/*.rs | head; grep -rn \\\"perf\\\" e2e --include=*.ts -il | head -3; sed -n 380,395p scripts/ci-s\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4969/.bot-plan.md\", \"content\": \"Draft: 3 edits \\u2014 scripts/ci-scope.sh line 422 pattern + header comment at 173-174; apps/web/src/net/ci-scope.test\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of the five hard lines holds: the change is one shell case pattern, a header comment and one test in two files (scripts/ci-scope.sh, apps/web/src/net/ci-scope.test.ts), with no engine, AI, cross-crate, migration or 40-file work.\"} --> ## Goal Changes \u2026"
       },
-      "hold": {
-        "ends": "2026-11-26T03:15:25Z",
-        "lifted": "2026-11-26T01:22:30Z",
-        "owner": "claude-8",
-        "since": "2026-11-26T01:15:25Z",
-        "until": "2026-11-26T01:20:00Z",
-        "why": "5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%)"
-      },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-8",
       "owner_since": "2026-11-26T01:08:26Z",
       "owner_why": "it plans it",
@@ -21357,12 +21339,14 @@
       "provider": "claude-8",
       "queued_at": "2026-11-26T01:03:32Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45733689819",
+      "run_id": "pending:05e325d1-1795656305",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-26T01:08:26Z",
+      "started_at": "2026-11-26T01:25:36Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:7179114636"
+      ],
       "waiting_comment": 7179591065
     },
     "4972": {
@@ -21691,9 +21675,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T01:24:51Z",
+    "at": "2026-11-26T01:25:36Z",
     "url": "",
-    "what": "plan #4984 on claude-8"
+    "what": "build #4969 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-26T01:12:42Z",
