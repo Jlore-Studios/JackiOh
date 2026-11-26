@@ -22444,16 +22444,15 @@
     "what": "plan #5006 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-26T04:43:38Z",
+    "at": "2026-11-26T04:56:18Z",
     "notes": [
-      "delivered suggest on claude-3 (run 45756218317): interrupted",
-      "delivered build #4995 on muse (run 45747383443): built",
-      "delivered build #4992 on claude-7 (run 45747117283): built",
-      "delivered review #5000 on claude-1 (run 45747034055): approved",
-      "started review #5009 on claude-7 (run 45757541304)",
-      "started review #5008 on muse (run 45757621231)",
-      "nothing more to start: nothing is queued",
-      "pruned 3 plan file(s) older than 7 days"
+      "delivered suggest on muse (run 45756301990): suggested",
+      "delivered plan #5005 on claude-3 (run 45755194189): interrupted",
+      "started plan #5005 on claude-1 (run 45758599957)",
+      "started plan #5006 on muse (run 45758679180)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-26T09:20:00Z; `claude-7` is busy; `claude-8` 5-hour usage is 85%, too close to its 85% cap to start a long run (it starts under 80%); it resets at 2026-11-26T06:20:00Z; it can start a build or a plan again in 19m; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` is busy; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json)",
+      "#5011: typed it Feature",
+      "#5010: typed it Task"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -23159,7 +23158,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T04:43:38Z",
+  "loop_tick": "2026-11-26T04:56:18Z",
   "machine_disk": {
     "issue": null,
     "reading": {
