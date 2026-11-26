@@ -83,9 +83,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R4991000: through v0.6.14k a Shockwave447 a Transform made drew nothing; `KEPT_SCRIPTS` folds those
-/// replays under it (R767000, R4779000).
-pub fn script_v0_6_14k() -> CardScripts {
+/// R4991000: in every version before this change's, a Shockwave447 a Transform made drew nothing;
+/// `KEPT_SCRIPTS` folds those replays under it, keyed by the change's fragment (R767000, R4779000).
+pub fn script_before_transform_draw() -> CardScripts {
     CardScripts {
         base: shockwave(false, true, &[GameEventType::Summoned]),
         radiant: shockwave(true, true, &[GameEventType::Summoned]),
@@ -108,7 +108,7 @@ mod tests {
     use jackioh_engine::catalog::is_complicated;
     use jackioh_engine::testkit::*;
 
-    use crate::{filler, scenario};
+    use crate::{filler, ids, scenario};
 
     const P1: PlayerId = PlayerId::P1;
     const P2: PlayerId = PlayerId::P2;
@@ -178,8 +178,8 @@ mod tests {
             "p2": { "hand": [FILLER, FILLER], "library": filler(6) },
         }));
         s.state_mut().players.p1.auto_end_turn = Some(false);
-        let mine: Vec<String> = s.hand(P1).into_iter().skip(1).map(|card| card.id).collect();
-        let theirs: Vec<String> = s.hand(P2).into_iter().map(|card| card.id).collect();
+        let mine = ids(&s.hand(P1)[1..]);
+        let theirs = ids(&s.hand(P2));
         let old = me(&s);
         s.play(CULTIVATION, pick::targets(pick::id(&old)));
         let id = me(&s);
@@ -192,10 +192,6 @@ mod tests {
             let (s, id, _, _) = cultivated(seed);
             s.card(id.as_str()).def_id == ID
         })
-    }
-
-    fn ids(cards: Vec<CardInstance>) -> Vec<String> {
-        cards.into_iter().map(|card| card.id).collect()
     }
 
     /// R4991000: a Transform's new card on the field arrives (R4816000), so the Aura draws its 3 (R781004);
@@ -212,20 +208,20 @@ mod tests {
         unique.dedup();
         assert_eq!(unique.len(), 3, "different ones: {three:?}");
         assert_eq!(aura(&s, &id), three, "the Aura gives them");
-        assert_eq!(ids(s.hand(P1)), mine, "no Cry replaced your hand");
-        assert_eq!(ids(s.hand(P2)), theirs, "nor theirs");
+        assert_eq!(ids(&s.hand(P1)), mine, "no Cry replaced your hand");
+        assert_eq!(ids(&s.hand(P2)), theirs, "nor theirs");
 
         let (again, again_id, _, _) = cultivated(&seed);
         assert_eq!(drawn(&again, &again_id), three, "the same seed draws the same");
     }
 
     #[test]
-    fn r767000_the_script_kept_for_v0_6_14k_draws_nothing_for_a_shockwave447_a_transform_makes() {
+    fn r767000_the_kept_script_draws_nothing_for_a_shockwave447_a_transform_makes() {
         let seed = shockwave_seed();
-        crate::under_kept(ID, script_v0_6_14k(), || {
+        crate::under_kept(ID, script_before_transform_draw(), || {
             let (s, id, _, _) = cultivated(&seed);
             assert_eq!(s.card(id.as_str()).def_id, ID);
-            assert!(drawn(&s, &id).is_empty(), "through v0.6.14k a Transform's Shockwave447 drew nothing");
+            assert!(drawn(&s, &id).is_empty(), "before this change a Transform's Shockwave447 drew nothing");
 
             let (s, _, _) = played(false, "shockwave-kept-4991", 2);
             assert_eq!(drawn(&s, &me(&s)).len(), 3, "and played it drew its 3");

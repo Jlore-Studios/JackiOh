@@ -1562,12 +1562,12 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (
         c065_keymaster_keenus::ID,
         "fragment:a-flickered-card-starts-its-printed-brittle-again-and-a",
-        c065_keymaster_keenus::script_v0_6_14k,
+        c065_keymaster_keenus::script_before_transform_draw,
     ),
     (
         c111_shockwave447::ID,
         "fragment:a-flickered-card-starts-its-printed-brittle-again-and-a",
-        c111_shockwave447::script_v0_6_14k,
+        c111_shockwave447::script_before_transform_draw,
     ),
 ];
 

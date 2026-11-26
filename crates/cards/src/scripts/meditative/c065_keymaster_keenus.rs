@@ -70,9 +70,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R4991000: through v0.6.14k a Keenus a Transform made drew nothing; `KEPT_SCRIPTS` folds those replays
-/// under it (R767000, R4779000).
-pub fn script_v0_6_14k() -> CardScripts {
+/// R4991000: in every version before this change's, a Keenus a Transform made drew nothing; `KEPT_SCRIPTS`
+/// folds those replays under it, keyed by the change's fragment (R767000, R4779000).
+pub fn script_before_transform_draw() -> CardScripts {
     CardScripts {
         base: keenus(true, &[GameEventType::Summoned]),
         radiant: keenus(true, &[GameEventType::Summoned]),
@@ -173,7 +173,6 @@ mod tests {
     /// Tireless Cultivation cast on p1's Reno (`radiant` its face, which the new card keeps) on `seed`;
     /// the id of the Unit standing in its zone after.
     fn cultivated(seed: &str, radiant: bool) -> (Scenario, String) {
-        crate::register_all();
         let mut s = scenario(json!({
             "seed": seed,
             "p1": {
@@ -471,7 +470,6 @@ mod tests {
         /// R4991000: a Transform in a hand or a library makes no card on the field, so nothing arrives.
         #[test]
         fn r4991000_a_transform_in_a_hand_that_makes_keenus_draws_nothing() {
-            crate::register_all();
             let seed = seed_where("keenus-4991-hand", |seed| {
                 transmogulated(seed).hand(P1).iter().any(|card| card.def_id == KEENUS)
             });
@@ -485,12 +483,12 @@ mod tests {
         }
 
         #[test]
-        fn r767000_the_script_kept_for_v0_6_14k_draws_nothing_for_a_keenus_a_transform_makes() {
+        fn r767000_the_kept_script_draws_nothing_for_a_keenus_a_transform_makes() {
             let seed = keenus_seed(false);
-            crate::under_kept(KEENUS, script_v0_6_14k(), || {
+            crate::under_kept(KEENUS, script_before_transform_draw(), || {
                 let (s, id) = cultivated(&seed, false);
                 assert_eq!(s.card(id.as_str()).def_id, KEENUS);
-                assert!(drawn(&s, &id).is_empty(), "through v0.6.14k a Transform's Keenus drew nothing");
+                assert!(drawn(&s, &id).is_empty(), "before this change a Transform's Keenus drew nothing");
 
                 let s = played("keenus-kept-4991", false, json!({}));
                 let id = s.card(KEENUS).id.clone();
