@@ -91,15 +91,20 @@ function planPlay(
   if (isBuilding(interaction) && dropSetFor(view, legal, interaction).has(sourceTestid)) return null;
 
   const lifted: Playing = { stage: "playing", instanceId: source.instanceId, candidates, picked: {} };
+  // The lit zones are every candidate's: a drop on a set play's backrow zone still sets the card.
   const dropTestids = dropSetFor(view, legal, lifted);
-  const freeDrop = dropTestids.size === 0 || outstandingNeed(lifted) === null;
 
-  // Nothing is picked yet, so every candidate is a remaining one. ME-ALTPLAY: a free drop casts
-  // face-up, so the set plays never make a drop free nor draw its arrow.
+  // Nothing is picked yet, so every candidate is a remaining one. ME-ALTPLAY, R5107000: a free drop casts
+  // face-up (`resolveDrop`), so the face-up plays alone decide whether a drop on the board is free and
+  // whether the drag draws an arrow; the set plays only light their zones. With no face-up play listed,
+  // nothing casts face-up and every candidate decides, as before.
+  const faceUp = candidates.filter((candidate) => candidate.faceDown === undefined);
+  const deciding: Playing = faceUp.length === 0 ? lifted : { ...lifted, candidates: faceUp };
+  const freeDrop = dropSetFor(view, legal, deciding).size === 0 || outstandingNeed(deciding) === null;
+
   let anyZone = false;
   let anyTargets = false;
-  for (const candidate of candidates) {
-    if (candidate.faceDown !== undefined) continue;
+  for (const candidate of faceUp) {
     if (candidate.zone !== undefined) anyZone = true;
     if (candidate.targets !== undefined && candidate.targets.length > 0) anyTargets = true;
   }
