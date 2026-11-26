@@ -44462,6 +44462,7 @@
       {
         "at": "2026-11-26T00:48:02Z",
         "number": 4981,
+        "reason": "the co-op case is a real server bug, not just tidiness. `DuosRegistry::actor_for` looks the actor up by the `matchId` exactly as the client sent it, and `rebuild` then registers the rebuilt actor under that same string (`keep`, `crates/server/src/duos/registry.rs:262-268`). So a seated player whose hello carries their match's id in uppercase gets a second live actor for a game that is already running, alongside the one holding the other seats. The client is untrusted (CLAUDE.md rule 7), and the ",
         "title": "Patch: WebSocket match, co-op and watch routes normalize match and profile UUIDs to lowercase, so uppercase hex connects to in-memory actors and seats",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
