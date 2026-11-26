@@ -68,6 +68,14 @@ function button(testId: string): HTMLButtonElement {
   return screen.getByTestId(testId) as HTMLButtonElement;
 }
 
+function gameTree(view: PlayerView, legal: readonly ActionBody[], onAction: (body: ActionBody) => void): ReactElement {
+  return (
+    <CatalogContext.Provider value={lookup}>
+      <Game view={view} legal={legal} onAction={onAction} />
+    </CatalogContext.Provider>
+  );
+}
+
 describe("R1853003 the Marketplace's shop", () => {
   it("R1853003 renders nothing while the view carries no marketplace", () => {
     renderGame(marketView(), [END_TURN]);
@@ -83,6 +91,7 @@ describe("R1853003 the Marketplace's shop", () => {
     expect(panel).toHaveTextContent("New offers at the start of each of your turns");
     const buy = button(testid.marketBuy(0));
     expect(buy.disabled).toBe(false);
+    expect(buy.getAttribute("aria-disabled")).toBeNull();
     expect(buy.getAttribute("data-legal")).toBe("true");
     expect(buy.title).toBe("");
     const lot = buy.closest("li");
@@ -93,6 +102,7 @@ describe("R1853003 the Marketplace's shop", () => {
     const sent = marketSent(onAction);
     expect(sent).toEqual([BUY_0]);
     expect(sent[0]).toBe(BUY_0);
+    expect(screen.queryByTestId(testid.marketReason(0))).toBeNull();
     fireEvent.click(screen.getByTestId(testid.marketplace));
     expect(screen.queryByTestId(testid.marketplacePanel)).toBeNull();
   });
@@ -101,7 +111,9 @@ describe("R1853003 the Marketplace's shop", () => {
     const onAction = renderGame(marketView(MARKET), [BUY_0, END_TURN]);
     openShop();
     const refused = button(testid.marketBuy(1));
-    expect(refused.disabled).toBe(true);
+    // R3768000: greyed with `aria-disabled`, not natively disabled, so a touch press reaches it.
+    expect(refused.getAttribute("aria-disabled")).toBe("true");
+    expect(refused.disabled).toBe(false);
     expect(refused.getAttribute("data-legal")).toBe("false");
     expect(refused.title).toBe(REASON);
     const lot = refused.closest("li");
@@ -116,10 +128,88 @@ describe("R1853003 the Marketplace's shop", () => {
     const waiting = renderGame(marketView(MARKET), []);
     openShop();
     const idle = button(testid.marketBuy(0));
-    expect(idle.disabled).toBe(true);
+    expect(idle.getAttribute("aria-disabled")).toBe("true");
     expect(idle.title).toBe("");
     fireEvent.click(idle);
+    expect(screen.queryByTestId(testid.marketReason(0))).toBeNull();
     expect(marketSent(waiting)).toEqual([]);
+  });
+
+  it("R1853003 a press on a greyed Buy shows its offer's reason under it and sends nothing", () => {
+    const onAction = renderGame(marketView(MARKET), [BUY_0, END_TURN]);
+    openShop();
+    expect(screen.queryByTestId(testid.marketReason(1))).toBeNull();
+    fireEvent.click(button(testid.marketBuy(1)));
+    const line = screen.getByTestId(testid.marketReason(1));
+    expect(line.textContent).toBe(REASON);
+    expect(line.getAttribute("role")).toBe("status");
+    expect(line.closest("li")).toBe(button(testid.marketBuy(1)).closest("li"));
+    expect(screen.queryByTestId(testid.marketReason(0))).toBeNull();
+    expect(marketSent(onAction)).toEqual([]);
+    expect(screen.getByTestId(testid.marketplacePanel)).toBeInTheDocument();
+  });
+
+  it("R1853003 a greyed Buy stays focusable", () => {
+    renderGame(marketView(MARKET), [BUY_0, END_TURN]);
+    openShop();
+    const refused = button(testid.marketBuy(1));
+    refused.focus();
+    expect(refused).toHaveFocus();
+    fireEvent.click(refused);
+    expect(screen.getByTestId(testid.marketReason(1))).toHaveTextContent(REASON);
+  });
+
+  it("R1853003 a greyed Buy the view gives no reason for says nothing when pressed", () => {
+    // The words are the view's, never `legal`'s: with nothing listed, Buy 1 still reads its own reason.
+    const onAction = renderGame(marketView(MARKET), []);
+    openShop();
+    fireEvent.click(button(testid.marketBuy(0)));
+    expect(screen.queryByTestId(testid.marketReason(0))).toBeNull();
+    expect(marketSent(onAction)).toEqual([]);
+    fireEvent.click(button(testid.marketBuy(1)));
+    expect(screen.getByTestId(testid.marketReason(1)).textContent).toBe(REASON);
+    expect(marketSent(onAction)).toEqual([]);
+  });
+
+  it("R1853003 the line goes with the next view, and a press shows it again", () => {
+    const onAction = vi.fn<(body: ActionBody) => void>();
+    const { rerender } = render(gameTree(marketView(MARKET), [BUY_0, END_TURN], onAction));
+    openShop();
+    fireEvent.click(button(testid.marketBuy(1)));
+    expect(screen.getByTestId(testid.marketReason(1))).toHaveTextContent(REASON);
+    rerender(gameTree(marketView(MARKET), [BUY_0, END_TURN], onAction));
+    expect(screen.queryByTestId(testid.marketReason(1))).toBeNull();
+    expect(screen.getByTestId(testid.marketplacePanel)).toBeInTheDocument();
+    fireEvent.click(button(testid.marketBuy(1)));
+    expect(screen.getByTestId(testid.marketReason(1))).toHaveTextContent(REASON);
+    expect(marketSent(onAction)).toEqual([]);
+  });
+
+  it("R1853003 a Buy that goes live after a press drops its line and sends its listed marketBuy", () => {
+    const onAction = vi.fn<(body: ActionBody) => void>();
+    const { rerender } = render(gameTree(marketView(MARKET), [BUY_0, END_TURN], onAction));
+    openShop();
+    fireEvent.click(button(testid.marketBuy(1)));
+    expect(screen.getByTestId(testid.marketReason(1))).toHaveTextContent(REASON);
+    const first = { offer: 0, defId: "core-008", price: 40, left: 2 };
+    const second = { offer: 1, defId: "core-080", radiant: true, price: 60, left: 1 };
+    const buy1: ActionBody = { type: "marketBuy", offer: 1 };
+    rerender(gameTree(marketView({ offers: [first, second], sales: [] }), [BUY_0, buy1, END_TURN], onAction));
+    expect(screen.queryByTestId(testid.marketReason(1))).toBeNull();
+    expect(button(testid.marketBuy(1)).getAttribute("aria-disabled")).toBeNull();
+    fireEvent.click(button(testid.marketBuy(1)));
+    expect(marketSent(onAction)).toEqual([buy1]);
+  });
+
+  it("R1853003 closing and reopening the shop drops the line", () => {
+    renderGame(marketView(MARKET), [BUY_0, END_TURN]);
+    openShop();
+    fireEvent.click(button(testid.marketBuy(1)));
+    expect(screen.getByTestId(testid.marketReason(1))).toHaveTextContent(REASON);
+    fireEvent.click(screen.getByTestId(testid.marketplace));
+    expect(screen.queryByTestId(testid.marketplacePanel)).toBeNull();
+    openShop();
+    expect(screen.queryByTestId(testid.marketReason(1))).toBeNull();
   });
 
   it("R4410000 the shop has no Sell section, even with a sale in the view and a marketSell in legal", () => {

@@ -35,7 +35,7 @@
   margin: 0;
   padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-sunken);
   color: var(--text);
   cursor: var(--cursor-glove-point, pointer);
@@ -74,7 +74,7 @@
   color: var(--text);
   background: var(--bg-sunken);
   border: 1px solid var(--line-bright);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 10px 12px;
   min-height: 44px;
   max-width: 100%;
@@ -89,7 +89,7 @@
 .lobby .lobby-verdict {
   margin: 6px 0 0;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--line);
   font-size: 13px;
 }
@@ -183,7 +183,7 @@
   min-width: 0;
   padding: 20px 20px 22px;
   border: 1px solid var(--play-panel-edge);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(ellipse 90% 40% at 50% 0%, rgba(255, 190, 110, 0.08), transparent 70%),
     linear-gradient(180deg, rgba(52, 30, 16, 0.94), rgba(22, 13, 7, 0.96));
@@ -216,7 +216,7 @@
   width: 26px;
   height: 26px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle at 40% 35%, #fff0bf, var(--tavern-gold) 45%, #a86a1f);
   color: var(--tavern-ink);
   font-size: 14px;
@@ -262,7 +262,7 @@
   min-height: 100%;
   padding: 12px 40px 12px 14px;
   border: 1px solid rgba(201, 149, 63, 0.35);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--play-tile);
   color: var(--tavern-parchment);
   cursor: var(--cursor-glove-point, pointer);
@@ -320,7 +320,7 @@
   margin: 0;
   appearance: none;
   border: 2px solid var(--tavern-brass);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--tavern-well);
   cursor: var(--cursor-glove-point, pointer);
 }
@@ -361,7 +361,7 @@
   grid-area: wait;
   padding: 2px 9px;
   border: 1px solid rgba(63, 182, 168, 0.45);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: #9fe3da;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
@@ -387,7 +387,7 @@
   min-height: 46px;
   padding: 10px 14px;
   border: 1px solid rgba(201, 149, 63, 0.5);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, #0b0704, var(--tavern-well));
   color: var(--tavern-parchment);
   font: inherit;
@@ -428,7 +428,7 @@
   max-width: 100%;
   padding: 3px 10px;
   border: 1px solid rgba(201, 149, 63, 0.45);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(14, 9, 5, 0.7);
   color: var(--tavern-parchment);
   font-size: 13px;
@@ -454,7 +454,7 @@
   margin: 2px 0 0;
   padding: 10px 14px;
   border: 1px solid rgba(232, 102, 79, 0.55);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: rgba(14, 9, 5, 0.6);
   color: var(--tavern-parchment);
   font-size: 13px;
@@ -474,7 +474,7 @@
   place-items: center;
   width: 20px;
   height: 20px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--play-ready);
   color: var(--tavern-ink);
   font-size: 12px;
@@ -501,7 +501,7 @@
   gap: 14px;
   padding: 12px 14px;
   border: 1px solid rgba(63, 182, 168, 0.45);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: rgba(14, 9, 5, 0.6);
 }
 
@@ -510,7 +510,7 @@
   flex: 0 0 auto;
   width: 30px;
   height: 30px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle, #d8fff8 0 3px, var(--tavern-teal) 4px 6px, transparent 7px);
 }
 
@@ -518,7 +518,7 @@
   position: absolute;
   inset: 0;
   border: 2px solid var(--tavern-teal);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   opacity: 0;
   animation: play-search-ping calc(1800ms * var(--anim-scale)) ease-out infinite;
 }
@@ -753,7 +753,7 @@
   gap: 8px 14px;
   padding: 6px 12px;
   border: 1px solid var(--line-bright);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-raised);
   font-size: 13px;
 }
@@ -779,7 +779,7 @@
   width: 10px;
   height: 10px;
   border: 1px solid var(--line-bright);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
 }
 
 .series-banner__pip[data-won="true"] {

@@ -92,9 +92,10 @@ use crate::scripts::stinkyscape_plus::{
     c062_overdrive_projector, c063_overdrive_dome, c064_surge_wall, c065_thorium_wall, c066_plastanium_wall,
     c067_phase_wall, c076_ayys_lmao, c077_black_hole, c079_a_glimpse_into_the_endless_sea,
     c080_the_last_voyage, c082_endless_expedition, c090_meltdown, c093_recessive_replicators,
-    c097_selective_enrollment, c101_a_wee_whelp, c104_tireless_cultivation, c119_eclipse, c120_crawler,
-    c121_1_toxopid_leg, c121_toxopid, c131_tetrative_reconstructor, c145_fire_beam_v5, c150_scorching_rounds,
-    c151_volcanic_rounds, c155_the_far_vagabond, c158_quick_chaos, c159_raven, c166_mindustrial_revolution,
+    c097_selective_enrollment, c101_a_wee_whelp, c102_cosmic_bard, c104_tireless_cultivation, c119_eclipse,
+    c120_crawler, c121_1_toxopid_leg, c121_toxopid, c131_tetrative_reconstructor, c145_fire_beam_v5,
+    c150_scorching_rounds, c151_volcanic_rounds, c155_the_far_vagabond, c158_quick_chaos, c159_raven,
+    c166_mindustrial_revolution,
 };
 use crate::scripts::training_grounds::{
     c012_fortify, c015_in_a_hurry, c027_hopeful_jelly_bean, c031_level_up, c035_corpse_recycler,
@@ -128,8 +129,8 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R4382001: Adaptive UI's Rush Token through v0.1.0d), #4396 (R4396000), #4423 (R4423000), #4424
 /// (R4424000), #4440 (R4440003: Profe Yates's exile; R4440050 to R4440055, and the Tributes of
 /// xxFreshJack, Raven, ZolarKeth and Galaxy, Last Hurrah's Flashback and Double Counting's price),
-/// #4666 (R4666000), #4844 (R656's help aims on eight buff Spells' targets), #4828 (R4828000) and #4991
-/// (R4991000).
+/// #4666 (R4666000), #4844 (R656's help aims on eight buff Spells' targets), #4828 (R4828000), #5048
+/// (R5048000) and #4991 (R4991000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 /// R4779000: a row's key is that version, or `"fragment:<stem>"` (`FRAGMENT_KEY`), the stem of the
 /// pending fragment that ships the change, which `resolve_kept_key` reads as the version just before
@@ -1413,6 +1414,13 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     ),
     // #4665's Ticketed (R4665000): the Cry that held a permanent beneath it in its own zone.
     (c009_ticketed::ID, "v0.6.12c", c009_ticketed::script_v0_6_12c),
+    // #4832 (R3568001): Cosmic Bard's Radiant set price before an override alone left a Unit
+    // carrying a raise larger than the cheapest above it.
+    (
+        c102_cosmic_bard::ID,
+        "fragment:radiant-cosmic-bard-leaves-both-drawn-units-at-the-cheapest",
+        c102_cosmic_bard::script_kept_4832,
+    ),
     // #4828 (R4828000): End Times' bank in the card's memory, kept until the fragment that moves it into
     // the card's tuning ships (R4779000).
     (
@@ -1557,6 +1565,13 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c059_mass_driver::ID,
         "fragment:mass-driver-s-badge-states-its-countdown-once",
         c059_mass_driver::script_v0_6_14i,
+    ),
+    // #5048 (R5048000): Toxopid's Cry before its Flexible Legs crushed, into random empty unit zones only
+    // (R4154300), kept until the fragment that changes it ships (R4779000).
+    (
+        c121_toxopid::ID,
+        "fragment:toxopid-s-legs-are-flexible-and-crush-the-units-they-land-on",
+        c121_toxopid::script_before_crushing_legs,
     ),
     // #4991 (R4991000): the Aura's draw on `summoned` alone, before a Transform's card drew (R4779000).
     (

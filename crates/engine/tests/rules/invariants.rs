@@ -4641,6 +4641,164 @@ mod i21 {
         );
     }
 
+    #[test]
+    fn r4604003_a_card_resolved_unplayed_ends_its_run() {
+        let (state, id) = immune_board("r4604003");
+        // An answer step resumes a cast whose `cardPlayed` was an earlier step's: its `cardResolved` ends
+        // the Spell's run, and what follows is no Spell's.
+        let resolved: GameEvent = json_as(json!({
+            "type": "cardResolved",
+            "player": "p1",
+            "instanceId": "i21-source",
+            "defId": SPELL,
+            "permanent": false,
+            "costPaid": 0,
+        }));
+        assert_eq!(
+            i21(&state, &[marker(SPELL), resolved, buffed(&id)], &state),
+            Vec::<String>::new()
+        );
+        only(
+            &i21(&state, &[marker(SPELL), buffed(&id)], &state),
+            &id,
+            &["I21", "buffed"],
+        );
+    }
+
+    #[test]
+    fn r4604004_a_burn_tick_on_a_divine_shield_and_an_exile_aura_arriving_by_a_transform_are_no_spell_s() {
+        use crate::rules::fixtures::card_on_card::{register_card_on_card, tag_exiler};
+
+        let (before, id) = immune_board("r4604004");
+        // A Burn tick a Divine Shield takes: its `divineShieldLost`, then the Burn's removal.
+        let shield_lost: GameEvent = json_as(json!({ "type": "divineShieldLost", "instanceId": id }));
+        let cleared: GameEvent =
+            json_as(json!({ "type": "counterChanged", "instanceId": id, "counter": "burn", "value": 0 }));
+        assert_eq!(
+            i21(&before, &[marker(SPELL), shield_lost.clone(), cleared], &before),
+            Vec::<String>::new()
+        );
+        only(
+            &i21(&before, &[marker(SPELL), shield_lost], &before),
+            &id,
+            &["I21", "divineShieldLost"],
+        );
+        // A card transformed into one laying an exile aura arrives with it (S+ #104 Tireless Cultivation
+        // turning a Drone into S #115 Scornboi), gone again by the step's end; not before that arrival.
+        register_card_on_card();
+        let banished = moved(&before, &id, OffFieldZone::Exile);
+        let transformed: GameEvent = json_as(json!({
+            "type": "transformed",
+            "instanceId": "i21-drone",
+            "fromDefId": PLAIN,
+            "toDefId": tag_exiler().id,
+            "newInstanceId": "i21-exiler",
+        }));
+        assert_eq!(
+            i21(
+                &before,
+                &[marker(SPELL), transformed.clone(), exiled(&id)],
+                &banished
+            ),
+            Vec::<String>::new()
+        );
+        only(
+            &i21(&before, &[marker(SPELL), exiled(&id), transformed], &banished),
+            &id,
+            &["I21", "exiled"],
+        );
+    }
+
+    #[test]
+    fn r4604005_a_restored_side_s_units_are_new_to_i21() {
+        let (before, id) = immune_board("r4604005");
+        let rolled = |side: &str| -> GameEvent {
+            json_as(json!({ "type": "rolledBack", "player": "p1", "turnsAgo": 0, "sides": [side] }))
+        };
+        // Restored as the snapshot held it (without a granted immunity, C+ #35 Rollback's Rush Token) and
+        // then exiled by a Spell's next run: gone by the step's end, it is no longer judged by the
+        // keywords it began the step with.
+        let banished = moved(&before, &id, OffFieldZone::Exile);
+        let restored =
+            |side: &str| -> Vec<GameEvent> { vec![marker(SPELL), rolled(side), marker(SPELL), exiled(&id)] };
+        assert_eq!(i21(&before, &restored("p2"), &banished), Vec::<String>::new());
+        // A restore of the other side leaves it judged.
+        only(&i21(&before, &restored("p1"), &banished), &id, &["I21", "exiled"]);
+        // One still on the field and immune as the step ends is judged by what it holds then (R4508001).
+        only(
+            &i21(&before, &[marker(SPELL), rolled("p2"), buffed(&id)], &before),
+            &id,
+            &["I21", "buffed"],
+        );
+    }
+
+    #[test]
+    fn r4604007_a_black_hole_opened_in_the_step_pulls_at_its_turn_s_end_and_i21_allows_it() {
+        use jackioh_engine::geometry::BlackHole;
+
+        // The immune Unit stands in p2's lane 1; a Black Hole cast in the step opens beside it, in lane 2,
+        // and pulls at the end of p2's turn, inside a Spell's run (R4440050).
+        let (before, id) = immune_board("r4604007");
+        let banished = moved(&before, &id, OffFieldZone::Exile);
+        let turn_ended: GameEvent =
+            json_as(json!({ "type": "turnEnded", "player": "p2", "turn": 1, "unspentMana": 0 }));
+        let pull = [turn_ended, marker(SPELL), exiled(&id)];
+        let holed = |lane: i32| {
+            let mut after = banished.clone();
+            after.black_hole = Some(BlackHole {
+                at_end: Some(true),
+                ..BlackHole::new(lane, None)
+            });
+            after
+        };
+        assert_eq!(i21(&before, &pull, &holed(2)), Vec::<String>::new());
+        // No hole, or one two lanes away that the pull cannot reach it from: the Spell's exile, a reach.
+        only(&i21(&before, &pull, &banished), &id, &["I21", "exiled"]);
+        only(&i21(&before, &pull, &holed(3)), &id, &["I21", "exiled"]);
+    }
+
+    #[test]
+    fn r4604008_a_burn_s_removal_at_a_turn_s_end_is_its_tick_s_and_i21_allows_it() {
+        let (state, id) = immune_board("r4604008");
+        let cleared: GameEvent =
+            json_as(json!({ "type": "counterChanged", "instanceId": id, "counter": "burn", "value": 0 }));
+        let turn_ended: GameEvent =
+            json_as(json!({ "type": "turnEnded", "player": "p1", "turn": 1, "unspentMana": 0 }));
+        let turn_started: GameEvent = json_as(json!({ "type": "turnStarted", "player": "p2", "turn": 2 }));
+        // After the turn's `turnEnded`, inside a Spell's run, the Burn's removal with no hit of its own
+        // before it (a tick of 0 shows nothing; a damage chain's echoes may come between).
+        assert_eq!(
+            i21(
+                &state,
+                &[turn_ended.clone(), marker(SPELL), cleared.clone()],
+                &state
+            ),
+            Vec::<String>::new()
+        );
+        // A step that resumes a turn's end, its `turnEnded` an earlier step's.
+        let mut ending = state.clone();
+        ending.phase = Phase::End;
+        assert_eq!(
+            i21(&ending, &[marker(SPELL), cleared.clone()], &ending),
+            Vec::<String>::new()
+        );
+        // Once the next turn has started, or outside a turn's end, the removal is the Spell's.
+        only(
+            &i21(
+                &state,
+                &[turn_ended, turn_started, marker(SPELL), cleared.clone()],
+                &state,
+            ),
+            &id,
+            &["I21", "counterChanged"],
+        );
+        only(
+            &i21(&state, &[marker(SPELL), cleared], &state),
+            &id,
+            &["I21", "counterChanged"],
+        );
+    }
+
     /// R4604012 (handicapped fuzz seed 3928): a Nerf in a Unit's run (Meditative #49.1 YileGPT Prime's Cry)
     /// takes an immune Unit's Immune to Spells away, and a Spell then exiles it: no reach. Without the
     /// Nerf the exile is the Spell's reach, and a Spell's own Nerf of the immune Unit is one too.

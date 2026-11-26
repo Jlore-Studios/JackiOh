@@ -618,7 +618,11 @@ one pointer while empty: every patch's totals, which the public routes keep (`ke
 329,000 rows on staging by 2026-11-25, and read whole with those parts inline they outgrew the game
 server's 1 GiB, which was killed loading them. A read a patch at a time instead took minutes there,
 past the client's `API_REQUEST_TIMEOUT_SECONDS`, since each patch's rows lie scattered through the
-table. `stats-import` writes and
+table. So the read files each row as it arrives (`StatsTotalsQuery::cards`, R4965000): the snapshot
+reads the records first, keeps as filed the card totals of the patches anyone may read and of the window
+before them (`api::stats::snapshot_filing`), folds each deck card's older totals into one per play
+version, and drops the rest; a dev account's older patch reads its own reach when asked, and the play
+rates keep one total per card and key. `stats-import` writes and
 folds `STATS_FOLD_BATCH_RECORDS` (500) records to a transaction. A record written before migration
 0041 is not folded until the retention loop folds it at boot or `stats-fold` does (R1044000). Once
 folded, a record's detail is emptied `GAME_RECORD_RAW_RETENTION_DAYS` (7) after it was written by the
@@ -635,6 +639,10 @@ outlive the purge; a record folded before 0063 counts in `record_totals` alone, 
 (R1994000). A finished match whose record failed to write after its result is filed again by the retention loop, each pass for a day after it ended (`GAME_RECORD_REFILE_WINDOW_SECONDS`) and once more before the purge takes its log, naming no build (R1596000).
 Records track the face each card was played on, and `playedRadiant` and `playedNormal` split the played
 decks into those that played the card Radiant at least once and those that never did (R1147000).
+Records written since R5054000 also list the dealt cards each seat held Radiant in its hand
+(`heldRadiant`), and `seenRadiant` and `seenNormal` split the seen decks the same way, played or not:
+the Face control's Normal and Radiant read those, so a win-more card's plays are not its whole face. A
+total folded before them reads empty on a face, with no back-fill.
 A Created card (R943: a token, a generated or copied card, a transform's result, The Coin) is no deck
 card: a record lists each seat's Created cards apart, those it made and used and those it made and never
 used, and its figures (`createdPlayed`, `createdNotPlayed` and the used ones split by face) ride in the
