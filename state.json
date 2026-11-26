@@ -47111,7 +47111,8 @@
     ],
     "runs": [
       "2026-11-26T08:48:23Z,45767162953,agy,gemini-3.8-flash-high,plan,4977,medium,failed,,150.3,293656,36601,0,,3,0,84,0,329.1,agy,none,,1",
-      "2026-11-26T09:17:20Z,45787675605,agy,gemini-3.8-flash-high,build,4999,medium,built,,18.2,237166,33703,0,,0,6,0,3,218.5,muse,none,cap,1"
+      "2026-11-26T09:17:20Z,45787675605,agy,gemini-3.8-flash-high,build,4999,medium,built,,18.2,237166,33703,0,,0,6,0,3,218.5,muse,none,cap,1",
+      "2026-11-26T09:16:53Z,45765909713,claude-6,sonnet+opus,revise,4893,medium,built,,76.9,108,29610,3854784,2.6879,38,8,,,10.7,muse,fresh,,4"
     ]
   },
   "version": 1
