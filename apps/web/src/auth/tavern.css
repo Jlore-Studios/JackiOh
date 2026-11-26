@@ -182,7 +182,7 @@
 }
 
 .tavern.app-shell .brand__word {
-  font-family: var(--tavern-serif);
+  font-family: var(--font-display);
   font-size: 44px;
   font-weight: 700;
   line-height: 1.05;
@@ -244,7 +244,7 @@
 .tavern.app-shell .form-card label {
   margin-top: 8px;
   color: color-mix(in srgb, var(--tavern-parchment) 80%, transparent);
-  font-size: 13px;
+  font-size: var(--type-md);
   font-weight: 600;
   letter-spacing: 0.03em;
 }
@@ -317,8 +317,8 @@
   padding: 10px 20px;
   border-width: 2px;
   border-radius: var(--radius-md);
-  font-family: var(--tavern-serif);
-  font-size: 19px;
+  font-family: var(--font-display);
+  font-size: var(--type-2xl);
   font-weight: 700;
   letter-spacing: 0.02em;
   transition: transform 90ms ease-out, box-shadow 140ms ease-out, filter 140ms ease-out;
@@ -345,8 +345,8 @@
   min-height: 44px;
   padding: 8px 18px;
   border-radius: var(--radius-md);
-  font-family: var(--tavern-serif);
-  font-size: 16px;
+  font-family: var(--font-display);
+  font-size: var(--type-lg);
   font-weight: 700;
 }
 
@@ -358,8 +358,8 @@
   min-height: 44px;
   padding: 8px 18px;
   border-radius: var(--radius-md);
-  font-family: var(--tavern-serif);
-  font-size: 16px;
+  font-family: var(--font-display);
+  font-size: var(--type-lg);
   font-weight: 700;
 }
 
@@ -503,7 +503,7 @@
 .tavern.app-shell .row .button-primary {
   min-height: 44px;
   padding: 8px 18px;
-  font-size: 16px;
+  font-size: var(--type-lg);
 }
 
 .tavern.app-shell .notice code {
@@ -551,15 +551,13 @@
 }
 
 .tavern.app-shell .account-label {
-  font-size: 13px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: var(--type-md);
 }
 
 .tavern.app-shell .account-email {
   color: var(--tavern-gold-pale);
-  font-family: var(--tavern-serif);
-  font-size: 19px;
+  font-family: var(--font-display);
+  font-size: var(--type-2xl);
   overflow-wrap: anywhere;
   word-break: normal;
 }
@@ -572,7 +570,7 @@
   border-radius: var(--radius-pill);
   background: rgba(201, 149, 63, 0.14);
   color: var(--tavern-gold-pale);
-  font-size: 14px;
+  font-size: var(--type-md);
   font-weight: 600;
 }
 
@@ -589,8 +587,8 @@
 
 .tavern.app-shell .account-heading {
   margin: 4px 0 0;
-  font-family: var(--tavern-serif);
-  font-size: 17px;
+  font-family: var(--font-display);
+  font-size: var(--type-xl);
   color: var(--tavern-gold-pale);
 }
 
@@ -609,7 +607,7 @@
 
 .tavern.app-shell .stat-value {
   color: var(--tavern-gold-pale);
-  font-family: var(--tavern-serif);
+  font-family: var(--font-display);
 }
 
 .tavern.app-shell .stat-label {

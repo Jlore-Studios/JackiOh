@@ -23,7 +23,7 @@
   display: flex;
   flex-wrap: nowrap;
   gap: 0.2em;
-  font-size: var(--type-2xs-em);
+  font-size: var(--type-xs-em);
   line-height: 1;
   pointer-events: none;
 }

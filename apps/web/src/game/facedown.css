@@ -85,11 +85,9 @@
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--pal-wood-900) 92%, transparent);
   color: var(--pal-slate-100);
-  font-size: clamp(var(--type-3xs), 11cqw, var(--type-sm));
+  font-size: clamp(var(--type-xs), 11cqw, var(--type-sm));
   font-weight: 800;
-  letter-spacing: 0.04em;
   line-height: 1.2;
-  text-transform: uppercase;
   white-space: nowrap;
   pointer-events: none;
 }

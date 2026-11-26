@@ -10,9 +10,17 @@ import { describe, expect, it } from "vitest";
 const SRC = dirname(fileURLToPath(import.meta.url));
 
 /** The scale's size limit: a new step raises it in the same change. */
-const TYPE_MAX = 10;
-/** The step the board's body is set in; every other step's em form is a fraction of it. */
-const BODY_STEP = "md";
+const TYPE_MAX = 9;
+/** The step the page's `body` is set in (#5013), at least BODY_MIN_PX. */
+const BODY_STEP = "lg";
+/** The step `.app-shell--wide` sets the board in; every other step's em form is a fraction of it. */
+const BOARD_STEP = "md";
+/** The smallest the page's body may be set in (#5013). */
+const BODY_MIN_PX = 15;
+/** The smallest step a sheet outside cards/ may name (#5013); card faces keep the steps under it. */
+const OFF_FACE_MIN_PX = 11;
+/** The most own sizes and faces the other sheets may hold in all: half of the 432 they held before #5013. It only falls. */
+const UNSCALED_MAX = 216;
 /** The faces a stylesheet may name: fonts.css's four families (R2715002: and the signature's hands), or its parent's. */
 const FAMILIES = [
   "inherit",
@@ -113,11 +121,10 @@ const UNSCALED: Record<string, number> = {
   "auth/auth.css": 4,
   "auth/code-field.css": 11,
   "auth/consent.css": 3,
-  "auth/tavern.css": 20,
+  "auth/tavern.css": 4,
   "auth/two-step.css": 1,
   "cards/cards.css": 31,
   "cards/cardstate.css": 8,
-  "cards/inspect/inspect.css": 34,
   "cards/inspect/list-play.css": 1,
   "cards/keywords.css": 3,
   "cards/marks.css": 1,
@@ -129,28 +136,24 @@ const UNSCALED: Record<string, number> = {
   "emotes/emotes.css": 7,
   "emotes/portrait.css": 3,
   "fx/fx.css": 8,
-  "game/deckbuilder/deckbuilder.css": 17,
-  "game/deckbuilder/workshop.css": 27,
   "i18n/language.css": 1,
   "packs/pack-object.css": 1,
   "packs/packs.css": 4,
-  "patches/patches.css": 37,
-  "practice/practice.css": 32,
+  "patches/patches.css": 4,
+  "practice/practice.css": 3,
   "practice/sandbox.css": 3,
   "routes/account.css": 3,
   "routes/game-banner.css": 5,
   "routes/landing.css": 20,
-  "routes/lobby.css": 32,
   "routes/privacy.css": 3,
   "routes/purchases.css": 2,
   "routes/site-footer.css": 1,
-  "routes/stats.css": 22,
   "settings/changeEmail.css": 1,
   "settings/settings.css": 10,
   "shop/shop.css": 2,
   "together/together.css": 6,
   "tutorial/path-visibility.css": 3,
-  "tutorial/tutorial.css": 31,
+  "tutorial/tutorial.css": 1,
 };
 
 /**
@@ -175,15 +178,15 @@ const EM_FORMS = tokenCaptures(read("typescale.css"), /^\s*--type-([a-z0-9]+)-em
 );
 
 describe("#2107 the type scale", () => {
-  it("#2107 typescale.css names at most TYPE_MAX sizes in px, smallest first, each but the body's with its em form, and nothing else", () => {
+  it("#2107 typescale.css names at most TYPE_MAX sizes in px, smallest first, each but the board's with its em form, and nothing else", () => {
     const sizes = STEPS.map((step) => step.px);
     expect(STEPS.length).toBeGreaterThan(0);
     expect(STEPS.length).toBeLessThanOrEqual(TYPE_MAX);
     expect(new Set(sizes).size, "two names for one size").toBe(sizes.length);
     expect(sizes).toEqual([...sizes].sort((a, b) => a - b));
-    const body = STEPS.find((step) => step.name === BODY_STEP)?.px;
-    expect(body).toBeDefined();
-    expect(EM_FORMS).toEqual(STEPS.filter((step) => step.name !== BODY_STEP).map((step) => ({ name: step.name, px: step.px, over: body })));
+    const board = STEPS.find((step) => step.name === BOARD_STEP)?.px;
+    expect(board).toBeDefined();
+    expect(EM_FORMS).toEqual(STEPS.filter((step) => step.name !== BOARD_STEP).map((step) => ({ name: step.name, px: step.px, over: board })));
     const text = read("typescale.css").replace(/\/\*[\s\S]*?\*\//g, "");
     // Token lines blanked (#4009: the `/^\s*--…$/gm` patterns rescan newline runs from every line).
     const rest = text
@@ -196,10 +199,26 @@ describe("#2107 the type scale", () => {
     expect(read("index.css")).toMatch(/^@import "\.\/fonts\.css";\n@import "\.\/palette\.css";\n@import "\.\/typescale\.css";\n/);
   });
 
-  it("#2107 the board's body is set in the body step, which the em forms are fractions of", () => {
+  it("#2107 #5013 the page's body is set in the body step and the board in the board step, which the em forms are fractions of", () => {
     const css = read("index.css");
-    expect(css).toMatch(/\nbody \{[^}]*\n {2}font-family: var\(--font-text\);\n {2}font-size: var\(--type-md\);/);
-    expect(css).toMatch(/\n\.app-shell\.app-shell--wide \{[^}]*\n {2}font-size: var\(--type-md\);/);
+    expect(css).toMatch(new RegExp(`\\nbody \\{[^}]*\\n {2}font-family: var\\(--font-text\\);\\n {2}font-size: var\\(--type-${BODY_STEP}\\);`));
+    expect(css).toMatch(new RegExp(`\\n\\.app-shell\\.app-shell--wide \\{[^}]*\\n {2}font-size: var\\(--type-${BOARD_STEP}\\);`));
+  });
+
+  it("#5013 the body step is at least BODY_MIN_PX", () => {
+    const body = STEPS.find((step) => step.name === BODY_STEP)?.px;
+    expect(body).toBeDefined();
+    expect(body).toBeGreaterThanOrEqual(BODY_MIN_PX);
+  });
+
+  it("#5013 no sheet outside cards/ names a step under OFF_FACE_MIN_PX", () => {
+    const px = new Map(STEPS.map((step) => [step.name, step.px]));
+    const offenders = SHEETS.filter((sheet) => !sheet.startsWith("cards/")).flatMap((sheet) =>
+      [...read(sheet).replace(/\/\*[\s\S]*?\*\//g, " ").matchAll(/var\(--type-([a-z0-9]+)(?:-em)?\)/g)]
+        .filter((match) => (px.get(match[1] ?? "") ?? 0) < OFF_FACE_MIN_PX)
+        .map((match) => `${sheet}: ${match[0]}`),
+    );
+    expect(offenders, "a card face's small steps stay on the card; take --type-xs or larger").toEqual([]);
   });
 
   it("#2107 every var(--type-…) names a step, only typescale.css declares one, and only fonts.css declares a family", () => {
@@ -240,6 +259,10 @@ describe("#2107 no one-off sizes or faces", () => {
       if (own > 0) counts[sheet] = own;
     }
     expect(counts, "take the size from typescale.css and the face from fonts.css; a sheet that loses some lowers its number in UNSCALED").toEqual(UNSCALED);
+  });
+
+  it("#5013 the other sheets' own sizes and faces number at most UNSCALED_MAX", () => {
+    expect(Object.values(UNSCALED).reduce((sum, count) => sum + count, 0)).toBeLessThanOrEqual(UNSCALED_MAX);
   });
 
   it("#2107 the board's components set no size or face inline", () => {

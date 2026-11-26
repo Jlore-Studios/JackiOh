@@ -23,6 +23,7 @@ import Game from "../game/Game.tsx";
 import { ModifierList } from "../game/ModifierList.tsx";
 import { OnceRevealed, resultSaysOpponentLeft } from "../game/Result.tsx";
 import { getAudioEngine } from "../audio/index.ts";
+import { reloadOwnProficiency } from "../cards/proficiencySync.ts";
 import { announceWallet } from "../economy/wallet.ts";
 import XpReveal from "../economy/XpReveal.tsx";
 import { useEmotes } from "../emotes/useEmotes.ts";
@@ -251,10 +252,14 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   const view = match.view;
 
   // #1664: the result's write paid this account (the Jlore, and maybe a level's or a quest's), so the
-  // pill reads the wallet again, once however many views carry the answer.
+  // pill reads the wallet again, once however many views carry the answer. R4977000: the same write counted the
+  // seat's plays (R3013000), so the page loads the account's card proficiency again too.
   const paid = match.economy !== null;
   useEffect(() => {
-    if (paid) announceWallet();
+    if (paid) {
+      announceWallet();
+      reloadOwnProficiency();
+    }
   }, [paid]);
 
   // R643–R644: the opponent's relays land through `match.emote`, whose `seq` bumps on every frame so

@@ -668,6 +668,30 @@ pub fn enemy_unit_arrival(state: &GameState, controller: PlayerId, event: &GameE
     }
 }
 
+/// R781004, R4991000: whether `event` brings the running card onto the field: a `summoned` naming it
+/// (played, summoned, Flickered, back through Reborn), or the `transformed` of a Transform whose new card
+/// it is, acting on the field (R4816000). A Vanilla's or a copied text's `transformed` names one card on
+/// both sides and brings nothing, and a Transform in a hand or a library makes no card on the field.
+/// Meditative #65's and Stinkyscape #111's Aura of random combat keywords draws on it.
+pub fn self_arrived_on_field(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
+    let Some(me) = ctx.live_self() else {
+        return false;
+    };
+    match event {
+        GameEvent::Summoned { instance_id, .. } => *instance_id == me.id,
+        GameEvent::Transformed {
+            instance_id,
+            new_instance_id,
+            ..
+        } => {
+            *new_instance_id == me.id
+                && instance_id != new_instance_id
+                && crate::zones::acts_on_field(ctx.state, me)
+        }
+        _ => false,
+    }
+}
+
 /// R3550009: every enemy permanent — the opponent's acting units, then their backrow, then any card lying
 /// on their unit zones (R4665000), each once (Stinkyscape+ #25 Snom Bunny's Death); Classic #40 MC Tech's
 /// count and pick read it too. A Dormant card is none (R4322000): `active_units_of` leaves out a Dormant
