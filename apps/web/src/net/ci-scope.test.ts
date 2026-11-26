@@ -425,6 +425,8 @@ describe("scripts/ci-scope.sh", () => {
         "apps/edge/src/routing.test.ts",
         "apps/edge/package.json",
         "apps/edge/tsconfig.json",
+        // The web job's eslint reads the hooks violations it holds (#4978).
+        "eslint-suppressions.json",
       ],
       off: [
         "crates/server/src/api/queue.rs",
@@ -495,6 +497,7 @@ describe("scripts/ci-scope.sh", () => {
         "apps/edge/src/index.ts",
         "apps/edge/src/routing.test.ts",
         "eslint.config.js",
+        "eslint-suppressions.json",
         "vitest.config.ts",
         "scripts/browse.sh",
         "scripts/promote-production.sh",

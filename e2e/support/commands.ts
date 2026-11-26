@@ -1085,9 +1085,9 @@ Cypress.Commands.add("expectResult", (text: "Win" | "Loss" | "Draw") => {
   cy.get(ts(RESULT_OVERLAY)).should("contain.text", text);
 });
 
-// Augmenting Cypress's own `Chainable` means using its namespace and repeating its
-// `Subject = any` default exactly, or declaration merging fails.
-/* eslint-disable @typescript-eslint/no-namespace, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-namespace, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars --
+   augmenting Cypress's own `Chainable` means using its namespace and repeating its `Subject = any` default
+   exactly, or declaration merging fails. */
 declare global {
   namespace Cypress {
     interface Chainable<Subject = any> {
