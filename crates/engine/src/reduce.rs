@@ -34,9 +34,7 @@ use crate::prompts::{AnswerInput, answer_prompt, prompt_answers};
 use crate::rng::Rng;
 use crate::script::EngineSink;
 use crate::setup::{answer_mulligan, begin_setup, mulligan_owed, mulligan_prompt_for, why_mulligan_refused};
-use crate::state::{
-    AppliedAction, CardInstance, EngineError, GameState, ModifierExpiry, ModifierKind, find_instance,
-};
+use crate::state::{AppliedAction, CardInstance, EngineError, GameState, ModifierKind, find_instance};
 use crate::subsystems::activate::{ActivateAction, abilities_of, activate_ability, activate_actions_for};
 use crate::subsystems::ai_policy::play_out_turn;
 use crate::subsystems::glitch::reset_match;
@@ -465,29 +463,21 @@ struct TurnEndsRider {
 }
 
 /// B5 E10, R456: the "your turn ends" rider on `player` for this turn, or `None`: the first `turnEnds`
-/// modifier whose `thisTurn` expiry, if any, is this turn. A private copy of `modifiers::turn_ends_of`
-/// (fullsend rule 5).
+/// modifier whose `thisTurn` expiry, if any, is this turn (`modifiers::turn_ends_of`).
 fn turn_ends_rider(state: &GameState, player: PlayerId) -> Option<TurnEndsRider> {
-    for modifier in &state.players[player].mods {
-        let ModifierKind::TurnEnds {
-            actions_left,
-            by_instance_id,
-        } = &modifier.kind
-        else {
-            continue;
-        };
-        if let ModifierExpiry::ThisTurn { turn } = modifier.expiry
-            && turn != state.turn
-        {
-            continue;
-        }
-        return Some(TurnEndsRider {
-            id: modifier.id.clone(),
-            actions_left: *actions_left,
-            by_instance_id: by_instance_id.clone(),
-        });
-    }
-    None
+    let modifier = crate::modifiers::turn_ends_of(state, player)?;
+    let ModifierKind::TurnEnds {
+        actions_left,
+        by_instance_id,
+    } = &modifier.kind
+    else {
+        return None;
+    };
+    Some(TurnEndsRider {
+        id: modifier.id.clone(),
+        actions_left: *actions_left,
+        by_instance_id: by_instance_id.clone(),
+    })
 }
 
 /// B5 E10, R456: the rider an action counts against: the acting player's own, with actions left, as it
