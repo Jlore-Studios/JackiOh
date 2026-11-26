@@ -79,10 +79,11 @@ use crate::scripts::stinkyscape::{
     c074_paragon_x, c080_galaxy, c083_halo, c086_prototype_x2, c087_siva_1, c094_tmack_trav,
     c096_ocean_tsunami, c109_xxfreshjack, c111_shockwave447, c112_job_application, c115_scornboi,
     c116_megabase, c119_unsecure_system, c129_jlockeeds_missile_pod, c134_felinor_containment_chamber,
-    c140_rush_token_launcher, c143_book_launcher, c148_alteran_reach, c149_wildar, c153_stimmycheck,
-    c154_dice_of_doom, c158_stratos_swarm, c163_swear_loyalities, c165_the_trade_union, c168_drone_hanger,
-    c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid,
-    c173_abandoned_spice_tower, t_drone_corvette, t_drone_interceptor, t_narcor, t_red_narcor,
+    c137_firststrike_capability, c140_rush_token_launcher, c143_book_launcher, c148_alteran_reach,
+    c149_wildar, c153_stimmycheck, c154_dice_of_doom, c158_stratos_swarm, c163_swear_loyalities,
+    c165_the_trade_union, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid,
+    c172_huge_asteroid, c173_abandoned_spice_tower, c176_preemptive_strike, t_drone_corvette,
+    t_drone_interceptor, t_narcor, t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c007_churnwalker, c009_drone_assembler_v4, c010_drone_assembler_v5, c017_smoothie,
@@ -130,7 +131,7 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R4424000), #4440 (R4440003: Profe Yates's exile; R4440050 to R4440055, and the Tributes of
 /// xxFreshJack, Raven, ZolarKeth and Galaxy, Last Hurrah's Flashback and Double Counting's price),
 /// #4666 (R4666000), #4844 (R656's help aims on eight buff Spells' targets), #4828 (R4828000), #5048
-/// (R5048000) and #4991 (R4991000).
+/// (R5048000), #4991 (R4991000) and #5106 (R5106000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
 /// R4779000: a row's key is that version, or `"fragment:<stem>"` (`FRAGMENT_KEY`), the stem of the
 /// pending fragment that ships the change, which `resolve_kept_key` reads as the version just before
@@ -1583,6 +1584,18 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c111_shockwave447::ID,
         "fragment:a-flickered-card-starts-its-printed-brittle-again-and-a",
         c111_shockwave447::script_before_transform_draw,
+    ),
+    // #5106 (R5106000): Starfleet Commander's Cry and Preemptive Strike before they read their Dormant
+    // Starship once, so a fused Cry that asked during the launch lost the Discover (R4779000).
+    (
+        c137_firststrike_capability::ID,
+        "fragment:starfleet-commander-and-preemptive-strike-still-discover-a",
+        c137_firststrike_capability::script_before_launch_read_once,
+    ),
+    (
+        c176_preemptive_strike::ID,
+        "fragment:starfleet-commander-and-preemptive-strike-still-discover-a",
+        c176_preemptive_strike::script_before_launch_read_once,
     ),
 ];
 
