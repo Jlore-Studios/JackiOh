@@ -45922,6 +45922,7 @@
       {
         "at": "2026-11-26T06:47:01Z",
         "number": 5010,
+        "reason": "confirmed. `Marketplace.tsx:98-99` renders a greyed Buy natively `disabled`, with the engine's reason only in its `title`, so on a phone the button takes no press and its reason can't be reached. `TradeControl.tsx` uses `aria-disabled` and answers a press with the reason, as R3768000 has every greyed board control do. It's a touch-only dead end in a shop players use, and the fix is one component that reads the view's own `reason`.",
         "title": "Patch: a greyed Marketplace Buy answers a press with the engine's reason",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
