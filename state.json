@@ -24991,6 +24991,13 @@
     "5099": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-26T19:16:25Z",
+        "difficulty": "medium",
+        "provider": "claude-3",
+        "tier": "medium",
+        "why": "None of rules 1-5 holds: no engine, AI or migration, about 6 files; the Rust tool and the Node script share one JSON object read at one call site."
+      },
       "failures": 0,
       "forced": false,
       "interruptions": 0,
