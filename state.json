@@ -20909,10 +20909,12 @@
           "provider": "muse",
           "tier": "medium"
         },
-        "at": "2026-11-25T23:00:07Z",
+        "at": "2026-11-26T00:24:37Z",
         "built_by": "muse",
         "by": "`muse` (medium)",
-        "sha": "20f9e7d00d6bdaae902d609902e54fad5fa0e75a"
+        "carried_from": "20f9e7d00d6bdaae902d609902e54fad5fa0e75a",
+        "resolved_by": "`muse` (medium)",
+        "sha": "a04158bc03f5942c86c7f565a9d6aaf09d84477c"
       },
       "died": 0,
       "difficulty": "medium",
