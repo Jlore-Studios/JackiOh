@@ -25323,16 +25323,6 @@
       "total": 8153944064
     },
     {
-      "at": "2026-11-25T15:45:21Z",
-      "high_swap": 6263672832,
-      "low_available": 2686406656,
-      "runner": "night-vm-agy",
-      "stall_full": 102.7,
-      "stall_some": 246.7,
-      "swapped": 11182581,
-      "total": 8153944064
-    },
-    {
       "at": "2026-11-25T16:35:53Z",
       "box": "b2",
       "high_swap": 1253376,
@@ -25936,6 +25926,16 @@
       "stall_full": 19.9,
       "stall_some": 24.3,
       "swapped": 1489287,
+      "total": 8153944064
+    },
+    {
+      "at": "2026-11-26T12:18:47Z",
+      "high_swap": 1181814784,
+      "low_available": 6678392832,
+      "runner": "night-vm-agy",
+      "stall_full": 5.6,
+      "stall_some": 10.5,
+      "swapped": 321787,
       "total": 8153944064
     }
   ],
