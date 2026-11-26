@@ -23658,31 +23658,17 @@
           "claude"
         ],
         "builder": "claude",
-        "built_by": "claude-8",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "apps/web/src/cards/inspect/inspect.css",
-            "apps/web/src/game/board.css",
-            "apps/web/src/game/deckbuilder/deckbuilder.css",
-            "apps/web/src/game/drag/drag.css",
-            "apps/web/src/patches/patches.css",
-            "apps/web/src/practice/practice.css",
-            "apps/web/src/routes/stats.css"
-          ],
-          "from": "d68c21d3ded324a2ec1e37defb39784416f77526",
-          "main": "5991e8da39cf724421f36f38f417da3af9e9debf"
-        },
+        "built_by": "claude-4",
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
-            "provider": "claude-8",
-            "run": "45835348764",
+            "provider": "claude-4",
+            "run": "45851156774",
             "tier": "strong"
           }
         ],
-        "sha": "a598f6c3c5c662fd7f59e9d8737e54db7ca71d8a",
+        "sha": "2f3a19bd4977a8b5c6d16b02c36e5d6c95c123fd",
         "tiers": {
           "claude": "strong"
         }
