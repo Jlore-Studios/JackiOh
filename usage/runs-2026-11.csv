@@ -4100,3 +4100,13 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-26T09:47:07Z,45792201928,claude-3,opus,plan,5026,hard,planned,,15.2,209,91037,15538010,6.5993,5,35,,,178.7,,fresh,,1
 2026-11-26T09:43:52Z,45791671270,agy,gemini-3.8-flash-high,review,5052,medium,approved,,18.9,204518,16731,0,,5,19,3,5,1.7,,none,,1
 2026-11-26T09:36:18Z,45773269214,claude-6,opus,build,5015,hard,built,,96,174,43972,9366040,3.7496,50,6,,,108.9,claude-6,fresh,,1
+2026-11-26T09:53:47Z,45794077023,claude-3,opus,plan,5027,hard,planned,,9.3,158,57104,8779836,4.1569,30,42,,,190.4,,fresh,,1
+2026-11-26T09:56:48Z,45792089583,claude-3,opus,plan,5025,hard,planned,,24.9,183,100313,13184695,6.3905,5,43,,,178.5,,fresh,,1
+2026-11-26T09:51:29Z,45791986131,claude-6,opus,plan,5024,hard,planned,,21.8,171,129768,13562167,7.3732,8,23,,,178.3,,fresh,,1
+2026-11-26T10:10:41Z,45798180923,claude-3,opus,build,5027,hard,blocked,,0.6,12,3234,290141,0.4026,58,59,,,216.8,claude-3,fresh,,1
+2026-11-26T10:14:08Z,45796290036,agy,gemini-3.8-flash-high,plan,5016,medium,planned,,19.4,310074,65720,0,,18,27,5,7,273.4,,none,,1
+2026-11-26T10:06:19Z,45771833982,claude-8,opus,build,5012,hard,built,,130.5,310,68349,22129585,7.3087,26,47,,,97.5,claude-8,fresh,,1
+2026-11-26T10:24:48Z,45800339182,claude-3,opus,review,5055,medium,reviewed,,1,16,5072,455224,0.5504,76,77,,,,,none,,1
+2026-11-26T10:22:51Z,45798304678,claude-3,opus,plan,5040,hard,planned,,13,154,86401,11400607,5.7025,57,76,,,134,,fresh,,1
+2026-11-26T10:18:36Z,45796155941,claude-3,opus,plan,5039,hard,planned,,21.1,234,134325,23487677,10.0141,44,72,,,120.3,,fresh,,1
+2026-11-26T10:21:56Z,45770403778,claude-8,opus,build,5013,hard,built,,150,0,0,0,,18,47,,,84.9,claude-8,fresh,,1
