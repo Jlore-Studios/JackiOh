@@ -21725,6 +21725,14 @@
       "queued_at": "2026-11-26T02:51:03Z",
       "requested_by": "MaxGoetzmann",
       "stop_requested": false
+    },
+    "4997": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-26T01:06:09Z",
+      "issue": 4981,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
