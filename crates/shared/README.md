@@ -620,7 +620,7 @@ the machine's (above); these are the modules the machine and the queue are made 
 | `cosmetics` | the loadout it wears: which cosmetics people own widely and long enough for a bot to hold (`eligible`), its wardrobe from the pool's seed (`draw_wardrobe`) at the share of people of its account age that own each (`fit_for`), its account's picks, each deck's slots and its cards' own picks (`draw_account`, `draw_slots`, `draw_card_picks`), and what a refresh changes of all that (`redraw`) | R1834005, R2755000 |
 
 - **Records, not rows.** `BotRecord` (a bot, its wardrobe among it), `TicketRecord` and `RatedGameRecord` are what the pairing and the pool
-  read; the server implements them for its store rows, and `BotFacts`, `TicketFacts` and `GameFacts` are
+  read; the server implements them for its store rows (`BotRecord` through `bot_record_of_fields!`, as `BotFacts` does), and `BotFacts`, `TicketFacts` and `GameFacts` are
   the same as plain JSON for a host with no row type of its own (a Roblox script, the boundary).
 - **Hidden is the one switch** (`BotSeat.hidden`). The fallback time (R1453: a ticket waits 15 to 40 s so that a
   pairing does not come the moment it is queued) is part of it: `fallback_due_keyed(key, ticket, now, hidden)`

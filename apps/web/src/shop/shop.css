@@ -41,9 +41,9 @@
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  border: 1px solid rgba(201, 149, 63, 0.3);
-  border-radius: 10px;
-  background: rgba(239, 224, 191, 0.05);
+  border: 1px solid color-mix(in srgb, var(--pal-brass-500) 30%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--pal-parchment) 5%, transparent);
 }
 
 .token-row > span:first-child {

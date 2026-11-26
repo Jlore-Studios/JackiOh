@@ -26,8 +26,8 @@
   min-height: 44px;
   padding: 4px 10px;
   border: 1px solid rgb(212 175 55 / 0.45);
-  border-radius: 10px;
-  background: rgb(0 0 0 / 0.45);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--pal-black) 45%, transparent);
   color: #e8c85c;
   font-size: 28px;
   line-height: 1;
@@ -104,7 +104,7 @@ button.card-wheel-card {
 .stack-sheet {
   width: min(560px, calc(100vw - 32px));
   border: 1px solid rgb(212 175 55 / 0.4);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: rgb(12 10 18 / 0.97);
   padding: 12px 12px 14px;
 }

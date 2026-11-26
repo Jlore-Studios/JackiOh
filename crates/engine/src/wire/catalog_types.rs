@@ -360,7 +360,8 @@ macro_rules! set_table {
             /// issue #1173, R1178000), Stinkyscape (issue #1836, R1857000; released by #1884) and
             /// Training Grounds (issue #2193, R2194000; released by #2204) and Stinkyscape+ (issue #3535,
             /// R3535000; released by #3573) ship; Boss and Boss-X are reserved; the Infinite Assault
-            /// (tracker #4576, R4577000) is a single-player set held while it is built.
+            /// (tracker #4576, R4577000) is a single-player set, held while it was built and open since
+            /// its release (#4597).
             pub enum SetName { $( $variant = $name ),+ }
         }
 
@@ -498,7 +499,7 @@ set_table![
     Boss = "Boss" { stage: SinglePlayer, segment: "boss", abbreviation: None, shadow_ban_share: None },
     BossX = "Boss-X" { stage: SinglePlayer, segment: "bossx", abbreviation: None, shadow_ban_share: None },
     StinkyscapePlus = "Stinkyscape+" { stage: Shipped, segment: "stinkyscapeplus", abbreviation: Some("S+"), shadow_ban_share: Some((1, 5)) },
-    InfiniteAssault = "Infinite Assault" { stage: HeldSinglePlayer, segment: "infiniteassault", abbreviation: Some("IA"), shadow_ban_share: None },
+    InfiniteAssault = "Infinite Assault" { stage: SinglePlayer, segment: "infiniteassault", abbreviation: Some("IA"), shadow_ban_share: None },
 ];
 
 /// R924000: what "More cards from" picks for a player's dealt Random deck (R1372, R1373): the newest
@@ -2078,7 +2079,7 @@ mod tests {
                 .iter()
                 .all(|set| set_row(*set).stage != SetStage::Held || !set_ships(*set))
         );
-        assert_eq!(SINGLE_PLAYER_SETS, [Boss, BossX]);
+        assert_eq!(SINGLE_PLAYER_SETS, [Boss, BossX, InfiniteAssault]);
     }
 
     // R3535002: the new kinds and tags read and write their printed names (CLAUDE.md rule 3).
@@ -2130,15 +2131,16 @@ mod tests {
     }
 
     // R4577000: the Infinite Assault is the set table's last row, a single-player set held while it
-    // is built: in neither the catalog order, the sets that ship nor the open single-player sets.
+    // was built and opened to `SinglePlayer` by its release (#4597): an open single-player set, in
+    // neither the catalog order nor the sets that ship, and no set is held for single-player now.
     #[test]
-    fn r4577000_infinite_assault_is_held_for_single_player() {
+    fn r4577000_infinite_assault_opens_as_a_single_player_set() {
         let row = set_row(SetName::InfiniteAssault);
         assert_eq!(
             *row,
             SetRow {
                 set: SetName::InfiniteAssault,
-                stage: SetStage::HeldSinglePlayer,
+                stage: SetStage::SinglePlayer,
                 segment: "infiniteassault",
                 abbreviation: Some("IA"),
                 shadow_ban_share: None,
@@ -2146,10 +2148,10 @@ mod tests {
         );
         assert_eq!(SetName::InfiniteAssault.as_str(), "Infinite Assault");
         assert_eq!(SetName::ALL.last(), Some(&SetName::InfiniteAssault));
-        assert_eq!(HELD_SINGLE_PLAYER_SETS, [SetName::InfiniteAssault]);
+        assert!(HELD_SINGLE_PLAYER_SETS.is_empty());
         assert!(!CATALOG_SETS.contains(&SetName::InfiniteAssault));
         assert!(!SHIPPED_SETS.contains(&SetName::InfiniteAssault));
-        assert!(!SINGLE_PLAYER_SETS.contains(&SetName::InfiniteAssault));
+        assert!(SINGLE_PLAYER_SETS.contains(&SetName::InfiniteAssault));
         assert!(!set_ships(SetName::InfiniteAssault));
     }
 

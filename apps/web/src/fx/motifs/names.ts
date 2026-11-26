@@ -3,42 +3,6 @@
 // event rows only, as a card with no entry does. `aura` on a hook plays nothing either: a card's standing
 // look is its entry's `aura` field, which the aura layer draws (fx/aura/, R2787000).
 
-/** Every motif name a table may use: the drawn motifs, then `aura`, which waits for #2787. */
-export const FX_MOTIF_NAMES = [
-  "bolt",
-  "volley",
-  "barrage",
-  "lance",
-  "nova",
-  "wipe",
-  "vanish",
-  "scorch",
-  "negate",
-  "drain",
-  "bless",
-  "curse",
-  "conjure",
-  "rise",
-  "offering",
-  "shift",
-  "bind",
-  "tether",
-  "transmute",
-  "flight",
-  "mana",
-  "tithe",
-  "tally",
-  "snap",
-  "send",
-  "radiance",
-  "mend",
-  "deal",
-  "seal",
-  "recall",
-  "hex",
-  "aura",
-] as const;
-
 /**
  * The motifs `MOTIF_PLANNERS` draws: #2784's damage and removal family, then #2786's life and
  * stats, board, cards and mana, and trap motifs, then #2793's send, radiance and mend, then #2796's
@@ -79,6 +43,9 @@ export const FX_DRAWN_MOTIFS = [
   "recall",
   "hex",
 ] as const;
+
+/** Every motif name a table may use: the drawn motifs, then `aura`, which waits for #2787. */
+export const FX_MOTIF_NAMES = [...FX_DRAWN_MOTIFS, "aura"] as const;
 
 /**
  * Where on its card a motif plays: `cast` a non-Unit's play (and a Trap's firing), `cry` a Unit's;

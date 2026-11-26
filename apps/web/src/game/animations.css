@@ -462,6 +462,31 @@
   animation-duration: calc(300ms * var(--anim-scale) * var(--anim-squeeze, 1));
 }
 
+/* --- damageNullified: a damage pool soaks a hit, its card pulses (400 ms, R5045000) ----- */
+
+@keyframes jk-pool-pulse {
+  /* The pool's card (Force Projector, Oct) swells and glows cool as it drinks the hit; the fx
+     layer's ring, the beam to the target and the shield there say where the damage went. */
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1) saturate(1) hue-rotate(0deg);
+  }
+  35% {
+    transform: scale(1.06);
+    filter: brightness(1.6) saturate(1.3) hue-rotate(-20deg);
+  }
+  70% {
+    transform: scale(0.99);
+    filter: brightness(1.15) saturate(1.1) hue-rotate(-8deg);
+  }
+}
+
+[data-animating="damageNullified"] {
+  animation-name: jk-pool-pulse;
+  animation-duration: calc(400ms * var(--anim-scale) * var(--anim-squeeze, 1));
+}
+
 /* --- divineShieldLost: shield shatter (250 ms) ----------------------------------------- */
 
 @keyframes jk-shield-shatter {
@@ -555,9 +580,9 @@
     var(--bg-sunken) 0%,
     var(--bg-sunken) 36%,
     var(--pal-wood-800) 40%,
-    var(--pal-red-500) 43%,
+    var(--pal-red-600) 43%,
     color-mix(in srgb, var(--radiant) 80%, var(--pal-white)) 45%,
-    color-mix(in srgb, var(--pal-orange-400) 40%, transparent) 47%,
+    color-mix(in srgb, var(--pal-copper-400) 40%, transparent) 47%,
     transparent 50%
   );
   animation-name: jk-burn-climb;
@@ -1299,6 +1324,43 @@
   animation-name: jk-rotate-atk;
 }
 
+/* R5053000: a GIGA turns within its four zones. Its box at rest is the footprint (ATK) or the
+   footprint with its sides swapped (DEF, board.css), so it turns from one onto the other, stretched
+   as it goes to land on the footprint (`--giga-turn-x` by `--giga-turn-y`, the anchor zone's
+   `cqw`/`cqh`, board.css): the box the new view rests on lies just where the turn ends, where the
+   one-zone `--def-scale` stood the footprint on end across both heroes. `tan(atan2(a, b))` is
+   `a / b` as a number. */
+@keyframes jk-rotate-def-giga {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  100% {
+    transform: rotate(90deg) scale(var(--giga-turn-x), var(--giga-turn-y));
+  }
+}
+
+@keyframes jk-rotate-atk-giga {
+  0% {
+    transform: rotate(90deg) scale(1);
+  }
+  100% {
+    transform: rotate(0deg) scale(var(--giga-turn-x), var(--giga-turn-y));
+  }
+}
+
+.zone[data-giga="anchor"] > [data-animating="positionSwitched"] {
+  --giga-across: tan(atan2(calc(200cqh + var(--gap)), calc(200cqw + var(--gap))));
+  --giga-turn-x: var(--giga-across);
+  --giga-turn-y: calc(1 / var(--giga-across));
+  animation-name: jk-rotate-def-giga;
+}
+
+.zone[data-giga="anchor"] > [data-animating="positionSwitched"][data-position="DEF"] {
+  --giga-turn-x: calc(1 / var(--giga-across));
+  --giga-turn-y: var(--giga-across);
+  animation-name: jk-rotate-atk-giga;
+}
+
 /* --- controlChanged: card slides across the center line (450 ms) --------------------- */
 
 @keyframes jk-cross-center {
@@ -1771,8 +1833,6 @@
   font-size: var(--type-4xl-em);
   font-weight: 800;
   line-height: 1;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 [data-outcome="win"] > .result-overlay__word {
@@ -1781,12 +1841,12 @@
 }
 
 [data-outcome="loss"] > .result-overlay__word {
-  color: var(--pal-red-400);
+  color: var(--pal-lacquer-400);
   text-shadow: 0 0 18px color-mix(in srgb, var(--pal-red-600) 45%, transparent), 0 2px 0 var(--pal-wood-800);
 }
 
 [data-outcome="draw"] > .result-overlay__word {
-  color: var(--pal-blue-200);
+  color: var(--pal-ink-200);
   text-shadow: 0 2px 0 var(--pal-slate-800);
 }
 

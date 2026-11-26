@@ -77,6 +77,27 @@ describe("R1363 the shield flash", () => {
     expect(plan([whole(3)]).some((cue) => cue.kind === "shake")).toBe(true);
   });
 
+  it("R5045000 a pool's soak rings its card, sends a mote to the hit's target and blooms a small shield there with the number, and nothing shakes", () => {
+    expect(ANIMATIONS.damageNullified.fx).toEqual({ recipe: "nullify" });
+    const D = ANIMATIONS.damageNullified.durationMs;
+    const land = Math.round(FX_MOTIF_PHASES.land * D);
+    const POOL: FxAnchor = { kind: "testid", testid: testid.card("u7") };
+    const soak: GameEvent = { type: "damageNullified", instanceId: "u7", sourceId: "u1", targetId: TARGET, amount: 4, combat: false };
+    const cues = plan([soak]);
+    expect(cues).toContainEqual(expect.objectContaining({ kind: "ring", preset: "arcane", at: POOL, delayMs: 0 }));
+    expect(cues).toContainEqual(expect.objectContaining({ kind: "projectile", preset: "arcane", from: POOL, to: AT, flightMs: land }));
+    expect(shields(cues)).toEqual([{ kind: "shield", size: "small", at: AT, delayMs: land, durationMs: D - land + FX_SHIELD_TAIL_MS }]);
+    expect(cues).toContainEqual(expect.objectContaining({ kind: "splat", tone: "absorb", amount: 4, at: AT, delayMs: land }));
+    expect(cues.some((cue) => cue.kind === "shake")).toBe(false);
+    // A pool card the view does not show: the shield and the number on the target alone.
+    const unseen = plan([{ ...soak, instanceId: "hidden" }]);
+    expect(unseen.some((cue) => cue.kind === "projectile" || (cue.kind === "ring" && cue.preset === "arcane"))).toBe(false);
+    expect(shields(unseen)).toHaveLength(1);
+    // A hero's soak lands on its portrait.
+    const hero = shields(plan([{ ...soak, targetId: "hero-p1" }]));
+    expect(hero.map((cue) => cue.at)).toEqual([{ kind: "testid", testid: testid.hero("you") }]);
+  });
+
   it("R1363 R200 under Reduce motion (the layer at intensity 0) nothing is drawn, the shield included", () => {
     expect(plan([whole(3)], 0)).toEqual([]);
     expect(plan([hit(2, 2)], 0)).toEqual([]);

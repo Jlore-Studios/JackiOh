@@ -15,11 +15,11 @@
   display: block;
   width: 5.2cqh;
   height: 5.2cqh;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle at 40% 35%, #3b404d, #14161c 72%);
   box-shadow:
-    0 0 0 0.35cqh color-mix(in srgb, var(--cf-bezel, #b89a5a) 80%, #000),
-    0 0.3cqh 0.6cqh rgb(0 0 0 / 0.55);
+    0 0 0 0.35cqh color-mix(in srgb, var(--cf-bezel, #b89a5a) 80%, var(--pal-black)),
+    0 0.3cqh 0.6cqh color-mix(in srgb, var(--pal-black) 55%, transparent);
   pointer-events: none;
 }
 
@@ -92,8 +92,8 @@
  */
 .cf[data-set-accent="glitch"] .card-name {
   text-shadow:
-    0.25cqw 0 0 color-mix(in srgb, var(--pal-red-400) 70%, transparent),
-    -0.25cqw 0 0 color-mix(in srgb, var(--pal-cyan-400) 70%, transparent);
+    0.25cqw 0 0 color-mix(in srgb, var(--pal-lacquer-400) 70%, transparent),
+    -0.25cqw 0 0 color-mix(in srgb, var(--pal-verdigris-400) 70%, transparent);
 }
 
 .cf[data-set-accent="glitch"]:not([data-full-art="true"], [data-art-first="true"], [data-version="version-extended-art"]) .cf-art-frame::after {
@@ -102,7 +102,7 @@
   inset: 0;
   z-index: var(--z-content);
   border-radius: inherit;
-  border-left: 0.35cqw solid color-mix(in srgb, var(--pal-red-400) 55%, transparent);
-  border-right: 0.35cqw solid color-mix(in srgb, var(--pal-cyan-400) 55%, transparent);
+  border-left: 0.35cqw solid color-mix(in srgb, var(--pal-lacquer-400) 55%, transparent);
+  border-right: 0.35cqw solid color-mix(in srgb, var(--pal-verdigris-400) 55%, transparent);
   pointer-events: none;
 }

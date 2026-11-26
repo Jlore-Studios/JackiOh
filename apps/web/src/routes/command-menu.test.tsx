@@ -149,6 +149,8 @@ describe("R2118000 the command menu", () => {
         "action-play",
         // B13: the command menu links the Dungeon run.
         "action-dungeon",
+        // IA7: and the Infinite Assault, since its release.
+        "action-assault",
         "page-home",
         "page-decks",
         "page-collection",

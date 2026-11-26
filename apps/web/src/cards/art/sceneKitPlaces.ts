@@ -8,7 +8,7 @@
 // tent and a sailing boat. R3397000: the Meditative+ and Training Grounds Alt art scenes (#3397) added a
 // smoking crater, a sandcastle, a snowman, a mill's water wheel and a rowboat, and R3398000's Core Alt art scenes
 // (#3398) a field holding a clean crater (`crater-field`, apart from R3397000's `crater`) and a van. sceneKit.ts
-// spreads them into `SCENE_KIT`. Every colour is a palette.css name, none in Radiant's gold window; a glow is a
+// spreads them into `SCENE_KIT`. Every colour is a SCENE_PALETTE name, none in Radiant's gold window; a glow is a
 // stack of translucent shapes, never a gradient; shapes are filled even-odd, so a hole is a second sub-path and no
 // two sub-paths of one shape overlap otherwise.
 

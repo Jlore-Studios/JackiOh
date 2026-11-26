@@ -27,14 +27,14 @@
   min-height: 44px;
   padding: 0 12px;
   border: 1px solid var(--line-bright);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--bg);
   color: var(--text);
   font: inherit;
 }
 
 .settings-email__error {
-  color: #fca5a5;
+  color: var(--pal-lacquer-300);
 }
 
 .settings-account__action {
@@ -44,7 +44,7 @@
   min-height: 44px;
   padding: 0 18px;
   border: 1px solid var(--line-bright);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--bg);
   color: var(--text);
   font: inherit;
@@ -58,6 +58,6 @@
 }
 
 .settings-account__action:focus-visible {
-  outline: 2px solid #7dd3fc;
+  outline: 2px solid var(--pal-ink-300);
   outline-offset: 2px;
 }

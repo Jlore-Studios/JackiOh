@@ -37093,5 +37093,460 @@
     ],
     "fragment": "the-tier-cards-and-kpis-read-the-newest-win-rates",
     "changes": []
+  },
+  {
+    "version": "v0.6.14n",
+    "date": "2026-11-26",
+    "title": "Patch: a card made Radiant where it stands starts the Brittle its Radiant face newly prints, and regains a Reborn that face newly prints",
+    "source": "issue #4817",
+    "notes": "Issue #4817 (R4817000, R4817001): Make Radiant and De-Radiant on a card where it stands refit its Brittle count to the new face (a count its printed Brittle started goes when the new face prints none; a card on the field with no count starts the one the new face prints), and a Radiant face that newly prints Reborn gives a used Reborn back, as it already did a spent Divine Shield. Engine change only, no catalog or script change; claimed with --plays as classify's stage 2 against daee3b7's build names it.",
+    "player": {
+      "title": "A card made Radiant where it stands follows its new face's Brittle and Reborn",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A Sack made Radiant on the field now crumbles at its Radiant face's Brittle 1, as one played Radiant does.",
+        "A Ticketed made Radiant on the field no longer crumbles, since its Radiant face has no Brittle; one De-Radianted by Prestige starts its Brittle 3.",
+        "A Unit that already used a Reborn regains it when made Radiant, if only its Radiant face has Reborn (Wrong-House Attacker, 4-mana 7/7, Jilliax and others)."
+      ]
+    },
+    "commits": [
+      "22a9db19dd2732f368f4612dff9ddf08a9dbfc0b"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "core-091"
+    ],
+    "fragment": "a-card-made-radiant-where-it-stands-starts-the-brittle-its",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14o",
+    "date": "2026-11-26",
+    "title": "Patch: Radiant Cosmic Bard leaves both drawn Units at the cheapest price, even one that carries a cost raise larger than that price",
+    "source": "#4832",
+    "notes": "Cosmic Bard's Radiant face took a carried cost raise off the cost override, which bottoms out at 0; a raise larger than the cheapest price survived and the card cost more. Now the override is 0 for such a card and the excess comes off its cost change in hand, so every drawn Unit still in the hand ends at the cheapest drawn price. The longer script makes Cosmic Bard complicated (R1846000), so Stinkyscape #109 and #111 read new pools (R2173001); `plays` claims those two, the families classify's games show playing differently. Cosmic Bard itself meets no raiser in those games, so its own play is unobservable there and goes unclaimed.",
+    "player": {
+      "title": "Radiant Cosmic Bard prices both drawn Units at the cheapest",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Radiant Cosmic Bard's Combo no longer leaves a drawn Unit that carries a cost raise larger than the cheapest price above it: both drawn Units cost the cheapest drawn price."
+      ]
+    },
+    "commits": [
+      "f9b18868b35013858635c73fe397f3a11ea7c469"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-109",
+      "stinkyscape-111"
+    ],
+    "fragment": "radiant-cosmic-bard-leaves-both-drawn-units-at-the-cheapest",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14p",
+    "date": "2026-11-26",
+    "title": "Toxopid's Legs are Flexible and crush the Units they land on",
+    "source": "#5048",
+    "notes": "S+ #121.1 Toxopid Leg gains Flexible. S+ #121 Toxopid's Cry draws its Legs' zones from every unit and backrow zone of both sides (Radiant: the opponent's) that holds nothing or only Units, destroys the Units there, and lands a Leg in each zone once the deaths resolve (R5048000). Claimed with --plays as classify's stage 2 against the merge base names them: M #8 Reach the Summit (its random Radiant cards can be a Toxopid) and S+ #127 Corvus (its line now meets Legs standing in the backrow).",
+    "player": {
+      "title": "Toxopid's Legs crush what they land on",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Toxopid Leg is now Flexible, so it can stand in the backrow as well as the unit row.",
+        "Toxopid's Legs now land in random zones of either row, empty or holding Units, and destroy the Units there before they land.",
+        "Radiant Toxopid's Legs still land only on your opponent's side, now in either row, destroying the Units there."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "4d0564418fbf44e5db0f52fd11a04902f98fdba2"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "meditative-008",
+      "stinkyscapeplus-121",
+      "stinkyscapeplus-127"
+    ],
+    "fragment": "toxopid-s-legs-are-flexible-and-crush-the-units-they-land-on",
+    "changes": [
+      {
+        "id": "stinkyscapeplus-121",
+        "name": "Toxopid",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      },
+      {
+        "id": "stinkyscapeplus-121-1",
+        "name": "Toxopid Leg",
+        "kind": "changed",
+        "fields": [
+          "base.keywords",
+          "base.text",
+          "radiant.keywords",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.14q",
+    "date": "2026-11-26",
+    "title": "One corner language for the table",
+    "source": "issue #5015",
+    "notes": "Every border-radius in the web client is a surfaces.css token: the corner scale is retuned to 2, 4, 6 and 10 px (xl dropped), the settings switch keeps its track's pill as --radius-switch, and the card faces' cuts and the effects' shapes are named tokens that keep their values.",
+    "player": {
+      "title": "One corner language for the table",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Menus, panels, buttons, badges and the card inspector have tighter corners; card faces keep the corner their frame is cut to."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "7a32473e328105b864cc63b8ac241d22d5c025d2"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "one-corner-language-for-the-table",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14r",
+    "date": "2026-11-26",
+    "title": "Patch: a counted game's result reloads the card proficiency the Collection shows, so a level the game earned and its stamp appear without a reload",
+    "source": "#4977",
+    "notes": "When a counted game's result pays the account (match.economy set on the match screen), the client loads the account's card proficiency again: cards/proficiencySync.ts's reloadOwnProficiency(), called from routes/match.tsx's paid effect beside announceWallet(), queues a GET /api/proficiency behind any stamp pick in flight (R4977000, amending R3013001). A level the game earned and the stamp it unlocks show in the Collection and can be worn without a page reload. No card looks or plays differently; claims --visual because the change touches apps/web/src/cards/ (R2529000), a micro of no family.",
+    "player": {
+      "title": "Card levels show as soon as a game ends",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A card level an online game earned now shows in the Collection as soon as the game ends, and the stamp it unlocks can be worn at once, without reloading the page."
+      ]
+    },
+    "commits": [
+      "0c4a11d63c1a94b9a46d19b0ddf79bdc093962e0"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "a-counted-game-s-result-reloads-the-card-proficiency-the",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14s",
+    "date": "2026-11-26",
+    "title": "A readable type scale, Alegreya for the game's words and fewer capitals",
+    "source": "#5013",
+    "notes": "Type scale re-spaced around a 16px body (the board's base 14px); no step under 11px outside cards/; card names and rules text, headings, titles and banners in Alegreya; capitals kept only for one shared small-caps label rule and the card faces' printed inscriptions. How cards look only: no card plays differently.",
+    "player": {
+      "title": "Larger, easier type",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Card names and rules text are now set in the game's serif, Alegreya.",
+        "Text across the menus and the board is larger, and far fewer labels are in capitals."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "0af41ad1f2d87c47b95150ac6007266b1447a09f"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "a-readable-type-scale-alegreya-for-the-game-s-words-and",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14t",
+    "date": "2026-11-26",
+    "title": "Patch: a Flickered card starts its printed Brittle again, and a Keymaster Keenus or Shockwave447 made by a Transform draws its Aura's keywords",
+    "source": "issue #4991",
+    "notes": "R441: a Flicker re-enters the field, so zones::flicker_in_place now starts a printed Brittle afresh when the crumble spent its count, and restarts a held count's turn cycle, as every arrival from off the field does (zones::place_with); a Brittle Unit Radiant C #14 Shadowstep saves keeps its Brittle. An engine rule, so a replay it changes is refused as rules_changed (R767000). R4991000: a Keymaster Keenus (M #65) or Shockwave447 (S #111) a Transform makes on the field draws its Aura's keywords as it arrives (query::self_arrived_on_field), with no Cry; a Transform in a hand or a library draws nothing. Each card's script_before_transform_draw keeps the draw on summoned alone, keyed by this fragment, so replays of every version before this one fold under it (R4779000). classify stage 2 against main's build (a6a0c4ae99) finds M #65 and S #111 play differently, and M #24 Polymorph: the Aura now listens to transformed, so a Transform while one stands on the field queues its entry, which draws nothing but takes a number from nextSeq (one of the 200 unforced games, seed 89).",
+    "player": {
+      "title": "Saved Brittle Units crumble again, and transformed Auras draw",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A Brittle Unit that Radiant Shadowstep saves counts its Brittle down again.",
+        "A Keymaster Keenus or Shockwave447 that a Transform makes gets its random keywords."
+      ]
+    },
+    "commits": [
+      "5991e8da39cf724421f36f38f417da3af9e9debf"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "meditative-024",
+      "meditative-065",
+      "stinkyscape-111"
+    ],
+    "fragment": "a-flickered-card-starts-its-printed-brittle-again-and-a",
+    "changes": []
+  },
+  {
+    "version": "v0.6.15",
+    "date": "2026-11-26",
+    "title": "Patch: the daily patch, rolling up v0.6.14b to v0.6.14t",
+    "source": "patches cut at 5991e8da39cf724421f36f38f417da3af9e9debf: v0.6.14b, v0.6.14c, v0.6.14d, v0.6.14e, v0.6.14f, v0.6.14g, v0.6.14h, v0.6.14i, v0.6.14j, v0.6.14k, v0.6.14l, v0.6.14m, v0.6.14n, v0.6.14o, v0.6.14p, v0.6.14q, v0.6.14r, v0.6.14s, v0.6.14t",
+    "notes": "The day's patch (R3944000): it rolls up the micros shipped since v0.6.14, each a snapshot of its own: v0.6.14b (Patch: Omura's Activate is not offered with no enemy Unit to aim at, so it cannot be spent on nothing and start its cooldown); v0.6.14c (Inner Fire reads Attack below 0); v0.6.14d (Patch: a Unit token sent into a deck is reported as gone, not shuffled in, and a Unit-token card cannot be traded, so no Trade ends in fatigue); v0.6.14e (Patch: Help-aimed buffs land stolen and random casts on the caster's side); v0.6.14f (Patch: tributing a GIGA empties all four zones it covers for the play that pays it, so a GIGA Tribute card can take its place); v0.6.14g (Patch: `permanents_on_field` meets a card lying on a unit zone after its side's backrow); v0.6.14h (End Times gives back its cuts after leaving the field); v0.6.14i (Stinkyscape+ Balance Changes VIII); v0.6.14j (Mass Driver's badge states its countdown once); v0.6.14k (Card-face code cleanup); v0.6.14l (PIP says performance improvement plan); v0.6.14m (Patch: the tier cards and KPIs read the newest win rates); v0.6.14n (Patch: a card made Radiant where it stands starts the Brittle its Radiant face newly prints, and regains a Reborn that face newly prints); v0.6.14o (Patch: Radiant Cosmic Bard leaves both drawn Units at the cheapest price, even one that carries a cost raise larger than that price); v0.6.14p (Toxopid's Legs are Flexible and crush the Units they land on); v0.6.14q (One corner language for the table); v0.6.14r (Patch: a counted game's result reloads the card proficiency the Collection shows, so a level the game earned and its stamp appear without a reload); v0.6.14s (A readable type scale, Alegreya for the game's words and fewer capitals); v0.6.14t (Patch: a Flickered card starts its printed Brittle again, and a Keymaster Keenus or Shockwave447 made by a Transform draws its Aura's keywords).",
+    "player": {
+      "title": "Stinkyscape+ Balance Changes VIII, and 18 more changes",
+      "new": [],
+      "balance": [
+        "Plesiosize gives +8/+8 (Radiant +16/+16), up from +6/+6 (Radiant +12/+12).",
+        "Cloaking Module is 3/2 (Radiant 6/4), up from 2/2 (Radiant 4/4).",
+        "Venomous Rounds is 1/4 (Radiant 2/8), from 2/1 (Radiant 4/2).",
+        "Cannon v3 deals 4 damage (Radiant 8), down from 5 (Radiant 10).",
+        "Cannon v4 deals 6 damage (Radiant 12), down from 7 (Radiant 14).",
+        "Cannon v5 deals 8 damage (Radiant 16), down from 9 (Radiant 18).",
+        "YileGPT Prime costs (4), down from (8), and its Cry starts with Overload (2).",
+        "The Last Voyage launches a Starship as you cast it, and its base face skips the end-of-turn launch on the turn you cast it.",
+        "CN in a Bottle's card costs (2) more (up to (4)), up from (1) more.",
+        "Jlockeed Shredder-12 has Tribute 4, up from 3; its Radiant face deals 4 damage at the end of your turn, down from 5.",
+        "Mommy Barker is 2/1 (Radiant 4/2), down from 2/2 (Radiant 4/4).",
+        "Call to Chaos (Mindustrial-Swarm Edition): the Toxopid it adds costs (2), up from (0), and its Terminus effect replenishes 3 mana, down from 4.",
+        "Impact Reactor's Cry is Overload (2) (Radiant (1)), down from Overload (4), then (2) the turn after (Radiant (2), then (1)).",
+        "Toxopid no longer ignores Taunt.",
+        "Meltdown no longer heals fully when it is Frozen.",
+        "Gary the Gambler flips 6 coins (Radiant 12), up from 5 (Radiant 10), and no longer flips for Divine Shield or Rush.",
+        "Knowledge Breaker is Cloaked itself and no longer Cloaks your other Units.",
+        "Crawler has Flashback instead of being playable from your graveyard for (1).",
+        "Yuma costs (1) and is 1/3 (Radiant 2/6), down from (2) and 1/8 (Radiant 2/16).",
+        "Volcanic Rounds is 6/1 (Radiant 12/2), up from 5/1 (Radiant 10/2); its hits deal their damage and also Burn that much, instead of becoming Burn.",
+        "Scorching Rounds is 4/1 (Radiant 8/2) and Burns 4 (Radiant 8), up from 3/1 (Radiant 6/2) and Burns 3 (Radiant 6).",
+        "Hull Repairer mk2 is 1/5 (Radiant 2/10), up from 1/4 (Radiant 2/8).",
+        "Servo Surge is 3/2 (Radiant 6/4), down from 5/3 (Radiant 10/6).",
+        "A Wee Whelp is 2/1 (Radiant 4/2), up from 1/1 (Radiant 2/2); its Evolve gives +8/+8 (Radiant +16/+16) instead of setting its stats to 10/10 (Radiant 20/20).",
+        "Quick Chaos's base face also discards a random card from your hand.",
+        "Outbreak costs (4), up from (3).",
+        "Drone Commander is 4/8 (Radiant 8/16), down from 8/12 (Radiant 16/24).",
+        "Chaos Machine costs (3), up from (2).",
+        "Imitated Instrumentality costs (4), up from (3).",
+        "Expedition12 also Buffs the card it makes Radiant.",
+        "Metaglass also gives +1 Attack (Radiant +5, up from +3)."
+      ],
+      "changes": [
+        "The AI saves Last Hurrah and A Glimpse into the Endless Sea for when it has nothing else to play or is about to lose (A Glimpse also when a card in its hand can refill its deck).",
+        "The AI plays Feng Shui better: it counts next turn's Auspicious Rock and plays cards that set up a rewarded element earlier.",
+        "Unused code behind the card faces is removed. No card looks or plays differently.",
+        "xxFreshJack, JC Backed, Open Enrollment, Selective Enrollment and KPIs now read the win rates of this patch's games.",
+        "Toxopid Leg is now Flexible, so it can stand in the backrow as well as the unit row.",
+        "Toxopid's Legs now land in random zones of either row, empty or holding Units, and destroy the Units there before they land.",
+        "Radiant Toxopid's Legs still land only on your opponent's side, now in either row, destroying the Units there.",
+        "Menus, panels, buttons, badges and the card inspector have tighter corners; card faces keep the corner their frame is cut to.",
+        "Card names and rules text are now set in the game's serif, Alegreya.",
+        "Text across the menus and the board is larger, and far fewer labels are in capitals."
+      ],
+      "text": [
+        "The Perfect Pair no longer lists the pairs in its text.",
+        "PIP: now says \"performance improvement plan\"."
+      ],
+      "fixes": [
+        "Omura's Activate can no longer be used with no enemy Unit on the field, where it did nothing and started its 3-turn cooldown.",
+        "Inner Fire on a Unit with negative Attack (under an aura such as Spikey Pillow) now sets it to exactly its Health, instead of coming up short.",
+        "A Unit token shuffled into a deck no longer shows as going in: it ceases to exist, and the deck pile shows \"Ceased to exist\".",
+        "A Unit-token card can no longer be Traded, so a Trade never puts its player into fatigue.",
+        "Stolen or random casts that aim at enemies now land Fortify, Hopeful Jelly Bean, Divine Spirit and Power Word Shield on the caster's own side.",
+        "Surge Alloy, Plastanium, Metaglass and Graphite land the same way now, instead of buffing the enemy.",
+        "Tributing a GIGA Unit frees all four zones it stood in for the card you pay with it, so a GIGA card with a Tribute cost can take its place.",
+        "A Tribute card that tributes a GIGA Unit may go into either of the GIGA's lanes, not only its left one.",
+        "Random effects over every permanent, and the choice of where a Plague Counter goes, now meet a Ticketed stacked on a Unit after that side's backrow cards, as other such effects do.",
+        "Heroic Power's End Times costs (10) again after a use, even if the card left the field or was copied after its cost went down.",
+        "End Times no longer costs more than (10) after a use when it was Immutable at some of its ends of turn.",
+        "Mass Driver's countdown badge no longer says \"in 2 turns\" twice.",
+        "A Sack made Radiant on the field now crumbles at its Radiant face's Brittle 1, as one played Radiant does.",
+        "A Ticketed made Radiant on the field no longer crumbles, since its Radiant face has no Brittle; one De-Radianted by Prestige starts its Brittle 3.",
+        "A Unit that already used a Reborn regains it when made Radiant, if only its Radiant face has Reborn (Wrong-House Attacker, 4-mana 7/7, Jilliax and others).",
+        "Radiant Cosmic Bard's Combo no longer leaves a drawn Unit that carries a cost raise larger than the cheapest price above it: both drawn Units cost the cheapest drawn price.",
+        "A card level an online game earned now shows in the Collection as soon as the game ends, and the stamp it unlocks can be worn at once, without reloading the page.",
+        "A Brittle Unit that Radiant Shadowstep saves counts its Brittle down again.",
+        "A Keymaster Keenus or Shockwave447 that a Transform makes gets its random keywords."
+      ]
+    },
+    "reconstructed": false,
+    "tier": "patch",
+    "plays": [
+      "classic-019",
+      "classic-024",
+      "classic-026",
+      "classic-030",
+      "classic-037",
+      "classic-039",
+      "classic-045",
+      "classic-053",
+      "classic-058",
+      "classic-064",
+      "classic-070",
+      "classic-076",
+      "classic-081",
+      "classic-083",
+      "classic-085",
+      "classicplus-006",
+      "classicplus-010",
+      "classicplus-011",
+      "classicplus-013",
+      "classicplus-023",
+      "classicplus-029",
+      "classicplus-046",
+      "classicplus-064",
+      "classicplus-065",
+      "classicplus-070",
+      "core-003",
+      "core-004",
+      "core-007",
+      "core-023",
+      "core-050",
+      "core-083",
+      "core-084",
+      "core-091",
+      "core-098",
+      "meditative-008",
+      "meditative-024",
+      "meditative-031",
+      "meditative-033",
+      "meditative-037",
+      "meditative-039",
+      "meditative-045",
+      "meditative-049",
+      "meditative-051",
+      "meditative-053",
+      "meditative-055",
+      "meditative-058",
+      "meditative-065",
+      "meditative-080",
+      "meditative-084",
+      "meditative-087",
+      "meditative-091",
+      "meditative-097",
+      "meditative-100",
+      "stinkyscape-010",
+      "stinkyscape-012",
+      "stinkyscape-018",
+      "stinkyscape-020",
+      "stinkyscape-045",
+      "stinkyscape-048",
+      "stinkyscape-052",
+      "stinkyscape-056",
+      "stinkyscape-060",
+      "stinkyscape-070",
+      "stinkyscape-074",
+      "stinkyscape-077",
+      "stinkyscape-090",
+      "stinkyscape-098",
+      "stinkyscape-109",
+      "stinkyscape-111",
+      "stinkyscape-113",
+      "stinkyscape-130",
+      "stinkyscape-148",
+      "stinkyscape-169",
+      "stinkyscape-177",
+      "stinkyscape-t-drone-interceptor",
+      "stinkyscapeplus-015",
+      "stinkyscapeplus-016",
+      "stinkyscapeplus-021",
+      "stinkyscapeplus-035",
+      "stinkyscapeplus-049",
+      "stinkyscapeplus-056",
+      "stinkyscapeplus-059",
+      "stinkyscapeplus-066",
+      "stinkyscapeplus-079",
+      "stinkyscapeplus-095",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-097",
+      "stinkyscapeplus-100",
+      "stinkyscapeplus-101",
+      "stinkyscapeplus-105",
+      "stinkyscapeplus-113",
+      "stinkyscapeplus-117",
+      "stinkyscapeplus-120",
+      "stinkyscapeplus-121",
+      "stinkyscapeplus-124",
+      "stinkyscapeplus-125",
+      "stinkyscapeplus-127",
+      "stinkyscapeplus-130",
+      "stinkyscapeplus-133",
+      "stinkyscapeplus-135",
+      "stinkyscapeplus-136",
+      "stinkyscapeplus-142",
+      "stinkyscapeplus-150",
+      "stinkyscapeplus-151",
+      "stinkyscapeplus-152",
+      "stinkyscapeplus-158",
+      "stinkyscapeplus-164",
+      "traininggrounds-040"
+    ],
+    "includes": [
+      "v0.6.14b",
+      "v0.6.14c",
+      "v0.6.14d",
+      "v0.6.14e",
+      "v0.6.14f",
+      "v0.6.14g",
+      "v0.6.14h",
+      "v0.6.14i",
+      "v0.6.14j",
+      "v0.6.14k",
+      "v0.6.14l",
+      "v0.6.14m",
+      "v0.6.14n",
+      "v0.6.14o",
+      "v0.6.14p",
+      "v0.6.14q",
+      "v0.6.14r",
+      "v0.6.14s",
+      "v0.6.14t"
+    ],
+    "changes": []
+  },
+  {
+    "version": "v0.6.15b",
+    "date": "2026-11-26",
+    "title": "Motion and glow budget",
+    "source": "issue #5014",
+    "notes": "Card faces stop looping their decoration (keyword treatments, the Mythic hand shimmer, the zzz, the Dormant seal and shipyard idle, marks, Glitch, the animated rarity foil, the full-screen view's camera); owned cosmetics keep theirs; no card plays differently.",
+    "player": {
+      "title": "A calmer table",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Card faces no longer loop their decorations. Playable cards, legal targets, End turn and the turn timer still pulse; cosmetics you own keep their motion."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "8a54a004551a2b60950db15928c73e9470aba12d"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "motion-and-glow-budget",
+    "changes": []
   }
 ]

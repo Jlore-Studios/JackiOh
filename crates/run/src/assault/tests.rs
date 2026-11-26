@@ -5,8 +5,8 @@ use super::*;
 use crate::assault::content::content_file;
 use crate::assault::day::MONTH_DAYS;
 use crate::config::{
-    ASSAULT_COMMANDER_HEALTH, ASSAULT_COMMANDER_LEVELS, ASSAULT_DECK_SIZE, ASSAULT_HERO_HEALTH,
-    ASSAULT_HISTORY_DAYS, ASSAULT_LEVELS, ASSAULT_SET, ASSAULT_UPGRADES,
+    ASSAULT_COMMANDER_HEALTH, ASSAULT_COMMANDER_LEVELS, ASSAULT_COMMANDER_UPGRADES, ASSAULT_DECK_SIZE,
+    ASSAULT_HERO_HEALTH, ASSAULT_HISTORY_DAYS, ASSAULT_LEVELS, ASSAULT_SET, ASSAULT_UPGRADES,
 };
 use jackioh_engine::catalog::{deckable, registered_catalog};
 use jackioh_engine::config::{HUMAN_HANDICAP, Handicap};
@@ -286,7 +286,7 @@ fn a_year_of_days_deals_twenty_levels_of_the_right_shape() {
 }
 
 #[test]
-fn each_normal_level_adds_one_escalation_and_a_commander_a_card_step_and_an_upgrade() {
+fn r4597002_each_normal_level_adds_one_escalation_and_a_commander_a_card_step_and_its_upgrades() {
     let content = set_content();
     for date in year() {
         let day = assault_day(&date, &content).unwrap();
@@ -294,21 +294,23 @@ fn each_normal_level_adds_one_escalation_and_a_commander_a_card_step_and_an_upgr
             if level.level == 1 {
                 assert!(level.escalations.is_empty(), "{date}");
             } else if commander_rank(level.level).is_some() {
+                // A card step, then `ASSAULT_COMMANDER_UPGRADES` upgrades (R4597002).
                 assert_eq!(
-                    level.escalations,
-                    vec![
-                        AssaultEscalation::Cards,
-                        AssaultEscalation::Upgrade {
-                            upgrade: level
-                                .escalations
-                                .iter()
-                                .find_map(|escalation| match escalation {
-                                    AssaultEscalation::Upgrade { upgrade } => Some(*upgrade),
-                                    AssaultEscalation::Cards => None,
-                                })
-                                .expect("a Commander level takes an upgrade"),
-                        }
-                    ],
+                    level.escalations.len(),
+                    1 + ASSAULT_COMMANDER_UPGRADES,
+                    "{date} level {}",
+                    level.level
+                );
+                assert_eq!(
+                    level.escalations[0],
+                    AssaultEscalation::Cards,
+                    "{date} level {}",
+                    level.level
+                );
+                assert!(
+                    level.escalations[1..]
+                        .iter()
+                        .all(|escalation| matches!(escalation, AssaultEscalation::Upgrade { .. })),
                     "{date} level {}",
                     level.level
                 );
@@ -319,12 +321,17 @@ fn each_normal_level_adds_one_escalation_and_a_commander_a_card_step_and_an_upgr
             if index > 0 {
                 let before = &day.levels[index - 1];
                 for (kind, _, _, _, _) in ASSAULT_UPGRADES {
-                    let added = level.escalations.iter().any(|escalation| {
-                        matches!(escalation, AssaultEscalation::Upgrade { upgrade } if *upgrade == kind)
-                    });
+                    // A Commander's two upgrades may be one kind twice (R4597002).
+                    let added = level
+                        .escalations
+                        .iter()
+                        .filter(|escalation| {
+                            matches!(escalation, AssaultEscalation::Upgrade { upgrade } if *upgrade == kind)
+                        })
+                        .count();
                     assert_eq!(
                         held(level, kind),
-                        held(before, kind) + i32::from(added),
+                        held(before, kind) + added as i32,
                         "{date} level {} {kind:?}",
                         level.level
                     );
@@ -411,6 +418,18 @@ fn r4579000_nothing_falls_from_one_level_to_the_next_over_a_year() {
             );
         }
     }
+}
+
+/// R4597002: the re-tune's numbers, written out: a Commander level's health base is 65, 90, 115 and
+/// 140 at levels 5, 10, 15 and 20, and it takes two upgrades after its card step.
+#[test]
+fn r4597002_the_commanders_health_and_upgrades_are_the_retunes() {
+    let bases: Vec<i32> = ASSAULT_COMMANDER_LEVELS
+        .iter()
+        .map(|level| ASSAULT_COMMANDER_HEALTH.0 + ASSAULT_COMMANDER_HEALTH.1 * i32::from(*level))
+        .collect();
+    assert_eq!(bases, vec![65, 90, 115, 140]);
+    assert_eq!(ASSAULT_COMMANDER_UPGRADES, 2);
 }
 
 /// A level's health base: a Commander's is a peak, the next level goes back to the normal base

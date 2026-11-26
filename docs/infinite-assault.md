@@ -2,7 +2,7 @@
 
 2026-11-23 · written in a Claude session from the owner's request of the same day
 
-> **Status: the plan of record for the issues** (tracker #4576). SPEC is still the only source of rules (CLAUDE.md). This
+> **Status: live.** The Infinite Assault and its set opened to players in the release (issue #4597, tracker #4576); this was the plan of record for the issues. SPEC is still the only source of rules (CLAUDE.md). This
 > file is the mode's design and the set's card list until the mode's spec section (§16) and the set's
 > catalog section (§8.13) hold them; when the two disagree, the spec wins and this file is the bug. The
 > part that builds a rule or a card may change a default here, and records its choice as a ruling note in
@@ -109,7 +109,7 @@ everything the levels before it added, the seed choosing which:
 - **An upgrade** is one stack of one upgrade (IA3), drawn by the upgrades' weights among those not at
   their most stacks and allowed at this level. A level with no upgrade left takes a card step.
 
-A Commander level takes a card step *and* an upgrade, and its Commander's cards join the deck (IA4).
+A Commander level takes a card step *and* two upgrades (one until the release, R4597002), and its Commander's cards join the deck (IA4).
 
 **The deck.** A level's deck is dealt from its slots: each slot a distinct Infinite Assault card of its
 rarity, `ASSAULT_DOCTRINE_SHARE` percent from the level's doctrine and the rest from the neutral cards and
@@ -240,6 +240,8 @@ its Chinese.
 - **It must play the set well enough to be a fair boss.** The AI part measures the AI with each Infinite
   Assault card (`cargo jackioh sweep`, R186, over the set) and fixes what it misplays; a card it cannot
   pilot is fixed in its evaluation or redesigned, never dropped silently.
+  The sweep over the set is `training/history/assault-sweep-2026-11-26.md` (#4595): 4 misplays fixed
+  (R4595001–R4595004), 2 cards piloted but passed over.
 
 ## IA9. Where it lives
 
@@ -265,7 +267,7 @@ Every part's "Done when" names its tests; together they hold the mode to this:
   no doctrine on two levels in a row; every deck distinct, token-free, all Infinite Assault cards, of its
   handicap's size, within its level's ceiling; `createGame` accepts every level's setup on the real
   catalog, for 365 consecutive days.
-- **Escalation:** one escalation a normal level, two at a Commander; nothing ever falls (IA2), over 365 days.
+- **Escalation:** one escalation a normal level, three at a Commander (a card step and two upgrades, R4597002); nothing ever falls (IA2), over 365 days.
 - **Attempts:** a start at a checkpoint the record lacks is refused; a loss ends the attempt; a win moves on;
   level 20 repels; an ended attempt refuses every action; a refusal leaves the state unchanged.
 - **Difficulty:** `cargo jackioh assault-sim --days N` plays whole days with the AI in the player's seat at

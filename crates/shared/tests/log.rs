@@ -947,6 +947,45 @@ fn a_hit_names_its_source_off_combat_only_and_only_where_the_view_names_it() {
     );
 }
 
+/// R5045000: a pool's soak opens with the card whose pool took it, then the amount, the target and,
+/// off combat, the source where the view names it, in both languages.
+#[test]
+fn r5045000_a_pools_soak_names_the_pool_card_the_target_and_the_source() {
+    let panther = name_of("core-032");
+    let vanilla = name_of("core-008");
+    let soak = |over: Value| {
+        let mut event = json!({ "type": "damageNullified", "instanceId": "u1", "sourceId": "e1", "targetId": "hero-p1", "amount": 4, "combat": false });
+        for (key, value) in over.as_object().expect("an object") {
+            event[key] = value.clone();
+        }
+        event
+    };
+    let view = board(json!([
+        soak(json!({})),
+        soak(json!({ "targetId": "u1", "amount": 3, "combat": true })),
+        soak(json!({ "sourceId": "hidden", "amount": 1 })),
+        soak(json!({ "sourceId": null, "amount": 1 })),
+    ]));
+    assert_eq!(
+        english(&view),
+        [
+            format!("{panther} nullified 4 damage to your hero from {vanilla}"),
+            format!("{panther} nullified 3 damage to {panther} in combat"),
+            format!("{panther} nullified 1 damage to your hero"),
+            format!("{panther} nullified 1 damage to your hero"),
+        ]
+    );
+    assert_eq!(cards(&view)[0], ("core-032".to_string(), Some("u1".to_string())));
+    let (zh_panther, zh_vanilla) = (chinese_name_of("core-032"), chinese_name_of("core-008"));
+    assert_eq!(
+        said(&view, Locale::ZhCn)[..2],
+        [
+            format!("{zh_panther}抵消了来自{zh_vanilla}对你的英雄的4点伤害"),
+            format!("{zh_panther}抵消了{zh_panther}在战斗中受到的3点伤害"),
+        ]
+    );
+}
+
 /// R3857000: a hero's kept Armor gain names the hero by its side, in both languages.
 #[test]
 fn r3857000_an_armor_gain_names_the_heros_side() {

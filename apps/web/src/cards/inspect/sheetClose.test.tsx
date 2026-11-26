@@ -40,7 +40,7 @@ function expectSharedClose(sheetTestid: string): HTMLElement {
   const close = screen.getByTestId(INSPECT_CLOSE);
   expect(close).toHaveClass("dialog__close");
   expect(close).toHaveAccessibleName("Close");
-  expect(close).toHaveTextContent("✕");
+  expect(close.querySelector(".icon--close")).not.toBeNull();
   expect(close).toHaveFocus();
   expect(screen.getByTestId(sheetTestid).lastElementChild).toBe(close);
   return close;

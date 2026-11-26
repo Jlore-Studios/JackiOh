@@ -25,15 +25,22 @@
 //! action (`step`'s `action`).
 //! R4672001: each Created card names the card whose effect made it (`GameState.makers`). R4672002: a
 //! card's `discover` or `pick` prompt is a pick, its offer and its answer as catalog ids.
+//!
+//! R4707000: each play's variant keeps what it rolled, read off the public reports: a `chaosRolled`'s
+//! places in its card's table, a `rolled` batch's coins, and its dice by the faces their card checks for
+//! (or by face, at most `ROLL_SPLIT_MAX_SIDES` sides). A roll joins the last entry the play of the card
+//! that rolled it listed, whenever it comes (a Trap's coin as it fires, a unit's end-of-turn flip), and a
+//! Call to Chaos a Recursion cast joins the play that began its chain (R28).
 
 use indexmap::{IndexMap, IndexSet};
 
+use crate::config::ROLL_SPLIT_MAX_SIDES;
 use crate::reduce::{begin_game, reduce};
 use crate::replay::FoldArgs;
 use crate::state::{CardInstance, CreateGameOptions, GameState, create_recorded_game, find_instance};
 use crate::wire::{
     Action, ActionBody, CardPick, CounteredTo, CreatedUse, GameEvent, GameSummary, MadeBy, PLAYER_IDS,
-    PerPlayer, PlayVariant, PlayerId, PromptKind, SeatSummary, Selection, Zone,
+    PerPlayer, PlayVariant, PlayerId, PromptKind, RollKind, RolledOutcome, SeatSummary, Selection, Tag, Zone,
 };
 
 /// Each seat's hand as instance id → catalog id, in hand order.
@@ -64,6 +71,8 @@ enum Slot {
 /// nothing.
 struct OpenPlay {
     player: PlayerId,
+    /// R4707000: the card played, which a Recursion's cast names as its maker.
+    def_id: String,
     slots: Vec<Slot>,
     answered: IndexSet<String>,
 }
@@ -81,10 +90,16 @@ struct Reading {
     played: PerPlayer<Vec<String>>,
     played_turns: PerPlayer<Vec<i32>>,
     played_radiant: PerPlayer<Vec<bool>>,
+    /// R5054000: the dealt cards each seat held Radiant in its hand from its opening hand on, each once.
+    held_radiant: PerPlayer<IndexSet<String>>,
     /// R4672000: each play's variant, beside `played`.
     played_variants: PerPlayer<Vec<Option<PlayVariant>>>,
     /// R4672000: the plays still resolving, by the instance id their card's prompts name.
     open: IndexMap<String, OpenPlay>,
+    /// R4707000: the entry each played card's rolls join, by its instance id: its play's last.
+    rollers: IndexMap<String, Slot>,
+    /// R4707000: a Call to Chaos a Recursion cast, by instance id, and the play that began its chain.
+    chains: IndexMap<String, String>,
     /// R4672002: each seat's Discover-like picks.
     picks: PerPlayer<Vec<CardPick>>,
     /// R1256000: the per-seat counts, read off the events both seats see.
@@ -113,6 +128,47 @@ struct Reading {
     stolen: Vec<String>,
 }
 
+impl Reading {
+    /// A reading that has read no step yet, from the game's hands, libraries and Radiant cards at
+    /// `current_turn`.
+    fn new(hands: Hands, decks: Decks, radiant: IndexSet<String>, current_turn: i32) -> Reading {
+        let zero = || PerPlayer::new(0, 0);
+        Reading {
+            hands,
+            decks,
+            radiant,
+            first: None,
+            opening: None,
+            drawn: per_seat(),
+            played: per_seat(),
+            played_turns: per_seat(),
+            played_radiant: per_seat(),
+            held_radiant: PerPlayer::new(IndexSet::new(), IndexSet::new()),
+            played_variants: per_seat(),
+            open: IndexMap::new(),
+            rollers: IndexMap::new(),
+            chains: IndexMap::new(),
+            picks: per_seat(),
+            fatigue_draws: zero(),
+            fatigue_damage: zero(),
+            traps_set: zero(),
+            traps_fired: zero(),
+            position_switches: zero(),
+            radiant_upgrades: zero(),
+            starship_pieces_fused: zero(),
+            starships_launched: zero(),
+            radiant_seen: IndexSet::new(),
+            current_turn,
+            made: IndexMap::new(),
+            used: IndexSet::new(),
+            created_used: per_seat(),
+            created_played: per_seat(),
+            cast_or_summoned: per_seat(),
+            stolen: Vec::new(),
+        }
+    }
+}
+
 /// Instance ids of the Radiant cards each seat holds in its hand or resolving zone as an action begins.
 fn radiant_of(state: &GameState, hands: &Hands) -> IndexSet<String> {
     let mut radiant = IndexSet::new();
@@ -135,6 +191,21 @@ fn mark_radiant(reading: &mut Reading, after: &GameState, id: &str) {
         reading.radiant.insert(id.to_string());
     } else {
         reading.radiant.shift_remove(id);
+    }
+}
+
+/// R5054000: notes the card `id` names as held Radiant by the seat whose hand holds it, when it is Radiant,
+/// dealt (a Created card is never drawn, R2089000) and the opening hand has been dealt (a card mulliganed
+/// away was never seen).
+fn hold_radiant(reading: &mut Reading, before: &GameState, after: &GameState, id: &str) {
+    if reading.opening.is_none() || !reading.radiant.contains(id) || is_created(before, after, &[id]) {
+        return;
+    }
+    for player in PLAYER_IDS {
+        if let Some(def_id) = reading.hands[player].get(id) {
+            let def_id = def_id.clone();
+            reading.held_radiant[player].insert(def_id);
+        }
     }
 }
 
@@ -204,7 +275,12 @@ fn play_variant(modes: Option<&[String]>, x: Option<i32>, embiggened: Option<boo
     if modes.is_empty() && x.is_none() && embiggened.is_none() {
         return None;
     }
-    Some(PlayVariant { modes, x, embiggened })
+    Some(PlayVariant {
+        modes,
+        x,
+        embiggened,
+        ..PlayVariant::default()
+    })
 }
 
 /// R4672000: the variant a list entry holds.
@@ -224,7 +300,16 @@ fn variant_mut(reading: &mut Reading, slot: Slot) -> Option<&mut Option<PlayVari
 }
 
 /// R4672000: a play's entries, open until its `cardResolved`; a play that listed none is no open play.
-fn open(reading: &mut Reading, instance_id: &str, player: PlayerId, slots: Vec<Slot>) {
+/// R4707000: its card's rolls join its last entry from here on, as long as the card keeps its id.
+fn open(reading: &mut Reading, instance_id: &str, player: PlayerId, def_id: &str, slots: Vec<Slot>) {
+    match slots.last() {
+        Some(slot) => {
+            reading.rollers.insert(instance_id.to_string(), *slot);
+        }
+        None => {
+            reading.rollers.shift_remove(instance_id);
+        }
+    }
     if slots.is_empty() {
         reading.open.shift_remove(instance_id);
     } else {
@@ -232,10 +317,80 @@ fn open(reading: &mut Reading, instance_id: &str, player: PlayerId, slots: Vec<S
             instance_id.to_string(),
             OpenPlay {
                 player,
+                def_id: def_id.to_string(),
                 slots,
                 answered: IndexSet::new(),
             },
         );
+    }
+}
+
+/// R4707000: whether a catalog card is of the Call to Chaos family (§10.7's recursion pool).
+fn is_call_to_chaos(state: &GameState, def_id: &str) -> bool {
+    crate::catalog::find_def(Some(state), def_id).is_some_and(|def| def.tags.contains(&Tag::CallToChaos))
+}
+
+/// R4707000, R28: the play whose chain a Call to Chaos cast by a Call to Chaos's Recursion is part of:
+/// the innermost play still resolving of the card that made it, and that play's own chain's first when it
+/// is a cast itself. `None` for any other cast.
+fn chain_root(reading: &Reading, state: &GameState, def_id: &str, maker: Option<&MadeBy>) -> Option<String> {
+    let maker = maker?;
+    if !is_call_to_chaos(state, def_id) || !is_call_to_chaos(state, &maker.card) {
+        return None;
+    }
+    let (parent, _) = reading
+        .open
+        .iter()
+        .rev()
+        .find(|(_, play)| play.def_id == maker.card)?;
+    Some(reading.chains.get(parent).unwrap_or(parent).clone())
+}
+
+/// R4707000: a roll the card `instance_id` made joins its play's entry, or its chain's first play's; a
+/// card no play the record keeps listed (one an effect summoned or set) records none.
+fn credit_roll(reading: &mut Reading, instance_id: &str, roll: RolledOutcome) {
+    let roller = reading
+        .chains
+        .get(instance_id)
+        .map_or(instance_id, String::as_str);
+    let Some(slot) = reading.rollers.get(roller).copied() else {
+        return;
+    };
+    if let Some(variant) = variant_mut(reading, slot) {
+        variant.get_or_insert_with(PlayVariant::default).rolled.push(roll);
+    }
+}
+
+/// R4707000: what a `rolled` batch came up with, as the record keeps it: its coins' heads, or its dice by
+/// the faces their card checks for, else by face when they have at most `ROLL_SPLIT_MAX_SIDES`; a larger
+/// die its card checks no face of is no outcome of a fixed list.
+fn rolled_outcome(
+    def_id: &str,
+    kind: RollKind,
+    sides: i32,
+    rolls: &[crate::wire::RollResult],
+    hit: Option<crate::wire::RollHit>,
+) -> Option<RolledOutcome> {
+    let count = |n: usize| i32::try_from(n).unwrap_or(i32::MAX);
+    // Every coin or die of a batch is thrown at one Lucky, 1 + X draws each (R1440).
+    let lucky = rolls
+        .first()
+        .map_or(0, |roll| count(roll.faces.len()).saturating_sub(1));
+    match kind {
+        RollKind::Coin => Some(RolledOutcome::Coin {
+            card: def_id.to_string(),
+            coins: count(rolls.len()),
+            heads: count(rolls.iter().filter(|roll| roll.heads()).count()),
+            lucky,
+        }),
+        RollKind::Die if hit.is_some() || sides <= ROLL_SPLIT_MAX_SIDES => Some(RolledOutcome::Die {
+            card: def_id.to_string(),
+            sides,
+            lucky,
+            hit,
+            kept: rolls.iter().map(crate::wire::RollResult::kept_face).collect(),
+        }),
+        RollKind::Die => None,
     }
 }
 
@@ -447,6 +602,14 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                     };
                     reading.opening =
                         Some(PerPlayer::new(dealt(&reading.hands.p1), dealt(&reading.hands.p2)));
+                    // R5054000: a card Radiant in the opening hand was held Radiant from the first turn on.
+                    let held: Vec<String> = PLAYER_IDS
+                        .iter()
+                        .flat_map(|&player| reading.hands[player].keys().cloned().collect::<Vec<_>>())
+                        .collect();
+                    for id in held {
+                        hold_radiant(reading, before, after, &id);
+                    }
                 }
             }
             GameEvent::Drawn {
@@ -473,6 +636,7 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
             } => {
                 reading.hands[*player].insert(instance_id.clone(), def_id.clone());
                 mark_radiant(reading, after, instance_id);
+                hold_radiant(reading, before, after, instance_id);
                 if is_created(before, after, &[instance_id]) {
                     let source = maker_of(before, after, &[instance_id]);
                     make(reading, instance_id, creator.unwrap_or(*player), def_id, source);
@@ -557,6 +721,7 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
             }
             GameEvent::RadiantSet { instance_id, .. } => {
                 reading.radiant.insert(instance_id.clone());
+                hold_radiant(reading, before, after, instance_id);
                 // R1256000: an instance's first cue counts for its controller when the step turned it
                 // Radiant; the engine also cues a card Radiant already (R177), and re-cues dedupe to one.
                 if reading.radiant_seen.insert(instance_id.clone())
@@ -621,12 +786,20 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                     if from_hand {
                         reading.hands[*player].shift_remove(id);
                     }
-                    open(reading, instance_id, *player, slots);
+                    // R4707000, R28: a Recursion's cast rolls for the play that began its chain.
+                    if created
+                        && !from_hand
+                        && let Some(root) =
+                            chain_root(reading, after, def_id, maker_of(before, after, &ids).as_ref())
+                    {
+                        reading.chains.insert(instance_id.clone(), root);
+                    }
+                    open(reading, instance_id, *player, def_id, slots);
                     continue;
                 }
                 if stolen.iter().any(|countered| countered == id) {
                     leave(&mut reading.hands, id);
-                    open(reading, instance_id, *player, slots);
+                    open(reading, instance_id, *player, def_id, slots);
                     continue;
                 }
                 let turn = reading.current_turn;
@@ -653,11 +826,41 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                     reading.traps_set[*player] += 1;
                 }
                 reading.hands[*player].shift_remove(id);
-                open(reading, instance_id, *player, slots);
+                open(reading, instance_id, *player, def_id, slots);
             }
             // R4672000: the play has resolved; a prompt its card asks from here on is no part of it.
             GameEvent::CardResolved { instance_id, .. } => {
                 reading.open.shift_remove(instance_id);
+            }
+            // R4707000: a table's entries rolled, by their places; a list done whole drew none.
+            GameEvent::ChaosRolled {
+                instance_id,
+                def_id,
+                effects,
+                indices: Some(picked),
+                table_size: Some(of),
+                ..
+            } => {
+                let roll = RolledOutcome::Effect {
+                    card: def_id.clone(),
+                    picked: picked.clone(),
+                    labels: effects.clone(),
+                    of: *of,
+                };
+                credit_roll(reading, instance_id, roll);
+            }
+            GameEvent::Rolled {
+                instance_id,
+                def_id,
+                kind,
+                sides,
+                rolls,
+                hit,
+                ..
+            } => {
+                if let Some(roll) = rolled_outcome(def_id, *kind, *sides, rolls, *hit) {
+                    credit_roll(reading, instance_id, roll);
+                }
             }
             GameEvent::Transformed {
                 instance_id,
@@ -674,6 +877,7 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                     hand.shift_remove(instance_id);
                     hand.insert(new_instance_id.clone(), to_def_id.clone());
                     mark_radiant(reading, after, new_instance_id);
+                    hold_radiant(reading, before, after, new_instance_id);
                 }
                 // R2089000: a Transform's new card is Created (a Vanilla keeps the card it changes).
                 // Taking a card's place on the field puts it there, which uses it.
@@ -750,6 +954,9 @@ fn seat_summary(reading: &Reading, deck: Vec<String>, player: PlayerId) -> SeatS
         played: reading.played[player].clone(),
         played_turns: listed(&reading.played_turns[player]),
         played_radiant: listed(&reading.played_radiant[player]),
+        // R5054000: always present on a fresh summary, empty when none, so the fold can tell it from an
+        // older record's.
+        held_radiant: Some(reading.held_radiant[player].iter().cloned().collect()),
         played_variants: Some(variants.clone()).filter(|variants| variants.iter().any(Option::is_some)),
         // R1256000: a fresh summary always knows the counts; `None` is for older records.
         fatigue_draws: Some(reading.fatigue_draws[player]),
@@ -784,40 +991,8 @@ impl SummaryReader {
         let hands = hands_of(start, None);
         let decks = decks_of(start, None);
         let radiant = radiant_of(start, &hands);
-        fn zero() -> PerPlayer<i32> {
-            PerPlayer::new(0, 0)
-        }
         SummaryReader {
-            reading: Reading {
-                hands,
-                decks,
-                radiant,
-                first: None,
-                opening: None,
-                drawn: per_seat(),
-                played: per_seat(),
-                played_turns: per_seat(),
-                played_radiant: per_seat(),
-                played_variants: per_seat(),
-                open: IndexMap::new(),
-                picks: per_seat(),
-                fatigue_draws: zero(),
-                fatigue_damage: zero(),
-                traps_set: zero(),
-                traps_fired: zero(),
-                position_switches: zero(),
-                radiant_upgrades: zero(),
-                starship_pieces_fused: zero(),
-                starships_launched: zero(),
-                radiant_seen: IndexSet::new(),
-                current_turn: start.turn.max(1),
-                made: IndexMap::new(),
-                used: IndexSet::new(),
-                created_used: per_seat(),
-                created_played: per_seat(),
-                cast_or_summoned: per_seat(),
-                stolen: Vec::new(),
-            },
+            reading: Reading::new(hands, decks, radiant, start.turn.max(1)),
         }
     }
 
@@ -943,37 +1118,12 @@ mod tests {
     use serde_json::json;
 
     fn reading() -> Reading {
-        let zero = || PerPlayer::new(0, 0);
-        Reading {
-            hands: PerPlayer::new(IndexMap::new(), IndexMap::new()),
-            decks: PerPlayer::new(IndexSet::new(), IndexSet::new()),
-            radiant: IndexSet::new(),
-            first: None,
-            opening: None,
-            drawn: per_seat(),
-            played: per_seat(),
-            played_turns: per_seat(),
-            played_radiant: per_seat(),
-            played_variants: per_seat(),
-            open: IndexMap::new(),
-            picks: per_seat(),
-            fatigue_draws: zero(),
-            fatigue_damage: zero(),
-            traps_set: zero(),
-            traps_fired: zero(),
-            position_switches: zero(),
-            radiant_upgrades: zero(),
-            starship_pieces_fused: zero(),
-            starships_launched: zero(),
-            radiant_seen: IndexSet::new(),
-            current_turn: 1,
-            made: IndexMap::new(),
-            used: IndexSet::new(),
-            created_used: per_seat(),
-            created_played: per_seat(),
-            cast_or_summoned: per_seat(),
-            stolen: Vec::new(),
-        }
+        Reading::new(
+            PerPlayer::new(IndexMap::new(), IndexMap::new()),
+            PerPlayer::new(IndexSet::new(), IndexSet::new()),
+            IndexSet::new(),
+            1,
+        )
     }
 
     /// core-008 "Vanilla": a hand card in a game whose catalog the engine's own tests install.
@@ -1019,6 +1169,52 @@ mod tests {
         read(&mut reading, &events, &before, &after);
         read(&mut reading, &events, &before, &after);
         assert_eq!(reading.radiant_upgrades.p1, 1);
+    }
+
+    /// R5054000: `hand_card`'s card as the reader's hand holds it, the opening hand dealt or not.
+    fn holding(state: &GameState, dealt: bool) -> Reading {
+        let card = &state.players[PlayerId::P1].hand[0];
+        let mut reading = reading();
+        reading.hands.p1.insert(card.id.clone(), card.def_id.clone());
+        if dealt {
+            reading.opening = Some(PerPlayer::new(vec![card.def_id.clone()], Vec::new()));
+        }
+        reading
+    }
+
+    #[test]
+    fn r5054000_a_card_turned_radiant_in_hand_is_held_radiant_played_or_not() {
+        let before = hand_card(false);
+        let after = hand_card(true);
+        let mut reading = holding(&before, true);
+        read(&mut reading, &cue(&after), &before, &after);
+        let reader = SummaryReader { reading };
+        let seat = reader.seat(PlayerId::P1, vec!["core-008".to_string()]);
+        assert_eq!(seat.held_radiant, Some(vec!["core-008".to_string()]));
+        assert!(seat.played.is_empty(), "held, never played");
+        assert_eq!(
+            reader.seat(PlayerId::P2, Vec::new()).held_radiant,
+            Some(Vec::new())
+        );
+    }
+
+    #[test]
+    fn r5054000_a_normal_card_or_one_upgraded_before_the_opening_hand_is_not_held_radiant() {
+        let before = hand_card(false);
+        let after = hand_card(true);
+        // Never Radiant: present and empty, so the fold reads it as seen normal.
+        let mut normal = holding(&before, true);
+        read(&mut normal, &[], &before, &before);
+        assert_eq!(
+            SummaryReader { reading: normal }
+                .seat(PlayerId::P1, Vec::new())
+                .held_radiant,
+            Some(Vec::new())
+        );
+        // Before the opening hand is dealt, a card may yet be mulliganed away: it is not held.
+        let mut early = holding(&before, false);
+        read(&mut early, &cue(&after), &before, &after);
+        assert!(early.held_radiant.p1.is_empty());
     }
 
     #[test]

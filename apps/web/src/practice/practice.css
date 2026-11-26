@@ -63,7 +63,7 @@
 
 .practice-crest__gem {
   fill: var(--tier);
-  stroke: color-mix(in srgb, var(--tier) 40%, white);
+  stroke: color-mix(in srgb, var(--tier) 40%, var(--pal-white));
   stroke-width: 1;
   stroke-linejoin: round;
 }
@@ -136,13 +136,13 @@
   gap: 10px;
   padding: 22px 18px 18px;
   border: 1px solid color-mix(in srgb, var(--tier) 22%, color-mix(in srgb, var(--tavern-brass) 30%, transparent));
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--tier) 10%, transparent), transparent 70%),
     var(--tier-face);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 4%),
-    0 12px 24px -16px rgb(0 0 0 / 85%);
+    inset 0 1px 0 color-mix(in srgb, var(--pal-white) 4%, transparent),
+    var(--shadow-2);
   text-align: center;
   cursor: var(--cursor-glove-point, pointer);
   transition:
@@ -163,8 +163,7 @@
     var(--tier-face);
   box-shadow:
     inset 0 0 0 1px var(--tier),
-    0 0 0 3px color-mix(in srgb, var(--tier) 16%, transparent),
-    0 18px 36px -18px color-mix(in srgb, var(--tier) 75%, transparent);
+    0 0 0 3px color-mix(in srgb, var(--tier) 16%, transparent);
 }
 
 /* The radio itself spans its whole tier, so the target is the card a player taps (WCAG 2.5.8): on a
@@ -193,7 +192,7 @@
   width: 24px;
   height: 24px;
   border: 2px solid color-mix(in srgb, var(--tier) 45%, color-mix(in srgb, var(--tavern-brass) 55%, transparent));
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--tavern-well);
   pointer-events: none;
 }
@@ -202,9 +201,9 @@
   content: "";
   width: 9px;
   height: 9px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--tier);
-  box-shadow: 0 0 8px var(--tier);
+  box-shadow: none;
   transform: rotate(45deg) scale(0);
   transition: transform calc(140ms * var(--anim-scale, 1)) ease-out;
 }
@@ -234,14 +233,14 @@
 
 .practice-tier__name {
   color: var(--tavern-parchment);
-  font-size: 20px;
+  font-size: var(--type-2xl);
   font-weight: 700;
   line-height: 1.2;
 }
 
 .practice-tier__tagline {
   color: var(--tavern-text-dim);
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .practice-tier__stats {
@@ -259,7 +258,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .practice-tier__stat-label {
@@ -281,7 +280,7 @@
 .practice-tier__stat[data-ahead="true"] .practice-tier__stat-value::before {
   content: "\25B2\00A0";
   content: "\25B2\00A0" / "";
-  font-size: 9px;
+  font-size: var(--type-xs);
   vertical-align: 1px;
 }
 
@@ -293,7 +292,7 @@
   gap: 16px 20px;
   padding: 16px 18px;
   border: 1px solid color-mix(in srgb, var(--tavern-brass) 30%, transparent);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--tavern-wood-deep) 72%, transparent);
 }
 
@@ -303,8 +302,8 @@
   align-items: flex-start;
   gap: 8px;
   max-width: 320px;
-  color: var(--tavern-parchment, #efe0bf);
-  font-size: 14px;
+  color: var(--tavern-parchment, var(--pal-parchment));
+  font-size: var(--type-md);
   line-height: 1.35;
   cursor: var(--cursor-glove-point, pointer);
 }
@@ -314,7 +313,7 @@
   width: 18px;
   height: 18px;
   margin: 1px 0 0;
-  accent-color: var(--tavern-brass, #c9a25b);
+  accent-color: var(--tavern-brass, var(--pal-brass-500));
 }
 
 .practice-setup__sandbox-label {
@@ -324,7 +323,7 @@
 
 .practice-setup__sandbox-note {
   display: block;
-  font-size: 12px;
+  font-size: var(--type-sm);
   color: var(--tavern-text-dim, #b8a98a);
 }
 
@@ -339,7 +338,7 @@
 .practice .practice-daily {
   min-height: 56px;
   padding: 12px 20px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--bg-raised);
   font-size: var(--type-lg);
   font-weight: 650;
@@ -381,12 +380,8 @@
   min-height: 48px;
   padding: 10px 42px 10px 14px;
   border: 1px solid color-mix(in srgb, var(--tavern-brass) 55%, transparent);
-  border-radius: 10px;
-  background: linear-gradient(
-    180deg,
-    var(--tavern-well),
-    color-mix(in srgb, var(--tavern-well) 70%, var(--tavern-wood-deep))
-  );
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--tavern-well) 70%, var(--tavern-wood-deep));
   color: var(--tavern-parchment);
   font: inherit;
   font-weight: 550;
@@ -400,7 +395,7 @@
 
 .app-shell .practice-setup__hint {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--type-md);
 }
 
 /* ---- the chosen deck: name, identity, curve and cards ------------------------------------- */
@@ -416,7 +411,7 @@
   margin-top: 6px;
   padding: 12px 14px;
   border: 1px solid color-mix(in srgb, var(--tavern-brass) 30%, transparent);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--tavern-well);
 }
 
@@ -424,7 +419,7 @@
   grid-area: title;
   margin: 0;
   color: var(--tavern-parchment);
-  font-size: 16px;
+  font-size: var(--type-lg);
   font-weight: 750;
 }
 
@@ -432,7 +427,7 @@
   grid-area: identity;
   margin: 0;
   color: var(--tavern-text-dim);
-  font-size: 14px;
+  font-size: var(--type-md);
   line-height: 1.35;
 }
 
@@ -440,7 +435,7 @@
   grid-area: cards;
   margin: 4px 0 0;
   color: var(--tavern-text-dim);
-  font-size: 14px;
+  font-size: var(--type-md);
 }
 
 /* A Hearthstone-style curve: one column per cost, the count above, the cost below. */
@@ -460,7 +455,7 @@
   width: 16px;
   height: 100%;
   color: var(--tavern-text-dim);
-  font-size: 10px;
+  font-size: var(--type-xs);
   font-variant-numeric: tabular-nums;
 }
 
@@ -468,8 +463,8 @@
   align-self: end;
   width: 100%;
   min-height: 2px;
-  border-radius: 3px 3px 0 0;
-  background: linear-gradient(180deg, #7fb4ff, #2f6fd6);
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+  background: var(--pal-blue-600);
 }
 
 .deck-preview__bar[data-count="0"] .deck-preview__bar-fill {
@@ -506,7 +501,7 @@
   padding: 2px 0;
   break-inside: avoid;
   color: var(--tavern-parchment);
-  font-size: 13px;
+  font-size: var(--type-md);
 }
 
 .deck-preview__cost {
@@ -515,12 +510,12 @@
   place-items: center;
   width: 20px;
   height: 20px;
-  border-radius: 6px;
-  background: linear-gradient(160deg, #7fb4ff 0%, #2f6fd6 55%, #1c3f86 100%);
-  color: #fff;
-  font-size: 11px;
+  border-radius: var(--radius-sm);
+  background: #1c3f86;
+  color: var(--pal-white);
+  font-size: var(--type-xs);
   font-weight: 800;
-  text-shadow: 0 1px 0 rgb(0 0 0 / 60%);
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
 
 .deck-preview__name {
@@ -540,8 +535,8 @@
   min-width: 220px;
   min-height: 56px;
   padding: 12px 36px;
-  border-radius: 12px;
-  font-size: 18px;
+  border-radius: var(--radius-md);
+  font-size: var(--type-xl);
   font-weight: 700;
   transition:
     transform calc(120ms * var(--anim-scale, 1)),
@@ -566,7 +561,7 @@
 
 .app-shell .practice-stage__status {
   color: var(--text);
-  font-size: 16px;
+  font-size: var(--type-lg);
   font-weight: 550;
 }
 
@@ -584,7 +579,7 @@
   height: 80px;
   margin: -40px 0 0 -29px;
   border: 1px solid color-mix(in srgb, var(--you) 55%, var(--line-bright));
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: repeating-linear-gradient(
     45deg,
     color-mix(in srgb, var(--you) 24%, var(--bg-raised)) 0 6px,
@@ -592,31 +587,31 @@
   );
   box-shadow:
     inset 0 0 0 3px color-mix(in srgb, var(--bg-sunken) 55%, transparent),
-    0 8px 18px -8px rgb(0 0 0 / 85%);
+    var(--shadow-2);
 }
 
 .practice-shuffle span:nth-child(1) {
   transform: translateX(-24px) rotate(-10deg);
-  animation: practice-shuffle-a calc(1.2s * var(--anim-scale, 1)) ease-in-out infinite;
+  animation: practice-shuffle-a calc(1.2s * var(--anim-scale, 1)) ease-in-out 1;
 }
 
 .practice-shuffle span:nth-child(2) {
-  z-index: 1;
+  z-index: var(--z-content);
 }
 
 .practice-shuffle span:nth-child(3) {
   transform: translateX(24px) rotate(10deg);
-  animation: practice-shuffle-b calc(1.2s * var(--anim-scale, 1)) ease-in-out infinite;
+  animation: practice-shuffle-b calc(1.2s * var(--anim-scale, 1)) ease-in-out 1;
 }
 
 @keyframes practice-shuffle-a {
   0%,
   100% {
-    z-index: 0;
+    z-index: var(--z-base);
     transform: translateX(-24px) rotate(-10deg);
   }
   50% {
-    z-index: 2;
+    z-index: var(--z-raised);
     transform: translateX(24px) rotate(8deg);
   }
 }
@@ -624,11 +619,11 @@
 @keyframes practice-shuffle-b {
   0%,
   100% {
-    z-index: 2;
+    z-index: var(--z-raised);
     transform: translateX(24px) rotate(10deg);
   }
   50% {
-    z-index: 0;
+    z-index: var(--z-base);
     transform: translateX(-24px) rotate(-8deg);
   }
 }
@@ -663,15 +658,15 @@
   padding: 6px 8px 6px 12px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--tier) 28%, var(--line));
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: linear-gradient(
     180deg,
     color-mix(in srgb, var(--bg-raised) 94%, transparent),
     color-mix(in srgb, var(--bg) 90%, transparent)
   );
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 4%),
-    0 10px 22px -14px rgb(0 0 0 / 90%),
+    inset 0 1px 0 color-mix(in srgb, var(--pal-white) 4%, transparent),
+    var(--shadow-2),
     var(--hud-band);
   color: var(--text-dim);
   backdrop-filter: blur(8px);
@@ -683,9 +678,8 @@
 .practice-hud[data-thinking="true"] {
   border-color: color-mix(in srgb, var(--opponent) 60%, var(--line));
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 4%),
-    0 10px 22px -14px rgb(0 0 0 / 90%),
-    0 0 22px -8px color-mix(in srgb, var(--opponent) 70%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--pal-white) 4%, transparent),
+    var(--shadow-2),
     var(--hud-band);
 }
 
@@ -697,7 +691,6 @@
   left: 0;
   width: 35%;
   height: 2px;
-  background: linear-gradient(90deg, transparent, var(--opponent), transparent);
   opacity: 0;
   transform: translateX(-100%);
   pointer-events: none;
@@ -705,7 +698,7 @@
 
 .practice-hud[data-thinking="true"]::after {
   opacity: 1;
-  animation: practice-scan calc(1.4s * var(--anim-scale, 1)) linear infinite;
+  animation: practice-scan calc(1.4s * var(--anim-scale, 1)) linear 1;
 }
 
 @keyframes practice-scan {
@@ -733,15 +726,13 @@
 
 .practice-hud__mode {
   color: var(--text-dim);
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 650;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .practice-hud__label strong {
   color: color-mix(in srgb, var(--tier) 75%, var(--text));
-  font-size: 14px;
+  font-size: var(--type-md);
   font-weight: 700;
 }
 
@@ -750,7 +741,7 @@
   padding-left: 14px;
   border-left: 1px solid var(--line);
   color: var(--text-dim);
-  font-size: 12px;
+  font-size: var(--type-sm);
   white-space: nowrap;
 }
 
@@ -770,7 +761,7 @@
   padding: 6px 14px;
   border-color: var(--line-bright);
   background: transparent;
-  font-size: 13px;
+  font-size: var(--type-md);
   white-space: nowrap;
 }
 
@@ -783,13 +774,11 @@
   min-height: 32px;
   padding: 4px 16px;
   border: 1px solid var(--line-bright);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bg-sunken);
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-weight: 750;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
 }
 
 .practice .practice-hud__outcome[data-outcome="win"] {
@@ -813,11 +802,11 @@
   min-height: 30px;
   padding: 4px 14px 4px 6px;
   border: 1px solid color-mix(in srgb, var(--opponent) 55%, var(--line-bright));
-  border-radius: 999px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--opponent) 18%, var(--bg-sunken)), var(--bg-sunken));
-  box-shadow: 0 0 14px -4px color-mix(in srgb, var(--opponent) 70%, transparent);
+  border-radius: var(--radius-pill);
+  background: var(--bg-sunken);
+  box-shadow: none;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--type-md);
   font-weight: 600;
   white-space: nowrap;
   animation: practice-pill-in calc(220ms * var(--anim-scale, 1)) ease-out both;
@@ -834,25 +823,19 @@
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 50%;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0 30%,
-    color-mix(in srgb, var(--opponent) 70%, transparent) 65%,
-    color-mix(in srgb, var(--opponent) 35%, white) 100%
-  );
-  -webkit-mask: radial-gradient(circle, transparent 6px, #000 6.5px);
-  mask: radial-gradient(circle, transparent 6px, #000 6.5px);
-  animation: practice-spin calc(0.9s * var(--anim-scale, 1)) linear infinite;
+  border-radius: var(--radius-round);
+  -webkit-mask: radial-gradient(circle, transparent 6px, var(--pal-black) 6.5px);
+  mask: radial-gradient(circle, transparent 6px, var(--pal-black) 6.5px);
+  animation: practice-spin calc(0.9s * var(--anim-scale, 1)) linear 1;
 }
 
 .practice-thinking__core {
   position: absolute;
   inset: 6.5px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--opponent);
-  box-shadow: 0 0 8px var(--opponent);
-  animation: practice-pulse calc(1.2s * var(--anim-scale, 1)) ease-in-out infinite;
+  box-shadow: none;
+  animation: practice-pulse calc(1.2s * var(--anim-scale, 1)) ease-in-out 1;
 }
 
 @keyframes practice-spin {
@@ -900,14 +883,13 @@
   width: min(420px, 100%);
   padding: 26px 24px 20px;
   border: 1px solid color-mix(in srgb, var(--glow) 45%, var(--line));
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(120% 60% at 50% 0%, color-mix(in srgb, var(--glow) 16%, transparent), transparent 70%),
     linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
   box-shadow:
-    0 0 0 1px rgb(0 0 0 / 40%),
-    0 30px 80px -20px rgb(0 0 0 / 90%),
-    0 0 70px -24px color-mix(in srgb, var(--glow) 70%, transparent);
+    0 0 0 1px color-mix(in srgb, var(--pal-black) 40%, transparent),
+    var(--shadow-3);
   text-align: center;
   animation: practice-result-in calc(420ms * var(--anim-scale, 1)) cubic-bezier(0.2, 1.3, 0.4, 1)
     calc(300ms * var(--anim-scale, 1)) both;
@@ -932,15 +914,15 @@
 .practice-result__rays {
   position: absolute;
   inset: -34px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: repeating-conic-gradient(
     from 0deg,
     color-mix(in srgb, var(--glow) 40%, transparent) 0 6deg,
     transparent 6deg 18deg
   );
-  -webkit-mask: radial-gradient(circle, #000 18%, transparent 68%);
-  mask: radial-gradient(circle, #000 18%, transparent 68%);
-  animation: practice-spin calc(28s * var(--anim-scale, 1)) linear infinite;
+  -webkit-mask: radial-gradient(circle, var(--pal-black) 18%, transparent 68%);
+  mask: radial-gradient(circle, var(--pal-black) 18%, transparent 68%);
+  animation: practice-spin calc(28s * var(--anim-scale, 1)) linear 1;
 }
 
 .practice-result[data-outcome="loss"] .practice-result__rays,
@@ -970,7 +952,7 @@
   width: 6px;
   height: 6px;
   margin: -3px 0 0 -3px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle, #fff7d6 0 30%, var(--radiant) 55%, transparent 72%);
   box-shadow: 0 0 8px 2px color-mix(in srgb, var(--radiant) 70%, transparent);
   opacity: 0;
@@ -988,13 +970,13 @@
     --drift: calc(22px * sin(var(--i) * 1.7rad));
     width: 5px;
     height: 5px;
-    background: radial-gradient(circle, #ffd2b8 0 25%, #e0663a 55%, transparent 72%);
-    box-shadow: 0 0 6px 1px rgb(224 102 58 / 55%);
+    background: radial-gradient(circle, var(--pal-parchment) 0 25%, var(--pal-lacquer-400) 55%, transparent 72%);
+    box-shadow: 0 0 6px 1px color-mix(in srgb, var(--pal-lacquer-400) 55%, transparent);
     rotate: none;
     top: 62%;
     left: calc(22% + 56% * var(--i) / var(--n));
     animation: practice-ember calc(2.4s * var(--anim-scale, 1)) ease-out
-      calc(0.6s * var(--anim-scale, 1) + 130ms * var(--i)) infinite;
+      calc(0.6s * var(--anim-scale, 1) + 130ms * var(--i)) 1;
   }
 }
 
@@ -1028,39 +1010,30 @@
 
 /* A lost tier's crest goes to ash under the red light. */
 .practice-result[data-outcome="loss"] .practice-result__emblem .practice-crest {
-  filter: grayscale(1) brightness(0.72) drop-shadow(0 6px 18px rgb(0 0 0 / 70%));
+  filter: grayscale(1) brightness(0.72) drop-shadow(0 6px 18px color-mix(in srgb, var(--pal-black) 70%, transparent));
 }
 
 .app-shell .practice-result .dialog__title {
   margin: 2px 0 0;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--glow) 30%, white),
-    var(--glow) 58%,
-    color-mix(in srgb, var(--glow) 62%, black)
-  );
+  background: var(--glow);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
   font-size: 46px;
   font-weight: 800;
   line-height: 1;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  filter: drop-shadow(0 2px 0 rgb(0 0 0 / 60%)) drop-shadow(0 0 18px color-mix(in srgb, var(--glow) 45%, transparent));
+  filter: drop-shadow(0 2px 0 color-mix(in srgb, var(--pal-black) 60%, transparent)) drop-shadow(0 0 18px color-mix(in srgb, var(--glow) 45%, transparent));
 }
 
 .app-shell .practice-result .dialog__body {
   color: var(--text);
-  font-size: 16px;
+  font-size: var(--type-lg);
 }
 
 .app-shell .practice-result__meta {
   color: var(--text-dim);
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
 }
 
 .practice-result .dialog__actions {
@@ -1072,8 +1045,8 @@
 
 .practice .practice-result__secondary {
   min-height: 56px;
-  border-radius: 12px;
-  font-size: 15px;
+  border-radius: var(--radius-md);
+  font-size: var(--type-lg);
   font-weight: 650;
 }
 
@@ -1090,7 +1063,7 @@
 
 .practice .practice-result__replay .practice-result__secondary {
   min-height: 44px;
-  font-size: 14px;
+  font-size: var(--type-md);
 }
 
 .practice .practice-result__view {
@@ -1146,7 +1119,7 @@
     max-width: none;
     padding: 14px;
     border: 1px solid color-mix(in srgb, var(--tavern-brass) 30%, transparent);
-    border-radius: 14px;
+    border-radius: var(--radius-lg);
     background: color-mix(in srgb, var(--tavern-wood-deep) 72%, transparent);
   }
 
@@ -1156,7 +1129,7 @@
   .tavern.practice--lobby .practice-setup button.practice-play {
     position: sticky;
     bottom: max(12px, env(safe-area-inset-bottom));
-    z-index: 5;
+    z-index: var(--z-popover);
     align-self: center;
     width: min(100%, 440px);
     min-width: 0;
@@ -1210,7 +1183,7 @@
   .practice-tier__stat {
     justify-content: space-between;
     min-width: 0;
-    font-size: 12px;
+    font-size: var(--type-sm);
   }
 }
 
@@ -1227,14 +1200,14 @@
     max-width: none;
     padding: 14px 18px;
     border: 1px solid color-mix(in srgb, var(--tavern-brass) 30%, transparent);
-    border-radius: 14px;
+    border-radius: var(--radius-lg);
     background: color-mix(in srgb, var(--tavern-wood-deep) 72%, transparent);
   }
 
   .tavern.practice--lobby .practice-setup button.practice-play {
     position: sticky;
     bottom: max(14px, env(safe-area-inset-bottom));
-    z-index: 5;
+    z-index: var(--z-popover);
     align-self: center;
     box-shadow: var(--primary-shadow), 0 0 0 14px var(--tavern-night);
   }
@@ -1292,11 +1265,11 @@
   }
 
   .practice-tier__name {
-    font-size: 16px;
+    font-size: var(--type-lg);
   }
 
   .practice-tier__tagline {
-    font-size: 12px;
+    font-size: var(--type-sm);
   }
 
   .practice-tier__stats {
@@ -1307,7 +1280,7 @@
   }
 
   .practice-tier__stat {
-    font-size: 12px;
+    font-size: var(--type-sm);
   }
 
   .practice-setup__footer {
@@ -1538,7 +1511,7 @@
 /* While the AI thinks, its hero breathes a ring in the opponent's color: the other seat is
    visibly "on". Not while the hero animates, so animations.css's damage shake and the like win. */
 .practice-table[data-thinking="true"] .hero-opponent:not([data-animating]) {
-  animation: practice-hero-think calc(1.4s * var(--anim-scale, 1)) ease-in-out infinite;
+  animation: practice-hero-think calc(1.4s * var(--anim-scale, 1)) ease-in-out 1;
 }
 
 @keyframes practice-hero-think {

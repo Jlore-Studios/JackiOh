@@ -1,18 +1,58 @@
-/* The board's named surfaces (#2109): every corner radius, every stacking level and every
-   neutral shadow depth a board stylesheet may use (src/surfaces.test.ts). A radius is a px size,
-   smallest first, except the pill and the round; a shadow is a neutral drop, weakest first, with
-   the inset top highlight last; a layer holds its level's current number, deepest first, so what
-   sits on top of what is unchanged by construction — a new level takes its own number in the same
-   change. Token counts are SURFACE_RADII, SURFACE_SHADOWS and SURFACE_LAYERS there. */
+/* The board's named surfaces (#2109, #5015): every corner radius, every stacking level and every
+   neutral shadow depth a stylesheet may use (src/surfaces.test.ts). No other sheet writes a radius
+   length: a border-radius is 0, inherit or these tokens. The radii come in four groups: the corner
+   scale, px sizes smallest first; the pill, the round and the switch; a card face's own cuts, kept as
+   its frame art is cut; and the shapes the effects and the table's marks draw. A shadow is a neutral
+   drop, weakest first, with the inset top highlight last; a layer holds its level's current number,
+   deepest first, so what sits on top of what is unchanged by construction — a new level takes its own
+   number in the same change. Token counts are SURFACE_RADII, SURFACE_SHADOWS and SURFACE_LAYERS there.
+   None is registered with @property, so a cqh, em or % radius resolves on the element that uses it. */
 
 :root {
-  --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 22px;
+  /* The corner scale: tight, for wood and brass; nothing past lg. */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  /* The pill, for chips, badges and toggles only (PILL_RULES); the round, for coins, gems, avatars and
+     dots; the switch, the pill of a settings switch's 30 px track inside its 7 px of vertical padding. */
   --radius-pill: 999px;
   --radius-round: 50%;
+  --radius-switch: 15px / 22px;
+  /* A card face's own cuts, in src/cards/ and wherever a face is drawn: kept as the frame art is cut,
+     sized relative to the face. */
+  --radius-card: 7% / 5%;
+  --radius-card-scale: 6% / 4.3%;
+  --radius-card-minion: 12% / 9%;
+  --radius-card-minion-scale: 10.7% / 8%;
+  --radius-card-edge: 10% / 7%;
+  --radius-art-portrait: 48% 48% 40% 40% / 55% 55% 45% 45%;
+  --radius-art-window: 6% / 8%;
+  --radius-art-arch: 50% 50% 4% 4% / 40% 40% 4% 4%;
+  --radius-card-gem: 0.6cqh;
+  --radius-card-text: 2.5cqw;
+  --radius-card-name: 2.2cqh;
+  --radius-card-name-core: 3.8cqh;
+  --radius-card-name-minion: 1.2cqh;
+  --radius-card-tag: 2.3cqh;
+  --radius-card-chip: max(3px, 2cqmin);
+  --radius-card-plate: 0.8cqmin;
+  --radius-card-armor: 20% 20% 45% 45%;
+  --radius-card-brittle: 18%;
+  --radius-card-inline: 0.2em;
+  --radius-card-kw-chip: 0.3em;
+  /* The shapes the effects and the table's marks draw. */
+  --radius-blob-a: 42% 58% 63% 37% / 41% 44% 56% 59%;
+  --radius-blob-b: 63% 37% 41% 59% / 58% 36% 64% 42%;
+  --radius-blob-c: 37% 63% 55% 45% / 35% 62% 38% 65%;
+  --radius-fog: 45% / 50%;
+  --radius-sweep: 6%;
+  --radius-flame: 50% 50% 45% 45% / 30% 30% 70% 70%;
+  --radius-trail: 50% 50% 0 0 / 20% 20% 0 0;
+  --radius-sand: 50% 43% 52% 45%;
+  --radius-parchment: 52% 46% 55% 44%;
+  --radius-petal: 80% 0;
+  --radius-leaf: 0 100%;
 
   --shadow-1: 0 1px 3px color-mix(in srgb, var(--pal-black) 55%, transparent);
   --shadow-2: 0 4px 12px color-mix(in srgb, var(--pal-black) 50%, transparent);

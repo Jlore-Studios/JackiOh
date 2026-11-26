@@ -166,10 +166,18 @@ fn r1846000_the_query_draws_each_list_from_the_sets_that_ship() {
     }
 }
 
+// R1846001, R4577000: since the Infinite Assault opened (#4597), an `everySet` pool adds its cards, and
+// only theirs, to the pool of the sets that ship: the first single-player set to hold a card.
 #[test]
-fn r1846001_every_set_adds_nothing_until_a_single_player_set_holds_a_card() {
+fn r1846001_every_set_adds_the_open_single_player_sets_cards() {
     register_all();
-    assert!(CATALOG.values().all(|def| !SINGLE_PLAYER_SETS.contains(&def.set)));
+    let single_player: Vec<&str> = CATALOG
+        .values()
+        .filter(|def| SINGLE_PLAYER_SETS.contains(&def.set))
+        .map(|def| def.set.as_str())
+        .collect();
+    assert!(!single_player.is_empty());
+    assert!(single_player.iter().all(|set| *set == "Infinite Assault"));
     let busted = CardQuery {
         busted: Some(true),
         ..CardQuery::default()
@@ -178,7 +186,14 @@ fn r1846001_every_set_adds_nothing_until_a_single_player_set_holds_a_card() {
         every_set: Some(true),
         ..busted.clone()
     };
-    assert_eq!(ids_of_defs(query(&every)), ids_of_defs(query(&busted)));
+    let shipped = ids_of_defs(query(&busted));
+    let added: Vec<String> = ids_of_defs(query(&every))
+        .into_iter()
+        .filter(|id| !shipped.contains(id))
+        .collect();
+    assert!(!added.is_empty(), "everySet adds the Assault's BUSTED cards");
+    assert!(added.iter().all(|id| id.starts_with("infiniteassault-")));
+    assert!(shipped.iter().all(|id| ids_of_defs(query(&every)).contains(id)));
 }
 
 #[test]
@@ -323,6 +338,9 @@ fn r1846000_a_comment_goes_and_a_string_or_character_literal_stays_code() {
         // A raw string ends at its own quote and hashes, and a backslash in it escapes nothing.
         (r#"let s = r"a\"; // c"#, &[r#"let s = r"a\"; "#]),
         (r#"let b = br"a\"; // c"#, &[r#"let b = br"a\"; "#]),
+        // A name run into a quote opens a plain string, not a raw one: classify reads TypeScript
+        // here (R2050000).
+        (r#"x = bar"a\" // b"; // c"#, &[r#"x = bar"a\" // b"; "#]),
         (r##"let s = r#"a\"#; // c"##, &[r##"let s = r#"a\"#; "##]),
         (
             r##"let s = r#"say "hi" // x"#; // c"##,

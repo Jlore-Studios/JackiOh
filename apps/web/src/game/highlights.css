@@ -11,8 +11,8 @@
  * green. On a hand card that can't be played it shows nothing, as in Hearthstone.
  *
  * The contract the component spec measures: a glowing element's FIRST box-shadow layer is
- * `0 0 0 2px <token>`, unmixed, so its computed value contains rgb(74, 222, 128) or
- * rgb(250, 204, 21) exactly. The halo after it is mixed with transparent and never serializes as
+ * `0 0 0 2px <token>`, unmixed, so its computed value contains rgb(78, 201, 138) or
+ * rgb(240, 192, 74) exactly. The halo after it is mixed with transparent and never serializes as
  * either plain color. Nothing here keys off `data-legal`: a legal element without glow gets no
  * color. A selected element (`data-selected="true"`) is left to board.css's own selection styling,
  * which stays on top of both glows.
@@ -24,11 +24,11 @@
  */
 
 :root {
-  --glow-ready: var(--pal-green-400);
-  --glow-condition: var(--pal-yellow-400);
-  --glow-counted: var(--pal-purple-400);
-  --glow-pareto: var(--pal-cyan-400);
-  --glow-lethal: var(--pal-red-400);
+  --glow-ready: var(--pal-jade-400);
+  --glow-condition: var(--pal-gold-400);
+  --glow-counted: var(--pal-amethyst-300);
+  --glow-pareto: var(--pal-verdigris-400);
+  --glow-lethal: var(--pal-lacquer-400);
 }
 
 /* Green: anything the board marks ready. The element-specific selectors outrank a board.css rule

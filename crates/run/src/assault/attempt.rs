@@ -5,7 +5,7 @@ use jackioh_engine::catalog::registered_catalog;
 use jackioh_engine::config::{HUMAN_HANDICAP, MAX_COPIES};
 use jackioh_engine::replay::ReplayInput;
 use jackioh_engine::state::validate_deck_with;
-use jackioh_engine::wire::PlayerId;
+use jackioh_engine::wire::{GameOverReason, PlayerId};
 
 use crate::RunAction;
 use crate::assault::{
@@ -13,7 +13,7 @@ use crate::assault::{
     AssaultState, checkpoints, commander_rank,
 };
 use crate::config::{ASSAULT_LEVELS, ASSAULT_SET};
-use crate::fight::fight_report;
+use crate::fight::{VOIDED_FIGHT, fight_report};
 
 /// IA6: an attempt at its start: the setup checked against the day and the record. The deck is
 /// checked at create, as a dungeon run's starting deck is: an attempt lasts one day, so
@@ -183,8 +183,8 @@ pub fn assault_fight_setup(state: &AssaultState, day: &AssaultDay) -> Option<Ass
         enemy_deck: level.deck.clone(),
         enemy_handicap: level.handicap,
         enemy_marks: level.marks.clone(),
-        // R4595000: the enemy's deck is the Assault's set, and the game says so; a deck of the shipped
-        // stand-ins dealt while the set is held names none, and samples every set as any game does.
+        // R4595000, R4597001: the enemy's deck is the Assault's set, and the game says so, which lets the
+        // seat hold the set's cards; a deck of the placeholder's shipped stand-ins names none.
         enemy_sets: if level.deck.iter().all(|id| {
             registered_catalog()
                 .get(id)
@@ -199,12 +199,17 @@ pub fn assault_fight_setup(state: &AssaultState, day: &AssaultDay) -> Option<Ass
 }
 
 /// IA6, IA15: the `AssaultAction::FightOver` a finished fight sends, folded from its record as a
-/// dungeon fight's is. A draw at the turn cap is a loss: no winner is the human's win.
+/// dungeon fight's is. A draw at the turn cap is a loss: no winner is the human's win. A fight a Glitch
+/// voids never happened ([[R679]]): it is refused, and the attempt deals it again from the same setup
+/// ([[R4999000]]).
 pub fn assault_fight_report(game: &ReplayInput, human: PlayerId) -> Result<AssaultAction, String> {
-    // #4852: a void still reads as a lost fight here, as it did before R4852000 dealt a voided dungeon
-    // fight again; the Assault's own reading is #4576's to make.
-    let (_, RunAction::FightOver { won, turns, .. }) = fight_report(game, human)? else {
+    let (reason, RunAction::FightOver { won, turns, .. }) = fight_report(game, human)? else {
         return Err("the fight is not over: only a finished fight reports".into());
     };
+    // R4999000: a voided fight never happened (R679): it reports nothing, and the caller deals
+    // the same level again from the same setup, as a dungeon run does (R4852000).
+    if reason == GameOverReason::Voided {
+        return Err(VOIDED_FIGHT.to_string());
+    }
     Ok(AssaultAction::FightOver { won, turns })
 }

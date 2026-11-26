@@ -15,7 +15,7 @@
 .cf {
   --cf-state-better: #7dff9a;
   --cf-state-worse: #ff6b6b;
-  --cf-state-tuned: #ffd24a;
+  --cf-state-tuned: var(--pal-gold-300);
   /* On the parchment rules box: dark enough to read on every stop of its gradient. */
   --cf-tuned-better-ink: #13692a;
   --cf-tuned-worse-ink: #a3120f;
@@ -46,11 +46,11 @@
   flex: none;
   width: var(--cf-state-size);
   height: var(--cf-state-size);
-  border-radius: 50%;
-  background: radial-gradient(circle at 40% 35%, #2b3142, #0d1018 75%);
+  border-radius: var(--radius-round);
+  background: radial-gradient(circle at 40% 35%, var(--pal-slate-800), var(--pal-wood-900) 75%);
   box-shadow:
-    0 0 0 max(1px, 0.5cqw) rgb(232 236 248 / 0.75),
-    0 0.3cqh 0.8cqh rgb(0 0 0 / 0.6);
+    0 0 0 max(1px, 0.5cqw) color-mix(in srgb, var(--pal-slate-100) 75%, transparent),
+    0 0.3cqh 0.8cqh color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
 
 .cf .cf-state > .cf-icon {
@@ -60,24 +60,24 @@
 
 .cf .cf-state-text {
   position: relative;
-  color: #fff;
+  color: var(--pal-white);
   font-size: calc(var(--cf-state-size) * 0.58);
   font-weight: 900;
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  text-shadow: 0 0 2px #000, 0 1px 2px #000;
+  text-shadow: 0 0 2px var(--pal-black), 0 1px 2px var(--pal-black);
 }
 
 /* R385: the cracked pane, square rather than round so Brittle reads apart from the rest. */
 .cf .cf-state[data-state="brittle"] {
-  border-radius: 18%;
+  border-radius: var(--radius-card-brittle);
   background: none;
-  box-shadow: 0 0.3cqh 0.8cqh rgb(0 0 0 / 0.6);
+  box-shadow: 0 0.3cqh 0.8cqh color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
 
 /* B5 E35: Berserk, the sword on a blood-red disc. */
 .cf .cf-state[data-state="berserk"] {
-  background: radial-gradient(circle, #b3122e 0%, #5a0716 100%);
+  background: radial-gradient(circle, #b3122e 0%, var(--pal-lacquer-900) 100%);
 }
 
 /* R1174000: Frozen, the snowflake on an ice-blue disc (cards/marks.ts's cyan). */
@@ -97,21 +97,21 @@
 
 /* R1852000: a Starship, the comet and its piece count on a deep-space disc, brighter once launched. */
 .cf .cf-state[data-state="starship"] {
-  background: radial-gradient(circle, #5b8cff 0%, #10183d 100%);
+  background: radial-gradient(circle, #5b8cff 0%, var(--pal-slate-900) 100%);
 }
 
 /* R3536005: Evolved, the star on a green disc. */
 .cf .cf-state[data-state="evolved"] {
-  background: var(--pal-green-500);
+  background: var(--pal-jade-500);
 }
 
 /* R3536005: an Evolved card glows green. */
 .cf[data-evolved="true"] {
-  box-shadow: 0 0 8px 2px color-mix(in srgb, var(--pal-green-400) 70%, transparent);
+  box-shadow: 0 0 8px 2px color-mix(in srgb, var(--pal-jade-400) 70%, transparent);
 }
 
 .cf .cf-state[data-state="starship"][data-starship="launched"] {
-  background: radial-gradient(circle, #ffd36b 0%, #7a3d00 100%);
+  background: radial-gradient(circle, var(--pal-gold-300) 0%, var(--pal-wood-600) 100%);
 }
 
 /* R386: the card's tuned mark, ▲ Buffed, ▼ Nerfed, ◆ Tuned (R1320). */
@@ -132,10 +132,10 @@
   width: auto;
   min-width: var(--cf-state-size);
   padding: 0 0.3em;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   box-shadow:
-    0 0 0 max(1px, 0.5cqw) var(--radiant, #ffd24a),
-    0 0.3cqh 0.8cqh rgb(0 0 0 / 0.6);
+    0 0 0 max(1px, 0.5cqw) var(--radiant, var(--pal-gold-300)),
+    0 0.3cqh 0.8cqh color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
 
 .cf .cf-state[data-state="quest"] .cf-state-text {
@@ -147,10 +147,10 @@
   width: auto;
   min-width: var(--cf-state-size);
   padding: 0 0.3em;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   box-shadow:
-    0 0 0 max(1px, 0.5cqw) var(--text-dim, #9aa1b8),
-    0 0.3cqh 0.8cqh rgb(0 0 0 / 0.6);
+    0 0 0 max(1px, 0.5cqw) var(--text-dim, var(--pal-slate-400)),
+    0 0.3cqh 0.8cqh color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
 
 .cf .cf-state[data-state="questStage"] .cf-state-text {
@@ -164,10 +164,10 @@
   min-width: var(--cf-state-size);
   height: calc(var(--cf-state-size) * 0.8);
   padding: 0 0.2em;
-  border-radius: 999px;
-  background: #0d1018;
-  box-shadow: 0 0 0 1px rgb(232 236 248 / 0.75);
-  color: #fff;
+  border-radius: var(--radius-pill);
+  background: var(--pal-wood-900);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pal-slate-100) 75%, transparent);
+  color: var(--pal-white);
   font-size: calc(var(--cf-state-size) * 0.5);
   font-weight: 800;
   line-height: 1;
@@ -222,7 +222,7 @@
 /* A dotted box round the number, and ▲ or ▼ after it; the tooltip says what it was printed as. */
 .cf-tuned {
   padding: 0 0.12em;
-  border-radius: 0.2em;
+  border-radius: var(--radius-card-inline);
   outline: 0.09em dotted currentColor;
   outline-offset: -0.02em;
   font-weight: 800;
@@ -275,9 +275,9 @@
   place-items: center;
   width: 1.25em;
   height: 1.25em;
-  border-radius: 50%;
-  background: #0d1018;
-  box-shadow: 0 0 0 1px rgb(232 236 248 / 0.8);
+  border-radius: var(--radius-round);
+  background: var(--pal-wood-900);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pal-slate-100) 80%, transparent);
   font-size: max(5cqw, 7px);
   font-weight: 900;
   line-height: 1;
@@ -324,7 +324,7 @@
 .cf .cf-kw-chip {
   display: inline-block;
   padding: 0 0.3em;
-  border-radius: 0.3em;
+  border-radius: var(--radius-card-kw-chip);
   border: 0.1em solid currentColor;
   font-weight: 800;
   white-space: nowrap;
@@ -358,5 +358,5 @@
   z-index: 3;
   min-width: 1.4em;
   text-align: center;
-  box-shadow: 0 0 0 1px rgb(232 236 248 / 0.6);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--pal-slate-100) 60%, transparent);
 }

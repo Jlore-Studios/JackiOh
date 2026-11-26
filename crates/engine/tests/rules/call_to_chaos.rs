@@ -664,11 +664,13 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         let mut state = game(&seed, None);
         let mut events: Vec<GameEvent> = Vec::new();
         let me = chaos_card(&mut state, true, None);
-        let expected = labels_of(&roll_chaos_effects(
-            &mut Rng::new(&seed, 0),
-            true,
-            Some(CHAOS_EFFECTS),
-        ));
+        let roll = roll_chaos_effects(&mut Rng::new(&seed, 0), true, Some(CHAOS_EFFECTS));
+        let expected = labels_of(&roll);
+        // R4707000: each rolled entry's place in the table, and the table's size, for the game record.
+        let indices: Vec<usize> = roll
+            .iter()
+            .filter_map(|rolled| CHAOS_EFFECTS.iter().position(|entry| entry.name == rolled.name))
+            .collect();
 
         sink_events(&mut state, &mut events, |sink| {
             run(sink, call_to_chaos(CallToChaosArgs::default()), Some(&me), P1);
@@ -676,7 +678,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
 
         assert_eq!(
             json_of(events_of_type(&events, GameEventType::ChaosRolled)),
-            json!([{ "type": "chaosRolled", "player": "p1", "instanceId": me.id, "defId": chaos().id, "effects": expected }])
+            json!([{ "type": "chaosRolled", "player": "p1", "instanceId": me.id, "defId": chaos().id, "effects": expected, "indices": indices, "tableSize": CHAOS_EFFECTS.len() }])
         );
         assert_eq!(
             events.first().map(|event| event.event_type()),

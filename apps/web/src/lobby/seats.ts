@@ -70,7 +70,7 @@ export function deckWords(seat: LobbySeat): string {
       return t("Choosing a deck…");
     case "ready":
       // The mark is a glyph beside the word, not a word of the sentence.
-      return `✓ ${t("Ready")}`;
+      return t("Ready");
     case "chosen":
       if (seat.deck !== null) return seat.deck;
       return seat.random ? t("Random deck") : t("Deck chosen");

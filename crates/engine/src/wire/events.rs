@@ -245,6 +245,27 @@ impl RollResult {
     }
 }
 
+/// R4707000: the faces a die's card checks for, `from` to `to` inclusive (Dice of Doom's 67 is 67 to 67),
+/// on a `rolled` batch whose card branches on them, so the game record keeps whether each die landed there.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct RollHit {
+    pub from: i32,
+    pub to: i32,
+}
+
+impl RollHit {
+    /// Whether `face` is one the card checks for.
+    pub fn holds(self, face: i32) -> bool {
+        (self.from..=self.to).contains(&face)
+    }
+}
+
 /// `{ winner: PlayerId | "draw"; reason: GameOverReason }`: how a game ended (`GameState.result`,
 /// `PlayerView.result`).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -966,6 +987,16 @@ pub enum GameEvent {
         instance_id: String,
         def_id: String,
         effects: Vec<String>,
+        /// R4707000: each rolled effect's place in its card's table, beside `effects`; absent for a list
+        /// done whole, which drew nothing. The game record's: no rule reads it (`as_rules_read`), no view
+        /// forwards it.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        indices: Option<Vec<i32>>,
+        /// R4707000: how many entries the table holds, set with `indices`; the game record's likewise.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        table_size: Option<i32>,
     },
     /// B5 E22: a card left the field and came back into the same zone at once (R78's reset, no Cry, no Death).
     Flickered {
@@ -1057,6 +1088,19 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         via: Option<KeywordKind>,
+    },
+    /// R5045000: a damage pool (`StaticFlags.damage_pool`, R3550004) nullified `amount` of a hit on
+    /// `target_id` at §4.4 step 3b — `instance_id` is the card whose pool took it, S+ #42 Force Projector
+    /// or S+ #123 Oct, one report per pool card in R68's order, emitted as the hit lands (R4022000)
+    /// whether the pool took it whole or only part. A report nothing answers: it takes no number in
+    /// R68's order and moves no hash. `source_id`, `target_id` and `combat` are `damage`'s, redacted as
+    /// `damage`'s are (R97); the pool card is on the field face up, public.
+    DamageNullified {
+        instance_id: String,
+        source_id: Option<String>,
+        target_id: String,
+        amount: i32,
+        combat: bool,
     },
     /// R3857000: `player`'s hero gained `amount` Armor it keeps (`effects::gain_hero_armor`); `armor` is
     /// its Armor after, as the view's badge reads it (`damage::hero_armor_of`, §10.8). A report nothing
@@ -1290,6 +1334,11 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional, type = "true"))]
         face_down: Option<bool>,
+        /// R4707000: the faces the card checks its dice for, when it branches on them (Dice of Doom's 67).
+        /// The game record's: no view forwards it, and the trigger loop never holds a `rolled`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        hit: Option<RollHit>,
     },
     // -------------------------------------------------------------------------------------------
     // Issue #2783: the event stream says why (R2783000, R2783001)
@@ -1438,6 +1487,7 @@ string_union! {
         Deradianted = "deradianted",
         ManaSpent = "manaSpent",
         DamageAbsorbed = "damageAbsorbed",
+        DamageNullified = "damageNullified",
         ArmorGained = "armorGained",
         LoopCapped = "loopCapped",
         JadeChanged = "jadeChanged",
@@ -1479,7 +1529,8 @@ impl GameEvent {
     /// without its `how`, likewise the client's. R1088: a `summoned` without its `sourceId`, the card
     /// whose effect summoned it, which no rule reads. R2089000: an `addedToHand`, a `shuffledIn`, a
     /// `summoned` and a `transformed` without their `creator`, the game record's (§9.11), and R4672000: a
-    /// `cardPlayed` without its `modes`, the record's too. So the state a
+    /// `cardPlayed` without its `modes`, the record's too, as R4707000's `chaosRolled` is without its
+    /// `indices` and `tableSize`. So the state a
     /// game passes through, a frontier paused on a prompt or left by a game's end included, hashes as it
     /// did before any of them existed (D14), and a recorded game's replay keeps its final hash (R768).
     /// R2783001: a `damage`, a `damageAbsorbed`, a `healed`, a `destroyed` and a `summoned` without their
@@ -1664,6 +1715,22 @@ impl GameEvent {
                 exits_from: *exits_from,
                 on_draw: *on_draw,
             },
+            // R4707000: a roll's places in its table are the game record's, as `modes` is.
+            GameEvent::ChaosRolled {
+                player,
+                instance_id,
+                def_id,
+                effects,
+                indices: _,
+                table_size: _,
+            } => GameEvent::ChaosRolled {
+                player: *player,
+                instance_id: instance_id.clone(),
+                def_id: def_id.clone(),
+                effects: effects.clone(),
+                indices: None,
+                table_size: None,
+            },
             other => other.clone(),
         }
     }
@@ -1743,6 +1810,7 @@ impl GameEvent {
             GameEvent::Deradianted { .. } => GameEventType::Deradianted,
             GameEvent::ManaSpent { .. } => GameEventType::ManaSpent,
             GameEvent::DamageAbsorbed { .. } => GameEventType::DamageAbsorbed,
+            GameEvent::DamageNullified { .. } => GameEventType::DamageNullified,
             GameEvent::ArmorGained { .. } => GameEventType::ArmorGained,
             GameEvent::LoopCapped { .. } => GameEventType::LoopCapped,
             GameEvent::JadeChanged { .. } => GameEventType::JadeChanged,
@@ -1860,8 +1928,8 @@ mod tests {
         // `marketBought` and `marketSold` (R1853003); and #1855's `boardReplaced` (R1855000); and
         // #2652's `rolled` (R2652001); and #2783's `hookResolving` (R2783000); and Stinkyscape+'s
         // `evolved` (R3536005); and E7's `lineDrawn` (R3554005); and #3857's `armorGained` (R3857000);
-        // and #3925's `loopCapped` (R3925000).
-        assert_eq!(GAME_EVENT_TYPES.len(), 97);
+        // and #3925's `loopCapped` (R3925000); and #5045's `damageNullified` (R5045000).
+        assert_eq!(GAME_EVENT_TYPES.len(), 98);
     }
 
     /// R1360, D14: `absorbed` is on the wire only when Armor took part of the hit, so a hit it had no
@@ -1909,6 +1977,28 @@ mod tests {
         // Appended to the list (later sets append after it: M #39's `jadeChanged`, R961, and MB05's
         // secret events, R860–R865).
         assert!(GAME_EVENT_TYPES.contains(&GameEventType::DamageAbsorbed));
+    }
+
+    /// R5045000: a pool's soak names the pool card, the hit's source and target, the amount and
+    /// whether it was combat's, and the rules read it as it is.
+    #[test]
+    fn r5045000_damage_nullified_serializes_with_its_pool_card_and_damages_fields() {
+        let event = GameEvent::DamageNullified {
+            instance_id: "c132".into(),
+            source_id: Some("c136".into()),
+            target_id: "c26".into(),
+            amount: 4,
+            combat: false,
+        };
+        let json = serde_json::to_string(&event).unwrap();
+        assert_eq!(
+            json,
+            r#"{"type":"damageNullified","instanceId":"c132","sourceId":"c136","targetId":"c26","amount":4,"combat":false}"#
+        );
+        assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), event);
+        assert_eq!(event.event_type().as_str(), "damageNullified");
+        assert_eq!(event.as_rules_read(), event);
+        assert!(GAME_EVENT_TYPES.contains(&GameEventType::DamageNullified));
     }
 
     /// R3857000: a kept Armor gain names its player, the amount and the hero's Armor after, and the
@@ -2073,5 +2163,51 @@ mod tests {
         assert!(json.contains(r#""diedAs":"Field Trap""#), "{json}");
         assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), set);
         assert_eq!(set.as_rules_read(), set);
+    }
+
+    /// R4707000: a `chaosRolled` carries its roll's places in its table and the table's size for the game
+    /// record, on the wire only when set, and the rules hold it without them, so no state hash moves; a
+    /// `rolled` carries the faces its card checks for likewise.
+    #[test]
+    fn r4707000_a_chaos_roll_s_places_are_the_record_s_and_the_rules_drop_them() {
+        let rolled = |indices: Option<Vec<i32>>, table_size: Option<i32>| GameEvent::ChaosRolled {
+            player: PlayerId::P1,
+            instance_id: "c4".into(),
+            def_id: "core-095".into(),
+            effects: vec!["Heal your hero 30".into()],
+            indices,
+            table_size,
+        };
+        let plain = rolled(None, None);
+        assert_eq!(
+            serde_json::to_string(&plain).unwrap(),
+            r#"{"type":"chaosRolled","player":"p1","instanceId":"c4","defId":"core-095","effects":["Heal your hero 30"]}"#
+        );
+        let placed = rolled(Some(vec![1]), Some(10));
+        let json = serde_json::to_string(&placed).unwrap();
+        assert!(json.ends_with(r#""indices":[1],"tableSize":10}"#), "{json}");
+        assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), placed);
+        assert_eq!(placed.as_rules_read(), plain);
+
+        let die = |hit: Option<RollHit>| GameEvent::Rolled {
+            player: PlayerId::P1,
+            instance_id: "c4".into(),
+            def_id: "stinkyscape-154".into(),
+            kind: RollKind::Die,
+            sides: 100,
+            rolls: vec![RollResult {
+                faces: vec![67],
+                kept: 0,
+            }],
+            face_down: None,
+            hit,
+        };
+        assert!(!serde_json::to_string(&die(None)).unwrap().contains("hit"));
+        let checked = die(Some(RollHit { from: 67, to: 67 }));
+        let json = serde_json::to_string(&checked).unwrap();
+        assert!(json.ends_with(r#""hit":{"from":67,"to":67}}"#), "{json}");
+        assert_eq!(serde_json::from_str::<GameEvent>(&json).unwrap(), checked);
+        assert!(RollHit { from: 1, to: 50 }.holds(50));
+        assert!(!RollHit { from: 1, to: 50 }.holds(51));
     }
 }

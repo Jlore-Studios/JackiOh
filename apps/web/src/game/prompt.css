@@ -23,7 +23,7 @@
 .prompt-scrim {
   /* The picker sits outside `.board`, so it restates the board's ice-blue selection: the global
      token is gold, and yellow on the table only ever means "condition met". */
-  --selected: var(--pal-sky-300);
+  --selected: var(--pal-ink-300);
 
   position: fixed;
   inset: 0;
@@ -128,7 +128,7 @@
 @media (hover: hover) and (pointer: fine) {
   .prompt-card:hover {
     transform: translateY(-3px);
-    border-color: var(--pal-grey-500);
+    border-color: var(--pal-stone-500);
   }
 }
 
@@ -153,8 +153,6 @@
   border-radius: var(--radius-pill);
   font-size: var(--type-xs);
   font-weight: 750;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
   pointer-events: none;
   white-space: nowrap;
 }
@@ -165,7 +163,7 @@
 }
 
 .prompt-card[data-verdict="redraw"] .prompt-card-verdict {
-  background: var(--pal-red-900);
+  background: var(--pal-lacquer-900);
   color: var(--pal-slate-100);
 }
 
@@ -218,7 +216,7 @@
   max-height: 14rem;
   overflow: auto;
   font-family: var(--font-mono);
-  font-size: var(--type-3xs);
+  font-size: var(--type-xs);
   line-height: 1.35;
   white-space: pre;
   color: var(--text);
@@ -289,7 +287,7 @@
 .choice-card-name {
   flex: none;
   color: var(--text);
-  font-size: max(var(--type-2xs), 10cqw);
+  font-size: max(var(--type-xs), 10cqw);
   font-weight: 750;
   line-height: 1.15;
   text-align: center;
@@ -303,7 +301,7 @@
   min-height: 0;
   overflow-y: auto;
   color: var(--text-dim);
-  font-size: max(var(--type-3xs), 8cqw);
+  font-size: max(var(--type-xs), 8cqw);
   line-height: 1.25;
   text-align: center;
   pointer-events: auto;
@@ -395,9 +393,7 @@
 .prompt-zone-row {
   grid-column: 1 / -1;
   color: var(--text-dim);
-  font-size: var(--type-2xs);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  font-size: var(--type-xs);
 }
 
 .prompt-direction {
@@ -617,10 +613,8 @@
   border-radius: var(--radius-pill);
   background: var(--pal-wood-600);
   color: var(--pal-parchment);
-  font-size: var(--type-2xs);
+  font-size: var(--type-xs);
   font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 /* `pick` (R515): the running total over the cards; a card over the budget is greyed by index.css's
@@ -670,7 +664,7 @@
 .prompt-board-note {
   margin: 0;
   color: var(--text-dim);
-  font-size: var(--type-2xs);
+  font-size: var(--type-xs);
 }
 
 /* A board pick's hint (Prompt.tsx `BoardHint`): shown only where the picker folds to a bar with no
@@ -801,9 +795,9 @@
 .prompt[data-prompt-kind="target"],
 .prompt[data-prompt-kind="tribute"],
 .prompt[data-prompt-kind="cell"] {
-  border-color: color-mix(in srgb, var(--glow-ready, var(--pal-green-400)) 45%, var(--line-bright));
+  border-color: color-mix(in srgb, var(--glow-ready, var(--pal-jade-400)) 45%, var(--line-bright));
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--glow-ready, var(--pal-green-400)) 20%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--glow-ready, var(--pal-jade-400)) 20%, transparent),
     var(--shadow-3);
 }
 
@@ -1062,11 +1056,11 @@
   width: 28px;
   height: 28px;
   margin: auto;
-  border: 2px solid var(--glow-ready, var(--pal-green-400));
+  border: 2px solid var(--glow-ready, var(--pal-jade-400));
   border-radius: var(--radius-round);
   background:
-    linear-gradient(var(--glow-ready, var(--pal-green-400)), var(--glow-ready, var(--pal-green-400))) center / 2px 100% no-repeat,
-    linear-gradient(var(--glow-ready, var(--pal-green-400)), var(--glow-ready, var(--pal-green-400))) center / 100% 2px no-repeat;
+    linear-gradient(var(--glow-ready, var(--pal-jade-400)), var(--glow-ready, var(--pal-jade-400))) center / 2px 100% no-repeat,
+    linear-gradient(var(--glow-ready, var(--pal-jade-400)), var(--glow-ready, var(--pal-jade-400))) center / 100% 2px no-repeat;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--pal-black) 55%, transparent);
   pointer-events: none;
 }

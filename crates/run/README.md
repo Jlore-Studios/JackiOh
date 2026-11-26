@@ -94,20 +94,20 @@ Every UTC day deals 20 levels, Commanders on 5, 10, 15 and 20, each one game aga
 | --- | --- |
 | `assault_day_seed(date)` | the day's seed (`assault-YYYY-MM-DD`), or why the date is refused (IA1) |
 | `assault_catalog_content(&CardDefs)` | the content the mode deals from: the set's cards by set and tag, with `src/assault.json`'s doctrines and Commanders (IA4) |
-| `assault_placeholder_content(&CardDefs)` | the content dealt until the release: legal decks from shipped cards standing in for each doctrine, with `assault.json`'s twelve stand-in Commanders (IA4) |
+| `assault_placeholder_content(&CardDefs)` | the content dealt until the release, a test fixture since: legal decks from shipped cards standing in for each doctrine, with `assault.json`'s twelve stand-in Commanders (IA4) |
 | `assault_day(date, &AssaultContent)` | the day's deal: its 20 levels, each with its enemy, doctrine, escalations, upgrades, slots, deck, marks and handicap (IA1, IA2, IA4) |
 | `assault_create(&AssaultSetup, &AssaultRecord, &AssaultDay)` | an attempt at its start: the setup checked against the day and the record, or why it is refused (IA6) |
 | `assault_reduce(&AssaultState, &AssaultDay, &AssaultAction)` | the attempt after one action, or why it is refused, the state unchanged (IA6) |
 | `assault_record(&AssaultRecord, &AssaultState)` | the day's record folded with a finished or running attempt: attempts, best, checkpoints and the first repel (IA6) |
 | `assault_fold(&AssaultFile, &AssaultDay)` | an attempt file replayed from its start, the error naming the first refused step (IA6) |
-| `assault_fight_setup(&AssaultState, &AssaultDay)` | in `Fight`, the game to start: its seed (`{day seed}-L{level}-A{attempt}`), both decks, the human's `HUMAN_HANDICAP` and the level's handicap and marks (IA6) |
-| `assault_fight_report(&ReplayInput, PlayerId)` | the `AssaultAction::FightOver` a finished game sends for that seat, folded from its record: a draw at the turn cap is a loss (IA6, IA15); a Glitch's void still reads as a loss until #4576 rules on it |
+| `assault_fight_setup(&AssaultState, &AssaultDay)` | in `Fight`, the game to start: its seed (`{day seed}-L{level}-A{attempt}`), both decks, the human's `HUMAN_HANDICAP`, the level's handicap and marks, and `enemy_sets`, the Assault's set when every enemy card is its (R4595000, R4597001) (IA6) |
+| `assault_fight_report(&ReplayInput, PlayerId)` | the `AssaultAction::FightOver` a finished game sends for that seat, folded from its record: a draw at the turn cap is a loss (IA6, IA15); a fight a Glitch voided is refused and dealt again from the same setup (R4999000) |
 | `assault_constants()` | the numbers the screens show (rule 9) |
 
 What the caller does:
 
-- **Content.** Deal from the placeholder (`assault_placeholder_content`) until the release, when
-  the browser deals from the catalog's content instead: C1's set (`SetName::InfiniteAssault`), its
+- **Content.** The browser deals from the catalog's content since the release (R4597000; the
+  placeholder, `assault_placeholder_content`, before it): C1's set (`SetName::InfiniteAssault`), its
   `Commander` tag, and each doctrine by the tag its `assault.json` id names.
 - **Records.** Start a day's first record as `AssaultRecord { date, ..Default::default() }`, with
   no attempts yet. Fold the state into the record after create and after each action, with
@@ -117,7 +117,9 @@ What the caller does:
   attempt. Leave mid-fight keeps the fight, as a dungeon fight does.
 - **Fights.** In `Fight` the caller starts the game from `assault_fight_setup` (the human P1, the
   enemy P2, the enemy marks as P2's), plays it, and sends the `AssaultAction::FightOver` that
-  `assault_fight_report` folds from the finished game.
+  `assault_fight_report` folds from the finished game. A fight a Glitch voided never happened (R679):
+  it reports nothing, the attempt stays in its fight, and the caller deals it again from the same
+  assault_fight_setup (R4999000).
 - **Files.** Keep the `AssaultFile` with the catalog version the caller folds under, as a dungeon
   run's file does: nothing here reads it.
 

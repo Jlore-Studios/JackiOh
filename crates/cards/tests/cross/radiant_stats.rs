@@ -11,7 +11,7 @@
 /// SPEC §8, read at compile time (`include_str!`: CLAUDE.md rule 4): the notes of `spec/08-catalog/`,
 /// one a subsection, in section order. A new set's note joins the list, which the tools' acceptance
 /// test holds to the folder (`every_catalog_note_is_read_by_the_radiant_stats_test`).
-const CATALOG_NOTE: &str = concat!(
+pub(super) const CATALOG_NOTE: &str = concat!(
     include_str!("../../../../spec/08-catalog/8.1-core-1-20.md"),
     "\n",
     include_str!("../../../../spec/08-catalog/8.2-core-21-50.md"),
@@ -40,7 +40,7 @@ const CATALOG_NOTE: &str = concat!(
 );
 
 /// The header of every §8 card table.
-const TABLE_HEADER: &str =
+pub(super) const TABLE_HEADER: &str =
     "| # | Name | Rarity | Cost | Type, tags | Stats | Base effect | Radiant effect | Engine |";
 
 /// The `A/B` a cell opens with, when it opens with one: `18/18` in "18/18, plus Pierce", none in

@@ -2500,14 +2500,17 @@ fn redact_event(
         }
 
         // R1361: the report of a hit Armor took whole names what `damage` names, and hides it alike.
-        GameEventType::Damage | GameEventType::DamageAbsorbed => {
+        // R5045000: so does a pool's soak, and its pool card besides, judged as any card is.
+        GameEventType::Damage | GameEventType::DamageAbsorbed | GameEventType::DamageNullified => {
             if nullable_at(&shown, "sourceId").is_some_and(|source| hidden(&source)) {
                 // R2783001: the hit's keyword is its source's, so it goes with the source.
                 shown.remove("via");
                 hide(&mut shown, &["sourceId"]);
             }
-            if hidden(&text_at(&shown, "targetId")) {
-                hide(&mut shown, &["targetId"]);
+            for key in ["targetId", "instanceId"] {
+                if nullable_at(&shown, key).is_some_and(|id| hidden(&id)) {
+                    hide(&mut shown, &[key]);
+                }
             }
             rebuild(shown)
         }
@@ -2770,9 +2773,10 @@ fn redact_event(
 
         // R2652000: a batch of coins or dice a viewer reads at all (`withheld_rolls` drops the rest)
         // shows every face; the card itself follows R97, as Call to Chaos's does below. `faceDown` is
-        // the engine's, so no view forwards it.
+        // the engine's, and R4707000's `hit` the game record's, so no view forwards either.
         GameEventType::Rolled => {
             shown.remove("faceDown");
+            shown.remove("hit");
             if !instance.is_empty() && hidden(&instance) {
                 hide(&mut shown, &["instanceId", "defId"]);
             }
@@ -2791,11 +2795,13 @@ fn redact_event(
         }
 
         // R436: Call to Chaos names what it rolled to both players; the card itself follows R97.
+        // R4707000: the roll's places in its table are the game record's, so no view forwards them.
         GameEventType::ChaosRolled => {
-            if !hidden(&instance) {
-                return event.clone();
+            shown.remove("indices");
+            shown.remove("tableSize");
+            if hidden(&instance) {
+                hide(&mut shown, &["instanceId", "defId"]);
             }
-            hide(&mut shown, &["instanceId", "defId"]);
             rebuild(shown)
         }
 
@@ -2937,11 +2943,14 @@ fn recent_events(state: &GameState, viewer: PlayerId) -> Vec<GameEvent> {
     // R2783000: a `hookResolving` marker takes no room in R168's floor, so the window holds the events
     // it would had no hook been marked, each marker among them beside them, and the markers just before
     // its first event with it (a hook's marker comes before its first effect). R3857000: an `armorGained`
-    // report likewise takes none, so the window holds what it held before the report existed.
+    // report likewise takes none, so the window holds what it held before the report existed, and so
+    // does a pool's `damageNullified` (R5045000).
     let marker = |at: &usize| {
         matches!(
             all[*at],
-            GameEvent::HookResolving { .. } | GameEvent::ArmorGained { .. }
+            GameEvent::HookResolving { .. }
+                | GameEvent::ArmorGained { .. }
+                | GameEvent::DamageNullified { .. }
         )
     };
     let counted: Vec<usize> = read.iter().copied().filter(|at| !marker(at)).collect();

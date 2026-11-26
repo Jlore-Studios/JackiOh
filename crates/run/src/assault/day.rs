@@ -7,9 +7,9 @@ use crate::assault::{
 };
 use crate::config::{
     ASSAULT_BASE_HANDICAP, ASSAULT_CARD_STEP, ASSAULT_CARD_STEP_PERCENT, ASSAULT_COMMANDER_HEALTH,
-    ASSAULT_COMMANDER_LEVELS, ASSAULT_DECK_SIZE, ASSAULT_DOCTRINE_SHARE, ASSAULT_FEWER_OPENING,
-    ASSAULT_FEWER_OPENING_LEVELS, ASSAULT_HERO_HEALTH, ASSAULT_LEVELS, ASSAULT_SEED_PREFIX,
-    ASSAULT_START_SLOTS, ASSAULT_UPGRADES,
+    ASSAULT_COMMANDER_LEVELS, ASSAULT_COMMANDER_UPGRADES, ASSAULT_DECK_SIZE, ASSAULT_DOCTRINE_SHARE,
+    ASSAULT_FEWER_OPENING, ASSAULT_FEWER_OPENING_LEVELS, ASSAULT_HERO_HEALTH, ASSAULT_LEVELS,
+    ASSAULT_SEED_PREFIX, ASSAULT_START_SLOTS, ASSAULT_UPGRADES,
 };
 use jackioh_engine::config::PERCENT;
 use jackioh_engine::rng::Rng;
@@ -203,12 +203,14 @@ pub fn assault_day(date: &str, content: &AssaultContent) -> Result<AssaultDay, S
         if level == 1 {
             // The base row alone.
         } else if commander_rank(level).is_some() {
-            // A Commander level takes a card step and an upgrade.
+            // A Commander level takes a card step and `ASSAULT_COMMANDER_UPGRADES` upgrades.
             if let Some(escalation) = escalate(&mut slots, &mut stacks, level, true, &mut rng) {
                 escalations.push(escalation);
             }
-            if let Some(escalation) = escalate(&mut slots, &mut stacks, level, false, &mut rng) {
-                escalations.push(escalation);
+            for _ in 0..ASSAULT_COMMANDER_UPGRADES {
+                if let Some(escalation) = escalate(&mut slots, &mut stacks, level, false, &mut rng) {
+                    escalations.push(escalation);
+                }
             }
         } else if let Some(escalation) = escalate(
             &mut slots,

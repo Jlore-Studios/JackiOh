@@ -1,17 +1,17 @@
-//! M #65 Keymaster Keenus (SPEC §8.8 row 65, R1086, R781004): (4) Unit, Legendary, 1/1 → 2/2.
+//! M #65 Keymaster Keenus (SPEC §8.8 row 65, R1086, R781004, R4991000): (4) Unit, Legendary, 1/1 → 2/2.
 //!
-//! Both faces: "Equip\nAura: Has {keywords|random combat keyword|random combat keywords}." — 5 on the
-//! base face, 10 on the Radiant face (the declared number `keywords`, R386).
+//! Both faces: "Equip\nHas {keywords|random combat keyword|random combat keywords}." — 5 on the base
+//! face, 10 on the Radiant face (the declared number `keywords`, R386).
 //! Engine: Equip is printed (ME-EQUIP, R1086). §10.4's layers read with no rng, so the Aura's keywords
 //! are drawn at an event and kept on the card: as it arrives on the field (played, summoned, Flickered,
-//! back through Reborn) and as an Equip play fuses it into a Unit, which draws its own. They come from
-//! the combat keyword pool (R21's), none the card has and no Taunt beside Indestructible, into one
-//! ordered list the card keeps until it leaves the field (R78). The Aura gives the first `keywords` of
-//! that list (`aura_combat_keywords`): a Buff of the number, a number set higher or the Radiant face
-//! draws only the rest (`combat_keywords_follow`), a lower number takes the newest off, and the number
-//! back returns them (R3778000). The Aura reads them back (`conditionalKeywords`), so a Vanilla takes
-//! them with the rest of its text (R781004). It printed every keyword and, Radiant, a Death that gave
-//! them away until patch v0.3.7 (R1084, R1085).
+//! back through Reborn, or made there by a Transform, R4991000) and as an Equip play fuses it into a
+//! Unit, which draws its own. They come from the combat keyword pool (R21's), none the card has and no
+//! Taunt beside Indestructible, into one ordered list the card keeps until it leaves the field (R78).
+//! The Aura gives the first `keywords` of that list (`aura_combat_keywords`): a Buff of the number, a
+//! number set higher or the Radiant face draws only the rest (`combat_keywords_follow`), a lower number
+//! takes the newest off, and the number back returns them (R3778000). The Aura reads them back
+//! (`conditionalKeywords`), so a Vanilla takes them with the rest of its text (R781004). It printed
+//! every keyword and, Radiant, a Death that gave them away until patch v0.3.7 (R1084, R1085).
 
 use jackioh_engine::effects::{
     DrawCombatKeywordsArgs, aura_combat_keywords, draw_combat_keywords, drawn_combat_keywords,
@@ -21,26 +21,18 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "meditative-065";
 
-/// R781004: this card arrived on the field (played, summoned, Flickered, back through Reborn).
-fn arrived(ctx: &EffectContext<'_>, event: &GameEvent) -> bool {
-    let Some(me) = ctx.live_self() else {
-        return false;
-    };
-    matches!(event, GameEvent::Summoned { instance_id, .. } if *instance_id == me.id)
-}
+/// R781004, R4991000: what the Aura draws on as it arrives (`self_arrived_on_field`): a `summoned`, or
+/// the `transformed` of a Transform that made it on the field. The kept scripts draw on `summoned` alone.
+const ARRIVALS: &[GameEventType] = &[GameEventType::Summoned, GameEventType::Transformed];
 
-fn draw_on_arrival(top_up: bool) -> TriggerDef {
-    TriggerDef::new(
-        "keenus-combat-keywords",
-        &[GameEventType::Summoned],
-        move |ctx, event| {
-            if !arrived(ctx, event) {
-                return vec![];
-            }
-            vec![draw_for(param(&*ctx, "keywords"), top_up)]
-        },
-    )
-    .with_when(|ctx, event| arrived(ctx, event))
+fn draw_on_arrival(top_up: bool, on: &[GameEventType]) -> TriggerDef {
+    TriggerDef::new("keenus-combat-keywords", on, move |ctx, event| {
+        if !self_arrived_on_field(ctx, event) {
+            return vec![];
+        }
+        vec![draw_for(param(&*ctx, "keywords"), top_up)]
+    })
+    .with_when(|ctx, event| self_arrived_on_field(ctx, event))
 }
 
 /// R3778000: `top_up` draws what the number asks beyond the list; the kept script's draw keeps any it
@@ -54,9 +46,9 @@ fn draw_for(count: i32, top_up: bool) -> Effect {
     }
 }
 
-fn keenus(top_up: bool) -> Script {
+fn keenus(top_up: bool, on: &[GameEventType]) -> Script {
     Script {
-        triggers: vec![draw_on_arrival(top_up)],
+        triggers: vec![draw_on_arrival(top_up, on)],
         // R3778000: a Buff, a number set or the Radiant face that raises its number draws the rest.
         combat_keywords_follow: top_up.then_some("keywords"),
         // An Equip play fuses this into a Unit, which carries the Aura and draws its own (R1086).
@@ -73,8 +65,17 @@ fn keenus(top_up: bool) -> Script {
 pub fn script() -> CardScripts {
     // One script: the Radiant face's 10 is its declared number, which `param` reads off the face.
     CardScripts {
-        base: keenus(true),
-        radiant: keenus(true),
+        base: keenus(true, ARRIVALS),
+        radiant: keenus(true, ARRIVALS),
+    }
+}
+
+/// R4991000: in every version before this change's, a Keenus a Transform made drew nothing; `KEPT_SCRIPTS`
+/// folds those replays under it, keyed by the change's fragment (R767000, R4779000).
+pub fn script_before_transform_draw() -> CardScripts {
+    CardScripts {
+        base: keenus(true, &[GameEventType::Summoned]),
+        radiant: keenus(true, &[GameEventType::Summoned]),
     }
 }
 
@@ -82,8 +83,8 @@ pub fn script() -> CardScripts {
 /// number did (R781004); `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_0c() -> CardScripts {
     CardScripts {
-        base: keenus(false),
-        radiant: keenus(false),
+        base: keenus(false, &[GameEventType::Summoned]),
+        radiant: keenus(false, &[GameEventType::Summoned]),
     }
 }
 
@@ -161,6 +162,61 @@ mod tests {
         (s, id)
     }
 
+    /// (1) Spell: Transform a permanent into one that costs (1) more (S+ #104 Tireless Cultivation).
+    const CULTIVATION: &str = "stinkyscapeplus-104";
+    /// (3) 4/6 Unit with no keywords, which a Transform may touch: one costing (1) more costs (4), as
+    /// Keenus does.
+    const RENO: &str = "core-053";
+    /// (2) Spell: replace every card in your hand and deck with a random Legendary (Core #83).
+    const TRANSMOGULATE: &str = "core-083";
+
+    /// Tireless Cultivation cast on p1's Reno (`radiant` its face, which the new card keeps) on `seed`;
+    /// the id of the Unit standing in its zone after.
+    fn cultivated(seed: &str, radiant: bool) -> (Scenario, String) {
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": {
+                "hand": [CULTIVATION, FILLER],
+                "field": [{ "def": RENO, "radiant": radiant }],
+                "library": filler(4),
+                "mana": 10,
+            },
+            "p2": { "hand": [FILLER], "library": filler(4) },
+        }));
+        let old = s.unit(P1, 1).expect("Reno").id;
+        s.play(CULTIVATION, pick::targets(pick::id(&old)));
+        let id = s.unit(P1, 1).expect("the new Unit").id;
+        (s, id)
+    }
+
+    /// The first seed whose Tireless Cultivation turns the Reno into Keenus.
+    fn keenus_seed(radiant: bool) -> String {
+        seed_where("keenus-4991", |seed| {
+            let (s, id) = cultivated(seed, radiant);
+            s.card(id.as_str()).def_id == KEENUS
+        })
+    }
+
+    /// Transmogulate cast from p1's hand on `seed`, which replaces the hand and the library.
+    fn transmogulated(seed: &str) -> Scenario {
+        let mut s = scenario(json!({
+            "seed": seed,
+            "p1": { "hand": [TRANSMOGULATE, FILLER], "library": filler(2), "mana": 10 },
+            "p2": { "hand": [FILLER], "library": filler(4) },
+        }));
+        s.play(TRANSMOGULATE, json!({}));
+        s
+    }
+
+    /// Every Keenus in p1's hand and library.
+    fn keenus_off_field(s: &Scenario) -> Vec<CardInstance> {
+        s.hand(P1)
+            .into_iter()
+            .chain(s.pile(P1, "library"))
+            .filter(|card| card.def_id == KEENUS)
+            .collect()
+    }
+
     mod m65_keymaster_keenus {
         use super::*;
 
@@ -172,7 +228,7 @@ mod tests {
                 assert_eq!(face.keywords, vec![Keyword::Equip], "it no longer prints every keyword");
                 assert_eq!(
                     face.text,
-                    "Equip\nAura: Has {keywords|random combat keyword|random combat keywords}."
+                    "Equip\nHas {keywords|random combat keyword|random combat keywords}."
                 );
             }
             assert_eq!(
@@ -370,6 +426,74 @@ mod tests {
                 assert!(!ten[5..].contains(&KeywordKind::Reborn), "New Wraps gave it Reborn first");
                 assert_eq!(aura(&s, &id), ten, "it acts with all 10");
             }
+        }
+
+        /// R4991000: a Transform's new card on the field arrives (R4816000), so the Aura draws its 5 from
+        /// the match rng as a played Keenus does (R781004), the new instance holding none (R78).
+        #[test]
+        fn r4991000_a_transform_that_makes_keenus_on_the_field_draws_5_from_the_match_rng() {
+            let seed = keenus_seed(false);
+            let (s, id) = cultivated(&seed, false);
+
+            let five = drawn(&s, &id);
+            assert_eq!(five.len(), 5, "{five:?}");
+            let mut unique = five.clone();
+            unique.sort();
+            unique.dedup();
+            assert_eq!(unique.len(), 5, "none repeats: {five:?}");
+            assert!(five.iter().all(|kind| pool_kinds().contains(kind)), "{five:?}");
+            assert_eq!(aura(&s, &id), five, "it acts with all 5");
+            // R1: a Transform is no summon.
+            assert!(!s.events().iter().any(
+                |event| matches!(event, GameEvent::Summoned { instance_id, .. } if *instance_id == id)
+            ));
+
+            let (again, again_id) = cultivated(&seed, false);
+            assert_eq!(drawn(&again, &again_id), five, "the same seed draws the same");
+        }
+
+        #[test]
+        fn r4991000_a_transform_that_makes_a_radiant_keenus_draws_10() {
+            let seed = keenus_seed(true);
+            let (s, id) = cultivated(&seed, true);
+
+            assert!(s.card(id.as_str()).radiant);
+            let ten = drawn(&s, &id);
+            assert_eq!(ten.len(), 10, "{ten:?}");
+            let mut unique = ten.clone();
+            unique.sort();
+            unique.dedup();
+            assert_eq!(unique.len(), 10, "none repeats: {ten:?}");
+            assert_eq!(aura(&s, &id), ten, "it acts with all 10");
+        }
+
+        /// R4991000: a Transform in a hand or a library makes no card on the field, so nothing arrives.
+        #[test]
+        fn r4991000_a_transform_in_a_hand_that_makes_keenus_draws_nothing() {
+            let seed = seed_where("keenus-4991-hand", |seed| {
+                transmogulated(seed).hand(P1).iter().any(|card| card.def_id == KEENUS)
+            });
+            let s = transmogulated(&seed);
+
+            let made = keenus_off_field(&s);
+            assert!(!made.is_empty());
+            for keenus in &made {
+                assert!(drawn_combat_keywords(keenus, None).is_empty(), "{:?}", keenus.zone);
+            }
+        }
+
+        #[test]
+        fn r767000_the_kept_script_draws_nothing_for_a_keenus_a_transform_makes() {
+            let seed = keenus_seed(false);
+            crate::under_kept(KEENUS, script_before_transform_draw(), || {
+                let (s, id) = cultivated(&seed, false);
+                assert_eq!(s.card(id.as_str()).def_id, KEENUS);
+                assert!(drawn(&s, &id).is_empty(), "before this change a Transform's Keenus drew nothing");
+
+                let s = played("keenus-kept-4991", false, json!({}));
+                let id = s.card(KEENUS).id.clone();
+                assert_eq!(drawn(&s, &id).len(), 5, "and played it drew its 5");
+            });
         }
 
         #[test]

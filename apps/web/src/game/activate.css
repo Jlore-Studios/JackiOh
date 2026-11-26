@@ -37,7 +37,7 @@
   border: 1px solid var(--pal-gold-300);
   border-radius: var(--radius-pill);
   background: var(--pal-brass-800);
-  color: var(--pal-gold-200);
+  color: var(--pal-brass-200);
   font-size: var(--type-xs);
   font-weight: 700;
   line-height: 1;
@@ -57,7 +57,7 @@
 }
 
 .board .activate-control[data-legal="false"] {
-  border-color: var(--pal-grey-500);
+  border-color: var(--pal-stone-500);
   background: var(--pal-slate-800);
   color: var(--pal-slate-400);
   cursor: not-allowed;
@@ -70,7 +70,7 @@
 }
 
 .board .activate-control:focus-visible {
-  outline: 2px solid var(--pal-gold-200);
+  outline: 2px solid var(--pal-brass-200);
   outline-offset: 2px;
 }
 
@@ -92,14 +92,14 @@
   .board .activate-control[data-flash="activated"],
   .board .power-button[data-flash="activated"] {
     animation: none;
-    outline: 2px solid var(--pal-gold-200);
+    outline: 2px solid var(--pal-brass-200);
   }
 }
 
 :root[data-reduce-motion="true"] .board .activate-control[data-flash="activated"],
 :root[data-reduce-motion="true"] .board .power-button[data-flash="activated"] {
   animation: none;
-  outline: 2px solid var(--pal-gold-200);
+  outline: 2px solid var(--pal-brass-200);
 }
 
 /* Touch sizing (B29, as the switch's): the glyph stays small on the card's edge, and a finger gets a
@@ -140,7 +140,7 @@
     min-width: 18px;
     height: 16px;
     padding: 0 var(--space-1) 0 0;
-    font-size: var(--type-3xs);
+    font-size: var(--type-xs);
   }
 
   .board .activate-glyph {

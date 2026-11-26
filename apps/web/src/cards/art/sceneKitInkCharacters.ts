@@ -4,7 +4,7 @@
 // plate-armoured rhino at the charge, the shade-iris sprite, the fizzing jar sprite, a crouching glitch critter,
 // a giant of rock and pine rising out of its mountainside, a pair of living cat ears), the bronze taotie mask
 // rising from its anchor as from a cauldron's rim, and the totem pole of five peoples' faces standing on it.
-// sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a palette.css name, none in Radiant's gold window;
+// sceneKit.ts spreads them into `SCENE_KIT`. Every colour is a SCENE_PALETTE name, none in Radiant's gold window;
 // a glow is a stack of translucent shapes, never a gradient; shapes are filled even-odd, so a hole is a second
 // sub-path and no two sub-paths of one shape overlap otherwise.
 
