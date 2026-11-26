@@ -48,7 +48,7 @@ pub const SEGMENT: &str = "e6-segment";
 pub const SEGMENT_ALL: &str = "e6-segment-all";
 /// A 3/3 Unit, Ranged, with no text.
 pub const RANGER: &str = "e6-ranger";
-/// A Spell: "Put a Unit on a performance enhancement plan..." (PIP's shape).
+/// A Spell: "Put a Unit on a performance improvement plan..." (PIP's shape).
 pub const PIP: &str = "e6-pip";
 /// A 5/6 Unit: "Cry: Take a snapshot... Death: Reset your board to that state" (Bogos Binted's
 /// shape).

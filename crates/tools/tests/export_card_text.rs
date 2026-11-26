@@ -263,3 +263,66 @@ fn a_misspelled_field_fails_naming_its_card() {
         "a key written twice is refused: {twice}"
     );
 }
+
+#[test]
+fn r4996000_pip_names_the_plan_in_every_locale() {
+    // R4996000: S+ #94 PIP names a performance improvement plan on every face,
+    // in English and in every locale card-text.yaml shows (`zh` today).
+    const ID: &str = "stinkyscapeplus-094";
+    const TERMS: &[(&str, &str)] = &[("en", "performance improvement plan"), ("zh", "绩效改进计划")];
+    const NOT_WORDS: &[&str] = &["enhancement", "PEP", "performance plan"];
+    const META: &[&str] = &["flavour", "artist", "voice"];
+    let term = |locale: &str| {
+        TERMS
+            .iter()
+            .find(|(code, _)| *code == locale)
+            .unwrap_or_else(|| panic!("R4996000: no term for locale {locale:?}: add its row to TERMS"))
+            .1
+    };
+    let card = &CATALOG[ID];
+    for face in [&card.base.text, &card.radiant.text] {
+        assert!(
+            face.contains(term("en")),
+            "R4996000: {face:?} lacks the plan's name"
+        );
+        for other in NOT_WORDS {
+            assert!(!face.contains(other), "R4996000: {face:?} says it as {other:?}");
+        }
+    }
+    let text = std::fs::read_to_string(YAML).unwrap_or_else(|error| panic!("{YAML}: {error}"));
+    let root: yaml_serde::Mapping =
+        yaml_serde::from_str(&text).unwrap_or_else(|error| panic!("card-text.yaml: {error}"));
+    let entry = root
+        .get(yaml_serde::Value::String(ID.to_string()))
+        .unwrap_or_else(|| panic!("card-text.yaml: no {ID} entry"));
+    let entry = entry
+        .as_mapping()
+        .unwrap_or_else(|| panic!("card-text.yaml: {ID} is not a mapping"));
+    let mut seen: Vec<&str> = vec!["en"];
+    for (key, value) in entry {
+        let Some(field) = key.as_str() else { continue };
+        if META.contains(&field) {
+            continue;
+        }
+        let faces = value
+            .as_mapping()
+            .unwrap_or_else(|| panic!("card-text.yaml: {ID}.{field} is not a locale"));
+        let get = |face: &str| {
+            faces
+                .get(yaml_serde::Value::String(face.to_string()))
+                .and_then(|v| v.as_str())
+                .unwrap_or_else(|| panic!("card-text.yaml: {ID}.{field} has no {face}"))
+        };
+        for face in [get("base"), get("radiant")] {
+            assert!(
+                face.contains(term(field)),
+                "R4996000: {ID}.{field} lacks its term"
+            );
+        }
+        seen.push(field);
+    }
+    let mut want: Vec<&str> = TERMS.iter().map(|(code, _)| *code).collect();
+    seen.sort_unstable();
+    want.sort_unstable();
+    assert_eq!(seen, want, "R4996000: locales shown and locales in TERMS differ");
+}
