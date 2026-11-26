@@ -24670,6 +24670,13 @@
     "5085": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45864946105",
+        "model": "opus",
+        "provider": "claude-8",
+        "since": "2026-11-26T17:33:36Z",
+        "until": "2026-11-26T18:03:36Z"
+      },
       "failures": 1,
       "handoff": {
         "at": "2026-11-26T16:57:46Z",
