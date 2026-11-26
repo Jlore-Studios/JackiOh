@@ -46743,14 +46743,5 @@
     "issue": 2890,
     "pinned": true
   },
-  "usage_spool": {
-    "readings": [
-      "2026-11-26T06:33:28Z,claude-6,ping,before,45768722368,39,2026-11-26T07:30:00Z,,,allowed,100,,",
-      "2026-11-26T06:34:01Z,claude-6,stream,call,45768722368,40,2026-11-26T07:30:00Z,,,allowed,100,,"
-    ],
-    "runs": [
-      "2026-11-26T06:34:22Z,45768722368,claude-6,opus,review,5019,medium,reviewed,,0.8,12,4534,326510,0.4822,39,40,,,,,none,,1"
-    ]
-  },
   "version": 1
 }
