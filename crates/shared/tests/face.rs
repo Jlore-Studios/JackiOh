@@ -691,10 +691,11 @@ fn r3045000_the_hull_itself_and_every_other_fusion_are_named_as_they_were() {
         face_of_def(&hull, false, Locale::En, json!({ "inPlay": {} })).name,
         "Dormant Starship"
     );
-    let equipped = fused(3, &[&catalog_def(BEAM), &catalog_def("core-020")]);
+    // R5050000: a unit holding gear is named for its host (`r5050000_…` below); two cards that are no gear are not.
+    let joined = fused(3, &[&catalog_def("core-011"), &catalog_def("core-020")]);
     assert_eq!(
-        face_of_def(&equipped, false, Locale::En, json!({ "inPlay": {} })).name,
-        "Beam v3 + Pointmaster"
+        face_of_def(&joined, false, Locale::En, json!({ "inPlay": {} })).name,
+        format!("{} + Pointmaster", catalog_def("core-011").name)
     );
     assert_eq!(printed("core-020", false, Locale::En).name, "Pointmaster");
 }
@@ -760,15 +761,21 @@ fn r3045000_a_chinese_face_names_a_fused_dormant_starship_for_the_hull_in_chines
         first.text.full,
         format!("{}\n{}", parts[0].text.full, parts[1].text.full)
     );
-    let equipped = fused(3, &[&catalog_def(BEAM), &catalog_def("core-020")]);
-    let joined = face_of_def(&equipped, false, Locale::ZhCn, json!({ "inPlay": {} }));
+    // Any other fusion joins its ingredients' Chinese names; R5050000: a unit holding gear is named for its host.
+    let both = fused(3, &[&catalog_def("core-011"), &catalog_def("core-020")]);
+    let joined = face_of_def(&both, false, Locale::ZhCn, json!({ "inPlay": {} }));
     assert_eq!(
         joined.name,
         format!(
             "{} + {}",
-            printed(BEAM, false, Locale::ZhCn).name,
+            printed("core-011", false, Locale::ZhCn).name,
             printed("core-020", false, Locale::ZhCn).name
         )
+    );
+    let equipped = fused(4, &[&catalog_def(BEAM), &catalog_def("core-020")]);
+    assert_eq!(
+        face_of_def(&equipped, false, Locale::ZhCn, json!({ "inPlay": {} })).name,
+        printed("core-020", false, Locale::ZhCn).name
     );
 }
 
@@ -1492,4 +1499,311 @@ fn r4747000_a_gained_keyword_prints_at_its_place_in_the_order() {
         vec!["Can't Defend", "Taunt", "Flying", "Divine Shield", "Reborn"],
     );
     assert_eq!(face.gained_line.full, "Flying");
+}
+
+// ---- A fused text's numbers (issue #5049) ------------------------------------------------------------------
+
+/// `parts` fused as the Fuse joins them, each on the face `forced` marks (R469): the base face prints a marked
+/// part's Radiant text, the Radiant face every part's.
+fn fused_text(
+    n: u32,
+    parts: &[jackioh_engine::wire::CardDef],
+    forced: &[bool],
+) -> jackioh_engine::wire::CardDef {
+    let refs: Vec<&jackioh_engine::wire::CardDef> = parts.iter().collect();
+    let mut def = fused(n, &refs);
+    def.params = None;
+    if let Some(ingredients) = def.ingredients.as_mut() {
+        for (ingredient, marked) in ingredients.iter_mut().zip(forced) {
+            ingredient.radiant = marked.then_some(true);
+        }
+    }
+    let join = |radiant: bool| {
+        parts
+            .iter()
+            .zip(forced)
+            .map(|(part, marked)| {
+                if radiant || *marked {
+                    part.radiant.text.clone()
+                } else {
+                    part.base.text.clone()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    };
+    def.base.text = join(false);
+    def.radiant.text = join(true);
+    def
+}
+
+/// What each part prints filled with its own numbers, `values` by part, joined as the Fuse joins them.
+fn each_filled(
+    parts: &[jackioh_engine::wire::CardDef],
+    faces: &[bool],
+    values: &[Option<indexmap::IndexMap<String, i32>>],
+) -> String {
+    use jackioh_engine::wire::{FaceKind, fill_params};
+    parts
+        .iter()
+        .zip(faces)
+        .zip(values)
+        .map(|((part, radiant), values)| {
+            let face = if *radiant {
+                FaceKind::Radiant
+            } else {
+                FaceKind::Base
+            };
+            fill_params(part, face, values.as_ref())
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// R5049000: a fused text's parts each print their own numbers, two that declare one key included (Normal
+/// Grape's `amount` 2 and Large Grape's 5, All Purpose Apple's `heal` 2 and Fig of Life's 20), never a
+/// placeholder: on the fusion's own face, as a Smoothie's gained text (R4440006), and on the Radiant face a
+/// part went in on (R469).
+#[test]
+fn r5049000_each_part_of_a_fused_text_prints_its_own_numbers() {
+    let parts = [
+        "classicplus-065-2",
+        "classicplus-065-3",
+        "classicplus-059",
+        "core-047",
+    ]
+    .map(catalog_def);
+    let none = [None, None, None, None];
+    let def = fused_text(5049, &parts, &[false; 4]);
+    assert!(
+        def.base.text.contains("{amount}"),
+        "PREMISE: the Fuse joins the templates"
+    );
+    let want = each_filled(&parts, &[false; 4], &none);
+    for wanted in ["Deal 2 damage", "Deal 5 damage", "Heal your hero 2.", "20"] {
+        assert!(want.contains(wanted), "PREMISE: {wanted} in {want}");
+    }
+    let own = face_of_def(&def, false, Locale::En, json!({ "inPlay": {} }));
+    assert_eq!(own.text.full, want);
+    let radiant = face_of_def(&def, true, Locale::En, json!({ "inPlay": {} }));
+    assert_eq!(radiant.text.full, each_filled(&parts, &[true; 4], &none));
+    // A Smoothie runs the Fruits' fusion as its text (R4440006): its copy prints the same, with or without the
+    // view's numbers, which are each key's first Fruit's (`params_view`), so Fig of Life's heal 20 is its own.
+    let first = json!({ "amount": 2, "draw": 1, "discount": 1, "setCost": 0, "heal": 2, "damage": 1 });
+    for params in [json!(null), first] {
+        let smoothie = in_play(
+            "stinkyscapeplus-018",
+            false,
+            Locale::En,
+            json!({ "inPlay": { "copies": { "def": def, "radiant": false, "params": params } } }),
+        );
+        assert!(smoothie.text.full.contains(&want), "{}", smoothie.text.full);
+        assert!(!smoothie.text.full.contains('{'), "{}", smoothie.text.full);
+    }
+    // R469: a part that went in on its Radiant face prints its Radiant numbers on the base face.
+    let marked = fused_text(5050, &parts[..2], &[true, false]);
+    assert_eq!(
+        face_of_def(&marked, false, Locale::En, json!({ "inPlay": {} }))
+            .text
+            .full,
+        each_filled(&parts[..2], &[true, false], &[None, None])
+    );
+}
+
+/// R5049000: an Upgrade moves a fused text's key on every part that declares it, each from its own printed
+/// number by its own step, as the engine reads it (`params::tuned_value`).
+#[test]
+fn r5049000_a_tuned_key_moves_on_each_part_from_its_own_number() {
+    let parts = ["classicplus-065-2", "classicplus-065-3"].map(catalog_def);
+    let def = fused_text(5051, &parts, &[false, false]);
+    let tuning = json!({ "numbers": { "amount": 1 } });
+    let tuned: jackioh_engine::wire::Tuning = serde_json::from_value(tuning.clone()).expect("a tuning");
+    let values: Vec<Option<indexmap::IndexMap<String, i32>>> = parts
+        .iter()
+        .map(|part| {
+            Some(
+                part.params
+                    .iter()
+                    .flatten()
+                    .map(|param| {
+                        let value = jackioh_engine::params::tuned_value(param, false, Some(&tuned));
+                        (param.key.clone(), value)
+                    })
+                    .collect(),
+            )
+        })
+        .collect();
+    let want = each_filled(&parts, &[false, false], &values);
+    assert!(
+        want.contains("Deal 3 damage") && want.contains("Deal 6 damage"),
+        "{want}"
+    );
+    let face = face_of_def(&def, false, Locale::En, json!({ "inPlay": { "tuning": tuning } }));
+    assert_eq!(face.text.full, want);
+}
+
+/// R5049000: the view's number for a key is its first declaring part's, as the engine reads it; a later part that
+/// declares the key prints its own.
+#[test]
+fn r5049000_the_views_number_is_the_first_declarers_and_a_later_one_prints_its_own() {
+    let parts = ["classicplus-065-2", "classicplus-065-3"].map(catalog_def);
+    let def = fused_text(5054, &parts, &[false, false]);
+    let face = face_of_def(
+        &def,
+        false,
+        Locale::En,
+        json!({ "inPlay": { "params": { "amount": 9, "draw": 1, "discount": 1, "setCost": 0 } } }),
+    );
+    assert!(face.text.full.contains("Deal 9 damage"), "{}", face.text.full);
+    assert!(face.text.full.contains("Deal 5 damage"), "{}", face.text.full);
+    // The view's numbers are the face the card stands on: its Radiant face reads its own.
+    let radiant = face_of_def(
+        &def,
+        true,
+        Locale::En,
+        json!({ "inPlay": { "params": { "amount": 9 } } }),
+    );
+    assert!(
+        radiant.text.full.contains("Deal 9 damage") && radiant.text.full.contains("Deal 10 damage"),
+        "{}",
+        radiant.text.full
+    );
+}
+
+/// R5049000: a fusion of fusions fills each leaf, the inner one read from the id it spells (R179) where the
+/// view carries only the outer definition (R243).
+#[test]
+fn r5049000_a_fusion_of_fusions_fills_each_leaf() {
+    let parts = ["classicplus-065-2", "classicplus-059", "core-047"].map(catalog_def);
+    let inner = fused_text(5052, &parts[1..], &[false, false]);
+    let mut outer = fused(5053, &[&parts[0], &inner]);
+    outer.params = None;
+    outer.base.text = format!("{}\n{}", parts[0].base.text, inner.base.text);
+    outer.radiant.text = format!("{}\n{}", parts[0].radiant.text, inner.radiant.text);
+    assert_eq!(
+        face_of_def(&outer, false, Locale::En, json!({ "inPlay": {} }))
+            .text
+            .full,
+        each_filled(&parts, &[false; 3], &[None, None, None])
+    );
+}
+
+// ---- A unit holding gear (issue #5050) ---------------------------------------------------------------------
+
+const RADI: &str = "stinkyscapeplus-060";
+const REPEATER: &str = "stinkyscape-051";
+
+/// Radi with Repeater v3 equipped, then Beam v3, as the Fuse builds it: each pick fused onto the unit again,
+/// `[newest, (older + host)]`.
+fn equipped_radi() -> jackioh_engine::wire::CardDef {
+    let once = fused(1, &[&catalog_def(REPEATER), &catalog_def(RADI)]);
+    fused(2, &[&catalog_def(BEAM), &once])
+}
+
+/// R5050000: a unit holding gear prints as a Starship does (R2249000): named for the card it was equipped into, its
+/// rules box that card's own text, its numbers filled, then the gear, oldest first, each a card on the face it
+/// reads on; on a Radiant unit every piece reads Radiant. One Weapon onto a Unit is gear as well.
+#[test]
+fn r5050000_a_unit_holding_gear_prints_its_host_and_lists_its_gear() {
+    let radi = catalog_def(RADI);
+    let def = equipped_radi();
+    assert_eq!(
+        def.name, "Beam v3 + Repeater v3 + Radi",
+        "PREMISE: the engine joins the names"
+    );
+    for radiant in [false, true] {
+        let face = face_of_def(&def, radiant, Locale::En, json!({ "inPlay": {} }));
+        assert_eq!(face.name, "Radi");
+        let kind = if radiant {
+            jackioh_engine::wire::FaceKind::Radiant
+        } else {
+            jackioh_engine::wire::FaceKind::Base
+        };
+        assert_eq!(
+            face.text.full,
+            jackioh_engine::wire::fill_params(&radi, kind, None)
+        );
+        let gear = face.equipped.expect("its gear listed");
+        assert_eq!(gear.host, RADI);
+        assert_eq!(
+            gear.list
+                .iter()
+                .map(|piece| (piece.def_id.as_str(), piece.radiant))
+                .collect::<Vec<_>>(),
+            vec![(REPEATER, radiant), (BEAM, radiant)]
+        );
+        assert!(gear.term.is_some(), "the Equip term heads the list");
+    }
+    let one = fused(3, &[&catalog_def(BEAM), &catalog_def("core-020")]);
+    let face = face_of_def(&one, false, Locale::En, json!({ "inPlay": {} }));
+    assert_eq!(face.name, "Pointmaster");
+    assert_eq!(face.text.full, "Rush, First Strike");
+    assert_eq!(
+        face.equipped.map(|gear| gear.list.len()),
+        Some(1),
+        "Beam v3 equipped on Pointmaster"
+    );
+}
+
+/// R5050000: the keywords the gear lends read as gained, the host's printed ones as printed.
+#[test]
+fn r5050000_what_the_gear_lends_reads_as_gained() {
+    let one = fused(4, &[&catalog_def(BEAM), &catalog_def("core-020")]);
+    let face = face_of_def(
+        &one,
+        false,
+        Locale::En,
+        json!({ "inPlay": {}, "live": { "attack": 1, "health": 1, "maxHealth": 1, "keywords": [
+            { "kind": "Rush" }, { "kind": "First Strike" }, { "kind": "Pierce" }
+        ] } }),
+    );
+    assert_eq!(
+        face.gained.iter().map(keyword_key).collect::<Vec<_>>(),
+        vec!["Pierce".to_string()]
+    );
+}
+
+/// R5050000: only a unit holding gear: a Starship lists its own pieces (R2249000), gear fused onto gear has no
+/// host, and a host that is itself two cards that are no gear prints as the Fuse joined it.
+#[test]
+fn r5050000_a_starship_gear_alone_and_two_hosts_list_no_gear() {
+    let hull = catalog_def(HULL);
+    let ship = fused(5, &[&hull, &catalog_def(BEAM)]);
+    let starship = face_of_def(
+        &ship,
+        false,
+        Locale::En,
+        json!({ "inPlay": { "starship": { "pieces": 1, "name": null } } }),
+    );
+    assert!(starship.equipped.is_none());
+    assert_eq!(starship.name, "Dormant Starship");
+    let gear_only = fused(6, &[&catalog_def(BEAM), &catalog_def(REPEATER)]);
+    assert!(
+        face_of_def(&gear_only, false, Locale::En, json!({ "inPlay": {} }))
+            .equipped
+            .is_none()
+    );
+    let hosts = fused(
+        7,
+        &[
+            &catalog_def(BEAM),
+            &catalog_def("core-011"),
+            &catalog_def("core-020"),
+        ],
+    );
+    let face = face_of_def(&hosts, false, Locale::En, json!({ "inPlay": {} }));
+    assert!(face.equipped.is_none());
+    assert_eq!(face.name, hosts.name);
+}
+
+/// R5050000, R1301: a Chinese face names a unit holding gear for its host in Chinese, and prints its host's text.
+#[test]
+fn r5050000_a_chinese_face_names_the_host_in_chinese() {
+    let def = equipped_radi();
+    let radi_zh = printed(RADI, false, Locale::ZhCn);
+    assert_ne!(radi_zh.name, "Radi", "PREMISE: Radi has a Chinese name");
+    let face = face_of_def(&def, false, Locale::En, json!({ "chinese": true, "inPlay": {} }));
+    assert_eq!(face.name, radi_zh.name);
+    assert_eq!(face.english_name.as_deref(), Some("Radi"));
+    assert_eq!(face.text.full, radi_zh.text.full);
 }

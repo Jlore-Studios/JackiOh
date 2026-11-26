@@ -622,10 +622,11 @@ describe("a face in play is the card as the view says it stands; the collection'
     expect(f.stats).toMatchObject({ attack: 5, health: 5 });
   });
 
-  it("R102 R277 a radiant fused face marks each ingredient's radiant line against its own base line", () => {
+  it("R102 R277 R5049000 a radiant fused face marks each ingredient's radiant line against its own base line", () => {
     const fused = fusedDef([def("core-011"), def("core-002")]);
     const f = faceModel({ defId: fused.id, def: fused, radiant: true, inPlay: {} });
-    expect(f.text.full.split("\n")).toEqual([def("core-011").radiant.text, def("core-002").radiant.text]);
+    // R5049000: each line its own ingredient's, filled with that ingredient's numbers (Speciesist's Overload).
+    expect(f.text.full.split("\n")).toEqual([fillParams(def("core-011"), "radiant"), fillParams(def("core-002"), "radiant")]);
     // Tempo Timmy's Charge, and Speciesist's "all … Units", each against its own base line.
     expect(markedText(f.text.full, legacyText(f.text).marks)).toEqual(["Charge", "all", "Units"]);
   });
@@ -690,9 +691,14 @@ describe("R3045000: a Starship keeps its hull's name", () => {
 
   it("R3045000 the hull itself and every other fusion are named as they were", () => {
     expect(faceModel({ defId: hull.id, def: hull, radiant: false, inPlay: {} }).name).toBe("Dormant Starship");
-    const equipped = fusedDef([def(BEAM), def("core-020")]);
-    expect(faceModel({ defId: equipped.id, def: equipped, radiant: false, inPlay: {} }).name).toBe("Beam v3 + Pointmaster");
+    const joined = fusedDef([def("core-011"), def("core-020")]);
+    expect(faceModel({ defId: joined.id, def: joined, radiant: false, inPlay: {} }).name).toBe(`${def("core-011").name} + Pointmaster`);
     expect(face("core-020", false).name).toBe("Pointmaster");
+  });
+
+  it("R5050000 a unit holding gear is named for the card it was equipped into", () => {
+    const equipped = fusedDef([def(BEAM), def("core-020")]);
+    expect(faceModel({ defId: equipped.id, def: equipped, radiant: false, inPlay: {} }).name).toBe("Pointmaster");
   });
 });
 
