@@ -7,7 +7,7 @@
 use std::cmp::Ordering;
 
 use indexmap::{IndexMap, IndexSet};
-use jackioh_engine::{ActionBody, GameState, Phase, PlayerId};
+use jackioh_engine::{ActionBody, GameState, OffFieldZone, Phase, PlayerId, play_cost, zone_cards};
 
 use crate::candidates::{
     candidate_actions, candidate_set, root_candidate_actions, root_candidate_set, stands_down,
@@ -36,6 +36,19 @@ struct OpenLine {
     state: GameState,
     actions: Vec<ActionBody>,
     score: f64,
+    /// R4595002: a step of its line made one of the seat's other hand cards cheaper.
+    discounted: bool,
+}
+
+/// R4595002: whether `next` prices some card of `seat`'s hand that `before` also held below what
+/// `before` priced it (`play_cost`).
+fn hand_cheapened(before: &GameState, next: &GameState, seat: PlayerId) -> bool {
+    let held = zone_cards(before, seat, OffFieldZone::Hand);
+    zone_cards(next, seat, OffFieldZone::Hand).iter().any(|card| {
+        held.iter()
+            .find(|old| old.id == card.id)
+            .is_some_and(|old| play_cost(next, card) < play_cost(before, old))
+    })
 }
 
 /// `b.score - a.score` as a comparator: best first; a NaN difference reads as a tie.
@@ -133,6 +146,7 @@ pub fn beam_search(
         state: det.clone(),
         actions: Vec::new(),
         score: evaluate_priced(det, seat, NextSwing::Enemy, &AI_EVAL, prices),
+        discounted: false,
     }];
     let mut left_open: Vec<OpenLine> = Vec::new();
     // #1797: the lane variants of the children the beam kept, closed after it (each a state and its line).
@@ -209,10 +223,12 @@ pub fn beam_search(
                 // #1112: a child waiting on the seat's own prompt is ranked where its answers lead.
                 let score = own_prompt_score(&next, seat, counter, prices)
                     .unwrap_or_else(|| evaluate_priced(&next, seat, NextSwing::Enemy, &AI_EVAL, prices));
+                let discounted = line.discounted || hand_cheapened(&line.state, &next, seat);
                 children.push(OpenLine {
                     state: next,
                     actions,
                     score,
+                    discounted,
                 });
             }
         }
@@ -229,7 +245,11 @@ pub fn beam_search(
             break;
         }
         let mut next_frontier = best_first_open(children);
-        next_frontier.truncate(budget.beam_width.max(1));
+        let cut = next_frontier.split_off(budget.beam_width.max(1).min(next_frontier.len()));
+        // R4595002: a discount the beam cut is played on beside it.
+        let kept_discounts = next_frontier.iter().filter(|line| line.discounted).count();
+        let room = (AI_SEARCH.discount_lines.max(0) as usize).saturating_sub(kept_discounts);
+        next_frontier.extend(cut.into_iter().filter(|line| line.discounted).take(room));
         let kept: IndexSet<String> = next_frontier
             .iter()
             .map(|line| lane_free_signature(&line.state, seat))
