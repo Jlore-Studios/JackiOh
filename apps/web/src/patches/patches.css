@@ -26,7 +26,7 @@
   text-decoration-thickness: 0.08em;
   text-underline-offset: 0.18em;
   background: var(--patch-mark-band);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
@@ -84,16 +84,14 @@
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--type-md);
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
 
 .patch-change__label {
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   opacity: 0.78;
 }
 
@@ -122,15 +120,13 @@
 }
 
 .patch-text__was {
-  font-size: 13px;
+  font-size: var(--type-md);
   opacity: 0.9;
 }
 
 .patch-text__tag {
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .patch-text__none {
@@ -139,7 +135,7 @@
 
 .patch-change-note {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--type-md);
 }
 
 /* A printed face, sized by its box: the face fills it at 5:7 (cards.css `.cf`). */
@@ -190,7 +186,7 @@
   min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--line-bright, rgb(201 149 63 / 55%));
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-sunken, #0e0905);
   color: var(--text, #efe0bf);
   font: inherit;
@@ -245,7 +241,7 @@
   gap: 8px;
   padding: 10px 12px;
   border: 1px solid var(--line, rgb(201 149 63 / 30%));
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: rgb(0 0 0 / 0.22);
 }
 
@@ -255,7 +251,7 @@
   align-items: baseline;
   gap: 4px 10px;
   margin: 0;
-  font-size: 14px;
+  font-size: var(--type-md);
   line-height: 1.35;
 }
 
@@ -265,7 +261,7 @@
 
 .patch-date {
   color: var(--text-dim, rgb(239 224 191 / 72%));
-  font-size: 13px;
+  font-size: var(--type-md);
   font-variant-numeric: tabular-nums;
 }
 
@@ -290,10 +286,8 @@
 
 .patch-history__face figcaption {
   color: var(--text-dim, rgb(239 224 191 / 72%));
-  font-size: 11px;
+  font-size: var(--type-xs);
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .patch-history__face--radiant figcaption {
@@ -304,7 +298,7 @@
   min-height: 44px;
   padding: 0 18px;
   border: 1px solid var(--line-bright, rgb(201 149 63 / 55%));
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bg-sunken, #0e0905);
   color: var(--text, #efe0bf);
   font: inherit;
@@ -345,7 +339,7 @@
   padding: 18px 20px 20px;
   overflow-wrap: anywhere;
   border: 1px solid var(--tavern-brass);
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(ellipse 90% 40% at 50% 0%, rgba(255, 190, 110, 0.08), transparent 70%),
     linear-gradient(180deg, rgba(52, 30, 16, 0.96), rgba(22, 13, 7, 0.97));
@@ -370,10 +364,10 @@
   min-height: 44px;
   padding: 4px 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--tavern-gold);
-  font-family: var(--tavern-serif);
+  font-family: var(--font-display);
   font-size: clamp(22px, 5vw, 30px);
   font-weight: 700;
   line-height: 1.2;
@@ -406,7 +400,7 @@
 .tavern.app-shell .patch-set__span,
 .tavern.app-shell .patch-set__count {
   font-family: var(--font-text);
-  font-size: 14px;
+  font-size: var(--type-md);
   font-weight: 600;
   color: var(--tavern-text-dim);
 }
@@ -428,7 +422,7 @@
 .tavern.app-shell .patch-set__summary {
   margin: 0;
   max-width: 72ch;
-  font-size: 16px;
+  font-size: var(--type-lg);
   line-height: 1.55;
   color: var(--tavern-parchment);
 }
@@ -437,14 +431,14 @@
 .tavern.app-shell .patch-tech {
   padding: 14px 16px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--tavern-well);
 }
 
 .tavern.app-shell .patch-tech__title {
   margin: 0 0 6px;
-  font-family: var(--tavern-serif);
-  font-size: 18px;
+  font-family: var(--font-display);
+  font-size: var(--type-xl);
   color: var(--tavern-gold-pale);
 }
 
@@ -455,7 +449,7 @@
   gap: 4px;
   margin: 0;
   padding-left: 1.2em;
-  font-size: 15px;
+  font-size: var(--type-lg);
   line-height: 1.5;
   color: var(--tavern-parchment);
 }
@@ -479,7 +473,7 @@
   /* A long word or name in a note wraps: the page never scrolls sideways. */
   overflow-wrap: anywhere;
   border: 1px solid var(--tavern-brass);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(ellipse 90% 40% at 50% 0%, rgba(255, 190, 110, 0.08), transparent 70%),
     linear-gradient(180deg, rgba(52, 30, 16, 0.96), rgba(22, 13, 7, 0.97));
@@ -505,7 +499,7 @@
   align-items: baseline;
   gap: 4px 12px;
   margin: 0;
-  font-family: var(--tavern-serif);
+  font-family: var(--font-display);
   font-size: clamp(20px, 4.4vw, 26px);
   line-height: 1.2;
   color: var(--tavern-gold-pale);
@@ -514,7 +508,7 @@
 .tavern.app-shell .patch__title .patch-version {
   padding: 2px 10px;
   border: 1px solid var(--tavern-teal);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: var(--patch-mark-ink);
   font-family: inherit;
   font-size: 0.72em;
@@ -523,7 +517,7 @@
 .tavern.app-shell .patch__meta,
 .tavern.app-shell .patch__counts {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--type-md);
   color: var(--tavern-text-dim);
 }
 
@@ -535,7 +529,7 @@
   aspect-ratio: 16 / 9;
   overflow: hidden;
   border: 1px solid var(--tavern-brass);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, var(--tavern-wood-deep), var(--tavern-well));
 }
 
@@ -562,10 +556,8 @@
 
 .tavern.app-shell .patch-note__heading {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--type-md);
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--tavern-gold);
 }
 
@@ -598,7 +590,7 @@
 }
 
 .tavern.app-shell .patch-filter__label {
-  font-size: 14px;
+  font-size: var(--type-md);
   font-weight: 600;
   color: var(--tavern-parchment);
 }
@@ -607,11 +599,11 @@
   min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--tavern-well);
   color: var(--tavern-parchment);
   font: inherit;
-  font-size: 16px;
+  font-size: var(--type-lg);
 }
 
 .tavern.app-shell .patch-filter input::placeholder {
@@ -627,14 +619,14 @@
 .tavern.app-shell .patch-section__title,
 .tavern.app-shell .patch-group__title {
   margin: 0;
-  font-family: var(--tavern-serif);
-  font-size: 19px;
+  font-family: var(--font-display);
+  font-size: var(--type-2xl);
   line-height: 1.25;
   color: var(--tavern-gold-pale);
 }
 
 .tavern.app-shell .patch-group__title {
-  font-size: 16px;
+  font-size: var(--type-lg);
   color: var(--tavern-parchment);
 }
 
@@ -660,7 +652,7 @@
   gap: 14px;
   padding: 12px;
   border: 1px solid rgba(201, 149, 63, 0.35);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: rgba(14, 9, 5, 0.55);
 }
 
@@ -678,8 +670,8 @@
 
 .tavern.app-shell .patch-card__name {
   margin: 0;
-  font-family: var(--tavern-serif);
-  font-size: 18px;
+  font-family: var(--font-display);
+  font-size: var(--type-xl);
 }
 
 /* A card's name as a control: gold prose over a brass hairline, as the tavern writes a link. The
@@ -723,7 +715,7 @@
 }
 
 .tavern.app-shell .patch-quiet__what {
-  font-size: 13px;
+  font-size: var(--type-md);
   color: var(--tavern-text-dim);
   overflow-wrap: anywhere;
 }
@@ -820,11 +812,11 @@
   overflow-wrap: anywhere;
   padding: 12px 10px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: linear-gradient(180deg, rgba(52, 30, 16, 0.96), rgba(22, 13, 7, 0.97));
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
   color: var(--tavern-parchment);
-  font-size: 14px;
+  font-size: var(--type-md);
 }
 
 .tavern.app-shell .patch-legend ol {
@@ -863,7 +855,7 @@
   padding: 4px 8px;
   border: 0;
   border-left: 3px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   color: var(--tavern-parchment);
   font-variant-numeric: tabular-nums;
   font-weight: 400;
@@ -872,8 +864,8 @@
 
 .tavern.app-shell .patch-notes .patch-legend__link--line {
   color: var(--tavern-gold);
-  font-family: var(--tavern-serif);
-  font-size: 15px;
+  font-family: var(--font-display);
+  font-size: var(--type-lg);
   font-weight: 700;
 }
 
@@ -907,11 +899,11 @@
   gap: 6px;
   padding: 2px 8px 2px 11px;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: none;
   color: var(--tavern-text-dim);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--type-md);
   text-align: left;
   text-decoration: none;
   cursor: var(--cursor-glove-point, pointer);
@@ -937,8 +929,8 @@
   justify-content: space-between;
   padding: 0 8px;
   color: var(--tavern-gold);
-  font-family: var(--tavern-serif);
-  font-size: 16px;
+  font-family: var(--font-display);
+  font-size: var(--type-lg);
   font-weight: 700;
   text-decoration: none;
 }
@@ -966,7 +958,7 @@
   padding: var(--space-7) var(--space-8);
   overflow-wrap: anywhere;
   border: 1px dashed var(--tavern-brass);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   background: var(--tavern-well);
 }
 
@@ -1010,7 +1002,7 @@
   gap: 6px;
   padding: 10px 12px;
   border-left: 3px solid var(--tavern-brass);
-  border-radius: 4px 10px 10px 4px;
+  border-radius: var(--radius-xs) var(--radius-md) var(--radius-md) var(--radius-xs);
   background: rgba(14, 9, 5, 0.55);
 }
 
@@ -1031,8 +1023,8 @@
   align-items: baseline;
   gap: 2px 10px;
   margin: 0;
-  font-family: var(--tavern-serif);
-  font-size: 16px;
+  font-family: var(--font-display);
+  font-size: var(--type-lg);
   line-height: 1.25;
   color: var(--tavern-gold-pale);
 }
@@ -1040,7 +1032,7 @@
 .tavern.app-shell .patch-micro__title .patch-version {
   padding: 1px 8px;
   border: 1px solid var(--tavern-teal);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: var(--patch-mark-ink);
   font-size: 0.8em;
 }

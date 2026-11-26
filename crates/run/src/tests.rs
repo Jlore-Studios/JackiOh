@@ -989,15 +989,12 @@ fn r2922001_every_placeholder_curse_and_combat_artifact_has_a_fight_effect_its_t
 // The mutation audit (#3513): each test below kills mutants `sh scripts/mutants.sh run` found
 // surviving, by asserting the value the spec states.
 
-/// §15.10: the score is `RUN_SCORE_ROW` per row reached, `RUN_SCORE_FIGHT` per win by its kind, and
-/// each point of the fights' reports at its own weight; every term counts once.
-#[test]
-fn the_score_counts_every_row_win_and_report_point_at_its_own_weight() {
-    let content = content();
-    let mut state = start(&content);
-    let rows = 5;
-    let (normal, elites, ghosts) = (4, 2, 3);
-    let (dealt, healed, drawn) = (7, 11, 13);
+/// A fresh run at row `rows` (1-based) whose stats hold `wins` (normal fights, elites, ghosts) and
+/// `report` (damage dealt, healing done, cards drawn): what the score tests below weigh.
+fn scored_run(content: &RunContent, rows: usize, wins: (i32, i32, i32), report: (i32, i32, i32)) -> RunState {
+    let (normal, elites, ghosts) = wins;
+    let (dealt, healed, drawn) = report;
+    let mut state = start(content);
     state.row = Some(rows - 1);
     state.stats = RunStats {
         fights_won: normal + elites + ghosts,
@@ -1008,6 +1005,18 @@ fn the_score_counts_every_row_win_and_report_point_at_its_own_weight() {
         cards_drawn: drawn,
         ..RunStats::default()
     };
+    state
+}
+
+/// §15.10: the score is `RUN_SCORE_ROW` per row reached, `RUN_SCORE_FIGHT` per win by its kind, and
+/// each point of the fights' reports at its own weight; every term counts once.
+#[test]
+fn the_score_counts_every_row_win_and_report_point_at_its_own_weight() {
+    let content = content();
+    let rows = 5;
+    let (normal, elites, ghosts) = (4, 2, 3);
+    let (dealt, healed, drawn) = (7, 11, 13);
+    let state = scored_run(&content, rows, (normal, elites, ghosts), (dealt, healed, drawn));
     let win = |kind: RunNodeKind, n: i32| i64::from(RUN_SCORE_FIGHT.of(kind)) * i64::from(n);
     let expected = RUN_SCORE_ROW * i64::try_from(rows).unwrap()
         + win(RunNodeKind::Fight, normal)
@@ -1024,20 +1033,10 @@ fn the_score_counts_every_row_win_and_report_point_at_its_own_weight() {
 #[test]
 fn the_score_terms_are_its_weighted_sums_before_the_percents() {
     let content = content();
-    let mut state = start(&content);
     let rows = 5;
     let (normal, elites, ghosts) = (4, 2, 3);
     let (dealt, healed, drawn) = (7, 11, 13);
-    state.row = Some(rows - 1);
-    state.stats = RunStats {
-        fights_won: normal + elites + ghosts,
-        elites_won: elites,
-        ghosts_won: ghosts,
-        damage_dealt: dealt,
-        healing_done: healed,
-        cards_drawn: drawn,
-        ..RunStats::default()
-    };
+    let state = scored_run(&content, rows, (normal, elites, ghosts), (dealt, healed, drawn));
     let win = |kind: RunNodeKind, n: i32| i64::from(RUN_SCORE_FIGHT.of(kind)) * i64::from(n);
     let terms = run_score_terms(&state);
     assert_eq!(

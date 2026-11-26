@@ -2114,9 +2114,9 @@ struct PlayPrice {
     cost: i32,
 }
 
-/// R65, R455: every price the card could be played at now, one per X and embiggen choice — the prices
-/// `priced_play_actions` lists plays at, with the ones a ban forbids left out, before any is paid for.
-fn play_prices(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<PlayPrice> {
+/// R65: every price the card's X and embiggen choices come to now, X outermost, the banned ones (R455)
+/// among them.
+fn every_play_price(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<PlayPrice> {
     let x_values: Vec<Option<i32>> = if chooses_x(state, card) {
         legal_x_values(state, player, card)
             .into_iter()
@@ -2142,9 +2142,6 @@ fn play_prices(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<
                 ..card.clone()
             };
             let cost = crate::mana::play_cost(state, &probe);
-            if crate::cost_rules::why_play_banned(state, player, &probe, cost).is_err() {
-                continue;
-            }
             out.push(PlayPrice {
                 x: *x,
                 embiggen: *embiggen,
@@ -2154,6 +2151,15 @@ fn play_prices(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<
         }
     }
     out
+}
+
+/// R65, R455: every price the card could be played at now, one per X and embiggen choice — the prices
+/// `priced_play_actions` lists plays at, with the ones a ban forbids left out, before any is paid for.
+fn play_prices(state: &GameState, player: PlayerId, card: &CardInstance) -> Vec<PlayPrice> {
+    every_play_price(state, player, card)
+        .into_iter()
+        .filter(|price| crate::cost_rules::why_play_banned(state, player, &price.probe, price.cost).is_ok())
+        .collect()
 }
 
 /// R667: the costs a play of this card from its player's hand could pay now, whatever mana is left.
@@ -2200,41 +2206,16 @@ fn why_unplayable(
     refuse_price: impl Fn(&CardInstance, i32) -> Option<String>,
 ) -> Option<String> {
     // (a) Ban: every X and embiggen combination `play_prices` enumerates, stamped alike, is banned (R455).
-    let x_values: Vec<Option<i32>> = if chooses_x(state, card) {
-        legal_x_values(state, player, card)
-            .into_iter()
-            .map(Some)
-            .collect()
-    } else {
-        vec![None]
-    };
-    let embiggens: Vec<Option<bool>> = if has_dearer_price(state, card) {
-        legal_embiggen_choices(state, card)
-            .into_iter()
-            .map(Some)
-            .collect()
-    } else {
-        vec![None]
-    };
+    let every = every_play_price(state, player, card);
     let mut banned = 0;
-    let mut combos = 0;
     let mut ban_message: Option<String> = None;
-    for x in &x_values {
-        for embiggen in &embiggens {
-            combos += 1;
-            let probe = CardInstance {
-                x: x.or(card.x),
-                embiggened: embiggen.or(card.embiggened),
-                ..card.clone()
-            };
-            let cost = crate::mana::play_cost(state, &probe);
-            if let Err(error) = crate::cost_rules::why_play_banned(state, player, &probe, cost) {
-                banned += 1;
-                ban_message.get_or_insert(error.message);
-            }
+    for price in &every {
+        if let Err(error) = crate::cost_rules::why_play_banned(state, player, &price.probe, price.cost) {
+            banned += 1;
+            ban_message.get_or_insert(error.message);
         }
     }
-    if combos > 0 && banned == combos {
+    if !every.is_empty() && banned == every.len() {
         return ban_message;
     }
     // (b) Price: `play_prices` left nothing unbanned. An X card with no legal X names its smallest

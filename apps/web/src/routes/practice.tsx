@@ -76,6 +76,7 @@ import { PracticeLeave, type PracticeLeaveTo } from "../practice/PracticeLeave.t
 import { PracticeResult, outcomeOf } from "../practice/PracticeResult.tsx";
 import ReplayPlayer from "../replay/ReplayPlayer.tsx";
 import { PracticeSetup, type PracticeSetupChoice, type SavedDecks } from "../practice/PracticeSetup.tsx";
+import { savedDecksFor } from "../practice/savedDecks.ts";
 import { practiceTestid } from "../practice/testids.ts";
 import { ThinkIndicator } from "../practice/ThinkIndicator.tsx";
 import { dailyDealConfig } from "../practice/todaysDeal.ts";
@@ -317,20 +318,7 @@ function useSavedDecks(account: Account, loadDecks: (token: string) => Promise<D
     setAttempt((before) => before + 1);
   }, []);
 
-  switch (account.kind) {
-    case "loading":
-      return { kind: "checking" };
-    case "anonymous":
-      return { kind: "anonymous" };
-    case "error":
-      return account.retry === undefined
-        ? { kind: "unavailable" }
-        : { kind: "unavailable", retry: account.retry, retryAfterMs: account.retryAfterMs };
-    case "ready":
-      if (token === null) return { kind: "inactive" };
-      if (loaded === null || loaded.token !== token) return { kind: "checking" };
-      return loaded.saved.kind === "unavailable" ? { ...loaded.saved, retry } : loaded.saved;
-  }
+  return savedDecksFor(account, token, loaded, retry);
 }
 
 /**

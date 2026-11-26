@@ -17,6 +17,7 @@ use jackioh_engine::{
     ActionBody, ActionType, Aim, CombatForecast, EmoteId, PlagueSpend, PlayerId, PlayerView, PortraitId,
     PromptKind, RevealAt, Selection, ZoneChoice, is_emote_id, is_player_id, is_row, parse_aim,
 };
+use jackioh_shared::host::ActionAnswer;
 
 use crate::db::store::MatchClocks;
 use crate::economy::rewards::GameEconomy;
@@ -349,6 +350,38 @@ pub const MATCH_VOIDED_CLOSE_REASON: &str = "voided";
 
 /// R1253000: the `internal` answer to an action the reducer panicked on, on 1v1 and co-op sockets.
 pub const ACTION_PANICKED_MESSAGE: &str = "the server could not apply this action; it has been reported";
+
+/// The frame an action's answer is sent as (§9.3) on a 1v1 or co-op socket, `ack` and `error` being
+/// that socket's `ack_message` and `error_message`. A panicked action (R1253000) gets the same answer
+/// first and on every resend of its nonce.
+pub fn answer_frame<M>(
+    nonce: &str,
+    answer: ActionAnswer,
+    ack: fn(&str, i64) -> M,
+    error: fn(SocketErrorCode, &str, Option<&str>) -> M,
+) -> M {
+    match answer {
+        ActionAnswer::Ack { seq } => ack(nonce, seq),
+        ActionAnswer::Illegal { reason } => error(SocketErrorCode::IllegalAction, &reason, Some(nonce)),
+        ActionAnswer::MatchOver => error(
+            SocketErrorCode::MatchOver,
+            "this match already has a result",
+            Some(nonce),
+        ),
+        ActionAnswer::Panicked => error(SocketErrorCode::Internal, ACTION_PANICKED_MESSAGE, Some(nonce)),
+        ActionAnswer::NotRecorded => error(
+            SocketErrorCode::Internal,
+            "the action could not be recorded; try again",
+            Some(nonce),
+        ),
+        // R4013000: a 1v1 nonce is its own seat's duplicate check, as a co-op host's is: another seat's copy is taken.
+        ActionAnswer::NonceTaken => error(
+            SocketErrorCode::Malformed,
+            "that nonce is already taken",
+            Some(nonce),
+        ),
+    }
+}
 
 /// A frame's JSON text, the match socket's and the co-op one's.
 pub fn encode<M: Serialize>(message: &M) -> String {
@@ -1315,6 +1348,71 @@ mod tests {
         assert_eq!(
             encode(&ack_message("n", 4)),
             r#"{"type":"ack","nonce":"n","seq":4}"#
+        );
+    }
+
+    /// §9.3, R1253000, R4013000: each answer an action gets is the frame it was before the two actors
+    /// shared `answer_frame`, and the same bytes on a match socket and a co-op one; so is the
+    /// `forbidden` frame `refuse_watchers` sends a revoked watcher of either.
+    #[test]
+    fn an_actions_answer_is_the_same_frame_on_a_match_and_a_co_op_socket() {
+        use crate::actor::match_actor::WATCH_NOT_ALLOWED;
+        use crate::duos::protocol as duos;
+
+        let answers = [
+            (ActionAnswer::Ack { seq: 7 }, ack_message("n", 7)),
+            (
+                ActionAnswer::Illegal {
+                    reason: "not your turn".to_string(),
+                },
+                error_message(SocketErrorCode::IllegalAction, "not your turn", Some("n")),
+            ),
+            (
+                ActionAnswer::MatchOver,
+                error_message(
+                    SocketErrorCode::MatchOver,
+                    "this match already has a result",
+                    Some("n"),
+                ),
+            ),
+            (
+                ActionAnswer::Panicked,
+                error_message(SocketErrorCode::Internal, ACTION_PANICKED_MESSAGE, Some("n")),
+            ),
+            (
+                ActionAnswer::NotRecorded,
+                error_message(
+                    SocketErrorCode::Internal,
+                    "the action could not be recorded; try again",
+                    Some("n"),
+                ),
+            ),
+            (
+                ActionAnswer::NonceTaken,
+                error_message(
+                    SocketErrorCode::Malformed,
+                    "that nonce is already taken",
+                    Some("n"),
+                ),
+            ),
+        ];
+        for (answer, frame) in answers {
+            let on_match = answer_frame("n", answer.clone(), ack_message, error_message);
+            assert_eq!(on_match, frame, "{answer:?}");
+            let on_co_op = answer_frame("n", answer.clone(), duos::ack_message, duos::error_message);
+            assert_eq!(encode(&on_co_op), encode(&on_match), "{answer:?}");
+        }
+        assert_eq!(
+            encode(&duos::error_message(
+                SocketErrorCode::Forbidden,
+                WATCH_NOT_ALLOWED,
+                None
+            )),
+            encode(&error_message(
+                SocketErrorCode::Forbidden,
+                WATCH_NOT_ALLOWED,
+                None
+            )),
         );
     }
 }

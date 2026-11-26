@@ -53,6 +53,7 @@ import {
   DUNGEON_RUN_STEP,
   DUNGEON_STORAGE_VERSION,
 } from "./config.ts";
+import { EMPTY_RUN_STATS } from "./emptyStats.ts";
 import { todayDate } from "./seed.ts";
 
 export type DungeonMode = "sandbox" | "campaign";
@@ -330,37 +331,6 @@ function foldKept(kept: KeptRun): Live | "gone" | null {
     return null;
   }
 }
-
-/** R3496000: a run that never settled has no rows, no score and no stats. */
-const EMPTY_RUN_STATS: RunStats = {
-  nodesVisited: 0,
-  fightsWon: 0,
-  elitesWon: 0,
-  ghostsWon: 0,
-  miniBossesWon: 0,
-  bossesWon: 0,
-  damageDealt: 0,
-  healingDone: 0,
-  cardsDrawn: 0,
-  turns: 0,
-  damageTaken: 0,
-  healed: 0,
-  coinsEarned: 0,
-  coinsSpent: 0,
-  ticketsEarned: 0,
-  ticketsSpent: 0,
-  cardsKept: 0,
-  cardsBought: 0,
-  cardsRemoved: 0,
-  cardsMadeRadiant: 0,
-  cardsBuffed: 0,
-  packsSkipped: 0,
-  artifactsTaken: 0,
-  artifactsLeveled: 0,
-  blessingsTaken: 0,
-  eventsSeen: 0,
-  chestsOpened: 0,
-};
 
 /**
  * R3496000: what a run that cannot be folded at all settles: lost with no row, no score and no

@@ -2,11 +2,13 @@
 //! board that nothing `seat` does this turn stops. Both turns are played through the engine: every
 //! line of `seat`'s own turn, and for each, the opponent's lethal solver (§9.9's `find_lethal`) on
 //! the turn it hands over. Like `lethal_hint` (R2102000) it reads the true state only through
-//! `redact` (R185), and it counts only what shows: the opponent's hand and face-down cards are taken
-//! out, so none of them can make the lethal nor stop the seat's answer to it. Every doubt answers
-//! false: a cut walk, a failed step, a roll of the game's random numbers, a card drawn from a library
-//! the seat cannot see into, a choice the seat would make in the opponent's turn, or a panic. So a bot
-//! that asks it concedes only when the loss is certain, and plays on whenever it is not proved.
+//! `redact` (R185), and it counts only what shows: the opponent's hand, face-down cards and unrevealed
+//! secrets are taken out, so none of them can make the lethal nor stop the seat's answer to it
+//! (R4796000). Every doubt answers false: a cut walk, a failed step, a roll of the game's random
+//! numbers, a card drawn from a library the seat cannot see into, a board returned to a snapshot of a
+//! history the seat cannot read in full (R4796000), a choice the seat would make in the opponent's
+//! turn, or a panic. So a bot that asks it concedes only when the loss is certain, and plays on
+//! whenever it is not proved.
 
 use std::borrow::Cow;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -14,7 +16,7 @@ use std::rc::Rc;
 
 use indexmap::IndexSet;
 use jackioh_engine::{
-    Action, ActionBody, ActionType, CardInstance, GameState, Phase, PlayerId, Rng, legal_actions,
+    Action, ActionBody, ActionType, CardInstance, GameEvent, GameState, Phase, PlayerId, Rng, legal_actions,
     reduce_unpiloted, subsystems,
 };
 
@@ -54,8 +56,12 @@ pub fn unstoppable_lethal(state: &GameState, seat: PlayerId, should_stop: Option
 /// R2660000: the redacted state with only what shows on the opponent's side: no hand, and no face-down
 /// card (`HIDDEN_DEF_ID`) in its backrow, beneath a backrow pile or waiting to be set, so no unseen trap
 /// can stop the seat's answer and no unseen card can make the lethal. A pile whose top was hidden goes
-/// with it. Both automatic turn ends (R345) are off: the opponent's turn never runs on into the seat's
-/// own draw or fatigue, and only "end turn" hands the turn over (`step_from`), as at R82.
+/// with it. R4796000: no secret of the opponent's the seat has not seen revealed either, whose choice
+/// `determinize` would only guess: its reward finds no choice and does nothing. Both automatic turn ends
+/// (R345) are off: the opponent's turn never runs on into the seat's own draw or fatigue, and only "end
+/// turn" hands the turn over (`step_from`), as at R82. R4796000: the board history `redact` drops (R419)
+/// holds one snapshot, the field as it shows, as this turn's, so a step that returns the board to one
+/// finds it and says so (`rolled_back`).
 fn showing_only(mut public: GameState, seat: PlayerId) -> GameState {
     let hidden = |card: &CardInstance| card.def_id == HIDDEN_DEF_ID;
     public.players[seat].auto_end_turn = Some(false);
@@ -76,6 +82,14 @@ fn showing_only(mut public: GameState, seat: PlayerId) -> GameState {
             }
         }
     }
+    let opp = seat.opponent();
+    if let Some(secrets) = public.secrets.as_mut() {
+        secrets.retain(|secret| secret.owner != opp || secret.revealed == Some(true));
+        if secrets.is_empty() {
+            public.secrets = None;
+        }
+    }
+    subsystems::board_history::record_board_snapshot(&mut public);
     public
 }
 
@@ -149,9 +163,10 @@ fn step_from<'a>(state: &'a GameState, action: &ActionBody) -> Cow<'a, GameState
 }
 
 /// R2660000: whether one step from `before` to `after` left nothing to chance: it drew no random
-/// number from the game's stream, and took no card from `drawer`'s library or put none in it. The
-/// walk sees one outcome of a roll, and one guessed order of a library; any other could be the
-/// escape, so a step that depends on either proves nothing.
+/// number from the game's stream, took no card from `drawer`'s library or put none in it, and returned
+/// no board to a snapshot (R4796000). The walk sees one outcome of a roll, one guessed order of a
+/// library and a stand-in for the board history (`showing_only`); any other could be the escape, so a
+/// step that depends on one proves nothing.
 fn sure_step(before: &GameState, after: &GameState, drawer: PlayerId) -> bool {
     let ids = |state: &GameState| -> Vec<String> {
         state.players[drawer]
@@ -160,7 +175,22 @@ fn sure_step(before: &GameState, after: &GameState, drawer: PlayerId) -> bool {
             .map(|card| card.id.clone())
             .collect()
     };
-    after.rng_cursor == before.rng_cursor && ids(before) == ids(after)
+    after.rng_cursor == before.rng_cursor && ids(before) == ids(after) && !rolled_back(before, after)
+}
+
+/// R4796000: whether a step from `before` to `after` returned the board to a snapshot: a `rolledBack`
+/// among the events its reduces logged, those past `before`'s last in `after`'s nonce log (all of them
+/// when that one has gone from it).
+fn rolled_back(before: &GameState, after: &GameState) -> bool {
+    let logged = before
+        .applied
+        .last()
+        .and_then(|last| after.applied.iter().rposition(|entry| entry.nonce == last.nonce))
+        .map_or(0, |at| at + 1);
+    after.applied[logged..]
+        .iter()
+        .flat_map(|entry| &entry.events)
+        .any(|event| matches!(event, GameEvent::RolledBack { .. }))
 }
 
 /// Whether the game on `state` is over and `seat`'s opponent won it.

@@ -174,7 +174,8 @@ describe("R4681001 the Experimental tab's Hall of Fame view", () => {
     const panel = screen.getByRole("tabpanel");
     const views = within(panel).getByRole("group", { name: "Experimental views" });
     expect(within(views).getAllByRole("button").map((button) => button.textContent)).toEqual([
-      "Running",
+      "Major patch running",
+      "Historical",
       "Versions",
       "Hall of fame",
     ]);
