@@ -22849,6 +22849,14 @@
       "queued_at": "2026-11-26T06:29:30Z",
       "requested_by": "squishy-squooby",
       "stop_requested": false
+    },
+    "5032": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-26T05:39:24Z",
+      "issue": 5006,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
