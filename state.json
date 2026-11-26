@@ -22100,17 +22100,8 @@
       "verdict_rounds": 1
     },
     "5007": {
-      "action": "plan",
-      "asks": [
-        "c:7183070685"
-      ],
-      "build_next": {
-        "from_run": "45837830866",
-        "model": "opus",
-        "provider": "claude-7",
-        "since": "2026-11-26T14:39:46Z",
-        "until": "2026-11-26T15:09:46Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-26T14:39:33Z",
         "difficulty": "hard",
@@ -22129,10 +22120,9 @@
         "reason": "planned on opus",
         "trail": "work/_temp/work/item-5007/.bot-plan.md\", \"content\": \"# Draft plan #5007 (opus planner, in progress)\\n\\n## Found so far\\n- `AI_EVAL.attack_hook` 0.5 at crates/ai/src/config\u2026\n- Bash: {\"command\": \"sed -n 2320,2365p crates/ai/src/evaluate.rs; grep -n \\\"fn can_swing\\\" -A25 crates/ai/src/evaluate.rs | head -40\", \"description\": \"Read kill_worth and can_swing\"}\n- Bash: {\"command\": \"grep -n \\\"attack hook\\\\|attack_hook\\\\|attack-hook\\\" spec/09-architecture/*.md | cut -c1-400\", \"description\": \"Search spec 9 for attack hook mentions\"}\n- Bash: {\"command\": \"ls spec/09-architecture/ | head -30; grep -rln \\\"R2688000\\\" spec --include=*.md | grep -v \\\"rulings/R2688000\\\" | head\", \"description\": \"List spec 9 files and R2688000 citations\"}\n- Bash: {\"command\": \"grep -n -o \\\".\\\\{300\\\\}R2688000.\\\\{400\\\\}\\\" spec/09-architecture/9.9-practice-ai.md | head -5\", \"description\": \"Show 9.9 context around R2688000\"}\n- Bash: {\"command\": \"sed -n 2155,2175p crates/server/tests/api/practice.rs; grep -n \\\"^fn r1303002\\\\|fn r1303002\\\" crates/server/tests/api/practice.rs\", \"description\": \"Find practice-claim server test name\"}\n- Bash: {\"command\": \"grep -n -A12 \\\"practice-claim fixture\\\" training/README.md | head -30\", \"description\": \"Read practice-claim fixture notes\"}\n- Bash: {\"command\": \"git show --stat b961329197 | head -20; git show --stat 047324cbd2 | head -20\", \"description\": \"Show file lists of earlier AI knob PRs\"}\n- Bash: {\"command\": \"grep -n \\\"kind\\\\|tier\\\\|claims\\\" crates/tools/README.md | grep -i classify | cut -c1-1500 | head -5\", \"description\": \"Read classify docs\"}\n- Bash: {\"command\": \"git show b961329197 -- crates/ai/src/config.rs | sed -n 1,60p\", \"description\": \"Show #4931 config comment diff\"}\n- Bash: {\"command\": \"cat crates/ai/Cargo.toml; ls crates/ai/tests/; grep -n \\\"attack_hooks\\\\|affliction\\\" crates/ai/tests/ai/main.rs 2>/dev/null | head\", \"description\": \"Read ai Cargo.toml and test layout\"}\n- Bash: {\"command\": \"grep -n \\\"attack_hooks\\\\|mod support\\\\|#\\\\[path\\\" crates/ai/tests/ai.rs | head; head -20 crates/ai/tests/ai.rs\", \"description\": \"Check ai test harness modules\"}\n- Bash: {\"command\": \"grep -rln \\\"JACKIOH_RECORD\\\\|UPDATE_GOLDEN\\\\|BLESS\\\" crates apps/web/src e2e --include=*.rs --include=*.ts 2>/dev/null | head -20\", \"description\": \"Find fixture re-record mechanisms\"}\n- Bash: {\"command\": \"grep -n \\\"JACKIOH_RECORD\\\\|BLESS\\\\|UPDATE_GOLDEN\\\" crates/tools/src/golden.rs crates/server/tests/api/practice.rs | head; ls crates/ai/tests/fixtures | head\", \"description\": \"Check golde\u2026\n- Bash: {\"command\": \"grep -n \\\"magic\\\\|float literal\\\\|bare number\\\" crates/tools/tests/acceptance.rs | head -10; grep -n \\\"float_arithmetic\\\\|float_cmp\\\\|lossy\\\" Cargo.toml clippy.toml crates/ai/clippy.toml\u2026\n- Bash: {\"command\": \"sed -n 1228,1240p crates/tools/src/arena.rs\", \"description\": \"Check DuelLine serde attributes\"}\n- Bash: {\"command\": \"grep -rn \\\"attack_hook\\\" crates/ai/README.md docs/ apps/web/src --include=*.md --include=*.ts 2>/dev/null | head; grep -rn \\\"attack_hook\\\" crates --include=*.rs -l | head\", \"description\"\u2026\n- Bash: {\"command\": \"sed -n 228,240p crates/ai/README.md; grep -n \\\"attack_hook\\\" crates/engine/tests/rules/mod.rs crates/ai/tests/ai/mod.rs | head\", \"description\": \"Check README and other test refs to attac\u2026\n- Bash: {\"command\": \"grep -rn \\\"GATE_GAMES_SMOKE\\\\|SMOKE_GAMES\\\\|smoke\\\" crates/ai/README.md | head -5 | cut -c1-300\", \"description\": \"Check smoke gate size\"}\n- Bash: {\"command\": \"ls crates/server/tests/ | head; grep -n \\\"^\\\\[\\\\[test\\\\]\\\\]\\\" -A3 crates/server/Cargo.toml | head\", \"description\": \"Check server test binary name\"}\n- Bash: {\"command\": \"cat rustfmt.toml; git rev-parse --short=10 HEAD\", \"description\": \"Read rustfmt config and short HEAD\"}\n- Bash: {\"command\": \"timeout 1500 cargo test -p jackioh-ai --test ai attack_hooks:: 2>&1 | tail -25\", \"description\": \"Run the attack_hooks tests on base\", \"timeout\": 1600000, \"run_in_background\": true}\n- said: While that baseline test builds, I'll update the draft with the full plan shape.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5007/.bot-plan.md\", \"content\": \"# Draft plan #5007 (opus planner, in progress)\\n\\n## Found so far\\n- `AI_EVAL.attack_hook` 0.5 at crates/ai/src/config\u2026\n- Bash: {\"command\": \"sleep 240; cat /tmp/claude-1001/-home-runner-work--temp-work-item-5007/ee16487e-718f-4d03-8002-eb98eecdbd4c/tasks/bk35ky3vb.output | tail -5\", \"description\": \"Wait and check test progres\u2026\n- tool error: <tool_use_error>Blocked: sleep 240 followed by: cat /tmp/claude-1001/-home-runner-work--temp-work-item-5007/ee16487e-718f-4d03-8002-eb98eecdbd4c/tasks/bk35ky3vb.output tail -5. To wait for a conditio\u2026\n- ToolSearch: {\"query\": \"select:Monitor\"}\n- Bash: {\"command\": \"until grep -qE \\\"test result|error(\\\\[|:)\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-5007/ee16487e-718f-4d03-8002-eb98eecdbd4c/tasks/bk35ky3vb.output 2>/dev/null; do sleep 5; d\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5007/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"hard\\\", \\\"why\\\": \\\"rule 2, the AI: it changes AI_EVAL in crates/ai/src/config.rs, a weigh\u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Count words in draft plan\"}\n- Bash: {\"command\": \"until grep -qE \\\"test result|error(\\\\[|:)\\\" /tmp/claude-1001/-home-runner-work--temp-work-item-5007/ee16487e-718f-4d03-8002-eb98eecdbd4c/tasks/bk35ky3vb.output 2>/dev/null; do sleep 10; \u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"rule 2, the AI: it changes AI_EVAL in crates/ai/src/config.rs, a weight every decision's evaluation reads\"} --> ## Goal Screen `AI_EVAL.attack_hook` at 1.0 against the 0.5 control: one deal screen, 400 games on improve-dev, by `training/improve.md` (A screen\u2026\n- said: <!-- bot: {\"difficulty\": \"hard\", \"why\": \"rule 2, the AI: it changes AI_EVAL in crates/ai/src/config.rs, a weight every decision's evaluation reads\"} --> ## Goal Screen `AI_EVAL.attack_hook` at 1.0 against the 0.5 control: one deal screen, 400 games on improve-dev, by `training/improve.md` (A screen\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-26T14:19:19Z",
       "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
@@ -22145,12 +22135,14 @@
       "provider": "claude-7",
       "queued_at": "2026-11-26T04:59:25Z",
       "requested_by": "jgoetzmann",
-      "run_id": "45837830866",
+      "run_id": "pending:123fd71a-1795704255",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-26T14:19:19Z",
+      "started_at": "2026-11-26T14:44:46Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7183070685"
+      ]
     },
     "5008": {
       "action": "review",
@@ -24753,9 +24745,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T14:44:00Z",
+    "at": "2026-11-26T14:44:46Z",
     "url": "",
-    "what": "review #5084 on claude-6"
+    "what": "build #5007 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-26T14:26:36Z",
