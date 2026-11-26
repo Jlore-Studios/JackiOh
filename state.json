@@ -49138,7 +49138,8 @@
       "2026-11-26T16:12:21Z,claude-4,stream,call,45844550800,20,2026-11-26T17:30:00Z,,,allowed,70,,"
     ],
     "runs": [
-      "2026-11-26T16:01:14Z,45851038318,claude-7,sonnet+opus,review,5088,medium,interrupted,5-hour cap,19.1,48,9494,2242313,1.37,39,51,,,1.2,,fresh,,2"
+      "2026-11-26T16:01:14Z,45851038318,claude-7,sonnet+opus,review,5088,medium,interrupted,5-hour cap,19.1,48,9494,2242313,1.37,39,51,,,1.2,,fresh,,2",
+      "2026-11-26T16:17:49Z,45844550800,claude-4,opus,revise,5064,hard,approved,,21.1,48,10263,2274931,3.1108,12,20,,,30.8,claude-4,resumed,,2"
     ]
   },
   "version": 1
