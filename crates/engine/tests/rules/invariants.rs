@@ -4103,6 +4103,89 @@ mod i21 {
     }
 
     #[test]
+    fn r4828001_the_settle_collecting_an_affliction_s_kill_is_no_spell_s_and_i21_allows_it() {
+        let (before, id) = immune_board("r4828001");
+        let after = moved(&before, &id, OffFieldZone::Graveyard);
+        // The turn ends, a Spell's hand trigger runs (S #34 Drone Core VIII's Float), then Burn or
+        // Toxic ticks on the immune Unit and the settle after it collects the kill, with no killer
+        // and no marker of its own (fuzz Radiant rotation, seed 4 with C #3, C #98, S #148, S #169).
+        let ended: GameEvent =
+            json_as(json!({ "type": "turnEnded", "player": "p1", "turn": before.turn, "unspentMana": 0 }));
+        let hand_trigger: GameEvent = json_as(json!({
+            "type": "hookResolving",
+            "sourceId": "i21-held",
+            "defId": SPELL,
+            "controller": "p1",
+            "hook": "whenever",
+        }));
+        let tick = |target: &str, via: &str, amount: i32, absorbed: bool| -> GameEvent {
+            if absorbed {
+                json_as(json!({
+                    "type": "damageAbsorbed",
+                    "sourceId": null,
+                    "targetId": target,
+                    "absorbed": amount,
+                    "combat": false,
+                    "via": via,
+                }))
+            } else {
+                json_as(json!({
+                    "type": "damage",
+                    "sourceId": null,
+                    "targetId": target,
+                    "amount": amount,
+                    "combat": false,
+                    "via": via,
+                }))
+            }
+        };
+        let cleared: GameEvent =
+            json_as(json!({ "type": "counterChanged", "instanceId": id, "counter": "burn", "value": 0 }));
+        let death = |killer: Option<&str>| -> GameEvent {
+            json_as(json!({
+                "type": "destroyed",
+                "instanceId": id,
+                "defId": IMMUNE,
+                "owner": "p2",
+                "controller": "p2",
+                "attack": 4,
+                "maxHealth": 4,
+                "killerId": killer,
+            }))
+        };
+        let burned = [
+            ended.clone(),
+            hand_trigger.clone(),
+            tick(&id, "Burn", 5, false),
+            cleared.clone(),
+            death(None),
+        ];
+        assert_eq!(i21(&before, &burned, &after), Vec::<String>::new());
+        // The tick's reading allows the kill alone, whatever the `destroyed`'s max health reads: a
+        // hit of 1 against a max health of 4 leaves the layers' reading (R4599008) out of it.
+        let poisoned = [marker(SPELL), tick(&id, "Toxic", 1, false), death(None)];
+        assert_eq!(i21(&before, &poisoned, &after), Vec::<String>::new());
+        // A hit the tick never landed, a tick on another Unit, a tick before the Spell's own marker
+        // and a death credited to the running Spell (R4599001) leave the death the Spell's.
+        let absorbed = [
+            hand_trigger.clone(),
+            tick(&id, "Burn", 5, true),
+            cleared,
+            death(None),
+        ];
+        let elsewhere = [
+            hand_trigger.clone(),
+            tick("i21-other", "Burn", 5, false),
+            death(None),
+        ];
+        let earlier = [tick(&id, "Toxic", 1, false), hand_trigger.clone(), death(None)];
+        let killed = [hand_trigger, tick(&id, "Burn", 5, false), death(Some("i21-held"))];
+        for events in [&absorbed[..], &elsewhere, &earlier, &killed] {
+            only(&i21(&before, events, &after), &id, &["I21", "destroyed", SPELL]);
+        }
+    }
+
+    #[test]
     fn r4623000_the_state_check_s_evolution_of_an_immune_unit_is_no_spell_s_and_i21_allows_it() {
         use crate::rules::fixtures::evolution::{FULL, register_evolution_fixtures};
 
@@ -4297,6 +4380,100 @@ mod i21 {
         // With health to spare, the death is the Spell's destroy.
         only(
             &i21(&state, &[marker(SPELL), died(&id, None, 4)], &gone),
+            &id,
+            &["I21", "destroyed"],
+        );
+    }
+
+    /// R4783000: `state` in p1's turn's start stage (a prompt paused it, R62), with an Allure of p1's
+    /// waiting on `id` (R963, Meditative #39.5 Jade Beauty's).
+    fn allured(mut state: GameState, id: &str) -> GameState {
+        state.phase = Phase::Start;
+        state.delayed.push(json_as(json!({
+            "id": "d-allure",
+            "seq": 1,
+            "owner": "p1",
+            "at": { "phase": "start", "player": "p1" },
+            "resume": {
+                "defId": PLAIN,
+                "hook": "@delayedAllure",
+                "step": "unit",
+                "radiant": false,
+                "data": { "instanceId": id },
+            },
+            "watch": id,
+        })));
+        state
+    }
+
+    /// R4783000: `id`'s Allure mark coming off (R437).
+    fn allure_off(id: &str) -> GameEvent {
+        json_as(
+            json!({ "type": "marked", "instanceId": id, "mark": "allure", "color": "pink", "added": false }),
+        )
+    }
+
+    #[test]
+    fn r4783000_an_allure_the_start_stage_resolves_after_a_spell_is_the_allure_s_and_i21_allows_it() {
+        let (state, id) = immune_board("r4783000");
+        let state = allured(state, &id);
+        // The Allure found no room: its entry resolved, its mark came off and the steal destroyed the Unit
+        // where it stood (R4205000), after a Spell the paused start stage ran. No marker parts them.
+        let gone = moved(&state, &id, OffFieldZone::Graveyard);
+        assert!(gone.delayed.is_empty(), "the entry went with its Unit");
+        assert_eq!(
+            i21(
+                &state,
+                &[marker(SPELL), allure_off(&id), died(&id, None, 4)],
+                &gone
+            ),
+            Vec::<String>::new()
+        );
+        // Or it found room and took the Unit.
+        let mut taken = state.clone();
+        taken.delayed.clear();
+        assert_eq!(
+            i21(
+                &state,
+                &[marker(SPELL), allure_off(&id), control_changed(&id)],
+                &taken
+            ),
+            Vec::<String>::new()
+        );
+        // A Spell's destroy names the Unit before its entry drops and its mark comes off.
+        only(
+            &i21(
+                &state,
+                &[marker(SPELL), died(&id, None, 4), allure_off(&id)],
+                &gone,
+            ),
+            &id,
+            &["I21", "destroyed"],
+        );
+        // Out of the Allurer's turn's start stage, no Allure resolves.
+        let mut main = state.clone();
+        main.phase = Phase::Main;
+        only(
+            &i21(
+                &main,
+                &[marker(SPELL), allure_off(&id), died(&id, None, 4)],
+                &gone,
+            ),
+            &id,
+            &["I21", "destroyed"],
+        );
+        // The steal is one event: a Spell's destroy after it is the Spell's.
+        only(
+            &i21(
+                &state,
+                &[
+                    marker(SPELL),
+                    allure_off(&id),
+                    control_changed(&id),
+                    died(&id, None, 4),
+                ],
+                &gone,
+            ),
             &id,
             &["I21", "destroyed"],
         );
@@ -5162,6 +5339,58 @@ mod i23 {
                     Some(&["p1"]),
                 )],
                 &state,
+            ),
+            held,
+            &["I23", "transformed"],
+        );
+    }
+
+    /// R4783002: the event of `id`'s move to an exile (`exiled`) or a graveyard (`enteredGraveyard`).
+    fn moved_off(kind: &str, id: &str) -> GameEvent {
+        json_as(json!({ "type": kind, "instanceId": id, "defId": INDESTRUCTIBLE, "owner": "p2" }))
+    }
+
+    #[test]
+    fn r4783002_a_replace_in_an_exile_or_a_graveyard_the_step_sent_the_card_to_is_lawful_and_i23_allows_it() {
+        let (state, ids) = holders("r4783002");
+        let held = &ids[2];
+        let mut gone = state.clone();
+        gone.players[P2].hand.retain(|card| card.id != *held);
+        // Played, exiled in its own resolution, then replaced there in public (IA #43, R427).
+        for kind in ["exiled", "enteredGraveyard"] {
+            let events = [
+                moved_off(kind, held),
+                transformed(held, INDESTRUCTIBLE, PLAIN, "i23-replaced", None),
+            ];
+            assert_eq!(i23(&state, &events, &gone), Vec::<String>::new(), "{kind}");
+        }
+        // With no such move, the public replace is a finding, and so is one after the card came back.
+        only(
+            &i23(
+                &state,
+                &[transformed(held, INDESTRUCTIBLE, PLAIN, "i23-replaced", None)],
+                &gone,
+            ),
+            held,
+            &["I23", "transformed"],
+        );
+        let back: GameEvent = json_as(json!({
+            "type": "summoned",
+            "player": "p2",
+            "instanceId": held,
+            "defId": INDESTRUCTIBLE,
+            "row": "units",
+            "lane": 3,
+        }));
+        only(
+            &i23(
+                &state,
+                &[
+                    moved_off("exiled", held),
+                    back,
+                    transformed(held, INDESTRUCTIBLE, PLAIN, "i23-replaced", None),
+                ],
+                &gone,
             ),
             held,
             &["I23", "transformed"],

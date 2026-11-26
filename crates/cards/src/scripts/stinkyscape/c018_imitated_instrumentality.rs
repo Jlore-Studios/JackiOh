@@ -1,6 +1,7 @@
 //! S #18 Imitated Instrumentality (SPEC §8.10 row S 18; §6.3, R1, R64, R1843000, R1843001, R1866000):
-//! (3) Spell, Tech, Legendary. Tribute 1 since issue #4154 (R101): `staticFlags.tribute`, the play's cost;
-//! through v0.6.6h it cost (4) and asked none (`script_v0_6_6h`, R767000).
+//! (4) Spell, Tech, Legendary ((3) from issue #4154 until issue #4783, catalog data). Tribute 1 since issue
+//! #4154 (R101): `staticFlags.tribute`, the play's cost; through v0.6.6h it cost (4) and asked none
+//! (`script_v0_6_6h`, R767000).
 //!   Base:    "Summon MELCHIOR, BALTHASAR and CASPER. They offer great strategic value, but they can vote
 //!            to remove you."
 //!   Radiant: "Summon Radiant MELCHIOR, BALTHASAR and CASPER. They offer great strategic value, but can
@@ -149,15 +150,15 @@ mod tests {
         #[test]
         fn r1866000_r1843000_three_votes_at_your_next_start_of_turn_remove_you() {
             // At 10 health with no Unit against two (its Tribute took p1's one), after a turn that left 1 mana
-            // unspent (4 mana for the (3) it costs since #4154): each Brain's condition holds at p1's next
-            // start of turn.
+            // unspent (5 mana for the (4) it costs since issue #4783): each Brain's condition holds at p1's
+            // next start of turn.
             let mut s = scenario(json!({
                 "p1": {
                     "hand": [INSTRUMENTALITY, FILLER],
                     "field": [BODY],
                     "health": 10,
                     "library": filler(4),
-                    "mana": 4,
+                    "mana": 5,
                 },
                 "p2": { "hand": [FILLER], "field": [VANILLA, VANILLA], "library": filler(4) },
             }));

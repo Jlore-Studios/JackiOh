@@ -18,8 +18,8 @@ fn predictive_text(radiant: bool) -> Script {
                 for_each_card(ForEachCardArgs {
                     cards: Arc::new(|each: &mut EffectContext<'_>| {
                         let opp = opponent_of(each.controller);
-                        let opp_hand = each.state.players[opp].hand.len();
-                        let my_hand = each.state.players[each.controller].hand.len();
+                        let opp_hand = zone_count(each.state, opp, OffFieldZone::Hand);
+                        let my_hand = zone_count(each.state, each.controller, OffFieldZone::Hand);
                         if opp_hand > my_hand {
                             vec!["one-more".to_string()]
                         } else {

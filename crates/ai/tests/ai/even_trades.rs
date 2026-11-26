@@ -207,12 +207,16 @@ fn a_losing_trade_stays_behind_the_plays() {
 
 #[test]
 fn of_two_targets_with_equal_stats_the_even_trade_goes_into_the_one_without_reborn() {
-    // #1796: Mommy Barker's Radiant 4/4 Reborn comes back at 1 health, so the kill that trades Mr.
-    // Vanilla for it is a losing one, and the trade into the other Mr. Vanilla is the even one.
+    // #1796: Mommy Barker's Radiant Reborn, set to a 4/4 as Mr. Vanilla is (its face prints 4/2 since
+    // issue #4783), comes back at 1 health, so the kill that trades Mr. Vanilla for it is a losing one,
+    // and the trade into the other Mr. Vanilla is the even one.
     let state = board(json!({
         "seed": "ai-even-trades-reborn",
         "p1": { "hand": [VANILLA], "field": [VANILLA] },
-        "p2": { "field": [{ "def": BARKER, "radiant": true }, VANILLA] },
+        "p2": { "field": [
+            { "def": BARKER, "radiant": true, "statsOverride": { "attack": 4, "health": 4 } },
+            VANILLA,
+        ] },
     }));
     let actions = candidate_actions(&state, AI, Prices::NONE);
     let attacker = unit_id(&state, AI, VANILLA);

@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #15 Hull Repairer mk2 (Unit 1/4 → 2/8, 0/4 → 0/8 through v0.6.7k, Starship Piece, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #15 Hull Repairer mk2 (Unit 1/5 → 2/10, 1/4 → 2/8 until issue #4783, 0/4 → 0/8 through v0.6.7k, Starship Piece, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Starship Piece
 //!            End of turn: Heal this to full health"
 //!   Radiant: "Starship Piece
@@ -45,6 +45,9 @@ mod tests {
 
     const P1: PlayerId = PlayerId::P1;
 
+    /// The printed health of each face (4 and 8 until issue #4783).
+    const HEALTH: i32 = 5;
+    const RADIANT_HEALTH: i32 = 10;
     /// The Radiant face's gain, and an equipped host with room to be hurt.
     const MAX_HEALTH_GAIN: i32 = 2;
     const HOST: &str = "stand-in (1) 4/30 R8/60";
@@ -79,7 +82,7 @@ mod tests {
             s.card_mut(ID).damage = 3;
             s.end_turn();
             assert_eq!(s.card(ID).damage, 0);
-            s.expect_stats(ID, json!({ "attack": 1, "health": 4, "maxHealth": 4 }));
+            s.expect_stats(ID, json!({ "attack": 1, "health": HEALTH, "maxHealth": HEALTH }));
         }
 
         #[test]
@@ -100,7 +103,7 @@ mod tests {
             let mut s = board(true);
             s.card_mut(ID).damage = 5;
             s.end_turn();
-            let max = 8 + MAX_HEALTH_GAIN;
+            let max = RADIANT_HEALTH + MAX_HEALTH_GAIN;
             s.expect_stats(ID, json!({ "health": max, "maxHealth": max }));
             s.end_turn();
             s.end_turn();

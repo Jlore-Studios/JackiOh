@@ -116,18 +116,18 @@
     },
     "meditative-045": {
       "base": {
-        "en": "Cry: Nerf other CN and KY cards in play and hands.\nAura: Your Units are Cloaked.\nDeath: Shuffle in its Prime."
+        "en": "Cloaked\nCry: Nerf other CN and KY cards in play and hands.\nDeath: Shuffle in its Prime."
       },
       "radiant": {
-        "en": "Cry: Nerf other CN and KY cards in play and hands {times|time|times}.\nAura: Cloaks your Units.\nDeath: Shuffle in a Prime."
+        "en": "Cloaked\nCry: Nerf other CN and KY cards in play and hands {times|time|times}.\nDeath: Shuffle in a Prime."
       }
     },
     "meditative-049-1": {
       "base": {
-        "en": "Float reduces cost.\nCry: Do {picks} at random: Datacenters, Glitches, an AI Girlfriend, Viruses for them, or Nerf their cards."
+        "en": "Float reduces cost.\nCry: Overload ({mana}). Do {picks} at random: Datacenters, Glitches, an AI Girlfriend, Viruses for them, or Nerf their cards."
       },
       "radiant": {
-        "en": "Float reduces cost.\nCry: Datacenters, Glitches, an AI Girlfriend, Viruses for them, and Nerf their cards."
+        "en": "Float reduces cost.\nCry: Overload ({mana}). Datacenters, Glitches, an AI Girlfriend, Viruses for them, and Nerf their cards."
       }
     },
     "meditative-049-2": {
@@ -459,7 +459,7 @@
     },
     "stinkyscapeplus-080": {
       "base": {
-        "en": "Exile your hand, deck and board. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one each turn end."
+        "en": "Exile your hand, deck and board. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one now and each later turn end."
       },
       "radiant": {
         "en": "Exile your hand, deck and both boards. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one now and each turn end."
@@ -491,10 +491,10 @@
     },
     "stinkyscapeplus-121": {
       "base": {
-        "en": "Immutable, Crater, Rush\nCry: Summon {legs|Leg|Legs}.\nIndestructible with Legs.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+        "en": "Immutable, Crater, Rush\nCry: Summon {legs|Leg|Legs}.\nIndestructible with Legs.\nEnd of turn: Toxic {toxic} all enemies."
       },
       "radiant": {
-        "en": "Immutable, Crater, Rush\nCry: Summon {legs|Leg|Legs} for them.\nIndestructible with Legs.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+        "en": "Immutable, Crater, Rush\nCry: Summon {legs|Leg|Legs} for them.\nIndestructible with Legs.\nEnd of turn: Toxic {toxic} all enemies."
       }
     },
     "stinkyscapeplus-123": {
@@ -513,11 +513,6 @@
     "stinkyscapeplus-133": {
       "radiant": {
         "en": "Add a Radiant Dagger and Flare. The first play of each cost of Radiant Automa-ζ adds the next cost's, Radiant."
-      }
-    },
-    "stinkyscapeplus-137": {
-      "radiant": {
-        "en": "Add a Radiant Automa-δ and its Radiant Automa-Ω pair: Scepter and Reign, Antumbra and Eclipse, Quad and Oct, Sei and Omura, Vela and Corvus."
       }
     },
     "stinkyscapeplus-142": {

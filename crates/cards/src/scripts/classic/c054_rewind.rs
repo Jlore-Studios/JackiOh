@@ -53,7 +53,7 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const REWIND: &str = "classic-054";
-    const GARY: &str = "core-004"; // Gary the Gambler: Cry: flip 5 coins, +1 attack per heads, +1 health per tails
+    const GARY: &str = "core-004"; // Gary the Gambler: Cry: flip a coin 6 times, +1 attack per heads, +1 health per tails
     const MR_TOKEN: &str = "core-015"; // Me and Mr Token: Cry: summon a Rush Token
     const DUPLICATING: &str = "core-012"; // Duplicating Felinors: Cry: summon a copy of this
     const SPECIESIST: &str = "core-002"; // Speciesist: Human, Cry: destroy target enemy non-Human Unit
@@ -104,7 +104,7 @@ mod tests {
                 let gary = s.card(GARY).clone();
                 s.play(REWIND, json!({ "targets": pick::id(&gary.id) }));
                 let stats = s.stats(&gary);
-                assert_eq!(stats.attack + stats.max_health, 1 + 1 + 5);
+                assert_eq!(stats.attack + stats.max_health, 1 + 1 + 6);
                 s.expect_events(json!(["cardPlayed", "buffed"]));
             }
 

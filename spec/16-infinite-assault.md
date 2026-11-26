@@ -20,7 +20,7 @@ Every value is a constant of `crates/run/src/config.rs`, and every one is a stra
 | `ASSAULT_HISTORY_DAYS` | The days of records the device keeps: 30 | [[§16.6]], [[R4581001]] |
 | `ASSAULT_BASE_HANDICAP` | The resources every level starts from: Easy's ([[§9.9]]) | [[§16.2]], [[R4579000]] |
 | `ASSAULT_HERO_HEALTH` | A normal level's hero health, `(base, per level)`: 20 + the level | [[§16.2]], [[R4579000]] |
-| `ASSAULT_COMMANDER_HEALTH` | A Commander level's hero health, `(base, per level)`: 30 + twice the level | [[§16.2]], [[R4579000]] |
+| `ASSAULT_COMMANDER_HEALTH` | A Commander level's hero health, `(base, per level)`: 30 + five times the level (twice until issue #4783) | [[§16.2]], [[R4579000]] |
 | `ASSAULT_FEWER_OPENING` | The cards fewer in the opening draw on the first levels: 1 ([[R3582000]]) | [[§16.2]], [[R4579000]] |
 | `ASSAULT_FEWER_OPENING_LEVELS` | The last level dealing fewer opening cards: 3 | [[§16.2]], [[R4579000]] |
 | `ASSAULT_DECK_SIZE` | The deck's size before Bigger Dataset: `DECK_SIZE` (25) | [[§16.2]], [[R4579000]] |
@@ -43,7 +43,7 @@ Every value is a constant of `crates/run/src/config.rs`, and every one is a stra
 
 **The base row.** Every level starts from `ASSAULT_BASE_HANDICAP`, Easy's resources ([[§9.9]], [[R180]]), with:
 
-- hero health `ASSAULT_HERO_HEALTH` on a normal level (21 to 39) and `ASSAULT_COMMANDER_HEALTH` on a Commander's (40, 50, 60, 70), plus Redundancy's stacks ([[R290]]);
+- hero health `ASSAULT_HERO_HEALTH` on a normal level (21 to 39) and `ASSAULT_COMMANDER_HEALTH` on a Commander's (55, 80, 105, 130), plus Redundancy's stacks ([[R290]]);
 - `ASSAULT_FEWER_OPENING` card fewer in the opening draw on levels 1 to `ASSAULT_FEWER_OPENING_LEVELS` (`fewer_opening_cards`, [[R3582000]]);
 - a deck of `ASSAULT_DECK_SIZE` cards plus Bigger Dataset's, dealt from slots of each rarity, level 1's being `ASSAULT_START_SLOTS`.
 

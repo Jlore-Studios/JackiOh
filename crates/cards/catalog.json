@@ -146,8 +146,8 @@
     "params": [
       {
         "key": "coins",
-        "base": 5,
-        "radiant": 10,
+        "base": 6,
+        "radiant": 12,
         "better": "up",
         "step": 1,
         "min": 1,
@@ -177,13 +177,13 @@
       "attack": 1,
       "health": 1,
       "keywords": [],
-      "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} Attack per heads and +{perTails} Health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
+      "text": "Cry: Flip a coin {coins|time|times}. Gain +{perHeads} Attack per heads and +{perTails} Health per tails."
     },
     "radiant": {
       "attack": 2,
       "health": 2,
       "keywords": [],
-      "text": "Cry: Flip {coins|coin|coins}. Gain +{perHeads} Attack per heads and +{perTails} Health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush."
+      "text": "Cry: Flip a coin {coins|time|times}. Gain +{perHeads} Attack per heads and +{perTails} Health per tails."
     }
   },
   "core-005": {
@@ -5611,7 +5611,7 @@
     "rarity": "Epic",
     "flavor": "Toxic",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "params": [
       {
         "key": "tokens",
@@ -8258,13 +8258,13 @@
     "loc": 5,
     "base": {
       "attack": 2,
-      "health": 2,
+      "health": 1,
       "keywords": [],
       "text": "Death: Add {tokens|random Pancake token|random Pancake tokens} to your hand."
     },
     "radiant": {
       "attack": 4,
-      "health": 4,
+      "health": 2,
       "keywords": [
         {
           "kind": "Reborn"
@@ -10990,7 +10990,7 @@
     "rarity": "Rare",
     "flavor": "Chaos",
     "token": false,
-    "cost": 2,
+    "cost": 3,
     "params": [
       {
         "key": "cards",
@@ -12417,7 +12417,7 @@
     "loc": 39,
     "base": {
       "keywords": [],
-      "text": "Overload ({loss}). Make a card in your hand Radiant."
+      "text": "Overload ({loss}). Make a card in your hand Radiant, then Buff it."
     },
     "radiant": {
       "keywords": [
@@ -12425,7 +12425,7 @@
           "kind": "Cleave"
         }
       ],
-      "text": "Cleave\nOverload ({loss}). Make a card in your hand Radiant."
+      "text": "Cleave\nOverload ({loss}). Make a card in your hand Radiant, then Buff it."
     }
   },
   "meditative-019": {
@@ -13370,8 +13370,8 @@
     "params": [
       {
         "key": "surcharge",
-        "base": 1,
-        "radiant": 1,
+        "base": 2,
+        "radiant": 2,
         "better": "down",
         "step": 1,
         "min": 1,
@@ -13852,14 +13852,22 @@
     "base": {
       "attack": 1,
       "health": 3,
-      "keywords": [],
-      "text": "Cry: Nerf all other CN and KY cards on the field and in hands.\nAura: Your Units are Cloaked.\nDeath: Shuffle a Knowledge Breaker Prime into your deck."
+      "keywords": [
+        {
+          "kind": "Cloaked"
+        }
+      ],
+      "text": "Cloaked\nCry: Nerf all other CN and KY cards on the field and in hands.\nDeath: Shuffle a Knowledge Breaker Prime into your deck."
     },
     "radiant": {
       "attack": 2,
       "health": 6,
-      "keywords": [],
-      "text": "Cry: Nerf all other CN and KY cards on the field and in hands {times|time|times}.\nAura: Your Units are Cloaked.\nDeath: Shuffle a Radiant Knowledge Breaker Prime into your deck."
+      "keywords": [
+        {
+          "kind": "Cloaked"
+        }
+      ],
+      "text": "Cloaked\nCry: Nerf all other CN and KY cards on the field and in hands {times|time|times}.\nDeath: Shuffle a Radiant Knowledge Breaker Prime into your deck."
     }
   },
   "meditative-045-1": {
@@ -14064,7 +14072,7 @@
     "printedRarity": "Mythic",
     "flavor": "Tech",
     "token": true,
-    "cost": 8,
+    "cost": 4,
     "refs": [
       "classic-018",
       "classic-t-glitch",
@@ -14129,6 +14137,15 @@
         "min": 1,
         "tunedOn": "radiant",
         "read": "cry"
+      },
+      {
+        "key": "mana",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 1,
+        "read": "cry"
       }
     ],
     "loc": 149,
@@ -14136,13 +14153,13 @@
       "attack": 8,
       "health": 20,
       "keywords": [],
-      "text": "Float reduces cost.\nCry: Do {picks} of these at random: summon {datacenters|Claude's Datacenter|Claude's Datacenters}; add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand, which cost ({setCost}); summon an AI Girlfriend; fill your opponent's board with Yile's Viruses; Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
+      "text": "Float reduces cost.\nCry: Overload ({mana}). Do {picks} of these at random: summon {datacenters|Claude's Datacenter|Claude's Datacenters}; add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand, which cost ({setCost}); summon an AI Girlfriend; fill your opponent's board with Yile's Viruses; Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
     },
     "radiant": {
       "attack": 16,
       "health": 40,
       "keywords": [],
-      "text": "Float reduces cost.\nCry: Summon {datacenters|Claude's Datacenter|Claude's Datacenters}. Add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand; they cost ({setCost}). Summon an AI Girlfriend. Summon {viruses|Radiant Yile's Virus|Radiant Yile's Viruses} for your opponent. Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
+      "text": "Float reduces cost.\nCry: Overload ({mana}). Summon {datacenters|Claude's Datacenter|Claude's Datacenters}. Add {glitches|Radiant Glitch in the System card|Radiant Glitch in the System cards} to your hand; they cost ({setCost}). Summon an AI Girlfriend. Summon {viruses|Radiant Yile's Virus|Radiant Yile's Viruses} for your opponent. Nerf every card on your opponent's field, in their hand and in their deck {nerfs|time|times}."
     }
   },
   "meditative-049-2": {
@@ -19271,7 +19288,7 @@
     "rarity": "Legendary",
     "flavor": "Tech",
     "token": false,
-    "cost": 3,
+    "cost": 4,
     "refs": [
       "stinkyscape-018-1",
       "stinkyscape-018-2",
@@ -20350,14 +20367,14 @@
     "cost": 4,
     "loc": 20,
     "base": {
-      "attack": 8,
-      "health": 12,
+      "attack": 4,
+      "health": 8,
       "keywords": [],
       "text": "Cry: Fill your hand with random Drone Core cards."
     },
     "radiant": {
-      "attack": 16,
-      "health": 24,
+      "attack": 8,
+      "health": 16,
       "keywords": [],
       "text": "Cry: Fill your hand with random Radiant Drone Core cards."
     }
@@ -20608,8 +20625,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 5,
-        "radiant": 10,
+        "base": 4,
+        "radiant": 8,
         "better": "up",
         "step": 1,
         "min": 1
@@ -20800,8 +20817,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 7,
-        "radiant": 14,
+        "base": 6,
+        "radiant": 12,
         "better": "up",
         "step": 2,
         "min": 1
@@ -20992,8 +21009,8 @@
     "params": [
       {
         "key": "damage",
-        "base": 9,
-        "radiant": 18,
+        "base": 8,
+        "radiant": 16,
         "better": "up",
         "step": 2,
         "min": 1
@@ -21655,11 +21672,11 @@
     "rarity": "Epic",
     "flavor": "Physical",
     "token": false,
-    "cost": 2,
+    "cost": 1,
     "loc": 9,
     "base": {
       "attack": 1,
-      "health": 8,
+      "health": 3,
       "keywords": [
         {
           "kind": "Flying"
@@ -21669,7 +21686,7 @@
     },
     "radiant": {
       "attack": 2,
-      "health": 16,
+      "health": 6,
       "keywords": [
         {
           "kind": "Flying"
@@ -25698,7 +25715,7 @@
     "cost": 1,
     "loc": 6,
     "base": {
-      "attack": 2,
+      "attack": 3,
       "health": 2,
       "keywords": [
         {
@@ -25714,7 +25731,7 @@
       "text": "Cloaked, Immutable, Starship Piece"
     },
     "radiant": {
-      "attack": 4,
+      "attack": 6,
       "health": 4,
       "keywords": [
         {
@@ -29478,7 +29495,7 @@
     "loc": 21,
     "base": {
       "attack": 1,
-      "health": 4,
+      "health": 5,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -29488,7 +29505,7 @@
     },
     "radiant": {
       "attack": 2,
-      "health": 8,
+      "health": 10,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -29521,8 +29538,8 @@
     "cost": 2,
     "loc": 6,
     "base": {
-      "attack": 5,
-      "health": 3,
+      "attack": 3,
+      "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -29534,8 +29551,8 @@
       "text": "Starship Piece, Windfury"
     },
     "radiant": {
-      "attack": 10,
-      "health": 6,
+      "attack": 6,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -29670,7 +29687,7 @@
       "attack": 12,
       "health": 16,
       "keywords": [],
-      "text": "Tribute 3\nFloat reduces Tribute requirement by 1.\nEnd of turn: Deal {damage} damage to all enemies, twice."
+      "text": "Tribute 4\nFloat reduces Tribute requirement by 1.\nEnd of turn: Deal {damage} damage to all enemies, twice."
     },
     "radiant": {
       "attack": 24,
@@ -29680,13 +29697,13 @@
           "kind": "Pierce"
         }
       ],
-      "text": "Tribute 3, Pierce\nFloat reduces Tribute requirement by 1.\nEnd of turn: Deal {damage} damage to all enemies, twice."
+      "text": "Tribute 4, Pierce\nFloat reduces Tribute requirement by 1.\nEnd of turn: Deal {damage} damage to all enemies, twice."
     },
     "params": [
       {
         "key": "damage",
         "base": 2,
-        "radiant": 5,
+        "radiant": 4,
         "better": "up",
         "step": 1,
         "min": 1
@@ -30739,7 +30756,7 @@
     "loc": 29,
     "base": {
       "keywords": [],
-      "text": "Give a Unit Ranged."
+      "text": "Give a Unit Ranged and +{attack} Attack."
     },
     "radiant": {
       "keywords": [],
@@ -30748,12 +30765,11 @@
     "params": [
       {
         "key": "attack",
-        "base": 3,
-        "radiant": 3,
+        "base": 1,
+        "radiant": 5,
         "better": "up",
         "step": 1,
-        "min": 1,
-        "tunedOn": "radiant"
+        "min": 1
       }
     ]
   },
@@ -30999,7 +31015,7 @@
           "kind": "GIGA"
         }
       ],
-      "text": "GIGA\nCry: Overload ({mana}), then ({mana2}) the turn after.\nDormant for {dormant|turn|turns}.\nWhen this awakens: Gain infinite mana."
+      "text": "GIGA\nCry: Overload ({mana}).\nDormant for {dormant|turn|turns}.\nWhen this awakens: Gain infinite mana."
     },
     "radiant": {
       "keywords": [
@@ -31007,20 +31023,11 @@
           "kind": "GIGA"
         }
       ],
-      "text": "GIGA\nCry: Overload ({mana}), then ({mana2}) the turn after.\nDormant for {dormant|turn|turns}.\nWhen this awakens: Gain infinite mana."
+      "text": "GIGA\nCry: Overload ({mana}).\nDormant for {dormant|turn|turns}.\nWhen this awakens: Gain infinite mana."
     },
     "params": [
       {
         "key": "mana",
-        "base": 4,
-        "radiant": 2,
-        "better": "down",
-        "step": 1,
-        "min": 1,
-        "read": "cry"
-      },
-      {
-        "key": "mana2",
         "base": 2,
         "radiant": 1,
         "better": "down",
@@ -32109,7 +32116,7 @@
     "loc": 85,
     "base": {
       "keywords": [],
-      "text": "Exile your hand, deck and board, Dormant cards included. Summon {starships|random Terminus Starship|random Terminus Starships}. They can't be launched by hand. Launch a random one at the end of each of your turns."
+      "text": "Exile your hand, deck and board, Dormant cards included. Summon {starships|random Terminus Starship|random Terminus Starships}. They can't be launched by hand. Launch a random one now and at the end of each of your turns after this one."
     },
     "radiant": {
       "keywords": [],
@@ -32452,7 +32459,7 @@
           "kind": "Windfury"
         }
       ],
-      "text": "Flexible, Can't Defend, Windfury, Ranged\nWhen this attacks, gain +{attack} Attack and take {damage} damage.\nWhen this is Frozen, fully heal it."
+      "text": "Flexible, Can't Defend, Windfury, Ranged\nWhen this attacks, gain +{attack} Attack and take {damage} damage."
     },
     "radiant": {
       "attack": 4,
@@ -32468,7 +32475,7 @@
           "kind": "Windfury"
         }
       ],
-      "text": "Flexible, Windfury, Ranged\nWhen this attacks, gain +{attack} Attack and take {damage} damage.\nWhen this is Frozen, fully heal it."
+      "text": "Flexible, Windfury, Ranged\nWhen this attacks, gain +{attack} Attack and take {damage} damage."
     },
     "params": [
       {
@@ -32841,8 +32848,8 @@
     "params": [
       {
         "key": "buff",
-        "base": 6,
-        "radiant": 6,
+        "base": 8,
+        "radiant": 8,
         "better": "up",
         "step": 1,
         "min": 1,
@@ -32850,8 +32857,8 @@
       },
       {
         "key": "buff2",
-        "base": 12,
-        "radiant": 12,
+        "base": 16,
+        "radiant": 16,
         "better": "up",
         "step": 1,
         "min": 1,
@@ -32874,17 +32881,39 @@
     "cost": 1,
     "loc": 42,
     "base": {
-      "attack": 1,
+      "attack": 2,
       "health": 1,
       "keywords": [],
-      "text": "Evolves after this destroys a Unit.\nEvolve: Set stats to 10/10."
+      "text": "Evolves after this destroys a Unit.\nEvolve: Gain +{buff}/+{buff}."
     },
     "radiant": {
-      "attack": 2,
+      "attack": 4,
       "health": 2,
       "keywords": [],
-      "text": "Evolves after this destroys a Unit.\nEvolve: Set stats to 20/20."
-    }
+      "text": "Evolves after this destroys a Unit.\nEvolve: Gain +{buff2}/+{buff2}."
+    },
+    "params": [
+      {
+        "key": "buff",
+        "base": 8,
+        "radiant": 8,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "base",
+        "read": "evolve"
+      },
+      {
+        "key": "buff2",
+        "base": 16,
+        "radiant": 16,
+        "better": "up",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "radiant",
+        "read": "evolve"
+      }
+    ]
   },
   "stinkyscapeplus-102": {
     "id": "stinkyscapeplus-102",
@@ -33932,14 +33961,22 @@
     "base": {
       "attack": 2,
       "health": 1,
-      "keywords": [],
-      "text": "May be played from your graveyard for (1).\nDeath: Add a Toxopid to your hand. If you already have one there, reduce its cost by ({reduce}) instead."
+      "keywords": [
+        {
+          "kind": "Flashback"
+        }
+      ],
+      "text": "Flashback\nDeath: Add a Toxopid to your hand. If you already have one there, reduce its cost by ({reduce}) instead."
     },
     "radiant": {
       "attack": 4,
       "health": 2,
-      "keywords": [],
-      "text": "May be played from your graveyard for (1).\nDeath: Add a Radiant Toxopid to your hand. If you already have one there, reduce its cost by ({reduce}) instead."
+      "keywords": [
+        {
+          "kind": "Flashback"
+        }
+      ],
+      "text": "Flashback\nDeath: Add a Radiant Toxopid to your hand. If you already have one there, reduce its cost by ({reduce}) instead."
     },
     "params": [
       {
@@ -33984,7 +34021,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Immutable, Crater, Rush\nFloat reduces cost.\nCry: Summon {legs|Toxopid Leg|Toxopid Legs} in random empty unit zones on the field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+      "text": "Immutable, Crater, Rush\nFloat reduces cost.\nCry: Summon {legs|Toxopid Leg|Toxopid Legs} in random empty unit zones on the field.\nIndestructible while Toxopid Legs are on the field.\nEnd of turn: Toxic {toxic} all enemies."
     },
     "radiant": {
       "attack": 20,
@@ -34000,7 +34037,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Immutable, Crater, Rush\nFloat reduces cost.\nCry: Summon {legs|Radiant Toxopid Leg|Radiant Toxopid Legs} in random empty unit zones on your opponent's field.\nIndestructible while Toxopid Legs are on the field.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+      "text": "Immutable, Crater, Rush\nFloat reduces cost.\nCry: Summon {legs|Radiant Toxopid Leg|Radiant Toxopid Legs} in random empty unit zones on your opponent's field.\nIndestructible while Toxopid Legs are on the field.\nEnd of turn: Toxic {toxic} all enemies."
     },
     "params": [
       {
@@ -35125,24 +35162,12 @@
     "loc": 28,
     "base": {
       "keywords": [],
-      "text": "Add an Automa-δ and its paired Automa-Ω card to your hand. The pairs are Scepter and Reign, Antumbra and Eclipse, Quad and Oct, Sei and Omura, Vela and Corvus."
+      "text": "Add an Automa-δ and its paired Automa-Ω card to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Add a Radiant Automa-δ and its paired Radiant Automa-Ω card to your hand. The pairs are Scepter and Reign, Antumbra and Eclipse, Quad and Oct, Sei and Omura, Vela and Corvus."
-    },
-    "refs": [
-      "stinkyscapeplus-113",
-      "stinkyscapeplus-114",
-      "stinkyscapeplus-118",
-      "stinkyscapeplus-119",
-      "stinkyscapeplus-122",
-      "stinkyscapeplus-123",
-      "stinkyscapeplus-124",
-      "stinkyscapeplus-125",
-      "stinkyscapeplus-126",
-      "stinkyscapeplus-127"
-    ]
+      "text": "Add a Radiant Automa-δ and its paired Radiant Automa-Ω card to your hand."
+    }
   },
   "stinkyscapeplus-138": {
     "id": "stinkyscapeplus-138",
@@ -35293,11 +35318,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "One random effect: Add {card|random Paperclip card|random Paperclip cards} to your hand, they cost (0), replenish 2 mana; add {card2|random Evolved Swarm card|random Evolved Swarm cards} to your hand, they cost (0); summon two random Radiant Units, make them GIGA; summon or cast {card3|random Jlockeed card|random Jlockeed cards}; add {card4|random Terminus card|random Terminus cards} to your hand, replenish 4 mana; add the Toxopid to your hand, it costs (0); Toxic {toxic} and Burn {burn} all enemies; for the rest of the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) Cost Weapon; summon a Mindustrial Golem and a Swarm Golem; cast a random Call to Chaos."
+      "text": "One random effect: Add {card|random Paperclip card|random Paperclip cards} to your hand, they cost (0), replenish 2 mana; add {card2|random Evolved Swarm card|random Evolved Swarm cards} to your hand, they cost (0); summon two random Radiant Units, make them GIGA; summon or cast {card3|random Jlockeed card|random Jlockeed cards}; add {card4|random Terminus card|random Terminus cards} to your hand, replenish {replenish} mana; add the Toxopid to your hand, it costs ({toxopidCost}); Toxic {toxic} and Burn {burn} all enemies; for the rest of the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) Cost Weapon; summon a Mindustrial Golem and a Swarm Golem; cast a random Call to Chaos."
     },
     "radiant": {
       "keywords": [],
-      "text": "Three different random effects, resolved in the order listed: Add {card|random Paperclip card|random Paperclip cards} to your hand, they cost (0), replenish 2 mana; add {card2|random Evolved Swarm card|random Evolved Swarm cards} to your hand, they cost (0); summon two random Radiant Units, make them GIGA; summon or cast {card3|random Jlockeed card|random Jlockeed cards}; add {card4|random Terminus card|random Terminus cards} to your hand, replenish 4 mana; add the Toxopid to your hand, it costs (0); Toxic {toxic} and Burn {burn} all enemies; for the rest of the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) Cost Weapon; summon a Mindustrial Golem and a Swarm Golem; cast a random Call to Chaos."
+      "text": "Three different random effects, resolved in the order listed: Add {card|random Paperclip card|random Paperclip cards} to your hand, they cost (0), replenish 2 mana; add {card2|random Evolved Swarm card|random Evolved Swarm cards} to your hand, they cost (0); summon two random Radiant Units, make them GIGA; summon or cast {card3|random Jlockeed card|random Jlockeed cards}; add {card4|random Terminus card|random Terminus cards} to your hand, replenish {replenish} mana; add the Toxopid to your hand, it costs ({toxopidCost}); Toxic {toxic} and Burn {burn} all enemies; for the rest of the game, when you launch a Starship, cast a random Call to Chaos and summon a random (2) Cost Weapon; summon a Mindustrial Golem and a Swarm Golem; cast a random Call to Chaos."
     },
     "params": [
       {
@@ -35347,6 +35372,22 @@
         "better": "up",
         "step": 1,
         "min": 1
+      },
+      {
+        "key": "replenish",
+        "base": 3,
+        "radiant": 3,
+        "better": "up",
+        "step": 1,
+        "min": 1
+      },
+      {
+        "key": "toxopidCost",
+        "base": 2,
+        "radiant": 2,
+        "better": "down",
+        "step": 1,
+        "min": 0
       }
     ],
     "refs": [
@@ -35768,7 +35809,7 @@
     "cost": 2,
     "loc": 18,
     "base": {
-      "attack": 3,
+      "attack": 4,
       "health": 1,
       "keywords": [
         {
@@ -35778,7 +35819,7 @@
       "text": "Starship Piece\nDamage also Burns {burns}."
     },
     "radiant": {
-      "attack": 6,
+      "attack": 8,
       "health": 2,
       "keywords": [
         {
@@ -35790,8 +35831,8 @@
     "params": [
       {
         "key": "burns",
-        "base": 3,
-        "radiant": 6,
+        "base": 4,
+        "radiant": 8,
         "better": "up",
         "step": 1,
         "min": 1
@@ -35811,24 +35852,24 @@
     "cost": 4,
     "loc": 16,
     "base": {
-      "attack": 5,
+      "attack": 6,
       "health": 1,
       "keywords": [
         {
           "kind": "Starship Piece"
         }
       ],
-      "text": "Starship Piece\nDamage dealt Burns."
+      "text": "Starship Piece\nDamage dealt also Burns."
     },
     "radiant": {
-      "attack": 10,
+      "attack": 12,
       "health": 2,
       "keywords": [
         {
           "kind": "Starship Piece"
         }
       ],
-      "text": "Starship Piece\nDamage dealt Burns."
+      "text": "Starship Piece\nDamage dealt also Burns."
     }
   },
   "stinkyscapeplus-152": {
@@ -35844,8 +35885,8 @@
     "cost": 2,
     "loc": 18,
     "base": {
-      "attack": 2,
-      "health": 1,
+      "attack": 1,
+      "health": 4,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -35854,8 +35895,8 @@
       "text": "Starship Piece\nDamage also applies Toxic {toxic}."
     },
     "radiant": {
-      "attack": 4,
-      "health": 2,
+      "attack": 2,
+      "health": 8,
       "keywords": [
         {
           "kind": "Starship Piece"
@@ -36042,12 +36083,24 @@
     "loc": 26,
     "base": {
       "keywords": [],
-      "text": "Cast on draw: Cast a random Spell with random targets."
+      "text": "Cast on draw: Cast a random Spell with random targets. Discard {discards|random card|random cards}."
     },
     "radiant": {
       "keywords": [],
       "text": "Cast on draw: Cast a random Radiant Spell with random targets."
-    }
+    },
+    "params": [
+      {
+        "key": "discards",
+        "base": 1,
+        "radiant": 1,
+        "better": "down",
+        "step": 1,
+        "min": 1,
+        "tunedOn": "base",
+        "read": "castOnDraw"
+      }
+    ]
   },
   "stinkyscapeplus-159": {
     "id": "stinkyscapeplus-159",
@@ -43468,7 +43521,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 2,
-    "loc": 30,
+    "loc": 29,
     "base": {
       "keywords": [],
       "text": "Add copies of two random cards in your opponent's graveyard to your hand."
@@ -43492,7 +43545,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 44,
+    "loc": 43,
     "base": {
       "attack": 1,
       "health": 3,
@@ -43724,7 +43777,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 1,
-    "loc": 122,
+    "loc": 121,
     "base": {
       "keywords": [],
       "text": "Look at the top three cards of your opponent's deck. Add a copy of one to your hand and exile another."
@@ -43776,7 +43829,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 33,
+    "loc": 32,
     "base": {
       "keywords": [],
       "text": "Shuffle copies of the cards in your opponent's hand into your deck. Draw two cards."
@@ -43838,7 +43891,7 @@
     "flavor": "Tech",
     "token": false,
     "cost": 3,
-    "loc": 61,
+    "loc": 58,
     "base": {
       "keywords": [],
       "text": "Reveals when your opponent plays a Unit: Summon a copy of it for yourself with +2/+2."

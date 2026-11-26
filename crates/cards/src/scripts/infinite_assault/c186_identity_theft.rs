@@ -14,8 +14,7 @@ fn identity_theft(radiant: bool) -> Script {
     Script {
         cry: Some(hook(move |ctx| {
             let opp = opponent_of(ctx.controller);
-            let cards: Vec<_> = ctx.state.players[opp]
-                .hand
+            let cards: Vec<_> = zone_cards(&*ctx.state, opp, OffFieldZone::Hand)
                 .iter()
                 .map(|c| (c.id.clone(), c.def_id.clone(), c.radiant))
                 .collect();
