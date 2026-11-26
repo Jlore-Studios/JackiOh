@@ -76,6 +76,44 @@ pub fn find_card<'a>(view: &'a PlayerView, instance_id: &str, resolving: bool) -
     None
 }
 
+/// The card an event about a public zone names by instance and definition: what `public_names` notes
+/// and `Names::card_of` opens.
+fn moved_card(event: &GameEvent) -> Option<(&str, &str)> {
+    match event {
+        GameEvent::CardPlayed {
+            instance_id, def_id, ..
+        }
+        | GameEvent::Summoned {
+            instance_id, def_id, ..
+        }
+        | GameEvent::Destroyed {
+            instance_id, def_id, ..
+        }
+        | GameEvent::EnteredGraveyard {
+            instance_id, def_id, ..
+        }
+        | GameEvent::Exiled {
+            instance_id, def_id, ..
+        }
+        | GameEvent::Bounced {
+            instance_id, def_id, ..
+        }
+        | GameEvent::Burned {
+            instance_id, def_id, ..
+        }
+        | GameEvent::LibraryOverflow {
+            instance_id, def_id, ..
+        }
+        | GameEvent::Discarded {
+            instance_id, def_id, ..
+        }
+        | GameEvent::TrapFired {
+            instance_id, def_id, ..
+        } => Some((instance_id.as_str(), def_id.as_str())),
+        _ => None,
+    }
+}
+
 /// Instance to definition, from the window's events about public zones, so a unit that has since left the
 /// board is still named. The hand's own events (`drawn`, `addedToHand`, `shuffledIn`) are not read, and
 /// neither is the sentinel.
@@ -87,41 +125,15 @@ pub fn public_names(events: &[GameEvent]) -> IndexMap<String, String> {
         }
     };
     for event in events {
+        if let Some((instance_id, def_id)) = moved_card(event) {
+            note(instance_id, def_id);
+            continue;
+        }
         match event {
-            GameEvent::CardPlayed {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Summoned {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Destroyed {
-                instance_id, def_id, ..
-            }
-            | GameEvent::EnteredGraveyard {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Exiled {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Bounced {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Burned {
-                instance_id, def_id, ..
-            }
-            | GameEvent::LibraryOverflow {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Discarded {
-                instance_id, def_id, ..
-            }
-            | GameEvent::RadiantSet {
+            GameEvent::RadiantSet {
                 instance_id, def_id, ..
             }
             | GameEvent::Deradianted {
-                instance_id, def_id, ..
-            }
-            | GameEvent::TrapFired {
                 instance_id, def_id, ..
             }
             | GameEvent::Held {
@@ -368,43 +380,14 @@ impl<'a> Names<'a> {
             let def_id = self.def_id_of(instance_id)?;
             by_def(&def_id, Some(instance_id))
         };
+        if let Some((instance_id, def_id)) = moved_card(event) {
+            return if instance_id == HIDDEN_CARD {
+                None
+            } else {
+                by_def(def_id, Some(instance_id))
+            };
+        }
         match event {
-            GameEvent::CardPlayed {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Summoned {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Destroyed {
-                instance_id, def_id, ..
-            }
-            | GameEvent::EnteredGraveyard {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Exiled {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Bounced {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Burned {
-                instance_id, def_id, ..
-            }
-            | GameEvent::LibraryOverflow {
-                instance_id, def_id, ..
-            }
-            | GameEvent::Discarded {
-                instance_id, def_id, ..
-            }
-            | GameEvent::TrapFired {
-                instance_id, def_id, ..
-            } => {
-                if instance_id == HIDDEN_CARD {
-                    None
-                } else {
-                    by_def(def_id, Some(instance_id))
-                }
-            }
             GameEvent::RadiantSet {
                 instance_id, def_id, ..
             } => {

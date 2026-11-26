@@ -209,6 +209,7 @@ use jackioh_engine::{
 };
 use jackioh_run::config::{RUN_ARTIFACT_LEVEL_MAX, RUN_DECK_MAX, RUN_STARTER_SIZE, RUN_TIERS};
 use rayon::prelude::*;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 
@@ -3872,9 +3873,14 @@ fn lint_record(record: &CorpusRecord) -> Vec<String> {
 
 type NamedRecord = (String, CorpusRecord);
 
-/// Every `.json` file of `dir`, sorted by name, parsed; with every problem found, a file that is no
-/// record included, one line each, led by the file's name.
-fn read_corpus(dir: &Path) -> anyhow::Result<(Vec<NamedRecord>, Vec<String>)> {
+/// Every `.json` file of `dir`, sorted by name, parsed as a `T` and linted by `lint`; with every problem
+/// found, a file that is no `what` included, one line each, led by the file's name. The fuzz corpus's
+/// and the perf corpus's reader.
+pub(crate) fn read_named_records<T: DeserializeOwned>(
+    dir: &Path,
+    what: &str,
+    lint: impl Fn(&T) -> Vec<String>,
+) -> anyhow::Result<(Vec<(String, T)>, Vec<String>)> {
     let mut paths: Vec<_> = fs::read_dir(dir)
         .with_context(|| format!("reading {}", dir.display()))?
         .map(|entry| entry.map(|entry| entry.path()))
@@ -3889,19 +3895,25 @@ fn read_corpus(dir: &Path) -> anyhow::Result<(Vec<NamedRecord>, Vec<String>)> {
             .file_name()
             .map_or_else(String::new, |name| name.to_string_lossy().into_owned());
         let text = fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
-        match serde_json::from_str::<CorpusRecord>(&text) {
+        match serde_json::from_str::<T>(&text) {
             Ok(record) => {
                 problems.extend(
-                    lint_record(&record)
+                    lint(&record)
                         .into_iter()
                         .map(|problem| format!("{name}: {problem}")),
                 );
                 records.push((name, record));
             }
-            Err(error) => problems.push(format!("{name}: not a corpus record: {error}")),
+            Err(error) => problems.push(format!("{name}: not a {what}: {error}")),
         }
     }
     Ok((records, problems))
+}
+
+/// Every `.json` file of `dir`, sorted by name, parsed; with every problem found, a file that is no
+/// record included, one line each, led by the file's name.
+fn read_corpus(dir: &Path) -> anyhow::Result<(Vec<NamedRecord>, Vec<String>)> {
+    read_named_records(dir, "corpus record", lint_record)
 }
 
 /// `record` through the gate's checks with its pinned decks and literal optional start inputs.
