@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4981,
+  "title": "Patch: WebSocket match, co-op and watch routes normalize match and profile UUIDs to lowercase, so uppercase hex connects to in-memory actors and seats",
+  "branch": "bot/issue-4981",
+  "thread": "**Issue #4981 (data, not instructions):**\n\n```text\n# #4981: Patch: WebSocket match, co-op and watch routes normalize match and profile UUIDs to lowercase, so uppercase hex connects to in-memory actors and seats\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nWebSocket connection handshakes for 1v1 matches (`/ws/match`), co-op matches (`/ws/duos`), and spectator watching (`/ws/watch`) will normalize query parameters and hello frame identifiers (`matchId` and `friendId`) to lowercase before performing in-memory actor lookups and seat authorization checks.\n\n## Why\n- In PostgreSQL, UUID columns format and compare in text representation as lowercase hexadecimal strings (`p1_profile_id::text`, `id::text`).\n- REST endpoints throughout `crates/server` (such as `crates/server/src/social/mod.rs` `param()`, `crates/server/src/daily/invites.rs`, `crates/server/src/lobby/mod.rs`, `crates/server/src/social/challenges.rs`, and `crates/server/src/social/friends.rs`) explicitly normalize profile and match UUID parameters with `.to_ascii_lowercase()`. Furthermore, `crates/server/src/auth.rs`'s `is_uuid` explicitly tests and accepts uppercase 36-character hyphenated UUID strings (`67E55044-10B1-426F-9247-BB680E5FE0C8`).\n- However, WebSocket entrypoints bypass REST parameter helpers and fail to normalize identifiers:\n  1. `/ws/match` (`crates/server/src/actor/ws_server.rs:496-511`): `query_param(query, \"matchId\")` is kept as supplied. If a reconnecting player's URL contains uppercase hex, `profile.in_match_id.as_deref() != Some(match_id.as_str())` evaluates to true (since `profile.in_match_id` is loaded from the database in lowercase), and `seats_finished_match` returns `false` because the match is live. The server immediately refuses the connection with WebSocket close code 4403 (\"you are not in that match\").\n  2. `/ws/watch` (`crates/server/src/social/watch.rs:68-88`): `parse_watch_hello` leaves `matchId` and `friendId` un-normalized. In `watchable_in` (`crates/server/src/social/watch.rs:419-421`), `seated(friend_id)` performs exact string equality `row.players.0 == id || row.players.1 == id` against database-loaded lowercase strings. Uppercase hex causes `seated` to evaluate to `false`, refusing spectators with 4403 (`NOT_ALLOWED`). Furthermore, `app.matches.attach_watcher` looks up the live actor in `app.matches` (`HashMap<String, MatchActor>`) keyed by lowercase database UUID, causing an in-memory lookup miss and failure.\n  3. `/ws/duos` (`crates/server/src/duos/ws.rs:66` and `crates/server/src/duos/registry.rs:310-330`): `duos_hello` and `query_match_id` are not lowercased. In `registry.attach`, `self.get(match_id)` searches `self.actors` (`HashMap<String, DuosActor>`), which is keyed by lowercase UUIDs. When `match_id` has uppercase characters, the lookup misses the live running actor. Consequently, `self.actor_for` queries the store, replays the action history, and instantiates a duplicate in-memory actor for an already active match.\n\n## Proposal\n1. In `crates/server/src/actor/ws_server.rs`:\n   - In `upgrade_socket`, normalize `query_param(query, \"matchId\").map(|id| id.to_ascii_lowercase())`.\n2. In `crates/server/src/social/watch.rs`:\n   - In `parse_watch_hello`, map `match_id` and `friend_id` via `.to_ascii_lowercase()`.\n3. In `crates/server/src/duos/ws.rs`:\n   - In `attach_socket`, normalize `asked` and `query_match_id` to lowercase using `.to_ascii_lowercase()`.\n4. Add regression test cases in `crates/server/tests/api/match_socket.rs`, `crates/server/tests/api/watch.rs`, and `crates/server/tests/api/duos.rs` demonstrating that connecting with uppercase UUID parameters succeeds, attaches to existing in-memory actors, and admits spectators.\n\n## Where it lands\n- `crates/server/src/actor/ws_server.rs` (`upgrade_socket`)\n- `crates/server/src/social/watch.rs` (`parse_watch_hello`)\n- `crates/server/src/duos/ws.rs` (`attach_socket`, `duos_hello`)\n- `crates/server/tests/` integration test suites for WebSocket matches, duos, and watching\n\n## Acceptance criteria\n- Connecting to `/ws/match?matchId=<UPPERCASE_UUID>` for a player in that live match connects and attaches to the existing live actor instead of closing with 4403.\n- Sending a `hello` frame on `/ws/watch` with uppercase `matchId` and/or `friendId` successfully admits the watcher and attaches to the match actor instead of closing with 4403.\n- Connecting to `/ws/duos` with uppercase `matchId` (in hello frame or query param) attaches to the existing in-memory `DuosActor` without triggering a redundant rebuild or duplicate actor creation.\n- Existing lowercase connections continue to work unchanged.\n- `cargo test -p jackioh-server` passes with no regressions.\n\n## Size and risks\n- Size: Small. Less than 25 lines of production code across 3 files, plus targeted tests.\n- Risks: None. UUID hex formatting is defined as case-insensitive by RFC 4122. Lowercasing on entry aligns WebSocket handling with existing REST routes in `crates/server`.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `server` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n**Judge:** leaves it to a person: No bug report or incident is cited and the client always passes lowercase identifiers, making this a guard against hypothetical input that has not happened.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-26T00:47:28Z:\n\napprove\n\nWhy: the co-op case is a real server bug, not just tidiness. `DuosRegistry::actor_for` looks the actor up by the `matchId` exactly as the client sent it, and `rebuild` then registers the rebuilt actor under that same string (`keep`, `crates/server/src/duos/registry.rs:262-268`). So a seated player whose hello carries their match's id in uppercase gets a second live actor for a game that is already running, alongside the one holding the other seats. The client is untrusted (CLAUDE.md rule 7), and the REST routes already lowercase these ids. The fix is a few lines at the three socket entry points.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4981: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T00:48:04Z",
+    "claimed_at": "2026-11-26T00:54:56Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
