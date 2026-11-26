@@ -354,6 +354,17 @@ first action of the next finalist the true state accepts, best mean first, with 
 only when none is accepted falls back (`DecisionReason::Fallback`) to `replacements_for`'s endTurn, answer
 or other legal action (#1575).
 
+R4792000: while a Mayor acts (R1200) `legal_actions` lists one attack per attacker, naming
+`RANDOM_ATTACK_TARGET`, and the engine draws its target. Such an attack is worth the mean of a hit on each
+target it may draw (`candidates::drawn_attack`: `attack_targets`, each as likely, a hit on the hero by
+`face_value` and on a unit by `trade_value`), in the reply's `ranked_attacks` and the move order's
+`front_value` alike. The move order puts it with the attacks on the hero when the enemy hero is its only
+target, otherwise with the even trades when some draw hits the hero or kills and the mean is 0 or more
+(`Drawn::even`), otherwise among the other attacks. `ready_gap` counts it only when the hero is its only
+target (`draws_only_hero`), and only then does `face_is_lethal` make its hit the win. A Radiant Mayor's
+Lucky (R1201) is not read. `AI_REPLY.drawn_attacks` off prices it at nothing and counts it on the hero,
+as before.
+
 `decide_styled` is `decide` under an `AiStyle` (R1452), the server's ladder bots' strength knob beside
 their budget: a `missed_lethal_chance` to pass over the lethal line the solver found (the search then
 keeps off every line that wins this turn, `lines_missing_lethal`, or it would find the same lethal),

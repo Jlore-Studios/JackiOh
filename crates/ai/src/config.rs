@@ -1160,6 +1160,11 @@ pub struct AiReply {
     /// Shield weight. Board-dependent kills only — the Cleave body itself stays priced by
     /// `AI_EVAL.keyword.cleave`.
     pub cleave_share: f64,
+    /// R4792000: an attack whose target the engine draws (`RANDOM_ATTACK_TARGET`, while a Mayor acts,
+    /// R1200) is worth the mean of a hit on each target it draws from (`candidates.rs` `drawn_attack`),
+    /// in the reply and in the move order, and counts in `lethal::ready_gap` only when the enemy hero is
+    /// its only target; false prices it at nothing and counts it on the hero, as before.
+    pub drawn_attacks: bool,
     /// #1696: switches to Defense Position that one reply step tries once no attack is worth making,
     /// of the opponent's units in Attack Position whose switch `legal_actions` lists, in that order.
     /// R4187000: also the most walls (`wall_switches`) a step facing lethal weighs against its best attack.
@@ -1191,6 +1196,9 @@ pub const AI_REPLY: AiReply = AiReply {
     face_per_damage: 1.0,
     chip_per_damage: 0.3,
     cleave_share: 1.0,
+    // R4792000: on. Its fork screen, on improve-dev against the control at 798bc44a80, is still being
+    // played as this is written; its scene tests (candidates.rs's and reply.rs's r4792000_ tests) hold it.
+    drawn_attacks: true,
     // #1696: on. Its screen read 199-199 with deal 136 aborted at the action cap in both seatings (the
     // parent aborts it against itself too), edge 0.0 (-0.057 to 0.057), every other game clean
     // (training/improve.md, A screen); about 34 decided (17-17, R4319000); 0 turns it off.
