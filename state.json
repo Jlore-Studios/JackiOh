@@ -23896,7 +23896,7 @@
       "asks": [],
       "audit_tier": "",
       "ci_early": false,
-      "ci_fixed_head": "f1899a101d79a5da0a6affb2b0b1e6590b8b527d",
+      "ci_fixed_head": "60505269394dc87956709237eff5cb94a64efeb9",
       "ci_fixes": 1,
       "ci_on_head": true,
       "ci_run_id": 45819665337,
