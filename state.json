@@ -24600,7 +24600,16 @@
       "feedback_since": "2026-11-26T11:54:23Z",
       "issue": 5039,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "claude",
+        "built_by": "claude-6",
+        "rejections": [],
+        "reviews": [],
+        "sha": "1858e699999c6163835751df1c569a7b88a1a5d8",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
