@@ -24869,9 +24869,11 @@
         "by": "`claude` (strong)",
         "sha": "befadd52d19b75e3781ec225d2dbd9858da37854"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-26T15:01:22Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-26T15:53:55Z",
         "family": "claude",
@@ -24881,6 +24883,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -50; git status --short; grep -n \\\"skipped()\\\" scripts/ci-scope.sh; sed -n 30,70p scripts/ci-scope.sh\"}\n- Bash: {\"command\": \"sed -n 70,100p scripts/ci-scope.sh; echo ----; sed -n 170,195p scripts/ci-scope.sh; echo ---; sed -n 225,260p scripts/ci-scope.sh; echo; sed -n 305,345p scripts/ci-scope.sh\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='scripts/ci-scope.sh'\\ns=open(p).read()\\ndef rep(a,b):\\n global s\\n assert s.count(a)==1,a\\n s=s.replace(a,b)\\nrep(\\\"\\\"\\\" .github/workflows/bot-commands.yml | .gi\u2026\n- Bash: {\"command\": \"grep -n \\\"SKIP_DIRS\\\\|^const ENGINE\\\\|^import\\\\|function named\\\\|function namedPaths\\\\|const WEB\\\\|const E2E\\\\|SCRIPT =\\\\|function onFor\\\\|function answerFor\\\" apps/web/src/net/ci-scope.\u2026\n- Bash: {\"command\": \"sed -n 55,62p apps/web/src/net/ci-scope.test.ts; sed -n 100,135p apps/web/src/net/ci-scope.test.ts; sed -n 755,900p apps/web/src/net/ci-scope.test.ts\"}\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='apps/web/src/net/ci-scope.test.ts'\\ns=open(p).read()\\ndef rep(a,b):\\n global s\\n assert s.count(a)==1,a\\n s=s.replace(a,b)\\nrep(\\\"\\\"\\\"// changed; every doubt mus\u2026\n- Bash: {\"command\": \"python3 -I - <<'EOF'\\np='apps/web/src/net/ci-scope.test.ts'\\ns=open(p).read()\\na=\\\"\\\"\\\" for (const [line, paths] of [\\n [\\\"web\\\", WEB],\\n [\\\"e2e\\\", E2E],\\n ] as const) {\\n for (const [pa\u2026\n- Bash: {\"command\": \"cp scripts/ci-scope.sh /tmp/ci-scope.sh.bak\\npython3 -I - <<'EOF'\\np='scripts/ci-scope.sh'\\ns=open(p).read()\\na=\\\" .cargo/mutants.toml | scripts/mutants.sh\\\"\\ns=s.replace(a,\\\"\\\"\\\" .githu\u2026\n- said: Negative proof holds, script restored. Now the remaining checks.\n- Bash: {\"command\": \"git diff --stat; (pnpm --dir apps/web exec vitest run src/net/ci-scope.test.ts src/net/env-production.test.ts 2>&1 | grep -E \\\"Test Files|Tests \\\"); pnpm exec eslint apps/web/src/net/ci-\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a pull request that changes only a bot workflow runs the web test that reads every workflow, and the scope test checks each file of a directory a source reads\"} --> A pull request that changes only one of the seven bot workflows now runs `full` and `web\u2026"
       },
+      "interruptions": 0,
       "issue": 5002,
       "kind": "review",
       "live": "reviewing",
