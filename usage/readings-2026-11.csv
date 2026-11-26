@@ -39023,3 +39023,10 @@ observed_at,subscription,source,during,run_id,util_5h,resets_5h,util_7d,resets_7
 2026-11-26T07:02:22Z,claude-1,stream,call,45768345270,54,2026-11-26T11:20:00Z,,,allowed,100,,
 2026-11-26T07:02:52Z,claude-1,stream,call,45768345270,55,2026-11-26T11:20:00Z,,,allowed,100,,
 2026-11-26T07:13:03Z,claude-1,refusal,call,45768345270,100,2026-11-26T11:20:00Z,,,rejected,100,,2026-11-26T11:20:00Z
+2026-11-26T05:42:37Z,claude-7,ping,before,45763019670,17,2026-11-26T07:50:00Z,,,allowed,50,,
+2026-11-26T05:43:38Z,claude-7,stream,call,45763019670,18,2026-11-26T07:50:00Z,,,allowed,50,,
+2026-11-26T05:47:53Z,claude-7,stream,call,45763019670,19,2026-11-26T07:50:00Z,,,allowed,50,,
+2026-11-26T06:05:24Z,claude-7,stream,call,45763019670,20,2026-11-26T07:50:00Z,,,allowed,50,,
+2026-11-26T06:36:55Z,claude-7,stream,call,45763019670,21,2026-11-26T07:50:00Z,,,allowed,50,,
+2026-11-26T06:55:56Z,claude-7,stream,call,45763019670,22,2026-11-26T07:50:00Z,,,allowed,100,,
+2026-11-26T07:44:22Z,claude-7,,tick,,22,2026-11-26T07:50:00Z,,,allowed,100,,
