@@ -88,12 +88,12 @@ use crate::scripts::stinkyscape_plus::{
     c004_profe_yates, c007_churnwalker, c009_drone_assembler_v4, c010_drone_assembler_v5, c017_smoothie,
     c018_large_smoothie, c021_jlockeed_shredder_12, c024_forced_propagation, c025_snom_bunny, c037_scorch,
     c039_mindustrial_cross_over, c041_mend_projector, c045_surge_alloy, c046_phase_fabric, c047_plastanium,
-    c049_metaglass, c050_graphite, c056_impact_reactor, c061_1_shawarma_law, c062_overdrive_projector,
-    c063_overdrive_dome, c064_surge_wall, c065_thorium_wall, c066_plastanium_wall, c067_phase_wall,
-    c076_ayys_lmao, c077_black_hole, c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage,
-    c082_endless_expedition, c090_meltdown, c093_recessive_replicators, c097_selective_enrollment,
-    c101_a_wee_whelp, c104_tireless_cultivation, c119_eclipse, c120_crawler, c121_1_toxopid_leg,
-    c121_toxopid, c131_tetrative_reconstructor, c145_fire_beam_v5, c150_scorching_rounds,
+    c049_metaglass, c050_graphite, c056_impact_reactor, c059_mass_driver, c061_1_shawarma_law,
+    c062_overdrive_projector, c063_overdrive_dome, c064_surge_wall, c065_thorium_wall, c066_plastanium_wall,
+    c067_phase_wall, c076_ayys_lmao, c077_black_hole, c079_a_glimpse_into_the_endless_sea,
+    c080_the_last_voyage, c082_endless_expedition, c090_meltdown, c093_recessive_replicators,
+    c097_selective_enrollment, c101_a_wee_whelp, c104_tireless_cultivation, c119_eclipse, c120_crawler,
+    c121_1_toxopid_leg, c121_toxopid, c131_tetrative_reconstructor, c145_fire_beam_v5, c150_scorching_rounds,
     c151_volcanic_rounds, c155_the_far_vagabond, c158_quick_chaos, c159_raven, c166_mindustrial_revolution,
 };
 use crate::scripts::training_grounds::{
@@ -1549,6 +1549,13 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c049_1_yilegpt_unleashed::ID,
         "fragment:stinkyscape-balance-changes-viii",
         c049_1_yilegpt_unleashed::script_v0_6_13h,
+    ),
+    // #4992 (R4992000): Mass Driver's badge that held its own count, kept until the fragment that drops
+    // it ships (R4779000).
+    (
+        c059_mass_driver::ID,
+        "fragment:mass-driver-s-badge-states-its-countdown-once",
+        c059_mass_driver::script_v0_6_14i,
     ),
 ];
 
