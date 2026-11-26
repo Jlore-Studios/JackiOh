@@ -3271,7 +3271,7 @@
           "n": 1
         }
       ],
-      "text": "Brittle 1, Rush\nWhile this is in your hand, it gains the attack and health of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
+      "text": "Brittle 1, Rush\nWhile this is in your hand: When a Unit dies, this gains its attack and health.\nAfter this attacks a Unit, it may attack again."
     },
     "radiant": {
       "attack": 4,
@@ -3285,7 +3285,7 @@
           "n": 3
         }
       ],
-      "text": "Brittle 3, Rush\nWhile this is in your hand, it gains twice the attack and health of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
+      "text": "Brittle 3, Rush\nWhile this is in your hand: When a Unit dies, this gains twice its attack and health.\nAfter this attacks a Unit, it may attack again."
     }
   },
   "core-090": {
@@ -28669,7 +28669,7 @@
       "attack": 5,
       "health": 5,
       "keywords": [],
-      "text": "While this is in your hand, it gains the attack and health of each Unit that dies."
+      "text": "While this is in your hand: When a Unit dies, this gains its attack and health."
     },
     "radiant": {
       "attack": 10,
@@ -28679,7 +28679,7 @@
           "kind": "Rush"
         }
       ],
-      "text": "Rush\nWhile this is in your hand, it gains twice the attack and health of each Unit that dies."
+      "text": "Rush\nWhile this is in your hand: When a Unit dies, this gains twice its attack and health."
     }
   },
   "traininggrounds-057": {
@@ -32411,11 +32411,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "Always starts on the bottom of your deck. If several cards do, their order is random.\nWhen your exile has {card|card|cards}, cast this, wherever in your deck it is.\nAdd a random Terminus card to your hand."
+      "text": "Always starts on the bottom of your deck. If several cards do, their order is random.\nWhile this is in your deck: When your exile has {card|card|cards}, cast this.\nAdd a random Terminus card to your hand."
     },
     "radiant": {
       "keywords": [],
-      "text": "Always starts on the bottom of your deck. If several cards do, their order is random.\nWhen your exile has {card|card|cards}, cast this, wherever in your deck it is.\nAdd a random Radiant Terminus card to your hand."
+      "text": "Always starts on the bottom of your deck. If several cards do, their order is random.\nWhile this is in your deck: When your exile has {card|card|cards}, cast this.\nAdd a random Radiant Terminus card to your hand."
     },
     "params": [
       {
@@ -32424,7 +32424,8 @@
         "radiant": 5,
         "better": "down",
         "step": 1,
-        "min": 1
+        "min": 1,
+        "read": "handOrDeck"
       }
     ]
   },

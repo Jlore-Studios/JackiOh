@@ -1,0 +1,22 @@
+{
+  "title": "Patch: hand, deck and graveyard triggers read alike",
+  "sources": "issue #5038",
+  "notes": "Animosity (S+ #89), Corpse Eater (Core #89) and Legacy: Corpse Eater (TG #56) print their trigger from where the card waits as \"While this is in your <zone>: …\", as every other such card does (R5038000, §6.2); their Chinese faces follow. Wording only: no card plays differently.",
+  "player": {
+    "title": "Hand, deck and graveyard triggers read alike",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [
+      "Animosity now reads \"While this is in your deck: When your exile has 5 cards, cast this.\"",
+      "Corpse Eater and Legacy: Corpse Eater now read \"While this is in your hand: When a Unit dies, this gains its attack and health.\"",
+      "No card plays differently: only the words changed, in English and Chinese."
+    ],
+    "fixes": []
+  },
+  "cards": [
+    "core-089",
+    "traininggrounds-056",
+    "stinkyscapeplus-089"
+  ]
+}

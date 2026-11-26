@@ -17,14 +17,6 @@
         "en": "Start of turn: Choose twice: nothing, exile your deck's bottom card, lose {loss} health or a Spikey Pillow.\nAfter {downsides|downside|downsides}, make your hand Radiant."
       }
     },
-    "core-089": {
-      "base": {
-        "en": "Brittle 1, Rush\nIn your hand, gains the stats of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
-      },
-      "radiant": {
-        "en": "Brittle 3, Rush\nIn hand: gains twice each dead Unit's stats.\nMay attack again after attacking a Unit."
-      }
-    },
     "core-095": {
       "base": "colon",
       "radiant": "colon"
@@ -475,10 +467,10 @@
     },
     "stinkyscapeplus-089": {
       "base": {
-        "en": "Starts on the bottom of your deck.\nCast from your deck once your exile has {card|card|cards}.\nAdd a random Terminus card to your hand."
+        "en": "Starts last in your deck.\nWhile this is in your deck: When your exile has {card|card|cards}, cast this.\nAdd a random Terminus card to your hand."
       },
       "radiant": {
-        "en": "Starts on the bottom of your deck.\nCast from your deck once your exile has {card|card|cards}.\nAdd a random Radiant Terminus card."
+        "en": "Starts last in your deck.\nWhile this is in your deck: When your exile has {card|card|cards}, cast this.\nAdd a random Radiant Terminus card to your hand."
       }
     },
     "stinkyscapeplus-098": {
