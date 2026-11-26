@@ -69,11 +69,12 @@ fn amount_of(attack: Option<i32>, health: Option<i32>) -> BuffAmount {
 }
 
 /// A layer-4 buff on one card. `report` false leaves out the `buffed` event: R440's silent change to a
-/// card of a hidden pile a scope reached (`buffCards`).
+/// card of a hidden pile a scope reached (`buffCards`). R5113000: another card's buff or debuff passes
+/// an Immutable card by.
 fn apply_buff(ctx: &mut EffectContext<'_>, unit: &CardInstance, amount: &BuffAmount, report: bool) {
     let attack = amount.attack.unwrap_or(0);
     let health = amount.health.unwrap_or(0);
-    if attack == 0 && health == 0 {
+    if (attack == 0 && health == 0) || crate::restrictions::immutable_keeps_off(ctx, unit) {
         return;
     }
     if let Some(live) = find_instance_mut(ctx.sink.state, &unit.id) {
@@ -193,7 +194,15 @@ pub(crate) fn grant_onto(unit: &mut CardInstance, keyword: &Keyword) {
 /// (§6.1); a spent Divine Shield or used Reborn comes back. The grant lands on the live card and `unit`
 /// is brought up to date from it (a card in no pile: the copy). R2280001: an Animated granted to a
 /// backrow card with stats that first gives it both owes it its animation at the next state check.
+/// R5113000: another card's grant passes an Immutable card by.
 fn grant_to(ctx: &mut EffectContext<'_>, unit: &mut CardInstance, keyword: &Keyword, report: bool) {
+    if !crate::restrictions::immutable_keeps_off(ctx, unit) {
+        land_grant(ctx, unit, keyword, report);
+    }
+}
+
+/// `grant_to`'s grant once Immutable has let it through (R5113000).
+fn land_grant(ctx: &mut EffectContext<'_>, unit: &mut CardInstance, keyword: &Keyword, report: bool) {
     let animated = keyword.kind() == KeywordKind::Animated;
     let was = animated && crate::animated::ready_to_animate(ctx.sink.state, &unit.id);
     match find_instance_mut(ctx.sink.state, &unit.id) {
@@ -231,6 +240,32 @@ pub fn grant_keyword(args: GrantKeywordArgs) -> Effect {
             return;
         };
         grant_to(ctx, &mut instance, &args.keyword, true);
+    })
+}
+
+/// `grantKeywords`' argument: one card and the keywords it is given together.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[serde(rename_all = "camelCase")]
+pub struct GrantKeywordsArgs {
+    pub target: TargetSpec,
+    pub keywords: Vec<Keyword>,
+}
+
+/// R5113001 (S+ #46 Phase Fabric): `keywords` given to one card together, in order, each as
+/// `grantKeyword` gives it: the target is resolved and Immutable read once, before the first lands, so a
+/// list that gives Immutable or Immune to Spells still gives the rest beside it (R3547002).
+pub fn grant_keywords(args: GrantKeywordsArgs) -> Effect {
+    Effect::new("grantKeywords", move |ctx| {
+        let Some(DamageTarget::Unit { mut instance }) = resolve_target(ctx, &args.target) else {
+            return;
+        };
+        if crate::restrictions::immutable_keeps_off(ctx, &instance) {
+            return;
+        }
+        for keyword in &args.keywords {
+            land_grant(ctx, &mut instance, keyword, true);
+        }
     })
 }
 
@@ -510,12 +545,16 @@ pub struct GrantRandomKeywordsArgs {
     pub count: Option<i32>,
 }
 
-/// R21: #63 Plastic Surgery's and #80 Zao Gao's random keywords, none the unit already has.
+/// R21: #63 Plastic Surgery's and #80 Zao Gao's random keywords, none the unit already has. R5113000:
+/// none for an Immutable unit, and nothing drawn for it (R129).
 pub fn grant_random_keywords(args: GrantRandomKeywordsArgs) -> Effect {
     Effect::new("grantRandomKeywords", move |ctx| {
         let Some(DamageTarget::Unit { instance }) = resolve_target(ctx, &args.target) else {
             return;
         };
+        if crate::restrictions::immutable_keeps_off(ctx, &instance) {
+            return;
+        }
         let mut unit = find_instance(ctx.sink.state, &instance.id)
             .cloned()
             .unwrap_or(instance);

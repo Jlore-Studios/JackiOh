@@ -73,6 +73,14 @@ pub fn unaffected_by(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
         && immune_to_spells(ctx.sink.state, card)
 }
 
+/// R5113000: whether Immutable keeps the change an effect would make to `card`'s stats or keywords off
+/// it: a buff or a debuff, for good or this turn, a set Attack this turn, a keyword given. It reads
+/// Immutable where the card is now (`layers::is_immutable`, an Indestructible Unit card's included,
+/// R4353000), and the card's own text still changes it, as its Radiant does (R23).
+pub fn immutable_keeps_off(ctx: &EffectContext<'_>, card: &CardInstance) -> bool {
+    ctx.self_.as_ref().is_none_or(|me| me.id != card.id) && crate::layers::is_immutable(ctx.sink.state, card)
+}
+
 /// R4353002: the type Evasive's targeting rule reads off a source (R781001's reading, kept): a Unit in a
 /// unit zone (an Animated card included), else its running face's printed type, so a revealed face-down
 /// Spell (ME-ALTPLAY, R1044) is a Spell and a Field Spell acting from the backrow a Field Spell.

@@ -1,0 +1,22 @@
+{
+  "title": "Patch: Immutable stops stat buffs, debuffs, keyword grants and auras from other cards",
+  "sources": "issue #5113",
+  "notes": "Issue #5113 (R5113000): Immutable keeps every change another card makes to a card's stats or keywords off it, in every zone, an Indestructible Unit card's included (R4353000): a buff or debuff, for good or this turn (buff, buffAllUnits, buffCards, buffRandomUnit, doubleStats, buffThisTurn), a set Attack this turn (amending R4591000), a keyword given (grantKeyword, grantRandomKeywords with no draw, grantKeywordCards, a draw's or a summon's keywords), another card's aura (stats, keywords, set Attack), a combat-only Attack bonus (R1120) and its controller's \"your Units have\" lends. Its own text still changes it (R23). Reported from a practice game where S #15 Arg Arg Defender gave S #116 Megabase +1/+1 and Taunt. R5113001: S+ #46 Phase Fabric gives its keywords with one grantKeywords, so its own Immutable does not turn the rest away; an Immutable target takes none.",
+  "player": {
+    "title": "Immutable Units can't be buffed or nerfed",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Immutable now also stops other cards from changing a card's Attack, Health or keywords.",
+      "Buffs and debuffs, ones that last a turn included, keywords given to it, auras and \"your Units have\" effects all pass an Immutable card by.",
+      "An Immutable card's own text still changes it, and damage, healing and destroy effects still reach it.",
+      "Every Indestructible Unit is Immutable, so the same holds for it.",
+      "Phase Fabric still gives all of its keywords, but gives none to a Unit that is already Immutable."
+    ],
+    "text": [],
+    "fixes": [
+      "Arg Arg Defender no longer gives an Immutable neighbour such as Megabase +1/+1 and Taunt."
+    ]
+  },
+  "cards": []
+}
