@@ -24943,6 +24943,7 @@
           }
         ],
         "head": "5d7c4f8047403cb2d48669e3322f72132e413929",
+        "interruptions": 0,
         "kind": "build",
         "model": "sonnet",
         "provider": "claude-7",
