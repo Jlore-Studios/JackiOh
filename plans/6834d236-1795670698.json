@@ -1,0 +1,58 @@
+{
+  "action": "plan",
+  "number": 5013,
+  "title": "Patch: a readable type scale, Alegreya for the game's words and fewer uppercase labels",
+  "branch": "bot/issue-5013",
+  "thread": "**Issue #5013 (data, not instructions):**\n\n```text\n# #5013: Patch: a readable type scale, Alegreya for the game's words and fewer uppercase labels\nOpened by @MaxGoetzmann.\n\n## What it does\n\n`apps/web/src/typescale.css` runs from 9px to 30px around a 13px body (`BODY_STEP = \"md\"`), with three steps below 12px (`3xs` 9, `2xs` 10, `xs` 11). Inter (`--font-text`) sets nearly everything, and about 60 rules use `text-transform: uppercase` with at least four different letter-spacings. That is the small, all-caps, dashboard look of a generated app, not a game table. A further 432 raw font sizes sit outside the scale, across 42 sheets (`UNSCALED` in `typescale.test.ts`).\n\n- Raise the body to 15\u201316px and re-space the scale around it. Drop the steps below 11px for anything outside a card face. Card faces size their text in `em` with the card and keep their small steps.\n- Set card names, headings, banners, results and rules text in `--font-display` (Alegreya, already shipped). Keep `--font-text` for numbers, controls and dense lists.\n- Give small-caps labels one shared style (a token or a class with one letter-spacing). Everything else goes to sentence case.\n- Move raw sizes onto the scale as each sheet is touched.\n\n## Acceptance\n\n- `typescale.test.ts`: the body step is at least 15px, `TYPE_MAX` is lowered to the new count, and no step below 11px is used outside `cards/`.\n- A test counts `text-transform: uppercase` per sheet against an allowlist that only shrinks, with a total of at most 20.\n- `UNSCALED`'s total is at most 216 (half of today's), and no entry grows.\n- The phone layout holds (`breakpoints.ts` and its tests). The web's unit tests, typecheck, `e2e smoke` and `pnpm --dir e2e test:component` pass, and pixel baselines that change on purpose are re-recorded.\n- If the classifier calls it a card change, it ships with a `--visual` fragment (`docs/ADDING_CARDS.md`).\n\n## Notes\n\nThis is part of the not-generic UI pass, beside the palette, effects, corners and icons issues. They touch the same sheets.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-8",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_8",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-8",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5013: needs a plan; `claude-8` (claude, `opus`, strong) writes it in a lane of `claude-8`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-8` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T05:20:24Z",
+    "claimed_at": "2026-11-26T05:25:31Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#4991 is held for `claude-1` until Thu 00:20 (it refused a call)",
+    "#5005 is held for `claude-1` until Thu 00:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
