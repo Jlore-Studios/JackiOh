@@ -44393,41 +44393,6 @@
         "approver": {
           "family": "claude",
           "model": "sonnet",
-          "provider": "claude-3",
-          "tier": "medium"
-        },
-        "builder": {
-          "family": "claude",
-          "provider": "claude-3"
-        },
-        "difficulty": "medium",
-        "done_at": "2026-11-06T18:11:52Z",
-        "every": 5,
-        "findings": 0,
-        "head": "7c20d931bb9ef1b6e8f09985b04e5fc6a0afc04a",
-        "issue": 3290,
-        "merged_at": "2026-11-06T17:53:47Z",
-        "n": 110,
-        "pr": 3312,
-        "queued_at": "2026-11-06T17:53:47Z",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-6",
-          "tier": "strong"
-        },
-        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42267180053",
-        "sha": "8f9f0dcbb788e803e08340b995815e4273ae1dd4",
-        "started_at": "2026-11-06T18:03:10Z",
-        "status": "done",
-        "title": "Patch: a banned account leaves the ranked leaderboard, the percentiles and Jlorious",
-        "tries": 0,
-        "verdict": "clean"
-      },
-      {
-        "approver": {
-          "family": "claude",
-          "model": "sonnet",
           "provider": "claude-7",
           "tier": "medium"
         },
@@ -47915,7 +47880,9 @@
           "provider": "claude-4"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-26T19:28:22Z",
         "every": 5,
+        "findings": 0,
         "head": "c3bf6fe4cc8d3bc79cbc5277f821f7e20c00d04e",
         "issue": 4707,
         "last_why": "interrupted: `claude-7` stops mid-call: 5-hour usage is 51%, at or over its 50% cap outside its hours; it resets at 2026-11-26T22:50:00Z",
@@ -47929,12 +47896,13 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:254ecc63-1795720053",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45881321188",
         "sha": "480256e74e965e08681eaa41c940b9c0360e78ce",
         "started_at": "2026-11-26T19:08:01Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: deeper card stats, S4, random-effect splits: each rolled outcome of Call to Chaos, coins and dice",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 613
