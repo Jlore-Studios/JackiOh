@@ -583,6 +583,21 @@
   font-size: var(--type-sm);
 }
 
+/* R4679001: the Outputs table scrolls in the box every /stats table does, set flush under the panel's Segmented as
+   the Choices tables are, its caption inset from the box's edge. A card's name wraps between its words, never inside
+   one: the box scrolls sideways on a phone rather than break "School" in two. */
+.stats-extended .stats-table-wrapper {
+  margin-top: 0;
+}
+
+.stats-extended .stats-table-wrapper caption {
+  padding: var(--space-2) var(--space-3) 0;
+}
+
+.stats-extended-table tbody th .stats-card-name-link {
+  overflow-wrap: normal;
+}
+
 /* Pressed, it wears the Radiant gold. As long as the tavern's bare-button size rule, and later, so it wins. */
 .tavern.app-shell.stats-page .stats-drilldown-actions button.stats-drilldown-action[aria-pressed="true"] {
   border-color: var(--radiant, #ffd24a);
