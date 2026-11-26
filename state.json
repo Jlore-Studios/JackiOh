@@ -25061,11 +25061,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-26T16:28:54Z",
+        "at": "2026-11-26T16:50:09Z",
         "difficulty": "hard",
-        "provider": "claude-1",
+        "provider": "claude-3",
         "tier": "strong",
-        "why": "the after-merge spot-check's follow-up of #5073, a hard change"
+        "why": "No line of the rule holds (about 11 files: web CSS, one web test, spec notes), but the bot already rated it hard and a plan may not rate it lower"
       },
       "failures": 0,
       "forced": false,
