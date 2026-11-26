@@ -22755,6 +22755,8 @@
       }
     },
     "5019": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-26T03:46:09Z",
@@ -22768,8 +22770,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: PIP's text says \\\"performance improvement plan\\\"\"} -->\n- ## What changed and why\n- Stinkyscape+ #94 PIP told players a Unit is put on a \"performance enhancement plan\". A PIP is a performance *improvement* plan, so both faces now read \"performance improvement plan\" everywhere the card's words live, with no rules change:\n- - [spec row 170](spec/08-catalog/8.12-stinkyscape-plus.md) \u2014 both face-text cells swapped, plus one `[[R4996000]]` sentence in the description cell.\n- - [catalog.json](crates/cards/catalog.json) \u2014 base and Radiant `text` swapped; `params`, `loc`, keywords untouched.\n- - [script header](crates/cards/src/scripts/stinkyscape_plus/c094_pip.rs) \u2014 quoted base text swapped; `pip()`, `script()`, tests untouched.\n- - [engine fixture comment](crates/engine/tests/rules/fixtures/combat_reactions.rs) \u2014 PIP shape quote swapped.\n- - [designer source](JackiOh_StinkyscapePlus_Cards.md) (lines 1003, 1005) \u2014 swapped, bold markup and trailing spaces kept.\n- - New pending micro fragment [pip-says-performance-improvement-plan.json](crates/cards/patches/pending/pip-says-performance-improvement-plan.json) claiming `stinkyscapeplus-094`, with a hand-written player note (`PIP: now says \"performance improvement plan\".`). No `KEPT_SCRIPTS` entry: the script r\u2026\n- - New ruling [R4996000](spec/rulings/R4996000.md) plus its [\u00a711 paragraph](spec/pending/4996.md): every face in every shown locale names the plan word for word (English \"performance improvement plan\", `zh` \u7ee9\u6548\u6539\u8fdb\u8ba1\u5212), and a newly added locale fails the test until its term is registered.\n- - Proving test `r4996000_pip_names_the_plan_in_every_locale` in [export_card_text.rs](crates/tools/tests/export_card_text.rs): both catalog English faces contain the phrase and none of `enhancement`/`PEP`/contiguous `performance plan`; both `zh` faces from `card-text.yaml` contain \u7ee9\u6548\u6539\u8fdb\u8ba1\u5212; every YAM\u2026\n- Shipped `patches/v*.json` history left alone.\n- ## How it was tested\n- - `cargo test -p jackioh-tools --test export_card_text`: 4/4 pass, and no rewrite of `chinese.json`/`flavour.json`/`voice-text.json`.\n- - Flip-proofs (each restored immediately): catalog flipped to \"enhancement\" \u2192 new test FAILS with `lacks the plan's name`; restored \u2192 PASSES. `card-text.yaml` flipped on exactly its 2 PIP lines \u2192 FAILS; restored \u2192 PASSES with no residual diff.\n- - `cargo test -p jackioh-cards c094_pip`: 4/4 pass (rules unchanged).\n- - `cargo test -p jackioh-cards --test cards`: 1271/1271 pass (the cross suite; see deviation 1).\n- - `cargo fmt --check` clean; `cargo clippy -p jackioh-cards/-tools/-engine --all-targets -- -D warnings` clean.\n- - `cargo jackioh catalog check`, `patches check`, `spec check` (2641 rulings) all pass.\n- - `git grep -n \"performance enhancement\"` finds nothing outside `crates/cards/patches/v*.json`; the \"improvement\" grep lists the spec row, both catalog texts, the script header, the fixture comment, and both designer lines.\n- ## Decisions and deviations from the plan\n- 1. The plan's `cargo test -p jackioh-cards --test cross` names no test target (`no test target named 'cross'`, help suggests `cards`). The cross suite is the `cards` binary (`tests/cards.rs` holds `mod cross`), so that is what ran.\n- 2. The plan's test snippet as written fails clippy (`needless_borrows_for_generic_args` on both `.get(&Value::String(...))` calls). I removed the two `&`s rather than adding an allow.\n- 3. `cargo jackioh classify --base origin/main --claims` prints a vacuous `Internal` locally: classify diffs commits (`git diff merge-base head`), and this work is uncommitted, which I may not change. I verified its stage-1 inputs directly instead: the catalog diff vs `origin/main` touches only `bas\u2026\n- ## For the reviewer\n- Once the harness commits, `git grep -n \"performance enhancement\"` will additionally surface one line: the pending fragment's maintainer-facing `notes` (`\"...(was 'performance enhancement plan').\"`), which the `patches` command wrote from the issue's own `--notes` string and which the plan forbids e\u2026\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner/_work/_temp/work/item-4996 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner/_work/_temp/work/item-4996/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4996,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-26T05:37:42Z",
         "from_run": "45751017198",
         "gates": [
           {
@@ -22828,8 +22833,15 @@
         "source": "build",
         "until": "2026-11-26T06:06:31Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-26T05:36:31Z",
+      "run_id": "pending:7cb4a9e1-1795671429",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-26T05:37:42Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -22843,9 +22855,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T05:26:21Z",
+    "at": "2026-11-26T05:37:42Z",
     "url": "",
-    "what": "plan #4999 on muse"
+    "what": "review #5019 on muse"
   },
   "last_sweep": {
     "at": "2026-11-26T05:19:11Z",
