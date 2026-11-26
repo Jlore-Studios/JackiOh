@@ -14,8 +14,7 @@ fn scrape(radiant: bool) -> Script {
         cry: Some(hook(move |ctx| {
             let count = if radiant { 3 } else { 2 };
             let opp = opponent_of(ctx.controller);
-            let graveyard: Vec<String> = ctx.state.players[opp]
-                .graveyard
+            let graveyard: Vec<String> = zone_cards(&*ctx.state, opp, OffFieldZone::Graveyard)
                 .iter()
                 .map(|c| c.id.clone())
                 .collect();
