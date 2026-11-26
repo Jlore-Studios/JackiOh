@@ -24723,9 +24723,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "",
-      "owner_since": "2026-11-26T18:30:20Z",
-      "owner_why": "its own review was handed off to its final audit: `claude-6` 5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-26T22:40:00Z; it can start again only in 4h 09m, more than the 120 minutes an item waits for its owner",
+      "owner": "claude-8",
+      "owner_since": "2026-11-26T19:29:48Z",
+      "owner_why": "it took it up; its own review was handed off to its final audit: `claude-6` 5-hour usage is 71%, too close to its 70% cap to start a long run (it starts under 65%); it resets at 2026-11-26T22:40:00Z; it can start again only in 4h 09m, more than the 120 minutes an item waits for its owner",
       "pending_request": false,
       "planned_at": "2026-11-26T16:50:12Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
@@ -24917,7 +24917,7 @@
       }
     },
     "5097": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "difficulty": "hard",
       "failures": 0,
@@ -24933,11 +24933,11 @@
       },
       "issue": 5091,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "resolving",
       "pending_request": false,
-      "provider": "claude-6",
+      "provider": "claude-8",
       "queued_at": "2026-11-26T18:31:08Z",
-      "run_id": "45874803364",
+      "run_id": "pending:98ac5931-1795721361",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -24958,7 +24958,7 @@
         "run": "45863080885"
       },
       "source": "conflict",
-      "started_at": "2026-11-26T18:17:55Z",
+      "started_at": "2026-11-26T19:29:48Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -25144,9 +25144,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T19:19:38Z",
+    "at": "2026-11-26T19:29:48Z",
     "url": "",
-    "what": "build #5099 on agy"
+    "what": "revise #5097 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-26T19:15:19Z",
