@@ -21508,6 +21508,9 @@
       "taken_asks": [
         "c:7179116446"
       ]
+    },
+    "4982": {
+      "suggestion": true
     }
   },
   "labels_synced": "e752b3263433d01e",
@@ -44534,6 +44537,13 @@
         "number": 4977,
         "reason": "confirmed. `proficiencySync.ts` loads the account's proficiency once (`:67`, `enqueue(reload)`), the shared sync survives the move from a match to the Collection, and the match's paid result calls only `announceWallet()` (`match.tsx:257`). So a card level a ranked, unranked or Conquest game earned still reads as before, and its newly unlocked stamp can't be worn until a reload. It's the same small fix #4780 made for cosmetics, placed so only games that count plays reload.",
         "title": "Patch: a counted game's result reloads the card proficiency the Collection shows, so a level the game earned and its stamp appear without a reload",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-26T01:03:15Z",
+        "number": 4982,
+        "title": "Patch: Duos match finish reads Jlore caps directly from the co-op payout outcome instead of a second ledger transaction",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
       }
