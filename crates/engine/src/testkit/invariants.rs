@@ -2145,7 +2145,9 @@ fn immutable_step(state: &GameState) -> ImmutableStep {
 /// Immutable card's text and names it is a finding, once per card:
 /// - a `transformed` of it, a Vanilla's (its own definition on both sides) and a copied or fused text's
 ///   included, but for a Replace off the field (R35, R921: a new instance, hidden from a player as a hand
-///   or library card is, R177), which rewrites no card (R4609001);
+///   or library card is, R177), which rewrites no card (R4609001), and one in an exile or a graveyard the
+///   step sent it to, where Immutable stops nothing (R4783002: IA #43 Cognitive Dissonance's answer to a
+///   play its Unit left in its own resolution, R427);
 /// - a `degraded` or an `upgraded` of it, but for one whose change is `none` (R440, R4609001);
 /// - a `fused` whose kept card is it (Fuse-onto, R77): its ingredients are taken whole, and a card the
 ///   step made is not in `step` (R4353003, R4609002).
@@ -2183,9 +2185,13 @@ fn immutable_text_findings(step: &ImmutableStep, events: &[GameEvent], after: &G
     let mut released: IndexSet<&str> = IndexSet::new();
     // R4609002: the cards reset in place, whose record is not held.
     let mut reset: IndexSet<&str> = IndexSet::new();
+    // R4783002: the cards the step sent to an exile or a graveyard, where Immutable stops nothing (§6.3),
+    // and has not brought back to the field.
+    let mut unjudged: IndexSet<&str> = IndexSet::new();
     for event in events {
         let (id, lawful) = match event {
-            // R4609001: a Replace off the field.
+            // R4609001: a Replace off the field, in a hand or a library, or (R4783002) in an exile or a
+            // graveyard the step sent the card to.
             GameEvent::Transformed {
                 instance_id,
                 new_instance_id,
@@ -2193,7 +2199,8 @@ fn immutable_text_findings(step: &ImmutableStep, events: &[GameEvent], after: &G
                 ..
             } => (
                 instance_id,
-                new_instance_id != instance_id && hidden_from.is_some(),
+                new_instance_id != instance_id
+                    && (hidden_from.is_some() || unjudged.contains(instance_id.as_str())),
             ),
             // R4609001, R440: an application on a hidden card that changed nothing.
             GameEvent::Degraded {
@@ -2208,6 +2215,12 @@ fn immutable_text_findings(step: &ImmutableStep, events: &[GameEvent], after: &G
             // R4609002, R78: left the field and back, or back through Reborn.
             GameEvent::Flickered { instance_id, .. } | GameEvent::Summoned { instance_id, .. } => {
                 reset.insert(instance_id);
+                unjudged.swap_remove(instance_id.as_str());
+                continue;
+            }
+            // R4783002: into a zone I23 does not judge.
+            GameEvent::Exiled { instance_id, .. } | GameEvent::EnteredGraveyard { instance_id, .. } => {
+                unjudged.insert(instance_id);
                 continue;
             }
             _ => continue,

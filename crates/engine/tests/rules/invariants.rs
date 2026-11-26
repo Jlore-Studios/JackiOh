@@ -5250,6 +5250,58 @@ mod i23 {
         );
     }
 
+    /// R4783002: the event of `id`'s move to an exile (`exiled`) or a graveyard (`enteredGraveyard`).
+    fn moved_off(kind: &str, id: &str) -> GameEvent {
+        json_as(json!({ "type": kind, "instanceId": id, "defId": INDESTRUCTIBLE, "owner": "p2" }))
+    }
+
+    #[test]
+    fn r4783002_a_replace_in_an_exile_or_a_graveyard_the_step_sent_the_card_to_is_lawful_and_i23_allows_it() {
+        let (state, ids) = holders("r4783002");
+        let held = &ids[2];
+        let mut gone = state.clone();
+        gone.players[P2].hand.retain(|card| card.id != *held);
+        // Played, exiled in its own resolution, then replaced there in public (IA #43, R427).
+        for kind in ["exiled", "enteredGraveyard"] {
+            let events = [
+                moved_off(kind, held),
+                transformed(held, INDESTRUCTIBLE, PLAIN, "i23-replaced", None),
+            ];
+            assert_eq!(i23(&state, &events, &gone), Vec::<String>::new(), "{kind}");
+        }
+        // With no such move, the public replace is a finding, and so is one after the card came back.
+        only(
+            &i23(
+                &state,
+                &[transformed(held, INDESTRUCTIBLE, PLAIN, "i23-replaced", None)],
+                &gone,
+            ),
+            held,
+            &["I23", "transformed"],
+        );
+        let back: GameEvent = json_as(json!({
+            "type": "summoned",
+            "player": "p2",
+            "instanceId": held,
+            "defId": INDESTRUCTIBLE,
+            "row": "units",
+            "lane": 3,
+        }));
+        only(
+            &i23(
+                &state,
+                &[
+                    moved_off("exiled", held),
+                    back,
+                    transformed(held, INDESTRUCTIBLE, PLAIN, "i23-replaced", None),
+                ],
+                &gone,
+            ),
+            held,
+            &["I23", "transformed"],
+        );
+    }
+
     #[test]
     fn r4609002_a_fuse_onto_a_card_the_step_made_a_reset_in_place_and_a_restore_are_lawful_and_i23_allows_them()
      {
