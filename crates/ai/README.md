@@ -460,6 +460,17 @@ the decision's own limit and clock still stop it.
 `Decision::fell_short` names a decision that left its finalists unscored on a sampled world. With no
 clock, or a wrap-up that never fires, a decision is node for node what it was.
 
+R4788000: on a decision whose budget was scaled down (a width past `AI_SEARCH.fat_reference`, R2575000),
+the lethal solver has a reach, the caller's own `lethal_nodes` (at most its `nodes`, R4802000): its walks
+spend the scaled allowance as before, and past it the best-first walk goes on only from a position whose
+ready attacks already reach
+lethal (`ready_gap` at or under 0), and the proof on the other determinizations of a line that won on the
+first is always finished (`find_lethal_reaching`). What the walk spends past the scaled allowance is added
+to the searched section, so the beam and the replies keep their nodes, and no decision passes its caller's
+`nodes`. A state of ordinary width, and a wide one whose walk never reads as lethal, decide node for node
+as before; `lethal_hint` and `unstoppable_lethal` call `find_lethal` and have no reach;
+`AI_SEARCH.lethal_reach` off stops every walk at its scaled allowance.
+
 R4447000: `decide` replays each finalist's world-0 line on the other determinizations with
 `replay_line`, which says whether the line was cut there: whether it met a step that world does not
 offer (a card the line drew is another card there, since each world shuffles the seat's own library,

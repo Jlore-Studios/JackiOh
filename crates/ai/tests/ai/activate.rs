@@ -4,27 +4,20 @@
 use jackioh_ai::{
     AI_BUDGET, AI_EVAL, AI_PROMPT_ACTIVATION_PROBE_NODES, ActivationPrice, AiOptions, DecisionReason,
     EvalWeights, GREEDY_EVAL, NextSwing, NodeCounter, Prices, action_key, activation_prices,
-    candidate_actions, create_node_counter, decide, decision_prices, det_ground, evaluate, evaluate_priced,
-    probe_world, prompt_activation_prices, redact,
+    candidate_actions, create_node_counter, decide, det_ground, evaluate, evaluate_priced, probe_world,
+    prompt_activation_prices, redact,
 };
 use jackioh_engine::testkit::{
     ActionBody, ActionType, ActivationCost, ActivationDecl, ActivationUses, CardDef, CardInstance,
-    CardScripts, GameState, PlayerId, PromptKind, Scenario, Script, create_rng, effects, find_instance,
+    CardScripts, GameState, PromptKind, Scenario, Script, create_rng, effects, find_instance,
     find_instance_mut, hook, json, json_as, pick, register_catalog_as, register_scripts, seed_where,
     subsystems,
 };
 
 use super::support::{
-    AI, HUMAN, act, in_graveyard, is_legal, on_field, register_cards, run_puzzle, scenario, trace,
+    AI, HUMAN, act, decision_prices_at, in_graveyard, is_legal, on_field, register_cards, run_puzzle,
+    scenario, trace,
 };
-
-/// The prices a decision of `seat`'s at `state` passes its search: `decision_prices` on the probe world
-/// of the state redacted for the seat, on a counter that leaves every probe its own cap.
-fn decision_prices_at(state: &GameState, seat: PlayerId) -> Prices {
-    let public = redact(state, seat);
-    let probe = probe_world(&public, seat, &det_ground(&public, seat));
-    decision_prices(&probe, seat, &create_node_counter(AI_BUDGET.nodes, None))
-}
 
 const PUNISH: &str = "classic-020"; // Field Spell; Activate: deal 2 damage, or a discard, or a delayed destroy
 const TURTINATOR: &str = "classic-021"; // Unit 5/4; Activate (once a turn): Tribute a Unit, deal its Attack to any target
