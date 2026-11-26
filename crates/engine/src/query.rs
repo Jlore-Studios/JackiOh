@@ -1257,13 +1257,9 @@ fn forecast_attack(
     let back = theirs.attack * back_multiplier;
     let strikes_back = crate::combat::takes_strike_back(state, attacker, defender);
     // §4.3 step 1: a First Strike defender that destroys the attacker first leaves it no blow to land,
-    // and so does one whose first blow exiles it (R1124, R4111000).
-    let exiled_first = has_keyword(&theirs.keywords, KeywordKind::FirstStrike)
-        && !has_keyword(&mine.keywords, KeywordKind::FirstStrike)
-        && exiles_on_damage(state, defender)
-        && hit_on_unit(state, defender, attacker, back) > 0;
-    let falls =
-        strikes_back && (falls_to_first_strike(state, attacker, defender, back_multiplier) || exiled_first);
+    // and so does one whose first blow exiles it (R1124, R4111000): `falls_to_first_strike` reads both,
+    // as My Pawn's projection does (R4823000).
+    let falls = strikes_back && falls_to_first_strike(state, attacker, defender, back_multiplier);
     let mut dealt = if falls {
         0
     } else {
@@ -1586,8 +1582,9 @@ fn overflow_of(state: &GameState, attacker: &CardInstance, target: &AttackTarget
 }
 
 /// R1124, R4111000: whether `source`'s damage exiles the Unit it lands on (Meditative #72 The Banisher),
-/// which the forecast counts as it counts Poisonous: any blow of 1 or more removes its target.
-fn exiles_on_damage(state: &GameState, source: &CardInstance) -> bool {
+/// which the forecast counts as it counts Poisonous, and R44's projection of a First Strike blow too
+/// (R4823000): any blow of 1 or more removes its target.
+pub(crate) fn exiles_on_damage(state: &GameState, source: &CardInstance) -> bool {
     crate::scripts::flags_of(state, source).exiles_on_damage == Some(true)
 }
 

@@ -53,7 +53,7 @@ R2250000) and library, the backrow cards it cannot read, an enemy face-down card
 them (its option reads the view's `Face-down card`, R177), its own library's order, the cards in
 it that came from the opponent or that it was never shown (R312), what changed on its other cards there, each read
 as its owner's list shows it, by the definition and face it went in with and its Created mark, unless its own
-prompt offers it (R2691000), the seed, the event history, every card's hidden Nerfs, its own
+prompt offers it (R2691000), the seed, the event history, how many ids the game has handed out (its id counter restarts one past the highest id the redaction names, R4824000), every card's hidden Nerfs, its own
 hand's too (R1845000), what the opponent bought at the Marketplace (R1853004), the opponent's Created cards' generators (R1956001), every Created card's maker, the game record's alone (R4672001), and what the opponent's play counts say of their face-down plays: a hidden card on their backrow takes its tags and its set off their counts and counts as a Trap among this turn's plays (R4804000)), and strips from the events its queues keep (an interrupted trap firing's under `data.firing` among them) what `view_for` strips of a
 hidden card. Every simulation runs on a `determinize`d copy whose hidden cards are resampled from the
 non-token cards of every set their own side has not shown (R185, R380, R2826000: the opponent's hidden
@@ -220,9 +220,10 @@ slumber share, which that probe's own evaluation already applied (R3575402).
 A unit's "when this attacks" and "after this attacks" hooks count by one attack (R2688000):
 `attack_hook_prices` walks the same two turns, within `AI_ATTACK_HOOK_PROBE_NODES`; at the start of each
 player's next turn it plays each of that player's units with a hook at the enemy hero, or at the first
-target `legal_actions` lists, beside the same attack by the unit's hookless twin (Vanilla, its printed
-keywords granted, its text given back before scoring), and prices the controller's evaluation after the
-one attack less after the other, each crystal gained at `next_turn_mana`; `unit_worth` adds
+target `legal_actions` lists, beside the same attack by the unit's hookless twin (Vanilla, granted its
+printed keywords and every other keyword the unit holds, a lent one among them, R4811000; a unit already
+Vanilla is its own twin; its text given back before scoring), and prices the controller's evaluation
+after the one attack less after the other, each crystal gained at `next_turn_mana`; `unit_worth` adds
 `AI_EVAL.attack_hook` of it for both sides' units, inside the Brittle share, while the unit may attack.
 A Dormant card's "When this awakens" counts by its awakening (R3064000): `awaken_prices` wakes each Dormant
 card with a wake trigger on either field, and each Unit with one in the seat's own hand, placed first
@@ -500,7 +501,7 @@ ships now and did not. Its report goes under `training/history/`, `--write` read
 changed table arrives as a `Patch: the shadow ban swept again after …` pull request with auto-merge
 on, `generation.json`'s `shadowBan` and the practice-claim fixture with it. So the sweep after a
 promotion may ban a card of those four sets again when the new AI is slow with it, within each
-set's ceiling; a record `--write` refuses opens an issue for a person instead.
+set's ceiling; a record `--write` refuses opens an issue for a person instead. A change that retires or replaces part of what the generation names (its evaluation or its search) moves the generation by hand, in lane `hand`, under an issue and a ruling of its own and with no gate numbers (generation 14, R4921000; `training/README.md`, Reading the history); an ordinary fix to the AI keeps the generation.
 
 `FIXTURE_BANNED_IDS` (issue #1113) is the frozen fixture pool: a copy of the table as it stood
 when the seeded fixtures were dealt from it. It is never updated with the table; a fixture that
@@ -618,8 +619,9 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
   zone its Tribute frees), when the seat can pay the pass; with `pass_cost` 0 also a card the
   teammate can afford next turn and the seat cannot; never more than the passes left or the
   teammate's free hand slots. Immediate passes rank by the teammate's best bounded follow-up
-  (R1127000; at most `DUOS_PASS_MAX_FOLLOWUPS` plays on a fixed-seed probe), ties by cost then
-  hand order; free-pass next-turn cards keep cost order. An immediate pass is named only when it is
+  (R1127000; at most `DUOS_PASS_MAX_FOLLOWUPS` plays on a fixed-seed probe, past it the first plays
+  of the teammate's best-valued hand cards, R4932000), ties by cost then hand order; free-pass
+  next-turn cards keep cost order. An immediate pass is named only when it is
   worth it (R1723000): the teammate's best follow-up with the card, also tried after the teammate's
   own best play, beats its best without it by more than the card's `hand_card_value` in the seat's
   hand, `DUOS_PASS_MARGIN_PER_COST` per crystal of `pass_cost` and `DUOS_PASS_MIN_GAIN`. A card the

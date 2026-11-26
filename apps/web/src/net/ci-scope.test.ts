@@ -533,6 +533,11 @@ describe("scripts/ci-scope.sh", () => {
     expect(onFor("crates/tools/Cargo.toml")).toEqual(["full", "clippy", "rust_tools_wasm", "web", "e2e"]);
   });
 
+  it("runs the merge queue's fuzz slice, and only it, for its script", () => {
+    expect(onFor("scripts/fuzz-slice.sh")).toEqual(["full", "rust_tools_wasm"]);
+    expect(onFor("scripts/ci-shards.toml")).toContain("rust_tools_wasm");
+  });
+
   it("#4371 leaves e2e off for a dashboard-only diff but on for the dashboard's test ids", () => {
     expect(onFor("apps/admin/src/Dashboard.tsx")).toEqual(["full", "web"]);
     expect(onFor("apps/admin/src/testids.ts")).toEqual(["full", "web", "e2e"]);

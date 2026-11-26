@@ -69,17 +69,16 @@ Electron is no longer run.
 Chrome 155 kills its own network service now and then under Cypress 16, whose Chrome runs pause
 every request over the DevTools protocol (crbug.com/559770861, fixed in 156): every fetch in
 flight fails at once and every socket drops, so a lobby shows "Couldn't reach JackiOh" while
-`cy.request`, which runs in Node, is fine. Chrome 158 refuses the `Storage.clearDataForOrigin`
-with origin `*` that Cypress 16.1.0 sends to reset the browser before each test ("* is not a
-valid URL"), so every spec dies before its first command.
-When the `chrome` Cypress finds is a major in
+`cy.request`, which runs in Node, is fine. Chrome 158, on the runner image from 2026-11-25, fails
+every spec under Cypress 16.1.0 before its first test, with "`*` is not a valid URL" (#4952). When
+the `chrome` Cypress finds is a major in
 `support/chrome-pin.ts`'s `BROKEN_CHROME_MAJORS` and `CI` is set, `cypress.config.ts` points
 `chrome` at Chrome for Testing `PINNED_CHROME_MILESTONE` (154), downloaded once into the repo's
 `.cache/chrome-for-testing/` (Linux x64 only); the run header then says `Chrome for Testing`.
 `E2E_CHROME_PIN=1` does the same off CI, `E2E_CHROME_PIN=0` keeps the system Chrome. Every other
 Chrome and browser launches as found, and a failed download keeps the system Chrome and says why.
-Drop 155 from the list once the runner image ships 156, and 158 once a Cypress that resets Chrome
-158 is installed.
+Drop 155 from the list now the runner image ships 156 and later, and 158 once the Cypress in
+`e2e/package.json` runs the smoke specs on it.
 
 Endpoints are overridable, so nothing in a spec has to change when a port moves:
 
@@ -106,7 +105,7 @@ E2E_ARTIFACTS=artifacts/my-run E2E_KEEP_ASSETS=1 pnpm exec cypress run --spec â€
 ```
 
 `E2E_ARTIFACTS` moves the e2e and the component folders alike (the CLI's `--config
-screenshotsFolder` does not reach the component block). Stop a server you started by its port
+screenshotsFolder` does not reach the component block). It also moves the e2e downloads folder and the replay-task logs: with `E2E_ARTIFACTS=artifacts/my-run`, downloads land in `artifacts/my-run/downloads` and each replay log in `artifacts/my-run/<label>.json` (e.g. `01-hotseat-full-game.json`). Stop a server you started by its port
 (`lsof -tiTCP:<port> -sTCP:LISTEN | xargs kill`), never by a process-name pattern, which also ends
 everyone else's. Headless Chrome's default window crops a capture taller than about 633 px; pass
 `--config viewportHeight=â€¦` (or `cy.viewport`) with a browser launched at a larger `--window-size`
