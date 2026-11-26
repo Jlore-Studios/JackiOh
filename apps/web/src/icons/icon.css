@@ -12,16 +12,6 @@
   fill: none;
 }
 
-.icon--size-3xs {
-  width: var(--type-3xs);
-  height: var(--type-3xs);
-}
-
-.icon--size-2xs {
-  width: var(--type-2xs);
-  height: var(--type-2xs);
-}
-
 .icon--size-xs {
   width: var(--type-xs);
   height: var(--type-xs);

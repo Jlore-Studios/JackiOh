@@ -5,7 +5,7 @@ import "./icon.css";
 
 export type IconName = "close" | "check" | "spark" | "star" | "crown" | "skull" | "flag";
 
-export type IconSize = "3xs" | "2xs" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
+export type IconSize = "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
 
 export interface IconProps {
   name: IconName;

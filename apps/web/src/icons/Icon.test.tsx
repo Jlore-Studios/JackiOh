@@ -14,7 +14,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const SRC = join(HERE, "..");
 
 const ALL_NAMES: readonly IconName[] = ["close", "check", "spark", "star", "crown", "skull", "flag"];
-const ALL_SIZES: readonly IconSize[] = ["3xs", "2xs", "xs", "sm", "md", "lg", "xl", "2xl", "3xl", "4xl"];
+const ALL_SIZES: readonly IconSize[] = ["xs", "sm", "md", "lg", "xl", "2xl", "3xl", "4xl"];
 
 describe("Icon component", () => {
   it("renders all 7 inline SVGs with aria-hidden, focusable=false, and currentColor", () => {
