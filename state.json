@@ -24503,6 +24503,18 @@
     "5083": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "at": "2026-11-26T16:52:11Z",
+        "built_by": "claude-6",
+        "by": "`claude` (strong)",
+        "sha": "0172ad208ff6da68cd69ef2d95f58b0f1e4d386e"
+      },
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-26T12:46:45Z",
@@ -24518,6 +24530,7 @@
       "issue": 5033,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "claude-6",
       "pending_request": false,
       "provider": "claude-6",
       "queued_at": "2026-11-26T14:15:34Z",
