@@ -23383,18 +23383,17 @@
     "what": "plan #5040 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-26T09:46:56Z",
+    "at": "2026-11-26T10:01:48Z",
     "notes": [
       "#5005 is held for `claude-1` until 05:20 (it refused a call)",
-      "delivered review #5055 on claude-7 (run 45793859672): approved",
-      "delivered plan #5026 on claude-3 (run 45792201928): planned",
-      "delivered review #5052 on agy (run 45791671270): approved",
-      "delivered build #5015 on claude-6 (run 45773269214): built",
-      "started review #5057 on claude-6 (run 45795909040)",
-      "started build #5026 on claude-7 (run 45796028886)",
-      "started plan #5039 on claude-3 (run 45796155941)",
-      "started plan #5016 on agy (run 45796290036)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` it refused a call; its limit resets at 2026-11-26T11:20:00Z; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` it refused a call; its limit resets at 2026-11-30T00:00:00Z; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #5005 held for `claude-1` until 05:20 (it refused a call)"
+      "delivered plan #5027 on claude-3 (run 45794077023): planned",
+      "delivered plan #5025 on claude-3 (run 45792089583): planned",
+      "delivered plan #5024 on claude-6 (run 45791986131): planned",
+      "started build #5024 on claude-6 (run 45798064732)",
+      "started build #5027 on claude-3 (run 45798180923)",
+      "started plan #5040 on claude-3 (run 45798304678)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` is busy; `claude-7` is busy; `claude-8` is busy; `claude-1` it refused a call; its limit resets at 2026-11-26T11:20:00Z; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` it refused a call; its limit resets at 2026-11-30T00:00:00Z; `agy` is busy; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #5005 held for `claude-1` until 05:20 (it refused a call)",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -24100,7 +24099,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T09:46:56Z",
+  "loop_tick": "2026-11-26T10:01:48Z",
   "machine_disk": {
     "issue": null,
     "reading": {
