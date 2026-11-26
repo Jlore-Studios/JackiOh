@@ -28,6 +28,7 @@ const NEW_PLAYER: Settings = {
   lethalHint: true,
   attackOutcomes: true,
   reduceMotion: false,
+  lowGraphics: false,
   muteOpponentEmotes: false,
   muteSpectatorEmotes: false,
 };

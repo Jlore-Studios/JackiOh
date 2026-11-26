@@ -1,6 +1,7 @@
 // R768000 (#768): `/replays`, the recent games: the device's practice games and, signed in, the
 // account's online games a page at a time. R970000: an owed consent screen comes before the online half.
 // R1141000: a watchable row downloads as one JSON file, which opens again in the player or is refused (#1160).
+// R5125000: an Infinite Assault fight is kept with them, named by its level and enemy.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -8,7 +9,9 @@ import { fileURLToPath } from "node:url";
 
 import { AI_GATE_BUDGET } from "@jackioh/ai";
 import { CATALOG_VERSION } from "@jackioh/cards";
+import { AI_DIFFICULTY, HUMAN_HANDICAP } from "@jackioh/engine/config";
 import { REPLAY_PAGE_STEPS } from "@jackioh/engine/config";
+import type { AssaultFightSetup } from "@jackioh/run";
 import type { PlayerId } from "@jackioh/shared";
 import { TERMS_VERSION } from "@jackioh/server-config";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -28,6 +31,7 @@ import { documentTitleFor, screenNameFor } from "../net/head.ts";
 import { paths } from "../net/navigate.ts";
 import { E2E_SESSION_STORAGE_KEY } from "../net/session.ts";
 import type { PracticeDriverEnv } from "../practice/driver.ts";
+import { PRACTICE_PRESETS } from "../practice/decks.ts";
 import { createPracticeHost } from "../practice/host.ts";
 import type { PracticeHost } from "../practice/host.ts";
 import { memorySaveStore } from "../practice/saveStore.ts";
@@ -40,6 +44,8 @@ import { expectEmptyState } from "../test/empty.ts";
 import { duosView } from "../test/fixtures.ts";
 import { pressBack } from "../test/history.ts";
 import { fakeReplaySource, foldedReplaySteps } from "../test/replay.ts";
+import { savedReplay } from "../test/savedReplay.ts";
+import { isRecord } from "../wire/json.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { ReplaysRoute, replaysTestid } from "./replays.tsx";
@@ -73,6 +79,39 @@ async function storeWithGame(portraits?: SeatPortraits): Promise<PracticeSaveSto
   });
   const done = await host.request({ type: "act", action: { type: "concede" } });
   if (done.type !== "snapshot" || done.snapshot.view.result === null) throw new Error("the conceded game did not end");
+  return saves;
+}
+
+/** R5125000: a store holding one finished Infinite Assault fight, level 7 against Rogue Model, conceded at once. */
+async function storeWithAssaultFight(): Promise<PracticeSaveStore> {
+  const [human, enemy] = PRACTICE_PRESETS.map((preset) => [...preset.cards]);
+  if (human === undefined || enemy === undefined) throw new Error("two practice presets are needed");
+  const setup: AssaultFightSetup = {
+    seed: "replays-assault-L7-A1",
+    humanDeck: human,
+    humanHandicap: { ...HUMAN_HANDICAP, deckSize: human.length },
+    enemyDeck: enemy,
+    enemyHandicap: { ...AI_DIFFICULTY.easy, deckSize: enemy.length },
+    enemyMarks: [{ index: 0, radiant: true, upgrades: 1 }],
+    enemySets: [],
+    level: {
+      level: 7,
+      enemy: "Rogue Model",
+      doctrine: null,
+      commander: null,
+      escalations: [],
+      upgrades: [],
+      rarities: [enemy.length, 0, 0, 0, 0],
+      deck: enemy,
+      marks: [],
+      handicap: { ...AI_DIFFICULTY.easy, deckSize: enemy.length },
+    },
+  };
+  const saves = memorySaveStore();
+  const host = hostOn(saves);
+  await host.request({ type: "start", config: { seed: setup.seed, difficulty: "easy", humanSeat: "p1", deck: { kind: "random" }, assault: setup } });
+  const done = await host.request({ type: "act", action: { type: "concede" } });
+  if (done.type !== "snapshot" || done.snapshot.view.result === null) throw new Error("the conceded fight did not end");
   return saves;
 }
 
@@ -246,6 +285,16 @@ describe("R768000 /replays", () => {
     fireEvent.click(within(row).getByRole("button", { name: "Watch" }));
     await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
     expect(screen.getByTestId("hero-opponent").querySelector(".hero-seat")).toHaveTextContent("AI");
+  });
+
+  it("R5125000 a kept Infinite Assault fight is listed by its level and enemy, and its replay names the enemy", async () => {
+    renderRoute(await storeWithAssaultFight());
+    const row = await screen.findByTestId(replaysTestid.practice(1));
+    expect(row).toHaveTextContent(/^Loss · Infinite Assault · Level 7 · Rogue Model · \d+ turns? · /u);
+
+    fireEvent.click(within(row).getByRole("button", { name: "Watch" }));
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+    expect(screen.getByTestId("hero-opponent").querySelector(".hero-seat")).toHaveTextContent("Rogue Model");
   });
 
   it("R768000 shows older online games a page at a time", async () => {
@@ -491,8 +540,8 @@ describe("R1141000 Download JSON", () => {
     await waitFor(() => expect(saved).toHaveLength(1));
     const file = saved[0];
     if (file === undefined) throw new Error("nothing was saved");
-    const text = await file.text();
-    return { file, text, json: JSON.parse(text) as ReplayJson };
+    const { text, json } = await savedReplay(file);
+    return { file, text, json: json as ReplayJson };
   }
 
   it("R1141000 a practice row saves every step of its game, in order, and nothing of its setup", async () => {
@@ -504,8 +553,8 @@ describe("R1141000 Download JSON", () => {
     fireEvent.click(screen.getByTestId(replaysTestid.download("practice-1")));
 
     const { file, text, json } = await savedJson();
-    expect(file.name).toBe("jackioh-replay-practice-1.json");
-    expect(file.type).toBe("application/json");
+    expect(file.name).toBe("jackioh-replay-practice-1.json.gz");
+    expect(file.type).toBe("application/gzip");
     expect(Object.keys(json).sort()).toEqual(["catalogVersion", "format", "game", "savedAt", "steps", "version"]);
     expect(json).toMatchObject({ format: REPLAY_JSON_FORMAT, version: REPLAY_JSON_VERSION, catalogVersion: CATALOG_VERSION });
     expect(json.game).toMatchObject({ kind: "practice", game: 1, result: "loss", steps: json.steps.length });
@@ -531,7 +580,7 @@ describe("R1141000 Download JSON", () => {
     fireEvent.click(screen.getByTestId(replaysTestid.download("online-m-1")));
 
     const { file, text, json } = await savedJson();
-    expect(file.name).toBe("jackioh-replay-m-1.json");
+    expect(file.name).toBe("jackioh-replay-m-1.json.gz");
     expect(json.steps).toEqual(steps);
     expect(json.game).toEqual({
       kind: "online",
@@ -640,8 +689,9 @@ describe("R1141000 Open replay JSON", () => {
     fireEvent.click(screen.getByTestId(replayTestid.back));
     await screen.findByTestId(replaysTestid.root);
 
-    // An older file, written before its game named portraits.
-    const json = JSON.parse(await (await downloaded({ p1: "gary", p2: "shredder" })).text()) as { game: Record<string, unknown> };
+    // An older file, written before its game named portraits and before files were packed: plain JSON.
+    const { json } = await savedReplay(await downloaded({ p1: "gary", p2: "shredder" }));
+    if (!isRecord(json.game)) throw new Error("the file holds no game");
     delete json.game.portraits;
     const older = new File([JSON.stringify(json)], "older.json", { type: "application/json" });
     const again = screen.getByTestId<HTMLInputElement>(replaysTestid.openFile);
@@ -688,7 +738,7 @@ describe("R1141000 Open replay JSON", () => {
   it("R1242000 a co-op file opens on the co-op replay player, offers no download and makes no request", async () => {
     const input = await openInput();
     const fetching = vi.spyOn(globalThis, "fetch");
-    choose(input, duosReplayJsonFile(DUOS_STEPS));
+    choose(input, await duosReplayJsonFile(DUOS_STEPS));
 
     const player = await screen.findByTestId(duosTestid.replay);
     await waitFor(() => expect(player).toHaveAttribute("data-step", "0"));
@@ -713,7 +763,7 @@ describe("R1141000 Open replay JSON", () => {
   it("R4619000 one Back closes a co-op replay opened from a file", async () => {
     arriveFromPlay();
     const input = await openInput();
-    choose(input, duosReplayJsonFile(DUOS_STEPS));
+    choose(input, await duosReplayJsonFile(DUOS_STEPS));
     await screen.findByTestId(duosTestid.replay);
 
     await pressBack();
@@ -776,7 +826,7 @@ describe("R1141000 Open replay JSON", () => {
       expect(screen.getByTestId(replaysTestid.root)).toBeInTheDocument();
     }
     // A good file after the refusals opens.
-    choose(input, duosReplayJsonFile(DUOS_STEPS));
+    choose(input, await duosReplayJsonFile(DUOS_STEPS));
     expect(await screen.findByTestId(duosTestid.replay)).toBeInTheDocument();
   });
 

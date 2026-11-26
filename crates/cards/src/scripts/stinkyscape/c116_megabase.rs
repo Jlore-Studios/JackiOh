@@ -155,6 +155,32 @@ mod tests {
         );
     }
 
+    /// R5113000 (issue #5113, a practice game's replay): S #15 Arg Arg Defender's Cry gives the Units
+    /// beside it +1/+1 and Taunt, and Megabase, Immutable, takes neither on either face, while the
+    /// Defender's other neighbour takes both.
+    #[test]
+    fn r5113000_arg_arg_defender_gives_it_no_buff_and_no_taunt() {
+        const ARG_ARG: &str = "stinkyscape-015"; // Arg Arg Defender: buffs its neighbours and gives them Taunt
+        const VANILLA: &str = "core-008"; // Mr. Vanilla
+        for radiant in [false, true] {
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [ARG_ARG, FILLER],
+                    "field": [{ "def": ID, "radiant": radiant, "lane": 2 }, { "def": VANILLA, "lane": 4 }],
+                },
+                "p2": { "hand": [FILLER] },
+            }));
+            s.play(ARG_ARG, json!({ "zone": 3 }));
+            let base = s.unit_at(P1, 2);
+            let health = if radiant { 40 } else { 20 };
+            s.expect_stats(&base, json!({ "attack": 0, "health": health }));
+            assert!(!has_keyword(&s.stats(&base).keywords, KeywordKind::Taunt), "radiant {radiant}");
+            let vanilla = s.unit_at(P1, 4);
+            s.expect_stats(&vanilla, json!({ "attack": 5, "health": 5 }));
+            assert!(has_keyword(&s.stats(&vanilla).keywords, KeywordKind::Taunt), "radiant {radiant}");
+        }
+    }
+
     #[test]
     fn never_attacks_or_defends() {
         let mut s = landed(false, json!({}));

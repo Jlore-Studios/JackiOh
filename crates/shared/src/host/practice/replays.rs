@@ -77,6 +77,8 @@ fn fold_options(replay: &PracticeReplay) -> Result<CreateGameOptions, String> {
         handicaps: Some(setup.handicaps.clone()),
         dealt: setup.dealt.clone(),
         last_boards: setup.last_boards.clone(),
+        deck_marks: setup.deck_marks.clone(),
+        deck_sets: setup.deck_sets.clone(),
         sandbox: replay.config.is_sandbox().then_some(true),
         ..CreateGameOptions::default()
     })

@@ -225,7 +225,7 @@ export default function DuosReplay({ matchId, onLeave }: { matchId: string; onLe
             type="button"
             data-testid={duosTestid.replayDownload}
             onClick={() => {
-              downloadFile(duosReplayJsonFile(steps));
+              void duosReplayJsonFile(steps).then(downloadFile);
             }}
           >
             {t("Download JSON")}

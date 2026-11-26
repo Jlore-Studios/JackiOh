@@ -39,8 +39,9 @@ use super::super::snapshot::{clock_view_for, snapshot as match_snapshot};
 use super::super::timer::{Fx, TimerCommand, TimerKey};
 use super::deal::deal;
 use super::types::{
-    AiAsk, AiMove, KeptAs, LethalAsk, PracticeClaim, PracticeConfig, PracticeDebug, PracticeRecord,
-    PracticeReplay, PracticeReplaySetup, PracticeReplaySummary, PracticeSave, PracticeSnapshot, RunReport,
+    AiAsk, AiMove, KeptAs, KeptAssault, LethalAsk, PracticeClaim, PracticeConfig, PracticeDebug,
+    PracticeRecord, PracticeReplay, PracticeReplaySetup, PracticeReplaySummary, PracticeSave,
+    PracticeSnapshot, RunReport,
 };
 use crate::config::{PRACTICE_AI_CLOCK_MS, PRACTICE_LETHAL_HINT_CLOCK_MS, PRACTICE_REPLAYS_KEPT};
 
@@ -478,9 +479,9 @@ impl PracticeHost {
         self.emit(PracticeOutput::Save { save });
     }
 
-    /// R768: a free game that has just ended is kept; a lesson, or a game Glitch voided (R679), is not,
-    /// nor is R2706000's run fight, which the run records itself. `keep` is false for a game being folded
-    /// (a claim, a resume), which keeps nothing.
+    /// R768: a free game that has just ended is kept, and so is R5125000's Assault fight; a lesson, or a
+    /// game Glitch voided (R679), is not, nor is R2706000's run fight, which the run records itself. `keep`
+    /// is false for a game being folded (a claim, a resume), which keeps nothing.
     fn end_of_game(&mut self, now: i64, keep: bool) {
         let Some(result) = self.game.result else {
             return;
@@ -496,7 +497,7 @@ impl PracticeHost {
             self.emit(PracticeOutput::Voided { at: now });
             return;
         }
-        if keep && !self.config.is_lesson() && !self.config.is_mode_fight() {
+        if keep && !self.config.is_lesson() && !self.config.is_run() {
             self.keep(now);
         }
         let human = self.human_seat();
@@ -545,6 +546,9 @@ impl PracticeHost {
                 handicaps: self.options.handicaps.clone().unwrap_or_default(),
                 last_boards: self.options.last_boards.clone(),
                 dealt: self.options.dealt.clone(),
+                // R5125000: an Assault fight's enemy marks and sets, so its replay folds to its hash.
+                deck_marks: self.options.deck_marks.clone(),
+                deck_sets: self.options.deck_sets.clone(),
             }),
             log: self.log.clone(),
             hash: jackioh_engine::hash_state(&self.game),
@@ -557,6 +561,10 @@ impl PracticeHost {
                 turns: self.game.turn,
                 steps,
                 portraits: self.config.portraits.clone().unwrap_or_else(default_portraits),
+                assault: self.config.assault.as_ref().map(|assault| KeptAssault {
+                    level: assault.level.level,
+                    enemy: assault.level.enemy.clone(),
+                }),
             },
         };
         self.kept_as = Some(KeptAs { game, steps });

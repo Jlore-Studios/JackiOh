@@ -768,8 +768,9 @@ fn price_held(card: &CardInstance) -> Vec<&'static str> {
 /// under one that woke inside it (S+ #63 Overdrive Dome, fuzz seeds 1596, 2217), and so may an animated
 /// card back in its backrow by then (R383, M #66 Fiery Waraxe, fuzz seed 1013, #4079).
 fn aura_gives_windfury(state: &GameState) -> bool {
-    crate::layers::aura_entries(state).iter().any(|entry| {
-        entry
+    crate::layers::aura_entries(state).iter().any(|sourced| {
+        sourced
+            .entry
             .mod_
             .keywords
             .as_deref()

@@ -87,7 +87,7 @@
     {
       "id": "Immutable",
       "label": "Immutable",
-      "rule": "Text can't be changed or transformed",
+      "rule": "Text, stats and keywords can't be changed by other cards",
       "section": "§6.1",
       "aliases": []
     },
