@@ -22600,13 +22600,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-4",
+            "run": "45765815886",
+            "tier": "medium"
+          }
+        ],
         "sha": "a373f70fb5469380228d99063799c8b69f8f4ee5",
-        "tiers": {}
+        "tiers": {
+          "claude": "medium"
+        }
       }
     },
     "5023": {
