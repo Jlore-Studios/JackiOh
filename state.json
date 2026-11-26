@@ -21318,6 +21318,13 @@
     "4969": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-26T01:14:09Z",
+        "difficulty": "medium",
+        "provider": "claude-8",
+        "tier": "medium",
+        "why": "None of the five hard lines holds: the change is one shell case pattern, a header comment and one test in two files (scripts/ci-scope.sh, apps/web/src/net/ci-scope.test.ts), with no engine, AI, cross-crate, migration or 40-file work."
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
