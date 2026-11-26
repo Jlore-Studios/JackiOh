@@ -24759,9 +24759,10 @@
     "5088": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-26T13:46:41Z",
+      "feedback_since": "2026-11-26T16:29:55Z",
       "handoff": {
         "at": "2026-11-26T16:01:14Z",
         "family": "claude",
@@ -24773,10 +24774,13 @@
       },
       "issue": 5037,
       "kind": "revise",
+      "last_findings": [],
       "live": "resolving",
       "pending_request": false,
       "provider": "claude-1",
+      "question": "",
       "queued_at": "2026-11-26T16:19:45Z",
+      "round_tier": "medium",
       "run_id": "45859321678",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
@@ -24797,10 +24801,11 @@
         "provider": "claude-7",
         "run": "45851038318"
       },
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-26T16:29:55Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 0,
       "votes": {
         "approvals": [],
         "builder": "claude",
