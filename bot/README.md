@@ -171,7 +171,9 @@ every tier. A priority label never makes work eligible or ineligible.
 super run production waits on is red, "CI: daily super run failed" (the daily run on the `_staging`
 branch) or "CI: super run failed on a production candidate", found by its exact title
 (`GateTitles` in [`go/internal/queue`](go/internal/queue/candidates.go)), is built before any
-`priority:high` item, whatever its labels, since production moves only once that run passes. The
+`priority:high` item, whatever its labels, since production moves only once that run passes. So is
+"CI: production promotion failed", which `promote-production.yml`'s report opens when the promotion
+or its deploy fails, since players get the commit only once that is fixed. The
 queue and the status issue name its tier `production gate`.
 
 **`human`** takes work away from the bot altogether: people do it. That is a decision, an

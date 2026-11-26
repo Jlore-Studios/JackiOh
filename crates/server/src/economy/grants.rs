@@ -112,8 +112,8 @@ fn refusal_text(grant: &LedgerGrant) -> String {
 /// cosmetics (R3335001), a quest's change to the quests and the date of the next one to its schedule. A grant carries its own `ref` or takes the outcome's, and its own date or the
 /// outcome's. A holding that cannot take a grant is `refused`'s error, writing nothing more; a wallet or a track
 /// that takes none, a quest that arrives held already and a Fleet reward the account owns already (a dev account's
-/// fill, R3335002) are no refusals. Answers the count the
-/// first inventory grant left, which an opening reads as the packs still held.
+/// fill, R3335002) are no refusals. Answers the count the first inventory grant's item holds after
+/// every grant was written, which an opening reads as the packs still held.
 pub async fn write_grants<E: From<StoreError>>(
     tx: &mut Tx<'_>,
     writing: &Writing<'_>,
@@ -121,7 +121,8 @@ pub async fn write_grants<E: From<StoreError>>(
     refused: impl Fn(&LedgerGrant) -> E,
 ) -> Result<Option<i64>, E> {
     let profile_id = writing.profile_id.to_string();
-    let mut first_count = None;
+    let mut pack = None;
+    let mut held = None;
     for grant in grants {
         match grant {
             LedgerGrant::Inventory {
@@ -144,7 +145,10 @@ pub async fn write_grants<E: From<StoreError>>(
                     })
                     .await?
                     .ok_or_else(|| refused(grant))?;
-                first_count.get_or_insert(count);
+                let (first_item, first_key) = pack.get_or_insert((*item, key.clone()));
+                if *first_item == *item && *first_key == *key {
+                    held = Some(count);
+                }
             }
             LedgerGrant::Cards { cards } => {
                 let quantities: Vec<CollectionEntry> = cards
@@ -310,7 +314,7 @@ pub async fn write_grants<E: From<StoreError>>(
             }
         }
     }
-    Ok(first_count)
+    Ok(held)
 }
 
 /// R3212000: [`write_grants`] for several outcomes of one account at once (an Open all's openings, in
