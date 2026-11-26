@@ -394,8 +394,9 @@ pub const UNSTOPPABLE_LETHAL_REPLY_NODES: usize;        // AI_BUDGET.lethal_node
 
 Whether `seat`, at its own turn, faces a lethal showing on the opponent's board that nothing it does
 this turn stops. Like `lethal_hint` it reads the true state only through `redact`, and it counts only
-what shows: the opponent's hand and face-down cards are taken out, so no unseen trap stops the seat's
-answer and no unseen card makes the lethal. It fills the rest in as
+what shows: the opponent's hand, face-down cards and unrevealed secrets are taken out, so no unseen
+trap stops the seat's answer and no unseen card or guessed secret makes the lethal (a secret's reward
+finds no choice and does nothing, R4796000). It fills the rest in as
 `UNSTOPPABLE_LETHAL_DETERMINIZATIONS` worlds from `UNSTOPPABLE_LETHAL_SEED`'s stream and, on each,
 plays every line of the seat's turn through the engine (every legal action but R84's and the
 mulligan, "end turn" first, a position once), and for each line that hands the turn over asks
@@ -403,7 +404,9 @@ mulligan, "end turn" first, a position once), and for each line that hands the t
 line again. It holds only when every line on every world ends lost. Every doubt answers false: a cut
 walk (`UNSTOPPABLE_LETHAL_NODES`, `should_stop`), a failed step, a step that rolls the game's random
 numbers or moves a card of the seat's library (one outcome of a roll, one guessed order, could hide
-the escape), an opponent's lethal that rolls, moves a card of its own library or opens a prompt for
+the escape), a step that returns the board to a snapshot (its `rolledBack`: the worlds' board history
+is one stand-in snapshot, the field as it shows, for the one `redact` drops, so a seat that can play a
+Rollback plays on, R4796000), an opponent's lethal that rolls, moves a card of its own library or opens a prompt for
 the seat, a panic, and every moment but the seat's own main phase with no prompt open. A turn that ends with the
 Marketplace open ends without it, so the opponent's turn start rolls no offers (R1853000), and a lethal
 that needs the opponent's turn to end is not counted: both err only towards playing on. `decide` never
@@ -629,13 +632,15 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
   and has a place for it: an open zone of its row or, failing that, any play of it the engine
   lists, onto a Stack, into the backrow with Flying, onto an Equip host or a stack base, or into a
   zone its Tribute frees), when the seat can pay the pass; with `pass_cost` 0 also a card the
-  teammate can afford next turn and the seat cannot; never more than the passes left or the
-  teammate's free hand slots. Immediate passes rank by the teammate's best bounded follow-up
+  teammate can afford next turn and the seat cannot, each side's next refresh read as its turn's
+  start gives it, a "+N mana per turn" (R4440052) and a credit line's instalment (R1224) counted;
+  never more than the passes left or the teammate's free hand slots. Immediate passes rank by the teammate's best bounded follow-up
   (R1127000; at most `DUOS_PASS_MAX_FOLLOWUPS` plays on a fixed-seed probe, past it the first plays
   of the teammate's best-valued hand cards, R4932000), ties by cost then hand order; free-pass
   next-turn cards keep cost order. An immediate pass is named only when it is
   worth it (R1723000): the teammate's best follow-up with the card, also tried after the teammate's
-  own best play, beats its best without it by more than the card's `hand_card_value` in the seat's
+  own best play (each a real engine step under a nonce of its own, a step that changed nothing
+  skipped), beats its best without it by more than the card's `hand_card_value` in the seat's
   hand, `DUOS_PASS_MARGIN_PER_COST` per crystal of `pass_cost` and `DUOS_PASS_MIN_GAIN`. A card the
   seat can play itself is named only when that gain also beats what the seat's own best bounded play
   of the card gains it in its own duel (R2827000): gain against gain, never one duel's score against

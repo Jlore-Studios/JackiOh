@@ -1,28 +1,28 @@
-/* The client's one type scale (#2107): every board stylesheet's font-size names a step here
-   (src/typescale.test.ts), and its font-family one of fonts.css's three families. A step is a size
-   in px, smallest first; its em form is the step over --type-md, the board's body size, for text
-   that scales with its box (the board, a card), where --type-md's own is `inherit`. A new step
-   raises TYPE_MAX there. */
+/* The client's one type scale (#2107, #5013): every board stylesheet's font-size names a step here
+   (src/typescale.test.ts), and its font-family one of fonts.css's families. A step is a size in px,
+   smallest first. The page's body is set in --type-lg (16px), and the board's base in --type-md
+   (14px, index.css's .app-shell--wide); a step's em form is the step over --type-md, for text that
+   scales with its box (the board, a card), where --type-md's own is `inherit`. --type-2xs is for
+   card faces only: no sheet outside cards/ names a step under 11px. A new step raises TYPE_MAX
+   there. */
 
 :root {
-  --type-3xs: 9px;
   --type-2xs: 10px;
   --type-xs: 11px;
   --type-sm: 12px;
-  --type-md: 13px;
-  --type-lg: 15px;
-  --type-xl: 16px;
-  --type-2xl: 19px;
-  --type-3xl: 22px;
+  --type-md: 14px;
+  --type-lg: 16px;
+  --type-xl: 18px;
+  --type-2xl: 20px;
+  --type-3xl: 24px;
   --type-4xl: 30px;
 
-  --type-3xs-em: calc(9em / 13);
-  --type-2xs-em: calc(10em / 13);
-  --type-xs-em: calc(11em / 13);
-  --type-sm-em: calc(12em / 13);
-  --type-lg-em: calc(15em / 13);
-  --type-xl-em: calc(16em / 13);
-  --type-2xl-em: calc(19em / 13);
-  --type-3xl-em: calc(22em / 13);
-  --type-4xl-em: calc(30em / 13);
+  --type-2xs-em: calc(10em / 14);
+  --type-xs-em: calc(11em / 14);
+  --type-sm-em: calc(12em / 14);
+  --type-lg-em: calc(16em / 14);
+  --type-xl-em: calc(18em / 14);
+  --type-2xl-em: calc(20em / 14);
+  --type-3xl-em: calc(24em / 14);
+  --type-4xl-em: calc(30em / 14);
 }

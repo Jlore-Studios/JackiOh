@@ -567,6 +567,7 @@
   word-break: normal;
   -webkit-line-clamp: none;
   line-height: 7.6cqh;
+  font-family: var(--font-display);
   font-size: calc(5.2cqh * var(--cf-name-scale, 1) * var(--cf-fit, 1));
   font-weight: 800;
   letter-spacing: 0.01em;
@@ -638,6 +639,7 @@
     inset 0 0 0 0.35cqw rgb(60 40 10 / 0.45),
     inset 0 0.5cqh 1cqh rgb(0 0 0 / 0.18);
   color: #2b2116;
+  font-family: var(--font-display);
   font-size: calc(4.4cqh * var(--cf-text-scale, 1) * var(--cf-fit, 1));
   font-weight: 500;
   line-height: 1.18;

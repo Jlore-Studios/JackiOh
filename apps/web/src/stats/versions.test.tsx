@@ -168,7 +168,9 @@ describe("R4680000 the Experimental tab's Versions view", () => {
     const { source, asked } = notingSource();
     renderStats(source);
     await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
-    expect(screen.getByTestId(statsTestid.experimentalLine)).toHaveTextContent(/^Every card's current version, over every patch since it last changed$/);
+    expect(screen.getByTestId(statsTestid.experimentalLine)).toHaveTextContent(
+      /^Every card's current version, over this major's patches since it last changed$/,
+    );
 
     fireEvent.click(screen.getByTestId(statsTestid.experimentalVersions));
     const table = await screen.findByTestId(statsTestid.versionsTable, undefined, SLOW);

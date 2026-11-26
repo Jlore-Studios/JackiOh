@@ -14,8 +14,9 @@ export const statsTestid = {
   runningTable: "stats-running-table",
   runningGrid: "stats-running-grid",
   runningSince: "stats-running-since",
-  /** R4680000: the tab's Segmented of views (Running, Versions), Versions' table, grid, span and Past versions only. */
+  /** R4680000: the tab's Segmented of views (R5040000: Major patch running, Historical, Versions), Versions' table, grid, span and Past versions only. */
   experimentalRunning: "stats-experimental-running",
+  experimentalHistorical: "stats-experimental-historical",
   experimentalVersions: "stats-experimental-versions",
   versionsTable: "stats-versions-table",
   versionsGrid: "stats-versions-grid",
