@@ -93,8 +93,7 @@ const ESCAPE_HANDLERS: Record<string, number> = {
   // under stays live, so no scrim, no Tab trap.
   "routes/landing.tsx": 1,
   "game/Marketplace.tsx": 1,
-  "game/deckbuilder/DeckHistory.tsx": 1,
-  "game/deckbuilder/DeckCosmeticsPicker.tsx": 1,
+  "game/deckbuilder/useWorkshopPopover.ts": 1,
   "emotes/PortraitPicker.tsx": 1,
   "emotes/ui.tsx": 1,
   "game/ModifierList.tsx": 1,

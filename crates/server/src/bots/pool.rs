@@ -18,8 +18,7 @@ use std::time::Duration;
 use jackioh_shared::bots::fallback::{BotMode, RatedGameRecord, TicketRecord, holds_decks, holds_trio};
 use jackioh_shared::bots::names::never_lists;
 use jackioh_shared::bots::pool::{
-    BotLadder, BotRecord, bot_target_strength, draw_decks, draw_new_bot, draw_trio, plan_grind, plan_pool,
-    pool_target,
+    bot_target_strength, draw_decks, draw_new_bot, draw_trio, plan_grind, plan_pool, pool_target,
 };
 
 use crate::api::queue::{new_seed, new_uuid};
@@ -31,8 +30,7 @@ use crate::config::{
     BOT_STALE_START_SECONDS, MS_PER_DAY, MS_PER_SECOND, USERNAME_CHANGE_COOLDOWN_MS,
 };
 use crate::db::store::{
-    BotDeck, BotRow, FrozenTrio, QueueMode, RatedGameRow, StoreError, Ticket, UsernameClaim,
-    UsernameClaimOutcome,
+    BotRow, QueueMode, RatedGameRow, StoreError, Ticket, UsernameClaim, UsernameClaimOutcome,
 };
 use crate::ranked::ladder::Ladder;
 use crate::username::{matches_lists, normalize_username, username_key};
@@ -50,50 +48,7 @@ impl From<QueueMode> for BotMode {
     }
 }
 
-impl BotRecord for BotRow {
-    fn profile_id(&self) -> &str {
-        &self.profile_id
-    }
-    fn created_at(&self) -> i64 {
-        self.created_at
-    }
-    fn retired_at(&self) -> Option<i64> {
-        self.retired_at
-    }
-    fn grinding(&self) -> bool {
-        self.grinding
-    }
-    fn rating_for(&self, ladder: BotLadder) -> f64 {
-        match ladder {
-            BotLadder::Constructed => self.rating,
-            BotLadder::Random => self.random_rating,
-        }
-    }
-    fn active_from_hour(&self) -> i32 {
-        self.active_from_hour
-    }
-    fn active_hours(&self) -> i32 {
-        self.active_hours
-    }
-    fn in_match_id(&self) -> Option<&str> {
-        self.in_match_id.as_deref()
-    }
-    fn decks(&self) -> &[BotDeck] {
-        &self.decks
-    }
-    fn decks_catalog_version(&self) -> Option<&str> {
-        self.decks_catalog_version.as_deref()
-    }
-    fn trio(&self) -> Option<&FrozenTrio> {
-        self.trio.as_ref()
-    }
-    fn trio_catalog_version(&self) -> Option<&str> {
-        self.trio_catalog_version.as_deref()
-    }
-    fn cosmetics(&self) -> Option<&cosmetics::BotCosmetics> {
-        self.cosmetics.as_ref()
-    }
-}
+jackioh_shared::bot_record_of_fields!(BotRow);
 
 impl TicketRecord for Ticket {
     fn id(&self) -> &str {

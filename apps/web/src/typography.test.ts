@@ -227,6 +227,27 @@ const FACE_NUMERIC = [
   "cards/cardstate.css: .cf .cf-state-text",
 ];
 
+/** #5013: the selectors each sheet sets in capitals; a sheet that drops one lowers its number, and none gains one. */
+const UPPERCASE: Readonly<Record<string, number>> = { "cards/cards.css": 6, "index.css": 11 };
+/** #5013: the most selectors set in capitals, in all. */
+const UPPERCASE_MAX = 20;
+/** #5013: the one letter-spacing of index.css's small-caps labels. */
+const CAPS_TRACKING = "0.08em";
+
+/** #5013: the game's words set in the display face, by the sheet that sets them. */
+const DISPLAY: Readonly<Record<string, readonly string[]>> = {
+  "index.css": ["h1", "h2", "h3", ".prompt-title", ".hero-inspect-title"],
+  "game/animations.css": [".result-overlay__word"],
+  "game/showcase/showcase.css": [".showcase-ribbon", ".chaos-banner-title"],
+  "fx/fx.css": [".fx-banner", ".fx-result::after", ".fx-chaos"],
+  "cards/cards.css": [".cf .card-name", ".cf .card-text"],
+};
+
+/** A rule's face: its `font-family`, or the family that ends its `font` shorthand. */
+const faceOf = (decls: Map<string, string>): string | undefined => decls.get("font-family") ?? /(var\(--font-[a-z-]+\))\s*$/.exec(decls.get("font") ?? "")?.[1];
+
+const isUppercase = (rule: Rule): boolean => rule.decls.get("text-transform") === "uppercase";
+
 describe("#2123 tabular numbers", () => {
   for (const [path, selectors] of Object.entries(TABULAR)) {
     it(`#2123 ${path} draws its counts, prices and figures in tabular numbers`, () => {
@@ -282,4 +303,36 @@ describe("#2123 card faces keep the wrap and the figures cards/fit.ts measures",
     const setting = faceRules.filter(({ decls }) => decls.has("font-variant-numeric")).map(({ where }) => where);
     expect(setting.sort()).toEqual(FACE_NUMERIC);
   });
+});
+
+describe("#5013 few capitals", () => {
+  it("#5013 each sheet sets capitals on no more selectors than UPPERCASE allows, UPPERCASE_MAX in all", () => {
+    const counts: Record<string, number> = {};
+    for (const path of cssFiles(SRC)) {
+      const count = parseSheet(readFileSync(path, "utf8"))
+        .rules.filter(isUppercase)
+        .reduce((sum, rule) => sum + rule.selectors.length, 0);
+      if (count > 0) counts[relative(SRC, path).replaceAll("\\", "/")] = count;
+    }
+    expect(counts, "set a label in sentence case, or add it to index.css's small-caps rule").toEqual(UPPERCASE);
+    expect(Object.values(UPPERCASE).reduce((sum, count) => sum + count, 0)).toBeLessThanOrEqual(UPPERCASE_MAX);
+  });
+
+  it("#5013 the small-caps labels share index.css's one rule at one letter-spacing, and the rest are card faces", () => {
+    const labels = sheet("index.css").rules.filter(isUppercase);
+    expect(labels).toHaveLength(1);
+    expect(labels[0]?.decls.get("letter-spacing")).toBe(CAPS_TRACKING);
+    const faces = sheet("cards/cards.css").rules.filter(isUppercase).flatMap((rule) => rule.selectors);
+    expect(faces.length).toBeGreaterThan(0);
+    for (const selector of faces) expect(selector, "a card face's printed inscription").toMatch(CARD_FACE);
+  });
+});
+
+describe("#5013 the game's words in the display face", () => {
+  for (const [path, selectors] of Object.entries(DISPLAY)) {
+    it(`#5013 ${path} sets its titles, names and rules text in --font-display`, () => {
+      const parsed = sheet(path);
+      for (const selector of selectors) expect(faceOf(declsFor(parsed, selector)), selector).toBe("var(--font-display)");
+    });
+  }
 });

@@ -1191,6 +1191,30 @@ mod pg {
     use crate::db::store::StoreError;
     use crate::economy::practice::ClaimBucket;
 
+    /// The ledger columns every `_all` statement binds after its own: each grant's `delta`, its
+    /// `reason` (`reasons`, read as literals), `ref`, `dev` and `at`, one array each in the grants'
+    /// order.
+    macro_rules! bind_ledger_columns {
+        ($query:expr, $grants:expr, $reasons:expr) => {
+            $query
+                .bind(
+                    $grants
+                        .iter()
+                        .map(|grant| grant.delta)
+                        .collect::<Vec<i64>>(),
+                )
+                .bind($reasons)
+                .bind(
+                    $grants
+                        .iter()
+                        .map(|grant| grant.reference.clone())
+                        .collect::<Vec<Option<String>>>(),
+                )
+                .bind($grants.iter().map(|grant| grant.dev).collect::<Vec<bool>>())
+                .bind($grants.iter().map(|grant| grant.at).collect::<Vec<i64>>())
+        };
+    }
+
     fn at_of(row: &PgRow) -> Result<i64, StoreError> {
         Ok(ms_of(row.try_get("at")?))
     }
@@ -1263,7 +1287,7 @@ mod pg {
             .iter()
             .map(|grant| literal(&grant.reason))
             .collect::<Result<Vec<String>, StoreError>>()?;
-        sqlx::query(
+        let query = sqlx::query(
             "with g as (
                select * from unnest($2::int8[], $3::text[], $4::text[], $5::boolean[], $6::int8[])
                         with ordinality as g(delta, reason, ref, dev, at, n)
@@ -1276,19 +1300,10 @@ mod pg {
              select $1::uuid, delta, reason, ref, dev, to_timestamp(at::double precision / 1000.0)
                from g order by n",
         )
-        .bind(first.profile_id.as_str())
-        .bind(grants.iter().map(|grant| grant.delta).collect::<Vec<i64>>())
-        .bind(reasons)
-        .bind(
-            grants
-                .iter()
-                .map(|grant| grant.reference.clone())
-                .collect::<Vec<Option<String>>>(),
-        )
-        .bind(grants.iter().map(|grant| grant.dev).collect::<Vec<bool>>())
-        .bind(grants.iter().map(|grant| grant.at).collect::<Vec<i64>>())
-        .execute(&mut **t)
-        .await?;
+        .bind(first.profile_id.as_str());
+        bind_ledger_columns!(query, grants, reasons)
+            .execute(&mut **t)
+            .await?;
         Ok(())
     }
 
@@ -1423,7 +1438,7 @@ mod pg {
             .iter()
             .map(|grant| literal(&grant.reason))
             .collect::<Result<Vec<String>, StoreError>>()?;
-        sqlx::query(
+        let query = sqlx::query(
             "with g as (
                select * from unnest($2::text[], $3::text[], $4::int8[], $5::text[], $6::text[],
                                     $7::boolean[], $8::int8[])
@@ -1446,19 +1461,10 @@ mod pg {
                 .iter()
                 .map(|grant| grant.key.clone())
                 .collect::<Vec<String>>(),
-        )
-        .bind(grants.iter().map(|grant| grant.delta).collect::<Vec<i64>>())
-        .bind(reasons)
-        .bind(
-            grants
-                .iter()
-                .map(|grant| grant.reference.clone())
-                .collect::<Vec<Option<String>>>(),
-        )
-        .bind(grants.iter().map(|grant| grant.dev).collect::<Vec<bool>>())
-        .bind(grants.iter().map(|grant| grant.at).collect::<Vec<i64>>())
-        .execute(&mut **t)
-        .await?;
+        );
+        bind_ledger_columns!(query, grants, reasons)
+            .execute(&mut **t)
+            .await?;
         Ok(())
     }
 
@@ -1484,7 +1490,7 @@ mod pg {
             .iter()
             .map(|grant| literal(&grant.reason))
             .collect::<Result<Vec<String>, StoreError>>()?;
-        let fits: bool = sqlx::query_scalar(
+        let query = sqlx::query_scalar(
             "with g as (
                select * from unnest($2::text[], $3::text[], $4::int8[], $5::text[], $6::text[],
                                     $7::boolean[], $8::int8[])
@@ -1526,19 +1532,10 @@ mod pg {
                 .iter()
                 .map(|grant| grant.key.clone())
                 .collect::<Vec<String>>(),
-        )
-        .bind(grants.iter().map(|grant| grant.delta).collect::<Vec<i64>>())
-        .bind(reasons)
-        .bind(
-            grants
-                .iter()
-                .map(|grant| grant.reference.clone())
-                .collect::<Vec<Option<String>>>(),
-        )
-        .bind(grants.iter().map(|grant| grant.dev).collect::<Vec<bool>>())
-        .bind(grants.iter().map(|grant| grant.at).collect::<Vec<i64>>())
-        .fetch_one(&mut **t)
-        .await?;
+        );
+        let fits: bool = bind_ledger_columns!(query, grants, reasons)
+            .fetch_one(&mut **t)
+            .await?;
         Ok(fits)
     }
 
@@ -1633,7 +1630,7 @@ mod pg {
             .iter()
             .map(|grant| literal(&grant.reason))
             .collect::<Result<Vec<String>, StoreError>>()?;
-        let fits: bool = sqlx::query_scalar(
+        let query = sqlx::query_scalar(
             "with g as (
                select * from unnest($2::text[], $3::text[], $4::int8[], $5::text[], $6::text[],
                                     $7::boolean[], $8::int8[])
@@ -1676,19 +1673,10 @@ mod pg {
                 .iter()
                 .map(|grant| grant.pack.clone())
                 .collect::<Vec<String>>(),
-        )
-        .bind(grants.iter().map(|grant| grant.delta).collect::<Vec<i64>>())
-        .bind(reasons)
-        .bind(
-            grants
-                .iter()
-                .map(|grant| grant.reference.clone())
-                .collect::<Vec<Option<String>>>(),
-        )
-        .bind(grants.iter().map(|grant| grant.dev).collect::<Vec<bool>>())
-        .bind(grants.iter().map(|grant| grant.at).collect::<Vec<i64>>())
-        .fetch_one(&mut **t)
-        .await?;
+        );
+        let fits: bool = bind_ledger_columns!(query, grants, reasons)
+            .fetch_one(&mut **t)
+            .await?;
         Ok(fits)
     }
 

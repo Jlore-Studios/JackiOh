@@ -1,0 +1,18 @@
+{
+  "title": "A readable type scale, Alegreya for the game's words and fewer capitals",
+  "sources": "#5013",
+  "notes": "Type scale re-spaced around a 16px body (the board's base 14px); no step under 11px outside cards/; card names and rules text, headings, titles and banners in Alegreya; capitals kept only for one shared small-caps label rule and the card faces' printed inscriptions. How cards look only: no card plays differently.",
+  "player": {
+    "title": "Larger, easier type",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Card names and rules text are now set in the game's serif, Alegreya.",
+      "Text across the menus and the board is larger, and far fewer labels are in capitals."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

@@ -23,6 +23,7 @@ import Game from "../game/Game.tsx";
 import { ModifierList } from "../game/ModifierList.tsx";
 import { OnceRevealed, resultSaysOpponentLeft } from "../game/Result.tsx";
 import { getAudioEngine } from "../audio/index.ts";
+import { reloadOwnProficiency } from "../cards/proficiencySync.ts";
 import { announceWallet } from "../economy/wallet.ts";
 import XpReveal from "../economy/XpReveal.tsx";
 import { useEmotes } from "../emotes/useEmotes.ts";
@@ -44,7 +45,7 @@ import { t, useLocale } from "../i18n/i18n.ts";
 import Username from "../auth/Username.tsx";
 import { getMatchRanks, type MatchRanksResponse } from "../net/api.ts";
 import { BackLayer } from "../net/backLayers.ts";
-import { guardLeaving, navigate, paths } from "../net/navigate.ts";
+import { navigate, paths, useLeaveGuard } from "../net/navigate.ts";
 import OpenedReplay from "../replay/OpenedReplay.tsx";
 import { openOnlineMatchReplay } from "../replay/sources.ts";
 import { rankCaption, rankShortWords, rankWords } from "../rank/rank.ts";
@@ -251,10 +252,14 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   const view = match.view;
 
   // #1664: the result's write paid this account (the Jlore, and maybe a level's or a quest's), so the
-  // pill reads the wallet again, once however many views carry the answer.
+  // pill reads the wallet again, once however many views carry the answer. R4977000: the same write counted the
+  // seat's plays (R3013000), so the page loads the account's card proficiency again too.
   const paid = match.economy !== null;
   useEffect(() => {
-    if (paid) announceWallet();
+    if (paid) {
+      announceWallet();
+      reloadOwnProficiency();
+    }
   }, [paid]);
 
   // R643–R644: the opponent's relays land through `match.emote`, whose `seq` bumps on every frame so
@@ -352,19 +357,9 @@ export default function MatchRoute({ matchId, token, socketFactory }: MatchRoute
   // R2479000: while the match is live, every way off the board (its Back, the browser's Back, any
   // in-app move but a forced one) asks first and names the disconnect grace (§9.5). A finished,
   // voided or refused match has nothing to come back to, so it is left at once.
-  const [leaving, setLeaving] = useState<{ leave: () => void } | null>(null);
   const atStake =
     view !== null && view.result === null && match.connection !== "closed" && match.connection !== "refused";
-  useEffect(() => {
-    if (!atStake) return;
-    const release = guardLeaving((leave) => {
-      setLeaving({ leave });
-    });
-    return () => {
-      release();
-      setLeaving(null);
-    };
-  }, [atStake]);
+  const [leaving, setLeaving] = useLeaveGuard(atStake);
 
   if (view === null) {
     if (match.connection === "refused") {

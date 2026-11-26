@@ -194,6 +194,12 @@ pub struct SummonArgs {
     /// (`SummonPlacement.exile_below`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub exile_below: Option<bool>,
+    /// R5048000 (S+ #121 Toxopid's Flexible Legs): `lane` names a backrow lane, where a fresh Flexible
+    /// Unit (Flying has it innately, R3543000) stands as a Flexible play does (R1081000). The zone must
+    /// be empty and unreserved, Locked or not, and on the summoner's half of a slashed board (R3554003);
+    /// any other card, or no lane, summons nothing. Fresh summons only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub backrow: Option<bool>,
     /// R3541002: the fresh card enters Dormant for this many turns (`SummonPlacement.dormant_turns`).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dormant_turns: Option<i32>,
@@ -526,6 +532,25 @@ pub(crate) fn summon_fresh_standing(
     summon_fresh_into(ctx, def_id, player, &slot, at, true, false)
 }
 
+/// R5048000: a fresh Flexible Unit (Flying has it innately, R3543000) summoned standing in `player`'s
+/// backrow zone `at.lane` (`SummonArgs.backrow`), on its summoner's half of a slashed board (R3554003);
+/// a card that is no Flexible Unit, or enters GIGA, lands nowhere.
+fn summon_fresh_in_backrow(
+    ctx: &mut EffectContext<'_>,
+    def_id: &str,
+    player: PlayerId,
+    at: &SummonPlacement,
+) -> Option<CardInstance> {
+    let probe = face_probe(def_id, player, at.radiant == Some(true));
+    if !summon_flies(ctx.state, &probe) || crate::giga::enters_giga(ctx.state, &probe) {
+        return None;
+    }
+    if !crate::geometry::lane_in_half(ctx.state, at.lane?, summoner_half(ctx)) {
+        return None;
+    }
+    summon_fresh_standing(ctx, def_id, player, at)
+}
+
 /// A fresh card of `def_id` placed in `slot`, standing there if `stands` (R1081000) and set face-down by
 /// its Cloaked if `set` (R4327000).
 fn summon_fresh_into(
@@ -768,7 +793,12 @@ pub fn summon(args: SummonArgs) -> Effect {
         let Some(def_id) = &args.def_id else {
             return;
         };
-        if let Some(made) = summon_fresh(ctx, def_id, player, &at) {
+        let made = if args.backrow == Some(true) {
+            summon_fresh_in_backrow(ctx, def_id, player, &at)
+        } else {
+            summon_fresh(ctx, def_id, player, &at)
+        };
+        if let Some(made) = made {
             roll_random_keywords(ctx, &made, args.random_keywords);
             let keywords = args.keywords.clone().unwrap_or_default();
             if made.set_as.is_some() {
