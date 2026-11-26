@@ -325,10 +325,10 @@
     },
     "stinkyscape-148": {
       "base": {
-        "en": "Indestructible\nYour first travel a turn is free.\nActivate ♾️: Pay (1) to travel a node. Node 20 is the edge."
+        "en": "Indestructible\nAura: Your first travel a turn is free.\nActivate ♾️: Pay (1) to travel a node. Node 20 is the edge."
       },
       "radiant": {
-        "en": "Indestructible\nFirst 2 travels a turn are free.\nActivate ♾️: Pay (1) to travel a node. Node 20 is the edge."
+        "en": "Indestructible\nAura: First 2 travels a turn are free.\nActivate ♾️: Pay (1) to travel a node. Node 20 is the edge."
       }
     },
     "stinkyscape-150": {
@@ -357,10 +357,10 @@
     },
     "stinkyscape-157": {
       "base": {
-        "en": "Brittle 3\nGauntlet: Units in lanes 2–4 fight only each other."
+        "en": "Brittle 3\nAura: Lanes 2–4 are a Gauntlet; Units there fight only each other."
       },
       "radiant": {
-        "en": "Brittle 3\nGauntlet: Units in lanes 2–4 fight only each other.\nActivate: +{brittleGain} Brittle, or Tribute this."
+        "en": "Brittle 3\nAura: Lanes 2–4 are a Gauntlet; Units there fight only each other.\nActivate: +{brittleGain} Brittle, or Tribute this."
       }
     },
     "stinkyscape-164": {
@@ -467,10 +467,10 @@
     },
     "stinkyscapeplus-087": {
       "base": {
-        "en": "Animated\nEvolves when a Starship launches.\nEvolve: {counters|Plague Counter|Plague Counters}.\nAura: 3X/3X, X its Plague Counters."
+        "en": "Animated\nEvolves when a Starship launches.\nEvolve: {counters|Plague Counter|Plague Counters}.\nHas 3X/3X, X its Plague Counters."
       },
       "radiant": {
-        "en": "Animated\nEvolves when a Starship launches.\nEvolve: {counters|Plague Counter|Plague Counters}.\nAura: 3X/3X, X its Plague Counters."
+        "en": "Animated\nEvolves when a Starship launches.\nEvolve: {counters|Plague Counter|Plague Counters}.\nHas 3X/3X, X its Plague Counters."
       }
     },
     "stinkyscapeplus-089": {

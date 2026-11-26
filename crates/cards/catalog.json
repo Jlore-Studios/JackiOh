@@ -1353,11 +1353,11 @@
     "loc": 7,
     "base": {
       "keywords": [],
-      "text": "Your cards gain \"Combo X: Deal X damage to the enemy hero.\" X = cards you played earlier this turn."
+      "text": "Aura: Your cards gain \"Combo X: Deal X damage to the enemy hero.\" X = cards you played earlier this turn."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your cards gain \"Combo X: Deal 2X damage to the enemy hero.\" X = cards you played earlier this turn."
+      "text": "Aura: Your cards gain \"Combo X: Deal 2X damage to the enemy hero.\" X = cards you played earlier this turn."
     }
   },
   "core-039": {
@@ -2290,11 +2290,11 @@
     "loc": 5,
     "base": {
       "keywords": [],
-      "text": "The first ({giftLimit}) Cost or less card you play each turn becomes Radiant as it's played."
+      "text": "Aura: The first ({giftLimit}) Cost or less card you play each turn becomes Radiant as it's played."
     },
     "radiant": {
       "keywords": [],
-      "text": "The first ({giftLimit}) Cost or less card you play each turn becomes Radiant as it's played."
+      "text": "Aura: The first ({giftLimit}) Cost or less card you play each turn becomes Radiant as it's played."
     }
   },
   "core-065": {
@@ -2717,11 +2717,11 @@
     "loc": 11,
     "base": {
       "keywords": [],
-      "text": "Your hero can't take more than {cap} damage at a time.\nCry: Draw {draw}."
+      "text": "Aura: Your hero can't take more than {cap} damage at a time.\nCry: Draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero can't take more than {cap} damage at a time.\nYour hero has Armor {armor}.\nCry: Draw {draw}."
+      "text": "Aura: Your hero can't take more than {cap} damage at a time. Your hero has Armor {armor}.\nCry: Draw {draw}."
     }
   },
   "core-074": {
@@ -2815,11 +2815,11 @@
     "loc": 37,
     "base": {
       "keywords": [],
-      "text": "Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw {draw}."
+      "text": "Aura: Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw {draw}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw {draw}."
+      "text": "Aura: Drawing from an empty deck gives you a Rush Token card instead of fatigue.\nCry: Draw {draw}."
     }
   },
   "core-076": {
@@ -3139,11 +3139,11 @@
     "loc": 8,
     "base": {
       "keywords": [],
-      "text": "Your hero has Armor {armor}.\nEmbiggened (4): Armor {paidArmor} instead."
+      "text": "Aura: Your hero has Armor {armor}.\nEmbiggened (4): Armor {paidArmor} instead."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero has Armor {armor}.\nEmbiggened (4): Armor {paidArmor} instead."
+      "text": "Aura: Your hero has Armor {armor}.\nEmbiggened (4): Armor {paidArmor} instead."
     }
   },
   "core-085": {
@@ -12159,7 +12159,7 @@
           "kind": "Tradable"
         }
       ],
-      "text": "Tradable, Indestructible\nThe first card you play each turn adds a copy of it to your hand. The copy isn't Radiant and costs ({setCost})."
+      "text": "Tradable, Indestructible\nAura: The first card you play each turn adds a copy of it to your hand. The copy isn't Radiant and costs ({setCost})."
     },
     "radiant": {
       "keywords": [
@@ -12170,7 +12170,7 @@
           "kind": "Tradable"
         }
       ],
-      "text": "Tradable, Indestructible\nThe first card you play each turn adds a Radiant copy of it to your hand. It costs ({setCost})."
+      "text": "Tradable, Indestructible\nAura: The first card you play each turn adds a Radiant copy of it to your hand. It costs ({setCost})."
     }
   },
   "meditative-012": {
@@ -14767,7 +14767,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Equip\nAura: Has {keywords|random combat keyword|random combat keywords}."
+      "text": "Equip\nHas {keywords|random combat keyword|random combat keywords}."
     },
     "radiant": {
       "attack": 2,
@@ -14777,7 +14777,7 @@
           "kind": "Equip"
         }
       ],
-      "text": "Equip\nAura: Has {keywords|random combat keyword|random combat keywords}."
+      "text": "Equip\nHas {keywords|random combat keyword|random combat keywords}."
     }
   },
   "meditative-066": {
@@ -15924,7 +15924,7 @@
           "n": 2
         }
       ],
-      "text": "Armor 2\nLethal damage your hero or your other Units would take is redirected to this."
+      "text": "Armor 2\nAura: Lethal damage your hero or your other Units would take is redirected to this."
     },
     "radiant": {
       "attack": 6,
@@ -15935,7 +15935,7 @@
           "n": 4
         }
       ],
-      "text": "Armor 4\nLethal damage your hero or your other Units would take is redirected to this."
+      "text": "Armor 4\nAura: Lethal damage your hero or your other Units would take is redirected to this."
     }
   },
   "meditative-093": {
@@ -22949,13 +22949,13 @@
       "attack": 4,
       "health": 7,
       "keywords": [],
-      "text": "Aura: Has {keywords|random combat keyword|random combat keywords}.\nCry: Replace both players' hands with random complicated cards."
+      "text": "Has {keywords|random combat keyword|random combat keywords}.\nCry: Replace both players' hands with random complicated cards."
     },
     "radiant": {
       "attack": 8,
       "health": 14,
       "keywords": [],
-      "text": "Aura: Has {keywords|random combat keyword|random combat keywords}.\nCry: Replace both players' hands with random complicated cards. Make yours Radiant."
+      "text": "Has {keywords|random combat keyword|random combat keywords}.\nCry: Replace both players' hands with random complicated cards. Make yours Radiant."
     }
   },
   "stinkyscape-112": {
@@ -24542,7 +24542,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nYour first travel each turn is free.\nActivate ♾️: Pay (1) to travel one node along your starscape map and gain its reward.\nThe 20th node is the edge of the universe: reaching it adds an Edge of the Universe to your hand."
+      "text": "Indestructible\nAura: Your first travel each turn is free.\nActivate ♾️: Pay (1) to travel one node along your starscape map and gain its reward.\nThe 20th node is the edge of the universe: reaching it adds an Edge of the Universe to your hand."
     },
     "radiant": {
       "keywords": [
@@ -24550,7 +24550,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nYour first two travels each turn are free.\nActivate ♾️: Pay (1) to travel one node along your starscape map and gain its reward.\nThe 20th node is the edge of the universe: reaching it adds an Edge of the Universe to your hand."
+      "text": "Indestructible\nAura: Your first two travels each turn are free.\nActivate ♾️: Pay (1) to travel one node along your starscape map and gain its reward.\nThe 20th node is the edge of the universe: reaching it adds an Edge of the Universe to your hand."
     }
   },
   "stinkyscape-148-1": {
@@ -24948,7 +24948,7 @@
           "n": 3
         }
       ],
-      "text": "Brittle 3\nThe unit zones of the middle 3 lanes are trapped in a Gauntlet. Units there can attack only each other, and no other Unit can attack them."
+      "text": "Brittle 3\nAura: The unit zones of the middle 3 lanes are trapped in a Gauntlet. Units there can attack only each other, and no other Unit can attack them."
     },
     "radiant": {
       "keywords": [
@@ -24957,7 +24957,7 @@
           "n": 3
         }
       ],
-      "text": "Brittle 3\nThe unit zones of the middle 3 lanes are trapped in a Gauntlet. Units there can attack only each other, and no other Unit can attack them.\nActivate: Choose one: give this +{brittleGain} Brittle, or Tribute this."
+      "text": "Brittle 3\nAura: The unit zones of the middle 3 lanes are trapped in a Gauntlet. Units there can attack only each other, and no other Unit can attack them.\nActivate: Choose one: give this +{brittleGain} Brittle, or Tribute this."
     }
   },
   "stinkyscape-158": {
@@ -25828,7 +25828,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Flying, Ranged\nAura: Has {keywords|random combat keyword|random combat keywords}."
+      "text": "Flying, Ranged\nHas {keywords|random combat keyword|random combat keywords}."
     },
     "radiant": {
       "attack": 4,
@@ -25841,7 +25841,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Flying, Ranged\nAura: Has {keywords|random combat keyword|random combat keywords}."
+      "text": "Flying, Ranged\nHas {keywords|random combat keyword|random combat keywords}."
     }
   },
   "stinkyscape-t-drone-corvette": {
@@ -25880,7 +25880,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Flying, Ranged\nAura: Has {keywords|random combat keyword|random combat keywords}."
+      "text": "Flying, Ranged\nHas {keywords|random combat keyword|random combat keywords}."
     },
     "radiant": {
       "attack": 16,
@@ -25893,7 +25893,7 @@
           "kind": "Flying"
         }
       ],
-      "text": "Flying, Ranged\nAura: Has {keywords|random combat keyword|random combat keywords}."
+      "text": "Flying, Ranged\nHas {keywords|random combat keyword|random combat keywords}."
     }
   },
   "stinkyscape-t-shield-layer": {
@@ -25932,7 +25932,7 @@
           "n": 4
         }
       ],
-      "text": "Can't attack, Taunt, Flying, Ranged, Armor 4\nLethal damage your hero or your other Units would take is redirected to this."
+      "text": "Can't attack, Taunt, Flying, Ranged, Armor 4\nAura: Lethal damage your hero or your other Units would take is redirected to this."
     },
     "radiant": {
       "attack": 24,
@@ -25955,7 +25955,7 @@
           "n": 8
         }
       ],
-      "text": "Can't attack, Taunt, Flying, Ranged, Armor 8\nLethal damage your hero or your other Units would take is redirected to this."
+      "text": "Can't attack, Taunt, Flying, Ranged, Armor 8\nAura: Lethal damage your hero or your other Units would take is redirected to this."
     }
   },
   "stinkyscape-t-propagation-layer": {
@@ -30081,11 +30081,11 @@
     "loc": 15,
     "base": {
       "keywords": [],
-      "text": "The first card you draw each turn is replaced with a Warhero Token."
+      "text": "Aura: The first card you draw each turn is replaced with a Warhero Token."
     },
     "radiant": {
       "keywords": [],
-      "text": "The first card you draw each turn is replaced with a Radiant Warhero Token."
+      "text": "Aura: The first card you draw each turn is replaced with a Radiant Warhero Token."
     },
     "refs": [
       "stinkyscapeplus-t-warhero-token"
@@ -30521,11 +30521,11 @@
     "loc": 57,
     "base": {
       "keywords": [],
-      "text": "The first {pool} damage allies would take per turn is nullified."
+      "text": "Aura: The first {pool} damage allies would take per turn is nullified."
     },
     "radiant": {
       "keywords": [],
-      "text": "The first {pool} damage allies would take per turn is nullified."
+      "text": "Aura: The first {pool} damage allies would take per turn is nullified."
     },
     "params": [
       {
@@ -31264,11 +31264,11 @@
     "loc": 42,
     "base": {
       "keywords": [],
-      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Rush and Windfury, and your Spells gain Echo +{spellEcho}."
+      "text": "Dormant for {dormant|turn|turns}.\nAura: Your Units gain Rush and Windfury, and your Spells gain Echo +{spellEcho}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Rush and Windfury, and your Spells gain Echo +{spellEcho}."
+      "text": "Dormant for {dormant|turn|turns}.\nAura: Your Units gain Rush and Windfury, and your Spells gain Echo +{spellEcho}."
     },
     "params": [
       {
@@ -31305,11 +31305,11 @@
     "loc": 42,
     "base": {
       "keywords": [],
-      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Charge and Windfury, and your Spells gain Echo +{spellEcho}."
+      "text": "Dormant for {dormant|turn|turns}.\nAura: Your Units gain Charge and Windfury, and your Spells gain Echo +{spellEcho}."
     },
     "radiant": {
       "keywords": [],
-      "text": "Dormant for {dormant|turn|turns}.\nYour Units gain Charge and Windfury, and your Spells gain Echo +{spellEcho}."
+      "text": "Dormant for {dormant|turn|turns}.\nAura: Your Units gain Charge and Windfury, and your Spells gain Echo +{spellEcho}."
     },
     "params": [
       {
@@ -32334,7 +32334,7 @@
           "kind": "Animated"
         }
       ],
-      "text": "Animated\nEvolves when a Starship is launched.\nEvolve: Place {counters|Plague Counter|Plague Counters} on this.\nAura: Has 3X/3X stats for each Plague Counter."
+      "text": "Animated\nEvolves when a Starship is launched.\nEvolve: Place {counters|Plague Counter|Plague Counters} on this.\nHas 3X/3X stats for each Plague Counter."
     },
     "radiant": {
       "keywords": [
@@ -32342,7 +32342,7 @@
           "kind": "Animated"
         }
       ],
-      "text": "Animated\nEvolves when a Starship is launched.\nEvolve: Place {counters|Plague Counter|Plague Counters} on this.\nAura: Has 3X/3X stats for each Plague Counter."
+      "text": "Animated\nEvolves when a Starship is launched.\nEvolve: Place {counters|Plague Counter|Plague Counters} on this.\nHas 3X/3X stats for each Plague Counter."
     },
     "params": [
       {
@@ -36257,13 +36257,13 @@
       "attack": 6,
       "health": 6,
       "keywords": [],
-      "text": "Aura: Has +{buff}/+{buff} for every card that Evolved this game."
+      "text": "Has +{buff}/+{buff} for every card that Evolved this game."
     },
     "radiant": {
       "attack": 12,
       "health": 12,
       "keywords": [],
-      "text": "Aura: Has +{buff2}/+{buff2} for every card that Evolved this game."
+      "text": "Has +{buff2}/+{buff2} for every card that Evolved this game."
     },
     "params": [
       {
@@ -40892,11 +40892,11 @@
     "loc": 36,
     "base": {
       "keywords": [],
-      "text": "Your Units have +{buff}/+{buff} for each other friendly Unit."
+      "text": "Aura: Your Units have +{buff}/+{buff} for each other friendly Unit."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your Units have +{buff}/+{buff} for each other friendly Unit and Rush."
+      "text": "Aura: Your Units have +{buff}/+{buff} for each other friendly Unit and Rush."
     }
   },
   "infiniteassault-096": {
@@ -41616,13 +41616,13 @@
       "attack": 4,
       "health": 7,
       "keywords": [],
-      "text": "Your Death triggers and Reborns happen twice."
+      "text": "Aura: Your Death triggers and Reborns happen twice."
     },
     "radiant": {
       "attack": 8,
       "health": 14,
       "keywords": [],
-      "text": "Your Death triggers and Reborns happen twice, and your Units have Reborn."
+      "text": "Aura: Your Death triggers and Reborns happen twice, and your Units have Reborn."
     }
   },
   "infiniteassault-119": {
@@ -42720,7 +42720,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt\nYour opponent can't attack with more than three Units each turn."
+      "text": "Taunt\nAura: Your opponent can't attack with more than three Units each turn."
     },
     "radiant": {
       "attack": 6,
@@ -42730,7 +42730,7 @@
           "kind": "Taunt"
         }
       ],
-      "text": "Taunt\nYour opponent can't attack with more than two Units each turn."
+      "text": "Taunt\nAura: Your opponent can't attack with more than two Units each turn."
     }
   },
   "infiniteassault-153": {
@@ -43874,13 +43874,13 @@
       "attack": 3,
       "health": 4,
       "keywords": [],
-      "text": "Your cards that started in your opponent's deck cost ({discount}) less."
+      "text": "Aura: Your cards that started in your opponent's deck cost ({discount}) less."
     },
     "radiant": {
       "attack": 6,
       "health": 8,
       "keywords": [],
-      "text": "Your cards that started in your opponent's deck cost ({discount}) less."
+      "text": "Aura: Your cards that started in your opponent's deck cost ({discount}) less."
     }
   },
   "infiniteassault-188": {
@@ -44001,13 +44001,13 @@
       "attack": 3,
       "health": 5,
       "keywords": [],
-      "text": "Your opponent plays with their hand revealed to you."
+      "text": "Aura: Your opponent plays with their hand revealed to you."
     },
     "radiant": {
       "attack": 6,
       "health": 10,
       "keywords": [],
-      "text": "Your opponent plays with their hand revealed to you, and their cards cost ({surcharge}) more."
+      "text": "Aura: Your opponent plays with their hand revealed to you, and their cards cost ({surcharge}) more."
     }
   },
   "infiniteassault-192": {
@@ -45060,11 +45060,11 @@
     "loc": 57,
     "base": {
       "keywords": [],
-      "text": "Your face-down cards can't be destroyed.\nOnce per turn, when you set a card face-down, draw a card."
+      "text": "Aura: Your face-down cards can't be destroyed.\nOnce per turn, when you set a card face-down, draw a card."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your face-down cards can't be destroyed.\nTwice per turn, when you set a card face-down, draw a card."
+      "text": "Aura: Your face-down cards can't be destroyed.\nTwice per turn, when you set a card face-down, draw a card."
     }
   },
   "infiniteassault-219": {

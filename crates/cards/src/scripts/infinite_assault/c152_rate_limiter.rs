@@ -1,6 +1,6 @@
 //! SPEC §8.13 IA #152 Rate Limiter ((2) Unit, Common, 3/5 → 6/10), a card of the held Infinite Assault set (R4577000).
-//!   Base:    "Taunt. Your opponent can't attack with more than three Units each turn." (limit 3)
-//!   Radiant: "Taunt. Your opponent can't attack with more than two Units each turn." (limit 2)
+//!   Base:    "Taunt. Aura: Your opponent can't attack with more than three Units each turn." (limit 3)
+//!   Radiant: "Taunt. Aura: Your opponent can't attack with more than two Units each turn." (limit 2)
 //!
 //! Engine: a static flag capping the opponent's declared attacks this turn (R4591002): a Unit
 //! already counted may attack again (Windfury), Units that attacked and then left the field still
