@@ -23030,9 +23030,11 @@
         "by": "`gemini` (medium)",
         "sha": "cf0e3be65426f2fc2bb60e7dbfdb1591ea6b9349"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-26T08:58:06Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-26T09:17:20Z",
         "family": "gemini",
@@ -23042,6 +23044,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4999 && grep -n -C 5 \"assault_fight_report\" crates/run/README.md\n- said: \n- read_file: {\"EndLine\": 50, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4999/crates/run/README.md\", \"StartLine\": 20}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4999/crates/run/README.md\"}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4999/crates/run/README.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4999 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4999 && cargo test -p jackioh-run r4999000\n- said: \n- manage_task: {\"Action\": \"list\"}\n- said: \n- manage_task: {\"Action\": \"kill\", \"TaskId\": \"4e147b21-7ed3-4f44-b289-d454d768c770/task-38\"}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4999/.bot-notes.md\"}\n- said: I have applied the changes across `crates/run`, the spec, and the documentation. `cargo test -p jackioh-run r4999000` has been launched and is running in the background. I will wait for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4999 && cargo test -p jackioh-run r4579002\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4999 && cargo test -p jackioh-run\n- said: Running the full test suite for `jackioh-run`. I will proceed once it finishes.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4999 && cargo jackioh spec check\n- said: `cargo jackioh spec check` is compiling and running in the background. I will wait for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4999 && cargo fmt --check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4999 && cargo clippy -p jackioh-run --all-targets -- -D warnings\n- said: Running `cargo clippy -p jackioh-run --all-targets -- -D warnings` in the background. I will proceed once it finishes.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4999 && cargo jackioh catalog check && cargo jackioh patches check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4999 && git diff\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-4999/.bot-notes.md\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-4999 && grep -n -C 5 \"## Titles\" docs/issues-and-patches.md\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a Glitch-voided Infinite Assault fight is dealt again, as a dungeon fight is\"} --> ## Summary When a Glitch voids a fight in Infinite Assault, `assault_fight_report` now refuses it with `VOIDED_FIGHT` (`\"a Glitch voided the fight, so it never happened: \u2026"
       },
+      "interruptions": 0,
       "issue": 4999,
       "kind": "review",
       "live": "reviewing",
