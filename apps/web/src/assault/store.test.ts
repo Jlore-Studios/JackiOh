@@ -321,13 +321,17 @@ it("R4581000 a start sent from a day screen left open past UTC midnight is refus
   expect(assault.current.state?.setup.date).toBe("2026-11-24");
 });
 
-it("R4581001 a record outside the module's level count reads as absent", () => {
+it("R4581001 a record no attempt could make, a best past the last level or a checkpoint that is none, reads as absent", () => {
   const recordsWith = (record: AssaultRecord): string => JSON.stringify({ v: 1, days: { [DAY.date]: record } });
 
-  // A best above the last level, or a checkpoint past it, is no record the attempt could have made.
+  // A best above the last level, a checkpoint past it, or one in range that is no checkpoint, is no record an
+  // attempt could have made.
+  const notACheckpoint = CONSTANTS.levels - 1;
+  expect(CONSTANTS.checkpoints).not.toContain(notACheckpoint);
   for (const record of [
     { ...RECORD, best: CONSTANTS.levels + 1 },
     { ...RECORD, checkpoints: [CONSTANTS.levels + 1] },
+    { ...RECORD, checkpoints: [notACheckpoint] },
   ]) {
     window.localStorage.setItem(ASSAULT_RECORDS_KEY, recordsWith(record));
     const assault = reload();
@@ -345,8 +349,8 @@ it("R4581001 a record outside the module's level count reads as absent", () => {
   expect(window.localStorage.getItem(ASSAULT_ATTEMPT_KEY)).toBeNull();
   expect(assault.current.records).toEqual({ [DAY.date]: RECORD });
 
-  // The last level itself is in range.
-  const top = { ...RECORD, best: CONSTANTS.levels, checkpoints: [CONSTANTS.levels] };
+  // The last level and every checkpoint are in range.
+  const top = { ...RECORD, best: CONSTANTS.levels, checkpoints: [...CONSTANTS.checkpoints] };
   window.localStorage.setItem(ASSAULT_RECORDS_KEY, recordsWith(top));
   expect(reload().current.records).toEqual({ [DAY.date]: top });
 });

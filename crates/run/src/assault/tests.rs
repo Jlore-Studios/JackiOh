@@ -844,3 +844,166 @@ fn r4595000_the_fight_setup_names_the_assault_set_only_for_a_deck_of_its_cards()
     assert_eq!(sets_for(ids("infiniteassault")), vec![ASSAULT_SET]);
     assert!(sets_for(ids("core")).is_empty());
 }
+
+// #5005: the Assault's attempt as docs/implicit-states.md §16 maps it.
+
+/// #5005, H9 (`docs/implicit-states.md` §16): a loss ends the attempt `Lost` on the level it lost,
+/// which stays unbeaten, so a Commander lost to reaches no checkpoint; the losing fight's turns join
+/// the attempt's; the record counts the attempt and the levels beaten before the loss; the file folds
+/// back to the same state; and every step after is refused ([[R4579002]]).
+#[test]
+fn a_loss_ends_the_attempt_on_its_level_unbeaten_with_the_losing_fights_turns_counted() {
+    let content = set_content();
+    let date = "2027-05-06";
+    let day = day_for(&content, date);
+    let setup = setup_for(date, 1, 1);
+    let record = record_for(date, 0);
+    // Every level below the first Commander won in 2 turns, then the Commander lost in 7.
+    let commander = ASSAULT_COMMANDER_LEVELS[0];
+    let mut actions = Vec::new();
+    for _ in 1..commander {
+        actions.push(AssaultAction::Fight);
+        actions.push(AssaultAction::FightOver { won: true, turns: 2 });
+    }
+    actions.push(AssaultAction::Fight);
+    actions.push(AssaultAction::FightOver { won: false, turns: 7 });
+    let mut state = assault_create(&setup, &record, &day).unwrap();
+    for action in &actions {
+        state = assault_reduce(&state, &day, action).unwrap();
+    }
+    assert_eq!(state.phase, AssaultPhase::Lost);
+    assert_eq!(state.level, commander, "the attempt ends on the level it lost");
+    assert_eq!(
+        state.beaten,
+        (1..commander).collect::<Vec<u8>>(),
+        "the level lost is not beaten"
+    );
+    assert_eq!(
+        state.turns,
+        2 * i32::from(commander - 1) + 7,
+        "the losing fight's turns are counted"
+    );
+    // The record counts the attempt and the levels beaten before the loss. The Commander lost to
+    // reaches no checkpoint, so the next attempt starts at level 1 and not past it.
+    let folded = assault_record(&record, &state);
+    assert_eq!(folded.attempts, 1);
+    assert_eq!(folded.best, commander - 1);
+    assert!(
+        folded.checkpoints.is_empty(),
+        "a Commander lost to is no checkpoint"
+    );
+    assert_eq!(folded.repelled_on, None);
+    assert!(checkpoints().contains(&(commander + 1)));
+    assert!(
+        assault_create(&setup_for(date, 2, commander + 1), &folded, &day).is_err(),
+        "level {} is no checkpoint reached today",
+        commander + 1
+    );
+    let restart = assault_create(&setup_for(date, 2, 1), &folded, &day).unwrap();
+    assert_eq!(restart.level, 1);
+    // The file folds back to the same state.
+    let file = AssaultFile {
+        version: "test".into(),
+        setup,
+        record,
+        actions,
+    };
+    assert_eq!(assault_fold(&file, &day), Ok(state.clone()));
+    // Every step of the lost attempt is refused.
+    for action in [
+        AssaultAction::Fight,
+        AssaultAction::FightOver { won: true, turns: 1 },
+        AssaultAction::Abandon,
+    ] {
+        assert_eq!(
+            assault_reduce(&state, &day, &action),
+            Err("the attempt is over".to_string()),
+            "{action:?}"
+        );
+    }
+}
+
+/// #5005, H11 (`docs/implicit-states.md` §16): abandoning from a briefing ends the attempt
+/// `Abandoned` where it stands, only the phase moving: its level, the levels it beat and its turns are
+/// kept; the record keeps what it reached, a checkpoint among them, so the next attempt may start
+/// there; an attempt abandoned on its first briefing is still counted; the file folds back to it; and
+/// every step after is refused ([[R4579002]]).
+#[test]
+fn abandoning_from_a_briefing_ends_the_attempt_where_it_stands() {
+    let content = set_content();
+    let date = "2027-05-06";
+    let day = day_for(&content, date);
+    let setup = setup_for(date, 1, 1);
+    let record = record_for(date, 0);
+    // Every level to the first Commander won in 3 turns: the attempt briefs the level after it.
+    let commander = ASSAULT_COMMANDER_LEVELS[0];
+    let checkpoint = commander + 1;
+    assert!(
+        checkpoints().contains(&checkpoint),
+        "the level after a Commander is a checkpoint"
+    );
+    let mut actions = Vec::new();
+    for _ in 1..=commander {
+        actions.push(AssaultAction::Fight);
+        actions.push(AssaultAction::FightOver { won: true, turns: 3 });
+    }
+    let mut briefing = assault_create(&setup, &record, &day).unwrap();
+    for action in &actions {
+        briefing = assault_reduce(&briefing, &day, action).unwrap();
+    }
+    assert_eq!(briefing.phase, AssaultPhase::Briefing);
+    assert_eq!(briefing.level, checkpoint);
+    // Abandon: only the phase moves.
+    let left = assault_reduce(&briefing, &day, &AssaultAction::Abandon).unwrap();
+    assert_eq!(left.phase, AssaultPhase::Abandoned);
+    assert_eq!(left.setup, briefing.setup);
+    assert_eq!(left.level, checkpoint, "it ends where it stood");
+    assert_eq!(left.beaten, (1..=commander).collect::<Vec<u8>>());
+    assert_eq!(left.turns, 3 * i32::from(commander));
+    // The record keeps what the attempt reached, and abandoning adds nothing to it.
+    let folded = assault_record(&record, &left);
+    assert_eq!(
+        folded,
+        assault_record(&record, &briefing),
+        "abandoning adds nothing to the record"
+    );
+    assert_eq!(folded.attempts, 1);
+    assert_eq!(folded.best, commander);
+    assert_eq!(folded.checkpoints, vec![checkpoint]);
+    assert_eq!(folded.repelled_on, None);
+    // The next attempt may start at the checkpoint reached.
+    let next = assault_create(&setup_for(date, 2, checkpoint), &folded, &day).unwrap();
+    assert_eq!((next.level, next.phase), (checkpoint, AssaultPhase::Briefing));
+    // The file folds back to the abandoned state.
+    actions.push(AssaultAction::Abandon);
+    let file = AssaultFile {
+        version: "test".into(),
+        setup,
+        record: record.clone(),
+        actions,
+    };
+    assert_eq!(assault_fold(&file, &day), Ok(left.clone()));
+    // Every step of the abandoned attempt is refused.
+    for action in [
+        AssaultAction::Fight,
+        AssaultAction::FightOver { won: true, turns: 1 },
+        AssaultAction::Abandon,
+    ] {
+        assert_eq!(
+            assault_reduce(&left, &day, &action),
+            Err("the attempt is over".to_string()),
+            "{action:?}"
+        );
+    }
+    // An attempt abandoned on its first briefing beat nothing, and is still counted.
+    let first = assault_create(&setup_for(date, 1, 1), &record, &day).unwrap();
+    let gone = assault_reduce(&first, &day, &AssaultAction::Abandon).unwrap();
+    assert_eq!(
+        (gone.phase, gone.level, gone.turns),
+        (AssaultPhase::Abandoned, 1, 0)
+    );
+    assert!(gone.beaten.is_empty());
+    let counted = assault_record(&record, &gone);
+    assert_eq!((counted.attempts, counted.best), (1, 0));
+    assert!(counted.checkpoints.is_empty());
+}
