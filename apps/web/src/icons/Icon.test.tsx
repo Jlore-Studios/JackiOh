@@ -68,13 +68,15 @@ function nonTestTsxFiles(dir: string): string[] {
   });
 }
 
+const CANDIDATE_RE = /[\u2600-\u27bf\u{1f300}-\u{1faff}]|\\u/u;
+
 const sourceFileCache = new Map<string, ts.SourceFile>();
 function getCachedSourceFile(filePath: string): ts.SourceFile | null {
   if (sourceFileCache.has(filePath)) return sourceFileCache.get(filePath)!;
   if (!existsSync(filePath)) return null;
   const content = readFileSync(filePath, "utf8");
   const kind = filePath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
-  const sf = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, true, kind);
+  const sf = ts.createSourceFile(filePath, content, ts.ScriptTarget.Latest, false, kind);
   sourceFileCache.set(filePath, sf);
   return sf;
 }
@@ -105,7 +107,15 @@ function getStringsFromInitializer(init: ts.Expression | undefined): string[] {
   return [];
 }
 
+const importedStringsCache = new Map<string, string[]>();
 function resolveImportedStrings(importInfo: { spec: string; importedName: string }, fromFile: string): string[] {
+  const cacheKey = `${fromFile}:${importInfo.spec}:${importInfo.importedName}`;
+  const cached = importedStringsCache.get(cacheKey);
+  if (cached) return cached;
+  if (!importInfo.spec.startsWith(".")) {
+    importedStringsCache.set(cacheKey, []);
+    return [];
+  }
   const dir = dirname(fromFile);
   let targetPath = resolve(dir, importInfo.spec);
   if (!existsSync(targetPath)) {
@@ -113,7 +123,10 @@ function resolveImportedStrings(importInfo: { spec: string; importedName: string
     else if (existsSync(targetPath + ".tsx")) targetPath += ".tsx";
   }
   const targetSf = getCachedSourceFile(targetPath);
-  if (!targetSf) return [];
+  if (!targetSf) {
+    importedStringsCache.set(cacheKey, []);
+    return [];
+  }
   const strings: string[] = [];
   for (const stmt of targetSf.statements) {
     if (ts.isVariableStatement(stmt)) {
@@ -124,6 +137,7 @@ function resolveImportedStrings(importInfo: { spec: string; importedName: string
       }
     }
   }
+  importedStringsCache.set(cacheKey, strings);
   return strings;
 }
 
@@ -169,6 +183,10 @@ describe("Issue #5016 acceptance", () => {
 
     for (const file of files) {
       const isTsx = file.endsWith(".tsx");
+      const rawContent = readFileSync(file, "utf8");
+      const hasCandidates = CANDIDATE_RE.test(rawContent);
+      if (!isTsx && !hasCandidates) continue;
+
       const sf = getCachedSourceFile(file);
       if (!sf) continue;
 
@@ -208,12 +226,13 @@ describe("Issue #5016 acceptance", () => {
 
       function walk(node: ts.Node) {
         if (
-          ts.isStringLiteral(node) ||
-          ts.isNoSubstitutionTemplateLiteral(node) ||
-          ts.isTemplateHead(node) ||
-          ts.isTemplateMiddle(node) ||
-          ts.isTemplateTail(node) ||
-          ts.isJsxText(node)
+          hasCandidates &&
+          (ts.isStringLiteral(node) ||
+            ts.isNoSubstitutionTemplateLiteral(node) ||
+            ts.isTemplateHead(node) ||
+            ts.isTemplateMiddle(node) ||
+            ts.isTemplateTail(node) ||
+            ts.isJsxText(node))
         ) {
           checkText(node.text);
         }
@@ -267,8 +286,9 @@ describe("Issue #5016 acceptance", () => {
     const unlabelledButtons: { file: string; line: number }[] = [];
 
     for (const file of files) {
-      const content = readFileSync(file, "utf8");
-      const sf = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+      const sf = getCachedSourceFile(file);
+      if (!sf || !sf.text.includes("button")) continue;
+      const sourceFile = sf;
 
       function hasAccessibleName(attrs: ts.JsxAttributes): boolean {
         return attrs.properties.some((prop) => {
@@ -298,14 +318,14 @@ describe("Issue #5016 acceptance", () => {
 
           const isIconOnly = nonWhitespaceChildren.length === 1 && isIconElement(nonWhitespaceChildren[0]!);
           if (isIconOnly && !hasAccessibleName(node.openingElement.attributes)) {
-            const { line } = sf.getLineAndCharacterOfPosition(node.getStart(sf));
+            const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
             unlabelledButtons.push({ file: relative(SRC, file), line: line + 1 });
           }
         }
         ts.forEachChild(node, walk);
       }
 
-      walk(sf);
+      walk(sourceFile);
     }
 
     expect(unlabelledButtons).toEqual([]);
