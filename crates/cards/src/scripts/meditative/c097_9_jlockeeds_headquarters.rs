@@ -165,7 +165,13 @@ mod tests {
             })
             .map(|def| def.id.clone())
             .collect();
-        assert_eq!(pool, expected_jlockeed_units());
+        // #3117: the pool probe rotates `pool_ids` and not the catalog's own order, so the two are
+        // held as sets.
+        let mut expected = expected_jlockeed_units();
+        let mut pool = pool;
+        pool.sort();
+        expected.sort();
+        assert_eq!(pool, expected);
     }
 
     mod base {
