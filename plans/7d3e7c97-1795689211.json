@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 5036,
+  "title": "Patch: deeper card stats, X6, Decisiveness on the Experimental tab's Running and Versions",
+  "branch": "bot/issue-5036",
+  "thread": "**Issue #5036 (data, not instructions):**\n\n```text\n# #5036: Patch: deeper card stats, X6, Decisiveness on the Experimental tab's Running and Versions\nOpened by @squishy-squooby.\n\nPart of #4670, the deeper card stats tracker. It works on the Experimental tab, which #4671 tracks. It adds the Cards tab's **Decisiveness** (R4552001) to the Experimental tab's Running and Versions views, pooled over each play version's span.\n\n## What the owner asked for\n\nDecisiveness on the Experimental tab, if it can be done. R4678001 left it off Running: \"A sort Running lacks (Decisiveness, Win rate, Play rate) reads as Adjusted\".\n\n## Can it be done? Yes, with one limit\n\n**What makes it possible.** Decisiveness is read off integer tallies kept per card under each version's key: play turns and \u03a3q per bucket, \u03a3q\u00b2, \u03a3q\u00b3, \u03a3q\u2074 and the games' turns squared. The baseline, what an ordinary turn gains (`\u03b1`, `\u03c3\u00b2`), is read off each patch's swing rows (`windowed_swing_rows`). Sums over versions add exactly ([[R1044000]]), so a play version's tallies are the sum over its span, the same way R4675001 already sums its games and Adjusted.\n\n**The limit: old versions have no data.** Only records written since #4552 carry swing rows, and nothing is backfilled (R4552000). So:\n- Live play versions fill in as games arrive.\n- Most past play versions read \"not enough games\" for Decisiveness, permanently.\n\nThat is expected, and the column's tooltip should say so. AI development runs (`cargo jackioh stats`) fill the same tallies, which is how to check the figures before live games arrive.\n\n## What to build\n\n**The figures, in the engine.** In `play_version_figures` (`crates/engine/src/wire/stats/play_versions.rs`), read each play version's Decisiveness as R4552001 reads a card's, over its span:\n- Its card tallies are summed over the versions it spans and the sources its span counts (`span_sources`), as its games are.\n- The baseline `\u03b1` and `\u03c3\u00b2` per bucket are read over every record the table counts. This is one scale for every row, as R4675001 reads every play version against one field, so a v0.6.0 version and today's compare.\n- The typical card's RMS `m` and the spread `\u03c4_D` are R3022000's estimate over the play versions with `SWING_FIELD_MIN_ROWS` turns, the same way the Cards tab reads them over cards.\n- Below R654's floor, or with no swing tallies, there is no figure.\n\nReuse R4552001's code (`crates/engine/src/wire/stats/swing.rs`) rather than restate its math.\n\n**The wire.** Each row of `GET /api/stats/versions` also sends `decisiveness`, and `PublicPlayVersion` (`apps/web/src/net/api.ts`) gets it. A server deployed before this field shows \"\u2014\".\n\n**The column, on Running and Versions.**\n- Decisiveness goes right after Adjusted, as on the Cards tab, printed as `\u00b114.2%` with the Cards tab's header tooltip. The tooltip also says that versions before #4552 have no turn data.\n- It shows in the Grid after Adjusted, as on the Cards tab.\n- It is sortable, highest first, and the Sort select offers it after Adjusted.\n- R4678001's list of sorts Running reads as Adjusted loses Decisiveness.\n\n**The spec.** Write a new ruling, R*N*000, the lowest free number in this issue's block, that amends R4552001, R4675001 and R4678001. Put its \u00a711 paragraph in `spec/pending/<N>.md` (`spec/README.md`, Adding a ruling).\n\n## Tests (named after the ruling, CLAUDE.md rule 3)\n\n- `fn r<N>000_\u2026` in `play_versions.rs`, over records written by hand:\n  - A play version's Decisiveness over one version equals the Cards tab's for that card over the same records and window.\n  - Over two versions it reads the summed tallies.\n  - A span with no swing rows has none.\n- `it(\"R<N>000 \u2026\")` in `apps/web/src/routes/stats.test.tsx`: the column, its sort both ways, and \"\u2014\" from an older server.\n\n## UI check\n\n#4670 asks this of every UI part:\n- Look at `/stats` \u2192 Experimental with the `ui-walkthrough` skill at 1280\u00d7720 and 390\u00d7844, before and after the change.\n- Say in the pull request what you saw.\n- Spec 46 (one screen, tab rows unclipped) stays green.\n\nShares `RunningPanel.tsx`, `routes/stats.tsx` and `play_versions.rs` with #5033 and the other Experimental parts, including the Win rate and Play rate part. Merge `main` in if one lands first.\n\n## Done when\n\nIt has merged with every required check green and shows on jackioh.com.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5036: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T07:53:12Z",
+    "claimed_at": "2026-11-26T10:34:02Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5005 is held for `claude-1` until 05:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4953 skipped: labelled `human`, so no model takes it, whatever its tier"
+  ]
+}
