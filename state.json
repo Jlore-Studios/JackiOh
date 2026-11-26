@@ -49443,7 +49443,8 @@
       "2026-11-26T16:32:35Z,45839495369,claude-3,opus,build,5035,hard,built,,70.1,283,71356,26373920,8.5416,1,45,,,396,claude-3,fresh,,1",
       "2026-11-26T16:45:49Z,45861159984,claude-7,opus,review,5092,hard,interrupted,5-hour cap,0,0,0,0,,51,51,,,3,,none,,0",
       "2026-11-26T16:43:27Z,45859461484,claude-3,opus,plan,5091,hard,planned,,10,93,63966,5198177,3.4103,59,65,,,1.9,,fresh,,1",
-      "2026-11-26T16:44:35Z,45849341507,claude-8,opus,revise,5078,hard,approved,,22.8,39,8763,1397301,1.4355,28,1,,,10.7,claude-7,fresh,,2"
+      "2026-11-26T16:44:35Z,45849341507,claude-8,opus,revise,5078,hard,approved,,22.8,39,8763,1397301,1.4355,28,1,,,10.7,claude-7,fresh,,2",
+      "2026-11-26T16:45:52Z,45837581881,claude-6,sonnet+opus,review,5083,medium,approved,,42.6,72,25673,2218203,3.1408,12,31,,,2.3,,fresh,,5"
     ]
   },
   "version": 1
