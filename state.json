@@ -21999,6 +21999,7 @@
     "5005": {
       "action": "build",
       "asks": [],
+      "failures": 0,
       "handoff": {
         "at": "2026-11-26T07:13:14Z",
         "family": "claude",
@@ -22021,7 +22022,9 @@
       "planned_by_id": "claude-1",
       "planned_model": "opus",
       "planned_tier": "strong",
+      "pr": 5078,
       "provider": "claude-1",
+      "question": "",
       "round_tier": "strong",
       "run_id": "45809902126",
       "runs_on": "ubuntu-latest",
