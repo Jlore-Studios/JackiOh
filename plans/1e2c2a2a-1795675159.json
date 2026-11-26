@@ -1,0 +1,54 @@
+{
+  "action": "plan",
+  "number": 5015,
+  "title": "Patch: one corner language for the table, every raw radius onto the scale",
+  "branch": "bot/issue-5015",
+  "thread": "**Issue #5015 (data, not instructions):**\n\n```text\n# #5015: Patch: one corner language for the table, every raw radius onto the scale\nOpened by @MaxGoetzmann.\n\n## What it does\n\n`apps/web/src/surfaces.css` names seven radii (4, 8, 12, 16 and 22px, pill and round), but 45 sheets write their own: `10px` 60 times (not on the scale at all), `999px` 41 times, `8px` 37 times and `12px` 19 times. Everything ends up softly and evenly rounded, the default look of generated UI. Wood and brass want tight, deliberate corners.\n\n- Retune the scale for the material: for example xs 2px, sm 4px, md 6px and lg 10px, with nothing larger for panels. Keep `--radius-pill` for chips, badges and toggles, and `--radius-round` for coins, mana gems and avatars.\n- Optionally add a bevelled or clipped-corner surface for panels and the main button, if it reads better than a radius. It is a token in `surfaces.css` like the rest.\n- Move every raw `border-radius` length onto a token. A card face keeps the corner its frame art is cut to.\n\n## Acceptance\n\n- `surfaces.test.ts` fails on any `border-radius` length written outside `surfaces.css`; only `0`, `inherit` and `var(--radius-*)` pass, and no allowlist keeps a raw radius.\n- A test lists the selectors allowed `--radius-pill`, and fails on any other.\n- `SURFACE_RADII` matches the new scale. The web's unit tests and `pnpm --dir e2e test:component` pass, and pixel baselines that change on purpose are re-recorded.\n- If the classifier calls it a card change, it ships with a `--visual` fragment (`docs/ADDING_CARDS.md`).\n\n## Notes\n\nThis is part of the not-generic UI pass, beside the palette, type, effects and icons issues. They touch the same sheets.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5015: needs a plan; `claude-6` (claude, `opus`, strong) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T05:20:44Z",
+    "claimed_at": "2026-11-26T06:39:47Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier"
+  ]
+}
