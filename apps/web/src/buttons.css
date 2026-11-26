@@ -22,15 +22,15 @@
   /* The one primary button, in the tavern's gold (the landing's Play vs AI): End turn, the prompt's
      Confirm, the result panel's first action and every menu's call to action, so a screen never
      shows two kinds of "go". The hover mixes 7% white into each of the face's stops. */
-  --primary-edge: var(--pal-gold-200);
+  --primary-edge: var(--pal-brass-200);
   --primary-face: linear-gradient(180deg, var(--pal-parchment) 0%, var(--pal-gold-400) 42%, var(--pal-brass-500) 58%, var(--pal-brass-600) 100%);
   --primary-face-hover: linear-gradient(180deg, color-mix(in srgb, var(--pal-parchment) 93%, var(--pal-white)) 0%, color-mix(in srgb, var(--pal-gold-400) 93%, var(--pal-white)) 42%, color-mix(in srgb, var(--pal-brass-500) 93%, var(--pal-white)) 58%, color-mix(in srgb, var(--pal-brass-600) 93%, var(--pal-white)) 100%);
   --primary-ink: var(--pal-brass-950);
   --primary-shadow: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 45%, transparent), 0 2px 0 var(--pal-wood-600), 0 4px 12px color-mix(in srgb, var(--pal-black) 45%, transparent);
   /* The same button in green once nothing else is left (B15, below). */
-  --primary-face-ready: linear-gradient(180deg, var(--pal-green-200), var(--pal-green-500) 55%, var(--pal-green-700));
-  --primary-face-ready-hover: linear-gradient(180deg, var(--pal-green-200), var(--pal-green-400) 55%, var(--pal-green-500));
-  --primary-shadow-ready: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 45%, transparent), 0 2px 0 var(--pal-green-900);
+  --primary-face-ready: linear-gradient(180deg, var(--pal-jade-200), var(--pal-jade-500) 55%, var(--pal-jade-700));
+  --primary-face-ready-hover: linear-gradient(180deg, var(--pal-jade-200), var(--pal-jade-400) 55%, var(--pal-jade-500));
+  --primary-shadow-ready: inset 0 1px 0 color-mix(in srgb, var(--pal-white) 45%, transparent), 0 2px 0 var(--pal-jade-900);
 
   /* The one red of an act that cannot be taken back: the opponent's, the color of a loss. */
   --danger: var(--pal-red-600);
@@ -104,7 +104,7 @@ button,
    `button-primary`, which the generic ring rule there outranks, so this one names the same button
    more specifically. The ring is still the first box-shadow layer. */
 .board .control.control-end-turn[data-glow="ready"]:not(:disabled):not([data-selected="true"]) {
-  border-color: var(--pal-green-200);
+  border-color: var(--pal-jade-200);
   background: var(--primary-face-ready);
   color: var(--pal-brass-950);
   text-shadow: 0 1px 0 color-mix(in srgb, var(--pal-white) 30%, transparent);
@@ -124,7 +124,7 @@ button,
 .board .control.control-end-turn[data-turn-state="over"] {
   border-color: var(--pal-wood-800);
   background: var(--bg-sunken);
-  color: color-mix(in srgb, var(--text) 52%, var(--pal-grey-500));
+  color: color-mix(in srgb, var(--text) 52%, var(--pal-stone-500));
 }
 
 /* ---- danger -------------------------------------------------------------------------------- */
@@ -157,7 +157,7 @@ button,
 }
 
 .link-button:where(:not(.top-bar-button)):hover:not(:disabled) {
-  color: var(--pal-gold-200);
+  color: var(--pal-brass-200);
   text-decoration-color: currentColor;
 }
 

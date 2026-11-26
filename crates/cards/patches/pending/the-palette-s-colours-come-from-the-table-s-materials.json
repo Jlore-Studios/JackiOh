@@ -1,0 +1,18 @@
+{
+  "title": "The palette's colours come from the table's materials",
+  "sources": "issue #5012",
+  "notes": "palette.css trades its 25 Tailwind default colours for jade, lacquer, ink, verdigris, copper, amethyst and pale brass (43 colours, from 50); the board's and menus' status colours follow, and 992 literal colours move onto the palette. Card art, owned cosmetics, playmats and card versions keep their colours.",
+  "player": {
+    "title": "Warmer status colours",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "Glows, damage, healing, timers, map nodes and proficiency stamps are redrawn in jade, lacquer red, ink blue and verdigris, to sit on the table's wood and parchment.",
+      "Card art and the cosmetics you own keep their colours."
+    ],
+    "text": [],
+    "fixes": []
+  },
+  "cards": [],
+  "visual": true
+}

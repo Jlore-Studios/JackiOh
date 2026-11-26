@@ -18,7 +18,7 @@
   stroke: color-mix(in srgb, var(--pal-ember-500) 85%, transparent);
   stroke-width: 7;
   stroke-linecap: round;
-  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--pal-red-500) 60%, transparent));
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--pal-red-600) 60%, transparent));
 }
 
 .opponent-aim-pulse {

@@ -23,7 +23,7 @@
 .prompt-scrim {
   /* The picker sits outside `.board`, so it restates the board's ice-blue selection: the global
      token is gold, and yellow on the table only ever means "condition met". */
-  --selected: var(--pal-sky-300);
+  --selected: var(--pal-ink-300);
 
   position: fixed;
   inset: 0;
@@ -128,7 +128,7 @@
 @media (hover: hover) and (pointer: fine) {
   .prompt-card:hover {
     transform: translateY(-3px);
-    border-color: var(--pal-grey-500);
+    border-color: var(--pal-stone-500);
   }
 }
 
@@ -165,7 +165,7 @@
 }
 
 .prompt-card[data-verdict="redraw"] .prompt-card-verdict {
-  background: var(--pal-red-900);
+  background: var(--pal-lacquer-900);
   color: var(--pal-slate-100);
 }
 
@@ -801,9 +801,9 @@
 .prompt[data-prompt-kind="target"],
 .prompt[data-prompt-kind="tribute"],
 .prompt[data-prompt-kind="cell"] {
-  border-color: color-mix(in srgb, var(--glow-ready, var(--pal-green-400)) 45%, var(--line-bright));
+  border-color: color-mix(in srgb, var(--glow-ready, var(--pal-jade-400)) 45%, var(--line-bright));
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--glow-ready, var(--pal-green-400)) 20%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--glow-ready, var(--pal-jade-400)) 20%, transparent),
     var(--shadow-3);
 }
 
@@ -1062,11 +1062,11 @@
   width: 28px;
   height: 28px;
   margin: auto;
-  border: 2px solid var(--glow-ready, var(--pal-green-400));
+  border: 2px solid var(--glow-ready, var(--pal-jade-400));
   border-radius: var(--radius-round);
   background:
-    linear-gradient(var(--glow-ready, var(--pal-green-400)), var(--glow-ready, var(--pal-green-400))) center / 2px 100% no-repeat,
-    linear-gradient(var(--glow-ready, var(--pal-green-400)), var(--glow-ready, var(--pal-green-400))) center / 100% 2px no-repeat;
+    linear-gradient(var(--glow-ready, var(--pal-jade-400)), var(--glow-ready, var(--pal-jade-400))) center / 2px 100% no-repeat,
+    linear-gradient(var(--glow-ready, var(--pal-jade-400)), var(--glow-ready, var(--pal-jade-400))) center / 100% 2px no-repeat;
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--pal-black) 55%, transparent);
   pointer-events: none;
 }

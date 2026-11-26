@@ -91,9 +91,9 @@ describe("R3351000 a Mythic's hand shimmer paints to one extent (cards.css)", ()
     // No `\s*` before the capture (#4009): it trades characters with `[^;]+` super-linearly.
     const list = (/box-shadow:([^;]+);/.exec(rim)?.[1] ?? "").trimStart();
     expect(shadowsOf(list)).toEqual([
-      "inset 0 0 6px 2px color-mix(in srgb, var(--pal-sky-300) 35%, transparent)",
-      "inset 0 0 4px 1px color-mix(in srgb, var(--pal-violet-300) 35%, transparent)",
-      "inset 0 0 3px 1px color-mix(in srgb, var(--pal-green-200) 35%, transparent)",
+      "inset 0 0 6px 2px color-mix(in srgb, #7dd3fc 35%, transparent)",
+      "inset 0 0 4px 1px color-mix(in srgb, #c4b5fd 35%, transparent)",
+      "inset 0 0 3px 1px color-mix(in srgb, #bbf7d0 35%, transparent)",
     ]);
     // An inset shadow reaches nowhere outside the box, and the layer is the box itself.
     expect(rim).toMatch(/inset:\s*0;/);

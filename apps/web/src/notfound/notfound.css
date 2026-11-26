@@ -247,8 +247,8 @@
   white-space: nowrap;
   color: var(--tavern-gold-pale);
   text-shadow:
-    -0.08em 0 color-mix(in srgb, var(--pal-red-400) 80%, transparent),
-    0.08em 0 color-mix(in srgb, var(--pal-cyan-400) 80%, transparent);
+    -0.08em 0 color-mix(in srgb, var(--pal-lacquer-400) 80%, transparent),
+    0.08em 0 color-mix(in srgb, var(--pal-verdigris-400) 80%, transparent);
 }
 
 /* ---- motion --------------------------------------------------------------------------------- */

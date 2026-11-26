@@ -40,7 +40,7 @@
 
 /* A meter over its budget reads as a warning, which is the engine's own numbers, not a rule. */
 .craft-meters [data-over="true"] {
-  color: var(--pal-red-300);
+  color: var(--pal-lacquer-300);
   font-weight: 650;
 }
 
@@ -231,7 +231,7 @@
   margin: 0;
   padding-left: var(--space-7);
   font-size: var(--type-sm);
-  color: var(--pal-red-300);
+  color: var(--pal-lacquer-300);
 }
 
 .craft-reasons:empty {
@@ -270,14 +270,14 @@
 }
 
 .craft-code-text[aria-invalid="true"] {
-  border-color: var(--pal-red-400);
+  border-color: var(--pal-lacquer-400);
 }
 
 .craft-code-error {
   margin: 0;
   min-height: 1.3em;
   max-width: none;
-  color: var(--pal-red-300);
+  color: var(--pal-lacquer-300);
   font-family: var(--font-mono);
   font-size: var(--type-sm);
 }

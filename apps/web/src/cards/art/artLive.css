@@ -79,7 +79,7 @@
   position: absolute;
   inset: 0;
   display: block;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--pal-blue-200) 45%, transparent), color-mix(in srgb, var(--pal-sky-300) 28%, transparent));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--pal-ink-200) 45%, transparent), color-mix(in srgb, var(--pal-ink-300) 28%, transparent));
   box-shadow: inset 0 0 1.4em color-mix(in srgb, var(--pal-white) 75%, transparent);
   pointer-events: none;
 }
