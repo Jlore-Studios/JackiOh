@@ -22552,7 +22552,7 @@
       "started_at": "2026-11-26T07:09:40Z",
       "stop_requested": false,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 2
     },
     "5016": {
       "action": "build",
