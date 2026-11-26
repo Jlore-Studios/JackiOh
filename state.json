@@ -21720,11 +21720,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-26T03:05:17Z",
+        "at": "2026-11-26T03:54:58Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "Engine rules: the fix changes the resolution loop in crates/engine/src/zones.rs (flicker_in_place)"
+        "provider": "claude-1",
+        "tier": "strong",
+        "why": "Engine rules: the change edits crates/engine/src/zones.rs (flicker_in_place) and adds a read in crates/engine/src/query.rs"
       },
       "failures": 0,
       "forced": false,
