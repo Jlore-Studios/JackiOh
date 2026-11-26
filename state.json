@@ -22602,15 +22602,16 @@
       "merge_owner": "claude-4",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-6",
       "queued_at": "2026-11-26T05:54:36Z",
       "review_floor": "",
       "review_notes": "",
-      "run_id": "45765815886",
+      "run_id": "pending:53e2d09c-1795674621",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 585,
-      "started_at": "2026-11-26T06:05:32Z",
+      "started_at": "2026-11-26T06:30:50Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -22749,9 +22750,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T06:30:07Z",
+    "at": "2026-11-26T06:30:50Z",
     "url": "",
-    "what": "plan #5013 on claude-8"
+    "what": "spot-check #5019 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-26T06:13:29Z",
@@ -45423,7 +45424,15 @@
         "n": 585,
         "pr": 5019,
         "queued_at": "2026-11-26T06:29:28Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "run_id": "pending:53e2d09c-1795674621",
         "sha": "6e1450bf6f9dbfbbe603f7d38ae0fe523daebae9",
+        "started_at": "2026-11-26T06:30:50Z",
         "status": "queued",
         "title": "Patch: PIP's text says \"performance improvement plan\"",
         "tries": 0
