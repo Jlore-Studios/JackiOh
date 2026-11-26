@@ -353,7 +353,9 @@ impl SimMemo {
 /// R3575603: whether the step `action` took from `state` to `stepped` is one the search pays more than
 /// its node for (`surcharge_nodes`, `announced_surcharge_nodes`): the only steps `SimMemo` keeps.
 fn is_expensive_step(state: &GameState, seat: PlayerId, action: &ActionBody, stepped: &ReduceResult) -> bool {
-    surcharge_nodes(state, seat, action) > 0 || announced_surcharge_nodes(state, action, stepped) > 0
+    surcharge_nodes(state, seat, action) > 0
+        || announced_surcharge_nodes(state, action, stepped) > 0
+        || event_surcharge_nodes(stepped) > 0
 }
 
 pub fn create_node_counter<'a>(
@@ -484,6 +486,14 @@ pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) 
 }
 
 /// Post-step surcharge for unannounced expensive card resolves like random/graveyard casts (#1347).
+/// R4595003: the nodes a step's own events cost beyond its one: one for every `AI_SEARCH.events_per_node`.
+pub fn event_surcharge_nodes(stepped: &ReduceResult) -> usize {
+    match usize::try_from(AI_SEARCH.events_per_node) {
+        Ok(per) if per > 0 => stepped.events.len() / per,
+        _ => 0,
+    }
+}
+
 pub fn announced_surcharge_nodes(state: &GameState, action: &ActionBody, stepped: &ReduceResult) -> usize {
     let ids = AI_SEARCH.expensive_def_ids;
     let announced = stepped
@@ -502,7 +512,7 @@ pub fn announced_surcharge_nodes(state: &GameState, action: &ActionBody, stepped
     announced.saturating_sub(prepaid) * AI_SEARCH.expensive_def_nodes.max(0) as usize
 }
 
-/// Takes a step's `announced_surcharge_nodes` from `counter`, as many as it still gives: the step's
+/// Takes a step's `announced_surcharge_nodes` and `event_surcharge_nodes` (R4595003) from `counter`, as many as it still gives: the step's
 /// work is done and kept, and a spent counter stops the search at its next node.
 pub(crate) fn charge_announced(
     counter: &dyn NodeCounter,
@@ -510,7 +520,7 @@ pub(crate) fn charge_announced(
     action: &ActionBody,
     stepped: &ReduceResult,
 ) {
-    for _ in 0..announced_surcharge_nodes(state, action, stepped) {
+    for _ in 0..announced_surcharge_nodes(state, action, stepped) + event_surcharge_nodes(stepped) {
         if !counter.take() {
             return;
         }

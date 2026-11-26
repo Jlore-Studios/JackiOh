@@ -162,6 +162,9 @@ pub struct AiSearch {
     /// cards cost less this turn" play) the beam keeps past its width at each depth, best first, so the
     /// plays the discount pays for are searched; the line's end-of-turn score still judges it.
     pub discount_lines: i32,
+    /// R4595003: a simulated step pays one more node for every this many events it emitted, so a step
+    /// that runs a long chain (a summon loop to the engine's cap) costs the search what it costs the clock.
+    pub events_per_node: i32,
     /// Opponent prompts auto-answered inside one simulated step before it counts as an error.
     pub max_auto_answers: i32,
     /// R4447000: the most steps a finalist's replay on another determinization plays past the first step
@@ -235,6 +238,7 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     zone_variants: 2,
     position_switches: 2,
     discount_lines: 1,
+    events_per_node: 100,
     max_auto_answers: 8,
     // R4697000: 3, the value R4447000's tests replay with. At 0 a replay cut where its world drew
     // other cards than the line's ended its turn there, which R4608000 read as evidence against a

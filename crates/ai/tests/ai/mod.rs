@@ -37,6 +37,7 @@ pub mod freeze;
 pub mod gauntlet;
 pub mod graveyard_plays;
 pub mod hallucination;
+pub mod heavy_steps;
 pub mod hidden_nerfs;
 pub mod ky_competition;
 pub mod lethal_hint;
