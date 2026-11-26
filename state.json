@@ -45528,6 +45528,7 @@
       {
         "at": "2026-11-26T05:19:20Z",
         "number": 5002,
+        "reason": "confirmed. It breaks two written rules. `scripts/ci-scope.sh`'s header says \"Nothing a test, a build or a check reads is on the list\", and CLAUDE.md lets a path join the skip list only with proof that nothing in `apps/` reads it. Yet `apps/web/src/net/env-production.test.ts:137` reads every workflow, the seven skip-listed ones included, to hold R1933000's rule that only two workflows may name production's statistics login. A pull request touching only those seven skips that check and the merge q",
         "title": "Patch: a pull request that changes only a bot workflow runs the web test that reads every workflow, and the scope test checks each file of a directory a source reads",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
