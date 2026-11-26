@@ -24782,6 +24782,8 @@
       "taken_asks": []
     },
     "5087": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-26T14:30:37Z",
@@ -24795,8 +24797,11 @@
         "trail": "- Bash: {\"command\": \"sed -n 1,60p .bot-notes.md | head -80; echo ---; grep -n 'tools, wasm' -B14 -A3 scripts/ci-shards.toml\", \"description\": \"Read notes and the shards file block\"}\n- Bash: {\"command\": \"python3 .github/ci/matrix.py matrix 2>&1 >/dev/null | tail -1; python3 .github/ci/matrix.py matrix 2>/dev/null | python3 -c \\\"import sys,json; d=json.load(sys.stdin); print([i['name'] fo\u2026\n- Bash: {\"command\": \"sed -n 120,145p .github/ci/matrix.py; python3 .github/ci/matrix.py matrix 2>/dev/null | head -c 600; echo; python3 .github/ci/matrix.py matrix 2>/dev/null | grep -o 'tools, wasm [0-9]/[0\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5046/scripts/ci-shards.toml\", \"old_string\": \"# bot/test_ci_matrix.py's pin changed.\\n\\\"tools, wasm\\\" = 8\", \"new_string\": \"# bot/\u2026\n- tool error: <tool_use_error>String to replace not found in file. String: # bot/test_ci_matrix.py's pin changed. \"tools, wasm\" = 8</tool_use_error>\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5046/scripts/ci-shards.toml\", \"old_string\": \"# bot/tests/test_ci_matrix.py's pin changed.\\n\\\"tools, wasm\\\" = 8\", \"new_string\": \"\u2026\n- Bash: {\"command\": \"git show --stat --format='%h %s%n%ci' 7fb76d5cb4 | head -12\", \"description\": \"Check which commit set the count to 8\"}\n- Bash: {\"command\": \"python3 - <<'E'\\np=\\\"scripts/ci-shards.toml\\\"\\ns=open(p).read()\\ns=s.replace(\\\"predates #4721's\\\\n# count of 8, so its copy of this file still said 4: no change was needed.\\\",\\\"predates \u2026\n- Bash: {\"command\": \"python3 - <<'E'\\np=\\\"scripts/ci-shards.toml\\\"\\nlines=open(p).read().split(\\\"\\\\n\\\")\\nstart=next(i for i,l in enumerate(lines) if l.startswith(\\\"# #5046 flagged\\\"))\\nend=next(i for i,l in \u2026\n- Bash: {\"command\": \"python3 -m unittest bot.tests.test_ci_matrix 2>&1 | tail -4; python3 .github/ci/matrix.py matrix 2>&1 >/dev/null | tail -1; python3 .github/ci/matrix.py matrix 2>/dev/null | grep -o 'too\u2026\n- Bash: {\"command\": \"(cd bot && python3 -m unittest discover -s tests -t . 2>&1 | tail -4); git diff | tail -3 | cat -A | tail -2; cargo jackioh patches check 2>&1 | tail -5\", \"description\": \"Run bot suite a\u2026\n- Bash: {\"command\": \"python3 - <<'E'\\np=\\\".bot-notes.md\\\"\\ns=open(p).read()\\nstate=\\\"\\\"\\\"## State\\n\\n- Done: the plan's one change, 8 comment lines in `scripts/ci-shards.toml` above `\\\"tools, wasm\\\" = 8` (in\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"CI: a job ran over 10 minutes\"} --> The flagged job, `rust (test tools, wasm 4/4)`, no longer exists on `main`, so I changed no count. I added 8 comment lines to `scripts/ci-shards.toml` above `\"tools, wasm\" = 8`. They record why, so the next \"job ran over 10 \u2026"
       },
       "issue": 5046,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-26T15:26:59Z",
         "from_run": "45839744356",
         "gates": [
           {
@@ -24888,7 +24893,11 @@
         "source": "build",
         "until": "2026-11-26T15:54:51Z"
       },
+      "pending_request": false,
+      "provider": "claude-4",
       "queued_at": "2026-11-26T15:24:51Z",
+      "run_id": "pending:426e64b1-1795706792",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -24907,6 +24916,9 @@
         "provider": "claude-4",
         "run": "45839744356"
       },
+      "started_at": "2026-11-26T15:26:59Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -24920,9 +24932,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T15:01:22Z",
+    "at": "2026-11-26T15:26:59Z",
     "url": "",
-    "what": "build #5002 on claude-8"
+    "what": "review #5087 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-26T15:15:53Z",
