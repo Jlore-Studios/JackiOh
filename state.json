@@ -25286,11 +25286,12 @@
     "what": "build #5085 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-26T17:22:43Z",
+    "at": "2026-11-26T17:32:31Z",
     "notes": [
-      "delivered build #5036 on claude-3 (run 45844702464): built",
-      "started review #5094 on claude-3 (run 45867625398)",
-      "nothing more to start: nothing is queued"
+      "delivered plan #5085 on claude-8 (run 45864946105): planned",
+      "started build #5085 on claude-8 (run 45868928268)",
+      "nothing more to start: nothing is queued",
+      "pruned 1 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -25996,7 +25997,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T17:22:43Z",
+  "loop_tick": "2026-11-26T17:32:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
