@@ -22156,13 +22156,14 @@
       "merge_owner": "claude-4",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-8",
       "queued_at": "2026-11-26T03:21:06Z",
-      "run_id": "45748494190",
+      "run_id": "pending:a02f0a90-1795665401",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 580,
-      "started_at": "2026-11-26T03:22:24Z",
+      "started_at": "2026-11-26T03:57:13Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -22189,9 +22190,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T03:56:27Z",
+    "at": "2026-11-26T03:57:13Z",
     "url": "",
-    "what": "build #4991 on claude-1"
+    "what": "spot-check #5003 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-26T03:41:28Z",
@@ -44842,7 +44843,15 @@
         "n": 580,
         "pr": 5003,
         "queued_at": "2026-11-26T03:55:37Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-8",
+          "tier": "strong"
+        },
+        "run_id": "pending:a02f0a90-1795665401",
         "sha": "6d97ef369aef40221bb0158e45fb20346edd9afc",
+        "started_at": "2026-11-26T03:57:13Z",
         "status": "queued",
         "title": "Patch: Duos match finish reads Jlore caps directly from the co-op payout outcome instead of a second ledger transaction",
         "tries": 0
