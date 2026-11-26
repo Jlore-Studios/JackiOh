@@ -37122,5 +37122,33 @@
     ],
     "fragment": "a-card-made-radiant-where-it-stands-starts-the-brittle-its",
     "changes": []
+  },
+  {
+    "version": "v0.6.14o",
+    "date": "2026-11-26",
+    "title": "Patch: Radiant Cosmic Bard leaves both drawn Units at the cheapest price, even one that carries a cost raise larger than that price",
+    "source": "#4832",
+    "notes": "Cosmic Bard's Radiant face took a carried cost raise off the cost override, which bottoms out at 0; a raise larger than the cheapest price survived and the card cost more. Now the override is 0 for such a card and the excess comes off its cost change in hand, so every drawn Unit still in the hand ends at the cheapest drawn price. The longer script makes Cosmic Bard complicated (R1846000), so Stinkyscape #109 and #111 read new pools (R2173001); `plays` claims those two, the families classify's games show playing differently. Cosmic Bard itself meets no raiser in those games, so its own play is unobservable there and goes unclaimed.",
+    "player": {
+      "title": "Radiant Cosmic Bard prices both drawn Units at the cheapest",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Radiant Cosmic Bard's Combo no longer leaves a drawn Unit that carries a cost raise larger than the cheapest price above it: both drawn Units cost the cheapest drawn price."
+      ]
+    },
+    "commits": [
+      "f9b18868b35013858635c73fe397f3a11ea7c469"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-109",
+      "stinkyscape-111"
+    ],
+    "fragment": "radiant-cosmic-bard-leaves-both-drawn-units-at-the-cheapest",
+    "changes": []
   }
 ]
