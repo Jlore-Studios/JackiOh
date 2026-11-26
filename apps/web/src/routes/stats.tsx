@@ -1969,36 +1969,29 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
               <EmptyState text={t("No tokens or created cards match the selected filters.")} />
             ) : (
               <>
-                <CreatedPanel
-                  kind="tokens"
-                  created={tokenCards}
-                  sort={createdSort}
-                  onSort={sortCreatedBy}
-                  view={view}
-                  showRanges={showRanges}
-                  tiers={tiers}
-                  nameOf={shownName}
-                  faceOf={gridFaceOf}
-                  plainCardOf={plain.shown ? plainCardOf : undefined}
-                  visibleThumbnail={visibleCols.thumbnail}
-                  visibleGames={visibleCols.games}
-                  onOpen={(id, opener) => openDrillDown(id, opener)}
-                />
-                <CreatedPanel
-                  kind="other"
-                  created={otherCreatedCards}
-                  sort={createdSort}
-                  onSort={sortCreatedBy}
-                  view={view}
-                  showRanges={showRanges}
-                  tiers={tiers}
-                  nameOf={shownName}
-                  faceOf={gridFaceOf}
-                  plainCardOf={plain.shown ? plainCardOf : undefined}
-                  visibleThumbnail={visibleCols.thumbnail}
-                  visibleGames={visibleCols.games}
-                  onOpen={(id, opener) => openDrillDown(id, opener)}
-                />
+                {(
+                  [
+                    ["tokens", tokenCards],
+                    ["other", otherCreatedCards],
+                  ] as const
+                ).map(([kind, created]) => (
+                  <CreatedPanel
+                    key={kind}
+                    kind={kind}
+                    created={created}
+                    sort={createdSort}
+                    onSort={sortCreatedBy}
+                    view={view}
+                    showRanges={showRanges}
+                    tiers={tiers}
+                    nameOf={shownName}
+                    faceOf={gridFaceOf}
+                    plainCardOf={plain.shown ? plainCardOf : undefined}
+                    visibleThumbnail={visibleCols.thumbnail}
+                    visibleGames={visibleCols.games}
+                    onOpen={(id, opener) => openDrillDown(id, opener)}
+                  />
+                ))}
               </>
             )}
           </>

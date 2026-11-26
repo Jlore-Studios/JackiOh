@@ -5,13 +5,14 @@
 // ownership decides (`useOwnsAccountCosmetic`), and a stored pick it does not own shows as the
 // kind's default, which is what the board draws.
 
-import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
+import type { ReactElement } from "react";
 
 import { DEFAULT_CARD_COSMETICS, cosmeticsOf, resolveCosmetic, useOwnsAccountCosmetic, type DeckSlotKind } from "../../cards/cosmetics.ts";
 import { t, useLocale } from "../../i18n/i18n.ts";
 import { BackLayer } from "../../net/backLayers.ts";
 import { DECK_COSMETICS_BUTTON } from "./testids.ts";
 import type { DeckItem } from "./sync.ts";
+import { useWorkshopPopover } from "./useWorkshopPopover.ts";
 
 const DECK_COSMETIC_FIELDS: readonly { kind: DeckSlotKind; key: "tableCosmetic" | "fieldCosmetic" | "cardBackCosmetic"; label: string }[] = [
   { kind: "table", key: "tableCosmetic", label: "Playmat" },
@@ -33,32 +34,8 @@ export default function DeckCosmeticsPicker({
 }): ReactElement {
   useLocale();
   const owns = useOwnsAccountCosmetic();
-  const [open, setOpen] = useState(false);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const root = useRef<HTMLDivElement>(null);
-
-  // Focus moves before the panel unmounts, so it never falls back to <body> on the way.
-  const close = useCallback((): void => {
-    setOpen(false);
-    buttonRef.current?.focus();
-  }, []);
-
   // Outside press and Escape close the picker, like the portrait picker's; Back does too (R2127000, the panel's BackLayer).
-  useEffect(() => {
-    if (!open) return undefined;
-    const onPointerDown = (event: PointerEvent): void => {
-      if (root.current !== null && !root.current.contains(event.target as Node)) setOpen(false);
-    };
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") close();
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [close, open]);
+  const { open, setOpen, close, buttonRef, root } = useWorkshopPopover();
 
   return (
     <div className="ws-cosmetics" ref={root}>
