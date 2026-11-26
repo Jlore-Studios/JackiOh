@@ -170,6 +170,44 @@ mod tests {
         assert!(is_empty(s.state(), ZoneSlot { player: P1, row: Row::Units, lane: 3 }));
     }
 
+    /// S+ #106 Spectre: a GIGA Unit, in lanes 1 and 2 of both rows from its anchor in unit lane 1.
+    const SPECTRE: &str = "stinkyscapeplus-106";
+
+    /// R391, R3546000: tributing Spectre empties all four zones it covers, so the drill may anchor in
+    /// lane 1 or 2 over them (#4836: only the lanes past a plain Unit's Tribute were offered).
+    #[test]
+    fn r391_r3546000_tributing_spectre_frees_all_four_zones_it_covers_for_the_drill() {
+        let mut s = weapon_board(
+            "s52-tribute-a-giga",
+            json!({
+                "hand": [ID],
+                "library": filler(6),
+                "field": [{ "def": SPECTRE, "lane": 1 }, { "def": "core-008", "lane": 4 }],
+                "mana": 10,
+            }),
+            json!({ "hand": [FILLER], "library": filler(6) }),
+        );
+        let spectre = s.unit_at(P1, 1).id;
+        let drill = s.card(ID).id.clone();
+        let lanes: Vec<i32> = s
+            .plays_of(&drill)
+            .into_iter()
+            .filter_map(|play| match play {
+                ActionBody::Play { zone: Some(zone), tributes: Some(tributes), .. }
+                    if tributes == [spectre.clone()] =>
+                {
+                    Some(zone.lane)
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(lanes, vec![1, 2], "tributing Spectre offers the lanes it covered");
+        s.play(ID, json!({ "zone": 1, "tributes": [spectre.as_str()] }));
+        s.expect_in_zone(ID, "field");
+        s.expect_in_zone(spectre.as_str(), "graveyard");
+        assert_eq!(s.card(ID).giga, Some(true));
+    }
+
     mod base {
         use super::*;
 

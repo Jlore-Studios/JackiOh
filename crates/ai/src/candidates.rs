@@ -2061,25 +2061,36 @@ mod tests {
         assert_eq!(checked, settings.len() * bodies.len() * bodies.len());
     }
 
-    /// R4171000: the seeded random-policy games the agreement test below plays, and its floors: the
-    /// Unit-target attacks it judged, the distinct cards (`def_id`s) at either end of one, and the
-    /// attacks a First Strike defender stopped whose blow would otherwise deal damage or pop a shield.
+    /// R4171000: the seeded random-policy games the agreement test below plays at least, the most it
+    /// plays while a floor is unmet, and its floors: the Unit-target attacks it judged, the distinct
+    /// cards (`def_id`s) at either end of one, and the attacks a First Strike defender stopped whose
+    /// blow would otherwise deal damage or pop a shield. The floors are what the games happen to deal,
+    /// so it plays on until they are met (#848's search, the pool probe's fix for a test of a roll):
+    /// one more card in a pool deals other decks (R380), and under the pool probe 16 games met one
+    /// stopped blow.
     const FORECAST_AGREEMENT_GAMES: usize = 16;
+    const FORECAST_AGREEMENT_MAX_GAMES: usize = 256;
     const FORECAST_AGREEMENT_MIN_ATTACKS: usize = 1000;
     const FORECAST_AGREEMENT_MIN_CARDS: usize = 150;
     const FORECAST_AGREEMENT_MIN_STOPPED: usize = 5;
 
     /// R4171000, R3100000: on every state of `FORECAST_AGREEMENT_GAMES` games of SPEC §10.7's random
-    /// policy, decks dealt from every set, every Unit-target entry of either seat's combat forecast is the
-    /// static trader's `fight` (what the attacker deals, up to the target's health for a Trample hit,
-    /// §4.4 step 5; what it takes; the kill; the survival; the pop) and the move order's
-    /// `kills_and_survives`.
+    /// policy, and as many more as its floors need, decks dealt from every set, every Unit-target entry
+    /// of either seat's combat forecast is the static trader's `fight` (what the attacker deals, up to
+    /// the target's health for a Trample hit, §4.4 step 5; what it takes; the kill; the survival; the
+    /// pop) and the move order's `kills_and_survives`.
     #[test]
     fn r4171000_the_trade_reads_agree_with_the_combat_forecast_on_seeded_games() {
         jackioh_cards::register_all();
         let (mut judged, mut stopped) = (0, 0);
         let mut met: IndexSet<String> = IndexSet::new();
-        for game in 0..FORECAST_AGREEMENT_GAMES {
+        for game in 0..FORECAST_AGREEMENT_MAX_GAMES {
+            let floors_met = judged >= FORECAST_AGREEMENT_MIN_ATTACKS
+                && met.len() >= FORECAST_AGREEMENT_MIN_CARDS
+                && stopped >= FORECAST_AGREEMENT_MIN_STOPPED;
+            if game >= FORECAST_AGREEMENT_GAMES && floors_met {
+                break;
+            }
             let seed = format!("forecast-agreement:{game}");
             let deck = |seat: PlayerId| {
                 build_ai_deck(
