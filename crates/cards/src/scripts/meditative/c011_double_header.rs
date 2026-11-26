@@ -1,9 +1,9 @@
 //! Meditative #11 Double Header (SPEC §8.8 row 11; docs/meditative-set.md M6 #11; R826).
 //! (4) Field Spell, Legendary.
-//!   Base:    "The first card you play each turn adds a copy of it to your hand. The copy isn't Radiant
-//!            and costs ({setCost})." (setCost 0)
-//!   Radiant: "The first card you play each turn adds a Radiant copy of it to your hand. It costs
-//!            ({setCost})."
+//!   Base:    "Aura: The first card you play each turn adds a copy of it to your hand. The copy isn't
+//!            Radiant and costs ({setCost})." (setCost 0)
+//!   Radiant: "Aura: The first card you play each turn adds a Radiant copy of it to your hand. It
+//!            costs ({setCost})."
 //!
 //! A trigger on its controller's `cardResolved` (§10.5 step 7, as Core #33 Unstable Clone Machine's,
 //! R17) for the card at the head of their plays this turn (R213: "first" is the turn's log, not a

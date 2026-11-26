@@ -1,0 +1,40 @@
+{
+  "title": "Aura on every standing text",
+  "sources": "#5039",
+  "notes": "R5039000: Aura: added to the standing line of Core #38, #64, #73, #75, #84, M #11, #92, S #148, #157, T-shield-layer, S+ #30, #42, #62, #63; removed from the own-text line of M #65, S #111, T-drone-interceptor, T-drone-corvette, S+ #87, #163. English and Chinese, wording only.",
+  "player": {
+    "title": "Aura on every standing text",
+    "new": [],
+    "balance": [],
+    "changes": [],
+    "text": [
+      "Every line that keeps working while its card is on the field and changes other cards, a player or a hero now starts with \"Aura:\".",
+      "Fourteen cards gain it, among them Anti-oneshot Armor, Going Long, Unan, The Gauntlet and Force Projector.",
+      "Keymaster Keenus, Shockwave447, Frontier Flora, Accelerationist and the Drones lose it: text about the card itself reads like a keyword.",
+      "No card plays differently: only the words changed, in English and Chinese."
+    ],
+    "fixes": []
+  },
+  "cards": [
+    "core-038",
+    "core-064",
+    "core-073",
+    "core-075",
+    "core-084",
+    "meditative-011",
+    "meditative-065",
+    "meditative-092",
+    "stinkyscape-111",
+    "stinkyscape-148",
+    "stinkyscape-157",
+    "stinkyscape-t-drone-interceptor",
+    "stinkyscape-t-drone-corvette",
+    "stinkyscape-t-shield-layer",
+    "stinkyscapeplus-030",
+    "stinkyscapeplus-042",
+    "stinkyscapeplus-062",
+    "stinkyscapeplus-063",
+    "stinkyscapeplus-087",
+    "stinkyscapeplus-163"
+  ]
+}
