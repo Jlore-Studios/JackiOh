@@ -44891,6 +44891,10 @@
       "5006": {
         "at": "2026-11-26T04:34:43Z",
         "why": "It deal-screens the untuned affliction weight the sweep was meant to revisit, keeping 1.0 only on a measured edge."
+      },
+      "5007": {
+        "at": "2026-11-26T04:34:46Z",
+        "why": "It deal-screens the untuned attack-hook share the smoke gate cannot distinguish, keeping it only on a measured edge."
       }
     },
     "auto_approved": [],
