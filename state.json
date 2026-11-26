@@ -22855,6 +22855,40 @@
     "5027": {
       "action": "build",
       "asks": [],
+      "decision": {
+        "asked_at": "2026-11-26T10:15:15Z",
+        "assigned": [
+          "jgoetzmann",
+          "MaxGoetzmann"
+        ],
+        "default": 1,
+        "ends": "2026-11-27T10:15:15Z",
+        "hours": 24,
+        "kind": "build",
+        "model": "opus",
+        "options": [
+          {
+            "change": "Remove `confirm_lone_win` and `spread_activations` at on: the field, the branch only `false` ran and the tests that pinned `false`. Amend R4608000 and R4515000 and add a retirement test for each in acceptance.rs. Keep `open_lethal` as a knob.",
+            "tradeoff": "The open-lethal code and its tests stay in the tree, unshipped."
+          },
+          {
+            "change": "Remove all three. `open_lethal` goes at off, along with `simulate_reply_with` and its on-value tests, and R4187000 is amended too.",
+            "tradeoff": "The fix R4187000 names leaves the tree and can come back only from git."
+          },
+          {
+            "change": "Remove the first two and screen `open_lethal` a fourth time (training/improve.md, A screen), then turn it on or remove it by the result.",
+            "tradeoff": "About 12\u201316 core-hours, more than one bot run can hold, and the three screens so far all read inconclusive. Its config comment says no more screens until the reply changes, and training/improve.md bars screening a change again. Since the last screen, only #4905's refactor and #4897's balance patch have touched reply.rs."
+          },
+          {
+            "change": "Keep all three switches as they are.",
+            "tradeoff": "Nothing changes: the code for the values that never run stays, and the issue closes."
+          }
+        ],
+        "problem": "The AI has three switches that ship at the same value everywhere, and each one still carries the code and tests for its other value. `AI_SEARCH.confirm_lone_win` (R4608000) and `AI_REPLY.spread_activations` (R4515000) both ship on, and their rulings say the scene tests settled them without a fork screen. `AI_REPLY.open_lethal` (R4187000) ships off. It is the open-lethal reply that never shipped, and its three screens all came out inconclusive.\n\nAll three are the fork screens' knobs (R4319000). The issue says whether each one stays is a decision for a person before it is a change (\"Ask a person first\"). #4905 removed a fourth such switch, `replay_fill_steps`, a day before `main` turned it on after a screen, so a removal can delete a feature that was about to ship. Nobody has answered in the thread and this run was not told to build the default, so I have not changed any code.",
+        "provider": "claude-3",
+        "question": "For each of the three switches, keep it or remove it at the value it ships?",
+        "why": "the rulings for the first two call them settled and both ship on everywhere, while a new screen of open_lethal is barred until the reply changes, so it stays a knob for that screen"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -22879,6 +22913,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-3",
+      "question": "For each of the three switches, keep it or remove it at the value it ships?",
       "queued_at": "2026-11-26T06:29:30Z",
       "requested_by": "squishy-squooby",
       "run_id": "45798180923",
