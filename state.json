@@ -22839,6 +22839,10 @@
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-26T11:22:29Z",
       "stop_requested": false,
+      "strike_log": [
+        "`claude-8` (claude, opus) rejected it: `crates/engine/src/game_summary.rs:116`: The branch conflicts with main in game_summary.rs, so it cannot merge as it stands. Main has since added a `held_radiant"
+      ],
+      "strikes": 1,
       "taken_asks": [],
       "verdict_rounds": 0
     },
