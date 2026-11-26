@@ -22161,6 +22161,8 @@
       "taken_asks": []
     },
     "5008": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-26T03:12:03Z",
@@ -22174,8 +22176,11 @@
         "trail": "- Test run underway \u2014 pausing here until its result arrives.Still waiting on the test run (the web suite builds WASM first, which takes a while) \u2014 ending the turn here; I'll pick up the results when they're delivered.\n- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a GIGA card's placement highlight lights all four zones it will take, not only its anchor\"} -->\n- Selecting a playable GIGA card in hand now draws one green rounded oblong over all four zones of each offered placement (SPEC \u00a73.2 footprint), measured from the zones' boxes so it follows layout and the second seat's flipped board. Hover or keyboard focus isolates one block while the rest dim; whil\u2026\n- What changed:\n- - [giga.ts](apps/web/src/game/giga.ts): `GigaAnchor`, `gigaFootprint`, `gigaFootprintTestids`, `anchorOfTestid` (parses only `zone-you-*`), `isGigaHandCard` (live `keywords` override first, printed face second, so hand-granted and printed GIGA both count).\n- - [LanePick.tsx](apps/web/src/game/LanePick.tsx): exported `Box`, added exported `measureBoxes`; `measure` reuses it, behavior identical.\n- - [GigaPlacement.tsx](apps/web/src/game/GigaPlacement.tsx) (new) + [gigaPlacement.css](apps/web/src/game/gigaPlacement.css) (new): per-anchor green (`--glow-ready`) oblongs, `pointer-events: none`, active/dim states, dim-while-dragging; no animation, so Reduce Motion holds by construction.\n- - [Board.tsx](apps/web/src/game/Board.tsx): mounts `<GigaPlacement>` in `.field` after the lanes.\n- - [DragLayer.tsx](apps/web/src/game/drag/DragLayer.tsx): `reticleFor(spot, footprint)` unions the footprint's boxes for GIGA hand-card drags (`gigaPadFor`); hero-gem and all other paths byte-identical.\n- - [gigaPlacement.test.tsx](apps/web/src/game/gigaPlacement.test.tsx) (new): the 7 acceptance tests (unit row p1+p2, backrow, hover/focus isolation, non-GIGA unchanged, click/no-hit-target, drag pad, printed GIGA).\n- How tested (commands I ran, what they printed):\n- - `pnpm --dir apps/web test src/game/gigaPlacement.test.tsx` \u2014 7 passed.\n- - Same plus `giga.test.tsx`, `PromptLane.test.tsx`, `src/test/ux/glow.test.ts`, `src/test/ux/drag-layer.test.tsx` \u2014 5 files, 112 passed.\n- - Plus `drag-blocked`, `drag-continue`, `drag-model`, `glow-render`, `Board.test`, `Board.render.test` \u2014 6 files, 116 passed.\n- - `pnpm --dir apps/web typecheck` green (needs `NODE_OPTIONS=--max-old-space-size=8192` on this machine; default heap OOMs at ~2GB \u2014 environmental, also true without my change).\n- - `pnpm exec eslint apps/web` green; `cargo fmt --check` green. No spec/ruling changes, so no `spec check` delta.\n- Decisions the issue didn't settle (with rejected alternatives):\n- - Oblongs measure during render and re-render on resize/scroll, instead of the plan's layout-effect `setBoxes`: the repo's React Compiler lint forbids sync setState in effects and new suppressions, and inline disables of `react-hooks/*` are banned. Same reason the drag catalog ref syncs in a `useEf\u2026\n- - Tests 2 and 7 offer two anchors, not one: a single fully-determined play sends on the click (`settle`), so no selection highlight exists to assert on. Rejected: asserting on a play that never selects.\n- - CSS `pointer-events` assertion reads the file with `readFileSync` (the duos-ux pattern): `?raw` on `.css` imports as `''` under vitest. Rejected: keeping the empty import.\n- - No new constants: reused `LANE_PICK_OUTSET_PX` and existing CSS tokens.\n- Reviewer, look twice at:\n- - `LanePick.tsx` `measure`: my first refactor read `rect.right` off the new `Box` (NaN, broke all 8 PromptLane tests); fixed to `left+width`. Regressions now green, but that function deserves a glance.\n- - `GigaPlacement.tsx` render-phase measurement: correct because zones stand in the committed DOM on every render that draws oblongs, but it re-measures on hover/focus renders too (cheap, \u2264 anchors\u00d74 lookups).\n- - `DragLayer.tsx` `lookupRef` sync runs as a post-commit effect; pointer events always fire after the commit, so it is current at every lift, move and release.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-fill/_work/_temp/work/item-4995 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-fill/_work/_temp/work/item-4995/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4995,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-26T04:49:18Z",
         "from_run": "45747383443",
         "gates": [
           {
@@ -22234,8 +22239,15 @@
         "source": "build",
         "until": "2026-11-26T05:15:24Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-26T04:45:24Z",
+      "run_id": "pending:4f25147d-1795668525",
+      "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
+      "started_at": "2026-11-26T04:49:18Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -22397,9 +22409,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T04:48:32Z",
+    "at": "2026-11-26T04:49:18Z",
     "url": "",
-    "what": "review #5009 on claude-7"
+    "what": "review #5008 on muse"
   },
   "last_sweep": {
     "at": "2026-11-26T04:33:13Z",
