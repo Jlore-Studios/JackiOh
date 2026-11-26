@@ -24375,10 +24375,14 @@
         "approvals": [],
         "builder": "claude",
         "built_by": "claude-1",
-        "rejections": [],
+        "rejections": [
+          "claude"
+        ],
         "reviews": [],
         "sha": "23e3cc443d4bd5d503ea9f14b5495ac947cd07ad",
-        "tiers": {}
+        "tiers": {
+          "claude": "strong"
+        }
       }
     }
   },
