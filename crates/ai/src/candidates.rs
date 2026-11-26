@@ -13,7 +13,7 @@ use jackioh_engine::{
     carried_at, cleave_struck, converts_to, damage_pool_of, effective_cost, effective_life, find_def,
     find_instance, find_instance_mut, flags_of, has_keyword, is_locked, lane_multiplier_for, legal_actions,
     midlane_lanes_of, pierces, position_after_switch, row_size, slot_of, strike_back_multiplier_for,
-    subsystems, takes_strike_back, unit_damage_cap, unit_view,
+    subsystems, unit_damage_cap, unit_view,
 };
 use serde_json::Value;
 
@@ -26,7 +26,7 @@ use crate::evaluate::{
     exiles_what_it_damages, face_threat, feng_shui_acts, feng_shui_verdict, plague_bomb_on_field,
 };
 use crate::lethal::ready_gap;
-use crate::reply::{face_value, trade_value};
+use crate::reply::{face_value, fight, trade_value};
 
 /// Canonical JSON of an action body (keys sorted, SURFACE §5.2), for equality across determinizations.
 pub fn action_key(action: &ActionBody) -> String {
@@ -328,79 +328,15 @@ pub(crate) fn cleaved_neighbours_with(
         .collect()
 }
 
-/// Tier 1: an attack on a unit it kills and survives, read from the layers and the combat's own
-/// reads (`exchange`). Divine Shield or Indestructible on the target means no kill; a Ranged attacker
-/// survives any target that is not Ranged (R783000). Either side's hit skips the other's Armor when
-/// it pierces (§4.4 step 2, R346), and each side's hit is capped by the side it hits (§4.4 step 3,
-/// R2179005). With `AI_EVAL.pool_and_conversion_read`, a hit that Burns or is Toxic instead kills
-/// nothing (step 3a, R4064001), and each side's damage pools soak what they have left of the hit on it
-/// (step 3b, R4064000). A hit from a side that exiles what it damages removes with any damage, as a
-/// Poisonous one does (R1124, R4065001).
+/// Tier 1: an attack on a unit it kills and survives, as the reply's `fight` reads the two blows: no
+/// kill through Divine Shield or Indestructible, no strike back on a Ranged attacker unless the target
+/// is Ranged too (R783000), each hit past the other's Armor when it pierces (§4.4 step 2, R346) and
+/// capped by the side it hits (step 3, R2179005), a converted hit killing nothing (step 3a, R4064001),
+/// the damage pools soaking theirs (step 3b, R4064000), and a side that exiles what it damages removing
+/// with any damage, as a Poisonous one does (R1124, R4065001).
 fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardInstance) -> bool {
-    let a = unit_view(state, attacker);
-    let t = unit_view(state, target);
-    if has_keyword(&t.keywords, KeywordKind::DivineShield)
-        || has_keyword(&t.keywords, KeywordKind::Indestructible)
-    {
-        return false;
-    }
-    let read = AI_EVAL.pool_and_conversion_read;
-    if read && converts_to(state, attacker).is_some() {
-        return false;
-    }
-    let combat = exchange(state, attacker, &a, target, &t);
-    let dealt = if pierces(state, Some(attacker), None) {
-        combat.hit
-    } else {
-        (combat.hit - t.armor).max(0)
-    };
-    let dealt = unit_damage_cap(state, target).map_or(dealt, |cap| dealt.min(cap));
-    let dealt = if read {
-        dealt - dealt.min(damage_pool_of(state, target.controller, false))
-    } else {
-        dealt
-    };
-    if dealt <= 0 {
-        return false;
-    }
-    let kills = dealt >= t.health || combat.poisonous || exiles_what_it_damages(state, attacker, &AI_EVAL);
-    if !kills {
-        return false;
-    }
-    // R783000: the engine's own read — no strike back reaches it, a First Strike one included.
-    if !takes_strike_back(state, attacker, target) {
-        return true;
-    }
-    if has_keyword(&a.keywords, KeywordKind::FirstStrike)
-        && !has_keyword(&t.keywords, KeywordKind::FirstStrike)
-    {
-        return true;
-    }
-    if has_keyword(&a.keywords, KeywordKind::DivineShield)
-        || has_keyword(&a.keywords, KeywordKind::Indestructible)
-    {
-        return true;
-    }
-    let taken = if pierces(state, Some(target), None) {
-        combat.strike_back
-    } else {
-        (combat.strike_back - a.armor).max(0)
-    };
-    let taken = unit_damage_cap(state, attacker).map_or(taken, |cap| taken.min(cap));
-    let taken = if !read {
-        taken
-    } else if converts_to(state, target).is_some() {
-        0
-    } else {
-        taken - taken.min(damage_pool_of(state, attacker.controller, false))
-    };
-    if taken <= 0 {
-        return true;
-    }
-    if has_keyword(&t.keywords, KeywordKind::Poisonous) || exiles_what_it_damages(state, target, &AI_EVAL) {
-        return false;
-    }
-    taken < a.health
+    let fought = fight(state, attacker, target);
+    fought.kills && !fought.dies
 }
 
 fn attack_tier(state: &GameState, seat: PlayerId, attacker_id: &str, target_id: &str) -> i32 {
@@ -429,7 +365,7 @@ fn even_trade(state: &GameState, attacker_id: &str, target_id: &str, prices: &Pr
 /// #2825: where an attack on the enemy hero or a winning trade stands among the move order's first
 /// attacks, by the opponent model's own values (`reply.rs`'s `ranked_attacks`): a hit on the hero by
 /// `face_value` (`AI_EVAL.win` for each when `face_is_lethal`), a hit on a unit by `trade_value`.
-fn front_value(
+pub(crate) fn front_value(
     state: &GameState,
     seat: PlayerId,
     action: &ActionBody,
@@ -620,25 +556,21 @@ fn enemy_first(state: &GameState, seat: PlayerId, variants: Vec<ActionBody>) -> 
         }
     }
     at_hero.extend(at_cards);
-    let mut enemy = at_hero.into_iter();
-    let mut other = rest.into_iter();
-    let mut out: Vec<ActionBody> = Vec::new();
-    loop {
-        match (enemy.next(), other.next()) {
-            (None, None) => break,
-            (aimed, unaimed) => {
-                out.extend(aimed);
-                out.extend(unaimed);
-            }
-        }
-    }
-    out
+    dealt_in_rounds([at_hero.as_slice(), rest.as_slice()].into_iter())
+}
+
+/// Every group's first action, then every group's second, …, the groups in the order given.
+fn dealt_in_rounds<'a>(groups: impl Iterator<Item = &'a [ActionBody]> + Clone) -> Vec<ActionBody> {
+    let rounds = groups.clone().map(<[ActionBody]>::len).max().unwrap_or(0);
+    (0..rounds)
+        .flat_map(|round| groups.clone().filter_map(move |group| group.get(round).cloned()))
+        .collect()
 }
 
 /// What kind of play or activation a variant represents, so that different ways of being played
 /// (biggest/smallest X, Embiggen, Equip, face-down, Tribute sets) get their first candidate
 /// before any way repeats a second lane or target (#1778).
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 struct WayKey {
     x: Option<i32>,
     embiggen: Option<bool>,
@@ -649,6 +581,13 @@ struct WayKey {
 }
 
 fn way_key(action: &ActionBody) -> WayKey {
+    let sorted = |tributes: &Option<Vec<String>>| {
+        tributes.as_ref().map(|tributes| {
+            let mut sorted = tributes.clone();
+            sorted.sort();
+            sorted
+        })
+    };
     match action {
         ActionBody::Play {
             x,
@@ -662,35 +601,17 @@ fn way_key(action: &ActionBody) -> WayKey {
             embiggen: *embiggen,
             equip: *equip == Some(true),
             face_down: face_down.is_some(),
-            tributes: tributes.as_ref().map(|t| {
-                let mut sorted = t.clone();
-                sorted.sort();
-                sorted
-            }),
+            tributes: sorted(tributes),
             ability: None,
         },
         ActionBody::Activate {
             ability, tributes, ..
         } => WayKey {
-            x: None,
-            embiggen: None,
-            equip: false,
-            face_down: false,
-            tributes: tributes.as_ref().map(|t| {
-                let mut sorted = t.clone();
-                sorted.sort();
-                sorted
-            }),
+            tributes: sorted(tributes),
             ability: ability.clone(),
+            ..WayKey::default()
         },
-        _ => WayKey {
-            x: None,
-            embiggen: None,
-            equip: false,
-            face_down: false,
-            tributes: None,
-            ability: None,
-        },
+        _ => WayKey::default(),
     }
 }
 
@@ -747,7 +668,6 @@ struct Way {
     variants: Vec<ActionBody>,
     price: i32,
     tribute_cost: (i32, Vec<i32>),
-    first_seen: usize,
 }
 
 /// Tier 2: round-robin across source instances (every source's first variant, then every second, …),
@@ -781,16 +701,15 @@ fn round_robin(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> Vec
         }
     }
     for source in &mut sources {
-        let mut way_groups: IndexMap<WayKey, (usize, Vec<ActionBody>)> = IndexMap::new();
-        for (idx, action) in std::mem::take(&mut source.variants).into_iter().enumerate() {
-            let key = way_key(&action);
-            let entry = way_groups.entry(key).or_insert_with(|| (idx, Vec::new()));
-            entry.1.push(action);
+        // Ways in the order first seen, which the sort below keeps among equals (`sort_by` is stable).
+        let mut way_groups: IndexMap<WayKey, Vec<ActionBody>> = IndexMap::new();
+        for action in std::mem::take(&mut source.variants) {
+            way_groups.entry(way_key(&action)).or_default().push(action);
         }
 
         let mut ways: Vec<Way> = way_groups
             .into_iter()
-            .map(|(key, (first_seen, variants))| {
+            .map(|(key, variants)| {
                 let variants = enemy_first(state, seat, variants);
                 let price = way_price(state, &variants[0]);
                 let tribute_cost = tribute_set_cost(state, key.tributes.as_deref());
@@ -798,7 +717,6 @@ fn round_robin(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> Vec
                     variants,
                     price,
                     tribute_cost,
-                    first_seen,
                 }
             })
             .collect();
@@ -828,41 +746,12 @@ fn round_robin(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> Vec
                     }
                 })
                 .then_with(|| a.tribute_cost.cmp(&b.tribute_cost))
-                .then_with(|| a.first_seen.cmp(&b.first_seen))
         });
-
-        let way_rounds = ways.iter().map(|w| w.variants.len()).max().unwrap_or(0);
-        let mut assembled = Vec::new();
-        for round in 0..way_rounds {
-            for way in &ways {
-                if let Some(variant) = way.variants.get(round) {
-                    assembled.push(variant.clone());
-                }
-            }
-        }
-        source.variants = assembled;
+        source.variants = dealt_in_rounds(ways.iter().map(|way| way.variants.as_slice()));
     }
-    let mut ordered: Vec<(usize, Source)> = sources.into_iter().enumerate().collect();
-    ordered.sort_by(|(ia, a), (ib, b)| {
-        a.auspice
-            .cmp(&b.auspice)
-            .then(b.cost.cmp(&a.cost))
-            .then(ia.cmp(ib))
-    });
-    let rounds = ordered
-        .iter()
-        .map(|(_, source)| source.variants.len())
-        .max()
-        .unwrap_or(0);
-    let mut out: Vec<ActionBody> = Vec::new();
-    for round in 0..rounds {
-        for (_, source) in &ordered {
-            if let Some(variant) = source.variants.get(round) {
-                out.push(variant.clone());
-            }
-        }
-    }
-    out
+    // Equal sources keep the order their first actions came in.
+    sources.sort_by(|a, b| a.auspice.cmp(&b.auspice).then(b.cost.cmp(&a.cost)));
+    dealt_in_rounds(sources.iter().map(|source| source.variants.as_slice()))
 }
 
 /// R90, R1282: When a card has more tribute sets than AI_SEARCH.tribute_sets, keep the ones
@@ -892,24 +781,14 @@ fn cap_tribute_sets(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>)
         if sets.len() <= limit {
             continue;
         }
-        let mut scored: Vec<(usize, Vec<String>, usize)> = sets
-            .into_iter()
-            .enumerate()
-            .map(|(idx, set)| {
-                let own_spent = set
-                    .iter()
-                    .filter(|id| find_instance(state, id).is_some_and(|c| c.controller == seat))
-                    .count();
-                (idx, set, own_spent)
-            })
-            .collect();
-
-        scored.sort_by(|(ia, _, oa), (ib, _, ob)| oa.cmp(ob).then(ia.cmp(ib)));
-
-        let kept: indexmap::IndexSet<Vec<String>> =
-            scored.into_iter().take(limit).map(|(_, set, _)| set).collect();
-
-        allowed_sets_by_instance.insert(instance_id, kept);
+        // Fewest of the seat's own cards first; equal sets keep the order seen (the sort is stable).
+        let mut scored = sets;
+        scored.sort_by_cached_key(|set| {
+            set.iter()
+                .filter(|id| find_instance(state, id).is_some_and(|c| c.controller == seat))
+                .count()
+        });
+        allowed_sets_by_instance.insert(instance_id, scored.into_iter().take(limit).collect());
     }
 
     if allowed_sets_by_instance.is_empty() {
@@ -1758,6 +1637,32 @@ mod tests {
         ]
     }
 
+    /// `attacker`'s reads of the fight `entry` forecasts are the forecast's: the static trader's kill and
+    /// death (`trade_value`, `fight`) and the move order's tier 1 read (`kills_and_survives`).
+    fn reads_as_forecast(
+        state: &GameState,
+        attacker: &CardInstance,
+        entry: &jackioh_engine::AttackForecast,
+        label: &str,
+    ) {
+        let target = find_instance(state, &entry.target_id).expect("the target");
+        assert_eq!(
+            trade_value(state, attacker, &entry.target_id, Prices::NONE).kills,
+            entry.kills,
+            "{label}: trade_value's kill, {entry:?}"
+        );
+        assert_eq!(
+            fight(state, attacker, target).dies,
+            !entry.survives,
+            "{label}: fight's death, {entry:?}"
+        );
+        assert_eq!(
+            kills_and_survives(state, attacker, target),
+            entry.kills && entry.survives,
+            "{label}: kills_and_survives, {entry:?}"
+        );
+    }
+
     /// R2179005, R3100000: on every legal attack of one body on another, the static trader's kill and death
     /// (`trade_value`, `fight`) and the move order's tier 1 read (`kills_and_survives`) are the engine's
     /// combat forecast's, Anime Armor's cap among Armor, Divine Shield, Indestructible, Poisonous, Pierce and
@@ -1776,22 +1681,7 @@ mod tests {
                         continue;
                     }
                     assert_eq!(entry.target_id, target_id, "{a} into {t}");
-                    let target = find_instance(&state, &entry.target_id).expect("the target");
-                    assert_eq!(
-                        trade_value(&state, attacker, &entry.target_id, Prices::NONE).kills,
-                        entry.kills,
-                        "{a} into {t}: trade_value's kill, {entry:?}"
-                    );
-                    assert_eq!(
-                        fight(&state, attacker, target).dies,
-                        !entry.survives,
-                        "{a} into {t}: fight's death, {entry:?}"
-                    );
-                    assert_eq!(
-                        kills_and_survives(&state, attacker, target),
-                        entry.kills && entry.survives,
-                        "{a} into {t}: kills_and_survives, {entry:?}"
-                    );
+                    reads_as_forecast(&state, attacker, &entry, &format!("{a} into {t}"));
                     checked += 1;
                 }
             }
@@ -2147,22 +2037,7 @@ mod tests {
                             continue;
                         }
                         assert_eq!(entry.target_id, target_id, "{a} into {t}, {pools:?}");
-                        let target = find_instance(state, &entry.target_id).expect("the target");
-                        assert_eq!(
-                            trade_value(state, attacker, &entry.target_id, Prices::NONE).kills,
-                            entry.kills,
-                            "{a} into {t}, {pools:?}: trade_value's kill, {entry:?}"
-                        );
-                        assert_eq!(
-                            fight(state, attacker, target).dies,
-                            !entry.survives,
-                            "{a} into {t}, {pools:?}: fight's death, {entry:?}"
-                        );
-                        assert_eq!(
-                            kills_and_survives(state, attacker, target),
-                            entry.kills && entry.survives,
-                            "{a} into {t}, {pools:?}: kills_and_survives, {entry:?}"
-                        );
+                        reads_as_forecast(state, attacker, &entry, &format!("{a} into {t}, {pools:?}"));
                         checked += 1;
                     }
                 }

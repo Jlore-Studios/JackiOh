@@ -311,7 +311,6 @@ export function runCreate(setup: RunSetup, unlocks: RunUnlocks, content: RunCont
 export function runReduce(state: RunState, content: RunContent, action: RunAction): RunResult;
 export function runFold(file: RunFile, content: RunContent): RunResult;
 export function runFightSetup(state: RunState, content: RunContent): RunFightSetup | null;
-export function runFightReport(game: ReplayInput, human: PlayerId): { action: RunAction } | { error: string };
 export function runScore(state: RunState, content: RunContent): number;
 export function runEmbers(score: number): number;
 export function runMaxHp(state: RunState, content: RunContent): number;
@@ -363,7 +362,7 @@ export function DungeonStats(): ReactElement;
 **The practice worker (part E).** `PracticeStartConfig` gains `run?: RunFightSetup`: when set, its
 decks, handicaps, deck marks and seed replace `deck`, `difficulty`'s handicap and the dealt AI deck.
 A new request `{ type: "runReport" }` answers `{ type: "runReport", action: RunAction }` or
-`{ type: "runReport", error: string }` from `runFightReport` over the finished game. `Game` gains an
+`{ type: "runReport", error: string }` from the module's `run_fight_report` over the finished game. `Game` gains an
 optional `heroAside?: { own?: ReactNode; enemy?: ReactNode }`, drawn beside each hero.
 
 Each part keeps its test ids in its own directory's `testids.ts`, prefixed `dungeon-`. Words go

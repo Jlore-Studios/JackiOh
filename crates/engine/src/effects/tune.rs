@@ -166,19 +166,6 @@ pub enum TuneRow {
     Plague,
 }
 
-impl TuneRow {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            TuneRow::Cost => "cost",
-            TuneRow::Stats => "stats",
-            TuneRow::Keyword => "keyword",
-            TuneRow::X => "x",
-            TuneRow::Number => "number",
-            TuneRow::Plague => "plague",
-        }
-    }
-}
-
 /// The keywords the card has now — all five layers in the unit row or standing in a backrow zone
 /// (§10.4, R1081000), layers 1 to 4 elsewhere.
 fn keywords_now(state: &GameState, card: &CardInstance) -> Vec<Keyword> {

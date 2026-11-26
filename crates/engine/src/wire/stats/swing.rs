@@ -76,16 +76,6 @@ pub struct CreatedActing {
     pub maker: Option<String>,
 }
 
-impl ActingCard {
-    /// Its catalog id.
-    pub fn card(&self) -> &str {
-        match self {
-            ActingCard::Dealt(card) => card,
-            ActingCard::Created(made) => &made.card,
-        }
-    }
-}
-
 // ---------------------------------------------------------------------------
 // The tallies (R4552001)
 // ---------------------------------------------------------------------------
@@ -682,13 +672,6 @@ pub struct SwingReport {
     pub created_field: DecisivenessField,
     pub cards: IndexMap<String, SwingFigures>,
     pub created: IndexMap<String, SwingFigures>,
-}
-
-impl SwingReport {
-    /// A deck card's figures, or for a card only a rule makes (R3070000) its Created ones.
-    pub fn of(&self, card: &str) -> Option<&SwingFigures> {
-        self.cards.get(card)
-    }
 }
 
 /// One card's terms before the fields of Decisiveness are read.

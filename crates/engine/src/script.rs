@@ -1313,7 +1313,7 @@ pub struct Script {
     pub echo_keeps_targets: bool,
     /// B5 E26, R464: triggers this card answers while in its owner's library (Classic+ #37 Wardrum). It is
     /// hidden (§9.1), so its queue entries take no number (R177) and, within a side, follow the hand's and
-    /// precede the graveyard's in creation order, never library order (`triggers::trigger_holders_of`).
+    /// precede the graveyard's in creation order, never library order (`triggers::holder_sites`).
     pub deck_triggers: Vec<TriggerDef>,
     /// B5 E26: triggers this card answers while it lies in a graveyard (Classic #47). R153's other
     /// graveyard answer, the end-of-turn return, stays the `endOfTurn` hook's.

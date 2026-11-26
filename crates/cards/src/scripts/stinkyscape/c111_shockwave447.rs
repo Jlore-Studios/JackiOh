@@ -83,9 +83,9 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R4991000: through v0.6.14i a Shockwave447 a Transform made drew nothing; `KEPT_SCRIPTS` folds those
+/// R4991000: through v0.6.14k a Shockwave447 a Transform made drew nothing; `KEPT_SCRIPTS` folds those
 /// replays under it (R767000, R4779000).
-pub fn script_v0_6_14i() -> CardScripts {
+pub fn script_v0_6_14k() -> CardScripts {
     CardScripts {
         base: shockwave(false, true, &[GameEventType::Summoned]),
         radiant: shockwave(true, true, &[GameEventType::Summoned]),
@@ -220,12 +220,12 @@ mod tests {
     }
 
     #[test]
-    fn r767000_the_script_kept_for_v0_6_14i_draws_nothing_for_a_shockwave447_a_transform_makes() {
+    fn r767000_the_script_kept_for_v0_6_14k_draws_nothing_for_a_shockwave447_a_transform_makes() {
         let seed = shockwave_seed();
-        crate::under_kept(ID, script_v0_6_14i(), || {
+        crate::under_kept(ID, script_v0_6_14k(), || {
             let (s, id, _, _) = cultivated(&seed);
             assert_eq!(s.card(id.as_str()).def_id, ID);
-            assert!(drawn(&s, &id).is_empty(), "through v0.6.14i a Transform's Shockwave447 drew nothing");
+            assert!(drawn(&s, &id).is_empty(), "through v0.6.14k a Transform's Shockwave447 drew nothing");
 
             let (s, _, _) = played(false, "shockwave-kept-4991", 2);
             assert_eq!(drawn(&s, &me(&s)).len(), 3, "and played it drew its 3");

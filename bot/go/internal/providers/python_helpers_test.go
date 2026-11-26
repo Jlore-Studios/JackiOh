@@ -73,7 +73,7 @@ func TestPurePath(t *testing.T) {
 		{[]string{"a/../b", "c"}, "a/../b/c"}, {[]string{"/root", "/abs", "c"}, "/abs/c"},
 		{[]string{".", "x"}, "x"}, {[]string{""}, "."}, {[]string{"./a/./b/"}, "a/b"},
 	} {
-		if got := purePath(c.parts...); got != c.want {
+		if got := py.PurePath(c.parts...); got != c.want {
 			t.Errorf("PurePosixPath%q: got %q want %q", c.parts, got, c.want)
 		}
 	}

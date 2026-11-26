@@ -155,12 +155,6 @@ pub fn view_for(pinned: Pinned, state: &EngineState, player: PlayerId) -> Player
     pinned.run(|| jackioh_engine::view_for(state, player))
 }
 
-/// R2652000: how many of a change's `fresh` events `player`'s view carries (a face-down trap's flip it
-/// leaves out), so the bots' personas slice that view by the change alone (R645).
-pub fn viewed_of_newest(state: &EngineState, player: PlayerId, fresh: usize) -> usize {
-    jackioh_engine::viewed_of_newest(state, player, fresh)
-}
-
 /// §9.5: a crashed actor rebuilds its state by folding `(seed, log)`.
 pub fn fold(pinned: Pinned, args: &FoldArgs) -> FoldResult {
     registered();
@@ -288,14 +282,9 @@ pub fn last_boards(state: &EngineState) -> LastBoards {
 
 /// SPEC §11 R376: a finished game's record for the card statistics — each seat's opening hand,
 /// draws and plays, and the ending — read off `(seed, decks, log)`; `None` when the log leaves the
-/// game without a result. Folded like `fold`.
-pub fn summarize_game(pinned: Pinned, args: &FoldArgs) -> Option<GameSummary> {
-    registered();
-    pinned.run(|| jackioh_engine::summarize_game(args))
-}
-
-/// R4552000: `summarize_game` with the game's turn rows filed in it (`jackioh_ai::summarize_with_swing_turns`),
-/// the data Decisiveness is read off, both from one fold under the pin (#2213); `None` without a result.
+/// game without a result. Folded like `fold`. R4552000: the engine's `summarize_game` with the game's
+/// turn rows filed in it (`jackioh_ai::summarize_with_swing_turns`), the data Decisiveness is read off,
+/// both from one fold under the pin (#2213).
 pub fn summarize_with_swing_turns(pinned: Pinned, args: &FoldArgs) -> Option<GameSummary> {
     registered();
     pinned.run(|| jackioh_ai::summarize_with_swing_turns(args))

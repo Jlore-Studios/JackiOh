@@ -32,7 +32,6 @@ export const FX_BURN_AT = 0.25;
 export const FX_FATIGUE_STREAK_AT = 0.35;      // the fatigue hit leaves the empty library at 0.35 D…
 export const FX_FATIGUE_FLIGHT_FRACTION = 0.6; // …and reaches the hero at 0.95 D, inside the entry (R200)
 export const FX_OVERFLOW_FIZZLE_AT = 0.45;     // a refused card fizzles at 0.45 D, after it bounces off the pile
-export const FX_MANA_STAGGER_MS = 40;
 export const FX_MANA_MAX_SPARKS = 10;
 export const FX_SLAM_STATS_MIN = 10;          // printed attack + health
 export const FX_SLAM_TRAUMA_PER_STAT = 0.06;

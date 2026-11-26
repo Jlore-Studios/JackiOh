@@ -1436,17 +1436,6 @@ pub enum MoveResult {
     Replaced,
 }
 
-impl MoveResult {
-    /// The literal, as serde writes it.
-    pub fn as_str(self) -> &'static str {
-        match self {
-            MoveResult::Moved => "moved",
-            MoveResult::Vanished => "vanished",
-            MoveResult::Replaced => "replaced",
-        }
-    }
-}
-
 // B5 E5: "would go to a graveyard" (damage and combat)
 
 /// Where a replacement sends a card that would go to a graveyard (B5 E5; Classic #28, #50, #60).

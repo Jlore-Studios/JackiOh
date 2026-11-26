@@ -762,7 +762,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         let mut state = game("chaos-cap", Some(hook(|_ctx| vec![cast_random_call_to_chaos()])));
         let mut events: Vec<GameEvent> = Vec::new();
         let at_cap = chaos_card(&mut state, false, Some(CALL_TO_CHAOS_CHAIN_CAP));
-        let before = clone_state(&state);
+        let before = state.clone();
 
         sink_events(&mut state, &mut events, |sink| {
             run(sink, cast_random_call_to_chaos(), Some(&at_cap), P1);
@@ -831,7 +831,7 @@ mod r28_call_to_chaos_s8_95_m3_t7 {
         sink_events(&mut second, &mut Vec::new(), |sink| {
             run(sink, call_to_chaos(CallToChaosArgs::default()), Some(&self_b), P1);
         });
-        assert_eq!(clone_state(&first), clone_state(&second));
+        assert_eq!(first.clone(), second.clone());
 
         let names: IndexSet<Option<String>> = (0..20)
             .map(|i| {

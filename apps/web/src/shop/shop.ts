@@ -206,7 +206,7 @@ export function buyableThere(cosmeticId: string, cardId: string, owned: OwnedCos
  * (R3335002, `earnedOnly`): the Jlorious card back and Starship, which only reaching Jlorious grants (R2755000,
  * R3335003), and a Fleet track reward (R3335001); nor a retired full art (R2725000) or augment
  * (R3015000), the account does not own, a per-card one for a card it owns where it is a next level (R3015004,
- * `buyableThere`; the server's `buy_chase`). `registry` defaults to the shipped one; a test passes its own.
+ * `buyableThere`; the server's `buy_chase_once`). `registry` defaults to the shipped one; a test passes its own.
  */
 export function chaseCandidates(
   owned: OwnedCosmeticsResponse,
