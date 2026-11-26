@@ -21554,6 +21554,8 @@
       "verdict_rounds": 0
     },
     "5121": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-26T21:38:54Z",
@@ -21567,8 +21569,11 @@
         "trail": "- said: I have launched the test command and am waiting for the Vitest run to complete.\n- said: \n- read_file: {\"EndLine\": 200, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5120/e2e/scripts/shard-specs.mjs\", \"StartLine\": 150}\n- said: \n- read_file: {\"EndLine\": 145, \"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5120/apps/web/src/net/e2e-smoke-selection.test.ts\", \"StartLine\": 110}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5120/apps/web/src/net/e2e-smoke-selection.test.ts\"}\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5120/apps/web/src/net/e2e-smoke-selection.test.ts\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5120 && pnpm --dir apps/web test src/net/e2e-smoke-selection.test.ts\n- said: I have launched the test command and am waiting for Vitest to complete.\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5120/e2e/scripts/shard-specs.mjs\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5120 && pnpm --dir apps/web test src/net/e2e-smoke-selection.test.ts\n- said: I have launched the test with `NEVER_ADDED` disabled to verify negative testing (regression detection), and will wait for it to complete.\n- said: \n- edit_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5120/e2e/scripts/shard-specs.mjs\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5120 && git diff\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5120 && git status\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5120 && pnpm --dir apps/web test src/net/e2e-smoke-selection.test.ts\n- said: I have launched the test command and am waiting for the final test run to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5120 && cargo fmt --check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5120 && cargo jackioh catalog check\n- said: I have launched `cargo jackioh catalog check` and am waiting for it to complete.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5120 && cargo jackioh patches check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5120 && cargo jackioh spec check\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5120 && git status -s\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5120/.bot-notes.md\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: follow-up to #5115 from the after-merge spot-check\"} --> ## Changes - In [apps/web/src/net/e2e-smoke-selection.test.ts](file:///home/agent-agy/actions-runner/_work/_temp/work/item-5120/apps/web/src/net/e2e-smoke-selection.test.ts): - Added [`reachedSpec\u2026"
       },
       "issue": 5120,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-26T22:13:09Z",
         "from_run": "45899579085",
         "gates": [
           {
@@ -21627,8 +21632,15 @@
         "source": "build",
         "until": "2026-11-26T22:41:12Z"
       },
+      "pending_request": false,
+      "provider": "agy",
       "queued_at": "2026-11-26T22:11:12Z",
+      "run_id": "pending:aef02ef6-1795731158",
+      "runs_on": "night-vm-agy",
       "self_check_findings": [],
+      "started_at": "2026-11-26T22:13:09Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "gemini",
@@ -21642,9 +21654,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T21:55:30Z",
+    "at": "2026-11-26T22:13:09Z",
     "url": "",
-    "what": "suggestions (client) on claude-7"
+    "what": "review #5121 on agy"
   },
   "last_sweep": {
     "at": "2026-11-26T22:02:15Z",
