@@ -24277,7 +24277,11 @@
       "issue": 5005,
       "kind": "review",
       "live": "reviewing",
-      "merge_owner": "claude-7",
+      "merge_owner_gave_up": {
+        "at": "2026-11-26T14:27:25Z",
+        "provider": "claude-7",
+        "sha": "7e226461bf4f4ff275272b9761caf32b86b48e7c"
+      },
       "pending_request": false,
       "provider": "claude-7",
       "queued_at": "2026-11-26T13:44:57Z",
