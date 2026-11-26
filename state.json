@@ -22570,15 +22570,8 @@
       "taken_asks": []
     },
     "5015": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45769743124",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-26T07:07:44Z",
-        "until": "2026-11-26T07:37:44Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -22590,10 +22583,9 @@
         "reason": "planned on opus",
         "trail": "at crates/cards/patches/pending/pip-says-performance-improvement-plan.json | head -40; grep -rl '\\\"visual\\\": true' crates/cards/patches | head\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5015; grep -rl '\\\"visual\\\"' crates/cards/patches | head -3; f=$(grep -rl '\\\"visual\\\"' crates/cards/patches | head -1); [ -n \\\"$f\\\" ] && python3 -c \\\"\u2026\n- tool error: Exit code 1\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5015; ls crates/cards/patches; grep -rn \\\"visual\\\" crates/tools/src/patches.rs | head -20\", \"description\": \"Inspect patches tool visual handling\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5015; git log --all --oneline -S'\\\"visual\\\": true' -- crates/cards/patches/pending | head -3; c=$(git log --oneline -S'\\\"visual\\\": true' -- crates/ca\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5015; grep -n \\\"CARD_VISUALS\\\" -A12 crates/tools/src/classify.rs | head -50\", \"description\": \"Check how classify detects card visual changes\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5015; grep -rln \\\"surfaces.css\\\\|#2109\\\\|surface scale\\\" spec | head; grep -rn \\\"2109\\\" spec/rulings/*.md | head -3 | cut -c1-200\", \"description\": \"C\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5015; git log --oneline -6 -- apps/web/src/palette.test.ts apps/web/src/surfaces.test.ts apps/web/src/typescale.test.ts 2>/dev/null; grep -n \\\"^ it(\\\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5015; grep -n -iE \\\"redos|super-linear|backtrack|regexp/\\\" eslint.config.js | head -20\", \"description\": \"Check eslint ReDoS rules\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5015/apps/web/src; grep -rnE \\\"999px|[^0-9](10|12|14|18|8|6)px;|50%\\\\)?;\\\" --include=*.test.ts --include=*.test.tsx . | grep -iE \\\"radius|999\\\" | hea\u2026\n- Bash: {\"command\": \"ls ~/.cache/Cypress 2>/dev/null | head; which chromium chromium-browser google-chrome 2>/dev/null; ls /home/runner/work/_temp/work/item-5015/node_modules/.bin/cypress 2>/dev/null\", \"desc\u2026\n- tool error: Exit code 2 /usr/bin/chromium /usr/bin/chromium-browser /usr/bin/google-chrome\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5015/apps/web/src; grep -rnE \\\"48% 48%|6% / 8%|7% / 5%|12% / 9%|10\\\\.7%|cqh\\\\)|2cqmin|0\\\\.2em|42% 58%|80% 0|0 100%\\\" --include=*.test.ts --include=*.\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5015/apps/web/src; grep -rn \\\"match.index\\\\|m.index\\\" --include=*.test.ts . | head -5; grep -n \\\"no-unnecessary-condition\\\\|strict-type-checked\\\\|rec\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5015/apps/web/src; grep -rnE \\\"\\\\.index\\\\b\\\" --include=*.test.ts . | grep -v \\\"index\\\\.ts\\\\|index\\\\.css\\\\|\\\\.index\\\\.\\\\|index\\\\.html\\\" | head -5; sed\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5015; git rev-parse origin/main 2>&1 | head -2; git rev-parse HEAD\", \"description\": \"Check origin/main availability\"}\n- said: Writing the draft now that the shape is clear.\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5015/.bot-plan.md\", \"content\": \"# Draft plan #5015 (planner notes)\\n\\nFound:\\n- 379 raw border-radius declarations in 56 sheets (apps/web/src/**/*.css\u2026\n- Bash: {\"command\": \"cat > /tmp/plan5015/retoken.mjs <<'EOF'\\n// Usage: node retoken.mjs <apps/web/src dir> (rewrites every *.css but surfaces.css in place)\\nimport { readdirSync, readFileSync, statSync, wri\u2026\n- Bash: {\"command\": \"cd /tmp/plan5015; diff -r /home/runner/work/_temp/work/item-5015/apps/web/src src -q | wc -l; diff -r /home/runner/work/_temp/work/item-5015/apps/web/src src | grep \\\"^>\\\" | grep -E \\\"va\u2026\n- Bash: {\"command\": \"cd /tmp/plan5015; node count.mjs src | awk -F'-> ' '{print $2}' | sort | uniq -c | head -3; node count.mjs src | grep -c \\\"\\\" ; node /tmp/pill.mjs src | tail -1; node -e '\\nconst fs=requ\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5015/apps/web/src; find . -name \\\"*.css\\\" -not -path \\\"*/test/*\\\" | wc -l; grep -n \\\"^## \\\\|surfaces\\\" ../README.md | head -5; cat ../package.json | \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5015/apps/web/src; grep -rn \\\"RadiusX\\\\|TopLeftRadius\\\\|getPropertyValue(\\\\\\\"--radius\\\\|radius-\\\" --include=*.ts --include=*.tsx . | grep -v \\\"\\\\.tes\u2026\n- Bash: {\"command\": \"cd /tmp/plan5015; diff -rq /home/runner/work/_temp/work/item-5015/apps/web/src src | sed -E 's#^Files /home/runner/work/_temp/work/item-5015/apps/web/src/([^ ]+) and.*#\\\\1#' | sort | tr \u2026\n- Bash: {\"command\": \"cd /tmp/plan5015; grep -n \\\"settings\\\" pills.txt; grep -c \\\"\\\" pills.txt; node count.mjs src | grep -E \\\"cards/cards.css|fx/fx.css|game/table.css\\\"\", \"description\": \"Confirm the settings\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5015/.bot-plan.md\", \"content\": \"## Goal\\n\\nEvery `border-radius` in `apps/web/src/**/*.css` is `0`, `inherit` or `var(--radius-*)`, and `surfaces.css`\u2026\n- Bash: {\"command\": \"wc -w -c /home/runner/work/_temp/work/item-5015/.bot-plan.md\", \"description\": \"Count plan words and characters\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport re\\np='.bot-plan.md'\\ns=open(p).read()\\nrep = [\\n(\\\"Do not touch: any `.ts`/`.tsx` other than `surfaces.test.ts` (`routes/dev/fx.tsx`'s inline `borderRadius: 8`\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-plan.md'\\ns=open(p).read()\\nrep=[\\n(\\\"- **Mapping.** Each raw value takes the token of its old rank (10px \\u2192 md 6px, 14\\u201324px \\u2192 lg 10px), not the \u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5015/.bot-plan.md\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5015/.bot-plan.md\", \"old_string\": \"It returns one entry each, in order, for `10px`, `50%`, `var(--radius-sm, 4px)`, `calc(var(--\u2026\n- said: ## Goal Every `border-radius` in `apps/web/src/**/*.css` is `0`, `inherit` or `var(--radius-*)`, and `surfaces.css` is the only file that writes a radius length. The corner scale is retuned for wood and brass: xs 2px, sm 4px, md 6px, lg 10px, and `xl` is removed. `--radius-pill` and `--radius-round\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-26T06:39:47Z",
       "owner_why": "it plans it",
@@ -22606,9 +22598,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-26T05:20:44Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45769743124",
+      "run_id": "pending:2d1388c7-1795676947",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-26T06:39:47Z",
+      "started_at": "2026-11-26T07:09:40Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -22843,9 +22835,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T07:08:53Z",
+    "at": "2026-11-26T07:09:40Z",
     "url": "",
-    "what": "build #5011 on claude-7"
+    "what": "build #5015 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-26T06:52:27Z",
