@@ -3724,6 +3724,9 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
     clearReadCache();
   });
 
+  /** R5033000: the shipped history the fixture's play versions began in, oldest first: a row's `firstShipped` is its place. */
+  const SHIPPED = ["v0.0.1", "v0.1.0", "v0.1.5", "v0.2.0"];
+
   /** A play version as `GET /api/stats/versions` sends it: no games and no figure unless given. */
   function playVersion(card: string, name: string, first: string, live: boolean, figures: Record<string, unknown> = {}) {
     return {
@@ -3734,6 +3737,7 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
       last: live ? "v0.2.0" : first,
       live,
       patches: 1,
+      firstShipped: SHIPPED.indexOf(first),
       games: 0,
       adjustedWinRate: null,
       adjustedLow: null,
@@ -3960,7 +3964,7 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
     render(<StatsRoute />);
     const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
     const select = screen.getByTestId(statsTestid.sortSelect);
-    expect(within(select).getAllByRole("option").map((option) => option.getAttribute("value"))).toEqual(["name", "games", "tier", "adjustedWinRate"]);
+    expect(within(select).getAllByRole("option").map((option) => option.getAttribute("value"))).toEqual(["name", "games", "tier", "adjustedWinRate", "date"]);
     expect(select).toHaveValue("adjustedWinRate");
 
     fireEvent.change(select, { target: { value: "name" } });
@@ -3985,6 +3989,109 @@ describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
     expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("adjustedWinRate");
     expect(within(again).getByRole("columnheader", { name: /^Adjusted/ })).toHaveAttribute("aria-sort", "descending");
     expect(rowsOf(again).ids).toEqual(["core-001", "core-003", "core-002"]);
+  });
+
+  it("R5033000 Date sorts Running newest first, then oldest first, by the select and by the Since header", async () => {
+    at("/stats?tab=experimental");
+    serveRunning();
+    render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    const select = screen.getByTestId(statsTestid.sortSelect);
+    // The first press sorts newest first, the next oldest first.
+    fireEvent.click(within(table).getByRole("columnheader", { name: /^Since/ }));
+    expect(within(table).getByRole("columnheader", { name: /^Since/ })).toHaveAttribute("aria-sort", "descending");
+    expect(select).toHaveValue("date");
+    expect(rowsOf(table).ids).toEqual(["core-003", "core-001", "core-002"]);
+    await waitFor(() => expect(address().get("sort")).toBe("date"), SLOW);
+    fireEvent.click(within(table).getByRole("columnheader", { name: /^Since/ }));
+    expect(within(table).getByRole("columnheader", { name: /^Since/ })).toHaveAttribute("aria-sort", "ascending");
+    expect(rowsOf(table).ids).toEqual(["core-002", "core-001", "core-003"]);
+    await waitFor(() => expect(address().get("dir")).toBe("asc"), SLOW);
+    // The select sets it too, newest first.
+    fireEvent.change(select, { target: { value: "name" } });
+    fireEvent.change(select, { target: { value: "date" } });
+    expect(rowsOf(table).ids).toEqual(["core-003", "core-001", "core-002"]);
+  });
+
+  it("R5033000 a row with no position sorts last either way, and ties keep the server's order", async () => {
+    // core-003 shares core-001's position, and core-002 is a row from a server deployed before the field.
+    const versions = VERSIONS.versions.map((row) => {
+      if (row.id === "core-003~v0.2.0") return { ...row, firstShipped: 2 };
+      if (row.id === "core-002~v0.0.1") return { ...row, firstShipped: undefined };
+      return row;
+    });
+    at("/stats?tab=experimental&sort=date");
+    serveRunning(() => json({ ...VERSIONS, versions }));
+    render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    expect(rowsOf(table).ids).toEqual(["core-001", "core-003", "core-002"]);
+    // Tied rows keep one order both ways: the Cards tab's Adjusted, descending, whatever the Date sort's direction.
+    fireEvent.click(screen.getByTestId(statsTestid.sortDir));
+    expect(rowsOf(table).ids).toEqual(["core-001", "core-003", "core-002"]);
+    cleanup();
+
+    // A null position is no position either (the address still asks for oldest first).
+    serveRunning(() => json({ ...VERSIONS, versions: versions.map((row) => (row.firstShipped === undefined ? { ...row, firstShipped: null } : row)) }));
+    render(<StatsRoute />);
+    const nulled = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    expect(rowsOf(nulled).ids).toEqual(["core-001", "core-003", "core-002"]);
+  });
+
+  it("R5033000 Versions sorts each row by its own first version", async () => {
+    at("/stats?tab=experimental&experimental=versions");
+    serveRunning();
+    render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.versionsTable, undefined, SLOW);
+    fireEvent.click(within(table).getByRole("columnheader", { name: /^Since/ }));
+    const order = (): (string | null)[] => [...table.querySelectorAll("tbody tr")].map((row) => row.getAttribute("data-version-id"));
+    expect(order()).toEqual(["core-003~v0.2.0", "core-001~v0.1.5", "core-001~v0.1.0", "core-002~v0.0.1"]);
+    fireEvent.click(within(table).getByRole("columnheader", { name: /^Since/ }));
+    expect(order()).toEqual(["core-002~v0.0.1", "core-001~v0.1.0", "core-001~v0.1.5", "core-003~v0.2.0"]);
+  });
+
+  it("R5033000 ?sort=date restores the sort", async () => {
+    at("/stats?tab=experimental&sort=date");
+    serveRunning();
+    render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("date");
+    expect(within(table).getByRole("columnheader", { name: /^Since/ })).toHaveAttribute("aria-sort", "descending");
+    expect(rowsOf(table).ids).toEqual(["core-003", "core-001", "core-002"]);
+    cleanup();
+
+    at("/stats?tab=experimental&sort=date&dir=asc");
+    render(<StatsRoute />);
+    const oldest = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    expect(within(oldest).getByRole("columnheader", { name: /^Since/ })).toHaveAttribute("aria-sort", "ascending");
+    expect(rowsOf(oldest).ids).toEqual(["core-002", "core-001", "core-003"]);
+  });
+
+  it("R5033000 Cards and Tokens read a Date sort as Adjusted, in its direction", async () => {
+    at("/stats?tab=experimental&sort=date&dir=asc");
+    serveRunning();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    const optionsOf = (): (string | null)[] =>
+      within(screen.getByTestId(statsTestid.sortSelect)).getAllByRole("option").map((option) => option.getAttribute("value"));
+
+    fireEvent.click(screen.getByTestId(statsTestid.tabCards));
+    const cards = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("adjustedWinRate");
+    expect(optionsOf()).not.toContain("date");
+    expect(within(cards).getByRole("columnheader", { name: /^Adjusted/ })).toHaveAttribute("aria-sort", "ascending");
+    expect(address().get("sort")).toBe("date");
+
+    fireEvent.click(screen.getByTestId(statsTestid.tabTokens));
+    await waitFor(() => expect(screen.getByTestId(statsTestid.tabTokens)).toHaveAttribute("aria-selected", "true"), SLOW);
+    expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("adjustedWinRate");
+    expect(optionsOf()).not.toContain("date");
+    expect(address().get("sort")).toBe("date");
+
+    // The state kept Date: Experimental still sorts by it.
+    fireEvent.click(screen.getByTestId(statsTestid.tabExperimental));
+    const again = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("date");
+    expect(rowsOf(again).ids).toEqual(["core-002", "core-001", "core-003"]);
   });
 
   it("R4678001 Running's Grid and Show 95% ranges are the page's: each card's tier, Adjusted, games and Since, its range and tier fit read against the play versions' band", async () => {
