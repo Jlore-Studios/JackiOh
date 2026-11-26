@@ -21652,6 +21652,13 @@
     "4992": {
       "action": "plan",
       "asks": [],
+      "difficulty_by": {
+        "at": "2026-11-26T03:06:09Z",
+        "difficulty": "medium",
+        "provider": "claude-7",
+        "tier": "medium",
+        "why": "none of the five hard lines holds: the change is two card scripts, a kept script, a ruling note, a fragment and about 10 files, with no engine, AI, cross-crate or migration change"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
