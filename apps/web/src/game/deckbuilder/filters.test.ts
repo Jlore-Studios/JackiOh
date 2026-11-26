@@ -1068,14 +1068,18 @@ describe("the chips follow what ships (R1380, R1381)", () => {
     expect([...shippedTags(FILTER_TAGS, [])]).toEqual([]);
   });
 
-  it("R1381 both lists of chips are their full list less the tags no shipped card carries", () => {
-    const carried = new Set(
-      Object.values(CORE_CATALOG)
-        .filter((d) => setShips(d.set) && d.id !== GLITCH_DEF_ID)
-        .flatMap((d) => d.tags),
-    );
+  it("R1381 both lists of chips are their full list less the tags no card they show carries", () => {
+    const carriedBy = (shows: (set: SetName) => boolean): Set<Tag> =>
+      new Set(
+        Object.values(CORE_CATALOG)
+          .filter((d) => shows(d.set) && d.id !== GLITCH_DEF_ID)
+          .flatMap((d) => d.tags),
+      );
+    const carried = carriedBy(setShips);
     expect([...DECK_CHIP_TAGS]).toEqual(FILTER_TAGS.filter((tag) => carried.has(tag)));
-    expect([...ALMANAC_CHIP_TAGS]).toEqual(ALMANAC_TAGS.filter((tag) => carried.has(tag)));
+    // R5131000: the almanac's are the tags of every set it shows, the Infinite Assault's among them.
+    const shown = carriedBy(almanacShows);
+    expect([...ALMANAC_CHIP_TAGS]).toEqual(ALMANAC_TAGS.filter((tag) => shown.has(tag)));
     // Wincon is in the full list now and in the chips only once a shipped card carries it.
     expect(FILTER_TAGS).toContain("Wincon");
     expect(DECK_CHIP_TAGS.includes("Wincon")).toBe(carried.has("Wincon"));
