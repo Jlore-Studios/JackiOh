@@ -331,7 +331,10 @@ deeper levels, the lethal solver and the reply try the first `AI_SEARCH.zone_var
 drops an open line whose position an earlier one reached (two orders of the same moves into the same lanes
 are one position). A position also holds the last Spell played while a card that copies it (C #57 Echo) is
 in the seat's hand or graveyard, and each unit's Churnwalker chain; its units' lanes include a Dormant card's
-lane and an animated card's home zone (R4808000). A line that differs from an earlier one only in where its cards stand is a lane variant
+lane and an animated card's home zone (R4808000). A card off the field signs its buffs and granted
+keywords, each only when it holds some and the keywords sorted (`grants_signature`,
+`AI_SEARCH.hand_grants_signed`), so which hand card an S+ #100 Plesiosize or an S+ #23 GIGA-ify went on is
+part of the position, for the beam, the lethal solver and the concession check's walk (R4793000). A line that differs from an earlier one only in where its cards stand is a lane variant
 (#1797; R4132000: a backrow card's lane, and which side of a standing unit a new one goes, included, read off
 `lane_free_signature`, which sorts each side's units and backrow cards and leaves out its empty zones): the
 evaluation reads no lane but through a unit's stats, which that signature keeps, so it takes no place in the

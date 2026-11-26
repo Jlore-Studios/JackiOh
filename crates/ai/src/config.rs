@@ -159,6 +159,11 @@ pub struct AiSearch {
     /// backrow cards stand (left or right of a standing unit alike, R4132000) is a lane variant, at most
     /// this many of a position; it is closed beside the first (#1797).
     pub zone_variants: i32,
+    /// R4793000: `search_signature` signs a card's buffs and granted keywords off the field (a hand
+    /// card's from S+ #100 Plesiosize or S+ #23 GIGA-ify), each only when it holds some, so the beam,
+    /// the lethal solver and the concession check's walk tell apart which hand card a buff or a grant
+    /// went on. false signs neither, as before.
+    pub hand_grants_signed: bool,
     /// #1759, R1759000, R2021000: the stand-downs (a switch to Defense Position of a unit an enemy unit
     /// that could attack it next turn would kill and survive) `expand` keeps past its `width`, beside
     /// endTurn: switches are the move order's last tier, so below the root a full board cut every one. A
@@ -259,6 +264,10 @@ pub struct AiSearch {
 
 pub const AI_SEARCH: AiSearch = AiSearch {
     zone_variants: 2,
+    // R4793000: on. Its fork screen, on improve-dev against the control at d50a0ce2d2, is still being
+    // played as this is written; its scene tests (position_model.rs's and unstoppable_lethal.rs's
+    // r4793000_ tests) hold it.
+    hand_grants_signed: true,
     position_switches: 2,
     discount_lines: 1,
     discount_def_ids: &["infiniteassault-072"],
