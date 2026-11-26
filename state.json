@@ -45701,7 +45701,8 @@
       "2026-11-26T19:40:19Z,claude-8,stream,call,45884159705,29,2026-11-26T21:30:00Z,,,allowed,85,,"
     ],
     "runs": [
-      "2026-11-26T20:27:07Z,45888452153,agy,gemini-3.8-flash-high,review,5115,medium,approved,,20.9,378185,24873,0,,13,22,52,54,3.1,,none,,1"
+      "2026-11-26T20:27:07Z,45888452153,agy,gemini-3.8-flash-high,review,5115,medium,approved,,20.9,378185,24873,0,,13,22,52,54,3.1,,none,,1",
+      "2026-11-26T20:29:30Z,45884159705,claude-8,sonnet+opus,build,5107,medium,built,,12.6,21,7245,541446,0.2953,28,29,,,15.8,claude-3,fresh,other,1"
     ]
   },
   "version": 1
