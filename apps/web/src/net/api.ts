@@ -1953,6 +1953,8 @@ export type PublicPlayVersion = {
   live: boolean;
   /** R4678001: the patches its versions reach (the patch bar's windows); absent from a server deployed before it. */
   patches?: number;
+  /** R5035000: its iteration's label, "v1", "v1b", "v2", the server's count over its card's history; absent from a server deployed before it. */
+  iteration?: string;
   games: number;
   adjustedWinRate: number | null;
   adjustedLow: number | null;

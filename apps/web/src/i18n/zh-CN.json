@@ -998,6 +998,8 @@
   "Since": "始于",
   "across 1 patch": "跨 1 个版本",
   "across {n} patches": "跨 {n} 个版本",
+  "Iteration": "迭代",
+  "v1 is the card's first version. A new number (v2, v3) means what the card shows changed: its name, cost, text, keywords or stats. A new letter (v1b, v1c) means only how it plays changed.": "v1 是该卡牌的首个版本。新的数字（v2、v3）表示卡面内容有改动：名称、费用、文本、关键词或数值。新的字母（v1b、v1c）表示仅玩法有改动。",
   "Experimental views": "实验视图",
   "Major patch running": "大版本累计",
   "Each card's current version, over the patches since the newest major or since it last changed, whichever is later. Every row starts again at each major, so it has too few games for a tier until games accrue.": "每张卡牌的当前版本，涵盖最新大版本或其上次改动（取较晚者）以来的各版本。每逢大版本，每一行都会重新开始，在积累足够对局前没有评级。",

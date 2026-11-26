@@ -8,19 +8,21 @@ export const statsTestid = {
   tabSets: "stats-tab-sets",
   /** R4279001: the Tokens tab, the cards made during a game. */
   tabTokens: "stats-tab-tokens",
-  /** R4678000: the Experimental tab, the line above its panel, and R4678001 its Running table, grid and Since. */
+  /** R4678000: the Experimental tab, the line above its panel, and R4678001 its Running table, grid and Since; R5035000 its Iteration. */
   tabExperimental: "stats-tab-experimental",
   experimentalLine: "stats-experimental-line",
   runningTable: "stats-running-table",
   runningGrid: "stats-running-grid",
   runningSince: "stats-running-since",
-  /** R4680000: the tab's Segmented of views (R5040000: Major patch running, Historical, Versions), Versions' table, grid, span and Past versions only. */
+  runningIteration: "stats-running-iteration",
+  /** R4680000: the tab's Segmented of views (R5040000: Major patch running, Historical, Versions), Versions' table, grid, span and Past versions only; R5035000 its Iteration. */
   experimentalRunning: "stats-experimental-running",
   experimentalHistorical: "stats-experimental-historical",
   experimentalVersions: "stats-experimental-versions",
   versionsTable: "stats-versions-table",
   versionsGrid: "stats-versions-grid",
   versionsSpan: "stats-versions-span",
+  versionsIteration: "stats-versions-iteration",
   versionsPastOnly: "stats-versions-past-only",
   /** R4681001: the Experimental tab's Hall of Fame view: its four sections, each entry's faces and balance line. */
   experimentalHall: "stats-experimental-hall",

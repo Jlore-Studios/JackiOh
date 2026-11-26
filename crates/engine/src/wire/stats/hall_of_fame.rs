@@ -188,6 +188,7 @@ mod tests {
             first: first.to_string(),
             last: first.to_string(),
             live,
+            iteration: "v1".to_string(),
             patches: 1,
             games,
             adjusted_win_rate: Some(rate),
