@@ -21659,10 +21659,14 @@
     "what": "revise #5094 on claude-3"
   },
   "last_sweep": {
-    "at": "2026-11-26T22:02:15Z",
+    "at": "2026-11-26T22:10:01Z",
     "notes": [
-      "delivered suggest on claude-7 (run 45901410079): interrupted",
-      "delivered suggest on claude-7 (run 45901333995): interrupted"
+      "delivered build #5120 on agy (run 45899579085): built",
+      "delivered revise #5094 on claude-3 (run 45888536906): approved",
+      "started review #5121 on agy (run 45903356595)",
+      "started revise #5094 on claude-3 (run 45903429404)",
+      "nothing more to start: nothing is queued",
+      "pruned 2 plan file(s) older than 7 days"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22368,7 +22372,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T22:02:15Z",
+  "loop_tick": "2026-11-26T22:10:01Z",
   "machine_disk": {
     "issue": null,
     "reading": {
