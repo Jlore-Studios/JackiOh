@@ -21221,17 +21221,18 @@
       "merge_owner": "muse",
       "merged": true,
       "pending_request": false,
-      "provider": "muse",
+      "provider": "claude-4",
       "question": "",
       "queued_at": "2026-11-26T00:05:55Z",
       "requested_by": "jgoetzmann-bot",
       "round_tier": "medium",
-      "run_id": "45726405664",
-      "runs_on": "night-vm-muse",
+      "run_id": "pending:851486a0-1795655182",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 575,
-      "started_at": "2026-11-26T00:07:05Z",
+      "started_at": "2026-11-26T01:06:53Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 1,
@@ -21571,9 +21572,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T01:06:09Z",
+    "at": "2026-11-26T01:06:53Z",
     "url": "",
-    "what": "build #4981 on muse"
+    "what": "spot-check #4960 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-26T00:51:27Z",
@@ -44218,7 +44219,15 @@
         "n": 575,
         "pr": 4960,
         "queued_at": "2026-11-26T01:04:06Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "run_id": "pending:851486a0-1795655182",
         "sha": "40d6f5966458dbb2c93c823f2749dce3d53c729e",
+        "started_at": "2026-11-26T01:06:53Z",
         "status": "queued",
         "title": "Patch: route six held-set hooks through the engine's read helpers instead of GameState fields",
         "tries": 0
