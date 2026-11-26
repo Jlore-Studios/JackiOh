@@ -10,9 +10,9 @@ its live games.
 
 ## How it runs
 
-On two of GitHub's runners since #3740, `gather.yml` plays without a pause, `stats --series gather` on
-the newest version on `main`, game `n` of run `r` being `gather:<(r - 1) × 100,000 + n>` and each of a
-run's two parts playing its own half of that range, while the repository variable `GATHER_ON_PATCH` is
+On GitHub's runners since #3740 (two, five since 2026-11-26), `gather.yml` plays without a pause,
+`stats --series gather` on the newest version on `main`, game `n` of run `r` being
+`gather:<(r - 1) × 100,000 + n>` and each of a run's five parts playing its own fifth of that range, while the repository variable `GATHER_ON_PATCH` is
 `true`. Each part plays five hours (`GATHER_HOURS`) and files its games as totals only into both
 projects' databases 400 at a time as they finish (`GATHER_FILE_GAMES`, about an hour), through
 `training/file-records.sh` (R1976000, R1933001), so the newest version's figures grow every hour; each
