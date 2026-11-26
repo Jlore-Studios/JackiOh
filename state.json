@@ -21581,6 +21581,8 @@
       "taken_asks": []
     },
     "4993": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-26T01:25:36Z",
@@ -21594,8 +21596,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -30; grep -n \\\"fuzz\\\" scripts/ci-scope.sh | head -20; grep -n \\\"fuzz-corpus\\\" apps/web/src/net/ci-scope.test.ts; ls crates/tools/perf-corpus | head -3\"}\n- Bash: {\"command\": \"sed -n 170,178p scripts/ci-scope.sh; sed -n 476,484p apps/web/src/net/ci-scope.test.ts; ls crates/tools/perf-corpus/plain-1*\"}\n- Bash: {\"command\": \"python3 - <<'E'\\np='scripts/ci-scope.sh'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"and the fuzz's records (crates/tools/fuzz-corpus/), so a\\n# change to the fuzz, the classifier or another co\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: leave e2e off in ci-scope for crates/tools/perf-corpus\"} --> Changes under `crates/tools/perf-corpus/` alone now leave `e2e` off in `scripts/ci-scope.sh`. They still turn on `full` and `rust_tools_wasm`. **What changed** - **`scripts/ci-scope.sh`:** `cr\u2026"
       },
       "issue": 4969,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-26T02:23:40Z",
         "from_run": "45735693269",
         "gates": [
           {
@@ -21687,7 +21692,11 @@
         "source": "build",
         "until": "2026-11-26T02:52:29Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-26T02:22:29Z",
+      "run_id": "pending:fa6238e0-1795659790",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -21706,6 +21715,9 @@
         "provider": "claude-8",
         "run": "45735693269"
       },
+      "started_at": "2026-11-26T02:23:40Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -21719,9 +21731,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T02:05:17Z",
+    "at": "2026-11-26T02:23:40Z",
     "url": "",
-    "what": "build #4982 on claude-4"
+    "what": "review #4993 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-26T02:12:23Z",
