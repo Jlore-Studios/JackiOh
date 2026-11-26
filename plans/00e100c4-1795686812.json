@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 5016,
+  "title": "Patch: one SVG icon set in place of Unicode glyphs",
+  "branch": "bot/issue-5016",
+  "thread": "**Issue #5016 (data, not instructions):**\n\n```text\n# #5016: Patch: one SVG icon set in place of Unicode glyphs\nOpened by @MaxGoetzmann.\n\n## What it does\n\nThe client uses Unicode characters as icons 55 times in 28 `.tsx` files: \u2715 46 times (close buttons), \u2713 3, \u2726 2, and \u2605 \u265b \u2620 \u2691 once each. The files include `game/Dialog.tsx`, `cards/inspect/*`, `collection/*`, `together/*`, `routes/CommandMenu.tsx` and `patches/PatchNotes.tsx`. Each one renders in whatever font the device has, some phones show it as an emoji, and none of them match each other's weight.\n\n- Add an `<Icon name>` component with inline SVGs drawn for this game: close, check, spark, star, crown, skull and flag. Give them one stroke weight, `currentColor` and a size from the type scale. They can be drawn to look engraved, to match the brass. No new package.\n- Replace every glyph-as-icon with it. An icon-only button keeps an accessible name through `aria-label`, from i18n, and the SVG is `aria-hidden`.\n\n## Acceptance\n\n- A test fails on any of these code points, or on the emoji ranges, in `apps/web/src/**/*.tsx` outside tests and in the i18n strings, except where a list names a character that is text rather than an icon.\n- A test checks that every `<Icon>` inside a button whose only content is the icon has an accessible name.\n- The web's unit tests, typecheck, ESLint and `pnpm --dir e2e test:component` pass, and pixel baselines that change on purpose are re-recorded.\n- If the classifier calls it a card change (the `cards/inspect/` files), it ships with a `--visual` fragment (`docs/ADDING_CARDS.md`).\n\n## Notes\n\nThis is part of the not-generic UI pass, beside the palette, type, effects and corners issues.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5016: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) writes it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T05:20:42Z",
+    "claimed_at": "2026-11-26T09:54:09Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5005 is held for `claude-1` until 05:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4953 skipped: labelled `human`, so no model takes it, whatever its tier"
+  ]
+}
