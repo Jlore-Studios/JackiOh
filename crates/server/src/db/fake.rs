@@ -38,19 +38,19 @@ use crate::config::{
     TERMS_VERSION, USERNAME_DEFAULT_BASE,
 };
 use crate::db::store::{
-    ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, BotState, CodeAttempt, CodeAttemptResult,
-    CollectionEntry, CollectionGrant, ConsentRow, Db, DeckVersion, DeckVersionOutcome, EmoteEventRow,
-    FavoriteCard, FoldedRecords, FrozenTrio, FunStats, GameRecordQuery, InviteCluster, InviteCode,
-    LastBoardEntry, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks,
-    MatchPhase, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PlayTelemetry,
-    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
-    PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
-    ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult,
-    ReplayListRow, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck,
-    SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
+    ActionTimingRow, BatchFolded, BotDeck, BotRating, BotRow, BotState, CardRows, CodeAttempt,
+    CodeAttemptResult, CollectionEntry, CollectionGrant, ConsentRow, Db, DeckVersion, DeckVersionOutcome,
+    EmoteEventRow, FavoriteCard, FoldedRecords, FrozenTrio, FunStats, GameRecordQuery, InviteCluster,
+    InviteCode, LastBoardEntry, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow,
+    MatchClocks, MatchPhase, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot,
+    PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
+    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
+    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput,
+    RedeemResult, ReplayListRow, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room,
+    SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
     StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
     TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord,
-    UpsertOutcome, UsernameClaim, UsernameClaimOutcome, deck_version_step,
+    UpsertOutcome, UsernameClaim, UsernameClaimOutcome, deck_version_step, file_card_totals,
 };
 use crate::ranked::glicko2::Glicko;
 use crate::ranked::ladder::{Ladder, SeasonRank};
@@ -2748,17 +2748,25 @@ pub fn game_records_unfiled(
 }
 
 pub fn stats_totals_load(f: &mut FakeTx<'_>, query: &StatsTotalsQuery) -> Result<StatsTotals, StoreError> {
-    call(f, "statsTotals.load")?;
-    if query.patch.is_none() {
+    // R4965000: a read of the records and game totals alone, one row per key, is no load of the card
+    // totals R3067000 counts.
+    if query.cards == CardRows::None {
+        call(f, "statsTotals.loadRecords")?;
+    } else {
+        call(f, "statsTotals.load")?;
+    }
+    if query.patch.is_none() && query.cards != CardRows::None {
         // R3067000: every patch's totals, counted apart from one patch's load.
         call(f, "statsTotals.loadAllPatches")?;
     }
-    Ok(f.tables().stats_totals.select(
+    let totals = f.tables().stats_totals.select(
         &sources_of(query.source),
         query.mode,
         query.patch.as_deref(),
         query.drills,
-    ))
+    );
+    // R4965000: the card totals the query keeps, under the patch it files each under.
+    Ok(file_card_totals(totals, &query.cards))
 }
 
 /// R1044000 (R1454, R750000): the patch's live Best-of-1 human decklists, first held first.

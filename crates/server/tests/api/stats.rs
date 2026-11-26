@@ -2212,8 +2212,23 @@ mod r4677000_patches_by_reader {
         let first = history[0].version.clone();
         let current = current_patch();
         let gate = count(PUBLIC_STATS_MIN_LIVE_GAMES);
+        // R4965000: the window just past anyone's patches, whose totals the kept snapshot still holds as
+        // filed, where the first version's are folded by play version.
+        let windows_with = |played: &[&str]| {
+            jackioh_engine::wire::stats::patch_windows(
+                &history,
+                |version| i64::from(played.contains(&version)),
+                |version| i64::from(played.contains(&version)),
+            )
+        };
+        let before = windows_with(&[first.as_str(), current.as_str()]);
+        let beyond = before[public_patch_count(&before)].versions[0].clone();
+        let after = windows_with(&[first.as_str(), beyond.as_str(), current.as_str()]);
+        assert_eq!(after[public_patch_count(&after)].versions[0], beyond);
+        assert_ne!(beyond, first);
         let app = test_app().await;
         let mut records: Vec<Value> = (0..gate).map(|n| live_on(format!("first-{n}"), &first)).collect();
+        records.extend((0..gate).map(|n| live_on(format!("beyond-{n}"), &beyond)));
         records.extend((0..gate).map(|n| live_on(format!("now-{n}"), &current)));
         insert_records(&app, records).await;
         let patches = |data: &Value| -> Vec<Value> {
@@ -2224,8 +2239,10 @@ mod r4677000_patches_by_reader {
                 .map(|row| row["patch"].clone())
                 .collect()
         };
+        // R4965000: a dev account's list stops at the patches the snapshot holds as filed, so the first
+        // version's patch is a `?patch=` away.
         let (_, _, dev) = get_as(&app, "/api/stats/cards/core-001", Some(DEV_TOKEN)).await;
-        assert_eq!(patches(&dev), vec![json!(first), json!(current)]);
+        assert_eq!(patches(&dev), vec![json!(beyond), json!(current)]);
         for token in [None, Some(USER_TOKEN)] {
             let (status, _, anyone) = get_as(&app, "/api/stats/cards/core-001", token).await;
             assert_eq!(status, 200);
@@ -4897,5 +4914,243 @@ mod r4679000_outputs {
         assert_eq!(school["adjustedWinRate"], Value::Null);
         assert_eq!(school["tier"], Value::Null);
         assert_eq!(rows[3]["offered"], json!(20));
+    }
+}
+
+mod r4965000_bounded_snapshot {
+    use super::*;
+    use indexmap::{IndexMap, IndexSet};
+    use jackioh_cards::{deck_play_versions, patch_history};
+    use jackioh_engine::GameRecord;
+    use jackioh_engine::wire::stats::{
+        GameMode, ModeFilter, PatchStep, PatchWindow, PilotFilter, PlayVersion, PlayVersionQuery,
+        StatsTotals, WindowQuery, WindowRequest, patch_windows, play_version_figures, windowed_card_stats,
+    };
+    use jackioh_server::api::stats::{public_patch_count, reach_of, snapshot_filing};
+    use jackioh_server::config::CARD_STATS_MIN_SAMPLE;
+    use jackioh_server::db::store::{CardFiling, CardRows, file_card_totals};
+
+    const MODES: [&str; 3] = ["bo1", "bo3", "random"];
+
+    /// A game on `patch` whose seats hold `p1` and `p2`, of the source, mode and pilots `n` turns through.
+    fn game_on(n: usize, patch: &str, p1: &[&str], p2: &[&str]) -> GameRecord {
+        let (source, pilots): (&'static str, [&'static str; 2]) = match n % 3 {
+            0 => ("dev", ["ai", "ai"]),
+            1 => ("live", ["human", "human"]),
+            _ => ("live", ["human", "ai"]),
+        };
+        let mut record = make_game_record(
+            &format!("r4965000-{n}"),
+            RecordOptions {
+                source: Some(source),
+                mode: Some(MODES[n % MODES.len()]),
+                patch: Some(patch.to_string()),
+                pilots: Some(pilots),
+                winner: Some(if n.is_multiple_of(2) { "p1" } else { "p2" }),
+                ..RecordOptions::default()
+            },
+        );
+        record["game"]["seats"]["p1"] = seat(p1, p1, &p1[..2], None, None);
+        record["game"]["seats"]["p2"] = seat(p2, p2, &p2[..2], None, None);
+        from(record)
+    }
+
+    /// Every shipped version's totals: two games on each, of every source, mode and pilot by turns, on
+    /// decks of the deck cards the first version shipped (a card a version did not hold counts too, and
+    /// is held by no play version there), with a card no deck can hold among them.
+    fn every_version_totals(history: &[PatchStep], plays: &[PlayVersion]) -> StatsTotals {
+        let first = history[0].version.as_str();
+        let mut cards: Vec<&str> = plays
+            .iter()
+            .filter(|play| play.first() == first)
+            .map(|play| play.card.as_str())
+            .collect();
+        cards.dedup();
+        assert!(
+            cards.len() >= 8,
+            "{} deck cards from the first version",
+            cards.len()
+        );
+        let mut totals = StatsTotals::default();
+        for (at, step) in history.iter().enumerate() {
+            for turn in 0..2 {
+                let n = at * 2 + turn;
+                let p1 = [cards[n % 4], cards[4], "r4965000-no-deck-card", cards[5]];
+                let p2 = [cards[6], cards[7], cards[(n + 1) % 4], cards[5]];
+                totals.fold(&game_on(n, &step.version, &p1, &p2), false);
+            }
+        }
+        totals
+    }
+
+    fn windows_of(history: &[PatchStep], totals: &StatsTotals) -> Vec<PatchWindow> {
+        patch_windows(
+            history,
+            |version| totals.games(version),
+            |version| totals.live_games(version),
+        )
+    }
+
+    /// Every figure a play version's table sends is what the whole totals give, under every pilot and
+    /// match type.
+    fn same_play_versions(
+        filed: &StatsTotals,
+        whole: &StatsTotals,
+        history: &[PatchStep],
+        plays: &[PlayVersion],
+    ) {
+        for live_pilot in [PilotFilter::Unified, PilotFilter::Human, PilotFilter::Ai] {
+            for mode in [
+                ModeFilter::All,
+                ModeFilter::Only(GameMode::Bo1),
+                ModeFilter::Only(GameMode::Bo3),
+                ModeFilter::Only(GameMode::Random),
+                ModeFilter::Constructed,
+            ] {
+                let query = PlayVersionQuery {
+                    versions: plays,
+                    history,
+                    live_pilot,
+                    mode,
+                    min_sample: CARD_STATS_MIN_SAMPLE,
+                };
+                assert_eq!(
+                    play_version_figures(filed, &query),
+                    play_version_figures(whole, &query),
+                    "{live_pilot:?} {mode:?}"
+                );
+            }
+        }
+    }
+
+    /// Every card's window at `at` is what the whole totals give, under every pilot and match type.
+    fn same_windows(filed: &StatsTotals, whole: &StatsTotals, history: &[PatchStep], at: &str) {
+        for live_pilot in [PilotFilter::Unified, PilotFilter::Human] {
+            for mode in [ModeFilter::All, ModeFilter::Only(GameMode::Bo3)] {
+                let query = WindowQuery {
+                    history,
+                    at,
+                    live_pilot,
+                    mode,
+                    request: WindowRequest::Gated,
+                };
+                assert_eq!(
+                    windowed_card_stats(filed, &query),
+                    windowed_card_stats(whole, &query),
+                    "{at} {live_pilot:?} {mode:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn r4965000_the_snapshot_keeps_its_reach_as_filed_and_one_total_per_play_version_before_it() {
+        let history = patch_history();
+        let plays = deck_play_versions();
+        let whole = every_version_totals(&history, &plays);
+        let filing = snapshot_filing(&history, &whole, &plays, &current_patch());
+        let filed = file_card_totals(whole.clone(), &CardRows::Filed(filing.clone()));
+
+        // Its reach: the patches anyone may read and the window before the oldest of them.
+        let windows = windows_of(&history, &whole);
+        let public = public_patch_count(&windows);
+        assert!(public + 1 < windows.len(), "patches older than the reach");
+        assert_eq!(
+            filing.versions.get_index_of(&windows[public].versions[0]),
+            Some(filing.kept_from)
+        );
+        assert_eq!(filing.kept_to, history.len() - 1);
+        let place = |patch: &str| filing.versions.get_index_of(patch).unwrap_or(usize::MAX);
+
+        // From there on every total is kept as filed.
+        for (key, cards) in &whole.cards {
+            if place(&key.patch) >= filing.kept_from {
+                assert_eq!(filed.cards.get(key), Some(cards), "{key:?}");
+            }
+        }
+
+        // Before it, a deck card's totals are one per play version and key, under the play version's
+        // first version, and no other card's are kept.
+        let firsts: IndexSet<(&str, &str)> = plays
+            .iter()
+            .map(|play| (play.card.as_str(), play.first()))
+            .collect();
+        let rows_before = |totals: &StatsTotals| -> usize {
+            totals
+                .cards
+                .iter()
+                .filter(|(key, _)| place(&key.patch) < filing.kept_from)
+                .map(|(_, cards)| cards.len())
+                .sum()
+        };
+        for (key, cards) in &filed.cards {
+            if place(&key.patch) < filing.kept_from {
+                for card in cards.keys() {
+                    assert!(
+                        firsts.contains(&(card.as_str(), key.patch.as_str())),
+                        "{card} under {key:?}"
+                    );
+                }
+            }
+        }
+        let keys: IndexSet<_> = whole
+            .cards
+            .keys()
+            .map(|key| (key.source, key.mode, key.pilot))
+            .collect();
+        let play_versions_before = plays
+            .iter()
+            .filter(|play| place(play.first()) < filing.kept_from)
+            .count();
+        assert!(rows_before(&filed) <= play_versions_before * keys.len());
+        assert!(
+            rows_before(&filed) * 4 < rows_before(&whole),
+            "{} totals before the reach folded into {}",
+            rows_before(&whole),
+            rows_before(&filed)
+        );
+
+        // Every figure anyone is sent from it is what the whole totals give: the play versions' table,
+        // and every card's window at each patch anyone may read.
+        same_play_versions(&filed, &whole, &history, &plays);
+        for window in &windows[..public] {
+            for at in &window.versions {
+                same_windows(&filed, &whole, &history, at);
+            }
+        }
+    }
+
+    #[test]
+    fn r4965000_a_patch_past_the_snapshot_reads_its_reach_alone_as_the_whole_totals_give() {
+        let history = patch_history();
+        let plays = deck_play_versions();
+        let whole = every_version_totals(&history, &plays);
+        let filing = snapshot_filing(&history, &whole, &plays, &current_patch());
+        let windows = windows_of(&history, &whole);
+        let public = public_patch_count(&windows);
+
+        // The newest patch past the snapshot's, which only a dev account reads (R4677000), and the oldest.
+        for window in [&windows[public + 1], windows.last().expect("a window")] {
+            let at = window.versions.last().expect("a version");
+            let (from, to) = reach_of(&windows, &filing.versions, at).expect("a shipped version");
+            assert!(from < filing.kept_from, "{at} is past the snapshot");
+            let rows = CardRows::Filed(CardFiling {
+                versions: filing.versions.clone(),
+                kept_from: from,
+                kept_to: to,
+                also_kept: Vec::new(),
+                folded: IndexMap::new(),
+            });
+            let own = file_card_totals(whole.clone(), &rows);
+            for key in own.cards.keys() {
+                let place = filing
+                    .versions
+                    .get_index_of(&key.patch)
+                    .expect("a shipped version");
+                assert!((from..=to).contains(&place), "{key:?} outside {at}'s reach");
+            }
+            assert_eq!(own.records, whole.records);
+            same_windows(&own, &whole, &history, at);
+        }
     }
 }

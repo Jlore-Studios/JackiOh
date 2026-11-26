@@ -11,7 +11,7 @@ use crate::faces::card_type_of;
 use crate::rng::Rng;
 use crate::script::{Effect, EffectContext, EngineSink};
 use crate::state::{CardInstance, find_instance_mut};
-use crate::wire::{CardType, GameEvent, Keyword, OneOrMany, PlayerId, Row, Zone, ZoneName};
+use crate::wire::{CardType, GameEvent, Keyword, KeywordKind, OneOrMany, PlayerId, Row, Zone, ZoneName};
 
 /// Which card becomes Radiant: the pick the play or a prompt carried (#26 Glowy Jelly Bean's hand
 /// pick, R81), `{ of: "self" }` for Radiant Saintess including itself (R22), or an instance id a
@@ -75,7 +75,9 @@ pub(crate) fn make_radiant(ctx: &mut EffectContext<'_>, card: &CardInstance) -> 
     if let Some(live) = find_instance_mut(ctx.state, &card.id) {
         live.radiant = true;
     }
-    gain_printed_shield(ctx, &card);
+    gain_newly_printed(ctx, &card);
+    // R4817000: the Brittle the Radiant face prints, or none, from now on.
+    crate::brittle_count::refit_brittle_to_face(ctx.state, &card.id);
     // R3778000: an Aura that follows its number draws what the Radiant face's asks beyond its list.
     crate::effects::buff::follow_combat_keywords(ctx, &card.id);
     ctx.events.push(GameEvent::RadiantSet {
@@ -86,23 +88,29 @@ pub(crate) fn make_radiant(ctx: &mut EffectContext<'_>, card: &CardInstance) -> 
     true
 }
 
-/// §5.2: on the field "newly gained keywords apply at once", so a radiant face printing Divine Shield
-/// the base face lacks (#20, #50, #89) puts a spent shield up again, as a shield granted again does
-/// (§10.4, `buff::grant_to`). One printed on both faces is not newly gained, and stays spent.
-fn gain_printed_shield(ctx: &mut EffectContext<'_>, card: &CardInstance) {
-    // A Vanilla unit has no printed text on either face (§6.3), so its face prints no shield.
-    if card.zone.z() != ZoneName::Field || card.divine_shield_spent != Some(true) || card.vanilla {
+/// §5.2: on the field "newly gained keywords apply at once", so a radiant face printing a Divine Shield
+/// (#20, #50, #89) or, R4817001, a Reborn (#25, #56, C+ #6, …) the base face lacks puts a spent one up
+/// again, as one granted again does (§10.4, `buff::grant_onto`). One printed on both faces is not newly
+/// gained, and stays spent.
+fn gain_newly_printed(ctx: &mut EffectContext<'_>, card: &CardInstance) {
+    // A Vanilla unit has no printed text on either face (§6.3), so its face prints neither.
+    if card.zone.z() != ZoneName::Field || card.vanilla {
         return;
     }
     let def = def_of(Some(&*ctx.state), &card.def_id);
-    let prints = |keywords: &[Keyword]| {
-        keywords
-            .iter()
-            .any(|keyword| matches!(keyword, Keyword::DivineShield))
+    let newly = |kind: KeywordKind| {
+        let prints = |keywords: &[Keyword]| keywords.iter().any(|keyword| keyword.kind() == kind);
+        prints(def.radiant.keywords.as_slice()) && !prints(def.base.keywords.as_slice())
     };
-    let newly = prints(def.radiant.keywords.as_slice()) && !prints(def.base.keywords.as_slice());
-    if newly && let Some(live) = find_instance_mut(ctx.state, &card.id) {
-        live.divine_shield_spent = None;
+    let shield = card.divine_shield_spent == Some(true) && newly(KeywordKind::DivineShield);
+    let reborn = card.reborn_spent == Some(true) && newly(KeywordKind::Reborn);
+    if let Some(live) = find_instance_mut(ctx.state, &card.id) {
+        if shield {
+            live.divine_shield_spent = None;
+        }
+        if reborn {
+            live.reborn_spent = None;
+        }
     }
 }
 
@@ -199,8 +207,8 @@ pub(crate) fn radiate_world(sink: &mut EngineSink<'_>) -> bool {
 
 /// MD-D6 (§5.2's exception, Meditative #53 Prestige): De-Radiant is Make Radiant reversed, reported by
 /// `deradianted`. The layers read the flag, so the face swaps back while damage, buffs and tuning stay,
-/// keywords only the Radiant face printed are lost, triggers read the base text and no Cry fires. A
-/// fused card returns to its fused base form (R77).
+/// keywords only the Radiant face printed are lost, triggers read the base text and no Cry fires, and a
+/// Brittle count follows the face (R4817000). A fused card returns to its fused base form (R77).
 pub fn clear_radiant(args: RadiantTarget) -> Effect {
     Effect::new("clearRadiant", move |ctx| {
         let Some(card) = instance_by_id_or_spec(ctx, args.instance_id.as_deref(), args.target.as_ref())
@@ -215,6 +223,8 @@ pub fn clear_radiant(args: RadiantTarget) -> Effect {
         if let Some(live) = find_instance_mut(ctx.state, &card.id) {
             live.radiant = false;
         }
+        // R4817000: the base face's Brittle, as Make Radiant reads the Radiant one's.
+        crate::brittle_count::refit_brittle_to_face(ctx.state, &card.id);
         ctx.events.push(GameEvent::Deradianted {
             instance_id: card.id.clone(),
             def_id: card.def_id.clone(),

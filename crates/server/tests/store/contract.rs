@@ -25,14 +25,14 @@ use jackioh_server::config::{
 };
 use jackioh_server::db::fake::{self, E2eStoreOptions, FakeCatalog, FakeData, RedemptionSettings};
 use jackioh_server::db::store::{
-    BatchFolded, BotDeck, BotRating, BotRow, BotState, CodeAttempt, CollectionEntry, CollectionGrant, Db,
-    DeckVersion, FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode, LastBoardKind,
-    MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry, PlayerSettingsLimits,
-    PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile, ProfileCreateInput,
-    ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ReplayListRow, ResultRow,
-    RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow, StatsTotalsQuery,
-    StoreError, TermsSource, Ticket, TicketStatus, TutorialMergeInput, TutorialProgressRow, Tx,
-    UnreadableGameRecord, UsernameClaim, UsernameClaimOutcome,
+    BatchFolded, BotDeck, BotRating, BotRow, BotState, CardFiling, CardRows, CodeAttempt, CollectionEntry,
+    CollectionGrant, Db, DeckVersion, FoldedRecords, FrozenTrio, GameRecordQuery, InviteCluster, InviteCode,
+    LastBoardKind, MatchActionRow, MatchCheckpointRow, MatchClocks, MatchRow, NewBot, PlayTelemetry,
+    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsRow, PlayerStatsListOptions, Profile,
+    ProfileCreateInput, ProfileKind, ProfileStatus, RatedGameRow, RedeemInviteCodeInput, ReplayListRow,
+    ResultRow, RetentionPurgeInput, Room, SavedDeck, SavedTrio, Season, SeasonStanding, SeriesRow,
+    StatsTotalsQuery, StoreError, TermsSource, Ticket, TicketStatus, TutorialMergeInput, TutorialProgressRow,
+    Tx, UnreadableGameRecord, UsernameClaim, UsernameClaimOutcome, file_card_totals,
 };
 use jackioh_server::ranked::glicko2::Glicko;
 use jackioh_server::ranked::ladder::{
@@ -5256,6 +5256,7 @@ mod game_records {
             mode: None,
             patch: None,
             drills: true,
+            cards: CardRows::All,
         }
     }
 
@@ -5368,6 +5369,7 @@ mod game_records {
                         mode,
                         patch: patch.clone(),
                         drills: false,
+                        cards: CardRows::All,
                     };
                     let totals = q!(harness, t => t.stats_totals_load(&query));
                     assert_eq!(
@@ -5859,6 +5861,45 @@ mod game_records {
         );
     }
 
+    /// R4965000: a read that files the card totals keeps what filing the whole read keeps: none, all under
+    /// one patch, or one patch's as filed with the patches before it folded into the first of them. Postgres
+    /// files each row as it arrives; the fake files the whole read.
+    async fn r4965000_a_filed_read_keeps_what_filing_the_whole_read_keeps(harness: &StoreHarness) {
+        let records = mixed_records();
+        assert_eq!(
+            q!(harness, t => t.game_records_insert_batch(&records)),
+            vec![true; records.len()]
+        );
+        let whole = folded(&records).select(GAME_SOURCES, None, None, false);
+        let filing = CardFiling {
+            versions: ["v0.1.1", "v0.2.0", "v0.2.3"]
+                .map(str::to_string)
+                .into_iter()
+                .collect(),
+            kept_from: 2,
+            kept_to: 2,
+            also_kept: Vec::new(),
+            folded: whole
+                .cards
+                .values()
+                .flat_map(|cards| cards.keys())
+                .map(|card| (card.clone(), vec![(0, 1)]))
+                .collect(),
+        };
+        for cards in [CardRows::None, CardRows::Merged, CardRows::Filed(filing)] {
+            let query = StatsTotalsQuery {
+                cards: cards.clone(),
+                drills: false,
+                ..every_total()
+            };
+            assert_eq!(
+                q!(harness, t => t.stats_totals_load(&query)),
+                file_card_totals(whole.clone(), &cards),
+                "{cards:?}"
+            );
+        }
+    }
+
     both_stores!(
         r376_reads_a_match_s_mode_off_its_room_its_queue_tickets_or_its_series,
         r376_writes_one_record_per_game_and_refuses_a_second_with_the_same_id,
@@ -5875,6 +5916,7 @@ mod game_records {
         r2089000_folds_the_created_figures_and_loads_them_as_the_records_give,
         r4672003_folds_the_choices_and_loads_them_as_the_records_give,
         r4673001_keeps_each_faces_drills_and_loads_them_as_the_records_give,
+        r4965000_a_filed_read_keeps_what_filing_the_whole_read_keeps,
     );
 }
 
