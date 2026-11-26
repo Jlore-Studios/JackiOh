@@ -24681,7 +24681,7 @@
       }
     },
     "5088": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "died": 0,
@@ -24700,10 +24700,12 @@
       },
       "interruptions": 0,
       "issue": 5037,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "resolving",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-26T17:44:44Z",
         "from_run": "45859321678",
         "gates": [
           {
@@ -24800,7 +24802,7 @@
       "question": "",
       "queued_at": "2026-11-26T17:42:46Z",
       "round_tier": "medium",
-      "run_id": "45859321678",
+      "run_id": "pending:2c7887c3-1795715059",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -24821,7 +24823,7 @@
         "run": "45859321678"
       },
       "source": "",
-      "started_at": "2026-11-26T16:29:55Z",
+      "started_at": "2026-11-26T17:44:44Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 0,
@@ -25285,9 +25287,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T17:34:43Z",
+    "at": "2026-11-26T17:44:44Z",
     "url": "",
-    "what": "build #5085 on claude-8"
+    "what": "review #5088 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-26T17:32:31Z",
