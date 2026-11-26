@@ -44543,6 +44543,10 @@
       "4982": {
         "at": "2026-11-26T00:41:53Z",
         "why": "Confirmed; Duos match finish unnecessarily opens a second transaction and re-queries the ledger for Jlore caps that pay_coop already returned in memory, retaining the exact waste eliminated for 1v1 in #4711."
+      },
+      "4999": {
+        "at": "2026-11-26T03:07:01Z",
+        "why": "A Glitch-voided Assault fight is recorded as a loss today though R679 says it never happened, and the fix mirrors the shipped dungeon reading with the void helper and test already in the tree."
       }
     },
     "auto_approved": [],
