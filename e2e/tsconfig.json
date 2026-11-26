@@ -1,7 +1,7 @@
 {
   // e2e is deliberately self-contained: it type-checks without the client or the Rust crates being
-  // buildable. The engine is the Rust one now: support/tasks/replay-runner.ts folds a recorded log
-  // with the `jackioh` CLI (docs/v0.3.0/SURFACE.md §12), so it reaches nothing outside e2e/ and is
+  // buildable. The engine is the Rust one now: support/tasks/replay.ts folds a recorded log
+  // with the `jackioh` CLI (`replay-check`) (docs/v0.3.0/SURFACE.md §12), so it reaches nothing outside e2e/ and is
   // checked here. support/tasks/lessons-runner.ts imports the client's tutorial source at run time,
   // under tsx from the repo root, and stays excluded from this project.
   //

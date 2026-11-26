@@ -1048,7 +1048,7 @@ Cypress.Commands.add("dragCardToDeck", (catalogCardId: string, options: { touch?
 
 /**
  * BUILD M8 spec 01: "final state hash equals the vitest replay of the recorded actions". The log is
- * folded with the Rust engine (`jackioh replay`, support/tasks/replay-runner.ts) and both states hashed.
+ * folded with the Rust engine (`jackioh replay-check`, support/tasks/replay.ts), which also hashes both states in the one call.
  */
 Cypress.Commands.add("replayCheck", (label: string) => {
   cy.jackioh().then((handle) => {

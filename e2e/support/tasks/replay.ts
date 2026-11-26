@@ -1,5 +1,5 @@
-// `cy.task("replayHash", …)` folds recorded actions through `jackioh replay` outside the browser
-// and compares the hashes `jackioh hash-state` gives (BUILD M8 spec 01, BUILD M5-T3; docs/v0.3.0/SURFACE.md §12).
+// `cy.task("replayHash", …)` folds the log and hashes the browser's state in one
+// `jackioh replay-check` call (#4925).
 
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
@@ -24,68 +24,67 @@ export type ReplayHashResult = {
   logFile: string;
 };
 
-type RunnerEnvelope =
-  | { ok: true; replayHash: string; browserHash: string; errors: unknown[] }
-  | { ok: false; error: string };
+type CheckAnswer = Pick<ReplayHashResult, "replayHash" | "browserHash" | "errors">;
+
+function isCheckAnswer(answer: unknown): answer is CheckAnswer {
+  const found = answer as Partial<CheckAnswer> | null;
+  return (
+    typeof found?.replayHash === "string" &&
+    typeof found?.browserHash === "string" &&
+    Array.isArray(found?.errors)
+  );
+}
 
 export function replayHash(projectRoot: string, payload: ReplayHashPayload): ReplayHashResult {
-  const repoRoot = path.resolve(projectRoot, "..");
+  const repoRoot = path.join(projectRoot, "..");
   const artifacts = path.join(projectRoot, process.env.E2E_ARTIFACTS ?? "artifacts");
   mkdirSync(artifacts, { recursive: true });
   const logFile = path.join(artifacts, `${payload.label}.json`);
-  writeFileSync(
-    logFile,
-    `${JSON.stringify(
-      {
-        seed: payload.seed,
-        decks: payload.decks,
-        log: payload.log,
-        ...(payload.handicaps === undefined ? {} : { handicaps: payload.handicaps }),
-        ...(payload.dealt === undefined ? {} : { dealt: payload.dealt }),
-      },
-      null,
-      2,
-    )}\n`,
-    "utf8",
-  );
+  const game = {
+    seed: payload.seed,
+    decks: payload.decks,
+    log: payload.log,
+    ...(payload.handicaps === undefined ? {} : { handicaps: payload.handicaps }),
+    ...(payload.dealt === undefined ? {} : { dealt: payload.dealt }),
+  };
+  writeFileSync(logFile, `${JSON.stringify(game, null, 2)}\n`, "utf8");
 
-  const tsx = path.join(repoRoot, "node_modules", ".bin", "tsx");
-  if (!existsSync(tsx)) {
+  const cli = path.join(repoRoot, "target", "release", process.platform === "win32" ? "jackioh.exe" : "jackioh");
+  if (!existsSync(cli)) {
     throw new Error(
-      `replayHash: ${tsx} is missing. Run pnpm install at the repo root; the task folds the ` +
-        "recorded log through the `jackioh` CLI (support/tasks/replay-runner.ts) with the repo's own tsx.",
+      `replayHash: ${cli} is missing, so the recorded log cannot be folded by the engine. Build it from the repo root with \`cargo build --release -p jackioh-tools\`.`,
     );
   }
-  const runner = path.join(projectRoot, "support", "tasks", "replay-runner.ts");
 
   let stdout: string;
   try {
-    stdout = execFileSync(tsx, [runner], {
-      cwd: repoRoot,
-      input: JSON.stringify(payload),
+    stdout = execFileSync(cli, ["replay-check"], {
+      input: JSON.stringify({ ...game, state: payload.state }),
       encoding: "utf8",
       maxBuffer: 256 * 1024 * 1024,
     });
   } catch (error) {
     const detail = error instanceof Error && "stderr" in error ? String((error as { stderr?: unknown }).stderr ?? "") : "";
-    throw new Error(`replayHash: the engine fold failed to run.\n${detail || String(error)}`, {
-      cause: error,
-    });
+    throw new Error(
+      `replayHash: \`jackioh replay-check\` failed (is target/release/jackioh older than this checkout? rebuild it).\n${detail || String(error)}`,
+      { cause: error },
+    );
   }
 
-  const line = stdout.trim().split("\n").at(-1) ?? "";
-  let envelope: RunnerEnvelope;
+  let answer: unknown;
   try {
-    envelope = JSON.parse(line) as RunnerEnvelope;
+    answer = JSON.parse(stdout) as unknown;
   } catch {
-    throw new Error(`replayHash: could not read the fold's output:\n${stdout}`);
+    throw new Error(`replayHash: \`jackioh replay-check\` printed something that is not its answer:\n${stdout}`);
   }
-  if (!envelope.ok) throw new Error(`replayHash: ${envelope.error}`);
+  if (!isCheckAnswer(answer)) {
+    throw new Error(`replayHash: the answer has no replayHash, browserHash or errors: ${stdout}`);
+  }
 
   return {
-    replayHash: envelope.replayHash,
-    browserHash: envelope.browserHash,
-    errors: envelope.errors,
+    replayHash: answer.replayHash,
+    browserHash: answer.browserHash,
+    errors: answer.errors,
     logFile,
   };
 }
