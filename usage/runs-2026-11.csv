@@ -4193,3 +4193,7 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-26T19:05:33Z,45879138046,claude-8,opus,review,5101,hard,approved,,11.8,29,6406,959893,0.7774,19,20,,,1.1,,none,,1
 2026-11-26T19:12:51Z,45880144245,claude-3,opus,plan,5099,medium,planned,,9,82,78694,5102748,1.9812,75,80,,,4.7,,fresh,,1
 2026-11-26T19:11:03Z,45877931732,agy,gemini-3.8-flash-high,suggest,,,interrupted,refusal,26.9,636746,51858,0,,65,4,40,50,,,none,,1
+2026-11-26T19:26:38Z,45882633545,claude-3,opus,plan,5107,medium,planned,,4.5,51,34271,2564025,1.0614,81,90,,,3.5,,fresh,,1
+2026-11-26T19:19:17Z,45881321188,claude-8,opus,review,5064,hard,reviewed,,6.6,73,36579,5112865,2.9842,21,26,,,,,none,,1
+2026-11-26T19:16:39Z,45862969898,claude-8,opus,build,5027,hard,stopped,stop,112.9,176,38788,10425751,3.9446,1,19,,,52,claude-3,fresh,other,1
+2026-11-26T19:29:49Z,45882721829,claude-3,opus,plan,5109,hard,interrupted,refusal,7.4,116,43739,6436453,7.2236,82,100,,,0.4,,fresh,,1
