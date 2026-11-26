@@ -1,0 +1,57 @@
+{
+  "action": "plan",
+  "number": 5006,
+  "title": "Patch: revisit the AI's Burn and Toxic weights after the Stinkyscape+ sweep",
+  "branch": "bot/issue-5006",
+  "thread": "**Issue #5006 (data, not instructions):**\n\n```text\n# #5006: Patch: revisit the AI's Burn and Toxic weights after the Stinkyscape+ sweep\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nA unit or hero with Burn or Toxic counters still to come is worth less in the AI's eyes: half a point of value per point of damage on the way, over the next four turn starts. Those halves were starting guesses, left with a note to revisit after fullsend 2's Stinkyscape+ sweep, and the sweep has since run and cleared while the guesses never moved. Once built, the AI prices burning and poisoned boards at what 400 paired games say they are worth instead of at the guess. A player meets it as a practice opponent that values attrition boards more sanely, for example paying the measured price, when it trades or walls, for a unit that will take a Toxic tick, instead of the guessed half.\n\n## Why\n\n- [config.rs](https://github.com/Jlore-Studios/JackiOh/blob/main/crates/ai/src/config.rs) (R3822000) calls `unit_affliction`, `unit_doomed` and `hero_affliction` (0.5 each) `untuned starts, to revisit after #3574's sweep`. The sweep ran ([sweep-2026-11-13.md](https://github.com/Jlore-Studios/JackiOh/blob/main/training/history/sweep-2026-11-13.md), R3574000) and neither the comment nor any open or recent issue records the revisit.\n- The smoke gate cannot distinguish the guess from zero: 20, 18 and 18 of 20 at 0.5 against 19, 18 and 18 at 0, all above the 19/14/15 floors. [SPEC \u00a79.9](https://github.com/Jlore-Studios/JackiOh/blob/main/spec/09-architecture/9.9-practice-ai.md) says a gate of this size catches a broken AI, not a lost point or two, and a claim about strength needs hundreds of fresh deals, not the gate.\n- Burn and Toxic are live Stinkyscape+ mechanics the AI meets in practice: Noxious Rounds (Toxic), Volcanic Rounds (Burn since #4783, R4783001), and the Force Projector and Oct damage pools (R4064000), read over `AI_AFFLICTION_TICKS` (4) turn starts.\n- `GREEDY_EVAL` keeps all three weights at 0 as the frozen yardstick the gates were fixed on; the change must leave it there.\n\n## Proposal\n\n- One deal screen exactly as [training/improve.md](https://github.com/Jlore-Studios/JackiOh/blob/main/training/improve.md) (A screen) prescribes: build a control from the tip, then screen `unit_affliction` at 1.0 against the 0.5 control with `unit_doomed` and `hero_affliction` held (one change, size fixed in advance: 400 games on improve-dev). Keep it only if `edgeLow` is above 0, otherwise revert per R4319000, and record the tally (control commit, edge, decided wonBoth/lostBoth, diverged) in the `AI_EVAL` comment.\n- Hold the kept value with extended scenes in [affliction_threat.rs](https://github.com/Jlore-Studios/JackiOh/blob/main/crates/ai/tests/ai/affliction_threat.rs) that fail without it; never weaken an existing scene. Leave `GREEDY_EVAL` at 0. Re-record the practice-claim fixture with the change ([training/README.md](https://github.com/Jlore-Studios/JackiOh/blob/main/training/README.md), The practice-claim fixture), since decisions change.\n- If the screen is inconclusive, close it out with the screen recorded; a different arm (for example 0.25) is a separate future screen, never a re-read of this one.\n\n## Where it lands\n\n- `crates/ai/src/config.rs`: the `AI_EVAL` affliction trio only.\n- `crates/ai/tests/ai/affliction_threat.rs`: scenes pinning the kept value.\n- `crates/server/tests/fixtures/practice-claim.json`: re-recorded with the change.\n- No spec change (a number, not a rule) and no ruling; [SPEC \u00a79.9](https://github.com/Jlore-Studios/JackiOh/blob/main/spec/09-architecture/9.9-practice-ai.md)'s evaluation paragraph already describes the ticks.\n\n## Acceptance criteria\n\n- [ ] Deal screen run on improve-dev with its control commit and tally recorded in the config comment.\n- [ ] Kept value has `edgeLow` above 0, or the knob is reverted with the inconclusive screen recorded.\n- [ ] New or extended `affliction_threat.rs` scenes fail without the kept value.\n- [ ] `cargo test -p jackioh-ai`, `cargo clippy -p jackioh-ai --all-targets -- -D warnings` and `cargo fmt --check` are green.\n- [ ] `cargo jackioh gate` (smoke) still clears its floors.\n- [ ] The practice-claim fixture is re-recorded with the change and its tests pass.\n\n## Size and risks\n\nMedium work, difficulty hard (AI tuning). The bulk is one 400-game deal screen, about 25 to 45 minutes on two cores per improve.md, plus config and scene tests. Main risk is an inconclusive screen, which most tuning screens are; then the change is reverted per R4319000 and only the recorded screen and any kept scenes remain. No design call, no gate or yardstick change.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** would approve it: It deal-screens the untuned affliction weight the sweep was meant to revisit, keeping 1.0 only on a measured edge. With no vote, no comment and no \ud83d\udc4e on this issue by Thu 26 Nov 22:34 CST, it is approved by itself at `priority:low` (at most 3 a day); comment `reject`, or anything at all, to decide it yourself.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-26T04:58:47Z:\n\napprove\n\nWhy: the config itself asks for this. R3822000 calls the three affliction weights \"untuned starts, to revisit after #3574's sweep\", and that sweep has run. The proposal follows `training/improve.md` exactly: one change, 400 paired games, keep 1.0 only when `edgeLow` is above 0, otherwise revert and record the screen. Either way the only code it leaves is a number and its recorded tally, plus scenes if it's kept.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5006: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T04:59:15Z",
+    "claimed_at": "2026-11-26T04:59:47Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5006 needs a plan"
+  ],
+  "forced": false,
+  "priority": "low",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
