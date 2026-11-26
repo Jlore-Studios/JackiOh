@@ -21550,16 +21550,15 @@
     "what": "review #4960 on muse"
   },
   "last_sweep": {
-    "at": "2026-11-25T23:51:57Z",
+    "at": "2026-11-26T00:03:31Z",
     "notes": [
-      "delivered suggest on claude-8 (run 45721268619): suggested",
-      "delivered suggest on claude-3 (run 45721058352): interrupted",
-      "delivered review #4944 on muse (run 45718092534): approved",
-      "started suggest on claude-8 (run 45724984995)",
-      "started suggest on muse (run 45725082250)",
+      "delivered suggest on claude-8 (run 45724984995): interrupted",
+      "delivered suggest on agy (run 45721374682): suggested",
+      "delivered revise #4960 on muse (run 45707636794): built",
+      "started review #4960 on muse (run 45726405664)",
       "nothing more to start: nothing is queued",
-      "#4977: typed it Task",
-      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
+      "pruned 1 plan file(s) older than 7 days",
+      "runner gate: started 1 of 3 waiting run(s) (super run 45722697998 on _staging); 2 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22261,7 +22260,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-25T23:51:57Z",
+  "loop_tick": "2026-11-26T00:03:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
