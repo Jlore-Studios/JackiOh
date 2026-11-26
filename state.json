@@ -18527,7 +18527,6 @@
       "live": "reviewing",
       "merge_owner": "muse",
       "own_review": {
-        "claimed": true,
         "claimed_at": "2026-11-26T04:08:16Z",
         "from_run": "45695319956",
         "gates": [
@@ -18585,7 +18584,7 @@
         "rounds_used": 0,
         "since": "2026-11-25T22:22:46Z",
         "source": "ci",
-        "until": "2026-11-26T04:07:48Z"
+        "until": "2026-11-26T05:51:35Z"
       },
       "pending_request": false,
       "provider": "muse",
