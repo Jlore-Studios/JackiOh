@@ -23,7 +23,7 @@ import { cardTierFit, type TierFitCard } from "./tierFit.ts";
 const PERCENT = 100;
 
 /** R3184002, R4083000: the Created tables' columns, every one sortable, named as the deck table's sort names them. */
-export type CreatedColumn = "name" | "games" | "tier" | "adjustedWinRate" | "decisiveness";
+export type CreatedColumn = "name" | "games" | "tier" | "adjustedWinRate" | "decisiveness" | "date";
 
 /** R4083000: the columns the Created tables sort by, in the deck table's order: the Tokens tab's sort select. */
 export const CREATED_SORT_COLUMNS: readonly CreatedColumn[] = ["name", "games", "tier", "adjustedWinRate", "decisiveness"];
@@ -42,8 +42,12 @@ export function createdSortOf(col: string, dir: "asc" | "desc"): CreatedSort {
   return { col: CREATED_SORT_COLUMNS.find((known) => known === col) ?? "adjustedWinRate", dir };
 }
 
-/** What a row sorts by: a Created card's, and R4678001 a Running row's, its Decisiveness among them (R5036000). */
-export type SortedRow = TierFitCard & Pick<PublicCreatedStat, "id" | "name" | "games" | "adjustedWinRate" | "decisiveness">;
+/**
+ * What a row sorts by: a Created card's, and R4678001 a Running row's, its Decisiveness among them (R5036000). R5033000:
+ * a Running row also holds `firstShipped`, the position the server sent for its first version; a Created row has none.
+ */
+export type SortedRow = TierFitCard &
+  Pick<PublicCreatedStat, "id" | "name" | "games" | "adjustedWinRate" | "decisiveness"> & { firstShipped?: number | null };
 
 /** R4082000: a card's adjusted win rate as the row shows it, null below the floor or from an older server. */
 function adjustedOf(card: SortedRow): number | null {
@@ -59,6 +63,8 @@ function decisivenessOf(card: SortedRow): number | null {
  * R3184002: the rows in a header's order: a row with no figure (below the floor, or none) after those with one,
  * either way, and rows that tie in the server's order. R4082000: by tier, S first descending, then by Adjusted;
  * R4083000: within a tier by tier fit first (R3184001), a card with none after, as the deck table sorts.
+ * R5033000: by Date, the position of a row's first version in the shipped history (newest first descending), a
+ * row with none (a server deployed before it) after those with one, either way.
  */
 export function sortCreated<Row extends SortedRow>(
   created: readonly Row[],
@@ -72,6 +78,12 @@ export function sortCreated<Row extends SortedRow>(
   return [...created].sort((a, b) => {
     if (col === "name") return nameOf(a.id, a.name).localeCompare(nameOf(b.id, b.name), language) * flip;
     if (col === "games") return (a.games - b.games) * flip;
+    if (col === "date") {
+      const x = a.firstShipped ?? null;
+      const y = b.firstShipped ?? null;
+      if (x === null || y === null) return x === y ? 0 : x === null ? 1 : -1;
+      return (x - y) * flip;
+    }
     if (col === "tier") {
       const x = tierRank(a.hasEnoughGames ? a.tier : null);
       const y = tierRank(b.hasEnoughGames ? b.tier : null);

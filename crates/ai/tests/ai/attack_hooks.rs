@@ -12,6 +12,9 @@
 //! Badger's text; Tmack Trav, (3) 9/9, Radiant 18/18 with Rush and Pierce, "After this destroys a Unit,
 //! it may attack again."; Polymorph, (3) "Transform a Unit into a Sheep Token"; Midrange Menace, (3) 9/9
 //! Taunt; Mr. Vanilla, a (1) 4/4 with no text (`plain`); and the (1) Traps Sheepish and My Pawn.
+//!
+//! Below them, #5007's two scenes hold `AI_EVAL.attack_hook` at the 0.5 its screen of 1.0 left: a unit's
+//! next attack counts half of what its text gives, the seat's units and the enemy's alike.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
@@ -29,6 +32,18 @@ const VANILLA: &str = "core-008";
 const SHEEPISH: &str = "core-041";
 const MY_PAWN: &str = "core-096";
 const LIBRARY: &[&str] = &[VANILLA, VANILLA, VANILLA, VANILLA];
+
+/// AI_EVAL with a unit's next attack priced in full: the arm #5007 screened.
+const FULL: EvalWeights = EvalWeights {
+    attack_hook: 1.0,
+    ..AI_EVAL
+};
+
+/// AI_EVAL with a unit's next attack priced at nothing.
+const UNPRICED: EvalWeights = EvalWeights {
+    attack_hook: 0.0,
+    ..AI_EVAL
+};
 
 /// The AI's turn with the AI's side `p1` and the human's `p2`, each with `LIBRARY` added.
 fn board(seed: &str, mut p1: Value, mut p2: Value) -> GameState {
@@ -392,4 +407,47 @@ fn r2688000_the_probes_stay_within_their_cap_and_the_decision_within_its_budget(
     )
     .expect("the AI acts");
     assert!(decision.stats.nodes <= AI_BUDGET.nodes, "{:?}", decision.stats);
+}
+
+/// #5007: an own Badger that may attack counts `AI_EVAL.attack_hook` of what its next attack's Resource
+/// gives (R2688000), the 0.5 its screen of 1.0 left: half the price over a plain 2/3. At 1.0 it would
+/// count the whole price, and at 0 nothing.
+#[test]
+fn r2688000_an_own_badger_counts_half_of_its_next_attack() {
+    let state = board(
+        "ai-attack-hook-own",
+        json!({ "field": [BADGER, plain(2, 3)] }),
+        json!({}),
+    );
+    let (badger, body) = (unit(&state, AI, BADGER), unit(&state, AI, VANILLA));
+    let (prices, _) = priced(&state);
+    let price = price_of(&prices, BADGER, AI);
+    assert!(price > 0.0, "the Resource it gains counts: {price}");
+    let prices = prices_of(prices);
+    let over =
+        |w: &EvalWeights| unit_worth(&state, badger, w, &prices) - unit_worth(&state, body, w, &prices);
+    close(over(&AI_EVAL), price / 2.0);
+    close(over(&FULL), price);
+    close(over(&UNPRICED), 0.0);
+}
+
+/// #5007: destroying an enemy Wasp is worth `AI_EVAL.attack_hook` of the copy its next attack makes
+/// (R2688000), the 0.5 its screen of 1.0 left: half the price over destroying a plain 3/3, which the
+/// reply's trader ranks by (`kill_worth`). At 1.0 it would be the whole price, and at 0 nothing.
+#[test]
+fn r2688000_destroying_an_enemy_wasp_is_worth_half_of_its_next_copy() {
+    let state = board(
+        "ai-attack-hook-enemy",
+        json!({}),
+        json!({ "field": [WASP, plain(3, 3)] }),
+    );
+    let (wasp, body) = (unit(&state, HUMAN, WASP), unit(&state, HUMAN, VANILLA));
+    let (prices, _) = priced(&state);
+    let price = price_of(&prices, WASP, HUMAN);
+    assert!(price > 0.0, "the copy it makes counts: {price}");
+    let prices = prices_of(prices);
+    let over = |w: &EvalWeights| kill_worth(&state, wasp, w, &prices) - kill_worth(&state, body, w, &prices);
+    close(over(&AI_EVAL), price / 2.0);
+    close(over(&FULL), price);
+    close(over(&UNPRICED), 0.0);
 }

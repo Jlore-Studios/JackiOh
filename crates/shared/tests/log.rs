@@ -757,15 +757,26 @@ fn r3045000_a_card_named_by_its_definition_alone_is_the_hull_too() {
 
 #[test]
 fn r3045000_any_other_fused_card_is_named_by_what_it_was_fused_of() {
-    let equipped = fused_def(&[catalog_def("stinkyscape-050"), catalog_def("core-020")], 3);
-    let view = with_defs(&[&equipped], json!([fused_event(&equipped)]));
+    let both = fused_def(&[catalog_def("core-011"), catalog_def("core-020")], 3);
+    let view = with_defs(&[&both], json!([fused_event(&both)]));
     assert_eq!(
         english(&view),
         [format!(
             "2 cards fused into {} + {}",
-            name_of("stinkyscape-050"),
+            name_of("core-011"),
             name_of("core-020")
         )]
+    );
+}
+
+/// R5050000: a unit holding gear is named for the card it was equipped into, as its face is.
+#[test]
+fn r5050000_a_unit_holding_gear_is_named_for_its_host() {
+    let equipped = fused_def(&[catalog_def("stinkyscape-050"), catalog_def("core-020")], 4);
+    let view = with_defs(&[&equipped], json!([fused_event(&equipped)]));
+    assert_eq!(
+        english(&view),
+        [format!("2 cards fused into {}", name_of("core-020"))]
     );
 }
 
