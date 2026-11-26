@@ -49,8 +49,8 @@ fn keyword_label(keyword: &Keyword) -> String {
 }
 
 /// The labels that start a line of their own (R366; Activate is B3.2's, Quest Classic #90's). An
-/// embiggen card's Embiggened version is labeled with its Embiggened cost, one label per cost a card
-/// prints (R1175000). The Stinkyscape set prints five more: "Embiggened (5):" (S #79 Orca) and
+/// embiggen card's Embiggened version is labeled with its Embiggen premium, one label per premium a card
+/// prints (R1175000, R5109001). The Stinkyscape set prints five more: S #79 Orca's Embiggened label and
 /// "Activate 3:" to "Activate 6:" (R1857003). "Cry & Death:" (TG #38 Tutorial Master, issue #3139) labels
 /// the one line both hooks run: its "Death:" is the tail of it, not a second label mid-line.
 pub(super) const LABELS: &[&str] = &[
@@ -60,11 +60,9 @@ pub(super) const LABELS: &[&str] = &[
     "Start of turn:",
     "End of turn:",
     "Aura:",
-    "Embiggened (1):",
-    "Embiggened (2):",
-    "Embiggened (3):",
-    "Embiggened (4):",
-    "Embiggened (5):",
+    "Embiggened (+1):",
+    "Embiggened (+2):",
+    "Embiggened (+3):",
     "Activate:",
     "Activate 2:",
     "Activate 3:",
@@ -504,14 +502,14 @@ fn failures(face: &Face) -> Vec<String> {
     }
     if paid_then_digit(text) {
         out.push(
-            "writes an embiggen card's Embiggened version as \"(paid N\", not \"Embiggened (N):\""
+            "writes an embiggen card's Embiggened version as \"(paid N\", not \"Embiggened (+N):\""
                 .to_string(),
         );
     }
     // R1175000: "Paid (N):" was R366's label for the Embiggened version until issue #1175.
     if has_word_start(text, "Paid (", false) {
         out.push(
-            "writes an embiggen card's Embiggened version as \"Paid (N):\", not \"Embiggened (N):\""
+            "writes an embiggen card's Embiggened version as \"Paid (N):\", not \"Embiggened (+N):\""
                 .to_string(),
         );
     }
@@ -1679,7 +1677,8 @@ mod r366_the_words_a_card_s_text_uses_spec_11_patch_v0_1_1 {
 
 // R1175000 (issue #1175): a card with two prices is an embiggen card. Played at the cheaper price it is
 // its normal version; at the dearer one, its Embiggened cost, it is its Embiggened version, and its
-// text labels that version "Embiggened (N): …" where R366 wrote "Paid (N): …".
+// text labels that version "Embiggened (N): …" where R366 wrote "Paid (N): …"; since #5109 N is its
+// premium, "Embiggened (+N): …" (R5109001).
 
 mod r4747000_one_fixed_order_for_every_card_s_keyword_line {
     use super::*;
@@ -1782,11 +1781,11 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
     use super::*;
     use jackioh_engine::CardCost;
 
+    /// R5109001: the label names the Embiggen premium, B − A (R5109000), never the price.
     fn embiggened_label(card: &CardDef) -> Option<String> {
-        match card.cost {
-            CardCost::Embiggen { embiggen, .. } => Some(format!("Embiggened ({embiggen}):")),
-            _ => None,
-        }
+        card.cost
+            .embiggen_premium()
+            .map(|premium| format!("Embiggened (+{premium}):"))
     }
 
     /// `chinese.json`'s text of one face (R1303).
@@ -1795,7 +1794,7 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
     }
 
     #[test]
-    fn r1175000_every_embiggen_card_starts_a_line_with_embiggened_n_its_embiggened_cost_on_both_faces_in_english_and_chinese()
+    fn r1175000_r5109001_every_embiggen_card_starts_a_line_with_embiggened_plus_n_its_premium_on_both_faces_in_english_and_chinese()
      {
         let terms = chinese_terms();
         let table: Value = serde_json::from_str(chinese_json()).expect("crates/cards/chinese.json is JSON");
@@ -1904,22 +1903,58 @@ mod r1175000_an_embiggen_card_labels_its_embiggened_version_issue_1175 {
         assert_eq!(
             check("Aura: Draw 1.\nPaid (4): Draw 2 instead."),
             strings(&[
-                "writes an embiggen card's Embiggened version as \"Paid (N):\", not \"Embiggened (N):\""
+                "writes an embiggen card's Embiggened version as \"Paid (N):\", not \"Embiggened (+N):\""
             ])
         );
         assert_eq!(
-            check("Aura: Draw 1.\nEmbiggened (4): Draw 2 instead."),
+            check("Aura: Draw 1.\nEmbiggened (+2): Draw 2 instead."),
             Vec::<String>::new()
         );
         assert_eq!(
-            check("Aura: Draw 1. Embiggened (4): Draw 2 instead."),
-            strings(&["does not start \"Embiggened (4):\" on a line of its own"])
+            check("Aura: Draw 1. Embiggened (+2): Draw 2 instead."),
+            strings(&["does not start \"Embiggened (+2):\" on a line of its own"])
         );
+    }
+
+    /// R5109001: every embiggen card's Embiggened line names its premium, at least (1) since its
+    /// Embiggened version is dearer, and never its Embiggened price, in English and in Chinese.
+    #[test]
+    fn r5109001_every_embiggen_cards_label_is_its_premium_of_at_least_1_never_its_price() {
+        let table: Value = serde_json::from_str(chinese_json()).expect("crates/cards/chinese.json is JSON");
+        let mut wrong: Vec<String> = Vec::new();
+        for face in faces_of(&entries()) {
+            let CardCost::Embiggen { embiggen, .. } = face.card.cost else {
+                continue;
+            };
+            let premium = face.card.cost.embiggen_premium();
+            if premium < Some(1) {
+                wrong.push(format!("{} has a premium of {premium:?} below 1", face.card.id));
+            }
+            let Some(label) = embiggened_label(face.card) else {
+                continue;
+            };
+            let price_label = format!("Embiggened ({embiggen}):");
+            if !face.text.contains(&label) || face.text.contains(&price_label) {
+                wrong.push(format!(
+                    "does not print {label} in place of {price_label}: {}",
+                    described(&face)
+                ));
+            }
+            let chinese = chinese_face(&table, &face.card.id, face.face);
+            if chinese.contains(&format!("加码({embiggen})：")) {
+                wrong.push(format!(
+                    "{} {}: the Chinese face prints the price, not the premium: {chinese}",
+                    face.card.id, face.face
+                ));
+            }
+        }
+        assert_eq!(wrong, Vec::<String>::new());
     }
 }
 
-/// R1857003: the Stinkyscape set prints five labels no other set's card does, "Activate 3:" to
-/// "Activate 6:" (an Activate of that many uses a turn, R1751000) and S #79 Orca's "Embiggened (5):".
+/// R1857003: the Stinkyscape set prints five labels no other set's card did, "Activate 3:" to
+/// "Activate 6:" (an Activate of that many uses a turn, R1751000) and S #79 Orca's "Embiggened (5):",
+/// since #5109 its premium's "Embiggened (+1):" (R5109001), which other sets print too.
 /// Each starts a line as R366's labels do, in English and in Chinese.
 mod r1857003_five_labels_the_stinkyscape_set_prints {
     use super::*;
@@ -1929,11 +1964,11 @@ mod r1857003_five_labels_the_stinkyscape_set_prints {
         ("Activate 4:", "激活4："),
         ("Activate 5:", "激活5："),
         ("Activate 6:", "激活6："),
-        ("Embiggened (5):", "加码(5)："),
+        ("Embiggened (+1):", "加码(+1)："),
     ];
 
     #[test]
-    fn r1857003_activate_3_to_6_and_embiggened_5_are_labels_in_both_languages() {
+    fn r1857003_r5109001_activate_3_to_6_and_orcas_embiggened_label_are_labels_in_both_languages() {
         let terms = chinese_terms();
         let dummy_card = entries()[0];
         let check = |text: &str| -> Vec<String> {
@@ -2134,7 +2169,7 @@ mod the_hand_written_patterns_read_as_their_regular_expressions {
         assert!(!word_dash_cost("a 3odd-cost card"));
         assert!(paid_then_digit("(Paid 4: draw)"));
         assert!(!paid_then_digit("Paid (4): draw"));
-        assert!(!paid_then_digit("Embiggened (4): draw"));
+        assert!(!paid_then_digit("Embiggened (+2): draw"));
     }
 
     #[test]

@@ -473,7 +473,8 @@ pub struct FaceCost {
     /// `data-cost`: the live number when there is one, else `text`.
     pub value: String,
     pub tone: CostTone,
-    /// The embiggen price, shown small beside the gem while the gem shows the base price; null otherwise.
+    /// The embiggen price, shown small beside the gem: the view's `embiggenCost` wherever it gives one
+    /// (R5109001), else the printed one while the gem shows the base price; null otherwise.
     pub alt: Option<String>,
 }
 

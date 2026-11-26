@@ -1,8 +1,8 @@
 //! S+ #96 Open Enrollment (SPEC §8.12 row 96). (0) embiggen (2) Spell, Common.
 //!   Base:    "Fill your hand with random F tier cards (or D tier if none exist).
-//!            Embiggened (2): They cost (1) less."
+//!            Embiggened (+2): They cost (1) less."
 //!   Radiant: "Fill your hand with random Radiant F tier cards (or D tier if none exist).
-//!            Embiggened (2): They cost (0)."
+//!            Embiggened (+2): They cost (0)."
 //!
 //! Cry (R1): add F-tier cards (D-tier when no F card exists, R3538001) until the hand is full,
 //! Radiant on the Radiant face. Issue #4353 gave it its Embiggened price, (2) (R1175000, the play's

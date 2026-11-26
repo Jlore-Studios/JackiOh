@@ -164,7 +164,7 @@ fn embiggen(mut card: CardDef) -> CardDef {
     card.cost = CardCost::Embiggen { base: 1, embiggen: 2 };
     card
 }
-/// "Embiggened (2): Starship Piece and Equip." (#129 Missile Pod's lend, R1878001.)
+/// "Embiggened (+1): Starship Piece and Equip." (#129 Missile Pod's lend, R1878001.)
 pub static lender: LazyLock<CardDef> =
     LazyLock::new(|| embiggen(def("ss-lender", 18537, "Unit", 1, (1, 1), json!([]), json!([]))));
 /// No piece at either price.

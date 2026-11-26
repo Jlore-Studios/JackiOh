@@ -433,6 +433,22 @@ describe("B8: the cost gem renders the model's cost", () => {
     }
   });
 
+  it("B8 R5109001 under a discount the second badge is the view's embiggenCost, the Embiggened version's realized price", () => {
+    // Unbiased Immigration, "2 embiggen 4", under a discount of 3: the engine prices it (0), and its
+    // Embiggened version (0) plus the premium of 2, which the view gives as embiggenCost.
+    const gem = one(catalogFace("core-059", false, "full", { liveCost: 0, liveEmbiggenCost: 2 }), ".cost-gem");
+    expect(gemText(gem)).toBe("0");
+    expect(gem.getAttribute("data-tone")).toBe("down");
+    const alt = one(gem, ".cf-cost-alt");
+    expect(alt.textContent).toBe("2");
+    expect(alt.getAttribute("aria-label")).toBe("Embiggened (2)");
+    expect(alt.getAttribute("title")).toBe("Embiggened (2)");
+    cleanup();
+    const raised = one(catalogFace("core-059", false, "full", { liveCost: 3, liveEmbiggenCost: 5 }), ".cost-gem");
+    expect(gemText(raised)).toBe("3");
+    expect(one(raised, ".cf-cost-alt").textContent).toBe("5");
+  });
+
   it("B8 an embiggen card's gem prints the view's live cost: a discounted 1, or the 4 it was paid on the field", () => {
     const discounted = one(catalogFace("core-084", false, "full", { liveCost: 1 }), ".cost-gem");
     expect(gemText(discounted)).toBe("1");
@@ -688,8 +704,8 @@ describe("B14: the radiant face", () => {
 
   it("B14 a radiant face prints its own keyword line, never the base keywords it replaced (core-056, core-025)", () => {
     const jilliax = one(catalogFace("core-056", true), ".card-text");
-    // "Embiggened (3): Equip." is on both faces, below the keyword line (R1175000).
-    expect(jilliax.textContent).toBe("Rush, Taunt, Lifesteal, Divine Shield, Reborn\nEmbiggened (3): Equip.");
+    // "Embiggened (+1): Equip." is on both faces, below the keyword line (R1175000, R5109001).
+    expect(jilliax.textContent).toBe("Rush, Taunt, Lifesteal, Divine Shield, Reborn\nEmbiggened (+1): Equip.");
     expect([...jilliax.querySelectorAll("strong.cf-term")].map((term) => term.getAttribute("data-term"))).toEqual([
       "Rush",
       "Taunt",
@@ -703,12 +719,23 @@ describe("B14: the radiant face", () => {
     expect(one(catalogFace("core-025", true), ".card-text").textContent).toBe("Armor 7, Reborn");
   });
 
+  it("R5109001 an embiggen card's text labels its Embiggened version with its premium, never its price, on both faces", () => {
+    for (const [id, label] of [["core-059", "Embiggened (+2): "], ["core-056", "Embiggened (+1): "], ["meditative-081", "Embiggened (+1): "]] as const) {
+      for (const radiant of [false, true]) {
+        const text = one(catalogFace(id, radiant), ".card-text").textContent ?? "";
+        expect(text.split("\n").some((line) => line.startsWith(label)), `${id} ${String(radiant)}: ${text}`).toBe(true);
+        expect(text, id).not.toMatch(/Embiggened \(\d+\):/);
+        cleanup();
+      }
+    }
+  });
+
   it("B14 a clause the radiant cell restates is printed once, in its radiant form (core-002, core-046)", () => {
     const speciesist = one(catalogFace("core-002", true), ".card-text");
     expect(speciesist.textContent).toBe("Cry: Destroy all enemy non-Human Units. Overload (1).");
     expect(speciesist.querySelectorAll('strong.cf-term[data-term="Cry"]')).toHaveLength(1);
     cleanup();
-    expect(one(catalogFace("core-046", true), ".card-text").textContent).toBe("Aura: Enemy Units have −2/−2.\nEmbiggened (3): −4/−4 instead.");
+    expect(one(catalogFace("core-046", true), ".card-text").textContent).toBe("Aura: Enemy Units have −2/−2.\nEmbiggened (+2): −4/−4 instead.");
   });
 
   it("R277 R276 the five cards that had no radiant form print a radiant face that differs, marked (core-038, core-080, core-093-1, core-095-1, core-096)", () => {

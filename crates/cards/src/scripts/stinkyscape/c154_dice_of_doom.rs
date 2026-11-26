@@ -1,7 +1,7 @@
 //! S #154 Dice of Doom (SPEC §8.10 row S 154; §2.4, §6.1 Lucky, §6.3 Embiggen, R62, R153, R155, R386,
 //! R640, R1178001, R1438, R1440, R1857002, R1870007, R3869000): (0) Spell, Quickdraw, Mythic; Embiggened (1).
 //!   Base:    "Roll a 100-sided die. If it lands on 67, add every Terminus card to your hand. They cost
-//!            (0). / End of turn: Add this back to your hand. / Embiggened (1): This also gains Lucky +1
+//!            (0). / End of turn: Add this back to your hand. / Embiggened (+1): This also gains Lucky +1
 //!            for good."
 //!   Radiant: "Roll an 80-sided die twice. If either lands on 67, …" and the same.
 //!

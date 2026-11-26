@@ -1,6 +1,6 @@
 //! M #21 API Key Fishing (SPEC §8.8 row 21, BUILD M10 row M 21). (0, embiggen 1) Spell, Rare.
 //!   Base:    "{chance}% chance: Steal your opponent's hand.
-//!            Embiggened (1): {paidChance}% instead.
+//!            Embiggened (+1): {paidChance}% instead.
 //!            End of turn: Add an API Key Fishing to your hand." (2; 5 step 2)
 //!   Radiant: the same, but "End of turn: Add a Radiant API Key Fishing to your hand." (4; 10 step 2)
 //!

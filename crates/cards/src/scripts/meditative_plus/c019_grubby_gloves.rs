@@ -1,6 +1,6 @@
 //! M+ #19 Grubby Gloves (SPEC §8.9 row 19, BUILD M11 row M+ 19): (1, Embiggened 2)
 //! Spell, Common.
-//!   Base:    "Steal the top {cards|card|cards} of your opponent's deck. Embiggened (2): Steal
+//!   Base:    "Steal the top {cards|card|cards} of your opponent's deck. Embiggened (+1): Steal
 //!            {cards|random card|random cards} from their hand instead." (2/3)
 //!   Radiant: the same, each card taken costing (0).
 //!

@@ -1,7 +1,7 @@
 //! M #81 Deadman's Hand (SPEC §8.8 row 81): (0) embiggen (1) Spell, Rare ((2) through v0.5.11r).
 //!
 //! Base:    "Shuffle a copy of each card in your hand, and of this, into your deck. Then draw
-//!          {draw|card|cards}.\nEmbiggened (1): Each copy has a {chance}% chance to become Radiant."
+//!          {draw|card|cards}.\nEmbiggened (+1): Each copy has a {chance}% chance to become Radiant."
 //!          (draw 1)
 //! Radiant: the same, draw 3.
 //! Engine:

@@ -1,6 +1,6 @@
 //! #46 Suppressive Aura (SPEC §8.2): (1), Embiggened (3), since issue #4440 ((2), Embiggened (4), before
-//! it, catalog data): "Aura: All Units have −1/−1. Embiggened (3): −2/−2 instead.",
-//! radiant "Aura: Enemy Units have −2/−2. Embiggened (3): −4/−4 instead." The radiant cell restates the whole
+//! it, catalog data): "Aura: All Units have −1/−1. Embiggened (+2): −2/−2 instead.",
+//! radiant "Aura: Enemy Units have −2/−2. Embiggened (+2): −4/−4 instead." The radiant cell restates the whole
 //! clause and replaces the base one (§8 Conventions). Neither face prints a keyword.
 //! Ongoing aura (§10.4 layer 5, R83; #14, #45, R1081000; not permanent R78; CLAUDE.md rule 5). Embiggen reads play action (R1178000).
 //! Negative stat mods floor health/attack at 0 on read (§10.4).

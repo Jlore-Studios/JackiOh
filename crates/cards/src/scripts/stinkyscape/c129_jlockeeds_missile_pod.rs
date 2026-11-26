@@ -1,9 +1,9 @@
 //! Stinkyscape #129 Jlockeed's Missile Pod (SPEC §8.10 row 129). (1, Embiggened 3) Unit, Jlockeed, Epic;
 //! 2/2 → 4/4 (1/1 → 2/2 through v0.6.7k, 2/1 → 4/2 until issue #3837).
 //!   Base:    "End of turn: Deal damage equal to its Attack split among all enemies.
-//!            Embiggened (3): Starship Piece."
+//!            Embiggened (+2): Starship Piece."
 //!   Radiant: "End of turn: Deal damage equal to twice its Attack split among all enemies.
-//!            Embiggened (3): Starship Piece."
+//!            Embiggened (+2): Starship Piece."
 //!
 //! End of turn (R62), R4285002: its Attack as it stands then, through the layers, buffs and auras included
 //! (§10.4, R1878002), times `ATTACK_MULTIPLE` (Radiant `RADIANT_ATTACK_MULTIPLE`), dealt by §4.4's split

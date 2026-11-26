@@ -2,7 +2,8 @@
 // and #23 Enormous Elderberry, each through a fixture script: R1181000's effect made "in N turns" with
 // its countdown badge (`delay`'s `turns` and `label`), R1181002's aura over embiggen prices (the
 // `embiggenGarden` flag), R1181003's price for the Embiggened version alone (`embiggenCostOverride`, M+
-// #23's through v0.6.8d) and R4350000's no Embiggen premium (`noEmbiggenPremium`, M+ #23's since #4350).
+// #23's through v0.6.8d) and R4350000's no Embiggen premium (`noEmbiggenPremium`, M+ #23's since #4350),
+// and R5109000's Embiggened price, the normal one plus a premium, under all three.
 
 use jackioh_engine::effects;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -696,5 +697,71 @@ mod r4350000_an_added_card_with_no_embiggen_premium {
             event,
             GameEvent::RadiantSet { instance_id, .. } if *instance_id == ids[1]
         )));
+    }
+}
+
+mod r5109000_the_embiggened_price_is_the_normal_price_plus_the_premium {
+    use super::*;
+
+    /// R5109000, R1181002: under a Garden the dearer choice costs the normal version's finished price,
+    /// floored at 0, plus the Garden's whole premium, so a discount past 0 takes none of the premium.
+    #[test]
+    fn r5109000_under_a_garden_a_discount_past_0_keeps_the_whole_premium() {
+        let mut s = board(
+            "r5109000-garden-floor",
+            json!({ "hand": [{ "def": SWELL.id, "costMod": -3 }, plain.id], "backrow": [GARDEN.id], "mana": 10 }),
+            json!({}),
+        );
+        let id = swells_in_hand(&s)[0].clone();
+        let card = shown(&s, &id);
+        assert_eq!(
+            (card.cost, card.embiggen_cost),
+            (0, Some(GARDEN_PREMIUM)),
+            "the normal price stops at 0 and the premium rides on top whole"
+        );
+        s.play(id.as_str(), json!({ "zone": 2, "embiggen": true }));
+        assert_eq!(played(&s), (GARDEN_PREMIUM, Some(true)));
+        assert!(
+            s.card(id.as_str()).radiant,
+            "the Garden's dearer choice plays it Radiant"
+        );
+    }
+
+    /// R5109000, R4350000: no Embiggen premium makes the premium 0, under a Garden and past the floor too.
+    #[test]
+    fn r5109000_with_no_embiggen_premium_the_premium_is_0_past_the_floor_too() {
+        let mut s = board(
+            "r5109000-no-premium-floor",
+            json!({ "hand": [{ "def": SWELL.id, "costMod": -3 }, plain.id], "backrow": [GARDEN.id], "mana": 10 }),
+            json!({}),
+        );
+        let id = swells_in_hand(&s)[0].clone();
+        s.card_mut(id.as_str()).no_embiggen_premium = Some(true);
+        let card = shown(&s, &id);
+        assert_eq!((card.cost, card.embiggen_cost), (0, Some(0)));
+        s.play(id.as_str(), json!({ "zone": 2, "embiggen": true }));
+        assert_eq!(played(&s), (0, Some(true)));
+        assert!(s.card(id.as_str()).radiant, "still the Garden's dearer choice");
+    }
+
+    /// R5109000, R1181003: a card kept with an `embiggenCostOverride` (a game of v0.6.9 and before)
+    /// prices its Embiggened version from that override on R65's ladder, as it did, with no premium.
+    #[test]
+    fn r5109000_a_kept_embiggen_cost_override_keeps_its_old_price() {
+        let mut s = board(
+            "r5109000-kept-override",
+            json!({ "hand": [{ "def": SWELL.id, "costMod": -1 }, plain.id], "mana": 10 }),
+            json!({}),
+        );
+        let id = swells_in_hand(&s)[0].clone();
+        s.card_mut(id.as_str()).embiggen_cost_override = Some(ELDER_COST);
+        let card = shown(&s, &id);
+        assert_eq!(
+            (card.cost, card.embiggen_cost),
+            (SWELL_BASE - 1, Some(ELDER_COST)),
+            "the override, its costMod floored at 0, and no premium over the normal price"
+        );
+        s.play(id.as_str(), json!({ "zone": 1, "embiggen": true }));
+        assert_eq!(played(&s), (ELDER_COST, Some(true)));
     }
 }

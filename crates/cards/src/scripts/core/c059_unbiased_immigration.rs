@@ -1,5 +1,5 @@
 //! #59 Unbiased Immigration (SPEC §8.3): Field Spell, cost 2 embiggen 4, Rare. "Activate: add a random card
-//! to your hand (Embiggened (4): it costs (0))" / radiant "A random Radiant card (Embiggened (4): it costs
+//! to your hand (Embiggened (+2): it costs (0))" / radiant "A random Radiant card (Embiggened (+2): it costs
 //! (0))". Engine cell: "Non-token pool excluding #59", every set's (R380; §8).
 //! Embiggen travels in play action (R81, §10.6). Pool query excludes def (#59, §5.1, R387).
 //! Drawn via RNG (R60; Radiant R74); embiggened discounts costMod (R766, R65; burns if full, R4, §2.4, R78).

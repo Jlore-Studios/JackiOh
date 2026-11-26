@@ -430,6 +430,21 @@ describe("#492 one card picker, front and center, for every short choice", () =>
     expect(onAction).toHaveBeenCalledWith(PRICES[1]);
   });
 
+  it("R5109001 both cards print the Embiggened line by its premium, (+2), and under a discount the Embiggened card's gem is the view's embiggenCost", () => {
+    // A discount of 3 on a 2 embiggen 4: the engine prices (0), and (0) plus the premium of 2.
+    renderPlay(handView(AURA, { cost: 0, embiggenCost: 2 }), PRICES);
+    const normal = screen.getByTestId("prompt-option-false");
+    const bigger = screen.getByTestId("prompt-option-true");
+    for (const option of [normal, bigger]) {
+      const text = option.querySelector(".card-text")?.textContent ?? "";
+      expect(text.split("\n").some((line) => line.startsWith("Embiggened (+2): "))).toBe(true);
+      expect(text).not.toContain("Embiggened (4)");
+    }
+    expect(gem(normal)).toEqual({ text: "0", alt: null });
+    expect(gem(bigger)).toEqual({ text: "2", alt: null });
+    expect(bigger.querySelector(".prompt-card-caption-detail")?.textContent).toBe("Pay (2)");
+  });
+
   it("#492 a Radiant card offers its Radiant face at both prices", () => {
     renderPlay(handView(AURA, { cost: 2, embiggenCost: 4, radiant: true }), PRICES);
     for (const key of ["false", "true"]) {
@@ -450,8 +465,9 @@ describe("#492 one card picker, front and center, for every short choice", () =>
     expect(bigger.getAttribute("aria-label")).toBe(`Embiggened: ${nameOf(AURA)}, costs (3)`);
   });
 
-  it("#492 R363: a discount the embiggen price alone reaches lowers only the Embiggened card", () => {
-    // Professor Curvature's "(4)+ Cost" discount: 2 stays 2, 4 becomes 3. Only the view can say so.
+  it("#492 R1181002: a premium only the Embiggened price pays lowers only the Embiggened card", () => {
+    // A Radiant Mountaintop Garden's premium of (1) replaces the card's (2) (R5109000): 2 stays 2, and the
+    // dearer price is 2 + 1. Only the view can say so.
     renderPlay(handView(AURA, { cost: 2, embiggenCost: 3 }), PRICES);
     expect(gem(screen.getByTestId("prompt-option-false"))).toEqual({ text: "2", alt: null });
     expect(gem(screen.getByTestId("prompt-option-true"))).toEqual({ text: "3", alt: null });

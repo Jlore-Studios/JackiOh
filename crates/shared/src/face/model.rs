@@ -924,9 +924,11 @@ fn cost_of(
             }
         }
         // "A embiggen B": with no live number, or the live number at A, the gem shows A with B (the view's
-        // `embiggenCost` where it has one, R1181003) beside it. Otherwise it shows the view's number and drops
-        // B: the client never works out a discounted embiggen price (CLAUDE.md rule 7). A card whose live
-        // cost is B was paid B, its printed price, so the tone is base.
+        // `embiggenCost` where it has one, R1181003) beside it. Otherwise it shows the view's number, and
+        // beside it the view's `embiggenCost` where it has one (R5109001: the badge is the Embiggened
+        // version's realized price, which moves with every discount as the engine's number does), else
+        // nothing: the client never works out a discounted embiggen price (CLAUDE.md rule 7). A card whose
+        // live cost is B was paid B, its printed price, so the tone is base.
         CardCost::Embiggen { base, embiggen } => match live_cost {
             None => FaceCost {
                 text: base.to_string(),
@@ -948,7 +950,7 @@ fn cost_of(
                 } else {
                     cost_tone(Some(cost), base)
                 },
-                alt: None,
+                alt: live_embiggen_cost.map(|price| price.to_string()),
             },
         },
     }
@@ -1223,6 +1225,29 @@ mod tests {
         );
         assert_eq!(at(Some(5)), ("5".to_string(), None, CostTone::Base));
         assert_eq!(at(Some(4)), ("4".to_string(), None, CostTone::Up));
+    }
+
+    /// R5109001, CLAUDE.md rule 7: the badge is the view's `embiggenCost`, the Embiggened version's realized
+    /// price, wherever the view gives one: under a discount the gem shows the view's normal price and the
+    /// badge the view's Embiggened one, each as the engine priced it; with none the badge is not shown.
+    #[test]
+    fn r5109001_under_a_discount_the_badge_is_the_views_embiggen_cost() {
+        let mut def = catalog("core-046");
+        def.cost = CardCost::Embiggen { base: 2, embiggen: 4 };
+        let at = |live, live_embiggen| {
+            let cost = cost_of(Some(&def), live, live_embiggen, None);
+            (cost.text, cost.alt, cost.tone)
+        };
+        assert_eq!(
+            at(Some(0), Some(2)),
+            ("0".to_string(), Some("2".to_string()), CostTone::Down),
+            "a discount of 3: (0) and the premium of 2 on top"
+        );
+        assert_eq!(
+            at(Some(3), Some(5)),
+            ("3".to_string(), Some("5".to_string()), CostTone::Up)
+        );
+        assert_eq!(at(Some(1), None), ("1".to_string(), None, CostTone::Down));
     }
 
     /// Issue #170: Glitch's gem is plain, whatever its cost would say.
