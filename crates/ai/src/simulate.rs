@@ -464,6 +464,10 @@ pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) 
             };
             expensive + judged
         }
+        // R4595004: a face-down expensive card's reveal (`activate`) runs its scorer as a Play does.
+        ActionBody::Activate { instance_id, .. } => find_instance(state, instance_id)
+            .filter(|card| stands_for_any(state, &card.def_id, AI_SEARCH.expensive_def_ids))
+            .map_or(0, |_| AI_SEARCH.expensive_def_nodes.max(0) as usize),
         ActionBody::Attack { attacker_id, .. } => {
             let defender = opponent_of(actor);
             // Trapped lethal-gate estimate against effective_life (R964000; never if cannot lose, R2201000).
@@ -504,7 +508,7 @@ pub fn announced_surcharge_nodes(state: &GameState, action: &ActionBody, stepped
         })
         .count();
     let prepaid = match action {
-        ActionBody::Play { instance_id, .. } => usize::from(
+        ActionBody::Play { instance_id, .. } | ActionBody::Activate { instance_id, .. } => usize::from(
             find_instance(state, instance_id).is_some_and(|card| stands_for_any(state, &card.def_id, ids)),
         ),
         _ => 0,
