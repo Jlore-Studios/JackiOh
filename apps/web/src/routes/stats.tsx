@@ -735,9 +735,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const [versionsError, setVersionsError] = useState(false);
   const [versionsAttempt, setVersionsAttempt] = useState(0);
   // R4681001: the Hall of Fame's four lists on the match type, which the Hall of Fame view reads; Retry bumps the attempt.
-  const [hallData, setHallData] = useState<PublicHallOfFameResponse | null>(null);
-  const [hallError, setHallError] = useState(false);
+  // R4681001: the Hall of Fame's answer, kept with the request it answers (the match type and the retry),
+  // so a new request reads as loading until its own answer lands, with no reset inside the effect.
+  const [hall, setHall] = useState<{ key: string; data: PublicHallOfFameResponse | null; error: boolean } | null>(null);
   const [hallAttempt, setHallAttempt] = useState(0);
+  const hallKey = `${mode}:${String(hallAttempt)}`;
+  const hallData = hall?.key === hallKey ? hall.data : null;
+  const hallError = hall?.key === hallKey && hall.error;
 
   const updateUrl = useCallback(() => {
     const params = new URLSearchParams();
@@ -952,15 +956,14 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const wantHall = experimental && experimentalView === "hall";
   useEffect(() => {
     if (!wantHall) return;
-    setHallData(null);
-    setHallError(false);
+    const key = `${mode}:${String(hallAttempt)}`;
     const controller = new AbortController();
     getHallOfFame({ mode, signal: controller.signal })
       .then((res) => {
-        if (!controller.signal.aborted) setHallData(res);
+        if (!controller.signal.aborted) setHall({ key, data: res, error: false });
       })
       .catch(() => {
-        if (!controller.signal.aborted) setHallError(true);
+        if (!controller.signal.aborted) setHall({ key, data: null, error: true });
       });
     return () => controller.abort();
   }, [wantHall, mode, hallAttempt]);
