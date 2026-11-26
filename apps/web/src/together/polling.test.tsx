@@ -9,7 +9,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CHAT_POLL_MS, PRESENCE_HEARTBEAT_MS } from "@jackioh/server-config";
+import { CHAT_POLL_MS, MATCH_FOUND_NAV_DELAY_MS, PRESENCE_HEARTBEAT_MS } from "@jackioh/server-config";
 
 import { RECONNECT_DELAYS_MS, RECONNECT_JITTER } from "../game/net.ts";
 import { rememberRead } from "../net/readCache.ts";
@@ -21,7 +21,8 @@ import { settle } from "../test/settle.ts";
 import { resetVisibility, setVisibility } from "../test/setup.ts";
 import { must, stubServer, type StubServer } from "../test/stubServer.ts";
 import { ChallengeToast } from "./ChallengeToast.tsx";
-import { FRIENDS_POLL_MS, HIDDEN_QUIET_MS, SOCIAL_POLL_MS } from "./config.ts";
+import { FRIENDS_POLL_MS, HIDDEN_QUIET_MS, IDLE_QUIET_MS, SOCIAL_POLL_MS } from "./config.ts";
+import { followChallenge, stopFollowingChallenge } from "./follow.ts";
 import { FriendsButton } from "./FriendsButton.tsx";
 import { friendsDrawerChunk } from "./friendsDrawerChunk.ts";
 import { setSocialSocketFactory } from "./socialSocket.ts";
@@ -59,13 +60,22 @@ const INCOMING: Challenge = {
 
 type Challenges = { incoming: Challenge[]; outgoing: Challenge[] };
 
-function serve(challenges: () => Challenges = () => ({ incoming: [], outgoing: [] })): StubServer {
+function serve(
+  challenges: () => Challenges = () => ({ incoming: [], outgoing: [] }),
+  currentMatchId: () => string | null = () => null,
+): StubServer {
   return stubServer((call) => {
     const { method, path } = call;
     if (path === "/api/auth/me") {
       return {
         status: 200,
-        body: { profile: { id: "profile-1", status: "active" }, needsInviteCode: false, emailVerified: true, currentMatchId: null, email: null },
+        body: {
+          profile: { id: "profile-1", status: "active" },
+          needsInviteCode: false,
+          emailVerified: true,
+          currentMatchId: currentMatchId(),
+          email: null,
+        },
       };
     }
     if (method === "GET" && path === "/api/friends") {
@@ -373,6 +383,40 @@ describe("R3214000 the social socket stands in for the polls", () => {
     expect(screen.queryByTestId(challengeToastTestid.toast), "the pushed read took it away").toBeNull();
   });
 
+  it("R4984001 while a challenge of the tab's own is open the poll reads under a live socket, so a join's one missed read still brings the challenger to the game", async () => {
+    let open: Challenges = { incoming: [], outgoing: [OUTGOING] };
+    let match: string | null = null;
+    const server = serve(
+      () => open,
+      () => match,
+    );
+    const from = window.location.pathname;
+    window.history.replaceState(null, "", "/replays");
+    followChallenge();
+    try {
+      render(<ChallengeToast />);
+      await settle({ advance: 0 });
+      await goLive(open);
+      const before = reads(server).social;
+
+      // The friend joins: the challenge is gone from the pushed read, but the game the toast asks for
+      // is not there yet (a read of `/api/auth/me` from before the join, an answer that failed).
+      open = { incoming: [], outgoing: [] };
+      socket().deliver({ type: "social", ...open, unread: {} });
+      await settle({ advance: 0 });
+      expect(window.location.pathname, "no game yet: the tab stays").toBe("/replays");
+
+      match = "m-9";
+      await settle({ advance: SOCIAL_POLL_MS });
+      expect(reads(server).social, "the follow rides the poll while the socket is live").toBe(before + 1);
+      await settle({ advance: MATCH_FOUND_NAV_DELAY_MS });
+      expect(window.location.pathname).toBe("/match/m-9");
+    } finally {
+      stopFollowingChallenge();
+      window.history.replaceState(null, "", from);
+    }
+  });
+
   it("R3214000 after the connection drops the social poll reads at once and resumes its pace", async () => {
     const server = serve();
     render(<ChallengeToast />);
@@ -557,6 +601,43 @@ describe("R3214000 the social socket stands in for the polls", () => {
     await goLive();
     await settle({ advance: 3 * SOCIAL_POLL_MS });
     expect(reads(server).social, "live again: no poll").toBe(before + 1);
+  });
+
+  it("R4691001 a shown tab with no input for IDLE_QUIET_MS lets its socket go and reads nothing, and opens one again at its next input", async () => {
+    const server = serve();
+    render(<ChallengeToast />);
+    await settle({ advance: 0 });
+    await goLive();
+    const before = reads(server).social;
+
+    await settle({ advance: IDLE_QUIET_MS - 1 });
+    expect(socket().closedWith, "idle for less, the socket stays").toBeNull();
+    await settle({ advance: 1 });
+    expect(socket().closedWith, "idle: the socket is let go").not.toBeNull();
+
+    await settle({ advance: 5 * SOCIAL_POLL_MS });
+    expect(reads(server).social, "idle: the poll reads nothing").toBe(before);
+    expect(sockets, "and no socket opens while nobody uses the tab").toHaveLength(1);
+
+    fireEvent.keyDown(document.body, { key: "a" });
+    await settle({ advance: 0 });
+    expect(sockets, "used again: a socket opens").toHaveLength(2);
+    expect(reads(server).social, "used again: one read").toBe(before + 1);
+  });
+
+  it("R4691001 input inside IDLE_QUIET_MS keeps the socket, and the count starts over", async () => {
+    serve();
+    render(<ChallengeToast />);
+    await settle({ advance: 0 });
+    await goLive();
+
+    for (let touch = 0; touch < 3; touch += 1) {
+      await settle({ advance: IDLE_QUIET_MS - 1 });
+      fireEvent.pointerMove(document.body);
+    }
+    await settle({ advance: 0 });
+    expect(sockets).toHaveLength(1);
+    expect(socket().closedWith).toBeNull();
   });
 
   it("R3576000 a tab that shows again before HIDDEN_QUIET_MS keeps its socket, and the count starts over", async () => {

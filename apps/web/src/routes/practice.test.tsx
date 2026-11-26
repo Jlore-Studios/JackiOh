@@ -92,6 +92,7 @@ const T = {
   playAgain: "practice-play-again",
   changeSetup: "practice-change-setup",
   viewBoard: "practice-view-board",
+  mainMenu: "practice-main-menu",
   watchReplay: "practice-watch-replay",
   shareLastTurn: "practice-share-last-turn",
   outcome: "practice-outcome",
@@ -1570,7 +1571,7 @@ describe("B33 starting renders the game with no HUD above the board", () => {
     expect(screen.queryByTestId(T.leave)).toBeNull();
   });
 
-  it("practice-menu asks first mid-game, and confirming leaves for the main menu", async () => {
+  it("practice-menu asks first mid-game, and confirming leaves for the main menu, the Play hub's Solo group (#4742)", async () => {
     visit("?seed=menu1&difficulty=easy&deck=random&seat=p1");
     renderRoute(routeHost());
     await screen.findByTestId("game");
@@ -1582,10 +1583,11 @@ describe("B33 starting renders the game with no HUD above the board", () => {
     expect(window.location.pathname).toBe("/practice");
 
     fireEvent.click(screen.getByTestId(T.leaveConfirm));
-    expect(window.location.pathname).toBe("/");
+    expect(window.location.pathname).toBe("/play");
+    expect(window.location.hash).toBe("#solo");
   });
 
-  it("once the game is over, practice-menu goes straight to the main menu", async () => {
+  it("once the game is over, practice-menu goes straight to the main menu, the Play hub's Solo group (#4742)", async () => {
     visit("?seed=menu2&difficulty=easy&deck=random&seat=p1");
     renderRoute(routeHost());
     await screen.findByTestId("game");
@@ -1594,7 +1596,8 @@ describe("B33 starting renders the game with no HUD above the board", () => {
 
     fireEvent.click(screen.getByTestId(T.menu));
     expect(screen.queryByTestId(T.leave)).toBeNull();
-    expect(window.location.pathname).toBe("/");
+    expect(window.location.pathname).toBe("/play");
+    expect(window.location.hash).toBe("#solo");
   });
 
   it("R668 a reload or a closed tab asks first while a lesson is on, and not for a free game (it is saved), at setup or once it is over", async () => {
@@ -1703,7 +1706,7 @@ describe("R668 resuming a practice game after a reload", () => {
     await screen.findByTestId("game");
     fireEvent.click(screen.getByTestId(T.menu));
     fireEvent.click(await screen.findByTestId(T.leaveConfirm));
-    expect(window.location.pathname).toBe("/");
+    expect(window.location.pathname).toBe("/play");
     expect(readPracticeResumeState()?.config ?? null).toBeNull();
     cleanup();
 
@@ -1837,7 +1840,8 @@ describe("R765 leaving a practice game: Save and leave, or Leave without saving"
     const leave = await askToLeave("menu");
     expect(leave).toHaveTextContent("main menu");
     fireEvent.click(screen.getByTestId(T.leaveSave));
-    expect(window.location.pathname).toBe("/");
+    expect(window.location.pathname).toBe("/play");
+    expect(window.location.hash).toBe("#solo");
     expect(readPracticeResumeState()?.saved).toBe(true);
     cleanup();
 
@@ -2041,6 +2045,17 @@ describe("the result dialog", () => {
 
     fireEvent.keyDown(window, { key: "Escape" });
     expect(screen.queryByTestId(T.result)).toBeNull();
+  });
+
+  it("R4742000 Main menu in the result dialog leaves at once for the Play hub's Solo group, as the board's Menu does, and gives the game up", async () => {
+    await concede("?seed=over4742&difficulty=easy&deck=random&seat=p1");
+
+    expect(screen.getByTestId(T.playAgain)).toHaveFocus();
+    fireEvent.click(screen.getByTestId(T.mainMenu));
+    expect(screen.queryByTestId(T.leave)).toBeNull();
+    expect(window.location.pathname).toBe("/play");
+    expect(window.location.hash).toBe("#solo");
+    expect(readPracticeResumeState()?.config ?? null).toBeNull();
   });
 
   it("Change setup returns to the setup screen", async () => {

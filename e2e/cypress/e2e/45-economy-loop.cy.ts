@@ -11,7 +11,8 @@
 
 import { newestShippedSet } from "../../../apps/web/src/wire/catalog.ts";
 import { VERSION_FULL_ART_ID } from "../../../apps/web/src/cards/versions.ts";
-import { COSMETICS, COSMETIC_OFFERS } from "../../../apps/web/src/wire/generated/cosmetics.ts";
+import { COSMETIC_OFFERS } from "../../../apps/web/src/wire/generated/cosmeticOffers.ts";
+import { COSMETICS } from "../../../apps/web/src/wire/generated/cosmetics.ts";
 import {
   COSMETIC_TOKEN_CYCLE,
   GLOBAL_PACK_NAME,

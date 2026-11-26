@@ -1,4 +1,4 @@
-//! Heroic Power (SPEC §8 #98, R43, R103, R352, R752–R761, R3551002): the fourteen powers, the roll
+//! Heroic Power (SPEC §8 #98, R43, R103, R352, R752–R761, R3551002, R4828000): the fourteen powers, the roll
 //! that picks one, and each power as the Activate ability it is. The kept v0.5.13g script plays the
 //! thirteen (`PowerEdition::Thirteen`); the new face adds End Times and prices each of the thirteen
 //! (1) less (`PowerEdition::EndTimes`).
@@ -397,6 +397,24 @@ fn write_memory(ctx: &mut EffectContext<'_>, id: &str, key: &str, value: Value) 
     }
 }
 
+/// R4828000: End Times' bank, `Tuning.taken` under `END_TIMES_PRICE_PARAM`, written on the card in the
+/// state and on the context's own copy, so later effects of the context see it.
+fn write_taken(ctx: &mut EffectContext<'_>, id: &str, value: i32) {
+    if let Some(card) = crate::state::find_instance_mut(&mut *ctx.sink.state, id) {
+        crate::tuning::set_taken(card, END_TIMES_PRICE_PARAM, value);
+    }
+    if let Some(card) = ctx.self_.as_mut().filter(|card| card.id == id) {
+        crate::tuning::set_taken(card, END_TIMES_PRICE_PARAM, value);
+    }
+}
+
+/// R3551002: End Times' price as the card stands in the state now: its declared `endTimes` as its
+/// tuning moved it.
+fn end_times_price(state: &GameState, card: &CardInstance) -> i32 {
+    let live = crate::state::find_instance(state, &card.id).unwrap_or(card);
+    crate::params::declared_or(state, live, END_TIMES_PRICE_PARAM, END_TIMES_COST)
+}
+
 /// R757: the power rerolls among the other twelve (the match rng) and gives back the use this
 /// activation spent, so the new power may be activated this turn too, paying its own X.
 /// R3551002: the card's edition picks the roll (Tank Up's refresh never lands on End Times).
@@ -587,6 +605,18 @@ fn terminus_tricks(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect> {
 /// named `defId`, never Radiant on either face; with no answer (no such card) nothing happens.
 /// `end_times_reset` runs first, so a use takes back what the ends of turn took off.
 fn end_times(ctx: &mut EffectContext<'_>, _radiant: bool) -> Vec<Effect> {
+    discover_terminus(ctx, end_times_reset)
+}
+
+/// R4828000: End Times as the kept v0.6.14 script ran it (`script_v0_6_14`), its use giving back the
+/// bank in the card's memory (`end_times_reset_v0_6_14`).
+pub fn end_times_v0_6_14(ctx: &mut EffectContext<'_>, _radiant: bool) -> Vec<Effect> {
+    discover_terminus(ctx, end_times_reset_v0_6_14)
+}
+
+/// R3551002: End Times' use, `reset` giving back its cuts before the Discover, or the Discover's
+/// answer added to the hand.
+fn discover_terminus(ctx: &mut EffectContext<'_>, reset: fn() -> Effect) -> Vec<Effect> {
     if let Some(picked) = crate::effects::chosen_options(ctx).first().cloned() {
         return vec![crate::effects::add_to_hand(json_as(json!({
             "defId": picked,
@@ -594,7 +624,7 @@ fn end_times(ctx: &mut EffectContext<'_>, _radiant: bool) -> Vec<Effect> {
         })))];
     }
     vec![
-        end_times_reset(),
+        reset(),
         crate::effects::discover_from_catalog(json_as(json!({
             "step": POWER_RESUME,
             "query": { "tags": ["Terminus"], "withTokens": true },
@@ -604,10 +634,73 @@ fn end_times(ctx: &mut EffectContext<'_>, _radiant: bool) -> Vec<Effect> {
     ]
 }
 
-/// R3551002: End Times' End of Turn, on its controller's end of turn alone (the hook's): it takes
-/// the face's cut (1, Radiant 2) off the next use's price, never below 0, and banks what it took in
-/// `END_TIMES_TAKEN_KEY` so the use takes it back. With any other power, nothing.
+/// R3551002, R4828000: End Times' End of Turn, on its controller's end of turn alone (the hook's): it
+/// takes the face's cut (1, Radiant 2) off the next use's price, never below 0, and banks what the
+/// price moved in the card's tuning beside the cut (`Tuning.taken`), so the use gives it back wherever
+/// the card has been since. With any other power, nothing.
 pub fn end_times_tick() -> Effect {
+    Effect::new("endTimesTick", |ctx| {
+        let Some(card) = ctx.live_self().cloned() else {
+            return;
+        };
+        if power_of(&card).map(|power| power.name) != Some(HeroPowerName::EndTimes) {
+            return;
+        }
+        let price = end_times_price(&*ctx.sink.state, &card);
+        let printed_cut = if ctx.radiant {
+            END_TIMES_RADIANT_CUT
+        } else {
+            END_TIMES_CUT
+        };
+        let cut = power_number(ctx, END_TIMES_CUT_PARAM, printed_cut);
+        let step = cut.min(price).max(0);
+        if step <= 0 {
+            return;
+        }
+        let lower = crate::effects::set_number(json_as(json!({
+            "target": { "of": "self" },
+            "which": format!("param:{END_TIMES_PRICE_PARAM}"),
+            "value": price - step
+        })));
+        (lower.apply)(ctx);
+        // An Immutable card's number does not move (B3.4 rule 2), so it banks nothing.
+        let moved = price - end_times_price(&*ctx.sink.state, &card);
+        if moved > 0 {
+            let taken = crate::tuning::taken_of(&card, END_TIMES_PRICE_PARAM);
+            write_taken(ctx, &card.id, taken + moved);
+        }
+    })
+}
+
+/// R3551002, R4828000: give back what the ends of turn took off, so a used End Times costs (10) again:
+/// the price moves back up by the bank in the card's tuning (`Tuning.taken`), and the bank down by what
+/// it moved.
+fn end_times_reset() -> Effect {
+    Effect::new("endTimesReset", |ctx| {
+        let Some(card) = ctx.live_self().cloned() else {
+            return;
+        };
+        let taken = crate::tuning::taken_of(&card, END_TIMES_PRICE_PARAM);
+        if taken <= 0 {
+            return;
+        }
+        let price = end_times_price(&*ctx.sink.state, &card);
+        let back = crate::effects::set_number(json_as(json!({
+            "target": { "of": "self" },
+            "which": format!("param:{END_TIMES_PRICE_PARAM}"),
+            "value": price + taken
+        })));
+        (back.apply)(ctx);
+        let given = end_times_price(&*ctx.sink.state, &card) - price;
+        if given > 0 {
+            write_taken(ctx, &card.id, (taken - given).max(0));
+        }
+    })
+}
+
+/// R4828000: End Times' End of Turn as the kept v0.6.14 script ran it (`script_v0_6_14`): the bank
+/// in the card's memory (`END_TIMES_TAKEN_KEY`), which R78 cleared while the cut stayed in the tuning.
+pub fn end_times_tick_v0_6_14() -> Effect {
     Effect::new("endTimesTick", |ctx| {
         let Some(card) = ctx.live_self().cloned() else {
             return;
@@ -642,9 +735,10 @@ pub fn end_times_tick() -> Effect {
     })
 }
 
-/// R3551002: give back what the ends of turn took off, so a used End Times costs (10) again: the
-/// price moves back up by the banked `END_TIMES_TAKEN_KEY`, banked to 0.
-fn end_times_reset() -> Effect {
+/// R4828000: End Times' use giving back its cuts as the kept v0.6.14 script ran it (`script_v0_6_14`):
+/// the bank in the card's memory (`END_TIMES_TAKEN_KEY`), which R78 cleared while the cut stayed in the
+/// tuning.
+fn end_times_reset_v0_6_14() -> Effect {
     Effect::new("endTimesReset", |ctx| {
         let Some(card) = ctx.live_self().cloned() else {
             return;
@@ -832,8 +926,8 @@ pub const HERO_POWERS: &[HeroPower] = &[
 pub const END_TIMES_PRICE_PARAM: &str = "endTimes";
 pub const END_TIMES_CUT_PARAM: &str = "endTimesCut";
 
-/// R3551002: where the cuts taken so far wait while End Times sits unused, so its activation takes
-/// them back.
+/// R3551002, R4828000: where the kept v0.6.14 script banked the cuts in the card's memory; the build's
+/// own banks them in its tuning (`Tuning.taken`).
 pub const END_TIMES_TAKEN_KEY: &str = "endTimesTaken";
 
 /// R3551002: what End Times Discovers.
@@ -1005,8 +1099,8 @@ pub fn discover_power() -> Effect {
 }
 
 /// R3134002: R151's arrival roll for a copy that reaches the field with no Cry to choose: Summoned,
-/// Recruited, fused onto a card on the field, Reborn or Flickered back (`summon_onto`'s and the fuse's
-/// arrival clause), so it is never dead. A copy in a hand or a library rolls nothing: playing it runs
+/// Recruited, fused onto a card on the field, Reborn, Flickered back or made by a Transform
+/// (`summon_onto`'s, the fuse's and the Transform's arrival clause, R4816000), so it is never dead. A copy in a hand or a library rolls nothing: playing it runs
 /// the Cry, which asks.
 pub fn roll_power_on_field() -> Effect {
     Effect::new("rollPowerOnField", |ctx| {

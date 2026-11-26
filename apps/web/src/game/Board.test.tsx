@@ -103,6 +103,35 @@ describe("Board", () => {
     expect(screen.getByTestId(testid.endTurn)).toBeDisabled();
   });
 
+  it("R4734000 a finished view's End turn reads Game over, carries data-turn-state over and stays disabled", () => {
+    const view = fullBoardView();
+    const results: NonNullable<PlayerView["result"]>[] = [
+      { winner: view.viewer, reason: "hero-death" },
+      { winner: view.opponent.player, reason: "hero-death" },
+      { winner: "draw", reason: "draw-accepted" },
+    ];
+    for (const result of results) {
+      for (const active of [view.viewer, view.opponent.player]) {
+        const board = render(<Board view={{ ...view, active, result }} highlight={NO_HIGHLIGHT} />);
+        const endTurn = screen.getByTestId(testid.endTurn);
+        const what = `${result.winner} won, ${active} active`;
+        expect(endTurn, what).toHaveTextContent("Game over");
+        expect(endTurn, what).not.toHaveTextContent("Enemy turn");
+        expect(endTurn.getAttribute("data-turn-state"), what).toBe("over");
+        expect(endTurn.closest(".turn-mechanism")?.getAttribute("data-turn-state"), what).toBe("over");
+        expect(endTurn, what).toBeDisabled();
+        board.unmount();
+      }
+    }
+  });
+
+  it("R4734000 Game over's End turn is sunk as the opponent's turn is", () => {
+    const buttonsCss = readSheet("src/buttons.css");
+    const pair = '.board .control.control-end-turn[data-turn-state="enemy"], .board .control.control-end-turn[data-turn-state="over"] {';
+    expect(boardCss.replace(/\s+/g, " ")).toContain(pair);
+    expect(buttonsCss.replace(/\s+/g, " ")).toContain(pair);
+  });
+
   it("#3219 a locked End turn is the real disabled, so it keeps the raised face main drew it with", () => {
     // End turn is a `button-primary`, whose disabled rule draws it unlit. A locked End turn
     // (nothing legal, as while an animation plays) carries `disabled` and not `aria-disabled`

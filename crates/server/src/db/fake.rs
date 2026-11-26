@@ -42,12 +42,12 @@ use crate::db::store::{
     CollectionEntry, CollectionGrant, ConsentRow, Db, DeckVersion, DeckVersionOutcome, EmoteEventRow,
     FavoriteCard, FoldedRecords, FrozenTrio, FunStats, GameRecordQuery, InviteCluster, InviteCode,
     LastBoardEntry, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks,
-    MatchPhase, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode,
-    PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
-    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
-    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput,
-    RedeemResult, ReplayRow, ReplayWithMode, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room,
-    SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
+    MatchPhase, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PlayTelemetry,
+    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
+    PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
+    ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult,
+    ReplayListRow, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck,
+    SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
     StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
     TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord,
     UpsertOutcome, UsernameClaim, UsernameClaimOutcome, deck_version_step,
@@ -1454,6 +1454,22 @@ pub fn matches_live(f: &mut FakeTx<'_>) -> Result<Vec<MatchRow>, StoreError> {
         .collect())
 }
 
+/// The reaper's read: `matches_live`'s rows whose ceiling is at or before `now`, in the order made.
+pub fn matches_past_ceiling(f: &mut FakeTx<'_>, now: i64) -> Result<Vec<MatchRow>, StoreError> {
+    call(f, "matches.pastCeiling")?;
+    let tables: &FakeTables = f.tables();
+    Ok(tables
+        .matches
+        .iter()
+        .filter(|row| {
+            row.status == MatchStatus::Live
+                && row.clocks.ceiling_at <= now
+                && !is_daily_match(tables, &row.id)
+        })
+        .cloned()
+        .collect())
+}
+
 pub fn matches_mode_of(f: &mut FakeTx<'_>, match_id: &str) -> Result<Option<QueueMode>, StoreError> {
     call(f, "matches.modeOf")?;
     Ok(match_mode_in(f.tables(), match_id))
@@ -1602,13 +1618,13 @@ fn replay_row_in(tables: &FakeTables, row: &MatchRow) -> Option<ReplayRow> {
     })
 }
 
-pub fn replays_list(
+pub fn replays_list_with_modes(
     f: &mut FakeTx<'_>,
     profile_id: &str,
     limit: i64,
     offset: i64,
-) -> Result<Vec<ReplayRow>, StoreError> {
-    call(f, "replays.list")?;
+) -> Result<Vec<ReplayListRow>, StoreError> {
+    call(f, "replays.listWithModes")?;
     let tables: &FakeTables = f.tables();
     let mut rows: Vec<ReplayRow> = tables
         .matches
@@ -1627,39 +1643,10 @@ pub fn replays_list(
         .into_iter()
         .skip(usize::try_from(offset).unwrap_or(0))
         .take(usize::try_from(limit).unwrap_or(0))
-        .collect())
-}
-
-pub fn replays_list_with_modes(
-    f: &mut FakeTx<'_>,
-    profile_id: &str,
-    limit: i64,
-    offset: i64,
-) -> Result<Vec<ReplayWithMode>, StoreError> {
-    call(f, "replays.listWithModes")?;
-    let tables: &FakeTables = f.tables();
-    let mut rows: Vec<ReplayWithMode> = tables
-        .matches
-        .iter()
-        .filter(|row| row.players.0 == profile_id || row.players.1 == profile_id)
-        .filter_map(|row| replay_row_in(tables, row))
-        .filter(|replay| replay.actions > 0)
         .map(|replay| {
             let mode = match_mode_in(tables, &replay.row.id);
-            ReplayWithMode { replay, mode }
+            ReplayListRow::of(replay, mode)
         })
-        .collect();
-    rows.sort_by(|a, b| {
-        b.replay
-            .row
-            .finished_at
-            .cmp(&a.replay.row.finished_at)
-            .then_with(|| b.replay.row.id.cmp(&a.replay.row.id))
-    });
-    Ok(rows
-        .into_iter()
-        .skip(usize::try_from(offset).unwrap_or(0))
-        .take(usize::try_from(limit).unwrap_or(0))
         .collect())
 }
 
@@ -1804,18 +1791,6 @@ pub fn tickets_count_open(f: &mut FakeTx<'_>) -> Result<i64, StoreError> {
         .count() as i64)
 }
 
-/// R257: open tickets per mode. Every mode is present, in the order `bo1`, `bo3`, `random`.
-pub fn tickets_count_open_by_mode(f: &mut FakeTx<'_>) -> Result<PerMode<i64>, StoreError> {
-    call(f, "tickets.countOpenByMode")?;
-    let mut counts: PerMode<i64> = PerMode::default();
-    for ticket in &f.tables().tickets {
-        if ticket.status == TicketStatus::Open {
-            counts[ticket.mode] += 1;
-        }
-    }
-    Ok(counts)
-}
-
 pub fn tickets_recent_waits(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<TicketWait>, StoreError> {
     call(f, "tickets.recentWaits")?;
     let tables = f.tables();
@@ -1888,6 +1863,15 @@ pub fn tickets_cancel(f: &mut FakeTx<'_>, ticket_id: &str, _at: i64) -> Result<(
     }
     row.status = TicketStatus::Canceled;
     Ok(())
+}
+
+/// R4446000: every cancelled ticket enqueued before `cutoff`.
+pub fn tickets_purge(f: &mut FakeTx<'_>, cutoff: i64) -> Result<i64, StoreError> {
+    call(f, "tickets.purge")?;
+    let gone = keep_only(&mut f.tables().tickets, |row| {
+        row.status != TicketStatus::Canceled || row.enqueued_at >= cutoff
+    });
+    Ok(gone as i64)
 }
 
 // Results (§9.5)
@@ -4407,7 +4391,7 @@ pub fn blocks_between(f: &mut FakeTx<'_>, x: &str, y: &str) -> Result<bool, Stor
 
 pub fn blocks_add(f: &mut FakeTx<'_>, blocker: &str, blocked: &str, at: i64) -> Result<(), StoreError> {
     call(f, "blocks.add")?;
-    if blocker == blocked {
+    if blocker.eq_ignore_ascii_case(blocked) {
         return Err(StoreError::from("blocks_check: a block of oneself".to_string()));
     }
     let blocks = &mut f.tables().social.blocks;
@@ -4550,7 +4534,7 @@ pub fn profiles_find(f: &mut FakeTx<'_>, profile_id: &str) -> Result<Option<Prof
     Ok(f.tables()
         .profiles
         .iter()
-        .find(|row| row.id == profile_id)
+        .find(|row| row.id.eq_ignore_ascii_case(profile_id))
         .cloned())
 }
 
@@ -5490,6 +5474,12 @@ pub fn daily_invites_purge(f: &mut FakeTx<'_>, now: i64) -> Result<i64, StoreErr
     Ok(gone as i64)
 }
 
+/// R4691000: the least `expires_at` of any invite.
+pub fn daily_invites_next_lapse(f: &mut FakeTx<'_>) -> Result<Option<i64>, StoreError> {
+    call(f, "dailyInvites.nextLapse")?;
+    Ok(f.tables().daily.invites.iter().map(|row| row.expires_at).min())
+}
+
 // daily notices
 
 pub fn daily_notify_get(f: &mut FakeTx<'_>, profile_id: &str) -> Result<DailyNotifyRow, StoreError> {
@@ -5527,12 +5517,15 @@ pub fn daily_notify_sent(
 
 pub fn daily_notify_unsubscribe(f: &mut FakeTx<'_>, token: &str) -> Result<bool, StoreError> {
     call(f, "dailyNotify.unsubscribe")?;
+    if !crate::auth::is_uuid(token) {
+        return Ok(false);
+    }
     let Some(row) = f
         .tables()
         .daily
         .notify
         .iter_mut()
-        .find(|row| row.unsubscribe_token == token)
+        .find(|row| row.unsubscribe_token.eq_ignore_ascii_case(token))
     else {
         return Ok(false);
     };

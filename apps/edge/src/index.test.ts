@@ -6,6 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { API_REQUEST_TIMEOUT_SECONDS } from "../../web/src/wire/serverConfig.ts";
 import { ALERT_WINDOW_MS } from "./alerts.ts";
 import worker, {
+  DAILY_NEXT_DUE_KEY,
+  DAILY_NEXT_TIMEOUT_MS,
   IMAGE_CHECK_RETRY_MS,
   IMAGE_CHECK_TIMEOUT_MS,
   SETTINGS_FINGERPRINT_KEY,
@@ -15,7 +17,7 @@ import worker, {
   type Env,
 } from "./index.ts";
 import { FakeNetwork } from "./network.fake.ts";
-import { DAILY_SWEEP_CRON, DAILY_SWEEP_PATH, SERVER_PORT, settingsFingerprint } from "./routing.ts";
+import { DAILY_NEXT_PATH, DAILY_SWEEP_CRON, DAILY_SWEEP_PATH, SERVER_PORT, settingsFingerprint } from "./routing.ts";
 
 const library = vi.hoisted(() => ({
   fetch: vi.fn<(request: Request) => Promise<Response>>(),
@@ -24,6 +26,7 @@ const library = vi.hoisted(() => ({
   containerFetch: vi.fn<(...args: unknown[]) => Promise<Response>>(),
   stop: vi.fn<(...args: unknown[]) => Promise<void>>(),
   destroy: vi.fn<() => Promise<void>>(),
+  onActivityExpired: vi.fn<() => Promise<void>>(),
 }));
 
 vi.mock("@cloudflare/containers", () => ({
@@ -52,11 +55,16 @@ vi.mock("@cloudflare/containers", () => ({
     destroy(): Promise<void> {
       return library.destroy();
     }
+    onActivityExpired(): Promise<void> {
+      return library.onActivityExpired();
+    }
   },
 }));
 
 const COMMIT = "abc123";
 const LISTENING = new Response("from the server");
+/** The context a request gets, for a test that is not about what it leaves running. */
+const REQUEST_CTX = { waitUntil: vi.fn(), passThroughOnException: vi.fn() } as unknown as ExecutionContext;
 /** The context a cron run gets, for a test that is not about what the run tells people. */
 const CRON_CTX = { waitUntil: vi.fn() } as unknown as ExecutionContext;
 /** #4118: the settings of most tests: the commit and nothing else. */
@@ -79,6 +87,7 @@ function memoryStorage(entries = new Map<string, unknown>([[SETTINGS_FINGERPRINT
       entries.set(key, value);
       return Promise.resolve();
     }),
+    delete: vi.fn((key: string) => Promise.resolve(entries.delete(key))),
   };
 }
 
@@ -110,6 +119,7 @@ function resetLibrary(): void {
   library.startAndWaitForPorts.mockResolvedValue();
   library.stop.mockResolvedValue();
   library.destroy.mockResolvedValue();
+  library.onActivityExpired.mockResolvedValue();
   library.containerFetch.mockResolvedValue(new Response(null, { headers: { "x-deployed-commit": COMMIT } }));
 }
 
@@ -693,9 +703,49 @@ describe("the Worker's routes", () => {
     } as unknown as Env;
   }
 
+  it("R4691002 answers a shipped patch's catalog from the edge's cache, and the live one from the server", async () => {
+    const held = new Map<string, Response>();
+    const cache = {
+      match: vi.fn((request: Request) => Promise.resolve(held.get(request.url)?.clone())),
+      put: vi.fn((request: Request, response: Response) => {
+        held.set(request.url, response);
+        return Promise.resolve();
+      }),
+    };
+    vi.stubGlobal("caches", { default: cache });
+    try {
+      const fetch = vi.fn((request: Request) =>
+        Promise.resolve(
+          new URL(request.url).pathname === "/api/catalog"
+            ? new Response("{}", { headers: { "Cache-Control": "no-store" } })
+            : new Response("{}", { headers: { "Cache-Control": "public, max-age=86400" } }),
+        ),
+      );
+      const env = routedEnv(fetch);
+      const pending: Promise<unknown>[] = [];
+      const ctx = {
+        waitUntil: (promise: Promise<unknown>) => {
+          pending.push(promise);
+        },
+        passThroughOnException: vi.fn(),
+      } as unknown as ExecutionContext;
+
+      for (let n = 0; n < 2; n += 1) {
+        await worker.fetch(new Request("https://jackioh.com/api/catalog/v0.6.9"), env, ctx);
+        await worker.fetch(new Request("https://jackioh.com/api/catalog"), env, ctx);
+        await Promise.all(pending);
+      }
+
+      const reached = fetch.mock.calls.map(([request]) => new URL(request.url).pathname);
+      expect(reached).toEqual(["/api/catalog/v0.6.9", "/api/catalog", "/api/catalog"]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("answers anything that is neither the server's nor the module's with 404", async () => {
     const env = routedEnv(() => Promise.resolve(new Response("unreached")));
-    const answer = await worker.fetch(new Request("https://jackioh.com/login"), env);
+    const answer = await worker.fetch(new Request("https://jackioh.com/login"), env, REQUEST_CTX);
 
     expect(answer.status).toBe(404);
     expect(await answer.text()).toBe("Not found");
@@ -704,7 +754,7 @@ describe("the Worker's routes", () => {
 
   it("#4297 carries the static security headers on its own 404", async () => {
     const env = routedEnv(() => Promise.resolve(new Response("unreached")));
-    const answer = await worker.fetch(new Request("https://jackioh.com/login"), env);
+    const answer = await worker.fetch(new Request("https://jackioh.com/login"), env, REQUEST_CTX);
 
     expect(answer.headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(answer.headers.get("X-Frame-Options")).toBe("DENY");
@@ -718,6 +768,7 @@ describe("the Worker's routes", () => {
     const answer = await worker.fetch(
       new Request("https://jackioh.com/api/catalog", { headers: { "X-Forwarded-For": "spoofed" } }),
       env,
+      REQUEST_CTX,
     );
 
     expect(env.SERVER.idFromName).toHaveBeenCalledWith("main");
@@ -738,7 +789,7 @@ describe("the Worker's routes", () => {
       vi.spyOn(console, level).mockImplementation(() => undefined),
     );
     try {
-      await worker.fetch(new Request("https://jackioh.com/ws/match?matchId=m1&token=SECRET-TOKEN"), env);
+      await worker.fetch(new Request("https://jackioh.com/ws/match?matchId=m1&token=SECRET-TOKEN"), env, REQUEST_CTX);
 
       const forwarded = fetch.mock.calls[0]?.[0] as Request;
       expect(new URL(forwarded.url).searchParams.get("token")).toBe("SECRET-TOKEN");
@@ -787,24 +838,26 @@ describe("the daily wake-up", () => {
 });
 
 describe("#3727 the daily games' hourly sweep", () => {
-  function sweepEnv(status: number): { env: Env; fetch: ReturnType<typeof vi.fn> } {
-    const fetch = vi.fn(() => Promise.resolve(new Response("{}", { status })));
+  function sweepEnv(status: number | null): { env: Env; sweepDaily: ReturnType<typeof vi.fn> } {
+    const sweepDaily = vi.fn(() => Promise.resolve(status));
+    const fetch = vi.fn();
     const tellUnreachable = vi.fn(() => Promise.resolve());
     const env = {
-      SERVER: { idFromName: vi.fn((name: string) => name), get: vi.fn((_id: string) => ({ fetch, tellUnreachable })) },
+      SERVER: {
+        idFromName: vi.fn((name: string) => name),
+        get: vi.fn((_id: string) => ({ fetch, sweepDaily, tellUnreachable })),
+      },
     } as unknown as Env;
-    return { env, fetch };
+    return { env, sweepDaily };
   }
 
-  it("posts the sweep to the server on the hourly cron", async () => {
-    const { env, fetch } = sweepEnv(200);
+  it("asks the server object for the sweep on the hourly cron", async () => {
+    const { env, sweepDaily } = sweepEnv(200);
 
     await worker.scheduled({ cron: DAILY_SWEEP_CRON } as Parameters<typeof worker.scheduled>[0], env, CRON_CTX);
 
-    expect(fetch).toHaveBeenCalledOnce();
-    const request = fetch.mock.calls[0]?.[0] as Request;
-    expect(request.url).toBe(`http://container${DAILY_SWEEP_PATH}`);
-    expect(request.method).toBe("POST");
+    expect(env.SERVER.idFromName).toHaveBeenCalledWith("main");
+    expect(sweepDaily).toHaveBeenCalledOnce();
   });
 
   it("fails naming the path and the status when the sweep fails", async () => {
@@ -813,6 +866,152 @@ describe("#3727 the daily games' hourly sweep", () => {
     await expect(
       worker.scheduled({ cron: DAILY_SWEEP_CRON } as Parameters<typeof worker.scheduled>[0], env, CRON_CTX),
     ).rejects.toThrow("the server's /daily-sweep answered 500");
+  });
+
+  it("R4691000 a server left asleep is no failure", async () => {
+    const { env } = sweepEnv(null);
+
+    await expect(
+      worker.scheduled({ cron: DAILY_SWEEP_CRON } as Parameters<typeof worker.scheduled>[0], env, CRON_CTX),
+    ).resolves.toBeUndefined();
+  });
+});
+
+describe("R4691000 the hourly sweep wakes a sleeping server only once one is due", () => {
+  beforeEach(resetLibrary);
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const NOW = 1_800_000_000_000;
+  const HOUR_MS = 3_600_000;
+
+  /** A storage holding `SETTINGS`' fingerprint and, when given, the time the server last said a sweep is due. */
+  function keeping(at?: number | null) {
+    const storage = memoryStorage();
+    if (at !== undefined) storage.entries.set(DAILY_NEXT_DUE_KEY, { at });
+    return storage;
+  }
+
+  /** The sweeps `library.fetch` was asked for. */
+  function sweeps(): Request[] {
+    return library.fetch.mock.calls
+      .map(([request]) => request)
+      .filter((request) => new URL(request.url).pathname === DAILY_SWEEP_PATH);
+  }
+
+  it("R4691000 leaves a sleeping server asleep while its next due time is still to come", async () => {
+    vi.useFakeTimers({ now: NOW });
+
+    expect(await serverWith(false, keeping(NOW + HOUR_MS)).sweepDaily()).toBeNull();
+    expect(await serverWith(false, keeping(null)).sweepDaily()).toBeNull();
+
+    expect(library.startAndWaitForPorts).not.toHaveBeenCalled();
+    expect(library.fetch).not.toHaveBeenCalled();
+  });
+
+  it("R4691000 wakes and sweeps a sleeping server once its time has come, or when it left none", async () => {
+    vi.useFakeTimers({ now: NOW });
+
+    for (const storage of [keeping(NOW), keeping(NOW - HOUR_MS), keeping()]) {
+      library.fetch.mockClear();
+      library.startAndWaitForPorts.mockClear();
+      expect(await serverWith(false, storage).sweepDaily()).toBe(200);
+      expect(library.startAndWaitForPorts).toHaveBeenCalledOnce();
+      expect(sweeps()).toHaveLength(1);
+      expect(sweeps()[0]?.method).toBe("POST");
+    }
+  });
+
+  it("R4691000 sweeps a running server whatever time is kept", async () => {
+    vi.useFakeTimers({ now: NOW });
+    library.fetch.mockResolvedValue(new Response("{}", { status: 200 }));
+
+    expect(await serverWith(true, keeping(NOW + HOUR_MS)).sweepDaily()).toBe(200);
+    expect(sweeps()).toHaveLength(1);
+  });
+
+  it("R4691000 a storage that cannot be read wakes the server, as no time kept would", async () => {
+    const storage = keeping(NOW + HOUR_MS);
+    storage.get.mockImplementation((key: string) =>
+      key === DAILY_NEXT_DUE_KEY ? Promise.reject(new Error("storage down")) : Promise.resolve(storage.entries.get(key)),
+    );
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      expect(await serverWith(false, storage).sweepDaily()).toBe(200);
+      expect(sweeps()).toHaveLength(1);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("R4691000 a start forgets the kept time", async () => {
+    const storage = keeping(NOW + HOUR_MS);
+
+    await serverWith(false, storage).onStart();
+
+    expect(storage.entries.has(DAILY_NEXT_DUE_KEY)).toBe(false);
+  });
+
+  it("R4691000 going to sleep, the server is asked its next due time, which is kept, and is then stopped", async () => {
+    const storage = keeping();
+    library.containerFetch.mockResolvedValue(Response.json({ nextDueAt: NOW + HOUR_MS }));
+
+    await serverWith(true, storage).onActivityExpired();
+
+    expect(library.containerFetch).toHaveBeenCalledWith(
+      `http://container${DAILY_NEXT_PATH}`,
+      { signal: expect.any(AbortSignal) as unknown },
+      SERVER_PORT,
+    );
+    expect(storage.entries.get(DAILY_NEXT_DUE_KEY)).toEqual({ at: NOW + HOUR_MS });
+    expect(library.onActivityExpired).toHaveBeenCalledOnce();
+    expect(library.onActivityExpired.mock.invocationCallOrder[0]).toBeGreaterThan(
+      library.containerFetch.mock.invocationCallOrder[0]!,
+    );
+  });
+
+  it("R4691000 nothing due until a request is kept as null", async () => {
+    const storage = keeping();
+    library.containerFetch.mockResolvedValue(Response.json({ nextDueAt: null }));
+
+    await serverWith(true, storage).onActivityExpired();
+
+    expect(storage.entries.get(DAILY_NEXT_DUE_KEY)).toEqual({ at: null });
+  });
+
+  it("R4691000 an answer that fails or says nothing readable keeps nothing, and the server still stops", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      for (const answer of [
+        Promise.resolve(new Response("down", { status: 503 })),
+        Promise.resolve(Response.json({ nextDueAt: "soon" })),
+        Promise.resolve(new Response("not json")),
+        Promise.reject(new Error("gone")),
+      ]) {
+        library.onActivityExpired.mockClear();
+        library.containerFetch.mockReturnValueOnce(answer);
+        const storage = keeping();
+
+        await serverWith(true, storage).onActivityExpired();
+
+        expect(storage.entries.has(DAILY_NEXT_DUE_KEY)).toBe(false);
+        expect(library.onActivityExpired).toHaveBeenCalledOnce();
+      }
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("R4691000 a server that is not running is not asked, and is left to the library", async () => {
+    await serverWith(false, keeping()).onActivityExpired();
+
+    expect(library.containerFetch).not.toHaveBeenCalled();
+    expect(library.onActivityExpired).toHaveBeenCalledOnce();
+  });
+
+  it("R4691000 the ask is bounded by DAILY_NEXT_TIMEOUT_MS", () => {
+    expect(DAILY_NEXT_TIMEOUT_MS).toBeLessThanOrEqual(IMAGE_CHECK_TIMEOUT_MS);
   });
 });
 
@@ -1069,7 +1268,11 @@ describe("#3618 server.unreachable", () => {
     function cronEnv(fetch: () => Promise<Response>) {
       const tellUnreachable = vi.fn(() => Promise.resolve());
       const env = {
-        SERVER: { idFromName: vi.fn((name: string) => name), get: vi.fn((_id: string) => ({ fetch, tellUnreachable })) },
+        SERVER: {
+          idFromName: vi.fn((name: string) => name),
+          // R4691000: the hourly sweep goes through the object's `sweepDaily`, which answers the sweep's status.
+          get: vi.fn((_id: string) => ({ fetch, tellUnreachable, sweepDaily: async () => (await fetch()).status })),
+        },
       } as unknown as Env;
       const waitUntil = vi.fn();
       return { env, tellUnreachable, waitUntil, ctx: { waitUntil } as unknown as ExecutionContext };
@@ -1157,7 +1360,7 @@ describe("#3183 the engine's compressed module", () => {
     const env = { ASSETS: assets, SERVER: { idFromName: vi.fn(), get: vi.fn() } };
     // An incoming request carries Cloudflare's `cf` facts, which a test's own Request has none of.
     const path = new Request("https://jackioh.com/assets/jackioh_wasm_bg.wasm-BIXTgzSO.br") as Parameters<typeof worker.fetch>[0];
-    const served = await worker.fetch(path, env as unknown as Env);
+    const served = await worker.fetch(path, env as unknown as Env, REQUEST_CTX);
     expect(assets.fetch).toHaveBeenCalledWith(path);
     expect(env.SERVER.get).not.toHaveBeenCalled();
     expect(served.headers.get("Content-Encoding")).toBe("br");

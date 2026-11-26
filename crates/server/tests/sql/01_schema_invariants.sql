@@ -97,7 +97,7 @@ declare
   -- 0030, 0031, 0033, 0035, 0036, 0040, 0043, 0044, 0046, 0048, 0049, 0050, 0051, 0052, 0053, 0054,
   -- 0055, 0056, 0057, 0058, 0059, 0062, 0064, 0065, 0068, 0069, 0070, 0071, 0072, 0073, 0074, 0075,
   -- 0076 and 0079 add no table, 0082 drops custom_cards, which 0037 had added, and 0083, 0084, 0085, 0087, 0088 and
-  -- 0091 add none, nor do 0094, 0095, 0096, 0098, 0099 and 0100.
+  -- 0091 add none, nor do 0094, 0095, 0096, 0098, 0099, 0100 and 0101.
   -- The three loadout tables stay after 0007, unread and unwritten (R254), so they are still expected
   -- here.
   expected constant text[] := array[
@@ -1682,6 +1682,173 @@ begin
   end loop;
   raise notice 'OK (CHECK 28): the sweep''s two reads and the list''s portraits read go through % and read no table whole',
     'daily_games_due_idx, matches_status_created_at_idx with daily_games_pkey, and matches_pkey';
+end $$;
+rollback;
+
+\echo '=== CHECK 29 (#4712): migration 0101''s indexes exist, and the replays list, the record, the board sample and the reaper read through an index ==='
+-- Migration 0101 indexes three reads of src/db/pg.rs that read rows they threw away: replays_list_with_modes
+-- (GET /api/replays, GET /api/friends/recent), one arm per seat on matches_p1_over_ended_idx and
+-- matches_p2_over_ended_idx, each the list's `order by` behind a seat and partial on `status = 'over'`;
+-- results_record_for (GET /api/auth/me), one count per seat on results_p1_record_idx and
+-- results_p2_record_idx; and last_boards_sample_others (every match start, R678), the boards from a
+-- random key on through last_boards_server_sample_idx, partial on the sample's filters. The reaper's read
+-- of the live matches past their ceiling (matches_past_ceiling) reads 0004's matches_status_ceiling_at_idx.
+-- First each index is held to its shape (its key, what it includes and what it is partial on). Then,
+-- over 3,000 analysed matches among 30 accounts, each in both seats, 2,980 of them finished with a result
+-- and an action and 20 live, with sequential scans priced out, each probe must read through its index and
+-- read no table whole: the page walks both seats' indexes in order and sorts nothing, the record reads
+-- each seat apart (no BitmapOr), the sample walks its index from a key. Each probe is pg.rs's query with
+-- its binds as literals (the replays probe its page, which the indexes serve): an edit there edits it here
+-- too. Rolled back, as CHECK 21.
+do $$
+declare
+  -- Each index and a pattern its definition must match.
+  expected constant text[][] := array[
+    ['matches_p1_over_ended_idx',
+     'ON public\.matches USING btree \(p1_profile_id, ended_at DESC NULLS LAST, id DESC\) WHERE \(status = ''over''::text\)$'],
+    ['matches_p2_over_ended_idx',
+     'ON public\.matches USING btree \(p2_profile_id, ended_at DESC NULLS LAST, id DESC\) WHERE \(status = ''over''::text\)$'],
+    ['results_p1_record_idx',
+     'ON public\.results USING btree \(p1_profile_id\) INCLUDE \(winner_profile_id, reason\)$'],
+    ['results_p2_record_idx',
+     'ON public\.results USING btree \(p2_profile_id\) INCLUDE \(winner_profile_id, reason, p1_profile_id\)$'],
+    ['last_boards_server_sample_idx',
+     'ON public\.last_boards USING btree \(profile_id\) WHERE \(\(kind = ''server''::text\) AND \(jsonb_array_length\(board\) > 0\)\)$']];
+  definition text;
+begin
+  for i in 1 .. array_length(expected, 1) loop
+    select indexdef into definition from pg_indexes
+     where schemaname = 'public' and indexname = expected[i][1];
+    if not found then
+      raise exception 'FAIL (CHECK 29): index public.% is missing', expected[i][1];
+    end if;
+    if definition !~ expected[i][2] then
+      raise exception E'FAIL (CHECK 29): index public.% is not the shape migration 0101 built:\n%', expected[i][1], definition;
+    end if;
+  end loop;
+  raise notice 'OK (CHECK 29): migration 0101''s % indexes are there, each its shape', array_length(expected, 1);
+end $$;
+begin;
+insert into auth.users (id, email, email_confirmed_at)
+  select gen_random_uuid(), format('check-29-%s@example.test', n), now() from generate_series(1, 30) as n;
+insert into public.matches (id, status, seed, p1_profile_id, p2_profile_id, p1_deck, p2_deck,
+                            catalog_version, ceiling_at, started_at, ended_at)
+  select gen_random_uuid(), case when n <= 20 then 'live' else 'over' end, 'c29-' || n, a.id, b.id,
+         '[]', '[]', 'core-1', now() - make_interval(mins => n), now() - make_interval(mins => n + 60),
+         case when n <= 20 then null else now() - make_interval(mins => n) end
+    from generate_series(1, 3000) as n
+    join (select id, row_number() over (order by id) as k from auth.users where email like 'check-29-%') a
+      on a.k = n % 30 + 1
+    join (select id, row_number() over (order by id) as k from auth.users where email like 'check-29-%') b
+      on b.k = (n + 7) % 30 + 1;
+insert into public.results (match_id, p1_profile_id, p2_profile_id, winner_profile_id, reason, turns,
+                            p1_rating_before, p1_rating_after, p2_rating_before, p2_rating_after, ended_at)
+  select id, p1_profile_id, p2_profile_id, p1_profile_id, 'concede', 5, 1000, 1000, 1000, 1000, ended_at
+    from public.matches where seed like 'c29-%' and status = 'over';
+insert into public.match_actions (match_id, seq, player_id, player_seat, nonce, action)
+  select id, 1, p1_profile_id, 'p1', 'c29', '{"type":"endTurn"}'
+    from public.matches where seed like 'c29-%' and status = 'over';
+insert into public.last_boards (profile_id, kind, board)
+  select id, 'server', '[{"defId":"core-001","radiant":false}]' from auth.users where email like 'check-29-%';
+analyze public.matches;
+analyze public.results;
+analyze public.match_actions;
+analyze public.last_boards;
+do $$
+declare
+  profile   uuid;
+  probes    text[];
+  plan_text text;
+  line      text;
+begin
+  select id into profile from auth.users where email = 'check-29-1@example.test';
+  probes := array[
+    array['the replays list''s page', format(
+      'with page as (
+         select u.id, u.ended_at from (
+           (select m.id, m.ended_at from public.matches m
+             where m.status = ''over'' and m.p1_profile_id = %1$L::uuid
+               and exists (select 1 from public.results r where r.match_id = m.id)
+               and exists (select 1 from public.match_actions a where a.match_id = m.id)
+             order by m.ended_at desc nulls last, m.id desc
+             limit 21::bigint)
+           union all
+           (select m.id, m.ended_at from public.matches m
+             where m.status = ''over'' and m.p2_profile_id = %1$L::uuid
+               and exists (select 1 from public.results r where r.match_id = m.id)
+               and exists (select 1 from public.match_actions a where a.match_id = m.id)
+             order by m.ended_at desc nulls last, m.id desc
+             limit 21::bigint)
+         ) u
+         order by u.ended_at desc nulls last, u.id desc
+         limit 11::bigint offset 10::bigint
+       )
+       select id from page', profile)],
+    array['the record', format(
+      'select sum(wins)::bigint as wins, sum(losses)::bigint as losses, sum(draws)::bigint as draws from (
+         select count(*) filter (where winner_profile_id = %1$L::uuid) as wins,
+                count(*) filter (where winner_profile_id is distinct from %1$L::uuid
+                                   and ((winner_profile_id is not null and reason <> all(%3$L::text[]))
+                                        or (winner_profile_id is null and reason = any(%2$L::text[])))) as losses,
+                count(*) filter (where (winner_profile_id is null and reason <> all(%2$L::text[]))
+                                   or (winner_profile_id is distinct from %1$L::uuid and winner_profile_id is not null
+                                       and reason = any(%3$L::text[]))) as draws
+           from public.results where p1_profile_id = %1$L::uuid
+         union all
+         select count(*) filter (where winner_profile_id = %1$L::uuid),
+                count(*) filter (where winner_profile_id is distinct from %1$L::uuid
+                                   and ((winner_profile_id is not null and reason <> all(%3$L::text[]))
+                                        or (winner_profile_id is null and reason = any(%2$L::text[])))),
+                count(*) filter (where (winner_profile_id is null and reason <> all(%2$L::text[]))
+                                   or (winner_profile_id is distinct from %1$L::uuid and winner_profile_id is not null
+                                       and reason = any(%3$L::text[])))
+           from public.results where p2_profile_id = %1$L::uuid and p1_profile_id is distinct from %1$L::uuid
+       ) seats', profile, '{hero-death,concede,disconnect,won-by-effect,voted-out,fled-decisive}', '{fled}')],
+    array['the board sample', format(
+      'with pivot as materialized (select gen_random_uuid() as key)
+       select board from (
+         (select board, false as wrapped, profile_id from public.last_boards
+           where kind = ''server'' and jsonb_array_length(board) > 0
+             and profile_id <> all(array[%1$L]::uuid[])
+             and profile_id >= (select key from pivot)
+           order by profile_id limit 2::int)
+         union all
+         (select board, true, profile_id from public.last_boards
+           where kind = ''server'' and jsonb_array_length(board) > 0
+             and profile_id <> all(array[%1$L]::uuid[])
+             and profile_id < (select key from pivot)
+           order by profile_id limit 2::int)
+       ) sample
+       order by wrapped, profile_id
+       limit 2::int', profile)],
+    array['the reaper''s read',
+      'select m.id from public.matches m
+        where m.status = ''live'' and m.ceiling_at <= to_timestamp(1000000000000::double precision / 1000.0)
+          and m.p2_profile_id is not null
+          and not exists (select 1 from public.daily_games d where d.match_id = m.id)']];
+  -- Local to this file's transaction, which the rollback below ends.
+  perform set_config('enable_seqscan', 'off', true);
+  for i in 1 .. array_length(probes, 1) loop
+    plan_text := '';
+    for line in execute 'explain (costs off) ' || probes[i][2] loop
+      plan_text := plan_text || line || E'\n';
+    end loop;
+    if plan_text ~ 'Seq Scan on (matches|results|last_boards)\M' then
+      raise exception E'FAIL (CHECK 29): % reads its table whole:\n%', probes[i][1], plan_text;
+    end if;
+    if (i = 1 and (plan_text !~ '\mmatches_p1_over_ended_idx\M' or plan_text !~ '\mmatches_p2_over_ended_idx\M'
+                   or plan_text ~ '(^|\n) *(->  )?(Incremental )?Sort\n'))
+       or (i = 2 and (plan_text ~ '\mBitmapOr\M'
+                      or plan_text !~ 'Index Cond: \(p1_profile_id = '
+                      or plan_text !~ 'Index Cond: \(p2_profile_id = '))
+       or (i = 3 and plan_text !~ '\mlast_boards_server_sample_idx\M')
+       or (i = 4 and plan_text !~ '\mmatches_status_ceiling_at_idx\M') then
+      raise exception E'FAIL (CHECK 29): % does not read through its index:\n%', probes[i][1], plan_text;
+    end if;
+  end loop;
+  raise notice 'OK (CHECK 29): the replays list''s page walks % in order and sorts nothing, the record reads each seat apart, the sample walks % and the reaper reads %',
+    'matches_p1_over_ended_idx and matches_p2_over_ended_idx', 'last_boards_server_sample_idx',
+    'matches_status_ceiling_at_idx';
 end $$;
 rollback;
 

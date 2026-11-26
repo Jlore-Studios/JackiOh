@@ -13,7 +13,7 @@ one screen, play online, or practice against the AI.
 | [`REVIEW.md`](REVIEW.md) | The audit procedure |
 | [`CLAUDE.md`](CLAUDE.md) | How the codebase is laid out, the rules every change follows, and the commands |
 | [`bot/README.md`](bot/README.md) | The night bot that builds issues while nobody is awake |
-| [`bot/machine/README.md`](bot/machine/README.md) | The two AWS boxes: the night box and the training box |
+| [`bot/machine/README.md`](bot/machine/README.md) | The two AWS boxes: the night box and the Muse box |
 
 ## How it is built
 
@@ -32,7 +32,7 @@ engine and the AI as WebAssembly.
 | [`crates/tools`](crates/tools/README.md) | `jackioh`: fuzz, replay, the catalog and spec checks, the AI's gates, the training arena |
 | [`apps/web`](apps/web/README.md) | the client (Vite, React) |
 | [`e2e`](e2e/README.md) | the Cypress specs |
-| [`training`](training/README.md) | the AI training lanes |
+| [`training`](training/README.md) | the AI's training: the gather lane, the gate, the screens and the history |
 
 ## Running it
 
@@ -68,12 +68,12 @@ flowchart LR
   end
   subgraph aws["AWS, us-east-2"]
     NV["night box<br/>Codex, agy, Muse"]
-    TB["training box<br/>improve, unban, gather"]
+    MB["Muse box<br/>Muse"]
     ST["starter Lambda<br/>every 5 minutes"]
     ST -- "starts it when a job waits" --> NV
   end
   NB -- "work job" --> NV
-  TB -- "ai/* pull requests" --> CI
+  NB -- "work job" --> MB
   NB -- "bot pull requests" --> CI
 ```
 
@@ -86,9 +86,9 @@ flowchart LR
 | The night bot | GitHub Actions | `bot-commands.yml` answers comments and labels within seconds; each `bot-night.yml` run is four jobs: gate, plan, work and deliver. Only the work job runs a model, and it holds no GitHub write token | [`bot/README.md`](bot/README.md) |
 | The Claude accounts' work | GitHub's runners | the work jobs of `claude-1` to `claude-8`, logged in from secrets | [`bot/README.md`](bot/README.md), Subscriptions |
 | The night box | AWS EC2, `m7i-flex.large`, tagged `jackioh-night-vm` | the work jobs of Codex, agy and one of Muse's lanes, each a Linux user of its own with its own runners, and Muse's in gpt's or agy's lane while that one cannot start work. A Lambda starts it when a job waits, and it powers off after 30 idle minutes | [`bot/machine/README.md`](bot/machine/README.md) |
-| The Muse box (the training box) | AWS EC2, `m7i-flex.large`, tagged `jackioh-train-box` | three of Muse's four lanes of its own, and the `gather` lane as a systemd service outside the night bot (#1677 stopped `improve` and `unban`); it powers off after 30 idle minutes too | [`bot/machine/README.md`](bot/machine/README.md#the-muse-box), [`training/README.md`](training/README.md) |
+| The Muse box (the training box) | AWS EC2, `m7i-flex.large`, tagged `jackioh-train-box` | three of Muse's four lanes of its own; it powers off after 30 idle minutes too | [`bot/machine/README.md`](bot/machine/README.md#the-muse-box) |
 | Squishy | GitHub Actions and GitHub's runners | `@squishy-squooby`, the same harness on its own Claude account | [`bot/README.md`](bot/README.md#squishy) |
-| The training lanes | GitHub's runners | `learn.yml`'s self-play exports, retrain and gate (learn lane retired, #4159), and `gather.yml`'s games, 12 of the organization's 60 hosted jobs (#3740) | [`training/README.md`](training/README.md) |
+| The gather lane | GitHub's runners | `gather.yml`'s development games for the card statistics, two of the organization's 60 hosted jobs (#3740); the other training lanes are retired (#4701) | [`training/README.md`](training/README.md) |
 
 The AWS account is on the Free plan: its credits pay for both boxes, and a Lambda opens an issue
 when they fall under $20. [`docs/architecture.md`](docs/architecture.md) covers the code's own

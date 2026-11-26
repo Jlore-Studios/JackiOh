@@ -129,8 +129,7 @@
     "apps/edge/",
     "apps/web/public/_headers",
     "scripts/promote-production.sh",
-    "scripts/promote-staging.sh",
-    "scripts/vercel-ignore.sh"
+    "scripts/promote-staging.sh"
   ],
   "migration_paths": ["crates/server/migrations/"],
   "lock_files": ["Cargo.lock", "pnpm-lock.yaml"],

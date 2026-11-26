@@ -51,6 +51,7 @@ function dungeonOf(over: Partial<Dungeon> = {}): Dungeon {
     notice: null,
     start: vi.fn(() => null),
     act: vi.fn(() => null),
+    holdReport: vi.fn(),
     abandon: vi.fn(),
     buyLevel: vi.fn(() => null),
     ...over,

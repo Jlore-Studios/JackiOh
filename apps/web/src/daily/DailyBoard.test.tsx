@@ -548,6 +548,24 @@ describe("R3855000 a daily board shows what every table shows", () => {
       expect(window.location.pathname).toBe(paths.dailyGame("g-1"));
     });
 
+    it("R4742000 a finished game's result offers Main menu after Back to daily games, which goes to Play", async () => {
+      serve(finished);
+      render(<DailyBoard matchId="g-1" />);
+      const overlay = await screen.findByTestId("result-overlay", undefined, SLOW);
+
+      const back = within(overlay).getByTestId(dailyTestid.backToList);
+      const menu = within(overlay).getByTestId(dailyTestid.mainMenu);
+      expect(menu).toHaveTextContent("Main menu");
+      expect(menu.parentElement).toBe(back.parentElement);
+      expect(back.compareDocumentPosition(menu) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(back).toHaveTextContent("Back to daily games");
+
+      fireEvent.click(menu);
+      await waitFor(() => {
+        expect(window.location.pathname).toBe("/play");
+      });
+    });
+
     it("R3855000 a voided game's result offers no replay", async () => {
       serve(() => dailyGame({ ...finished(), view: baseView({ result: { winner: "draw", reason: "voided" } }) }));
       render(<DailyBoard matchId="g-1" />);
@@ -670,6 +688,21 @@ describe("R3934000 a finished game whose moves are no longer kept", () => {
     });
   });
 
+  it("R4742000 an expired game's result offers Main menu beside Back to daily games", async () => {
+    serve(() => expiredGame());
+    render(<DailyBoard matchId="g-1" />);
+
+    const panel = await screen.findByTestId(dailyTestid.expired, undefined, SLOW);
+    const menu = within(panel).getByTestId(dailyTestid.mainMenu);
+    expect(menu).toHaveTextContent("Main menu");
+    expect(menu.parentElement).toBe(within(panel).getByTestId(dailyTestid.backToList).parentElement);
+
+    fireEvent.click(menu);
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/play");
+    });
+  });
+
   it("R3934000 a game that reads as expired after it showed a board is read no more", async () => {
     vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });
     let purged = false;
@@ -734,4 +767,70 @@ describe("R4621000 a finished game whose opponent deleted their account", () => 
     const panel = await screen.findByTestId(dailyTestid.expired, undefined, SLOW);
     expect(panel).toHaveTextContent("vs a deleted account");
   });
+});
+
+describe("#4846 the board never goes backwards", () => {
+  const GAME = "/api/daily/games/g-1";
+
+  it("#4846 a read already out when End turn is sent lands after its answer and is dropped", async () => {
+    let gets = 0;
+    let releaseReread: ((reply: Reply) => void) | null = null;
+    const server = stubServer((call) => {
+      if (call.method === "GET" && call.path === GAME) {
+        gets += 1;
+        if (gets === 1) return { status: 200, body: dailyGame({ seq: 5 }) };
+        return new Promise<Reply>((resolve) => {
+          releaseReread = resolve;
+        });
+      }
+      if (call.method === "POST" && call.path === `${GAME}/actions`) {
+        return {
+          status: 200,
+          body: dailyGame({ seq: 6, hasMove: false, legal: [CONCEDE], view: baseView({ active: "p2" }), holds: [] }),
+        };
+      }
+      return undefined;
+    });
+    render(<DailyBoard matchId="g-1" />);
+
+    const endTurn = await screen.findByTestId("end-turn", undefined, SLOW);
+    expect(endTurn).toBeEnabled();
+
+    // A read already out when the player acts: the tab shows again while the first answer is in.
+    act(() => {
+      setVisibility("hidden");
+    });
+    act(() => {
+      setVisibility("visible");
+    });
+    await waitFor(() => {
+      expect(server.to("GET", GAME)).toHaveLength(2);
+    }, SLOW);
+
+    fireEvent.click(screen.getByTestId("end-turn"));
+    await waitFor(() => {
+      expect(screen.getByTestId(dailyTestid.board)).toHaveAttribute("data-has-move", "false");
+    }, SLOW);
+    expect(screen.getByTestId("end-turn")).toBeDisabled();
+    expect(screen.getByTestId("end-turn")).toHaveTextContent("Enemy turn");
+    const body = server.to("POST", `${GAME}/actions`)[0]?.body as { after: number; nonce: string; action: ActionBody };
+    expect(body.after).toBe(5);
+    expect(body.action).toEqual(END_TURN);
+    expect(typeof body.nonce).toBe("string");
+    expect(body.nonce.length).toBeGreaterThan(0);
+
+    // The held read, taken at seq 5, lands after the action's seq-6 answer: it is dropped.
+    expect(releaseReread).not.toBeNull();
+    await act(async () => {
+      releaseReread?.({ status: 200, body: dailyGame({ seq: 5 }) });
+    });
+    await flush();
+
+    expect(screen.getByTestId(dailyTestid.board)).toHaveAttribute("data-has-move", "false");
+    expect(screen.getByTestId("end-turn")).toBeDisabled();
+    expect(server.to("GET", GAME)).toHaveLength(2);
+  });
+  // `expired` always replaces a live board: the purge only moves forward, so it is newer than any live
+  // board of this game. The reverse needs no test: a live answer cannot land after a shown `expired`
+  // (same-path reads join while one is out per R3206000, and once the game is gone nothing reads).
 });

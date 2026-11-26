@@ -21,9 +21,10 @@ use crate::wire::{
     opponent_of,
 };
 
-/// The unit is carried by value: a target is built once per hit and matched at every card and test
-/// that aims one, where a `Box` would buy nothing but noise.
-#[allow(clippy::large_enum_variant)]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "a target is built once per hit and matched where it lands: a Box buys nothing but noise"
+)]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum DamageTarget {
@@ -459,12 +460,17 @@ fn land(
     };
 
     // R1849000: a Spell's hit on a Unit immune to Spell Damage is no damage instance at all — before
-    // Divine Shield, which stays, and with no Trample excess to send on. R4604001: nor is its hit on a
-    // Unit Immune to Spells, which reaches one only when another card's rule carries it there (a damage
-    // chain's echo or share).
+    // Divine Shield, which stays, and with no Trample excess to send on.
     if let Some(live) = &unit
-        && (crate::restrictions::spell_damage_cannot_reach(sink.state, source, live)
-            || crate::restrictions::spell_cannot_reach(sink.state, source, live))
+        && crate::restrictions::spell_damage_cannot_reach(sink.state, source, live)
+    {
+        return Landed::default();
+    }
+
+    // R4591004: a hit on a Unit immune to damage is no damage instance at all — before Divine
+    // Shield, which stays, and with no Trample excess to send on (as in R1849000).
+    if let Some(live) = &unit
+        && crate::effects::firewall::units_immune_now(sink.state, live)
     {
         return Landed::default();
     }
@@ -489,12 +495,20 @@ fn land(
 
     // R3554007, §4.4 step 0b: a hit on a split-chained Unit is divided among every member of its
     // chain, rounded down, each share landing as its own chain hit through `land_hit`. The target's
-    // share is what this hit dealt.
+    // share is what this hit dealt. R4599006: a Spell's hit passes a member Immune to Spells by, so it
+    // is divided among the others.
     if flags.is_none_or(|flags| !flags.chain_hit)
         && let Some(live) = unit.as_ref()
         && let Some(chain) = live.split_chain
     {
-        let members = crate::geometry::chain_members(sink.state, chain, crate::geometry::ChainKind::Split);
+        let members: Vec<CardInstance> =
+            crate::geometry::chain_members(sink.state, chain, crate::geometry::ChainKind::Split)
+                .into_iter()
+                .filter(|member| {
+                    member.id == live.id
+                        || !crate::restrictions::spell_cannot_reach(sink.state, source, member)
+                })
+                .collect();
         if members.len() > 1 {
             let share = amount_in / members.len() as i32;
             let chained = chain_flags(flags);
@@ -753,9 +767,9 @@ fn land(
     }
 
     // R3540002: "Damage also Burns N / applies Toxic N" adds N to a target the hit left standing, after
-    // Poisonous and the exile have had their say.
+    // Poisonous and the exile have had their say; R4783001: "Damage dealt also Burns" adds what it dealt.
     if let Some(source_card) = source {
-        crate::afflictions::ride_damage(sink, source_card, target);
+        crate::afflictions::ride_damage(sink, source_card, target, dealt);
     }
 
     // Step 8: Lifesteal heals the source's controller's hero by the amount dealt; R85: an effect may
@@ -773,7 +787,8 @@ fn land(
     }
 
     // R3554007, §4.4 step 8b: what a shared-chained Unit was dealt is dealt again to each other
-    // member of its chain, as its own chain hit, so no echo echoes again.
+    // member of its chain, as its own chain hit, so no echo echoes again. R4599006: a Spell's echo
+    // passes a member Immune to Spells by.
     if dealt > 0
         && flags.is_none_or(|flags| !flags.chain_hit)
         && let Some(live) = &unit
@@ -781,7 +796,7 @@ fn land(
     {
         let chained = chain_flags(flags);
         for member in crate::geometry::chain_members(sink.state, chain, crate::geometry::ChainKind::Shared) {
-            if member.id == live.id {
+            if member.id == live.id || crate::restrictions::spell_cannot_reach(sink.state, source, &member) {
                 continue;
             }
             let hit = DamageArgs {
@@ -1053,6 +1068,10 @@ pub fn project_hit(
     let (side, after) = match target {
         DamageTarget::Hero { player } => (*player, hero_hit_amount(state, *player, amount, pierce)),
         DamageTarget::Unit { instance } => {
+            // R4591004: a hit on a Unit immune to damage lands nothing, as `land` reads it.
+            if crate::effects::firewall::units_immune_now(state, instance) {
+                return 0;
+            }
             let view = crate::layers::unit_view(state, instance);
             // Step 1, and step 4 read first: a shield's hit and an Indestructible's spend no pool.
             if (has_keyword(&view.keywords, KeywordKind::DivineShield)

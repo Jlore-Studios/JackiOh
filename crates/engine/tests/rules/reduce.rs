@@ -53,7 +53,7 @@ mod reduce_m1_t3 {
     #[test]
     fn rejects_an_action_from_the_non_active_player_and_leaves_the_state_untouched() {
         let state = playing("reduce");
-        let before = clone_state(&state);
+        let before = state.clone();
 
         let result = reduce(&state, &Action::new(ActionBody::EndTurn, P2, next_nonce()));
         assert_error(&result.error, "not your turn");

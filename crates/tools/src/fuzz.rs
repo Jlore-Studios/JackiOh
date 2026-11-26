@@ -14,7 +14,7 @@
 //!   4. FAILURE DETAIL: every card id in the failing seed's two decks is named in the report, because
 //!      a bare seed number is useless against a 100-card pool.
 //!
-//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I22 hold on every applicable state or action
+//! And at every step, INVARIANTS: `testkit::invariants`'s I1–I23 hold on every applicable state or action
 //! (stage "invariant"); I11 finds Unit tokens left in the graveyards, exile piles or held cards (R11), I12
 //! shadows chosen switches and declared attacks through each turn and stint (R49, R636), I13 holds every
 //! hand card and admitted graveyard card `legalActions` lists no play of to a `playReason` (§10.8, R979000,
@@ -39,6 +39,8 @@
 //! the played path, on I14's branches and in each Duos duel.
 //! I22 holds every random `target` draw, listed `target` declaration and open `target` prompt to what its
 //! source may aim at (R450, R452, R1200, R1839000, R4353002; #4540), on the played path and in each Duos duel.
+//! I23 fails a step that changes an Immutable card's text, by the keyword or by Indestructible on a Unit card
+//! (§6.1, R23, R386, R4353000, R4609000; #4609), on the played path, on I14's branches and in each Duos duel.
 //! I9 holds the wire to the state: each `turnStarted`, `turnEnded`, `gameOver` and `manaChanged` to the
 //! state it left, each `fatigue` to its seat's count, and each 1v1 hero's health to a tally kept from
 //! `damage`, `healthLost`, `healed`, `healthSet` and `swapped` alone (§10.3).
@@ -537,7 +539,7 @@ const TERMINAL_REASONS: &[&str] = &[
 /// A card kept out of the pool, with the reason and the issue it waits on.
 pub struct PoolExclusion {
     pub id: &'static str,
-    #[allow(dead_code)]
+    #[expect(dead_code, reason = "read by the person editing the list; nothing prints it")]
     pub why: &'static str,
 }
 
@@ -2254,7 +2256,9 @@ pub(crate) fn largest_number(card: &CardInstance) -> i64 {
 /// The turn stamps `largest_number` leaves out, by their JSON names, left out of a card record a
 /// memory holds as well: S+ #84 Bogos Binted keeps its side's cards on its memory (R3550007), and a
 /// Unit frozen forever there carries `FROZEN_FOREVER` (R1848000), a turn, not a growth (issue #3800).
-const TURN_STAMP_KEYS: [&str; 3] = ["summonedTurn", "frozen", "since"];
+/// So is a launched Starship's `launched`, its launch order (`GameState.next_seq` as it launched,
+/// R1852005), which `largest_number` never reads on the live card (issue #4816).
+const TURN_STAMP_KEYS: [&str; 4] = ["summonedTurn", "frozen", "since", "launched"];
 
 pub(crate) fn largest_in_json(value: &Value) -> i64 {
     match value {
@@ -4890,6 +4894,13 @@ pub(crate) mod tests {
                 SIDE_SNAPSHOT_KEY.to_string(),
                 json!({ "turn": 12, "side": { "units": [[{ "frozen": FROZEN_FOREVER, "summonedTurn": 9,
                     "brittle": [{ "count": 2, "since": 11 }], "buffs": { "attack": 1, "health": 30 } }]] } }),
+            );
+            assert_eq!(largest_number(card), 30);
+            // Issue #4816: nor a launched Starship's launch order there (R1852005).
+            card.memory.insert(
+                SIDE_SNAPSHOT_KEY.to_string(),
+                json!({ "turn": 12, "side": { "backrow": [{ "starship": { "launched": 2542, "pieces": [] },
+                    "buffs": { "attack": 0, "health": 30 } }] } }),
             );
             assert_eq!(largest_number(card), 30);
             card.memory.clear();

@@ -1,11 +1,12 @@
-//! S #33 Drone Core VII (SPEC §8.10 row 33): (5) Spell, Drone Core, Epic, a card of the Stinkyscape set.
+//! S #33 Drone Core VII (SPEC §8.10 row 33): (6) Spell, Drone Core, Epic, a card of the Stinkyscape set;
+//! (5) from #3142 until issue #4665.
 //!   Base:    "Float reduces cost. / Summon a Drone Corvette and {interceptors|Drone Interceptor|Drone
 //!            Interceptors}." — interceptors 2
 //!   Radiant: "Float reduces cost. / Summon a Radiant Drone Corvette and {interceptors|Radiant Drone
 //!            Interceptor|Radiant Drone Interceptors}." — interceptors 2
 //! Engine: "Float reduces cost" (§6.2, R1563000) is the engine's `float_reduces_cost`, a hand trigger (R464) as
 //!   S #34 Drone Core VIII has it, and none in the deck (R2657002): each Float of its owner's lowers its cost
-//!   by that much, a `costMod` kept until a graveyard or exile (R766), so at (5), past `MAX_MANA`, it is played
+//!   by that much, a `costMod` kept until a graveyard or exile (R766), so at (6), past `MAX_MANA`, it is played
 //!   only so or with mana gained. Through v0.5.11r it cost (4) and had no hand trigger (`script_v0_5_11o`,
 //!   kept, R767000). Two kinds of summon, the Corvette first, then one per Interceptor, each into the caster's
 //!   leftmost open unit zone in turn (R64), then the backrow's once the unit row is full, where each stands
@@ -87,19 +88,19 @@ mod tests {
         fam::drone_cell(def_id, radiant)
     }
 
-    /// #3142: it costs (5), past `MAX_MANA` (4), on both faces, where it cost (4): with no Float it is not
-    /// played, and with one it is, after the turn that floated.
+    /// Issue #4665: it costs (6), past `MAX_MANA` (4), on both faces ((5) from #3142, (4) before): with no
+    /// Float it is not played, and with one it is, after the turn that floated.
     #[test]
-    fn it_costs_5_and_is_played_only_after_a_float() {
+    fn it_costs_6_and_is_played_only_after_a_float() {
         for radiant in [false, true] {
             let (mut s, hand, _) = fam::drone_floating(CORE, 4, radiant);
-            assert_eq!(fam::drone_price_of(&s, &hand), 5, "radiant {radiant}");
-            crate::expect_costs(&mut s, CORE, 5, json!({}));
+            assert_eq!(fam::drone_price_of(&s, &hand), 6, "radiant {radiant}");
+            crate::expect_costs(&mut s, CORE, 6, json!({}));
 
-            // A Float of 2: its price is (3) from then on, so the next turn's mana plays it.
+            // A Float of 2: its price is (4) from then on, so the next turn's mana plays it.
             let (mut s, hand, _) = fam::drone_floating(CORE, 2, radiant);
             s.end_turn();
-            assert_eq!(fam::drone_price_of(&s, &hand), 3, "radiant {radiant}");
+            assert_eq!(fam::drone_price_of(&s, &hand), 4, "radiant {radiant}");
             s.end_turn();
             assert_eq!(s.state().active, P1);
             s.play(CORE, json!({}));
@@ -115,12 +116,12 @@ mod tests {
     /// #3142, R1563000, R2657002: a Float lowers it by that much in its owner's hand, never in the deck.
     #[test]
     fn r1563000_r2657002_a_float_of_2_makes_it_cost_two_less_in_hand_never_in_the_deck() {
-        fam::drone_float_two_less(CORE, 5);
+        fam::drone_float_two_less(CORE, 6);
     }
 
     #[test]
     fn r1563000_the_opponents_float_lowers_nothing() {
-        fam::drone_float_opponent(CORE, 5);
+        fam::drone_float_opponent(CORE, 6);
     }
 
     /// R767000: through v0.5.11r it cost (4) and a Float lowered nothing.

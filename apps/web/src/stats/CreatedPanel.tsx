@@ -16,17 +16,17 @@ import { ADJUSTED_RANGE_DIGITS } from "./config.ts";
 import { RangeText, TierFitText } from "./RangeText.tsx";
 import { TableScroll } from "./TableScroll.tsx";
 import { statsTestid } from "./testids.ts";
-import { TierChip, adjustedText, tierRank } from "./TierChip.tsx";
-import { cardTierFit } from "./tierFit.ts";
+import { TierChip, adjustedText, decisivenessText, tierRank } from "./TierChip.tsx";
+import { cardTierFit, type TierFitCard } from "./tierFit.ts";
 
 /** Unit conversion, not configuration: a share of 0..1 as a percentage. */
 const PERCENT = 100;
 
 /** R3184002, R4083000: the Created tables' columns, every one sortable, named as the deck table's sort names them. */
-export type CreatedColumn = "name" | "games" | "tier" | "adjustedWinRate";
+export type CreatedColumn = "name" | "games" | "tier" | "adjustedWinRate" | "decisiveness";
 
 /** R4083000: the columns the Created tables sort by, in the deck table's order: the Tokens tab's sort select. */
-export const CREATED_SORT_COLUMNS: readonly CreatedColumn[] = ["name", "games", "tier", "adjustedWinRate"];
+export const CREATED_SORT_COLUMNS: readonly CreatedColumn[] = ["name", "games", "tier", "adjustedWinRate", "decisiveness"];
 
 /** R3184002: a header's sort: the column and its direction. */
 export type CreatedSort = { col: CreatedColumn; dir: "asc" | "desc" };
@@ -42,9 +42,17 @@ export function createdSortOf(col: string, dir: "asc" | "desc"): CreatedSort {
   return { col: CREATED_SORT_COLUMNS.find((known) => known === col) ?? "adjustedWinRate", dir };
 }
 
+/** What a row sorts by: a Created card's, and R4678001 a Running row's, which has no Decisiveness. */
+export type SortedRow = TierFitCard & Pick<PublicCreatedStat, "id" | "name" | "games" | "adjustedWinRate" | "decisiveness">;
+
 /** R4082000: a card's adjusted win rate as the row shows it, null below the floor or from an older server. */
-function adjustedOf(card: PublicCreatedStat): number | null {
+function adjustedOf(card: SortedRow): number | null {
   return card.hasEnoughGames ? (card.adjustedWinRate ?? null) : null;
+}
+
+/** R4552004: a card's decisiveness as the row shows it, null below the floor or from an older server. */
+function decisivenessOf(card: SortedRow): number | null {
+  return card.hasEnoughGames ? (card.decisiveness ?? null) : null;
 }
 
 /**
@@ -52,13 +60,13 @@ function adjustedOf(card: PublicCreatedStat): number | null {
  * either way, and rows that tie in the server's order. R4082000: by tier, S first descending, then by Adjusted;
  * R4083000: within a tier by tier fit first (R3184001), a card with none after, as the deck table sorts.
  */
-export function sortCreated(
-  created: readonly PublicCreatedStat[],
+export function sortCreated<Row extends SortedRow>(
+  created: readonly Row[],
   sort: CreatedSort,
   tiers: Pick<PublicStatsTiers, "bandLow" | "bandHigh"> | undefined,
   nameOf: (id: string, name: string) => string,
   language?: string,
-): PublicCreatedStat[] {
+): Row[] {
   const flip = sort.dir === "desc" ? -1 : 1;
   const { col } = sort;
   return [...created].sort((a, b) => {
@@ -72,22 +80,29 @@ export function sortCreated(
       const q = cardTierFit(b, tiers);
       if (p !== q) return p === null || q === null ? (p === null ? 1 : -1) : (p - q) * flip;
     }
-    const x = adjustedOf(a);
-    const y = adjustedOf(b);
+    const x = col === "decisiveness" ? decisivenessOf(a) : adjustedOf(a);
+    const y = col === "decisiveness" ? decisivenessOf(b) : adjustedOf(b);
     if (x === null || y === null) return x === y ? 0 : x === null ? 1 : -1;
     return (x - y) * flip;
   });
 }
 
+/** R3184002: the sort a header's press asks for: its column descending (a name ascending), or the same flipped. */
+export function pressedSort(sort: CreatedSort, col: CreatedColumn): CreatedSort {
+  return sort.col === col ? { col, dir: sort.dir === "asc" ? "desc" : "asc" } : { col, dir: col === "name" ? "asc" : "desc" };
+}
+
 /** R3184002: a sortable header: the first press sorts descending (a name ascending), the next flips it. */
-function SortHeader({
+export function SortHeader({
   col,
   label,
+  title,
   sort,
   onSort,
 }: {
   col: CreatedColumn;
   label: string;
+  title?: string;
   sort: CreatedSort;
   onSort: (col: CreatedColumn) => void;
 }): ReactElement {
@@ -96,6 +111,7 @@ function SortHeader({
     <th
       scope="col"
       className="stats-th stats-th--sortable"
+      title={title}
       aria-sort={dir === null ? "none" : dir === "asc" ? "ascending" : "descending"}
       onClick={() => onSort(col)}
       onKeyDown={(e) => {
@@ -138,7 +154,7 @@ export function CreatedPanel({
   view: "table" | "grid";
   showRanges: boolean;
   /** R3184001: the band a tier fit reads; absent from a server deployed before it. */
-  tiers: Pick<PublicStatsTiers, "bandLow" | "bandHigh"> | undefined;
+  tiers: Pick<PublicStatsTiers, "bandLow" | "bandHigh" | "created"> | undefined;
   /** A card's name as the page shows it. */
   nameOf: (id: string, name: string) => string;
   /** R4083000: a card's face in the Grid, as the deck grid draws it; null for an id with none. */
@@ -155,12 +171,7 @@ export function CreatedPanel({
   const titleId = useId();
   if (created.length === 0) return null;
 
-  const pressed = (col: CreatedColumn): void =>
-    onSort(
-      sort.col === col
-        ? { col, dir: sort.dir === "asc" ? "desc" : "asc" }
-        : { col, dir: col === "name" ? "asc" : "desc" },
-    );
+  const pressed = (col: CreatedColumn): void => onSort(pressedSort(sort, col));
   const rows = sortCreated(created, sort, tiers, nameOf, locale === "en" ? undefined : locale);
   const header = { sort, onSort: pressed };
   const tokens = kind === "tokens";
@@ -202,6 +213,10 @@ export function CreatedPanel({
                       <RangeText low={card.adjustedLow} high={card.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
                     )}
                   </dd>
+                  <dt>{t("Decisiveness")}</dt>
+                  <dd data-testid={statsTestid.createdDecisivenessCell}>
+                    {card.hasEnoughGames ? decisivenessText(card.decisiveness) : t("not enough games")}
+                  </dd>
                   <dt>{t("Games")}</dt>
                   <dd>{card.games}</dd>
                 </dl>
@@ -223,6 +238,15 @@ export function CreatedPanel({
                 {visibleGames && <SortHeader col="games" label={t("Games")} {...header} />}
                 <SortHeader col="tier" label={t("Tier")} {...header} />
                 <SortHeader col="adjustedWinRate" label={t("Adjusted")} {...header} />
+                <SortHeader
+                  col="decisiveness"
+                  label={t("Decisiveness")}
+                  title={t(
+                    "Decisiveness: how far playing a card typically moves your chance of winning, one way or the other; ± is the swing itself, not a margin of error. A typical card: {typical}.",
+                    { typical: decisivenessText(tiers?.created?.decisiveness) },
+                  )}
+                  {...header}
+                />
               </tr>
             </thead>
             <tbody>
@@ -272,6 +296,13 @@ export function CreatedPanel({
                             <RangeText low={card.adjustedLow} high={card.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
                           )}
                         </div>
+                      )}
+                    </td>
+                    <td className="stats-td" data-testid={statsTestid.createdDecisivenessCell}>
+                      {card.hasEnoughGames ? (
+                        decisivenessText(card.decisiveness)
+                      ) : (
+                        <span className="stats-not-enough">{t("not enough games")}</span>
                       )}
                     </td>
                   </tr>

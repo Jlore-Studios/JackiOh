@@ -279,8 +279,15 @@ fn signed_with_shared_secret(token: &str) -> bool {
 }
 
 /// An id that is not a UUID is refused before any request and counts as "unavailable".
-pub(crate) fn is_uuid(id: &str) -> bool {
-    uuid::Uuid::parse_str(id).is_ok()
+/// #4838: accepts only the 36-character hyphenated hex form. URN prefixes (`urn:uuid:...`),
+/// braces (`{...}`), and hyphenless spellings are refused so PostgreSQL casts cannot error.
+pub(crate) fn is_uuid(raw: &str) -> bool {
+    let bytes = raw.as_bytes();
+    bytes.len() == 36
+        && bytes.iter().enumerate().all(|(index, byte)| match index {
+            8 | 13 | 18 | 23 => *byte == b'-',
+            _ => byte.is_ascii_hexdigit(),
+        })
 }
 
 /// The admin half (secret key only): §9.4 step 1's authoritative `email_confirmed_at`, and
@@ -1272,27 +1279,6 @@ impl SupabaseAuth {
     }
 }
 
-/// One fixture account (`e2e/support/config.ts`, `accounts`): user id, email, password, token.
-/// A private copy of `api::e2e::E2E_ACCOUNTS`' identity half; `api::e2e` owns the reseed.
-const E2E_FIXTURE_ACCOUNTS: &[(&str, &str, &str, &str)] = &[
-    ("e2e-p1", "e2e-p1@jackioh.test", "e2e-p1-password", "e2e-token-p1"),
-    ("e2e-p2", "e2e-p2@jackioh.test", "e2e-p2-password", "e2e-token-p2"),
-    ("e2e-p3", "e2e-p3@jackioh.test", "e2e-p3-password", "e2e-token-p3"),
-    ("e2e-p4", "e2e-p4@jackioh.test", "e2e-p4-password", "e2e-token-p4"),
-    (
-        "e2e-pending",
-        "e2e-pending@jackioh.test",
-        "e2e-pending-password",
-        "e2e-token-pending",
-    ),
-    (
-        "e2e-econ",
-        "e2e-econ@jackioh.test",
-        "e2e-econ-password",
-        "e2e-token-econ",
-    ),
-];
-
 /// The plain error a fixture sign-in fails with; `api::auth::call_provider` turns it into the one
 /// 401 whose wording never distinguishes "no such account" from "wrong password".
 const INVALID_LOGIN_CREDENTIALS: &str = "invalid login credentials";
@@ -1350,8 +1336,15 @@ impl E2eAuth {
                 deletion: E2eDeletion::Unsupported,
             }),
         };
-        for &(user_id, email, password, token) in E2E_FIXTURE_ACCOUNTS {
-            auth.register(user_id, email, true, Some(password), token);
+        // The fixture accounts (`e2e/support/config.ts`, `accounts`), whose reseed `api::e2e` owns.
+        for account in crate::api::e2e::E2E_ACCOUNTS {
+            auth.register(
+                account.user_id,
+                account.email,
+                true,
+                Some(account.password),
+                account.token,
+            );
         }
         auth
     }
@@ -1489,11 +1482,11 @@ impl E2eAuth {
 }
 
 /// The auth provider: Supabase in production, the fixtures under `E2E=1` and in the tests.
-///
-/// SURFACE §11.2 freezes the variants unboxed; there is one `Auth` per `App`, so a `Box` would buy
-/// nothing for the size difference clippy reports.
 #[derive(Debug)]
-#[allow(clippy::large_enum_variant)]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "SURFACE §11.2 freezes the variants unboxed, and there is one `Auth` per `App`"
+)]
 pub enum Auth {
     Supabase(SupabaseAuth),
     E2e(E2eAuth),
@@ -1628,5 +1621,19 @@ mod tests {
         });
         let board = flights.inflight.lock().expect("the board");
         assert!(board.get("k").is_some_and(|held| Arc::ptr_eq(held, &newer)));
+    }
+
+    #[test]
+    fn is_uuid_accepts_36_character_hyphenated_forms_and_refuses_urn_and_braces() {
+        use super::is_uuid;
+        assert!(is_uuid("67e55044-10b1-426f-9247-bb680e5fe0c8"));
+        assert!(is_uuid("67E55044-10B1-426F-9247-BB680E5FE0C8"));
+        assert!(!is_uuid("urn:uuid:67e55044-10b1-426f-9247-bb680e5fe0c8"));
+        assert!(!is_uuid("{67e55044-10b1-426f-9247-bb680e5fe0c8}"));
+        assert!(!is_uuid("67e5504410b1426f9247bb680e5fe0c8"));
+        assert!(!is_uuid("67e55044-10b1-426f-9247-bb680e5fe0c"));
+        assert!(!is_uuid("67e55044-10b1-426f-9247-bb680e5fe0c8a"));
+        assert!(!is_uuid("not-a-uuid"));
+        assert!(!is_uuid(""));
     }
 }

@@ -8,8 +8,8 @@ A set the catalog holds before it ships, as Meditative was while issue #496 buil
 while issue #1173 did (R1178000), Stinkyscape while issue #1836 did, Training Grounds while tracker
 #2193 did, and Stinkyscape+ while tracker #3533 did (R3535000), is in no pool that names no set, no deck and no random deck until the patch that lists it in `SHIPPED_SETS`
 (R1420), counts toward none of the census's totals, and a test opens it with the testkit's `preview_sets`; one script file per entry with its tests inside it; the catalog query every random pool goes through; and the
-catalog's patch history. This file is the contract between the card files. The spec (`spec/08-catalog.md`
-for every card, `spec/07-tokens.md` for the tokens) is the only source of card text; when it and this
+catalog's patch history. This file is the contract between the card files. The spec (`spec/08-catalog/`,
+a note a set, for every card, `spec/07-tokens.md` for the tokens) is the only source of card text; when it and this
 file disagree, the spec wins. [`docs/ADDING_CARDS.md`](../../docs/ADDING_CARDS.md) is the procedure
 for adding, changing or removing a card (CLAUDE.md rule 10).
 
@@ -26,8 +26,9 @@ crates/cards
 │                       and pending/ (one fragment per patch being built)
 ├── build.rs            generates the registry from src/scripts/**, compiles the catalog version in,
 │                       cuts every card's code block from its script (R1183004), and counts every
-│                       script's code lines into the BUSTED and complicated lists (R1846000), and
-│                       lists the scripts that owe an extra turn (#3116)
+│                       script's code lines into the BUSTED and complicated lists (R1846000),
+│                       lists the scripts that owe an extra turn (#3116), and the ones that call a
+│                       verb rewriting a card's text (#4609)
 ├── clippy.toml         the purity lint (CLAUDE.md rule 4), the engine's file
 ├── src/lib.rs          CATALOG, CATALOG_IDS, CATALOG_VERSION, card_def, register_all, the registry
 ├── src/query.rs        spec §5.1's catalog.query, the only random-pool source
@@ -139,7 +140,7 @@ the engine's read helpers, never a `GameState` field: no script names `state.pla
 | Read | Answers |
 | --- | --- |
 | `hero_of(state, player)` | `HeroView { health, armor }`, copied |
-| `starting_health_of(state, player)` | the health the player's hero started with: its handicap's `heroHealth`, else `HERO_HEALTH` (R290, R1866002) |
+| `starting_health_of(state, player)` | the health the player's hero started with: a Duos seat's own HP at setup, spent or not (R4831000), else its handicap's `heroHealth`, else `HERO_HEALTH` (R290, R1866002) |
 | `zone_cards(state, player, zone)` / `zone_count(…)` | one off-field pile (`OffFieldZone`: hand, library, graveyard, exile) as a copy, `library[0]` on top; its size |
 | `cards_played_this_turn(state, player)` | §10.5 step 4's counter, counting the card being played |
 | `unspent_mana_of(state, player)`, `max_mana_of(state, player)` | the mana a player holds now; §2.3's max mana |
@@ -266,7 +267,8 @@ Meditative+ #25's code Discover), and the card metrics into `$OUT_DIR/card_metri
 `BUSTED`, the ids over the engine's `BUSTED_CODE_LINES`, and `COMPLICATED`, over its
 `COMPLICATED_CODE_LINES`, which the catalog query's `busted` and `complicated` read; and
 `EXTRA_TURN_CARDS`, the ids whose script's code names `take_extra_turn` (#3116), which the AI prices in
-hand, R846). There is nothing to wire and nothing to
+hand, R846; and `TEXT_REWRITERS`, the ids whose script's code calls a verb that rewrites a card's text,
+which the cross test plays at Immutable cards, #4609, R4609000). There is nothing to wire and nothing to
 regenerate by hand: drop the file in its folder and build. The folders are the ones that hold card
 files, each its set's id segment with `_` between its words (`classic_plus`), so a new set's folder is
 listed nowhere (R3114000). The build fails, naming the path, on a file
@@ -364,7 +366,7 @@ Every change to card data is a patch, and every patch is kept.
   Tech read the snapshot of the server's cached card stats each game is handed (R3049000).
   `cargo jackioh patches check` (CI's `rust (checks, fuzz 200)` job) fails naming
   the card when a change is unclaimed or claimed twice, a claimed card did not change, a `plays` id
-  is no shipped card, a fragment claims nothing, or a fragment's title, sources or notes is empty, when a fragment's or a shipped patch's player note is missing, empty or names a ruling,
+  is no shipped card, a fragment claims nothing (a `KEPT_SCRIPTS` row keyed by it is a claim, R4844000), or a fragment's title, sources or notes is empty, when a fragment's or a shipped patch's player note is missing, empty or names a ruling,
   an issue or a § (R724001).
 - After the merge, `.github/workflows/patches-ship.yml` runs `cargo jackioh patches ship`: it
   appends each fragment in first-parent order with its player note, named from its tier (a major
@@ -381,12 +383,20 @@ Every change to card data is a patch, and every patch is kept.
   window does: each version's tier and the families that play in it, as recorded, or, for a version
   shipped before tiers were recorded, from its `changes` (`WORDING_FIELDS`, `PATCH_MIN_CARDS`,
   `PRE_TIER_MAJORS`). The server and the tools hand it to the engine's `windowed_card_stats`.
+- `play_versions()` (the same file, R4675000) reads it as each card's play versions: the runs of
+  shipped versions over which the card plays the same, `<card>~<first version>`, a new one starting
+  where a change line moves a field other than `WORDING_FIELDS` and `PLAY_VERSION_QUIET_FIELDS` (`loc`)
+  or the version's own `plays` claim its family; no tier ends one, and a day's cut restates its micros.
+  `deck_play_versions()` keeps a deck's cards, which the engine's `play_version_figures` reads
+  (`GET /api/stats/versions`, R4675001); a card `catalog.json` holds before the history does, one a
+  branch adds or of a set a branch releases, has none until `patches ship`.
 - Every shipped version but the newest is carried for replays (R767000): its definitions rebuilt
   from its snapshot, its scripts the build's own, and the win-rate table it shipped with (R1266000:
   its `win_rates/<version>.json`, or the empty table with no file, R1329000). A patch
   that changes what a card's script does, not only a number its definition holds, keeps the script
-  it replaces in `src/history.rs`'s `KEPT_SCRIPTS` as `(ID, the newest shipped version that ran it,
-  a fn building that card's scripts)`; without one, a replay that script changes is refused by its
+  it replaces in `src/history.rs`'s `KEPT_SCRIPTS` as `(ID, "fragment:<stem>", a fn building that
+  card's scripts)`, `<stem>` the branch's pending fragment, which the build resolves to the newest
+  shipped version that ran it (R4779000); without one, a replay that script changes is refused by its
   final hash.
   `cargo jackioh patches check` proves every carried version holds its snapshot's cards, in order,
   each with a script, and its table's rows.

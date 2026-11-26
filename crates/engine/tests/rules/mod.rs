@@ -31,6 +31,7 @@ pub mod backrow_death;
 pub mod backrow_piles;
 pub mod balance_2657;
 pub mod balance_2727;
+pub mod batch;
 pub mod blueprint;
 pub mod board_geometry;
 pub mod board_history;
@@ -54,6 +55,7 @@ pub mod combat_reactions;
 pub mod combat_resolution;
 pub mod combat_validation;
 pub mod combo_index;
+pub mod commanders;
 pub mod concealed_copy;
 pub mod condition_active;
 pub mod config;
@@ -74,6 +76,7 @@ pub mod damage_routing;
 pub mod death_pause;
 pub mod deck_bottom;
 pub mod deck_marks;
+pub mod deck_sets;
 pub mod delayed_kinds;
 pub mod destroyed_face;
 pub mod discard_guard;
@@ -148,10 +151,11 @@ pub mod extra_turns;
 pub mod face_down_text;
 pub mod faces;
 pub mod feng_shui;
-pub mod tune_live;
-pub mod tutorial_cards;
-// A fixture only the other binary's modules use is dead code in this one.
-#[allow(dead_code)]
+pub mod firewall;
+#[expect(
+    dead_code,
+    reason = "a fixture only another binary's modules use is dead code in this one"
+)]
 pub mod fixtures;
 pub mod flashback;
 pub mod flexible_evasive_frenzy;
@@ -169,6 +173,7 @@ pub mod granted_tags;
 pub mod graveyard_play;
 pub mod graveyard_play_reason;
 pub mod graveyard_reset;
+pub mod hallucination;
 pub mod hand_deck_fuse;
 pub mod hand_size;
 pub mod handicap;
@@ -182,6 +187,7 @@ pub mod hotseat_smoke;
 pub mod immutable;
 pub mod instance_data;
 pub mod invariants;
+pub mod jailbreak_verbs;
 pub mod keyword_via;
 pub mod kill_credit;
 pub mod ky_competition;
@@ -207,3 +213,5 @@ pub mod outside_data;
 pub mod outside_data_records;
 pub mod overflow_events;
 pub mod own_library;
+pub mod tune_live;
+pub mod tutorial_cards;

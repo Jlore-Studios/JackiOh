@@ -4,7 +4,8 @@
 //!            opponent."
 //!   Radiant: "Taunt, Tribute 3. Can use enemy Units as Tributes."
 //! Tribute targets chosen at play time (§10.5, R81, R90); enemy tributes sacrifice enemy units (R360; control is field-only, R15).
-//! If any enemy tribute chosen, summons for opponent (R101; leftmost open zone, R64; §3.2, R4, R11, R65).
+//! If any enemy tribute chosen, summons for opponent (R101; leftmost open zone, R64; §3.2, R4, R11, R65);
+//! made GIGA in the hand, only where all four of its zones are open there, else where named (R4990000).
 //! A face-down play by a lent Cloaked (M #45) is set on the player's own side whatever it tributed (R4265000).
 
 use jackioh_engine::prelude::*;
@@ -224,11 +225,12 @@ mod tests {
             assert_eq!(golem.summoned_turn, Some(turn));
         }
 
-        /// R4265000: set by M #45's lent Cloaked, the Golem paid with an opposing unit stays in p1's backrow (fuzz handicapped seed 6928).
+        /// R4265000: set by the Cloaked M #45.1 lends (M #45's did through v0.6.13h), the Golem paid with an opposing
+        /// unit stays in p1's backrow (fuzz handicapped seed 6928).
         #[test]
         fn r4265000_a_cloaked_play_paid_with_an_opposing_unit_is_set_in_the_player_s_own_backrow() {
             let mut s = scenario(json!({
-                "p1": { "mana": 10, "hand": ["core-055"], "field": [{ "def": "core-053", "lane": 1 }, { "def": "core-053", "lane": 2 }, { "def": "meditative-045", "lane": 4 }] },
+                "p1": { "mana": 10, "hand": ["core-055"], "field": [{ "def": "core-053", "lane": 1 }, { "def": "core-053", "lane": 2 }, { "def": "meditative-045-1", "lane": 4 }] },
                 "p2": { "field": [{ "def": "core-053", "lane": 1 }] },
             }));
             let golem = s.card("core-055").id.clone();
@@ -309,6 +311,115 @@ mod tests {
             assert_eq!(s.unit(P1, 2).map(|unit| unit.def_id).as_deref(), Some("core-055"));
             assert_eq!(s.card("core-055").controller, P1);
             assert_eq!(s.pile(P2, "graveyard").len(), 3);
+        }
+    }
+
+    /// R4990000: a base Golem made GIGA in the hand (S+ #100 Plesiosize, S+ #23 GIGA-ify) and paid for
+    /// with an opposing unit takes the opponent's anchor in the named lane only when all four of its zones
+    /// are open, else their leftmost such anchor, else it lands where the play named (R360), never in a
+    /// graveyard.
+    mod r4990000_a_giga_golem_handed_over {
+        use super::*;
+
+        /// p1's GIGA Golem in hand and two of p1's units in lanes 4 and 5; p2's units in `p2_lanes`.
+        /// Plays the Golem into p1's zone 1 paid with p1's two units and p2's lane-1 unit; returns the
+        /// scenario and the Golem's id.
+        fn handed_over(p2_lanes: &[i32]) -> (Scenario, String) {
+            let p2_field: Vec<Value> =
+                p2_lanes.iter().map(|lane| json!({ "def": "core-053", "lane": lane })).collect();
+            let mut s = scenario(json!({
+                "p1": { "hand": ["core-055"], "field": [{ "def": "core-053", "lane": 4 }, { "def": "core-053", "lane": 5 }] },
+                "p2": { "field": p2_field },
+            }));
+            let golem = s.card("core-055").id.clone();
+            crate::give_giga(&mut s, &golem);
+            let mut tributes = ids_at(&s, P1, &[4, 5]);
+            tributes.push(s.unit_at(P2, 1).id);
+            s.play("core-055", json!({ "zone": 1, "tributes": tributes }));
+            (s, golem)
+        }
+
+        fn in_no_graveyard(s: &Scenario, id: &str) -> bool {
+            [P1, P2].iter().all(|&player| s.pile(player, "graveyard").iter().all(|card| card.id != id))
+        }
+
+        #[test]
+        fn r4990000_a_giga_base_golem_takes_the_opponent_s_leftmost_fitting_anchor() {
+            // p2's lane 1 is open once its unit is paid, but lane 2 beside it is taken: lane 3 fits.
+            let (s, golem) = handed_over(&[1, 2]);
+            let placed = s.unit(P2, 3).expect("the Golem anchored in p2's lane 3");
+            assert_eq!(placed.id, golem);
+            assert_eq!(placed.controller, P2);
+            assert_eq!(placed.giga, Some(true));
+            assert!(in_no_graveyard(&s, &golem));
+        }
+
+        #[test]
+        fn r4990000_a_giga_base_golem_with_no_fit_on_the_opponent_s_side_lands_where_the_play_named() {
+            // p2's units in lanes 2 and 4 leave no two open lanes side by side.
+            let (s, golem) = handed_over(&[1, 2, 4]);
+            let placed = s.unit(P1, 1).expect("the Golem in p1's lane 1, where the play named");
+            assert_eq!(placed.id, golem);
+            assert_eq!(placed.controller, P1);
+            assert_eq!(placed.giga, Some(true));
+            assert!(s.state().players.p2.units.iter().flatten().flatten().all(|unit| unit.id != golem));
+            assert!(in_no_graveyard(&s, &golem));
+        }
+    }
+
+    /// R4834000: an Equip play onto S #16 Rod of Ages that R360 hands to the opponent fuses nothing.
+    mod r4834000_an_equip_play_onto_rod_of_ages_s_16 {
+        use super::*;
+
+        const ROD: &str = "stinkyscape-016"; // Rod of Ages: lends Equip (R1869000)
+
+        /// Rod of Ages face-up in p1's backrow zone 1, the Golem in hand, three of p2's units to pay with;
+        /// the Golem's and Rod's ids, and p2's three units.
+        fn onto_rod(golem: Value) -> (Scenario, String, String, Vec<String>) {
+            let s = scenario(json!({
+                "p1": { "mana": 10, "hand": [golem], "backrow": [{ "def": ROD, "lane": 1, "faceUp": true }] },
+                "p2": { "field": fodder() },
+            }));
+            let golem = s.card("core-055").id.clone();
+            let rod = s.backrow(P1, 1).expect("Rod of Ages").id;
+            let theirs = ids_at(&s, P2, &[1, 2, 3]);
+            (s, golem, rod, theirs)
+        }
+
+        #[test]
+        fn r4834000_base_paid_with_opposing_units_it_is_handed_over_and_rod_of_ages_fuses_nothing() {
+            let (mut s, golem, rod, theirs) = onto_rod(json!("core-055"));
+            assert!(
+                s.plays_of("core-055").iter().any(|play| matches!(
+                    play,
+                    ActionBody::Play { zone: Some(zone), equip: Some(true), tributes: Some(paid), .. }
+                        if zone.row == Row::Backrow && zone.lane == 1 && paid.iter().all(|id| theirs.contains(id))
+                )),
+                "the Equip play onto Rod of Ages paid with p2's units is listed"
+            );
+
+            s.play("core-055", json!({ "zone": 1, "row": "backrow", "equip": true, "tributes": theirs }));
+
+            // R360: summoned for p2 in the lane the play named, and no card stood on Rod to fuse.
+            assert_eq!(s.unit(P2, 1).map(|unit| unit.id), Some(golem.clone()));
+            assert_eq!(s.card("core-055").controller, P2);
+            let rod_after = s.backrow(P1, 1).expect("Rod of Ages, left as it was");
+            assert_eq!(rod_after.id, rod);
+            assert_eq!(rod_after.def_id, ROD);
+            assert!(!s.last_events().iter().any(|event| matches!(event, GameEvent::Fused { .. })));
+            assert_eq!(s.pile(P2, "graveyard").len(), 3);
+        }
+
+        #[test]
+        fn r4834000_radiant_paid_with_opposing_units_it_stays_and_fuses_into_rod_of_ages() {
+            let (mut s, golem, rod, theirs) = onto_rod(json!({ "def": "core-055", "radiant": true }));
+
+            s.play("core-055", json!({ "zone": 1, "row": "backrow", "equip": true, "tributes": theirs }));
+
+            assert!(find_instance(s.state(), &golem).is_none(), "the Golem fused into Rod of Ages");
+            assert!(s.last_events().iter().any(|event| matches!(event, GameEvent::Fused { .. })));
+            assert_eq!(find_instance(s.state(), &rod).map(|card| card.controller), Some(P1));
+            assert!(s.state().players.p2.units.iter().all(Option::is_none));
         }
     }
 

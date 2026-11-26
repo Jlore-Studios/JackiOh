@@ -1,5 +1,5 @@
 //! C #9 Income Tax (SPEC §8.6 row 9, §6.3 Steal, §10.6; R12, R33, R58, R61, R78, R97, R99, R317,
-//! R521, R1279000). Trap, cost 2 (3 until issue #3996), Legendary.
+//! R521, R1279000, R4814000). Trap, cost 2 (3 until issue #3996), Legendary.
 //!   Base:    "Activates when the cards your opponent has drawn in a turn reach {draws}: They keep one
 //!            card of their choice and give you the rest of their hand."
 //!   Radiant: the same, then "The cards you get cost ({discount}) less."
@@ -18,6 +18,8 @@
 //! turn) carrying the discount exactly as the prompt's data does, and the `deferred` resume step opens
 //! the identical keep prompt when that turn starts. On the drawer's own turn it asks at once, as before.
 //! The faces do not print the wait: the sentence would put both over the face's text limit (R1017000).
+//! Inside the drawer's own random cast the keep is answered at random for them (R452), and the giving
+//! still runs as this card's controller (R4814000).
 
 use jackioh_engine::prelude::*;
 
@@ -212,6 +214,7 @@ mod tests {
     const SEVEN: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
     const FELINORS: &str = "core-012"; // Duplicating Felinors
     const TIMMY: &str = "stand-in (1) 3/3 Rush, First Strike R6/6 Charge, First Strike";
+    const JOGG: &str = "classicplus-047"; // Jogg's Box
 
     fn open(s: &Scenario) -> PendingChoice {
         must(s.state().pending.clone(), "open prompt")
@@ -427,6 +430,54 @@ mod tests {
                 s.expect_in_zone(TAX, "graveyard");
                 assert_eq!(def_ids(&s.hand(P1)), [MENACE]);
             });
+        }
+
+        /// R4814000: on the drawer's own turn the keep opens at once (R1279000); inside their own random
+        /// cast (C+ #47 Jogg's Box) it is answered for them at random (R452), and the step still runs as
+        /// this trap's controller: every card the firing moves goes from the drawer to you, on either face.
+        #[test]
+        fn r4814000_fired_inside_the_drawers_random_cast_the_keep_is_drawn_at_random_and_the_rest_still_comes_to_you() {
+            let board = |seed: &str, radiant: bool| {
+                scenario(json!({
+                    "seed": seed, "active": "p1", "turn": 9,
+                    "p1": { "hand": [JOGG, VANILLA, VANILLA, VANILLA], "mana": 10, "library": vec![VANILLA; 30] },
+                    "p2": {
+                        "hand": [MENACE, FELINORS, VANILLA],
+                        "backrow": [{ "def": TAX, "faceUp": false, "radiant": radiant }],
+                        "library": vec![VANILLA; 30],
+                    },
+                }))
+            };
+            // The firing's own steals: from `trapFired` to the trap's `enteredGraveyard` (§3.2).
+            let steals = |s: &Scenario| -> Vec<(PlayerId, PlayerId)> {
+                let Some(from) = s
+                    .events()
+                    .iter()
+                    .position(|event| matches!(event, GameEvent::TrapFired { def_id, .. } if def_id == TAX))
+                else {
+                    return vec![];
+                };
+                s.events()[from..]
+                    .iter()
+                    .take_while(|event| !matches!(event, GameEvent::EnteredGraveyard { def_id, .. } if def_id == TAX))
+                    .filter_map(|event| match event {
+                        GameEvent::Stolen { from, to, .. } => Some((*from, *to)),
+                        _ => None,
+                    })
+                    .collect()
+            };
+            for radiant in [false, true] {
+                let seed = seed_where("r4814000-tax", |seed| {
+                    let mut s = board(seed, radiant);
+                    s.play(JOGG, json!({}));
+                    !steals(&s).is_empty()
+                });
+                let mut s = board(&seed, radiant);
+                s.play(JOGG, json!({}));
+                for (from, to) in nonempty(steals(&s), "Income Tax's steals") {
+                    assert_eq!((from, to), (P1, P2), "radiant {radiant}, seed {seed}");
+                }
+            }
         }
 
         #[test]

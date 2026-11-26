@@ -7,6 +7,7 @@ import {
   AUTH_EMAIL_RESEND_COOLDOWN_SECONDS,
   AUTH_PROVIDER_TIMEOUT_SECONDS,
   AUTH_SESSION_REFRESH_MARGIN_SECONDS,
+  TOTP_CODE_FORMAT,
 } from "@jackioh/server-config";
 import { claimsOf } from "../auth/claims.ts";
 import { challengeForRequest, forgetVerifier, storedVerifiers, type PkceChallenge, type PkceFlow } from "../auth/pkce.ts";
@@ -919,7 +920,8 @@ function factorPath(factorId: string, suffix = ""): string {
   return `/auth/v1/factors/${encodeURIComponent(factorId)}${suffix}`;
 }
 
-const TOTP_CODE_PATTERN = /^[0-9]{6}$/u;
+/** R4669000: a two-step code is six digits; the shape is `TOTP_CODE_FORMAT`, so the two cannot disagree. */
+const TOTP_CODE_PATTERN = new RegExp(`^[${TOTP_CODE_FORMAT.alphabet}]{${TOTP_CODE_FORMAT.length}}$`, "u");
 
 /** R665: verify a factor's challenge and replace the session with its `aal2` tokens. */
 export async function verifySecondFactor(session: Session, factorId: string, code: string): Promise<Session> {

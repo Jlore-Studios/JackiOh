@@ -22,7 +22,8 @@
 //! as `records/<version>.json`. Branches never edit `patches.json`, the snapshots, the tables under
 //! `win_rates/` and `records/`, `index.json` or `shipped.json`. `check` fails, naming the card, on an
 //! entry that differs from the newest shipped snapshot without exactly one fragment's claim or is
-//! claimed and does not, a `plays` id that is no shipped card, a fragment that claims nothing, carries
+//! claimed and does not, a `plays` id that is no shipped card, a fragment that claims nothing (a kept
+//! script keyed by it counts as a claim, R4844000), carries
 //! win rates of record with no row, or leaves its title, sources or notes empty (R388), a player note
 //! that breaks the note rules (R724001), a carried
 //! version whose win-rate table is not its frozen file (R1329000), and a technical log out of shape
@@ -43,9 +44,10 @@ use indexmap::{IndexMap, IndexSet};
 use self::patch::bump_sites;
 use self::patches_io::{
     Catalog, CheckFragmentsArgs, NamedFragment, PatchEntry, PendingFragment, PlayerNote, RECORDS_DIR,
-    ShippedEntry, check_fragments, differing_ids, fragment_name, git_blob_hash, next_ship_name,
-    player_note_problems, read_fragments, read_patches, read_shipped, read_snapshot, read_win_rates,
-    rebuild_derived, records_path, remove_file, same_win_rates, snapshot_path, win_rates_path, write_json,
+    ShippedEntry, check_fragments, differing_ids, fragment_name, fragment_stem, git_blob_hash,
+    next_ship_name, player_note_problems, read_fragments, read_patches, read_shipped, read_snapshot,
+    read_win_rates, rebuild_derived, records_path, remove_file, same_win_rates, snapshot_path,
+    win_rates_path, write_json,
 };
 use self::versions::name_by_tier;
 use crate::card_lists;
@@ -451,8 +453,13 @@ pub mod patch {
 
     /// One match of a site's pattern: its byte span, and where the version starts inside it (everything before is kept).
     struct SiteMatch {
-        /// Read only by `versions_at_sites`, which only the tests call.
-        #[cfg_attr(not(test), allow(dead_code))]
+        #[cfg_attr(
+            not(test),
+            expect(
+                dead_code,
+                reason = "read only by `versions_at_sites`, which only the tests call"
+            )
+        )]
         start: usize,
         value_start: usize,
         end: usize,
@@ -827,6 +834,11 @@ pub mod patches_io {
         /// under it as its snapshots. Absent on every version shipped before #3944, and on a micro.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub includes: Option<Vec<String>>,
+        /// R4779000: the stem of the pending fragment this version shipped from (its file name under
+        /// `pending/` without `.json`), which a kept script's `"fragment:<stem>"` key names. Absent on
+        /// every version shipped before #4779, and on a cut, which ships no fragment.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pub fragment: Option<String>,
         /// GENERATED from the snapshots: every card the patch added, changed or removed, in catalog
         /// order.
         #[serde(default)]
@@ -1160,6 +1172,20 @@ pub mod patches_io {
         format!("{slug}.json")
     }
 
+    /// R4779000: a fragment's stem, its file name without `.json`: what `patches ship` records as a
+    /// version's `fragment` and a kept script's `"fragment:<stem>"` key names.
+    pub fn fragment_stem(name: &str) -> &str {
+        name.strip_suffix(".json").unwrap_or(name)
+    }
+
+    /// R4844000: whether one of `keys`, `KEPT_SCRIPTS` keys, is `"fragment:<stem>"` (R4779000). Such a
+    /// fragment claims a change though it claims no card, play or rule: a script it ships changes only
+    /// what no game `classify` plays reaches (a stolen or random cast, say), so no card's statistics
+    /// restart, yet replays fold the kept script around the version it ships as.
+    pub fn keyed_by_kept_scripts<'a>(stem: &str, mut keys: impl Iterator<Item = &'a str>) -> bool {
+        keys.any(|key| key.strip_prefix(jackioh_cards::FRAGMENT_KEY) == Some(stem))
+    }
+
     fn is_fragment(value: &Json) -> bool {
         let Json::Object(fragment) = value else {
             return false;
@@ -1357,7 +1383,8 @@ pub mod patches_io {
 
     /// Every way the pending fragments disagree with the newest shipped snapshot, each naming the card
     /// (and the fragment) at fault, or [] when the tree is shippable; the rules are `patches check`'s
-    /// (module header). Pure: `patches check` reads the files and prints what this returns.
+    /// (module header). Pure: `patches check` reads the files and prints what this returns; the one
+    /// other input is the build's compiled-in `jackioh_cards::KEPT_SCRIPTS` (R4844000).
     pub fn check_fragments(args: &CheckFragmentsArgs<'_>) -> Vec<String> {
         let mut problems = Vec::new();
         for NamedFragment { name, fragment } in args.files {
@@ -1379,16 +1406,20 @@ pub mod patches_io {
             }
             // A patch changes a card, a card's play or look, a rule, a system or the win rates of
             // record; one that claims none would bump the version over nothing (R650, R1366000,
-            // R2529000, R3882000). No patch ships a `win_rates/` table since #3049 (R3049000).
+            // R2529000, R3882000). No patch ships a `win_rates/` table since #3049 (R3049000). R4844000:
+            // nor does a fragment a kept script is keyed by, whose version is the boundary replays fold
+            // that script around.
+            let kept_keys = jackioh_cards::KEPT_SCRIPTS.iter().map(|(_, key, _)| *key);
             if fragment.cards.is_empty()
                 && fragment.plays.is_empty()
                 && !fragment.rule
                 && !fragment.visual
                 && fragment.system.is_none()
                 && fragment.records.is_none()
+                && !keyed_by_kept_scripts(fragment_stem(name), kept_keys)
             {
                 problems.push(format!(
-                    "pending/{name} claims nothing (no card, no --plays, no --rule, no --visual, no --system), but a patch ships a change"
+                    "pending/{name} claims nothing (no card, no --plays, no --rule, no --visual, no --system, no kept script keyed by it), but a patch ships a change"
                 ));
             }
             // R3882000: win rates of record with no row would record nothing.
@@ -1720,6 +1751,7 @@ pub fn check_patches(repo_root: &Path) -> anyhow::Result<Vec<String>> {
         problems.push(format!("the pending fragments cannot ship: {error}"));
     }
     problems.extend(includes_problems(&patches));
+    problems.extend(reused_fragment_problems(&patches, &files));
     // Every shipped patch carries the note the Patch notes page shows for it (R724001).
     for patch in &patches {
         match &patch.player {
@@ -1787,6 +1819,47 @@ pub fn check_carried(paths: &PatchPaths) -> anyhow::Result<Vec<String>> {
         }
     }
     Ok(problems)
+}
+
+/// R4779000: every `KEPT_SCRIPTS` key of `rows`, `(ID, key)`, that names no shipped version of
+/// `versions` and no fragment: a `"fragment:<stem>"` key's stem must be one of `pending` (a fragment
+/// waiting in `pending/`) or `shipped` (one a shipped version records), else a typo would read as
+/// pending forever and cover every version shipped since.
+fn kept_key_problems(
+    rows: &[(&str, &str)],
+    versions: &[String],
+    pending: &[String],
+    shipped: &[String],
+) -> Vec<String> {
+    rows.iter()
+        .filter(|(_, key)| match key.strip_prefix(jackioh_cards::FRAGMENT_KEY) {
+            Some(stem) => !pending.iter().chain(shipped).any(|known| known == stem),
+            None => !versions.iter().any(|version| version == key),
+        })
+        .map(|(id, key)| {
+            format!(
+                "jackioh_cards::KEPT_SCRIPTS keeps \"{id}\" under \"{key}\", which names no shipped version nor a pending or shipped fragment (R4779000)"
+            )
+        })
+        .collect()
+}
+
+/// R4779000: `kept_key_problems` over this binary's `jackioh_cards::KEPT_SCRIPTS`, the versions and
+/// fragments `patches.json` records and the fragments `pending/` holds. Only `patches check` on this
+/// repository calls it, as it does `check_carried`.
+pub fn check_kept_keys(paths: &PatchPaths) -> anyhow::Result<Vec<String>> {
+    let patches = read_patches(&paths.patches_json)?;
+    let versions: Vec<String> = patches.iter().map(|patch| patch.version.clone()).collect();
+    let shipped: Vec<String> = patches.into_iter().filter_map(|patch| patch.fragment).collect();
+    let pending: Vec<String> = read_fragments(&paths.pending_dir)?
+        .iter()
+        .map(|file| fragment_stem(&file.name).to_string())
+        .collect();
+    let rows: Vec<(&str, &str)> = jackioh_cards::KEPT_SCRIPTS
+        .iter()
+        .map(|(id, key, _)| (*id, *key))
+        .collect();
+    Ok(kept_key_problems(&rows, &versions, &pending, &shipped))
 }
 
 /// R1329000: how `carried`, the win-rate table a build folds `version`'s games against, is not
@@ -2215,6 +2288,7 @@ pub fn ship_patches(repo_root: &Path) -> anyhow::Result<ShipResult> {
             plays: Some(plays),
             system: false,
             includes,
+            fragment: Some(fragment_stem(&name).to_string()),
             changes: Vec::new(),
         });
         let written =
@@ -2306,6 +2380,25 @@ fn includes_problems(patches: &[PatchEntry]) -> Vec<String> {
             ));
         }
         since.clear();
+    }
+    problems
+}
+
+/// R4779000: every pending fragment whose stem a shipped version already records as its `fragment`: a
+/// kept script keyed by that stem would resolve to the version before the old one, not the newest.
+fn reused_fragment_problems(patches: &[PatchEntry], files: &[NamedFragment]) -> Vec<String> {
+    let mut problems = Vec::new();
+    for NamedFragment { name, .. } in files {
+        let stem = fragment_stem(name);
+        if let Some(patch) = patches
+            .iter()
+            .find(|patch| patch.fragment.as_deref() == Some(stem))
+        {
+            problems.push(format!(
+                "pending/{name}: {} already shipped from a fragment of that name, so a kept script keyed \"fragment:{stem}\" would resolve to the version before it: give the fragment another title (R4779000)",
+                patch.version
+            ));
+        }
     }
     problems
 }
@@ -2461,6 +2554,7 @@ pub fn cut_patch(repo_root: &Path, production: Option<&str>) -> anyhow::Result<C
         plays: Some(plays),
         system: false,
         includes: Some(includes.clone()),
+        fragment: None,
         changes: Vec::new(),
     });
     let mut shipped = read_shipped(&paths.shipped_json)?;
@@ -2596,6 +2690,7 @@ fn main(repo_root: &Path, argv: &[String]) -> anyhow::Result<()> {
     if command == Some("check") {
         let mut problems = check_patches(repo_root)?;
         problems.extend(check_carried(&patch_paths(repo_root))?);
+        problems.extend(check_kept_keys(&patch_paths(repo_root))?);
         if !problems.is_empty() {
             return Err(anyhow::Error::new(CheckFailed(problems)));
         }
@@ -3046,7 +3141,7 @@ mod tests {
                 assert_eq!(
                     check(&none, &newest, &newest),
                     strings(&[
-                        "pending/t.json claims nothing (no card, no --plays, no --rule, no --visual, no --system), but a patch ships a change"
+                        "pending/t.json claims nothing (no card, no --plays, no --rule, no --visual, no --system, no kept script keyed by it), but a patch ships a change"
                     ])
                 );
                 let mut plays = none.clone();
@@ -3055,6 +3150,28 @@ mod tests {
                 let mut rule = none;
                 rule[0].fragment.rule = true;
                 assert_eq!(check(&rule, &newest, &newest), Vec::<String>::new());
+            }
+
+            /// R4844000: a fragment a `KEPT_SCRIPTS` row is keyed by claims the change of the script it
+            /// keeps, so it ships claiming no card, play or rule; a key naming another stem, a stem it
+            /// only starts with, or a version, does not count.
+            #[test]
+            fn r4844000_a_fragment_a_kept_script_is_keyed_by_claims_that_change() {
+                assert!(keyed_by_kept_scripts(
+                    "mine",
+                    ["v0.6.1", "fragment:mine"].into_iter()
+                ));
+                assert!(!keyed_by_kept_scripts(
+                    "mine",
+                    ["mine", "fragment:other", "fragment:mine-too"].into_iter()
+                ));
+                let stem = jackioh_cards::KEPT_SCRIPTS
+                    .iter()
+                    .find_map(|(_, key, _)| key.strip_prefix(jackioh_cards::FRAGMENT_KEY))
+                    .expect("a kept script keyed by a fragment (R4779000)");
+                let newest = catalog_of(vec![card("aaa", 1)]);
+                let kept = vec![named(&format!("{stem}.json"), "t", "s", "n", &[])];
+                assert_eq!(check(&kept, &newest, &newest), Vec::<String>::new());
             }
 
             #[test]
@@ -3349,6 +3466,7 @@ mod tests {
                     plays: None,
                     system: false,
                     includes: None,
+                    fragment: None,
                     changes,
                 }
             }
@@ -4193,6 +4311,63 @@ mod tests {
                 assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1d"]));
             }
 
+            // R4779000: one ship of two fragments records each one's stem on the version it shipped as,
+            // so a kept script keyed by the second covers the first's version, one keyed by the first the
+            // version before it, and one keyed by a fragment still pending every version shipped.
+            #[test]
+            fn r4779000_one_ship_of_two_fragments_records_each_and_keys_the_second_at_the_first_version() {
+                let base = cards(2);
+                let temp = shipped_repo("jackioh-ship-fragments-", &base);
+                let root = temp.path();
+                let dir = root.join("crates/cards/patches");
+                let first = costing(&base, &ids(0, 1), 2);
+                write_files(root, &[("crates/cards/catalog.json", json(&first))]);
+                write_fragment(root, &fragment_args("first", "s", "n", None)).unwrap();
+                commit_at(root, "first", "2026-10-01T12:00:00+00:00");
+                let second = costing(&first, &ids(1, 2), 2);
+                write_files(root, &[("crates/cards/catalog.json", json(&second))]);
+                write_fragment(root, &fragment_args("second", "s", "n", Some(&["c01"]))).unwrap();
+                commit_at(root, "second", "2026-10-02T12:00:00+00:00");
+
+                assert_eq!(ship_patches(root).unwrap(), shipped_of(&["v0.1.1b", "v0.1.1c"]));
+                let patches = read_patches(&dir.join("patches.json")).unwrap();
+                let recorded: Vec<Option<&str>> =
+                    patches.iter().map(|patch| patch.fragment.as_deref()).collect();
+                assert_eq!(recorded, [None, Some("first"), Some("second")]);
+                let order: Vec<String> = patches.iter().map(|patch| patch.version.clone()).collect();
+                let fragments: IndexMap<String, String> = patches
+                    .iter()
+                    .filter_map(|patch| Some((patch.version.clone(), patch.fragment.clone()?)))
+                    .collect();
+                let resolved = |key: &str| jackioh_cards::resolve_kept_key(key, &order, &fragments);
+                assert_eq!(
+                    resolved("fragment:second"),
+                    Some(1),
+                    "v0.1.1b ran what `second` replaced"
+                );
+                assert_eq!(
+                    resolved("fragment:first"),
+                    Some(0),
+                    "v0.1.1 ran what `first` replaced"
+                );
+                assert_eq!(
+                    resolved("fragment:waiting"),
+                    Some(2),
+                    "a pending one: every version shipped"
+                );
+                commit_at(root, "ship", "2026-10-02T13:00:00+00:00");
+
+                // A fragment titled as one already shipped would key its scripts to the old version.
+                let again = costing(&second, &ids(0, 1), 5);
+                write_files(root, &[("crates/cards/catalog.json", json(&again))]);
+                write_fragment(root, &fragment_args("first", "s", "n", None)).unwrap();
+                let problems = check_patches(root).unwrap().join("\n");
+                assert!(
+                    problems.contains("pending/first.json") && problems.contains("R4779000"),
+                    "{problems}"
+                );
+            }
+
             #[test]
             fn r1366000_ships_wording_on_twelve_cards_as_a_micro() {
                 let base = cards(12);
@@ -5015,6 +5190,7 @@ mod tests {
                         "reconstructed",
                         "tier",
                         "plays",
+                        "fragment",
                         "changes"
                     ]
                 );
@@ -6206,7 +6382,10 @@ mod tests {
 
     /// R767000: every older shipped version is carried, whole, for the replays of games played on it.
     mod r767000_carried {
-        use super::super::{carried_problems, carried_table_problem, check_carried, patch_paths, repo_root};
+        use super::super::{
+            carried_problems, carried_table_problem, check_carried, check_kept_keys, kept_key_problems,
+            patch_paths, repo_root,
+        };
 
         fn pick(ids: &[&str]) -> jackioh_engine::CardDefs {
             ids.iter()
@@ -6218,6 +6397,39 @@ mod tests {
         fn r767000_every_shipped_version_but_the_newest_is_carried_with_every_script() {
             let problems = check_carried(&patch_paths(&repo_root())).expect("the patch history reads");
             assert!(problems.is_empty(), "{problems:#?}");
+        }
+
+        #[test]
+        fn r4779000_every_kept_key_names_a_shipped_version_or_a_fragment() {
+            let problems = check_kept_keys(&patch_paths(&repo_root())).expect("the patch history reads");
+            assert!(problems.is_empty(), "{problems:#?}");
+        }
+
+        #[test]
+        fn r4779000_names_a_kept_key_that_names_no_shipped_version_nor_fragment() {
+            let rows = [
+                ("a", "v1"),
+                ("b", "fragment:waiting"),
+                ("c", "fragment:gone"),
+                ("d", "fragment:typo"),
+                ("e", "v9"),
+            ];
+            use super::strings;
+            let problems = kept_key_problems(
+                &rows,
+                &strings(&["v1", "v2"]),
+                &strings(&["waiting"]),
+                &strings(&["gone"]),
+            );
+            assert_eq!(problems.len(), 2, "{problems:#?}");
+            assert!(
+                problems[0].contains("\"d\"") && problems[0].contains("fragment:typo"),
+                "{problems:#?}"
+            );
+            assert!(
+                problems[1].contains("\"e\"") && problems[1].contains("\"v9\""),
+                "{problems:#?}"
+            );
         }
 
         #[test]

@@ -36,19 +36,20 @@ use crate::scripts::classic::{
 };
 use crate::scripts::classic_plus::{
     c007_the_house, c011_anime_armor, c016_conjure_rush_token, c019_1_top_loser, c019_2_jungle_loser,
-    c019_3_mid_loser, c023_dropshipping, c026_tommy_tempo, c029_portal_to_the_past, c030_felinor_fuser,
-    c033_ivory_tower, c037_wardrum, c040_appropriations, c042_kys_test, c043_ai_slop, c047_joggs_box,
-    c048_jlockeeds_lobbyist, c049_jay_fungus, c051_jlockeeds_j15_fighter, c053_book_of_tokens,
-    c062_kys_papaya, c068_organic_produce, c071_book_of_buff, c073_1_classic_golem, c078_claudes_datacenter,
+    c019_3_mid_loser, c019_5_bot_loser, c023_dropshipping, c026_tommy_tempo, c029_portal_to_the_past,
+    c030_felinor_fuser, c033_ivory_tower, c037_wardrum, c040_appropriations, c042_kys_test, c043_ai_slop,
+    c047_joggs_box, c048_jlockeeds_lobbyist, c049_jay_fungus, c051_jlockeeds_j15_fighter,
+    c053_book_of_tokens, c062_kys_papaya, c068_organic_produce, c071_book_of_buff, c073_1_classic_golem,
+    c078_claudes_datacenter,
 };
 use crate::scripts::core::{
-    c002_speciesist, c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean, c032_prem_panther,
-    c033_unstable_clone_machine, c042_eugenics, c043_big_felinor, c049_snom_bunny_mind_control,
-    c050_k_pop_fanatic, c051_1_kys_empty_notebook, c052_silly_silas, c054_straaza, c059_unbiased_immigration,
-    c065_1_spikey_pillow, c065_masochism_mask, c069_call_to_arms, c070_spiteful_stab,
-    c073_anti_oneshot_armor, c074_adaptive_ui, c075_infinite_reserves, c079_twinspell, c080_zao_gao,
-    c081_radiant_saintess, c083_transmogulate, c084_going_long, c085_unlicensed_experimentation,
-    c089_corpse_eater, c098_heroic_power,
+    c002_speciesist, c004_gary_the_gambler, c021_hinder, c023_reoccurring_dream, c029_giga_glowy_jelly_bean,
+    c032_prem_panther, c033_unstable_clone_machine, c042_eugenics, c043_big_felinor,
+    c049_snom_bunny_mind_control, c050_k_pop_fanatic, c051_1_kys_empty_notebook, c052_silly_silas,
+    c054_straaza, c059_unbiased_immigration, c065_1_spikey_pillow, c065_masochism_mask, c069_call_to_arms,
+    c070_spiteful_stab, c073_anti_oneshot_armor, c074_adaptive_ui, c075_infinite_reserves, c079_twinspell,
+    c080_zao_gao, c081_radiant_saintess, c083_transmogulate, c084_going_long,
+    c085_unlicensed_experimentation, c089_corpse_eater, c098_heroic_power,
 };
 use crate::scripts::meditative::{
     c001_disruptive_disruptor, c005_death_by_1000_cuts, c007_introspection, c009_joint_filing,
@@ -68,40 +69,44 @@ use crate::scripts::meditative_plus::{
     c022_mountaintop_garden, c023_enormous_elderberry,
 };
 use crate::scripts::stinkyscape::{
-    c004_olivian_expanse, c007_the_greatest_heist, c010_2_divine_spirit, c011_2_arcane_missiles,
-    c013_asphyxiants_cloud, c016_rod_of_ages, c018_1_melchior, c018_3_casper, c018_imitated_instrumentality,
-    c023_warp_disruptor, c024_warp_disruptor_ii, c026_zolarketh, c033_drone_core_vii, c034_drone_core_viii,
-    c035_drone_core_ix, c036_drone_core_x, c042_core_researcher, c045_drone_commander,
-    c046_circadian_halfcycler, c049_spacemine, c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3,
-    c054_beam_v4, c055_repeater_v4, c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5,
-    c060_cannon_v5, c061_flak_v5, c070_zzoth, c074_paragon_x, c080_galaxy, c083_halo, c086_prototype_x2,
-    c087_siva_1, c094_tmack_trav, c096_ocean_tsunami, c109_xxfreshjack, c111_shockwave447,
-    c112_job_application, c115_scornboi, c116_megabase, c119_unsecure_system, c129_jlockeeds_missile_pod,
-    c134_felinor_containment_chamber, c140_rush_token_launcher, c143_book_launcher, c148_alteran_reach,
-    c149_wildar, c153_stimmycheck, c154_dice_of_doom, c158_stratos_swarm, c163_swear_loyalities,
-    c165_the_trade_union, c168_drone_hanger, c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid,
-    c172_huge_asteroid, c173_abandoned_spice_tower, t_drone_corvette, t_drone_interceptor, t_narcor,
-    t_red_narcor,
+    c004_olivian_expanse, c007_the_greatest_heist, c009_ticketed, c010_1_inner_fire, c010_2_divine_spirit,
+    c010_3_power_word_shield, c011_2_arcane_missiles, c013_asphyxiants_cloud, c016_rod_of_ages,
+    c018_1_melchior, c018_3_casper, c018_imitated_instrumentality, c023_warp_disruptor,
+    c024_warp_disruptor_ii, c026_zolarketh, c033_drone_core_vii, c034_drone_core_viii, c035_drone_core_ix,
+    c036_drone_core_x, c042_core_researcher, c045_drone_commander, c046_circadian_halfcycler, c049_spacemine,
+    c050_beam_v3, c051_repeater_v3, c052_cannon_v3, c053_flak_v3, c054_beam_v4, c055_repeater_v4,
+    c056_cannon_v4, c057_flak_v4, c058_beam_v5, c059_repeater_v5, c060_cannon_v5, c061_flak_v5, c070_zzoth,
+    c074_paragon_x, c080_galaxy, c083_halo, c086_prototype_x2, c087_siva_1, c094_tmack_trav,
+    c096_ocean_tsunami, c109_xxfreshjack, c111_shockwave447, c112_job_application, c115_scornboi,
+    c116_megabase, c119_unsecure_system, c129_jlockeeds_missile_pod, c134_felinor_containment_chamber,
+    c140_rush_token_launcher, c143_book_launcher, c148_alteran_reach, c149_wildar, c153_stimmycheck,
+    c154_dice_of_doom, c158_stratos_swarm, c163_swear_loyalities, c165_the_trade_union, c168_drone_hanger,
+    c169_tiny_asteroid, c170_medium_asteroid, c171_large_asteroid, c172_huge_asteroid,
+    c173_abandoned_spice_tower, t_drone_corvette, t_drone_interceptor, t_narcor, t_red_narcor,
 };
 use crate::scripts::stinkyscape_plus::{
-    c004_profe_yates, c009_drone_assembler_v4, c010_drone_assembler_v5, c017_smoothie, c018_large_smoothie,
-    c021_jlockeed_shredder_12, c025_snom_bunny, c037_scorch, c039_mindustrial_cross_over,
-    c041_mend_projector, c046_phase_fabric, c061_1_shawarma_law, c064_surge_wall, c065_thorium_wall,
-    c066_plastanium_wall, c067_phase_wall, c076_ayys_lmao, c077_black_hole,
-    c079_a_glimpse_into_the_endless_sea, c080_the_last_voyage, c082_endless_expedition,
-    c093_recessive_replicators, c097_selective_enrollment, c104_tireless_cultivation, c119_eclipse,
-    c120_crawler, c121_1_toxopid_leg, c121_toxopid, c131_tetrative_reconstructor, c145_fire_beam_v5,
-    c155_the_far_vagabond, c159_raven, c166_mindustrial_revolution,
+    c004_profe_yates, c007_churnwalker, c009_drone_assembler_v4, c010_drone_assembler_v5, c017_smoothie,
+    c018_large_smoothie, c021_jlockeed_shredder_12, c024_forced_propagation, c025_snom_bunny, c037_scorch,
+    c039_mindustrial_cross_over, c041_mend_projector, c045_surge_alloy, c046_phase_fabric, c047_plastanium,
+    c049_metaglass, c050_graphite, c056_impact_reactor, c059_mass_driver, c061_1_shawarma_law,
+    c062_overdrive_projector, c063_overdrive_dome, c064_surge_wall, c065_thorium_wall, c066_plastanium_wall,
+    c067_phase_wall, c076_ayys_lmao, c077_black_hole, c079_a_glimpse_into_the_endless_sea,
+    c080_the_last_voyage, c082_endless_expedition, c090_meltdown, c093_recessive_replicators,
+    c097_selective_enrollment, c101_a_wee_whelp, c104_tireless_cultivation, c119_eclipse, c120_crawler,
+    c121_1_toxopid_leg, c121_toxopid, c131_tetrative_reconstructor, c145_fire_beam_v5, c150_scorching_rounds,
+    c151_volcanic_rounds, c155_the_far_vagabond, c158_quick_chaos, c159_raven, c166_mindustrial_revolution,
 };
 use crate::scripts::training_grounds::{
-    c015_in_a_hurry, c031_level_up, c035_corpse_recycler, c036_training_dummy, c038_tutorial_master,
-    c039_call_to_chaos_training_grounds_edition, c040_goetzmann_game_design, c045_jlockeeds_weapons,
+    c012_fortify, c015_in_a_hurry, c027_hopeful_jelly_bean, c031_level_up, c035_corpse_recycler,
+    c036_training_dummy, c038_tutorial_master, c039_call_to_chaos_training_grounds_edition,
+    c040_goetzmann_game_design, c045_jlockeeds_weapons,
+    c050_glowy_jelly_bean as c050_legacy_glowy_jelly_bean,
     c052_snom_bunny_mind_control as c052_legacy_snom_bunny_mind_control,
     c056_corpse_eater as c056_legacy_corpse_eater,
 };
 use crate::{CATALOG, REGISTRY, catalog_json};
 
-/// R767000, R388: the scripts kept for shipped versions, `(ID, version, script)`: a patch that changes
+/// R767000, R388: the scripts kept for shipped versions, `(ID, key, script)`: a patch that changes
 /// what a card's script does, not only a number its definition holds, keeps the script it replaces
 /// here, under the newest shipped version that ran it, as any `fn` that builds that card's scripts
 /// (`docs/ADDING_CARDS.md` §3). A replay on that version, or on one before it back to the previous kept
@@ -123,8 +128,12 @@ use crate::{CATALOG, REGISTRY, catalog_json};
 /// (R4382001: Adaptive UI's Rush Token through v0.1.0d), #4396 (R4396000), #4423 (R4423000), #4424
 /// (R4424000), #4440 (R4440003: Profe Yates's exile; R4440050 to R4440055, and the Tributes of
 /// xxFreshJack, Raven, ZolarKeth and Galaxy, Last Hurrah's Flashback and Double Counting's price),
-/// and #4666 (R4666000).
+/// #4666 (R4666000), #4844 (R656's help aims on eight buff Spells' targets) and #4828 (R4828000).
 /// A card patch before them kept none, and a game it alters is refused by its final hash.
+/// R4779000: a row's key is that version, or `"fragment:<stem>"` (`FRAGMENT_KEY`), the stem of the
+/// pending fragment that ships the change, which `resolve_kept_key` reads as the version just before
+/// the one it shipped as, or the newest shipped version while it is pending; `HISTORY.kept_at` holds
+/// every row's, resolved once.
 pub static KEPT_SCRIPTS: &[KeptScript] = &[
     (c074_adaptive_ui::ID, "v0.1.0d", c074_adaptive_ui::script_v0_1_0d),
     (
@@ -1146,23 +1155,24 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
     // #4327 (R4327002): Ayys LMAO's summons before they were set face-down.
     (c076_ayys_lmao::ID, "v0.6.8b", c076_ayys_lmao::script_v0_6_8b),
     // #4353 Stinkyscape+ Balance Changes V (R4353020, R4353021, R4353022, R4353024, R4353025): the last
-    // scripts before it.
-    (c059_repeater_v5::ID, "v0.6.8b", c059_repeater_v5::script_v0_6_8b),
-    (c052_silly_silas::ID, "v0.6.8b", c052_silly_silas::script_v0_6_8b),
-    (c002_speciesist::ID, "v0.6.8b", c002_speciesist::script_v0_6_8b),
+    // scripts before it. Keyed at v0.6.8d, the newest version shipped as it merged, which ran them (#4779
+    // re-keyed them from v0.6.8b).
+    (c059_repeater_v5::ID, "v0.6.8d", c059_repeater_v5::script_v0_6_8b),
+    (c052_silly_silas::ID, "v0.6.8d", c052_silly_silas::script_v0_6_8b),
+    (c002_speciesist::ID, "v0.6.8d", c002_speciesist::script_v0_6_8b),
     (
         c083_medina_enforcer::ID,
-        "v0.6.8b",
+        "v0.6.8d",
         c083_medina_enforcer::script_v0_6_8b,
     ),
     (
         c079_a_glimpse_into_the_endless_sea::ID,
-        "v0.6.8b",
+        "v0.6.8d",
         c079_a_glimpse_into_the_endless_sea::script_v0_6_8b,
     ),
     (
         c166_mindustrial_revolution::ID,
-        "v0.6.8b",
+        "v0.6.8d",
         c166_mindustrial_revolution::script_v0_6_8b,
     ),
     (
@@ -1171,9 +1181,11 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         c041_mend_projector::script_v0_6_8b,
     ),
     // #4350 (R4350000): Enormous Elderberry's cards before their Embiggened version cost the normal price.
+    // Keyed at v0.6.9, the newest version shipped as it merged, which ran it (#4779 re-keyed it from
+    // v0.6.8d).
     (
         c023_enormous_elderberry::ID,
-        "v0.6.8d",
+        "v0.6.9",
         c023_enormous_elderberry::script_v0_6_8d,
     ),
     // #4331 (R4331000, R4331001): the last scripts before a spent Quest went to the graveyard and a steal
@@ -1348,11 +1360,232 @@ pub static KEPT_SCRIPTS: &[KeptScript] = &[
         "v0.6.12b",
         c040_appropriations::script_v0_6_12b,
     ),
+    // #4665 Stinkyscape+ Balance Changes VII: Mend Projector, Overdrive Projector and Overdrive Dome
+    // over both sides (R4665001, R4665002), Bot Loser's Attack on a kill (R4665003), the Flaks' 60/30/10
+    // (R4665004), the Legacy Glowy Jelly Bean's copy of Core #26 (R4665006) and Churnwalker with no
+    // Tribute, the last scripts before it.
+    // v0.6.8c and v0.6.8d declared no `health` yet: they ran v0.6.8b's script.
+    (
+        c041_mend_projector::ID,
+        "v0.6.8d",
+        c041_mend_projector::script_v0_6_8b,
+    ),
+    (
+        c041_mend_projector::ID,
+        "v0.6.12c",
+        c041_mend_projector::script_v0_6_12c,
+    ),
+    (
+        c062_overdrive_projector::ID,
+        "v0.6.12c",
+        c062_overdrive_projector::script_v0_6_12c,
+    ),
+    (
+        c063_overdrive_dome::ID,
+        "v0.6.12c",
+        c063_overdrive_dome::script_v0_6_12c,
+    ),
+    // #4825 (R3557001): Forced Propagation's Radiant mark before it was per resolution, kept under
+    // v0.6.13c, the newest shipped version that ran it.
+    (
+        c024_forced_propagation::ID,
+        "v0.6.13c",
+        c024_forced_propagation::script_v0_6_13c,
+    ),
+    (
+        c019_5_bot_loser::ID,
+        "v0.6.12c",
+        c019_5_bot_loser::script_v0_6_12c,
+    ),
+    (c053_flak_v3::ID, "v0.6.12c", c053_flak_v3::script_v0_6_12c),
+    (c057_flak_v4::ID, "v0.6.12c", c057_flak_v4::script_v0_6_12c),
+    (c061_flak_v5::ID, "v0.6.12c", c061_flak_v5::script_v0_6_12c),
+    (
+        c050_legacy_glowy_jelly_bean::ID,
+        "v0.6.12c",
+        c050_legacy_glowy_jelly_bean::script_v0_6_12c,
+    ),
+    (
+        c007_churnwalker::ID,
+        "v0.6.12c",
+        c007_churnwalker::script_v0_6_12c,
+    ),
+    // #4665's Ticketed (R4665000): the Cry that held a permanent beneath it in its own zone.
+    (c009_ticketed::ID, "v0.6.12c", c009_ticketed::script_v0_6_12c),
+    // #4828 (R4828000): End Times' bank in the card's memory, kept until the fragment that moves it into
+    // the card's tuning ships (R4779000).
+    (
+        c098_heroic_power::ID,
+        "fragment:end-times-gives-back-its-cuts-after-leaving-the-field",
+        c098_heroic_power::script_v0_6_14,
+    ),
+    // #4840 (R1867002): the buffs before the unfloored-Attack reading (R4779000: keyed by the
+    // pending fragment, so versions shipped while the branch waits stay covered).
+    (
+        c010_1_inner_fire::ID,
+        "fragment:inner-fire-reads-attack-below-0",
+        c010_1_inner_fire::script_v0_6_13h,
+    ),
+    // #4844 (R656's help aims): the aim-less targets of eight buff Spells, before they aimed help
+    // (R4779000: keyed by the pending fragment, so versions shipped while the branch waits stay covered).
+    (
+        c012_fortify::ID,
+        "fragment:help-aimed-buffs-land-stolen-and-random-casts-on-the-caster",
+        c012_fortify::script_before_help_aim,
+    ),
+    (
+        c027_hopeful_jelly_bean::ID,
+        "fragment:help-aimed-buffs-land-stolen-and-random-casts-on-the-caster",
+        c027_hopeful_jelly_bean::script_before_help_aim,
+    ),
+    (
+        c010_2_divine_spirit::ID,
+        "fragment:help-aimed-buffs-land-stolen-and-random-casts-on-the-caster",
+        c010_2_divine_spirit::script_before_help_aim,
+    ),
+    (
+        c010_3_power_word_shield::ID,
+        "fragment:help-aimed-buffs-land-stolen-and-random-casts-on-the-caster",
+        c010_3_power_word_shield::script_before_help_aim,
+    ),
+    (
+        c045_surge_alloy::ID,
+        "fragment:help-aimed-buffs-land-stolen-and-random-casts-on-the-caster",
+        c045_surge_alloy::script_before_help_aim,
+    ),
+    (
+        c047_plastanium::ID,
+        "fragment:help-aimed-buffs-land-stolen-and-random-casts-on-the-caster",
+        c047_plastanium::script_before_help_aim,
+    ),
+    (
+        c049_metaglass::ID,
+        "fragment:help-aimed-buffs-land-stolen-and-random-casts-on-the-caster",
+        c049_metaglass::script_before_help_aim,
+    ),
+    (
+        c050_graphite::ID,
+        "fragment:help-aimed-buffs-land-stolen-and-random-casts-on-the-caster",
+        c050_graphite::script_before_help_aim,
+    ),
+    // #4783 Stinkyscape+ Balance Changes VIII (R4779000: keyed by its pending fragment): the scripts before
+    // it: Shredder-12's Tribute 3, Metaglass's base Ranged alone (R4783024), Impact Reactor's two
+    // Overloads (R4783020), The Last Voyage's base end-of-turn launches alone (R4783030), Meltdown's Frozen
+    // heal (R4783023), A Wee Whelp's Evolve to 10/10, Crawler's graveyard price (R4783022), Toxopid's
+    // Ignores Taunt (R4783021), Scorching Rounds' Burns 3, Volcanic Rounds' conversion (R4783001), Quick
+    // Chaos without its discard (R4783025), Gary's keyword coin, Expedition12 without its Buff (R4783031),
+    // Knowledge Breaker's Aura and YileGPT Prime without its Overload.
+    (
+        c021_jlockeed_shredder_12::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c021_jlockeed_shredder_12::script_v0_6_13h,
+    ),
+    (
+        c049_metaglass::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c049_metaglass::script_v0_6_13h,
+    ),
+    (
+        c056_impact_reactor::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c056_impact_reactor::script_v0_6_13h,
+    ),
+    (
+        c080_the_last_voyage::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c080_the_last_voyage::script_v0_6_13h,
+    ),
+    (
+        c090_meltdown::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c090_meltdown::script_v0_6_13h,
+    ),
+    (
+        c101_a_wee_whelp::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c101_a_wee_whelp::script_v0_6_13h,
+    ),
+    (
+        c120_crawler::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c120_crawler::script_v0_6_13h,
+    ),
+    (
+        c121_toxopid::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c121_toxopid::script_v0_6_13h,
+    ),
+    (
+        c150_scorching_rounds::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c150_scorching_rounds::script_v0_6_13h,
+    ),
+    (
+        c151_volcanic_rounds::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c151_volcanic_rounds::script_v0_6_13h,
+    ),
+    (
+        c158_quick_chaos::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c158_quick_chaos::script_v0_6_13h,
+    ),
+    (
+        c004_gary_the_gambler::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c004_gary_the_gambler::script_v0_6_13h,
+    ),
+    (
+        c018_expedition12::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c018_expedition12::script_v0_6_13h,
+    ),
+    (
+        c045_knowledge_breaker::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c045_knowledge_breaker::script_v0_6_13h,
+    ),
+    (
+        c049_1_yilegpt_unleashed::ID,
+        "fragment:stinkyscape-balance-changes-viii",
+        c049_1_yilegpt_unleashed::script_v0_6_13h,
+    ),
+    // #4992 (R4992000): Mass Driver's badge that held its own count, kept until the fragment that drops
+    // it ships (R4779000).
+    (
+        c059_mass_driver::ID,
+        "fragment:mass-driver-s-badge-states-its-countdown-once",
+        c059_mass_driver::script_v0_6_14i,
+    ),
 ];
 
-/// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under, and the `fn`
-/// that builds the scripts that version ran.
+/// One entry of `KEPT_SCRIPTS`: the card's `ID`, the shipped version it is kept under or the
+/// `FRAGMENT_KEY` of the fragment that ships its change (R4779000), and the `fn` that builds the
+/// scripts that version ran.
 pub type KeptScript = (&'static str, &'static str, fn() -> CardScripts);
+
+/// R4779000: what opens a `KEPT_SCRIPTS` key that names the pending fragment shipping the change,
+/// `"fragment:<stem>"`, `<stem>` its file name in `crates/cards/patches/pending/` without `.json`.
+pub const FRAGMENT_KEY: &str = "fragment:";
+
+/// R4779000: the index into `order`, every shipped version oldest first, of the version a
+/// `KEPT_SCRIPTS` key stands for, given `fragments`, the stem each shipped version shipped from by
+/// version. A version stands for itself (`None` when `order` lacks it); a `FRAGMENT_KEY` whose stem a
+/// shipped version names stands for the version just before the first that names it (`None` when that
+/// is the first version), and one no shipped version names yet for the newest shipped version, since
+/// every version shipped so far ran the script it keeps.
+pub fn resolve_kept_key(key: &str, order: &[String], fragments: &IndexMap<String, String>) -> Option<usize> {
+    let Some(stem) = key.strip_prefix(FRAGMENT_KEY) else {
+        return order.iter().position(|version| version == key);
+    };
+    match order
+        .iter()
+        .position(|version| fragments.get(version).is_some_and(|shipped| shipped == stem))
+    {
+        Some(at) => at.checked_sub(1),
+        None => order.len().checked_sub(1),
+    }
+}
 
 /// `history.json`: every shipped version in order, the definition patches, the win-rate tables, and
 /// each carried version.
@@ -1377,6 +1610,14 @@ struct History {
     /// of its names a later retcon renamed, to its name now.
     #[serde(default)]
     marked: IndexMap<String, IndexMap<String, String>>,
+    /// R4779000: the stem of the pending fragment each version shipped from, by version, for each
+    /// that `patches.json` records it on (every version `patches ship` added since #4779).
+    #[serde(default)]
+    fragments: IndexMap<String, String>,
+    /// R4779000: each `KEPT_SCRIPTS` row's key resolved once as the history loads, in its order: an
+    /// index into `order` (`resolve_kept_key`), `None` for a key that names no shipped version.
+    #[serde(skip)]
+    kept_at: Vec<Option<usize>>,
 }
 
 /// R2173000: a `card_metrics/<version>.json`: the BUSTED and complicated lists a version shipped with.
@@ -1418,8 +1659,13 @@ struct VersionDelta {
 }
 
 static HISTORY: LazyLock<History> = LazyLock::new(|| {
-    serde_json::from_str(include_str!(concat!(env!("OUT_DIR"), "/history.json")))
-        .unwrap_or_else(|error| panic!("crates/cards/build.rs's history.json: {error}"))
+    let mut history: History = serde_json::from_str(include_str!(concat!(env!("OUT_DIR"), "/history.json")))
+        .unwrap_or_else(|error| panic!("crates/cards/build.rs's history.json: {error}"));
+    history.kept_at = KEPT_SCRIPTS
+        .iter()
+        .map(|(_, key, _)| resolve_kept_key(key, &history.order, &history.fragments))
+        .collect();
+    history
 });
 
 /// Each carried version's catalog, in `HISTORY.versions`' order, built on first use.
@@ -1455,10 +1701,7 @@ pub fn card_eras(id: &str) -> Vec<(&'static str, &'static str)> {
             before = None;
             continue;
         }
-        let era = (
-            delta.changed.get(id).copied(),
-            covering_at(&HISTORY.order, KEPT_SCRIPTS, &delta.version, id),
-        );
+        let era = (delta.changed.get(id).copied(), kept_row(&delta.version, id));
         match eras.last_mut() {
             Some((_, last)) if before == Some(era) => *last = delta.version.as_str(),
             _ => eras.push((delta.version.as_str(), delta.version.as_str())),
@@ -1551,9 +1794,7 @@ fn build(delta: &VersionDelta) -> ShippedCatalog {
     }
     let scripts = defs
         .keys()
-        .filter_map(|id| {
-            covering(&HISTORY.order, KEPT_SCRIPTS, &delta.version, id).map(|script| (id.clone(), script()))
-        })
+        .filter_map(|id| kept_row(&delta.version, id).map(|at| (id.clone(), (KEPT_SCRIPTS[at].2)())))
         .collect();
     let shipped =
         ShippedCatalog::new(&delta.version, defs, scripts).with_win_rates(table_of(&HISTORY, delta));
@@ -1577,23 +1818,33 @@ fn patched(version: &str, id: &str, raw: Option<&Value>, patch: &DefPatch) -> Ca
     })
 }
 
-/// R767000: the script kept for `id` that `version` ran: among `id`'s kept scripts, the one kept at
-/// the earliest version at or after `version` in `order`, since a script is kept under the last
-/// version that ran it. `None` when none is, or when `order` does not hold `version`.
-fn covering<'a, T>(order: &[String], kept: &'a [(&str, &str, T)], version: &str, id: &str) -> Option<&'a T> {
-    covering_at(order, kept, version, id).map(|at| &kept[at].2)
-}
-
-/// R3538002: `covering` as an index into `kept`, so a kept script builds once and is shared.
-fn covering_at<T>(order: &[String], kept: &[(&str, &str, T)], version: &str, id: &str) -> Option<usize> {
+/// R767000: the row of `kept` whose script `id` ran on `version`: among `id`'s kept scripts, the one
+/// kept at the earliest version at or after `version` in `order`, since a script is kept under the
+/// last version that ran it. R4779000: each row's version is `keys`', its key resolved
+/// (`resolve_kept_key`), one per row of `kept`. R3538002: an index into `kept`, so a kept script
+/// builds once and is shared. `None` when none is, or when `order` does not hold `version`.
+fn covering_at<T>(
+    order: &[String],
+    kept: &[(&str, &str, T)],
+    keys: &[Option<usize>],
+    version: &str,
+    id: &str,
+) -> Option<usize> {
     let from = order.iter().position(|listed| listed == version)?;
     kept.iter()
+        .zip(keys)
         .enumerate()
-        .filter(|(_, (kept_id, _, _))| *kept_id == id)
-        .filter_map(|(at, (_, kept_at, _))| Some((order.iter().position(|listed| listed == kept_at)?, at)))
-        .filter(|(at, _)| *at >= from)
-        .min_by_key(|(at, _)| *at)
+        .filter(|(_, ((kept_id, _, _), _))| *kept_id == id)
+        .filter_map(|(at, (_, key))| Some(((*key)?, at)))
+        .filter(|(key, _)| *key >= from)
+        .min_by_key(|(key, _)| *key)
         .map(|(_, at)| at)
+}
+
+/// R767000, R4779000: the `KEPT_SCRIPTS` row whose script `id` ran on `version`, by every row's key as
+/// `HISTORY` resolved it.
+fn kept_row(version: &str, id: &str) -> Option<usize> {
+    covering_at(&HISTORY.order, KEPT_SCRIPTS, &HISTORY.kept_at, version, id)
 }
 
 /// R1266000, R1329000: the win-rate table `delta`'s version shipped with: the one its
@@ -1742,7 +1993,7 @@ static KEPT_BUILT: LazyLock<Vec<OnceLock<CardScripts>>> =
 /// past version with no kept row, which runs its card's own script.
 pub fn past_scripts(past_id: &str) -> Option<&'static CardScripts> {
     let (card, version) = jackioh_engine::catalog::split_past_id(past_id)?;
-    let at = covering_at(&HISTORY.order, KEPT_SCRIPTS, version, card)?;
+    let at = kept_row(version, card)?;
     Some(KEPT_BUILT[at].get_or_init(|| (KEPT_SCRIPTS[at].2)()))
 }
 
@@ -1797,13 +2048,17 @@ fn record_in(
 
 /// R767000: whether `id` has a script on `version`: one kept for it, or the build's own.
 pub fn has_script_at(version: &str, id: &str) -> bool {
-    covering(&HISTORY.order, KEPT_SCRIPTS, version, id).is_some()
-        || REGISTRY.iter().any(|(registered, _)| *registered == id)
+    kept_row(version, id).is_some() || REGISTRY.iter().any(|(registered, _)| *registered == id)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// R4779000: the version `KEPT_SCRIPTS[at]`'s key stands for, as `HISTORY` resolved it.
+    fn kept_version(at: usize) -> Option<&'static str> {
+        HISTORY.kept_at[at].map(|key| HISTORY.order[key].as_str())
+    }
 
     /// R767000, R3538002: a kept script runs on the definitions of every version it covers, so from
     /// v0.5.0 on each of them declares the numbers the version it is kept at declares (a script reads
@@ -1829,10 +2084,13 @@ mod tests {
             .position(|version| version == "v0.5.0")
             .expect("v0.5.0 shipped");
         let mut wrong: Vec<String> = Vec::new();
-        for (at, (id, kept_at, _)) in KEPT_SCRIPTS.iter().enumerate() {
+        for (at, (id, _, _)) in KEPT_SCRIPTS.iter().enumerate() {
+            let Some(kept_at) = kept_version(at) else {
+                continue;
+            };
             let own = keys(kept_at, id);
             for version in &HISTORY.order[from..] {
-                if covering_at(&HISTORY.order, KEPT_SCRIPTS, version, id) != Some(at) {
+                if kept_row(version, id) != Some(at) {
                     continue;
                 }
                 let Some(theirs) = keys(version, id) else {
@@ -1852,7 +2110,12 @@ mod tests {
     fn r767000_a_kept_script_covers_its_version_and_those_before_back_to_the_previous() {
         let order: Vec<String> = ["v1", "v2", "v3", "v4", "v5"].map(String::from).to_vec();
         let kept = [("a", "v2", 1), ("a", "v4", 2), ("b", "v1", 3)];
-        let at = |version: &str, id: &str| covering(&order, &kept, version, id).copied();
+        let keys: Vec<Option<usize>> = kept
+            .iter()
+            .map(|(_, key, _)| resolve_kept_key(key, &order, &IndexMap::new()))
+            .collect();
+        let at =
+            |version: &str, id: &str| covering_at(&order, &kept, &keys, version, id).map(|row| kept[row].2);
         assert_eq!(at("v1", "a"), Some(1));
         assert_eq!(at("v2", "a"), Some(1));
         assert_eq!(at("v3", "a"), Some(2));
@@ -1862,6 +2125,71 @@ mod tests {
         assert_eq!(at("v2", "b"), None);
         assert_eq!(at("v1", "c"), None);
         assert_eq!(at("v0", "a"), None, "a version the order does not hold");
+    }
+
+    /// R4779000: a row keyed by a fragment no shipped version names yet stands for the newest shipped
+    /// version, so it covers every version back to the card's previous row: those shipped while the
+    /// branch waited among them.
+    #[test]
+    fn r4779000_a_pending_fragment_key_covers_every_shipped_version_back_to_the_cards_previous_row() {
+        let order: Vec<String> = ["v1", "v2", "v3", "v4", "v5"].map(String::from).to_vec();
+        let fragments = IndexMap::from([("v3".to_string(), "other".to_string())]);
+        let kept = [("a", "v2", 1), ("a", "fragment:mine", 2), ("b", "v4", 3)];
+        let keys: Vec<Option<usize>> = kept
+            .iter()
+            .map(|(_, key, _)| resolve_kept_key(key, &order, &fragments))
+            .collect();
+        assert_eq!(keys, [Some(1), Some(4), Some(3)]);
+        let at =
+            |version: &str, id: &str| covering_at(&order, &kept, &keys, version, id).map(|row| kept[row].2);
+        assert_eq!(at("v1", "a"), Some(1));
+        assert_eq!(at("v2", "a"), Some(1));
+        for version in ["v3", "v4", "v5"] {
+            assert_eq!(
+                at(version, "a"),
+                Some(2),
+                "{version} ran the script the fragment keeps"
+            );
+        }
+        assert_eq!(at("v5", "b"), None, "after the last kept, the build's own");
+    }
+
+    /// R4779000: a fragment key whose stem a shipped version names stands for the version just before
+    /// the first that names it, so of one ship of `first` then `second` the second's covers the first's
+    /// version, and a stem the very first version shipped from covers none.
+    #[test]
+    fn r4779000_a_shipped_fragment_key_resolves_to_the_version_just_before_the_one_it_shipped_as() {
+        let order: Vec<String> = ["v1", "v2", "v3", "v4"].map(String::from).to_vec();
+        let fragments: IndexMap<String, String> = [("v1", "zero"), ("v3", "first"), ("v4", "second")]
+            .map(|(version, stem)| (version.to_string(), stem.to_string()))
+            .into_iter()
+            .collect();
+        let resolved = |key: &str| resolve_kept_key(key, &order, &fragments);
+        assert_eq!(resolved("fragment:second"), Some(2));
+        assert_eq!(resolved("fragment:first"), Some(1));
+        assert_eq!(
+            resolved("fragment:zero"),
+            None,
+            "nothing shipped before the first version"
+        );
+        assert_eq!(
+            resolved("fragment:pending"),
+            Some(3),
+            "a pending stem: the newest version"
+        );
+        assert_eq!(resolved("v2"), Some(1), "a version stands for itself");
+        assert_eq!(resolved("v9"), None, "a version the order does not hold");
+        let kept = [("a", "fragment:first", 1), ("a", "fragment:second", 2)];
+        let keys: Vec<Option<usize>> = kept.iter().map(|(_, key, _)| resolved(key)).collect();
+        let at = |version: &str| covering_at(&order, &kept, &keys, version, "a").map(|row| kept[row].2);
+        assert_eq!(at("v1"), Some(1));
+        assert_eq!(at("v2"), Some(1));
+        assert_eq!(
+            at("v3"),
+            Some(2),
+            "v3 shipped `first`'s change and ran `second`'s kept script"
+        );
+        assert_eq!(at("v4"), None, "v4 shipped `second`'s change");
     }
 
     #[test]
@@ -1879,14 +2207,11 @@ mod tests {
             "v0.6.1b",
         ] {
             assert!(
-                covering(&HISTORY.order, KEPT_SCRIPTS, version, id).is_some(),
+                kept_row(version, id).is_some(),
                 "{version} ran the roll: its replays need the kept script"
             );
         }
-        assert!(
-            covering(&HISTORY.order, KEPT_SCRIPTS, "v0.6.2", id).is_none(),
-            "v0.6.2 ran #3810's script"
-        );
+        assert!(kept_row("v0.6.2", id).is_none(), "v0.6.2 ran #3810's script");
     }
 
     /// #3951 merged after `patches ship` named v0.6.4c and shipped as v0.6.4d, so v0.6.4c is the newest
@@ -1912,9 +2237,7 @@ mod tests {
             c155_the_far_vagabond::ID,
         ];
         for id in ids {
-            let kept_at = |version: &str| {
-                covering_at(&HISTORY.order, KEPT_SCRIPTS, version, id).map(|at| KEPT_SCRIPTS[at].1)
-            };
+            let kept_at = |version: &str| kept_row(version, id).map(|at| KEPT_SCRIPTS[at].1);
             assert_eq!(
                 kept_at("v0.6.4c"),
                 Some("v0.6.4c"),
@@ -1930,9 +2253,7 @@ mod tests {
         crate::register_all();
         let key = *ran_it.last().expect("a version");
         for id in ids {
-            let kept_at = |version: &str| {
-                covering_at(&HISTORY.order, KEPT_SCRIPTS, version, id).map(|at| KEPT_SCRIPTS[at].1)
-            };
+            let kept_at = |version: &str| kept_row(version, id).and_then(kept_version);
             for version in ran_it {
                 assert_eq!(
                     kept_at(version),
@@ -1958,6 +2279,37 @@ mod tests {
         );
     }
 
+    /// Issue #4353: v0.6.8c and v0.6.8d shipped while it was built (#4356 merged with v0.6.8d the newest),
+    /// so they ran the scripts it replaced and its rows are keyed at v0.6.8d (#4779 re-keyed them from
+    /// v0.6.8b); v0.6.8e shipped its own.
+    #[test]
+    fn r767000_issue_4353_scripts_are_kept_through_v0_6_8d_the_newest_version_that_ran_them() {
+        assert_kept_through(
+            &[
+                c059_repeater_v5::ID,
+                c052_silly_silas::ID,
+                c002_speciesist::ID,
+                c083_medina_enforcer::ID,
+                c079_a_glimpse_into_the_endless_sea::ID,
+                c166_mindustrial_revolution::ID,
+            ],
+            &["v0.6.8b", "v0.6.8c", "v0.6.8d"],
+            "v0.6.8e",
+        );
+    }
+
+    /// Issue #4350: v0.6.8e and v0.6.9 shipped while it was built (#4380 merged with v0.6.9 the newest),
+    /// so they ran Enormous Elderberry's old pricing and its row is keyed at v0.6.9 (#4779 re-keyed it
+    /// from v0.6.8d); v0.6.9b shipped its own.
+    #[test]
+    fn r767000_issue_4350_elderberry_is_kept_through_v0_6_9_the_newest_version_that_ran_it() {
+        assert_kept_through(
+            &[c023_enormous_elderberry::ID],
+            &["v0.6.8d", "v0.6.8e", "v0.6.9"],
+            "v0.6.9b",
+        );
+    }
+
     /// Issue #4395: Shadowstep's base trigger answered any card of yours that was destroyed through
     /// v0.6.9g, which shipped while it was built (#4437 before #4419; the fix shipped in v0.6.9h), so its
     /// row is keyed there (#4423 re-keyed it from v0.6.9f, as #4086 re-keyed #3837's); v0.4.12b and before
@@ -1965,10 +2317,7 @@ mod tests {
     #[test]
     fn r767000_issue_4395_shadowstep_is_kept_through_v0_6_9g_the_newest_version_that_ran_it() {
         crate::register_all();
-        let kept_at = |version: &str| {
-            covering_at(&HISTORY.order, KEPT_SCRIPTS, version, c014_shadowstep::ID)
-                .map(|at| KEPT_SCRIPTS[at].1)
-        };
+        let kept_at = |version: &str| kept_row(version, c014_shadowstep::ID).map(|at| KEPT_SCRIPTS[at].1);
         assert_eq!(kept_at("v0.4.12b"), Some("v0.4.12b"));
         for version in [
             "v0.4.12c", "v0.4.12d", "v0.5.0", "v0.6.9", "v0.6.9e", "v0.6.9f", "v0.6.9g",
@@ -2093,9 +2442,7 @@ mod tests {
             c007_the_greatest_heist::ID,
             c014_shadowstep::ID,
         ] {
-            let kept_at = |version: &str| {
-                covering_at(&HISTORY.order, KEPT_SCRIPTS, version, id).map(|at| KEPT_SCRIPTS[at].1)
-            };
+            let kept_at = |version: &str| kept_row(version, id).map(|at| KEPT_SCRIPTS[at].1);
             assert_eq!(
                 kept_at("v0.6.9i"),
                 Some("v0.6.9i"),
@@ -2132,10 +2479,8 @@ mod tests {
     #[test]
     fn r767000_issue_4424_arcane_missiles_keeps_the_pool_each_of_v0_6_9k_l_and_m_ran() {
         crate::register_all();
-        let kept_at = |version: &str| {
-            covering_at(&HISTORY.order, KEPT_SCRIPTS, version, c011_2_arcane_missiles::ID)
-                .map(|at| KEPT_SCRIPTS[at].1)
-        };
+        let kept_at =
+            |version: &str| kept_row(version, c011_2_arcane_missiles::ID).map(|at| KEPT_SCRIPTS[at].1);
         for (version, key) in [
             ("v0.6.9i", "v0.6.9k"),
             ("v0.6.9j", "v0.6.9k"),
@@ -2201,7 +2546,7 @@ mod tests {
             &["v0.6.1b", "v0.6.2", "v0.6.2b", "v0.6.2c"],
             "v0.6.3",
         );
-        let tatches = covering_at(&HISTORY.order, KEPT_SCRIPTS, "v0.6.3", c087_tatches_the_totem::ID);
+        let tatches = kept_row("v0.6.3", c087_tatches_the_totem::ID);
         assert_eq!(tatches.map(|at| KEPT_SCRIPTS[at].1), Some("v0.6.4c"));
     }
 
@@ -2689,8 +3034,7 @@ mod tests {
     #[test]
     fn r3538002_a_past_id_runs_the_script_kept_for_its_version() {
         // Pickle kept its v0.3.16 script under v0.4.0b: a past version from then runs it.
-        let at = covering_at(&HISTORY.order, KEPT_SCRIPTS, "v0.4.0b", "classic-008")
-            .expect("Pickle's kept row covers v0.4.0b");
+        let at = kept_row("v0.4.0b", "classic-008").expect("Pickle's kept row covers v0.4.0b");
         assert_eq!(KEPT_SCRIPTS[at].0, c008_pickle::ID);
         assert_eq!(KEPT_SCRIPTS[at].1, "v0.4.0b");
         assert!(std::ptr::fn_addr_eq(

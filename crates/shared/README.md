@@ -209,7 +209,7 @@ never state, so a hidden card cannot be named by it.
   definitions a view carries (`PlayerView.defs`) consulted next.
 - **The oracle.** `data/glossary.json`, `power-words.json` and `short-forms.json` are the tables the web
   held in `glossary.ts`, `inPlay.ts` and `shortText.ts`; the web's `rules.test.ts` still holds the glossary
-  to `spec/06-keywords.md`, and `src/face/power.rs` holds the powers to the engine's own table.
+  to `spec/06-keywords/`, and `src/face/power.rs` holds the powers to the engine's own table.
 
 ## `src/log/`: the game log's lines
 
@@ -300,11 +300,11 @@ order. Nothing in the machine reads a clock, draws from the OS or does I/O.
 
 What the machine decides:
 
-- **The clocks** (`clock.rs`): the turn clock, a non-active holder's prompt clock, the mulligan clock both
-  seats share, the disconnect grace, the ceiling and a question sequence's clock (R79, R265, R268, R147,
-  R744, R1563006), and the retry of a clock whose action the log did not take (R776000). `expiry`: a
-  clock that runs out is a server action under a `srv-` nonce (R270), so `(seed, log)` still folds; a
-  mulligan expiry times out each seat still owing, in seat order.
+- **The clocks** (`clock.rs`): the turn clock, a non-active holder's prompt clock, fresh for each prompt
+  (R4848000), the mulligan clock both seats share, the disconnect grace, the ceiling and a question
+  sequence's clock (R79, R265, R268, R147, R744, R1563006), and the retry of a clock whose action the log did
+  not take (R776000). `expiry`: a clock that runs out is a server action under a `srv-` nonce (R270), so
+  `(seed, log)` still folds; a mulligan expiry times out each seat still owing, in seat order.
 - **The flow of a change**: the order every view, prompt and clock goes out in, the `prompt` frames a
   change in who owes an answer sends (§10.6, R266), a Glitch's swap and the grace that moves with it
   (R677), the end of the game (R679, R1253000) and what a ranked game with a bot does after it (R639000).
@@ -412,8 +412,9 @@ read like the 1v1 machine's, and its timers are the `duos*` `TimerKey`s. What it
   back, no loss by disconnect) or in the mode an expiry forced. The pause before every AI action
   (`DUOS_AI_STEP_DELAY_MS`), whether the move needs the AI's search at all (a mulligan kept whole or a
   turn simply ended does not), the move it falls back on and R188's forbidden ones, a refused move
-  deciding again, an unwritten one retried after `BOT_WRITE_RETRY_MS` (or the match let go if its row is
-  gone: `checkRow`, `rowChecked`).
+  deciding again, a pass (or an end of turn once its seat's hand has changed) decided on a state the game
+  has since moved past deciding again too (R4813000), an unwritten one retried after `BOT_WRITE_RETRY_MS`
+  (or the match let go if its row is gone: `checkRow`, `rowChecked`).
 - **The flow of a change** (B35, B40): the order of every view and clock, the result recorded once with every
   clock gone, a server action's panic ending the match as a ceiling draw (R1253000).
 
@@ -464,7 +465,8 @@ step(host, event, now) -> (host, outputs)
 What the machine decides: how the game is dealt (`deal.rs`: the human's deck, a list or the random deck dealt
 on `"{seed}:human-deck"` leaning as asked and counted dealt, R433, R1373, R924000; the AI's on
 `"{seed}:ai-deck"`; the tier's handicap on the AI's seat alone, R180; a lesson's decks under
-`TUTORIAL_HUMAN` and `AI_TUTORIAL`, R290, R1705005; a run fight's setup, R2706000; the human's last board,
+`TUTORIAL_HUMAN` and `AI_TUTORIAL`, R290, R1705005; a run fight's setup, R2706000, and an Infinite Assault
+fight's, R4582000, the enemy's deck marks at the AI's seat; the human's last board,
 R508; a sandbox, R923000), the nonces (`h<n>`, `a<n>`, each counting only accepted actions, so a refused
 action spends nothing and the log folds exactly: R187, R433, R508), the seat each action is sent from, what
 the AI may never take (R188, R923000), the snapshot, the save and its resume, the kept game and its number,
@@ -546,7 +548,7 @@ OrderedDataStore and a MemoryStore and calls the same code through the `ranked` 
 
 | Module | Holds | Rulings |
 | --- | --- | --- |
-| `glicko2` | the hidden rating: `glicko2_period`, `rate_game`, `rate_game_scored`, `widen_for_promotions`, Glickman's steps in his order | R603, R1843004, R1560000 |
+| `glicko2` | the hidden rating: `glicko2_period`, `rate_game_scored`, `widen_for_promotions`, Glickman's steps in his order | R603, R1843004, R1560000 |
 | `ladder` | the visible ladder: `place_of`, `percentile_of`, `target_ladder`, `pip_delta`, `apply_ranked_game`, `jlorious_order`, `visible_rank`, `peak_badge` and the shapes `SeasonRank`, `Standing`, `VisibleRank`, `PeakBadge`, `Ladder` | R605 to R608, R2778000 |
 | `season` | `season_id_of`, `plan_season` (which season a build plays in, from the seasons that exist and the time), `soft_reset` | R609 |
 | `game` | `decide(&RateGameInput) -> RatedDecision`: one rated game, as data | R603 to R611, R640000, R672, R1560000, R1843004, R3074001 |
@@ -784,8 +786,10 @@ the real catalog), `tests/rematch.rs` (the book), `tests/duos.rs` and `tests/aga
 book) and `tests/host_boundary.rs`; `tests/host_fuzz.rs` plays both host machines on seeded random events (#4392: a clock
 running out, a socket dropping and returning, a refused or taken log write, a resent or copied nonce, a restart rebuilt
 from the written rows) and checks after every step that the log rebuilds the game, that it is well formed, that a stale
-timer changes nothing, that a match ends once and that a restart holds the game. `HOST_FUZZ_SEEDS` matches per machine
-run on every pull request and `daily_host_fuzz_sweep` plays `HOST_FUZZ_DAILY_SEEDS`; to rerun one failing seed, set
+timer changes nothing, that a match ends once, that a restart holds the game and, on the 1v1 machine, that a silent
+table moves on: a clock other than the ceiling stays armed, and stays so while a copy of the host plays on from there
+with no seat acting (R4848000). `HOST_FUZZ_SEEDS` matches per machine run on every pull request and
+`daily_host_fuzz_sweep` plays `HOST_FUZZ_DAILY_SEEDS`; to rerun one failing seed, set
 `REPRO = Some((Machine::Duel, <seed>))` (or `Duos`) in the file, as the failure's text says, and run `cargo test -p
 jackioh-shared --features jackioh-engine/testkit --test shared host_soak::repro`. The files under `tests/` are
 modules of the one binary `tests/shared.rs`; a new file is declared there, which `crates/tools/tests/acceptance.rs`

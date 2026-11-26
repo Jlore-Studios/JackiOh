@@ -12,8 +12,11 @@ use jackioh_engine::testkit::*;
 
 use super::support::{AI, HUMAN, register_cards, unit};
 
-/// Stinkyscape #52 Cannon v3: (2) 0/2, Starship Piece, "Activate: Deal 5 damage to an enemy Unit".
-const CANNON: &str = "stinkyscape-052";
+/// Stinkyscape #56 Cannon v4: (3) 0/3, Starship Piece, "Activate: Deal 6 damage to an enemy Unit", enough to
+/// destroy the Twisted Sorcerer (5/5); Cannon v3 until issue #4783 took its damage to 4.
+const CANNON: &str = "stinkyscape-056";
+/// The mana that plays the Cannon and leaves none for the Vanilla beside it.
+const CANNON_MANA: i32 = 3;
 /// Stinkyscape+ #157 Phantom Shipyard: (4) 0/0, a shipyard Dormant until launched (R3539004).
 const SHIPYARD: &str = "stinkyscapeplus-157";
 const SORCERER: &str = "core-068";
@@ -39,7 +42,7 @@ fn activation_price_of(prices: &[ActivationPrice], def_id: &str, controller: Pla
 fn r3575400_an_own_hand_cards_activate_is_priced_and_the_enemys_hand_never() {
     let state = board(
         "ai-r3575400-hand",
-        json!({ "hand": [CANNON, VANILLA], "mana": 2 }),
+        json!({ "hand": [CANNON, VANILLA], "mana": CANNON_MANA }),
         json!({ "hand": [CANNON], "field": [SORCERER] }),
     )
     .state()
@@ -67,7 +70,7 @@ fn r3575400_an_own_hand_cards_activate_is_priced_and_the_enemys_hand_never() {
     // The Cannon the AI plays reads the price the root gave it.
     let mut played = board(
         "ai-r3575400-hand",
-        json!({ "hand": [CANNON, VANILLA], "mana": 2 }),
+        json!({ "hand": [CANNON, VANILLA], "mana": CANNON_MANA }),
         json!({ "hand": [CANNON], "field": [SORCERER] }),
     );
     played.play(CANNON, json!({ "zone": 1 }));

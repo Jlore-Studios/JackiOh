@@ -99,7 +99,8 @@ fn a_table_reads_the_shipped_auras_as_a_single_read_does() {
         (
             "p1 lane 4 Back Breaker",
             s.unit_at(P1, 4),
-            view(3, 1, armed(&[Keyword::Stack]), 0, Position::Atk),
+            // Taunt since issue #4665.
+            view(3, 1, armed(&[Keyword::Stack, Keyword::Taunt]), 0, Position::Atk),
         ),
         (
             "p1 dormant Mr. Vanilla",

@@ -17,7 +17,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CATALOG } from "@jackioh/cards";
 import { SHIPPED_SETS } from "@jackioh/shared";
 
-import { COSMETIC_OFFERS } from "../wire/generated/cosmetics.ts";
+import { COSMETIC_OFFERS } from "../wire/generated/cosmeticOffers.ts";
 import { CardFace } from "./CardFace.tsx";
 import { EXTENDED_ART_BOX_PCT, EXTENDED_ART_FRAME_OPACITY, EXTENDED_ART_PICTURE_PCT, FACE_TEXT_MIN_HEIGHT_PX } from "./constants.ts";
 import { CARD_PICKS_SETTINGS_KEY, resetCosmeticsForTests, writeCardLevel, writeCardPick } from "./cosmetics.ts";

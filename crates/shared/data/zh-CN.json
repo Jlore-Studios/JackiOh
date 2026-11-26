@@ -258,7 +258,7 @@
   "{whose} deck is empty: fatigue {count}": "{whose}牌库已空：疲劳{count}",
   "{whose} deck is full: {card} was not created": "{whose}牌库已满：{card}未被创造",
   "{whose} deck is full: {card} went to the graveyard": "{whose}牌库已满：{card}进入了墓地",
-  "{whose} deck is full: {card} ceased to exist": "{whose}牌库已满：{card}不复存在",
+  "{card} could not go into {whose} deck: it ceased to exist": "{card}无法进入{whose}牌库，不复存在",
   "{seat} discarded {card}": "{seat}弃掉了{card}",
   "{seat} drew a card": "{seat}抽了一张牌",
   "{seat} added a card to hand": "{seat}将一张牌置入手牌",

@@ -726,17 +726,26 @@ impl DuelHost {
 
     fn on_attached(&mut self, home: PlayerId, now: i64) {
         let player = self.playing(home);
-        self.clock.clear_grace(player, &mut self.fx);
+        // §9.5, R744, R3767000: a socket that dropped while it was being seated is already gone
+        // (`Left` ran before this `Attached`), so its grace keeps running and nobody is greeted.
+        let here = self.connected[home];
+        if here {
+            self.clock.clear_grace(player, &mut self.fx);
+        }
         // R744: an account that has not been here yet is away from now.
         self.start_absent_grace(now);
         self.persist_clocks();
-        // §9.5: a fresh full view, never a log replay.
-        self.greet(home, player, now);
+        if here {
+            // §9.5: a fresh full view, never a log replay.
+            self.greet(home, player, now);
+        }
         self.push_clock(player.opponent(), now);
-        self.emit(DuelOutput::Greeting {
-            home,
-            part: GreetingPart::Watchers,
-        });
+        if here {
+            self.emit(DuelOutput::Greeting {
+                home,
+                part: GreetingPart::Watchers,
+            });
+        }
     }
 
     fn on_left(&mut self, home: PlayerId) {
@@ -754,7 +763,9 @@ impl DuelHost {
     /// §9.5: the grace starts, and "the clock keeps running while a player is disconnected" — on the
     /// seat this account plays (R677).
     fn on_disconnected(&mut self, home: PlayerId, now: i64) {
-        if self.stopped || self.finished {
+        // A disconnect that runs after its seat's next socket attached is stale, as the co-op
+        // host's `on_disconnected` already holds: the seat is back, so no grace starts.
+        if self.stopped || self.finished || self.connected[home] {
             return;
         }
         let player = self.playing(home);

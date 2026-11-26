@@ -108,6 +108,12 @@ builds reads its own game's hold without the state (R2201001).
   built with `hook(|ctx| …)`, and never writes the state itself (CLAUDE.md rule 5).
 - `query.rs` (with `zones`, `layers`, `mana`, `numbers`, `params`) is the read half: the board facts
   a card reads instead of `GameState` fields. `crates/cards/README.md` lists them.
+- `recursion_log.rs` (R4589000–R4589004) is the Infinite Assault's one game history: the face-up plays
+  (with their player-turn) and Unit deaths each side keeps once the game holds an Infinite Assault card,
+  read by the Recursion, Scraper (R4592000) and Commander (R4594005, R4594009) cards, and
+  `returned_by_reborn`; `origin.rs` stamps a card's deck of origin under the same gate (R4592002);
+  `Script.death_extra` and `Script.reborn_extra` are IA #118's Death-only and Reborn multipliers, and
+  `reset_side_keeping_self` is IA #119's reset that leaves its own card standing.
 - `prelude` is what a card file names: `use jackioh_engine::prelude::*;`.
 - `subsystems/` holds the card-specific systems (fuse, rotation, scorer, the random policy
   `ai_policy`, the scorer-driven `autopilot` that `reduce` drives through a turn, R1183002, heroic
@@ -189,6 +195,9 @@ builds reads its own game's hold without the state (R2201001).
 - `scripts::script_of(state, def_id)` finds a card's script; a fused card's is composed from its
   ingredients on lookup (`subsystems::fuse::compose_fused_scripts`), and a crafted card's (Meditative
   #17, R882) from its recipe (`subsystems::craft::compile_crafted_scripts`).
+- `effects/turn_buff.rs` is "this turn" Attack and keywords (R4587000): `buff_this_turn`
+  (`buffThisTurn`) writes `CardInstance.turn_buff`, which layer 4 reads only while its `turn` is now.
+  It is absent until set, so old games hash the same.
 
 The engine never depends on `jackioh-cards` (only its tests do). An engine test that needs a card's
 behavior uses a test-only script in `tests/rules/fixtures/`, and the real card's test covers the
@@ -213,8 +222,9 @@ seat, a nonce and a `DuosActionBody`) through them:
   duel's own `concede` are refused; `Concede` is the team's, offered and confirmed, one offer per team
   (`DuosState.concede_offer` is a `PerTeam`).
 - **The shared life** (§13.4). A duel side's `PlayerState.duos` (`DuosLife`: `pool`, `pool_cap`,
-  `spent`) is absent outside Duos and skipped when absent, so a 1v1 state serializes, hashes and
-  folds exactly as before and every golden trace and fuzz seed is unchanged. Every write to a hero's
+  `spent`, and `own_start`, the own HP it started on, absent at `DUOS_OWN_HEALTH`, R4831000) is absent
+  outside Duos and skipped when absent, so a 1v1 state serializes, hashes and folds exactly as before
+  and every golden trace and fuzz seed is unchanged. Every write to a hero's
   health (`damage.rs`'s deal, heal, lose and set, `effects/swap.rs`) goes through `duos_life.rs`
   (`hero_loses`, `hero_heals`, `hero_set`, `effective_life`), which without `duos` is exactly the 1v1
   arithmetic. After every step the wrapper copies each team's pool into the other duel.
@@ -232,8 +242,7 @@ Duos game from four decks with the mulligans kept and round 1 open.
 ## Constants (CLAUDE.md rule 9)
 
 Every rules number is a named constant in `src/config.rs` (BUILD §2), the "decide" rulings (R1, R4,
-R5, R14, R26, R39) and R2's turn cap included, with the training lanes' gate (`TRAINING_IMPROVE`,
-`TRAINING_UNBAN`: each lane's games, pairing and wins) and Duos's team rules (§13.4, §13.7:
+R5, R14, R26, R39) and R2's turn cap included, with Duos's team rules (§13.4, §13.7:
 `DUOS_OWN_HEALTH`, `DUOS_POOL_HEALTH`, `DUOS_POOL_HEALTH_HARD`, `DUOS_PASS_COST`, `DUOS_PASS_CAP`,
 `DUOS_HUMAN_TEAM` and `duos_ai_team(difficulty)`), the Trade's (`TRADES_PER_TURN`, `TRADE_COST`,
 R1838000; a player's own figure, `PlayerState.trades_per_turn`, is read in place of the first by
@@ -262,7 +271,7 @@ cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts
 
 | Feature | Default | What |
 | --- | --- | --- |
-| `testkit` | off | `jackioh_engine::testkit`: `scenario()` and the harness verbs (and, in `duos`, `duos_scenario`, §13), the I1–I22 invariant monitor `jackioh fuzz` runs, the glow helpers, the registry override (and `thread_overrides()`, which hands a thread's override to another thread, #1035), the seed search (`seed_where`, `cursor_where`: a test finds the seed or rng cursor where a pool's roll lands as it needs, #848), the pool shift (`with_pool_shift(0, …)`, `hold_pool_shift`: a test of a pool's content or order reads it as it is under `pool-probe`, #3117), the unique-draws switch (`with_unique_draws`, R3563000: `UNIQUE_RANDOM_DRAWS` is on since the Stinkyscape+ release, #3573), the test seams (`seams.rs`) and the golden replay's pure half (`golden`: the canonical texts, one recorded game's replay to its first `Mismatch`, the hotseat fixture and `HOTSEAT_HASH`, shared by `tests/golden.rs` and `cargo jackioh golden check`, #1641), `Scenario::unit_at`, the event and action queries (`events_of`, `last_events_of`, `count`, `last_count`: a `GameEventType` or its string, an unknown one panicking; `offered(seat)`, the seat's `legal_actions`, #3504; `prompt_modes` and `prompt_modes_of`, an open prompt's Mode options, #3796; `plays_of`, `can_play`, `play_targets`, `activations_of` and `attacks_of`, one card's offered actions, with `plays_in` and `is_play_of` for a state or one action, #3913), the pick builders (`pick`: the one-instance ones, #1826, `pick::mode`, #3796, `pick::hero` and the `pick::targets` wrapper, #3827, and `pick::instance_ids`, the instance ids among a `Selection[]`, #3913) `must` (an `Option`'s value, or a panic naming what was expected, #2023), `nonempty` (a `Vec`'s items, or a panic naming what was expected in them, #3914) and the stand-in cards (`stand_in.rs`, #3486: a card a `stand-in (1) 4/4 R12/12` id spells out, which `catalog::find_def` builds on a miss and no pool or query reaches). Every test crate enables it as a dev-dependency |
+| `testkit` | off | `jackioh_engine::testkit`: `scenario()` and the harness verbs (and, in `duos`, `duos_scenario`, §13), the I1–I23 invariant monitor `jackioh fuzz` runs, the glow helpers, the registry override (and `thread_overrides()`, which hands a thread's override to another thread, #1035), the seed search (`seed_where`, `cursor_where`: a test finds the seed or rng cursor where a pool's roll lands as it needs, #848), the pool shift (`with_pool_shift(0, …)`, `hold_pool_shift`: a test of a pool's content or order reads it as it is under `pool-probe`, #3117), the unique-draws switch (`with_unique_draws`, R3563000: `UNIQUE_RANDOM_DRAWS` is on since the Stinkyscape+ release, #3573), the test seams (`seams.rs`) and the golden replay's pure half (`golden`: the canonical texts, one recorded game's replay to its first `Mismatch`, the hotseat fixture and `HOTSEAT_HASH`, shared by `tests/golden.rs` and `cargo jackioh golden check`, #1641), `Scenario::unit_at`, the event and action queries (`events_of`, `last_events_of`, `count`, `last_count`: a `GameEventType` or its string, an unknown one panicking; `offered(seat)`, the seat's `legal_actions`, #3504; `prompt_modes` and `prompt_modes_of`, an open prompt's Mode options, #3796; `plays_of`, `can_play`, `play_targets`, `activations_of` and `attacks_of`, one card's offered actions, with `plays_in` and `is_play_of` for a state or one action, #3913), the pick builders (`pick`: the one-instance ones, #1826, `pick::mode`, #3796, `pick::hero` and the `pick::targets` wrapper, #3827, and `pick::instance_ids`, the instance ids among a `Selection[]`, #3913) `must` (an `Option`'s value, or a panic naming what was expected, #2023), `nonempty` (a `Vec`'s items, or a panic naming what was expected in them, #3914) and the stand-in cards (`stand_in.rs`, #3486: a card a `stand-in (1) 4/4 R12/12` id spells out, which `catalog::find_def` builds on a miss and no pool or query reaches). Every test crate enables it as a dev-dependency |
 | `pool-probe` | off | implies `testkit`: every random pool `catalog::query` returns comes back rotated `POOL_PROBE_SHIFT` (1) place, so each draw lands where one more card in the pool would put it (R380) and a test that pins a roll fails; `sh scripts/pool-probe.sh` runs the cards', AI's, server's and tools' tests under it by hand, and `crates/tools/tests/pool_probe.rs` the cards' daily (#3117, #4181, `testkit/pool_probe.rs`) |
 | `ts` | off | the ts-rs derives above |
 

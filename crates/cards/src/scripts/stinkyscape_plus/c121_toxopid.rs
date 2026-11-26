@@ -6,7 +6,6 @@
 //! **Indestructible** while **Toxopid Legs** are on the field
 //! 10/10
 //! **Rush**
-//! **Ignores Taunt**
 //! **End of turn: Toxic 2** all enemies
 //! \~\~\~
 //! **Float** reduces mana.
@@ -16,14 +15,16 @@
 //! **Indestructible** while **Toxopid Legs** are on the field
 //! 20/20
 //! **Rush**
-//! **Ignores Taunt**
 //! **End of turn: Toxic 4** all enemies
 //!
 //! R4154300: the Cry draws its Legs' zones together as it resolves, from the empty unit zones of both
 //! sides (the Radiant face: the opponent's), no zone twice, and summons a Leg into each; with fewer zones
 //! fewer Legs land, and no prompt opens. A Leg belongs to the side it lands on and Craters. R3560006:
-//! Indestructible while any Leg stands. R3560007: Ignores Taunt. Float and Toxic are the engine's.
+//! Indestructible while any Leg stands. Float and Toxic are the engine's. R4783021: a Taunt binds it as
+//! it binds any attacker.
 //!
+//! Issue #4783 (Stinkyscape+ Balance Changes VIII) took "Ignores Taunt" off both faces; through v0.6.13h
+//! (`script_v0_6_13h`, R767000) it carried the `ignoresTaunt` flag, so no Taunt bound it (R3560007).
 //! Issue #4154 placed the Legs at random and took out its first-hand-arrival Crawler and the discount
 //! each friendly Crawler death gave it. Through v0.6.6h (`script_v0_6_6h`, R767000) its first hand arrival
 //! each game added a Crawler (R3560000), each friendly Crawler death took 1 off it in hand and deck
@@ -183,13 +184,19 @@ fn ask_leg(ctx: &EffectContext<'_>, left: i32, taken: Vec<String>) -> Vec<Effect
     })]
 }
 
-/// The face: today's when `through_v0_6_6h` is false, else the one v0.6.6h and before ran.
+/// R3560007 (through v0.6.13h): "Ignores Taunt", the attacker's flag no Taunt binds.
+fn ignoring_taunt(mut script: Script) -> Script {
+    script.static_flags = Some(StaticFlags {
+        ignores_taunt: Some(true),
+        ..StaticFlags::default()
+    });
+    script
+}
+
+/// The face: today's when `through_v0_6_6h` is false, else the one v0.6.6h and before ran; neither
+/// ignores Taunt (`ignoring_taunt` gives both kept scripts the flag).
 fn toxopid(through_v0_6_6h: bool) -> Script {
     let mut script = Script {
-        static_flags: Some(StaticFlags {
-            ignores_taunt: Some(true),
-            ..StaticFlags::default()
-        }),
         hand_triggers: vec![float_reduces_cost("toxopid-float")],
         conditional_keywords: Some(read_hook(|args| {
             if def_on_field(args.state, LEG) {
@@ -262,12 +269,21 @@ pub fn script() -> CardScripts {
     }
 }
 
+/// R767000: what it ran through v0.6.13h, before issue #4783: today's script, ignoring Taunt
+/// (R3560007).
+pub fn script_v0_6_13h() -> CardScripts {
+    CardScripts {
+        base: ignoring_taunt(toxopid(false)),
+        radiant: ignoring_taunt(toxopid(false)),
+    }
+}
+
 /// R767000: what it ran through v0.6.6h, before issue #4154: the first-hand-arrival Crawler, the
-/// Crawler-death discount and the Leg prompts.
+/// Crawler-death discount and the Leg prompts, ignoring Taunt (R3560007).
 pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
-        base: toxopid(true),
-        radiant: toxopid(true),
+        base: ignoring_taunt(toxopid(true)),
+        radiant: ignoring_taunt(toxopid(true)),
     }
 }
 
@@ -289,6 +305,7 @@ mod tests {
     const FILLER: &str = "core-005";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const BODY: &str = "stand-in (0) 1/1";
+    const TAUNT: &str = "stand-in (1) 2/30 Taunt";
     /// How many seeds the random placement is watched over.
     const SEEDS: usize = 16;
 
@@ -449,25 +466,29 @@ mod tests {
         assert!(!unit_has(s.state(), s.card(ID), KeywordKind::Indestructible));
     }
 
-    #[test]
-    fn r3560007_it_ignores_taunt() {
+    /// A Toxopid of `radiant`'s face against a Taunt in lane 1 and a plain Unit beside it:
+    /// whether it may attack the hero, the plain Unit and the Taunt.
+    fn past_taunt(seed: &str, radiant: bool) -> (bool, bool, bool) {
         let s = weapon_board(
-            "s121-taunt",
-            json!({ "field": [ID] }),
-            json!({ "field": [{ "def": "core-019", "lane": 1 }, VANILLA] }),
+            seed,
+            json!({ "field": [{ "def": ID, "radiant": radiant }] }),
+            json!({ "field": [{ "def": TAUNT, "lane": 1 }, VANILLA] }),
         );
         let toxopid = s.unit_at(P1, 1);
-        let plain = s.unit_at(P2, 2);
-        assert!(can_attack(
-            s.state(),
-            &toxopid,
-            &DamageTarget::Hero { player: P2 }
-        ));
-        assert!(can_attack(
-            s.state(),
-            &toxopid,
-            &DamageTarget::Unit { instance: plain }
-        ));
+        let (taunt, plain) = (s.unit_at(P2, 1), s.unit_at(P2, 2));
+        (
+            can_attack(s.state(), &toxopid, &DamageTarget::Hero { player: P2 }),
+            can_attack(s.state(), &toxopid, &DamageTarget::Unit { instance: plain }),
+            can_attack(s.state(), &toxopid, &DamageTarget::Unit { instance: taunt }),
+        )
+    }
+
+    #[test]
+    fn r4783021_a_taunt_binds_it_on_both_faces() {
+        // Neither the hero nor the plain Unit: the Taunt alone.
+        for radiant in [false, true] {
+            assert_eq!(past_taunt("s121-taunt", radiant), (false, false, true), "radiant {radiant}");
+        }
     }
 
     #[test]
@@ -487,9 +508,44 @@ mod tests {
         }
     }
 
+    /// R767000: the script kept for the replays of v0.6.13h and before (issue #4783).
+    mod kept_v0_6_13h {
+        use super::*;
+
+        #[test]
+        fn r767000_r3560007_it_ignored_taunt_on_both_faces() {
+            crate::under_kept(ID, script_v0_6_13h(), || {
+                for radiant in [false, true] {
+                    assert_eq!(past_taunt("s121-kept-taunt", radiant), (true, true, true), "radiant {radiant}");
+                }
+            });
+        }
+
+        #[test]
+        fn r767000_r4154300_its_cry_still_landed_its_legs_at_random() {
+            crate::under_kept(ID, script_v0_6_13h(), || {
+                let mut s = weapon_board(
+                    "s121-kept-cry",
+                    json!({ "mana": 10, "hand": [ID], "library": filler(4) }),
+                    json!({ "library": filler(4) }),
+                );
+                s.play(ID, json!({ "zone": 1 }));
+                assert!(s.state().pending.is_none(), "no prompt opens");
+                assert_eq!(legs_of(&s, P1).len() + legs_of(&s, P2).len(), 3);
+            });
+        }
+    }
+
     /// R767000: the script kept for the replays of v0.6.6h and before (issue #4154).
     mod kept_v0_6_6h {
         use super::*;
+
+        #[test]
+        fn r767000_r3560007_it_ignored_taunt_through_v0_6_6h_too() {
+            crate::under_kept(ID, script_v0_6_6h(), || {
+                assert_eq!(past_taunt("s121-kept-6h-taunt", false), (true, true, true));
+            });
+        }
 
         #[test]
         fn r767000_r3560000_its_first_hand_arrival_added_a_crawler_once() {

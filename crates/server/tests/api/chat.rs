@@ -395,10 +395,15 @@ mod r1384000_paging {
             "1760445296789",
             "_0f1e2d3c-4b5a-4968-8776-655443322110",
             "1760445296789_0F1E2D3C-4B5A-4968-8776-655443322110",
+            "9223372036854775807_67e55044-10b1-426f-9247-bb680e5fe0c8",
         ] {
             let path = format!("/api/chat/{}?before={}", ada.id, encode_query(malformed));
             let (status, body) = api(&app, "GET", &path, &bea.token, Value::Null).await;
             assert_eq!(status, 400, "{malformed}: {body}");
+            assert_eq!(
+                body["error"]["message"],
+                "\"before\" must be the nextCursor a page answered"
+            );
         }
 
         let calls = methods.lock().expect("the call log").clone();
@@ -408,6 +413,24 @@ mod r1384000_paging {
         );
         fake(&app).lock().await.on_call = None;
         assert_eq!(unread_from(&app, &bea, &ada).await, 1);
+    }
+
+    #[tokio::test]
+    async fn chat_post_refuses_nul_body_with_bad_request() {
+        let (app, ada, bea) = friends().await;
+        let (status, body) = api(
+            &app,
+            "POST",
+            &format!("/api/chat/{}", bea.id),
+            &ada.token,
+            json!({ "body": "a\u{0000}" }),
+        )
+        .await;
+        assert_eq!(status, 400);
+        assert_eq!(
+            body["error"]["message"],
+            "a request value may not contain a NUL character"
+        );
     }
 }
 

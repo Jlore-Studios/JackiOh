@@ -86,10 +86,15 @@ pub fn hero_of(state: &GameState, player: PlayerId) -> HeroView {
     }
 }
 
-/// R290, R180: the health this player's hero started the game with: its seat's handicap `heroHealth`,
-/// else HERO_HEALTH (Stinkyscape #18.2 BALTHASAR, R1866002).
+/// R290, R180, R4831000: the health this player's hero started the game with: a Duos seat's own HP
+/// at setup, spent or not (`DuosLife::own_start`, absent at DUOS_OWN_HEALTH), else its seat's handicap
+/// `heroHealth`, else HERO_HEALTH (Stinkyscape #18.2 BALTHASAR, R1866002; IA #71, R4587004).
 pub fn starting_health_of(state: &GameState, player: PlayerId) -> i32 {
-    crate::state::starting_hero_health(state.players[player].handicap.as_ref())
+    let side = &state.players[player];
+    match side.duos {
+        Some(life) => life.own_start.unwrap_or(crate::config::DUOS_OWN_HEALTH),
+        None => crate::state::starting_hero_health(side.handicap.as_ref()),
+    }
 }
 
 /// The live pile, for this module only: `zones.rs` keeps `pile_for` private because a live pile hands
@@ -180,35 +185,9 @@ pub fn hand_index(state: &GameState, id: &str) -> Option<(PlayerId, usize)> {
     None
 }
 
-/// R3558000: the leftmost card of `player`'s hand (index 0), or `None` for an empty hand.
-pub fn hand_leftmost(state: &GameState, player: PlayerId) -> Option<&CardInstance> {
-    state.players[player].hand.first()
-}
-
-/// R3558000: the rightmost card of `player`'s hand, or `None` for an empty hand.
-pub fn hand_rightmost(state: &GameState, player: PlayerId) -> Option<&CardInstance> {
-    state.players[player].hand.last()
-}
-
-/// R3558000: the card beside `id` in its hand, on `side` of it, or `None` when `id` is in no hand
-/// or has no neighbour there.
-pub fn hand_neighbor<'a>(state: &'a GameState, id: &str, side: HandSide) -> Option<&'a CardInstance> {
-    let (player, at) = hand_index(state, id)?;
-    let hand = &state.players[player].hand;
-    match side {
-        HandSide::Left => at.checked_sub(1).and_then(|left| hand.get(left)),
-        HandSide::Right => hand.get(at + 1),
-    }
-}
-
 /// R3558000: whether `id` is the leftmost card of its hand.
 pub fn is_leftmost_in_hand(state: &GameState, id: &str) -> bool {
     hand_index(state, id).is_some_and(|(_, at)| at == 0)
-}
-
-/// R3558000: whether `id` is the rightmost card of its hand.
-pub fn is_rightmost_in_hand(state: &GameState, id: &str) -> bool {
-    hand_index(state, id).is_some_and(|(player, at)| at + 1 == state.players[player].hand.len())
 }
 
 /// R1881007: whether a card of one of these definitions is mid-resolution (§10.5's `resolving`) for this
@@ -519,6 +498,12 @@ pub fn played_this_game_with_tag(state: &GameState, player: PlayerId, tag: Tag) 
         .unwrap_or(0)
 }
 
+/// R4593001 (Infinite Assault #196 Emergent Behavior): how many turns `player` has started this
+/// game, the current turn included (`PlayerState.turns_started`, R845).
+pub fn turns_started_of(state: &GameState, player: PlayerId) -> i32 {
+    state.players[player].turns_started
+}
+
 /// B5 E4, R451: the last Spell either player played (Classic #57 Echo) as its play recorded it (a
 /// played Echo is the Spell it copied), or `None`. A copy.
 pub fn last_spell_played(state: &GameState) -> Option<PlayRecord> {
@@ -683,10 +668,10 @@ pub fn enemy_unit_arrival(state: &GameState, controller: PlayerId, event: &GameE
     }
 }
 
-/// R3550009: every enemy permanent — the opponent's acting units, then their backrow, each once
-/// (Stinkyscape+ #25 Snom Bunny's Death); Classic #40 MC Tech's count and pick read it too. A Dormant
-/// card is none (R4322000): `active_units_of` leaves out a Dormant Unit, and the backrow walk leaves
-/// out a Dormant card.
+/// R3550009: every enemy permanent — the opponent's acting units, then their backrow, then any card lying
+/// on their unit zones (R4665000), each once (Stinkyscape+ #25 Snom Bunny's Death); Classic #40 MC Tech's
+/// count and pick read it too. A Dormant card is none (R4322000): `active_units_of` leaves out a Dormant
+/// Unit, and the backrow walk leaves out a Dormant card.
 pub fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance> {
     let enemy = opponent_of(player);
     let backrow: Vec<CardInstance> = crate::zones::slots_of(enemy, Row::Backrow)
@@ -701,6 +686,13 @@ pub fn enemy_permanents(state: &GameState, player: PlayerId) -> Vec<CardInstance
         .filter(|card| !permanents.iter().any(|unit| unit.id == card.id))
         .collect();
     permanents.extend(backrow);
+    // R4665000: and a card lying on one of their unit zones, a backrow card there, after their backrow.
+    permanents.extend(
+        crate::zones::lying_on_unit_zones_of(state, enemy)
+            .into_iter()
+            .filter(|card| !crate::slumber::is_slumbering(card))
+            .cloned(),
+    );
     permanents
 }
 
@@ -1239,13 +1231,9 @@ fn forecast_attack(
     let back = theirs.attack * back_multiplier;
     let strikes_back = crate::combat::takes_strike_back(state, attacker, defender);
     // §4.3 step 1: a First Strike defender that destroys the attacker first leaves it no blow to land,
-    // and so does one whose first blow exiles it (R1124, R4111000).
-    let exiled_first = has_keyword(&theirs.keywords, KeywordKind::FirstStrike)
-        && !has_keyword(&mine.keywords, KeywordKind::FirstStrike)
-        && exiles_on_damage(state, defender)
-        && hit_on_unit(state, defender, attacker, back) > 0;
-    let falls =
-        strikes_back && (falls_to_first_strike(state, attacker, defender, back_multiplier) || exiled_first);
+    // and so does one whose first blow exiles it (R1124, R4111000): `falls_to_first_strike` reads both,
+    // as My Pawn's projection does (R4823000).
+    let falls = strikes_back && falls_to_first_strike(state, attacker, defender, back_multiplier);
     let mut dealt = if falls {
         0
     } else {
@@ -1568,14 +1556,18 @@ fn overflow_of(state: &GameState, attacker: &CardInstance, target: &AttackTarget
 }
 
 /// R1124, R4111000: whether `source`'s damage exiles the Unit it lands on (Meditative #72 The Banisher),
-/// which the forecast counts as it counts Poisonous: any blow of 1 or more removes its target.
-fn exiles_on_damage(state: &GameState, source: &CardInstance) -> bool {
+/// which the forecast counts as it counts Poisonous, and R44's projection of a First Strike blow too
+/// (R4823000): any blow of 1 or more removes its target.
+pub(crate) fn exiles_on_damage(state: &GameState, source: &CardInstance) -> bool {
     crate::scripts::flags_of(state, source).exiles_on_damage == Some(true)
 }
 
 /// Whether a unit's Divine Shield is up (§6.1): the view drops a spent one.
+/// Whether a hit on `unit` pops its Divine Shield: one immune to damage keeps it (R4591004).
 fn is_shielded(state: &GameState, unit: &CardInstance) -> bool {
-    unit_has(state, unit, KeywordKind::DivineShield) && unit.divine_shield_spent != Some(true)
+    unit_has(state, unit, KeywordKind::DivineShield)
+        && unit.divine_shield_spent != Some(true)
+        && !crate::effects::firewall::units_immune_now(state, unit)
 }
 
 /// §4.4 steps 1 to 4 on a unit, read as `damage.rs`'s pipeline reads them (`damage::project_hit`,

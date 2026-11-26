@@ -6,13 +6,29 @@ use serde_json::{Map, Value, json};
 
 use crate::draw::add_to_hand as put_in_hand;
 use crate::prelude::json_as;
-use crate::script::Effect;
+use crate::script::{Effect, EffectContext};
 use crate::state::CardInstance;
 use crate::zones::active_units_of;
 
-use super::buff::{buff, grant_keyword};
-use super::targets::{PlayerSpec, player_of};
-use crate::wire::Keyword;
+use super::buff::buff;
+use super::targets::{BoardScope, PlayerSpec, ScopeSide, cards_in_scope, player_of};
+use crate::wire::Row;
+
+/// The pool every "random enemy permanent" draws from (#4763): `ctx.controller`'s opponent's
+/// permanents through `cards_in_scope`, in R68 order: each unit pile's top (a card under it is not on
+/// the field, R13), carried and standing Units (R446, R1081000), then each backrow card, face-down
+/// ones included. A Dormant card is passed by (R4322000), as is a Unit immune to a Spell's effects
+/// when a Spell draws (R4424000), and a card across a slash from the source (R3554003). It only reads:
+/// the caller draws from it inside its own effect, distinct cards (R60), and an empty pool draws
+/// nothing (R129).
+pub fn enemy_permanent_pool(ctx: &EffectContext<'_>) -> Vec<CardInstance> {
+    let scope = BoardScope {
+        side: Some(ScopeSide::Enemy),
+        rows: Some(vec![Row::Units, Row::Backrow]),
+        ..BoardScope::default()
+    };
+    cards_in_scope(ctx, &scope)
+}
 
 /// `buffRandomUnit`'s argument: `{ player? } & BuffAmount`.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
@@ -52,35 +68,6 @@ pub fn buff_random_unit(args: BuffRandomUnitArgs) -> Effect {
             literal.insert("health".into(), json!(health));
         }
         (buff(json_as(Value::Object(literal))).apply)(ctx);
-    })
-}
-
-/// `grantKeywordsRandomUnit`'s argument.
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
-#[serde(rename_all = "camelCase")]
-pub struct GrantKeywordsRandomUnitArgs {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub player: Option<PlayerSpec>,
-    #[serde(default)]
-    pub keywords: Vec<Keyword>,
-}
-
-/// R1085 (M #65 Radiant): one random Unit acting on that side (R13) is granted every named keyword.
-pub fn grant_keywords_random_unit(args: GrantKeywordsRandomUnitArgs) -> Effect {
-    Effect::new("grantKeywordsRandomUnit", move |ctx| {
-        let player = player_of(ctx, args.player.unwrap_or(PlayerSpec::SelfSide));
-        let units: Vec<CardInstance> = active_units_of(ctx.state, player).into_iter().cloned().collect();
-        let Some(unit) = ctx.rng.pick(&units).cloned() else {
-            return;
-        };
-        for keyword in &args.keywords {
-            let effect = grant_keyword(json_as(json!({
-                "target": { "of": "instance", "instanceId": unit.id },
-                "keyword": keyword,
-            })));
-            (effect.apply)(ctx);
-        }
     })
 }
 

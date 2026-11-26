@@ -28,8 +28,9 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    CardStats, CardStatsFilter, CreatedStats, GameFigures, GameSource, GameTotal, ModeFilter, PILOTS, Pilot,
-    PilotFilter, RecordsKey, SourceFilter, StatsTotals, add_created, add_stats, card_stats_of, game_figures,
+    CardChoices, CardStats, CardStatsFilter, CreatedStats, GameFigures, GameSource, GameTotal, ModeFilter,
+    PILOTS, Pilot, PilotFilter, RecordsKey, SourceFilter, StatsTotals, SwingRows, add_created, add_stats,
+    add_swing_rows, card_stats_of, game_figures,
 };
 use crate::config::PUBLIC_STATS_MIN_LIVE_GAMES;
 
@@ -324,6 +325,10 @@ pub struct WindowedReport {
     /// own window as a deck card is.
     #[serde(default)]
     pub created: Vec<WindowedCreated>,
+    /// R4676000: each card's choices (R4672003), by catalog id, over its family's window as its row is.
+    /// Absent when no card has any.
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub choices: IndexMap<String, CardChoices>,
 }
 
 /// R2089000: one Created card's figures over its window.
@@ -342,22 +347,17 @@ impl WindowedReport {
 }
 
 /// One version's figures from one source, as `card_stats_of` counts them.
-struct Part {
-    games: i64,
-    decks: i64,
-    cards: IndexMap<String, CardStats>,
-    created: IndexMap<String, CreatedStats>,
+pub(super) struct Part {
+    pub(super) games: i64,
+    pub(super) decks: i64,
+    pub(super) cards: IndexMap<String, CardStats>,
+    pub(super) created: IndexMap<String, CreatedStats>,
+    pub(super) choices: IndexMap<String, CardChoices>,
 }
 
-/// R1367000 (amends R654): every card's figures, each over its own window at `query.at`: R377's
-/// breakdowns summed over the versions and sources its window counts (`card_window`), with the
-/// games and decks of those records. Every caller of public card figures reads them here:
-/// `GET /api/stats/cards` (and the win-rate snapshot a match starts with, R3049000) and `cargo jackioh
-/// stats report --window`.
-pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> WindowedReport {
-    let collapsed = collapse_gameless(query.history, |version| totals.games(version));
-    let (history, at) = resolve(&collapsed, query.at);
-    // Each version's totals apart, so a version's figures read only its own keys.
+/// Each version's totals apart, so a version's figures read only its own keys: the records and the
+/// cards' breakdowns, by the version they are filed under.
+pub(super) fn split_by_version(totals: &StatsTotals) -> IndexMap<&str, StatsTotals> {
     let mut by_version: IndexMap<&str, StatsTotals> = IndexMap::new();
     for (key, records) in &totals.records {
         by_version
@@ -373,6 +373,76 @@ pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> Windowe
             .cards
             .insert(key.clone(), cards.clone());
     }
+    by_version
+}
+
+/// One version's figures from one source over `held`, that version's totals (`split_by_version`):
+/// a live record's seats as `live_pilot` names them, a development record's both (R378, R1451), in
+/// the modes `mode` reads.
+pub(super) fn part_of(
+    held: &StatsTotals,
+    version: &str,
+    source: GameSource,
+    live_pilot: PilotFilter,
+    mode: ModeFilter,
+) -> Part {
+    let (filter_source, pilot) = match source {
+        GameSource::Live => (SourceFilter::Live, live_pilot),
+        GameSource::Dev => (SourceFilter::Dev, PilotFilter::Unified),
+    };
+    let mut part = Part {
+        games: 0,
+        decks: 0,
+        cards: IndexMap::new(),
+        created: IndexMap::new(),
+        choices: IndexMap::new(),
+    };
+    // R2777001: each mode the query reads, summed, as one card's records in two modes are two decks.
+    for read in mode.modes() {
+        let report = card_stats_of(
+            held,
+            &CardStatsFilter {
+                source: filter_source,
+                mode: *read,
+                patch: Some(version.to_string()),
+                pilot,
+            },
+        );
+        part.games += i64::from(report.games);
+        part.decks += i64::from(report.decks);
+        for stats in report.cards {
+            match part.cards.get_mut(&stats.card) {
+                None => {
+                    part.cards.insert(stats.card.clone(), stats);
+                }
+                Some(held) => add_stats(held, &stats),
+            }
+        }
+        for stats in report.created {
+            match part.created.get_mut(&stats.card) {
+                None => {
+                    part.created.insert(stats.card.clone(), stats);
+                }
+                Some(held) => add_created(held, &stats),
+            }
+        }
+        // R4676000: the choices, summed the same way.
+        for row in report.choices {
+            part.choices.entry(row.card).or_default().add(&row.choices);
+        }
+    }
+    part
+}
+
+/// R1367000 (amends R654): every card's figures, each over its own window at `query.at`: R377's
+/// breakdowns summed over the versions and sources its window counts (`card_window`), with the
+/// games and decks of those records. Every caller of public card figures reads them here:
+/// `GET /api/stats/cards` (and the win-rate snapshot a match starts with, R3049000) and `cargo jackioh
+/// stats report --window`.
+pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> WindowedReport {
+    let collapsed = collapse_gameless(query.history, |version| totals.games(version));
+    let (history, at) = resolve(&collapsed, query.at);
+    let by_version = split_by_version(totals);
     let live: IndexMap<&str, i64> = by_version
         .iter()
         .map(|(version, held)| (*version, held.live_games(version)))
@@ -380,47 +450,13 @@ pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> Windowe
     let live_games = |version: &str| live.get(version).copied().unwrap_or(0);
     let empty = StatsTotals::default();
     let part = |version: &str, source: GameSource| {
-        let (filter_source, pilot) = match source {
-            GameSource::Live => (SourceFilter::Live, query.live_pilot),
-            GameSource::Dev => (SourceFilter::Dev, PilotFilter::Unified),
-        };
-        let mut part = Part {
-            games: 0,
-            decks: 0,
-            cards: IndexMap::new(),
-            created: IndexMap::new(),
-        };
-        // R2777001: each mode the query reads, summed, as one card's records in two modes are two decks.
-        for mode in query.mode.modes() {
-            let report = card_stats_of(
-                by_version.get(version).unwrap_or(&empty),
-                &CardStatsFilter {
-                    source: filter_source,
-                    mode: *mode,
-                    patch: Some(version.to_string()),
-                    pilot,
-                },
-            );
-            part.games += i64::from(report.games);
-            part.decks += i64::from(report.decks);
-            for stats in report.cards {
-                match part.cards.get_mut(&stats.card) {
-                    None => {
-                        part.cards.insert(stats.card.clone(), stats);
-                    }
-                    Some(held) => add_stats(held, &stats),
-                }
-            }
-            for stats in report.created {
-                match part.created.get_mut(&stats.card) {
-                    None => {
-                        part.created.insert(stats.card.clone(), stats);
-                    }
-                    Some(held) => add_created(held, &stats),
-                }
-            }
-        }
-        part
+        part_of(
+            by_version.get(version).unwrap_or(&empty),
+            version,
+            source,
+            query.live_pilot,
+            query.mode,
+        )
     };
     let mut parts: IndexMap<(String, GameSource), Part> = IndexMap::new();
     for step in &history[..=at] {
@@ -507,6 +543,31 @@ pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> Windowe
             created.push(WindowedCreated { window, stats });
         }
     }
+    // R4676000: each card's choices over its family's window as above.
+    let mut ids: Vec<&str> = parts
+        .values()
+        .flat_map(|part| part.choices.keys().map(String::as_str))
+        .collect();
+    ids.sort_unstable();
+    ids.dedup();
+    let mut choices: IndexMap<String, CardChoices> = IndexMap::new();
+    for id in ids {
+        let family = card_family(id);
+        let window = windows
+            .entry(family)
+            .or_insert_with(|| window_in(&history, at, Some(family), query.request, &live_games))
+            .clone();
+        let mut held = CardChoices::default();
+        for part in counted_parts(&window) {
+            if let Some(card) = part.choices.get(id) {
+                held.add(card);
+            }
+        }
+        if !held.is_empty() {
+            held.sort();
+            choices.insert(id.to_string(), held);
+        }
+    }
     WindowedReport {
         at: query.at.to_string(),
         patch,
@@ -514,6 +575,7 @@ pub fn windowed_card_stats(totals: &StatsTotals, query: &WindowQuery) -> Windowe
         decks,
         cards,
         created,
+        choices,
     }
 }
 
@@ -586,6 +648,31 @@ pub fn windowed_game_figures(
     }
 }
 
+/// R4552001: every turn of the records `windowed_game_figures` counts at `at` (the window every card
+/// shares, in the modes `mode` reads), per bucket: what an ordinary turn gains is read off these
+/// (`swing_baseline`) for `GET /api/stats/cards`' Decisiveness.
+pub fn windowed_swing_rows(
+    totals: &StatsTotals,
+    history: &[PatchStep],
+    at: &str,
+    mode: ModeFilter,
+    request: WindowRequest,
+) -> SwingRows {
+    let collapsed = collapse_gameless(history, |version| totals.games(version));
+    let (history, at) = resolve(&collapsed, at);
+    let window = window_in(&history, at, None, request, &|version| totals.live_games(version));
+    let mut rows = SwingRows::new();
+    for (key, total) in &totals.game_totals {
+        if window.counted.contains(&key.patch)
+            && window.sources().contains(&key.source)
+            && mode.counts(key.mode)
+        {
+            add_swing_rows(&mut rows, &total.swing);
+        }
+    }
+    rows
+}
+
 // R1367000: windows over a history written by hand, and figures over totals folded from records
 // written by hand, so each count can be read off the test.
 #[cfg(test)]
@@ -593,7 +680,9 @@ mod tests {
     use super::*;
     use crate::wire::catalog_types::{PerPlayer, PlayerId};
     use crate::wire::events::{GameOverReason, Winner};
-    use crate::wire::stats::{CreatedUse, GameMode, GameRecord, GameSummary, Pilot, RecordsKey, SeatSummary};
+    use crate::wire::stats::{
+        CreatedUse, GameMode, GameRecord, GameSummary, Pilot, RecordsKey, SeatSummary, SwingTurn,
+    };
 
     const A: &str = "core-001";
     const B: &str = "core-002";
@@ -848,11 +937,15 @@ mod tests {
                     card: TOKEN.to_string(),
                     turn: 2,
                     radiant: false,
+                    variant: None,
+                    source: None,
                 },
                 CreatedUse {
                     card: B.to_string(),
                     turn: 3,
                     radiant: true,
+                    variant: None,
+                    source: None,
                 },
             ]);
             record
@@ -1034,6 +1127,58 @@ mod tests {
         assert_eq!(versions(&report.patch), ["v2", "v2b"]);
         let b = report.card(B).expect("B is held");
         assert_eq!(versions(&b.window), ["v2", "v2b"]);
+    }
+
+    #[test]
+    fn r4552001_the_turns_an_ordinary_turn_is_read_off_are_the_window_every_card_shares() {
+        let history = [
+            step("v1", PatchTier::Major, &[]),
+            step("v2", PatchTier::Patch, &[]),
+            step("v3", PatchTier::Micro, &[A]),
+        ];
+        // One record a version, its p1 two turns (one row of each bucket), the second ending at its win.
+        let with_rows = |id: &str, patch: &str| {
+            let mut record = game(id, GameSource::Live, patch, &[A]);
+            record.game.seats.p1.swing_turns = Some(vec![
+                SwingTurn {
+                    turn: 1,
+                    eval: 0,
+                    acting: Vec::new(),
+                    facing: Vec::new(),
+                },
+                SwingTurn {
+                    turn: 3,
+                    eval: 0,
+                    acting: Vec::new(),
+                    facing: Vec::new(),
+                },
+            ]);
+            record
+        };
+        let mut totals = StatsTotals::default();
+        for record in [
+            with_rows("m1", "v1"),
+            with_rows("m2", "v2"),
+            with_rows("m3", "v3"),
+        ] {
+            totals.fold(&record, false);
+        }
+        let rows = windowed_swing_rows(&totals, &history, "v3", ModeFilter::All, WindowRequest::Gated);
+        // v2's patch opened the window: v2's and v3's records, not v1's.
+        assert_eq!(rows.keys().copied().collect::<Vec<i32>>(), [1, 2]);
+        assert_eq!(rows[&1][0], 2);
+        assert_eq!(rows[&2][0], 2);
+        // A mode the records are not read under counts none of them.
+        assert!(
+            windowed_swing_rows(
+                &totals,
+                &history,
+                "v3",
+                ModeFilter::Only(GameMode::Random),
+                WindowRequest::Gated
+            )
+            .is_empty()
+        );
     }
 
     #[test]

@@ -102,7 +102,7 @@ crates/
   tools/                   package jackioh-tools (bin "jackioh") ← packages/*/scripts, ladder/, scripts/catalog-version.mjs
     src/main.rs            clap dispatch (§12), written by part 1
     src/<command>.rs       one per subcommand
-training/                  the AI training lanes (§14): README.md, improve.md, unban.md, loop.sh, history/
+training/                  the AI's training (§14): README.md, improve.md, gather.md, file-records.sh, history/
 spec/                      SPEC.md split into notes (§15)
 apps/web/src/wasm/         the TS wrapper over the WASM module (§10); pkg/ is generated and gitignored
 apps/web/src/wire/         the client's wire layer (§10.4): generated types and constants, hand-kept helpers
@@ -148,6 +148,7 @@ on this list during Waves 1–3.
 | tower | 0.5.3 | util | server (tests: `oneshot`) |
 | tower-http | 0.7.1 | cors, trace | server |
 | sqlx | 0.9.0 | runtime-tokio, tls-rustls, postgres, json, time, uuid | server |
+| futures-util | 0.3.34 | — (default-features = false) | server (the statistics' totals read as a stream, `db::pg::stats_totals_load`; already in the lock through sqlx) |
 | jsonwebtoken | 11.1.0 | — | server |
 | reqwest | 0.13.5 | json, rustls-tls (default-features = false) | server (JWKS, Supabase Auth `/user` and admin calls) |
 | hmac | 0.13.0 | — | server |
@@ -371,8 +372,9 @@ because practice saves on players' devices store it (the practice session, `crat
 save that does not fold to its hash), `packages/cards/test/fixtures/01-hotseat-full-game.json` pins
 `"a798906b"`, and e2e specs 01, 13 and 22 compare browser and Node hashes:
 
-1. Serialize the state to `serde_json::Value`; remove the top-level keys `applied`, `opening` and
-   `generators` (the Created cards' generators, presentation only, R1956001).
+1. Serialize the state to `serde_json::Value`; remove the top-level keys `applied`, `opening`,
+   `generators` (the Created cards' generators, presentation only, R1956001) and `makers` (the Created
+   cards' makers, the game record's, R4672001).
 2. `canonical(v)`: a string, number, bool or null as `JSON.stringify` writes it (serde_json writes the
    same for integers and for the escapes `\" \\ \b \f \n \r \t \u00xx`, lower-case hex, non-ASCII
    raw); an array as `[` + items joined by `,` + `]`; an object as `{` + `"key":canonical(value)`
@@ -407,6 +409,12 @@ pub fn seat_played_by(state: &GameState, home: PlayerId) -> PlayerId;
 pub fn mulligan_owed(state: &GameState) -> Vec<PlayerId>;
 pub fn seats_swapped(state: &GameState) -> bool;
 pub fn summarize_game(args: &FoldArgs) -> Option<GameSummary>;
+pub fn summarize_game_with(args: &FoldArgs, step: impl FnMut(&GameState, &[GameEvent], &GameState)) -> Option<GameSummary>;
+                                                                    // R4552000: the same one fold, each step handed to `step` too
+                                                                    // (jackioh_ai::summarize_with_swing_turns, #2213)
+pub fn recorded_start(args: &FoldArgs) -> GameState;                // R4552000: the start summarize_game replays from
+pub fn read_steps(start: &GameState, log: &[Action], step: impl FnMut(&GameState, &[GameEvent], &GameState)) -> GameState;
+                                                                    // R4552000: its steps; jackioh_ai::swing_turns reads the same
 pub fn registered_catalog() -> &'static CardDefs;                   // after jackioh_cards::register_all()
 
 pub struct ReduceResult {                                           // serializes as { state, events, error? }
@@ -752,7 +760,8 @@ pub fn wrap_up_after_ms(limit_ms: i64) -> i64;      // R3498000: the ms into a h
 pub fn build_ai_deck(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> Vec<String>;
     // AiDeckOptions { banned, include, theme, mana_cap, boost, lean_set: Option<SetName> } (serde camelCase;
     // `leanSet`, R1370: at least ceil(size × AI_DECK.lean_min_share) of the deck from that set; absent, the
-    // draw is exactly the pre-R1370 one)
+    // pre-R1370 draw, a pick that would cost the theme's and the units' floors drawn again from the same
+    // roll, R4784000)
 pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -> TracedAiDeck;  // { deck, lean_forced }
 pub fn redact(state: &GameState, seat: PlayerId) -> GameState;
 pub fn ai_to_act(state: &GameState, seat: PlayerId) -> bool;
@@ -859,7 +868,7 @@ with the route it missed, a body that arrives still compressed),
 `export function loadWasmSync(bytes: BufferSource): void` (for jsdom tests, from
 `apps/web/src/test/setup.ts`), and one typed function per binding that parses and stringifies, named
 as the TS engine named it (`createGame`, `reduce`, `legalActions`, `viewFor`, `hashState`, `fold`,
-`lastBoardFor`, `seatPlayedBy`, `aiToAct`, `decide`, `buildAiDeck`, `registeredCatalog`, `findInstance`,
+`lastBoardFor`, `seatPlayedBy`, `aiToAct`, `decide`, `buildAiDeck`, `registeredCatalog`,
 `dealEmoteHand`, `combatForecast` (R3100000: the normal module's own, as the Duos bindings are), `game_log` (#3108: the game log's lines, the normal module's own too), …).
 `apps/web/src/main.tsx` starts `loadWasm()` at boot, and its `EngineGate` holds every screen that
 calls the engine until it resolves (#778; the deck builder calls the validator synchronously);
@@ -1148,7 +1157,7 @@ mpsc channel. Time: `tokio::time::pause()` and `advance()` replace the TS manual
 | `stats [--games N] [--patch v] [--out file]` | `stats.rs` | 22 | `pnpm ai:stats` | R378's development run |
 | `golden check`, `golden bless [--seeds N]` (retired in #2578), `golden record` | `golden.rs` | 23 | — | §13 |
 | `spec check`, `spec index` | `spec.rs` | 28 | `pnpm rulings:coverage`, `rulings.test.ts` | §15 |
-| `arena …`, `agent`, `promote …` | `arena.rs`, `agent.rs`, `promote.rs` | 29 | `ladder/`, `duel.ts` | §14 |
+| `arena …`, `agent` | `arena.rs`, `agent.rs` | 29 | `ladder/`, `duel.ts` | §14 |
 
 ## 13. Golden traces
 
@@ -1221,19 +1230,17 @@ The referee holds the true state and sends each agent only `redact(state, seat)`
 must share an engine version: an `ai/*` branch differs from `main` only under `crates/ai/` and
 `training/history/` (CI enforces it, part 30).
 
-### 14.2 `arena` and `promote`
+### 14.2 `arena`
 
 ```
-cargo jackioh arena --a self|random|bin:<path> --b self|random|bin:<path> (--set improve-dev [--games N] [--extend] [--forks] | --seed <base> --games N [--paired]) [--out <dir>]
-cargo jackioh promote --lane improve|unban --parent-bin <path to main's jackioh> [--dry-run] [--verify]
+cargo jackioh arena --a self|random|bin:<path> --b self|random|bin:<path> (--set improve-dev [--games N] [--extend] [--forks [--save <path>]] | --seed <base> --games N [--paired]) [--out <dir>]
 ```
 
 `arena` plays game `n` on the seed `<base>:<n>`, agent `a` on `p1` in odd games. `--paired` (R850000)
 plays each deal twice with the seats swapped: deal `d`'s seed is `<base>:<d>`, game `2d − 1` seats `a`
 on `p1` and game `2d` on `p2`, so the game count is even. `--set improve-dev` is the improve lane's
 fixed dev set (R850001): the base `improve-dev`, paired, 400 games unless `--games` says more, and never fewer.
-A base that is a lane's name (`improve`, `unban`) or starts with one and `:` is refused: those are
-the gate's hold-out seeds, which no screen plays (R850001). It writes one `GameRecord` JSONL line per
+It writes one `GameRecord` JSONL line per
 game (`packages/shared/src/stats.ts`'s format, R376; `source: "dev"`, `mode: "random"`, `pilots`
 naming the two agents; a paired game's id ends with `a`'s seat, `:p1` or `:p2`, so a deal's two games
 are two records) to `--out` (default `$JACKIOH_TRAINING_OUT/<date>.jsonl`, else stdout). A tally
@@ -1255,55 +1262,16 @@ control's seat got, never the true state. When its action differs that decision 
 once after each action, both arms on to the end with the control on both seats. The tally adds
 `trunkGames`, `forks`, `liveForks`, `forksPerGame`, `rollouts` and `forkEdge` with its 95% interval
 `forkEdgeLow` and `forkEdgeHigh`, keeps a change when `forkEdgeLow` is above 0, and reads
-`inconclusive: true` below `SCREEN_MIN_DECIDED` live forks.
+`inconclusive: true` below `SCREEN_MIN_DECIDED` live forks. `--save <path>` (R4607000) appends
+each finished deal to the file as soon as it is done: one header line naming the set, `--games`,
+`--extend`, the budget, `FORK_ROLLOUTS`, `FORK_MAX_PER_GAME`, the catalog version and each agent's
+label and `info` answer, then one JSON line a deal. A rerun of the same command refuses a foreign
+file by field name, replays the first saved deal's trunk once as an identity check, and plays only
+the deals still missing; a finished save, run again, plays nothing and prints its tally again.
 
-`promote` plays the lane's deals against the parent, seeds `"<lane>:<tree>:<d>"` where `<tree>` is
-`git rev-parse HEAD:crates/ai/src` (so committing `generation.json` does not change the seeds), each
-deal played twice with the seats swapped as `arena --paired` plays one (candidate `p1` in its first
-game), each seat's deck `build_ai_deck` over every set that ships minus **its own** AI's shadow-ban
-list, no handicap (Easy both). The deals are the lane's hold-out set, read only by the committed AI
-they are named for: a dry run refuses uncommitted changes in `crates/ai/src`, as a promotion and a
-verification do (R850001). Every lane's gate is the sequential test `TRAINING_GATE` (R1679000): the
-deals are played `batch_deals` (100) at a time and read in deal order as the candidate's edge, and from
-deal `min_deals` (100) on it stops at the first whose log-likelihood ratio, H0 a mean edge of
-`edge_h0` (0) against H1 `edge_h1` (+0.06) with errors `alpha` and `beta` (5% each), reaches
-`ln((1 − β) / α)` (a pass) or falls to `ln(β / (1 − α))` (a fail); undecided at `max_deals` (1,000)
-it fails. A promotion's `vsParent` is the wins out of the games of the deals it read. It promotes when:
-
-| Lane | vs parent | shadow bans |
-|---|---|---|
-| `improve` | the test passes | — |
-| `unban` | the test passes | strictly fewer than the parent's |
-| `learn` | the test passes, on deals of its own (R1012000); retired with the learned evaluation by #4159 (R4159000), kept while `learn.yml` runs it | — |
-
-The improve lane's bar was 65 of 100 until issue #850 (R732001), then 220 of 400 paired games until
-issue #1679 (R850000), and the unban lane's 60 of 100 unpaired games.
-
-It played 100 more against `random` (SPEC §10.7's policy, `jackioh_ai::random_action`),
-needing 90, until generation 9, the first AI dealt the Meditative set, had beaten random in at least
-90 of 100 (issue #732, R732001); since then it plays none and a promotion records `"vsRandom": null`.
-The daily quality gates (`cargo jackioh gate --full`) still play random.
-
-A draw is not a win. `TRAINING_GATE` (`TrainingGate { min_deals, max_deals, batch_deals, edge_h0,
-edge_h1, alpha, beta, variance_floor }`) is a constant in `crates/engine/src/config.rs` next to
-`AI_GATE` (CLAUDE.md rule 9; part 1 wrote its predecessors, `TRAINING_IMPROVE` and `TRAINING_UNBAN`). Without
-`--dry-run` or `--verify`, a pass writes `crates/ai/generation.json` and appends the same object to
-`training/history/<lane>.jsonl`:
-
-```json
-{"generation":8,"lane":"improve","parent":"<main commit>","tree":"<crates/ai/src tree>","vsRandom":"93/100","vsParent":"87/100","shadowBan":11,"parentShadowBan":11,"date":"2026-11-02"}
-```
-
-`--verify` (CI) recomputes and compares with the branch's `generation.json`. Exit 0 on a pass, 1 on
-a failed gate. The report (Markdown, stdout) gives the wins, the bar and their 95% Wilson interval,
-and for a paired gate the edge over its deals with its interval, as `arena`'s tally computes it, in
-points of the games.
-
-Every run that plays its games, in any mode and whether or not it passes, rewrites
-`$JACKIOH_TRAINING_OUT/last-pass.md` when that directory is set: the pass in Markdown (the games the
-candidate won, lost and drew against the parent and those without a result, as `p1`, as `p2` and in
-all, and one square per game), which `training/loop.sh` puts at the top of the lane's draft pull
-request.
+`promote`, the training lanes' gate (a sequential test on each lane's hold-out deals, R1679000), is
+gone since #4702 (R4702000), with `TRAINING_GATE`; git history holds it. Its promotions' records are
+§14.3's.
 
 ### 14.3 `crates/ai/generation.json`
 
@@ -1320,7 +1288,7 @@ spec/README.md            the map: one line per section note, the note format, h
 spec/01-overview.md … spec/10-engine-guide.md      one note per SPEC § (its ### subsections inside)
 spec/11-rulings.md        §11's provenance paragraphs (the prose above the table), verbatim
 spec/rulings/R0001.md … spec/rulings/R0762.md      one note per §11 row (4-digit, zero-padded; 561 files)
-spec/INDEX.md             generated by `cargo jackioh spec index`: id | title | note | proven in
+spec/INDEX.md             generated by `cargo jackioh spec index`: id | title | note | touches
 ```
 
 A ruling note:
@@ -1404,7 +1372,7 @@ Holes the Wave 2 reconcilers found, each settled once and applied to the code (`
 - **§3 / §4.2–§4.4 / §6.1 / §10.1 / §10.5 / §10.8, GIGA (issue #3546, R3546000–R3546004):** `config` gains `GIGA_LANES` (2, the lanes a GIGA permanent spans in each row); `CardInstance` gains `giga: Option<bool>` (stamped as the card enters the field — printed, granted in the hand or embiggened alike — and fixed there; R78's reset takes it off, Flicker and Transform keep it); `PlayRun` and `RebornEntry` gain `giga_zones: Option<Vec<ZoneRef>>` (the other three zones a GIGA play or return holds with its anchor, R210 and R64); `UnitView`, `PublicBackrowView` and `FaceDownBackrowView` gain `giga: Option<bool>` (the anchor's flag, the three covered zones empty in the view, public on a face-down card too); new module `giga.rs` (the four-zone geometry — `spanned_slots`, `covering`, `fits`, `first_anchor`, `entry_anchor` — and the both-lanes reads — `lanes_of`, `occupant_at`, `adjacent_slots`, `lanes_meet`); the prelude re-exports `enters_giga`, `is_giga`, `lanes_of` and `occupant_at`; the client draws the anchor's card across its four zones (`data-giga`). Every new field is absent until set, so old games hash the same.
 - **§2.2 / §2.3 / §3.2 / §6.1 / §6.3 / §10.1 / §10.8, Stinkyscape+ E5 (issue #3548, R3548000–R3548004):** `config` gains `TIPSY_DECAY`, `TIPSY_BLUR_CHANCE_PER_STACK`, `TIPSY_BLUR_CHANCE_CAP`, `WARHERO_TOKEN_DEF_ID`, `WARHERO_GROWTH_MIN`, `WARHERO_GROWTH_MAX` and `WARHERO_RADIANT_MULTIPLIER`; `PlayerState` gains `tipsy: Option<TipsyCounter>` (`{ count, since }`, absent at none) and `GameState` gains `warhero_worth: Option<i32>` (absent until the first Warhero Token is minted); `CardInstance` gains `tipsy: Option<TipsyStamp>` (`{ player, level, turn }`, stamped as the card is drawn, played or summoned while the counter is up, R78's reset takes it off); `NextId` gains `minted` (the `GameState` impl starts the worth at 0); new modules `tipsy.rs` (the counter, the decay at its owner's turn start, and the blur, drawn from a stream of the seed and the card's id and stamped turn, never the game's `Rng`) and `warhero.rs` (the worth, growing 0–10 at every cleanup from the match rng); `CounterKind` gains `Tipsy` and `Warhero`; `CardView`, `UnitView` and `PublicBackrowView` gain `tipsyBlur: Option<TipsyBlur>` (owner's view alone, never face-down); `SideView` gains `tipsy: Option<i32>` and `infiniteMana: Option<true>`; `StaticFlags` gains `infinite_mana: Option<bool>` (kept by a Fuse); new verbs `refreshActivates` (`refresh_ability`) and `has_infinite_mana` with `credit::can_pay` (every refusal and listing reads the one check; the X range keeps `spendable_mana`); the log gains `{target} Tipsy counter: {value}` and `Warhero Tokens are worth {value} Credits`, and the client the stein badge (`.hero-tipsy`), the `.tipsy-blur` blur and the infinite tray. Every new field is absent until set, and no rng is drawn without a Warhero, so old games hash the same.
  - **§3 / §4.2–§4.4 / §6.3 / §10.1 / §10.5 / §10.8, Stinkyscape+ E7 (issue #3554, R3554000–R3554009):** `config` gains `BLACK_HOLE_LANE` (3), `BLACK_HOLE_CAPACITY` (10), `SLASH_BASE_LANE` (3) and `SLASH_LANES` ([2, 3, 4]); `GameState` gains `black_hole: Option<BlackHole>` (`{ lane, swallowed?, pulls?, capacity? }`, `openBlackHole`'s `capacity`, else `BLACK_HOLE_CAPACITY`, R3561000; a new hole replacing an open one), `slashed_lane: Option<i32>` and `chains_made: Option<u32>` (all absent until set); `CardInstance` gains `half: Option<Half>`, `shared_chain: Option<u32>` and `split_chain: Option<u32>` (R78's reset and the resolving zone's exit take them off); `PlayRun` gains `half: Option<Half>` (the `mode` prompt's answer, stamped at §10.5 step 5) and `Awaiting` gains `Half`; `DamageFlags` gains `chain_hit: bool` (serde-skipped); `StaticFlags` gains `sweep_lane` and `sweep_adjacent: Option<i32>` (numbers, summed by a Fuse, read through the declared numbers `sweepLane` and `sweepAdjacent`); `SummonPlacement` and `SummonArgs` gain `exile_below: Option<bool>`; new module `geometry.rs` (the hole and slash reads — `in_hole`, `is_void`, `half_of_lane`, `half_of_card`, `lane_in_half`, `reaches`, `chain_members`, `line_cells` — and the turn steps — `exile_zone`, `swallow_standing` in the state check, `pull_at_turn_start` at each turn's start) and `effects/geometry.rs` (new verbs `openBlackHole`, `slashBoard`, `askSlashLane`/`chosenSlashLane`, `lineTile`/`lineDamage` (`LineRules`, `LINE_STEP`), `chainLightning` and `chainUnits`); new event `LineDrawn { player, cells, laser? }` (`"lineDrawn"`, public positions only); `PlayerView` gains `black_hole: Option<BlackHoleView>` and `slashed_lane: Option<i32>`, `UnitView` gains `shared_chain`/`split_chain: Option<u32>`; the log gains `{seat} drew a line across the board`; the client the hole lane (`data-lane-mark="blackHole"`, the count), the slash mark (`data-lane-mark="slashed"`), the chain marks (`data-chain`) and the `line` recipe (`lineDrawn`). Every new field is absent until set, `chain_hit` never serializes, and the hot predicates read an `Option` only, so old games hash the same.
-- **§2.1 / §3 / §4.5 / §6.2 / §6.3 / §10.1 / §10.8 / §10.9, Stinkyscape+ E8 (issue #3558, R3558000–R3558008):** `config` gains `DECK_CAST_ACTION_CAP` (60, a whole library's worth); `query` gains `HandSide` (`left`/`right`, right the default) and the hand-position reads (`hand_index`, index 0 the leftmost; `hand_leftmost`/`hand_rightmost`, `hand_neighbor`, `is_leftmost_in_hand`/`is_rightmost_in_hand`); `Script` gains `hand_aura: Option<HandAuraHook>` (a fusion carries each ingredient's) and `cast_from_deck_when: Option<HasHook>` (a fusion drops it, as `evolvesWhen`), `StaticFlags` gains `starts_at_bottom: Option<bool>` (carried by a fusion); `GameState` gains `hand_meets: Option<Vec<HandMeet>>` (`{ player, left, right, cost? }`) and `radiance_lends: Option<Vec<RadianceLend>>` (`{ player, lender, card }`); new modules `hand_order.rs` (`hand_aura_cost_delta`, `sync_hand_auras`, `add_meet`/`meets_partner`/`meet_pairs`, `MEET_MARK`/`MEET_MARK_COLOR`) and `deck_cast.rs` (`queue_deck_casts`, the hidden `@deckCast` entry, `run_deck_cast`, at most the cap an action); `Frontier` gains `deck_casts: i32`; new verbs `addMeetingPair` (`AddMeetingPairArgs`, the left card to the left end, the right to the right) and `cast_new_times` (N separate `castNew` effects); `fuseRandomInto` gains `count` and `unfusedOnly`, `fuseGenerated` gains `untilCost`, `addToHand` gains `at`, the catalog query gains `nameContains`; the owner's hand view marks a waiting pair (`meet`, gold), which the AI's `redact` drops for the opponent. Every new field is absent until set, no rng is drawn, so old games hash the same.
+- **§2.1 / §3 / §4.5 / §6.2 / §6.3 / §10.1 / §10.8 / §10.9, Stinkyscape+ E8 (issue #3558, R3558000–R3558008):** `config` gains `DECK_CAST_ACTION_CAP` (60, a whole library's worth); `query` gains `HandSide` (`left`/`right`, right the default) and the hand-position reads (`hand_index`, index 0 the leftmost; `is_leftmost_in_hand`); `Script` gains `hand_aura: Option<HandAuraHook>` (a fusion carries each ingredient's) and `cast_from_deck_when: Option<HasHook>` (a fusion drops it, as `evolvesWhen`), `StaticFlags` gains `starts_at_bottom: Option<bool>` (carried by a fusion); `GameState` gains `hand_meets: Option<Vec<HandMeet>>` (`{ player, left, right, cost? }`) and `radiance_lends: Option<Vec<RadianceLend>>` (`{ player, lender, card }`); new modules `hand_order.rs` (`hand_aura_cost_delta`, `sync_hand_auras`, `add_meet`/`meets_partner`/`meet_pairs`, `MEET_MARK`/`MEET_MARK_COLOR`) and `deck_cast.rs` (`queue_deck_casts`, the hidden `@deckCast` entry, `run_deck_cast`, at most the cap an action); `Frontier` gains `deck_casts: i32`; new verbs `addMeetingPair` (`AddMeetingPairArgs`, the left card to the left end, the right to the right) and `cast_new_times` (N separate `castNew` effects); `fuseRandomInto` gains `count` and `unfusedOnly`, `fuseGenerated` gains `untilCost`, `addToHand` gains `at`, the catalog query gains `nameContains`; the owner's hand view marks a waiting pair (`meet`, gold), which the AI's `redact` drops for the opponent. Every new field is absent until set, no rng is drawn, so old games hash the same.
  - **§4.1 / §4.2 / §4.4 / §6.2 / §6.3 / §10.8, Stinkyscape+ E6 (issue #3550, R3550000–R3550009):** `config` gains `ACTIVATE_BASE_COOLDOWN` (1, a normal Activate's cooldown in the designer's count); `StaticFlags` gains `attacks_per_turn` and `counters_ranged` (numbers, read through the declared numbers `attacks` and `perTurn`), `damage_pool` (summed by a Fuse, read through `pool`) and `attacks_only_across`, `freezes_damaged` and `counters_ranged_all` (flags); `ActivationCost` gains `cooldown_turns: Option<i32>`; `ActivationView` gains `cooldown_turns_left: Option<i32>`; new module `countering.rs` (`counter_declared_attack`, `counter_activation`, the `@countered` note and the `AttackCancelled` on a countered declaration); new verbs `forcedAttack` (`ForcedAttackArgs`), `killDeadline` (`KillDeadlineArgs`, the `@delayedKillDeadline` hook, `DEADLINE_MARK`/`DEADLINE_MARK_COLOR` and `meet_kill_deadlines` in the state check), `snapshotSide`/`restoreSideSnapshot` (the `@sideSnapshot` note, dropped from the opponent's cards by the AI's `redact`) and `secret_pick`/`keepSecretPick` (the `@secretPick` note); new queries `enemy_unit_arrival`, `is_frozen_event`, `damage_pool_left`, `enemy_permanents`, `secret_pick_hit` (`SecretPickHit`) and `stands_across`; `damage.rs` soaks a per-turn pool after Armor (`@damagePool`, `damage_pool_used`) and rides the freeze rider in step 7; the client the cooldown badge (`data-cooldown`, the hourglass) and the deadline mark. Every new field is absent until set, and the memory notes appear only for the new flags, so old games hash the same.
  - **§2.3 / §5.2 / §6.3 / §10.3, Stinkyscape+ S22 (issue #3569, R3569000–R3569008):** `GameState` gains `radiant_world: Option<bool>` (`radiantWorld`, set by the verb `makeAllRadiant` and kept true of every card of both players in every zone by `radiate_world` at the settled state check; the sweep draws nothing); `CardZone` gains `graveyard` and `exile` (a card scope may name them); new verbs `fuseBoardInto` (`FuseBoardIntoArgs`: every Unit the Spell reaches fused into a fresh card on the caster's side) and `loseMaxMana` (`LoseMaxManaArgs`: the persistent modifier to max mana lowered, an empty crystal first). Every new field is absent until set, so old games hash the same.
  - **§2.3 / §4.2 / §6.3, Stinkyscape+ S13 (issue #3560, R3560000–R3560008):** `StaticFlags` gains `graveyard_price` and `ignores_taunt`, and `PlayerState` gains `once_a_game: Option<Vec<String>>` (not in any view, and dropped from the opponent's side by the AI's redaction).
@@ -1413,3 +1381,4 @@ Holes the Wave 2 reconcilers found, each settled once and applied to the code (`
  - **§6.3, Stinkyscape+ S25 (issue #3571, R3571000, R3571001):** `LineRules` gains `pierce: bool` (Lancer, Vela and Corvus set it, KY's Line Search Bot does not); `MarketPool` gains `OpenIds` (the ids named whose set is open, R1420), the AI lot's pool, now 17 ids (`MARKETPLACE_AI_CARDS`); nothing reaches the client.
 - **§6.1 / §10.8, the switch's refusal on the unit view (issue #3821, R3821000):** `UnitView` carries `switchReason` (`combat::why_cannot_switch_in` to `position_after_switch`, spending exertion), gated by `view_for::turn_open_to`. `golden::view_texts` strips it, so no golden hash moves. jackioh-shared's `LiveCard`, `InPlay` and `FaceModel` carry it, `InPlay` dropping it where it repeats `attackReason`.
 - **§4.5 / §6.1 / §6.2, a death into exile (issue #4207, R4207000):** `RebornEntry` gains `exiled: Option<bool>`, set when the body died into its exile pile, which §4.5 step 4 then returns it from; absent otherwise, so old games hash the same. Nothing reaches the client.
+- **§8.5 #98, End Times' bank (issue #4828, R4828000):** `Tuning` gains `taken: Option<IndexMap<String, i32>>`, the cuts End Times' End of Turn made since its last use, by the declared number's key: kept and copied with the rest of the tuning, and taken by a Fuse with the `set` it records (`tuning::taken_of`, `set_taken`); `memory.endTimesTaken` is the kept v0.6.14 script's. Absent until set, so old games hash the same; the web's generated `Tuning.ts` carries it.

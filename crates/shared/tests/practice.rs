@@ -1,6 +1,6 @@
 //! The practice session's machine (#3099; SPEC §9.9, §9.10, B22, B25, B34, B35, B38, B39, R187, R188, R433,
 //! R508, R668, R677, R679, R768, R923000, R1303000, R1373, R1705005, R2102000, R2560000, R2706000,
-//! R3100000, R3477000): played on the real catalog, with a `Session` standing in for a host. It keeps what
+//! R3100000, R3477000, R4582000): played on the real catalog, with a `Session` standing in for a host. It keeps what
 //! the machine asks it to store (the save, the kept games), answers the AI's ask with the AI itself and the
 //! lethal ask with nothing, and nothing else decides anything.
 
@@ -247,8 +247,17 @@ fn b34_every_snapshot_of_a_played_out_opening_is_view_for_of_the_true_state() {
 
 #[test]
 fn b34_an_ai_turn_the_ai_does_not_owe_changes_nothing_and_still_answers_with_a_snapshot() {
-    // The human first (p1): once the mulligans are answered it is on turn, and the AI owes nothing.
-    let mut session = started("practice-b34-idle", P1);
+    // The human first (p1): once the mulligans are answered it is on turn, and the AI owes nothing. The
+    // decks are dealt from the pools, which every card patch moves, so the test takes the first seed whose
+    // opening leaves the AI no prompt of its own to answer (a Discover the human's draw hands it, say), as
+    // the testkit's `seed_where` does (#848).
+    let owes_nothing = |seed: &str| {
+        let mut session = started(seed, P1);
+        session.answer_mulligans();
+        !session.snapshot().ai_to_act
+    };
+    let seed = jackioh_engine::testkit::seed_where("practice-b34-idle", owes_nothing);
+    let mut session = started(&seed, P1);
     session.answer_mulligans();
     let (hash, log, snapshots) = (
         jackioh_engine::hash_state(session.state()),
@@ -1109,6 +1118,128 @@ fn b25_a_report_is_refused_before_the_end_and_for_a_game_that_is_no_fight() {
         free.failed,
         vec!["this practice game is not a dungeon run's fight".to_string()]
     );
+}
+
+// R4582000: an Infinite Assault level's fight
+
+fn assault_config(seed: &str) -> PracticeConfig {
+    jackioh_cards::register_all();
+    let human = jackioh_engine::Handicap {
+        deck_size: 12,
+        ..jackioh_engine::HUMAN_HANDICAP
+    };
+    let enemy = jackioh_engine::Handicap {
+        deck_size: 12,
+        hero_health: Some(30),
+        hero_armor: Some(5),
+        ..jackioh_engine::AI_DIFFICULTY.easy
+    };
+    let enemy_deck = deck_of(&format!("{seed}:enemy"), 12);
+    let marks = vec![jackioh_engine::DeckMark {
+        index: 0,
+        radiant: true,
+        upgrades: 1,
+    }];
+    let mut asked = config("ignored", P1);
+    asked.assault = Some(jackioh_run::AssaultFightSetup {
+        seed: seed.to_string(),
+        human_deck: deck_of(&format!("{seed}:human"), 12),
+        human_handicap: human,
+        enemy_deck: enemy_deck.clone(),
+        enemy_handicap: enemy,
+        enemy_marks: marks.clone(),
+        enemy_sets: Vec::new(),
+        level: jackioh_run::AssaultLevel {
+            level: 1,
+            enemy: "Enemy".to_string(),
+            doctrine: None,
+            commander: None,
+            escalations: Vec::new(),
+            upgrades: Vec::new(),
+            rarities: [12, 0, 0, 0, 0],
+            deck: enemy_deck,
+            marks,
+            handicap: enemy,
+        },
+    });
+    asked
+}
+
+#[test]
+fn r4582000_an_assault_fight_is_created_from_its_setup_a_game_of_its_own_kind() {
+    let mut setup = assault_config("practice-r4582000");
+    setup.difficulty = Difficulty::Hard;
+    setup.last_board = Some(vec![LastBoardEntry {
+        def_id: "core-001".to_string(),
+        radiant: false,
+    }]);
+    let assault = setup.assault.clone().expect("an Assault fight");
+    let mut session = Session::start(&setup).expect("starts");
+    let args = session.host.fold_args();
+    // Its seed, its decks and its handicaps, the human at the seat the config names, the enemy's
+    // marks at the AI's seat, whatever the config's seed, deck, tier and last board say.
+    assert_eq!(session.host.config().seed, assault.seed);
+    assert_eq!(args.seed, assault.seed);
+    assert_eq!(
+        args.decks,
+        (assault.human_deck.clone(), assault.enemy_deck.clone())
+    );
+    let handicaps = args.handicaps.expect("handicaps");
+    assert_eq!(
+        (handicaps.p1, handicaps.p2),
+        (Some(assault.human_handicap), Some(assault.enemy_handicap))
+    );
+    let marks = args.deck_marks.expect("the enemy's marks");
+    assert_eq!((marks.p1, marks.p2), (None, Some(assault.enemy_marks.clone())));
+    assert!(args.dealt.is_none() && args.last_boards.is_none());
+    // It leaves no last board, is never kept, and earns nothing; its save clears once it is over.
+    session.concede();
+    assert!(session.snapshot().last_board.is_none());
+    assert!(session.kept.is_empty());
+    assert_eq!(session.save, Some(None));
+    assert_eq!(session.records.len(), 1);
+}
+
+/// R4595000: an Assault fight names its enemy's sets at the AI's seat, so the game keeps them and the
+/// AI's and the hint's determinizations read them; a fight that names none stores nothing
+#[test]
+fn r4595000_an_assault_fight_names_the_enemys_sets_at_the_ais_seat() {
+    // The set is held until its release (R4577000), so a test deals it under a preview.
+    let _preview = jackioh_engine::testkit::preview_sets(&[jackioh_engine::SetName::InfiniteAssault]);
+    let mut setup = assault_config("practice-r4595000");
+    let enemy_deck: Vec<String> = (1..=12).map(|n| format!("infiniteassault-{n:03}")).collect();
+    let assault = setup.assault.as_mut().expect("an Assault fight");
+    assault.enemy_deck = enemy_deck.clone();
+    assault.level.deck = enemy_deck;
+    assault.enemy_sets = vec![jackioh_engine::SetName::InfiniteAssault];
+    let session = Session::start(&setup).expect("starts");
+    let sets = session.host.fold_args().deck_sets.expect("the enemy's sets");
+    assert_eq!(
+        (sets.p1, sets.p2),
+        (None, Some(vec![jackioh_engine::SetName::InfiniteAssault]))
+    );
+    let unnamed = Session::start(&assault_config("practice-r4595000-none")).expect("starts");
+    assert!(unnamed.host.fold_args().deck_sets.is_none());
+}
+
+#[test]
+fn r4582000_resume_refuses_across_an_assault_fight_and_a_run_fight() {
+    let mut assault = Session::start(&assault_config("practice-r4582000-assault")).expect("starts");
+    assault.answer_mulligans();
+    let assault_save = assault.save.clone().expect("a save").expect("in progress");
+    let build = assault.catalog.clone();
+    // The fight's own save resumes it.
+    assert!(PracticeHost::resume(&assault_save.config, Some(&assault_save), &build, None, EPOCH).is_ok());
+    // A run fight on the same seed never resumes it, nor a free game.
+    let mut as_run = assault_save.config.clone();
+    as_run.assault = None;
+    as_run.run = run_config(&assault_save.config.seed).run;
+    let refused = PracticeHost::resume(&as_run, Some(&assault_save), &build, None, EPOCH)
+        .expect_err("an Assault save asked as a run fight is refused");
+    assert!(refused.contains("not the one the page remembers"), "{refused}");
+    let mut as_free = assault_save.config.clone();
+    as_free.assault = None;
+    assert!(PracticeHost::resume(&as_free, Some(&assault_save), &build, None, EPOCH).is_err());
 }
 
 // R677, R679: a Glitch in practice. No deck deals one on cue, so the state is changed the way a Glitch

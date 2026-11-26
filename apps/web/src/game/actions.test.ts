@@ -9,11 +9,13 @@ import {
   IDLE,
   answerAction,
   answerPlaguePlacement,
+  answerTargetPrompt,
   attackTargetTestid,
   heroTargetId,
   hiddenTargetZone,
   highlightFor,
   isPlaguePlacementPrompt,
+  matchTargetOption,
   onClickTarget,
   onControl,
   outstandingNeed,
@@ -22,6 +24,7 @@ import {
   selectionForOption,
   selectionKey,
   selectionTestid,
+  targetBoardKeys,
   type Interaction,
 } from "./actions.ts";
 import { NOT_NOW, testid, type ClickTarget } from "./contract.ts";
@@ -1228,13 +1231,14 @@ describe("R821000 a Plague Counter placement is answered on the board", () => {
     });
   });
 
-  it("lights the cards and the zone a face-down card lies in, and only for this prompt", () => {
+  it("lights the cards and the zone a face-down card lies in (R4781000: the zone for any target prompt)", () => {
     const lit = pendingHighlight(view, placement);
     expect(lit.has(testid.card("u1"))).toBe(true);
     expect(lit.has(testid.card("e1"))).toBe(true);
     expect(lit.has(testid.zone("opponent", "backrow", 3))).toBe(true);
     const other = pendingHighlight(view, pendingFor("target", options, { prompt: "Choose a target" }));
-    expect(other.has(testid.zone("opponent", "backrow", 3))).toBe(false);
+    // R4781000: any `target` prompt for the viewer lights the zone a face-down card lies in now.
+    expect(other.has(testid.zone("opponent", "backrow", 3))).toBe(true);
   });
 
   it("answers a click on an offered unit, or on the zone of a face-down card, with the engine's answer", () => {
@@ -1270,6 +1274,99 @@ describe("R821000 a Plague Counter placement is answered on the board", () => {
     expect(click({ on: "unit", instanceId: "e1", side: "opponent", lane: 1 }, target)).toBeNull();
     expect(click({ on: "unit", instanceId: "e1", side: "opponent", lane: 1 }, waitingPending)).toBeNull();
     expect(click({ on: "unit", instanceId: "e1", side: "opponent", lane: 1 }, null)).toBeNull();
+  });
+});
+
+describe("R4781000 a target prompt is answered on the board", () => {
+  const view = seatedView();
+  const options: PendingOption[] = [
+    { key: "instance:e1", label: "Theirs", instanceId: "e1", defId: "core-002" },
+    { key: "instance:u1", label: "Mine", instanceId: "u1", defId: "core-002" },
+    { key: "instance:t1", label: "Face-down card", instanceId: "t1", player: "p2", row: "backrow", lane: 3 },
+    { key: "hero:p2", label: "Enemy hero", player: "p2" },
+  ];
+  const single = pendingFor("target", options, { prompt: "Choose a target" });
+  // A hand card and a zone selection stay list-only: offered, but no board click names them.
+  const multi = pendingFor(
+    "target",
+    [
+      ...options,
+      { key: "instance:h1", label: "Hand", instanceId: "h1", defId: "core-002" },
+      { key: "zone:p1:units:2", label: "Lane 2", player: "p1", row: "units", lane: 2 },
+    ],
+    { prompt: "Choose up to two targets", min: 1, max: 2 },
+  );
+  const answer = (instanceId: string): ActionBody => ({
+    type: "answer",
+    choiceId: "ch1",
+    selection: [{ pick: "instance", instanceId }],
+  });
+
+  it("matches a lit enemy unit, a lit own unit, a lit hero and a lit face-down card's zone", () => {
+    expect(matchTargetOption(view, single, { on: "unit", instanceId: "e1", side: "opponent", lane: 1 })).toBe(options[0]);
+    expect(matchTargetOption(view, single, { on: "unit", instanceId: "u1", side: "you", lane: 1 })).toBe(options[1]);
+    expect(matchTargetOption(view, single, { on: "hero", side: "opponent" })).toBe(options[3]);
+    expect(matchTargetOption(view, single, { on: "zone", side: "opponent", row: "backrow", lane: 3 })).toBe(options[2]);
+  });
+
+  it("matches nothing else: a hand card, an unoffered click, a list-only zone, another prompt", () => {
+    // A hand card answers from the list, even when offered.
+    expect(matchTargetOption(view, multi, { on: "hand", instanceId: "h1" })).toBeNull();
+    // A zone selection answers from the list too.
+    expect(matchTargetOption(view, multi, { on: "zone", side: "you", row: "units", lane: 2 })).toBeNull();
+    expect(matchTargetOption(view, single, { on: "unit", instanceId: "u2", side: "you", lane: 2 })).toBeNull();
+    expect(matchTargetOption(view, single, { on: "hero", side: "you" })).toBeNull();
+    expect(matchTargetOption(view, single, { on: "zone", side: "you", row: "backrow", lane: 3 })).toBeNull();
+    expect(matchTargetOption(view, single, { on: "switch", instanceId: "u1" })).toBeNull();
+    expect(matchTargetOption(view, waitingPending, { on: "unit", instanceId: "e1", side: "opponent", lane: 1 })).toBeNull();
+    expect(matchTargetOption(view, null, { on: "unit", instanceId: "e1", side: "opponent", lane: 1 })).toBeNull();
+    expect(
+      matchTargetOption(view, pendingFor("mode", options, { prompt: "Choose a target" }), {
+        on: "unit",
+        instanceId: "e1",
+        side: "opponent",
+        lane: 1,
+      }),
+    ).toBeNull();
+    const placement = pendingFor("target", options.slice(0, 3), { prompt: "Place 3 Plague Counters on a permanent" });
+    expect(
+      matchTargetOption(view, placement, { on: "unit", instanceId: "e1", side: "opponent", lane: 1 }),
+    ).toBeNull();
+  });
+
+  it("answers a one-pick click at once with the engine's listed body, and nothing for several picks", () => {
+    const listed = answer("e1");
+    expect(answerTargetPrompt(view, [listed], single, { on: "unit", instanceId: "e1", side: "opponent", lane: 1 })).toBe(
+      listed,
+    );
+    expect(answerTargetPrompt(view, [], single, { on: "hero", side: "opponent" })).toEqual({
+      type: "answer",
+      choiceId: "ch1",
+      selection: [{ pick: "hero", player: "p2" }],
+    });
+    expect(answerTargetPrompt(view, [], single, { on: "zone", side: "opponent", row: "backrow", lane: 3 })).toEqual(
+      answer("t1"),
+    );
+    // A prompt of several picks toggles instead, so it sends nothing.
+    expect(answerTargetPrompt(view, [], multi, { on: "unit", instanceId: "e1", side: "opponent", lane: 1 })).toBeNull();
+    expect(answerTargetPrompt(view, [], single, { on: "unit", instanceId: "u2", side: "you", lane: 2 })).toBeNull();
+  });
+
+  it("maps several-pick options to card, hero and hidden-zone testids, and nothing for one pick", () => {
+    const keys = targetBoardKeys(view, multi);
+    expect(keys?.get(testid.card("e1"))).toBe("instance:e1");
+    expect(keys?.get(testid.card("u1"))).toBe("instance:u1");
+    expect(keys?.get(testid.zone("opponent", "backrow", 3))).toBe("instance:t1");
+    expect(keys?.get(testid.hero("opponent"))).toBe("hero:p2");
+    // A hand card and a zone selection keep no board key.
+    expect(keys?.get(testid.handCard("h1"))).toBeUndefined();
+    expect(keys?.get(testid.zone("you", "units", 2))).toBeUndefined();
+    expect(targetBoardKeys(view, single)).toBeNull();
+    const placement = pendingFor("target", options.slice(0, 3), { prompt: "Place 3 Plague Counters on a permanent" });
+    expect(targetBoardKeys(view, placement)).toBeNull();
+    expect(targetBoardKeys(view, pendingFor("mode", options, { prompt: "Choose a target" }))).toBeNull();
+    expect(targetBoardKeys(view, waitingPending)).toBeNull();
+    expect(targetBoardKeys(view, null)).toBeNull();
   });
 });
 

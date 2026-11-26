@@ -75,6 +75,7 @@ class MatrixTests(unittest.TestCase):
         self.assertEqual([job["group"] for job in out["rust_test"]], JOBS)
         self.assertEqual(out["web_unit_shards"], [1, 2, 3, 4, 5, 6, 7, 8])
         self.assertEqual(out["e2e_smoke_shards"], [1, 2, 3, 4])
+        self.assertEqual(out["fuzz_slice_shards"], [1, 2, 3, 4])
         jobs = {job["group"]: job for job in out["rust_test"]}
         for n, name in enumerate(["rules", "rules_2", "rules_3"]):
             self.assertEqual(jobs[JOBS[n]]["test"], RULES.format(name))
@@ -85,7 +86,7 @@ class MatrixTests(unittest.TestCase):
         self.assertEqual({(job["shard"], job["shards"]) for job in jobs.values()},
                          {(1, 1), (1, 4), (2, 4), (3, 4), (4, 4)})
         self.assertEqual(jobs["tools, wasm 1/4"]["test"].split(" -- ")[1],
-                         "--skip fuzz:: --skip selfplay:: --skip positions::")
+                         "--skip fuzz:: --skip selfplay::")
 
     def test_a_new_rules_binary_gets_a_job_and_the_binaries_check_by_itself(self):
         self.repo.edit("crates/engine/Cargo.toml", '[[test]]\nname = "golden"',
@@ -117,11 +118,13 @@ class MatrixTests(unittest.TestCase):
         self.assertEqual(names, ["engine rules 1/2", "engine rules 2/2", "engine rules 2 1/2", "engine rules 2 2/2",
                                  "engine rules 3 1/2", "engine rules 3 2/2"])
 
-    def test_the_web_and_e2e_counts_come_from_the_file(self):
+    def test_the_web_e2e_and_fuzz_counts_come_from_the_file(self):
         self.repo.edit(matrix.COUNTS, "unit = 8", "unit = 5")
         self.repo.edit(matrix.COUNTS, "smoke = 4", "smoke = 5")
+        self.repo.edit(matrix.COUNTS, "slice = 4", "slice = 2")
         out = self.repo.outputs()
-        self.assertEqual((out["web_unit_shards"], out["e2e_smoke_shards"]), ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5]))
+        self.assertEqual((out["web_unit_shards"], out["e2e_smoke_shards"], out["fuzz_slice_shards"]),
+                         ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], [1, 2]))
 
     def test_it_refuses_what_could_hide_a_job_or_flood_the_runners(self):
         for old, new, says in [
@@ -134,6 +137,8 @@ class MatrixTests(unittest.TestCase):
             ("unit = 8", "unit = 0", "from 1 to 8"),
             ("unit = 8", "units = 8", "holds only `unit`"),
             ("[e2e]\nsmoke = 4", "[e2e]", "has no `smoke`"),
+            ("slice = 4", "slice = 9", "from 1 to 8"),
+            ("[fuzz]\nslice = 4", "[fuzz]", "has no `slice`"),
             ("[web]", "[wbe]\nunit = 1\n[web]", "no job reads the table wbe"),
         ]:
             with self.subTest(new=new):
@@ -205,14 +210,14 @@ class ShardTests(unittest.TestCase):
     def test_the_matrix_command_prints_one_output_a_line(self):
         run = subprocess.run([sys.executable, str(SCRIPT), "matrix"], text=True, capture_output=True, check=True)
         self.assertEqual([line.split("=", 1)[0] for line in run.stdout.splitlines()],
-                         ["rust_test", "web_unit_shards", "e2e_smoke_shards"])
+                         ["rust_test", "web_unit_shards", "e2e_smoke_shards", "fuzz_slice_shards"])
         self.assertIn("rust (test engine rules 3)", run.stderr)
 
 
 class WorkflowTests(unittest.TestCase):
     def test_ci_yml_reads_every_output_and_names_no_group_itself(self):
         text = (REPO_ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-        for output in ("rust_test", "web_unit_shards", "e2e_smoke_shards"):
+        for output in ("rust_test", "web_unit_shards", "e2e_smoke_shards", "fuzz_slice_shards"):
             self.assertIn(f"${{{{ steps.matrix.outputs.{output} }}}}", text)
             self.assertIn(f"needs.changes.outputs.{output}", text)
         self.assertNotIn("- group: ", text)

@@ -118,6 +118,20 @@ pub fn targets_in_scope(ctx: &EffectContext<'_>, scope: Option<&TargetScope>) ->
                     instance_id: card.id.clone(),
                 });
             }
+            // R4665000: a card lying on a unit zone is a backrow card there, no Unit.
+            for slot in slots_of(player, Row::Units) {
+                let Some(card) = card_at(ctx.state, slot) else {
+                    continue;
+                };
+                if !crate::zones::lies_on_unit_zone(ctx.state, card)
+                    || (excludes_self && Some(card.id.as_str()) == self_id)
+                {
+                    continue;
+                }
+                out.push(Selection::Instance {
+                    instance_id: card.id.clone(),
+                });
+            }
         }
         if kinds.contains(&FilterOf::Hero) {
             out.push(Selection::Hero { player });
@@ -890,6 +904,10 @@ pub struct PileSpec {
     pub zone: PileZone,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub player: Option<PlayerSpec>,
+    /// R4586005: only the top N of a library, in library order (`library[0]` first). Other piles
+    /// read the whole pile; absent, a library does too.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub top: Option<i32>,
 }
 
 const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
@@ -906,9 +924,16 @@ fn creation_number(id: &str) -> f64 {
 
 /// A pile's cards in `pick` order. A library's are in creation order, since its own order is hidden
 /// from both players (§9.1). The field's are the unit piles' tops, then the backrow (R13: a dormant
-/// card is not on the field).
-fn pile_cards(state: &GameState, player: PlayerId, zone: PileZone) -> Vec<&CardInstance> {
+/// card is not on the field). With `top`, a library offers only its first N in library order,
+/// unsorted: the top of the deck as it lies.
+fn pile_cards(state: &GameState, player: PlayerId, zone: PileZone, top: Option<i32>) -> Vec<&CardInstance> {
     let side = &state.players[player];
+    if zone == PileZone::Library
+        && let Some(n) = top
+    {
+        let n = n.max(0) as usize;
+        return side.library.iter().take(n).collect();
+    }
     let pile = match zone {
         PileZone::Field => {
             let mut out: Vec<&CardInstance> = active_units_of(state, player);
@@ -992,6 +1017,8 @@ pub struct ChoosePickArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub except: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub data: StepData,
 }
 
@@ -1002,14 +1029,19 @@ pub struct ChoosePickArgs {
 pub fn choose_pick(args: ChoosePickArgs) -> Effect {
     Effect::new("choosePick", move |ctx| {
         let filter = args.filter.clone().unwrap_or_default();
+        let except: IndexSet<String> = args
+            .except
+            .as_ref()
+            .map(|list| list.iter().cloned().collect())
+            .unwrap_or_default();
         let mut seen: IndexSet<String> = IndexSet::new();
         let mut options: Vec<PromptOption> = Vec::new();
         let reader: &EffectContext<'_> = &*ctx;
         let state: &GameState = &*reader.state;
         for pile in &args.from {
             let player = player_of(reader, pile.player.unwrap_or(PlayerSpec::SelfSide));
-            for card in pile_cards(state, player, pile.zone) {
-                if seen.contains(&card.id) || !pickable(state, card, &filter) {
+            for card in pile_cards(state, player, pile.zone, pile.top) {
+                if seen.contains(&card.id) || except.contains(&card.id) || !pickable(state, card, &filter) {
                     continue;
                 }
                 seen.insert(card.id.clone());

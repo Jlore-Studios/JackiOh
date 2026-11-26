@@ -1,8 +1,9 @@
 //! Face-down plays as Traps: Cloaked (#783, R783004–R783010, R1040–R1046).
 //!
 //! A Unit, Spell or Field Spell that has Cloaked in its controller's hand (printed, given, or lent by
-//! an aura there, §10.4 layer 5: Knowledge Breaker (#45) and its Prime to Units, Paranoia (#99) to
-//! Spells, `cloak_hand_aura`) may be set face-down at its own price (R783005). A set card is a Field
+//! an aura there, §10.4 layer 5: Knowledge Breaker Prime (#45.1) to Units, as Knowledge Breaker (#45)
+//! did through v0.6.13h, Paranoia (#99) to Spells, `cloak_hand_aura`) may be set face-down at its own
+//! price (R783005). A set card is a Field
 //! Trap or a Trap until it reveals, hidden like any set Trap (R33, R1046), its text dormant. It reveals
 //! only when its controller activates its Reveal (`CLOAKED_REVEAL`), offered only while the card can
 //! come out whole (`reveal_can_complete`). The form ends when the card leaves the field (R78). Under
@@ -45,16 +46,20 @@ pub fn is_cloaked_set(card: &CardInstance) -> bool {
 pub fn printed_cloaked_def_ids() -> Vec<String> {
     crate::catalog::query(&crate::catalog::CatalogQueryArgs::default())
         .into_iter()
-        .filter(|def| {
-            [&def.base, &def.radiant].into_iter().any(|face| {
-                !matches!(
-                    face.type_.unwrap_or(def.type_),
-                    CardType::Trap | CardType::FieldTrap
-                ) && crate::wire::has_keyword(&face.keywords, KeywordKind::Cloaked)
-            })
-        })
+        .filter(|def| prints_cloaked(def))
         .map(|def| def.id.clone())
         .collect()
+}
+
+/// R783009: whether a definition prints Cloaked on a face that is no Trap, so its card may be set
+/// face-down by it.
+pub fn prints_cloaked(def: &crate::wire::CardDef) -> bool {
+    [&def.base, &def.radiant].into_iter().any(|face| {
+        !matches!(
+            face.type_.unwrap_or(def.type_),
+            CardType::Trap | CardType::FieldTrap
+        ) && crate::wire::has_keyword(&face.keywords, KeywordKind::Cloaked)
+    })
 }
 
 /// R783007, R783009: every catalog definition an aura on the field lends Cloaked to in this player's
@@ -334,6 +339,25 @@ pub fn fire_cloaked_reveal(sink: &mut EngineSink<'_>, card: &CardInstance, event
     crate::traps::fire_trap(sink, &reveal, event, Some(card.controller));
 }
 
+/// R4590000 (IA #134 Rootkit Runner): a revealed Unit's "When this is revealed" hook, run once it
+/// has come out and its Cry has run, as its controller. Resumable like `prompts::run_evolve`.
+/// Returns true when the whole hook ran. It never runs on a face-up play: only this reveal path
+/// calls it.
+pub fn run_revealed(sink: &mut EngineSink<'_>, card: &CardInstance, controller: PlayerId) -> bool {
+    if crate::scripts::script_of(sink.state, card).revealed.is_none() {
+        return true;
+    }
+    crate::prompts::run_hook_resumable(
+        sink,
+        card,
+        "revealed",
+        crate::prompts::HookResumableOptions {
+            controller: Some(controller),
+            ..crate::prompts::HookResumableOptions::default()
+        },
+    )
+}
+
 /// ME-ALTPLAY: the one effect a reveal runs — a Unit animates then cries, a Spell resolves. A Field
 /// Spell set by its Cloaked (R783006) runs its Cry from where it stands, as a Spell's text runs, and
 /// the firing's end turns it into its own card there (`traps::consume_trap`).
@@ -372,6 +396,12 @@ fn reveal_effect() -> Effect {
                 return;
             };
             crate::cry_trigger::trigger_cry_of(ctx, &live, controller);
+            // R4590000: after the Cry, "When this is revealed" runs once. When the Cry paused on a
+            // question, the hook does not run: the reveal resumes, and no C6 card has both a Cry
+            // and this hook.
+            if !crate::work::paused(ctx) {
+                run_revealed(ctx, &live, controller);
+            }
         } else {
             // R1045: the Echo stamped as it was set, and Radiant Paranoia's while one acts on its
             // controller's field now.

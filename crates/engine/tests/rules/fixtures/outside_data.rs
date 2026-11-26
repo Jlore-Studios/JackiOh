@@ -3,7 +3,10 @@
 //! R1183003) and the code-block Discover (R1183005), each trimmed to the one property its name
 //! promises (the real cards are M+ #2, #18 and #25). Ids `od-…` from 11830.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

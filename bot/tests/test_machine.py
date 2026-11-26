@@ -75,7 +75,7 @@ class StarterTests(unittest.TestCase):
     def test_a_box_wakes_only_for_its_own_runners(self):
         """With two boxes that sleep (`RUNNER_LABELS`), each starter watches its labels: a job
         for the other box's runner wakes that box, and the night box sleeps through it (and the
-        other way round). The training box is always on, so it has no starter."""
+        other way round)."""
         get, _ = fake_api({"in_progress": [{"id": 7}]}, {7: [
             job("work", "queued", ["night-vm-gpt"]),
             job("other", "queued", ["night-vm-other"])]})
@@ -376,10 +376,10 @@ class OnBoxTests(unittest.TestCase):
 
 
 class SetupTests(unittest.TestCase):
-    """setup.sh, read as text: what each box gets (README.md, Building it; The training box)."""
+    """setup.sh, read as text: what each box gets (README.md, Building it)."""
 
     text = SETUP.read_text(encoding="utf-8")
-    training, _, night = text.partition('if [ -n "$training" ]; then')[2].partition("\n  exit 0\nfi\n")
+    night = text
 
     def test_it_parses(self):
         self.assertEqual(subprocess.run(["bash", "-n", str(SETUP)]).returncode, 0)
@@ -393,7 +393,7 @@ class SetupTests(unittest.TestCase):
 
     def test_both_boxes_swap_to_compressed_memory_before_the_swapfile(self):
         """Three jobs overrun an 8 GB box; paging to the swapfile on EBS stalled one for 766 s."""
-        shared = self.text.split('if [ -n "$training" ]; then', 1)[0]
+        shared = self.text
         self.assertIn("apt-get install -y -qq zram-tools", shared)
         self.assertIn("printf 'ALGO=zstd\\nPERCENT=50\\nPRIORITY=100\\n' > /etc/default/zramswap",
                       shared)
@@ -406,63 +406,25 @@ class SetupTests(unittest.TestCase):
         self.assertIn(f"RUST_TOOLCHAIN={channel}\n", self.text)
         self.assertIn('toolchain install "$RUST_TOOLCHAIN" \\\n        --profile minimal '
                       '--component rustfmt,clippy', self.text)
-        self.assertIn('install_rust "$user"', self.training)
         self.assertIn('install_rust "$user"', self.night)
         # The night box's runners find it first on their PATH, every lane's runner alike.
         self.assertIn('for dir in "/home/$user"/actions-runner*; do', self.night)
         self.assertIn('echo "/home/$user/.cargo/bin:/usr/local/bin:', self.night)
 
-    def test_the_training_box_keeps_three_lanes_starts_none_and_never_powers_off(self):
-        self.assertIn('TRAIN_LANES="improve unban gather"', self.text)
-        self.assertIn('user="agent-train-$lane"', self.training)
-        self.assertIn("apt-get install -y -qq gh", self.training)
-        unit = self.training.split("jackioh-train@.service <<'EOF'\n", 1)[1].split("\nEOF\n", 1)[0]
-        for line in ("User=agent-train-%i",
-                     "ExecStart=/bin/sh /home/agent-train-%i/JackiOh/training/loop.sh %i",
-                     "Restart=always", "RestartSec=60",
-                     "Environment=MUSE_MODEL=muse-spark-1.3-contributor",
-                     "Environment=MUSE_NO_AUTO_UPDATE=1",
-                     "Environment=RAYON_NUM_THREADS=2",
-                     "Environment=JACKIOH_TRAINING_OUT=/home/agent-train-%i/training-out/%i",
-                     "WantedBy=multi-user.target"):
-            self.assertIn(f"\n{line}\n", f"\n{unit}\n", line)
-        # #1677: the two LLM lanes are stopped, gather since 2026-11-04 too (it filed staging's
-        # database alone, R1933001), and setup never starts any of them again.
-        for lane in ("improve", "unban", "gather"):
-            self.assertNotIn(f"systemctl enable --now jackioh-train@{lane}", self.training, lane)
-        # No idle stop, no runner and no CloudWatch agent: those are the night box's alone.
-        for night_only in ("night-vm-idle-stop.timer <<", "actions-runner", "amazon-cloudwatch-agent"):
-            self.assertNotIn(night_only, self.training, night_only)
-            self.assertIn(night_only, self.night, night_only)
-        self.assertIn("systemctl disable --now night-vm-idle-stop.timer", self.training)
+    def test_no_box_runs_a_training_lane(self):
+        """#4701: the training box's lanes are gone, and --training with them."""
+        self.assertIn('[ "${1:-}" != --training ] || {', self.text)
+        self.assertLess(self.text.index("!= --training"), self.text.index("apt-get update"))
+        for gone in ("TRAIN_LANES", "training/loop.sh", "jackioh-train@.service"):
+            self.assertNotIn(gone, self.text, gone)
 
-    def test_the_training_lanes_run_muse(self):
-        """#1272: the improve and unban lanes run Muse, which both boxes install."""
-        self.assertIn("\n  install_muse\n", self.training)
+    def test_both_boxes_run_muse(self):
         self.assertIn("\ninstall_muse\n", self.night)
-        loop = (REPO_ROOT / "training" / "loop.sh").read_text(encoding="utf-8")
-        self.assertIn('muse exec --yolo --disable-web-tools --workspace "$repo"', loop)
-        self.assertIn('--model "$MUSE_MODEL"', loop)
-
-    def test_the_training_lanes_clean_their_own_disk(self):
-        """The training box has no clean-up timer: each lane's cycle starts by giving back its own
-        builds but the release one when the disk is short, and its test builds carry no debug info,
-        as the night box's jobs (`bot-night.yml`)."""
-        loop = (REPO_ROOT / "training" / "loop.sh").read_text(encoding="utf-8")
-        self.assertIn('disk_floor="${TRAIN_DISK_FLOOR_GB:-20}"', loop)
-        self.assertIn("cycle() {\n  cd \"$repo\" || return 1\n", loop)
-        cycle = loop[loop.index("cycle() {"):]
-        self.assertLess(cycle.index("free_disk"), cycle.index("gather"))
-        self.assertIn('find "$repo/target" -mindepth 1 -maxdepth 1 ! -name release', loop)
-        for setting in ("CARGO_PROFILE_DEV_DEBUG=0", "CARGO_PROFILE_TEST_DEBUG=0"):
-            self.assertIn(setting, loop)
-            self.assertIn(setting, (REPO_ROOT / ".github/workflows/bot-night.yml").read_text())
 
     def test_the_night_box_has_a_chrome_for_the_ui_walkthroughs(self):
-        """#816: scripts/browse.sh finds google-chrome-stable on PATH; the training box needs none."""
+        """#816: scripts/browse.sh finds google-chrome-stable on PATH."""
         self.assertIn("google-chrome-stable_current_amd64.deb", self.night)
         self.assertIn("apt-get install -y -qq --only-upgrade google-chrome-stable", self.night)
-        self.assertNotIn("google-chrome", self.training)
         browse = (REPO_ROOT / "scripts" / "browse.sh").read_text(encoding="utf-8")
         self.assertIn("google-chrome-stable", browse)
 

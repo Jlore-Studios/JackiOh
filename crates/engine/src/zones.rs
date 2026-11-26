@@ -666,6 +666,30 @@ pub struct PlaceOnFieldOptions {
     pub stack: Option<bool>,
 }
 
+/// R4665000: whether this card lies on a unit zone: a card whose face is no Unit's, on a unit zone's
+/// pile with no position (S #9 Ticketed stacked on a Unit). It fills the zone and is a permanent, but no
+/// Unit: no unit walk sees it, it neither attacks nor is attacked, and no health judges it. A card that
+/// animates there has a position and is a Unit (R383).
+pub fn lies_on_unit_zone(state: &GameState, card: &CardInstance) -> bool {
+    card.position.is_none()
+        && matches!(card.zone, Zone::Field { row: Row::Units, .. })
+        && !is_unit_face(state, card)
+}
+
+/// R4665000: lay a card that is no Unit, just placed on top of a unit zone's pile, down there: it takes
+/// no position, so it lies on the zone rather than standing in it (`lies_on_unit_zone`).
+pub fn lie_down(state: &mut GameState, instance_id: &str) {
+    let Some(card) = find_instance(state, instance_id).cloned() else {
+        return;
+    };
+    if !matches!(card.zone, Zone::Field { row: Row::Units, .. }) || is_unit_face(state, &card) {
+        return;
+    }
+    if let Some(live) = find_instance_mut(state, instance_id) {
+        live.position = None;
+    }
+}
+
 /// Where `place_on_field` sets the card down, decided before anything changes.
 enum Landing {
     Units,
@@ -794,16 +818,19 @@ fn place_with(
 
     // R638: a move from one field zone to another (a steal, a swap, a rotation) is no arrival.
     let from_off_field = instance.zone.z() != ZoneName::Field;
+    // R4665000: a card lying on a unit zone keeps lying there as its pile moves whole (`lie_down` lays
+    // it there first).
+    let lies = slot.row == Row::Units && lies_on_unit_zone(state, instance);
     instance.controller = slot.player;
     instance.zone = zone_of(slot);
-    if (slot.row == Row::Units || is_unit_face(state, instance)) && instance.position.is_none() {
+    if (slot.row == Row::Units || is_unit_face(state, instance)) && instance.position.is_none() && !lies {
         instance.position = Some(Position::Atk);
     }
     // B3.3 rule 1, R385, R638: a printed Brittle starts as its card enters the field, and a held count starts ticking.
     start_brittle_on_field(state, instance, from_off_field);
     // R1839000, R3556000: a Unit or a face-up Field Spell printing Dormant enters the field Dormant
     // (a carried Unit included, R446).
-    let as_unit = slot.row == Row::Units || is_unit_face(state, instance);
+    let as_unit = (slot.row == Row::Units && !lies) || is_unit_face(state, instance);
     crate::slumber::start_slumber_on_field(state, instance, from_off_field);
     // R1852000: and a Starship's hull starts its memory as it does.
     crate::starship::start_starship_on_field(state, instance, from_off_field, as_unit);
@@ -962,11 +989,16 @@ pub fn replace_in_zone(state: &mut GameState, old: &CardInstance, replacement: &
     replacement.zone = old.zone.clone();
     // R3546002: a Transform keeps the size (Flicker does too, `flicker_in_place`).
     replacement.giga = old.giga;
-    if (row == Row::Units || is_unit_face(state, replacement)) && replacement.position.is_none() {
+    let as_unit = row == Row::Units || is_unit_face(state, replacement);
+    if as_unit && replacement.position.is_none() {
         replacement.position = Some(Position::Atk);
     }
-    // B3.3 rule 1, R385: the new card has entered the field, so its printed Brittle starts.
+    // B3.3 rule 1, R385, R4816000: the new card has entered the field, so it starts what every arrival
+    // from off it starts (`place_with`): its printed Brittle, its printed Dormant (R1839000, R3556000)
+    // and a hull's memory (R1852000).
     start_brittle_on_field(state, replacement, true);
+    crate::slumber::start_slumber_on_field(state, replacement, true);
+    crate::starship::start_starship_on_field(state, replacement, true, as_unit);
 
     let placed = replacement.clone();
     match place {
@@ -1247,6 +1279,8 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.stats_override = None;
     instance.armor_override = None;
     instance.taunt_suppressed_turn = None;
+    // R4587000: a this-turn buff is a status of the stay on the field, gone with R78's reset.
+    instance.turn_buff = None;
     instance.face_up = None;
     instance.revealed = None;
     instance.last_damaged_by = None;
@@ -1277,6 +1311,9 @@ pub fn reset_instance(instance: &mut CardInstance) {
     instance.half = None;
     instance.shared_chain = None;
     instance.split_chain = None;
+    // R4591000, R4591001: so are a set Attack and Containment, stamped on the Unit on the field.
+    instance.attack_this_turn = None;
+    instance.contained = None;
 }
 
 /// R766 (#473): a card that reaches a graveyard or exile costs its printed cost again (R65), a
@@ -1397,17 +1434,6 @@ pub enum MoveResult {
     Moved,
     Vanished,
     Replaced,
-}
-
-impl MoveResult {
-    /// The literal, as serde writes it.
-    pub fn as_str(self) -> &'static str {
-        match self {
-            MoveResult::Moved => "moved",
-            MoveResult::Vanished => "vanished",
-            MoveResult::Replaced => "replaced",
-        }
-    }
 }
 
 // B5 E5: "would go to a graveyard" (damage and combat)
@@ -1562,6 +1588,7 @@ pub fn move_to_zone(
     // (R87) carries no link of its chain (R28) into a play of its own.
     // R2618000: it lands as its keeper's own card, before R78's reset hands control back to its owner.
     if let Some(keeper) = keeper {
+        crate::origin::note_origin(crate::recursion_log::kept(state), instance);
         instance.owner = keeper;
     }
     let to_graveyard_or_exile = zone == OffFieldZone::Graveyard || zone == OffFieldZone::Exile;
@@ -1651,7 +1678,10 @@ pub fn units_on_field_of(state: &GameState, player: PlayerId) -> Vec<&CardInstan
             .and_then(|index| side.units.get(index))
             .and_then(Option::as_ref)
             .and_then(|pile| pile.first());
-        if let Some(top) = top {
+        // R4665000: a card lying on a unit zone is no Unit.
+        if let Some(top) = top
+            && !lies_on_unit_zone(state, top)
+        {
             units.push(top);
         }
     }
@@ -1686,13 +1716,24 @@ pub fn stands_in_backrow(state: &GameState, card: &CardInstance) -> bool {
 /// R1081000: whether `card` is a Unit in a zone of its own on the field (a unit zone, or standing in a
 /// backrow zone), as a "your Units" or "a Unit on the field" read asks. A carried Unit is not (R446).
 pub fn in_units_row_or_standing(state: &GameState, card: &CardInstance) -> bool {
-    matches!(card.zone, Zone::Field { row: Row::Units, .. }) || stands_in_backrow(state, card)
+    // R4665000: a card lying on a unit zone is no Unit.
+    (matches!(card.zone, Zone::Field { row: Row::Units, .. }) && !lies_on_unit_zone(state, card))
+        || stands_in_backrow(state, card)
 }
 
 /// R1081000: whether `neighbour` is adjacent to `origin` in the sense an effect or a Cleave reads: beside a
 /// Unit standing in the backrow, only another Unit standing there, never a Trap or a Field Spell (§3.1
-/// Adjacent, §4.4 step 10 hit "units adjacent"). `adjacent` itself only names the zones.
+/// Adjacent, §4.4 step 10 hit "units adjacent"). R4665000: and never a card lying on a unit zone, which is
+/// no Unit; "the permanents beside" a pick read `is_adjacent_permanent`. `adjacent` itself only names the
+/// zones.
 pub fn is_adjacent_card(state: &GameState, origin: &CardInstance, neighbour: &CardInstance) -> bool {
+    !lies_on_unit_zone(state, neighbour) && is_adjacent_permanent(state, origin, neighbour)
+}
+
+/// §3.1, R2198003: whether `neighbour` is among "the permanents beside" `origin` (Core #34 Collateral
+/// Damage's Radiant, a Spell's Cleave on a board pick): R1081000's rule beside a Unit standing in the
+/// backrow, and a card lying on a unit zone is one, the Field Spell it is (R4665000).
+pub fn is_adjacent_permanent(state: &GameState, origin: &CardInstance, neighbour: &CardInstance) -> bool {
     !stands_in_backrow(state, origin) || is_standing_unit(state, neighbour)
 }
 
@@ -1707,6 +1748,16 @@ pub fn standing_units_of(state: &GameState, player: PlayerId) -> Vec<&CardInstan
                 .and_then(Option::as_ref)
         })
         .filter(|top| is_standing_unit(state, top))
+        .collect()
+}
+
+/// R4665000: the cards lying on `player`'s unit zones, in lane order: backrow cards (Field Spells) there,
+/// no Units, which every backrow walk reads after the side's backrow lanes.
+pub fn lying_on_unit_zones_of(state: &GameState, player: PlayerId) -> Vec<&CardInstance> {
+    slots_of(player, Row::Units)
+        .into_iter()
+        .filter_map(|slot| card_at(state, slot))
+        .filter(|top| lies_on_unit_zone(state, top))
         .collect()
 }
 

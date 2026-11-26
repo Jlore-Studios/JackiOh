@@ -17,7 +17,7 @@ use serde::Serialize;
 
 use jackioh_engine::config::{END_TIMES_COST, HERO_POWER_DISCOUNT, POWERS_THROUGH_V0_5_13G};
 use jackioh_engine::effects::tune::TuneDirection;
-use jackioh_engine::effects::{bounce, summon};
+use jackioh_engine::effects::{bounce, summon, transform};
 use jackioh_engine::subsystems::activate::uses_this_turn;
 use jackioh_engine::subsystems::hero_power::{
     DISCOVER_POWER_PROMPT, END_TIMES_PRICE_PARAM, HERO_POWER_NAMES, HERO_POWERS, HeroPowerName, POWER_KEY,
@@ -122,8 +122,20 @@ fn armored() -> CardDef {
     )
 }
 
+/// A Field Spell with no text, for a Transform to turn into a Heroic Power (R4816000).
+fn lamp() -> CardDef {
+    def("lamp", "Field Spell", 1603, json!({}))
+}
+
 fn defs() -> Vec<CardDef> {
-    vec![heroic(), rush_token(), felinor_token(), ghoul_token(), armored()]
+    vec![
+        heroic(),
+        rush_token(),
+        felinor_token(),
+        ghoul_token(),
+        armored(),
+        lamp(),
+    ]
 }
 
 fn heroic_script(radiant: bool) -> Script {
@@ -1181,6 +1193,45 @@ mod heroic_power_rolling_the_power_r43_r78 {
         assert!(powers.len() > 1);
     }
 
+    /// R4816000: a Transform's new card arrives with no Cry (S+ #103 making #98 from a (0)-cost Field
+    /// Spell), so its start-of-game clause runs and it rolls its power, asking nothing.
+    #[test]
+    fn r4816000_r3134002_a_heroic_power_a_transform_makes_rolls_its_power() {
+        let mut state = game("r4816000-transformed");
+        let old = put(&mut state, &lamp().id, slot(P1, Row::Backrow, 1), json!({}));
+        let mut sink = sink_for(&mut state);
+        {
+            let mut ctx = make_context(
+                &mut sink,
+                None,
+                HookOptions {
+                    controller: Some(P1),
+                    ..Default::default()
+                },
+            );
+            apply_effects(
+                &[transform(json_as(
+                    json!({ "instanceId": old.id, "defId": heroic().id }),
+                ))],
+                &mut ctx,
+            );
+        }
+        let made = sink
+            .state
+            .players
+            .p1
+            .backrow
+            .iter()
+            .flatten()
+            .find(|card| card.def_id == heroic().id)
+            .cloned()
+            .expect("the Heroic Power the Transform made");
+        assert_ne!(made.id, old.id, "a new card lies in the zone");
+        assert!(sink.state.pending.is_none(), "the roll asks nothing");
+        assert!(is_power_name(made.memory.get(POWER_KEY)), "it rolled its power");
+        assert!(power_ability_of(sink.state, &made).is_some());
+    }
+
     #[test]
     fn r151_r3134002_a_summoned_copy_of_either_face_has_its_power_to_activate() {
         for radiant in [false, true] {
@@ -1293,5 +1344,38 @@ mod heroic_power_rolling_the_power_r43_r78 {
         let replayed = play_heroic(&state, &on_field_now(&state, &card.id));
         assert_eq!(replayed.error, None);
         assert_eq!(offered(&replayed.state).len() as i32, DISCOVER_OPTIONS);
+    }
+}
+
+// R4828000: End Times' bank is the card's tuning (`Tuning.taken`), beside the cut it records.
+mod heroic_power_end_times_bank_r4828000 {
+    use super::*;
+    use jackioh_engine::tuning::{set_taken, sum_tunings, taken_of};
+
+    /// A tuning that sets End Times' price to `price` and banks `bank` cuts against it.
+    fn cut(price: i32, bank: i32) -> Option<Tuning> {
+        Some(Tuning {
+            set: Some(IndexMap::from([(END_TIMES_PRICE_PARAM.to_string(), price)])),
+            taken: Some(IndexMap::from([(END_TIMES_PRICE_PARAM.to_string(), bank)])),
+            ..Tuning::default()
+        })
+    }
+
+    #[test]
+    fn r4828000_a_fuse_keeps_the_bank_of_the_ingredient_whose_set_price_it_keeps() {
+        let fused = sum_tunings(&[cut(7, 3), cut(8, 2)]);
+        assert_eq!(fused, cut(7, 3));
+        let fused = sum_tunings(&[None, cut(8, 2), cut(7, 3)]);
+        assert_eq!(fused, cut(8, 2));
+    }
+
+    #[test]
+    fn r4828000_a_bank_given_back_to_0_leaves_no_tuning() {
+        let mut card = powered(&mut game("r4828000-bank"), "rush", false, 1);
+        set_taken(&mut card, END_TIMES_PRICE_PARAM, 3);
+        assert_eq!(taken_of(&card, END_TIMES_PRICE_PARAM), 3);
+        set_taken(&mut card, END_TIMES_PRICE_PARAM, 0);
+        assert_eq!(taken_of(&card, END_TIMES_PRICE_PARAM), 0);
+        assert_eq!(card.tuning, None);
     }
 }

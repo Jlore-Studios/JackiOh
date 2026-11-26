@@ -9,7 +9,7 @@ use jackioh_engine::testkit::*;
 use jackioh_engine::view_for::view_for;
 
 use super::fixtures::board_geometry::*;
-use super::fixtures::harness::{live, run_effect, slot};
+use super::fixtures::harness::{live, run_effect, run_with_targets, slot};
 
 /// p1's main phase with `p1` and `p2` as given, plain cards to draw, and no turn that ends by
 /// itself, so each test ends every turn it means to.
@@ -336,74 +336,47 @@ mod r3554007_damage_chains {
         assert_eq!(damage_on(s.state(), &first), 3, "no share reached back");
     }
 
-    const IMMUNE: &str = "stand-in (1) 4/4 Immune to Spells";
-
-    /// `hit`, dealt by p1's resolving Spell, then the state check.
-    fn spell_hit(s: &mut Scenario, id: &str, amount: i32) -> Vec<GameEvent> {
-        let state = s.state_mut();
-        let me = new_instance(
-            &mut *state,
-            "stand-in (0) Spell",
-            P1,
-            Zone::Resolving { player: P1 },
-        );
-        let effect = effects::damage(json_as(json!({
-            "to": { "of": "instance", "instanceId": id },
-            "amount": amount,
-        })));
-        let mut events: Vec<GameEvent> = Vec::new();
-        let mut rng = Rng::new(&state.seed, state.rng_cursor);
-        {
-            let mut sink = EngineSink::new(&mut *state, &mut events, &mut rng);
-            let options = HookOptions {
-                controller: Some(P1),
-                ..HookOptions::default()
-            };
-            {
-                let mut ctx = make_context(&mut sink, Some(&me), options);
-                apply_effects(&[effect], &mut ctx);
-            }
-            state_check(&mut sink);
-        }
-        state.rng_cursor = rng.cursor();
-        events
-    }
-
     #[test]
-    fn r4604001_a_spells_hit_carried_by_a_chain_passes_a_unit_immune_to_spells_by() {
-        // A shared chain: the Spell's hit on its other member echoes nowhere onto the immune Unit.
-        let mut s = board(
-            "r4604001-shared",
-            json!({}),
-            json!({ "field": [field_unit(PLAIN, 1), field_unit(IMMUNE, 2)] }),
-        );
-        chain(&mut s, "enemy", "shared");
-        let (plain, immune) = (id_at(&s, P2, 1), id_at(&s, P2, 2));
-        let events = spell_hit(&mut s, &plain, 1);
-        assert_eq!(dealt_to(&events, &plain), vec![1]);
-        assert_eq!(dealt_to(&events, &immune), Vec::<i32>::new());
-        assert_eq!(damage_on(s.state(), &immune), 0);
-        // A sourceless hit still echoes onto it.
-        let events = hit(&mut s, &plain, 1);
-        assert_eq!(dealt_to(&events, &immune), vec![1]);
-        assert_eq!(damage_on(s.state(), &plain), 2);
-
-        // A split chain: the immune member's share is dealt nowhere, and the others keep theirs.
-        let mut s = board(
-            "r4604001-split",
-            json!({
-                "field": [field_unit(BULWARK, 1), field_unit(BULWARK, 2), field_unit(IMMUNE, 4)],
-            }),
-            json!({}),
-        );
-        chain(&mut s, "self", "split");
-        let ids = [id_at(&s, P1, 1), id_at(&s, P1, 2), id_at(&s, P1, 4)];
-        let events = spell_hit(&mut s, &ids[0], 6);
-        for id in &ids[..2] {
-            assert_eq!(damage_on(s.state(), id), 2, "{id} took its share");
+    fn r4599006_a_spell_s_echo_and_share_pass_a_member_immune_to_spells_by() {
+        const IMMUNE: &str = "stand-in (1) 1/20 Immune to Spells";
+        let enemies = json!({
+            "field": [field_unit(BULWARK, 1), field_unit(IMMUNE, 2), field_unit(BULWARK, 3)],
+        });
+        let p1 = json!({ "hand": ["stand-in (0) Spell"] });
+        // The hit as the Spell in p1's hand deals it.
+        let spell_hit = |s: &mut Scenario, id: &str, amount: i32| {
+            let spell = s.state().players[P1].hand[0].clone();
+            let effect = effects::damage(json_as(json!({
+                "to": { "of": "instance", "instanceId": id },
+                "amount": amount,
+            })));
+            run_with_targets(s.state_mut(), effect, Some(&spell), vec![], P1)
+        };
+        for kind in ["shared", "split"] {
+            let mut s = board(&format!("r4599006-{kind}"), p1.clone(), enemies.clone());
+            chain(&mut s, "enemy", kind);
+            let ids = [id_at(&s, P2, 1), id_at(&s, P2, 2), id_at(&s, P2, 3)];
+            spell_hit(&mut s, &ids[0], 6);
+            // Shared: the 6 echoes onto the other plain member. Split: the 6 is divided between the two
+            // plain members only.
+            let each = if kind == "shared" { 6 } else { 3 };
+            assert_eq!(damage_on(s.state(), &ids[0]), each, "{kind}");
+            assert_eq!(damage_on(s.state(), &ids[2]), each, "{kind}");
+            assert_eq!(
+                damage_on(s.state(), &ids[1]),
+                0,
+                "{kind}: the immune member is passed by"
+            );
+            // A hit from no Spell still reaches it: 6 echoed, or 6 among three.
+            let mut s = board(&format!("r4599006-{kind}-plain"), p1.clone(), enemies.clone());
+            chain(&mut s, "enemy", kind);
+            let ids = [id_at(&s, P2, 1), id_at(&s, P2, 2), id_at(&s, P2, 3)];
+            hit(&mut s, &ids[0], 6);
+            let each = if kind == "shared" { 6 } else { 2 };
+            for id in &ids {
+                assert_eq!(damage_on(s.state(), id), each, "{kind}: {id}");
+            }
         }
-        assert_eq!(dealt_to(&events, &ids[2]), Vec::<i32>::new());
-        assert_eq!(damage_on(s.state(), &ids[2]), 0);
     }
 }
 

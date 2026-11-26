@@ -1,38 +1,22 @@
-# The AI training lanes
+# The AI's training
 
-**The learn lane is retired (#4159, R4159000)**: the AI plays its hand-written evaluation `AI_EVAL`
-alone, and the learned network and the policy prior are gone from it. From 2026-10-25 the AI improved
-itself through the `learn` lane alone, with no LLM in the loop ([`learn.md`](learn.md)). On GitHub's
-runners (the owner's PC until #3740), one run after another, a script played the AI on `main` against
-itself, retrained the learned evaluation on those games, and gated the result against the AI on
-`main`. A pass opened its own pull request with auto-merge on, and every run's games went into the
-card statistics as development records (#1976). It promoted once, generation 13 (2026-10-21), and
-could not keep up with daily patches, so the owner retired it on 2026-11-18; its workflows run until a
-person removes them (CLAUDE.md rule 13). #682's audit
-(`reviews/2026-10-22-issue-682-subscriptions.md`) stopped the two LLM lanes, `improve` and `unban`:
-they made no fair promotion in about 427 hours of Muse and Devin sessions, while `learn` made
-generation 13 (#1677). The shadow ban is now measured by a sweep of record, which #1675's took from
-17 cards to 1 and #1889's to none, and fixed through ordinary issues. Since #1678 a sweep of record runs
-by itself after every promotion and every set that ships, on GitHub's runners
-(`.github/workflows/sweep.yml`, R1678000), so the table keeps step with the AI on `main`.
+The lanes that trained the AI are retired, and #4701 removed what ran them: the two LLM lanes,
+`improve` and `unban` (a Muse session after another on the training box, stopped on 2026-10-25 when
+#1681's audit found they made no fair promotion in about 427 hours, #1677), and the `learn` lane, which
+retrained the learned evaluation on GitHub's runners until #4159 retired it (R4159000). Git history
+holds their prompts, `training/loop.sh`, `training/ml/` and `learn.yml`. An idea for the AI now goes
+through the night bot as an issue with a measured acceptance, measured with the screens
+[`improve.md`](improve.md) describes (How you measure). What is left here:
 
-The lanes below improve JackiOh's AI (`crates/ai/`, SPEC §9.9), each gated by a fixed number of
-games against the AI on `main`, and nothing else: since generation 9 they play no games against
-random (R732001). The two LLM lanes were each a Muse session after another on the training box. They
-succeed #55's ladder (the Python `ladder/` that v0.3.0 replaced and deleted). The design is docs/v0.3.0/README.md §8; the interfaces are
-docs/v0.3.0/SURFACE.md §14.
+- **The gather lane** (`.github/workflows/gather.yml`, [`gather.md`](gather.md)): development games of
+  the newest version for the card statistics (The gather lane, below).
+- **The sweep of record** (`.github/workflows/sweep.yml`, R1678000): the shadow ban measured again after
+  every promotion and every set that ships, so the table keeps step with the AI on `main`. #1675's took
+  it from 17 cards to 1 and #1889's to none.
+- **The arena** (`cargo jackioh arena`, `agent`), where a change to the AI is screened, below.
+- **The history** of every promotion (`training/history/`, Reading the history).
 
-| Lane | Goal | Standing prompt |
-|---|---|---|
-| `improve` | **stopped (#1677).** A stronger AI: pass the sequential test against its predecessor on paired deals (R850000, R1679000) | [`improve.md`](improve.md) |
-| `unban` | **stopped (#1677).** An AI that plays well with fewer shadow-banned cards (R186): strictly fewer bans than its predecessor, and the same test passed | [`unban.md`](unban.md) |
-| `gather` | no change to the AI: development records for the card win rates (R378), without end; since #1676 the development records come from the learn lane's exports and `gather.yml`'s, which keeps filing them on its own once the retired learn lane's workflow is removed (The gather lane) | [`gather.md`](gather.md) |
-| `learn` | **retired (#4159).** A stronger learned evaluation, retrained on fresh self-play by a script with no LLM in it: the same test, on deals of its own (R1012000) | [`learn.md`](learn.md) |
-
-The `gather` lane runs no model session and opens no pull request (The gather lane, below). The
-`learn` lane, **retired (#4159)**, ran no model session either and needed no box: it is a GitHub
-workflow, `.github/workflows/learn.yml`, which runs until a person removes it, and its contract is
-[`learn.md`](learn.md). The AI it retrained no longer compiles a network (R4159000).
+The design is docs/v0.3.0/README.md §8; the interfaces are docs/v0.3.0/SURFACE.md §14.
 
 Generation 8 (`training/history/unban.jsonl`, 2026-10-10) removed the last ban on the earlier sets,
 Core, Classic and Classic+. Generation 9 (#732, `training/history/meditative.jsonl`) brought the
@@ -41,255 +25,37 @@ cards, which shadow-banned the ones the AI misplays (at most half the set). Thos
 lane's work until #1677; a sweep of record measures them now (#1675). The shadow ban holds no card of a set before Meditative and at most half of Meditative's (R732000), and since #1186's sweep, which banned none,
 Meditative+ cards on the same terms (R1186000), and since #1885 Stinkyscape cards, at most 35 of them
 (R1885000), and since #2203 Training Grounds cards, at most half of them (R2203000): no lane, sweep or person adds a card of an earlier set to
-it, and the lanes only ever remove entries; the sweep after a promotion may ban a Meditative or
+it, and the lanes only ever removed entries; the sweep after a promotion may ban a Meditative or
 Meditative+ card again when the new AI is slow with it (R1678000).
-
-While the table is empty the unban lane idles: no AI can keep strictly fewer cards out of its decks
-than none, so `promote --lane unban` refuses to play its games (The gate), and `loop.sh` starts no
-session, looking again every `TRAIN_IDLE_SECONDS` (How a lane runs, step 2).
 
 The lanes played 100 games against SPEC §10.7's random policy too, needing 90, until generation 9,
 the first AI dealt the Meditative set, beat random in at least 90 of 100 (R732001). Since then they
 measure a candidate against its parent alone: `unban` at 60 of 100, and `improve` at 65 of 100 until
 issue #850 lowered its bar to 220 of 400 paired games (R850000), so that the few points a change
-gains can bank and compound. Since #1679 every lane's gate is a sequential test on paired deals
-(R1679000, The gate, below), which banks a 53% gain about nine times in ten where 220 of 400 banked
-it about one time in seven. The daily quality gates (`cargo jackioh gate --full`) still hold the AI
+gains can bank and compound. From #1679 every lane's gate was a sequential test on paired deals
+(R1679000), which banked a 53% gain about nine times in ten where 220 of 400 banked it about one time
+in seven. The daily quality gates (`cargo jackioh gate --full`) still hold the AI
 on `main` to their floor against random, so an AI that forgets how to beat random fails the daily
 run.
 
-## How a lane runs
+Generation 14 is no lane's either. R4159000's retirement of the learned evaluation moved the AI on
+2026-11-19 without moving the number, so the sweep of record, the ladder bots' re-settling and the
+records' builds read 13 for another AI. It is recorded by hand in lane `hand`
+(`training/history/hand.jsonl`), its parent the last commit that held the evaluation. It has no
+`vsRandom` and no `vsParent`, and its `shadowBan` and `parentShadowBan` are 0 (R4921000).
 
-The training box (an EC2 `m7i-flex.large` set up by #306's part 39, always on until it became the Muse box) runs three systemd services,
-`jackioh-train@improve`, `jackioh-train@unban` and `jackioh-train@gather`, each as its own Linux user
-(`agent-train-improve`, `agent-train-unban`, `agent-train-gather`) with its own checkout (the two
-training lanes also hold a Muse login and GitHub token, which the gather lane needs neither of). Each runs
-[`loop.sh`](loop.sh) `<lane>` forever (`Restart=always`).
+## The practice-claim fixture
 
-The steps below are the `improve` and `unban` lanes'. The `gather` lane's cycle is its own (The
-gather lane).
+`crates/server/tests/fixtures/practice-claim.json` is a practice game the web's claim test plays move
+for move and the server's test folds and pays (R2560000). Every change to the AI plays it differently,
+so the change records it again (`JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run
+src/practice/claim.test.ts`, after `sh scripts/build-wasm.sh`) and commits it with the change.
 
-Each lane keeps one pull request open from `ai/<lane>`: a draft while Muse works, and ready for
-review, with auto-merge on, once a promotion is in it. Each cycle:
-
-1. If the pull request holds a promotion waiting on CI, look after it and do nothing else. When
-   `main` moved under it (GitHub calls it behind or conflicting, or a check failed on a `main` that
-   has moved on since), land it on `main` again (step 4) and push, so CI runs again. When a required
-   check failed, set it back: back to draft, with a comment naming the failing checks, its commit kept
-   as a local branch `ai/<lane>-set-back-<t>`, and an entry in `attempts.md` saying why, which the
-   next session reads first. Otherwise wait.
-2. Otherwise fetch `main`, reset `ai/<lane>` to it, build `jackioh` from it and keep that binary as
-   `~/parent-jackioh`. The parent is always the AI on `main`.
-   - The `improve` lane then checks out its stack, `ai/improve-stack`, rebased onto `main` (The
-     improve stack): the session starts from its kept changes, not from bare `main`.
-   - The `unban` lane stops here while the parent shadow-bans no card. A promotion needs strictly
-     fewer bans, so a session could do nothing. The lane retitles its draft
-     `AI gen <N> (unban): idle, the AI on main bans no card`, says so once in a comment, and looks
-     again every `TRAIN_IDLE_SECONDS` (15 minutes). The first cycle after `main`'s AI bans a card
-     again starts a session. A sweep of record adds such bans, as #732's did for the Meditative set,
-     and both standing prompts send the lanes to the Meditative cards first.
-   - Otherwise push `ai/<lane>` as that start (`main`, or the improve lane's rebased stack) plus an
-     empty `[skip ci]` commit naming the session, and make the lane's pull request this session's
-     draft, titled
-     `AI gen <N> (<lane>): in training, nothing promoted yet` (opening one if none is open). Its
-     description opens with the gate's latest pass (Watching a lane on GitHub).
-3. Run one Muse session on the lane's standing prompt
-   (`muse exec --yolo --disable-web-tools --workspace <checkout> --model "$MUSE_MODEL"
-   --reasoning-effort xhigh --prompt-file training/<lane>.md --max-model-steps 1000`, its transcript
-   in `~/logs/<lane>-<t>.log`). Muse changes the AI and
-   measures it: the `unban` lane with dry runs of the gate, committing only once a real run has
-   passed; the `improve` lane with paired screens on its dev set, committing each change it keeps to
-   its stack and going to the gate only with a stack that screened above its parent
-   ([`improve.md`](improve.md)). A session ends after a promotion or after four hours. Meanwhile,
-   every 15 minutes (`TRAIN_PROGRESS_SECONDS`), the loop pushes the checkout as it is to `ai/<lane>`
-   as one `[skip ci]` commit when it changed, rewrites the
-   session's comment on the draft, and rewrites the draft's description when a new pass of the gate
-   changed it. When the session ends, the loop stops any `jackioh` process it left running as the
-   lane's user (an arena or a gate cut off by the time limit, and the parent agents it spawned), so
-   the next measurement has the box.
-   Without a promotion, the `improve` lane saves the session's commits as its stack.
-4. When the session ends with a promotion commit, fold every commit of the session into it (the
-   improve lane's stack included) and land it on `main`. If `main`'s crates did not move
-   since the session's start, the parent and the candidate are the builds the gate measured: rebase
-   the commit and re-check it against the parent (`cargo jackioh promote --verify`). If they moved,
-   the parent changed: build it from `main` again, apply the promotion's change (less the record the
-   gate writes) to `main`'s AI and play the gate again for real, which renumbers the generation.
-   Then run the web's tests that play the AI (the tutorial's lessons and practice, as the standing
-   prompts' "Beyond the gate" lists them) when the box has `pnpm`, push `ai/<lane>`, retitle the pull
-   request with the promotion's subject (`AI gen <N> (<lane>): <what changed>`), give it the gate's
-   report as its body, mark it ready and turn on auto-merge (squash). A promotion that fails any of
-   that is set back as in 1. Until it merges, the improve lane's promotion, less its record, is its
-   stack, so a set-back promotion is where the next session starts.
-5. Sleep 60 seconds and repeat.
-
-Every lane's cycle, the gather lane's too, starts by reading the disk: under 20 GB free
-(`TRAIN_DISK_FLOOR_GB`) the lane deletes its own builds but the release one and its download caches,
-which come back by themselves, so the box cleans itself (`bot/machine/README.md`, The training box).
-Its test builds, Muse's included, carry no debug info, as on the night box.
-
-A lane never merges anything itself: CI does, through branch protection, once its checks pass.
-
-### The improve stack
-
-The `improve` lane banks its work between sessions on a branch of its own, `ai/improve-stack`, so
-a measured gain too small for the gate is not lost when a session ends or `main` moves (issue
-#850). It holds the lane's kept changes as commits on `main`, one per change, each subject
-`Stack (improve): <what changed>` and each body the screen that kept it (its games, wins, edge and
-interval, and the control it was measured against; [`improve.md`](improve.md), The stack). No stack
-commit holds anything outside `crates/ai/`, nor `crates/ai/generation.json` or a history line, and
-none is a promotion (its subject never starts `AI gen `).
-
-- **When it is saved.** A session without a promotion ends with its commits pushed to
-  `ai/improve-stack` (`save_stack`), uncommitted work left out. A session whose commits change
-  anything else is refused as a stack: the stack stays as it was, the commits are kept on the box as
-  the local branch `ai/improve-stack-unsaved-<t>`, and `attempts.md` says so.
-- **A promotion.** The loop folds the session's commits into the promotion commit, as it always
-  has, and pushes it less its record as the stack: one commit, its message the promotion's subject
-  and every folded commit's message (`save_promoted_stack`). A promotion set back, or refused by
-  closing its pull request, is where the next session starts; once it merges, `main` holds its
-  change, and the next cycle empties the stack to `main`.
-- **Each session.** Step 2 fetches the stack. When `main` already holds its change, it is emptied.
-  Otherwise it is rebased onto `main` and checked out as `ai/improve`, and the session starts from
-  it. Its comment on the draft says so.
-- **When `main`'s AI moved under it** (`crates/ai` differs between the `main` the stack was on and
-  today's, say after an unban promotion), the loop builds the rebased stack and screens it against
-  the new parent on the dev set (`arena --a self --b bin:~/parent-jackioh --set improve-dev`, 400
-  games, about 40 minutes on the box) before the session, and puts the tally in `attempts.md`. The
-  session reads it first; a stack that lost its edge is the session's to fix or drop. That screen
-  reads higher than the gate would, as every dev-set read can: the gate is the hold-out read.
-- **A rebase conflict.** When the stack does not rebase onto `main`, the loop aborts the rebase,
-  keeps the stack's commits as the local branch `ai/improve-stack-conflict-<t>`, notes the conflict
-  and its files in `attempts.md`, and starts the session from `main`. The stack stays on GitHub as
-  it was. The session rebuilds it first (`improve.md`, The stack): it cherry-picks the kept commits
-  onto `main`, resolving the conflicts in `crates/ai`, and screens the result against the parent.
-  Its commits replace the stack when it ends; a session that commits nothing leaves it as it was. A
-  stack is never dropped without a note.
-- **A stack the loop cannot read** (GitHub unreachable at the session's start) is left alone: the
-  session starts from `main`, `attempts.md` says so, and its commits are kept as a local branch
-  rather than pushed over the stack.
-
-The gate still measures only what is committed: `promote` refuses uncommitted changes in
-`crates/ai/src`, so the promotion's seeds are the committed stack's (R850001).
-
-### Watching a lane on GitHub
-
-The lane's pull request is the place to follow it. Its **Files changed** is the session's work in
-progress against `main` (CI does not run on a `[skip ci]` commit), the top of its description is
-the latest pass, and its comments say what happened:
-
-- the latest pass of the gate, at the top of the draft's description: every run of `promote` (a dry
-  run, a promotion or a `--verify`) rewrites `~/training-out/<lane>/last-pass.md` with it, failed
-  runs included, and the loop puts that file above the lane's own text within 15 minutes. It says
-  how many of the games the candidate beat the AI on `main` in, with what the lane needs, a table of
-  the games won, lost, drawn and without a result as p1, as p2 and in all, the interval those wins
-  give and the shadow bans, and a grid with one square per game (🟩 beat the bot, 🟥 lost, ⬜ drawn,
-  ⬛ no result). Arena runs are not passes and do not change it;
-
-- one comment per session, rewritten every 15 minutes while it runs: how long it has run, the
-  checkout's diff against `main` with a link to it, and everything `attempts.md` gained this session
-  (each attempt, its dry run's numbers, kept or reverted). The last rewrite says how it ended;
-- a comment when a promotion goes up, with the gate's table, and when one is set back, with the
-  failing checks.
-
-## What a lane may change
-
-Only `crates/ai/**` and `training/history/**`, and one file outside them:
-`crates/server/tests/fixtures/practice-claim.json`, a practice game the web's claim test plays move
-for move and the server's test folds and pays (R2560000). Every AI change plays it differently, so a promotion records it
-again once its gate passes (`JACKIOH_RECORD_PRACTICE_CLAIM=1 pnpm --dir apps/web exec vitest run
-src/practice/claim.test.ts`, after `sh scripts/build-wasm.sh`) and commits it with `generation.json`.
-The learn lane's workflow does it itself; the improve and unban lanes' loop does not yet, so their
-promotion fails CI's `rust` and `web` on it until someone records it on the branch. A pull request
-from an `ai/*` branch that touches anything else is refused by CI, and so is one whose
-`crates/ai/generation.json` is not `main`'s
-plus one (part 30's `training-gate` job). That job builds `main`'s `jackioh` and the branch's, and
-runs `promote --lane <lane> --verify` again on the same seeds: a lane's own claim is never trusted.
-Branch protection's "require branches to be up to date" holds a promotion whose `main` moved on
-until the loop lands it on `main` again (How a lane runs, step 1).
-
-The engine (`crates/engine`), the cards (`crates/cards`), every test outside `crates/ai`, the gate
-(`crates/tools/src/promote.rs`, `arena.rs`) and its thresholds (`TRAINING_*` in
-`crates/engine/src/config.rs`) are never a lane's to change. Inside `crates/ai`, `SHADOW_BAN` only
-shrinks: no lane adds an entry, and no card of an earlier set is ever banned again (R732000;
-`crates/ai/tests/ai/shadow_ban.rs` fails on one).
-
-## The gate
-
-`cargo jackioh promote --lane <lane> --parent-bin <parent> [--dry-run] [--verify]` plays the lane's
-deals against the parent until its sequential test decides (R1679000, `TRAINING_GATE`):
-
-- deal `d`'s seed is `<lane>:<tree>:<d>`, where `<tree>` is `git rev-parse HEAD:crates/ai/src`, so
-  the seeds name the AI being measured and committing `generation.json` does not move them;
-- each deal is played twice with the seats swapped (R850000), game `2d − 1` with the candidate on p1
-  and game `2d` with it on p2, the same decks, shuffles and first seat in both. The deals are the
-  lane's hold-out set (R850001): named for the committed AI and read only by it, never by a screen.
-  Every lane's gate is paired since #1679, the unban lane's too;
-- each seat's deck is `build_ai_deck` over every set that ships (Meditative included since
-  generation 9) minus its own AI's shadow ban, with no handicap (Easy both). Both seats are dealt
-  by that one rule, and neither is shaped by the lane's dealt-quality table (`DEALT_Q`; the deck
-  builder's `shape` option, off), so the gate's decks are drawn as practice's and the daily gates'
-  are (R976000). Until issue #976 the builder shaped every seat whose ban list was this build's
-  own, so in the unban lane the candidate's seat was always shaped and the parent's never. Each AI
-  mulligans by its own build's `mulligan_keep_curved`, which is part of how the AI plays;
-- the AI plays at `AI_GATE_BUDGET`, the browser's own budget, so the gate measures the AI that ships.
-
-**The test.** Each deal gives the candidate an edge, its wins less the parent's over the deal's two
-games, halved, from −1 to 1. The test weighs H0, a mean edge of 0 (a successor no stronger than its
-parent), against H1, +0.06 (a 53% win rate, about +21 Elo), with a 5% chance of promoting the first
-and 5% of failing the second, by the log-likelihood ratio of two normal laws with the deals' own
-variance. It plays the deals 100 at a time and reads them in deal order; from the 100th deal on it
-stops at the first whose ratio reaches `ln(19)` (about 2.94), a pass, or falls to `−ln(19)`, a fail,
-and a test still undecided at the 1,000th deal fails. The games of a batch past the deal it stopped at
-are set aside, so where it stops never depends on the thread count and `--verify` stops at the same
-deal; a promotion's `vsParent` is the wins out of the games of the deals it read.
-
-| Lane | vs parent | Shadow bans |
-|---|---|---|
-| `improve` | the test passes | — |
-| `unban` | the test passes | strictly fewer than the parent's |
-| `learn` | the test passes, on deals of its own | — |
-
-On #1058's paired deals (of 200, 25 won twice, 146 split and 29 lost twice), it promotes an equal
-successor about 4.5% of the time, and one that truly wins 52%, 53% or 55% about 60%, 91% or nearly all
-of it, where the fixed bar of 220 of 400 it replaced let those through about 6%, 15% and 53%. It plays
-about 800 games at H0 and at H1, 1,050 between them, about 300 for a clear loser, and never more than
-2,000. The bar was 65 of 100 until issue #850, then 220 of 400 paired games until #1679 (the unban
-lane's 60 of 100 unpaired); a tree gets one test, since the same tree plays the same deals to the same
-verdict.
-
-It plays no games against random (R732001), and a promotion records `"vsRandom": null`. A draw is not
-a win, and neither is a game that ended without a result. Every game must also be clean on either
-seat: no refused action, throw, fallback or panic caught in an AI's search, and a log that folds back
-to its hash (R1489000). The parent's counts come from its verbose answers; each other game is a
-failure naming its seed and the candidate's seat. Exit 0 on a pass, 1 on a failed gate. The
-report (Markdown) goes to stdout; it and the latest pass add the paired edge, the candidate's wins
-less the parent's over each deal's two games, in points of the games, with its 95% interval, and the
-test's line: the deals it read, its log-likelihood ratio and its bounds.
-
-Against a parent whose shadow ban is empty, the unban lane's gate cannot pass (strictly fewer than
-none), so `promote --lane unban` says the lane has nothing to do and exits 1 before it plays a game,
-whatever the flag, writing nothing and printing no report.
-
-- `--dry-run` measures and writes nothing. It refuses a working copy with uncommitted changes in
-  `crates/ai/src`: the deals are read only by the committed AI they are named for (R850001), so a dry
-  run on a clean checkout plays exactly the games the promotion would. Until #1679 the unban lane's
-  unpaired gate measured uncommitted changes on HEAD's seeds.
-- Without a flag, a pass writes `crates/ai/generation.json` and appends the same object to
-  `training/history/<lane>.jsonl`. It refuses to run while `crates/ai/src` has uncommitted changes,
-  since the seeds come from the committed tree: commit the change first, then run it, then commit
-  the two files (the unban lane amends them into the change's commit; the improve lane commits them
-  alone on top of its stack, as the promotion commit).
-- `--verify` (CI, and `loop.sh` before it pushes) recomputes and compares every field of the
-  branch's `generation.json` except `date` and `parent`.
-
-The games run on rayon's threads (`RAYON_NUM_THREADS` is respected); no result depends on the
-thread count.
-
-### The arena and the agent
+## The arena and the agent
 
 - `cargo jackioh arena --a self|random|bin:<path> --b self|random|bin:<path> --games N --seed <base>
   [--paired] [--out <dir>]` plays games `1..=N` with seeds `<base>:<n>`, agent `a` on p1 in odd
-  games. It is the free-form version of the gate, for experiments on other seeds than the gate's.
+  games, on any base of your own.
   With `--paired` (R850000) it plays deals instead: deal `d` is `<base>:<d>`, played twice with the
   seats swapped, so `N` is even. Per game it prints duel.ts's line (who won, why, the hash, whether
   the log replays, decision times) and a tally at the end: the wins, draws and games without a
@@ -297,23 +63,23 @@ thread count.
   paired series adds `deals` and `edge`, the mean over deals of `a`'s wins less `b`'s over the deal's
   two games (−1 to 1), with its 95% interval (`edgeLow`, `edgeHigh`), then `decided` (the deals
   whose edge is not 0, split into `wonBoth` and `lostBoth`) and `diverged` (the deals whose two
-  games end on different hashes). The gate's report gives the same intervals for its wins. A base
-  that is a lane's name, or one followed by `:`, is refused: those are the gates' own seeds
-  (R850001).
+  games end on different hashes). A base that is a retired lane's name, or one followed by `:`, is
+  refused: those were the gates' own seeds (R850001).
 - `cargo jackioh arena --a … --b … --set improve-dev [--games N] [--extend]` plays the improve
   lane's fixed dev set, deals `improve-dev:1` to `:200`, paired, 400 games unless `--games` says
   more, never fewer (R850001). A screen with fewer than `SCREEN_MIN_DECIDED` (20) decided deals
   prints `inconclusive: true` and says nothing: it neither keeps nor drops the change (R4319000).
   `--extend` plays on in 100-deal batches until `SCREEN_MIN_DECIDED` deals are decided or
-  `SCREEN_MAX_GAMES` (2,000) games are played, reading the edge only at the end. The improve lane
-  screens every change on it (`improve.md`, How you measure); the gate's hold-out deals are never
-  a screen's.
-- `cargo jackioh arena --a … --b … --set improve-dev --forks [--extend]` is the fork screen
-  (R4397000): the trunk plays each dev-set deal once with the control on both seats, and wherever
-  the candidate would have made a different move that position is played out `FORK_ROLLOUTS` (8)
-  pairs both ways, both arms on with the control. The tally's `forkEdge` measures the change at the
-  moves it changes; it keeps a change when `forkEdgeLow` is above 0 and reads `inconclusive: true`
-  below `SCREEN_MIN_DECIDED` live forks.
+  `SCREEN_MAX_GAMES` (2,000) games are played, reading the edge only at the end. A change to the AI
+  screens on it (`improve.md`, How you measure); the gate's hold-out deals are never a screen's.
+- `cargo jackioh arena --a … --b … --set improve-dev --forks [--extend] [--save <path>]` is
+  the fork screen (R4397000): the trunk plays each dev-set deal once with the control on both
+  seats, and wherever the candidate would have made a different move that position is played out
+  `FORK_ROLLOUTS` (8) pairs both ways, both arms on with the control. The tally's `forkEdge`
+  measures the change at the moves it changes; it keeps a change when `forkEdgeLow` is above 0 and
+  reads `inconclusive: true` below `SCREEN_MIN_DECIDED` live forks. `--save <path>` (R4607000)
+  appends each finished deal to the file as soon as it is done, and a rerun of the same command
+  plays only the deals still missing.
 - `cargo jackioh agent` is this build's AI speaking JSON lines on stdin and stdout (`info`,
   `decide`, `quit`; SURFACE §14.1). `bin:<path>` spawns `<path> agent`. The referee holds the true
   state and sends each agent only `redact(state, seat)` (R185). The agent's answers name its rng
@@ -321,15 +87,7 @@ thread count.
 
 ## The gather lane
 
-Since #1676 the development games come from the learn lane's exports (the lane is retired by #4159 and
-files them only until a person removes its workflow; `gather.yml`, below, keeps filing on its own). `cargo jackioh stats
-from-selfplay <shards>… --out <file>` files each game of an export that still replays under the
-catalog it was played on, finished and clean, as a development record `dev:<patch>:selfplay:<base>:<n>`,
-and counts the rest (R1676000). Since #1976 `learn.yml` does it after every export (its `import` job,
-`learn.md` step 7) and loads the file with `jackioh-server stats-import --totals-only` (R1976000): the
-records' counts go into the totals and no row is kept per game, so each project's database (both file
-the development lanes' games, R1933001) grows with the patches and not the games. Runs follow one another, so an export comes about every half
-day on GitHub's runners. Beside them, `.github/workflows/gather.yml` plays without a pause since #3740
+`.github/workflows/gather.yml` plays without a pause since #3740
 (it played 5,000 games of each new patch or set, once, on the PC's gather half, before): two of
 GitHub's runners each play `GATHER_HOURS` (5) hours of the newest version on `main`, `GATHER_FILE_GAMES`
 (400, about an hour) at a time, and file each batch the same way as it finishes, so the card statistics
@@ -345,71 +103,35 @@ the number before), so its 95% interval is about ±5 points. `cargo jackioh stat
 this build's deal pool, and the number grows with the catalog: 29000 at 633 cards when it landed.
 `--explain` shows the working, `--sigma` and `--rho` set its two guesses, and
 `crates/tools/README.md` has the formula. The lane playing without a pause reaches it for a version
-that stays the newest about a day and a half (two runners at about 400 games an hour), and the learn lane's
-exports add theirs. A change to `gather.yml` is a person's, since the bots never edit `.github/`;
+that stays the newest about a day and a half (two runners at about 400 games an hour). A change to `gather.yml` is a person's, since the bots never edit `.github/`;
 so is growing `GATHER_STRIDE` (100,000), which a run's games pass only past about 50,000 a part.
 
-To file an export by hand: `gh run download <run> --pattern 'selfplay-<base>-*'`,
-`cargo jackioh stats from-selfplay <shards>… --out <file>`, then `jackioh-server stats-import
---totals-only <file>`. No box runs `loop.sh gather` since 2026-11-04: the training box, the Muse box
-now (`bot/machine/README.md`), ran it until then and filed its games into staging's database alone,
-which R1933001's two databases outgrew, so `jackioh-train@gather` is disabled there. What follows is the
-lane's contract for a box that still runs it.
-
-`loop.sh gather` is the third lane, and it gathers data instead of improving the AI (#749, part of
-#636): it plays AI-against-AI All Random games without end and keeps their card figures, so the card
-win rates (SPEC §9.11, R376–R378) of every patch have a development source beside the live games. No
-model runs it, so [`gather.md`](gather.md) is its contract rather than a prompt, and it needs no Muse
-login and opens no pull request. Each cycle:
-
-1. Fetch `main`, check out `origin/main` (a new `loop.sh` there restarts the lane, as for the others)
-   and build `jackioh` from it. The AI that plays is always the one on `main`.
-2. Load the finished days' record files into Postgres with `stats-import`, once each, when the box has
-   `DATABASE_URL` (the same step as the other lanes').
-3. Play the next `TRAIN_GATHER_GAMES` (100) games with `jackioh stats --series gather --patch <patch>`,
-   where `<patch>` is `cargo jackioh catalog-version`, `main`'s. Game `n`'s seed is `gather:<n>`, so
-   the lane's games are neither the gate's nor a person's `dev` run's. The file `cursor-<patch>` in
-   `~/training-out/gather/` holds the next `n`: no game of a patch is played twice, and a new patch
-   starts at 1.
-   A patch has no cap: the lane plays it until `main` ships another, about 4,000 games a day. In
-   Postgres each game is folded into the card statistics' totals as it loads, which grow with the
-   cards and not the games, and its detail is kept `GAME_RECORD_RAW_RETENTION_DAYS` (7), so a week of
-   the lane's games, some 50 MB, is all the detail held (R1044000, R1044001). The files here keep
-   every game's detail.
-4. Append the batch to `~/training-out/gather/<date>.jsonl`, advancing the cursor first, so a batch
-   the loop never finished is played again and none is appended twice (`stats-import` skips the ids it
-   holds, too), and rewrite the patch's card figures, `cards-<patch>.txt` and `.json`, and its game
-   figures, `games-<patch>.txt` and `.json`, from every game the lane's files hold.
-5. Sleep `TRAIN_PAUSE_SECONDS` (60) and repeat.
-
-The records are `source: "dev"`, mode `random`, both pilots `ai`, with the id
-`dev:<patch>:gather:<n>`. The games run under `nice -n 19` with `RAYON_NUM_THREADS=1`, so the lane stays on one core, as it does today, and the other two lanes' gates keep the CPU.
-A record is about 1.8 KB and a game takes about 4 seconds on one core. If the AI is promoted in the
-middle of a patch, that patch's games come from more than one generation of it. Nothing feeds the
-records back to the AI, the gate or the shadow ban (`gather.md`, What it never does).
+The games are `stats --series gather` (R378): the AI on `main` against itself on R258's All Random
+deals at the browser's budget, each finished game a record with `source: "dev"`, mode `random`, both
+pilots `ai` and the id `dev:<patch>:gather:<n>` ([`gather.md`](gather.md) has the rest). Nothing feeds
+the records back to the AI, the gate or the shadow ban (`gather.md`, What it never does).
 
 ### Setting it up
 
-The training box sets up its lanes in `bot/machine/setup.sh`, which the bot never edits, so a person
-does this once:
-
-- Run `setup.sh --training` on the training box (`bot/machine/README.md`, The training box),
-  whose `TRAIN_LANES` already holds `gather`. It creates the user `agent-train-gather` with its own
-  checkout and the service `jackioh-train@gather`.
-- To load its records into Postgres, run `sudo systemctl edit jackioh-train@gather` and add
-  `Environment=DATABASE_URL=…`. Without it the lane keeps only the files.
-- It needs no Muse login. A `gh` login is needed only if the repository is private, so the lane can
-  read it.
+A person does this once for each project's database: create a login that may act as `service_role`
+(Supabase's SQL editor: `create role stats_importer login noinherit password '…'; grant service_role
+to stats_importer;`) and save its session-pooler connection string
+(`postgresql://stats_importer.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres`,
+the pooler because GitHub's runners reach no IPv6-only direct host) as the repository secret
+`STATS_IMPORT_DATABASE_URL` (staging's, set on 2026-10-26, #1976) or
+`PRODUCTION_STATS_IMPORT_DATABASE_URL` (production's, set on 2026-11-03 by `cutover.yml`'s step
+`stats-logins`, R1933001). The read-only `stats_reader` is production's other login. Then set the
+repository variable `GATHER_ON_PATCH` to `true`.
 
 ### Reading the figures
 
+Each run keeps its batches' record files as artifacts, `gather-<run>-<part>`
+(`gh run download <run> --pattern 'gather-*'`):
+
 ```sh
-tail -f ~agent-train-gather/logs/gather.log
-cat ~agent-train-gather/training-out/gather/cards-<patch>.txt     # the patch's card figures, a row per card
-cat ~agent-train-gather/training-out/gather/games-<patch>.txt     # the first seat's wins, the endings, the turns
-cargo jackioh stats report --source=dev --patch <patch> ~agent-train-gather/training-out/gather/*.jsonl
-cargo jackioh stats report --games --source=dev --patch <patch> ~agent-train-gather/training-out/gather/*.jsonl
-jackioh-server stats-cards --source=dev --patch=<patch>           # the same, from Postgres, once loaded
+cargo jackioh stats report --source=dev --patch <patch> gather-*/*.jsonl
+cargo jackioh stats report --games --source=dev --patch <patch> gather-*/*.jsonl
+jackioh-server stats-cards --source=dev --patch=<patch>           # the same, from Postgres
 jackioh-server stats-cards --source=dev --patch=<patch> --card=<id> --json
 jackioh-server stats-cards --patch=<patch>                        # that patch's live games, human seats
 jackioh-server stats-cards --patch=<patch> --pilot=ai             # the ladder bots' sides of them
@@ -434,7 +156,7 @@ decision rests on them only with that in view.
 The live games' records are what the gather lane's figures sit beside, and they are filed already:
 
 - Every finished live match files a record, and no switch turns that off: `api::results::record_result`
-  calls `api::game_records::record_live_game` once the result is in, and `LADDER_BOTS` only decides
+  calls `api::game_records::record_finished_game` once the result is in, and `LADDER_BOTS` only decides
   who is seated, not whether the game is filed. The ones that file none are a match no series, room or
   queue ticket made, a log that never reaches a result and one already filed; a failure to file is
   logged as `game.record.failed` and the result stands.
@@ -449,89 +171,37 @@ The live games' records are what the gather lane's figures sit beside, and they 
   `r1451_counts_every_seat_of_development_data_unless_a_pilot_is_named` and
   `r1451_reads_a_ladder_bots_side_of_a_live_game_only_when_asked`.
 
-## Where the exports come from
-
-The self-play exports (which fed the learned evaluation, retired by #4159; #466, `docs/learned-eval.md`) are game logs
-`cargo jackioh selfplay` plays, which `cargo jackioh positions` folds into training rows (R1006001,
-R1006003). An export is dispatched, never played on the training box, whose two vCPUs the lanes need:
-`gh workflow run selfplay.yml -f games=100000 -f seed=<base> [-f shards=80]` plays it in shards on
-GitHub's runners (free for this public repository; about 400 games an hour each at the AI's budget
-since #2628, measured on 2026-11-12, 10 at once: 100,000 games in 80 shards of 1,250, each about 3
-hours and under GitHub's 6-hour job limit, take about a day), and keeps each shard's log file as an
-artifact for up to 90 days. The organization's Team plan runs 60 hosted jobs at once (#3740), of
-which the training lanes take 12, the export's 10 and gather's 2; whatever they leave idle, CI and
-the bots take. On the Free plan's 20 an export held 12, and CI waited behind it, 70 to 110 minutes a
-run on 2026-10-20 against 10 to 16 without one, so from #1455 until #3740 the exports played on the
-owner's PC. The learn lane's own exports play the same way ([`learn.md`](learn.md), How it runs). Its last job runs
-`positions` over the whole export and writes the counts (games, positions, games that no longer
-replay) and the games an hour to the run's summary. The same base and game numbers always play the
-same games, so an export can be played again on any runner, and a base never names a gate's
-hold-out deals or the dev set (R1006002). A faulted game carries `faults`, which `positions` leaves
-out, counted `unclean` (R1489000). `gh run download <run> --pattern 'selfplay-<base>-*'`
-fetches it. `cargo jackioh stats from-selfplay` files the same games as the card statistics' development
-records (The gather lane, R1676000). The fit that learns from it is [`training/ml/`](ml/README.md).
-
-## The ladder bots after a promotion
+## The ladder bots after a change to the AI
 
 The ladder bots' strengths are measured against each other on the AI on `main` (R748000,
 `docs/bot-calibration.md`), beside the skill curve their seed ratings are read from (R747000), so a
-merged promotion is followed by that document's re-calibration: `cargo run --release -p
+merged change to the AI is followed by that document's re-calibration: `cargo run --release -p
 jackioh-server -- bot-calibrate`, run by a person or the night bot, whose report is compared with the
-curve and, where it should win, written into `crates/server/src/config.rs` with `--write` in a pull request. A lane
-never edits `crates/server`, and a promotion does not wait for it.
+curve and, where it should win, written into `crates/server/src/config.rs` with `--write` in a pull request. The
+change to the AI does not wait for it.
 
 ## Where the numbers go
 
 | What | Where |
 |---|---|
-| Every game the arena plays (a promotion run or an experiment): one `GameRecord` (R376) per line, `source: "dev"`, `mode: "random"` | `~/training-out/<lane>/<date>.jsonl` (`$JACKIOH_TRAINING_OUT`; `arena` without it prints to stdout) |
-| The same records in Postgres, loaded once per finished day when the box has `DATABASE_URL`: folded into the card statistics' totals as they load, each record's detail kept a week (R1044000, R1044001) | `jackioh-server stats-import`, read back with `jackioh-server stats-cards --source=dev` (the totals) or `stats-export --source=dev` (the last week's records) |
-| The gather lane's records: one `GameRecord` per line, a file a day | `~/training-out/gather/<date>.jsonl` |
-| The gather lane's next game number for a patch, and that patch's card figures and game figures, rewritten each cycle | `~/training-out/gather/cursor-<patch>`, `cards-<patch>.txt` and `.json`, `games-<patch>.txt` and `.json` |
-| The learn lane's exports as development records: one `GameRecord` per line (`stats from-selfplay`) | the file `--out` names, loaded with `stats-import` |
-| The days already loaded into Postgres (each lane's `~/training-out/<lane>/`) | `imported.txt` |
-| A promotion's gate numbers | `training/history/<lane>.jsonl` and `crates/ai/generation.json`, committed with it |
-| The latest pass of the gate (any mode, failed ones included), in Markdown: the top of the lane's draft pull request | `~/training-out/<lane>/last-pass.md`, rewritten by every run of `promote` |
-| What each Muse session tried, with each screen's numbers and interval, why the loop set a promotion back, and what it did with the improve stack (a rebase conflict, a re-measure) | `~/training-out/<lane>/attempts.md`, quoted in each session's comment on the lane's pull request |
-| The improve lane's kept changes between sessions, one commit each | the branch `ai/improve-stack` on GitHub (The improve stack) |
-| The gate's report for each pull request | `~/training-out/<lane>/promote-<t>.md` |
-| The loop's log, each Muse session's transcript, and each run of the web's tests | `~/logs/<lane>.log`, `~/logs/<lane>-<t>.log`, `~/logs/<lane>-web-<t>.log` |
-
-## Stopping, starting and watching a lane
-
-```sh
-sudo systemctl stop jackioh-train@improve      # stop the lane now (its Muse session ends with it)
-sudo systemctl disable jackioh-train@improve   # and keep it stopped across reboots
-sudo systemctl enable --now jackioh-train@improve
-systemctl status jackioh-train@unban
-tail -f ~agent-train-unban/logs/unban.log
-tail -f ~agent-train-gather/logs/gather.log
-```
-
-To refuse a promotion, close its pull request: the loop opens a new draft with its next session,
-from `main`, or for the improve lane from its stack, which still holds the refused promotion's change
-(The improve stack). To refuse the improve stack's changes as well, stop the lane, delete the branch
-`ai/improve-stack` on GitHub, then start the lane: its next session starts from `main` and saves a new
-stack. Delete it only while the lane is stopped, or the session running then saves it again. A lane
-notices a new `loop.sh` on `main` at the start of a cycle, or while it waits on a promotion, and
-restarts on it. A lane's thresholds change only by a pull request from a person to
-`crates/engine/src/config.rs`.
+| Every game the arena plays: one `GameRecord` (R376) per line, `source: "dev"`, `mode: "random"` | `$JACKIOH_TRAINING_OUT/<date>.jsonl`; without it, stdout |
+| The gather lane's records, a file a batch | the run's artifacts, `gather-<run>-<part>`, and both projects' card statistics as totals (`stats-import --totals-only`, R1976000) |
+| A retired lane's promotions | `training/history/<lane>.jsonl` and `crates/ai/generation.json` |
 
 ## Reading the history
 
-`crates/ai/generation.json` is the AI on `main`. `training/history/<lane>.jsonl` holds one line per
-promotion of that lane, oldest first:
+`crates/ai/generation.json` is the AI on `main`, as the last promotion left it. `training/history/<lane>.jsonl`
+holds one line per promotion of that lane, oldest first; no lane promotes since #4701, and the gate
+that measured them (`promote`) is gone since #4702 (R4702000), in git history:
 
 ```json
 {"generation":8,"lane":"improve","parent":"<main commit>","tree":"<crates/ai/src tree>","vsRandom":"93/100","vsParent":"87/100","shadowBan":11,"parentShadowBan":11,"date":"2026-11-02"}
 ```
 
 - `generation`: the parent's plus one. Generations count across both lanes: they share `main`.
-- `parent`: the `main` commit the parent was built from; `tree`: the AI's source tree, which names
-  the seeds (`<lane>:<tree>:1` … `:100`, or the improve lane's deals `:1` … `:200`), so anyone can
-  re-run the gate:
-  `git checkout <parent> && cargo build --release -p jackioh-tools && cp target/release/jackioh /tmp/parent`,
-  then on the promotion's commit `cargo jackioh promote --lane <lane> --parent-bin /tmp/parent --verify`.
+- `parent`: the `main` commit the parent was built from; `tree`: the AI's source tree, which named
+  the gate's seeds (`<lane>:<tree>:1` … `:100`, or the improve lane's deals `:1` … `:200`). The arena
+  and self-play still refuse a base that names a lane (R850001, R1006002).
 - `vsRandom`, `vsParent`: the candidate's wins out of the games played, `"<wins>/<games>"`: out of
   400 for the improve lane since issue #850 (R850000), out of 100 for the unban lane and every
   promotion before. `vsRandom` is `null` from generation 10 on: the lanes play no random games

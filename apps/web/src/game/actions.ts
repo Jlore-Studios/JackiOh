@@ -103,9 +103,9 @@ export function isBuilding(interaction: Interaction): interaction is Building {
   return interaction.stage === "playing" || interaction.stage === "activating";
 }
 
-/** #2924: the shown turn, seat and viewer a half-built play or attack belongs to. */
+/** #2924, #4743: the shown turn, seat and viewer a half-built play or attack belongs to, plus a mark once the game is over, so a build lifted before the end is dropped on the render that shows the result. */
 export function boardKeyOf(view: PlayerView): string {
-  return `${String(view.turn)}:${view.active}:${view.viewer}`;
+  return `${String(view.turn)}:${view.active}:${view.viewer}${view.result === null ? "" : ":over"}`;
 }
 
 /** What is still unchosen about the play in flight, derived only from the candidates. */
@@ -715,7 +715,8 @@ export function pendingHighlight(view: PlayerView, pending: PendingView | null):
     if (where !== null) out.add(where);
   }
   // R821000: a face-down card has no testid of its own, so the zone its back lies in is what is clicked.
-  if (isPlaguePlacementPrompt(pending)) {
+  // R4781000: every `target` prompt for the viewer lights those zones, so a click on one can answer it.
+  if (pending.forYou && pending.kind === "target") {
     for (const option of pending.options) {
       const zone = hiddenOptionZone(view, option);
       if (zone !== null) out.add(testid.zone(zone.side, zone.row, zone.lane));
@@ -1243,6 +1244,92 @@ export function answerPlaguePlacement(
     }
   });
   return picked === undefined ? null : answerAction(pending, [picked.key], view, legal);
+}
+
+/**
+ * R4781000: the option of an open `target` prompt a board click names, or null when it names none.
+ * Only a prompt open for the viewer answers, never Plague placement (answered by
+ * `answerPlaguePlacement`), and only a lit card (by its id), a lit hero (by its seat) or the zone
+ * of a lit face-down card answers. Zone selections stay list-only, as do the hand, the graveyard,
+ * an activation and a switch, which a board click never names.
+ */
+export function matchTargetOption(
+  view: PlayerView,
+  pending: PendingView | null,
+  target: ClickTarget,
+): PendingOption | null {
+  if (pending === null || !pending.forYou || pending.kind !== "target" || isPlaguePlacementPrompt(pending)) {
+    return null;
+  }
+  switch (target.on) {
+    case "unit":
+    case "backrow":
+      return pending.options.find((option) => option.instanceId === target.instanceId) ?? null;
+    case "hero": {
+      const player = playerOf(view, target.side);
+      return (
+        pending.options.find((option) => {
+          const selection = selectionForOption(option);
+          return selection.pick === "hero" && selection.player === player;
+        }) ?? null
+      );
+    }
+    case "zone": {
+      return (
+        pending.options.find((option) => {
+          const zone = hiddenOptionZone(view, option);
+          return zone !== null && zone.side === target.side && zone.row === target.row && zone.lane === target.lane;
+        }) ?? null
+      );
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * R4781000: a board click that answers a one-pick `target` prompt at once, or null when it does
+ * not. The body sent is the engine's own, exactly as the placement answer is.
+ */
+export function answerTargetPrompt(
+  view: PlayerView,
+  legal: readonly ActionBody[],
+  pending: PendingView | null,
+  target: ClickTarget,
+): ActionBody | null {
+  if (pending === null || !pending.forYou) return null;
+  const matched = matchTargetOption(view, pending, target);
+  if (matched === null || pending.max > 1) return null;
+  return answerAction(pending, [matched.key], view, legal);
+}
+
+/**
+ * R4781000: the board testids that toggle a several-pick `target` prompt's options, by testid to
+ * the option each toggles, or null when no board click toggles. A one-pick prompt answers at once
+ * through `answerTargetPrompt`, so it sets no keys; anything no board click names (a hand card, a
+ * zone selection, another prompt kind, placement) is skipped.
+ */
+export function targetBoardKeys(view: PlayerView, pending: PendingView | null): Map<string, string> | null {
+  if (pending === null || !pending.forYou || pending.kind !== "target" || isPlaguePlacementPrompt(pending)) {
+    return null;
+  }
+  if (pending.max <= 1) return null;
+  const hand = Array.isArray(view.you.hand) ? view.you.hand : [];
+  const out = new Map<string, string>();
+  for (const option of pending.options) {
+    const zone = hiddenOptionZone(view, option);
+    if (zone !== null) {
+      out.set(testid.zone(zone.side, zone.row, zone.lane), option.key);
+      continue;
+    }
+    if (option.instanceId !== undefined) {
+      if (!hand.some((card) => card.instanceId === option.instanceId)) out.set(testid.card(option.instanceId), option.key);
+      continue;
+    }
+    const selection = selectionForOption(option);
+    if (selection.pick === "hero") out.set(testid.hero(sideOf(view, selection.player)), option.key);
+  }
+  return out;
 }
 
 /** Zone choices in board order, for a picker that wants to draw a grid. */

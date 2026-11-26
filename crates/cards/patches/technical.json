@@ -9415,5 +9415,1061 @@
     "pr": 4643,
     "title": "patches ship: v0.6.11e; patches cut: v0.6.12",
     "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "fbb8526070eaac5421c93ef296acb0fe3c9351c3",
+    "pr": 4620,
+    "title": "a tab left open across an update loads the new version at its next menu move, instead of failing to open a screen",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "a3ff340dff3b31f27162b5e42e53db33d564503a",
+    "pr": 4647,
+    "title": "bot: build pass 1 for #4632",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "38ba34bc16ea577771e83714e9b2e2befcb51299",
+    "pr": 4650,
+    "title": "the night bot's suggestions approve themselves when its judge would and no one votes",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "b531baf513ea4c8a568545d195581ff5301b0bdf",
+    "pr": 4628,
+    "title": "bot: build pass 1 for #4622",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "fe11ad8c9469e38456b4cb23addb3122e0e631b1",
+    "pr": 4655,
+    "title": "bot: the judge weighs suggestions as a person did, and keeps why one was approved",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "dea0ff59fb94624757330cd66d55cd580e6396e0",
+    "pr": 4654,
+    "title": "staging's super run on v0.6.12 goes green bar I21: spec 29, the Smoothie's filling event, and the fuzz wave's size",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "6ae400b17d5b32662b7690d1d0fc1b26e8a86abe",
+    "pr": 4658,
+    "title": "patches log: 4443938..a296c51",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "6b3a6e17e6f12b35530df31cce4dedf79b77301e",
+    "pr": 4656,
+    "title": "bot: build pass 1 for #4608",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "4b06262a029327dea8fa4a99100a3921281644e6",
+    "pr": 4659,
+    "title": "patches ship: v0.6.12b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "7ecd8f2ef9a3dfc35f6a3f4938e9ef99c9ba4854",
+    "pr": 4660,
+    "title": "bot: build pass 1 for #4653",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "3e87871d41549bb2485d162c726564df0596125c",
+    "pr": 4661,
+    "title": "bot: build pass 1 for #4652",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "c8b1f035d550c458b749cb088f67a38ea372a7d1",
+    "pr": 4664,
+    "title": "bot: work in progress (`claude-3` reached its usage limit)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "522d09e94e231a49527254617149617bff64424b",
+    "pr": 4662,
+    "title": "Double Counting repeats a Death a Unit was given, and Windfast's stand-in keeps to the attack rules when its attack is forced",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "e361b8a82fa23a640986a50472252408e66ccd7b",
+    "pr": 4684,
+    "title": "bot: build pass 1 for #4619",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "5cce3dcf6fa83e26ad623a694a581d136d13d6e2",
+    "pr": 4689,
+    "title": "patches ship: v0.6.12c",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "e2f382438ebee722f800ed735222d89256d8e3b2",
+    "pr": 4663,
+    "title": "the fuzz monitor fails a game in which anything changes an Immutable card's text, and a test plays every Transform, Vanilla, Nerf, Buff and Fuse card at one",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "70926614d9c9b19487783c696692bef107dcf134",
+    "pr": 4634,
+    "title": "a fork screen saves each deal as it finishes and picks up where it stopped, so a screen cut off part-way loses nothing",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "3a3289efda84f745e1aa56f304fbe7be73c75a36",
+    "pr": 4651,
+    "title": "the Infinite Assault, M, the mode",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "af1c289f296b564543dbd8ff1c26643802b60485",
+    "pr": 4695,
+    "title": "bot: build pass 1 for #4674",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "c1b2c98c36cac9c6f1f7481800cb4a5dc1c39648",
+    "pr": 4694,
+    "title": "the authenticator code as six boxes",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "517813ac5afd4cb12ae7894844ba899b4a207ddb",
+    "pr": 4700,
+    "title": "remove leftover docs and the last Vercel and Render mentions",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "818860ff9cd6659c3a720ac3030b8ad4e51044ea",
+    "pr": 4703,
+    "title": "remove the retired AI training lanes: the learn lane's workflows and the training box's loop",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "ad096ccc574057233d9f4732a109436bb3da2f8d",
+    "pr": 4708,
+    "title": "patches ship: v0.6.12d",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "863732844756bd5bb5ec7f3cc1648211e3675e31",
+    "pr": 4706,
+    "title": "bot: build pass 1 for #4675",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "e153ebc33e51e7f9b68f5513fc30f06d2c772fd7",
+    "pr": 4698,
+    "title": "a job ran over 10 minutes",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "ce96a06528723652728242166ab03b4ca8671c8f",
+    "pr": 4719,
+    "title": "bot: build pass 1 for #4648",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "73279f09d5e82f3d031d65a6e7253401e6ca26ba",
+    "pr": 4718,
+    "title": "bot: build pass 1 for #4686",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "a1978c33560a633b9c87c9d5df8869f151acfa1e",
+    "pr": 4717,
+    "title": "bot: build pass 1 for #4696",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "f10180a05739cd1cfe4a4fe86805b809709645e9",
+    "pr": 4716,
+    "title": "the clock alarm covers the mulligan and background tabs",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "ef6ce5a8306371953491444af898cb2f862f9fc7",
+    "pr": 4728,
+    "title": "patches ship: v0.6.12e",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "36cc6a77587e1cc571fa65740734bdb4bc4ef926",
+    "pr": 4738,
+    "title": "patches ship: v0.6.12f",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "f0e9d782e4f236cc2c1eb0346224c615aad1afc6",
+    "pr": 4735,
+    "title": "bot: build pass 1 for #4692",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "c155282b67d7f0542db8cd353b4b4b404003409d",
+    "pr": 4740,
+    "title": "bot: build pass 1 for #4720",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "4661395bbdbd52d93fc3606659c16b69ce07e9f8",
+    "pr": 4729,
+    "title": "deeper card stats, P2, a patch search, and older patches for dev accounts only",
+    "kind": "app",
+    "player": "/stats has a Find a patch button that opens any recent patch's statistics; older patches are for dev accounts."
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "15bc61b7dd639e3d1f24447d54c51fdb0c7517d4",
+    "pr": 4744,
+    "title": "Crater on a GIGA card Locks all four zones it fills (R4693000)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "9dde39cdcf78385fa3e980809383c56f3ae82023",
+    "pr": 4746,
+    "title": "patches cut: v0.6.13",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "5320535162d2b89d8075cf391a5abfa4fc41e7a2",
+    "pr": 4741,
+    "title": "follow-up to #4716 from the after-merge spot-check",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "17717f07bf69ae38426e813b3d3bce39ede50c67",
+    "pr": 4574,
+    "title": "the Decisiveness statistic, how hard a card's plays swing the game",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "b24c98d84dbf453cc141be3f6706125e5d95c74b",
+    "pr": 4749,
+    "title": "bot: build pass 1 for #4731",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "9817dc4aea78dcaec17f1ab1b0527b500cfbc9f8",
+    "pr": 4748,
+    "title": "bot: build pass 1 for #4733",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "764c36740611e774a6d2b1275e84559b6aacb006",
+    "pr": 4750,
+    "title": "bot: build pass 1 for #4722",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "da18e1fcbb489d95202fcf1e061a6a58581b0b66",
+    "pr": 4753,
+    "title": "bot: build pass 1 for #4725",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "2936e48cbc203a5f55535fb26ce2447ba690ca02",
+    "pr": 4754,
+    "title": "bot: build pass 1 for #4743",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "d201f7e0a61a1550fccd1f62d95d2b4add1452b8",
+    "pr": 4752,
+    "title": "bot: build pass 1 for #4723",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "192b9e3d936cdd28c0c9425024c673a2d3331574",
+    "pr": 4715,
+    "title": "bot: build pass 1 for #4683",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "80415dd992606355e14d8e2a0166391efd1b7185",
+    "pr": 4758,
+    "title": "patches ship: v0.6.13b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "2c81129d1d1391cef86ca272b5231c961d594776",
+    "pr": 4724,
+    "title": "bot: work in progress (`claude-7` stops mid-call: 5-hour usage is 70%, at or over its 70% cap; it resets at 2026-11-24T10:30:00Z)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.13",
+    "commit": "3a83bd774118e55a5e0550e7f14ed14176d7285e",
+    "pr": 4757,
+    "title": "a Main menu button on every end-of-game screen",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "f62ca60184f016fa41edd376ce9a9739b35dc0c5",
+    "pr": 4765,
+    "title": "patches ship: v0.6.13c",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "c474345f8fc1661965e708cdde9beb5151f32ea6",
+    "pr": 4775,
+    "title": "the first-load test probes the newest patch title only when it is more than one word",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "beb7996330e07164ff6f147eeba371276d081d13",
+    "pr": 4774,
+    "title": "remove the Rust commands only the retired training lanes ran: promote, positions, stats from-selfplay and the training gate",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "2564f77a8fe09c7c3a9e4fd14bdf2e76177981b0",
+    "pr": 4772,
+    "title": "the e2e replay hash is computed by the engine, not a TypeScript copy",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "5d6270a774cd491f93fbceda91854fc35d79bd99",
+    "pr": 4777,
+    "title": "the Infinite Assault, F, the spec, §16",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "6390f9efe2059c14542f064adae3e31d1e2c435d",
+    "pr": 4776,
+    "title": "bot: build pass 1 for #4773",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "4839df39990dc4fa71cd00d9f2810e00cdc3ea0d",
+    "pr": 4771,
+    "title": "the Infinite Assault, G, the e2e spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "f69913b6a8903fb8521ec6d30e5080df233cf997",
+    "pr": 4778,
+    "title": "fold the pending §11 paragraphs, the rulings index and the card index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "8d25bd8aa36494fd6d537c340f07b019416fba3a",
+    "pr": 4782,
+    "title": "the Infinite Assault, E, assault-sim and the difficulty bands",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "e875739489d69f357b185c63a34062bf446ee0ac",
+    "pr": 4800,
+    "title": "staging's super run goes green on spec 08 and the variant ladders again",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "cd2be2943eafb748969d450aa0293f705cde7d0a",
+    "pr": 4822,
+    "title": "bot: build pass 1 for #4761",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "36bca947d51698cf78c28eebc5a7e51c2d651a51",
+    "pr": 4853,
+    "title": "patches ship: v0.6.13d",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "0e1aa157778bd4a57b1d3d3c78c0f4b612c18b3f",
+    "pr": 4768,
+    "title": "bot: build pass 1 for #4732",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "eece62ea898ffcf0a8492d2030f9442887c829af",
+    "pr": 4858,
+    "title": "deeper card stats, X1, the Experimental tab and Running stats",
+    "kind": "app",
+    "player": "The Statistics page has an Experimental tab: Running shows every card's current version with its figures over every patch since it last changed."
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "bbfaed40be9982fa1fa66a948525090221b50a2d",
+    "pr": 4859,
+    "title": "bot: build pass 1 for #4781",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "6937a178dbecd90acc9bbafa9b6a72946036b92b",
+    "pr": 4862,
+    "title": "the AI takes a lethal it reaches by drawing first, finishing a cut-short replay's turn on each sampled world",
+    "kind": "ai",
+    "player": "The practice AI no longer walks past a lethal it can reach by drawing a card first."
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "5375c4f75533f53900d5fafe0573f0c5f204596f",
+    "pr": 4857,
+    "title": "bot: build pass 1 for #4780",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "90f2f4319e685fe9be6e2efcbeae422e35e2dfd3",
+    "pr": 4865,
+    "title": "patches ship: v0.6.13e",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "a9652b4441fdc5a0b3e0d8bf73e41a38c2506a89",
+    "pr": 4789,
+    "title": "no spec note longer than one read, §11's history one note an issue, and a lookup guide",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "05df436db78039c41eb8dae65cfcfd259e18253c",
+    "pr": 4867,
+    "title": "Call to Chaos's switch passes an immune Unit by, and I21 passes a destroy its casting Unit marked",
+    "kind": "internal",
+    "player": "Call to Chaos (Stinky Edition) no longer switches an enemy Unit Immune to Spells to Attack Position."
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "088f4705fa93300bd9cbba4f8186307f93ae790c",
+    "pr": 4869,
+    "title": "bot: build pass 1 for #4786",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "222fe9d1c288af8ae1c8bf7a129147760ce67748",
+    "pr": 4866,
+    "title": "deeper card stats, X2, every older version of a card as its own row",
+    "kind": "app",
+    "player": "The Statistics page's Experimental tab has a Versions view: every older version of every card as its own row, and a version opens to show the card as it was, with the changes before and after it."
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "2ac7542295151d4dfa98205a334ccbe258da8050",
+    "pr": 4873,
+    "title": "patches ship: v0.6.13f",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "69bc0fc88b5f452b16c213077c51538a3f3e80d3",
+    "pr": 4875,
+    "title": "bot: build pass 1 for #4801",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "af2fed168ea5e0d51960206c7d3b9a02372d7d60",
+    "pr": 4874,
+    "title": "bot: build pass 1 for #4841",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "2d30ffd98c2603e55d61487cfb924a4bd40ec90a",
+    "pr": 4463,
+    "title": "bot: build pass 1 for #4446",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "24dd4464abf21e2b4fb29f775b3fa318544e1d21",
+    "pr": 4868,
+    "title": "the server answers 400, not 500, to a NUL character, a UUID spelling Postgres will not cast, and a chat cursor past any timestamp",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "9f66d005899d99b5d7c1b3521ec6440d8b4763b3",
+    "pr": 4870,
+    "title": "the craft validator refuses a crafted Unit whose stats overflow its points and a granted keyword the block table does not price",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "37ebc4705157b39049be49f1fbf2143d82d7514b",
+    "pr": 4876,
+    "title": "the web manifest is fetched with credentials, so staging's Access lets it through",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "57de03ab9932f8ddb82421f108d28109e20714b7",
+    "pr": 4878,
+    "title": "patches ship: v0.6.13g",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "54023341bf9c6163676e8e863c0ff746b9ca02ca",
+    "pr": 4879,
+    "title": "patches log: a296c51..3a83bd7",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "eeea5aacb6b2b800515b3f45fdd3b1bdbe43d57c",
+    "pr": 4726,
+    "title": "deeper card stats, S0, each play's choice and each made card's maker in the record",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "a7574095ada4c43292402bcc8a34d9c3dff6e7f2",
+    "pr": 4872,
+    "title": "the Infinite Assault, AI, the AI plays the Assault",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "c0b49712022be8effa0faa35c1f8763c747f434c",
+    "pr": 4885,
+    "title": "bot: build pass 1 for #4803",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "ee76680a72700e50c32ebb9242e1daa33786d408",
+    "pr": 4882,
+    "title": "bot: build pass 1 for #4784",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "73b2e423dfe3801fd5a7f096cec12402b01228f8",
+    "pr": 4883,
+    "title": "bot: build pass 1 for #4849",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "97e85e4a2ea94a41fa8b721f78bcfaa99a6ddb9f",
+    "pr": 4886,
+    "title": "bot: build pass 1 for #4834",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "e3fe5705e33a97026fee0b25ea9797201bb95c3c",
+    "pr": 4888,
+    "title": "patches ship: v0.6.13h",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "a60f1a00005351e30db419970a0ea4df7e4d3574",
+    "pr": 4881,
+    "title": "bot: build pass 1 for #4848",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "ea379f1a0adf174f84fa3eaebf7bd3f7db17b9f2",
+    "pr": 4889,
+    "title": "bot: build pass 1 for #4818",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "3565d7319fcc1033d03a367633153b8bb27b1384",
+    "pr": 4894,
+    "title": "squishy: build pass 1 for #4892",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "fdbafa374cc8a0cbcb26907c026e93987cc834ba",
+    "pr": 4896,
+    "title": "bot: build pass 1 for #4808",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "56bddc1a7cf09981764888ee53fcc0ff17df7731",
+    "pr": 4895,
+    "title": "bot: build pass 1 for #4813",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "c4736b0ab66b7419426195ccc7eff85925eee4da",
+    "pr": 4903,
+    "title": "patches ship: v0.6.13i",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "7d4b6ab64b628a12993fd2734a89a50235404da0",
+    "pr": 4901,
+    "title": "bot: build pass 1 for #4815",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "6fea683ac5ac5405e99da0450f8e8839aba94d95",
+    "pr": 4900,
+    "title": "bot: build pass 1 for #4837",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "056932ae76fd29bc7b810f62ff38417a9ca14b77",
+    "pr": 4899,
+    "title": "bot: build pass 1 for #4806",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "aa084b54147eef8057bb64b85aa89792a80c4abf",
+    "pr": 4904,
+    "title": "bot: build pass 1 for #4809",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "85af9d5e42d3ad698087376e01a1774f444186cd",
+    "pr": 4864,
+    "title": "bot: build pass 1 for #4814",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "a9c2665f8dd6c6377342625a9d4de5cfd1b5e6d5",
+    "pr": 4887,
+    "title": "bot: build pass 1 for #4835",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "eae4e4ba7ff9999c53dffa86c32c87ce86ebf423",
+    "pr": 4909,
+    "title": "patches ship: v0.6.13j",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "c4830a4cb571e9dde6bf7af40e9f71aa6391ad17",
+    "pr": 4910,
+    "title": "bot: build pass 1 for #4734",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "f943af57b751a6e623f7d29262d367d2797562ab",
+    "pr": 4908,
+    "title": "bot: build pass 1 for #4846",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "074e207831e81f716a07f5d1b99500dd8bd4efb0",
+    "pr": 4906,
+    "title": "bot: build pass 1 for #4843",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "13e90a64c0efa58cec9b06d20a8b540bae63b9e7",
+    "pr": 4902,
+    "title": "bot: build pass 1 for #4810",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "3fb50609c6ac8bf1421da24223ce1590f2e31b36",
+    "pr": 4912,
+    "title": "bot: build pass 1 for #4831",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "c370e9ab77b5d51715c53509eec8d16369f8f201",
+    "pr": 4915,
+    "title": "bot: build pass 1 for #4785",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "1769dbf58b550d4afa6d27ed52ff9c628163fea3",
+    "pr": 4914,
+    "title": "bot: build pass 1 for #4847",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "784ef8529e1468a3eb70f4757464f7f62bf268b5",
+    "pr": 4913,
+    "title": "bot: build pass 1 for #4816",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "cff29cdb4536c64f3712e93e926923c108a1ac77",
+    "pr": 4916,
+    "title": "bot: build pass 1 for #4802",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "c9562b6ec883f13e2f09b093078dcee83b7f05ea",
+    "pr": 4920,
+    "title": "patches ship: v0.6.13k",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "f3f0f294cc292179da4dc2aa1108d8b01261b8d0",
+    "pr": 4917,
+    "title": "bot: build pass 1 for #4779",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "f955ed9d3539c41e11a408da29dbeef379cfe48a",
+    "pr": 4911,
+    "title": "bot: build pass 1 for #4850",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "3f3d94d19961657b756870fd81ea2c42e0f3039f",
+    "pr": 4919,
+    "title": "bot: build pass 1 for #4851",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "e39c5da087ee4946f06d532db668ed8fae9ae60e",
+    "pr": 4923,
+    "title": "patches cut: v0.6.14",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "daee3b7b411241506d95243436e980ab2c7f38df",
+    "pr": 4918,
+    "title": "the AI's count of a board's coming damage includes a Cleave splash's Trample excess over a neighbour that has no Taunt",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "108cfb03bc550502f7ae2b3fbe2cb95751458542",
+    "pr": 4930,
+    "title": "patches ship: v0.6.14b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "8972c092ce73589f2e487983a5e951c1ec67d665",
+    "pr": 4929,
+    "title": "bot: build pass 1 for #4845",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "a83795ab15e182e15263227f5681a501c4fe4146",
+    "pr": 4933,
+    "title": "bot: build pass 1 for #4807",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "4a378a3ed7ad64f730ff0c14cb0a18410c9c1156",
+    "pr": 4928,
+    "title": "bot: build pass 1 for #4852",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "324379057abaa7af130fd5546cb9ce2c3fae573e",
+    "pr": 4940,
+    "title": "the AI's redaction hides the tags of the opponent's face-down Trap in the play counts, and the hidden card an interrupted trap firing remembers",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "6dabb1949301892fe5834ac7fbdce0adbbb36009",
+    "pr": 4945,
+    "title": "patches ship: v0.6.14c",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "12f393b679225f1743a67b299d5007ca440d6530",
+    "pr": 4942,
+    "title": "bot: build pass 1 for #4812",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "09aa5eb75ce398d494fe3dda4840a351f3595feb",
+    "pr": 4935,
+    "title": "a Unit token sent into a deck is reported as gone, not shuffled in, and a Unit-token card cannot be traded, so no Trade ends in fatigue",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "bcf1b18dce5a937a1b6aba3c4812d369b9030962",
+    "pr": 4954,
+    "title": "fold the pending §11 paragraphs, the rulings index and the card index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "328135b4ca8680ff4b41b98ed7bcd32c7755516c",
+    "pr": 4957,
+    "title": "patches ship: v0.6.14d",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "4bd2d802b5dc1c1c233ff147a0f67fa5a12dadf3",
+    "pr": 4949,
+    "title": "bot: build pass 1 for #4891",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "40b477a91f6db55d2f798e8079b8e2054eb24c39",
+    "pr": 4958,
+    "title": "bot: build pass 1 for #4924",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "047324cbd22b872a12baea61bb032ab487c29d19",
+    "pr": 4961,
+    "title": "bot: build pass 1 for #4932",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "734cb44ed56b827029edd2fc0adda1685dcf149c",
+    "pr": 4952,
+    "title": "tributing a GIGA empties all four zones it covers for the play that pays it, so a GIGA Tribute card can take its place",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "eb1709f3c81ed883e8e7061aeff878ad9056f946",
+    "pr": 4963,
+    "title": "patches ship: v0.6.14e",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "4f1d75fd922e9d524a599286c936a8f26d973ccb",
+    "pr": 4956,
+    "title": "`permanents_on_field` meets a card lying on a unit zone after its side's backrow",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "c99eed0df9717f9e65b149bb988243d27d9e335d",
+    "pr": 4955,
+    "title": "bot: build pass 1 for #4926",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "e046cabb873dd1af48a7b8cb929728d625fcb259",
+    "pr": 4943,
+    "title": "bot: build pass 1 for #4823",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "d7c66164f1dc1dcf90a223b2cfb19af7d66a809e",
+    "pr": 4964,
+    "title": "the statistics load every patch's card totals in a third of the memory, so the game server is no longer killed loading them",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "c1b1371cde1147dbe6ed8f1028d992d099633b73",
+    "pr": 4939,
+    "title": "bot: build pass 1 for #4811",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "0c287997ec2d05067a4bef4378b1762fda575f0d",
+    "pr": 4959,
+    "title": "the AI without its learned evaluation is generation 14, so the shadow ban is swept on it and the ladder bots' ratings re-settle",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "5aca1af91a246cc75b1430c120737cd5982dc630",
+    "pr": 4948,
+    "title": "bot: build pass 1 for #4824",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "d5a6c909fb78de360aba0d554a699bbf973aeeef",
+    "pr": 4968,
+    "title": "patches ship: v0.6.14f, v0.6.14g",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "fcd989600c0e90b1c32401d3e11200945b20c988",
+    "pr": 4898,
+    "title": "one issue per red staging run, deploy failures first, and a fuzz slice in the merge queue",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "b961329197eb2c2d227c41657e5cc643cce02d00",
+    "pr": 4973,
+    "title": "bot: build pass 1 for #4931",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "1020221e60b7b799216dcbebdf429fde8ef44a48",
+    "pr": 4944,
+    "title": "bot: build pass 1 for #4842",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "a59511bb2f0c449789a07fc0e1e627134434f986",
+    "pr": 4976,
+    "title": "patches log: 3a83bd7..e046cab",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "40d6f5966458dbb2c93c823f2749dce3d53c729e",
+    "pr": 4960,
+    "title": "route six held-set hooks through the engine's read helpers instead of GameState fields",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "56cc692e5ac1ebcbf1280729b9cb0bdbe1eec77e",
+    "pr": 4983,
+    "title": "ban the React hooks misuse agents write, and make every lint suppression state its reason and fail once stale",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "c94c973c8ea39899b5cc524d2464424e7bde7e15",
+    "pr": 4950,
+    "title": "deeper card stats, S2, an Extended stats button on every card: its win rate by each choice",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "7446a711a6ec7b682d19a07e9fbb982f74006be9",
+    "pr": 4987,
+    "title": "patches ship: v0.6.14h, v0.6.14i",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "1c38dfc6725411fc242f07c02e21be612d569d9c",
+    "pr": 4988,
+    "title": "staging's super run goes green again: a Radiant card set face-down under a Garden keeps its Embiggened play, I18 leaves Tribute conditions alone, and the daily fuzz wave grows to 16800 seeds",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "f8c40d9321460899df420e8c223b19e39f43fe25",
+    "pr": 4989,
+    "title": "the statistics read every patch's card totals as one stream, so /stats loads inside the client's timeout",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "0945b5f645c9951727b1bb99ebf1e4f15d8eedb5",
+    "pr": 4993,
+    "title": "bot: build pass 1 for #4969",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "d1b9b808987ffe3ba4e1e2a2fb7e3f7053ba1358",
+    "pr": 4994,
+    "title": "the pool probe runs each suite on its own runner, and a challenger follows the friend's join while the social socket is live",
+    "kind": "app",
+    "player": "A challenge you send now always takes you to the game when your friend accepts it."
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "2682cb7620ef465207c812d4d70b6634a9ec3f94",
+    "pr": 4997,
+    "title": "bot: build pass 1 for #4981",
+    "kind": "app"
   }
 ]

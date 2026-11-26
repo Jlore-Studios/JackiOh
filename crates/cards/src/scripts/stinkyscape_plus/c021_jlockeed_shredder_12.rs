@@ -1,28 +1,32 @@
 //! SPEC §8.12 S+ #21 Jlockeed Shredder-12, a card of the Stinkyscape+ set (R1420, R3535000).
-//!   Base:    12/16, Tribute 3; "Float reduces Tribute requirement by 1.
+//!   Base:    12/16, Tribute 4; "Float reduces Tribute requirement by 1.
 //!            End of turn: Deal {damage} damage to all enemies, twice." (Pierce too until issue #4353)
-//!   Radiant: 24/32, Tribute 3, Pierce; the same.
+//!   Radiant: 24/32, Tribute 4, Pierce; the same.
 //!
 //! Pierce is catalog data: issue #4353 took it off the base face's keywords and first line, and the
 //! Radiant face keeps it, so the script is the same for both; the shipped catalogs keep the base face's
-//! Pierce through v0.6.8b (R767000).
+//! Pierce through v0.6.8b (R767000). The damage is declared, 2 (Radiant 4; 5 until issue #4783).
 //!
-//! Tribute 3 is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the keyword line's
+//! Tribute 4 is the play validator's (§6.3, R101), read off `staticFlags.tribute`, the keyword line's
 //! printed Tribute (R366), lowered 1 by each of its owner's Floats while it waits in hand, never in the
 //! deck (R2657002), never below 0 (`float_lowers_tribute`, R1841003, as S #86 Prototype-X2's). The end of
 //! turn is #13's shape: one `damage_all` per pass (R51, R59), and "twice" is two passes, so every enemy
 //! takes two damage instances, the hero last in each (R3553000).
-//! Issue #4154 raised the Tribute from 2 and gave it the Float line; `script_v0_6_6h` keeps Tribute 2 with
-//! no Float for the replays of v0.6.6h and before, and issue #3996 had raised it from 1, which
-//! `script_v0_6_5b` keeps for the replays of v0.6.5b and before (R767000).
+//! Issue #4783 (Stinkyscape+ Balance Changes VIII) raised the Tribute from 3, which `script_v0_6_13h`
+//! keeps, Float line and all, for the replays of v0.6.13h and before; issue #4154 had raised it from 2
+//! and given it the Float line, and `script_v0_6_6h` keeps Tribute 2 with no Float for the replays of
+//! v0.6.6h and before; issue #3996 had raised it from 1, which `script_v0_6_5b` keeps for the replays of
+//! v0.6.5b and before (R767000).
 
 use jackioh_engine::effects::damage_all;
 use jackioh_engine::prelude::*;
 
 pub const ID: &str = "stinkyscapeplus-021";
 
-/// "Tribute 3" (R101, R366: printed, declared nowhere), since issue #4154.
-const TRIBUTE: i32 = 3;
+/// "Tribute 4" (R101, R366: printed, declared nowhere), since issue #4783.
+const TRIBUTE: i32 = 4;
+/// "Tribute 3", after v0.6.6h through v0.6.13h (issue #4154), with the Float line.
+const TRIBUTE_V0_6_13C: i32 = 3;
 /// "Tribute 2", after v0.6.5b through v0.6.6h (issue #3996).
 const TRIBUTE_V0_6_6H: i32 = 2;
 /// "Tribute 1", through v0.6.5b.
@@ -60,6 +64,14 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
+/// R767000: after v0.6.6h through v0.6.13h it was Tribute 3, each Float lowering it by 1 as now (issue
+/// #4783); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_13h() -> CardScripts {
+    let base = shredder(TRIBUTE_V0_6_13C, true);
+    let radiant = base.clone();
+    CardScripts { base, radiant }
+}
+
 /// R767000: after v0.6.5b through v0.6.6h it was Tribute 2 with no Float (issue #4154); `KEPT_SCRIPTS`
 /// folds those replays under it.
 pub fn script_v0_6_6h() -> CardScripts {
@@ -76,8 +88,8 @@ pub fn script_v0_6_5b() -> CardScripts {
 }
 
 // S+ #21 Jlockeed Shredder-12 — SPEC §8.12 row S+ 21 (R3553000; R51, R59, R101, R366, R1841003).
-// End-of-turn double AoE over enemy units and hero; Tribute 3 to play, each Float lowering it by 1 (2
-// with no Float through v0.6.6h, 1 through v0.6.5b).
+// End-of-turn double AoE over enemy units and hero; Tribute 4 to play, each Float lowering it by 1 (3
+// through v0.6.13h, 2 with no Float through v0.6.6h, 1 through v0.6.5b).
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -128,7 +140,7 @@ mod tests {
             assert!(def.base.keywords.iter().all(|keyword| keyword.kind() != KeywordKind::Pierce));
             assert!(!def.base.text.contains("Pierce"), "{}", def.base.text);
             assert!(def.radiant.keywords.iter().any(|keyword| keyword.kind() == KeywordKind::Pierce));
-            assert!(def.radiant.text.starts_with("Tribute 3, Pierce\n"), "{}", def.radiant.text);
+            assert!(def.radiant.text.starts_with("Tribute 4, Pierce\n"), "{}", def.radiant.text);
         }
 
         #[test]
@@ -192,12 +204,12 @@ mod tests {
             );
         }
 
-        /// p1 holds the Shredder (`radiant` its face) beside three Units to tribute.
+        /// p1 holds the Shredder (`radiant` its face) beside four Units to tribute.
         fn to_play(radiant: bool) -> Scenario {
             scenario(json!({
                 "p1": {
                     "hand": [{ "def": ID, "radiant": radiant }],
-                    "field": [VANILLA, VANILLA, VANILLA],
+                    "field": [VANILLA, VANILLA, VANILLA, VANILLA],
                     "library": [FILLER],
                 },
                 "p2": { "hand": [FILLER], "library": [FILLER] },
@@ -205,36 +217,32 @@ mod tests {
         }
 
         #[test]
-        fn r101_it_needs_tribute_3_on_both_faces() {
+        fn r101_it_needs_tribute_4_on_both_faces() {
             for radiant in [false, true] {
                 let mut s = to_play(radiant);
                 assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE);
-                let [first, second, third] = [1, 2, 3].map(|lane| s.unit_at(PlayerId::P1, lane).id);
-                // No tribute, or two, is refused; three Units pay it.
-                s.expect_refused(|s| s.play(ID, json!({ "zone": 4 })));
-                s.expect_refused(|s| {
-                    s.play(ID, json!({ "zone": 4, "tributes": [first.as_str(), second.as_str()] }))
-                });
-                s.play(
-                    ID,
-                    json!({ "zone": 4, "tributes": [first.as_str(), second.as_str(), third.as_str()] }),
-                );
+                let three = [1, 2, 3].map(|lane| s.unit_at(PlayerId::P1, lane).id);
+                let four = [1, 2, 3, 4].map(|lane| s.unit_at(PlayerId::P1, lane).id);
+                // No tribute, or three, is refused; four Units pay it.
+                s.expect_refused(|s| s.play(ID, json!({ "zone": 5 })));
+                s.expect_refused(|s| s.play(ID, json!({ "zone": 5, "tributes": three })));
+                s.play(ID, json!({ "zone": 5, "tributes": four }));
                 s.expect_in_zone(ID, "field");
-                for id in [&first, &second, &third] {
+                for id in &four {
                     s.expect_in_zone(id.as_str(), "graveyard");
                 }
             }
         }
 
         /// R1841003, R2657002: each of its owner's Floats lowers its Tribute by 1 while it waits in hand,
-        /// never in the deck, never below 0; a lowered Tribute 2 is paid by two Units.
+        /// never in the deck, never below 0; a lowered Tribute 3 is paid by three Units.
         #[test]
         fn r1841003_each_float_lowers_its_tribute_by_1_in_hand_never_in_the_deck() {
             for radiant in [false, true] {
                 let mut s = scenario(json!({
                     "p1": {
                         "hand": [{ "def": ID, "radiant": radiant }, FILLER],
-                        "field": [VANILLA, VANILLA],
+                        "field": [VANILLA, VANILLA, VANILLA],
                         "library": [FILLER, FILLER, FILLER, FILLER, { "def": ID, "radiant": radiant }],
                         "mana": 2,
                     },
@@ -261,10 +269,27 @@ mod tests {
                 );
                 next_turn_of(&mut s, PlayerId::P1);
                 assert_eq!(tribute(&s, &in_hand), TRIBUTE - 1, "radiant {radiant}");
-                let [first, second] = [1, 2].map(|lane| s.unit_at(PlayerId::P1, lane).id);
-                s.play(&in_hand, json!({ "zone": 3, "tributes": [first.as_str(), second.as_str()] }));
+                let three = [1, 2, 3].map(|lane| s.unit_at(PlayerId::P1, lane).id);
+                s.play(&in_hand, json!({ "zone": 4, "tributes": three }));
                 s.expect_in_zone(&in_hand, "field");
             }
+        }
+
+        /// R767000: after v0.6.6h through v0.6.13h three Units paid it, a Float lowering it as now (issue
+        /// #4783).
+        #[test]
+        fn r767000_the_script_kept_for_v0_6_13h_needs_tribute_3_and_a_float_lowers_it() {
+            crate::under_kept(ID, script_v0_6_13h(), || {
+                let mut s = to_play(false);
+                assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE_V0_6_13C);
+                assert!(!script_v0_6_13h().base.hand_triggers.is_empty(), "its Float");
+                let two = [1, 2].map(|lane| s.unit_at(PlayerId::P1, lane).id);
+                let three = [1, 2, 3].map(|lane| s.unit_at(PlayerId::P1, lane).id);
+                s.expect_refused(|s| s.play(ID, json!({ "zone": 5, "tributes": two })));
+                s.play(ID, json!({ "zone": 5, "tributes": three }));
+                s.expect_in_zone(ID, "field");
+                assert!(s.unit(PlayerId::P1, 4).is_some(), "the fourth Unit stays");
+            });
         }
 
         /// R767000: after v0.6.5b through v0.6.6h two Units paid it and a Float lowered nothing (issue #4154).
@@ -275,8 +300,8 @@ mod tests {
                 assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE_V0_6_6H);
                 assert!(script_v0_6_6h().base.hand_triggers.is_empty(), "no Float");
                 let [first, second] = [1, 2].map(|lane| s.unit_at(PlayerId::P1, lane).id);
-                s.expect_refused(|s| s.play(ID, json!({ "zone": 4, "tributes": [first.as_str()] })));
-                s.play(ID, json!({ "zone": 4, "tributes": [first.as_str(), second.as_str()] }));
+                s.expect_refused(|s| s.play(ID, json!({ "zone": 5, "tributes": [first.as_str()] })));
+                s.play(ID, json!({ "zone": 5, "tributes": [first.as_str(), second.as_str()] }));
                 s.expect_in_zone(ID, "field");
                 assert!(s.unit(PlayerId::P1, 3).is_some(), "the third Unit stays");
             });
@@ -289,7 +314,7 @@ mod tests {
                 let mut s = to_play(false);
                 assert_eq!(tribute_cost_of(s.state(), s.card(ID)), TRIBUTE_V0_6_5B);
                 let first = s.unit_at(PlayerId::P1, 1).id;
-                s.play(ID, json!({ "zone": 4, "tributes": [first.as_str()] }));
+                s.play(ID, json!({ "zone": 5, "tributes": [first.as_str()] }));
                 s.expect_in_zone(ID, "field");
                 s.expect_in_zone(first.as_str(), "graveyard");
                 assert!(s.unit(PlayerId::P1, 2).is_some(), "the second Unit stays");
@@ -301,18 +326,18 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r3553000_the_radiant_face_deals_5_twice() {
+        fn r3553000_the_radiant_face_deals_4_twice() {
             let mut s = shredder_board(true);
 
             s.end_turn();
 
             let hits = hits(&s);
-            assert_eq!(hits.iter().map(|hit| hit.1).collect::<Vec<_>>(), vec![5, 5, 5, 5, 5, 5]);
+            assert_eq!(hits.iter().map(|hit| hit.1).collect::<Vec<_>>(), vec![4, 4, 4, 4, 4, 4]);
             for lane in [1, 2] {
                 let id = s.unit(PlayerId::P2, lane).expect("still standing").id;
-                s.expect_stats(id.as_str(), json!({ "health": 2, "maxHealth": 12 }));
+                s.expect_stats(id.as_str(), json!({ "health": 4, "maxHealth": 12 }));
             }
-            s.expect_health(PlayerId::P2, 20);
+            s.expect_health(PlayerId::P2, 22);
             s.expect_health(PlayerId::P1, 30);
         }
     }

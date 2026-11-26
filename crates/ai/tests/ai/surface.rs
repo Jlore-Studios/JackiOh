@@ -1,5 +1,5 @@
-//! The search's building blocks against docs/polish/3-ai.md §Surface: `lineStatus`, `terminalScore`,
-//! `scoreLine`, `beamSearch`, `findLethal`, `decide`, `playAiTurn`, and sweep clock.
+//! The search's building blocks against docs/polish/3-ai.md §Surface: `lineStatus`, a closed line's
+//! score, `replayLine`, `beamSearch`, `findLethal`, `decide`, `playAiTurn`, and sweep clock.
 
 use std::cell::Cell;
 
@@ -104,7 +104,7 @@ mod surface_line_status {
     }
 }
 
-mod surface_terminal_score {
+mod surface_closed_line_score {
     use super::*;
 
     /// an open line in the seat's main phase ends its turn and pays for the crystals it left
@@ -116,7 +116,12 @@ mod surface_terminal_score {
 
         let counter = create_node_counter(10, None);
         assert_eq!(
-            terminal_score(&state, AI, TURN, &counter, Prices::NONE),
+            static_score(
+                &close_line(&state, AI, TURN, &counter, Prices::NONE),
+                AI,
+                TURN,
+                Prices::NONE
+            ),
             passed_value(&ended)
         );
         assert!(counter.used() > 0);
@@ -129,7 +134,12 @@ mod surface_terminal_score {
         assert_eq!(line_status(&ended, AI, TURN), LineStatus::Passed);
         let counter = create_node_counter(10, None);
         assert_eq!(
-            terminal_score(&ended, AI, TURN, &counter, Prices::NONE),
+            static_score(
+                &close_line(&ended, AI, TURN, &counter, Prices::NONE),
+                AI,
+                TURN,
+                Prices::NONE
+            ),
             passed_value(&ended)
         );
         assert!(passed_value(&ended) < line(&ended, AI));
@@ -142,12 +152,22 @@ mod surface_terminal_score {
         let state = quiet_turn();
         let counter = create_node_counter(10, None);
         assert_eq!(
-            terminal_score(&state, HUMAN, TURN, &counter, Prices::NONE),
+            static_score(
+                &close_line(&state, HUMAN, TURN, &counter, Prices::NONE),
+                HUMAN,
+                TURN,
+                Prices::NONE
+            ),
             line(&state, HUMAN)
         );
         let over = act(&state, AI, &ActionBody::Concede);
         assert_eq!(
-            terminal_score(&over, AI, TURN, &counter, Prices::NONE),
+            static_score(
+                &close_line(&over, AI, TURN, &counter, Prices::NONE),
+                AI,
+                TURN,
+                Prices::NONE
+            ),
             line(&over, AI)
         );
         assert_eq!(eval(&over, AI), -AI_EVAL.win + f64::from(over.turn));
@@ -159,7 +179,12 @@ mod surface_terminal_score {
     fn an_open_line_with_no_node_left_for_its_end_turn_is_scored_where_it_stands() {
         let state = quiet_turn();
         assert_eq!(
-            terminal_score(&state, AI, TURN, &create_node_counter(0, None), Prices::NONE),
+            static_score(
+                &close_line(&state, AI, TURN, &create_node_counter(0, None), Prices::NONE),
+                AI,
+                TURN,
+                Prices::NONE
+            ),
             line(&state, AI)
         );
     }
@@ -167,29 +192,29 @@ mod surface_terminal_score {
 
 // search.ts
 
-mod surface_score_line {
+mod surface_replay_line {
     use super::*;
 
-    /// a line whose first action is not a candidate is cut there and scored by terminalScore
+    /// a line whose first action is not a candidate is cut there and scored where it closes
     #[test]
-    fn a_line_whose_first_action_is_not_a_candidate_is_cut_there_and_scored_by_terminal_score() {
+    fn a_line_whose_first_action_is_not_a_candidate_is_cut_there_and_scored_where_it_closes() {
         let state = quiet_turn();
         assert!(!is_legal(&state, AI, bogus()));
         assert_eq!(
-            score_line(
+            replay_line(
                 &state,
                 AI,
                 &[bogus()],
                 &create_node_counter(20, None),
-                false,
                 None,
                 Prices::NONE,
-            ),
-            Some(terminal_score(
-                &state,
+                ReplayFill::OFF,
+            )
+            .map(|replay| replay.score),
+            Some(static_score(
+                &close_line(&state, AI, TURN, &create_node_counter(20, None), Prices::NONE),
                 AI,
                 TURN,
-                &create_node_counter(20, None),
                 Prices::NONE
             )),
         );
@@ -207,27 +232,29 @@ mod surface_score_line {
         let expected = passed_value(&ended_turn(&stepped));
 
         assert_eq!(
-            score_line(
+            replay_line(
                 &state,
                 AI,
                 std::slice::from_ref(&attack),
                 &create_node_counter(20, None),
-                false,
                 None,
                 Prices::NONE,
-            ),
+                ReplayFill::OFF,
+            )
+            .map(|replay| replay.score),
             Some(expected)
         );
         assert_eq!(
-            score_line(
+            replay_line(
                 &state,
                 AI,
                 &[attack.clone(), bogus(), ActionBody::EndTurn],
                 &create_node_counter(20, None),
-                false,
                 None,
                 Prices::NONE,
-            ),
+                ReplayFill::OFF,
+            )
+            .map(|replay| replay.score),
             Some(expected)
         );
     }
@@ -238,27 +265,29 @@ mod surface_score_line {
         let state = quiet_turn();
         let attack = hero_attack(&state);
         assert!(
-            score_line(
+            replay_line(
                 &state,
                 AI,
                 std::slice::from_ref(&attack),
                 &create_node_counter(0, None),
-                false,
                 None,
                 Prices::NONE,
+                ReplayFill::OFF,
             )
+            .map(|replay| replay.score)
             .is_none()
         );
         assert!(
-            score_line(
+            replay_line(
                 &state,
                 AI,
                 std::slice::from_ref(&attack),
                 &create_node_counter(1, None),
-                false,
                 None,
                 Prices::NONE,
+                ReplayFill::OFF,
             )
+            .map(|replay| replay.score)
             .is_none()
         );
     }
@@ -435,6 +464,40 @@ mod surface_play_ai_turn {
         }
         assert!(!ai_to_act(&turn.state, AI));
     }
+
+    /// a second play_ai_turn on the same game applies every action it returns
+    #[test]
+    fn a_second_play_ai_turn_on_the_same_game_applies_every_action_it_returns() {
+        jackioh_cards::register_all();
+        let start = scenario(json!({
+            "seed": "audit-turns", "active": "p1", "turn": 9,
+            "p1": { "hand": ["core-025", "core-011"], "mana": 4, "library": ["core-008", "core-011", "core-019"] },
+            "p2": { "hand": ["core-025", "core-011"], "mana": 4, "library": ["core-008", "core-011", "core-019"] },
+        }))
+        .state()
+        .clone();
+        let mut ai = AiOptions::with_budget(create_rng("audit-turns", 0), AI_GATE_BUDGET);
+        let first = play_ai_turn(&start, PlayerId::P1, &mut ai);
+        assert!(first.actions.len() >= 2, "p1 plays and ends its turn");
+        let second = play_ai_turn(&first.state, PlayerId::P2, &mut ai);
+
+        let mut current = first.state.clone();
+        for action in &second.actions {
+            let next = reduce(
+                &current,
+                &Action::new(action.body.clone(), PlayerId::P2, action.nonce.clone()),
+            );
+            assert!(next.error.is_none());
+            assert_ne!(
+                hash_state(&next.state),
+                hash_state(&current),
+                "p2's action {} ({:?}) changed nothing: its nonce was p1's",
+                action.nonce,
+                action.body
+            );
+            current = next.state;
+        }
+    }
 }
 
 // sweep.ts: the clock
@@ -459,7 +522,6 @@ mod surface_sweep_cards_clock {
                 retime: None,
                 tier: None,
                 banned: None,
-                setup: None,
                 face: None,
             },
         );

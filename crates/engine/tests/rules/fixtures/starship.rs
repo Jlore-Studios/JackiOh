@@ -3,14 +3,17 @@
 //! summons (`DORMANT_STARSHIP_DEF_ID`), Starship Pieces in the shapes Stinkyscape will print, and the
 //! cards that kill, steal, discard, equip, stack onto and launch them. Ids `ss-…` from 18520.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 
 use jackioh_engine::effects;
 // The verbs and reads as a card script names them, through the prelude (CLAUDE.md rule 5).
 use jackioh_engine::prelude::{
-    awaken, dormant_starship_of, launched_starship_of, starship_pieces_of, when_launched,
+    awaken, dormant_starship_of, launched_starship_of, starship_pieces_of, units_on_field_of, when_launched,
 };
 use jackioh_engine::testkit::*;
 
@@ -274,7 +277,13 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             grab.id.clone(),
-            spell(hook(|_ctx| vec![effects::steal_all(json_as(json!({})))])),
+            spell(hook(|ctx| {
+                // One `steal` for each enemy Unit, in lane order.
+                units_on_field_of(ctx.state, opponent_of(ctx.controller))
+                    .into_iter()
+                    .map(|unit| effects::steal(json_as(json!({ "instanceId": unit.id }))))
+                    .collect()
+            })),
         ),
         (
             liftoff.id.clone(),

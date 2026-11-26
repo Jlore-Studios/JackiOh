@@ -1,54 +1,43 @@
-# Standing prompt: the gather lane
+# The gather lane
 
-No model runs this lane. `training/loop.sh gather` does every step itself, with no model session and no
-pull request, so this file is the lane's contract, not a prompt anyone reads: a change to the lane
-updates this file, `loop.sh` and `training/README.md` (The gather lane) together.
+No model runs this lane. `.github/workflows/gather.yml` does every step itself on GitHub's runners,
+with no model session and no pull request, so this file is the lane's contract: a change to the lane
+updates this file, `gather.yml` and `training/README.md` (The gather lane) together.
 
-The lane is the data side of #636. The two other lanes improve the AI; this one improves nothing. It
-gathers the development games the card win rates (SPEC §9.11, R376–R378) are read from, so a patch has
-AI-against-AI figures for every card beside its live games, whether or not anyone ever trains on them.
+The lane is the data side of #636. It improves nothing: it gathers the development games the card win
+rates (SPEC §9.11, R376–R378) are read from, so a patch has AI-against-AI figures for every card beside
+its live games.
 
-## Where the development games come from now
+## How it runs
 
-Since #1676 they come from the learn lane's exports, which `cargo jackioh stats from-selfplay` files as
-development records (R1676000; `training/README.md`, The gather lane), and since #1976 `learn.yml` files
-every export's games itself and imports them as totals only (R1976000). On two of GitHub's runners
-since #3740, `.github/workflows/gather.yml` plays without a pause the way this lane did, `stats --series
-gather` on the newest version on `main`, game `n` of run `r` being `gather:<(r - 1) × 100,000 + n>` and
-each of a run's two parts playing its own half of that range, while the repository variable
-`GATHER_ON_PATCH` is `true`. Each part plays five hours (`GATHER_HOURS`) and files its games as totals
-only into both projects' databases 400 at a time as they finish (`GATHER_FILE_GAMES`, about an hour),
-so the newest version's figures grow every hour; each run starts the next as it ends. Until #3740 it
-played 5,000 games of each new patch or set (never a micro) once, on the owner's PC. The learn lane's shards file theirs the same way, 1,250 at a
-time (`training/learn.md`, step 7), with `training/file-records.sh`. No box runs this lane since 2026-11-04: the training box (the Muse box
-now, `bot/machine/README.md`) ran it until then, filing staging's database alone where gather.yml files
-both (R1933001), so `jackioh-train@gather` is disabled there. What follows is its contract for any box
-that still runs `loop.sh gather`.
+On two of GitHub's runners since #3740, `gather.yml` plays without a pause, `stats --series gather` on
+the newest version on `main`, game `n` of run `r` being `gather:<(r - 1) × 100,000 + n>` and each of a
+run's two parts playing its own half of that range, while the repository variable `GATHER_ON_PATCH` is
+`true`. Each part plays five hours (`GATHER_HOURS`) and files its games as totals only into both
+projects' databases 400 at a time as they finish (`GATHER_FILE_GAMES`, about an hour), through
+`training/file-records.sh` (R1976000, R1933001), so the newest version's figures grow every hour; each
+run starts the next as it ends. Until #3740 it played 5,000 games of each new patch or set (never a
+micro) once, on the owner's PC, and until 2026-11-04 the training box ran it too (`loop.sh gather`,
+which #4701 removed).
 
 ## What it plays
 
-`jackioh stats --series gather` (R378), in batches:
+`jackioh stats --series gather` (R378):
 
-- The AI on `main` plays itself. It is the best AI there is, since every promotion lands on `main`, and
-  the lane builds `jackioh` from `main` at the start of every cycle.
+- The AI on `main` plays itself, built from `main` as it was when the run started.
 - Both decks are dealt by R258's All Random deal (`build_ai_deck` with nothing banned, less the AI's
   soft gate, R1390), at the browser's budget (`AI_BUDGET`) and with no handicap.
-- Game `n` of the series has the seed `gather:<n>`, so the lane's games are not the gate's
-  (`<lane>:<tree>:<k>`), not a person's pre-release run's (`dev:<n>`) and not any tuning run's.
+- A game's seed is `gather:<n>`, so the lane's games are not the gate's (`<lane>:<tree>:<k>`), not a
+  person's pre-release run's (`dev:<n>`) and not any tuning run's, and no two runs or parts play the
+  same game (R1976000).
 - Each finished game is filed as a record with `source: "dev"`, `mode: "random"`, both pilots `ai`, the
   id `dev:<patch>:gather:<n>` and the patch `cargo jackioh catalog-version` names for the checkout. A game
   that does not finish (the action limit, a panic) files nothing.
-- The games play one at a time (`RAYON_NUM_THREADS=1`), under `nice -n 19`, so the lane keeps the CPU for the other lanes' gates.
-
-The lane keeps `~/training-out/gather/cursor-<patch>`, the number of the next game of that patch, so a
-patch's games are played once each and a new patch starts again at 1. It plays a patch without end,
-until `main` ships another.
 
 ## What it never does
 
-1. It changes no file in the checkout, commits nothing, pushes nothing and opens no pull request. It
-   needs no GitHub login beyond reading the repository.
-2. Nothing reads its records back into the AI, the gate or the shadow ban. A lane's gate plays its own
+1. It changes no file in the repository, commits nothing, pushes nothing and opens no pull request.
+2. Nothing reads its records back into the AI, the gate or the shadow ban. The gate plays its own
    seeds (`<lane>:<tree>:<k>`) and every sweep its own; this lane's numbers inform a person, and no
    loop closes on them.
 3. It never mixes live and development data (R378, R1451). Its records are `source: "dev"` all of
@@ -60,19 +49,8 @@ until `main` ships another.
 
 ## What it leaves
 
-`~/training-out/gather/`, under the lane's own Linux user:
-
-- the records, a file a day (`<date>.jsonl`);
-- `cursor-<patch>`, the number of the next game of that patch;
-- `cards-<patch>.txt` and `.json`, the patch's card figures from every game held, rewritten each cycle:
-  per card, the win rate and the games behind it for the decks that held it (in deck), held it in the
-  opening hand, went first or second with it, played it, or drew it and never played it, and the played
-  delta; a card's play rate is its played games over its seen ones (played plus drawn and not played, R3950000);
-- `games-<patch>.txt` and `.json`, the patch's game figures from every game held, rewritten each cycle:
-  the games and the draws, how many the first seat won with the 95% interval of that share, a count per
-  ending, the turn quartiles, and, over the games whose records carry R1256000's counts, the share with
-  a draw from an empty library, the fatigue damage a game, the Traps fired per Trap set, and the position switches and Radiant upgrades in all and a game. They are
-  AI-against-AI figures: the first seat's edge between two AIs is not the people's;
-- `imported.txt`, the days already loaded into Postgres when the box has `DATABASE_URL`.
+- Both projects' card statistics, as totals: no row per game (`stats-import --totals-only`, R1976000).
+- Each batch's records file, a `GameRecord` per line, kept as the run's artifact `gather-<run>-<part>`
+  for `GATHER_RETENTION_DAYS`.
 
 `training/README.md` (The gather lane) says how to read them.

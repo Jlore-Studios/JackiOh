@@ -1,4 +1,4 @@
-//! SPEC §8.12 S+ #152 Venomous Rounds (Unit 2/1 → 4/2, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
+//! SPEC §8.12 S+ #152 Venomous Rounds (Unit 1/4 → 2/8, 2/1 → 4/2 until issue #4783, cost 2, Rare), a card of the Stinkyscape+ set (R1420, R3535000).
 //!   Base:    "Starship Piece
 //!            Damage also applies Toxic {toxic}." — toxic 2
 //!   Radiant: the same text — toxic 4
@@ -54,9 +54,9 @@ mod tests {
     /// An equipped host.
     const HOST: &str = "stand-in (1) 4/4 R12/12";
 
-    /// The printed attack and rider, and the Radiant face's.
-    const ATTACK: i32 = 2;
-    const RADIANT_ATTACK: i32 = 4;
+    /// The printed attack, and the Radiant face's (2 and 4 until issue #4783).
+    const ATTACK: i32 = 1;
+    const RADIANT_ATTACK: i32 = 2;
 
     fn rounds_on(radiant: bool, p2: Value) -> Scenario {
         weapon_board(
@@ -174,7 +174,7 @@ mod tests {
         fn its_stats_are_doubled() {
             let s = rounds_on(true, json!({}));
             let view = s.stats(ID);
-            assert_eq!((view.attack, view.health), (4, 2));
+            assert_eq!((view.attack, view.health), (2, 8));
         }
     }
 }

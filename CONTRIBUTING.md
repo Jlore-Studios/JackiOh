@@ -7,7 +7,7 @@ For people and agents alike. This is a pointer page: the rules live in the files
 ## Read first
 
 - `CLAUDE.md`: the rules of engagement (numbered; code cites them, "CLAUDE.md rule 7"), the
-  commands, CI and the architecture. They bind every agent, not only Claude. `AGENTS.md` is the
+  commands and CI. They bind every agent, not only Claude. `AGENTS.md` is the
   shared entry point for other agents.
 - `SPEC.md` and the notes in `spec/`: the only source of rules, cards and engine design.
 - `docs/ADDING_CARDS.md`, before any card work.

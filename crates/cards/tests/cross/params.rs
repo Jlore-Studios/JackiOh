@@ -504,10 +504,11 @@ mod r1430_r1431_the_numbers_a_change_reaches {
             .count();
         // #2657's Anti-oneshot Armor `armor`, its Radiant face's "Your hero has Armor 1", and less
         // M #49.1's `radiants`, gone with its start-of-turn text, and C #6's `mana`, gone with its Radiant
-        // face's gain since issue #4440.
+        // face's gain since issue #4440; M #48's `refresh` joins the Meditative set's, its Radiant face's
+        // "Replenish 2 mana" since issue #4665 (R4665007).
         assert_eq!(
             (radiant_only.len() - meditative - held, meditative),
-            (41, 19),
+            (41, 20),
             "{radiant_only:#?}"
         );
     }
@@ -573,9 +574,8 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
 
     const FIXED: &[(&str, &str)] = &[
         ("core-023", KEYWORD),
-        // R2195003: the snapshots of Core #23 and #26, TG #49 and #50.
+        // R2195003: the snapshot of Core #23, TG #49 (TG #50's numbers are declared since issue #4665).
         ("traininggrounds-049", KEYWORD),
-        ("traininggrounds-050", TARGETS),
         ("classic-023", KEYWORD),
         ("classic-057", KEYWORD),
         ("classicplus-025", KEYWORD),
@@ -663,6 +663,11 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("stinkyscapeplus-098", PRICE),
         ("stinkyscapeplus-103", PRICE),
         ("stinkyscapeplus-104", PRICE),
+        // R4589000: the held Infinite Assault set's numbered-keyword counts (IA #98's Echo,
+        // #104's Echo) and #103's tax (a price, R65).
+        ("infiniteassault-098", KEYWORD),
+        ("infiniteassault-104", KEYWORD),
+        ("infiniteassault-103", PRICE),
         ("stinkyscapeplus-128", PRICE),
         ("stinkyscapeplus-129", PRICE),
         ("stinkyscapeplus-130", PRICE),
@@ -677,6 +682,21 @@ mod r1748003_the_numbers_a_spell_or_field_spell_prints {
         ("infiniteassault-005", PRICE),
         ("infiniteassault-021", PRICE),
         ("infiniteassault-024", PRICE),
+        // C6 (#4590): IA #123's hike, #131's and #144's Cost caps and #144's hike.
+        ("infiniteassault-123", PRICE),
+        ("infiniteassault-131", PRICE),
+        ("infiniteassault-144", PRICE),
+        // R4586009: Brittle counts; #34's price.
+        ("infiniteassault-028", KEYWORD),
+        ("infiniteassault-034", PRICE),
+        ("infiniteassault-036", KEYWORD),
+        ("infiniteassault-045", KEYWORD),
+        ("infiniteassault-189", KEYWORD),
+        // IA #52's Brittle 1 and IA #72's "cost (0)" (issue #4587).
+        ("infiniteassault-052", KEYWORD),
+        // R4588001: IA #86's Brittle 1.
+        ("infiniteassault-086", KEYWORD),
+        ("infiniteassault-072", PRICE),
         ("core-038", ENGINE),
         ("core-093", ENGINE),
         ("core-095", ENGINE),

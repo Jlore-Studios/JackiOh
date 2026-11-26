@@ -157,8 +157,8 @@ describe("scripts/ci-scope.sh", () => {
     ).toEqual([]);
     // Squishy (#60): its switches and its two workflows, which only the bot's harness reads.
     expect(onFor(".squishy/config.json", ".github/workflows/squishy-run.yml", ".github/workflows/squishy-commands.yml")).toEqual([]);
-    // The training lanes' standing prompts and loop: Muse and the training box read them, no job does.
-    expect(onFor("training/README.md", "training/improve.md", "training/unban.md", "training/loop.sh")).toEqual([]);
+    // The training docs: people and the bots read them, no job does.
+    expect(onFor("training/README.md", "training/improve.md", "training/gather.md")).toEqual([]);
     // The notebooks' project (#445): only super.yml's daily `notebooks` job reads it.
     expect(onFor("analysis/notebooks/01-card-win-rates.ipynb", "analysis/jackioh_records/load.py", "analysis/uv.lock")).toEqual([]);
   });
@@ -194,7 +194,7 @@ describe("scripts/ci-scope.sh", () => {
     "scripts/build-wasm.sh",
     "apps/web/src/main.tsx",
     "e2e/cypress/e2e/01-hotseat-full-game.cy.ts",
-    // `spec check` reads the notes; the training gate reads the lanes' history.
+    // `spec check` reads the notes; training/history/ is no skip-list path.
     "spec/rulings/R0195.md",
     "spec/README.md",
     "training/history/improve.jsonl",
@@ -425,6 +425,8 @@ describe("scripts/ci-scope.sh", () => {
         "apps/edge/src/routing.test.ts",
         "apps/edge/package.json",
         "apps/edge/tsconfig.json",
+        // The web job's eslint reads the hooks violations it holds (#4978).
+        "eslint-suppressions.json",
       ],
       off: [
         "crates/server/src/api/queue.rs",
@@ -475,10 +477,11 @@ describe("scripts/ci-scope.sh", () => {
         "crates/cards/README.md",
         "crates/wasm/c/src/lib.rs",
         "crates/wasm/c/README.md",
-        // The fuzz, the classifier and the fuzz's records: no command e2e runs reads them (#4219).
+        // The fuzz, the classifier and the records of the fuzz and the perf: no command e2e runs reads them (#4219).
         "crates/tools/src/fuzz.rs",
         "crates/tools/src/classify.rs",
         "crates/tools/fuzz-corpus/seed-8-v0.4.12d.json",
+        "crates/tools/perf-corpus/plain-1-v0.6.14c.json",
         "apps/web/src/net/ci-scope.test.ts",
         "apps/web/src/game/Board.test.tsx",
         "docs/architecture.md",
@@ -495,6 +498,7 @@ describe("scripts/ci-scope.sh", () => {
         "apps/edge/src/index.ts",
         "apps/edge/src/routing.test.ts",
         "eslint.config.js",
+        "eslint-suppressions.json",
         "vitest.config.ts",
         "scripts/browse.sh",
         "scripts/promote-production.sh",
@@ -529,8 +533,14 @@ describe("scripts/ci-scope.sh", () => {
   it("#4219 changes only the e2e line for the tools' sources", () => {
     expect(onFor("crates/tools/src/fuzz.rs")).toEqual(["full", "clippy", "rust_tools_wasm"]);
     expect(onFor("crates/tools/fuzz-corpus/seed-8-v0.4.12d.json")).toEqual(["full", "rust_tools_wasm"]);
+    expect(onFor("crates/tools/perf-corpus/plain-1-v0.6.14c.json")).toEqual(["full", "rust_tools_wasm"]);
     expect(onFor("crates/tools/src/replay.rs")).toEqual(["full", "clippy", "rust_tools_wasm", "e2e"]);
     expect(onFor("crates/tools/Cargo.toml")).toEqual(["full", "clippy", "rust_tools_wasm", "web", "e2e"]);
+  });
+
+  it("runs the merge queue's fuzz slice, and only it, for its script", () => {
+    expect(onFor("scripts/fuzz-slice.sh")).toEqual(["full", "rust_tools_wasm"]);
+    expect(onFor("scripts/ci-shards.toml")).toContain("rust_tools_wasm");
   });
 
   it("#4371 leaves e2e off for a dashboard-only diff but on for the dashboard's test ids", () => {
@@ -623,6 +633,8 @@ describe("scripts/ci-scope.sh", () => {
     ["apps/web/src/wire/generated/Action.ts", ["rust_engine", "rust_server", "rust_tools_wasm"]],
     ["docs/radiant-audit.md", ["rust_cards"]],
     ["spec/07-tokens.md", ["rust_cards"]],
+    // §8 is one note a subsection: radiant_stats.rs reads each, and the tools' acceptance test holds its list to the folder.
+    ["spec/08-catalog/8.10-stinkyscape.md", ["rust_cards", "rust_tools_wasm"]],
     ["e2e/support/config.ts", ["rust_server"]],
     // The tools' README check reads the cited e2e specs, so their files run its group (#4449).
     ["e2e/cypress/e2e/01-hotseat-full-game.cy.ts", ["rust_tools_wasm"]],

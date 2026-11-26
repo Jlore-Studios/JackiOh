@@ -224,6 +224,11 @@
     gap: 8px;
   }
 
+  .code-field--digits .code-field__segments,
+  .tavern .code-field--digits .code-field__segments {
+    gap: var(--space-3);
+  }
+
   .code-field__segment {
     padding: 8px 2px;
     gap: 1px;
@@ -233,6 +238,21 @@
     right: -6px;
     width: 4px;
   }
+}
+
+/* --- the two-step code: six boxes, one digit each (R4669000) --- */
+
+/* No separators are drawn between the six boxes: the format joins with "". */
+.code-field--digits .code-field__segment:not(:last-child)::after {
+  content: none;
+}
+
+/* A filled box glows gold, the tavern's brass, mirroring the teal complete above. Only tokens:
+   color-mix keeps the guards in spacing, surfaces, palette and breakpoints tests quiet. */
+.tavern .code-field--digits .code-field__segment[data-state="complete"] {
+  border-color: color-mix(in srgb, var(--tavern-gold) 70%, transparent);
+  background: color-mix(in srgb, var(--tavern-gold) 14%, var(--tavern-well));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--tavern-gold) 30%, transparent);
 }
 
 /* --- the invite screen ------------------------------------------------------------------------ */

@@ -24,8 +24,8 @@ use crate::app::{App, Handler, Route};
 use crate::auth::AuthUser;
 use crate::config::{
     API_MAX_BODY_BYTES, API_REJECTION_ALERT_THRESHOLD, API_REJECTION_ALERT_WINDOW_MS,
-    API_REQUESTS_PER_MINUTE, IPV6_RATE_LIMIT_PREFIX_BITS, KNOWN_PROFILES_MAX, MAX_TRUSTED_PROXY_HOPS,
-    RATING_START, ROUTE_FAILING_ALERT_COUNT, ROUTE_FAILING_ALERT_MS,
+    IPV6_RATE_LIMIT_PREFIX_BITS, KNOWN_PROFILES_MAX, MAX_TRUSTED_PROXY_HOPS, RATING_START,
+    ROUTE_FAILING_ALERT_COUNT, ROUTE_FAILING_ALERT_MS,
 };
 use crate::db::store::{Profile, ProfileCreateInput, ProfileStatus, StoreError};
 use crate::loops::FailureRun;
@@ -66,6 +66,8 @@ pub enum ApiErrorCode {
     Forbidden,
     /// R2124000: a spend's `Idempotency-Key` came before with another route or body.
     IdempotencyKeyReused,
+    /// R4677000: a `/stats` patch older than anyone but a dev account may read.
+    PatchDevOnly,
 }
 
 impl ApiErrorCode {
@@ -96,6 +98,7 @@ impl ApiErrorCode {
             ApiErrorCode::Internal => 500,
             ApiErrorCode::Forbidden => 403,
             ApiErrorCode::IdempotencyKeyReused => 422,
+            ApiErrorCode::PatchDevOnly => 403,
         }
     }
 
@@ -126,6 +129,7 @@ impl ApiErrorCode {
             ApiErrorCode::Internal => "internal",
             ApiErrorCode::Forbidden => "forbidden",
             ApiErrorCode::IdempotencyKeyReused => "idempotency_key_reused",
+            ApiErrorCode::PatchDevOnly => "patch_dev_only",
         }
     }
 }
@@ -598,6 +602,15 @@ fn is_one_click_unsubscribe(headers: &HeaderMap, text: &str) -> bool {
         && text.lines().any(|line| line.trim() == "One-Click")
 }
 
+fn contains_nul(value: &Value) -> bool {
+    match value {
+        Value::String(s) => s.contains('\0'),
+        Value::Array(items) => items.iter().any(contains_nul),
+        Value::Object(map) => map.iter().any(|(k, v)| k.contains('\0') || contains_nul(v)),
+        _ => false,
+    }
+}
+
 async fn read_body(method: &Method, headers: &HeaderMap, body: Body) -> Result<Value, ApiError> {
     if *method == Method::GET || *method == Method::HEAD {
         return Ok(Value::Object(Map::new()));
@@ -610,6 +623,9 @@ async fn read_body(method: &Method, headers: &HeaderMap, body: Body) -> Result<V
         serde_json::from_str(&text).map_err(|_| bad_request("the request body must be JSON"))?;
     if !parsed.is_object() {
         return Err(bad_request("the request body must be a JSON object"));
+    }
+    if contains_nul(&parsed) {
+        return Err(bad_request("a request value may not contain a NUL character"));
     }
     Ok(parsed)
 }
@@ -767,8 +783,9 @@ fn decode_form_component(raw: &str) -> String {
     String::from_utf8_lossy(&out).into_owned()
 }
 
-/// URL search parameters, taking the first value of each name.
-fn parse_query(query: &str) -> IndexMap<String, String> {
+/// URL search parameters, taking the first value of each name. Refuses a NUL character (U+0000)
+/// in any name or value as a 400 Bad Request.
+fn parse_query(query: &str) -> Result<IndexMap<String, String>, ApiError> {
     let mut out = IndexMap::new();
     for pair in query.split('&') {
         if pair.is_empty() {
@@ -776,11 +793,15 @@ fn parse_query(query: &str) -> IndexMap<String, String> {
         }
         let (name, value) = pair.split_once('=').unwrap_or((pair, ""));
         let name = decode_form_component(name);
+        let value = decode_form_component(value);
+        if name.contains('\0') || value.contains('\0') {
+            return Err(bad_request("a query parameter may not contain a NUL character"));
+        }
         if !out.contains_key(&name) {
-            out.insert(name, decode_form_component(value));
+            out.insert(name, value);
         }
     }
-    out
+    Ok(out)
 }
 
 /// Resolves the caller. A token that does not verify is 401; a verified user with no profile row
@@ -825,6 +846,28 @@ pub async fn resolve_caller(app: &App, headers: &HeaderMap, path: &str) -> Resul
     Ok(Caller { profile, user })
 }
 
+/// SPEC §11 R4677000: the profile of an open route's signed-in caller, for a route whose answer depends
+/// on who asks (`/stats`' patches, which a dev account reads further back). `None` with no token, a token
+/// that does not verify or a user with no profile yet, each of whom the route serves as it serves anyone:
+/// it stays open, and nothing is created. A profile found counts as presence, as every signed-in request's
+/// does (R897000, R3210000).
+pub async fn open_route_profile(app: &App, headers: &HeaderMap) -> Result<Option<Profile>, ApiError> {
+    let Some(token) = bearer_token(headers) else {
+        return Ok(None);
+    };
+    let Ok(user) = app.auth.verify(&token).await else {
+        return Ok(None);
+    };
+    let mut tx = app.db.begin(Some(&user.user_id)).await?;
+    let profile = tx.profiles_get_by_user_id(&user.user_id).await?;
+    tx.commit().await?;
+    if let Some(profile) = &profile {
+        app.queue_presence.touch(&profile.id, now_ms());
+        crate::social::presence::touch_on_request(app, profile).await;
+    }
+    Ok(profile)
+}
+
 /// §9.4: the gate. Public so a non-HTTP caller (the WebSocket upgrade) uses the same rule.
 pub fn assert_active(profile: &Profile) -> Result<(), ApiError> {
     if matches!(profile.status, ProfileStatus::Banned) {
@@ -843,10 +886,6 @@ pub fn assert_active(profile: &Profile) -> Result<(), ApiError> {
 }
 
 // §9.8's per-account rate limit
-
-/// Unit conversion, not configuration: R109 states its API allowance *per minute*, and
-/// `API_REQUESTS_PER_MINUTE` is the number itself.
-const API_RATE_WINDOW_MS: i64 = 60_000;
 
 /// §9.8, R109: the bucket a request is counted in. Never one shared counter — see `dispatch`.
 pub fn account_key(profile_id: &str) -> String {
@@ -1152,18 +1191,6 @@ pub fn create_rate_limiter(limit: usize, window_ms: i64) -> RateLimiter {
     RateLimiter::new(limit, window_ms)
 }
 
-/// §9.8's "per-account rate limit at the API": `API_REQUESTS_PER_MINUTE` a minute, the limiter
-/// every `App` holds.
-pub fn api_rate_limiter() -> RateLimiter {
-    create_rate_limiter(API_REQUESTS_PER_MINUTE, API_RATE_WINDOW_MS)
-}
-
-impl Default for RateLimiter {
-    fn default() -> RateLimiter {
-        api_rate_limiter()
-    }
-}
-
 /// The router: `routes` (`app.rs`'s `ROUTES`) tried in order, behind the CORS layer, which answers
 /// preflights first.
 ///
@@ -1253,7 +1280,10 @@ pub async fn dispatch(app: &Arc<App>, routes: &[Route], request: Request) -> Res
 }
 
 /// One matched route, from the address hash to the handler.
-#[allow(clippy::too_many_arguments)]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the request's parts as the router splits them"
+)]
 async fn run_route(
     app: &Arc<App>,
     auth: AuthLevel,
@@ -1335,7 +1365,7 @@ async fn run_route(
     let req = Req {
         caller,
         params,
-        query: parse_query(parts.uri.query().unwrap_or("")),
+        query: parse_query(parts.uri.query().unwrap_or(""))?,
         body: read_body(&parts.method, &parts.headers, body).await?,
         address,
         headers: parts.headers.clone(),

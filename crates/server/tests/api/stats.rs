@@ -19,6 +19,8 @@ use crate::support::store::from;
 const USER_TOKEN: &str = "e2e-token-p1";
 /// The pending account's bearer token (`e2e-pending`).
 const PENDING_TOKEN: &str = "e2e-token-pending";
+/// R1310004: the end-to-end dev account's bearer token (`e2e-econ`), which reads every patch (R4677000).
+const DEV_TOKEN: &str = "e2e-token-econ";
 
 /// The patch the server counts as current.
 fn current_patch() -> String {
@@ -58,6 +60,12 @@ struct RecordOptions {
     /// R2777002: the cards of p1's deck that reached its hand (the first three its opening hand, the
     /// rest drawn); by default the whole deck, so no card goes unseen.
     p1_hand: Option<Vec<&'static str>>,
+    /// R4552000: p1's turn rows (`swingTurns`), absent by default as from a record written before them.
+    p1_swing_turns: Option<Value>,
+    /// R4672000: p1's plays' variants (`playedVariants`), beside `played`.
+    p1_played_variants: Option<Value>,
+    /// R4672002: p1's picks (`picks`), each Discover-like choice a card of its asked.
+    p1_picks: Option<Value>,
 }
 
 /// One seat's summary: the first three cards of `hand` are the opening hand, the rest drawn.
@@ -118,6 +126,15 @@ fn make_game_record(id: &str, options: RecordOptions) -> Value {
     }
     if let Some(unused) = options.p1_created_unused {
         p1["createdUnused"] = json!(unused);
+    }
+    if let Some(rows) = options.p1_swing_turns {
+        p1["swingTurns"] = rows;
+    }
+    if let Some(variants) = options.p1_played_variants {
+        p1["playedVariants"] = variants;
+    }
+    if let Some(picks) = options.p1_picks {
+        p1["picks"] = picks;
     }
 
     json!({
@@ -612,6 +629,7 @@ mod r654_public_card_and_player_stats {
                     "adjustedLow",
                     "adjustedWinRate",
                     "cost",
+                    "decisiveness",
                     "games",
                     "hasEnoughGames",
                     "id",
@@ -1362,9 +1380,10 @@ mod r2491000_kept_card_history {
         let gate = count(PUBLIC_STATS_MIN_LIVE_GAMES);
         let current = current_patch();
         let versions = load_patch_versions().await;
-        let mut past = versions.iter().filter(|version| **version != current);
-        let old = past.next().expect("a past patch").clone();
-        let short = past.next().expect("a second past patch").clone();
+        // R4677000: the newest past patches, which anyone may read, listed oldest first.
+        let mut past = versions.iter().rev().filter(|version| **version != current);
+        let short = past.next().expect("a past patch").clone();
+        let old = past.next().expect("a second past patch").clone();
 
         let mut records: Vec<Value> = (0..gate)
             .map(|i| game(format!("hist-old-{i}"), &old, "bo1", "p1"))
@@ -1403,12 +1422,13 @@ mod r2491000_kept_card_history {
         u64::try_from(CARD_STATS_CACHE_TTL_SECONDS).expect("the TTL is not negative") * 1000
     }
 
-    /// A past shipped patch, which is not the current one.
+    /// A past shipped patch, which is not the current one: the newest, which anyone may read (R4677000).
     async fn past_patch() -> String {
         let current = current_patch();
         load_patch_versions()
             .await
             .into_iter()
+            .rev()
             .find(|version| *version != current)
             .expect("a past patch")
     }
@@ -1510,6 +1530,36 @@ mod r2491000_kept_card_history {
         tokio::time::advance(Duration::from_millis(1)).await;
         assert_eq!(reads_of(&app, &loads, &late).await, (1, 1), "{late}");
         assert_eq!(reads_of(&app, &loads, &paths[0]).await, (0, 0), "{}", paths[0]);
+    }
+
+    // R4675001: the play versions' table is cut from the snapshot the cards read, once per `?pilot=` and
+    // `?mode=`, so the whole history costs one load of every patch's totals however many keys ask.
+    #[tokio::test(start_paused = true)]
+    async fn r4675001_the_route_reads_every_patch_once_and_shares_the_snapshot_with_the_cards() {
+        let past = past_patch().await;
+        let app = test_app().await;
+        insert_records(&app, mixed_records(&past)).await;
+        let loads = count_loads(&app).await;
+
+        assert_eq!(reads_of(&app, &loads, "/api/stats/versions").await, (1, 1));
+        for path in [
+            "/api/stats/versions",
+            "/api/stats/versions?mode=bo1&pilot=human",
+            "/api/stats/versions?mode=constructed&pilot=ai",
+            "/api/stats/cards",
+        ] {
+            assert_eq!(reads_of(&app, &loads, path).await, (0, 0), "{path}");
+        }
+        // A key's table is what a load of its own gives from the same records.
+        let (_, _, kept) = get_public(&app, "/api/stats/versions?mode=bo1&pilot=human").await;
+        let reference = test_app().await;
+        insert_records(&reference, mixed_records(&past)).await;
+        let (_, _, own) = get_public(&reference, "/api/stats/versions?mode=bo1&pilot=human").await;
+        assert_eq!(kept, own);
+
+        // At the TTL the snapshot is loaded again.
+        tokio::time::advance(Duration::from_millis(ttl_ms())).await;
+        assert_eq!(reads_of(&app, &loads, "/api/stats/versions").await, (1, 1));
     }
 
     #[tokio::test(start_paused = true)]
@@ -1802,7 +1852,8 @@ mod r1367000_card_stats_by_window {
         let mut records: Vec<Value> = (0..5).map(|n| live(format!("x-{n}"), &x, card)).collect();
         records.extend((0..3).map(|n| dev(format!("pad-{n}"), &micro, card)));
         insert_records(&app, records).await;
-        let (status, _, data) = get_public(&app, "/api/stats/cards").await;
+        // R4677000: a dev account is listed every patch.
+        let (status, _, data) = request(&app, "GET", "/api/stats/cards", Some(DEV_TOKEN), None).await;
         assert_eq!(status, 200);
         let patches = data["patches"].as_array().expect("the patches are a list");
         let history = jackioh_cards::patch_history();
@@ -1884,6 +1935,461 @@ mod r1367000_card_stats_by_window {
             .expect("a major has shipped")
             .version;
         assert_eq!(first(&patches[0]), *newest_patch);
+    }
+}
+
+// R4677000: anyone but a dev account reads the newest patches alone: every patch of the newest line and two
+// of the line before, or the five newest, whichever run is longer. A dev account reads every patch.
+mod r4677000_patches_by_reader {
+    use super::*;
+    use std::time::Duration;
+
+    use jackioh_engine::wire::stats::{PatchTier, PatchWindow};
+    use jackioh_server::api::stats::public_patch_count;
+    use jackioh_server::config::{PUBLIC_STATS_PATCHES_LINE_BEFORE, PUBLIC_STATS_PATCHES_NEWEST};
+
+    use crate::support::deps::{TestAppOptions, add_user, test_app_with};
+    use crate::support::store::fake;
+
+    /// `GET path` with `token`, when there is one.
+    async fn get_as(app: &Arc<App>, path: &str, token: Option<&str>) -> (u16, HeaderMap, Value) {
+        request(app, "GET", path, token, None).await
+    }
+
+    /// Each listed patch's name, the version that opened it, newest first.
+    fn names(data: &Value) -> Vec<String> {
+        data["patches"]
+            .as_array()
+            .expect("the patches are a list")
+            .iter()
+            .map(|window| window["versions"][0].as_str().expect("a version").to_string())
+            .collect()
+    }
+
+    /// A version's line, its `major.minor`.
+    fn line(version: &str) -> String {
+        version.split('.').take(2).collect::<Vec<_>>().join(".")
+    }
+
+    /// One live game filed under `patch`.
+    fn live_on(id: String, patch: &str) -> Value {
+        make_game_record(
+            &id,
+            RecordOptions {
+                source: Some("live"),
+                patch: Some(patch.to_string()),
+                ..RecordOptions::default()
+            },
+        )
+    }
+
+    /// A window of the fixture histories: its name and nothing else read.
+    fn window(name: &str) -> PatchWindow {
+        PatchWindow {
+            versions: vec![name.to_string()],
+            games: 0,
+            live_games: 0,
+        }
+    }
+
+    fn windows(names: &[&str]) -> Vec<PatchWindow> {
+        names.iter().map(|name| window(name)).collect()
+    }
+
+    /// The shipped versions that open a window once a game is played on each, newest first, of the
+    /// newest line and of the line before it.
+    fn the_two_newest_lines() -> (Vec<String>, Vec<String>) {
+        let history = jackioh_cards::patch_history();
+        let opening: Vec<String> = history
+            .iter()
+            .rev()
+            .filter(|step| step.tier != PatchTier::Micro)
+            .map(|step| step.version.clone())
+            .collect();
+        let newest = line(&opening[0]);
+        let current: Vec<String> = opening
+            .iter()
+            .take_while(|version| line(version) == newest)
+            .cloned()
+            .collect();
+        let before_line = line(&opening[current.len()]);
+        let before: Vec<String> = opening[current.len()..]
+            .iter()
+            .take_while(|version| line(version) == before_line)
+            .cloned()
+            .collect();
+        (current, before)
+    }
+
+    #[test]
+    fn r4677000_the_longer_run_of_the_newest_line_with_two_of_the_line_before_or_the_five_newest() {
+        // Just after a major, the newest line holds one patch: the five newest are the longer run.
+        let after_a_major = windows(&[
+            "v0.7.0", "v0.6.3", "v0.6.2", "v0.6.1", "v0.6.0", "v0.5.1", "v0.5.0",
+        ]);
+        assert_eq!(1 + PUBLIC_STATS_PATCHES_LINE_BEFORE, 3);
+        assert_eq!(public_patch_count(&after_a_major), PUBLIC_STATS_PATCHES_NEWEST);
+        // A long newest line: all of it and the two newest of the line before.
+        let long_line = windows(&[
+            "v0.6.3", "v0.6.2", "v0.6.1", "v0.6.0", "v0.5.9", "v0.5.8", "v0.5.7", "v0.4.0",
+        ]);
+        assert_eq!(
+            public_patch_count(&long_line),
+            4 + PUBLIC_STATS_PATCHES_LINE_BEFORE
+        );
+        // A line before of one patch gives one; and nothing past the list.
+        let thin_before = windows(&[
+            "v0.6.5", "v0.6.4", "v0.6.3", "v0.6.2", "v0.6.1", "v0.6.0", "v0.5.0", "v0.4.0",
+        ]);
+        assert_eq!(public_patch_count(&thin_before), 7);
+        assert_eq!(public_patch_count(&windows(&["v0.1.1", "v0.1.0"])), 2);
+        assert_eq!(public_patch_count(&[]), 0);
+        // A line is its major and minor: v0.10 is not v0.1.
+        let tenth = windows(&[
+            "v0.10.2", "v0.10.1", "v0.10.0", "v0.1.9", "v0.1.8", "v0.1.7", "v0.1.6",
+        ]);
+        assert_eq!(public_patch_count(&tenth), 3 + PUBLIC_STATS_PATCHES_LINE_BEFORE);
+    }
+
+    #[tokio::test]
+    async fn r4677000_anyone_reads_the_newest_line_and_two_of_the_line_before_when_that_run_is_longer() {
+        let (current, before) = the_two_newest_lines();
+        assert!(current.len() + PUBLIC_STATS_PATCHES_LINE_BEFORE > PUBLIC_STATS_PATCHES_NEWEST);
+        let app = test_app().await;
+        // A game on each patch of the two lines opens its window (R1973001).
+        let records: Vec<Value> = current
+            .iter()
+            .chain(&before)
+            .enumerate()
+            .map(|(n, version)| live_on(format!("line-{n}"), version))
+            .collect();
+        insert_records(&app, records).await;
+
+        let mut expected = current.clone();
+        expected.extend(before.iter().take(PUBLIC_STATS_PATCHES_LINE_BEFORE).cloned());
+        // Signed out, and signed in as an account that is no dev account, alike.
+        for token in [None, Some(USER_TOKEN)] {
+            let (status, _, data) = get_as(&app, "/api/stats/cards", token).await;
+            assert_eq!(status, 200);
+            assert_eq!(names(&data), expected, "{token:?}");
+            assert_eq!(data["olderPatchesForDevs"], json!(true));
+        }
+        // The line before's third patch is past it.
+        let third = &before[PUBLIC_STATS_PATCHES_LINE_BEFORE];
+        let (status, _, refused) = get_public(&app, &format!("/api/stats/cards?patch={third}")).await;
+        assert_eq!(
+            (status, refused["error"]["code"].clone()),
+            (403, json!("patch_dev_only"))
+        );
+    }
+
+    #[tokio::test]
+    async fn r4677000_anyone_reads_the_five_newest_patches_when_that_run_is_longer() {
+        // No game anywhere: the newest line is its major and its newest patch, and each line before is its
+        // major alone, so the newest line and one of the line before are three, short of five.
+        let app = test_app().await;
+        let (_, _, all) = get_as(&app, "/api/stats/cards", Some(DEV_TOKEN)).await;
+        let every = names(&all);
+        let newest_line = every
+            .iter()
+            .take_while(|name| line(name) == line(&every[0]))
+            .count();
+        assert_eq!(newest_line, 2);
+        assert!(newest_line + 1 < PUBLIC_STATS_PATCHES_NEWEST);
+        assert!(every.len() > PUBLIC_STATS_PATCHES_NEWEST);
+        let (status, _, data) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(status, 200);
+        assert_eq!(names(&data), every[..PUBLIC_STATS_PATCHES_NEWEST].to_vec());
+    }
+
+    #[tokio::test]
+    async fn r4677000_a_dev_account_reads_every_patch_back_to_v0_1_0() {
+        let history = jackioh_cards::patch_history();
+        let first = &history[0].version;
+        let app = test_app().await;
+        insert_records(&app, vec![live_on("old-1".to_string(), first)]).await;
+
+        // R1310004's end-to-end dev fixture: every window, the oldest opened by the first version shipped.
+        let (status, headers, data) = get_as(&app, "/api/stats/cards", Some(DEV_TOKEN)).await;
+        assert_eq!(status, 200);
+        let listed = names(&data);
+        assert_eq!(listed.last(), Some(first));
+        let versions: Vec<String> = data["patches"]
+            .as_array()
+            .expect("the patches are a list")
+            .iter()
+            .rev()
+            .flat_map(|window| window["versions"].as_array().expect("versions").clone())
+            .map(|version| version.as_str().expect("a version").to_string())
+            .collect();
+        let shipped: Vec<String> = history.iter().map(|step| step.version.clone()).collect();
+        assert_eq!(versions, shipped);
+        assert_eq!(data["olderPatchesForDevs"], json!(false));
+        assert_eq!(cache_control(&headers), Some("private, no-store"));
+        // Its oldest patch reads on both routes, a micro of it too.
+        for path in [
+            format!("/api/stats/cards?patch={first}"),
+            format!("/api/stats/games?patch={first}"),
+        ] {
+            let (status, _, body) = get_as(&app, &path, Some(DEV_TOKEN)).await;
+            assert_eq!(status, 200, "{path}");
+            assert_eq!(body["totalGames"], json!(1), "{path}");
+        }
+
+        // An account `DEV_PROFILE_IDS` lists, whose profile id is not its user id, reads them too.
+        let listed_id = "d0000000-0000-4000-8000-000004677000";
+        let listed_app = test_app_with(TestAppOptions {
+            env: vec![("DEV_PROFILE_IDS".to_string(), listed_id.to_string())],
+            ..TestAppOptions::default()
+        })
+        .await;
+        fake(&listed_app).lock().await.seed_profile(json!({
+            "id": listed_id,
+            "userId": "user-4677",
+            "status": "active",
+            "username": "Dev4677",
+            "usernamePrompted": true,
+        }));
+        let token = add_user(&listed_app, "user-4677", "user-4677@example.test", true);
+        let (status, _, body) = get_as(
+            &listed_app,
+            &format!("/api/stats/cards?patch={first}"),
+            Some(&token),
+        )
+        .await;
+        assert_eq!(status, 200);
+        assert_eq!(body["olderPatchesForDevs"], json!(false));
+    }
+
+    #[tokio::test]
+    async fn r4677000_a_patch_past_the_callers_is_403_patch_dev_only_on_both_routes() {
+        let history = jackioh_cards::patch_history();
+        let first = &history[0].version;
+        // A micro of the first patch, read as the patch that holds it.
+        let micro = &history
+            .iter()
+            .find(|step| step.tier == PatchTier::Micro)
+            .expect("a micro has shipped")
+            .version;
+        let app = test_app().await;
+        for token in [None, Some(USER_TOKEN)] {
+            for patch in [first, micro] {
+                for route in ["cards", "games"] {
+                    let path = format!("/api/stats/{route}?patch={patch}");
+                    let (status, _, body) = get_as(&app, &path, token).await;
+                    assert_eq!(status, 403, "{path} {token:?}");
+                    assert_eq!(body["error"]["code"], json!("patch_dev_only"), "{path}");
+                }
+            }
+        }
+        // A token that does not verify is read as no token: the route stays open, and the limit holds.
+        let (status, _, _) = get_as(&app, "/api/stats/cards", Some("not-a-token")).await;
+        assert_eq!(status, 200);
+        let (status, _, _) = get_as(
+            &app,
+            &format!("/api/stats/cards?patch={first}"),
+            Some("not-a-token"),
+        )
+        .await;
+        assert_eq!(status, 403);
+        // No patch, the current one, is open to everyone.
+        let (status, _, _) = get_public(&app, &format!("/api/stats/cards?patch={}", current_patch())).await;
+        assert_eq!(status, 200);
+
+        // The patch before the oldest readable patch is past it: anyone is told none, a dev account the version.
+        let (_, _, page) = get_public(&app, "/api/stats/cards").await;
+        let oldest = names(&page).last().expect("a patch").clone();
+        let path = format!("/api/stats/cards?patch={oldest}");
+        let (_, _, anyone) = get_public(&app, &path).await;
+        assert_eq!(anyone["previousPatch"], Value::Null);
+        let (_, _, dev) = get_as(&app, &path, Some(DEV_TOKEN)).await;
+        assert!(dev["previousPatch"].is_string(), "{}", dev["previousPatch"]);
+    }
+
+    #[tokio::test]
+    async fn r4677000_the_drill_down_lists_only_the_callers_patches() {
+        let history = jackioh_cards::patch_history();
+        let first = history[0].version.clone();
+        let current = current_patch();
+        let gate = count(PUBLIC_STATS_MIN_LIVE_GAMES);
+        let app = test_app().await;
+        let mut records: Vec<Value> = (0..gate).map(|n| live_on(format!("first-{n}"), &first)).collect();
+        records.extend((0..gate).map(|n| live_on(format!("now-{n}"), &current)));
+        insert_records(&app, records).await;
+        let patches = |data: &Value| -> Vec<Value> {
+            data["patches"]
+                .as_array()
+                .expect("the patches are a list")
+                .iter()
+                .map(|row| row["patch"].clone())
+                .collect()
+        };
+        let (_, _, dev) = get_as(&app, "/api/stats/cards/core-001", Some(DEV_TOKEN)).await;
+        assert_eq!(patches(&dev), vec![json!(first), json!(current)]);
+        for token in [None, Some(USER_TOKEN)] {
+            let (status, _, anyone) = get_as(&app, "/api/stats/cards/core-001", token).await;
+            assert_eq!(status, 200);
+            assert_eq!(patches(&anyone), vec![json!(current)], "{token:?}");
+        }
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn r4677000_the_kept_figures_never_cross_from_one_reader_to_another() {
+        let history = jackioh_cards::patch_history();
+        let first = history[0].version.clone();
+        let app = test_app().await;
+        insert_records(&app, vec![live_on("old-1".to_string(), &first)]).await;
+        let old_cards = format!("/api/stats/cards?patch={first}");
+        let old_games = format!("/api/stats/games?patch={first}");
+
+        // A dev account reads first, filling every kept figure; anyone after it, inside the same TTL, is
+        // still refused and listed the newest patches alone.
+        let (_, _, dev_page) = get_as(&app, "/api/stats/cards", Some(DEV_TOKEN)).await;
+        for path in [&old_cards, &old_games] {
+            assert_eq!(get_as(&app, path, Some(DEV_TOKEN)).await.0, 200, "{path}");
+        }
+        tokio::time::advance(Duration::from_secs(1)).await;
+        for path in [&old_cards, &old_games] {
+            assert_eq!(get_public(&app, path).await.0, 403, "{path}");
+        }
+        let (_, anyone_headers, anyone_page) = get_public(&app, "/api/stats/cards").await;
+        assert!(names(&anyone_page).len() < names(&dev_page).len());
+        // And the other way: what anyone was answered never stands in for the dev account's.
+        let (_, dev_headers, dev_again) = get_as(&app, "/api/stats/cards", Some(DEV_TOKEN)).await;
+        assert_eq!(names(&dev_again), names(&dev_page));
+
+        // No cache in front keeps the dev account's answer, and every answer varies by who asks.
+        assert_eq!(cache_control(&dev_headers), Some("private, no-store"));
+        assert_eq!(
+            cache_control(&anyone_headers),
+            Some(format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}").as_str())
+        );
+        for path in [
+            "/api/stats/cards",
+            "/api/stats/games",
+            "/api/stats/cards/core-001",
+        ] {
+            for token in [None, Some(DEV_TOKEN)] {
+                let (status, headers, _) = get_as(&app, path, token).await;
+                assert_eq!(status, 200, "{path}");
+                let vary = headers
+                    .get("vary")
+                    .and_then(|value| value.to_str().ok())
+                    .unwrap_or("");
+                assert!(vary.contains("Authorization"), "{path} {token:?}: {vary}");
+                let expected = if token.is_some() {
+                    "private, no-store".to_string()
+                } else {
+                    format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}")
+                };
+                assert_eq!(
+                    cache_control(&headers),
+                    Some(expected.as_str()),
+                    "{path} {token:?}"
+                );
+            }
+        }
+    }
+}
+
+mod r4675001_play_versions {
+    use super::*;
+
+    /// The keys of a JSON object, sorted.
+    fn keys(value: &Value) -> Vec<String> {
+        let mut keys: Vec<String> = value.as_object().expect("an object").keys().cloned().collect();
+        keys.sort();
+        keys
+    }
+
+    #[tokio::test]
+    async fn r4675001_the_route_lists_every_play_version_and_an_old_one_with_no_totals() {
+        let app = test_app().await;
+        let floor = count(CARD_STATS_MIN_SAMPLE);
+        let records: Vec<Value> = (0..floor)
+            .map(|i| make_game_record(&format!("pv-{i}"), RecordOptions::default()))
+            .collect();
+        insert_records(&app, records).await;
+
+        let (status, headers, data) = get_public(&app, "/api/stats/versions").await;
+        assert_eq!(status, 200);
+        let ttl = format!("public, max-age={CARD_STATS_CACHE_TTL_SECONDS}");
+        assert_eq!(cache_control(&headers), Some(ttl.as_str()));
+        assert_eq!(
+            keys(&data),
+            [
+                "bandHigh",
+                "bandLow",
+                "field",
+                "minSample",
+                "mode",
+                "pilot",
+                "versions"
+            ]
+        );
+        assert_eq!((&data["pilot"], &data["mode"]), (&json!("merged"), &json!("all")));
+        assert_eq!(data["minSample"], json!(CARD_STATS_MIN_SAMPLE));
+        let rows = data["versions"].as_array().expect("versions is a list");
+        let versions = jackioh_cards::deck_play_versions();
+        assert_eq!(rows.len(), versions.len());
+        // Figures only, and no source (R661): a client reads each definition from its catalog at `last`.
+        assert_eq!(
+            keys(&rows[0]),
+            [
+                "adjustedHigh",
+                "adjustedLow",
+                "adjustedWinRate",
+                "card",
+                "first",
+                "games",
+                "hasEnoughGames",
+                "id",
+                "last",
+                "live",
+                "name",
+                "patches",
+                "tier"
+            ]
+        );
+        for (row, version) in rows.iter().zip(&versions) {
+            assert_eq!(row["id"], json!(version.id));
+        }
+
+        let core: Vec<&Value> = rows
+            .iter()
+            .filter(|row| row["card"] == json!("core-001"))
+            .collect();
+        let live = core.last().expect("core-001 has play versions");
+        assert_eq!(live["live"], json!(true));
+        assert_eq!(live["last"], json!(current_patch()));
+        assert_eq!(live["games"], json!(floor));
+        assert_eq!(live["hasEnoughGames"], json!(true));
+        assert!(live["tier"].is_string(), "{live}");
+        assert!(live["adjustedWinRate"].is_number(), "{live}");
+        // R4678001: the patches its versions reach, the newest among them.
+        assert!(
+            live["patches"].as_u64().is_some_and(|patches| patches >= 1),
+            "{live}"
+        );
+
+        // Its oldest play version began before the records: no games and no figure.
+        let oldest = core[0];
+        assert_eq!(oldest["first"], json!(jackioh_cards::shipped_versions()[0]));
+        assert_eq!(oldest["live"], json!(false));
+        assert_eq!(oldest["games"], json!(0));
+        assert_eq!(oldest["hasEnoughGames"], json!(false));
+        for figure in ["adjustedWinRate", "adjustedLow", "adjustedHigh", "tier"] {
+            assert_eq!(oldest[figure], Value::Null, "{figure}");
+        }
+
+        // `?mode=` and `?pilot=` name what the figures count; every game here is a Best of 1.
+        let (_, _, conquest) = get_public(&app, "/api/stats/versions?mode=bo3&pilot=human").await;
+        assert_eq!(
+            (&conquest["pilot"], &conquest["mode"]),
+            (&json!("human"), &json!("bo3"))
+        );
+        let row = find(&conquest["versions"], "id", &live["id"]).expect("the live row");
+        assert_eq!(row["games"], json!(0));
     }
 }
 
@@ -3034,6 +3540,7 @@ mod r2089000_created_card_stats {
                     "adjustedLow",
                     "adjustedWinRate",
                     "cost",
+                    "decisiveness",
                     "games",
                     "hasEnoughGames",
                     "id",
@@ -3058,7 +3565,8 @@ mod r2089000_created_card_stats {
             .map(String::as_str)
             .collect();
         field.sort_unstable();
-        assert_eq!(field, ["baseline", "cards", "center", "spread"]);
+        // R4552003: and the typical Created card's Decisiveness.
+        assert_eq!(field, ["baseline", "cards", "center", "decisiveness", "spread"]);
     }
 }
 
@@ -3240,6 +3748,14 @@ mod cache_poisoning {
     }
 
     #[tokio::test]
+    async fn cache_poisoning_versions_same_bytes_whatever_the_caller_carries() {
+        let app = test_app().await;
+        insert_records(&app, vec![make_game_record("poison-1", RecordOptions::default())]).await;
+        let responses = seven_ways(&app, "/api/stats/versions").await;
+        assert_same_bytes(&responses, CARD_STATS_CACHE_TTL_SECONDS);
+    }
+
+    #[tokio::test]
     async fn cache_poisoning_players_same_bytes_whatever_the_caller_carries() {
         let app = test_app().await;
         let alice_id = seed_profile(&app, "u-alice", "Alice_Wonder").await;
@@ -3253,5 +3769,930 @@ mod cache_poisoning {
         .await;
         let responses = seven_ways(&app, "/api/stats/players").await;
         assert_same_bytes(&responses, PLAYER_STATS_CACHE_TTL_SECONDS);
+    }
+}
+
+// R4673000, R4673001: `?face=` on both card routes: each face read against its own field and band, the
+// drill-down's history and drills following it, and its face line.
+mod r4673000_card_faces {
+    use super::*;
+    use jackioh_engine::config::{RADIANT_TIER_BAND_HIGH, RADIANT_TIER_BAND_LOW, STATS_INTERVAL_Z};
+
+    /// Forty Core cards, the field the test reads.
+    const FIELD: [&str; 40] = [
+        "core-001", "core-002", "core-003", "core-004", "core-005", "core-006", "core-007", "core-008",
+        "core-009", "core-010", "core-011", "core-012", "core-013", "core-014", "core-015", "core-016",
+        "core-017", "core-018", "core-019", "core-020", "core-021", "core-022", "core-023", "core-024",
+        "core-025", "core-026", "core-027", "core-028", "core-029", "core-030", "core-031", "core-032",
+        "core-033", "core-034", "core-035", "core-036", "core-037", "core-038", "core-039", "core-040",
+    ];
+
+    /// How p1 met the forty in a game.
+    #[derive(Clone, Copy)]
+    enum Met {
+        /// Played every one, Radiant, and used a Created core-050, Radiant.
+        Radiant,
+        /// Played every one, normal, and used a Created core-050, normal.
+        Normal,
+        /// Never drew one.
+        Unseen,
+    }
+
+    /// `count` live Best of 1 games of p1's forty met as `met`, p1 winning the first `won`; p2 holds core-100
+    /// and plays nothing.
+    fn games(tag: &str, met: Met, won: usize, count: usize) -> Vec<Value> {
+        (0..count)
+            .map(|i| {
+                let (hand, played, radiant): (Vec<&'static str>, Vec<&'static str>, Option<bool>) = match met
+                {
+                    Met::Radiant => (FIELD.to_vec(), FIELD.to_vec(), Some(true)),
+                    Met::Normal => (FIELD.to_vec(), FIELD.to_vec(), Some(false)),
+                    Met::Unseen => (Vec::new(), Vec::new(), None),
+                };
+                make_game_record(
+                    &format!("faces-{tag}-{i}"),
+                    RecordOptions {
+                        source: Some("live"),
+                        mode: Some("bo1"),
+                        p1_deck: Some(FIELD.to_vec()),
+                        p1_hand: Some(hand),
+                        p1_played: Some(played),
+                        p1_played_radiant: radiant.map(|flag| vec![flag; FIELD.len()]),
+                        p1_created_used: radiant
+                            .map(|flag| json!([{ "card": "core-050", "turn": 3, "radiant": flag }])),
+                        p2_deck: Some(vec!["core-100"]),
+                        p2_played: Some(Vec::new()),
+                        winner: Some(if i < won { "p1" } else { "p2" }),
+                        ..RecordOptions::default()
+                    },
+                )
+            })
+            .collect()
+    }
+
+    fn card<'a>(data: &'a Value, id: &str) -> &'a Value {
+        find(&data["cards"], "id", &json!(id)).expect("the card is listed")
+    }
+
+    fn close(a: f64, b: f64) -> bool {
+        (a - b).abs() < 1e-9
+    }
+
+    #[tokio::test]
+    async fn r4673000_each_face_reads_its_own_field_and_band() {
+        let app = test_app().await;
+        // Every card: played Radiant in 30 games (24 won), normal in 30 (18 won), never drawn in 30 (12 won).
+        // Its Radiant face is 40 points above its never-drawn games, its normal face 20, as every card's is.
+        let mut records = games("radiant", Met::Radiant, 24, 30);
+        records.extend(games("normal", Met::Normal, 18, 30));
+        records.extend(games("unseen", Met::Unseen, 12, 30));
+        insert_records(&app, records).await;
+
+        let (status, _, all) = get_public(&app, "/api/stats/cards?source=live&mode=bo1").await;
+        assert_eq!(status, 200);
+        let (status, _, radiant) =
+            get_public(&app, "/api/stats/cards?source=live&mode=bo1&face=radiant").await;
+        assert_eq!(status, 200);
+        let (_, _, normal) = get_public(&app, "/api/stats/cards?source=live&mode=bo1&face=normal").await;
+
+        // Each face's field: its own centre, every card alike so its spread is the floor; the bands are its own.
+        let floor = jackioh_engine::config::ADJUSTED_FIELD_SPREAD_FLOOR;
+        for (page, center) in [(&radiant, 0.4), (&normal, 0.2)] {
+            let tiers = &page["tiers"];
+            assert_eq!(tiers["cards"], json!(40), "{tiers}");
+            assert!(close(tiers["center"].as_f64().unwrap(), center), "{tiers}");
+            assert!(close(tiers["spread"].as_f64().unwrap(), floor), "{tiers}");
+            assert_eq!(tiers["baseline"], all["tiers"]["baseline"]);
+        }
+        assert_eq!(
+            (
+                radiant["tiers"]["bandLow"].as_f64(),
+                radiant["tiers"]["bandHigh"].as_f64()
+            ),
+            (Some(RADIANT_TIER_BAND_LOW), Some(RADIANT_TIER_BAND_HIGH))
+        );
+        // All's field reads every card's seen games, both faces together: 30 points over the never-drawn.
+        assert!(
+            close(all["tiers"]["center"].as_f64().unwrap(), 0.3),
+            "{}",
+            all["tiers"]
+        );
+
+        // Each card reads an even game on each face, over that face's 30 games, its win rate and range that
+        // face's; its play rate is All's.
+        let noise = 0.25 * (1.0 / 30.0 + 1.0 / 30.0);
+        let weight = floor * floor / (floor * floor + noise);
+        let half = STATS_INTERVAL_Z * (weight * noise).sqrt();
+        for (page, rate) in [(&radiant, 0.8), (&normal, 0.6)] {
+            let row = card(page, "core-001");
+            assert_eq!(row["games"], json!(30), "{row}");
+            assert_eq!(row["hasEnoughGames"], json!(true));
+            assert!(close(row["winRate"].as_f64().unwrap(), rate), "{row}");
+            let adjusted = row["adjustedWinRate"].as_f64().unwrap();
+            assert!(close(adjusted, 0.5), "{row}");
+            assert!(
+                close(row["adjustedHigh"].as_f64().unwrap(), adjusted + half),
+                "{row}"
+            );
+            assert_eq!(row["tier"], json!(if adjusted >= 0.5 { "B" } else { "C" }));
+            assert_eq!(row["playRate"], card(&all, "core-001")["playRate"]);
+        }
+        assert_eq!(card(&all, "core-001")["games"], json!(90));
+        // p2's card, never played, has no games and no tier on a face.
+        for page in [&radiant, &normal] {
+            let unplayed = card(page, "core-100");
+            assert_eq!(unplayed["games"], json!(0), "{unplayed}");
+            assert_eq!(unplayed["adjustedWinRate"], Value::Null);
+            assert_eq!(unplayed["tier"], Value::Null);
+            assert_eq!(unplayed["hasEnoughGames"], json!(false));
+        }
+
+        // A Created card's faces are the seats that used a copy on each.
+        let created = |page: &Value| {
+            find(&page["created"], "id", &json!("core-050"))
+                .expect("listed")
+                .clone()
+        };
+        assert_eq!(created(&all)["games"], json!(60));
+        assert_eq!(created(&radiant)["games"], json!(30));
+        assert_eq!(created(&normal)["games"], json!(30));
+        assert_ne!(
+            created(&radiant)["adjustedWinRate"],
+            created(&normal)["adjustedWinRate"]
+        );
+    }
+
+    #[tokio::test]
+    async fn r4673001_face_all_and_no_face_answer_the_same_bytes_and_an_unknown_face_reads_all() {
+        let app = test_app().await;
+        let mut records = games("radiant", Met::Radiant, 24, 30);
+        records.extend(games("unseen", Met::Unseen, 12, 30));
+        insert_records(&app, records).await;
+
+        for base in [
+            "/api/stats/cards?source=live&mode=bo1",
+            "/api/stats/cards/core-001?mode=bo1",
+        ] {
+            let (_, _, plain) = get_public(&app, base).await;
+            for face in ["all", "ALL", "sideways", ""] {
+                let (status, _, asked) = get_public(&app, &format!("{base}&face={face}")).await;
+                assert_eq!(status, 200);
+                assert_eq!(asked, plain, "{base} face={face}");
+            }
+            // A face is read whatever its case and spaces.
+            let (_, _, radiant) = get_public(&app, &format!("{base}&face=Radiant")).await;
+            let (_, _, lower) = get_public(&app, &format!("{base}&face=radiant")).await;
+            assert_eq!(radiant, lower, "{base}");
+            assert_ne!(radiant, plain, "{base}");
+        }
+        // The default answer's rows carry no new field.
+        let (_, _, page) = get_public(&app, "/api/stats/cards?source=live&mode=bo1").await;
+        let keys: Vec<&String> = card(&page, "core-001").as_object().unwrap().keys().collect();
+        assert!(
+            !keys.iter().any(|key| key.to_lowercase().contains("face")),
+            "{keys:?}"
+        );
+        assert!(page.get("face").is_none());
+        let (_, _, drill) = get_public(&app, "/api/stats/cards/core-001").await;
+        assert_eq!(drill["face"], json!("all"));
+    }
+
+    #[tokio::test]
+    async fn r4673001_the_drill_down_follows_the_face_and_a_drill_with_no_face_split_reads_empty() {
+        let app = test_app().await;
+        let radiant_games = count(PUBLIC_STATS_MIN_LIVE_GAMES) / 2;
+        let normal_games = count(PUBLIC_STATS_MIN_LIVE_GAMES) - radiant_games;
+        let played = |id: String, turn: usize, radiant: Option<bool>, winner: &'static str| {
+            make_game_record(
+                &id,
+                RecordOptions {
+                    source: Some("live"),
+                    mode: Some("bo1"),
+                    p1_played_turns: Some(vec![turn, turn]),
+                    p1_played_radiant: radiant.map(|flag| vec![flag, flag]),
+                    winner: Some(winner),
+                    ..RecordOptions::default()
+                },
+            )
+        };
+        // p1 plays core-001 and core-002: Radiant on turn 2 and wins, normal on turn 3 and loses, or with no
+        // face flags on turn 4 and wins. p2's plays of core-003 and core-004 carry no flags.
+        let mut records: Vec<Value> = (0..radiant_games)
+            .map(|i| played(format!("drill-radiant-{i}"), 2, Some(true), "p1"))
+            .collect();
+        records.extend((0..normal_games).map(|i| played(format!("drill-normal-{i}"), 3, Some(false), "p2")));
+        records.extend((0..10).map(|i| played(format!("drill-flagless-{i}"), 4, None, "p1")));
+        insert_records(&app, records).await;
+        let current = current_patch();
+
+        let turn =
+            |turn: i32, games: usize, rate: f64| json!({ "turn": turn, "games": games, "winRate": rate });
+        let (_, _, all) = get_public(&app, "/api/stats/cards/core-001").await;
+        let name = all["coPlayed"][0]["name"].clone();
+        let co = |games: usize, rate: f64| json!([{ "id": "core-002", "name": name, "games": games, "winRate": rate }]);
+        let patch =
+            |games: usize, rate: Value| json!([{ "patch": current, "games": games, "winRate": rate }]);
+
+        let (status, _, radiant) = get_public(&app, "/api/stats/cards/core-001?face=radiant").await;
+        assert_eq!(status, 200);
+        assert_eq!(radiant["face"], json!("radiant"));
+        assert_eq!(radiant["patches"], patch(radiant_games, json!(1.0)));
+        assert_eq!(radiant["byTurn"], json!([turn(2, radiant_games, 1.0)]));
+        assert_eq!(radiant["coPlayed"], co(radiant_games, 1.0));
+
+        let (_, _, normal) = get_public(&app, "/api/stats/cards/core-001?face=normal").await;
+        assert_eq!(normal["face"], json!("normal"));
+        assert_eq!(normal["patches"], patch(normal_games, json!(0.0)));
+        assert_eq!(normal["byTurn"], json!([turn(3, normal_games, 0.0)]));
+        assert_eq!(normal["coPlayed"], co(normal_games, 0.0));
+
+        // All holds every seat, the flagless ones among them.
+        let every = radiant_games + normal_games + 10;
+        let won = radiant_games + 10;
+        assert_eq!(all["patches"][0]["games"], json!(every));
+        assert_eq!(
+            all["byTurn"],
+            json!([
+                turn(2, radiant_games, 1.0),
+                turn(3, normal_games, 0.0),
+                turn(4, 10, 1.0)
+            ])
+        );
+        assert_eq!(all["coPlayed"][0]["games"], json!(every));
+        assert!(close(
+            all["coPlayed"][0]["winRate"].as_f64().unwrap(),
+            won as f64 / every as f64
+        ));
+
+        // A card whose plays never carried a face reads empty on each face, never All's figures.
+        let (_, _, unsplit) = get_public(&app, "/api/stats/cards/core-003?face=radiant").await;
+        assert_eq!(unsplit["byTurn"], json!([]));
+        assert_eq!(unsplit["coPlayed"], json!([]));
+        assert_eq!(unsplit["patches"], patch(0, Value::Null));
+        let (_, _, unsplit_all) = get_public(&app, "/api/stats/cards/core-003").await;
+        assert_ne!(unsplit_all["byTurn"], json!([]));
+
+        // The face line, on every face: each face's games; no never-drawn games, so no rate and no gap.
+        for page in [&all, &radiant, &normal] {
+            let faces = &page["faces"];
+            assert_eq!(faces["radiant"]["games"], json!(radiant_games), "{faces}");
+            assert_eq!(faces["normal"]["games"], json!(normal_games), "{faces}");
+            assert_eq!(faces["radiant"]["adjustedWinRate"], Value::Null, "{faces}");
+            assert_eq!(faces["normal"]["tier"], Value::Null, "{faces}");
+            assert_eq!(faces["gap"], Value::Null, "{faces}");
+        }
+    }
+
+    #[tokio::test]
+    async fn r4673001_the_face_line_reads_each_faces_rate_and_the_gap_at_the_page_s_patch() {
+        let app = test_app().await;
+        let mut records = games("radiant", Met::Radiant, 24, 30);
+        records.extend(games("normal", Met::Normal, 18, 30));
+        records.extend(games("unseen", Met::Unseen, 12, 30));
+        insert_records(&app, records).await;
+
+        // Every card is the field's on each face: both rates an even game, their gap about 0, its range the two
+        // ranges' half-widths summed in quadrature.
+        let (_, _, drill) = get_public(&app, "/api/stats/cards/core-001?mode=bo1").await;
+        let (_, _, radiant) = get_public(&app, "/api/stats/cards?source=live&mode=bo1&face=radiant").await;
+        let (_, _, normal) = get_public(&app, "/api/stats/cards?source=live&mode=bo1&face=normal").await;
+        let faces = &drill["faces"];
+        for (face, page) in [("radiant", &radiant), ("normal", &normal)] {
+            let row = card(page, "core-001");
+            for key in [
+                "games",
+                "adjustedWinRate",
+                "adjustedLow",
+                "adjustedHigh",
+                "tier",
+                "hasEnoughGames",
+            ] {
+                assert_eq!(faces[face][key], row[key], "{face} {key}");
+            }
+        }
+        let gap = &faces["gap"];
+        let half = |face: &str| {
+            (faces[face]["adjustedHigh"].as_f64().unwrap() - faces[face]["adjustedLow"].as_f64().unwrap())
+                / 2.0
+        };
+        let spread = half("normal").hypot(half("radiant"));
+        let value = gap["gap"].as_f64().expect("a gap");
+        assert!(close(value, 0.0), "{gap}");
+        assert!(close(gap["low"].as_f64().unwrap(), value - spread), "{gap}");
+        assert!(close(gap["high"].as_f64().unwrap(), value + spread), "{gap}");
+
+        // At a patch with none of these games, each face is below the floor: no rates and no gap. R4677000: the
+        // patch before the current one that anyone may read, asked at its newest version.
+        let (_, _, page) = get_public(&app, "/api/stats/cards").await;
+        let past = page["patches"][1]["versions"]
+            .as_array()
+            .and_then(|versions| versions.last())
+            .and_then(Value::as_str)
+            .expect("a past patch anyone reads")
+            .to_string();
+        assert_ne!(past, current_patch());
+        let (status, _, before) =
+            get_public(&app, &format!("/api/stats/cards/core-001?mode=bo1&patch={past}")).await;
+        assert_eq!(status, 200);
+        assert_eq!(before["faces"]["radiant"]["games"], json!(0));
+        assert_eq!(before["faces"]["gap"], Value::Null);
+        assert_eq!(before["byTurn"], drill["byTurn"]);
+    }
+
+    #[tokio::test]
+    async fn r4673001_the_face_lines_patch_past_the_callers_is_403_patch_dev_only() {
+        // R4677000: the oldest patch is a dev account's alone, so the face line cannot read it around the table.
+        let app = test_app().await;
+        let first = jackioh_cards::patch_history()[0].version.clone();
+        let path = format!("/api/stats/cards/core-001?patch={first}");
+        for token in [None, Some(USER_TOKEN)] {
+            let (status, _, body) = request(&app, "GET", &path, token, None).await;
+            assert_eq!(
+                (status, body["error"]["code"].clone()),
+                (403, json!("patch_dev_only")),
+                "{token:?}"
+            );
+        }
+        // A dev account reads it; and no patch, the current one, stays open to everyone.
+        let (status, _, dev) = request(&app, "GET", &path, Some(DEV_TOKEN), None).await;
+        assert_eq!(status, 200);
+        assert_eq!(dev["faces"]["radiant"]["games"], json!(0));
+        assert_eq!(get_public(&app, "/api/stats/cards/core-001").await.0, 200);
+    }
+
+    #[tokio::test]
+    async fn r4673000_decisiveness_reads_all_s_on_every_face() {
+        // R4552001's turn rows name no face, so a face reads All's Decisiveness, as it does the play rate:
+        // half the games play core-001 and use the Rush Token Radiant, half normal, and each swings far.
+        let app = test_app().await;
+        let records: Vec<Value> = (0..40)
+            .map(|i| {
+                let won = i % 2 == 0;
+                let radiant = i % 4 < 2;
+                make_game_record(
+                    &format!("faces-swing-{i}"),
+                    RecordOptions {
+                        source: Some("live"),
+                        p1_deck: Some(vec!["core-001", "core-002", "core-015"]),
+                        p1_played: Some(vec!["core-001"]),
+                        p1_played_radiant: Some(vec![radiant]),
+                        winner: Some(if won { "p1" } else { "p2" }),
+                        p1_swing_turns: Some(json!([
+                            { "turn": 1, "eval": 0 },
+                            {
+                                "turn": 3,
+                                "eval": if won { 5_000_000 } else { -5_000_000 },
+                                "acting": ["core-001", { "card": "core-t-rush", "maker": "core-015" }],
+                            },
+                        ])),
+                        p1_created_used: Some(
+                            json!([{ "card": "core-t-rush", "turn": 1, "radiant": radiant }]),
+                        ),
+                        ..RecordOptions::default()
+                    },
+                )
+            })
+            .collect();
+        insert_records(&app, records).await;
+
+        let (_, _, all) = get_public(&app, "/api/stats/cards").await;
+        let decisive = card(&all, "core-001")["decisiveness"].clone();
+        assert!(decisive.is_f64(), "{decisive}");
+        let token = |data: &Value| {
+            find(&data["created"], "id", &json!("core-t-rush")).expect("the Rush Token is listed")["decisiveness"]
+                .clone()
+        };
+        assert!(token(&all).is_f64());
+        for face in ["normal", "radiant"] {
+            let (status, _, data) = get_public(&app, &format!("/api/stats/cards?face={face}")).await;
+            assert_eq!(status, 200);
+            // The face's own games, but All's Decisiveness, the card's, the token's and each field's typical.
+            assert_eq!(card(&data, "core-001")["games"], json!(20), "{face}");
+            assert_eq!(card(&data, "core-001")["decisiveness"], decisive, "{face}");
+            assert_eq!(token(&data), token(&all), "{face}");
+            assert_eq!(
+                data["tiers"]["decisiveness"], all["tiers"]["decisiveness"],
+                "{face}"
+            );
+            assert_eq!(
+                data["tiers"]["created"]["decisiveness"], all["tiers"]["created"]["decisiveness"],
+                "{face}"
+            );
+        }
+    }
+}
+
+// R4552003: `GET /api/stats/cards` sends each card's Decisiveness and each field's typical value, and
+// nothing else of R4552001's: no Swing, no Board swing, no play term, no raw RMS.
+mod r4552003_decisiveness {
+    use super::*;
+
+    /// Every key of a JSON value, at any depth.
+    fn keys_of(value: &Value, out: &mut Vec<String>) {
+        match value {
+            Value::Object(map) => {
+                for (key, inner) in map {
+                    out.push(key.clone());
+                    keys_of(inner, out);
+                }
+            }
+            Value::Array(items) => items.iter().for_each(|item| keys_of(item, out)),
+            _ => {}
+        }
+    }
+
+    #[tokio::test]
+    async fn r4552003_cards_answer_decisiveness_and_the_typical_value_and_no_swing() {
+        let app = test_app().await;
+        // 40 games: p1 plays core-001 on its first turn and its chance then swings far one way or the
+        // other; a Rush Token core-015 made acts on its second turn. core-002 is never played.
+        let mut records = Vec::new();
+        for i in 0..40 {
+            let won = i % 2 == 0;
+            let after = if won { 5_000_000 } else { -5_000_000 };
+            records.push(make_game_record(
+                &format!("rec-swing-{i}"),
+                RecordOptions {
+                    source: Some("live"),
+                    p1_deck: Some(vec!["core-001", "core-002", "core-015"]),
+                    p1_played: Some(vec!["core-001"]),
+                    winner: Some(if won { "p1" } else { "p2" }),
+                    p1_swing_turns: Some(json!([
+                        { "turn": 1, "eval": 0 },
+                        {
+                            "turn": 3,
+                            "eval": after,
+                            "acting": ["core-001", { "card": "core-t-rush", "maker": "core-015" }],
+                        },
+                    ])),
+                    p1_created_used: Some(json!([{ "card": "core-t-rush", "turn": 1, "radiant": false }])),
+                    ..RecordOptions::default()
+                },
+            ));
+        }
+        insert_records(&app, records).await;
+
+        let (status, _, data) = get_public(&app, "/api/stats/cards").await;
+        assert_eq!(status, 200);
+        let played = find(&data["cards"], "id", &json!("core-001")).expect("core-001 is listed");
+        let decisive = played["decisiveness"].as_f64().expect("a Decisiveness");
+        assert!(decisive > 0.0 && decisive <= 1.0, "{decisive}");
+        // Never played and never acting: no turn of its own to read.
+        let quiet = find(&data["cards"], "id", &json!("core-002")).expect("core-002 is listed");
+        assert_eq!(quiet["decisiveness"], Value::Null);
+        // The typical card's value of each field, beside the tiers' centres.
+        assert!(
+            data["tiers"]["decisiveness"]
+                .as_f64()
+                .is_some_and(|typical| typical > 0.0)
+        );
+        assert!(
+            data["tiers"]["created"]["decisiveness"]
+                .as_f64()
+                .is_some_and(|typical| typical > 0.0)
+        );
+        // The token its maker put onto the field reads its acting turns.
+        let token = find(&data["created"], "id", &json!("core-t-rush")).expect("the Rush Token is listed");
+        assert!(token["decisiveness"].as_f64().is_some(), "{token}");
+        // No key of the response names a swing.
+        let mut keys = Vec::new();
+        keys_of(&data, &mut keys);
+        assert!(
+            keys.iter().all(|key| !key.to_lowercase().contains("swing")),
+            "{keys:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn stats_queries_refuse_nul_characters_with_bad_request() {
+        let app = test_app().await;
+
+        let (status, _, body) = get_public(&app, "/api/stats/players?search=%00").await;
+        assert_eq!(status, 400);
+        assert_eq!(
+            body["error"]["message"],
+            "a query parameter may not contain a NUL character"
+        );
+
+        let (status, _, body) = get_public(&app, "/api/stats/cards?patch=%00").await;
+        assert_eq!(status, 400);
+        assert_eq!(
+            body["error"]["message"],
+            "a query parameter may not contain a NUL character"
+        );
+
+        let (status, _, body) = get_public(&app, "/api/stats/cards/core-001?patch=%00").await;
+        assert_eq!(status, 400);
+        assert_eq!(
+            body["error"]["message"],
+            "a query parameter may not contain a NUL character"
+        );
+
+        let (status, _, body) = get_public(&app, "/api/stats/games?patch=%00").await;
+        assert_eq!(status, 400);
+        assert_eq!(
+            body["error"]["message"],
+            "a query parameter may not contain a NUL character"
+        );
+    }
+}
+
+// R4676000: `GET /api/stats/cards/:id`'s `variants`: each choice of a Choose One, an X and an Embiggen card,
+// at the page's patch and on its face.
+mod r4676000_extended_stats {
+    use super::*;
+
+    const FLOOD: &str = "core-017"; // Flood: Radiant, Choose one of three.
+    const DIVIDEND: &str = "core-024"; // Efficiency Dividend: X, and Choose one.
+    const PREP: &str = "classic-035"; // Prep: an Embiggen Spell.
+    const PLAIN: &str = "core-001";
+    const DECK: [&str; 4] = [FLOOD, DIVIDEND, PREP, PLAIN];
+
+    /// `count` live Best of 1 games, p1 winning the first `won`. With `variants`, p1 plays the four cards with
+    /// them (Flood's, Dividend's, Prep's), Flood on its Radiant face when `radiant`; without, it never draws one.
+    fn games(tag: &str, variants: Option<[Value; 3]>, radiant: bool, won: usize, count: usize) -> Vec<Value> {
+        (0..count)
+            .map(|i| {
+                let (hand, played, flags, chosen) = match &variants {
+                    Some([flood, dividend, prep]) => (
+                        DECK.to_vec(),
+                        DECK.to_vec(),
+                        Some(vec![radiant, false, false, false]),
+                        Some(json!([flood, dividend, prep, null])),
+                    ),
+                    None => (Vec::new(), Vec::new(), None, None),
+                };
+                make_game_record(
+                    &format!("variants-{tag}-{i}"),
+                    RecordOptions {
+                        source: Some("live"),
+                        mode: Some("bo1"),
+                        p1_deck: Some(DECK.to_vec()),
+                        p1_hand: Some(hand),
+                        p1_played: Some(played),
+                        p1_played_radiant: flags,
+                        p1_played_variants: chosen,
+                        p2_deck: Some(vec!["core-100"]),
+                        p2_played: Some(Vec::new()),
+                        winner: Some(if i < won { "p1" } else { "p2" }),
+                        ..RecordOptions::default()
+                    },
+                )
+            })
+            .collect()
+    }
+
+    async fn seeded() -> Arc<App> {
+        let app = test_app().await;
+        let mut records = games(
+            "a",
+            Some([
+                json!({ "modes": ["bounce all units"] }),
+                json!({ "modes": ["deal"], "x": 2 }),
+                json!({ "embiggened": true }),
+            ]),
+            true,
+            24,
+            30,
+        );
+        records.extend(games(
+            "b",
+            Some([
+                json!({ "modes": ["destroy all enemy units"] }),
+                json!({ "modes": ["heal"], "x": 6 }),
+                json!({ "embiggened": false }),
+            ]),
+            false,
+            12,
+            30,
+        ));
+        records.extend(games(
+            "c",
+            Some([
+                json!({ "modes": ["bounce all enemy units"] }),
+                json!({ "modes": ["heal"], "x": 7 }),
+                json!({ "embiggened": false }),
+            ]),
+            false,
+            5,
+            10,
+        ));
+        records.extend(games("unseen", None, false, 15, 30));
+        insert_records(&app, records).await;
+        app
+    }
+
+    fn kinds(drill: &Value) -> Vec<&str> {
+        drill["variants"]
+            .as_array()
+            .expect("variants")
+            .iter()
+            .map(|group| group["kind"].as_str().expect("a kind"))
+            .collect()
+    }
+
+    fn rows<'a>(drill: &'a Value, kind: &str) -> &'a Vec<Value> {
+        drill["variants"]
+            .as_array()
+            .and_then(|groups| groups.iter().find(|group| group["kind"] == json!(kind)))
+            .and_then(|group| group["rows"].as_array())
+            .expect("the kind's rows")
+    }
+
+    fn keys(rows: &[Value]) -> Vec<&str> {
+        rows.iter()
+            .map(|row| row["key"].as_str().expect("a key"))
+            .collect()
+    }
+
+    #[tokio::test]
+    async fn r4676000_a_choose_one_card_answers_each_option_by_share_with_its_figures() {
+        let app = seeded().await;
+        let (status, _, drill) = get_public(&app, &format!("/api/stats/cards/{FLOOD}?mode=bo1")).await;
+        assert_eq!(status, 200);
+        assert_eq!(kinds(&drill), ["mode"]);
+        let modes = rows(&drill, "mode");
+        // By share, most chosen first; the 10-game option below the floor reads no tier.
+        assert_eq!(
+            keys(modes),
+            [
+                "bounce all units",
+                "destroy all enemy units",
+                "bounce all enemy units"
+            ]
+        );
+        assert_eq!(modes[0]["label"], json!("bounce all units"));
+        // Each option apart, for the page to name in the card's own words.
+        assert_eq!(modes[0]["options"], json!(["bounce all units"]));
+        assert_eq!(modes[0]["games"], json!(30));
+        let share = modes[0]["share"].as_f64().expect("a share");
+        assert!((share - 30.0 / 70.0).abs() < 1e-3, "{share}");
+        assert_eq!(modes[0]["hasEnoughGames"], json!(true));
+        assert!(modes[0]["tier"].is_string());
+        // The option that won more reads above its sibling.
+        let rate = |row: &Value| row["adjustedWinRate"].as_f64().expect("a rate");
+        assert!(rate(&modes[0]) > rate(&modes[1]));
+        assert!(modes[0]["adjustedLow"].as_f64().unwrap() < rate(&modes[0]));
+        assert!(modes[0]["adjustedHigh"].as_f64().unwrap() > rate(&modes[0]));
+        assert_eq!(modes[2]["hasEnoughGames"], json!(false));
+        assert_eq!(modes[2]["tier"], Value::Null);
+        // A card with no choice answers an empty list.
+        let (_, _, plain) = get_public(&app, &format!("/api/stats/cards/{PLAIN}?mode=bo1")).await;
+        assert_eq!(plain["variants"], json!([]));
+    }
+
+    #[tokio::test]
+    async fn r4676000_an_x_card_groups_its_top_x_and_an_embiggen_card_splits_both_ways() {
+        let app = seeded().await;
+        let (_, _, dividend) = get_public(&app, &format!("/api/stats/cards/{DIVIDEND}?mode=bo1")).await;
+        assert_eq!(kinds(&dividend), ["mode", "x"]);
+        let x = rows(&dividend, "x");
+        // X=6 and X=7 are one row, X ≥ 5, its 40 seats ahead of X=2's 30.
+        assert_eq!(keys(x), ["top", "2"]);
+        assert_eq!(x[0]["label"], json!("X ≥ 5"));
+        assert_eq!(x[0]["games"], json!(40));
+        assert_eq!(x[1]["label"], json!("X = 2"));
+        // Only a mode row names options.
+        assert!(x[0].get("options").is_none());
+        assert_eq!(keys(rows(&dividend, "mode")), ["heal", "deal"]);
+
+        let (_, _, prep) = get_public(&app, &format!("/api/stats/cards/{PREP}?mode=bo1")).await;
+        assert_eq!(kinds(&prep), ["embiggen"]);
+        let embiggen = rows(&prep, "embiggen");
+        assert_eq!(keys(embiggen), ["notEmbiggened", "embiggened"]);
+        assert_eq!(embiggen[1]["label"], json!("Embiggened"));
+        assert_eq!(embiggen[1]["games"], json!(30));
+    }
+
+    #[tokio::test]
+    async fn r4676000_the_face_and_the_patch_scope_the_variants() {
+        let app = seeded().await;
+        // Flood was played Radiant only with its first option: on Radiant that is its one row, all its plays.
+        let (_, _, radiant) =
+            get_public(&app, &format!("/api/stats/cards/{FLOOD}?mode=bo1&face=radiant")).await;
+        let modes = rows(&radiant, "mode");
+        assert_eq!(keys(modes), ["bounce all units"]);
+        assert_eq!(modes[0]["share"], json!(1.0));
+        let (_, _, normal) =
+            get_public(&app, &format!("/api/stats/cards/{FLOOD}?mode=bo1&face=normal")).await;
+        assert_eq!(
+            keys(rows(&normal, "mode")),
+            ["destroy all enemy units", "bounce all enemy units"]
+        );
+        // At a patch with none of these games, there is nothing to split.
+        let (_, _, page) = get_public(&app, "/api/stats/cards").await;
+        let past = page["patches"][1]["versions"]
+            .as_array()
+            .and_then(|versions| versions.last())
+            .and_then(Value::as_str)
+            .expect("a past patch anyone reads")
+            .to_string();
+        let (status, _, before) =
+            get_public(&app, &format!("/api/stats/cards/{FLOOD}?mode=bo1&patch={past}")).await;
+        assert_eq!(status, 200);
+        assert_eq!(before["variants"], json!([]));
+    }
+}
+
+// R4679000: `GET /api/stats/cards/:id`'s `outputs`: each card a random-output card and a Discover card made,
+// read against the card's other outputs, at the page's patch and on its face.
+mod r4679000_outputs {
+    use super::*;
+
+    const PANCAKE: &str = "classicplus-012"; // The Mother Pancake: a random Pancake each end of turn.
+    const BLUEPRINTS: &str = "meditative-097"; // Jlockeed's Evil Blueprints: Discover a building.
+    const PLAIN: &str = "core-001";
+
+    /// A `createdUsed` entry: `card`, made by `source` on its Radiant face or not.
+    fn made(card: &str, source: &str, radiant: bool) -> Value {
+        json!({ "card": card, "turn": 3, "radiant": false, "source": { "card": source, "radiant": radiant } })
+    }
+
+    /// `count` live Best of 1 games of p1 playing `source`, p1 winning the first `won`, its seat making `used`
+    /// and asking `picks`.
+    fn games(
+        tag: &str,
+        source: &'static str,
+        used: Value,
+        picks: Option<Value>,
+        won: usize,
+        count: usize,
+    ) -> Vec<Value> {
+        (0..count)
+            .map(|i| {
+                make_game_record(
+                    &format!("outputs-{tag}-{i}"),
+                    RecordOptions {
+                        source: Some("live"),
+                        mode: Some("bo1"),
+                        p1_deck: Some(vec![source, PLAIN]),
+                        p1_created_used: Some(used.clone()),
+                        p1_picks: picks.clone(),
+                        p2_deck: Some(vec!["core-100"]),
+                        p2_played: Some(Vec::new()),
+                        winner: Some(if i < won { "p1" } else { "p2" }),
+                        ..RecordOptions::default()
+                    },
+                )
+            })
+            .collect()
+    }
+
+    fn outputs(drill: &Value) -> &Vec<Value> {
+        drill["outputs"].as_array().expect("outputs")
+    }
+
+    fn keys(rows: &[Value]) -> Vec<&str> {
+        rows.iter()
+            .map(|row| row["key"].as_str().expect("a key"))
+            .collect()
+    }
+
+    fn rate(row: &Value) -> f64 {
+        row["adjustedWinRate"].as_f64().expect("a rate")
+    }
+
+    #[tokio::test]
+    async fn r4679000_a_random_output_card_answers_each_output_against_its_siblings() {
+        let app = test_app().await;
+        let pancake = |n: u8| format!("{PANCAKE}-{n}");
+        let mut records = games(
+            "a",
+            PANCAKE,
+            json!([made(&pancake(1), PANCAKE, true)]),
+            None,
+            24,
+            30,
+        );
+        records.extend(games(
+            "b",
+            PANCAKE,
+            json!([made(&pancake(2), PANCAKE, false)]),
+            None,
+            12,
+            30,
+        ));
+        records.extend(games(
+            "c",
+            PANCAKE,
+            json!([made(&pancake(3), PANCAKE, false)]),
+            None,
+            5,
+            10,
+        ));
+        insert_records(&app, records).await;
+
+        let (status, _, drill) = get_public(&app, &format!("/api/stats/cards/{PANCAKE}?mode=bo1")).await;
+        assert_eq!(status, 200);
+        let rows = outputs(&drill);
+        // Best adjusted first; the 10-game Pancake below the floor after both.
+        assert_eq!(keys(rows), [pancake(1), pancake(2), pancake(3)]);
+        let devour = &rows[0];
+        assert_eq!(devour["label"], json!("Devour"));
+        assert_eq!(devour["rarity"], json!("Token"));
+        assert_eq!(devour["cost"], json!(0));
+        assert_eq!(devour["games"], json!(30));
+        let share = devour["share"].as_f64().expect("a share");
+        assert!((share - 30.0 / 70.0).abs() < 1e-3, "{share}");
+        assert_eq!(devour["hasEnoughGames"], json!(true));
+        assert!(devour["tier"].is_string());
+        assert!(devour["adjustedLow"].as_f64().unwrap() < rate(devour));
+        assert!(devour["adjustedHigh"].as_f64().unwrap() > rate(devour));
+        // Devour's seats won more than its siblings': it reads above the Pancake that won less.
+        assert!(rate(devour) > rate(&rows[1]));
+        assert_eq!(rows[2]["hasEnoughGames"], json!(false));
+        assert_eq!(rows[2]["tier"], Value::Null);
+        // No Pancake was offered: no row names offers or a pick rate.
+        assert!(
+            rows.iter()
+                .all(|row| row.get("offered").is_none() && row.get("pickRate").is_none())
+        );
+
+        // Devour was made only by a Radiant Mother Pancake: on Radiant it is every output, with no sibling.
+        let (_, _, radiant) =
+            get_public(&app, &format!("/api/stats/cards/{PANCAKE}?mode=bo1&face=radiant")).await;
+        let rows = outputs(&radiant);
+        assert_eq!(keys(rows), [pancake(1)]);
+        assert_eq!(rows[0]["share"], json!(1.0));
+        assert_eq!(rows[0]["adjustedWinRate"], Value::Null);
+        let (_, _, normal) =
+            get_public(&app, &format!("/api/stats/cards/{PANCAKE}?mode=bo1&face=normal")).await;
+        assert_eq!(keys(outputs(&normal)), [pancake(2), pancake(3)]);
+        // At a patch with none of these games, it made nothing.
+        let (_, _, page) = get_public(&app, "/api/stats/cards").await;
+        let past = page["patches"][1]["versions"]
+            .as_array()
+            .and_then(|versions| versions.last())
+            .and_then(Value::as_str)
+            .expect("a past patch anyone reads")
+            .to_string();
+        let (status, _, before) =
+            get_public(&app, &format!("/api/stats/cards/{PANCAKE}?mode=bo1&patch={past}")).await;
+        assert_eq!(status, 200);
+        assert_eq!(before["outputs"], json!([]));
+
+        // A card that made nothing answers an empty list.
+        let (_, _, plain) = get_public(&app, &format!("/api/stats/cards/{PLAIN}?mode=bo1")).await;
+        assert_eq!(plain["outputs"], json!([]));
+    }
+
+    #[tokio::test]
+    async fn r4679000_a_discover_card_answers_each_offer_with_its_pick_rate() {
+        let app = test_app().await;
+        let building = |n: u8| format!("{BLUEPRINTS}-{n}");
+        let pick = |offered: [u8; 3], picked: u8| {
+            json!([{
+                "source": { "card": BLUEPRINTS, "radiant": false },
+                "offered": offered.map(building),
+                "picked": [building(picked)],
+            }])
+        };
+        let mut records = games(
+            "a",
+            BLUEPRINTS,
+            json!([made(&building(1), BLUEPRINTS, false)]),
+            Some(pick([1, 2, 3], 1)),
+            20,
+            30,
+        );
+        records.extend(games(
+            "b",
+            BLUEPRINTS,
+            json!([made(&building(2), BLUEPRINTS, false)]),
+            Some(pick([1, 2, 4], 2)),
+            8,
+            20,
+        ));
+        records.extend(games(
+            "c",
+            BLUEPRINTS,
+            json!([made(&building(1), BLUEPRINTS, false)]),
+            Some(pick([1, 2, 3], 1)),
+            5,
+            10,
+        ));
+        insert_records(&app, records).await;
+
+        let (status, _, drill) = get_public(&app, &format!("/api/stats/cards/{BLUEPRINTS}?mode=bo1")).await;
+        assert_eq!(status, 200);
+        let rows = outputs(&drill);
+        // The two built read against each other; the two never picked come after, by id.
+        assert_eq!(keys(rows), [building(1), building(2), building(3), building(4)]);
+        assert!(rate(&rows[0]) > rate(&rows[1]));
+        let pick_rate = |row: &Value| row["pickRate"].as_f64().expect("a pick rate");
+        assert_eq!(rows[0]["offered"], json!(60));
+        assert!((pick_rate(&rows[0]) - 40.0 / 60.0).abs() < 1e-3);
+        assert_eq!(rows[1]["offered"], json!(60));
+        assert!((pick_rate(&rows[1]) - 20.0 / 60.0).abs() < 1e-3);
+        // School was offered in 40 seat-games and never picked: no seat built it, so it has no rate.
+        let school = &rows[2];
+        assert_eq!(school["label"], json!("School"));
+        assert_eq!(school["offered"], json!(40));
+        assert_eq!(school["pickRate"], json!(0.0));
+        assert_eq!(school["games"], json!(0));
+        assert_eq!(school["share"], json!(0.0));
+        assert_eq!(school["adjustedWinRate"], Value::Null);
+        assert_eq!(school["tier"], Value::Null);
+        assert_eq!(rows[3]["offered"], json!(20));
     }
 }

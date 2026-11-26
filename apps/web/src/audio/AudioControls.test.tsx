@@ -17,7 +17,7 @@ type ControlsModule = typeof import("./AudioControls.tsx");
 
 /** R631: what the background switch says it does. */
 const BACKGROUND_HINT =
-  "Off: the music fades out when you switch to another tab or window, and back in when you return. Sound effects and voices stay quiet either way.";
+  "Off: the music fades out when you switch to another tab or window, and back in when you return. Sound effects and voices stay quiet either way, except your own turn, prompt and mulligan countdown beats.";
 
 /** The text of the element `el` names as its description, or null with none. */
 function description(el: HTMLElement): string | null {

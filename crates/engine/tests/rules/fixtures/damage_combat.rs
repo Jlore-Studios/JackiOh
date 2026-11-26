@@ -3,7 +3,10 @@
 //! engine never imports the cards crate. Ids are `dc-…`, indexed from 4700, so they collide with no other
 //! test file. The action nonce is a per-thread counter (each test runs on its own thread).
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 
@@ -1317,7 +1320,7 @@ pub fn round_trip(state: &GameState) -> GameState {
 
 /// §9.3: the live game and its replay agree.
 pub fn replays_to(start: &GameState, log: &[Action], live: &GameState) -> bool {
-    let mut state = clone_state(start);
+    let mut state = start.clone();
     for action in log {
         let result = reduce(&state, action);
         if let Some(error) = &result.error {
@@ -1357,7 +1360,7 @@ pub fn recorder(start: &GameState) -> Recorder {
     Recorder {
         current: start.clone(),
         log: Vec::new(),
-        start: clone_state(start),
+        start: start.clone(),
     }
 }
 

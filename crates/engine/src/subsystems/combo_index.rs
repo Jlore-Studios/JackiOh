@@ -83,10 +83,6 @@ pub fn grade_of(instance: &CardInstance) -> i32 {
     clamp_grade(instance.counters.grade.unwrap_or(FIRST_GRADE))
 }
 
-pub fn grade_name_of(instance: &CardInstance) -> Grade {
-    grade_name(grade_of(instance))
-}
-
 /// R27: "grade S is terminal", so at S nothing rises and no step runs.
 pub fn is_terminal_grade(grade: i32) -> bool {
     clamp_grade(grade) >= LAST_GRADE

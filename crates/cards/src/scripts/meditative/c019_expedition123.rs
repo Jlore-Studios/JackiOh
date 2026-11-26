@@ -1,6 +1,6 @@
 //! Meditative #19 Expedition123 (SPEC §8.8 row 19). (1) Spell, Quickdraw, Epic. Expedition1234 until
 //! patch v0.3.10 (#831), which renamed it and took a turn off its loss.
-//!   Base:    "Lose ({loss}) mana next turn, then ({lossAfter}) mana the turn after. Your hero gains
+//!   Base:    "Overload ({loss}), then ({lossAfter}) the turn after. Your hero gains
 //!             {armor} Armor. Add a Temporal Rift to your hand." (armor 2)
 //!   Radiant: the same with a Radiant Temporal Rift. (armor 4)
 //!

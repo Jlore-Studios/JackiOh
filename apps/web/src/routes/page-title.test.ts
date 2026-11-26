@@ -69,6 +69,7 @@ describe("R3223000 one PageTitle per menu", () => {
       "routes/landing.tsx": 1,
       "routes/practice.tsx": 1,
       "dungeon/fight/FightScreen.tsx": 1,
+      "assault/fight/FightScreen.tsx": 1,
       "duos/DevDuosRoute.tsx": 2,
       "routes/dev/hotseat.tsx": 3,
     });

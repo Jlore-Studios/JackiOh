@@ -24,9 +24,10 @@
 //! the game figures per patch, mode and source instead: the first seat's wins of the decided games with a
 //! 95% Wilson interval (unknown when every game was drawn, R2567000), endings, lengths and R1256000's
 //! counts, unknown (not zero) in a record older than them. A forced run files under `dev-force-<id>`, for
-//! `compare` and `report`, never `stats-import` (R1284000). `fit-dealt` refits `DEALT_Q` and
-//! `DEALT_Q_PRIOR` over arena records (`dealt_fit.rs`); `from-selfplay` files `selfplay` logs as
-//! development records (`selfplay_records.rs`, R1676000). `sample-size` prints the games a gather run needs at this build's deal pool (`sample_size.rs`, #2888).
+//! `compare` and `report`, never `stats-import` (R1284000). `sample-size` prints the games a gather run
+//! needs at this build's deal pool (`sample_size.rs`, #2888).
+//! `report --versions` prints every deck card's play versions with their figures (R4675000, R4675001), the
+//! table `GET /api/stats/versions` sends, over record files.
 
 use std::io::Write as _;
 use std::path::PathBuf;
@@ -37,22 +38,30 @@ use indexmap::{IndexMap, IndexSet};
 use rayon::prelude::*;
 use serde_json::Value;
 
-use jackioh_ai::{AI_DEV_RUN, DevRunOptions, MatchSetup, SHADOW_BAN, SHADOW_WATCH, dev_game_record};
+use jackioh_ai::{AI_DEV_RUN, DevRunOptions, SHADOW_BAN, SHADOW_WATCH, dev_game_record};
+use jackioh_engine::config::SWING_FIELD_MIN_ROWS;
 use jackioh_engine::{
-    CardStats, CardStatsFilter, CardStatsReport, CardWindow, CreatedStats, DEFAULT_CARD_STATS_FILTER,
-    DEV_RECORD_ID_PREFIX, FORCED_SERIES_PREFIX, GAME_MODES, GameFigures, GameGroup, GameMode, GameRecord,
-    GameReport, ModeFilter, PILOT_FILTERS, PilotFilter, PlayerId, SOURCE_FILTERS, SourceFilter, StatsTotals,
-    Tally, WindowQuery, WindowRequest, WindowedCard, WindowedCreated, WindowedReport, Winner, card_stats,
-    created_played_delta, describe_filter, drawn_delta, format_card_stats, format_delta, format_tally,
-    game_report, not_drawn, windowed_card_stats,
+    CardChoicesRow, CardStats, CardStatsFilter, CardStatsReport, CardWindow, CreatedStats,
+    DEFAULT_CARD_STATS_FILTER, DEV_RECORD_ID_PREFIX, FORCED_SERIES_PREFIX, GAME_MODES, GameFigures,
+    GameGroup, GameMode, GameRecord, GameReport, ModeFilter, PILOT_FILTERS, PilotFilter, PlayVersionQuery,
+    PlayVersionTable, PlayerId, SOURCE_FILTERS, SourceFilter, StatsTotals, SwingFigures, SwingReport,
+    SwingTally, Tally, WindowQuery, WindowRequest, WindowedCard, WindowedCreated, WindowedReport, Winner,
+    adjusted_win_rate, card_stats, card_stats_of, created_played_delta, describe_filter, drawn_delta,
+    format_card_choices, format_card_stats, format_delta, format_play_versions, format_swing, format_tally,
+    game_report, not_drawn, play_version_figures, record_matches, stats_field, swing_baseline, swing_report,
+    swing_rows_of, windowed_card_stats,
 };
 use serde::Serialize;
 
 use crate::arena::{paired_interval, wilson_interval};
-use crate::selfplay_records::SELFPLAY_SERIES_PREFIX;
-use crate::{dealt_fit, golden, sample_size, selfplay_records};
+use crate::{golden, sample_size, win_probability};
 
 const SECONDS_DECIMALS: usize = 1;
+
+/// R1676000: the series the retired learn lane's exports were filed under, ahead of each game's seed.
+/// Both databases still hold those records, so `--series` refuses one that begins with it, and no run
+/// files an id they hold.
+const SELFPLAY_SERIES_PREFIX: &str = "selfplay:";
 
 const PERCENT_DECIMALS: usize = 1;
 
@@ -127,14 +136,13 @@ pub struct Args {
 pub enum Command {
     /// R377's card win rates over record files, with no database, or with --games the game figures.
     Report(ReportArgs),
-    /// DEALT_Q's refit over arena record files, printed to paste into crates/ai/src/shadow_ban.rs.
-    FitDealt(dealt_fit::Args),
     /// R1284000: two forced runs compared: the holder's win rate before and after, and the paired difference.
     Compare(CompareArgs),
-    /// R1676000: selfplay logs filed as development records, one GameRecord per line.
-    FromSelfplay(selfplay_records::Args),
     /// #2888: the games a gather run needs for the card win rates at this build's deal pool.
     SampleSize(sample_size::Args),
+    /// R4552000: the win probability's weights fit over record files' turn rows, to paste into
+    /// crates/engine/src/config.rs.
+    Calibrate(win_probability::Args),
 }
 
 /// `cargo jackioh stats compare --before <file>… --after <file>… --card <id>`: two runs of
@@ -186,9 +194,21 @@ pub struct ReportArgs {
     /// live game's seats counted. Not with --source, --mode, --patch or --games.
     #[arg(long, value_name = "VERSION", conflicts_with_all = ["source", "mode", "patch", "games"])]
     pub window: Option<String>,
+    /// R4675001: every deck card's play versions (R4675000) with their figures, as `/api/stats/versions`
+    /// sends them (`play_version_figures`): a version's live games once the live games on its span reach
+    /// `PUBLIC_STATS_MIN_LIVE_GAMES`, live and development games together otherwise. `--mode` and `--pilot`
+    /// name what it counts, `--card` one card's. Not with --source, --patch, --games or --window.
+    #[arg(long, conflicts_with_all = ["source", "patch", "games", "window"])]
+    pub versions: bool,
     /// The report as JSON, as `stats-cards --json` prints it.
     #[arg(long)]
     pub json: bool,
+    /// R4552001: each card's play term, Board swing, Swing, raw RMS and Decisiveness (`swing_report`),
+    /// each figure's split-half reliability (odd records against even ones) and the correlation of the
+    /// deck cards' Swing with their adjusted win rate, after the table. Not with --games, --window or
+    /// --json.
+    #[arg(long, conflicts_with_all = ["games", "window", "json"])]
+    pub swing: bool,
 }
 
 /// One of `allowed`, by the literal it is written as.
@@ -248,8 +268,9 @@ pub fn report(args: &ReportArgs) -> Result<CardStatsReport> {
     let mut report = card_stats(&records, &filter_of(args));
     if let Some(only) = &args.card {
         report.cards.retain(|stats| &stats.card == only);
-        // R2089000: the Created table is filtered as the deck's is.
+        // R2089000: the Created table is filtered as the deck's is, and R4672003's choices.
         report.created.retain(|stats| &stats.card == only);
+        report.choices.retain(|row| &row.card == only);
     }
     Ok(report)
 }
@@ -284,6 +305,9 @@ struct ReportJson<'a> {
     decks: i32,
     cards: Vec<CardRow<'a>>,
     created: &'a [CreatedStats],
+    /// R4672003: the cards' variants, outputs and offers, absent when there are none.
+    #[serde(skip_serializing_if = "<[CardChoicesRow]>::is_empty")]
+    choices: &'a [CardChoicesRow],
 }
 
 /// R2427000: one card's row of `stats report --window --json`: the windowed row with the never-drawn
@@ -331,16 +355,19 @@ pub fn render(
             decks: report.decks,
             cards: report.cards.iter().map(CardRow::of).collect(),
             created: &report.created,
+            choices: &report.choices,
         };
         return serde_json::to_string_pretty(&json).unwrap_or_default();
     }
-    let table = format_card_stats(report, name_of);
-    match &args.card {
-        Some(card) if report.cards.is_empty() && report.created.is_empty() => {
-            format!("{table}\nNo deck the filter counts held {card}.")
-        }
-        _ => table,
+    let mut table = format_card_stats(report, &name_of);
+    let Some(card) = &args.card else {
+        return table;
+    };
+    if report.cards.is_empty() && report.created.is_empty() {
+        table.push_str(&format!("\nNo deck the filter counts held {card}."));
     }
+    // R4672003: the card's variants and outputs, after its other tables, as `stats-cards --card` prints them.
+    format!("{table}\n\n{}", format_card_choices(report, card, name_of))
 }
 
 pub fn render_games(report: &GameReport, json: bool) -> String {
@@ -463,6 +490,31 @@ pub fn window_report(args: &ReportArgs, at: &str) -> Result<WindowedReport> {
     Ok(report)
 }
 
+/// R4675001: `stats report --versions`: every deck card's play versions' figures, through the function
+/// `/api/stats/versions` calls, over the records of the files named.
+pub fn versions_report(args: &ReportArgs) -> Result<PlayVersionTable> {
+    let mut totals = StatsTotals::default();
+    for record in read_records(&args.files)? {
+        totals.fold(&record, false);
+    }
+    let versions = jackioh_cards::deck_play_versions();
+    let history = jackioh_cards::patch_history();
+    let mut table = play_version_figures(
+        &totals,
+        &PlayVersionQuery {
+            versions: &versions,
+            history: &history,
+            live_pilot: args.pilot.unwrap_or_else(|| default_pilot(args.source)),
+            mode: args.mode.map_or(ModeFilter::All, ModeFilter::Only),
+            min_sample: jackioh_shared::config::CARD_STATS_MIN_SAMPLE,
+        },
+    );
+    if let Some(only) = &args.card {
+        table.versions.retain(|row| &row.card == only);
+    }
+    Ok(table)
+}
+
 /// The windowed report as JSON, or as the table `stats report` prints with each card's window beside it.
 pub fn render_window(
     report: &WindowedReport,
@@ -504,6 +556,7 @@ pub fn render_window(
             decks: i32::try_from(report.decks).unwrap_or(i32::MAX),
             cards: report.cards.iter().map(|card| card.stats.clone()).collect(),
             created: report.created.iter().map(|card| card.stats.clone()).collect(),
+            choices: Vec::new(),
         },
         name_of,
     );
@@ -526,6 +579,15 @@ pub fn render_window(
 }
 
 fn run_report(args: &ReportArgs) -> Result<()> {
+    if args.versions {
+        let table = versions_report(args)?;
+        if args.json {
+            println!("{}", serde_json::to_string_pretty(&table)?);
+        } else {
+            println!("{}", format_play_versions(&table));
+        }
+        return Ok(());
+    }
     if let Some(at) = &args.window {
         jackioh_cards::register_all();
         let report = window_report(args, at)?;
@@ -544,13 +606,123 @@ fn run_report(args: &ReportArgs) -> Result<()> {
     }
     jackioh_cards::register_all();
     let report = report(args)?;
-    println!(
-        "{}",
-        render(&report, args, |card| jackioh_cards::CATALOG
-            .get(card)
-            .map(|def| def.name.clone()))
-    );
+    let name_of = |card: &str| jackioh_cards::CATALOG.get(card).map(|def| def.name.clone());
+    println!("{}", render(&report, args, name_of));
+    if args.swing {
+        println!(
+            "\n{}",
+            swing_text(&read_records(&args.files)?, &filter_of(args), name_of)
+        );
+    }
     Ok(())
+}
+
+/// R4552001: one report's figures of Swing and Decisiveness over some records (`swing_report`), each
+/// field read off every card of the report as `GET /api/stats/cards` reads it.
+fn swing_of(records: &[GameRecord], filter: &CardStatsFilter) -> (CardStatsReport, SwingReport) {
+    let mut totals = StatsTotals::default();
+    for record in records.iter().filter(|record| record_matches(record, filter)) {
+        totals.fold(record, false);
+    }
+    let report = card_stats_of(&totals, filter);
+    let empty = SwingTally::default();
+    let swing = swing_report(
+        report
+            .cards
+            .iter()
+            .map(|stats| (stats.card.as_str(), stats.swing.or(&empty))),
+        report
+            .created
+            .iter()
+            .map(|stats| (stats.card.as_str(), &stats.swing)),
+        &swing_baseline(&swing_rows_of(&totals, filter)),
+    );
+    (report, swing)
+}
+
+/// R654's floor (`jackioh_shared::config::CARD_STATS_MIN_SAMPLE`, which this crate does not take): the
+/// drawn games a card's lift needs to count toward the field `--swing` reads the adjusted win rate
+/// against, as `GET /api/stats/cards` reads it.
+const ADJUSTED_FIELD_FLOOR: i32 = 20;
+
+/// Pearson's r over pairs; `None` below three or with no spread.
+fn pearson(pairs: &[(f64, f64)]) -> Option<f64> {
+    if pairs.len() < 3 {
+        return None;
+    }
+    let n = pairs.len() as f64;
+    let (mx, my) = (
+        pairs.iter().map(|(x, _)| x).sum::<f64>() / n,
+        pairs.iter().map(|(_, y)| y).sum::<f64>() / n,
+    );
+    let (mut xy, mut xx, mut yy) = (0.0, 0.0, 0.0);
+    for (x, y) in pairs {
+        xy += (x - mx) * (y - my);
+        xx += (x - mx) * (x - mx);
+        yy += (y - my) * (y - my);
+    }
+    (xx > 0.0 && yy > 0.0).then(|| xy / (xx * yy).sqrt())
+}
+
+fn shown_r(r: Option<f64>, cards: usize) -> String {
+    match r {
+        Some(r) => format!("r = {r:.2} over {cards} cards"),
+        None => format!("unknown over {cards} cards"),
+    }
+}
+
+/// R4552001: `stats report --swing`'s text: the figures (`format_swing`), each figure's split-half
+/// reliability (the records at odd places against those at even ones, over the cards with
+/// `SWING_FIELD_MIN_ROWS` turns of the figure's kind in both halves) and the correlation of the deck
+/// cards' Swing with their adjusted win rate (R2777000).
+pub fn swing_text(
+    records: &[GameRecord],
+    filter: &CardStatsFilter,
+    name_of: impl Fn(&str) -> Option<String>,
+) -> String {
+    let (report, swing) = swing_of(records, filter);
+    let mut lines = vec![format_swing(&swing, name_of)];
+    let halves: Vec<Vec<GameRecord>> = (0..2)
+        .map(|half| records.iter().skip(half).step_by(2).cloned().collect())
+        .collect();
+    let (_, odd) = swing_of(&halves[0], filter);
+    let (_, even) = swing_of(&halves[1], filter);
+    lines.push(String::new());
+    lines.push("Split-half reliability (odd records against even ones):".to_string());
+    type Figure = fn(&SwingFigures) -> Option<f64>;
+    let figures: [(&str, Figure, Figure); 3] = [
+        ("Swing", |f| f.swing, |f| Some(f.plays as f64)),
+        ("Board swing", |f| f.board, |f| Some(f.acting as f64)),
+        ("Decisiveness", |f| f.decisiveness, |f| Some(f.plays as f64)),
+    ];
+    for (name, figure, turns) in figures {
+        let floor = SWING_FIELD_MIN_ROWS as f64;
+        let pairs: Vec<(f64, f64)> = odd
+            .cards
+            .iter()
+            .filter_map(|(card, first)| {
+                let second = even.cards.get(card)?;
+                (turns(first)? >= floor && turns(second)? >= floor).then_some(())?;
+                Some((figure(first)?, figure(second)?))
+            })
+            .collect();
+        lines.push(format!("  {name}: {}", shown_r(pearson(&pairs), pairs.len())));
+    }
+    let field = stats_field(report.cards.iter(), ADJUSTED_FIELD_FLOOR);
+    let pairs: Vec<(f64, f64)> = report
+        .cards
+        .iter()
+        .filter_map(|stats| {
+            let figures = swing.cards.get(&stats.card)?;
+            (figures.plays >= SWING_FIELD_MIN_ROWS).then_some(())?;
+            Some((figures.swing?, adjusted_win_rate(stats, &field)?))
+        })
+        .collect();
+    lines.push(format!(
+        "Deck cards' Swing against their adjusted win rate: {}",
+        shown_r(pearson(&pairs), pairs.len())
+    ));
+    lines.join("\n")
 }
 
 /// R1284000: whether the seat whose deck alone holds `card` won; `None` when no seat or both seats hold it.
@@ -798,7 +970,7 @@ fn run_options(args: &Args, patch: String) -> Result<DevRunOptions> {
         && series.starts_with(SELFPLAY_SERIES_PREFIX)
     {
         return Err(anyhow!(
-            "--series {series} is refused: a series beginning \"{SELFPLAY_SERIES_PREFIX}\" is the learn lane's exports' (stats from-selfplay), whose record ids a run under it would take (R1676000)"
+            "--series {series} is refused: a series beginning \"{SELFPLAY_SERIES_PREFIX}\" is the retired learn lane's exports', whose record ids a run under it would take (R1676000)"
         ));
     }
     let force = args.force.as_deref().map(golden::resolve_forced).transpose()?;
@@ -820,7 +992,6 @@ fn run_options(args: &Args, patch: String) -> Result<DevRunOptions> {
         budget: None,
         force,
         commit: None,
-        setup: MatchSetup::default(),
     })
 }
 
@@ -874,10 +1045,9 @@ fn play_chunks(
 pub fn run(args: Args) -> Result<()> {
     match &args.command {
         Some(Command::Report(report)) => return run_report(report),
-        Some(Command::FitDealt(fit)) => return dealt_fit::run(fit),
         Some(Command::Compare(compared)) => return run_compare(compared),
-        Some(Command::FromSelfplay(from)) => return selfplay_records::run(from),
         Some(Command::SampleSize(sized)) => return sample_size::run(sized),
+        Some(Command::Calibrate(calibrate)) => return win_probability::run(calibrate),
         None => {}
     }
     let games = args.games.unwrap_or(AI_DEV_RUN.games);
@@ -1062,7 +1232,9 @@ mod tests {
                 card: None,
                 games: false,
                 window: None,
+                versions: false,
                 json: false,
+                swing: false,
             }
         );
         let all = report_args(&[
@@ -1420,18 +1592,6 @@ mod tests {
         assert!(render_games(&none, false).contains("No game the filter reads."));
     }
 
-    #[test]
-    fn fit_dealt_names_record_files_and_takes_no_run_option() {
-        assert_eq!(
-            parse(&["fit-dealt", "a.jsonl", "b.jsonl"]).unwrap().command,
-            Some(Command::FitDealt(dealt_fit::Args {
-                files: vec![PathBuf::from("a.jsonl"), PathBuf::from("b.jsonl")],
-            }))
-        );
-        assert!(parse(&["fit-dealt"]).is_err());
-        assert!(parse(&["fit-dealt", "a.jsonl", "--games=3"]).is_err());
-    }
-
     /// A game record as a line of JSON: the shape `--out` writes.
     fn record_line(id: &str, source: &str, mode: &str, winner: &str, deck_p2: &[&str]) -> String {
         let pilot = if source == "live" { "human" } else { "ai" };
@@ -1546,7 +1706,10 @@ mod tests {
             ["core-003"]
         );
         let (none_args, none) = report_of(&paths, &["--card=core-099"]);
-        assert!(render(&none, &none_args, |_| None).ends_with("No deck the filter counts held core-099."));
+        // R4672003: the card's variants and outputs tables follow the line.
+        assert!(render(&none, &none_args, |_| None).contains(
+            "\nNo deck the filter counts held core-099.\n\nVariants of core-099:\nNo variant recorded."
+        ));
         assert!(!render(&one, &one_args, |_| None).contains("No deck"));
         std::fs::remove_dir_all(dir).unwrap();
     }
@@ -1721,6 +1884,80 @@ mod tests {
     }
 
     #[test]
+    fn r4675001_report_versions_reads_record_files_as_the_route_reads_totals() {
+        let live = record_line("m1", "live", "bo1", "p1", &["core-003"]);
+        let dev = record_line("dev:v0.2.3:dev:1", "dev", "random", "p2", &["core-003"]);
+        let (dir, paths) = scratch(&[("a.jsonl", format!("{live}\n{dev}\n"))]);
+        let named: Vec<&str> = paths.iter().map(|path| path.to_str().unwrap()).collect();
+        let args = report_args(&[named.clone(), vec!["--versions", "--card", "core-001"]].concat()).unwrap();
+        assert!(args.versions);
+        let table = versions_report(&args).unwrap();
+
+        // The route's function over the same records folded, with the floor the route reads.
+        let mut totals = StatsTotals::default();
+        for record in read_records(&paths).unwrap() {
+            totals.fold(&record, false);
+        }
+        let versions = jackioh_cards::deck_play_versions();
+        let history = jackioh_cards::patch_history();
+        let mut every = play_version_figures(
+            &totals,
+            &PlayVersionQuery {
+                versions: &versions,
+                history: &history,
+                live_pilot: PilotFilter::Unified,
+                mode: ModeFilter::All,
+                min_sample: jackioh_shared::config::CARD_STATS_MIN_SAMPLE,
+            },
+        );
+        every.versions.retain(|row| row.card == "core-001");
+        assert_eq!(
+            serde_json::to_value(&table).unwrap(),
+            serde_json::to_value(&every).unwrap()
+        );
+        assert_eq!(
+            table.versions.len(),
+            versions
+                .iter()
+                .filter(|version| version.card == "core-001")
+                .count()
+        );
+        // v0.2.3's one live game is short of the gate, so its development game counts beside it.
+        let spanning = versions
+            .iter()
+            .find(|version| version.card == "core-001" && version.versions.iter().any(|at| at == "v0.2.3"))
+            .unwrap();
+        let row = table.versions.iter().find(|row| row.id == spanning.id).unwrap();
+        assert_eq!((row.games, row.has_enough_games), (2, false));
+        assert!(format_play_versions(&table).contains(&format!("{} ", spanning.id)));
+        // `--mode` names what it counts: the development game is All Random's.
+        let bo1 = report_args(&[named.clone(), vec!["--versions", "--card=core-001", "--mode=bo1"]].concat())
+            .unwrap();
+        let bo1 = versions_report(&bo1).unwrap();
+        assert_eq!(
+            bo1.versions
+                .iter()
+                .find(|row| row.id == spanning.id)
+                .unwrap()
+                .games,
+            1
+        );
+
+        for refused in [
+            &["--patch", "v0.2.3"][..],
+            &["--source", "dev"],
+            &["--games"],
+            &["--window", "v0.2.3"],
+        ] {
+            assert!(
+                report_args(&[named.clone(), vec!["--versions"], refused.to_vec()].concat()).is_err(),
+                "{refused:?}"
+            );
+        }
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
     fn report_names_the_file_and_line_it_cannot_read() {
         let good = record_line("m1", "live", "bo1", "p1", &["core-002"]);
         let (dir, paths) = scratch(&[
@@ -1812,18 +2049,8 @@ mod tests {
         // A series that only starts like the prefix's base is a plain one, as is the gather lane's.
         assert_eq!(options_of(&["--series=gather"]).unwrap().series, "gather");
         assert_eq!(options_of(&["--series=selfplay"]).unwrap().series, "selfplay");
-
-        assert_eq!(
-            parse(&["from-selfplay", "a.jsonl", "--out", "r.jsonl"])
-                .unwrap()
-                .command,
-            Some(Command::FromSelfplay(selfplay_records::Args {
-                logs: vec![PathBuf::from("a.jsonl")],
-                out: PathBuf::from("r.jsonl"),
-            }))
-        );
-        assert!(parse(&["from-selfplay", "a.jsonl"]).is_err(), "no --out");
-        assert!(parse(&["from-selfplay", "--out", "r.jsonl"]).is_err(), "no log");
+        // The subcommand that filed the exports is gone (R4702000).
+        assert!(parse(&["from-selfplay", "a.jsonl", "--out", "r.jsonl"]).is_err());
     }
 
     /// `compare`'s options as `main.rs` mounts the subcommand.
@@ -2058,6 +2285,82 @@ mod tests {
         std::fs::remove_dir_all(dir).unwrap();
     }
 
+    /// R4672003: `stats report --card` prints the card's variants table and its outputs table after its
+    /// other tables, as `stats-cards --card` does, and `--json` writes both.
+    #[test]
+    fn r4672003_report_card_prints_the_variants_and_outputs_tables_and_json_writes_them() {
+        let mut value: Value =
+            serde_json::from_str(&record_line("m1", "live", "bo1", "p1", &["core-002"])).unwrap();
+        let made_by = serde_json::json!({ "card": "core-001", "radiant": false });
+        let p1 = &mut value["game"]["seats"]["p1"];
+        p1["playedRadiant"] = serde_json::json!([false]);
+        p1["playedVariants"] = serde_json::json!([{ "x": 3 }]);
+        p1["createdUnused"] = serde_json::json!(["core-t-rush"]);
+        p1["createdUnusedSources"] = serde_json::json!([made_by]);
+        let (dir, paths) = scratch(&[("choices.jsonl", format!("{value}\n"))]);
+
+        let (args, one) = report_of(&paths, &["--card=core-001"]);
+        assert_eq!(
+            one.choices
+                .iter()
+                .map(|row| row.card.as_str())
+                .collect::<Vec<_>>(),
+            ["core-001"]
+        );
+        let text = render(&one, &args, |card| {
+            (card == "core-001").then(|| "Big D Fender".to_owned())
+        });
+        let (tables, choices) = text
+            .split_once("\n\nVariants of core-001 Big D Fender:\n")
+            .expect("the variants follow the card's other tables");
+        assert!(tables.contains("core-001 Big D Fender"), "{tables}");
+        let lines: Vec<&str> = choices.split('\n').collect();
+        // A table's cells are two spaces or more apart.
+        let split_wide = |line: &str| -> Vec<String> {
+            line.split("  ")
+                .map(str::trim)
+                .filter(|cell| !cell.is_empty())
+                .map(str::to_string)
+                .collect()
+        };
+        let variant = lines
+            .iter()
+            .find(|line| line.starts_with("X=3"))
+            .expect("the X=3 row");
+        assert_eq!(split_wide(variant), ["X=3", "— (0)", "100.0% (1)"]);
+        assert!(
+            choices.contains("\n\nOutputs of core-001 Big D Fender:\n"),
+            "{choices}"
+        );
+        let output = lines
+            .iter()
+            .find(|line| line.starts_with("core-t-rush"))
+            .expect("the Rush Token's row");
+        assert_eq!(
+            split_wide(output),
+            ["core-t-rush", "— (0)", "100.0% (1)", "— (0)", "— (0)"]
+        );
+        // Every card's report prints the tables it printed, and none of these.
+        let (every_args, every) = report_of(&paths, &[]);
+        assert!(!render(&every, &every_args, |_| None).contains("Variants of"));
+
+        let (json_args, _) = report_of(&paths, &["--card=core-001", "--json"]);
+        let parsed: Value = serde_json::from_str(&render(&one, &json_args, |_| None)).unwrap();
+        let won = serde_json::json!({ "games": 1, "wins": 1, "draws": 0 });
+        assert_eq!(
+            parsed["choices"],
+            serde_json::json!([{
+                "card": "core-001",
+                "variants": { "X=3": { "normal": won } },
+                "outputs": { "core-t-rush": { "normal": won } },
+            }])
+        );
+        let (none_args, none) = report_of(&paths, &["--card=core-002", "--json"]);
+        let parsed: Value = serde_json::from_str(&render(&none, &none_args, |_| None)).unwrap();
+        assert!(parsed.get("choices").is_none(), "{parsed}");
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
     #[test]
     fn r1284000_compare_adds_the_shadow_ban_or_watch_line() {
         // The ids come from the tables, which every sweep rewrites, and a sweep may leave `SHADOW_BAN`
@@ -2177,7 +2480,6 @@ mod tests {
                 budget: Some(FEW),
                 force: None,
                 commit: None,
-                setup: MatchSetup::default(),
             },
             DevRunOptions {
                 series: "dev-force-core-090".to_string(),
@@ -2185,7 +2487,6 @@ mod tests {
                 budget: Some(FEW),
                 force: Some("core-090".to_string()),
                 commit: None,
-                setup: MatchSetup::default(),
             },
         ] {
             let expected = serial_lines(1, 6, &options);
@@ -2223,7 +2524,6 @@ mod tests {
             budget: Some(FEW),
             force: None,
             commit: None,
-            setup: MatchSetup::default(),
         };
         let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
         let mut kept = String::new();

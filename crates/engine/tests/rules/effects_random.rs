@@ -13,10 +13,8 @@ use jackioh_engine::testkit::*;
 
 use jackioh_engine::catalog::registered_catalog;
 use jackioh_engine::config::{FUSE_COST_CAP, ROLL_HEADS, ROLL_TAILS};
-use jackioh_engine::effects::{
-    exile, flip_coin_keyword, flip_coins, fuse_cards, grant_keywords_random_unit, radiant_chance, rotate,
-};
-use jackioh_engine::layers::{keywords_of, unit_view};
+use jackioh_engine::effects::{exile, flip_coin_keyword, flip_coins, fuse_cards, radiant_chance, rotate};
+use jackioh_engine::layers::unit_view;
 use jackioh_engine::mana::effective_cost;
 use jackioh_engine::resolve::{HookOptions, apply_effects, make_context};
 use jackioh_engine::rng::Rng;
@@ -1342,60 +1340,158 @@ mod r14_r88_rotate_s6_3_rotate_s3_1s_rotation_topology_s8_3_c52 {
     }
 }
 
-/// R1085 (M #65 Radiant): `grantKeywordsRandomUnit` grants a named list to one random acting Unit.
-mod r1085_grant_keywords_random_unit {
+/// #4763: `enemy_permanent_pool`, the one pool every "random enemy permanent" draws from.
+mod enemy_permanent_pool_draws {
     use super::*;
+    use jackioh_engine::effects::enemy_permanent_pool;
+    use jackioh_engine::state::Slumber;
 
-    fn granting() -> Effect {
-        grant_keywords_random_unit(json_as(json!({
-            "keywords": [{ "kind": "Taunt" }, { "kind": "Rush" }],
-        })))
+    /// The pool's ids, read under a context p1 controls with `self_` as the source. It rolls nothing.
+    fn pool_ids(state: &mut GameState, self_: Option<&CardInstance>) -> (Vec<String>, u32) {
+        let mut rng = Rng::new(&state.seed, state.rng_cursor);
+        let mut events = Vec::new();
+        let ids = {
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
+            let ctx = make_context(
+                &mut sink,
+                self_,
+                HookOptions {
+                    controller: Some(PlayerId::P1),
+                    ..Default::default()
+                },
+            );
+            enemy_permanent_pool(&ctx)
+                .into_iter()
+                .map(|card| card.id)
+                .collect()
+        };
+        (ids, rng.cursor())
     }
 
-    fn has(keyword_kinds: &[KeywordKind], kind: KeywordKind) -> bool {
-        keyword_kinds.contains(&kind)
+    /// p2 holds Units in lanes 1 and 2, a face-up backrow card in lane 1 and a face-down one in lane
+    /// 2; p1 holds a Unit and a backrow card of its own. The ids: p2's, in R68 order.
+    fn mixed_board(state: &mut GameState) -> Vec<String> {
+        put(state, &gary().id, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        put(
+            state,
+            &backdrop().id,
+            slot(PlayerId::P1, Row::Backrow, 1),
+            json!({}),
+        );
+        let first = put(state, &gary().id, slot(PlayerId::P2, Row::Units, 1), json!({}));
+        let second = put(state, &body().id, slot(PlayerId::P2, Row::Units, 2), json!({}));
+        let shown = put(
+            state,
+            &backdrop().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
+        let hidden = put(
+            state,
+            &backdrop().id,
+            slot(PlayerId::P2, Row::Backrow, 2),
+            json!({}),
+        );
+        find_instance_mut(state, &hidden.id)
+            .expect("the face-down card")
+            .face_up = Some(false);
+        vec![first.id, second.id, shown.id, hidden.id]
     }
 
     #[test]
-    fn r1085_grants_every_keyword_to_one_random_unit() {
-        let mut state = game("grant-keywords");
-        let first = put(
+    fn it_holds_each_enemy_unit_and_backrow_card_once_face_down_included_and_none_of_yours() {
+        let mut state = game("enemy-pool-mixed");
+        let expected = mixed_board(&mut state);
+        let (ids, cursor) = pool_ids(&mut state, None);
+        assert_eq!(ids, expected);
+        // R60: a shuffle of it draws distinct cards, as each one is in it once.
+        let mut unique = ids.clone();
+        unique.sort();
+        unique.dedup();
+        assert_eq!(unique.len(), ids.len());
+        // It only reads: the draw is the caller's, inside its own effect.
+        assert_eq!(cursor, state.rng_cursor);
+    }
+
+    #[test]
+    fn an_empty_enemy_board_pools_nothing() {
+        let mut state = game("enemy-pool-empty");
+        put(
             &mut state,
             &gary().id,
             slot(PlayerId::P1, Row::Units, 1),
             json!({}),
         );
-        let second = put(
-            &mut state,
-            &body().id,
-            slot(PlayerId::P1, Row::Units, 2),
-            json!({}),
-        );
-
-        let ran = run(&mut state, &[granting()], as_p1());
-
-        assert_eq!(draws(&ran), 1);
-        let kinds_of = |id: &str| -> Vec<KeywordKind> {
-            keywords_of(&state, &live(&state, id))
-                .iter()
-                .map(|keyword| keyword.kind())
-                .collect()
-        };
-        let first_kinds = kinds_of(&first.id);
-        let second_kinds = kinds_of(&second.id);
-        let first_has = has(&first_kinds, KeywordKind::Taunt) && has(&first_kinds, KeywordKind::Rush);
-        let second_has = has(&second_kinds, KeywordKind::Taunt) && has(&second_kinds, KeywordKind::Rush);
-        assert!(first_has ^ second_has);
-        assert_eq!(events_json(&ran.events, "keywordGranted").len(), 2);
+        let (ids, _) = pool_ids(&mut state, None);
+        assert!(ids.is_empty());
     }
 
     #[test]
-    fn r1085_r129_no_unit_no_draw() {
-        let mut state = game("grant-keywords-empty");
+    fn a_dormant_card_is_never_in_it() {
+        let mut state = game("enemy-pool-dormant");
+        let expected = mixed_board(&mut state);
+        // R4322000: Dormant cards, a Unit and a backrow card, stamped by hand (white-box).
+        let sleeper = put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P2, Row::Units, 3),
+            json!({}),
+        );
+        let sleeping_trap = put(
+            &mut state,
+            &backdrop().id,
+            slot(PlayerId::P2, Row::Backrow, 3),
+            json!({}),
+        );
+        for id in [&sleeper.id, &sleeping_trap.id] {
+            find_instance_mut(&mut state, id)
+                .expect("the Dormant card")
+                .slumber = Some(Slumber { turns: Some(2) });
+        }
+        let (ids, _) = pool_ids(&mut state, None);
+        assert_eq!(ids, expected);
+    }
 
-        let ran = run(&mut state, &[granting()], as_p1());
-
-        assert!(ran.events.is_empty());
-        assert_eq!(draws(&ran), 0);
+    #[test]
+    fn on_a_slashed_board_it_holds_only_the_sources_half() {
+        let mut state = game("enemy-pool-slash");
+        let source = put(
+            &mut state,
+            &gary().id,
+            slot(PlayerId::P1, Row::Units, 1),
+            json!({}),
+        );
+        let near = put(
+            &mut state,
+            &gary().id,
+            slot(PlayerId::P2, Row::Units, 2),
+            json!({}),
+        );
+        let near_back = put(
+            &mut state,
+            &backdrop().id,
+            slot(PlayerId::P2, Row::Backrow, 1),
+            json!({}),
+        );
+        put(
+            &mut state,
+            &body().id,
+            slot(PlayerId::P2, Row::Units, 4),
+            json!({}),
+        );
+        put(
+            &mut state,
+            &backdrop().id,
+            slot(PlayerId::P2, Row::Backrow, 5),
+            json!({}),
+        );
+        // R3554003: the slash at lane 3 splits lanes 1-2 from 4-5.
+        state.slashed_lane = Some(3);
+        let source = live(&state, &source.id);
+        let (ids, _) = pool_ids(&mut state, Some(&source));
+        assert_eq!(ids, vec![near.id, near_back.id]);
+        // With no source on the board, both halves are in it.
+        let (unsourced, _) = pool_ids(&mut state, None);
+        assert_eq!(unsourced.len(), 4);
     }
 }

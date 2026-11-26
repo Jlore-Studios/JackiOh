@@ -497,6 +497,64 @@ mod r316_library_overflow {
     }
 }
 
+mod r4821000_token_into_a_library_with_room {
+    use super::*;
+
+    #[test]
+    fn r4821000_a_unit_token_into_a_library_with_room_ceases_reported_ceased_never_shuffled_in() {
+        let mut state = new_game("r4821000-room", None);
+        let before = state.players.p1.library.len();
+        assert!(query::room_in(&state, PlayerId::P1, OffFieldZone::Library) > 0);
+        let mut token = put(&mut state, TOKEN, slot(PlayerId::P1, Row::Units, 1), json!({}));
+        let mut sink = Bench::new(&state);
+        let outcome = sink.run(&mut state, |s| {
+            draw::shuffle_into_library(s, &mut token, true, None)
+        });
+        assert!(matches!(outcome, ShuffleInOutcome::Dropped));
+
+        let ceased = json!({
+            "type": "libraryOverflow", "player": "p1", "instanceId": token.id, "defId": TOKEN, "outcome": "ceased"
+        });
+        // R11 ended it on the way in: no `shuffledIn` names it, since it is in no library (R1838001).
+        assert_eq!(values(&sink.events), vec![ceased]);
+        assert_eq!(token.zone.z(), ZoneName::Gone);
+        assert_eq!(state.players.p1.library.len(), before);
+        assert!(!state.players.p1.library.iter().any(|card| card.id == token.id));
+        let views = seen(&mut state, &sink.events);
+        assert_eq!(
+            first_field(&views.p1, "libraryOverflow", "instanceId"),
+            json!(token.id)
+        );
+        assert_eq!(
+            first_field(&views.p2, "libraryOverflow", "instanceId"),
+            json!(token.id)
+        );
+    }
+
+    #[test]
+    fn r4821000_a_unit_token_card_from_a_hand_through_the_trades_funnel_ceases_the_same_way() {
+        let mut state = new_game("r4821000-hand", None);
+        set_library(&mut state, PlayerId::P1, &[] as &[&str]);
+        let mut card = in_hand(&mut state, TOKEN, PlayerId::P1, 1)
+            .into_iter()
+            .next()
+            .expect("no card");
+        let mut sink = Bench::new(&state);
+        let outcome = sink.run(&mut state, |s| draw::shuffle_into_library_below_top(s, &mut card));
+        assert!(matches!(outcome, ShuffleInOutcome::Dropped));
+
+        assert_eq!(
+            values(&sink.events),
+            vec![json!({
+                "type": "libraryOverflow", "player": "p1", "instanceId": card.id, "defId": TOKEN, "outcome": "ceased"
+            })]
+        );
+        assert!(state.players.p1.library.is_empty());
+        assert!(!state.players.p1.hand.iter().any(|held| held.id == card.id));
+        assert_eq!(card.zone.z(), ZoneName::Gone);
+    }
+}
+
 mod r317_a_full_hand_burns {
     use super::*;
 

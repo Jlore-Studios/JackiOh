@@ -27,6 +27,8 @@ export const fightTestid = {
   actRefusal: "dungeon-fight-act-refusal",
   /** R3932000: out to the Play menu: mid-fight it opens `leaveDialog`; once the fight has its result it leaves at once. */
   menu: "dungeon-fight-menu",
+  /** #4742, R4742000: in the result panel, after Continue: the same Menu, which leaves at once. */
+  resultMenu: "dungeon-fight-result-menu",
   /** R2972000: the question asked before a fight in progress is left. */
   leaveDialog: "dungeon-fight-leave",
   /** R2972000: stay in the fight. */
@@ -37,6 +39,10 @@ export const fightTestid = {
   reportError: "dungeon-fight-report-error",
   /** Beside `reportError`: ask the worker again. */
   reportRetry: "dungeon-fight-report-retry",
+  /** R4852000: in the result panel of a fight a Glitch voided, in place of Continue: why there is no result; role="status". */
+  voided: "dungeon-fight-voided",
+  /** R4852000: beside `voided`: deal the same fight fresh from its seed. */
+  redeal: "dungeon-fight-redeal",
   /** B23: a side's tray of relics and blessings, beside its hero. */
   tray: (side: TraySide): string => `dungeon-tray-${side}`,
   /** B23: the tray's button, which opens its list. */

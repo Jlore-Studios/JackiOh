@@ -1,8 +1,10 @@
 // Audit: every admin action the server recorded, newest first: who, which route, what was asked, and the
 // state before and after, each as `JSON.stringify` text. A filter row narrows the list to one acting
-// account, one route, or one time window, and Older appends the next page past it.
+// account, one route, or one time window, and Older appends the next page past the shown list's
+// `nextBeforeId`, read with the filter that produced the shown rows; an Older answer overtaken by a
+// newer first page is dropped.
 
-import { useEffect, useId, useState, type ReactElement } from "react";
+import { useEffect, useId, useRef, useState, type ReactElement } from "react";
 
 import { messageOf } from "./api.ts";
 import { json, when, type SectionProps } from "./section.ts";
@@ -30,25 +32,31 @@ export function Audit({ api, revision }: SectionProps): ReactElement {
   });
   const [actions, setActions] = useState<AuditAction[] | null>(null);
   const [next, setNext] = useState<number | null>(null);
+  // The filter the shown rows were read with: Older continues this list, not the inputs.
+  const [readFilter, setReadFilter] = useState(applied);
+  const generation = useRef(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // The first page of what the filters name; Refresh and any dashboard write ask again.
   useEffect(() => {
     let live = true;
+    generation.current += 1;
+    const read = applied;
     setLoading(true);
     api
       .audit({
-        profileId: applied.profileId || undefined,
-        route: applied.route || undefined,
-        since: applied.since,
-        until: applied.until,
+        profileId: read.profileId || undefined,
+        route: read.route || undefined,
+        since: read.since,
+        until: read.until,
       })
       .then(
         (page) => {
           if (!live) return;
           setActions(page.actions);
           setNext(page.nextBeforeId);
+          setReadFilter(read);
           setError(null);
           setLoading(false);
         },
@@ -65,24 +73,28 @@ export function Audit({ api, revision }: SectionProps): ReactElement {
 
   const older = (): void => {
     if (next === null || loading) return;
+    const my = generation.current;
+    const query = readFilter;
     const cursor = next;
     setLoading(true);
     api
       .audit({
         beforeId: cursor,
-        profileId: applied.profileId || undefined,
-        route: applied.route || undefined,
-        since: applied.since,
-        until: applied.until,
+        profileId: query.profileId || undefined,
+        route: query.route || undefined,
+        since: query.since,
+        until: query.until,
       })
       .then(
         (page) => {
+          if (generation.current !== my) return;
           setActions((previous) => [...(previous ?? []), ...page.actions]);
           setNext(page.nextBeforeId);
           setError(null);
           setLoading(false);
         },
         (cause: unknown) => {
+          if (generation.current !== my) return;
           setError(messageOf(cause));
           setLoading(false);
         },

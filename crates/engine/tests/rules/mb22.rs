@@ -16,6 +16,11 @@ use jackioh_engine::testkit::*;
 use super::fixtures::harness::{act, act_result, in_hand, put, set_library, sink_for, slot};
 use super::fixtures::mb22 as fx;
 use super::fixtures::mb22::{playing, recorder, replays_to};
+use super::fixtures::spell_verbs::{nono_x, register_spell_verb_fixtures};
+
+fn says(error: &Option<String>, text: &str) -> bool {
+    error.as_deref().is_some_and(|message| message.contains(text))
+}
 
 fn play_action(player: PlayerId, instance_id: &str) -> Value {
     json!({ "type": "play", "instanceId": instance_id, "playerId": player })
@@ -151,7 +156,7 @@ fn r1200_a_declared_target_is_drawn_and_replays() {
     put(&mut state, &fx::mayor.id, slot(P1, Row::Units, 1), json!({}));
     let bolt = in_hand(&mut state, &fx::bolt.id, P1, 1).remove(0);
     put(&mut state, &fx::ally.id, slot(P2, Row::Units, 1), json!({}));
-    let start = clone_state(&state);
+    let start = state.clone();
 
     let mut rec = recorder(&state);
     let result = rec.play(play_action(P1, &bolt.id));
@@ -325,6 +330,74 @@ fn r1200_r1044_a_face_down_play_under_a_mayor_draws_no_target() {
         let result = act_result(&state, body);
         assert!(result.error.is_none(), "{set:?}: {:?}", result.error);
     }
+}
+
+// R1200, R348: a play naming an X above the player's spendable mana is refused before the Mayor's
+// draw runs, so no script ever reads the unbounded X (S #99's named check multiplies by it).
+#[test]
+fn r1200_r348_huge_x_is_refused_before_the_draw() {
+    let mut state = playing("mb22-huge-x");
+    register_spell_verb_fixtures();
+    // The verbs' register resets the catalog `playing` built, so put mb22's cards back.
+    fx::register();
+    put(&mut state, &fx::mayor.id, slot(P1, Row::Units, 1), json!({}));
+    let ally = put(&mut state, &fx::ally.id, slot(P2, Row::Units, 1), json!({}));
+    let hunter = in_hand(&mut state, &nono_x.id, P1, 1).remove(0);
+    state.players.p1.mana.current = 4;
+    let before = state.clone();
+
+    // Without the R348 pre-check in `validate_play`, the draw runs the `belowFourX` check with
+    // the X-stamped face and panics on `4 * i32::MAX`.
+    let result = act_result(
+        &state,
+        json!({ "type": "play", "instanceId": hunter.id, "playerId": "p1", "x": i32::MAX }),
+    );
+    assert!(
+        says(&result.error, "X is above your current mana"),
+        "{:?}",
+        result.error
+    );
+    assert!(result.events.is_empty());
+    assert_eq!(result.state, before, "a refusal returns the input state");
+    assert!(on_field(&result.state, &ally.id), "nothing resolved");
+}
+
+// R1200, R348: a legal X still draws its target at random under a Mayor and resolves.
+#[test]
+fn r1200_r348_a_legal_x_still_draws_under_a_mayor() {
+    // Both Units are legal picks (limit 4 × 2 = 8 > each Attack), so the draw may take either;
+    // over seeds it reaches each, as the Windfast test above holds its own draw to.
+    let (mut drew_ally, mut drew_mayor) = (false, false);
+    for n in 0..12 {
+        let mut state = playing(&format!("mb22-legal-x-{n}"));
+        register_spell_verb_fixtures();
+        // The verbs' register resets the catalog `playing` built, so put mb22's cards back.
+        fx::register();
+        let mayor = put(&mut state, &fx::mayor.id, slot(P1, Row::Units, 1), json!({}));
+        let ally = put(&mut state, &fx::ally.id, slot(P2, Row::Units, 1), json!({}));
+        let hunter = in_hand(&mut state, &nono_x.id, P1, 1).remove(0);
+        state.players.p1.mana.current = 4;
+
+        // Cost 2 ≤ mana 4.
+        let result = act_result(
+            &state,
+            json!({ "type": "play", "instanceId": hunter.id, "playerId": "p1", "x": 2 }),
+        );
+        assert!(result.error.is_none(), "{n}: {:?}", result.error);
+        match (
+            on_field(&result.state, &ally.id),
+            on_field(&result.state, &mayor.id),
+        ) {
+            (false, true) => drew_ally = true,
+            (true, false) => drew_mayor = true,
+            (ally, mayor) => {
+                panic!(
+                    "{n}: the draw destroys exactly one Unit, ally on field: {ally}, mayor on field: {mayor}"
+                )
+            }
+        }
+    }
+    assert!(drew_ally && drew_mayor, "the draw reaches each candidate");
 }
 
 // R1201: Lucky rolls its controller's draws again
@@ -949,38 +1022,6 @@ fn r1204_a_lethal_hit_reaches_the_guard_through_its_armor() {
 }
 
 #[test]
-fn r4604000_a_guard_immune_to_spells_catches_no_spells_lethal_hit() {
-    let mut state = playing("mb22-immune-guard");
-    let guard = put(&mut state, &fx::guard.id, slot(P1, Row::Units, 1), json!({}));
-    find_instance_mut(&mut state, &guard.id)
-        .expect("the guard")
-        .granted_keywords
-        .push(Keyword::ImmuneToSpells);
-    let ally = put(&mut state, &fx::ally.id, slot(P1, Row::Units, 2), json!({}));
-    let bolt = in_hand(&mut state, &fx::bolt.id, P2, 1).remove(0);
-
-    state = act(&state, end_turn(P1));
-    let result = act_result(
-        &state,
-        json!({
-            "type": "play",
-            "instanceId": bolt.id,
-            "playerId": "p2",
-            "targets": [{ "pick": "instance", "instanceId": ally.id }],
-        }),
-    );
-    assert!(result.error.is_none(), "{:?}", result.error);
-    // The Spell's 10 cannot reach the guard (§6.1), so it catches none of it and the ally takes it all.
-    assert_eq!(redirected(&result.events), Vec::<(String, String)>::new());
-    assert_eq!(damaged(&result.events), vec![(ally.id.clone(), 10)]);
-    let told = serde_json::to_string(&result.events).expect("events are JSON");
-    assert!(!told.contains(&guard.id), "no event names the guard: {told}");
-    let kept = find_instance(&result.state, &guard.id).expect("the guard");
-    assert_eq!(kept.damage, 0);
-    assert!(on_field(&result.state, &guard.id));
-}
-
-#[test]
 fn r1204_shield_indestructible_and_survivable_hits_are_not_caught() {
     // A Divine Shield takes the hit first: no window opens.
     let mut state = playing("mb22-screen");
@@ -1173,6 +1214,71 @@ fn r1204_trample_into_the_guard_tramples_into_its_hero() {
     );
     assert_eq!(result.state.players[P1].hero.health, HERO_HEALTH - 2);
     assert!(!on_field(&result.state, &guard.id), "the guard died of its 5");
+}
+
+#[test]
+fn r4599005_a_guard_immune_to_spells_never_takes_a_spell_s_hit_and_still_catches_a_unit_s() {
+    let immune = |state: &mut GameState, id: &str| {
+        find_instance_mut(state, id)
+            .expect("the guard")
+            .granted_keywords
+            .push(Keyword::ImmuneToSpells);
+    };
+    // A Spell's lethal hit on the ally stays on the ally: the guard takes nothing (§6.1, R4453000).
+    let mut state = playing("r4599005-spell");
+    let guard = put(&mut state, &fx::guard.id, slot(P1, Row::Units, 1), json!({}));
+    immune(&mut state, &guard.id);
+    let ally = put(&mut state, &fx::ally.id, slot(P1, Row::Units, 2), json!({}));
+    let bolt = in_hand(&mut state, &fx::bolt.id, P2, 1).remove(0);
+    state = act(&state, end_turn(P1));
+    let result = act_result(
+        &state,
+        json!({
+            "type": "play",
+            "instanceId": bolt.id,
+            "playerId": "p2",
+            "targets": [{ "pick": "instance", "instanceId": ally.id }],
+        }),
+    );
+    assert!(result.error.is_none(), "{:?}", result.error);
+    assert!(redirected(&result.events).is_empty());
+    assert_eq!(damaged(&result.events), vec![(ally.id.clone(), 10)]);
+    assert!(!on_field(&result.state, &ally.id), "the ally died of the 10");
+    assert_eq!(
+        find_instance(&result.state, &guard.id).expect("the guard").damage,
+        0
+    );
+    // A Spell's lethal hit on the hero stays on the hero.
+    let mut state = playing("r4599005-hero");
+    let guard = put(&mut state, &fx::guard.id, slot(P1, Row::Units, 1), json!({}));
+    immune(&mut state, &guard.id);
+    let smite = in_hand(&mut state, &fx::smite.id, P2, 1).remove(0);
+    state = act(&state, end_turn(P1));
+    let result = act_result(
+        &state,
+        json!({
+            "type": "play",
+            "instanceId": smite.id,
+            "playerId": "p2",
+            "targets": [{ "pick": "hero", "player": "p1" }],
+        }),
+    );
+    assert!(result.error.is_none(), "{:?}", result.error);
+    assert!(redirected(&result.events).is_empty());
+    assert!(result.state.players[P1].hero.health <= 0);
+    // A Unit's lethal attack is still the guard's to catch.
+    let mut state = playing("r4599005-unit");
+    let guard = put(&mut state, &fx::guard.id, slot(P1, Row::Units, 1), json!({}));
+    immune(&mut state, &guard.id);
+    let ally = put(&mut state, &fx::ally.id, slot(P1, Row::Units, 2), json!({}));
+    state = act(&state, end_turn(P1));
+    let ram = put(&mut state, &fx::ram.id, slot(P2, Row::Units, 1), json!({}));
+    let result = act_result(&state, attack_action(P2, &ram.id, &ally.id));
+    assert!(result.error.is_none(), "{:?}", result.error);
+    assert_eq!(
+        redirected(&result.events),
+        vec![(ally.id.clone(), guard.id.clone())]
+    );
 }
 
 // R113 (ME-ATTACKSUMMON): a question that opens mid-attack owes the rest of the replacement or the

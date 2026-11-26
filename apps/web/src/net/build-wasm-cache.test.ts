@@ -33,10 +33,21 @@ function world(): string {
   roots.push(root);
   mkdirSync(join(root, "scripts"));
   copyFileSync(join(ROOT, "scripts/build-wasm.sh"), join(root, "scripts/build-wasm.sh"));
+  mkdirSync(join(root, "crates/wasm/c/src"), { recursive: true });
+  copyFileSync(join(ROOT, "crates/wasm/c/src/lib.rs"), join(root, "crates/wasm/c/src/lib.rs"));
   // cargo logs each build and leaves its output in target/ (CARGO_TARGET_DIR when set), naming the run.
+  // The linker self-test's fixture build (#4732, the one with `--manifest-path`) is logged with the C
+  // module's profile env to "$CARGO_LOG.profile", as the module's own build is, and answers at once:
+  // the failure a real link gives an export named `log` (a clean build when SELFTEST_CLEAN is set).
   sh(
     join(root, "bin/cargo"),
     [
+      'echo "${CARGO_PROFILE_RELEASE_OPT_LEVEL:-} ${CARGO_PROFILE_RELEASE_CODEGEN_UNITS:-} ${CARGO_PROFILE_RELEASE_STRIP:-} $*" >> "$CARGO_LOG.profile"',
+      'case " $* " in',
+      '  *" --manifest-path "*)',
+      '    [ -n "${SELFTEST_CLEAN:-}" ] && exit 0',
+      '    echo "error: linker stderr: rust-lld: function signature mismatch: log" >&2; exit 101 ;;',
+      "esac",
       'echo "$*" >> "$CARGO_LOG"',
       'target=""; prev=""; for a in "$@"; do [ "$prev" = --target ] && target=$a; prev=$a; done',
       'dir="${CARGO_TARGET_DIR:-target}/$target/release"; mkdir -p "$dir"',
@@ -214,5 +225,70 @@ exit 0`,
     expect(result.stderr).toContain(
       `reproduce with: node luau/tools/reference-host.mjs fixture ${join(root, "target/wasm32-unknown-unknown/release/jackioh_wasm_c.wasm")}`,
     );
+  });
+
+  it("builds the linker self-test's fixture under the C module's own profile and removes it, and no signature_mismatch grep remains (#4732)", () => {
+    const root = world();
+    sh(join(root, "bin/node"), "exit 0");
+    run(root, "guard", { JACKIOH_WASM_C: "1", JACKIOH_WASM_NORMAL: "0" });
+    const profiled = readFileSync(join(root, "cargo-guard.log.profile"), "utf8").split("\n").filter(Boolean);
+    expect(profiled).toHaveLength(2);
+    expect(profiled[0]).toMatch(/^z 1 symbols build -p jackioh-wasm-c --release --target wasm32-unknown-unknown/u);
+    const fixture = /^z 1 symbols build --release --target wasm32-unknown-unknown --manifest-path (.+\/Cargo\.toml)$/u.exec(profiled[1] ?? "");
+    expect(fixture, profiled[1]).not.toBeNull();
+    // The fixture's directory is gone once the self-test has judged it.
+    expect(existsSync(dirname(fixture?.[1] ?? root))).toBe(false);
+    // The name the strip removed from the module is not what guards it any more.
+    expect(SCRIPT).not.toContain("signature_mismatch");
+  });
+
+  it("fails the C build when the linker self-test's fixture links clean, as it does once the lint is silenced (#4732)", () => {
+    const root = world();
+    sh(join(root, "bin/node"), "exit 0");
+    const result = spawnSync("sh", [join(root, "scripts/build-wasm.sh")], {
+      encoding: "utf8",
+      env: {
+        PATH: `${join(root, "bin")}:${process.env.PATH ?? ""}`,
+        HOME: root,
+        CARGO_LOG: join(root, "cargo-clean.log"),
+        RUN: "clean",
+        SELFTEST_CLEAN: "1",
+        JACKIOH_WASM_PREVIEW: "0",
+        JACKIOH_WASM_NORMAL: "0",
+        JACKIOH_WASM_C: "1",
+      },
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("linker self-test failed");
+  });
+
+  it("fails the C build when lib.rs has no deny(linker_messages) line, before it builds the fixture (#4732)", () => {
+    const root = world();
+    sh(join(root, "bin/node"), "exit 0");
+    const lib = join(root, "crates/wasm/c/src/lib.rs");
+    const original = readFileSync(lib, "utf8");
+    const without = original
+      .split("\n")
+      .filter((line) => !/^#!\[.*deny\(linker_messages\)/u.test(line))
+      .join("\n");
+    // The line is there to take out, so the case cannot pass on a lib.rs that never had it.
+    expect(without).not.toBe(original);
+    writeFileSync(lib, without);
+    const result = spawnSync("sh", [join(root, "scripts/build-wasm.sh")], {
+      encoding: "utf8",
+      env: {
+        PATH: `${join(root, "bin")}:${process.env.PATH ?? ""}`,
+        HOME: root,
+        CARGO_LOG: join(root, "cargo-nolint.log"),
+        RUN: "nolint",
+        JACKIOH_WASM_PREVIEW: "0",
+        JACKIOH_WASM_NORMAL: "0",
+        JACKIOH_WASM_C: "1",
+      },
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("deny(linker_messages)");
+    // Only the module's own build ran: the fixture was never built.
+    expect(readFileSync(join(root, "cargo-nolint.log.profile"), "utf8").split("\n").filter(Boolean)).toHaveLength(1);
   });
 });

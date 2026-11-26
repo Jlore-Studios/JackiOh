@@ -234,7 +234,7 @@ account, its presence to friends, written at most once a `PRESENCE_TOUCH_EVERY_M
 | `GET` | `/api/admin/leaderboard` | active | `?ladder=`: every season row of the ladder, highest rating first, `{ season, ladder, rows: [{ profileId, username, kind: person \| bot, rating, games, wins, losses, draws, rank, handSet, you, bot: { strength, persona, retired } \| null }] }`: the one read that marks a bot (R3074002) |
 | `GET`, `POST` | `/api/admin/news` | active | the newest `NEWS_POSTS_PAGE` posts, `{ posts: [{ id, title, summary, postedAt, postedBy, takenDownAt }] }`; `POST { title, summary }` posts one with no reward, checked as `news.json`'s entries are, 201 `{ post }`, 400 naming every problem (R3074003) |
 | `DELETE` | `/api/admin/news/:postId` | active | takes a post down, `{ post }`; 404 for no such post, 409 for one down already (R3074003) |
-| `GET` | `/api/admin/audit` | active | the newest `ADMIN_AUDIT_PAGE` audit rows matching `?before_id=<id>&profile_id=<id>&route=<METHOD path>` (all optional: `before_id` an exclusive upper bound on the row id, the other two exact matches), `{ actions: [{ id, profileId, username, route, request, before, after, at }], nextBeforeId: <id> \| null }`, newest first; `nextBeforeId` is the last row's id when the page is full, else `null` (R3074000); a moderation lever's row (`CLI moderate …`, #4141) has `profileId` and `username` empty |
+| `GET` | `/api/admin/audit` | active | the newest `ADMIN_AUDIT_PAGE` audit rows matching `?before_id=<id>&profile_id=<id>&route=<METHOD path>` (all optional: `before_id` the cursor naming the shown page's last row, answered in the `(at, id)` sort key's order, the other two exact matches), `{ actions: [{ id, profileId, username, route, request, before, after, at }], nextBeforeId: <id> \| null }`, newest first; `nextBeforeId` is the last row's id when the page is full, else `null` (R3074000); a moderation lever's row (`CLI moderate …`, #4141) has `profileId` and `username` empty |
 | `POST` | `/api/dev/bar/:bar` | active | a dev tool: fills the caller's `card` or `cosmetic` token bar so it pays at once, a card token or the cosmetic token cycle's next step, the cosmetic bar to its current step's size (R1305000, R1305001, R2728000), every row reason `dev`, marked `dev`; 404 `no such bar` for any other `:bar`. 403 `forbidden` to any account that is not a dev account (R1310003) |
 | `GET`, `PUT`, `DELETE` | `/api/decks`, `/api/decks/:id` | active | saved decks as drafts, by client-minted id (R250, R256); a deck also carries its portrait (R641), a portrait the account owns (R1827000), and its `tableCosmetic`, `fieldCosmetic` and `cardBackCosmetic` picks, each an id of its kind in `cosmetics.json` or absent (R1297000), and a playmat, backdrop and card back the account owns (R1833000, R1834001) |
 | `POST` | `/api/decks/sync` | active | the deck workshop's autosave pass in one request (R3212001): `{ decks, trios, deletedTrios, deletedDecks }`, each deck and trio its `PUT` body with its `id`, each deletion an id, at most `DECK_SYNC_ITEMS_MAX` items in all (else 400, running none); run in that order, each as its own `PUT` or `DELETE` in its own transaction; answers the four lists index-aligned, each item `{ id, deck }`, `{ id, trio }`, `{ id, deleted }` or, refused, `{ id, status, error }` as its route would answer; a refused item refuses alone, and a server fault fails the request. No spend: no turn, no key |
@@ -249,9 +249,10 @@ account, its presence to friends, written at most once a `PRESENCE_TOUCH_EVERY_M
 | `GET`, `POST` | `/api/matches/:matchId/rematch` | active | rematch offers (R672), which swap the finished match's seats: its P2 takes P1 (R1989000); 409 `update_required` for a match played on another catalog version (R1638000); an offer past `REMATCH_OFFER_TTL_MS` of the match's end lapses silently, recording nothing (R2685000) |
 | `GET` | `/api/ranked`, `/api/leaderboard` | active | the caller's season and rank; the ladder; every player shown with their `profileId` and `username` (R608, R612, R1436). R2778000: each on `?ladder=` (`constructed`, the default, or `random`), named in the body's `ladder` |
 | `GET`, `PUT` | `/api/tutorial`, `/api/settings` | active | the account's tutorial progress (R320) and settings (R633, R634), merged; friends may always watch, so the settings carry no watching switch (R2615000); a `cosmetics` group's six picks must each be of its kind, or the write is 400 `bad_request` (R1834001); a pick the account does not own is left out of the write, keeping the stored one (R4403000) |
-| `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436); each card over its own window, through the engine's `windowed_card_stats` (R1367000); every window and history is cut from one snapshot of every patch's totals, kept `CARD_STATS_CACHE_TTL_SECONDS` and loaded once, and a patch the server does not ship reads only its own totals and is never kept (R3067000) |
+| `GET` | `/api/stats/cards`, `/api/stats/cards/:id`, `/api/stats/players` | none | public card and player statistics, a player's with their `profileId` and `username` (R654, R1436); each card over its own window, through the engine's `windowed_card_stats` (R1367000); every window and history is cut from one snapshot of every patch's totals, kept `CARD_STATS_CACHE_TTL_SECONDS` and loaded once, and a patch the server does not ship reads only its own totals and is never kept (R3067000); anyone but a dev account reads the newest patches alone, a patch past them 403 `patch_dev_only` and the patch list and the drill-down's history cut to them, and a dev account's answer, told by its token, is `private, no-store` (R4677000); both card routes take `face=all\|normal\|radiant`, All when missing, reading one face against its own field and band, and the drill-down answers the card's Normal and Radiant figures and their gap at its `patch=`, past the caller's patches 403 `patch_dev_only` (R4673000, R4673001); the drill-down answers `variants`, the card's choices by kind (`mode`, `x`, `embiggen`), each row's share, adjusted rate, range and tier read against a field of every card's choices on that face and patch (R4676000); and `outputs`, each card it made or offered, read against its other outputs, with `offered` and `pickRate` for a pick (R4679000) |
 | `GET` | `/api/stats/play-rates` | none | each card's play rate, the share of the human seats of every live game that played it, for cards `PLAY_RATES_MIN_GAMES` seats held; kept `PLAY_RATES_REFRESH_SECONDS` (R1583000) |
-| `GET` | `/api/stats/games` | none | the patch's game figures (the first seat's wins with their interval, the endings, the turns, R1256000's counts) over the window every card shares, under R654's gate, split by both seats' pilots, through the engine's `windowed_game_figures`; kept and cached as the cards' (R1994000) |
+| `GET` | `/api/stats/games` | none | the patch's game figures (the first seat's wins with their interval, the endings, the turns, R1256000's counts) over the window every card shares, under R654's gate, split by both seats' pilots, through the engine's `windowed_game_figures`; kept and cached as the cards', and a patch past the caller's 403 `patch_dev_only` as there (R1994000, R4677000) |
+| `GET` | `/api/stats/versions` | none | every deck card's play versions (R4675000), in catalog order, each with its figures summed over the versions it spans and read against a field of every play version's, figures only and no source (`?pilot=`, `?mode=`); through the engine's `play_version_figures`, one table per pilot and mode cut from the cards' snapshot and cached as theirs (R4675001); each row also counts `patches`, the windows every card shares that its versions reach, which `/stats`' Experimental tab shows (R4678001) |
 | `GET` | `/api/stats/ci` | none | the daily super run's last `CI_RUNS_LISTED` runs on `main` and a failed run's jobs that did not pass, read from GitHub's Actions API (with `CREATE_ISSUES_TOKEN` when set) and kept `CI_RUNS_CACHE_TTL_SECONDS`; `unavailable` when GitHub cannot be read; none on the end-to-end server (`api/ci_runs.rs`, R1935000) |
 | `GET`, `PUT` | `/api/stats/player` | active | the caller's own tracked statistics and privacy setting (R654); a PUT keeps only R1142000's summary inputs, for catalog cards (R1771000) |
 | `GET` | `/api/replays`, `/api/replays/:matchId` | active | the caller's finished matches whose log is kept, each with the opponent's `profileId` and `username` (R1436); one seat's steps of one (R768), or the sharer's seat's to a friend holding a share (§9.5), each page with both seats' frozen `loadouts` and the `cardLoadouts` of the cards its steps show (R1834003) and both seats' `portraits` (R3976000, `vanilla` before them); a page of a replay kept in memory waits for nothing, while an opening that is not kept folds its whole game behind `REPLAY_FOLDS_RUNNING_MAX` folds at once for the whole server (the co-op replays' too), a concurrent opening of the same match sharing that fold, and one that waits past `REPLAY_FOLD_WAIT_MS` is 429 `rate_limited` with `retryAfterMs` (`REPLAY_FOLD_RETRY_AFTER_MS`, R192, R3500000) |
@@ -604,12 +605,20 @@ target/release/jackioh-server stats-export --claims --out=claims.jsonl      # ho
 cargo jackioh stats report live.jsonl --json                                # the same figures with no database
 target/release/jackioh-server stats-fold                                    # fold the records written before migration 0041; the retention loop does it too
 target/release/jackioh-server stats-cards --window > window.json            # every card over its own window, off the totals (R1367000)
+target/release/jackioh-server stats-cards --versions                         # every deck card's play versions with their figures, as GET /api/stats/versions sends them; --json writes the table (R4675001)
 ```
 
 Every figure, `stats-cards`, `balance-watch`, the public routes and the ladder bots' decks, reads the
 totals each record is folded into as it is written (migration 0041: `record_totals`, `card_totals`,
 `decklist_totals`; `Tx::stats_totals_load`, `Tx::stats_decklists`), by the engine's `StatsTotals`, the
-counting a record file is read with, so a report is what the records gave. `stats-import` writes and
+counting a record file is read with, so a report is what the records gave. `Tx::stats_totals_load` reads
+`card_totals` as one stream, each row's `stats` straight into its `CardStats` as it arrives, and the
+parts most cards leave empty (their swing tallies, choices and faces' drills) are the engine's `Sparse`,
+one pointer while empty: every patch's totals, which the public routes keep (`kept_snapshot`), came to
+329,000 rows on staging by 2026-11-25, and read whole with those parts inline they outgrew the game
+server's 1 GiB, which was killed loading them. A read a patch at a time instead took minutes there,
+past the client's `API_REQUEST_TIMEOUT_SECONDS`, since each patch's rows lie scattered through the
+table. `stats-import` writes and
 folds `STATS_FOLD_BATCH_RECORDS` (500) records to a transaction. A record written before migration
 0041 is not folded until the retention loop folds it at boot or `stats-fold` does (R1044000). Once
 folded, a record's detail is emptied `GAME_RECORD_RAW_RETENTION_DAYS` (7) after it was written by the
@@ -619,7 +628,7 @@ checks, then one transaction folds every record into the totals and writes no ro
 and claims the file in `game_record_batches` (migration 0060) by the SHA-256 of its contents with how
 many it folded. The same file imported again folds nothing, and a record whose id `game_records`
 holds, or that the file repeats, is left out; the games themselves are read off the file, which the
-learn lane and the gather workflow keep as their runs' artifacts. Each record folded also folds its
+gather workflow keeps as its runs' artifacts. Each record folded also folds its
 whole game under its `record_totals` key into `game_totals` (migration 0063), read and added to in
 Rust as a card row is, so the game figures `GET /api/stats/games` and `stats report --games` read
 outlive the purge; a record folded before 0063 counts in `record_totals` alone, with no back-fill
@@ -635,6 +644,11 @@ the deck's, `--json` as `created`, `--card` filtering both, and `GET /api/stats/
 `created` (R2089000), each row only its games, an adjusted win rate, its range and a tier (R4083000), read
 against the other Created cards (`created_field`, answered as `tiers.created`), or against the average deck for The Coin, Glitch and
 the Dormant Starship, which a rule makes (R4082000).
+Each play also records what was chosen for it (its Choose One options, X and Embiggen, R4672000), each
+Created card the card whose effect made it (R4672001) and each Discover-like choice what it offered and
+picked (R4672002); the totals keep each card's `variants`, `outputs` and `offers` in the same row's `stats`,
+a seat once a game by face, no migration (R4672003). `stats-cards --card=<id>` prints its variants and
+outputs tables after its other tables, and `--json` writes them as `choices`; no public route reads them yet.
 
 `stats-cards` takes `--source=live|dev|all` (live unless told otherwise), `--mode=bo1|bo3|random`,
 `--patch=<version>`, `--pilot=human|ai|unified`, `--card=<id>` and `--json`. With no `--pilot` it
@@ -812,7 +826,7 @@ has failed on at least `LOOP_FAILING_ALERT_PASSES` passes in a row over at least
 pass), with the failure's text in the line's `message` (the issue shows only the event name, the email every
 field); `ALERT_WINDOW_MS` then holds the event to one notice an hour. The steps are `matchmaker`,
 `matches.reaper`, `matches.open_reaper`, `seats.reconcile`, `series.sweeper`, `duos.sweeper`, `challenges.sweeper`, `daily.sweeper` and the retention
-purge's ten, `game_records.fold`, `game_records.refile`, `retention.purge`, `shares.purge`, `chat.purge`, `duos.logs.purge`,
+purge's eleven, `game_records.fold`, `game_records.refile`, `retention.purge`, `shares.purge`, `tickets.purge`, `chat.purge`, `duos.logs.purge`,
 `idempotency.sweep`, `lobbies.sweep`, `practice.sweep` and `practice.prune`. Each step's text in `alerts::meaning` names its job and what
 players notice while it fails (for the matchmaker, that nobody who queues gets a game), and says that the
 email's `message` field holds the error. A reaper pass in which any match would not reap counts as failed,
@@ -847,7 +861,8 @@ it is its `matches` row (unranked, its catalog version frozen, R3727005), its `m
 list. Each request loads and folds the game (`daily::games::load`, as a rebuild folds), and an action is
 reduced, appended and the clock stored in one transaction, the next `seq` the log's own key, so of two
 requests at once one lands and the other is `stale`. It never has a match actor: `Registry::rebuild` refuses
-a daily id, `app.live_matches()` and the fake's `matches_live` leave daily games out of the reaper's ceiling,
+a daily id, `app.live_matches()` and both stores' `matches_live` and `matches_past_ceiling` leave daily games
+out of a restart's recovery and the reaper's ceiling,
 and its start takes no seat of the ledger and sets no in-match flag (R3727004), so its result clears no live
 game's flag and cancels no live queue ticket.
 
@@ -1160,7 +1175,9 @@ the server's alone, as a 1v1 match's are: a room's host and guest may read it (b
 choices), and no client role reads a co-op match or its log (no grant, no policy). The retention
 loop deletes a co-op match's log `MATCH_ACTION_RETENTION_DAYS` after the match ended, as a 1v1
 match's (`duos::purge_expired_logs`); the match row and its result stay. The loop also deletes a replay
-share whose match's log is gone (`shares.purge`, R4390001).
+share whose match's log is gone (`shares.purge`, R4390001). It also deletes a cancelled queue ticket
+enqueued more than `QUEUE_TICKET_CANCELLED_KEEP_SECONDS` ago (`tickets.purge`, R4446000); queued and
+claimed tickets stay, as a queue match's mode is read from its claimed ticket (`matches_mode_of`).
 
 Migration 0041 adds the card statistics' totals (R1044000): `record_totals`, `card_totals` and
 `decklist_totals`, server-only like `game_records` (RLS on, no policy, no grant), and
@@ -1529,6 +1546,25 @@ R3727008). Both stores read an emptied seat back as `""` (`remove_daily_rows` em
 `daily::games` names such an opponent with empty fields and never looks it up.
 `tests/sql/53_daily_games.sql` checks the keys, the emptied seat and the running game's refusal.
 
+Migration 0101 only adds five indexes (#4712), for three reads that read rows they threw away, and the reaper
+gets a read of its own. `replays_list_with_modes` (`GET /api/replays`, `GET /api/friends/recent`) finds its page
+first, one arm per seat, each walking `matches_p1_over_ended_idx` or `matches_p2_over_ended_idx` (a seat, then
+the list's `order by`, partial on `status = 'over'`) in order and stopping after `limit + offset` rows, and joins
+only the page; it answers `ReplayListRow`, the seats, catalog version, ranked flag, portraits, result, log length
+and mode the two routes read, never a deck, board, loadout or win-rate snapshot (a change to that `order by`
+needs a migration that rebuilds both indexes). `results_record_for` (`GET /api/auth/me`) sums one count per seat,
+each read from `results_p1_record_idx` or `results_p2_record_idx` alone, the second leaving out a row that seats
+the player twice, as the `or` it replaces counted such a row once. `last_boards_sample_others` (every match
+start, R678) takes the boards from a random key on in profile order through `last_boards_server_sample_idx`,
+topped up from the lowest id, instead of sorting every board at random: a sample less even, which its doc
+comment weighs. The reaper reads `matches_past_ceiling`, the live matches past their ceiling through 0004's
+`matches_status_ceiling_at_idx`, rather than every live match and win-rate snapshot every
+`MATCH_REAPER_INTERVAL_SECONDS`; `matches_live` stays a restart's recovery. On synthetic data (300,000 finished
+matches, 11,000 of them one player's) the list's page went from about 150 ms to under 2 ms, the record from 8 ms
+to 2 ms, the sample from 4 ms to under 0.1 ms and the reaper's pass over 400 live matches from about 150 ms to 2 ms.
+`tests/sql/01_schema_invariants.sql` CHECK 29 holds each index to its shape and plans each read with sequential
+scans off.
+
 ## Tests
 
 ```
@@ -1576,7 +1612,8 @@ is this binary's only daily test: a second `#[ignore = "daily: …"]` here would
 `tests/export_config.rs` writes `apps/web/src/wire/serverConfig.ts`, the constants the client and e2e
 read; CI fails when a run changes it.
 `tests/export_cosmetics.rs` writes `apps/web/src/wire/generated/cosmetics.ts` from `cosmetics.json`,
-the card and deck slot cosmetics, the full arts and the portraits, the registry `crates/shared/src/cosmetics.rs` checks (R1295000, R1297000, R1313000, R1827000); CI fails when a run changes it too.
+the card and deck slot cosmetics, the full arts and the portraits, the registry `crates/shared/src/cosmetics.rs` checks (R1295000, R1297000, R1313000, R1827000), and beside it
+`cosmeticOffers.ts`, each version's offered cards (R2725001), a module of its own so the client loads it after its first paint (#4714); CI fails when a run changes either.
 
 ## Conventions
 

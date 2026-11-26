@@ -97,8 +97,11 @@ mod the_card_facing_read_surface_build_m3_t1_spec_s10_9 {
     }
 
     #[test]
-    // The writes to `hero` are the test: they land on a copy nothing reads again.
-    #[allow(unused_variables, unused_assignments)]
+    #[expect(
+        unused_variables,
+        unused_assignments,
+        reason = "the writes to `hero` are the test: they land on a copy nothing reads again"
+    )]
     fn hero_of_hands_back_a_copy_so_a_script_cannot_write_a_hero_s_health_through_it() {
         let state = board("hero-copy");
         let mut hero = hero_of(&state, P1);

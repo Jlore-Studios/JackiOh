@@ -2,7 +2,7 @@
 // jackioh-shared's (#3106): the glossary is its data file and the tokenizer is asked of the module (`richWords`),
 // so these still hold what a face prints to the spec; the rendered half of B10 is in CardFace.test.tsx. The glossary's rules are its
 // own reviewed data, in a player's words (#133), so nothing here compares a sentence with the spec's:
-// the tie is structure, the term names in the first column of spec/06-keywords.md's three tables.
+// the tie is structure, the term names in the first column of the three tables of spec/06-keywords/.
 // A row added without a glossary entry fails; a reworded rule fails nothing.
 
 import { readFileSync } from "node:fs";
@@ -34,15 +34,20 @@ import {
 /* helpers */
 
 /**
- * The spec's keyword note (§6) and its card-types note (§5), read for ids only (#133). Paths, not
- * `new URL("…", import.meta.url)`, which Vite rewrites into an asset URL `readFileSync` refuses.
+ * The spec's keyword notes (§6, one note a subsection in `spec/06-keywords/`) and its card-types note
+ * (§5), read for ids only (#133). Paths, not `new URL("…", import.meta.url)`, which Vite rewrites into
+ * an asset URL `readFileSync` refuses.
  */
 const SPEC_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../../../spec");
-const KEYWORDS_NOTE = join(SPEC_DIR, "06-keywords.md");
 const CARD_TYPES_NOTE = join(SPEC_DIR, "05-card-types.md");
 
 type TableSection = "§6.1" | "§6.2" | "§6.3";
 const TABLE_SECTIONS: readonly TableSection[] = ["§6.1", "§6.2", "§6.3"];
+const KEYWORD_NOTES: Readonly<Record<TableSection, string>> = {
+  "§6.1": "06-keywords/6.1-unit-keywords.md",
+  "§6.2": "06-keywords/6.2-triggers-and-timing.md",
+  "§6.3": "06-keywords/6.3-actions-and-verbs.md",
+};
 
 function headingIds(note: string): string[] {
   return readFileSync(note, "utf8")
@@ -55,9 +60,10 @@ function headingIds(note: string): string[] {
  * read, and a later table is no term table (§6.3's table of where a Buff or a Nerf is live, R3888000).
  */
 function rowNames(section: TableSection): string[] {
-  const lines = readFileSync(KEYWORDS_NOTE, "utf8").split("\n");
+  const note = KEYWORD_NOTES[section];
+  const lines = readFileSync(join(SPEC_DIR, note), "utf8").split("\n");
   const start = lines.findIndex((line) => line.startsWith(`### ${section.slice(1)} `));
-  if (start < 0) throw new Error(`spec/06-keywords.md has no ${section} heading`);
+  if (start < 0) throw new Error(`spec/${note} has no ${section} heading`);
   const names: string[] = [];
   for (const line of lines.slice(start + 1)) {
     if (line.startsWith("#")) break;
@@ -229,6 +235,13 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Watch first plays",
     // R4353020: S+ #79 A Glimpse into the Endless Sea's line and its badge, plain words like Immune to damage's row.
     "Immune to fatigue damage",
+    // R4587000, R4588000, R4588001, R4588005: the Infinite Assault's verbs (§8.13, #4587, #4588), which its cards
+    // print in plain words ("this turn", "Double the Attack and Health", "your cheapest Unit").
+    "Buff this turn",
+    "Units attack this turn",
+    "Units keyword this turn",
+    "Double stats",
+    "Cheapest or highest-Attack Unit",
   ],
 };
 
@@ -301,6 +314,8 @@ const VERBS_6_3: readonly VerbTermId[] = [
   "Burn",
   "Toxic",
   "Replenish",
+  // R4751000: Overload (X) is the printed name of the next-turn mana loss (§6.3).
+  "Overload",
 ];
 
 /**
@@ -790,12 +805,13 @@ describe("B11: GLOSSARY and KEYWORD_MARK", () => {
       Activate: ["Activated", "Activates"],
       // R3572000: the Stinkyscape+ faces print these mid-sentence ("Burns 3", "then buff them", "lock the tile", "is countered",
       // "when it awakens", "is launched", "Evolved Swarm cards", "replenish 2 mana"); "Evolves" is the trigger's own verb.
-      Awaken: ["awakens"],
       Counter: ["countered"],
       Launch: ["launch", "launches", "launched"],
       Evolve: ["evolve", "Evolved", "Evolves"],
       Burn: ["Burns"],
       Replenish: ["replenish"],
+      // R4593011: the Infinite Assault's #206 Thought Accelerator prints "Your Dormant Units awaken." (§8.13).
+      Awaken: ["awaken", "awakens"],
     };
     for (const [key, entry] of Object.entries(GLOSSARY)) {
       expect(entry.aliases, key).toEqual(printed[key as GlossaryTermId] ?? []);
@@ -945,13 +961,9 @@ describe("R2657000: Can't Defend, the keyword that took over from the status Can
     expect(rowOf(entry)).toBe("Can't Defend");
     expect(KEYWORD_MARK["Can't Defend"]).toBe("CD");
     expect(KEYWORD_KINDS).toContain("Can't Defend");
-    // Top Loser, both faces, and Spikey Pillow print it on their keyword lines.
-    expect(termsOf(played("classicplus-019-1"))).toEqual(
-      expect.arrayContaining([
-        { text: "Armor 2", term: "Armor" },
-        { text: "Can't Defend", term: "Can't Defend" },
-      ]),
-    );
+    // Top Loser, both faces, and Spikey Pillow print it on their keyword lines (Top Loser's Armor 2 went with
+    // issue #4665).
+    expect(termsOf(played("classicplus-019-1"))).toEqual(expect.arrayContaining([{ text: "Can't Defend", term: "Can't Defend" }]));
     expect(termsIn(played("classicplus-019-1", "radiant"))).toEqual(expect.arrayContaining(["Immune to Spells", "Can't Defend"]));
     expect(termsIn(played("core-065-1"))).toEqual(expect.arrayContaining(["Can't Defend", "Aura"]));
     // Jlockeed's J15 Fighter printed it again on both faces from #3042 (part 5 of #3000) until R3551003 gave it

@@ -266,6 +266,8 @@ fn fire(sink: &mut EngineSink<'_>, cand: &mut Candidate) -> bool {
         lane: at.map_or(0, |slot| slot.lane),
         // R2657001: a face-up Field Trap replacing again reveals nothing.
         again: crate::traps::fires_again(sink.state, &cand.card),
+        // R4586007: a replacement's firing answers no attack.
+        attacker_id: None,
     });
     // R783011: a Crater Trap Locks the backrow zone it is revealed in, as `traps::fire_trap` does.
     crate::crater::lock_on_firing(sink, &cand.card, at);
@@ -347,7 +349,7 @@ pub enum LethalHitTo {
 /// ME-LETHALGUARD) a Unit, to 0 or less. Returns where the hit now goes (dealt there as a new instance
 /// from the same source, through that destination's Armor, divisor and caps), that it was canceled
 /// (R1704001), or `None`. Only the target's controller's cards answer: "you would take lethal damage".
-/// R4604000: a `self` guard a Spell's hit cannot reach (Immune to Spells, §6.1) catches none of it.
+/// `source` is the hit's card: a guard Immune to Spells never takes a Spell's hit (R4599005).
 pub fn lethal_hit_window(
     sink: &mut EngineSink<'_>,
     target: &DamageTarget,
@@ -410,15 +412,16 @@ pub fn lethal_hit_window(
         // takes the hit as a Unit; any other redirect answers only hero targets, for the enemy hero.
         let destination: DamageTarget =
             if def.instead.redirect == Some(crate::script::InsteadRedirect::SelfCard) {
-                if cand.card.id == target_id || caught.contains(&cand.card.id) {
+                let instance = live_or(sink.state, &cand.card);
+                // R4599005: a Unit Immune to Spells never takes a Spell's hit on itself: the hit stays.
+                if cand.card.id == target_id
+                    || caught.contains(&cand.card.id)
+                    || (instance.zone.z() == ZoneName::Field
+                        && crate::restrictions::spell_cannot_reach(sink.state, source, &instance))
+                {
                     continue;
                 }
-                // R4604000: a guard Immune to Spells takes no Spell's hit (§6.1), so it catches none.
-                let guard = live_or(sink.state, &cand.card);
-                if crate::restrictions::spell_cannot_reach(sink.state, source, &guard) {
-                    continue;
-                }
-                DamageTarget::Unit { instance: guard }
+                DamageTarget::Unit { instance }
             } else {
                 if !matches!(target, DamageTarget::Hero { .. }) {
                     continue;
@@ -767,8 +770,9 @@ pub fn graveyard_redirect_for(state: &GameState, card: &CardInstance) -> Option<
 
 /// B5 E5, E9: `by` has chosen `target`, one of the other player's units, for an attack (§4.2 step 2) or a
 /// pick (§10.5 step 1). The first card of its controller that interposes (Classic #33 Joro, from the hand)
-/// is summoned into their leftmost open unit zone (no Cry, summoning sick) and the attack or pick moves to
-/// it; returns the new target, or `None`. A random pick, "all" effect or forced attack (R121) never comes.
+/// is summoned into their leftmost open unit zone (a GIGA one at its leftmost fit, R4990000; no Cry,
+/// summoning sick) and the attack or pick moves to it; returns the new target, or `None`. A random pick,
+/// "all" effect or forced attack (R121) never comes.
 pub fn answer_targeting(
     sink: &mut EngineSink<'_>,
     target: &CardInstance,
@@ -795,12 +799,23 @@ pub fn answer_targeting(
         };
         let mut card = cand.card.clone();
         // §3.2, R64, R688: the leftmost empty, unreserved unit zone (an unlocked one first), which
-        // `place_on_field` accepts: Joro is summoned, not played.
-        let Some(slot) = crate::zones::first_entry_zone(sink.state, defender, Row::Units) else {
+        // `place_on_field` accepts: Joro is summoned, not played. R4990000: a GIGA one's leftmost fit.
+        let Some(slot) = crate::giga::summon_anchor(sink.state, defender, &card) else {
             continue;
         };
+        let held_at = sink.state.players[defender]
+            .hand
+            .iter()
+            .position(|held| held.id == card.id);
         crate::zones::remove_from_any_zone(sink.state, &mut card);
-        crate::zones::place_on_field(sink.state, &mut card, slot, Default::default());
+        if !crate::zones::place_on_field(sink.state, &mut card, slot, Default::default()) {
+            // R4990000: a refused placement answers nothing, and a card taken from the hand goes back
+            // where it was held.
+            if let Some(at) = held_at {
+                sink.state.players[defender].hand.insert(at, card);
+            }
+            continue;
+        }
         let turn = sink.state.turn;
         if let Some(placed) = find_instance_mut(sink.state, &card.id) {
             placed.summoned_turn = Some(turn);

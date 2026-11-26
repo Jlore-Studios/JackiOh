@@ -33,7 +33,12 @@ import type { Winner } from "./Winner";
 import type { Zone } from "./Zone";
 import type { ZoneRef } from "./ZoneRef";
 
-export type GameEvent = { "type": "cardPlayed", player: PlayerId, instanceId: string, defId: string, costPaid: number, x?: number, embiggened?: boolean, formerId?: string, 
+export type GameEvent = { "type": "cardPlayed", player: PlayerId, instanceId: string, defId: string, costPaid: number, x?: number, embiggened?: boolean, 
+/**
+ * R4672000: the play's declared choices (R81) in its card's option order; the game record's,
+ * which no rule reads (`as_rules_read`) and no view forwards.
+ */
+modes?: Array<string>, formerId?: string, 
 /**
  * B5 E11, R454: the card was played from its player's graveyard, not the hand. Public.
  */
@@ -193,7 +198,14 @@ lost?: true, } | { "type": "counterChanged", instanceId: string, counter: Counte
  * plays no reveal and "when one of your Traps reveals" does not answer it. Only ever
  * `Some(true)`, so a first firing serializes and hashes as it did.
  */
-again?: boolean, } | { "type": "attackDeclared", attackerId: string, targetId: string, forced: boolean, 
+again?: boolean, 
+/**
+ * R4586007: the attacker of the attack the firing answers (`traps::fire_trap` on an
+ * `attackDeclared`), in a game holding an Infinite Assault card (`recursion_log::kept`), so a
+ * trigger on a Figment's reveal can copy it. Absent otherwise, so no other game's firing
+ * serializes otherwise than it did before the field existed.
+ */
+attackerId?: string, } | { "type": "attackDeclared", attackerId: string, targetId: string, forced: boolean, 
 /**
  * ME-ATTACKSUMMON (R1202): the id of the card whose attack this replaces — Windfast's —
  * when a summoned substitute makes it. Absent otherwise.

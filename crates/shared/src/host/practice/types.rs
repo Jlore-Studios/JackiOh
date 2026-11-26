@@ -12,7 +12,7 @@ use jackioh_engine::{
     Action, ActionBody, CombatForecast, DeckMark, Difficulty, GameResult, GameState, Handicap,
     LastBoardEntry, LeanPick, PerPlayer, PerPlayerOpt, PlayerId, PlayerView, PortraitId, ReplayRefusal,
 };
-use jackioh_run::{RunAction, RunFightSetup};
+use jackioh_run::{AssaultFightSetup, RunAction, RunFightSetup};
 
 /// The human's deck, as the setup asked for it (§9.9). A preset's cards are the web's list (`decks.ts`),
 /// which the host puts in `cards` before it hands a config over: the machine knows no preset by name.
@@ -130,6 +130,11 @@ pub struct PracticeConfig {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub run: Option<RunFightSetup>,
+    /// R4582000: an Infinite Assault level's fight, whose decks, handicaps, enemy marks and seed replace
+    /// the free game's deal, as a run fight's do.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub assault: Option<AssaultFightSetup>,
 }
 
 impl PracticeConfig {
@@ -154,6 +159,7 @@ impl PracticeConfig {
             earning: None,
             daily_deal: None,
             run: None,
+            assault: None,
         }
     }
 
@@ -169,6 +175,16 @@ impl PracticeConfig {
     /// Whether this is a dungeon run's fight (DR14), a game of its own kind.
     pub fn is_run(&self) -> bool {
         self.run.is_some()
+    }
+
+    /// Whether this is an Infinite Assault level's fight (R4582000), a game of its own kind.
+    pub fn is_assault(&self) -> bool {
+        self.assault.is_some()
+    }
+
+    /// A fight a mode writes, a run's or the Assault's: no last board either way, never kept, never dealt.
+    pub fn is_mode_fight(&self) -> bool {
+        self.is_run() || self.is_assault()
     }
 
     /// Whether the game is on a server seed (R1303000), so its end may be claimed.

@@ -269,6 +269,25 @@ pub const ROOM_CODE_FORMAT: CodeFormat = CodeFormat {
     max_input_length: CODE_INPUT_MAX_LENGTH,
 };
 
+/// R4669000: the two-step code's alphabet. R104 leaves out `0` and `1`, which a TOTP code needs,
+/// so this is its own alphabet: all ten digits.
+pub const TOTP_CODE_ALPHABET: &str = "0123456789";
+/// R4669000: a two-step code is 6 digits long.
+pub const TOTP_CODE_LENGTH: usize = 6;
+/// R4669000: a two-step code is drawn as six boxes, one digit per box.
+pub const TOTP_CODE_GROUP_SIZE: usize = 1;
+/// R4669000: no separator between the boxes; the stored code is the six digits.
+pub const TOTP_CODE_SEPARATOR: &str = "";
+
+/// R4669000: the shape `CodeField` draws a two-step code with (one digit per box, no separator).
+pub const TOTP_CODE_FORMAT: CodeFormat = CodeFormat {
+    alphabet: TOTP_CODE_ALPHABET,
+    length: TOTP_CODE_LENGTH,
+    group_size: TOTP_CODE_GROUP_SIZE,
+    separator: TOTP_CODE_SEPARATOR,
+    max_input_length: CODE_INPUT_MAX_LENGTH,
+};
+
 /// SPEC §11 R190: how many `X-Forwarded-For` entries, counted from the right, the deployment's own
 /// proxies wrote, when `TRUSTED_PROXY_HOPS` does not say. Zero: with no proxy in front (a local or
 /// E2E server) the header is whatever the caller wrote, and trusting it would let a caller choose its
@@ -626,6 +645,10 @@ pub const QUEUE_TICKET_STALE_MS: i64 = 12_000;
 /// before the client stops waiting with a rejoin message. Two, so one failed or slow read cannot
 /// end a live queue.
 pub const QUEUE_ENDED_AFTER_READS: usize = 2;
+/// R4446000: seconds a cancelled queue ticket is kept, counted from its enqueue, before the hourly
+/// retention purge may delete it. An hour: the enqueue's read-back and the pairing's re-read both
+/// happen inside one request, long before.
+pub const QUEUE_TICKET_CANCELLED_KEEP_SECONDS: i64 = 3600;
 
 /// SPEC §11 R640002: the window the queue readout counts over, in seconds: the waits of the tickets
 /// claimed in it and the games that ended in it.
@@ -1135,6 +1158,14 @@ pub const CARD_STATS_CURVE_TOP: i32 = 6;
 /// Cache-Control max-age in seconds for public card statistics endpoints.
 pub const CARD_STATS_CACHE_TTL_SECONDS: i64 = 300;
 
+/// SPEC §11 R4677000: after every patch of the newest patch's line (its `major.minor`), how many of the
+/// line before's newest patches anyone but a dev account may read on `/stats`.
+pub const PUBLIC_STATS_PATCHES_LINE_BEFORE: usize = 2;
+
+/// SPEC §11 R4677000: how many of the newest patches anyone but a dev account may always read on `/stats`,
+/// when that run is longer than the newest line's patches and `PUBLIC_STATS_PATCHES_LINE_BEFORE` more.
+pub const PUBLIC_STATS_PATCHES_NEWEST: usize = 5;
+
 /// SPEC §11 R978000, R2491000: how many computed reports each of the card statistics' kept stores
 /// (`api::stats::KeptReports`) holds at once, each for `CARD_STATS_CACHE_TTL_SECONDS`; keeping
 /// another drops the one kept longest ago. The card drill-down keeps at most 24 however many patches
@@ -1343,6 +1374,10 @@ pub const CHAT_MESSAGES_PER_MINUTE: usize = 20;
 pub const CHAT_RETENTION_DAYS: i64 = 30;
 /// B53: the messages one page of `GET /api/chat/:friendId` holds, newest last.
 pub const CHAT_PAGE: i64 = 50;
+/// #4838: how far into the future a chat cursor timestamp may reach before it is refused as
+/// malformed: one day, so slight client clock drift is tolerated but timestamps beyond any real
+/// message are rejected before PostgreSQL to_timestamp errors.
+pub const CHAT_CURSOR_FUTURE_MAX_MS: i64 = MS_PER_DAY;
 /// B52 (#1825): the most shares one `GET /api/replays/shared` lists, newest first, so that list is
 /// bounded like the friends (`MAX_FRIENDS`) and a chat page (`CHAT_PAGE`); fifty is a chat page's.
 pub const SHARED_REPLAYS_LIST_MAX: i64 = 50;
@@ -1450,18 +1485,14 @@ pub const PING_SHOW_MS: i64 = 2_500;
 // `jackioh_shared::config`'s since #3104: the pure economy decides with them, and the server names them
 // here as it always has, so `serverConfig.ts` is unchanged.
 pub use jackioh_shared::config::{
-    CARD_TIER_WEIGHTS, CARD_TOKEN_BAR_SIZE, CARD_TOKEN_BAR_TARGET_PACKS, CHASE_SHARD_PACKS,
-    COSMETIC_PACK_CARD_WEIGHTS, COSMETIC_PACK_FLOOR_RARITY, COSMETIC_PACK_SLOTS, COSMETIC_TIER_WEIGHTS,
-    COSMETIC_TOKEN_BAR_SIZE_EPIC, COSMETIC_TOKEN_BAR_SIZE_LEGENDARY, COSMETIC_TOKEN_BAR_SIZE_PACK,
-    COSMETIC_TOKEN_BAR_SIZE_RARE, COSMETIC_TOKEN_BAR_TARGET_PACKS_EPIC,
-    COSMETIC_TOKEN_BAR_TARGET_PACKS_LEGENDARY, COSMETIC_TOKEN_BAR_TARGET_PACKS_PACK,
-    COSMETIC_TOKEN_BAR_TARGET_PACKS_RARE, COSMETIC_TOKEN_CYCLE, CosmeticTokenStep,
-    GLOBAL_COSMETIC_FLOOR_RARITY, GLOBAL_COSMETIC_ROLL_WEIGHT, GLOBAL_PACK_NAME, LEVEL_SKIP_WEIGHT,
-    OFFER_SAMPLE_PERCENT_SCALE, PACK_FLOOR_RARITY, PACK_FLOORED_SLOT, PACK_SLOTS, PACK_UNOWNED_WEIGHTS,
-    PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS, PLAYER_SETTINGS_TEXT_MAX_LENGTH,
-    PackUnownedWeights, RarityPoints, SET_TRACK_XP_PER_LEVEL, TIER_WEIGHT_TOTAL,
-    TOKEN_BAR_POINTS_BY_CARD_RARITY, TOKEN_BAR_POINTS_BY_COSMETIC_RARITY, TierWeights,
-    VERSION_OFFER_MIN_CARDS, VERSION_OFFER_MIN_PER_SET,
+    CARD_TIER_WEIGHTS, CARD_TOKEN_BAR_SIZE, CHASE_SHARD_PACKS, COSMETIC_PACK_FLOOR_RARITY,
+    COSMETIC_PACK_SLOTS, COSMETIC_TIER_WEIGHTS, COSMETIC_TOKEN_BAR_SIZE_EPIC,
+    COSMETIC_TOKEN_BAR_SIZE_LEGENDARY, COSMETIC_TOKEN_BAR_SIZE_PACK, COSMETIC_TOKEN_BAR_SIZE_RARE,
+    COSMETIC_TOKEN_CYCLE, CosmeticTokenStep, GLOBAL_COSMETIC_FLOOR_RARITY, GLOBAL_COSMETIC_ROLL_WEIGHT,
+    GLOBAL_PACK_NAME, LEVEL_SKIP_WEIGHT, OFFER_SAMPLE_PERCENT_SCALE, PACK_FLOOR_RARITY, PACK_FLOORED_SLOT,
+    PACK_SLOTS, PACK_UNOWNED_WEIGHTS, PITY_EPIC_PACKS, PITY_LEGENDARY_PACKS, PITY_MYTHIC_PACKS,
+    PLAYER_SETTINGS_TEXT_MAX_LENGTH, PackUnownedWeights, RarityPoints, SET_TRACK_XP_PER_LEVEL,
+    TIER_WEIGHT_TOTAL, TierWeights, VERSION_OFFER_MIN_CARDS, VERSION_OFFER_MIN_PER_SET,
 };
 // What a finished game pays and how a quest moves (the Jlore and XP rates, the daily cap, the track levels, the
 // quest rhythm and the day) are `jackioh_shared::config`'s since #3104: the pure economy decides with them, and
@@ -1472,9 +1503,9 @@ pub use jackioh_shared::config::{
     FLEET_TRACK_XP_PER_STINKYSCAPE_PLAY, FLEET_TRACK_XP_STINKYSCAPE_WIN, JLORE_CONQUEST_LOSS,
     JLORE_CONQUEST_WIN, JLORE_COOP_LOSS, JLORE_COOP_WIN, JLORE_GAMES_DAILY_CAP, JLORE_LADDER_LOSS,
     JLORE_LADDER_WIN, JLORE_PRACTICE_LOSS, JLORE_PRACTICE_WIN, JLORE_UNRANKED_LOSS, JLORE_UNRANKED_WIN,
-    QUEST_INTERVAL_HOURS, QUEST_JLORE_MAX, QUEST_JLORE_MIN, QUEST_MAX_HELD, QUEST_REPLACES_PER_DAY,
-    QUEST_XP_PER_JLORE, SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL, XP_COOP_SCALE,
-    XP_GAME_CAP, XP_LADDER_TARGET_MEAN, XP_PER_ACTION, XP_PRACTICE_SCALE, XP_WIN_BONUS,
+    QUEST_JLORE_MAX, QUEST_JLORE_MIN, QUEST_MAX_HELD, QUEST_REPLACES_PER_DAY, QUEST_XP_PER_JLORE,
+    SET_TRACK_FIRST_LEVEL, SET_TRACK_LEVELS, SET_TRACK_UNLOCK_LEVEL, XP_COOP_SCALE, XP_GAME_CAP,
+    XP_LADDER_TARGET_MEAN, XP_PER_ACTION, XP_PRACTICE_SCALE, XP_WIN_BONUS,
 };
 /// SPEC §14.3: the Jlore a card pack costs (#1333's table: 100), five ladder wins.
 pub const PACK_PRICE_JLORE: i32 = 100;
@@ -1655,11 +1686,20 @@ pub use jackioh_shared::config::{
 
 /// §9.13: how often the daily sweep ends the games whose move ran out, lapses old challenges and
 /// seeks and sends the emails and pushes due, in minutes, while the server is awake. The Worker's
-/// hourly cron (`apps/edge`'s `DAILY_SWEEP_CRON`) wakes it for one while nobody else does.
+/// hourly cron (`apps/edge`'s `DAILY_SWEEP_CRON`) wakes it for one while nobody else does, once one
+/// has something due (R4691000, `DAILY_NEXT_PATH`).
 pub const DAILY_SWEEP_MINUTES: u64 = 60;
 /// §9.13: the route the Worker's cron posts the sweep to; outside `/api`, so the Worker's public
 /// `fetch` never forwards it.
 pub const DAILY_SWEEP_PATH: &str = "/daily-sweep";
+/// R4691002 (#4713): how long a shipped patch's catalog (`GET /api/catalog/:version`, R388) may be kept
+/// by a browser and by the Worker's edge cache, which then answers a repeat read without the server.
+/// A shipped version never reopens, but #1371 once renamed them all; a day bounds what a rename would
+/// leave stale without a purge.
+pub const CATALOG_SNAPSHOT_MAX_AGE_SECONDS: i64 = 86_400;
+/// R4691000: the route the Worker asks, as the server goes to sleep, when a sweep next has something
+/// due (`daily::notify::next_due`); outside `/api`, as the sweep's is.
+pub const DAILY_NEXT_PATH: &str = "/daily-next";
 /// §9.13: how many times a request ends a game on time when another request moved first and its
 /// log row clashed (R3727000), before it answers what it read.
 pub const DAILY_SETTLE_ATTEMPTS: usize = 3;

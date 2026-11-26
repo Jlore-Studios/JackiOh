@@ -22,3 +22,6 @@ jackioh-engine = { workspace = true, features = ["testkit"] }
 # build.rs reads catalog.json and patches/patches.json (§7.4). Build scripts are not the pure
 # crate: they run at compile time, which is where data reaches a pure crate (§3).
 serde_json = { workspace = true }
+
+[lints]
+workspace = true

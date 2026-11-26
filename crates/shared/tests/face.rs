@@ -4,6 +4,7 @@
 
 use jackioh_engine::catalog::registered_catalog;
 use jackioh_engine::wire::PlayerId;
+use jackioh_engine::wire::{Keyword, KeywordKind, keyword_key};
 use jackioh_shared::face::{FaceAnswer, FaceCall, FaceModel, Locale, Span, apply};
 use serde_json::{Value, json};
 
@@ -454,6 +455,7 @@ fn a_view() -> jackioh_engine::wire::PlayerView {
         sandbox: None,
         deck_marks: None,
         win_rates: None,
+        deck_sets: None,
     });
     let state = jackioh_engine::begin_game(&state).state;
     jackioh_engine::view_for(&state, PlayerId::P1)
@@ -699,6 +701,7 @@ fn r3045000_the_hull_itself_and_every_other_fusion_are_named_as_they_were() {
 
 /// R3941002 (issue #3941): a fused face prints its ingredients' keyword lines as one, at its head, each keyword
 /// once, and every other line in its place; a card that is no fusion prints its lines as they are.
+/// R4747000: the merged line is in the fixed line order.
 #[test]
 fn r3941002_a_fused_face_prints_its_ingredients_keyword_lines_as_one() {
     // TG #41 Legacy: Speciesist, whose Cry line has no number (Core #2's gained one in #4353).
@@ -711,11 +714,11 @@ fn r3941002_a_fused_face_prints_its_ingredients_keyword_lines_as_one() {
         .join("\n");
     assert_eq!(
         face_of_def(&def, false, Locale::En, json!({})).text.full,
-        "Rush, First Strike, Taunt, Divine Shield, Reborn, Can't Defend\nCry: Destroy an enemy non-Human Unit."
+        "Can't Defend, Rush, Taunt, First Strike, Divine Shield, Reborn\nCry: Destroy an enemy non-Human Unit."
     );
     assert_eq!(
         printed("core-003", false, Locale::En).text.full,
-        "Taunt, Divine Shield, Reborn, Can't Defend"
+        "Can't Defend, Taunt, Divine Shield, Reborn"
     );
 }
 
@@ -908,8 +911,8 @@ fn r3556000_a_dormant_field_spell_in_the_backrow_wears_its_countdown() {
         .expect("a face-up backrow card");
     assert_eq!(
         live.slumber,
-        Some(jackioh_engine::state::Slumber { turns: Some(1) }),
-        "LiveCard carries the countdown off the backrow view"
+        Some(jackioh_engine::state::Slumber { turns: Some(2) }),
+        "LiveCard carries the countdown off the backrow view (2 turns on the base face since issue #4665)"
     );
     let faces = view_faces(Words::new(Locale::En), &view);
     let face = faces.get(&live.instance_id).expect("a face for the Projector");
@@ -1341,4 +1344,84 @@ fn r3941001_written_words_describe_their_cards_effect_honestly() {
         narcor_short.contains("Discard a Narcor or Red Narcor:"),
         "The Narcor Project radiant must permit either Narcor or Red Narcor, got: {narcor_short}"
     );
+}
+
+/// SPEC §6.1 R4747000: a face sorts arriving keywords into the one fixed line order, printing the
+/// line, `keywords` and `keywordWords` in that order, paired index for index.
+fn r4747000_def_with_line(text: &str) -> Value {
+    ready();
+    let def = registered_catalog().get("core-003").expect("core-003").clone();
+    let mut def = serde_json::to_value(def).expect("a def serializes");
+    def["base"]["text"] = Value::from(text);
+    def["radiant"]["text"] = Value::from(text);
+    // The `keywords` array keeps arrival order (Ranged, Flying, Can't Defend): only the line is
+    // written in the fixed order, as the catalog rewrite does.
+    let keywords = json!([{"kind": "Ranged"}, {"kind": "Flying"}, {"kind": "Can't Defend"}]);
+    def["base"]["keywords"] = keywords.clone();
+    def["radiant"]["keywords"] = keywords;
+    def
+}
+
+fn r4747000_face(locale: Locale, text: &str) -> FaceModel {
+    face_of(call(json!({
+        "call": "card",
+        "locale": locale_name(locale),
+        "source": {"defId": "r4747000-test", "def": r4747000_def_with_line(text), "radiant": false},
+    })))
+}
+
+#[test]
+fn r4747000_a_face_sorts_arriving_keywords_into_line_order() {
+    let face = r4747000_face(Locale::En, "Tribute 2, Can't Defend, Flying, Ranged");
+    assert_eq!(face.text.full, "Tribute 2, Can't Defend, Flying, Ranged");
+    let kinds: Vec<KeywordKind> = face.keywords.iter().map(Keyword::kind).collect();
+    assert_eq!(
+        kinds,
+        vec![KeywordKind::CantDefend, KeywordKind::Flying, KeywordKind::Ranged,]
+    );
+    assert_eq!(face.keyword_words, vec!["Can't Defend", "Flying", "Ranged"],);
+    // Paired index for index: each word is its keyword's own.
+    for (keyword, word) in face.keywords.iter().zip(face.keyword_words.iter()) {
+        assert_eq!(word, &keyword_key(keyword));
+    }
+    // In Chinese the words are the table's, in the same order.
+    let chinese = r4747000_face(Locale::ZhCn, "Tribute 2, Can't Defend, Flying, Ranged");
+    let kinds: Vec<KeywordKind> = chinese.keywords.iter().map(Keyword::kind).collect();
+    assert_eq!(
+        kinds,
+        vec![KeywordKind::CantDefend, KeywordKind::Flying, KeywordKind::Ranged,]
+    );
+    assert_eq!(chinese.keyword_words, vec!["无法守备", "飞行", "远程"]);
+    // Core #3's rewritten Chinese face prints its line in the order too.
+    let core = printed("core-003", false, Locale::ZhCn);
+    assert_eq!(core.text.full, "无法守备，嘲讽，圣盾，复生");
+    assert_eq!(core.keyword_words, vec!["无法守备", "嘲讽", "圣盾", "复生"],);
+}
+
+#[test]
+fn r4747000_a_gained_keyword_prints_at_its_place_in_the_order() {
+    // Core #3 prints Can't Defend, Taunt, Divine Shield, Reborn; the live view gains Flying.
+    let face = in_play(
+        "core-003",
+        false,
+        Locale::En,
+        json!({ "live": { "attack": 1, "health": 1, "maxHealth": 1, "keywords": [{ "kind": "Taunt" }, { "kind": "Flying" }, { "kind": "Divine Shield" }, { "kind": "Reborn" }, { "kind": "Can't Defend" }] }, "inPlay": {} }),
+    );
+    let kinds: Vec<KeywordKind> = face.keywords.iter().map(Keyword::kind).collect();
+    // Flying sits at its place in the order, not at the end.
+    assert_eq!(
+        kinds,
+        vec![
+            KeywordKind::CantDefend,
+            KeywordKind::Taunt,
+            KeywordKind::Flying,
+            KeywordKind::DivineShield,
+            KeywordKind::Reborn,
+        ]
+    );
+    assert_eq!(
+        face.keyword_words,
+        vec!["Can't Defend", "Taunt", "Flying", "Divine Shield", "Reborn"],
+    );
+    assert_eq!(face.gained_line.full, "Flying");
 }

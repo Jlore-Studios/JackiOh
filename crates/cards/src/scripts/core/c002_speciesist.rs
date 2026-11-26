@@ -1,7 +1,7 @@
 //! SPEC §8.1 #2 Speciesist — 4/1 → 8/2 Unit, Human, cost 2 (7/1 → 14/2, cost 3 from issue #3837 until
 //! issue #4353; 4/1 → 8/2, cost 2 until issue #3837).
-//! Base: "Cry: destroy target enemy non-Human unit. You have {mana} less mana next turn." Radiant: "Cry:
-//! destroy all enemy non-Human units. You have {mana} less mana next turn." — the radiant cell restates
+//! Base: "Cry: destroy target enemy non-Human unit. Overload ({mana})." Radiant: "Cry:
+//! destroy all enemy non-Human units. Overload ({mana})." — the radiant cell restates
 //! the clause, so it replaces the base one (§8 Conventions) and the radiant form declares no target at
 //! all.
 //!
@@ -9,11 +9,11 @@
 //! the board (R90); with no legal target the unit still enters and the destroy fizzles. The radiant
 //! `destroy_all` marks every match as `destroy` does, so all die in one state check (R59).
 //!
-//! Issue #4353 gave both faces' Cry "You have {mana} less mana next turn" (R4353021): the self side of #21
+//! Issue #4353 gave both faces' Cry "Overload ({mana})." (R4353021): the self side of #21
 //! Hinder's next-refresh modifier (§6.3 Mana, `next_turn_mana`, as M #18 Expedition12's), the declared
 //! `mana` (R386, 1 on both faces, read by the Cry alone), its controller's next refresh giving that much
 //! less, never below 0 (§2.3). It is the Cry's, so it comes with every Cry that runs, whatever the destroy
-//! finds, and never with a summon, which runs none; through v0.6.8b the Cry lost nothing, which
+//! finds, and never with a summon, which runs none; through v0.6.8d the Cry lost nothing, which
 //! `script_v0_6_8b` keeps (R767000).
 
 use jackioh_engine::effects::{destroy, destroy_all};
@@ -21,7 +21,7 @@ use jackioh_engine::prelude::*;
 
 pub const ID: &str = "core-002";
 
-/// R4353021: the Cry's "You have {mana} less mana next turn", its controller's own next refresh.
+/// R4353021: the Cry's "Overload ({mana}).", its controller's own next refresh.
 fn less_mana_next_turn(ctx: &EffectContext<'_>) -> Effect {
     next_turn_mana(json_as(json!({ "amount": -param(ctx, "mana") })))
 }
@@ -65,7 +65,7 @@ pub fn script() -> CardScripts {
     speciesist(true)
 }
 
-/// R767000: through v0.6.8b its Cry lost no mana (issue #4353); `KEPT_SCRIPTS` folds those replays
+/// R767000: through v0.6.8d its Cry lost no mana (issue #4353); `KEPT_SCRIPTS` folds those replays
 /// under it.
 pub fn script_v0_6_8b() -> CardScripts {
     speciesist(false)
@@ -163,7 +163,7 @@ mod tests {
         }
     }
 
-    /// R4353021: issue #4353's "You have {mana} less mana next turn", on both faces.
+    /// R4353021: issue #4353's "Overload ({mana}).", on both faces.
     mod n2_speciesist_less_mana_next_turn_r4353021 {
         use super::*;
 
@@ -245,7 +245,7 @@ mod tests {
             assert_eq!(s.state().players.p1.mana.next_turn_mod, -loss);
         }
 
-        /// R767000: through v0.6.8b the Cry lost no mana (issue #4353).
+        /// R767000: through v0.6.8d the Cry lost no mana (issue #4353).
         #[test]
         fn r767000_the_script_kept_for_v0_6_8b_loses_no_mana() {
             crate::under_kept(super::super::ID, super::super::script_v0_6_8b(), || {

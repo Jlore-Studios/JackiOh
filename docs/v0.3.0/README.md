@@ -116,7 +116,7 @@ with BUILD.md's). Parts cite them; part 37's coverage check lists any V that no 
 | V4 | Every golden trace (the 240 games, retired in #2578) replays with identical view hashes, event hashes and legal sets | `crates/engine/tests/golden.rs` |
 | V5 | Every TS card test, ported, passes | `cargo test -p jackioh-cards` |
 | V6 | Every §11 ruling has a proving Rust test named `r<n>_…`, and every cited R-id exists | `cargo jackioh spec check` |
-| V7 | `cargo jackioh fuzz --seeds 1000` finds no invariant breach and every game folds back to its hash | daily super run (CI: 200 seeds) |
+| V7 | `cargo jackioh fuzz --seeds 1000` finds no invariant breach and every game folds back to its hash | daily super run (CI: 200 seeds; the merge queue: 1,600 plain and handicapped and 200 Duos, failing only a seed its base passes) |
 | V8 | `cargo jackioh catalog check` and `patches check` pass on the moved data | CI `rust` job |
 | V9 | `replay(args, log)` of a game equals the live state's `hash_state` | fuzz + server actor test |
 | V10 | The AI gates pass at their `gateNeeded` counts: vs random 100, vs greedy 50, Hard vs Easy 50 | daily super run (`cargo jackioh gate --full`) |

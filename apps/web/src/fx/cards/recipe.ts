@@ -176,13 +176,24 @@ export const ENTRANCE_TRAUMA = {
   maskSplit: 0.8,
   pavilionUnfurl: 0.8,
   fortressRise: 0.8,
+  // R4596000: the Infinite Assault's twelve Commanders' (fx/cards/infiniteassault/commanders.ts), a Mythic's
+  // the louder, inside SIGNATURE_PERMANENT_MAX_TRAUMA.
+  echoBoot: 0.4,
+  redlineBoot: 0.5,
+  hiveBoot: 0.45,
+  loopBoot: 0.4,
+  rootkitBoot: 0.45,
+  bastionBoot: 0.5,
+  harvestBoot: 0.7,
+  blackBoxBoot: 0.75,
+  collapseBoot: 0.7,
+  primeBoot: 0.75,
+  runawayBoot: 0.8,
+  zeroDayBoot: 0.7,
 } as const;
 
 /** R3389001: the shake of each Classic signature recipe that shakes the board, on top of nothing (rule 9). */
 export const SIGNATURE_TRAUMA = { taxSeizure: 0.4, graveRise: 0.6, craterLock: 0.5 } as const;
-
-/** R3389001: where a signature's second beat starts, as a fraction of its entry: after the first beat's gather. */
-export const SIGNATURE_BEAT_AT = 0.35;
 
 /** R3389001: how far a signature's run steps on per card it moves (Second Wind's piles, Spell Tyrant's ghosts), a fraction of the entry. */
 export const SIGNATURE_STEP_AT = 0.08;

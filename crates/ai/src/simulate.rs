@@ -11,11 +11,10 @@ use jackioh_engine::subsystems::ky_competition::worked_answer;
 use jackioh_engine::{
     ANSWER_KEY, ANSWER_STOP_KEY, Action, ActionBody, AppliedAction, CardInstance, GameEvent, GameState,
     KY_COMPETITION_MAX, NONCE_HISTORY, PLAYER_IDS, Phase, PlayerId, PromptKind, ReduceResult, Rng, Selection,
-    TurnLog, active_units_of, effective_life, find_instance, is_sick, legal_actions, max_mana_for,
+    TurnLog, active_units_of, attack_target_of, find_instance, home_of, is_sick, legal_actions, max_mana_for,
     opponent_of, owed_mana_of, reduce_unpiloted, self_def_ids, slot_of, stop_answer, subsystems, unit_view,
     units_on_field_of,
 };
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::candidates::{action_key, plague_aims_first, plague_placement_open};
@@ -25,24 +24,12 @@ use crate::config::{
 use crate::evaluate::{NextSwing, Prices, evaluate_priced, feng_shui_acts, float_credit};
 use crate::types::{NodeCounter, StoppedBy};
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum LineStatus {
     Open,
     Passed,
     Yielded,
     Over,
-}
-
-impl LineStatus {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            LineStatus::Open => "open",
-            LineStatus::Passed => "passed",
-            LineStatus::Yielded => "yielded",
-            LineStatus::Over => "over",
-        }
-    }
 }
 
 /// What a `CountingNodeCounter` is: a root counter of its own, or a slice of a parent.
@@ -62,9 +49,10 @@ enum CounterKind<'a> {
         start: usize,
         limit: usize,
         capped: Cell<bool>,
-        /// R3498000: the beam's stop short of the clock, polled once `floor` nodes are drawn.
+        /// R3498000: the beam's stop short of the clock, polled once `root_tried` (R4801000).
         wrap_up: Option<&'a dyn Fn() -> bool>,
-        floor: usize,
+        /// R4801000: `end_root` was called: the beam has tried every move at its root.
+        root_tried: Cell<bool>,
         /// The wrap-up fired: no node is taken until `closing`.
         wrapped: Cell<bool>,
         /// `end_exploring` was called: the wrap-up no longer refuses.
@@ -75,37 +63,6 @@ enum CounterKind<'a> {
 /// A NodeCounter that also tallies failed simulations for `SearchStats.simErrors`.
 pub struct CountingNodeCounter<'a> {
     kind: CounterKind<'a>,
-}
-
-impl CountingNodeCounter<'_> {
-    /// A sub-counter reads its parent's tally (0 when the parent keeps none).
-    pub fn sim_errors(&self) -> usize {
-        match &self.kind {
-            CounterKind::Root { sim_errors, .. } => sim_errors.get(),
-            CounterKind::Sub { parent, .. } => parent.sim_error_tally().unwrap_or(0),
-        }
-    }
-
-    /// A sub-counter writes its parent's tally, when it keeps one.
-    pub fn set_sim_errors(&self, value: usize) {
-        match &self.kind {
-            CounterKind::Root { sim_errors, .. } => sim_errors.set(value),
-            CounterKind::Sub { parent, .. } => {
-                if parent.sim_error_tally().is_some() {
-                    parent.set_sim_error_tally(value);
-                }
-            }
-        }
-    }
-
-    /// #1429: the panics of `sim_errors`; a sub-counter reads its parent's tally (0 when the parent
-    /// keeps none).
-    pub fn sim_panics(&self) -> usize {
-        match &self.kind {
-            CounterKind::Root { sim_panics, .. } => sim_panics.get(),
-            CounterKind::Sub { parent, .. } => parent.sim_panic_tally().unwrap_or(0),
-        }
-    }
 }
 
 impl NodeCounter for CountingNodeCounter<'_> {
@@ -156,7 +113,7 @@ impl NodeCounter for CountingNodeCounter<'_> {
                 limit,
                 capped,
                 wrap_up,
-                floor,
+                root_tried,
                 wrapped,
                 closing,
             } => {
@@ -169,7 +126,7 @@ impl NodeCounter for CountingNodeCounter<'_> {
                         return false;
                     }
                     if let Some(wrap_up) = wrap_up
-                        && parent.used().saturating_sub(*start) >= *floor
+                        && root_tried.get()
                         && wrap_up()
                     {
                         wrapped.set(true);
@@ -212,16 +169,31 @@ impl NodeCounter for CountingNodeCounter<'_> {
         }
     }
 
-    fn sim_error_tally(&self) -> Option<usize> {
-        Some(self.sim_errors())
+    fn end_root(&self) {
+        if let CounterKind::Sub { root_tried, .. } = &self.kind {
+            root_tried.set(true);
+        }
     }
 
-    fn set_sim_error_tally(&self, value: usize) {
-        self.set_sim_errors(value);
+    fn sim_errors(&self) -> usize {
+        match &self.kind {
+            CounterKind::Root { sim_errors, .. } => sim_errors.get(),
+            CounterKind::Sub { parent, .. } => parent.sim_errors(),
+        }
     }
 
-    fn sim_panic_tally(&self) -> Option<usize> {
-        Some(self.sim_panics())
+    fn note_sim_error(&self) {
+        match &self.kind {
+            CounterKind::Root { sim_errors, .. } => sim_errors.set(sim_errors.get() + 1),
+            CounterKind::Sub { parent, .. } => parent.note_sim_error(),
+        }
+    }
+
+    fn sim_panics(&self) -> usize {
+        match &self.kind {
+            CounterKind::Root { sim_panics, .. } => sim_panics.get(),
+            CounterKind::Sub { parent, .. } => parent.sim_panics(),
+        }
     }
 
     fn first_sim_panic(&self) -> Option<String> {
@@ -255,7 +227,7 @@ impl NodeCounter for CountingNodeCounter<'_> {
     }
 }
 
-/// R3575603: one step a decision simulated and found expensive (`is_expensive_step`): the state it
+/// R3575603: one step a decision simulated and found expensive (`surcharge_nodes`, `announced_surcharge_nodes`): the state it
 /// stepped from, the seat and the action, and the engine's answer.
 struct MemoEntry {
     state: GameState,
@@ -343,12 +315,6 @@ impl SimMemo {
     }
 }
 
-/// R3575603: whether the step `action` took from `state` to `stepped` is one the search pays more than
-/// its node for (`surcharge_nodes`, `announced_surcharge_nodes`): the only steps `SimMemo` keeps.
-fn is_expensive_step(state: &GameState, seat: PlayerId, action: &ActionBody, stepped: &ReduceResult) -> bool {
-    surcharge_nodes(state, seat, action) > 0 || announced_surcharge_nodes(state, action, stepped) > 0
-}
-
 pub fn create_node_counter<'a>(
     limit: usize,
     should_stop: Option<&'a dyn Fn() -> bool>,
@@ -370,17 +336,17 @@ pub fn create_node_counter<'a>(
 /// A slice of `parent`: at most `limit` more nodes, drawn from the parent. Running out of the slice
 /// does not stop the parent, so the lethal solver can hand what it left over to the beam.
 pub fn create_sub_counter<'a>(parent: &'a dyn NodeCounter, limit: usize) -> CountingNodeCounter<'a> {
-    create_wrap_up_counter(parent, limit, None, 0)
+    create_wrap_up_counter(parent, limit, None)
 }
 
 /// R3498000: `create_sub_counter` that also refuses once `wrap_up` answers true, polled before each node
-/// from the `floor`th node it has drawn on, until `end_exploring`; its parent runs on. The beam's slice:
-/// with `wrap_up` None it is `create_sub_counter`'s, node for node.
+/// once `end_root` is called (R4801000: the beam has tried every move at its root), until
+/// `end_exploring`; its parent runs on. The beam's slice: with `wrap_up` None it is
+/// `create_sub_counter`'s, node for node.
 pub fn create_wrap_up_counter<'a>(
     parent: &'a dyn NodeCounter,
     limit: usize,
     wrap_up: Option<&'a dyn Fn() -> bool>,
-    floor: usize,
 ) -> CountingNodeCounter<'a> {
     CountingNodeCounter {
         kind: CounterKind::Sub {
@@ -389,23 +355,17 @@ pub fn create_wrap_up_counter<'a>(
             limit,
             capped: Cell::new(false),
             wrap_up,
-            floor,
+            root_tried: Cell::new(false),
             wrapped: Cell::new(false),
             closing: Cell::new(false),
         },
     }
 }
 
-fn note_sim_error(counter: &dyn NodeCounter) {
-    if let Some(errors) = counter.sim_error_tally() {
-        counter.set_sim_error_tally(errors + 1);
-    }
-}
-
 /// #1429: a caught panic is a failed simulation, counted apart too, its message kept when first;
 /// returns the message.
 pub(crate) fn note_sim_panic(counter: &dyn NodeCounter, payload: &(dyn std::any::Any + Send)) -> String {
-    note_sim_error(counter);
+    counter.note_sim_error();
     let message = panic_message(payload);
     counter.record_sim_panic(&message);
     message
@@ -440,8 +400,8 @@ pub fn line_status(state: &GameState, seat: PlayerId, root_turn: i32) -> LineSta
 /// `simulate`'s answer: the state reached, or the error.
 pub type SimStep = Result<GameState, String>;
 
-/// Up-front node surcharge for heavy actions (expensive scorers §10.7, turn-granting traps §8.5 core-096,
-/// watching players, or R186 sweep flags; #1240).
+/// Up-front node surcharge for heavy actions (expensive scorers §10.7, an attack a turn-granting trap
+/// would answer (§8.5 core-096, R4809001), watching players, or R186 sweep flags; #1240).
 pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) -> usize {
     match action {
         ActionBody::Play { instance_id, .. } => {
@@ -455,18 +415,27 @@ pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) 
             };
             expensive + judged
         }
-        ActionBody::Attack { attacker_id, .. } => {
+        ActionBody::Attack {
+            attacker_id,
+            target_id,
+        } => {
             let defender = opponent_of(actor);
-            // Trapped lethal-gate estimate against effective_life (R964000; never if cannot lose, R2201000).
-            let lethalish = jackioh_engine::can_lose(state, defender)
-                && find_instance(state, attacker_id)
-                    .is_some_and(|unit| unit_view(state, unit).attack >= effective_life(state, defender));
             let trapped = state.players[defender]
                 .backrow
                 .iter()
                 .flatten()
                 .any(|card| stands_for_any(state, &card.def_id, AI_SEARCH.ai_turn_trap_ids));
-            if lethalish && trapped {
+            // R4809001: only an attack the trap would answer, one its own projection calls lethal to its
+            // controller's hero (`subsystems::is_lethal`, R44): through a Unit only by Trample excess
+            // (R176), against effective_life (R964000), never to a hero that cannot lose (R2201000).
+            let answered = trapped
+                && find_instance(state, attacker_id)
+                    .zip(attack_target_of(state, target_id))
+                    .is_some_and(|(attacker, target)| {
+                        subsystems::defending_hero(&target) == defender
+                            && subsystems::is_lethal(state, attacker, &target)
+                    });
+            if answered {
                 AI_SEARCH.ai_turn_trap_nodes.max(0) as usize
             } else {
                 0
@@ -569,42 +538,40 @@ pub(crate) fn best_auto_answer(
 ) -> Option<SimStep> {
     let answers = auto_answers(state, answerer, tried);
     if answers.is_empty() {
-        note_sim_error(counter);
+        counter.note_sim_error();
         return Some(Err("the prompt has no answer".to_string()));
     }
     let scored = answers.len() > 1;
     let mut best: Option<(GameState, f64)> = None;
     let mut failure = String::new();
     for answer in answers {
-        if !counter.take() {
-            return None;
-        }
-        let action = Action::new(answer, answerer, format!("{prefix}:{}", counter.used()));
-        let next = match catch_unwind(AssertUnwindSafe(|| reduce_unpiloted(state, &action))) {
-            Ok(next) => next,
+        let stepped = catch_unwind(AssertUnwindSafe(|| {
+            step_answer(state, answerer, answer, counter, prefix)
+        }));
+        let next = match stepped {
+            Ok(None) => return None,
+            Ok(Some(Ok(next))) => next,
+            Ok(Some(Err(error))) => {
+                failure = error;
+                continue;
+            }
             Err(payload) => {
                 failure = note_sim_panic(counter, payload.as_ref());
                 continue;
             }
         };
-        if let Some(error) = next.error {
-            note_sim_error(counter);
-            failure = error;
-            continue;
-        }
-        charge_announced(counter, state, &action.body, &next);
         let score = if scored {
-            let swing = if next.state.active == answerer {
+            let swing = if next.active == answerer {
                 NextSwing::Seat
             } else {
                 NextSwing::Enemy
             };
-            evaluate_priced(&next.state, answerer, swing, &AI_EVAL, prices)
+            evaluate_priced(&next, answerer, swing, &AI_EVAL, prices)
         } else {
             0.0
         };
         if best.as_ref().is_none_or(|(_, best_score)| score > *best_score) {
-            best = Some((next.state, score));
+            best = Some((next, score));
         }
     }
     Some(best.map(|(state, _)| state).ok_or(failure))
@@ -617,9 +584,6 @@ pub(crate) fn best_auto_answer(
 /// sequence is answered right until its streak is the face's expected one, then Stopped, which summons
 /// that Kenny (R1184000). `None` for any other prompt, which keeps `best_auto_answer`.
 pub(crate) fn worked_step(state: &GameState, seat: PlayerId) -> Option<(GameState, ActionBody)> {
-    if state.result.is_some() {
-        return None;
-    }
     let pending = state.pending.as_ref()?;
     if pending.player_id != seat || pending.kind != PromptKind::Answer {
         return None;
@@ -657,8 +621,9 @@ pub(crate) fn worked_step(state: &GameState, seat: PlayerId) -> Option<(GameStat
     Some((keyed, answer))
 }
 
-/// #2929: `seat`'s `answer` stepped on `state` as `best_auto_answer` steps each it tries: one node
-/// (`None` once `counter` is spent), a refused step a failed simulation. Its callers catch a panic.
+/// `seat`'s `answer` stepped on `state`, as `best_auto_answer` steps each it tries and #2929 the one the
+/// seat works out: one node (`None` once `counter` is spent), a refused step a failed simulation. Its
+/// callers catch a panic.
 fn step_answer(
     state: &GameState,
     seat: PlayerId,
@@ -672,7 +637,7 @@ fn step_answer(
     let action = Action::new(answer, seat, format!("{prefix}:{}", counter.used()));
     let next = reduce_unpiloted(state, &action);
     if let Some(error) = next.error {
-        note_sim_error(counter);
+        counter.note_sim_error();
         return Some(Err(error));
     }
     charge_announced(counter, state, &action.body, &next);
@@ -732,6 +697,11 @@ pub fn own_prompt_score(
     })
 }
 
+/// `simulate`'s refusal of a step whose up-front surcharge (`surcharge_nodes`) the counter's slice
+/// cannot pay once the step's own node is taken: a refusal of the slice, not of the step. The lethal
+/// solver's first walk reads it as a cut, not a searched tree (R4807000).
+pub(crate) const UNPAID_SURCHARGE: &str = "the step's surcharge does not fit the budget's slice";
+
 /// Simulates one AI action on determinized state and auto-answers subsequent opponent prompts.
 /// Returns `None` when node counter exhausts.
 pub fn simulate(
@@ -768,13 +738,13 @@ fn simulate_answering(
     // An action whose surcharge the slice cannot pay must not drain it node by node and then
     // return `None`: `None` is the callers' "the budget is spent, stop the wave" signal, so one
     // expensive step would stop every cheaper sibling beside it. Refuse the step like any refused
-    // action instead (Some(Err): the beam's `continue`, reply's "skip this action").
+    // action instead (Some(Err): the beam's `continue`). The reply checks a try's surcharge before
+    // it calls this and cuts instead (`best_try`, R4809000). The lethal solver's first walk tells it
+    // apart by `UNPAID_SURCHARGE` (R4807000).
     let surcharge = surcharge_nodes(state, seat, action);
     if counter.used() + surcharge > counter.limit() {
-        note_sim_error(counter);
-        return Some(Err(
-            "the step's surcharge does not fit the budget's slice".to_string()
-        ));
+        counter.note_sim_error();
+        return Some(Err(UNPAID_SURCHARGE.to_string()));
     }
     for _ in 0..surcharge {
         if !counter.take() {
@@ -789,9 +759,11 @@ fn simulate_answering(
             Some(stepped) => stepped,
             None => {
                 let stepped = reduce_unpiloted(state, &Action::new(action.clone(), seat, nonce));
+                // R3575603: the memo keeps only a step the search pays more than its node for.
                 if let Some(memo) = memo
                     && stepped.error.is_none()
-                    && is_expensive_step(state, seat, action, &stepped)
+                    && (surcharge_nodes(state, seat, action) > 0
+                        || announced_surcharge_nodes(state, action, &stepped) > 0)
                 {
                     memo.keep(state, seat, action, &stepped);
                 }
@@ -799,7 +771,7 @@ fn simulate_answering(
             }
         };
         if let Some(error) = first.error {
-            note_sim_error(counter);
+            counter.note_sim_error();
             return Some(Err(error));
         }
         charge_announced(counter, state, action, &first);
@@ -821,7 +793,7 @@ fn simulate_answering(
                     break;
                 };
                 if worked >= KY_COMPETITION_MAX as usize {
-                    note_sim_error(counter);
+                    counter.note_sim_error();
                     return Some(Err("too many worked answers in one step".to_string()));
                 }
                 current = match step_answer(&keyed, seat, answer, counter, "sim")? {
@@ -832,7 +804,7 @@ fn simulate_answering(
                 continue;
             }
             if answered >= AI_SEARCH.max_auto_answers as usize {
-                note_sim_error(counter);
+                counter.note_sim_error();
                 return Some(Err("too many opponent prompts in one step".to_string()));
             }
             current = match best_auto_answer(&current, other, tried, counter, "sim", prices)? {
@@ -858,25 +830,6 @@ fn passed_score(state: &GameState, seat: PlayerId, prices: &Prices) -> f64 {
         + float_credit(state, seat, unspent, &AI_EVAL)
 }
 
-/// `closeLine`'s step: the line's turn ended here, or `None` where the line stays as it stands.
-fn close_line_step(
-    state: &GameState,
-    seat: PlayerId,
-    root_turn: i32,
-    counter: &dyn NodeCounter,
-    prices: &Prices,
-) -> Option<GameState> {
-    if line_status(state, seat, root_turn) == LineStatus::Open
-        && state.pending.is_none()
-        && state.active == seat
-        && state.phase == Phase::Main
-        && let Some(Ok(next)) = simulate(state, seat, &ActionBody::EndTurn, counter, prices)
-    {
-        return Some(next);
-    }
-    None
-}
-
 /// Where a line stops: a line still open in the seat's main phase ends its turn here (one node, when
 /// one is left). Anything else stops where it stands.
 pub fn close_line(
@@ -886,7 +839,15 @@ pub fn close_line(
     counter: &dyn NodeCounter,
     prices: &Prices,
 ) -> GameState {
-    close_line_step(state, seat, root_turn, counter, prices).unwrap_or_else(|| state.clone())
+    // An open line with no prompt is the seat's own turn (`line_status`).
+    if line_status(state, seat, root_turn) == LineStatus::Open
+        && state.pending.is_none()
+        && state.phase == Phase::Main
+        && let Some(Ok(next)) = simulate(state, seat, &ActionBody::EndTurn, counter, prices)
+    {
+        return next;
+    }
+    state.clone()
 }
 
 /// The static value of a line that stopped at `state`: a passed turn pays for its unspent mana.
@@ -896,25 +857,6 @@ pub fn static_score(state: &GameState, seat: PlayerId, root_turn: i32, prices: &
     } else {
         evaluate_priced(state, seat, NextSwing::Enemy, &AI_EVAL, prices)
     }
-}
-
-/// A line's value: `static_score`, but an open line is first closed with an endTurn if the seat is in its
-/// main phase and a node is left.
-pub fn terminal_score(
-    state: &GameState,
-    seat: PlayerId,
-    root_turn: i32,
-    counter: &dyn NodeCounter,
-    prices: &Prices,
-) -> f64 {
-    let status = line_status(state, seat, root_turn);
-    if status == LineStatus::Open {
-        return match close_line_step(state, seat, root_turn, counter, prices) {
-            None => evaluate_priced(state, seat, NextSwing::Enemy, &AI_EVAL, prices),
-            Some(closed) => static_score(&closed, seat, root_turn, prices),
-        };
-    }
-    static_score(state, seat, root_turn, prices)
 }
 
 /// `items` sorted and joined by commas: a part of `search_signature` that two orders of the same moves
@@ -961,8 +903,17 @@ fn card_signature(card: &CardInstance) -> String {
 fn unit_play_signature(state: &GameState, unit: &CardInstance) -> String {
     let view = unit_view(state, unit);
     let frozen = unit.frozen.map(|thaw| format!(":f{thaw}")).unwrap_or_default();
+    // R4808000: the damage chain a Churnwalker put the unit in (R3554007), only while it is in one.
+    let shared = unit
+        .shared_chain
+        .map(|chain| format!(":c{chain}"))
+        .unwrap_or_default();
+    let split = unit
+        .split_chain
+        .map(|chain| format!(":x{chain}"))
+        .unwrap_or_default();
     format!(
-        "{}{}{}:{}/{}/{}/{}:{:?}:{:?}/{:?}:{}:{:?}:{:?}{}{frozen}",
+        "{}{}{}:{}/{}/{}/{}:{:?}:{:?}/{:?}:{}:{:?}:{:?}{}{frozen}{shared}{split}",
         unit.def_id,
         if unit.radiant { "*" } else { "" },
         if unit.vanilla { "~" } else { "" },
@@ -1083,7 +1034,8 @@ fn push_side_parts(state: &GameState, player: PlayerId, parts: &mut Vec<String>)
     }
 }
 
-/// Position signature for beam deduplication and lethal visited set (R1224, #898, #1797, R3772000).
+/// Position signature for the beam's duplicate check and, with the units' lanes (`position_key`, R4806000),
+/// the lethal solver's visited set (R1224, #898, #1797, R3772000, R4808000).
 pub fn search_signature(state: &GameState, seat: PlayerId) -> String {
     position_signature(state, seat, false)
 }
@@ -1267,23 +1219,55 @@ fn position_signature(state: &GameState, seat: PlayerId, lane_free: bool) -> Str
     {
         parts.push(format!("E{}", element.as_str()));
     }
+    // R4808000: while a card that copies the last Spell (C #57 Echo) is where the seat could play it
+    // (its hand or its graveyard), the last Spell is that card's text (`subsystems::copied_text_of`),
+    // so two orders of the same plays that end on different Spells are two positions; said only then,
+    // so every other signature stays as it was.
+    let side = &state.players[seat];
+    if side
+        .hand
+        .iter()
+        .chain(&side.graveyard)
+        .any(subsystems::copies_text)
+    {
+        let last = state.last_spell.as_ref().map_or("-".to_string(), |last| {
+            format!("{}{}", last.def_id, if last.radiant { "*" } else { "" })
+        });
+        parts.push(format!("V{last}"));
+    }
     parts.join("|")
 }
 
-/// Every active unit's lane, each side's in `active_units_of` order, the sides in `PLAYER_IDS` order
-/// (#1797): what `search_signature` leaves out. The beam's duplicate check reads the two together, so
-/// two placements of one play that differ only in lane stay two positions, while two orders of the
-/// same moves into the same lanes stay one.
+/// Every unit's lane, Dormant cards included, with an animated card's home zone beside it (R4808000),
+/// each side's in `units_on_field_of` order, the sides in `PLAYER_IDS` order (#1797): what
+/// `search_signature` leaves out. The beam's duplicate check reads the two together, as `position_key` does
+/// for the lethal solver's and the concession check's walks, so two placements of one play that differ only
+/// in lane stay two positions, while two orders of the same moves into the same lanes stay one.
 pub fn unit_lanes(state: &GameState) -> String {
     PLAYER_IDS
         .into_iter()
         .map(|player| {
-            active_units_of(state, player)
+            units_on_field_of(state, player)
                 .into_iter()
-                .map(|unit| slot_of(state, unit).map_or(0, |slot| slot.lane).to_string())
+                .map(|unit| {
+                    let lane = slot_of(state, unit).map_or(0, |slot| slot.lane);
+                    // R4808000: an animated card's home, the backrow zone it goes back to.
+                    match home_of(state, &unit.id) {
+                        Some(home) => format!("{lane}h{}{}", home.zone.player, home.zone.lane),
+                        None => lane.to_string(),
+                    }
+                })
                 .collect::<Vec<_>>()
                 .join(",")
         })
         .collect::<Vec<_>>()
         .join("/")
+}
+
+/// A position of the lethal solver's and the concession check's walks (R4806000, R2660000): the
+/// search's own identity for it (`search_signature`) and the units' lanes, which that leaves out, so a
+/// unit played into another lane is another position, while two orders of the same moves into the same
+/// lanes stay one.
+pub(crate) fn position_key(state: &GameState, seat: PlayerId) -> String {
+    format!("{}|{}", search_signature(state, seat), unit_lanes(state))
 }

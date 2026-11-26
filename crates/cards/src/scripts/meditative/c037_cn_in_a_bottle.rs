@@ -1,19 +1,20 @@
 //! M #37 CN in a Bottle (SPEC §8.8 row 37): (1) Spell, CN, Epic.
 //!
-//! Base:    "Cast on draw: Add a random Radiant card to your hand. It costs (1) more (up to (4))."
+//! Base:    "Cast on draw: Add a random Radiant card to your hand. It costs (2) more (up to (4))."
 //! Radiant: "Cast on draw: Add a random Radiant card to your hand. It costs (0)."
 //! Engine:
 //! - **Cast on draw** is the static flag §2.4's draw reads (R58): drawn, it casts itself at once and
 //!   the draw repeats, so its owner draws again. Setup never deals it (R635, R748).
 //! - **The card:** `add_random_from_catalog` of one non-token card of every open set but this one
-//!   (R380, R387), Radiant, `chinese` (ME-CN), on the base face `costMod: 1` up to (4) (R1704003)
-//!   and on the Radiant face `costOverride: 0`. R673's Glitch roll and its own arrival hooks (R151)
+//!   (R380, R387), Radiant, `chinese` (ME-CN), on the base face `costMod` of the declared `surcharge`,
+//!   2 since issue #4783 (1 until then, a catalog number), up to (4) (R1704003), and on the Radiant
+//!   face `costOverride: 0`. R673's Glitch roll and its own arrival hooks (R151)
 //!   apply. Only the owner sees it (R97). A full hand burns it (§2.4, R4).
 //! - **The (1) and the play** are R1149001's: a bottle that reaches a hand any other way (an add, a
 //!   bounce, a steal, a draw past R58's chain cap) stays there as a (1) Spell, and played from it, it
 //!   does the same.
 //!
-//! Tunes: surcharge 1 ↓, on the base face only; setCost 0 ↓, on the Radiant face only (R1431, R824000,
+//! Tunes: surcharge 2 ↓, on the base face only; setCost 0 ↓, on the Radiant face only (R1431, R824000,
 //! R1748003). The cap of (4) stays printed (R1704003).
 
 use jackioh_engine::effects::add_random_from_catalog;
@@ -118,6 +119,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const BOTTLE: &str = "meditative-037";
+    /// The base face's declared `surcharge`: "It costs (2) more (up to (4))" (1 until issue #4783).
+    const SURCHARGE: i32 = 2;
     const STOCKPILE: &str = "core-005"; // Stockpile: Draw 2
     const FILLER: &str = "core-005";
 
@@ -361,14 +364,22 @@ mod tests {
                     .collect()
             }
 
+            /// R1704003: a card at (2) or less costs (2) more, and one at (3) only (1) more, up to (4).
             #[test]
-            fn r1704003_at_3_or_less_costs_1_more() {
+            fn r1704003_at_3_or_less_costs_2_more_up_to_4() {
                 let seen: Vec<(Option<i32>, i32)> = raised("bottle-raise-low", 80)
                     .into_iter()
                     .filter(|(printed, _)| printed.is_some_and(|cost| cost <= 3))
                     .collect();
                 assert!(seen.iter().any(|(printed, _)| *printed == Some(3)), "{seen:?}");
-                assert!(seen.iter().all(|(_, cost_mod)| *cost_mod == 1), "{seen:?}");
+                assert!(
+                    seen.iter().any(|(printed, _)| printed.is_some_and(|cost| cost <= 2)),
+                    "{seen:?}"
+                );
+                for (printed, cost_mod) in &seen {
+                    let printed = printed.expect("a printed cost");
+                    assert_eq!(*cost_mod, SURCHARGE.min(RAISE_UP_TO - printed), "{seen:?}");
+                }
             }
 
             #[test]
@@ -470,24 +481,35 @@ mod tests {
 
         #[test]
         fn r1748003_surcharge_moves_with_a_buff_or_a_nerf() {
-            // A Buff finds it at its floor of 1 (an amount never drops below 1, R386); a Nerf in the
-            // hand makes the card it adds cost (2) more, still up to (4).
-            let mut s = quiet("bottle-surcharge");
-            let _ = apply_for_p1(
-                &mut s,
-                &[jackioh_engine::effects::add_to_hand(json_as(json!({ "defId": BOTTLE })))],
-            );
-            let held = s
-                .hand(P1)
-                .into_iter()
-                .find(|card| card.def_id == BOTTLE)
-                .expect("the bottle stays in the hand");
-            assert!(!crate::can_upgrade_number(&s, &held.id, "surcharge"));
-            assert_eq!(crate::degrade_number(&mut s, &held.id, "surcharge"), 2);
-            s.play(&held.id, json!({}));
-            let new_card = s.hand(P1).last().cloned().expect("the card it added");
-            assert_ne!(new_card.def_id, BOTTLE);
-            assert_eq!(new_card.cost_mod, raise_on(&new_card, 2));
+            // A Buff in the hand lowers it to its floor of 1 (an amount never drops below 1, R386), where
+            // a second Buff finds nothing to move; a Nerf makes the card it adds cost (3) more, still up
+            // to (4).
+            for (buffed, surcharge) in [(true, SURCHARGE - 1), (false, SURCHARGE + 1)] {
+                let mut s = quiet("bottle-surcharge");
+                let _ = apply_for_p1(
+                    &mut s,
+                    &[jackioh_engine::effects::add_to_hand(json_as(json!({ "defId": BOTTLE })))],
+                );
+                let held = s
+                    .hand(P1)
+                    .into_iter()
+                    .find(|card| card.def_id == BOTTLE)
+                    .expect("the bottle stays in the hand");
+                if buffed {
+                    assert_eq!(crate::upgrade_number(&mut s, &held.id, "surcharge"), surcharge);
+                    assert!(!crate::can_upgrade_number(&s, &held.id, "surcharge"));
+                } else {
+                    assert_eq!(crate::degrade_number(&mut s, &held.id, "surcharge"), surcharge);
+                }
+                s.play(&held.id, json!({}));
+                let new_card = s.hand(P1).last().cloned().expect("the card it added");
+                assert_ne!(new_card.def_id, BOTTLE);
+                assert_eq!(
+                    new_card.cost_mod,
+                    raise_on(&new_card, surcharge),
+                    "buffed {buffed}"
+                );
+            }
         }
 
         #[test]

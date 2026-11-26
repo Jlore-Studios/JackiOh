@@ -77,11 +77,12 @@ pub struct AdminAction {
     pub at: i64,
 }
 
-/// R3074000: how `GET /api/admin/audit` narrows the audit read. `before_id` is an exclusive
-/// upper bound on the row id, the cursor of the next older page; `profile_id` and `route` are
-/// exact matches; `since` and `until` are inclusive lower and upper bounds on the row's `at`
+/// R3074000: how `GET /api/admin/audit` narrows the audit read. `before_id` is the id of
+/// the last row of the shown page: the read answers rows strictly older than that row in
+/// `(at desc, id desc)` order, not rows with a smaller id; `profile_id` and `route` are exact
+/// matches; `since` and `until` are inclusive lower and upper bounds on the row's `at`
 /// (epoch milliseconds). `None` (and, by the time it reaches the store, never an empty string)
-/// means no constraint.
+/// means no constraint. Naming no row answers an empty page.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct AdminActionFilter {
     pub before_id: Option<i64>,
@@ -234,20 +235,15 @@ impl Tx<'_> {
         admin_dispatch!(self, actions_append(action))
     }
 
-    /// R3074000: the audit rows matching `filter`, newest first (of two at once, the later
-    /// written), at most `limit` of them.
+    /// R3074000: the audit rows matching `filter` in `(at, id)` order, newest first (of
+    /// two at once, the later `at`; a shared `at` broken by id), at most `limit` of them. A
+    /// `before_id` cursor names the shown page's last row and answers the next older page.
     pub async fn admin_actions_page(
         &mut self,
         filter: &AdminActionFilter,
         limit: i64,
     ) -> StoreResult<Vec<AdminAction>> {
         admin_dispatch!(self, actions_page(filter, limit))
-    }
-
-    /// R3074000: the newest `limit` audit rows, newest first (of two at once, the later written).
-    pub async fn admin_actions_recent(&mut self, limit: i64) -> StoreResult<Vec<AdminAction>> {
-        self.admin_actions_page(&AdminActionFilter::default(), limit)
-            .await
     }
 
     /// R3074001: the ladders on which the profile holds a hand-set rating, Constructed first.
@@ -438,7 +434,8 @@ mod pg {
         let rows = sqlx::query(
             "select id, profile_id, route, request, before_value, after_value, at
                from public.admin_actions
-              where ($2::bigint is null or id < $2)
+              where (($2::bigint is null)
+                 or (at, id) < (select at, id from public.admin_actions where id = $2))
                 and ($3::text is null or profile_id::text = $3)
                 and ($4::text is null or route = $4)
                 and ($5::double precision is null or at >= to_timestamp($5::double precision / 1000.0))
@@ -597,6 +594,9 @@ mod pg {
     }
 
     pub async fn posts_get(t: &mut PgTx<'_>, id: &str) -> Result<Option<NewsPost>, StoreError> {
+        if id.contains('\0') {
+            return Ok(None);
+        }
         run_as(t, None).await?;
         let row = sqlx::query(concat!(
             "select ",
@@ -651,6 +651,9 @@ mod pg {
         id: &str,
         at: i64,
     ) -> Result<Option<NewsPost>, StoreError> {
+        if id.contains('\0') {
+            return Ok(None);
+        }
         run_as(t, None).await?;
         let row = sqlx::query(concat!(
             "update public.news_posts
@@ -706,10 +709,21 @@ mod fake {
         limit: i64,
     ) -> Result<Vec<AdminAction>, StoreError> {
         let tables = call(f, "admin.actions.recent")?;
+        let anchor = filter.before_id.and_then(|before| {
+            tables
+                .actions
+                .iter()
+                .find(|row| row.id == before)
+                .map(|row| (row.at, row.id))
+        });
         let kept: Vec<AdminAction> = tables
             .actions
             .iter()
-            .filter(|row| filter.before_id.is_none_or(|before| row.id < before))
+            .filter(|row| match (filter.before_id, anchor) {
+                (None, _) => true,
+                (Some(_), None) => false,
+                (Some(_), Some((at, id))) => (row.at, row.id) < (at, id),
+            })
             .filter(|row| {
                 filter
                     .profile_id
@@ -797,6 +811,9 @@ mod fake {
     }
 
     pub fn posts_get(f: &mut FakeTx<'_>, id: &str) -> Result<Option<NewsPost>, StoreError> {
+        if id.contains('\0') {
+            return Ok(None);
+        }
         let tables = call(f, "admin.posts.get")?;
         Ok(tables.posts.iter().find(|post| post.id == id).cloned())
     }
@@ -826,6 +843,9 @@ mod fake {
     }
 
     pub fn posts_take_down(f: &mut FakeTx<'_>, id: &str, at: i64) -> Result<Option<NewsPost>, StoreError> {
+        if id.contains('\0') {
+            return Ok(None);
+        }
         let tables = call(f, "admin.posts.takeDown")?;
         let Some(post) = tables
             .posts

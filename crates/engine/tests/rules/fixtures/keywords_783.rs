@@ -130,6 +130,16 @@ pub fn cloaked_bolt() -> CardDef {
     def(7841, "cloaked-bolt", "Spell", 1, json!([{ "kind": "Cloaked" }]))
 }
 
+/// R4590000: a Cloaked 2/3 at (1) whose reveal draws a card.
+pub fn revealed_drawer() -> CardDef {
+    unit(7859, "revealed-drawer", 1, 2, 3, json!([{ "kind": "Cloaked" }]))
+}
+
+/// R4590001: a 2/5 whose aura is IA #142's random-targets aura.
+pub fn random_targets_aura() -> CardDef {
+    unit(7860, "random-targets-aura", 2, 2, 5, json!([]))
+}
+
 /// A Cloaked Field Spell at (2) whose aura gives its controller's Units +1 Attack, and whose Cry deals 1
 /// to the enemy hero.
 pub fn cloaked_field() -> CardDef {
@@ -410,6 +420,8 @@ pub static KW_DEFS: LazyLock<Vec<CardDef>> = LazyLock::new(|| {
         sniper(),
         cloaked_unit(),
         cloaked_bolt(),
+        revealed_drawer(),
+        random_targets_aura(),
         cloaked_field(),
         cloaked_trap(),
         cloak_units(),
@@ -548,6 +560,23 @@ pub static KW_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|
                     json!({ "to": { "of": "chosen" }, "amount": 2 }),
                 ))]
             })),
+            ..Script::default()
+        }),
+    );
+    table.insert(
+        revealed_drawer().id,
+        both(Script {
+            revealed: Some(hook(|_ctx| vec![effects::draw(json_as(json!({ "count": 1 })))])),
+            ..Script::default()
+        }),
+    );
+    table.insert(
+        random_targets_aura().id,
+        both(Script {
+            static_flags: Some(StaticFlags {
+                random_opponent_spell_targets: Some(true),
+                ..StaticFlags::default()
+            }),
             ..Script::default()
         }),
     );

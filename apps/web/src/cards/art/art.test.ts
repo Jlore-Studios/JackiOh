@@ -59,23 +59,32 @@ afterEach(() => {
 });
 
 describe("B1: artSpec is pure and deterministic", () => {
-  it("B1 equal arguments give deep-equal specs for every catalog card, and Math.random is never called", () => {
-    const random = vi.spyOn(Math, "random");
+  // One test over the whole catalog builds about four thousand SVGs and exceeds vitest's
+  // 5 s default on a loaded runner (web (unit 6/8) timed out with no assertion failed,
+  // #4690). Each chunk below keeps the same assertions over its slice, so the coverage is
+  // unchanged and each stays well under the default.
+  const B1_CARDS_PER_TEST = 250;
+  for (let start = 0; start < DEFS.length; start += B1_CARDS_PER_TEST) {
+    const slice = DEFS.slice(start, start + B1_CARDS_PER_TEST);
+    const end = start + slice.length;
+    it(`B1 equal arguments give deep-equal specs for every catalog card, and Math.random is never called (${start + 1}-${end} of ${DEFS.length})`, () => {
+      const random = vi.spyOn(Math, "random");
 
-    for (const card of DEFS) {
-      const theme = themeFor(card.tags, card.type);
-      const composition = compositionFor(card.type);
-      const motif = motifFor(card.name, theme);
-      for (const radiant of [false, true]) {
-        const first = artSpec(card.id, theme, composition, radiant, motif);
-        const second = artSpec(card.id, theme, composition, radiant, motif);
-        expect(second, `${card.id} radiant=${String(radiant)}`).toEqual(first);
-        expect(artDataUri(second)).toBe(artDataUri(first));
+      for (const card of slice) {
+        const theme = themeFor(card.tags, card.type);
+        const composition = compositionFor(card.type);
+        const motif = motifFor(card.name, theme);
+        for (const radiant of [false, true]) {
+          const first = artSpec(card.id, theme, composition, radiant, motif);
+          const second = artSpec(card.id, theme, composition, radiant, motif);
+          expect(second, `${card.id} radiant=${String(radiant)}`).toEqual(first);
+          expect(artDataUri(second)).toBe(artDataUri(first));
+        }
       }
-    }
 
-    expect(random).not.toHaveBeenCalled();
-  });
+      expect(random).not.toHaveBeenCalled();
+    });
+  }
 
   it("B1 a spec does not depend on what was computed before it (no hidden state)", () => {
     const card = def("core-002");

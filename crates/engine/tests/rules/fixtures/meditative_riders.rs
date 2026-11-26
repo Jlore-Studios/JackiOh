@@ -3,7 +3,10 @@
 //! Ids are prefixed `rider-` and indexed from 4200, so they cannot collide with another fixture
 //! file's.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

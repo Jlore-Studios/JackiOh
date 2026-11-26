@@ -152,6 +152,7 @@ mod tests {
             pool,
             pool_cap: pool,
             spent: false,
+            own_start: None,
         });
         side
     }

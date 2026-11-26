@@ -42,6 +42,7 @@ import {
   WATERMARK_OPACITY_ON_DARK,
   WATERMARK_SIZE_PCT,
   glyphUri,
+  setAccentOf,
   setMarkOf,
   watermarkOf,
 } from "./setMark.ts";
@@ -150,6 +151,8 @@ async function freshCardFace(): Promise<CardFaceModule> {
     SCENE_RECIPES: data.SCENE_RECIPES,
     ALT_SCENE_RECIPES: data.ALT_SCENE_RECIPES,
   });
+  // #4714: and the cosmetic offers the face's look reads, as setup.ts installs them.
+  await (await import("./versions.ts")).loadCosmeticOffers();
   return import("./CardFace.tsx");
 }
 
@@ -458,7 +461,7 @@ describe("B10: RulesText marks terms in bold", () => {
     const term = one(cry, ".card-text strong.cf-term");
     expect(term.getAttribute("data-term")).toBe("Cry");
     expect(term.textContent).toBe("Cry:");
-    expect(one(cry, ".cf-text-base").textContent).toBe("Cry: Destroy an enemy non-Human Unit. You have 1 less mana next turn.");
+    expect(one(cry, ".cf-text-base").textContent).toBe("Cry: Destroy an enemy non-Human Unit. Overload (1).");
     cleanup();
 
     const start = one(catalogFace("core-040"), '.card-text strong.cf-term[data-term="Start of turn"]');
@@ -468,8 +471,9 @@ describe("B10: RulesText marks terms in bold", () => {
     const golem = catalogFace("core-055");
     const terms = [...golem.querySelectorAll(".card-text strong.cf-term")];
     // R910000: "Can use enemy Units as Tributes" bolds its plural too.
-    expect(terms.map((strong) => strong.textContent)).toEqual(["Taunt", "Tribute 3", "Tributes"]);
-    expect(terms.map((strong) => strong.getAttribute("data-term"))).toEqual(["Taunt", "Tribute", "Tribute"]);
+    // R4747000: core-055's keyword line prints "Tribute 3, Taunt", in text order.
+    expect(terms.map((strong) => strong.textContent)).toEqual(["Tribute 3", "Taunt", "Tributes"]);
+    expect(terms.map((strong) => strong.getAttribute("data-term"))).toEqual(["Tribute", "Taunt", "Tribute"]);
   });
 
   it("B10 every catalog face, base and radiant, Classic and Classic+ too, draws each term its text names in bold, its keywords among them (#85)", () => {
@@ -677,9 +681,9 @@ describe("B14: the radiant face", () => {
   it("R277 a radiant face prints its whole text once and marks in gold what the base face lacks", () => {
     const cf = catalogFace("core-004", true);
     const text = one(cf, ".card-text");
-    expect(one(text, ".cf-text-base").textContent).toBe("Cry: Flip 10 coins. Gain +1 Attack per heads and +1 Health per tails. Flip a coin. If heads, gain Divine Shield; if tails, gain Rush.");
+    expect(one(text, ".cf-text-base").textContent).toBe("Cry: Flip a coin 12 times. Gain +1 Attack per heads and +1 Health per tails.");
     expect(text.querySelector(".cf-text-radiant")).toBeNull();
-    expect([...text.querySelectorAll(".cf-mark")].map((mark) => mark.textContent)).toEqual(["10"]);
+    expect([...text.querySelectorAll(".cf-mark")].map((mark) => mark.textContent)).toEqual(["12"]);
   });
 
   it("B14 a radiant face prints its own keyword line, never the base keywords it replaced (core-056, core-025)", () => {
@@ -701,7 +705,7 @@ describe("B14: the radiant face", () => {
 
   it("B14 a clause the radiant cell restates is printed once, in its radiant form (core-002, core-046)", () => {
     const speciesist = one(catalogFace("core-002", true), ".card-text");
-    expect(speciesist.textContent).toBe("Cry: Destroy all enemy non-Human Units. You have 1 less mana next turn.");
+    expect(speciesist.textContent).toBe("Cry: Destroy all enemy non-Human Units. Overload (1).");
     expect(speciesist.querySelectorAll('strong.cf-term[data-term="Cry"]')).toHaveLength(1);
     cleanup();
     expect(one(catalogFace("core-046", true), ".card-text").textContent).toBe("Aura: Enemy Units have −2/−2.\nEmbiggened (3): −4/−4 instead.");
@@ -1041,6 +1045,17 @@ describe("R503: the set mark and a token's printed rarity", () => {
     expect(svg).not.toContain("<text");
     expect(svg).not.toContain("<title");
     expect(one(catalogFace("stinkyscapeplus-001"), ".cf-set").getAttribute("data-set-mark")).toBe("stinkyscape-plus");
+  });
+
+  it("R4596000 an Infinite Assault face wears the glitch accent, base and Radiant, and no other set's face does", () => {
+    expect(setAccentOf("Infinite Assault")).toBe("glitch");
+    for (const set of ["Core", "Classic", "Stinkyscape+", "Training Grounds", "Boss"]) expect(setAccentOf(set), set).toBeUndefined();
+    expect(setAccentOf(null)).toBeUndefined();
+    for (const radiant of [false, true]) {
+      expect(catalogFace("infiniteassault-217", radiant).getAttribute("data-set-accent")).toBe("glitch");
+      cleanup();
+    }
+    expect(catalogFace("core-002").getAttribute("data-set-accent")).toBeNull();
   });
 
   it("R503 a set with no glyph of its own gets the fallback, still named; an unknown card shows no set", () => {

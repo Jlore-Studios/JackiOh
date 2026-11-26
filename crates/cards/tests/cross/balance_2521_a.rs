@@ -142,14 +142,16 @@ const NOT_PIECES: [&str; 15] = [
 /// B17, B18: the weapons that aim at one enemy Unit — id, name, damage on the base and Radiant faces.
 /// #4154 moved the three Beams' damage down: 5, 7 and 9 (Radiant 10, 14 and 18) to 4, 6 and 8 (Radiant 8,
 /// 12 and 16), #4353 to 3, 5 and 7 (Radiant 6, 10 and 14), and Repeater v5's from 3 (Radiant 6) to 2
-/// (Radiant 4), and #4440 the Beams' to 2, 4 and 6 (Radiant 4, 8 and 12).
+/// (Radiant 4), and #4440 the Beams' to 2, 4 and 6 (Radiant 4, 8 and 12), and #4665 Beam v5's to 5
+/// (Radiant 10), and #4783 the Cannons' from 5, 7 and 9 (Radiant 10, 14 and 18) to 4, 6 and 8 (Radiant 8,
+/// 12 and 16).
 const AIMED_WEAPONS: [(&str, &str, i32, i32); 9] = [
     ("stinkyscape-050", "Beam v3", 2, 4),
     ("stinkyscape-054", "Beam v4", 4, 8),
-    ("stinkyscape-058", "Beam v5", 6, 12),
-    (CANNON_V3, "Cannon v3", 5, 10),
-    ("stinkyscape-056", "Cannon v4", 7, 14),
-    ("stinkyscape-060", "Cannon v5", 9, 18),
+    ("stinkyscape-058", "Beam v5", 5, 10),
+    (CANNON_V3, "Cannon v3", 4, 8),
+    ("stinkyscape-056", "Cannon v4", 6, 12),
+    ("stinkyscape-060", "Cannon v5", 8, 16),
     ("stinkyscape-051", "Repeater v3", 1, 2),
     ("stinkyscape-055", "Repeater v4", 2, 4),
     ("stinkyscape-059", "Repeater v5", 2, 4),
@@ -1099,7 +1101,7 @@ fn b11_a_buffed_piece_fuses_with_its_printed_numbers_not_its_buffed_ones() {
         }));
         let cannon = s.unit_at(P1, 1).id;
         step_param(s.card_mut(cannon.as_str()), "damage", 2);
-        let printed = if radiant { 10 } else { 5 };
+        let printed = if radiant { 8 } else { 4 };
         let buffed = params_view(s.state(), s.card(cannon.as_str()))
             .and_then(|numbers| numbers.get("damage").copied());
         assert!(
@@ -1126,8 +1128,8 @@ fn b11_a_buffed_piece_fuses_with_its_printed_numbers_not_its_buffed_ones() {
         if !radiant {
             assert_eq!(
                 params_view(s.state(), &ship).and_then(|numbers| numbers.get("damage").copied()),
-                Some(5),
-                "the Starship's Cannon v3 deals its printed 5"
+                Some(4),
+                "the Starship's Cannon v3 deals its printed 4"
             );
         }
     }
@@ -1245,7 +1247,7 @@ fn b13_stratos_swarm_leaves_an_occupied_unit_zone_alone() {
 }
 
 #[test]
-fn b14_cloaking_module_is_a_1_cost_2_2_rare_unit_whose_radiant_4_4_adds_immune_to_spells() {
+fn b14_cloaking_module_is_a_1_cost_3_2_rare_unit_whose_radiant_6_4_adds_immune_to_spells() {
     let def = card_def(CLOAKING_MODULE);
     assert_eq!(def.type_, CardType::Unit);
     assert_eq!(def.rarity, Rarity::Rare);
@@ -1263,14 +1265,15 @@ fn b14_cloaking_module_is_a_1_cost_2_2_rare_unit_whose_radiant_4_4_adds_immune_t
     let mut radiant_printed = printed;
     radiant_printed.push(KeywordKind::ImmuneToSpells);
     assert_eq!(radiant, radiant_printed);
+    // 3/2 (Radiant 6/4) since issue #4783, 2/2 (4/4) before.
     let faces = serde_json::to_value(def).expect("a CardDef serializes");
     assert_eq!(
         (&faces["base"]["attack"], &faces["base"]["health"]),
-        (&json!(2), &json!(2))
+        (&json!(3), &json!(2))
     );
     assert_eq!(
         (&faces["radiant"]["attack"], &faces["radiant"]["health"]),
-        (&json!(4), &json!(4))
+        (&json!(6), &json!(4))
     );
 }
 
@@ -1703,7 +1706,7 @@ fn b20_flak_never_deals_outside_least_to_most_nor_hits_its_own_side_over_many_se
 }
 
 #[test]
-fn b20_base_flak_weights_its_amounts_60_30_10_lowest_first() {
+fn b20_r4665004_base_flak_weights_its_amounts_60_33_7_lowest_first() {
     let rolled = amounts(FLAK_V5, false, "b20-weights", 150, &untuned);
     assert_eq!(rolled.len(), 150 * ENEMIES_A_ROUND * 3);
     let (ones, twos, threes) = (tally(&rolled, 1), tally(&rolled, 2), tally(&rolled, 3));
@@ -1712,14 +1715,15 @@ fn b20_base_flak_weights_its_amounts_60_30_10_lowest_first() {
         ones > twos + threes,
         "1 is 60%: {ones} 1s, {twos} 2s, {threes} 3s"
     );
-    assert!(twos > 2 * threes, "2 is 30%, 3 is 10%: {twos} 2s, {threes} 3s");
-    assert!(threes > 0, "3 is 10%, never left out");
+    assert!(twos > 2 * threes, "2 is 33%, 3 is 7%: {twos} 2s, {threes} 3s");
+    assert!(threes > 0, "3 is 7%, never left out");
 }
 
 #[test]
 fn b20_radiant_flak_s_lucky_1_rolls_twice_per_target_and_keeps_the_higher() {
-    // Over 1–3 at 60/30/10 (the base range since issue #4292; 2–4 before), the higher of two rolls is
-    // 1 at 36%, 2 at 45% and 3 at 19%; one roll alone would make 1 the most common and 3 a tenth.
+    // Over 1–3 at 60/33/7 (since issue #4665, R4665004; the base range since issue #4292, 2–4 before),
+    // the higher of two rolls is 1 at 36%, 2 at about 50% and 3 at about 13.5%; one roll alone would
+    // make 1 the most common and 3 a fourteenth.
     let rolled = amounts(FLAK_V5, true, "b20-lucky", 200, &untuned);
     assert_eq!(rolled.len(), 200 * ENEMIES_A_ROUND * 3);
     let (ones, twos, threes) = (tally(&rolled, 1), tally(&rolled, 2), tally(&rolled, 3));
@@ -1734,8 +1738,8 @@ fn b20_radiant_flak_s_lucky_1_rolls_twice_per_target_and_keeps_the_higher() {
     );
     assert!(ones > threes, "{ones} 1s, {threes} 3s");
     assert!(
-        threes * 100 > rolled.len() * 14,
-        "3 comes near 19%, not 10%: {threes} of {}",
+        threes * 100 > rolled.len() * 10,
+        "3 comes near 13.5%, not 7%: {threes} of {}",
         rolled.len()
     );
 }

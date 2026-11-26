@@ -2,7 +2,9 @@
 //! are tuning defaults: tests pin rankings and puzzle outcomes, never these values. Each constant
 //! object is a `const` of a struct named after it (SURFACE §4.2).
 
-use jackioh_engine::config::{CN_TECH_MIN_GAMES, KY_COMPETITION_MAX, MARKETPLACE_CREDITS_PER_MANA};
+use jackioh_engine::config::{
+    CN_TECH_MIN_GAMES, HERO_HEALTH, KY_COMPETITION_MAX, MARKETPLACE_CREDITS_PER_MANA,
+};
 use jackioh_engine::{KeywordKind, SetName};
 use serde::{Deserialize, Serialize};
 
@@ -129,7 +131,13 @@ pub const DUOS_PASS_PROBE_SEED: &str = "ai:duos-pass";
 
 /// R1127000: the most of the teammate's legal `Play` follow-ups one passed card is scored on, the
 /// card's own plays first, then the rest in `legal_actions` order: bounds scoring at one hand of
-/// cards times this many single `reduce` calls per `duos_passes` call.
+/// cards times this many single `reduce` calls per `duos_passes` call. It also bounds the hand cards
+/// the teammate's baseline is scored on (R1723000). R4932000: when more are listed than the room
+/// left, the kept ones are the first plays of the teammate's best-valued hand cards
+/// (`hand_card_value`), not the first in list order. The bound is not a hand size, which an effect
+/// moves (R1143). Its screen (#4932), `gate --duos --games 40` against the base build: random 39 and
+/// 39 won, greedy 36 and 36, 1 of 80 games played differently, 0 decided: inconclusive (R4319000),
+/// its scene tests settle it.
 pub const DUOS_PASS_MAX_FOLLOWUPS: usize = 8;
 
 /// R1723000: what each crystal of a team's `pass_cost` charges a pass, in `evaluate`'s points: the
@@ -195,9 +203,11 @@ pub struct AiSearch {
     /// hand and a full board (R186's sweep flags a decision over 2 s) cost about an ordinary one.
     pub fat_reference: i32,
     /// The least the scaled budget ever holds (the lethal walk still gets its depth-first pass and
-    /// the beam a few expansions at the widest states).
+    /// the beam a few expansions at the widest states), unless the budget's own `nodes` is less
+    /// (R4802000).
     pub fat_min_nodes: i32,
-    /// The least of the scaled budget the lethal solver's allowance shrinks to.
+    /// The least of the scaled budget the lethal solver's allowance shrinks to, unless the budget's own
+    /// `lethal_nodes` is less (R4802000). A state that is not fat keeps the budget's own allowance.
     pub fat_min_lethal: i32,
     /// R2575000: the most nodes a fat state's allowance is scaled from: the practice budget before
     /// issue #2575 doubled it, so a state whose every step costs the most spends what it did.
@@ -214,12 +224,13 @@ pub struct AiSearch {
     /// holds two states, and a decision meets a few at most.
     pub memo_steps: i32,
     /// The cards an armed backrow copy of which makes a simulated Attack cost `ai_turn_trap_nodes`
-    /// (§8.5 core-096: a whole random AI turn inside one reduce), asked only of an attack that could be
-    /// the lethal one the trap answers, so an ordinary poke is not priced like losing the turn. A fused
+    /// (§8.5 core-096: a whole random AI turn inside one reduce), asked only of an attack the trap
+    /// would answer, one its own projection calls lethal (`subsystems::is_lethal`, R4809001), so an
+    /// ordinary poke or an attack on a Defense Position Unit is not priced like losing the turn. A fused
     /// card holding one is charged the same (`stands_for_any`, #1240).
     pub ai_turn_trap_ids: &'static [&'static str],
-    /// Nodes an Attack into an armed `ai_turn_trap_ids` card pays beyond the one every `simulate`
-    /// takes — the playout's rough share of the nodes it burns.
+    /// Nodes an Attack an armed `ai_turn_trap_ids` card would answer pays beyond the one every
+    /// `simulate` takes — the playout's rough share of the nodes it burns.
     pub ai_turn_trap_nodes: i32,
     /// #1240: nodes a Play pays for each card in its player's hand while a card of the other side
     /// judges that player's plays (Pareto Optimality, `subsystems::watching`): the judge runs §10.7's
@@ -231,10 +242,11 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     zone_variants: 2,
     position_switches: 2,
     max_auto_answers: 8,
-    // #4447: 0. Its fork screen (3 against the control at 0, built from 3af8296300; 50 trunk deals on
-    // improve-dev) did not finish in the bot's run: stopped after 2 hours, nothing printed (training/
-    // improve.md, A screen).
-    replay_fill_steps: 0,
+    // R4697000: 3, the value R4447000's tests replay with. At 0 a replay cut where its world drew
+    // other cards than the line's ended its turn there, which R4608000 read as evidence against a
+    // win every draw gives. Fork screen on improve-dev (3 against the control at 0; --forks --extend,
+    // 200 trunk games), 207 forks, 107 live, edge +0.038 (+0.007 to +0.070) vs control ad096cc: kept.
+    replay_fill_steps: 3,
     max_auto_answer_options: 4,
     auto_answer_seed: "ai:answers",
     lethal_max_depth: 10,
@@ -316,6 +328,10 @@ pub struct KeywordWeights {
     /// swing at the next turn's face; this is what the body is worth for it beyond that, in trades.
     #[serde(rename = "Windfury")]
     pub windfury: f64,
+    /// R3543002, R4353002: no attack may target it, nor a Spell or Field Spell while it is in play, its
+    /// controller's own included, and it never stands in Defense Position.
+    #[serde(rename = "Evasive")]
+    pub evasive: f64,
 }
 
 impl KeywordWeights {
@@ -344,6 +360,7 @@ impl KeywordWeights {
             KeywordKind::Crater => Some(self.crater),
             KeywordKind::Flashback => Some(self.flashback),
             KeywordKind::Windfury => Some(self.windfury),
+            KeywordKind::Evasive => Some(self.evasive),
             _ => None,
         }
     }
@@ -450,6 +467,12 @@ pub struct EvalWeights {
     /// (R3543003); an exiling hit's removal and a Cleave splash's kill free none. Off, every swing counts and
     /// Frenzy frees none, as before.
     pub strike_back_survival_read: bool,
+    /// R4805000, #4805: whether the Taunt walk of `damage_past_taunts_with` (so `face_threat`, `ready_gap` and
+    /// all that read them) lands a Cleave splash on every unit it strikes: one without Taunt, or a Taunt the
+    /// walk has passed, as its earlier hits and splashes left it (gone, or back as its Reborn body), spending the
+    /// pools in the engine's order, a Trample attacker's excess going to the hero (§4.4 step 9). Off, a splash
+    /// on such a unit counts nothing, as before.
+    pub splash_trample_read: bool,
     /// Per point of unitView.health (current).
     pub health: f64,
     /// Per point of unitView.armor.
@@ -543,7 +566,9 @@ pub struct EvalWeights {
     /// R3951100: while a Feng Shui acts (Meditative #40, R981–R985), the share that counts of what the
     /// seat's next face-up play is worth to it (`evaluate::feng_shui_outlook`): of its own hand's cards a
     /// Feng Shui would judge, the best verdict its last element gives one, a reward at what the card would
-    /// gain in hand as Radiant and a punishment at the hit's cost on the hero curve. At 0 nothing is read.
+    /// gain in hand as Radiant and a punishment at the hit's cost on the hero curve. While a Feng Shui of
+    /// the seat's own acts, the Auspicious Rock its Activate adds next turn is one more such card
+    /// (`AI_FENG_SHUI_ROCK`, R4783041). At 0 nothing is read.
     pub feng_shui_outlook: f64,
     /// §3.2, R13, R3695001: the share of its `unit_worth` a card dormant under one of the seat's own
     /// unit piles counts. It resumes when the cards above it leave.
@@ -581,6 +606,14 @@ pub struct EvalWeights {
     /// trigger (`evaluate::awaken_price`) that `slumber_worth` adds, inside its slumber share, the seat's
     /// sleepers and the enemy's alike.
     pub awaken: f64,
+    /// R4648000: the share of an unevolved card's probed evolution (`evaluate::evolve_price`: one run of
+    /// its Evolve text's price × the runs its text takes now × `evaluate::evolve_closeness`) that
+    /// `unit_worth` adds, inside the Brittle share, the seat's units and the enemy's alike. At 0 nothing
+    /// reads it and the root spends no probe node on it.
+    pub evolve: f64,
+    /// R4648000: how close a card counts as standing to evolving when it waits on an event (its own
+    /// trigger, a Stack, or a hand the seat cannot see: `evaluate::EvolveCondition::Event`).
+    pub evolve_event_share: f64,
     /// R3822000: for each point of damage a unit's Burn and Toxic will deal it over `AI_AFFLICTION_TICKS`
     /// of its controller's turn starts (`evaluate::afflicted`), up to its health, the share of a `health`
     /// point taken off its worth; a Divine Shield a tick takes costs the same share of
@@ -604,16 +637,9 @@ pub struct EvalWeights {
     pub standing_unit_priced_once: bool,
     /// A backrow card the seat cannot read (on the enemy's side of the ledger).
     pub enemy_face_down: f64,
-    /// R351: per crystal of the cost such a card shows both players (`shown_cost`), on top of
-    /// `enemy_face_down`: a (6) back and a (0) back are not the same threat.
-    pub enemy_face_down_per_cost: f64,
     /// Per library card up to libraryComfort.
     pub library_card: f64,
     pub library_comfort: f64,
-    /// §2.4: taken off a side per fatigue draw it has taken (`fatigue_count`, public): the Nth draw
-    /// from an empty library deals N, so each one taken adds a point to every fatigue hit to come.
-    /// It reads the count alone, never the library, which `library_card` prices.
-    pub fatigue_draw: f64,
     /// Per crystal left at the end of the seat's own turn (terminal only).
     pub unspent_mana: f64,
     /// R3695000: per crystal of a passed line's Float that a "Float reduces cost" card in the seat's own
@@ -674,6 +700,10 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // edge 0.0 (-0.028 to 0.028); inconclusive (R4319000): 8 decided of 200 (won 4, lost 4), 33 diverged;
     // its scene tests settle it (training/improve.md, A screen).
     strike_back_survival_read: true,
+    // #4805: on. Its screen, 400 games on improve-dev against the control at cf1fb68fd9 with this flag off,
+    // read 200-200, edge 0.0 (0.0 to 0.0); inconclusive (R4319000): 0 decided of 200 (won 0, lost 0), 1
+    // diverged; its scene tests settle it (training/improve.md, A screen).
+    splash_trample_read: true,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -709,6 +739,12 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
         // #1602: off. At 1.0 its screen read 201-199, edge 0.005 (-0.005 to 0.015), which keeps nothing
         // (training/improve.md, A screen); inconclusive (R4319000): 1 decided of 200 (won 1, lost 0).
         windfury: 0.0,
+        // #4761: an untuned start, as Immune to Spells': removal can't reach it either, nor can any
+        // attack, though its owner's Spells can't buff it and it never defends. Its fork screen on
+        // improve-dev, 200 trunk games, 6 forks, 2 live, edge 0.0 (0.0 to 0.0), no faults, vs control
+        // 80415dd992: inconclusive (R4319000), 2 live forks; its scene tests
+        // (crates/ai/tests/ai/evasive.rs) settle it.
+        evasive: 1.0,
     },
     spell_damage: 0.5,
     brittle_discount: 0.5,
@@ -795,6 +831,11 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // play a lone Imprisoned Ship Smith and plays a Felinor Token over Imprisoned Cosmality. At 1.0 the
     // smoke gate read 20, 19 and 20 of 20; at 0, 20, 19 and 20.
     awaken: 1.0,
+    // R4648000: untuned starts for the training lanes, as R2688000's are: half of the evolution a card's
+    // closeness reaches, and a card waiting on an event at a quarter of the way there. At 0.5 and 0.25 the
+    // smoke gate read 20, 16 and 18 of 20.
+    evolve: 0.5,
+    evolve_event_share: 0.25,
     // R3822000: untuned starts, to revisit after #3574's sweep. A point of damage still to come at half a
     // point of health now, a hero's coming life at half its cost on the curve, and a unit a tick kills at
     // Brittle's own `brittle_discount`, since both ends come at the same stage. At 0.5 the smoke gate read
@@ -807,14 +848,8 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     backrow_per_cost: 0.8,
     standing_unit_priced_once: true,
     enemy_face_down: 2.0,
-    // #1602: off. At 0.8 its screen read 201-199, edge 0.005 (-0.017 to 0.027), which keeps nothing
-    // (training/improve.md, A screen); inconclusive (R4319000): 5 decided of 200 (won 3, lost 2).
-    enemy_face_down_per_cost: 0.0,
     library_card: 0.1,
     library_comfort: 10.0,
-    // #1602: off. At 1.0 its screen read 199-201, edge -0.005 (-0.022 to 0.012), which keeps nothing
-    // (training/improve.md, A screen); inconclusive (R4319000): 3 decided of 200 (won 1, lost 2).
-    fatigue_draw: 0.0,
     unspent_mana: 0.8,
     // R3695000: a crystal Floated toward a Float-discount card still above the crystals counts as one
     // left unspent does, the least issue #3695 allows: on such a crystal the line nets the card's
@@ -851,6 +886,8 @@ const _: () = assert!(AI_EVAL.feng_shui_outlook >= 0.0 && AI_EVAL.feng_shui_outl
 const _: () = assert!(AI_EVAL.dead_tradable_discount >= 0.0 && AI_EVAL.dead_tradable_discount <= 1.0);
 // R4440002: a share, so a card that pays Credits is never worth less than nothing in hand.
 const _: () = assert!(AI_EVAL.credits_card_discount >= 0.0 && AI_EVAL.credits_card_discount <= 1.0);
+// R4648000: a share, so a card waiting on an event never counts for more than its whole evolution.
+const _: () = assert!(AI_EVAL.evolve_event_share >= 0.0 && AI_EVAL.evolve_event_share <= 1.0);
 
 /// R4154402: the cards whose turn hooks destroy every permanent with a Plague Counter that the player whose
 /// turn starts controls (Classic #62 Living Bomb, R400): its start-of-turn hook its controller's, its
@@ -858,6 +895,28 @@ const _: () = assert!(AI_EVAL.credits_card_discount >= 0.0 && AI_EVAL.credits_ca
 /// permanent that hook reaches is a destroy waiting (`evaluate::plague_doomed`), and the move order tries a
 /// placement prompt's enemy permanents first (`candidates::plague_aims_first`).
 pub const AI_PLAGUE_BOMBS: &[&str] = &["classic-062"];
+
+/// R4783040: the cards the AI keeps for a last resort (issue #4783): Classic #37 Last Hurrah, which draws its
+/// whole deck, the hand cap burning the rest, and Stinkyscape+ #79 A Glimpse into the Endless Sea, which
+/// exiles its deck and every permanent for a countdown to a win. The search prices either far above what it
+/// costs (a fatigue draw counts nothing, `AI_EVAL.fatigue_draw`, and a countdown to a win counts a share of the
+/// win, R3696000), so a play of one is a candidate only while the seat's times are dire or it has no other
+/// play (`candidates::hold_last_resorts`).
+pub const AI_LAST_RESORT: &[&str] = &["classic-037", "stinkyscapeplus-079"];
+
+/// R4783040: the cards of `AI_LAST_RESORT` the seat may also play while it holds a way to put cards back into
+/// its deck (`candidates::refills_own_deck`): A Glimpse into the Endless Sea, which empties it.
+pub const AI_LAST_RESORT_REFILLED: &[&str] = &["stinkyscapeplus-079"];
+
+/// R4783040: the life at or under which the seat's times are dire and it may play a last-resort card, a
+/// third of a hero's starting `HERO_HEALTH`: one Feng Shui punishment (`FENG_SHUI_DAMAGE`) from dead.
+pub const AI_LAST_RESORT_DIRE_LIFE: i32 = HERO_HEALTH / 3;
+
+/// R4783041: the card a Feng Shui's Activate adds to its controller's hand, Meditative #39.1 Auspicious Rock
+/// (水), Radiant on the Radiant face. While a Feng Shui of the seat's own acts, the one its next turn's
+/// Activate adds is a card its next play may be (`evaluate::feng_shui_outlook`), and a play that leaves an
+/// element generating a card of its hand bridges to it (`candidates::Auspice::Bridge`).
+pub const AI_FENG_SHUI_ROCK: &str = "meditative-039-1";
 
 /// R2424000, R2687000: the most nodes a decision's Death probes (`evaluate::death_prices`) spend: two
 /// per field unit or readable backrow card with a Death, three per own hand Field Spell with one, three
@@ -899,16 +958,10 @@ pub const AI_ATTACK_HOOK_PROBE_NODES: usize = 24;
 /// each own hand Unit with one, and a spawn more per such hand Unit (one node, two on a full unit row).
 pub const AI_AWAKEN_PROBE_NODES: usize = 16;
 
-/// R4070000: the most nodes a decision's root prices spend, every probe's cap above together: the counter
-/// `decide::decision_prices_at` prices a state on outside a decision (`cargo jackioh positions`), so each
-/// probe runs to its own cap, as it does in a decision whose budget leaves it that many.
-pub const AI_DECISION_PRICE_NODES: usize = AI_DEATH_PROBE_NODES
-    + AI_TURN_HOOK_PROBE_NODES
-    + AI_ACTIVATION_PROBE_NODES
-    + AI_HAND_ACTIVATION_PROBE_NODES
-    + AI_PROMPT_ACTIVATION_PROBE_NODES
-    + AI_ATTACK_HOOK_PROBE_NODES
-    + AI_AWAKEN_PROBE_NODES;
+/// R4648000: the most nodes a decision's evolution probes (`evaluate::evolve_prices`) spend: one evolve
+/// for each unevolved Evolve card on either field, and a spawn (one node, two on a full unit row) and an
+/// evolve for each own hand Unit with an Evolve text.
+pub const AI_EVOLVE_PROBE_NODES: usize = 16;
 
 /// The greedy baseline's own evaluation (baselines.rs): AI_EVAL exactly as it stood when the quality
 /// gates were fixed on the seed series `gate:v2`, frozen here, so tuning AI_EVAL changes the AI and never
@@ -917,7 +970,7 @@ pub const AI_DECISION_PRICE_NODES: usize = AI_DEATH_PROBE_NODES
 /// `gauntlet_bars_face_attacks`, `standing_unit_priced_once`, `brittle_crumbles_before_swing`,
 /// `affliction_kills_before_swing`, `frozen_sick_before_swing`, `static_attack_flags_read`,
 /// `best_attack_order_past_taunts`, `exile_on_damage_read`, `pool_and_conversion_read`,
-/// `giga_cleave_read`, `strike_back_survival_read`) is off.
+/// `giga_cleave_read`, `strike_back_survival_read`, `splash_trample_read`) is off.
 pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     win: 1_000_000.0,
     drawn: 0.0,
@@ -939,6 +992,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     pool_and_conversion_read: false,
     giga_cleave_read: false,
     strike_back_survival_read: false,
+    splash_trample_read: false,
     health: 1.0,
     armor_point: 0.8,
     keyword: KeywordWeights {
@@ -964,6 +1018,7 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
         crater: 0.0,
         flashback: 0.0,
         windfury: 0.0,
+        evasive: 0.0,
     },
     spell_damage: 0.0,
     brittle_discount: 0.0,
@@ -1000,6 +1055,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     activation: 0.0,
     attack_hook: 0.0,
     awaken: 0.0,
+    evolve: 0.0,
+    evolve_event_share: 0.0,
     unit_affliction: 0.0,
     unit_doomed: 0.0,
     hero_affliction: 0.0,
@@ -1008,10 +1065,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     backrow_per_cost: 0.8,
     standing_unit_priced_once: false,
     enemy_face_down: 2.0,
-    enemy_face_down_per_cost: 0.0,
     library_card: 0.1,
     library_comfort: 10.0,
-    fatigue_draw: 0.0,
     unspent_mana: 0.8,
     float_discount: 0.0,
     owed_mana: 0.0,
@@ -1031,8 +1086,19 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct AiReply {
-    /// Engine steps one reply may take: plays, attacks, prompt answers and the closing endTurn.
+    /// Engine steps one reply's turn may take: plays, Activates, switches, attacks, prompt answers and
+    /// its own endTurn. R4810000: a turn whose steps run out with the opponent still on turn is ended
+    /// in up to `close_steps` more.
     pub max_steps: i32,
+    /// R4810000: the most of `max_steps` that known plays (reply.rs `known_play`) and visible
+    /// Activates (`visible_activation`) take together. Past it a step tries neither, so a card with
+    /// many uses, or one whose every use gains a card the reply then plays (S #66 Miner v5), leaves
+    /// the attacks the rest.
+    pub play_steps: i32,
+    /// R4810000: the steps past `max_steps` a reply whose steps ran out with the opponent still on
+    /// turn takes to end that turn: its endTurn and the prompts the turn's end opens, answered as
+    /// every reply prompt is. The line is then scored at the seat's next decision.
+    pub close_steps: i32,
     /// Nodes `decide` reserves per reply when it splits the budget (a typical reply, not the most).
     pub reserve_steps: i32,
     /// Plays of cards the line put in the opponent's hand that one reply step tries, in move order.
@@ -1075,6 +1141,14 @@ pub struct AiReply {
 /// The opponent's reply that the best lines are scored after (reply.rs, SPEC §9.9).
 pub const AI_REPLY: AiReply = AiReply {
     max_steps: 12,
+    // R4810000: 6, so the 12 steps keep one attack for each of the engine's `UNIT_ZONES` (5) Units and
+    // the endTurn. With `close_steps` its screen, 400 games on improve-dev against the control at
+    // e3fe5705e3, read 199-201, edge -0.005 (-0.022 to 0.012); inconclusive (R4319000): 3 decided of 200
+    // (won 1, lost 2), 17 diverged, every game clean; its scene tests settle it (training/improve.md,
+    // A screen).
+    play_steps: 6,
+    // R4810000: 3, the endTurn and two prompts its turn's end may open.
+    close_steps: 3,
     reserve_steps: 5,
     known_plays: 8,
     visible_activations: 4,
@@ -1085,9 +1159,12 @@ pub const AI_REPLY: AiReply = AiReply {
     chip_per_damage: 0.3,
     cleave_share: 1.0,
     // #1634: off. On, its screen read 203-197, edge 0.015 (-0.002 to 0.032), inconclusive (R4319000):
-    // 3 decided of 200 (won 3, lost 0). #4246's, on the reply as it stands since, 400 games on
-    // improve-dev against the control at baa7cdb93f, read 200-200, edge 0.0 (0.0 to 0.0), inconclusive
-    // (R4319000): 0 decided of 200, 21 diverged. Neither keeps it (training/improve.md, A screen).
+    // 3 decided of 200 (won 3, lost 0). #4246's, 400 games on improve-dev against the control at
+    // baa7cdb93f, read 200-200, edge 0.0 (0.0 to 0.0), inconclusive (R4319000): 0 decided of 200, 21
+    // diverged. #4931's, on the reply since R4187000's walls and R4810000's close steps, 400 games on
+    // improve-dev against the control at 328135b4ca, read 198-202, edge -0.010 (-0.024 to 0.004),
+    // inconclusive (R4319000): 2 decided of 200 (won 0, lost 2), 11 diverged, every game clean: reverted.
+    // No further screen until the reply changes again (training/improve.md, A screen).
     open_lethal: false,
     // #1696: on. Its screen read 199-199 with deal 136 aborted at the action cap in both seatings (the
     // parent aborts it against itself too), edge 0.0 (-0.057 to 0.057), every other game clean

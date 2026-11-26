@@ -129,8 +129,9 @@ pub fn why_not_in_main_phase(state: &GameState, player: PlayerId) -> Result<(), 
     Ok(())
 }
 
-/// R1838000: why `player` may not Trade the card `instance_id` names now, or `Ok`. Its last check is
-/// room in their deck for the card (R80's cap, which would otherwise turn it away).
+/// R1838000: why `player` may not Trade the card `instance_id` names now, or `Ok`. Its last checks are
+/// that the deck takes the card: room in it (R80's cap), and no unit-token card, which R11 ends on the
+/// way in (R4821001).
 pub fn why_trade_refused(state: &GameState, player: PlayerId, instance_id: &str) -> Result<(), EngineError> {
     why_not_in_main_phase(state, player)?;
     let side = &state.players[player];
@@ -157,6 +158,12 @@ pub fn why_trade_refused(state: &GameState, player: PlayerId, instance_id: &str)
     if crate::query::room_in(state, player, crate::zones::OffFieldZone::Library) == 0 {
         return Err(EngineError::new(format!(
             "your deck is full ({LIBRARY_CAP} cards)"
+        )));
+    }
+    if crate::zones::is_unit_token(state, card) {
+        let name = &crate::catalog::def_of(Some(state), &card.def_id).name;
+        return Err(EngineError::new(format!(
+            "{name} is a Unit token, which would cease to exist instead of going into your deck"
         )));
     }
     Ok(())

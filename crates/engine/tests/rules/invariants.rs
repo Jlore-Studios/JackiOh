@@ -26,6 +26,13 @@
 //! (R450). Proved on hand-made random draws (R452's cast, R1200's Mayor), on the record a real random
 //! cast and a Mayor's play leave between `before` and `after`, on a listed play or activation retargeted
 //! and on an open prompt given one more option; a random pick an effect makes is no targeting.
+//!
+//! And its I23 (#4609): nothing changes the text of an Immutable card, by the keyword or by Indestructible
+//! on a Unit card (§6.1, R23, R386, R4353000): a planted `transformed`, Vanilla, `degraded`, `upgraded` and
+//! Fuse-onto each fail on a keyword-Immutable Unit, an Indestructible one and an Indestructible card in a
+//! hand, and a record changed with no event fails naming its field; the lawful changes (R4609001 to
+//! R4609003), a card Immutable only for part of the step, a Dormant, face-down or Indestructible Field
+//! Spell card (R4609000) and the engine's own refusals are clean.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -1686,6 +1693,7 @@ fn r4111000_i18_a_step_that_ran_a_hook_met_a_trap_or_a_redirect_or_ended_the_tur
                 row: Row::Backrow,
                 lane: 1,
                 again: None,
+                attacker_id: None,
             },
         ),
         (
@@ -1852,6 +1860,37 @@ fn r4221000_i18_an_attack_a_would_die_replacement_can_answer_is_not_judged() {
         Vec::<String>::new()
     );
     assert_eq!(monitor.forecast_judged(), 0);
+}
+
+/// R4984000 (the fused pair stinkyscapeplus-160+classic-088): a permanent with a "When …, Tribute this"
+/// (Classic #88 Siphon Squad's "When your opponent has no Units", R403) on either side may be sacrificed
+/// at the state check after the combat, which the forecast does not model (R4379000), so I18 does not
+/// judge the attack; with no such text, the same attack is judged.
+#[test]
+fn r4984000_i18_an_attack_beside_a_tribute_condition_is_not_judged() {
+    let (state, attacker, defender) = i18_board("r4984000-i18-tribute-when");
+    let (judged, found) = judged_drift(&state, &attacker, &defender);
+    assert_eq!(judged, 1, "the plain attack is judged");
+    assert!(
+        found.iter().any(|finding| finding.contains("I18 forecast drift")),
+        "{found:?}"
+    );
+
+    let (state, attacker, defender) = i18_board("r4984000-i18-tribute-when");
+    register_i18_script(
+        &big_body.id,
+        Script {
+            tribute_when: Some(read_hook(|args| {
+                active_units_of(args.state, opponent_of(args.self_.controller)).is_empty()
+            })),
+            ..Script::default()
+        },
+    );
+    assert_eq!(
+        judged_drift(&state, &attacker, &defender),
+        (0, Vec::new()),
+        "a Tribute condition on the target"
+    );
 }
 
 /// I18 on `attacker`'s attack on `defender`, its `damage` into the defender drifted one more than the
@@ -2189,7 +2228,7 @@ fn r4111000_played_attack_reads_a_return_and_an_exile_as_gone_and_an_alternative
 // Dormant cards and the engine's own board verbs (a swap, a rotation, a board exile, a slash).
 mod i19 {
     use super::*;
-    use jackioh_engine::effects::{exile_board, fuse_cards, make_all_radiant, slash_board, swap_board};
+    use jackioh_engine::effects::{SwapArgs, exile_board, fuse_cards, make_all_radiant, slash_board, swap};
     use jackioh_engine::subsystems::board_history::{
         RollBackArgs, RollBackSides, record_board_snapshot, roll_back,
     };
@@ -2547,7 +2586,13 @@ mod i19 {
     fn r4454000_a_board_swap_and_a_rotation_carry_a_dormant_card_and_i19_allows_it() {
         let (before, id) = dormant_board("r4454000-swap");
         let mut swapped = before.clone();
-        let events = run_effect(&mut swapped, swap_board(), P1);
+        let events = run_effect(
+            &mut swapped,
+            swap(SwapArgs {
+                what: Some(SwapWhat::Board),
+            }),
+            P1,
+        );
         let card = find_instance(&swapped, &id).expect("still on the field");
         assert_eq!(
             card.zone,
@@ -3374,7 +3419,7 @@ mod i20 {
 // synthetic events over a stand-in immune Unit, real Spells and Units, and the engine's board verbs.
 mod i21 {
     use super::*;
-    use jackioh_engine::effects::{make_all_radiant, swap_board};
+    use jackioh_engine::effects::{SwapArgs, make_all_radiant, swap};
     use jackioh_engine::subsystems::board_history::{
         RollBackArgs, RollBackSides, record_board_snapshot, roll_back,
     };
@@ -3735,6 +3780,74 @@ mod i21 {
     }
 
     #[test]
+    fn r4863000_a_killerless_death_in_a_play_a_unit_cast_is_its_casting_card_s_mark_and_i21_allows_it() {
+        let (before, id) = immune_board("r4863000");
+        let after = moved(&before, &id, OffFieldZone::Graveyard);
+        let death = |killer: Option<&str>| -> GameEvent {
+            json_as(json!({
+                "type": "destroyed",
+                "instanceId": id,
+                "defId": IMMUNE,
+                "owner": "p2",
+                "controller": "p2",
+                "attack": 4,
+                "maxHealth": 4,
+                "killerId": killer,
+            }))
+        };
+        let cast: GameEvent = json_as(json!({
+            "type": "cardPlayed",
+            "player": "p1",
+            "instanceId": "i21-cast",
+            "defId": SPELL,
+            "costPaid": 0,
+        }));
+        let cast_resolved: GameEvent = json_as(json!({
+            "type": "cardResolved",
+            "player": "p1",
+            "instanceId": "i21-cast",
+            "defId": SPELL,
+            "permanent": false,
+            "costPaid": 0,
+        }));
+        let inside = |outer: Option<&str>, killer: Option<&str>| -> Vec<GameEvent> {
+            outer
+                .map(marker)
+                .into_iter()
+                .chain([
+                    cast.clone(),
+                    marker_of("i21-cast", SPELL),
+                    death(killer),
+                    cast_resolved.clone(),
+                ])
+                .collect()
+        };
+        // A Unit's hook marked the immune Unit destroyed (R59), then cast a Spell before any state check:
+        // the Spell's state check collects the Unit's mark, with no killer and no marker of its own.
+        assert_eq!(
+            i21(&before, &inside(Some(PLAIN), None), &after),
+            Vec::<String>::new()
+        );
+        // Cast inside a Spell's run, or played by a seat with no run open, the death is the Spell's.
+        only(
+            &i21(&before, &inside(Some(SPELL), None), &after),
+            &id,
+            &["I21", "destroyed", SPELL],
+        );
+        only(
+            &i21(&before, &inside(None, None), &after),
+            &id,
+            &["I21", "destroyed", SPELL],
+        );
+        // A death that names its killer is a hit's, judged where the hit landed, not a collected mark.
+        only(
+            &i21(&before, &inside(Some(PLAIN), Some("i21-cast")), &after),
+            &id,
+            &["I21", "destroyed", SPELL],
+        );
+    }
+
+    #[test]
     fn i21_a_spell_set_face_down_runs_as_a_trap_as_it_is_set_and_as_it_reveals() {
         let (before, id) = immune_board("i21-set");
         let mut set = before.clone();
@@ -3806,7 +3919,13 @@ mod i21 {
         // A Spell's board swap carries it to p1's side, immune still.
         let mut swapped = before.clone();
         let mut events = vec![marker(SPELL)];
-        events.extend(run_effect(&mut swapped, swap_board(), P1));
+        events.extend(run_effect(
+            &mut swapped,
+            swap(SwapArgs {
+                what: Some(SwapWhat::Board),
+            }),
+            P1,
+        ));
         let card = find_instance(&swapped, &id).expect("still on the field");
         assert_eq!(card.controller, P1);
         assert!(
@@ -4015,6 +4134,89 @@ mod i21 {
     }
 
     #[test]
+    fn r4828001_the_settle_collecting_an_affliction_s_kill_is_no_spell_s_and_i21_allows_it() {
+        let (before, id) = immune_board("r4828001");
+        let after = moved(&before, &id, OffFieldZone::Graveyard);
+        // The turn ends, a Spell's hand trigger runs (S #34 Drone Core VIII's Float), then Burn or
+        // Toxic ticks on the immune Unit and the settle after it collects the kill, with no killer
+        // and no marker of its own (fuzz Radiant rotation, seed 4 with C #3, C #98, S #148, S #169).
+        let ended: GameEvent =
+            json_as(json!({ "type": "turnEnded", "player": "p1", "turn": before.turn, "unspentMana": 0 }));
+        let hand_trigger: GameEvent = json_as(json!({
+            "type": "hookResolving",
+            "sourceId": "i21-held",
+            "defId": SPELL,
+            "controller": "p1",
+            "hook": "whenever",
+        }));
+        let tick = |target: &str, via: &str, amount: i32, absorbed: bool| -> GameEvent {
+            if absorbed {
+                json_as(json!({
+                    "type": "damageAbsorbed",
+                    "sourceId": null,
+                    "targetId": target,
+                    "absorbed": amount,
+                    "combat": false,
+                    "via": via,
+                }))
+            } else {
+                json_as(json!({
+                    "type": "damage",
+                    "sourceId": null,
+                    "targetId": target,
+                    "amount": amount,
+                    "combat": false,
+                    "via": via,
+                }))
+            }
+        };
+        let cleared: GameEvent =
+            json_as(json!({ "type": "counterChanged", "instanceId": id, "counter": "burn", "value": 0 }));
+        let death = |killer: Option<&str>| -> GameEvent {
+            json_as(json!({
+                "type": "destroyed",
+                "instanceId": id,
+                "defId": IMMUNE,
+                "owner": "p2",
+                "controller": "p2",
+                "attack": 4,
+                "maxHealth": 4,
+                "killerId": killer,
+            }))
+        };
+        let burned = [
+            ended.clone(),
+            hand_trigger.clone(),
+            tick(&id, "Burn", 5, false),
+            cleared.clone(),
+            death(None),
+        ];
+        assert_eq!(i21(&before, &burned, &after), Vec::<String>::new());
+        // The tick's reading allows the kill alone, whatever the `destroyed`'s max health reads: a
+        // hit of 1 against a max health of 4 leaves the layers' reading (R4599008) out of it.
+        let poisoned = [marker(SPELL), tick(&id, "Toxic", 1, false), death(None)];
+        assert_eq!(i21(&before, &poisoned, &after), Vec::<String>::new());
+        // A hit the tick never landed, a tick on another Unit, a tick before the Spell's own marker
+        // and a death credited to the running Spell (R4599001) leave the death the Spell's.
+        let absorbed = [
+            hand_trigger.clone(),
+            tick(&id, "Burn", 5, true),
+            cleared,
+            death(None),
+        ];
+        let elsewhere = [
+            hand_trigger.clone(),
+            tick("i21-other", "Burn", 5, false),
+            death(None),
+        ];
+        let earlier = [tick(&id, "Toxic", 1, false), hand_trigger.clone(), death(None)];
+        let killed = [hand_trigger, tick(&id, "Burn", 5, false), death(Some("i21-held"))];
+        for events in [&absorbed[..], &elsewhere, &earlier, &killed] {
+            only(&i21(&before, events, &after), &id, &["I21", "destroyed", SPELL]);
+        }
+    }
+
+    #[test]
     fn r4623000_the_state_check_s_evolution_of_an_immune_unit_is_no_spell_s_and_i21_allows_it() {
         use crate::rules::fixtures::evolution::{FULL, register_evolution_fixtures};
 
@@ -4079,7 +4281,8 @@ mod i21 {
         only(&i21(&before, &events, &no_world), &id, &["I21", "radiantSet"]);
     }
 
-    fn destroyed(id: &str) -> GameEvent {
+    /// R4599001, R4599008: the `destroyed` of the immune stand-in, its max health at death `max_health`.
+    fn died(id: &str, killer: Option<&str>, max_health: i32) -> GameEvent {
         json_as(json!({
             "type": "destroyed",
             "instanceId": id,
@@ -4087,16 +4290,282 @@ mod i21 {
             "owner": "p2",
             "controller": "p2",
             "attack": 4,
-            "maxHealth": 4,
+            "maxHealth": max_health,
+            "killerId": killer,
         }))
     }
 
+    #[test]
+    fn r4599001_a_death_naming_its_killer_in_a_spell_s_run_is_the_hit_s_and_i21_allows_it() {
+        let (state, id) = immune_board("r4599001");
+        let gone = moved(&state, &id, OffFieldZone::Graveyard);
+        // The lethal hit was credited to a Unit (R42): it is judged where it landed.
+        assert_eq!(
+            i21(&state, &[marker(SPELL), died(&id, Some("i21-killer"), 4)], &gone),
+            Vec::<String>::new()
+        );
+        // A death naming no killer, at full health, is the Spell's destroy, and one credited to the
+        // running Spell is its own hit.
+        for killer in [None, Some("i21-source")] {
+            only(
+                &i21(&state, &[marker(SPELL), died(&id, killer, 4)], &gone),
+                &id,
+                &["I21", "destroyed"],
+            );
+        }
+    }
+
+    #[test]
+    fn r4599002_a_card_announced_face_down_in_the_step_runs_as_a_trap_for_i21() {
+        let (state, id) = immune_board("r4599002");
+        let announced = |face_down: bool| -> GameEvent {
+            json_as(json!({
+                "type": "cardAnnounced",
+                "player": "p1",
+                "instanceId": "i21-set",
+                "defId": SPELL,
+                "cardType": "Spell",
+                "costPaid": 0,
+                "targets": [],
+                "faceDown": face_down,
+            }))
+        };
+        let played: GameEvent = json_as(json!({
+            "type": "cardPlayed",
+            "player": "p1",
+            "instanceId": "i21-played",
+            "defId": SPELL,
+            "costPaid": 0,
+            "formerId": "i21-set",
+        }));
+        let run = |face_down: bool| {
+            [
+                announced(face_down),
+                played.clone(),
+                marker_of("i21-played", SPELL),
+                buffed(&id),
+            ]
+        };
+        // Set face-down and resolving as it is set, the Spell runs as a Trap (R3806000) under its new id.
+        assert_eq!(i21(&state, &run(true), &state), Vec::<String>::new());
+        only(&i21(&state, &run(false), &state), &id, &["I21", "buffed"]);
+    }
+
+    #[test]
+    fn r4599007_from_a_turn_s_end_a_spell_s_standing_trigger_opens_no_run_i21_reads() {
+        let (state, id) = immune_board("r4599007");
+        let ended: GameEvent =
+            json_as(json!({ "type": "turnEnded", "player": "p1", "turn": 1, "unspentMana": 0 }));
+        let hook = |kind: &str| -> GameEvent {
+            json_as(json!({
+                "type": "hookResolving",
+                "sourceId": "i21-source",
+                "defId": SPELL,
+                "controller": "p1",
+                "hook": kind,
+            }))
+        };
+        // R62's tail follows the triggers answering the `turnEnded` with no marker of its own.
+        for kind in ["whenever", "endOfTurn"] {
+            let tail = [ended.clone(), hook(kind), buffed(&id)];
+            assert_eq!(i21(&state, &tail, &state), Vec::<String>::new(), "{kind}");
+        }
+        // A cast at the turn's end is still a Spell's run, and so is a standing trigger before it.
+        only(
+            &i21(&state, &[ended.clone(), hook("cry"), buffed(&id)], &state),
+            &id,
+            &["I21", "buffed"],
+        );
+        only(
+            &i21(&state, &[hook("whenever"), buffed(&id), ended], &state),
+            &id,
+            &["I21", "buffed"],
+        );
+    }
+
+    #[test]
+    fn r4599008_a_killerless_death_its_damage_meets_is_the_layers_and_i21_allows_it() {
+        let (mut state, id) = immune_board("r4599008");
+        find_instance_mut(&mut state, &id)
+            .expect("the immune Unit")
+            .damage = 3;
+        let gone = moved(&state, &id, OffFieldZone::Graveyard);
+        // An aura's loss left its max health at the 3 damage it held, and the state check destroyed it.
+        assert_eq!(
+            i21(&state, &[marker(SPELL), died(&id, None, 3)], &gone),
+            Vec::<String>::new()
+        );
+        // A sourceless Burn tick in the step adds to the damage held (R4508005).
+        let tick: GameEvent = json_as(json!({
+            "type": "damage",
+            "sourceId": null,
+            "targetId": id,
+            "amount": 2,
+            "combat": false,
+            "via": "Burn",
+        }));
+        assert_eq!(
+            i21(&state, &[marker(SPELL), tick, died(&id, None, 5)], &gone),
+            Vec::<String>::new()
+        );
+        // With health to spare, the death is the Spell's destroy.
+        only(
+            &i21(&state, &[marker(SPELL), died(&id, None, 4)], &gone),
+            &id,
+            &["I21", "destroyed"],
+        );
+    }
+
+    /// R4783000: `state` in p1's turn's start stage (a prompt paused it, R62), with an Allure of p1's
+    /// waiting on `id` (R963, Meditative #39.5 Jade Beauty's).
+    fn allured(mut state: GameState, id: &str) -> GameState {
+        state.phase = Phase::Start;
+        state.delayed.push(json_as(json!({
+            "id": "d-allure",
+            "seq": 1,
+            "owner": "p1",
+            "at": { "phase": "start", "player": "p1" },
+            "resume": {
+                "defId": PLAIN,
+                "hook": "@delayedAllure",
+                "step": "unit",
+                "radiant": false,
+                "data": { "instanceId": id },
+            },
+            "watch": id,
+        })));
+        state
+    }
+
+    /// R4783000: `id`'s Allure mark coming off (R437).
+    fn allure_off(id: &str) -> GameEvent {
+        json_as(
+            json!({ "type": "marked", "instanceId": id, "mark": "allure", "color": "pink", "added": false }),
+        )
+    }
+
+    #[test]
+    fn r4783000_an_allure_the_start_stage_resolves_after_a_spell_is_the_allure_s_and_i21_allows_it() {
+        let (state, id) = immune_board("r4783000");
+        let state = allured(state, &id);
+        // The Allure found no room: its entry resolved, its mark came off and the steal destroyed the Unit
+        // where it stood (R4205000), after a Spell the paused start stage ran. No marker parts them.
+        let gone = moved(&state, &id, OffFieldZone::Graveyard);
+        assert!(gone.delayed.is_empty(), "the entry went with its Unit");
+        assert_eq!(
+            i21(
+                &state,
+                &[marker(SPELL), allure_off(&id), died(&id, None, 4)],
+                &gone
+            ),
+            Vec::<String>::new()
+        );
+        // Or it found room and took the Unit.
+        let mut taken = state.clone();
+        taken.delayed.clear();
+        assert_eq!(
+            i21(
+                &state,
+                &[marker(SPELL), allure_off(&id), control_changed(&id)],
+                &taken
+            ),
+            Vec::<String>::new()
+        );
+        // A Spell's destroy names the Unit before its entry drops and its mark comes off.
+        only(
+            &i21(
+                &state,
+                &[marker(SPELL), died(&id, None, 4), allure_off(&id)],
+                &gone,
+            ),
+            &id,
+            &["I21", "destroyed"],
+        );
+        // Out of the Allurer's turn's start stage, no Allure resolves.
+        let mut main = state.clone();
+        main.phase = Phase::Main;
+        only(
+            &i21(
+                &main,
+                &[marker(SPELL), allure_off(&id), died(&id, None, 4)],
+                &gone,
+            ),
+            &id,
+            &["I21", "destroyed"],
+        );
+        // The steal is one event: a Spell's destroy after it is the Spell's.
+        only(
+            &i21(
+                &state,
+                &[
+                    marker(SPELL),
+                    allure_off(&id),
+                    control_changed(&id),
+                    died(&id, None, 4),
+                ],
+                &gone,
+            ),
+            &id,
+            &["I21", "destroyed"],
+        );
+    }
+
+    /// R4599010, R4599014: the immune stand-in's `exiled`.
     fn exiled(id: &str) -> GameEvent {
         json_as(json!({ "type": "exiled", "instanceId": id, "defId": IMMUNE, "owner": "p2" }))
     }
 
     #[test]
-    fn r4604003_a_card_resolved_unplayed_ends_its_run_and_a_card_announced_face_down_runs_as_a_trap() {
+    fn r4599010_an_exile_after_a_board_restore_in_a_spell_s_run_is_the_restore_s_and_i21_allows_it() {
+        let (state, id) = immune_board("r4599010");
+        let gone = moved(&state, &id, OffFieldZone::Exile);
+        let restored: GameEvent =
+            json_as(json!({ "type": "rolledBack", "player": "p1", "turnsAgo": 1, "sides": ["p1", "p2"] }));
+        assert_eq!(
+            i21(&state, &[marker(SPELL), restored, exiled(&id)], &gone),
+            Vec::<String>::new()
+        );
+        only(
+            &i21(&state, &[marker(SPELL), exiled(&id)], &gone),
+            &id,
+            &["I21", "exiled"],
+        );
+    }
+
+    #[test]
+    fn r4599014_a_board_replacement_s_exile_in_a_spell_s_run_takes_the_side_whole_and_i21_allows_it() {
+        let (state, id) = immune_board("r4599014");
+        let gone = moved(&state, &id, OffFieldZone::Exile);
+        let replaced: GameEvent = json_as(json!({ "type": "boardReplaced", "player": "p2" }));
+        assert_eq!(
+            i21(&state, &[marker(SPELL), replaced, exiled(&id)], &gone),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn r4599015_once_the_step_moves_a_unit_off_the_field_a_later_event_naming_its_id_is_no_reach() {
+        let (state, id) = immune_board("r4599015");
+        // It died in a Trap's run and came back (a Reborn's return under the same id), then a Spell hit it.
+        let hit: GameEvent = json_as(json!({
+            "type": "damage",
+            "sourceId": "i21-source",
+            "targetId": id,
+            "amount": 1,
+            "combat": false,
+        }));
+        let after_death = [trap_fired(), died(&id, None, 4), marker(SPELL), hit.clone()];
+        assert_eq!(i21(&state, &after_death, &state), Vec::<String>::new());
+        // With no departure before it, the hit is the Spell's reach.
+        only(
+            &i21(&state, &[marker(SPELL), hit], &state),
+            &id,
+            &["I21", "damage"],
+        );
+    }
+
+    #[test]
+    fn r4604003_a_card_resolved_unplayed_ends_its_run() {
         let (state, id) = immune_board("r4604003");
         // An answer step resumes a cast whose `cardPlayed` was an earlier step's: its `cardResolved` ends
         // the Spell's run, and what follows is no Spell's.
@@ -4117,120 +4586,13 @@ mod i21 {
             &id,
             &["I21", "buffed"],
         );
-        // A Spell announced face-down runs as a Trap under the id it is played as (R3806000), though no
-        // set card is left by the step's end to say so.
-        let announced = |face_down: bool| -> GameEvent {
-            let mut event = json!({
-                "type": "cardAnnounced",
-                "player": "p1",
-                "instanceId": "i21-set",
-                "defId": SPELL,
-                "cardType": "Spell",
-                "costPaid": 0,
-                "targets": [],
-            });
-            if face_down {
-                event["faceDown"] = json!(true);
-            }
-            json_as(event)
-        };
-        let played: GameEvent = json_as(json!({
-            "type": "cardPlayed",
-            "player": "p1",
-            "instanceId": "i21-set2",
-            "defId": SPELL,
-            "costPaid": 0,
-            "formerId": "i21-set",
-        }));
-        let set_run = |face_down: bool| -> Vec<GameEvent> {
-            vec![
-                announced(face_down),
-                played.clone(),
-                marker_of("i21-set2", SPELL),
-                buffed(&id),
-            ]
-        };
-        assert_eq!(i21(&state, &set_run(true), &state), Vec::<String>::new());
-        only(&i21(&state, &set_run(false), &state), &id, &["I21", "buffed"]);
     }
 
     #[test]
-    fn r4604004_the_state_check_s_deaths_and_exiles_and_a_burn_tick_on_a_divine_shield_are_no_spell_s_and_i21_allows_them()
-     {
+    fn r4604004_a_burn_tick_on_a_divine_shield_and_an_exile_aura_arriving_by_a_transform_are_no_spell_s() {
         use crate::rules::fixtures::card_on_card::{register_card_on_card, tag_exiler};
 
         let (before, id) = immune_board("r4604004");
-        // A death after an earlier run of the step (a trap, another card's hook, a turn edge, an attack):
-        // the state check may destroy what that run doomed.
-        let gone = moved(&before, &id, OffFieldZone::Graveyard);
-        let turn_ended: GameEvent =
-            json_as(json!({ "type": "turnEnded", "player": "p1", "turn": 1, "unspentMana": 0 }));
-        let declared: GameEvent = json_as(json!({
-            "type": "attackDeclared",
-            "attackerId": "i21-attacker",
-            "targetId": "hero-p2",
-            "forced": false,
-        }));
-        for earlier in [trap_fired(), marker_of("i21-unit", PLAIN), turn_ended, declared] {
-            let events = [earlier.clone(), marker(SPELL), destroyed(&id)];
-            assert_eq!(i21(&before, &events, &gone), Vec::<String>::new(), "{earlier:?}");
-        }
-        // The Spell's own first run, and its own next marker, follow no other run: a reach.
-        only(
-            &i21(&before, &[marker(SPELL), destroyed(&id)], &gone),
-            &id,
-            &["I21", "destroyed"],
-        );
-        only(
-            &i21(&before, &[marker(SPELL), marker(SPELL), destroyed(&id)], &gone),
-            &id,
-            &["I21", "destroyed"],
-        );
-
-        // An exile while an exile aura stands (R1850002): as the step ends, or from the arrival of a card
-        // that carries one, gone again by its end; not before that arrival.
-        let banished = moved(&before, &id, OffFieldZone::Exile);
-        let exile = [marker(SPELL), exiled(&id)];
-        only(&i21(&before, &exile, &banished), &id, &["I21", "exiled"]);
-        register_card_on_card();
-        let mut aura = banished.clone();
-        put(&mut aura, &tag_exiler().id, slot(P1, Row::Units, 2), json!({}));
-        assert_eq!(i21(&before, &exile, &aura), Vec::<String>::new());
-        let summoned: GameEvent = json_as(json!({
-            "type": "summoned",
-            "player": "p1",
-            "instanceId": "i21-exiler",
-            "defId": tag_exiler().id,
-            "row": "units",
-            "lane": 2,
-        }));
-        assert_eq!(
-            i21(
-                &before,
-                &[marker(SPELL), summoned.clone(), exiled(&id)],
-                &banished
-            ),
-            Vec::<String>::new()
-        );
-        only(
-            &i21(&before, &[marker(SPELL), exiled(&id), summoned], &banished),
-            &id,
-            &["I21", "exiled"],
-        );
-        // A card transformed into one that carries an exile aura arrives with it too (S+ #104 Tireless
-        // Cultivation turning a Drone into S #115 Scornboi).
-        let transformed: GameEvent = json_as(json!({
-            "type": "transformed",
-            "instanceId": "i21-drone",
-            "fromDefId": PLAIN,
-            "toDefId": tag_exiler().id,
-            "newInstanceId": "i21-exiler",
-        }));
-        assert_eq!(
-            i21(&before, &[marker(SPELL), transformed, exiled(&id)], &banished),
-            Vec::<String>::new()
-        );
-
         // A Burn tick a Divine Shield takes: its `divineShieldLost`, then the Burn's removal.
         let shield_lost: GameEvent = json_as(json!({ "type": "divineShieldLost", "instanceId": id }));
         let cleared: GameEvent =
@@ -4244,39 +4606,53 @@ mod i21 {
             &id,
             &["I21", "divineShieldLost"],
         );
+        // A card transformed into one laying an exile aura arrives with it (S+ #104 Tireless Cultivation
+        // turning a Drone into S #115 Scornboi), gone again by the step's end; not before that arrival.
+        register_card_on_card();
+        let banished = moved(&before, &id, OffFieldZone::Exile);
+        let transformed: GameEvent = json_as(json!({
+            "type": "transformed",
+            "instanceId": "i21-drone",
+            "fromDefId": PLAIN,
+            "toDefId": tag_exiler().id,
+            "newInstanceId": "i21-exiler",
+        }));
+        assert_eq!(
+            i21(
+                &before,
+                &[marker(SPELL), transformed.clone(), exiled(&id)],
+                &banished
+            ),
+            Vec::<String>::new()
+        );
+        only(
+            &i21(&before, &[marker(SPELL), exiled(&id), transformed], &banished),
+            &id,
+            &["I21", "exiled"],
+        );
     }
 
     #[test]
-    fn r4604006_a_unit_only_an_aura_s_health_held_up_dies_at_the_state_check_and_i21_allows_it() {
-        let (mut before, id) = immune_board("r4604006");
-        let gone = moved(&before, &id, OffFieldZone::Graveyard);
-        let death = [marker(SPELL), destroyed(&id)];
-        // With 3 damage on its 4 health it stands on its own: its death in a Spell's first run is a reach.
-        find_instance_mut(&mut before, &id)
-            .expect("the immune Unit")
-            .damage = 3;
-        only(&i21(&before, &death, &gone), &id, &["I21", "destroyed"]);
-        // Dead at a max health of 0 or less, which only a stat change brings (C #42 Transmutable Toxins
-        // made Radiant by a Spell: −2/−2 a Plague Counter on an enemy Unit), the state check's death.
-        let starved: GameEvent = json_as(json!({
-            "type": "destroyed",
-            "instanceId": id,
-            "defId": IMMUNE,
-            "owner": "p2",
-            "controller": "p2",
-            "attack": 0,
-            "maxHealth": -2,
-        }));
-        assert_eq!(
-            i21(&before, &[marker(SPELL), starved], &gone),
-            Vec::<String>::new()
+    fn r4604005_a_restored_side_s_units_are_new_to_i21() {
+        let (before, id) = immune_board("r4604005");
+        let rolled = |side: &str| -> GameEvent {
+            json_as(json!({ "type": "rolledBack", "player": "p1", "turnsAgo": 0, "sides": [side] }))
+        };
+        // Restored as the snapshot held it (without a granted immunity, C+ #35 Rollback's Rush Token) and
+        // then exiled by a Spell's next run: gone by the step's end, it is no longer judged by the
+        // keywords it began the step with.
+        let banished = moved(&before, &id, OffFieldZone::Exile);
+        let restored =
+            |side: &str| -> Vec<GameEvent> { vec![marker(SPELL), rolled(side), marker(SPELL), exiled(&id)] };
+        assert_eq!(i21(&before, &restored("p2"), &banished), Vec::<String>::new());
+        // A restore of the other side leaves it judged.
+        only(&i21(&before, &restored("p1"), &banished), &id, &["I21", "exiled"]);
+        // One still on the field and immune as the step ends is judged by what it holds then (R4508001).
+        only(
+            &i21(&before, &[marker(SPELL), rolled("p2"), buffed(&id)], &before),
+            &id,
+            &["I21", "buffed"],
         );
-        // With 4 it stands only on an aura's health (C #42 Transmutable Toxins' +1/+1 a Plague Counter):
-        // the Spell destroys the aura's card, and the state check the Unit.
-        find_instance_mut(&mut before, &id)
-            .expect("the immune Unit")
-            .damage = 4;
-        assert_eq!(i21(&before, &death, &gone), Vec::<String>::new());
     }
 
     #[test]
@@ -4284,7 +4660,7 @@ mod i21 {
         use jackioh_engine::geometry::BlackHole;
 
         // The immune Unit stands in p2's lane 1; a Black Hole cast in the step opens beside it, in lane 2,
-        // and pulls at the end of p2's turn, inside a hand Spell's "whenever" run (R4440050).
+        // and pulls at the end of p2's turn, inside a Spell's run (R4440050).
         let (before, id) = immune_board("r4604007");
         let banished = moved(&before, &id, OffFieldZone::Exile);
         let turn_ended: GameEvent =
@@ -4312,8 +4688,8 @@ mod i21 {
         let turn_ended: GameEvent =
             json_as(json!({ "type": "turnEnded", "player": "p1", "turn": 1, "unspentMana": 0 }));
         let turn_started: GameEvent = json_as(json!({ "type": "turnStarted", "player": "p2", "turn": 2 }));
-        // After the turn's `turnEnded`, inside a hand Spell's "whenever" run, the Burn's removal with no
-        // hit of its own before it (a tick of 0 shows nothing; a damage chain's echoes may come between).
+        // After the turn's `turnEnded`, inside a Spell's run, the Burn's removal with no hit of its own
+        // before it (a tick of 0 shows nothing; a damage chain's echoes may come between).
         assert_eq!(
             i21(
                 &state,
@@ -4343,29 +4719,6 @@ mod i21 {
             &i21(&state, &[marker(SPELL), cleared], &state),
             &id,
             &["I21", "counterChanged"],
-        );
-    }
-
-    #[test]
-    fn r4604005_a_restored_side_s_units_are_new_to_i21() {
-        let (before, id) = immune_board("r4604005");
-        let rolled = |side: &str| -> GameEvent {
-            json_as(json!({ "type": "rolledBack", "player": "p1", "turnsAgo": 0, "sides": [side] }))
-        };
-        // Restored as the snapshot held it (without a granted immunity, C+ #35 Rollback's Rush Token) and
-        // then exiled by a Spell: gone by the step's end, it is no longer judged by the keywords it began
-        // the step with.
-        let banished = moved(&before, &id, OffFieldZone::Exile);
-        let restored =
-            |side: &str| -> Vec<GameEvent> { vec![marker(SPELL), rolled(side), marker(SPELL), exiled(&id)] };
-        assert_eq!(i21(&before, &restored("p2"), &banished), Vec::<String>::new());
-        // A restore of the other side leaves it judged.
-        only(&i21(&before, &restored("p1"), &banished), &id, &["I21", "exiled"]);
-        // One still on the field and immune as the step ends is judged by what it holds then (R4508001).
-        only(
-            &i21(&before, &[marker(SPELL), rolled("p2"), buffed(&id)], &before),
-            &id,
-            &["I21", "buffed"],
         );
     }
 }
@@ -4825,5 +5178,581 @@ mod i22 {
             &evasive.id,
             &["I22 unlawful target offered", &chooser.id, "R4353002"],
         );
+    }
+}
+
+mod i23 {
+    use super::*;
+    use jackioh_engine::effects;
+    use jackioh_engine::subsystems::unit_text::UNIT_TEXT_KEY;
+
+    const KEYWORD: &str = "stand-in (1) 4/4 Immutable";
+    const INDESTRUCTIBLE: &str = "stand-in (1) 4/4 Indestructible";
+    const PLAIN: &str = "stand-in (1) 4/4";
+    const TRAP: &str = "stand-in (0) Trap";
+    const FIELD_SPELL: &str = "stand-in (0) Field Spell";
+
+    /// I23 of one step from `before` to `after`, read as the fuzz reads it.
+    fn i23(before: &GameState, events: &[GameEvent], after: &GameState) -> Vec<String> {
+        let mut monitor = create_invariant_monitor(before);
+        monitor.before(before, before.active, &ActionBody::EndTurn);
+        invariant("I23", monitor.after(events, after))
+    }
+
+    /// `effect` applied as p1's with no card of its own and settled, as a card's effect is (§10.3).
+    fn settled(state: &mut GameState, effect: Effect) -> Vec<GameEvent> {
+        let mut events: Vec<GameEvent> = Vec::new();
+        let mut rng = Rng::new(&state.seed.clone(), state.rng_cursor);
+        {
+            let mut sink = EngineSink::new(state, &mut events, &mut rng);
+            {
+                let options = HookOptions {
+                    controller: Some(P1),
+                    ..Default::default()
+                };
+                let mut ctx = make_context(&mut sink, None, options);
+                (effect.apply)(&mut ctx);
+            }
+            settle(&mut sink, SettleOptions::default());
+        }
+        state.rng_cursor = rng.cursor();
+        events
+    }
+
+    /// `def_id` made in `player`'s hand.
+    fn in_hand(state: &mut GameState, def_id: &str, player: PlayerId) -> String {
+        let card = new_instance(state, def_id, player, Zone::Hand { player });
+        let id = card.id.clone();
+        state.players[player].hand.push(card);
+        id
+    }
+
+    /// p1's first main phase with the three Immutable stand-ins: one with the keyword in p2's unit zone 1,
+    /// an Indestructible one in its unit zone 2 and an Indestructible one in its hand.
+    fn holders(seed: &str) -> (GameState, [String; 3]) {
+        let mut state = playing(seed);
+        let keyword = put(&mut state, KEYWORD, slot(P2, Row::Units, 1), json!({})).id;
+        let indestructible = put(&mut state, INDESTRUCTIBLE, slot(P2, Row::Units, 2), json!({})).id;
+        let held = in_hand(&mut state, INDESTRUCTIBLE, P2);
+        (state, [keyword, indestructible, held])
+    }
+
+    fn def_of_id(state: &GameState, id: &str) -> String {
+        find_instance(state, id).expect("the card").def_id.clone()
+    }
+
+    fn transformed(id: &str, from: &str, to: &str, new_id: &str, hidden_from: Option<&[&str]>) -> GameEvent {
+        let mut event = json!({
+            "type": "transformed",
+            "instanceId": id,
+            "fromDefId": from,
+            "toDefId": to,
+            "newInstanceId": new_id,
+        });
+        if let Some(players) = hidden_from {
+            event["hiddenFrom"] = json!(players);
+        }
+        json_as(event)
+    }
+
+    fn tuned(kind: &str, id: &str, def_id: &str, change: Value) -> GameEvent {
+        json_as(json!({ "type": kind, "instanceId": id, "defId": def_id, "change": change }))
+    }
+
+    fn degraded(id: &str, def_id: &str) -> GameEvent {
+        tuned(
+            "degraded",
+            id,
+            def_id,
+            json!({ "kind": "stats", "attack": -1, "health": -3 }),
+        )
+    }
+
+    fn fused_onto(id: &str, def_id: &str) -> GameEvent {
+        json_as(json!({
+            "type": "fused",
+            "instanceIds": ["i23-piece"],
+            "resultInstanceId": id,
+            "defId": def_id,
+        }))
+    }
+
+    /// An edit of a card's record.
+    type Edit = fn(&mut CardInstance);
+
+    /// An effect on the card an id names.
+    type Verb = fn(&str) -> Effect;
+
+    /// `state` with `edit` made to the card `id`.
+    fn edited(state: &GameState, id: &str, edit: impl FnOnce(&mut CardInstance)) -> GameState {
+        let mut edited = state.clone();
+        edit(find_instance_mut(&mut edited, id).expect("the card"));
+        edited
+    }
+
+    fn granted(state: &GameState, id: &str, keyword: Keyword) -> GameState {
+        edited(state, id, |card| card.granted_keywords.push(keyword))
+    }
+
+    fn nerfed(card: &mut CardInstance) {
+        card.tuning = Some(json_as(json!({ "attack": -1, "health": -3 })));
+    }
+
+    #[test]
+    fn i23_a_planted_change_of_each_kind_fails_on_each_immutable_card() {
+        let (state, ids) = holders("i23-planted");
+        for (at, id) in ids.iter().enumerate() {
+            let def = def_of_id(&state, id);
+            let mut changes: Vec<(&str, GameEvent)> = vec![
+                ("transformed", transformed(id, &def, PLAIN, id, None)),
+                ("transformed", transformed(id, &def, &def, id, None)),
+                ("degraded", degraded(id, &def)),
+                (
+                    "upgraded",
+                    tuned(
+                        "upgraded",
+                        id,
+                        &def,
+                        json!({ "kind": "stats", "attack": 3, "health": 1 }),
+                    ),
+                ),
+                ("fused", fused_onto(id, &def)),
+            ];
+            // On the field, a Transform is a Replace with a new instance, readable to both players.
+            if at < 2 {
+                changes.push(("transformed", transformed(id, &def, PLAIN, "i23-new", None)));
+            }
+            for (kind, event) in changes {
+                only(
+                    &i23(&state, std::slice::from_ref(&event), &state),
+                    id,
+                    &["I23 Immutable text changed", kind, "§6.1", "R4353000"],
+                );
+                // Twice in one step is one finding.
+                let twice = [event.clone(), event];
+                assert_eq!(i23(&state, &twice, &state).len(), 1, "{kind} on {id}");
+            }
+        }
+        // The same changes on a plain card are clean.
+        let mut plain_board = state.clone();
+        let plain_id = put(&mut plain_board, PLAIN, slot(P1, Row::Units, 1), json!({})).id;
+        assert_eq!(
+            i23(
+                &plain_board,
+                &[degraded(&plain_id, PLAIN), fused_onto(&plain_id, PLAIN)],
+                &plain_board
+            ),
+            Vec::<String>::new()
+        );
+        // An `after` with no `before` judges nothing.
+        let mut unprimed = create_invariant_monitor(&state);
+        assert_eq!(
+            invariant("I23", unprimed.after(&[degraded(&ids[0], KEYWORD)], &state)),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn i23_a_record_change_with_no_event_is_one_finding_naming_the_field() {
+        let mut before = playing("i23-record");
+        let keyword = put(&mut before, PLAIN, slot(P2, Row::Units, 1), json!({})).id;
+        let indestructible = put(&mut before, PLAIN, slot(P2, Row::Units, 2), json!({})).id;
+        let held = in_hand(&mut before, PLAIN, P2);
+        let before = granted(&before, &keyword, Keyword::Immutable);
+        let before = granted(&before, &indestructible, Keyword::Indestructible);
+        let before = granted(&before, &held, Keyword::Indestructible);
+        let edits: [(&str, Edit); 6] = [
+            ("defId", |card| card.def_id = "stand-in (1) 5/5".to_string()),
+            ("vanilla", |card| card.vanilla = true),
+            ("tuning", nerfed),
+            ("hiddenNerfs", |card| card.hidden_nerfs = Some(1)),
+            // §6.3 Set stats: Immutable stops it (R23, R1185002).
+            ("statsOverride", |card| {
+                card.stats_override = Some(json_as(json!({ "attack": 1, "health": 1 })));
+            }),
+            ("unitText", |card| {
+                card.memory.insert(
+                    UNIT_TEXT_KEY.to_string(),
+                    json!({ "defId": PLAIN, "radiant": false }),
+                );
+            }),
+        ];
+        for id in [&keyword, &indestructible, &held] {
+            assert_eq!(i23(&before, &[], &before), Vec::<String>::new());
+            for (field, edit) in edits {
+                let after = edited(&before, id, edit);
+                only(
+                    &i23(&before, &[], &after),
+                    id,
+                    &["I23 Immutable record changed", field, "§6.1"],
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn r4609000_a_card_is_judged_only_while_it_is_immutable_before_and_after_the_step() {
+        let mut state = playing("r4609000");
+        let id = put(&mut state, PLAIN, slot(P2, Row::Units, 1), json!({})).id;
+        let ungranted = state.clone();
+        let immutable = granted(&state, &id, Keyword::Immutable);
+        let hit = [degraded(&id, PLAIN)];
+        // Held through the step, the Nerf is a finding; a grant that lapses in the step, or one that
+        // arises in it, judges nothing (R4353000: Immutable for as long as it is Indestructible).
+        only(&i23(&immutable, &hit, &immutable), &id, &["I23", "degraded"]);
+        assert_eq!(i23(&immutable, &hit, &ungranted), Vec::<String>::new());
+        assert_eq!(i23(&ungranted, &hit, &immutable), Vec::<String>::new());
+        // A Nerf that took the card's own Indestructible away, or a Vanilla its printed one, is judged
+        // still: its text as the step began is what makes it Immutable.
+        let (holders, ids) = holders("r4609000-own");
+        let stripped = edited(&holders, &ids[1], |card| {
+            card.tuning = Some(json_as(json!({ "removeKeywords": ["Indestructible"] })));
+        });
+        only(
+            &i23(&holders, &[degraded(&ids[1], INDESTRUCTIBLE)], &stripped),
+            &ids[1],
+            &["I23", "degraded"],
+        );
+        let vanilla = edited(&holders, &ids[1], |card| card.vanilla = true);
+        only(&i23(&holders, &[], &vanilla), &ids[1], &["I23", "vanilla"]);
+        // A Dormant card is not read (I19's ground, R1839000).
+        let mut dormant = playing("r4609000-dormant");
+        let sleeper = put(&mut dormant, KEYWORD, slot(P2, Row::Units, 1), json!({})).id;
+        let dormant = edited(&dormant, &sleeper, |card| {
+            card.slumber = Some(Slumber { turns: Some(2) })
+        });
+        assert_eq!(
+            i23(&dormant, &[degraded(&sleeper, KEYWORD)], &dormant),
+            Vec::<String>::new()
+        );
+        // A face-down Trap's text is dormant; a face-up one is read.
+        let mut backrow = playing("r4609000-backrow");
+        let trap = put(&mut backrow, TRAP, slot(P2, Row::Backrow, 1), json!({})).id;
+        let field_spell = put(&mut backrow, FIELD_SPELL, slot(P2, Row::Backrow, 2), json!({})).id;
+        let face_down = granted(&backrow, &trap, Keyword::Immutable);
+        assert_eq!(
+            face_down.players[P2].backrow[0].as_ref().map(|card| card.face_up),
+            Some(None)
+        );
+        assert_eq!(
+            i23(&face_down, &[degraded(&trap, TRAP)], &face_down),
+            Vec::<String>::new()
+        );
+        let face_up = edited(&face_down, &trap, |card| card.face_up = Some(true));
+        only(
+            &i23(&face_up, &[degraded(&trap, TRAP)], &face_up),
+            &trap,
+            &["I23", "degraded"],
+        );
+        // An Indestructible Field Spell is no Unit card, so it is not Immutable (R4353000); one with the
+        // keyword is.
+        let indestructible = granted(&backrow, &field_spell, Keyword::Indestructible);
+        assert_eq!(
+            i23(
+                &indestructible,
+                &[degraded(&field_spell, FIELD_SPELL)],
+                &indestructible
+            ),
+            Vec::<String>::new()
+        );
+        let keyword = granted(&backrow, &field_spell, Keyword::Immutable);
+        only(
+            &i23(&keyword, &[degraded(&field_spell, FIELD_SPELL)], &keyword),
+            &field_spell,
+            &["I23", "degraded"],
+        );
+        // Radiant is the card's own text (R23): a `radiantSet` and the flag it sets are no finding.
+        let radiant = edited(&holders, &ids[0], |card| card.radiant = true);
+        let zone = serde_json::to_value(&find_instance(&holders, &ids[0]).expect("the card").zone)
+            .expect("a zone serializes");
+        let set: GameEvent =
+            json_as(json!({ "type": "radiantSet", "instanceId": ids[0], "defId": KEYWORD, "zone": zone }));
+        assert_eq!(i23(&holders, &[set], &radiant), Vec::<String>::new());
+    }
+
+    #[test]
+    fn r4609001_a_replace_off_the_field_and_a_none_cue_are_lawful_and_i23_allows_them() {
+        let (state, ids) = holders("r4609001");
+        let held = &ids[2];
+        let mut library = state.clone();
+        let deep = new_instance(&mut library, INDESTRUCTIBLE, P2, Zone::Library { player: P2 });
+        let deep_id = deep.id.clone();
+        library.players[P2].library.push(deep);
+        let mut replaced = library.clone();
+        replaced.players[P2].hand.retain(|card| card.id != *held);
+        replaced.players[P2].library.retain(|card| card.id != deep_id);
+        let replaces = [
+            transformed(held, INDESTRUCTIBLE, PLAIN, "i23-new", Some(&["p1"])),
+            transformed(&deep_id, INDESTRUCTIBLE, PLAIN, "i23-deep", Some(&["p1", "p2"])),
+        ];
+        assert_eq!(i23(&library, &replaces, &replaced), Vec::<String>::new());
+        // R440's cue on a card nothing could change.
+        let cue = tuned("degraded", &ids[0], KEYWORD, json!({ "kind": "none" }));
+        assert_eq!(i23(&state, &[cue], &state), Vec::<String>::new());
+        // A real Transform of the hand card replaces it (R35); a real Nerf leaves it as it is.
+        let mut real = state.clone();
+        let events = settled(
+            &mut real,
+            effects::transform(json_as(json!({ "instanceId": held, "defId": PLAIN }))),
+        );
+        assert!(find_instance(&real, held).is_none(), "{events:?}");
+        assert_eq!(i23(&state, &events, &real), Vec::<String>::new());
+        let mut real = state.clone();
+        let events = settled(
+            &mut real,
+            effects::degrade(json_as(json!({ "instanceId": held }))),
+        );
+        assert_eq!(i23(&state, &events, &real), Vec::<String>::new());
+        assert_eq!(
+            find_instance(&real, held).map(|card| card.tuning.clone()),
+            Some(None)
+        );
+        // A Replace on the field, and a Transform in place in a hand, are findings.
+        only(
+            &i23(
+                &state,
+                &[transformed(&ids[0], KEYWORD, PLAIN, "i23-new", None)],
+                &state,
+            ),
+            &ids[0],
+            &["I23", "transformed"],
+        );
+        only(
+            &i23(
+                &state,
+                &[transformed(
+                    held,
+                    INDESTRUCTIBLE,
+                    INDESTRUCTIBLE,
+                    held,
+                    Some(&["p1"]),
+                )],
+                &state,
+            ),
+            held,
+            &["I23", "transformed"],
+        );
+    }
+
+    /// R4783002: the event of `id`'s move to an exile (`exiled`) or a graveyard (`enteredGraveyard`).
+    fn moved_off(kind: &str, id: &str) -> GameEvent {
+        json_as(json!({ "type": kind, "instanceId": id, "defId": INDESTRUCTIBLE, "owner": "p2" }))
+    }
+
+    #[test]
+    fn r4783002_a_replace_in_an_exile_or_a_graveyard_the_step_sent_the_card_to_is_lawful_and_i23_allows_it() {
+        let (state, ids) = holders("r4783002");
+        let held = &ids[2];
+        let mut gone = state.clone();
+        gone.players[P2].hand.retain(|card| card.id != *held);
+        // Played, exiled in its own resolution, then replaced there in public (IA #43, R427).
+        for kind in ["exiled", "enteredGraveyard"] {
+            let events = [
+                moved_off(kind, held),
+                transformed(held, INDESTRUCTIBLE, PLAIN, "i23-replaced", None),
+            ];
+            assert_eq!(i23(&state, &events, &gone), Vec::<String>::new(), "{kind}");
+        }
+        // With no such move, the public replace is a finding, and so is one after the card came back.
+        only(
+            &i23(
+                &state,
+                &[transformed(held, INDESTRUCTIBLE, PLAIN, "i23-replaced", None)],
+                &gone,
+            ),
+            held,
+            &["I23", "transformed"],
+        );
+        let back: GameEvent = json_as(json!({
+            "type": "summoned",
+            "player": "p2",
+            "instanceId": held,
+            "defId": INDESTRUCTIBLE,
+            "row": "units",
+            "lane": 3,
+        }));
+        only(
+            &i23(
+                &state,
+                &[
+                    moved_off("exiled", held),
+                    back,
+                    transformed(held, INDESTRUCTIBLE, PLAIN, "i23-replaced", None),
+                ],
+                &gone,
+            ),
+            held,
+            &["I23", "transformed"],
+        );
+    }
+
+    #[test]
+    fn r4609002_a_fuse_onto_a_card_the_step_made_a_reset_in_place_and_a_restore_are_lawful_and_i23_allows_them()
+     {
+        // R4353003: the kept card of a Fuse the step made for it.
+        let before = playing("r4609002");
+        let mut after = before.clone();
+        let fresh = put(&mut after, INDESTRUCTIBLE, slot(P1, Row::Units, 1), json!({})).id;
+        assert_eq!(
+            i23(&before, &[fused_onto(&fresh, INDESTRUCTIBLE)], &after),
+            Vec::<String>::new()
+        );
+        // A record changed beside a restore, a Glitch, or a reset of the card in place.
+        let (state, ids) = holders("r4609002-reset");
+        let id = &ids[0];
+        let changed = edited(&state, id, nerfed);
+        only(
+            &i23(&state, &[], &changed),
+            id,
+            &["I23 Immutable record changed", "tuning"],
+        );
+        let lane = json!({ "player": "p2", "instanceId": id, "defId": KEYWORD, "row": "units", "lane": 1 });
+        let mut flickered = lane.clone();
+        flickered["type"] = json!("flickered");
+        let mut summoned = lane;
+        summoned["type"] = json!("summoned");
+        let restores: [GameEvent; 4] = [
+            json_as(json!({ "type": "rolledBack", "player": "p1", "turnsAgo": 0, "sides": ["p2"] })),
+            json_as(json!({ "type": "glitched", "player": "p1", "outcome": "boards" })),
+            json_as(flickered),
+            json_as(summoned),
+        ];
+        for event in restores {
+            assert_eq!(
+                i23(&state, std::slice::from_ref(&event), &changed),
+                Vec::<String>::new(),
+                "{event:?}"
+            );
+        }
+        // R676: a Glitch's reset counts itself.
+        let mut glitched = changed.clone();
+        glitched.resets = Some(glitched.resets.unwrap_or(0) + 1);
+        assert_eq!(i23(&state, &[], &glitched), Vec::<String>::new());
+        // A reset releases the record, never an event after it.
+        let flicker: GameEvent = json_as(json!({
+            "type": "flickered", "player": "p2", "instanceId": id, "defId": KEYWORD, "row": "units", "lane": 1,
+        }));
+        only(
+            &i23(&state, &[flicker, degraded(id, KEYWORD)], &changed),
+            id,
+            &["I23 Immutable text changed", "degraded"],
+        );
+    }
+
+    #[test]
+    fn r4609003_a_keyword_kept_for_good_is_no_buff_and_i23_allows_it() {
+        let (state, ids) = holders("r4609003");
+        let id = &ids[2];
+        let flashback = || -> Keyword { json_as(json!({ "kind": "Flashback" })) };
+        let kept = edited(&state, id, |card| {
+            card.tuning = Some(json_as(json!({ "addKeywords": [{ "kind": "Flashback" }] })));
+        });
+        let grant: GameEvent =
+            json_as(json!({ "type": "keywordGranted", "instanceId": id, "keyword": flashback() }));
+        assert_eq!(
+            i23(&state, std::slice::from_ref(&grant), &kept),
+            Vec::<String>::new()
+        );
+        // Without its grant, or with a Buff's stats beside it, the tuning is a finding.
+        only(
+            &i23(&state, &[], &kept),
+            id,
+            &["I23 Immutable record changed", "tuning"],
+        );
+        let buffed = edited(&kept, id, |card| {
+            card.tuning.as_mut().expect("the tuning").attack = Some(2);
+        });
+        only(
+            &i23(&state, std::slice::from_ref(&grant), &buffed),
+            id,
+            &["I23 Immutable record changed", "tuning"],
+        );
+        // A real keyword kept for good (R1870007, R4154202).
+        let mut real = state.clone();
+        let events = settled(
+            &mut real,
+            effects::gain_keyword_for_good(json_as(json!({ "keyword": flashback(), "instanceId": id }))),
+        );
+        assert!(
+            find_instance(&real, id).is_some_and(|card| card.tuning.is_some()),
+            "{events:?}"
+        );
+        assert_eq!(i23(&state, &events, &real), Vec::<String>::new());
+    }
+
+    #[test]
+    fn i23_the_engines_own_refusals_leave_each_immutable_card_clean() {
+        let (state, ids) = holders("i23-refusals");
+        let verbs: [(&str, Verb); 5] = [
+            ("vanilla", |id| {
+                effects::vanilla(json_as(json!({ "instanceId": id })))
+            }),
+            ("transform", |id| {
+                effects::transform(json_as(json!({ "instanceId": id, "defId": PLAIN })))
+            }),
+            ("degrade", |id| {
+                effects::degrade(json_as(json!({ "instanceId": id })))
+            }),
+            ("upgrade", |id| {
+                effects::upgrade(json_as(json!({ "instanceId": id })))
+            }),
+            ("set_stats", |id| {
+                effects::set_stats(json_as(json!({
+                    "target": { "of": "instance", "instanceId": id },
+                    "attack": 1,
+                    "health": 1,
+                })))
+            }),
+        ];
+        for (name, verb) in verbs {
+            for id in &ids[..2] {
+                let mut after = state.clone();
+                let events = settled(&mut after, verb(id));
+                assert_eq!(
+                    i23(&state, &events, &after),
+                    Vec::<String>::new(),
+                    "{name} on {id}"
+                );
+                let card = find_instance(&after, id).expect("still there");
+                let was = find_instance(&state, id).expect("the card");
+                assert_eq!(
+                    (&card.def_id, card.vanilla, &card.tuning, card.stats_override),
+                    (&was.def_id, was.vanilla, &was.tuning, was.stats_override),
+                    "{name} on {id}"
+                );
+            }
+        }
+        let mut after = state.clone();
+        let events = settled(
+            &mut after,
+            effects::vanilla(json_as(json!({ "instanceId": ids[2] }))),
+        );
+        assert_eq!(i23(&state, &events, &after), Vec::<String>::new());
+        assert!(!find_instance(&after, &ids[2]).expect("in the hand").vanilla);
+    }
+
+    #[test]
+    fn i23_runs_on_i14_s_branches() {
+        let (state, ids) = holders("i23-i14");
+        let hit = [degraded(&ids[1], INDESTRUCTIBLE)];
+        let branch = |state: &GameState, action: &Action| -> ReduceResult {
+            let mut result = reduce(state, action);
+            result.events.extend(hit.iter().cloned());
+            result
+        };
+        let found: Vec<String> = listed_refused(&state, P1, &[ActionBody::EndTurn], branch)
+            .into_iter()
+            .filter(|finding| finding.contains("I23"))
+            .collect();
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].starts_with("I14 branch:"), "{}", found[0]);
+        assert!(found[0].contains("I23 Immutable text changed"), "{}", found[0]);
+        assert!(found[0].contains(&ids[1]), "{}", found[0]);
+        // The plain reducer's branch changes no Immutable card's text.
+        let clean: Vec<String> = listed_refused(&state, P1, &[ActionBody::EndTurn], reduce)
+            .into_iter()
+            .filter(|finding| finding.contains("I23"))
+            .collect();
+        assert_eq!(clean, Vec::<String>::new());
     }
 }
