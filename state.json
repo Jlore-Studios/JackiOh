@@ -47659,10 +47659,6 @@
   "suggest": {
     "asks": [],
     "auto": {
-      "4936": {
-        "at": "2026-11-25T15:34:23Z",
-        "why": "It fixes a real spec-order bug on a shipped card, with the spec line, files, and seeded-pick effect cited."
-      },
       "4969": {
         "at": "2026-11-25T22:34:58Z",
         "why": "Confirmed: line 414 of scripts/ci-scope.sh omitted crates/tools/perf-corpus/* when #4924 pinned it, unnecessarily running all 4 shards of e2e smoke for files no e2e spec reads."
