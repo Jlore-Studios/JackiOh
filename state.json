@@ -44713,6 +44713,10 @@
       "4999": {
         "at": "2026-11-26T03:07:01Z",
         "why": "A Glitch-voided Assault fight is recorded as a loss today though R679 says it never happened, and the fix mirrors the shipped dungeon reading with the void helper and test already in the tree."
+      },
+      "5001": {
+        "at": "2026-11-26T03:20:25Z",
+        "why": "Confirmed: spec 36 deletes a card from its module-level `remaining` set (:139) before `afterPlay` checks it, and `before` does not run again on Cypress's one retry, so the retry deals a game without the failing card and the daily run passes. The test hides a deterministic failure today, and the fix is a few lines in one spec."
       }
     },
     "auto_approved": [],
