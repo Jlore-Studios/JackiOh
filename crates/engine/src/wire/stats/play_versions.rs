@@ -28,7 +28,7 @@ use super::window::{Part, PatchStep, PatchTier, part_of, patch_windows, split_by
 use super::{
     CardStats, CardTier, CreatedStats, DECIMALS, GameMode, GameSource, ModeFilter, NO_FIGURE, PERCENT,
     PilotFilter, StatsField, StatsTotals, Tally, add_created, add_stats, adjusted_interval,
-    adjusted_win_rate, held_adjusted, seen, stats_field, tier_of, to_fixed,
+    adjusted_win_rate, held_adjusted, percent, seen, stats_field, tier_of, to_fixed,
 };
 use crate::catalog::RULE_MADE_DEF_IDS;
 use crate::config::{PUBLIC_STATS_MIN_LIVE_GAMES, TIER_BAND_HIGH, TIER_BAND_LOW};
@@ -335,14 +335,6 @@ fn figures_of(
         tier,
         has_enough_games,
     }
-}
-
-/// A fraction as "52.1%", or `NO_FIGURE`.
-fn percent(rate: Option<f64>) -> String {
-    rate.map_or_else(
-        || NO_FIGURE.to_string(),
-        |rate| format!("{}%", to_fixed(rate * PERCENT, DECIMALS)),
-    )
 }
 
 /// R4675001: the table as text: the field and band, one line per play version, and how many have games

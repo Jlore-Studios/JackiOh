@@ -1448,3 +1448,242 @@ mod r4233000_read_on_open {
         assert_eq!(invites(&t.app, &t.guest).await, (vec![], json!(0)));
     }
 }
+
+mod lobby_states_5005 {
+    //! #5005: a private lobby as an implicit state (`docs/implicit-states.md`, state 17): what the
+    //! code does for the combinations of its seats, picks, Readies and Start that no test reached.
+    use super::*;
+    use jackioh_server::config::MAX_SAVED_TRIOS;
+
+    /// Every playable card in `who`'s collection, three saved decks of disjoint cards (`uuid(base)`
+    /// to `uuid(base + 2)`) and a trio of them (`uuid(base + 3)`), whose id it answers.
+    async fn with_saved_trio(app: &Arc<App>, who: &Account, base: u32) -> String {
+        let cards = playable();
+        let rows: Vec<Value> = cards
+            .iter()
+            .map(|id| json!({ "cardId": id, "quantity": 1 }))
+            .collect();
+        let entries: Vec<CollectionEntry> = from(Value::Array(rows));
+        store!(app, t => t.collection_upsert_quantities(&who.id, &entries).await.expect("collection.upsertQuantities"));
+        let size = usize::try_from(jackioh_engine::config::DECK_SIZE).expect("a deck size");
+        let deck_ids: Vec<String> = (0..3).map(|n| uuid(base + n)).collect();
+        for (n, deck_id) in deck_ids.iter().enumerate() {
+            let outcome = store!(app, t => t
+                .decks_upsert(
+                    &from(json!({
+                        "id": deck_id,
+                        "profileId": who.id,
+                        "name": format!("{} {}", who.name, n + 1),
+                        "cards": cards[n * size..(n + 1) * size].to_vec(),
+                        "portrait": null,
+                        "catalogVersion": jackioh_cards::catalog_version(),
+                        "createdAt": AT,
+                        "updatedAt": AT,
+                    })),
+                    MAX_SAVED_DECKS as _,
+                )
+                .await
+                .expect("decks.upsert"));
+            assert_eq!(serde_json::to_value(outcome).expect("an outcome"), "created");
+        }
+        let trio_id = uuid(base + 3);
+        let outcome = store!(app, t => t
+            .trios_upsert(
+                &from(json!({
+                    "id": trio_id,
+                    "profileId": who.id,
+                    "name": format!("{}'s trio", who.name),
+                    "deckIds": deck_ids,
+                    "createdAt": AT,
+                    "updatedAt": AT,
+                })),
+                MAX_SAVED_TRIOS as _,
+            )
+            .await
+            .expect("trios.upsert"));
+        assert_eq!(serde_json::to_value(outcome).expect("an outcome"), "created");
+        trio_id
+    }
+
+    /// A Conquest 1v1 lobby the guest is in, each member on a saved trio and ready.
+    async fn ready_conquest(t: &Three) -> String {
+        let host_trio = with_saved_trio(&t.app, &t.host, 400).await;
+        let guest_trio = with_saved_trio(&t.app, &t.guest, 410).await;
+        let code = duel(&t.app, &t.host, "bo3").await;
+        ok_act(&t.app, &t.guest, &code, "enter", Value::Null).await;
+        for (who, trio) in [(&t.host, &host_trio), (&t.guest, &guest_trio)] {
+            ok_act(
+                &t.app,
+                who,
+                &code,
+                "pick",
+                json!({ "mode": "bo3", "trioId": trio }),
+            )
+            .await;
+            ok_act(&t.app, who, &code, "ready", json!({ "ready": true })).await;
+        }
+        code
+    }
+
+    /// #5005 (J8): a seat freed and taken again leaves every other seat's Ready as it was
+    /// (unspecified: R3730003 and R3731000 take the Readies off for a settings or a team change,
+    /// and nothing says a new member does), so the newcomer's own Ready is all the Start waits for.
+    #[tokio::test]
+    async fn r3730004_a_seat_freed_and_filled_again_keeps_the_others_ready() {
+        let t = three().await;
+        let code = ready_random_duel(&t).await;
+        ok_act(&t.app, &t.guest, &code, "leave", Value::Null).await;
+        ok_act(&t.app, &t.third, &code, "enter", Value::Null).await;
+        let seen = view(&t.app, &t.third, &code).await;
+        assert_eq!(seen["you"], "guest", "{seen}");
+        assert_eq!(states(&seen), ["ready", "choosing"], "{seen}");
+
+        ok_act(&t.app, &t.third, &code, "pick", json!({ "mode": "random" })).await;
+        ok_act(&t.app, &t.third, &code, "ready", json!({ "ready": true })).await;
+        let (status, started) = act(&t.app, &t.host, &code, "start", Value::Null).await;
+        assert_eq!(status, 200, "{started}");
+        let match_id = started["matchId"].as_str().expect("a match id").to_string();
+        for who in [&t.host, &t.third] {
+            assert_eq!(t.app.seats.of(&who.id), Some(Seat::Match(match_id.clone())));
+        }
+        assert_eq!(t.app.seats.of(&t.guest.id), None);
+    }
+
+    /// #5005 (J23): a Conquest lobby's Start begins a series, as a Conquest room's join does: the
+    /// lobby names the series and no match, the series' first game having its own id (R3730002).
+    #[tokio::test]
+    async fn r3730002_a_conquest_lobby_starts_a_series_and_names_no_match() {
+        let t = three().await;
+        let code = ready_conquest(&t).await;
+        let (status, started) = act(&t.app, &t.host, &code, "start", Value::Null).await;
+        assert_eq!(status, 200, "{started}");
+        assert!(started["matchId"].is_null(), "{started}");
+        let series_id = started["seriesId"].as_str().expect("a series id").to_string();
+        for who in [&t.host, &t.guest] {
+            let seen = view(&t.app, who, &code).await;
+            assert!(seen["startedAt"].is_i64(), "{seen}");
+            assert!(seen["matchId"].is_null(), "{seen}");
+            assert_eq!(seen["seriesId"], series_id.as_str(), "{seen}");
+            // Each member holds the series' seat of the ledger.
+            assert!(
+                matches!(t.app.seats.of(&who.id), Some(Seat::Series { id, .. }) if id == series_id),
+                "{:?}",
+                t.app.seats.of(&who.id)
+            );
+        }
+        let (status, series) = api(
+            &t.app,
+            "GET",
+            &format!("/api/series/{series_id}"),
+            &t.host.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{series}");
+    }
+
+    /// #5005 (J30): a started lobby is left to its TTL, its game over or not (R3730004): it still
+    /// reads as started, naming its game, nobody leaves it or starts it again, no member's list holds
+    /// it, and a read writes nothing, so it closes the TTL after the Start's last write.
+    #[tokio::test(start_paused = true)]
+    async fn r3730004_a_started_lobby_outlives_its_game_until_its_ttl() {
+        let t = three().await;
+        let code = ready_conquest(&t).await;
+        let (status, started) = act(&t.app, &t.host, &code, "start", Value::Null).await;
+        assert_eq!(status, 200, "{started}");
+        let series_id = started["seriesId"].as_str().expect("a series id").to_string();
+        // Its game ends before it is played: the guest forfeits the series at its first pick.
+        let (status, body) = api(
+            &t.app,
+            "POST",
+            &format!("/api/series/{series_id}/forfeit"),
+            &t.guest.token,
+            Value::Null,
+        )
+        .await;
+        assert_eq!(status, 200, "{body}");
+
+        advance(ROOM_CODE_TTL_SECONDS * 1000 / 2).await;
+        for who in [&t.host, &t.guest] {
+            let seen = view(&t.app, who, &code).await;
+            assert!(seen["startedAt"].is_i64(), "{seen}");
+            assert_eq!(seen["seriesId"], series_id.as_str(), "{seen}");
+            let (status, body) = act(&t.app, who, &code, "leave", Value::Null).await;
+            assert!(status == 409 && refused_for(&body, "started"), "{status} {body}");
+            let (_, mine) = api(&t.app, "GET", "/api/lobbies", &who.token, Value::Null).await;
+            assert_eq!(mine["lobbies"], json!([]), "{mine}");
+        }
+        let (status, body) = act(&t.app, &t.host, &code, "start", Value::Null).await;
+        assert!(status == 409 && refused_for(&body, "started"), "{status} {body}");
+
+        advance(ROOM_CODE_TTL_SECONDS * 1000 / 2).await;
+        for who in [&t.host, &t.guest] {
+            assert_eq!(read(&t.app, who, &code).await.0, 404);
+        }
+    }
+
+    /// #5005 (J27): a member holds no seat until a Start (R3730000), so a guest sits in two lobbies;
+    /// once the first starts, the second's Start finds them in its game: `busy`, and taken back with
+    /// every Ready kept (R3730002), the guest still seated there.
+    #[tokio::test]
+    async fn r3730000_a_guest_in_two_lobbies_is_busy_for_the_second_start() {
+        let t = three().await;
+        let first = ready_random_duel(&t).await;
+        let second = duel(&t.app, &t.third, "random").await;
+        ok_act(&t.app, &t.guest, &second, "enter", Value::Null).await;
+        for who in [&t.third, &t.guest] {
+            ok_act(&t.app, who, &second, "pick", json!({ "mode": "random" })).await;
+            ok_act(&t.app, who, &second, "ready", json!({ "ready": true })).await;
+        }
+        let (status, started) = act(&t.app, &t.host, &first, "start", Value::Null).await;
+        assert_eq!(status, 200, "{started}");
+        let match_id = started["matchId"].as_str().expect("a match id").to_string();
+
+        let (status, body) = act(&t.app, &t.third, &second, "start", Value::Null).await;
+        assert_eq!(status, 409, "{body}");
+        assert!(refused_for(&body, "busy"), "{body}");
+        let seen = view(&t.app, &t.third, &second).await;
+        assert!(seen["startedAt"].is_null(), "{seen}");
+        assert_eq!(states(&seen), ["ready", "ready"], "{seen}");
+        assert_eq!(
+            seen["seats"][1]["player"]["profileId"],
+            t.guest.id.as_str(),
+            "{seen}"
+        );
+        assert_eq!(t.app.seats.of(&t.third.id), None);
+        assert_eq!(t.app.seats.of(&t.guest.id), Some(Seat::Match(match_id)));
+    }
+
+    /// #5005 (J31): a block between the host and the guest once the Start has landed drops no one
+    /// (unspecified: R3730000 drops a guest a block now separates from the host as the lobby is next
+    /// read, and says nothing of a started one): both still read the lobby, the guest in its seat,
+    /// and it still names their game.
+    #[tokio::test]
+    async fn r3730000_a_block_after_the_start_drops_no_one() {
+        let t = three().await;
+        let code = ready_random_duel(&t).await;
+        let (status, started) = act(&t.app, &t.host, &code, "start", Value::Null).await;
+        assert_eq!(status, 200, "{started}");
+        let match_id = started["matchId"].as_str().expect("a match id").to_string();
+        let (status, body) = api(
+            &t.app,
+            "POST",
+            "/api/blocks",
+            &t.guest.token,
+            json!({ "profileId": t.host.id }),
+        )
+        .await;
+        assert_eq!(status, 204, "{body}");
+
+        for who in [&t.host, &t.guest] {
+            let seen = view(&t.app, who, &code).await;
+            assert_eq!(
+                seen["seats"][1]["player"]["profileId"],
+                t.guest.id.as_str(),
+                "{seen}"
+            );
+            assert_eq!(seen["matchId"], match_id.as_str(), "{seen}");
+        }
+        assert_eq!(view(&t.app, &t.guest, &code).await["you"], "guest");
+    }
+}
