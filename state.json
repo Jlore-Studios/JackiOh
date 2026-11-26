@@ -25098,6 +25098,23 @@
       },
       "queued_at": "2026-11-26T16:01:08Z",
       "self_check_findings": [],
+      "session": {
+        "action": "build",
+        "artifact": 15135100909,
+        "artifact_bytes": 127483,
+        "artifact_name": "work",
+        "at": "2026-11-26T16:01:27Z",
+        "bytes": 151068,
+        "cwd": "/home/runner/work/_temp/work/item-5002",
+        "ended": "built: built and checked; its own review run, on this subscription, reviews it next",
+        "head": "01575891f845c2186544a3b25ce6ac1789b5171f",
+        "id": "5dc32c91-a472-4645-a9bb-f7137f509f97",
+        "kind": "build",
+        "model": "sonnet",
+        "project": "-home-runner-work--temp-work-item-5002",
+        "provider": "claude-8",
+        "run": "45844860459"
+      },
       "votes": {
         "approvals": [],
         "builder": "claude",
