@@ -21317,7 +21317,9 @@
     },
     "4969": {
       "action": "plan",
-      "asks": [],
+      "asks": [
+        "c:7179114636"
+      ],
       "build_next": {
         "from_run": "45733689819",
         "model": "sonnet",
@@ -21364,9 +21366,7 @@
       "started_at": "2026-11-26T01:08:26Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:7179114636"
-      ]
+      "taken_asks": []
     },
     "4972": {
       "action": "review",
