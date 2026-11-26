@@ -33,7 +33,7 @@ use jackioh_server::economy::store::{JloreGrant, JloreReason};
 use super::ws_server::encode_query;
 use crate::support::deps::{add_user, call, empty_test_app, record_logs};
 use crate::support::engine::{PANIC_TEXT, install_panicking_plays};
-use crate::support::store::{Account, account, fake, uuid};
+use crate::support::store::{Account, account, fake, record_calls, uuid};
 
 /// S6's socket.
 const DUOS_PATH: &str = "/ws/duos";
@@ -1840,6 +1840,71 @@ mod r1483000_a_capped_coop_seat_is_told_on_its_own_view {
                 client.frames()
             );
         }
+    }
+}
+
+// #4982 — a fresh co-op result's caps come off its own payout, with no second read of the ledger
+
+mod a_fresh_coop_results_caps_come_off_its_payout {
+    use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn the_end_reads_each_persons_day_totals_once_and_never_the_match_row_again() {
+        let h = duos("easy").await;
+        // Today's games have already paid the host the cap; the guest has played none.
+        let earlier = JloreGrant {
+            profile_id: h.host.id.clone(),
+            delta: JLORE_GAMES_DAILY_CAP,
+            reason: JloreReason::Game,
+            reference: Some("earlier-game".to_string()),
+            dev: false,
+            at: now_ms(),
+        };
+        {
+            let mut tx = h.app.db.begin(None).await.expect("a store transaction");
+            tx.economy_jlore_grant(&earlier)
+                .await
+                .expect("the earlier game's Jlore");
+            tx.commit().await.expect("commit");
+        }
+
+        let a1 = h.seat(&h.host).await;
+        let a2 = h.seat(&h.guest).await;
+        let (a1_from, a2_from) = (a1.received(), a2.received());
+        // From here on, so neither the grant nor the seating is counted.
+        let calls = record_calls(&h.app).await;
+
+        h.concede_both(&a1, &a2).await;
+        a1.wait_for(a1_from, PROMPTLY, |frame| {
+            frame.get("jloreCapped").and_then(Value::as_bool) == Some(true)
+        })
+        .await
+        .unwrap_or_else(|| {
+            panic!(
+                "the host was never told the cap held its pay back: {:?}",
+                a1.frames()
+            )
+        });
+        a2.wait_for(a2_from, PROMPTLY, |frame| {
+            frame["type"] == "view" && frame.get("economy").is_some()
+        })
+        .await
+        .unwrap_or_else(|| panic!("the guest was never sent its pay: {:?}", a2.frames()));
+
+        let calls = calls.lock().expect("the call log").clone();
+        let count = |method: &str| calls.iter().filter(|call| *call == method).count();
+        assert_eq!(count("duos.matches.finish"), 1, "{calls:?}");
+        // Once per person, in the write's own payout (R1483000's cap); before #4982 the actor read
+        // them again in a second transaction, with the match row.
+        assert_eq!(count("economy.wallets.gameTotals"), 2, "{calls:?}");
+        assert_eq!(count("duos.matches.get"), 0, "{calls:?}");
+
+        // The views are the same as when the ledger was read: the capped seat is told, its teammate not.
+        let (host, guest) = (last_view(&a1), last_view(&a2));
+        assert_eq!(host.get("jloreCapped"), Some(&json!(true)), "{host}");
+        assert!(guest.get("jloreCapped").is_none(), "{guest}");
+        assert!(host.get("economy").is_some(), "{host}");
+        assert!(guest.get("economy").is_some(), "{guest}");
     }
 }
 
