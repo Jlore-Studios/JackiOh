@@ -23779,6 +23779,8 @@
       }
     },
     "5063": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-26T09:39:10Z",
@@ -23792,8 +23794,11 @@
         "trail": " cat \\\"$f\\\" | head -c 1500; echo; echo ----; sed -n '245p' spec/14-eco\u2026\n- tool error: Exit code 2 --- id: R4780000 title: \"A game's paid result drops the owned cosmetics too, so a Fleet track level's reward shows owned as soon as the game ends (issue #4780; amends R3206000)\" cards: \"\u00a7\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4977/spec/rulings/R4977000.md\", \"content\": \"---\\nid: R4977000\\ntitle: \\\"A counted game's paid result loads the account's card proficiency again, so a \u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4977/spec/pending/4977.md\", \"content\": \"**[[R4977000]] A counted game's paid result loads the account's card proficiency again (issue #4977, 2026-11-2\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/14-economy.md'\\ns=open(p).read()\\nold=\\\"The Collection shows each owned card's level, its plays toward the next level and a picker of its stamps, a locked one \u2026\n- Bash: {\"command\": \"grep -o '\\\\[\\\\[\\u00a7[0-9.]*\\\\]\\\\]' spec/pending/*.md | head -3; python3 - <<'EOF'\\np='apps/web/README.md'\\ns=open(p).read()\\npad=' '*24\\nold=pad+\\\"by cards/proficiencySync.ts (GET /api/\u2026\n- said: Source, spec and README are in. Now the tests; first the `settle` helper's signature and the match test's fixtures.\n- Bash: {\"command\": \"cat apps/web/src/test/settle.ts | head -40; echo ----; sed -n '1,40p' apps/web/src/routes/match.test.tsx; grep -n 'describe(\\\"the XP reveal\\\\|an economy on a game still being played\\\\|co\u2026\n- Bash: {\"command\": \"grep -n 'describe(\\\"the XP reveal\\\\|an economy on a game still being played' apps/web/src/routes/match.test.tsx\", \"description\": \"Locate the XP reveal describe block\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-4977/apps/web/src/routes/match.test.tsx\", \"offset\": 1126, \"limit\": 100}\n- Bash: {\"command\": \"grep -n 'export function useAccountSync' -A 30 apps/web/src/settings/accountSync.ts | head -45; sed -n '100,120p' apps/web/src/routes/match.test.tsx\", \"description\": \"Read useAccountSync\u2026\n- Bash: {\"command\": \"grep -n 'export function requestQueue' -A 25 apps/web/src/settings/accountSync.ts\", \"description\": \"Read requestQueue implementation\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/cards/proficiencySync.test.ts'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert s.count(old)==1, old\\n s=s.replace(old,new)\\nrep(\\\"\\\"\\\"import {\u2026\n- said: The three sync tests are written. Next is the match screen test, then I'll run both files.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/routes/match.test.tsx'\\ns=open(p).read()\\ndef rep(old,new):\\n global s\\n assert s.count(old)==1, old\\n s=s.replace(old,new)\\nrep('import { act, cleanup\u2026\n- said: All 6 sync tests pass. Now the match test file, calling vitest directly since the WASM module is already built.\n- Bash: {\"command\": \"timeout 900 pnpm exec vitest run src/routes/match.test.tsx src/test/helpers.test.ts 2>&1 | grep -v '^\\\\s*$' | tail -15\", \"description\": \"Run match screen and helpers tests\", \"timeout\": 9\u2026\n- said: Both pass. Now I'll confirm the tests fail without the fix: first with `reloadOwnProficiency` turned into a no-op, then with `reload()` calling `api.load` directly instead of going through the queue.\n- Bash: {\"command\": \"cp src/cards/proficiencySync.ts /tmp/ps.bak\\npython3 - <<'EOF'\\np='src/cards/proficiencySync.ts'\\ns=open(p).read()\\ns=s.replace(\\\" shared?.sync.reload();\\\\n\\\",\\\" void shared;\\\\n\\\")\\nopen\u2026\n- said: Each change is caught: the no-op fails both \"loads again\" tests, and an unqueued reload fails the race test. Next: the `stopped` guard mutation, then typecheck and eslint.\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='src/cards/proficiencySync.ts'\\ns=open(p).read()\\ns=s.replace(\\\" if (!stopped) enqueue(reload);\\\\n\\\",\\\" enqueue(reload);\\\\n\\\")\\nopen(p,'w').write(s)\\nEOF\\ntimeout 60\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4977 && grep -n '\\\"format\\\\|prettier' package.json apps/web/package.json | head; (timeout 600 pnpm --dir apps/web typecheck 2>&1 | tail -5); (timeout\u2026\n- said: Typecheck and eslint are clean. Now a formatter check, `spec check` and `classify`.\n- Bash: {\"command\": \"ls -a | grep -i prettier; grep -rn 'prettier' .github/workflows/ci.yml | head -3; timeout 1200 cargo jackioh spec check 2>&1 | tail -6\", \"description\": \"Look for prettier config and run \u2026\n- said: No prettier is configured and `spec check` passes. Now `classify`, plus `catalog check` and `patches check` (the harness runs both).\n- Bash: {\"command\": \"git fetch -q origin main 2>&1 | tail -2; timeout 1200 cargo jackioh classify --base origin/main --claims 2>&1 | tail -12; timeout 600 cargo jackioh patches check 2>&1 | tail -3; timeout \u2026\n- Bash: {\"command\": \"grep -rln 'mock(\\\"[./]*cards/proficiencySync\\\\|mock(\\\"\\\\./proficiencySync' apps/web/src | head; echo ---; git diff --stat; git status --short\", \"description\": \"Find tests mocking profici\u2026\n- said: No test mocks it. Now the harness's web command (`--changed origin/main`), with the WASM module already built.\n- Bash: {\"command\": \"echo \\\"- build pass 1: typecheck, eslint, spec check, classify (Internal), patches, catalog all clean. Running the harness's vitest --changed origin/main.\\\" >> .bot-notes.md; timeout 150\u2026\n- said: All 39 affected web test files pass (951 tests). One last read of the source diff:\n- Bash: {\"command\": \"git diff apps/web/src/cards/proficiencySync.ts apps/web/src/routes/match.tsx spec/14-economy.md | grep '^[+-]' | cut -c1-220\", \"description\": \"Show the source and spec diff lines\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=s[s.index('## State'):s.index('## Log')]\\nnew=\\\"\\\"\\\"## State\\n\\n- DONE (build pass 1, opus): every plan step built as written;\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a counted game's result reloads the card proficiency the Collection shows, so a level the game earned and its stamp appear without a reload\"} --> ## What changed When a counted game (ladder, unranked or Conquest) finishes and its result pays the account\u2026"
       },
       "issue": 4977,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-26T10:44:10Z",
         "from_run": "45793969590",
         "gates": [
           {
@@ -23885,7 +23890,11 @@
         "source": "build",
         "until": "2026-11-26T11:12:49Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-26T10:42:49Z",
+      "run_id": "pending:1212484f-1795689817",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -23904,6 +23913,9 @@
         "provider": "claude-3",
         "run": "45793969590"
       },
+      "started_at": "2026-11-26T10:44:10Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -23917,9 +23929,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T10:34:02Z",
+    "at": "2026-11-26T10:44:10Z",
     "url": "",
-    "what": "plan #5036 on claude-3"
+    "what": "review #5063 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-26T10:27:39Z",
