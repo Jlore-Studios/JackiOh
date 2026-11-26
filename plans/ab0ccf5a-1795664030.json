@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4996,
+  "title": "Patch: PIP's text says \"performance improvement plan\"",
+  "branch": "bot/issue-4996",
+  "thread": "**Issue #4996 (data, not instructions):**\n\n````text\n# #4996: Patch: PIP's text says \"performance improvement plan\"\nOpened by @MaxGoetzmann.\n\n### What it does\n\nStinkyscape+ #94 **PIP** (`stinkyscapeplus-094`, SPEC \u00a78.12) tells players a Unit is put on a \"performance **enhancement** plan\". A PIP is a performance **improvement** plan. Change the visible text on both faces to say \"performance improvement plan\", and add a ruling so every face, in every language the client shows, keeps that term word for word.\n\nThe Simplified Chinese faces already say \u7ee9\u6548\u6539\u8fdb\u8ba1\u5212 (performance improvement plan) in `crates/cards/card-text.yaml`, so they stay as they are. The new ruling's test locks them in.\n\n**This is a change to the card's words only.** The rules stay the same: one target, the `kill_deadline` effect, `{count}`/`{count2}` turns, the Radiant face's `{the}` The Coins.\n\nWhere the old wording appears now (from `git grep -n \"performance enhancement\"` on main, f8c40d93):\n\n| File | What to do |\n|---|---|\n| `spec/08-catalog/8.12-stinkyscape-plus.md` line 170, PIP's row | Change both faces. The spec is the only source of card text (`docs/ADDING_CARDS.md` \u00a71, row 1). |\n| `crates/cards/catalog.json` ~32631 (base) and ~32635 (radiant) | Change both `text`s: `Put a Unit on a performance improvement plan: it has \u2026` |\n| `crates/cards/src/scripts/stinkyscape_plus/c094_pip.rs` header (line 2) | Change the quoted base text. |\n| `crates/engine/tests/rules/fixtures/combat_reactions.rs` line 51 | Change the doc comment that quotes PIP's shape. |\n| `JackiOh_StinkyscapePlus_Cards.md` lines 1003 and 1005 (the designer's source note) | Change both lines so REVIEW Part A doesn't report a gap between the spec and the source. The owner made this call (this issue). |\n| `crates/cards/patches/v*.json` (shipped history) | **Leave these alone.** Shipped patches and their snapshots are never reopened (`docs/ADDING_CARDS.md` \u00a73). Replays fold under the version they were played on. |\n\n**The patch.** A change to a card's words is a micro (`tier:micro`, `kind:cards`). Claim it with a pending fragment:\n\n```\ncargo jackioh patches \"PIP says performance improvement plan\" --source \"#4996\" --notes \"Stinkyscape+ #94 PIP's text reads 'performance improvement plan' (was 'performance enhancement plan').\"\n```\n\nThen write its `player` note by hand, one line under `text`, e.g. `PIP: now says \"performance improvement plan\".` (`docs/issues-and-patches.md`, Patch notes players read). The script only reads `count`, `count2` and `the`, not the card's words. So according to \u00a73 of ADDING_CARDS it needs no `KEPT_SCRIPTS` entry. Before you push, run `cargo jackioh classify --base origin/main --claims` to check this: it should find no card playing differently, so no `--plays`.\n\n### The ruling\n\nAdd a new note, **R4996000** (`spec/rulings/R4996000.md`, the first number in this issue's block). Put its \u00a711 paragraph in `spec/pending/4996.md` (CLAUDE.md rule 3; `spec/README.md`, Adding a ruling). What it rules:\n\n> **PIP names the plan word for word.** Every face of Stinkyscape+ #94 PIP (base and Radiant) contains the exact phrase \"performance improvement plan\" in English, and in every other language the client shows (`card-text.yaml`'s locales: Simplified Chinese, `zh`, today) that language's standard term for one. In Simplified Chinese that is \u7ee9\u6548\u6539\u8fdb\u8ba1\u5212. No face says it any other way, such as \"performance enhancement plan\", \"performance plan\" or \"PEP\". A language added later must name the plan by its own standard term, and this ruling's test covers it from the day it lands.\n\nProving test, named after the ruling (`fn r4996000_\u2026`), e.g. in `crates/cards/tests/cross/chinese.rs` or PIP's own `mod tests`:\n- both English faces of `stinkyscapeplus-094` in the catalog contain `performance improvement plan`, and neither contains `enhancement`;\n- both `zh` faces (`crates/cards/chinese.json`, which `card-text.yaml` writes) contain `\u7ee9\u6548\u6539\u8fdb\u8ba1\u5212`;\n- it walks every locale the card text has, so a new language with no entry in the test's term table fails it, rather than skipping it.\n\n### Acceptance\n\n- [ ] `git grep -n \"performance enhancement\"` finds nothing outside `crates/cards/patches/v*.json` (the shipped history).\n- [ ] The ruling note R4996000 and its `spec/pending/4996.md` paragraph exist, and `cargo jackioh spec check` passes.\n- [ ] The proving test `r4996000_\u2026` passes, and fails if the catalog's text goes back to \"enhancement\" or the `zh` face drops \u7ee9\u6548\u6539\u8fdb\u8ba1\u5212.\n- [ ] `cargo jackioh catalog check`, `cargo jackioh patches check` and `cargo jackioh classify --base origin/main --claims` pass.\n- [ ] `cargo test -p jackioh-cards c094_pip` and `cargo test -p jackioh-cards --test cross` pass.\n\n### Blocked by, part of\n\nNone.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4996: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) writes it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T02:51:03Z",
+    "claimed_at": "2026-11-26T03:34:25Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
