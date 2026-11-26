@@ -298,3 +298,114 @@ describe("reopening the Assault page", () => {
     expect(assault.current.state?.phase).toBe("lost");
   });
 });
+
+// #5005: the Assault's attempt as docs/implicit-states.md §16 maps it.
+
+it("R4581000 a start sent from a day screen left open past UTC midnight is refused and shows the new day", () => {
+  vi.setSystemTime(new Date("2026-11-23T23:59:00Z"));
+  const assault = mount();
+  expect(assault.current.day.date).toBe("2026-11-23");
+
+  // The screen still offers yesterday's day when the clock passes midnight; its Start names that day.
+  vi.setSystemTime(new Date("2026-11-24T00:01:00Z"));
+  const refused = press(() => assault.current.start({ date: "2026-11-23", deck: ["core-001"], source: "dayDeck", startLevel: 1 }));
+
+  expect(refused).toBe("A new day's Assault has begun. Look it over and start again.");
+  expect(assault.current.day.date).toBe("2026-11-24");
+  expect(assault.current.state).toBeNull();
+  expect(window.localStorage.getItem(ASSAULT_ATTEMPT_KEY)).toBeNull();
+  expect(bindingFixtures.assaultCreate).not.toHaveBeenCalled();
+
+  // The new day's Start is dealt on it.
+  expect(press(() => assault.current.start({ date: "2026-11-24", deck: ["core-001"], source: "dayDeck", startLevel: 1 }))).toBeNull();
+  expect(assault.current.state?.setup.date).toBe("2026-11-24");
+});
+
+it("R4581001 a record no attempt could make, a best past the last level or a checkpoint that is none, reads as absent", () => {
+  const recordsWith = (record: AssaultRecord): string => JSON.stringify({ v: 1, days: { [DAY.date]: record } });
+
+  // A best above the last level, a checkpoint past it, or one in range that is no checkpoint, is no record an
+  // attempt could have made.
+  const notACheckpoint = CONSTANTS.levels - 1;
+  expect(CONSTANTS.checkpoints).not.toContain(notACheckpoint);
+  for (const record of [
+    { ...RECORD, best: CONSTANTS.levels + 1 },
+    { ...RECORD, checkpoints: [CONSTANTS.levels + 1] },
+    { ...RECORD, checkpoints: [notACheckpoint] },
+  ]) {
+    window.localStorage.setItem(ASSAULT_RECORDS_KEY, recordsWith(record));
+    const assault = reload();
+    expect(assault.current.records).toEqual({});
+    expect(window.localStorage.getItem(ASSAULT_RECORDS_KEY)).toBeNull();
+  }
+
+  // An attempt file whose record is out of range is malformed too, and goes on its own.
+  const setup = setupOf();
+  const file: AssaultFile = { version: "test-catalog", setup, record: { ...RECORD, best: CONSTANTS.levels + 1 }, actions: [] };
+  window.localStorage.setItem(ASSAULT_ATTEMPT_KEY, JSON.stringify({ v: 1, file }));
+  window.localStorage.setItem(ASSAULT_RECORDS_KEY, recordsWith(RECORD));
+  const assault = reload();
+  expect(assault.current.state).toBeNull();
+  expect(window.localStorage.getItem(ASSAULT_ATTEMPT_KEY)).toBeNull();
+  expect(assault.current.records).toEqual({ [DAY.date]: RECORD });
+
+  // The last level and every checkpoint are in range.
+  const top = { ...RECORD, best: CONSTANTS.levels, checkpoints: [...CONSTANTS.checkpoints] };
+  window.localStorage.setItem(ASSAULT_RECORDS_KEY, recordsWith(top));
+  expect(reload().current.records).toEqual({ [DAY.date]: top });
+});
+
+it("an attempt whose catalog version the build no longer carries is dropped and its day's record kept", () => {
+  const setup = setupOf();
+  const file: AssaultFile = { version: "a-catalog-gone", setup, record: RECORD, actions: [{ kind: "fight" }] };
+  window.localStorage.setItem(ASSAULT_ATTEMPT_KEY, JSON.stringify({ v: 1, file }));
+  window.localStorage.setItem(ASSAULT_RECORDS_KEY, JSON.stringify({ v: 1, days: { [DAY.date]: RECORD } }));
+  window.localStorage.setItem(ASSAULT_HELD_KEY, JSON.stringify({ attempt: 1, level: 1, action: { kind: "fightOver", won: true, turns: 7 } }));
+  bindingFixtures.assaultContentAt.mockReturnValue(null);
+
+  const assault = mount();
+
+  expect(bindingFixtures.assaultContentAt).toHaveBeenCalledWith("a-catalog-gone");
+  expect(bindingFixtures.assaultFold).not.toHaveBeenCalled();
+  expect(assault.current.state).toBeNull();
+  expect(assault.current.day.date).toBe(DAY.date);
+  expect(assault.current.records).toEqual({ [DAY.date]: RECORD });
+  expect(window.localStorage.getItem(ASSAULT_ATTEMPT_KEY)).toBeNull();
+  expect(window.localStorage.getItem(ASSAULT_HELD_KEY)).toBeNull();
+  expect(window.localStorage.getItem(ASSAULT_RECORDS_KEY)).not.toBeNull();
+});
+
+it("another tab's start, action or hold reloads this tab, and a held report is applied once", () => {
+  const assault = mount();
+  expect(assault.current.state).toBeNull();
+  const fromAnotherTab = (key: string, value: unknown): void => {
+    window.localStorage.setItem(key, JSON.stringify(value));
+    act(() => { window.dispatchEvent(new StorageEvent("storage", { key })); });
+  };
+  const setup = setupOf();
+  const keptActions = (): unknown =>
+    (JSON.parse(window.localStorage.getItem(ASSAULT_ATTEMPT_KEY) ?? "null") as { file: AssaultFile }).file.actions;
+
+  // Another tab starts an attempt, then plays its fight.
+  fromAnotherTab(ASSAULT_ATTEMPT_KEY, { v: 1, file: { version: "test-catalog", setup, record: RECORD, actions: [] } });
+  expect(assault.current.state?.phase).toBe("briefing");
+  fromAnotherTab(ASSAULT_ATTEMPT_KEY, { v: 1, file: { version: "test-catalog", setup, record: RECORD, actions: [{ kind: "fight" }] } });
+  expect(assault.current.state?.phase).toBe("fight");
+
+  // It holds the fight's report and closes: this tab applies it as Continue would, and clears the hold.
+  fromAnotherTab(ASSAULT_HELD_KEY, { attempt: setup.attempt, level: 1, action: { kind: "fightOver", won: true, turns: 7 } });
+  expect(assault.current.state?.phase).toBe("briefing");
+  expect(assault.current.state?.level).toBe(2);
+  expect(window.localStorage.getItem(ASSAULT_HELD_KEY)).toBeNull();
+  expect(keptActions()).toEqual([{ kind: "fight" }, { kind: "fightOver", won: true, turns: 7 }]);
+
+  // A later reload, by another tab's write or this one's, applies nothing more.
+  act(() => { window.dispatchEvent(new StorageEvent("storage", { key: ASSAULT_ATTEMPT_KEY })); });
+  expect(assault.current.state?.level).toBe(2);
+  expect(keptActions()).toHaveLength(2);
+
+  // A key that is not the Assault's reloads nothing.
+  const folds = bindingFixtures.assaultFold.mock.calls.length;
+  act(() => { window.dispatchEvent(new StorageEvent("storage", { key: "jackioh.something-else" })); });
+  expect(bindingFixtures.assaultFold.mock.calls.length).toBe(folds);
+});

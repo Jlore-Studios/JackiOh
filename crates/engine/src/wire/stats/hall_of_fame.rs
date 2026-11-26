@@ -190,6 +190,7 @@ mod tests {
             live,
             iteration: "v1".to_string(),
             patches: 1,
+            first_shipped: None,
             games,
             adjusted_win_rate: Some(rate),
             adjusted_low: Some(rate - 0.02),

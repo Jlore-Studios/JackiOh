@@ -4,10 +4,10 @@
 # 8), so each site's figures always have fresh development games of the version that is live, beside
 # its live games.
 #
-# Since #3740 it runs all the time on two of the organization's 60 hosted jobs; CI and the bots take
-# the rest. A run is two parts side by side, each playing GATHER_HOURS hours of `cargo jackioh stats
-# --series gather` (AI against AI on R258's All Random deals at the browser's budget) on main as it
-# was when the run started,
+# Since #3740 it runs all the time, on five of the organization's 60 hosted jobs since 2026-11-26 (two
+# before); CI and the bots take the rest. A run is five parts side by side, each playing GATHER_HOURS
+# hours of `cargo jackioh stats --series gather` (AI against AI on R258's All Random deals at the
+# browser's budget) on main as it was when the run started,
 # GATHER_FILE_GAMES games at a time (about an hour of a runner), each batch filed as it finishes with
 # `training/file-records.sh`: `jackioh-server stats-import --totals-only` over
 # STATS_IMPORT_DATABASE_URL (staging's) and then PRODUCTION_STATS_IMPORT_DATABASE_URL (no row per
@@ -75,9 +75,10 @@ jobs:
     timeout-minutes: 350
     strategy:
       fail-fast: false
-      # Two parts side by side, the gather lane's two runners (#3740).
+      # Five parts side by side, the gather lane's five runners (two from #3740 to 2026-11-26). Each
+      # plays its own fifth of the run's GATHER_STRIDE game numbers.
       matrix:
-        part: [1, 2]
+        part: [1, 2, 3, 4, 5]
     steps:
       # The commit that started the run (a scheduled or dispatched run's, the lane's own `next`
       # among them: main as it was then), so a rerun plays the same commit, and its batches are byte

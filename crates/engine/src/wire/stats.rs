@@ -3692,13 +3692,17 @@ fn to_fixed(x: f64, digits: usize) -> String {
     out
 }
 
+/// A fraction as "52.1%", or `NO_FIGURE` for none.
+fn percent(rate: Option<f64>) -> String {
+    rate.map_or_else(
+        || NO_FIGURE.to_string(),
+        |rate| format!("{}%", to_fixed(rate * PERCENT, DECIMALS)),
+    )
+}
+
 /// "52.1% (310)": the win rate with its sample size, the games behind it, always beside it.
 pub fn format_tally(tally: &Tally) -> String {
-    let shown = match win_rate(tally) {
-        None => NO_FIGURE.to_string(),
-        Some(rate) => format!("{}%", to_fixed(rate * PERCENT, DECIMALS)),
-    };
-    format!("{shown} ({})", tally.games)
+    format!("{} ({})", percent(win_rate(tally)), tally.games)
 }
 
 /// "+8.2": the played delta in percentage points.

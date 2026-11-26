@@ -15,6 +15,7 @@ use std::sync::Arc;
 
 use serde_json::{Value, json};
 
+use crate::actor::rooms::release_room;
 use crate::api::consent::{age_check_owed, terms_owed};
 use crate::api::http::{
     ApiError, ApiErrorCode, ApiResult, Caller, Req, address_key, caller_of, json, log_info, now_ms,
@@ -264,9 +265,20 @@ pub(crate) async fn remove_account(app: &Arc<App>, caller: &Caller) -> Result<()
         ));
     }
 
+    let now = now_ms();
     let mut tx = app.db.begin(Some(&profile.id)).await?;
+    // R1689000: the deletion ends every friendship, so each open challenge's unjoined room is freed,
+    // as an unfriend frees it, rather than left open to anyone with its code (#5005).
+    for challenge in tx.challenges_open_of(&profile.id, now).await? {
+        release_room(&mut tx, &challenge.room_code).await?;
+    }
+    // R3730000: the lobbies it hosts or sits in go with it (0090's cascade), so their members are told.
+    let lobbies = tx.lobbies_of_member(&profile.id, now).await?;
     tx.profiles_remove(&profile.id).await?;
     tx.commit().await?;
+    for lobby in &lobbies {
+        crate::lobby::tell(app, &[lobby], &[]);
+    }
     // The friendships went with the profile by cascade, so a watch of a friend by this account, of a
     // 1v1 match or a co-op game (R2881000), ends at once, as an unfriend or a block ends one
     // (`social::watch::revoke_between`).

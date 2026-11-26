@@ -25,7 +25,8 @@ use super::chinese::{
 use super::data::ShortForm;
 use super::diff::radiant_marks;
 use super::fused::{
-    DORMANT_STARSHIP_ID, DORMANT_STARSHIP_NAME, holds_dormant_starship, with_merged_keyword_lines,
+    DORMANT_STARSHIP_ID, DORMANT_STARSHIP_NAME, Equipped, equipped_of, holds_dormant_starship,
+    with_merged_keyword_lines,
 };
 use super::glitch::{glitch_def, glitch_words};
 use super::glossary::{glossary_for, state_terms};
@@ -38,10 +39,10 @@ use super::short::{ascent_level_of, cut_text, in_language, short_form_of, summit
 use super::spans::{Dressing, rich};
 use super::state::{BadgeFacts, state_badges};
 use super::text::{Text, copied_text};
-use super::tuning::{MINUS, face_tuning, filled_text};
+use super::tuning::{LiveNumbers, MINUS, as_host, face_tuning, filled_text, with_part_numbers};
 use super::types::{
-    CostTone, DefMap, FaceCost, FaceCredits, FaceModel, FaceSource, FaceStats, Grew, InPlay, LiveStats,
-    Mention, QuestBox, StarshipFace, StatTone, TagChip, TuningChip,
+    CostTone, DefMap, EquippedFace, FaceCost, FaceCredits, FaceModel, FaceSource, FaceStats, Grew, InPlay,
+    LiveStats, Mention, QuestBox, StarshipFace, StarshipPieceRef, StatTone, TagChip, TuningChip,
 };
 use super::words::Words;
 
@@ -95,15 +96,45 @@ pub fn face_model(words: Words, source: &FaceSource, lookup: &Lookup<'_>) -> Fac
 
 fn face_in(words: Words, source: &FaceSource, lookup: &Lookup<'_>, chinese: bool) -> FaceModel {
     let given = source.def.clone().or_else(|| lookup.def(&source.def_id));
+    // R5049000: a fused definition's parts each print their own numbers, as their texts read them.
+    let view_tuning = source.in_play.as_ref().and_then(|play| play.tuning.as_ref());
+    let find = |id: &str| lookup.def(id);
+    let part_numbers = |def: CardDef, radiant: bool, values: Option<&IndexMap<String, i32>>| {
+        let live = LiveNumbers {
+            tuning: view_tuning,
+            radiant,
+            values,
+        };
+        with_part_numbers(&def, &find, live).unwrap_or(def)
+    };
+    // R5050000: a unit holding gear is printed as the card it was equipped into, its gear listed (`equipped`); a
+    // Starship lists its own pieces (R2249000).
+    let starship_in_view = source
+        .in_play
+        .as_ref()
+        .is_some_and(|play| play.starship.is_some());
+    let equipped: Option<(Equipped, CardDef)> = given
+        .as_ref()
+        .filter(|_| !starship_in_view)
+        .and_then(|def| equipped_of(def, &find))
+        .and_then(|gear| find(&gear.host.def_id).map(|host| (gear, host)));
+    let view_params = source.in_play.as_ref().and_then(|play| play.params.as_ref());
     let filled = with_view_params(
-        given,
-        source.in_play.as_ref().and_then(|play| play.params.as_ref()),
+        given.map(|def| part_numbers(def, source.radiant, view_params)),
+        view_params,
     );
     // R1301: a Chinese card's name and texts are the table's; all else stays the definition's.
     let def: Option<CardDef> = match (&filled, chinese) {
         (Some(filled), true) => Some(chinese_def(filled)),
         // R3941002: a fused face prints its ingredients' keyword lines as one; a Chinese face keeps its lines.
         _ => filled.clone().map(with_merged_keyword_lines),
+    };
+    let def = match (&equipped, def) {
+        (Some((gear, host)), Some(def)) => {
+            let host = if chinese { chinese_def(host) } else { host.clone() };
+            Some(as_host(&def, &host, gear.host.radiant, view_tuning))
+        }
+        (_, def) => def,
     };
     let radiant = source.radiant;
     let printed: Option<&CardFace> = def
@@ -131,6 +162,9 @@ fn face_in(words: Words, source: &FaceSource, lookup: &Lookup<'_>, chinese: bool
     // B5 E14, R511: a copier's own words are the copied Spell's text (in Chinese on a Chinese copier, R1301).
     let copies = in_play.and_then(|play| play.copies.as_ref()).map(|copies| {
         let mut copies = copies.clone();
+        // R5049000: a gained fused text (a Smoothie's Fruits, R4440006) fills as a fused card's own does.
+        let def = part_numbers(copies.def.clone(), copies.radiant, copies.params.as_ref());
+        copies.def = with_view_params(Some(def.clone()), copies.params.as_ref()).unwrap_or(def);
         if chinese {
             copies.def = chinese_def(&copies.def);
         }
@@ -302,6 +336,18 @@ fn face_in(words: Words, source: &FaceSource, lookup: &Lookup<'_>, chinese: bool
             list: ship.list.clone().unwrap_or_default(),
             term: super::glossary::entry("Starship"),
         });
+    let equipped = equipped.map(|(gear, host)| EquippedFace {
+        host: host.id,
+        list: gear
+            .gear
+            .into_iter()
+            .map(|piece| StarshipPieceRef {
+                def_id: piece.def_id,
+                radiant: radiant || piece.radiant,
+            })
+            .collect(),
+        term: super::glossary::entry("Equip"),
+    });
     // R3337001: an Anomaly Found! that holds a board (R2247000) draws that board's picture.
     let anomaly = in_play
         .and_then(|play| play.label.clone())
@@ -548,6 +594,7 @@ fn face_in(words: Words, source: &FaceSource, lookup: &Lookup<'_>, chinese: bool
         dormant,
         frozen_forever,
         starship,
+        equipped,
         anomaly,
         created,
         created_by: in_play.and_then(|play| play.created_by.clone()),

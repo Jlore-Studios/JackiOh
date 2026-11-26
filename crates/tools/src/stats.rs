@@ -29,13 +29,15 @@
 //! `report --versions` prints every deck card's play versions with their figures (R4675000, R4675001), the
 //! table `GET /api/stats/versions` sends, over record files.
 
+use std::collections::BTreeMap;
 use std::io::Write as _;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::mpsc;
 use std::time::Instant;
 
 use anyhow::{Context, Result, anyhow};
 use indexmap::{IndexMap, IndexSet};
-use rayon::prelude::*;
 use serde_json::Value;
 
 use jackioh_ai::{AI_DEV_RUN, DevRunOptions, SHADOW_BAN, SHADOW_WATCH, dev_game_record};
@@ -995,13 +997,10 @@ fn run_options(args: &Args, patch: String) -> Result<DevRunOptions> {
     })
 }
 
-/// Games played and written at a time: a chunk's records reach the file in game order before
-/// the next chunk starts, so a stopped run keeps every whole chunk, like `selfplay`'s chunks.
-const MIN_CHUNK_GAMES: i32 = 1;
-
-/// One game per rayon thread, so every core has work and a stopped run loses at most one chunk.
-fn chunk_games() -> i32 {
-    rayon::current_num_threads().max(MIN_CHUNK_GAMES as usize) as i32
+/// The games played at once: one a rayon thread, so every core has work (the tests' `install` sets
+/// how many).
+fn workers() -> usize {
+    rayon::current_num_threads().max(1)
 }
 
 /// One played game: its number, its record when it finished, and the task's wall seconds for
@@ -1012,34 +1011,71 @@ struct PlayedGame {
     seconds: f64,
 }
 
-/// Plays games `from..from + games` in chunks of `chunk_games`, handing each chunk's games, in
-/// game order, to `sink` before the next chunk starts. A record is a pure function of its number
-/// and options (`dev_game_record`), so the chunks read the same games whatever the thread count.
+/// Plays games `from..from + games` with `dev_game_record` and hands them to `sink` in game order
+/// (`play_in_order`). A record is a pure function of its number and options, so the run reads the
+/// same games whatever the thread count.
 fn play_chunks(
     from: i32,
     games: i32,
     options: &DevRunOptions,
+    sink: impl FnMut(Vec<PlayedGame>) -> Result<()>,
+) -> Result<()> {
+    let play = |n| {
+        let game_started = Instant::now();
+        PlayedGame {
+            n,
+            record: dev_game_record(n, options),
+            seconds: game_started.elapsed().as_secs_f64(),
+        }
+    };
+    play_in_order(from, games, play, sink)
+}
+
+/// Plays games `from..from + games` on `workers()` threads, each taking the next game as soon as it
+/// is free, and hands `sink` each run of finished games as soon as every game before it has
+/// finished, in game order. No core waits on a slower game: played a chunk of `workers()` at a time,
+/// each chunk waiting for its slowest, the gather lane's runners stood idle about half the time. A
+/// sink that fails stops the run once each game in hand finishes, so a stopped run keeps the games
+/// in order up to the first one that had not finished.
+fn play_in_order(
+    from: i32,
+    games: i32,
+    play: impl Fn(i32) -> PlayedGame + Sync,
     mut sink: impl FnMut(Vec<PlayedGame>) -> Result<()>,
 ) -> Result<()> {
-    let end = from + games;
-    let mut start = from;
-    while start < end {
-        let count = chunk_games().min(end - start);
-        let chunk: Vec<PlayedGame> = (start..start + count)
-            .into_par_iter()
-            .map(|n| {
-                let game_started = Instant::now();
-                PlayedGame {
-                    n,
-                    record: dev_game_record(n, options),
-                    seconds: game_started.elapsed().as_secs_f64(),
+    let total = usize::try_from(games).unwrap_or(0);
+    let next = AtomicUsize::new(0);
+    let (done, finished) = mpsc::channel::<PlayedGame>();
+    std::thread::scope(|scope| {
+        for _ in 0..workers().min(total) {
+            let (done, next, play) = (done.clone(), &next, &play);
+            // Until every game is taken, or the sink failed and dropped `finished`.
+            scope.spawn(move || {
+                loop {
+                    let i = next.fetch_add(1, Ordering::Relaxed);
+                    let Ok(offset) = i32::try_from(i) else { break };
+                    if i >= total || done.send(play(from + offset)).is_err() {
+                        break;
+                    }
                 }
-            })
-            .collect();
-        sink(chunk)?;
-        start += count;
-    }
-    Ok(())
+            });
+        }
+        drop(done);
+        let mut waiting = BTreeMap::new();
+        let mut due = from;
+        for played in finished {
+            waiting.insert(played.n, played);
+            let mut ready = Vec::new();
+            while let Some(played) = waiting.remove(&due) {
+                ready.push(played);
+                due += 1;
+            }
+            if !ready.is_empty() {
+                sink(ready)?;
+            }
+        }
+        Ok(())
+    })
 }
 
 pub fn run(args: Args) -> Result<()> {
@@ -2472,7 +2508,7 @@ mod tests {
         jackioh_cards::register_all();
         let one = rayon::ThreadPoolBuilder::new().num_threads(1).build().unwrap();
         let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
-        // Six games cover odd and even forced holders and, on four threads, two chunks of 4+2.
+        // Six games cover odd and even forced holders and, on four threads, more games than threads.
         for options in [
             DevRunOptions {
                 series: "dev".to_string(),
@@ -2513,10 +2549,10 @@ mod tests {
         }
     }
 
-    /// A stopped run keeps whole records in game order: the sink bails after the first chunk, and
-    /// what it kept parses and matches the serial run's first chunk.
+    /// A stopped run keeps whole records in game order: the sink bails after the first games it is
+    /// handed, and what it kept parses and is the serial run's first games.
     #[test]
-    fn stats_a_stopped_run_keeps_whole_chunks_in_game_order() {
+    fn stats_a_stopped_run_keeps_whole_records_in_game_order() {
         jackioh_cards::register_all();
         let options = DevRunOptions {
             series: "dev".to_string(),
@@ -2527,25 +2563,73 @@ mod tests {
         };
         let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
         let mut kept = String::new();
+        let mut handed = Vec::new();
         let stopped = four.install(|| {
-            play_chunks(1, 6, &options, |chunk| {
-                for played in &chunk {
+            play_chunks(1, 6, &options, |games| {
+                for played in &games {
+                    handed.push(played.n);
                     if let Some(record) = &played.record {
                         kept.push_str(&serde_json::to_string(record).unwrap());
                         kept.push('\n');
                     }
                 }
-                anyhow::bail!("stopped after one chunk");
+                anyhow::bail!("stopped after the first games");
             })
         });
         assert!(stopped.is_err(), "the bailed sink ends the run");
+        assert_eq!(
+            handed,
+            (1..=handed.len() as i32).collect::<Vec<_>>(),
+            "handed in game order from the first"
+        );
         parse_game_record_lines(&kept).unwrap();
         let kept_lines: Vec<&str> = kept.lines().collect();
-        let first_chunk = serial_lines(1, 4, &options);
-        assert_eq!(
-            kept_lines,
-            first_chunk.iter().map(String::as_str).collect::<Vec<_>>()
+        let first = serial_lines(1, handed.len() as i32, &options);
+        assert_eq!(kept_lines, first.iter().map(String::as_str).collect::<Vec<_>>());
+    }
+
+    /// How long a test game waits for another before the test calls the run stuck.
+    const STUCK_SECONDS: u64 = 20;
+
+    /// No game waits on a slower one: on four threads, game 1 holds its thread until game 6 has been
+    /// played, which a run of four at a time (each four waiting for its slowest) never reaches, and
+    /// the sink still sees every game once, in game order.
+    #[test]
+    fn stats_no_game_waits_for_a_slower_one() {
+        let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
+        let (six_played, six) = mpsc::channel::<()>();
+        let six = std::sync::Mutex::new(six);
+        let first_waited = std::sync::atomic::AtomicBool::new(false);
+        let play = |n: i32| {
+            if n == 1 {
+                let got = six
+                    .lock()
+                    .unwrap()
+                    .recv_timeout(std::time::Duration::from_secs(STUCK_SECONDS));
+                first_waited.store(got.is_ok(), Ordering::Relaxed);
+            }
+            if n == 6 {
+                six_played.send(()).unwrap();
+            }
+            PlayedGame {
+                n,
+                record: None,
+                seconds: 0.0,
+            }
+        };
+        let mut handed = Vec::new();
+        four.install(|| {
+            play_in_order(1, 8, play, |games| {
+                handed.extend(games.iter().map(|played| played.n));
+                Ok(())
+            })
+        })
+        .unwrap();
+        assert!(
+            first_waited.load(Ordering::Relaxed),
+            "game 6 was not played while game 1 was"
         );
+        assert_eq!(handed, (1..=8).collect::<Vec<_>>());
     }
 
     #[test]

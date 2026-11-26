@@ -264,10 +264,16 @@ type ViewKey = "table" | "grid";
  */
 type ExperimentalView = "running" | "historical" | "versions" | "hall";
 const EXPERIMENTAL_VIEWS: readonly ExperimentalView[] = ["running", "historical", "versions", "hall"];
-type SortColumn = "name" | "games" | "tier" | "adjustedWinRate" | "decisiveness" | "winRate" | "playRate";
+type SortColumn = "name" | "games" | "tier" | "adjustedWinRate" | "decisiveness" | "winRate" | "playRate" | "date";
 type SortDirection = "asc" | "desc";
 
 const SORT_COLUMNS: readonly SortColumn[] = ["name", "games", "tier", "adjustedWinRate", "decisiveness", "winRate", "playRate"] as const;
+
+/**
+ * R5033000: the columns an address may sort by: the Cards tab's and Date, which only Running and Versions offer.
+ * The Cards and Tokens tabs read Date as Adjusted, so `?sort=date` survives a switch of tab (R4083000).
+ */
+const ADDRESS_SORT_COLUMNS: readonly SortColumn[] = [...SORT_COLUMNS, "date"];
 
 const SORT_LABELS: Record<SortColumn, string> = {
   name: "Name",
@@ -277,6 +283,7 @@ const SORT_LABELS: Record<SortColumn, string> = {
   decisiveness: "Decisiveness",
   winRate: "Win rate",
   playRate: "Play rate",
+  date: "Date",
 };
 
 function defaultDirection(col: SortColumn): SortDirection {
@@ -284,7 +291,7 @@ function defaultDirection(col: SortColumn): SortDirection {
 }
 
 /** R2777000: the table's default order, the adjusted win rate descending. */
-const DEFAULT_SORT: SortColumn = "adjustedWinRate";
+const DEFAULT_SORT = "adjustedWinRate" satisfies SortColumn;
 
 /**
  * R2446000: the sort an address asks for. One the table no longer offers (an old address's `cost`, `rarity` or
@@ -293,7 +300,7 @@ const DEFAULT_SORT: SortColumn = "adjustedWinRate";
  */
 function sortOf(params: URLSearchParams): { col: SortColumn; dir: SortDirection } {
   const asked = params.get("sort");
-  const col = asked === null ? DEFAULT_SORT : SORT_COLUMNS.find((known) => known === asked);
+  const col = asked === null ? DEFAULT_SORT : ADDRESS_SORT_COLUMNS.find((known) => known === asked);
   if (col === undefined) return { col: DEFAULT_SORT, dir: "desc" };
   return { col, dir: params.get("dir") === "asc" ? "asc" : "desc" };
 }
@@ -1164,8 +1171,11 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     return KEYWORD_KINDS.filter((kind) => present.has(kind));
   }, []);
 
+  // R5033000: the Cards tab offers no Date, so it reads one as Adjusted in its direction, as Tokens does; the state
+  // keeps `date` for the address and the other tabs.
+  const cardsCol: Exclude<SortColumn, "date"> = sortCol === "date" ? DEFAULT_SORT : sortCol;
   const handleSort = (col: SortColumn) => {
-    if (sortCol === col) {
+    if (cardsCol === col) {
       setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
     } else {
       setSortCol(col);
@@ -1176,14 +1186,15 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   // R4083000: the Tokens tab sorts by the Cards tab's one sort, kept in the address, a column its tables lack read as
   // Adjusted; a Created header sets it as a deck header does.
   const createdSort = createdSortOf(sortCol, sortDir);
-  // R4678001: Running sorts by it too, with no Decisiveness.
+  // R4678001: Running sorts by it too, with no Decisiveness, and R5033000 with Date.
   const runningSort = runningSortOf(sortCol, sortDir);
   const sortCreatedBy = (next: CreatedSort): void => {
     setSortCol(next.col);
     setSortDir(next.dir);
   };
 
-  const filteredCards = useMemo(() => {
+  // The cards the shared filters keep, before any sort.
+  const unsortedCards = useMemo(() => {
     if (!cardStatsData) return [];
     let list = [...cardStatsData.cards];
 
@@ -1194,61 +1205,75 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     if (keywordFilter) {
       list = list.filter((c) => keywordKinds(c.id).includes(keywordFilter as KeywordKind));
     }
-
-    const flip = sortDir === "desc" ? -1 : 1;
-    const language = locale === "en" ? undefined : locale;
-    const compareNames = (a: { id: string; name: string }, b: { id: string; name: string }): number =>
-      shownName(a.id, a.name).localeCompare(shownName(b.id, b.name), language);
-    list.sort((a, b) => {
-      if (sortCol === "tier") {
-        // R3022000: by tier, S first descending; a card without one after those with one, then by its adjusted rate.
-        if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
-        if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
-        const aRank = tierRank(a.tier);
-        const bRank = tierRank(b.tier);
-        if (aRank >= 0 && bRank < 0) return -1;
-        if (aRank < 0 && bRank >= 0) return 1;
-        if (aRank !== bRank) return (aRank - bRank) * flip;
-        // R3184001: within a tier, by how much of the card's range is in it, a card with no range after; then by its adjusted rate.
-        const aFit = cardTierFit(a, tiers);
-        const bFit = cardTierFit(b, tiers);
-        if (aFit !== null && bFit === null) return -1;
-        if (aFit === null && bFit !== null) return 1;
-        if (aFit !== null && bFit !== null && aFit !== bFit) return (aFit - bFit) * flip;
-        const aRate = a.adjustedWinRate ?? null;
-        const bRate = b.adjustedWinRate ?? null;
-        if (aRate !== null && bRate !== null && aRate !== bRate) return (aRate - bRate) * flip;
-      } else if (sortCol === "adjustedWinRate" || sortCol === "decisiveness") {
-        // R2777000: a card with no adjusted rate (nothing seen, or never unseen) sorts after those with one;
-        // R4552001: Decisiveness sorts the same way.
-        if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
-        if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
-        const aRate = (sortCol === "decisiveness" ? a.decisiveness : a.adjustedWinRate) ?? null;
-        const bRate = (sortCol === "decisiveness" ? b.decisiveness : b.adjustedWinRate) ?? null;
-        if (aRate !== null && bRate === null) return -1;
-        if (aRate === null && bRate !== null) return 1;
-        if (aRate !== null && bRate !== null && aRate !== bRate) {
-          return (aRate - bRate) * flip;
-        }
-      } else if (sortCol === "winRate") {
-        if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
-        if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
-        if (a.winRate !== null && b.winRate !== null && a.winRate !== b.winRate) {
-          return (a.winRate - b.winRate) * flip;
-        }
-      } else if (sortCol === "games") {
-        if (a.games !== b.games) return (a.games - b.games) * flip;
-      } else if (sortCol === "playRate") {
-        if (a.playRate !== b.playRate) return (a.playRate - b.playRate) * flip;
-      } else if (sortCol === "name") {
-        const diff = compareNames(a, b);
-        if (diff !== 0) return diff * flip;
-      }
-      return a.games - b.games || compareNames(a, b);
-    });
-
     return list;
-  }, [cardStatsData, search, keywordFilter, sortCol, sortDir, locale, tiers]);
+  }, [cardStatsData, search, keywordFilter]);
+
+  const sortCards = useCallback(
+    (cards: readonly (typeof unsortedCards)[number][], cardsCol: Exclude<SortColumn, "date">, sortDir: SortDirection) => {
+      const list = [...cards];
+      const flip = sortDir === "desc" ? -1 : 1;
+      const language = locale === "en" ? undefined : locale;
+      const compareNames = (a: { id: string; name: string }, b: { id: string; name: string }): number =>
+        shownName(a.id, a.name).localeCompare(shownName(b.id, b.name), language);
+      list.sort((a, b) => {
+        if (cardsCol === "tier") {
+          // R3022000: by tier, S first descending; a card without one after those with one, then by its adjusted rate.
+          if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
+          if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
+          const aRank = tierRank(a.tier);
+          const bRank = tierRank(b.tier);
+          if (aRank >= 0 && bRank < 0) return -1;
+          if (aRank < 0 && bRank >= 0) return 1;
+          if (aRank !== bRank) return (aRank - bRank) * flip;
+          // R3184001: within a tier, by how much of the card's range is in it, a card with no range after; then by its adjusted rate.
+          const aFit = cardTierFit(a, tiers);
+          const bFit = cardTierFit(b, tiers);
+          if (aFit !== null && bFit === null) return -1;
+          if (aFit === null && bFit !== null) return 1;
+          if (aFit !== null && bFit !== null && aFit !== bFit) return (aFit - bFit) * flip;
+          const aRate = a.adjustedWinRate ?? null;
+          const bRate = b.adjustedWinRate ?? null;
+          if (aRate !== null && bRate !== null && aRate !== bRate) return (aRate - bRate) * flip;
+        } else if (cardsCol === "adjustedWinRate" || cardsCol === "decisiveness") {
+          // R2777000: a card with no adjusted rate (nothing seen, or never unseen) sorts after those with one;
+          // R4552001: Decisiveness sorts the same way.
+          if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
+          if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
+          const aRate = (cardsCol === "decisiveness" ? a.decisiveness : a.adjustedWinRate) ?? null;
+          const bRate = (cardsCol === "decisiveness" ? b.decisiveness : b.adjustedWinRate) ?? null;
+          if (aRate !== null && bRate === null) return -1;
+          if (aRate === null && bRate !== null) return 1;
+          if (aRate !== null && bRate !== null && aRate !== bRate) {
+            return (aRate - bRate) * flip;
+          }
+        } else if (cardsCol === "winRate") {
+          if (a.hasEnoughGames && !b.hasEnoughGames) return -1;
+          if (!a.hasEnoughGames && b.hasEnoughGames) return 1;
+          if (a.winRate !== null && b.winRate !== null && a.winRate !== b.winRate) {
+            return (a.winRate - b.winRate) * flip;
+          }
+        } else if (cardsCol === "games") {
+          if (a.games !== b.games) return (a.games - b.games) * flip;
+        } else if (cardsCol === "playRate") {
+          if (a.playRate !== b.playRate) return (a.playRate - b.playRate) * flip;
+        } else if (cardsCol === "name") {
+          const diff = compareNames(a, b);
+          if (diff !== 0) return diff * flip;
+        }
+        return a.games - b.games || compareNames(a, b);
+      });
+
+      return list;
+    },
+    [locale, tiers],
+  );
+  const filteredCards = useMemo(() => sortCards(unsortedCards, cardsCol, sortDir), [sortCards, unsortedCards, cardsCol, sortDir]);
+  // R5033000: Running and Versions take the Cards tab's order as the order their ties keep. Under a Date sort that is
+  // Adjusted in its default direction whatever the sort's own, so a row tied on Date keeps one place both ways.
+  const rowsInput = useMemo(
+    () => (sortCol === "date" ? sortCards(unsortedCards, DEFAULT_SORT, defaultDirection(DEFAULT_SORT)) : filteredCards),
+    [sortCol, sortCards, unsortedCards, filteredCards],
+  );
 
   // R2089000: the Created cards the search box asks for, as it asks for the deck rows, and R4083000 the keyword;
   // R3324002: the tokens among them in a section of their own, and every other in its own, so no card is in both.
@@ -1264,8 +1289,8 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const experimentalData = majorRunning ? majorData : versionsData;
   const experimentalError = majorRunning ? majorError : versionsError;
   const running = useMemo(
-    () => (experimentalData ? runningRows(filteredCards, experimentalData.versions) : []),
-    [filteredCards, experimentalData],
+    () => (experimentalData ? runningRows(rowsInput, experimentalData.versions) : []),
+    [rowsInput, experimentalData],
   );
 
   // R4680000: each old version's definition, from its catalog once a row on screen or its drill-down asks for it; a
@@ -1291,12 +1316,12 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const versionsShown = useMemo(
     () =>
       versionsData
-        ? versionRows(filteredCards, versionsData.versions, pastOnly, (version) => {
+        ? versionRows(rowsInput, versionsData.versions, pastOnly, (version) => {
             const read = readVersion(version);
             return read === undefined ? undefined : (read?.def ?? null);
           })
         : [],
-    [filteredCards, versionsData, pastOnly, readVersion],
+    [rowsInput, versionsData, pastOnly, readVersion],
   );
   // R4681001: whether the Hall of Fame's four lists are all empty.
   const hallEmpty =
@@ -1494,7 +1519,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     }
     const columns: readonly SortColumn[] =
       shown === "cards" ? SORT_COLUMNS : shown === "tokens" ? CREATED_SORT_COLUMNS : RUNNING_SORT_COLUMNS;
-    const sortShown = shown === "cards" ? sortCol : shown === "tokens" ? createdSort.col : runningSort.col;
+    const sortShown = shown === "cards" ? cardsCol : shown === "tokens" ? createdSort.col : runningSort.col;
     return (
       <div className="stats-options">
         <div className="stats-sort">
@@ -1847,7 +1872,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                       <th
                         scope="col"
                         className="stats-th stats-th--sortable"
-                        aria-sort={sortCol === "name" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                        aria-sort={cardsCol === "name" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                         onClick={() => handleSort("name")}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
@@ -1857,13 +1882,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         }}
                         tabIndex={0}
                       >
-                        {t("Name")} {sortCol === "name" && (sortDir === "asc" ? "↑" : "↓")}
+                        {t("Name")} {cardsCol === "name" && (sortDir === "asc" ? "↑" : "↓")}
                       </th>
                       {visibleCols.games && (
                         <th
                           scope="col"
                           className="stats-th stats-th--sortable"
-                          aria-sort={sortCol === "games" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                          aria-sort={cardsCol === "games" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                           onClick={() => handleSort("games")}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
@@ -1873,14 +1898,14 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                           }}
                           tabIndex={0}
                         >
-                          {t("Games")} {sortCol === "games" && (sortDir === "asc" ? "↑" : "↓")}
+                          {t("Games")} {cardsCol === "games" && (sortDir === "asc" ? "↑" : "↓")}
                         </th>
                       )}
                       <th
                         scope="col"
                         className="stats-th stats-th--sortable"
                         title={t("S needs a nerf and F a buff: S is above the band and sure of it, F below it and sure of it, and A to D are the band's quarters")}
-                        aria-sort={sortCol === "tier" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                        aria-sort={cardsCol === "tier" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                         onClick={() => handleSort("tier")}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
@@ -1890,13 +1915,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         }}
                         tabIndex={0}
                       >
-                        {t("Tier")} {sortCol === "tier" && (sortDir === "asc" ? "↑" : "↓")}
+                        {t("Tier")} {cardsCol === "tier" && (sortDir === "asc" ? "↑" : "↓")}
                       </th>
                       <th
                         scope="col"
                         className="stats-th stats-th--sortable"
                         title={t("50% plus how far drawing the card moves its deck's win rate beyond the average card's, counted only as far as its games bear out")}
-                        aria-sort={sortCol === "adjustedWinRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                        aria-sort={cardsCol === "adjustedWinRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                         onClick={() => handleSort("adjustedWinRate")}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
@@ -1906,7 +1931,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         }}
                         tabIndex={0}
                       >
-                        {t("Adjusted")} {sortCol === "adjustedWinRate" && (sortDir === "asc" ? "↑" : "↓")}
+                        {t("Adjusted")} {cardsCol === "adjustedWinRate" && (sortDir === "asc" ? "↑" : "↓")}
                       </th>
                       <th
                         scope="col"
@@ -1915,7 +1940,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                           "Decisiveness: how far playing a card typically moves your chance of winning, one way or the other; ± is the swing itself, not a margin of error. A typical card: {typical}.",
                           { typical: decisivenessText(tiers?.decisiveness) },
                         )}
-                        aria-sort={sortCol === "decisiveness" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                        aria-sort={cardsCol === "decisiveness" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                         onClick={() => handleSort("decisiveness")}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
@@ -1925,12 +1950,12 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         }}
                         tabIndex={0}
                       >
-                        {t("Decisiveness")} {sortCol === "decisiveness" && (sortDir === "asc" ? "↑" : "↓")}
+                        {t("Decisiveness")} {cardsCol === "decisiveness" && (sortDir === "asc" ? "↑" : "↓")}
                       </th>
                       <th
                         scope="col"
                         className="stats-th stats-th--sortable"
-                        aria-sort={sortCol === "winRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                        aria-sort={cardsCol === "winRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                         onClick={() => handleSort("winRate")}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
@@ -1940,13 +1965,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         }}
                         tabIndex={0}
                       >
-                        {t("Win rate")} {sortCol === "winRate" && (sortDir === "asc" ? "↑" : "↓")}
+                        {t("Win rate")} {cardsCol === "winRate" && (sortDir === "asc" ? "↑" : "↓")}
                       </th>
                       {visibleCols.playRate && (
                         <th
                           scope="col"
                           className="stats-th stats-th--sortable"
-                          aria-sort={sortCol === "playRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                          aria-sort={cardsCol === "playRate" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
                           onClick={() => handleSort("playRate")}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
@@ -1956,7 +1981,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                           }}
                           tabIndex={0}
                         >
-                          {t("Play rate")} {sortCol === "playRate" && (sortDir === "asc" ? "↑" : "↓")}
+                          {t("Play rate")} {cardsCol === "playRate" && (sortDir === "asc" ? "↑" : "↓")}
                         </th>
                       )}
                     </tr>

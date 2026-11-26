@@ -100,7 +100,7 @@ export function setupOf(over: Partial<AssaultSetup> = {}): AssaultSetup {
   };
 }
 
-export function stateOf(over: Partial<AssaultState> = {}): AssaultState {
+function stateOf(over: Partial<AssaultState> = {}): AssaultState {
   return {
     setup: setupOf(),
     level: 1,

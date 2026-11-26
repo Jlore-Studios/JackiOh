@@ -2,6 +2,7 @@
 // on its live play version (R4675000), the version it plays today, with that version's figures over every patch since
 // it began (R4675001), pooled across the patches. Card, Name, Tier and Adjusted as the Created tables show them
 // (R4083000), Games behind the tab's Columns toggle, and Since: the version it began at and the patches it reaches.
+// R5033000: its header sorts by Date, when the version it began at shipped.
 // It sorts, views and ranges by the page's one state, as the Tokens tab does, and a row opens the card's drill-down.
 // Every figure is the server's (CLAUDE.md rule 7); the tier fit only measures its range against its band (R3184001).
 // R4680000: the same table and grid draw the Versions view, one row per play version of each card the Cards tab lists,
@@ -25,8 +26,11 @@ import { cardTierFit } from "./tierFit.ts";
 /** Unit conversion, not configuration: a share of 0..1 as a percentage. */
 const PERCENT = 100;
 
-/** R4678001: the columns Running sorts by, in the deck table's order: its sort select. It has no Decisiveness. */
-export const RUNNING_SORT_COLUMNS: readonly CreatedColumn[] = ["name", "games", "tier", "adjustedWinRate"];
+/**
+ * R4678001: the columns Running sorts by, in the deck table's order: its sort select. It has no Decisiveness.
+ * R5033000 adds Date, which the Since header also sets.
+ */
+export const RUNNING_SORT_COLUMNS: readonly CreatedColumn[] = ["name", "games", "tier", "adjustedWinRate", "date"];
 
 /** R4678001: the page's one sort as Running reads it: a column it lacks reads as Adjusted, keeping its direction. */
 export function runningSortOf(col: string, dir: "asc" | "desc"): CreatedSort {
@@ -84,6 +88,7 @@ export function runningRows(
         since: version.first,
         patches: version.patches,
         iteration: version.iteration,
+        firstShipped: version.firstShipped,
       },
     ];
   });
@@ -130,6 +135,7 @@ export function versionRows(
         until: version.live ? null : version.last,
         patches: version.patches,
         iteration: version.iteration,
+        firstShipped: version.firstShipped,
         needs: version.live || def ? undefined : version.last,
       };
     }),
@@ -325,9 +331,7 @@ export function RunningPanel({
             {visibleGames && <SortHeader col="games" label={t("Games")} {...header} />}
             <SortHeader col="tier" label={t("Tier")} {...header} />
             <SortHeader col="adjustedWinRate" label={t("Adjusted")} {...header} />
-            <th scope="col" className="stats-th">
-              {t("Since")}
-            </th>
+            <SortHeader col="date" label={t("Since")} {...header} />
             <th scope="col" className="stats-th" title={iterationTitle()}>
               {t("Iteration")}
             </th>

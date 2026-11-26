@@ -89,7 +89,8 @@ func (x *Deliverer) Suggestions() {
 			footer += fmt.Sprintf("\n\nClass: `%s` → `priority:%s`; relabel to change it.", kind, level)
 		}
 		// The judge's word on it (`suggestions.auto_approve`): one it would approve goes ahead by
-		// itself once it has waited with no one's vote, comment or 👎 (`plan.AutoApprove`).
+		// itself once it has waited with no one's vote, comment or 👎 (`plan.AutoApprove`), or as it
+		// opens when `wait_hours` is 0 (#5104).
 		judge := pyjson.Obj(entry.Get("judge"))
 		auto := x.Cfg.AutoApprove
 		approve := auto.Enabled && judge != nil && judge.Truthy("approve")
@@ -98,7 +99,11 @@ func (x *Deliverer) Suggestions() {
 			if why != "" {
 				why = ": " + strings.TrimRight(why, ".")
 			}
-			if approve {
+			if approve && auto.WaitHours == 0 {
+				footer += fmt.Sprintf("\n\n**Judge:** would approve it%s, so it is approved by itself as it opens, "+
+					"at `priority:low` (at most %d a day; one past that waits for room). `%s stop` takes it "+
+					"back out of the queue.", why, auto.PerDay, config.Slash)
+			} else if approve {
 				due := x.Ctx.Now().Add(time.Duration(auto.WaitHours) * time.Hour)
 				footer += fmt.Sprintf("\n\n**Judge:** would approve it%s. With no vote, no comment and no 👎 on "+
 					"this issue by %s, it is approved by itself at `priority:low` (at most %d a day); "+
@@ -119,6 +124,12 @@ func (x *Deliverer) Suggestions() {
 		}
 	}
 	x.log("opened suggestions: " + py.Repr(made))
+	// #5104: with no wait, each one the judge would approve is queued now, not at a later sweep.
+	if auto := x.Cfg.AutoApprove; auto.Enabled && auto.WaitHours == 0 {
+		for _, note := range planmod.AutoApprove(x.Ctx) {
+			x.log(note)
+		}
+	}
 }
 
 // ------------------------------------------------------------------ the next run

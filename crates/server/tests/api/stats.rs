@@ -2401,6 +2401,7 @@ mod r4675001_play_versions {
                 "adjustedWinRate",
                 "card",
                 "first",
+                "firstShipped",
                 "games",
                 "hasEnoughGames",
                 "id",
@@ -2434,10 +2435,18 @@ mod r4675001_play_versions {
             live["patches"].as_u64().is_some_and(|patches| patches >= 1),
             "{live}"
         );
+        // Its first version's position in the shipped history, which the client never orders names for.
+        let shipped = jackioh_cards::shipped_versions();
+        let first = live["first"].as_str().expect("first is a version");
+        assert_eq!(
+            live["firstShipped"],
+            json!(shipped.iter().position(|version| *version == first))
+        );
 
         // Its oldest play version began before the records: no games and no figure.
         let oldest = core[0];
         assert_eq!(oldest["first"], json!(jackioh_cards::shipped_versions()[0]));
+        assert_eq!(oldest["firstShipped"], json!(0));
         // R5035000: counted though it began before the records.
         assert_eq!(oldest["iteration"], json!("v1"));
         assert_eq!(oldest["live"], json!(false));
