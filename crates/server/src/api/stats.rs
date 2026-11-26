@@ -44,12 +44,13 @@ use std::sync::{Arc, Mutex};
 use axum::body::Body;
 use axum::http::{HeaderValue, StatusCode, header};
 use axum::response::Response;
-use indexmap::IndexMap;
+use indexmap::{IndexMap, IndexSet};
 use serde::Serialize;
 use serde_json::{Map, Value, json};
 use tokio::sync::OnceCell;
 
 use jackioh_cards::{deck_play_versions, patch_history};
+use jackioh_engine::wire::stats::PlayVersion;
 use jackioh_engine::wire::stats::{
     CardDrill, CardStats, CardStatsFilter, CardStatsReport, CardTier, CardWindow, CreatedStats, GameFigures,
     GameMode, GameSource, ModeFilter, PatchStep, PatchWindow, PilotFilter, PilotPairFigures,
@@ -80,7 +81,7 @@ use crate::config::{
     PLAYER_STATS_BYTES_MAX, PLAYER_STATS_CACHE_TTL_SECONDS, PLAYER_STATS_PAGE_LIMIT,
     PUBLIC_STATS_MIN_LIVE_GAMES, PUBLIC_STATS_PATCHES_LINE_BEFORE, PUBLIC_STATS_PATCHES_NEWEST,
 };
-use crate::db::store::{PlayerStatsListOptions, StatsTotalsQuery};
+use crate::db::store::{CardFiling, CardRows, PlayerStatsListOptions, StatsTotalsQuery};
 use crate::env::js_number;
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
@@ -1065,8 +1066,13 @@ fn tally_of(tally: &Tally) -> (i64, i64) {
 }
 
 /// R1044000: one patch's totals (every patch's with `None`) over both sources and every mode, each
-/// card's turn and co-played counts only with `drills`.
-async fn totals_for(app: &App, patch: Option<&str>, drills: bool) -> Result<StatsTotals, ApiError> {
+/// card's turn and co-played counts only with `drills`, and (R4965000) the card totals `cards` keeps.
+async fn totals_for(
+    app: &App,
+    patch: Option<&str>,
+    drills: bool,
+    cards: CardRows,
+) -> Result<StatsTotals, ApiError> {
     let mut tx = app.db.begin(None).await?;
     let totals = tx
         .stats_totals_load(&StatsTotalsQuery {
@@ -1074,6 +1080,7 @@ async fn totals_for(app: &App, patch: Option<&str>, drills: bool) -> Result<Stat
             mode: None,
             patch: patch.map(str::to_string),
             drills,
+            cards,
         })
         .await?;
     tx.commit().await?;
@@ -1082,16 +1089,85 @@ async fn totals_for(app: &App, patch: Option<&str>, drills: bool) -> Result<Stat
 
 /// R3067000: every patch's totals as kept: one load when none was made in the last
 /// `CARD_STATS_CACHE_TTL_SECONDS`, once however many requests miss it together. A load that fails is
-/// kept for no one: the next request makes it again.
+/// kept for no one: the next request makes it again. R4965000: the records and game totals are read
+/// first, and the card totals then as `snapshot_filing` files them by those records.
 async fn kept_snapshot(app: &App) -> Result<KeptTotals, ApiError> {
     let (made_at, cell) = app.card_stats.totals_cell(now_ms());
-    let totals = cell
-        .get_or_try_init(|| async { totals_for(app, None, false).await.map(Arc::new) })
+    let snapshot = cell
+        .get_or_try_init(|| async {
+            let history = patch_history();
+            let records = totals_for(app, None, false, CardRows::None).await?;
+            let filing = snapshot_filing(&history, &records, &deck_play_versions(), &app.catalog.version);
+            let totals = totals_for(app, None, false, CardRows::Filed(filing.clone())).await?;
+            Ok::<_, ApiError>(Arc::new(Snapshot::new(&history, totals, filing)))
+        })
         .await?;
     Ok(KeptTotals {
         made_at,
-        totals: Arc::clone(totals),
+        held: Arc::clone(snapshot),
     })
+}
+
+/// SPEC §11 R4965000: how the kept snapshot files the card totals (R3067000), by the records' patches
+/// (`patch_windows`, R1973002). It keeps as filed the totals of every version from the first of the
+/// window before the oldest patch anyone may read (`public_patch_count`, R4677000) through the newest:
+/// the windows every card's figures at a public patch reach (R1367000: a card's own window, or the one
+/// before it, never opens before the window every card shares before its own). Before them it keeps one
+/// total per deck card's play version (R4675000) and key, filed under the play version's first version,
+/// which the play versions' table sums as it summed each version's (R4675001), and drops the rest. The
+/// build's own version, when it is no shipped one, is kept too.
+pub fn snapshot_filing(
+    history: &[PatchStep],
+    records: &StatsTotals,
+    plays: &[PlayVersion],
+    current: &str,
+) -> CardFiling {
+    let windows = patch_windows(
+        history,
+        |version| records.games(version),
+        |version| records.live_games(version),
+    );
+    let reach = (public_patch_count(&windows) + 1).min(windows.len());
+    let versions: IndexSet<String> = history.iter().map(|step| step.version.clone()).collect();
+    let kept_from = windows[..reach]
+        .last()
+        .and_then(|window| window.versions.first())
+        .and_then(|first| versions.get_index_of(first))
+        .unwrap_or(0);
+    let mut folded: IndexMap<String, Vec<(usize, usize)>> = IndexMap::new();
+    for play in plays {
+        if let (Some(first), Some(last)) = (
+            versions.get_index_of(play.first()),
+            versions.get_index_of(play.last()),
+        ) && first < kept_from
+        {
+            folded.entry(play.card.clone()).or_default().push((first, last));
+        }
+    }
+    CardFiling {
+        kept_to: versions.len().saturating_sub(1),
+        also_kept: if versions.contains(current) {
+            Vec::new()
+        } else {
+            vec![current.to_string()]
+        },
+        versions,
+        kept_from,
+        folded,
+    }
+}
+
+/// SPEC §11 R4965000: the versions, as places in `versions`, whose card totals the figures at `at`
+/// read (R1367000): from the first of the window every card shares before `at`'s own through `at`.
+/// `None` for a version no window holds.
+pub fn reach_of(windows: &[PatchWindow], versions: &IndexSet<String>, at: &str) -> Option<(usize, usize)> {
+    let to = versions.get_index_of(at)?;
+    let own = windows
+        .iter()
+        .position(|window| window.versions.iter().any(|version| version == at))?;
+    let oldest = windows.get(own + 1).unwrap_or(&windows[own]);
+    let from = versions.get_index_of(oldest.versions.first()?)?;
+    Some((from, to))
 }
 
 /// R1451, amended by R807000: the seats of a record the public figures count. Development games
@@ -1228,12 +1304,69 @@ struct ReportKey {
 type KeptCell = Arc<OnceCell<Arc<PatchReport>>>;
 
 /// R3067000: every patch's totals, filled by the first request that needs them; the others wait on it.
-type KeptTotalsCell = Arc<OnceCell<Arc<StatsTotals>>>;
+type KeptTotalsCell = Arc<OnceCell<Arc<Snapshot>>>;
 
 /// R3067000: every patch's totals, and when their cell was first asked for.
 struct KeptTotals {
     made_at: i64,
-    totals: Arc<StatsTotals>,
+    held: Arc<Snapshot>,
+}
+
+/// R4965000: the kept snapshot: the totals, how their card totals were filed (`snapshot_filing`), and
+/// the windows every card shares over their records (`patch_windows`).
+struct Snapshot {
+    totals: StatsTotals,
+    filing: CardFiling,
+    windows: Vec<PatchWindow>,
+}
+
+impl Snapshot {
+    fn new(history: &[PatchStep], totals: StatsTotals, filing: CardFiling) -> Snapshot {
+        let windows = patch_windows(
+            history,
+            |version| totals.games(version),
+            |version| totals.live_games(version),
+        );
+        Snapshot {
+            totals,
+            filing,
+            windows,
+        }
+    }
+
+    /// R4965000: whether `version`'s card totals are held as filed.
+    fn holds_patch(&self, version: &str) -> bool {
+        self.filing.also_kept.iter().any(|kept| kept == version)
+            || self
+                .filing
+                .versions
+                .get_index_of(version)
+                .is_some_and(|at| (self.filing.kept_from..=self.filing.kept_to).contains(&at))
+    }
+
+    /// R4965000: whether the figures at `at` can be cut from the snapshot: every version they read
+    /// (`reach_of`) is held as filed. A version no window holds reads its own totals alone (R1367000).
+    fn holds(&self, at: &str) -> bool {
+        match reach_of(&self.windows, &self.filing.versions, at) {
+            Some((from, to)) => from >= self.filing.kept_from && to <= self.filing.kept_to,
+            None => self.holds_patch(at),
+        }
+    }
+
+    /// R4965000: the card totals the figures at `at` read, a patch past the snapshot's (a dev account's,
+    /// R4677000): every patch's records and game totals, and the card totals of `at`'s reach alone, so
+    /// the load holds no more than that reach.
+    fn reach_rows(&self, at: &str) -> CardRows {
+        let (kept_from, kept_to) =
+            reach_of(&self.windows, &self.filing.versions, at).unwrap_or((usize::MAX, usize::MAX));
+        CardRows::Filed(CardFiling {
+            versions: self.filing.versions.clone(),
+            kept_from,
+            kept_to,
+            also_kept: Vec::new(),
+            folded: IndexMap::new(),
+        })
+    }
 }
 
 /// R978000: the computed per-patch reports, each with when it was first asked for, the one kept
@@ -1411,14 +1544,20 @@ async fn shipped_window(
     let cell = app.card_stats.window_cell(key, snapshot.made_at);
     let kept = cell
         .get_or_try_init(|| async {
-            Ok::<_, ApiError>(Arc::new(window_over(
-                &snapshot.totals,
-                history,
-                at,
-                source,
-                pilot,
-                mode,
-            )))
+            let held = &snapshot.held;
+            if held.holds(at) {
+                return Ok::<_, ApiError>(Arc::new(window_over(
+                    &held.totals,
+                    history,
+                    at,
+                    source,
+                    pilot,
+                    mode,
+                )));
+            }
+            // R4965000: a patch past the snapshot's reads its own reach, loaded now.
+            let own = totals_for(app, None, false, held.reach_rows(at)).await?;
+            Ok(Arc::new(window_over(&own, history, at, source, pilot, mode)))
         })
         .await?;
     Ok(Arc::clone(kept))
@@ -1450,7 +1589,7 @@ async fn kept_window(
         PublicStatsMode::All,
     )
     .await?;
-    let own = totals_for(app, Some(at), false).await?;
+    let own = totals_for(app, Some(at), false, CardRows::All).await?;
     let mut window = window_over(&own, history, at, source, pilot, mode);
     window.history.clone_from(&shared.history);
     window.patches.clone_from(&shared.patches);
@@ -1551,7 +1690,7 @@ async fn kept_report(
     let current = patch == app.catalog.version;
     let compute = || async move {
         let with_drills = current && source == SourceParam::Default;
-        let totals = totals_for(app, Some(patch), with_drills).await?;
+        let totals = totals_for(app, Some(patch), with_drills, CardRows::All).await?;
         Ok::<_, ApiError>(Arc::new(patch_report(
             &totals,
             patch,
@@ -1637,9 +1776,15 @@ async fn kept_history(
     let cell = app.card_stats.history_cell((pilot, mode, face), snapshot.made_at);
     let kept = cell
         .get_or_try_init(|| async {
+            // R4965000: the patches whose card totals the snapshot holds as filed.
+            let held: Vec<String> = versions
+                .iter()
+                .filter(|version| snapshot.held.holds_patch(version))
+                .cloned()
+                .collect();
             Ok::<_, ApiError>(Arc::new(history_over(
-                &snapshot.totals,
-                versions,
+                &snapshot.held.totals,
+                &held,
                 pilot,
                 mode,
                 face,
@@ -1666,7 +1811,7 @@ async fn kept_versions(
             let versions = deck_play_versions();
             let history = patch_history();
             Ok::<_, ApiError>(Arc::new(play_version_figures(
-                &snapshot.totals,
+                &snapshot.held.totals,
                 &PlayVersionQuery {
                     versions: &versions,
                     history: &history,
@@ -2225,6 +2370,8 @@ pub async fn get_play_rates(app: &Arc<App>, _req: Req) -> ApiResult {
                     mode: None,
                     patch: None,
                     drills: false,
+                    // R4965000: every patch's live totals summed alike, so one total per card and key.
+                    cards: CardRows::Merged,
                 })
                 .await?;
             tx.commit().await?;
