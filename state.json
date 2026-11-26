@@ -21425,6 +21425,7 @@
       "provider": "agy",
       "queued_at": "2026-11-26T00:48:15Z",
       "requested_by": "jgoetzmann",
+      "round_tier": "",
       "run_id": "45732225022",
       "runs_on": "night-vm-agy",
       "started_at": "2026-11-26T00:55:48Z",
@@ -21436,7 +21437,8 @@
       "suggestion": true,
       "taken_asks": [
         "c:7179115536"
-      ]
+      ],
+      "verdict_rounds": 0
     },
     "4981": {
       "action": "build",
