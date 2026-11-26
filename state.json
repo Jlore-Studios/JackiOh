@@ -21606,7 +21606,9 @@
     },
     "4991": {
       "action": "build",
-      "asks": [],
+      "asks": [
+        "c:7181103198"
+      ],
       "difficulty_by": {
         "at": "2026-11-26T03:05:17Z",
         "difficulty": "hard",
@@ -21645,9 +21647,7 @@
       "started_at": "2026-11-26T02:57:06Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [
-        "c:7181103198"
-      ]
+      "taken_asks": []
     },
     "4992": {
       "action": "plan",
