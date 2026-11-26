@@ -36,7 +36,7 @@ struct OpenLine {
     state: GameState,
     actions: Vec<ActionBody>,
     score: f64,
-    /// R4595002: the step into it made one of the seat's other hand cards cheaper.
+    /// R4595002: a step of its line made one of the seat's other hand cards cheaper.
     discounted: bool,
 }
 
@@ -223,7 +223,7 @@ pub fn beam_search(
                 // #1112: a child waiting on the seat's own prompt is ranked where its answers lead.
                 let score = own_prompt_score(&next, seat, counter, prices)
                     .unwrap_or_else(|| evaluate_priced(&next, seat, NextSwing::Enemy, &AI_EVAL, prices));
-                let discounted = hand_cheapened(&line.state, &next, seat);
+                let discounted = line.discounted || hand_cheapened(&line.state, &next, seat);
                 children.push(OpenLine {
                     state: next,
                     actions,

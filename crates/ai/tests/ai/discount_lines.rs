@@ -26,14 +26,21 @@ fn r4595002_a_beam_one_line_wide_still_plays_on_from_a_discount() {
         beam_width: 1,
         ..AI_BUDGET
     };
-    let lines = beam_search(state, AI, &create_node_counter(AI_BUDGET.nodes, None), narrow, Prices::NONE);
-    let opens_with_overclock = |line: &Line| {
-        matches!(line.actions.first(), Some(ActionBody::Play { instance_id, .. }) if *instance_id == overclock)
-    };
+    let lines = beam_search(
+        state,
+        AI,
+        &create_node_counter(AI_BUDGET.nodes, None),
+        narrow,
+        Prices::NONE,
+    );
+    let opens_with_overclock = |line: &Line| matches!(line.actions.first(), Some(ActionBody::Play { instance_id, .. }) if *instance_id == overclock);
     let from_overclock: Vec<&Line> = lines.iter().filter(|line| opens_with_overclock(line)).collect();
     assert!(
         from_overclock.iter().any(|line| line.actions.len() >= 3),
         "a line plays the Menace and the 4/4 for (0) after the Overclock: {:?}",
-        lines.iter().map(|line| line.actions.iter().map(action_key).collect::<Vec<_>>()).collect::<Vec<_>>()
+        lines
+            .iter()
+            .map(|line| line.actions.iter().map(action_key).collect::<Vec<_>>())
+            .collect::<Vec<_>>()
     );
 }

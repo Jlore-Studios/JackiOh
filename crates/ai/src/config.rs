@@ -158,9 +158,9 @@ pub struct AiSearch {
     /// board threatens lethal, as many switches to Defense that lower that threat (`wall_switches`) are
     /// kept after them.
     pub position_switches: i32,
-    /// R4595002: how many children that made the seat's other hand cards cheaper than their parent's
-    /// (a "your cards cost less this turn" play) the beam keeps past its width, best first, so the plays
-    /// the discount pays for are searched; the line's end-of-turn score still judges it.
+    /// R4595002: how many lines one of whose steps made the seat's other hand cards cheaper (a "your
+    /// cards cost less this turn" play) the beam keeps past its width at each depth, best first, so the
+    /// plays the discount pays for are searched; the line's end-of-turn score still judges it.
     pub discount_lines: i32,
     /// Opponent prompts auto-answered inside one simulated step before it counts as an error.
     pub max_auto_answers: i32,
