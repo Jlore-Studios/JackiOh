@@ -21301,7 +21301,11 @@
       "issue": 4925,
       "kind": "review",
       "live": "reviewing",
-      "merge_owner": "muse",
+      "merge_owner_gave_up": {
+        "at": "2026-11-26T02:52:03Z",
+        "provider": "muse",
+        "sha": "4155d3d262aec7d1d66774db808f281fc23e35c7"
+      },
       "pending_request": false,
       "provider": "muse",
       "queued_at": "2026-11-25T22:35:44Z",
