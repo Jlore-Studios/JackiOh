@@ -46144,21 +46144,13 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": "2026-11-26T04:36:34Z",
+    "idle_since": "2026-11-26T04:35:08Z",
     "last_area": "client",
-    "last_run": "2026-11-26T04:36:34Z",
+    "last_run": "2026-11-26T04:16:51Z",
     "provider": null,
     "requested": false,
     "run_id": null,
     "running": {
-      "1": {
-        "area": "server",
-        "count": 2,
-        "last_run": "2026-11-26T04:35:45Z",
-        "provider": "claude-3",
-        "run_id": "45756218317",
-        "taken_asks": []
-      },
       "2": {
         "area": "client",
         "count": 2,
