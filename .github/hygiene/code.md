@@ -11,7 +11,7 @@ Find every function, type, constant, export and dependency that nothing referenc
 worked in #900:
 - **Rust:** rename each low-hit `pub` item in a scratch copy, then run `cargo check --workspace
   --all-targets` with every feature on (`testkit`, `ts`, `wasm/preview`), and put back each
-  rename the compiler names. Blank the `#[allow(dead_code)]`s and check again. An item only its own
+  rename the compiler names. Blank the `#[expect(dead_code)]`s and check again. An item only its own
   tests use is dead with them.
 - **TypeScript:** grep each `export` of `apps/web/src` and `e2e` with
   `git grep -nw <name> -- apps e2e crates`. Rule out `import.meta.glob`, the barrels and test globs.
