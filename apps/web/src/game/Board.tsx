@@ -43,6 +43,7 @@ import StarscapeMap from "./StarscapeMap.tsx";
 import { BurnNotice, PileNotice, noticesFrom, noticeTestid, type OverflowNotices } from "./OverflowNotices.tsx";
 import Zone from "./Zone.tsx";
 import { listedFace, namedFace } from "./faces.ts";
+import GigaPlacement from "./GigaPlacement.tsx";
 import { glowAttr, hasMovesLeft } from "./glow.ts";
 import { HoveredHandCardProvider } from "./hoveredHandCard.tsx";
 import { revealedOpponentHand } from "./reveal.ts";
@@ -774,6 +775,8 @@ export default function Board({
                 ))}
               </div>
             ))}
+            {/* #4995: a selected GIGA hand card's offered placements, over the zones they would take. */}
+            <GigaPlacement view={view} highlight={highlight} />
             {/* A group, so its name is allowed on a div that may hold no notice (axe aria-prohibited-attr, spec 38). */}
             <div className="board-notices" role="group" aria-label={t("Notices")}>
               {boardNotices}
