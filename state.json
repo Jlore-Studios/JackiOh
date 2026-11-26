@@ -23246,13 +23246,14 @@
       "merge_owner": "claude-7",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-3",
       "queued_at": "2026-11-26T09:37:12Z",
-      "run_id": "45793859672",
+      "run_id": "pending:7aa7cebe-1795688371",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 595,
-      "started_at": "2026-11-26T09:38:27Z",
+      "started_at": "2026-11-26T10:19:59Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -23575,9 +23576,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T10:19:16Z",
+    "at": "2026-11-26T10:19:59Z",
     "url": "",
-    "what": "build #5016 on agy"
+    "what": "spot-check #5055 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-26T10:01:48Z",
@@ -46276,7 +46277,15 @@
         "n": 595,
         "pr": 5055,
         "queued_at": "2026-11-26T10:15:55Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:7aa7cebe-1795688371",
         "sha": "9a1dbb8f75b36120e052f0b4b33ef73051471f00",
+        "started_at": "2026-11-26T10:19:59Z",
         "status": "queued",
         "title": "Patch: a greyed Marketplace Buy answers a press with the engine's reason",
         "tries": 0
