@@ -24815,10 +24815,12 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "at": "2026-11-26T17:15:57Z",
+        "at": "2026-11-26T20:03:17Z",
         "built_by": "claude-3",
         "by": "`claude` (strong)",
-        "sha": "ea2e569d47ebbe37f2d5ea4bad6e48cadd8b3baf"
+        "carried_from": "ea2e569d47ebbe37f2d5ea4bad6e48cadd8b3baf",
+        "resolved_by": "`claude` (strong)",
+        "sha": "8ecd526c138a85a972a036ea074f50fd4517facf"
       },
       "died": 0,
       "difficulty": "hard",
