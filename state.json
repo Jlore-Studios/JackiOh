@@ -22975,20 +22975,20 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-3",
-      "owner_since": "2026-11-26T16:01:58Z",
-      "owner_why": "a person answered its question, so the lane that asked carries the answer out",
+      "owner": "claude-8",
+      "owner_since": "2026-11-26T16:53:58Z",
+      "owner_why": "handed off from `claude-3`: `claude-3` is busy: its lanes are all taken",
       "pending_request": false,
       "planned_at": "2026-11-26T10:02:51Z",
       "planned_by": "`claude-3` (claude, `opus`, strong)",
       "planned_by_id": "claude-3",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-3",
+      "provider": "claude-8",
       "question": "For each of the three switches, keep it or remove it at the value it ships?",
       "queued_at": "2026-11-26T16:01:58Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45798180923",
+      "run_id": "pending:67c8582d-1795712012",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -23007,7 +23007,7 @@
         "provider": "claude-3",
         "run": "45798180923"
       },
-      "started_at": "2026-11-26T10:06:20Z",
+      "started_at": "2026-11-26T16:53:58Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -25328,9 +25328,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T16:53:15Z",
+    "at": "2026-11-26T16:53:58Z",
     "url": "",
-    "what": "review #5092 on claude-7"
+    "what": "build #5027 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-26T16:37:46Z",
