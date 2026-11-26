@@ -170,8 +170,9 @@
 #    sources (crates/wasm/c/src/: no client, server or `jackioh` links it; its manifest, which every cargo
 #    command loads, is not among them), the tools' sources but the four those commands run (#4219: main.rs,
 #    which dispatches them, replay.rs, catalog.rs, whose run_version is `catalog-version`, and patches.rs,
-#    whose `js` parser and repo_root it calls) and the fuzz's records (crates/tools/fuzz-corpus/), so a
-#    change to the fuzz, the classifier or another command leaves e2e off. That is safe: `replay`'s shipped
+#    whose `js` parser and repo_root it calls) and the fuzz's and the perf corpus's records
+#    (crates/tools/fuzz-corpus/, crates/tools/perf-corpus/), so a change to the fuzz, the classifier, the perf
+#    or another command leaves e2e off. That is safe: `replay`'s shipped
 #    code names no other module of the crate (acceptance.rs's scan holds it and names the file to add here
 #    when that stops being true), replay.rs's own tests pin the hotseat game's hash in `rust (test tools,
 #    wasm)`, which every change under crates/tools/ runs, and the push to `main` runs e2e smoke after the
@@ -407,7 +408,7 @@ for file in $files; do
   esac
 
   # e2e runs two commands of the `jackioh` binary (header, #4219): the four tools sources they run keep it
-  # on; the rest of crates/tools/src/ and the fuzz's records do not.
+  # on; the rest of crates/tools/src/ and the fuzz's and the perf's records do not.
   case "$file" in
     crates/engine/tests/golden/*) on e2e ;;
     # The dev dashboard's test ids: the daily dashboard spec's only dashboard read (spec 49, #4371).
@@ -419,7 +420,7 @@ for file in $files; do
     scripts/browse.sh | scripts/promote-production.sh | scripts/promote-staging.sh | scripts/server-image.sh | scripts/worktree.sh) ;;
     scripts/fuzz-slice.sh) ;;
     crates/tools/src/main.rs | crates/tools/src/replay.rs | crates/tools/src/catalog.rs | crates/tools/src/patches.rs) on e2e ;;
-    crates/tools/src/* | crates/tools/fuzz-corpus/*) ;;
+    crates/tools/src/* | crates/tools/fuzz-corpus/* | crates/tools/perf-corpus/*) ;;
     *) on e2e ;;
   esac
 done
