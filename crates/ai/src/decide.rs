@@ -358,18 +358,15 @@ pub fn pick_finalist(means: &[f64], temperature: f64, rng: &mut Rng) -> usize {
     best_index
 }
 
-/// R4608000: each finalist's mean from its row of scores, determinization 0's first. With `confirm`, a row
-/// whose first score is a won game (above `AI_WON_SCORE_SHARE` of `AI_EVAL.win`) and whose other scores, at
-/// least one, are none won takes the mean of those others; every other row the mean of all its scores.
-pub fn finalist_means(rows: &[Vec<f64>], confirm: bool) -> Vec<f64> {
+/// R4608000: each finalist's mean from its row of scores, determinization 0's first. A row whose
+/// first score is a won game (above `AI_WON_SCORE_SHARE` of `AI_EVAL.win`) and whose other scores, at least
+/// one, are none won takes the mean of those others; every other row the mean of all its scores.
+pub fn finalist_means(rows: &[Vec<f64>]) -> Vec<f64> {
     let won = AI_EVAL.win * AI_WON_SCORE_SHARE;
     rows.iter()
         .map(|row| match row.split_first() {
             Some((first, others))
-                if confirm
-                    && *first > won
-                    && !others.is_empty()
-                    && others.iter().all(|score| *score <= won) =>
+                if *first > won && !others.is_empty() && others.iter().all(|score| *score <= won) =>
             {
                 mean_of(others)
             }
@@ -765,7 +762,7 @@ fn plan(
     scratch.worlds_scored = usize::try_from(scored_on).unwrap_or(0);
 
     // R4608000: a finalist that won on determinization 0 alone is ranked by its mean on the others.
-    let means = finalist_means(&rows, AI_SEARCH.confirm_lone_win);
+    let means = finalist_means(&rows);
     let chosen_index = pick_finalist(&means, style.temperature, rng);
     let chosen_mean = means.get(chosen_index).copied().unwrap_or(0.0);
 
