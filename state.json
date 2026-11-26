@@ -22617,6 +22617,7 @@
       "run_id": "45765815886",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check_n": 585,
       "started_at": "2026-11-26T06:05:32Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -45410,9 +45411,33 @@
         "title": "Patch: Duos match finish reads Jlore caps directly from the co-op payout outcome instead of a second ledger transaction",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "sonnet",
+          "provider": "claude-4",
+          "tier": "medium"
+        },
+        "builder": {
+          "family": "muse",
+          "provider": "muse"
+        },
+        "difficulty": "medium",
+        "every": 5,
+        "head": "a373f70fb5469380228d99063799c8b69f8f4ee5",
+        "issue": 4996,
+        "merged_at": "2026-11-26T06:29:28Z",
+        "n": 585,
+        "pr": 5019,
+        "queued_at": "2026-11-26T06:29:28Z",
+        "sha": "6e1450bf6f9dbfbbe603f7d38ae0fe523daebae9",
+        "status": "queued",
+        "title": "Patch: PIP's text says \"performance improvement plan\"",
+        "tries": 0
       }
     ],
-    "count": 584
+    "count": 585
   },
   "statistics": {
     "at": "2026-11-26T06:23:06Z"
