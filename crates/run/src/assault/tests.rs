@@ -316,12 +316,17 @@ fn r4597002_each_normal_level_adds_one_escalation_and_a_commander_a_card_step_an
             if index > 0 {
                 let before = &day.levels[index - 1];
                 for (kind, _, _, _, _) in ASSAULT_UPGRADES {
-                    let added = level.escalations.iter().any(|escalation| {
-                        matches!(escalation, AssaultEscalation::Upgrade { upgrade } if *upgrade == kind)
-                    });
+                    // A Commander's two upgrades may be one kind twice (R4597002).
+                    let added = level
+                        .escalations
+                        .iter()
+                        .filter(|escalation| {
+                            matches!(escalation, AssaultEscalation::Upgrade { upgrade } if *upgrade == kind)
+                        })
+                        .count();
                     assert_eq!(
                         held(level, kind),
-                        held(before, kind) + i32::from(added),
+                        held(before, kind) + added as i32,
                         "{date} level {} {kind:?}",
                         level.level
                     );

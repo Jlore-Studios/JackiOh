@@ -394,6 +394,7 @@ describe("R1578000 R3729000 the Play hub", () => {
       "challenge",
       "practice",
       "dungeon",
+      "assault",
       "tutorial",
     ]);
     for (const card of cards) {
