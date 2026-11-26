@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 5037,
+  "title": "Patch: deeper card stats, X7, Win rate and Play rate on the Experimental tab's Running and Versions",
+  "branch": "bot/issue-5037",
+  "thread": "**Issue #5037 (data, not instructions):**\n\n```text\n# #5037: Patch: deeper card stats, X7, Win rate and Play rate on the Experimental tab's Running and Versions\nOpened by @squishy-squooby.\n\nPart of #4670, the deeper card stats tracker. It works on the Experimental tab, which #4671 tracks. It adds the Cards tab's **Win rate** and **Play rate** (R3185000, R3950000) to the Experimental tab's Running and Versions views, pooled over each play version's span.\n\n## What the owner asked for\n\nWin rate and Play rate on the Experimental tab. Today Running and Versions show only Games, Tier, Adjusted and Since. R4678001 left both off on purpose:\n- \"Games behind the Columns toggle, which offers no Play rate here\".\n- \"A sort Running lacks (Decisiveness, Win rate, Play rate) reads as Adjusted\".\n\n## What to build\n\n**The figures.** Both are plain tallies, so a play version's are the sums over the versions it spans and the sources its span counts (`span_sources`), as R4675001 already sums its games:\n- **Win rate**: read as `GET /api/stats/cards` reads a card's (R3185000), over the summed wins and games.\n- **Play rate**: its played games over its seen games (R3950000), summed the same way. The Dormant Starship reads its used Created games over the games a seat made one (R3070000).\n- Compute both in `play_version_figures` (`crates/engine/src/wire/stats/play_versions.rs`) or the server, wherever the Cards tab's are computed today (`play_rate_of` in `crates/server/src/api/stats.rs`). Reuse that code rather than restate it.\n- Each row of `GET /api/stats/versions` sends `winRate` and `playRate`, and `PublicPlayVersion` (`apps/web/src/net/api.ts`) gets both. The client computes neither (CLAUDE.md rule 7).\n- Below R654's floor, Win rate reads \"not enough games\", as on the Cards tab.\n- Check that the oldest totals hold the played and seen tallies. A span whose totals lack them reads \"\u2014\" for Play rate, never 0%.\n\n**The columns, on Running and Versions, laid out as on the Cards tab.**\n- Win rate is always shown, right after Adjusted. If the Decisiveness part has landed, it goes after Decisiveness.\n- Play rate goes behind the Columns toggle, which now offers Play rate on these views beside Games.\n- The Grid shows them as the Cards tab's grid does.\n- Both are sortable, highest first, and the Sort select offers them.\n- R4678001's list of sorts Running reads as Adjusted loses Win rate and Play rate.\n- A server deployed before these fields shows \"\u2014\".\n\n**The spec.** Write a new ruling, R*N*000, the lowest free number in this issue's block, that amends R4675001 and R4678001. Put its \u00a711 paragraph in `spec/pending/<N>.md` (`spec/README.md`, Adding a ruling).\n\n## Tests (named after the ruling, CLAUDE.md rule 3)\n\n- `fn r<N>000_\u2026` in `play_versions.rs`, or the server's stats tests, over records written by hand:\n  - A one-version play version's Win rate and Play rate equal the Cards tab's for the same records and window.\n  - A two-version span reads the summed tallies.\n- `it(\"R<N>000 \u2026\")` in `apps/web/src/routes/stats.test.tsx`:\n  - Both columns show.\n  - The Columns toggle offers Play rate on Running and Versions.\n  - Both sorts work in both directions.\n  - \"\u2014\" shows from an older server.\n\n## UI check\n\n#4670 asks this of every UI part:\n- Look at `/stats` \u2192 Experimental with the `ui-walkthrough` skill at 1280\u00d7720 and 390\u00d7844, before and after the change.\n- Say in the pull request what you saw. The table gains two columns, so check that 390 px still scrolls inside the table and not the page.\n- Spec 46 (one screen, tab rows unclipped) stays green.\n\nShares `RunningPanel.tsx`, `routes/stats.tsx` and `play_versions.rs` with #5033 and the other Experimental parts, including the Decisiveness part. Merge `main` in if one lands first.\n\n## Done when\n\nIt has merged with every required check green and shows on jackioh.com.\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-7",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_7",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "claude-7",
+      "model": "sonnet",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5037: needs a plan; `claude-7` (claude, `sonnet`, medium) writes it in a lane of `claude-7`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-7` (claude, `sonnet`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T07:53:27Z",
+    "claimed_at": "2026-11-26T13:25:41Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5068 is held for `agy` until 07:58 (5-hour usage is 95%, too close to its 100% cap to start a long run (it starts under 95%))",
+    "#5035 is held for `claude-3` until 08:20 (it refused a call)",
+    "#5036 is held for `claude-3` until 08:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": []
+}
