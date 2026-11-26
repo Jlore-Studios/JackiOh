@@ -44200,6 +44200,10 @@
       "4977": {
         "at": "2026-11-25T23:53:07Z",
         "why": "Confirmed on main: the page loads card proficiency once when the shared sync starts (`proficiencySync.ts:67`), the sync survives the move from the match to the Collection, and the match's paid result calls only `announceWallet()`, so a level or stamp a counted game earned stays stale and can't be picked until a reload; this is the same small fix #4780 made for cosmetics, which was approved."
+      },
+      "4982": {
+        "at": "2026-11-26T00:41:53Z",
+        "why": "Confirmed; Duos match finish unnecessarily opens a second transaction and re-queries the ledger for Jlore caps that pay_coop already returned in memory, retaining the exact waste eliminated for 1v1 in #4711."
       }
     },
     "auto_approved": [],
