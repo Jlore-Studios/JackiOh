@@ -397,6 +397,7 @@ const FX_RECIPES = [
   "brand",
   "rewind",
   "armor",
+  "nullify",
   "curve",
   "line",
 ];
