@@ -2405,6 +2405,7 @@ mod r4675001_play_versions {
                 "games",
                 "hasEnoughGames",
                 "id",
+                "iteration",
                 "last",
                 "live",
                 "name",
@@ -2416,6 +2417,8 @@ mod r4675001_play_versions {
         );
         for (row, version) in rows.iter().zip(&versions) {
             assert_eq!(row["id"], json!(version.id));
+            // R5035000: its play version's iteration, as a label.
+            assert_eq!(row["iteration"], json!(version.iteration_label()));
         }
 
         let core: Vec<&Value> = rows
@@ -2446,6 +2449,8 @@ mod r4675001_play_versions {
         let oldest = core[0];
         assert_eq!(oldest["first"], json!(jackioh_cards::shipped_versions()[0]));
         assert_eq!(oldest["firstShipped"], json!(0));
+        // R5035000: counted though it began before the records.
+        assert_eq!(oldest["iteration"], json!("v1"));
         assert_eq!(oldest["live"], json!(false));
         assert_eq!(oldest["games"], json!(0));
         assert_eq!(oldest["hasEnoughGames"], json!(false));
@@ -2468,6 +2473,8 @@ mod r4675001_play_versions {
         );
         let row = find(&conquest["versions"], "id", &live["id"]).expect("the live row");
         assert_eq!(row["games"], json!(0));
+        // R5035000: a match type moves no number.
+        assert_eq!(row["iteration"], live["iteration"]);
     }
 
     // R5040000: `?scope=major` sends the live play versions alone, each cut to the newest major's line,
@@ -2546,6 +2553,8 @@ mod r4675001_play_versions {
         let id = json!(spanning.id);
         let cut_row = find(&cut["versions"], "id", &id).expect("the spanning row, cut");
         assert_eq!(cut_row["first"], json!(history[major].version));
+        // R5035000: a cut row keeps its play version's iteration.
+        assert_eq!(cut_row["iteration"], json!(spanning.iteration_label()));
         assert_eq!(cut_row["games"], json!(floor));
 
         // No scope: every play version over its whole span.
