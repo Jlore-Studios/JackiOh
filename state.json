@@ -21854,13 +21854,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "muse"
+        ],
         "builder": "muse",
         "built_by": "muse",
         "rejections": [],
-        "reviews": [],
+        "reviews": [
+          {
+            "family": "muse",
+            "provider": "muse",
+            "run": "45745518287",
+            "tier": "medium"
+          }
+        ],
         "sha": "6dac0044182a3d303b527cc7c99e42acb09e1999",
-        "tiers": {}
+        "tiers": {
+          "muse": "medium"
+        }
       }
     },
     "5000": {
