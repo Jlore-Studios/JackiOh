@@ -25156,6 +25156,18 @@
     "5094": {
       "action": "review",
       "asks": [],
+      "cleared": {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "at": "2026-11-26T17:50:11Z",
+        "built_by": "claude-3",
+        "by": "`claude` (strong)",
+        "sha": "e61690cff8d7b41aacc223cb8aa025b9ab29ca1c"
+      },
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-26T15:00:28Z",
@@ -25171,6 +25183,7 @@
       "issue": 5036,
       "kind": "review",
       "live": "reviewing",
+      "merge_owner": "claude-3",
       "pending_request": false,
       "provider": "claude-3",
       "queued_at": "2026-11-26T17:24:11Z",
