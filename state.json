@@ -21655,14 +21655,6 @@
     "4984": {
       "action": "plan",
       "asks": [],
-      "hold": {
-        "ends": "2026-11-26T03:15:20Z",
-        "lifted": "2026-11-26T01:22:26Z",
-        "owner": "claude-8",
-        "since": "2026-11-26T01:15:20Z",
-        "until": "2026-11-26T01:20:00Z",
-        "why": "5-hour usage is 87%, too close to its 85% cap to start a long run (it starts under 80%)"
-      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
@@ -21671,9 +21663,9 @@
       "owner_why": "it plans it",
       "pending_request": false,
       "provider": "claude-8",
-      "run_id": "45733784224",
+      "run_id": "pending:001b3184-1795656253",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-26T01:09:15Z",
+      "started_at": "2026-11-26T01:24:51Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 7179589674
@@ -21699,7 +21691,7 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T01:09:15Z",
+    "at": "2026-11-26T01:24:51Z",
     "url": "",
     "what": "plan #4984 on claude-8"
   },
