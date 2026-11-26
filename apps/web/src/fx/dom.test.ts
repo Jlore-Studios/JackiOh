@@ -370,6 +370,20 @@ describe("B39 — mountDomEffect mounts one element per cue", () => {
     expect(mountDomEffect(root, still, {})).toBeNull();
   });
 
+  it("#5014 the launch flame flickers until its cue ends, not forever", () => {
+    const launch: FxDomCue = { kind: "launch", at: anchor, tint: TINT, size: "large", countsMs: [0, 600, 1200], igniteMs: 1800, delayMs: 0, durationMs: 3400 };
+    const el = expectMounted(mountDomEffect(root, launch, { at: AT }), launch);
+    expect(cssVar(el, "--fx-flicker")).toBe("110ms");
+    // ⌈(3400 − 1800) / 110⌉ flickers cover the flame from its ignition to the cue's end.
+    expect(cssVar(el, "--fx-flickers")).toBe("15");
+    el.remove();
+
+    const late: FxDomCue = { ...launch, igniteMs: 3400 };
+    const lit = expectMounted(mountDomEffect(root, late, { at: AT }), late);
+    expect(cssVar(lit, "--fx-flickers")).toBe("1");
+    lit.remove();
+  });
+
   it("R3337003 rift mounts its tear and flare at their times, on its side", () => {
     const rift: FxDomCue = { kind: "rift", at: anchor, side: "opponent", tint: TINT, tearMs: 280, flareMs: 1540, delayMs: 0, durationMs: 4300 };
     const el = expectMounted(mountDomEffect(root, rift, { at: AT }), rift);

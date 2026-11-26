@@ -19,7 +19,7 @@
   letter-spacing: 0.02em;
   text-decoration: none;
   text-shadow: none;
-  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.15), 0 4px 14px rgba(0, 0, 0, 0.45);
+  box-shadow: inset 0 1px 0 rgba(251, 231, 176, 0.15), var(--shadow-2);
 }
 
 .jlore-pill.jlore-pill:hover,
