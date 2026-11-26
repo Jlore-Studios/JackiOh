@@ -20297,6 +20297,7 @@
       "runs_on": "night-vm-muse",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 574,
       "started_at": "2026-11-25T23:01:41Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -44158,7 +44159,7 @@
         "verdict": "clean"
       }
     ],
-    "count": 573
+    "count": 574
   },
   "statistics": {
     "at": "2026-11-26T00:08:04Z"
