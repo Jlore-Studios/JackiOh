@@ -2306,7 +2306,15 @@ fn cast_x_chosen(
     let values: Vec<String> = (MIN_CHOSEN_X..=most).map(|value| value.to_string()).collect();
     let name = def_of(Some(&*sink.state), &card.def_id).name.clone();
     let prompt = format!("{}: choose X", ask_label(step, &name, None));
-    if ask_mode_options(sink, run, step, Awaiting::CastX, PromptKind::Number, prompt, &values) {
+    if ask_mode_options(
+        sink,
+        run,
+        step,
+        Awaiting::CastX,
+        PromptKind::Number,
+        prompt,
+        &values,
+    ) {
         return false;
     }
     set_x(sink.state, &card.id, most);

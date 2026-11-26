@@ -3873,6 +3873,9 @@ fn lint_record(record: &CorpusRecord) -> Vec<String> {
 
 type NamedRecord = (String, CorpusRecord);
 
+/// A corpus as `read_named_records` reads it: each record led by its file's name, and every problem.
+pub(crate) type NamedRecords<T> = (Vec<(String, T)>, Vec<String>);
+
 /// Every `.json` file of `dir`, sorted by name, parsed as a `T` and linted by `lint`; with every problem
 /// found, a file that is no `what` included, one line each, led by the file's name. The fuzz corpus's
 /// and the perf corpus's reader.
@@ -3880,7 +3883,7 @@ pub(crate) fn read_named_records<T: DeserializeOwned>(
     dir: &Path,
     what: &str,
     lint: impl Fn(&T) -> Vec<String>,
-) -> anyhow::Result<(Vec<(String, T)>, Vec<String>)> {
+) -> anyhow::Result<NamedRecords<T>> {
     let mut paths: Vec<_> = fs::read_dir(dir)
         .with_context(|| format!("reading {}", dir.display()))?
         .map(|entry| entry.map(|entry| entry.path()))

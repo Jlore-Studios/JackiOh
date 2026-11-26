@@ -875,7 +875,15 @@ fn play_run_start(record: &PerfRecord) -> Result<Played> {
         deck_marks: Some(marks),
         ..FoldArgs::default()
     };
-    play_out(record.seed, "perf-run-start", "perf-run-start", begun.state, input, policy, order)
+    play_out(
+        record.seed,
+        "perf-run-start",
+        "perf-run-start",
+        begun.state,
+        input,
+        policy,
+        order,
+    )
 }
 
 struct PlayedDuos {

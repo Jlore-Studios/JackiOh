@@ -8,15 +8,13 @@ use crate::config::ASSAULT_LEVELS;
 use crate::fight::VOIDED_FIGHT;
 use crate::fight_tests::voided_game;
 use jackioh_engine::catalog::{deckable, registered_catalog};
-use jackioh_engine::config::{GLITCH_DEF_ID, HUMAN_HANDICAP, Handicap, TURN_CAP_PLAYER_TURNS};
+use jackioh_engine::config::{HUMAN_HANDICAP, Handicap, TURN_CAP_PLAYER_TURNS};
 use jackioh_engine::reduce::{begin_game, legal_actions, reduce, seat_to_act};
 use jackioh_engine::replay::{self, ReplayInput, fold};
 use jackioh_engine::state::{
     CreateGameOptions, SetupKind, create_game, create_recorded_game, validate_setup,
 };
-use jackioh_engine::wire::{
-    Action, ActionBody, GameOverReason, PerPlayerOpt, PlayerId, Rarity, SandboxOp, SpawnZone, Winner,
-};
+use jackioh_engine::wire::{Action, ActionBody, GameOverReason, PerPlayerOpt, PlayerId, Rarity, Winner};
 
 /// The first `n` `deckable` ids of the catalog that ships, in catalog order.
 fn first_deckable(n: usize) -> Vec<String> {

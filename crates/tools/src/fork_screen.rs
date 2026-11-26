@@ -40,8 +40,8 @@ use serde::{Deserialize, Serialize};
 use crate::agent::AgentInfo;
 use crate::arena::{
     AgentSpec, ArenaGame, ArenaOutcome, Entrant, FinishCtx, Live, SCREEN_EXTEND_DEALS, SCREEN_MAX_GAMES,
-    SCREEN_MIN_DECIDED, accept, append_records, choose_for, duel_line, entrant_at, finish_from, game_setup,
-    paired_interval, play_game_probed, records_of, records_path, replays, round_share, screen_done, won_by, write_duel_output,
+    SCREEN_MIN_DECIDED, accept, choose_for, duel_line, entrant_at, finish_from, game_setup, paired_interval,
+    play_game_probed, replays, round_share, screen_done, won_by, write_duel_output,
 };
 
 /// R4397000: the most forks one trunk game keeps, its first ones.
