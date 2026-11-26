@@ -21656,17 +21656,8 @@
       "taken_asks": []
     },
     "4992": {
-      "action": "plan",
-      "asks": [
-        "c:7181098640"
-      ],
-      "build_next": {
-        "from_run": "45745687964",
-        "model": "sonnet",
-        "provider": "claude-7",
-        "since": "2026-11-26T03:06:18Z",
-        "until": "2026-11-26T03:36:18Z"
-      },
+      "action": "build",
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-26T03:06:09Z",
         "difficulty": "medium",
@@ -21685,10 +21676,9 @@
         "reason": "planned on sonnet",
         "trail": "singularity.rs cra\u2026\n- Bash: {\"command\": \"sed -n 95,135p crates/cards/src/scripts/infinite_assault/c141_logic_bomb.rs; sed -n 125,150p crates/cards/src/scripts/stinkyscape_plus/c079_a_glimpse_into_the_endless_sea.rs; sed -n 190,\u2026\n- Bash: {\"command\": \"sed -n 195,205p crates/cards/src/scripts/meditative_plus/c004_supply_drop.rs; sed -n 100,125p crates/cards/src/scripts/meditative_plus/c004_supply_drop.rs; grep -rn \\\"turns in\\\\|in {turn\u2026\n- Bash: {\"command\": \"grep -n \\\"label\\\" crates/cards/src/scripts/meditative_plus/c004_supply_drop.rs | head -12; grep -n \\\"let label\\\\|label =\\\" -A3 crates/cards/src/scripts/classic_plus/c052_jlockeeds_perman\u2026\n- Bash: {\"command\": \"sed -n 1,60p spec/pending/4828.md | head -5; cat spec/rulings/R4828000.md | head -15; sed -n 62,78p spec/README.md\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport json\\nc=json.load(open('crates/cards/catalog.json'))\\ncards = c['cards'] if isinstance(c,dict) and 'cards' in c else c\\nfor e in (cards if isinstance(cards,list\u2026\n- Bash: {\"command\": \"grep -rn \\\"\\\\\\\"tuning\\\\\\\"\\\" crates/cards/src/scripts | head -8; grep -rn \\\"fn buff_number\\\\|fn set_number\\\\|numbers\\\" crates/engine/src/tuning.rs | head -12\"}\n- Bash: {\"command\": \"sed -n 1,40p crates/engine/src/tuning.rs; grep -rn \\\"tuning:\\\\|\\\\.tuning = \\\\|Tuning {\\\" crates/cards/src/scripts --include=*.rs | grep -i \\\"test\\\\|numbers\\\" | head -10; grep -rn \\\"fn pa\u2026\n- Bash: {\"command\": \"grep -rln \\\"effects::tune\\\\|tune(json_as\\\\|crate::tune\\\\| tune(\\\" crates/cards/src/scripts | head -5; grep -rn \\\"tune(\\\" crates/cards/src/scripts --include=*.rs | grep -v \\\"fn \\\\|//\\\" | \u2026\n- Bash: {\"command\": \"sed -n 75,125p crates/cards/src/scripts/classic_plus/c074_twice_forward_one_step_backwards.rs; grep -n \\\"fn tune\\\\b\\\" -B3 -A22 crates/cards/src/scripts/meditative/c084_volatility.rs | he\u2026\n- Bash: {\"command\": \"grep -rn \\\"pub fn tune\\\\b\\\\|pub fn tune(\\\" crates/engine/src | head; grep -rn \\\"numbers\\\" crates/cards/src/scripts --include=*.rs | grep -i \\\"json!\\\\|\\\\\\\"numbers\\\\\\\"\\\" | head -8\"}\n- Bash: {\"command\": \"grep -rn \\\"tuning\\\\|Tuning\\\" crates/engine/src/testkit/*.rs | grep -v invariants | head -10; grep -rn \\\"\\\\\\\"tuning\\\\\\\"\\\\|tuning:\\\" crates/cards/src crates/engine/tests --include=*.rs | g\u2026\n- Bash: {\"command\": \"sed -n 100,135p crates/cards/src/scripts/classic_plus/c065_two_grapes.rs; sed -n 115,145p crates/cards/src/scripts/stinkyscape_plus/c065_thorium_wall.rs; sed -n 270,290p crates/cards/src\u2026\n- Bash: {\"command\": \"grep -rn '\\\"numbers\\\": {' crates --include=*.rs | head -6; sed -n 408,470p crates/engine/src/params.rs\"}\n- Bash: {\"command\": \"grep -n \\\"fn value_with\\\" -A40 crates/engine/src/params.rs | head -70\"}\n- Bash: {\"command\": \"sed -n 1140,1170p crates/engine/tests/rules/effects_tune.rs; grep -n \\\"fn param_step\\\" -A12 crates/engine/src/params.rs\"}\n- Bash: {\"command\": \"grep -n \\\"classify\\\" crates/tools/README.md | head -20\"}\n- Bash: {\"command\": \"grep -rn \\\"SHIPPED_SETS\\\" crates/cards/src/*.rs crates/engine/src/config.rs crates/tools/src/classify.rs 2>/dev/null | head -5; grep -n \\\"Infinite\\\" crates/engine/src/config.rs | head\"}\n- Bash: {\"command\": \"grep -rn \\\"pub const SHIPPED_SETS\\\" -A20 crates/ --include=*.rs | head -30; ls /home/runner/work/_temp/work/ 2>/dev/null | head; ls target 2>/dev/null | head -3\"}\n- Bash: {\"command\": \"grep -rn \\\"SHIPPED_SETS\\\" crates/engine/src --include=*.rs | head -3; head -12 spec/rulings/R4577000.md | cut -c1-600\"}\n- Bash: {\"command\": \"grep -n \\\"fn slug\\\" -B2 -A25 crates/tools/src/patches.rs | head -50; grep -n \\\"SLUG\\\" crates/tools/src/patches.rs | head -5\"}\n- Bash: {\"command\": \"grep -n \\\"Patch notes players read\\\" -A25 docs/issues-and-patches.md | head -50\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport json\\nd=json.load(open('crates/cards/patches/patches.json'))\\nprint([p['version'] for p in d[-4:]])\\nEOF\\ngrep -n \\\"c059_mass_driver\\\\|c056_impact_reactor\\\" cra\u2026\n- Bash: {\"command\": \"ls crates/cards/src/scripts/stinkyscape_plus/ | head -5; grep -rn \\\"c059_mass_driver\\\" crates/cards/src crates/cards/build.rs | grep -v \\\"^crates/cards/src/scripts/stinkyscape_plus/c059\\\u2026\n- Bash: {\"command\": \"grep -n \\\"json_as\\\\|pub use\\\" crates/engine/src/testkit/mod.rs | head -30; grep -n \\\"pub fn card_mut\\\" -B2 -A8 crates/engine/src/testkit/*.rs | head -20\"}\n- Bash: {\"command\": \"grep -rln \\\"fuzz-corpus\\\\|perf-corpus\\\" crates/tools/tests crates/tools/src crates/cards/tests 2>/dev/null | head; grep -n \\\"fn .*carried\\\" crates/tools/tests/*.rs | head -5\"}\n- Bash: {\"command\": \"grep -rn \\\"fn .*loc\\\" crates/tools/tests/*.rs | head -10; cargo jackioh catalog loc --help 2>&1 | head -3\"}\n- Bash: {\"command\": \"grep -rn \\\"\\\\\\\"loc\\\\\\\"\\\\|\\\\.loc\\\\b\\\\|loc:\\\" crates/tools/src/catalog.rs | head -15; grep -rn \\\"loc\\\" crates/cards/tests/cross/catalog.rs | head -8\"}\n- Bash: {\"command\": \"sed -n 2935,3030p crates/tools/src/catalog.rs\"}\n- Bash: {\"command\": \"grep -n -i \\\"held\\\\|is_shipped\\\\|shipped_set\\\" crates/tools/src/classify.rs crates/tools/src/claims.rs | head -20\"}\n- Bash: {\"command\": \"cd crates/cards && git log -3 --format='%h %s' -- src/scripts/infinite_assault/c141_logic_bomb.rs; git log -1 --stat --format='%h %s' $(git log -1 --format=%h -- src/scripts/infinite_ass\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-4992 && ls spec/rulings | grep -c \\\"R4992\\\"; ls spec/rulings | grep R0767; sed -n 1,12p spec/rulings/R0767000.md | cut -c1-200; git status --short | \u2026\n- Bash: {\"command\": \"ls spec/rulings | grep -E \\\"767|R4779|R1181\\\"; grep -rn \\\"fn r767\\\" crates/cards/src/scripts | head -2\"}\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-4992/.bot-plan.md\", \"content\": \"<!-- bot: {\\\"difficulty\\\": \\\"medium\\\", \\\"why\\\": \\\"none of the five hard lines holds: two card scripts, a kept script, \u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"none of the five hard lines holds: the change is two card scripts, a kept script, a ruling note, a fragment and about 10 files, with no engine, AI, cross-crate or migration change\"} --> ## Goal A countdown badge states its count once, and the view writes i\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-7",
       "owner_since": "2026-11-26T02:56:16Z",
       "owner_why": "it plans it",
@@ -21701,12 +21691,14 @@
       "provider": "claude-7",
       "queued_at": "2026-11-26T02:46:26Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45745687964",
+      "run_id": "pending:2dba5f84-1795662546",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-26T02:56:16Z",
+      "started_at": "2026-11-26T03:09:38Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": []
+      "taken_asks": [
+        "c:7181098640"
+      ]
     },
     "4993": {
       "action": "review",
@@ -22035,9 +22027,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T03:08:53Z",
+    "at": "2026-11-26T03:09:38Z",
     "url": "",
-    "what": "review #5000 on claude-1"
+    "what": "build #4992 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-26T02:51:15Z",
