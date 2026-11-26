@@ -25226,15 +25226,11 @@
     "what": "review #5097 on claude-6"
   },
   "last_sweep": {
-    "at": "2026-11-26T17:58:15Z",
+    "at": "2026-11-26T18:13:25Z",
     "notes": [
-      "delivered review #5088 on claude-1 (run 45870313147): approved",
-      "delivered review #5092 on claude-7 (run 45862866541): approved",
-      "started suggest on claude-7 (run 45872672261)",
-      "started suggest on claude-4 (run 45872793005)",
-      "started suggest on claude-4 (run 45872912485)",
-      "started suggest on claude-6 (run 45873033829)",
-      "started suggest on claude-1 (run 45873166691)",
+      "delivered revise #5083 on agy (run 45865059685): built",
+      "delivered build #5091 on claude-6 (run 45863080885): built",
+      "started review #5097 on claude-6 (run 45874803364)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -25941,7 +25937,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T17:58:15Z",
+  "loop_tick": "2026-11-26T18:13:25Z",
   "machine_disk": {
     "issue": null,
     "reading": {
