@@ -22317,6 +22317,14 @@
         "sha": "991f619e735794b5184303620518266a1bf1355e",
         "tiers": {}
       }
+    },
+    "5009": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-26T03:09:38Z",
+      "issue": 4992,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
