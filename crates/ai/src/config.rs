@@ -129,7 +129,13 @@ pub const DUOS_PASS_PROBE_SEED: &str = "ai:duos-pass";
 
 /// R1127000: the most of the teammate's legal `Play` follow-ups one passed card is scored on, the
 /// card's own plays first, then the rest in `legal_actions` order: bounds scoring at one hand of
-/// cards times this many single `reduce` calls per `duos_passes` call.
+/// cards times this many single `reduce` calls per `duos_passes` call. It also bounds the hand cards
+/// the teammate's baseline is scored on (R1723000). R4932000: when more are listed than the room
+/// left, the kept ones are the first plays of the teammate's best-valued hand cards
+/// (`hand_card_value`), not the first in list order. The bound is not a hand size, which an effect
+/// moves (R1143). Its screen (#4932), `gate --duos --games 40` against the base build: random 39 and
+/// 39 won, greedy 36 and 36, 1 of 80 games played differently, 0 decided: inconclusive (R4319000),
+/// its scene tests settle it.
 pub const DUOS_PASS_MAX_FOLLOWUPS: usize = 8;
 
 /// R1723000: what each crystal of a team's `pass_cost` charges a pass, in `evaluate`'s points: the
@@ -1127,9 +1133,12 @@ pub const AI_REPLY: AiReply = AiReply {
     chip_per_damage: 0.3,
     cleave_share: 1.0,
     // #1634: off. On, its screen read 203-197, edge 0.015 (-0.002 to 0.032), inconclusive (R4319000):
-    // 3 decided of 200 (won 3, lost 0). #4246's, on the reply as it stands since, 400 games on
-    // improve-dev against the control at baa7cdb93f, read 200-200, edge 0.0 (0.0 to 0.0), inconclusive
-    // (R4319000): 0 decided of 200, 21 diverged. Neither keeps it (training/improve.md, A screen).
+    // 3 decided of 200 (won 3, lost 0). #4246's, 400 games on improve-dev against the control at
+    // baa7cdb93f, read 200-200, edge 0.0 (0.0 to 0.0), inconclusive (R4319000): 0 decided of 200, 21
+    // diverged. #4931's, on the reply since R4187000's walls and R4810000's close steps, 400 games on
+    // improve-dev against the control at 328135b4ca, read 198-202, edge -0.010 (-0.024 to 0.004),
+    // inconclusive (R4319000): 2 decided of 200 (won 0, lost 2), 11 diverged, every game clean: reverted.
+    // No further screen until the reply changes again (training/improve.md, A screen).
     open_lethal: false,
     // #1696: on. Its screen read 199-199 with deal 136 aborted at the action cap in both seatings (the
     // parent aborts it against itself too), edge 0.0 (-0.057 to 0.057), every other game clean

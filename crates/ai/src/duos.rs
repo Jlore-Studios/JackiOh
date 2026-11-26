@@ -428,7 +428,9 @@ fn rank_now(
 /// R1127000: the teammate's best bounded follow-up with the passed card in hand (added as B20's pass
 /// adds it, `received`): the maximum of `evaluate` over at most `DUOS_PASS_MAX_FOLLOWUPS` legal `Play`
 /// actions, each one engine step on `mate_probe`, else of the receiving probe. No hidden opponent card
-/// and no caller stream is ever read; a refused or panicking follow-up is skipped.
+/// and no caller stream is ever read; a refused or panicking follow-up is skipped. The room the card's
+/// own plays leave takes the teammate's other plays, its best-valued cards' first plays when they are
+/// more (R4932000).
 fn pass_score(
     own_probe: &GameState,
     seat_player: PlayerId,
@@ -444,8 +446,9 @@ fn pass_score(
         return f64::NEG_INFINITY;
     };
     let (receiving, given) = received(own_probe, passed, mate_probe, mate);
-    // The passed card's own plays first, then the teammate's other plays in `legal_actions` order: the
-    // card sits at the hand's end, so a plain prefix would cut its plays off behind a full hand's.
+    // The passed card's own plays first, then the teammate's other plays in the room left, cut by
+    // `best_valued_plays` (R4932000): the card sits at the hand's end, so a plain prefix would cut its
+    // plays off behind a full hand's.
     let mut own_plays = Vec::new();
     let mut other_plays = Vec::new();
     for action in legal_actions(&receiving, mate) {
@@ -457,13 +460,53 @@ fn pass_score(
             _ => {}
         }
     }
+    let room = DUOS_PASS_MAX_FOLLOWUPS.saturating_sub(own_plays.len());
     let plays = own_plays
         .into_iter()
-        .chain(other_plays)
+        .chain(best_valued_plays(&receiving, mate, other_plays, room))
         .take(DUOS_PASS_MAX_FOLLOWUPS);
     best_step(&receiving, mate, plays)
         .map(|(value, _)| value)
         .unwrap_or_else(|| evaluate(&receiving, mate, NextSwing::Enemy, &AI_EVAL))
+}
+
+/// R4932000: `plays` cut to at most `limit` to score. A list within `limit` is kept as it came, in
+/// `legal_actions` order. A longer one keeps the first play of each card it names, the cards `mate`'s
+/// hand values most first (`hand_card_value` on `state`), ties in list order, a card outside the hand
+/// (a graveyard play, R454) last: the hand is read as it stands, at any size (R1143), and no engine
+/// step is added.
+fn best_valued_plays(
+    state: &GameState,
+    mate: PlayerId,
+    plays: Vec<ActionBody>,
+    limit: usize,
+) -> Vec<ActionBody> {
+    if plays.len() <= limit {
+        return plays;
+    }
+    let hand = &state.players[mate].hand;
+    let worth = |id: &str| {
+        hand.iter()
+            .find(|card| card.id == id)
+            .map_or(f64::NEG_INFINITY, |card| hand_card_value(state, card, &AI_EVAL))
+    };
+    let mut cards: IndexSet<String> = IndexSet::new();
+    let mut firsts: Vec<(f64, ActionBody)> = plays
+        .into_iter()
+        .filter_map(|action| {
+            let ActionBody::Play { instance_id, .. } = &action else {
+                return None;
+            };
+            if !cards.insert(instance_id.clone()) {
+                return None;
+            }
+            let value = worth(instance_id);
+            Some((value, action))
+        })
+        .collect();
+    // A stable sort: equal values keep list order.
+    firsts.sort_by(|a, b| b.0.total_cmp(&a.0));
+    firsts.into_iter().take(limit).map(|(_, action)| action).collect()
 }
 
 /// The best of `evaluate` from `mate`'s seat over `plays`, each applied by one engine step to `from`,
@@ -509,15 +552,16 @@ fn own_use_gain(own_probe: &GameState, seat_player: PlayerId, card_id: &str) -> 
 }
 
 /// R1723000: the teammate's own best bounded follow-up, with no pass: the best of `evaluate` over the
-/// first legal `Play` of each of at most `DUOS_PASS_MAX_FOLLOWUPS` of its hand cards, scored as
-/// `pass_score` scores, with the state it left; the probe's own value and the probe when none applies.
+/// first legal `Play` of each of at most `DUOS_PASS_MAX_FOLLOWUPS` of its hand cards (the best-valued
+/// ones when it lists more, R4932000), scored as `pass_score` scores, with the state it left; the
+/// probe's own value and the probe when none applies.
 fn mate_baseline(mate_probe: &GameState, mate: PlayerId) -> (f64, GameState) {
     let mut cards: IndexSet<String> = IndexSet::new();
-    let plays: Vec<ActionBody> = legal_actions(mate_probe, mate)
+    let firsts: Vec<ActionBody> = legal_actions(mate_probe, mate)
         .into_iter()
         .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if cards.insert(instance_id.clone())))
-        .take(DUOS_PASS_MAX_FOLLOWUPS)
         .collect();
+    let plays = best_valued_plays(mate_probe, mate, firsts, DUOS_PASS_MAX_FOLLOWUPS);
     best_step(mate_probe, mate, plays).unwrap_or_else(|| {
         (
             evaluate(mate_probe, mate, NextSwing::Enemy, &AI_EVAL),

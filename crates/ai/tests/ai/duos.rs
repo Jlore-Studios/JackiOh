@@ -10,12 +10,13 @@
 use std::cell::Cell;
 
 use jackioh_ai::{
-    AI_EVAL, AI_GATE_BUDGET, AiOptions, NextSwing, Prices, SearchBudget, decide, duos_decide, duos_decision,
-    duos_greedy_action, duos_passes, duos_pool_loss, evaluate_priced, face_threat, greedy_action,
-    starting_life,
+    AI_EVAL, AI_GATE_BUDGET, AiOptions, DUOS_PASS_MAX_FOLLOWUPS, NextSwing, Prices, SearchBudget, decide,
+    duos_decide, duos_decision, duos_greedy_action, duos_passes, duos_pool_loss, evaluate_priced,
+    face_threat, greedy_action, starting_life,
 };
 use jackioh_engine::config::{
-    DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, DUOS_PASS_COST, DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, duos_ai_team,
+    DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, DUOS_PASS_COST, DUOS_POOL_HEALTH, DUOS_POOL_HEALTH_HARD, HAND_CAP,
+    HAND_CAP_MAX, duos_ai_team,
 };
 use jackioh_engine::duos::{
     DuosState, duos_begin, duos_create, duos_legal_actions, duos_reduce, duos_scenario, duos_view_for,
@@ -1304,6 +1305,98 @@ fn r2827000_passes_a_playable_card_its_hurt_teammate_hits_harder_with() {
     // A2's duel goes worse than A1's: the hurdle weighs what the card gains each, not the two duels.
     assert!(effective_life(&state.duels[1], PlayerId::P1) < effective_life(&state.duels[0], PlayerId::P1));
     assert_eq!(duos_passes(&state, A1), vec![stab]);
+}
+
+// R4932000: past the bound, the pass's scores weigh the teammate's best-valued cards
+
+/// `trade_state` (A1 holding only BIG at pass mana, A2 at BIG's mana) with A2's hand size set to `cap`
+/// (R1143) and A2 holding `held` cards: one-drops, then `last` at the hand's end when given.
+fn crowded_trade_state(seed: &str, cap: i32, held: usize, last: Option<&str>) -> (DuosState, String) {
+    let mut hand = vec![ONE_DROP; held - usize::from(last.is_some())];
+    hand.extend(last);
+    let (mut state, big) = trade_state(seed, None, &hand);
+    side(&mut state, A2).hand_cap = Some(cap);
+    (state, big)
+}
+
+#[test]
+fn r4932000_a_teammates_card_past_the_bound_is_weighed_at_any_hand_size() {
+    let seed = "duos-ai-crowded-mate";
+    for cap in [HAND_CAP, HAND_CAP + 2, HAND_CAP_MAX] {
+        // One slot left for the pass, and A2's own BIG last of more cards than the bound holds.
+        let held = usize::try_from(cap - 1).expect("a hand size above 0");
+        assert!(
+            held > DUOS_PASS_MAX_FOLLOWUPS,
+            "cap {cap}: more cards than the bound"
+        );
+        let (crowded, big) = crowded_trade_state(seed, cap, held, Some(BIG));
+        assert!(
+            plays_in(&crowded.duels[0], PlayerId::P1, &big).is_empty(),
+            "cap {cap}: A1 cannot play BIG"
+        );
+        let mate_big = &crowded.duels[1].players[PlayerId::P1].hand[held - 1];
+        assert_eq!(mate_big.def_id, BIG, "cap {cap}");
+        assert!(
+            !plays_in(&crowded.duels[1], PlayerId::P1, &mate_big.id).is_empty(),
+            "cap {cap}: A2 can play its own BIG"
+        );
+        // The one-drops alone leave the pass worth making ...
+        let (bare, bare_big) = crowded_trade_state(seed, cap, held, None);
+        assert_eq!(
+            duos_passes(&bare, A1),
+            vec![bare_big],
+            "cap {cap}: one-drops alone"
+        );
+        // ... and A2's own BIG keeps it, held alone (R1723000) or past the bound alike.
+        let (alone, _) = crowded_trade_state(seed, cap, 1, Some(BIG));
+        assert!(
+            duos_passes(&alone, A1).is_empty(),
+            "cap {cap}: A2's own BIG alone"
+        );
+        assert!(
+            duos_passes(&crowded, A1).is_empty(),
+            "cap {cap}: A2's own BIG past the bound"
+        );
+    }
+}
+
+#[test]
+fn r4932000_a_teammate_hand_the_bound_holds_whole_is_scored_as_before() {
+    let seed = "duos-ai-crowded-mate-within";
+    let held = DUOS_PASS_MAX_FOLLOWUPS;
+    let lowered = i32::try_from(held).expect("a small bound") + 1;
+    for cap in [lowered, HAND_CAP, HAND_CAP_MAX] {
+        // A2's own BIG is the last card the bound reaches in hand order: it kept the pass before
+        // R4932000 and still does.
+        let (state, _) = crowded_trade_state(seed, cap, held, Some(BIG));
+        assert_eq!(
+            state.duels[1].players[PlayerId::P1].hand[held - 1].def_id,
+            BIG,
+            "cap {cap}"
+        );
+        assert!(duos_passes(&state, A1).is_empty(), "cap {cap}");
+        let (bare, big) = crowded_trade_state(seed, cap, held, None);
+        assert_eq!(duos_passes(&bare, A1), vec![big], "cap {cap}");
+    }
+}
+
+#[test]
+fn r4932000_the_room_a_passed_cards_plays_leave_takes_the_teammates_best_valued_cards_in_any_order() {
+    let seed = "duos-ai-mate-room";
+    for a2_hand in [&[STAB, BIG][..], &[BIG, STAB], &[BIG]] {
+        // B2 at an effective life of 3, which A2's Stab ends; A1 holds only BIG and cannot afford it.
+        let (mut state, ..) = winning_pass_state(seed);
+        let big = set_hand(&mut state, A1, &[BIG]).remove(0);
+        set_hand(&mut state, A2, a2_hand);
+        assert!(
+            plays_in(&state.duels[0], PlayerId::P1, &big).is_empty(),
+            "{a2_hand:?}: A1 cannot play BIG"
+        );
+        // BIG's five lanes leave room for three of A2's seven plays. Listed first, the Stab's second
+        // play (B2's hero, a win) filled that room and was credited to the pass. A2 holds a BIG of its
+        // own, so the pass gains nothing (R1723000), in either hand order.
+        assert!(duos_passes(&state, A1).is_empty(), "{a2_hand:?}");
+    }
 }
 
 // #1760: the Duos gate's greedy team plays each seat's duel with the 1v1 greedy baseline

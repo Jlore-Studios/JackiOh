@@ -14,8 +14,11 @@
 #              jackioh and jackioh-server, side by side, each made once for the run; the catalog,
 #              patches and spec checks and 200 fuzz seeds on that build of jackioh; on a pull
 #              request, the classifier (#1360, R1365000, R1370000): its kind and tier as labels, and
-#              its pending fragments held to what it does to the cards; and, when infra/ changed,
-#              its Terraform's fmt and validate (#1708), in the checks job.
+#              its pending fragments held to what it does to the cards; when infra/ changed,
+#              its Terraform's fmt and validate (#1708), in the checks job; and in the merge queue
+#              (never on a pull request), the fuzz slice: the first 1,600 seeds of the daily
+#              plain and handicapped waves and 200 of its Duos wave, failing a change only for a
+#              seed that passes on its base (scripts/fuzz-slice.sh, the owner's call of 2026-11-25).
 #   web        the two WASM modules, side by side: the browser's, and the C module (crates/wasm/c),
 #              the one a Roblox port translates (#2898), built for wasm32-unknown-unknown with its
 #              import section checked empty and its size in the job summary; the e2e client on the
@@ -41,7 +44,8 @@
 # compiled once per run, not once per job that uses it.
 #
 # Not run per pull request (README §7): e2e on Electron (dropped), the AI gates, coverage, the
-# 10,000-seed fuzz runs and the Duos wave, `golden check` (cargo test replays the same traces),
+# 13,200-seed fuzz runs and the Duos wave (the merge queue plays their first seeds, `rust (fuzz
+# slice k/K)`), `golden check` (cargo test replays the same traces),
 # every e2e spec beyond the smoke list, the component specs, the web's audio, fx and asset tests,
 # the Rust tests marked `#[ignore = "daily: <why>"]` and the rest of each web sweep
 # apps/web/src/test/daily.ts holds back (many-game sweeps whose rule a cheaper test keeps here).
@@ -200,6 +204,7 @@ jobs:
       rust_test: ${{ steps.matrix.outputs.rust_test }}
       web_unit_shards: ${{ steps.matrix.outputs.web_unit_shards }}
       e2e_smoke_shards: ${{ steps.matrix.outputs.e2e_smoke_shards }}
+      fuzz_slice_shards: ${{ steps.matrix.outputs.fuzz_slice_shards }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -571,6 +576,96 @@ jobs:
             exit 1
           fi
 
+  # The merge queue's slice of the daily fuzz (the owner's call of 2026-11-25): seeds 1-FUZZ_SLICE_SEEDS
+  # of the plain and the handicapped wave and 1-DUOS_FUZZ_SLICE_SEEDS of the Duos wave, over
+  # scripts/ci-shards.toml's [fuzz] slice shards, on the jackioh rust-build made of the commit the
+  # queue would land. From 2026-11-19 every daily super run on `_staging` was red, mostly on fuzz
+  # seeds that newer commits broke while the last fix was being built; this stops such a commit at
+  # the queue. scripts/fuzz-slice.sh is the logic (its header says more): a seed that fails here is
+  # played again on the base's build (main's run caches one per commit, `jackioh-main-<sha>`, else it
+  # is built here), and only a seed that passes there fails the job, so a red main never blocks every
+  # merge behind it. Never on a pull request, whose authors iterate; in the queue, and on a push to
+  # main or a dispatch whose scope still holds it (a push the queue built has run it, main_scope.py),
+  # whenever `rust_tools_wasm` is on: every change to what a fuzz game plays (the engine, the cards
+  # and their data, the AI, the tools). About 0.25 s a 1v1 seed and 1.3 s a Duos seed on this build
+  # (the tools crate at opt-level 0): 400 + 400 + 50 a shard is about five minutes.
+  rust-fuzz-slice:
+    name: rust (fuzz slice ${{ matrix.shard }}/${{ strategy.job-total }})
+    needs: [changes, rust-build]
+    if: ${{ needs.changes.outputs.full == 'true' && needs.changes.outputs.rust_tools_wasm == 'true' && github.event_name != 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      FUZZ_SLICE_SEEDS: "1600"
+      DUOS_FUZZ_SLICE_SEEDS: "200"
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON(needs.changes.outputs.fuzz_slice_shards) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rust-release-jackioh
+          path: ${{ runner.temp }}
+      - name: unpack the binary
+        run: tar -xzf "$RUNNER_TEMP/rust-release-jackioh.tgz"
+      - id: play
+        name: this shard's seeds, plain, handicapped and Duos
+        env:
+          SEEDS: ${{ env.FUZZ_SLICE_SEEDS }}
+          DUOS_SEEDS: ${{ env.DUOS_FUZZ_SLICE_SEEDS }}
+          SHARD: ${{ matrix.shard }}
+          SHARDS: ${{ strategy.job-total }}
+        run: bash scripts/fuzz-slice.sh play "$SHARD" "$SHARDS"
+      # Only when a seed failed: the base, main as the queue found it (the group's base, the commit
+      # before a push, or a dispatch's merge base with main).
+      - id: base
+        if: ${{ steps.play.outputs.failed == 'true' }}
+        name: the base
+        env:
+          EVENT: ${{ github.event_name }}
+          GROUP_BASE: ${{ github.event.merge_group.base_sha }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          case $EVENT in
+            merge_group) base=$GROUP_BASE ;;
+            push) base=$BEFORE ;;
+            *)
+              git fetch -q --unshallow origin main 2>/dev/null || git fetch -q origin main
+              base=$(git merge-base HEAD FETCH_HEAD)
+              [ "$base" != "$(git rev-parse HEAD)" ] || base=$(git rev-parse HEAD^1)
+              ;;
+          esac
+          echo "the base: $base"
+          echo "sha=$base" >> "$GITHUB_OUTPUT"
+      - id: cached
+        if: ${{ steps.play.outputs.failed == 'true' }}
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/main-jackioh
+          key: jackioh-main-${{ steps.base.outputs.sha }}
+      - if: ${{ steps.play.outputs.failed == 'true' && steps.cached.outputs.cache-hit != 'true' }}
+        uses: ./.github/actions/setup
+        with:
+          node: "false"
+      # As rust-base-build builds it: in a worktree of its own, into a target directory of its own.
+      - name: the base built here, since main's run has not cached it
+        if: ${{ steps.play.outputs.failed == 'true' && steps.cached.outputs.cache-hit != 'true' }}
+        env:
+          BASE: ${{ steps.base.outputs.sha }}
+          CARGO_PROFILE_RELEASE_LTO: "false"
+        run: |
+          git fetch -q --depth 1 origin "$BASE"
+          git worktree add --detach "$RUNNER_TEMP/base" "$BASE"
+          cargo build --release -p jackioh-tools --config profile.release.package.jackioh-tools.opt-level=0 \
+            --manifest-path "$RUNNER_TEMP/base/Cargo.toml" --target-dir "$RUNNER_TEMP/base-target"
+          mkdir -p "$RUNNER_TEMP/main-jackioh"
+          cp "$RUNNER_TEMP/base-target/release/jackioh" "$RUNNER_TEMP/main-jackioh/jackioh"
+      - name: each failing seed on the base, which fails the job only when it passes there
+        if: ${{ steps.play.outputs.failed == 'true' }}
+        run: bash scripts/fuzz-slice.sh judge "$RUNNER_TEMP/main-jackioh/jackioh"
+
   # The base's jackioh, for the classifier's stage 2 (below), beside rust-build so the two builds run
   # at once: main's own run cached it per commit (`rust-build`), or, when that run has not finished
   # or never ran (main's runs queue behind each other), it is built here. Only a pull request that
@@ -756,7 +851,7 @@ jobs:
 
   rust:
     name: rust
-    needs: [changes, rust-lint, rust-test, rust-build, rust-checks, rust-classify]
+    needs: [changes, rust-lint, rust-test, rust-build, rust-checks, rust-fuzz-slice, rust-classify]
     if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -769,10 +864,13 @@ jobs:
           TEST: ${{ needs.rust-test.result }}
           BUILD: ${{ needs.rust-build.result }}
           CHECKS: ${{ needs.rust-checks.result }}
+          SLICE: ${{ needs.rust-fuzz-slice.result }}
+          TOOLS: ${{ needs.changes.outputs.rust_tools_wasm }}
           CLASSIFY: ${{ needs.rust-classify.result }}
+          EVENT: ${{ github.event_name }}
           PULL: ${{ github.event_name == 'pull_request' && github.base_ref != '_production' }}
         run: |
-          echo "full=$FULL clippy=$CLIPPY lint=$LINT test=$TEST build=$BUILD checks=$CHECKS classify=$CLASSIFY"
+          echo "full=$FULL clippy=$CLIPPY lint=$LINT test=$TEST build=$BUILD checks=$CHECKS slice=$SLICE classify=$CLASSIFY"
           if [ "$FULL" = false ]; then
             echo "only files no job reads changed (scripts/ci-scope.sh)"
             exit 0
@@ -786,6 +884,14 @@ jobs:
           test "$TEST" = success
           test "$BUILD" = success
           test "$CHECKS" = success
+          # The fuzz slice runs in the queue, never on a pull request, and only on `rust_tools_wasm`.
+          if [ "$EVENT" = pull_request ]; then
+            echo "the fuzz slice runs in the merge queue, not on a pull request"
+          elif [ "$TOOLS" = false ]; then
+            echo "nothing a fuzz game plays changed: the fuzz slice skipped (scripts/ci-scope.sh)"
+          else
+            test "$SLICE" = success
+          fi
           if [ "$PULL" = true ]; then
             test "$CLASSIFY" = success
           fi
