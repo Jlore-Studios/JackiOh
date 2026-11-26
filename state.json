@@ -41868,41 +41868,6 @@
       {
         "approver": {
           "family": "claude",
-          "model": "sonnet",
-          "provider": "claude-8",
-          "tier": "medium"
-        },
-        "builder": {
-          "family": "claude",
-          "provider": "claude-8"
-        },
-        "difficulty": "medium",
-        "done_at": "2026-11-05T22:59:38Z",
-        "every": 5,
-        "findings": 0,
-        "head": "975bc92d0cd918383167a37f66fdcaccde505ffb",
-        "issue": 3196,
-        "merged_at": "2026-11-05T22:37:05Z",
-        "n": 85,
-        "pr": 3238,
-        "queued_at": "2026-11-05T22:37:05Z",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-4",
-          "tier": "strong"
-        },
-        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42123574540",
-        "sha": "80115f257d6a38835fa8b8d158b15c7dd4200567",
-        "started_at": "2026-11-05T22:41:09Z",
-        "status": "done",
-        "title": "Patch: the component specs for R2803000's shift ghosts and phone frame budget hold up on a loaded runner",
-        "tries": 0,
-        "verdict": "clean"
-      },
-      {
-        "approver": {
-          "family": "claude",
           "model": "opus",
           "provider": "claude-6",
           "tier": "strong"
@@ -45399,7 +45364,9 @@
           "provider": "muse"
         },
         "difficulty": "medium",
+        "done_at": "2026-11-26T06:38:52Z",
         "every": 5,
+        "findings": 0,
         "head": "a373f70fb5469380228d99063799c8b69f8f4ee5",
         "issue": 4996,
         "merged_at": "2026-11-26T06:29:28Z",
@@ -45412,12 +45379,13 @@
           "provider": "claude-6",
           "tier": "strong"
         },
-        "run_id": "pending:53e2d09c-1795674621",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45768722368",
         "sha": "6e1450bf6f9dbfbbe603f7d38ae0fe523daebae9",
         "started_at": "2026-11-26T06:30:50Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: PIP's text says \"performance improvement plan\"",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 586
