@@ -22388,6 +22388,9 @@
         }
       }
     },
+    "5011": {
+      "suggestion": true
+    },
     "5012": {
       "action": "plan",
       "asks": [],
@@ -45880,6 +45883,13 @@
         "number": 4999,
         "reason": "confirmed. `crates/run/src/assault/attempt.rs:204` says outright that \"a void still reads as a lost fight here, as it did before R4852000\", so a fight a Glitch voids, which R679 says never happened, costs an Infinite Assault player the level and the attempt's standing. The dungeon already reads it as no fight and redeals it, and the Assault's fix is one branch that mirrors it, with the void helper and its tests already in the tree.",
         "title": "Patch: a Glitch-voided Infinite Assault fight is dealt again, as a dungeon fight is",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-26T06:46:53Z",
+        "number": 5011,
+        "title": "Patch: the Assault page reads its saved attempt again when it is reopened",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
       }
