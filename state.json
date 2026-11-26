@@ -24217,16 +24217,24 @@
         ],
         "builder": "claude",
         "built_by": "claude-4",
+        "carried": {
+          "by": "`claude` (strong)",
+          "conflicts": [
+            "apps/web/src/tutorial/tutorial.css"
+          ],
+          "from": "68a1ae0bbfc987624c4930c0290f86493845cf1a",
+          "main": "5991e8da39cf724421f36f38f417da3af9e9debf"
+        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-4",
-            "run": "45817912605",
+            "run": "45832338464",
             "tier": "strong"
           }
         ],
-        "sha": "68a1ae0bbfc987624c4930c0290f86493845cf1a",
+        "sha": "09e493b5b424ede8ca4f55d7d770c5fe9222d110",
         "tiers": {
           "claude": "strong"
         }
