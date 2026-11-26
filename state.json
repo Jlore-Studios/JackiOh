@@ -24346,6 +24346,8 @@
       "pending_request": false,
       "provider": "claude-8",
       "queued_at": "2026-11-26T13:05:30Z",
+      "review_floor": "",
+      "review_notes": "",
       "run_id": "45825817326",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
