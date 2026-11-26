@@ -24425,6 +24425,14 @@
         "sha": "ab0a616836a641c119af2f465ab7a609b7aa8ae6",
         "tiers": {}
       }
+    },
+    "5073": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-26T09:06:50Z",
+      "issue": 5014,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
