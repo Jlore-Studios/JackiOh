@@ -629,13 +629,15 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
   and has a place for it: an open zone of its row or, failing that, any play of it the engine
   lists, onto a Stack, into the backrow with Flying, onto an Equip host or a stack base, or into a
   zone its Tribute frees), when the seat can pay the pass; with `pass_cost` 0 also a card the
-  teammate can afford next turn and the seat cannot; never more than the passes left or the
-  teammate's free hand slots. Immediate passes rank by the teammate's best bounded follow-up
+  teammate can afford next turn and the seat cannot, each side's next refresh read as its turn's
+  start gives it, a "+N mana per turn" (R4440052) and a credit line's instalment (R1224) counted;
+  never more than the passes left or the teammate's free hand slots. Immediate passes rank by the teammate's best bounded follow-up
   (R1127000; at most `DUOS_PASS_MAX_FOLLOWUPS` plays on a fixed-seed probe, past it the first plays
   of the teammate's best-valued hand cards, R4932000), ties by cost then hand order; free-pass
   next-turn cards keep cost order. An immediate pass is named only when it is
   worth it (R1723000): the teammate's best follow-up with the card, also tried after the teammate's
-  own best play, beats its best without it by more than the card's `hand_card_value` in the seat's
+  own best play (each a real engine step under a nonce of its own, a step that changed nothing
+  skipped), beats its best without it by more than the card's `hand_card_value` in the seat's
   hand, `DUOS_PASS_MARGIN_PER_COST` per crystal of `pass_cost` and `DUOS_PASS_MIN_GAIN`. A card the
   seat can play itself is named only when that gain also beats what the seat's own best bounded play
   of the card gains it in its own duel (R2827000): gain against gain, never one duel's score against
