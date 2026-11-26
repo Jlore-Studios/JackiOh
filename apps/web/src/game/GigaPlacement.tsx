@@ -5,7 +5,7 @@
 // takes the click, the focus and the drop. Client only (CLAUDE.md rule 7): the anchors come
 // from `Highlight.glow`, never from re-deciding legality.
 
-import { useContext, useEffect, useLayoutEffect, useState, type ReactElement } from "react";
+import { useContext, useEffect, useLayoutEffect, useRef, useState, type ReactElement } from "react";
 
 import type { PlayerView, Row } from "@jackioh/shared";
 
@@ -50,6 +50,40 @@ function unionOf(ids: readonly string[]): Box | null {
   return { left, top, width: right - left, height: bottom - top };
 }
 
+/** Measure every anchor's 2×2 block and write it onto its oblong; hide anchors with no box yet. */
+function positionOblongs(nodes: ReadonlyMap<string, HTMLDivElement>, anchors: readonly GigaAnchor[]): void {
+  const boxes = boxesOf(anchors);
+  for (const anchor of anchors) {
+    const key = keyOf(anchor);
+    const node = nodes.get(key);
+    if (node === undefined) continue;
+    const box = boxes.get(key);
+    if (box === undefined) {
+      node.style.display = "none";
+      continue;
+    }
+    node.style.display = "";
+    node.style.left = `${box.left}px`;
+    node.style.top = `${box.top}px`;
+    node.style.width = `${box.width}px`;
+    node.style.height = `${box.height}px`;
+  }
+}
+
+/** The anchors `anchorsKey` names, so event listeners re-derive them without new dependencies. */
+function anchorsOfKey(anchorsKey: string): GigaAnchor[] {
+  if (anchorsKey === "") return [];
+  const out: GigaAnchor[] = [];
+  for (const key of anchorsKey.split(",")) {
+    const [row, lane] = key.split(":");
+    if ((row === "units" || row === "backrow") && lane !== undefined) {
+      const laneNumber = Number(lane);
+      if (Number.isInteger(laneNumber) && laneNumber >= 1) out.push({ row, lane: laneNumber });
+    }
+  }
+  return out;
+}
+
 export default function GigaPlacement(props: { view: PlayerView; highlight?: Highlight }): ReactElement | null {
   const { view, highlight } = props;
   const lookup = useContext(CatalogContext);
@@ -68,22 +102,28 @@ export default function GigaPlacement(props: { view: PlayerView; highlight?: Hig
 
   const [hovered, setHovered] = useState<string | null>(null);
   const [focused, setFocused] = useState<string | null>(null);
+  const oblongs = useRef(new Map<string, HTMLDivElement>());
 
-  // The board can move under the oblongs without this component rendering (a resize, an
-  // orientation change, a scroll), so those events re-render for a fresh measure below.
-  // The measure itself runs during the render: the zones stand in the committed DOM, so the
-  // boxes are current on the render that draws them, with no state to cascade.
-  const [, bumpLayout] = useState(0);
+  // The boxes are measured after the commit and written straight onto the oblongs, as
+  // `LanePick.tsx` measures after its own commit: the zones stand in the committed DOM, so the
+  // boxes are current on the paint that draws them. The write is imperative rather than state
+  // because a sync setState here trips `react-hooks/set-state-in-effect` on new code, and new
+  // entries in `eslint-suppressions.json` are banned (CLAUDE.md rule 15): `LanePick.tsx` passes
+  // only through its grandfathered entry. The board can move under the oblongs without this
+  // component rendering (a resize, an orientation change, a scroll), so those events
+  // re-position too.
   useLayoutEffect(() => {
-    const update = (): void => bumpLayout((version) => version + 1);
+    positionOblongs(oblongs.current, anchors);
+  });
+  useEffect(() => {
+    const update = (): void => positionOblongs(oblongs.current, anchorsOfKey(anchorsKey));
     window.addEventListener("resize", update);
     window.addEventListener("scroll", update, true);
     return () => {
       window.removeEventListener("resize", update);
       window.removeEventListener("scroll", update, true);
     };
-  }, []);
-  const boxes = boxesOf(anchors);
+  }, [anchorsKey]);
 
   // Hover and focus are read off the page's zones, as `LanePick.tsx` reads them. Only the anchor
   // under the pointer or focus lights its block alone; the rest dim beside it.
@@ -120,24 +160,25 @@ export default function GigaPlacement(props: { view: PlayerView; highlight?: Hig
     };
   }, [anchorsKey, gigaId]);
 
-  if (gigaId === undefined || boxes.size === 0) return null;
+  if (gigaId === undefined || anchors.length === 0) return null;
   const active = hovered ?? focused;
   return (
     <div className="giga-placement" data-testid="giga-placement">
       {anchors.map((anchor) => {
-        const box = boxes.get(keyOf(anchor));
-        if (box === undefined) return null;
         const key = keyOf(anchor);
         return (
           <div
             key={key}
+            ref={(node) => {
+              if (node === null) oblongs.current.delete(key);
+              else oblongs.current.set(key, node);
+            }}
             className="giga-placement-oblong"
             data-testid={gigaOblongTestid(anchor.row, anchor.lane)}
             data-active={active === key ? "true" : undefined}
             data-dim={active !== null && active !== key ? "true" : undefined}
             role="img"
             aria-label={`GIGA placement: ${anchor.row} lanes ${anchor.lane} and ${anchor.lane + 1}`}
-            style={{ left: box.left, top: box.top, width: box.width, height: box.height }}
           />
         );
       })}
