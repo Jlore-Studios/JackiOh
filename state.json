@@ -25192,6 +25192,10 @@
         {
           "at": "2026-11-26T09:22:16Z",
           "minutes": 18.2
+        },
+        {
+          "at": "2026-11-26T09:49:11Z",
+          "minutes": 18.9
         }
       ],
       "tokens_spent": [
@@ -26307,17 +26311,24 @@
           "cost": 0.0,
           "input": 237166,
           "output": 33703
+        },
+        {
+          "at": "2026-11-26T09:49:11Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 204518,
+          "output": 16731
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-26T13:58:46Z",
-          "utilization": 0.06
+          "utilization": 0.19
         },
-        "observed_at": "2026-11-26T09:22:16Z",
+        "observed_at": "2026-11-26T09:49:11Z",
         "seven_day": {
           "resets_at": "2026-12-03T08:58:46Z",
-          "utilization": 0.03
+          "utilization": 0.05
         },
         "status": "allowed"
       }
@@ -47252,7 +47263,10 @@
       "2026-11-26T09:44:27Z,claude-3,stream,call,45792201928,29,2026-11-26T14:20:00Z,,,allowed,,,",
       "2026-11-26T09:44:57Z,claude-3,stream,call,45792201928,30,2026-11-26T14:20:00Z,,,allowed,,,",
       "2026-11-26T09:46:12Z,claude-3,stream,call,45792201928,33,2026-11-26T14:20:00Z,,,allowed,,,",
-      "2026-11-26T09:47:07Z,claude-3,stream,call,45792201928,35,2026-11-26T14:20:00Z,,,allowed,,,"
+      "2026-11-26T09:47:07Z,claude-3,stream,call,45792201928,35,2026-11-26T14:20:00Z,,,allowed,,,",
+      "2026-11-26T09:24:44Z,agy,usage-command,before,45791671270,5,2026-11-26T13:58:46Z,3,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-26T09:34:53Z,agy,usage-command,call,45791671270,17,2026-11-26T13:58:46Z,5,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-26T09:43:47Z,agy,usage-command,after,45791671270,19,2026-11-26T13:58:46Z,5,2026-12-03T08:58:46Z,allowed,100,100,"
     ],
     "runs": [
       "2026-11-26T09:34:56Z,45791874963,claude-3,opus,plan,4977,hard,planned,,5.3,46,36466,1737223,1.8006,3,10,,,28.8,agy,fresh,other,1",
