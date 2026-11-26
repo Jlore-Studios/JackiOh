@@ -23839,6 +23839,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 600,
       "started_at": "2026-11-26T12:14:16Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -47121,9 +47122,33 @@
         "title": "Patch: a greyed Marketplace Buy answers a press with the engine's reason",
         "tries": 0,
         "verdict": "clean"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-6",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-6"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "8daa60537bd4b35299feff9bef1049338ad38a42",
+        "issue": 4977,
+        "merged_at": "2026-11-26T12:49:08Z",
+        "n": 600,
+        "pr": 5063,
+        "queued_at": "2026-11-26T12:49:08Z",
+        "sha": "0c4a11d63c1a94b9a46d19b0ddf79bdc093962e0",
+        "status": "queued",
+        "title": "Patch: a counted game's result reloads the card proficiency the Collection shows, so a level the game earned and its stamp appear without a reload",
+        "tries": 0
       }
     ],
-    "count": 599
+    "count": 600
   },
   "statistics": {
     "at": "2026-11-26T12:44:56Z"
