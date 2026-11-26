@@ -24545,13 +24545,24 @@
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
-        "approvals": [],
+        "approvals": [
+          "claude"
+        ],
         "builder": "claude",
         "built_by": "claude-6",
         "rejections": [],
-        "reviews": [],
-        "sha": "518e1e60116ed6d00bfde288ab7758dd699f5a87",
-        "tiers": {}
+        "reviews": [
+          {
+            "family": "claude",
+            "provider": "claude-6",
+            "run": "45837581881",
+            "tier": "strong"
+          }
+        ],
+        "sha": "0172ad208ff6da68cd69ef2d95f58b0f1e4d386e",
+        "tiers": {
+          "claude": "strong"
+        }
       }
     },
     "5084": {
