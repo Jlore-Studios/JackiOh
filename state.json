@@ -20901,6 +20901,7 @@
     "4953": {
       "action": "revise",
       "asks": [],
+      "audit_tier": "",
       "cleared": {
         "approver": {
           "family": "muse",
@@ -20916,23 +20917,27 @@
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
-      "feedback_since": "2026-11-25T16:42:50Z",
+      "feedback_since": "2026-11-25T23:03:32Z",
       "forced": false,
       "interruptions": 0,
       "issue": 4832,
       "kind": "revise",
+      "last_findings": [],
       "live": "resolving",
       "merge_owner": "muse",
       "pending_request": false,
       "provider": "muse",
+      "question": "",
       "queued_at": "2026-11-25T23:01:01Z",
+      "round_tier": "medium",
       "run_id": "45718341984",
       "runs_on": "night-vm-muse-fill",
       "self_check_findings": [],
-      "source": "conflict",
+      "source": "",
       "started_at": "2026-11-25T23:03:32Z",
       "stop_requested": false,
       "taken_asks": [],
+      "verdict_rounds": 1,
       "votes": {
         "approvals": [
           "muse"
