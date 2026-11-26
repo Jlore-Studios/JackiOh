@@ -21527,15 +21527,8 @@
       }
     },
     "5120": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45895829205",
-        "model": "gemini-3.8-flash-high",
-        "provider": "agy",
-        "since": "2026-11-26T21:37:00Z",
-        "until": "2026-11-26T22:07:00Z"
-      },
       "difficulty_by": {
         "at": "2026-11-26T21:05:01Z",
         "difficulty": "medium",
@@ -21554,10 +21547,9 @@
         "reason": "planned on gemini-3.8-flash-high",
         "trail": "- said: I have launched `cargo jackioh catalog check` to compile the host tools and verify repository catalog invariants. I will wait for it to finish.\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5120 && cargo jackioh patches check && cargo jackioh spec check\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"fbfce3c4-1c72-432f-8924-15d1cf4aab7b/task-78\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"fbfce3c4-1c72-432f-8924-15d1cf4aab7b/task-78\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5120 && cargo fmt --check\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"fbfce3c4-1c72-432f-8924-15d1cf4aab7b/task-85\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"fbfce3c4-1c72-432f-8924-15d1cf4aab7b/task-85\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5120 && pnpm --dir apps/web typecheck\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"fbfce3c4-1c72-432f-8924-15d1cf4aab7b/task-92\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"fbfce3c4-1c72-432f-8924-15d1cf4aab7b/task-92\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"fbfce3c4-1c72-432f-8924-15d1cf4aab7b/task-92\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"fbfce3c4-1c72-432f-8924-15d1cf4aab7b/task-92\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"fbfce3c4-1c72-432f-8924-15d1cf4aab7b/task-92\"}\n- said: \n- schedule: {\"DurationSeconds\": 10, \"Prompt\": \"Check task-92\"}\n- said: \n- manage_task: {\"Action\": \"kill\", \"TaskId\": \"fbfce3c4-1c72-432f-8924-15d1cf4aab7b/task-104\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"fbfce3c4-1c72-432f-8924-15d1cf4aab7b/task-92\"}\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5120/.bot-plan.md\"}\n- said: \n- manage_task: {\"Action\": \"status\", \"TaskId\": \"fbfce3c4-1c72-432f-8924-15d1cf4aab7b/task-92\"}\n- said: \n- run_command: cd /home/agent-agy/actions-runner/_work/_temp/work/item-5120 && git status\n- said: \n- write_file: {\"Path\": \"/home/agent-agy/actions-runner/_work/_temp/work/item-5120/.bot-plan.md\"}\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"Touches only web unit tests for e2e smoke spec selection without touching engine rules, AI, migrations, or cross-crate design.\"} --> ## Goal Add tests in [apps/web/src/net/e2e-smoke-selection.test.ts](file:///home/agent-agy/actions-runner/_work/_temp/work/\u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "agy",
       "owner_since": "2026-11-26T21:06:42Z",
       "owner_why": "it plans it",
@@ -21570,19 +21562,19 @@
       "provider": "agy",
       "queued_at": "2026-11-26T21:05:01Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "45895829205",
+      "run_id": "pending:4881234e-1795729108",
       "runs_on": "night-vm-agy",
       "spot_check_of": 5115,
-      "started_at": "2026-11-26T21:06:42Z",
+      "started_at": "2026-11-26T21:38:54Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T21:22:20Z",
+    "at": "2026-11-26T21:38:54Z",
     "url": "",
-    "what": "build #5109 on claude-8"
+    "what": "build #5120 on agy"
   },
   "last_sweep": {
     "at": "2026-11-26T21:29:11Z",
