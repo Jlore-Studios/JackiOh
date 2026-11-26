@@ -10344,5 +10344,132 @@
     "pr": 4943,
     "title": "bot: build pass 1 for #4823",
     "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "d7c66164f1dc1dcf90a223b2cfb19af7d66a809e",
+    "pr": 4964,
+    "title": "the statistics load every patch's card totals in a third of the memory, so the game server is no longer killed loading them",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "c1b1371cde1147dbe6ed8f1028d992d099633b73",
+    "pr": 4939,
+    "title": "bot: build pass 1 for #4811",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "0c287997ec2d05067a4bef4378b1762fda575f0d",
+    "pr": 4959,
+    "title": "the AI without its learned evaluation is generation 14, so the shadow ban is swept on it and the ladder bots' ratings re-settle",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "5aca1af91a246cc75b1430c120737cd5982dc630",
+    "pr": 4948,
+    "title": "bot: build pass 1 for #4824",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "d5a6c909fb78de360aba0d554a699bbf973aeeef",
+    "pr": 4968,
+    "title": "patches ship: v0.6.14f, v0.6.14g",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "fcd989600c0e90b1c32401d3e11200945b20c988",
+    "pr": 4898,
+    "title": "one issue per red staging run, deploy failures first, and a fuzz slice in the merge queue",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "b961329197eb2c2d227c41657e5cc643cce02d00",
+    "pr": 4973,
+    "title": "bot: build pass 1 for #4931",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "1020221e60b7b799216dcbebdf429fde8ef44a48",
+    "pr": 4944,
+    "title": "bot: build pass 1 for #4842",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "a59511bb2f0c449789a07fc0e1e627134434f986",
+    "pr": 4976,
+    "title": "patches log: 3a83bd7..e046cab",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "40d6f5966458dbb2c93c823f2749dce3d53c729e",
+    "pr": 4960,
+    "title": "route six held-set hooks through the engine's read helpers instead of GameState fields",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "56cc692e5ac1ebcbf1280729b9cb0bdbe1eec77e",
+    "pr": 4983,
+    "title": "ban the React hooks misuse agents write, and make every lint suppression state its reason and fail once stale",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "c94c973c8ea39899b5cc524d2464424e7bde7e15",
+    "pr": 4950,
+    "title": "deeper card stats, S2, an Extended stats button on every card: its win rate by each choice",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "7446a711a6ec7b682d19a07e9fbb982f74006be9",
+    "pr": 4987,
+    "title": "patches ship: v0.6.14h, v0.6.14i",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "1c38dfc6725411fc242f07c02e21be612d569d9c",
+    "pr": 4988,
+    "title": "staging's super run goes green again: a Radiant card set face-down under a Garden keeps its Embiggened play, I18 leaves Tribute conditions alone, and the daily fuzz wave grows to 16800 seeds",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "f8c40d9321460899df420e8c223b19e39f43fe25",
+    "pr": 4989,
+    "title": "the statistics read every patch's card totals as one stream, so /stats loads inside the client's timeout",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "0945b5f645c9951727b1bb99ebf1e4f15d8eedb5",
+    "pr": 4993,
+    "title": "bot: build pass 1 for #4969",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "d1b9b808987ffe3ba4e1e2a2fb7e3f7053ba1358",
+    "pr": 4994,
+    "title": "the pool probe runs each suite on its own runner, and a challenger follows the friend's join while the social socket is live",
+    "kind": "app",
+    "player": "A challenge you send now always takes you to the game when your friend accepts it."
+  },
+  {
+    "version": "v0.6.14",
+    "commit": "2682cb7620ef465207c812d4d70b6634a9ec3f94",
+    "pr": 4997,
+    "title": "bot: build pass 1 for #4981",
+    "kind": "app"
   }
 ]
