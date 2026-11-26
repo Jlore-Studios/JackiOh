@@ -23133,6 +23133,13 @@
     "5036": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45839608050",
+        "model": "opus",
+        "provider": "claude-3",
+        "since": "2026-11-26T14:55:32Z",
+        "until": "2026-11-26T15:25:32Z"
+      },
       "failures": 0,
       "forced": false,
       "handoff": {
