@@ -21555,15 +21555,11 @@
     "what": "suggestions (server) on agy"
   },
   "last_sweep": {
-    "at": "2026-11-26T00:03:31Z",
+    "at": "2026-11-26T00:14:11Z",
     "notes": [
-      "delivered suggest on claude-8 (run 45724984995): interrupted",
-      "delivered suggest on agy (run 45721374682): suggested",
-      "delivered revise #4960 on muse (run 45707636794): built",
-      "started review #4960 on muse (run 45726405664)",
+      "started suggest on agy (run 45727476671)",
       "nothing more to start: nothing is queued",
-      "pruned 1 plan file(s) older than 7 days",
-      "runner gate: started 1 of 3 waiting run(s) (super run 45722697998 on _staging); 2 wait for a slot"
+      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22265,7 +22261,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T00:03:31Z",
+  "loop_tick": "2026-11-26T00:14:11Z",
   "machine_disk": {
     "issue": null,
     "reading": {
