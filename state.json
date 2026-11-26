@@ -21616,18 +21616,21 @@
     "what": "plan #4984 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-26T00:51:27Z",
+    "at": "2026-11-26T01:03:06Z",
     "notes": [
-      "#4977 needs a plan",
-      "#4981 needs a plan",
-      "delivered suggest on claude-1 (run 45730867593): interrupted",
-      "delivered suggest on claude-1 (run 45730776462): interrupted",
-      "started revise #4953 on muse (run 45732019106)",
-      "started plan #4981 on muse (run 45732119250)",
-      "started plan #4977 on agy (run 45732225022)",
+      "answered a comment on #4982 that was never answered",
+      "answered a comment on #4969 that was never answered",
+      "#4969 needs a plan",
+      "#4982 needs a plan",
+      "delivered plan #4981 on muse (run 45732119250): planned",
+      "started build #4981 on muse (run 45733421651)",
+      "started review #4960 on claude-4 (run 45733504316)",
+      "started plan #4982 on claude-4 (run 45733597718)",
+      "started plan #4969 on claude-8 (run 45733689819)",
+      "started plan #4984 on claude-8 (run 45733784224)",
       "nothing more to start: nothing is queued",
-      "pruned 2 plan file(s) older than 7 days",
-      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
+      "pruned 1 plan file(s) older than 7 days",
+      "#4984: typed it Bug"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -22333,7 +22336,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T00:51:27Z",
+  "loop_tick": "2026-11-26T01:03:06Z",
   "machine_disk": {
     "issue": null,
     "reading": {
