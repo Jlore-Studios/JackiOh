@@ -5,6 +5,7 @@
 
 import { CARD_NAMES, TOKEN_NAMES } from "../../support/cards.ts";
 import { FX_SETTINGS_KEY, constants, seedFor, timeouts } from "../../support/config.ts";
+import { VANILLA_4_4 } from "../../support/standIns.ts";
 import {
   DAMAGE_POP,
   burnCardId,
@@ -41,7 +42,8 @@ const MANA_WELL = nameOf(6);
 const THE_ROCK = nameOf(66);
 const CLONE_MACHINE = nameOf(33);
 const GARY = nameOf(4);
-const VANILLA = nameOf(8);
+/** #5099: 25-library-full-a deals a stand-in for #8 Mr. Vanilla; its name is its id. */
+const VANILLA = VANILLA_4_4;
 const INJECTION = nameOf(90);
 const SUPER_VIRUS = TOKEN_NAMES["90.1"] ?? "Super-Virus";
 const THE_COIN = TOKEN_NAMES["T-coin"] ?? "The Coin";

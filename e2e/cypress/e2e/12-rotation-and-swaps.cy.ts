@@ -6,6 +6,7 @@
 import { CARDS, CARD_NAMES, cardId as catalogId } from "../../support/cards.ts";
 import type { PlayCardOptions } from "../../support/commands.ts";
 import { seedFor } from "../../support/config.ts";
+import { FIRST_STRIKE_6_1 } from "../../support/standIns.ts";
 import { ensureSeat } from "../../support/hotseat.ts";
 import { BOARD, cardId, ts, zoneId } from "../../support/testids.ts";
 import type { GameStateLike, Lane, PlayerId, Side, ZoneRef } from "../../support/types.ts";
@@ -20,7 +21,8 @@ const BEAR_HONEYPOT = catalogId(60);
 /** SPEC §8 choice-free 2-cost units avoid Bear Honeypot's 1-cost trigger. */
 const PLAIN_UNITS: readonly string[] = [
   catalogId(1),
-  catalogId(20),
+  // #5099: the fixtures deal a stand-in for #20 (support/standIns.ts).
+  FIRST_STRIKE_6_1,
   catalogId(32),
   catalogId(45),
   catalogId(56),

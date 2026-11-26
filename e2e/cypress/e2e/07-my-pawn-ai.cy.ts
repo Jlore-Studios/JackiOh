@@ -5,6 +5,7 @@
 
 import { CARD_NAMES, cardId as catalogId } from "../../support/cards.ts";
 import { seedFor, timeouts } from "../../support/config.ts";
+import { ARMORED_7_7, FIRST_STRIKE_6_1 } from "../../support/standIns.ts";
 import { ensureSeat } from "../../support/hotseat.ts";
 import {
   ANIMATING,
@@ -19,7 +20,7 @@ import {
 } from "../../support/testids.ts";
 import type { GameStateLike, Lane, PlayerId } from "../../support/types.ts";
 
-/** BUILD M8 seed: #96 opens for p2 and #20 makes a grinder affordable before R2's cap. */
+/** BUILD M8 seed: #96 opens for p2 and #20's stand-in makes a grinder affordable before R2's cap. */
 const SEED = seedFor("07-my-pawn-10");
 
 /** Budgets: R2 caps the game at 30 player-turns, so nothing here may loop forever. */
@@ -32,8 +33,9 @@ const GRINDER_LANE: Lane = 1;
 /** SPEC §8 printed attacks; no #14 aura or buff means §10.4 layer 1 is sufficient. */
 const GRINDERS: readonly { defId: string; name: string; attack: number; cost: number }[] = [
   { defId: catalogId(19), name: nameOf(19), attack: 9, cost: 3 },
-  { defId: catalogId(20), name: nameOf(20), attack: 6, cost: 2 },
-  { defId: catalogId(25), name: nameOf(25), attack: 7, cost: 4 },
+  // #5099: the fixture deals stand-ins for #20 and #25, whose ids spell these numbers (support/standIns.ts).
+  { defId: FIRST_STRIKE_6_1, name: FIRST_STRIKE_6_1, attack: 6, cost: 2 },
+  { defId: ARMORED_7_7, name: ARMORED_7_7, attack: 7, cost: 4 },
 ];
 
 /** SPEC §8's name for card #index, as the client prints it (BUILD M5-T1). */
