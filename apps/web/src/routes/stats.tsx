@@ -5,7 +5,9 @@
 // over every patch since it last changed, under the Cards tab's filters, sort, view and ranges, with no patch bar,
 // games tile or Face, a line naming what it shows in their place, and a drill-down on All and the newest patch; R4680000:
 // its Segmented's Versions view is every play version of those cards as its own row, Past versions only one button, and
-// R4680001 a version's row opens its own drill-down, `?card=<id>&version=<first>`, drawn from its own catalog). No
+// R4680001 a version's row opens its own drill-down, `?card=<id>&version=<first>`, drawn from its own catalog;
+// R5040000: Running is now Historical, the second view, and the first, Major patch running, is the same over the
+// newest major's line alone, which the server cuts, `GET /api/stats/versions?scope=major`). No
 // provisional banner and no reading notes (R2325000): the page never names a data source or the gate (R661).
 // Below the per-row floor a row reads "not enough games". The Adjusted win rate leads (R2777000), so the table
 // shows no When drawn, Drawn vs not drawn, Radiant or Normal (R3184000); with the ranges shown, a tier says how
@@ -252,9 +254,13 @@ function setPercent(rate: number, signed = false): string {
 type TabKey = "cards" | "tokens" | "sets" | "players" | "experimental";
 const TAB_KEYS: readonly TabKey[] = ["cards", "tokens", "sets", "players", "experimental"];
 type ViewKey = "table" | "grid";
-/** R4678000, R4680000, R4681001: the Experimental tab's views, in the order they landed; `?experimental=` names any but the first. */
-type ExperimentalView = "running" | "versions" | "hall";
-const EXPERIMENTAL_VIEWS: readonly ExperimentalView[] = ["running", "versions", "hall"];
+/**
+ * R4678000, R4680000, R4681001, R5040000: the Experimental tab's views, in the Segmented's order; `?experimental=`
+ * names any but the first. `running` is Major patch running, so an old link to Running opens it; `historical` is
+ * R4678001's view, every patch since a card last changed.
+ */
+type ExperimentalView = "running" | "historical" | "versions" | "hall";
+const EXPERIMENTAL_VIEWS: readonly ExperimentalView[] = ["running", "historical", "versions", "hall"];
 type SortColumn = "name" | "games" | "tier" | "adjustedWinRate" | "decisiveness" | "winRate" | "playRate";
 type SortDirection = "asc" | "desc";
 
@@ -742,6 +748,12 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const hallKey = `${mode}:${String(hallAttempt)}`;
   const hallData = hall?.key === hallKey ? hall.data : null;
   const hallError = hall?.key === hallKey && hall.error;
+  // R5040000: Major patch running's table, the live play versions cut to the newest major's line, kept with the
+  // request it answers (the match type and the retry) as the Hall of Fame's is; Retry bumps `versionsAttempt`.
+  const [major, setMajor] = useState<{ key: string; data: PublicStatsVersionsResponse | null; error: boolean } | null>(null);
+  const majorKey = `${mode}:${String(versionsAttempt)}`;
+  const majorData = major?.key === majorKey ? major.data : null;
+  const majorError = major?.key === majorKey && major.error;
 
   const updateUrl = useCallback(() => {
     const params = new URLSearchParams();
@@ -933,9 +945,10 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
 
   // R4678001: Running reads every play version's figures on the page's match type once the Experimental tab is
   // open; a pooled view is no patch query, so it is open to everyone (R4677000) and sends no token. R4680001: so does
-  // a play version's drill-down, from any tab.
+  // a play version's drill-down, from any tab. R5040000: every view but Major patch running, which reads its own.
   const versionOpen = cardDrillDownId !== null && drillDownVersion !== null;
-  const wantVersions = experimental || versionOpen;
+  const majorRunning = experimental && experimentalView === "running";
+  const wantVersions = (experimental && !majorRunning) || versionOpen;
   useEffect(() => {
     if (!wantVersions) return;
     setVersionsData(null);
@@ -950,6 +963,22 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
       });
     return () => controller.abort();
   }, [wantVersions, mode, versionsAttempt]);
+
+  // R5040000: Major patch running asks the route for the newest major's line on the page's match type; the server
+  // cuts each span, so the client reads no version.
+  useEffect(() => {
+    if (!majorRunning) return;
+    const key = `${mode}:${String(versionsAttempt)}`;
+    const controller = new AbortController();
+    getStatsVersions({ mode, scope: "major", signal: controller.signal })
+      .then((res) => {
+        if (!controller.signal.aborted) setMajor({ key, data: res, error: false });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setMajor({ key, data: null, error: true });
+      });
+    return () => controller.abort();
+  }, [majorRunning, mode, versionsAttempt]);
 
   // R4681001: the Hall of Fame's lists on the page's match type once its view is open; a pooled view is
   // no patch query, so it is open to everyone (R4677000) and sends no token.
@@ -1159,10 +1188,13 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   const tokenCards = createdCards.filter((card) => catalog()[card.id]?.token === true);
   const otherCreatedCards = createdCards.filter((card) => catalog()[card.id]?.token !== true);
 
-  // R4678001: the cards the Cards tab lists under the shared filters, each on its live play version.
+  // R4678001: the cards the Cards tab lists under the shared filters, each on its live play version. R5040000: Major
+  // patch running reads the cut table, Historical and the other views the whole one.
+  const experimentalData = majorRunning ? majorData : versionsData;
+  const experimentalError = majorRunning ? majorError : versionsError;
   const running = useMemo(
-    () => (versionsData ? runningRows(filteredCards, versionsData.versions) : []),
-    [filteredCards, versionsData],
+    () => (experimentalData ? runningRows(filteredCards, experimentalData.versions) : []),
+    [filteredCards, experimentalData],
   );
 
   // R4680000: each old version's definition, from its catalog once a row on screen or its drill-down asks for it; a
@@ -1544,7 +1576,9 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
               ? t("Every version of every card, each over the patches it was played on")
               : experimentalView === "hall"
                 ? t("The most broken, nerfed, buffed and changed versions of all time")
-                : t("Every card's current version, over every patch since it last changed")}
+                : experimentalView === "historical"
+                  ? t("Every card's current version, over every patch since it last changed")
+                  : t("Every card's current version, over this major's patches since it last changed")}
           </p>
         )}
 
@@ -2277,24 +2311,41 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
         label: t("Experimental"),
         testId: statsTestid.tabExperimental,
         panelClassName: "stats-panel one-screen__body",
-        // R4678000: figures that span patches, in a Segmented of its views, now three (R4680000, R4681001). R4678001:
-        // Running, each card the Cards tab's filters list, on its live play version; R4680000: Versions, every play
-        // version of those cards; R4681001: Hall of Fame, the four all-time lists, which read no filter.
+        // R4678000: figures that span patches, in a Segmented of its views, now four (R4680000, R4681001, R5040000).
+        // R5040000: Major patch running and Historical (R4678001's Running), each card the Cards tab's filters list, on
+        // its live play version, over the newest major's line or every patch; R4680000: Versions, every play version
+        // of those cards; R4681001: Hall of Fame, the four all-time lists, which read no filter.
         panel: (
           <>
             <Segmented
               label={t("Experimental views")}
+              className="stats-experimental-views"
               value={experimentalView}
               onChange={setExperimentalView}
               options={[
-                { value: "running", label: t("Running"), testId: statsTestid.experimentalRunning, className: "stats-view-btn" },
+                {
+                  value: "running",
+                  label: t("Major patch running"),
+                  title: t(
+                    "Each card's current version, over the patches since the newest major or since it last changed, whichever is later. Every row starts again at each major, so it has too few games for a tier until games accrue.",
+                  ),
+                  testId: statsTestid.experimentalRunning,
+                  className: "stats-view-btn",
+                },
+                {
+                  value: "historical",
+                  label: t("Historical"),
+                  title: t("Each card's current version, over every patch since it last changed, across majors."),
+                  testId: statsTestid.experimentalHistorical,
+                  className: "stats-view-btn",
+                },
                 { value: "versions", label: t("Versions"), testId: statsTestid.experimentalVersions, className: "stats-view-btn" },
                 { value: "hall", label: t("Hall of fame"), testId: statsTestid.experimentalHall, className: "stats-view-btn" },
               ]}
             />
             <div className="stats-filter-bar">
               {cardFilters()}
-              {cardOptions(experimentalView)}
+              {cardOptions(experimentalView === "historical" ? "running" : experimentalView)}
             </div>
 
             {/* R4681001: the Hall of Fame's four lists, which read no filter and open the before version. */}
@@ -2328,21 +2379,21 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                   onOpen={openVersion}
                 />
               )
-            ) : versionsError || cardStatsError ? (
+            ) : experimentalError || cardStatsError ? (
               <div className="stats-error">
                 <p>{t("The card statistics didn't load.")}</p>
                 <button
                   type="button"
                   className="stats-retry-btn"
                   onClick={() => {
-                    if (versionsError) setVersionsAttempt((n) => n + 1);
+                    if (experimentalError) setVersionsAttempt((n) => n + 1);
                     if (cardStatsError) setCardStatsAttempt((n) => n + 1);
                   }}
                 >
                   {t("Retry")}
                 </button>
               </div>
-            ) : versionsData === null || cardStatsLoading ? (
+            ) : experimentalData === null || cardStatsLoading ? (
               <Skeleton variant={view === "grid" ? "grid" : "table"} label={t("Loading card statistics…")} />
             ) : (experimentalView === "versions" ? versionsShown : running).length === 0 ? (
               <EmptyState text={t("No cards match the selected filters.")} />
@@ -2354,7 +2405,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                 onSort={sortCreatedBy}
                 view={view}
                 showRanges={showRanges}
-                band={versionsData}
+                band={experimentalData}
                 labeledBy="stats-tab-experimental"
                 nameOf={shownName}
                 faceOf={versionFaceOf}
@@ -2371,7 +2422,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                 onSort={sortCreatedBy}
                 view={view}
                 showRanges={showRanges}
-                band={versionsData}
+                band={experimentalData}
                 labeledBy="stats-tab-experimental"
                 nameOf={shownName}
                 faceOf={gridFaceOf}
