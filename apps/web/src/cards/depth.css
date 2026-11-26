@@ -112,15 +112,15 @@
 }
 
 .cf[data-frame-break="true"] .cf-plane[data-plane="near"].cf-art--portrait {
-  clip-path: inset(calc(-1 * var(--cf-frame-break, 0px)) 0 0 0 round 48% 48% 40% 40% / 55% 55% 45% 45%);
+  clip-path: inset(calc(-1 * var(--cf-frame-break, 0px)) 0 0 0 round var(--radius-art-portrait));
 }
 
 .cf[data-frame-break="true"] .cf-plane[data-plane="near"].cf-art--window {
-  clip-path: inset(calc(-1 * var(--cf-frame-break, 0px)) 0 0 0 round 6% / 8%);
+  clip-path: inset(calc(-1 * var(--cf-frame-break, 0px)) 0 0 0 round var(--radius-art-window));
 }
 
 .cf[data-frame-break="true"] .cf-plane[data-plane="near"].cf-art--arch {
-  clip-path: inset(calc(-1 * var(--cf-frame-break, 0px)) 0 0 0 round 50% 50% 4% 4% / 40% 40% 4% 4%);
+  clip-path: inset(calc(-1 * var(--cf-frame-break, 0px)) 0 0 0 round var(--radius-art-arch));
 }
 
 .cf[data-frame-break="true"] .cf-plane[data-plane="near"].cf-art--notched {

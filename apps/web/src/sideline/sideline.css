@@ -45,7 +45,7 @@
   max-inline-size: 100%;
   overflow: hidden;
   color: var(--text-dim);
-  font-size: var(--type-2xs);
+  font-size: var(--type-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }

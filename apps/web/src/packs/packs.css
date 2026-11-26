@@ -67,7 +67,7 @@
   display: block;
   padding: 0;
   border: 0;
-  border-radius: 0.6rem;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: inherit;
   cursor: var(--cursor-glove-point, pointer);
@@ -143,7 +143,7 @@
 .pack-slot__back {
   padding: 0;
   border: 0;
-  border-radius: 7% / 5%;
+  border-radius: var(--radius-card);
   background: transparent;
   box-shadow: 0 0 1rem var(--slot-glow);
   cursor: var(--cursor-glove-point, pointer);
@@ -251,7 +251,7 @@
   .pack-scene .pack-actions {
     position: sticky;
     bottom: 0;
-    z-index: 1;
+    z-index: var(--z-content);
     width: 100%;
     padding: 0.5rem 0;
     background: rgb(8 10 16 / 0.92);

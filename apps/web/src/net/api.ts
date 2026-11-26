@@ -1971,10 +1971,45 @@ export type PublicStatsVersionsResponse = {
   versions: PublicPlayVersion[];
 };
 
-/** R4675001, R4678001: every play version's figures on a match type, every one when none is asked; open to everyone. */
-export function getStatsVersions(options: { mode?: string; signal?: AbortSignal } = {}): Promise<PublicStatsVersionsResponse> {
-  const query = options.mode ? `?${new URLSearchParams({ mode: options.mode }).toString()}` : "";
+/** R4675001, R4678001: every play version's figures on a match type, every one when none is asked; open to everyone. R5040000: `scope: "major"` asks for the live ones alone, the server cutting each to the newest major's line. */
+export function getStatsVersions(
+  options: { mode?: string; scope?: "major"; signal?: AbortSignal } = {},
+): Promise<PublicStatsVersionsResponse> {
+  const params = new URLSearchParams();
+  if (options.mode) params.set("mode", options.mode);
+  if (options.scope) params.set("scope", options.scope);
+  const text = params.toString();
+  const query = text ? `?${text}` : "";
   return apiRequest<PublicStatsVersionsResponse>(`/api/stats/versions${query}`, { signal: options.signal });
+}
+
+/** R4681001: one Hall of Fame entry: its before and after play-version rows with figures, their ship dates, the balance line, and, on the changed list alone, how many changes lie between. */
+export type PublicHallEntry = {
+  before: PublicPlayVersion;
+  after: PublicPlayVersion;
+  beforeDate: string | null;
+  afterDate: string | null;
+  balance: string | null;
+  changesBetween: number | null;
+};
+
+/** R4681001: `GET /api/stats/hall-of-fame`: the four lists over a match type, every one when none is asked; open to everyone. */
+export type PublicHallOfFameResponse = {
+  pilot: "merged" | "human" | "ai";
+  mode: "all" | "bo1" | "bo3" | "random" | "constructed";
+  minSample: number;
+  bandLow: number;
+  bandHigh: number;
+  broken: PublicHallEntry[];
+  nerfed: PublicHallEntry[];
+  buffed: PublicHallEntry[];
+  changed: PublicHallEntry[];
+};
+
+/** R4681001: the Hall of Fame's four lists (R4681000) on a match type, every one when none is asked; open to everyone. */
+export function getHallOfFame(options: { mode?: string; signal?: AbortSignal } = {}): Promise<PublicHallOfFameResponse> {
+  const query = options.mode ? `?${new URLSearchParams({ mode: options.mode }).toString()}` : "";
+  return apiRequest<PublicHallOfFameResponse>(`/api/stats/hall-of-fame${query}`, { signal: options.signal });
 }
 
 /**

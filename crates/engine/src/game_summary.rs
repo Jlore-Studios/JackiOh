@@ -81,6 +81,8 @@ struct Reading {
     played: PerPlayer<Vec<String>>,
     played_turns: PerPlayer<Vec<i32>>,
     played_radiant: PerPlayer<Vec<bool>>,
+    /// R5054000: the dealt cards each seat held Radiant in its hand from its opening hand on, each once.
+    held_radiant: PerPlayer<IndexSet<String>>,
     /// R4672000: each play's variant, beside `played`.
     played_variants: PerPlayer<Vec<Option<PlayVariant>>>,
     /// R4672000: the plays still resolving, by the instance id their card's prompts name.
@@ -113,6 +115,45 @@ struct Reading {
     stolen: Vec<String>,
 }
 
+impl Reading {
+    /// A reading that has read no step yet, from the game's hands, libraries and Radiant cards at
+    /// `current_turn`.
+    fn new(hands: Hands, decks: Decks, radiant: IndexSet<String>, current_turn: i32) -> Reading {
+        let zero = || PerPlayer::new(0, 0);
+        Reading {
+            hands,
+            decks,
+            radiant,
+            first: None,
+            opening: None,
+            drawn: per_seat(),
+            played: per_seat(),
+            played_turns: per_seat(),
+            played_radiant: per_seat(),
+            held_radiant: PerPlayer::new(IndexSet::new(), IndexSet::new()),
+            played_variants: per_seat(),
+            open: IndexMap::new(),
+            picks: per_seat(),
+            fatigue_draws: zero(),
+            fatigue_damage: zero(),
+            traps_set: zero(),
+            traps_fired: zero(),
+            position_switches: zero(),
+            radiant_upgrades: zero(),
+            starship_pieces_fused: zero(),
+            starships_launched: zero(),
+            radiant_seen: IndexSet::new(),
+            current_turn,
+            made: IndexMap::new(),
+            used: IndexSet::new(),
+            created_used: per_seat(),
+            created_played: per_seat(),
+            cast_or_summoned: per_seat(),
+            stolen: Vec::new(),
+        }
+    }
+}
+
 /// Instance ids of the Radiant cards each seat holds in its hand or resolving zone as an action begins.
 fn radiant_of(state: &GameState, hands: &Hands) -> IndexSet<String> {
     let mut radiant = IndexSet::new();
@@ -135,6 +176,21 @@ fn mark_radiant(reading: &mut Reading, after: &GameState, id: &str) {
         reading.radiant.insert(id.to_string());
     } else {
         reading.radiant.shift_remove(id);
+    }
+}
+
+/// R5054000: notes the card `id` names as held Radiant by the seat whose hand holds it, when it is Radiant,
+/// dealt (a Created card is never drawn, R2089000) and the opening hand has been dealt (a card mulliganed
+/// away was never seen).
+fn hold_radiant(reading: &mut Reading, before: &GameState, after: &GameState, id: &str) {
+    if reading.opening.is_none() || !reading.radiant.contains(id) || is_created(before, after, &[id]) {
+        return;
+    }
+    for player in PLAYER_IDS {
+        if let Some(def_id) = reading.hands[player].get(id) {
+            let def_id = def_id.clone();
+            reading.held_radiant[player].insert(def_id);
+        }
     }
 }
 
@@ -447,6 +503,14 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                     };
                     reading.opening =
                         Some(PerPlayer::new(dealt(&reading.hands.p1), dealt(&reading.hands.p2)));
+                    // R5054000: a card Radiant in the opening hand was held Radiant from the first turn on.
+                    let held: Vec<String> = PLAYER_IDS
+                        .iter()
+                        .flat_map(|&player| reading.hands[player].keys().cloned().collect::<Vec<_>>())
+                        .collect();
+                    for id in held {
+                        hold_radiant(reading, before, after, &id);
+                    }
                 }
             }
             GameEvent::Drawn {
@@ -473,6 +537,7 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
             } => {
                 reading.hands[*player].insert(instance_id.clone(), def_id.clone());
                 mark_radiant(reading, after, instance_id);
+                hold_radiant(reading, before, after, instance_id);
                 if is_created(before, after, &[instance_id]) {
                     let source = maker_of(before, after, &[instance_id]);
                     make(reading, instance_id, creator.unwrap_or(*player), def_id, source);
@@ -557,6 +622,7 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
             }
             GameEvent::RadiantSet { instance_id, .. } => {
                 reading.radiant.insert(instance_id.clone());
+                hold_radiant(reading, before, after, instance_id);
                 // R1256000: an instance's first cue counts for its controller when the step turned it
                 // Radiant; the engine also cues a card Radiant already (R177), and re-cues dedupe to one.
                 if reading.radiant_seen.insert(instance_id.clone())
@@ -674,6 +740,7 @@ fn read(reading: &mut Reading, events: &[GameEvent], before: &GameState, after: 
                     hand.shift_remove(instance_id);
                     hand.insert(new_instance_id.clone(), to_def_id.clone());
                     mark_radiant(reading, after, new_instance_id);
+                    hold_radiant(reading, before, after, new_instance_id);
                 }
                 // R2089000: a Transform's new card is Created (a Vanilla keeps the card it changes).
                 // Taking a card's place on the field puts it there, which uses it.
@@ -750,6 +817,9 @@ fn seat_summary(reading: &Reading, deck: Vec<String>, player: PlayerId) -> SeatS
         played: reading.played[player].clone(),
         played_turns: listed(&reading.played_turns[player]),
         played_radiant: listed(&reading.played_radiant[player]),
+        // R5054000: always present on a fresh summary, empty when none, so the fold can tell it from an
+        // older record's.
+        held_radiant: Some(reading.held_radiant[player].iter().cloned().collect()),
         played_variants: Some(variants.clone()).filter(|variants| variants.iter().any(Option::is_some)),
         // R1256000: a fresh summary always knows the counts; `None` is for older records.
         fatigue_draws: Some(reading.fatigue_draws[player]),
@@ -784,40 +854,8 @@ impl SummaryReader {
         let hands = hands_of(start, None);
         let decks = decks_of(start, None);
         let radiant = radiant_of(start, &hands);
-        fn zero() -> PerPlayer<i32> {
-            PerPlayer::new(0, 0)
-        }
         SummaryReader {
-            reading: Reading {
-                hands,
-                decks,
-                radiant,
-                first: None,
-                opening: None,
-                drawn: per_seat(),
-                played: per_seat(),
-                played_turns: per_seat(),
-                played_radiant: per_seat(),
-                played_variants: per_seat(),
-                open: IndexMap::new(),
-                picks: per_seat(),
-                fatigue_draws: zero(),
-                fatigue_damage: zero(),
-                traps_set: zero(),
-                traps_fired: zero(),
-                position_switches: zero(),
-                radiant_upgrades: zero(),
-                starship_pieces_fused: zero(),
-                starships_launched: zero(),
-                radiant_seen: IndexSet::new(),
-                current_turn: start.turn.max(1),
-                made: IndexMap::new(),
-                used: IndexSet::new(),
-                created_used: per_seat(),
-                created_played: per_seat(),
-                cast_or_summoned: per_seat(),
-                stolen: Vec::new(),
-            },
+            reading: Reading::new(hands, decks, radiant, start.turn.max(1)),
         }
     }
 
@@ -943,37 +981,12 @@ mod tests {
     use serde_json::json;
 
     fn reading() -> Reading {
-        let zero = || PerPlayer::new(0, 0);
-        Reading {
-            hands: PerPlayer::new(IndexMap::new(), IndexMap::new()),
-            decks: PerPlayer::new(IndexSet::new(), IndexSet::new()),
-            radiant: IndexSet::new(),
-            first: None,
-            opening: None,
-            drawn: per_seat(),
-            played: per_seat(),
-            played_turns: per_seat(),
-            played_radiant: per_seat(),
-            played_variants: per_seat(),
-            open: IndexMap::new(),
-            picks: per_seat(),
-            fatigue_draws: zero(),
-            fatigue_damage: zero(),
-            traps_set: zero(),
-            traps_fired: zero(),
-            position_switches: zero(),
-            radiant_upgrades: zero(),
-            starship_pieces_fused: zero(),
-            starships_launched: zero(),
-            radiant_seen: IndexSet::new(),
-            current_turn: 1,
-            made: IndexMap::new(),
-            used: IndexSet::new(),
-            created_used: per_seat(),
-            created_played: per_seat(),
-            cast_or_summoned: per_seat(),
-            stolen: Vec::new(),
-        }
+        Reading::new(
+            PerPlayer::new(IndexMap::new(), IndexMap::new()),
+            PerPlayer::new(IndexSet::new(), IndexSet::new()),
+            IndexSet::new(),
+            1,
+        )
     }
 
     /// core-008 "Vanilla": a hand card in a game whose catalog the engine's own tests install.
@@ -1019,6 +1032,52 @@ mod tests {
         read(&mut reading, &events, &before, &after);
         read(&mut reading, &events, &before, &after);
         assert_eq!(reading.radiant_upgrades.p1, 1);
+    }
+
+    /// R5054000: `hand_card`'s card as the reader's hand holds it, the opening hand dealt or not.
+    fn holding(state: &GameState, dealt: bool) -> Reading {
+        let card = &state.players[PlayerId::P1].hand[0];
+        let mut reading = reading();
+        reading.hands.p1.insert(card.id.clone(), card.def_id.clone());
+        if dealt {
+            reading.opening = Some(PerPlayer::new(vec![card.def_id.clone()], Vec::new()));
+        }
+        reading
+    }
+
+    #[test]
+    fn r5054000_a_card_turned_radiant_in_hand_is_held_radiant_played_or_not() {
+        let before = hand_card(false);
+        let after = hand_card(true);
+        let mut reading = holding(&before, true);
+        read(&mut reading, &cue(&after), &before, &after);
+        let reader = SummaryReader { reading };
+        let seat = reader.seat(PlayerId::P1, vec!["core-008".to_string()]);
+        assert_eq!(seat.held_radiant, Some(vec!["core-008".to_string()]));
+        assert!(seat.played.is_empty(), "held, never played");
+        assert_eq!(
+            reader.seat(PlayerId::P2, Vec::new()).held_radiant,
+            Some(Vec::new())
+        );
+    }
+
+    #[test]
+    fn r5054000_a_normal_card_or_one_upgraded_before_the_opening_hand_is_not_held_radiant() {
+        let before = hand_card(false);
+        let after = hand_card(true);
+        // Never Radiant: present and empty, so the fold reads it as seen normal.
+        let mut normal = holding(&before, true);
+        read(&mut normal, &[], &before, &before);
+        assert_eq!(
+            SummaryReader { reading: normal }
+                .seat(PlayerId::P1, Vec::new())
+                .held_radiant,
+            Some(Vec::new())
+        );
+        // Before the opening hand is dealt, a card may yet be mulliganed away: it is not held.
+        let mut early = holding(&before, false);
+        read(&mut early, &cue(&after), &before, &after);
+        assert!(early.held_radiant.p1.is_empty());
     }
 
     #[test]

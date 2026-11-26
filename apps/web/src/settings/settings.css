@@ -67,11 +67,7 @@
   height: min(560px, 88dvh);
   padding: 0;
   overflow: hidden;
-  background: linear-gradient(
-    180deg,
-    var(--bg-raised),
-    color-mix(in srgb, var(--bg-raised) 72%, var(--bg))
-  );
+  background: color-mix(in srgb, var(--bg-raised) 72%, var(--bg));
   font: 14px/1.35 var(--font-text);
   text-align: start;
   outline: none;
@@ -109,7 +105,7 @@
   padding: 0 14px;
   border: 0;
   border-bottom: 3px solid transparent;
-  border-radius: 6px 6px 0 0;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   background: none;
   color: var(--text-dim);
   font: inherit;
@@ -205,7 +201,7 @@
   min-height: 44px;
   padding: 0 10px;
   border: 1px solid var(--line-bright);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--bg);
   color: var(--text);
   font: inherit;
@@ -230,7 +226,7 @@
   min-width: 4ch;
   padding: 2px 8px;
   border: 1px solid var(--line-bright);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bg);
   color: var(--text);
   font-size: 14px;
@@ -253,7 +249,7 @@
 
 .settings-slider::-webkit-slider-runnable-track {
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: linear-gradient(
     90deg,
     #7dd3fc calc(var(--fx-speed-fill) * 100%),
@@ -263,13 +259,13 @@
 
 .settings-slider::-moz-range-track {
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: var(--line-bright);
 }
 
 .settings-slider::-moz-range-progress {
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: #7dd3fc;
 }
 
@@ -278,9 +274,9 @@
   height: 22px;
   margin-top: -8px;
   border: 2px solid var(--bg);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: #e0f2fe;
-  box-shadow: 0 0 0 1px #7dd3fc, 0 1px 3px rgb(0 0 0 / 0.5);
+  box-shadow: 0 0 0 1px #7dd3fc, var(--shadow-1);
   appearance: none;
 }
 
@@ -288,9 +284,9 @@
   width: 20px;
   height: 20px;
   border: 2px solid var(--bg);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: #e0f2fe;
-  box-shadow: 0 0 0 1px #7dd3fc, 0 1px 3px rgb(0 0 0 / 0.5);
+  box-shadow: 0 0 0 1px #7dd3fc, var(--shadow-1);
 }
 
 .settings-slider:focus-visible {
@@ -346,7 +342,7 @@
   margin: 0;
   padding: 7px 0;
   border: 0;
-  border-radius: 15px / 22px;
+  border-radius: var(--radius-switch);
   background-color: var(--line-bright);
   background-image: radial-gradient(circle closest-side, var(--text-dim) 0 calc(100% - 4px), transparent calc(100% - 3px));
   background-repeat: no-repeat;
@@ -372,9 +368,9 @@
 }
 
 /* The switch: a 44 px tall input whose visible track is the 30 px content box. The asymmetric
-   radius (15px horizontal, 22px vertical) leaves the content box a true pill once the 7 px of
-   vertical padding is taken off, and the knob is a background layer, so no pseudo-element is
-   needed on the <input>. */
+   radius (--radius-switch: 15px horizontal, 22px vertical) leaves the content box a true pill once
+   the 7 px of vertical padding is taken off, and the knob is a background layer, so no
+   pseudo-element is needed on the <input>. */
 .settings-switch {
   appearance: none;
   -webkit-appearance: none;
@@ -385,7 +381,7 @@
   margin: 0;
   padding: 7px 0;
   border: 0;
-  border-radius: 15px / 22px;
+  border-radius: var(--radius-switch);
   background-color: var(--line-bright);
   background-image: radial-gradient(
     circle closest-side,

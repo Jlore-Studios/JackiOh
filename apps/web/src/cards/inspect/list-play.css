@@ -13,7 +13,7 @@
   min-height: 32px;
   padding: 4px 14px;
   border: 1px solid #22c55e;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: linear-gradient(180deg, #166534, #14532d);
   color: #dcfce7;
   font: inherit;

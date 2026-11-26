@@ -214,7 +214,7 @@
   background: color-mix(in srgb, var(--pal-black) 32%, transparent);
   box-shadow: var(--shadow-inset-top);
   color: var(--pal-blue-200);
-  font-size: var(--type-2xs-em);
+  font-size: var(--type-xs-em);
   font-weight: 600;
   line-height: 1.2;
   -webkit-box-orient: vertical;
@@ -345,7 +345,7 @@
   stroke-linecap: round;
   stroke-dasharray: 1 27;
   opacity: 0;
-  animation: drag-arrow-march 0.7s steps(1, end) infinite;
+  animation: drag-arrow-march 0.7s steps(1, end) 1;
 }
 
 /* R3608000: the dots march by four copies of the shaft, one quarter of the 28-unit dash period apart, each

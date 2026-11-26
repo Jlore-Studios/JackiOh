@@ -500,7 +500,10 @@ withholds a marker from a seat that could not read its card and never forwards `
 golden texts leave both out (R2783000, R2783001). Since #3857 `GameEvent::ArmorGained { player, amount,
 armor }` reports a hero's kept Armor gain (`effects::gain_hero_armor`), `armor` being `hero_armor_of`
 after it. It is withheld from the trigger loop, public, takes no room in R168's floor and is left out
-of the golden texts (R3857000). Since #3925 `GameEvent::LoopCapped { player }` reports that an
+of the golden texts (R3857000). Since #5045 `GameEvent::DamageNullified { instance_id, source_id,
+target_id, amount, combat }` reports what each damage pool soaked of a hit (`damage::spend_pool`),
+`instance_id` the pool's card; withheld from the trigger loop, redacted as `damage` is, taking no room
+in R168's floor and left out of the golden texts (R5045000). Since #3925 `GameEvent::LoopCapped { player }` reports that an
 interaction reached `RESOLUTION_EVENT_CAP` events and its loop stopped (`loop_cap.rs`, whose count rides
 `Frontier.interaction_from` and dies with the action); public, and emitted only by a capped interaction,
 so no game that never reaches the cap hashes differently (R3925000). Since #4423 `destroyed` carries an
@@ -1382,3 +1385,5 @@ Holes the Wave 2 reconcilers found, each settled once and applied to the code (`
 - **§6.1 / §10.8, the switch's refusal on the unit view (issue #3821, R3821000):** `UnitView` carries `switchReason` (`combat::why_cannot_switch_in` to `position_after_switch`, spending exertion), gated by `view_for::turn_open_to`. `golden::view_texts` strips it, so no golden hash moves. jackioh-shared's `LiveCard`, `InPlay` and `FaceModel` carry it, `InPlay` dropping it where it repeats `attackReason`.
 - **§4.5 / §6.1 / §6.2, a death into exile (issue #4207, R4207000):** `RebornEntry` gains `exiled: Option<bool>`, set when the body died into its exile pile, which §4.5 step 4 then returns it from; absent otherwise, so old games hash the same. Nothing reaches the client.
 - **§8.5 #98, End Times' bank (issue #4828, R4828000):** `Tuning` gains `taken: Option<IndexMap<String, i32>>`, the cuts End Times' End of Turn made since its last use, by the declared number's key: kept and copied with the rest of the tuning, and taken by a Fuse with the `set` it records (`tuning::taken_of`, `set_taken`); `memory.endTimesTaken` is the kept v0.6.14 script's. Absent until set, so old games hash the same; the web's generated `Tuning.ts` carries it.
+- **§6.3 / §10.4, a Transform's Aura draw (issue #4991, R4991000):** new query `query::self_arrived_on_field` (a `summoned` naming the running card, or a Transform's `transformed` whose new card it is, acting on the field), which M #65's and S #111's arrival draw reads; nothing reaches the client.
+- **§4.5 / §9.9, the Reborn body read ahead (issue #4798, R4798000):** `state_check.rs` gains `reborn_body_of`, the card a Unit with its Reborn unspent would come back as were it destroyed now (its keeper's card, R2618000; a unit token's summoned X/X, R175), built from §4.5 step 4's own `reborn_token` and `prepare_body`, whose arguments are now the keep and the face rather than the whole `RebornEntry`. The AI reads it; no state changes and nothing reaches the client.

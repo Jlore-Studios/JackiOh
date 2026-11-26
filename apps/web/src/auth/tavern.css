@@ -72,7 +72,7 @@
 .tavern.app-shell::before {
   content: "";
   position: absolute;
-  z-index: -1;
+  z-index: var(--z-below);
   left: -20%;
   right: -20%;
   bottom: 0;
@@ -134,7 +134,7 @@
   padding: 28px 26px 30px;
   gap: 14px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(ellipse 90% 40% at 50% 0%, rgba(255, 190, 110, 0.1), transparent 70%),
     linear-gradient(180deg, rgba(52, 30, 16, 0.96), rgba(22, 13, 7, 0.97));
@@ -142,7 +142,7 @@
     inset 0 0 0 3px rgba(18, 11, 7, 0.9),
     inset 0 0 0 4px rgba(201, 149, 63, 0.4),
     inset 0 1px 0 4px rgba(251, 231, 176, 0.06),
-    0 24px 60px rgba(0, 0, 0, 0.6),
+    var(--shadow-3),
     0 0 90px rgba(255, 150, 60, 0.08);
 }
 
@@ -151,7 +151,7 @@
   position: absolute;
   inset: 9px;
   pointer-events: none;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   --stud: radial-gradient(circle at 42% 38%, #fff3c4 0 1px, #e3b35a 2px, #8a5a1f 4px, #2a1709 4.6px, transparent 5.2px);
   background:
     var(--stud) 0 0 / 11px 11px no-repeat,
@@ -172,7 +172,7 @@
 .tavern.app-shell .auth-signed-in {
   padding: 11px 14px;
   border: 1px solid rgba(201, 149, 63, 0.3);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: rgba(239, 224, 191, 0.05);
 }
 
@@ -182,21 +182,13 @@
 }
 
 .tavern.app-shell .brand__word {
-  font-family: var(--tavern-serif);
+  font-family: var(--font-display);
   font-size: 44px;
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: 0.01em;
   padding: 0 0.06em 0.06em;
-  background: linear-gradient(
-    180deg,
-    var(--tavern-gold-pale) 0%,
-    #ffe39a 22%,
-    var(--tavern-gold) 44%,
-    var(--tavern-brass) 64%,
-    #9b6423 84%,
-    #d9a44c 100%
-  );
+  background: #d9a44c;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -211,8 +203,8 @@
 .tavern.app-shell .notice {
   max-width: none;
   border: 1px solid rgba(201, 149, 63, 0.45);
-  border-radius: 10px;
-  background: linear-gradient(90deg, rgba(201, 149, 63, 0.12), rgba(201, 149, 63, 0.04));
+  border-radius: var(--radius-md);
+  background: rgba(201, 149, 63, 0.04);
   color: color-mix(in srgb, var(--tavern-parchment) 90%, transparent);
   line-height: 1.45;
 }
@@ -230,7 +222,7 @@
 .tavern.app-shell .notice[role="alert"],
 .tavern.app-shell [role="alert"] > .notice {
   border-color: var(--tavern-danger);
-  background: linear-gradient(90deg, rgba(232, 102, 79, 0.16), rgba(232, 102, 79, 0.05));
+  background: rgba(232, 102, 79, 0.05);
   color: var(--tavern-parchment);
 }
 
@@ -252,7 +244,7 @@
 .tavern.app-shell .form-card label {
   margin-top: 8px;
   color: color-mix(in srgb, var(--tavern-parchment) 80%, transparent);
-  font-size: 13px;
+  font-size: var(--type-md);
   font-weight: 600;
   letter-spacing: 0.03em;
 }
@@ -261,11 +253,11 @@
   min-height: 46px;
   padding: 10px 14px;
   border: 1px solid rgba(201, 149, 63, 0.5);
-  border-radius: 10px;
-  background: linear-gradient(180deg, #0b0704, var(--tavern-well));
+  border-radius: var(--radius-md);
+  background: var(--tavern-well);
   color: var(--tavern-parchment);
   caret-color: var(--tavern-gold);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.65), 0 1px 0 rgba(251, 231, 176, 0.05);
+  box-shadow: 0 1px 0 rgba(251, 231, 176, 0.05);
   transition: border-color 140ms, box-shadow 140ms;
 }
 
@@ -282,7 +274,6 @@
   outline: none;
   border-color: var(--tavern-gold);
   box-shadow:
-    inset 0 2px 6px rgba(0, 0, 0, 0.65),
     0 0 0 3px rgba(243, 201, 105, 0.22),
     0 0 16px rgba(243, 201, 105, 0.18);
 }
@@ -293,9 +284,7 @@
 
 .tavern.app-shell .form-card input:not(.code-field__input)[aria-invalid="true"]:focus {
   border-color: var(--tavern-danger);
-  box-shadow:
-    inset 0 2px 6px rgba(0, 0, 0, 0.65),
-    0 0 0 3px rgba(232, 102, 79, 0.25);
+  box-shadow: 0 0 0 3px rgba(232, 102, 79, 0.25);
 }
 
 .tavern.app-shell .auth-field-error {
@@ -310,7 +299,7 @@
    way, so the field does not jump when it is pressed. */
 .tavern.app-shell .affix-button {
   min-width: 68px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-weight: 600;
 }
 
@@ -327,9 +316,9 @@
   min-height: 50px;
   padding: 10px 20px;
   border-width: 2px;
-  border-radius: 12px;
-  font-family: var(--tavern-serif);
-  font-size: 19px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: var(--type-2xl);
   font-weight: 700;
   letter-spacing: 0.02em;
   transition: transform 90ms ease-out, box-shadow 140ms ease-out, filter 140ms ease-out;
@@ -355,9 +344,9 @@
 .tavern.app-shell:where(:not(.deckbuilder)) button:where(:not(.top-bar-button)):not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]):where(:not(.dialog__close, .together-group__toggle)) {
   min-height: 44px;
   padding: 8px 18px;
-  border-radius: 10px;
-  font-family: var(--tavern-serif);
-  font-size: 16px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: var(--type-lg);
   font-weight: 700;
 }
 
@@ -368,9 +357,9 @@
   justify-content: center;
   min-height: 44px;
   padding: 8px 18px;
-  border-radius: 10px;
-  font-family: var(--tavern-serif);
-  font-size: 16px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: var(--type-lg);
   font-weight: 700;
 }
 
@@ -514,12 +503,12 @@
 .tavern.app-shell .row .button-primary {
   min-height: 44px;
   padding: 8px 18px;
-  font-size: 16px;
+  font-size: var(--type-lg);
 }
 
 .tavern.app-shell .notice code {
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: var(--tavern-well);
   color: var(--tavern-gold-pale);
 }
@@ -536,10 +525,10 @@
   flex: 0 0 auto;
   width: 18px;
   height: 18px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   border: 2px solid rgba(201, 149, 63, 0.3);
   border-top-color: var(--tavern-gold);
-  animation: tavern-spin 900ms linear infinite;
+  animation: tavern-spin 900ms linear 1;
 }
 
 @keyframes tavern-spin {
@@ -557,20 +546,18 @@
   gap: 4px;
   padding: 12px 14px;
   border: 1px solid rgba(201, 149, 63, 0.3);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: rgba(239, 224, 191, 0.05);
 }
 
 .tavern.app-shell .account-label {
-  font-size: 13px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: var(--type-md);
 }
 
 .tavern.app-shell .account-email {
   color: var(--tavern-gold-pale);
-  font-family: var(--tavern-serif);
-  font-size: 19px;
+  font-family: var(--font-display);
+  font-size: var(--type-2xl);
   overflow-wrap: anywhere;
   word-break: normal;
 }
@@ -580,10 +567,10 @@
   margin-top: 4px;
   padding: 3px 10px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(201, 149, 63, 0.14);
   color: var(--tavern-gold-pale);
-  font-size: 14px;
+  font-size: var(--type-md);
   font-weight: 600;
 }
 
@@ -600,8 +587,8 @@
 
 .tavern.app-shell .account-heading {
   margin: 4px 0 0;
-  font-family: var(--tavern-serif);
-  font-size: 17px;
+  font-family: var(--font-display);
+  font-size: var(--type-xl);
   color: var(--tavern-gold-pale);
 }
 
@@ -620,7 +607,7 @@
 
 .tavern.app-shell .stat-value {
   color: var(--tavern-gold-pale);
-  font-family: var(--tavern-serif);
+  font-family: var(--font-display);
 }
 
 .tavern.app-shell .stat-label {
@@ -723,7 +710,7 @@
     grid-column: 2;
     grid-row: 2;
     position: relative;
-    z-index: 1;
+    z-index: var(--z-content);
   }
 
   /* The footer takes a row of its own under the board: auto-placed beside it, its longest line (#3380's labels)

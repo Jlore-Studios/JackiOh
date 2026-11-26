@@ -240,6 +240,8 @@ its Chinese.
 - **It must play the set well enough to be a fair boss.** The AI part measures the AI with each Infinite
   Assault card (`cargo jackioh sweep`, R186, over the set) and fixes what it misplays; a card it cannot
   pilot is fixed in its evaluation or redesigned, never dropped silently.
+  The sweep over the set is `training/history/assault-sweep-2026-11-26.md` (#4595): 4 misplays fixed
+  (R4595001–R4595004), 2 cards piloted but passed over.
 
 ## IA9. Where it lives
 

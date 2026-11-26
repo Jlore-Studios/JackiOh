@@ -143,6 +143,10 @@ const RULES_ONLY_ROWS: Readonly<Record<TableSection, readonly string[]>> = {
     "Damage chains",
     "Sweep",
     "Summon onto an occupied zone",
+    // R5048000: Crush is a verb a card's text calls, no keyword ("destroying the Units there"), and the
+    // backrow summon stands Toxopid's Flexible Legs; neither is printed as a term.
+    "Crush",
+    "Summon into a backrow zone",
     "Summon Starships",
     "Launch a random Starship",
     "Exile a whole board",

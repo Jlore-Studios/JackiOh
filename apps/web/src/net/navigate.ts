@@ -3,7 +3,8 @@
 // Moves wait on a leave guard (R1754000), cross-fade between menu screens (R2117000) and give an open
 // sheet or dialog Back first (`backLayers.ts`, R2127000).
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { flushSync } from "react-dom";
 
 import { boardShownNow } from "../game/boardShown.ts";
@@ -59,6 +60,28 @@ export function guardLeaving(hold: (leave: () => void) => void): () => void {
   return () => {
     if (leaveGuard === guard) leaveGuard = null;
   };
+}
+
+/**
+ * R1754000: a screen's leave guard, held while `atStake`, and the move it holds until the player
+ * lets the work go (`leave`) or stays (`setLeaving(null)`). Once nothing is at stake the guard is
+ * released and any held move dropped.
+ */
+export function useLeaveGuard(
+  atStake: boolean,
+): [{ leave: () => void } | null, Dispatch<SetStateAction<{ leave: () => void } | null>>] {
+  const [leaving, setLeaving] = useState<{ leave: () => void } | null>(null);
+  useEffect(() => {
+    if (!atStake) return;
+    const release = guardLeaving((leave) => {
+      setLeaving({ leave });
+    });
+    return () => {
+      release();
+      setLeaving(null);
+    };
+  }, [atStake]);
+  return [leaving, setLeaving];
 }
 
 /**

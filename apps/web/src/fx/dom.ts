@@ -12,7 +12,7 @@ import { KEYWORD_CALLOUT_ICONS } from "../cards/keywordVisuals.ts";
 import { ART_PLANES } from "../cards/art/pictures.ts";
 import { fragmentRef, signatureLength, signatureSize } from "../cards/FullArtSignature.tsx";
 import { SIGNATURE_FACES } from "../cards/signatureFaces.ts";
-import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS, FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX } from "./constants.ts";
+import { FX_FOG_ICONS, FX_FOG_PAD, FX_FOG_PUFFS, FX_HOLD_TURN_DEG, FX_HOLD_TURN_PX, FX_LAUNCH_FLICKER_MS } from "./constants.ts";
 import { atOf, pointIn } from "./anchors.ts";
 import { ART_ATTRS, TAKEOVER_ART_DRAWINGS, takeoverArtParts, type TakeoverDrawing } from "./takeoverArt.ts";
 import type { FxBox, FxChaosCue, FxDomCue, FxHoldCue, FxIcon, FxRollCue, FxSplatTone, FxTakeoverStage, FxTimedPoint, FxTint, SetPieceShape } from "./types.ts";
@@ -596,6 +596,9 @@ export function mountDomEffect(root: HTMLElement, cue: FxDomCue, boxes: DomEffec
       if (cue.still === true) el.setAttribute("data-still", "true");
       tintVars(el, cue.tint);
       el.style.setProperty("--fx-ignite", `${Math.max(0, cue.igniteMs)}ms`);
+      // #5014: the flame flickers out and back until the cue ends, not forever.
+      el.style.setProperty("--fx-flicker", `${String(FX_LAUNCH_FLICKER_MS)}ms`);
+      el.style.setProperty("--fx-flickers", String(Math.max(1, Math.ceil(Math.max(0, cue.durationMs - cue.igniteMs) / FX_LAUNCH_FLICKER_MS))));
       cue.countsMs.forEach((countMs, k) => {
         const count = doc.createElement("div");
         count.className = "fx-launch-count";
