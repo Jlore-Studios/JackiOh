@@ -21791,7 +21791,8 @@
       "stop_requested": false,
       "suggestion": true,
       "taken_asks": [],
-      "verdict_rounds": 0
+      "verdict_rounds": 0,
+      "waiting_comment": 7183446460
     },
     "4992": {
       "action": "build",
