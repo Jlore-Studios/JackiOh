@@ -29,15 +29,13 @@
 }
 
 .stats-summary-label {
-  font-size: 11.5px;
+  font-size: var(--type-xs);
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--text-dim, #9aa1b8);
 }
 
 .stats-summary-value {
-  font-size: 20px;
+  font-size: var(--type-2xl);
   font-weight: 700;
   color: var(--text, #fff);
 }
@@ -52,7 +50,7 @@
 
 .stats-games-title {
   margin: 0 0 6px;
-  font-size: 13.5px;
+  font-size: var(--type-md);
   font-weight: 600;
   color: var(--text-dim, #9aa1b8);
 }
@@ -64,13 +62,13 @@
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 14px;
+  font-size: var(--type-md);
   color: var(--text, #e8eaf2);
 }
 
 .stats-games-status {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--type-md);
   color: var(--text-dim, #9aa1b8);
 }
 
@@ -98,7 +96,7 @@
   border: 1px solid var(--line-bright, #454d66);
   background: rgba(11, 13, 19, 0.8);
   color: var(--text, #fff);
-  font-size: 14px;
+  font-size: var(--type-md);
   width: 100%;
   max-width: 400px;
 }
@@ -136,7 +134,7 @@
 .stats-sort-label {
   color: var(--text-dim, #9aa1b8);
   font-weight: 600;
-  font-size: 12.5px;
+  font-size: var(--type-sm);
 }
 
 .stats-grid {
@@ -182,7 +180,7 @@
   grid-template-columns: auto 1fr;
   gap: 2px 8px;
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--type-sm);
 }
 
 .stats-grid-figures dt {
@@ -215,7 +213,7 @@
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 13.5px;
+  font-size: var(--type-md);
   font-variant-numeric: tabular-nums;
 }
 
@@ -224,10 +222,8 @@
   background: rgba(18, 22, 34, 0.95);
   border-bottom: 1px solid var(--line, #2c3245);
   color: var(--text-dim, #9aa1b8);
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   white-space: nowrap;
 }
 
@@ -282,7 +278,7 @@
   border-radius: var(--radius-round);
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid var(--line-bright, #454d66);
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-weight: 700;
 }
 
@@ -350,13 +346,13 @@
 }
 
 .stats-not-enough {
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-style: italic;
   color: var(--text-dim, #9aa1b8);
 }
 
 .stats-sample-hint {
-  font-size: 11.5px;
+  font-size: var(--type-xs);
   color: var(--text-dim, #9aa1b8);
 }
 
@@ -421,7 +417,7 @@
   border: 1px solid var(--line-bright, #454d66);
   background: rgba(18, 22, 34, 0.8);
   color: var(--text, #fff);
-  font-size: 13px;
+  font-size: var(--type-md);
   cursor: var(--cursor-glove-point, pointer);
 }
 
@@ -431,7 +427,7 @@
 }
 
 .stats-pager-page {
-  font-size: 13px;
+  font-size: var(--type-md);
   color: var(--text-dim, #9aa1b8);
   font-variant-numeric: tabular-nums;
 }
@@ -510,10 +506,8 @@
 }
 
 .stats-drilldown-caption {
-  font-size: 12px;
+  font-size: var(--type-sm);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--text-dim, #9aa1b8);
 }
 
@@ -556,8 +550,6 @@
   margin: 0;
   font-size: var(--type-sm);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--text-dim);
   text-align: left;
 }
@@ -629,7 +621,7 @@
 }
 
 .stats-drilldown-token-name {
-  font-size: 12px;
+  font-size: var(--type-sm);
   text-align: center;
 }
 
@@ -642,10 +634,8 @@
 
 .stats-drilldown-section h3 {
   margin: 0 0 8px;
-  font-size: 13.5px;
+  font-size: var(--type-md);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--text-dim, #9aa1b8);
 }
 
@@ -659,7 +649,7 @@
 }
 
 .stats-drilldown-item {
-  font-size: 13px;
+  font-size: var(--type-md);
   padding: 6px 10px;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.04);
@@ -710,11 +700,11 @@
   }
 
   .stats-sets-leaders .stats-summary-label {
-    font-size: 10px;
+    font-size: var(--type-xs);
   }
 
   .stats-sets-leaders .stats-summary-value {
-    font-size: 16px;
+    font-size: var(--type-lg);
   }
 }
 
@@ -744,7 +734,7 @@
 
 .stats-sets-outlier-title {
   margin: 0 0 8px;
-  font-size: 15px;
+  font-size: var(--type-lg);
   font-weight: 700;
 }
 
