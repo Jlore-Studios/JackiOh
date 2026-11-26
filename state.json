@@ -21555,11 +21555,9 @@
     "what": "suggestions (server) on agy"
   },
   "last_sweep": {
-    "at": "2026-11-26T00:14:11Z",
+    "at": "2026-11-26T00:16:19Z",
     "notes": [
-      "started suggest on agy (run 45727476671)",
-      "nothing more to start: nothing is queued",
-      "runner gate: started 0 of 2 waiting run(s); 2 wait for a slot"
+      "runner gate: started 0 of 1 waiting run(s); 1 wait for a slot"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
