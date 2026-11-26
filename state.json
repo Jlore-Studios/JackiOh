@@ -22127,6 +22127,7 @@
     "5007": {
       "action": "build",
       "asks": [],
+      "died": 0,
       "difficulty_by": {
         "at": "2026-11-26T14:39:33Z",
         "difficulty": "hard",
