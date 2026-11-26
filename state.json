@@ -43509,41 +43509,6 @@
       {
         "approver": {
           "family": "claude",
-          "model": "opus",
-          "provider": "claude-8",
-          "tier": "strong"
-        },
-        "builder": {
-          "family": "claude",
-          "provider": "claude-8"
-        },
-        "difficulty": "hard",
-        "done_at": "2026-11-06T13:10:31Z",
-        "every": 5,
-        "findings": 0,
-        "head": "9af8c93d069e29c1fbcae6617f90c2c58da0fdc8",
-        "issue": 3288,
-        "merged_at": "2026-11-06T12:55:44Z",
-        "n": 100,
-        "pr": 3296,
-        "queued_at": "2026-11-06T12:55:44Z",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-4",
-          "tier": "strong"
-        },
-        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42221961672",
-        "sha": "e30e74f84a556a1a7d7a78fb9339981f56091178",
-        "started_at": "2026-11-06T13:00:04Z",
-        "status": "done",
-        "title": "Patch: delete the fuse-onto and clear-plague engine verbs that nothing has called since the custom-card host went",
-        "tries": 0,
-        "verdict": "clean"
-      },
-      {
-        "approver": {
-          "family": "claude",
           "model": "sonnet",
           "provider": "claude-8",
           "tier": "medium"
@@ -47032,7 +46997,9 @@
           "provider": "claude-6"
         },
         "difficulty": "hard",
+        "done_at": "2026-11-26T13:24:47Z",
         "every": 5,
+        "findings": 0,
         "head": "8daa60537bd4b35299feff9bef1049338ad38a42",
         "issue": 4977,
         "merged_at": "2026-11-26T12:49:08Z",
@@ -47045,12 +47012,13 @@
           "provider": "claude-7",
           "tier": "strong"
         },
-        "run_id": "pending:be1ee4ab-1795698987",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45827631794",
         "sha": "0c4a11d63c1a94b9a46d19b0ddf79bdc093962e0",
         "started_at": "2026-11-26T13:16:55Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: a counted game's result reloads the card proficiency the Collection shows, so a level the game earned and its stamp appear without a reload",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 600
