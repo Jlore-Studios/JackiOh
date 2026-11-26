@@ -4213,3 +4213,7 @@ ended_at,run_id,subscription,models,kind,item,difficulty,outcome,stop_reason,mod
 2026-11-26T21:35:00Z,45888621716,claude-3,opus,revise,5093,hard,approved,,29.2,72,15320,3308890,3.1831,17,30,,,1.7,claude-3,resumed,,2
 2026-11-26T21:58:47Z,45901410079,claude-7,opus,suggest,,,interrupted,5-hour cap,0,0,0,0,,59,59,,,,,none,,0
 2026-11-26T21:58:42Z,45901333995,claude-7,opus,suggest,,,interrupted,5-hour cap,0,0,0,0,,59,59,,,,,none,,0
+2026-11-26T22:03:33Z,45899579085,agy,gemini-3.8-flash-high,build,5120,medium,built,,23.7,127624,17467,0,,26,28,55,56,33.9,agy,none,,1
+2026-11-26T22:07:28Z,45888536906,claude-3,opus,revise,5094,hard,approved,,26.1,145,37313,6453899,5.1858,14,68,,,1.1,claude-3,resumed,,4
+2026-11-26T22:14:39Z,45901262529,claude-3,opus,suggest,,,suggested,,17.8,107,54178,6701432,16.4712,37,75,,,,,none,,2
+2026-11-26T22:21:59Z,45901192624,claude-8,opus,suggest,,,suggested,,24.4,10,2149,418402,30.6391,3,79,,,,,none,,1
