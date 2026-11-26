@@ -24760,9 +24760,11 @@
       "action": "revise",
       "asks": [],
       "audit_tier": "",
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-26T16:29:55Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-26T16:01:14Z",
         "family": "claude",
@@ -24772,6 +24774,7 @@
         "reason": "`claude-7` stops mid-call: 5-hour usage is 51%, at or over its 50% cap outside its hours; it resets at 2026-11-26T17:50:00Z",
         "trail": "- Bash: {\"command\": \"git status --short | grep -v '^M ' | head -30; grep -rlE '^(<<<<<<<|>>>>>>>|=======$)' --exclude-dir=node_modules --exclude-dir=target --exclude-dir=.git . 2>/dev/null | head -30; cat .b\u2026\n- Bash: {\"command\": \"for f in crates/server/README.md spec/09-architecture/9.11-card-statistics.md spec/rulings/R4675001.md spec/rulings/R4678001.md spec/rulings/R4680000.md; do echo \\\"=== $f\\\"; awk '/^<<<<<\u2026\n- Bash: {\"command\": \"sed -n 255,259p crates/server/README.md; echo ======; sed -n 12,16p spec/09-architecture/9.11-card-statistics.md; for f in R4675001 R4678001 R4680000; do echo \\\"=== $f\\\"; sed -n '3,9p;28\u2026"
       },
+      "interruptions": 0,
       "issue": 5037,
       "kind": "revise",
       "last_findings": [],
