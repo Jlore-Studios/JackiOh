@@ -46990,10 +46990,6 @@
   "suggest": {
     "asks": [],
     "auto": {
-      "4925": {
-        "at": "2026-11-25T14:01:29Z",
-        "why": "It fixes the documented standalone e2e install, which fails every replay check on the missing tsx, by composing the two engine calls #4766 already provides."
-      },
       "4931": {
         "at": "2026-11-25T15:14:37Z",
         "why": "It re-screens the spec-invited open_lethal switch after the reply changed substantially, keeping only on edgeLow above 0."
