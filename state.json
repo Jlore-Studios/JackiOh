@@ -24948,7 +24948,7 @@
         "provider": "claude-7",
         "round_tier": "medium",
         "rounds_on": 5037,
-        "rounds_used": 0,
+        "rounds_used": 1,
         "since": "2026-11-26T15:36:44Z",
         "source": "build",
         "until": "2026-11-26T16:10:22Z"
