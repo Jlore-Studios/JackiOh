@@ -24547,7 +24547,7 @@
       }
     },
     "5088": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "audit_tier": "",
       "cleared": {
@@ -24567,26 +24567,18 @@
       "failures": 0,
       "feedback_since": "2026-11-26T16:29:55Z",
       "forced": false,
-      "hold": {
-        "ends": "2026-11-26T20:30:27Z",
-        "lifted": "2026-11-26T20:20:55Z",
-        "owner": "claude-1",
-        "since": "2026-11-26T18:30:27Z",
-        "until": "2026-11-26T20:20:00Z",
-        "why": "5-hour usage is 40%, too close to its 40% cap outside its hours to start a long run (it starts under 35%)"
-      },
       "interruptions": 0,
       "issue": 5037,
       "kind": "revise",
       "last_findings": [],
-      "live": "reviewing",
+      "live": "resolving",
       "merge_owner": "claude-1",
       "pending_request": false,
       "provider": "claude-1",
       "question": "",
       "queued_at": "2026-11-26T18:29:59Z",
       "round_tier": "medium",
-      "run_id": "45870313147",
+      "run_id": "pending:77e0fdc8-1795724490",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
@@ -24607,16 +24599,9 @@
         "run": "45859321678"
       },
       "source": "conflict",
-      "started_at": "2026-11-26T17:44:44Z",
+      "started_at": "2026-11-26T20:22:04Z",
       "stop_requested": false,
       "taken_asks": [],
-      "turn": {
-        "model": "sonnet",
-        "provider": "claude-1",
-        "since": "2026-11-26T18:29:59Z",
-        "until": "2026-11-26T18:59:59Z",
-        "why": "it conflicts with `main` now"
-      },
       "verdict_rounds": 1,
       "votes": {
         "approvals": [
@@ -25311,9 +25296,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T20:06:45Z",
+    "at": "2026-11-26T20:22:04Z",
     "url": "",
-    "what": "revise #5093 on claude-3"
+    "what": "revise #5088 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-26T20:13:34Z",
