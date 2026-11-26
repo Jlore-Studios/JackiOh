@@ -45241,21 +45241,13 @@
         "why": "rejected by @jgoetzmann"
       }
     ],
-    "idle_since": "2026-11-25T23:56:16Z",
+    "idle_since": "2026-11-25T23:23:07Z",
     "last_area": "ai",
-    "last_run": "2026-11-25T23:56:16Z",
+    "last_run": "2026-11-25T23:23:07Z",
     "provider": null,
     "requested": false,
     "run_id": null,
     "running": {
-      "1": {
-        "area": "rules",
-        "count": 3,
-        "last_run": "2026-11-25T23:55:28Z",
-        "provider": "claude-8",
-        "run_id": "45724984995",
-        "taken_asks": []
-      },
       "2": {
         "area": "ai",
         "count": 2,
