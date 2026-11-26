@@ -21142,6 +21142,12 @@
         "tiers": {
           "claude": "strong"
         }
+      },
+      "wip": {
+        "at": "2026-11-26T22:51:04Z",
+        "provider": "claude-3",
+        "sha": "b82561c3723e2aaeb7432a447d76c38f24940371",
+        "start": "be301a8f4f663666cdaeaa9dad3e6dc5c3ba8ca5"
       }
     },
     "5097": {
