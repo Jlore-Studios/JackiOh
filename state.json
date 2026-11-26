@@ -24593,6 +24593,14 @@
         "sha": "518e1e60116ed6d00bfde288ab7758dd699f5a87",
         "tiers": {}
       }
+    },
+    "5084": {
+      "difficulty": "hard",
+      "failures": 0,
+      "feedback_since": "2026-11-26T11:54:23Z",
+      "issue": 5039,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
