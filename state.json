@@ -44390,6 +44390,14 @@
         "title": "Patch: honor E2E_ARTIFACTS in the downloads folder and the replay-task log dir",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-26T00:47:41Z",
+        "number": 4979,
+        "reason": "no Medium or Hard gate game is shown failing, and neither cited bug (#4895, #4961) lives in the free-pass branch the new games would reach. Two to four new floors to calibrate and about three times the daily Duos gate's runtime is a lot of upkeep for a path with no shipped bug. The scene tests hold the per-decision behaviour on every pull request.",
+        "title": "Patch: the Duos gate holds the Medium and Hard AI teams, not just Easy",
+        "verdict": "came to nothing",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "declined": [
@@ -45203,6 +45211,13 @@
         "number": 4819,
         "reason": "a convenience, not a fix. Each replay's row in the list already saves its JSON (R1141000), and since #4619 one Back closes the viewer onto that list. A second save control in the viewer, with game facts carried into it and its own saving and failure states, is a nice-to-have nobody asked for.",
         "title": "Patch: a 1v1 replay's viewer offers Download JSON for the game's own replays, as its list rows and the Duos viewer already do",
+        "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-26T00:47:41Z",
+        "number": 4979,
+        "reason": "no Medium or Hard gate game is shown failing, and neither cited bug (#4895, #4961) lives in the free-pass branch the new games would reach. Two to four new floors to calibrate and about three times the daily Duos gate's runtime is a lot of upkeep for a path with no shipped bug. The scene tests hold the per-decision behaviour on every pull request.",
+        "title": "Patch: the Duos gate holds the Medium and Hard AI teams, not just Easy",
         "why": "rejected by @jgoetzmann"
       }
     ],
