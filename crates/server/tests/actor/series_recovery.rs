@@ -16,7 +16,7 @@ use jackioh_server::config::{
 };
 use jackioh_server::db::fake::{CallOutcome, FakeTables};
 use jackioh_server::db::store::SeriesRow;
-use jackioh_server::ranked::glicko2::{Glicko, rate_game};
+use jackioh_server::ranked::glicko2::{Glicko, rate_game_scored};
 use jackioh_shared::series::{game_ended, pick_deck};
 
 use crate::support::deps::{TestAppOptions, add_user, call, test_app, test_app_with};
@@ -624,7 +624,7 @@ mod r263_a_series_survives_a_restart {
             deviation: RATING_DEVIATION_START,
             volatility: RATING_VOLATILITY_START,
         };
-        let expected = rate_game(&fresh, &fresh, 1.0);
+        let expected = rate_game_scored(&fresh, &fresh, 1.0, 0.0);
         assert_eq!(table(&a.app, |data| json!(data.tables.results)).await.len(), 3);
         assert_eq!(rating_of(&a.app, ALICE).await, Some(expected.a.rating));
         let over = row(&a.app).await;

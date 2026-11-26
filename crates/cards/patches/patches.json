@@ -36975,5 +36975,57 @@
         ]
       }
     ]
+  },
+  {
+    "version": "v0.6.14j",
+    "date": "2026-11-26",
+    "title": "Mass Driver's badge states its countdown once",
+    "source": "issue #4992",
+    "notes": "R4992000: Mass Driver's badge no longer holds the count the view adds, so it reads 'in 2 turns' once; the older label is kept (script_v0_6_14i, KEPT_SCRIPTS keyed by this fragment, R4779000). Doomsday Clock is a card of a held set, so it takes no claim.",
+    "player": {
+      "title": "Mass Driver's countdown reads once",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "Mass Driver's countdown badge no longer says \"in 2 turns\" twice."
+      ]
+    },
+    "commits": [
+      "3cfbef178cc1f05c0bbabbec3c0f3417039906bc"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscapeplus-059"
+    ],
+    "fragment": "mass-driver-s-badge-states-its-countdown-once",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14k",
+    "date": "2026-11-26",
+    "title": "Card-face code cleanup",
+    "source": "issue #4702",
+    "notes": "Four exports of the card-face code that nothing read are removed (FIGURE_HEIGHT, FLAVOUR_MAX_CHARS, ARTIST_MAX_CHARS, setFlavourForTests); no card looks or plays differently.",
+    "player": {
+      "title": "Card-face code cleanup",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "Unused code behind the card faces is removed. No card looks or plays differently."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "0f3e8f961ec05866d940cd2662f012c22405d762"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "card-face-code-cleanup",
+    "changes": []
   }
 ]

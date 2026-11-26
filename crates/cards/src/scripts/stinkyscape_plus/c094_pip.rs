@@ -1,5 +1,5 @@
 //! SPEC §8.12 S+ #94 PIP, a card of the Stinkyscape+ set (R1420, R3535000). (1) Spell, Rare.
-//!   Base:    "Put a Unit on a performance enhancement plan, they have {count} turn to get a kill
+//!   Base:    "Put a Unit on a performance improvement plan, they have {count} turn to get a kill
 //!            otherwise they are destroyed."
 //!   Radiant: the same with {count2} turn, "If they fail, add {the} The Coins to your hand."
 //!

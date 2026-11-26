@@ -166,13 +166,23 @@ pub struct AiSearch {
     /// board threatens lethal, as many switches to Defense that lower that threat (`wall_switches`) are
     /// kept after them.
     pub position_switches: i32,
-    /// R4595002: how many lines one of whose steps made the seat's other hand cards cheaper (a "your
-    /// cards cost less this turn" play) the beam keeps past its width at each depth, best first, so the
-    /// plays the discount pays for are searched; the line's end-of-turn score still judges it.
+    /// R4595002: how many lines one of whose steps played a `discount_def_ids` card and made the seat's
+    /// other hand cards cheaper (a "your cards cost less this turn" play) the beam keeps past its width at
+    /// each depth, best first, so the plays the discount pays for are searched; the line's end-of-turn
+    /// score still judges it.
     pub discount_lines: i32,
-    /// R4595003: a simulated step pays one more node for every this many events it emitted, so a step
-    /// that runs a long chain (a summon loop to the engine's cap) costs the search what it costs the clock.
+    /// R4595002: the cards whose discount `discount_lines` keeps searching: Infinite Assault #72 Overclock
+    /// to Infinity, the one the sweep found the beam cutting. A shipped card is not listed, so shipped
+    /// decks search as before (#4595's fork screen).
+    pub discount_def_ids: &'static [&'static str],
+    /// R4595003: a simulated step pays one more node for every this many events it emitted past
+    /// `free_events`, so a step that runs a long chain (a summon loop to the engine's cap) costs the
+    /// search what it costs the clock.
     pub events_per_node: i32,
+    /// R4595003: the events a step emits at no extra charge: past any step of an ordinary game (the
+    /// heaviest of 200 fuzz games of the Infinite Assault emitted 375; the Drone loop the sweep timed out
+    /// on, 2,002), so shipped decks search as before (#4595's fork screen).
+    pub free_events: i32,
     /// Opponent prompts auto-answered inside one simulated step before it counts as an error.
     pub max_auto_answers: i32,
     /// R4447000: the most steps a finalist's replay on another determinization plays past the first step
@@ -249,7 +259,9 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     zone_variants: 2,
     position_switches: 2,
     discount_lines: 1,
+    discount_def_ids: &["infiniteassault-072"],
     events_per_node: 100,
+    free_events: 1_000,
     max_auto_answers: 8,
     // R4697000: 3, the value R4447000's tests replay with. At 0 a replay cut where its world drew
     // other cards than the line's ended its turn there, which R4608000 read as evidence against a
@@ -646,16 +658,9 @@ pub struct EvalWeights {
     pub standing_unit_priced_once: bool,
     /// A backrow card the seat cannot read (on the enemy's side of the ledger).
     pub enemy_face_down: f64,
-    /// R351: per crystal of the cost such a card shows both players (`shown_cost`), on top of
-    /// `enemy_face_down`: a (6) back and a (0) back are not the same threat.
-    pub enemy_face_down_per_cost: f64,
     /// Per library card up to libraryComfort.
     pub library_card: f64,
     pub library_comfort: f64,
-    /// §2.4: taken off a side per fatigue draw it has taken (`fatigue_count`, public): the Nth draw
-    /// from an empty library deals N, so each one taken adds a point to every fatigue hit to come.
-    /// It reads the count alone, never the library, which `library_card` prices.
-    pub fatigue_draw: f64,
     /// Per crystal left at the end of the seat's own turn (terminal only).
     pub unspent_mana: f64,
     /// R3695000: per crystal of a passed line's Float that a "Float reduces cost" card in the seat's own
@@ -864,14 +869,8 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     backrow_per_cost: 0.8,
     standing_unit_priced_once: true,
     enemy_face_down: 2.0,
-    // #1602: off. At 0.8 its screen read 201-199, edge 0.005 (-0.017 to 0.027), which keeps nothing
-    // (training/improve.md, A screen); inconclusive (R4319000): 5 decided of 200 (won 3, lost 2).
-    enemy_face_down_per_cost: 0.0,
     library_card: 0.1,
     library_comfort: 10.0,
-    // #1602: off. At 1.0 its screen read 199-201, edge -0.005 (-0.022 to 0.012), which keeps nothing
-    // (training/improve.md, A screen); inconclusive (R4319000): 3 decided of 200 (won 1, lost 2).
-    fatigue_draw: 0.0,
     unspent_mana: 0.8,
     // R3695000: a crystal Floated toward a Float-discount card still above the crystals counts as one
     // left unspent does, the least issue #3695 allows: on such a crystal the line nets the card's
@@ -985,18 +984,6 @@ pub const AI_AWAKEN_PROBE_NODES: usize = 16;
 /// evolve for each own hand Unit with an Evolve text.
 pub const AI_EVOLVE_PROBE_NODES: usize = 16;
 
-/// R4070000: the most nodes a decision's root prices spend, every probe's cap above together: the counter
-/// `decide::decision_prices_at` prices a state on outside a decision, so each
-/// probe runs to its own cap, as it does in a decision whose budget leaves it that many.
-pub const AI_DECISION_PRICE_NODES: usize = AI_DEATH_PROBE_NODES
-    + AI_TURN_HOOK_PROBE_NODES
-    + AI_ACTIVATION_PROBE_NODES
-    + AI_HAND_ACTIVATION_PROBE_NODES
-    + AI_PROMPT_ACTIVATION_PROBE_NODES
-    + AI_ATTACK_HOOK_PROBE_NODES
-    + AI_AWAKEN_PROBE_NODES
-    + AI_EVOLVE_PROBE_NODES;
-
 /// The greedy baseline's own evaluation (baselines.rs): AI_EVAL exactly as it stood when the quality
 /// gates were fixed on the seed series `gate:v2`, frozen here, so tuning AI_EVAL changes the AI and never
 /// its yardstick. Every term and keyword AI_EVAL gained after that (R346, #1602, #1886, …) is 0 here, and
@@ -1099,10 +1086,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     backrow_per_cost: 0.8,
     standing_unit_priced_once: false,
     enemy_face_down: 2.0,
-    enemy_face_down_per_cost: 0.0,
     library_card: 0.1,
     library_comfort: 10.0,
-    fatigue_draw: 0.0,
     unspent_mana: 0.8,
     float_discount: 0.0,
     owed_mana: 0.0,

@@ -4,7 +4,7 @@
 
 use jackioh_engine::effects::move_::bounce_card;
 use jackioh_engine::effects::transform::vanilla;
-use jackioh_engine::effects::{grant_keyword, grant_keyword_cards, steal, summon, swap_board};
+use jackioh_engine::effects::{SwapArgs, grant_keyword, grant_keyword_cards, steal, summon, swap};
 use jackioh_engine::state_check::state_check;
 use jackioh_engine::subsystems::rotation::rotate_rings;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -540,7 +540,13 @@ mod r3546003_moves_whole {
             json!({}),
         );
         let id = s.unit(P1, 1).expect("no GIGA in lane 1").id.clone();
-        run_effect(s.state_mut(), swap_board(), P1);
+        run_effect(
+            s.state_mut(),
+            swap(SwapArgs {
+                what: Some(SwapWhat::Board),
+            }),
+            P1,
+        );
         let state = s.state();
         let moved = live(state, &id);
         assert_eq!(where_is(state, &moved), "p2 units 1");

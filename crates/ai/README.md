@@ -16,9 +16,8 @@ caller passes in. The clock arrives only as a callback (`AiOptions::should_stop`
 (R977000), which `cargo jackioh sweep` answers against the perf gate's yardstick. A node counter keeps its tallies in `Cell`, which the lint allows.
 The Death, the turn-hook, the activation, the attack-hook and the awakening prices of a decision (R2424000,
 R2477000, R2564000, R2688000, R3064000), and the evolution prices (R4648000), travel with it as one value, `evaluate::Prices`, passed by reference from `decide`
-through the search to the scorers that read them. `decide` takes them from `decision_prices` on its `probe_world`, and
-`decision_prices_at` gives a caller outside a decision the same prices for a state, on `AI_DECISION_PRICE_NODES`
-(R4070000). Any other call outside a decision passes
+through the search to the scorers that read them. `decide` takes them from `decision_prices` on its `probe_world`.
+Any call outside a decision passes
 `Prices::NONE` (plain `evaluate`, the probes, the baselines) and prices nothing. The crate holds no thread-local.
 
 `src/` never depends on `jackioh-cards`. Callers call `jackioh_cards::register_all()` first: the WASM
@@ -464,8 +463,7 @@ turn on greedily (`fill_turn`: up to that many steps, each the best by `static_s
 leaves the seat's own prompt open), on a slice of `steps × (branching + 1)` nodes, which `decide` keeps
 back beside each other world's reserve. It ships at 3 (R4697000), so `decide` keeps up to 126 more of
 `AI_BUDGET`'s 1,200 nodes back from the beam (21 for each of three finalists on two other worlds); at 0 a
-cut replay ends its turn where it stands and a decision is node for node what it was before R4447000;
-`score_line` keeps the cut whatever the switch.
+cut replay ends its turn where it stands and a decision is node for node what it was before R4447000.
 
 ## Decks and the shadow ban (R184, R186, R390, R1370, R4784000, R1390, R817000, R976000)
 
@@ -486,11 +484,8 @@ gated card in by name. Emptying the list lifts the gate and deals every deck as 
 Stinkyscape set from its release (issue #1884) until issue #1885 measured the AI on it: gating a set that
 ships before the AI is trained on it is listing it there. It held the Stinkyscape+ set from its release
 (issue #3573) until fullsend 2's sweep of record measured the AI on it (issue #3574, R3574000), and is
-empty since. `shape`
-(R976000) multiplies each card's weight by `shaped_weight`, the unban lane's dealt-quality table in
-`src/shadow_ban.rs`; it is off unless a caller sets it, whatever `banned` holds, and no caller does, so
-practice, the quality gates and both seats of an arena or a promotion deal unshaped. Nothing else reads
-`shaped_weight`: the mulligan ranks by `hand_card_value` (R4110000).
+empty since. No deal is shaped: the unban lane's dealt-quality table and the option that read it are
+removed (R4702001), so practice, the quality gates and both seats of an arena deal by one rule (R976000).
 `src/shadow_ban.rs` holds `SHADOW_BAN` (each card with the sweep flags that banned it) and
 `SHADOW_WATCH` (cards found at risk and cleared). Both are decided by the sweep, never by hand, and
 never copied in by hand either: `cargo jackioh sweep --write <report>…` rewrites the file's header block
@@ -568,11 +563,10 @@ the same way, and the skill-to-Elo curve is measured with the arena.
 `MatchConfig.setup` (`MatchSetup`: `dealt`, `lastBoards`, `glitchBoards`, `deckMarks`, written beside
 the config's other keys) carries the setup inputs `create_game` takes beyond the decks and handicaps
 (R433, R417, R564, R678, R2702000), and `MatchConfig::fold_args` folds a record with all of them
-(#1697). Unset, a game is created, played and folded exactly as before. No gate sets it;
-`SweepOptions.setup` opts a sweep in, the same inputs in seat order in every game. `SweepOptions.face`
-(`SweepFace`, base when absent) picks the face the forced card is dealt on: the Radiant one adds a `deckMarks`
-entry for it on the AI's seat (R2702000), and `cargo jackioh sweep` plays both (#4466). `cargo jackioh
-run-sim` sets `deckMarks` for a dungeon run's fight (#3065).
+(#1697). Unset, a game is created, played and folded exactly as before. No gate sets it.
+`SweepOptions.face` (`SweepFace`, base when absent) picks the face the forced card is dealt on: the
+Radiant one sets a `deckMarks` entry for it on the AI's seat (R2702000), and `cargo jackioh sweep`
+plays both (#4466). `cargo jackioh run-sim` sets `deckMarks` for a dungeon run's fight (#3065).
 
 ## Development runs for the card statistics (R378)
 
@@ -583,8 +577,8 @@ record of source `dev` under the patch the run tests, id `dev:<patch>:<seed>` (`
 `forced_dev_game_config`, which `DevRunOptions.force` selects, deals the same game with one card in one
 seat's deck, p1's in odd games and p2's in even ones (R1284000). Both decks are dealt with the card
 banned, and the holder's card at the slot `${seed}:force` picks is replaced by it.
-`DevRunOptions.setup` creates every game of a run with the same setup inputs (`dev_run_config`), so a
-record stays a pure function of its number.
+`dev_run_config` deals game n of the run its options describe, so a record stays a pure function of
+its number.
 
 R4552000, R4552002: `swing_turns` (`src/swing_turns.rs`) replays a finished game's log from the engine's
 own start and steps (`recorded_start`, `read_steps`, as `summarize_game` does) and writes, at the start of
@@ -669,9 +663,8 @@ pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
   (0.8) against random and `DUOS_GATE_GREEDY_WIN_FLOOR` (0.7) against greedy, of
   `DUOS_GATE_GAMES_SMOKE` (20) games with no action of either team refused, no AI action off a
   fallback path and no panic an AI seat's search caught (`cargo jackioh gate --duos` plays both);
-  `duos_gate_game_at` plays a game at another budget, and `duos_gate_game_with` one with a stand-in
-  decider (`DuosGateDecider`) for the AI team, which the tests use to show the gate catching a
-  weakened pass.
+  `duos_gate_game_with` plays a game at another budget or with a stand-in decider (`DuosGateDecider`)
+  for the AI team, which the tests use to show the gate catching a weakened pass.
 
 ## Commands
 

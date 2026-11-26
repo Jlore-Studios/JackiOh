@@ -87,33 +87,6 @@ pub fn left_field_after(state: &GameState, mark: u32, instance_id: &str) -> bool
         > mark
 }
 
-/// R174: whether a card has left the field in the events since `from` (§10.3: every way off emits one).
-pub fn left_field_since(events: &[GameEvent], from: usize, instance_id: &str) -> bool {
-    for event in events.iter().skip(from) {
-        match event {
-            GameEvent::Destroyed { instance_id: id, .. }
-            | GameEvent::Bounced { instance_id: id, .. }
-            | GameEvent::Exiled { instance_id: id, .. }
-            // R1850003: a card held beneath another has left the field.
-            | GameEvent::Held { instance_id: id, .. } => {
-                if id == instance_id {
-                    return true;
-                }
-            }
-            // A Vanilla (§6.3) names the same card on both sides: it has not left.
-            GameEvent::Transformed {
-                instance_id: id,
-                new_instance_id,
-                ..
-            } if id == instance_id && new_instance_id != instance_id => {
-                return true;
-            }
-            _ => {}
-        }
-    }
-    false
-}
-
 /// §3.2, R153, R212: a card has just been taken off the field, and `resumed` tops its Stack pile now. A
 /// dormant card registers nothing (R153) and no event reports a resume, so it is noted against the card
 /// that left, for `uncovered_by`, until that removal is reported (`note_reported`) and the card moves

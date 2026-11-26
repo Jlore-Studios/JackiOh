@@ -20,16 +20,21 @@ use crate::evaluate::hand_card_value;
 /// raises (R2977000) and no Tribute moves (R3936000: the AI's own keep, `mulligan_keep_plain`, reads
 /// `mulligan_cost`).
 pub fn mulligan_keep(state: &GameState, seat: PlayerId, keep_max_cost: i32) -> Vec<String> {
-    let mut keep: Vec<String> = Vec::new();
-    for card in &state.players[seat].hand {
-        let Some(def) = find_def(Some(state), &card.def_id) else {
-            continue;
-        };
-        if query_cost(def) <= keep_max_cost {
-            keep.push(card.id.clone());
-        }
-    }
-    keep
+    kept_by(state, seat, keep_max_cost, |_, def| query_cost(def))
+}
+
+/// The ids of `seat`'s hand cards that `cost` prices at most `keep_max_cost`, in hand order.
+fn kept_by(
+    state: &GameState,
+    seat: PlayerId,
+    keep_max_cost: i32,
+    cost: impl Fn(&CardInstance, &CardDef) -> i32,
+) -> Vec<String> {
+    let kept = |card: &&CardInstance| {
+        find_def(Some(state), &card.def_id).is_some_and(|def| cost(card, def) <= keep_max_cost)
+    };
+    let hand = state.players[seat].hand.iter();
+    hand.filter(kept).map(|card| card.id.clone()).collect()
 }
 
 /// R2977000: the dearest card `seat`'s mulligan keeps by the plain rule. `keep_max_cost` is the bound
@@ -60,16 +65,9 @@ pub fn mulligan_cost(state: &GameState, card: &CardInstance, def: &CardDef) -> i
 /// `keep_max_cost`; nothing dearer is kept. It takes the bound as given; `mulligan_keep_curved` raises
 /// it first.
 pub fn mulligan_keep_plain(state: &GameState, seat: PlayerId, keep_max_cost: i32) -> Vec<String> {
-    let mut keep: Vec<String> = Vec::new();
-    for card in &state.players[seat].hand {
-        let Some(def) = find_def(Some(state), &card.def_id) else {
-            continue;
-        };
-        if mulligan_cost(state, card, def) <= keep_max_cost {
-            keep.push(card.id.clone());
-        }
-    }
-    keep
+    kept_by(state, seat, keep_max_cost, |card, def| {
+        mulligan_cost(state, card, def)
+    })
 }
 
 /// #993: filters `mulligan_keep_plain`'s cards, priced by `mulligan_cost` (R3936000), to `curve`, ranked

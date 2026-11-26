@@ -1,5 +1,5 @@
 //! R4595003: a simulated step pays one more node for every `AI_SEARCH.events_per_node` events it
-//! emitted. Behind a Suppressive Aura a summoned 1/1 Drone dies at once, Hive Overseer summons
+//! emitted past `AI_SEARCH.free_events`. Behind a Suppressive Aura a summoned 1/1 Drone dies at once, Hive Overseer summons
 //! another, and the loop runs to the engine's cap: one Play, thousands of events (the sweep's
 //! `sweep:easy:infiniteassault-029:6`, turn 18).
 
@@ -30,12 +30,16 @@ fn r4595003_a_step_that_runs_a_summon_loop_pays_a_node_per_hundred_events() {
     let stepped = reduce_unpiloted(state, &Action::new(play.clone(), AI, "loop".to_string()));
     assert!(stepped.error.is_none());
     let per = AI_SEARCH.events_per_node as usize;
+    let free = AI_SEARCH.free_events as usize;
     assert!(
-        stepped.events.len() >= 10 * per,
+        stepped.events.len() >= free + 10 * per,
         "PREMISE: the loop runs long: {} events",
         stepped.events.len()
     );
-    assert_eq!(event_surcharge_nodes(&stepped), stepped.events.len() / per);
+    assert_eq!(
+        event_surcharge_nodes(&stepped),
+        (stepped.events.len() - free) / per
+    );
 
     let counter = create_node_counter(AI_BUDGET.nodes, None);
     simulate(state, AI, &play, &counter, Prices::NONE)
@@ -43,7 +47,7 @@ fn r4595003_a_step_that_runs_a_summon_loop_pays_a_node_per_hundred_events() {
         .expect("the step is accepted");
     assert_eq!(
         counter.used(),
-        1 + stepped.events.len() / per,
+        1 + (stepped.events.len() - free) / per,
         "the step's node and its events'"
     );
 }

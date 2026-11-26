@@ -15,7 +15,6 @@ import (
 	"os/exec"
 	"sort"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 	"unicode/utf8"
@@ -57,39 +56,12 @@ func (e *unicodeDecodeError) Error() string { return e.msg }
 // first executable of that name on the PATH of the child's own environment.
 func command(argv []string, env map[string]string) *exec.Cmd {
 	cmd := &exec.Cmd{Path: argv[0], Args: argv}
-	if strings.Contains(argv[0], "/") {
+	path, errno := py.ExecPath(argv[0], env)
+	if errno != 0 {
+		cmd.Err = &osError{errno: errno, filename: argv[0]}
 		return cmd
 	}
-	path, ok := env["PATH"]
-	if !ok {
-		path = "/bin:/usr/bin"
-	}
-	saved := syscall.Errno(0)
-	for _, dir := range strings.Split(path, ":") {
-		candidate := argv[0]
-		if dir != "" {
-			candidate = strings.TrimSuffix(dir, "/") + "/" + argv[0]
-		}
-		info, err := os.Stat(candidate)
-		if err != nil {
-			var errno syscall.Errno
-			if errors.As(err, &errno) && errno != syscall.ENOENT && errno != syscall.ENOTDIR && saved == 0 {
-				saved = errno
-			}
-			continue
-		}
-		if info.Mode().IsRegular() && info.Mode()&0o111 != 0 {
-			cmd.Path = candidate
-			return cmd
-		}
-		if saved == 0 {
-			saved = syscall.EACCES
-		}
-	}
-	if saved == 0 {
-		saved = syscall.ENOENT
-	}
-	cmd.Err = &osError{errno: saved, filename: argv[0]}
+	cmd.Path = path
 	return cmd
 }
 

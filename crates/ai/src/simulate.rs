@@ -15,7 +15,6 @@ use jackioh_engine::{
     opponent_of, owed_mana_of, reduce_unpiloted, self_def_ids, slot_of, stop_answer, subsystems, unit_view,
     units_on_field_of,
 };
-use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::candidates::{action_key, plague_aims_first, plague_placement_open};
@@ -25,24 +24,12 @@ use crate::config::{
 use crate::evaluate::{NextSwing, Prices, evaluate_priced, feng_shui_acts, float_credit};
 use crate::types::{NodeCounter, StoppedBy};
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[serde(rename_all = "camelCase")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum LineStatus {
     Open,
     Passed,
     Yielded,
     Over,
-}
-
-impl LineStatus {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            LineStatus::Open => "open",
-            LineStatus::Passed => "passed",
-            LineStatus::Yielded => "yielded",
-            LineStatus::Over => "over",
-        }
-    }
 }
 
 /// What a `CountingNodeCounter` is: a root counter of its own, or a slice of a parent.
@@ -76,37 +63,6 @@ enum CounterKind<'a> {
 /// A NodeCounter that also tallies failed simulations for `SearchStats.simErrors`.
 pub struct CountingNodeCounter<'a> {
     kind: CounterKind<'a>,
-}
-
-impl CountingNodeCounter<'_> {
-    /// A sub-counter reads its parent's tally (0 when the parent keeps none).
-    pub fn sim_errors(&self) -> usize {
-        match &self.kind {
-            CounterKind::Root { sim_errors, .. } => sim_errors.get(),
-            CounterKind::Sub { parent, .. } => parent.sim_error_tally().unwrap_or(0),
-        }
-    }
-
-    /// A sub-counter writes its parent's tally, when it keeps one.
-    pub fn set_sim_errors(&self, value: usize) {
-        match &self.kind {
-            CounterKind::Root { sim_errors, .. } => sim_errors.set(value),
-            CounterKind::Sub { parent, .. } => {
-                if parent.sim_error_tally().is_some() {
-                    parent.set_sim_error_tally(value);
-                }
-            }
-        }
-    }
-
-    /// #1429: the panics of `sim_errors`; a sub-counter reads its parent's tally (0 when the parent
-    /// keeps none).
-    pub fn sim_panics(&self) -> usize {
-        match &self.kind {
-            CounterKind::Root { sim_panics, .. } => sim_panics.get(),
-            CounterKind::Sub { parent, .. } => parent.sim_panic_tally().unwrap_or(0),
-        }
-    }
 }
 
 impl NodeCounter for CountingNodeCounter<'_> {
@@ -219,16 +175,25 @@ impl NodeCounter for CountingNodeCounter<'_> {
         }
     }
 
-    fn sim_error_tally(&self) -> Option<usize> {
-        Some(self.sim_errors())
+    fn sim_errors(&self) -> usize {
+        match &self.kind {
+            CounterKind::Root { sim_errors, .. } => sim_errors.get(),
+            CounterKind::Sub { parent, .. } => parent.sim_errors(),
+        }
     }
 
-    fn set_sim_error_tally(&self, value: usize) {
-        self.set_sim_errors(value);
+    fn note_sim_error(&self) {
+        match &self.kind {
+            CounterKind::Root { sim_errors, .. } => sim_errors.set(sim_errors.get() + 1),
+            CounterKind::Sub { parent, .. } => parent.note_sim_error(),
+        }
     }
 
-    fn sim_panic_tally(&self) -> Option<usize> {
-        Some(self.sim_panics())
+    fn sim_panics(&self) -> usize {
+        match &self.kind {
+            CounterKind::Root { sim_panics, .. } => sim_panics.get(),
+            CounterKind::Sub { parent, .. } => parent.sim_panics(),
+        }
     }
 
     fn first_sim_panic(&self) -> Option<String> {
@@ -262,7 +227,7 @@ impl NodeCounter for CountingNodeCounter<'_> {
     }
 }
 
-/// R3575603: one step a decision simulated and found expensive (`is_expensive_step`): the state it
+/// R3575603: one step a decision simulated and found expensive (`surcharge_nodes`, `announced_surcharge_nodes`): the state it
 /// stepped from, the seat and the action, and the engine's answer.
 struct MemoEntry {
     state: GameState,
@@ -350,14 +315,6 @@ impl SimMemo {
     }
 }
 
-/// R3575603: whether the step `action` took from `state` to `stepped` is one the search pays more than
-/// its node for (`surcharge_nodes`, `announced_surcharge_nodes`): the only steps `SimMemo` keeps.
-fn is_expensive_step(state: &GameState, seat: PlayerId, action: &ActionBody, stepped: &ReduceResult) -> bool {
-    surcharge_nodes(state, seat, action) > 0
-        || announced_surcharge_nodes(state, action, stepped) > 0
-        || event_surcharge_nodes(stepped) > 0
-}
-
 pub fn create_node_counter<'a>(
     limit: usize,
     should_stop: Option<&'a dyn Fn() -> bool>,
@@ -405,16 +362,10 @@ pub fn create_wrap_up_counter<'a>(
     }
 }
 
-fn note_sim_error(counter: &dyn NodeCounter) {
-    if let Some(errors) = counter.sim_error_tally() {
-        counter.set_sim_error_tally(errors + 1);
-    }
-}
-
 /// #1429: a caught panic is a failed simulation, counted apart too, its message kept when first;
 /// returns the message.
 pub(crate) fn note_sim_panic(counter: &dyn NodeCounter, payload: &(dyn std::any::Any + Send)) -> String {
-    note_sim_error(counter);
+    counter.note_sim_error();
     let message = panic_message(payload);
     counter.record_sim_panic(&message);
     message
@@ -498,15 +449,17 @@ pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) 
     }
 }
 
-/// Post-step surcharge for unannounced expensive card resolves like random/graveyard casts (#1347).
-/// R4595003: the nodes a step's own events cost beyond its one: one for every `AI_SEARCH.events_per_node`.
+/// R4595003: the nodes a step's own events cost beyond its one: one for every
+/// `AI_SEARCH.events_per_node` past `AI_SEARCH.free_events`.
 pub fn event_surcharge_nodes(stepped: &ReduceResult) -> usize {
+    let free = usize::try_from(AI_SEARCH.free_events).unwrap_or(0);
     match usize::try_from(AI_SEARCH.events_per_node) {
-        Ok(per) if per > 0 => stepped.events.len() / per,
+        Ok(per) if per > 0 => stepped.events.len().saturating_sub(free) / per,
         _ => 0,
     }
 }
 
+/// Post-step surcharge for unannounced expensive card resolves like random/graveyard casts (#1347).
 pub fn announced_surcharge_nodes(state: &GameState, action: &ActionBody, stepped: &ReduceResult) -> usize {
     let ids = AI_SEARCH.expensive_def_ids;
     let announced = stepped
@@ -599,42 +552,40 @@ pub(crate) fn best_auto_answer(
 ) -> Option<SimStep> {
     let answers = auto_answers(state, answerer, tried);
     if answers.is_empty() {
-        note_sim_error(counter);
+        counter.note_sim_error();
         return Some(Err("the prompt has no answer".to_string()));
     }
     let scored = answers.len() > 1;
     let mut best: Option<(GameState, f64)> = None;
     let mut failure = String::new();
     for answer in answers {
-        if !counter.take() {
-            return None;
-        }
-        let action = Action::new(answer, answerer, format!("{prefix}:{}", counter.used()));
-        let next = match catch_unwind(AssertUnwindSafe(|| reduce_unpiloted(state, &action))) {
-            Ok(next) => next,
+        let stepped = catch_unwind(AssertUnwindSafe(|| {
+            step_answer(state, answerer, answer, counter, prefix)
+        }));
+        let next = match stepped {
+            Ok(None) => return None,
+            Ok(Some(Ok(next))) => next,
+            Ok(Some(Err(error))) => {
+                failure = error;
+                continue;
+            }
             Err(payload) => {
                 failure = note_sim_panic(counter, payload.as_ref());
                 continue;
             }
         };
-        if let Some(error) = next.error {
-            note_sim_error(counter);
-            failure = error;
-            continue;
-        }
-        charge_announced(counter, state, &action.body, &next);
         let score = if scored {
-            let swing = if next.state.active == answerer {
+            let swing = if next.active == answerer {
                 NextSwing::Seat
             } else {
                 NextSwing::Enemy
             };
-            evaluate_priced(&next.state, answerer, swing, &AI_EVAL, prices)
+            evaluate_priced(&next, answerer, swing, &AI_EVAL, prices)
         } else {
             0.0
         };
         if best.as_ref().is_none_or(|(_, best_score)| score > *best_score) {
-            best = Some((next.state, score));
+            best = Some((next, score));
         }
     }
     Some(best.map(|(state, _)| state).ok_or(failure))
@@ -647,9 +598,6 @@ pub(crate) fn best_auto_answer(
 /// sequence is answered right until its streak is the face's expected one, then Stopped, which summons
 /// that Kenny (R1184000). `None` for any other prompt, which keeps `best_auto_answer`.
 pub(crate) fn worked_step(state: &GameState, seat: PlayerId) -> Option<(GameState, ActionBody)> {
-    if state.result.is_some() {
-        return None;
-    }
     let pending = state.pending.as_ref()?;
     if pending.player_id != seat || pending.kind != PromptKind::Answer {
         return None;
@@ -687,8 +635,9 @@ pub(crate) fn worked_step(state: &GameState, seat: PlayerId) -> Option<(GameStat
     Some((keyed, answer))
 }
 
-/// #2929: `seat`'s `answer` stepped on `state` as `best_auto_answer` steps each it tries: one node
-/// (`None` once `counter` is spent), a refused step a failed simulation. Its callers catch a panic.
+/// `seat`'s `answer` stepped on `state`, as `best_auto_answer` steps each it tries and #2929 the one the
+/// seat works out: one node (`None` once `counter` is spent), a refused step a failed simulation. Its
+/// callers catch a panic.
 fn step_answer(
     state: &GameState,
     seat: PlayerId,
@@ -702,7 +651,7 @@ fn step_answer(
     let action = Action::new(answer, seat, format!("{prefix}:{}", counter.used()));
     let next = reduce_unpiloted(state, &action);
     if let Some(error) = next.error {
-        note_sim_error(counter);
+        counter.note_sim_error();
         return Some(Err(error));
     }
     charge_announced(counter, state, &action.body, &next);
@@ -808,7 +757,7 @@ fn simulate_answering(
     // apart by `UNPAID_SURCHARGE` (R4807000).
     let surcharge = surcharge_nodes(state, seat, action);
     if counter.used() + surcharge > counter.limit() {
-        note_sim_error(counter);
+        counter.note_sim_error();
         return Some(Err(UNPAID_SURCHARGE.to_string()));
     }
     for _ in 0..surcharge {
@@ -824,9 +773,12 @@ fn simulate_answering(
             Some(stepped) => stepped,
             None => {
                 let stepped = reduce_unpiloted(state, &Action::new(action.clone(), seat, nonce));
+                // R3575603: the memo keeps only a step the search pays more than its node for.
                 if let Some(memo) = memo
                     && stepped.error.is_none()
-                    && is_expensive_step(state, seat, action, &stepped)
+                    && (surcharge_nodes(state, seat, action) > 0
+                        || announced_surcharge_nodes(state, action, &stepped) > 0
+                        || event_surcharge_nodes(&stepped) > 0)
                 {
                     memo.keep(state, seat, action, &stepped);
                 }
@@ -834,7 +786,7 @@ fn simulate_answering(
             }
         };
         if let Some(error) = first.error {
-            note_sim_error(counter);
+            counter.note_sim_error();
             return Some(Err(error));
         }
         charge_announced(counter, state, action, &first);
@@ -856,7 +808,7 @@ fn simulate_answering(
                     break;
                 };
                 if worked >= KY_COMPETITION_MAX as usize {
-                    note_sim_error(counter);
+                    counter.note_sim_error();
                     return Some(Err("too many worked answers in one step".to_string()));
                 }
                 current = match step_answer(&keyed, seat, answer, counter, "sim")? {
@@ -867,7 +819,7 @@ fn simulate_answering(
                 continue;
             }
             if answered >= AI_SEARCH.max_auto_answers as usize {
-                note_sim_error(counter);
+                counter.note_sim_error();
                 return Some(Err("too many opponent prompts in one step".to_string()));
             }
             current = match best_auto_answer(&current, other, tried, counter, "sim", prices)? {
@@ -893,25 +845,6 @@ fn passed_score(state: &GameState, seat: PlayerId, prices: &Prices) -> f64 {
         + float_credit(state, seat, unspent, &AI_EVAL)
 }
 
-/// `closeLine`'s step: the line's turn ended here, or `None` where the line stays as it stands.
-fn close_line_step(
-    state: &GameState,
-    seat: PlayerId,
-    root_turn: i32,
-    counter: &dyn NodeCounter,
-    prices: &Prices,
-) -> Option<GameState> {
-    if line_status(state, seat, root_turn) == LineStatus::Open
-        && state.pending.is_none()
-        && state.active == seat
-        && state.phase == Phase::Main
-        && let Some(Ok(next)) = simulate(state, seat, &ActionBody::EndTurn, counter, prices)
-    {
-        return Some(next);
-    }
-    None
-}
-
 /// Where a line stops: a line still open in the seat's main phase ends its turn here (one node, when
 /// one is left). Anything else stops where it stands.
 pub fn close_line(
@@ -921,7 +854,15 @@ pub fn close_line(
     counter: &dyn NodeCounter,
     prices: &Prices,
 ) -> GameState {
-    close_line_step(state, seat, root_turn, counter, prices).unwrap_or_else(|| state.clone())
+    // An open line with no prompt is the seat's own turn (`line_status`).
+    if line_status(state, seat, root_turn) == LineStatus::Open
+        && state.pending.is_none()
+        && state.phase == Phase::Main
+        && let Some(Ok(next)) = simulate(state, seat, &ActionBody::EndTurn, counter, prices)
+    {
+        return next;
+    }
+    state.clone()
 }
 
 /// The static value of a line that stopped at `state`: a passed turn pays for its unspent mana.
@@ -931,25 +872,6 @@ pub fn static_score(state: &GameState, seat: PlayerId, root_turn: i32, prices: &
     } else {
         evaluate_priced(state, seat, NextSwing::Enemy, &AI_EVAL, prices)
     }
-}
-
-/// A line's value: `static_score`, but an open line is first closed with an endTurn if the seat is in its
-/// main phase and a node is left.
-pub fn terminal_score(
-    state: &GameState,
-    seat: PlayerId,
-    root_turn: i32,
-    counter: &dyn NodeCounter,
-    prices: &Prices,
-) -> f64 {
-    let status = line_status(state, seat, root_turn);
-    if status == LineStatus::Open {
-        return match close_line_step(state, seat, root_turn, counter, prices) {
-            None => evaluate_priced(state, seat, NextSwing::Enemy, &AI_EVAL, prices),
-            Some(closed) => static_score(&closed, seat, root_turn, prices),
-        };
-    }
-    static_score(state, seat, root_turn, prices)
 }
 
 /// `items` sorted and joined by commas: a part of `search_signature` that two orders of the same moves

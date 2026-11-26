@@ -40,7 +40,7 @@ const FAKE_SCRIPT: LessonScript = {
     { id: "welcome", kind: "info", title: "Welcome", text: "This is the board.", anchor: { kind: "hand" }, holdAi: true },
     {
       id: "end",
-      kind: "act",
+      kind: "moment",
       title: "End your turn",
       text: "Press End turn.",
       anchor: { kind: "endTurn" },
