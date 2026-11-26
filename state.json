@@ -21446,6 +21446,9 @@
         }
       }
     },
+    "4977": {
+      "suggestion": true
+    },
     "4981": {
       "asks": [
         "c:7179116446"
@@ -44474,6 +44477,13 @@
         "title": "Patch: a paired Duos screen measures a Duos AI change against a control build",
         "verdict": "came to nothing",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-26T00:48:11Z",
+        "number": 4977,
+        "title": "Patch: a counted game's result reloads the card proficiency the Collection shows, so a level the game earned and its stamp appear without a reload",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
       }
     ],
     "declined": [
