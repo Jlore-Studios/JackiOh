@@ -76,7 +76,6 @@ describe("R3546004 a GIGA permanent drawn across its four zones", () => {
 
 const boardCss = parseSheet(readSheet("src/game/board.css"));
 const animCss = parseSheet(readSheet("src/game/animations.css"));
-const faceCss = parseSheet(readSheet("src/cards/cards.css"));
 
 /** A unit zone's inside, which both `%` and the anchor zone's `cqw`/`cqh` read, and the lanes' gap. */
 type ZoneSize = { w: number; h: number; gap: number };
@@ -219,9 +218,11 @@ describe("R5053000 a GIGA unit in Defense Position lies on its side across its f
     }
   });
 
-  it("R5053000 on a landscape phone a GIGA's gems keep the face's own size, not the one-tile cap", () => {
-    const gems = boardCss.rules.find((rule) => rule.media?.includes("(orientation: landscape) and (max-height: 500px)") === true && rule.selectors.includes('.zone[data-giga="anchor"] .stat'));
-    const face = declsOf(faceCss, ".cf .stat");
-    for (const name of ["min-width", "padding", "font-size"]) expect(gems?.decls.get(name), name).toBe(face.get(name));
+  it("R5053000 on a landscape phone the one-tile gem cap passes a GIGA's anchor by, so its gems keep the face's own size", () => {
+    const caps = boardCss.rules.filter(
+      (rule) => rule.media?.includes("(orientation: landscape) and (max-height: 500px)") === true && rule.decls.get("min-width") === "13px" && rule.selectors.some((s) => s.endsWith(" .stat")),
+    );
+    expect(caps.length).toBeGreaterThan(0);
+    for (const cap of caps) expect(cap.selectors).toEqual(['.zone:where(:not([data-giga="anchor"])) .stat']);
   });
 });

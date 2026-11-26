@@ -4080,25 +4080,19 @@ button.modifier-badge[data-open="true"] {
     padding: var(--space-2) var(--space-4);
   }
 
-  /* A tile here is about 56px square, so its numbers come down a size to stay inside it. */
+  /* A tile here is about 56px square, so its numbers come down a size to stay inside it.
+     R5053000: a GIGA's face spans four tiles, so its gems keep the face's own size (cards.css),
+     round in either position, where the tile's 13px squeezed them into slivers; `:where` keeps
+     the rule's weight. */
   .zone .stats {
     gap: 0;
   }
 
-  .zone .stat {
+  .zone:where(:not([data-giga="anchor"])) .stat {
     min-width: 13px;
     padding: 0 var(--space-1);
     font-size: var(--type-xs-em);
     letter-spacing: -0.02em;
-  }
-
-  /* R5053000: a GIGA's face spans four tiles, so its gems keep the face's own size (cards.css),
-     round in either position, where the tile's 13px squeezed them into slivers. */
-  .zone[data-giga="anchor"] .stat {
-    min-width: var(--mf-stat, 28cqmin);
-    padding: 0 calc(var(--mf-stat, 28cqmin) * 0.12);
-    font-size: calc(var(--mf-stat, 28cqmin) * 0.6);
-    letter-spacing: normal;
   }
 
   /* The peek: the hand's row is half a card tall, the cards hang from its top edge, and the
