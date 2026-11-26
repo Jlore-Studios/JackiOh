@@ -44832,6 +44832,7 @@
         "every": 5,
         "head": "a31c936f48959670b76122a12cd772def124f1cf",
         "issue": 4982,
+        "last_why": "interrupted: `claude-8` stops before it starts: 5-hour usage is 85%, at or over its 85% cap; it resets at 2026-11-26T06:20:00Z",
         "merged_at": "2026-11-26T03:55:37Z",
         "n": 580,
         "pr": 5003,
@@ -44842,7 +44843,7 @@
           "provider": "claude-8",
           "tier": "strong"
         },
-        "run_id": "pending:a02f0a90-1795665401",
+        "run_id": "",
         "sha": "6d97ef369aef40221bb0158e45fb20346edd9afc",
         "started_at": "2026-11-26T03:57:13Z",
         "status": "queued",
