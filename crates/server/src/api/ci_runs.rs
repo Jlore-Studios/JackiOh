@@ -118,11 +118,6 @@ impl CiRuns {
         })
     }
 
-    /// Reads nothing and lists no run.
-    pub fn off() -> CiRuns {
-        CiRuns::with(Source::Off)
-    }
-
     /// A test's: answers what it is given, and nothing (a failed read) until then.
     pub fn canned() -> CiRuns {
         CiRuns::with(Source::Canned(Mutex::new(Canned::default())))
@@ -316,7 +311,7 @@ mod tests {
     #[tokio::test]
     async fn the_end_to_end_server_reads_nothing_and_lists_no_run() {
         assert_eq!(
-            CiRuns::off().load().await,
+            CiRuns::with(Source::Off).load().await,
             Ok(CiRunsResponse { runs: Vec::new() })
         );
     }

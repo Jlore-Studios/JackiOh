@@ -124,4 +124,100 @@ mod tests {
             s.expect_stats(&summoned, json!({ "attack": 4, "health": 4 }));
         }
     }
+
+    /// Overfitting set in p1's lane 1; p1's unit zones hold `held` stand-ins (lanes 1..=held);
+    /// p2 holds the Unit to play.
+    fn crowded(radiant: bool, held: usize) -> Scenario {
+        let field: Vec<_> = (1..=held)
+            .map(|lane| json!({ "def": UNIT, "lane": lane }))
+            .collect();
+        scenario(json!({
+            "active": "p2",
+            "p1": {
+                "backrow": [{ "def": ID, "radiant": radiant, "faceUp": false, "lane": 1 }],
+                "field": field,
+                "mana": 10,
+            },
+            "p2": { "hand": [UNIT], "mana": 10 },
+        }))
+    }
+
+    fn reserve_lane_5(s: &mut Scenario) {
+        reserve_zone(s.state_mut(), ZoneSlot { player: P1, row: Row::Units, lane: 5 });
+    }
+
+    /// R4985000: the reveal gate reads `fill_board_zones`, the unit zones a summon can take.
+    mod gate {
+        use super::*;
+
+        #[test]
+        fn r4985000_stays_set_when_every_unit_zone_is_occupied() {
+            let mut s = crowded(false, 5);
+            s.play(UNIT, json!({ "zone": 1 }));
+            s.expect_in_zone(ID, "field");
+            assert_eq!(active_units_of(s.state(), P1).len(), 5);
+        }
+
+        #[test]
+        fn r4985000_stays_set_when_the_only_empty_zone_is_reserved() {
+            let mut s = crowded(false, 4);
+            reserve_lane_5(&mut s);
+            s.play(UNIT, json!({ "zone": 1 }));
+            s.expect_in_zone(ID, "field");
+            assert_eq!(active_units_of(s.state(), P1).len(), 4);
+        }
+
+        #[test]
+        fn r4985000_stays_set_when_the_only_empty_zone_is_in_the_hole() {
+            let mut s = crowded(false, 4);
+            s.state_mut().black_hole = Some(BlackHole {
+                lane: 5,
+                swallowed: None,
+                pulls: None,
+                capacity: None,
+                at_end: None,
+            });
+            s.play(UNIT, json!({ "zone": 1 }));
+            s.expect_in_zone(ID, "field");
+            assert_eq!(active_units_of(s.state(), P1).len(), 4);
+        }
+
+        #[test]
+        fn r4985000_reveals_while_an_open_zone_remains_beside_a_reserved_one() {
+            let mut s = crowded(false, 3);
+            reserve_lane_5(&mut s);
+            s.play(UNIT, json!({ "zone": 1 }));
+            s.expect_in_zone(ID, "graveyard");
+            let summoned = s.unit_at(P1, 4);
+            assert_eq!(summoned.def_id, UNIT);
+            s.expect_stats(&summoned, json!({ "attack": 3, "health": 3 }));
+            assert_eq!(active_units_of(s.state(), P1).len(), 4);
+        }
+
+        #[test]
+        fn r4985000_a_radiant_overfitting_obeys_the_same_gate() {
+            let mut s = crowded(true, 5);
+            s.play(UNIT, json!({ "zone": 1 }));
+            s.expect_in_zone(ID, "field");
+            assert_eq!(active_units_of(s.state(), P1).len(), 5);
+        }
+
+        /// R4985000: the gate counts unit zones only; a Flying copy that could stand in the backrow
+        /// (R2248000) does not open it.
+        #[test]
+        fn r4985000_a_full_unit_row_keeps_the_trap_set_even_for_a_flying_unit() {
+            let mut s = scenario(json!({
+                "active": "p2",
+                "p1": {
+                    "backrow": [{ "def": ID, "faceUp": false, "lane": 1 }],
+                    "field": (1..=5).map(|lane| json!({ "def": UNIT, "lane": lane })).collect::<Vec<_>>(),
+                    "mana": 10,
+                },
+                "p2": { "hand": ["stand-in (1) 0/40 Flying"], "mana": 10 },
+            }));
+            s.play("stand-in (1) 0/40 Flying", json!({ "zone": 1 }));
+            s.expect_in_zone(ID, "field");
+            assert_eq!(active_units_of(s.state(), P1).len(), 5);
+        }
+    }
 }

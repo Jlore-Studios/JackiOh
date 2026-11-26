@@ -24,8 +24,8 @@
 //! the game figures per patch, mode and source instead: the first seat's wins of the decided games with a
 //! 95% Wilson interval (unknown when every game was drawn, R2567000), endings, lengths and R1256000's
 //! counts, unknown (not zero) in a record older than them. A forced run files under `dev-force-<id>`, for
-//! `compare` and `report`, never `stats-import` (R1284000). `fit-dealt` refits `DEALT_Q` and
-//! `DEALT_Q_PRIOR` over arena records (`dealt_fit.rs`). `sample-size` prints the games a gather run needs at this build's deal pool (`sample_size.rs`, #2888).
+//! `compare` and `report`, never `stats-import` (R1284000). `sample-size` prints the games a gather run
+//! needs at this build's deal pool (`sample_size.rs`, #2888).
 //! `report --versions` prints every deck card's play versions with their figures (R4675000, R4675001), the
 //! table `GET /api/stats/versions` sends, over record files.
 
@@ -38,7 +38,7 @@ use indexmap::{IndexMap, IndexSet};
 use rayon::prelude::*;
 use serde_json::Value;
 
-use jackioh_ai::{AI_DEV_RUN, DevRunOptions, MatchSetup, SHADOW_BAN, SHADOW_WATCH, dev_game_record};
+use jackioh_ai::{AI_DEV_RUN, DevRunOptions, SHADOW_BAN, SHADOW_WATCH, dev_game_record};
 use jackioh_engine::config::SWING_FIELD_MIN_ROWS;
 use jackioh_engine::{
     CardChoicesRow, CardStats, CardStatsFilter, CardStatsReport, CardWindow, CreatedStats,
@@ -54,7 +54,7 @@ use jackioh_engine::{
 use serde::Serialize;
 
 use crate::arena::{paired_interval, wilson_interval};
-use crate::{dealt_fit, golden, sample_size, win_probability};
+use crate::{golden, sample_size, win_probability};
 
 const SECONDS_DECIMALS: usize = 1;
 
@@ -136,8 +136,6 @@ pub struct Args {
 pub enum Command {
     /// R377's card win rates over record files, with no database, or with --games the game figures.
     Report(ReportArgs),
-    /// DEALT_Q's refit over arena record files, printed to paste into crates/ai/src/shadow_ban.rs.
-    FitDealt(dealt_fit::Args),
     /// R1284000: two forced runs compared: the holder's win rate before and after, and the paired difference.
     Compare(CompareArgs),
     /// #2888: the games a gather run needs for the card win rates at this build's deal pool.
@@ -994,7 +992,6 @@ fn run_options(args: &Args, patch: String) -> Result<DevRunOptions> {
         budget: None,
         force,
         commit: None,
-        setup: MatchSetup::default(),
     })
 }
 
@@ -1048,7 +1045,6 @@ fn play_chunks(
 pub fn run(args: Args) -> Result<()> {
     match &args.command {
         Some(Command::Report(report)) => return run_report(report),
-        Some(Command::FitDealt(fit)) => return dealt_fit::run(fit),
         Some(Command::Compare(compared)) => return run_compare(compared),
         Some(Command::SampleSize(sized)) => return sample_size::run(sized),
         Some(Command::Calibrate(calibrate)) => return win_probability::run(calibrate),
@@ -1594,18 +1590,6 @@ mod tests {
         let none = games_of(&["--patch=v0.0.1"]);
         assert!(none.groups.is_empty());
         assert!(render_games(&none, false).contains("No game the filter reads."));
-    }
-
-    #[test]
-    fn fit_dealt_names_record_files_and_takes_no_run_option() {
-        assert_eq!(
-            parse(&["fit-dealt", "a.jsonl", "b.jsonl"]).unwrap().command,
-            Some(Command::FitDealt(dealt_fit::Args {
-                files: vec![PathBuf::from("a.jsonl"), PathBuf::from("b.jsonl")],
-            }))
-        );
-        assert!(parse(&["fit-dealt"]).is_err());
-        assert!(parse(&["fit-dealt", "a.jsonl", "--games=3"]).is_err());
     }
 
     /// A game record as a line of JSON: the shape `--out` writes.
@@ -2496,7 +2480,6 @@ mod tests {
                 budget: Some(FEW),
                 force: None,
                 commit: None,
-                setup: MatchSetup::default(),
             },
             DevRunOptions {
                 series: "dev-force-core-090".to_string(),
@@ -2504,7 +2487,6 @@ mod tests {
                 budget: Some(FEW),
                 force: Some("core-090".to_string()),
                 commit: None,
-                setup: MatchSetup::default(),
             },
         ] {
             let expected = serial_lines(1, 6, &options);
@@ -2542,7 +2524,6 @@ mod tests {
             budget: Some(FEW),
             force: None,
             commit: None,
-            setup: MatchSetup::default(),
         };
         let four = rayon::ThreadPoolBuilder::new().num_threads(4).build().unwrap();
         let mut kept = String::new();

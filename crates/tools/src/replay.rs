@@ -1,5 +1,7 @@
 //! `cargo jackioh replay` (SPEC §9.2, §9.3; SURFACE §12): folds a recorded game from scratch and prints
-//! its state hash. It reads `{seed, decks, log, handicaps?, dealt?, lastBoards?, glitchBoards?,
+//! its state hash. `cargo jackioh replay-check` folds a game and hashes the browser's state in one
+//! call, for the e2e `replayHash` task (#4925).
+//! It reads `{seed, decks, log, handicaps?, dealt?, lastBoards?, glitchBoards?,
 //! catalogVersion?}` on stdin, the setup as the live `createGame` had it (R180 handicaps, R433 dealt
 //! seats, R417 last boards, R678 Glitch boards), and prints `{"hash", "errors": [{nonce, error}, …]}`.
 //! A `catalogVersion` folds under that shipped catalog (R767000), and one this build does not carry
@@ -27,6 +29,10 @@ pub struct Args {}
 /// `cargo jackioh hash-state`: no options; one state object comes on stdin.
 #[derive(clap::Args, Debug)]
 pub struct HashStateArgs {}
+
+/// `cargo jackioh replay-check`: no options; the recorded game and the browser's state come on stdin.
+#[derive(clap::Args, Debug)]
+pub struct ReplayCheckArgs {}
 
 /// R767000: the shipped catalog `game` folds under, by its `catalogVersion`: `None` (this build's) for
 /// none or this build's own, the carried one when carried, else an `earlier_patch` error before any
@@ -108,6 +114,40 @@ pub fn run_hash_state(_args: HashStateArgs) -> Result<()> {
         .context("reading stdin")?;
     let input: Value = serde_json::from_str(&text).context("stdin is not JSON")?;
     println!("{}", serde_json::to_string(&hash_state_json(input)?)?);
+    Ok(())
+}
+
+/// Folds `{seed, decks, log, state, handicaps?, dealt?}` in one call for the e2e `replayHash` task
+/// (#4925): `state` is hashed as `hash-state` hashes it and the rest is folded as `replay` folds
+/// it, answering `{"replayHash", "browserHash", "errors"}`.
+pub(crate) fn replay_check_json(mut input: Value) -> Result<Value> {
+    if input.get("options").is_some() {
+        bail!(
+            "a co-op game has no browser state to compare: replay-check reads {{seed, decks, log, state, …}}"
+        );
+    }
+    let state = input
+        .as_object_mut()
+        .and_then(|game| game.remove("state"))
+        .context("the input has no `state` object")?;
+    let browser = hash_state_json(state)?;
+    let replayed = replay_json(input)?;
+    Ok(json!({
+        "replayHash": replayed["hash"],
+        "browserHash": browser["hash"],
+        "errors": replayed["errors"],
+    }))
+}
+
+/// `cargo jackioh replay-check`.
+pub fn run_replay_check(_args: ReplayCheckArgs) -> Result<()> {
+    let mut text = String::new();
+    std::io::stdin()
+        .read_to_string(&mut text)
+        .context("reading stdin")?;
+    let input: Value = serde_json::from_str(&text).context("stdin is not JSON")?;
+    jackioh_cards::register_all();
+    println!("{}", serde_json::to_string(&replay_check_json(input)?)?);
     Ok(())
 }
 
@@ -311,6 +351,69 @@ mod tests {
     fn input_that_is_no_game_is_refused() {
         assert!(replay_json(json!({ "seed": "x" })).is_err());
         assert!(replay_json(json!([1, 2, 3])).is_err());
+    }
+
+    #[test]
+    fn replay_check_mode_agrees_with_both_halves_on_a_clean_game() {
+        let mut input = hotseat_game();
+        let (_, state) = folded_hotseat();
+        input["state"] = state;
+        let answer = replay_check_json(input).unwrap();
+        assert_eq!(
+            answer,
+            json!({"replayHash": HOTSEAT_HASH, "browserHash": HOTSEAT_HASH, "errors": []})
+        );
+    }
+
+    #[test]
+    fn replay_check_mode_lists_a_refused_action_and_still_matches_the_state() {
+        let mut input = hotseat_game();
+        let refused = json!({
+            "type": "attack", "attackerId": "no-such-card", "targetId": "hero-p2", "playerId": "p1", "nonce": "refused-1"
+        });
+        input["log"].as_array_mut().unwrap().push(refused);
+        let (_, state) = folded_hotseat();
+        input["state"] = state;
+        let answer = replay_check_json(input).unwrap();
+        assert_eq!(answer["replayHash"], HOTSEAT_HASH);
+        assert_eq!(answer["browserHash"], HOTSEAT_HASH);
+        let errors = answer["errors"].as_array().unwrap();
+        assert_eq!(errors.len(), 1, "{errors:?}");
+        assert_eq!(errors[0]["nonce"], "refused-1");
+        assert!(
+            errors[0]["error"].as_str().is_some_and(|error| !error.is_empty()),
+            "{errors:?}"
+        );
+    }
+
+    #[test]
+    fn replay_check_mode_reports_a_browser_state_that_differs() {
+        let mut input = hotseat_game();
+        let (_, mut state) = folded_hotseat();
+        state["turn"] = json!(state["turn"].as_i64().unwrap() + 1);
+        input["state"] = state;
+        let answer = replay_check_json(input).unwrap();
+        assert_eq!(answer["replayHash"], HOTSEAT_HASH);
+        assert_ne!(answer["browserHash"], answer["replayHash"]);
+        assert_eq!(answer["errors"], json!([]));
+    }
+
+    #[test]
+    fn replay_check_mode_refuses_a_missing_or_undecodable_state_and_a_co_op_game() {
+        let mut input = hotseat_game();
+        input["state"] = json!({"seed": "x"});
+        let error = replay_check_json(input).unwrap_err();
+        assert!(format!("{error:#}").contains("state object"), "{error:#}");
+
+        let mut input = hotseat_game();
+        input["state"] = json!([]);
+        assert!(replay_check_json(input).is_err());
+
+        let error = replay_check_json(hotseat_game()).unwrap_err();
+        assert!(format!("{error:#}").contains("no `state`"), "{error:#}");
+
+        let error = replay_check_json(json!({"options": {}, "log": [], "state": {}})).unwrap_err();
+        assert!(format!("{error:#}").contains("co-op"), "{error:#}");
     }
 
     /// Actions a co-op test game plays at most.

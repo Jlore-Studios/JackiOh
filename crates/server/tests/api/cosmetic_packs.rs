@@ -6,7 +6,7 @@ use serde_json::{Value, json};
 use tokio::sync::watch;
 
 use jackioh_server::api::collection::{GrantInput, grant_cards, owned_map};
-use jackioh_server::api::http::AuthLevel;
+use jackioh_server::api::http::{ApiError, AuthLevel};
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
     CARD_TOKEN_BAR_SIZE, CHASE_SHARD_PACKS, COSMETIC_PACK_FLOOR_RARITY, COSMETIC_PACK_SLOTS,
@@ -23,7 +23,7 @@ use jackioh_server::cosmetics::{
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::cosmetic_packs::{
-    OpenedCosmeticPack, buy_chase, buy_chase_once, level_skip_chance, open_cosmetic_pack,
+    OpenedCosmeticPack, buy_chase_once, level_skip_chance, open_cosmetic_pack_once,
 };
 use jackioh_server::economy::idempotency::{RequestKey, Spent};
 use jackioh_server::economy::spend_slots::SPEND_BUSY_MESSAGE;
@@ -42,6 +42,32 @@ use crate::support::store::{fake, uuid};
 
 const PROFILE: &str = "p1";
 const USER: &str = "u1";
+
+/// An opening that sends no `Idempotency-Key`: `open_cosmetic_pack_once`'s own answer.
+async fn open_cosmetic_pack(
+    app: &App,
+    profile_id: &str,
+    registry: &[Cosmetic],
+    seed: &str,
+) -> Result<OpenedCosmeticPack, ApiError> {
+    open_cosmetic_pack_once(app, profile_id, registry, seed, None)
+        .await
+        .and_then(Spent::now)
+}
+
+/// A purchase that sends no `Idempotency-Key`: `buy_chase_once`'s own answer.
+async fn buy_chase(
+    app: &App,
+    profile_id: &str,
+    registry: &[Cosmetic],
+    cosmetic_id: &str,
+    card_id: Option<&str>,
+) -> Result<(), ApiError> {
+    buy_chase_once(app, profile_id, registry, cosmetic_id, card_id, None)
+        .await
+        .and_then(Spent::now)
+        .map(|_| ())
+}
 
 // A cosmetic pack has a slot for each of the two full arts a test below fixes.
 const _: () = assert!(COSMETIC_PACK_SLOTS >= 2);

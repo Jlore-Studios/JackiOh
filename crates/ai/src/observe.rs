@@ -475,9 +475,11 @@ fn belongs_to_hidden(instance_id: Option<&str>, resume: Option<&Resume>, hidden:
     is_hidden_id(instance_id, hidden) || is_hidden_id(resume.and_then(|r| r.instance_id.as_deref()), hidden)
 }
 
-/// A kept entry's captured event (a trigger's `resume.data.event`, or the event an interrupted trap
-/// firing keeps under `data.firing.event`) is scrubbed like a dispatch event, so a face-up card's
-/// trigger cannot carry a hidden card's identity through the queue.
+/// A kept continuation as `seat` may read it. Its captured event (a trigger's `resume.data.event`, or
+/// the event an interrupted trap firing keeps under `data.firing.event`) is scrubbed like a dispatch
+/// event, so a face-up card's trigger cannot carry a hidden card's identity through the queue; it holds
+/// no answer key (R465); and an in-flight play of a `secret_modes` card carries none of its modes in its
+/// run (R865).
 fn scrub_resume(state: &GameState, seat: PlayerId, resume: &mut Resume, hidden: &IndexSet<String>) {
     if let Some(event) = resume.data.get_mut("event")
         && event.is_object()
@@ -495,6 +497,8 @@ fn scrub_resume(state: &GameState, seat: PlayerId, resume: &mut Resume, hidden: 
     {
         scrub_event_value(state, seat, event, hidden);
     }
+    without_answer_key(resume);
+    jackioh_engine::secrets::scrub_secret_modes(state, resume, seat);
 }
 
 /// R465: a multiple-choice problem's key (`ANSWER_KEY`, Classic+ #42) rides in the resume data of the
@@ -770,10 +774,6 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         .retain(|entry| !belongs_to_hidden(Some(entry.instance_id.as_str()), Some(&entry.resume), &hidden));
     for entry in next.trigger_queue.iter_mut() {
         scrub_resume(state, seat, &mut entry.resume, &hidden);
-        without_answer_key(&mut entry.resume);
-        // R865: an in-flight play of a `secret_modes` card carries its modes in the run the queue
-        // holds; the other seat reads none of them.
-        jackioh_engine::secrets::scrub_secret_modes(state, &mut entry.resume, seat);
     }
 
     let mut cursor = next.work_cursor as i64;
@@ -787,9 +787,6 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         }
         scrub_resume(state, seat, &mut item.resume, &hidden);
         scrub_owed_mulligan(&mut item.resume, opp);
-        without_answer_key(&mut item.resume);
-        // R865: as above, for the owed play the work queue holds.
-        jackioh_engine::secrets::scrub_secret_modes(state, &mut item.resume, seat);
         kept_work.push(item);
     }
     next.work_cursor = cursor.min(kept_work.len() as i64).max(0) as usize;
@@ -801,18 +798,12 @@ pub fn redact(state: &GameState, seat: PlayerId) -> GameState {
         .retain(|entry| !belongs_to_hidden(None, Some(&entry.resume), &hidden));
     for entry in next.delayed.iter_mut() {
         scrub_resume(state, seat, &mut entry.resume, &hidden);
-        without_answer_key(&mut entry.resume);
-        // R865: as above, for a delayed continuation.
-        jackioh_engine::secrets::scrub_secret_modes(state, &mut entry.resume, seat);
     }
     for entry in next.dispatch.iter_mut() {
         entry.event = scrub_event(state, seat, &entry.event, &hidden);
     }
     if let Some(pending) = next.pending.as_mut() {
         scrub_resume(state, seat, &mut pending.resume, &hidden);
-        without_answer_key(&mut pending.resume);
-        // R865: as above, for the open prompt's continuation.
-        jackioh_engine::secrets::scrub_secret_modes(state, &mut pending.resume, seat);
     }
 
     // Step 6: a transient definition only a hidden card uses would name that card.
