@@ -23849,6 +23849,7 @@
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check_n": 610,
       "started_at": "2026-11-26T16:20:13Z",
       "stop_requested": false,
       "taken_asks": [],
@@ -47933,9 +47934,33 @@
         "title": "Patch: a motion and glow budget, idle effects only on what the player can act on",
         "tries": 0,
         "verdict": "findings"
+      },
+      {
+        "approver": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-4",
+          "tier": "strong"
+        },
+        "builder": {
+          "family": "claude",
+          "provider": "claude-4"
+        },
+        "difficulty": "hard",
+        "every": 5,
+        "head": "c3bf6fe4cc8d3bc79cbc5277f821f7e20c00d04e",
+        "issue": 4707,
+        "merged_at": "2026-11-26T18:22:57Z",
+        "n": 610,
+        "pr": 5064,
+        "queued_at": "2026-11-26T18:22:57Z",
+        "sha": "480256e74e965e08681eaa41c940b9c0360e78ce",
+        "status": "queued",
+        "title": "Patch: deeper card stats, S4, random-effect splits: each rolled outcome of Call to Chaos, coins and dice",
+        "tries": 0
       }
     ],
-    "count": 609
+    "count": 610
   },
   "statistics": {
     "at": "2026-11-26T18:17:19Z"
