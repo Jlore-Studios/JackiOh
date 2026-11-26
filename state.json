@@ -21715,6 +21715,13 @@
     "5122": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45906462556",
+        "model": "gemini-3.8-flash-high",
+        "provider": "agy",
+        "since": "2026-11-26T23:20:19Z",
+        "until": "2026-11-26T23:50:19Z"
+      },
       "difficulty_by": {
         "at": "2026-11-26T23:20:10Z",
         "difficulty": "medium",
