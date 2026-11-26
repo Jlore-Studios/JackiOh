@@ -1497,9 +1497,9 @@ pub struct TipsyStamp {
     pub turn: i32,
 }
 
-/// #936 S3: a Duos duel's side — its team's shared pool, the pool's cap, and whether this seat's own
-/// HP is spent (B12–B15, `duos_life.rs`). Present only in a duel a `DuosState` holds, so a 1v1 state
-/// hashes as before (B3).
+/// #936 S3: a Duos duel's side — its team's shared pool, the pool's cap, whether this seat's own HP
+/// is spent, and the own HP it started on (B12–B15, `duos_life.rs`). Present only in a duel a
+/// `DuosState` holds, so a 1v1 state hashes as before (B3).
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
 #[cfg_attr(
     feature = "ts",
@@ -1511,6 +1511,13 @@ pub struct DuosLife {
     pub pool: i32,
     pub pool_cap: i32,
     pub spent: bool,
+    /// R4831000: the own HP this seat started on, its team's `own_health` (`duos_seat`), which
+    /// `query::starting_health_of` answers for the seat, spent or not. Absent at DUOS_OWN_HEALTH, so a
+    /// co-op game on the standard rules serializes and hashes as before and a state stored before this
+    /// field loads.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub own_start: Option<i32>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -3397,12 +3404,6 @@ pub fn numbering_order<T: Clone>(state: &GameState, items: &[T]) -> Vec<T> {
         0,
     )
     .shuffle(items)
-}
-
-/// A deep copy of a state. §10.1 keeps the state JSON-only; in Rust the clone is the derived one
-/// (SURFACE §4.4.8: TS's JSON round trip had no other effect on a JSON-only state).
-pub fn clone_state(state: &GameState) -> GameState {
-    state.clone()
 }
 
 /// §2.1, §2.2: whether it is `player`'s turn. Setup (`SETUP_TURN`) is no player's turn: `active`

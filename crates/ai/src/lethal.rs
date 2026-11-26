@@ -1,7 +1,9 @@
 //! The lethal solver (SPEC §9.9): bounded search for a line winning this turn across all determinizations.
 //!
 //! Stages:
-//! 1. Depth-first walk in move order for `AI_SEARCH.lethalQuickNodes`.
+//! 1. Depth-first walk in move order for `AI_SEARCH.lethalQuickNodes`. A step that slice cannot pay the
+//!    surcharge of (`UNPAID_SURCHARGE`), walked or replayed on another determinization, leaves the walk
+//!    cut, not exhausted, so stage 2 still runs (R4807000).
 //! 2. Best-first walk ordered by `ready_gap` (enemy hero life including Duos pool R964000 less ready attacks).
 //!
 //! Each walk's visited set reads `position_key`, `search_signature` with the units' lanes (R4806000), so a
@@ -25,7 +27,8 @@ use crate::determinize::{DeterminizeOptions, det_ground, determinize_on};
 use crate::evaluate::{Prices, damage_past_taunts, deft_in_defense};
 use crate::observe::redact;
 use crate::simulate::{
-    LineStatus, create_node_counter, create_sub_counter, line_status, position_key, simulate,
+    LineStatus, UNPAID_SURCHARGE, create_node_counter, create_sub_counter, line_status, position_key,
+    simulate,
 };
 use crate::types::{NodeCounter, StoppedBy};
 
@@ -43,7 +46,8 @@ struct Open {
     order: u32,
 }
 
-/// What a walk ended with: a lethal line, a tree searched to the end, or a walk the counter cut short.
+/// What a walk ended with: a lethal line, a tree searched to the end, or a walk the counter cut short
+/// or that skipped a step its slice could not pay for (R4807000).
 enum Walk {
     Line(Vec<ActionBody>),
     Exhausted,
@@ -55,6 +59,9 @@ enum Walk {
 enum Verdict {
     Lethal,
     Deeper,
+    /// R4807000: the line wins here, but a step of it on another determinization has a surcharge the
+    /// counter's slice cannot pay, so it is neither proved nor refuted there.
+    Unpaid,
     Dead,
 }
 
@@ -100,14 +107,15 @@ fn push_moves(
 /// Replays a lethal line on each of `worlds`: each action must be legal there (equality with
 /// legal_actions, ActionBody being plain data) and the line must end with `seat` the winner. `None`
 /// when the counter ran out. The walks prove a line on the determinizations but the first, where
-/// they found it.
+/// they found it. `Lethal` when it wins on every world, `Unpaid` when a step's surcharge does not fit
+/// `counter`'s slice (`UNPAID_SURCHARGE`, R4807000), else `Dead`.
 fn wins_on(
     worlds: &[GameState],
     seat: PlayerId,
     line: &[ActionBody],
     counter: &dyn NodeCounter,
     prices: &Prices,
-) -> Option<bool> {
+) -> Option<Verdict> {
     for det in worlds {
         let mut state = det.clone();
         for action in line {
@@ -115,11 +123,12 @@ fn wins_on(
                 break;
             }
             if !legal_actions(&state, seat).iter().any(|legal| legal == action) {
-                return Some(false);
+                return Some(Verdict::Dead);
             }
             match simulate(&state, seat, action, counter, prices) {
                 None => return None,
-                Some(Err(_)) => return Some(false),
+                Some(Err(error)) if error == UNPAID_SURCHARGE => return Some(Verdict::Unpaid),
+                Some(Err(_)) => return Some(Verdict::Dead),
                 Some(Ok(next)) => state = next,
             }
         }
@@ -127,10 +136,10 @@ fn wins_on(
             .result
             .is_none_or(|result| result.winner.player() != Some(seat))
         {
-            return Some(false);
+            return Some(Verdict::Dead);
         }
     }
-    Some(true)
+    Some(Verdict::Lethal)
 }
 
 /// Whether `legal_actions` lists an attack for `unit` (`combat::can_attack`).
@@ -206,9 +215,13 @@ pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
     f64::from(life - damage_past_taunts(state, opp, &attacks))
 }
 
-/// What a new position means for the walk: a proved lethal, a position to search on from, or neither.
-/// `None` when the counter ran out while proving a win on the other determinizations.
-#[allow(clippy::too_many_arguments)]
+/// What a new position means for the walk: a proved lethal, a position to search on from, a lethal the
+/// slice cannot pay to prove (`Unpaid`), or neither. `None` when the counter ran out while proving a win
+/// on the other determinizations.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the walk's position and its counters, each borrowed apart"
+)]
 fn judge(
     dets: &[GameState],
     seat: PlayerId,
@@ -223,8 +236,7 @@ fn judge(
         if result.winner.player() != Some(seat) {
             return Some(Verdict::Dead);
         }
-        let verdict = wins_on(dets.get(1..).unwrap_or_default(), seat, line, counter, prices)?;
-        return Some(if verdict { Verdict::Lethal } else { Verdict::Dead });
+        return wins_on(dets.get(1..).unwrap_or_default(), seat, line, counter, prices);
     }
     if line.len() as i32 >= AI_SEARCH.lethal_max_depth {
         return Some(Verdict::Dead);
@@ -232,19 +244,18 @@ fn judge(
     if line_status(next, seat, root_turn) != LineStatus::Open {
         return Some(Verdict::Dead);
     }
-    let key = position_key(next, seat);
-    if visited.contains(&key) {
+    if !visited.insert(position_key(next, seat)) {
         return Some(Verdict::Dead);
     }
-    visited.insert(key);
     Some(Verdict::Deeper)
 }
 
-/// Stage 1: depth-first in move order, with a visited set on `position_key` (R4806000).
+/// Stage 1: depth-first in move order, with a visited set on `position_key` (R4806000). A step whose
+/// surcharge the slice cannot pay, here or in a replay on another determinization, is skipped like a
+/// refused one, but the walk then ends `Cut`: it has not searched what lies past that step, and the
+/// best-first walk may pay for it (R4807000).
 fn depth_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter, prices: &Prices) -> Walk {
-    let Some(root) = dets.first() else {
-        return Walk::Exhausted;
-    };
+    let root = &dets[0]; // `find_lethal` answered an empty slice itself.
     let mut visited: IndexSet<String> = IndexSet::new();
     visited.insert(position_key(root, seat));
     let mut stack: Vec<Frame> = Vec::new();
@@ -256,10 +267,14 @@ fn depth_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter, pr
         prices,
     );
 
+    let mut unpaid = false;
     while let Some(frame) = stack.pop() {
         let next = match simulate(&frame.state, seat, &frame.action, counter, prices) {
             None => return Walk::Cut,
-            Some(Err(_)) => continue,
+            Some(Err(error)) => {
+                unpaid |= error == UNPAID_SURCHARGE;
+                continue;
+            }
             Some(Ok(next)) => next,
         };
         let mut line: Vec<ActionBody> = frame.line.as_ref().clone();
@@ -270,10 +285,11 @@ fn depth_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter, pr
         match verdict {
             Verdict::Lethal => return Walk::Line(line),
             Verdict::Deeper => push_moves(&mut stack, Rc::new(next), Rc::new(line), seat, prices),
+            Verdict::Unpaid => unpaid = true,
             Verdict::Dead => {}
         }
     }
-    Walk::Exhausted
+    if unpaid { Walk::Cut } else { Walk::Exhausted }
 }
 
 /// Index of the open position to expand next: the smallest gap, then the longest line, then the oldest.
@@ -295,9 +311,7 @@ fn next_open(open: &[Open]) -> usize {
 
 /// Stage 2: best-first by `ready_gap`, each expansion simulating its first AI_SEARCH.lethalWidth moves.
 fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter, prices: &Prices) -> Walk {
-    let Some(root) = dets.first() else {
-        return Walk::Exhausted;
-    };
+    let root = &dets[0]; // `find_lethal` answered an empty slice itself.
     let mut visited: IndexSet<String> = IndexSet::new();
     visited.insert(position_key(root, seat));
     let mut open: Vec<Open> = vec![Open {
@@ -335,7 +349,7 @@ fn best_first(dets: &[GameState], seat: PlayerId, counter: &dyn NodeCounter, pri
                     });
                     order += 1;
                 }
-                Verdict::Dead => {}
+                Verdict::Dead | Verdict::Unpaid => {}
             }
         }
     }
@@ -418,7 +432,7 @@ pub fn trim_lethal(
     prices: &Prices,
 ) -> Option<Vec<ActionBody>> {
     for start in (1..line.len()).rev() {
-        if wins_on(dets, seat, &line[start..], counter, prices)? {
+        if wins_on(dets, seat, &line[start..], counter, prices)? == Verdict::Lethal {
             line.drain(..start);
             break;
         }
@@ -430,11 +444,11 @@ pub fn trim_lethal(
         without.remove(at);
         match wins_on(dets, seat, &without, counter, prices) {
             None => break,
-            Some(true) => {
+            Some(Verdict::Lethal) => {
                 line = without;
                 at = 0;
             }
-            Some(false) => at += 1,
+            Some(_) => at += 1,
         }
     }
     Some(line)
@@ -458,4 +472,99 @@ pub fn lethal_hint(state: &GameState, seat: PlayerId, should_stop: Option<&dyn F
         find_lethal(&worlds, seat, &counter, LETHAL_HINT_NODES, Prices::NONE).is_some()
     }))
     .unwrap_or(false)
+}
+
+#[cfg(test)]
+mod tests {
+    use jackioh_engine::testkit::{json, scenario};
+
+    use super::*;
+    use crate::config::AI_BUDGET;
+    use crate::simulate::surcharge_nodes;
+
+    const P1: PlayerId = PlayerId::P1;
+    /// #8 Mr. Vanilla, a 4/4 with no keywords.
+    const VANILLA: &str = "core-008";
+    /// #96 My Pawn: an attack it would answer costs `AI_SEARCH.ai_turn_trap_nodes` more (R4809001).
+    const MY_PAWN: &str = "core-096";
+
+    /// p1 on turn 9 with Mr. Vanilla on the field since before this turn and nothing in hand, against a
+    /// hero at `health`; with `pawn`, p2 has My Pawn face-down in its backrow. p1's ids come first, so
+    /// the two worlds share them.
+    fn vanilla_into(health: i32, pawn: bool) -> GameState {
+        jackioh_cards::register_all();
+        let backrow = if pawn { json!([MY_PAWN]) } else { json!([]) };
+        scenario(json!({
+            "seed": "lethal-r4807000", "active": P1, "turn": 9,
+            "p1": { "field": [VANILLA], "library": [VANILLA, VANILLA] },
+            "p2": { "health": health, "backrow": backrow, "library": [VANILLA, VANILLA] },
+        }))
+        .state()
+        .clone()
+    }
+
+    /// The Vanilla's attack on the enemy hero.
+    fn swing(state: &GameState) -> ActionBody {
+        let attacker_id = active_units_of(state, P1)
+            .first()
+            .map(|unit| unit.id.clone())
+            .unwrap_or_default();
+        ActionBody::Attack {
+            attacker_id,
+            target_id: format!("hero-{}", P1.opponent().as_str()),
+        }
+    }
+
+    /// The first walk's slice, as `find_lethal` gives it.
+    fn quick() -> impl NodeCounter {
+        create_node_counter(AI_SEARCH.lethal_quick_nodes as usize, None)
+    }
+
+    #[test]
+    fn r4807000_an_attack_the_quick_slice_cannot_pay_for_cuts_the_first_walk() {
+        let trapped = vanilla_into(3, true);
+        assert!(
+            1 + surcharge_nodes(&trapped, P1, &swing(&trapped)) > AI_SEARCH.lethal_quick_nodes as usize,
+            "the attack's surcharge fits the quick slice"
+        );
+        assert!(
+            matches!(
+                depth_first(std::slice::from_ref(&trapped), P1, &quick(), Prices::NONE),
+                Walk::Cut
+            ),
+            "a walk that skipped a step it could not pay for read as a searched tree"
+        );
+    }
+
+    #[test]
+    fn r4807000_a_replay_the_quick_slice_cannot_pay_for_on_another_world_cuts_the_first_walk() {
+        let worlds = [vanilla_into(3, false), vanilla_into(3, true)];
+        let line = [swing(&worlds[0])];
+        assert_eq!(swing(&worlds[0]), swing(&worlds[1]));
+        assert_eq!(
+            wins_on(&worlds[1..], P1, &line, &quick(), Prices::NONE),
+            Some(Verdict::Unpaid)
+        );
+        let roomy = create_node_counter(AI_BUDGET.lethal_nodes, None);
+        assert_eq!(
+            wins_on(&worlds[1..], P1, &line, &roomy, Prices::NONE),
+            Some(Verdict::Dead),
+            "My Pawn cancels the lethal attack"
+        );
+        assert!(
+            matches!(depth_first(&worlds, P1, &quick(), Prices::NONE), Walk::Cut),
+            "a lethal the slice could not pay to prove on the other world read as a searched tree"
+        );
+    }
+
+    #[test]
+    fn a_first_walk_that_pays_every_step_still_reads_a_tree_without_a_lethal_as_searched() {
+        // The Vanilla's 4 does not reach 5, so My Pawn would not answer and no surcharge applies.
+        let worlds = [vanilla_into(5, true), vanilla_into(5, true)];
+        assert_eq!(surcharge_nodes(&worlds[0], P1, &swing(&worlds[0])), 0);
+        assert!(matches!(
+            depth_first(&worlds, P1, &quick(), Prices::NONE),
+            Walk::Exhausted
+        ));
+    }
 }

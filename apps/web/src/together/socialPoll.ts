@@ -8,7 +8,8 @@
 // player's own is open or just sent: that room expires, and the follow that takes the challenger to
 // the board rides this poll (`ChallengeToast.tsx`, `follow.ts`).
 // R3214000: the poll also holds the tab's social socket (`socialSocket.ts`). While it is live (its first
-// `social` frame came) the server pushes the same read whenever it changes, and the poll sends nothing;
+// `social` frame came) the server pushes the same read whenever it changes, and the poll sends nothing
+// but while a challenge of the player's own is open or just sent (R4984001: the follow rides the poll);
 // it reads at once when the socket drops and goes on at its pace until another is live. The socket's
 // `chat` and `friends` pushes go to their listeners (`onChatPush`, `onFriendsPush`): an open chat and an
 // open friends list read again; its `lobby` and `lobbyInvite` pushes go to `onLobbyPush` and
@@ -140,12 +141,14 @@ function tick(): void {
   // R3214000: a socket that is down (never opened, refused for an older token) opens again with this
   // one, and one opened for a token the session no longer holds is replaced.
   socket?.retry();
-  // The live socket pushes what this would read.
-  if (reads.live) return;
+  // The live socket pushes what this would read. R4984001: but while a challenge of the tab's own is
+  // open or just sent, the poll reads at its pace all the same: the friend's join is one pushed read,
+  // and the follow (`ChallengeToast.tsx`) asks for the game once a read.
+  if (reads.live && !keepPolling()) return;
   const started = generation;
   getSocial().then(
     (answer) => {
-      if (started !== generation || reads.live) return;
+      if (started !== generation || (reads.live && !keepPolling())) return;
       applySocial(answer);
     },
     (cause: unknown) => {

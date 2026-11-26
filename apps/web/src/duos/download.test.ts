@@ -5,7 +5,7 @@ import { CATALOG_VERSION } from "@jackioh/cards";
 import { describe, expect, it } from "vitest";
 
 import { REPLAY_JSON_MAX_BYTES, REPLAY_JSON_MAX_STEPS } from "../replay/config.ts";
-import { REPLAY_JSON_FORMAT, parseReplayJsonFile, readReplayJsonFile } from "../replay/download.ts";
+import { REPLAY_JSON_FORMAT, readReplayJsonFile, replayStepsOf } from "../replay/download.ts";
 import { ReplayFailure } from "../replay/source.ts";
 import { duosView } from "../test/fixtures.ts";
 import type { DuosReplaySteps } from "./DuosReplay.tsx";
@@ -95,7 +95,7 @@ describe("R1242000 downloading a co-op replay", () => {
     expect(refusal(fileJson({ catalogVersion: "v0.0.0" }))).toBe(otherPatch);
     expect(refusal(fileJson({ catalogVersion: undefined }))).toBe(otherPatch);
     // The co-op file is no 1v1 replay.
-    const failure: unknown = await parseReplayJsonFile(duosReplayJsonFile(STEPS)).then(
+    const failure: unknown = await readReplayJsonFile(duosReplayJsonFile(STEPS)).then(replayStepsOf).then(
       () => null,
       (cause: unknown) => cause,
     );

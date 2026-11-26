@@ -1,28 +1,32 @@
 //! The moves the search considers, in the order it considers them. `legal_actions` is the only source
 //! (so the AI can never offer what the reducer refuses), minus R84's skipped actions (R188: the AI
-//! never concedes, offers or accepts a draw) and minus the mulligan, which `decide` answers itself.
+//! never concedes, offers or accepts a draw), minus the mulligan, which `decide` answers itself, and minus
+//! the plays of a last-resort card it may not play yet (R4783040).
 
 use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::afflictions::Affliction;
 use jackioh_engine::effects::PLAGUE_PLACEMENT_HOOK;
 use jackioh_engine::{
     ActionBody, ActionType, AttackTarget, CardInstance, CostOptions, FengShuiOutcome, GameState, KeywordKind,
-    PlayerId, Position, Row, Selection, SetAs, UnitView, ZoneChoice, ZoneSlot, active_units_of, adjacent,
-    attack_mod_for, attack_restriction, beneath_at, canonical, card_at, carried_at, cleave_struck,
-    converts_to, damage_pool_of, effective_cost, effective_life, find_instance, find_instance_mut, flags_of,
-    has_keyword, is_locked, lane_multiplier_for, legal_actions, midlane_lanes_of, pierces,
-    position_after_switch, row_size, slot_of, strike_back_multiplier_for, subsystems, takes_strike_back,
-    unit_damage_cap, unit_view,
+    PlayerId, Position, Row, Selection, SetAs, UnitView, ZoneChoice, ZoneSlot, acting_with_flag,
+    active_units_of, adjacent, attack_mod_for, attack_restriction, beneath_at, canonical, card_at,
+    carried_at, cleave_struck, converts_to, damage_pool_of, effective_cost, effective_life, find_def,
+    find_instance, find_instance_mut, flags_of, has_keyword, is_locked, lane_multiplier_for, legal_actions,
+    midlane_lanes_of, pierces, position_after_switch, row_size, slot_of, strike_back_multiplier_for,
+    subsystems, unit_damage_cap, unit_view,
 };
 use serde_json::Value;
 
-use crate::config::{AI_EVAL, AI_SAME_CARD_PLAYS_PER_TURN, AI_SEARCH};
+use crate::config::{
+    AI_EVAL, AI_LAST_RESORT, AI_LAST_RESORT_DIRE_LIFE, AI_LAST_RESORT_REFILLED, AI_SAME_CARD_PLAYS_PER_TURN,
+    AI_SEARCH,
+};
 use crate::evaluate::{
     Prices, afflicted_before_swing, can_swing, crumbles_before_swing, dead_in_hand, deft_in_defense,
     exiles_what_it_damages, face_threat, feng_shui_acts, feng_shui_verdict, plague_bomb_on_field,
 };
 use crate::lethal::ready_gap;
-use crate::reply::{face_value, trade_value};
+use crate::reply::{face_value, fight, trade_value};
 
 /// Canonical JSON of an action body (keys sorted, SURFACE §5.2), for equality across determinizations.
 pub fn action_key(action: &ActionBody) -> String {
@@ -324,79 +328,15 @@ pub(crate) fn cleaved_neighbours_with(
         .collect()
 }
 
-/// Tier 1: an attack on a unit it kills and survives, read from the layers and the combat's own
-/// reads (`exchange`). Divine Shield or Indestructible on the target means no kill; a Ranged attacker
-/// survives any target that is not Ranged (R783000). Either side's hit skips the other's Armor when
-/// it pierces (§4.4 step 2, R346), and each side's hit is capped by the side it hits (§4.4 step 3,
-/// R2179005). With `AI_EVAL.pool_and_conversion_read`, a hit that Burns or is Toxic instead kills
-/// nothing (step 3a, R4064001), and each side's damage pools soak what they have left of the hit on it
-/// (step 3b, R4064000). A hit from a side that exiles what it damages removes with any damage, as a
-/// Poisonous one does (R1124, R4065001).
+/// Tier 1: an attack on a unit it kills and survives, as the reply's `fight` reads the two blows: no
+/// kill through Divine Shield or Indestructible, no strike back on a Ranged attacker unless the target
+/// is Ranged too (R783000), each hit past the other's Armor when it pierces (§4.4 step 2, R346) and
+/// capped by the side it hits (step 3, R2179005), a converted hit killing nothing (step 3a, R4064001),
+/// the damage pools soaking theirs (step 3b, R4064000), and a side that exiles what it damages removing
+/// with any damage, as a Poisonous one does (R1124, R4065001).
 fn kills_and_survives(state: &GameState, attacker: &CardInstance, target: &CardInstance) -> bool {
-    let a = unit_view(state, attacker);
-    let t = unit_view(state, target);
-    if has_keyword(&t.keywords, KeywordKind::DivineShield)
-        || has_keyword(&t.keywords, KeywordKind::Indestructible)
-    {
-        return false;
-    }
-    let read = AI_EVAL.pool_and_conversion_read;
-    if read && converts_to(state, attacker).is_some() {
-        return false;
-    }
-    let combat = exchange(state, attacker, &a, target, &t);
-    let dealt = if pierces(state, Some(attacker), None) {
-        combat.hit
-    } else {
-        (combat.hit - t.armor).max(0)
-    };
-    let dealt = unit_damage_cap(state, target).map_or(dealt, |cap| dealt.min(cap));
-    let dealt = if read {
-        dealt - dealt.min(damage_pool_of(state, target.controller, false))
-    } else {
-        dealt
-    };
-    if dealt <= 0 {
-        return false;
-    }
-    let kills = dealt >= t.health || combat.poisonous || exiles_what_it_damages(state, attacker, &AI_EVAL);
-    if !kills {
-        return false;
-    }
-    // R783000: the engine's own read — no strike back reaches it, a First Strike one included.
-    if !takes_strike_back(state, attacker, target) {
-        return true;
-    }
-    if has_keyword(&a.keywords, KeywordKind::FirstStrike)
-        && !has_keyword(&t.keywords, KeywordKind::FirstStrike)
-    {
-        return true;
-    }
-    if has_keyword(&a.keywords, KeywordKind::DivineShield)
-        || has_keyword(&a.keywords, KeywordKind::Indestructible)
-    {
-        return true;
-    }
-    let taken = if pierces(state, Some(target), None) {
-        combat.strike_back
-    } else {
-        (combat.strike_back - a.armor).max(0)
-    };
-    let taken = unit_damage_cap(state, attacker).map_or(taken, |cap| taken.min(cap));
-    let taken = if !read {
-        taken
-    } else if converts_to(state, target).is_some() {
-        0
-    } else {
-        taken - taken.min(damage_pool_of(state, attacker.controller, false))
-    };
-    if taken <= 0 {
-        return true;
-    }
-    if has_keyword(&t.keywords, KeywordKind::Poisonous) || exiles_what_it_damages(state, target, &AI_EVAL) {
-        return false;
-    }
-    taken < a.health
+    let fought = fight(state, attacker, target);
+    fought.kills && !fought.dies
 }
 
 fn attack_tier(state: &GameState, seat: PlayerId, attacker_id: &str, target_id: &str) -> i32 {
@@ -425,7 +365,7 @@ fn even_trade(state: &GameState, attacker_id: &str, target_id: &str, prices: &Pr
 /// #2825: where an attack on the enemy hero or a winning trade stands among the move order's first
 /// attacks, by the opponent model's own values (`reply.rs`'s `ranked_attacks`): a hit on the hero by
 /// `face_value` (`AI_EVAL.win` for each when `face_is_lethal`), a hit on a unit by `trade_value`.
-fn front_value(
+pub(crate) fn front_value(
     state: &GameState,
     seat: PlayerId,
     action: &ActionBody,
@@ -493,13 +433,17 @@ enum Auspice {
     /// R4154403: the seat's own acting Feng Shui's Activate, a free Auspicious Rock, before every play.
     Judge,
     Rewarded,
+    /// R4783041: a play judged neither way whose element generates another card of the hand's, while a
+    /// Feng Shui of the seat's own acts (`bridges`), before the other plain sources.
+    Bridge,
     Plain,
     Punished,
 }
 
 /// R3951100: the `Auspice` of `action`'s source while a Feng Shui acts (`judging`): a play by the verdict
-/// its card would get now (`feng_shui_verdict`), an Activate or a power, which no Feng Shui judges, plain.
-/// Plain for every source with none acting, so the move order is unchanged without one.
+/// its card would get now (`feng_shui_verdict`), a plain one that bridges to a reward (`bridges`, R4783041)
+/// before the rest, an Activate or a power, which no Feng Shui judges, plain. Plain for every source with
+/// none acting, so the move order is unchanged without one.
 fn auspice(state: &GameState, seat: PlayerId, action: &ActionBody, judging: bool) -> Auspice {
     if judging && judges_own_rock(state, seat, action) {
         return Auspice::Judge;
@@ -510,11 +454,40 @@ fn auspice(state: &GameState, seat: PlayerId, action: &ActionBody, judging: bool
     if !judging {
         return Auspice::Plain;
     }
-    match find_instance(state, instance_id).and_then(|card| feng_shui_verdict(state, seat, card)) {
+    let Some(card) = find_instance(state, instance_id) else {
+        return Auspice::Plain;
+    };
+    match feng_shui_verdict(state, seat, card) {
         Some((FengShuiOutcome::Positive, _)) => Auspice::Rewarded,
         Some((FengShuiOutcome::Negative, _)) => Auspice::Punished,
+        None if bridges(state, seat, card) => Auspice::Bridge,
         None => Auspice::Plain,
     }
+}
+
+/// R4783041: while a Feng Shui of `seat`'s own acts, whether its face-up play of `card` would leave an element
+/// that generates the element of another card in its hand a Feng Shui would judge (R981), so that card's play
+/// next is rewarded: the free Auspicious Rock (水) before a 木 card, a 金 card before the Rock. An own Feng Shui
+/// rewards its controller on either face (R984); a card a play leaves no record of (R982), or one without a
+/// definition, bridges nothing. Two plays are the chain the search plays through; this only keeps its first
+/// step ahead of the other plain sources, so a level's `branching` cut does not drop it.
+fn bridges(state: &GameState, seat: PlayerId, card: &CardInstance) -> bool {
+    if !acting_with_flag(state, seat, |flags| flags.feng_shui)
+        || find_def(Some(state), &card.def_id).is_none()
+        || !subsystems::feng_shui::judged(state, card)
+    {
+        return false;
+    }
+    let left = subsystems::feng_shui::element_of(state, &card.def_id);
+    state.players[seat].hand.iter().any(|next| {
+        next.id != card.id
+            && find_def(Some(state), &next.def_id).is_some()
+            && subsystems::feng_shui::judged(state, next)
+            && subsystems::feng_shui::reaction(
+                Some(left),
+                subsystems::feng_shui::element_of(state, &next.def_id),
+            ) == Some(FengShuiOutcome::Positive)
+    })
 }
 
 /// R4154403: whether `action` is an Activate of a Feng Shui of `seat`'s own (a card whose running face holds
@@ -583,25 +556,21 @@ fn enemy_first(state: &GameState, seat: PlayerId, variants: Vec<ActionBody>) -> 
         }
     }
     at_hero.extend(at_cards);
-    let mut enemy = at_hero.into_iter();
-    let mut other = rest.into_iter();
-    let mut out: Vec<ActionBody> = Vec::new();
-    loop {
-        match (enemy.next(), other.next()) {
-            (None, None) => break,
-            (aimed, unaimed) => {
-                out.extend(aimed);
-                out.extend(unaimed);
-            }
-        }
-    }
-    out
+    dealt_in_rounds([at_hero.as_slice(), rest.as_slice()].into_iter())
+}
+
+/// Every group's first action, then every group's second, …, the groups in the order given.
+fn dealt_in_rounds<'a>(groups: impl Iterator<Item = &'a [ActionBody]> + Clone) -> Vec<ActionBody> {
+    let rounds = groups.clone().map(<[ActionBody]>::len).max().unwrap_or(0);
+    (0..rounds)
+        .flat_map(|round| groups.clone().filter_map(move |group| group.get(round).cloned()))
+        .collect()
 }
 
 /// What kind of play or activation a variant represents, so that different ways of being played
 /// (biggest/smallest X, Embiggen, Equip, face-down, Tribute sets) get their first candidate
 /// before any way repeats a second lane or target (#1778).
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 struct WayKey {
     x: Option<i32>,
     embiggen: Option<bool>,
@@ -612,6 +581,13 @@ struct WayKey {
 }
 
 fn way_key(action: &ActionBody) -> WayKey {
+    let sorted = |tributes: &Option<Vec<String>>| {
+        tributes.as_ref().map(|tributes| {
+            let mut sorted = tributes.clone();
+            sorted.sort();
+            sorted
+        })
+    };
     match action {
         ActionBody::Play {
             x,
@@ -625,35 +601,17 @@ fn way_key(action: &ActionBody) -> WayKey {
             embiggen: *embiggen,
             equip: *equip == Some(true),
             face_down: face_down.is_some(),
-            tributes: tributes.as_ref().map(|t| {
-                let mut sorted = t.clone();
-                sorted.sort();
-                sorted
-            }),
+            tributes: sorted(tributes),
             ability: None,
         },
         ActionBody::Activate {
             ability, tributes, ..
         } => WayKey {
-            x: None,
-            embiggen: None,
-            equip: false,
-            face_down: false,
-            tributes: tributes.as_ref().map(|t| {
-                let mut sorted = t.clone();
-                sorted.sort();
-                sorted
-            }),
+            tributes: sorted(tributes),
             ability: ability.clone(),
+            ..WayKey::default()
         },
-        _ => WayKey {
-            x: None,
-            embiggen: None,
-            equip: false,
-            face_down: false,
-            tributes: None,
-            ability: None,
-        },
+        _ => WayKey::default(),
     }
 }
 
@@ -710,7 +668,6 @@ struct Way {
     variants: Vec<ActionBody>,
     price: i32,
     tribute_cost: (i32, Vec<i32>),
-    first_seen: usize,
 }
 
 /// Tier 2: round-robin across source instances (every source's first variant, then every second, …),
@@ -744,16 +701,15 @@ fn round_robin(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> Vec
         }
     }
     for source in &mut sources {
-        let mut way_groups: IndexMap<WayKey, (usize, Vec<ActionBody>)> = IndexMap::new();
-        for (idx, action) in std::mem::take(&mut source.variants).into_iter().enumerate() {
-            let key = way_key(&action);
-            let entry = way_groups.entry(key).or_insert_with(|| (idx, Vec::new()));
-            entry.1.push(action);
+        // Ways in the order first seen, which the sort below keeps among equals (`sort_by` is stable).
+        let mut way_groups: IndexMap<WayKey, Vec<ActionBody>> = IndexMap::new();
+        for action in std::mem::take(&mut source.variants) {
+            way_groups.entry(way_key(&action)).or_default().push(action);
         }
 
         let mut ways: Vec<Way> = way_groups
             .into_iter()
-            .map(|(key, (first_seen, variants))| {
+            .map(|(key, variants)| {
                 let variants = enemy_first(state, seat, variants);
                 let price = way_price(state, &variants[0]);
                 let tribute_cost = tribute_set_cost(state, key.tributes.as_deref());
@@ -761,7 +717,6 @@ fn round_robin(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> Vec
                     variants,
                     price,
                     tribute_cost,
-                    first_seen,
                 }
             })
             .collect();
@@ -791,41 +746,12 @@ fn round_robin(state: &GameState, seat: PlayerId, actions: &[ActionBody]) -> Vec
                     }
                 })
                 .then_with(|| a.tribute_cost.cmp(&b.tribute_cost))
-                .then_with(|| a.first_seen.cmp(&b.first_seen))
         });
-
-        let way_rounds = ways.iter().map(|w| w.variants.len()).max().unwrap_or(0);
-        let mut assembled = Vec::new();
-        for round in 0..way_rounds {
-            for way in &ways {
-                if let Some(variant) = way.variants.get(round) {
-                    assembled.push(variant.clone());
-                }
-            }
-        }
-        source.variants = assembled;
+        source.variants = dealt_in_rounds(ways.iter().map(|way| way.variants.as_slice()));
     }
-    let mut ordered: Vec<(usize, Source)> = sources.into_iter().enumerate().collect();
-    ordered.sort_by(|(ia, a), (ib, b)| {
-        a.auspice
-            .cmp(&b.auspice)
-            .then(b.cost.cmp(&a.cost))
-            .then(ia.cmp(ib))
-    });
-    let rounds = ordered
-        .iter()
-        .map(|(_, source)| source.variants.len())
-        .max()
-        .unwrap_or(0);
-    let mut out: Vec<ActionBody> = Vec::new();
-    for round in 0..rounds {
-        for (_, source) in &ordered {
-            if let Some(variant) = source.variants.get(round) {
-                out.push(variant.clone());
-            }
-        }
-    }
-    out
+    // Equal sources keep the order their first actions came in.
+    sources.sort_by(|a, b| a.auspice.cmp(&b.auspice).then(b.cost.cmp(&a.cost)));
+    dealt_in_rounds(sources.iter().map(|source| source.variants.as_slice()))
 }
 
 /// R90, R1282: When a card has more tribute sets than AI_SEARCH.tribute_sets, keep the ones
@@ -855,24 +781,14 @@ fn cap_tribute_sets(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>)
         if sets.len() <= limit {
             continue;
         }
-        let mut scored: Vec<(usize, Vec<String>, usize)> = sets
-            .into_iter()
-            .enumerate()
-            .map(|(idx, set)| {
-                let own_spent = set
-                    .iter()
-                    .filter(|id| find_instance(state, id).is_some_and(|c| c.controller == seat))
-                    .count();
-                (idx, set, own_spent)
-            })
-            .collect();
-
-        scored.sort_by(|(ia, _, oa), (ib, _, ob)| oa.cmp(ob).then(ia.cmp(ib)));
-
-        let kept: indexmap::IndexSet<Vec<String>> =
-            scored.into_iter().take(limit).map(|(_, set, _)| set).collect();
-
-        allowed_sets_by_instance.insert(instance_id, kept);
+        // Fewest of the seat's own cards first; equal sets keep the order seen (the sort is stable).
+        let mut scored = sets;
+        scored.sort_by_cached_key(|set| {
+            set.iter()
+                .filter(|id| find_instance(state, id).is_some_and(|c| c.controller == seat))
+                .count()
+        });
+        allowed_sets_by_instance.insert(instance_id, scored.into_iter().take(limit).collect());
     }
 
     if allowed_sets_by_instance.is_empty() {
@@ -899,7 +815,8 @@ fn cap_tribute_sets(state: &GameState, seat: PlayerId, actions: Vec<ActionBody>)
 }
 
 /// The candidates' membership, before their order is fixed: legal_actions minus AI_SKIPPED_ACTIONS
-/// (R84) and `mulligan`, with `play` zone variants collapsed (`collapse_zones`, R2203001).
+/// (R84), `mulligan` and the last-resort plays held back (`hold_last_resorts`, R4783040), with `play` zone
+/// variants collapsed (`collapse_zones`, R2203001).
 /// `candidate_actions` orders it; a caller that only asks membership is spared the ordering's reads.
 pub fn candidate_set(state: &GameState, seat: PlayerId) -> Vec<ActionBody> {
     candidate_pool(state, seat, legal_actions(state, seat))
@@ -941,8 +858,94 @@ fn pool(
             !skipped.contains(&kind) && kind != ActionType::Mulligan && !played_out(played, action)
         })
         .collect();
+    let legal = hold_last_resorts(state, seat, legal);
     let capped = cap_tribute_sets(state, seat, legal);
     collapse_zones(state, seat, &capped, zone_cap)
+}
+
+/// R4783040: the card `action` plays, when it plays one the AI keeps for a last resort (`AI_LAST_RESORT`),
+/// from the hand or the graveyard.
+fn last_resort_played<'a>(state: &'a GameState, action: &ActionBody) -> Option<&'a CardInstance> {
+    let ActionBody::Play { instance_id, .. } = action else {
+        return None;
+    };
+    find_instance(state, instance_id).filter(|card| AI_LAST_RESORT.contains(&card.def_id.as_str()))
+}
+
+/// R4783040: `legal` less the plays of the cards the AI keeps for a last resort (`AI_LAST_RESORT`) while
+/// `seat` may not play them (`last_resort_due`), a card of `AI_LAST_RESORT_REFILLED` kept too while a card of
+/// its own would put cards back into its deck (`refills_own_deck`). Every other action stays, the Trade of a
+/// Tradable last-resort card among them. All of it reads what the seat can see, its own hand, field and turn
+/// and the public board, so every world a determinization samples keeps or drops the same plays (R185). A
+/// seat with no such card in its hand or graveyard, where a play comes from, is spared the walk.
+fn hold_last_resorts(state: &GameState, seat: PlayerId, legal: Vec<ActionBody>) -> Vec<ActionBody> {
+    let side = &state.players[seat];
+    if !side
+        .hand
+        .iter()
+        .chain(&side.graveyard)
+        .any(|card| AI_LAST_RESORT.contains(&card.def_id.as_str()))
+    {
+        return legal;
+    }
+    if !legal
+        .iter()
+        .any(|action| last_resort_played(state, action).is_some())
+        || last_resort_due(state, seat, &legal)
+    {
+        return legal;
+    }
+    legal
+        .into_iter()
+        .filter(|action| match last_resort_played(state, action) {
+            None => true,
+            Some(card) => {
+                AI_LAST_RESORT_REFILLED.contains(&card.def_id.as_str())
+                    && refills_own_deck(state, seat, &card.id)
+            }
+        })
+        .collect()
+}
+
+/// R4783040: whether `seat` may play a last-resort card now: its times are dire, its life at most
+/// `AI_LAST_RESORT_DIRE_LIFE` or the face damage the enemy's board could deal it next turn (`face_threat`)
+/// reaching it, or it has no other play: it has played no card this turn (`turnLog.playedIds`) and `legal`
+/// plays no card but last-resort ones. A turn that played its other cards first has had its plays, so the
+/// card is not the turn's last action whenever the rest of the hand ran out.
+fn last_resort_due(state: &GameState, seat: PlayerId, legal: &[ActionBody]) -> bool {
+    let life = effective_life(state, seat);
+    if life <= AI_LAST_RESORT_DIRE_LIFE || face_threat(state, seat.opponent()) >= life {
+        return true;
+    }
+    state.players[seat].turn_log.played_ids.is_empty()
+        && !legal.iter().any(|action| {
+            matches!(action, ActionBody::Play { .. }) && last_resort_played(state, action).is_none()
+        })
+}
+
+/// R4783040: what a card's text says when it puts cards into its owner's own deck: "Shuffle … into your
+/// deck" (Classic #30 Recycle, Stinkyscape+ #24 Forced Propagation, …) and M #54 Money
+/// Machine's "into both decks". An opponent's deck ("into your opponent's deck") is none of them.
+const REFILL_PHRASES: &[&str] = &["into your deck", "into both decks"];
+
+/// R4783040: whether a card in `seat`'s own hand other than `except` shuffles cards into its deck by the
+/// text of the face it runs (`REFILL_PHRASES`): a way to put cards back into a deck A Glimpse into the
+/// Endless Sea has emptied. Only the hand counts: the Glimpse exiles every permanent, so a card on the field
+/// would be gone before it could refill anything. The seat's own hand is all cards it can read.
+fn refills_own_deck(state: &GameState, seat: PlayerId, except: &str) -> bool {
+    state.players[seat]
+        .hand
+        .iter()
+        .any(|card| card.id != except && shuffles_into_own_deck(state, card))
+}
+
+/// R4783040: whether `card`'s running face's text shuffles cards into its owner's deck (`REFILL_PHRASES`).
+fn shuffles_into_own_deck(state: &GameState, card: &CardInstance) -> bool {
+    find_def(Some(state), &card.def_id).is_some_and(|def| {
+        let face = if card.radiant { &def.radiant } else { &def.base };
+        let text = face.text.to_lowercase();
+        text.contains("shuffle") && REFILL_PHRASES.iter().any(|phrase| text.contains(phrase))
+    })
 }
 
 /// `candidate_set` (R84's concede/offerDraw/answerDraw skipped, `play` zone variants collapsed to at most
@@ -1261,7 +1264,7 @@ mod tests {
 
     /// The Jlockeed Large Language Model token, a 2/5 GIGA Taunt.
     const LLM: &str = "stinkyscapeplus-t-ai-04";
-    /// S #77 Yuma, a 1/8 Flying, so it stands in a backrow zone (R1081000).
+    /// S #77 Yuma, a 1/3 Flying, so it stands in a backrow zone (R1081000).
     const YUMA: &str = "stinkyscape-077";
     /// S #79 Orca, a 3/3 Flying.
     const ORCA: &str = "stinkyscape-079";
@@ -1634,6 +1637,32 @@ mod tests {
         ]
     }
 
+    /// `attacker`'s reads of the fight `entry` forecasts are the forecast's: the static trader's kill and
+    /// death (`trade_value`, `fight`) and the move order's tier 1 read (`kills_and_survives`).
+    fn reads_as_forecast(
+        state: &GameState,
+        attacker: &CardInstance,
+        entry: &jackioh_engine::AttackForecast,
+        label: &str,
+    ) {
+        let target = find_instance(state, &entry.target_id).expect("the target");
+        assert_eq!(
+            trade_value(state, attacker, &entry.target_id, Prices::NONE).kills,
+            entry.kills,
+            "{label}: trade_value's kill, {entry:?}"
+        );
+        assert_eq!(
+            fight(state, attacker, target).dies,
+            !entry.survives,
+            "{label}: fight's death, {entry:?}"
+        );
+        assert_eq!(
+            kills_and_survives(state, attacker, target),
+            entry.kills && entry.survives,
+            "{label}: kills_and_survives, {entry:?}"
+        );
+    }
+
     /// R2179005, R3100000: on every legal attack of one body on another, the static trader's kill and death
     /// (`trade_value`, `fight`) and the move order's tier 1 read (`kills_and_survives`) are the engine's
     /// combat forecast's, Anime Armor's cap among Armor, Divine Shield, Indestructible, Poisonous, Pierce and
@@ -1652,22 +1681,7 @@ mod tests {
                         continue;
                     }
                     assert_eq!(entry.target_id, target_id, "{a} into {t}");
-                    let target = find_instance(&state, &entry.target_id).expect("the target");
-                    assert_eq!(
-                        trade_value(&state, attacker, &entry.target_id, Prices::NONE).kills,
-                        entry.kills,
-                        "{a} into {t}: trade_value's kill, {entry:?}"
-                    );
-                    assert_eq!(
-                        fight(&state, attacker, target).dies,
-                        !entry.survives,
-                        "{a} into {t}: fight's death, {entry:?}"
-                    );
-                    assert_eq!(
-                        kills_and_survives(&state, attacker, target),
-                        entry.kills && entry.survives,
-                        "{a} into {t}: kills_and_survives, {entry:?}"
-                    );
+                    reads_as_forecast(&state, attacker, &entry, &format!("{a} into {t}"));
                     checked += 1;
                 }
             }
@@ -1825,8 +1839,6 @@ mod tests {
 
     /// S+ #42 Force Projector, a Field Spell: the first 5 damage its side would take each turn is nullified.
     const PROJECTOR: &str = "stinkyscapeplus-042";
-    /// S+ #151 Volcanic Rounds, a 3/1: "Damage dealt Burns."
-    const VOLCANIC: &str = "stinkyscapeplus-151";
     /// S+ #153 Noxious Rounds, a 1/1: "Damage dealt is Toxic."
     const NOXIOUS: &str = "stinkyscapeplus-153";
     /// A 3/3 with no text.
@@ -1886,85 +1898,80 @@ mod tests {
         assert_eq!((second.dealt, second.soaked, second.kills), (2, 1, false));
     }
 
-    /// R4064001, §4.4 step 3a: a 6/2 Rounds unit's hit on a 3/3 is its Burn (or Toxic) 6, no damage: no kill
+    /// R4064001, §4.4 step 3a: a 6/2 Noxious Rounds unit's hit on a 3/3 is its Toxic 6, no damage: no kill
     /// in `blow`, `kills_and_survives` or `trade_value`, whose Lifesteal heals nothing, and the counter is
-    /// worth something. A Divine Shield still takes the hit (step 1), and the engine plays it alike.
+    /// worth something. A Divine Shield still takes the hit (step 1), and the engine plays it alike. (S+ #151
+    /// Volcanic Rounds Burned alike until issue #4783 made its hits land and also Burn, R4783001.)
     #[test]
     fn r4064001_a_converted_blow_kills_nothing_and_heals_nothing() {
-        for rounds in [VOLCANIC, NOXIOUS] {
+        let rounds = NOXIOUS;
+        let (s, attacker, target) = armed(
+            rounds_six_two(rounds),
+            &[],
+            json!(THREE_THREE),
+            &[],
+            (false, false),
+        );
+        let (state, a, t) = (s.state(), s.card(attacker.as_str()), s.card(target.as_str()));
+        let read = blow(&side_of(state, a), 6, false, &side_of(state, t));
+        assert_eq!(
+            (read.dealt, read.kills, read.soaked, read.converted),
+            (0, false, 0, 6),
+            "{rounds}"
+        );
+        assert!(!kills_and_survives(state, a, t), "{rounds}");
+        assert!(!trade_value(state, a, &target, Prices::NONE).kills, "{rounds}");
+
+        let shielded = |keywords: &[Keyword]| {
             let (s, attacker, target) = armed(
                 rounds_six_two(rounds),
-                &[],
+                keywords,
                 json!(THREE_THREE),
                 &[],
                 (false, false),
             );
-            let (state, a, t) = (s.state(), s.card(attacker.as_str()), s.card(target.as_str()));
-            let read = blow(&side_of(state, a), 6, false, &side_of(state, t));
-            assert_eq!(
-                (read.dealt, read.kills, read.soaked, read.converted),
-                (0, false, 0, 6),
-                "{rounds}"
-            );
-            assert!(!kills_and_survives(state, a, t), "{rounds}");
-            assert!(!trade_value(state, a, &target, Prices::NONE).kills, "{rounds}");
+            trade_value(s.state(), s.card(attacker.as_str()), &target, Prices::NONE)
+        };
+        let plain = shielded(&[Keyword::DivineShield]);
+        let lifesteal = shielded(&[Keyword::DivineShield, Keyword::Lifesteal]);
+        assert!(!plain.kills && plain.value > 0.0, "{rounds}: {}", plain.value);
+        assert!((lifesteal.value - plain.value).abs() < 1e-9, "{rounds}");
 
-            let shielded = |keywords: &[Keyword]| {
-                let (s, attacker, target) = armed(
-                    rounds_six_two(rounds),
-                    keywords,
-                    json!(THREE_THREE),
-                    &[],
-                    (false, false),
-                );
-                trade_value(s.state(), s.card(attacker.as_str()), &target, Prices::NONE)
-            };
-            let plain = shielded(&[Keyword::DivineShield]);
-            let lifesteal = shielded(&[Keyword::DivineShield, Keyword::Lifesteal]);
-            assert!(!plain.kills && plain.value > 0.0, "{rounds}: {}", plain.value);
-            assert!((lifesteal.value - plain.value).abs() < 1e-9, "{rounds}");
+        let (s, attacker, target) = armed(
+            rounds_six_two(rounds),
+            &[],
+            json!(THREE_THREE),
+            &[Keyword::DivineShield],
+            (false, false),
+        );
+        let popped = blow(
+            &side_of(s.state(), s.card(attacker.as_str())),
+            6,
+            false,
+            &side_of(s.state(), s.card(target.as_str())),
+        );
+        assert!(popped.pops_shield && popped.converted == 0, "{rounds}");
 
-            let (s, attacker, target) = armed(
-                rounds_six_two(rounds),
-                &[],
-                json!(THREE_THREE),
-                &[Keyword::DivineShield],
-                (false, false),
-            );
-            let popped = blow(
-                &side_of(s.state(), s.card(attacker.as_str())),
-                6,
-                false,
-                &side_of(s.state(), s.card(target.as_str())),
-            );
-            assert!(popped.pops_shield && popped.converted == 0, "{rounds}");
-
-            let (mut s, attacker, target) = armed(
-                rounds_six_two(rounds),
-                &[Keyword::DivineShield, Keyword::Lifesteal],
-                json!(THREE_THREE),
-                &[],
-                (false, false),
-            );
-            s.attack(attacker.as_str(), target.as_str());
-            let struck = s.card(target.as_str());
-            assert_eq!(unit_view(s.state(), struck).health, 3, "{rounds}");
-            let counter = if rounds == VOLCANIC {
-                jackioh_engine::burn_on(struck)
-            } else {
-                jackioh_engine::toxic_on(struck)
-            };
-            assert_eq!(counter, 6, "{rounds}");
-            assert_eq!(
-                s.state().players[PlayerId::P1].hero.health,
-                ARMED_LIFE,
-                "{rounds}"
-            );
-        }
+        let (mut s, attacker, target) = armed(
+            rounds_six_two(rounds),
+            &[Keyword::DivineShield, Keyword::Lifesteal],
+            json!(THREE_THREE),
+            &[],
+            (false, false),
+        );
+        s.attack(attacker.as_str(), target.as_str());
+        let struck = s.card(target.as_str());
+        assert_eq!(unit_view(s.state(), struck).health, 3, "{rounds}");
+        assert_eq!(jackioh_engine::toxic_on(struck), 6, "{rounds}");
+        assert_eq!(
+            s.state().players[PlayerId::P1].hero.health,
+            ARMED_LIFE,
+            "{rounds}"
+        );
     }
 
-    /// R4064001, R4064000: against a hero at 6, a 6/2 Rounds unit's hit is no win but is worth the life
-    /// its counter's ticks take; a 6/4 Mr. Vanilla's is the win, and behind p2's Force Projector it deals
+    /// R4064001, R4064000: against a hero at 6, a 6/2 Noxious Rounds unit's hit is no win but is worth the
+    /// life its counter's ticks take; a 6/4 Mr. Vanilla's is the win, and behind p2's Force Projector it deals
     /// 1, as the engine deals it.
     #[test]
     fn r4064001_r4064000_face_value_reads_the_counter_and_the_pool() {
@@ -1974,11 +1981,9 @@ mod tests {
             s.state_mut().players[PlayerId::P2].hero.health = LIFE;
             (s, attacker)
         };
-        for rounds in [VOLCANIC, NOXIOUS] {
-            let (s, attacker) = at_six(rounds_six_two(rounds), false);
-            let value = face_value(s.state(), s.card(attacker.as_str()), PlayerId::P2, false);
-            assert!(value > 0.0 && value < AI_EVAL.win, "{rounds}: {value}");
-        }
+        let (s, attacker) = at_six(rounds_six_two(NOXIOUS), false);
+        let value = face_value(s.state(), s.card(attacker.as_str()), PlayerId::P2, false);
+        assert!(value > 0.0 && value < AI_EVAL.win, "{value}");
         let vanilla = json!({ "def": VANILLA, "statsOverride": { "attack": 6, "health": 4 } });
         let (s, attacker) = at_six(vanilla.clone(), false);
         let value = face_value(s.state(), s.card(attacker.as_str()), PlayerId::P2, false);
@@ -1996,17 +2001,12 @@ mod tests {
     fn pool_bodies() -> Vec<(&'static str, &'static str, Vec<Keyword>)> {
         vec![
             ("Mr. Vanilla", VANILLA, vec![]),
-            ("Volcanic Rounds", VOLCANIC, vec![]),
             ("Noxious Rounds", NOXIOUS, vec![]),
             ("Divine Shield", VANILLA, vec![Keyword::DivineShield]),
             ("Poisonous", VANILLA, vec![Keyword::Poisonous]),
             ("First Strike", VANILLA, vec![Keyword::FirstStrike]),
             ("Indestructible", VANILLA, vec![Keyword::Indestructible]),
-            (
-                "First Strike Volcanic Rounds",
-                VOLCANIC,
-                vec![Keyword::FirstStrike],
-            ),
+            ("First Strike Noxious", NOXIOUS, vec![Keyword::FirstStrike]),
             ("Poisonous Noxious Rounds", NOXIOUS, vec![Keyword::Poisonous]),
         ]
     }
@@ -2037,22 +2037,7 @@ mod tests {
                             continue;
                         }
                         assert_eq!(entry.target_id, target_id, "{a} into {t}, {pools:?}");
-                        let target = find_instance(state, &entry.target_id).expect("the target");
-                        assert_eq!(
-                            trade_value(state, attacker, &entry.target_id, Prices::NONE).kills,
-                            entry.kills,
-                            "{a} into {t}, {pools:?}: trade_value's kill, {entry:?}"
-                        );
-                        assert_eq!(
-                            fight(state, attacker, target).dies,
-                            !entry.survives,
-                            "{a} into {t}, {pools:?}: fight's death, {entry:?}"
-                        );
-                        assert_eq!(
-                            kills_and_survives(state, attacker, target),
-                            entry.kills && entry.survives,
-                            "{a} into {t}, {pools:?}: kills_and_survives, {entry:?}"
-                        );
+                        reads_as_forecast(state, attacker, &entry, &format!("{a} into {t}, {pools:?}"));
                         checked += 1;
                     }
                 }
@@ -2061,25 +2046,36 @@ mod tests {
         assert_eq!(checked, settings.len() * bodies.len() * bodies.len());
     }
 
-    /// R4171000: the seeded random-policy games the agreement test below plays, and its floors: the
-    /// Unit-target attacks it judged, the distinct cards (`def_id`s) at either end of one, and the
-    /// attacks a First Strike defender stopped whose blow would otherwise deal damage or pop a shield.
+    /// R4171000: the seeded random-policy games the agreement test below plays at least, the most it
+    /// plays while a floor is unmet, and its floors: the Unit-target attacks it judged, the distinct
+    /// cards (`def_id`s) at either end of one, and the attacks a First Strike defender stopped whose
+    /// blow would otherwise deal damage or pop a shield. The floors are what the games happen to deal,
+    /// so it plays on until they are met (#848's search, the pool probe's fix for a test of a roll):
+    /// one more card in a pool deals other decks (R380), and under the pool probe 16 games met one
+    /// stopped blow.
     const FORECAST_AGREEMENT_GAMES: usize = 16;
+    const FORECAST_AGREEMENT_MAX_GAMES: usize = 256;
     const FORECAST_AGREEMENT_MIN_ATTACKS: usize = 1000;
     const FORECAST_AGREEMENT_MIN_CARDS: usize = 150;
     const FORECAST_AGREEMENT_MIN_STOPPED: usize = 5;
 
     /// R4171000, R3100000: on every state of `FORECAST_AGREEMENT_GAMES` games of SPEC §10.7's random
-    /// policy, decks dealt from every set, every Unit-target entry of either seat's combat forecast is the
-    /// static trader's `fight` (what the attacker deals, up to the target's health for a Trample hit,
-    /// §4.4 step 5; what it takes; the kill; the survival; the pop) and the move order's
-    /// `kills_and_survives`.
+    /// policy, and as many more as its floors need, decks dealt from every set, every Unit-target entry
+    /// of either seat's combat forecast is the static trader's `fight` (what the attacker deals, up to
+    /// the target's health for a Trample hit, §4.4 step 5; what it takes; the kill; the survival; the
+    /// pop) and the move order's `kills_and_survives`.
     #[test]
     fn r4171000_the_trade_reads_agree_with_the_combat_forecast_on_seeded_games() {
         jackioh_cards::register_all();
         let (mut judged, mut stopped) = (0, 0);
         let mut met: IndexSet<String> = IndexSet::new();
-        for game in 0..FORECAST_AGREEMENT_GAMES {
+        for game in 0..FORECAST_AGREEMENT_MAX_GAMES {
+            let floors_met = judged >= FORECAST_AGREEMENT_MIN_ATTACKS
+                && met.len() >= FORECAST_AGREEMENT_MIN_CARDS
+                && stopped >= FORECAST_AGREEMENT_MIN_STOPPED;
+            if game >= FORECAST_AGREEMENT_GAMES && floors_met {
+                break;
+            }
             let seed = format!("forecast-agreement:{game}");
             let deck = |seat: PlayerId| {
                 build_ai_deck(

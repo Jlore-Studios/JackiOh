@@ -1,7 +1,7 @@
-//! Burn and Toxic (issue #3540, R3540000–R3540005; issue #4154, R4154000, R4154001): the counters the verbs
-//! add, the Toxic tick at the start of its owner's turn and the Burn tick at the end of every turn,
-//! the riders and the conversion on a hit, a Vanilla's clearing and the view, proved on the fixtures of
-//! `fixtures/burn_toxic.rs` with no card yet.
+//! Burn and Toxic (issue #3540, R3540000–R3540005; issue #4154, R4154000, R4154001; issue #4783, R4783001):
+//! the counters the verbs add, the Toxic tick at the start of its owner's turn and the Burn tick at the end
+//! of every turn, the riders and the conversion on a hit, a Vanilla's clearing and the view, proved on the
+//! fixtures of `fixtures/burn_toxic.rs` with no card yet.
 
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -651,6 +651,82 @@ mod r3540003_conversion {
         s.attack(&volcanic, &stone);
         assert_eq!(burn(&s, &stone), 0);
         assert_eq!(s.card(&stone).damage, 0);
+    }
+}
+
+mod r4783001_damage_dealt_also_burns {
+    use super::*;
+
+    #[test]
+    fn r4783001_the_hit_deals_its_damage_and_then_burns_what_it_dealt() {
+        let mut s = board(
+            "r4783001-armored",
+            json!({ "field": [MAGMA] }),
+            json!({ "field": [ARMORED] }),
+        );
+        let (magma, armored) = (id_at(&s, P1, 1), id_at(&s, P2, 1));
+        assert!(
+            query::converts_to(s.state(), s.card(&magma)).is_none(),
+            "no conversion: the hit lands"
+        );
+        s.attack(&magma, &armored);
+        assert_eq!(s.card(&armored).damage, 2, "4 damage past Armor 2");
+        assert!(
+            hits(s.events())
+                .iter()
+                .any(|(target, amount, _)| target == &armored && *amount == 2),
+            "a damage event names the target"
+        );
+        assert_eq!(burn(&s, &armored), 2, "the Burn is what the hit dealt");
+
+        let mut s = board("r4783001-hero", json!({ "field": [MAGMA] }), json!({}));
+        let magma = id_at(&s, P1, 1);
+        s.attack(&magma, "hero");
+        s.expect_health(P2, HERO_HEALTH - 4);
+        assert_eq!(query::hero_burn_of(s.state(), P2), 4);
+    }
+
+    #[test]
+    fn r4783001_no_burn_after_a_kill_or_a_hit_that_dealt_nothing() {
+        let mut s = board(
+            "r4783001-kill",
+            json!({ "field": [MAGMA] }),
+            json!({ "field": [FRAIL] }),
+        );
+        let (magma, frail) = (id_at(&s, P1, 1), id_at(&s, P2, 1));
+        s.attack(&magma, &frail);
+        assert!(
+            s.events().iter().any(
+                |event| matches!(event, GameEvent::Destroyed { instance_id, .. } if instance_id == &frail)
+            ),
+            "the hit killed its target"
+        );
+        assert!(counter_events(s.events(), CounterKind::Burn).is_empty());
+
+        for (seed, def) in [("r4783001-shield", SHIELDED), ("r4783001-stone", STONE)] {
+            let mut s = board(seed, json!({ "field": [MAGMA] }), json!({ "field": [def] }));
+            let (magma, target) = (id_at(&s, P1, 1), id_at(&s, P2, 1));
+            s.attack(&magma, &target);
+            assert_eq!(s.card(&target).damage, 0, "{def}");
+            assert!(counter_events(s.events(), CounterKind::Burn).is_empty());
+            assert_eq!(burn(&s, &target), 0, "{def}");
+        }
+    }
+
+    #[test]
+    fn r4783001_an_also_burns_rider_adds_its_n_to_what_the_hit_dealt_in_one_gain() {
+        let mut s = board(
+            "r4783001-equip",
+            json!({ "hand": [ROUNDS], "field": [MAGMA] }),
+            json!({ "field": [PLAIN] }),
+        );
+        s.play(ROUNDS, json!({ "zone": 1, "equip": true }));
+        let (host, plain) = (id_at(&s, P1, 1), id_at(&s, P2, 1));
+        let attack = unit_view(s.state(), s.card(&host)).attack;
+        s.attack(&host, &plain);
+        assert_eq!(s.card(&plain).damage, attack);
+        assert_eq!(burn(&s, &plain), attack + BT_ROUNDS);
+        assert_eq!(counter_events(s.last_events(), CounterKind::Burn).len(), 1);
     }
 }
 

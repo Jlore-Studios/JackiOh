@@ -1,5 +1,5 @@
-//! S #177 Cloaking Module (SPEC §8.10 row 177): (2) Unit, Rare, 2/2 → 4/4, a card of the Stinkyscape
-//! set (#2521).
+//! S #177 Cloaking Module (SPEC §8.10 row 177): (1) Unit, Rare, 3/2 → 6/4 (2/2 → 4/4 until issue #4783,
+//! catalog data the shipped catalogs keep, R767000), a card of the Stinkyscape set (#2521).
 //!   Base:    "Starship Piece, Cloaked, Immutable"
 //!   Radiant: "Starship Piece, Cloaked, Immutable, Immune to Spells"
 //!
@@ -60,13 +60,13 @@ mod tests {
             crate::give_equip(&mut s, MODULE);
             s.play(MODULE, json!({ "zone": 1, "equip": true }));
 
-            // R77: the host is kept, a 4/4 that is also a 2/2.
+            // R77: the host is kept, a 4/4 that is also a 3/2.
             assert!(
                 s.last_events().iter().any(|event| event.event_type() == GameEventType::Fused),
                 "the Equip fused"
             );
             assert_eq!(s.unit_at(P1, 1).id, host.id, "the host keeps its zone");
-            s.expect_stats(&host, json!({ "attack": 6, "health": 6 }));
+            s.expect_stats(&host, json!({ "attack": 7, "health": 6 }));
             // A piece equipped onto a Unit that is no piece leaves it no piece (R1852001).
             assert!(!has_keyword(&s.stats(&host).keywords, KeywordKind::StarshipPiece));
             assert!(s.unit(P1, 2).is_none(), "nothing else took a zone");
@@ -88,7 +88,7 @@ mod tests {
 
             let unit = s.unit(P1, 1).expect("it took a unit zone");
             assert_eq!(unit.def_id, MODULE);
-            s.expect_stats(&unit, json!({ "attack": 2, "health": 2 }));
+            s.expect_stats(&unit, json!({ "attack": 3, "health": 2 }));
         }
 
         #[test]
@@ -120,10 +120,10 @@ mod tests {
         use super::*;
 
         #[test]
-        fn is_4_4_and_immune_to_spells_a_spells_sweep_passes_it_by() {
+        fn is_6_4_and_immune_to_spells_a_spells_sweep_passes_it_by() {
             let mut s = standing(true, json!([NETHER, ANCHOR]), json!([ANCHOR]));
             let me = s.unit_at(P1, 1);
-            s.expect_stats(&me, json!({ "attack": 4, "health": 4 }));
+            s.expect_stats(&me, json!({ "attack": 6, "health": 4 }));
             assert!(has_keyword(&s.stats(&me).keywords, KeywordKind::ImmuneToSpells));
             assert!(immune_to_spells(s.state(), &me));
             let spell = s.card(NETHER).clone();

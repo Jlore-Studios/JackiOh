@@ -24,9 +24,14 @@
 // Reference cards, as readable text, no face (PlainText.tsx). R4673000, R4673001: their Face control (All, Normal
 // or Radiant, kept in the address) reads every figure they and the Sets tab show on one face, against that face's
 // own field and band, and the drill-down on the page's face and patch, with each face's rate and the Radiant gap.
+// R4676000, R4676001: the drill-down's Extended stats toggle swaps its details for one panel, kept in the address as
+// `extended`: a Segmented of the sections the card has, Choices (each choice's share, tier and Adjusted) and Radiant
+// vs normal (each face's figures and the gap). R4679000, R4679001: and between them Outputs, each card the card made
+// or offered with its share, tier and Adjusted against its siblings and a pick's offers and pick rate, a row opening
+// that card's drill-down; while the panel is open, "Tokens this card makes" gives way as the details do.
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
-import { KEYWORD_KINDS, SHIPPED_SETS, type CardDef, type CardDefs, type KeywordKind } from "@jackioh/shared";
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactElement, type ReactNode } from "react";
+import { KEYWORD_KINDS, SHIPPED_SETS, fillParams, type CardDef, type CardDefs, type KeywordKind } from "@jackioh/shared";
 import Username from "../auth/Username.tsx";
 import { CardDefsProvider } from "../cards/index.ts";
 import { chineseName, drawnInChinese, readerName, readerTerms } from "../cards/chinese.ts";
@@ -39,6 +44,7 @@ import { EmptyState } from "../empty/EmptyState.tsx";
 import { Dialog } from "../game/Dialog.tsx";
 import { currentCatalog } from "../game/currentCatalog.ts";
 import { useFaceModel } from "../game/faces.ts";
+import { modeText } from "../game/modeText.ts";
 import { formatNumber, t, useLocale } from "../i18n/i18n.ts";
 import {
   ApiRequestError,
@@ -49,6 +55,9 @@ import {
   getStatsVersions,
   type CardDrillDownResponse,
   type CardFaces,
+  type PublicOutputRow,
+  type PublicVariantGroup,
+  type PublicVariantRow,
   type CardStatsOptions,
   type PublicFaceFigures,
   type PublicPlayVersion,
@@ -348,17 +357,237 @@ function gapPercent(share: number): string {
   });
 }
 
+/** R4676001, R4679001: the Extended stats panel's sections, in its Segmented's order. */
+type ExtendedSection = "choices" | "outputs" | "faces";
+const EXTENDED_SECTIONS: readonly ExtendedSection[] = ["choices", "outputs", "faces"];
+
+/** R4676001, R4679001: a section's segment, its name and its test id. */
+function sectionOption(section: ExtendedSection): { label: string; testId: string } {
+  switch (section) {
+    case "choices":
+      return { label: t("Choices"), testId: statsTestid.extendedChoicesTab };
+    case "outputs":
+      return { label: t("Outputs"), testId: statsTestid.extendedOutputsTab };
+    case "faces":
+      return { label: t("Radiant vs normal"), testId: statsTestid.extendedFacesTab };
+  }
+}
+
+/** R4676001: the panel an address opens beside `card`; none, or a section the page does not know, is closed. */
+function extendedOf(params: URLSearchParams): ExtendedSection | null {
+  const asked = params.get("extended");
+  return EXTENDED_SECTIONS.find((known) => known === asked) ?? null;
+}
+
+/** R4676000: a choice's share of the card's plays, a whole percent. */
+function shareText(share: number): string {
+  return formatNumber(share, { style: "percent", maximumFractionDigits: 0 });
+}
+
+/** R4676000: the heading of a kind of choice's table. */
+function kindTitle(kind: PublicVariantGroup["kind"]): string {
+  switch (kind) {
+    case "mode":
+      return t("Options chosen");
+    case "x":
+      return t("X paid");
+    case "embiggen":
+      return t("Embiggened");
+  }
+}
+
 /**
- * R4673001: the drill-down's line under the faces, on every face: the card's Normal and Radiant adjusted rates,
- * each read against its own face's field, and Radiant's minus Normal's with its 95% range.
+ * R4676000: a choice's words: a Choose One row's options each as the card names it in play (`modeText`), its
+ * numbers filled from the face the page reads, a "choose two"'s pair joined; the server's label otherwise.
  */
-function FaceLine({ faces }: { faces: CardFaces }): ReactElement {
-  const { gap } = faces;
+function choiceLabel(row: PublicVariantRow, def: CardDef | undefined, radiant: boolean): string {
+  if (row.options === undefined || row.options.length === 0) return row.label;
+  const face = radiant ? "radiant" : "base";
+  return row.options
+    .map((option) => {
+      const { label } = modeText(def?.id, option, radiant);
+      return def === undefined ? label : fillParams({ params: def.params, base: { ...def.base, text: label }, radiant: { ...def.radiant, text: label } }, face);
+    })
+    .join(" + ");
+}
+
+/**
+ * R4676000: the panel's Choices: one table per kind of choice the card has, its rows by share as the server sends
+ * them, each with the deck table's tier chip, Adjusted and, with the ranges shown, its 95% range.
+ */
+function ChoicesTables({
+  variants,
+  def,
+  radiant,
+  showRanges,
+}: {
+  variants: PublicVariantGroup[];
+  def: CardDef | undefined;
+  radiant: boolean;
+  showRanges: boolean;
+}): ReactElement {
   return (
-    <p className="stats-drilldown-face-line" data-testid={statsTestid.drillDownFaceLine}>
-      <span data-testid={statsTestid.drillDownFaceNormal}>{t("Normal {rate}", { rate: faceRateText(faces.normal) })}</span>
-      <span data-testid={statsTestid.drillDownFaceRadiant}>{t("Radiant {rate}", { rate: faceRateText(faces.radiant) })}</span>
-      <span data-testid={statsTestid.drillDownFaceGap}>
+    <section className="stats-drilldown-section" data-testid={statsTestid.extendedChoices}>
+      {variants.map((group) => (
+        <table key={group.kind} className="stats-table stats-extended-table" data-kind={group.kind} data-testid={statsTestid.extendedKind}>
+          <caption>{kindTitle(group.kind)}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{t("Choice")}</th>
+              <th scope="col">{t("Share")}</th>
+              <th scope="col">{t("Tier")}</th>
+              <th scope="col">{t("Adjusted")}</th>
+              <th scope="col">{t("Games")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {group.rows.map((row) => (
+              <tr key={row.key} data-key={row.key} data-testid={statsTestid.extendedRow}>
+                <th scope="row">{choiceLabel(row, def, radiant)}</th>
+                <td>{shareText(row.share)}</td>
+                <td>
+                  <TierChip tier={row.hasEnoughGames ? row.tier : null} testid={statsTestid.extendedTier} />
+                </td>
+                <td>
+                  {row.hasEnoughGames ? adjustedText(row.adjustedWinRate) : t("not enough games")}
+                  {showRanges && row.hasEnoughGames && (
+                    <RangeText low={row.adjustedLow} high={row.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
+                  )}
+                </td>
+                <td>{formatNumber(row.games)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ))}
+    </section>
+  );
+}
+
+/**
+ * R4679001: the panel's Outputs: one row per card the card made or offered, in the server's order, best adjusted
+ * first, each with the deck table's Card cell, its name, share, games, tier chip and Adjusted (its 95% range with the
+ * ranges shown), and a Discover-like card's Offered and Pick rate. A row opens that card's own drill-down.
+ */
+function OutputsTable({
+  outputs,
+  showRanges,
+  onOpen,
+}: {
+  outputs: PublicOutputRow[];
+  showRanges: boolean;
+  onOpen: (id: string) => void;
+}): ReactElement {
+  const titleId = useId();
+  const picks = outputs.some((row) => row.offered !== undefined);
+  return (
+    <section className="stats-drilldown-section" data-testid={statsTestid.extendedOutputs}>
+      {outputs.length === 0 ? (
+        <p className="stats-empty-sub">{t("No outputs recorded yet.")}</p>
+      ) : (
+        <TableScroll labeledBy={titleId}>
+          <table className="stats-table stats-extended-table">
+            <caption id={titleId}>{t("Outputs")}</caption>
+            <thead>
+              <tr>
+                <th className="stats-th--thumb" scope="col">
+                  {t("Card")}
+                </th>
+                <th scope="col">{t("Name")}</th>
+                <th scope="col">{t("Share")}</th>
+                <th scope="col">{t("Games")}</th>
+                <th scope="col">{t("Tier")}</th>
+                <th scope="col">{t("Adjusted")}</th>
+                {picks && <th scope="col">{t("Offered")}</th>}
+                {picks && <th scope="col">{t("Pick rate")}</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {outputs.map((row) => (
+                <tr
+                  key={row.key}
+                  className="stats-tr"
+                  data-key={row.key}
+                  data-testid={statsTestid.extendedOutputRow}
+                  onClick={() => onOpen(row.key)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onOpen(row.key);
+                    }
+                  }}
+                >
+                  <td className="stats-td stats-td--thumb">
+                    <span className="stats-card-thumb-badge" data-rarity={row.rarity}>
+                      {row.cost}
+                    </span>
+                  </td>
+                  <th scope="row">
+                    <span className="stats-card-name-link">{shownName(row.key, row.label)}</span>
+                  </th>
+                  <td>{shareText(row.share)}</td>
+                  <td>{formatNumber(row.games)}</td>
+                  <td>
+                    <TierChip tier={row.hasEnoughGames ? row.tier : null} testid={statsTestid.extendedTier} />
+                  </td>
+                  <td>
+                    {row.hasEnoughGames ? adjustedText(row.adjustedWinRate) : t("not enough games")}
+                    {showRanges && row.hasEnoughGames && (
+                      <RangeText low={row.adjustedLow} high={row.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
+                    )}
+                  </td>
+                  {picks && <td>{row.offered === undefined ? "—" : formatNumber(row.offered)}</td>}
+                  {picks && <td>{row.pickRate === undefined ? "—" : shareText(row.pickRate)}</td>}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TableScroll>
+      )}
+    </section>
+  );
+}
+
+/**
+ * R4673001, R4676001: the panel's Radiant vs normal: the card's Normal and Radiant figures, each read against its own
+ * face's field, as two rows of the deck table's cells, and Radiant's adjusted rate minus Normal's with its 95% range.
+ */
+function FacesTable({ faces, showRanges }: { faces: CardFaces; showRanges: boolean }): ReactElement {
+  const { gap } = faces;
+  const row = (label: string, figures: PublicFaceFigures, testid: string): ReactElement => (
+    <tr data-testid={testid}>
+      <th scope="row">{label}</th>
+      <td>
+        <TierChip tier={figures.hasEnoughGames ? figures.tier : null} testid={statsTestid.extendedTier} />
+      </td>
+      <td>
+        {faceRateText(figures)}
+        {showRanges && figures.hasEnoughGames && (
+          <RangeText low={figures.adjustedLow} high={figures.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
+        )}
+      </td>
+      <td>{formatNumber(figures.games)}</td>
+    </tr>
+  );
+  return (
+    <section className="stats-drilldown-section" data-testid={statsTestid.drillDownFaceLine}>
+      <table className="stats-table stats-extended-table">
+        <thead>
+          <tr>
+            <th scope="col">{t("Face")}</th>
+            <th scope="col">{t("Tier")}</th>
+            <th scope="col">{t("Adjusted")}</th>
+            <th scope="col">{t("Games")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {row(t("Normal"), faces.normal, statsTestid.drillDownFaceNormal)}
+          {row(t("Radiant"), faces.radiant, statsTestid.drillDownFaceRadiant)}
+        </tbody>
+      </table>
+      <p className="stats-extended-gap" data-testid={statsTestid.drillDownFaceGap}>
         {t("Radiant gap {gap}", {
           gap:
             gap === null
@@ -369,8 +598,8 @@ function FaceLine({ faces }: { faces: CardFaces }): ReactElement {
                   high: gapPercent(gap.high),
                 }),
         })}
-      </span>
-    </p>
+      </p>
+    </section>
   );
 }
 
@@ -438,6 +667,8 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     () => EXPERIMENTAL_VIEWS.find((known) => known === initialParams.get("experimental")) ?? "running",
   );
   const [pastOnly, setPastOnly] = useState(initialParams.get("past") === "1");
+  // R4676001: the drill-down's Extended stats panel and its section, kept in the address beside `card`.
+  const [extended, setExtended] = useState<ExtendedSection | null>(() => (initialParams.get("card") ? extendedOf(initialParams) : null));
   // R2895000: the 95% ranges under Win rate and Adjusted, off by default.
   const [showRanges, setShowRanges] = useState(initialParams.get("ranges") === "1");
   const [mode, setMode] = useState<StatsMode>(() => modeOf(initialParams));
@@ -516,6 +747,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     if (cardDrillDownId && drillDownVersion) params.set("version", drillDownVersion);
     if (experimentalView !== "running") params.set("experimental", experimentalView);
     if (pastOnly) params.set("past", "1");
+    if (cardDrillDownId && drillDownVersion === null && extended) params.set("extended", extended);
     if (mode !== DEFAULT_MODE) params.set("mode", mode);
     if (face !== DEFAULT_FACE) params.set("face", face);
     if (showRanges) params.set("ranges", "1");
@@ -536,6 +768,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     view,
     cardDrillDownId,
     drillDownVersion,
+    extended,
     experimentalView,
     pastOnly,
     mode,
@@ -751,10 +984,22 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     drillDownOpener.current = opener;
     setCardDrillDownId(id);
     setDrillDownVersion(null);
+    setExtended(null);
+  };
+  // R4679001: an output row opens its card in the same dialog, its details shown. The row is gone with the panel, so
+  // the focus moves to the Extended stats toggle, which the new card keeps, and still comes back to whatever opened
+  // the dialog once it closes.
+  const extendedToggle = useRef<HTMLButtonElement | null>(null);
+  const openOutput = (id: string): void => {
+    extendedToggle.current?.focus({ preventScroll: true });
+    setCardDrillDownId(id);
+    setDrillDownVersion(null);
+    setExtended(null);
   };
   const closeDrillDown = (): void => {
     setCardDrillDownId(null);
     setDrillDownVersion(null);
+    setExtended(null);
   };
 
   useEffect(() => {
@@ -939,6 +1184,7 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
     drillDownOpener.current = opener;
     setCardDrillDownId(version.card);
     setDrillDownVersion(version.first);
+    setExtended(null);
   };
   // R4680001: the open play version, and its card's versions either side of it.
   const versionsOfOpen = cardDrillDownId && versionsData ? versionsData.versions.filter((version) => version.card === cardDrillDownId) : [];
@@ -963,6 +1209,21 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
   // none from a server deployed before it.
   const drillDownFaces = drillDownLoading || drillDownError ? undefined : drillDownData?.faces;
   const drillDownTokens = drillDownDef ? tokensOf(drillDownDef) : [];
+  // R4676001: the panel's sections the open card has, Choices only when it offers a choice, R4679001 Outputs only when
+  // it made or offered a card or its text names a token; the one shown is the one asked for, or the first the card has.
+  const drillDownVariants = drillDownLoading || drillDownError ? [] : (drillDownData?.variants ?? []);
+  const drillDownOutputs = drillDownLoading || drillDownError ? [] : (drillDownData?.outputs ?? []);
+  const extendedSections = EXTENDED_SECTIONS.filter((section) => {
+    switch (section) {
+      case "choices":
+        return drillDownVariants.length > 0;
+      case "outputs":
+        return drillDownOutputs.length > 0 || drillDownTokens.length > 0;
+      case "faces":
+        return drillDownFaces !== undefined;
+    }
+  });
+  const extendedShown = extended !== null && extendedSections.includes(extended) ? extended : extendedSections[0];
   // R3887000: every card its text names, for the breakdown's Reference cards while Plain text is on.
   const drillDownRefs = drillDownDef ? referencesOf(drillDownDef) : [];
 
@@ -2104,7 +2365,6 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         </div>
                       </FullArtShown>
                     </OwnCopy>
-                    {drillDownFaces && <FaceLine faces={drillDownFaces} />}
                     <div className="stats-drilldown-actions">
                       <button
                         type="button"
@@ -2114,6 +2374,17 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         onClick={() => setDrillDownRadiant((shown) => !shown)}
                       >
                         {t("Show Radiant")}
+                      </button>
+                      {/* R4676001: the details column gives way to the Extended stats panel while pressed */}
+                      <button
+                        type="button"
+                        className="stats-drilldown-action"
+                        data-testid={statsTestid.extendedToggle}
+                        ref={extendedToggle}
+                        aria-pressed={extended !== null}
+                        onClick={() => setExtended((open) => (open === null ? (extendedSections[0] ?? "choices") : null))}
+                      >
+                        {t("Extended stats")}
                       </button>
                       <a
                         className="stats-drilldown-action button-secondary"
@@ -2131,7 +2402,8 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                         className="stats-drilldown-action"
                       />
                     </div>
-                    {!plain.shown && drillDownTokens.length > 0 && (
+                    {/* R4679001: it gives way while the Extended stats panel is open, as the details do */}
+                    {!plain.shown && extended === null && drillDownTokens.length > 0 && (
                       <section className="stats-drilldown-section stats-drilldown-tokens" data-testid={statsTestid.drillDownTokens}>
                         <h3>{t("Tokens this card makes")}</h3>
                         <ul className="stats-drilldown-token-list">
@@ -2202,6 +2474,35 @@ function StatsPage({ cardText }: { cardText: CardText }): ReactElement {
                       <button type="button" className="stats-retry-btn" onClick={() => setDrillDownAttempt((n) => n + 1)}>
                         {t("Retry")}
                       </button>
+                    </div>
+                  ) : drillDownData && extended !== null ? (
+                    <div className="stats-extended" data-testid={statsTestid.extendedPanel}>
+                      <h3 className="stats-extended-title">{t("Extended stats")}</h3>
+                      {extendedSections.length > 1 && extendedShown !== undefined && (
+                        <Segmented
+                          label={t("Extended stats")}
+                          value={extendedShown}
+                          onChange={setExtended}
+                          options={extendedSections.map((section) => ({
+                            value: section,
+                            ...sectionOption(section),
+                            className: "stats-view-btn",
+                          }))}
+                        />
+                      )}
+                      {extendedShown === "choices" && (
+                        <ChoicesTables
+                          variants={drillDownVariants}
+                          def={drillDownDef}
+                          radiant={detailsFace === "radiant"}
+                          showRanges={showRanges}
+                        />
+                      )}
+                      {extendedShown === "outputs" && (
+                        <OutputsTable outputs={drillDownOutputs} showRanges={showRanges} onOpen={openOutput} />
+                      )}
+                      {extendedShown === "faces" && drillDownFaces && <FacesTable faces={drillDownFaces} showRanges={showRanges} />}
+                      {extendedShown === undefined && <p className="stats-empty-sub">{t("Details unavailable.")}</p>}
                     </div>
                   ) : drillDownData ? (
                     <>

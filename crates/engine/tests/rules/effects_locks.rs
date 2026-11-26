@@ -6,14 +6,12 @@
 
 use jackioh_engine::effects::counters::{lock, unlock};
 use jackioh_engine::effects::locks::{
-    lock_lane, lock_own_zone, lock_played_zone, lock_random_zone, unlock_all, unlock_random_zone,
+    lock_lane, lock_played_zone, lock_random_zone, unlock_all, unlock_random_zone,
 };
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::combat::plain;
-use crate::rules::fixtures::field::{
-    banner, doom, eater, flush, leak, lockdown, notes_of, playing, unlocker,
-};
+use crate::rules::fixtures::field::{eater, flush, leak, lockdown, playing, unlocker};
 use crate::rules::fixtures::harness::{Bench, act_result, events_of_type, in_hand, put, slot};
 
 struct Played {
@@ -77,16 +75,6 @@ fn apply_as_p1(bench: &mut Bench, state: &mut GameState, effect: Effect, self_: 
 
 fn id_at(state: &GameState, at: ZoneSlot) -> Option<String> {
     card_at(state, at).map(|card| card.id.clone())
-}
-
-fn pluck<T: serde::Serialize>(events: &T, key: &str) -> Vec<Value> {
-    match serde_json::to_value(events).expect("events serialize") {
-        Value::Array(items) => items
-            .into_iter()
-            .map(|item| item.get(key).cloned().unwrap_or(Value::Null))
-            .collect(),
-        other => panic!("expected a list of events, got {other}"),
-    }
 }
 
 fn lane_zone(row: &str, lane: i32) -> Value {
@@ -286,50 +274,6 @@ mod b5_e20_lock_a_random_zone {
             id_at(&state, slot(PlayerId::P2, Row::Units, 1)),
             Some(unit.id.clone())
         );
-    }
-}
-
-mod b5_e20_lock_the_firing_trap_s_own_zone {
-    use super::*;
-
-    #[test]
-    fn doom_shroom_fires_locks_its_own_zone_and_is_consumed_the_zone_staying_locked_behind_it() {
-        let mut state = playing("lock-own");
-        let trap = put(
-            &mut state,
-            &doom.id,
-            slot(PlayerId::P2, Row::Backrow, 4),
-            json!({}),
-        );
-        let out = play(&mut state, &plain.id, Some((Row::Units, 1)), false);
-        assert!(is_locked(&out.state, slot(PlayerId::P2, Row::Backrow, 4)));
-        assert_eq!(id_at(&out.state, slot(PlayerId::P2, Row::Backrow, 4)), None);
-        let consumed = find_instance(&out.state, &trap.id);
-        assert_eq!(consumed.map(|card| card.zone.z()), Some(ZoneName::Graveyard));
-        assert_eq!(notes_of(consumed), Vec::<String>::new());
-        assert_eq!(
-            pluck(
-                &events_of_type(&out.events, GameEventType::TrapFired),
-                "instanceId"
-            ),
-            vec![json!(trap.id)]
-        );
-    }
-
-    #[test]
-    fn a_card_off_the_field_locks_nothing() {
-        let mut state = playing("lock-own-gone");
-        let mut card = put(
-            &mut state,
-            &banner.id,
-            slot(PlayerId::P1, Row::Backrow, 1),
-            json!({}),
-        );
-        state.players[PlayerId::P1].backrow[0] = None;
-        card.zone = Zone::Graveyard { player: PlayerId::P1 };
-        let mut sink = Bench::new(&state);
-        apply_as_p1(&mut sink, &mut state, lock_own_zone(), Some(&card));
-        assert_eq!(locked_zones(&state), Vec::<String>::new());
     }
 }
 

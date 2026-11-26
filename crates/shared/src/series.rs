@@ -350,24 +350,6 @@ pub enum SeriesRefusalReason {
     PicksMissing,
 }
 
-impl SeriesRefusalReason {
-    /// The wire literal (`"not_picking"`, …).
-    pub fn as_str(self) -> &'static str {
-        match self {
-            SeriesRefusalReason::NotPicking => "not_picking",
-            SeriesRefusalReason::Over => "over",
-            SeriesRefusalReason::PickClosed => "pick_closed",
-            SeriesRefusalReason::SlotOutOfRange => "slot_out_of_range",
-            SeriesRefusalReason::SlotWon => "slot_won",
-            SeriesRefusalReason::PickSealed => "pick_sealed",
-            SeriesRefusalReason::StalePick => "stale_pick",
-            SeriesRefusalReason::PickOpen => "pick_open",
-            SeriesRefusalReason::NotPlaying => "not_playing",
-            SeriesRefusalReason::PicksMissing => "picks_missing",
-        }
-    }
-}
-
 /// The reason and the sentence a player can read.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(

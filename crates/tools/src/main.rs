@@ -13,7 +13,6 @@ mod catalog;
 mod changed;
 mod claims;
 mod classify;
-mod dealt_fit;
 mod duos_fuzz;
 mod duos_gate;
 mod fork_screen;
@@ -71,6 +70,8 @@ enum Command {
     Replay(replay::Args),
     /// Hash one state object from stdin by the engine's hash_state; print `{"hash"}` (#4766).
     HashState(replay::HashStateArgs),
+    /// Fold `{seed, decks, log, state, …}` from stdin and hash its `state`; print `{"replayHash", "browserHash", "errors"}` (#4925).
+    ReplayCheck(replay::ReplayCheckArgs),
     /// Print one gate game turn by turn (part 22).
     Trace(trace::Args),
     /// Fold `{seed, decks, log, …}` to one position and print it and the AI's decision there (#834).
@@ -118,6 +119,7 @@ fn main() -> ExitCode {
         Command::Fx(args) => fx_census::run(args),
         Command::Replay(args) => replay::run(args),
         Command::HashState(args) => replay::run_hash_state(args),
+        Command::ReplayCheck(args) => replay::run_replay_check(args),
         Command::Trace(args) => trace::run(args),
         Command::Think(args) => think::run(args),
         Command::Catalog(args) => catalog::run(args),

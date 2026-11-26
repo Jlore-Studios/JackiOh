@@ -20,7 +20,7 @@
 //! effect reaches spared; through v0.6.6h it exiled the deck alone, which `script_v0_6_6h` keeps. Issue
 //! #4353 makes both faces' caster immune to fatigue damage for the rest of the game (R4353020): a
 //! `fatigueImmune` player modifier, expiry `never`, after the exiles and the Armor, so each later draw from
-//! the empty deck is a fatigue draw, counted and announced, that deals their hero nothing; through v0.6.8b
+//! the empty deck is a fatigue draw, counted and announced, that deals their hero nothing; through v0.6.8d
 //! it gave none, which `script_v0_6_8b` keeps.
 
 use jackioh_engine::prelude::*;
@@ -74,7 +74,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: the scripts through v0.6.8b, which gave no immunity to fatigue damage (issue #4353).
+/// R767000: the scripts through v0.6.8d, which gave no immunity to fatigue damage (issue #4353).
 /// `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_8b() -> CardScripts {
     CardScripts {
@@ -216,7 +216,7 @@ mod tests {
             assert_eq!(s.state().players[P1].hero.health, 200);
         }
 
-        /// R767000: through v0.6.8b it gave no immunity, so the empty deck's fatigue hits (issue #4353).
+        /// R767000: through v0.6.8d it gave no immunity, so the empty deck's fatigue hits (issue #4353).
         #[test]
         fn r767000_the_script_kept_for_v0_6_8b_leaves_fatigue_hitting() {
             crate::under_kept(ID, script_v0_6_8b(), || {

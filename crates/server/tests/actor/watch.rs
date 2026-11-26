@@ -464,6 +464,65 @@ mod b50_watching_a_friend {
     }
 
     #[tokio::test(start_paused = true)]
+    async fn b50_an_uppercase_hello_is_admitted_to_the_friends_live_match() {
+        // `uuid()` ids are digits-only, so uppercasing one is a no-op: the match id names hex
+        // letters instead, and without the fix the seat check misses and the hello is forbidden.
+        install_test_cards();
+        let app = empty_test_app().await;
+        let friend = account(&app, 11, "Fern").await;
+        let rival = account(&app, 12, "Rex").await;
+        let watcher = account(&app, 13, "Wes").await;
+        befriend(&app, &watcher, &friend).await;
+        let match_id = "67e55044-10b1-426f-9247-bb680e5fe0d01";
+        start_match(&app, match_id, &friend, &rival, false).await;
+        let p1 = create_fake_socket();
+        let p2 = create_fake_socket();
+        app.matches
+            .attach(&app, match_id, &friend.id, p1.socket())
+            .await
+            .expect("the friend attaches");
+        app.matches
+            .attach(&app, match_id, &rival.id, p2.socket())
+            .await
+            .expect("the rival attaches");
+        settle().await;
+        let served = serve(&app);
+        let client = served.connect(WATCH_PATH, &watcher.token).await;
+        client
+            .send_json(json!({
+                "type": "hello",
+                "matchId": match_id.to_ascii_uppercase(),
+                "friendId": friend.id.to_ascii_uppercase(),
+            }))
+            .await;
+        assert!(client.of_type("error").is_empty(), "{:?}", client.frames());
+        tokio::time::sleep(BEFORE_THE_PLAYERS_ACT).await;
+        for (socket, nonce) in [(&p1, "keep-p1"), (&p2, "keep-p2")] {
+            let view = last_view_of(socket);
+            let keep: Vec<Value> = view["you"]["hand"]
+                .as_array()
+                .expect("a hand")
+                .iter()
+                .map(|card| card["instanceId"].clone())
+                .collect();
+            socket.receive_json(json!({
+                "type": "action",
+                "action": { "type": "mulligan", "keep": keep, "nonce": nonce },
+            }));
+            settle().await;
+        }
+        let delay = ms(SPECTATE_DELAY_MS);
+        let (_, _, frame) = client
+            .wait_for(0, delay + DELAY_SLACK, |frame| {
+                frame["type"] == "view" && frame["view"]["phase"] == "main"
+            })
+            .await
+            .unwrap_or_else(|| panic!("the watcher never saw the turn begin: {:?}", client.frames()));
+        assert_eq!(frame["view"]["viewer"], "p1", "the friend's seat: {frame}");
+        assert!(client.of_type("error").is_empty(), "{:?}", client.frames());
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn b50_a_watchers_frames_after_hello_never_reach_the_reducer() {
         let w = world(false).await;
         w.keep_both().await;

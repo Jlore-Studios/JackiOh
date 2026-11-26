@@ -10,7 +10,8 @@ pub const ID: &str = "traininggrounds-012";
 
 fn fortify(radiant: bool) -> Script {
     Script {
-        targets: vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))],
+        // R656: a buff helps, so a random cast that targets enemies aims this at friends.
+        targets: vec![TargetDecl { aim: Some(TargetAim::Help), ..TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] })) }],
         cry: Some(hook(move |ctx| {
             let mut effects = vec![
                 buff(json_as(json!({ "target": { "of": "chosen" }, "health": param(&*ctx, "health") }))),
@@ -39,6 +40,17 @@ pub fn script() -> CardScripts {
     }
 }
 
+/// R767000: until its help aim shipped, the target declared no aim, so a stolen or random cast aimed it at
+/// enemies (issue #4844); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_before_help_aim() -> CardScripts {
+    let old = vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))];
+    let now = script();
+    CardScripts {
+        base: Script { targets: old.clone(), ..now.base },
+        radiant: Script { targets: old, ..now.radiant },
+    }
+}
+
 // TG #12 Fortify — SPEC §8.11 row TG 12, BUILD M13 row TG 12.
 #[cfg(test)]
 mod tests {
@@ -50,6 +62,10 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const FORTIFY: &str = "traininggrounds-012";
+    const PALANTIR: &str = "classic-004"; // Palantir: steals the play and casts it at enemies (R831001).
+    const MINE: &str = "stand-in (1) 3/3";
+    const THEIRS: &str = "stand-in (1) 4/4";
+    const FILLER: &str = "core-005";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const MOON: &str = "traininggrounds-007"; // Chosen by the Moon: Taunt, Armor 3 (once P3 builds it).
     const ARMORED: &str = "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn";
@@ -62,6 +78,35 @@ mod tests {
             "p1": { "hand": [{ "def": FORTIFY, "radiant": radiant }], "field": mine, "mana": 10, "library": filler(4) },
             "p2": { "hand": filler(1), "field": theirs, "library": filler(4) },
         }))
+    }
+
+    /// A (1) Cost Spell made a (2) Cost one by a `costMod` of 1: Palantir steals and casts it (R831001).
+    fn dear(def: &str) -> Value {
+        json!({ "def": def, "costMod": 1 })
+    }
+
+    /// P1 holds the Spell and a Unit, P2 a Unit and a face-up Palantir: P1 plays it on their own
+    /// Unit, Palantir steals it and casts it at enemies.
+    fn stolen_rig(spell: Value) -> (Scenario, CardInstance, CardInstance) {
+        let mut s = scenario(json!({
+            "seed": "audit-aim",
+            "p1": { "hand": [spell], "field": [{ "def": MINE, "lane": 1 }], "library": [FILLER, FILLER, FILLER], "mana": 10 },
+            "p2": { "hand": [FILLER], "field": [{ "def": THEIRS, "lane": 1 }],
+                    "backrow": [{ "def": PALANTIR, "faceUp": true }], "library": [FILLER, FILLER, FILLER] },
+        }));
+        let mine = s.unit_at(P1, 1);
+        let theirs = s.unit_at(P2, 1);
+        let cast = s.hand(P1)[0].id.clone();
+        s.play(cast.as_str(), pick::targets(pick::instance(&mine)));
+        (s, mine, theirs)
+    }
+
+    #[test]
+    fn r656_stolen_fortify_lands_on_its_casters_unit() {
+        let (s, mine, theirs) = stolen_rig(dear(FORTIFY));
+        assert!(s.pile(P2, "graveyard").iter().any(|card| card.def_id == FORTIFY), "P2 stole and cast it");
+        assert_eq!(s.stats(&theirs).max_health, 9, "the caster's own Unit takes the +5 Health");
+        assert_eq!(s.stats(&mine).max_health, 3, "the caster's enemy takes no buff");
     }
 
     fn armor(s: &Scenario, card: &CardInstance) -> i32 {
@@ -197,6 +242,23 @@ mod tests {
             let unit = s.unit_at(P1, 1);
             s.play(FORTIFY, pick::targets(pick::instance(&unit)));
             assert_eq!(keyword_count(&s, &unit, KeywordKind::DivineShield), 1);
+        }
+    }
+
+    mod before_help_aim {
+        use super::*;
+
+        use crate::scripts::training_grounds::c012_fortify::{ID, script_before_help_aim};
+
+        /// R767000: a game from before the help aim lands a stolen Fortify on the caster's enemy.
+        #[test]
+        fn r767000_a_game_before_the_help_aim_lands_a_stolen_fortify_on_the_casters_enemy() {
+            crate::under_kept(ID, script_before_help_aim(), || {
+                let (s, mine, theirs) = stolen_rig(dear(FORTIFY));
+                assert!(s.pile(P2, "graveyard").iter().any(|card| card.def_id == FORTIFY), "P2 stole and cast it");
+                assert_eq!(s.stats(&mine).max_health, 8, "the caster's enemy takes the +5 Health");
+                assert_eq!(s.stats(&theirs).max_health, 4, "the caster's own Unit takes no buff");
+            });
         }
     }
 }

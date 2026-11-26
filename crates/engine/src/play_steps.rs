@@ -629,7 +629,11 @@ pub fn validate_play(
     // would reach them (S #99's check multiplies by it). A Plague spend travels on no face the
     // draw reads, so its check stays below.
     crate::play_choices::refuse_x(sink.state, player, &card, owned.x)?;
-    crate::play_choices::refuse_embiggen(sink.state, &card, owned.embiggen)?;
+    // R1181002: a face-down play's embiggen is read off the card stamped set, which no Garden
+    // reaches (`why_face_down_refused`), so only a face-up play's is read off the card in hand here.
+    if owned.face_down.is_none() {
+        crate::play_choices::refuse_embiggen(sink.state, &card, owned.embiggen)?;
+    }
     if crate::random_targets::play_targets_random(sink.state, player, &card) && owned.face_down.is_none() {
         let face = crate::play_choices::face_for_action(sink.state, player, &card, &owned);
         let given = owned.targets.clone().unwrap_or_default();
@@ -838,7 +842,8 @@ fn tributes_an_enemy(state: &GameState, run: &PlayRun) -> bool {
 /// is (§8 #52's base face) takes the opponent's leftmost open unit zone (R64); with none it stays where
 /// named (R3837001). R360: #55's base face, when its Tribute took an opposing unit, takes the
 /// opponent's zone in the named lane if open, else their leftmost open unit zone (R15); with none it
-/// stays where named. A Flying Golem named into the backrow goes to the unit row (R1081000).
+/// stays where named. A GIGA Golem needs all four zones open there (R4990000). A Flying Golem named
+/// into the backrow goes to the unit row (R1081000).
 fn handed_over_zone(state: &GameState, run: &PlayRun, card: &CardInstance) -> Option<ZoneSlot> {
     // R4265000: a Cloaked play is set face-down in its player's own backrow, its text inert (§6.1
     // Cloaked), so no hand-over moves it, and its reveal animates it on its controller's side.
@@ -859,6 +864,15 @@ fn handed_over_zone(state: &GameState, run: &PlayRun, card: &CardInstance) -> Op
         row: Row::Units,
         lane: zone.lane,
     };
+    // R4990000: a Golem that enters GIGA takes the named lane only where all four of its zones are open,
+    // else the opponent's leftmost such anchor, as a cast GIGA does; with none it stays where named (R360).
+    if crate::giga::enters_giga(state, card) {
+        return if crate::giga::fits(same_lane, |slot| is_open(state, slot)) {
+            Some(same_lane)
+        } else {
+            crate::giga::first_anchor(opponent, Row::Units, |slot| is_open(state, slot))
+        };
+    }
     if is_open(state, same_lane) {
         Some(same_lane)
     } else {

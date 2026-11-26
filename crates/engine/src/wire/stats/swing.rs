@@ -26,8 +26,8 @@ use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 
 use super::{
-    CardStatsFilter, CardTotal, GameRecord, GameSummary, Outcome, RecordsKey, StatsTotals, TotalsKey,
-    made_by_the_rules, outcome_for, pilot_counts, random_effects, sources_of, table, to_fixed,
+    CardStatsFilter, CardTotal, GameRecord, GameSummary, Outcome, RecordsKey, SparsePart, StatsTotals,
+    TotalsKey, made_by_the_rules, outcome_for, pilot_counts, random_effects, sources_of, table, to_fixed,
 };
 use crate::config::{
     ADJUSTED_FIELD_MIN_CARDS, DECISIVENESS_PRIOR_CENTER, DECISIVENESS_PRIOR_SPREAD, SWING_EVAL_SCALE,
@@ -74,16 +74,6 @@ pub struct CreatedActing {
     pub card: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub maker: Option<String>,
-}
-
-impl ActingCard {
-    /// Its catalog id.
-    pub fn card(&self) -> &str {
-        match self {
-            ActingCard::Dealt(card) => card,
-            ActingCard::Created(made) => &made.card,
-        }
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -192,6 +182,16 @@ impl SwingTally {
         self.played.close_game();
         self.acting.close_game();
         self.facing.close_game();
+    }
+}
+
+impl SparsePart for SwingTally {
+    fn is_empty_part(&self) -> bool {
+        self.is_empty()
+    }
+
+    fn add_part(&mut self, other: &Self) {
+        self.add(other);
     }
 }
 
@@ -421,7 +421,7 @@ impl StatsTotals {
                     .or_insert_with(|| CardTotal::new(&card))
                     .stats
                     .swing
-                    .add(&tally);
+                    .add_value(&tally);
             }
             for (card, mut tally) in created {
                 tally.close_game();
@@ -430,7 +430,7 @@ impl StatsTotals {
                     .or_insert_with(|| CardTotal::new(&card))
                     .stats
                     .created_swing
-                    .add(&tally);
+                    .add_value(&tally);
             }
         }
     }
@@ -672,13 +672,6 @@ pub struct SwingReport {
     pub created_field: DecisivenessField,
     pub cards: IndexMap<String, SwingFigures>,
     pub created: IndexMap<String, SwingFigures>,
-}
-
-impl SwingReport {
-    /// A deck card's figures, or for a card only a rule makes (R3070000) its Created ones.
-    pub fn of(&self, card: &str) -> Option<&SwingFigures> {
-        self.cards.get(card)
-    }
 }
 
 /// One card's terms before the fields of Decisiveness are read.
@@ -983,9 +976,14 @@ mod tests {
     use crate::wire::events::{GameOverReason, Winner};
     use crate::wire::stats::{
         CardStatsReport, CreatedUse, GameMode, GameSource, GameSummary, Pilot, PilotFilter, SeatSummary,
-        SourceFilter, card_stats_of, parse_game_record, played_delta,
+        SourceFilter, Sparse, card_stats_of, parse_game_record, played_delta,
     };
     use serde_json::json;
+
+    /// A card's swing tally as a value, the empty one while it has none.
+    fn held_swing(part: &Sparse<SwingTally>) -> SwingTally {
+        part.get().cloned().unwrap_or_default()
+    }
 
     const EVERY: CardStatsFilter = CardStatsFilter {
         source: SourceFilter::All,
@@ -1063,11 +1061,12 @@ mod tests {
     fn report_of(totals: &StatsTotals) -> (CardStatsReport, SwingReport) {
         let report = card_stats_of(totals, &EVERY);
         let baseline = swing_baseline(&swing_rows_of(totals, &EVERY));
+        let empty = SwingTally::default();
         let swing = swing_report(
             report
                 .cards
                 .iter()
-                .map(|stats| (stats.card.as_str(), &stats.swing)),
+                .map(|stats| (stats.card.as_str(), stats.swing.or(&empty))),
             report
                 .created
                 .iter()
@@ -1403,7 +1402,12 @@ mod tests {
             .map(|(card, total)| {
                 (
                     card.clone(),
-                    total.stats.swing.played.buckets.keys().copied().collect(),
+                    held_swing(&total.stats.swing)
+                        .played
+                        .buckets
+                        .keys()
+                        .copied()
+                        .collect(),
                 )
             })
             .collect();
@@ -1629,21 +1633,24 @@ mod tests {
 
         // Played on its own turn, two copies once, and cast on the opponent's turn that replied to it:
         // both with p1's second turn (bucket 2), each worth its 20 points.
-        let hand = &person["hand"].stats.swing;
+        let hand = &held_swing(&person["hand"].stats.swing);
         assert_eq!(hand.played.buckets, buckets(&[(2, [20, 4000])]));
-        let reply = &person["reply"].stats.swing;
+        let reply = &held_swing(&person["reply"].stats.swing);
         assert_eq!(reply.played.buckets, buckets(&[(2, [20, 4000])]));
         // Two copies acting on a turn count it once.
-        let board = &person["board"].stats.swing;
+        let board = &held_swing(&person["board"].stats.swing);
         assert_eq!(board.acting.buckets, buckets(&[(3, [20, 0]), (4, [20, 6000])]));
 
         // The opponent's acting cards are tallied under the opponent's key, with p1's turns' change
         // and buckets, each game's two turns one cluster.
-        let wall = &ai["wall"].stats.swing;
+        let wall = &held_swing(&ai["wall"].stats.swing);
         assert_eq!(wall.facing.buckets, buckets(&[(2, [20, 4000]), (3, [20, 0])]));
         assert_eq!(wall.facing.cluster, 20 * 2 * 2);
         assert!(wall.played.is_empty() && wall.acting.is_empty());
-        assert_eq!(ai["core-t-rush"].stats.created_swing.facing.rows(), 40);
+        assert_eq!(
+            held_swing(&ai["core-t-rush"].stats.created_swing).facing.rows(),
+            40
+        );
         assert!(
             person
                 .get("wall")
@@ -1725,8 +1732,8 @@ mod tests {
         );
         assert_eq!(token.swing.acting.rows(), 60);
         let maker = cards.cards.iter().find(|stats| stats.card == "core-015").unwrap();
-        assert_eq!(maker.swing.played.rows(), 30);
-        assert_eq!(maker.swing.made_acting.get("core-t-rush"), Some(&60));
+        assert_eq!(held_swing(&maker.swing).played.rows(), 30);
+        assert_eq!(held_swing(&maker.swing).made_acting.get("core-t-rush"), Some(&60));
         let token = &report.created["core-t-rush"];
         let maker = figures(&report, "core-015");
         assert_eq!(token.plays, 0);

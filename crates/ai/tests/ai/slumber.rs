@@ -495,3 +495,29 @@ fn r3064000_a_zero_weight_and_greedy_eval_read_no_price() {
         );
     }
 }
+
+#[test]
+fn r4811000_a_lent_keyword_moves_no_wake_price() {
+    // A Dormant card takes no lend until it wakes (R1859007) and its twin's wake runs nothing, so a lent
+    // Poisonous prices the wake as the sleeper's own Poisonous does. Against its own, not a bare
+    // sleeper: Cosmality's damage changes the enemy's next swing, which the keyword reads too.
+    let (state, id) = sleeper_board(COSMALITY, AI);
+    let mut lent = state.clone();
+    lent.players[AI].mods.push(PlayerModifier {
+        id: "ai-awaken-lent".to_string(),
+        expiry: ModifierExpiry::Never,
+        kind: ModifierKind::UnitsHaveKeyword {
+            keyword: Keyword::Poisonous,
+            from_spell: None,
+        },
+    });
+    let mut own = state.clone();
+    find_instance_mut(&mut own, &id)
+        .expect("the sleeper")
+        .granted_keywords
+        .push(Keyword::Poisonous);
+    close(
+        price_of(&priced(&lent).0, COSMALITY, AI),
+        price_of(&priced(&own).0, COSMALITY, AI),
+    );
+}

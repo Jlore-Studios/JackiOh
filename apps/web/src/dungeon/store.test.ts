@@ -928,3 +928,63 @@ describe("R3502000 a run's time is the time it was played", () => {
     expect(reload().current.run).toBeNull();
   });
 });
+
+describe("reopening the Dungeon page", () => {
+  it("reads the device again, so a run finished in another tab is not written over", () => {
+    const dungeon = mount();
+    press(() => dungeon.current.start(setupOf()));
+    advance(2 * MINUTE_MS);
+    // The page unmounts (Back to Play): the store stays in memory and stops listening.
+    cleanup();
+
+    // Another tab finishes the run: Embers, unlocks, a history record, and the run's key gone.
+    const record = {
+      seed: "TAB_A",
+      daily: false,
+      mode: "sandbox",
+      curses: [],
+      cursePoints: 0,
+      rowReached: 3,
+      won: true,
+      score: 250,
+      embers: 42,
+      timeMs: 120_000,
+      endedAt: `${DAY}T12:05:00.000Z`,
+      stats: ZERO_STATS,
+    };
+    window.localStorage.removeItem(DUNGEON_RUN_KEY);
+    window.localStorage.setItem(
+      DUNGEON_PROGRESS_KEY,
+      JSON.stringify({ v: 1, unlocks: unlocks({ level: 2 }), embers: 42, daily: null }),
+    );
+    window.localStorage.setItem(DUNGEON_HISTORY_KEY, JSON.stringify({ v: 1, runs: [record] }));
+
+    // The page opens again: it starts from what the device holds now.
+    const back = mount();
+    expect(back.current.run).toBeNull();
+    expect(back.current.progress).toEqual({ unlocks: unlocks({ level: 2 }), embers: 42 });
+    expect(readRunHistory()).toEqual([record]);
+
+    // Abandoning with no run records nothing and keeps the other tab's values.
+    press(() => back.current.abandon());
+    expect(stored(DUNGEON_PROGRESS_KEY)).toEqual({ v: 1, unlocks: unlocks({ level: 2 }), embers: 42, daily: null });
+    expect(stored(DUNGEON_HISTORY_KEY)).toEqual({ v: 1, runs: [record] });
+  });
+
+  it("keeps a finished run this tab still shows when the page opens again", () => {
+    const dungeon = mount();
+    press(() => dungeon.current.start(setupOf()));
+    wasmBindings.runReduce.mockReturnValue({ state: runState({ phase: { phase: "won" } }) });
+    press(() => dungeon.current.act({ type: "fightOver", won: true, hp: 12, damageDealt: 90, healingDone: 4, cardsDrawn: 30, turns: 6 }));
+    expect(dungeon.current.run?.phase).toEqual({ phase: "won" });
+    expect(window.localStorage.getItem(DUNGEON_RUN_KEY)).toBeNull();
+
+    // The page unmounts and opens again: the run-over screen stays until it is left.
+    cleanup();
+    const back = mount();
+    expect(back.current.run?.phase).toEqual({ phase: "won" });
+
+    press(() => back.current.abandon());
+    expect(back.current.run).toBeNull();
+  });
+});

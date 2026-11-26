@@ -8,6 +8,12 @@ import type { KeywordKind } from "./KeywordKind";
  * `costMod`, not a field here. `x` holds a step per numbered keyword or X ("Armor", "Echo",
  * "Activate", "Brittle", "Spell Damage", "Tribute", "Lucky", "X"), `numbers` a step per declared
  * number (`CardDef.params` key), `set` a declared number or numbered keyword set outright (KY's
- * Constant's "to 3"), which wins over the steps.
+ * Constant's "to 3"), which wins over the steps, and `taken` the cuts End Times' End of Turn made
+ * since its last use (R4828000).
  */
-export type Tuning = { attack?: number, health?: number, addKeywords?: Array<Keyword>, removeKeywords?: Array<KeywordKind>, x?: { [key in string]: number }, numbers?: { [key in string]: number }, set?: { [key in string]: number }, };
+export type Tuning = { attack?: number, health?: number, addKeywords?: Array<Keyword>, removeKeywords?: Array<KeywordKind>, x?: { [key in string]: number }, numbers?: { [key in string]: number }, set?: { [key in string]: number }, 
+/**
+ * R4828000: what the card's own countdown took off a declared number since its last use, by key
+ * (End Times' `endTimes`, R3551002), so that use gives it back: kept wherever the rest is.
+ */
+taken?: { [key in string]: number }, };

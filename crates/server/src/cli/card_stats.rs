@@ -37,7 +37,7 @@ use serde::Serialize;
 use jackioh_engine::wire::{
     CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, GAME_MODES, GameMode, ModeFilter,
     PILOT_FILTERS, PilotFilter, PlayVersionQuery, PlayVersionTable, SOURCE_FILTERS, SourceFilter,
-    StatsTotals, WindowQuery, WindowRequest, WindowedReport, card_stats_of, format_card_choices,
+    StatsTotals, SwingTally, WindowQuery, WindowRequest, WindowedReport, card_stats_of, format_card_choices,
     format_card_stats, format_play_versions, format_swing, play_version_figures, swing_baseline,
     swing_report, swing_rows_of, windowed_card_stats,
 };
@@ -312,11 +312,12 @@ pub fn swing_text(
     name_of: &dyn Fn(&str) -> Option<String>,
 ) -> String {
     let every = card_stats_of(totals, &options.filter);
+    let empty = SwingTally::default();
     let mut swing = swing_report(
         every
             .cards
             .iter()
-            .map(|stats| (stats.card.as_str(), &stats.swing)),
+            .map(|stats| (stats.card.as_str(), stats.swing.or(&empty))),
         every
             .created
             .iter()

@@ -565,6 +565,22 @@ mod tests {
         }
 
         #[test]
+        fn r4845000_r673_the_call_entry_alternate_adds_may_be_glitch() {
+            let mut s = chaos("alternate", side(false, json!([])), json!({ "hand": [VANILLA] }));
+            // R673: certain odds, as a match whose System plays reach the denominator.
+            s.state_mut().system_plays = Some(GLITCH_ODDS_DENOMINATOR / GLITCH_ODDS_PER_SYSTEM_PLAY);
+            s.state_mut().players.p1.auto_end_turn = Some(false);
+            s.state_mut().players.p2.auto_end_turn = Some(false);
+            s.end_turn();
+            s.end_turn();
+            // R4845000: the Call added at the start of the caster's turn is a card generated into a hand.
+            assert!(added_calls(&s).is_empty());
+            let glitches = s.hand(P1).into_iter().filter(|card| card.def_id == GLITCH_DEF_ID).count();
+            assert_eq!(glitches, 1);
+            assert!(s.hand(P2).iter().all(|card| card.def_id != GLITCH_DEF_ID));
+        }
+
+        #[test]
         fn r3135000_r2200002_an_extra_turn_counts_as_one_of_the_caster_s_turns() {
             let mut s = chaos("alternate", side(false, json!([])), json!({ "hand": [VANILLA] }));
             assert!(added_calls(&s).is_empty());

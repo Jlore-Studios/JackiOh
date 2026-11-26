@@ -112,10 +112,12 @@ trap 'echo "::error::scripts/promote-production.sh line $LINENO: \`$BASH_COMMAND
 # the night bot off them (docs/issues-and-patches.md: people's work is `human`, for both of them).
 : "${ASSIGNEES:=jgoetzmann,MaxGoetzmann}"
 : "${HUMAN_LABEL:=human}"
-# The workflow that tests a promotion pull request, and the title its `report` job gives the issue a
-# red run on one opens for the night bot (super.yml's CANDIDATE_TITLE).
+# The workflow that tests a promotion pull request, the title its `report` job gives the issue a
+# red run on one opens for the night bot (super.yml's CANDIDATE_TITLE), and the title of staging's
+# own, which takes the report instead while it is open (super.yml's DAILY_TITLE).
 : "${SUPER_WORKFLOW:=super.yml}"
 : "${SUPER_TITLE:=CI: super run failed on a production candidate}"
+: "${GATE_TITLE:=CI: daily super run failed}"
 # main, whose commits staging takes; STAGING_BRANCH, the branch production takes its commits
 # from, whose passing super runs it follows (the daily promotion); and PRODUCTION_BRANCH, the
 # branch the `jackioh` Worker serves. The long-lived branches start with `_`, so GitHub lists
@@ -435,7 +437,7 @@ reconcile() {
   STATUS=failed
   [ "$reported" != "$id.$attempt" ] || return 0
   reported="$id.$attempt"
-  say "The super run ended \`$conclusion\` on \`${sha:0:12}\` ([run]($SUPER_URL)), so #$num does not merge. Its report hands the fix to the night bot as \`priority:high\` (the issue \"$SUPER_TITLE\"). #$num stays open: re-running the run's failed jobs merges it once they pass, a \`/promote\` once the fix is on \`$STAGING_BRANCH\` tests the newer commit instead, and \`/skip-super\` with a reason merges it now."
+  say "The super run ended \`$conclusion\` on \`${sha:0:12}\` ([run]($SUPER_URL)), so #$num does not merge. Its report hands the fix to the night bot as \`priority:high\` (the issue \"$SUPER_TITLE\", or \"$GATE_TITLE\" while that one is open). #$num stays open: re-running the run's failed jobs merges it once they pass, a \`/promote\` once the fix is on \`$STAGING_BRANCH\` tests the newer commit instead, and \`/skip-super\` with a reason merges it now."
 }
 
 # --- the queue -------------------------------------------------------------------------------
@@ -576,8 +578,8 @@ body_for() {
         "$PR_NUMBER" "${CAND:0:12}" "${SUPER_URL:+ ([run]($SUPER_URL))}"
       ;;
     failed)
-      printf '\n**Next for production:** the full test run (super) failed on `%s` ([run](%s)), so #%s waits. Its fix is the night bot'"'"'s ("%s"). Re-running the failed jobs merges #%s once they pass; the next daily run on `_staging` that passes, or a `/promote` once the fix is on `_staging`, takes a newer commit instead.\n' \
-        "${CAND:0:12}" "$SUPER_URL" "$PR_NUMBER" "$SUPER_TITLE" "$PR_NUMBER"
+      printf '\n**Next for production:** the full test run (super) failed on `%s` ([run](%s)), so #%s waits. Its fix is the night bot'"'"'s ("%s", or "%s" while that one is open). Re-running the failed jobs merges #%s once they pass; the next daily run on `_staging` that passes, or a `/promote` once the fix is on `_staging`, takes a newer commit instead.\n' \
+        "${CAND:0:12}" "$SUPER_URL" "$PR_NUMBER" "$SUPER_TITLE" "$GATE_TITLE" "$PR_NUMBER"
       ;;
     *)
       if [ "$WAITING" = 0 ]; then

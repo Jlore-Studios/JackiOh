@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::config::{DUOS_HUMAN_TEAM, Handicap, SETUP_TURN};
+use crate::config::{DUOS_HUMAN_TEAM, DUOS_OWN_HEALTH, Handicap, SETUP_TURN};
 use crate::state::{
     CreateGameOptions, DuosLife, EngineError, GameState, PlayerState, SetupKind, create_game,
     create_recorded_game,
@@ -231,7 +231,7 @@ fn create_duel(
 }
 
 /// B9, B12: what makes a duel's side a Duos seat, as `duos_create` says; its pool is `pool` of
-/// `rules.pool_health`, unspent.
+/// `rules.pool_health`, unspent, and its starting own HP (R4831000).
 pub(super) fn duos_seat(side: &mut PlayerState, rules: &DuosTeamRules, pool: i32) {
     side.auto_end_turn = Some(false);
     side.hero.health = rules.own_health;
@@ -239,5 +239,7 @@ pub(super) fn duos_seat(side: &mut PlayerState, rules: &DuosTeamRules, pool: i32
         pool,
         pool_cap: rules.pool_health,
         spent: false,
+        // R4831000: the start BALTHASAR reads, absent at the standard own HP so its games hash as before.
+        own_start: (rules.own_health != DUOS_OWN_HEALTH).then_some(rules.own_health),
     });
 }

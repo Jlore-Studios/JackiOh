@@ -227,8 +227,16 @@ shipped version's definitions, rebuilt from the snapshots, and the frozen win-ra
 if any (R1329000), which its games read unless they hold a snapshot (R3049000), and runs
 its own scripts for them. A patch
 that changes what a card's script does, not only a number in its definition, keeps the script it
-replaces: add `(ID, the newest shipped version, a fn that builds the old scripts)` to
-`KEPT_SCRIPTS` in `crates/cards/src/history.rs`. Without it, the replays that script would change are
+replaces: add `(ID, "fragment:<stem>", a fn that builds the old scripts)`, `<stem>` your fragment's
+file name in `crates/cards/patches/pending/` without `.json`, to `KEPT_SCRIPTS` in
+`crates/cards/src/history.rs`. `patches ship` records each version's fragment, and the build reads the
+key as the version just before the one your fragment shipped as, or the newest shipped version while it
+is pending, so a version shipped while you wait in the merge queue is covered (R4779000). A later part
+of a split patch keys by a fragment still pending or by its own. Rows keyed by a version stay;
+`patches check` fails a key naming no shipped version nor fragment, and a pending fragment named as one
+already shipped. When `classify` finds no card playing differently (the change shows only in a stolen or
+random cast, which its forced games never reach), the fragment claims no `--plays`, so no card's
+statistics restart: the kept script keyed by it is its claim (R4844000). Without it, the replays that script would change are
 refused by their final hash rather than shown wrong. `cargo jackioh carried` plays every era of every carried
 catalog and folds it back, so a kept script that is missing and panics there fails it (R4382000, R4382001). A script that writes its card's words into the
 state (a badge, a prompt) reads them with `def_of(Some(&*ctx.state), ID)`, the definition the game
@@ -278,6 +286,9 @@ One more card shifts every random draw from the pool (R380), so tests and games 
   whole event window (#106), `determinize` put a Siphon Squad in a hidden slot the seat's own view rules out (#107), and a deeply nested
   fusion resumed Final Gambit's step against the wrong ingredient (#105). If a wave fails at a seed that has nothing to do with
   your card, print the failing game's state, find which card the panic or the diff names, and file it rather than editing the test. A failure you fix or file gets a record in `crates/tools/fuzz-corpus/` in the same change (its README), so its deal survives the next card.
+- **The perf corpus** (`crates/tools/perf-corpus/`, #4924) pins its games' decks, so a new card re-deals none of them. A removed or
+  renamed id fails `cargo jackioh perf` and the per-pull-request `tests/perf.rs`, naming the record: add its `retired` marker and run
+  `cargo jackioh perf --pin` (its README).
 - **The fused-pair sweep** (`cargo jackioh fused-pairs`, #2381) fuses the text of every card with a Death, a trigger, a start- or
   end-of-turn hook, an aura or a fused hook onto every fusable Unit, and plays each pair until the board settles. A new card with one of
   those hooks joins the texts, and a new Unit joins the bodies, so the pull request's stride sample can move onto pairs nobody has

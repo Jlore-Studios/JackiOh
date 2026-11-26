@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""ci.yml's sharded jobs (#3072): the `rust-test` matrix, the web unit and e2e smoke shard lists, and
-which tests one shard of a `rust-test` group runs.
+"""ci.yml's sharded jobs (#3072): the `rust-test` matrix, the web unit, e2e smoke and fuzz slice shard
+lists, and which tests one shard of a `rust-test` group runs.
 
     python3 .github/ci/matrix.py matrix          `<output>=<json>` lines for the `changes` job's
-                                                 $GITHUB_OUTPUT: rust_test, web_unit_shards and
-                                                 e2e_smoke_shards
+                                                 $GITHUB_OUTPUT: rust_test, web_unit_shards,
+                                                 e2e_smoke_shards and fuzz_slice_shards
     python3 .github/ci/matrix.py shard <k> <K>   the test names of shard k of K, one a line, from
                                                  `cargo test … -- --list --format terse` on stdin
 
@@ -28,7 +28,7 @@ COUNTS = "scripts/ci-shards.toml"
 # every job of every run.
 MAX_SHARDS = 8
 # scripts/ci-shards.toml's tables past `rust-test`, each with the one count it holds.
-COUNT_TABLES = {"web": "unit", "e2e": "smoke"}
+COUNT_TABLES = {"web": "unit", "e2e": "smoke", "fuzz": "slice"}
 
 
 class Bad(Exception):
@@ -149,8 +149,8 @@ def main(argv):
         # What the run will hold, for its log: stdout is $GITHUB_OUTPUT's.
         for job in values["rust_test"]:
             print(f"rust (test {job['group']})", file=sys.stderr)
-        print(f"web (unit k/{len(values['web_unit_shards'])}), e2e smoke (k/{len(values['e2e_smoke_shards'])})",
-              file=sys.stderr)
+        print(f"web (unit k/{len(values['web_unit_shards'])}), e2e smoke (k/{len(values['e2e_smoke_shards'])}), "
+              f"rust (fuzz slice k/{len(values['fuzz_slice_shards'])})", file=sys.stderr)
         return 0
     if argv[1:2] == ["shard"] and len(argv) == 4 and argv[2].isdigit() and argv[3].isdigit():
         k, total = int(argv[2]), int(argv[3])

@@ -940,74 +940,362 @@ fn name_tokens(name: &str) -> Vec<u64> {
 /// The title of every `it(…)`, `test(…)` and `describe(…)` in TypeScript source that runs, as
 /// written between its quotes: `.concurrent` and the like may stand between the name and the
 /// parenthesis, but a call marked with one of `SKIPPED_TS_MODIFIERS` is left out, along with every
-/// call inside it (#1718).
-fn ts_test_titles(src: &str) -> Vec<String> {
+/// call inside it (#1718). Comments, string and template literals and regex literals hold no
+/// titles: a test named in any of them is no test that runs.
+fn ts_test_titles(src: &str, jsx: bool) -> Vec<String> {
     let bytes = src.as_bytes();
-    let mut titles = Vec::new();
-    let mut i = 0;
-    while i < bytes.len() {
-        let rest = &bytes[i..];
-        let name_len = ["describe", "test", "it"]
-            .iter()
-            .find(|name| rest.starts_with(name.as_bytes()))
-            .map(|name| name.len());
-        let Some(len) = name_len else {
-            i += 1;
-            continue;
-        };
-        if i > 0 && is_word_byte(bytes[i - 1]) {
-            i += 1;
-            continue;
-        }
-        let mut j = i + len;
-        if j < bytes.len() && is_word_byte(bytes[j]) {
-            i += 1;
-            continue;
-        }
-        // `.concurrent`, `.each`, …, or one of SKIPPED_TS_MODIFIERS.
-        let mut skipped = false;
-        while j < bytes.len() && bytes[j] == b'.' {
-            let mut k = j + 1;
-            while k < bytes.len() && is_word_byte(bytes[k]) {
-                k += 1;
-            }
-            if k == j + 1 {
-                break;
-            }
-            skipped |= SKIPPED_TS_MODIFIERS.contains(&&src[j + 1..k]);
-            j = k;
-        }
-        if j >= bytes.len() || bytes[j] != b'(' {
-            i += 1;
-            continue;
-        }
-        if skipped {
-            // Nothing inside a skipped call runs either: a `describe.skip(…)`'s tests among it.
-            i = ts_call_end(bytes, j);
-            continue;
-        }
-        j += 1;
-        while j < bytes.len() && bytes[j].is_ascii_whitespace() {
-            j += 1;
-        }
-        if j >= bytes.len() || !matches!(bytes[j], b'"' | b'\'' | b'`') {
-            i = j;
-            continue;
-        }
-        let quote = bytes[j];
-        let start = j + 1;
-        let mut k = start;
-        while k < bytes.len() && bytes[k] != quote {
-            if bytes[k] == b'\\' {
-                k += 1;
-            }
-            k += 1;
-        }
-        let end = k.min(bytes.len());
-        titles.push(src[start..end].to_string());
-        i = end + 1;
+    let mut scan = TsScan {
+        titles: Vec::new(),
+        regex_ok: true,
+        jsx,
+        jsx_depth: 0,
+    };
+    scan.code(bytes, src, 0, bytes.len(), None);
+    scan.titles
+}
+
+/// What the scan of TypeScript source remembers while reading it: the titles it has read, whether
+/// a `/` opens a regex literal (it does after an operator or an expression keyword such as
+/// `return`, never after a value, as in valid code a `/` there always divides), and, in a
+/// TSX file, how many JSX elements hold the current position.
+struct TsScan {
+    titles: Vec<String>,
+    regex_ok: bool,
+    jsx: bool,
+    jsx_depth: usize,
+}
+
+/// The words a `/` may still follow as a regex literal's start: the expression keywords, which a
+/// value's word is not (`return /re/` is a regex, `x / 2` is division).
+const TS_EXPR_KEYWORDS: &[&str] = &[
+    "await",
+    "case",
+    "delete",
+    "do",
+    "else",
+    "in",
+    "instanceof",
+    "new",
+    "of",
+    "return",
+    "throw",
+    "typeof",
+    "void",
+    "yield",
+];
+
+impl TsScan {
+    /// A value ended: a `/` after it divides.
+    fn value(&mut self) {
+        self.regex_ok = false;
     }
-    titles
+
+    /// An operator ended: a `/` after it opens a regex literal.
+    fn operator(&mut self) {
+        self.regex_ok = true;
+    }
+
+    /// The titles of the test calls in `bytes[i..end]`, stopping just past `closer` when one
+    /// closes a `${ … }` hole, whose braces nest (`None` reads to `end`). Returns the index to
+    /// read next.
+    fn code(&mut self, bytes: &[u8], src: &str, mut i: usize, end: usize, closer: Option<u8>) -> usize {
+        let mut depth = 0usize;
+        while i < end {
+            if bytes[i] == b'{' {
+                if closer == Some(b'}') {
+                    depth += 1;
+                }
+                self.operator();
+                i += 1;
+                continue;
+            }
+            if bytes[i] == b'}' {
+                if closer == Some(b'}') {
+                    if depth == 0 {
+                        self.value();
+                        return i + 1;
+                    }
+                    depth -= 1;
+                }
+                self.value();
+                i += 1;
+                continue;
+            }
+            let rest = &bytes[i..];
+            if rest.starts_with(b"//") {
+                while i < end && bytes[i] != b'\n' {
+                    i += 1;
+                }
+                continue;
+            }
+            if rest.starts_with(b"/*") {
+                i += 2;
+                while i < end && !bytes[i..].starts_with(b"*/") {
+                    i += 1;
+                }
+                i = (i + 2).min(end);
+                continue;
+            }
+            if matches!(bytes[i], b'"' | b'\'') {
+                i = ts_string_end(bytes, i, end);
+                self.value();
+                continue;
+            }
+            if bytes[i] == b'`' {
+                i = self.template(bytes, src, i, end);
+                self.value();
+                continue;
+            }
+            if self.jsx && self.regex_ok && bytes[i] == b'<' {
+                let next = bytes.get(i + 1).copied().unwrap_or(0);
+                if (next == b'>' || is_word_byte(next))
+                    && let Some(after) = self.jsx_open(bytes, src, i, end)
+                {
+                    i = after;
+                    self.value();
+                    continue;
+                }
+            }
+            if bytes[i] == b'/' {
+                i = if self.regex_ok {
+                    ts_regex_end(bytes, i, end)
+                } else {
+                    i + 1
+                };
+                self.operator();
+                continue;
+            }
+            if matches!(bytes[i], b'+' | b'-') && !self.regex_ok && bytes.get(i + 1) == Some(&bytes[i]) {
+                // Postfix `++` and `--` keep their value a value (`n++ / 2` divides).
+                i += 2;
+                continue;
+            }
+            if is_word_byte(bytes[i]) {
+                let start = i;
+                while i < end && is_word_byte(bytes[i]) {
+                    i += 1;
+                }
+                let word = &src[start..i];
+                if !matches!(word, "it" | "test" | "describe") {
+                    self.regex_ok = TS_EXPR_KEYWORDS.contains(&word);
+                    continue;
+                }
+                let mut j = i;
+                // `.concurrent`, `.each`, …, or one of SKIPPED_TS_MODIFIERS.
+                let mut skipped = false;
+                while j < end && bytes[j] == b'.' {
+                    let mut k = j + 1;
+                    while k < end && is_word_byte(bytes[k]) {
+                        k += 1;
+                    }
+                    if k == j + 1 {
+                        break;
+                    }
+                    skipped |= SKIPPED_TS_MODIFIERS.contains(&&src[j + 1..k]);
+                    j = k;
+                }
+                if j >= end || bytes[j] != b'(' {
+                    // A bare `it` with no call names a value, as any other word does.
+                    self.value();
+                    continue;
+                }
+                if skipped {
+                    // Nothing inside a skipped call runs either: a `describe.skip(…)`'s tests among it.
+                    i = ts_call_end(bytes, j);
+                    self.value();
+                    continue;
+                }
+                j += 1;
+                while j < end && bytes[j].is_ascii_whitespace() {
+                    j += 1;
+                }
+                if j >= end || !matches!(bytes[j], b'"' | b'\'' | b'`') {
+                    i = j;
+                    self.operator();
+                    continue;
+                }
+                let quote = bytes[j];
+                let start = j + 1;
+                let mut k = start;
+                while k < end && bytes[k] != quote {
+                    if bytes[k] == b'\\' {
+                        k += 1;
+                    }
+                    k += 1;
+                }
+                let title_end = k.min(end);
+                self.titles.push(src[start..title_end].to_string());
+                i = title_end + 1;
+                self.value();
+                continue;
+            }
+            // A `)`, `]` or `}` closes a value; a `.` or whitespace continues one (`a.b / 2`
+            // and `a / b` divide, and so does `...` spreading or a `.5`: none opens an expression,
+            // where ASI still starts one after `return`); every other byte opens an expression.
+            if matches!(bytes[i], b')' | b']' | b'}') {
+                self.value();
+            } else if bytes[i] != b'.' && !bytes[i].is_ascii_whitespace() {
+                self.operator();
+            }
+            i += 1;
+        }
+        end
+    }
+
+    /// The index just past the template literal at `open` (its backtick): a `\`` escapes nothing's
+    /// end, and each `${ … }` hole holds code, which may nest templates.
+    fn template(&mut self, bytes: &[u8], src: &str, mut i: usize, end: usize) -> usize {
+        i += 1; // the opening backtick
+        while i < end {
+            match bytes[i] {
+                b'\\' => i += 2,
+                b'`' => return i + 1,
+                b'$' if bytes.get(i + 1) == Some(&b'{') => {
+                    // A hole holds an expression, whatever stood before the template.
+                    self.operator();
+                    i = self.code(bytes, src, i + 2, end, Some(b'}'));
+                }
+                _ => i += 1,
+            }
+        }
+        end
+    }
+
+    /// The JSX element at `open` (its `<`), or `None` when it is no element: in a TSX file `<`
+    /// opens one where an expression may start (never after a value, where it compares), and the
+    /// tag's name runs to whitespace, `/` or `>` (a `<T,>` generic bails out here). Returns the
+    /// index to read next: past `/>` for a self-closed element, or past the text its close tag
+    /// ends, whose quotes and slashes are literal and whose `{ … }` holes hold code.
+    fn jsx_open(&mut self, bytes: &[u8], src: &str, mut i: usize, end: usize) -> Option<usize> {
+        i += 1; // the opening bracket
+        if bytes.get(i) == Some(&b'>') {
+            self.jsx_depth += 1;
+            return Some(self.jsx_text(bytes, src, i + 1, end));
+        }
+        while i < end && (is_word_byte(bytes[i]) || matches!(bytes[i], b'.' | b'-' | b':')) {
+            i += 1;
+        }
+        if !matches!(
+            bytes.get(i),
+            Some(b' ') | Some(b'\t') | Some(b'\n') | Some(b'\r') | Some(b'\x0c') | Some(b'/') | Some(b'>')
+        ) {
+            return None;
+        }
+        loop {
+            if i >= end {
+                return Some(end);
+            }
+            match bytes[i] {
+                b'"' | b'\'' => i = ts_string_end(bytes, i, end),
+                b'`' => i = self.template(bytes, src, i, end),
+                // A hole holds an expression, whatever the tag read before it.
+                b'{' => {
+                    self.operator();
+                    i = self.code(bytes, src, i + 1, end, Some(b'}'));
+                }
+                b'/' if bytes.get(i + 1) == Some(&b'>') => return Some(i + 2),
+                b'>' => {
+                    self.jsx_depth += 1;
+                    return Some(self.jsx_text(bytes, src, i + 1, end));
+                }
+                _ => i += 1,
+            }
+        }
+    }
+
+    /// The JSX text at `i`: every byte is literal but `{ … }` holes, which hold code, and tags,
+    /// which nest or, closing one this call opened, return past their `>`. Stops at the end of
+    /// the text, when the depth falls back to `depth`.
+    fn jsx_text(&mut self, bytes: &[u8], src: &str, mut i: usize, end: usize) -> usize {
+        let depth = self.jsx_depth - 1;
+        while i < end {
+            match bytes[i] {
+                // A hole holds an expression, whatever the text read before it.
+                b'{' => {
+                    self.operator();
+                    i = self.code(bytes, src, i + 1, end, Some(b'}'));
+                }
+                b'<' => {
+                    let next = bytes.get(i + 1).copied().unwrap_or(0);
+                    if next == b'/'
+                        && (is_word_byte(bytes.get(i + 2).copied().unwrap_or(0))
+                            || bytes.get(i + 2) == Some(&b'>'))
+                    {
+                        i += 2;
+                        while i < end && bytes[i] != b'>' {
+                            i += 1;
+                        }
+                        i = (i + 1).min(end);
+                        self.jsx_depth -= 1;
+                        if self.jsx_depth == depth {
+                            return i;
+                        }
+                    } else if next == b'>' || is_word_byte(next) {
+                        match self.jsx_open(bytes, src, i, end) {
+                            Some(after) => {
+                                i = after;
+                                if self.jsx_depth == depth {
+                                    return i;
+                                }
+                            }
+                            None => i += 1,
+                        }
+                    } else {
+                        i += 1;
+                    }
+                }
+                _ => i += 1,
+            }
+        }
+        end
+    }
+}
+
+/// The index just past the string literal at `open` (its quote), `\` escapes aside.
+fn ts_string_end(bytes: &[u8], open: usize, end: usize) -> usize {
+    let quote = bytes[open];
+    let mut i = open + 1;
+    while i < end && bytes[i] != quote {
+        if bytes[i] == b'\\' {
+            i += 1;
+        }
+        i += 1;
+    }
+    (i + 1).min(end)
+}
+
+/// The index just past the regex literal at `open` (its slash): `\` escapes end nothing, a `/`
+/// inside `[ … ]` closes nothing, and a `]` first in its class is literal (`/[]]/`). A newline
+/// ends it instead: a regex never spans lines, so a `/` reaching one divided.
+fn ts_regex_end(bytes: &[u8], open: usize, end: usize) -> usize {
+    let mut i = open + 1; // the opening slash
+    let mut klass = false;
+    while i < end {
+        match bytes[i] {
+            b'\\' => i += 2,
+            b'\n' => return i,
+            b'[' if !klass => {
+                klass = true;
+                i += 1;
+                if bytes.get(i) == Some(&b']') {
+                    i += 1;
+                }
+            }
+            b']' if klass => {
+                klass = false;
+                i += 1;
+            }
+            b'/' if !klass => {
+                i += 1;
+                while i < end && is_word_byte(bytes[i]) {
+                    i += 1;
+                } // its flags
+                return i;
+            }
+            _ => i += 1,
+        }
+    }
+    end
 }
 
 /// The index just past the `)` that closes the call whose `(` is at `open`, string literals and
@@ -1058,7 +1346,14 @@ fn sql_headings(src: &str) -> Vec<String> {
     let mut headings = Vec::new();
     let mut rest = src;
     while let Some(at) = rest.find("\\echo") {
+        // A heading commented out with `--` is no proof (#1718): an `\echo` whose line
+        // starts with `--` before it never runs.
+        let start = src.len() - rest.len() + at;
         rest = &rest[at + "\\echo".len()..];
+        let line_start = src[..start].rfind('\n').map(|p| p + 1).unwrap_or(0);
+        if src[line_start..start].trim_start().starts_with("--") {
+            continue;
+        }
         let after = rest.trim_start();
         let Some(quoted) = after.strip_prefix('\'') else {
             continue;
@@ -1107,7 +1402,9 @@ fn proves(path: &str, src: &str, number: u64) -> Result<bool, String> {
             .any(|heading| sql_heading_names(heading, number)));
     }
     if TS_EXTENSIONS.contains(&extension.as_str()) {
-        return Ok(ts_test_titles(src)
+        // In a TSX file `<` may open a JSX element, whose text holds no titles.
+        let jsx = extension == "tsx" || extension == "jsx";
+        return Ok(ts_test_titles(src, jsx)
             .iter()
             .any(|title| citations(title).iter().any(|(_, cited)| *cited == number)));
     }
@@ -2490,7 +2787,7 @@ mod tests {
     fn reads_typescript_test_titles() {
         let src = "describe(\"R143 — the optional seed\", () => {\n  it(\"plays (R112)\", () => {});\n  it.skip('R5 skipped', () => {});\n  test(`R191 B5 ${row.name}`, () => {});\n  submit(\"R7 not a test\");\n});\n";
         assert_eq!(
-            ts_test_titles(src),
+            ts_test_titles(src, false),
             vec!["R143 — the optional seed", "plays (R112)", "R191 B5 ${row.name}"]
         );
         assert!(proves("a.test.ts", src, 112).unwrap());
@@ -2504,13 +2801,68 @@ mod tests {
     fn refuses_a_typescript_title_that_does_not_run() {
         // Only ids with a note here: this file is itself in what `check` reads (rule 3).
         let src = "describe.skip(\"R143 group (a paren: ')')\", () => {\n  // a stray ) in a comment\n  it(\"R112 inside a skipped group\", () => {});\n});\nit.todo(\"R191 later\");\ntest.only(\"R195 focused\", () => {});\ntest.fixme(\"R58 broken\", () => {});\nit.concurrent(\"R7 runs\", () => {});\ndescribe(\"R1 after\", () => {});\n";
-        assert_eq!(ts_test_titles(src), vec!["R7 runs", "R1 after"]);
+        assert_eq!(ts_test_titles(src, false), vec!["R7 runs", "R1 after"]);
         for number in [143, 112, 191, 195, 58] {
             assert!(!proves("a.test.ts", src, number).unwrap(), "{number}");
         }
         for number in [7, 1] {
             assert!(proves("a.test.ts", src, number).unwrap(), "{number}");
         }
+    }
+
+    #[test]
+    fn refuses_a_typescript_proof_in_comments_and_strings() {
+        // Only ids with a note here: this file is itself in what `check` reads (rule 3).
+        let dead = [
+            "// it(\"R1 line commented\", () => {});\n",
+            "/* it(\"R1 block commented\", () => {}); */",
+            "/*\nit(\"R1 block commented\", () => {});\n*/\n",
+            "export const todo = 'write it(\"R1 one day\") someday';\n",
+            "export const todo = \"write it('R1 one day') someday\";\n",
+            "export const todo = `write it(\"R1 one day\") someday`;\n",
+            // A title inside a regex literal is no test either, though the regex may hold
+            // quotes and comment sequences of its own.
+            "const re = /it\\(\"R1 dead\"\\)/;\n",
+            "const re = /\\bSet a hero's health\\b/i; // it(\"R1 dead\", () => {});\n",
+        ];
+        for src in dead {
+            assert!(ts_test_titles(src, false).is_empty(), "{src}");
+            assert!(!proves("a.test.ts", src, 1).unwrap(), "{src}");
+        }
+        // A comment ends at its line, and neither division, a regex holding an apostrophe nor
+        // a template hole hides the live test after it.
+        let live = [
+            "// a note\nit(\"R1 live\", () => {});\n",
+            "const half = n / 2;\nit(\"R1 live\", () => {});\n",
+            "const re = /hero's \\b/;\nit(\"R1 live\", () => {});\n",
+            "const re = /\\//;\nit(\"R1 live\", () => {});\n",
+            "it(`R1 live ${label}`, () => {});\n",
+        ];
+        for src in live {
+            assert!(!ts_test_titles(src, false).is_empty(), "{src}");
+            assert!(proves("a.test.ts", src, 1).unwrap(), "{src}");
+        }
+        // In a TSX file the text of an element holds no test, though it holds quotes: an
+        // apostrophe, a slur of attributes, holes and nested elements among them.
+        let dead_tsx = "<p>Max is taken, so you'd be <b>fine</b></p>;\n// it(\"R1 dead\", () => {});\n";
+        assert!(ts_test_titles(dead_tsx, true).is_empty());
+        assert!(!proves("a.test.tsx", dead_tsx, 1).unwrap());
+        let live_tsx = "const el = <p>Max is taken, so you'd be <Username name=\"Max\" /></p>;\nit(\"R1 live\", () => {});\n";
+        assert_eq!(ts_test_titles(live_tsx, true), vec!["R1 live"]);
+        assert!(proves("a.test.tsx", live_tsx, 1).unwrap());
+    }
+
+    #[test]
+    fn refuses_an_sql_heading_that_is_commented_out() {
+        // Only ids with a note here: this file is itself in what `check` reads (rule 3).
+        for src in [
+            "-- \\echo '### R1: the fixture ###'\n",
+            "  -- \\echo '### R1: the fixture ###'\n",
+        ] {
+            assert!(!proves("x.sql", src, 1).unwrap(), "{src}");
+        }
+        let live = "\\echo '### R1: the fixture ###'\n";
+        assert!(proves("x.sql", live, 1).unwrap());
     }
 
     #[test]

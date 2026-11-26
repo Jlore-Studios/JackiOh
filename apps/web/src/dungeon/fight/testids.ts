@@ -39,6 +39,10 @@ export const fightTestid = {
   reportError: "dungeon-fight-report-error",
   /** Beside `reportError`: ask the worker again. */
   reportRetry: "dungeon-fight-report-retry",
+  /** R4852000: in the result panel of a fight a Glitch voided, in place of Continue: why there is no result; role="status". */
+  voided: "dungeon-fight-voided",
+  /** R4852000: beside `voided`: deal the same fight fresh from its seed. */
+  redeal: "dungeon-fight-redeal",
   /** B23: a side's tray of relics and blessings, beside its hero. */
   tray: (side: TraySide): string => `dungeon-tray-${side}`,
   /** B23: the tray's button, which opens its list. */

@@ -1,10 +1,11 @@
 //! R4552000, R4552002 (SPEC §9.11): a finished game's turn rows, the data Decisiveness is read off.
 //!
 //! The engine's record (`summarize_game`) cannot call the AI, so this fold replays the same log from the
-//! same start (`recorded_start`, `read_steps`) and, at the start of every turn, writes one row for the
-//! seat whose turn it is (`SwingTurn`): the turn counter, the AI's evaluation of the seat less its
-//! opponent's (`evaluate`, the true, whole state: the game is over and nothing is hidden from a
-//! statistic), and the cards acting on each side's field (`acting_on`, a face-down Trap left out).
+//! same start (`recorded_start`, `read_steps`) and, once every turn's start has resolved (a start that
+//! asks is read at the first step past it, R4785000), writes one row for the seat whose turn it is
+//! (`SwingTurn`): the turn counter, the AI's evaluation of the seat less its opponent's (`evaluate`, the
+//! true, whole state: the game is over and nothing is hidden from a statistic), and the cards acting on
+//! each side's field (`acting_on`, a face-down Trap left out).
 //!
 //! R4552002: a Created card (R943) on the field names its maker, the card whose play or trigger was
 //! resolving when it appeared (a summon's `sourceId` when the event names one; for a copy an effect cast,
@@ -20,7 +21,7 @@ use indexmap::{IndexMap, IndexSet};
 use jackioh_engine::config::SWING_EVAL_SCALE;
 use jackioh_engine::{
     ActingCard, CardInstance, CreatedActing, FoldArgs, GameEvent, GameState, GameSummary, PLAYER_IDS,
-    PerPlayer, PlayerId, StandingAt, SwingTurn, acting_on, find_instance, is_face_down, read_steps,
+    PerPlayer, Phase, PlayerId, StandingAt, SwingTurn, acting_on, find_instance, is_face_down, read_steps,
     recorded_start, summarize_game_with,
 };
 
@@ -37,6 +38,9 @@ pub struct SwingReader {
     makers: IndexMap<String, Option<String>>,
     /// R4552002: every Created instance a hand has held.
     in_hand: IndexSet<String>,
+    /// R4785000: the turn whose start the last step left under way (its seat and turn counter): its
+    /// row waits for the first step past the start.
+    held: Option<(PlayerId, i32)>,
 }
 
 fn is_created(card: &CardInstance) -> bool {
@@ -58,7 +62,14 @@ impl SwingReader {
                 }
             }
         }
-        let mut resolving: Option<String> = None;
+        // R4785000: an answer continues the asking card's play or trigger, and the engine marks no hook
+        // for a run continued (`prompts.rs`), so an answer begins with the card whose script asked still
+        // resolving (an engine's own prompt names none).
+        let mut resolving: Option<String> = before
+            .pending
+            .as_ref()
+            .map(|pending| pending.resume.def_id.clone())
+            .filter(|def_id| !def_id.is_empty());
         let mut turns_started: Vec<(PlayerId, i32)> = Vec::new();
         for event in events {
             match event {
@@ -117,6 +128,8 @@ impl SwingReader {
                 }
             }
         }
+        // No row is written for a turn that begins on a finished game, nor (R4785000) for one whose start
+        // was still under way as the game ended: its row is held, never written.
         if after.result.is_some() {
             return;
         }
@@ -124,7 +137,15 @@ impl SwingReader {
         // nothing but ending it left to do ends by itself, R345; the autopilot plays one, R1183002), and
         // the step's own states are all there is to read: each such turn is read off the state the step
         // left, as the last one is.
-        for (seat, turn) in turns_started {
+        // R4785000: a turn whose start asked a question is read once the start has resolved. The engine
+        // leaves `Phase::Start` only when the start's last stage, the draw, is done (`turn.rs`), so while
+        // the step leaves it there, the turn under way (the last begun) waits, and the first later step
+        // past it reads it, ahead of any turn that step began.
+        let mut owed: Vec<(PlayerId, i32)> = self.held.take().into_iter().chain(turns_started).collect();
+        if after.phase == Phase::Start {
+            self.held = owed.pop();
+        }
+        for (seat, turn) in owed {
             let opponent = seat.opponent();
             let difference = evaluate(after, seat, NextSwing::Seat, &AI_EVAL)
                 - evaluate(after, opponent, NextSwing::Enemy, &AI_EVAL);
@@ -157,7 +178,7 @@ impl SwingReader {
             .collect()
     }
 
-    /// Each seat's rows so far.
+    /// Each seat's rows so far: a turn whose start is still asking has none yet (R4785000).
     pub fn turns(&self) -> &PerPlayer<Vec<SwingTurn>> {
         &self.rows
     }

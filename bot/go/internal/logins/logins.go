@@ -175,14 +175,14 @@ func Prepare(provider *providers.Provider, secret string, vaultText string, home
 		for k, v := range provider.Env {
 			env[k] = v
 		}
-		return newLogin(provider.ID, provider.CLI, purePath(home), env, "")
+		return newLogin(provider.ID, provider.CLI, py.PurePath(home), env, "")
 	}
 	secret = strings.TrimSpace(secret)
 	if secret == "" {
 		herr.Raise(&herr.LoginError{Msg: fmt.Sprintf("`%s`'s secret `%s` is empty in this job",
 			provider.ID, provider.Secret)})
 	}
-	home = purePath(home)
+	home = py.PurePath(home)
 	mkdir(home, 0o700)
 	redact.Remember([]string{secret})
 	env := map[string]string{}
@@ -204,16 +204,16 @@ func Prepare(provider *providers.Provider, secret string, vaultText string, home
 		}
 	}
 	if provider.CLI == "claude" {
-		configDir := purePath(home, "claude")
+		configDir := py.PurePath(home, "claude")
 		mkdir(configDir, 0o700)
 		env["CLAUDE_CODE_OAUTH_TOKEN"] = secret
 		env["CLAUDE_CONFIG_DIR"] = configDir
 		return login
 	}
 	if provider.CLI == "codex" {
-		codexHome := purePath(home, "codex")
-		Install(login, "auth.json", purePath(codexHome, "auth.json"), saved, secret)
-		write(purePath(codexHome, "config.toml"), "cli_auth_credentials_store = \"file\"\n")
+		codexHome := py.PurePath(home, "codex")
+		Install(login, "auth.json", py.PurePath(codexHome, "auth.json"), saved, secret)
+		write(py.PurePath(codexHome, "config.toml"), "cli_auth_credentials_store = \"file\"\n")
 		env["CODEX_HOME"] = codexHome
 	} else if provider.CLI == "muse" {
 		for k, v := range CLIEnv["muse"] {
@@ -221,8 +221,8 @@ func Prepare(provider *providers.Provider, secret string, vaultText string, home
 		}
 		_, isJSON := jsonText(secret)
 		if saved["auth.json"] != "" || isJSON {
-			configHome := purePath(home, "muse-config")
-			Install(login, "auth.json", purePath(configHome, "muse", "auth.json"), saved, secret)
+			configHome := py.PurePath(home, "muse-config")
+			Install(login, "auth.json", py.PurePath(configHome, "muse", "auth.json"), saved, secret)
 			env["XDG_CONFIG_HOME"] = configHome
 		} else {
 			// Not a login file: an API key, which Meta bills per token, not on the subscription.
@@ -299,29 +299,4 @@ func same(current *pyjson.Object, initial map[string]string) bool {
 		}
 	}
 	return true
-}
-
-// purePath is str(PurePosixPath(*parts)): joined with "/", empty and "." parts dropped, ".."
-// kept, an absolute part starting afresh (two leading slashes kept, as POSIX allows).
-func purePath(parts ...string) string {
-	root := ""
-	var segments []string
-	for _, part := range parts {
-		if strings.HasPrefix(part, "/") {
-			segments = nil
-			root = "/"
-			if strings.HasPrefix(part, "//") && !strings.HasPrefix(part, "///") {
-				root = "//"
-			}
-		}
-		for _, s := range strings.Split(part, "/") {
-			if s != "" && s != "." {
-				segments = append(segments, s)
-			}
-		}
-	}
-	if path := root + strings.Join(segments, "/"); path != "" {
-		return path
-	}
-	return "."
 }

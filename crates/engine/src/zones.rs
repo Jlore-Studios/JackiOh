@@ -989,11 +989,16 @@ pub fn replace_in_zone(state: &mut GameState, old: &CardInstance, replacement: &
     replacement.zone = old.zone.clone();
     // R3546002: a Transform keeps the size (Flicker does too, `flicker_in_place`).
     replacement.giga = old.giga;
-    if (row == Row::Units || is_unit_face(state, replacement)) && replacement.position.is_none() {
+    let as_unit = row == Row::Units || is_unit_face(state, replacement);
+    if as_unit && replacement.position.is_none() {
         replacement.position = Some(Position::Atk);
     }
-    // B3.3 rule 1, R385: the new card has entered the field, so its printed Brittle starts.
+    // B3.3 rule 1, R385, R4816000: the new card has entered the field, so it starts what every arrival
+    // from off it starts (`place_with`): its printed Brittle, its printed Dormant (R1839000, R3556000)
+    // and a hull's memory (R1852000).
     start_brittle_on_field(state, replacement, true);
+    crate::slumber::start_slumber_on_field(state, replacement, true);
+    crate::starship::start_starship_on_field(state, replacement, true, as_unit);
 
     let placed = replacement.clone();
     match place {
@@ -1429,17 +1434,6 @@ pub enum MoveResult {
     Moved,
     Vanished,
     Replaced,
-}
-
-impl MoveResult {
-    /// The literal, as serde writes it.
-    pub fn as_str(self) -> &'static str {
-        match self {
-            MoveResult::Moved => "moved",
-            MoveResult::Vanished => "vanished",
-            MoveResult::Replaced => "replaced",
-        }
-    }
 }
 
 // B5 E5: "would go to a graveyard" (damage and combat)

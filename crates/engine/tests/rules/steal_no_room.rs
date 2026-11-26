@@ -6,7 +6,7 @@
 //! (R2618000). A give leaves such a card (R803), and a card no steal reaches (R13, R1839000) is neither
 //! taken nor destroyed. Fixture cards from `fixtures/stinkyscape_verbs.rs`.
 
-use jackioh_engine::effects::{give_control, steal, steal_all};
+use jackioh_engine::effects::{give_control, steal};
 use jackioh_engine::state_check::state_check;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
@@ -180,26 +180,6 @@ fn r4205000_r1220_an_untributable_target_is_destroyed() {
 }
 
 #[test]
-fn r4205000_r68_steal_all_takes_what_fits_and_destroys_the_rest_in_board_order() {
-    let mut s = board(
-        "r4205000-steal-all",
-        json!({ "field": [GRUNT, GRUNT, GRUNT] }),
-        json!({ "field": [PLAIN, PLAIN, PLAIN, PLAIN, PLAIN] }),
-    );
-    let theirs: Vec<String> = (1..=5).map(|lane| s.unit_at(P2, lane).id).collect();
-
-    let events = settled(&mut s, steal_all(Default::default()), P1);
-
-    assert_eq!(control_changed(&events), theirs[..2].to_vec());
-    assert_eq!(s.unit(P1, 4).map(|card| card.id), Some(theirs[0].clone()));
-    assert_eq!(s.unit(P1, 5).map(|card| card.id), Some(theirs[1].clone()));
-    assert_eq!(destroyed(&events), theirs[2..].to_vec());
-    for id in &theirs[2..] {
-        s.expect_in_zone(id.as_str(), "graveyard");
-    }
-}
-
-#[test]
 fn r4205000_r1839000_r13_a_dormant_card_and_a_card_beneath_a_stack_are_neither_stolen_nor_destroyed() {
     let mut s = board(
         "r4205000-unreached",
@@ -226,7 +206,7 @@ fn r4205000_r1839000_r13_a_dormant_card_and_a_card_beneath_a_stack_are_neither_s
     }
     assert_eq!(s.unit(P2, 1).map(|card| card.id), Some(dormant.id.clone()));
 
-    let events = settled(&mut s, steal_all(Default::default()), P1);
+    let events = settled(&mut s, steal_of(&top.id), P1);
     assert_eq!(
         destroyed(&events),
         vec![top.id.clone()],

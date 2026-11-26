@@ -13,8 +13,9 @@ use jackioh_engine::prelude::*;
 pub const ID: &str = "stinkyscapeplus-047";
 
 /// R81, R3547000: any Unit on either side, picked with the play.
+/// R656: Health and Divine Shield help, so a random cast that targets enemies aims this at friends.
 fn targets() -> Vec<TargetDecl> {
-    vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))]
+    vec![TargetDecl { aim: Some(TargetAim::Help), ..TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] })) }]
 }
 
 /// One script for both faces: `health` is declared per face.
@@ -37,6 +38,17 @@ pub fn script() -> CardScripts {
     CardScripts { base, radiant }
 }
 
+/// R767000: until its help aim shipped, the target declared no aim (issue #4844); `KEPT_SCRIPTS` folds
+/// those replays under it.
+pub fn script_before_help_aim() -> CardScripts {
+    let old = vec![TargetDecl::target(1, 1, json!({ "side": "any", "of": ["unit"] }))];
+    let now = script();
+    CardScripts {
+        base: Script { targets: old.clone(), ..now.base },
+        radiant: Script { targets: old, ..now.radiant },
+    }
+}
+
 // S+ #47 Plastanium — SPEC §8.12 row S+ 47 (R81, R3547000).
 #[cfg(test)]
 mod tests {
@@ -48,6 +60,9 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const PLASTANIUM: &str = "stinkyscapeplus-047";
+    const PALANTIR: &str = "classic-004"; // Palantir: steals the play and casts it at enemies (R831001).
+    const MINE: &str = "stand-in (1) 3/3";
+    const THEIRS: &str = "stand-in (1) 4/4";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const SHIELDED: &str = "stand-in (1) 4/4 Divine Shield";
     const WALL: &str = "stand-in (1) 1/30";
@@ -147,6 +162,60 @@ mod tests {
             let unit = s.unit_at(P1, 1);
             s.play(PLASTANIUM, pick::targets(pick::instance(&unit)));
             assert_eq!(s.stats(&unit).max_health, 11);
+        }
+    }
+
+    /// A (1) Cost Spell made a (2) Cost one by a `costMod` of 1: Palantir steals and casts it (R831001).
+    /// P1 holds the Spell and a Unit, P2 a Unit and a face-up Palantir: P1 plays it on their own
+    /// Unit, Palantir steals it and casts it at enemies.
+    fn stolen_rig() -> (Scenario, CardInstance, CardInstance) {
+        let mut s = scenario(json!({
+            "seed": "audit-aim",
+            "p1": { "hand": [{ "def": PLASTANIUM, "costMod": 1 }], "field": [{ "def": MINE, "lane": 1 }],
+                    "library": [FILLER, FILLER, FILLER], "mana": 10 },
+            "p2": { "hand": [FILLER], "field": [{ "def": THEIRS, "lane": 1 }],
+                    "backrow": [{ "def": PALANTIR, "faceUp": true }], "library": [FILLER, FILLER, FILLER] },
+        }));
+        let mine = s.unit_at(P1, 1);
+        let theirs = s.unit_at(P2, 1);
+        let cast = s.hand(P1)[0].id.clone();
+        s.play(cast.as_str(), pick::targets(pick::instance(&mine)));
+        (s, mine, theirs)
+    }
+
+    #[test]
+    fn r656_the_target_aims_help() {
+        let scripts = super::script();
+        for face in [&scripts.base, &scripts.radiant] {
+            assert_eq!(
+                serde_json::to_value(&face.targets).unwrap(),
+                json!([{
+                    "kind": "target",
+                    "min": 1,
+                    "max": 1,
+                    "aim": "help",
+                    "filter": { "side": "any", "of": ["unit"] },
+                }]),
+            );
+        }
+    }
+
+    mod before_help_aim {
+        use super::*;
+
+        use crate::scripts::stinkyscape_plus::c047_plastanium::{ID, script_before_help_aim};
+
+        /// R767000: a game from before the help aim plastaniums the caster's enemy with a stolen cast.
+        #[test]
+        fn r767000_a_game_before_the_help_aim_plastaniums_the_casters_enemy_with_a_stolen_cast() {
+            crate::under_kept(ID, script_before_help_aim(), || {
+                let (s, mine, theirs) = stolen_rig();
+                assert!(s.pile(P2, "graveyard").iter().any(|card| card.def_id == PLASTANIUM), "P2 stole and cast it");
+                assert_eq!(s.stats(&mine).max_health, 5, "the caster's enemy takes the +2 Health");
+                assert_eq!(keyword_count(&s, &mine, KeywordKind::DivineShield), 1);
+                assert_eq!(s.stats(&theirs).max_health, 4, "the caster's own Unit takes no buff");
+                assert_eq!(keyword_count(&s, &theirs, KeywordKind::DivineShield), 0);
+            });
         }
     }
 }

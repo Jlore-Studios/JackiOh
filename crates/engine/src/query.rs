@@ -86,10 +86,15 @@ pub fn hero_of(state: &GameState, player: PlayerId) -> HeroView {
     }
 }
 
-/// R290, R180: the health this player's hero started the game with: its seat's handicap `heroHealth`,
-/// else HERO_HEALTH (Stinkyscape #18.2 BALTHASAR, R1866002).
+/// R290, R180, R4831000: the health this player's hero started the game with: a Duos seat's own HP
+/// at setup, spent or not (`DuosLife::own_start`, absent at DUOS_OWN_HEALTH), else its seat's handicap
+/// `heroHealth`, else HERO_HEALTH (Stinkyscape #18.2 BALTHASAR, R1866002; IA #71, R4587004).
 pub fn starting_health_of(state: &GameState, player: PlayerId) -> i32 {
-    crate::state::starting_hero_health(state.players[player].handicap.as_ref())
+    let side = &state.players[player];
+    match side.duos {
+        Some(life) => life.own_start.unwrap_or(crate::config::DUOS_OWN_HEALTH),
+        None => crate::state::starting_hero_health(side.handicap.as_ref()),
+    }
 }
 
 /// The live pile, for this module only: `zones.rs` keeps `pile_for` private because a live pile hands
@@ -180,35 +185,9 @@ pub fn hand_index(state: &GameState, id: &str) -> Option<(PlayerId, usize)> {
     None
 }
 
-/// R3558000: the leftmost card of `player`'s hand (index 0), or `None` for an empty hand.
-pub fn hand_leftmost(state: &GameState, player: PlayerId) -> Option<&CardInstance> {
-    state.players[player].hand.first()
-}
-
-/// R3558000: the rightmost card of `player`'s hand, or `None` for an empty hand.
-pub fn hand_rightmost(state: &GameState, player: PlayerId) -> Option<&CardInstance> {
-    state.players[player].hand.last()
-}
-
-/// R3558000: the card beside `id` in its hand, on `side` of it, or `None` when `id` is in no hand
-/// or has no neighbour there.
-pub fn hand_neighbor<'a>(state: &'a GameState, id: &str, side: HandSide) -> Option<&'a CardInstance> {
-    let (player, at) = hand_index(state, id)?;
-    let hand = &state.players[player].hand;
-    match side {
-        HandSide::Left => at.checked_sub(1).and_then(|left| hand.get(left)),
-        HandSide::Right => hand.get(at + 1),
-    }
-}
-
 /// R3558000: whether `id` is the leftmost card of its hand.
 pub fn is_leftmost_in_hand(state: &GameState, id: &str) -> bool {
     hand_index(state, id).is_some_and(|(_, at)| at == 0)
-}
-
-/// R3558000: whether `id` is the rightmost card of its hand.
-pub fn is_rightmost_in_hand(state: &GameState, id: &str) -> bool {
-    hand_index(state, id).is_some_and(|(player, at)| at + 1 == state.players[player].hand.len())
 }
 
 /// R1881007: whether a card of one of these definitions is mid-resolution (§10.5's `resolving`) for this
@@ -1252,13 +1231,9 @@ fn forecast_attack(
     let back = theirs.attack * back_multiplier;
     let strikes_back = crate::combat::takes_strike_back(state, attacker, defender);
     // §4.3 step 1: a First Strike defender that destroys the attacker first leaves it no blow to land,
-    // and so does one whose first blow exiles it (R1124, R4111000).
-    let exiled_first = has_keyword(&theirs.keywords, KeywordKind::FirstStrike)
-        && !has_keyword(&mine.keywords, KeywordKind::FirstStrike)
-        && exiles_on_damage(state, defender)
-        && hit_on_unit(state, defender, attacker, back) > 0;
-    let falls =
-        strikes_back && (falls_to_first_strike(state, attacker, defender, back_multiplier) || exiled_first);
+    // and so does one whose first blow exiles it (R1124, R4111000): `falls_to_first_strike` reads both,
+    // as My Pawn's projection does (R4823000).
+    let falls = strikes_back && falls_to_first_strike(state, attacker, defender, back_multiplier);
     let mut dealt = if falls {
         0
     } else {
@@ -1581,8 +1556,9 @@ fn overflow_of(state: &GameState, attacker: &CardInstance, target: &AttackTarget
 }
 
 /// R1124, R4111000: whether `source`'s damage exiles the Unit it lands on (Meditative #72 The Banisher),
-/// which the forecast counts as it counts Poisonous: any blow of 1 or more removes its target.
-fn exiles_on_damage(state: &GameState, source: &CardInstance) -> bool {
+/// which the forecast counts as it counts Poisonous, and R44's projection of a First Strike blow too
+/// (R4823000): any blow of 1 or more removes its target.
+pub(crate) fn exiles_on_damage(state: &GameState, source: &CardInstance) -> bool {
     crate::scripts::flags_of(state, source).exiles_on_damage == Some(true)
 }
 

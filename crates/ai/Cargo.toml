@@ -16,3 +16,6 @@ indexmap = { workspace = true }
 [dev-dependencies]
 jackioh-cards = { workspace = true }
 jackioh-engine = { workspace = true, features = ["testkit"] }
+
+[lints]
+workspace = true

@@ -30,3 +30,6 @@ serde_json = { workspace = true }
 # reach the WebAssembly modules or the release binaries. `crates/tools/tests/acceptance.rs` holds both.
 jackioh-run = { workspace = true, features = ["ts"] }
 jackioh-shared = { workspace = true, features = ["ts"] }
+
+[lints]
+workspace = true

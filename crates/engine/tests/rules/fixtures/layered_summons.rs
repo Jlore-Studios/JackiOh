@@ -2,7 +2,10 @@
 //! summoned into one unit zone as a §3.2 Stack pile, bottom first (`summon_pile`, R1842000), and
 //! R1204's lethal guard standing in such a pile (R1842001). Ids `ls-…` from 18420 are no other file's.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

@@ -159,6 +159,57 @@ fn golden_record_forces_the_cards_into_both_decks_of_every_game_and_replays_clea
 }
 
 #[test]
+fn r4850000_golden_record_radiant_pins_the_forced_cards_and_replays_clean() {
+    let dir = scratch("radiant");
+    let file = dir.join("radiant.jsonl");
+    let path = file.to_str().unwrap();
+    let recorded = jackioh(&[
+        "golden",
+        "record",
+        "--seeds",
+        "1..5",
+        "--force",
+        &FORCED.join(","),
+        "--radiant",
+        "--out",
+        path,
+    ]);
+    assert!(
+        recorded.status.success(),
+        "{}{}",
+        stdout(&recorded),
+        stderr(&recorded)
+    );
+    let text = fs::read_to_string(&file).unwrap();
+    let games: Vec<Value> = text
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap())
+        .collect();
+    assert_eq!(games.len(), 5);
+    for game in &games {
+        assert!(
+            game["args"].get("deckMarks").is_some(),
+            "{}: no deckMarks in {}",
+            game["seed"],
+            game["args"]
+        );
+    }
+    let checked = jackioh(&["golden", "check", "--file", path]);
+    assert!(
+        checked.status.success(),
+        "{}{}",
+        stdout(&checked),
+        stderr(&checked)
+    );
+    assert!(
+        stdout(&checked).contains("5 of 5 games replayed identically"),
+        "{}",
+        stdout(&checked)
+    );
+    let _ = fs::remove_dir_all(&dir);
+}
+
+#[test]
 fn golden_check_with_no_file_folds_the_hotseat_fixture_alone_and_exits_0() {
     let output = jackioh(&["golden", "check"]);
     let out = stdout(&output);

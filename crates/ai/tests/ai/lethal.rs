@@ -306,6 +306,57 @@ mod the_lethal_solvers_walks {
         assert!(counter.used() < AI_SEARCH.lethal_quick_nodes as usize);
     }
 
+    /// R4807000: the AI holds only #97 Zephrys, an `AI_SEARCH.expensive_def_ids` card whose play costs
+    /// more than the depth-first walk's slice, against a hero at 3. That walk skips the play, and the
+    /// best-first walk proves the lethal on the rest of the allowance (Zephrys, C #69, its play, the attack).
+    #[test]
+    fn r4807000_a_step_the_quick_slice_cannot_pay_for_leaves_the_rest_of_the_allowance_to_the_second_walk() {
+        register_cards();
+        let state = scenario(json!({
+            "seed": "audit-zephrys", "active": AI, "turn": 9,
+            "p1": { "hand": ["core-097"], "library": ["core-008", "core-008"] },
+            "p2": { "health": 3, "library": ["core-008", "core-008"] },
+        }))
+        .state()
+        .clone();
+        let limit = AI_BUDGET.lethal_nodes;
+
+        // With no depth-first stage the lethal is proved well inside the allowance.
+        let counter = create_node_counter(limit, None);
+        let second_walk =
+            find_lethal_with_quick_nodes(std::slice::from_ref(&state), AI, &counter, limit, 0, Prices::NONE);
+        assert!(second_walk.is_some(), "the best-first walk proves it");
+        assert!(counter.used() < limit);
+
+        // The solver as `decide`, `lethal_hint` and `unstoppable_lethal` call it.
+        let counter = create_node_counter(limit, None);
+        let found = find_lethal(std::slice::from_ref(&state), AI, &counter, limit, Prices::NONE);
+        let Some(line) = found else {
+            panic!("find_lethal gave up after {} of {limit} nodes", counter.used())
+        };
+        assert!(
+            counter.used() > AI_SEARCH.lethal_quick_nodes as usize,
+            "the second walk ran"
+        );
+        assert!(counter.used() <= limit);
+        let zephrys = mine(&state, AI, "core-097").id;
+        assert!(
+            matches!(line.first(), Some(ActionBody::Play { instance_id, .. }) if *instance_id == zephrys),
+            "the line starts with the Zephrys play"
+        );
+
+        // `play_out`'s counter is too small to pay the Zephrys play's surcharge.
+        let replay = create_node_counter(limit, None);
+        let mut current = state.clone();
+        for action in &line {
+            match simulate(&current, AI, action, &replay, Prices::NONE) {
+                Some(Ok(next)) => current = next,
+                _ => panic!("the line was refused at {}", action_key(action)),
+            }
+        }
+        assert_eq!(current.result.and_then(|result| result.winner.player()), Some(AI));
+    }
+
     /// p1 (the AI) on turn 9 with `def_id` in Defense Position, on the field since before this turn;
     /// p2 at 4 health with no unit, so no Taunt. Both sides hold a library.
     fn in_defense_at_4(def_id: &str) -> GameState {
@@ -521,6 +572,7 @@ mod duos_life_r964000 {
             pool: 20,
             pool_cap: 20,
             spent,
+            own_start: None,
         });
         out
     }

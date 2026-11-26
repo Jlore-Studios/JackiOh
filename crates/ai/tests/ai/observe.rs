@@ -99,8 +99,9 @@ fn is_hidden_backrow(state: &GameState, card: &CardInstance, seat: PlayerId) -> 
 /// B9's mutation: rewrite everything `seat` may not know and nothing else. The opponent's hand and
 /// library get new identities, Radiant flags and order; a backrow card the seat cannot read gets another
 /// Trap (another card of the pool, if it is no Trap) that shows the same cost (R351, #85's own included)
-/// and leaves the seat's view unchanged; the seat's own library is reordered; seed, cursor and the nonce
-/// log are replaced.
+/// and leaves the seat's view unchanged, and an opponent's hidden backrow card's play counts move with it
+/// (R4804000); the seat's own library is reordered; seed, cursor and the nonce log are replaced, and the
+/// id counter moves up (R4824000).
 fn mutate_hidden(state: &GameState, seat: PlayerId, seed: i64) -> GameState {
     let mut out = clone(state);
     let mut rng = create_rng(&format!("observe-mutate:{seed}"), 0);
@@ -156,6 +157,14 @@ fn mutate_hidden(state: &GameState, seat: PlayerId, seed: i64) -> GameState {
                 }
             }
             let picked = rng.pick(&unseen).cloned().unwrap_or_default();
+            if player == opp
+                && card.owner == opp
+                && !picked.is_empty()
+                && picked != original
+                && find_def(Some(&out), &original).is_some()
+            {
+                recount_face_down_play(&mut out, opp, &card, &picked);
+            }
             if let Some(slot) = out.players[player].backrow[lane].as_mut() {
                 slot.def_id = picked;
             }
@@ -167,7 +176,64 @@ fn mutate_hidden(state: &GameState, seat: PlayerId, seed: i64) -> GameState {
     out.seed = format!("observe-mutated-{seed}");
     out.rng_cursor = rng.int(10_000) as u32;
     out.applied = Vec::new();
+    // R4824000: ids minted where the seat cannot see move the counter, and only up.
+    out.next_id += 1 + rng.int(10) as u32;
     out
+}
+
+/// One count less of `key`; a count reaching 0 is removed (`redact`'s own, R4804000).
+fn take_one<K: std::hash::Hash + Eq>(counts: &mut IndexMap<K, i32>, key: &K) {
+    match counts.get_mut(key) {
+        Some(count) if *count > 1 => *count -= 1,
+        Some(_) => {
+            counts.shift_remove(key);
+        }
+        None => {}
+    }
+}
+
+/// R4804000: in a world where the opponent's hidden backrow card is `picked`, their counts hold
+/// `picked`'s tags, set and type where they held the card's (`redact`'s reading, run backwards).
+fn recount_face_down_play(out: &mut GameState, opp: PlayerId, card: &CardInstance, picked: &str) {
+    let mut now = card.clone();
+    now.def_id = picked.to_string();
+    let was: IndexSet<Tag> = query::tags_of(out, card).into_iter().collect();
+    let is: IndexSet<Tag> = query::tags_of(out, &now).into_iter().collect();
+    let was_set = find_def(Some(&*out), &card.def_id).map(|def| def.set);
+    let is_set = find_def(Some(&*out), picked)
+        .map(|def| def.set)
+        .filter(|set| SINGLE_PLAYER_SETS.contains(set) || HELD_SINGLE_PLAYER_SETS.contains(set));
+    let was_type = faces::card_type_of(out, card);
+    let is_type = faces::card_type_of(out, &now);
+    let played_now = out.players[opp].turn_log.played_ids.contains(&card.id);
+    let side = &mut out.players[opp];
+    if let Some(log) = side.game_log.as_mut() {
+        for tag in &was {
+            take_one(&mut log.played_by_tag, tag);
+        }
+        for tag in is {
+            *log.played_by_tag.entry(tag).or_insert(0) += 1;
+        }
+        if let (Some(set), Some(by_set)) = (was_set, log.played_by_set.as_mut()) {
+            take_one(by_set, &set);
+        }
+        if log.played_by_set.as_ref().is_some_and(IndexMap::is_empty) {
+            log.played_by_set = None;
+        }
+        if let Some(set) = is_set {
+            *log.played_by_set
+                .get_or_insert_with(IndexMap::new)
+                .entry(set)
+                .or_insert(0) += 1;
+        }
+    }
+    if played_now
+        && let Some(types) = side.turn_log.played_by_type.as_mut()
+        && types.get(&was_type).is_some_and(|count| *count > 0)
+    {
+        take_one(types, &was_type);
+        *types.entry(is_type).or_insert(0) += 1;
+    }
 }
 
 /// viewFor without its event tail, which B10 exempts, and without the match-made definitions only that

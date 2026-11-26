@@ -10,8 +10,8 @@
 //! a deck that held both deals as it always did.
 //! Everything comes from the rng passed in, so the same seed deals the same deck in any process. The
 //! soft gate (R1390) never deals a card of a set in `gated_sets` (it held Stinkyscape from #1884 until
-//! #1885, Meditative until #732). The Quickdraw cap (R817000), a ladder bot's `strength` (#750, R1454)
-//! and the unban lane's `shape` (R976000, `shadow_ban.rs`) add no rng draw.
+//! #1885, Meditative until #732). The Quickdraw cap (R817000) and a ladder bot's `strength` (#750,
+//! R1454) add no rng draw.
 
 use std::cmp::Ordering;
 use std::ops::{Index, IndexMut};
@@ -24,7 +24,7 @@ use jackioh_engine::{
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::config::{AI_DECK_GATED_SETS, AI_WIN_RATE};
-use crate::shadow_ban::{SHADOW_BAN_IDS, shaped_weight};
+use crate::shadow_ban::SHADOW_BAN_IDS;
 
 /// `"0-1" | "2" | "3" | "4+"`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -37,17 +37,6 @@ pub enum CostBucket {
     Three,
     #[serde(rename = "4+")]
     FourPlus,
-}
-
-impl CostBucket {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            CostBucket::ZeroOne => "0-1",
-            CostBucket::Two => "2",
-            CostBucket::Three => "3",
-            CostBucket::FourPlus => "4+",
-        }
-    }
 }
 
 /// One value per cost bucket, serialized `{ "0-1": …, "2": …, "3": …, "4+": … }`.
@@ -144,10 +133,6 @@ pub struct AiDeckOptions {
     /// strength.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub win_rates: Option<WinRateTable>,
-    /// R976000: multiply each card's weight by `shaped_weight`, the unban lane's dealt-quality table
-    /// (`shadow_ban.rs`). Off by default, whatever `banned` holds, and no caller sets it.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub shape: bool,
 }
 
 /// R1390: the set a deck leans on under the gate `gated`: `lean` itself when the gate leaves it, else
@@ -277,45 +262,25 @@ fn curve_shares(mana_cap: i32) -> ByBucket<f64> {
 
 /// Integers summing to size (largest remainder).
 pub fn curve_targets(size: i32, mana_cap: i32) -> ByBucket<i32> {
-    struct Remainder {
-        bucket: CostBucket,
-        fraction: f64,
-        order: usize,
-    }
     let shares = curve_shares(mana_cap);
-    let mut targets: ByBucket<i32> = ByBucket {
-        zero_one: 0,
-        two: 0,
-        three: 0,
-        four_plus: 0,
-    };
-    let mut remainders: Vec<Remainder> = Vec::new();
+    let mut targets: ByBucket<i32> = ByBucket::default();
+    let mut remainders: Vec<(CostBucket, f64)> = Vec::new();
     let mut assigned = 0;
-    for (order, bucket) in BUCKET_ORDER.into_iter().enumerate() {
+    for bucket in BUCKET_ORDER {
         let raw = shares[bucket] * f64::from(size);
         let whole = raw.floor();
         targets[bucket] = whole as i32;
         assigned += whole as i32;
-        remainders.push(Remainder {
-            bucket,
-            fraction: raw - whole,
-            order,
-        });
+        remainders.push((bucket, raw - whole));
     }
-    // Largest fractional part first; a tie goes to the cheaper bucket, so the result is a total order.
-    remainders.sort_by(|a, b| {
-        if a.fraction != b.fraction {
-            b.fraction.partial_cmp(&a.fraction).unwrap_or(Ordering::Equal)
-        } else {
-            a.order.cmp(&b.order)
-        }
-    });
+    // Largest fractional part first; a tie keeps curve order, the cheaper bucket first (the sort is stable).
+    remainders.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
     let mut i = 0usize;
     while assigned < size && !remainders.is_empty() {
-        let Some(entry) = remainders.get(i) else {
+        let Some((bucket, _)) = remainders.get(i) else {
             break;
         };
-        targets[entry.bucket] += 1;
+        targets[*bucket] += 1;
         assigned += 1;
         i = (i + 1) % remainders.len();
     }
@@ -750,18 +715,10 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
         .filter(|strength| strength.is_finite())
         .unwrap_or(0.0)
         .clamp(0.0, 1.0);
-    // R976000: the unban lane's deck shaping (shadow_ban.rs) only when the caller asks for it, never
-    // because a ban list matches this AI's own, so a gate's two seats are dealt by one rule.
-    let shape = options.shape;
 
     let mut deck: Vec<&CardDef> = include_defs.clone();
     let mut tally = Tally {
-        counts: ByBucket {
-            zero_one: 0,
-            two: 0,
-            three: 0,
-            four_plus: 0,
-        },
+        counts: ByBucket::default(),
         units: 0,
         themed: 0,
         leaned: 0,
@@ -823,9 +780,6 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
             }
             if boosted.contains(&def.id) {
                 weight *= boost_by;
-            }
-            if shape {
-                weight *= shaped_weight(&def.id);
             }
             weight *= win_rate_weight(options.win_rates.as_ref(), &def.id, strength);
             weight

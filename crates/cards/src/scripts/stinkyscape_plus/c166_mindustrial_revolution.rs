@@ -16,7 +16,7 @@
 //! Mindustrial itself. The badge is the face as the catalog the game runs under prints it (`def_of`), so a
 //! replay of an older version badges it in that version's words (R767000). Since issue #4353 the Cry also
 //! adds the card at once, the same add as a turn start's, before it sets the rest-of-game effect
-//! (R4353022); through v0.6.8b it added none until its owner's next turn, which `script_v0_6_8b` keeps.
+//! (R4353022); through v0.6.8d it added none until its owner's next turn, which `script_v0_6_8b` keeps.
 
 use jackioh_engine::effects::for_rest_of_game;
 use jackioh_engine::prelude::*;
@@ -71,7 +71,7 @@ pub fn script() -> CardScripts {
     }
 }
 
-/// R767000: through v0.6.8b the Cry only set the rest-of-game effect, adding nothing until its owner's
+/// R767000: through v0.6.8d the Cry only set the rest-of-game effect, adding nothing until its owner's
 /// next turn (issue #4353); `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_8b() -> CardScripts {
     CardScripts {
@@ -230,7 +230,7 @@ mod tests {
             }
         }
 
-        /// R767000: through v0.6.8b the cast added nothing; the first card came at its owner's next turn
+        /// R767000: through v0.6.8d the cast added nothing; the first card came at its owner's next turn
         /// (issue #4353).
         #[test]
         fn r767000_the_script_kept_for_v0_6_8b_adds_nothing_at_the_cast() {
