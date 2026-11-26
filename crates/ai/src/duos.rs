@@ -31,9 +31,9 @@ use jackioh_engine::wire::{
     DuosSeat, PerTeam, Team,
 };
 use jackioh_engine::{
-    Action, ActionBody, ActionType, CardInstance, CostOptions, GameState, OffFieldZone, PlayerId,
-    PlayerState, Rng, Zone, effective_cost, legal_actions, max_mana_for, natural_mana_on, needs_zone,
-    open_zones, reduce_unpiloted, refreshed_mana, room_in, row_for_card, spendable_mana,
+    Action, ActionBody, ActionType, CardInstance, CostOptions, GameState, OffFieldZone, PlayerId, Rng, Zone,
+    effective_cost, legal_actions, mana_per_turn_of, natural_mana_on, needs_zone, open_zones,
+    reduce_unpiloted, refresh_mana_with_bonus, room_in, row_for_card, spendable_mana,
 };
 use serde::{Deserialize, Serialize};
 
@@ -234,7 +234,6 @@ fn passes_of(state: &DuosState, seat: DuosSeat) -> Vec<String> {
     };
     let rules = state.teams[seat.team()].rules;
     let player = seat.player();
-    let mate_side = &mate_duel.players[mate.player()];
 
     // B19, B28: the passes left this round, the teammate's free hand slots and what the seat's mana
     // pays for, whichever is fewest.
@@ -264,8 +263,8 @@ fn passes_of(state: &DuosState, seat: DuosSeat) -> Vec<String> {
     let mate_probe = mate_probe(mate_duel, mate.player());
     let mate_acts = open_round_seat(state, mate);
     let mate_now = spendable_mana(mate_duel, mate.player());
-    let mate_next = next_turn_mana(mate_duel, mate_side);
-    let own_next = next_turn_mana(&probe, &probe.players[player]);
+    let mate_next = next_turn_mana(mate_duel, mate.player());
+    let own_next = next_turn_mana(&probe, player);
 
     // (the teammate's price, hand index, id): the plays the teammate can make this round, whether
     // or not the seat can play them itself (R2827000), then (pass cost 0 only) the cards it can pay
@@ -358,13 +357,15 @@ fn mate_can_play(receiving: &GameState, given: &CardInstance, mate: PlayerId) ->
         .any(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == given.id))
 }
 
-/// What this side's next refresh gives (§2.3, R181): the turn's start counts the turn, then refreshes
-/// (`turn.rs`), with the rider and a lost refresh as they stand and natural mana as the field stands.
-fn next_turn_mana(duel: &GameState, side: &PlayerState) -> i32 {
-    let mut next = side.clone();
+/// What `player`'s next refresh gives (§2.3, R181), as its turn's start gives it (`turn.rs`): the turn
+/// counted, then the engine's refresh, with the rider and a lost refresh as they stand, natural mana and
+/// the "+N mana per turn" (R4440052) as the field stands, and a credit line's instalment taken off it
+/// (R1224).
+fn next_turn_mana(duel: &GameState, player: PlayerId) -> i32 {
+    let mut next = duel.players[player].clone();
     next.turns_started += 1;
-    let max = max_mana_for(&next);
-    refreshed_mana(&next, max, natural_mana_on(duel))
+    refresh_mana_with_bonus(&mut next, natural_mana_on(duel), mana_per_turn_of(duel, player));
+    next.mana.current
 }
 
 /// Costliest first, then in hand order.
@@ -465,7 +466,7 @@ fn pass_score(
         .into_iter()
         .chain(best_valued_plays(&receiving, mate, other_plays, room))
         .take(DUOS_PASS_MAX_FOLLOWUPS);
-    best_step(&receiving, mate, plays)
+    best_step(&receiving, mate, PASS_SCORE_NONCE, plays)
         .map(|(value, _)| value)
         .unwrap_or_else(|| evaluate(&receiving, mate, NextSwing::Enemy, &AI_EVAL))
 }
@@ -509,21 +510,29 @@ fn best_valued_plays(
     firsts.into_iter().take(limit).map(|(_, action)| action).collect()
 }
 
-/// The best of `evaluate` from `mate`'s seat over `plays`, each applied by one engine step to `from`,
-/// with the state it left; None when none applies. A refused or panicking step is skipped
-/// (R1127000).
+/// The nonces of `best_step`'s steps, `<tag>:<n>`: the scoring's own and, on the state the teammate's
+/// best play left, the passed card's (R1723000). The engine answers a nonce its state already holds with
+/// that state unchanged and no error (§10.2), so a step on a state another step left takes a tag of its
+/// own (#4795).
+const PASS_SCORE_NONCE: &str = "duos-pass-score";
+const PASS_AFTER_NONCE: &str = "duos-pass-after";
+
+/// The best of `evaluate` from `mate`'s seat over `plays`, each applied by one engine step to `from`
+/// under a nonce `tag` names, with the state it left; None when none applies. A refused or panicking
+/// step is skipped (R1127000), and so is one that left `from` as it was, which made no play (#4795).
 fn best_step(
     from: &GameState,
     mate: PlayerId,
+    tag: &str,
     plays: impl IntoIterator<Item = ActionBody>,
 ) -> Option<(f64, GameState)> {
     let mut best: Option<(f64, GameState)> = None;
     for (at, body) in plays.into_iter().enumerate() {
         let applied = catch_unwind(AssertUnwindSafe(|| {
-            reduce_unpiloted(from, &Action::new(body, mate, format!("duos-pass-score:{at}")))
+            reduce_unpiloted(from, &Action::new(body, mate, format!("{tag}:{at}")))
         }));
         let Ok(applied) = applied else { continue };
-        if applied.error.is_some() {
+        if applied.error.is_some() || applied.state == *from {
             continue;
         }
         let value = evaluate(&applied.state, mate, NextSwing::Enemy, &AI_EVAL);
@@ -546,7 +555,7 @@ fn own_use_gain(own_probe: &GameState, seat_player: PlayerId, card_id: &str) -> 
         .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == card_id))
         .take(DUOS_PASS_MAX_FOLLOWUPS)
         .collect();
-    best_step(own_probe, seat_player, plays).map_or(0.0, |(value, _)| {
+    best_step(own_probe, seat_player, PASS_SCORE_NONCE, plays).map_or(0.0, |(value, _)| {
         value - evaluate(own_probe, seat_player, NextSwing::Enemy, &AI_EVAL)
     })
 }
@@ -562,7 +571,7 @@ fn mate_baseline(mate_probe: &GameState, mate: PlayerId) -> (f64, GameState) {
         .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if cards.insert(instance_id.clone())))
         .collect();
     let plays = best_valued_plays(mate_probe, mate, firsts, DUOS_PASS_MAX_FOLLOWUPS);
-    best_step(mate_probe, mate, plays).unwrap_or_else(|| {
+    best_step(mate_probe, mate, PASS_SCORE_NONCE, plays).unwrap_or_else(|| {
         (
             evaluate(mate_probe, mate, NextSwing::Enemy, &AI_EVAL),
             mate_probe.clone(),
@@ -595,7 +604,8 @@ fn pass_gain(
         .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if *instance_id == given.id))
         .take(DUOS_PASS_MAX_FOLLOWUPS)
         .collect();
-    let after = best_step(&receiving, mate, card_plays).map_or(f64::NEG_INFINITY, |(value, _)| value);
+    let after = best_step(&receiving, mate, PASS_AFTER_NONCE, card_plays)
+        .map_or(f64::NEG_INFINITY, |(value, _)| value);
     let keep = hand_card_value(own_probe, passed, &AI_EVAL);
     let price = DUOS_PASS_MARGIN_PER_COST * f64::from(pass_cost);
     let gain = score.max(after) - baseline_value - keep - price - DUOS_PASS_MIN_GAIN;
