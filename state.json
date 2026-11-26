@@ -21676,11 +21676,11 @@
       "action": "plan",
       "asks": [],
       "difficulty_by": {
-        "at": "2026-11-26T03:30:39Z",
+        "at": "2026-11-26T04:05:36Z",
         "difficulty": "hard",
-        "provider": "muse",
-        "tier": "medium",
-        "why": "Engine rules: the change rewrites the replacement/summon path in crates/engine/src (rule 1)."
+        "provider": "claude-4",
+        "tier": "strong",
+        "why": "Rule 1, engine rules: it changes how a summon picks its zone in crates/engine/src/ (replacements.rs, targeting.rs, play_choices.rs, play_steps.rs, giga.rs)"
       },
       "failures": 0,
       "forced": false,
