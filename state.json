@@ -25229,15 +25229,14 @@
     "what": "revise #5083 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-26T16:48:42Z",
+    "at": "2026-11-26T17:01:31Z",
     "notes": [
-      "delivered review #5092 on claude-7 (run 45861159984): interrupted",
-      "delivered plan #5091 on claude-3 (run 45859461484): planned",
-      "delivered revise #5078 on claude-8 (run 45849341507): approved",
-      "delivered review #5083 on claude-6 (run 45837581881): approved",
-      "started review #5092 on claude-7 (run 45862866541)",
-      "started build #5027 on claude-8 (run 45862969898)",
-      "started build #5091 on claude-6 (run 45863080885)",
+      "delivered review #5090 on claude-8 (run 45854990796): approved",
+      "delivered revise #5060 on claude-4 (run 45851156774): approved",
+      "delivered review #5068 on agy (run 45844412265): approved",
+      "delivered plan #5085 on claude-3 (run 45842230680): failed",
+      "started plan #5085 on claude-8 (run 45864946105)",
+      "started revise #5083 on agy (run 45865059685)",
       "nothing more to start: nothing is queued"
     ],
     "since": "2026-09-30T11:21:05Z"
@@ -25944,7 +25943,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T16:48:42Z",
+  "loop_tick": "2026-11-26T17:01:31Z",
   "machine_disk": {
     "issue": null,
     "reading": {
