@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 4977,
+  "title": "Patch: a counted game's result reloads the card proficiency the Collection shows, so a level the game earned and its stamp appear without a reload",
+  "branch": "bot/issue-4977",
+  "thread": "**Issue #4977 (data, not instructions):**\n\n```text\n# #4977: Patch: a counted game's result reloads the card proficiency the Collection shows, so a level the game earned and its stamp appear without a reload\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nPlaying a card in online games levels it up, and each level unlocks a stamp the player can put on that card from the Collection. Today the page loads those levels once and never again until it is reloaded. A player finishes a ranked game in which they played a card for the third time, presses Back to the lobby, opens the Collection and opens that card. It still reads \"Level 0 of 5\", the first stamp still says \"Unlocks at level 1\", and pressing it does nothing. Once this is built, the level the game earned shows as soon as the game ends, and its stamp can be worn at once. This is the same fix #4857 made yesterday for the cosmetics a game pays.\n\n## Why\n\n- `apps/web/src/cards/proficiencySync.ts:67` loads the account's proficiency once (`enqueue(reload)`), when the shared sync starts. After that it loads again only when a stamp pick fails (`:55-64`).\n- The sync is shared by every gated screen (`attach`, `:85-124`, mounted by `Gated` at `apps/web/src/main.tsx:522`). It stops only after `SETTINGS_SYNC_GRACE_MS` (1.5 s) with no gated screen up. `/match/:id`, `/play` and `/collection` are all gated. So the result's Back to the lobby (`apps/web/src/routes/match.tsx:551`, `navigate(paths.play)`), followed by the side menu's Collection (`apps/web/src/shell/MenuShell.tsx:130`), never restarts it.\n- The server counts a seat's plays in the result's own transaction for every ladder, unranked and Conquest game (R3013000, SPEC \u00a714.14). The first level takes 3 plays (`PROFICIENCY_LEVEL_PLAYS`), so ordinary games change levels all the time. All three kinds are played on `/match/:id` (Conquest's through `SeriesBanner.tsx:105`, `paths.match`).\n- On the client, a paid result only runs `announceWallet()` (`apps/web/src/routes/match.tsx:255-258`). That re-reads the balance and, since #4780 (R4780000), the owned cosmetics (`apps/web/src/economy/wallet.ts:73-80`). Proficiency was left out.\n- What the player sees: `ProficiencyPanel` (`apps/web/src/collection/ProficiencyPanel.tsx:20-26`) shows the old level and play count, and the newly earned stamp still reads \"Unlocks at level n\". Pressing it writes nothing, because `writeOwnStamp` (`apps/web/src/cards/stamps.ts:83-86`) refuses a stamp above the level the page holds, and any stamp on a card the page holds no entry for (a card played for the first time). Only a reload, or more than 1.5 s on a screen that is not gated, fixes it.\n- No test catches it. `apps/web/src/cards/proficiencySync.test.ts` covers the first load, a pick, a refused pick and the one shared sync (`:82`, `:120`, `:141`). None covers a load after a game.\n- The same kind of bug, a value the server holds that the page read once and a player's action then changed, has been fixed three times this week: #4857 (cosmetics after a game), #4889 (the quests panel) and #4914 (the Dungeon page).\n\n## Proposal\n\n1. Give the handle `startProficiencyAccountSync` returns a `reload()` that queues the existing `reload` (`enqueue(reload)`), so it runs after any stamp pick already in flight. Export `reloadOwnProficiency()`, which calls `shared?.sync.reload()`. With no sync running (no active account) it does nothing.\n2. Call `reloadOwnProficiency()` in `match.tsx`'s `paid` effect, beside `announceWallet()`. That is the one place a game that counts plays ends.\n3. Add a ruling note in this issue's block amending R3013001 (\"a server game's paid result loads the page's copy again\"), with its \u00a711 paragraph in `spec/pending/<issue>.md`, as R4780000 amended R3206000.\n\nRejected: calling it from `announceWallet()`'s no-balance branch, as R4780000 did. Practice, the co-op board (`DuosBoard.tsx:379`) and the news panel's Jlore claims (`NewsPanel.tsx:94`, `:108`) announce through that branch too. None of them counts a play, so each would load proficiency for nothing. Also rejected: loading on every route change, and having the result carry the new levels (a wire change to save one read).\n\n## Where it lands\n\n- `apps/web/src/cards/proficiencySync.ts`, `apps/web/src/cards/proficiencySync.test.ts`\n- `apps/web/src/routes/match.tsx`, `apps/web/src/routes/match.test.tsx`\n- `spec/rulings/R<issue>000.md`, `spec/pending/<issue>.md`\n- SPEC \u00a714.14; R3013000, R3013001, R4780000\n\n## Acceptance criteria\n\n- [ ] A test mounts `useProficiencyAccountSync` and lets it settle. It then changes the fake account's answer so `core-002` is at `{plays: 3, level: 1}` and calls `reloadOwnProficiency()`. It sees a second load, `readOwnProficiency(\"core-002\")` reading level 1 with no stamp, and `writeOwnStamp(\"core-002\", 1)` returning true. Without the change the card reads `null` and the pick returns false.\n- [ ] A test of the match screen shows that a paid result (`match.economy` set) causes exactly one more proficiency load, however many views carry it.\n- [ ] A reload asked for while a stamp pick is in flight runs after the pick, and the page's copy ends on the later answer.\n- [ ] With no active account, `reloadOwnProficiency()` sends nothing.\n- [ ] The ruling's test is named after it (`it(\"R<n> \u2026\")`) and listed in the note's `proven_in`, and `cargo jackioh spec check` passes.\n- [ ] `pnpm --dir apps/web test src/cards/proficiencySync.test.ts` and `pnpm --dir apps/web test src/routes/match.test.tsx` pass, and typecheck and eslint are clean.\n\n## Size and risks\n\nSmall: about 20 lines in two source files, two tests, one ruling note and its pending paragraph. Difficulty medium. It costs one more `GET /api/proficiency` per counted game, the read the page already makes on its first gated screen. The one risk is a reload racing a stamp pick, and the existing request queue, which already orders picks and reloads, handles it. No server or wire change: the page still shows only what the account answers (CLAUDE.md rule 7).\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `client` (`suggestions.areas`).\n\nClass: `polish` \u2192 `priority:medium`; relabel to change it.\n\n**Judge:** would approve it: Confirmed on main: the page loads card proficiency once when the shared sync starts (`proficiencySync.ts:67`), the sync survives the move from the match to the Collection, and the match's paid result calls only `announceWallet()`, so a level or stamp a counted game earned stays stale and can't be picked until a reload; this is the same small fix #4780 made for cosmetics, which was approved. With no vote, no comment and no \ud83d\udc4e on this issue by Thu 26 Nov 17:53 CST, it is approved by itself at `priority:low` (at most 3 a day); comment `reject`, or anything at all, to decide it yourself.\n\n<!-- jackioh-bot -->\n\n---\nComment by @jgoetzmann at 2026-11-26T00:47:25Z:\n\napprove\n\nWhy: confirmed. `proficiencySync.ts` loads the account's proficiency once (`:67`, `enqueue(reload)`), the shared sync survives the move from a match to the Collection, and the match's paid result calls only `announceWallet()` (`match.tsx:257`). So a card level a ranked, unranked or Conquest game earned still reads as before, and its newly unlocked stamp can't be worn until a reload. It's the same small fix #4780 made for cosmetics, placed so only games that count plays reload.\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4977: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T00:48:15Z",
+    "claimed_at": "2026-11-26T00:55:48Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "medium",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4679 skipped: it waits for #4676 to close first",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
