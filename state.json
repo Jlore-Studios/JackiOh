@@ -24772,18 +24772,9 @@
     "what": "build #5002 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-26T14:52:34Z",
+    "at": "2026-11-26T15:08:38Z",
     "notes": [
-      "delivered review #5074 on claude-8 (run 45841853674): approved",
-      "delivered plan #5002 on claude-3 (run 45839873063): planned",
-      "delivered plan #5036 on claude-3 (run 45839608050): planned",
-      "delivered revise #5068 on agy (run 45835502324): built",
-      "delivered revise #5073 on claude-4 (run 45832338464): approved",
-      "started review #5068 on agy (run 45844412265)",
-      "started revise #5064 on claude-4 (run 45844550800)",
-      "started build #5036 on claude-3 (run 45844702464)",
-      "started build #5002 on claude-8 (run 45844860459)",
-      "nothing more to start: nothing is queued"
+      "#5074: approved and green, so its strikes are cleared"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -25489,7 +25480,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T14:52:34Z",
+  "loop_tick": "2026-11-26T15:08:38Z",
   "machine_disk": {
     "issue": null,
     "reading": {
