@@ -448,6 +448,9 @@ of the counter and skips the payoff line R3696000 adds: the beam's open lines en
 run on until `should_stop`. R4801000: it is first polled once the beam has tried every move at its
 root (`NodeCounter::end_root`), however many nodes those cost (a surcharged play, its auto-answers),
 so a wrap-up that fired before the beam still leaves it lines, the root's End turn among them.
+R4604014: so is the slice's own limit (`create_beam_counter`): the root's moves draw on the decision's
+counter however many nodes they cost, so a root move dearer than the whole slice still closes a line;
+the decision's own limit and clock still stop it.
 `SearchStats.replied` and `worldsScored` say how far they got, and
 `Decision::fell_short` names a decision that left its finalists unscored on a sampled world. With no
 clock, or a wrap-up that never fires, a decision is node for node what it was.
