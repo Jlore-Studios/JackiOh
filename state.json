@@ -21642,9 +21642,7 @@
     },
     "4991": {
       "action": "build",
-      "asks": [
-        "c:7181103198"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-26T03:54:58Z",
         "difficulty": "hard",
@@ -21667,9 +21665,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "claude-1",
-      "owner_since": "2026-11-26T03:10:26Z",
-      "owner_why": "handed off from `muse`: its owner `muse` has no strong seat, which it needs",
+      "owner": "claude-7",
+      "owner_since": "2026-11-26T08:23:51Z",
+      "owner_why": "handed off from `claude-1`: `claude-1` it refused a call; its limit resets at 2026-11-26T11:20:00Z; it can start again only in 2h 56m, more than the 120 minutes an item waits for its owner",
       "paused": {
         "at": "2026-11-26T07:18:58Z",
         "interrupt": "usage",
@@ -21681,11 +21679,11 @@
       "planned_by_id": "claude-1",
       "planned_model": "opus",
       "planned_tier": "strong",
-      "provider": "claude-1",
+      "provider": "claude-7",
       "queued_at": "2026-11-26T02:46:40Z",
       "requested_by": "MaxGoetzmann",
       "round_tier": "strong",
-      "run_id": "45768345270",
+      "run_id": "pending:d6ce445d-1795681401",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "build",
@@ -21704,10 +21702,12 @@
         "provider": "claude-1",
         "run": "45768345270"
       },
-      "started_at": "2026-11-26T06:27:36Z",
+      "started_at": "2026-11-26T08:23:51Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:7181103198"
+      ],
       "verdict_rounds": 0,
       "waiting_comment": 7183446460
     },
@@ -23096,9 +23096,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T08:13:59Z",
+    "at": "2026-11-26T08:23:51Z",
     "url": "",
-    "what": "build #5010 on claude-7"
+    "what": "build #4991 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-26T08:11:41Z",
