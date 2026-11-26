@@ -22438,14 +22438,6 @@
         "reason": "`claude-8` stops mid-call: 5-hour usage is 100%, at or over its 100% cap; it resets at 2026-11-26T06:20:00Z",
         "trail": "s\\\";\\nimport { join, relative } from \\\"node:path\\\";\\nconst SRC = process.argv[2];\\nfunction file\u2026\n- Bash: {\"command\": \"for c in account-label inspect-printed-label inspect-refs-label inspect-detail-caption inspect-rules-label inspect-stats-title inspect-tuned-ribbon inspect-quest-label collection-tile__l\u2026\n- Agent: {\"description\": \"Survey label text casing\", \"subagent_type\": \"Explore\", \"prompt\": \"Read-only survey in the repo at /home/runner/work/_temp/work/item-5013 (a React + TS web client under apps/web/src).\u2026\n- Bash: {\"command\": \"ls && ls i18n | head -30 && git status | head -5\", \"description\": \"List src dirs and i18n contents\"}\n- Bash: {\"command\": \"head -60 i18n/i18n.ts; grep -n \\\"export\\\" i18n/i18n.ts\", \"description\": \"Inspect i18n layer\"}\n- Grep: {\"pattern\": \"account-label|inspect-printed-label|inspect-refs-label|inspect-detail-caption|inspect-rules-label|inspect-stats-title|inspect-tuned-ribbon|inspect-quest-label|collection-tile__lock|colle\u2026\n- Bash: {\"command\": \"grep -n -E \\\"^[^ ].*(card-name|cf-name|mf-name|card-text|cf-text|mf-text)[^-_a-z]\\\" cards/*.css | grep \\\"{\\\" | head -40\", \"description\": \"List card name and rules text selectors\"}\n- Grep: {\"pattern\": \"account-label|duos-life__label|portrait-current\\\\b|inspect-tuned-ribbon|earnWords\", \"glob\": \"*.{tsx,ts,css}\", \"output_mode\": \"content\", \"-n\": true}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/cards/inspect/StateNotes.tsx\", \"offset\": 1, \"limit\": 80}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/duos/LifeStrip.tsx\", \"offset\": 55, \"limit\": 30}\n- Bash: {\"command\": \"sed -n 1,60p fonts.css | grep -n \\\"font-family\\\\|font-weight\\\\|src\\\\|font-style\\\\|unicode\\\" | head -30\", \"description\": \"Check shipped Alegreya weights\"}\n- Grep: {\"pattern\": \"text-transform:\\\\s*uppercase\", \"glob\": \"*.css\", \"output_mode\": \"content\", \"-B\": 12}\n- Grep: {\"pattern\": \"label=|label:\", \"path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/duos/LifeStrip.tsx\", \"output_mode\": \"content\"}\n- Grep: {\"pattern\": \"word:|word =|glyph:\", \"path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/cards\", \"output_mode\": \"content\", \"glob\": \"*.ts*\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/collection/collection.ts\", \"offset\": 355, \"limit\": 30}\n- said: Now find tuning.word source.\n- Grep: {\"pattern\": \"Buffed|Nerfed|\\\"Tuned\\\"\", \"glob\": \"*.{ts,tsx}\", \"output_mode\": \"content\", \"-n\": true, \"head_limit\": 30}\n- Grep: {\"pattern\": \"inspect-stats-title|hero-seat|power-used|pile-label|hand-empty|turn-plate-number|clock-side-label|clock-grace-label\", \"glob\": \"*.tsx\", \"output_mode\": \"content\", \"-n\": true, \"-C\": 2}\n- Grep: {\"pattern\": \"SIDE_LABEL|GRACE_LABEL|function urgencyLabel|HAND_EMPTY_TEXT =|turnBefore|<Pile|label=\\\\{t\\\\(|label: t\\\\(\", \"path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/game\", \"glob\": \"{\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/game/Board.tsx\", \"offset\": 790, \"limit\": 15}\n- Grep: {\"pattern\": \"SIDE_LABEL|GRACE_LABEL|urgencyLabel|HAND_EMPTY_TEXT\", \"glob\": \"*.{ts,tsx}\", \"output_mode\": \"content\", \"-n\": true, \"-A\": 3}\n- Grep: {\"pattern\": \"fx-banner|fx-result|fx-chaos|fx-roll\", \"path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src\", \"output_mode\": \"content\", \"-n\": true}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/fx/fx.css\", \"offset\": 650, \"limit\": 290}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/fx/fx.css\", \"offset\": 1496, \"limit\": 40}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/fx/fx.css\", \"offset\": 1672, \"limit\": 36}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/fx/dom.ts\", \"offset\": 260, \"limit\": 100}\n- Grep: {\"pattern\": \"data-text|\\\\.text\\\\b\", \"path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/fx/dom.ts\", \"output_mode\": \"content\", \"-n\": true, \"-B\": 3}\n- said: Now find where banner/result/chaos/roll cues are created with text/title.\n- Grep: {\"pattern\": \"kind: \\\"(banner|result|chaos|roll)\\\"\", \"path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/fx\", \"output_mode\": \"content\", \"-n\": true, \"-A\": 4}\n- Grep: {\"pattern\": \"FX_TEXT\\\\s*=|banner\\\\(|bannerCue\\\\(|text: FX_TEXT|FX_TEXT\\\\.\\\\w+\", \"path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/fx\", \"output_mode\": \"content\", \"-n\": true, \"glob\": \"!*.tes\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/fx/constants.ts\", \"offset\": 485, \"limit\": 45}\n- Grep: {\"pattern\": \"banner|bannerCue\", \"path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/fx/cards/classicplus/flagbearer.ts\", \"output_mode\": \"content\", \"-n\": true}\n- Grep: {\"pattern\": \"GLITCH_WORDS\\\\s*=|name: \\\"\", \"path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src\", \"glob\": \"**/glitch*.ts\", \"output_mode\": \"content\", \"-n\": true}\n- Grep: {\"pattern\": \"bannerCue\\\\(|bannerOf\\\\(|resultCue\\\\(\", \"path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/fx\", \"output_mode\": \"content\", \"-n\": true, \"glob\": \"!*.test.ts\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/cards/glitch.ts\", \"offset\": 70, \"limit\": 8}\n- Bash: {\"command\": \"cat > /tmp/detail.mjs <<'EOF'\\nimport { readFileSync } from \\\"node:fs\\\";\\nconst sheets = process.argv.slice(2);\\nconst FAMILIES = [\\\"inherit\\\",\\\"var(--font-display)\\\",\\\"var(--font-text)\\\u2026\n- Grep: {\"pattern\": \"Dice of Doom|title: \", \"path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/fx\", \"output_mode\": \"content\", \"-n\": true, \"glob\": \"!*.test.ts\"}\n- Grep: {\"pattern\": \"result-overlay__word|card-type\\\"|\\\"card-type|unrevealed-tag|modifier-list__who|their-hand__title|db-new|db-group-label|ws-field-label\", \"glob\": \"*.tsx\", \"output_mode\": \"content\", \"-n\": t\u2026\n- Grep: {\"pattern\": \"card-type|unrevealed-tag\", \"path\": \"/home/runner/work/_temp/work/item-5013/apps/web/src/game\", \"output_mode\": \"content\", \"-n\": true, \"-C\": 3, \"glob\": \"*.{tsx,css}\"}\n- said: You've hit your 5-hour limit \u00b7 resets 6:20am (UTC)"
       },
-      "hold": {
-        "ends": "2026-11-26T07:54:49Z",
-        "lifted": "2026-11-26T06:26:35Z",
-        "owner": "claude-8",
-        "since": "2026-11-26T05:54:49Z",
-        "until": "2026-11-26T06:20:00Z",
-        "why": "it refused a call"
-      },
       "in_lane": true,
       "interruptions": 0,
       "kind": "build",
@@ -22457,7 +22449,7 @@
       "provider": "claude-8",
       "queued_at": "2026-11-26T05:20:24Z",
       "requested_by": "MaxGoetzmann",
-      "run_id": "45761516599",
+      "run_id": "pending:54d0a903-1795674578",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -22476,7 +22468,7 @@
         "provider": "claude-8",
         "run": "45761516599"
       },
-      "started_at": "2026-11-26T05:25:31Z",
+      "started_at": "2026-11-26T06:30:07Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 7183919190
@@ -22757,9 +22749,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T06:29:13Z",
+    "at": "2026-11-26T06:30:07Z",
     "url": "",
-    "what": "plan #5012 on claude-8"
+    "what": "plan #5013 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-26T06:13:29Z",
