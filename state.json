@@ -22889,6 +22889,7 @@
         "question": "For each of the three switches, keep it or remove it at the value it ships?",
         "why": "the rulings for the first two call them settled and both ship on everywhere, while a new screen of open_lethal is barred until the reply changes, so it stays a knob for that screen"
       },
+      "died": 0,
       "failures": 0,
       "forced": false,
       "handoff": {
