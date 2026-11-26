@@ -1299,6 +1299,43 @@
   animation-name: jk-rotate-atk;
 }
 
+/* R5053000: a GIGA turns within its four zones. Its box at rest is the footprint (ATK) or the
+   footprint with its sides swapped (DEF, board.css), so it turns from one onto the other, stretched
+   as it goes to land on the footprint (`--giga-turn-x` by `--giga-turn-y`, the anchor zone's
+   `cqw`/`cqh`, board.css): the box the new view rests on lies just where the turn ends, where the
+   one-zone `--def-scale` stood the footprint on end across both heroes. `tan(atan2(a, b))` is
+   `a / b` as a number. */
+@keyframes jk-rotate-def-giga {
+  0% {
+    transform: rotate(0deg) scale(1);
+  }
+  100% {
+    transform: rotate(90deg) scale(var(--giga-turn-x), var(--giga-turn-y));
+  }
+}
+
+@keyframes jk-rotate-atk-giga {
+  0% {
+    transform: rotate(90deg) scale(1);
+  }
+  100% {
+    transform: rotate(0deg) scale(var(--giga-turn-x), var(--giga-turn-y));
+  }
+}
+
+.zone[data-giga="anchor"] > [data-animating="positionSwitched"] {
+  --giga-across: tan(atan2(calc(200cqh + var(--gap)), calc(200cqw + var(--gap))));
+  --giga-turn-x: var(--giga-across);
+  --giga-turn-y: calc(1 / var(--giga-across));
+  animation-name: jk-rotate-def-giga;
+}
+
+.zone[data-giga="anchor"] > [data-animating="positionSwitched"][data-position="DEF"] {
+  --giga-turn-x: calc(1 / var(--giga-across));
+  --giga-turn-y: var(--giga-across);
+  animation-name: jk-rotate-atk-giga;
+}
+
 /* --- controlChanged: card slides across the center line (450 ms) --------------------- */
 
 @keyframes jk-cross-center {

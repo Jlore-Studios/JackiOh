@@ -1369,6 +1369,33 @@ button.modifier-badge[data-open="true"] {
   background: transparent;
 }
 
+/* R5053000: a GIGA unit in Defense Position lies on its side across the same four zones. The quarter
+   turn (Card.tsx) spins a card about its own centre, so the card's box is the footprint with its sides
+   swapped (two rows and the gap wide, two lanes and the gap tall) and centred on the footprint's
+   centre, and `--def-scale` is 1: turned, it fills the four zones exactly, as large as an ATK GIGA,
+   where turning the footprint itself stood it on end across both heroes. Only percentages along
+   the same axis exist, so the anchor zone answers its size to the card (`cqw`/`cqh`) while the
+   card is on its side or turning. */
+.zone[data-giga="anchor"]:has(> .card:is([data-position="DEF"], [data-animating="positionSwitched"])) {
+  container-type: size;
+}
+
+.zone[data-side="you"][data-row="units"][data-giga="anchor"] > .card[data-position="DEF"],
+.zone[data-side="opponent"][data-row="units"][data-giga="anchor"] > .card[data-position="DEF"] {
+  --def-scale: 1;
+  left: calc(100cqw - 100cqh);
+  width: calc(200cqh + var(--gap));
+  height: calc(200cqw + var(--gap));
+}
+
+.zone[data-side="you"][data-row="units"][data-giga="anchor"] > .card[data-position="DEF"] {
+  top: calc(100cqh - 100cqw);
+}
+
+.zone[data-side="opponent"][data-row="units"][data-giga="anchor"] > .card[data-position="DEF"] {
+  bottom: calc(100cqh - 100cqw);
+}
+
 /* R3554000: the Black Hole lane is a dark well that breathes, with its swallowed count; still under
    `prefers-reduced-motion` (BUILD M5-T6). The well is a layer of its own whose opacity loops, so the
    loop composites (#3706). R3554002: the slashed lane is a deep red edge over a
@@ -4063,6 +4090,15 @@ button.modifier-badge[data-open="true"] {
     padding: 0 var(--space-1);
     font-size: var(--type-xs-em);
     letter-spacing: -0.02em;
+  }
+
+  /* R5053000: a GIGA's face spans four tiles, so its gems keep the face's own size (cards.css),
+     round in either position, where the tile's 13px squeezed them into slivers. */
+  .zone[data-giga="anchor"] .stat {
+    min-width: var(--mf-stat, 28cqmin);
+    padding: 0 calc(var(--mf-stat, 28cqmin) * 0.12);
+    font-size: calc(var(--mf-stat, 28cqmin) * 0.6);
+    letter-spacing: normal;
   }
 
   /* The peek: the hand's row is half a card tall, the cards hang from its top edge, and the
