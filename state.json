@@ -20483,24 +20483,16 @@
         ],
         "builder": "claude",
         "built_by": "claude-8",
-        "carried": {
-          "by": "`claude` (strong)",
-          "conflicts": [
-            "crates/cards/src/history.rs"
-          ],
-          "from": "543880d2fb845ac95fcbba2a2920c3d225646c8e",
-          "main": "492a4363ecb4b9c8b4667cdbb7cf63ea8a2b56dc"
-        },
         "rejections": [],
         "reviews": [
           {
             "family": "claude",
             "provider": "claude-8",
-            "run": "45707471417",
+            "run": "45718215934",
             "tier": "strong"
           }
         ],
-        "sha": "6f6b22fc6b2919695fd7e63471fb42b25a1531c4",
+        "sha": "e797835e691cf57a3db8cb64630559803c63ef71",
         "tiers": {
           "claude": "strong"
         }
