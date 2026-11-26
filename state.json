@@ -42242,41 +42242,6 @@
         "approver": {
           "family": "claude",
           "model": "opus",
-          "provider": "claude-6",
-          "tier": "strong"
-        },
-        "builder": {
-          "family": "claude",
-          "provider": "claude-6"
-        },
-        "difficulty": "medium",
-        "done_at": "2026-11-06T04:06:26Z",
-        "every": 5,
-        "findings": 0,
-        "head": "324330509ec5e7ba3103648c867c95de31d7bc66",
-        "issue": 3229,
-        "merged_at": "2026-11-06T03:33:28Z",
-        "n": 90,
-        "pr": 3250,
-        "queued_at": "2026-11-06T03:33:28Z",
-        "reviewer": {
-          "family": "claude",
-          "model": "opus",
-          "provider": "claude-1",
-          "tier": "strong"
-        },
-        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/42157860894",
-        "sha": "105211cd4221f4c5bace65dbb850b5b0a79ef301",
-        "started_at": "2026-11-06T03:39:21Z",
-        "status": "done",
-        "title": "Patch: draw the dungeon map's node icons as SVG instead of system emoji",
-        "tries": 0,
-        "verdict": "clean"
-      },
-      {
-        "approver": {
-          "family": "claude",
-          "model": "opus",
           "provider": "claude-4",
           "tier": "strong"
         },
@@ -45764,7 +45729,9 @@
         "approver": {},
         "builder": {},
         "difficulty": "hard",
+        "done_at": "2026-11-26T09:36:29Z",
         "every": 5,
+        "findings": 0,
         "head": "75790655c00ba8b9a0b325e198b708679756b7a1",
         "issue": 4817,
         "merged_at": "2026-11-26T08:57:37Z",
@@ -45777,12 +45744,13 @@
           "provider": "claude-3",
           "tier": "strong"
         },
-        "run_id": "pending:e7b51864-1795685076",
+        "run": "https://github.com/Jlore-Studios/JackiOh/actions/runs/45791766092",
         "sha": "22a9db19dd2732f368f4612dff9ddf08a9dbfc0b",
         "started_at": "2026-11-26T09:25:01Z",
-        "status": "queued",
+        "status": "done",
         "title": "Patch: a card made Radiant where it stands starts the Brittle its Radiant face newly prints, and regains a Reborn that face newly prints",
-        "tries": 0
+        "tries": 0,
+        "verdict": "clean"
       }
     ],
     "count": 592
