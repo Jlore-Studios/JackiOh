@@ -32,6 +32,7 @@ crates/cards
 ├── clippy.toml         the purity lint (CLAUDE.md rule 4), the engine's file
 ├── src/lib.rs          CATALOG, CATALOG_IDS, CATALOG_VERSION, card_def, register_all, the registry
 ├── src/query.rs        spec §5.1's catalog.query, the only random-pool source
+├── src/war_doctrine.rs the War Doctrine text S #137 and S #176 share (R5106000)
 ├── src/census.rs       each set's cards, tokens, rarities and tag counts (#2581)
 ├── src/ky_test_bank.rs C+ #42 KY's Test's problems (R420)
 ├── src/scripts/

@@ -14,16 +14,14 @@
 //! its controller has a Dormant Starship. The prompt names the card as the game's
 //! catalog spells it (`def_of`). Declares no numbers.
 //!
-//! R5106000: the text is S #137's (`launch_then_discover`): the Dormant Starship read once, as the
+//! R5106000: the text is S #137's (`crate::war_doctrine`): the Dormant Starship read once, as the
 //! Spell begins, so a fused Cry that asks during the launch (S #40 Poison Capsule's placement) is
 //! answered and the Discover follows. Before issue #5106 (`script_before_launch_read_once`, R767000)
 //! the rebuild after that answer found the Starship launched, and the Discover was lost.
 
 use jackioh_engine::prelude::*;
 
-use crate::scripts::stinkyscape::c137_firststrike_capability::{
-    PICKED, Read, cast_the_pick, doctrine_text, launch_then_discover,
-};
+use crate::war_doctrine::{PICKED, Read, cast_the_pick, doctrine_text, launch_then_discover};
 
 pub const ID: &str = "stinkyscape-176";
 
