@@ -22747,6 +22747,14 @@
         "sha": "f40b2f367b5a2eee8df2007823297b36287b6b31",
         "tiers": {}
       }
+    },
+    "5019": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-26T03:46:09Z",
+      "issue": 4996,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
