@@ -44410,6 +44410,14 @@
         "title": "Patch: the Duos gate holds the Medium and Hard AI teams, not just Easy",
         "verdict": "came to nothing",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-26T00:47:48Z",
+        "number": 4970,
+        "reason": "all 45 deck fixtures pass today, and none uses `deckCopies`, `heroArmor`, `heroFloor` or `tutorialCardsOnly`. `MAX_COPIES = 1` appears only in the check's comments and messages. Teaching the check fields no fixture has is a guard against something that hasn't happened. Do it in the change that first adds such a fixture.",
+        "title": "Patch: check-fixtures reads MAX_COPIES from engine config and accepts valid handicap fields",
+        "verdict": "came to nothing",
+        "why": "rejected by @jgoetzmann"
       }
     ],
     "declined": [
@@ -45230,6 +45238,13 @@
         "number": 4979,
         "reason": "no Medium or Hard gate game is shown failing, and neither cited bug (#4895, #4961) lives in the free-pass branch the new games would reach. Two to four new floors to calibrate and about three times the daily Duos gate's runtime is a lot of upkeep for a path with no shipped bug. The scene tests hold the per-decision behaviour on every pull request.",
         "title": "Patch: the Duos gate holds the Medium and Hard AI teams, not just Easy",
+        "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-26T00:47:48Z",
+        "number": 4970,
+        "reason": "all 45 deck fixtures pass today, and none uses `deckCopies`, `heroArmor`, `heroFloor` or `tutorialCardsOnly`. `MAX_COPIES = 1` appears only in the check's comments and messages. Teaching the check fields no fixture has is a guard against something that hasn't happened. Do it in the change that first adds such a fixture.",
+        "title": "Patch: check-fixtures reads MAX_COPIES from engine config and accepts valid handicap fields",
         "why": "rejected by @jgoetzmann"
       }
     ],
