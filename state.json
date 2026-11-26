@@ -21546,6 +21546,8 @@
       }
     },
     "5118": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-26T19:30:31Z",
@@ -21559,8 +21561,11 @@
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -30; sed -n 80,125p apps/web/src/game/drag/model.ts\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='apps/web/src/game/drag/model.ts'\\ns=open(p).read()\\na=s.index(\\\" const dropTestids = dropSetFor(view, legal, lifted);\\\\n const freeDrop\\\")\\nb=s.index(\\\" return {\\\\n\u2026\n- Bash: {\"command\": \"cd apps/web/src/game/drag; sed -n 50,125p model.test.ts; grep -n \\\"resolveDrop\\\" model.ts | head; grep -n \\\"DropSpot\\\" model.ts | head -3\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5107; sed -n 64,76p apps/web/src/game/drag/model.ts; sed -n 280,360p apps/web/src/game/drag/model.ts\"}\n- said: Now the tests.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5107/apps/web/src\\npython3 - <<'EOF'\\np='game/drag/model.test.ts'\\ns=open(p).read()\\ns=s.replace('import { IDLE, onClickTarget, pickInPlay, type Inte\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5107/apps/web/src\\npython3 - <<'EOF'\\np='test/ux/drag-model.test.ts'\\ns=open(p).read()\\ns=s.replace(''' dropTestids: [\\\"zone-you-backrow-2\\\"],\\n free\u2026\n- said: Now spec files.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5107; cat spec/pending/5054.md; ls spec/rulings | tail -3; cat spec/rulings/$(ls spec/rulings | grep -v README | tail -1); grep -c \\\"R783007\\\\]\\\\]). \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5107; ls spec/rulings | grep -E \\\"R5[0-9]{3}000\\\" | tail -3\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5107; cat spec/rulings/R5054000.md | head -8; \\ncat > spec/rulings/R5107000.md <<'EOF'\\n---\\nid: R5107000\\ntitle: \\\"Where a Cloaked card dropped on t\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5107; (pnpm --dir apps/web typecheck 2>&1 | tail -5; pnpm exec eslint apps/web 2>&1 | tail -10; cargo fmt --check 2>&1 | tail -3; cargo jackioh spec \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5107; cargo jackioh classify --base origin/main --claims 2>&1 | tail -8\", \"timeout\": 600000}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: a Cloaked Spell dropped outside the backrow zones casts face-up at once\"} --> A Cloaked Spell dragged out of the hand and dropped on the board outside its lit backrow zones now casts face-up. A drop on a lit backrow zone still sets it face-down. Clickin\u2026"
       },
       "issue": 5107,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-26T20:40:37Z",
         "from_run": "45884159705",
         "gates": [
           {
@@ -21652,7 +21657,11 @@
         "source": "build",
         "until": "2026-11-26T21:07:49Z"
       },
+      "pending_request": false,
+      "provider": "claude-8",
       "queued_at": "2026-11-26T20:37:49Z",
+      "run_id": "pending:f2b75f09-1795725611",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -21671,6 +21680,9 @@
         "provider": "claude-8",
         "run": "45884159705"
       },
+      "started_at": "2026-11-26T20:40:37Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -21684,9 +21696,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T20:39:58Z",
+    "at": "2026-11-26T20:40:37Z",
     "url": "",
-    "what": "review #5097 on claude-8"
+    "what": "review #5118 on claude-8"
   },
   "last_sweep": {
     "at": "2026-11-26T20:20:29Z",
