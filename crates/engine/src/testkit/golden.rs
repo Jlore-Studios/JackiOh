@@ -207,6 +207,11 @@ pub fn events_text(events: &[GameEvent]) -> String {
                 event.remove("creator");
                 // R4672000: the game record's, as `creator` is.
                 event.remove("modes");
+                // R4707000: a roll's places in its table and the faces a die's card checks for, the
+                // game record's too (only `chaosRolled` and `rolled` carry them).
+                event.remove("indices");
+                event.remove("tableSize");
+                event.remove("hit");
                 event.remove("via");
                 event.remove("diedAs");
                 strip_destroyed_animated(item);

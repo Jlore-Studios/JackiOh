@@ -1,8 +1,8 @@
 //! M #92 Unan (SPEC §8.8 row 92): (3) Unit, Rare, 3/13 with Armor 2 → 6/26 with Armor 4 (Armor 3 →
 //! Armor 6 until issue #3837).
 //!
-//! Base:    "Armor 2\nLethal damage your hero or your other Units would take is redirected to this."
-//! Radiant: "Armor 4\nLethal damage your hero or your other Units would take is redirected to this."
+//! Base:    "Armor 2\nAura: Lethal damage your hero or your other Units would take is redirected to this."
+//! Radiant: "Armor 4\nAura: Lethal damage your hero or your other Units would take is redirected to this."
 //! Engine: `ReplacementDef { id: "92-lethal-guard", on: LethalHit, instead: redirect SelfCard }`
 //! (ME-LETHALGUARD, R1204): §4.4 step 4a opens for Units too, so a fatal hit on a friendly ally
 //! goes to Unan through Unan's own Armor, each Unan catching a given hit once. Armor is catalog
@@ -274,7 +274,7 @@ mod tests {
                 assert_eq!(def.radiant.keywords, vec![Keyword::Armor { n: 4 }]);
                 assert_eq!(
                     def.radiant.text,
-                    "Armor 4\nLethal damage your hero or your other Units would take is redirected to this."
+                    "Armor 4\nAura: Lethal damage your hero or your other Units would take is redirected to this."
                 );
                 assert_eq!(
                     registered_scripts()[ID].radiant.replacements.len(),

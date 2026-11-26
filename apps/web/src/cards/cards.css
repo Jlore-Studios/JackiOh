@@ -711,6 +711,11 @@
   opacity: 0.75;
 }
 
+/* R5050000: the gear a unit holds, listed below its own text as a Starship's pieces are. */
+.cf .cf-equipped {
+  margin-top: 0.3em;
+}
+
 /* R2521009: a Resource's sale prices on the face shown, "Credits: 2–5", a quiet line under its text
    (`CardDef.resource`, read off the definition alone). */
 .cf .cf-text-credits {

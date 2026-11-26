@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { isRecord, isSafeKey, isStringArray } from "./json.ts";
+import { isCount, isRecord, isSafeKey, isStringArray } from "./json.ts";
 
 describe("isRecord", () => {
   it("takes a plain object", () => {
@@ -42,5 +42,18 @@ describe("isStringArray", () => {
     expect(isStringArray("a")).toBe(false);
     expect(isStringArray(null)).toBe(false);
     expect(isStringArray({})).toBe(false);
+  });
+});
+
+describe("isCount", () => {
+  it("isCount holds only a non-negative safe integer", () => {
+    expect(isCount(0)).toBe(true);
+    expect(isCount(Number.MAX_SAFE_INTEGER)).toBe(true);
+    expect(isCount(-1)).toBe(false);
+    expect(isCount(1.5)).toBe(false);
+    expect(isCount(Number.MAX_SAFE_INTEGER + 1)).toBe(false);
+    expect(isCount(Number.NaN)).toBe(false);
+    expect(isCount("1")).toBe(false);
+    expect(isCount(null)).toBe(false);
   });
 });

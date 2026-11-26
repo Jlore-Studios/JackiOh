@@ -3533,6 +3533,36 @@ fn r4702003_the_evaluations_zero_weight_terms_are_gone() {
     );
 }
 
+/// R4608000: the lone-win rule ships with no switch (#5027): no source of the AI names one.
+#[test]
+fn r4608000_the_lone_win_switch_is_gone() {
+    let found = ai_sources_naming(&[concat!("confirm", "_lone_win"), concat!("confirm", ": bool")]);
+    assert!(
+        found.is_empty(),
+        "the lone-win switch is back (R4608000): {found:?}"
+    );
+}
+
+/// R4515000: the spread order of the reply's visible tries ships with no switch (#5027).
+#[test]
+fn r4515000_the_spread_switch_is_gone() {
+    let found = ai_sources_naming(&[concat!("spread", "_activations"), concat!("spread", ": bool")]);
+    assert!(
+        found.is_empty(),
+        "the spread switch is back (R4515000): {found:?}"
+    );
+}
+
+/// R5027000: the reply's open lethal ships on with no switch (#5027): no source of the AI names one.
+#[test]
+fn r5027000_the_open_lethal_switch_is_gone() {
+    let found = ai_sources_naming(&[concat!("open", "_lethal"), concat!("simulate_reply", "_with")]);
+    assert!(
+        found.is_empty(),
+        "the open-lethal switch is back (R5027000): {found:?}"
+    );
+}
+
 /// R4159000, R1010000, R1010001, R1011000, R1171001, R3112001: the AI compiles no network and no prior.
 /// `crates/ai` has no build script, no `learned` or `policy` module and no weights file, and no source of
 /// the AI or of the three WebAssembly crates names what only they used.

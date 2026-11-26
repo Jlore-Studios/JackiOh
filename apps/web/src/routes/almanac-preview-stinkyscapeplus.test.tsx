@@ -118,14 +118,18 @@ describe("the Almanac with the Stinkyscape+ set previewed (R3572000)", () => {
 
     const pool = visiblePool(currentCatalog(), null, { ...DEFAULT_FILTER, ownedOnly: false }, DEFAULT_SORT);
     render(<FilterBar filter={DEFAULT_FILTER} onFilter={() => {}} sort={DEFAULT_SORT} onSort={() => {}} count={pool.length} />);
-    for (const tag of deckable) expect(chips("Tag"), tag).toContain(tag);
-    expect(chips("Tag")).not.toContain("Automa-ζ");
+    // Each chip row is read once: a role query walks the whole tree, and one per tag of every card ran
+    // this test past its timeout on a loaded runner (#5092).
+    const deckChips = chips("Tag");
+    for (const tag of deckable) expect(deckChips, tag).toContain(tag);
+    expect(deckChips).not.toContain("Automa-ζ");
     cleanup();
 
     render(<AlmanacRoute />);
-    expect(chips("Tag")).toEqual([...ALMANAC_CHIP_TAGS]);
-    for (const tag of STINKYSCAPE_PLUS.flatMap((def) => def.tags)) expect(chips("Tag"), tag).toContain(tag);
-    expect(chips("Tag")).toContain("Automa-ζ");
+    const almanacChips = chips("Tag");
+    expect(almanacChips).toEqual([...ALMANAC_CHIP_TAGS]);
+    for (const tag of STINKYSCAPE_PLUS.flatMap((def) => def.tags)) expect(almanacChips, tag).toContain(tag);
+    expect(almanacChips).toContain("Automa-ζ");
     fireEvent.click(screen.getByTestId(filterTagId("Automa-ζ")));
     const zetas = STINKYSCAPE_PLUS.filter((def) => def.tags.includes("Automa-ζ")).map((def) => def.id);
     expect(zetas).toHaveLength(5);

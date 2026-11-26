@@ -14,6 +14,7 @@ import { API_REQUEST_TIMEOUT_SECONDS } from "@jackioh/server-config";
 import type { CardTier } from "../wire/generated/CardTier.ts";
 import type { CosmeticRarity } from "../wire/generated/cosmetics.ts";
 import type { FleetTrackView } from "../wire/generated/FleetTrackView.ts";
+import type { RolledKind } from "../wire/generated/RolledKind.ts";
 import type { StatsFace } from "../wire/generated/StatsFace.ts";
 import type { VariantKind } from "../wire/generated/VariantKind.ts";
 import { stripTrailingSlashes } from "./navigate.ts";
@@ -1816,6 +1817,11 @@ export type CardDrillDownResponse = {
   variants?: PublicVariantGroup[];
   /** R4679000: each card it made or offered at the page's patch and face, best adjusted first; absent from an older server. */
   outputs?: PublicOutputRow[];
+  /**
+   * R4707001: the card's rolled outcomes at the page's patch and face, one group per kind it has (its table of
+   * effects, coin flips, dice) in that order; `[]` for a card with none, absent from an older server.
+   */
+  rolled?: PublicRolledGroup[];
 };
 
 /** R4676000: one choice of a card, read against the field of every card's choices. */
@@ -1859,6 +1865,30 @@ export type PublicOutputRow = {
   offered?: number;
   /** Picked over offered, 0..1; absent when it was never offered. */
   pickRate?: number;
+};
+
+/** R4707001: one outcome a card rolled, read against its expected share and the card's other outcomes of its kind. */
+export type PublicRolledRow = {
+  /** Unique within the response, e.g. `core-004:2/6`. */
+  key: string;
+  /** The server's words for the outcome ("3 of 6 heads", "Lands on 67"), shown as they are. */
+  label: string;
+  /** The share the odds give it, 0..1. */
+  expected: number;
+  /** The share it was rolled in, 0..1. */
+  share: number;
+  games: number;
+  adjustedWinRate: number | null;
+  adjustedLow: number | null;
+  adjustedHigh: number | null;
+  tier: CardTier | null;
+  hasEnoughGames: boolean;
+};
+
+/** R4707001: one kind of a card's rolled outcomes, its rows best adjusted first and those below the floor last. */
+export type PublicRolledGroup = {
+  kind: RolledKind;
+  rows: PublicRolledRow[];
 };
 
 /** R4673000: one face's figures in the drill-down, read against that face's own field and band. */
@@ -1953,6 +1983,8 @@ export type PublicPlayVersion = {
   live: boolean;
   /** R4678001: the patches its versions reach (the patch bar's windows); absent from a server deployed before it. */
   patches?: number;
+  /** R5033000: the position of its first version in the shipped history; absent from a server deployed before it. */
+  firstShipped?: number | null;
   games: number;
   adjustedWinRate: number | null;
   adjustedLow: number | null;

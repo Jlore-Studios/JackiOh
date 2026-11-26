@@ -207,8 +207,8 @@ func Explain(ctx *hctx.Context, number int, state *pyjson.Object) {
 	state.Set("runners_explained", record)
 }
 
-// GatherWorkflow is GATHER_WORKFLOW: the gather workflow (training/gather.md), on two of GitHub's
-// runners without a pause since #3740.
+// GatherWorkflow is GATHER_WORKFLOW: the gather workflow (training/gather.md), on GitHub's runners
+// without a pause since #3740 (two of them, five since 2026-11-26).
 var GatherWorkflow = "gather.yml"
 
 // BoxRow and BoxSteps are BOX_ROW and BOX_STEPS: how many boxes a row of the runners diagram

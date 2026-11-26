@@ -1,7 +1,7 @@
 //! M #65 Keymaster Keenus (SPEC §8.8 row 65, R1086, R781004, R4991000): (4) Unit, Legendary, 1/1 → 2/2.
 //!
-//! Both faces: "Equip\nAura: Has {keywords|random combat keyword|random combat keywords}." — 5 on the
-//! base face, 10 on the Radiant face (the declared number `keywords`, R386).
+//! Both faces: "Equip\nHas {keywords|random combat keyword|random combat keywords}." — 5 on the base
+//! face, 10 on the Radiant face (the declared number `keywords`, R386).
 //! Engine: Equip is printed (ME-EQUIP, R1086). §10.4's layers read with no rng, so the Aura's keywords
 //! are drawn at an event and kept on the card: as it arrives on the field (played, summoned, Flickered,
 //! back through Reborn, or made there by a Transform, R4991000) and as an Equip play fuses it into a
@@ -228,7 +228,7 @@ mod tests {
                 assert_eq!(face.keywords, vec![Keyword::Equip], "it no longer prints every keyword");
                 assert_eq!(
                     face.text,
-                    "Equip\nAura: Has {keywords|random combat keyword|random combat keywords}."
+                    "Equip\nHas {keywords|random combat keyword|random combat keywords}."
                 );
             }
             assert_eq!(

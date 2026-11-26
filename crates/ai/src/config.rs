@@ -207,10 +207,6 @@ pub struct AiSearch {
     pub lethal_width: i32,
     /// Lines per first action scored after the opponent's reply on determinization 0.
     pub lines_per_action: i32,
-    /// R4608000: a finalist whose line won on determinization 0, the world the beam searched, and on no
-    /// other scored determinization is ranked by its mean on those others (`decide::finalist_means`).
-    /// `false` ranks every finalist by the plain mean of all its worlds, as before.
-    pub confirm_lone_win: bool,
     /// R4788000: on a state whose allowance was scaled down (`fat_*`, below), the lethal solver's best-first
     /// walk goes on past its scaled allowance, up to the budget's own `lethal_nodes` (at most its `nodes`,
     /// R4802000), while it stands at a position whose ready attacks already reach lethal, and finishes the
@@ -280,9 +276,6 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     lethal_quick_nodes: 40,
     lethal_width: 60,
     lines_per_action: 2,
-    // R4608000: on. No fork screen was played (training/improve.md, A screen); its scene tests
-    // (crates/ai/tests/ai/lone_win.rs) settle it, as an inconclusive screen's would (R4319000).
-    confirm_lone_win: true,
     // R4788000: on. Its deal screen, 400 games on improve-dev against the control at 3a83bd7741, read
     // 200-200, edge 0.0 (0.0 to 0.0), inconclusive (R4319000): 0 decided of 200 (won 0, lost 0), 6
     // diverged, every game clean; its scene tests (crates/ai/tests/ai/wide_lethal.rs) settle it
@@ -867,7 +860,10 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     // forks, 99 live, edge -0.002 (-0.032 to 0.027); reverted (training/improve.md, A screen).
     activation: 0.5,
     // R2688000: an untuned start for the training lanes, as R2564000's is. At 0.5 the smoke gate read
-    // 20, 20 and 20 of 20; at 0, 20, 20 and 20.
+    // 20, 20 and 20 of 20; at 0, 20, 20 and 20. #5007 screened it at 1.0 (training/improve.md, A
+    // screen): 400 games on improve-dev, 200-200, edge +0.000 (-0.031 to +0.031), 10 decided (5-5), 22
+    // diverged vs control d7f8bbf22c, every game clean: inconclusive (R4319000), so its scenes settle it,
+    // and those in `tests/ai/attack_hooks.rs` hold 0.5. Another arm is a screen of its own.
     attack_hook: 0.5,
     // R3064000: 1.0, not the untuned starts' 0.5: the slumber share already discounts the wait, and no
     // effect reaches a Dormant card, so its wake comes. At 0.5, as at 0, Medium ends its turn rather than
@@ -1155,10 +1151,6 @@ pub struct AiReply {
     /// Activations of cards the seat can see on the field that one reply step tries, in reply.rs
     /// `ordered_tries`' order.
     pub visible_activations: i32,
-    /// R4515000: the tries aimed at a card of the seat's are dealt out one per pick over every visible
-    /// source and ability, each one's at the seat's most valuable Unit first (reply.rs `ordered_tries`);
-    /// false sorts them by `aim_of` alone, the first ones `legal_actions` lists.
-    pub spread_activations: bool,
     /// The opponent's value per point of damage its attack would deal the seat's hero.
     pub face_per_damage: f64,
     /// Per point an attack deals a unit it does not kill.
@@ -1168,11 +1160,6 @@ pub struct AiReply {
     /// Shield weight. Board-dependent kills only — the Cleave body itself stays priced by
     /// `AI_EVAL.keyword.cleave`.
     pub cleave_share: f64,
-    /// #1634: the static trader's lethal counts every attack it has left. When `lethal::ready_gap`
-    /// says the opponent's attacks still to come reach the seat's hero past its Taunts, every attack
-    /// on that hero is worth `AI_EVAL.win`, so the face goes first; false scores one hit at a time
-    /// (`reply_face_value`).
-    pub open_lethal: bool,
     /// #1696: switches to Defense Position that one reply step tries once no attack is worth making,
     /// of the opponent's units in Attack Position whose switch `legal_actions` lists, in that order.
     /// R4187000: also the most walls (`wall_switches`) a step facing lethal weighs against its best attack.
@@ -1201,20 +1188,9 @@ pub const AI_REPLY: AiReply = AiReply {
     reserve_steps: 5,
     known_plays: 8,
     visible_activations: 4,
-    // R4515000: on. No screen was played; its scene tests settle it, as R4433000's were. false gives back
-    // the order before it.
-    spread_activations: true,
     face_per_damage: 1.0,
     chip_per_damage: 0.3,
     cleave_share: 1.0,
-    // #1634: off. On, its screen read 203-197, edge 0.015 (-0.002 to 0.032), inconclusive (R4319000):
-    // 3 decided of 200 (won 3, lost 0). #4246's, 400 games on improve-dev against the control at
-    // baa7cdb93f, read 200-200, edge 0.0 (0.0 to 0.0), inconclusive (R4319000): 0 decided of 200, 21
-    // diverged. #4931's, on the reply since R4187000's walls and R4810000's close steps, 400 games on
-    // improve-dev against the control at 328135b4ca, read 198-202, edge -0.010 (-0.024 to 0.004),
-    // inconclusive (R4319000): 2 decided of 200 (won 0, lost 2), 11 diverged, every game clean: reverted.
-    // No further screen until the reply changes again (training/improve.md, A screen).
-    open_lethal: false,
     // #1696: on. Its screen read 199-199 with deal 136 aborted at the action cap in both seatings (the
     // parent aborts it against itself too), edge 0.0 (-0.057 to 0.057), every other game clean
     // (training/improve.md, A screen); about 34 decided (17-17, R4319000); 0 turns it off.

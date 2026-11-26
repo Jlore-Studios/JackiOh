@@ -889,11 +889,15 @@ func TestWorkflows_GatherPlaysTheNewestMainWithoutAPause(t *testing.T) {
 	assertTrue(t, workflowsLinted(t, "gather.yml"))
 }
 
-// #3740: the gather lane holds two of the organization's 60 hosted jobs, its two parts, and every
-// job of its runs on GitHub's runners: the owner's PC no longer runs it.
-func TestWorkflows_TheGatherLaneHoldsTwoOfGithubsRunners(t *testing.T) {
+// #3740: the gather lane holds five of the organization's 60 hosted jobs (two until 2026-11-26), its
+// five parts, each its own equal slice of a run's GATHER_STRIDE, and every job of its runs on GitHub's
+// runners: the owner's PC no longer runs it.
+func TestWorkflows_TheGatherLaneHoldsFiveOfGithubsRunners(t *testing.T) {
 	text := workflowsRead(t, "gather.yml")
-	assertIn(t, "part: [1, 2]\n", workflowsJob(t, text, "gather"))
+	assertIn(t, "part: [1, 2, 3, 4, 5]\n", workflowsJob(t, text, "gather"))
+	stride := regexp.MustCompile(`(?m)^  GATHER_STRIDE: "(\d+)"$`).FindStringSubmatch(text)
+	assertTrue(t, stride != nil, "GATHER_STRIDE")
+	assertTrue(t, workflowsInt(t, stride[1])%5 == 0, "GATHER_STRIDE splits into five equal slices")
 	assertNotIn(t, "TRAINING_ON_PC", text)
 	assertNotIn(t, "jackioh-selfplay-local", text)
 	assertNotIn(t, "inputs.runner", text)
