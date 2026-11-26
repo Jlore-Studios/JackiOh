@@ -23322,15 +23322,8 @@
       }
     },
     "5046": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45837707574",
-        "model": "sonnet",
-        "provider": "claude-4",
-        "since": "2026-11-26T14:28:00Z",
-        "until": "2026-11-26T14:58:00Z"
-      },
       "difficulty_by": {
         "at": "2026-11-26T14:27:50Z",
         "difficulty": "medium",
@@ -23347,9 +23340,8 @@
         "reason": "planned on sonnet",
         "trail": "- Bash: {\"command\": \"cat scripts/ci-shards.toml && ls .github/ci && cat .github/ci/rust-test.toml && ls .bot-plan.md 2>&1\"}\n- tool error: Exit code 2 # How many jobs share each sharded CI job (#3072). .github/ci/matrix.py reads it, in ci.yml's # `changes` job, from the pull request's own copy. Every test or spec lands in exactly one of\u2026\n- Bash: {\"command\": \"sed -n 1,80p .github/ci/rust-test.toml; ls .github/ci; git log --oneline -15 -- scripts/ci-shards.toml\"}\n- Bash: {\"command\": \"grep -n \\\"tools, wasm\\\" -r scripts bot/tests .github --include=* -l 2>/dev/null | head -20; sed -n 55,80p scripts/ci-shards.toml\"}\n- Bash: {\"command\": \"git show 7fb76d cutoff 2>/dev/null | head -0; git show 7fb76d5cb4 --stat | head -30; git show e153ebc33e --stat | head -20; git log -5 --format='%h %ad %s' --date=iso -- scripts/ci-shard\u2026\n- Bash: {\"command\": \"git cat-file -t d9fb4d6 2>&1; git log -3 --format='%h %ad %s' --date=iso; git branch -a | head; ls .harness 2>/dev/null | head\"}\n- Bash: {\"command\": \"sed -n 1,200p bot/tests/test_ci_matrix.py | grep -n -i \\\"tools\\\\|shard\\\\|8\\\" | head -50\"}\n- Bash: {\"command\": \"git log -1 --format='%h %ad %P %s' --date=iso d9fb4d6; git show d9fb4d6:scripts/ci-shards.toml | grep -n '\\\"tools, wasm\\\"'; git merge-base --is-ancestor d9fb4d6 HEAD && echo ancestor || \u2026\n- Bash: {\"command\": \"sed -n 1,60p .github/ci/matrix.py | head -80; grep -n \\\"def main\\\\|argparse\\\\|add_parser\\\\|sys.argv\\\" .github/ci/matrix.py | head\"}\n- Bash: {\"command\": \"python3 .github/ci/matrix.py matrix | python3 -c \\\"\\nimport sys,json\\nfor l in sys.stdin:\\n k,v=l.rstrip().split('=',1)\\n d=json.loads(v)\\n if isinstance(d,dict) and 'include' in d:\\n pr\u2026\n- Bash: {\"command\": \"grep -rn \\\"fn r4607000_resume_refuses_a_changed_header\\\\|fn r4607000_a_finished_save_plays_nothing\\\\|fn r4607000_a_deal_finished_before_a_batch_error\\\" crates/tools/src | head; grep -n \\\u2026\n- Bash: {\"command\": \"sed -n 140,170p .github/ci/matrix.py; grep -n \\\"mod tests\\\" crates/tools/src/fork_screen.rs | head -3; python3 - <<'EOF'\\nimport zlib\\nfor n in [\\\"fork_screen::tests::r4607000_a_deal_fin\u2026\n- Bash: {\"command\": \"grep -n \\\"mod fork_screen\\\" crates/tools/src/*.rs; sed -n 1236,1244p crates/tools/src/fork_screen.rs; grep -n \\\"slowest\\\\|4/4\\\\|8/8\\\" scripts/ci-shards.toml | head\"}\n- Write: {\"path\": \"/home/runner/work/_temp/work/item-5046/.bot-plan.md\", \"content\": \"# Draft plan #5046 (planner)\\n\\nFindings:\\n- Flagged job `rust (test tools, wasm 4/4)` ran on d9fb4d6 (08:05 UTC 2026-11-26\u2026\n- said: <!-- bot: {\"difficulty\": \"medium\", \"why\": \"None of the five hard lines holds: the only edit is a comment in scripts/ci-shards.toml, with no engine, AI, cross-crate, migration or 40-file change.\"} --> ## Goal The flagged job, `rust (test tools, wasm 4/4)`, no longer exists on `main`, so no count cha\u2026"
       },
-      "in_lane": true,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-4",
       "owner_since": "2026-11-26T14:18:35Z",
       "owner_why": "it plans it",
@@ -23360,9 +23352,9 @@
       "planned_model": "sonnet",
       "planned_tier": "medium",
       "provider": "claude-4",
-      "run_id": "45837707574",
+      "run_id": "pending:d52d275a-1795703408",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-26T14:18:35Z",
+      "started_at": "2026-11-26T14:30:37Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -24495,9 +24487,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T14:29:52Z",
+    "at": "2026-11-26T14:30:37Z",
     "url": "",
-    "what": "plan #5036 on claude-3"
+    "what": "build #5046 on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-26T14:13:26Z",
