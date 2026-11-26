@@ -23810,7 +23810,7 @@
       }
     },
     "5064": {
-      "action": "revise",
+      "action": "review",
       "asks": [],
       "audit_tier": "",
       "cleared": {
@@ -23835,22 +23835,23 @@
       "forced": false,
       "interruptions": 0,
       "issue": 4707,
-      "kind": "revise",
+      "kind": "review",
       "last_findings": [],
-      "live": "resolving",
+      "live": "reviewing",
       "merge_owner": "claude-4",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-4",
+      "provider": "claude-7",
       "question": "",
       "queued_at": "2026-11-26T16:19:51Z",
       "round_tier": "strong",
-      "run_id": "45857821886",
+      "run_id": "pending:48c7b63a-1795717913",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "source": "",
+      "spot_check": true,
       "spot_check_n": 610,
-      "started_at": "2026-11-26T16:20:13Z",
+      "started_at": "2026-11-26T18:32:23Z",
       "stop_requested": false,
       "taken_asks": [],
       "verdict_rounds": 3,
@@ -25096,9 +25097,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T18:31:34Z",
+    "at": "2026-11-26T18:32:23Z",
     "url": "",
-    "what": "revise #5093 on claude-3"
+    "what": "spot-check #5064 on claude-7"
   },
   "last_sweep": {
     "at": "2026-11-26T18:13:25Z",
@@ -47844,7 +47845,15 @@
         "n": 610,
         "pr": 5064,
         "queued_at": "2026-11-26T18:22:57Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-7",
+          "tier": "strong"
+        },
+        "run_id": "pending:48c7b63a-1795717913",
         "sha": "480256e74e965e08681eaa41c940b9c0360e78ce",
+        "started_at": "2026-11-26T18:32:23Z",
         "status": "queued",
         "title": "Patch: deeper card stats, S4, random-effect splits: each rolled outcome of Call to Chaos, coins and dice",
         "tries": 0
