@@ -21776,7 +21776,7 @@
     "what": "build #5122 on agy"
   },
   "last_sweep": {
-    "at": "2026-11-26T23:33:35Z",
+    "at": "2026-11-26T23:39:42Z",
     "notes": [
       "#5094 is held for `claude-3` until 18:40 (it refused a call)"
     ],
@@ -22484,7 +22484,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T23:33:35Z",
+  "loop_tick": "2026-11-26T23:39:42Z",
   "machine_disk": {
     "issue": null,
     "reading": {
