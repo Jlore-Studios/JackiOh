@@ -23914,6 +23914,7 @@
         "by": "`gemini` (medium)",
         "sha": "60505269394dc87956709237eff5cb94a64efeb9"
       },
+      "closed_at": "2026-11-26T17:42:30Z",
       "died": 0,
       "difficulty": "medium",
       "failures": 0,
@@ -23925,6 +23926,7 @@
       "last_findings": [],
       "live": "reviewing",
       "merge_owner": "agy",
+      "merged": true,
       "pending_request": false,
       "provider": "agy",
       "question": "",
