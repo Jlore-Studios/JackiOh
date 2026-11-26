@@ -21951,9 +21951,7 @@
     },
     "4999": {
       "action": "build",
-      "asks": [
-        "c:7183069760"
-      ],
+      "asks": [],
       "difficulty_by": {
         "at": "2026-11-26T05:34:33Z",
         "difficulty": "medium",
@@ -21976,9 +21974,9 @@
       "kind": "build",
       "last_findings": [],
       "live": "building",
-      "owner": "muse",
-      "owner_since": "2026-11-26T05:26:21Z",
-      "owner_why": "it plans it",
+      "owner": "agy",
+      "owner_since": "2026-11-26T08:58:06Z",
+      "owner_why": "handed off from `muse`: `muse` it refused a call; its limit resets at 2026-11-30T00:00:00Z",
       "paused": {
         "at": "2026-11-26T05:47:39Z",
         "interrupt": "usage",
@@ -21990,16 +21988,18 @@
       "planned_by_id": "muse",
       "planned_model": "muse-spark-1.3-contributor",
       "planned_tier": "medium",
-      "provider": "muse",
+      "provider": "agy",
       "queued_at": "2026-11-26T05:19:35Z",
       "requested_by": "jgoetzmann",
       "round_tier": "medium",
-      "run_id": "45762937003",
-      "runs_on": "night-vm-muse",
-      "started_at": "2026-11-26T05:38:35Z",
+      "run_id": "pending:952d5441-1795683445",
+      "runs_on": "night-vm-agy",
+      "started_at": "2026-11-26T08:58:06Z",
       "stop_requested": false,
       "suggestion": true,
-      "taken_asks": [],
+      "taken_asks": [
+        "c:7183069760"
+      ],
       "verdict_rounds": 0
     },
     "5000": {
@@ -23070,9 +23070,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T08:23:51Z",
+    "at": "2026-11-26T08:58:06Z",
     "url": "",
-    "what": "build #4991 on claude-7"
+    "what": "build #4999 on agy"
   },
   "last_sweep": {
     "at": "2026-11-26T08:47:53Z",
