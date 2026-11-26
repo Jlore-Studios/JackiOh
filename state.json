@@ -21561,6 +21561,9 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "4991": {
+      "suggestion": true
+    },
     "4992": {
       "asks": [
         "c:7181098640"
@@ -44691,6 +44694,13 @@
         "at": "2026-11-26T02:46:22Z",
         "number": 4992,
         "title": "Patch: Mass Driver's and Doomsday Clock's countdown badges state their countdown once, and Radiant Doomsday Clock's badge says the damage it deals",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
+      },
+      {
+        "at": "2026-11-26T02:46:37Z",
+        "number": 4991,
+        "title": "Patch: a Flickered card starts its printed Brittle again, and a Keymaster Keenus or Shockwave447 made by a Transform draws its Aura's keywords",
         "verdict": "approved",
         "why": "approved by @MaxGoetzmann"
       }
