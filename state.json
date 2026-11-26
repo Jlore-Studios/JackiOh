@@ -21654,9 +21654,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T22:29:33Z",
+    "at": "2026-11-26T22:30:11Z",
     "url": "",
-    "what": "suggestions (tests) on claude-3"
+    "what": "suggestions (rules) on claude-4"
   },
   "last_sweep": {
     "at": "2026-11-26T22:20:30Z",
@@ -45802,9 +45802,9 @@
         "why": "closed unbuilt by a person (not planned)"
       }
     ],
-    "idle_since": "2026-11-26T22:29:33Z",
-    "last_area": "tests",
-    "last_run": "2026-11-26T22:29:33Z",
+    "idle_since": "2026-11-26T22:30:11Z",
+    "last_area": "rules",
+    "last_run": "2026-11-26T22:30:11Z",
     "provider": null,
     "requested": false,
     "run_id": null,
@@ -45815,6 +45815,14 @@
         "last_run": "2026-11-26T22:29:33Z",
         "provider": "claude-3",
         "run_id": "45905121001",
+        "taken_asks": []
+      },
+      "2": {
+        "area": "rules",
+        "count": 2,
+        "last_run": "2026-11-26T22:30:11Z",
+        "provider": "claude-4",
+        "run_id": "pending:0aad295e-1795732186",
         "taken_asks": []
       }
     },
