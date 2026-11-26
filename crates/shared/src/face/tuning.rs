@@ -420,17 +420,16 @@ pub fn with_part_numbers(
             .iter()
             .map(|(part, forced)| {
                 let radiant = radiant_face || *forced;
-                let text = if radiant { &part.radiant.text } else { &part.base.text };
-                if !filled {
-                    return text.clone();
+                let text = if radiant {
+                    &part.radiant.text
+                } else {
+                    &part.base.text
+                };
+                if filled {
+                    own_numbers_text(part, text, radiant, tuning)
+                } else {
+                    text.clone()
                 }
-                let values: IndexMap<String, i32> = part
-                    .params
-                    .iter()
-                    .flatten()
-                    .map(|param| (param.key.clone(), tuned_value(param, radiant, tuning)))
-                    .collect();
-                filled_text_of(part, text, radiant, Some(&values)).0
             })
             .collect::<Vec<_>>()
             .join(FUSED_LINE)
@@ -443,6 +442,33 @@ pub fn with_part_numbers(
         out.radiant.text = face_text(true, true);
     }
     Some(out)
+}
+
+/// R5049000: `text` (one of `part`'s, or its Chinese template) filled with `part`'s own numbers on the face `radiant`
+/// names, as `tuning` moves them.
+fn own_numbers_text(part: &CardDef, text: &str, radiant: bool, tuning: Option<&Tuning>) -> String {
+    let values: IndexMap<String, i32> = part
+        .params
+        .iter()
+        .flatten()
+        .map(|param| (param.key.clone(), tuned_value(param, radiant, tuning)))
+        .collect();
+    filled_text_of(part, text, radiant, Some(&values)).0
+}
+
+/// R5050000: `def`, a unit holding gear (`fused.rs` `equipped_of`), printed as `host`, the card the gear was
+/// equipped into: the host's name, and on each face its text filled with its own numbers (R5049000) and its
+/// keywords, so what the gear lends reads as gained; its id, cost, stats and tags stay the fusion's. `forced` is
+/// R469's mark on the host, which puts its Radiant face on both forms.
+pub fn as_host(def: &CardDef, host: &CardDef, forced: bool, tuning: Option<&Tuning>) -> CardDef {
+    let mut out = def.clone();
+    out.name = host.name.clone();
+    for (face, radiant) in [(&mut out.base, forced), (&mut out.radiant, true)] {
+        let printed = if radiant { &host.radiant } else { &host.base };
+        face.text = own_numbers_text(host, &printed.text, radiant, tuning);
+        face.keywords = printed.keywords.clone();
+    }
+    out
 }
 
 /// `fillParams` over a text of its own (a Chinese template, a copier's sentence): `def`'s declared numbers.

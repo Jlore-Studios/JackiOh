@@ -9,7 +9,7 @@
 
 use std::str::FromStr;
 
-use jackioh_engine::wire::{CardDef, KeywordKind};
+use jackioh_engine::wire::{CardDef, KeywordKind, Tag};
 
 use crate::config::keyword_line_rank;
 
@@ -87,12 +87,14 @@ pub fn fused_parts(
     listed: &dyn Fn(&str) -> Option<Vec<String>>,
     inside: &[String],
 ) -> Option<Vec<String>> {
-    let marked = |id: &str| {
-        listed(id).map(|ingredients| ingredients.into_iter().map(|id| (id, false)).collect())
-    };
+    let marked =
+        |id: &str| listed(id).map(|ingredients| ingredients.into_iter().map(|id| (id, false)).collect());
     let leaves = leaves_in(id, false, &marked, inside)?;
     Some(leaves.into_iter().map(|leaf| leaf.def_id).collect())
 }
+
+/// R469, R5049000: the ingredients a held definition lists, each with its Radiant mark (`CardDef.ingredients`).
+pub type MarkedListing<'a> = &'a dyn Fn(&str) -> Option<Vec<(String, bool)>>;
 
 /// R469, R5049000: one catalog card a fused definition is made of, and whether it went in on its Radiant face:
 /// marked so itself, or inside a fused ingredient that was (`fuse.rs` `fused_face` puts such a fusion in on
@@ -105,7 +107,7 @@ pub struct FusedLeaf {
 
 /// R469, R5049000: `fused_parts` with each leaf's Radiant mark. `listed` answers the ingredients a held
 /// definition lists, each with its mark (`CardDef.ingredients`).
-pub fn fused_leaves(id: &str, listed: &dyn Fn(&str) -> Option<Vec<(String, bool)>>) -> Option<Vec<FusedLeaf>> {
+pub fn fused_leaves(id: &str, listed: MarkedListing<'_>) -> Option<Vec<FusedLeaf>> {
     leaves_in(id, false, listed, &[])
 }
 
@@ -131,7 +133,7 @@ pub fn leaves_of(def: &CardDef, lookup: &dyn Fn(&str) -> Option<CardDef>) -> Opt
 fn leaves_in(
     id: &str,
     radiant: bool,
-    listed: &dyn Fn(&str) -> Option<Vec<(String, bool)>>,
+    listed: MarkedListing<'_>,
     inside: &[String],
 ) -> Option<Vec<FusedLeaf>> {
     let ingredients = match listed(id).filter(|ingredients| !ingredients.is_empty()) {
@@ -173,6 +175,60 @@ pub fn holds_dormant_starship(def: &CardDef) -> bool {
     };
     fused_parts(&def.id, &listed, &[])
         .is_some_and(|parts| parts.len() > 1 && parts.iter().any(|part| part == DORMANT_STARSHIP_ID))
+}
+
+/// R3045000, R5050000: the Stinkyscape Miners, Miner v1 to v5, gear that prints no Weapon tag; the web's
+/// `fusedArt.ts` `MINER_IDS` and `tests/face.rs` hold both to the catalog's.
+pub const MINER_IDS: [&str; 5] = [
+    "stinkyscape-062",
+    "stinkyscape-063",
+    "stinkyscape-064",
+    "stinkyscape-065",
+    "stinkyscape-066",
+];
+
+/// R5050000: a unit holding gear, a Miner or a Weapon, Equipped into it (§6.1 Equip, R1841002): the card it was
+/// equipped into, and the gear, oldest first, each with R469's mark.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Equipped {
+    pub host: FusedLeaf,
+    pub gear: Vec<FusedLeaf>,
+}
+
+/// R3045000, R5050000: whether the catalog card `id` (its definition `def`, where found) is gear.
+pub fn is_gear(id: &str, def: Option<&CardDef>) -> bool {
+    MINER_IDS.contains(&id) || def.is_some_and(|def| def.tags.contains(&Tag::Weapon))
+}
+
+/// R5050000: `def` as a unit holding gear: a fusion whose leaves are gear but one, its host, the card the gear
+/// was equipped into. An Equip fuses onto its host as `[equip, host]`, a fusion again for each pick (`[newest,
+/// (older + host)]`), so the gear comes oldest first by reversing the leaves. `None` for any other definition: no
+/// gear, gear fused onto gear, two cards that are no gear (a host that was itself a fusion), a Dormant Starship
+/// (its pieces are its own list, R2249000), or a fusion a digest hides (R468).
+pub fn equipped_of(def: &CardDef, lookup: &dyn Fn(&str) -> Option<CardDef>) -> Option<Equipped> {
+    let leaves = leaves_of(def, lookup)?;
+    if leaves.len() < 2 || leaves.iter().any(|leaf| leaf.def_id == DORMANT_STARSHIP_ID) {
+        return None;
+    }
+    let (gear, hosts): (Vec<FusedLeaf>, Vec<FusedLeaf>) = leaves
+        .into_iter()
+        .partition(|leaf| is_gear(&leaf.def_id, lookup(&leaf.def_id).as_ref()));
+    let [host] = <[FusedLeaf; 1]>::try_from(hosts).ok()?;
+    if gear.is_empty() {
+        return None;
+    }
+    Some(Equipped {
+        host,
+        gear: gear.into_iter().rev().collect(),
+    })
+}
+
+/// R5050000: the card a unit holding gear was equipped into (`equipped_of`), its definition the catalog's: what the
+/// unit is named for where nothing but the catalog is held (a log line, a Chinese name).
+pub fn equipped_host(def: &CardDef) -> Option<CardDef> {
+    let in_catalog = |id: &str| jackioh_engine::catalog::find_def(None, id).cloned();
+    let gear = equipped_of(def, &in_catalog)?;
+    in_catalog(&gear.host.def_id)
 }
 
 /// R3941002: whether `id` names a fused definition (`t-<n>:…`, R179).

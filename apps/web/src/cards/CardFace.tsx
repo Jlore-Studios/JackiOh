@@ -151,7 +151,7 @@ import { FullArtSignature } from "./FullArtSignature.tsx";
 import { foilFor, frameRarity } from "./frame.ts";
 import type { FaceModel, RichText } from "./model.ts";
 import { RulesText, printedValue } from "./RulesText.tsx";
-import { StarshipPieces } from "./StarshipPieces.tsx";
+import { EquippedGear, StarshipPieces } from "./StarshipPieces.tsx";
 import { setAccentOf, setMarkOf, watermarkOf } from "./setMark.ts";
 import { useCardSettings } from "./settings.ts";
 import { pixelNameUri } from "./pixelName.ts";
@@ -733,6 +733,10 @@ function CardFace({
               <span className="cf-text-base">
                 <RulesText rich={shown} />
               </span>
+            )}
+            {face.equipped !== undefined && (
+              // R5050000: a unit holding gear lists it below its own text, as a Starship lists its pieces.
+              <EquippedGear equipped={face.equipped} />
             )}
             {face.credits != null && (
               <span className="cf-text-credits" data-credits-min={face.credits.min} data-credits-max={face.credits.max}>
