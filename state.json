@@ -24334,9 +24334,11 @@
       "asks": [],
       "audit_tier": "strong",
       "cross_rounds": 1,
+      "died": 0,
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-26T11:22:29Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-26T13:00:45Z",
         "family": "claude",
@@ -24346,6 +24348,7 @@
         "reason": "`claude-1` stops mid-call: 5-hour usage is 75%, at or over its 40% cap outside its hours; it resets at 2026-11-26T16:20:00Z",
         "trail": ""
       },
+      "interruptions": 0,
       "issue": 5025,
       "kind": "revise",
       "last_findings": [
