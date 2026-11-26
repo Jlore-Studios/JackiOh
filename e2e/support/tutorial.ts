@@ -493,10 +493,18 @@ function finishPlay(play: PlayAction, view: PlayerViewLike, remaining: number): 
       }
       case "discover":
       case "mode":
-      case "direction":
-        for (const mode of play.modes ?? []) cy.get(inPicker(mode)).click();
+      case "direction": {
+        // R783004: a Cloaked card's "Play it how?" is a mode picker of its own, face-up (`up`) or the
+        // play's `faceDown`, which the play names apart from its modes (tutorial lesson 5's Goku gains).
+        const how = play.faceDown ?? "up";
+        if ((play.modes ?? []).length === 0 && $body.find(inPicker(how)).length > 0) {
+          cy.get(inPicker(how)).click();
+        } else {
+          for (const mode of play.modes ?? []) cy.get(inPicker(mode)).click();
+        }
         submitIfStillOpen(`${PROMPT}[data-prompt-source="play"]`);
         break;
+      }
       default:
         break;
     }
