@@ -18,7 +18,8 @@ struct TutorialTier {
     /// Games 1..tutorialGames against the AI at AI_TUTORIAL.
     tutorial_games: i32,
     /// Greedy's wins against AI_TUTORIAL the run needs: about half of its 13. Measured: 8 of these 13
-    /// (tutorial-tier-4 to -8's 65 games after #4897 gave 32, about 49%; tutorial-tier-4's then gave 2).
+    /// (tutorial-tier-4 to -8's 65 games after #4897 gave 32 and 100 games of a fresh series 53;
+    /// tutorial-tier-4's then gave 2).
     /// Before: 9 (tutorial-tier-3's seeds 1–100 gave 49 of 100 after R4132000's beam, 57 before; a
     /// re-dealt run of 13 reaches 6 about 68 times in 100 at 49% and 86 at 57%, and an AI as strong as
     /// Easy, 35 of 100, lets it about once in 4).
