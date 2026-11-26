@@ -195,6 +195,8 @@ mod tests {
             adjusted_high: Some(rate + 0.02),
             tier: Some(tier),
             has_enough_games: games >= FLOOR,
+            win_rate: None,
+            play_rate: None,
         }
     }
 

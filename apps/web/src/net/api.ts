@@ -1959,6 +1959,16 @@ export type PublicPlayVersion = {
   adjustedHigh: number | null;
   tier: CardTier | null;
   hasEnoughGames: boolean;
+  /**
+   * R5037000: its win rate over the games it counts, as the Cards tab's reads a card's (R3185000); null with no
+   * games; absent from a server deployed before it. The client shows it from R654's floor (`hasEnoughGames`).
+   */
+  winRate?: number | null;
+  /**
+   * R5037000: its played games over its seen games (R3950000); null when it was never seen, which is no 0%; absent
+   * from a server deployed before it.
+   */
+  playRate?: number | null;
 };
 
 /** R4675001: `GET /api/stats/versions`: every deck card's play versions in catalog order, and the band their tiers read. */

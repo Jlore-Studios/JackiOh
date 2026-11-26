@@ -2070,6 +2070,25 @@ pub fn seen(stats: &CardStats) -> Tally {
     seen
 }
 
+/// R3950000: a card's play rate, how often it was played when seen: its played games over its seen games
+/// (played, or drawn and never played; `seen`), in every mode. A card only a rule makes (R3070000), which
+/// `made` names as the games a seat made one (`CreatedStats::made`), reads its used Created games over
+/// them. `None` when it was never seen, so a card nobody held never reads as 0%.
+pub fn play_rate(
+    stats: Option<&CardStats>,
+    created: Option<&CreatedStats>,
+    made: Option<&Tally>,
+) -> Option<f64> {
+    let (played, seen_games) = match made {
+        Some(made) => (
+            created.map_or(0, |created| created.created_played.games),
+            made.games,
+        ),
+        None => stats.map_or((0, 0), |stats| (stats.played.games, seen(stats).games)),
+    };
+    (seen_games > 0).then(|| f64::from(played) / f64::from(seen_games))
+}
+
 string_union! {
     /// R4673000: which of a card's faces its figures read, each against a field of its own:
     ///  - `all`: every seat, as R2777000 and R3022000 read the card (its seen games against its never-drawn);

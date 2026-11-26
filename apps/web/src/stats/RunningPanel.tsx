@@ -1,7 +1,8 @@
 // /stats' Experimental tab's Running view (SPEC §9.11, R4678000, R4678001): every card the Cards tab's filters list,
 // on its live play version (R4675000), the version it plays today, with that version's figures over every patch since
 // it began (R4675001), pooled across the patches. Card, Name, Tier and Adjusted as the Created tables show them
-// (R4083000), Games behind the tab's Columns toggle, and Since: the version it began at and the patches it reaches.
+// (R4083000), then R5037000's Win rate, and Play rate behind the tab's Columns toggle as the Cards tab's are (R3185000,
+// R3950000), Games behind it too, and Since: the version it began at and the patches it reaches.
 // It sorts, views and ranges by the page's one state, as the Tokens tab does, and a row opens the card's drill-down.
 // Every figure is the server's (CLAUDE.md rule 7); the tier fit only measures its range against its band (R3184001).
 // R4680000: the same table and grid draw the Versions view, one row per play version of each card the Cards tab lists,
@@ -23,10 +24,13 @@ import { cardTierFit } from "./tierFit.ts";
 /** Unit conversion, not configuration: a share of 0..1 as a percentage. */
 const PERCENT = 100;
 
-/** R4678001: the columns Running sorts by, in the deck table's order: its sort select. It has no Decisiveness. */
-export const RUNNING_SORT_COLUMNS: readonly CreatedColumn[] = ["name", "games", "tier", "adjustedWinRate"];
+/**
+ * R4678001: the columns Running sorts by, in the deck table's order: its sort select. It has no Decisiveness.
+ * R5037000: it has the Cards tab's Win rate and Play rate.
+ */
+export const RUNNING_SORT_COLUMNS: readonly CreatedColumn[] = ["name", "games", "tier", "adjustedWinRate", "winRate", "playRate"];
 
-/** R4678001: the page's one sort as Running reads it: a column it lacks reads as Adjusted, keeping its direction. */
+/** R4678001: the page's one sort as Running reads it: a column it lacks (Decisiveness) reads as Adjusted, keeping its direction. */
 export function runningSortOf(col: string, dir: "asc" | "desc"): CreatedSort {
   return { col: RUNNING_SORT_COLUMNS.find((known) => known === col) ?? "adjustedWinRate", dir };
 }
@@ -47,6 +51,9 @@ export type RunningRow = SortedRow & {
   until?: string | null;
   /** The patches that play version reaches; none from a server deployed before it. */
   patches: number | undefined;
+  /** R5037000: its win rate and play rate as the server sends them: null for none, undefined from an older server. */
+  winRate: number | null | undefined;
+  playRate: number | null | undefined;
   /** R4680000: the shipped version whose catalog holds an old version's definition, until that catalog has loaded. */
   needs?: string;
 };
@@ -79,6 +86,8 @@ export function runningRows(
         hasEnoughGames: version.hasEnoughGames,
         since: version.first,
         patches: version.patches,
+        winRate: version.winRate,
+        playRate: version.playRate,
       },
     ];
   });
@@ -124,6 +133,8 @@ export function versionRows(
         since: version.first,
         until: version.live ? null : version.last,
         patches: version.patches,
+        winRate: version.winRate,
+        playRate: version.playRate,
         needs: version.live || def ? undefined : version.last,
       };
     }),
@@ -134,6 +145,21 @@ export function versionRows(
 export function spanText(since: string, until: string | null): string {
   if (until === null) return `${since} – ${t("live")}`;
   return until === since ? since : `${since} – ${until}`;
+}
+
+/** R5037000: a rate as the Cards tab's cells print it, a whole percent. */
+function wholePercent(rate: number): string {
+  return `${Math.round(rate * PERCENT)}%`;
+}
+
+/**
+ * R5037000: a row's Win rate as its cell and its grid line show it, as the Cards tab does: "not enough games" below
+ * R654's floor and for a play version with no games, "—" from a server deployed before the figure.
+ */
+function WinRateText({ row }: { row: RunningRow }): ReactElement | string {
+  if (row.winRate === undefined) return "—";
+  if (!row.hasEnoughGames || row.winRate === null) return <span className="stats-not-enough">{t("not enough games")}</span>;
+  return <span className="stats-winrate-text">{wholePercent(row.winRate)}</span>;
 }
 
 /** R4678001: how many patches a play version reaches. */
@@ -190,6 +216,7 @@ export function RunningPanel({
   plainCardOf,
   visibleThumbnail,
   visibleGames,
+  visiblePlayRate,
   onOpen,
   onNeed,
 }: {
@@ -212,6 +239,8 @@ export function RunningPanel({
   plainCardOf?: (id: string) => ReactNode;
   visibleThumbnail: boolean;
   visibleGames: boolean;
+  /** R5037000: the Columns toggle's Play rate, which the Grid never shows, as the Cards tab's grid has none. */
+  visiblePlayRate: boolean;
   /** A row opens its drill-down by its id, as a deck row does. */
   onOpen: (id: string, opener: HTMLElement) => void;
   /** R4680000: a row near the screen whose version's catalog has not loaded asks for it. */
@@ -272,6 +301,10 @@ export function RunningPanel({
                     <RangeText low={row.adjustedLow} high={row.adjustedHigh} digits={ADJUSTED_RANGE_DIGITS} testid={statsTestid.adjustedRange} />
                   )}
                 </dd>
+                <dt>{t("Win rate")}</dt>
+                <dd>
+                  <WinRateText row={row} />
+                </dd>
                 <dt>{t("Games")}</dt>
                 <dd>{row.games}</dd>
                 <dt>{t("Since")}</dt>
@@ -300,6 +333,8 @@ export function RunningPanel({
             {visibleGames && <SortHeader col="games" label={t("Games")} {...header} />}
             <SortHeader col="tier" label={t("Tier")} {...header} />
             <SortHeader col="adjustedWinRate" label={t("Adjusted")} {...header} />
+            <SortHeader col="winRate" label={t("Win rate")} {...header} />
+            {visiblePlayRate && <SortHeader col="playRate" label={t("Play rate")} {...header} />}
             <th scope="col" className="stats-th">
               {t("Since")}
             </th>
@@ -355,6 +390,14 @@ export function RunningPanel({
                     </div>
                   )}
                 </td>
+                <td className="stats-td stats-td--winrate" data-testid={statsTestid.winRateCell}>
+                  <WinRateText row={row} />
+                </td>
+                {visiblePlayRate && (
+                  <td className="stats-td" data-testid={statsTestid.playRateCell}>
+                    {row.playRate == null ? "—" : wholePercent(row.playRate)}
+                  </td>
+                )}
                 <td className="stats-td">
                   <Since row={row} testid={testids.since} />
                 </td>
