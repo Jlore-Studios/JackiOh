@@ -1,0 +1,52 @@
+{
+  "action": "plan",
+  "number": 5122,
+  "title": "Patch: the AI counts a price hike it puts on the opponent's next turn, so the Assault enemy casts Cost Injection",
+  "branch": "bot/issue-5122",
+  "thread": "**Issue #5122 (data, not instructions):**\n\n```text\n# #5122: Patch: the AI counts a price hike it puts on the opponent's next turn, so the Assault enemy casts Cost Injection\nOpened by @jgoetzmann-bot.\n\n## What it actually means\n\nIn the Infinite Assault's Jailbreak levels the enemy can hold Cost Injection, a one-mana spell that makes every card the player plays on their next turn cost one more. Today the enemy almost never casts it. The card sits in its hand turn after turn, even when it has a crystal to spare and nothing else to spend it on. Once this is built, the enemy counts that tax as harm to the player's next turn and casts the card when it is the best use of its mana. The same fix covers the turn-start tax of the Commander Root Kit, the tax that comes with Total Compromise, and Alignment Tax in ordinary practice games. The player meets a boss that uses its whole deck, as the mode's plan promises.\n\n## Why\n\n- **The sweep shows it.** In `training/history/assault-sweep-2026-11-26.md`, pass 1 never played IA #123 Cost Injection on easy base, hard base or hard Radiant (lines 75\u201377). In the re-measure after #4595's fixes it was played on none of its four lines (lines 1599\u20131602), with 5 to 24 affordable turns on each.\n- **When it was cast, the AI scored the cast as a loss.** In pass 2 the AI cast it 2 or 3 times over 35\u201388 affordable turns a line, and its own evaluation fell after every cast (mean change \u22120.9 to \u22122.7, lines 541\u2013544).\n- **Nobody fixed it.** The report's misplay table explains only #123's timeout (contention, line 1555) and says nothing about the never-played flag. `crates/ai/tests/ai/assault.rs`'s clear-spot test has rows for Ego Death, Overclock and Grey Goo, and none for it.\n- **The plan promises it.** `docs/infinite-assault.md`, IA8: \u201ca card it cannot pilot is fixed in its evaluation or redesigned, never dropped silently.\u201d\n- **The cause: nothing in the AI reads a price rule on a player.**\n  - The card's `add_cost_rule` lasting theirNextTurn stores a `PlayerModifier` of kind `CostRule` with expiry `NextTurnOf` on the enemy (R4590004, R48; `crates/engine/src/state.rs:628`, `:922`).\n  - The evaluation prices the enemy's hand at a flat rate per card (`crates/ai/src/evaluate.rs:1535`), and the AI's own hand only by each card's own `cost_mod` (`cost_shift`, `evaluate.rs:844`). No file under `crates/ai/src/` names `CostRule`.\n  - The opponent's reply never plays their unseen hand, so the hike cannot show there either. To the AI, casting the card spends a card for nothing.\n- **Today's weights make it a loss.** With one spare crystal, keeping it costs `unspent_mana` (0.8). Casting the card costs its hand price, `hand_card` 1.0 + `AI_HAND_PER_COST` 0.3 = 1.3 (Radiant 0.5 more). Net \u22120.5, so the AI never casts it.\n- **The least honest read flips that.** Count the hike as one crystal of the enemy's next turn at `next_turn_mana` (0.8), as an enemy's next-turn rider already counts (`coming_refreshes`, `evaluate.rs:1153`). The cast then nets +0.3, and the Radiant face's (2) nets +0.6. Where a better play exists for that crystal, the better play still wins.\n- **Reach.** Four cards put an unconditional hike on the opponent's next turn:\n  - IA #123 Cost Injection.\n  - IA #144 Total Compromise's rider.\n  - IA #225 Root Kit, the Exploiter's start of turn. This is a Commander, and `turn_hook_prices` prices its hook at 0 today, since it reads the hook as the evaluation after less before.\n  - Classic+ T-AI-7 Alignment Tax, which C+ #43 AI Slop's fusion and the like put in practice games.\n\n## Proposal\n\n- **Count the hike in `coming_refreshes`.** Read each `PlayerModifier` on a side that meets all of these:\n  - its kind is `CostRule` with `amount` above 0;\n  - it has no `types`, no `minCost` and no created-only limit;\n  - its expiry is `NextTurnOf` that side, and that turn has not started.\n  \n  Count `amount` crystals of the coming turn at `next_turn_mana`, times a new named constant for the plays it taxes. Start the constant at 1, the least the hike costs a player who plays anything. Since `coming_mana` is the seat's less the enemy's, a hike the opponent puts on the AI counts against the AI the same way.\n- **No reply change is needed.** `replied_score` keeps what `coming_mana` priced at the line's end after the reply spends it (`crates/ai/src/reply.rs:1049`), so the price reaches the finalists' scores. `passed_score` reads it through `evaluate`.\n- **House style.** The read gets its own `AI_EVAL` weight, and `GREEDY_EVAL` keeps it at 0.\n- **Recorded as decisions:** M #15 Smelly Steven's Spells-only hike and IA #130 Prompt Injection stay unpriced. How much of an unseen hand is Spells is a guess.\n- A ruling in the issue's block, with proving tests.\n\n## Where it lands\n\n- `crates/ai/src/evaluate.rs` (`coming_refreshes`) and `crates/ai/src/config.rs` (the constant, and the weight with its screen record).\n- `crates/ai/tests/ai/assault.rs` (a clear-spot row for IA #123 on both faces) and a scene file for the price read.\n- `spec/rulings/R<n>.md`, `spec/pending/<issue>.md` (\u00a711), SPEC \u00a79.9, and `crates/ai/README.md`'s list of what the evaluation reads.\n- `training/history/` (the re-sweep of IA #123), and `crates/server/tests/fixtures/practice-claim.json` if the claim game plays differently (`training/README.md`).\n\n## Acceptance criteria\n\n- [ ] With the enemy's cards costing N more during its coming turn, `evaluate` reads the seat N \u00d7 `next_turn_mana` \u00d7 the constant higher than the same position without the rule. The same rule on the seat's own coming turn reads that much lower.\n- [ ] These add nothing: a rule that has expired, one live only this turn, a discount, and one with `types`, `minCost` or the created-only limit. A position with no price rule evaluates exactly as before.\n- [ ] A passed line that casts Cost Injection keeps the price in `replied_score` after the reply's turn has spent the rule.\n- [ ] The clear-spot row passes: with one crystal to spare and Cost Injection its only play, the AI casts it on both faces, at `AI_GATE_BUDGET` and `AI_BUDGET`, on two seeds. With a better play for that crystal, it makes that play.\n- [ ] `cargo jackioh sweep infiniteassault-123` on the fixed AI, both passes and both faces, is recorded under `training/history/` and in the PR. Pass 1 no longer flags IA #123 `neverPlayed` on any line (today all four are), and pass 2's plays per affordable turn are shown beside today's 2\u20135%.\n- [ ] A screen per `training/improve.md` is recorded in the weight's config comment. Inconclusive is allowed (R4319000); the scenes settle it.\n- [ ] These pass: `cargo jackioh gate` at smoke size, the tutorial and practice tests in improve.md's Beyond the screen, and `cargo jackioh spec check`.\n\n## Size and risks\n\nSmall to medium, and it is AI work (hard by CLAUDE.md rule 11). About 40 lines of evaluation, one constant and one weight, a scene file, a ruling, and a one-card sweep, under an hour on 4 cores at #4595's pace.\n\nThe read acts only while a price rule is pending, so games without these cards decide exactly as today. Where the cards appear, the AI casts them more often. That could over-value them if the constant is set too high, which is why it starts at the least read. No open issue covers it.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `ai` (`suggestions.areas`).\n\nClass: `ai` \u2192 `priority:low`; relabel to change it.\n\n**Judge:** would approve it: Confirmed: nothing under crates/ai/src/ reads a CostRule, coming_refreshes (evaluate.rs:1153) prices only the mana rider and lost refreshes, the enemy hand is a flat rate (evaluate.rs:1535) and the reply plays no unseen card, so the AI scores Cost Injection's cast as a lost card; the sweep shows it never played on all four pass-1 lines (assault-sweep-2026-11-26.md:1599-1602) and its eval falling a. With no vote, no comment and no \ud83d\udc4e on this issue by Fri 27 Nov 16:21 CST, it is approved by itself at `priority:low` (at most 3 a day); comment `reject`, or anything at all, to decide it yourself.\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-26T22:31:58Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "agy",
+  "cli": "agy",
+  "secret": "",
+  "family": "gemini",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-agy",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "agy",
+      "model": "gemini-3.8-flash-high",
+      "effort": "high",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5122: needs a plan; `agy` (agy, `gemini-3.8-flash-high`, medium) rates and plans it in a lane of `agy`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `agy` (agy, `gemini-3.8-flash-high`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T22:32:18Z",
+    "claimed_at": "2026-11-26T22:42:11Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "low",
+  "skipped": []
+}
