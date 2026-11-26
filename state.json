@@ -22758,15 +22758,8 @@
       }
     },
     "5024": {
-      "action": "plan",
+      "action": "build",
       "asks": [],
-      "build_next": {
-        "from_run": "45791986131",
-        "model": "opus",
-        "provider": "claude-6",
-        "since": "2026-11-26T10:04:26Z",
-        "until": "2026-11-26T10:34:26Z"
-      },
       "failures": 0,
       "forced": false,
       "handoff": {
@@ -22778,10 +22771,9 @@
         "reason": "planned on opus",
         "trail": "d_watchers(\\\" crates/server/src/actor/match_actor.rs crates/server/src/d\u2026\n- Bash: {\"command\": \"grep -n \\\"SPECTATOR_EMOTE_LIMITS\\\\|pub(crate) fn\\\\|pub fn\\\\|pub async fn\\\\|pub(crate) async fn\\\\|^use\\\" crates/server/src/social/watch.rs | head -30\", \"description\": \"Survey social/watch\u2026\n- Bash: {\"command\": \"sed -n '125,170p' crates/server/src/social/watch.rs; grep -n \\\"pub fn emote_gate_within\\\" -B3 -A12 crates/engine/src/*.rs crates/engine/src/**/*.rs 2>/dev/null | head -30; grep -n \\\"#\\\\[\u2026\n- Bash: {\"command\": \"grep -n \\\"SPECTATOR_EMOTE_COOLDOWN_MS\\\\|SPECTATOR_EMOTE_WINDOW_MS\\\\|SPECTATOR_EMOTE_WINDOW_MAX\\\" crates/server/src/config.rs; sed -n '40,46p' crates/server/src/social/watch.rs; sed -n '5\u2026\n- Bash: {\"command\": \"grep -n \\\"proven_in\\\\|test named\\\\|named after\\\" spec/README.md | head -20\", \"description\": \"Check spec check rules for ruling-named tests\"}\n- Bash: {\"command\": \"sed -n '/\\\\[workspace.lints/,/^\\\\[/p' Cargo.toml | head -60; grep -n \\\"lints\\\" crates/server/Cargo.toml\", \"description\": \"Read the workspace lint configuration\"}\n- Bash: {\"command\": \"sed -n '1165,1200p' crates/server/src/economy/store.rs; sed -n '1205,1260p' crates/server/src/economy/store.rs | head -60\", \"description\": \"Read the economy store pg module head\"}\n- Bash: {\"command\": \"grep -n \\\"last_boards_of\\\\|engine::fold\\\\b\\\\|engine::fold(\\\" crates/server/src/actor/telemetry.rs; grep -n \\\"max_width\\\" rustfmt.toml; sed -n '1,14p' crates/server/src/actor/telemetry.rs\u2026\n- Bash: {\"command\": \"sed -n '1,40p' crates/server/tests/db/run.sh | grep -v \\\"^$\\\" | head -30; which docker; docker info >/dev/null 2>&1 && echo docker-ok\", \"description\": \"Read the store contract runner and\u2026\n- Bash: {\"command\": \"for f in tickets_claim_for_bot tickets_claim_for_bot_series bots_claim_for_rematch bots_claim_pair series_create series_update economy_jlore_grant_all economy_inventory_grant_all economy\u2026\n- Bash: {\"command\": \"git show --stat --format='%s' 0f3e8f961e | grep -v \\\"crates/\\\\|apps/\\\" | head -20; git show --stat --format='%s' 469057d8b1 | grep -i \\\"pending\\\\|patches\\\\|spec\\\" | head\", \"description\":\u2026\n- Bash: {\"command\": \"grep -n -i \\\"pull request's description\\\\|PR body\\\\|description of the pull\\\\|final message\\\\|report\\\" bot/README.md | head -15\", \"description\": \"Check how the bot's report becomes the P\u2026\n- Bash: {\"command\": \"sed -n '410,430p' bot/README.md; grep -n -i \\\"body\\\\b.*pull\\\\|pull request.*body\\\\|BuildReport\\\" bot/README.md | head\", \"description\": \"Read how a build report reaches the pull request\"}\n- Bash: {\"command\": \"grep -rn \\\"fn [a-z0-9_]*once[a-z0-9_]*\\\\|fn [a-z0-9_]*concurrent[a-z0-9_]*\\\\|fn [a-z0-9_]*single[a-z0-9_]*\\\" crates/server/tests/actor/*.rs | head; grep -n \\\"cfg(test)\\\" crates/server/sr\u2026\n- Bash: {\"command\": \"grep -n \\\"WatchRefused::Full\\\\|replaces\\\\|revoke\\\\|4403\\\\|SPECTATOR_EMOTE\\\\|past its limit\\\\|cooldown\\\" crates/server/tests/actor/watch.rs | head -20; grep -n \\\"WatchRefused::Full\\\\|revo\u2026\n- Bash: {\"command\": \"grep -n \\\"pub async fn series_create\\\\|pub async fn series_update\\\\|pub async fn tickets_claim_for_bot\\\\|pub async fn bots_claim_for_rematch\\\\|pub async fn bots_claim_pair\\\\|^struct Seri\u2026\n- Bash: {\"command\": \"grep -n \\\"pub const SPECTATORS_PER_MATCH\\\" crates/server/src/config.rs; grep -n \\\"pub mod protocol\\\\|mod protocol\\\" crates/server/src/duos/mod.rs; grep -n \\\"BotRecord\\\\b\\\" crates/server/\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5024/.bot-plan.md\", \"content\": \"**Goal.** Fold the duplicated server blocks the issue's `dups.py` finds (47 runs at base `469057d8b1`) where one funct\u2026\n- Bash: {\"command\": \"grep -n \\\"^mod\\\\|^pub mod\\\" crates/server/tests/server.rs | head -20; ls crates/server/tests/bots/; wc -w .bot-plan.md\", \"description\": \"Confirm the server test binary modules and plan l\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5024/.bot-plan.md\", \"old_string\": \"12. Everywhere: remove only the imports the compiler then reports unused (likely `SPECTATORS_\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5024/.bot-plan.md\", \"old_string\": \"`series_create` and `series_update` become `p.bind_to(sqlx::query(concat!(\\u2026unchanged\\u20\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5024/.bot-plan.md\", \"old_string\": \"- *Determinism, replay, hidden information*: untouched; no engine, view or log code changes. \u2026\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Count words and characters in the plan draft\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5024/.bot-plan.md\", \"old_string\": \"**Goal.** Fold the duplicated server blocks the issue's `dups.py` finds (47 runs at base `469\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5024/.bot-plan.md\", \"old_string\": \"- *A changed SQL string or bind order* would break the Postgres store while the fake passes: \u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5024/.bot-plan.md\", \"old_string\": \"- Folding the watchers' hello, junk and flush steps needs a generic `Spectate` shared by both\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5024/.bot-plan.md\", \"old_string\": \"insert it under `profile_id` and answer `true`. Doc R2990002.\", \"new_string\": \"insert it unde\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5024/.bot-plan.md\", \"old_string\": \"- [ ] The six new tests pass,\", \"new_string\": \"- [ ] The seven new tests pass,\"}\n- Bash: {\"command\": \"wc -w -c .bot-plan.md\", \"description\": \"Recount the plan draft's words\"}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5024/.bot-plan.md\"}\n- said: **Goal.** Fold the duplicated blocks the issue's `dups.py` finds (47 runs at base `469057d8b1`) where one function, small generic or macro serves both sites with the same writes, frames, log lines and errors, and leave the rest with a reason. SQL strings stay byte for byte, nothing is migrated, no \u2026"
       },
-      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
-      "live": "planning",
+      "live": "building",
       "owner": "claude-6",
       "owner_since": "2026-11-26T09:26:23Z",
       "owner_why": "it plans it",
@@ -22794,9 +22786,9 @@
       "provider": "claude-6",
       "queued_at": "2026-11-26T06:28:06Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45791986131",
+      "run_id": "pending:2391cc52-1795687503",
       "runs_on": "ubuntu-latest",
-      "started_at": "2026-11-26T09:26:23Z",
+      "started_at": "2026-11-26T10:05:35Z",
       "stop_requested": false,
       "taken_asks": []
     },
@@ -23378,9 +23370,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T09:54:09Z",
+    "at": "2026-11-26T10:05:35Z",
     "url": "",
-    "what": "plan #5016 on agy"
+    "what": "build #5024 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-26T09:46:56Z",
