@@ -25973,6 +25973,10 @@
         {
           "at": "2026-11-26T10:16:05Z",
           "minutes": 19.4
+        },
+        {
+          "at": "2026-11-26T11:30:23Z",
+          "minutes": 69.3
         }
       ],
       "tokens_spent": [
@@ -27102,17 +27106,24 @@
           "cost": 0.0,
           "input": 310074,
           "output": 65720
+        },
+        {
+          "at": "2026-11-26T11:30:23Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 1170275,
+          "output": 63533
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-26T13:58:46Z",
-          "utilization": 0.27
+          "utilization": 0.47
         },
-        "observed_at": "2026-11-26T10:16:05Z",
+        "observed_at": "2026-11-26T11:30:23Z",
         "seven_day": {
           "resets_at": "2026-12-03T08:58:46Z",
-          "utilization": 0.07
+          "utilization": 0.13
         },
         "status": "allowed"
       }
@@ -48005,6 +48016,18 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-26T10:19:39Z,agy,usage-command,before,45800226479,27,2026-11-26T13:58:46Z,7,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-26T10:29:57Z,agy,usage-command,call,45800226479,33,2026-11-26T13:58:46Z,9,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-26T10:40:00Z,agy,usage-command,call,45800226479,39,2026-11-26T13:58:46Z,10,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-26T10:50:03Z,agy,usage-command,call,45800226479,41,2026-11-26T13:58:46Z,11,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-26T11:00:06Z,agy,usage-command,call,45800226479,43,2026-11-26T13:58:46Z,11,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-26T11:10:09Z,agy,usage-command,call,45800226479,45,2026-11-26T13:58:46Z,12,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-26T11:20:13Z,agy,usage-command,call,45800226479,45,2026-11-26T13:58:46Z,12,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-26T11:29:12Z,agy,usage-command,after,45800226479,47,2026-11-26T13:58:46Z,13,2026-12-03T08:58:46Z,allowed,100,100,"
+    ]
   },
   "version": 1
 }
