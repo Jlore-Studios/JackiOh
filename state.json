@@ -23778,7 +23778,7 @@
       }
     },
     "5068": {
-      "action": "review",
+      "action": "revise",
       "asks": [],
       "ci_early": false,
       "ci_fixes": 1,
@@ -23802,28 +23802,20 @@
       "failures": 0,
       "feedback_since": "2026-11-26T10:19:16Z",
       "forced": false,
-      "hold": {
-        "ends": "2026-11-26T14:42:58Z",
-        "lifted": "2026-11-26T14:01:07Z",
-        "owner": "agy",
-        "since": "2026-11-26T12:42:58Z",
-        "until": "2026-11-26T13:58:46Z",
-        "why": "5-hour usage is 95%, too close to its 100% cap to start a long run (it starts under 95%)"
-      },
       "interruptions": 0,
       "issue": 5016,
       "kind": "revise",
-      "live": "reviewing",
+      "live": "fixing-ci",
       "merge_owner": "agy",
       "pending_request": false,
       "provider": "agy",
       "queued_at": "2026-11-26T12:40:01Z",
       "requested_by": "jgoetzmann-bot",
-      "run_id": "45811708284",
+      "run_id": "pending:fc9d4b3a-1795701884",
       "runs_on": "night-vm-agy",
       "self_check_findings": [],
       "source": "ci",
-      "started_at": "2026-11-26T11:33:39Z",
+      "started_at": "2026-11-26T14:05:22Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -24279,9 +24271,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T14:04:28Z",
+    "at": "2026-11-26T14:05:22Z",
     "url": "",
-    "what": "revise #5060 on claude-8"
+    "what": "revise #5068 on agy"
   },
   "last_sweep": {
     "at": "2026-11-26T13:53:36Z",
