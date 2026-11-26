@@ -26593,6 +26593,10 @@
         {
           "at": "2026-11-26T11:30:23Z",
           "minutes": 69.3
+        },
+        {
+          "at": "2026-11-26T12:26:08Z",
+          "minutes": 44.0
         }
       ],
       "tokens_spent": [
@@ -27729,17 +27733,24 @@
           "cost": 0.0,
           "input": 1170275,
           "output": 63533
+        },
+        {
+          "at": "2026-11-26T12:26:08Z",
+          "cache": 0,
+          "cost": 0.0,
+          "input": 996888,
+          "output": 108713
         }
       ],
       "usage": {
         "five_hour": {
           "resets_at": "2026-11-26T13:58:46Z",
-          "utilization": 0.47
+          "utilization": 0.95
         },
-        "observed_at": "2026-11-26T11:30:23Z",
+        "observed_at": "2026-11-26T12:26:08Z",
         "seven_day": {
           "resets_at": "2026-12-03T08:58:46Z",
-          "utilization": 0.13
+          "utilization": 0.24
         },
         "status": "allowed"
       }
@@ -48632,6 +48643,17 @@
   "usage_issue": {
     "issue": 2890,
     "pinned": true
+  },
+  "usage_spool": {
+    "readings": [
+      "2026-11-26T11:34:03Z,agy,usage-command,before,45811708284,47,2026-11-26T13:58:46Z,12,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-26T11:44:16Z,agy,usage-command,call,45811708284,64,2026-11-26T13:58:46Z,16,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-26T11:54:19Z,agy,usage-command,call,45811708284,81,2026-11-26T13:58:46Z,21,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-26T11:57:25Z,agy,usage-command,after,45811708284,86,2026-11-26T13:58:46Z,21,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-26T12:07:30Z,agy,usage-command,call,45811708284,89,2026-11-26T13:58:46Z,23,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-26T12:11:01Z,agy,usage-command,after,45811708284,91,2026-11-26T13:58:46Z,23,2026-12-03T08:58:46Z,allowed,100,100,",
+      "2026-11-26T12:18:41Z,agy,usage-command,after,45811708284,95,2026-11-26T13:58:46Z,24,2026-12-03T08:58:46Z,allowed,100,100,"
+    ]
   },
   "version": 1
 }
