@@ -10,7 +10,7 @@
 
 use crate::script::{HookArgs, ReplacementMoment, ReplacementWhere, Script, TargetedReplacement};
 use crate::state::{CardInstance, EngineError, GameState, find_instance};
-use crate::wire::{CardType, PlayerId, Row, Selection, TargetAim, TargetDecl, opponent_of};
+use crate::wire::{CardType, PlayerId, Selection, TargetAim, TargetDecl, opponent_of};
 
 /// One face's own targeting cost, read with the card as "this" (a pure read, §10.9).
 fn face_cost(script: &Script, state: &GameState, self_: &CardInstance) -> i32 {
@@ -118,7 +118,8 @@ fn answers_source(state: &GameState, card: &CardInstance, source: Option<CardTyp
 
 /// Classic #33 Joro, R450: the card that answers `chooser` targeting `targeted`: the first in its
 /// controller's hand that interposes and answers this source (R651), when `targeted` is the opponent's
-/// unit acting on the field and they have an open unit zone to summon it into.
+/// unit acting on the field and it has room on their side (`giga::summon_anchor`: a GIGA one needs a
+/// fitting anchor, R4990000).
 pub fn interceptor_for<'a>(
     state: &'a GameState,
     chooser: PlayerId,
@@ -133,11 +134,11 @@ pub fn interceptor_for<'a>(
     if defender != opponent_of(chooser) {
         return None;
     }
-    crate::zones::first_entry_zone(state, defender, Row::Units)?;
-    state.players[defender]
-        .hand
-        .iter()
-        .find(|card| interposes_from_hand(state, card) && answers_source(state, card, source))
+    state.players[defender].hand.iter().find(|card| {
+        interposes_from_hand(state, card)
+            && answers_source(state, card, source)
+            && crate::giga::summon_anchor(state, defender, card).is_some()
+    })
 }
 
 /// R450: how many cards `picks` cost their chooser to target (a card named twice is targeted twice).

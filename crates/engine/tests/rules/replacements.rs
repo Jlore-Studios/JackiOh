@@ -5,6 +5,8 @@
 // from the other seat's view (R97, R177).
 
 use jackioh_engine::effects::{discard, exile, heal};
+use jackioh_engine::giga::covering;
+use jackioh_engine::targeting::interceptor_for;
 use jackioh_engine::testkit::*;
 
 use crate::rules::fixtures::damage_combat::{
@@ -1363,6 +1365,77 @@ mod e5_a_friendly_unit_is_targeted_e9_attack_redirect {
         assert_eq!(
             unit_in(&state, P2, 2).and_then(|c| c.summoned_turn),
             Some(state.turn)
+        );
+    }
+
+    /// R4990000: an interposer made GIGA in the hand needs all four of its zones free. Walls in lanes 1,
+    /// 3 and 5 leave lanes 2 and 4 open with no open lane beside either, so no anchor fits: it stays in
+    /// hand, nothing is summoned or redirected, and the attack hits the unit it chose.
+    #[test]
+    fn r4990000_a_giga_interposer_with_no_fitting_anchor_stays_in_hand_and_the_attack_goes_on() {
+        let mut state = playing("dc-joro-giga-none");
+        let attacker = put(&mut state, &grunt.id, slot(P1, Row::Units, 1), Default::default());
+        let chosen = put(&mut state, &wall.id, slot(P2, Row::Units, 1), Default::default());
+        for lane in [3, 5] {
+            put(
+                &mut state,
+                &wall.id,
+                slot(P2, Row::Units, lane),
+                Default::default(),
+            );
+        }
+        let decoy = first_in_hand(&mut state, &joro.id, P2);
+        live_mut(&mut state, &decoy).granted_keywords.push(Keyword::Giga);
+        // The check the attack asks agrees with the answer.
+        assert!(interceptor_for(&state, P1, &live(&state, &chosen), None).is_none());
+        let mut game = recorder(&state);
+
+        let result = game.play(input(
+            json!({ "type": "attack", "attackerId": attacker.id, "targetId": chosen.id, "playerId": "p1" }),
+        ));
+
+        assert!(in_pile(game.state(), P2, ZoneName::Hand, &decoy.id));
+        assert!(events_json(&result.events, GameEventType::Summoned).is_empty());
+        assert!(events_json(&result.events, GameEventType::Redirected).is_empty());
+        assert_eq!(find_instance(game.state(), &chosen.id).map(|c| c.damage), Some(2));
+        assert!(replays_to(&game.start, &game.log, game.state()));
+    }
+
+    /// R4990000: lane 2 is open but lane 3 is not, so a GIGA interposer answers at lane 4, the leftmost
+    /// anchor whose four zones are free, and covers both rows' lanes 4 and 5.
+    #[test]
+    fn r4990000_a_giga_interposer_answers_at_the_leftmost_fitting_anchor_covering_four_zones() {
+        let mut state = playing("dc-joro-giga-fit");
+        let chosen = put(&mut state, &wall.id, slot(P2, Row::Units, 1), Default::default());
+        put(&mut state, &wall.id, slot(P2, Row::Units, 3), Default::default());
+        let decoy = first_in_hand(&mut state, &joro.id, P2);
+        live_mut(&mut state, &decoy).granted_keywords.push(Keyword::Giga);
+        let target = live(&state, &chosen);
+        assert_eq!(
+            interceptor_for(&state, P1, &target, None).map(|card| card.id.clone()),
+            Some(decoy.id.clone())
+        );
+        let mut b = Bench::new(&state);
+
+        let moved = answer_targeting(&mut b.sink(&mut state), &target, P1, TargetedWhat::Target);
+
+        assert_eq!(moved.map(|card| card.id), Some(decoy.id.clone()));
+        let placed = unit_in(&state, P2, 4).expect("the decoy anchored in lane 4");
+        assert_eq!(placed.id, decoy.id);
+        assert_eq!(placed.giga, Some(true));
+        assert_eq!(
+            covering(&state, slot(P2, Row::Backrow, 5)).map(|card| card.id.clone()),
+            Some(decoy.id.clone())
+        );
+        let summoned = events_json(&b.events, GameEventType::Summoned);
+        assert_eq!(summoned.len(), 1);
+        assert_eq!(summoned[0]["instanceId"], json!(decoy.id));
+        assert_eq!(summoned[0]["lane"], json!(4));
+        assert_eq!(
+            events_json(&b.events, GameEventType::Redirected),
+            vec![
+                json!({ "type": "redirected", "what": "target", "fromId": chosen.id, "toId": decoy.id, "byInstanceId": decoy.id })
+            ]
         );
     }
 

@@ -15,8 +15,9 @@
 //!
 //! The whole card is one replacement, declared as data (B5 E5, `Script.replacements`): at "targeted",
 //! from its controller's hand (`where: "hand"`), answering only a Spell's targeting (`by: "spell"`,
-//! R651), the engine summons it into the leftmost empty, unlocked, unreserved unit zone (R64), with
-//! no Cry and summoning sick, and moves the pick to it (`redirected`). It is asked only for the
+//! R651), the engine summons it into the leftmost empty, unlocked, unreserved unit zone (R64; made GIGA
+//! in the hand, the leftmost anchor whose four zones are free, R4990000), with no Cry and summoning
+//! sick, and moves the pick to it (`redirected`). It is asked only for the
 //! opponent's Spell picks (declared target, §10.5 step 1, or prompt answer) of a unit of its
 //! controller's on the field: never an attack, Cry pick, activation, Trap pick, random pick, "all"
 //! effect, forced attack (R121) or its controller's own pick. With no open zone it stays in hand.
@@ -467,5 +468,83 @@ mod tests {
             redirects(&s).iter().map(|event| json!([event["what"], event["fromId"], event["toId"]])).collect();
         assert_eq!(seen, vec![json!(["target", vanilla, joro])]);
         s.expect_in_zone(vanilla.as_str(), "field");
+    }
+
+    /// R4990000: a Joro made GIGA in the hand (S+ #100 Plesiosize, S+ #23 GIGA-ify) is summoned only
+    /// where all four of its zones are free, at its side's leftmost such anchor; with none it stays in
+    /// hand and the next card there that interposes and has room answers instead.
+    mod r4990000_giga {
+        use super::*;
+
+        /// Lanes 1 to 4 taken leave lane 5, the last, which no GIGA anchors in.
+        fn no_fit() -> Value {
+            json!([VANILLA, TIMMY, VANILLA, TIMMY])
+        }
+
+        fn joros_in_hand(s: &Scenario) -> Vec<String> {
+            s.hand(PlayerId::P1)
+                .iter()
+                .filter(|card| card.def_id == JORO)
+                .map(|card| card.id.clone())
+                .collect()
+        }
+
+        #[test]
+        fn r4990000_a_giga_joro_with_no_fitting_anchor_stays_in_hand_and_the_spell_hits_its_target() {
+            crate::register_all();
+            let mut s = under_attack(json!({ "myField": no_fit() }));
+            let joro = s.card(JORO).id.clone();
+            crate::give_giga(&mut s, &joro);
+            let target = s.unit_at(PlayerId::P1, 1).id;
+            s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": target }] }));
+            assert!(redirects(&s).is_empty());
+            s.expect_in_zone(&joro, "hand");
+            s.expect_in_zone(&target, "graveyard");
+        }
+
+        #[test]
+        fn r4990000_a_giga_joro_answers_at_the_leftmost_fitting_anchor() {
+            crate::register_all();
+            let mut s = under_attack(json!({
+                "radiantFace": true,
+                "myField": [{ "def": VANILLA, "lane": 1 }, { "def": TIMMY, "lane": 3 }],
+            }));
+            let joro = s.card(JORO).id.clone();
+            crate::give_giga(&mut s, &joro);
+            let vanilla = s.card(VANILLA).id.clone();
+            s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": vanilla }] }));
+            let seen: Vec<Value> =
+                redirects(&s).iter().map(|event| json!([event["what"], event["fromId"], event["toId"]])).collect();
+            assert_eq!(seen, vec![json!(["target", vanilla, joro])]);
+            // Lane 2 is open but lane 3 is not, so lane 4 is the leftmost anchor that fits.
+            let placed = s.unit(PlayerId::P1, 4).expect("Joro anchored in lane 4");
+            assert_eq!(placed.id, joro);
+            assert_eq!(placed.giga, Some(true));
+            let summoned = s
+                .events()
+                .iter()
+                .map(js)
+                .find(|event| event["type"] == "summoned" && event["instanceId"] == joro)
+                .expect("Joro's summoned event");
+            assert_eq!(summoned["lane"], 4);
+            s.expect_in_zone(&vanilla, "field");
+        }
+
+        #[test]
+        fn r4990000_a_giga_joro_with_no_fitting_anchor_leaves_the_answer_to_the_next_joro_in_hand() {
+            crate::register_all();
+            let mut s = under_attack(json!({ "myHand": [JORO, JORO, STOCKPILE], "myField": no_fit() }));
+            let held = joros_in_hand(&s);
+            let (giga, plain) = (held[0].clone(), held[1].clone());
+            crate::give_giga(&mut s, &giga);
+            let target = s.unit_at(PlayerId::P1, 1).id;
+            s.play(HIT_JOB, json!({ "targets": [{ "pick": "instance", "instanceId": target }] }));
+            let seen: Vec<Value> =
+                redirects(&s).iter().map(|event| json!([event["what"], event["fromId"], event["toId"]])).collect();
+            assert_eq!(seen, vec![json!(["target", target, plain])]);
+            s.expect_in_zone(&giga, "hand");
+            s.expect_in_zone(&plain, "graveyard");
+            s.expect_in_zone(&target, "field");
+        }
     }
 }
