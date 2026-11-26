@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 5025,
+  "title": "Patch: the engine's, the tools' and the shared crate's repeated blocks are written once",
+  "branch": "bot/issue-5025",
+  "thread": "**Issue #5025 (data, not instructions):**\n\n````text\n# #5025: Patch: the engine's, the tools' and the shared crate's repeated blocks are written once\nOpened by @squishy-squooby.\n\n### Kind\n\nArchitecture\n\n### Why\n\nThe audit that landed as #4905 ended with a scan for blocks of code that stand word for word in two places. On `main` at `7270e555` it finds 34 such runs in the Rust crates outside the server and the AI (windows of 12 or more lines, comments, blank lines and lone braces left out, test modules and `crates/cards/src/scripts/` skipped). #4905 folded three smaller copies the code itself called \"a private copy\" (`due_delayed`, `turn_ends_of`, the trigger order's walk) and none of these.\n\nWhere they are:\n\n| Files | Runs | Lines in each run |\n|---|---|---|\n| `crates/engine/src/subsystems/call_to_chaos_meditative.rs` with itself | 5 | 32, 32, 32, 17, 17 |\n| `crates/engine/src/subsystems/call_to_chaos_training_grounds.rs` with itself | 1 pair | 17 |\n| `crates/engine/src/play_steps.rs` (near 2307 and 2709) | 1 pair | 21 |\n| `crates/engine/src/game_summary.rs` (near 795 and 951) | 1 pair | 18 |\n| `crates/engine/src/effects/transform.rs` (near 676 and 740) | 1 pair | 17 |\n| `crates/engine/src/subsystems/hero_power.rs` (near 650 and 713) | 1 pair | 13 |\n| `crates/engine/src/play_choices.rs` (near 2120 and 2203) | 1 pair | 12 |\n| `crates/tools/src/run_sim.rs` and `assault_sim.rs` | 2 | 22, 19 |\n| `crates/tools/src/catalog.rs` and `crates/cards/src/code_lines.rs` | 3 | 18, 17, 17 |\n| `crates/tools/src/fork_screen.rs` and `arena.rs` | 1 | 16 |\n| `crates/tools/src/perf.rs` and `fuzz.rs`; `perf.rs` with itself | 2 | 14, 12 |\n| `crates/shared/src/log/names.rs` (near 90 and 371) | 1 pair | 19 |\n\nThe script under \"How to list them\" prints each run's lines.\n\n### What to change\n\nRead each pair side by side and decide:\n\n- **Fold** it when one function, closure or small generic serves both sites with identical behaviour: the same effects in the same order, the same events, the same rng draws, the same error text. Both sites call it. The result is shorter and no harder to read.\n- **Leave** it when the two sides are versioned copies kept so old replays fold as they did (R767000: anything named `_V0_\u2026`, a kept script, an older catalog's rules), data tables, or code where the shared form needs more machinery than the repeat it removes. Say which in the pull request, with file and line.\n- `crates/cards/src/code_lines.rs` is what the cards' `build.rs` runs, so the tools call it rather than the other way round.\n- CLAUDE.md rule 4 holds for the pure crates: no new dependency, no static, no hash-ordered collection. Rule 9: every number stays a named constant. No state or wire shape changes.\n\n### Acceptance\n\n- The pull request has a table of every run: folded into what, or left and why.\n- No card plays differently: `cargo test -p jackioh-engine --features testkit,ts` passes with the golden replays, `cargo test -p jackioh-cards` passes, and `cargo jackioh selfplay --games 60 --seed <any>` writes the same games on the head as on its base (compare every record but its `commit`).\n- `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test -p jackioh-tools`, `cargo test -p jackioh-shared --features jackioh-engine/testkit`, `cargo jackioh spec check` and `cargo jackioh classify --base origin/main --claims` pass.\n- The scan below, run again, lists only the runs the table says were left.\n\n### How to list them\n\n```bash\npython3 dups.py . 12 rs crates/engine/src crates/shared/src crates/run/src crates/tools/src crates/wasm crates/cards/src\n```\n\n<details><summary><code>dups.py</code></summary>\n\n```python\n# Verbatim duplicate blocks in non-test source: windows of W normalized lines seen in 2+ places,\n# merged into maximal runs. Usage: dups.py <root> <W> <ext,ext> <dir>...\nimport sys, os, re, hashlib, collections\nroot, W, exts = sys.argv[1], int(sys.argv[2]), tuple('.'+e for e in sys.argv[3].split(','))\ndirs = sys.argv[4:]\ndef norm(l):\n    l = l.strip()\n    if not l or l.startswith(('//', '/*', '*', '#[', '#!')) or l in ('{', '}', '};', '),', ')', '});', '],', ']', 'else {', '} else {'): return None\n    return re.sub(r'\\s+', ' ', l)\nfiles = {}\nfor d in dirs:\n    for dp, dn, fs in os.walk(os.path.join(root, d)):\n        if any(x in dp for x in ('/target', 'node_modules', '/tests', '/testkit', '/scripts/', '/pkg', '/generated', '/wire/', '/test/', '/__')): continue\n        for f in fs:\n            if not f.endswith(exts) or '.test.' in f or f.endswith('_test.go') or f.endswith('.d.ts'): continue\n            p = os.path.join(dp, f); t = open(p, encoding='utf-8', errors='replace').read()\n            if p.endswith('.rs'):\n                m = re.search(r'^#\\[cfg\\(test\\)\\]\\n(pub(\\([a-z]+\\))?\\s+)?mod\\s+\\w+\\s*\\{', t, re.M)\n                if m: t = t[:m.start()]\n            lines = [(i+1, norm(l)) for i, l in enumerate(t.split('\\n'))]\n            files[os.path.relpath(p, root)] = [(i, n) for i, n in lines if n]\nseen = collections.defaultdict(list)\nfor p, ls in files.items():\n    for k in range(len(ls) - W + 1):\n        h = hashlib.md5('\\n'.join(n for _, n in ls[k:k+W]).encode()).hexdigest()\n        seen[h].append((p, k))\ndup = {h: v for h, v in seen.items() if len(v) > 1}\nmarks = collections.defaultdict(set)\nfor h, v in dup.items():\n    for p, k in v: marks[p].add(k)\nruns = []\nfor p, ks in marks.items():\n    ks = sorted(ks); s = ks[0]; prev = ks[0]\n    for k in ks[1:] + [None]:\n        if k is None or k != prev + 1:\n            ls = files[p]; a = ls[s][0]; b = ls[prev + W - 1][0]\n            h = hashlib.md5('\\n'.join(n for _, n in ls[s:s+W]).encode()).hexdigest()\n            others = sorted({q for q, _ in dup[h] if q != p}) or [p + ' (itself)']\n            runs.append((prev - s + W, p, a, b, others))\n            if k is not None: s = k\n        prev = k if k is not None else prev\nruns.sort(reverse=True)\nprint(f'{len(runs)} duplicated runs, {sum(r[0] for r in runs)} normalized lines in them (each side counted)')\nfor n, p, a, b, others in runs:\n    print(f'{n:4} {p}:{a}-{b}  ~ {\", \".join(others[:2])}')\n```\n\n</details>\n\n### Blocked by, part of\n\nFollow-up to #4905 (its handoff is on #4702). The server's pairs are #5024. The scheduled audit #5005 asks for duplicates in general in its part 2; this issue takes the listed pairs, so that audit can leave them.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "claude-3",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_3",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-3",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5025: needs a plan; `claude-3` (claude, `opus`, strong) writes it on the planning lane"
+  ],
+  "assignment": "plan on `claude-3` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T06:28:33Z",
+    "claimed_at": "2026-11-26T09:27:05Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5005 is held for `claude-1` until 05:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4953 skipped: labelled `human`, so no model takes it, whatever its tier"
+  ]
+}
