@@ -461,102 +461,6 @@
   "halt": {},
   "halted": false,
   "handled": {
-    "c:7052755109": {
-      "at": "2026-11-20T23:03:40Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:7052756022": {
-      "at": "2026-11-20T23:14:12Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:7052756917": {
-      "at": "2026-11-20T23:03:48Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:7052757801": {
-      "at": "2026-11-20T23:03:47Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:7052758617": {
-      "at": "2026-11-20T23:14:00Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:7052759360": {
-      "at": "2026-11-20T23:13:49Z",
-      "lines": [
-        "approve"
-      ]
-    },
-    "c:7052760208": {
-      "at": "2026-11-20T23:03:58Z",
-      "lines": [
-        "reject"
-      ]
-    },
-    "c:7052760989": {
-      "at": "2026-11-20T23:04:11Z",
-      "lines": [
-        "reject"
-      ]
-    },
-    "c:7052761756": {
-      "at": "2026-11-20T23:04:04Z",
-      "lines": [
-        "reject"
-      ]
-    },
-    "c:7052762644": {
-      "at": "2026-11-20T23:04:04Z",
-      "lines": [
-        "reject"
-      ]
-    },
-    "c:7052769214": {
-      "at": "2026-11-20T23:04:30Z",
-      "lines": [
-        "/harness review strong CI is green on a69e66b after the re-run; finish the review and the audit."
-      ]
-    },
-    "c:7052769990": {
-      "at": "2026-11-20T23:04:34Z",
-      "lines": [
-        "/harness build"
-      ]
-    },
-    "c:7052770814": {
-      "at": "2026-11-20T23:04:46Z",
-      "lines": [
-        "/harness build The open questions are settled in this comment: count every GameEvent; at the cap, drop the rest and return control (no draw); the AI does not plan around the cap."
-      ]
-    },
-    "c:7052771733": {
-      "at": "2026-11-20T23:04:43Z",
-      "lines": [
-        "/harness build First check whether this test still needs a retry on main's recent e2e smoke (4/4) runs (spec 51 changed in #4240). If it no longer does, close this with the links. Otherwise find the cause as the issue says, from server.log in the cypress-smoke-4-of-4 artifact or by reproducing it locally. Don't skip the test or raise its retries."
-      ]
-    },
-    "c:7052772586": {
-      "at": "2026-11-20T23:04:40Z",
-      "lines": [
-        "/harness build Write option 3 into R665 (or docs/architecture.md \u00a710, if R665 is the wrong place): the ~90-second TOTP replay window GoTrue v2.197.0 allows, why it is accepted, and that option 1's MFA verification attempt hook is the fix to revisit on a plan that offers it. Nothing else: no migration, no hook."
-      ]
-    },
-    "c:7053663620": {
-      "at": "2026-11-20T23:59:06Z",
-      "lines": [
-        "/harness resume claude-3"
-      ]
-    },
     "c:7057202784": {
       "at": "2026-11-21T04:21:43Z",
       "lines": [
@@ -1425,6 +1329,12 @@
       "at": "2026-11-25T19:09:44Z",
       "lines": [
         "Approve"
+      ]
+    },
+    "c:7179115875": {
+      "at": "2026-11-26T00:47:38Z",
+      "lines": [
+        "reject"
       ]
     }
   },
