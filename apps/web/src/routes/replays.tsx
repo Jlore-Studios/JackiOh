@@ -170,7 +170,7 @@ function OpenReplayJson({ ready, onOpen }: { ready: boolean; onOpen: (opened: Op
       <input
         id="replays-open-file"
         type="file"
-        accept="application/json,.json"
+        accept="application/json,.json,application/gzip,.gz"
         data-testid={replaysTestid.openFile}
         onChange={choose}
         disabled={!ready || reading}

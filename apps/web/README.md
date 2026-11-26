@@ -675,7 +675,10 @@ draws too; a source with none draws the default.
 The GIF code still loads on demand, never in the main bundle.
 Each `/replays` row that can be watched also offers "Download JSON" (R1141000): every step's view through the
 row's own source, the row's facts and the build's catalog version, no account named, made in memory and saved
-to the browser's downloads, for a bug report.
+to the browser's downloads, for a bug report. The file is packed (`replay/pack.ts`, R5124000): the first step whole and
+each later one as its change from the one before, gzipped by the browser's CompressionStream into
+`.json.gz`, about a fiftieth to a hundredth of the plain JSON; a browser without CompressionStream saves plain
+`.json`, and Open replay JSON opens either.
 Every mode's end-of-game result offers one **Main menu** button after its own ways on (R4742000, issue #4742):
 `game/MainMenuButton.tsx` draws it for the result panels and screens (the dungeon run-over screen and fights, the
 Infinite Assault fight, the daily game's result, the co-op result), and `mainMenuAction` is the same label as a
@@ -688,7 +691,7 @@ A finished co-op game's result panel offers "Watch the replay" too (§13.9): `du
 `GET /api/duos/matches/:matchId/replay` once and steps the seat's `DuosView`s on `DuosBoard`'s replay mode,
 with the player's controls, a round standing for a turn; it is never in `/replays`.
 The panel takes the focus on its first way on as it comes in; its "View the board" folds it to a "Result" button on the board's rail (`duos-result-reopen`) that opens it again, the replay door and the XP reveal with it (#1755).
-A loaded co-op replay offers "Download JSON" too (R1242000, `duos/download.ts`): the seat's views as one file, made in the page, which `/replays` opens again from its Open replay JSON.
+A loaded co-op replay offers "Download JSON" too (R1242000, `duos/download.ts`): the seat's views as one file, packed as the 1v1 file is, made in the page, which `/replays` opens again from its Open replay JSON.
 
 ```
 src/replay/
@@ -706,6 +709,8 @@ src/replay/
   download.ts     "Download JSON" (#1141, R1141000): every step of a source and the row's facts as one file, and
                   `readReplayJsonFile`, then `replayStepsOf`, opens one again (#1160);
                   the download both it and the GIF's share.ts hand a file to
+  pack.ts         a replay file's packing, the co-op file's too: each step as its JSON change from the one before
+                  (`diff`, `apply`), gzipped through CompressionStream, and read back under the byte and step caps
   gif/            what it loads on demand, never in the main bundle: plan.ts (a clip's views to frames, a pure
                   function on a fixed frame clock), raster.ts and raster.worker.ts (the frames drawn on an
                   OffscreenCanvas, in a worker where it can), encoder.ts (GIF bytes by hand), share.ts, export.ts

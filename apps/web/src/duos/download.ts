@@ -2,12 +2,13 @@
 // already-authorized `DuosView`s and the build's catalog version. Nothing else leaves: no seed, log,
 // state, deck, match id, account id or name, and no ping. The file does carry what the team shares
 // (§13.6), the teammate's duel and hand as the seat saw them, though nothing in it names the teammate.
-// Its format is versioned apart from R1141000's 1v1 file; it is made in the page, never uploaded or kept.
+// Its format is versioned apart from R1141000's 1v1 file and packed as it is (`replay/pack.ts`, R5124000); it is
+// made in the page, never uploaded or kept.
 
 import { CATALOG_VERSION } from "@jackioh/cards";
 
 import { REPLAY_JSON_MAX_STEPS } from "../replay/config.ts";
-import { NOT_A_REPLAY, TOO_BIG, checkReplayHeader } from "../replay/download.ts";
+import { NOT_A_REPLAY, TOO_BIG, checkReplayHeader, replayFile } from "../replay/download.ts";
 import { isRecord } from "../wire/json.ts";
 import { ReplayFailure } from "../replay/source.ts";
 import type { DuosSeat } from "../wire/generated/DuosSeat.ts";
@@ -47,8 +48,8 @@ export function duosReplayJson(steps: DuosReplaySteps): DuosReplayJson {
   };
 }
 
-export function duosReplayJsonFile(steps: DuosReplaySteps): File {
-  return new File([JSON.stringify(duosReplayJson(steps))], "jackioh-duos-replay.json", { type: "application/json" });
+export function duosReplayJsonFile(steps: DuosReplaySteps): Promise<File> {
+  return replayFile(duosReplayJson(steps), "jackioh-duos-replay");
 }
 
 /**
