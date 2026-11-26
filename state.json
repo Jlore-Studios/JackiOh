@@ -22916,23 +22916,6 @@
       "requested_by": "squishy-squooby",
       "run_id": "45862969898",
       "runs_on": "ubuntu-latest",
-      "session": {
-        "action": "build",
-        "artifact": 15106830775,
-        "artifact_bytes": 114711,
-        "artifact_name": "work",
-        "at": "2026-11-26T10:15:31Z",
-        "bytes": 146032,
-        "cwd": "/home/runner/work/_temp/work/item-5027",
-        "ended": "blocked: the builder needs a person to decide something",
-        "head": "1b379828c6c381ee77c7bf74089e062136e23a6a",
-        "id": "8ee861e0-186d-40ef-be93-79b5934aff48",
-        "kind": "build",
-        "model": "opus",
-        "project": "-home-runner-work--temp-work-item-5027",
-        "provider": "claude-3",
-        "run": "45798180923"
-      },
       "started_at": "2026-11-26T16:53:58Z",
       "stop_requested": false,
       "taken_asks": []
