@@ -188,7 +188,9 @@ R12/12"`, `"stand-in (4) 7/7 Armor 7"`, `"stand-in (1) 3/3 Rush, First Strike"`,
 (1) Trap"`). A helper kept for its text, name, tag or set keeps its real id, with the card's name in its comment
 and an optional role, `const KILL: &str = "core-016"; // Hit Job: the removal`, which `cargo jackioh names`
 writes. No comment beside a real card's id gives a cost or stats: `names --check`, which a `jackioh-tools` test
-runs over the card tests, refuses one.
+runs over the card tests, refuses one. The e2e hotseat fixtures deal stand-ins the same way (#5099, `e2e/README.md`, Stand-ins in
+the fixture decks): a card change that turns a fixture card into one whose whole text is its keyword line fails
+`pnpm --dir e2e check:fixtures`, which names the stand-in to deal instead.
 
 ## 3. The patch, and its order
 

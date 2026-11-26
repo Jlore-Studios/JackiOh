@@ -2851,7 +2851,8 @@ fn validate_seat_deck(
     }
     let mut seen: Vec<&str> = Vec::with_capacity(deck.len());
     for def_id in deck {
-        let Some(def) = catalog.get(def_id) else {
+        // #5099: under `testkit`, a stand-in (`testkit/stand_in.rs`) is a Core card with no text.
+        let Some(def) = catalog.get(def_id).or_else(|| crate::catalog::stand_in(def_id)) else {
             return Err(EngineError::new(format!(
                 "{label}: \"{def_id}\" is not in the catalog (§9.4 L6)"
             )));
@@ -3038,8 +3039,9 @@ impl NextId for GameState {
     fn minted(&mut self, def_id: &str) {
         crate::warhero::note_minted(self, def_id);
         // R3538002: a past version's definition rides along in `transient_defs`, so the view ships
-        // it (R243). Nothing for any other id.
-        if crate::catalog::split_past_id(def_id).is_some()
+        // it (R243); so does a testkit stand-in's (#5099), which no client catalog has either.
+        // Nothing for any other id.
+        if (crate::catalog::split_past_id(def_id).is_some() || crate::catalog::stand_in(def_id).is_some())
             && !self.transient_defs.contains_key(def_id)
             && let Some(def) = crate::catalog::find_def(None, def_id)
         {

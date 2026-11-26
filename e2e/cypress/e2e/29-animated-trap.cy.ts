@@ -4,6 +4,7 @@
 // Read each seat's DOM only (CLAUDE.md rule 7).
 
 import { seedFor } from "../../support/config.ts";
+import { FIRST_STRIKE_3_3, VANILLA_4_4 } from "../../support/standIns.ts";
 import {
   cardId,
   graveyardCountId,
@@ -89,7 +90,7 @@ describe("BUILD M9 29: an Animated Field Trap fires on the opponent's turn and b
 
         cy.advanceToTurn(5);
         ensureSeat("p1");
-        cy.handCardByName("Mr. Vanilla").then((vanilla) => {
+        cy.handCardByName(VANILLA_4_4).then((vanilla) => {
           cy.playCard(vanilla, { zone: { side: "you", row: "units", lane: 2 } });
           // R831007: Tesla zaps only the Unit that revealed it.
           cy.get(ts(zoneId("you", "units", 2))).find(ts(cardId(vanilla))).should("exist");
@@ -120,7 +121,7 @@ describe("BUILD M9 29: an Animated Field Trap fires on the opponent's turn and b
       ensureSeat("p1");
       cy.get(ts(cardId(tesla))).should("not.exist");
 
-      cy.handCardByName("Tempo Timmy").then((timmy) => {
+      cy.handCardByName(FIRST_STRIKE_3_3).then((timmy) => {
         cy.playCard(timmy, { zone: { side: "you", row: "units", lane: 1 }, expectAnimating: "trapFired" });
         cy.get(ts(cardId(timmy))).should("not.exist");
         cy.get(ts(heroId("opponent"))).find(healthIs(HERO_HEALTH + TESLA_DAMAGE)).should("exist");

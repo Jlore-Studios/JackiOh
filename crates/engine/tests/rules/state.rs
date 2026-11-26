@@ -164,4 +164,58 @@ mod create_game_m1_t1 {
         let message = refusal((with_ghost, deck_b()));
         assert!(message.contains("not in the catalog (§9.4 L6)"), "{message}");
     }
+
+    /// #5099: under `testkit` a deck may hold stand-ins (`testkit/stand_in.rs`), so a seeded e2e game
+    /// deals cards whose numbers no balance patch moves. Each dealt one rides in `transient_defs`, and
+    /// the view ships the definition of every one it shows (R243), since no client catalog has it.
+    #[test]
+    fn a_deck_may_hold_stand_ins_and_the_view_ships_the_ones_it_shows() {
+        const BODY: &str = "stand-in (2) 4/4 Rush";
+        let mut deck = vanilla_deck(DECK_SIZE - 1, 1);
+        deck.push(BODY.into());
+        register_catalog(catalog());
+        let state = create_game(&CreateGameOptions {
+            seed: "state-test".into(),
+            decks: (deck, deck_b()),
+            ..Default::default()
+        });
+        assert!(
+            state.transient_defs.contains_key(BODY),
+            "the dealt stand-in rides along"
+        );
+        let card = state
+            .players
+            .p1
+            .library
+            .iter()
+            .find(|card| card.def_id == BODY)
+            .expect("the stand-in is dealt");
+        assert_eq!(
+            find_def(Some(&state), BODY).map(|def| def.name.as_str()),
+            Some(BODY)
+        );
+        let mut shown = state.clone();
+        let at = shown
+            .players
+            .p1
+            .library
+            .iter()
+            .position(|it| it.id == card.id)
+            .expect("in the library");
+        let mut drawn = shown.players.p1.library.remove(at);
+        drawn.zone = Zone::Hand { player: PlayerId::P1 };
+        shown.players.p1.hand.push(drawn);
+        let defs = view_for(&shown, PlayerId::P1).defs.unwrap_or_default();
+        assert!(
+            defs.contains_key(BODY),
+            "its owner's view ships the stand-in in hand"
+        );
+        assert!(
+            !view_for(&shown, PlayerId::P2)
+                .defs
+                .unwrap_or_default()
+                .contains_key(BODY),
+            "the opponent sees no hidden hand card's definition (R97)"
+        );
+    }
 }

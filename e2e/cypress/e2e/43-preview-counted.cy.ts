@@ -2,6 +2,7 @@
 // BUILD M8: use a seeded hotseat game, retried assertions, and test ids.
 
 import { seedFor } from "../../support/config.ts";
+import { VANILLA_4_4 } from "../../support/standIns.ts";
 import { COUNTED, RADIANT, cardId, handCardId, ts } from "../../support/testids.ts";
 
 const SEED = seedFor("43-counted-1");
@@ -9,7 +10,8 @@ const DECK_A = "43-counted-a";
 const DECK_B = "08-do-nothing-b";
 
 const SIMPLICITY_AUDIT = "classicplus-044";
-const MR_VANILLA = "core-008";
+/** #5099: a (1) 4/4 with no text; was #8 Mr. Vanilla. */
+const MR_VANILLA = VANILLA_4_4;
 const GLOWY_JELLY_BEAN = "core-026";
 
 describe("43 — the board rings the permanents a hand card's preview counts", () => {

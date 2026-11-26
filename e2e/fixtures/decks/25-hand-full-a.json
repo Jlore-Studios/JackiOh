@@ -1,7 +1,7 @@
 {
   "id": "25-hand-full-a",
   "spec": "25-overflow-animations.cy.ts",
-  "description": "Player 1's deck for R317's burned card. 08-do-nothing-a with #100 Ceaseless Void swapped for #5 Stockpile, and a handicap that is a human's but for six extra opening cards (R182): 3 + 6 = 9 in the opening hand, 10 after the turn-1 draw, which is HAND_CAP, so the turn-3 draw burns (SPEC 2.4) on seat 2's device, whose end-turn started the turn. Stockpile (1 mana, draw 2) then burns one more on seat 1's own device: it leaves the hand, so its first draw refills it to 10 and its second burns. Every other card costs 3 or more and none has a Cast-on-draw, a Quickdraw or a hand trigger (08-do-nothing-a's description has the full reasoning), so on 1 and 2 mana Stockpile is the only play and nothing resolves by itself; Stockpile being playable is also what keeps turn 1 from ending by itself (R82). Stockpile is not always in the first ten cards: the spec's seed is one where it is, and where the burned cards are #6 Mana Well (turn 3) and #66 The Rock (Stockpile's second draw), which the spec names.",
+  "description": "Player 1's deck for R317's burned card. 08-do-nothing-a with #100 Ceaseless Void swapped for #5 Stockpile, and a handicap that is a human's but for six extra opening cards (R182): 3 + 6 = 9 in the opening hand, 10 after the turn-1 draw, which is HAND_CAP, so the turn-3 draw burns (SPEC 2.4) on seat 2's device, whose end-turn started the turn. Stockpile (1 mana, draw 2) then burns one more on seat 1's own device: it leaves the hand, so its first draw refills it to 10 and its second burns. Every other card costs 3 or more and none has a Cast-on-draw, a Quickdraw or a hand trigger (08-do-nothing-a's description has the full reasoning), so on 1 and 2 mana Stockpile is the only play and nothing resolves by itself; Stockpile being playable is also what keeps turn 1 from ending by itself (R82). Stockpile is not always in the first ten cards: the spec's seed is one where it is, and where the burned cards are #6 Mana Well (turn 3) and #66 The Rock (Stockpile's second draw), which the spec names. #5099: #25 4-mana 7/7, a card whose whole text is its keyword line, is dealt as a stand-in (crates/engine/src/testkit/stand_in.rs) spelling its numbers as it stood, in the same place in the list, so the deal is unchanged and no balance patch moves it.",
   "cards": [
     "core-005",
     "core-006",
@@ -10,7 +10,7 @@
     "core-017",
     "core-019",
     "core-022",
-    "core-025",
+    "stand-in (4) 7/7 Armor 7 R14/14 Armor 7, Reborn",
     "core-026",
     "core-029",
     "core-034",

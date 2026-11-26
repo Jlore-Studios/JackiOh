@@ -25,12 +25,11 @@
 use std::cell::Cell;
 
 use crate::config::RADIANT_FALLBACK_FACTOR;
+/// What every stand-in id starts with; no catalog id does (`its_prefix_is_no_catalog_id…`).
+pub use crate::config::STAND_IN_PREFIX;
 use crate::wire::{
     CardCost, CardDef, CardFace, CardType, Keyword, KeywordKind, Rarity, SetName, keyword_key,
 };
-
-/// What every stand-in id starts with; no catalog id does (`its_prefix_is_no_catalog_id…`).
-pub const STAND_IN_PREFIX: &str = "stand-in";
 
 /// The grammar a malformed stand-in id's panic gives.
 pub const STAND_IN_GRAMMAR: &str = "A stand-in id is `stand-in (<cost>) <attack>/<health>[ <keywords>][ R<attack>/<health>[ <keywords>]]` for a Unit (\"stand-in (3) 9/9\", \"stand-in (1) 4/4 R12/12\", \"stand-in (4) 7/7 Armor 7\", \"stand-in (1) 3/3 Rush, First Strike\"), its keywords joined by \", \" as `keyword_key` writes them, a Radiant face left out being R349's fallback and one with no keywords keeping the base face's; or `stand-in (<cost>) Spell`, `Field Spell`, `Trap` or `Field Trap`, a card with no text. Numbers are digits; `+ * # @ :` are refused.";

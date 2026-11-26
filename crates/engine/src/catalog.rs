@@ -212,14 +212,16 @@ pub fn find_def<'a>(state: Option<&'a GameState>, def_id: &str) -> Option<&'a Ca
     catalog_def(def_id).or_else(|| stand_in(def_id))
 }
 
-/// #3486: the testkit's stand-in card for an id that spells one out (`testkit/stand_in.rs`).
+/// #3486: the testkit's stand-in card for an id that spells one out (`testkit/stand_in.rs`). #5099: a
+/// deck may hold one under `testkit` (`state::validate_seat_deck`), so a seeded e2e game deals cards
+/// whose numbers no balance patch moves; minting one notes it into `transient_defs` (`state::NextId`).
 #[cfg(feature = "testkit")]
-fn stand_in(def_id: &str) -> Option<&'static CardDef> {
+pub(crate) fn stand_in(def_id: &str) -> Option<&'static CardDef> {
     crate::testkit::stand_in::stand_in_def(def_id)
 }
 
 #[cfg(not(feature = "testkit"))]
-fn stand_in(_def_id: &str) -> Option<&'static CardDef> {
+pub(crate) fn stand_in(_def_id: &str) -> Option<&'static CardDef> {
     None
 }
 

@@ -1,6 +1,6 @@
 // A6: routes, endpoints, and fixtures are overridden through Cypress `expose`.
 
-import { DECK_SIZE } from "../../apps/web/src/wire/engineConfig.ts";
+import { DECK_SIZE, STAND_IN_PREFIX } from "../../apps/web/src/wire/engineConfig.ts";
 
 function env(key: string, fallback: string): string {
   const value: unknown = Cypress.expose(key);
@@ -173,6 +173,12 @@ export const constants = {
   DECKS_PER_LOADOUT: 3,
   /** R80: a library holds at most this many cards (`LIBRARY_CAP`), so no handicap deck is larger. */
   LIBRARY_CAP: 60,
+  /**
+   * #5099: what a stand-in's id starts with (`crates/engine/src/testkit/stand_in.rs`). A hotseat fixture deck
+   * names a card it holds only for its numbers as one, `"stand-in (3) 3/3 First Strike"`, so no balance patch
+   * moves it; its name is its id. The e2e client's engine carries the testkit; the server's does not.
+   */
+  STAND_IN_PREFIX,
 };
 
 /** R201: spec 25 seeds effects settings so its screenshot catches a notice. */

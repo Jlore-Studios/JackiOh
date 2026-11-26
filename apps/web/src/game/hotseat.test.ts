@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import type { Action, ActionBody, CardDef, CardDefs, GameEvent, PlayerId, PlayerView } from "@jackioh/shared";
 
 import { DECK_SIZE, byIndex, printedCost, resolveDeck, resolveDecks } from "./decks.ts";
+import { STAND_IN_PREFIX } from "@jackioh/engine/config";
 import { fold } from "@jackioh/engine";
 
 import { enginePort, type CreateGameArgs, type EnginePort, type EngineState, type ReduceResult } from "./engine.ts";
@@ -588,6 +589,25 @@ describe("with the real engine", () => {
     expectFolds(live, seed);
   });
 
+  it("#5099 an injected deck of stand-ins plays: each hand card's definition rides in the view, and the log folds", () => {
+    const seed = "hotseat-5099-stand-ins";
+    const standIns = Array.from({ length: DECK_SIZE }, (_, at) => `${STAND_IN_PREFIX} (${String(at % 5)}) ${String(at + 1)}/${String(at + 1)}`);
+    const injected = resolveDecks("stand-ins", "cheap20", catalog, { "stand-ins": standIns });
+    if (!("decks" in injected)) throw new Error(injected.error);
+    const live = createHotseat({ seed, decks: injected.decks, engine: port, catalog });
+    const hand = live.view().you.hand;
+    if (!Array.isArray(hand)) throw new Error("the viewer sees their own hand (§10.8)");
+    expect(hand.length).toBeGreaterThan(0);
+    for (const card of hand) {
+      const defId = card.defId;
+      expect(defId.startsWith(STAND_IN_PREFIX), `${defId} is a stand-in`).toBe(true);
+      expect(live.view().defs?.[defId]?.name, "R243: the view ships the stand-in's definition").toBe(defId);
+    }
+    const replayed = fold({ seed, decks: injected.decks, log: [...live.log()] });
+    expect(replayed.errors).toEqual([]);
+    expect(port.hashState(replayed.state as unknown as EngineState)).toBe(live.hash());
+  });
+
   it("R265 either order deals the same hands", () => {
     const seed = "hotseat-r265-either";
     const p1First = real(seed);
@@ -762,6 +782,12 @@ describe("resolveDeck", () => {
 
     const unknown = resolveDeck("spec01", catalog, { spec01: [...cards.slice(0, DECK_SIZE - 1), "core-999"] });
     expect("error" in unknown && /not in the catalog/.test(unknown.error)).toBe(true);
+
+    // #5099: a testkit stand-in is in no catalog; the engine takes it, so the mirror lets it through.
+    const standIn = `${STAND_IN_PREFIX} (2) 4/4 Rush`;
+    expect(resolveDeck("spec01", catalog, { spec01: [...cards.slice(0, DECK_SIZE - 1), standIn] })).toEqual({
+      deck: [...cards.slice(0, DECK_SIZE - 1), standIn],
+    });
   });
 });
 

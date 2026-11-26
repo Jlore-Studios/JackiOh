@@ -6,6 +6,7 @@
 
 import { CARDS, CARD_NAMES, cardId as catalogId } from "../../support/cards.ts";
 import { seedFor } from "../../support/config.ts";
+import { VANILLA_4_4 } from "../../support/standIns.ts";
 import { ensureSeat } from "../../support/hotseat.ts";
 import { RADIANT, cardId, handCardId, ts } from "../../support/testids.ts";
 import type { GameStateLike, Lane, PlayerId } from "../../support/types.ts";
@@ -18,7 +19,7 @@ const UNIT_LANE: Lane = 1;
 
 const MATH_EQUATION = catalogId(31);
 
-/** SPEC §8 #8 Mr. Vanilla's base and Radiant stats. */
+/** #5099: the field unit's base and Radiant stats, which its stand-in id spells (VANILLA_4_4; was #8 Mr. Vanilla). */
 const VANILLA = { attack: 4, health: 4 } as const;
 const VANILLA_RADIANT = { attack: 12, health: 12 } as const;
 /** SPEC §8 #31 deals Fib(2) = 1 at its printed cost (R25). */
@@ -26,7 +27,7 @@ const MATH_DAMAGE = 1;
 
 /** Costs come from SPEC §8; §2.3 caps max mana at 4, so each of these waits for its own turn. */
 const COSTS: Record<string, number> = {
-  [CARDS.mrVanilla]: 1,
+  [VANILLA_4_4]: 1,
   [CARDS.glowyJellyBean]: 3,
   [CARDS.knockoffTemu]: 1,
   [MATH_EQUATION]: 1,
@@ -114,8 +115,8 @@ describe("BUILD M8 11 — Glowy Jelly Bean on a hand card, Knockoff Temu on a da
   });
 
   it("§5.2 flips a hand card and a damaged field unit, keeping the damage on the field card", () => {
-    waitToPlay("p1", CARDS.mrVanilla);
-    cy.playByName(nameOf(8), { zone: { side: "you", row: "units", lane: UNIT_LANE } });
+    waitToPlay("p1", VANILLA_4_4);
+    cy.playByName(VANILLA_4_4, { zone: { side: "you", row: "units", lane: UNIT_LANE } });
 
     cy.instanceAt("p1", "units", UNIT_LANE).then((vanillaId) => {
       cy.get(`${ts(cardId(vanillaId))}${RADIANT}`).should("not.exist");
@@ -201,7 +202,7 @@ describe("BUILD M8 11 — Glowy Jelly Bean on a hand card, Knockoff Temu on a da
             health: 0,
           });
           // §10.1: a converted instance retains its id.
-          expect(unit.defId, "the instance was converted in place (§5.2)").to.eq(CARDS.mrVanilla);
+          expect(unit.defId, "the instance was converted in place (§5.2)").to.eq(VANILLA_4_4);
         });
       });
     });

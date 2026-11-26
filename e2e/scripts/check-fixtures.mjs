@@ -35,6 +35,86 @@ function engineConstant(name) {
   return value;
 }
 
+/** #5099: a testkit stand-in's id prefix (`crates/engine/src/testkit/stand_in.rs`), a string constant. */
+const STAND_IN_PREFIX = JSON.parse(/^export const STAND_IN_PREFIX = (".*");$/m.exec(engineConfig)?.[1] ?? "null");
+if (typeof STAND_IN_PREFIX !== "string") {
+  console.error(`no "export const STAND_IN_PREFIX = "<prefix>";" line in ${engineConfigPath}`);
+  process.exit(1);
+}
+
+/**
+ * #5099: the shape of a stand-in id, `STAND_IN_GRAMMAR`'s: a cost, then a Unit's `<attack>/<health>` and its
+ * keywords, or a textless Spell, Field Spell, Trap or Field Trap. The engine parses the rest and panics with
+ * the grammar on a bad keyword; this catches a typo in the shape before a browser starts.
+ */
+const STAND_IN_SHAPE = new RegExp(
+  `^${STAND_IN_PREFIX} \\(\\d+\\) (\\d+/\\d+( [^+*#@:]+)?|Spell|Field Spell|Trap|Field Trap)$`,
+);
+
+/**
+ * #5099: the calls that hand a fixture's cards to anything but `cy.seedGame`: the loadout and deck installs,
+ * whose server engine has no testkit and refuses a stand-in (§9.4 L6), and a spec's own `cy.fixture` read
+ * (spec 10 holds its cards to the starter set and installs them). Only `cy.seedGame`'s hotseat game, whose
+ * engine carries the testkit, takes a stand-in.
+ */
+const SERVER_LOADERS = ["installLoadout(", "legalDeck(", "cy.fixture("];
+const specsDirs = [path.join(here, "..", "cypress"), path.join(here, "..", "support")];
+
+/** Every spec and support source, read once. */
+function sources() {
+  const out = [];
+  const walk = (dir) => {
+    if (!existsSync(dir)) return;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (/\.tsx?$/.test(entry.name)) out.push({ file: path.relative(path.join(here, ".."), full), text: readFileSync(full, "utf8") });
+    }
+  };
+  for (const dir of specsDirs) walk(dir);
+  return out;
+}
+
+/** Where a source hands fixture `id` to a server loader: by its literal, or by a `const` bound to it. */
+function serverLoads(id, all) {
+  const literal = new RegExp(`["'\`]${id}["'\`]`);
+  const out = [];
+  for (const { file, text } of all) {
+    if (!literal.test(text)) continue;
+    const names = [...text.matchAll(new RegExp(`const (\\w+) = ["'\`]${id}["'\`]`, "g"))].map((match) => match[1]);
+    text.split("\n").forEach((line, at) => {
+      if (!SERVER_LOADERS.some((loader) => line.includes(loader))) return;
+      if (literal.test(line) || names.some((name) => new RegExp(`\\b${name}\\b`).test(line))) out.push(`${file}:${at + 1}`);
+    });
+  }
+  return out;
+}
+
+/**
+ * #5099: the hotseat fixtures that deal catalog cards a stand-in could spell, each for a reason a stand-in
+ * cannot meet. Every other fixture `cy.seedGame` loads deals a stand-in for such a card (`pureStats`).
+ */
+const REAL_CARDS = new Map([
+  ["01-aggro-a", "spec 15 hears each played Unit's own voice line, and spec 17 shows its art"],
+  ["01-aggro-b", "spec 15 hears each played Unit's own voice line, and spec 17 shows its art"],
+  ["50-busy-a", "spec 50 frames a busy board of real cards, their art and keyword marks"],
+  ["50-busy-b", "spec 50 frames a busy board of real cards, their art and keyword marks"],
+]);
+
+/** A face's keyword line as the catalog writes it: `keyword_key`'s words joined by ", ". */
+function keywordLine(face) {
+  return (face?.keywords ?? []).map((keyword) => (keyword.n === undefined ? keyword.kind : `${keyword.kind} ${keyword.n}`)).join(", ");
+}
+
+/**
+ * #5099: a Unit of one plain cost whose whole text, on both faces, is its keyword line: a card a spec can
+ * only want for its numbers, which a stand-in spells and no balance patch moves.
+ */
+function pureStats(def) {
+  if (def.type !== "Unit" || typeof def.cost !== "number") return false;
+  return [def.base, def.radiant].every((face) => face === undefined || (face.text ?? "") === keywordLine(face));
+}
+
 /** §2.6 L2. */
 const DECK_SIZE = engineConstant("DECK_SIZE");
 /** R80: a library holds at most this many cards, so no handicap deck is larger (R184). */
@@ -79,6 +159,7 @@ if (existsSync(catalogPath)) {
 
 const problems = [];
 const files = readdirSync(decksDir).filter((name) => name.endsWith(".json")).sort();
+const allSources = sources();
 
 for (const file of files) {
   const id = file.replace(/\.json$/, "");
@@ -121,6 +202,12 @@ for (const file of files) {
   for (const card of deck.cards) {
     if (seen.has(card)) problems.push(`${where}: "${card}" appears twice (L3, MAX_COPIES = 1)`);
     seen.add(card);
+    if (card.startsWith(STAND_IN_PREFIX)) {
+      if (!STAND_IN_SHAPE.test(card)) {
+        problems.push(`${where}: "${card}" is no stand-in id; see STAND_IN_GRAMMAR in crates/engine/src/testkit/stand_in.rs`);
+      }
+      continue;
+    }
     if (catalog === null) continue;
     const def = catalog[card];
     if (def === undefined) {
@@ -129,6 +216,22 @@ for (const file of files) {
     }
     if (def.token === true || (def.tags ?? []).includes("Token")) {
       problems.push(`${where}: "${card}" (${def.name}) is a Token card (L3)`);
+    }
+  }
+  const loads = serverLoads(id, allSources);
+  if (catalog !== null && loads.length === 0 && !REAL_CARDS.has(id)) {
+    for (const card of deck.cards) {
+      const def = catalog[card];
+      if (def !== undefined && pureStats(def)) {
+        problems.push(
+          `${where}: "${card}" (${def.name}) is only its numbers and keywords; deal a stand-in that spells them (e2e/support/standIns.ts, #5099)`,
+        );
+      }
+    }
+  }
+  if (deck.cards.some((card) => card.startsWith(STAND_IN_PREFIX))) {
+    for (const at of loads) {
+      problems.push(`${where}: holds a stand-in, which the server's engine refuses, yet ${at} installs it through the server (#5099)`);
     }
   }
 }

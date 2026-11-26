@@ -29,6 +29,21 @@ pnpm exec tsc -p tsconfig.json
 pnpm check:fixtures                       # every deck fixture obeys L2/L3/L6 before a browser is involved (`pnpm typecheck` runs it too, as CI does)
 ```
 
+### Stand-ins in the fixture decks (#5099)
+
+A hotseat fixture (one only `cy.seedGame` loads) deals a card it holds for its numbers alone, a Unit whose
+whole text is its keyword line, as a stand-in: an id that spells the card, `"stand-in (1) 3/3 Rush, First
+Strike R6/6 Charge, First Strike"` (`crates/engine/src/testkit/stand_in.rs` has the grammar). No balance patch
+moves it, so a spec that leans on "a 4/4 for 1" keeps it (#4654, #2361 and #2719 broke on such patches). Its
+name is its id, so `cy.playByName` finds it; `support/standIns.ts` names the four the decks deal, each the card
+it replaced as that card stood, in the same place in the list, so every seed deals as it did. The e2e client's
+engine carries the testkit and takes a stand-in (its definition rides in the view, R243); the server's does
+not, so a fixture `installLoadout`, `legalDeck` or a spec's own `cy.fixture` hands to the server keeps its
+catalog cards. `check:fixtures` refuses a stand-in such a fixture holds, a malformed stand-in, and a hotseat
+fixture's catalog card that is only its numbers, except in the fixtures its `REAL_CARDS` names with the reason
+(the 01-aggro decks, whose Units spec 15 hears and spec 17 shows). A card kept for its text stays a catalog
+card.
+
 ## Run
 
 ```

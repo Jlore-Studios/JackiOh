@@ -2,6 +2,7 @@
 // other trap: #60 Bear Honeypot stays armed. Reads player 1's DOM and unrendered play counts (CLAUDE.md rule 7).
 
 import { seedFor } from "../../support/config.ts";
+import { VANILLA_4_4 } from "../../support/standIns.ts";
 import {
   cardId,
   graveyardCountId,
@@ -91,7 +92,7 @@ describe("BUILD M9 31: a Counter answers the opponent's Spell on their turn", ()
                 expect(state.pending).to.eq(null);
               });
 
-              cy.handCardByName("Mr. Vanilla").then((vanilla) => {
+              cy.handCardByName(VANILLA_4_4).then((vanilla) => {
                 cy.playCard(vanilla, { zone: { side: "you", row: "units", lane: 1 }, expectAnimating: "trapFired" });
                 cy.get(ts(zoneId("opponent", "backrow", HONEYPOT_LANE))).find('[data-face-down="true"]').should("not.exist");
                 cy.gameState().should((state) => {

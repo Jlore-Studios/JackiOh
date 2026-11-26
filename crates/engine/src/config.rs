@@ -1778,6 +1778,10 @@ pub const CRAFT_MAX_STAT: i32 = CRAFT_POINTS_BASE + CRAFT_POINTS_PER_MANA * CRAF
 pub const CRAFT_UNPRICED_POINTS: i32 = i32::MAX;
 /// What a crafted definition's id starts with, before the recipe's digest (R882).
 pub const CRAFT_ID_PREFIX: &str = "craft:";
+/// #3486: what a testkit stand-in's id starts with (`testkit/stand_in.rs`); no catalog id does. #5099: the
+/// client and the e2e support read it (`engineConfig.ts`) to let an injected deck's stand-ins through to
+/// `createGame`, which takes them under `testkit` alone.
+pub const STAND_IN_PREFIX: &str = "stand-in";
 /// The first words of a crafted card's name; the designer may replace them (R883).
 pub const CRAFT_ADJECTIVES: &[&str] = &[
     "Pure",

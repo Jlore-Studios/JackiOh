@@ -3,6 +3,7 @@
 // Strike) attacks heroes on player-turn 3 (§6.1): from HERO_HEALTH (30, §2), one hit leaves 27.
 
 import { constants, seedFor } from "../../support/config.ts";
+import { FIRST_STRIKE_3_3 } from "../../support/standIns.ts";
 import { BOARD, attackIs, cardId, handCardId, healthIs, heroId, ts, zoneId } from "../../support/testids.ts";
 import {
   DRAGGING_ATTR,
@@ -35,7 +36,8 @@ const DECK_A = "04-combat-a";
 const DECK_B = "04-combat-b";
 
 /** §8 #11 is in player 1's opening hand under this seed. */
-const TIMMY = "Tempo Timmy";
+/** #5099: a (1) 3/3 with Rush and First Strike; was #11 Tempo Timmy. */
+const TIMMY = FIRST_STRIKE_3_3;
 const TIMMY_ATTACK = 3;
 
 const LANE_1 = zoneId("you", "units", 1);

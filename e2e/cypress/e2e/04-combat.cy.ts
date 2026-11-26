@@ -4,6 +4,7 @@
 // BUILD M5-T4 pops are asserted while the animation runs, then the durable stats.
 
 import { seedFor } from "../../support/config.ts";
+import { FIRST_STRIKE_3_3, FIRST_STRIKE_6_1, VANILLA_4_4 } from "../../support/standIns.ts";
 import {
   DAMAGE_POP,
   HEAL_POP,
@@ -49,10 +50,10 @@ describe("BUILD M8 04 — Taunt, Defense Position, First Strike and Divine Shiel
     cy.seedGame({ seed: SEED, a: "04-combat-a", b: "04-combat-b" });
 
     ensureSeat("p1");
-    cy.playByName("Tempo Timmy", { zone: { side: "you", row: "units", lane: 1 } });
+    cy.playByName(FIRST_STRIKE_3_3, { zone: { side: "you", row: "units", lane: 1 } });
 
     advanceToTurn(2);
-    cy.playByName("Mr. Vanilla", { zone: { side: "you", row: "units", lane: 1 } });
+    cy.playByName(VANILLA_4_4, { zone: { side: "you", row: "units", lane: 1 } });
     advanceToTurn(4);
     // Turn 4 is p2's second: 2 mana, too few for Jilliax's Embiggened (3), so no price picker opens.
     cy.playByName("Jilliax", { zone: { side: "you", row: "units", lane: 2 } });
@@ -77,12 +78,12 @@ describe("BUILD M8 04 — Taunt, Defense Position, First Strike and Divine Shiel
     cy.seedGame({ seed: SEED, a: "04-combat-a", b: "04-combat-b" });
 
     ensureSeat("p1");
-    cy.playByName("Mr. Vanilla", { zone: { side: "you", row: "units", lane: 1 } });
+    cy.playByName(VANILLA_4_4, { zone: { side: "you", row: "units", lane: 1 } });
     advanceToTurn(2);
-    cy.playByName("Mr. Vanilla", { zone: { side: "you", row: "units", lane: 1 } });
+    cy.playByName(VANILLA_4_4, { zone: { side: "you", row: "units", lane: 1 } });
 
     advanceToTurn(3);
-    cy.playByName("Tempo Timmy", { zone: { side: "you", row: "units", lane: 2 } });
+    cy.playByName(FIRST_STRIKE_3_3, { zone: { side: "you", row: "units", lane: 2 } });
 
     cy.instanceAt("p1", "units", 1).then((defender) => {
       cy.instanceAt("p1", "units", 2).then((timmy) => {
@@ -120,9 +121,9 @@ describe("BUILD M8 04 — Taunt, Defense Position, First Strike and Divine Shiel
     cy.seedGame({ seed: SEED, a: "04-combat-a", b: "04-combat-b" });
 
     ensureSeat("p1");
-    cy.playByName("Tempo Timmy", { zone: { side: "you", row: "units", lane: 1 } });
+    cy.playByName(FIRST_STRIKE_3_3, { zone: { side: "you", row: "units", lane: 1 } });
     advanceToTurn(3);
-    cy.playByName("Pointmaster", { zone: { side: "you", row: "units", lane: 2 } });
+    cy.playByName(FIRST_STRIKE_6_1, { zone: { side: "you", row: "units", lane: 2 } });
     advanceToTurn(4);
     cy.playByName("Jilliax", { zone: { side: "you", row: "units", lane: 1 } });
 

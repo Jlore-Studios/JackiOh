@@ -3,6 +3,7 @@
 // card in hand cheaper (R831009), and a Turtinator use Tributes another Unit (R683).
 
 import { seedFor } from "../../support/config.ts";
+import { VANILLA_4_4 } from "../../support/standIns.ts";
 import {
   PROMPT,
   activateId,
@@ -60,7 +61,7 @@ describe("BUILD M9 30: Activate controls (R384, R510)", () => {
       // R831009: the hand card is chosen as the activation resolves.
       cy.waitForPrompt("hand");
       // Answered in its picker by PendingOption.key (`instance:<id>`), not on the hand.
-      cy.handCardByName("Mr. Vanilla").then((vanilla) => {
+      cy.handCardByName(VANILLA_4_4).then((vanilla) => {
         cy.answerPrompt("hand", { options: [`instance:${vanilla}`] });
       });
       cy.settled();
@@ -73,7 +74,7 @@ describe("BUILD M9 30: Activate controls (R384, R510)", () => {
       cy.get(PROMPT).should("not.exist");
       manaIs(0);
 
-      cy.playByName("Mr. Vanilla", { zone: { side: "you", row: "units", lane: 1 } });
+      cy.playByName(VANILLA_4_4, { zone: { side: "you", row: "units", lane: 1 } });
       manaIs(0);
 
       cy.advanceToTurn(5);

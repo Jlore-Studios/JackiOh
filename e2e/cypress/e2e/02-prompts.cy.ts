@@ -4,6 +4,7 @@
 // Fixture cards #7, #15, #17, #24 and #30 cover choices; #46, #55 and #67 cover zones.
 
 import { constants, seedFor } from "../../support/config.ts";
+import { ARMORED_7_7, FIRST_STRIKE_3_3, VANILLA_4_4 } from "../../support/standIns.ts";
 import {
   GAME,
   MULLIGAN_OPPONENT_READY,
@@ -269,7 +270,7 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
     openGame(SEEDS.mode);
     ensureSeat("p1");
 
-    cy.playByName("Mr. Vanilla", { zone: { side: "you", row: "units", lane: 1 } });
+    cy.playByName(VANILLA_4_4, { zone: { side: "you", row: "units", lane: 1 } });
 
     // Only radiant Flood has this choice (§8.1).
     toP1Turn(3);
@@ -279,7 +280,7 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
       cy.get(ts(handCardId(flood))).should("have.attr", "data-radiant", "true");
 
       toP1Turn(4);
-      cy.fieldCardByName("Mr. Vanilla").then((vanilla) => {
+      cy.fieldCardByName(VANILLA_4_4).then((vanilla) => {
         select("Flood");
         pickerOpensOnce("discover");
         cy.gameState().should((state) => {
@@ -303,8 +304,8 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
     // R64 makes four bodies; R101 leaves several minimal Tribute 3 sets.
     cy.playByName("Me and Mr Token", { zone: { side: "you", row: "units", lane: 1 } });
     toP1Turn(2);
-    cy.playByName("Tempo Timmy", { zone: { side: "you", row: "units", lane: 3 } });
-    cy.playByName("Mr. Vanilla", { zone: { side: "you", row: "units", lane: 4 } });
+    cy.playByName(FIRST_STRIKE_3_3, { zone: { side: "you", row: "units", lane: 3 } });
+    cy.playByName(VANILLA_4_4, { zone: { side: "you", row: "units", lane: 4 } });
 
     toP1Turn(3);
     // Identify the token by lane because its name occurs in the card text.
@@ -348,10 +349,10 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
     openGame(SEEDS.direction);
     ensureSeat("p1");
 
-    cy.playByName("Tempo Timmy", { zone: { side: "you", row: "units", lane: 1 } });
+    cy.playByName(FIRST_STRIKE_3_3, { zone: { side: "you", row: "units", lane: 1 } });
 
     toP1Turn(4);
-    cy.fieldCardByName("Tempo Timmy").then((timmy) => {
+    cy.fieldCardByName(FIRST_STRIKE_3_3).then((timmy) => {
       select("Silly Silas");
 
       // The direction comes before the M5-T2 zone click.
@@ -401,10 +402,10 @@ describe("BUILD M8 02 — every choice picker is rendered once and answered", ()
     openGame(SEEDS.embiggen);
     // Both prices must be affordable (§2.3, R65).
     toP1Turn(4);
-    cy.playByName("4-mana 7/7", { zone: { side: "you", row: "units", lane: 1 } });
+    cy.playByName(ARMORED_7_7, { zone: { side: "you", row: "units", lane: 1 } });
 
     toP1Turn(5);
-    cy.fieldCardByName("4-mana 7/7").then((sevens) => {
+    cy.fieldCardByName(ARMORED_7_7).then((sevens) => {
       select("Suppressive Aura");
       pickerOpensOnce("embiggen");
       cy.gameState().should((state) => {

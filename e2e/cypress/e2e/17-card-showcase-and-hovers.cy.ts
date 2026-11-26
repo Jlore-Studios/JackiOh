@@ -5,7 +5,8 @@
 import catalogJson from "../../../crates/cards/catalog.json";
 
 import { CARD_NAMES } from "../../support/cards.ts";
-import { CARD_SETTINGS_KEY, seedFor, timeouts } from "../../support/config.ts";
+import { CARD_SETTINGS_KEY, constants, seedFor, timeouts } from "../../support/config.ts";
+import { ARMORED_7_7, FIRST_STRIKE_3_3, FIRST_STRIKE_6_1, VANILLA_4_4 } from "../../support/standIns.ts";
 import {
   BOARD,
   BROWSABLE,
@@ -62,6 +63,8 @@ const UNIT_DEF_IDS: ReadonlySet<string> = new Set([
   "core-001", "core-003", "core-008", "core-011", "core-015", "core-019", "core-020", "core-025",
   "core-032", "core-045", "core-053", "core-056", "core-077", "core-081", "core-089", "core-091",
   "core-092",
+  // #5099: the stand-ins the 03 decks deal in place of #8, #11, #20 and #25 (support/standIns.ts).
+  VANILLA_4_4, FIRST_STRIKE_3_3, FIRST_STRIKE_6_1, ARMORED_7_7,
 ]);
 const SPELL_DEF_IDS: ReadonlySet<string> = new Set(["core-005", "core-010", "core-062"]);
 
@@ -82,6 +85,8 @@ const ROWS: readonly Row[] = ["units", "backrow"];
 
 // Catalog display name (SPEC §8).
 function nameOf(defId: string): string {
+  // #5099: a stand-in's name is its id.
+  if (defId.startsWith(constants.STAND_IN_PREFIX)) return defId;
   const name = CARD_NAMES[Number(defId.replace(/^core-/, ""))];
   expect(name, `SPEC §8 names ${defId}`).to.not.eq(undefined);
   return name ?? defId;

@@ -237,6 +237,7 @@ function asDeck(raw: unknown, id: string, known: ReadonlySet<string> = CORE_IDS)
   ).to.eq(size);
   expect(new Set(cards).size, `decks/${id}.json has no duplicate ids (L3)`).to.eq(cards.length);
   for (const card of cards) {
+    if (card.startsWith(constants.STAND_IN_PREFIX)) continue;
     expect(known.has(card), `decks/${id}.json: "${card}" is a deckable catalog id (L6)`).to.eq(true);
   }
   return {

@@ -18,7 +18,7 @@ import { setShips, type CardCost, type CardDef, type CardDefs, type SetName } fr
  */
 // Imported and then re-exported, not `export … from`: this module uses both constants itself, and a bare
 // re-export creates no local binding.
-import { DECK_SIZE, MAX_COPIES } from "@jackioh/engine/config";
+import { DECK_SIZE, MAX_COPIES, STAND_IN_PREFIX } from "@jackioh/engine/config";
 
 export { DECK_SIZE, MAX_COPIES };
 
@@ -119,6 +119,9 @@ function refusal(deck: readonly string[], catalog: CardDefs, id: string, size: n
     return `deck "${id}" repeats a card id; at most ${MAX_COPIES} copy of each (§2.6 L3)`;
   }
   for (const defId of deck) {
+    // #5099: a testkit stand-in (`crates/engine/src/testkit/stand_in.rs`) is in no catalog; the engine's
+    // `createGame` takes it when it carries the testkit (the e2e build's module) and refuses it otherwise.
+    if (defId.startsWith(STAND_IN_PREFIX)) continue;
     const def = catalog[defId];
     if (def === undefined) return `deck "${id}": "${defId}" is not in the catalog (§9.4 L6)`;
     if (!deckable(def, preview)) {
