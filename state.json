@@ -21731,6 +21731,8 @@
       "stop_requested": false
     },
     "4997": {
+      "action": "review",
+      "asks": [],
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-26T01:06:09Z",
@@ -21744,8 +21746,11 @@
         "trail": "- <!-- bot: {\"status\": \"done\", \"title\": \"Patch: WebSocket match, co-op and watch routes normalize match and profile UUIDs to lowercase, so uppercase hex connects to in-memory actors and seats\"} -->\n- ## What changed\n- WebSocket handshakes for `/ws/match`, `/ws/duos`, and `/ws/watch` now lowercase `matchId` (and `friendId` on watch) before any actor lookup or seat check, matching what the REST routes already do:\n- - [ws_server.rs](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4981/crates/server/src/actor/ws_server.rs:496) \u2014 `upgrade_socket` lowercases the `?matchId=` query value.\n- - [social/watch.rs](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4981/crates/server/src/social/watch.rs:85) \u2014 `parse_watch_hello` lowercases `match_id` and `friend_id` at construction.\n- - [duos/ws.rs](/home/agent-muse/actions-runner-2/_work/_temp/work/item-4981/crates/server/src/duos/ws.rs:66) \u2014 `attach_socket` lowercases the resolved id once, covering the hello value, the `?matchId=` query value, and the `live_match_of` fallback.\n- Four regression tests: a `parse_watch_hello` unit test plus one integration test each for `/ws/match` (`MATCH-1` attaches to the live match), `/ws/watch` (uppercase hello admitted), and two for `/ws/duos` (uppercase id in hello frame and in `?matchId=` both attach to the running `DuosActor`; guest \u2026\n- ## How it was tested\n- - Each new test was run with the three production lines temporarily reverted: all four fail (integration tests refuse with 4403 / get no view; unit test mismatches). With the fix restored, all four pass.\n- - Neighbors green, no regressions: `cargo test -p jackioh-server --lib social::watch::` (6 passed), `--test server actor::ws_server::` (22 passed), `actor::watch::b50_` (15 passed), `actor::duos::b35_` (9 passed).\n- - `cargo fmt --check` passes; `cargo clippy -p jackioh-server --all-targets -- -D warnings` reports no warnings.\n- - No `cargo jackioh spec check` needed: no ruling note was added (UUID case-insensitivity is RFC 4122 and REST routes already lowercase, so this aligns sockets with settled behavior rather than deciding anything new).\n- ## Decisions and notes for the reviewer\n- - The watch integration test builds its match inline with the hex-letter id `67e5\u20260d01` because `support::store::uuid()` is digits-only, so uppercasing it would be a no-op and the test would pass without the fix; `friendId` is uppercased anyway for symmetry.\n- - The duos tests assert the host observes `teammate` with `connected && !aiPlaying`, which only the original actor emits (`on_attached` pushes teammate to the mate), so a duplicate-actor regression fails the host half, not just the guest's view.\n- - One misstep during construction: the two duos tests were first inserted at the end of `mod b36_the_ai_seats` (an identical anchor matched there); caught via `--list` and moved into `mod b35_the_socket` with the duplicate removed. Final `git status` shows only the six intended files.\n- --- stderr ---\n- muse: workspace root: /home/agent-muse/actions-runner-2/_work/_temp/work/item-4981 (explicit)\n- muse: workspace trust: trusted source=run-flag\n- muse: warning: rules file at /home/agent-muse/actions-runner-2/_work/_temp/work/item-4981/CLAUDE.md is ignored this session because AGENTS.md takes precedence in that directory; merge still-applicable guidance into AGENTS.md or remove one of the two files"
       },
       "issue": 4981,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-26T02:54:40Z",
         "from_run": "45733421651",
         "gates": [
           {
@@ -21804,8 +21809,15 @@
         "source": "build",
         "until": "2026-11-26T03:23:24Z"
       },
+      "pending_request": false,
+      "provider": "muse",
       "queued_at": "2026-11-26T02:53:24Z",
+      "run_id": "pending:69c3ac76-1795661647",
+      "runs_on": "night-vm-muse",
       "self_check_findings": [],
+      "started_at": "2026-11-26T02:54:40Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "muse",
@@ -21819,9 +21831,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T02:43:45Z",
+    "at": "2026-11-26T02:54:40Z",
     "url": "",
-    "what": "suggestions (rules) on muse"
+    "what": "review #4997 on muse"
   },
   "last_sweep": {
     "at": "2026-11-26T02:40:32Z",
