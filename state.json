@@ -21555,6 +21555,9 @@
       "stop_requested": false,
       "taken_asks": []
     },
+    "4992": {
+      "suggestion": true
+    },
     "4993": {
       "action": "review",
       "asks": [],
@@ -44666,6 +44669,13 @@
         "title": "Patch: leave e2e off in ci-scope for crates/tools/perf-corpus",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-26T02:46:22Z",
+        "number": 4992,
+        "title": "Patch: Mass Driver's and Doomsday Clock's countdown badges state their countdown once, and Radiant Doomsday Clock's badge says the damage it deals",
+        "verdict": "approved",
+        "why": "approved by @MaxGoetzmann"
       }
     ],
     "declined": [
