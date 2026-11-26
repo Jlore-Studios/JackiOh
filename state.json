@@ -46203,7 +46203,8 @@
       "2026-11-26T03:26:44Z,45732225022,agy,gemini-3.8-flash-high,plan,4977,medium,failed,,150.3,376052,38622,0,,83,0,83,83,7.5,,none,,1",
       "2026-11-26T03:41:11Z,45749789504,muse,muse-spark-1.3-contributor,plan,4996,medium,planned,,6.3,0,0,0,,14,15,96,96,43.4,,none,,1",
       "2026-11-26T03:30:50Z,45748494190,claude-4,sonnet+opus,review,5003,medium,approved,,4.8,16,4187,417304,0.5169,2,2,,,1.3,,none,,1",
-      "2026-11-26T03:38:31Z,45732019106,muse,muse-spark-1.3-contributor,revise,4953,medium,built,,144.2,0,0,0,,11,12,90,95,6.5,muse,none,,1"
+      "2026-11-26T03:38:31Z,45732019106,muse,muse-spark-1.3-contributor,revise,4953,medium,built,,144.2,0,0,0,,11,12,90,95,6.5,muse,none,,1",
+      "2026-11-26T03:47:51Z,45747206492,claude-1,opus,plan,4991,hard,planned,,33.2,16,11555,2472685,13.6003,39,69,,,23.8,muse,fresh,other,1"
     ]
   },
   "version": 1
