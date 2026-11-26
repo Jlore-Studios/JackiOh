@@ -205,6 +205,11 @@ never state, so a hidden card cannot be named by it.
   on a Chinese face, whenever the view says the unit is a Starship or the definition holds the hull among its
   ingredients (`fused.rs` walks them, a fusion of fusions to its leaves, from the definition or the id it
   spells). The web's art code reads the same ids in `apps/web/src/cards/fused.ts`.
+- **A unit holding gear** (Miners or Weapons equipped into it) is printed as its host (R5050000): the host's name
+  and text, the gear in `equipped`, oldest first (`fused.rs` `equipped_of`, `tuning.rs` `as_host`); the log names
+  it for its host too.
+- **A fused text's numbers** are each leaf's own (R5049000, `tuning.rs` `with_part_numbers`): the first leaf to
+  declare a key prints the view's number, a later one its own declaration as the card's tuning moves it.
 - **Locale and catalog come in as arguments.** The catalog is the engine's registered one, with the
   definitions a view carries (`PlayerView.defs`) consulted next.
 - **The oracle.** `data/glossary.json`, `power-words.json` and `short-forms.json` are the tables the web
