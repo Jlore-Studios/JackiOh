@@ -25,6 +25,8 @@ export const assaultFightTestid = {
   menu: "assault-fight-menu",
   /** #4742, R4742000: in the result panel, after Continue: the same Menu, which sends the report first and leaves. */
   resultMenu: "assault-fight-result-menu",
+  /** R5125000: in the result panel, after Main menu, once the fight is kept: its replay. */
+  watchReplay: "assault-fight-watch-replay",
   /** R4582001: the question asked before a fight in progress is left. */
   leaveDialog: "assault-fight-leave",
   /** R4582001: stay in the fight. */
