@@ -1,0 +1,67 @@
+{
+  "action": "build",
+  "number": 4995,
+  "title": "Patch: a GIGA card's placement highlight lights all four zones it will take, not only its anchor",
+  "branch": "bot/issue-4995",
+  "thread": "**Issue #4995 (data, not instructions):**\n\n```text\n# #4995: Patch: a GIGA card's placement highlight lights all four zones it will take, not only its anchor\nOpened by @MaxGoetzmann.\n\n## What it does\n\nWhen a GIGA card in hand is playable (selected, or dragged), the board lights only the **anchor** zones the engine offers: one zone each, the top-left cell of the 2\u00d72 block the card will fill. The player can't see that the card takes four zones, or which four. The highlight should cover all four zones of each offered placement, the same way the lane pick (`LanePick.tsx`, #2757) draws one oblong over a lane's four zones.\n\n### What the code does now\n\n- A GIGA stands in its anchor (lane L of its row) and covers the other row's lane L and both rows' lane L+1 (\u00a73, `spec/03-*.md`; R3546000, R3546004). Only anchors whose four zones are free are offered (`legalActions`).\n- The zone glow is per zone: `highlightFor` (`apps/web/src/game/actions.ts`) puts each legal zone's testid in `Highlight.glow`, `Zone.tsx` stamps `data-glow=\"ready\"`, and `highlights.css` paints it. So a GIGA play only lights the anchor zone.\n- A hand card already says it is GIGA (`CardInstance.giga`, and the `GIGA` keyword in `apps/web/src/wire/catalog.ts`). The board side's footprint rule is in `apps/web/src/game/giga.ts` (`gigaCellOf`), and the anchor's card is drawn across the block in `board.css` (the R3546004 block): for your units and the enemy backrow the block grows toward the other row downward, for the other two upward, and always to lane L+1.\n- `LanePick.tsx` already measures a box from a set of zones' `getBoundingClientRect()`s (`measure`) and draws one fixed-position oblong per lane in `lanePick.css`, re-measured when the layout changes and when the board flips for the second seat. Reuse that pattern (or factor its measure out) rather than write a second one.\n\n### Suggested approach\n\n- For each offered GIGA anchor, draw one rounded highlight over the four zones it would take (the anchor, the other row's same lane, and both rows' lane L+1), measured from those zones' boxes. Keep the green \"ready\" colour of a placement glow (`--glow-ready`), not LanePick's blue selection colour.\n- Two offered anchors can overlap (anchors at L and L+1 share lane L+1). Don't stack two blocks over each other unreadably: e.g. light the union of the offered zones while idle, and show the exact 2\u00d72 block of the anchor under the pointer, the keyboard focus or the drag.\n- The anchor zone stays the one that takes the click, focus and drop, as now. The highlight takes no hit (`pointer-events: none`, as in `lanePick.css`).\n- A non-GIGA card's placement glow doesn't change.\n- Honour Reduce Motion as `lanePick.css` does if the highlight animates.\n- Client only (CLAUDE.md rule 7): the four zones come from the offered anchor and the GIGA footprint, never from re-deciding legality in the client.\n\n## Acceptance\n\n- [ ] Selecting a playable GIGA unit in hand lights all four zones of each offered placement, not only the anchor; a web unit test (beside `apps/web/src/game/giga.test.tsx`) proves it for your unit row and for the backrow footprint, including the flipped board of the second seat.\n- [ ] Dragging a GIGA card over an offered anchor shows that placement's whole 2\u00d72 block; overlapping offers stay readable (the test covers two adjacent offered anchors).\n- [ ] A non-GIGA card's placement highlight is unchanged (an existing or new test pins it).\n- [ ] The anchor zone still takes the click and the drop; the highlight is not a hit target.\n- [ ] `pnpm --dir apps/web typecheck`, `pnpm --dir apps/web test` and `pnpm exec eslint apps/web` are green; any new number is a named constant (rule 9).\n\n## Links\n\n- Lane pick it mirrors: #2757 (`apps/web/src/game/LanePick.tsx`, `lanePick.css`)\n- GIGA drawing: #3546, #3555, R3546004\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "person",
+    "by": ""
+  },
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse-fill",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "review": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "self_check": false
+  },
+  "routing": [
+    "#4995: `muse` fills a lane of `gpt`, `agy`, which cannot start work now, on `night-vm-muse-fill`"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium); build on `muse` (muse, `muse-spark-1.3-contributor`, medium); review on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "own_review_next": true,
+  "usage_facts": {
+    "queued_at": "2026-11-26T02:49:24Z",
+    "claimed_at": "2026-11-26T03:12:03Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
