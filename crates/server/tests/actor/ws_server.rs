@@ -1079,3 +1079,17 @@ mod r2686000_player_hello_limit {
         assert_eq!(views(&revived.messages_until_silent(HELLO_SETTLE).await), 0);
     }
 }
+
+mod an_uppercase_match_id_in_the_query {
+    //! An uppercase-hex `?matchId=` attaches to the live 1v1 match instead of refusing with 4403:
+    //! the socket lowercases the query value before the seat check and the actor lookup.
+    use super::*;
+
+    #[tokio::test]
+    async fn attaches_to_the_live_match_instead_of_refusing_with_4403() {
+        let _serial = SERIAL.lock().await;
+        let (listening, tokens) = listen_with(1).await;
+        let mut client = open_as(listening.port, "MATCH-1", &tokens[0]).await.open();
+        assert_eq!(client.first_view().await["viewer"], "p1");
+    }
+}
