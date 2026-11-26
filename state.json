@@ -24165,10 +24165,12 @@
           "provider": "claude-4",
           "tier": "strong"
         },
-        "at": "2026-11-26T13:41:30Z",
+        "at": "2026-11-26T14:57:29Z",
         "built_by": "claude-4",
         "by": "`claude` (strong)",
-        "sha": "68a1ae0bbfc987624c4930c0290f86493845cf1a"
+        "carried_from": "68a1ae0bbfc987624c4930c0290f86493845cf1a",
+        "resolved_by": "`claude` (strong)",
+        "sha": "09e493b5b424ede8ca4f55d7d770c5fe9222d110"
       },
       "died": 0,
       "difficulty": "hard",
