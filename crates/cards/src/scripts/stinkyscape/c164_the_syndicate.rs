@@ -78,6 +78,7 @@ mod tests {
     const FILLER: &str = "core-005"; // Stockpile: a Spell that prints no Tradable.
     const PRESTIGE: &str = "meditative-053"; // Prestige: Prints Tradable
     const TRADE_UNION: &str = "stinkyscape-165"; // The Trade Union: The same aura, and no roll.
+    const RUSH: &str = "core-t-rush"; // Rush Token: a Unit-token card.
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     enum Outcome {
@@ -147,6 +148,38 @@ mod tests {
             s.expect_events(json!(["traded", "shuffledIn", "drawn"]));
             assert_eq!(trades_left(s.state(), P1), 0, "one Trade a turn");
         }
+    }
+
+    /// R4821001: the aura lends a Unit-token card Tradable too, but R11 would end it on the way into
+    /// the deck, so it has no Trade, and an empty deck's draw never follows to fatigue its player.
+    #[test]
+    fn r4821001_a_unit_token_card_lent_tradable_has_no_trade_and_an_empty_deck_fatigues_nobody() {
+        let mut s = scenario(json!({
+            "p1": { "hand": [RUSH, FILLER], "field": [{ "def": ID, "lane": 1 }], "library": [] },
+            "p2": { "hand": [FILLER], "library": filler(2) },
+        }));
+        let token = s
+            .hand(P1)
+            .into_iter()
+            .find(|card| card.def_id == RUSH)
+            .map(|card| card.id)
+            .expect("a Rush Token card in p1's hand");
+        assert!(is_tradable(s.state(), s.card(&token)), "lent by the aura");
+        assert!(
+            !legal_actions(s.state(), P1)
+                .iter()
+                .any(|action| matches!(action, ActionBody::Trade { instance_id } if *instance_id == token)),
+            "no Trade of the token is offered"
+        );
+        let fatigue = s.state().players.p1.fatigue_count;
+        let health = s.state().players.p1.hero.health;
+        s.expect_refused_with(|s| s.trade(&token), "is a Unit token");
+        assert_eq!(
+            (s.state().players.p1.fatigue_count, s.state().players.p1.hero.health),
+            (fatigue, health),
+            "a Trade fatigued its player"
+        );
+        s.expect_in_zone(&token, "hand");
     }
 
     #[test]

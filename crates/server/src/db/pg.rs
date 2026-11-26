@@ -17,6 +17,7 @@
 use std::ops::{Deref, DerefMut};
 use std::time::Duration;
 
+use futures_util::TryStreamExt;
 use indexmap::{IndexMap, IndexSet};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -28,9 +29,9 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 
 use jackioh_engine::wire::{
-    CardTotal, CoCount, DrillCount, FaceDrills, FirstMet, FirstSeen, GameEventType, GameRecord, ListTotal,
-    PortraitId, RecordsKey, StatsFace, StatsTotals, TotalsKey, parse_game_record, portrait_or_default,
-    sources_of,
+    CardStats, CardTotal, CoCount, DrillCount, FaceDrills, FirstMet, FirstSeen, GameEventType, GameRecord,
+    ListTotal, PortraitId, RecordsKey, StatsFace, StatsTotals, TotalsKey, parse_game_record,
+    portrait_or_default, sources_of,
 };
 use jackioh_engine::{Action, LastBoardEntry, LeanPick, PlayerId, WinRateTable};
 use jackioh_shared::host::daily::{DailyBoard, DailyClock};
@@ -47,7 +48,7 @@ use crate::db::store::{
     CollectionGrant, ConsentRow, DailyGameRow, DailyInviteKind, DailyInviteRow, DailyInviteState,
     DailyNotifyRow, DeckVersion, DeckVersionOutcome, EmoteEventRow, FoldedRecords, FrozenDeck, FrozenTrio,
     GameRecordQuery, InviteCluster, InviteCode, LastBoardKind, LoadoutSample, MatchActionRow,
-    MatchCheckpointRow, MatchClocks, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, NewBot, PerMode,
+    MatchCheckpointRow, MatchClocks, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, NewBot,
     PlayTelemetry, PlayerSettingsGroup, PlayerSettingsLimits, PlayerSettingsMergeInput,
     PlayerSettingsMergeOutcome, PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile,
     ProfileCreateInput, ProfileKind, ProfileRecord, ProfileStatus, PublicPlayerSummary, PushSubRow,
@@ -3535,42 +3536,6 @@ async fn replay_row(t: &mut PgTx<'_>, match_id: &str, actions: i64) -> Result<Op
     Ok(Some(ReplayRow { row, result, actions }))
 }
 
-pub async fn replays_list(
-    t: &mut PgTx<'_>,
-    profile_id: &str,
-    limit: i64,
-    offset: i64,
-) -> Result<Vec<ReplayRow>, StoreError> {
-    if !is_uuid(profile_id) {
-        return Ok(Vec::new());
-    }
-    run_as(t, None).await?;
-    let rows = sqlx::query(
-        "select m.id, (select count(*) from public.match_actions a where a.match_id = m.id) as actions
-           from public.matches m
-          where m.status = 'over'
-            and (m.p1_profile_id = $1::uuid or m.p2_profile_id = $1::uuid)
-            and exists (select 1 from public.results r where r.match_id = m.id)
-            and exists (select 1 from public.match_actions a where a.match_id = m.id)
-          order by m.ended_at desc nulls last, m.id desc
-          limit $2::bigint offset $3::bigint",
-    )
-    .bind(profile_id)
-    .bind(limit)
-    .bind(offset)
-    .fetch_all(&mut **t)
-    .await
-    .map_err(db_error)?;
-    let mut replays = Vec::with_capacity(rows.len());
-    for row in &rows {
-        let match_id = uuid_text(row, "id")?;
-        if let Some(replay) = replay_row(t, &match_id, get(row, "actions")?).await? {
-            replays.push(replay);
-        }
-    }
-    Ok(replays)
-}
-
 /// R768: one query, the page of matches, their results and their action counts joined, with the mode
 /// derived in Rust by the same precedence `matches_mode_of` uses. #4712: the page is found first, one
 /// arm per seat, each walking its seat's index of finished matches (`matches_p1_over_ended_idx`,
@@ -3940,22 +3905,6 @@ pub async fn tickets_count_open(t: &mut PgTx<'_>) -> Result<i64, StoreError> {
         .await
         .map_err(db_error)?;
     row.map_or(Ok(0), |row| get::<i32>(&row, "n").map(i64::from))
-}
-
-pub async fn tickets_count_open_by_mode(t: &mut PgTx<'_>) -> Result<PerMode<i64>, StoreError> {
-    run_as(t, None).await?;
-    let rows = sqlx::query(
-        "select mode, count(*)::int as n from public.tickets where status = 'queued' group by mode",
-    )
-    .fetch_all(&mut **t)
-    .await
-    .map_err(db_error)?;
-    let mut counts: PerMode<i64> = PerMode::default();
-    for row in &rows {
-        let mode = queue_mode_of(&get::<String>(row, "mode")?)?;
-        counts[mode] = i64::from(get::<i32>(row, "n")?);
-    }
-    Ok(counts)
 }
 
 pub async fn tickets_recent_waits(t: &mut PgTx<'_>, since: i64) -> Result<Vec<TicketWait>, StoreError> {
@@ -4918,9 +4867,10 @@ const STORED_FACES: [StatsFace; 2] = [StatsFace::Radiant, StatsFace::Normal];
 /// R4673001: one turn's or co-played card's counts on each stored face, `[games, wins]` per face in
 /// `STORED_FACES`' order, or none when no face counted it (as every total folded before R4673001).
 fn face_counts(total: &CardTotal, count: impl Fn(&FaceDrills) -> Option<DrillCount>) -> Vec<i64> {
+    let empty = FaceDrills::default();
     let counts: Vec<Option<DrillCount>> = STORED_FACES
         .iter()
-        .map(|face| total.face(*face).and_then(&count))
+        .map(|face| total.face(*face, &empty).and_then(&count))
         .collect();
     if counts.iter().all(Option::is_none) {
         return Vec::new();
@@ -4938,8 +4888,9 @@ fn face_counts(total: &CardTotal, count: impl Fn(&FaceDrills) -> Option<DrillCou
 /// order; a face that counted no game gets no entry.
 fn add_face_counts(total: &mut CardTotal, counts: &[i64], mut add: impl FnMut(&mut FaceDrills, DrillCount)) {
     for (face, pair) in STORED_FACES.iter().zip(counts.chunks(2)) {
-        if let ([games, wins], Some(drills)) = (pair, total.face_mut(*face))
+        if let [games, wins] = pair
             && *games > 0
+            && let Some(drills) = total.face_mut(*face)
         {
             add(
                 drills,
@@ -5405,7 +5356,11 @@ pub async fn stats_totals_load(
             .game_totals
             .insert(records_key_of(row)?, from_json(get::<Value>(row, "total")?)?);
     }
-    let rows = sqlx::query(
+    // One read, taken a row at a time as it arrives and each card's `stats` read straight into its
+    // figures, so no raw row is held past its own and no JSON tree stands between. A read a patch at a
+    // time cost minutes on staging (2026-11-26): each patch's rows lie scattered through the table, so
+    // every patch's read went through most of its pages.
+    let mut rows = sqlx::query(
         "select patch, source, mode, pilot, card, stats,
                 case when $4::boolean then turns end as turns,
                 case when $4::boolean then co end as co
@@ -5418,28 +5373,30 @@ pub async fn stats_totals_load(
     .bind(mode.as_deref())
     .bind(query.patch.as_deref())
     .bind(query.drills)
-    .fetch_all(&mut **t)
-    .await
-    .map_err(db_error)?;
-    for row in &rows {
+    .fetch(&mut **t);
+    while let Some(row) = rows.try_next().await.map_err(db_error)? {
         let key = TotalsKey {
-            patch: get(row, "patch")?,
-            source: from_literal(&get::<String>(row, "source")?)?,
-            mode: from_literal(&get::<String>(row, "mode")?)?,
-            pilot: from_literal(&get::<String>(row, "pilot")?)?,
+            patch: get(&row, "patch")?,
+            source: from_literal(&get::<String>(&row, "source")?)?,
+            mode: from_literal(&get::<String>(&row, "mode")?)?,
+            pilot: from_literal(&get::<String>(&row, "pilot")?)?,
         };
-        let card: String = get(row, "card")?;
+        let card: String = get(&row, "card")?;
         let mut total = CardTotal {
-            stats: from_json(get::<Value>(row, "stats")?)?,
+            stats: get::<Json<CardStats>>(&row, "stats")?.0,
             ..CardTotal::new(&card)
         };
-        if let Some(turns) = get::<Option<Value>>(row, "turns")? {
+        if let Some(turns) = get::<Option<Value>>(&row, "turns")? {
             turns_of(turns, &mut total)?;
         }
-        if let Some(co) = get::<Option<Value>>(row, "co")? {
+        if let Some(co) = get::<Option<Value>>(&row, "co")? {
             co_of(co, &mut total)?;
         }
         totals.cards.entry(key).or_default().insert(card, total);
+    }
+    drop(rows);
+    for cards in totals.cards.values_mut() {
+        cards.shrink_to_fit();
     }
     Ok(totals)
 }
@@ -8047,7 +8004,7 @@ fn from_ticket_status(status: &TicketStatus) -> Result<&'static str, StoreError>
 use crate::db::store::{ReplayShare, SharedReplayRow};
 
 /// B52: what a share `s`, joined to its match `m`, is read through on: the match is over, the
-/// sharer held a seat in it, the retention purge has not taken its action log (as `replays_list`
+/// sharer held a seat in it, the retention purge has not taken its action log (as `replays_list_with_modes`
 /// does), and the two are still friends (`a < b`) with neither blocking the other.
 macro_rules! readable_share {
     () => {

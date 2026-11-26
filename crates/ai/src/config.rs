@@ -2,7 +2,9 @@
 //! are tuning defaults: tests pin rankings and puzzle outcomes, never these values. Each constant
 //! object is a `const` of a struct named after it (SURFACE §4.2).
 
-use jackioh_engine::config::{CN_TECH_MIN_GAMES, KY_COMPETITION_MAX, MARKETPLACE_CREDITS_PER_MANA};
+use jackioh_engine::config::{
+    CN_TECH_MIN_GAMES, HERO_HEALTH, KY_COMPETITION_MAX, MARKETPLACE_CREDITS_PER_MANA,
+};
 use jackioh_engine::{KeywordKind, SetName};
 use serde::{Deserialize, Serialize};
 
@@ -129,7 +131,13 @@ pub const DUOS_PASS_PROBE_SEED: &str = "ai:duos-pass";
 
 /// R1127000: the most of the teammate's legal `Play` follow-ups one passed card is scored on, the
 /// card's own plays first, then the rest in `legal_actions` order: bounds scoring at one hand of
-/// cards times this many single `reduce` calls per `duos_passes` call.
+/// cards times this many single `reduce` calls per `duos_passes` call. It also bounds the hand cards
+/// the teammate's baseline is scored on (R1723000). R4932000: when more are listed than the room
+/// left, the kept ones are the first plays of the teammate's best-valued hand cards
+/// (`hand_card_value`), not the first in list order. The bound is not a hand size, which an effect
+/// moves (R1143). Its screen (#4932), `gate --duos --games 40` against the base build: random 39 and
+/// 39 won, greedy 36 and 36, 1 of 80 games played differently, 0 decided: inconclusive (R4319000),
+/// its scene tests settle it.
 pub const DUOS_PASS_MAX_FOLLOWUPS: usize = 8;
 
 /// R1723000: what each crystal of a team's `pass_cost` charges a pass, in `evaluate`'s points: the
@@ -558,7 +566,9 @@ pub struct EvalWeights {
     /// R3951100: while a Feng Shui acts (Meditative #40, R981–R985), the share that counts of what the
     /// seat's next face-up play is worth to it (`evaluate::feng_shui_outlook`): of its own hand's cards a
     /// Feng Shui would judge, the best verdict its last element gives one, a reward at what the card would
-    /// gain in hand as Radiant and a punishment at the hit's cost on the hero curve. At 0 nothing is read.
+    /// gain in hand as Radiant and a punishment at the hit's cost on the hero curve. While a Feng Shui of
+    /// the seat's own acts, the Auspicious Rock its Activate adds next turn is one more such card
+    /// (`AI_FENG_SHUI_ROCK`, R4783041). At 0 nothing is read.
     pub feng_shui_outlook: f64,
     /// §3.2, R13, R3695001: the share of its `unit_worth` a card dormant under one of the seat's own
     /// unit piles counts. It resumes when the cards above it leave.
@@ -627,16 +637,9 @@ pub struct EvalWeights {
     pub standing_unit_priced_once: bool,
     /// A backrow card the seat cannot read (on the enemy's side of the ledger).
     pub enemy_face_down: f64,
-    /// R351: per crystal of the cost such a card shows both players (`shown_cost`), on top of
-    /// `enemy_face_down`: a (6) back and a (0) back are not the same threat.
-    pub enemy_face_down_per_cost: f64,
     /// Per library card up to libraryComfort.
     pub library_card: f64,
     pub library_comfort: f64,
-    /// §2.4: taken off a side per fatigue draw it has taken (`fatigue_count`, public): the Nth draw
-    /// from an empty library deals N, so each one taken adds a point to every fatigue hit to come.
-    /// It reads the count alone, never the library, which `library_card` prices.
-    pub fatigue_draw: f64,
     /// Per crystal left at the end of the seat's own turn (terminal only).
     pub unspent_mana: f64,
     /// R3695000: per crystal of a passed line's Float that a "Float reduces cost" card in the seat's own
@@ -845,14 +848,8 @@ pub const AI_EVAL: EvalWeights = EvalWeights {
     backrow_per_cost: 0.8,
     standing_unit_priced_once: true,
     enemy_face_down: 2.0,
-    // #1602: off. At 0.8 its screen read 201-199, edge 0.005 (-0.017 to 0.027), which keeps nothing
-    // (training/improve.md, A screen); inconclusive (R4319000): 5 decided of 200 (won 3, lost 2).
-    enemy_face_down_per_cost: 0.0,
     library_card: 0.1,
     library_comfort: 10.0,
-    // #1602: off. At 1.0 its screen read 199-201, edge -0.005 (-0.022 to 0.012), which keeps nothing
-    // (training/improve.md, A screen); inconclusive (R4319000): 3 decided of 200 (won 1, lost 2).
-    fatigue_draw: 0.0,
     unspent_mana: 0.8,
     // R3695000: a crystal Floated toward a Float-discount card still above the crystals counts as one
     // left unspent does, the least issue #3695 allows: on such a crystal the line nets the card's
@@ -899,6 +896,28 @@ const _: () = assert!(AI_EVAL.evolve_event_share >= 0.0 && AI_EVAL.evolve_event_
 /// placement prompt's enemy permanents first (`candidates::plague_aims_first`).
 pub const AI_PLAGUE_BOMBS: &[&str] = &["classic-062"];
 
+/// R4783040: the cards the AI keeps for a last resort (issue #4783): Classic #37 Last Hurrah, which draws its
+/// whole deck, the hand cap burning the rest, and Stinkyscape+ #79 A Glimpse into the Endless Sea, which
+/// exiles its deck and every permanent for a countdown to a win. The search prices either far above what it
+/// costs (a fatigue draw counts nothing, `AI_EVAL.fatigue_draw`, and a countdown to a win counts a share of the
+/// win, R3696000), so a play of one is a candidate only while the seat's times are dire or it has no other
+/// play (`candidates::hold_last_resorts`).
+pub const AI_LAST_RESORT: &[&str] = &["classic-037", "stinkyscapeplus-079"];
+
+/// R4783040: the cards of `AI_LAST_RESORT` the seat may also play while it holds a way to put cards back into
+/// its deck (`candidates::refills_own_deck`): A Glimpse into the Endless Sea, which empties it.
+pub const AI_LAST_RESORT_REFILLED: &[&str] = &["stinkyscapeplus-079"];
+
+/// R4783040: the life at or under which the seat's times are dire and it may play a last-resort card, a
+/// third of a hero's starting `HERO_HEALTH`: one Feng Shui punishment (`FENG_SHUI_DAMAGE`) from dead.
+pub const AI_LAST_RESORT_DIRE_LIFE: i32 = HERO_HEALTH / 3;
+
+/// R4783041: the card a Feng Shui's Activate adds to its controller's hand, Meditative #39.1 Auspicious Rock
+/// (水), Radiant on the Radiant face. While a Feng Shui of the seat's own acts, the one its next turn's
+/// Activate adds is a card its next play may be (`evaluate::feng_shui_outlook`), and a play that leaves an
+/// element generating a card of its hand bridges to it (`candidates::Auspice::Bridge`).
+pub const AI_FENG_SHUI_ROCK: &str = "meditative-039-1";
+
 /// R2424000, R2687000: the most nodes a decision's Death probes (`evaluate::death_prices`) spend: two
 /// per field unit or readable backrow card with a Death, three per own hand Field Spell with one, three
 /// or four per own hand Unit with one.
@@ -943,18 +962,6 @@ pub const AI_AWAKEN_PROBE_NODES: usize = 16;
 /// for each unevolved Evolve card on either field, and a spawn (one node, two on a full unit row) and an
 /// evolve for each own hand Unit with an Evolve text.
 pub const AI_EVOLVE_PROBE_NODES: usize = 16;
-
-/// R4070000: the most nodes a decision's root prices spend, every probe's cap above together: the counter
-/// `decide::decision_prices_at` prices a state on outside a decision, so each
-/// probe runs to its own cap, as it does in a decision whose budget leaves it that many.
-pub const AI_DECISION_PRICE_NODES: usize = AI_DEATH_PROBE_NODES
-    + AI_TURN_HOOK_PROBE_NODES
-    + AI_ACTIVATION_PROBE_NODES
-    + AI_HAND_ACTIVATION_PROBE_NODES
-    + AI_PROMPT_ACTIVATION_PROBE_NODES
-    + AI_ATTACK_HOOK_PROBE_NODES
-    + AI_AWAKEN_PROBE_NODES
-    + AI_EVOLVE_PROBE_NODES;
 
 /// The greedy baseline's own evaluation (baselines.rs): AI_EVAL exactly as it stood when the quality
 /// gates were fixed on the seed series `gate:v2`, frozen here, so tuning AI_EVAL changes the AI and never
@@ -1058,10 +1065,8 @@ pub const GREEDY_EVAL: EvalWeights = EvalWeights {
     backrow_per_cost: 0.8,
     standing_unit_priced_once: false,
     enemy_face_down: 2.0,
-    enemy_face_down_per_cost: 0.0,
     library_card: 0.1,
     library_comfort: 10.0,
-    fatigue_draw: 0.0,
     unspent_mana: 0.8,
     float_discount: 0.0,
     owed_mana: 0.0,
@@ -1154,9 +1159,12 @@ pub const AI_REPLY: AiReply = AiReply {
     chip_per_damage: 0.3,
     cleave_share: 1.0,
     // #1634: off. On, its screen read 203-197, edge 0.015 (-0.002 to 0.032), inconclusive (R4319000):
-    // 3 decided of 200 (won 3, lost 0). #4246's, on the reply as it stands since, 400 games on
-    // improve-dev against the control at baa7cdb93f, read 200-200, edge 0.0 (0.0 to 0.0), inconclusive
-    // (R4319000): 0 decided of 200, 21 diverged. Neither keeps it (training/improve.md, A screen).
+    // 3 decided of 200 (won 3, lost 0). #4246's, 400 games on improve-dev against the control at
+    // baa7cdb93f, read 200-200, edge 0.0 (0.0 to 0.0), inconclusive (R4319000): 0 decided of 200, 21
+    // diverged. #4931's, on the reply since R4187000's walls and R4810000's close steps, 400 games on
+    // improve-dev against the control at 328135b4ca, read 198-202, edge -0.010 (-0.024 to 0.004),
+    // inconclusive (R4319000): 2 decided of 200 (won 0, lost 2), 11 diverged, every game clean: reverted.
+    // No further screen until the reply changes again (training/improve.md, A screen).
     open_lethal: false,
     // #1696: on. Its screen read 199-199 with deal 136 aborted at the action cap in both seatings (the
     // parent aborts it against itself too), edge 0.0 (-0.057 to 0.057), every other game clean

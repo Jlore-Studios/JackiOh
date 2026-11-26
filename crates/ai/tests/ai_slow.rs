@@ -20,6 +20,7 @@ mod lethal;
 mod match_;
 #[path = "ai/shadow_ban.rs"]
 mod shadow_ban;
+#[expect(dead_code, reason = "the slow tests take only some of the shared helpers")]
 #[path = "ai/support.rs"]
 mod support;
 #[path = "ai/tutorial_tier.rs"]

@@ -15,6 +15,7 @@ import type { CardTier } from "../wire/generated/CardTier.ts";
 import type { CosmeticRarity } from "../wire/generated/cosmetics.ts";
 import type { FleetTrackView } from "../wire/generated/FleetTrackView.ts";
 import type { StatsFace } from "../wire/generated/StatsFace.ts";
+import type { VariantKind } from "../wire/generated/VariantKind.ts";
 import { stripTrailingSlashes } from "./navigate.ts";
 import {
   forgetRead,
@@ -1111,24 +1112,6 @@ export type DeckInput = {
   cardBackCosmetic?: string | null;
 };
 
-/**
- * `PUT /api/decks/:id`: creates or replaces. Refusals: 400 `bad_request` (a D1–D4 draft rule, issues in
- * `details`), 409 `conflict` with `details.limit` at `limits.decks`, 409 `update_required` for a stale
- * catalog, 404 when the id is another profile's.
- */
-export async function putDeck(token: string, id: string, input: DeckInput): Promise<{ deck: SavedDeck }> {
-  const answer = await apiRequest<{ deck: SavedDeck }>(`/api/decks/${encodeURIComponent(id)}`, {
-    method: "PUT",
-    token,
-    body: input,
-  });
-  updateCachedRead<DecksResponse>(token, keptPaths.decks, (before) => ({
-    ...before,
-    decks: withItem(before.decks, answer.deck),
-  }));
-  return answer;
-}
-
 /** The kept decks without deck `id`: a trio slot naming it empties (R252). */
 function withoutDeck(before: DecksResponse, id: string): DecksResponse {
   return {
@@ -1164,7 +1147,7 @@ export function getDeckVersions(token: string, deckId: string): Promise<{ versio
 /**
  * `POST /api/decks/:id/versions/:versionId/restore`: saves the version's name and cards as the deck's,
  * keeping its portrait and picks, as a new version, so the one it replaced stays listed. Refusals as
- * `putDeck`'s.
+ * `PUT /api/decks/:id`'s.
  */
 export async function restoreDeckVersion(
   token: string,
@@ -1829,6 +1812,53 @@ export type CardDrillDownResponse = {
   face?: StatsFace;
   /** R4673001: the card's Normal and Radiant figures and the gap between them, on every face; absent from an older server. */
   faces?: CardFaces;
+  /** R4676000: the card's choices at the page's patch and face, one group per kind it has; absent from an older server. */
+  variants?: PublicVariantGroup[];
+  /** R4679000: each card it made or offered at the page's patch and face, best adjusted first; absent from an older server. */
+  outputs?: PublicOutputRow[];
+};
+
+/** R4676000: one choice of a card, read against the field of every card's choices. */
+export type PublicVariantRow = {
+  key: string;
+  label: string;
+  /** A `mode` row's options as recorded, for the page to name in the card's own words; absent for the other kinds. */
+  options?: string[];
+  games: number;
+  /** Its games over the card's played games on the face, 0..1. */
+  share: number;
+  adjustedWinRate: number | null;
+  adjustedLow: number | null;
+  adjustedHigh: number | null;
+  tier: CardTier | null;
+  hasEnoughGames: boolean;
+};
+
+/** R4676000: one kind of a card's choices, its rows by share, most chosen first. */
+export type PublicVariantGroup = {
+  kind: VariantKind;
+  rows: PublicVariantRow[];
+};
+
+/** R4679000: one card a card made or offered, read against the card's other outputs. */
+export type PublicOutputRow = {
+  /** The output's catalog id, which its drill-down opens. */
+  key: string;
+  label: string;
+  cost: number;
+  rarity: string;
+  games: number;
+  /** Its games over every output's on the face, 0..1. */
+  share: number;
+  adjustedWinRate: number | null;
+  adjustedLow: number | null;
+  adjustedHigh: number | null;
+  tier: CardTier | null;
+  hasEnoughGames: boolean;
+  /** A Discover-like card's: the seat-games the output was offered in; absent for a card that offers none. */
+  offered?: number;
+  /** Picked over offered, 0..1; absent when it was never offered. */
+  pickRate?: number;
 };
 
 /** R4673000: one face's figures in the drill-down, read against that face's own field and band. */

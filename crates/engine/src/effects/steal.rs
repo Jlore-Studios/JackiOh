@@ -19,9 +19,8 @@ use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, find_instance};
 use crate::wire::{ControlHow, GameEvent, PlayerId, Row, opponent_of};
 use crate::zones::{
-    PlaceOnFieldOptions, ZoneSlot, card_at, first_entry_zone, in_units_row_or_standing, is_open,
-    is_standing_unit, place_beneath_top, place_on_field, place_standing_on_field, remove_from_field, slot_of,
-    slots_of, standing_units_of,
+    PlaceOnFieldOptions, ZoneSlot, first_entry_zone, in_units_row_or_standing, is_open, place_beneath_top,
+    place_on_field, place_standing_on_field, remove_from_field, slot_of,
 };
 
 /// Which card to steal: the pick the play or a prompt carried (R81), or an instance id a script
@@ -57,27 +56,32 @@ enum MoveOutcome {
 /// R15: the same lane on the stealer's side when that zone is free, else its first free zone.
 /// R3546003: a GIGA takes the same lane whole when all four zones are free (R64), else the
 /// leftmost fit (R64, R688), else nothing (the card is then destroyed by a steal, R4205000).
+/// R4599016: a Unit a carrier held (`carried`, read before it left) crosses to the unit row, the row
+/// its type takes (§5.1): the carrier stays where it stood, and no zone of the backrow holds a Unit
+/// on its own but one standing there.
 fn destination_for(
     ctx: &EffectContext<'_>,
     thief: PlayerId,
     card: &CardInstance,
     from: &ZoneSlot,
+    carried: bool,
 ) -> Option<ZoneSlot> {
+    let row = if carried { Row::Units } else { from.row };
     let same_lane = ZoneSlot {
         player: thief,
-        row: from.row,
+        row,
         lane: from.lane,
     };
     if crate::giga::is_giga(card) {
         if crate::giga::fits(same_lane, |slot| is_open(ctx.state, slot)) {
             return Some(same_lane);
         }
-        return crate::giga::entry_anchor(ctx.state, thief, from.row);
+        return crate::giga::entry_anchor(ctx.state, thief, row);
     }
     if is_open(ctx.state, same_lane) {
         return Some(same_lane);
     }
-    first_entry_zone(ctx.state, thief, from.row)
+    first_entry_zone(ctx.state, thief, row)
 }
 
 /// One card to `ctx.controller`'s side, by `move_control`'s rules; a card it reaches but has no room for
@@ -114,7 +118,8 @@ fn move_control(
     }
     let previous = card.controller;
 
-    let Some(to) = destination_for(ctx, receiver, card, &from) else {
+    let carried = crate::zones::is_carried(ctx.state, card);
+    let Some(to) = destination_for(ctx, receiver, card, &from, carried) else {
         return MoveOutcome::NoRoom;
     };
 
@@ -231,13 +236,16 @@ pub fn swap_control(args: SwapControlArgs) -> Effect {
         }
         let mine_stands = crate::zones::stands_in_backrow(ctx.state, mine);
         let theirs_stands = crate::zones::stands_in_backrow(ctx.state, &theirs);
+        // R4599016: read before both leave, as `destination_for` places a carried Unit by it.
+        let mine_carried = crate::zones::is_carried(ctx.state, mine);
+        let theirs_carried = crate::zones::is_carried(ctx.state, &theirs);
         let mut mine = mine.clone();
         let mut theirs = theirs.clone();
         remove_from_field(ctx.state, &mine, Default::default());
         remove_from_field(ctx.state, &theirs, Default::default());
         // Both are off the field, so each destination is read with both zones free (R15, R4590003).
-        let mine_to = destination_for(ctx, theirs.controller, &mine, &my_slot);
-        let theirs_to = destination_for(ctx, mine.controller, &theirs, &their_slot);
+        let mine_to = destination_for(ctx, theirs.controller, &mine, &my_slot, mine_carried);
+        let theirs_to = destination_for(ctx, mine.controller, &theirs, &their_slot, theirs_carried);
         let (Some(mine_to), Some(theirs_to)) = (mine_to, theirs_to) else {
             // Cannot happen (`to` was open); putting both cards back keeps the board legal, not
             // losing them.
@@ -289,38 +297,6 @@ pub fn swap_control(args: SwapControlArgs) -> Effect {
         });
         // R1854002: the taken Unit is its new controller's steal, for the quests.
         crate::subsystems::quests::note_steal(ctx, theirs_to.player);
-    })
-}
-
-/// `stealAll`'s arguments: the row defaults to "units".
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
-#[serde(rename_all = "camelCase")]
-pub struct StealAllArgs {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub row: Option<Row>,
-}
-
-/// Steal every enemy card of a row in lane order (§3.2), each per R15: what fits is taken and the rest
-/// destroyed, in that order (R68, R4205000); only a Stack pile's top is reached (R13). No Core card
-/// calls it (#86 steals `query::killer_of`, R361); it stays for a card that may.
-pub fn steal_all(args: StealAllArgs) -> Effect {
-    Effect::new("stealAll", move |ctx| {
-        let row = args.row.unwrap_or(Row::Units);
-        let enemy = opponent_of(ctx.controller);
-        // R1081000: a Unit standing in a backrow zone is the units row's, after its zones (§6.1 Animated).
-        let mut cards: Vec<CardInstance> = slots_of(enemy, row)
-            .into_iter()
-            .filter_map(|slot| card_at(ctx.state, slot))
-            .filter(|card| !(row == Row::Backrow && is_standing_unit(ctx.state, card)))
-            .cloned()
-            .collect();
-        if row == Row::Units {
-            cards.extend(standing_units_of(ctx.state, enemy).into_iter().cloned());
-        }
-        for card in cards {
-            take_control(ctx, &card);
-        }
     })
 }
 

@@ -3,7 +3,10 @@
 //! one, a shipyard, two Stinkyscape-set pieces and the spells that summon, launch and exile them.
 //! Ids `sm-…` from 35390, so they collide with no other fixture file's.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

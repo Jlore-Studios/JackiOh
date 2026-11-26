@@ -1,6 +1,7 @@
 //! Test-only cards for GIGA (issue #3546, R3546000–R3546004): a GIGA Unit and Field Spell, a
-//! plain Unit, a Cleaver, a Stack Unit, a lane-locked Unit, a Reborn GIGA, a Crater one (R4693000)
-//! and an embiggen Unit that is GIGA only embiggened, so the engine never imports `crates/cards`. Ids are `giga-` from
+//! plain Unit, a Cleaver, a Stack Unit, a lane-locked Unit, a Reborn GIGA, a Crater one (R4693000),
+//! an embiggen Unit that is GIGA only embiggened, and a Tribute GIGA Field Spell and a Tribute Unit
+//! (R391), so the engine never imports `crates/cards`. Ids are `giga-` from
 //! 35460, clear of every other fixture file's.
 
 use jackioh_engine::testkit::*;
@@ -30,6 +31,10 @@ pub const CRATER_GIGA: &str = "giga-crater";
 /// A (1 embiggen 0) 2/2 Unit, GIGA only embiggened: its embiggened price is the cheaper, as a discount
 /// that reaches that price alone leaves it (R363).
 pub const CHEAP_GROWER: &str = "giga-cheap-grower";
+/// A (0) Field Spell with GIGA and Tribute 1, S+ #52 Airblast Drill's shape (R391).
+pub const TRIBUTE_GIGA: &str = "giga-tribute-field";
+/// A (0) 3/3 Unit with Tribute 1 (R391).
+pub const TRIBUTE_PLAIN: &str = "giga-tribute-plain";
 
 fn card(
     index: u32,
@@ -62,6 +67,17 @@ fn card(
         "base": base,
         "radiant": radiant,
     }))
+}
+
+/// "Tribute 1" (R391), read off staticFlags.tribute.
+fn tribute_1() -> Script {
+    Script {
+        static_flags: Some(StaticFlags {
+            tribute: Some(1),
+            ..StaticFlags::default()
+        }),
+        ..Script::default()
+    }
 }
 
 pub fn scripts() -> IndexMap<String, CardScripts> {
@@ -102,6 +118,8 @@ pub fn scripts() -> IndexMap<String, CardScripts> {
                 ..Script::default()
             },
         ),
+        (TRIBUTE_GIGA, tribute_1()),
+        (TRIBUTE_PLAIN, tribute_1()),
     ];
     let mut all: IndexMap<String, CardScripts> = entries
         .into_iter()
@@ -198,6 +216,15 @@ pub fn defs() -> Vec<CardDef> {
             json!([]),
             json!({ "base": 1, "embiggen": 0 }),
         ),
+        card(
+            35471,
+            TRIBUTE_GIGA,
+            "Field Spell",
+            None,
+            json!([{ "kind": "GIGA" }]),
+            json!(0),
+        ),
+        card(35472, TRIBUTE_PLAIN, "Unit", Some((3, 3)), json!([]), json!(0)),
     ]
 }
 

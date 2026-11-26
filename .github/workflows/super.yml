@@ -8,8 +8,9 @@
 #   ai gates        `jackioh gate --full` in shards, held together by `gate merge` (V10)
 #   golden          `jackioh golden check`: every recorded TypeScript trace replays identically (V4)
 #   daily tests     every Rust test `#[ignore = "daily: …"]` leaves out of a pull request's cargo test:
-#                   the many-game sweeps, whose rule a cheaper test holds per pull request, in three
-#                   legs: every crate but the tools, the tools, and the tools' pool probe (#4375)
+#                   the many-game sweeps, whose rule a cheaper test holds per pull request, in six
+#                   legs: every crate but the tools, the tools, and the tools' pool probe, one leg for
+#                   each of its four suites (#4375, #4984)
 #   coverage        cargo llvm-cov over engine, cards and ai, failing under .github/coverage-floor.txt
 #                   (90% at the start, raised by hand as it climbs toward #306's 99%)
 #   e2e             all 35 e2e specs on Chrome, in shards, and the component specs in three (V21)
@@ -36,6 +37,9 @@
 # opens its own issue, CANDIDATE_TITLE, handed to the night bot as `priority:high` and
 # `difficulty:hard`, since production waits on it; the pull request stays open, and re-running the
 # failed jobs merges it once they pass. A run that passes on one closes that issue, never the daily one.
+# One red staging is one issue, so one lane of the bot fixes it, not two (`report`): a red promotion
+# is reported on the daily issue while that one is open, and a red run on `_staging` that finds
+# CANDIDATE_TITLE open takes that issue over, retitled DAILY_TITLE.
 #
 # A failed run on `_staging` (or on the default branch, whose commits reach `_staging` within two
 # hours) hands the issue to the night bot (.harness/config.json's bot_login), as ci-duration.yml hands
@@ -81,10 +85,10 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  # The fuzz wave's size (README §7); `fuzz` splits it evenly over its matrix. 13200 since the pool
-  # reached 823 cards (the held Infinite Assault set's landing, which the fuzz previews), when the daily
-  # top-up test asked for at least 12839: it covers about 846; each shard ran about 20 of its 90 minutes.
-  FUZZ_SEEDS: "13200"
+  # The fuzz wave's size (README §7); `fuzz` splits it evenly over its matrix. 16800 since the pool
+  # reached 1039 cards (#4984), when the daily top-up test asked for at least 16209: it covers up to
+  # 1076; at 13200 a shard's plain quarter of 3300 seeds ran about 12 of its 90 minutes.
+  FUZZ_SEEDS: "16800"
   # The Duos wave's (§13, #936 B25), ten times `fuzz --duos`'s 200: a Duos game is four seats and a
   # pool, several times a 1v1 game's work. Split the same way.
   DUOS_FUZZ_SEEDS: "2000"
@@ -302,15 +306,17 @@ jobs:
   # holds every ignore to that form), and nothing else. `--tests` leaves out the doc-tests, whose
   # `ignore` blocks are not tests at all. Three legs that together run each ignored test once
   # (#4375): as one job they ran past its 60 minutes once the pool probe took the AI's, the server's
-  # and the tools' suites too (#4249). The tools leg leaves the probe's four tests to their own leg.
-  # That leg builds only jackioh-tools, which does not depend on the server, so it fetches every
-  # crate first for the probe's nested `cargo test --offline` builds.
+  # and the tools' suites too (#4249). The tools leg leaves the probe's four tests to their own legs,
+  # one each, given 90 minutes: sharing one runner, the four ran 37 minutes on 2026-11-23 and past 60
+  # on 2026-11-26, the tools' still running (#4984). A probe leg builds only jackioh-tools, which does
+  # not depend on the server, so it fetches every crate first for the probe's nested `cargo test
+  # --offline` builds. `args` follows `--ignored`: a leg's `--skip`, or the one probe test it runs.
   daily-tests:
     name: daily tests (${{ matrix.leg }})
     if: github.event_name != 'schedule'
     environment: ${{ vars.CI_GATE_ENVIRONMENT || '' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: ${{ matrix.timeout }}
     strategy:
       fail-fast: false
       matrix:
@@ -318,15 +324,33 @@ jobs:
           - leg: every crate but the tools
             key: crates
             targets: "--workspace --exclude jackioh-tools --tests"
-            skip: ""
+            args: ""
+            timeout: 60
           - leg: tools
             key: tools
             targets: "-p jackioh-tools --tests"
-            skip: "--skip _passes_with_every_random_pool_rotated"
-          - leg: pool probe
-            key: pool-probe
+            args: "--skip _passes_with_every_random_pool_rotated"
+            timeout: 60
+          - leg: pool probe, cards
+            key: pool-probe-cards
             targets: "-p jackioh-tools --test pool_probe"
-            skip: ""
+            args: "every_cards_test_passes_with_every_random_pool_rotated"
+            timeout: 90
+          - leg: pool probe, AI
+            key: pool-probe-ai
+            targets: "-p jackioh-tools --test pool_probe"
+            args: "every_ai_test_passes_with_every_random_pool_rotated"
+            timeout: 90
+          - leg: pool probe, server
+            key: pool-probe-server
+            targets: "-p jackioh-tools --test pool_probe"
+            args: "every_server_test_passes_with_every_random_pool_rotated"
+            timeout: 90
+          - leg: pool probe, tools
+            key: pool-probe-tools
+            targets: "-p jackioh-tools --test pool_probe"
+            args: "every_tools_test_passes_with_every_random_pool_rotated"
+            timeout: 90
     env:
       CARGO_PROFILE_TEST_DEBUG: "0"
     steps:
@@ -336,15 +360,15 @@ jobs:
           node: "false"
           cache-key: daily-tests-${{ matrix.key }}
       - name: every crate in Cargo.lock, for the probe's offline builds
-        if: ${{ matrix.key == 'pool-probe' }}
+        if: ${{ startsWith(matrix.key, 'pool-probe') }}
         run: cargo fetch
       - name: this leg's tests a pull request leaves to the daily run
         env:
           TARGETS: ${{ matrix.targets }}
-          SKIP: ${{ matrix.skip }}
+          ARGS: ${{ matrix.args }}
         run: |
-          # shellcheck disable=SC2086 # TARGETS and SKIP are several arguments on purpose.
-          cargo test $TARGETS --features jackioh-engine/testkit,jackioh-engine/ts -- --ignored $SKIP
+          # shellcheck disable=SC2086 # TARGETS and ARGS are several arguments on purpose.
+          cargo test $TARGETS --features jackioh-engine/testkit,jackioh-engine/ts -- --ignored $ARGS
 
   coverage:
     name: coverage (engine, cards, ai)
@@ -587,8 +611,12 @@ jobs:
             gate=true
           fi
 
-          open=$(gh issue list --repo "$REPO" --state open --search "in:title \"$TITLE\"" \
-            --json number,title --jq "map(select(.title == env.TITLE)) | .[0].number // empty")
+          # The open issue titled $1, or nothing.
+          open_issue() {
+            T=$1 gh issue list --repo "$REPO" --state open --search "in:title \"$1\"" \
+              --json number,title --jq "map(select(.title == env.T)) | .[0].number // empty"
+          }
+          open=$(open_issue "$TITLE")
           where="[super run $RUN_ID]($RUN_URL) on \`$REF\` (\`${SHA:0:7}\`, $EVENT)"
           [ "$candidate" = false ] || where="[super run $RUN_ID]($RUN_URL) on #$PR, the promotion of \`${SHA:0:12}\` into production,"
 
@@ -618,12 +646,40 @@ jobs:
           fi
           echo "$failed"
 
+          # One red staging, one issue, one fix. On 2026-11-23 the daily run and a promotion's run went
+          # red on the same commit of staging, each opened its own issue (#4599, #4604), and two lanes
+          # of the night bot built the same fix side by side (#4649, #4629). A promotion pull request's
+          # head is a commit of staging, so a red promotion is reported on the daily issue while that
+          # one is open; and a red run on staging that finds a promotion's issue open takes that issue
+          # over, retitled, since the freeze (scripts/promote-staging.sh) finds staging's issue by its
+          # title and waits for it to close. A retitle that fails opens the daily issue as before.
+          fold=""
+          if [ "$candidate" = true ]; then
+            daily=$(open_issue "$DAILY_TITLE")
+            if [ -n "$daily" ]; then
+              fold=daily
+              open=$daily
+            fi
+          elif [ "$gate" = true ] && [ -z "$open" ]; then
+            promotion=$(open_issue "$CANDIDATE_TITLE")
+            if [ -n "$promotion" ] && gh issue edit "$promotion" --repo "$REPO" --title "$DAILY_TITLE"; then
+              echo "retitled #$promotion \"$DAILY_TITLE\""
+              fold=candidate
+              open=$promotion
+            fi
+          fi
+
           # Staging's red run, main's and a promotion's are the night bot's to fix, first; a branch's is
           # its author's.
-          if [ "$candidate" = true ]; then
+          if [ "$fold" = daily ]; then
+            owner="Night bot: #$PR promotes \`${SHA:0:12}\`, a commit of \`$STAGING_BRANCH\`, and its run is red while this issue, \`$STAGING_BRANCH\`'s red run, is open, so it is reported here and not in an issue of its own: one red \`$STAGING_BRANCH\`, one issue, one fix. Fix these jobs too, in the pull request on \`$DEFAULT_BRANCH\` that closes this, building on it if one is open. When it closes this, \`$STAGING_BRANCH\` takes main's first green commit after the close and the super run starts on it at once; a run there that passes every job promotes it to production by itself. Root-cause each failed job from its log: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and give a person the exact lines for the rest."
+          elif [ "$candidate" = true ]; then
             owner="Night bot: production waits on this run, so it is yours and it comes first (\`priority:high\`, and you take it before every other queued item). #$PR promotes \`${SHA:0:12}\`, a commit of \`$STAGING_BRANCH\` (and so of \`$DEFAULT_BRANCH\`), so the fix lands on \`$DEFAULT_BRANCH\` like any other. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). Say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them. Once the fix is on \`$DEFAULT_BRANCH\`, promote-staging.yml brings it to \`$STAGING_BRANCH\` within two hours; the next daily run there that passes promotes it, or a \`/promote\` on the production issue tests staging's newer commit sooner."
           elif [ "$gate" = true ]; then
             owner="Night bot: this run is on \`$REF\`, so it is yours, and it comes first (\`priority:high\`, and you take it before every other queued item): production promotes itself only from a daily run on \`$STAGING_BRANCH\` that passes every job, so it waits on this fix, and \`$STAGING_BRANCH\` holds still until this issue closes (scripts/promote-staging.sh, the freeze). Fix every failed job here, in the one pull request on \`$DEFAULT_BRANCH\` that closes this: when it closes, \`$STAGING_BRANCH\` takes main's first green commit after the close and the super run starts on it at once, and a run still red opens a new issue. Before you start, look for an open pull request or issue already fixing one of these jobs, and build on it instead of fixing the same test twice. Root-cause each failed job from its log and fix it in a pull request: a flake is not a root cause, so make a flaky test robust instead of re-running it, and never skip, disable or quarantine a test to get green. Reproduce it with the job's own command (CLAUDE.md, Commands; one fuzz seed is \`cargo jackioh fuzz --from <seed> --seeds 1\`, with \`--handicap\` for the handicapped wave and \`--duos\` for the Duos wave; a daily test is \`cargo test -p <crate> <name> -- --ignored\`). A pull request's CI runs only the e2e smoke specs and leaves the tests marked \`#[ignore = \"daily: …\"]\` out, so say in the pull request which job here the fix makes pass and how you checked it. You cannot change \`.github/\`: make the part of the fix that lives elsewhere, and when the rest needs a workflow or an action, give the exact lines to change there and ask a person to make them."
+            if [ "$fold" = candidate ]; then
+              owner="This issue was a promotion's red run (\"$CANDIDATE_TITLE\") and now stands for \`$REF\`'s too, retitled so the freeze waits on its fix: one red \`$STAGING_BRANCH\`, one issue, one fix. If a pull request for it is open, build on that one. $owner"
+            fi
           else
             owner="This run is on \`$REF\`, not \`$STAGING_BRANCH\` or \`$DEFAULT_BRANCH\`: it tests that branch's change, so the branch's author fixes it, and it is not handed to the night bot."
           fi

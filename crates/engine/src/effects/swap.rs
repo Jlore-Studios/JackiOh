@@ -252,16 +252,6 @@ pub fn swap(args: SwapArgs) -> Effect {
     })
 }
 
-/// R73: the two heroes' health values change places; armor stays with its hero.
-pub fn swap_health() -> Effect {
-    Effect::new("swapHealth", swap_health_now)
-}
-
-/// R73: zone contents change sides lane by lane in both rows; locks stay, control moves, owners don't.
-pub fn swap_board() -> Effect {
-    Effect::new("swapBoard", swap_board_now)
-}
-
 /// R73: the libraries change places whole, and each swapped card's owner changes with it (R12).
 pub fn swap_library() -> Effect {
     Effect::new("swapLibrary", swap_library_now)

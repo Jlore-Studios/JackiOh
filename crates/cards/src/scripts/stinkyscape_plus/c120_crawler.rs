@@ -1,9 +1,9 @@
 //! SPEC §8.12 S+ #120 Crawler, a card of the Stinkyscape+ set (R1420, R3535000). Built by S13 (#3560).
-//! May be played from your GY for (1)
+//! **Flashback**
 //! 2/1 (3/1 until issue #4440)
 //! **Death:** Add a **Toxopid** to your hand. If you already have one there, reduce its cost by (2) instead.
 //! \~\~\~
-//! May be played from your GY for (1)
+//! **Flashback**
 //! 4/2 (6/2 until issue #4440)
 //! **Death:** Add a **Radiant Toxopid** to your hand. If you already have one there, reduce its cost by
 //! (3) instead.
@@ -12,11 +12,15 @@
 //! made it a 3/1 (Radiant 6/2) whose Death adds or cheapens a Toxopid; through v0.6.6h (`script_v0_6_6h`,
 //! R767000) it was a 1/3 (Radiant 2/6) with Can't Defend whose first arrival each game added a Toxopid
 //! (R3560000), which died after it attacked (R3560002) and whose Death hit the last Unit it damaged
-//! (R3560003).
+//! (R3560003). Issue #4783 (Stinkyscape+ Balance Changes VIII) gave both faces Flashback, a catalog keyword,
+//! in place of "May be played from your graveyard for (1)": through v0.6.13h (`script_v0_6_13h`, R767000)
+//! its own `graveyardPrice` played it from there at (1) any number of times (R3560001).
 //!
-//! R3560001: the graveyard play at (1), any number of times. R4154301: its Death reads its controller's
-//! hand as it resolves: with a Toxopid there (either face), the first in hand order, the one held longest,
-//! takes a lasting `costMod` of minus `reduce`; with none, a Toxopid is added, Radiant on the Radiant face.
+//! R4783022: Flashback plays it from its owner's graveyard once, at its cost, at least (1) (§6.1, R783012,
+//! R783013, R4285000), the engine's; the script runs nothing for it. R4154301: its Death reads its
+//! controller's hand as it resolves: with a Toxopid there (either face), the first in hand order, the one
+//! held longest, takes a lasting `costMod` of minus `reduce`; with none, a Toxopid is added, Radiant on the
+//! Radiant face.
 
 use jackioh_engine::prelude::*;
 
@@ -28,7 +32,7 @@ const TOXOPID: &str = "stinkyscapeplus-121";
 const BOARD_KEY: &str = "stinkyscapeplus-120:board";
 /// R3560003: the last Unit this damaged (through v0.6.6h).
 const LAST_DAMAGED: &str = "lastDamaged";
-/// R3560001: "May be played from your graveyard for (1)".
+/// R3560001: "May be played from your graveyard for (1)" (through v0.6.13h).
 const GRAVEYARD_PRICE: i32 = 1;
 
 /// This card arrived on the field (played or summoned): its `Summoned` names its own id.
@@ -79,21 +83,25 @@ fn toxopid_or_discount(ctx: &mut EffectContext<'_>, radiant: bool) -> Vec<Effect
     }
 }
 
-/// The face: today's when `through_v0_6_6h` is false, else the one v0.6.6h and before ran.
-fn crawler(radiant: bool, through_v0_6_6h: bool) -> Script {
-    let static_flags = Some(StaticFlags {
+/// R3560001 (through v0.6.13h): its own price in the graveyard, any number of times.
+fn priced_in_graveyard(mut script: Script) -> Script {
+    script.static_flags = Some(StaticFlags {
         graveyard_price: Some(GRAVEYARD_PRICE),
         ..StaticFlags::default()
     });
+    script
+}
+
+/// The face: today's when `through_v0_6_6h` is false, else the one v0.6.6h and before ran; neither
+/// prices itself in the graveyard (`priced_in_graveyard` gives both kept scripts the price).
+fn crawler(radiant: bool, through_v0_6_6h: bool) -> Script {
     if !through_v0_6_6h {
         return Script {
-            static_flags,
             death: Some(hook(move |ctx| toxopid_or_discount(ctx, radiant))),
             ..Script::default()
         };
     }
     Script {
-        static_flags,
         triggers: vec![
             TriggerDef::new("crawler-board", &[GameEventType::Summoned], move |ctx, event| {
                 if !arrived(ctx, event) {
@@ -152,12 +160,21 @@ pub fn script() -> CardScripts {
     }
 }
 
+/// R767000: what it ran through v0.6.13h, before issue #4783: today's Death, and its own graveyard price
+/// of (1) any number of times in place of Flashback (R3560001).
+pub fn script_v0_6_13h() -> CardScripts {
+    CardScripts {
+        base: priced_in_graveyard(crawler(false, false)),
+        radiant: priced_in_graveyard(crawler(true, false)),
+    }
+}
+
 /// R767000: what it ran through v0.6.6h, before issue #4154: the first-arrival Toxopid, the death after
-/// an attack and the Death that hit the last Unit it damaged.
+/// an attack and the Death that hit the last Unit it damaged, with its graveyard price (R3560001).
 pub fn script_v0_6_6h() -> CardScripts {
     CardScripts {
-        base: crawler(false, true),
-        radiant: crawler(true, true),
+        base: priced_in_graveyard(crawler(false, true)),
+        radiant: priced_in_graveyard(crawler(true, true)),
     }
 }
 
@@ -202,33 +219,63 @@ mod tests {
         s.expect_in_zone(crawler.as_str(), "graveyard");
     }
 
-    #[test]
-    fn r3560001_it_is_played_from_the_graveyard_for_1() {
-        // From the graveyard at (1): offered, and the play costs 1.
-        let s = weapon_board(
-            "s120-grave",
-            json!({ "mana": 1, "graveyard": [ID], "library": filler(4) }),
-            json!({}),
-        );
-        let id = s
-            .pile(P1, "graveyard")
+    fn in_graveyard(s: &Scenario) -> CardInstance {
+        s.pile(P1, "graveyard")
             .into_iter()
             .find(|card| card.def_id == ID)
-            .expect("setup")
-            .id;
-        let offered: Vec<String> = legal_actions(s.state(), P1)
-            .into_iter()
-            .filter_map(|action| match action {
-                ActionBody::Play { instance_id, .. } => Some(instance_id),
-                _ => None,
-            })
-            .collect();
-        assert!(offered.contains(&id));
+            .expect("in the graveyard")
+    }
+
+    /// p1's Crawler of `radiant`'s face in the graveyard and 1 mana, a 9/9 in p2's lane 1: whether it lies
+    /// there with Flashback, then what its play from there into lane 1 cost, and, after the 9/9 kills it on
+    /// p2's turn, whether p1's next turn offers it from the graveyard again.
+    fn played_from_the_graveyard(seed: &str, radiant: bool) -> (bool, i32, bool) {
+        let mut s = weapon_board(
+            seed,
+            json!({ "mana": 1, "graveyard": [{ "def": ID, "radiant": radiant }], "library": filler(4) }),
+            json!({ "field": [{ "def": BIG, "lane": 1 }], "library": filler(4) }),
+        );
+        let buried = in_graveyard(&s);
+        let flashback = has_flashback(s.state(), &buried);
+        let id = buried.id;
+        assert!(!plays_in(s.state(), P1, &id).is_empty(), "offered from the graveyard");
         let mana = s.state().players[P1].mana.current;
-        let action = json!({ "type": "play", "playerId": "p1", "instanceId": id, "zone": { "row": "units", "lane": 2 }, "nonce": "s120-grave-1" });
+        let action = json!({
+            "type": "play",
+            "playerId": "p1",
+            "instanceId": id.as_str(),
+            "zone": { "row": "units", "lane": 1 },
+            "nonce": format!("{seed}-1"),
+        });
         let result = reduce(s.state(), &json_as::<Action>(action));
         assert!(result.error.is_none(), "{:?}", result.error);
-        assert_eq!(result.state.players[P1].mana.current, mana - 1);
+        let paid = mana - result.state.players[P1].mana.current;
+        *s.state_mut() = result.state;
+        s.expect_in_zone(id.as_str(), "field");
+        crate::next_turn_of(&mut s, P2);
+        let big = s.unit_at(P2, 1).id;
+        s.attack(big.as_str(), id.as_str());
+        s.expect_in_zone(id.as_str(), "graveyard");
+        crate::next_turn_of(&mut s, P1);
+        (flashback, paid, !plays_in(s.state(), P1, &id).is_empty())
+    }
+
+    #[test]
+    fn r4783022_flashback_plays_it_from_the_graveyard_once_at_1_on_both_faces() {
+        for radiant in [false, true] {
+            // It lies there with Flashback, is played for (1), and dies with it spent: never offered again.
+            assert_eq!(
+                played_from_the_graveyard("s120-flashback", radiant),
+                (true, 1, false),
+                "radiant {radiant}"
+            );
+        }
+    }
+
+    #[test]
+    fn r4783022_its_script_prices_nothing_in_the_graveyard() {
+        let s = weapon_board("s120-no-price", json!({ "graveyard": [ID] }), json!({}));
+        assert_eq!(flags_of(s.state(), &in_graveyard(&s)).graveyard_price, None);
     }
 
     #[test]
@@ -318,6 +365,31 @@ mod tests {
             kill(&mut s);
             assert_eq!(toxopids(&s), held, "nothing added");
             assert_eq!(s.card(&held[0]).cost_mod, before - 3);
+        }
+    }
+
+    /// R767000: the script kept for the replays of v0.6.13h and before (issue #4783), under its v0.6.13h
+    /// definition, which printed no Flashback.
+    mod kept_v0_6_13h {
+        use super::*;
+
+        fn v0_6_13h(def: &mut CardDef) {
+            def.base.keywords = Vec::new();
+            def.radiant.keywords = Vec::new();
+        }
+
+        #[test]
+        fn r767000_r3560001_it_was_played_from_the_graveyard_for_1_any_number_of_times() {
+            crate::under_kept_as(ID, script_v0_6_13h(), v0_6_13h, || {
+                for radiant in [false, true] {
+                    // No Flashback, played for (1), and offered again once it is back in the graveyard.
+                    assert_eq!(
+                        played_from_the_graveyard("s120-kept-grave", radiant),
+                        (false, 1, true),
+                        "radiant {radiant}"
+                    );
+                }
+            });
         }
     }
 

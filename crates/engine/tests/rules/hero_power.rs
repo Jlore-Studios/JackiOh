@@ -1346,3 +1346,36 @@ mod heroic_power_rolling_the_power_r43_r78 {
         assert_eq!(offered(&replayed.state).len() as i32, DISCOVER_OPTIONS);
     }
 }
+
+// R4828000: End Times' bank is the card's tuning (`Tuning.taken`), beside the cut it records.
+mod heroic_power_end_times_bank_r4828000 {
+    use super::*;
+    use jackioh_engine::tuning::{set_taken, sum_tunings, taken_of};
+
+    /// A tuning that sets End Times' price to `price` and banks `bank` cuts against it.
+    fn cut(price: i32, bank: i32) -> Option<Tuning> {
+        Some(Tuning {
+            set: Some(IndexMap::from([(END_TIMES_PRICE_PARAM.to_string(), price)])),
+            taken: Some(IndexMap::from([(END_TIMES_PRICE_PARAM.to_string(), bank)])),
+            ..Tuning::default()
+        })
+    }
+
+    #[test]
+    fn r4828000_a_fuse_keeps_the_bank_of_the_ingredient_whose_set_price_it_keeps() {
+        let fused = sum_tunings(&[cut(7, 3), cut(8, 2)]);
+        assert_eq!(fused, cut(7, 3));
+        let fused = sum_tunings(&[None, cut(8, 2), cut(7, 3)]);
+        assert_eq!(fused, cut(8, 2));
+    }
+
+    #[test]
+    fn r4828000_a_bank_given_back_to_0_leaves_no_tuning() {
+        let mut card = powered(&mut game("r4828000-bank"), "rush", false, 1);
+        set_taken(&mut card, END_TIMES_PRICE_PARAM, 3);
+        assert_eq!(taken_of(&card, END_TIMES_PRICE_PARAM), 3);
+        set_taken(&mut card, END_TIMES_PRICE_PARAM, 0);
+        assert_eq!(taken_of(&card, END_TIMES_PRICE_PARAM), 0);
+        assert_eq!(card.tuning, None);
+    }
+}

@@ -3,7 +3,10 @@
 //! never changes its meaning; the four that mirror a card's radiant text (Big D-fender, Moths, Deft
 //! Duelist, Spikey Pillow) are the exceptions §8 pins. Surface contract: docs/v0.3.0/SURFACE.md §4.2.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

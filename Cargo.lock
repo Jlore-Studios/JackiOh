@@ -1276,6 +1276,7 @@ dependencies = [
  "base64 0.23.1",
  "caseless",
  "clap",
+ "futures-util",
  "getrandom 0.4.3",
  "hmac 0.13.0",
  "indexmap",

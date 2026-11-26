@@ -30,6 +30,7 @@ indexmap = { workspace = true }
 axum = { workspace = true }
 tokio = { workspace = true }
 sqlx = { workspace = true }
+futures-util = { workspace = true }
 jsonwebtoken = { workspace = true }
 reqwest = { workspace = true }
 hmac = { workspace = true }
@@ -67,3 +68,6 @@ path = "tests/server.rs"
 [[test]]
 name = "server_store"
 path = "tests/server_store.rs"
+
+[lints]
+workspace = true

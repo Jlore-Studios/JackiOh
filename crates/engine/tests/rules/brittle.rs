@@ -629,7 +629,7 @@ mod r113_b3_3_a_crumble_that_pauses_the_settle_after_the_tick_9_3 {
         let pending = pending.expect("expected the Death to ask");
 
         let copy: GameState = serde_json::from_value(json_of(&state)).expect("a state survives JSON");
-        assert_eq!(copy, clone_state(&state));
+        assert_eq!(copy, state.clone());
         let answer = json!({
             "type": "answer", "choiceId": pending.id, "selection": [{ "pick": "mode", "option": "two" }],
             "playerId": "p1"

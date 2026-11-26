@@ -4,7 +4,7 @@
 
 use jackioh_engine::effects::move_::bounce_card;
 use jackioh_engine::effects::transform::vanilla;
-use jackioh_engine::effects::{grant_keyword, grant_keyword_cards, steal, summon, swap_board};
+use jackioh_engine::effects::{SwapArgs, grant_keyword, grant_keyword_cards, steal, summon, swap};
 use jackioh_engine::state_check::state_check;
 use jackioh_engine::subsystems::rotation::rotate_rings;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
@@ -540,7 +540,13 @@ mod r3546003_moves_whole {
             json!({}),
         );
         let id = s.unit(P1, 1).expect("no GIGA in lane 1").id.clone();
-        run_effect(s.state_mut(), swap_board(), P1);
+        run_effect(
+            s.state_mut(),
+            swap(SwapArgs {
+                what: Some(SwapWhat::Board),
+            }),
+            P1,
+        );
         let state = s.state();
         let moved = live(state, &id);
         assert_eq!(where_is(state, &moved), "p2 units 1");
@@ -667,5 +673,198 @@ mod r3546004_anchor_view {
         assert!(view.opponent.backrow[1].is_none(), "covered backrow reads empty");
         assert!(view.opponent.units[0].is_none(), "covered units read empty");
         assert!(view.opponent.units[1].is_none(), "covered units read empty");
+    }
+}
+
+mod r391_r3546000_tribute_a_giga {
+    use super::*;
+
+    /// Every zone a play of `id` is offered with the Tribute it pays there, sorted.
+    fn tributed_plays(s: &Scenario, id: &str) -> Vec<(Row, i32, Vec<String>)> {
+        let mut plays: Vec<(Row, i32, Vec<String>)> = s
+            .plays_of(id)
+            .into_iter()
+            .filter_map(|action| match action {
+                ActionBody::Play {
+                    zone: Some(zone),
+                    tributes,
+                    ..
+                } => Some((zone.row, zone.lane, tributes.unwrap_or_default())),
+                _ => None,
+            })
+            .collect();
+        plays.sort();
+        plays
+    }
+
+    /// The refusal `reduce` gives p1's play of `id` into (`row`, `lane`) paying `tributes`, or `None`.
+    fn refusal(s: &Scenario, id: &str, row: Row, lane: i32, tributes: &[&str]) -> Option<String> {
+        let body = ActionBody::Play {
+            instance_id: id.to_string(),
+            zone: Some(ZoneChoice { row, lane }),
+            x: None,
+            embiggen: None,
+            equip: None,
+            tributes: Some(tributes.iter().map(|tribute| tribute.to_string()).collect()),
+            targets: None,
+            modes: None,
+            plague: None,
+            face_down: None,
+        };
+        reduce(s.state(), &Action::new(body, P1, "tribute a giga")).error
+    }
+
+    fn says_not_open(error: Option<String>) -> bool {
+        error.is_some_and(|message| message.contains("not open"))
+    }
+
+    fn in_graveyard(s: &Scenario, id: &str) -> bool {
+        s.state().players[P1].graveyard.iter().any(|card| card.id == id)
+    }
+
+    /// R391, R3546000: a GIGA Tribute card (S+ #52 Airblast Drill's shape) that tributes a GIGA Unit
+    /// takes the four zones the Tribute empties, the covered three among them, and the lane past them.
+    #[test]
+    fn r391_r3546000_a_giga_tribute_card_anchors_in_the_zones_its_tributed_giga_covers() {
+        let mut s = board(
+            "r391-r3546000-giga-for-giga",
+            json!({
+                "mana": 4,
+                "hand": [TRIBUTE_GIGA],
+                "field": [field_unit(GIGA_UNIT, 1), field_unit(PLAIN, 4)],
+            }),
+            json!({}),
+        );
+        let id = s.card(TRIBUTE_GIGA).id.clone();
+        let giga = s.unit(P1, 1).expect("no GIGA in lane 1").id.clone();
+        let plain = s.unit(P1, 4).expect("no plain in lane 4").id.clone();
+        let state = s.state();
+        assert!(freed_by_tribute(
+            state,
+            &slot(P1, Row::Backrow, 1),
+            std::slice::from_ref(&giga)
+        ));
+        assert!(freed_by_tribute(
+            state,
+            &slot(P1, Row::Units, 2),
+            std::slice::from_ref(&giga)
+        ));
+        assert!(
+            !freed_by_tribute(state, &slot(P1, Row::Units, 2), std::slice::from_ref(&plain)),
+            "tributing another Unit leaves the GIGA where it stands"
+        );
+        assert_eq!(
+            tributed_plays(&s, &id),
+            vec![
+                (Row::Backrow, 1, vec![giga.clone()]),
+                (Row::Backrow, 2, vec![giga.clone()]),
+                (Row::Backrow, 3, vec![plain.clone()]),
+                (Row::Backrow, 4, vec![plain.clone()]),
+            ]
+        );
+        assert_eq!(refusal(&s, &id, Row::Backrow, 1, &[&giga]), None);
+        assert!(refusal(&s, &id, Row::Backrow, 1, &[&plain]).is_some());
+
+        s.play(TRIBUTE_GIGA, json!({ "zone": 1, "tributes": [giga.clone()] }));
+        let state = s.state();
+        let landed = card_at(state, slot(P1, Row::Backrow, 1)).expect("the Tribute card lands at backrow 1");
+        assert_eq!(landed.id, id);
+        assert_eq!(landed.giga, Some(true));
+        assert!(in_graveyard(&s, &giga), "the tributed GIGA is in the graveyard");
+        for (row, lane) in [
+            (Row::Backrow, 1),
+            (Row::Units, 1),
+            (Row::Backrow, 2),
+            (Row::Units, 2),
+        ] {
+            assert!(!is_empty(state, slot(P1, row, lane)), "{row} {lane} is filled");
+            assert!(
+                !is_reserved(state, slot(P1, row, lane)),
+                "{row} {lane} is no longer reserved"
+            );
+        }
+    }
+
+    /// R391, R3546000: with the GIGA it tributes as the only fit, a GIGA Tribute card is listed that
+    /// play, its view gives no reason it cannot be played, and a play that names no zone takes it.
+    #[test]
+    fn r391_r3546000_a_lone_giga_pays_for_a_giga_tribute_card_that_names_no_zone_and_its_reason_clears() {
+        let mut s = board(
+            "r391-r3546000-lone-giga",
+            json!({
+                "mana": 4,
+                "hand": [TRIBUTE_GIGA],
+                "field": [field_unit(GIGA_UNIT, 1), backrow_card(GIGA_FIELD, 3)],
+            }),
+            json!({}),
+        );
+        let id = s.card(TRIBUTE_GIGA).id.clone();
+        let giga = s.unit(P1, 1).expect("no GIGA in lane 1").id.clone();
+        assert_eq!(zone_pairs(&s, &id), vec![(Row::Backrow, 1)]);
+        let HandView::Cards(hand) = s.view(P1).you.hand else {
+            panic!("p1 reads its own hand");
+        };
+        let shown = hand
+            .into_iter()
+            .find(|card| card.instance_id == id)
+            .expect("p1's view lists the card");
+        assert_eq!(shown.play_reason, None, "a playable card gives no reason");
+
+        s.play(TRIBUTE_GIGA, json!({ "tributes": [giga.clone()] }));
+        let landed = card_at(s.state(), slot(P1, Row::Backrow, 1)).expect("the play takes backrow 1");
+        assert_eq!(landed.id, id);
+        assert!(in_graveyard(&s, &giga), "the tributed GIGA is in the graveyard");
+    }
+
+    /// R391, R3546000: a Tribute card that is not GIGA may enter either lane a tributed GIGA covered —
+    /// not a Locked one, and not when the GIGA has Reborn (its zone would be reserved, R64).
+    #[test]
+    fn r391_r3546000_a_tribute_card_may_enter_either_lane_its_tributed_giga_covered_unless_reborn_or_locked()
+    {
+        let p1 = |giga: &str| {
+            json!({
+                "mana": 4,
+                "hand": [TRIBUTE_PLAIN],
+                "field": [field_unit(giga, 1), field_unit(PLAIN, 3), field_unit(PLAIN, 4), field_unit(PLAIN, 5)],
+            })
+        };
+        let mut s = board("r391-r3546000-lane-two", p1(GIGA_UNIT), json!({}));
+        let id = s.card(TRIBUTE_PLAIN).id.clone();
+        let giga = s.unit(P1, 1).expect("no GIGA in lane 1").id.clone();
+        let third = s.unit(P1, 3).expect("no plain in lane 3").id.clone();
+        let paid_by_giga = |s: &Scenario| -> Vec<i32> {
+            tributed_plays(s, &id)
+                .into_iter()
+                .filter(|(row, _, tributes)| *row == Row::Units && *tributes == vec![giga.clone()])
+                .map(|(_, lane, _)| lane)
+                .collect()
+        };
+        assert_eq!(paid_by_giga(&s), vec![1, 2]);
+        assert!(
+            says_not_open(refusal(&s, &id, Row::Units, 2, &[&third])),
+            "another Unit's Tribute leaves lane 2 covered"
+        );
+        lock_zone(s.state_mut(), slot(P1, Row::Units, 2));
+        assert_eq!(paid_by_giga(&s), vec![1], "a Locked covered zone stays shut");
+        unlock_zone(s.state_mut(), slot(P1, Row::Units, 2));
+
+        s.play(TRIBUTE_PLAIN, json!({ "zone": 2, "tributes": [giga.clone()] }));
+        let state = s.state();
+        let landed = card_at(state, slot(P1, Row::Units, 2)).expect("the Tribute card lands in lane 2");
+        assert_eq!(landed.id, id);
+        assert!(in_graveyard(&s, &giga), "the tributed GIGA is in the graveyard");
+        for (row, lane) in [(Row::Units, 1), (Row::Backrow, 1), (Row::Backrow, 2)] {
+            assert!(is_open(state, slot(P1, row, lane)), "{row} {lane} is open again");
+        }
+
+        let s = board("r391-r3546000-reborn", p1(REBORN_GIGA), json!({}));
+        let id = s.card(TRIBUTE_PLAIN).id.clone();
+        let reborn = s.unit(P1, 1).expect("no Reborn GIGA in lane 1").id.clone();
+        assert!(
+            tributed_plays(&s, &id)
+                .iter()
+                .all(|(_, _, tributes)| *tributes != vec![reborn.clone()]),
+            "a Reborn GIGA's zones stay reserved, so tributing it frees none"
+        );
     }
 }

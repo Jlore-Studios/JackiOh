@@ -22,7 +22,8 @@
 //! as `records/<version>.json`. Branches never edit `patches.json`, the snapshots, the tables under
 //! `win_rates/` and `records/`, `index.json` or `shipped.json`. `check` fails, naming the card, on an
 //! entry that differs from the newest shipped snapshot without exactly one fragment's claim or is
-//! claimed and does not, a `plays` id that is no shipped card, a fragment that claims nothing, carries
+//! claimed and does not, a `plays` id that is no shipped card, a fragment that claims nothing (a kept
+//! script keyed by it counts as a claim, R4844000), carries
 //! win rates of record with no row, or leaves its title, sources or notes empty (R388), a player note
 //! that breaks the note rules (R724001), a carried
 //! version whose win-rate table is not its frozen file (R1329000), and a technical log out of shape
@@ -452,8 +453,13 @@ pub mod patch {
 
     /// One match of a site's pattern: its byte span, and where the version starts inside it (everything before is kept).
     struct SiteMatch {
-        /// Read only by `versions_at_sites`, which only the tests call.
-        #[cfg_attr(not(test), allow(dead_code))]
+        #[cfg_attr(
+            not(test),
+            expect(
+                dead_code,
+                reason = "read only by `versions_at_sites`, which only the tests call"
+            )
+        )]
         start: usize,
         value_start: usize,
         end: usize,
@@ -1172,6 +1178,14 @@ pub mod patches_io {
         name.strip_suffix(".json").unwrap_or(name)
     }
 
+    /// R4844000: whether one of `keys`, `KEPT_SCRIPTS` keys, is `"fragment:<stem>"` (R4779000). Such a
+    /// fragment claims a change though it claims no card, play or rule: a script it ships changes only
+    /// what no game `classify` plays reaches (a stolen or random cast, say), so no card's statistics
+    /// restart, yet replays fold the kept script around the version it ships as.
+    pub fn keyed_by_kept_scripts<'a>(stem: &str, mut keys: impl Iterator<Item = &'a str>) -> bool {
+        keys.any(|key| key.strip_prefix(jackioh_cards::FRAGMENT_KEY) == Some(stem))
+    }
+
     fn is_fragment(value: &Json) -> bool {
         let Json::Object(fragment) = value else {
             return false;
@@ -1369,7 +1383,8 @@ pub mod patches_io {
 
     /// Every way the pending fragments disagree with the newest shipped snapshot, each naming the card
     /// (and the fragment) at fault, or [] when the tree is shippable; the rules are `patches check`'s
-    /// (module header). Pure: `patches check` reads the files and prints what this returns.
+    /// (module header). Pure: `patches check` reads the files and prints what this returns; the one
+    /// other input is the build's compiled-in `jackioh_cards::KEPT_SCRIPTS` (R4844000).
     pub fn check_fragments(args: &CheckFragmentsArgs<'_>) -> Vec<String> {
         let mut problems = Vec::new();
         for NamedFragment { name, fragment } in args.files {
@@ -1391,16 +1406,20 @@ pub mod patches_io {
             }
             // A patch changes a card, a card's play or look, a rule, a system or the win rates of
             // record; one that claims none would bump the version over nothing (R650, R1366000,
-            // R2529000, R3882000). No patch ships a `win_rates/` table since #3049 (R3049000).
+            // R2529000, R3882000). No patch ships a `win_rates/` table since #3049 (R3049000). R4844000:
+            // nor does a fragment a kept script is keyed by, whose version is the boundary replays fold
+            // that script around.
+            let kept_keys = jackioh_cards::KEPT_SCRIPTS.iter().map(|(_, key, _)| *key);
             if fragment.cards.is_empty()
                 && fragment.plays.is_empty()
                 && !fragment.rule
                 && !fragment.visual
                 && fragment.system.is_none()
                 && fragment.records.is_none()
+                && !keyed_by_kept_scripts(fragment_stem(name), kept_keys)
             {
                 problems.push(format!(
-                    "pending/{name} claims nothing (no card, no --plays, no --rule, no --visual, no --system), but a patch ships a change"
+                    "pending/{name} claims nothing (no card, no --plays, no --rule, no --visual, no --system, no kept script keyed by it), but a patch ships a change"
                 ));
             }
             // R3882000: win rates of record with no row would record nothing.
@@ -3122,7 +3141,7 @@ mod tests {
                 assert_eq!(
                     check(&none, &newest, &newest),
                     strings(&[
-                        "pending/t.json claims nothing (no card, no --plays, no --rule, no --visual, no --system), but a patch ships a change"
+                        "pending/t.json claims nothing (no card, no --plays, no --rule, no --visual, no --system, no kept script keyed by it), but a patch ships a change"
                     ])
                 );
                 let mut plays = none.clone();
@@ -3131,6 +3150,28 @@ mod tests {
                 let mut rule = none;
                 rule[0].fragment.rule = true;
                 assert_eq!(check(&rule, &newest, &newest), Vec::<String>::new());
+            }
+
+            /// R4844000: a fragment a `KEPT_SCRIPTS` row is keyed by claims the change of the script it
+            /// keeps, so it ships claiming no card, play or rule; a key naming another stem, a stem it
+            /// only starts with, or a version, does not count.
+            #[test]
+            fn r4844000_a_fragment_a_kept_script_is_keyed_by_claims_that_change() {
+                assert!(keyed_by_kept_scripts(
+                    "mine",
+                    ["v0.6.1", "fragment:mine"].into_iter()
+                ));
+                assert!(!keyed_by_kept_scripts(
+                    "mine",
+                    ["mine", "fragment:other", "fragment:mine-too"].into_iter()
+                ));
+                let stem = jackioh_cards::KEPT_SCRIPTS
+                    .iter()
+                    .find_map(|(_, key, _)| key.strip_prefix(jackioh_cards::FRAGMENT_KEY))
+                    .expect("a kept script keyed by a fragment (R4779000)");
+                let newest = catalog_of(vec![card("aaa", 1)]);
+                let kept = vec![named(&format!("{stem}.json"), "t", "s", "n", &[])];
+                assert_eq!(check(&kept, &newest, &newest), Vec::<String>::new());
             }
 
             #[test]

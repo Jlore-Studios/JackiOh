@@ -2,7 +2,10 @@
 //! the Dormant Units Stinkyscape will print, in their shapes, and the cards that try to reach them.
 //! Ids `sl-…` from 18389, so they collide with no other fixture file's.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 
@@ -86,7 +89,7 @@ pub static flood: LazyLock<CardDef> = LazyLock::new(|| def(18399, "flood", "Spel
 pub static frost: LazyLock<CardDef> = LazyLock::new(|| def(18400, "frost", "Spell", 0, (0, 0), json!([])));
 /// "Give every Unit +1/+1."
 pub static cheer: LazyLock<CardDef> = LazyLock::new(|| def(18401, "cheer", "Spell", 0, (0, 0), json!([])));
-/// "Take control of every enemy Unit."
+/// "Take control of every enemy Unit" — each named by its id, read off the board.
 pub static heist: LazyLock<CardDef> = LazyLock::new(|| def(18402, "heist", "Spell", 0, (0, 0), json!([])));
 /// "Transform each enemy Unit into a Big Body" — each named by its id, read off the board.
 pub static morph: LazyLock<CardDef> = LazyLock::new(|| def(18403, "morph", "Spell", 0, (0, 0), json!([])));
@@ -293,7 +296,14 @@ static SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::new(|| {
         ),
         (
             heist.id.clone(),
-            spell(hook(|_ctx| vec![effects::steal_all(json_as(json!({})))])),
+            spell(hook(|ctx| {
+                // One `steal` for every card topping an enemy unit zone, in lane order, the Dormant one
+                // included, named by its id: `steal` is what passes the Dormant one by (R1839000).
+                units_on_field_of(ctx.state, opponent_of(ctx.controller))
+                    .into_iter()
+                    .map(|unit| effects::steal(json_as(json!({ "instanceId": unit.id }))))
+                    .collect()
+            })),
         ),
         (
             morph.id.clone(),

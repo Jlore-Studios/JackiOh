@@ -82,16 +82,17 @@ pub struct DuosDecision {
     pub first_sim_panic: Option<String>,
 }
 
+/// What `seat` may send while the game is on: `None` once it is over, or when the concede is all it has.
+fn offered(state: &DuosState, seat: DuosSeat) -> Option<Vec<DuosActionBody>> {
+    let legal = duos_legal_actions(state, seat);
+    let nothing = legal.iter().all(|body| matches!(body, DuosActionBody::Concede));
+    (state.result.is_none() && !nothing).then_some(legal)
+}
+
 /// `duos_decide`, with whether its action came off a fallback path (#1385): the same stream, the same
 /// action.
 pub fn duos_decision(state: &DuosState, seat: DuosSeat, options: &mut AiOptions) -> Option<DuosDecision> {
-    if state.result.is_some() {
-        return None;
-    }
-    let legal = duos_legal_actions(state, seat);
-    if legal.iter().all(|body| matches!(body, DuosActionBody::Concede)) {
-        return None;
-    }
+    let legal = offered(state, seat)?;
     let duel = state.duels.get(seat.duel())?;
     // `decide` has already tried its action on the duel's true state (decide.rs `submitted`); the
     // wrapper's own refusals are by kind (a seat that has ended, a draw offer), so an action of a
@@ -313,10 +314,15 @@ fn open_round_seat(state: &DuosState, seat: DuosSeat) -> bool {
 /// of `redact` on the fixed probe seed, so the seat's own legal plays are read with no hidden card in
 /// reach and without touching any caller's stream.
 fn own_probe(duel: &GameState, player: PlayerId) -> GameState {
+    probe_on(duel, player, AI_SEARCH.probe_seed)
+}
+
+/// One determinization of `redact` from `player`'s seat on the fixed `seed`.
+fn probe_on(duel: &GameState, player: PlayerId, seed: &str) -> GameState {
     determinize(
         &redact(duel, player),
         player,
-        &mut Rng::new(AI_SEARCH.probe_seed, 0),
+        &mut Rng::new(seed, 0),
         DeterminizeOptions::default(),
     )
 }
@@ -422,7 +428,9 @@ fn rank_now(
 /// R1127000: the teammate's best bounded follow-up with the passed card in hand (added as B20's pass
 /// adds it, `received`): the maximum of `evaluate` over at most `DUOS_PASS_MAX_FOLLOWUPS` legal `Play`
 /// actions, each one engine step on `mate_probe`, else of the receiving probe. No hidden opponent card
-/// and no caller stream is ever read; a refused or panicking follow-up is skipped.
+/// and no caller stream is ever read; a refused or panicking follow-up is skipped. The room the card's
+/// own plays leave takes the teammate's other plays, its best-valued cards' first plays when they are
+/// more (R4932000).
 fn pass_score(
     own_probe: &GameState,
     seat_player: PlayerId,
@@ -438,8 +446,9 @@ fn pass_score(
         return f64::NEG_INFINITY;
     };
     let (receiving, given) = received(own_probe, passed, mate_probe, mate);
-    // The passed card's own plays first, then the teammate's other plays in `legal_actions` order: the
-    // card sits at the hand's end, so a plain prefix would cut its plays off behind a full hand's.
+    // The passed card's own plays first, then the teammate's other plays in the room left, cut by
+    // `best_valued_plays` (R4932000): the card sits at the hand's end, so a plain prefix would cut its
+    // plays off behind a full hand's.
     let mut own_plays = Vec::new();
     let mut other_plays = Vec::new();
     for action in legal_actions(&receiving, mate) {
@@ -451,13 +460,53 @@ fn pass_score(
             _ => {}
         }
     }
+    let room = DUOS_PASS_MAX_FOLLOWUPS.saturating_sub(own_plays.len());
     let plays = own_plays
         .into_iter()
-        .chain(other_plays)
+        .chain(best_valued_plays(&receiving, mate, other_plays, room))
         .take(DUOS_PASS_MAX_FOLLOWUPS);
     best_step(&receiving, mate, plays)
         .map(|(value, _)| value)
         .unwrap_or_else(|| evaluate(&receiving, mate, NextSwing::Enemy, &AI_EVAL))
+}
+
+/// R4932000: `plays` cut to at most `limit` to score. A list within `limit` is kept as it came, in
+/// `legal_actions` order. A longer one keeps the first play of each card it names, the cards `mate`'s
+/// hand values most first (`hand_card_value` on `state`), ties in list order, a card outside the hand
+/// (a graveyard play, R454) last: the hand is read as it stands, at any size (R1143), and no engine
+/// step is added.
+fn best_valued_plays(
+    state: &GameState,
+    mate: PlayerId,
+    plays: Vec<ActionBody>,
+    limit: usize,
+) -> Vec<ActionBody> {
+    if plays.len() <= limit {
+        return plays;
+    }
+    let hand = &state.players[mate].hand;
+    let worth = |id: &str| {
+        hand.iter()
+            .find(|card| card.id == id)
+            .map_or(f64::NEG_INFINITY, |card| hand_card_value(state, card, &AI_EVAL))
+    };
+    let mut cards: IndexSet<String> = IndexSet::new();
+    let mut firsts: Vec<(f64, ActionBody)> = plays
+        .into_iter()
+        .filter_map(|action| {
+            let ActionBody::Play { instance_id, .. } = &action else {
+                return None;
+            };
+            if !cards.insert(instance_id.clone()) {
+                return None;
+            }
+            let value = worth(instance_id);
+            Some((value, action))
+        })
+        .collect();
+    // A stable sort: equal values keep list order.
+    firsts.sort_by(|a, b| b.0.total_cmp(&a.0));
+    firsts.into_iter().take(limit).map(|(_, action)| action).collect()
 }
 
 /// The best of `evaluate` from `mate`'s seat over `plays`, each applied by one engine step to `from`,
@@ -503,15 +552,16 @@ fn own_use_gain(own_probe: &GameState, seat_player: PlayerId, card_id: &str) -> 
 }
 
 /// R1723000: the teammate's own best bounded follow-up, with no pass: the best of `evaluate` over the
-/// first legal `Play` of each of at most `DUOS_PASS_MAX_FOLLOWUPS` of its hand cards, scored as
-/// `pass_score` scores, with the state it left; the probe's own value and the probe when none applies.
+/// first legal `Play` of each of at most `DUOS_PASS_MAX_FOLLOWUPS` of its hand cards (the best-valued
+/// ones when it lists more, R4932000), scored as `pass_score` scores, with the state it left; the
+/// probe's own value and the probe when none applies.
 fn mate_baseline(mate_probe: &GameState, mate: PlayerId) -> (f64, GameState) {
     let mut cards: IndexSet<String> = IndexSet::new();
-    let plays: Vec<ActionBody> = legal_actions(mate_probe, mate)
+    let firsts: Vec<ActionBody> = legal_actions(mate_probe, mate)
         .into_iter()
         .filter(|action| matches!(action, ActionBody::Play { instance_id, .. } if cards.insert(instance_id.clone())))
-        .take(DUOS_PASS_MAX_FOLLOWUPS)
         .collect();
+    let plays = best_valued_plays(mate_probe, mate, firsts, DUOS_PASS_MAX_FOLLOWUPS);
     best_step(mate_probe, mate, plays).unwrap_or_else(|| {
         (
             evaluate(mate_probe, mate, NextSwing::Enemy, &AI_EVAL),
@@ -556,12 +606,7 @@ fn pass_gain(
 /// seat on the fixed `DUOS_PASS_PROBE_SEED`, built exactly like `own_probe`, so its own hand and
 /// face-down cards (the team's to share, B29) are there and no hidden opponent card is.
 fn mate_probe(mate_duel: &GameState, mate: PlayerId) -> GameState {
-    determinize(
-        &redact(mate_duel, mate),
-        mate,
-        &mut Rng::new(DUOS_PASS_PROBE_SEED, 0),
-        DeterminizeOptions::default(),
-    )
+    probe_on(mate_duel, mate, DUOS_PASS_PROBE_SEED)
 }
 
 /// `card` passed into a copy of the teammate's probe, as B20's pass moves it: its match-made
@@ -607,10 +652,13 @@ pub fn duos_random_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
     let mut end_turn: Option<DuosActionBody> = None;
     let mut others: Vec<DuosActionBody> = Vec::new();
     for body in duos_legal_actions(state, seat) {
-        match policy_kind(&body) {
-            PolicyKind::Skipped => {}
-            PolicyKind::EndTurn => end_turn = Some(body),
-            PolicyKind::Other => others.push(body),
+        match &body {
+            DuosActionBody::Concede => {}
+            DuosActionBody::Duel { body: duel } if AI_SKIPPED_ACTIONS.contains(&duel.action_type()) => {}
+            DuosActionBody::Duel {
+                body: ActionBody::EndTurn,
+            } => end_turn = Some(body),
+            _ => others.push(body),
         }
     }
     if others.is_empty() {
@@ -623,38 +671,12 @@ pub fn duos_random_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> O
     usize::try_from(at).ok().and_then(|at| others.into_iter().nth(at))
 }
 
-/// How §10.7's policy treats one offered action.
-enum PolicyKind {
-    Skipped,
-    EndTurn,
-    Other,
-}
-
-fn policy_kind(body: &DuosActionBody) -> PolicyKind {
-    match body {
-        DuosActionBody::Concede => PolicyKind::Skipped,
-        DuosActionBody::Duel { body } if AI_SKIPPED_ACTIONS.contains(&body.action_type()) => {
-            PolicyKind::Skipped
-        }
-        DuosActionBody::Duel {
-            body: ActionBody::EndTurn,
-        } => PolicyKind::EndTurn,
-        _ => PolicyKind::Other,
-    }
-}
-
 /// B32's second opponent (#1760): the 1v1 gates' one-ply greedy baseline (`greedy_action`) on the
 /// seat's own duel, else `duel_fallback`'s. It never passes: a yardstick that shared `duos_passes`
 /// would move with the AI it measures. It reads its duel through `greedy_action`'s `redact` alone
 /// (R185) and draws on `rng` only there. None when the seat has nothing to send.
 pub fn duos_greedy_action(state: &DuosState, seat: DuosSeat, rng: &mut Rng) -> Option<DuosActionBody> {
-    if state.result.is_some() {
-        return None;
-    }
-    let legal = duos_legal_actions(state, seat);
-    if legal.iter().all(|body| matches!(body, DuosActionBody::Concede)) {
-        return None;
-    }
+    let legal = offered(state, seat)?;
     let duel = state.duels.get(seat.duel())?;
     match greedy_action(duel, seat.player(), rng) {
         Some(action) if offers(&legal, action.action_type()) => Some(DuosActionBody::Duel { body: action }),
@@ -814,19 +836,10 @@ pub fn duos_gate_report(opponent: DuosOpponent, played: &[DuosGateGame]) -> Duos
     }
 }
 
-/// Game n of the series against `opponent` at AI_GATE_BUDGET (`duos_gate_game_at`), the gate's own.
+/// Game n of the series against `opponent`, the gate's own: the AI team on `duos_decision` at
+/// AI_GATE_BUDGET (`duos_gate_game_with`).
 pub fn duos_gate_game(n: usize, series: &str, opponent: DuosOpponent) -> DuosGateGame {
-    duos_gate_game_at(n, series, opponent, AI_GATE_BUDGET)
-}
-
-/// Game n of the series at `budget`, the AI team on `duos_decision` (`duos_gate_game_with`).
-pub fn duos_gate_game_at(
-    n: usize,
-    series: &str,
-    opponent: DuosOpponent,
-    budget: SearchBudget,
-) -> DuosGateGame {
-    duos_gate_game_with(n, series, opponent, budget, duos_decision)
+    duos_gate_game_with(n, series, opponent, AI_GATE_BUDGET, duos_decision)
 }
 
 /// How an AI-team seat decides in a gate game: `duos_decision`, or a test's weakened stand-in that

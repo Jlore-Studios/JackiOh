@@ -69,7 +69,10 @@
 //!
 //! The crate's `clippy.toml` bans file and environment reads (CLAUDE.md rule 4); a build script runs
 //! at compile time, which is exactly where data may reach a pure crate (SURFACE §3), so it may read.
-#![allow(clippy::disallowed_methods)]
+#![expect(
+    clippy::disallowed_methods,
+    reason = "a build script runs at compile time, where data may reach a pure crate (SURFACE §3)"
+)]
 
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
@@ -78,7 +81,10 @@ use std::path::{Path, PathBuf};
 // R1846000, R2173000: the code-line counter, shared with the crate (`jackioh_cards::code_lines`) and
 // through it the tools, so the lists a build compiles in and the ones `patches ship` keeps per version
 // are counted alike.
-#[allow(dead_code)]
+#[expect(
+    dead_code,
+    reason = "the build reads some of the counter; the crate and the tools read the rest"
+)]
 #[path = "src/code_lines.rs"]
 mod code_lines;
 use code_lines::{code_lines, owes_extra_turn, reads_card_lists, rewrites_text, without_comments};

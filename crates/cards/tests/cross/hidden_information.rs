@@ -13,7 +13,9 @@ use jackioh_engine::testkit::*;
 /// `game` builds from it (R28), searched at test time: the roll's place in the effect table moves whenever
 /// an effect joins it.
 fn discount_seed(game: impl Fn(&str) -> Scenario) -> String {
-    let label = jackioh_engine::subsystems::chaos_effect_by_name("discount")
+    let label = jackioh_engine::subsystems::CHAOS_EFFECTS
+        .iter()
+        .find(|effect| effect.name == "discount")
         .map(|effect| effect.label)
         .unwrap_or_default();
     seed_where("chaos-discount", |seed| {
@@ -38,8 +40,8 @@ const MENACE: &str = "core-019";
 const MATH_EQUATION: &str = "core-031";
 const SHEEPISH: &str = "core-041";
 const SPEK: &str = "core-048";
-/// Classic #39 Outbreak, a (1) Spell that targets any permanent: one Plague Counter, and an enemy
-/// card it covers its cost with is stolen.
+/// Classic #39 Outbreak, a (4) Spell that targets any permanent: two Plague Counters, and an enemy
+/// card they cover its cost with is stolen.
 const OUTBREAK: &str = "classic-039";
 const TWINSPELL: &str = "core-079";
 const SEVEN_SEVEN: &str = "core-025";

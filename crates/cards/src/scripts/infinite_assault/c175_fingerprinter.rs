@@ -16,8 +16,7 @@ pub fn script() -> CardScripts {
     let base = Script {
         cry: Some(hook(|ctx| {
             let opp = opponent_of(ctx.controller);
-            let spells: Vec<String> = ctx.state.players[opp]
-                .hand
+            let spells: Vec<String> = zone_cards(&*ctx.state, opp, OffFieldZone::Hand)
                 .iter()
                 .filter(|c| card_type_of(&*ctx.state, c) == CardType::Spell)
                 .map(|c| c.id.clone())

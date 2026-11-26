@@ -654,7 +654,9 @@ fn immutable_fuser(state: &GameState, slot: &ZoneSlot) -> bool {
 
 /// R391 (B4.5): whether the Tribute a play pays empties this zone for it: a pile of exactly one card,
 /// that card tributed (a Stack pile's next card would resume, R13) and without Reborn (its zone would be
-/// reserved, R64), in a zone neither Locked nor reserved. The rule is the row's, the backrow's included;
+/// reserved, R64), in a zone neither Locked nor reserved. R3546000: a zone a GIGA covers is emptied by
+/// tributing that GIGA, which is read at its anchor; the Lock and the reservation are read on the zone
+/// the play enters. The rule is the row's, the backrow's included;
 /// an Activate cost needs no zone and never comes here (B3.2).
 pub fn freed_by_tribute(state: &GameState, slot: &ZoneSlot, tributes: &[String]) -> bool {
     if tributes.is_empty() {
@@ -663,20 +665,30 @@ pub fn freed_by_tribute(state: &GameState, slot: &ZoneSlot, tributes: &[String])
     if crate::zones::is_locked(state, slot) || crate::zones::is_reserved(state, slot) {
         return false;
     }
-    let Some(held) = crate::zones::card_at(state, slot) else {
-        return false;
+    // R3546000: a zone a GIGA covers holds no card; tributing the GIGA empties it as it does the
+    // anchor, so the GIGA is read where it stands.
+    let (held, at) = match crate::zones::card_at(state, slot) {
+        Some(held) => (held, *slot),
+        None => {
+            let Some(giga) = crate::giga::covering(state, *slot) else {
+                return false;
+            };
+            let Some(anchor) = crate::zones::slot_of(state, giga) else {
+                return false;
+            };
+            (giga, anchor)
+        }
     };
     if !tributes.contains(&held.id) {
         return false;
     }
-    if slot.row == Row::Units && crate::zones::pile_at(state, slot).map_or(0, |pile| pile.len()) != 1 {
+    if at.row == Row::Units && crate::zones::pile_at(state, at).map_or(0, |pile| pile.len()) != 1 {
         return false;
     }
     // R1081000: the same reading in the backrow, where a Unit stands on its own — a card beneath it
     // would resume (R13), and a Unit a carrier holds goes with the carrier's zone, not the Tribute's.
-    if slot.row == Row::Backrow
-        && (!crate::zones::beneath_at(state, *slot).is_empty()
-            || crate::zones::carried_at(state, *slot).is_some())
+    if at.row == Row::Backrow
+        && (!crate::zones::beneath_at(state, at).is_empty() || crate::zones::carried_at(state, at).is_some())
     {
         return false;
     }
@@ -1388,8 +1400,8 @@ pub fn targeting_discards_required(
     total
 }
 
-/// Classic #33 Joro, R450: whether `interceptor`, summoned into its controller's leftmost open unit
-/// zone and read as it would stand there, would be a legal pick of `decl`; only then does a pick move.
+/// Classic #33 Joro, R450: whether `interceptor`, summoned where `giga::summon_anchor` puts it (R4990000)
+/// and read as it would stand there, would be a legal pick of `decl`; only then does a pick move.
 pub fn interceptor_fits_decl(
     state: &GameState,
     player: PlayerId,
@@ -1401,7 +1413,7 @@ pub fn interceptor_fits_decl(
     if !sides_for(player, decl).contains(&defender) || !pick_kinds_for(decl).contains(&FilterOf::Unit) {
         return false;
     }
-    let Some(zone) = crate::zones::first_entry_zone(state, defender, Row::Units) else {
+    let Some(zone) = crate::giga::summon_anchor(state, defender, interceptor) else {
         return false;
     };
     let probe = CardInstance {

@@ -322,7 +322,6 @@ pub struct HookArgs<'a> {
 }
 
 /// Builds any `HookArgs` hook whose answer borrows nothing (`read_hook(|a| a.self_.damage > 0)`).
-#[allow(clippy::type_complexity)]
 pub fn read_hook<R: 'static>(
     f: impl for<'a> Fn(HookArgs<'a>) -> R + Send + Sync + 'static,
 ) -> Arc<dyn for<'a> Fn(HookArgs<'a>) -> R + Send + Sync> {
@@ -835,6 +834,11 @@ pub struct StaticFlags {
     /// R3540003: "Damage dealt is Toxic", as `damage_burns` but Toxic; a card with both burns.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub damage_is_toxic: Option<bool>,
+    /// R4783001: "Damage dealt also Burns": each hit this card deals lands as damage, and then, if its
+    /// target survived it, adds Burn equal to what the hit dealt, beside `burns_on_damage`'s N
+    /// (`afflictions::ride_damage`). Only ever `Some(true)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub damage_also_burns: Option<bool>,
     // Stinkyscape+ E6 (issue #3550)
     /// R3550001: "Can attack N times per turn": how many attacks the unit may declare a turn, read
     /// through the card's declared number `attacks` where it declares one.
@@ -976,7 +980,6 @@ pub struct UnitTally {
 pub type TallyHook = Arc<dyn for<'a> Fn(ConditionContext<'a>) -> Vec<UnitTally> + Send + Sync>;
 
 /// Builds a `ConditionHook`, a `PreviewHook` or a `TallyHook`.
-#[allow(clippy::type_complexity)]
 pub fn condition_hook<R: 'static>(
     f: impl for<'a> Fn(ConditionContext<'a>) -> R + Send + Sync + 'static,
 ) -> Arc<dyn for<'a> Fn(ConditionContext<'a>) -> R + Send + Sync> {
@@ -1310,7 +1313,7 @@ pub struct Script {
     pub echo_keeps_targets: bool,
     /// B5 E26, R464: triggers this card answers while in its owner's library (Classic+ #37 Wardrum). It is
     /// hidden (§9.1), so its queue entries take no number (R177) and, within a side, follow the hand's and
-    /// precede the graveyard's in creation order, never library order (`triggers::trigger_holders_of`).
+    /// precede the graveyard's in creation order, never library order (`triggers::holder_sites`).
     pub deck_triggers: Vec<TriggerDef>,
     /// B5 E26: triggers this card answers while it lies in a graveyard (Classic #47). R153's other
     /// graveyard answer, the end-of-turn return, stays the `endOfTurn` hook's.
