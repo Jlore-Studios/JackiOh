@@ -25147,7 +25147,16 @@
       "feedback_since": "2026-11-26T19:19:38Z",
       "issue": 5099,
       "kind": "revise",
-      "self_check_findings": []
+      "self_check_findings": [],
+      "votes": {
+        "approvals": [],
+        "builder": "gemini",
+        "built_by": "agy",
+        "rejections": [],
+        "reviews": [],
+        "sha": "bfd67d26753e761e1fd28c60996aa9291b55d494",
+        "tiers": {}
+      }
     }
   },
   "labels_synced": "e752b3263433d01e",
