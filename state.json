@@ -24382,7 +24382,7 @@
       "forced": false,
       "interruptions": 0,
       "issue": 5005,
-      "kind": "review",
+      "kind": "revise",
       "live": "reviewing",
       "merge_owner_gave_up": {
         "at": "2026-11-26T14:27:25Z",
@@ -24391,7 +24391,7 @@
       },
       "pending_request": false,
       "provider": "claude-7",
-      "queued_at": "2026-11-26T13:44:57Z",
+      "queued_at": "2026-11-26T15:17:04Z",
       "review_floor": "",
       "review_notes": "",
       "run_id": "45835639105",
@@ -24414,6 +24414,7 @@
         "provider": "claude-1",
         "run": "45809902126"
       },
+      "source": "conflict",
       "started_at": "2026-11-26T14:06:11Z",
       "stop_requested": false,
       "taken_asks": [],
