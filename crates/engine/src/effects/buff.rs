@@ -235,12 +235,24 @@ pub struct GrantKeywordArgs {
 }
 
 pub fn grant_keyword(args: GrantKeywordArgs) -> Effect {
-    Effect::new("grantKeyword", move |ctx| {
-        let Some(DamageTarget::Unit { mut instance }) = resolve_target(ctx, &args.target) else {
-            return;
-        };
-        grant_to(ctx, &mut instance, &args.keyword, true);
-    })
+    Effect::new("grantKeyword", move |ctx| grant_keyword_on(ctx, &args, true))
+}
+
+/// R5113000: `grant_keyword` as a summon's `keywords` rider gives it to the fresh card it brings: how
+/// the card arrives, which Immutable lets through.
+pub(crate) fn grant_arriving_keyword(args: GrantKeywordArgs) -> Effect {
+    Effect::new("grantKeyword", move |ctx| grant_keyword_on(ctx, &args, false))
+}
+
+/// `grantKeyword`'s body: `refused_by_immutable` false for a card's arrival (R5113000).
+fn grant_keyword_on(ctx: &mut EffectContext<'_>, args: &GrantKeywordArgs, refused_by_immutable: bool) {
+    let Some(DamageTarget::Unit { mut instance }) = resolve_target(ctx, &args.target) else {
+        return;
+    };
+    if refused_by_immutable && crate::restrictions::immutable_keeps_off(ctx, &instance) {
+        return;
+    }
+    land_grant(ctx, &mut instance, &args.keyword, true);
 }
 
 /// `grantKeywords`' argument: one card and the keywords it is given together.
@@ -549,29 +561,42 @@ pub struct GrantRandomKeywordsArgs {
 /// none for an Immutable unit, and nothing drawn for it (R129).
 pub fn grant_random_keywords(args: GrantRandomKeywordsArgs) -> Effect {
     Effect::new("grantRandomKeywords", move |ctx| {
-        let Some(DamageTarget::Unit { instance }) = resolve_target(ctx, &args.target) else {
+        grant_random_on(ctx, &args, true)
+    })
+}
+
+/// R5113000: `grant_random_keywords` as a summon's `random_keywords` roll gives them to the fresh card
+/// it brings: how the card arrives, which Immutable lets through.
+pub(crate) fn grant_arriving_random_keywords(args: GrantRandomKeywordsArgs) -> Effect {
+    Effect::new("grantRandomKeywords", move |ctx| {
+        grant_random_on(ctx, &args, false)
+    })
+}
+
+/// `grantRandomKeywords`' body: `refused_by_immutable` false for a card's arrival (R5113000).
+fn grant_random_on(ctx: &mut EffectContext<'_>, args: &GrantRandomKeywordsArgs, refused_by_immutable: bool) {
+    let Some(DamageTarget::Unit { instance }) = resolve_target(ctx, &args.target) else {
+        return;
+    };
+    if refused_by_immutable && crate::restrictions::immutable_keeps_off(ctx, &instance) {
+        return;
+    }
+    let mut unit = find_instance(ctx.sink.state, &instance.id)
+        .cloned()
+        .unwrap_or(instance);
+    let count = args.count.unwrap_or(1).max(0);
+
+    for _ in 0..count {
+        // Recomputed each draw, so the keyword just granted is out of the pool for the next one.
+        let candidates = pool_candidates(ctx, &unit);
+        if candidates.is_empty() {
+            return;
+        }
+        let Some(keyword) = ctx.sink.rng.pick(&candidates).cloned() else {
             return;
         };
-        if crate::restrictions::immutable_keeps_off(ctx, &instance) {
-            return;
-        }
-        let mut unit = find_instance(ctx.sink.state, &instance.id)
-            .cloned()
-            .unwrap_or(instance);
-        let count = args.count.unwrap_or(1).max(0);
-
-        for _ in 0..count {
-            // Recomputed each draw, so the keyword just granted is out of the pool for the next one.
-            let candidates = pool_candidates(ctx, &unit);
-            if candidates.is_empty() {
-                return;
-            }
-            let Some(keyword) = ctx.sink.rng.pick(&candidates).cloned() else {
-                return;
-            };
-            grant_to(ctx, &mut unit, &keyword, true);
-        }
-    })
+        land_grant(ctx, &mut unit, &keyword, true);
+    }
 }
 
 /// `buffCards`' argument: `{ scope: CardScope } & BuffAmount`.

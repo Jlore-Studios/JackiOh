@@ -334,7 +334,7 @@ mod r5113000_immutable_takes_no_other_cards_buff_grant_aura_or_lend {
     use super::*;
     use crate::rules::fixtures::aura_deaths::aura_board;
     use crate::rules::fixtures::combat::big_body;
-    use crate::rules::fixtures::harness::run_with_targets;
+    use crate::rules::fixtures::harness::{live, run_with_targets};
 
     /// Each change R5113000 keeps off, aimed at the chosen card: a buff, a debuff, a keyword, random
     /// keywords, a buff this turn and a set Attack this turn.
@@ -380,10 +380,6 @@ mod r5113000_immutable_takes_no_other_cards_buff_grant_aura_or_lend {
             }
             _ => false,
         })
-    }
-
-    fn live(state: &GameState, card: &CardInstance) -> CardInstance {
-        find_instance(state, &card.id).expect("on the field").clone()
     }
 
     /// `card` exactly as it was: no buff, no keyword but `kept`, nothing this turn.

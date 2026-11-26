@@ -131,7 +131,8 @@ mod tests {
                 ))],
             );
             assert!(s.state().result.is_none(), "it stands");
-            // ...but a Unit with no health left dies past it (R69), and its Death loses the game.
+            // ...and another card's debuff passes it by, an Indestructible Unit being Immutable (R4353000,
+            // R5113000)...
             settled(
                 &mut s,
                 vec![buff(json_as(json!({
@@ -139,6 +140,10 @@ mod tests {
                     "health": -10,
                 })))],
             );
+            assert!(s.state().result.is_none(), "R5113000: it takes no debuff");
+            // ...but a Unit with no health left dies past it (R69), and its Death loses the game.
+            s.card_mut(id.as_str()).buffs.health = -10;
+            settled(&mut s, vec![]);
             let result = s.state().result.expect("the game is over");
             assert_eq!(result.winner, Winner::P2);
             assert_eq!(result.reason, GameOverReason::WonByEffect);
@@ -204,13 +209,10 @@ mod tests {
         fn r3569003_radiant_alnilam_death_also_loses() {
             let mut s = game(true);
             let id = s.unit_at(P1, 1).id;
-            settled(
-                &mut s,
-                vec![buff(json_as(json!({
-                    "target": { "of": "instance", "instanceId": id },
-                    "health": -20,
-                })))],
-            );
+            // R69: with no health left it dies past Indestructible, though no other card's debuff
+            // brings it there (R5113000).
+            s.card_mut(id.as_str()).buffs.health = -20;
+            settled(&mut s, vec![]);
             assert_eq!(s.state().result.map(|result| result.winner), Some(Winner::P2));
         }
     }

@@ -160,8 +160,8 @@ mod tests {
     /// Defender's other neighbour takes both.
     #[test]
     fn r5113000_arg_arg_defender_gives_it_no_buff_and_no_taunt() {
-        const ARG_ARG: &str = "stinkyscape-015"; // Arg Arg Defender: Cry: give adjacent Units +1/+1 and Taunt
-        const VANILLA: &str = "core-008"; // Mr. Vanilla, 4/4
+        const ARG_ARG: &str = "stinkyscape-015"; // Arg Arg Defender: buffs its neighbours and gives them Taunt
+        const VANILLA: &str = "core-008"; // Mr. Vanilla
         for radiant in [false, true] {
             let mut s = scenario(json!({
                 "p1": {
