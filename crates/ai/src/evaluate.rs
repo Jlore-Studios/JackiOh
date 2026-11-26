@@ -1293,9 +1293,12 @@ fn slumber_worth(
     let mut awake = unit.clone();
     awake.slumber = None;
     // R3575404: the use that wakes it was priced from the sleeping card, so its price already reads the
-    // wait; `unit_worth` of the awake copy counts it inside the share, and the rest of it is put back.
+    // wait; `unit_worth` of the awake copy counts the awake copy's own Activate inside the share, and the
+    // rest of the sleeper's is put back: all of it for a Dormant Starship, whose launch the awake copy
+    // no longer has (R4799003).
     let waking = if acts_to_awaken(state, unit) {
-        (1.0 - share) * brittle_share(unit, w) * w.activation * activation_price(state, unit, w, prices)
+        let kept = share * activation_price(state, &awake, w, prices);
+        brittle_share(unit, w) * w.activation * (activation_price(state, unit, w, prices) - kept)
     } else {
         0.0
     };

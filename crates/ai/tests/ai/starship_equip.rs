@@ -6,11 +6,17 @@
 //!   outside the slumber share, since it fuses while the card sleeps.
 //! - R3575404: a Dormant card's awakening Activate is priced, the launch among them (R1839002), and for
 //!   that use alone the card need not be the instance left standing (R3539004).
+//! - R4799003: a Dormant Starship whose one ability is the engine's launch counts it in full too.
 
 use jackioh_ai::*;
 use jackioh_engine::testkit::*;
 
 use super::support::{AI, HUMAN, register_cards, unit};
+
+/// Stinkyscape #100 AP Rounds: a Starship Piece that prints only keywords (Pierce).
+const AP_ROUNDS: &str = "stinkyscape-100";
+/// Core #16 Hit Job: "Destroy a Unit".
+const HIT_JOB: &str = "core-016";
 
 /// Stinkyscape #56 Cannon v4: (3) 0/3, Starship Piece, "Activate: Deal 6 damage to an enemy Unit", enough to
 /// destroy the Twisted Sorcerer (5/5); Cannon v3 until issue #4783 took its damage to 4.
@@ -204,5 +210,42 @@ fn r3575404_a_dormant_shipyards_launch_is_priced_though_it_exiles_the_hull() {
         (gained - AI_EVAL.activation * price).abs() < 1e-9,
         "the sleeper is worth `activation` of its launch, not the slumber share of that: the price was \
          read from the sleeping hull, so it already holds the wait: {gained} against {price}"
+    );
+}
+
+#[test]
+fn r4799003_a_launch_only_starships_launch_counts_in_full() {
+    // The AI's AP Rounds dies to its own Hit Job and builds it a Dormant Starship whose one ability is
+    // the engine's launch (R1852003), which it has only while it slumbers: its awake copy prices none.
+    let mut s = board(
+        "ai-r4799003-launch",
+        json!({ "hand": [HIT_JOB, VANILLA], "field": [{ "def": AP_ROUNDS, "lane": 1 }], "mana": 10 }),
+        json!({ "hand": [VANILLA], "field": [VANILLA] }),
+    );
+    let targets = pick::unit_at(&s, AI, 1);
+    s.play(HIT_JOB, json!({ "targets": targets }));
+    let placed = s.state().clone();
+    let hull = dormant_starship_of(&placed, AI)
+        .expect("the AP Rounds built the AI a Dormant Starship")
+        .clone();
+    assert!(acts_to_awaken(&placed, &hull), "it acts for its launch alone");
+    let counter = create_node_counter(AI_BUDGET.nodes, None);
+    let prices = activation_prices(&placed, AI, &counter);
+    let price = activation_price_of(&prices, &hull.def_id, AI)
+        .unwrap_or_else(|| panic!("the Dormant Starship's launch is priced: {prices:?}"));
+    assert!(
+        price > 0.0,
+        "the Starship it launches is worth something: {price}"
+    );
+    let priced = Prices {
+        activations: prices,
+        ..Prices::default()
+    };
+    let gained = evaluate_priced(&placed, AI, NextSwing::Enemy, &AI_EVAL, &priced)
+        - evaluate_priced(&placed, AI, NextSwing::Enemy, &AI_EVAL, Prices::NONE);
+    assert!(
+        (gained - AI_EVAL.activation * price).abs() < 1e-9,
+        "the hull is worth `activation` of its launch, as a shipyard is, though its awake copy has no \
+         launch to count inside the slumber share: {gained} against {price}"
     );
 }

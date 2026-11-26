@@ -219,7 +219,10 @@ prices the best as the controller's evaluation after less before, each crystal a
 backrow card, inside its Brittle share. `activate_sources` lists each Dormant card acting for its
 awakening alone too (R3575404, R1839002: a Dormant Starship's launch, and the `wakesBy` ability a hull's
 text names, R3539000), and for that use alone the card need not be the instance left standing, since a
-shipyard's launch exiles the hull and stands a fresh Starship in its place. Then, within
+shipyard's launch exiles the hull and stands a fresh Starship in its place. `slumber_worth` counts
+that awakening use in full: it puts back what the awake copy's own Activate does not count of the
+sleeper's, so a Dormant Starship whose pieces print only keywords, which has its launch only while it
+slumbers, counts the launch whole (R4799003). Then, within
 `AI_HAND_ACTIVATION_PROBE_NODES` of its own, each Unit and Field Spell in the seat's own hand with an
 ability, and each Dormant card of the seat's acting to awaken, is priced the same way and keyed by the
 card as the seat holds it now (R3575400, R923001: a hand card is spawned where a play would put it
