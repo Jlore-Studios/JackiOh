@@ -21355,6 +21355,11 @@
       "owner": "claude-8",
       "owner_since": "2026-11-26T21:22:20Z",
       "owner_why": "handed off from `claude-1`: `claude-1` is busy: its lanes are all taken",
+      "paused": {
+        "at": "2026-11-26T22:39:59Z",
+        "interrupt": "usage",
+        "provider": "claude-8"
+      },
       "pending_at": "2026-11-26T19:18:59Z",
       "pending_by": "MaxGoetzmann",
       "pending_request": false,
@@ -21364,7 +21369,7 @@
       "planned_model": "opus",
       "planned_tier": "strong",
       "provider": "claude-8",
-      "round_tier": "",
+      "round_tier": "strong",
       "run_id": "45897684390",
       "runs_on": "ubuntu-latest",
       "started_at": "2026-11-26T21:22:20Z",
