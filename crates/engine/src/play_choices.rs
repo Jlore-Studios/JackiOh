@@ -1400,8 +1400,8 @@ pub fn targeting_discards_required(
     total
 }
 
-/// Classic #33 Joro, R450: whether `interceptor`, summoned into its controller's leftmost open unit
-/// zone and read as it would stand there, would be a legal pick of `decl`; only then does a pick move.
+/// Classic #33 Joro, R450: whether `interceptor`, summoned where `giga::summon_anchor` puts it (R4990000)
+/// and read as it would stand there, would be a legal pick of `decl`; only then does a pick move.
 pub fn interceptor_fits_decl(
     state: &GameState,
     player: PlayerId,
@@ -1413,7 +1413,7 @@ pub fn interceptor_fits_decl(
     if !sides_for(player, decl).contains(&defender) || !pick_kinds_for(decl).contains(&FilterOf::Unit) {
         return false;
     }
-    let Some(zone) = crate::zones::first_entry_zone(state, defender, Row::Units) else {
+    let Some(zone) = crate::giga::summon_anchor(state, defender, interceptor) else {
         return false;
     };
     let probe = CardInstance {
