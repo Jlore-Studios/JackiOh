@@ -45900,6 +45900,7 @@
       {
         "at": "2026-11-26T06:46:53Z",
         "number": 5011,
+        "reason": "confirmed. `assault/store.ts` caches the attempt in a module-level `core` (`:332`, loaded once by `current()`) and only listens for `storage` while a page is subscribed. So another tab's write made while this tab is away is missed, and starting, retrying or abandoning from the stale copy writes the old records over the newer ones, losing attempts, checkpoints and held reports. The Dungeon store had exactly this bug, and #4914 fixed it (`pageWasOpen`, `reloadCore`). This ports that fix to its sib",
         "title": "Patch: the Assault page reads its saved attempt again when it is reopened",
         "verdict": "approved",
         "why": "approved by @jgoetzmann"
