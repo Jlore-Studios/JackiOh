@@ -2,7 +2,10 @@
 //! Edition)'s table, R423). The engine does not depend on `crates/cards`, so each pool its entries name
 //! gets stand-ins under the tags, sets and indices the real cards carry.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

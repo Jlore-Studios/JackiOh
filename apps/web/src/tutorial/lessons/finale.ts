@@ -10,7 +10,9 @@
 // which Call to Chaos went unplayed there, "-175" was; since #4034, which adds Legacy: Big Felinor
 // and Legacy: The Rock to the human deck so Tribes and Tribute can be met in lessons, "-47" was; since
 // #4353's costs and keyword rules (Legacy: Speciesist (3) 7/1 in the AI's deck), on which Call to Chaos
-// went unplayed there, "-22" is, every Legendary and Mythic played.
+// went unplayed there, "-22" was; since #4783's balance (Stinkyscape+ Balance Changes VIII), whose cards
+// move what Goetzmann Game Design's random effects find and on which Call to Chaos went unplayed there,
+// "-37" is, every Legendary and Mythic played.
 
 import type { TutorialLesson } from "../lessons.ts";
 
@@ -20,7 +22,7 @@ export const lesson: TutorialLesson = {
   title: "The final exam",
   summary: "Legendary and Mythic cards, random effects, Quickdraw and copies: everything at once.",
   discoveries: ["quickdraw", "legendary", "random", "copying"],
-  seed: "tg-finale-22",
+  seed: "tg-finale-37",
   humanSeat: "p1",
   poolHold: false,
   humanDeck: [

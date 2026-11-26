@@ -143,14 +143,15 @@ const NOT_PIECES: [&str; 15] = [
 /// #4154 moved the three Beams' damage down: 5, 7 and 9 (Radiant 10, 14 and 18) to 4, 6 and 8 (Radiant 8,
 /// 12 and 16), #4353 to 3, 5 and 7 (Radiant 6, 10 and 14), and Repeater v5's from 3 (Radiant 6) to 2
 /// (Radiant 4), and #4440 the Beams' to 2, 4 and 6 (Radiant 4, 8 and 12), and #4665 Beam v5's to 5
-/// (Radiant 10).
+/// (Radiant 10), and #4783 the Cannons' from 5, 7 and 9 (Radiant 10, 14 and 18) to 4, 6 and 8 (Radiant 8,
+/// 12 and 16).
 const AIMED_WEAPONS: [(&str, &str, i32, i32); 9] = [
     ("stinkyscape-050", "Beam v3", 2, 4),
     ("stinkyscape-054", "Beam v4", 4, 8),
     ("stinkyscape-058", "Beam v5", 5, 10),
-    (CANNON_V3, "Cannon v3", 5, 10),
-    ("stinkyscape-056", "Cannon v4", 7, 14),
-    ("stinkyscape-060", "Cannon v5", 9, 18),
+    (CANNON_V3, "Cannon v3", 4, 8),
+    ("stinkyscape-056", "Cannon v4", 6, 12),
+    ("stinkyscape-060", "Cannon v5", 8, 16),
     ("stinkyscape-051", "Repeater v3", 1, 2),
     ("stinkyscape-055", "Repeater v4", 2, 4),
     ("stinkyscape-059", "Repeater v5", 2, 4),
@@ -1100,7 +1101,7 @@ fn b11_a_buffed_piece_fuses_with_its_printed_numbers_not_its_buffed_ones() {
         }));
         let cannon = s.unit_at(P1, 1).id;
         step_param(s.card_mut(cannon.as_str()), "damage", 2);
-        let printed = if radiant { 10 } else { 5 };
+        let printed = if radiant { 8 } else { 4 };
         let buffed = params_view(s.state(), s.card(cannon.as_str()))
             .and_then(|numbers| numbers.get("damage").copied());
         assert!(
@@ -1127,8 +1128,8 @@ fn b11_a_buffed_piece_fuses_with_its_printed_numbers_not_its_buffed_ones() {
         if !radiant {
             assert_eq!(
                 params_view(s.state(), &ship).and_then(|numbers| numbers.get("damage").copied()),
-                Some(5),
-                "the Starship's Cannon v3 deals its printed 5"
+                Some(4),
+                "the Starship's Cannon v3 deals its printed 4"
             );
         }
     }
@@ -1246,7 +1247,7 @@ fn b13_stratos_swarm_leaves_an_occupied_unit_zone_alone() {
 }
 
 #[test]
-fn b14_cloaking_module_is_a_1_cost_2_2_rare_unit_whose_radiant_4_4_adds_immune_to_spells() {
+fn b14_cloaking_module_is_a_1_cost_3_2_rare_unit_whose_radiant_6_4_adds_immune_to_spells() {
     let def = card_def(CLOAKING_MODULE);
     assert_eq!(def.type_, CardType::Unit);
     assert_eq!(def.rarity, Rarity::Rare);
@@ -1264,14 +1265,15 @@ fn b14_cloaking_module_is_a_1_cost_2_2_rare_unit_whose_radiant_4_4_adds_immune_t
     let mut radiant_printed = printed;
     radiant_printed.push(KeywordKind::ImmuneToSpells);
     assert_eq!(radiant, radiant_printed);
+    // 3/2 (Radiant 6/4) since issue #4783, 2/2 (4/4) before.
     let faces = serde_json::to_value(def).expect("a CardDef serializes");
     assert_eq!(
         (&faces["base"]["attack"], &faces["base"]["health"]),
-        (&json!(2), &json!(2))
+        (&json!(3), &json!(2))
     );
     assert_eq!(
         (&faces["radiant"]["attack"], &faces["radiant"]["health"]),
-        (&json!(4), &json!(4))
+        (&json!(6), &json!(4))
     );
 }
 

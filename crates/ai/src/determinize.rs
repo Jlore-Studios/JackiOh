@@ -195,7 +195,10 @@ impl TrapSampler<'_> {
         same
     }
 
-    #[allow(clippy::too_many_arguments)]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the slot, what it shows and the draw's running sets, each borrowed apart"
+    )]
     fn trap_for(
         &self,
         next: &mut GameState,
@@ -332,7 +335,7 @@ pub fn det_ground(public_state: &GameState, seat: PlayerId) -> DetGround {
             }
             None => (trap_pool.clone(), printed_cloaked.clone(), every_set.clone()),
         };
-        // R1046: Knowledge Breaker's and Paranoia's auras lend Cloaked to a hand's Units and Spells,
+        // R1046: Knowledge Breaker Prime's and Paranoia's auras lend Cloaked to a hand's Units and Spells,
         // so while one acts those cards are `lent_cloaked_def_ids` too.
         let mut side_cloakable = side_printed;
         for id in jackioh_engine::alt_play::lent_cloaked_def_ids(public_state, side) {

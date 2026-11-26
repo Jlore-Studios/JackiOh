@@ -15,6 +15,7 @@ import type { CardTier } from "../wire/generated/CardTier.ts";
 import type { CosmeticRarity } from "../wire/generated/cosmetics.ts";
 import type { FleetTrackView } from "../wire/generated/FleetTrackView.ts";
 import type { StatsFace } from "../wire/generated/StatsFace.ts";
+import type { VariantKind } from "../wire/generated/VariantKind.ts";
 import { stripTrailingSlashes } from "./navigate.ts";
 import {
   forgetRead,
@@ -1829,6 +1830,30 @@ export type CardDrillDownResponse = {
   face?: StatsFace;
   /** R4673001: the card's Normal and Radiant figures and the gap between them, on every face; absent from an older server. */
   faces?: CardFaces;
+  /** R4676000: the card's choices at the page's patch and face, one group per kind it has; absent from an older server. */
+  variants?: PublicVariantGroup[];
+};
+
+/** R4676000: one choice of a card, read against the field of every card's choices. */
+export type PublicVariantRow = {
+  key: string;
+  label: string;
+  /** A `mode` row's options as recorded, for the page to name in the card's own words; absent for the other kinds. */
+  options?: string[];
+  games: number;
+  /** Its games over the card's played games on the face, 0..1. */
+  share: number;
+  adjustedWinRate: number | null;
+  adjustedLow: number | null;
+  adjustedHigh: number | null;
+  tier: CardTier | null;
+  hasEnoughGames: boolean;
+};
+
+/** R4676000: one kind of a card's choices, its rows by share, most chosen first. */
+export type PublicVariantGroup = {
+  kind: VariantKind;
+  rows: PublicVariantRow[];
 };
 
 /** R4673000: one face's figures in the drill-down, read against that face's own field and band. */

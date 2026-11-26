@@ -3,7 +3,10 @@
 //! R2198001) and tokens destroyed at the end of the turn they arrive (R2198002), through the engine's own
 //! verbs so the engine never imports `crates/cards`. Ids are `tg5-` from 21980, clear of other fixtures'.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

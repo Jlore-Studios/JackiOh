@@ -21,9 +21,10 @@ use crate::wire::{
     opponent_of,
 };
 
-/// The unit is carried by value: a target is built once per hit and matched at every card and test
-/// that aims one, where a `Box` would buy nothing but noise.
-#[allow(clippy::large_enum_variant)]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "a target is built once per hit and matched where it lands: a Box buys nothing but noise"
+)]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum DamageTarget {
@@ -766,9 +767,9 @@ fn land(
     }
 
     // R3540002: "Damage also Burns N / applies Toxic N" adds N to a target the hit left standing, after
-    // Poisonous and the exile have had their say.
+    // Poisonous and the exile have had their say; R4783001: "Damage dealt also Burns" adds what it dealt.
     if let Some(source_card) = source {
-        crate::afflictions::ride_damage(sink, source_card, target);
+        crate::afflictions::ride_damage(sink, source_card, target, dealt);
     }
 
     // Step 8: Lifesteal heals the source's controller's hero by the amount dealt; R85: an effect may

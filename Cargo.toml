@@ -11,6 +11,12 @@ edition = "2024"
 rust-version = "1.97.0"
 publish = false
 
+# A suppression says why and expires (CLAUDE.md rule 15): `#[expect(lint, reason = "…")]`, which fails once
+# it suppresses nothing, never an `#[allow]`, which outlives its cause and is copied (#4978).
+[workspace.lints.clippy]
+allow_attributes = "deny"
+allow_attributes_without_reason = "deny"
+
 [workspace.dependencies]
 # Path dependencies (SURFACE §2, crate edges).
 jackioh-engine = { path = "crates/engine" }
@@ -31,6 +37,8 @@ axum = { version = "0.8.9", features = ["ws", "macros"] }
 tokio = { version = "1.53.2", features = ["full", "test-util"] }
 tower = { version = "0.5.3", features = ["util"] }
 sqlx = { version = "0.9.0", features = ["runtime-tokio", "tls-rustls", "postgres", "json", "time", "uuid"] }
+# The statistics' totals read as a stream (`db::pg::stats_totals_load`). Already in the lock through sqlx.
+futures-util = { version = "0.3.34", default-features = false }
 jsonwebtoken = { version = "11.1.0", features = ["rust_crypto"] }
 reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls"] }
 hmac = { version = "0.13.0" }

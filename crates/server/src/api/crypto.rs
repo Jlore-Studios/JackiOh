@@ -148,8 +148,7 @@ impl SystemIds {
     }
 }
 
-/// Kept under lowercase name for SURFACE §4.2.
-#[allow(non_upper_case_globals)]
+#[expect(non_upper_case_globals, reason = "SURFACE §4.2 names it in lowercase")]
 pub const system_ids: SystemIds = SystemIds;
 
 #[cfg(test)]

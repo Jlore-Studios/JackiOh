@@ -8,8 +8,9 @@
 #   ai gates        `jackioh gate --full` in shards, held together by `gate merge` (V10)
 #   golden          `jackioh golden check`: every recorded TypeScript trace replays identically (V4)
 #   daily tests     every Rust test `#[ignore = "daily: …"]` leaves out of a pull request's cargo test:
-#                   the many-game sweeps, whose rule a cheaper test holds per pull request, in three
-#                   legs: every crate but the tools, the tools, and the tools' pool probe (#4375)
+#                   the many-game sweeps, whose rule a cheaper test holds per pull request, in six
+#                   legs: every crate but the tools, the tools, and the tools' pool probe, one leg for
+#                   each of its four suites (#4375, #4984)
 #   coverage        cargo llvm-cov over engine, cards and ai, failing under .github/coverage-floor.txt
 #                   (90% at the start, raised by hand as it climbs toward #306's 99%)
 #   e2e             all 35 e2e specs on Chrome, in shards, and the component specs in three (V21)
@@ -84,10 +85,10 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  # The fuzz wave's size (README §7); `fuzz` splits it evenly over its matrix. 13200 since the pool
-  # reached 823 cards (the held Infinite Assault set's landing, which the fuzz previews), when the daily
-  # top-up test asked for at least 12839: it covers about 846; each shard ran about 20 of its 90 minutes.
-  FUZZ_SEEDS: "13200"
+  # The fuzz wave's size (README §7); `fuzz` splits it evenly over its matrix. 16800 since the pool
+  # reached 1039 cards (#4984), when the daily top-up test asked for at least 16209: it covers up to
+  # 1076; at 13200 a shard's plain quarter of 3300 seeds ran about 12 of its 90 minutes.
+  FUZZ_SEEDS: "16800"
   # The Duos wave's (§13, #936 B25), ten times `fuzz --duos`'s 200: a Duos game is four seats and a
   # pool, several times a 1v1 game's work. Split the same way.
   DUOS_FUZZ_SEEDS: "2000"
@@ -305,15 +306,17 @@ jobs:
   # holds every ignore to that form), and nothing else. `--tests` leaves out the doc-tests, whose
   # `ignore` blocks are not tests at all. Three legs that together run each ignored test once
   # (#4375): as one job they ran past its 60 minutes once the pool probe took the AI's, the server's
-  # and the tools' suites too (#4249). The tools leg leaves the probe's four tests to their own leg.
-  # That leg builds only jackioh-tools, which does not depend on the server, so it fetches every
-  # crate first for the probe's nested `cargo test --offline` builds.
+  # and the tools' suites too (#4249). The tools leg leaves the probe's four tests to their own legs,
+  # one each, given 90 minutes: sharing one runner, the four ran 37 minutes on 2026-11-23 and past 60
+  # on 2026-11-26, the tools' still running (#4984). A probe leg builds only jackioh-tools, which does
+  # not depend on the server, so it fetches every crate first for the probe's nested `cargo test
+  # --offline` builds. `args` follows `--ignored`: a leg's `--skip`, or the one probe test it runs.
   daily-tests:
     name: daily tests (${{ matrix.leg }})
     if: github.event_name != 'schedule'
     environment: ${{ vars.CI_GATE_ENVIRONMENT || '' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: ${{ matrix.timeout }}
     strategy:
       fail-fast: false
       matrix:
@@ -321,15 +324,33 @@ jobs:
           - leg: every crate but the tools
             key: crates
             targets: "--workspace --exclude jackioh-tools --tests"
-            skip: ""
+            args: ""
+            timeout: 60
           - leg: tools
             key: tools
             targets: "-p jackioh-tools --tests"
-            skip: "--skip _passes_with_every_random_pool_rotated"
-          - leg: pool probe
-            key: pool-probe
+            args: "--skip _passes_with_every_random_pool_rotated"
+            timeout: 60
+          - leg: pool probe, cards
+            key: pool-probe-cards
             targets: "-p jackioh-tools --test pool_probe"
-            skip: ""
+            args: "every_cards_test_passes_with_every_random_pool_rotated"
+            timeout: 90
+          - leg: pool probe, AI
+            key: pool-probe-ai
+            targets: "-p jackioh-tools --test pool_probe"
+            args: "every_ai_test_passes_with_every_random_pool_rotated"
+            timeout: 90
+          - leg: pool probe, server
+            key: pool-probe-server
+            targets: "-p jackioh-tools --test pool_probe"
+            args: "every_server_test_passes_with_every_random_pool_rotated"
+            timeout: 90
+          - leg: pool probe, tools
+            key: pool-probe-tools
+            targets: "-p jackioh-tools --test pool_probe"
+            args: "every_tools_test_passes_with_every_random_pool_rotated"
+            timeout: 90
     env:
       CARGO_PROFILE_TEST_DEBUG: "0"
     steps:
@@ -339,15 +360,15 @@ jobs:
           node: "false"
           cache-key: daily-tests-${{ matrix.key }}
       - name: every crate in Cargo.lock, for the probe's offline builds
-        if: ${{ matrix.key == 'pool-probe' }}
+        if: ${{ startsWith(matrix.key, 'pool-probe') }}
         run: cargo fetch
       - name: this leg's tests a pull request leaves to the daily run
         env:
           TARGETS: ${{ matrix.targets }}
-          SKIP: ${{ matrix.skip }}
+          ARGS: ${{ matrix.args }}
         run: |
-          # shellcheck disable=SC2086 # TARGETS and SKIP are several arguments on purpose.
-          cargo test $TARGETS --features jackioh-engine/testkit,jackioh-engine/ts -- --ignored $SKIP
+          # shellcheck disable=SC2086 # TARGETS and ARGS are several arguments on purpose.
+          cargo test $TARGETS --features jackioh-engine/testkit,jackioh-engine/ts -- --ignored $ARGS
 
   coverage:
     name: coverage (engine, cards, ai)

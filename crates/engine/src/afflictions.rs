@@ -9,7 +9,7 @@
 //!     its count as piercing damage and stays (`tick_at_turn_start`, R3540001);
 //!   - an immunity: a Unit whose text says "Immune to Toxic" takes no Toxic (R4154001);
 //!   - the riders and the conversion (`ride_damage`, `converts_to`), which §4.4 reads off the source's
-//!     static flags (R3540002, R3540003);
+//!     static flags (R3540002, R3540003, R4783001);
 //!   - a Vanilla's clearing (`clear_afflictions`, R3540004), and the reads, re-exported by `query.rs`.
 //!
 //! Only a Unit acting in a unit zone, or standing in the backrow, or a hero carries them; R78's reset
@@ -176,11 +176,22 @@ pub fn converts_to(state: &GameState, source: &CardInstance) -> Option<Afflictio
 /// R3540002, §4.4 step 7: the Burn and the Toxic a hit from `source` adds to its target after it landed,
 /// when the target survived it: a Unit still standing and not killed, a hero with life left. N is the
 /// source's declared number where it declares one (R386), the flag's otherwise; Burn goes on first.
-pub(crate) fn ride_damage(sink: &mut EngineSink<'_>, source: &CardInstance, target: &DamageTarget) {
+/// R4783001: "Damage dealt also Burns" adds `dealt`, what the hit dealt at step 5, to that Burn, one gain.
+pub(crate) fn ride_damage(
+    sink: &mut EngineSink<'_>,
+    source: &CardInstance,
+    target: &DamageTarget,
+    dealt: i32,
+) {
     let flags = crate::scripts::flags_of(sink.state, source);
-    let burn = flags
+    let rider = flags
         .burns_on_damage
         .map(|n| crate::params::declared_or(sink.state, source, BURNS_PARAM, n));
+    let burn = if flags.damage_also_burns == Some(true) {
+        Some(rider.unwrap_or(0) + dealt)
+    } else {
+        rider
+    };
     let toxic = flags
         .toxic_on_damage
         .map(|n| crate::params::declared_or(sink.state, source, TOXIC_PARAM, n));

@@ -493,7 +493,7 @@ async fn upgrade_socket(
 ) -> Result<(), UpgradeFailure> {
     let profile = authenticate_upgrade(app, token, WS_PATH).await?;
 
-    let asked = query_param(query, "matchId");
+    let asked = query_param(query, "matchId").map(|id| id.to_ascii_lowercase());
     let Some(match_id) = asked.or_else(|| profile.in_match_id.clone()) else {
         return Err(UpgradeFailure::refused(
             WS_CLOSE.not_found,

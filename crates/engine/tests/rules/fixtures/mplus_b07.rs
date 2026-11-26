@@ -4,7 +4,10 @@
 //! (`fill_board`'s `chinese` rider) and a draw that fills the hand with copies (`draw_priced`'s
 //! `fillWithCopies`, R1185004). Ids `b7-…` from 11850.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

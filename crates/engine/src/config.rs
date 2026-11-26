@@ -1269,13 +1269,15 @@ pub const CHAOS_TG_PERMANENTS_V0_6_6H: i32 = 5;
 pub const CHAOS_TG_ARMY_TOKENS_V0_6_6H: i32 = 3;
 
 // §8.12 row 142 S+ #142 Call to Chaos (Mindustrial-Swarm Edition), R3570000–R3570005.
-/// §8.12 row 142 entries 1, 2 and 6, R3570000: the price the cards the edition adds cost, `costOverride` (R65).
+/// §8.12 row 142 entries 1, 2 and 6, R3570000: the price the cards the edition adds cost, `costOverride` (R65);
+/// entry 6's only under a definition that declares no `toxopidCost`, as every one through v0.6.13h (R4783032).
 pub const CHAOS_MS_CARD_COST: i32 = 0;
 /// §8.12 row 142 entry 1: "Refresh 2 mana" after the Paperclip cards (§6.3 Refresh, R364).
 pub const CHAOS_MS_PAPERCLIP_REPLENISH: i32 = 2;
 /// §8.12 row 142 entry 3: "Summon two random Radiant units, make them GIGA".
 pub const CHAOS_MS_GIGA_UNITS: i32 = 2;
-/// §8.12 row 142 entry 5: "Refresh 4 mana" after the Terminus cards (§6.3 Refresh, R364).
+/// §8.12 row 142 entry 5: "Refresh 4 mana" after the Terminus cards (§6.3 Refresh, R364), under a definition
+/// that declares no `replenish`, as every one through v0.6.13h (R4783032).
 pub const CHAOS_MS_TERMINUS_REPLENISH: i32 = 4;
 /// §8.12 row 142 entry 8: the cost of the Weapon the launch watch summons, "a random (2) cost Weapon".
 pub const CHAOS_MS_WEAPON_COST: i32 = 2;
@@ -2394,6 +2396,10 @@ pub const RADIANT_TIER_A_FROM: f64 = (ADJUSTED_WIN_RATE_CENTER + RADIANT_TIER_BA
 /// R4673000: the Radiant face's tier C floor, halfway from its band's bottom to an even game: its own
 /// lever, starting at All's (`TIER_C_FROM`).
 pub const RADIANT_TIER_C_FROM: f64 = (RADIANT_TIER_BAND_LOW + ADJUSTED_WIN_RATE_CENTER) / 2.0;
+
+/// R4676000: the least X paid that Extended stats counts in one row with every higher X ("X ≥ 5"): few
+/// plays reach it, so each higher X alone would read "not enough games".
+pub const VARIANT_X_GROUP_FROM: i32 = 5;
 
 /// R4552000: the win probability's intercept, `β₀` of `P = σ(β₀ + β₁·eval + β₂·turn + β₃·first)`, fit by
 /// `cargo jackioh stats calibrate` over development records against `WIN_PROBABILITY_AI_GENERATION`'s

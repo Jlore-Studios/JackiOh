@@ -83,7 +83,10 @@ pub fn parse_watch_hello(text: &str) -> Result<WatchHello, String> {
             .map(str::to_string)
     };
     match (text_of("matchId"), text_of("friendId")) {
-        (Some(match_id), Some(friend_id)) => Ok(WatchHello { match_id, friend_id }),
+        (Some(match_id), Some(friend_id)) => Ok(WatchHello {
+            match_id: match_id.to_ascii_lowercase(),
+            friend_id: friend_id.to_ascii_lowercase(),
+        }),
         _ => Err(r#""hello" needs "matchId" and "friendId""#.to_string()),
     }
 }
@@ -433,6 +436,20 @@ mod tests {
             Ok(WatchHello {
                 match_id: "m-1".to_string(),
                 friend_id: "p-2".to_string(),
+            })
+        );
+    }
+
+    #[test]
+    fn a_hello_with_uppercase_ids_is_read_lowercase() {
+        let hello = parse_watch_hello(
+            r#"{"type":"hello","matchId":"67E55044-10B1-426F-9247-BB680E5FE0C8","friendId":"67E55044-10B1-426F-9247-BB680E5FE0C11"}"#,
+        );
+        assert_eq!(
+            hello,
+            Ok(WatchHello {
+                match_id: "67e55044-10b1-426f-9247-bb680e5fe0c8".to_string(),
+                friend_id: "67e55044-10b1-426f-9247-bb680e5fe0c11".to_string(),
             })
         );
     }

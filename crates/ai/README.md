@@ -77,6 +77,15 @@ The greedy baseline's `mulligan_keep` reads mana alone. Nothing here reads a dif
 mulligan's bonus and cap): the tiers change the AI seat's resources only (R180), and the tutorial's
 opponent is the same AI on `AI_TUTORIAL` with the lesson's fixed deck (R290, R291).
 
+It keeps Classic #37 Last Hurrah and Stinkyscape+ #79 A Glimpse into the Endless Sea (`AI_LAST_RESORT`) for a
+last resort (R4783040): the candidate pool (`hold_last_resorts`, which every caller of the move list reads)
+drops a play of either unless the seat's times are dire (its life at most `AI_LAST_RESORT_DIRE_LIFE`, or
+`face_threat` of the enemy's board reaching it) or it has no other play (no card played this turn, and no
+legal play of any other card), and keeps A Glimpse (`AI_LAST_RESORT_REFILLED`) too while a card of its own in
+its hand or on its field shuffles cards into its own deck by its running face's text (`refills_own_deck`).
+The Trade of a Tradable Last Hurrah stays. It reads only the seat's own hand, field and turn and the public
+board, so every determinization keeps the same plays.
+
 A question of a sequence (Meditative+ #20 KY's Competition, R1184000) is answered at once, before
 any search, with the option its redacted statement works out to (`ky_competition::worked_answer`),
 never Stop: the redacted copy judges no answer right (R465), so a search would rank the answers alike
@@ -167,7 +176,8 @@ A hit on a Taunt, its Cleave splash and a First Strike Taunt's strike back are
 each capped after Armor by the struck unit's own guard (C+ #11 Anime Armor, R2179005), as `blow` caps the
 static trader's. Past the caps, every static read of a hit takes §4.4 steps 3a and 3b
 (`pool_and_conversion_read`, R4064000, R4064001, #4064; off in `GREEDY_EVAL`). A hit from a source whose
-damage Burns or is Toxic (S+ #151 Volcanic Rounds, #153 Noxious Rounds, `converts_to`) deals nothing, kills
+damage Burns or is Toxic (S+ #153 Noxious Rounds; #151 Volcanic Rounds through v0.6.13h, whose hits since
+issue #4783 land and also Burn, R4783001; `converts_to`) deals nothing, kills
 nothing and heals nothing, though a Divine Shield still takes it: the walk's attacker waits at its Taunt, and
 the reply prices the counter instead, on a unit by `counter_price` (what `afflicted` takes off it with that
 much more on) and on a hero by `hero_ticks_added`. Each side's damage pools (S+ #42 Force Projector, #123
@@ -277,6 +287,11 @@ element is part of `search_signature`, so two orders of the same plays that end 
 two positions; with no Feng Shui acting neither changes. `GREEDY_EVAL` keeps 0.
 While a Feng Shui of the seat's own acts, its Activate (a free Auspicious Rock) is tier 2's first source,
 before the rewarded plays (`Auspice::Judge`, R4154403), so a busy turn's `branching` cut never drops it.
+While a Feng Shui of the seat's own acts, `feng_shui_outlook` also counts the Auspicious Rock its next turn's
+Activate adds (`coming_rock`, `AI_FENG_SHUI_ROCK`, Radiant on a Radiant Feng Shui) among the cards the next
+play may be, so a hand the element punishes costs nothing while that Rock is not punished, and a play no
+Feng Shui judges whose element generates another hand card's is a bridge (`Auspice::Bridge`), tried after
+the rewarded plays and before the other plain ones (R4783041).
 A Tradable card in the seat's own hand whose own cost is above the crystals its next refresh brings (this
 turn's `mana.max`, one more while its crystal count under the cap, `mana.max` less `perm_mod` and the crystals
 stolen past the cap, is under `MAX_MANA` (R4812000), moved by the rider; never the handicap) is dead

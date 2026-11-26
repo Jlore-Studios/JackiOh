@@ -5,7 +5,10 @@
 //! the set's gate (R1420) and test the same cases again. Ids are prefixed `en-` and indexed from 18430,
 //! so they collide with no other fixture file's.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

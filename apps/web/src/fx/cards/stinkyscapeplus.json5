@@ -115,7 +115,7 @@
   "stinkyscapeplus-087": { cast: { motif: "conjure", palette: "Beast/swarm" }, trigger: { motif: "tally", palette: "Beast/swarm" }, aura: { look: "toxic", palette: "Beast/swarm", scope: "zone" } }, // Frontier Flora
   "stinkyscapeplus-088": { trigger: { motif: "conjure", palette: "Beast/swarm" } }, // Colony Watcher
   "stinkyscapeplus-089": { cast: { motif: "send", palette: "Dark/shadow" } }, // Animosity
-  "stinkyscapeplus-090": { trigger: { motif: "bless", palette: "Tech/laser" } }, // Meltdown
+  "stinkyscapeplus-090": "none: its one hook is When this attacks, an attack's, which no hookResolving marks", // Meltdown
   "stinkyscapeplus-091": "none: its Freeze rides each hit, which the mark row draws", // Tsunami
   "stinkyscapeplus-092": "none: no motif reads jadeChanged", // Crystalline Chiton
   "stinkyscapeplus-093": { death: { motif: "rise", palette: "Beast/swarm" } }, // Recessive Replicators

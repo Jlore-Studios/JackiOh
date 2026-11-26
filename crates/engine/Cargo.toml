@@ -56,3 +56,6 @@ required-features = ["testkit"]
 name = "golden"
 path = "tests/golden.rs"
 required-features = ["testkit"]
+
+[lints]
+workspace = true

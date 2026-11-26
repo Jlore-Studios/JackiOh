@@ -151,11 +151,11 @@ pub mod extra_turns;
 pub mod face_down_text;
 pub mod faces;
 pub mod feng_shui;
-pub mod tune_live;
-pub mod tutorial_cards;
-// A fixture only the other binary's modules use is dead code in this one.
 pub mod firewall;
-#[allow(dead_code)]
+#[expect(
+    dead_code,
+    reason = "a fixture only another binary's modules use is dead code in this one"
+)]
 pub mod fixtures;
 pub mod flashback;
 pub mod flexible_evasive_frenzy;
@@ -213,3 +213,5 @@ pub mod outside_data;
 pub mod outside_data_records;
 pub mod overflow_events;
 pub mod own_library;
+pub mod tune_live;
+pub mod tutorial_cards;

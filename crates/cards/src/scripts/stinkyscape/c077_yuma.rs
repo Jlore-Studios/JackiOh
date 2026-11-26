@@ -1,4 +1,5 @@
-//! Stinkyscape #77 Yuma (SPEC §8.10 row 77). (2) Unit, Epic, 1/8 → 2/16, Flying.
+//! Stinkyscape #77 Yuma (SPEC §8.10 row 77). (1) Unit, Epic, 1/3 → 2/6, Flying ((2) and 1/8 → 2/16
+//! until issue #4783, catalog data).
 //!   Base:    "Flying\nCry: At the start of your opponent's next turn, make them a trade offer: you give
 //!            them a card from your hand, then they Discover one of theirs to give you."
 //!   Radiant: "Flying, Lucky 1\nCry: …" (the same Cry)
@@ -140,7 +141,7 @@ mod tests {
     }
 
     #[test]
-    fn r1877001_radiant_is_a_2_16_with_lucky_1_carried_into_the_offer() {
+    fn r1877001_radiant_is_a_2_6_with_lucky_1_carried_into_the_offer() {
         let mut s = scenario(json!({
             "seed": "yuma-radiant",
             "p1": { "hand": [{ "def": ID, "radiant": true }, FILLER], "field": [VANILLA], "library": filler(8), "mana": 10 },
@@ -149,7 +150,7 @@ mod tests {
         s.play(ID, json!({ "zone": 2 }));
         let me = s.unit(P1, 2).expect("Yuma").id;
         let stats = s.stats(me.as_str());
-        assert_eq!((stats.attack, stats.health), (2, 16));
+        assert_eq!((stats.attack, stats.health), (2, 6));
         assert_eq!(lucky_on(s.state(), s.card(me.as_str())), 1);
         assert_eq!(
             s.state().delayed[0].resume.data.get(TRADE_OFFER_LUCKY_KEY),

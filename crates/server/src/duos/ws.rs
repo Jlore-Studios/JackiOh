@@ -75,6 +75,7 @@ async fn attach_socket(
             }
         },
     };
+    let match_id = match_id.to_ascii_lowercase();
     registry(app)
         .attach(app, &match_id, &profile.id, socket.clone())
         .await

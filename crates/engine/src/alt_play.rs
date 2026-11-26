@@ -1,8 +1,9 @@
 //! Face-down plays as Traps: Cloaked (#783, R783004–R783010, R1040–R1046).
 //!
 //! A Unit, Spell or Field Spell that has Cloaked in its controller's hand (printed, given, or lent by
-//! an aura there, §10.4 layer 5: Knowledge Breaker (#45) and its Prime to Units, Paranoia (#99) to
-//! Spells, `cloak_hand_aura`) may be set face-down at its own price (R783005). A set card is a Field
+//! an aura there, §10.4 layer 5: Knowledge Breaker Prime (#45.1) to Units, as Knowledge Breaker (#45)
+//! did through v0.6.13h, Paranoia (#99) to Spells, `cloak_hand_aura`) may be set face-down at its own
+//! price (R783005). A set card is a Field
 //! Trap or a Trap until it reveals, hidden like any set Trap (R33, R1046), its text dormant. It reveals
 //! only when its controller activates its Reveal (`CLOAKED_REVEAL`), offered only while the card can
 //! come out whole (`reveal_can_complete`). The form ends when the card leaves the field (R78). Under
