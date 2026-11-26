@@ -239,8 +239,12 @@ const DISPLAY: Readonly<Record<string, readonly string[]>> = {
   "index.css": ["h1", "h2", "h3", ".prompt-title", ".hero-inspect-title"],
   "game/animations.css": [".result-overlay__word"],
   "game/showcase/showcase.css": [".showcase-ribbon", ".chaos-banner-title"],
+  "fx/fx.css": [".fx-banner", ".fx-result::after", ".fx-chaos"],
   "cards/cards.css": [".cf .card-name", ".cf .card-text"],
 };
+
+/** A rule's face: its `font-family`, or the family that ends its `font` shorthand. */
+const faceOf = (decls: Map<string, string>): string | undefined => decls.get("font-family") ?? /(var\(--font-[a-z-]+\))\s*$/.exec(decls.get("font") ?? "")?.[1];
 
 const isUppercase = (rule: Rule): boolean => rule.decls.get("text-transform") === "uppercase";
 
@@ -328,7 +332,7 @@ describe("#5013 the game's words in the display face", () => {
   for (const [path, selectors] of Object.entries(DISPLAY)) {
     it(`#5013 ${path} sets its titles, names and rules text in --font-display`, () => {
       const parsed = sheet(path);
-      for (const selector of selectors) expect(declsFor(parsed, selector).get("font-family"), selector).toBe("var(--font-display)");
+      for (const selector of selectors) expect(faceOf(declsFor(parsed, selector)), selector).toBe("var(--font-display)");
     });
   }
 });
