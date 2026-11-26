@@ -260,7 +260,7 @@
   min-width: 18px;
   margin-left: 6px;
   padding: 0 5px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background: var(--opponent);
   color: #fff;
   font-size: 11px;

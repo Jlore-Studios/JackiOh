@@ -664,7 +664,7 @@
   right: -6px;
   min-width: 18px;
   padding: 0 5px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background: var(--opponent);
   color: var(--pal-white);
   font-size: var(--type-xs);

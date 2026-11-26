@@ -335,6 +335,7 @@ const PILL_RULES: string[] = [
   "routes/dev-panel.css: .landing .landing-corner .landing-dev-button",
   "routes/entry-card.css: .entry-card__pill",
   "routes/entry-card.css: .entry-card__tag",
+  "routes/landing.css: .landing .landing-news-count",
   "routes/lobby.css: .tavern.play-screen .play-mode-tile__waiting",
   "routes/lobby.css: .tavern.play-screen .play-trio-deck",
   "routes/play-hub.css: .tavern.play-screen.play-hub .play-card__fact",
@@ -343,6 +344,7 @@ const PILL_RULES: string[] = [
   "routes/stats.css: .stats-version-live",
   "routes/top-bar.css: :is(.screen-nav, .landing-corner) .top-bar-button",
   "settings/settings.css: .settings-slider-value",
+  "together/together.css: .together-badge",
   'tutorial/tutorial.css: .coach[data-coach-mode="discovery"] .coach__eyebrow',
   "tutorial/tutorial.css: .tutorial-lesson__chip",
 ];
