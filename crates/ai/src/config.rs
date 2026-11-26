@@ -218,6 +218,14 @@ pub struct AiSearch {
     /// proof of a line that won on determinization 0 (`lethal::find_lethal_reaching`). `false` stops it at
     /// the scaled allowance, as before.
     pub lethal_reach: bool,
+    /// R4791000: a beam its budget cut short leaves its open lines' turns unended. With this on, it
+    /// closes on a stop only the frontier line the stop cut short, those after it and their children
+    /// (the lines it finished expanding filed their End turn already), ranks a line it could not end the
+    /// turn of as a passed one, less its unspent crystals at `AI_EVAL.unspent_mana` (`search.rs`), and
+    /// `decide` ends the turn of each shortlisted line still open in the seat's main phase on its own
+    /// nodes before it replies to it. A beam its slice never refused decides as before. `false` scores
+    /// every such line where it stood, unreplied.
+    pub close_cut_lines: bool,
     /// Seed of the throwaway determinization that lists candidates for the forced check.
     pub probe_seed: &'static str,
     /// R90, R1282: the most sets a shipped card lists, #55's 3 of ten units.
@@ -291,6 +299,9 @@ pub const AI_SEARCH: AiSearch = AiSearch {
     // diverged, every game clean; its scene tests (crates/ai/tests/ai/wide_lethal.rs) settle it
     // (training/improve.md, A screen). false stops every walk at its scaled allowance.
     lethal_reach: true,
+    // R4791000: on. Its deal screen, 400 games on improve-dev against the control at 5991e8da39, is still
+    // being played as this is written; its scene tests (crates/ai/tests/ai/budget.rs) hold it.
+    close_cut_lines: true,
     probe_seed: "ai:probe",
     tribute_sets: 120,
     fat_reference: 30,

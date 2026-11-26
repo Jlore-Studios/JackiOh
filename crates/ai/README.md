@@ -472,6 +472,12 @@ so a wrap-up that fired before the beam still leaves it lines, the root's End tu
 R4604014: so is the slice's own limit (`create_beam_counter`): the root's moves draw on the decision's
 counter however many nodes they cost, so a root move dearer than the whole slice still closes a line;
 the decision's own limit and clock still stop it.
+R4791000: a beam whose slice refused a node, to its budget or the wrap-up, closes on its stop only the
+frontier line the stop cut short, those after it and the children (a line it finished expanding filed its
+End turn already), and ranks a line whose End turn was refused, open in the seat's main phase, as a passed
+one, its hand eval less `AI_EVAL.unspent_mana` a crystal (`closed_score`); `decide` then ends the turn of
+each such shortlisted line on the decision's own nodes before `reply_score`, and a node refused there ends
+the replies. A beam its slice never refused decides node for node as before (`AI_SEARCH.close_cut_lines`).
 `SearchStats.replied` and `worldsScored` say how far they got, and
 `Decision::fell_short` names a decision that left its finalists unscored on a sampled world. With no
 clock, or a wrap-up that never fires, a decision is node for node what it was.
