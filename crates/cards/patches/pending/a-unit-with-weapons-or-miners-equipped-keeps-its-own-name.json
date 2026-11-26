@@ -1,0 +1,20 @@
+{
+  "title": "Patch: a unit with Weapons or Miners equipped keeps its own name and text and lists its gear, and a Smoothie's Fruit text prints its numbers",
+  "sources": "issue #5050, issue #5049",
+  "notes": "Issue #5050 (R5050000): a unit holding gear (Miners or Weapons equipped into it: Radi, Halo, Radix, Phalanx, Raven, Icarus, Prototype-X1, Prototype-X2, Ozark, Orca, Galaxy and any other) is drawn as a Starship is, named for its host, its host's text, then its gear listed oldest first (apps/web/src/cards/StarshipPieces.tsx EquippedGear; the face model's FaceModel.equipped). Issue #5049 (R5049000): a fused text's face fills each ingredient's numbers from its own declaration, so a Smoothie's gained Fruit text prints numbers instead of placeholders. Presentation only: no card plays differently.",
+  "player": {
+    "title": "Equipped Units keep their own faces, and Smoothies show their numbers",
+    "new": [],
+    "balance": [],
+    "changes": [
+      "A Unit with Weapons or Miners Equipped into it, such as Radi or Halo, keeps its own name and text.",
+      "Its gear is listed below its text, oldest first, as a Starship lists its pieces: hover a piece to read its card."
+    ],
+    "text": [],
+    "fixes": [
+      "A Smoothie or Large Smoothie in hand now shows its Fruits' numbers, each Fruit its own, instead of placeholders such as {amount}."
+    ]
+  },
+  "cards": [],
+  "visual": true
+}

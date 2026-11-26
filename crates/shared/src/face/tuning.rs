@@ -397,16 +397,27 @@ pub fn filled_text(
     filled_text_of(def, text, radiant, values)
 }
 
+/// R5049000: the numbers a face fills a fused text with: the card's tuning, and the view's numbers by key
+/// (`CardView.params`, `CopiedTextView.params`) for the face it stands on.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct LiveNumbers<'a> {
+    pub tuning: Option<&'a Tuning>,
+    pub radiant: bool,
+    pub values: Option<&'a IndexMap<String, i32>>,
+}
+
 /// R5049000: `def`, a fused definition that declares no numbers (R77), with each part's `{key}`s filled with that
-/// part's own numbers (R102) on the face it went in on (R469, R4334000), as `tuning` moves them
-/// (`params::tuned_value`, the formula the view's numbers come from): two parts that declare one key, a
-/// Smoothie's Fig of Life and All Purpose Apple, each print their own. A face whose text is not its parts'
-/// joined as the Fuse joins them (`fuse.rs` `fused_face`) is left as it is; `None` for a definition that
-/// declares numbers or is no fusion, and for one holding a part `lookup` cannot find.
+/// part's own numbers (R102) on the face it went in on (R469, R4334000). The first part to declare a key prints
+/// the view's number for it on the face the card stands on, as the engine reads it (`params_view` keeps the first
+/// declaration of each key); a later one its own declaration, as the card's tuning moves it (`params::tuned_value`,
+/// the formula the view's numbers come from): two parts that declare one key, a Smoothie's Fig of Life and All
+/// Purpose Apple, each print their own. A face whose text is not its parts' joined as the Fuse joins them
+/// (`fuse.rs` `fused_face`) is left as it is; `None` for a definition that declares numbers or is no fusion, and
+/// for one holding a part `lookup` cannot find.
 pub fn with_part_numbers(
     def: &CardDef,
     lookup: &dyn Fn(&str) -> Option<CardDef>,
-    tuning: Option<&Tuning>,
+    live: LiveNumbers<'_>,
 ) -> Option<CardDef> {
     if def.params.is_some() || !is_fused(&def.id) {
         return None;
@@ -416,6 +427,7 @@ pub fn with_part_numbers(
         .map(|leaf| lookup(&leaf.def_id).map(|part| (part, leaf.radiant)))
         .collect::<Option<_>>()?;
     let face_text = |radiant_face: bool, filled: bool| -> String {
+        let mut declared: Vec<&str> = Vec::new();
         leaves
             .iter()
             .map(|(part, forced)| {
@@ -425,11 +437,26 @@ pub fn with_part_numbers(
                 } else {
                     &part.base.text
                 };
-                if filled {
-                    own_numbers_text(part, text, radiant, tuning)
-                } else {
-                    text.clone()
+                if !filled {
+                    return text.clone();
                 }
+                let values: IndexMap<String, i32> = part
+                    .params
+                    .iter()
+                    .flatten()
+                    .map(|param| {
+                        let first = !declared.contains(&param.key.as_str());
+                        let viewed = live
+                            .values
+                            .filter(|_| first && radiant_face == live.radiant)
+                            .and_then(|values| values.get(&param.key))
+                            .copied();
+                        let value = viewed.unwrap_or_else(|| tuned_value(param, radiant, live.tuning));
+                        (param.key.clone(), value)
+                    })
+                    .collect();
+                declared.extend(part.params.iter().flatten().map(|param| param.key.as_str()));
+                filled_text_of(part, text, radiant, Some(&values)).0
             })
             .collect::<Vec<_>>()
             .join(FUSED_LINE)
@@ -444,8 +471,8 @@ pub fn with_part_numbers(
     Some(out)
 }
 
-/// R5049000: `text` (one of `part`'s, or its Chinese template) filled with `part`'s own numbers on the face `radiant`
-/// names, as `tuning` moves them.
+/// R5049000, R5050000: `text` (one of `part`'s, or its Chinese template) filled with `part`'s own numbers on the face
+/// `radiant` names, as `tuning` moves them.
 fn own_numbers_text(part: &CardDef, text: &str, radiant: bool, tuning: Option<&Tuning>) -> String {
     let values: IndexMap<String, i32> = part
         .params

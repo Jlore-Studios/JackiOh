@@ -1519,9 +1519,10 @@ fn r5049000_each_part_of_a_fused_text_prints_its_own_numbers() {
     assert_eq!(own.text.full, want);
     let radiant = face_of_def(&def, true, Locale::En, json!({ "inPlay": {} }));
     assert_eq!(radiant.text.full, each_filled(&parts, &[true; 4], &none));
-    // A Smoothie runs the Fruits' fusion as its text (R4440006): its copy prints the same, whatever numbers
-    // the view's one map by key would give.
-    for params in [json!(null), json!({ "amount": 2, "heal": 20 })] {
+    // A Smoothie runs the Fruits' fusion as its text (R4440006): its copy prints the same, with or without the
+    // view's numbers, which are each key's first Fruit's (`params_view`), so Fig of Life's heal 20 is its own.
+    let first = json!({ "amount": 2, "draw": 1, "discount": 1, "setCost": 0, "heal": 2, "damage": 1 });
+    for params in [json!(null), first] {
         let smoothie = in_play(
             "stinkyscapeplus-018",
             false,
@@ -1571,6 +1572,34 @@ fn r5049000_a_tuned_key_moves_on_each_part_from_its_own_number() {
     );
     let face = face_of_def(&def, false, Locale::En, json!({ "inPlay": { "tuning": tuning } }));
     assert_eq!(face.text.full, want);
+}
+
+/// R5049000: the view's number for a key is its first declaring part's, as the engine reads it; a later part that
+/// declares the key prints its own.
+#[test]
+fn r5049000_the_views_number_is_the_first_declarers_and_a_later_one_prints_its_own() {
+    let parts = ["classicplus-065-2", "classicplus-065-3"].map(catalog_def);
+    let def = fused_text(5054, &parts, &[false, false]);
+    let face = face_of_def(
+        &def,
+        false,
+        Locale::En,
+        json!({ "inPlay": { "params": { "amount": 9, "draw": 1, "discount": 1, "setCost": 0 } } }),
+    );
+    assert!(face.text.full.contains("Deal 9 damage"), "{}", face.text.full);
+    assert!(face.text.full.contains("Deal 5 damage"), "{}", face.text.full);
+    // The view's numbers are the face the card stands on: its Radiant face reads its own.
+    let radiant = face_of_def(
+        &def,
+        true,
+        Locale::En,
+        json!({ "inPlay": { "params": { "amount": 9 } } }),
+    );
+    assert!(
+        radiant.text.full.contains("Deal 9 damage") && radiant.text.full.contains("Deal 10 damage"),
+        "{}",
+        radiant.text.full
+    );
 }
 
 /// R5049000: a fusion of fusions fills each leaf, the inner one read from the id it spells (R179) where the

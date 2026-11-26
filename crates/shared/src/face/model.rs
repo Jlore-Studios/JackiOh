@@ -39,7 +39,7 @@ use super::short::{ascent_level_of, cut_text, in_language, short_form_of, summit
 use super::spans::{Dressing, rich};
 use super::state::{BadgeFacts, state_badges};
 use super::text::{Text, copied_text};
-use super::tuning::{MINUS, as_host, face_tuning, filled_text, with_part_numbers};
+use super::tuning::{LiveNumbers, MINUS, as_host, face_tuning, filled_text, with_part_numbers};
 use super::types::{
     CostTone, DefMap, EquippedFace, FaceCost, FaceCredits, FaceModel, FaceSource, FaceStats, Grew, InPlay,
     LiveStats, Mention, QuestBox, StarshipFace, StarshipPieceRef, StatTone, TagChip, TuningChip,
@@ -99,7 +99,14 @@ fn face_in(words: Words, source: &FaceSource, lookup: &Lookup<'_>, chinese: bool
     // R5049000: a fused definition's parts each print their own numbers, as their texts read them.
     let view_tuning = source.in_play.as_ref().and_then(|play| play.tuning.as_ref());
     let find = |id: &str| lookup.def(id);
-    let part_numbers = |def: CardDef| with_part_numbers(&def, &find, view_tuning).unwrap_or(def);
+    let part_numbers = |def: CardDef, radiant: bool, values: Option<&IndexMap<String, i32>>| {
+        let live = LiveNumbers {
+            tuning: view_tuning,
+            radiant,
+            values,
+        };
+        with_part_numbers(&def, &find, live).unwrap_or(def)
+    };
     // R5050000: a unit holding gear is printed as the card it was equipped into, its gear listed (`equipped`); a
     // Starship lists its own pieces (R2249000).
     let starship_in_view = source
@@ -111,9 +118,10 @@ fn face_in(words: Words, source: &FaceSource, lookup: &Lookup<'_>, chinese: bool
         .filter(|_| !starship_in_view)
         .and_then(|def| equipped_of(def, &find))
         .and_then(|gear| find(&gear.host.def_id).map(|host| (gear, host)));
+    let view_params = source.in_play.as_ref().and_then(|play| play.params.as_ref());
     let filled = with_view_params(
-        given.map(part_numbers),
-        source.in_play.as_ref().and_then(|play| play.params.as_ref()),
+        given.map(|def| part_numbers(def, source.radiant, view_params)),
+        view_params,
     );
     // R1301: a Chinese card's name and texts are the table's; all else stays the definition's.
     let def: Option<CardDef> = match (&filled, chinese) {
@@ -155,7 +163,7 @@ fn face_in(words: Words, source: &FaceSource, lookup: &Lookup<'_>, chinese: bool
     let copies = in_play.and_then(|play| play.copies.as_ref()).map(|copies| {
         let mut copies = copies.clone();
         // R5049000: a gained fused text (a Smoothie's Fruits, R4440006) fills as a fused card's own does.
-        let def = part_numbers(copies.def.clone());
+        let def = part_numbers(copies.def.clone(), copies.radiant, copies.params.as_ref());
         copies.def = with_view_params(Some(def.clone()), copies.params.as_ref()).unwrap_or(def);
         if chinese {
             copies.def = chinese_def(&copies.def);
