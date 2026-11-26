@@ -1,30 +1,34 @@
-// The coach machine (tutorial/coach.ts), on hand-built views: R292, and R314 on the real lessons'
-// scripts too. The coach reads the human's view, their legal actions and whether the AI owes a move,
+// The coach machine (tutorial/coach.ts), on hand-built views: R292, R314 on the real lessons' scripts
+// too, and R4702004. The coach reads the human's view, their legal actions and whether the AI owes a move,
 // and nothing else (CLAUDE.md rule 7); with no Skip step to fall back on (R314), nothing may strand a player.
 
 import { describe, expect, it } from "vitest";
 
 import type { ActionBody, GameEvent, PlayerView } from "@jackioh/shared";
 
-import { baseView, card, emptySide, pendingFor, resetIds, unit } from "../test/fixtures.ts";
+import { baseView, card, emptySide, resetIds } from "../test/fixtures.ts";
 import {
   COACH_START,
   activeStep,
   coachAck,
   coachDisplay,
+  coachHint,
   coachObserve,
+  coachStart,
   type CoachCtx,
   type CoachDisplay,
   type CoachState,
+  type CoachStep,
   type LessonScript,
 } from "./coach.ts";
 import { TUTORIAL_STEP_TURNS_MAX } from "./config.ts";
+import type { Discovery } from "./discoveries.ts";
 import { LESSON_SCRIPTS } from "./scripts/index.ts";
-import { attackWith, endTurn, info, keepHand, playCard, tip } from "./steps.ts";
+import { momentOf, playOf } from "./scripts/kit.ts";
+import { info } from "./steps.ts";
 import { coachTargets } from "./targets.ts";
 
 const VANILLA = "core-008";
-const SHREDDER = "core-013";
 
 function ctx(view: PlayerView, legal: ActionBody[] = [], fresh: GameEvent[] = [], aiToAct = false): CoachCtx {
   return { view, legal, fresh, aiToAct };
@@ -41,14 +45,29 @@ function aiTurnView(turn: number, over: Partial<PlayerView> = {}): PlayerView {
 
 const PLAY_VANILLA: ActionBody = { type: "play", instanceId: "h1", zone: { row: "units", lane: 1 } };
 
+/** The one Field guide entry these scripts watch: found once the player plays a card. */
+const GUIDE: readonly Discovery[] = [
+  { id: "x", name: "Mana", rule: "each card costs mana.", lesson: "basics", found: (c) => c.fresh.some((event) => event.type === "cardPlayed" && event.player === c.view.viewer) },
+];
+const PLAYED: GameEvent = { type: "cardPlayed", player: "p1", instanceId: "h1", defId: VANILLA, costPaid: 1 };
+
+/** A moment as the lessons build theirs (scripts/kit.ts): it asks for Mr. Vanilla to be played, and sets up `x`. */
+function askForVanilla(id: string, over: { revisit?: boolean } = {}): CoachStep {
+  return momentOf({
+    id,
+    title: "Play it",
+    text: "What can you afford?",
+    discovers: ["x"],
+    hints: ["Your cards show their cost.", "Play Mr. Vanilla."],
+    pick: playOf([VANILLA]),
+    ...over,
+  });
+}
+
 describe("R292 the coach", () => {
-  it("R292 activates a step only when its moment comes, and points at the element it names", () => {
+  it("R292 activates a step only when its moment comes, and its last hint points at the element it names", () => {
     resetIds();
-    const script: LessonScript = {
-      lessonId: "t",
-      steps: [playCard({ id: "play", title: "Play it", text: "Play Mr. Vanilla.", defId: VANILLA })],
-      tips: [],
-    };
+    const script: LessonScript = { lessonId: "t", steps: [askForVanilla("play")], tips: [] };
     let state = coachObserve(script, COACH_START, ctx(aiTurnView(2), [], [], true));
     expect(coachDisplay(script, state, ctx(aiTurnView(2), [], [], true))).toEqual({
       mode: "waiting",
@@ -65,16 +84,14 @@ describe("R292 the coach", () => {
     if (display.mode !== "step") return;
     expect(display.title).toBe("Play it");
     expect(display.ack).toBe(false);
-    expect(coachTargets(display.anchor, view)).toEqual(["hand-card-h1"]);
+    expect(display.anchor, "the question points at nothing").toBeNull();
+    const pointed = coachDisplay(script, coachHint(script, coachHint(script, state)), context);
+    expect(pointed.mode === "step" ? coachTargets(pointed.anchor, view) : null).toEqual(["hand-card-h1"]);
     expect(activeStep(script, state)?.id).toBe("play");
   });
 
   it("R292 waits while the engine offers no such action, since legality is the engine's", () => {
-    const script: LessonScript = {
-      lessonId: "t",
-      steps: [playCard({ id: "play", title: "Play it", text: "Play Mr. Vanilla.", defId: VANILLA })],
-      tips: [],
-    };
+    const script: LessonScript = { lessonId: "t", steps: [askForVanilla("play")], tips: [] };
     // In hand but not offered: the coach never decides it is playable itself.
     const state = coachObserve(script, COACH_START, ctx(myTurn(3), [{ type: "endTurn" }]));
     expect(state.since).toBeNull();
@@ -84,108 +101,28 @@ describe("R292 the coach", () => {
   it("R292 completes a step when the view shows it done, including one done before it showed", () => {
     const script: LessonScript = {
       lessonId: "t",
-      steps: [
-        info({ id: "hello", title: "Hello", text: "Welcome." }),
-        playCard({ id: "play", title: "Play it", text: "Play Mr. Vanilla.", defId: VANILLA }),
-        endTurn({ id: "end", title: "End turn", text: "End your turn." }),
-      ],
+      guide: GUIDE,
+      teaches: ["x"],
+      steps: [askForVanilla("play"), info({ id: "next", title: "Next", text: "Next." })],
       tips: [],
     };
-    const legal = [PLAY_VANILLA, { type: "endTurn" } as ActionBody];
-    let state = coachObserve(script, COACH_START, ctx(myTurn(3), legal));
-    expect(activeStep(script, state)?.id).toBe("hello");
+    let state = coachObserve(script, COACH_START, ctx(myTurn(3), [PLAY_VANILLA, { type: "endTurn" }]));
+    expect(activeStep(script, state)?.id).toBe("play");
+    state = coachObserve(script, state, ctx(myTurn(3, []), [{ type: "endTurn" }], [PLAYED]));
+    expect(state.outcomes).toEqual({ play: "done" });
 
-    const played = myTurn(3, []);
-    state = coachObserve(script, state, ctx(played, [{ type: "endTurn" }]));
-    state = coachAck(script, state, ctx(played, [{ type: "endTurn" }]));
-    expect(state.outcomes).toEqual({ hello: "done", play: "moot" });
-    expect(activeStep(script, state)?.id).toBe("end");
-
-    state = coachObserve(script, state, ctx(aiTurnView(4), [], [], true));
-    expect(state.outcomes["end"]).toBe("done");
-    expect(state.index).toBe(script.steps.length);
+    // Found on the AI's turn, before the step could show: done without a word.
+    expect(coachObserve(script, COACH_START, ctx(aiTurnView(2), [], [PLAYED], true)).outcomes).toEqual({ play: "done" });
   });
 
-  it("R292 completes an attack step on the attack the engine reports, and retires it when its turn ends without one", () => {
-    const attacker = unit("p1", { instanceId: "u1", defId: SHREDDER });
-    const board = (units: PlayerView["you"]["units"]): PlayerView =>
-      myTurn(5, [], { you: emptySide("p1", { units, hand: [] }) });
-    const attack: ActionBody = { type: "attack", attackerId: "u1", targetId: "hero-p2" };
+  it("R292 retires a step that can no longer happen before it ever showed: a revisit of what the Field guide holds", () => {
     const script: LessonScript = {
       lessonId: "t",
-      steps: [attackWith({ id: "hit", title: "Attack", text: "Hit the hero.", attacker: SHREDDER, target: "hero" })],
+      steps: [askForVanilla("again", { revisit: true }), info({ id: "next", title: "Next", text: "Next." })],
       tips: [],
     };
-    const view = board([attacker, null, null, null, null]);
-    let state = coachObserve(script, COACH_START, ctx(view, [attack]));
-    const display = coachDisplay(script, state, ctx(view, [attack]));
-    expect(display.mode === "step" ? coachTargets(display.anchor, view) : null).toEqual(["hero-opponent"]);
-    expect(script.steps[0]?.expect?.(attack, ctx(view, [attack]))).toBe(true);
-
-    const declared: GameEvent = { type: "attackDeclared", attackerId: "u1", targetId: "hero-p2", forced: false };
-    const after = coachObserve(script, state, ctx(board([{ ...attacker, canAct: false }, null, null, null, null]), [], [declared]));
-    expect(after.outcomes["hit"]).toBe("done");
-
-    const unused = aiTurnView(6, { you: emptySide("p1", { units: [attacker, null, null, null, null], hand: [] }) });
-    state = coachObserve(script, state, ctx(unused, [], [], true));
-    expect(state.outcomes["hit"]).toBe("moot");
-  });
-
-  it("R292 counts an attack that also ends the turn by itself as done, and follows the very instance that showed", () => {
-    const tokenA = unit("p1", { instanceId: "t1", defId: "core-t-rush" });
-    const tokenB = unit("p1", { instanceId: "t2", defId: "core-t-rush" });
-    const board = (units: PlayerView["you"]["units"], over: Partial<PlayerView> = {}): PlayerView =>
-      myTurn(5, [], { you: emptySide("p1", { units, hand: [] }), ...over });
-    const attack: ActionBody = { type: "attack", attackerId: "t1", targetId: "hero-p2" };
-    const script: LessonScript = {
-      lessonId: "t",
-      steps: [attackWith({ id: "hit", title: "Attack", text: "Hit the hero.", attacker: "core-t-rush", target: "hero" })],
-      tips: [],
-    };
-    const view = board([tokenA, tokenB, null, null, null]);
-    const shown = coachObserve(script, COACH_START, ctx(view, [attack]));
-    expect(activeStep(script, shown)?.id).toBe("hit");
-
-    // The first token dies attacking; its twin is still on the field, and the step is still done.
-    const traded = board([null, tokenB, null, null, null]);
-    const declared: GameEvent = { type: "attackDeclared", attackerId: "t1", targetId: "hero-p2", forced: false };
-    expect(coachObserve(script, shown, ctx(traded, [], [declared])).outcomes["hit"]).toBe("done");
-
-    // The attack left nothing to do and the turn ended by itself (R82) in the same action: done, not moot.
-    const autoEnded = aiTurnView(6, { you: emptySide("p1", { units: [tokenA, tokenB, null, null, null], hand: [] }) });
-    expect(coachObserve(script, shown, ctx(autoEnded, [], [declared], true)).outcomes["hit"]).toBe("done");
-  });
-
-  it("R292 retires an End turn step whose turn ended by itself before it showed", () => {
-    const script: LessonScript = {
-      lessonId: "t",
-      steps: [
-        info({ id: "read", title: "Read", text: "Read this first." }),
-        endTurn({ id: "end", title: "End turn", text: "End your turn." }),
-        info({ id: "next", title: "Next", text: "Next." }),
-      ],
-      tips: [],
-    };
-    let state = coachObserve(script, COACH_START, ctx(myTurn(3), [{ type: "endTurn" }]));
-    state = coachObserve(script, state, ctx(aiTurnView(4), [], [], true));
-    state = coachAck(script, state, ctx(aiTurnView(4), [], [], true));
-    // "End turn" belonged to turn 3; it is not asked on turn 5.
-    state = coachObserve(script, state, ctx(myTurn(5), [{ type: "endTurn" }]));
-    expect(state.outcomes["end"]).toBe("moot");
-    expect(activeStep(script, state)?.id).toBe("next");
-  });
-
-  it("R292 retires a step whose card is gone before it ever showed", () => {
-    const script: LessonScript = {
-      lessonId: "t",
-      steps: [
-        playCard({ id: "play", title: "Play it", text: "Play Mr. Vanilla.", defId: VANILLA }),
-        info({ id: "next", title: "Next", text: "Next." }),
-      ],
-      tips: [],
-    };
-    const state = coachObserve(script, COACH_START, ctx(myTurn(3, []), [{ type: "endTurn" }]));
-    expect(state.outcomes).toEqual({ play: "moot" });
+    const state = coachObserve(script, coachStart(["x"]), ctx(myTurn(3), [PLAY_VANILLA, { type: "endTurn" }]));
+    expect(state.outcomes).toEqual({ again: "moot" });
     expect(activeStep(script, state)?.id).toBe("next");
   });
 
@@ -225,7 +162,7 @@ describe("R292 the coach", () => {
         info({ id: "a", title: "A", text: "A." }),
         info({ id: "b", title: "B", text: "B." }),
       ],
-      tips: [tip({ id: "t", title: "T", text: "T.", when: () => true })],
+      tips: [{ id: "t", title: "T", text: "T.", when: () => true }],
     };
     const over = myTurn(9, [], { result: { winner: "p1", reason: "hero-death" } });
     const state = coachObserve(script, coachObserve(script, COACH_START, ctx(myTurn(3))), ctx(over));
@@ -240,19 +177,18 @@ describe("R292 the coach", () => {
     const coin: GameEvent = { type: "cardPlayed", player: "p2", instanceId: "x", defId: "core-t-coin", costPaid: 0 };
     const script: LessonScript = {
       lessonId: "t",
-      steps: [
-        playCard({ id: "play", title: "Play it", text: "Play Mr. Vanilla.", defId: VANILLA }),
-        endTurn({ id: "end", title: "End turn", text: "End your turn." }),
-      ],
+      guide: GUIDE,
+      teaches: ["x"],
+      steps: [askForVanilla("play"), info({ id: "end", title: "End turn", text: "End your turn." })],
       tips: [
-        tip({
+        {
           id: "coin",
           title: "The Coin",
           text: "The AI played The Coin.",
           holdAi: true,
           anchor: { kind: "hero", side: "opponent" },
           when: (c) => c.fresh.some((event) => event.type === "cardPlayed" && event.defId === "core-t-coin"),
-        }),
+        },
       ],
     };
     const legal = [PLAY_VANILLA, { type: "endTurn" } as ActionBody];
@@ -263,11 +199,12 @@ describe("R292 the coach", () => {
     // No step is "active" for the tests while a tip is up.
     expect(activeStep(script, state)).toBeNull();
 
-    state = coachObserve(script, state, ctx(myTurn(3, []), [{ type: "endTurn" }], [coin]));
+    state = coachObserve(script, state, ctx(myTurn(3, []), [{ type: "endTurn" }], [coin, PLAYED]));
     expect(state.outcomes["play"]).toBe("done");
     expect(state.tipQueue).toEqual(["coin"]);
 
-    state = coachAck(script, state, ctx(myTurn(3, []), [{ type: "endTurn" }]));
+    // Got it takes the find's own bubble first, then the tip.
+    state = coachAck(script, coachAck(script, state, ctx(myTurn(3, []))), ctx(myTurn(3, [])));
     expect(state.tipsSeen).toEqual(["coin"]);
     state = coachObserve(script, state, ctx(myTurn(3, []), [{ type: "endTurn" }], [coin]));
     expect(state.tipQueue).toEqual([]);
@@ -280,12 +217,12 @@ describe("R292 the coach", () => {
       lessonId: "t",
       steps: [info({ id: "only", title: "Only", text: "The only step.", final: true })],
       tips: [
-        tip({
+        {
           id: "coin",
           title: "The Coin",
           text: "The AI played The Coin.",
           when: (c) => c.fresh.some((event) => event.type === "cardPlayed" && event.defId === "core-t-coin"),
-        }),
+        },
       ],
     };
     let state = coachObserve(script, COACH_START, ctx(myTurn(3)));
@@ -314,36 +251,6 @@ describe("R292 the coach", () => {
     };
     expect(() => coachObserve(script, COACH_START, ctx(myTurn(3)))).not.toThrow();
   });
-
-  it("R292 keeps the mulligan step to the view's own prompt, answered with the engine's own mulligan action", () => {
-    const hand = [card({ instanceId: "h1", defId: VANILLA }), card({ instanceId: "h2", defId: SHREDDER })];
-    const mulligan = baseView({
-      turn: 0,
-      phase: "mulligan",
-      you: emptySide("p1", { hand }),
-      pending: pendingFor("mulligan", [
-        { key: "h1", label: VANILLA, instanceId: "h1", defId: VANILLA },
-        { key: "h2", label: SHREDDER, instanceId: "h2", defId: SHREDDER },
-      ]),
-    });
-    const keepAll: ActionBody = { type: "mulligan", keep: ["h1", "h2"] };
-    const keepOne: ActionBody = { type: "mulligan", keep: ["h1"] };
-    const script: LessonScript = {
-      lessonId: "t",
-      steps: [keepHand({ id: "keep", title: "Keep", text: "Keep your hand." })],
-      tips: [],
-    };
-    let state = coachObserve(script, COACH_START, ctx(mulligan, [keepAll, keepOne]));
-    const step = activeStep(script, state);
-    expect(step?.id).toBe("keep");
-    expect(step?.expect?.(keepAll, ctx(mulligan))).toBe(true);
-    expect(step?.expect?.(keepOne, ctx(mulligan))).toBe(false);
-    const display = coachDisplay(script, state, ctx(mulligan));
-    expect(display.mode === "step" ? coachTargets(display.anchor, mulligan) : null).toEqual(["prompt-modal"]);
-
-    state = coachObserve(script, state, ctx(baseView({ turn: 0, phase: "mulligan", pending: { forYou: false, pendingFor: "p2" } })));
-    expect(state.outcomes["keep"]).toBe("done");
-  });
 });
 
 describe("R314 no Skip step, and nothing strands the player", () => {
@@ -360,7 +267,6 @@ describe("R314 no Skip step, and nothing strands the player", () => {
       expect(script.steps.length, `${script.lessonId} has steps`).toBeGreaterThan(0);
       for (const [index, step] of script.steps.entries()) {
         const where = `${script.lessonId} step ${step.id}`;
-        if (step.kind === "act") expect(step.holdAi, `${where}: an act step never holds the AI`).not.toBe(true);
         if (step.holdAi === true) expect(step.kind, `${where} holds the AI, so it is an info step`).toBe("info");
         // Only the last step may be final: every other one can expire.
         if (step.final === true) expect(index, `${where} is final, so it is the lesson's last`).toBe(script.steps.length - 1);
@@ -378,26 +284,21 @@ describe("R314 no Skip step, and nothing strands the player", () => {
     }
   });
 
-  it("R314 without Skip step no step strands the player: an act step never holds the AI, even when its script asks", () => {
-    const script: LessonScript = {
-      lessonId: "t",
-      steps: [{ id: "act", kind: "act", title: "Do it", text: "Do it.", holdAi: true, done: () => false }],
-      tips: [],
-    };
-    const state = coachObserve(script, COACH_START, ctx(myTurn(3), [{ type: "endTurn" }]));
-    expect(shownDisplay(script, state)).toMatchObject({ mode: "step", id: "act", ack: false, holdAi: false });
+  it("R314 without Skip step no step strands the player: a moment never holds the AI, even when its script asks", () => {
+    const script: LessonScript = { lessonId: "t", steps: [{ ...askForVanilla("ask"), holdAi: true }], tips: [] };
+    const state = coachObserve(script, COACH_START, ctx(myTurn(3), [PLAY_VANILLA, { type: "endTurn" }]));
+    expect(shownDisplay(script, state)).toMatchObject({ mode: "step", id: "ask", ack: false, holdAi: false });
   });
 
   it(`R314 without Skip step no step strands the player: a step still current after ${String(TUTORIAL_STEP_TURNS_MAX)} of the player's own turn starts expires, and the final one ends with the game`, () => {
-    const never = (): boolean => false;
     const script: LessonScript = {
       lessonId: "t",
       steps: [
         // Waits for a moment that never comes (the engine never offers the play).
-        playCard({ id: "waits", title: "Play it", text: "Play Mr. Vanilla.", defId: VANILLA }),
-        // Shows but is never done.
-        { id: "shown", kind: "act", title: "Do it", text: "Something the player never does.", done: never },
-        { id: "win", kind: "act", title: "Win", text: "Win the game.", done: never, final: true },
+        askForVanilla("waits"),
+        // Shows, and the player never answers it.
+        info({ id: "shown", title: "Read this", text: "Something the player never answers." }),
+        info({ id: "win", title: "Win", text: "Win the game.", final: true }),
       ],
       tips: [],
     };
@@ -419,7 +320,7 @@ describe("R314 no Skip step, and nothing strands the player", () => {
     }
     ownTurnStart();
     expect(state.outcomes).toEqual({ waits: "expired" });
-    expect(display()).toMatchObject({ mode: "step", id: "shown", ack: false, holdAi: false });
+    expect(display()).toMatchObject({ mode: "step", id: "shown", ack: true, holdAi: false });
 
     for (let start = 1; start <= TUTORIAL_STEP_TURNS_MAX; start += 1) {
       ownTurnStart();
@@ -438,5 +339,13 @@ describe("R314 no Skip step, and nothing strands the player", () => {
     state = coachObserve(script, state, ctx(over));
     expect(state.finished).toBe(true);
     expect(coachDisplay(script, state, ctx(over))).toEqual({ mode: "finished" });
+  });
+});
+
+describe("R4702004 the coach has no act steps", () => {
+  it("R4702004 every step of every shipped lesson is an info step or a moment", () => {
+    const steps = Object.values(LESSON_SCRIPTS).flatMap((script) => script.steps.map((step) => ({ lesson: script.lessonId, step })));
+    expect(steps.length).toBeGreaterThan(0);
+    for (const { lesson, step } of steps) expect(["info", "moment"], `${lesson} step ${step.id}`).toContain(step.kind);
   });
 });

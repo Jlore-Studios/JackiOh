@@ -15,7 +15,7 @@ use crate::candidates::{
 };
 use crate::config::{AI_EVAL, AI_SEARCH};
 use crate::evaluate::{NextSwing, Prices, evaluate_priced};
-use crate::reply::{hidden_card_ids, reply_score};
+use crate::reply::reply_score;
 use crate::simulate::{
     AnswersTried, LineStatus, best_auto_answer, close_line, create_sub_counter, lane_free_signature,
     line_status, own_prompt_score, search_signature, simulate, static_score, unit_lanes,
@@ -43,18 +43,6 @@ fn by_score_desc(a: f64, b: f64) -> Ordering {
     b.partial_cmp(&a).unwrap_or(Ordering::Equal)
 }
 
-/// Best first; equal scores keep their order (`sort_by` is stable).
-fn best_first_open(mut lines: Vec<OpenLine>) -> Vec<OpenLine> {
-    lines.sort_by(|a, b| by_score_desc(a.score, b.score));
-    lines
-}
-
-/// Best first; equal scores keep their order (`sort_by` is stable).
-fn best_first_lines(mut lines: Vec<Line>) -> Vec<Line> {
-    lines.sort_by(|a, b| by_score_desc(a.score, b.score));
-    lines
-}
-
 /// The first `width` candidates that are not endTurn, then the first `AI_SEARCH.position_switches`
 /// stand-downs (`stands_down`) the cut left out (#1759, R1759000), then, while the opponent's board
 /// threatens lethal, the first `AI_SEARCH.position_switches` switches to Defense that lower that threat
@@ -63,6 +51,9 @@ fn best_first_lines(mut lines: Vec<Line>) -> Vec<Line> {
 pub fn expansion(state: &GameState, seat: PlayerId, width: usize, prices: &Prices) -> Vec<ActionBody> {
     expand(candidate_actions(state, seat, prices), state, seat, width, prices)
 }
+
+/// `expansion` or `root_expansion`: a level's moves from a state, at most `width` of them.
+type Expansion = fn(&GameState, PlayerId, usize, &Prices) -> Vec<ActionBody>;
 
 /// `expansion` at the search's root (#1635): of `root_candidate_actions`, which keeps every distinct
 /// placement of a play.
@@ -99,18 +90,15 @@ fn expand(
         .filter(|action| !matches!(action, ActionBody::EndTurn))
         .collect();
     moves.truncate(width);
-    let left_out: Vec<ActionBody> = stand_downs
-        .into_iter()
-        .filter(|stand_down| !moves.contains(stand_down))
-        .take(AI_SEARCH.position_switches.max(0) as usize)
-        .collect();
-    moves.extend(left_out);
-    let walls_left_out: Vec<ActionBody> = walls
-        .into_iter()
-        .filter(|wall| !moves.contains(wall))
-        .take(AI_SEARCH.position_switches.max(0) as usize)
-        .collect();
-    moves.extend(walls_left_out);
+    // Past the cut: the first stand-downs it left out, then the first walls.
+    for switches in [stand_downs, walls] {
+        let left_out: Vec<ActionBody> = switches
+            .into_iter()
+            .filter(|switch| !moves.contains(switch))
+            .take(AI_SEARCH.position_switches.max(0) as usize)
+            .collect();
+        moves.extend(left_out);
+    }
     if let Some(end) = end {
         moves.push(end);
     }
@@ -148,22 +136,17 @@ pub fn beam_search(
         let mut seen: IndexSet<(String, String)> = IndexSet::new();
         let mut placements: IndexMap<String, usize> = IndexMap::new();
         let mut variants: Vec<(String, GameState, Vec<ActionBody>)> = Vec::new();
-        let width = if depth == 0 {
-            budget.root_branching
+        let (width, moves_of): (usize, Expansion) = if depth == 0 {
+            (budget.root_branching, root_expansion)
         } else {
-            budget.branching
+            (budget.branching, expansion)
         };
 
         for line in &frontier {
             if stopped {
                 break;
             }
-            let moves = if depth == 0 {
-                root_expansion(&line.state, seat, width, prices)
-            } else {
-                expansion(&line.state, seat, width, prices)
-            };
-            for action in moves {
+            for action in moves_of(&line.state, seat, width, prices) {
                 let next = match simulate(&line.state, seat, &action, counter, prices) {
                     None => {
                         stopped = true;
@@ -228,7 +211,9 @@ pub fn beam_search(
             lane_variants.extend(variants.into_iter().map(|(_, state, actions)| (state, actions)));
             break;
         }
-        let mut next_frontier = best_first_open(children);
+        // Best first; equal scores keep their order (`sort_by` is stable).
+        let mut next_frontier = children;
+        next_frontier.sort_by(|a, b| by_score_desc(a.score, b.score));
         next_frontier.truncate(budget.beam_width.max(1));
         let kept: IndexSet<String> = next_frontier
             .iter()
@@ -261,13 +246,9 @@ pub fn beam_search(
         if actions.is_empty() {
             continue;
         }
+        // Every line here is open, so one `close_line` left where it stood scores as the hand eval.
         let end = close_line(&state, seat, root_turn, counter, prices);
-        // Equality means `close_line` took no step: a step always moves the state on.
-        let score = if end == state {
-            evaluate_priced(&end, seat, NextSwing::Enemy, &AI_EVAL, prices)
-        } else {
-            static_score(&end, seat, root_turn, prices)
-        };
+        let score = static_score(&end, seat, root_turn, prices);
         let status = line_status(&end, seat, root_turn);
         complete.push(Line {
             actions,
@@ -277,7 +258,9 @@ pub fn beam_search(
         });
     }
 
-    best_first_lines(complete)
+    // Best first; equal scores keep their order (`sort_by` is stable).
+    complete.sort_by(|a, b| by_score_desc(a.score, b.score));
+    complete
 }
 
 /// R4447000: how a finalist's replay on another determinization plays on past the first step that world
@@ -471,27 +454,4 @@ pub fn replay_line(
         cut,
         closed: state,
     })
-}
-
-/// `replay_line` with the fill off (R4447000): cut at the first step its world does not offer, whatever
-/// `AI_SEARCH.replay_fill_steps` is. `hidden` defaults to `det`'s hidden cards when `reply` is set.
-pub fn score_line(
-    det: &GameState,
-    seat: PlayerId,
-    actions: &[ActionBody],
-    counter: &dyn NodeCounter,
-    reply: bool,
-    hidden: Option<&IndexSet<String>>,
-    prices: &Prices,
-) -> Option<f64> {
-    let default_hidden;
-    let reply = match (reply, hidden) {
-        (false, _) => None,
-        (true, Some(hidden)) => Some(hidden),
-        (true, None) => {
-            default_hidden = hidden_card_ids(det, seat);
-            Some(&default_hidden)
-        }
-    };
-    replay_line(det, seat, actions, counter, reply, prices, ReplayFill::OFF).map(|replay| replay.score)
 }

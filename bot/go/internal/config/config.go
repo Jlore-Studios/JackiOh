@@ -127,10 +127,6 @@ var LabelDescriptionMax int = 100
 // LabelPrefix is the prefix of the labels that are the bot's own (`bot:`, `squishy:`).
 var LabelPrefix = Identity.LabelPrefix
 
-// Said is a sentence the night bot says of itself, said by the running bot: "the night bot"
-// becomes "Squishy" in Squishy's process, and stays itself in the night bot's.
-func Said(text string) string { return said(Name, text) }
-
 func said(name, text string) string {
 	plain := name
 	if strings.HasPrefix(name, "the ") {
@@ -664,11 +660,6 @@ type Resolver struct {
 	Take           string // default: ""
 	Run            string // default: ""
 	TimeoutMinutes int    // default: 10
-}
-
-// NewResolver is Resolver(path), with its defaults: no take, no run, ten minutes.
-func NewResolver(path string) *Resolver {
-	return &Resolver{Path: path, TimeoutMinutes: 10}
 }
 
 // Partner is another bot on the same subscription, and the steps of its workflows that spend it.

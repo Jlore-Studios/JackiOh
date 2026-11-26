@@ -39,7 +39,6 @@ import {
   ladderPath,
   openCosmeticPack,
   openPack,
-  putDeck,
   redeemCardToken,
   redeemCosmeticToken,
   rematchStatus,
@@ -254,7 +253,7 @@ describe("R2125000 a write's answer updates what is kept", () => {
     expect(countOf(packs, GLOBAL_PACK_NAME), "the other kind is untouched").toBe(1);
   });
 
-  it("R2125000 a pack opening and a deck saved or deleted fold into their kept answers", async () => {
+  it("R2125000 a pack opening and a deck deleted fold into their kept answers", async () => {
     const deck = (id: string, name: string): SavedDeck => ({
       id,
       name,
@@ -277,8 +276,6 @@ describe("R2125000 a write's answer updates what is kept", () => {
       if (call.method === "POST" && call.path === "/api/packs/open") {
         return { status: 200, body: { ...openedPack(), unopened: 0, pity: { epic: 1, legendary: 2, mythic: 3 } } };
       }
-      if (call.method === "PUT" && call.path === "/api/decks/d-3") return { status: 200, body: { deck: deck("d-3", "Three") } };
-      if (call.method === "PUT" && call.path === "/api/decks/d-1") return { status: 200, body: { deck: deck("d-1", "Renamed") } };
       if (call.method === "DELETE" && call.path === "/api/decks/d-2") return { status: 200, body: { deleted: true } };
       return undefined;
     });
@@ -291,17 +288,9 @@ describe("R2125000 a write's answer updates what is kept", () => {
     expect(countOf(packs, GLOBAL_PACK_NAME)).toBe(1);
     expect(packs?.pity).toEqual({ epic: 1, legendary: 2, mythic: 3 });
 
-    await putDeck(A1, "d-3", { name: "Three", cards: [], catalogVersion: "v" });
-    await putDeck(A1, "d-1", { name: "Renamed", cards: [], catalogVersion: "v" });
-    expect(cachedRead<DecksResponse>(A1, keptPaths.decks)?.decks.map((entry) => `${entry.id}:${entry.name}`)).toEqual([
-      "d-1:Renamed",
-      "d-2:Two",
-      "d-3:Three",
-    ]);
-
     await deleteDeck(A1, "d-2");
     const after = cachedRead<DecksResponse>(A1, keptPaths.decks);
-    expect(after?.decks.map((entry) => entry.id)).toEqual(["d-1", "d-3"]);
+    expect(after?.decks.map((entry) => entry.id)).toEqual(["d-1"]);
     expect(after?.trios[0]?.deckIds, "the trio's slot that named the deck empties (R252)").toEqual(["d-1", null, null]);
   });
 

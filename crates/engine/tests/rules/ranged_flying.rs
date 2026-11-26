@@ -7,7 +7,7 @@ use jackioh_engine::subsystems::lethal::projected_damage;
 use jackioh_engine::testkit::PlayerId::{P1, P2};
 use jackioh_engine::testkit::*;
 
-use jackioh_engine::effects::{steal, swap_board, transform};
+use jackioh_engine::effects::{SwapArgs, steal, swap, transform};
 use jackioh_engine::subsystems::rotation::{RotationArgs, rotate_rings};
 
 use super::fixtures::combat::cleaver;
@@ -725,7 +725,13 @@ mod r1081000_flying_backrow {
         let mut state = board("r1081000-swap");
         let wing = put(&mut state, &flyer().id, slot(P1, Row::Backrow, 2), json!({}));
         vanilla(&mut state, &wing.id);
-        run_effect(&mut state, swap_board(), P1);
+        run_effect(
+            &mut state,
+            swap(SwapArgs {
+                what: Some(SwapWhat::Board),
+            }),
+            P1,
+        );
         let swapped = live(&state, &wing.id);
         assert_eq!(swapped.controller, P2);
         assert!(stands(&state, P2, &wing.id), "it stands on the other side");
@@ -1010,7 +1016,13 @@ mod r1081000_flying_backrow {
         let mut state = board("r1081000-pile-swap");
         let (top, under) = flyer_beneath_a_stack_flyer(&mut state);
         record_board_snapshot(&mut state);
-        run_effect(&mut state, swap_board(), P1);
+        run_effect(
+            &mut state,
+            swap(SwapArgs {
+                what: Some(SwapWhat::Board),
+            }),
+            P1,
+        );
         assert_pile(&state, slot(P2, Row::Backrow, 2), &top.id, &under.id);
         assert_eq!(live(&state, &under.id).controller, P2);
 
@@ -1173,7 +1185,7 @@ mod r1081000_flying_backrow {
 
     #[test]
     fn r1081000_a_standing_unit_is_no_backrow_card_but_one_of_the_units_to_every_walk() {
-        use jackioh_engine::effects::{StealAllArgs, cards_in_card_scope, cards_in_scope, steal_all};
+        use jackioh_engine::effects::{cards_in_card_scope, cards_in_scope, steal};
         let mut state = board("r1081000-walks");
         let walker = put(&mut state, &grunt().id, slot(P2, Row::Units, 1), json!({}));
         let wing = put(&mut state, &flyer().id, slot(P2, Row::Backrow, 2), json!({}));
@@ -1184,7 +1196,7 @@ mod r1081000_flying_backrow {
             json!({}),
         );
         let (walker, wing, field) = (walker.id, wing.id, field.id);
-        {
+        let units = {
             let mut sink = sink_for(&mut state);
             let ctx = make_context(
                 &mut sink,
@@ -1216,8 +1228,12 @@ mod r1081000_flying_backrow {
                     "once"
                 );
             }
+            board(json!(["units"]))
+        };
+        // A steal of every enemy Unit takes what the units walk lists, one `steal` each.
+        for id in &units {
+            run_effect(&mut state, steal(json_as(json!({ "instanceId": id }))), P1);
         }
-        run_effect(&mut state, steal_all(StealAllArgs::default()), P1);
         assert_eq!(live(&state, &walker).controller, P1);
         assert!(stands(&state, P1, &wing), "taken with the unit row's, standing");
         assert_eq!(live(&state, &field).controller, P2);

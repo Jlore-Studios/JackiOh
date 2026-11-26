@@ -12,8 +12,7 @@ use serde_json::{Map, Value};
 use super::sidecar;
 
 /// A flavour line's longest length, in characters (UTF-16 code units, as JS counts them): one or two
-/// short lines under the rules: the client's `FLAVOUR_MAX_CHARS` (SURFACE §7.4), the sidecar's
-/// contract, held here at the same number.
+/// short lines under the rules: the sidecar's contract (R660, SURFACE §7.4), held here.
 const FLAVOUR_MAX_CHARS: usize = 120;
 
 const ARTIST_MAX_CHARS: usize = 60;

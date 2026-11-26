@@ -1,10 +1,10 @@
 // Tutorial primitives read the view and legal actions, never game rules (CLAUDE.md rule 7).
 
-import type { ActionBody, CardView, GameEvent, PlayerView, UnitView } from "@jackioh/shared";
+import type { CardView, GameEvent, PlayerView, UnitView } from "@jackioh/shared";
 
 import { sideView, type Side } from "../game/contract.ts";
 import type { Params } from "../i18n/i18n.ts";
-import type { CoachAnchor, CoachCtx, CoachStep, CoachTip } from "./coach.ts";
+import type { CoachCtx, CoachStep } from "./coach.ts";
 
 export function isMyTurn(view: PlayerView): boolean {
   return view.active === view.viewer;
@@ -47,37 +47,6 @@ export function freshOf<T extends GameEvent["type"]>(ctx: CoachCtx, type: T): Ex
   return ctx.fresh.filter((event): event is Extract<GameEvent, { type: T }> => event.type === type);
 }
 
-export function legalPlays(ctx: CoachCtx, defId: string): Extract<ActionBody, { type: "play" }>[] {
-  const card = inHand(ctx.view, defId);
-  if (card === undefined) return [];
-  return ctx.legal.filter(
-    (action): action is Extract<ActionBody, { type: "play" }> => action.type === "play" && action.instanceId === card.instanceId,
-  );
-}
-
-export function legalAttacks(
-  ctx: CoachCtx,
-  attacker: string,
-  target?: AttackTarget,
-): Extract<ActionBody, { type: "attack" }>[] {
-  const unit = unitOf(ctx.view, "you", attacker);
-  if (unit === undefined) return [];
-  const targetId = target === undefined ? undefined : attackTargetId(ctx.view, target);
-  return ctx.legal.filter(
-    (action): action is Extract<ActionBody, { type: "attack" }> =>
-      action.type === "attack" &&
-      action.attackerId === unit.instanceId &&
-      (targetId === undefined || action.targetId === targetId),
-  );
-}
-
-export type AttackTarget = "hero" | { defId: string };
-
-export function attackTargetId(view: PlayerView, target: AttackTarget): string | undefined {
-  if (target === "hero") return heroTargetId(view, "opponent");
-  return unitOf(view, "opponent", target.defId)?.instanceId;
-}
-
 type StepText = CoachStep["text"];
 
 type Common = {
@@ -112,86 +81,4 @@ export function moment(
   const ready = (ctx: CoachCtx): boolean =>
     prompt === true ? ctx.view.pending !== null && ctx.view.pending.forYou : myMain(ctx);
   return { kind: "moment", ...rest, when: (ctx) => ready(ctx) && (when === undefined || when(ctx)) };
-}
-
-export function tip(options: CoachTip): CoachTip {
-  return options;
-}
-
-/** Wait for an offered play; a card gone before display is moot. */
-export function playCard(options: Common & { defId: string; lane?: number }): CoachStep {
-  const { defId, lane, when, ...rest } = options;
-  return {
-    kind: "act",
-    anchor: { kind: "handCard", defId },
-    ...rest,
-    when: (ctx) => myMain(ctx) && legalPlays(ctx, defId).length > 0 && (when === undefined || when(ctx)),
-    done: (ctx) => inHand(ctx.view, defId) === undefined,
-    moot: (ctx, since) => since === null && inHand(ctx.view, defId) === undefined,
-    expect: (action, ctx) => {
-      const card = inHand(ctx.view, defId);
-      if (card === undefined || action.type !== "play" || action.instanceId !== card.instanceId) return false;
-      return lane === undefined || action.zone?.lane === lane;
-    },
-  };
-}
-
-/** Wait for an offered attack; retire it when the shown turn ends. */
-export function attackWith(options: Common & { attacker: string; target?: AttackTarget }): CoachStep {
-  const { attacker, target, when, ...rest } = options;
-  const defaultAnchor = (): CoachAnchor | null => {
-    if (target === undefined) return { kind: "unit", side: "you", defId: attacker };
-    return target === "hero" ? { kind: "hero", side: "opponent" } : { kind: "unit", side: "opponent", defId: target.defId };
-  };
-  return {
-    kind: "act",
-    anchor: defaultAnchor,
-    ...rest,
-    when: (ctx) => myMain(ctx) && legalAttacks(ctx, attacker, target).length > 0 && (when === undefined || when(ctx)),
-    // Track the shown instance because tokens can share a definition.
-    done: (ctx, since) => {
-      const unit = unitOf(since, "you", attacker) ?? unitOf(ctx.view, "you", attacker);
-      if (unit === undefined) return true;
-      const onField = unitsOf(ctx.view, "you").some((candidate) => candidate.instanceId === unit.instanceId);
-      if (!onField) return true;
-      return freshOf(ctx, "attackDeclared").some((event) => event.attackerId === unit.instanceId && !event.forced);
-    },
-    moot: (ctx, since) => {
-      if (since !== null) return ctx.view.turn !== since.turn;
-      return unitOf(ctx.view, "you", attacker) === undefined && inHand(ctx.view, attacker) === undefined;
-    },
-    expect: (action, ctx) =>
-      action.type === "attack" && legalAttacks(ctx, attacker, target).some((legal) => legal.targetId === action.targetId && legal.attackerId === action.attackerId),
-  };
-}
-
-export function endTurn(options: Common): CoachStep {
-  const { when, ...rest } = options;
-  return {
-    kind: "act",
-    anchor: { kind: "endTurn" },
-    ...rest,
-    when: (ctx) => myMain(ctx) && (when === undefined || when(ctx)),
-    done: (ctx, since) => ctx.view.turn !== since.turn,
-    // An automatic end before display (R82) must not end the next turn.
-    turnBound: true,
-    expect: (action) => action.type === "endTurn",
-  };
-}
-
-export function keepHand(options: Common): CoachStep {
-  const { when, ...rest } = options;
-  return {
-    kind: "act",
-    anchor: { kind: "prompt" },
-    ...rest,
-    when: (ctx) => mulliganOpen(ctx.view) && (when === undefined || when(ctx)),
-    done: (ctx, since) => since !== ctx.view && !mulliganOpen(ctx.view),
-    moot: (ctx, since) => since === null && ctx.view.phase !== "mulligan" && ctx.view.phase !== "setup",
-    expect: (action, ctx) => {
-      const pending = ctx.view.pending;
-      if (action.type !== "mulligan" || pending === null || !pending.forYou) return false;
-      return action.keep.length === pending.options.length;
-    },
-  };
 }

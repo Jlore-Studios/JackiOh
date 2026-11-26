@@ -32,18 +32,6 @@ pub enum GrapeTier {
     Mythic,
 }
 
-impl GrapeTier {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            GrapeTier::Rotten => "rotten",
-            GrapeTier::Normal => "normal",
-            GrapeTier::Large => "large",
-            GrapeTier::Golden => "golden",
-            GrapeTier::Mythic => "mythic",
-        }
-    }
-}
-
 /// R605: the Grape tiers, lowest first. Raisin sits below them and Jlorious above.
 pub const GRAPE_TIERS: &[GrapeTier] = &[
     GrapeTier::Rotten,

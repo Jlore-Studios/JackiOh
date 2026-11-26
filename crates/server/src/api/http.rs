@@ -24,8 +24,8 @@ use crate::app::{App, Handler, Route};
 use crate::auth::AuthUser;
 use crate::config::{
     API_MAX_BODY_BYTES, API_REJECTION_ALERT_THRESHOLD, API_REJECTION_ALERT_WINDOW_MS,
-    API_REQUESTS_PER_MINUTE, IPV6_RATE_LIMIT_PREFIX_BITS, KNOWN_PROFILES_MAX, MAX_TRUSTED_PROXY_HOPS,
-    RATING_START, ROUTE_FAILING_ALERT_COUNT, ROUTE_FAILING_ALERT_MS,
+    IPV6_RATE_LIMIT_PREFIX_BITS, KNOWN_PROFILES_MAX, MAX_TRUSTED_PROXY_HOPS, RATING_START,
+    ROUTE_FAILING_ALERT_COUNT, ROUTE_FAILING_ALERT_MS,
 };
 use crate::db::store::{Profile, ProfileCreateInput, ProfileStatus, StoreError};
 use crate::loops::FailureRun;
@@ -887,10 +887,6 @@ pub fn assert_active(profile: &Profile) -> Result<(), ApiError> {
 
 // §9.8's per-account rate limit
 
-/// Unit conversion, not configuration: R109 states its API allowance *per minute*, and
-/// `API_REQUESTS_PER_MINUTE` is the number itself.
-const API_RATE_WINDOW_MS: i64 = 60_000;
-
 /// §9.8, R109: the bucket a request is counted in. Never one shared counter — see `dispatch`.
 pub fn account_key(profile_id: &str) -> String {
     format!("account:{profile_id}")
@@ -1193,18 +1189,6 @@ impl RateLimiter {
 
 pub fn create_rate_limiter(limit: usize, window_ms: i64) -> RateLimiter {
     RateLimiter::new(limit, window_ms)
-}
-
-/// §9.8's "per-account rate limit at the API": `API_REQUESTS_PER_MINUTE` a minute, the limiter
-/// every `App` holds.
-pub fn api_rate_limiter() -> RateLimiter {
-    create_rate_limiter(API_REQUESTS_PER_MINUTE, API_RATE_WINDOW_MS)
-}
-
-impl Default for RateLimiter {
-    fn default() -> RateLimiter {
-        api_rate_limiter()
-    }
 }
 
 /// The router: `routes` (`app.rs`'s `ROUTES`) tried in order, behind the CORS layer, which answers

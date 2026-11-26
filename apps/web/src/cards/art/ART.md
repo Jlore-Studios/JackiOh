@@ -18,7 +18,7 @@ asset tests out).
 2. Add the card's line to `ART_MANIFEST` in `manifest.ts`, naming the faces delivered:
    `"core-002": { base: true, radiant: true },` (or `{ base: true }`).
 3. Credit the artist, if they are credited, as the `artist` of the card's entry in
-   `crates/cards/card-text.yaml` (`artist: Name`, beside its `flavour`, at most `ARTIST_MAX_CHARS`
+   `crates/cards/card-text.yaml` (`artist: Name`, beside its `flavour`, at most 60
    characters), then run `cargo test -p jackioh-tools --test export_card_text`, which writes it into
    `crates/cards/flavour.json`. The inspect views and the Card Almanac show it as "Art by Name". That
    file is not card data, so the credit needs no patch fragment.

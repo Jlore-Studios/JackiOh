@@ -6,9 +6,9 @@ import { describe, expect, it } from "vitest";
 
 import { PARTICLE_PRESETS } from "./presets.ts";
 import { FLAVOR_LOOKS, FLAVOR_SUB_LOOKS, FX_PALETTES, flavorLook, isPalette, paletteLook } from "./flavors.ts";
-import type { FxShotMotion } from "./types.ts";
+import type { FxShot } from "./types.ts";
 
-const MOTIONS: readonly FxShotMotion[] = ["arc", "bolt", "beam", "swipe"];
+const MOTIONS: readonly FxShot["motion"][] = ["arc", "bolt", "beam", "swipe"];
 
 describe("#2792 sub-looks", () => {
   it("#2792 the crowded flavors' sub-looks, at least 3 for Tech, Physical, Nerd and Dark and 2 for Beast and Hustle", () => {

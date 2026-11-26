@@ -298,9 +298,6 @@ var FakePlan string = "1. **Goal.** Do what the issue asks.\n2. **Steps.** Chang
 // FakeRunnerName is FakeRunner.name.
 var FakeRunnerName = "fake"
 
-// FakeRunnerCLI is FakeRunner.cli.
-var FakeRunnerCLI = "fake"
-
 // Handler is one scripted call: it receives the request and returns a RunResult.
 type Handler func(request *RunRequest) *RunResult
 
@@ -322,9 +319,6 @@ func NewFakeRunner(handlers map[string][]Handler /* = None */) *FakeRunner {
 
 // Name is FakeRunner.name.
 func (x *FakeRunner) Name() string { return FakeRunnerName }
-
-// CLI is FakeRunner.cli.
-func (x *FakeRunner) CLI() string { return FakeRunnerCLI }
 
 // Run is FakeRunner.run.
 func (x *FakeRunner) Run(request *RunRequest) *RunResult {

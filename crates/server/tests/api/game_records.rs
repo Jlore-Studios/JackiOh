@@ -12,7 +12,7 @@ use indexmap::IndexMap;
 use jackioh_engine::testkit::{clear_overrides, register_shipped};
 use jackioh_engine::{PlayerId, ShippedCatalog};
 use jackioh_server::actor::ws_server::{Socket, SocketFrame};
-use jackioh_server::api::game_records::{fold_pending, record_live_game};
+use jackioh_server::api::game_records::{fold_pending, refile_live_game};
 use jackioh_server::api::results::record_result;
 use jackioh_server::api::retention::{refile_unfiled, run_purge};
 use jackioh_server::app::App;
@@ -373,7 +373,7 @@ mod live_game_records {
         let records = game_records(&h.app).await;
         assert_eq!(records.as_array().map(Vec::len), Some(1));
         assert_eq!(records[0]["mode"], "bo1");
-        assert!(record_live_game(&h.app, MATCH_ID).await.is_none());
+        assert!(refile_live_game(&h.app, MATCH_ID).await.is_none());
     }
 
     #[tokio::test(start_paused = true)]
@@ -404,7 +404,7 @@ mod live_game_records {
         assert_eq!(results_for(&h.app, MATCH_ID).await, 1);
         assert_eq!(game_records(&h.app).await, json!([]));
         assert_eq!(logs.count("game.record.skipped"), 1);
-        assert!(record_live_game(&h.app, "no-such-match").await.is_none());
+        assert!(refile_live_game(&h.app, "no-such-match").await.is_none());
         assert_eq!(logs.count("game.record.skipped"), 2);
     }
 
@@ -420,7 +420,7 @@ mod live_game_records {
             data.tables.match_actions.pop();
         }
 
-        assert!(record_live_game(&h.app, MATCH_ID).await.is_none());
+        assert!(refile_live_game(&h.app, MATCH_ID).await.is_none());
         assert_eq!(logs.count("game.record.unfinished"), 1);
     }
 

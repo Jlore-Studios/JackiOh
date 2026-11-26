@@ -23,18 +23,6 @@ pub enum EnchantmentKind {
     SwapsBook,
 }
 
-impl EnchantmentKind {
-    /// The literal, as the wire writes it.
-    pub fn as_str(self) -> &'static str {
-        match self {
-            EnchantmentKind::ReturnAfterResolve => "returnAfterResolve",
-            EnchantmentKind::CastOnDraw => "castOnDraw",
-            EnchantmentKind::TargetEnemies => "targetEnemies",
-            EnchantmentKind::SwapsBook => "swapsBook",
-        }
-    }
-}
-
 pub fn enchantment_kind(entry: &Enchantment) -> EnchantmentKind {
     match entry {
         Enchantment::ReturnAfterResolve { .. } => EnchantmentKind::ReturnAfterResolve,
@@ -46,15 +34,6 @@ pub fn enchantment_kind(entry: &Enchantment) -> EnchantmentKind {
 
 pub fn enchantments_of(instance: &CardInstance) -> &[Enchantment] {
     instance.enchantments.as_deref().unwrap_or(&[])
-}
-
-/// The card's enchantments of one kind, in the order they were given.
-pub fn enchantments_of_kind(instance: &CardInstance, kind: EnchantmentKind) -> Vec<Enchantment> {
-    enchantments_of(instance)
-        .iter()
-        .filter(|entry| enchantment_kind(entry) == kind)
-        .cloned()
-        .collect()
 }
 
 pub fn has_enchantment(instance: &CardInstance, kind: EnchantmentKind) -> bool {

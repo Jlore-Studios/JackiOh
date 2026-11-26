@@ -89,26 +89,13 @@ enum Due {
 }
 
 fn due_entries(state: &GameState, phase: Phase, player: PlayerId, due_before: u32) -> Vec<DueEntry> {
-    // A private copy of `modifiers::due_delayed`: the entries due at this point of this player's turn.
-    let mut delayed: Vec<&DelayedEffect> = state
-        .delayed
-        .iter()
-        .filter(|effect| {
-            effect.at.phase == phase
-                && effect.at.player == player
-                && effect
-                    .not_before
-                    .is_none_or(|not_before| state.turn >= not_before)
-                && crate::modifiers::own_turn_reached(state, effect)
-        })
-        .collect();
-    delayed.sort_by_key(|a| a.seq);
-    let mut entries: Vec<DueEntry> = delayed
+    // The entries due at this point of this player's turn (`modifiers::due_delayed`).
+    let mut entries: Vec<DueEntry> = crate::modifiers::due_delayed(state, phase, player)
         .into_iter()
         .filter(|due| due.seq < due_before)
         .map(|due| DueEntry {
             seq: due.seq,
-            what: Due::Delayed(Box::new(due.clone())),
+            what: Due::Delayed(Box::new(due)),
         })
         .collect();
     // The player's rest-of-game effects not yet run this turn, due at its start, or at its end for an

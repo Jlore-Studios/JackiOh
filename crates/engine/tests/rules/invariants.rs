@@ -2228,7 +2228,7 @@ fn r4111000_played_attack_reads_a_return_and_an_exile_as_gone_and_an_alternative
 // Dormant cards and the engine's own board verbs (a swap, a rotation, a board exile, a slash).
 mod i19 {
     use super::*;
-    use jackioh_engine::effects::{exile_board, fuse_cards, make_all_radiant, slash_board, swap_board};
+    use jackioh_engine::effects::{SwapArgs, exile_board, fuse_cards, make_all_radiant, slash_board, swap};
     use jackioh_engine::subsystems::board_history::{
         RollBackArgs, RollBackSides, record_board_snapshot, roll_back,
     };
@@ -2586,7 +2586,13 @@ mod i19 {
     fn r4454000_a_board_swap_and_a_rotation_carry_a_dormant_card_and_i19_allows_it() {
         let (before, id) = dormant_board("r4454000-swap");
         let mut swapped = before.clone();
-        let events = run_effect(&mut swapped, swap_board(), P1);
+        let events = run_effect(
+            &mut swapped,
+            swap(SwapArgs {
+                what: Some(SwapWhat::Board),
+            }),
+            P1,
+        );
         let card = find_instance(&swapped, &id).expect("still on the field");
         assert_eq!(
             card.zone,
@@ -3413,7 +3419,7 @@ mod i20 {
 // synthetic events over a stand-in immune Unit, real Spells and Units, and the engine's board verbs.
 mod i21 {
     use super::*;
-    use jackioh_engine::effects::{make_all_radiant, swap_board};
+    use jackioh_engine::effects::{SwapArgs, make_all_radiant, swap};
     use jackioh_engine::subsystems::board_history::{
         RollBackArgs, RollBackSides, record_board_snapshot, roll_back,
     };
@@ -3913,7 +3919,13 @@ mod i21 {
         // A Spell's board swap carries it to p1's side, immune still.
         let mut swapped = before.clone();
         let mut events = vec![marker(SPELL)];
-        events.extend(run_effect(&mut swapped, swap_board(), P1));
+        events.extend(run_effect(
+            &mut swapped,
+            swap(SwapArgs {
+                what: Some(SwapWhat::Board),
+            }),
+            P1,
+        ));
         let card = find_instance(&swapped, &id).expect("still on the field");
         assert_eq!(card.controller, P1);
         assert!(

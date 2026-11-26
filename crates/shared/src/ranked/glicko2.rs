@@ -153,22 +153,17 @@ pub fn glicko2_period(player: &Glicko, games: &[RatedOpponent], tau: f64) -> Gli
     }
 }
 
-/// `rate_game`'s answer: both sides' ratings after the game.
+/// `rate_game_scored`'s answer: both sides' ratings after the game.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 pub struct RatedGame {
     pub a: Glicko,
     pub b: Glicko,
 }
 
-/// R603: one rated game between `a` and `b`, `score_a` being a's score (b's is `1 - score_a`). Each
-/// side is rated against the other's rating from before the game.
-pub fn rate_game(a: &Glicko, b: &Glicko, score_a: Score) -> RatedGame {
-    rate_game_scored(a, b, score_a, 1.0 - score_a)
-}
-
-/// R1843004: `rate_game` for a game whose two scores do not add up to 1: a fled game is a win (1) for
-/// the fleer and a draw (0.5) for the other side. Each side is still rated against the other's
-/// rating from before the game, with its own score; Glicko-2's period reads one side at a time.
+/// R603: one rated game between `a` and `b`, each side rated against the other's rating from before
+/// the game with its own score (`score_b` is `1 - score_a` in a game played out); Glicko-2's period
+/// reads one side at a time. R1843004: the two scores need not add up to 1: a fled game is a win (1)
+/// for the fleer and a draw (0.5) for the other side.
 pub fn rate_game_scored(a: &Glicko, b: &Glicko, score_a: Score, score_b: Score) -> RatedGame {
     RatedGame {
         a: glicko2_period(

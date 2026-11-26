@@ -156,7 +156,7 @@ fn r1200_a_declared_target_is_drawn_and_replays() {
     put(&mut state, &fx::mayor.id, slot(P1, Row::Units, 1), json!({}));
     let bolt = in_hand(&mut state, &fx::bolt.id, P1, 1).remove(0);
     put(&mut state, &fx::ally.id, slot(P2, Row::Units, 1), json!({}));
-    let start = clone_state(&state);
+    let start = state.clone();
 
     let mut rec = recorder(&state);
     let result = rec.play(play_action(P1, &bolt.id));

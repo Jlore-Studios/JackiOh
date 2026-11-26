@@ -28,7 +28,7 @@ use jackioh_server::db::store::{
 };
 use jackioh_server::economy::proficiency::{top_level, top_level_plays};
 use jackioh_server::economy::store::{CardPicks, CardProficiency};
-use jackioh_server::ranked::glicko2::{Glicko, rate_game};
+use jackioh_server::ranked::glicko2::{Glicko, rate_game_scored};
 use serde_json::{Value, json};
 use tracing::subscriber::DefaultGuard;
 
@@ -45,7 +45,7 @@ fn rating_move(rating_a: f64, rating_b: f64, score_a: f64) -> (f64, f64) {
         deviation: float(RATING_DEVIATION_START),
         volatility: float(RATING_VOLATILITY_START),
     };
-    let next = rate_game(&fresh(rating_a), &fresh(rating_b), score_a);
+    let next = rate_game_scored(&fresh(rating_a), &fresh(rating_b), score_a, 1.0 - score_a);
     (next.a.rating, next.b.rating)
 }
 

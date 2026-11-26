@@ -19,7 +19,7 @@ import { createFxMemory } from "../fx/memory.ts";
 import { PARTICLE_PRESETS } from "../fx/presets.ts";
 import { resetFxSettingsForTests } from "../fx/settings.ts";
 import { planStage } from "../fx/stage.ts";
-import type { FxAnchor, FxCue, FxPlanEnv, FxShot, FxShotMotion } from "../fx/types.ts";
+import type { FxAnchor, FxCue, FxPlanEnv, FxShot } from "../fx/types.ts";
 import { MIN_ENTRY_MS, planEntries, reducedMotionNow } from "./animations.ts";
 import { CATALOG } from "../wire/cards.ts";
 
@@ -87,7 +87,7 @@ const FLAVORS = [
   "Toxic",
 ] as const satisfies readonly Flavor[];
 
-const MOTIONS: readonly FxShotMotion[] = ["arc", "bolt", "beam", "swipe"];
+const MOTIONS: readonly FxShot["motion"][] = ["arc", "bolt", "beam", "swipe"];
 
 describe("#1442 the looks", () => {
   it("#1442 every Flavor has a look: two or three colors, a particle shape and a projectile", () => {

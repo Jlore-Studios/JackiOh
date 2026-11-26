@@ -60,12 +60,7 @@ pub struct AiOptions<'a> {
 
 impl<'a> AiOptions<'a> {
     pub fn new(rng: Rng) -> AiOptions<'a> {
-        AiOptions {
-            rng,
-            budget: crate::config::AI_BUDGET,
-            should_stop: None,
-            wrap_up: None,
-        }
+        Self::with_budget(rng, crate::config::AI_BUDGET)
     }
 
     pub fn with_budget(rng: Rng, budget: SearchBudget) -> AiOptions<'a> {
@@ -118,9 +113,10 @@ impl std::fmt::Display for DecisionReason {
 }
 
 /// `SearchStats["stoppedBy"]`: what ended a decision's search.
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[serde(rename_all = "camelCase")]
 pub enum StoppedBy {
+    #[default]
     Exhausted,
     Budget,
     Clock,
@@ -136,13 +132,7 @@ impl StoppedBy {
     }
 }
 
-impl std::fmt::Display for StoppedBy {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct SearchStats {
     pub nodes: usize,
@@ -205,28 +195,20 @@ pub trait NodeCounter {
     fn stopped_by(&self) -> StoppedBy;
     /// R3498000: from here the beam only ends its open lines' turns, which a wrap-up no longer refuses;
     /// a counter with no wrap-up ignores it.
-    fn end_exploring(&self) {}
+    fn end_exploring(&self);
     /// R4801000: the beam has tried every move at its root; a wrap-up is polled from here. A counter
     /// with no wrap-up ignores it.
-    fn end_root(&self) {}
-    /// The failed simulations this counter tallies (`SearchStats.simErrors`), if it tallies them.
-    fn sim_error_tally(&self) -> Option<usize> {
-        None
-    }
-    /// Sets that tally; a counter that tallies none ignores it.
-    fn set_sim_error_tally(&self, _value: usize) {}
-    /// Of those, the ones that panicked (`SearchStats.simPanics`, #1429), if it tallies them.
-    fn sim_panic_tally(&self) -> Option<usize> {
-        None
-    }
+    fn end_root(&self);
+    /// The failed simulations its decision has tallied (`SearchStats.simErrors`).
+    fn sim_errors(&self) -> usize;
+    /// Counts one failed simulation.
+    fn note_sim_error(&self);
+    /// Of those, the ones that panicked (`SearchStats.simPanics`, #1429).
+    fn sim_panics(&self) -> usize;
     /// The first panic's message that tally kept.
-    fn first_sim_panic(&self) -> Option<String> {
-        None
-    }
+    fn first_sim_panic(&self) -> Option<String>;
     /// Counts one panic, keeping its message when it is the first.
-    fn record_sim_panic(&self, _message: &str) {}
+    fn record_sim_panic(&self, message: &str);
     /// R3575603: the decision's memo of its expensive steps (`simulate::SimMemo`), if it keeps one.
-    fn sim_memo(&self) -> Option<&crate::simulate::SimMemo> {
-        None
-    }
+    fn sim_memo(&self) -> Option<&crate::simulate::SimMemo>;
 }

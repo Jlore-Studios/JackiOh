@@ -17,7 +17,6 @@ import {
   buildAiDeck,
   catalogVersion,
   createGame,
-  findInstance,
   runContent,
   runContentAt,
   seatPlayedBy,
@@ -101,7 +100,6 @@ const WRAPPERS: readonly (readonly [string, (wasm: Wasm) => unknown])[] = [
   ["replayPage", (w) => w.replayPage(ANY, ANY, ANY, ANY)],
   ["lastBoardFor", (w) => w.lastBoardFor(ANY, ANY)],
   ["seatPlayedBy", (w) => w.seatPlayedBy(ANY, ANY)],
-  ["findInstance", (w) => w.findInstance(ANY, ANY)],
   ["combatForecast", (w) => w.combatForecast(ANY, ANY)],
   ["dealEmoteHand", (w) => w.dealEmoteHand(ANY, ANY)],
   ["previewSets", (w) => w.previewSets(ANY)],
@@ -115,7 +113,6 @@ const WRAPPERS: readonly (readonly [string, (wasm: Wasm) => unknown])[] = [
   ["runReduce", (w) => w.runReduce(ANY, ANY, ANY)],
   ["runFold", (w) => w.runFold(ANY, ANY)],
   ["runFightSetup", (w) => w.runFightSetup(ANY, ANY)],
-  ["runFightReport", (w) => w.runFightReport(ANY, ANY)],
   ["runScore", (w) => w.runScore(ANY, ANY)],
   ["runEmbers", (w) => w.runEmbers(ANY)],
   ["runMaxHp", (w) => w.runMaxHp(ANY, ANY)],
@@ -442,14 +439,6 @@ describe("the loaded module", () => {
     const state = game();
     expect(seatPlayedBy(state, "p1")).toBe("p1");
     expect(seatPlayedBy(state, "p2")).toBe("p2");
-  });
-
-  it("finds a card by its id, and answers undefined, not null, for an id no card has", () => {
-    const state = game();
-    const card = state.players.p1.library[0];
-    if (card === undefined) throw new Error("p1 was dealt no library");
-    expect(findInstance(state, card.id)).toMatchObject({ id: card.id, defId: card.defId });
-    expect(findInstance(state, "no-such-card")).toBeUndefined();
   });
 
   it("reads the run's content at the build's own catalog version, and none at a version it does not carry", () => {

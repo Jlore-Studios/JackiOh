@@ -112,7 +112,7 @@ mod r429_10_5_step_4_counts_the_plays_of_a_card_that_asks {
         assert_eq!(times_played_of(landed), 1);
 
         // R78's reset leaves it: moved back into the hand and played again, it counts 2.
-        let mut again = clone_state(&played);
+        let mut again = played.clone();
         let mut back = again.players.p1.graveyard.pop().expect("expected the Spell");
         back.zone = Zone::Hand { player: P1 };
         again.players.p1.hand.push(back.clone());

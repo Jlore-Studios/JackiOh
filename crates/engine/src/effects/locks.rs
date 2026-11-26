@@ -218,17 +218,6 @@ pub fn unlock_random_zone(args: ZoneScope) -> Effect {
     })
 }
 
-/// B5 E20: Lock the zone the running card stands in (Classic+ #1 Doom Shroom's "Lock this zone"). The
-/// trap is consumed after its list runs (`traps::consume_trap`), leaving the zone Locked.
-pub fn lock_own_zone() -> Effect {
-    Effect::new("lockOwnZone", move |ctx| {
-        let slot = ctx.live_self().and_then(|this| slot_of(ctx.state, this));
-        if let Some(slot) = slot {
-            lock_one(ctx, &slot);
-        }
-    })
-}
-
 /// B5 E20: Unlock every Locked zone the scope covers (Classic+ #77 Anti-Softlock), in R68's walk.
 pub fn unlock_all(args: ZoneScope) -> Effect {
     Effect::new("unlockAll", move |ctx| {

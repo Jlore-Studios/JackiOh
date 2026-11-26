@@ -54,7 +54,7 @@ use crate::config::{
 };
 use crate::db::store::StoreError;
 use crate::duos::checkpoint::{DuosCheckpointBody, checkpoint_row};
-use crate::duos::engine::{self, Pinned};
+use crate::duos::engine::Pinned;
 use crate::duos::protocol::{
     DuosClientMessage, DuosServerMessage, GraceDeadlines, PingAt, PingKind, PingTarget, ack_message, encode,
     error_message, parse_duos_message,
@@ -1082,11 +1082,6 @@ impl DuosActor {
         );
     }
 
-    /// The match's row as the actor was built with it.
-    pub fn row(&self) -> &DuosMatch {
-        &self.shared.row
-    }
-
     /// The seat `profile_id` holds: a1 for the room's host, a2 for its guest, b1 and b2 for a 2v2's team
     /// B (R3731002), none otherwise.
     pub fn seat_of(&self, profile_id: &str) -> Option<DuosSeat> {
@@ -1243,12 +1238,15 @@ impl DuosActor {
 
     /// `seat`'s view as its socket would get it (without the clock).
     pub fn view_for(&self, seat: DuosSeat) -> DuosView {
-        engine::view(self.shared.pinned, self.lock().host.game(), seat)
+        let core = self.lock();
+        self.shared
+            .pinned
+            .run(|| jackioh_engine::duos::duos_view_for(core.host.game(), seat))
     }
 
     /// `duos_hash` of the live state, for a rebuild's check; never sent to a socket.
     pub fn hash(&self) -> String {
-        engine::hash(self.lock().host.game())
+        jackioh_engine::duos::duos_hash(self.lock().host.game())
     }
 
     /// The next seq the log will take.

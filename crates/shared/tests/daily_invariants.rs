@@ -5,7 +5,7 @@
 //! agree, and that a finished game holds nothing. Pure like the clock: every draw is the engine's
 //! `Rng` (CLAUDE.md rule 4 binds a pure crate's tests too), time a number the runner moves itself.
 //!
-//! No module or test here is named `fuzz`, `selfplay` or `positions`: the `rust (test tools, wasm)`
+//! No module or test here is named `fuzz` or `selfplay`: the `rust (test tools, wasm)`
 //! job skips tests with those names (`.github/ci/rust-test.toml`).
 
 use std::fmt;

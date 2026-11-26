@@ -13,7 +13,7 @@ use jackioh_engine::{
 use serde::{Deserialize, Serialize};
 
 use crate::deck::{AiDeckOptions, build_ai_deck};
-use crate::match_::{MatchConfig, MatchHooks, MatchRecord, MatchSetup, SeatController, play_match};
+use crate::match_::{MatchConfig, MatchHooks, MatchRecord, MatchSetup, SeatController, play_match, seated};
 use crate::shadow_ban::FIXTURE_BANNED_IDS;
 use crate::types::SearchBudget;
 
@@ -37,12 +37,6 @@ impl Matchup {
             Matchup::AiVsGreedy => "ai-vs-greedy",
             Matchup::HardVsEasy => "hard-vs-easy",
         }
-    }
-}
-
-impl std::fmt::Display for Matchup {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.as_str())
     }
 }
 
@@ -257,37 +251,20 @@ fn game_config_with_banned(
         budget: Some(budget),
         skill: None,
     };
-    let subject_first = subject_seat == PlayerId::P1;
-    let controllers = if subject_first {
-        PerPlayer {
-            p1: subject_controller,
-            p2: opponent_controller(matchup, budget),
-        }
-    } else {
-        PerPlayer {
-            p1: opponent_controller(matchup, budget),
-            p2: subject_controller,
-        }
-    };
+    let (p1, p2) = seated(
+        subject_seat,
+        subject_controller,
+        opponent_controller(matchup, budget),
+    );
+    let (p1_handicap, p2_handicap) = seated(subject_seat, subject_handicap, other_handicap);
 
     MatchConfig {
-        decks: if subject_first {
-            (subject_deck, other_deck)
-        } else {
-            (other_deck, subject_deck)
-        },
-        handicaps: Some(if subject_first {
-            PerPlayerOpt {
-                p1: Some(subject_handicap),
-                p2: Some(other_handicap),
-            }
-        } else {
-            PerPlayerOpt {
-                p1: Some(other_handicap),
-                p2: Some(subject_handicap),
-            }
+        decks: seated(subject_seat, subject_deck, other_deck),
+        handicaps: Some(PerPlayerOpt {
+            p1: Some(p1_handicap),
+            p2: Some(p2_handicap),
         }),
-        controllers,
+        controllers: PerPlayer { p1, p2 },
         max_actions: None,
         seed,
         setup: MatchSetup::default(),

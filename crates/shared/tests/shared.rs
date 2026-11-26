@@ -1,7 +1,7 @@
 //! The shared crate's one integration-test binary (SURFACE §1). The test modules stay in their original
 //! files so rulings' `proven_in` paths remain valid.
 //!
-//! No module in a test path may be named `fuzz`, `selfplay` or `positions`, or end in `fuzz`:
+//! No module in a test path may be named `fuzz` or `selfplay`, or end in `fuzz`:
 //! `.github/ci/rust-test.toml` skips those paths in the `tools, wasm` group.
 
 #[path = "again.rs"]

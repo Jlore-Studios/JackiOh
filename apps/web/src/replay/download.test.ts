@@ -8,7 +8,7 @@ import type { PortraitId } from "@jackioh/shared";
 
 import { fakeReplaySource, foldedReplaySteps } from "../test/replay.ts";
 import { REPLAY_JSON_MAX_BYTES, REPLAY_JSON_MAX_STEPS } from "./config.ts";
-import { REPLAY_JSON_FORMAT, REPLAY_JSON_VERSION, parseReplayJsonFile, practiceGame, readReplayJsonFile, replayJsonFile, replayPortraitsOf } from "./download.ts";
+import { REPLAY_JSON_FORMAT, REPLAY_JSON_VERSION, practiceGame, readReplayJsonFile, replayJsonFile, replayPortraitsOf, replayStepsOf } from "./download.ts";
 import { ReplayFailure, memoryReplaySource } from "./source.ts";
 import { createStepCache } from "./steps.ts";
 
@@ -28,7 +28,7 @@ function fileOf(over: Record<string, unknown>): File {
 
 /** The sentence `file` is refused with. */
 async function refusal(file: File): Promise<string> {
-  const failure: unknown = await parseReplayJsonFile(file).then(
+  const failure: unknown = await readReplayJsonFile(file).then(replayStepsOf).then(
     () => null,
     (cause: unknown) => cause,
   );
@@ -44,11 +44,11 @@ function bare(index: number, turn = 0): unknown {
 
 describe("R1141000 opening a downloaded replay", () => {
   it("R1141000 parses a file replayJsonFile wrote into identical ordered steps", async () => {
-    expect(await parseReplayJsonFile(await written())).toEqual([...steps]);
+    expect(replayStepsOf(await readReplayJsonFile(await written()))).toEqual([...steps]);
   });
 
   it("R1141000 the memory source pages verified steps and walks turns like the original", async () => {
-    const opened = createStepCache(memoryReplaySource(await parseReplayJsonFile(await written())));
+    const opened = createStepCache(memoryReplaySource(replayStepsOf(await readReplayJsonFile(await written()))));
     const original = createStepCache(fakeReplaySource(steps));
     expect(opened.total).toBe(original.total);
     /** The steps a turn move lands on, from `from` until it stops moving. */
@@ -111,7 +111,7 @@ describe("R1141000 opening a downloaded replay", () => {
   it("R1141000 refuses more steps than the cap, and takes exactly the cap", async () => {
     const make = (count: number): unknown[] => Array.from({ length: count }, (_, index) => bare(index));
     expect(await refusal(fileOf({ steps: make(REPLAY_JSON_MAX_STEPS + 1) }))).toBe("This replay file is too big to open.");
-    expect(await parseReplayJsonFile(fileOf({ steps: make(REPLAY_JSON_MAX_STEPS) }))).toHaveLength(REPLAY_JSON_MAX_STEPS);
+    expect(replayStepsOf(await readReplayJsonFile(fileOf({ steps: make(REPLAY_JSON_MAX_STEPS) })))).toHaveLength(REPLAY_JSON_MAX_STEPS);
   });
 
   it("R1141000 refuses a file over the byte cap, by its size unread and by its text read", async () => {
@@ -129,7 +129,7 @@ describe("R1141000 opening a downloaded replay", () => {
   it("R1141000 opens only what it parsed: a step's extra keys do not come through", async () => {
     const [first] = steps;
     if (first === undefined) throw new Error("the folded game is empty");
-    const opened = await parseReplayJsonFile(fileOf({ steps: [{ ...first, seed: "hunter2", log: [] }] }));
+    const opened = replayStepsOf(await readReplayJsonFile(fileOf({ steps: [{ ...first, seed: "hunter2", log: [] }] })));
     expect(opened).toEqual([first]);
     expect(Object.keys(opened[0] ?? {}).sort()).toEqual(["step", "turn", "view"]);
   });

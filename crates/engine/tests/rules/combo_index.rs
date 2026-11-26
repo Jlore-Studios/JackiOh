@@ -5,8 +5,8 @@
 use jackioh_engine::query::cards_played_this_turn;
 use jackioh_engine::subsystems::combo_index::{
     GRADES, Grade, RaiseGradeArgs, StartGradeArgs, cascade_effects, combo_index_end_of_turn, grade_name,
-    grade_name_of, grade_of, grade_rises, grade_step_effects, grade_value, is_terminal_grade,
-    played_cards_this_turn, raise_grade, start_grade, step_a, step_b, step_c, step_d, step_e,
+    grade_of, grade_rises, grade_step_effects, grade_value, is_terminal_grade, played_cards_this_turn,
+    raise_grade, start_grade, step_a, step_b, step_c, step_d, step_e,
 };
 use jackioh_engine::testkit::*;
 use jackioh_engine::wire::PlayerId::{P1, P2};
@@ -164,7 +164,7 @@ mod r27_combo_index_s8_93_m3_t7 {
             // An instance that has never written the counter is at E (§8 #93 "starts at E").
             assert_eq!(card.counters.grade, None);
             assert_eq!(grade_of(&card), 1);
-            assert_eq!(json_of(grade_name_of(&card)), json!("E"));
+            assert_eq!(json_of(grade_name(grade_of(&card))), json!("E"));
 
             assert_eq!(json_of(GRADES), json!(["E", "D", "C", "B", "A", "S"]));
             assert_eq!(
@@ -203,7 +203,7 @@ mod r27_combo_index_s8_93_m3_t7 {
             run(sink, &card, vec![raise_grade(RaiseGradeArgs::default())]);
         });
         assert_eq!(grade_now(&state, &card_id), Some(2));
-        assert_eq!(json_of(grade_name_of(&live(&state, &card_id))), json!("D"));
+        assert_eq!(json_of(grade_name(grade_of(&live(&state, &card_id)))), json!("D"));
     }
 
     #[test]
@@ -312,7 +312,7 @@ mod r27_combo_index_s8_93_m3_t7 {
         };
 
         assert_eq!(grade_now(&state, &card_id), Some(6));
-        assert_eq!(json_of(grade_name_of(&live(&state, &card_id))), json!("S"));
+        assert_eq!(json_of(grade_name(grade_of(&live(&state, &card_id)))), json!("S"));
         let types: Vec<Value> = events[from..]
             .iter()
             .map(|event| json_of(event)["type"].clone())
@@ -683,7 +683,10 @@ mod r27_combo_index_s8_93_m3_t7 {
         end_turn(&mut sink);
 
         assert_eq!(grade_now(sink.state, &card.id), Some(2));
-        assert_eq!(json_of(grade_name_of(&live(sink.state, &card.id))), json!("D"));
+        assert_eq!(
+            json_of(grade_name(grade_of(&live(sink.state, &card.id)))),
+            json!("D")
+        );
         // E and D ran before the turn ended (§2.2).
         let added: Vec<Value> = events_of_type(sink.events, GameEventType::AddedToHand)
             .iter()

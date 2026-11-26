@@ -210,7 +210,10 @@ fn scripts() -> IndexMap<String, CardScripts> {
             ))]
         }),
     );
-    map.insert(SWAP.into(), on_play(|| vec![effects::swap_health()]));
+    map.insert(
+        SWAP.into(),
+        on_play(|| vec![effects::swap(json_as(json!({ "what": "health" })))]),
+    );
     map.insert(
         TEMPO.into(),
         on_play(|| vec![effects::end_turn(json_as(json!({})))]),

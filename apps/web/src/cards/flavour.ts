@@ -19,12 +19,6 @@ import { useSyncExternalStore } from "react";
 /** One card's sidecar entry. Either field may be absent; an artist arrives with its art. */
 export type CardFlavour = { readonly flavour?: string; readonly artist?: string };
 
-/** A flavour line's longest length, in characters: one or two short lines under the rules. */
-export const FLAVOUR_MAX_CHARS = 120;
-
-/** An artist credit's longest length, in characters. */
-export const ARTIST_MAX_CHARS = 60;
-
 type FlavourTable = Readonly<Record<string, CardFlavour>>;
 
 const EMPTY: FlavourTable = {};
@@ -86,13 +80,6 @@ export function useFlavour(): FlavourTable | null {
     void loadFlavour().catch(() => {});
   }
   return useSyncExternalStore(subscribe, flavourNow, () => null);
-}
-
-/** Install or clear the table. Tests only. */
-export function setFlavourForTests(table: FlavourTable | null): void {
-  cached = table;
-  pendingLoad = table !== null ? Promise.resolve(table) : null;
-  notify();
 }
 
 /** A held flavour load, settled by the test. */

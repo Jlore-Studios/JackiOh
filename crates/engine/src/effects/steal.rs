@@ -19,9 +19,8 @@ use crate::script::{Effect, EffectContext};
 use crate::state::{CardInstance, find_instance};
 use crate::wire::{ControlHow, GameEvent, PlayerId, Row, opponent_of};
 use crate::zones::{
-    PlaceOnFieldOptions, ZoneSlot, card_at, first_entry_zone, in_units_row_or_standing, is_open,
-    is_standing_unit, place_beneath_top, place_on_field, place_standing_on_field, remove_from_field, slot_of,
-    slots_of, standing_units_of,
+    PlaceOnFieldOptions, ZoneSlot, first_entry_zone, in_units_row_or_standing, is_open, place_beneath_top,
+    place_on_field, place_standing_on_field, remove_from_field, slot_of,
 };
 
 /// Which card to steal: the pick the play or a prompt carried (R81), or an instance id a script
@@ -298,38 +297,6 @@ pub fn swap_control(args: SwapControlArgs) -> Effect {
         });
         // R1854002: the taken Unit is its new controller's steal, for the quests.
         crate::subsystems::quests::note_steal(ctx, theirs_to.player);
-    })
-}
-
-/// `stealAll`'s arguments: the row defaults to "units".
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
-#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
-#[serde(rename_all = "camelCase")]
-pub struct StealAllArgs {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub row: Option<Row>,
-}
-
-/// Steal every enemy card of a row in lane order (§3.2), each per R15: what fits is taken and the rest
-/// destroyed, in that order (R68, R4205000); only a Stack pile's top is reached (R13). No Core card
-/// calls it (#86 steals `query::killer_of`, R361); it stays for a card that may.
-pub fn steal_all(args: StealAllArgs) -> Effect {
-    Effect::new("stealAll", move |ctx| {
-        let row = args.row.unwrap_or(Row::Units);
-        let enemy = opponent_of(ctx.controller);
-        // R1081000: a Unit standing in a backrow zone is the units row's, after its zones (§6.1 Animated).
-        let mut cards: Vec<CardInstance> = slots_of(enemy, row)
-            .into_iter()
-            .filter_map(|slot| card_at(ctx.state, slot))
-            .filter(|card| !(row == Row::Backrow && is_standing_unit(ctx.state, card)))
-            .cloned()
-            .collect();
-        if row == Row::Units {
-            cards.extend(standing_units_of(ctx.state, enemy).into_iter().cloned());
-        }
-        for card in cards {
-            take_control(ctx, &card);
-        }
     })
 }
 

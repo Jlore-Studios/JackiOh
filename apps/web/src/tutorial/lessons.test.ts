@@ -102,9 +102,6 @@ describe("R291 the tutorial's lessons", () => {
       const ids = [...script.steps.map((step) => step.id), ...script.tips.map((tip) => tip.id)];
       expect(new Set(ids).size, `${lesson.id}: step and tip ids are unique`).toBe(ids.length);
       expect(script.steps.at(-1)?.final, `${lesson.id}: the last step ends with the game`).toBe(true);
-      for (const step of script.steps) {
-        if (step.kind === "act") expect(step.done, `${lesson.id}/${step.id}: an act step says when it is done`).toBeDefined();
-      }
     }
     const [first] = TUTORIAL_LESSONS;
     expect(first === undefined ? undefined : nextLessonOf(first.id)).toBe(TUTORIAL_LESSONS[1]);

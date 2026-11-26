@@ -120,7 +120,7 @@ and `mulligan` (the two sealed mulligans, open beside `pending`, never in it, R2
 **What moves it:** a prompt opening (`pending` set) and the scope that asked parking its rest
 (`push_work`, `owe`, `park_work`: inserted at `min(cursor, len)`, the cursor set past it; a Spell set
 under Paranoia owes its `@setResolved`, R3806000); `take_work`
-and `drain_work`'s `begin_work_cascade` (cursor 0); `drop_work` and `unpark_work` (the cursor follows
+and `drain_work`'s `begin_work_cascade` (cursor 0); `drop_work` (the cursor follows
 what it loses, clamped to the length); an answer (`pending` cleared, the drain resumes); `end_game`
 (`result` set, `pending` and `mulligan` cleared, `work` left as it stands); `open_mulligans` (only while
 `pending` is none) and `resolve_mulligans` (`mulligan` cleared before anything it runs can ask); a JSON

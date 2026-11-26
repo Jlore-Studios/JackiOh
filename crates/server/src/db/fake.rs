@@ -42,12 +42,12 @@ use crate::db::store::{
     CollectionEntry, CollectionGrant, ConsentRow, Db, DeckVersion, DeckVersionOutcome, EmoteEventRow,
     FavoriteCard, FoldedRecords, FrozenTrio, FunStats, GameRecordQuery, InviteCluster, InviteCode,
     LastBoardEntry, LastBoardKind, LoadoutSample, MatchActionRow, MatchCheckpointRow, MatchClocks,
-    MatchPhase, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PerMode,
-    PlayTelemetry, PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome,
-    PlayerSettingsRow, PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind,
-    ProfileRecord, ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput,
-    RedeemResult, ReplayListRow, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room,
-    SavedDeck, SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
+    MatchPhase, MatchPortraits, MatchRow, MatchSeats, MatchSignalRow, MatchStatus, NewBot, PlayTelemetry,
+    PlayerSettingsLimits, PlayerSettingsMergeInput, PlayerSettingsMergeOutcome, PlayerSettingsRow,
+    PlayerStatsListOptions, PlayerStatsRow, Profile, ProfileCreateInput, ProfileKind, ProfileRecord,
+    ProfileStatus, PublicPlayerSummary, QueueMode, RatedGameRow, RedeemInviteCodeInput, RedeemResult,
+    ReplayListRow, ReplayRow, ResultRow, RetentionPurgeInput, RetentionPurgeResult, Room, SavedDeck,
+    SavedTrio, Season, SeasonStanding, SeatedProfile, SeriesRow, SeriesStatus, SignalOutcomeRow,
     StatsTotalsQuery, StoreError, TermsAcceptanceRow, TermsSource, Ticket, TicketStatus, TicketWait,
     TrioUpsertOutcome, TutorialMergeInput, TutorialMergeOutcome, TutorialProgressRow, UnreadableGameRecord,
     UpsertOutcome, UsernameClaim, UsernameClaimOutcome, deck_version_step,
@@ -1618,34 +1618,6 @@ fn replay_row_in(tables: &FakeTables, row: &MatchRow) -> Option<ReplayRow> {
     })
 }
 
-pub fn replays_list(
-    f: &mut FakeTx<'_>,
-    profile_id: &str,
-    limit: i64,
-    offset: i64,
-) -> Result<Vec<ReplayRow>, StoreError> {
-    call(f, "replays.list")?;
-    let tables: &FakeTables = f.tables();
-    let mut rows: Vec<ReplayRow> = tables
-        .matches
-        .iter()
-        .filter(|row| row.players.0 == profile_id || row.players.1 == profile_id)
-        .filter_map(|row| replay_row_in(tables, row))
-        .filter(|replay| replay.actions > 0)
-        .collect();
-    rows.sort_by(|a, b| {
-        b.row
-            .finished_at
-            .cmp(&a.row.finished_at)
-            .then_with(|| b.row.id.cmp(&a.row.id))
-    });
-    Ok(rows
-        .into_iter()
-        .skip(usize::try_from(offset).unwrap_or(0))
-        .take(usize::try_from(limit).unwrap_or(0))
-        .collect())
-}
-
 pub fn replays_list_with_modes(
     f: &mut FakeTx<'_>,
     profile_id: &str,
@@ -1817,18 +1789,6 @@ pub fn tickets_count_open(f: &mut FakeTx<'_>) -> Result<i64, StoreError> {
         .iter()
         .filter(|ticket| ticket.status == TicketStatus::Open)
         .count() as i64)
-}
-
-/// R257: open tickets per mode. Every mode is present, in the order `bo1`, `bo3`, `random`.
-pub fn tickets_count_open_by_mode(f: &mut FakeTx<'_>) -> Result<PerMode<i64>, StoreError> {
-    call(f, "tickets.countOpenByMode")?;
-    let mut counts: PerMode<i64> = PerMode::default();
-    for ticket in &f.tables().tickets {
-        if ticket.status == TicketStatus::Open {
-            counts[ticket.mode] += 1;
-        }
-    }
-    Ok(counts)
 }
 
 pub fn tickets_recent_waits(f: &mut FakeTx<'_>, since: i64) -> Result<Vec<TicketWait>, StoreError> {

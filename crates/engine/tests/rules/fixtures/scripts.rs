@@ -99,24 +99,34 @@ pub fn super_virus() -> CardDef {
     }))
 }
 
+/// "Shuffle `count` copies of this into your deck", as #90.1 writes it: `shuffleInto` of its own
+/// definition, with the face that was cast and `copyOf` the running card (R57, R316).
+fn copies_of_this(ctx: &EffectContext<'_>, count: i32) -> Effect {
+    let mut args = json!({ "defId": super_virus().id, "count": count, "radiant": ctx.radiant });
+    if let Some(this) = ctx.self_.as_ref() {
+        args["copyOf"] = json!(this.id);
+    }
+    effects::shuffle_into(json_as(args))
+}
+
 fn super_virus_scripts() -> CardScripts {
     CardScripts {
         base: Script {
             static_flags: flags(json!({ "castOnDraw": true })),
-            cry: Some(hook(|_ctx| {
+            cry: Some(hook(|ctx| {
                 vec![
                     effects::damage(json_as(json!({ "to": { "of": "selfHero" }, "amount": 1 }))),
-                    effects::shuffle_copies_of_self(json_as(json!({ "count": 2 }))),
+                    copies_of_this(ctx, 2),
                 ]
             })),
             ..Script::default()
         },
         radiant: Script {
             static_flags: flags(json!({ "castOnDraw": true })),
-            cry: Some(hook(|_ctx| {
+            cry: Some(hook(|ctx| {
                 vec![
                     effects::damage(json_as(json!({ "to": { "of": "selfHero" }, "amount": 1 }))),
-                    effects::shuffle_copies_of_self(json_as(json!({ "count": 3 }))),
+                    copies_of_this(ctx, 3),
                 ]
             })),
             ..Script::default()

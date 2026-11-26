@@ -1302,8 +1302,14 @@ mod spec_11_rulings_r43_r84_m3_gate {
 
         let mut sink = sink_for(&mut state);
         let mut ctx = make_context(&mut sink, Some(&me), controlled(P1));
+        // A copy of the running card, as #90.1 shuffles its own: its definition, its face, `copyOf` it.
         apply_effects(
-            &[effects::shuffle_copies_of_self(json_as(json!({ "count": 1 })))],
+            &[effects::shuffle_into(json_as(json!({
+                "defId": PLAIN,
+                "count": 1,
+                "radiant": me.radiant,
+                "copyOf": me.id,
+            })))],
             &mut ctx,
         );
 

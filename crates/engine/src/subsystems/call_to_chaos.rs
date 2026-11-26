@@ -386,10 +386,6 @@ pub const CHAOS_EFFECTS: &[ChaosEffectDef] = &[
     },
 ];
 
-pub fn chaos_effect_by_name(name: &str) -> Option<&'static ChaosEffectDef> {
-    CHAOS_EFFECTS.iter().find(|effect| effect.name == name)
-}
-
 /// R28, R423: the base form rolls one entry; the Radiant form rolls
 /// `CALL_TO_CHAOS_RADIANT_EFFECTS` *different* ones, resolved in list order (R87). `table` is the
 /// edition's list, so one roll serves Core #95 and Classic+ #73.

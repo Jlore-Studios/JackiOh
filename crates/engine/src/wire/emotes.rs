@@ -92,9 +92,6 @@ pub const EMOJI_EMOTE_IDS: &[EmoteId] = &[
 /// order is exactly that.
 pub const EMOTE_IDS: &[EmoteId] = EmoteId::ALL;
 
-/// TS's `(typeof VOICE_EMOTE_IDS)[number]`: one of the voice lines (`is_voice_emote` tells).
-pub type VoiceEmoteId = EmoteId;
-
 /// TS `isEmoteId(value: unknown)`: a string that is one of the pool's ids.
 pub fn is_emote_id(value: &Value) -> bool {
     match value.as_str() {
@@ -187,65 +184,6 @@ pub fn portrait_or_default(portrait: Option<&str>) -> PortraitId {
         None => DEFAULT_PORTRAIT,
     }
 }
-
-/// One entry of the launch roster (TS's anonymous `{ cardName: string; flavour: string }`). A
-/// constant table, so it serializes but is never read back.
-#[derive(Serialize, Clone, Copy, Debug, PartialEq, Eq)]
-#[serde(rename_all = "camelCase")]
-pub struct PortraitEntry {
-    pub card_name: &'static str,
-    pub flavour: &'static str,
-}
-
-/// The launch roster. `card_name` is the Core card the portrait's art and voice come from, looked
-/// up BY NAME in the catalog, never by number (the issue's roster table). `flavour` is the voice
-/// direction the emote persona in `card-audio.json5` (`emote-<id>`) follows.
-///
-/// TS's `Record<PortraitId, …>`, in its key order (`PORTRAIT_IDS`'s).
-pub const PORTRAITS: &[(PortraitId, PortraitEntry)] = &[
-    (
-        PortraitId::Vanilla,
-        PortraitEntry {
-            card_name: "Mr. Vanilla",
-            flavour: "Flat, polite, unbothered",
-        },
-    ),
-    (
-        PortraitId::Gary,
-        PortraitEntry {
-            card_name: "Gary the Gambler",
-            flavour: "Fast-talking card sharp",
-        },
-    ),
-    (
-        PortraitId::Timmy,
-        PortraitEntry {
-            card_name: "Tempo Timmy",
-            flavour: "Hyper, rushed",
-        },
-    ),
-    (
-        PortraitId::Dfender,
-        PortraitEntry {
-            card_name: "Big D-fender",
-            flavour: "Low, steady bodyguard",
-        },
-    ),
-    (
-        PortraitId::Felinors,
-        PortraitEntry {
-            card_name: "Duplicating Felinors",
-            flavour: "Two cats talking at once",
-        },
-    ),
-    (
-        PortraitId::Shredder,
-        PortraitEntry {
-            card_name: "Jlockeed Shredder-10",
-            flavour: "Robot, all caps",
-        },
-    ),
-];
 
 /// A uniform pick over the roster (R642: All Random deals one per seat, independently).
 pub fn pick_portrait(mut rng: impl FnMut() -> f64) -> PortraitId {
@@ -490,17 +428,11 @@ mod tests {
         use super::*;
 
         #[test]
-        fn r641_holds_exactly_the_six_issue_portraits_each_with_a_card_name_and_a_flavour() {
+        fn r641_holds_exactly_the_six_issue_portraits() {
             assert_eq!(
                 portrait_ids(PORTRAIT_IDS),
                 vec!["vanilla", "gary", "timmy", "dfender", "felinors", "shredder"]
             );
-            let keys: Vec<PortraitId> = PORTRAITS.iter().map(|(id, _)| *id).collect();
-            assert_eq!(keys, PORTRAIT_IDS.to_vec());
-            for (id, entry) in PORTRAITS {
-                assert!(!entry.card_name.is_empty(), "{id}");
-                assert!(!entry.flavour.is_empty(), "{id}");
-            }
         }
 
         #[test]

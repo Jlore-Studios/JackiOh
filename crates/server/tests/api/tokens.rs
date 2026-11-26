@@ -7,7 +7,7 @@ use tokio::sync::watch;
 
 use jackioh_engine::SetName;
 use jackioh_server::api::collection::{GrantInput, grant_cards, grant_entire_catalog, owned_map};
-use jackioh_server::api::http::AuthLevel;
+use jackioh_server::api::http::{ApiError, AuthLevel};
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
     CARD_TOKEN_BAR_SIZE, COSMETIC_TOKEN_BAR_SIZE_EPIC, COSMETIC_TOKEN_BAR_SIZE_LEGENDARY,
@@ -24,19 +24,35 @@ use jackioh_server::cosmetics::{
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::idempotency::{RequestKey, Spent};
-use jackioh_server::economy::packs::open_pack;
 use jackioh_server::economy::spend_slots::SPEND_BUSY_MESSAGE;
 use jackioh_server::economy::store::{
     CosmeticGrant, Counter, CounterGrant, EconomyLedger, EconomyReason, InventoryGrant, InventoryItem,
 };
-use jackioh_server::economy::tokens::{redeem_cosmetic_token, redeem_cosmetic_token_once};
+use jackioh_server::economy::tokens::redeem_cosmetic_token_once;
 use jackioh_shared::economy::roll::PackKind;
 
 use crate::support::deps::{add_user, call, call_with_key, empty_test_app};
 use crate::support::store::{fake, uuid};
 
+use super::packs::open_pack;
+
 const PROFILE: &str = "p1";
 const USER: &str = "u1";
+
+/// A redemption that sends no `Idempotency-Key`: `redeem_cosmetic_token_once`'s own answer.
+async fn redeem_cosmetic_token(
+    app: &App,
+    profile_id: &str,
+    registry: &[Cosmetic],
+    token: CosmeticRarity,
+    cosmetic_id: &str,
+    card_id: Option<&str>,
+) -> Result<(), ApiError> {
+    redeem_cosmetic_token_once(app, profile_id, registry, token, cosmetic_id, card_id, None)
+        .await
+        .and_then(Spent::now)
+        .map(|_| ())
+}
 
 /// The three routes, as `(method, path)`.
 const ROUTES: [(&str, &str); 3] = [

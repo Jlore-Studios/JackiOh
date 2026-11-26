@@ -42,15 +42,10 @@ export const RANDOM_POLICY_AI_BUDGET: SearchBudget = {
 
 /** Full-lesson timeout; AI search dominates its runtime. */
 export const LESSON_GAME_TIMEOUT_MS = 180_000;
-/** Per-game budget for multi-game gate tests. */
-export const LESSON_GAME_MS = 90_000;
 /** Per-game budget for multi-game random-policy tests. */
 export const RANDOM_GAME_MS = 45_000;
 
 export type LessonPolicy = "coach" | "coach-passive" | "autopilot" | "random" | "reckless" | "idle";
-
-/** Every policy a lesson must be won under (R2205001; `idle`, R2201000). */
-export const LESSON_POLICIES: readonly LessonPolicy[] = ["coach", "coach-passive", "autopilot", "random", "reckless", "idle"];
 
 export type LessonRun = {
   lesson: TutorialLesson;
@@ -264,7 +259,7 @@ export function playLesson(lessonId: string, options: Options = {}): LessonRun {
     let byCoach = false;
     if (policy === "coach") {
       const step = activeStep(script, coach);
-      if ((step?.kind === "act" || step?.kind === "moment") && step.expect !== undefined) {
+      if (step?.kind === "moment" && step.expect !== undefined) {
         const expected = step.expect;
         action = snapshot.legal.find((candidate) => expected(candidate, ctx)) ?? null;
         byCoach = action !== null;
@@ -272,7 +267,7 @@ export function playLesson(lessonId: string, options: Options = {}): LessonRun {
       action ??= autopilot(ctx);
     } else if (policy === "coach-passive") {
       const step = activeStep(script, coach);
-      if ((step?.kind === "act" || step?.kind === "moment") && step.expect !== undefined) {
+      if (step?.kind === "moment" && step.expect !== undefined) {
         const expected = step.expect;
         action = snapshot.legal.find((candidate) => expected(candidate, ctx)) ?? null;
         byCoach = action !== null;
