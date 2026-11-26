@@ -22130,14 +22130,6 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": "it5005 && python3 - <<'EOF'\\ns=open('wasm.py').read()\\ns=s.replace(\\\"\\\"\\\" for m in star.finditer(s):\\\"\\\"\\\",\\\"\\\"\\\" for m in re.finditer(r'import\\\\\\\\s+\\\\\\\\*\\\\\\\\s+as\\\\\\\\s+(\\\\\\\\w+\u2026\n- said: Section 18 is ready to paste below. The most important findings: - **Accepted challenge with no game (Q7).** When a join loses its seat race after the claim, the room goes with the discarded match but the challenge stays `accepted`, and nobody is told. - **Room left open after the friend deletes th\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5005\\ngrep -nE '^import' apps/web/src/undo/hold.ts apps/web/src/undo/UndoToast.tsx apps/web/src/net/session.ts apps/web/src/net/storage.ts; for f in \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5005; grep -n -E '\\\\b(series|loadout|ranked|bots|bot_decide|economy)\\\\b' apps/web/src/wasm/index.ts | head -20\", \"description\": \"Find how index.ts re\u2026\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n## Agent findings (raw, for the builder if this file survives)\\n\\n### TS dead exports (agent B)\\nClass 1 (unused): e2e/support/testids.ts:431 PRACTICE_MAIN\u2026\n- Bash: {\"command\": \"git grep -n -A3 'expect(dead_code' -- crates | cut -c1-200\", \"description\": \"List expect(dead_code) suppressions with context\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5005; git grep -n -E '\\\\b(bot_decide|loadout)\\\\b' -- apps/web/src ':!*.test.ts' ':!*.test.tsx' | head -20; grep -n -B3 -A12 'fn series' crates/wasm/s\u2026\n- Bash: {\"command\": \"sed -n 525,560p crates/tools/src/fuzz.rs; git grep -n -E '\\\\.why\\\\b' -- crates/tools/src | head; git grep -n 'why:' -- crates/tools/src/fuzz.rs | wc -l; git log --oneline -1 -S'nothing p\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5005; grep -n -E '\\\\b(series|loadout|ranked|bots|bot_decide|economy)\\\\b' crates/wasm/README.md crates/wasm/c/README.md | head -20\", \"description\": \"R\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5005; git ls-files luau | head -30; git ls-files luau | wc -l\", \"description\": \"List the luau port files\"}\n- Bash: {\"command\": \"grep -n 'pub async fn delete_account' -A80 crates/server/src/api/auth.rs | grep -n 'lobb\\\\|challenge\\\\|room\\\\|push_social\\\\|nudge\\\\|remove_profile\\\\|profiles_delete\\\\|async fn' | head -3\u2026\n- Bash: {\"command\": \"git grep -n -E 'POOL_EXCLUSIONS|PoolExclusion|EXCLUDED_IDS' -- crates apps scripts e2e spec BUILD.md docs | cut -c1-170\", \"description\": \"Find references to POOL_EXCLUSIONS machinery\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5005; grep -n -o -E '(exports|instance\\\\.exports|module|wasm|Exports)\\\\s*[.\\\\[]\\\\s*\\\"?\\\\w+' luau/src/Host.luau luau/tools/reference-host.mjs | awk -F\u2026\n- Bash: {\"command\": \"sed -n 205,284p crates/server/src/api/auth.rs; sed -n 250,280p crates/server/src/social/live.rs\", \"description\": \"Read remove_account and nudge_lobby\"}\n- Bash: {\"command\": \"ls crates crates/wasm; git ls-files 'crates/**/Cargo.toml' 'Cargo.toml'\", \"description\": \"List crates and Cargo.toml files\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5005; grep -n -o -E '\\\"[a-z_]+\\\"' luau/src/Host.luau | awk -F: '{print $3}' | sort | uniq -c | sort -k2 | tr '\\\\n' ' '; echo; grep -n -o -E '\\\"[a-z_]\u2026\n- Bash: {\"command\": \"for f in crates/ai/Cargo.toml crates/cards/Cargo.toml crates/engine/Cargo.toml crates/run/Cargo.toml crates/shared/Cargo.toml crates/wasm/Cargo.toml crates/wasm/c/Cargo.toml crates/wasm/\u2026\n- said: I found one change since `35993a84f6` that moves rows: `a1978c3356` (#4696) changes the 1v1 and co-op hosts' `on_attached`/`on_disconnected`. It affects states 1 and 13. Every other commit moves no row. All cited tests still exist, so there are no renames. Two doc edits from the period are already \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5005; wc -l luau/src/Host.luau luau/tools/reference-host.mjs; grep -n -E 'exports\\\\[name|function Host\\\\.|callJson|call\\\\(' luau/src/Host.luau | head\u2026\n- Bash: {\"command\": \"sed -n 1,12p spec/rulings/R1689000.md | cut -c1-900; grep -n 'lobby closed\\\\|\\\"lobby\\\"' crates/server/README.md | head -5\", \"description\": \"Read R1689000 and the server README's lobby fr\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5005; grep -n -o -E \\\"call\\\\w*\\\\(\\\\s*['\\\\\\\"][a-z_]+['\\\\\\\"]|['\\\\\\\"](create_game|begin_game|reduce|legal_actions|view_for|hash_state|seat_to_act|series\u2026\n- Bash: {\"command\": \"for f in crates/ai/Cargo.toml crates/cards/Cargo.toml crates/engine/Cargo.toml crates/run/Cargo.toml crates/shared/Cargo.toml crates/wasm/c/Cargo.toml crates/wasm/core/Cargo.toml; do ech\u2026\n- Bash: {\"command\": \"for f in crates/server/Cargo.toml crates/tools/Cargo.toml crates/wasm/Cargo.toml; do echo \\\"### $f\\\"; awk '/^\\\\[(dev-|build-)?dependencies\\\\]/{p=1;print;next} /^\\\\[/{p=0} p && !/^\\\\s*#/ \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5005; for b in series loadout ranked bots bot_decide economy; do echo \\\"$b: web=$(git grep -l -E \\\"\\\\bnormal\\\\.$b\\\\b|\\\\.$b\\\\(\\\" -- apps/web/src | wc \u2026\n- said: You've hit your 5-hour limit \u00b7 resets 9:20am (UTC)\n- Write: {\"file_path\": \"/tmp/audit5005/deps.sh\", \"content\": \"#!/bin/sh\\n# usage: deps.sh <crate dir> ; prints each dep with code hit counts in that crate (src, tests, benches, build.rs, examples)\\ndir=\\\"$1\\\"\\\u2026\n- said: You've hit your 5-hour limit \u00b7 resets 9:20am (UTC)\n- Bash: {\"command\": \"cat >> .bot-plan.md <<'EOF'\\n\\n### State 18 room code (agent I) \\u2014 key\\nRows Q1..Q21. Mismatches claimed: Q8 (room released between joinable_room and rooms_claim -> 409 \\\"someone alr\u2026\n- said: You've hit your 5-hour limit \u00b7 resets 9:20am (UTC)\n- said: I re-checked all six states and the three that should be unchanged. Most commits move no row. Three behaviours have no rows yet: R4733000's held fight report (state 3), R4781000's board-click answers (state 6), and the social poll's idle quiet (R4691001) plus R4984001's polling under a live socket \u2026\n- said: You've hit your 5-hour limit \u00b7 resets 9:20am (UTC)\n- said: You've hit your 5-hour limit \u00b7 resets 9:20am (UTC)"
       },
-      "hold": {
-        "ends": "2026-11-26T07:10:54Z",
-        "lifted": "2026-11-26T06:26:28Z",
-        "owner": "claude-1",
-        "since": "2026-11-26T05:10:54Z",
-        "until": "2026-11-26T06:20:00Z",
-        "why": "5-hour usage is 97%, too close to its 100% cap to start a long run (it starts under 95%)"
-      },
       "in_lane": true,
       "kind": "build",
       "live": "planning",
@@ -22146,7 +22138,7 @@
       "owner_why": "handed off from `claude-3`: `claude-3` it refused a call; its limit resets at 2026-11-26T09:20:00Z; it can start again only in 4h 21m, more than the 120 minutes an item waits for its owner",
       "pending_request": false,
       "provider": "claude-1",
-      "run_id": "45758599957",
+      "run_id": "pending:1eca6f5b-1795674472",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -22165,7 +22157,7 @@
         "provider": "claude-3",
         "run": "45755194189"
       },
-      "started_at": "2026-11-26T04:58:57Z",
+      "started_at": "2026-11-26T06:28:24Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 7183253741
@@ -22738,9 +22730,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T06:27:36Z",
+    "at": "2026-11-26T06:28:24Z",
     "url": "",
-    "what": "build #4991 on claude-1"
+    "what": "plan #5005 on claude-1"
   },
   "last_sweep": {
     "at": "2026-11-26T06:13:29Z",
