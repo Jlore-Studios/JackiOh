@@ -25129,9 +25129,9 @@
       "owner_why": "it plans it",
       "pending_at": "2026-11-26T19:18:59Z",
       "pending_by": "MaxGoetzmann",
-      "pending_request": true,
+      "pending_request": false,
       "provider": "claude-3",
-      "run_id": "45882721829",
+      "run_id": "pending:5b381563-1795721936",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -25150,16 +25150,16 @@
         "provider": "claude-3",
         "run": "45882721829"
       },
-      "started_at": "2026-11-26T19:18:54Z",
+      "started_at": "2026-11-26T19:39:24Z",
       "stop_requested": false,
       "taken_asks": []
     }
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T19:30:31Z",
+    "at": "2026-11-26T19:39:24Z",
     "url": "",
-    "what": "build #5107 on claude-8"
+    "what": "plan #5109 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-26T19:26:43Z",
