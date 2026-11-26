@@ -24990,8 +24990,10 @@
     "what": "revise #5060 on claude-4"
   },
   "last_sweep": {
-    "at": "2026-11-26T15:45:36Z",
-    "notes": [],
+    "at": "2026-11-26T15:52:48Z",
+    "notes": [
+      "#5087: closed, so `bot:merging` is off"
+    ],
     "since": "2026-09-30T11:21:05Z"
   },
   "loop_deliveries": {
@@ -25696,7 +25698,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T15:45:36Z",
+  "loop_tick": "2026-11-26T15:52:48Z",
   "machine_disk": {
     "issue": null,
     "reading": {
