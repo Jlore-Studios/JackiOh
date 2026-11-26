@@ -40,6 +40,8 @@ import { expectEmptyState } from "../test/empty.ts";
 import { duosView } from "../test/fixtures.ts";
 import { pressBack } from "../test/history.ts";
 import { fakeReplaySource, foldedReplaySteps } from "../test/replay.ts";
+import { savedReplay } from "../test/savedReplay.ts";
+import { isRecord } from "../wire/json.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { ReplaysRoute, replaysTestid } from "./replays.tsx";
@@ -491,8 +493,8 @@ describe("R1141000 Download JSON", () => {
     await waitFor(() => expect(saved).toHaveLength(1));
     const file = saved[0];
     if (file === undefined) throw new Error("nothing was saved");
-    const text = await file.text();
-    return { file, text, json: JSON.parse(text) as ReplayJson };
+    const { text, json } = await savedReplay(file);
+    return { file, text, json: json as ReplayJson };
   }
 
   it("R1141000 a practice row saves every step of its game, in order, and nothing of its setup", async () => {
@@ -504,8 +506,8 @@ describe("R1141000 Download JSON", () => {
     fireEvent.click(screen.getByTestId(replaysTestid.download("practice-1")));
 
     const { file, text, json } = await savedJson();
-    expect(file.name).toBe("jackioh-replay-practice-1.json");
-    expect(file.type).toBe("application/json");
+    expect(file.name).toBe("jackioh-replay-practice-1.json.gz");
+    expect(file.type).toBe("application/gzip");
     expect(Object.keys(json).sort()).toEqual(["catalogVersion", "format", "game", "savedAt", "steps", "version"]);
     expect(json).toMatchObject({ format: REPLAY_JSON_FORMAT, version: REPLAY_JSON_VERSION, catalogVersion: CATALOG_VERSION });
     expect(json.game).toMatchObject({ kind: "practice", game: 1, result: "loss", steps: json.steps.length });
@@ -531,7 +533,7 @@ describe("R1141000 Download JSON", () => {
     fireEvent.click(screen.getByTestId(replaysTestid.download("online-m-1")));
 
     const { file, text, json } = await savedJson();
-    expect(file.name).toBe("jackioh-replay-m-1.json");
+    expect(file.name).toBe("jackioh-replay-m-1.json.gz");
     expect(json.steps).toEqual(steps);
     expect(json.game).toEqual({
       kind: "online",
@@ -640,8 +642,9 @@ describe("R1141000 Open replay JSON", () => {
     fireEvent.click(screen.getByTestId(replayTestid.back));
     await screen.findByTestId(replaysTestid.root);
 
-    // An older file, written before its game named portraits.
-    const json = JSON.parse(await (await downloaded({ p1: "gary", p2: "shredder" })).text()) as { game: Record<string, unknown> };
+    // An older file, written before its game named portraits and before files were packed: plain JSON.
+    const { json } = await savedReplay(await downloaded({ p1: "gary", p2: "shredder" }));
+    if (!isRecord(json.game)) throw new Error("the file holds no game");
     delete json.game.portraits;
     const older = new File([JSON.stringify(json)], "older.json", { type: "application/json" });
     const again = screen.getByTestId<HTMLInputElement>(replaysTestid.openFile);
@@ -688,7 +691,7 @@ describe("R1141000 Open replay JSON", () => {
   it("R1242000 a co-op file opens on the co-op replay player, offers no download and makes no request", async () => {
     const input = await openInput();
     const fetching = vi.spyOn(globalThis, "fetch");
-    choose(input, duosReplayJsonFile(DUOS_STEPS));
+    choose(input, await duosReplayJsonFile(DUOS_STEPS));
 
     const player = await screen.findByTestId(duosTestid.replay);
     await waitFor(() => expect(player).toHaveAttribute("data-step", "0"));
@@ -713,7 +716,7 @@ describe("R1141000 Open replay JSON", () => {
   it("R4619000 one Back closes a co-op replay opened from a file", async () => {
     arriveFromPlay();
     const input = await openInput();
-    choose(input, duosReplayJsonFile(DUOS_STEPS));
+    choose(input, await duosReplayJsonFile(DUOS_STEPS));
     await screen.findByTestId(duosTestid.replay);
 
     await pressBack();
@@ -776,7 +779,7 @@ describe("R1141000 Open replay JSON", () => {
       expect(screen.getByTestId(replaysTestid.root)).toBeInTheDocument();
     }
     // A good file after the refusals opens.
-    choose(input, duosReplayJsonFile(DUOS_STEPS));
+    choose(input, await duosReplayJsonFile(DUOS_STEPS));
     expect(await screen.findByTestId(duosTestid.replay)).toBeInTheDocument();
   });
 
