@@ -148,6 +148,7 @@ on this list during Waves 1–3.
 | tower | 0.5.3 | util | server (tests: `oneshot`) |
 | tower-http | 0.7.1 | cors, trace | server |
 | sqlx | 0.9.0 | runtime-tokio, tls-rustls, postgres, json, time, uuid | server |
+| futures-util | 0.3.34 | — (default-features = false) | server (the statistics' totals read as a stream, `db::pg::stats_totals_load`; already in the lock through sqlx) |
 | jsonwebtoken | 11.1.0 | — | server |
 | reqwest | 0.13.5 | json, rustls-tls (default-features = false) | server (JWKS, Supabase Auth `/user` and admin calls) |
 | hmac | 0.13.0 | — | server |

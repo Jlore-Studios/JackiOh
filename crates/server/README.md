@@ -612,11 +612,13 @@ Every figure, `stats-cards`, `balance-watch`, the public routes and the ladder b
 totals each record is folded into as it is written (migration 0041: `record_totals`, `card_totals`,
 `decklist_totals`; `Tx::stats_totals_load`, `Tx::stats_decklists`), by the engine's `StatsTotals`, the
 counting a record file is read with, so a report is what the records gave. `Tx::stats_totals_load` reads
-`card_totals` a patch at a time, each `stats` straight into its `CardStats`, and the parts most cards
-leave empty (their swing tallies, choices and faces' drills) are the engine's `Sparse`, one pointer while
-empty: every patch's totals, which the public routes keep (`kept_snapshot`), came to 329,000 rows on
-staging by 2026-11-25, and read whole with those parts inline they outgrew the game server's 1 GiB,
-which was killed loading them. `stats-import` writes and
+`card_totals` as one stream, each row's `stats` straight into its `CardStats` as it arrives, and the
+parts most cards leave empty (their swing tallies, choices and faces' drills) are the engine's `Sparse`,
+one pointer while empty: every patch's totals, which the public routes keep (`kept_snapshot`), came to
+329,000 rows on staging by 2026-11-25, and read whole with those parts inline they outgrew the game
+server's 1 GiB, which was killed loading them. A read a patch at a time instead took minutes there,
+past the client's `API_REQUEST_TIMEOUT_SECONDS`, since each patch's rows lie scattered through the
+table. `stats-import` writes and
 folds `STATS_FOLD_BATCH_RECORDS` (500) records to a transaction. A record written before migration
 0041 is not folded until the retention loop folds it at boot or `stats-fold` does (R1044000). Once
 folded, a record's detail is emptied `GAME_RECORD_RAW_RETENTION_DAYS` (7) after it was written by the
