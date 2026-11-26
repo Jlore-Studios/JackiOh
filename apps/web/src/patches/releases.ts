@@ -116,6 +116,7 @@ export const RELEASES: readonly Release[] = [
       "Every Stinkyscape+ card wears the set's mark, Stinkyscape's planet with a plus, and every Legendary and Mythic of the set opens its play with a few bars of its own.",
       "The practice AI answers every Stinkyscape+ card you play, but does not deal itself any yet.",
       "The Infinite Assault, a daily 20-level solo gauntlet against AI-made bosses, opens from the Play hub, with the Infinite Assault set of 240 cards its enemies play.",
+      "Low graphics, in Settings under Visuals, turns off the particles, board shake, moving card art and big moments for a slow device, and cards still move.",
     ],
   },
 ];

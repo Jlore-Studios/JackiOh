@@ -41,7 +41,7 @@ const SECTIONS: readonly SectionSpec[] = [
     title: "Gameplay",
     controls: ["dragToPlay", "confirmEndTurn", "autoEndTurn", "hoverPreviews", "lethalHint", "attackOutcomes"],
   },
-  { id: "visuals", title: "Visuals", controls: ["reduceMotion"] },
+  { id: "visuals", title: "Visuals", controls: ["reduceMotion", "lowGraphics"] },
   { id: "audio", title: "Audio", controls: ["muteOpponentEmotes", "muteSpectatorEmotes"] },
 ];
 
@@ -76,6 +76,11 @@ const CONTROLS: Readonly<Record<SettingKey, { label: string; hint: string }>> = 
   reduceMotion: {
     label: "Reduce motion",
     hint: "Turn animations off, whatever your system setting says.",
+  },
+  // R5128000: the effects layer off, no set piece's hold and the ambient layers undrawn; cards still move.
+  lowGraphics: {
+    label: "Low graphics",
+    hint: "For a slow device: no particles, board shake, moving card art or big moments, and a still backdrop. Cards still move.",
   },
   muteOpponentEmotes: {
     label: "Mute opponent emotes",

@@ -15,7 +15,7 @@ import {
   writeCardSettings,
   type CardSettings,
 } from "../cards/settings.ts";
-import { getFxSettings, setFxSettings, subscribeFxSettings, type FxSettings } from "../fx/settings.ts";
+import { getChosenFxSettings, setFxSettings, subscribeFxSettings, type FxSettings } from "../fx/settings.ts";
 import type { PlayerSettingValue } from "../net/api.ts";
 import { readSettings, subscribeSettings, writeSettings, type Settings } from "./store.ts";
 
@@ -65,8 +65,9 @@ export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
     }),
   },
   {
+    // R5128000: the player's own choices, never what Low graphics holds.
     id: "fx",
-    read: () => flat(getFxSettings()),
+    read: () => flat(getChosenFxSettings()),
     apply: (values) => {
       setFxSettings(values as Partial<FxSettings>);
     },
