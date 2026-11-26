@@ -24603,6 +24603,8 @@
       }
     },
     "5084": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-26T11:54:23Z",
@@ -24616,8 +24618,11 @@
         "trail": "{\"command\": \"grep -n \\\"TEXT_TIER_MAX\\\" -A 2 apps/web/src/cards/constants.ts | head -6; grep -n \\\"LONG_FACES\\\" -A 30 apps/web/src/cards/faceData.ts | head -45\", \"description\": \"Read text tier limits a\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nimport json,re,subprocess\\nc=json.load(open('crates/cards/catalog.json'))\\nold=json.loads(subprocess.check_output(['git','show','HEAD:crates/cards/catalog.json']))\\nsj\u2026\n- Bash: {\"command\": \"until grep -q \\\"^finished\\\" /tmp/aura/tools_shared.log; do sleep 10; done; cat /tmp/aura/tools_shared.log\", \"description\": \"Wait for tools and shared tests\", \"timeout\": 600000}\n- said: While the tools suite runs, drafting the PR description.\n- Bash: {\"command\": \"sed -n 28,100p /tmp/aura/rows.md | head -80\", \"description\": \"View already-printed rows\"}\n- Bash: {\"command\": \"cat /tmp/aura/tools_shared.log 2>/dev/null | tail -20\", \"description\": \"Check tools/shared log so far\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\nrows=open('/tmp/aura/rows.md').read().split('\\\\n\\\\n')\\nchanged=rows[0]; already=rows[1]\\npr=f\\\"\\\"\\\"\\n\\u00a76.2's Aura row now says which text prints \\\"Aura:\\\", and a n\u2026\n- Bash: {\"command\": \"cat /tmp/aura/tools_shared.log; pgrep -fa \\\"deps/\\\" | cut -c1-160 | head -3\", \"description\": \"Check tools/shared progress\"}\n- Bash: {\"command\": \"until grep -q \\\"^finished\\\" /tmp/aura/tools_shared.log; do sleep 15; done; cat /tmp/aura/tools_shared.log\", \"description\": \"Wait again for tools/shared tests\", \"timeout\": 600000}\n- said: Tools suite green (641 + the integration binaries, no failures). The shared suite needs the engine's `testkit` feature; rerunning it that way.\n- Bash: {\"command\": \"echo \\\"- tools tests green; rerun shared with testkit\\\" >> .bot-notes.md; cargo test -p jackioh-shared --features jackioh-engine/testkit 2>&1 | grep -E \\\"^test result|FAILED|panicked|^er\u2026\n- said: Shared green (331 + 684). Now the web: build the WASM engine, then the web test files the plan names.\n- Bash: {\"command\": \"echo \\\"- shared green; building wasm for web tests\\\" >> .bot-notes.md; sh scripts/build-wasm.sh > /tmp/aura/wasm.log 2>&1; echo \\\"rc=$?\\\"; tail -5 /tmp/aura/wasm.log\", \"description\": \"Bu\u2026\n- Bash: {\"command\": \"git status --short apps/ | head; cd apps/web && timeout 1500 pnpm exec vitest run src/cards/textLimit.test.ts src/cards/chinese.test.tsx src/cards/rules.test.ts src/tutorial/lessons.test\u2026\n- said: Web files green (6 files, 118 tests). Running the harness's own `--changed origin/main` web selection in the background as well.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5039 && echo \\\"- listed web tests green (118); running harness web cmd --changed origin/main\\\" >> .bot-notes.md; timeout 3000 pnpm exec vitest run --\u2026\n- said: Meanwhile, reviewing the full spec diff once.\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5039 && git diff spec/07-tokens.md | grep \\\"^[-+]\\\" | cut -c1-260; git diff --stat\", \"description\": \"Review \\u00a77 diff and overall stat\"}\n- said: R781004's note still says Keenus prints \"Aura: Has \u2026\", while the test named after it now asserts the bare line. Checking both old notes.\n- Bash: {\"command\": \"sed -n 6,9p spec/rulings/R3778000.md | cut -c1-700\", \"description\": \"Read R3778000 body start\"}\n- Bash: {\"command\": \"sed -n 10,16p spec/rulings/R3778000.md | cut -c1-600\", \"description\": \"Read R3778000 body\"}\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='spec/rulings/R781004.md'\\ns=open(p,encoding='utf-8').read()\\na=\\\"Its stats, cost and rarity stay; the Radiant Death and the 21 printed keywords go ([[R1084]], [[R10\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\ni=s.index('## Log')\\nstate=\\\"\\\"\\\"## State\\n\\n- Build run 1 (opus, 2026-11-26): ALL plan steps 1-12 DONE.\\n- Green: catalog/patches\u2026\n- Bash: {\"command\": \"until grep -q \\\"^rc=\\\" /tmp/aura/web_changed.log; do sleep 15; done; tail -30 /tmp/aura/web_changed.log\", \"description\": \"Wait for harness web selection\", \"timeout\": 600000}\n- Bash: {\"command\": \"tail -c 1500 /tmp/aura/web_changed.log\", \"description\": \"Peek web selection log\"}\n- said: The harness's web selection is running most of the web suite, since the catalog is imported nearly everywhere. Writing the final description while it finishes.\n- Bash: {\"command\": \"cat > /tmp/aura/pr_tail.md <<'EOF'\\n\\n## Decisions the issue left open\\n\\n- **A card's text about itself prints bare** (R5039000), so \\\"This can't go Berserk\\\", \\\"This is a 2X/2X\\\" and \\\u2026\n- Bash: {\"command\": \"until grep -q \\\"^rc=\\\" /tmp/aura/web_changed.log; do sleep 15; done; grep -E \\\"Test Files|Tests |FAIL|rc=\\\" /tmp/aura/web_changed.log | head -20\", \"description\": \"Wait for web selection \u2026\n- Bash: {\"command\": \"grep -cE \\\"\\u2713|\\u2717|\\u00d7\\\" /tmp/aura/web_changed.log; grep -E \\\"Test Files|Tests |FAIL|rc=\\\" /tmp/aura/web_changed.log | head; ps aux | grep -c \\\"[v]itest\\\"\", \"description\": \"Chec\u2026\n- Bash: {\"command\": \"until grep -q \\\"^rc=\\\" /tmp/aura/web_changed.log; do sleep 20; done; grep -E \\\"Test Files|Tests |FAIL|rc=\\\" /tmp/aura/web_changed.log | head -30\", \"description\": \"Wait for web selection \u2026\n- said: All 480 web test files passed. Final check of the tree for stray files.\n- Bash: {\"command\": \"git status --short | grep -v \\\"^ M\\\" ; git status --porcelain -- apps/web/src/wire | wc -l; grep -c \\\"tmp_dump\\\" crates/cards/tests/cross/aura_label.rs; git worktree list | head; echo \\\"\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\nbody=open('/tmp/aura/pr_body.md').read().strip()\\ntail=open('/tmp/aura/pr_tail.md').read()\\ntail=tail.replace(\\\"6 files, 118 tests passed.\\\",\\\"6 files, 118 tests passe\u2026\n- Bash: {\"command\": \"echo \\\"- final report written (/tmp/aura/final.md). Run complete.\\\" >> .bot-notes.md\", \"description\": \"Log completion in notes\"}\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: every card whose text acts while it is in play prints \\\"Aura:\\\"\"} --> \u00a76.2's Aura row now says which text prints \"Aura:\", and a new ruling, **R5039000**, records the decision. The rule: standing text that works while its card is face-up and acting on th\u2026"
       },
       "issue": 5039,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-26T14:44:00Z",
         "from_run": "45814754564",
         "gates": [
           {
@@ -24709,7 +24714,11 @@
         "source": "build",
         "until": "2026-11-26T15:12:02Z"
       },
+      "pending_request": false,
+      "provider": "claude-6",
       "queued_at": "2026-11-26T14:42:02Z",
+      "run_id": "pending:64d1d066-1795704211",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
       "session": {
         "action": "build",
@@ -24728,6 +24737,9 @@
         "provider": "claude-6",
         "run": "45814754564"
       },
+      "started_at": "2026-11-26T14:44:00Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -24741,9 +24753,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T14:43:15Z",
+    "at": "2026-11-26T14:44:00Z",
     "url": "",
-    "what": "review #5074 on claude-8"
+    "what": "review #5084 on claude-6"
   },
   "last_sweep": {
     "at": "2026-11-26T14:26:36Z",
