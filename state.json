@@ -23115,14 +23115,7 @@
         "reason": "`claude-3` reached its usage limit",
         "trail": ": \"/home/runner/work/_temp/work/item-5036/crates/engine/src/wire/stats/window.rs\", \"offset\": 80, \"limit\": 60}\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5036/crates/engine/src/wire/stats/window.rs\", \"offset\": 280, \"limit\": 200}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -n \\\"pub fn card_stats_of\\\" -A 60 crates/engine/src/wire/stats.rs | grep -n \\\"add_stats\\\\|swing\\\\|CreatedStats::of\\\\|clone()\\\" | head; gre\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; sed -n 1862,1890p crates/engine/src/wire/stats.rs\", \"description\": \"Read card_stats_of created split\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -rn \\\"pub fn made_by_the_rules\\\\|pub const RULE_MADE_DEF_IDS\\\" -A 8 crates/engine/src | head -30; grep -rn \\\"pub fn deck_play_versions\\\" -\u2026\n- Write: {\"file_path\": \"/home/runner/work/_temp/work/item-5036/.bot-plan.md\", \"content\": \"# Draft plan #5036 (planner notes)\\n\\n## Found so far\\n- engine `crates/engine/src/wire/stats/play_versions.rs`: `Summ\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -rn \\\"how far playing a card typically moves\\\" apps/web/src --include=*.ts --include=*.tsx --include=*.json -l; ls apps/web/src/i18n/ | he\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5036/apps/web/src/routes/stats.test.tsx\", \"offset\": 3719, \"limit\": 330}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -n \\\"headers(\\\\|cells\\\\|\\\\\\\"Adjusted\\\\|Since\\\\\\\"\\\\|toEqual(\\\\[\\\\\\\"\\\" apps/web/src/stats/versions.test.tsx | head -30; grep -n \\\"Adjusted \\\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5036/apps/web/src/stats/versions.test.tsx\", \"offset\": 1, \"limit\": 240}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -n -i \\\"running\\\\|versions\\\\|experimental\\\" e2e/cypress/e2e/34-stats.cy.ts | head -20; grep -rln \\\"runningTable\\\\|versionsTable\\\\|tabExper\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -rn \\\"4552\\\" patches/*.json 2>/dev/null | head -5; ls patches | head; grep -n \\\"Decisiveness: how far\\\" -A1 apps/web/src/i18n/zh-CN.json |\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; sed -n 240,270p apps/web/src/i18n/i18n.test.ts; grep -rn \\\"4552\\\" crates/cards/patches.json 2>/dev/null | head -3; find . -name patches.json -n\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -n \\\"#4552\\\\|4552\\\" crates/cards/patches/patches.json | head -5; git log --oneline --grep=\\\"4552\\\" | tail -3\", \"description\": \"Find where \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -rn \\\"PlayVersionFigures {\\\\|PlayVersionTable {\\\" crates --include=*.rs; grep -rn \\\"format_play_versions\\\" crates --include=*.rs | grep -v\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; sed -n 495,520p crates/tools/src/stats.rs; sed -n 243,275p crates/server/src/cli/card_stats.rs; sed -n 330,360p crates/server/tests/store/card_\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5036/crates/engine/src/wire/stats/swing.rs\", \"offset\": 974, \"limit\": 200}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -n \\\"fn r4552001\\\\|swing_turns\\\\|SwingTurn {\\\" crates/engine/src/wire/stats/window.rs | head; sed -n 1120,1190p crates/engine/src/wire/sta\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -n \\\"pub struct CreatedUse\\\" -A 14 crates/engine/src/wire/stats.rs; grep -n \\\"pub created_played:\\\\|pub created_unused:\\\\|pub played_turns\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -n \\\"Adding a ruling\\\" -A 30 spec/README.md | cut -c1-700 | head -45; echo ----; cat spec/pending/5053.md | cut -c1-900\", \"description\": \"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; ls spec/ | head -30; ls spec/09-* 2>/dev/null | head; grep -rln \\\"R4678001\\\" spec --include=*.md | grep -v rulings | grep -v history | head\", \"\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -n \\\"R4678001\\\\|R4675001\\\\|R4552001\\\\|Experimental\\\" spec/09-architecture/9.11-card-statistics.md | cut -c1-600\", \"description\": \"Find \\u0\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; sed -n 12p spec/09-architecture/9.11-card-statistics.md | fold -w 3000 | sed -n '1,3p'; echo; echo ======; sed -n 16p spec/09-architecture/9.11\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -rn \\\"stats/versions\\\\|hasEnoughGames.*patches\\\\|play_version_figures\\\" docs/ crates/*/README.md apps/*/README.md 2>/dev/null | cut -c1-30\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; sed -n 255p crates/server/README.md; sed -n 42p crates/tools/README.md\", \"description\": \"Read README rows for the versions route\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; git show --stat --format=\\\"%s\\\" dfdca49c8e | head -60\", \"description\": \"See files the Hall of Fame PR touched\"}\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -rn \\\"swingTurns\\\\|swing_turns\\\" crates/server/tests/api/*.rs crates/server/tests/common/*.rs 2>/dev/null | head -5; grep -n \\\"fn r4552003\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -rn \\\"exactOptional\\\" apps/web/tsconfig*.json tsconfig*.json 2>/dev/null; grep -n \\\"decisivenessCell\\\\|runningSince\\\\|versionsSpan\\\" apps/\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -n \\\"sort\\\" apps/web/src/i18n/i18n.test.ts | head -5; sed -n 975,983p apps/web/src/i18n/zh-CN.json | cut -c1-120; grep -n '\\\"not enough ga\u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -rn \\\"pub const NO_FIGURE\\\" crates/engine/src; grep -n \\\"4552\\\\|decisiv\\\" crates/tools/README.md | cut -c1-200 | head -5\", \"description\": \u2026\n- Bash: {\"command\": \"cd /home/runner/work/_temp/work/item-5036; grep -rn \\\"NO_FIGURE\\\" crates/engine/src/wire/stats.rs | head -3\", \"description\": \"Find NO_FIGURE definition\"}\n- said: You've hit your 5-hour limit \u00b7 resets 2:20pm (UTC)"
       },
-      "hold": {
-        "ends": "2026-11-26T14:25:30Z",
-        "lifted": "2026-11-26T14:27:12Z",
-        "owner": "claude-3",
-        "since": "2026-11-26T12:25:30Z",
-        "until": "2026-11-26T14:20:00Z",
-        "why": "it refused a call"
-      },
+      "in_lane": true,
       "interruptions": 0,
       "kind": "build",
       "live": "planning",
@@ -23133,7 +23126,7 @@
       "provider": "claude-3",
       "queued_at": "2026-11-26T07:53:12Z",
       "requested_by": "squishy-squooby",
-      "run_id": "45802533115",
+      "run_id": "pending:2d13f9de-1795703366",
       "runs_on": "ubuntu-latest",
       "session": {
         "action": "plan",
@@ -23152,7 +23145,7 @@
         "provider": "claude-3",
         "run": "45802533115"
       },
-      "started_at": "2026-11-26T10:34:02Z",
+      "started_at": "2026-11-26T14:29:52Z",
       "stop_requested": false,
       "taken_asks": [],
       "waiting_comment": 7191985432
@@ -24502,9 +24495,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T14:29:11Z",
+    "at": "2026-11-26T14:29:52Z",
     "url": "",
-    "what": "build #5035 on claude-3"
+    "what": "plan #5036 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-26T14:13:26Z",
