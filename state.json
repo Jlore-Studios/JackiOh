@@ -21835,6 +21835,13 @@
     "4996": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "45749789504",
+        "model": "muse-spark-1.3-contributor",
+        "provider": "muse",
+        "since": "2026-11-26T03:42:42Z",
+        "until": "2026-11-26T04:12:42Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
