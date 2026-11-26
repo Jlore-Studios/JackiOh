@@ -25223,6 +25223,8 @@
       }
     },
     "5093": {
+      "action": "review",
+      "asks": [],
       "difficulty": "hard",
       "failures": 0,
       "feedback_since": "2026-11-26T14:29:11Z",
@@ -25236,8 +25238,11 @@
         "trail": "he tests, starting with the cards crate.\n- Bash: {\"command\": \"cargo test -p jackioh-cards --lib patch_history 2>&1 | grep -E '^test |test result|panicked|error(\\\\[|:)|warning:' | head -40\", \"description\": \"Run the cards crate's patch history tests\"\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-engine --features testkit --lib wire::stats:: 2>&1 | grep -E 'test result|FAILED|panicked|error(\\\\[|:)|r5035000' | head -20\", \"description\": \"Run the engine's stats\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-tools --bin jackioh r3631000 2>&1 | grep -E 'test result|FAILED|panicked|error(\\\\[|:)|running' | head -10 || true\", \"description\": \"Run the tools' R3631000 letter t\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-server --test server r4675001_play_versions 2>&1 | grep -E 'test result|FAILED|panicked|error(\\\\[|:)|^test ' | head -20\", \"description\": \"Run the server's play vers\u2026\n- Bash: {\"command\": \"pnpm --dir apps/web test src/routes/stats.test.tsx src/stats/versions.test.tsx src/i18n/i18n.test.ts 2>&1 | grep -vE '^\\\\s*$' | grep -E 'Test Files|Tests |FAIL|\\u2717|\\u00d7|AssertionErr\u2026\n- said: Web tests pass (3 files, 150 tests). Typecheck and lint next, while the server test builds.\n- Bash: {\"command\": \"pnpm --dir apps/web typecheck 2>&1 | tail -5; pnpm exec eslint apps/web/src/stats/RunningPanel.tsx apps/web/src/stats/testids.ts apps/web/src/net/api.ts apps/web/src/routes/stats.test.ts\u2026\n- Bash: {\"command\": \"cargo fmt --check 2>&1 | head -40\", \"description\": \"Check Rust formatting\"}\n- Bash: {\"command\": \"cargo fmt && cargo fmt --check && git diff --stat | tail -1\", \"description\": \"Apply rustfmt and recheck\"}\n- Bash: {\"command\": \"cargo jackioh spec check 2>&1 | grep -vE '^\\\\s+(Compiling|Finished|Running)' | tail -15\", \"description\": \"Run the ruling notes check\", \"timeout\": 2400000}\n- Read: {\"file_path\": \"/tmp/claude-1001/-home-runner-work--temp-work-item-5035/df581011-f8e2-4116-b78c-92dcaaa8e8af/tasks/bii20ca3x.output\"}\n- said: Spec check is green and both server route tests pass. Now clippy on the touched crates.\n- Bash: {\"command\": \"cargo clippy -p jackioh-cards -p jackioh-engine -p jackioh-tools -p jackioh-server --all-targets -- -D warnings 2>&1 | grep -E '^(error|warning)|-->|Finished' | head -30\", \"description\":\u2026\n- Bash: {\"command\": \"git fetch -q origin main 2>/dev/null; git rev-parse --short origin/main; cargo jackioh classify --base origin/main --claims 2>&1 | grep -vE '^\\\\s+(Compiling|Finished|Running)|Compiling|F\u2026\n- Bash: {\"command\": \"git log --oneline 54d56db0e8..origin/main | head -20; git diff --stat 54d56db0e8 origin/main -- crates/engine/src/wire/stats crates/cards/src/patch_history.rs crates/cards/src/versions.r\u2026\n- Bash: {\"command\": \"git diff --stat 54d56db0e8 origin/main | tail -3; git diff --name-only 54d56db0e8 origin/main | grep -E 'patches.json|play_versions|patch_history|RunningPanel|stats.test|zh-CN|api.ts|pat\u2026\n- Bash: {\"command\": \"grep -n 'ts(export\\\\|feature = \\\"ts\\\"' crates/engine/src/wire/stats/play_versions.rs crates/engine/src/wire/stats.rs | head -5; git status --porcelain -- apps/web/src/wire\", \"description\u2026\n- Bash: {\"command\": \"cargo test -p jackioh-tools --test acceptance 2>&1 | grep -E 'test result|FAILED|panicked' | head -20\", \"description\": \"Run the tools' acceptance scans\", \"timeout\": 2400000}\n- said: Acceptance scans pass. Running the full test suites of the touched crates (cards, engine lib, tools) to catch anything outside the targeted subsets.\n- Bash: {\"command\": \"(cargo test -p jackioh-cards 2>&1 | grep -E 'test result|FAILED|panicked' ; cargo test -p jackioh-engine --features testkit,ts --lib 2>&1 | grep -E 'test result|FAILED|panicked'; cargo t\u2026\n- Read: {\"file_path\": \"/home/runner/work/_temp/work/item-5035/spec/rulings/R5035000.md\"}\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5035/spec/rulings/R5035000.md\", \"old_string\": \"only changes which rows show, never their numbers.\\n\", \"new_string\": \"only change\u2026\n- Edit: {\"replace_all\": false, \"file_path\": \"/home/runner/work/_temp/work/item-5035/spec/rulings/R5035000.md\", \"old_string\": \"restarted 32 times by claims alone, ran\", \"new_string\": \"restarted 32 times with \u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=\\\"- Web source edits are scripted in /tmp/jk-5035/web_edits.py\\\"\\nnew=\\\"\\\"\\\"- Status: ALL code/spec/web done. Green so far: ca\u2026\n- Bash: {\"command\": \"until grep -q '^exit' /tmp/jk-5035/crate-tests.log; do sleep 10; done; cat /tmp/jk-5035/crate-tests.log\", \"description\": \"Wait for the crate test suites to finish\", \"timeout\": 3600000}\n- Read: {\"file_path\": \"/tmp/jk-5035/crate-tests.log\"}\n- said: The cards crate's full suite passed (11,150 + 1,271 tests). The engine lib and tools suites are still running.\n- Bash: {\"command\": \"until grep -q '^exit' /tmp/jk-5035/crate-tests.log; do sleep 10; done; cat /tmp/jk-5035/crate-tests.log\", \"description\": \"Wait again for the crate test suites\", \"timeout\": 600000}\n- said: Every touched crate's full suite is green. One last spec check after the ruling edit, plus the catalog and patches checks.\n- Bash: {\"command\": \"cargo jackioh spec check 2>&1 | tail -1; cargo jackioh catalog check 2>&1 | tail -1; cargo jackioh patches check 2>&1 | tail -1; cargo fmt --check && echo fmt-ok; git status --porcelain \u2026\n- Bash: {\"command\": \"cargo jackioh catalog check >/dev/null 2>&1; echo \\\"catalog exit $?\\\"; git status --porcelain | grep -v '^ M' ; ls .cache/browse/*.png | grep x5 | wc -l\", \"description\": \"Confirm the cat\u2026\n- Bash: {\"command\": \"python3 - <<'EOF'\\np='.bot-notes.md'\\ns=open(p).read()\\nold=\\\"Running: full cards/engine-lib/tools suites.\\\"\\nnew=\\\"Full suites also green: cards (11150+1271), engine lib with testkit,ts\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: deeper card stats, X5, an Iteration column on the Experimental tab: v1, v2, and v1b for a change only in play\"} --> ## What changed Each play version now has an **iteration**. `jackioh_cards::play_versions_of` counts it once, over the card's whole shipp\u2026"
       },
       "issue": 5035,
-      "kind": "revise",
+      "kind": "review",
+      "live": "reviewing",
       "own_review": {
+        "claimed": true,
+        "claimed_at": "2026-11-26T16:41:10Z",
         "from_run": "45839495369",
         "gates": [
           {
@@ -25329,8 +25334,15 @@
         "source": "build",
         "until": "2026-11-26T17:09:59Z"
       },
+      "pending_request": false,
+      "provider": "claude-3",
       "queued_at": "2026-11-26T16:39:59Z",
+      "run_id": "pending:da395229-1795711240",
+      "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "started_at": "2026-11-26T16:41:10Z",
+      "stop_requested": false,
+      "taken_asks": [],
       "votes": {
         "approvals": [],
         "builder": "claude",
@@ -25344,9 +25356,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-26T16:30:46Z",
+    "at": "2026-11-26T16:41:10Z",
     "url": "",
-    "what": "plan #5091 on claude-3"
+    "what": "review #5093 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-26T16:27:42Z",
