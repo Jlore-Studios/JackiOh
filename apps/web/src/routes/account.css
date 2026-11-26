@@ -31,7 +31,7 @@
   gap: 4px;
   padding: 12px 14px;
   border: 1px solid color-mix(in srgb, var(--pal-brass-500) 30%, transparent);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--pal-parchment) 5%, transparent);
 }
 

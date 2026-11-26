@@ -36,8 +36,8 @@ use crate::config::{
 };
 use crate::determinize::{DetGround, DeterminizeOptions, det_ground, determinize_on};
 use crate::evaluate::{
-    Prices, activation_prices, attack_hook_prices, awaken_prices, death_prices, evolve_prices,
-    prompt_activation_prices, turn_hook_prices,
+    NextSwing, Prices, activation_prices, attack_hook_prices, awaken_prices, death_prices, evaluate_priced,
+    evolve_prices, prompt_activation_prices, turn_hook_prices,
 };
 use crate::lethal::{find_lethal, trim_lethal};
 use crate::match_::replacements_for;
@@ -46,7 +46,7 @@ use crate::observe::{HIDDEN_DEF_ID, ai_to_act, redact, unanswered_draw_offer};
 use crate::reply::{hidden_card_ids, reply_score};
 use crate::search::{Line, ReplayFill, beam_search, replay_line};
 use crate::simulate::{
-    CountingNodeCounter, LineStatus, create_node_counter, create_sub_counter, create_wrap_up_counter,
+    CountingNodeCounter, LineStatus, create_beam_counter, create_node_counter, create_sub_counter,
     note_sim_panic,
 };
 use crate::types::{
@@ -68,6 +68,31 @@ fn fallback_action(candidates: &[ActionBody]) -> ActionBody {
         .or_else(|| candidates.first())
         .cloned()
         .unwrap_or(ActionBody::EndTurn)
+}
+
+/// R4595001: the candidate whose one `reduce` on `det` leaves `seat` the best `evaluate_priced`
+/// position, its prompts left open, the first on a tie; `None` when every candidate is refused.
+fn best_single_step(
+    det: &GameState,
+    seat: PlayerId,
+    candidates: &[ActionBody],
+    prices: &Prices,
+) -> Option<(ActionBody, f64)> {
+    let mut best: Option<(ActionBody, f64)> = None;
+    for (index, action) in candidates.iter().enumerate() {
+        let stepped = catch_unwind(AssertUnwindSafe(|| {
+            reduce_unpiloted(det, &Action::new(action.clone(), seat, format!("single:{index}")))
+        }));
+        let Ok(stepped) = stepped else { continue };
+        if stepped.error.is_some() {
+            continue;
+        }
+        let score = evaluate_priced(&stepped.state, seat, NextSwing::Enemy, &AI_EVAL, prices);
+        if best.as_ref().is_none_or(|(_, top)| score > *top) {
+            best = Some((action.clone(), score));
+        }
+    }
+    best
 }
 
 /// Step 3, R1184002: the answer to a question of a sequence open for `seat` (Meditative+ #20 KY's
@@ -609,8 +634,10 @@ fn plan(
     // reply and the other determinizations below still run until the hard stop. R4801000: it is first
     // polled once the beam has tried every move at its root (`end_root`), however many nodes those cost,
     // so a wrap-up that fired before the beam still leaves it a line, the root's End turn among them.
+    // R4604014: and so is the slice's own limit, so a root move dearer than the slice still closes one.
+    let before_beam = counter.used();
     let (found, beam_stopped_by) = {
-        let beam_counter = create_wrap_up_counter(counter, remaining - reserve, wrap_up);
+        let beam_counter = create_beam_counter(counter, remaining - reserve, wrap_up);
         let found = beam_search(det0, seat, &beam_counter, budget, &prices);
         (found, beam_counter.stopped_by())
     };
@@ -622,6 +649,18 @@ fn plan(
         } else {
             beam_stopped_by
         };
+        // R4595001: the beam spent nodes and no candidate's step fit them (a chain of expensive casts
+        // each answer starts): each is stepped once, unanswered and uncharged, and the one that leaves the
+        // best position is taken, a search of one ply rather than a fallback. A beam given no node at all
+        // still falls back (B15).
+        if counter.used() > before_beam
+            && let Some((action, score)) = best_single_step(det0, seat, &scratch.candidates, &prices)
+        {
+            return Plan {
+                score,
+                ..Plan::single(action, DecisionReason::Search, Some(stopped_by))
+            };
+        }
         return Plan::fallback(&scratch.candidates, Some(stopped_by));
     }
 
@@ -1336,5 +1375,39 @@ mod tests {
             plain
         );
         assert!(ample.used() > 0);
+    }
+
+    #[test]
+    fn r4595001_an_unsearched_decision_takes_the_candidate_whose_one_step_evaluates_best() {
+        let s = board(false);
+        let state = s.state();
+        let candidates = candidate_actions(state, AI, Prices::NONE);
+        let menace = s.card(MENACE).id.clone();
+        let (action, score) =
+            best_single_step(state, AI, &candidates, Prices::NONE).expect("a step is accepted");
+        assert!(
+            matches!(&action, ActionBody::Play { instance_id, .. } if *instance_id == menace),
+            "the 9/9 Taunt beats the 4/4 and passing: {action:?}"
+        );
+        // Its score is the best of every candidate's one step.
+        let best = candidates
+            .iter()
+            .filter_map(|candidate| {
+                let stepped =
+                    reduce_unpiloted(state, &Action::new(candidate.clone(), AI, "check".to_string()));
+                stepped
+                    .error
+                    .is_none()
+                    .then(|| evaluate_priced(&stepped.state, AI, NextSwing::Enemy, &AI_EVAL, Prices::NONE))
+            })
+            .fold(f64::MIN, f64::max);
+        assert_eq!(score, best);
+        // Every candidate refused: nothing to take, so the decision falls back.
+        let mut gone = action.clone();
+        if let ActionBody::Play { instance_id, .. } = &mut gone {
+            *instance_id = "no-such-card".to_string();
+        }
+        let refused = vec![gone];
+        assert_eq!(best_single_step(state, AI, &refused, Prices::NONE), None);
     }
 }

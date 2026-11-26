@@ -37027,5 +37027,100 @@
     "plays": [],
     "fragment": "card-face-code-cleanup",
     "changes": []
+  },
+  {
+    "version": "v0.6.14l",
+    "date": "2026-11-26",
+    "title": "PIP says performance improvement plan",
+    "source": "#4996",
+    "notes": "Stinkyscape+ #94 PIP's text reads 'performance improvement plan' (was 'performance enhancement plan').",
+    "player": {
+      "title": "PIP says performance improvement plan",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [
+        "PIP: now says \"performance improvement plan\"."
+      ],
+      "fixes": []
+    },
+    "commits": [
+      "6e1450bf6f9dbfbbe603f7d38ae0fe523daebae9"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [],
+    "fragment": "pip-says-performance-improvement-plan",
+    "changes": [
+      {
+        "id": "stinkyscapeplus-094",
+        "name": "PIP",
+        "kind": "changed",
+        "fields": [
+          "base.text",
+          "radiant.text"
+        ]
+      }
+    ]
+  },
+  {
+    "version": "v0.6.14m",
+    "date": "2026-11-26",
+    "title": "Patch: the tier cards and KPIs read the newest win rates",
+    "source": "winrates-refresh.yml: production's windowed card figures at v0.6.14k (R3882000)",
+    "notes": "The win rates of record refresh from the card statistics at v0.6.14k: 794 cards with at least 20 games over their own windows (provisional figures). The tier pools and KPIs read them from this version on (R3538000, R3538001); earlier versions keep theirs, and CN Tech and NA Tech still read each game's snapshot (R3049000).",
+    "player": {
+      "title": "Win rates refreshed",
+      "new": [],
+      "balance": [],
+      "changes": [
+        "xxFreshJack, JC Backed, Open Enrollment, Selective Enrollment and KPIs now read the win rates of this patch's games."
+      ],
+      "text": [],
+      "fixes": []
+    },
+    "commits": [
+      "61758a8b61caae7b24f87b4562792ba161f9f1bc"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "stinkyscape-109",
+      "stinkyscapeplus-095",
+      "stinkyscapeplus-096",
+      "stinkyscapeplus-097",
+      "stinkyscapeplus-164"
+    ],
+    "fragment": "the-tier-cards-and-kpis-read-the-newest-win-rates",
+    "changes": []
+  },
+  {
+    "version": "v0.6.14n",
+    "date": "2026-11-26",
+    "title": "Patch: a card made Radiant where it stands starts the Brittle its Radiant face newly prints, and regains a Reborn that face newly prints",
+    "source": "issue #4817",
+    "notes": "Issue #4817 (R4817000, R4817001): Make Radiant and De-Radiant on a card where it stands refit its Brittle count to the new face (a count its printed Brittle started goes when the new face prints none; a card on the field with no count starts the one the new face prints), and a Radiant face that newly prints Reborn gives a used Reborn back, as it already did a spent Divine Shield. Engine change only, no catalog or script change; claimed with --plays as classify's stage 2 against daee3b7's build names it.",
+    "player": {
+      "title": "A card made Radiant where it stands follows its new face's Brittle and Reborn",
+      "new": [],
+      "balance": [],
+      "changes": [],
+      "text": [],
+      "fixes": [
+        "A Sack made Radiant on the field now crumbles at its Radiant face's Brittle 1, as one played Radiant does.",
+        "A Ticketed made Radiant on the field no longer crumbles, since its Radiant face has no Brittle; one De-Radianted by Prestige starts its Brittle 3.",
+        "A Unit that already used a Reborn regains it when made Radiant, if only its Radiant face has Reborn (Wrong-House Attacker, 4-mana 7/7, Jilliax and others)."
+      ]
+    },
+    "commits": [
+      "22a9db19dd2732f368f4612dff9ddf08a9dbfc0b"
+    ],
+    "reconstructed": false,
+    "tier": "micro",
+    "plays": [
+      "core-091"
+    ],
+    "fragment": "a-card-made-radiant-where-it-stands-starts-the-brittle-its",
+    "changes": []
   }
 ]

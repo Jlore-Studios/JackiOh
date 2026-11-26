@@ -163,6 +163,7 @@ const SAMPLES: { [K in GameEventType]: Extract<GameEvent, { type: K }> } = {
   translated: { type: "translated", instanceId: "u6" },
   discardPrevented: { type: "discardPrevented", player: "p2", count: 1 },
   damageAbsorbed: { type: "damageAbsorbed", sourceId: "u1", targetId: "u6", absorbed: 2, combat: true },
+  damageNullified: { type: "damageNullified", instanceId: "u7", sourceId: "u1", targetId: "u6", amount: 2, combat: true },
   armorGained: { type: "armorGained", player: "p2", amount: 2, armor: 2 },
   jadeChanged: { type: "jadeChanged", player: "p1", value: 3 },
   secretChosen: { type: "secretChosen", player: "p1", secretId: "secret-1" },
@@ -315,6 +316,8 @@ const S4_RECIPES: Record<GameEventType, string | null> = {
   discardPrevented: "fizzle",
   // MN05, R1363: a hit the Armor took whole blooms a shield.
   damageAbsorbed: "armor",
+  // R5045000: a pool's soak rings its card and shields the hit's target.
+  damageNullified: "nullify",
   // R3857000: a hero's kept Armor gain blooms the same shield over the hero.
   armorGained: "armor",
   // Meditative #39.2 (R961): the Jade badge ticks and nothing decorates it.
@@ -394,6 +397,7 @@ const FX_RECIPES = [
   "brand",
   "rewind",
   "armor",
+  "nullify",
   "curve",
   "line",
 ];
@@ -474,6 +478,7 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
   translated: ["jk-radiant-pulse", 400, "card-<instanceId>"],
   discardPrevented: ["jk-fatigue", 300, "hand-<side>"],
   damageAbsorbed: ["jk-armor-absorb", 300, "card-<targetId> | hero-<side>"],
+  damageNullified: ["jk-pool-pulse", 400, "card-<instanceId>"],
   armorGained: ["jk-badge-tick", 300, "hero-<side>"],
   jadeChanged: ["jk-badge-tick", 200, "hero-<side>"],
   secretChosen: ["jk-badge-fade", 300, "hero-<side>"],
@@ -501,11 +506,11 @@ const KEPT: Record<GameEventType, readonly [string, number, string]> = {
 };
 
 describe("B1 the fx column of ANIMATIONS", () => {
-  it("B1 exactly the 69 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002), the evolution (R3536005), the Trade (R1838001), the launch (R1852003), #1843's two endings (R1843000, R1843002) and #2652's rolls (R2652001) and the drawn line (R3554005) and the Armor gain (R3857000) and the loop cap (R3925000) carry fx with the listed recipe and the other 28 carry none", async () => {
+  it("B1 exactly the 70 rows of S4, patch v0.2.0, Glitch (R676), the discard guard (R800), MN05 (R1363), Feng Shui (R983), KY's Papaya's curve (R831003), the autopilot (R1183002), the awakening (R1839002), the evolution (R3536005), the Trade (R1838001), the launch (R1852003), #1843's two endings (R1843000, R1843002) and #2652's rolls (R2652001) and the drawn line (R3554005) and the Armor gain (R3857000) and the loop cap (R3925000) and a pool's soak (R5045000) carry fx with the listed recipe and the other 28 carry none", async () => {
     const table = await freshTable();
     const actual = Object.fromEntries(GAME_EVENT_TYPES.map((t) => [t, table[t].fx?.recipe ?? null]));
     expect(actual).toEqual(S4_RECIPES);
-    expect(GAME_EVENT_TYPES.filter((t) => table[t].fx !== undefined)).toHaveLength(69);
+    expect(GAME_EVENT_TYPES.filter((t) => table[t].fx !== undefined)).toHaveLength(70);
   });
 
   it("B1 an fx descriptor is data only: one recipe field and nothing else", async () => {

@@ -332,6 +332,8 @@ function loadCore(): Core {
 let core: Core | null = null;
 const listeners = new Set<() => void>();
 let pageListening = false;
+/** An Assault page was open and left: the cache may be older than what the device holds. */
+let pageWasOpen = false;
 
 function current(): Core {
   core ??= loadCore();
@@ -343,11 +345,22 @@ function commit(next: Core): void {
   for (const listener of [...listeners]) listener();
 }
 
+function reloadCore(): void {
+  // Another tab changed what is kept: read it all again, but for a finished attempt this tab still shows.
+  const kept = core;
+  const next = loadCore();
+  commit(
+    next.state === null && kept !== null && kept.state !== null && terminal(kept.state)
+      ? { ...next, content: kept.content, day: kept.day, state: kept.state, file: kept.file, record: next.records[kept.record.date] ?? kept.record }
+      : next,
+  );
+}
+
 function onStorage(event: StorageEvent): void {
   // R4733000: another tab holding or clearing a report reloads this tab too, so a report is
   // applied once no matter which tab left the fight.
   if (event.key !== null && event.key !== ASSAULT_ATTEMPT_KEY && event.key !== ASSAULT_RECORDS_KEY && event.key !== ASSAULT_HELD_KEY) return;
-  commit(loadCore());
+  reloadCore();
 }
 
 function subscribe(listener: () => void): () => void {
@@ -355,9 +368,14 @@ function subscribe(listener: () => void): () => void {
   if (!pageListening && typeof window !== "undefined") {
     window.addEventListener("storage", onStorage);
     pageListening = true;
+    // The page opens again after leaving: start from what the device holds now, as another tab
+    // may have written while nothing listened. A first load already read it. A finished attempt
+    // this tab still shows is kept.
+    if (pageWasOpen) reloadCore();
   }
   return () => {
     listeners.delete(listener);
+    if (listeners.size === 0) pageWasOpen = true;
     if (listeners.size === 0 && pageListening) {
       window.removeEventListener("storage", onStorage);
       pageListening = false;
@@ -507,4 +525,5 @@ export function __resetAssaultForTests(): void {
   listeners.clear();
   if (pageListening && typeof window !== "undefined") window.removeEventListener("storage", onStorage);
   pageListening = false;
+  pageWasOpen = false;
 }

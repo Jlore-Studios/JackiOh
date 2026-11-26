@@ -74,7 +74,7 @@
   max-width: calc(100vw - 32px);
   padding: 10px 12px;
   border: 1px solid var(--line-bright);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--bg-raised) 92%, transparent);
   box-shadow: 0 6px 22px color-mix(in srgb, var(--pal-black) 55%, transparent);
   transform: translateX(calc(-50% + var(--emote-menu-shift, 0px)));
@@ -113,7 +113,7 @@
   align-items: center;
   justify-content: center;
   border: 1px solid var(--line-bright);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-sunken);
   color: var(--text);
   font: inherit;
@@ -229,7 +229,7 @@
   max-width: min(28ch, calc(100vw - 48px));
   padding: 8px 12px;
   border: 1px solid var(--line-bright);
-  border-radius: 12px 12px 12px 3px;
+  border-radius: var(--radius-md) var(--radius-md) var(--radius-md) var(--radius-xs);
   background: var(--bg-raised);
   color: var(--text);
   font-size: 1em;
@@ -243,7 +243,7 @@
 .hero-opponent .emote-bubble {
   top: calc(100% + 6px);
   bottom: auto;
-  border-radius: 3px 12px 12px 12px;
+  border-radius: var(--radius-xs) var(--radius-md) var(--radius-md) var(--radius-md);
   transform-origin: 22px 0;
 }
 
@@ -480,7 +480,7 @@
   gap: 2px;
   padding: 2px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: none;
   color: var(--text-dim);
   font: inherit;
@@ -511,7 +511,7 @@
   max-width: min(92vw, 460px);
   padding: 12px;
   border: 1px solid var(--line-bright);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: var(--bg-raised);
   box-shadow: 0 10px 30px color-mix(in srgb, var(--pal-black) 60%, transparent);
 }
@@ -537,7 +537,7 @@
   width: 100%;
   padding: 8px 6px;
   border: 1px solid var(--line-bright);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--bg-sunken);
   color: var(--text);
   font: inherit;
@@ -564,7 +564,7 @@
 .portrait-preview-toggle {
   padding: 2px 10px;
   border: 1px solid var(--line-bright);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: none;
   color: var(--text-dim);
   font: inherit;

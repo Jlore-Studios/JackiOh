@@ -144,7 +144,7 @@
   border: 1px solid var(--line-bright);
   /* Round at a pill's height, but a hero whose power and badges wrap to a second line stays a
      rounded plate instead of swelling into a capsule. */
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   background: var(--bg-sunken);
   box-shadow: var(--shadow-inset-top), var(--shadow-2);
 }
@@ -1030,7 +1030,7 @@ button.modifier-badge[data-open="true"] {
   width: var(--sand-size);
   height: calc(var(--sand-size) * (0.64 + var(--sand-variation) * 0.2));
   border: 1px solid color-mix(in srgb, var(--pal-wood-800) 48%, transparent);
-  border-radius: 50% 43% 52% 45%;
+  border-radius: var(--radius-sand);
   background:
     radial-gradient(ellipse at 38% 34%, color-mix(in srgb, var(--pal-wood-900) 58%, transparent), transparent 54%),
     radial-gradient(ellipse at 66% 68%, color-mix(in srgb, var(--pal-gold-400) 36%, transparent), transparent 60%);
@@ -1139,7 +1139,7 @@ button.modifier-badge[data-open="true"] {
 }
 
 .tap-mark--parchment {
-  border-radius: 52% 46% 55% 44%;
+  border-radius: var(--radius-parchment);
   background: radial-gradient(circle, color-mix(in srgb, var(--pal-brass-800) 62%, transparent), color-mix(in srgb, var(--pal-wood-600) 38%, transparent) 55%, transparent 75%);
   rotate: calc(var(--sand-variation) * 90deg);
   animation: tap-bleed 2400ms var(--ease-out) forwards;
@@ -1367,6 +1367,33 @@ button.modifier-badge[data-open="true"] {
 .zone[data-giga="covered"] {
   border-color: transparent;
   background: transparent;
+}
+
+/* R5053000: a GIGA unit in Defense Position lies on its side across the same four zones. The quarter
+   turn (Card.tsx) spins a card about its own centre, so the card's box is the footprint with its sides
+   swapped (two rows and the gap wide, two lanes and the gap tall) and centred on the footprint's
+   centre, and `--def-scale` is 1: turned, it fills the four zones exactly, as large as an ATK GIGA,
+   where turning the footprint itself stood it on end across both heroes. Only percentages along
+   the same axis exist, so the anchor zone answers its size to the card (`cqw`/`cqh`) while the
+   card is on its side or turning. */
+.zone[data-giga="anchor"]:has(> .card:is([data-position="DEF"], [data-animating="positionSwitched"])) {
+  container-type: size;
+}
+
+.zone[data-side="you"][data-row="units"][data-giga="anchor"] > .card[data-position="DEF"],
+.zone[data-side="opponent"][data-row="units"][data-giga="anchor"] > .card[data-position="DEF"] {
+  --def-scale: 1;
+  left: calc(100cqw - 100cqh);
+  width: calc(200cqh + var(--gap));
+  height: calc(200cqw + var(--gap));
+}
+
+.zone[data-side="you"][data-row="units"][data-giga="anchor"] > .card[data-position="DEF"] {
+  top: calc(100cqh - 100cqw);
+}
+
+.zone[data-side="opponent"][data-row="units"][data-giga="anchor"] > .card[data-position="DEF"] {
+  bottom: calc(100cqh - 100cqw);
 }
 
 /* R3554000: the Black Hole lane is a dark well that breathes, with its swallowed count; still under
@@ -4053,12 +4080,15 @@ button.modifier-badge[data-open="true"] {
     padding: var(--space-2) var(--space-4);
   }
 
-  /* A tile here is about 56px square, so its numbers come down a size to stay inside it. */
+  /* A tile here is about 56px square, so its numbers come down a size to stay inside it.
+     R5053000: a GIGA's face spans four tiles, so its gems keep the face's own size (cards.css),
+     round in either position, where the tile's 13px squeezed them into slivers; `:where` keeps
+     the rule's weight. */
   .zone .stats {
     gap: 0;
   }
 
-  .zone .stat {
+  .zone:where(:not([data-giga="anchor"])) .stat {
     min-width: 13px;
     padding: 0 var(--space-1);
     font-size: var(--type-xs-em);

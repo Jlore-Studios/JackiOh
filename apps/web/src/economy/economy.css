@@ -44,7 +44,7 @@
   inset: 0;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   background: var(--tavern-well, var(--pal-wood-950));
 }
 
@@ -63,7 +63,7 @@
   width: 28px;
   height: 28px;
   margin: -14px -14px 0 0;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle, var(--tavern-gold-pale, var(--pal-brass-200)) 0%, var(--tavern-flame, var(--pal-gold-400)) 40%, transparent 70%);
   opacity: 0;
   pointer-events: none;
@@ -128,7 +128,7 @@
   padding: 10px 16px 12px;
   border: 1px solid color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
   border-top: 0;
-  border-radius: 0 0 12px 12px;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
   background: color-mix(in srgb, var(--pal-wood-950) 94%, transparent);
   color: var(--tavern-parchment, var(--pal-parchment));
 }
@@ -190,7 +190,7 @@
 .reward-reveal__item {
   padding: 6px 12px;
   border: 1px solid var(--tavern-brass, var(--pal-brass-500));
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--pal-parchment) 8%, transparent);
   font-weight: 600;
 }

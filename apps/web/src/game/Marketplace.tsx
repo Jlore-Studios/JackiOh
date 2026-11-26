@@ -4,15 +4,17 @@
 // A toggle opens a panel that draws `view.marketplace` and `legal` alone: the viewer's Credits and the
 // offers rolled for them at the start of their turn, each marked with how many times it was Buffed or
 // Nerfed (R3047002) beside its price. "Buy" is live exactly when `legal` lists that lot's `marketBuy`,
-// and sends the listed body. Otherwise the button is greyed, its tooltip the engine's reason, and sends
-// nothing. Nothing sells here (R4410000): a Resource or Spice pays its Credits as it is played or
+// and sends the listed body. Otherwise the button is greyed (`aria-disabled`, so a touch press reaches it),
+// its tooltip the engine's reason; a press shows that reason in a line under it and sends nothing
+// (R3768000, as a greyed Activate or Trade does), and the line goes with the next view or the panel's
+// closing. Nothing sells here (R4410000): a Resource or Spice pays its Credits as it is played or
 // discarded, its quote in braces on it in hand. Every number shown is the view's: nothing here prices,
 // filters or refuses (CLAUDE.md rule 7). The view carries nothing while the Marketplace is closed, and
 // then nothing is drawn. Escape and Back (R2127000) close the panel.
 //
 // The toggle is a button of the control bar (Board.tsx, #2645), which owns whether the panel is open.
 
-import { useCallback, useId, useRef, type ReactElement } from "react";
+import { useCallback, useId, useRef, useState, type ReactElement } from "react";
 
 import type { ActionBody, CardDef, MarketOfferView, PlayerView } from "@jackioh/shared";
 
@@ -69,9 +71,18 @@ function TuneMark(props: { offer: MarketOfferView }): ReactElement | null {
  * the long-press sheet, so a lot can be read before it is bought; "Buy" is its own button, so a greyed
  * one never stops the face from being read.
  */
-function Offer(props: { offer: MarketOfferView; listed: MarketBuy | undefined; onAction: (action: ActionBody) => void }) {
+function Offer(props: {
+  view: PlayerView;
+  offer: MarketOfferView;
+  listed: MarketBuy | undefined;
+  onAction: (action: ActionBody) => void;
+}) {
   useLocale();
-  const { offer, listed } = props;
+  const { view, offer, listed } = props;
+  // R3768000: the view a greyed "Buy" was pressed on. Only the press is kept, never the words: the reason
+  // is read off the offer of the same view as the line draws, so the next view (a new object) drops the
+  // line, as Board's end-turn confirm is dropped (B25) and Game's `notice.view === shown`.
+  const [pressedOn, setPressedOn] = useState<PlayerView | null>(null);
   const radiant = offer.radiant === true;
   const info = useCardInfo(offer.defId, radiant);
   const face = faceModel({ defId: offer.defId, def: info.def, name: info.name, radiant, chinese: false, inPlay: {} });
@@ -95,15 +106,24 @@ function Offer(props: { offer: MarketOfferView; listed: MarketBuy | undefined; o
         className="marketplace-deal"
         data-testid={testid.marketBuy(offer.offer)}
         data-legal={listed === undefined ? "false" : "true"}
-        disabled={listed === undefined}
+        aria-disabled={listed === undefined ? "true" : undefined}
         title={listed === undefined && offer.reason !== undefined ? t(offer.reason) : undefined}
         aria-label={t("Buy {name} for {n} Credits", { name, n: offer.price })}
         onClick={() => {
-          if (listed !== undefined) props.onAction(listed);
+          if (listed === undefined) {
+            setPressedOn(view);
+            return;
+          }
+          props.onAction(listed);
         }}
       >
         {t("Buy")}
       </button>
+      {listed === undefined && pressedOn === view && offer.reason !== undefined ? (
+        <span className="marketplace-reason" data-testid={testid.marketReason(offer.offer)} role="status">
+          {t(offer.reason)}
+        </span>
+      ) : null}
     </li>
   );
 }
@@ -177,7 +197,7 @@ export default function Marketplace({ view, legal, onAction, open, onOpenChange 
           ) : (
             <ul className="marketplace-offers">
               {market.offers.map((offer) => (
-                <Offer key={offer.offer} offer={offer} listed={buys.get(offer.offer)} onAction={onAction} />
+                <Offer key={offer.offer} view={view} offer={offer} listed={buys.get(offer.offer)} onAction={onAction} />
               ))}
             </ul>
           )}

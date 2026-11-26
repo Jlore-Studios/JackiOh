@@ -12,7 +12,7 @@
   min-height: 44px;
   padding: 0 14px 0 10px;
   border: 1px solid var(--tavern-brass, var(--pal-brass-500));
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--pal-wood-900) 65%, transparent);
   color: var(--tavern-gold-pale, var(--pal-brass-200));
   font-weight: 600;

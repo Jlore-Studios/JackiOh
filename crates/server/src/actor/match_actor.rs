@@ -23,7 +23,7 @@ use tokio::sync::{mpsc, oneshot};
 
 use jackioh_engine::{
     ActionBody, EmoteId, PLAYER_IDS, PerPlayer, Pilot, PlayerId, PlayerView, PortraitId, deal_emote_hand,
-    emote_gate, emote_gate_within, hand_holds, portrait_or_default,
+    emote_gate, hand_holds, portrait_or_default,
 };
 use jackioh_shared::bots::decide::BotChoice;
 use jackioh_shared::host::bot::BotSeat;
@@ -42,14 +42,15 @@ use crate::actor::contracts::{ActorDeps, RecordResultInput, SocketHandlers, Void
 use crate::actor::engine::{self, EngineState, LastBoards, MatchSnapshot, Pinned};
 use crate::actor::guard::{CLOSE_POLICY_VIOLATED, SeatGuard, alert_unusual_rejections};
 use crate::actor::protocol::{
-    ACTION_PANICKED_MESSAGE, ClientMessage, MATCH_VOIDED_CLOSE_REASON, SERVER_NONCE_PREFIX, ServerMessage,
-    SocketErrorCode, ack_message, aim_relay_message, card_loadouts_message, choice_hover_relay_message,
+    ClientMessage, MATCH_VOIDED_CLOSE_REASON, SERVER_NONCE_PREFIX, ServerMessage, SocketErrorCode,
+    ack_message, aim_relay_message, answer_frame, card_loadouts_message, choice_hover_relay_message,
     clock_message, emote_relay_message, encode, error_message, loadouts_message, parse_client_message,
     portraits_message, prompt_for_opponent, prompt_for_you, view_message,
 };
 use crate::actor::telemetry::{self, Recorder};
 use crate::actor::ws_server::Socket;
 use crate::api::rematch::{RematchStakes, offer_for_bot, rematch_seen};
+use crate::api::results::seats_of;
 use crate::app::now_ms;
 use crate::bug_reports::{Finding, FoundIn, RefusedRow};
 use crate::config::{
@@ -122,16 +123,11 @@ pub fn last_boards_of(match_row: &MatchRow) -> (Option<LastBoards>, Option<LastB
     (match_row.last_boards.clone(), match_row.glitch_boards.clone())
 }
 
-/// R1452, R639000: each bot's last move's turn, so an actor rebuilt mid-turn draws no second think
-/// time, concession or idle roll for it. Folded under the pinned catalog (R388, R767000).
-pub fn bot_moved_turns(
-    pinned: Pinned,
-    match_row: &MatchRow,
-    log: &[MatchActionRow],
-    dealt: Option<Vec<PlayerId>>,
-) -> PerPlayer<Option<i32>> {
+/// R417, R678: the match's opening state, nothing of its log folded, under its pinned catalog (R388,
+/// R767000).
+pub fn opening_state(pinned: Pinned, match_row: &MatchRow, dealt: Option<Vec<PlayerId>>) -> EngineState {
     let (last_boards, glitch_boards) = last_boards_of(match_row);
-    let state = engine::fold(
+    engine::fold(
         pinned,
         &engine::fold_args(
             &match_row.seed,
@@ -143,7 +139,18 @@ pub fn bot_moved_turns(
             match_row.win_rates.clone(),
         ),
     )
-    .state;
+    .state
+}
+
+/// R1452, R639000: each bot's last move's turn, so an actor rebuilt mid-turn draws no second think
+/// time, concession or idle roll for it. Folded under the pinned catalog (R388, R767000).
+pub fn bot_moved_turns(
+    pinned: Pinned,
+    match_row: &MatchRow,
+    log: &[MatchActionRow],
+    dealt: Option<Vec<PlayerId>>,
+) -> PerPlayer<Option<i32>> {
+    let state = opening_state(pinned, match_row, dealt);
     bot_moved_turns_from(pinned, state, log, PerPlayer::new(None, None))
 }
 
@@ -388,36 +395,9 @@ fn bot_seat_for(bot: Option<&BotRow>) -> Option<BotSeat> {
     })
 }
 
-/// R1253000: the answer a panicked action gets, first and on every resend of its nonce.
-fn panicked_answer(nonce: &str) -> ServerMessage {
-    error_message(SocketErrorCode::Internal, ACTION_PANICKED_MESSAGE, Some(nonce))
-}
-
 /// The frame the machine's answer to an action is sent as (§9.3).
 fn answer_message(nonce: &str, answer: ActionAnswer) -> ServerMessage {
-    match answer {
-        ActionAnswer::Ack { seq } => ack_message(nonce, seq),
-        ActionAnswer::Illegal { reason } => {
-            error_message(SocketErrorCode::IllegalAction, &reason, Some(nonce))
-        }
-        ActionAnswer::MatchOver => error_message(
-            SocketErrorCode::MatchOver,
-            "this match already has a result",
-            Some(nonce),
-        ),
-        ActionAnswer::Panicked => panicked_answer(nonce),
-        ActionAnswer::NotRecorded => error_message(
-            SocketErrorCode::Internal,
-            "the action could not be recorded; try again",
-            Some(nonce),
-        ),
-        // R4013000: a 1v1 nonce is its own seat's duplicate check, as a co-op host's is: another seat's copy is taken.
-        ActionAnswer::NonceTaken => error_message(
-            SocketErrorCode::Malformed,
-            "that nonce is already taken",
-            Some(nonce),
-        ),
-    }
+    answer_frame(nonce, answer, ack_message, error_message)
 }
 
 fn panic_message(error: tokio::task::JoinError) -> String {
@@ -455,22 +435,7 @@ pub fn create_match_actor(deps: ActorDeps, input: MatchActorInput) -> MatchActor
         pinned,
         dealt_cards,
     } = input;
-    let seats = (
-        MatchSeat {
-            profile_id: match_row.players.0.clone(),
-            player: PlayerId::P1,
-            deck: match_row.decks.0.clone(),
-            portrait: None,
-            deck_slots: None,
-        },
-        MatchSeat {
-            profile_id: match_row.players.1.clone(),
-            player: PlayerId::P2,
-            deck: match_row.decks.1.clone(),
-            portrait: None,
-            deck_slots: None,
-        },
-    );
+    let seats = seats_of(&match_row);
 
     let next_seq = log.iter().fold(0, |highest, row| highest.max(row.seq)) + 1;
     let acked: Vec<(String, PlayerId, i64)> = log
@@ -1997,7 +1962,7 @@ use crate::actor::protocol::{spectator_emote_message, spectator_hand_message, wa
 use crate::actor::ws_server::{CLOSE_GOING_AWAY, CLOSE_NORMAL, WS_CLOSE};
 use crate::config::{SPECTATE_DELAY_MS, SPECTATORS_PER_MATCH};
 use crate::social::watch::{
-    SPECTATOR_EMOTE_LIMITS, WatchFrame, deal_spectator_emote_hand, parse_watch_frame, send_spectator_emote,
+    WatchFrame, deal_spectator_emote_hand, parse_watch_frame, send_spectator_emote, spectator_emote_allowed,
 };
 
 /// What a revoked watcher's `forbidden` frame and close say: the words every refused hello carries
@@ -2136,6 +2101,36 @@ impl WatchRefused {
     }
 }
 
+/// B50: makes room for a watcher socket of the account `of_account` picks out, on a match or a co-op
+/// game. A newer socket of the account takes its older one's place, and the older one is answered for
+/// the caller to close; otherwise a match SPECTATORS_PER_MATCH sockets already watch is `Full`.
+pub(crate) fn make_room<W>(
+    watchers: &mut Vec<W>,
+    of_account: impl Fn(&W) -> bool,
+) -> Result<Option<W>, WatchRefused> {
+    let replaced = watchers.iter().position(of_account).map(|at| watchers.remove(at));
+    if replaced.is_none() && watchers.len() >= SPECTATORS_PER_MATCH {
+        return Err(WatchRefused::Full);
+    }
+    Ok(replaced)
+}
+
+/// B50, B46: sends each revoked watcher's open socket `forbidden` and closes it with R148's 4403, on a
+/// match or a co-op game. Called off the lock, once the watchers are out of the list.
+pub(crate) fn refuse_watchers<'a>(sockets: impl IntoIterator<Item = &'a Socket>) {
+    let refusal = encode(&error_message(
+        SocketErrorCode::Forbidden,
+        WATCH_NOT_ALLOWED,
+        None,
+    ));
+    for socket in sockets {
+        if socket.is_open() {
+            socket.send(&refusal);
+            socket.close(Some(WS_CLOSE.forbidden), Some(WATCH_NOT_ALLOWED));
+        }
+    }
+}
+
 impl MatchActor {
     /// B50: `profile_id`'s watcher socket on the seat `home`'s account plays. A newer socket of the
     /// account replaces its older one; otherwise a match with SPECTATORS_PER_MATCH watchers is `Full`.
@@ -2155,15 +2150,9 @@ impl MatchActor {
             if core.host.is_stopped() || core.host.is_voided() || core.spectate.closed {
                 return Err(WatchRefused::Closed);
             }
-            let at = core
-                .spectate
-                .watchers
-                .iter()
-                .position(|watcher| watcher.profile_id == profile_id);
-            let replaced = at.map(|at| core.spectate.watchers.remove(at));
-            if replaced.is_none() && core.spectate.watchers.len() >= SPECTATORS_PER_MATCH {
-                return Err(WatchRefused::Full);
-            }
+            let replaced = make_room(&mut core.spectate.watchers, |watcher| {
+                watcher.profile_id == profile_id
+            })?;
             // Those already watching are sent what has come due first, so each record is down to
             // the view the newcomer starts from.
             self.spectate_flush(&mut core, now_ms());
@@ -2269,19 +2258,7 @@ impl MatchActor {
             gone
         };
         // Already out of the list, so their close handlers find nothing to take off.
-        let refusal = encode(&error_message(
-            SocketErrorCode::Forbidden,
-            WATCH_NOT_ALLOWED,
-            None,
-        ));
-        for watcher in &gone {
-            if watcher.socket.is_open() {
-                watcher.socket.send(&refusal);
-                watcher
-                    .socket
-                    .close(Some(WS_CLOSE.forbidden), Some(WATCH_NOT_ALLOWED));
-            }
-        }
+        refuse_watchers(gone.iter().map(|watcher| &watcher.socket));
         gone.len()
     }
 
@@ -2369,19 +2346,9 @@ impl MatchActor {
             }
             let sender_id = watcher.profile_id.clone();
             let frame = encode(&spectator_emote_message(&watcher.name, emote));
-            let now = now_ms();
-            let history = core
-                .spectate
-                .emote_sent_at
-                .get(&sender_id)
-                .map_or(&[][..], Vec::as_slice);
-            let gate = emote_gate_within(history, now, SPECTATOR_EMOTE_LIMITS);
-            if !gate.ok {
+            if !spectator_emote_allowed(&mut core.spectate.emote_sent_at, &sender_id, now_ms()) {
                 return;
             }
-            let mut sent_at = gate.sent_at;
-            sent_at.push(now);
-            core.spectate.emote_sent_at.insert(sender_id.clone(), sent_at);
             let (first, second) = &self.shared.seats;
             let players = [first, second].into_iter().filter_map(|seat| {
                 core.sockets[seat.player]
@@ -2595,5 +2562,23 @@ impl MatchActor {
                 watcher.socket.close(Some(code), Some(reason));
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// B50: a newer socket of the account takes its older one's place, even in a full match; a socket of
+    /// another account finds room only below SPECTATORS_PER_MATCH, and a full match keeps its watchers.
+    #[test]
+    fn a_newer_socket_of_the_account_takes_its_place_and_a_full_match_is_full() {
+        let mut watchers: Vec<usize> = (0..SPECTATORS_PER_MATCH).collect();
+        assert_eq!(make_room(&mut watchers, |watcher| *watcher == 0), Ok(Some(0)));
+        assert_eq!(watchers.len(), SPECTATORS_PER_MATCH - 1);
+        assert_eq!(make_room(&mut watchers, |_| false), Ok(None));
+        watchers.push(SPECTATORS_PER_MATCH);
+        assert_eq!(make_room(&mut watchers, |_| false), Err(WatchRefused::Full));
+        assert_eq!(watchers.len(), SPECTATORS_PER_MATCH);
     }
 }

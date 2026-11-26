@@ -53,6 +53,8 @@ enum CounterKind<'a> {
         wrap_up: Option<&'a dyn Fn() -> bool>,
         /// R4801000: `end_root` was called: the beam has tried every move at its root.
         root_tried: Cell<bool>,
+        /// R4604014: the beam's slice (`create_beam_counter`), whose own limit binds once `root_tried`.
+        root_free: bool,
         /// The wrap-up fired: no node is taken until `closing`.
         wrapped: Cell<bool>,
         /// `end_exploring` was called: the wrap-up no longer refuses.
@@ -76,6 +78,13 @@ impl NodeCounter for CountingNodeCounter<'_> {
     fn limit(&self) -> usize {
         match &self.kind {
             CounterKind::Root { limit, .. } => *limit,
+            // R4604014: the beam's root draws on the parent alone.
+            CounterKind::Sub {
+                parent,
+                root_free: true,
+                root_tried,
+                ..
+            } if !root_tried.get() => parent.limit(),
             CounterKind::Sub {
                 parent, start, limit, ..
             } => parent.limit().min(start + *limit),
@@ -114,10 +123,12 @@ impl NodeCounter for CountingNodeCounter<'_> {
                 capped,
                 wrap_up,
                 root_tried,
+                root_free,
                 wrapped,
                 closing,
             } => {
-                if parent.used().saturating_sub(*start) >= *limit {
+                // R4604014: the beam's root takes the parent's nodes however many its moves cost.
+                if parent.used().saturating_sub(*start) >= *limit && !(*root_free && !root_tried.get()) {
                     capped.set(true);
                     return false;
                 }
@@ -356,10 +367,28 @@ pub fn create_wrap_up_counter<'a>(
             capped: Cell::new(false),
             wrap_up,
             root_tried: Cell::new(false),
+            root_free: false,
             wrapped: Cell::new(false),
             closing: Cell::new(false),
         },
     }
+}
+
+/// R4604014: the beam's slice, `create_wrap_up_counter`'s, whose own `limit` binds, as its wrap-up does
+/// (R4801000), only once `end_root` is called: the moves at the beam's root draw on the parent however
+/// many nodes they cost, so a root move dearer than the whole slice still closes a line (run-sim seed 0's
+/// turn 31, two answers of a prompt at 206 nodes each against a slice of 193, fell back with none).
+/// The parent's own limit and clock still stop it.
+pub fn create_beam_counter<'a>(
+    parent: &'a dyn NodeCounter,
+    limit: usize,
+    wrap_up: Option<&'a dyn Fn() -> bool>,
+) -> CountingNodeCounter<'a> {
+    let mut counter = create_wrap_up_counter(parent, limit, wrap_up);
+    if let CounterKind::Sub { root_free, .. } = &mut counter.kind {
+        *root_free = true;
+    }
+    counter
 }
 
 /// #1429: a caught panic is a failed simulation, counted apart too, its message kept when first;
@@ -415,6 +444,10 @@ pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) 
             };
             expensive + judged
         }
+        // R4595004: a face-down expensive card's reveal (`activate`) runs its scorer as a Play does.
+        ActionBody::Activate { instance_id, .. } => find_instance(state, instance_id)
+            .filter(|card| stands_for_any(state, &card.def_id, AI_SEARCH.expensive_def_ids))
+            .map_or(0, |_| AI_SEARCH.expensive_def_nodes.max(0) as usize),
         ActionBody::Attack {
             attacker_id,
             target_id,
@@ -445,6 +478,16 @@ pub fn surcharge_nodes(state: &GameState, actor: PlayerId, action: &ActionBody) 
     }
 }
 
+/// R4595003: the nodes a step's own events cost beyond its one: one for every
+/// `AI_SEARCH.events_per_node` past `AI_SEARCH.free_events`.
+pub fn event_surcharge_nodes(stepped: &ReduceResult) -> usize {
+    let free = usize::try_from(AI_SEARCH.free_events).unwrap_or(0);
+    match usize::try_from(AI_SEARCH.events_per_node) {
+        Ok(per) if per > 0 => stepped.events.len().saturating_sub(free) / per,
+        _ => 0,
+    }
+}
+
 /// Post-step surcharge for unannounced expensive card resolves like random/graveyard casts (#1347).
 pub fn announced_surcharge_nodes(state: &GameState, action: &ActionBody, stepped: &ReduceResult) -> usize {
     let ids = AI_SEARCH.expensive_def_ids;
@@ -456,7 +499,7 @@ pub fn announced_surcharge_nodes(state: &GameState, action: &ActionBody, stepped
         })
         .count();
     let prepaid = match action {
-        ActionBody::Play { instance_id, .. } => usize::from(
+        ActionBody::Play { instance_id, .. } | ActionBody::Activate { instance_id, .. } => usize::from(
             find_instance(state, instance_id).is_some_and(|card| stands_for_any(state, &card.def_id, ids)),
         ),
         _ => 0,
@@ -464,7 +507,7 @@ pub fn announced_surcharge_nodes(state: &GameState, action: &ActionBody, stepped
     announced.saturating_sub(prepaid) * AI_SEARCH.expensive_def_nodes.max(0) as usize
 }
 
-/// Takes a step's `announced_surcharge_nodes` from `counter`, as many as it still gives: the step's
+/// Takes a step's `announced_surcharge_nodes` and `event_surcharge_nodes` (R4595003) from `counter`, as many as it still gives: the step's
 /// work is done and kept, and a spent counter stops the search at its next node.
 pub(crate) fn charge_announced(
     counter: &dyn NodeCounter,
@@ -472,7 +515,7 @@ pub(crate) fn charge_announced(
     action: &ActionBody,
     stepped: &ReduceResult,
 ) {
-    for _ in 0..announced_surcharge_nodes(state, action, stepped) {
+    for _ in 0..announced_surcharge_nodes(state, action, stepped) + event_surcharge_nodes(stepped) {
         if !counter.take() {
             return;
         }
@@ -763,7 +806,8 @@ fn simulate_answering(
                 if let Some(memo) = memo
                     && stepped.error.is_none()
                     && (surcharge_nodes(state, seat, action) > 0
-                        || announced_surcharge_nodes(state, action, &stepped) > 0)
+                        || announced_surcharge_nodes(state, action, &stepped) > 0
+                        || event_surcharge_nodes(&stepped) > 0)
                 {
                     memo.keep(state, seat, action, &stepped);
                 }

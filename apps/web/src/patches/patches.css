@@ -26,7 +26,7 @@
   text-decoration-thickness: 0.08em;
   text-underline-offset: 0.18em;
   background: var(--patch-mark-band);
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
@@ -190,7 +190,7 @@
   min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--line-bright, color-mix(in srgb, var(--pal-brass-500) 55%, transparent));
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-sunken, var(--pal-wood-950));
   color: var(--text, var(--pal-parchment));
   font: inherit;
@@ -245,7 +245,7 @@
   gap: 8px;
   padding: 10px 12px;
   border: 1px solid var(--line, color-mix(in srgb, var(--pal-brass-500) 30%, transparent));
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--pal-black) 22%, transparent);
 }
 
@@ -304,7 +304,7 @@
   min-height: 44px;
   padding: 0 18px;
   border: 1px solid var(--line-bright, color-mix(in srgb, var(--pal-brass-500) 55%, transparent));
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bg-sunken, var(--pal-wood-950));
   color: var(--text, var(--pal-parchment));
   font: inherit;
@@ -345,7 +345,7 @@
   padding: 18px 20px 20px;
   overflow-wrap: anywhere;
   border: 1px solid var(--tavern-brass);
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(ellipse 90% 40% at 50% 0%, color-mix(in srgb, var(--pal-brass-300) 8%, transparent), transparent 70%),
     linear-gradient(180deg, color-mix(in srgb, var(--pal-wood-800) 96%, transparent), color-mix(in srgb, var(--pal-wood-900) 97%, transparent));
@@ -370,7 +370,7 @@
   min-height: 44px;
   padding: 4px 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--tavern-gold);
   font-family: var(--tavern-serif);
@@ -437,7 +437,7 @@
 .tavern.app-shell .patch-tech {
   padding: 14px 16px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--tavern-well);
 }
 
@@ -479,7 +479,7 @@
   /* A long word or name in a note wraps: the page never scrolls sideways. */
   overflow-wrap: anywhere;
   border: 1px solid var(--tavern-brass);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(ellipse 90% 40% at 50% 0%, color-mix(in srgb, var(--pal-brass-300) 8%, transparent), transparent 70%),
     linear-gradient(180deg, color-mix(in srgb, var(--pal-wood-800) 96%, transparent), color-mix(in srgb, var(--pal-wood-900) 97%, transparent));
@@ -514,7 +514,7 @@
 .tavern.app-shell .patch__title .patch-version {
   padding: 2px 10px;
   border: 1px solid var(--tavern-teal);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: var(--patch-mark-ink);
   font-family: inherit;
   font-size: 0.72em;
@@ -535,7 +535,7 @@
   aspect-ratio: 16 / 9;
   overflow: hidden;
   border: 1px solid var(--tavern-brass);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, var(--tavern-wood-deep), var(--tavern-well));
 }
 
@@ -607,7 +607,7 @@
   min-height: 44px;
   padding: 0 14px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--tavern-well);
   color: var(--tavern-parchment);
   font: inherit;
@@ -660,7 +660,7 @@
   gap: 14px;
   padding: 12px;
   border: 1px solid color-mix(in srgb, var(--pal-brass-500) 35%, transparent);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--pal-wood-950) 55%, transparent);
 }
 
@@ -820,7 +820,7 @@
   overflow-wrap: anywhere;
   padding: 12px 10px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: linear-gradient(180deg, color-mix(in srgb, var(--pal-wood-800) 96%, transparent), color-mix(in srgb, var(--pal-wood-900) 97%, transparent));
   box-shadow: 0 10px 28px color-mix(in srgb, var(--pal-black) 45%, transparent);
   color: var(--tavern-parchment);
@@ -863,7 +863,7 @@
   padding: 4px 8px;
   border: 0;
   border-left: 3px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   color: var(--tavern-parchment);
   font-variant-numeric: tabular-nums;
   font-weight: 400;
@@ -907,7 +907,7 @@
   gap: 6px;
   padding: 2px 8px 2px 11px;
   border: 0;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: none;
   color: var(--tavern-text-dim);
   font: inherit;
@@ -966,7 +966,7 @@
   padding: var(--space-7) var(--space-8);
   overflow-wrap: anywhere;
   border: 1px dashed var(--tavern-brass);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   background: var(--tavern-well);
 }
 
@@ -1010,7 +1010,7 @@
   gap: 6px;
   padding: 10px 12px;
   border-left: 3px solid var(--tavern-brass);
-  border-radius: 4px 10px 10px 4px;
+  border-radius: var(--radius-xs) var(--radius-md) var(--radius-md) var(--radius-xs);
   background: color-mix(in srgb, var(--pal-wood-950) 55%, transparent);
 }
 
@@ -1040,7 +1040,7 @@
 .tavern.app-shell .patch-micro__title .patch-version {
   padding: 1px 8px;
   border: 1px solid var(--tavern-teal);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: var(--patch-mark-ink);
   font-size: 0.8em;
 }

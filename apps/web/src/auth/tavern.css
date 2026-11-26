@@ -134,7 +134,7 @@
   padding: 28px 26px 30px;
   gap: 14px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(ellipse 90% 40% at 50% 0%, color-mix(in srgb, var(--pal-brass-300) 10%, transparent), transparent 70%),
     linear-gradient(180deg, color-mix(in srgb, var(--pal-wood-800) 96%, transparent), color-mix(in srgb, var(--pal-wood-900) 97%, transparent));
@@ -151,7 +151,7 @@
   position: absolute;
   inset: 9px;
   pointer-events: none;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   --stud: radial-gradient(circle at 42% 38%, var(--pal-brass-200) 0 1px, #e3b35a 2px, #8a5a1f 4px, var(--pal-wood-800) 4.6px, transparent 5.2px);
   background:
     var(--stud) 0 0 / 11px 11px no-repeat,
@@ -172,7 +172,7 @@
 .tavern.app-shell .auth-signed-in {
   padding: 11px 14px;
   border: 1px solid color-mix(in srgb, var(--pal-brass-500) 30%, transparent);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--pal-parchment) 5%, transparent);
 }
 
@@ -211,7 +211,7 @@
 .tavern.app-shell .notice {
   max-width: none;
   border: 1px solid color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: linear-gradient(90deg, color-mix(in srgb, var(--pal-brass-500) 12%, transparent), color-mix(in srgb, var(--pal-brass-500) 4%, transparent));
   color: color-mix(in srgb, var(--tavern-parchment) 90%, transparent);
   line-height: 1.45;
@@ -261,7 +261,7 @@
   min-height: 46px;
   padding: 10px 14px;
   border: 1px solid color-mix(in srgb, var(--pal-brass-500) 50%, transparent);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, var(--pal-wood-950), var(--tavern-well));
   color: var(--tavern-parchment);
   caret-color: var(--tavern-gold);
@@ -310,7 +310,7 @@
    way, so the field does not jump when it is pressed. */
 .tavern.app-shell .affix-button {
   min-width: 68px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-weight: 600;
 }
 
@@ -327,7 +327,7 @@
   min-height: 50px;
   padding: 10px 20px;
   border-width: 2px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   font-family: var(--tavern-serif);
   font-size: 19px;
   font-weight: 700;
@@ -355,7 +355,7 @@
 .tavern.app-shell:where(:not(.deckbuilder)) button:where(:not(.top-bar-button)):not(.link-button):not(.affix-button):not(.button-primary):not([type="submit"]):where(:not(.dialog__close, .together-group__toggle)) {
   min-height: 44px;
   padding: 8px 18px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-family: var(--tavern-serif);
   font-size: 16px;
   font-weight: 700;
@@ -368,7 +368,7 @@
   justify-content: center;
   min-height: 44px;
   padding: 8px 18px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-family: var(--tavern-serif);
   font-size: 16px;
   font-weight: 700;
@@ -519,7 +519,7 @@
 
 .tavern.app-shell .notice code {
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: var(--tavern-well);
   color: var(--tavern-gold-pale);
 }
@@ -536,7 +536,7 @@
   flex: 0 0 auto;
   width: 18px;
   height: 18px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   border: 2px solid color-mix(in srgb, var(--pal-brass-500) 30%, transparent);
   border-top-color: var(--tavern-gold);
   animation: tavern-spin 900ms linear infinite;
@@ -557,7 +557,7 @@
   gap: 4px;
   padding: 12px 14px;
   border: 1px solid color-mix(in srgb, var(--pal-brass-500) 30%, transparent);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--pal-parchment) 5%, transparent);
 }
 
@@ -580,7 +580,7 @@
   margin-top: 4px;
   padding: 3px 10px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--pal-brass-500) 14%, transparent);
   color: var(--tavern-gold-pale);
   font-size: 14px;

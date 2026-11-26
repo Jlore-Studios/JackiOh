@@ -148,6 +148,8 @@ export const testid = {
   matchMenuPanel: "match-menu-panel",
   /** R1853003: "Buy" under the Marketplace's lot `offer` (its index, which `marketBuy` names). */
   marketBuy: (offer: number): string => `market-buy-${offer}`,
+  /** R3768000: the line a press on a greyed "Buy" shows under it, the view's `reason` for lot `offer`. */
+  marketReason: (offer: number): string => `market-reason-${offer}`,
   /**
    * R3477000: the attack outcome on a legal target of the aimed attack (AttackOutcome.tsx), `target` its
    * `card-…` or `hero-…` testid. No drag target reads it (drag/targets.ts), so a press walks up to the target.

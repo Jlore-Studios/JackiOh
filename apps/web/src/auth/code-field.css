@@ -40,7 +40,7 @@
   min-height: 46px;
   padding: 8px 4px;
   border: 1px solid var(--line-bright);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--bg-sunken);
   color: var(--text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
@@ -58,7 +58,7 @@
   top: 50%;
   width: 6px;
   height: 2px;
-  border-radius: 1px;
+  border-radius: var(--radius-xs);
   background: var(--line-bright);
 }
 
@@ -95,7 +95,7 @@
   content: "";
   width: 4px;
   height: 4px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--line-bright);
 }
 
@@ -106,7 +106,7 @@
   top: 5%;
   bottom: 5%;
   width: 2px;
-  border-radius: 1px;
+  border-radius: var(--radius-xs);
   background: var(--radiant);
   animation: code-field-blink 1s steps(1, end) infinite;
 }
@@ -122,7 +122,7 @@
 /* A selection: the input's own highlight is transparent (its text is), so the cells draw it, and
    the next keystroke visibly replaces what is marked. */
 .code-field__cell[data-selected="true"] {
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--you) 45%, transparent);
   color: var(--text);
 }
@@ -144,7 +144,7 @@
   margin: 0;
   padding: 0 12px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: transparent;
   -webkit-text-fill-color: transparent;
@@ -173,7 +173,7 @@
 
 /* Focus is shown on the segments instead, since the input draws nothing. */
 .code-field:focus-within .code-field__segments {
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   outline: 2px solid color-mix(in srgb, var(--radiant) 55%, transparent);
   outline-offset: 4px;
 }
@@ -195,7 +195,7 @@
 .code-field__hint {
   border-left: 3px solid var(--opponent);
   padding: 6px 10px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--opponent) 10%, var(--bg-sunken));
   color: var(--text);
   font-size: 13px;
@@ -354,7 +354,7 @@
 .tavern .code-field__segment {
   min-height: 54px;
   border: 1px solid color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, var(--pal-wood-950), var(--tavern-well));
   color: var(--tavern-gold-pale);
   font-size: clamp(16px, 4.4vw, 21px);
@@ -419,7 +419,7 @@
 
 .tavern.app-shell .code-field__hint {
   border-left-color: var(--tavern-danger);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: linear-gradient(90deg, color-mix(in srgb, var(--pal-lacquer-400) 16%, transparent), color-mix(in srgb, var(--pal-lacquer-400) 5%, transparent));
   color: var(--tavern-parchment);
 }
@@ -536,7 +536,7 @@
   padding: 11px 14px;
   border: 1px solid color-mix(in srgb, var(--pal-lacquer-400) 35%, transparent);
   border-left: 3px solid var(--tavern-danger);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: linear-gradient(90deg, color-mix(in srgb, var(--pal-lacquer-400) 16%, transparent), color-mix(in srgb, var(--pal-lacquer-400) 5%, transparent));
 }
 

@@ -43,7 +43,7 @@
   min-height: 44px;
   padding: 8px 10px;
   border: 1px solid color-mix(in srgb, var(--pal-brass-500) 50%, transparent);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, var(--pal-wood-950), var(--tavern-well, var(--pal-wood-950)));
   color: var(--tavern-parchment, var(--pal-parchment));
   font: inherit;
@@ -113,7 +113,7 @@
 .consent-link:focus-visible {
   outline: 2px solid #9cc8ff;
   outline-offset: 2px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
 }
 
 .consent-error {

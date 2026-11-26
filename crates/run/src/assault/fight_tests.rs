@@ -5,14 +5,17 @@ use super::*;
 use crate::assault::content::content_file;
 use crate::assault::day::MONTH_DAYS;
 use crate::config::ASSAULT_LEVELS;
+use crate::fight::VOIDED_FIGHT;
 use jackioh_engine::catalog::{deckable, registered_catalog};
-use jackioh_engine::config::{HUMAN_HANDICAP, Handicap, TURN_CAP_PLAYER_TURNS};
+use jackioh_engine::config::{GLITCH_DEF_ID, HUMAN_HANDICAP, Handicap, TURN_CAP_PLAYER_TURNS};
 use jackioh_engine::reduce::{begin_game, legal_actions, reduce, seat_to_act};
-use jackioh_engine::replay::{self, ReplayInput};
+use jackioh_engine::replay::{self, ReplayInput, fold};
 use jackioh_engine::state::{
     CreateGameOptions, SetupKind, create_game, create_recorded_game, validate_setup,
 };
-use jackioh_engine::wire::{Action, ActionBody, PerPlayerOpt, PlayerId, Rarity};
+use jackioh_engine::wire::{
+    Action, ActionBody, GameOverReason, PerPlayerOpt, PlayerId, Rarity, SandboxOp, SpawnZone, Winner,
+};
 
 /// The first `n` `deckable` ids of the catalog that ships, in catalog order.
 fn first_deckable(n: usize) -> Vec<String> {
@@ -329,5 +332,240 @@ fn r4579002_a_draw_at_the_turn_cap_reports_a_loss_and_a_concession_a_win() {
             Ok(AssaultAction::FightOver { won: true, .. })
         ),
         "P1 reports a win"
+    );
+}
+
+fn tg(n: &str) -> String {
+    format!("traininggrounds-{n}")
+}
+
+/// `scripted_game`'s decks and handicaps; both hands kept, P1 ends its turns, P2 puts a Glitch in its
+/// hand and plays it, on the first seed whose Glitch voids. A sandbox only to put the Glitch in hand; a
+/// run's fight is never one.
+fn voided_game() -> ReplayInput {
+    jackioh_cards::register_all();
+    let decks = (
+        ["058", "042", "043", "001", "008"].map(tg).to_vec(),
+        ["006", "007", "047", "054", "048"].map(tg).to_vec(),
+    );
+    let handicap = |hero_health| Handicap {
+        deck_size: 5,
+        hero_health: Some(hero_health),
+        ..HUMAN_HANDICAP
+    };
+    let handicaps = PerPlayerOpt {
+        p1: Some(handicap(20)),
+        p2: Some(handicap(10)),
+    };
+    for n in 0..200 {
+        let seed = format!("glitch-void-{n}");
+        let options = CreateGameOptions {
+            seed: seed.clone(),
+            decks: decks.clone(),
+            handicaps: Some(handicaps.clone()),
+            sandbox: Some(true),
+            ..Default::default()
+        };
+        let mut state = begin_game(&create_recorded_game(&options)).state;
+        let mut log: Vec<Action> = Vec::new();
+        let mut spawned = false;
+        loop {
+            assert!(log.len() < 12, "the Glitch is played");
+            let seat = seat_to_act(&state).expect("a seat acts");
+            let legal = legal_actions(&state, seat);
+            let hand = &state.players[seat].hand;
+            let body = if legal.iter().any(|b| matches!(b, ActionBody::Mulligan { .. })) {
+                ActionBody::Mulligan {
+                    keep: hand.iter().map(|c| c.id.clone()).collect(),
+                }
+            } else if seat == PlayerId::P1 {
+                ActionBody::EndTurn
+            } else if !spawned {
+                spawned = true;
+                ActionBody::Sandbox {
+                    op: SandboxOp::Spawn {
+                        player: PlayerId::P2,
+                        def_id: GLITCH_DEF_ID.into(),
+                        radiant: None,
+                        to: SpawnZone::Hand,
+                    },
+                }
+            } else {
+                legal
+                    .iter()
+                    .find(|b| {
+                        matches!(b, ActionBody::Play { instance_id, .. }
+                            if hand.iter().any(|c| &c.id == instance_id && c.def_id == GLITCH_DEF_ID))
+                    })
+                    .cloned()
+                    .expect("the Glitch is playable")
+            };
+            let played = matches!(body, ActionBody::Play { .. });
+            let action = Action::new(body, seat, format!("n{}", log.len()));
+            let result = reduce(&state, &action);
+            assert_eq!(result.error, None, "{action:?}");
+            log.push(action);
+            state = result.state;
+            if played {
+                break;
+            }
+        }
+        if state.result.map(|r| (r.winner, r.reason)) == Some((Winner::Draw, GameOverReason::Voided)) {
+            return ReplayInput {
+                seed,
+                decks,
+                log,
+                handicaps: Some(handicaps),
+                sandbox: Some(true),
+                ..Default::default()
+            };
+        }
+    }
+    panic!("no seed's Glitch draws the void");
+}
+
+#[test]
+fn r4999000_a_glitch_voided_assault_fight_is_refused_and_dealt_again() {
+    jackioh_cards::register_all();
+    let catalog = registered_catalog();
+    let content = assault_placeholder_content(catalog);
+    let date = "2027-01-02";
+    let day = assault_day(date, &content).expect("the placeholder content deals");
+    let setup = AssaultSetup {
+        date: date.into(),
+        deck: first_deckable(25),
+        source: AssaultDeckSource::Saved,
+        start_level: 1,
+        attempt: 1,
+    };
+    let record = AssaultRecord {
+        date: date.into(),
+        ..Default::default()
+    };
+    let briefing = assault_create(&setup, &record, &day).expect("create attempt");
+    let fighting = assault_reduce(&briefing, &day, &AssaultAction::Fight).expect("start fight");
+    assert_eq!(fighting.phase, AssaultPhase::Fight);
+    assert!(fighting.beaten.is_empty());
+
+    let setup_before = assault_fight_setup(&fighting, &day).expect("setup before void");
+    assert_eq!(setup_before.seed, format!("{}-L1-A1", day.seed));
+
+    let voided = voided_game();
+    assert_eq!(
+        fold(&voided).state.result.map(|r| (r.winner, r.reason)),
+        Some((Winner::Draw, GameOverReason::Voided))
+    );
+    assert_eq!(
+        assault_fight_report(&voided, PlayerId::P1),
+        Err(VOIDED_FIGHT.to_string())
+    );
+    assert_eq!(
+        assault_fight_report(&voided, PlayerId::P2),
+        Err(VOIDED_FIGHT.to_string())
+    );
+
+    let setup_after = assault_fight_setup(&fighting, &day).expect("setup after void");
+    assert_eq!(setup_before, setup_after);
+    assert_eq!(fighting.phase, AssaultPhase::Fight);
+    assert!(fighting.beaten.is_empty());
+
+    let (options, handicaps) = fight_options(&setup_after.human_deck, &setup_after.level, &setup_after.seed);
+    let begun = begin_game(&create_recorded_game(&options)).state;
+    let (mut state, mut log) = keep_all(&begun);
+    let mut nonce = log.len();
+    while state.result.is_none() {
+        let seat = seat_to_act(&state).expect("a seat acts");
+        let body = if seat == PlayerId::P2
+            && !legal_actions(&state, seat)
+                .iter()
+                .any(|body| matches!(body, ActionBody::Mulligan { .. }))
+        {
+            ActionBody::Concede
+        } else {
+            ActionBody::EndTurn
+        };
+        let action = Action::new(body, seat, format!("c{nonce}"));
+        nonce += 1;
+        let result = reduce(&state, &action);
+        assert_eq!(result.error, None, "{action:?}");
+        log.push(action);
+        state = result.state;
+        assert!(nonce < 20, "P1 ends one turn, then P2 concedes");
+    }
+    let conceded = ReplayInput {
+        seed: options.seed.clone(),
+        decks: options.decks.clone(),
+        log,
+        handicaps: Some(handicaps),
+        deck_marks: options.deck_marks.clone(),
+        ..Default::default()
+    };
+    assert!(
+        matches!(
+            assault_fight_report(&conceded, PlayerId::P1),
+            Ok(AssaultAction::FightOver { won: true, .. })
+        ),
+        "P1 reports a win"
+    );
+}
+
+#[test]
+fn r4999000_a_real_loss_still_reports_a_loss() {
+    jackioh_cards::register_all();
+    let catalog = registered_catalog();
+    let content = assault_placeholder_content(catalog);
+    let date = "2027-01-02";
+    let day = assault_day(date, &content).expect("the placeholder content deals");
+    let setup = AssaultSetup {
+        date: date.into(),
+        deck: first_deckable(25),
+        source: AssaultDeckSource::Saved,
+        start_level: 1,
+        attempt: 1,
+    };
+    let record = AssaultRecord {
+        date: date.into(),
+        ..Default::default()
+    };
+    let briefing = assault_create(&setup, &record, &day).expect("create attempt");
+    let fighting = assault_reduce(&briefing, &day, &AssaultAction::Fight).expect("start fight");
+    let setup_fight = assault_fight_setup(&fighting, &day).expect("setup for fight");
+    let (options, handicaps) = fight_options(&setup_fight.human_deck, &setup_fight.level, &setup_fight.seed);
+    let begun = begin_game(&create_recorded_game(&options)).state;
+    let (mut state, mut log) = keep_all(&begun);
+    let mut nonce = log.len();
+    while state.result.is_none() {
+        let seat = seat_to_act(&state).expect("a seat acts");
+        let body = if seat == PlayerId::P1
+            && !legal_actions(&state, seat)
+                .iter()
+                .any(|body| matches!(body, ActionBody::Mulligan { .. }))
+        {
+            ActionBody::Concede
+        } else {
+            ActionBody::EndTurn
+        };
+        let action = Action::new(body, seat, format!("c{nonce}"));
+        nonce += 1;
+        let result = reduce(&state, &action);
+        assert_eq!(result.error, None, "{action:?}");
+        log.push(action);
+        state = result.state;
+        assert!(nonce < 20, "P1 concedes on its first turn");
+    }
+    let game = ReplayInput {
+        seed: options.seed.clone(),
+        decks: options.decks.clone(),
+        log,
+        handicaps: Some(handicaps),
+        deck_marks: options.deck_marks.clone(),
+        ..Default::default()
+    };
+    assert!(
+        matches!(
+            assault_fight_report(&game, PlayerId::P1),
+            Ok(AssaultAction::FightOver { won: false, .. })
+        ),
+        "P1 reports a loss"
     );
 }

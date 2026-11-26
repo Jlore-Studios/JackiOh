@@ -63,17 +63,17 @@
 
 /* Unit, full card: an upright oval-topped portrait. */
 .cf-art--portrait {
-  border-radius: 48% 48% 40% 40% / 55% 55% 45% 45%;
+  border-radius: var(--radius-art-portrait);
 }
 
 /* Spell: a framed window with softened corners. */
 .cf-art--window {
-  border-radius: 6% / 8%;
+  border-radius: var(--radius-art-window);
 }
 
 /* Field Spell: a round-topped arch. */
 .cf-art--arch {
-  border-radius: 50% 50% 4% 4% / 40% 40% 4% 4%;
+  border-radius: var(--radius-art-arch);
 }
 
 /* Trap and Field Trap: a window with chamfered corners. */
@@ -90,7 +90,7 @@
 
 /* Board minion: a full oval. */
 .cf-art--oval {
-  border-radius: 50%;
+  border-radius: var(--radius-round);
 }
 
 /* #3341: a board unit's art that is not full art: the picture up to the face's frame, a rectangle the face's own panel

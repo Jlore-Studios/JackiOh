@@ -262,7 +262,7 @@ pub fn run_fight_report(game: &ReplayInput, human: PlayerId) -> Result<RunAction
 
 /// DR14: the fold behind `run_fight_report`: the `FightOver` a finished game sends with the reason it
 /// ended, a void read as any other end (no winner, so no win). `run_fight_report` refuses a void
-/// (R4852000); `assault_fight_report` does not yet (#4576).
+/// (R4852000); `assault_fight_report` refuses a void too ([[R4999000]]).
 pub(crate) fn fight_report(
     game: &ReplayInput,
     human: PlayerId,

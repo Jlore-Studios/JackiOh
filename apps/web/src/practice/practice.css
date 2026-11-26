@@ -136,7 +136,7 @@
   gap: 10px;
   padding: 22px 18px 18px;
   border: 1px solid color-mix(in srgb, var(--tier) 22%, color-mix(in srgb, var(--tavern-brass) 30%, transparent));
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--tier) 10%, transparent), transparent 70%),
     var(--tier-face);
@@ -193,7 +193,7 @@
   width: 24px;
   height: 24px;
   border: 2px solid color-mix(in srgb, var(--tier) 45%, color-mix(in srgb, var(--tavern-brass) 55%, transparent));
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--tavern-well);
   pointer-events: none;
 }
@@ -202,7 +202,7 @@
   content: "";
   width: 9px;
   height: 9px;
-  border-radius: 2px;
+  border-radius: var(--radius-xs);
   background: var(--tier);
   box-shadow: 0 0 8px var(--tier);
   transform: rotate(45deg) scale(0);
@@ -293,7 +293,7 @@
   gap: 16px 20px;
   padding: 16px 18px;
   border: 1px solid color-mix(in srgb, var(--tavern-brass) 30%, transparent);
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--tavern-wood-deep) 72%, transparent);
 }
 
@@ -339,7 +339,7 @@
 .practice .practice-daily {
   min-height: 56px;
   padding: 12px 20px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--bg-raised);
   font-size: var(--type-lg);
   font-weight: 650;
@@ -381,7 +381,7 @@
   min-height: 48px;
   padding: 10px 42px 10px 14px;
   border: 1px solid color-mix(in srgb, var(--tavern-brass) 55%, transparent);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: linear-gradient(
     180deg,
     var(--tavern-well),
@@ -416,7 +416,7 @@
   margin-top: 6px;
   padding: 12px 14px;
   border: 1px solid color-mix(in srgb, var(--tavern-brass) 30%, transparent);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--tavern-well);
 }
 
@@ -468,7 +468,7 @@
   align-self: end;
   width: 100%;
   min-height: 2px;
-  border-radius: 3px 3px 0 0;
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
   background: linear-gradient(180deg, #7fb4ff, var(--pal-blue-600));
 }
 
@@ -515,7 +515,7 @@
   place-items: center;
   width: 20px;
   height: 20px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: linear-gradient(160deg, #7fb4ff 0%, var(--pal-blue-600) 55%, #1c3f86 100%);
   color: var(--pal-white);
   font-size: 11px;
@@ -540,7 +540,7 @@
   min-width: 220px;
   min-height: 56px;
   padding: 12px 36px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   font-size: 18px;
   font-weight: 700;
   transition:
@@ -584,7 +584,7 @@
   height: 80px;
   margin: -40px 0 0 -29px;
   border: 1px solid color-mix(in srgb, var(--you) 55%, var(--line-bright));
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: repeating-linear-gradient(
     45deg,
     color-mix(in srgb, var(--you) 24%, var(--bg-raised)) 0 6px,
@@ -663,7 +663,7 @@
   padding: 6px 8px 6px 12px;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--tier) 28%, var(--line));
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: linear-gradient(
     180deg,
     color-mix(in srgb, var(--bg-raised) 94%, transparent),
@@ -783,7 +783,7 @@
   min-height: 32px;
   padding: 4px 16px;
   border: 1px solid var(--line-bright);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bg-sunken);
   color: var(--text);
   font-size: 12px;
@@ -813,7 +813,7 @@
   min-height: 30px;
   padding: 4px 14px 4px 6px;
   border: 1px solid color-mix(in srgb, var(--opponent) 55%, var(--line-bright));
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: linear-gradient(180deg, color-mix(in srgb, var(--opponent) 18%, var(--bg-sunken)), var(--bg-sunken));
   box-shadow: 0 0 14px -4px color-mix(in srgb, var(--opponent) 70%, transparent);
   color: var(--text);
@@ -834,7 +834,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: conic-gradient(
     from 0deg,
     transparent 0 30%,
@@ -849,7 +849,7 @@
 .practice-thinking__core {
   position: absolute;
   inset: 6.5px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--opponent);
   box-shadow: 0 0 8px var(--opponent);
   animation: practice-pulse calc(1.2s * var(--anim-scale, 1)) ease-in-out infinite;
@@ -900,7 +900,7 @@
   width: min(420px, 100%);
   padding: 26px 24px 20px;
   border: 1px solid color-mix(in srgb, var(--glow) 45%, var(--line));
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(120% 60% at 50% 0%, color-mix(in srgb, var(--glow) 16%, transparent), transparent 70%),
     linear-gradient(180deg, var(--bg-raised), var(--bg-sunken));
@@ -932,7 +932,7 @@
 .practice-result__rays {
   position: absolute;
   inset: -34px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: repeating-conic-gradient(
     from 0deg,
     color-mix(in srgb, var(--glow) 40%, transparent) 0 6deg,
@@ -970,7 +970,7 @@
   width: 6px;
   height: 6px;
   margin: -3px 0 0 -3px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle, #fff7d6 0 30%, var(--radiant) 55%, transparent 72%);
   box-shadow: 0 0 8px 2px color-mix(in srgb, var(--radiant) 70%, transparent);
   opacity: 0;
@@ -1072,7 +1072,7 @@
 
 .practice .practice-result__secondary {
   min-height: 56px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   font-size: 15px;
   font-weight: 650;
 }
@@ -1146,7 +1146,7 @@
     max-width: none;
     padding: 14px;
     border: 1px solid color-mix(in srgb, var(--tavern-brass) 30%, transparent);
-    border-radius: 14px;
+    border-radius: var(--radius-lg);
     background: color-mix(in srgb, var(--tavern-wood-deep) 72%, transparent);
   }
 
@@ -1227,7 +1227,7 @@
     max-width: none;
     padding: 14px 18px;
     border: 1px solid color-mix(in srgb, var(--tavern-brass) 30%, transparent);
-    border-radius: 14px;
+    border-radius: var(--radius-lg);
     background: color-mix(in srgb, var(--tavern-wood-deep) 72%, transparent);
   }
 

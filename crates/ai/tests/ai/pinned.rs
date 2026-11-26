@@ -3,18 +3,20 @@
 //! and node budgets while blind to hidden cards (R185).
 
 use jackioh_ai::{
-    AI_BUDGET, AI_SEARCH, AiOptions, Decision, Prices, SearchBudget, create_node_counter, decide,
-    hidden_instance_ids, redact, simulate, surcharge_nodes,
+    AI_BUDGET, AI_SEARCH, AiOptions, Decision, DecisionReason, Prices, SearchBudget, create_node_counter,
+    decide, hidden_instance_ids, redact, simulate, surcharge_nodes,
 };
 use jackioh_engine::testkit::{
     ActionBody, GameState, PlayerId, Value, create_rng, find_instance, hash_state, legal_actions, subsystems,
 };
 
-use super::support::register_cards;
+use super::support::{TEST_BUDGET, register_cards};
 
 const IMPROVE_DEV_154: &str = include_str!("../fixtures/pinned-improve-dev-154.json");
 const IMPROVE_DEV_200: &str = include_str!("../fixtures/pinned-improve-dev-200.json");
 const AUTOPILOT_DRAW: &str = include_str!("../fixtures/pinned-autopilot-draw.json");
+/// #5044: the enemy commander's decision on the 2026-11-28 Assault's level 9 (turn 16) that fell back.
+const ASSAULT_ROOT_CUT: &str = include_str!("../fixtures/pinned-assault-root-cut.json");
 
 /// The fused Zephyrs the seat holds on improve-dev:200's position (R77, R179).
 const FUSED_ZEPHYRS: &str = "t-10:core-097+core-068";
@@ -236,4 +238,22 @@ fn r2575000_a_state_of_ordinary_width_spends_past_600_nodes() {
     let at = pinned(IMPROVE_DEV_154);
     let decision = decide_on(&at.state, &at);
     assert!(decision.stats.nodes > 600, "{:?}", decision.stats);
+}
+
+/// R5044000: #5044's position at the test budget. The lethal search leaves 72 of 150 nodes, and the
+/// root holds two moves: a play of Meditative #21 whose simulation draws every one of them, then End turn.
+/// The beam simulates End turn first, so the cut play still leaves it a line and the decision searches.
+#[test]
+fn r5044000_a_root_move_that_spends_the_last_node_leaves_the_beam_its_end_turn() {
+    let at = pinned(ASSAULT_ROOT_CUT);
+    let mut options = AiOptions::with_budget(create_rng(&at.rng_seed, at.rng_cursor), TEST_BUDGET);
+    let d = decide(&at.state, at.seat, &mut options).expect("a decision");
+    assert_ne!(
+        d.reason,
+        DecisionReason::Fallback,
+        "the beam was left no line: {:?} after {} nodes",
+        d.action,
+        d.stats.nodes
+    );
+    assert!(d.stats.lines > 0, "{:?}", d.stats);
 }

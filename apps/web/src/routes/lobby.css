@@ -35,7 +35,7 @@
   margin: 0;
   padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-sunken);
   color: var(--text);
   cursor: var(--cursor-glove-point, pointer);
@@ -74,7 +74,7 @@
   color: var(--text);
   background: var(--bg-sunken);
   border: 1px solid var(--line-bright);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 10px 12px;
   min-height: 44px;
   max-width: 100%;
@@ -89,7 +89,7 @@
 .lobby .lobby-verdict {
   margin: 6px 0 0;
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--line);
   font-size: 13px;
 }
@@ -183,7 +183,7 @@
   min-width: 0;
   padding: 20px 20px 22px;
   border: 1px solid var(--play-panel-edge);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(ellipse 90% 40% at 50% 0%, color-mix(in srgb, var(--pal-brass-300) 8%, transparent), transparent 70%),
     linear-gradient(180deg, color-mix(in srgb, var(--pal-wood-800) 94%, transparent), color-mix(in srgb, var(--pal-wood-900) 96%, transparent));
@@ -216,7 +216,7 @@
   width: 26px;
   height: 26px;
   border: 1px solid var(--tavern-brass);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle at 40% 35%, var(--pal-brass-200), var(--tavern-gold) 45%, var(--pal-brass-600));
   color: var(--tavern-ink);
   font-size: 14px;
@@ -262,7 +262,7 @@
   min-height: 100%;
   padding: 12px 40px 12px 14px;
   border: 1px solid color-mix(in srgb, var(--pal-brass-500) 35%, transparent);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--play-tile);
   color: var(--tavern-parchment);
   cursor: var(--cursor-glove-point, pointer);
@@ -320,7 +320,7 @@
   margin: 0;
   appearance: none;
   border: 2px solid var(--tavern-brass);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--tavern-well);
   cursor: var(--cursor-glove-point, pointer);
 }
@@ -361,7 +361,7 @@
   grid-area: wait;
   padding: 2px 9px;
   border: 1px solid color-mix(in srgb, var(--pal-verdigris-400) 45%, transparent);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: #9fe3da;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
@@ -387,7 +387,7 @@
   min-height: 46px;
   padding: 10px 14px;
   border: 1px solid color-mix(in srgb, var(--pal-brass-500) 50%, transparent);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: linear-gradient(180deg, var(--pal-wood-950), var(--tavern-well));
   color: var(--tavern-parchment);
   font: inherit;
@@ -428,7 +428,7 @@
   max-width: 100%;
   padding: 3px 10px;
   border: 1px solid color-mix(in srgb, var(--pal-brass-500) 45%, transparent);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--pal-wood-950) 70%, transparent);
   color: var(--tavern-parchment);
   font-size: 13px;
@@ -454,7 +454,7 @@
   margin: 2px 0 0;
   padding: 10px 14px;
   border: 1px solid color-mix(in srgb, var(--pal-lacquer-400) 55%, transparent);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--pal-wood-950) 60%, transparent);
   color: var(--tavern-parchment);
   font-size: 13px;
@@ -474,7 +474,7 @@
   place-items: center;
   width: 20px;
   height: 20px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: var(--play-ready);
   color: var(--tavern-ink);
   font-size: 12px;
@@ -501,7 +501,7 @@
   gap: 14px;
   padding: 12px 14px;
   border: 1px solid color-mix(in srgb, var(--pal-verdigris-400) 45%, transparent);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--pal-wood-950) 60%, transparent);
 }
 
@@ -510,7 +510,7 @@
   flex: 0 0 auto;
   width: 30px;
   height: 30px;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle, #d8fff8 0 3px, var(--tavern-teal) 4px 6px, transparent 7px);
 }
 
@@ -518,7 +518,7 @@
   position: absolute;
   inset: 0;
   border: 2px solid var(--tavern-teal);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   opacity: 0;
   animation: play-search-ping calc(1800ms * var(--anim-scale)) ease-out infinite;
 }
@@ -753,7 +753,7 @@
   gap: 8px 14px;
   padding: 6px 12px;
   border: 1px solid var(--line-bright);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-raised);
   font-size: 13px;
 }
@@ -779,7 +779,7 @@
   width: 10px;
   height: 10px;
   border: 1px solid var(--line-bright);
-  border-radius: 50%;
+  border-radius: var(--radius-round);
 }
 
 .series-banner__pip[data-won="true"] {

@@ -15,7 +15,7 @@
   display: block;
   width: 5.2cqh;
   height: 5.2cqh;
-  border-radius: 50%;
+  border-radius: var(--radius-round);
   background: radial-gradient(circle at 40% 35%, #3b404d, #14161c 72%);
   box-shadow:
     0 0 0 0.35cqh color-mix(in srgb, var(--cf-bezel, #b89a5a) 80%, var(--pal-black)),

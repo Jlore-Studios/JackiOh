@@ -174,3 +174,221 @@ mod r1850000_copy_a_units_text {
         assert_eq!(unit_view(&state, &plain).attack, 2);
     }
 }
+
+mod r4839000_a_copied_aura_draws_its_keywords_as_it_lands {
+    use super::*;
+    use jackioh_engine::effects::{aura_combat_keywords, drawn_combat_keywords, random_pool_keywords};
+
+    use crate::rules::fixtures::harness::both;
+
+    /// A Legendary 1/1 → 2/2: "Aura: Has {keywords} random combat keywords", 3 on the base face and 6 on
+    /// the Radiant one, following its number (R3778000) with no arrival draw of its own, so only the
+    /// copy draws.
+    const KEYED: &str = "ut-keyed-legend";
+    const KEYED_BASE: usize = 3;
+    const KEYED_RADIANT: usize = 6;
+
+    fn keyed() -> CardDef {
+        let text = "Aura: Has {keywords|random combat keyword|random combat keywords}.";
+        json_as(json!({
+            "id": KEYED,
+            "index": "48390",
+            "name": "Keyed Legend (#4839)",
+            "set": "Core",
+            "type": "Unit",
+            "tags": [],
+            "rarity": "Legendary",
+            "token": false,
+            "cost": 1,
+            "base": { "attack": 1, "health": 1, "keywords": [], "text": text },
+            "radiant": { "attack": 2, "health": 2, "keywords": [], "text": text },
+            "params": [{
+                "key": "keywords",
+                "base": KEYED_BASE,
+                "radiant": KEYED_RADIANT,
+                "better": "up",
+                "step": 1,
+                "min": 1,
+            }],
+        }))
+    }
+
+    /// `playing`'s board with `KEYED` registered beside #1850's cards.
+    fn keyed_game(seed: &str) -> GameState {
+        let state = playing(seed);
+        let mut catalog = registered_catalog().clone();
+        catalog.insert(KEYED.to_string(), keyed());
+        register_catalog(catalog);
+        let mut scripts = registered_scripts().clone();
+        scripts.insert(
+            KEYED.to_string(),
+            both(Script {
+                combat_keywords_follow: Some("keywords"),
+                conditional_keywords: Some(read_hook(|args| aura_combat_keywords(&args, "keywords", None))),
+                ..Script::default()
+            }),
+        );
+        register_scripts(scripts);
+        state
+    }
+
+    /// `KEYED` in p1's lane 1 and `copier` in lane 2: their ids.
+    fn board(seed: &str, copier: &CardDef) -> (GameState, String, String) {
+        let mut state = keyed_game(seed);
+        let source = put(&mut state, KEYED, slot(P1, Row::Units, 1), json!({})).id;
+        let me = put(&mut state, &copier.id, slot(P1, Row::Units, 2), json!({})).id;
+        (state, source, me)
+    }
+
+    /// `me` copies `target`'s text (its Radiant text when `radiant`).
+    fn copy(state: &mut GameState, me: &str, target: &str, radiant: bool) -> Vec<GameEvent> {
+        let mut args = json!({ "target": instance(target) });
+        if radiant {
+            args["radiant"] = json!(true);
+        }
+        apply(state, Some(me), P1, effects::copy_unit_text(json_as(args)))
+    }
+
+    /// The card's list, in draw order.
+    fn drawn(state: &GameState, id: &str) -> Vec<KeywordKind> {
+        let card = find_instance(state, id).cloned().expect("the card");
+        drawn_combat_keywords(&card, None)
+            .iter()
+            .map(Keyword::kind)
+            .collect()
+    }
+
+    /// The keywords the card acts with.
+    fn acting(state: &GameState, id: &str) -> Vec<KeywordKind> {
+        let card = find_instance(state, id).cloned().expect("the card");
+        keywords_of(state, &card).iter().map(Keyword::kind).collect()
+    }
+
+    /// `count` different keywords of R21's pool.
+    fn assert_pool_draw(kinds: &[KeywordKind], count: usize) {
+        assert_eq!(kinds.len(), count, "{kinds:?}");
+        let pool: Vec<KeywordKind> = random_pool_keywords().iter().map(Keyword::kind).collect();
+        assert!(kinds.iter().all(|kind| pool.contains(kind)), "{kinds:?}");
+        let mut unique = kinds.to_vec();
+        unique.sort();
+        unique.dedup();
+        assert_eq!(unique.len(), count, "no repeats: {kinds:?}");
+    }
+
+    #[test]
+    fn r4839000_a_copier_draws_the_copied_auras_number_as_the_text_lands() {
+        let (mut state, source, me) = board("keyed", &copier());
+        assert!(drawn(&state, &source).is_empty());
+        let events = copy(&mut state, &me, &source, false);
+        assert_eq!(events_of_type(&events, GameEventType::Transformed).len(), 1);
+        let list = drawn(&state, &me);
+        assert_pool_draw(&list, KEYED_BASE);
+        let shown = acting(&state, &me);
+        assert!(
+            list.iter().all(|kind| shown.contains(kind)),
+            "{list:?} in {shown:?}"
+        );
+        assert!(
+            drawn(&state, &source).is_empty(),
+            "the copier drew its own; the target's list is its draw"
+        );
+    }
+
+    #[test]
+    fn r4839000_the_radiant_option_draws_the_radiant_number() {
+        let (mut state, source, me) = board("keyed-radiant", &copier());
+        copy(&mut state, &me, &source, true);
+        let list = drawn(&state, &me);
+        assert_pool_draw(&list, KEYED_RADIANT);
+        let shown = acting(&state, &me);
+        assert!(
+            list.iter().all(|kind| shown.contains(kind)),
+            "{list:?} in {shown:?}"
+        );
+    }
+
+    #[test]
+    fn r4839000_the_draw_replays_under_the_same_seed() {
+        let draw = || {
+            let (mut state, source, me) = board("keyed-replay", &copier());
+            copy(&mut state, &me, &source, false);
+            (drawn(&state, &me), state.rng_cursor)
+        };
+        let first = draw();
+        assert_eq!(first.0.len(), KEYED_BASE);
+        assert_eq!(first, draw());
+    }
+
+    #[test]
+    fn r4839000_a_text_with_no_such_aura_shows_none_of_the_list_and_the_aura_back_draws_nothing_new() {
+        let (mut state, source, me) = board("keyed-back", &copier());
+        let other = put(&mut state, &legend().id, slot(P1, Row::Units, 3), json!({})).id;
+        copy(&mut state, &me, &source, false);
+        let list = drawn(&state, &me);
+        assert_eq!(list.len(), KEYED_BASE);
+
+        copy(&mut state, &me, &other, false);
+        assert!(has(&state, &me, KeywordKind::Taunt), "the legend's printed Taunt");
+        let shown = acting(&state, &me);
+        for kind in list.iter().filter(|kind| **kind != KeywordKind::Taunt) {
+            assert!(!shown.contains(kind), "{kind:?}: no text gives it now: {shown:?}");
+        }
+        assert_eq!(drawn(&state, &me), list, "the list stays whole");
+
+        let cursor = state.rng_cursor;
+        copy(&mut state, &me, &source, false);
+        assert_eq!(drawn(&state, &me), list, "the same list, nothing new drawn");
+        assert_eq!(state.rng_cursor, cursor, "no draw");
+        let shown = acting(&state, &me);
+        assert!(
+            list.iter().all(|kind| shown.contains(kind)),
+            "{list:?} in {shown:?}"
+        );
+    }
+
+    #[test]
+    fn r4839000_a_later_copy_of_a_higher_number_draws_only_the_rest() {
+        let (mut state, source, me) = board("keyed-higher", &copier());
+        copy(&mut state, &me, &source, false);
+        let first = drawn(&state, &me);
+        assert_eq!(first.len(), KEYED_BASE);
+        copy(&mut state, &me, &source, true);
+        let now = drawn(&state, &me);
+        assert_pool_draw(&now, KEYED_RADIANT);
+        assert_eq!(now[..KEYED_BASE], first[..], "the first 3 stay, in their order");
+        let shown = acting(&state, &me);
+        assert!(
+            now.iter().all(|kind| shown.contains(kind)),
+            "{now:?} in {shown:?}"
+        );
+    }
+
+    #[test]
+    fn r4839000_a_copier_made_radiant_keeps_the_copied_number_and_draws_nothing() {
+        let (mut state, source, me) = board("keyed-flip", &copier());
+        copy(&mut state, &me, &source, false);
+        let list = drawn(&state, &me);
+        assert_eq!(list.len(), KEYED_BASE);
+        apply(
+            &mut state,
+            None,
+            P1,
+            effects::set_radiant(json_as(json!({ "instanceId": me }))),
+        );
+        assert!(find_instance(&state, &me).is_some_and(|card| card.radiant));
+        assert_eq!(
+            drawn(&state, &me),
+            list,
+            "R1850000: the copied face, so the copied number"
+        );
+    }
+
+    #[test]
+    fn r4839000_an_immutable_copier_draws_nothing() {
+        let (mut state, source, me) = board("keyed-immutable", &immutable_copier());
+        let cursor = state.rng_cursor;
+        copy(&mut state, &me, &source, false);
+        assert!(drawn(&state, &me).is_empty());
+        assert_eq!(state.rng_cursor, cursor);
+    }
+}
