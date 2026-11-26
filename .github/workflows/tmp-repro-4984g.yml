@@ -1,0 +1,50 @@
+# TEMPORARY (staging's red super run 45746855347), deleted before any pull request of this branch
+# merges: R290's tutorial tier on main, its greedy win rate over 100 games of a fresh series, and four
+# candidate series to re-freeze it on (R290's #4270 amendment, R817000), each through all four R290 tests.
+name: tmp repro 4984 tutorial tier
+
+on:
+  push:
+    branches: [claude/charming-bell-p8etig]
+    paths: [".github/workflows/tmp-repro-4984g.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tier:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - series: tutorial-tier-measure
+            games: 100
+          - series: tutorial-tier-5
+            games: 13
+          - series: tutorial-tier-6
+            games: 13
+          - series: tutorial-tier-7
+            games: 13
+          - series: tutorial-tier-8
+            games: 13
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: ./.github/actions/setup
+        with:
+          node: "false"
+          cache-key: tmp-tier
+      - name: point the tier at this series
+        env:
+          SERIES: ${{ matrix.series }}
+          GAMES: ${{ matrix.games }}
+        run: |
+          sed -i "s/series: \"tutorial-tier-4\",/series: \"$SERIES\",/; s/^    tutorial_games: 13,/    tutorial_games: $GAMES,/" crates/ai/tests/ai/tutorial_tier.rs
+          grep -n "series: \"\|    tutorial_games: " crates/ai/tests/ai/tutorial_tier.rs
+      - name: R290's tests
+        run: |
+          cargo test -p jackioh-ai --tests --features jackioh-engine/testkit -- --ignored r290_ --nocapture 2>&1 | grep -E "R290 tutorial tier|^test tutorial_tier|test result" | cut -c1-400 || true
