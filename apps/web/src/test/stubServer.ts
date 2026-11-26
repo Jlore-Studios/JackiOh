@@ -2,6 +2,7 @@
 // test's handler, else by a 404 `not_found`; beside it, the helpers most web tests share (#1799). A
 // refusal carries its code both inside `error` (as `crates/server/src/api/http.rs` answers and
 // `net/api.ts` reads) and at the top level (SPEC S6/S7's `409 {code:"full"}`), for either reader.
+// A handler may return a promise to hold a request until the test releases it (#4846).
 
 import { vi } from "vitest";
 
@@ -22,7 +23,7 @@ export type Call = {
 
 export type Reply = { status: number; body?: unknown };
 
-export type Handler = (call: Call) => Reply | undefined;
+export type Handler = (call: Call) => Reply | Promise<Reply> | undefined;
 
 export type StubServer = {
   calls: Call[];
@@ -78,7 +79,7 @@ export function stubServer(handler: Handler): StubServer {
   const calls: Call[] = [];
   vi.stubGlobal(
     "fetch",
-    vi.fn((input: unknown, init?: RequestInit) => {
+    vi.fn(async (input: unknown, init?: RequestInit) => {
       const url = urlOf(input);
       const requestMethod = (input as { method?: unknown } | null)?.method;
       const method = (init?.method ?? (typeof requestMethod === "string" ? requestMethod : "GET")).toUpperCase();
@@ -91,8 +92,8 @@ export function stubServer(handler: Handler): StubServer {
         keepalive: init?.keepalive === true,
       };
       calls.push(call);
-      const reply = handler(call) ?? refusal(404, "not_found", `no stub for ${method} ${url.pathname}`);
-      return Promise.resolve(jsonResponse(reply.status, reply.body));
+      const reply = (await handler(call)) ?? refusal(404, "not_found", `no stub for ${method} ${url.pathname}`);
+      return jsonResponse(reply.status, reply.body);
     }),
   );
   return {

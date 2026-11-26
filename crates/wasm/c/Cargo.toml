@@ -37,3 +37,6 @@ jackioh-shared = { workspace = true }
 # `scripts/build-wasm.sh` makes, so the shipped modules keep their stubs.
 # `crates/tools/tests/acceptance.rs` holds this line.
 jackioh-wasm-core = { path = "../core", features = ["duos"] }
+
+[lints]
+workspace = true

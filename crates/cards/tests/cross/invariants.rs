@@ -3244,7 +3244,7 @@ mod i16_every_card_s_record_agrees_with_the_pile_that_holds_it {
 
     const KPOP: &str = "core-050"; // K-Pop Fanatic: Cry: Allure an enemy permanent, a steal at its next turn's start
     const TOWER: &str = "classicplus-033"; // Ivory Tower: a carrier
-    const TICKETED: &str = "stinkyscape-009"; // Ticketed: holds a permanent beneath it
+    const TICKETED: &str = "stinkyscape-009"; // Ticketed: stacks itself on a permanent anywhere (R4665000)
 
     fn i16(g: &Scenario) -> Vec<String> {
         create_invariant_monitor(g.state())
@@ -3255,7 +3255,8 @@ mod i16_every_card_s_record_agrees_with_the_pile_that_holds_it {
     }
 
     /// A board of real cards holding what I16 must not flag: a stolen unit, a backrow pile, a carried unit,
-    /// a held card and a buffed hand card. Also the stolen unit.
+    /// a Ticketed stacked on an enemy Unit in the enemy's control (R4665000) and a buffed hand card. Also
+    /// the stolen unit.
     fn board() -> (Scenario, CardInstance) {
         let mut g = scenario(json!({
             "p1": {
@@ -3276,7 +3277,7 @@ mod i16_every_card_s_record_agrees_with_the_pile_that_holds_it {
         }));
         let stolen = g.unit_at(PlayerId::P2, 1);
         let held = g.unit_at(PlayerId::P2, 2);
-        g.play(TICKETED, json!({ "zone": 1, "targets": pick::instance(&held) }));
+        g.play(TICKETED, json!({ "targets": pick::instance(&held) }));
         g.play(KPOP, json!({ "targets": pick::instance(&stolen) }));
         g.end_turn();
         g.end_turn();
@@ -3285,7 +3286,13 @@ mod i16_every_card_s_record_agrees_with_the_pile_that_holds_it {
             (g.card(&stolen).controller, g.card(&stolen).owner),
             (PlayerId::P1, PlayerId::P2)
         );
-        assert_eq!(g.state().held.iter().flatten().count(), 1);
+        let stacked = ZoneSlot {
+            player: PlayerId::P2,
+            row: Row::Units,
+            lane: 2,
+        };
+        assert_eq!(beneath_at(g.state(), stacked).len(), 1);
+        assert_eq!(g.card(TICKETED).controller, PlayerId::P2);
         let pile = ZoneSlot {
             player: PlayerId::P1,
             row: Row::Backrow,
@@ -3319,7 +3326,7 @@ mod i16_every_card_s_record_agrees_with_the_pile_that_holds_it {
     }
 
     #[test]
-    fn i16_is_clean_with_a_stolen_unit_a_backrow_pile_a_carried_unit_a_held_card_and_a_buffed_hand_card() {
+    fn i16_is_clean_with_a_stolen_unit_backrow_and_ticketed_piles_a_carried_unit_and_a_buffed_hand_card() {
         assert_eq!(i16(&board().0), no_violations());
     }
 
@@ -3826,7 +3833,8 @@ mod r4577008_the_black_hole_s_turn_end_pull_is_no_spell_s_reach {
     fn r4577008_a_spell_s_exile_of_an_immune_unit_the_pull_cannot_reach_is_still_a_reach() {
         // One lane from the hole on the side whose turn ended, the pull swallows it; two lanes away it only
         // steps, and at the end of p1's turn p2's Unit is not pulled at all, so a Spell's exile of either is
-        // a reach.
+        // a reach. The Spell is cast at the turn's end: a standing trigger there (Drone Core VII's Float)
+        // opens no run I21 reads, R62's tail following it with no marker of its own (R4599007).
         for (lane, side, owner, reach) in [
             (2, "p1", PlayerId::P1, false),
             (1, "p1", PlayerId::P1, true),
@@ -3849,7 +3857,7 @@ mod r4577008_the_black_hole_s_turn_end_pull_is_no_spell_s_reach {
                     "sourceId": "r4577008-source",
                     "defId": DRONE_CORE_VII,
                     "controller": "p1",
-                    "hook": "whenever",
+                    "hook": "cry",
                 })),
                 event(json!({ "type": "exiled", "instanceId": id, "defId": IMMUNE, "owner": side })),
             ];
@@ -4116,5 +4124,137 @@ mod r4609000_every_text_rewriting_card_leaves_an_immutable_card_as_it_is {
             .map(|(id, radiant, _)| (id.to_string(), *radiant))
             .collect();
         assert_eq!(unplayed, listed, "the faces the sweep's board lists no play of");
+    }
+}
+
+// R4601000 (#4601): S #115 Scornboi's standing exile at the state check takes an immune Unit as the
+// board's, not as the run of the Spell that summoned it (fuzz `--duos` seed 3, IA #45 to #54 forced, where
+// S #150 Call to Chaos (Stinky Edition) filled the board with Humans and Scornboi among them).
+mod r4601000_a_standing_exile_aura_s_exile_is_no_spell_s_reach {
+    use super::*;
+
+    const SCORNBOI: &str = "stinkyscape-115";
+    const CALL_TO_CHAOS: &str = "stinkyscape-150";
+    const IMMUNE: &str = "stand-in (1) 4/4 Immune to Spells";
+
+    /// The I21 findings of a Call to Chaos run exiling p1's immune stand-in, the step beginning on
+    /// `before` and ending on `after`.
+    fn i21_of(before: &GameState, after: &GameState, id: &str) -> Vec<String> {
+        let mut monitor = create_invariant_monitor(before);
+        monitor.before(before, PlayerId::P2, &ActionBody::EndTurn);
+        let events = [
+            event(json!({
+                "type": "hookResolving",
+                "sourceId": "r4601000-source",
+                "defId": CALL_TO_CHAOS,
+                "controller": "p2",
+                "hook": "cry",
+            })),
+            event(json!({ "type": "exiled", "instanceId": id, "defId": IMMUNE, "owner": "p1" })),
+        ];
+        monitor
+            .after(&events, after)
+            .into_iter()
+            .filter(|finding| finding.starts_with("I21"))
+            .collect()
+    }
+
+    #[test]
+    fn r4601000_scornboi_s_exile_in_a_spell_s_run_is_the_board_s_and_i21_allows_it() {
+        let library = json!([VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA]);
+        let before = scenario(json!({
+            "active": "p2",
+            "p1": { "field": [IMMUNE], "library": library },
+            "p2": { "library": library },
+        }));
+        let id = before.unit_at(PlayerId::P1, 1).id;
+        // After the step Scornboi stands on p2's side and the stand-in is gone from the field.
+        let with_scornboi = scenario(json!({
+            "active": "p2",
+            "p1": { "library": library },
+            "p2": { "field": [SCORNBOI], "library": library },
+        }));
+        assert!(
+            find_instance(with_scornboi.state(), &id)
+                .is_none_or(|card| !matches!(card.zone, Zone::Field { .. })),
+            "the stand-in's id names nothing on the field after the step"
+        );
+        assert_eq!(
+            i21_of(before.state(), with_scornboi.state(), &id),
+            no_violations()
+        );
+        // With no exile aura standing, the Spell's exile of the immune Unit is a reach.
+        let without = scenario(json!({
+            "active": "p2",
+            "p1": { "library": library },
+            "p2": { "library": library },
+        }));
+        let found = i21_of(before.state(), without.state(), &id);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains(CALL_TO_CHAOS), "{}", found[0]);
+    }
+}
+
+// R4599004 (#4599): an exile aura that arrives in a Spell's run exiles at its state check as the board's,
+// though the card laying it is gone again by the step's end (the daily fuzz's plain seed 1920: S #150 Call
+// to Chaos (Stinky Edition) filled the board with Humans, S #115 Scornboi among them, which exiled IA #235.1,
+// immune, and was itself gone by the step's end).
+mod r4599004_an_exile_aura_arriving_in_the_step_is_the_board_s {
+    use super::*;
+
+    const SCORNBOI: &str = "stinkyscape-115";
+    const CALL_TO_CHAOS: &str = "stinkyscape-150";
+    const IMMUNE: &str = "stand-in (1) 4/4 Immune to Spells";
+
+    fn i21_of(arrives: bool) -> Vec<String> {
+        let library = json!([VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA]);
+        let before = scenario(json!({
+            "active": "p2",
+            "p1": { "field": [IMMUNE], "library": library },
+            "p2": { "library": library },
+        }));
+        let id = before.unit_at(PlayerId::P1, 1).id;
+        // After the step neither the stand-in nor Scornboi is on the field.
+        let after = scenario(json!({
+            "active": "p2",
+            "p1": { "library": library },
+            "p2": { "library": library },
+        }));
+        let mut monitor = create_invariant_monitor(before.state());
+        monitor.before(before.state(), PlayerId::P2, &ActionBody::EndTurn);
+        let mut events = vec![event(json!({
+            "type": "hookResolving",
+            "sourceId": "r4599004-source",
+            "defId": CALL_TO_CHAOS,
+            "controller": "p2",
+            "hook": "cry",
+        }))];
+        if arrives {
+            events.push(event(json!({
+                "type": "summoned",
+                "player": "p2",
+                "instanceId": "r4599004-scornboi",
+                "defId": SCORNBOI,
+                "row": "units",
+                "lane": 2,
+            })));
+        }
+        events.push(event(
+            json!({ "type": "exiled", "instanceId": id, "defId": IMMUNE, "owner": "p1" }),
+        ));
+        monitor
+            .after(&events, after.state())
+            .into_iter()
+            .filter(|finding| finding.starts_with("I21"))
+            .collect()
+    }
+
+    #[test]
+    fn r4599004_scornboi_arriving_and_gone_in_a_spell_s_run_exiles_as_the_board_and_i21_allows_it() {
+        assert_eq!(i21_of(true), no_violations());
+        // With no exile aura standing or arriving, the Spell's exile of the immune Unit is a reach.
+        let found = i21_of(false);
+        assert_eq!(found.len(), 1, "{found:?}");
+        assert!(found[0].contains(CALL_TO_CHAOS), "{}", found[0]);
     }
 }

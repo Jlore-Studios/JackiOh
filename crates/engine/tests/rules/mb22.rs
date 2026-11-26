@@ -16,6 +16,11 @@ use jackioh_engine::testkit::*;
 use super::fixtures::harness::{act, act_result, in_hand, put, set_library, sink_for, slot};
 use super::fixtures::mb22 as fx;
 use super::fixtures::mb22::{playing, recorder, replays_to};
+use super::fixtures::spell_verbs::{nono_x, register_spell_verb_fixtures};
+
+fn says(error: &Option<String>, text: &str) -> bool {
+    error.as_deref().is_some_and(|message| message.contains(text))
+}
 
 fn play_action(player: PlayerId, instance_id: &str) -> Value {
     json!({ "type": "play", "instanceId": instance_id, "playerId": player })
@@ -151,7 +156,7 @@ fn r1200_a_declared_target_is_drawn_and_replays() {
     put(&mut state, &fx::mayor.id, slot(P1, Row::Units, 1), json!({}));
     let bolt = in_hand(&mut state, &fx::bolt.id, P1, 1).remove(0);
     put(&mut state, &fx::ally.id, slot(P2, Row::Units, 1), json!({}));
-    let start = clone_state(&state);
+    let start = state.clone();
 
     let mut rec = recorder(&state);
     let result = rec.play(play_action(P1, &bolt.id));
@@ -325,6 +330,74 @@ fn r1200_r1044_a_face_down_play_under_a_mayor_draws_no_target() {
         let result = act_result(&state, body);
         assert!(result.error.is_none(), "{set:?}: {:?}", result.error);
     }
+}
+
+// R1200, R348: a play naming an X above the player's spendable mana is refused before the Mayor's
+// draw runs, so no script ever reads the unbounded X (S #99's named check multiplies by it).
+#[test]
+fn r1200_r348_huge_x_is_refused_before_the_draw() {
+    let mut state = playing("mb22-huge-x");
+    register_spell_verb_fixtures();
+    // The verbs' register resets the catalog `playing` built, so put mb22's cards back.
+    fx::register();
+    put(&mut state, &fx::mayor.id, slot(P1, Row::Units, 1), json!({}));
+    let ally = put(&mut state, &fx::ally.id, slot(P2, Row::Units, 1), json!({}));
+    let hunter = in_hand(&mut state, &nono_x.id, P1, 1).remove(0);
+    state.players.p1.mana.current = 4;
+    let before = state.clone();
+
+    // Without the R348 pre-check in `validate_play`, the draw runs the `belowFourX` check with
+    // the X-stamped face and panics on `4 * i32::MAX`.
+    let result = act_result(
+        &state,
+        json!({ "type": "play", "instanceId": hunter.id, "playerId": "p1", "x": i32::MAX }),
+    );
+    assert!(
+        says(&result.error, "X is above your current mana"),
+        "{:?}",
+        result.error
+    );
+    assert!(result.events.is_empty());
+    assert_eq!(result.state, before, "a refusal returns the input state");
+    assert!(on_field(&result.state, &ally.id), "nothing resolved");
+}
+
+// R1200, R348: a legal X still draws its target at random under a Mayor and resolves.
+#[test]
+fn r1200_r348_a_legal_x_still_draws_under_a_mayor() {
+    // Both Units are legal picks (limit 4 × 2 = 8 > each Attack), so the draw may take either;
+    // over seeds it reaches each, as the Windfast test above holds its own draw to.
+    let (mut drew_ally, mut drew_mayor) = (false, false);
+    for n in 0..12 {
+        let mut state = playing(&format!("mb22-legal-x-{n}"));
+        register_spell_verb_fixtures();
+        // The verbs' register resets the catalog `playing` built, so put mb22's cards back.
+        fx::register();
+        let mayor = put(&mut state, &fx::mayor.id, slot(P1, Row::Units, 1), json!({}));
+        let ally = put(&mut state, &fx::ally.id, slot(P2, Row::Units, 1), json!({}));
+        let hunter = in_hand(&mut state, &nono_x.id, P1, 1).remove(0);
+        state.players.p1.mana.current = 4;
+
+        // Cost 2 ≤ mana 4.
+        let result = act_result(
+            &state,
+            json!({ "type": "play", "instanceId": hunter.id, "playerId": "p1", "x": 2 }),
+        );
+        assert!(result.error.is_none(), "{n}: {:?}", result.error);
+        match (
+            on_field(&result.state, &ally.id),
+            on_field(&result.state, &mayor.id),
+        ) {
+            (false, true) => drew_ally = true,
+            (true, false) => drew_mayor = true,
+            (ally, mayor) => {
+                panic!(
+                    "{n}: the draw destroys exactly one Unit, ally on field: {ally}, mayor on field: {mayor}"
+                )
+            }
+        }
+    }
+    assert!(drew_ally && drew_mayor, "the draw reaches each candidate");
 }
 
 // R1201: Lucky rolls its controller's draws again

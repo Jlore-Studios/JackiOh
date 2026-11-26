@@ -60,9 +60,9 @@
 # `rust (classify)` (#1370) reads every change to the cards, the engine and the AI, and runs exactly
 # when `full` does. The other docs are
 # not: `spec check` reads spec/, the radiant-standard test reads docs/radiant-audit.md, the catalog
-# test reads spec/07-tokens.md's table of tokens, radiant_stats.rs reads spec/08-catalog.md, web tests
-# read two spec/ notes (06-keywords.md and 05-card-types.md), and the `training gate` job reads
-# training/history/, and the tools' test of shadow_ban.rs reads its sweep-*.md reports. A
+# test reads spec/07-tokens.md's table of tokens, radiant_stats.rs reads spec/08-catalog/, web tests
+# read spec/06-keywords/ and spec/05-card-types.md, and the tools' test of shadow_ban.rs
+# reads training/history/'s sweep-*.md reports. A
 # `full=false` diff prints every other line false too.
 #
 # Past the skip list, each changed file turns lines on, and a line no file turned on is false:
@@ -110,7 +110,8 @@
 #    (the engine's and the server's export tests write it, and jackioh-wasm-core's constants test reads
 #    engineConfig.ts, #3093) engine and server, and tools, wasm; docs/radiant-audit.md
 #    (radiant_standard.rs), spec/07-tokens.md (the catalog test's table of tokens, R1177001) and
-#    spec/08-catalog.md (radiant_stats.rs, a row's two Radiant stats cells, #3804) cards; e2e/support/config.ts (the server's tests/api/e2e.rs) server;
+#    spec/08-catalog/ (radiant_stats.rs, a row's two Radiant stats cells, #3804) cards, the folder tools, wasm too
+#    (acceptance.rs holds radiant_stats.rs's list of its notes to it); e2e/support/config.ts (the server's tests/api/e2e.rs) server;
 #    crates/server/.env.example and apps/web/.env.production (the catalog version's sites, which the
 #    tools' patches tests read; the ship case above takes precedence) tools, wasm, the first as well as server; crates/server/tests/'s
 #    actor/, api/, bots/, loops/ and support/ run server only because the server binary checks their
@@ -121,16 +122,21 @@
 #    repo_root().join(MIGRATIONS_REL), #4157) tools, wasm as well as server; and
 #    packages/, apps/server/ and ladder/ (acceptance.rs's V28) tools, wasm; training/history/sweep-*.md
 #    (the tools' test that holds crates/ai/src/shadow_ban.rs to its reports of record) tools, wasm;
+#    training/history/hand.jsonl (the AI's test that holds generation.json to its history line, R4921000)
+#    ai;
 #    analysis/fixtures/'s dev-40.jsonl, live-40.jsonl, games.report.json, counts.jsonl and
 #    counts.report.json (the tools' test that holds `stats report --games` to them, R1994000) tools,
 #    wasm; apps/web/src/audio/voice-text.json (the
 #    tools' export_card_text.rs writes it from crates/cards/card-text.yaml, #2498) tools, wasm; and
 #    apps/web/src/game/cardModes.json (the tools' export_card_modes.rs writes it from the card
-#    scripts, #2646) tools, wasm; and spec/15-dungeon-run.md and spec/README.md (acceptance.rs holds
-#    the first's table of constants to crates/run/src/config.rs, and the second's map to it, B33)
+#    scripts, #2646) tools, wasm; and spec/15-dungeon-run.md, spec/16-infinite-assault.md and
+#    spec/README.md (acceptance.rs holds the first two's tables of constants to
+#    crates/run/src/config.rs, and the third's map to them, B33, #4584)
 #    tools, wasm. scripts/ci-shards.toml, the shard counts of ci.yml's sharded jobs (#3072), runs
 #    every Rust group, and web and e2e as any file outside the lists below does, so a count it
-#    changes is seen running.
+#    changes is seen running. scripts/fuzz-slice.sh, the logic of the merge queue's fuzz slice
+#    (ci.yml's `rust (fuzz slice k/K)`, which runs on rust_tools_wasm), runs rust_tools_wasm and
+#    nothing else: no web or e2e job reads it.
 #  - acceptance.rs (tools) also scans every source under apps/, crates/ and e2e/ for a Markdown read
 #    (V23), every Rust source for a file it includes from outside its crate, every Rust source for
 #    an `#[ignore]` that does not say it runs daily, and every Rust source for a preview of sets that
@@ -164,8 +170,9 @@
 #    sources (crates/wasm/c/src/: no client, server or `jackioh` links it; its manifest, which every cargo
 #    command loads, is not among them), the tools' sources but the four those commands run (#4219: main.rs,
 #    which dispatches them, replay.rs, catalog.rs, whose run_version is `catalog-version`, and patches.rs,
-#    whose `js` parser and repo_root it calls) and the fuzz's records (crates/tools/fuzz-corpus/), so a
-#    change to the fuzz, the classifier or another command leaves e2e off. That is safe: `replay`'s shipped
+#    whose `js` parser and repo_root it calls) and the fuzz's and the perf corpus's records
+#    (crates/tools/fuzz-corpus/, crates/tools/perf-corpus/), so a change to the fuzz, the classifier, the perf
+#    or another command leaves e2e off. That is safe: `replay`'s shipped
 #    code names no other module of the crate (acceptance.rs's scan holds it and names the file to add here
 #    when that stops being true), replay.rs's own tests pin the hotseat game's hash in `rust (test tools,
 #    wasm)`, which every change under crates/tools/ runs, and the push to `main` runs e2e smoke after the
@@ -357,14 +364,19 @@ for file in $files; do
       on $RUST
       ;;
     apps/web/src/wire/*) on rust_engine rust_server rust_tools_wasm ;;
-    docs/radiant-audit.md | spec/07-tokens.md | spec/08-catalog.md) on rust_cards ;;
+    docs/radiant-audit.md | spec/07-tokens.md) on rust_cards ;;
+    # §8 is one note a subsection: radiant_stats.rs reads each, and the tools' acceptance test holds its
+    # list to the folder.
+    spec/08-catalog/*) on rust_cards rust_tools_wasm ;;
     e2e/support/config.ts) on rust_server ;;
     e2e/cypress/e2e/01-* | e2e/cypress/e2e/13-*) on rust_tools_wasm ;;
     apps/web/.env.production | packages/* | apps/server/* | ladder/* | training/history/sweep-*.md) on rust_tools_wasm ;;
+    training/history/hand.jsonl) on rust_ai ;;
     apps/web/src/audio/voice-text.json) on rust_tools_wasm ;;
     apps/web/src/game/cardModes.json) on rust_tools_wasm ;;
-    spec/15-dungeon-run.md | spec/README.md) on rust_tools_wasm ;;
+    spec/15-dungeon-run.md | spec/16-infinite-assault.md | spec/README.md) on rust_tools_wasm ;;
     scripts/ci-shards.toml) on $RUST ;;
+    scripts/fuzz-slice.sh) on rust_tools_wasm ;;
     analysis/fixtures/dev-40.jsonl | analysis/fixtures/live-40.jsonl | analysis/fixtures/games.report.json) on rust_tools_wasm ;;
     analysis/fixtures/counts.jsonl | analysis/fixtures/counts.report.json) on rust_tools_wasm ;;
   esac
@@ -384,6 +396,7 @@ for file in $files; do
     infra/cloudflare.tf) on web ;;
     docs/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
+    scripts/fuzz-slice.sh) ;;
     *) on web ;;
   esac
 
@@ -395,7 +408,7 @@ for file in $files; do
   esac
 
   # e2e runs two commands of the `jackioh` binary (header, #4219): the four tools sources they run keep it
-  # on; the rest of crates/tools/src/ and the fuzz's records do not.
+  # on; the rest of crates/tools/src/ and the fuzz's and the perf's records do not.
   case "$file" in
     crates/engine/tests/golden/*) on e2e ;;
     # The dev dashboard's test ids: the daily dashboard spec's only dashboard read (spec 49, #4371).
@@ -403,10 +416,11 @@ for file in $files; do
     crates/*/tests/* | crates/*/README.md | crates/wasm/c/src/* | apps/web/*.test.ts | apps/web/*.test.tsx) ;;
     docs/* | spec/* | training/* | reviews/* | analysis/* | infra/*) ;;
     SPEC.md | BUILD.md | REVIEW.md | README.md | ARCHITECTURE-CCG.md | JackiOh_*.md) ;;
-    crates/server/Dockerfile | wrangler.jsonc | apps/edge/* | apps/admin/* | eslint.config.js | vitest.config.ts) ;;
+    crates/server/Dockerfile | wrangler.jsonc | apps/edge/* | apps/admin/* | eslint.config.js | eslint-suppressions.json | vitest.config.ts) ;;
     scripts/browse.sh | scripts/promote-production.sh | scripts/promote-staging.sh | scripts/server-image.sh | scripts/worktree.sh) ;;
+    scripts/fuzz-slice.sh) ;;
     crates/tools/src/main.rs | crates/tools/src/replay.rs | crates/tools/src/catalog.rs | crates/tools/src/patches.rs) on e2e ;;
-    crates/tools/src/* | crates/tools/fuzz-corpus/*) ;;
+    crates/tools/src/* | crates/tools/fuzz-corpus/* | crates/tools/perf-corpus/*) ;;
     *) on e2e ;;
   esac
 done

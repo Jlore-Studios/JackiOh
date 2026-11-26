@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
+  edgeCachedRead,
+  isEdgeCachedRead,
   DAILY_SWEEP_PATH,
   MODULE_CACHE_CONTROL,
   MODULE_ROUTES,
@@ -237,5 +239,85 @@ describe("#4118 settingsFingerprint", () => {
     const other = { CREATE_ISSUES_TOKEN: "", SERVER: "a binding" } as ServerSettings;
 
     expect(await settingsFingerprint(other)).toBe(await settingsFingerprint({}));
+  });
+});
+
+describe("R4691002 a shipped patch's catalog from the edge's cache", () => {
+  const SNAPSHOT = "https://jackioh.com/api/catalog/v0.6.9";
+  const KEPT = "public, max-age=86400";
+
+  /** A cache over a Map, keyed by URL, as `caches.default` keys a GET. */
+  function mapCache() {
+    const held = new Map<string, Response>();
+    return {
+      held,
+      match: vi.fn((request: Request) => Promise.resolve(held.get(request.url)?.clone())),
+      put: vi.fn((request: Request, response: Response) => {
+        held.set(request.url, response);
+        return Promise.resolve();
+      }),
+    };
+  }
+
+  it("R4691002 names only a GET of a versioned catalog, never the live one", () => {
+    expect(isEdgeCachedRead(new Request(SNAPSHOT))).toBe(true);
+    expect(isEdgeCachedRead(new Request("https://jackioh.com/api/catalog"))).toBe(false);
+    expect(isEdgeCachedRead(new Request("https://jackioh.com/api/catalog/"))).toBe(false);
+    expect(isEdgeCachedRead(new Request("https://jackioh.com/api/catalog/v1/x"))).toBe(false);
+    expect(isEdgeCachedRead(new Request(SNAPSHOT, { method: "POST" }))).toBe(false);
+    expect(isEdgeCachedRead(new Request(`${SNAPSHOT}?poison=1`))).toBe(false);
+    expect(isEdgeCachedRead(new Request("https://jackioh.com/api/stats/play-rates"))).toBe(false);
+  });
+
+  it("R4691002 keeps a public answer, and the next read never reaches the server", async () => {
+    const cache = mapCache();
+    const load = vi.fn(() => Promise.resolve(new Response("{\"defs\":{}}", { headers: { "Cache-Control": KEPT } })));
+    const pending: Promise<unknown>[] = [];
+    const waitUntil = (promise: Promise<unknown>) => {
+      pending.push(promise);
+    };
+
+    const first = await edgeCachedRead(new Request(SNAPSHOT), cache, load, waitUntil);
+    await Promise.all(pending);
+    const second = await edgeCachedRead(new Request(SNAPSHOT), cache, load, waitUntil);
+
+    expect(load).toHaveBeenCalledOnce();
+    expect(await first.text()).toBe("{\"defs\":{}}");
+    expect(await second.text()).toBe("{\"defs\":{}}");
+  });
+
+  it("R4691002 keeps no answer the server did not mark public", async () => {
+    for (const answer of [
+      new Response("nope", { status: 404 }),
+      new Response("{}", { headers: { "Cache-Control": "no-store" } }),
+      new Response("{}"),
+    ]) {
+      const cache = mapCache();
+      await edgeCachedRead(new Request(SNAPSHOT), cache, () => Promise.resolve(answer), () => undefined);
+      expect(cache.put).not.toHaveBeenCalled();
+    }
+  });
+
+  it("R4691002 a cache that fails is passed by", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const cache = {
+        match: vi.fn(() => Promise.reject(new Error("down"))),
+        put: vi.fn(() => Promise.reject(new Error("down"))),
+      };
+      const pending: Promise<unknown>[] = [];
+      const answer = await edgeCachedRead(
+        new Request(SNAPSHOT),
+        cache,
+        () => Promise.resolve(new Response("{}", { headers: { "Cache-Control": KEPT } })),
+        (promise) => {
+          pending.push(promise);
+        },
+      );
+      await Promise.all(pending);
+      expect(answer.status).toBe(200);
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

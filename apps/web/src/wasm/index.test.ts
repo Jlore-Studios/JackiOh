@@ -4,15 +4,19 @@
 // binding the stand-in leaves out is never reached. The engine behind it is proved by the suites that play
 // games through it; the last describe here asks the loaded module itself.
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DECK_SIZE } from "../wire/engineConfig.ts";
 import type { GameState } from "../wire/generated/GameState.ts";
 import {
+  BOOT_MODULE_FETCH_PRIORITY,
   buildAiDeck,
   catalogVersion,
   createGame,
-  findInstance,
   runContent,
   runContentAt,
   seatPlayedBy,
@@ -42,7 +46,7 @@ async function loaded(bindings: Record<string, unknown> = {}): Promise<Wasm> {
 
 /** `fetch`, answering every request with a response `respond` makes. */
 function stubFetch(respond: () => Response) {
-  const fetch = vi.fn((_input: URL) => Promise.resolve(respond()));
+  const fetch = vi.fn((_input: URL, _init?: RequestInit) => Promise.resolve(respond()));
   vi.stubGlobal("fetch", fetch);
   return fetch;
 }
@@ -96,7 +100,6 @@ const WRAPPERS: readonly (readonly [string, (wasm: Wasm) => unknown])[] = [
   ["replayPage", (w) => w.replayPage(ANY, ANY, ANY, ANY)],
   ["lastBoardFor", (w) => w.lastBoardFor(ANY, ANY)],
   ["seatPlayedBy", (w) => w.seatPlayedBy(ANY, ANY)],
-  ["findInstance", (w) => w.findInstance(ANY, ANY)],
   ["combatForecast", (w) => w.combatForecast(ANY, ANY)],
   ["dealEmoteHand", (w) => w.dealEmoteHand(ANY, ANY)],
   ["previewSets", (w) => w.previewSets(ANY)],
@@ -110,7 +113,6 @@ const WRAPPERS: readonly (readonly [string, (wasm: Wasm) => unknown])[] = [
   ["runReduce", (w) => w.runReduce(ANY, ANY, ANY)],
   ["runFold", (w) => w.runFold(ANY, ANY)],
   ["runFightSetup", (w) => w.runFightSetup(ANY, ANY)],
-  ["runFightReport", (w) => w.runFightReport(ANY, ANY)],
   ["runScore", (w) => w.runScore(ANY, ANY)],
   ["runEmbers", (w) => w.runEmbers(ANY)],
   ["runMaxHp", (w) => w.runMaxHp(ANY, ANY)],
@@ -200,6 +202,49 @@ describe("loading", () => {
     await wasm.loadWasm();
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(initWasm).toHaveBeenCalledTimes(1);
+  });
+
+  it("#4714 the boot's download asks for a low priority, and a screen's load waits on it rather than fetch again", async () => {
+    const fetch = stubFetch(() => new Response(new Uint8Array([0, 97, 115, 109]), { headers: { "Content-Type": "application/wasm" } }));
+    const init = vi.fn();
+    const wasm = await fresh({ default: initFrom(), init });
+
+    wasm.startWasmLoad();
+    await wasm.loadWasm("high");
+    expect(BOOT_MODULE_FETCH_PRIORITY).toBe("low");
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(String(fetch.mock.calls[0]?.[0])).toContain("/jackioh_wasm_bg.wasm.br");
+    expect(fetch.mock.calls[0]?.[1]).toEqual({ priority: BOOT_MODULE_FETCH_PRIORITY });
+    expect(init).toHaveBeenCalledTimes(1);
+    expect(wasm.wasmLoaded()).toBe(true);
+  });
+
+  it("#4714 a download the boot did not start, or one after it failed, asks at its caller's priority", async () => {
+    let status = 503;
+    const fetch = stubFetch(() =>
+      status === 200
+        ? new Response(new Uint8Array([0, 97, 115, 109]), { headers: { "Content-Type": "application/wasm" } })
+        : new Response("down", { status, statusText: "Service Unavailable" }),
+    );
+    const wasm = await fresh({ default: initFrom() });
+
+    // The boot's download fails, and a screen's load asked meanwhile shares it and fails with it.
+    wasm.startWasmLoad();
+    expect((await failure(wasm.loadWasm())).message).toContain("503");
+    status = 200;
+    await wasm.loadWasm();
+    expect(wasm.wasmLoaded()).toBe(true);
+    expect(fetch.mock.calls.map((call) => call[1])).toEqual([{ priority: BOOT_MODULE_FETCH_PRIORITY }, { priority: "auto" }]);
+  });
+
+  it("#4714 main.tsx starts the boot's download through startWasmLoad, never a bare loadWasm()", () => {
+    const main = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "../main.tsx"), "utf8");
+    // The mount, the module's side effect, runs last in the file.
+    const at = main.indexOf('if (import.meta.env.MODE !== "test") {');
+    expect(at).toBeGreaterThan(0);
+    const boot = main.slice(at);
+    expect(boot).toContain("startWasmLoad();");
+    expect(boot).not.toContain("loadWasm()");
   });
 
   it("#3183 gives the wasm type to a module a static server sends with its encoding and no type", async () => {
@@ -394,14 +439,6 @@ describe("the loaded module", () => {
     const state = game();
     expect(seatPlayedBy(state, "p1")).toBe("p1");
     expect(seatPlayedBy(state, "p2")).toBe("p2");
-  });
-
-  it("finds a card by its id, and answers undefined, not null, for an id no card has", () => {
-    const state = game();
-    const card = state.players.p1.library[0];
-    if (card === undefined) throw new Error("p1 was dealt no library");
-    expect(findInstance(state, card.id)).toMatchObject({ id: card.id, defId: card.defId });
-    expect(findInstance(state, "no-such-card")).toBeUndefined();
   });
 
   it("reads the run's content at the build's own catalog version, and none at a version it does not carry", () => {

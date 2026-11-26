@@ -296,6 +296,11 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         embiggened: Option<bool>,
+        /// R4672000: the play's declared choices (R81) in its card's option order; the game record's,
+        /// which no rule reads (`as_rules_read`) and no view forwards.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        modes: Option<Vec<String>>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         former_id: Option<String>,
@@ -523,6 +528,7 @@ pub enum GameEvent {
     /// effect was creating is `notCreated` (it never existed, #33's and #90's copies), an existing card
     /// goes to its owner's `graveyard` (its `enteredGraveyard` follows), and an existing unit-token card
     /// has `ceased` to exist (R11). `player` owns the library. `instanceId` and `defId` follow R97.
+    /// R4821000: `ceased` also reports a unit-token card R11 ends on its way into a library with room.
     LibraryOverflow {
         player: PlayerId,
         instance_id: String,
@@ -711,6 +717,13 @@ pub enum GameEvent {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         #[cfg_attr(feature = "ts", ts(optional))]
         again: Option<bool>,
+        /// R4586007: the attacker of the attack the firing answers (`traps::fire_trap` on an
+        /// `attackDeclared`), in a game holding an Infinite Assault card (`recursion_log::kept`), so a
+        /// trigger on a Figment's reveal can copy it. Absent otherwise, so no other game's firing
+        /// serializes otherwise than it did before the field existed.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[cfg_attr(feature = "ts", ts(optional))]
+        attacker_id: Option<String>,
     },
     AttackDeclared {
         attacker_id: String,
@@ -1465,7 +1478,8 @@ impl GameEvent {
     /// of an absorbed fatigue draw, the one that reaches the loop (R1362). R1366: a `controlChanged`
     /// without its `how`, likewise the client's. R1088: a `summoned` without its `sourceId`, the card
     /// whose effect summoned it, which no rule reads. R2089000: an `addedToHand`, a `shuffledIn`, a
-    /// `summoned` and a `transformed` without their `creator`, the game record's (§9.11). So the state a
+    /// `summoned` and a `transformed` without their `creator`, the game record's (§9.11), and R4672000: a
+    /// `cardPlayed` without its `modes`, the record's too. So the state a
     /// game passes through, a frontier paused on a prompt or left by a game's end included, hashes as it
     /// did before any of them existed (D14), and a recorded game's replay keeps its final hash (R768).
     /// R2783001: a `damage`, a `damageAbsorbed`, a `healed`, a `destroyed` and a `summoned` without their
@@ -1621,6 +1635,34 @@ impl GameEvent {
                 exits_from: *exits_from,
                 creator: None,
                 via: None,
+            },
+            // R4672000: `modes` is the game record's, as `creator` is.
+            GameEvent::CardPlayed {
+                player,
+                instance_id,
+                def_id,
+                cost_paid,
+                x,
+                embiggened,
+                modes: _,
+                former_id,
+                from,
+                arrived_during,
+                exits_from,
+                on_draw,
+            } => GameEvent::CardPlayed {
+                player: *player,
+                instance_id: instance_id.clone(),
+                def_id: def_id.clone(),
+                cost_paid: *cost_paid,
+                x: *x,
+                embiggened: *embiggened,
+                modes: None,
+                former_id: former_id.clone(),
+                from: *from,
+                arrived_during: arrived_during.clone(),
+                exits_from: *exits_from,
+                on_draw: *on_draw,
             },
             other => other.clone(),
         }

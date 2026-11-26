@@ -15,6 +15,7 @@ import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { CATALOG } from "@jackioh/cards";
+import { setShips } from "@jackioh/shared";
 
 import { resetFxSettingsForTests, setFxSettings } from "../fx/settings.ts";
 import { __resetSettingsForTests, writeSettings } from "../settings/store.ts";
@@ -224,7 +225,9 @@ describe("R3350000 a Mythic's face draws its diorama", () => {
     // token is offered no level of its own.
     const offered = [...DIORAMAS.keys()].filter((id) => offeredOn(VERSION_ANIMATED_ID, id));
     it("R3350000 every Mythic card is offered its Animated level", () => {
-      expect(offered.length).toBe([...DIORAMAS.keys()].filter((id) => defOf(id).rarity === "Mythic").length);
+      // R2725001: a level is offered on the shipped catalog alone, so a held set's Mythics (the Infinite Assault's,
+      // R4577000) draw their dioramas with no level offered yet.
+      expect(offered.length).toBe([...DIORAMAS.keys()].filter((id) => defOf(id).rarity === "Mythic" && setShips(defOf(id).set)).length);
     });
     for (const id of offered) {
       it(`R3350000 ${id} at its Animated level`, () => {

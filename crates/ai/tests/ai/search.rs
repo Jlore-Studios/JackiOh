@@ -1227,17 +1227,21 @@ mod lanes_that_play_differently {
     }
 
     /// #1635: a finalist that opens with a play only the root offers is replayed on another world, not
-    /// cut at its first action: `score_line` checks a line's first action against the root's set.
+    /// cut at its first action: `replay_line` checks a line's first action against the root's set.
     #[test]
-    fn score_line_replays_a_first_action_only_the_root_offers() {
+    fn replay_line_replays_a_first_action_only_the_root_offers() {
         let state = lane_eater_board();
         let play = root_candidate_actions(&state, AI, Prices::NONE)
             .into_iter()
             .find(|action| lane_of(action) == Some(4))
             .expect("the root offers lane 4");
         let counter = create_node_counter(AI_BUDGET.nodes, None);
-        let played = score_line(&state, AI, &[play], &counter, false, None, Prices::NONE).expect("in budget");
-        let passed = score_line(&state, AI, &[], &counter, false, None, Prices::NONE).expect("in budget");
+        let played = replay_line(&state, AI, &[play], &counter, None, Prices::NONE, ReplayFill::OFF)
+            .map(|replay| replay.score)
+            .expect("in budget");
+        let passed = replay_line(&state, AI, &[], &counter, None, Prices::NONE, ReplayFill::OFF)
+            .map(|replay| replay.score)
+            .expect("in budget");
         assert!(played > passed, "{played} > {passed}");
     }
 
@@ -1960,11 +1964,12 @@ mod r3498000_wrap_up {
     fn r3498000_a_wrap_up_counter_refuses_past_its_floor_until_it_closes_and_leaves_its_parent_running() {
         let root = create_node_counter(100, None);
         let fired = || true;
-        let beam = create_wrap_up_counter(&root, 50, Some(&fired), 5);
+        let beam = create_wrap_up_counter(&root, 50, Some(&fired));
         assert_eq!(
             [beam.take(), beam.take(), beam.take(), beam.take(), beam.take()],
             [true; 5]
         );
+        beam.end_root();
         assert!(!beam.take());
         assert_eq!(beam.stopped_by(), StoppedBy::Clock);
         assert!(root.take());
@@ -1975,12 +1980,156 @@ mod r3498000_wrap_up {
         assert_eq!(root.used(), 7);
 
         // With no wrap-up it is a plain slice, which closing changes nothing for.
-        let plain = create_wrap_up_counter(&root, 1, None, 0);
+        let plain = create_wrap_up_counter(&root, 1, None);
         assert!(plain.take());
         assert!(!plain.take());
+        plain.end_root();
         plain.end_exploring();
         assert!(!plain.take());
         assert_eq!(plain.stopped_by(), StoppedBy::Budget);
+    }
+
+    /// #97 Zephrys: (1) Spell, a Play of which `simulate` surcharges `AI_SEARCH.expensive_def_nodes`.
+    const ZEPHRYS: &str = "core-097";
+
+    /// The AI on turn 9 at 3 mana holding `def` alone, against one Unit (#4801's scene).
+    fn one_card(def: &str) -> GameState {
+        jackioh_cards::register_all();
+        scenario(json!({
+            "seed": "r4801000", "active": AI, "turn": 9,
+            "p1": { "hand": [def], "mana": 3, "library": ["core-008", "core-011", "core-020"] },
+            "p2": { "hand": ["core-011"], "field": ["core-008"], "library": ["core-008", "core-011", "core-020"] },
+        }))
+        .state()
+        .clone()
+    }
+
+    /// `decide` on `state` at `AI_BUDGET` with no hard stop and the given wrap-up.
+    fn wrapped(state: &GameState, wrap_up: Option<&dyn Fn() -> bool>) -> Decision {
+        decide(
+            state,
+            AI,
+            &mut AiOptions {
+                rng: create_rng("r4801000", 0),
+                budget: AI_BUDGET,
+                should_stop: None,
+                wrap_up,
+            },
+        )
+        .expect("a decision")
+    }
+
+    /// The Zephrys scene's root moves, as the beam tries them.
+    fn zephrys_root(state: &GameState) -> Vec<ActionBody> {
+        root_expansion(state, AI, AI_BUDGET.root_branching, Prices::NONE)
+    }
+
+    #[test]
+    fn r4801000_a_wrap_up_counter_is_first_polled_once_the_root_is_tried_and_the_hard_stop_still_is() {
+        let root = create_node_counter(100, None);
+        let polls = Cell::new(0usize);
+        let fired = || {
+            polls.set(polls.get() + 1);
+            true
+        };
+        let beam = create_wrap_up_counter(&root, 50, Some(&fired));
+        // However many nodes the root's moves take, past the old floor of root_branching and one more.
+        for _ in 0..AI_BUDGET.root_branching + 2 {
+            assert!(beam.take());
+        }
+        assert_eq!(polls.get(), 0, "the wrap-up is not polled inside the root");
+        assert_eq!(beam.stopped_by(), StoppedBy::Exhausted);
+
+        beam.end_root();
+        assert!(!beam.take());
+        assert_eq!(polls.get(), 1);
+        assert_eq!(beam.stopped_by(), StoppedBy::Clock);
+        assert!(root.take(), "the parent runs on");
+
+        // The hard stop is polled before every node, the root's included.
+        let stops = Cell::new(0usize);
+        let should_stop = || {
+            stops.set(stops.get() + 1);
+            stops.get() > 2
+        };
+        let clocked = create_node_counter(100, Some(&should_stop));
+        let slice = create_wrap_up_counter(&clocked, 50, Some(&fired));
+        assert_eq!([slice.take(), slice.take(), slice.take()], [true, true, false]);
+        assert_eq!(clocked.stopped_by(), StoppedBy::Clock);
+        assert_eq!(slice.stopped_by(), StoppedBy::Clock);
+    }
+
+    #[test]
+    fn r4801000_a_wrap_up_fired_before_the_beam_still_leaves_a_line_when_the_first_root_move_is_surcharged() {
+        let fired = || true;
+        let never = || false;
+        assert!(
+            wrapped(&one_card("core-008"), Some(&fired)).stats.lines > 0,
+            "PREMISE: an ordinary root is expanded under a fired wrap-up"
+        );
+        let state = one_card(ZEPHRYS);
+        let moves = zephrys_root(&state);
+        assert!(
+            surcharge_nodes(&state, AI, &moves[0]) > AI_BUDGET.root_branching + 1,
+            "PREMISE: the first root move costs more than the old floor: {}",
+            action_key(&moves[0])
+        );
+        let unclocked = wrapped(&state, None);
+        assert_eq!(
+            unclocked.reason,
+            DecisionReason::Search,
+            "PREMISE: with no clock the root is searched"
+        );
+        assert_eq!(wrapped(&state, Some(&never)), unclocked);
+
+        let d = wrapped(&state, Some(&fired));
+        assert!(
+            d.stats.lines > 0,
+            "the beam was left no line: {:?} {} after {} nodes, stopped by {:?} (no clock: {})",
+            d.reason,
+            action_key(&d.action),
+            d.stats.nodes,
+            d.stats.stopped_by,
+            action_key(&unclocked.action)
+        );
+        assert_ne!(d.reason, DecisionReason::Fallback);
+        assert_eq!(js(d.stats.stopped_by), json!("clock"));
+        assert!(is_legal(&state, AI, &d.action));
+    }
+
+    #[test]
+    fn r4801000_a_wrap_up_fired_before_the_beam_still_tries_every_root_move_its_end_turn_last() {
+        let state = one_card(ZEPHRYS);
+        let moves = zephrys_root(&state);
+        assert_eq!(moves.last(), Some(&ActionBody::EndTurn), "PREMISE");
+        let cost: usize = moves.iter().map(|m| 1 + surcharge_nodes(&state, AI, m)).sum();
+        assert!(
+            cost > AI_BUDGET.root_branching + 1,
+            "PREMISE: the root costs more than the old floor ({cost})"
+        );
+
+        let fired = || true;
+        let root = create_node_counter(AI_BUDGET.nodes, None);
+        let beam = create_wrap_up_counter(&root, AI_BUDGET.nodes, Some(&fired));
+        let lines = beam_search(&state, AI, &beam, AI_BUDGET, Prices::NONE);
+        let firsts: Vec<String> = lines.iter().map(|line| action_key(&line.actions[0])).collect();
+        for action in &moves {
+            assert!(
+                firsts.contains(&action_key(action)),
+                "{} untried: {firsts:?}",
+                action_key(action)
+            );
+        }
+        assert!(
+            lines.iter().any(|line| line.actions == [ActionBody::EndTurn]),
+            "{firsts:?}"
+        );
+        assert_eq!(
+            lines.len(),
+            moves.len(),
+            "the beam explored no further than its root: {firsts:?}"
+        );
+        assert_eq!(beam.stopped_by(), StoppedBy::Clock);
     }
 }
 
@@ -2313,7 +2462,16 @@ mod rescored_own_prompts_1636 {
 
     /// `line` scored on `world` after the opponent's reply, as `decide` re-scores a finalist.
     fn rescore(world: &GameState, line: &[ActionBody], counter: &dyn NodeCounter) -> Option<f64> {
-        score_line(world, AI, line, counter, true, None, Prices::NONE)
+        replay_line(
+            world,
+            AI,
+            line,
+            counter,
+            Some(&hidden_card_ids(world, AI)),
+            Prices::NONE,
+            ReplayFill::OFF,
+        )
+        .map(|replay| replay.score)
     }
 
     /// #1636: the line [Scarab, its answer] found on one world, scored on a world whose offer lacks

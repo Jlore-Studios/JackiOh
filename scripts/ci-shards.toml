@@ -76,3 +76,12 @@ unit = 8
 # that pin changed.
 [e2e]
 smoke = 4
+
+# `rust (fuzz slice k/K)`: the merge queue's slice of the daily fuzz (ci.yml's rust-fuzz-slice,
+# scripts/fuzz-slice.sh): ci.yml's FUZZ_SLICE_SEEDS plain and handicapped seeds and
+# DUOS_FUZZ_SLICE_SEEDS Duos seeds, split over K shards. The totals are ci.yml's, so a count only
+# splits them: no count can skip a seed. At 4, each shard plays 400 + 400 + 50 seeds, about five
+# minutes on CI's jackioh (0.25 s a 1v1 seed, 1.3 s a Duos one). Any count other than 4 needs
+# bot/tests/test_ci_matrix.py's pin changed.
+[fuzz]
+slice = 4

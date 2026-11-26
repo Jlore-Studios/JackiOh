@@ -3,6 +3,8 @@
 //!  - R42, R89: a destroy effect is no damage instance, so an earlier non-lethal hit is not the kill.
 //!  - R176: My Pawn's lethal projection follows the combat: First Strike, Trample excess from Cleave,
 //!    and a Lifesteal strike back that heals in the same combat, by what it really deals.
+//!  - R4823000: a First Strike defender whose damage exiles fells the attacker before its Trample
+//!    blow, so My Pawn stays set.
 //!  - §5.1: My Pawn fires once, even while its own AI turn is still being played out.
 //!  - R44, R152: the AI plays out the rest of the turn My Pawn took, not the player's next turn.
 //!  - §10.3: the AI turn's events are dispatched once, not again by the enclosing action.
@@ -33,6 +35,7 @@ const DUELIST: &str = "core-045";
 const RENO: &str = "core-053";
 const SORCERER: &str = "core-068";
 const MY_PAWN: &str = "core-096";
+const BANISHER: &str = "meditative-072";
 const JILLIAX: &str = "core-056";
 const GOING_LONG: &str = "core-084";
 const WINDOW_LIBRARY: [&str; 6] = [VANILLA, VANILLA, VANILLA, VANILLA, VANILLA, VANILLA];
@@ -174,6 +177,75 @@ mod r176_my_pawns_projection_follows_the_combat {
         assert_eq!(count(&s, GameEventType::AttackCancelled), 0);
         s.expect_health("p2", 1);
         s.expect_in_zone(MY_PAWN, "field");
+    }
+}
+
+mod r4823000_my_pawn_reads_a_first_strike_exile_as_the_combat_does {
+    use super::*;
+
+    /// p1's 10/10 Trample Unit across from p2's Meditative #72 The Banisher (2/1, exiles what it
+    /// damages), p2's hero at 5 with My Pawn set; the Banisher granted First Strike when `first_strike`.
+    fn banisher_board(seed: &str, first_strike: bool) -> Scenario {
+        let mut s = setup(json!({
+            "seed": seed,
+            "active": "p1",
+            "turn": 9,
+            "p1": {
+                "field": [{ "def": VANILLA, "lane": 3, "statsOverride": { "attack": 10, "health": 10 } }],
+                "hand": [VANILLA],
+                "library": [VANILLA, VANILLA, VANILLA],
+            },
+            "p2": {
+                "health": 5,
+                "field": [{ "def": BANISHER, "lane": 3 }],
+                "backrow": [{ "def": MY_PAWN, "faceUp": false }],
+                "hand": [VANILLA],
+                "library": [VANILLA, VANILLA, VANILLA],
+            },
+        }));
+        let attacker = must(s.unit("p1", 3), "p1's 10/10");
+        s.card_mut(&attacker).granted_keywords.push(Keyword::Trample);
+        if first_strike {
+            let banisher = must(s.unit("p2", 3), "p2's Banisher");
+            s.card_mut(&banisher).granted_keywords.push(Keyword::FirstStrike);
+        }
+        s
+    }
+
+    #[test]
+    fn r4823000_my_pawn_stays_set_when_a_first_strike_banisher_exiles_the_trampler_first() {
+        let mut s = banisher_board("r4823000-pawn-stays", true);
+        let attacker = must(s.unit("p1", 3), "p1's 10/10");
+        let banisher = must(s.unit("p2", 3), "p2's Banisher");
+
+        s.attack(&attacker, &banisher);
+
+        // §4.3 step 1: the Banisher's 2 lands first and marks the attacker, which deals nothing.
+        assert_eq!(count(&s, GameEventType::TrapFired), 0);
+        assert_eq!(count(&s, GameEventType::AttackCancelled), 0);
+        s.expect_health("p2", 5);
+        s.expect_in_zone(&banisher, "field");
+        s.expect_in_zone(&attacker, "exile");
+        s.expect_in_zone(MY_PAWN, "field");
+    }
+
+    #[test]
+    fn r4823000_my_pawn_still_cancels_the_trample_swing_into_a_banisher_without_first_strike() {
+        let mut s = banisher_board("r4823000-pawn-fires", false);
+        let attacker = must(s.unit("p1", 3), "p1's 10/10");
+        let banisher = must(s.unit("p2", 3), "p2's Banisher");
+
+        s.attack(&attacker, &banisher);
+
+        // 10 into 1 health tramples 9 over 5: lethal, so My Pawn cancels it.
+        let canceled = s
+            .events()
+            .iter()
+            .filter(|event| matches!(event, GameEvent::AttackCancelled { attacker_id, .. } if *attacker_id == attacker.id))
+            .count();
+        assert_eq!(canceled, 1);
+        assert!(s.state().result.is_none());
+        s.expect_health("p2", 5);
     }
 }
 
@@ -445,7 +517,7 @@ fn swapper() -> Script {
             TriggerDef::new(
                 "edge-r6-swapper",
                 &[GameEventType::AttackDeclared],
-                |_ctx, _event| vec![effects::swap_board()],
+                |_ctx, _event| vec![effects::swap(json_as(json!({ "what": "board" })))],
             )
             .with_when(|_ctx, event| unforced_declaration(event).is_some()),
         ],

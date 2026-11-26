@@ -7,8 +7,8 @@
 //! `attack`/`health` are summed deltas beside the layer-4 buffs, moving max health on the field and the
 //! face a card will enter with anywhere else (B3.4 rule 6); `x` and `numbers` count steps per numbered
 //! keyword or X and per declared number (each step `TUNE_X_STEP`, or that number's own, so a card made
-//! Radiant keeps its steps on its Radiant numbers); `set` a number KY's Constant sets outright. A
-//! declared number's key is a `params` key (camelCase), a keyword's its kind (capitalised), so the two
+//! Radiant keeps its steps on its Radiant numbers); `set` a number KY's Constant sets outright; `taken`
+//! what End Times' countdown took off its price since its last use (R4828000). A declared number's key is a `params` key (camelCase), a keyword's its kind (capitalised), so the two
 //! never share a key. The cost change is the card's `costMod` (R65), never a field here.
 
 use indexmap::IndexMap;
@@ -158,6 +158,32 @@ pub fn tuning_of(instance: &mut CardInstance) -> &mut Tuning {
     instance.tuning.get_or_insert_with(Tuning::default)
 }
 
+/// R4828000: what the card's own countdown has taken off its declared number `key` since its last use
+/// (`Tuning.taken`), 0 when nothing.
+pub fn taken_of(instance: &CardInstance, key: &str) -> i32 {
+    instance
+        .tuning
+        .as_ref()
+        .and_then(|tuning| tuning.taken.as_ref())
+        .and_then(|taken| taken.get(key))
+        .copied()
+        .unwrap_or(0)
+}
+
+/// R4828000: writes `Tuning.taken` for `key`, dropping it at 0 so a card with nothing banked stores and
+/// hashes as one that never banked (§9.3).
+pub fn set_taken(instance: &mut CardInstance, key: &str, value: i32) {
+    let tuning = tuning_of(instance);
+    let mut taken = tuning.taken.clone().unwrap_or_default();
+    if value == 0 {
+        taken.shift_remove(key);
+    } else {
+        taken.insert(key.to_string(), value);
+    }
+    tuning.taken = Some(taken);
+    tidy_tuning(instance);
+}
+
 /// Add `delta` to a step count, dropping a count that comes back to 0 so an untuned card stores nothing
 /// (`shift_remove` keeps the other keys in order).
 pub fn add_step(record: Option<&IndexMap<String, i32>>, key: &str, delta: i32) -> IndexMap<String, i32> {
@@ -185,7 +211,12 @@ fn tidy(tuning: &mut Tuning) -> bool {
     if tuning.remove_keywords.as_ref().is_none_or(|list| list.is_empty()) {
         tuning.remove_keywords = None;
     }
-    for record in [&mut tuning.x, &mut tuning.numbers, &mut tuning.set] {
+    for record in [
+        &mut tuning.x,
+        &mut tuning.numbers,
+        &mut tuning.set,
+        &mut tuning.taken,
+    ] {
         if record.as_ref().is_some_and(|map| map.is_empty()) {
             *record = None;
         }
@@ -197,6 +228,7 @@ fn tidy(tuning: &mut Tuning) -> bool {
         && tuning.x.is_none()
         && tuning.numbers.is_none()
         && tuning.set.is_none()
+        && tuning.taken.is_none()
 }
 
 /// Drop every empty field, and the record itself once nothing is left, so a card whose changes have
@@ -216,7 +248,7 @@ pub fn copy_tuning(tuning: Option<&Tuning>) -> Option<Tuning> {
 }
 
 /// R102, B3.4 rule 4: a Fuse sums its ingredients' tuning; a number KY's Constant set is kept from the
-/// first ingredient that set it.
+/// first ingredient that set it, and a bank (`taken`, R4828000) goes with the set it records.
 pub fn sum_tunings(tunings: &[Option<Tuning>]) -> Option<Tuning> {
     let mut out = Tuning::default();
     for tuning in tunings.iter().flatten() {
@@ -252,6 +284,11 @@ pub fn sum_tunings(tunings: &[Option<Tuning>]) -> Option<Tuning> {
                 out.set
                     .get_or_insert_with(IndexMap::new)
                     .insert(key.clone(), *value);
+                if let Some(bank) = tuning.taken.as_ref().and_then(|taken| taken.get(key)) {
+                    out.taken
+                        .get_or_insert_with(IndexMap::new)
+                        .insert(key.clone(), *bank);
+                }
             }
         }
     }

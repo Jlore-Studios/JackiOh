@@ -2,9 +2,15 @@
 // page and `/stats`, against `build:e2e` with stubbed `/api/stats/*` endpoints. BUILD M8's key assertions
 // for this row: the landing's calls to action carry no Stats link and the footer's "Stats" link opens
 // `/stats`; no provisional banner and no reading notes (R2325000); no data source is named anywhere.
+// R4680001: the Experimental tab's Versions view opens an old play version's drill-down, drawn from the
+// catalog files the built client carries.
+// R4676001: at a phone's size the drill-down's Extended stats panel opens from a shared link inside the screen.
 
 import { landingTestid } from "../../../apps/web/src/auth/testids.ts";
-import { seedFor } from "../../support/config.ts";
+import { patchTestid } from "../../../apps/web/src/patches/testids.ts";
+import { statsTestid } from "../../../apps/web/src/stats/testids.ts";
+import { CARD_NAMES, cardId } from "../../support/cards.ts";
+import { seedFor, viewports } from "../../support/config.ts";
 import {
   NAV_BACK,
   SITE_FOOTER,
@@ -114,6 +120,46 @@ const PLAYERS_FIXTURE = {
   limit: 50,
 };
 
+/** R4680001: Rapid Replenish, changed twice: three play versions, the two old ones' catalogs in the built client. */
+const REPLENISH = cardId(10);
+
+function playVersion(first: string, last: string, live: boolean, games: number) {
+  return {
+    id: `${REPLENISH}~${first}`,
+    card: REPLENISH,
+    name: CARD_NAMES[10],
+    first,
+    last,
+    live,
+    patches: 2,
+    games,
+    adjustedWinRate: games > 0 ? 0.52 : null,
+    adjustedLow: games > 0 ? 0.5 : null,
+    adjustedHigh: games > 0 ? 0.54 : null,
+    tier: games > 0 ? "B" : null,
+    hasEnoughGames: games > 0,
+  };
+}
+
+const VERSIONS_FIXTURE = {
+  pilot: "merged",
+  mode: "all",
+  field: { center: 0, spread: 0.05, cards: 3, baseline: 0.5, drawnFloor: 20 },
+  bandLow: 0.47,
+  bandHigh: 0.53,
+  minSample: 20,
+  versions: [
+    playVersion("v0.1.0", "v0.2.5f", false, 0),
+    playVersion("v0.2.6", "v0.6.3c", false, 120),
+    playVersion("v0.6.4", "v0.6.13c", true, 80),
+  ],
+};
+
+const VERSION_CARDS_FIXTURE = {
+  ...PROVISIONAL_CARDS_FIXTURE,
+  cards: [{ ...PROVISIONAL_CARDS_FIXTURE.cards[0], id: REPLENISH, name: CARD_NAMES[10], cost: 0 }],
+};
+
 describe("Spec 34 — the public Statistics page (R654)", () => {
   const seed = seedFor("34-stats");
 
@@ -200,5 +246,78 @@ describe("Spec 34 — the public Statistics page (R654)", () => {
     cy.get(ts(NAV_BACK)).click();
     cy.location("pathname").should("eq", "/");
     cy.get(ts(landingTestid.root)).should("be.visible");
+  });
+  it("R4680001 the Experimental tab's Versions view opens an old version's drill-down: its faces from its own catalog and the versions before and after it", () => {
+    cy.intercept("GET", "**/api/stats/cards*", (req) => {
+      if (!req.url.includes("/api/stats/cards/")) req.reply(VERSION_CARDS_FIXTURE);
+    }).as("getVersionCards");
+    cy.intercept("GET", "**/api/stats/versions*", VERSIONS_FIXTURE).as("getVersions");
+
+    cy.visit("/stats?tab=experimental&experimental=versions");
+    cy.get(ts(statsTestid.versionsTable)).should("be.visible").find("tbody tr").should("have.length", 3);
+    cy.get(ts(statsTestid.versionsPastOnly)).click();
+    cy.get(ts(statsTestid.versionsPastOnly)).should("have.attr", "aria-pressed", "true");
+    cy.get(ts(statsTestid.versionsTable)).find("tbody tr").should("have.length", 2);
+
+    cy.get(ts(statsTestid.versionsTable)).find(`tr[data-version-id="${REPLENISH}~v0.2.6"]`).click();
+    cy.get(ts(STATS_DRILL_DOWN_MODAL)).should("be.visible").and("have.attr", "data-version-id", `${REPLENISH}~v0.2.6`);
+    cy.location("search").should("include", `card=${REPLENISH}`).and("include", "version=v0.2.6");
+    cy.get(ts(statsTestid.versionFaces)).find(".patch-face").should("have.length", 2);
+    cy.get(ts(statsTestid.versionFigures)).should("contain.text", "52.0%").and("contain.text", "v0.2.6 – v0.6.3c");
+    cy.get(ts(statsTestid.versionBefore)).find(ts(statsTestid.versionOpen)).should("have.text", "v0.1.0 – v0.2.5f");
+    cy.get(ts(statsTestid.versionBefore)).find(".patch-face").should("have.length", 1);
+    cy.get(ts(statsTestid.versionBefore)).find(ts(patchTestid.change)).should("have.length.at.least", 1);
+    cy.get(ts(statsTestid.versionAfter)).find(ts(statsTestid.versionOpen)).should("have.text", "v0.6.4 – live");
+
+    // The version before opens its own drill-down, the card's first.
+    cy.get(ts(statsTestid.versionBefore)).find(ts(statsTestid.versionOpen)).click();
+    cy.location("search").should("include", "version=v0.1.0");
+    cy.get(ts(statsTestid.versionBefore)).should("contain.text", "None: this is its first version.");
+    cy.get(ts(STATS_DRILL_DOWN_CLOSE)).click();
+    cy.get(ts(STATS_DRILL_DOWN_MODAL)).should("not.exist");
+    cy.location("search").should("not.include", "version=");
+  });
+
+  it("R4676001 at a phone's size the Extended stats panel opens from a shared link inside the dialog and the screen", () => {
+    const figures = (rate: number, tier: string) => ({
+      games: 40,
+      adjustedWinRate: rate,
+      adjustedLow: rate - 0.03,
+      adjustedHigh: rate + 0.03,
+      tier,
+      hasEnoughGames: true,
+    });
+    cy.intercept("GET", "**/api/stats/cards/core-001*", (req) => {
+      req.reply({
+        ...CARD_DRILL_DOWN_FIXTURE,
+        face: "all",
+        faces: { normal: figures(0.51, "B"), radiant: figures(0.57, "A"), gap: { gap: 0.06, low: 0.01, high: 0.11 } },
+        variants: [
+          {
+            kind: "mode",
+            rows: [
+              { key: "bounce all enemy units", label: "bounce all enemy units", share: 0.6, ...figures(0.55, "A") },
+              { key: "destroy all enemy units", label: "destroy all enemy units", share: 0.4, ...figures(0.47, "C") },
+            ],
+          },
+        ],
+      });
+    }).as("getExtended");
+    cy.viewport(viewports.phone.width, viewports.phone.height);
+    cy.visit("/stats?card=core-001&extended=choices");
+    cy.get(ts(statsTestid.extendedPanel), { timeout: 20_000 }).should("exist");
+    cy.get(ts(statsTestid.extendedToggle)).should("have.attr", "aria-pressed", "true");
+    cy.get(ts(statsTestid.extendedRow)).should("have.length", 2);
+    // The panel scrolls inside the dialog: brought into view, it lies wholly inside the screen's width.
+    cy.get(ts(statsTestid.extendedPanel)).scrollIntoView();
+    cy.get(ts(statsTestid.extendedPanel)).then(($panel) => {
+      const box = $panel.get(0)?.getBoundingClientRect();
+      if (!box) throw new Error("the panel has no box");
+      expect(box.left, "left edge").to.be.at.least(0);
+      expect(box.right, "right edge").to.be.at.most(viewports.phone.width);
+    });
+    cy.get(ts(statsTestid.extendedFacesTab)).click();
+    cy.get(ts(statsTestid.drillDownFaceGap)).should("be.visible");
+    cy.get(ts(statsTestid.extendedChoices)).should("not.exist");
   });
 });

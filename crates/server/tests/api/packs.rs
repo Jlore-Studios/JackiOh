@@ -11,7 +11,7 @@ use tokio::sync::watch;
 use jackioh_engine::wire::PrintedRarity;
 use jackioh_engine::{CardDefs, SetName};
 use jackioh_server::api::collection::{GrantInput, grant_cards, grant_entire_catalog, owned_map};
-use jackioh_server::api::http::AuthLevel;
+use jackioh_server::api::http::{ApiError, AuthLevel};
 use jackioh_server::app::{self, App};
 use jackioh_server::config::{
     CARD_TIER_WEIGHTS, CARD_TOKEN_BAR_SIZE, COSMETIC_TIER_WEIGHTS, COSMETIC_TOKEN_BAR_SIZE_EPIC,
@@ -26,7 +26,8 @@ use jackioh_server::cosmetics::{
 };
 use jackioh_server::db::store::CollectionEntry;
 use jackioh_server::economy::grants::PACK_GRANT_REASON;
-use jackioh_server::economy::packs::{OpenedPack, OpenedPacks, open_pack, open_packs};
+use jackioh_server::economy::idempotency::Spent;
+use jackioh_server::economy::packs::{OpenedPack, OpenedPacks, open_pack_once, open_packs_once};
 use jackioh_server::economy::spend_slots::SPEND_BUSY_MESSAGE;
 use jackioh_server::economy::store::{
     Counter, CounterGrant, EconomyReason, InventoryItem, JloreGrant, JloreReason,
@@ -42,6 +43,19 @@ use crate::support::deps::{add_user, call, call_with_key, empty_test_app};
 use crate::support::store::{fail_on, fake, stop_failing, uuid};
 
 const PROFILE: &str = "p1";
+
+/// An opening that sends no `Idempotency-Key`: `open_pack_once`'s own answer.
+pub(super) async fn open_pack(
+    app: &App,
+    profile_id: &str,
+    pack: PackKind,
+    registry: &[Cosmetic],
+    seed: &str,
+) -> Result<OpenedPack, ApiError> {
+    open_pack_once(app, profile_id, pack, registry, seed, None)
+        .await
+        .and_then(Spent::now)
+}
 const USER: &str = "u1";
 
 /// The four routes, as `(method, path)`.
@@ -2039,14 +2053,16 @@ async fn r3212000_open_all_of_n_equals_n_opens_for_the_same_seeds_and_state() {
             .expect("an opening"),
         );
     }
-    let batch = open_packs(
+    let batch = open_packs_once(
         &all_at_once,
         PROFILE,
         PackKind::Set(SetName::Core),
         &registry,
         &seeds,
+        None,
     )
     .await
+    .and_then(|spent| spent.now())
     .expect("the openings");
     assert_eq!(
         batch,

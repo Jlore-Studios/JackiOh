@@ -5,10 +5,13 @@
 //! floors are hard rather than weighted: once the cards they still owe need every slot left, only cards
 //! that meet them are eligible, so a themed deck meets `themeMinShare`, every deck `minUnitShare`, and a
 //! leaning deck its set's `leanMinShare` (R1370; the leaned set goes before the theme before the units).
+//! A deck that leans on no set keeps the narrowing it always had, and a pick that would leave its
+//! theme's and its units' floors out of reach together is drawn again from the same roll (R4784000), so
+//! a deck that held both deals as it always did.
 //! Everything comes from the rng passed in, so the same seed deals the same deck in any process. The
 //! soft gate (R1390) never deals a card of a set in `gated_sets` (it held Stinkyscape from #1884 until
-//! #1885, Meditative until #732). The Quickdraw cap (R817000), a ladder bot's `strength` (#750, R1454)
-//! and the unban lane's `shape` (R976000, `shadow_ban.rs`) add no rng draw.
+//! #1885, Meditative until #732). The Quickdraw cap (R817000) and a ladder bot's `strength` (#750,
+//! R1454) add no rng draw.
 
 use std::cmp::Ordering;
 use std::ops::{Index, IndexMut};
@@ -21,7 +24,7 @@ use jackioh_engine::{
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::config::{AI_DECK_GATED_SETS, AI_WIN_RATE};
-use crate::shadow_ban::{SHADOW_BAN_IDS, shaped_weight};
+use crate::shadow_ban::SHADOW_BAN_IDS;
 
 /// `"0-1" | "2" | "3" | "4+"`.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
@@ -34,17 +37,6 @@ pub enum CostBucket {
     Three,
     #[serde(rename = "4+")]
     FourPlus,
-}
-
-impl CostBucket {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            CostBucket::ZeroOne => "0-1",
-            CostBucket::Two => "2",
-            CostBucket::Three => "3",
-            CostBucket::FourPlus => "4+",
-        }
-    }
 }
 
 /// One value per cost bucket, serialized `{ "0-1": …, "2": …, "3": …, "4+": … }`.
@@ -122,9 +114,9 @@ pub struct AiDeckOptions {
     pub boost: Option<AiDeckBoost>,
     /// R1370: a set the deck leans on: at least `ceil(size × AI_DECK.leanMinShare)` of its cards come
     /// from it (a hard floor), weighing `leanBoost` more while the deck is short of them. `None` deals
-    /// exactly the deck it always did. It names the set (#549's `newest_share`) because a caller may lean
-    /// on one not shipped (R1420); "More cards from the newest set" (R1372, R1373) passes
-    /// `newest_shipped_set()` (R1371).
+    /// the deck it always did wherever that deck held the theme's and the units' floors (R4784000). It
+    /// names the set (#549's `newest_share`) because a caller may lean on one not shipped (R1420); "More
+    /// cards from the newest set" (R1372, R1373) passes `newest_shipped_set()` (R1371).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lean_set: Option<SetName>,
     /// R1390: the sets the random draw never deals from. Default `AI_DECK_GATED_SETS`; pass
@@ -141,10 +133,6 @@ pub struct AiDeckOptions {
     /// strength.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub win_rates: Option<WinRateTable>,
-    /// R976000: multiply each card's weight by `shaped_weight`, the unban lane's dealt-quality table
-    /// (`shadow_ban.rs`). Off by default, whatever `banned` holds, and no caller sets it.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub shape: bool,
 }
 
 /// R1390: the set a deck leans on under the gate `gated`: `lean` itself when the gate leaves it, else
@@ -274,45 +262,25 @@ fn curve_shares(mana_cap: i32) -> ByBucket<f64> {
 
 /// Integers summing to size (largest remainder).
 pub fn curve_targets(size: i32, mana_cap: i32) -> ByBucket<i32> {
-    struct Remainder {
-        bucket: CostBucket,
-        fraction: f64,
-        order: usize,
-    }
     let shares = curve_shares(mana_cap);
-    let mut targets: ByBucket<i32> = ByBucket {
-        zero_one: 0,
-        two: 0,
-        three: 0,
-        four_plus: 0,
-    };
-    let mut remainders: Vec<Remainder> = Vec::new();
+    let mut targets: ByBucket<i32> = ByBucket::default();
+    let mut remainders: Vec<(CostBucket, f64)> = Vec::new();
     let mut assigned = 0;
-    for (order, bucket) in BUCKET_ORDER.into_iter().enumerate() {
+    for bucket in BUCKET_ORDER {
         let raw = shares[bucket] * f64::from(size);
         let whole = raw.floor();
         targets[bucket] = whole as i32;
         assigned += whole as i32;
-        remainders.push(Remainder {
-            bucket,
-            fraction: raw - whole,
-            order,
-        });
+        remainders.push((bucket, raw - whole));
     }
-    // Largest fractional part first; a tie goes to the cheaper bucket, so the result is a total order.
-    remainders.sort_by(|a, b| {
-        if a.fraction != b.fraction {
-            b.fraction.partial_cmp(&a.fraction).unwrap_or(Ordering::Equal)
-        } else {
-            a.order.cmp(&b.order)
-        }
-    });
+    // Largest fractional part first; a tie keeps curve order, the cheaper bucket first (the sort is stable).
+    remainders.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(Ordering::Equal));
     let mut i = 0usize;
     while assigned < size && !remainders.is_empty() {
-        let Some(entry) = remainders.get(i) else {
+        let Some((bucket, _)) = remainders.get(i) else {
             break;
         };
-        targets[entry.bucket] += 1;
+        targets[*bucket] += 1;
         assigned += 1;
         i = (i + 1) % remainders.len();
     }
@@ -340,15 +308,15 @@ fn theme_candidates(defs: &[&CardDef]) -> Vec<String> {
     themes
 }
 
-/// One index into `weights`, chosen with probability proportional to its weight: the last when the roll
-/// runs past the end, `None` for an empty list. The draw is taken either way.
-fn weighted_index(weights: &[f64], rng: &mut Rng) -> Option<usize> {
+/// One index into `weights` for `roll`, one draw of the rng in [0, 1): chosen with probability
+/// proportional to its weight, the last when the roll runs past the end, `None` for an empty list.
+fn weighted_index(weights: &[f64], roll: f64) -> Option<usize> {
     let total = weights.iter().fold(0.0, |sum, weight| sum + weight);
-    let roll = rng.next() * total;
+    let at = roll * total;
     let mut cumulative = 0.0;
     for (i, weight) in weights.iter().enumerate() {
         cumulative += weight;
-        if roll < cumulative {
+        if at < cumulative {
             return Some(i);
         }
     }
@@ -404,9 +372,9 @@ impl Tally<'_> {
     }
 }
 
-/// The narrowing a deck that leans on no set has always had, kept exactly so every seed still deals
-/// the deck it dealt: once the theme cards still owed reach the slots left only theme cards are
-/// eligible, and once the units still owed do, only the units among those (when there are any).
+/// The narrowing a deck that leans on no set has always had: once the theme cards still owed reach the
+/// slots left only theme cards are eligible, and once the units still owed do, only the units among
+/// those (when there are any). It weighs each floor alone; `unleaned_redraw` keeps the two together.
 fn narrow_unleaned<'a>(
     remaining: &[&'a CardDef],
     slots_left: i32,
@@ -519,10 +487,7 @@ fn owed_within(owed: [i32; 3], kept: usize) -> [i32; 3] {
     within
 }
 
-/// R1370: the cards the next pick of a leaning deck may take. A floor short of cards owes only those.
-/// The floors kept are the first set in `FLOORS_KEPT` the slots left can still meet; while they can be
-/// met with a slot to spare every card may be taken, and once they need every slot left, only a card
-/// of a class some fewest way of meeting them takes, so the floors stay within reach to the last card.
+/// R1370: the cards the next pick of a leaning deck may take, those of the classes `floor_takes` keeps.
 fn narrow_leaning<'a>(
     remaining: &[&'a CardDef],
     slots_left: i32,
@@ -530,10 +495,31 @@ fn narrow_leaning<'a>(
     theme: Option<&str>,
     lean: Option<SetName>,
 ) -> Vec<&'a CardDef> {
-    let classes: Vec<usize> = remaining.iter().map(|def| class_of(def, theme, lean)).collect();
+    match floor_takes(remaining, slots_left, owed, theme, lean) {
+        None => remaining.to_vec(),
+        Some(takes) => remaining
+            .iter()
+            .copied()
+            .filter(|def| takes[class_of(def, theme, lean)])
+            .collect(),
+    }
+}
+
+/// R1370: the classes of card the next pick may take, `None` when it may take any. A floor short of
+/// cards owes only those. The floors kept are the first set in `FLOORS_KEPT` the slots left can still
+/// meet; while they can be met with a slot to spare every card may be taken, and once they need every
+/// slot left, only a card of a class some fewest way of meeting them takes, so the floors stay within
+/// reach to the last card.
+fn floor_takes(
+    remaining: &[&CardDef],
+    slots_left: i32,
+    owed: [i32; 3],
+    theme: Option<&str>,
+    lean: Option<SetName>,
+) -> Option<[bool; CLASSES]> {
     let mut avail = [0; CLASSES];
-    for class in &classes {
-        avail[*class] += 1;
+    for def in remaining {
+        avail[class_of(def, theme, lean)] += 1;
     }
     // A floor short of cards owes only the cards it has left, so it takes every one of them.
     let mut owed = owed;
@@ -553,7 +539,7 @@ fn narrow_leaning<'a>(
             continue;
         }
         if needed < slots_left {
-            return remaining.to_vec();
+            return None;
         }
         let mut takes = [false; CLASSES];
         for (class, takes) in takes.iter_mut().enumerate() {
@@ -570,14 +556,34 @@ fn narrow_leaning<'a>(
             }
             *takes = min_slots(owed_after, &after) == Some(needed - 1);
         }
-        return remaining
-            .iter()
-            .zip(&classes)
-            .filter(|(_, class)| takes[**class])
-            .map(|(def, _)| *def)
-            .collect();
+        return Some(takes);
     }
-    remaining.to_vec()
+    None
+}
+
+/// R4784000: the cards a deck that leans on no set draws its pick again from, with the same roll, when
+/// `picked` would leave the theme's and the units' floors (`owed`, the leaned set's owing 0) out of
+/// reach: those of `eligible` that `floor_takes` keeps, or of `remaining` when `eligible` holds none.
+/// `None` when `picked` keeps them, so a deck that held both floors deals as it always did.
+fn unleaned_redraw<'a>(
+    remaining: &[&'a CardDef],
+    eligible: &[&'a CardDef],
+    picked: &CardDef,
+    slots_left: i32,
+    owed: [i32; 3],
+    theme: Option<&str>,
+) -> Option<Vec<&'a CardDef>> {
+    let takes = floor_takes(remaining, slots_left, owed, theme, None)?;
+    if takes[class_of(picked, theme, None)] {
+        return None;
+    }
+    let keeps = |def: &&CardDef| takes[class_of(def, theme, None)];
+    let again: Vec<&CardDef> = eligible.iter().copied().filter(keeps).collect();
+    if again.is_empty() {
+        Some(remaining.iter().copied().filter(keeps).collect())
+    } else {
+        Some(again)
+    }
 }
 
 /// #750: what a card's weight is multiplied by at `strength` (`AI_WIN_RATE`): 1.0 at strength 0, with
@@ -709,18 +715,10 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
         .filter(|strength| strength.is_finite())
         .unwrap_or(0.0)
         .clamp(0.0, 1.0);
-    // R976000: the unban lane's deck shaping (shadow_ban.rs) only when the caller asks for it, never
-    // because a ban list matches this AI's own, so a gate's two seats are dealt by one rule.
-    let shape = options.shape;
 
     let mut deck: Vec<&CardDef> = include_defs.clone();
     let mut tally = Tally {
-        counts: ByBucket {
-            zero_one: 0,
-            two: 0,
-            three: 0,
-            four_plus: 0,
-        },
+        counts: ByBucket::default(),
         units: 0,
         themed: 0,
         leaned: 0,
@@ -756,44 +754,58 @@ pub fn build_ai_deck_traced(rng: &mut Rng, size: i32, options: &AiDeckOptions) -
             lean_forced += 1;
         }
 
-        let weights: Vec<f64> = eligible
-            .iter()
-            .map(|def| {
-                let mut weight = 1.0;
-                let bucket = cost_bucket(def);
-                weight *= if tally.counts[bucket] < targets[bucket] {
-                    AI_DECK.curve_boost
-                } else {
-                    AI_DECK.curve_overflow
-                };
-                if is_unit(def) && tally.units < units_needed {
-                    weight *= AI_DECK.unit_boost;
-                }
-                if let Some(theme) = theme.as_deref()
-                    && has_tag(def, theme)
-                {
-                    weight *= AI_DECK.theme_boost;
-                }
-                // R1370: only while the deck is short of the set, so once the floor is met the rest
-                // is dealt as without it.
-                if is_leaned(def, lean) && tally.leaned < lean_needed {
-                    weight *= AI_DECK.lean_boost;
-                }
-                if query_cost(def) > castable_ceiling {
-                    weight *= AI_DECK.uncastable;
-                }
-                if boosted.contains(&def.id) {
-                    weight *= boost_by;
-                }
-                if shape {
-                    weight *= shaped_weight(&def.id);
-                }
-                weight *= win_rate_weight(options.win_rates.as_ref(), &def.id, strength);
-                weight
-            })
-            .collect();
-
-        let Some(chosen) = weighted_index(&weights, rng).and_then(|at| eligible.get(at).copied()) else {
+        let weight_of = |def: &CardDef| -> f64 {
+            let mut weight = 1.0;
+            let bucket = cost_bucket(def);
+            weight *= if tally.counts[bucket] < targets[bucket] {
+                AI_DECK.curve_boost
+            } else {
+                AI_DECK.curve_overflow
+            };
+            if is_unit(def) && tally.units < units_needed {
+                weight *= AI_DECK.unit_boost;
+            }
+            if let Some(theme) = theme.as_deref()
+                && has_tag(def, theme)
+            {
+                weight *= AI_DECK.theme_boost;
+            }
+            // R1370: only while the deck is short of the set, so once the floor is met the rest
+            // is dealt as without it.
+            if is_leaned(def, lean) && tally.leaned < lean_needed {
+                weight *= AI_DECK.lean_boost;
+            }
+            if query_cost(def) > castable_ceiling {
+                weight *= AI_DECK.uncastable;
+            }
+            if boosted.contains(&def.id) {
+                weight *= boost_by;
+            }
+            weight *= win_rate_weight(options.win_rates.as_ref(), &def.id, strength);
+            weight
+        };
+        let weights: Vec<f64> = eligible.iter().map(|def| weight_of(def)).collect();
+        // R4784000: one roll per pick, a pick drawn again included, so the rng stops where it always did.
+        let roll = rng.next();
+        let mut chosen = weighted_index(&weights, roll).and_then(|at| eligible.get(at).copied());
+        // With no theme the units' narrowing alone already keeps the one floor, so only a themed deck
+        // can need a pick drawn again.
+        if lean.is_none()
+            && theme.is_some()
+            && let Some(picked) = chosen
+            && let Some(again) = unleaned_redraw(
+                &remaining,
+                &eligible,
+                picked,
+                slots_left,
+                [0, theme_needed - tally.themed, units_needed - tally.units],
+                theme.as_deref(),
+            )
+        {
+            let weights: Vec<f64> = again.iter().map(|def| weight_of(def)).collect();
+            chosen = weighted_index(&weights, roll).and_then(|at| again.get(at).copied());
+        }
+        let Some(chosen) = chosen else {
             panic!("buildAiDeck: ran out of cards at {} of {size}", deck.len());
         };
         deck.push(chosen);

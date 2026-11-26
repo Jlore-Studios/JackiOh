@@ -2,14 +2,14 @@
 //! filed as a development record. Small budget for tests; `cargo jackioh stats` plays full.
 
 use jackioh_ai::{
-    AI_BUDGET, AI_DEV_RUN, AiDeckOptions, DevRunOptions, MatchConfig, MatchHooks, MatchSetup, SearchBudget,
-    SeatController, build_ai_deck, dev_game_config, dev_game_record, dev_record_id, dev_run_config,
-    forced_dev_game_config, play_match,
+    AI_BUDGET, AI_DEV_RUN, AiDeckOptions, DevRunOptions, MatchHooks, SearchBudget, SeatController,
+    attach_swing_turns, build_ai_deck, dev_game_config, dev_game_record, dev_record_id,
+    forced_dev_game_config, play_match, swing_turns,
 };
 use jackioh_engine::testkit::{
-    CardStatsFilter, DECK_SIZE, DEFAULT_CARD_STATS_FILTER, FoldArgs, GameRecord, LastBoardEntry, PerPlayer,
-    PilotFilter, PlayerId, SourceFilter, card_stats, create_rng, json, json_as, registered_catalog,
-    summarize_game, validate_deck,
+    CardStatsFilter, DECK_SIZE, DEFAULT_CARD_STATS_FILTER, FoldArgs, GameRecord, PerPlayer, PilotFilter,
+    PlayerId, SourceFilter, card_stats, create_rng, json, json_as, registered_catalog, summarize_game,
+    validate_deck,
 };
 
 use super::support::register_cards;
@@ -24,6 +24,10 @@ const QUICK: SearchBudget = SearchBudget {
     max_depth: 2,
     finalists: 1,
 };
+
+// A pure crate reads data at compile time only (rule 4).
+const GENERATION_JSON: &str = include_str!("../../generation.json");
+const HAND_HISTORY: &str = include_str!("../../../../training/history/hand.jsonl");
 
 /// Every field named holds its value, read as the wire writes it.
 fn assert_matches_object(record: &GameRecord, fields: serde_json::Value) {
@@ -99,7 +103,6 @@ mod the_ais_development_run_9_11 {
             budget: Some(QUICK),
             force: None,
             commit: Some("0123abc".to_string()),
-            setup: MatchSetup::default(),
         };
         let generation = jackioh_ai::ai_generation();
         assert!(generation.is_some(), "generation.json holds the generation");
@@ -123,6 +126,69 @@ mod the_ais_development_run_9_11 {
     }
 
     #[test]
+    fn r4921000_the_ai_without_its_learned_evaluation_is_generation_14_and_hand_jsonl_holds_its_line() {
+        let held: serde_json::Value = serde_json::from_str(GENERATION_JSON).expect("generation.json parses");
+        assert_eq!(
+            jackioh_ai::ai_generation(),
+            Some(14),
+            "generation 14 is #4921's; a later generation moves this test with its own ruling"
+        );
+        let last = HAND_HISTORY
+            .lines()
+            .rev()
+            .find(|line| !line.trim().is_empty())
+            .expect("hand.jsonl holds a line");
+        let line: serde_json::Value = serde_json::from_str(last).expect("hand.jsonl's last line parses");
+        // `shadowBan` is left out: sweep.yml rewrites it in generation.json alone, so the history line
+        // keeps the 0 it was written with, as learn.jsonl keeps its 17.
+        for key in [
+            "generation",
+            "lane",
+            "parent",
+            "tree",
+            "vsRandom",
+            "vsParent",
+            "parentShadowBan",
+            "date",
+        ] {
+            assert_eq!(line[key], held[key], "{key}");
+        }
+        assert_eq!(held["lane"], "hand");
+        assert!(held["vsRandom"].is_null() && held["vsParent"].is_null());
+        assert_eq!(line["shadowBan"], 0);
+    }
+
+    #[test]
+    fn r4552000_a_development_record_carries_one_row_per_turn() {
+        register_cards();
+        let options = DevRunOptions {
+            series: "dev-test".to_string(),
+            patch: "v0.2.3".to_string(),
+            budget: Some(QUICK),
+            force: None,
+            commit: None,
+        };
+        let record = dev_game_record(1, &options).expect("the game finished");
+        let mut turns: Vec<i32> = Vec::new();
+        for (seat, summary) in record.game.seats.iter() {
+            let rows = summary.swing_turns.as_ref().expect("each seat carries its rows");
+            assert!(!rows.is_empty(), "{seat:?} took a turn");
+            // One row per turn the seat took, in the order taken.
+            assert!(
+                rows.windows(2).all(|pair| pair[0].turn < pair[1].turn),
+                "{rows:?}"
+            );
+            turns.extend(rows.iter().map(|row| row.turn));
+        }
+        // No turn is two seats', and the game's counter ends at or past every row.
+        turns.sort_unstable();
+        assert!(turns.windows(2).all(|pair| pair[0] < pair[1]), "{turns:?}");
+        assert!(turns.last().is_some_and(|turn| *turn <= record.game.turns));
+        // Seeded: the same game writes the same rows.
+        assert_eq!(dev_game_record(1, &options), Some(record));
+    }
+
+    #[test]
     fn r378_files_each_finished_game_as_a_development_record_of_the_patch_it_tests() {
         register_cards();
         let options = DevRunOptions {
@@ -131,7 +197,6 @@ mod the_ais_development_run_9_11 {
             budget: Some(QUICK),
             force: None,
             commit: None,
-            setup: MatchSetup::default(),
         };
         let records: Vec<Option<GameRecord>> =
             [1, 2].into_iter().map(|n| dev_game_record(n, &options)).collect();
@@ -152,13 +217,18 @@ mod the_ais_development_run_9_11 {
                     "pilots": { "p1": "ai", "p2": "ai" },
                 }),
             );
-            // The game half is the engine's own reading of the game the AI played.
+            // The game half is the engine's own reading of the game the AI played, with the AI's turn
+            // rows beside it (R4552000).
             let played = play_match(&config, &mut MatchHooks::default());
-            let summary = summarize_game(&json_as::<FoldArgs>(json!({
+            let args = json_as::<FoldArgs>(json!({
                 "seed": config.seed,
                 "decks": config.decks,
                 "log": played.log,
-            })));
+            }));
+            let mut summary = summarize_game(&args);
+            if let Some(game) = summary.as_mut() {
+                attach_swing_turns(game, swing_turns(&args).expect("a finished game has rows"));
+            }
             assert_eq!(Some(record.game.clone()), summary);
             assert_eq!(
                 Some(record.game.winner),
@@ -269,7 +339,6 @@ mod the_ais_development_run_9_11 {
             budget: Some(QUICK),
             force: Some(FORCED.to_string()),
             commit: None,
-            setup: MatchSetup::default(),
         };
         for n in [1, 2] {
             let record = dev_game_record(n, &options)
@@ -289,62 +358,6 @@ mod the_ais_development_run_9_11 {
                 serde_json::to_string(&record).expect("a record serializes"),
                 serde_json::to_string(&again).expect("a record serializes"),
                 "game {n}"
-            );
-        }
-    }
-
-    #[test]
-    fn a_runs_games_carry_its_setup_inputs_and_deal_as_without_them() {
-        register_cards();
-        let board = vec![LastBoardEntry {
-            def_id: "core-012".to_string(),
-            radiant: false,
-        }];
-        let setup = MatchSetup {
-            last_boards: Some((board.clone(), board)),
-            ..MatchSetup::default()
-        };
-        let plain = DevRunOptions {
-            series: "dev-test".to_string(),
-            patch: "v0.2.3".to_string(),
-            budget: Some(QUICK),
-            force: None,
-            commit: None,
-            setup: MatchSetup::default(),
-        };
-        let carrying = DevRunOptions {
-            setup: setup.clone(),
-            ..plain.clone()
-        };
-        let forced = DevRunOptions {
-            force: Some(FORCED.to_string()),
-            ..carrying.clone()
-        };
-        for n in [1, 2] {
-            assert_eq!(
-                dev_run_config(n, &plain),
-                dev_game_config(n, "dev-test", Some(QUICK)),
-                "game {n}"
-            );
-            let config = dev_run_config(n, &carrying);
-            assert_eq!(config.setup, setup, "game {n}");
-            assert_eq!(
-                MatchConfig {
-                    setup: MatchSetup::default(),
-                    ..config
-                },
-                dev_run_config(n, &plain),
-                "game {n}: only the setup differs"
-            );
-            let config = dev_run_config(n, &forced);
-            assert_eq!(config.setup, setup, "game {n} forced");
-            assert_eq!(
-                MatchConfig {
-                    setup: MatchSetup::default(),
-                    ..config
-                },
-                forced_dev_game_config(n, "dev-test", Some(QUICK), FORCED),
-                "game {n} forced: only the setup differs"
             );
         }
     }

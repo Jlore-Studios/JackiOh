@@ -6,9 +6,34 @@
 
 use crate::combat::AttackTarget;
 use crate::damage::DamageTarget;
+use crate::faces::card_type_of;
 use crate::rng::Rng;
-use crate::state::GameState;
-use crate::wire::{KeywordKind, PLAYER_IDS, PlayerId, Selection, TargetAim};
+use crate::state::{CardInstance, GameState, ModifierKind};
+use crate::wire::{CardType, KeywordKind, PLAYER_IDS, PlayerId, Selection, TargetAim, opponent_of};
+
+/// R4590001 (IA #130 Prompt Injection, IA #142 The Jailbreaker): whether `player`'s play of
+/// `card` draws its declared targets at random. A Mayor keeps drawing every play's, exactly as
+/// `targets_random` does; otherwise only a face-up Spell play does — a cast never carries one
+/// (R70), and a face-down set draws nothing — when the player holds a live
+/// `RandomTargetsNextSpell`, or a card in the opponent's active units carries
+/// `random_opponent_spell_targets`.
+pub fn play_targets_random(state: &GameState, player: PlayerId, card: &CardInstance) -> bool {
+    if targets_random(state) {
+        return true;
+    }
+    if card_type_of(state, card) != CardType::Spell || card.set_as.is_some() {
+        return false;
+    }
+    if state.players[player].mods.iter().any(|modifier| {
+        matches!(modifier.kind, ModifierKind::RandomTargetsNextSpell)
+            && crate::mana::modifier_is_live(state, modifier)
+    }) {
+        return true;
+    }
+    crate::zones::active_units_of(state, opponent_of(player))
+        .into_iter()
+        .any(|unit| crate::scripts::flags_of(state, unit).random_opponent_spell_targets == Some(true))
+}
 
 /// R1200: whether a Mayor acts on the field — a card in either player's active units whose running
 /// face carries `random_targets`.

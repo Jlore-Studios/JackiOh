@@ -307,6 +307,37 @@ async fn r1304001_a_game_that_ends_as_a_quest_arrives_counts_toward_it() {
 }
 
 #[tokio::test]
+async fn r1304001_a_game_pays_no_quest_that_arrived_after_it_ended() {
+    let app = test_app().await;
+    let p1 = profile_id_of(&app, USER).await;
+    store!(app, |t| top_up_quests(&mut t, &p1, T0));
+    set_due(&app, &p1, T0 + 10 * interval()).await;
+    let win_3 = quest_def("win-3").expect("the pool has win-3");
+    hold(&app, &p1, win_3, 0, T0 + 1_000).await;
+
+    store!(app, |t| pay_game_rewards(
+        &mut t,
+        &won_game(&p1, "match-1", GameTally::default(), T0)
+    ));
+    let rows = ledger_of(&app, &p1).await.quests;
+    assert!(
+        rows.iter().all(
+            |row| !matches!(row.change, QuestChange::Progressed | QuestChange::Completed)
+                || row.quest_id != "win-3"
+                || row.reference.as_deref() != Some("match-1")
+        ),
+        "a game that ended at {T0} moved a quest that arrived later: {rows:?}"
+    );
+    let held = store!(app, |t| t.economy_quests_get(&p1));
+    let quest = held
+        .held
+        .iter()
+        .find(|quest| quest.quest_id == "win-3")
+        .expect("the late quest is still held");
+    assert_eq!(quest.progress, 0);
+}
+
+#[tokio::test]
 async fn r1304001_a_completed_quest_pays_its_jlore_and_xp_exactly_once() {
     let app = test_app().await;
     let p1 = profile_id_of(&app, USER).await;

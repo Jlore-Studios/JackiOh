@@ -60,8 +60,8 @@ pub mod census;
 mod history;
 
 pub use history::{
-    KEPT_SCRIPTS, KeptScript, card_eras, carried_versions, catalog_at, catalog_defs_at, has_script_at,
-    shipped_catalog, shipped_versions,
+    FRAGMENT_KEY, KEPT_SCRIPTS, KeptScript, card_eras, carried_versions, catalog_at, catalog_defs_at,
+    has_script_at, resolve_kept_key, shipped_catalog, shipped_versions,
 };
 
 /// R1367000: the card patch history as a card's stats window reads it, and R4675000: as each card's

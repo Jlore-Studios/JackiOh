@@ -5,7 +5,9 @@
 // board's rail shows beside the run's timer and the chip that lists the live modifiers (B22, B24,
 // R3912000), and each side's relics sit in a tray beside its hero (B23). There is no Play again: once
 // the game is over the page asks the worker for its report, the run's `FightOver` (B25), and Continue
-// sends it to the run, which a lost fight ends (B26).
+// sends it to the run, which a lost fight ends (B26). A fight a Glitch voided never happened (R679,
+// R4852000): it has no report, and its panel's Deal it again deals it fresh from its seed, as Try
+// again does.
 //
 // The board is the practice route's (`routes/practice.tsx`): the same controller, pacing
 // (`practice/aiTable.ts`: the AI waits on `data-animating`, `data-showcase` and `data-speaking`, #2925),
@@ -31,6 +33,7 @@ import "../../auth/tavern.css";
 import Game from "../../game/Game.tsx";
 import { reducedMotionNow } from "../../game/animations.ts";
 import { CatalogContext, lookupFromDefs } from "../../game/catalog.ts";
+import { MainMenuButton } from "../../game/MainMenuButton.tsx";
 import { ModifierList } from "../../game/ModifierList.tsx";
 import { t } from "../../i18n/i18n.ts";
 import { PRACTICE_PACING, PRACTICE_PACING_REDUCED, type PracticePacing } from "../../practice/config.ts";
@@ -88,6 +91,8 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
   const seed = setup?.seed ?? null;
   const setupRef = useRef(setup);
   setupRef.current = setup;
+  const dungeonRef = useRef(dungeon);
+  dungeonRef.current = dungeon;
 
   // Read when a fight starts, so a prop change mid-game does not tear it down.
   const factory = useRef(hostFactory ?? defaultHostFactory);
@@ -140,8 +145,10 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
   const [report, setReport] = useState<Report | null>(null);
   const [reportAttempt, setReportAttempt] = useState(0);
   const over = state.phase === "over";
+  // R4852000: a fight a Glitch voided never happened (R679): no report is asked for, and the run stays on it.
+  const voided = over && state.snapshot?.view.result?.reason === "voided";
   useEffect(() => {
-    if (controller === null || !over) return;
+    if (controller === null || !over || voided) return;
     let canceled = false;
     controller.runReport().then(
       (action) => {
@@ -154,17 +161,42 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     return () => {
       canceled = true;
     };
-  }, [controller, over, reportAttempt]);
+  }, [controller, over, voided, reportAttempt]);
   const shownReport = report !== null && report.controller === controller ? report : null;
   const action = shownReport !== null && "action" in shownReport ? shownReport.action : null;
 
   /** What the run said to the report Continue sent it: its refusal, or null once it took it. */
   const [sent, setSent] = useState<{ controller: PracticeController; refusal: string | null } | null>(null);
   const answer = sent !== null && sent.controller === controller ? sent : null;
-  const onContinue = useCallback(() => {
-    if (action === null || controller === null) return;
-    setSent({ controller, refusal: dungeon.act(action) });
-  }, [action, controller, dungeon]);
+  // R4733000: the report goes to the run once per fight, however the player leaves: Continue, Menu
+  // or unmount. A refusal leaves the fight unsent, so Continue may be pressed again.
+  const sentRef = useRef<PracticeController | null>(null);
+  const sendOnce = useCallback(() => {
+    if (action === null || controller === null || sentRef.current === controller) return;
+    sentRef.current = controller;
+    const refusal = dungeonRef.current.act(action);
+    if (refusal !== null) sentRef.current = null;
+    setSent({ controller, refusal });
+  }, [action, controller]);
+  // R4733000: the report is held beside the kept run the moment it arrives, so leaving before
+  // Continue keeps the result. Holding changes no screen: the board keeps showing its end.
+  const heldFor = useRef<PracticeController | null>(null);
+  useEffect(() => {
+    if (action !== null && controller !== null && heldFor.current !== controller) {
+      heldFor.current = controller;
+      dungeonRef.current.holdReport(action);
+    }
+  }, [action, controller]);
+  // R4733000: leaving with a held report the screen never sent applies it, as Continue would.
+  const sendRef = useRef(sendOnce);
+  sendRef.current = sendOnce;
+  useEffect(
+    () => () => {
+      sendRef.current();
+    },
+    [controller],
+  );
+  const onContinue = sendOnce;
   const onRetryReport = useCallback(() => {
     setReport(null);
     setReportAttempt((attempt) => attempt + 1);
@@ -178,9 +210,12 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     },
     [controller],
   );
+  // R4733000 (amending R3932000): Menu still navigates to Play without asking once the fight has
+  // its result, but it sends the report first, so the result is kept however the player leaves.
   const onMenu = useCallback(() => {
+    if (action !== null) sendOnce();
     navigate(paths.play);
-  }, []);
+  }, [action, sendOnce]);
 
   const snapshot = state.snapshot;
 
@@ -262,7 +297,17 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
   const tier = String(setup.enemy.tier);
   const tierLabel = node?.kind === "elite" ? t("Elite, tier {tier}", { tier }) : t("Tier {tier}", { tier });
 
-  const resultActions = (
+  const resultActions = voided ? (
+    <>
+      <p className="result-overlay__note" data-testid={fightTestid.voided} role="status">
+        {t("A Glitch voided this fight, so it never happened. Your run stands where it was.")}
+      </p>
+      <button type="button" className="button-primary" data-testid={fightTestid.redeal} onClick={onRetryFight}>
+        {t("Deal it again")}
+      </button>
+      <MainMenuButton testid={fightTestid.resultMenu} onClick={onMenu} />
+    </>
+  ) : (
     <>
       {shownReport !== null && "error" in shownReport ? (
         <>
@@ -285,6 +330,8 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
           {t("Continue")}
         </button>
       )}
+      {/* #4742, R4742000: after Continue, which keeps the focus and the primary look: the board's Menu, once the fight is over. */}
+      <MainMenuButton testid={fightTestid.resultMenu} onClick={onMenu} />
       {answer === null || answer.refusal === null ? null : (
         <p className="result-overlay__note" data-testid={fightTestid.actRefusal} role="alert">
           {t(answer.refusal)}
@@ -293,7 +340,8 @@ export function FightScreen({ dungeon, hostFactory, pacing }: FightScreenProps):
     </>
   );
 
-  // R3932000: out to Play; mid-fight it asks first, and leaves once the fight has its result.
+  // R3932000, R4733000: out to Play; mid-fight it asks first, and leaves once the fight has its
+  // result, sending the report first.
   const menuButton = (
     <button
       type="button"

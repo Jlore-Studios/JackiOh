@@ -118,9 +118,10 @@ button,
   background: var(--primary-face-ready-hover);
 }
 
-/* End turn in the opponent's turn: its housing sunk into the rail and dimmed (board.css draws the
-   rest of the housing: its inset shadow, cursor and filter). */
-.board .control.control-end-turn[data-turn-state="enemy"] {
+/* End turn in the opponent's turn and after the game (R4734000): its housing sunk into the rail and
+   dimmed (board.css draws the rest of the housing: its inset shadow, cursor and filter). */
+.board .control.control-end-turn[data-turn-state="enemy"],
+.board .control.control-end-turn[data-turn-state="over"] {
   border-color: var(--pal-wood-800);
   background: var(--bg-sunken);
   color: color-mix(in srgb, var(--text) 52%, var(--pal-grey-500));

@@ -21,9 +21,10 @@ use crate::wire::{
     opponent_of,
 };
 
-/// The unit is carried by value: a target is built once per hit and matched at every card and test
-/// that aims one, where a `Box` would buy nothing but noise.
-#[allow(clippy::large_enum_variant)]
+#[expect(
+    clippy::large_enum_variant,
+    reason = "a target is built once per hit and matched where it lands: a Box buys nothing but noise"
+)]
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum DamageTarget {
@@ -466,6 +467,14 @@ fn land(
         return Landed::default();
     }
 
+    // R4591004: a hit on a Unit immune to damage is no damage instance at all — before Divine
+    // Shield, which stays, and with no Trample excess to send on (as in R1849000).
+    if let Some(live) = &unit
+        && crate::effects::firewall::units_immune_now(sink.state, live)
+    {
+        return Landed::default();
+    }
+
     // R1849004, step 0a: on its controller's own turn, a hero's hit goes to the opponent's hero, up to
     // each own-turn redirect's cap this turn; what no cap takes lands here as the rest of the same hit.
     if let DamageTarget::Hero { player } = target
@@ -758,9 +767,9 @@ fn land(
     }
 
     // R3540002: "Damage also Burns N / applies Toxic N" adds N to a target the hit left standing, after
-    // Poisonous and the exile have had their say.
+    // Poisonous and the exile have had their say; R4783001: "Damage dealt also Burns" adds what it dealt.
     if let Some(source_card) = source {
-        crate::afflictions::ride_damage(sink, source_card, target);
+        crate::afflictions::ride_damage(sink, source_card, target, dealt);
     }
 
     // Step 8: Lifesteal heals the source's controller's hero by the amount dealt; R85: an effect may
@@ -1059,6 +1068,10 @@ pub fn project_hit(
     let (side, after) = match target {
         DamageTarget::Hero { player } => (*player, hero_hit_amount(state, *player, amount, pierce)),
         DamageTarget::Unit { instance } => {
+            // R4591004: a hit on a Unit immune to damage lands nothing, as `land` reads it.
+            if crate::effects::firewall::units_immune_now(state, instance) {
+                return 0;
+            }
             let view = crate::layers::unit_view(state, instance);
             // Step 1, and step 4 read first: a shield's hit and an Indestructible's spend no pool.
             if (has_keyword(&view.keywords, KeywordKind::DivineShield)

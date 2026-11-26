@@ -1,7 +1,7 @@
 // The dashboard from canned answers: each section shows what the server sent, and each button sends
 // its request as typed; the status line shows the answer, or the server's refusal word for word.
 
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -10,7 +10,7 @@ import { Dashboard } from "./Dashboard.tsx";
 import { NO_REWARD_NOTE } from "./News.tsx";
 import { json, when } from "./section.ts";
 import { AT, AUDIT, CONSTRUCTED, dashboardRoutes, ME, NEWS, QUESTS } from "./test/canned.ts";
-import { fakeFetch, type Route } from "./test/fakes.ts";
+import { fakeFetch, type Reply, type Route } from "./test/fakes.ts";
 import { testids } from "./testids.ts";
 import { BARS, CLEAR_PARTS } from "./types.ts";
 import { SHIPPED_SETS } from "./wire.ts";
@@ -504,6 +504,73 @@ describe("Audit", () => {
       "7",
       "5",
     ]);
+    expect(screen.queryByTestId(testids.auditOlder)).toBeNull();
+  });
+
+  it("Older after a failed filtered read uses the shown list's filter", async () => {
+    const { fake, user } = open({
+      "GET /api/admin/audit?profile_id=p-dev": refusal("The server is busy."),
+      "GET /api/admin/audit?before_id=6": { body: { actions: [], nextBeforeId: null } },
+    });
+    await loaded();
+    await user.type(screen.getByTestId(testids.auditProfile), "p-dev");
+    await user.click(screen.getByTestId(testids.auditApply));
+    await waitFor(() => {
+      expect(fake.sent("GET", "/api/admin/audit?profile_id=p-dev")).toHaveLength(1);
+    });
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId(testids.audit)).getByTestId(testids.loadError),
+      ).toHaveTextContent("The server is busy.");
+    });
+    // The failed read keeps the old rows and their cursor.
+    expect(screen.getAllByTestId(testids.auditRow)).toHaveLength(2);
+    await user.click(screen.getByTestId(testids.auditOlder));
+    await waitFor(() => {
+      expect(fake.sent("GET", "/api/admin/audit?before_id=6")).toHaveLength(1);
+    });
+    // Older continues the shown, unfiltered list: no page pairs the old cursor with the new filter.
+    expect(
+      fake.calls.filter((call) => call.url.includes("before_id") && call.url.includes("profile_id")),
+    ).toHaveLength(0);
+  });
+
+  it("drops an Older answer that lands after a new first page", async () => {
+    let resolveOlder!: (reply: Reply) => void;
+    const gated = new Promise<Reply>((resolve) => {
+      resolveOlder = resolve;
+    });
+    const only = {
+      id: 9,
+      profileId: "p-dev",
+      username: "devname",
+      route: "PUT /api/admin/rating",
+      request: { ladder: "constructed", rating: 1800 },
+      before: { rating: 1523.456, handSet: false },
+      after: { rating: 1800, handSet: true },
+      at: AT,
+    };
+    const stale = { ...only, id: 5, at: AT - 2 };
+    const { fake, user } = open({
+      "GET /api/admin/audit?before_id=6": () => gated,
+      "GET /api/admin/audit?profile_id=p-dev": { body: { actions: [only], nextBeforeId: null } },
+    });
+    await loaded();
+    await user.click(screen.getByTestId(testids.auditOlder));
+    await waitFor(() => {
+      expect(fake.sent("GET", "/api/admin/audit?before_id=6")).toHaveLength(1);
+    });
+    await user.type(screen.getByTestId(testids.auditProfile), "p-dev");
+    await user.click(screen.getByTestId(testids.auditApply));
+    await waitFor(() => {
+      expect(screen.getAllByTestId(testids.auditRow)).toHaveLength(1);
+    });
+    expect(screen.getAllByTestId(testids.auditRow)[0]?.dataset["actionId"]).toBe("9");
+    await act(async () => {
+      resolveOlder({ body: { actions: [stale], nextBeforeId: 5 } });
+    });
+    // The overtaken Older answer changes nothing: the filtered row stands alone, with no Older.
+    expect(screen.getAllByTestId(testids.auditRow).map((row) => row.dataset["actionId"])).toEqual(["9"]);
     expect(screen.queryByTestId(testids.auditOlder)).toBeNull();
   });
 });

@@ -1,0 +1,592 @@
+{
+  "apps/admin/src/Audit.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/admin/src/section.ts": {
+    "react-hooks/exhaustive-deps": {
+      "count": 2
+    }
+  },
+  "apps/web/src/assault/AssaultPage.tsx": {
+    "react-hooks/refs": {
+      "count": 1
+    }
+  },
+  "apps/web/src/assault/fight/FightScreen.tsx": {
+    "react-hooks/refs": {
+      "count": 6
+    }
+  },
+  "apps/web/src/audio/useGameAudio.ts": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    },
+    "react-hooks/refs": {
+      "count": 8
+    }
+  },
+  "apps/web/src/audio/usePickupSound.ts": {
+    "react-hooks/refs": {
+      "count": 1
+    }
+  },
+  "apps/web/src/auth/ConsentPrompt.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    }
+  },
+  "apps/web/src/auth/cooldown.ts": {
+    "react-hooks/purity": {
+      "count": 2
+    }
+  },
+  "apps/web/src/cards/CardRef.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    }
+  },
+  "apps/web/src/cards/RulesText.tsx": {
+    "react-hooks/immutability": {
+      "count": 1
+    }
+  },
+  "apps/web/src/cards/TermTip.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    }
+  },
+  "apps/web/src/cards/fullscreen.ts": {
+    "react-hooks/refs": {
+      "count": 2
+    }
+  },
+  "apps/web/src/cards/inspect/CardList.tsx": {
+    "react-hooks/refs": {
+      "count": 2
+    }
+  },
+  "apps/web/src/cards/inspect/FaceDown.tsx": {
+    "react-hooks/refs": {
+      "count": 2
+    }
+  },
+  "apps/web/src/cards/inspect/InspectSheet.tsx": {
+    "react-hooks/refs": {
+      "count": 2
+    }
+  },
+  "apps/web/src/cards/motionSlots.test.ts": {
+    "react-hooks/globals": {
+      "count": 2
+    }
+  },
+  "apps/web/src/collection/CardCosmeticsView.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    }
+  },
+  "apps/web/src/collection/LookHover.tsx": {
+    "react-hooks/immutability": {
+      "count": 1
+    },
+    "react-hooks/refs": {
+      "count": 3
+    }
+  },
+  "apps/web/src/collection/OwnedCards.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    },
+    "react-hooks/refs": {
+      "count": 1
+    }
+  },
+  "apps/web/src/daily/DailyBoard.tsx": {
+    "react-hooks/refs": {
+      "count": 1
+    }
+  },
+  "apps/web/src/daily/DailyRoute.tsx": {
+    "react-hooks/immutability": {
+      "count": 1
+    }
+  },
+  "apps/web/src/dungeon/fight/FightScreen.tsx": {
+    "react-hooks/refs": {
+      "count": 5
+    }
+  },
+  "apps/web/src/duos/DuosBoard.tsx": {
+    "react-hooks/purity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/duos/DuosReplay.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    },
+    "react-hooks/refs": {
+      "count": 1
+    }
+  },
+  "apps/web/src/duos/DuosRoute.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    },
+    "react-hooks/refs": {
+      "count": 1
+    }
+  },
+  "apps/web/src/economy/FillBar.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/economy/OpeningBars.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 2
+    }
+  },
+  "apps/web/src/economy/RewardReveal.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    }
+  },
+  "apps/web/src/economy/XpReveal.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/emotes/ui.tsx": {
+    "react-hooks/purity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/emotes/useEmotes.ts": {
+    "react-hooks/refs": {
+      "count": 6
+    }
+  },
+  "apps/web/src/fx/FxLayer.test.tsx": {
+    "react-hooks/immutability": {
+      "count": 2
+    }
+  },
+  "apps/web/src/fx/FxLayer.tsx": {
+    "react-hooks/refs": {
+      "count": 1
+    }
+  },
+  "apps/web/src/fx/aura/AuraLayer.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    },
+    "react-hooks/refs": {
+      "count": 6
+    },
+    "react-hooks/set-state-in-effect": {
+      "count": 2
+    }
+  },
+  "apps/web/src/fx/aura/TileAura.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    }
+  },
+  "apps/web/src/game/Clock.tsx": {
+    "react-hooks/refs": {
+      "count": 17
+    }
+  },
+  "apps/web/src/game/Game.tsx": {
+    "react-hooks/preserve-manual-memoization": {
+      "count": 1
+    },
+    "react-hooks/refs": {
+      "count": 27
+    },
+    "react-hooks/set-state-in-effect": {
+      "count": 3
+    }
+  },
+  "apps/web/src/game/Hand.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/game/LanePick.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    },
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/game/Log.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    }
+  },
+  "apps/web/src/game/Prompt.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    },
+    "react-hooks/refs": {
+      "count": 1
+    }
+  },
+  "apps/web/src/game/SandSurface.tsx": {
+    "react-hooks/refs": {
+      "count": 3
+    }
+  },
+  "apps/web/src/game/aim/OpponentAim.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/game/aim/useHoveredAimTarget.ts": {
+    "react-hooks/refs": {
+      "count": 1
+    }
+  },
+  "apps/web/src/game/arena/CornerProps.tsx": {
+    "react-hooks/preserve-manual-memoization": {
+      "count": 1
+    },
+    "react-hooks/purity": {
+      "count": 1
+    },
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/game/cardBar.ts": {
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/game/catalog.ts": {
+    "react-hooks/refs": {
+      "count": 5
+    }
+  },
+  "apps/web/src/game/choiceHover.ts": {
+    "react-hooks/refs": {
+      "count": 1
+    }
+  },
+  "apps/web/src/game/deckbuilder/DeckEditor.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    },
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/game/deckbuilder/DeckHistory.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/game/deckbuilder/DeckSidebar.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 2
+    }
+  },
+  "apps/web/src/game/deckbuilder/DeckWorkshop.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    },
+    "react-hooks/refs": {
+      "count": 1
+    },
+    "react-hooks/set-state-in-effect": {
+      "count": 2
+    }
+  },
+  "apps/web/src/game/deckbuilder/PoolGrid.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    }
+  },
+  "apps/web/src/game/deckbuilder/useCardWinRates.ts": {
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/game/drag/DragLayer.tsx": {
+    "react-hooks/refs": {
+      "count": 1
+    },
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/game/emotes.test.tsx": {
+    "react-hooks/immutability": {
+      "count": 1
+    }
+  },
+  "apps/web/src/game/faces.ts": {
+    "react-hooks/exhaustive-deps": {
+      "count": 2
+    }
+  },
+  "apps/web/src/game/rootVars.ts": {
+    "react-hooks/refs": {
+      "count": 6
+    }
+  },
+  "apps/web/src/game/shareView.ts": {
+    "react-hooks/refs": {
+      "count": 8
+    }
+  },
+  "apps/web/src/game/showcase/CardShowcase.tsx": {
+    "react-hooks/refs": {
+      "count": 1
+    }
+  },
+  "apps/web/src/game/useLogWindow.ts": {
+    "react-hooks/refs": {
+      "count": 1
+    }
+  },
+  "apps/web/src/lobby/LobbyScreen.tsx": {
+    "react-hooks/refs": {
+      "count": 2
+    }
+  },
+  "apps/web/src/net/liveGame.ts": {
+    "react-hooks/refs": {
+      "count": 2
+    }
+  },
+  "apps/web/src/packs/PackOpening.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 3
+    }
+  },
+  "apps/web/src/patches/PatchNotes.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/patches/context.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    }
+  },
+  "apps/web/src/practice/DeckPreview.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    }
+  },
+  "apps/web/src/practice/SandboxPanel.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    }
+  },
+  "apps/web/src/practice/emotes.ts": {
+    "react-hooks/refs": {
+      "count": 4
+    }
+  },
+  "apps/web/src/replay/OpenedReplay.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    }
+  },
+  "apps/web/src/replay/ReplayPlayer.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    }
+  },
+  "apps/web/src/replay/ReplayToolbar.tsx": {
+    "react-hooks/refs": {
+      "count": 1
+    }
+  },
+  "apps/web/src/routes/Rematch.tsx": {
+    "react-hooks/refs": {
+      "count": 1
+    }
+  },
+  "apps/web/src/routes/SeriesBanner.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/routes/SeriesPicker.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/routes/almanac.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    }
+  },
+  "apps/web/src/routes/dev/hotseat.tsx": {
+    "react-hooks/immutability": {
+      "count": 1
+    }
+  },
+  "apps/web/src/routes/invite.tsx": {
+    "react-hooks/purity": {
+      "count": 1
+    },
+    "react-hooks/refs": {
+      "count": 2
+    },
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/routes/landing.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 2
+    }
+  },
+  "apps/web/src/routes/login.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    },
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/routes/match.tsx": {
+    "react-hooks/refs": {
+      "count": 1
+    }
+  },
+  "apps/web/src/routes/play.tsx": {
+    "react-hooks/refs": {
+      "count": 2
+    },
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    },
+    "react-hooks/use-memo": {
+      "count": 1
+    }
+  },
+  "apps/web/src/routes/practice.tsx": {
+    "react-hooks/immutability": {
+      "count": 1
+    },
+    "react-hooks/refs": {
+      "count": 9
+    },
+    "react-hooks/set-state-in-effect": {
+      "count": 4
+    }
+  },
+  "apps/web/src/routes/stats.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 2
+    },
+    "react-hooks/set-state-in-effect": {
+      "count": 5
+    }
+  },
+  "apps/web/src/settings/accountSync.ts": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    },
+    "react-hooks/refs": {
+      "count": 2
+    }
+  },
+  "apps/web/src/shop/CosmeticPacks.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    },
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    },
+    "react-hooks/use-memo": {
+      "count": 1
+    }
+  },
+  "apps/web/src/shop/Shop.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 2
+    }
+  },
+  "apps/web/src/shop/TokenPicker.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 2
+    }
+  },
+  "apps/web/src/sideline/SidelineStrip.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/sideline/useSideline.ts": {
+    "react-hooks/refs": {
+      "count": 8
+    }
+  },
+  "apps/web/src/stats/CardStatsBlock.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/stats/GamesPanel.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/together/ChallengeToast.tsx": {
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/together/FriendList.tsx": {
+    "react-hooks/purity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/together/TogetherPanels.tsx": {
+    "react-hooks/refs": {
+      "count": 1
+    }
+  },
+  "apps/web/src/together/session.ts": {
+    "react-hooks/refs": {
+      "count": 1
+    }
+  },
+  "apps/web/src/together/useFriendActions.ts": {
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/tutorial/Coach.tsx": {
+    "react-hooks/exhaustive-deps": {
+      "count": 1
+    },
+    "react-hooks/refs": {
+      "count": 2
+    },
+    "react-hooks/set-state-in-effect": {
+      "count": 1
+    }
+  },
+  "apps/web/src/tutorial/accountSync.ts": {
+    "react-hooks/refs": {
+      "count": 2
+    }
+  },
+  "apps/web/src/undo/hold.ts": {
+    "react-hooks/refs": {
+      "count": 1
+    }
+  }
+}

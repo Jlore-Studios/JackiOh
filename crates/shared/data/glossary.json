@@ -653,6 +653,7 @@
       "rule": "A Dormant card awakens now",
       "section": "§6.3",
       "aliases": [
+        "awaken",
         "awakens"
       ]
     },
@@ -731,6 +732,14 @@
         "replenish"
       ],
       "row": "Replenish X"
+    },
+    {
+      "id": "Overload",
+      "label": "Overload",
+      "rule": "You have that much less mana next turn",
+      "section": "§6.3",
+      "aliases": [],
+      "row": "Overload X"
     },
     {
       "id": "Radiant",

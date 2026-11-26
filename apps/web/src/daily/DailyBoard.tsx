@@ -1,7 +1,9 @@
 // `/daily/:matchId` (#3727): one daily game's board, the ordinary `game/Game.tsx` fed from the server's read
 // (`GET /api/daily/games/:matchId`: the seat's `view` and `legal`). No socket and no engine runs here: each
 // action is one `POST …/actions` sent `after` the last action the board read, under a fresh nonce (the same
-// nonce sent again applies once), and the board draws the answer. A refusal reads the game again: `stale`
+// nonce sent again applies once), and the board draws the answer. A read already out when the player acts
+// may land after the action's answer; the board drops any answer below the shown game's `seq`, so it never
+// goes backwards (#4846). A refusal reads the game again: `stale`
 // means it moved on meanwhile (the opponent, or this game in another tab), and `time_up`, `not_your_move`
 // or `illegal` say so in the server's words over the game as it now stands.
 //
@@ -36,6 +38,7 @@ import type { ActionBody } from "@jackioh/shared";
 
 import Game from "../game/Game.tsx";
 import { CatalogContext } from "../game/catalog.ts";
+import { MainMenuButton } from "../game/MainMenuButton.tsx";
 import { ModifierList } from "../game/ModifierList.tsx";
 import { pollWhileVisible } from "../game/net.ts";
 import { outcomeFor } from "../game/Result.tsx";
@@ -93,6 +96,13 @@ function ExpiredGame({ game }: { game: DailyExpiredGame }): ReactElement {
         <button type="button" className="button-primary" data-testid={dailyTestid.backToList} data-route={paths.daily} onClick={() => navigate(paths.daily)}>
           {t("Back to daily games")}
         </button>
+        {/* #4742, R4742000: an expired game's result is an end of game too. */}
+        <MainMenuButton
+          testid={dailyTestid.mainMenu}
+          onClick={() => {
+            navigate(paths.play);
+          }}
+        />
       </div>
     </ShellPanel>
   );
@@ -125,11 +135,20 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
     attempt(() => getDailyGame(matchId)).then(
       (answer) => {
         if (canceled) return;
+        // Every live answer carries the log row it was read at (`DailyGame.seq`, which the next action is
+        // sent `after`), so a live answer below the shown game's `seq` is a read that was already out when
+        // a newer answer landed, and is dropped (#4846); an equal one still applies, so a reread refreshes
+        // the clock. An `expired` answer carries no `seq` and always applies: the purge only moves forward,
+        // so it is newer than any live board of this game. A live answer can never land after one did —
+        // same-path reads join while one is out (R3206000), and once the game is gone the poll, the social
+        // read and `send` all stop reading — so the live branch needs no expired check.
         // R3934000: the board is gone with the moves, so the slow poll, which reads a game not over, has none to read.
         if ("expired" in answer) {
           setExpired(answer);
           setGame(null);
         } else {
+          const shown = current.current;
+          if (shown !== null && shown.matchId === answer.matchId && answer.seq < shown.seq) return;
           setGame(answer);
           setExpired(null);
         }
@@ -344,6 +363,13 @@ export default function DailyBoard({ matchId }: { matchId: string }): ReactEleme
               <button type="button" data-testid={dailyTestid.backToList} data-route={paths.daily} onClick={() => navigate(paths.daily)}>
                 {t("Back to daily games")}
               </button>
+              {/* #4742, R4742000: beside Back to daily games, out to the Play menu. */}
+              <MainMenuButton
+                testid={dailyTestid.mainMenu}
+                onClick={() => {
+                  navigate(paths.play);
+                }}
+              />
             </>
           }
         />

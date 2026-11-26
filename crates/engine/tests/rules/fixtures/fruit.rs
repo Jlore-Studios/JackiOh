@@ -2,7 +2,10 @@
 //! The engine does not depend on `crates/cards`, so the five Grapes are stand-ins under the ids
 //! `GRAPE_ODDS` names, with the Fruit tag and the Token rarity the real ones carry.
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 

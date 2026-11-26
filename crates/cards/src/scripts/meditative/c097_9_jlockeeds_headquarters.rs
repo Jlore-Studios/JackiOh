@@ -4,7 +4,7 @@
 //!   Radiant: "Tribute 5, Indestructible, Can't attack\nActivate 2: Fill your board with random Radiant Jlockeed Units."
 //!   Engine:  "Activate (R384; Activate 2 on the Radiant face). C+ #2 Groom Shroom's fill: each empty,
 //!            unreserved unit zone, a Locked one included, left to right (R64, R1136000), gets a random
-//!            non-token Jlockeed Unit of every set (R380; this token is out, §5.1, R387), repeats allowed
+//!            `crate::query::jlockeed_units` (R278, R380; this token is out, §5.1, R387), repeats allowed
 //!            (R60), summoned, so with no Cry (R1); the Radiant face's second activation in a turn fills
 //!            what the first left empty (R1261). Indestructible (R46; never Taunt, R347)."
 
@@ -18,11 +18,6 @@ const RADIANT_USES: i32 = 2;
 
 /// §6.3 "Tribute 5": five of your Units, or Sheep Tokens worth as many (§3.2).
 const TRIBUTE_COST: i32 = 5;
-
-/// "Jlockeed Units": the Jlockeed-tagged Units of every set (R278, R380).
-fn jlockeed_units() -> Value {
-    json!({ "type": "Unit", "tags": ["Jlockeed"] })
-}
 
 fn fill(uses: i32, radiant: bool) -> ActivationDecl {
     ActivationDecl {
@@ -39,7 +34,7 @@ fn fill(uses: i32, radiant: bool) -> ActivationDecl {
                 .iter()
                 .map(|zone| {
                     summon_random(json_as(json!({
-                        "query": jlockeed_units(),
+                        "query": crate::query::jlockeed_units(),
                         "lane": zone.lane,
                         "radiant": radiant,
                     })))
@@ -80,20 +75,12 @@ mod tests {
     const FILLER: &str = "core-010"; // Rapid Replenish: a Spell
     const SPARE: &str = "core-005"; // Stockpile: library spare
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
-    /// Every non-token Jlockeed Unit of the sets that ship, in catalog order (R380, R1420): Core #13, C+ #48
-    /// and #51, M #87 (every tribe), Stinkyscape's #127, #128 and #129 (#1884), Training Grounds' #48,
-    /// Core #13's snapshot (#2204), and Stinkyscape+'s #21 Jlockeed Shredder-12 (#3573).
-    const JLOCKEED_UNITS: [&str; 9] = [
-        "core-013",
-        "classicplus-048",
-        "classicplus-051",
-        "meditative-087",
-        "stinkyscape-127",
-        "stinkyscape-128",
-        "stinkyscape-129",
-        "traininggrounds-048",
-        "stinkyscapeplus-021",
-    ];
+    /// The expected Jlockeed Units, straight from the pool the script draws from
+    /// (`crate::query::jlockeed_units`): every non-token Jlockeed Unit of the sets that ship, in
+    /// catalog order (R278, R380, R1420).
+    fn expected_jlockeed_units() -> Vec<String> {
+        crate::query::pool_ids(&crate::query::jlockeed_units())
+    }
 
     fn slot(lane: i32) -> ZoneSlot {
         ZoneSlot {
@@ -178,7 +165,13 @@ mod tests {
             })
             .map(|def| def.id.clone())
             .collect();
-        assert_eq!(pool, JLOCKEED_UNITS.map(String::from).to_vec());
+        // #3117: the pool probe rotates `pool_ids` and not the catalog's own order, so the two are
+        // held as sets.
+        let mut expected = expected_jlockeed_units();
+        let mut pool = pool;
+        pool.sort();
+        expected.sort();
+        assert_eq!(pool, expected);
     }
 
     mod base {
@@ -213,7 +206,7 @@ mod tests {
                 units.iter().map(|unit| Some(unit.id.clone())).collect::<Vec<_>>()
             );
             for unit in &units {
-                assert!(JLOCKEED_UNITS.contains(&unit.def_id.as_str()), "{}", unit.def_id);
+                assert!(expected_jlockeed_units().contains(&unit.def_id), "{}", unit.def_id);
                 assert!(!unit.radiant);
                 assert_eq!(unit.controller, P1);
             }
@@ -233,12 +226,12 @@ mod tests {
                 s.activate(ID, json!({}));
                 let defs: Vec<String> = summoned(&s).into_iter().map(|unit| unit.def_id).collect();
                 assert_eq!(defs.len(), 4);
-                assert!(defs.iter().all(|def| JLOCKEED_UNITS.contains(&def.as_str())));
+                assert!(defs.iter().all(|def| expected_jlockeed_units().contains(def)));
                 assert_eq!(defs.iter().collect::<IndexSet<_>>().len(), 4, "seed {n}: {defs:?}");
                 seen.extend(defs);
             }
-            for unit in JLOCKEED_UNITS {
-                assert!(seen.iter().any(|def| def == unit), "{unit} never came");
+            for unit in expected_jlockeed_units() {
+                assert!(seen.iter().any(|def| def == &unit), "{unit} never came");
             }
         }
 
@@ -313,7 +306,7 @@ mod tests {
             for lane in [2, 3, 5] {
                 let unit = s.unit(P1, lane).expect("a filled zone");
                 assert!(unit.radiant);
-                assert!(JLOCKEED_UNITS.contains(&unit.def_id.as_str()));
+                assert!(expected_jlockeed_units().contains(&unit.def_id));
             }
             assert!(s.unit(P1, 4).is_none());
             release_zone(s.state_mut(), slot(4));

@@ -6,8 +6,9 @@
 //!
 //! Engine: Hearthstone's Inner Fire on existing primitives — a declared target, any Unit (R81); read
 //! its Health H and Attack A through the layers as the Cry resolves (§10.4) and `buff` the Attack by
-//! max(0, H + shift) − A, never below 0 (R1867002). Shift is 0 on the base face; on the Radiant face
-//! the declared `shift`, signed + for a Unit its caster controls and − for an enemy's.
+//! max(0, H + shift) − A, never below 0 (R1867002). The Attack is read before layer 5's floor
+//! (`unclamped_attack`, the reading KY's Constant sets a number with). Shift is 0 on the base face;
+//! on the Radiant face the declared `shift`, signed + for a Unit its caster controls and − for an enemy's.
 
 use jackioh_engine::prelude::*;
 
@@ -36,7 +37,7 @@ fn inner_fire(radiant: bool) -> Script {
             } else {
                 0
             };
-            let attack = (view.health + shift).max(0) - view.attack;
+            let attack = (view.health + shift).max(0) - unclamped_attack(&*ctx.state, &unit);
             vec![buff(json_as(json!({ "target": { "of": "chosen" }, "attack": attack })))]
         })),
         ..Script::default()
@@ -47,6 +48,40 @@ pub fn script() -> CardScripts {
     CardScripts {
         base: inner_fire(false),
         radiant: inner_fire(true),
+    }
+}
+
+fn inner_fire_v0_6_13h(radiant: bool) -> Script {
+    Script {
+        targets: targets(),
+        cry: Some(hook(move |ctx| {
+            let Some(unit) = instance_of(ctx, &json_as::<TargetSpec>(json!({ "of": "chosen" }))) else {
+                return vec![];
+            };
+            let view = unit_view(&*ctx.state, &unit);
+            let shift = if radiant {
+                let magnitude = param(&*ctx, "shift");
+                if unit.controller == ctx.controller {
+                    magnitude
+                } else {
+                    -magnitude
+                }
+            } else {
+                0
+            };
+            let attack = (view.health + shift).max(0) - view.attack;
+            vec![buff(json_as(json!({ "target": { "of": "chosen" }, "attack": attack })))]
+        })),
+        ..Script::default()
+    }
+}
+
+/// R767000: before this fragment shipped the buff was taken off the shown (floored) Attack
+/// (issue #4840); `KEPT_SCRIPTS` folds those replays under it.
+pub fn script_v0_6_13h() -> CardScripts {
+    CardScripts {
+        base: inner_fire_v0_6_13h(false),
+        radiant: inner_fire_v0_6_13h(true),
     }
 }
 
@@ -61,6 +96,8 @@ mod tests {
     const P2: PlayerId = PlayerId::P2;
 
     const INNER_FIRE: &str = "stinkyscape-010-1";
+    const PILLOW: &str = "core-065-1"; // Spikey Pillow: your Units have −2 Attack
+    const SMALL: &str = "stand-in (1) 1/5";
     const VANILLA: &str = "stand-in (1) 4/4 R12/12";
     const WEAPONS: &str = "core-014"; // Jlockeed's Weapons: your units have +1 Attack
     const IMMUNE: &str = "classicplus-019-1"; // Top Loser: Radiant: Immune to Spells.
@@ -128,6 +165,23 @@ mod tests {
 
             assert!(offered.contains(&s.unit_at(P1, 1).id));
             assert!(!offered.contains(&immune));
+        }
+
+        #[test]
+        fn r1867002_a_unit_below_0_attack_becomes_exactly_its_health() {
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [INNER_FIRE, FILLER],
+                    "field": [{ "def": SMALL, "lane": 1 }, { "def": PILLOW, "lane": 3 }],
+                },
+                "p2": { "hand": [FILLER] },
+            }));
+            let unit = s.unit_at(P1, 1);
+            s.expect_stats(&unit, json!({ "attack": 0, "health": 5 }));
+
+            s.play(INNER_FIRE, json!({ "targets": pick::instance(&unit) }));
+
+            s.expect_stats(&unit, json!({ "attack": 5, "health": 5 }));
         }
 
         #[test]
@@ -200,6 +254,47 @@ mod tests {
             s.play(INNER_FIRE, json!({ "targets": pick::instance(&unit) }));
 
             s.expect_stats(&unit, json!({ "attack": 2, "health": 6 }));
+        }
+
+        #[test]
+        fn r1867002_a_friendly_unit_below_0_attack_gains_health_plus_shift() {
+            let mut s = scenario(json!({
+                "p1": {
+                    "hand": [{ "def": INNER_FIRE, "radiant": true }, FILLER],
+                    "field": [{ "def": SMALL, "lane": 1 }, { "def": PILLOW, "lane": 3 }],
+                },
+                "p2": { "hand": [FILLER] },
+            }));
+            let unit = s.unit_at(P1, 1);
+            s.expect_stats(&unit, json!({ "attack": 0, "health": 5 }));
+
+            s.play(INNER_FIRE, json!({ "targets": pick::instance(&unit) }));
+
+            s.expect_stats(&unit, json!({ "attack": 9, "health": 5 }));
+        }
+    }
+
+    mod v0_6_13h {
+        use super::*;
+        use crate::scripts::stinkyscape::c010_1_inner_fire::{ID, script_v0_6_13h};
+
+        /// R767000: a game on v0.6.13h, before the unfloored-Attack reading, lands short under an aura.
+        #[test]
+        fn r767000_a_game_on_v0_6_13h_lands_short_under_an_aura() {
+            crate::under_kept(ID, script_v0_6_13h(), || {
+                let mut s = scenario(json!({
+                    "p1": {
+                        "hand": [INNER_FIRE, FILLER],
+                        "field": [{ "def": SMALL, "lane": 1 }, { "def": PILLOW, "lane": 3 }],
+                    },
+                    "p2": { "hand": [FILLER] },
+                }));
+                let unit = s.unit_at(P1, 1);
+
+                s.play(INNER_FIRE, json!({ "targets": pick::instance(&unit) }));
+
+                s.expect_stats(&unit, json!({ "attack": 4, "health": 5 }));
+            });
         }
     }
 }

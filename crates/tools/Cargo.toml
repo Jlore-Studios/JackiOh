@@ -17,6 +17,8 @@ jackioh-cards = { workspace = true }
 jackioh-ai = { workspace = true }
 # run-sim plays dungeon runs' fights to the end (#3065).
 jackioh-run = { workspace = true }
+# assault-sim deals the content and the day's Assault deck as the browser does (#4583).
+jackioh-wasm-core = { path = "../wasm/core" }
 # stats report --versions reads R654's floor, `CARD_STATS_MIN_SAMPLE`, where the server reads it (R4675001).
 jackioh-shared = { workspace = true }
 serde = { workspace = true }
@@ -29,3 +31,6 @@ rayon = { workspace = true }
 [dev-dependencies]
 # export_card_text.rs: crates/cards/card-text.yaml, parsed (#2498).
 yaml_serde = { workspace = true }
+
+[lints]
+workspace = true

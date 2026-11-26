@@ -1774,9 +1774,10 @@ describe("R768000 a finished match's replay from its result panel", () => {
 
   /**
    * `GET /api/replays/m-1?from=&count=` answers the folded game's steps, or never when `pages` is
-   * `"pending"`; anything else the catalog.
+   * `"pending"`; the rematch read says whether the opponent is still here (`opponentHere`); anything
+   * else the catalog.
    */
-  function stubReplayFetch(ranks?: unknown, pages: "served" | "pending" = "served"): string[] {
+  function stubReplayFetch(ranks?: unknown, pages: "served" | "pending" = "served", opponentHere = false): string[] {
     const asked: string[] = [];
     vi.stubGlobal(
       "fetch",
@@ -1795,7 +1796,7 @@ describe("R768000 a finished match's replay from its result panel", () => {
             : address.pathname.endsWith("/series")
               ? { series: null }
               : address.pathname.endsWith("/rematch")
-                ? { youOffered: null, opponentOffer: null, opponentHere: false, matchId: null }
+                ? { youOffered: null, opponentOffer: null, opponentHere, matchId: null }
                 : { version: "v1", defs: {} };
         return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(JSON.stringify(body)) } as unknown as Response);
       }),
@@ -1819,6 +1820,24 @@ describe("R768000 a finished match's replay from its result panel", () => {
     fireEvent.click(screen.getByTestId(replayTestid.back));
     expect(await screen.findByTestId(matchTestid.watchReplay)).toBeInTheDocument();
     expect(screen.queryByTestId(replayTestid.player)).toBeNull();
+  });
+
+  it("R4734000 after Watch the replay and Back, the result and its Rematch are in with no wait", async () => {
+    stubReplayFetch(undefined, "served", true);
+    render(<MatchRoute matchId="m-1" token="tok" socketFactory={socketFactory} />);
+    attach();
+    pushView(baseView({ viewer: "p1", active: "p1", result: { winner: "p1", reason: "hero-death" } }));
+    // The result arrived on the mounted board: it waits for the effects layer's Victory.
+    expect(screen.getByTestId("result-overlay")).toHaveAttribute("data-revealed", "false");
+
+    fireEvent.click(await screen.findByTestId(matchTestid.watchReplay));
+    await waitFor(() => expect(screen.getByTestId(replayTestid.player)).toHaveAttribute("data-step", "0"));
+    fireEvent.click(screen.getByTestId(replayTestid.back));
+
+    // Back mounts a fresh board on the finished game: nothing plays, so nothing is waited for.
+    expect(await screen.findByTestId("rematch-offer")).toBeInTheDocument();
+    expect(screen.getByTestId("result-overlay")).toHaveAttribute("data-revealed", "true");
+    expect(screen.getByTestId("result-overlay").style.animationDelay).toBe("");
   });
 
   it("#3698 the match's replay names the opponent as the ranks read does", async () => {

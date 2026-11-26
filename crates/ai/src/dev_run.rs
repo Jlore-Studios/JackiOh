@@ -14,13 +14,14 @@
 use jackioh_engine::config::DECK_SIZE;
 use jackioh_engine::{
     DEV_RECORD_ID_PREFIX, GameMode, GameRecord, GameSource, PerPlayer, Pilot, PlayerId, RecordBuild, Rng,
-    summarize_game,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::config::AI_BUDGET;
 use crate::deck::{AiDeckOptions, build_ai_deck};
+use crate::gate::subject_seat_of;
 use crate::match_::{MatchConfig, MatchHooks, MatchSetup, SeatController, play_match};
+use crate::swing_turns::summarize_with_swing_turns;
 use crate::types::SearchBudget;
 
 /// `AI_DEV_RUN`'s shape.
@@ -55,12 +56,6 @@ pub struct DevRunOptions {
     /// this build's AI generation (`ai_generation`); `None` files no build.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub commit: Option<String>,
-    /// #1697: the setup inputs every game of the run is created with beyond its decks (§9.3): dealt
-    /// seats (R433), last boards (R417, R564) and Glitch boards (R678), in seat order. The same in
-    /// every game, so a record stays a pure function of its number and the options (`cargo jackioh
-    /// stats` plays them in parallel).
-    #[serde(flatten)]
-    pub setup: MatchSetup,
 }
 
 /// `crates/ai/generation.json`, compiled in (CLAUDE.md rule 4: data reaches a pure crate only at
@@ -120,11 +115,6 @@ pub fn dev_game_config(n: i32, series: &str, budget: Option<SearchBudget>) -> Ma
     dev_match(seed, decks, budget)
 }
 
-/// R1284000: p1 holds the forced card in an odd game, p2 in an even one.
-fn forced_seat(n: i32) -> PlayerId {
-    if n % 2 == 1 { PlayerId::P1 } else { PlayerId::P2 }
-}
-
 /// Game n of a series with `card` in one seat's deck (R1284000). Both decks are R258's deal with `card`
 /// banned, so the other seat never holds it and no deal depends on the card's own numbers; the
 /// holder's card at the slot `${seed}:force` picks is replaced by `card`, which must be a deckable
@@ -133,7 +123,8 @@ pub fn forced_dev_game_config(n: i32, series: &str, budget: Option<SearchBudget>
     let seed = format!("{series}:{n}");
     let banned = [card.to_string()];
     let mut decks = (dev_deck(&seed, "p1", &banned), dev_deck(&seed, "p2", &banned));
-    let held = match forced_seat(n) {
+    // R1284000: p1 holds the forced card in an odd game, p2 in an even one.
+    let held = match subject_seat_of(n) {
         PlayerId::P1 => &mut decks.0,
         PlayerId::P2 => &mut decks.1,
     };
@@ -142,16 +133,11 @@ pub fn forced_dev_game_config(n: i32, series: &str, budget: Option<SearchBudget>
     dev_match(seed, decks, budget)
 }
 
-/// Game n of the run `options` describes: R258's deal, or R1284000's with `options.force` in one seat,
-/// created with the run's setup inputs (#1697).
+/// Game n of the run `options` describes: R258's deal, or R1284000's with `options.force` in one seat.
 pub fn dev_run_config(n: i32, options: &DevRunOptions) -> MatchConfig {
-    let config = match options.force.as_deref() {
+    match options.force.as_deref() {
         None => dev_game_config(n, &options.series, options.budget),
         Some(card) => forced_dev_game_config(n, &options.series, options.budget, card),
-    };
-    MatchConfig {
-        setup: options.setup.clone(),
-        ..config
     }
 }
 
@@ -167,7 +153,8 @@ pub fn dev_game_record(n: i32, options: &DevRunOptions) -> Option<GameRecord> {
     let config = dev_run_config(n, options);
     let played = play_match(&config, &mut MatchHooks::default());
     played.result?;
-    let game = summarize_game(&config.fold_args(played.log))?;
+    // R4552000: with the turn rows Decisiveness is read off.
+    let game = summarize_with_swing_turns(&config.fold_args(played.log))?;
     Some(GameRecord {
         id: dev_record_id(&options.patch, &config.seed),
         source: GameSource::Dev,

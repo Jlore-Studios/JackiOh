@@ -42,7 +42,7 @@ import { statsTestid } from "../stats/testids.ts";
 import { expectEmptyState } from "../test/empty.ts";
 import { pressBack } from "../test/history.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
-import { at } from "../test/stubServer.ts";
+import { at, signIn } from "../test/stubServer.ts";
 import { expectOnePageTitle } from "../test/pageTitle.ts";
 import { CARD_TEXT_KEY, cardTextTestid } from "./cardText.tsx";
 import { SiteFooter, siteFooterTestid } from "./SiteFooter.tsx";
@@ -377,9 +377,9 @@ describe("R654 public statistics route", () => {
     expect(screen.getByText("Spark Pup")).toBeInTheDocument();
     expect(screen.getByText("60%")).toBeInTheDocument();
 
-    // core-002 has 10 games (< 20) -> displays "not enough games"
+    // core-002 has 10 games (< 20) -> displays "not enough games" under Decisiveness and under Win rate
     expect(screen.getByText("Lava Hound")).toBeInTheDocument();
-    expect(screen.getByText("not enough games")).toBeInTheDocument();
+    expect(screen.getAllByText("not enough games")).toHaveLength(2);
   });
 
   it("R654 sorts cards by column on header click and keyboard activation", async () => {
@@ -655,16 +655,16 @@ describe("R654 public statistics route", () => {
     for (const figure of ["+25%", "(40 / 10)", "65%", "70%", "40%"]) {
       expect(within(pupRow).queryByText(figure)).toBeNull();
     }
-    // Lava Hound, below the floor, reads "—" for its Tier and Adjusted alone, and no "not enough data".
+    // Lava Hound, below the floor, reads "—" for its Tier and Adjusted alone (Decisiveness and Win rate read "not enough games"), and no "not enough data".
     const houndRow = within(table).getByText("Lava Hound").closest("tr")!;
     expect(within(houndRow).getAllByText("—")).toHaveLength(2);
     expect(screen.queryByText("not enough data")).toBeNull();
 
-    // The grid shows Tier, Adjusted, Win rate and Games, and no face rates.
+    // The grid shows Tier, Adjusted, Decisiveness, Win rate and Games, and no face rates.
     await user.click(screen.getByTestId(statsTestid.viewGrid));
     const grid = await screen.findByTestId(statsTestid.cardsGrid);
     const item = grid.querySelector<HTMLElement>('[data-card-id="core-001"]')!;
-    expect([...item.querySelectorAll("dt")].map((dt) => dt.textContent)).toEqual(["Tier", "Adjusted", "Win rate", "Games"]);
+    expect([...item.querySelectorAll("dt")].map((dt) => dt.textContent)).toEqual(["Tier", "Adjusted", "Decisiveness", "Win rate", "Games"]);
   });
 
   it("R654 keyword filter", async () => {
@@ -892,6 +892,92 @@ describe("R377 public statistics match type", () => {
     // The raw win rate is still a column, and sorting by it puts Spark Pup back on top.
     await user.click(within(table).getByRole("columnheader", { name: /^Win rate/ }));
     expect(order()).toEqual(["core-001", "core-003", "core-002"]);
+  });
+
+  /** R4552001: the provisional fixture with each card's decisiveness and the typical deck card's. */
+  function stubDecisiveness(): void {
+    const swing: Record<string, number> = { "core-001": 0.142, "core-002": 0.3, "core-003": 0.2 };
+    const cards = MOCK_CARD_STATS_PROVISIONAL.cards.map((card) => ({ ...card, decisiveness: swing[card.id] }));
+    const tiers = { center: 0.02, spread: 0.034, cards: 412, bandLow: 0.45, bandHigh: 0.55, decisiveness: 0.137 };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(new Response(JSON.stringify({ ...MOCK_CARD_STATS_PROVISIONAL, cards, tiers }), { status: 200 })),
+      ),
+    );
+  }
+
+  it("R4552001 Decisiveness shows ±X.X% after Adjusted and before Win rate", async () => {
+    stubDecisiveness();
+    render(<StatsRoute />);
+
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const heads = within(table).getAllByRole("columnheader").map((th) => th.textContent?.replace(/[↑↓]/g, "").trim());
+    expect(heads.indexOf("Decisiveness")).toBe(heads.indexOf("Adjusted") + 1);
+    expect(heads.indexOf("Win rate")).toBe(heads.indexOf("Decisiveness") + 1);
+    const cells = within(table).getAllByTestId(statsTestid.decisivenessCell);
+    expect(cells.map((cell) => cell.textContent)).toEqual(["±14.2%", "±20.0%", "not enough games"]);
+  });
+
+  it("R4552001 Decisiveness sorts highest first and reads not enough games below the floor", async () => {
+    const user = userEvent.setup();
+    stubDecisiveness();
+    render(<StatsRoute />);
+
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const order = (): (string | null)[] =>
+      [...table.querySelectorAll("tbody tr")].map((row) => row.getAttribute("data-card-id"));
+    expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("adjustedWinRate");
+    await user.selectOptions(screen.getByTestId(statsTestid.sortSelect), "decisiveness");
+    const header = within(table).getByRole("columnheader", { name: /^Decisiveness/ });
+    expect(header).toHaveAttribute("aria-sort", "descending");
+    // Lava Hound swings most but is below the floor: last, reading "not enough games".
+    expect(order()).toEqual(["core-003", "core-001", "core-002"]);
+    expect(within(table).getAllByTestId(statsTestid.decisivenessCell).map((cell) => cell.textContent)).toEqual([
+      "±20.0%",
+      "±14.2%",
+      "not enough games",
+    ]);
+    await user.click(header);
+    expect(order()).toEqual(["core-001", "core-003", "core-002"]);
+  });
+
+  it("R4552001 the Decisiveness header names the typical card", async () => {
+    stubDecisiveness();
+    render(<StatsRoute />);
+
+    const table = await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const title = within(table).getByRole("columnheader", { name: /^Decisiveness/ }).getAttribute("title") ?? "";
+    expect(title).toContain("±");
+    expect(title).toContain("not a margin of error");
+    expect(title).toContain("A typical card: ±13.7%.");
+  });
+
+  it("R4552001 the grid shows Decisiveness after Adjusted", async () => {
+    const user = userEvent.setup();
+    stubDecisiveness();
+    render(<StatsRoute />);
+
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    await user.click(screen.getByTestId(statsTestid.viewGrid));
+    const grid = await screen.findByTestId(statsTestid.cardsGrid);
+    const item = grid.querySelector<HTMLElement>('[data-card-id="core-001"]')!;
+    const labels = [...item.querySelectorAll("dt")].map((dt) => dt.textContent);
+    expect(labels.indexOf("Decisiveness")).toBe(labels.indexOf("Adjusted") + 1);
+    const value = [...item.querySelectorAll("dt")].find((dt) => dt.textContent === "Decisiveness")!.nextElementSibling;
+    expect(value?.textContent).toBe("±14.2%");
+  });
+
+  it("R4552003 no Swing or Board swing is rendered", async () => {
+    const user = userEvent.setup();
+    stubDecisiveness();
+    render(<StatsRoute />);
+
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(document.body.textContent).not.toMatch(/swing/i);
+    await user.click(screen.getByTestId(statsTestid.viewGrid));
+    await screen.findByTestId(statsTestid.cardsGrid);
+    expect(document.body.textContent).not.toMatch(/swing/i);
   });
 
   it("R3022000 R4155000 shows each enough-games card's tier and sorts by tier with S first, with no tiers note", async () => {
@@ -1364,6 +1450,8 @@ describe("the card drill-down dialog", () => {
     const retry = await within(dialog).findByRole("button", { name: "Retry" }, SLOW);
     const close = screen.getByTestId(statsTestid.drillDownClose);
     const radiant = screen.getByTestId(statsTestid.drillDownRadiantToggle);
+    // R4676001: Extended stats stands beside Show Radiant.
+    const extended = screen.getByTestId(statsTestid.extendedToggle);
     const almanac = screen.getByTestId(statsTestid.drillDownAlmanac);
     // R3939000: Show card text stands below View in Almanac.
     const cardText = within(dialog).getByTestId(cardTextTestid.dialog);
@@ -1371,11 +1459,11 @@ describe("the card drill-down dialog", () => {
     expect(screen.queryByTestId("stats-drill-down-art")).toBeNull();
     expect(close).toHaveFocus();
 
-    for (const next of [radiant, almanac, cardText, retry, close]) {
+    for (const next of [radiant, extended, almanac, cardText, retry, close]) {
       press("Tab");
       expect(next).toHaveFocus();
     }
-    for (const previous of [retry, cardText, almanac, radiant, close]) {
+    for (const previous of [retry, cardText, almanac, extended, radiant, close]) {
       press("Tab", { shiftKey: true });
       expect(previous).toHaveFocus();
     }
@@ -1703,7 +1791,7 @@ describe("R1966000 the Sets tab", () => {
     expect(asked.every((url) => !url.searchParams.has("rarity") && !url.searchParams.has("cost"))).toBe(true);
   });
 
-  it("#3222 R4279001 stats tabs answer arrow keys, moving between Cards, Tokens, Sets, and Players", async () => {
+  it("#3222 R4279001 R4678000 stats tabs answer arrow keys, moving between Cards, Tokens, Sets, Players and Experimental", async () => {
     serveSets();
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
@@ -1713,6 +1801,7 @@ describe("R1966000 the Sets tab", () => {
     const tokensTab = screen.getByTestId(statsTestid.tabTokens);
     const setsTab = screen.getByTestId(statsTestid.tabSets);
     const playersTab = screen.getByTestId(statsTestid.tabPlayers);
+    const experimentalTab = screen.getByTestId(statsTestid.tabExperimental);
 
     expect(cardsTab).toHaveAttribute("aria-selected", "true");
     expect(cardsTab).toHaveAttribute("tabindex", "0");
@@ -1732,12 +1821,16 @@ describe("R1966000 the Sets tab", () => {
     expect(document.activeElement).toBe(playersTab);
 
     fireEvent.keyDown(tablist, { key: "ArrowRight" });
+    expect(experimentalTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(experimentalTab);
+
+    fireEvent.keyDown(tablist, { key: "ArrowRight" });
     expect(cardsTab).toHaveAttribute("aria-selected", "true");
     expect(document.activeElement).toBe(cardsTab);
 
     fireEvent.keyDown(tablist, { key: "ArrowLeft" });
-    expect(playersTab).toHaveAttribute("aria-selected", "true");
-    expect(document.activeElement).toBe(playersTab);
+    expect(experimentalTab).toHaveAttribute("aria-selected", "true");
+    expect(document.activeElement).toBe(experimentalTab);
   });
 
   it("R1966000 a read that fails shows Retry, which asks again", async () => {
@@ -1983,6 +2076,216 @@ describe("R1973002 R3324000 the patch tabs", () => {
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
     expect(screen.queryByTestId(statsTestid.patchBar)).toBeNull();
     expect(screen.queryByTestId(statsTestid.patchCollecting)).toBeNull();
+  });
+});
+
+describe("R4677000 R4677001 the patch search, and older patches for dev accounts", () => {
+  /** The patches anyone may read, newest first: three of 0.6 and two of 0.5, 0.5.8 a micro folded into 0.5.7's patch. */
+  const LISTED = [
+    { versions: ["0.6.2", "0.6.2b"], games: 300, liveGames: 0 },
+    { versions: ["0.6.1"], games: 1500, liveGames: 0 },
+    { versions: ["0.6.0"], games: 2500, liveGames: 0 },
+    { versions: ["0.5.9"], games: 4000, liveGames: 0 },
+    { versions: ["0.5.7", "0.5.8", "0.5.8b"], games: 999, liveGames: 0 },
+  ];
+  /** A patch older than anyone but a dev account reads. */
+  const OLDER = { versions: ["0.4.0", "0.4.0b"], games: 6000, liveGames: 0 };
+
+  /**
+   * Answers as the server would (R4677000): anyone is listed `LISTED` and refused an older patch, 403
+   * `patch_dev_only`; a dev account, told by its token, is listed every patch.
+   */
+  function serveReader(devToken: string | null = null): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(String(input), window.location.origin);
+        const dev = devToken !== null && new Headers(init?.headers).get("authorization") === `Bearer ${devToken}`;
+        const patch = url.searchParams.get("patch") ?? "0.6.2b";
+        if (!dev && OLDER.versions.includes(patch)) {
+          const refused = { error: { code: "patch_dev_only", message: "Older patches are for dev accounts." } };
+          return Promise.resolve(new Response(JSON.stringify(refused), { status: 403 }));
+        }
+        if (url.pathname === "/api/stats/cards/core-001") {
+          return Promise.resolve(new Response(JSON.stringify(MOCK_DRILL_DOWN), { status: 200 }));
+        }
+        if (url.pathname !== "/api/stats/cards") return Promise.resolve(new Response("{}", { status: 200 }));
+        const body = {
+          ...MOCK_CARD_STATS_PROVISIONAL,
+          patch,
+          previousPatch: null,
+          patches: dev ? [...LISTED, OLDER] : LISTED,
+          olderPatchesForDevs: !dev,
+        };
+        return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+      }),
+    );
+  }
+
+  /** Opens the search from the patch bar's end and answers its dialog. */
+  async function openSearch(user: ReturnType<typeof userEvent.setup>): Promise<HTMLElement> {
+    const button = await screen.findByTestId(statsTestid.patchSearch, undefined, SLOW);
+    await user.click(button);
+    return screen.findByRole("dialog", { name: "Find a patch" });
+  }
+
+  /** The dialog's lines as their names, and each patch's words. */
+  function lines(dialog: HTMLElement): { names: string[]; patches: string[] } {
+    return {
+      names: within(dialog)
+        .queryAllByTestId(statsTestid.patchSearchLine)
+        .map((line) => line.querySelector("h3")?.textContent ?? ""),
+      patches: within(dialog)
+        .queryAllByTestId(statsTestid.patchSearchOption)
+        .map((option) => option.textContent ?? ""),
+    };
+  }
+
+  it("R4677001 one search button at the patch bar's end opens a dialog of the patches by line, newest first, with their games", async () => {
+    serveReader();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    const button = await screen.findByTestId(statsTestid.patchSearch, undefined, SLOW);
+    // One button, named for what it does, last in the bar, after the arrows.
+    expect(button).toHaveAccessibleName("Find a patch");
+    expect(button).toHaveAttribute("title", "Find a patch");
+    expect(screen.getByTestId(statsTestid.patchBar).lastElementChild).toBe(button);
+    expect(screen.getByTestId(statsTestid.patchPrevious).compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    const dialog = await openSearch(user);
+    expect(lines(dialog)).toEqual({
+      names: ["0.6", "0.5"],
+      patches: ["0.6.2Collecting data", "0.6.11,500 games", "0.6.02,500 games", "0.5.94,000 games", "0.5.7999 games"],
+    });
+    // The patch shown is marked; the box has the focus.
+    const options = within(dialog).getAllByTestId(statsTestid.patchSearchOption);
+    expect(options[0]).toHaveAttribute("aria-current", "true");
+    expect(options.slice(1).every((option) => !option.hasAttribute("aria-current"))).toBe(true);
+    expect(within(dialog).getByTestId(statsTestid.patchSearchInput)).toHaveFocus();
+    // Escape closes it, and the patch is unchanged.
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Find a patch" })).toBeNull(), SLOW);
+    expect(window.location.search).toBe("");
+  });
+
+  it("R4677001 the box filters the patches by version, micros included, and says when none holds it", async () => {
+    serveReader();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    const dialog = await openSearch(user);
+    const box = within(dialog).getByRole("searchbox", { name: "Patch version" });
+    // 0.5.8 is a micro of 0.5.7's patch: typing it finds that patch.
+    await user.type(box, "0.5.8");
+    expect(lines(dialog)).toEqual({ names: ["0.5"], patches: ["0.5.7999 games"] });
+    await user.clear(box);
+    await user.type(box, "v0.6");
+    expect(lines(dialog).patches).toEqual(["0.6.2Collecting data", "0.6.11,500 games", "0.6.02,500 games"]);
+    await user.clear(box);
+    await user.type(box, "9.9.9");
+    expect(lines(dialog)).toEqual({ names: [], patches: [] });
+    expect(within(dialog).getByTestId(statsTestid.patchSearchNone)).toHaveTextContent("No patch holds version 9.9.9.");
+  });
+
+  it("R4677001 picking a patch shows it as a tab does: in the address, and the bar's shown patch", async () => {
+    serveReader();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    await screen.findAllByTestId(statsTestid.patchTab, undefined, SLOW);
+    // 0.5.7, short of games and not the newest, has no tab until it is shown.
+    expect(screen.getAllByTestId(statsTestid.patchTab).map((tab) => tab.querySelector(".stats-patch-tab-name")?.textContent)).toEqual([
+      "0.6.2",
+      "0.6.1",
+      "0.6.0",
+      "0.5.9",
+    ]);
+    let dialog = await openSearch(user);
+    await user.type(within(dialog).getByTestId(statsTestid.patchSearchInput), "0.5.8");
+    await user.click(within(dialog).getByTestId(statsTestid.patchSearchOption));
+    // Asked for at its newest version, the dialog closed, and pressed as a tab of its own.
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.5.8b"), SLOW);
+    expect(screen.queryByRole("dialog", { name: "Find a patch" })).toBeNull();
+    expect(requested("/api/stats/cards").at(-1)?.searchParams.get("patch")).toBe("0.5.8b");
+    await waitFor(
+      () =>
+        expect(
+          screen
+            .getAllByTestId(statsTestid.patchTab)
+            .filter((tab) => tab.getAttribute("aria-pressed") === "true")
+            .map((tab) => tab.querySelector(".stats-patch-tab-name")?.textContent),
+        ).toEqual(["0.5.7"]),
+      SLOW,
+    );
+    // Picking the newest is the plain address, as its tab is.
+    dialog = await openSearch(user);
+    await user.click(within(dialog).getAllByTestId(statsTestid.patchSearchOption)[0]!);
+    await waitFor(() => expect(window.location.search).toBe(""), SLOW);
+  });
+
+  it("R4677000 the dialog ends with older patches for dev accounts for anyone else, and a dev account's lists them with no such line", async () => {
+    serveReader();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    let dialog = await openSearch(user);
+    const devs = within(dialog).getByTestId(statsTestid.patchSearchDevs);
+    expect(devs).toHaveTextContent("Older patches are for dev accounts.");
+    // The line comes after every patch, and no patch the server refuses is listed.
+    const options = within(dialog).getAllByTestId(statsTestid.patchSearchOption);
+    expect(options.at(-1)!.compareDocumentPosition(devs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(lines(dialog).names).not.toContain("0.4");
+    cleanup();
+
+    // The E2E dev fixture's session (R1310004): the server lists it every patch, and the dialog says nothing more.
+    signIn("dev-token");
+    serveReader("dev-token");
+    render(<StatsRoute />);
+    dialog = await openSearch(user);
+    expect(lines(dialog).names).toEqual(["0.6", "0.5", "0.4"]);
+    expect(within(dialog).queryByTestId(statsTestid.patchSearchDevs)).toBeNull();
+    await user.click(within(dialog).getAllByTestId(statsTestid.patchSearchOption).at(-1)!);
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.4.0b"), SLOW);
+  });
+
+  it("R4677000 an address naming a refused patch opens on the current patch with that same line, never an error page", async () => {
+    at("/stats?patch=0.4.0b");
+    serveReader();
+    const user = userEvent.setup();
+    render(<StatsRoute />);
+    const refused = await screen.findByTestId(statsTestid.patchRefused, undefined, SLOW);
+    expect(refused).toHaveTextContent("Older patches are for dev accounts.");
+    await waitFor(() => expect(window.location.search).toBe(""), SLOW);
+    expect(requested("/api/stats/cards").at(-1)?.searchParams.get("patch")).toBeNull();
+    // The current patch is shown, collecting its data, and nothing says the page failed.
+    expect(await screen.findByTestId(statsTestid.patchCollecting, undefined, SLOW)).toBeInTheDocument();
+    expect(screen.queryByText("The card statistics didn't load.")).toBeNull();
+    // Choosing a patch leaves the line behind.
+    await user.click(screen.getByTestId(statsTestid.patchPrevious));
+    await waitFor(() => expect(window.location.search).toBe("?patch=0.6.1"), SLOW);
+    expect(screen.queryByTestId(statsTestid.patchRefused)).toBeNull();
+  });
+
+  it("R4677000 the page sends the signed-in token with its statistics reads, and none signed out", async () => {
+    const tokens = (): (string | null)[] =>
+      vi
+        .mocked(fetch)
+        .mock.calls.filter(([input]) => new URL(String(input), window.location.origin).pathname.startsWith("/api/stats/"))
+        .map(([, init]) => new Headers(init?.headers).get("authorization"));
+    serveReader();
+    render(<StatsRoute />);
+    await screen.findAllByTestId(statsTestid.patchTab, undefined, SLOW);
+    expect(tokens().length).toBeGreaterThan(0);
+    expect(tokens().every((token) => token === null)).toBe(true);
+    cleanup();
+
+    signIn("dev-token");
+    serveReader("dev-token");
+    at("/stats?patch=0.6.1&card=core-001");
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+    await waitFor(() => {
+      const asked = vi.mocked(fetch).mock.calls.map(([input]) => new URL(String(input), window.location.origin).pathname);
+      expect(asked).toEqual(expect.arrayContaining(["/api/stats/cards", "/api/stats/games", "/api/stats/cards/core-001"]));
+    }, SLOW);
+    expect(tokens().every((token) => token === "Bearer dev-token")).toBe(true);
   });
 });
 
@@ -2349,24 +2652,24 @@ describe("R3447000 the games tile names the patch its games were collected on", 
 });
 
 describe("R1973000 the Daily runs tab is gone", () => {
-  it("R1973000 R4279001 the page offers Cards, Tokens, Sets and Players, asks nothing of /api/stats/ci, and ?tab=ci opens the Cards tab", async () => {
+  it("R1973000 R4279001 R4678000 the page offers Cards, Tokens, Sets, Players and Experimental, asks nothing of /api/stats/ci, and ?tab=ci opens the Cards tab", async () => {
     at("/stats?tab=ci");
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
     const names = screen.getAllByRole("tab").map((tab) => tab.textContent);
-    expect(names).toEqual(["Cards", "Tokens", "Sets", "Players"]);
+    expect(names).toEqual(["Cards", "Tokens", "Sets", "Players", "Experimental"]);
     expect(screen.queryByText("Daily runs")).toBeNull();
     expect(requested("/api/stats/ci")).toEqual([]);
   });
 });
 
 describe("R4335000 the view tabs show their names alone, in a row that never shrinks", () => {
-  it("R4335000 each tab holds its name and no line of what it shows", async () => {
+  it("R4335000 R4678000 each tab holds its name and no line of what it shows", async () => {
     at("/stats");
     render(<StatsRoute />);
     await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
     const tabs = screen.getAllByRole("tab");
-    expect(tabs.map((tab) => tab.textContent)).toEqual(["Cards", "Tokens", "Sets", "Players"]);
+    expect(tabs.map((tab) => tab.textContent)).toEqual(["Cards", "Tokens", "Sets", "Players", "Experimental"]);
     for (const tab of tabs) expect(tab.children).toHaveLength(0);
     for (const hint of [
       "Win rate and tier of every card",
@@ -2405,6 +2708,7 @@ describe("R2446000 the Cards table's columns", () => {
       "Games",
       "Tier",
       "Adjusted",
+      "Decisiveness",
       "Win rate",
       "Play rate",
     ]);
@@ -2416,7 +2720,7 @@ describe("R2446000 the Cards table's columns", () => {
       within(screen.getByTestId(statsTestid.sortSelect))
         .getAllByRole("option")
         .map((option) => option.getAttribute("value")),
-    ).toEqual(["name", "games", "tier", "adjustedWinRate", "winRate", "playRate"]);
+    ).toEqual(["name", "games", "tier", "adjustedWinRate", "decisiveness", "winRate", "playRate"]);
   });
 
   it("R2446000 R2777000 R3184000 an old address's sort by cost, rarity, keyword, When drawn, Drawn vs not drawn, Radiant or Normal opens on the default sort, adjusted win rate descending", async () => {
@@ -2517,7 +2821,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     };
   }
 
-  const COLUMNS = ["Card", "Name", "Games", "Tier", "Adjusted ↓"];
+  const COLUMNS = ["Card", "Name", "Games", "Tier", "Adjusted ↓", "Decisiveness"];
 
   it("R3887000 the Tokens and Other created cards list a catalog card as plain text, The Coin among them", async () => {
     window.localStorage.setItem(PLAIN_TEXT_KEY, "1");
@@ -2578,15 +2882,15 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(rowsOf(tokenTable)).toEqual({
       ids: ["core-t-sheep", "core-t-rush", "core-t-coin", "core-t-ghoul"],
       cells: [
-        ["1", "Sheep Token", "40", "A", "53.3%"],
-        ["1", "Rush Token", "55", "B", "52.1%"],
-        ["0", "The Coin", "40", "D", "47.1%"],
-        ["1", "Ghoul Token", "12", "—", "—"],
+        ["1", "Sheep Token", "40", "A", "53.3%", "—"],
+        ["1", "Rush Token", "55", "B", "52.1%", "—"],
+        ["0", "The Coin", "40", "D", "47.1%", "—"],
+        ["1", "Ghoul Token", "12", "—", "—", "not enough games"],
       ],
     });
     expect(rowsOf(otherTable)).toEqual({
       ids: ["core-001"],
-      cells: [["1", "Spark Pup", "30", "C", "49.0%"]],
+      cells: [["1", "Spark Pup", "30", "C", "49.0%", "—"]],
     });
 
     // A header sorts both tables (R4083000). Rush has 55 games; Sheep and The Coin tie at 40 and
@@ -2759,8 +3063,8 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
     expect(headersOf(statsTestid.tokensTable)).toContain("Games");
 
     await user.click(screen.getByTestId(statsTestid.columnGames));
-    expect(headersOf(statsTestid.tokensTable)).toEqual(["Card", "Name", "Tier", "Adjusted ↓"]);
-    expect(headersOf(statsTestid.createdTable)).toEqual(["Card", "Name", "Tier", "Adjusted ↓"]);
+    expect(headersOf(statsTestid.tokensTable)).toEqual(["Card", "Name", "Tier", "Adjusted ↓", "Decisiveness"]);
+    expect(headersOf(statsTestid.createdTable)).toEqual(["Card", "Name", "Tier", "Adjusted ↓", "Decisiveness"]);
 
     await user.click(screen.getByTestId(statsTestid.columnGames));
     expect(headersOf(statsTestid.tokensTable)).toEqual(COLUMNS);
@@ -2782,6 +3086,7 @@ describe("R2089000 R3324002 the Created cards and the Tokens", () => {
       ["games", "Games"],
       ["tier", "Tier"],
       ["adjustedWinRate", "Adjusted"],
+      ["decisiveness", "Decisiveness"],
     ]);
     expect(select).toHaveValue("adjustedWinRate");
     expect(screen.getByTestId(statsTestid.sortDir)).toHaveTextContent("↓");
@@ -3025,5 +3330,1049 @@ describe("#4511 the statistics grid builds each card's face once", () => {
       await setLocale("zh-CN");
     });
     for (const id of listed) expect(gridCalls(id)).toBeGreaterThan(0);
+  });
+});
+
+describe("R4673000 R4673001 the Face control", () => {
+  /** The mock cards with each face's figures over them, read against `tiers`, with `created` for the Tokens tab. */
+  function faced(rows: Record<string, object>, tiers: object, created: object[]) {
+    return {
+      ...MOCK_CARD_STATS_PROVISIONAL,
+      cards: MOCK_CARD_STATS_PROVISIONAL.cards.map((card) => ({ ...card, ...rows[card.id] })),
+      tiers,
+      created,
+    };
+  }
+
+  /** Rush Token, a Created card, on one face: `games` seats used a copy of it. */
+  function rush(games: number, tier: string, adjustedWinRate: number) {
+    return {
+      id: "core-t-rush",
+      name: "Rush Token",
+      cost: 1,
+      rarity: "Token",
+      set: "Core",
+      games,
+      tier,
+      adjustedWinRate,
+      hasEnoughGames: true,
+      window: { from: "0.2.0", liveGames: 412, source: "provisional", counted: ["0.2.0"] },
+    };
+  }
+
+  // All: Spark Pup A and Aqua Warden C on the band 45% to 55%.
+  const ALL = faced(
+    {
+      "core-001": { adjustedWinRate: 0.534, adjustedLow: 0.53, adjustedHigh: 0.538, tier: "A" },
+      "core-003": { adjustedWinRate: 0.486, adjustedLow: 0.48, adjustedHigh: 0.49, tier: "C" },
+    },
+    { center: 0.02, spread: 0.03, cards: 40, baseline: 0.5, bandLow: 0.45, bandHigh: 0.55 },
+    [rush(55, "B", 0.521)],
+  );
+  // Radiant, on a band of its own (40% to 60%): Aqua Warden S over Spark Pup A, Lava Hound still short of games.
+  const RADIANT = faced(
+    {
+      "core-001": { games: 20, winRate: 0.7, adjustedWinRate: 0.58, adjustedLow: 0.56, adjustedHigh: 0.6, tier: "A" },
+      "core-002": { games: 4, winRate: 0.75, hasEnoughGames: false },
+      "core-003": { games: 25, winRate: 0.72, adjustedWinRate: 0.62, adjustedLow: 0.61, adjustedHigh: 0.63, tier: "S" },
+    },
+    { center: 0.14, spread: 0.05, cards: 40, baseline: 0.5, bandLow: 0.4, bandHigh: 0.6 },
+    [rush(20, "S", 0.61)],
+  );
+  // Normal: Lava Hound B over Spark Pup C, Aqua Warden short of games.
+  const NORMAL = faced(
+    {
+      "core-001": { games: 30, winRate: 0.5, adjustedWinRate: 0.49, adjustedLow: 0.47, adjustedHigh: 0.51, tier: "C" },
+      "core-002": { games: 25, winRate: 0.56, adjustedWinRate: 0.52, adjustedLow: 0.5, adjustedHigh: 0.54, tier: "B", hasEnoughGames: true },
+      "core-003": { games: 5, winRate: 0.4, hasEnoughGames: false },
+    },
+    { center: 0.02, spread: 0.03, cards: 40, baseline: 0.5, bandLow: 0.45, bandHigh: 0.55 },
+    [rush(35, "C", 0.49)],
+  );
+
+  /** A card's Normal and Radiant figures and the gap between them, both faces over the floor. */
+  const FACES_SEEN = {
+    normal: { games: 30, adjustedWinRate: 0.512, adjustedLow: 0.48, adjustedHigh: 0.544, tier: "B", hasEnoughGames: true },
+    radiant: { games: 25, adjustedWinRate: 0.58, adjustedLow: 0.552, adjustedHigh: 0.608, tier: "A", hasEnoughGames: true },
+    gap: { gap: 0.068, low: 0.012, high: 0.124 },
+  };
+  /** Radiant below the floor: the server's rate is not shown, and there is no gap. */
+  const FACES_FEW = {
+    normal: { games: 40, adjustedWinRate: 0.495, adjustedLow: 0.47, adjustedHigh: 0.52, tier: "C", hasEnoughGames: true },
+    radiant: { games: 4, adjustedWinRate: 0.7, adjustedLow: 0.4, adjustedHigh: 0.9, tier: null, hasEnoughGames: false },
+    gap: null,
+  };
+
+  /**
+   * Answers the card statistics with the face asked for (All when none is), and a card's details with that face's
+   * turn (All 1, Normal 2, Radiant 3); Spark Pup's faces are both seen, Aqua Warden's Radiant is short of games, and
+   * Lava Hound's details come from a server that sends no faces.
+   */
+  function serveFaces(): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        const face = url.searchParams.get("face");
+        const json = (body: unknown): Promise<Response> => Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+        if (url.pathname === "/api/stats/cards") return json(face === "radiant" ? RADIANT : face === "normal" ? NORMAL : ALL);
+        if (url.pathname.startsWith("/api/stats/cards/")) {
+          const id = decodeURIComponent(url.pathname.slice("/api/stats/cards/".length));
+          const turn = face === "radiant" ? 3 : face === "normal" ? 2 : 1;
+          const details = { ...MOCK_DRILL_DOWN, byTurn: [{ turn, games: 25, winRate: 0.64 }] };
+          if (id === "core-002") return json(details);
+          return json({ ...details, face: face ?? "all", faces: id === "core-003" ? FACES_FEW : FACES_SEEN });
+        }
+        return json({});
+      }),
+    );
+  }
+
+  const faceButtons = (): HTMLElement[] =>
+    [statsTestid.faceAll, statsTestid.faceNormal, statsTestid.faceRadiant].map((id) => screen.getByTestId(id));
+  const pressed = (): (string | null)[] => faceButtons().map((button) => button.getAttribute("aria-pressed"));
+  const facesAsked = (): (string | null)[] => requested("/api/stats/cards").map((url) => url.searchParams.get("face"));
+  /** The cards table as it stands: a face with no kept answer draws a skeleton while it loads, then a new table. */
+  const cardsTable = (): HTMLElement => screen.getByTestId(statsTestid.cardsTable);
+  const order = (): (string | null)[] =>
+    [...cardsTable().querySelectorAll("tbody tr")].map((row) => row.getAttribute("data-card-id"));
+  const tiersOf = (scope: HTMLElement): (string | null)[] =>
+    within(scope).getAllByTestId(statsTestid.tierCell).map((cell) => cell.textContent);
+
+  it("R4673001 the Face control sits beside View, opens on All asking for no face, and asks for and keeps the face pressed", async () => {
+    serveFaces();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+
+    // One group named Face in the options row, right after View's, its buttons in the Segmented's look with their words alone.
+    const group = screen.getByRole("group", { name: "Face" });
+    expect(document.querySelector(".stats-options")).toContainElement(group);
+    expect(screen.getByRole("group", { name: "View" }).parentElement!.nextElementSibling).toBe(group.parentElement);
+    expect(within(group).getAllByRole("button")).toEqual(faceButtons());
+    expect(faceButtons().map((button) => button.textContent)).toEqual(["All", "Normal", "Radiant"]);
+    for (const button of faceButtons()) {
+      expect(button).toHaveClass("stats-view-btn");
+      expect(button).toHaveClass("segmented__item");
+      expect(button).not.toHaveAttribute("aria-label");
+    }
+
+    // All: pressed, and no read asks for a face, so its path is the one it always was.
+    expect(pressed()).toEqual(["true", "false", "false"]);
+    expect(facesAsked().length).toBeGreaterThan(0);
+    expect(facesAsked().every((face) => face === null)).toBe(true);
+    expect(requested("/api/stats/cards").map((url) => url.pathname + url.search)).toContain(cardStatsPath({ mode: "all" }));
+    expect(window.location.search).not.toContain("face=");
+
+    fireEvent.click(screen.getByTestId(statsTestid.faceNormal));
+    await waitFor(() => expect(facesAsked()).toContain("normal"), SLOW);
+    expect(pressed()).toEqual(["false", "true", "false"]);
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("face")).toBe("normal"), SLOW);
+
+    fireEvent.click(screen.getByTestId(statsTestid.faceRadiant));
+    await waitFor(() => expect(facesAsked()).toContain("radiant"), SLOW);
+    expect(pressed()).toEqual(["false", "false", "true"]);
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("face")).toBe("radiant"), SLOW);
+
+    // One state for both tabs: the Tokens tab opens on the face pressed, and the address keeps it.
+    fireEvent.click(screen.getByTestId(statsTestid.tabTokens));
+    await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
+    expect(pressed()).toEqual(["false", "false", "true"]);
+    expect(new URLSearchParams(window.location.search).get("face")).toBe("radiant");
+
+    // Back to All: the address drops the face, and a read after the kept one's window asks for none.
+    expireRead(null, cardStatsPath({ mode: "all" }));
+    vi.mocked(fetch).mockClear();
+    fireEvent.click(screen.getByTestId(statsTestid.faceAll));
+    await waitFor(() => expect(facesAsked().length).toBeGreaterThan(0), SLOW);
+    expect(facesAsked().every((face) => face === null)).toBe(true);
+    expect(pressed()).toEqual(["true", "false", "false"]);
+    await waitFor(() => expect(window.location.search).not.toContain("face="), SLOW);
+  });
+
+  it("R4673001 face=radiant in the address opens Radiant on the Cards and Tokens tabs, and an unknown face reads All", async () => {
+    serveFaces();
+    at("/stats?face=radiant");
+    const { unmount } = render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(pressed()).toEqual(["false", "false", "true"]);
+    expect(facesAsked().length).toBeGreaterThan(0);
+    expect(facesAsked().every((face) => face === "radiant")).toBe(true);
+    expect(new URLSearchParams(window.location.search).get("face")).toBe("radiant");
+    unmount();
+
+    at("/stats?tab=tokens&face=radiant");
+    const tokens = render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
+    expect(pressed()).toEqual(["false", "false", "true"]);
+    expect(within(table).getByTestId(statsTestid.createdTierCell)).toHaveTextContent("S");
+    tokens.unmount();
+
+    vi.mocked(fetch).mockClear();
+    for (const address of ["/stats?face=nonsense", "/stats?face=all"]) {
+      at(address);
+      const { unmount: leave } = render(<StatsRoute />);
+      await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+      expect(pressed()).toEqual(["true", "false", "false"]);
+      await waitFor(() => expect(window.location.search).not.toContain("face="), SLOW);
+      leave();
+    }
+    // All's table was asked for, and never with a face.
+    expect(facesAsked().length).toBeGreaterThan(0);
+    expect(facesAsked().every((face) => face === null)).toBe(true);
+  });
+
+  it("R4673000 R4673001 the table and the grid show each face's rows and tiers", async () => {
+    serveFaces();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const row = (id: string): HTMLElement => cardsTable().querySelector<HTMLElement>(`tbody tr[data-card-id="${id}"]`)!;
+    const games = (): (string | null)[] =>
+      [...cardsTable().querySelectorAll("tbody tr")].map((tr) => tr.querySelectorAll("td")[2]?.textContent ?? null);
+    const adjusted = (): (string | null)[] =>
+      within(cardsTable()).getAllByTestId(statsTestid.adjustedCell).map((cell) => cell.textContent);
+    const tierHeader = (): HTMLElement => within(cardsTable()).getByRole("columnheader", { name: /^Tier/ });
+    expect(order()).toEqual(["core-001", "core-003", "core-002"]);
+    expect(tiersOf(cardsTable())).toEqual(["A", "C", "—"]);
+
+    // Radiant: its rows, sorted by its adjusted rates, with its games and tiers; Lava Hound still last.
+    fireEvent.click(screen.getByTestId(statsTestid.faceRadiant));
+    await waitFor(() => expect(order()).toEqual(["core-003", "core-001", "core-002"]), SLOW);
+    expect(tiersOf(cardsTable())).toEqual(["S", "A", "—"]);
+    expect(adjusted()).toEqual(["62.0%", "58.0%", "—"]);
+    expect(games()).toEqual(["25", "20", "4"]);
+
+    // Its ranges and tier fit read its own band: Spark Pup's 56% to 60% is all inside Radiant's A (55% to 60%),
+    // where All's A (52.5% to 55%) would hold none of it.
+    fireEvent.click(screen.getByTestId(statsTestid.rangesToggle));
+    expect(within(row("core-001")).getByTestId(statsTestid.tierFit)).toHaveTextContent("100%");
+    expect(within(row("core-001")).getByTestId(statsTestid.adjustedRange)).toHaveTextContent("56.0–60.0%");
+
+    // The sort by tier follows the face's tiers.
+    fireEvent.click(tierHeader());
+    expect(order()).toEqual(["core-003", "core-001", "core-002"]);
+    fireEvent.click(tierHeader());
+    expect(order()).toEqual(["core-001", "core-003", "core-002"]);
+
+    // Normal: its own rows and tiers, Aqua Warden now short of games.
+    fireEvent.click(screen.getByTestId(statsTestid.faceNormal));
+    await waitFor(() => expect(tiersOf(cardsTable())).toContain("B"), SLOW);
+    fireEvent.click(within(cardsTable()).getByRole("columnheader", { name: /^Adjusted/ }));
+    expect(order()).toEqual(["core-002", "core-001", "core-003"]);
+    expect(tiersOf(cardsTable())).toEqual(["B", "C", "—"]);
+    expect(games()).toEqual(["25", "30", "5"]);
+
+    // The grid shows the face's tiers too.
+    fireEvent.click(screen.getByTestId(statsTestid.viewGrid));
+    await screen.findByTestId(statsTestid.cardsGrid, undefined, SLOW);
+    const gridTier = (id: string): HTMLElement =>
+      within(screen.getByTestId(statsTestid.cardsGrid).querySelector<HTMLElement>(`[data-card-id="${id}"]`)!).getByTestId(
+        statsTestid.tierCell,
+      );
+    expect(gridTier("core-002")).toHaveTextContent("B");
+    expect(gridTier("core-003")).toHaveTextContent("—");
+    fireEvent.click(screen.getByTestId(statsTestid.faceRadiant));
+    await waitFor(() => expect(gridTier("core-003")).toHaveTextContent("S"), SLOW);
+    expect(gridTier("core-001")).toHaveTextContent("A");
+
+    // The Tokens tab's Created rows follow it as well.
+    fireEvent.click(screen.getByTestId(statsTestid.viewTable));
+    fireEvent.click(screen.getByTestId(statsTestid.tabTokens));
+    await screen.findByTestId(statsTestid.tokensTable, undefined, SLOW);
+    const rushCells = (): (string | null)[] =>
+      [...screen.getByTestId(statsTestid.tokensTable).querySelectorAll('tr[data-card-id="core-t-rush"] td')].map((td) => td.textContent);
+    // R4552004's Decisiveness column last, the mock's none "—" (R4673000: All's on every face).
+    expect(rushCells()).toEqual(["1", "Rush Token", "20", "S", "61.0%", "—"]);
+    fireEvent.click(screen.getByTestId(statsTestid.faceAll));
+    await waitFor(() => expect(rushCells()).toEqual(["1", "Rush Token", "55", "B", "52.1%", "—"]), SLOW);
+  });
+
+  it("R4673001 R4676001 a row opens the drill-down on the page's face and patch, with the Normal, Radiant and gap table in Extended stats on every face, not enough games below the floor", async () => {
+    serveFaces();
+    at("/stats?patch=0.1.0");
+    const { unmount } = render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    const asked = (id: string): Record<string, string> => Object.fromEntries(requested(`/api/stats/cards/${id}`).at(-1)!.searchParams);
+    const open = async (id: string): Promise<HTMLElement> => {
+      fireEvent.click(cardsTable().querySelector<HTMLElement>(`tbody tr[data-card-id="${id}"]`)!);
+      const modal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+      await within(modal).findByText("Win rate by turn played", undefined, SLOW);
+      return modal;
+    };
+    const close = (): void => {
+      fireEvent.click(screen.getByTestId(statsTestid.drillDownClose));
+    };
+    // R4676001: the faces' figures are Extended stats' Radiant vs normal, each face's Adjusted, then the gap.
+    const line = (modal: HTMLElement): string[] => {
+      if (within(modal).getByTestId(statsTestid.extendedToggle).getAttribute("aria-pressed") !== "true") {
+        fireEvent.click(within(modal).getByTestId(statsTestid.extendedToggle));
+      }
+      const adjusted = (id: string): string => within(within(modal).getByTestId(id)).getAllByRole("cell")[1]?.textContent ?? "";
+      return [
+        adjusted(statsTestid.drillDownFaceNormal),
+        adjusted(statsTestid.drillDownFaceRadiant),
+        within(modal).getByTestId(statsTestid.drillDownFaceGap).textContent ?? "",
+      ];
+    };
+    const seen = ["51.2%", "58.0%", "Radiant gap +6.8% (+1.2% to +12.4%)"];
+
+    // All: asked for the page's patch and no face; no line under the faces, the figures inside Extended stats.
+    let modal = await open("core-001");
+    expect(asked("core-001")).toEqual({ mode: "all", patch: "0.1.0" });
+    expect(within(modal).getByText("Turn 1:")).toBeInTheDocument();
+    expect(within(modal).queryByTestId(statsTestid.drillDownFaceLine)).toBeNull();
+    expect(line(modal)).toEqual(seen);
+    expect(within(modal).getByTestId(statsTestid.drillDownFaceLine).closest(".stats-drilldown-details")).not.toBeNull();
+    expect(within(modal).queryByTestId(statsTestid.drillDownFaceShown)).toBeNull();
+    close();
+
+    // Radiant: the row opens on Radiant and the patch, its details that face's alone, the same line.
+    fireEvent.click(screen.getByTestId(statsTestid.faceRadiant));
+    await waitFor(() => expect(order()).toEqual(["core-003", "core-001", "core-002"]), SLOW);
+    modal = await open("core-001");
+    expect(asked("core-001")).toEqual({ mode: "all", face: "radiant", patch: "0.1.0" });
+    expect(within(modal).getByText("Turn 3:")).toBeInTheDocument();
+    expect(within(modal).getByTestId(statsTestid.drillDownFaceShown)).toHaveTextContent("Radiant faces only");
+    expect(line(modal)).toEqual(seen);
+    close();
+
+    // Normal, on a card whose Radiant face is short of games: no Radiant rate though the server sent one, and no gap.
+    fireEvent.click(screen.getByTestId(statsTestid.faceNormal));
+    await waitFor(() => expect(order()).toEqual(["core-002", "core-001", "core-003"]), SLOW);
+    modal = await open("core-003");
+    expect(asked("core-003")).toEqual({ mode: "all", face: "normal", patch: "0.1.0" });
+    expect(within(modal).getByText("Turn 2:")).toBeInTheDocument();
+    expect(within(modal).getByTestId(statsTestid.drillDownFaceShown)).toHaveTextContent("Normal faces only");
+    expect(line(modal)).toEqual(["49.5%", "not enough games", "Radiant gap not enough games"]);
+    close();
+
+    // A server that sends no faces draws no table.
+    modal = await open("core-002");
+    fireEvent.click(within(modal).getByTestId(statsTestid.extendedToggle));
+    expect(within(modal).queryByTestId(statsTestid.drillDownFaceLine)).toBeNull();
+    close();
+    unmount();
+
+    // On the newest patch the details ask for no patch.
+    at("/stats?face=radiant");
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    fireEvent.click(screen.getByText("Spark Pup"));
+    modal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+    await within(modal).findByText("Win rate by turn played", undefined, SLOW);
+    expect(asked("core-001")).toEqual({ mode: "all", face: "radiant" });
+  });
+
+  it("R4673001 the Sets tab reads the face", async () => {
+    const card = (id: string, name: string, set: string, wins: number, games: number) => ({
+      ...MOCK_CARD_STATS_PROVISIONAL.cards[0]!,
+      id,
+      name,
+      set,
+      games,
+      winRate: wins / games,
+      hasEnoughGames: true,
+    });
+    // All: Classic ahead at 52%; Radiant: Core ahead at 70%.
+    const sets = { ...MOCK_CARD_STATS_PROVISIONAL, patch: "0.2.0", previousPatch: "0.1.0" };
+    const allSets = { ...sets, cards: [card("core-001", "Spark Pup", "Core", 500, 1000), card("classic-001", "Palantir", "Classic", 520, 1000)] };
+    const radiantSets = { ...sets, cards: [card("core-001", "Spark Pup", "Core", 700, 1000), card("classic-001", "Palantir", "Classic", 400, 1000)] };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        const body = url.pathname !== "/api/stats/cards" ? {} : url.searchParams.get("face") === "radiant" ? radiantSets : allSets;
+        return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+      }),
+    );
+    at("/stats?set=core&mode=bo1&face=radiant");
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+
+    fireEvent.click(screen.getByTestId(statsTestid.tabSets));
+    let table = await screen.findByTestId(statsTestid.setsTable, undefined, SLOW);
+    const setsAsked = (): (string | null)[][] =>
+      requested("/api/stats/cards")
+        .filter((url) => !url.searchParams.has("set"))
+        .map((url) => [url.searchParams.get("patch"), url.searchParams.get("mode"), url.searchParams.get("face")]);
+    await waitFor(() => expect(setsAsked()).toHaveLength(2), SLOW);
+    expect(setsAsked()).toEqual([
+      [null, "bo1", "radiant"],
+      ["0.1.0", "bo1", "radiant"],
+    ]);
+    const setsShown = (): (string | null)[] => within(table).getAllByRole("row").slice(1).map((r) => r.getAttribute("data-set"));
+    expect(setsShown()).toEqual(["Core", "Classic"]);
+    expect(within(table).getAllByRole("row")[1]).toHaveTextContent("70.0%");
+
+    // All, pressed on the Cards tab: the Sets tab asks for no face and sums All's figures.
+    fireEvent.click(screen.getByTestId(statsTestid.tabCards));
+    fireEvent.click(await screen.findByTestId(statsTestid.faceAll, undefined, SLOW));
+    vi.mocked(fetch).mockClear();
+    fireEvent.click(screen.getByTestId(statsTestid.tabSets));
+    table = await screen.findByTestId(statsTestid.setsTable, undefined, SLOW);
+    await waitFor(() => expect(setsShown()).toEqual(["Classic", "Core"]), SLOW);
+    expect(within(table).getAllByRole("row")[1]).toHaveTextContent("52.0%");
+    expect(setsAsked().length).toBeGreaterThan(0);
+    expect(setsAsked().every(([, , face]) => face === null)).toBe(true);
+  });
+});
+
+describe("R4678000 R4678001 the Experimental tab and its Running view", () => {
+  const json = (body: unknown): Response => new Response(JSON.stringify(body), { status: 200 });
+
+  // A card statistics read kept by an earlier test would answer for these filters without asking (R3206000).
+  beforeEach(() => {
+    clearReadCache();
+  });
+
+  /** A play version as `GET /api/stats/versions` sends it: no games and no figure unless given. */
+  function playVersion(card: string, name: string, first: string, live: boolean, figures: Record<string, unknown> = {}) {
+    return {
+      id: `${card}~${first}`,
+      card,
+      name,
+      first,
+      last: live ? "v0.2.0" : first,
+      live,
+      patches: 1,
+      games: 0,
+      adjustedWinRate: null,
+      adjustedLow: null,
+      adjustedHigh: null,
+      tier: null,
+      hasEnoughGames: false,
+      ...figures,
+    };
+  }
+
+  /** Every play version, read against a band of its own (47% to 53%), apart from the cards' (45% to 55%). */
+  const VERSIONS = {
+    pilot: "merged",
+    mode: "all",
+    field: { center: 0, spread: 0.05, cards: 4, baseline: 0.5, drawnFloor: 20 },
+    bandLow: 0.47,
+    bandHigh: 0.53,
+    minSample: 20,
+    versions: [
+      // Spark Pup before it last changed: closed, so no row of its own.
+      playVersion("core-001", "Spark Pup", "v0.1.0", false, {
+        games: 900,
+        adjustedWinRate: 0.61,
+        adjustedLow: 0.58,
+        adjustedHigh: 0.64,
+        tier: "S",
+        hasEnoughGames: true,
+      }),
+      playVersion("core-001", "Spark Pup", "v0.1.5", true, {
+        patches: 3,
+        games: 140,
+        adjustedWinRate: 0.512,
+        adjustedLow: 0.49,
+        adjustedHigh: 0.534,
+        tier: "B",
+        hasEnoughGames: true,
+      }),
+      // Below the floor: a rate the row does not show, and no tier.
+      playVersion("core-002", "Lava Hound", "v0.0.1", true, { patches: 7, games: 12, adjustedWinRate: 0.55 }),
+      playVersion("core-003", "Aqua Warden", "v0.2.0", true, {
+        games: 60,
+        adjustedWinRate: 0.455,
+        adjustedLow: 0.43,
+        adjustedHigh: 0.48,
+        tier: "F",
+        hasEnoughGames: true,
+      }),
+      // A card the Cards tab does not list: no row either.
+      playVersion("core-099", "Unlisted", "v0.0.1", true, { games: 50, adjustedWinRate: 0.5, tier: "C", hasEnoughGames: true }),
+    ],
+  };
+
+  /** The patches, so the bar shows on the other tabs. */
+  const PATCHES = [
+    { versions: ["0.2.0"], games: 1200, liveGames: 0 },
+    { versions: ["0.1.0"], games: 1500, liveGames: 0 },
+  ];
+
+  /**
+   * Answers the play versions with `versions`, a drill-down with Spark Pup's, and the card statistics with the cost
+   * filter applied as the server applies it, the cards' own band and the patches.
+   */
+  function serveRunning(versions: () => Response = () => json(VERSIONS)): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        if (url.pathname === "/api/stats/versions") return Promise.resolve(versions());
+        if (url.pathname.startsWith("/api/stats/cards/")) return Promise.resolve(json(MOCK_DRILL_DOWN));
+        if (url.pathname !== "/api/stats/cards") return Promise.resolve(json({}));
+        const cost = url.searchParams.get("cost");
+        const cards = MOCK_CARD_STATS_PROVISIONAL.cards.filter((card) => cost === null || card.cost === Number(cost));
+        const tiers = { center: 0, spread: 0.05, cards: 3, bandLow: 0.45, bandHigh: 0.55 };
+        return Promise.resolve(json({ ...MOCK_CARD_STATS_PROVISIONAL, cards, tiers, patches: PATCHES }));
+      }),
+    );
+  }
+
+  /** A table's rows as their card ids, and each row's cells. */
+  function rowsOf(table: HTMLElement): { ids: (string | null)[]; cells: string[][] } {
+    const rows = [...table.querySelectorAll("tbody tr")];
+    return {
+      ids: rows.map((row) => row.getAttribute("data-card-id")),
+      cells: rows.map((row) => [...row.querySelectorAll("td")].map((td) => td.textContent ?? "")),
+    };
+  }
+
+  const headers = (table: HTMLElement): string[] => within(table).getAllByRole("columnheader").map((th) => th.textContent ?? "");
+  const address = (): URLSearchParams => new URLSearchParams(window.location.search);
+
+  it("R4678000 ?tab=experimental opens the Experimental tab, named alone, and the address follows the tab", async () => {
+    at("/stats?tab=experimental");
+    serveRunning();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    const tab = screen.getByTestId(statsTestid.tabExperimental);
+    expect(tab).toHaveAttribute("aria-selected", "true");
+    expect(tab).toHaveTextContent(/^Experimental$/);
+    expect(tab.children).toHaveLength(0);
+    expect(screen.queryByTestId(statsTestid.cardsTable)).toBeNull();
+
+    fireEvent.click(screen.getByTestId(statsTestid.tabCards));
+    await waitFor(() => expect(address().has("tab")).toBe(false), SLOW);
+    fireEvent.click(screen.getByTestId(statsTestid.tabExperimental));
+    await waitFor(() => expect(address().get("tab")).toBe("experimental"), SLOW);
+  });
+
+  it("R4678000 R4680000 on the Experimental tab the patch bar, the games tile and Face are hidden, one line above the tabs names what it shows, and its Segmented offers Running and Versions", async () => {
+    at("/stats?patch=0.1.0&face=radiant");
+    serveRunning();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.patchBar)).toBeInTheDocument();
+    expect(screen.getByTestId(statsTestid.summaryTiles)).toBeInTheDocument();
+    expect(screen.getByTestId(statsTestid.faceRadiant)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByTestId(statsTestid.experimentalLine)).toBeNull();
+
+    fireEvent.click(screen.getByTestId(statsTestid.tabExperimental));
+    await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    for (const hidden of [
+      statsTestid.patchBar,
+      statsTestid.patchSearch,
+      statsTestid.summaryTiles,
+      statsTestid.faceAll,
+      statsTestid.faceNormal,
+      statsTestid.faceRadiant,
+    ]) {
+      expect(screen.queryByTestId(hidden), hidden).toBeNull();
+    }
+    const line = screen.getByTestId(statsTestid.experimentalLine);
+    expect(line).toHaveTextContent(/^Every card's current version, over every patch since it last changed$/);
+    const tablist = screen.getByRole("tablist", { name: "Statistics views" });
+    expect(line.compareDocumentPosition(tablist) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // R4680000: two views, so the Segmented of views shows, Running first and pressed; the options row keeps its
+    // View, ranges, Plain text and Columns.
+    const panel = screen.getByRole("tabpanel");
+    const views = within(panel).getByRole("group", { name: "Experimental views" });
+    expect(within(views).getAllByRole("button").map((button) => button.textContent)).toEqual(["Running", "Versions"]);
+    expect(within(views).getByRole("button", { name: "Running" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(panel).queryByRole("group", { name: "Face" })).toBeNull();
+    expect(within(panel).getByRole("group", { name: "View" })).toBeInTheDocument();
+    expect(within(panel).getByTestId(statsTestid.rangesToggle)).toBeInTheDocument();
+    expect(within(panel).getByTestId(statsTestid.plainTextToggle)).toBeInTheDocument();
+
+    // The patch and face stay the page's, in the address and on the other tabs.
+    expect(address().get("patch")).toBe("0.1.0");
+    expect(address().get("face")).toBe("radiant");
+    fireEvent.click(screen.getByTestId(statsTestid.tabCards));
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.patchBar)).toBeInTheDocument();
+    expect(screen.getByTestId(statsTestid.faceRadiant)).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByTestId(statsTestid.experimentalLine)).toBeNull();
+  });
+
+  it("R4678001 Running lists each card the Cards tab lists on its live play version: Card, Name, Games, Tier, Adjusted and Since with the patches it reaches", async () => {
+    at("/stats?tab=experimental");
+    serveRunning();
+    render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    expect(headers(table)).toEqual(["Card", "Name", "Games", "Tier", "Adjusted ↓", "Since"]);
+    // Adjusted best first, the row below the floor last with no tier or rate; no closed version and no unlisted card.
+    expect(rowsOf(table)).toEqual({
+      ids: ["core-001", "core-003", "core-002"],
+      cells: [
+        ["1", "Spark Pup", "140", "B", "51.2%", "v0.1.5 across 3 patches"],
+        ["2", "Aqua Warden", "60", "F", "45.5%", "v0.2.0 across 1 patch"],
+        ["4", "Lava Hound", "12", "—", "—", "v0.0.1 across 7 patches"],
+      ],
+    });
+    // The cost badge wears the card's rarity, as a deck row's does.
+    expect(table.querySelector('tr[data-card-id="core-002"] .stats-card-thumb-badge')).toHaveAttribute("data-rarity", "Rare");
+    // Asked once, on the page's match type.
+    expect(requested("/api/stats/versions").map((url) => url.search)).toEqual(["?mode=all"]);
+
+    // Games is behind the Columns toggle, which has no Play rate here.
+    expect(screen.queryByTestId(statsTestid.columnPlayRate)).toBeNull();
+    fireEvent.click(screen.getByTestId(statsTestid.columnGames));
+    expect(headers(table)).toEqual(["Card", "Name", "Tier", "Adjusted ↓", "Since"]);
+    cleanup();
+
+    // A server deployed before the patches were counted: the version alone.
+    serveRunning(() => json({ ...VERSIONS, versions: VERSIONS.versions.map((row) => ({ ...row, patches: undefined })) }));
+    render(<StatsRoute />);
+    const older = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    expect(within(older).getAllByTestId(statsTestid.runningSince).map((since) => since.textContent)).toEqual(["v0.1.5", "v0.2.0", "v0.0.1"]);
+  });
+
+  it("R4678001 Running shares the Cards tab's filters: the search and the server's cost, and the match type, which it asks the route for", async () => {
+    serveRunning();
+    render(<StatsRoute />);
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "Warden" } });
+    fireEvent.click(screen.getByTestId(statsTestid.tabExperimental));
+    const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    expect(rowsOf(table).ids).toEqual(["core-003"]);
+    expect(screen.getByTestId(statsTestid.searchInput)).toHaveValue("Warden");
+
+    fireEvent.change(screen.getByTestId(statsTestid.searchInput), { target: { value: "" } });
+    expect(rowsOf(table).ids).toEqual(["core-001", "core-003", "core-002"]);
+
+    // The cost is the server's: Running lists the cards its read lists.
+    fireEvent.change(screen.getByRole("combobox", { name: "Filter by cost" }), { target: { value: "4" } });
+    await waitFor(() => expect(rowsOf(screen.getByTestId(statsTestid.runningTable)).ids).toEqual(["core-002"]), SLOW);
+    expect(requested("/api/stats/cards").at(-1)?.searchParams.get("cost")).toBe("4");
+    fireEvent.change(screen.getByRole("combobox", { name: "Filter by cost" }), { target: { value: "3" } });
+    expectEmptyState(await screen.findByText("No cards match the selected filters.", undefined, SLOW));
+
+    // The match type asks the route again, and the address keeps every filter.
+    fireEvent.change(screen.getByTestId(statsTestid.modeSelect), { target: { value: "bo1" } });
+    await waitFor(() => expect(requested("/api/stats/versions").at(-1)?.searchParams.get("mode")).toBe("bo1"), SLOW);
+    await waitFor(() => expect(address().get("mode")).toBe("bo1"), SLOW);
+    expect(address().get("cost")).toBe("3");
+    expect(address().get("tab")).toBe("experimental");
+  });
+
+  it("R4678001 Running sorts by the page's one sort: Name, Games, Tier and Adjusted, set by the select, the direction and the headers, a sort it lacks read as Adjusted", async () => {
+    at("/stats?tab=experimental");
+    serveRunning();
+    render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    const select = screen.getByTestId(statsTestid.sortSelect);
+    expect(within(select).getAllByRole("option").map((option) => option.getAttribute("value"))).toEqual(["name", "games", "tier", "adjustedWinRate"]);
+    expect(select).toHaveValue("adjustedWinRate");
+
+    fireEvent.change(select, { target: { value: "name" } });
+    await waitFor(() => expect(address().get("sort")).toBe("name"), SLOW);
+    expect(rowsOf(table).ids).toEqual(["core-003", "core-002", "core-001"]);
+
+    // A header sets it; the direction button flips it; a row with no tier stays last either way.
+    fireEvent.click(within(table).getByRole("columnheader", { name: /^Tier/ }));
+    expect(select).toHaveValue("tier");
+    expect(rowsOf(table).ids).toEqual(["core-001", "core-003", "core-002"]);
+    fireEvent.click(screen.getByTestId(statsTestid.sortDir));
+    expect(rowsOf(table).ids).toEqual(["core-003", "core-001", "core-002"]);
+    await waitFor(() => expect(address().get("dir")).toBe("asc"), SLOW);
+
+    // The Cards tab follows it, and a Cards sort Running lacks reads as Adjusted there, in its direction.
+    fireEvent.click(screen.getByTestId(statsTestid.tabCards));
+    await screen.findByTestId(statsTestid.cardsTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("tier");
+    fireEvent.change(screen.getByTestId(statsTestid.sortSelect), { target: { value: "decisiveness" } });
+    fireEvent.click(screen.getByTestId(statsTestid.tabExperimental));
+    const again = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    expect(screen.getByTestId(statsTestid.sortSelect)).toHaveValue("adjustedWinRate");
+    expect(within(again).getByRole("columnheader", { name: /^Adjusted/ })).toHaveAttribute("aria-sort", "descending");
+    expect(rowsOf(again).ids).toEqual(["core-001", "core-003", "core-002"]);
+  });
+
+  it("R4678001 Running's Grid and Show 95% ranges are the page's: each card's tier, Adjusted, games and Since, its range and tier fit read against the play versions' band", async () => {
+    at("/stats?tab=experimental&view=grid&ranges=1");
+    serveRunning();
+    render(<StatsRoute />);
+    const grid = await screen.findByTestId(statsTestid.runningGrid, undefined, SLOW);
+    const items = [...grid.querySelectorAll<HTMLElement>("li")];
+    expect(items.map((item) => item.getAttribute("data-card-id"))).toEqual(["core-001", "core-003", "core-002"]);
+    const [pup, warden, hound] = items as [HTMLElement, HTMLElement, HTMLElement];
+    expect(within(pup).getByRole("button", { name: "Spark Pup" })).toBeInTheDocument();
+    // 49.0–53.4% holds 1.5 points of B's 50.0–51.5% on the versions' band, 34%; the cards' band would read 57%.
+    expect(within(pup).getByTestId(statsTestid.tierFit)).toHaveTextContent("34%");
+    expect(within(pup).getByTestId(statsTestid.adjustedRange)).toHaveTextContent("49.0–53.4%");
+    expect(within(pup).getByTestId(statsTestid.runningSince)).toHaveTextContent("v0.1.5 across 3 patches");
+    expect(within(warden).getByTestId(statsTestid.tierFit)).toHaveTextContent("80%");
+    expect(within(hound).queryByTestId(statsTestid.tierFit)).toBeNull();
+    expect(within(hound).queryByTestId(statsTestid.adjustedRange)).toBeNull();
+    expect(within(hound).getByTestId(statsTestid.tierCell)).toHaveTextContent("—");
+
+    // The Table, ranges off: no range and no fit.
+    fireEvent.click(screen.getByTestId(statsTestid.viewTable));
+    fireEvent.click(screen.getByTestId(statsTestid.rangesToggle));
+    const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    expect(within(table).queryByTestId(statsTestid.tierFit)).toBeNull();
+    expect(within(table).queryByTestId(statsTestid.adjustedRange)).toBeNull();
+    await waitFor(() => expect(address().has("view")).toBe(false), SLOW);
+    expect(address().has("ranges")).toBe(false);
+  });
+
+  it("R4678001 a Running row opens the card's drill-down on All and the newest patch, whatever face and patch the address holds for the other tabs", async () => {
+    at("/stats?tab=experimental&face=radiant&patch=0.1.0");
+    serveRunning();
+    render(<StatsRoute />);
+    const table = await screen.findByTestId(statsTestid.runningTable, undefined, SLOW);
+    const row = table.querySelector<HTMLElement>('tbody tr[data-card-id="core-001"]')!;
+    fireEvent.click(row);
+    const modal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+    await within(modal).findByText("Win rate by turn played", undefined, SLOW);
+    expect(Object.fromEntries(requested("/api/stats/cards/core-001").at(-1)!.searchParams)).toEqual({ mode: "all" });
+    expect(within(modal).queryByTestId(statsTestid.drillDownFaceShown)).toBeNull();
+    await waitFor(() => expect(address().get("card")).toBe("core-001"), SLOW);
+    expect(address().get("face")).toBe("radiant");
+    expect(address().get("patch")).toBe("0.1.0");
+
+    fireEvent.click(screen.getByTestId(statsTestid.drillDownClose));
+    await waitFor(() => expect(screen.queryByTestId(statsTestid.drillDownModal)).toBeNull(), SLOW);
+    expect(document.activeElement).toBe(row);
+
+    // Enter on a row opens it too.
+    fireEvent.keyDown(table.querySelector<HTMLElement>('tbody tr[data-card-id="core-003"]')!, { key: "Enter" });
+    expect(await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW)).toBeInTheDocument();
+  });
+
+  it("R4678001 a read that fails offers Retry, which asks the route again", async () => {
+    let up = false;
+    serveRunning(() => (up ? json(VERSIONS) : new Response("{}", { status: 500 })));
+    at("/stats?tab=experimental");
+    render(<StatsRoute />);
+    expect(await screen.findByText("The card statistics didn't load.", undefined, SLOW)).toBeInTheDocument();
+    up = true;
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByTestId(statsTestid.runningTable, undefined, SLOW)).toBeInTheDocument();
+    expect(requested("/api/stats/versions")).toHaveLength(2);
+  });
+});
+
+describe("R4676000 R4676001 Extended stats", () => {
+  // A card statistics read kept by an earlier test would answer for these filters without asking (R3206000).
+  beforeEach(() => {
+    clearReadCache();
+  });
+
+  const FACES = {
+    normal: { games: 30, adjustedWinRate: 0.512, adjustedLow: 0.48, adjustedHigh: 0.544, tier: "B", hasEnoughGames: true },
+    radiant: { games: 25, adjustedWinRate: 0.58, adjustedLow: 0.552, adjustedHigh: 0.608, tier: "A", hasEnoughGames: true },
+    gap: { gap: 0.068, low: 0.012, high: 0.124 },
+  };
+  const row = (key: string, label: string, games: number, share: number, rate: number, tier: string | null) => ({
+    key,
+    label,
+    games,
+    share,
+    adjustedWinRate: rate,
+    adjustedLow: rate - 0.02,
+    adjustedHigh: rate + 0.02,
+    tier,
+    hasEnoughGames: tier !== null,
+  });
+  /** Spark Pup offers two options and an X; Lava Hound offers no choice. */
+  const VARIANTS = [
+    { kind: "mode", rows: [row("deal", "deal", 60, 0.6, 0.56, "A"), row("heal", "heal", 10, 0.1, 0.44, null)] },
+    { kind: "x", rows: [row("top", "X ≥ 5", 40, 0.4, 0.51, "B")] },
+  ];
+  /** Efficiency Dividend's options as the server names them: each row's options apart, a pair for two. */
+  const DIVIDEND = [
+    {
+      kind: "mode",
+      rows: [
+        { ...row("heal", "heal", 40, 0.5, 0.52, "B"), options: ["heal"] },
+        { ...row("damage + mana", "damage + mana", 20, 0.25, 0.5, "B"), options: ["damage", "mana"] },
+      ],
+    },
+    { kind: "x", rows: [row("2", "X = 2", 30, 0.375, 0.5, "B")] },
+  ];
+
+  function serve(): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        const json = (body: unknown): Promise<Response> => Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+        if (url.pathname === "/api/stats/cards") return json(MOCK_CARD_STATS_PROVISIONAL);
+        if (url.pathname.startsWith("/api/stats/cards/")) {
+          const id = decodeURIComponent(url.pathname.slice("/api/stats/cards/".length));
+          const variants = id === "core-001" ? VARIANTS : id === "core-024" ? DIVIDEND : [];
+          return json({ ...MOCK_DRILL_DOWN, face: "all", faces: FACES, variants });
+        }
+        return json({});
+      }),
+    );
+  }
+
+  const openModal = async (): Promise<HTMLElement> => {
+    const modal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+    await within(modal).findByText("Win rate by turn played", undefined, SLOW);
+    return modal;
+  };
+  const toggle = (modal: HTMLElement): HTMLElement => within(modal).getByTestId(statsTestid.extendedToggle);
+
+  it("R4676001 the Extended stats toggle sits beside Show Radiant and swaps the details for the panel and back", async () => {
+    serve();
+    at("/stats?card=core-001");
+    render(<StatsRoute />);
+    const modal = await openModal();
+    const button = toggle(modal);
+    expect(button.previousElementSibling).toBe(within(modal).getByTestId(statsTestid.drillDownRadiantToggle));
+    expect(button).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(button);
+    expect(button).toHaveAttribute("aria-pressed", "true");
+    const panel = within(modal).getByTestId(statsTestid.extendedPanel);
+    expect(within(modal).queryByText("Win rate by turn played")).toBeNull();
+    // Choices first: one table per kind, rows as the server ordered them, with the deck table's cells.
+    expect(within(panel).getByTestId(statsTestid.extendedChoicesTab)).toHaveAttribute("aria-pressed", "true");
+    const tables = within(panel).getAllByTestId(statsTestid.extendedKind);
+    expect(tables.map((table) => table.getAttribute("data-kind"))).toEqual(["mode", "x"]);
+    const rows = within(tables[0]!).getAllByTestId(statsTestid.extendedRow);
+    expect(rows.map((one) => one.getAttribute("data-key"))).toEqual(["deal", "heal"]);
+    expect(rows[0]).toHaveTextContent("deal");
+    expect(rows[0]).toHaveTextContent("60%");
+    expect(rows[0]).toHaveTextContent("56.0%");
+    expect(within(rows[0]!).getByTestId(statsTestid.extendedTier)).toHaveTextContent("A");
+    expect(rows[1]).toHaveTextContent("not enough games");
+    expect(within(tables[1]!).getByTestId(statsTestid.extendedRow)).toHaveTextContent("X ≥ 5");
+    expect(within(panel).queryByTestId(statsTestid.adjustedRange)).toBeNull();
+    expect(window.location.search).toContain("extended=choices");
+
+    // Radiant vs normal: the faces' two rows and the gap.
+    fireEvent.click(within(panel).getByTestId(statsTestid.extendedFacesTab));
+    expect(within(panel).getByTestId(statsTestid.drillDownFaceNormal)).toHaveTextContent("51.2%");
+    expect(within(panel).getByTestId(statsTestid.drillDownFaceGap)).toHaveTextContent("Radiant gap +6.8% (+1.2% to +12.4%)");
+    expect(within(panel).queryByTestId(statsTestid.extendedChoices)).toBeNull();
+    expect(window.location.search).toContain("extended=faces");
+
+    // Pressed again, the details come back and the address forgets the panel.
+    fireEvent.click(button);
+    expect(within(modal).queryByTestId(statsTestid.extendedPanel)).toBeNull();
+    expect(within(modal).getByText("Win rate by turn played")).toBeInTheDocument();
+    expect(window.location.search).not.toContain("extended=");
+  });
+
+  it("R4676001 a card with no choice shows no Choices segment, and a shared link opens the panel on its section", async () => {
+    serve();
+    at("/stats?card=core-002&extended=choices");
+    render(<StatsRoute />);
+    const modal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+    const panel = await within(modal).findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    await within(panel).findByTestId(statsTestid.drillDownFaceLine, undefined, SLOW);
+    // Its one section needs no Segmented, and none for Choices.
+    expect(within(panel).queryByTestId(statsTestid.extendedChoicesTab)).toBeNull();
+    expect(within(panel).queryByTestId(statsTestid.extendedFacesTab)).toBeNull();
+    expect(toggle(modal)).toHaveAttribute("aria-pressed", "true");
+    cleanup();
+
+    at("/stats?card=core-001&extended=faces&ranges=1");
+    render(<StatsRoute />);
+    const shared = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    await within(shared).findByTestId(statsTestid.drillDownFaceLine, undefined, SLOW);
+    expect(within(shared).getByTestId(statsTestid.extendedFacesTab)).toHaveAttribute("aria-pressed", "true");
+    // With the ranges shown, each face's range sits under its Adjusted.
+    expect(within(shared).getAllByTestId(statsTestid.adjustedRange)).toHaveLength(2);
+  });
+
+  it("R4676000 R4676001 a Choose One row names each option as the card does in play, its numbers from the face the page reads", async () => {
+    serve();
+    at("/stats?card=core-024&extended=choices");
+    render(<StatsRoute />);
+    const panel = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    const named = async (scope: HTMLElement): Promise<(string | null)[]> =>
+      (await within(scope).findAllByTestId(statsTestid.extendedRow, undefined, SLOW)).map((one) => one.querySelector("th")?.textContent ?? null);
+    // The normal face's words, its heal filled from the card's numbers; a pair joined; X keeps the server's label.
+    expect(await named(panel)).toEqual(["Heal 3X", "Deal X damage + Mana next turn", "X = 2"]);
+    cleanup();
+
+    at("/stats?card=core-024&extended=choices&face=radiant");
+    render(<StatsRoute />);
+    const radiant = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    expect(await named(radiant)).toEqual(["Heal 6X", "Deal 2X damage + Mana next turn", "X = 2"]);
+  });
+
+  it("R4676001 Escape closes the dialog with the panel open, and the address forgets both", async () => {
+    serve();
+    at("/stats?card=core-001&extended=choices");
+    render(<StatsRoute />);
+    const panel = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    await within(panel).findByTestId(statsTestid.extendedChoices, undefined, SLOW);
+    press("Escape");
+    await waitFor(() => expect(screen.queryByTestId(statsTestid.drillDownModal)).toBeNull());
+    expect(window.location.search).not.toContain("card=");
+    expect(window.location.search).not.toContain("extended=");
+  });
+});
+
+describe("R4679000 R4679001 Extended stats' Outputs", () => {
+  // A card statistics read kept by an earlier test would answer for these filters without asking (R3206000).
+  beforeEach(() => {
+    clearReadCache();
+  });
+
+  const FACES = {
+    normal: { games: 30, adjustedWinRate: 0.512, adjustedLow: 0.48, adjustedHigh: 0.544, tier: "B", hasEnoughGames: true },
+    radiant: { games: 25, adjustedWinRate: 0.58, adjustedLow: 0.552, adjustedHigh: 0.608, tier: "A", hasEnoughGames: true },
+    gap: { gap: 0.068, low: 0.012, high: 0.124 },
+  };
+  const output = (key: string, label: string, cost: number, games: number, share: number, rate: number, tier: string | null) => ({
+    key,
+    label,
+    cost,
+    rarity: "Token",
+    games,
+    share,
+    adjustedWinRate: rate,
+    adjustedLow: rate - 0.02,
+    adjustedHigh: rate + 0.02,
+    tier,
+    hasEnoughGames: tier !== null,
+  });
+  /** Jlockeed's Evil Blueprints built School most, offered and picked, and Empty Plot too few times to read. */
+  const BLUEPRINTS = [
+    { ...output("meditative-097-3", "School", 2, 30, 0.5, 0.56, "A"), offered: 60, pickRate: 0.667 },
+    { ...output("meditative-097-1", "Empty Plot", 0, 10, 0.167, 0.47, null), offered: 40, pickRate: 0.25 },
+  ];
+  /** The Mother Pancake's Pancakes, made at random: none was offered. */
+  const PANCAKES = [
+    output("classicplus-012-1", "Devour", 0, 40, 0.571, 0.53, "B"),
+    output("classicplus-012-2", "Death Boil", 1, 30, 0.429, 0.47, "C"),
+  ];
+
+  function serve(): void {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) => {
+        const url = new URL(String(input), window.location.origin);
+        const json = (body: unknown): Promise<Response> => Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
+        if (url.pathname === "/api/stats/cards") return json(MOCK_CARD_STATS_PROVISIONAL);
+        if (url.pathname.startsWith("/api/stats/cards/")) {
+          const id = decodeURIComponent(url.pathname.slice("/api/stats/cards/".length));
+          const outputs = id === "meditative-097" ? BLUEPRINTS : id === "classicplus-012" ? PANCAKES : [];
+          return json({ ...MOCK_DRILL_DOWN, face: "all", faces: FACES, variants: [], outputs });
+        }
+        return json({});
+      }),
+    );
+  }
+
+  const openModal = async (): Promise<HTMLElement> => {
+    const modal = await screen.findByTestId(statsTestid.drillDownModal, undefined, SLOW);
+    await within(modal).findByText("Win rate by turn played", undefined, SLOW);
+    return modal;
+  };
+  const toggle = (modal: HTMLElement): HTMLElement => within(modal).getByTestId(statsTestid.extendedToggle);
+  const outputRows = (scope: HTMLElement): Promise<HTMLElement[]> =>
+    within(scope).findAllByTestId(statsTestid.extendedOutputRow, undefined, SLOW);
+  const headers = (scope: HTMLElement): (string | null)[] => [...scope.querySelectorAll("thead th")].map((cell) => cell.textContent);
+
+  it("R4679001 the Outputs segment lists each output with its thumbnail, name, share, games, tier and adjusted in the server's order, and a Discover's offered and pick rate", async () => {
+    serve();
+    at("/stats?card=meditative-097");
+    render(<StatsRoute />);
+    const modal = await openModal();
+    // A card with no choice opens the panel on its first section, Outputs, before Radiant vs normal.
+    fireEvent.click(toggle(modal));
+    const panel = within(modal).getByTestId(statsTestid.extendedPanel);
+    expect(within(panel).getByTestId(statsTestid.extendedOutputsTab)).toHaveAttribute("aria-pressed", "true");
+    expect(within(panel).getByTestId(statsTestid.extendedOutputsTab).nextElementSibling).toBe(
+      within(panel).getByTestId(statsTestid.extendedFacesTab),
+    );
+    expect(window.location.search).toContain("extended=outputs");
+    const rows = await outputRows(panel);
+    expect(rows.map((one) => one.getAttribute("data-key"))).toEqual(["meditative-097-3", "meditative-097-1"]);
+    const badge = rows[0]!.querySelector(".stats-card-thumb-badge");
+    expect(badge).toHaveAttribute("data-rarity", "Token");
+    expect(badge).toHaveTextContent("2");
+    expect(headers(panel)).toEqual(["Card", "Name", "Share", "Games", "Tier", "Adjusted", "Offered", "Pick rate"]);
+    expect([...rows[0]!.querySelectorAll("th, td")].map((cell) => cell.textContent)).toEqual([
+      "2",
+      "School",
+      "50%",
+      "30",
+      "A",
+      "56.0%",
+      "60",
+      "67%",
+    ]);
+    expect(within(rows[0]!).getByTestId(statsTestid.extendedTier)).toHaveTextContent("A");
+    expect(rows[1]).toHaveTextContent("not enough games");
+    expect(rows[1]).toHaveTextContent("25%");
+    expect(within(panel).queryByTestId(statsTestid.adjustedRange)).toBeNull();
+    cleanup();
+
+    // With the ranges shown, the row that reads a rate shows its range under it.
+    at("/stats?card=meditative-097&extended=outputs&ranges=1");
+    render(<StatsRoute />);
+    const ranged = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    await outputRows(ranged);
+    expect(within(ranged).getAllByTestId(statsTestid.adjustedRange)).toHaveLength(1);
+    cleanup();
+
+    // A card that offers nothing shows neither Offered nor Pick rate.
+    at("/stats?card=classicplus-012&extended=outputs");
+    render(<StatsRoute />);
+    const pancakes = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    const made = await outputRows(pancakes);
+    expect(made.map((one) => one.getAttribute("data-key"))).toEqual(["classicplus-012-1", "classicplus-012-2"]);
+    expect(made[0]).toHaveTextContent("Devour");
+    expect(headers(pancakes)).toEqual(["Card", "Name", "Share", "Games", "Tier", "Adjusted"]);
+  });
+
+  it("R4679001 the segment shows for a card whose text names a token with none recorded, and not for a card with neither", async () => {
+    serve();
+    // Call to Chaos names its Chaos Golem and Rush Token, and nothing it made was recorded.
+    at("/stats?card=core-095&extended=outputs");
+    render(<StatsRoute />);
+    const panel = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    const outputs = await within(panel).findByTestId(statsTestid.extendedOutputs, undefined, SLOW);
+    expect(within(panel).getByTestId(statsTestid.extendedOutputsTab)).toHaveAttribute("aria-pressed", "true");
+    expect(outputs).toHaveTextContent("No outputs recorded yet.");
+    expect(within(outputs).queryByTestId(statsTestid.extendedOutputRow)).toBeNull();
+    cleanup();
+
+    // A card that made nothing and names no token: a link to its Outputs opens the section it has.
+    at("/stats?card=core-002&extended=outputs");
+    render(<StatsRoute />);
+    const plain = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+    await within(plain).findByTestId(statsTestid.drillDownFaceLine, undefined, SLOW);
+    expect(within(plain).queryByTestId(statsTestid.extendedOutputsTab)).toBeNull();
+    expect(within(plain).queryByTestId(statsTestid.extendedOutputs)).toBeNull();
+  });
+
+  it("R4679001 pressing an output row opens that output's drill-down, and the tokens section gives way while the panel is open", async () => {
+    serve();
+    at("/stats?card=meditative-097");
+    render(<StatsRoute />);
+    const modal = await openModal();
+    // The buildings its text names show until the panel opens, and come back once it closes.
+    expect(within(modal).getByTestId(statsTestid.drillDownTokens)).toBeInTheDocument();
+    fireEvent.click(toggle(modal));
+    expect(within(modal).queryByTestId(statsTestid.drillDownTokens)).toBeNull();
+    fireEvent.click(toggle(modal));
+    expect(within(modal).getByTestId(statsTestid.drillDownTokens)).toBeInTheDocument();
+
+    const opensSchool = async (open: (row: HTMLElement) => void): Promise<void> => {
+      const panel = await screen.findByTestId(statsTestid.extendedPanel, undefined, SLOW);
+      const [school] = await outputRows(panel);
+      open(school!);
+      await waitFor(() => expect(new URLSearchParams(window.location.search).get("card")).toBe("meditative-097-3"), SLOW);
+      expect(window.location.search).not.toContain("extended=");
+      await waitFor(() => expect(requested("/api/stats/cards/meditative-097-3")).not.toHaveLength(0), SLOW);
+      const opened = await openModal();
+      expect(within(opened).queryByTestId(statsTestid.extendedPanel)).toBeNull();
+      expect(toggle(opened)).toHaveAttribute("aria-pressed", "false");
+      // The row went with the panel: the focus is on the toggle, inside the dialog.
+      expect(toggle(opened)).toHaveFocus();
+    };
+    // A click on a row.
+    fireEvent.click(toggle(modal));
+    await opensSchool((row) => fireEvent.click(row));
+    cleanup();
+
+    // Enter on a row.
+    at("/stats?card=meditative-097&extended=outputs");
+    render(<StatsRoute />);
+    await opensSchool((row) => fireEvent.keyDown(row, { key: "Enter" }));
   });
 });

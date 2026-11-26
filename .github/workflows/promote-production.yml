@@ -428,7 +428,8 @@ jobs:
 
   # A promotion that failed after a super run (the daily promotion, or a merge once a promotion's run
   # passed) or a deploy that failed: production waits on it, so it is handed to the night bot as
-  # `priority:high`, as super.yml hands it a red run. Squishy takes only what a person hands it (#3676).
+  # `priority:high`, as super.yml hands it a red run, and the bot takes it before every other queued
+  # item (bot/go/internal/queue `GateTitles`). Squishy takes only what a person hands it (#3676).
   # One issue, PROMOTION_TITLE, opened or commented on; a deploy that passes closes it. A command or a
   # manual run that fails is the asker's to read, and is not reported. It never checks out or runs code.
   report:

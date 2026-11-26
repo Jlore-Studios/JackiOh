@@ -1109,14 +1109,20 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 cant_be_attacked: flags(|f| f.cant_be_attacked),
                 attacked_only_from_lane: flags(|f| f.attacked_only_from_lane),
                 cant_attack_or_be_attacked: flags(|f| f.cant_attack_or_be_attacked),
+                // R4591002: with several attack-count limits, the lowest holds.
+                opponent_attack_limit: least_number(defined.iter().map(|f| f.opponent_attack_limit)),
                 immune_to_tribal_hate: flags(|f| f.immune_to_tribal_hate),
                 never_berserk: flags(|f| f.never_berserk),
                 heal_to_damage: flags(|f| f.heal_to_damage),
                 random_targets: flags(|f| f.random_targets),
+                random_opponent_spell_targets: flags(|f| f.random_opponent_spell_targets),
+                face_down_indestructible: flags(|f| f.face_down_indestructible),
                 attack_from_hand: flags(|f| f.attack_from_hand),
                 bounce_attacker: flags(|f| f.bounce_attacker),
                 attack_joiners: flags(|f| f.attack_joiners),
                 stack_base: flags(|f| f.stack_base),
+                // R4665000: a fusion plays as its host does, never stacking on a target.
+                stacks_on_target: None,
                 stack_base_buffs: numbers(|f| f.stack_base_buffs),
                 tribute_cheap: numbers(|f| f.tribute_cheap),
                 lane_multiplier: numbers(|f| f.lane_multiplier),
@@ -1155,6 +1161,9 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 gauntlet: flags(|f| f.gauntlet),
                 units_never_defense: flags(|f| f.units_never_defense),
                 reveal_chance: numbers(|f| f.reveal_chance),
+                // R4586004: the ward fuses as one flag, like the other auras.
+                face_down_ward: flags(|f| f.face_down_ward),
+                reveals_opponents_hand: flags(|f| f.reveals_opponents_hand),
                 pilots_actions: numbers(|f| f.pilots_actions),
                 pilots_turn: flags(|f| f.pilots_turn),
                 hints_plays: flags(|f| f.hints_plays),
@@ -1163,6 +1172,8 @@ fn combine_static_flags(records: &[Script]) -> Option<StaticFlags> {
                 toxic_on_damage: sum_defined(defined.iter().map(|f| f.toxic_on_damage)),
                 damage_burns: flags(|f| f.damage_burns),
                 damage_is_toxic: flags(|f| f.damage_is_toxic),
+                // R4783001: a flag, so a fusion of two such cards adds the hit's Burn once.
+                damage_also_burns: flags(|f| f.damage_also_burns),
                 infinite_mana: flags(|f| f.infinite_mana),
                 // Stinkyscape+ E8 (issue #3558).
                 starts_at_bottom: flags(|f| f.starts_at_bottom),
@@ -1219,6 +1230,7 @@ fn combine_objects(records: &[Script]) -> Script {
         cost: None,
         cry: None,
         death: hooks(|s| s.death.clone(), "death"),
+        revealed: hooks(|s| s.revealed.clone(), "revealed"),
         start_of_game: hooks(|s| s.start_of_game.clone(), "startOfGame"),
         enters_hand: hooks(|s| s.enters_hand.clone(), "entersHand"),
         fused_into: hooks(|s| s.fused_into.clone(), "fusedInto"),
@@ -1297,6 +1309,8 @@ fn combine_objects(records: &[Script]) -> Script {
         start_of_opponent_turn: hooks(|s| s.start_of_opponent_turn.clone(), "startOfOpponentTurn"),
         turn_hook_extra: None,
         cry_death_extra: None,
+        death_extra: None,
+        reborn_extra: None,
         // R3536001, R3536003, R3542000: a fusion drops "Evolves when", the evolution multiplier and a
         // stat line its text gave, as it drops `tributeWhen` (R403).
         evolves_when: None,
@@ -1411,6 +1425,8 @@ fn script_record(script: &Script, def_id: &str, radiant: bool, index: usize) -> 
         would_counter: None,
         turn_hook_extra: None,
         cry_death_extra: None,
+        death_extra: None,
+        reborn_extra: None,
         evolves_when: None,
         evolve_extra: None,
         stat_line_when: None,
@@ -1866,6 +1882,8 @@ fn fused_script(
     combined.echo_x = fused_echo_x(&scripts);
     combined.turn_hook_extra = fused_highest_extra(&scripts, |script| script.turn_hook_extra.clone());
     combined.cry_death_extra = fused_highest_extra(&scripts, |script| script.cry_death_extra.clone());
+    combined.death_extra = fused_highest_extra(&scripts, |script| script.death_extra.clone());
+    combined.reborn_extra = fused_highest_extra(&scripts, |script| script.reborn_extra.clone());
     combined
 }
 

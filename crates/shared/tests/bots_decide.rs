@@ -58,6 +58,7 @@ mod harness {
             sandbox: None,
             deck_marks: None,
             win_rates: None,
+            deck_sets: None,
         }
     }
 

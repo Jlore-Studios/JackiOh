@@ -6,9 +6,8 @@
 //!      summoned (R64's leftmost open unit zone) and the first pick it answers moves to it, only when it
 //!      is itself a legal pick of that declaration (Spellbender); a cost paid for that pick stays paid.
 //!
-//! The attack half (§4.2 step 2, `combat.rs`) calls `intercept_targeting` with `what: "attack"`; a
-//! play's own prompts go through `play_steps::answer_play_prompt` (R122), the rest through `prompts.rs`
-//! (SURFACE §6.6).
+//! The attack half (§4.2 step 2, `combat.rs`) calls `intercept_targeting` with `what: "attack"`; every
+//! prompt's answer, whichever sequence owns it, goes through `prompts::take_answer` (R122, SURFACE §6.6).
 
 use serde_json::json;
 

@@ -624,33 +624,47 @@ mod r1370_a_deck_that_leans_on_a_set {
         themes
     }
 
-    /// Over `seeds` seeds, with the deck leaning on `lean`: the deck is whole and distinct, at least
-    /// `leanMinShare` of it is of the set it leans on (`lean`, or under the AI's soft gate the newest
-    /// set that ships and is not gated, R1390), at least `minUnitShare` of it are units, and a theme
-    /// the pool holds enough cards of for its floor is at least `themeMinShare` of it.
-    fn every_floor_holds(size: i32, base: Value, lean: SetName, theme: Option<(&str, usize)>, seeds: usize) {
+    /// Over `seeds` seeds, with the deck leaning on `lean`, or on no set when `None` (R4784000): the
+    /// deck is whole and distinct, at least `leanMinShare` of it is of the set it leans on (`lean`, or
+    /// under the AI's soft gate the newest set that ships and is not gated, R1390), at least
+    /// `minUnitShare` of it are units, and a theme the pool holds enough cards of for its floor is at
+    /// least `themeMinShare` of it.
+    fn every_floor_holds(
+        size: i32,
+        base: Value,
+        lean: Option<SetName>,
+        theme: Option<(&str, usize)>,
+        seeds: usize,
+    ) {
         register_cards();
         let mut literal = base;
-        literal["leanSet"] = json!(lean);
+        if let Some(lean) = lean {
+            literal["leanSet"] = json!(lean);
+        }
         if let Some((tag, _)) = theme {
             literal["theme"] = json!(tag);
         }
-        let leaned = ungated_lean(Some(lean), &gate_of(&literal))
-            .unwrap_or_else(|| panic!("{literal}: the gate leaves a set that ships"));
+        let leaned = lean.map(|lean| {
+            ungated_lean(Some(lean), &gate_of(&literal))
+                .unwrap_or_else(|| panic!("{literal}: the gate leaves a set that ships"))
+        });
+        let lean_label = lean.map_or_else(|| "none".to_string(), |set| set.to_string());
         let opts = options(literal.clone());
         for n in 1..=seeds {
             let deck = build_ai_deck(
-                &mut create_rng(&format!("r1370:{size}:{lean}:{theme:?}:{n}"), 0),
+                &mut create_rng(&format!("r1370:{size}:{lean_label}:{theme:?}:{n}"), 0),
                 size,
                 &opts,
             );
             let at = format!("{literal} seed {n}");
             assert_eq!(deck.len(), size as usize, "{at}");
             assert_eq!(deck.iter().collect::<IndexSet<_>>().len(), size as usize, "{at}");
-            assert!(
-                of_set(&deck, leaned) >= floor_of(size, AI_DECK.lean_min_share),
-                "{at}: {deck:?}"
-            );
+            if let Some(leaned) = leaned {
+                assert!(
+                    of_set(&deck, leaned) >= floor_of(size, AI_DECK.lean_min_share),
+                    "{at}: {deck:?}"
+                );
+            }
             assert!(
                 units_in(&deck) >= floor_of(size, AI_DECK.min_unit_share),
                 "{at}: {deck:?}"
@@ -706,8 +720,11 @@ mod r1370_a_deck_that_leans_on_a_set {
         // less, Felinor Feelings and Heroic Power one more; #4154 the human pin: Living Bomb (3), Snom
         // Bunny Mind Control (6), K-Pop Fanatic (3), Lockdown and Memory Leak (1), Field of Dreams (0) and others
         // move cost; #4440's second part the human, easy and hard pins: Suppressive Aura costs (1), and the
-        // Toe Cracker, Professor Curvature and Wardrum change the deck builder's reads of them).
-        let pins: [(&str, i32, Value, u32, &[&str]); 4] = [
+        // Toe Cracker, Professor Curvature and Wardrum change the deck builder's reads of them). #4784 adds
+        // the Book pin, a theme holding no Unit, dealt before R4784000 where it held the units' floor, so
+        // R4784000 leaves it as it was. #4783 the pins it re-deals: Mommy Barker 2/1, Outbreak (4), Chaos
+        // Machine (3), Yuma (1) and the other cost and stat moves of Stinkyscape+ Balance Changes VIII.
+        let pins: [(&str, i32, Value, u32, &[&str]); 5] = [
             (
                 "r1370-pin:human",
                 20,
@@ -730,10 +747,10 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-019",
                     "core-012",
                     "core-053",
-                    "classic-085",
-                    "classicplus-031",
+                    "classic-081",
+                    "classicplus-030",
                     "core-077",
-                    "classicplus-019",
+                    "classicplus-017",
                 ],
             ),
             (
@@ -756,11 +773,11 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "classicplus-001",
                     "classicplus-045",
                     "core-032",
-                    "classic-048",
+                    "classic-049",
                     "classicplus-067",
                     "classic-009",
-                    "classicplus-069",
-                    "core-046",
+                    "classicplus-066",
+                    "core-042",
                     "core-053",
                 ],
             ),
@@ -798,7 +815,7 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-026",
                     "classic-013",
                     "classic-009",
-                    "classic-018",
+                    "classic-020",
                     "classic-086",
                 ],
             ),
@@ -824,10 +841,43 @@ mod r1370_a_deck_that_leans_on_a_set {
                     "core-066",
                     "core-061",
                     "core-085",
-                    "classicplus-063",
+                    "classicplus-064",
                     "core-094",
-                    "classic-071",
-                    "classicplus-019",
+                    "classic-083",
+                    "classicplus-026",
+                ],
+            ),
+            (
+                "r4784000-pin:book:6",
+                25,
+                json!({ "banned": [], "gatedSets": ["Meditative", "Meditative+", "Stinkyscape", "Training Grounds", "Stinkyscape+"], "theme": "Book" }),
+                25,
+                &[
+                    "core-043",
+                    "classicplus-044",
+                    "core-019",
+                    "core-087",
+                    "classic-012",
+                    "classicplus-039",
+                    "classic-077",
+                    "classicplus-035",
+                    "classic-080",
+                    "classic-053",
+                    "classic-067",
+                    "core-045",
+                    "classic-048",
+                    "classicplus-038",
+                    "core-071",
+                    "classicplus-041",
+                    "classicplus-049",
+                    "classicplus-054",
+                    "classic-027",
+                    "classic-003",
+                    "classicplus-056",
+                    "classicplus-057",
+                    "classic-016",
+                    "classic-024",
+                    "classicplus-055",
                 ],
             ),
         ];
@@ -863,6 +913,88 @@ mod r1370_a_deck_that_leans_on_a_set {
     }
 
     #[test]
+    fn r4784000_without_a_lean_set_every_theme_keeps_its_floor_and_the_units_floor_on_every_deck_at_every_tier()
+     {
+        let banned: Vec<String> = SHADOW_BAN_IDS.iter().map(|id| id.to_string()).collect();
+        let themes = themes(&banned, AI_DECK_GATED_SETS);
+        // Book holds no Unit, so a Book deck's units all come from outside its theme (#4784).
+        assert!(themes.iter().any(|(tag, _)| tag == "Book"), "{themes:?}");
+        for difficulty in [Difficulty::Easy, Difficulty::Medium, Difficulty::Hard] {
+            let h = AI_DIFFICULTY[difficulty];
+            for (tag, in_pool) in &themes {
+                every_floor_holds(
+                    h.deck_size,
+                    json!({ "manaCap": h.mana_cap }),
+                    None,
+                    Some((tag, *in_pool)),
+                    50,
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn r4784000_without_a_lean_set_a_rolled_theme_or_none_keeps_the_units_floor_on_every_deck_at_every_tier()
+    {
+        for difficulty in [Difficulty::Easy, Difficulty::Medium, Difficulty::Hard] {
+            let h = AI_DIFFICULTY[difficulty];
+            // The AI's own deck (its shadow ban and soft gate) and a player's random deck (neither).
+            every_floor_holds(h.deck_size, json!({ "manaCap": h.mana_cap }), None, None, SEEDS);
+            every_floor_holds(
+                h.deck_size,
+                json!({ "manaCap": h.mana_cap, "banned": [], "gatedSets": [] }),
+                None,
+                None,
+                SEEDS,
+            );
+        }
+    }
+
+    #[test]
+    fn r4784000_every_deck_the_quality_gates_deal_holds_the_units_floor() {
+        use jackioh_ai::{AI_GATE, AI_GATE_BUDGET, Matchup, fixture_game_config, game_config};
+        register_cards();
+        for matchup in Matchup::ALL {
+            for n in 1..=AI_GATE.full_seeds[*matchup] {
+                for config in [
+                    game_config(*matchup, n, AI_GATE_BUDGET, AI_GATE.seed_series),
+                    fixture_game_config(*matchup, n, AI_GATE_BUDGET, AI_GATE.seed_series),
+                ] {
+                    for (seat, deck) in [("p1", &config.decks.0), ("p2", &config.decks.1)] {
+                        let floor = floor_of(deck.len() as i32, AI_DECK.min_unit_share);
+                        assert!(
+                            units_in(deck) >= floor,
+                            "{} {seat}: {} units of {}, the floor is {floor}: {deck:?}",
+                            config.seed,
+                            units_in(deck),
+                            deck.len()
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn r4784000_a_book_deck_holds_the_units_floor_on_every_seed_and_a_card_drawn_again_takes_no_extra_rng_draw()
+     {
+        register_cards();
+        let book = options(json!({ "theme": "Book" }));
+        for n in 1..=SEEDS {
+            let seed = format!("r4784000:book:{n}");
+            let mut rng = create_rng(&seed, 0);
+            let deck = build_ai_deck(&mut rng, DECK_SIZE, &book);
+            assert!(
+                units_in(&deck) >= floor_of(DECK_SIZE, AI_DECK.min_unit_share),
+                "{seed}: {} units: {deck:?}",
+                units_in(&deck)
+            );
+            // An explicit theme rolls nothing, so the deal takes one draw a card.
+            assert_eq!(rng.cursor(), DECK_SIZE as u32, "{seed}");
+        }
+    }
+
+    #[test]
     fn r1370_lean_set_reads_and_writes_as_lean_set_naming_the_set() {
         let leaning = options(json!({ "leanSet": "Classic+" }));
         assert_eq!(leaning.lean_set, Some(SetName::ClassicPlus));
@@ -883,14 +1015,14 @@ mod r1370_a_deck_that_leans_on_a_set {
         every_floor_holds(
             DECK_SIZE,
             json!({ "banned": [], "gatedSets": [] }),
-            newest,
+            Some(newest),
             None,
             SEEDS,
         );
         every_floor_holds(
             DECK_SIZE,
             json!({ "banned": [], "gatedSets": [], "theme": null }),
-            newest,
+            Some(newest),
             None,
             SEEDS,
         );
@@ -905,7 +1037,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             every_floor_holds(
                 DECK_SIZE,
                 json!({ "banned": [], "gatedSets": [] }),
-                newest,
+                Some(newest),
                 Some((tag, *in_pool)),
                 40,
             );
@@ -923,9 +1055,9 @@ mod r1370_a_deck_that_leans_on_a_set {
         for difficulty in [Difficulty::Medium, Difficulty::Hard] {
             let h = AI_DIFFICULTY[difficulty];
             let base = json!({ "manaCap": h.mana_cap });
-            every_floor_holds(h.deck_size, base.clone(), newest, None, SEEDS);
+            every_floor_holds(h.deck_size, base.clone(), Some(newest), None, SEEDS);
             for (tag, in_pool) in themes(&banned, AI_DECK_GATED_SETS) {
-                every_floor_holds(h.deck_size, base.clone(), newest, Some((&tag, in_pool)), 20);
+                every_floor_holds(h.deck_size, base.clone(), Some(newest), Some((&tag, in_pool)), 20);
             }
             // The shadow ban still applies to the AI's own decks (R186).
             for n in 1..=50 {
@@ -954,7 +1086,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             every_floor_holds(
                 DECK_SIZE,
                 json!({ "banned": [], "gatedSets": [] }),
-                set,
+                Some(set),
                 None,
                 100,
             );
@@ -974,7 +1106,7 @@ mod r1370_a_deck_that_leans_on_a_set {
             every_floor_holds(
                 DECK_SIZE,
                 json!({ "banned": [], "gatedSets": [] }),
-                pick.resolve(),
+                Some(pick.resolve()),
                 None,
                 25,
             );
@@ -1775,84 +1907,6 @@ mod r817000_a_random_deck_holds_at_most_two_quickdraw_cards {
                 assert!(held <= most, "{at}: {held} Quickdraw cards in {deck:?}");
             }
         }
-    }
-}
-
-// R976000: shaping is an option, never a ban list's match
-
-mod r976000_shaping_is_an_option {
-    use jackioh_ai::shaped_weight;
-
-    use super::*;
-
-    /// The mean `shaped_weight` of a deck's cards.
-    fn mean_shaped(deck: &[String]) -> f64 {
-        deck.iter().map(|id| shaped_weight(id)).sum::<f64>() / deck.len() as f64
-    }
-
-    #[test]
-    fn r976000_a_seat_under_this_ais_own_shadow_ban_is_shaped_only_when_the_option_asks() {
-        register_cards();
-        let easy = AI_DIFFICULTY.easy;
-        // The options an arena seat for this AI carried before the fix: its own list under a mana cap.
-        let own = json!({ "manaCap": easy.mana_cap, "banned": SHADOW_BAN_IDS });
-        let asked = json!({ "manaCap": easy.mana_cap, "banned": SHADOW_BAN_IDS, "shape": true });
-        // The daily gates' and practice's options.
-        let plain = json!({ "manaCap": easy.mana_cap });
-        let deal = |literal: &Value, seed: &str| {
-            build_ai_deck(
-                &mut create_rng(seed, 0),
-                easy.deck_size,
-                &options(literal.clone()),
-            )
-        };
-        let (mut differing, mut own_mean, mut asked_mean) = (0, 0.0, 0.0);
-        for n in 1..=SEEDS {
-            let seed = format!("r976000:own:{n}");
-            let (unasked, shaped) = (deal(&own, &seed), deal(&asked, &seed));
-            assert_eq!(
-                unasked,
-                deal(&plain, &seed),
-                "seed {n}: a matching ban list alone shaped the deal"
-            );
-            assert!(
-                shaped.iter().all(|id| !is_shadow_banned(id)),
-                "seed {n}: shaping dealt a banned card: {shaped:?}"
-            );
-            differing += usize::from(shaped != unasked);
-            own_mean += mean_shaped(&unasked);
-            asked_mean += mean_shaped(&shaped);
-        }
-        assert!(differing > 0, "the option shaped no deal in {SEEDS} seeds");
-        assert!(
-            asked_mean > own_mean,
-            "shaped decks hold no more shaped weight ({asked_mean}) than unshaped ones ({own_mean})"
-        );
-    }
-
-    #[test]
-    fn r976000_the_option_shapes_whatever_the_ban_list_and_is_absent_unless_set() {
-        register_cards();
-        let plain = options(json!({ "banned": [], "gatedSets": [] }));
-        let asked = options(json!({ "banned": [], "gatedSets": [], "shape": true }));
-        let shaped_somewhere = (1..=50).any(|n| {
-            let seed = format!("r976000:any:{n}");
-            build_ai_deck(&mut create_rng(&seed, 0), DECK_SIZE, &asked)
-                != build_ai_deck(&mut create_rng(&seed, 0), DECK_SIZE, &plain)
-        });
-        assert!(
-            shaped_somewhere,
-            "`shape` changed no deal under an empty ban list"
-        );
-        assert!(!AiDeckOptions::default().shape);
-        assert_eq!(
-            serde_json::to_value(AiDeckOptions::default()).ok(),
-            Some(json!({}))
-        );
-        assert_eq!(
-            serde_json::to_value(options(json!({ "shape": true }))).ok(),
-            Some(json!({ "shape": true }))
-        );
     }
 }
 

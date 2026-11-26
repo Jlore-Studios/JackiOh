@@ -19,10 +19,10 @@
     },
     "core-089": {
       "base": {
-        "en": "Rush, Brittle 1\nIn your hand, gains the stats of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
+        "en": "Brittle 1, Rush\nIn your hand, gains the stats of each Unit that dies.\nAfter this attacks a Unit, it may attack again."
       },
       "radiant": {
-        "en": "Rush, Brittle 3\nIn hand: gains twice each dead Unit's stats.\nMay attack again after attacking a Unit."
+        "en": "Brittle 3, Rush\nIn hand: gains twice each dead Unit's stats.\nMay attack again after attacking a Unit."
       }
     },
     "core-095": {
@@ -39,7 +39,7 @@
     },
     "classic-023": {
       "base": {
-        "en": "Indestructible, Spell Damage +1, Tradable\nCry: Discard {discards|random card|random cards}.\nActivate: Your plays this turn become Books of Flame."
+        "en": "Tradable, Spell Damage +1, Indestructible\nCry: Discard {discards|random card|random cards}.\nActivate: Your plays this turn become Books of Flame."
       }
     },
     "classic-028": {
@@ -116,18 +116,18 @@
     },
     "meditative-045": {
       "base": {
-        "en": "Cry: Nerf other CN and KY cards in play and hands.\nAura: Your Units are Cloaked.\nDeath: Shuffle in its Prime."
+        "en": "Cloaked\nCry: Nerf other CN and KY cards in play and hands.\nDeath: Shuffle in its Prime."
       },
       "radiant": {
-        "en": "Cry: Nerf other CN and KY cards in play and hands {times|time|times}.\nAura: Cloaks your Units.\nDeath: Shuffle in a Prime."
+        "en": "Cloaked\nCry: Nerf other CN and KY cards in play and hands {times|time|times}.\nDeath: Shuffle in a Prime."
       }
     },
     "meditative-049-1": {
       "base": {
-        "en": "Float reduces cost.\nCry: Do {picks} at random: Datacenters, Glitches, an AI Girlfriend, Viruses for them, or Nerf their cards."
+        "en": "Float reduces cost.\nCry: Overload ({mana}). Do {picks} at random: Datacenters, Glitches, an AI Girlfriend, Viruses for them, or Nerf their cards."
       },
       "radiant": {
-        "en": "Float reduces cost.\nCry: Datacenters, Glitches, an AI Girlfriend, Viruses for them, and Nerf their cards."
+        "en": "Float reduces cost.\nCry: Overload ({mana}). Datacenters, Glitches, an AI Girlfriend, Viruses for them, and Nerf their cards."
       }
     },
     "meditative-049-2": {
@@ -286,7 +286,7 @@
         "en": "Flying\nCry: Next turn, make your opponent a trade offer: you give a card from your hand, they Discover one of theirs for you."
       },
       "radiant": {
-        "en": "Flying, Lucky 1\nCry: Next turn, make your opponent a trade offer: you give a card from your hand, they Discover one of theirs for you."
+        "en": "Lucky 1, Flying\nCry: Next turn, make your opponent a trade offer: you give a card from your hand, they Discover one of theirs for you."
       }
     },
     "stinkyscape-087": {
@@ -397,7 +397,7 @@
     },
     "traininggrounds-016": {
       "radiant": {
-        "en": "Divine Shield, Taunt, Armor 6\nCry: Summon a Radiant Chosen by the Sun to the left and a Radiant Chosen by the Moon to the right."
+        "en": "Taunt, Divine Shield, Armor 6\nCry: Summon a Radiant Chosen by the Sun to the left and a Radiant Chosen by the Moon to the right."
       }
     },
     "traininggrounds-039": {
@@ -411,10 +411,10 @@
     },
     "stinkyscapeplus-007": {
       "base": {
-        "en": "Armor 4, Tribute 1\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
+        "en": "Tribute 1, Armor 4\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
       },
       "radiant": {
-        "en": "Armor 8, Tribute 1\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
+        "en": "Tribute 1, Armor 8\nCry: Choose one: chain enemy Units, so damage to one hits all; or chain friendly Units, so damage is split among them."
       }
     },
     "stinkyscapeplus-024": {
@@ -451,15 +451,15 @@
     },
     "stinkyscapeplus-072": {
       "base": {
-        "en": "Tribute 5, Indestructible, Can't attack, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nAttacks each summoned enemy; lose {mana} mana next turn."
+        "en": "Tribute 5, Flexible, Indestructible, Immutable, Immune to Spells, Can't attack, Can't Defend, Ranged\nAttacks each summoned enemy; Overload ({mana})."
       },
       "radiant": {
-        "en": "Tribute 5, Indestructible, Can't Defend, Immutable, Immune to Spells, Flexible, Ranged\nAttacks each summoned enemy; lose {mana} mana next turn."
+        "en": "Tribute 5, Flexible, Indestructible, Immutable, Immune to Spells, Can't Defend, Ranged\nAttacks each summoned enemy; Overload ({mana})."
       }
     },
     "stinkyscapeplus-080": {
       "base": {
-        "en": "Exile your hand, deck and board. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one each turn end."
+        "en": "Exile your hand, deck and board. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one now and each later turn end."
       },
       "radiant": {
         "en": "Exile your hand, deck and both boards. Summon {starships|random Terminus Starship|random Terminus Starships}, not launched by hand. Launch one now and each turn end."
@@ -491,10 +491,10 @@
     },
     "stinkyscapeplus-121": {
       "base": {
-        "en": "Crater, Immutable, Rush\nCry: Summon {legs|Leg|Legs}.\nIndestructible with Legs.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+        "en": "Immutable, Crater, Rush\nCry: Summon {legs|Leg|Legs}.\nIndestructible with Legs.\nEnd of turn: Toxic {toxic} all enemies."
       },
       "radiant": {
-        "en": "Crater, Immutable, Rush\nCry: Summon {legs|Leg|Legs} for them.\nIndestructible with Legs.\nIgnores Taunt.\nEnd of turn: Toxic {toxic} all enemies."
+        "en": "Immutable, Crater, Rush\nCry: Summon {legs|Leg|Legs} for them.\nIndestructible with Legs.\nEnd of turn: Toxic {toxic} all enemies."
       }
     },
     "stinkyscapeplus-123": {
@@ -513,11 +513,6 @@
     "stinkyscapeplus-133": {
       "radiant": {
         "en": "Add a Radiant Dagger and Flare. The first play of each cost of Radiant Automa-ζ adds the next cost's, Radiant."
-      }
-    },
-    "stinkyscapeplus-137": {
-      "radiant": {
-        "en": "Add a Radiant Automa-δ and its Radiant Automa-Ω pair: Scepter and Reign, Antumbra and Eclipse, Quad and Oct, Sei and Omura, Vela and Corvus."
       }
     },
     "stinkyscapeplus-142": {
@@ -547,6 +542,14 @@
     "stinkyscapeplus-t-terminus-starship-farthest-shore": {
       "radiant": {
         "en": "Flying, Ranged\nDormant until launched, never by hand. Holds Radiant Repeater v5, Ultra Capacitor and Healing Capsule."
+      }
+    },
+    "infiniteassault-235": {
+      "base": {
+        "en": "Immune to Spells\nStart of turn: Get a random Radiant Infinite Assault card, costing ({setCost}).\nDeath: Summon The Prime Generator, Iteration Two."
+      },
+      "radiant": {
+        "en": "Immune to Spells\nStart of turn: Get two random Radiant Infinite Assault cards, costing ({setCost}).\nDeath: Summon The Prime Generator, Iteration Two."
       }
     }
   },

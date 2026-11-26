@@ -661,19 +661,17 @@ pub async fn reap_stuck_matches(app: &Arc<App>) -> Result<Vec<String>, ApiError>
 /// `reap_stuck_matches`, answering the ids it could not resolve as well.
 async fn reap_pass(app: &Arc<App>) -> Result<ReapReport, ApiError> {
     let now = now_ms();
-    let live = {
+    // #4712: only the matches past their ceiling, not every live match to skip the rest.
+    let due = {
         let mut tx = app.db.begin(None).await.map_err(failure)?;
-        let live = tx.matches_live().await.map_err(failure)?;
+        let due = tx.matches_past_ceiling(now).await.map_err(failure)?;
         tx.commit().await.map_err(failure)?;
-        live
+        due
     };
     let mut resolved: Vec<String> = Vec::new();
     let mut failed: Vec<String> = Vec::new();
 
-    for match_row in live {
-        if match_row.clocks.ceiling_at > now {
-            continue;
-        }
+    for match_row in due {
         // R833000: a log that already ends is recorded as it ended; a recovery that fails falls through
         // to the ceiling's draw below.
         if let Some(recovered) = fold_terminal_input(app, &match_row, now).await {

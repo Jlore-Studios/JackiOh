@@ -20,8 +20,10 @@ use serde_json::{Map, Value};
 use crate::catalog::RULE_MADE_DEF_IDS;
 use crate::config::{
     ADJUSTED_FIELD_MIN_CARDS, ADJUSTED_FIELD_SPREAD_FLOOR, ADJUSTED_WIN_RATE_CENTER,
-    ADJUSTED_WIN_RATE_PRIOR_SPREAD, COIN_DEF_ID, STATS_INTERVAL_Z, STATS_SHARE_PRECISION, TIER_A_FROM,
-    TIER_BAND_HIGH, TIER_BAND_LOW, TIER_C_FROM,
+    ADJUSTED_WIN_RATE_PRIOR_SPREAD, COIN_DEF_ID, NORMAL_TIER_A_FROM, NORMAL_TIER_BAND_HIGH,
+    NORMAL_TIER_BAND_LOW, NORMAL_TIER_C_FROM, RADIANT_TIER_A_FROM, RADIANT_TIER_BAND_HIGH,
+    RADIANT_TIER_BAND_LOW, RADIANT_TIER_C_FROM, STATS_INTERVAL_Z, STATS_SHARE_PRECISION, TIER_A_FROM,
+    TIER_BAND_HIGH, TIER_BAND_LOW, TIER_C_FROM, VARIANT_X_GROUP_FROM,
 };
 use crate::state::EngineError;
 use crate::wire::catalog_types::{PLAYER_IDS, PerPlayer, PlayerId};
@@ -29,10 +31,14 @@ use crate::wire::codes::utf16_len;
 use crate::wire::events::{GameOverReason, Winner};
 use crate::wire::string_union;
 
+pub mod swing;
 pub mod window;
+pub use swing::*;
 pub use window::*;
 pub mod play_versions;
 pub use play_versions::*;
+pub mod sparse;
+pub use sparse::*;
 
 // ---------------------------------------------------------------------------
 // The record (R376)
@@ -119,6 +125,11 @@ pub struct SeatSummary {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub played_radiant: Option<Vec<bool>>,
+    /// R4672000: what was chosen for each card in `played`, in the same order, `None` for a play whose
+    /// card offered no choice. Absent when no play had one, and from every record written before it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub played_variants: Option<Vec<Option<PlayVariant>>>,
     /// R1256000: draws from an empty library this seat took.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -154,6 +165,12 @@ pub struct SeatSummary {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub created_unused: Option<Vec<String>>,
+    /// R4672001: the card whose effect made each card in `created_unused`, in the same order, `None` for
+    /// one a rule made (The Coin). Absent when every entry is `None`, and from every record written
+    /// before it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub created_unused_sources: Option<Vec<Option<MadeBy>>>,
     /// R2089000: the Created cards this seat played from its hand, whoever made them, every play, as
     /// `played` keeps the dealt ones; the quests count them with `played` (§14.9). Absent when none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -175,6 +192,17 @@ pub struct SeatSummary {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub starships_launched: Option<i32>,
+    /// R4672002: every Discover-like choice this seat's cards asked of it, in order: the cards it offered
+    /// and the ones picked. Absent when there were none, and from every record written before it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub picks: Option<Vec<CardPick>>,
+    /// R4552000: one row per turn the seat took, read at its start (`SwingTurn`), which the AI's fold
+    /// writes (`crates/ai/src/swing_turns.rs`). Absent from every record written before it. No client
+    /// reads it, so the web's types leave it out.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(skip))]
+    pub swing_turns: Option<Vec<SwingTurn>>,
 }
 
 /// R2089000: one use of a Created card: its catalog id, the turn (§2.5's counter) and whether it was
@@ -190,6 +218,105 @@ pub struct CreatedUse {
     pub card: String,
     pub turn: i32,
     pub radiant: bool,
+    /// R4672000: what was chosen for this play or cast, when its card offered a choice and the seat it
+    /// is listed under played it. Absent otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub variant: Option<PlayVariant>,
+    /// R4672001: the card whose effect made this Created card, on a `createdUsed` entry; absent for one
+    /// a rule made (The Coin), on the other lists, and on every record written before it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub source: Option<MadeBy>,
+}
+
+/// R4672000: what was chosen for one play of a card that offered a choice: the Choose One options and
+/// any other answer its own definition fixes (in the card's option order), the X paid (R65, R348), and
+/// whether an Embiggen card was Embiggened (§6). Each part is absent when the card offered none.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayVariant {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "ts", ts(as = "Option<Vec<String>>", optional))]
+    pub modes: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub x: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(feature = "ts", ts(optional))]
+    pub embiggened: Option<bool>,
+}
+
+/// R4672003: how a variant's options are joined in its label.
+pub const VARIANT_MODE_JOIN: &str = " + ";
+
+/// R4672003: how a variant's parts are joined in its label.
+pub const VARIANT_PART_JOIN: &str = ", ";
+
+/// R4672003: the start of a variant label's X part, `X=<x>`.
+pub const VARIANT_X_PREFIX: &str = "X=";
+
+/// R4672003: a variant label's Embiggen part.
+pub const VARIANT_EMBIGGENED: &str = "Embiggened";
+pub const VARIANT_NOT_EMBIGGENED: &str = "Not Embiggened";
+
+impl PlayVariant {
+    /// R4672003: the key a variant is totalled under and the name it is printed with: its options, then
+    /// `X=<x>`, then whether it was Embiggened.
+    pub fn label(&self) -> String {
+        let mut parts: Vec<String> = Vec::new();
+        if !self.modes.is_empty() {
+            parts.push(self.modes.join(VARIANT_MODE_JOIN));
+        }
+        if let Some(x) = self.x {
+            parts.push(format!("{VARIANT_X_PREFIX}{x}"));
+        }
+        if let Some(embiggened) = self.embiggened {
+            parts.push(
+                if embiggened {
+                    VARIANT_EMBIGGENED
+                } else {
+                    VARIANT_NOT_EMBIGGENED
+                }
+                .to_string(),
+            );
+        }
+        parts.join(VARIANT_PART_JOIN)
+    }
+}
+
+/// R4672001: the card whose effect made a Created card: its catalog id and whether it ran its Radiant
+/// face.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct MadeBy {
+    pub card: String,
+    pub radiant: bool,
+}
+
+/// R4672002: one Discover-like choice a card asked: the card that asked, the catalog ids it offered in
+/// the order offered, and the ones picked.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(
+    feature = "ts",
+    derive(ts_rs::TS),
+    ts(export, export_to = "../../../apps/web/src/wire/generated/")
+)]
+#[serde(rename_all = "camelCase")]
+pub struct CardPick {
+    pub source: MadeBy,
+    pub offered: Vec<String>,
+    pub picked: Vec<String>,
 }
 
 /// R376: a finished game, read off its replay by the engine's `summarize_game`.
@@ -482,6 +609,142 @@ pub struct CardStats {
     #[serde(default, skip_serializing_if = "Tally::is_empty")]
     #[cfg_attr(feature = "ts", ts(as = "Option<Tally>", optional))]
     pub created_played_normal: Tally,
+    /// R4552001: the turns of the seats that held the card it was played on, acted on their field and
+    /// acted against the other's, which its Swing and Decisiveness are read off. Absent while empty, and
+    /// sent to no client.
+    #[serde(default, skip_serializing_if = "Sparse::is_empty")]
+    #[cfg_attr(feature = "ts", ts(skip))]
+    pub swing: Sparse<SwingTally>,
+    /// R4552002: the same of the card's Created copies, kept beside the deck's as the four Created tallies
+    /// are and read apart from them (`CreatedStats::of`).
+    #[serde(default, skip_serializing_if = "Sparse::is_empty")]
+    #[cfg_attr(feature = "ts", ts(skip))]
+    pub created_swing: Sparse<SwingTally>,
+    /// R4672003: the card's variants, what its copies made and what they offered, kept beside the deck's
+    /// tallies under the same key and read apart from them (`card_stats_of`'s `choices`). Absent while
+    /// empty, so a total written before it, or with none, reads and is stored as before; no report a
+    /// client reads carries it.
+    #[serde(default, skip_serializing_if = "Sparse::is_empty")]
+    #[cfg_attr(feature = "ts", ts(skip))]
+    pub choices: Sparse<CardChoices>,
+}
+
+/// R4672003: a tally split by a card's face: Radiant at that play (or when it made the card), or not.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct FaceTally {
+    #[serde(default, skip_serializing_if = "Tally::is_empty")]
+    pub radiant: Tally,
+    #[serde(default, skip_serializing_if = "Tally::is_empty")]
+    pub normal: Tally,
+}
+
+impl FaceTally {
+    /// The tally of one face.
+    pub fn face_mut(&mut self, radiant: bool) -> &mut Tally {
+        if radiant {
+            &mut self.radiant
+        } else {
+            &mut self.normal
+        }
+    }
+
+    /// Both faces added.
+    pub fn both(&self) -> Tally {
+        let mut both = self.radiant;
+        add_tally(&mut both, &self.normal);
+        both
+    }
+
+    pub fn add(&mut self, other: &FaceTally) {
+        add_tally(&mut self.radiant, &other.radiant);
+        add_tally(&mut self.normal, &other.normal);
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.radiant.is_empty() && self.normal.is_empty()
+    }
+}
+
+/// R4672003: one card a Discover-like choice offered: the seat-games it was offered in, and those it
+/// was picked in, each by the asking card's face.
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct OfferTally {
+    #[serde(default, skip_serializing_if = "FaceTally::is_empty")]
+    pub offered: FaceTally,
+    #[serde(default, skip_serializing_if = "FaceTally::is_empty")]
+    pub picked: FaceTally,
+}
+
+impl OfferTally {
+    pub fn add(&mut self, other: &OfferTally) {
+        self.offered.add(&other.offered);
+        self.picked.add(&other.picked);
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.offered.is_empty() && self.picked.is_empty()
+    }
+}
+
+/// R4672003: one card's choices, each a seat once a game: the seats that played it with each variant
+/// (`PlayVariant::label`), the seats whose copy of it made each card, and the seat-games each card was
+/// offered and picked in by its Discover-like choices.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct CardChoices {
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub variants: IndexMap<String, FaceTally>,
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub outputs: IndexMap<String, FaceTally>,
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub offers: IndexMap<String, OfferTally>,
+}
+
+impl CardChoices {
+    pub fn add(&mut self, other: &CardChoices) {
+        for (variant, tally) in &other.variants {
+            self.variants.entry(variant.clone()).or_default().add(tally);
+        }
+        for (card, tally) in &other.outputs {
+            self.outputs.entry(card.clone()).or_default().add(tally);
+        }
+        for (card, tally) in &other.offers {
+            self.offers.entry(card.clone()).or_default().add(tally);
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.variants.is_empty() && self.outputs.is_empty() && self.offers.is_empty()
+    }
+
+    /// Each list in key order, so two totals read back the same whatever order they were folded or
+    /// stored in (Postgres keeps a jsonb object's keys in its own order).
+    pub fn sort(&mut self) {
+        self.variants.sort_keys();
+        self.outputs.sort_keys();
+        self.offers.sort_keys();
+    }
+}
+
+impl SparsePart for CardChoices {
+    fn is_empty_part(&self) -> bool {
+        self.is_empty()
+    }
+
+    fn add_part(&mut self, other: &Self) {
+        self.add(other);
+    }
+}
+
+/// R4672003: one card's choices in a report, by catalog id.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct CardChoicesRow {
+    pub card: String,
+    #[serde(flatten)]
+    pub choices: CardChoices,
 }
 
 /// R2089000: a Created card's figures, by its catalog id: over the seats that made a Created copy of
@@ -501,6 +764,10 @@ pub struct CreatedStats {
     pub created_not_played: Tally,
     pub created_played_radiant: Tally,
     pub created_played_normal: Tally,
+    /// R4552002: the turns of the Created copies (`CardStats.created_swing`).
+    #[serde(default, skip_serializing_if = "SwingTally::is_empty")]
+    #[cfg_attr(feature = "ts", ts(skip))]
+    pub swing: SwingTally,
 }
 
 impl CreatedStats {
@@ -512,6 +779,7 @@ impl CreatedStats {
             created_not_played: stats.created_not_played,
             created_played_radiant: stats.created_played_radiant,
             created_played_normal: stats.created_played_normal,
+            swing: stats.created_swing.get().cloned().unwrap_or_default(),
         }
     }
 
@@ -566,6 +834,12 @@ pub struct CardStatsReport {
     /// from `cards`. Absent from a report written before it.
     #[serde(default)]
     pub created: Vec<CreatedStats>,
+    /// R4672003: one entry per card some counted seat played with a variant, or whose copies made or
+    /// offered a card, by catalog id. Absent when there is none; only the operators' CLIs fill it, so no
+    /// report a client reads carries it.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "ts", ts(skip))]
+    pub choices: Vec<CardChoicesRow>,
 }
 
 fn empty_tally() -> Tally {
@@ -591,6 +865,9 @@ fn empty_stats(card: &str) -> CardStats {
         created_not_played: empty_tally(),
         created_played_radiant: empty_tally(),
         created_played_normal: empty_tally(),
+        swing: Sparse::default(),
+        created_swing: Sparse::default(),
+        choices: Sparse::default(),
     }
 }
 
@@ -691,13 +968,60 @@ pub struct CoCount {
     pub first: FirstMet,
 }
 
+/// R4673001: one face's share of a card's drills: the games of the seats that played the card on that
+/// face (R1147000's split, `playedRadiant` or `playedNormal`) by the turn it was played on and with each
+/// card that shared its deck. Where two cards first met is the card's own (`CardTotal::co`), so a face
+/// keeps counts alone. Folded from R4673001 on: totals folded before it hold none.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, Default)]
+pub struct FaceDrills {
+    pub turns: IndexMap<i32, DrillCount>,
+    pub co: IndexMap<String, DrillCount>,
+}
+
+impl FaceDrills {
+    /// No turn and no co-played card counted.
+    pub fn is_empty(&self) -> bool {
+        self.turns.is_empty() && self.co.is_empty()
+    }
+
+    /// Adds `other`'s counts.
+    fn add(&mut self, other: &FaceDrills) {
+        for (turn, count) in &other.turns {
+            self.turns.entry(*turn).or_default().add(count);
+        }
+        for (card, count) in &other.co {
+            match self.co.get_mut(card) {
+                None => {
+                    self.co.insert(card.clone(), *count);
+                }
+                Some(held) => held.add(count),
+            }
+        }
+    }
+}
+
+impl SparsePart for FaceDrills {
+    fn is_empty_part(&self) -> bool {
+        self.is_empty()
+    }
+
+    fn add_part(&mut self, other: &Self) {
+        self.add(other);
+    }
+}
+
 /// R1044000: one card's totals under one key: R377's breakdowns, and the drill-down's games by the
-/// turn the card was played on and with each card that shared its deck.
+/// turn the card was played on and with each card that shared its deck. R4673001: the same drills of
+/// the seats that played it Radiant, and of those that played it normal.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct CardTotal {
     pub stats: CardStats,
     pub turns: IndexMap<i32, DrillCount>,
     pub co: IndexMap<String, CoCount>,
+    #[serde(default, skip_serializing_if = "Sparse::is_empty")]
+    pub radiant: Sparse<FaceDrills>,
+    #[serde(default, skip_serializing_if = "Sparse::is_empty")]
+    pub normal: Sparse<FaceDrills>,
 }
 
 impl CardTotal {
@@ -706,12 +1030,35 @@ impl CardTotal {
             stats: empty_stats(card),
             turns: IndexMap::new(),
             co: IndexMap::new(),
+            radiant: Sparse::default(),
+            normal: Sparse::default(),
+        }
+    }
+
+    /// R4673001: a face's drills, `empty` for a face that counted none; `None` for All, whose drills are
+    /// `turns` and `co`.
+    pub fn face<'a>(&'a self, face: StatsFace, empty: &'a FaceDrills) -> Option<&'a FaceDrills> {
+        match face {
+            StatsFace::All => None,
+            StatsFace::Normal => Some(self.normal.or(empty)),
+            StatsFace::Radiant => Some(self.radiant.or(empty)),
+        }
+    }
+
+    /// R4673001: a face's drills, to count into; `None` for All.
+    pub fn face_mut(&mut self, face: StatsFace) -> Option<&mut FaceDrills> {
+        match face {
+            StatsFace::All => None,
+            StatsFace::Normal => Some(self.normal.get_mut()),
+            StatsFace::Radiant => Some(self.radiant.get_mut()),
         }
     }
 
     /// Adds `other`'s counts, each pair keeping its earlier first meeting.
     pub fn add(&mut self, other: &CardTotal) {
         add_stats(&mut self.stats, &other.stats);
+        self.radiant.add(&other.radiant);
+        self.normal.add(&other.normal);
         for (turn, count) in &other.turns {
             self.turns.entry(*turn).or_default().add(count);
         }
@@ -807,6 +1154,10 @@ pub struct GameTotal {
     pub traps_fired: i64,
     pub position_switches: i64,
     pub radiant_upgrades: i64,
+    /// R4552001: every turn of the games whose records carry turn rows, per bucket (`swing_bucket`): the
+    /// turns, `Σq` and `Σq²`, which an ordinary turn's gain is read off. Absent while empty.
+    #[serde(default, skip_serializing_if = "IndexMap::is_empty")]
+    pub swing: SwingRows,
 }
 
 /// R1256000's counts of one game, both seats added.
@@ -873,6 +1224,7 @@ impl GameTotal {
         self.traps_fired += other.traps_fired;
         self.position_switches += other.position_switches;
         self.radiant_upgrades += other.radiant_upgrades;
+        add_swing_rows(&mut self.swing, &other.swing);
     }
 }
 
@@ -912,6 +1264,9 @@ pub fn add_stats(into: &mut CardStats, other: &CardStats) {
     add_tally(&mut into.created_not_played, &other.created_not_played);
     add_tally(&mut into.created_played_radiant, &other.created_played_radiant);
     add_tally(&mut into.created_played_normal, &other.created_played_normal);
+    into.swing.add(&other.swing);
+    into.created_swing.add(&other.created_swing);
+    into.choices.add(&other.choices);
 }
 
 /// R2089000: one Created card's figures added into another's.
@@ -920,6 +1275,96 @@ pub fn add_created(into: &mut CreatedStats, other: &CreatedStats) {
     add_tally(&mut into.created_not_played, &other.created_not_played);
     add_tally(&mut into.created_played_radiant, &other.created_played_radiant);
     add_tally(&mut into.created_played_normal, &other.created_played_normal);
+    into.swing.add(&other.swing);
+}
+
+/// R4672003: one seat's choices in one game, each once: `(card, variant label, radiant)` for the cards
+/// it played with a variant, and `(source, card, radiant)` for what its source cards made, offered and
+/// picked, by the source's face. A record written before them has none.
+#[derive(Default)]
+struct SeatChoices<'a> {
+    variants: IndexSet<(&'a str, String, bool)>,
+    outputs: IndexSet<(&'a str, &'a str, bool)>,
+    offered: IndexSet<(&'a str, &'a str, bool)>,
+    picked: IndexSet<(&'a str, &'a str, bool)>,
+}
+
+impl<'a> SeatChoices<'a> {
+    fn of(summary: &'a SeatSummary) -> SeatChoices<'a> {
+        let mut choices = SeatChoices::default();
+        // A play from the hand's variant, read only when every play has an entry and a face flag.
+        if let (Some(variants), Some(flags)) = (&summary.played_variants, &summary.played_radiant)
+            && variants.len() == summary.played.len()
+            && flags.len() == summary.played.len()
+        {
+            for ((card, variant), radiant) in summary.played.iter().zip(variants).zip(flags) {
+                if let Some(variant) = variant {
+                    choices
+                        .variants
+                        .insert((card.as_str(), variant.label(), *radiant));
+                }
+            }
+        }
+        for uses in [
+            &summary.cast_or_summoned,
+            &summary.created_used,
+            &summary.created_played,
+        ] {
+            for used in uses.iter().flatten() {
+                if let Some(variant) = &used.variant {
+                    choices
+                        .variants
+                        .insert((used.card.as_str(), variant.label(), used.radiant));
+                }
+            }
+        }
+        for used in summary.created_used.iter().flatten() {
+            if let Some(source) = &used.source {
+                choices
+                    .outputs
+                    .insert((source.card.as_str(), used.card.as_str(), source.radiant));
+            }
+        }
+        // The unused cards' makers, read only when every one has an entry.
+        if let (Some(unused), Some(sources)) = (&summary.created_unused, &summary.created_unused_sources)
+            && unused.len() == sources.len()
+        {
+            for (card, source) in unused.iter().zip(sources) {
+                if let Some(source) = source {
+                    choices
+                        .outputs
+                        .insert((source.card.as_str(), card.as_str(), source.radiant));
+                }
+            }
+        }
+        for pick in summary.picks.iter().flatten() {
+            let source = (pick.source.card.as_str(), pick.source.radiant);
+            for card in &pick.offered {
+                choices.offered.insert((source.0, card.as_str(), source.1));
+            }
+            for card in &pick.picked {
+                choices.picked.insert((source.0, card.as_str(), source.1));
+            }
+        }
+        choices
+    }
+
+    fn is_empty(&self) -> bool {
+        self.variants.is_empty()
+            && self.outputs.is_empty()
+            && self.offered.is_empty()
+            && self.picked.is_empty()
+    }
+}
+
+/// R4672003: a card's choices among one key's cards, a total begun for it when it has none.
+fn choices_of<'a>(cards: &'a mut IndexMap<String, CardTotal>, card: &str) -> &'a mut CardChoices {
+    cards
+        .entry(card.to_string())
+        .or_insert_with(|| CardTotal::new(card))
+        .stats
+        .choices
+        .get_mut()
 }
 
 /// A seat's place in `PLAYER_IDS`, as `FirstMet` and `FirstSeen` keep it.
@@ -1029,9 +1474,10 @@ impl StatsTotals {
                 .map(String::as_str)
                 .filter(|card| !used.contains(card))
                 .collect();
+            let choices = SeatChoices::of(summary);
             // A seat with no cards adds no key, as the store keeps no row for it.
             let mut none = IndexMap::new();
-            let cards = if deck.is_empty() && used.is_empty() && unused.is_empty() {
+            let cards = if deck.is_empty() && used.is_empty() && unused.is_empty() && choices.is_empty() {
                 &mut none
             } else {
                 self.cards.entry(key).or_default()
@@ -1071,6 +1517,19 @@ impl StatsTotals {
                 if !drills {
                     continue;
                 }
+                // R4673001: the face the seat played the card on, as R1147000 counts it above: Radiant at
+                // least once, or never. A seat that did not play it, or whose plays carry no face flags,
+                // counts in neither face's drills.
+                let face = played_radiant
+                    .as_ref()
+                    .filter(|_| played.contains(card))
+                    .map(|radiant| {
+                        if radiant.contains(card) {
+                            StatsFace::Radiant
+                        } else {
+                            StatsFace::Normal
+                        }
+                    });
 
                 // Each turn the card was played on counts the game once, a cast or summon's (R4279000)
                 // among them.
@@ -1088,6 +1547,26 @@ impl StatsTotals {
                 for cast in cast_or_summoned {
                     if cast.card == card && cast.turn > 0 {
                         turns_played_in_game.insert(cast.turn);
+                    }
+                }
+                if let Some(faced) = face.and_then(|face| total.face_mut(face)) {
+                    let game = DrillCount {
+                        games: 1,
+                        wins: i64::from(won),
+                    };
+                    for &turn in &turns_played_in_game {
+                        faced.turns.entry(turn).or_default().add(&game);
+                    }
+                    for &other in &deck {
+                        if other == card {
+                            continue;
+                        }
+                        match faced.co.get_mut(other) {
+                            None => {
+                                faced.co.insert(other.to_string(), game);
+                            }
+                            Some(held) => held.add(&game),
+                        }
                     }
                 }
                 for turn in turns_played_in_game {
@@ -1148,6 +1627,36 @@ impl StatsTotals {
                     .stats;
                 count(&mut stats.created_not_played, outcome);
             }
+            // R4672003: a played card's variants, and what a source card made and offered, each a seat
+            // once a game by the face it had.
+            for (card, variant, radiant) in &choices.variants {
+                let tally = choices_of(cards, card)
+                    .variants
+                    .entry(variant.clone())
+                    .or_default();
+                count(tally.face_mut(*radiant), outcome);
+            }
+            for (source, made, radiant) in &choices.outputs {
+                let tally = choices_of(cards, source)
+                    .outputs
+                    .entry(made.to_string())
+                    .or_default();
+                count(tally.face_mut(*radiant), outcome);
+            }
+            for (source, offered, radiant) in &choices.offered {
+                let tally = choices_of(cards, source)
+                    .offers
+                    .entry(offered.to_string())
+                    .or_default();
+                count(tally.offered.face_mut(*radiant), outcome);
+            }
+            for (source, picked, radiant) in &choices.picked {
+                let tally = choices_of(cards, source)
+                    .offers
+                    .entry(picked.to_string())
+                    .or_default();
+                count(tally.picked.face_mut(*radiant), outcome);
+            }
 
             // R1454, R750000: the lists people took into live Best-of-1 games.
             if record.source == GameSource::Live && record.mode == GameMode::Bo1 && pilot == Pilot::Human {
@@ -1173,6 +1682,8 @@ impl StatsTotals {
                 }
             }
         }
+        // R4552000: the turn rows, when the record carries them.
+        self.fold_swing(record);
     }
 
     /// R1044000: adds `other`'s totals into these.
@@ -1243,6 +1754,8 @@ impl StatsTotals {
                                 stats: total.stats.clone(),
                                 turns: IndexMap::new(),
                                 co: IndexMap::new(),
+                                radiant: Sparse::default(),
+                                normal: Sparse::default(),
                             }
                         };
                         (card.clone(), total)
@@ -1343,7 +1856,17 @@ pub fn card_stats_of(totals: &StatsTotals, filter: &CardStatsFilter) -> CardStat
     // counted deck held has no deck row.
     let mut cards: Vec<CardStats> = Vec::new();
     let mut created: Vec<CreatedStats> = Vec::new();
+    let mut choices: Vec<CardChoicesRow> = Vec::new();
     for mut stats in by_card.into_values() {
+        // R4672003: the choices apart from both, and neither row with them.
+        let mut held = stats.choices.take();
+        if !held.is_empty() {
+            held.sort();
+            choices.push(CardChoicesRow {
+                card: stats.card.clone(),
+                choices: held,
+            });
+        }
         let made = CreatedStats::of(&stats);
         if made.games() > 0 {
             created.push(made);
@@ -1353,18 +1876,21 @@ pub fn card_stats_of(totals: &StatsTotals, filter: &CardStatsFilter) -> CardStat
             stats.created_not_played = Tally::default();
             stats.created_played_radiant = Tally::default();
             stats.created_played_normal = Tally::default();
+            stats.created_swing = Sparse::default();
             cards.push(stats);
         }
     }
     // A stable sort by id (SURFACE §4.4.1; ids are ASCII, so `str::cmp` is JS's `<`).
     cards.sort_by(|a, b| a.card.cmp(&b.card));
     created.sort_by(|a, b| a.card.cmp(&b.card));
+    choices.sort_by(|a, b| a.card.cmp(&b.card));
     CardStatsReport {
         filter: filter.clone(),
         games: i32::try_from(games).unwrap_or(i32::MAX),
         decks: i32::try_from(decks).unwrap_or(i32::MAX),
         cards,
         created,
+        choices,
     }
 }
 
@@ -1381,15 +1907,20 @@ pub struct CardDrill {
 /// R978000, R1044000: every card's drill-down over the totals whose key `counts`, each turn's and
 /// each other card's counts summed across those keys and each pair keeping its earliest meeting, so
 /// a tie lists in the order the records first met it, as counting the records themselves did.
-pub fn card_drills_of(
+/// R4673001: on All the card's drills, on Normal or Radiant those of the seats that played it on that
+/// face (`CardTotal::face`), a tie among the co-played cards listed in the order the card first met
+/// them on any face. Totals folded before R4673001 give a face no drills.
+pub fn face_drills_of(
     totals: &StatsTotals,
     counts: impl Fn(&TotalsKey) -> bool,
     top: usize,
+    face: StatsFace,
 ) -> IndexMap<String, CardDrill> {
     type Merged<'a> = (
         IndexMap<i32, DrillCount>,
         IndexMap<&'a str, (DrillCount, FirstMet)>,
     );
+    let empty = FaceDrills::default();
     let mut merged: IndexMap<&str, Merged> = IndexMap::new();
     for (key, cards) in &totals.cards {
         if !counts(key) {
@@ -1397,13 +1928,20 @@ pub fn card_drills_of(
         }
         for (card, total) in cards {
             let (turns, co) = merged.entry(card.as_str()).or_default();
-            for (turn, count) in &total.turns {
+            let faced = total.face(face, &empty);
+            for (turn, count) in faced.map_or(&total.turns, |faced| &faced.turns) {
                 turns.entry(*turn).or_default().add(count);
             }
             for (other, count) in &total.co {
-                let pair = DrillCount {
-                    games: count.games,
-                    wins: count.wins,
+                let pair = match faced {
+                    None => DrillCount {
+                        games: count.games,
+                        wins: count.wins,
+                    },
+                    Some(faced) => match faced.co.get(other) {
+                        Some(pair) => *pair,
+                        None => continue,
+                    },
                 };
                 match co.get_mut(other.as_str()) {
                     None => {
@@ -1481,6 +2019,87 @@ pub fn seen(stats: &CardStats) -> Tally {
     seen
 }
 
+string_union! {
+    /// R4673000: which of a card's faces its figures read, each against a field of its own:
+    ///  - `all`: every seat, as R2777000 and R3022000 read the card (its seen games against its never-drawn);
+    ///  - `normal`: the seats that played it and never on its Radiant face (R1147000's `playedNormal`);
+    ///  - `radiant`: the seats that played it Radiant at least once (`playedRadiant`).
+    ///
+    /// A Created card's faces are its used copies' (R2089000's `createdPlayedNormal` and
+    /// `createdPlayedRadiant`).
+    pub enum StatsFace {
+        All = "all",
+        Normal = "normal",
+        Radiant = "radiant",
+    }
+}
+
+/// R3022000, R4673000: a face's balance band and its quarters, the floors `tier_in` reads.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct TierBand {
+    pub low: f64,
+    pub high: f64,
+    pub a_from: f64,
+    pub c_from: f64,
+}
+
+impl TierBand {
+    /// R3022000: All's band.
+    pub const ALL: TierBand = TierBand {
+        low: TIER_BAND_LOW,
+        high: TIER_BAND_HIGH,
+        a_from: TIER_A_FROM,
+        c_from: TIER_C_FROM,
+    };
+
+    /// R4673000: the normal faces' band, its own constants.
+    pub const NORMAL: TierBand = TierBand {
+        low: NORMAL_TIER_BAND_LOW,
+        high: NORMAL_TIER_BAND_HIGH,
+        a_from: NORMAL_TIER_A_FROM,
+        c_from: NORMAL_TIER_C_FROM,
+    };
+
+    /// R4673000: the Radiant faces' band, its own constants.
+    pub const RADIANT: TierBand = TierBand {
+        low: RADIANT_TIER_BAND_LOW,
+        high: RADIANT_TIER_BAND_HIGH,
+        a_from: RADIANT_TIER_A_FROM,
+        c_from: RADIANT_TIER_C_FROM,
+    };
+}
+
+impl StatsFace {
+    /// R4673000: the band the face's tiers are read in.
+    pub fn band(self) -> TierBand {
+        match self {
+            StatsFace::All => TierBand::ALL,
+            StatsFace::Normal => TierBand::NORMAL,
+            StatsFace::Radiant => TierBand::RADIANT,
+        }
+    }
+}
+
+/// R4673000: the games a face reads as the card's seen side: on All its seen games (`seen`), on Normal the
+/// seats that played it normal, on Radiant those that played it Radiant (R1147000).
+pub fn face_side(stats: &CardStats, face: StatsFace) -> Tally {
+    match face {
+        StatsFace::All => seen(stats),
+        StatsFace::Normal => stats.played_normal,
+        StatsFace::Radiant => stats.played_radiant,
+    }
+}
+
+/// R4673000: the games a face reads of a Created card: on All every seat that made a copy
+/// (`CreatedStats::made`), on Normal or Radiant the seats that used one on that face (R2089000).
+pub fn created_face_side(stats: &CreatedStats, face: StatsFace) -> Tally {
+    match face {
+        StatsFace::All => stats.made(),
+        StatsFace::Normal => stats.created_played_normal,
+        StatsFace::Radiant => stats.created_played_radiant,
+    }
+}
+
 /// R3022000: what a card's adjusted win rate is read against: the field of cards it is measured beside.
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -1527,13 +2146,26 @@ impl StatsField {
 /// R3070000: only a card with `drawn_floor` games on both sides (at least 1) gives a delta, and every card
 /// given counts toward `baseline`, the average card's in-deck win rate (an even game when none has a game).
 pub fn stats_field<'a>(cards: impl IntoIterator<Item = &'a CardStats>, drawn_floor: i32) -> StatsField {
+    face_stats_field(cards, StatsFace::All, drawn_floor)
+}
+
+/// R4673000: `stats_field` over one face: each card's delta is its face's win rate (`face_side`) less its
+/// never-drawn games', from the cards with `drawn_floor` games on both sides, so the face has a centre and a
+/// spread of its own. The centre takes in what every card's face shares: a play's selection over a mere
+/// draw and, on Radiant, the seat's having upgraded. Below `ADJUSTED_FIELD_MIN_CARDS` such cards it keeps
+/// `StatsField::PRIOR`'s centre and spread, as All does; `baseline` is the average deck's either way.
+pub fn face_stats_field<'a>(
+    cards: impl IntoIterator<Item = &'a CardStats>,
+    face: StatsFace,
+    drawn_floor: i32,
+) -> StatsField {
     let drawn_floor = drawn_floor.max(1);
     let mut held = Tally::default();
     let lifts: Vec<(f64, f64)> = cards
         .into_iter()
         .filter_map(|stats| {
             add_tally(&mut held, &stats.in_deck);
-            let seen = seen(stats);
+            let seen = face_side(stats, face);
             let never = not_drawn(stats);
             if seen.games < drawn_floor || never.games < drawn_floor {
                 return None;
@@ -1543,6 +2175,12 @@ pub fn stats_field<'a>(cards: impl IntoIterator<Item = &'a CardStats>, drawn_flo
         })
         .collect();
     let baseline = win_rate(&held).unwrap_or(ADJUSTED_WIN_RATE_CENTER);
+    field_of_lifts(&lifts, baseline, drawn_floor)
+}
+
+/// R3022000: the field of `(lift, noise)` pairs: their random-effects centre and spread, or
+/// `StatsField::PRIOR`'s below `ADJUSTED_FIELD_MIN_CARDS` pairs, with `baseline` and `drawn_floor` as given.
+fn field_of_lifts(lifts: &[(f64, f64)], baseline: f64, drawn_floor: i32) -> StatsField {
     if lifts.len() < ADJUSTED_FIELD_MIN_CARDS {
         return StatsField {
             baseline,
@@ -1550,7 +2188,7 @@ pub fn stats_field<'a>(cards: impl IntoIterator<Item = &'a CardStats>, drawn_flo
             ..StatsField::PRIOR
         };
     }
-    let (center, spread_squared) = random_effects(&lifts);
+    let (center, spread_squared) = random_effects(lifts);
     StatsField {
         center,
         spread: spread_squared.sqrt(),
@@ -1618,13 +2256,29 @@ pub fn adjusted_interval(stats: &CardStats, field: &StatsField) -> Option<(f64, 
 /// R2777000, R2895000, R3022000: the posterior of a card's lift read from an even game, `(mean, variance)`.
 /// R3070000: with fewer than `field.drawn_floor` never-drawn games, `held_posterior` of its seen games.
 fn adjusted_posterior(stats: &CardStats, field: &StatsField) -> Option<(f64, f64)> {
-    let seen = seen(stats);
+    face_posterior(stats, StatsFace::All, field)
+}
+
+/// R4673000: `adjusted_posterior` on one face, its seen side `face_side` and `field` that face's
+/// (`face_stats_field`). A face with fewer than `field.drawn_floor` never-drawn games has no posterior:
+/// R3070000's reading against the average deck would read the play's selection as the face's strength.
+fn face_posterior(stats: &CardStats, face: StatsFace, field: &StatsField) -> Option<(f64, f64)> {
+    let seen = face_side(stats, face);
     let never = not_drawn(stats);
     if never.games < field.drawn_floor.max(1) {
-        return held_posterior(&seen, field);
+        return match face {
+            StatsFace::All => held_posterior(&seen, field),
+            StatsFace::Normal | StatsFace::Radiant => None,
+        };
     }
-    let delta = win_rate(&seen)? - win_rate(&never)?;
-    let noise = delta_noise(&seen, &never);
+    lift_posterior(&seen, &never, field)
+}
+
+/// R2777000: the posterior of a lift read from an even game, `(mean, variance)`: `seen`'s win rate less
+/// `never`'s kept in the share `τ²/(τ² + SE²)` about `field.center`. `None` when either side has no games.
+fn lift_posterior(seen: &Tally, never: &Tally, field: &StatsField) -> Option<(f64, f64)> {
+    let delta = win_rate(seen)? - win_rate(never)?;
+    let noise = delta_noise(seen, never);
     let prior = field.spread * field.spread;
     let weight = prior / (prior + noise);
     Some((
@@ -1663,6 +2317,357 @@ pub fn held_adjusted(games: &Tally, field: &StatsField) -> Option<(f64, (f64, f6
     Some((mean, (mean - half, mean + half)))
 }
 
+/// R4673000: a card's adjusted win rate on one face and its 95% range, `(rate, (low, high))`, read as
+/// R2777000 reads the card against that face's field (`face_stats_field`): `ADJUSTED_WIN_RATE_CENTER +
+/// τ²/(τ² + SE²) · (delta − center)`, the range R2895000's. On All it is `adjusted_win_rate` and
+/// `adjusted_interval`. `None` when the face has no games, or (on a face) too few never-drawn games.
+pub fn face_adjusted(stats: &CardStats, face: StatsFace, field: &StatsField) -> Option<(f64, (f64, f64))> {
+    let (mean, variance) = face_posterior(stats, face, field)?;
+    let half = STATS_INTERVAL_Z * variance.sqrt();
+    Some((mean, (mean - half, mean + half)))
+}
+
+/// R4673000: the Radiant gap, a card's Radiant adjusted win rate less its Normal one, each `(rate, (low,
+/// high))` on its own face's centred scale, with its 95% range: the gap `± √(h_n² + h_r²)`, each `h` the
+/// half-width of a face's range. Above 0, the card's Radiant face gains more over its normal face than a
+/// typical card's does. The two variances are summed as if the faces were independent; they share the
+/// card's never-drawn games, so the range is a little wide, never narrow.
+pub fn radiant_gap(normal: (f64, (f64, f64)), radiant: (f64, (f64, f64))) -> (f64, (f64, f64)) {
+    let gap = radiant.0 - normal.0;
+    let half = |(_, (low, high)): (f64, (f64, f64))| (high - low) / 2.0;
+    let spread = half(normal).hypot(half(radiant));
+    (gap, (gap - spread, gap + spread))
+}
+
+string_union! {
+    /// R4676000: the kinds of choice Extended stats splits a card's variants (R4672000) by, in the order it
+    /// shows them:
+    ///  - `mode`: the options chosen with the play (its Choose One options and its own prompts' answers), each
+    ///    set of options one row, so a "choose two" is one row per pair;
+    ///  - `x`: the X paid, every X from `VARIANT_X_GROUP_FROM` up one row;
+    ///  - `embiggen`: Embiggened or not.
+    pub enum VariantKind {
+        Mode = "mode",
+        X = "x",
+        Embiggen = "embiggen",
+    }
+}
+
+/// R4676000: the key of the row every X from `VARIANT_X_GROUP_FROM` up is counted in.
+pub const VARIANT_X_GROUP_KEY: &str = "top";
+
+/// R4676000: the keys of the Embiggen rows.
+pub const VARIANT_EMBIGGENED_KEY: &str = "embiggened";
+pub const VARIANT_NOT_EMBIGGENED_KEY: &str = "notEmbiggened";
+
+/// R4676000: one row of a card's choices: its kind, its key (the options as recorded, the X paid or
+/// `VARIANT_X_GROUP_KEY`, or an Embiggen key), the words a page shows, and the seats that played the card
+/// with it, by face. A seat that played two variants of one row's kind with the same part (two Choose One
+/// options at the same X, say) counts once in each of its labels, so the row adds both, as R4672003 already
+/// counts a seat in each of its variants.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct VariantRow {
+    pub kind: VariantKind,
+    pub key: String,
+    pub label: String,
+    pub games: FaceTally,
+}
+
+impl VariantRow {
+    /// R4676000: a `mode` row's options as recorded, one or a "choose two"'s pair (its key joins them with
+    /// `VARIANT_MODE_JOIN`, as `PlayVariant::label` does), for a page to name in the card's own words; none
+    /// for the other kinds.
+    pub fn options(&self) -> Vec<String> {
+        match self.kind {
+            VariantKind::Mode => self.key.split(VARIANT_MODE_JOIN).map(str::to_string).collect(),
+            VariantKind::X | VariantKind::Embiggen => Vec::new(),
+        }
+    }
+}
+
+impl FaceTally {
+    /// R4676000: the seats a face reads: both faces on All.
+    pub fn on(&self, face: StatsFace) -> Tally {
+        match face {
+            StatsFace::All => self.both(),
+            StatsFace::Normal => self.normal,
+            StatsFace::Radiant => self.radiant,
+        }
+    }
+}
+
+/// R4676000: a variant label's parts (`PlayVariant::label`), read from its end, `(kind, key, label)`: an
+/// Embiggen word, then `X=<x>`, and what is left is the options.
+fn variant_parts(label: &str) -> Vec<(VariantKind, String, String)> {
+    let mut parts = Vec::new();
+    let mut rest = label;
+    let take = |rest: &mut &str, word: &str| -> bool {
+        let Some(head) = rest.strip_suffix(word) else {
+            return false;
+        };
+        if head.is_empty() || head.ends_with(VARIANT_PART_JOIN) {
+            *rest = head.strip_suffix(VARIANT_PART_JOIN).unwrap_or(head);
+            true
+        } else {
+            false
+        }
+    };
+    if take(&mut rest, VARIANT_NOT_EMBIGGENED) {
+        parts.push((
+            VariantKind::Embiggen,
+            VARIANT_NOT_EMBIGGENED_KEY.to_string(),
+            VARIANT_NOT_EMBIGGENED.to_string(),
+        ));
+    } else if take(&mut rest, VARIANT_EMBIGGENED) {
+        parts.push((
+            VariantKind::Embiggen,
+            VARIANT_EMBIGGENED_KEY.to_string(),
+            VARIANT_EMBIGGENED.to_string(),
+        ));
+    }
+    let (head, last) = match rest.rsplit_once(VARIANT_PART_JOIN) {
+        Some((head, last)) => (head, last),
+        None => ("", rest),
+    };
+    if let Some(x) = last
+        .strip_prefix(VARIANT_X_PREFIX)
+        .and_then(|x| x.parse::<i32>().ok())
+    {
+        parts.push(if x >= VARIANT_X_GROUP_FROM {
+            (
+                VariantKind::X,
+                VARIANT_X_GROUP_KEY.to_string(),
+                format!("X ≥ {VARIANT_X_GROUP_FROM}"),
+            )
+        } else {
+            (VariantKind::X, x.to_string(), format!("X = {x}"))
+        });
+        rest = head;
+    }
+    if !rest.is_empty() {
+        parts.push((VariantKind::Mode, rest.to_string(), rest.to_string()));
+    }
+    parts
+}
+
+/// R4676000: a card's choices as Extended stats lists them: each variant's parts (`variant_parts`) summed by
+/// kind and key, in `VariantKind`'s order, then by X paid, then by key.
+pub fn variant_rows(choices: &CardChoices) -> Vec<VariantRow> {
+    let mut rows: IndexMap<(VariantKind, String), VariantRow> = IndexMap::new();
+    for (label, games) in &choices.variants {
+        for (kind, key, label) in variant_parts(label) {
+            rows.entry((kind, key.clone()))
+                .or_insert_with(|| VariantRow {
+                    kind,
+                    key,
+                    label,
+                    games: FaceTally::default(),
+                })
+                .games
+                .add(games);
+        }
+    }
+    let mut rows: Vec<VariantRow> = rows.into_values().collect();
+    let x_order = |row: &VariantRow| row.key.parse::<i32>().unwrap_or(VARIANT_X_GROUP_FROM);
+    rows.sort_by(|a, b| {
+        a.kind
+            .cmp(&b.kind)
+            .then_with(|| x_order(a).cmp(&x_order(b)))
+            .then_with(|| a.key.cmp(&b.key))
+    });
+    rows
+}
+
+/// R4676000: the field a variant is read against: `stats_field`'s estimate over every row (`variant_rows`)
+/// of every card given, each with its card's baseline (its never-drawn games, or a Created card's made but
+/// never used), the row's games on `face` against it, from the rows with `drawn_floor` games on both sides.
+/// Its centre is what a typical card's play with a choice is worth over the card never drawn, so a variant
+/// at an even game plays as a typical play does. `baseline` is unused here and an even game.
+pub fn variant_field<'a>(
+    cards: impl IntoIterator<Item = (&'a CardChoices, Tally)>,
+    face: StatsFace,
+    drawn_floor: i32,
+) -> StatsField {
+    let drawn_floor = drawn_floor.max(1);
+    let lifts: Vec<(f64, f64)> = cards
+        .into_iter()
+        .filter(|(_, never)| never.games >= drawn_floor)
+        .flat_map(|(choices, never)| {
+            variant_rows(choices).into_iter().filter_map(move |row| {
+                let seen = row.games.on(face);
+                if seen.games < drawn_floor {
+                    return None;
+                }
+                let delta = win_rate(&seen)? - win_rate(&never)?;
+                Some((delta, delta_noise(&seen, &never)))
+            })
+        })
+        .collect();
+    field_of_lifts(&lifts, ADJUSTED_WIN_RATE_CENTER, drawn_floor)
+}
+
+/// R4676000: one variant's figures on a face, as Extended stats shows them.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct VariantFigures {
+    pub games: i32,
+    /// R2777000, R2895000: the adjusted win rate and its 95% range, `(rate, (low, high))`.
+    pub adjusted: Option<(f64, (f64, f64))>,
+    /// R3022000: null below the floor, as the rate is shown.
+    pub tier: Option<CardTier>,
+    pub has_enough_games: bool,
+}
+
+/// R4676000: a variant's figures: `seen` (its games on `face`) against `never` (its card's baseline), read
+/// as R2777000 reads a card against `field` (`variant_field` of the same face), its tier in the face's band
+/// (`StatsFace::band`). It has no rate when its card has fewer than `field.drawn_floor` baseline games, and
+/// no tier below `field.drawn_floor` games of its own (R654).
+pub fn variant_figures(seen: &Tally, never: &Tally, face: StatsFace, field: &StatsField) -> VariantFigures {
+    let has_enough_games = seen.games >= field.drawn_floor.max(1);
+    let adjusted = (never.games >= field.drawn_floor.max(1))
+        .then(|| lift_posterior(seen, never, field))
+        .flatten()
+        .map(|(mean, variance)| {
+            let half = STATS_INTERVAL_Z * variance.sqrt();
+            (mean, (mean - half, mean + half))
+        });
+    VariantFigures {
+        games: seen.games,
+        adjusted,
+        tier: adjusted
+            .filter(|_| has_enough_games)
+            .map(|(rate, (low, high))| tier_in(rate, low, high, face.band())),
+        has_enough_games,
+    }
+}
+
+/// R4679000: each card a source made on `face`, `(card, seen, siblings)`: `seen` the seats whose source made
+/// it, `siblings` those whose source made one of its other outputs, every output's seats added less its own.
+/// A seat that made two outputs in a game counts in both.
+fn output_sides(choices: &CardChoices, face: StatsFace) -> Vec<(&str, Tally, Tally)> {
+    let mut total = Tally::default();
+    for made in choices.outputs.values() {
+        add_tally(&mut total, &made.on(face));
+    }
+    choices
+        .outputs
+        .iter()
+        .map(|(card, made)| {
+            let seen = made.on(face);
+            let siblings = Tally {
+                games: total.games - seen.games,
+                wins: total.wins - seen.wins,
+                draws: total.draws - seen.draws,
+            };
+            (card.as_str(), seen, siblings)
+        })
+        .collect()
+}
+
+/// R4679000: the field an output is read against: `stats_field`'s estimate (R3022000) over every output of
+/// every source given, each output's seats on `face` against its siblings' (`output_sides`), from the outputs
+/// with `drawn_floor` games on both sides. Its centre is how far a typical output reads from its siblings, so
+/// one source's outputs sit on one scale and an output at an even game is as good as its siblings. `baseline`
+/// is unused here and an even game.
+pub fn output_field<'a>(
+    sources: impl IntoIterator<Item = &'a CardChoices>,
+    face: StatsFace,
+    drawn_floor: i32,
+) -> StatsField {
+    let drawn_floor = drawn_floor.max(1);
+    let lifts: Vec<(f64, f64)> = sources
+        .into_iter()
+        .flat_map(|choices| output_sides(choices, face))
+        .filter(|(_, seen, siblings)| seen.games >= drawn_floor && siblings.games >= drawn_floor)
+        .filter_map(|(_, seen, siblings)| {
+            let delta = win_rate(&seen)? - win_rate(&siblings)?;
+            Some((delta, delta_noise(&seen, &siblings)))
+        })
+        .collect();
+    field_of_lifts(&lifts, ADJUSTED_WIN_RATE_CENTER, drawn_floor)
+}
+
+/// R4679000: one card a source made or offered, as Extended stats' Outputs shows it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct OutputFigures {
+    pub card: String,
+    /// The seats whose source made it on the face.
+    pub games: i32,
+    /// Its games over every output's on the face: how often the source gives it.
+    pub share: f64,
+    /// R2777000, R2895000: the adjusted win rate against its siblings and its 95% range, `(rate, (low, high))`.
+    pub adjusted: Option<(f64, (f64, f64))>,
+    /// R3022000: null below the floor, as the rate is shown.
+    pub tier: Option<CardTier>,
+    pub has_enough_games: bool,
+    /// A Discover-like source's: the seat-games it was offered in on the face; `None` for a source that
+    /// offers nothing.
+    pub offered: Option<i32>,
+    /// Picked over offered; `None` when it was never offered on the face.
+    pub pick_rate: Option<f64>,
+}
+
+/// R4679000: a source's outputs and offers on `face`, each read against its siblings as `variant_figures`
+/// reads a variant against its card's baseline, against `field` (`output_field` of the same face). A card
+/// with neither games nor offers on the face is left out. Sorted by adjusted rate, best first, a row below
+/// the floor after every row above it, then by games, then by id.
+pub fn output_figures(choices: &CardChoices, face: StatsFace, field: &StatsField) -> Vec<OutputFigures> {
+    let sides = output_sides(choices, face);
+    let total: i32 = sides.iter().map(|(_, seen, _)| seen.games).sum();
+    let cards: IndexSet<&str> = choices
+        .outputs
+        .keys()
+        .chain(choices.offers.keys())
+        .map(String::as_str)
+        .collect();
+    let mut rows: Vec<OutputFigures> = cards
+        .into_iter()
+        .filter_map(|card| {
+            let (seen, siblings) = sides
+                .iter()
+                .find(|(made, _, _)| *made == card)
+                .map(|(_, seen, siblings)| (*seen, *siblings))
+                .unwrap_or_default();
+            let offer = choices.offers.get(card);
+            let offered = offer.map(|offer| offer.offered.on(face).games);
+            let picked = offer.map_or(0, |offer| offer.picked.on(face).games);
+            if seen.games == 0 && offered.unwrap_or(0) == 0 {
+                return None;
+            }
+            let figures = variant_figures(&seen, &siblings, face, field);
+            Some(OutputFigures {
+                card: card.to_string(),
+                games: figures.games,
+                share: if total > 0 {
+                    round_share(f64::from(seen.games) / f64::from(total))
+                } else {
+                    0.0
+                },
+                adjusted: figures.adjusted,
+                tier: figures.tier,
+                has_enough_games: figures.has_enough_games,
+                offered: (!choices.offers.is_empty()).then_some(offered.unwrap_or(0)),
+                pick_rate: offered
+                    .filter(|&offered| offered > 0)
+                    .map(|offered| round_share(f64::from(picked) / f64::from(offered))),
+            })
+        })
+        .collect();
+    let rate = |row: &OutputFigures| {
+        row.adjusted
+            .filter(|_| row.has_enough_games)
+            .map(|(rate, _)| rate)
+    };
+    rows.sort_by(|a, b| {
+        match (rate(a), rate(b)) {
+            (Some(x), Some(y)) => y.total_cmp(&x),
+            (x, y) => y.is_some().cmp(&x.is_some()),
+        }
+        .then_with(|| b.games.cmp(&a.games))
+        .then_with(|| a.card.cmp(&b.card))
+    });
+    rows
+}
+
 string_union! {
     /// R3022000: a card's balance tier, from its adjusted win rate and that rate's 95% range:
     ///  - `S`: above the band (`TIER_BAND_HIGH`), its range wholly above an even game: a nerf candidate;
@@ -1682,15 +2687,20 @@ string_union! {
 
 /// R3022000: the tier of an adjusted win rate and its 95% range.
 pub fn tier_of(rate: f64, low: f64, high: f64) -> CardTier {
-    if rate > TIER_BAND_HIGH && low > ADJUSTED_WIN_RATE_CENTER {
+    tier_in(rate, low, high, TierBand::ALL)
+}
+
+/// R4673000: `tier_of` in a face's band (`StatsFace::band`): S and F mean S or F among that face's cards.
+pub fn tier_in(rate: f64, low: f64, high: f64, band: TierBand) -> CardTier {
+    if rate > band.high && low > ADJUSTED_WIN_RATE_CENTER {
         CardTier::S
-    } else if rate < TIER_BAND_LOW && high < ADJUSTED_WIN_RATE_CENTER {
+    } else if rate < band.low && high < ADJUSTED_WIN_RATE_CENTER {
         CardTier::F
-    } else if rate >= TIER_A_FROM {
+    } else if rate >= band.a_from {
         CardTier::A
     } else if rate >= ADJUSTED_WIN_RATE_CENTER {
         CardTier::B
-    } else if rate >= TIER_C_FROM {
+    } else if rate >= band.c_from {
         CardTier::C
     } else {
         CardTier::D
@@ -1722,12 +2732,24 @@ pub fn created_field<'a>(
     created: impl IntoIterator<Item = &'a CreatedStats>,
     deck: &StatsField,
 ) -> StatsField {
+    created_face_field(created, StatsFace::All, deck)
+}
+
+/// R4673000: `created_field` over one face: each Created card's lift is the win rate of the seats that used
+/// a copy on that face (`created_face_side`) less the average deck's (`deck.baseline`, All's), so the face
+/// reads its own centre and spread. Below `ADJUSTED_FIELD_MIN_CARDS` such cards it is the deck field, as All's
+/// is.
+pub fn created_face_field<'a>(
+    created: impl IntoIterator<Item = &'a CreatedStats>,
+    face: StatsFace,
+    deck: &StatsField,
+) -> StatsField {
     let floor = deck.drawn_floor.max(1);
     let lifts: Vec<(f64, f64)> = created
         .into_iter()
         .filter(|stats| !made_by_the_rules(&stats.card))
         .filter_map(|stats| {
-            let made = stats.made();
+            let made = created_face_side(stats, face);
             if made.games < floor {
                 return None;
             }
@@ -1761,12 +2783,24 @@ pub fn created_adjusted(
     created: &StatsField,
     deck: &StatsField,
 ) -> Option<(f64, (f64, f64))> {
+    created_face_adjusted(stats, StatsFace::All, created, deck)
+}
+
+/// R4673000: `created_adjusted` on one face: the games of the seats that used a copy on that face
+/// (`created_face_side`) against that face's Created field (`created_face_field`), or for a card a rule
+/// makes against the average deck (`deck`, All's), as on All. `None` when no seat counts on the face.
+pub fn created_face_adjusted(
+    stats: &CreatedStats,
+    face: StatsFace,
+    created: &StatsField,
+    deck: &StatsField,
+) -> Option<(f64, (f64, f64))> {
     let field = if made_by_the_rules(&stats.card) {
         deck
     } else {
         created
     };
-    held_adjusted(&stats.made(), field)
+    held_adjusted(&created_face_side(stats, face), field)
 }
 
 /// R2089000: the Created played delta, R377's over a Created card's used and never-used seats.
@@ -2224,6 +3258,93 @@ pub fn format_card_stats(report: &CardStatsReport, name_of: impl Fn(&str) -> Opt
     lines.join("\n")
 }
 
+/// R4672003: one card's variants table and its outputs table, which `stats-cards --card` and `stats
+/// report --card` print after the card's other tables. Each cell is a win rate with its seat-games in
+/// brackets, as `format_card_stats`' are.
+pub fn format_card_choices(
+    report: &CardStatsReport,
+    card: &str,
+    name_of: impl Fn(&str) -> Option<String>,
+) -> String {
+    let named = |card: &str| match name_of(card) {
+        None => card.to_string(),
+        Some(name) => format!("{card} {name}"),
+    };
+    let none = CardChoices::default();
+    let choices = report
+        .choices
+        .iter()
+        .find(|row| row.card == card)
+        .map_or(&none, |row| &row.choices);
+    let mut lines: Vec<String> = vec![format!("Variants of {}:", named(card))];
+    if choices.variants.is_empty() {
+        lines.push("No variant recorded.".to_string());
+    } else {
+        lines.push(
+            "Each cell is the win rate of the seats that played the card with that variant at least once, by its face at that"
+                .to_string(),
+        );
+        lines.push(
+            "play, with those games in brackets; a seat that played two variants counts in both.".to_string(),
+        );
+        let header: Vec<String> = ["Variant", "Radiant", "Normal"].map(str::to_string).to_vec();
+        let rows: Vec<Vec<String>> = choices
+            .variants
+            .iter()
+            .map(|(variant, tally)| {
+                vec![
+                    variant.clone(),
+                    format_tally(&tally.radiant),
+                    format_tally(&tally.normal),
+                ]
+            })
+            .collect();
+        lines.extend(table(&header, &rows));
+    }
+    lines.push(String::new());
+    lines.push(format!("Outputs of {}:", named(card)));
+    let mut made: Vec<&str> = choices
+        .outputs
+        .keys()
+        .chain(choices.offers.keys())
+        .map(String::as_str)
+        .collect::<IndexSet<&str>>()
+        .into_iter()
+        .collect();
+    made.sort();
+    if made.is_empty() {
+        lines.push("No output recorded.".to_string());
+    } else {
+        lines.push(
+            "By Radiant and By normal are the win rates of the seats whose copy of the card made that card, by the copy's face;"
+                .to_string(),
+        );
+        lines.push(
+            "Offered and Picked those of the seats its choices offered the card to, and of those that picked it, both faces."
+                .to_string(),
+        );
+        let header: Vec<String> = ["Made", "By Radiant", "By normal", "Offered", "Picked"]
+            .map(str::to_string)
+            .to_vec();
+        let rows: Vec<Vec<String>> = made
+            .iter()
+            .map(|&made| {
+                let output = choices.outputs.get(made).copied().unwrap_or_default();
+                let offer = choices.offers.get(made).copied().unwrap_or_default();
+                vec![
+                    named(made),
+                    format_tally(&output.radiant),
+                    format_tally(&output.normal),
+                    format_tally(&offer.offered.both()),
+                    format_tally(&offer.picked.both()),
+                ]
+            })
+            .collect();
+        lines.extend(table(&header, &rows));
+    }
+    lines.join("\n")
+}
+
 /// A plain-text table: the first column padded on the right, the rest on the left, each as wide as
 /// its widest cell, two spaces between.
 fn table(header: &[String], rows: &[Vec<String>]) -> Vec<String> {
@@ -2367,11 +3488,16 @@ fn card_uses(
         let radiant = entry
             .and_then(|entry| entry.get("radiant"))
             .and_then(Value::as_bool);
-        match (card, turn, radiant) {
-            (Some(card), Some(turn), Some(radiant)) => uses.push(CreatedUse {
+        // R4672000, R4672001: the variant and the maker, each absent on a record written before them.
+        let variant = optional(entry.and_then(|entry| entry.get("variant")));
+        let source = optional(entry.and_then(|entry| entry.get("source")));
+        match (card, turn, radiant, variant, source) {
+            (Some(card), Some(turn), Some(radiant), Ok(variant), Ok(source)) => uses.push(CreatedUse {
                 card: card.to_string(),
                 turn,
                 radiant,
+                variant,
+                source,
             }),
             _ => {
                 return Err(EngineError::new(format!("{at}[{idx}] is not a {one}")));
@@ -2379,6 +3505,24 @@ fn card_uses(
         }
     }
     Ok(Some(uses))
+}
+
+/// R4672000 to R4672002: an optional field read with its type's own shape: absent (or null) reads as
+/// `None`, anything that is not one is refused.
+fn optional<T: serde::de::DeserializeOwned>(value: Option<&Value>) -> Result<Option<T>, ()> {
+    match value.filter(|value| !value.is_null()) {
+        None => Ok(None),
+        Some(value) => T::deserialize(value).map(Some).map_err(|_| ()),
+    }
+}
+
+/// `optional`, refused with `at` and what the field should be.
+fn optional_at<T: serde::de::DeserializeOwned>(
+    value: Option<&Value>,
+    at: &str,
+    what: &str,
+) -> Result<Option<T>, EngineError> {
+    optional(value).map_err(|()| EngineError::new(format!("{at} is not {what}")))
 }
 
 fn seat_summary(value: Option<&Value>, at: &str) -> Result<SeatSummary, EngineError> {
@@ -2392,6 +3536,11 @@ fn seat_summary(value: Option<&Value>, at: &str) -> Result<SeatSummary, EngineEr
         played: ids(record.get("played"), &format!("{at}.played"))?,
         played_turns: None,
         played_radiant: None,
+        played_variants: optional_at(
+            record.get("playedVariants"),
+            &format!("{at}.playedVariants"),
+            "a list of play variants",
+        )?,
         fatigue_draws: seat_count(record.get("fatigueDraws"), &format!("{at}.fatigueDraws"))?,
         fatigue_damage: seat_count(record.get("fatigueDamage"), &format!("{at}.fatigueDamage"))?,
         traps_set: seat_count(record.get("trapsSet"), &format!("{at}.trapsSet"))?,
@@ -2403,6 +3552,11 @@ fn seat_summary(value: Option<&Value>, at: &str) -> Result<SeatSummary, EngineEr
             None => None,
             Some(value) => Some(ids(Some(value), &format!("{at}.createdUnused"))?),
         },
+        created_unused_sources: optional_at(
+            record.get("createdUnusedSources"),
+            &format!("{at}.createdUnusedSources"),
+            "a list of makers",
+        )?,
         created_played: created_uses(record.get("createdPlayed"), &format!("{at}.createdPlayed"))?,
         cast_or_summoned: card_uses(
             record.get("castOrSummoned"),
@@ -2418,6 +3572,14 @@ fn seat_summary(value: Option<&Value>, at: &str) -> Result<SeatSummary, EngineEr
             record.get("starshipsLaunched"),
             &format!("{at}.starshipsLaunched"),
         )?,
+        picks: optional_at(record.get("picks"), &format!("{at}.picks"), "a list of picks")?,
+        swing_turns: match record.get("swingTurns") {
+            None | Some(Value::Null) => None,
+            Some(value) => Some(
+                serde_json::from_value::<Vec<SwingTurn>>(value.clone())
+                    .map_err(|_| EngineError::new(format!("{at}.swingTurns is not a list of turn rows")))?,
+            ),
+        },
     };
     if let Some(Value::Array(turns)) = record.get("playedTurns") {
         let mut out: Vec<i32> = Vec::with_capacity(turns.len());
@@ -2572,6 +3734,10 @@ mod tests {
             cast_or_summoned: None,
             starship_pieces_fused: None,
             starships_launched: None,
+            played_variants: None,
+            created_unused_sources: None,
+            picks: None,
+            swing_turns: None,
         }
     }
 
@@ -2788,6 +3954,9 @@ mod tests {
                 created_not_played: tally(0, 0, 0),
                 created_played_radiant: tally(0, 0, 0),
                 created_played_normal: tally(0, 0, 0),
+                swing: Sparse::default(),
+                created_swing: Sparse::default(),
+                choices: Sparse::default(),
             };
             assert_eq!(win_rate(&stats.played), Some(0.75));
             assert_eq!(win_rate(&stats.drawn_not_played), Some(0.4));
@@ -2822,6 +3991,9 @@ mod tests {
                 created_not_played: tally(0, 0, 0),
                 created_played_radiant: tally(0, 0, 0),
                 created_played_normal: tally(0, 0, 0),
+                swing: Sparse::default(),
+                created_swing: Sparse::default(),
+                choices: Sparse::default(),
             };
             assert_eq!(not_drawn(&stats), tally(8, 2, 1));
             let delta = drawn_delta(&stats).unwrap();
@@ -2861,6 +4033,9 @@ mod tests {
                 created_not_played: tally(0, 0, 0),
                 created_played_radiant: tally(0, 0, 0),
                 created_played_normal: tally(0, 0, 0),
+                swing: Sparse::default(),
+                created_swing: Sparse::default(),
+                choices: Sparse::default(),
             }
         }
 
@@ -3142,6 +4317,7 @@ mod tests {
                 created_not_played: tally(games - games / 2, wins - wins / 2, 0),
                 created_played_radiant: tally(0, 0, 0),
                 created_played_normal: tally(games / 2, wins / 2, 0),
+                swing: SwingTally::default(),
             }
         }
 
@@ -3549,6 +4725,7 @@ mod tests {
                 decks,
                 cards,
                 created: Vec::new(),
+                choices: Vec::new(),
             }
         }
 
@@ -3727,6 +4904,10 @@ mod tests {
                 cast_or_summoned: None,
                 starship_pieces_fused: None,
                 starships_launched: None,
+                played_variants: None,
+                created_unused_sources: None,
+                picks: None,
+                swing_turns: None,
             }
         }
 
@@ -3871,7 +5052,7 @@ mod tests {
                     for live_pilot in PILOT_FILTERS {
                         for top in [1, 2, 3, 10] {
                             let expected = reference_card_drills(&counted, *live_pilot, top);
-                            let drills = card_drills_of(
+                            let drills = face_drills_of(
                                 &totals,
                                 |key| {
                                     key.patch == patch
@@ -3879,6 +5060,7 @@ mod tests {
                                         && seat_counted(key.source, key.pilot, *live_pilot)
                                 },
                                 top,
+                                StatsFace::All,
                             );
                             assert_eq!(drills.len(), expected.len(), "{patch} {source} {live_pilot}");
                             for (card, (by_turn, co_played)) in &expected {
@@ -3998,6 +5180,7 @@ mod tests {
                             created_not_played: Tally::default(),
                             created_played_radiant: Tally::default(),
                             created_played_normal: Tally::default(),
+                            swing: SwingTally::default(),
                         });
                         let of_card: Vec<&CreatedUse> =
                             uses.iter().filter(|used| used.card == card).collect();
@@ -4039,6 +5222,8 @@ mod tests {
                             card: draws.pick(MADE).to_string(),
                             turn: 1 + i32::try_from(draws.below(9)).unwrap_or(0),
                             radiant: draws.below(3) == 0,
+                            variant: None,
+                            source: None,
                         });
                     }
                     let unused: Vec<String> = (0..draws.below(3))
@@ -4531,6 +5716,8 @@ mod tests {
                 card: card.to_string(),
                 turn,
                 radiant,
+                variant: None,
+                source: None,
             }
         }
 
@@ -4730,6 +5917,406 @@ mod tests {
         }
     }
 
+    /// R4672000 to R4672003: the variants, the makers and the picks a record carries, how the totals
+    /// count them (a seat once a game, by face) and how they read back.
+    mod r4672003_choices {
+        use super::*;
+
+        fn variant(modes: &[&str], x: Option<i32>, embiggened: Option<bool>) -> PlayVariant {
+            PlayVariant {
+                modes: list(modes),
+                x,
+                embiggened,
+            }
+        }
+
+        fn by(card: &str, radiant: bool) -> MadeBy {
+            MadeBy {
+                card: card.to_string(),
+                radiant,
+            }
+        }
+
+        fn used(
+            card: &str,
+            radiant: bool,
+            variant: Option<PlayVariant>,
+            source: Option<MadeBy>,
+        ) -> CreatedUse {
+            CreatedUse {
+                card: card.to_string(),
+                turn: 2,
+                radiant,
+                variant,
+                source,
+            }
+        }
+
+        fn choices_of<'a>(report: &'a CardStatsReport, card: &str) -> &'a CardChoices {
+            &report
+                .choices
+                .iter()
+                .find(|row| row.card == card)
+                .unwrap_or_else(|| panic!("no choices for {card}"))
+                .choices
+        }
+
+        fn face(radiant: Tally, normal: Tally) -> FaceTally {
+            FaceTally { radiant, normal }
+        }
+
+        /// p1 (who wins) played `a` three times, Choose One `one` Radiant twice and normal once, and `b` at
+        /// X=1 and X=2; it cast `c` with `two` and played a Created `d` it made, Embiggened. p2 (who
+        /// loses) played `a` with `one`, normal.
+        fn variant_game() -> GameRecord {
+            let mut p1 = seat(&["a", "b", "c"], &[], &[], &["a", "a", "a", "b", "b"]);
+            p1.played_radiant = Some(vec![true, true, false, false, false]);
+            p1.played_variants = Some(vec![
+                Some(variant(&["one"], None, None)),
+                Some(variant(&["one"], None, None)),
+                Some(variant(&["one"], None, None)),
+                Some(variant(&[], Some(1), None)),
+                Some(variant(&[], Some(2), None)),
+            ]);
+            p1.cast_or_summoned = Some(vec![used("c", false, Some(variant(&["two"], None, None)), None)]);
+            let embiggened = Some(variant(&[], None, Some(true)));
+            p1.created_used = Some(vec![used("d", false, embiggened.clone(), Some(by("s", false)))]);
+            p1.created_played = Some(vec![used("d", false, embiggened, None)]);
+            let mut p2 = seat(&["a"], &[], &[], &["a"]);
+            p2.played_radiant = Some(vec![false]);
+            p2.played_variants = Some(vec![Some(variant(&["one"], None, None))]);
+            GameRecord {
+                game: game(Winner::P1, GameOverReason::HeroDeath, 9, p1, p2),
+                ..record()
+            }
+        }
+
+        /// p1 (who wins) used two `t`s its Radiant `s` made, kept a `u` its normal `s` made and The Coin,
+        /// and its normal `s` Discovered twice: `y` of `x y z`, then `x` of `x w y`. p2 (who loses) kept a
+        /// `u` its normal `s` made.
+        fn output_game() -> GameRecord {
+            let mut p1 = seat(&["s"], &[], &[], &[]);
+            p1.created_used = Some(vec![
+                used("t", false, None, Some(by("s", true))),
+                used("t", true, None, Some(by("s", true))),
+            ]);
+            p1.created_unused = Some(list(&["u", COIN_DEF_ID]));
+            p1.created_unused_sources = Some(vec![Some(by("s", false)), None]);
+            p1.picks = Some(vec![
+                CardPick {
+                    source: by("s", false),
+                    offered: list(&["x", "y", "z"]),
+                    picked: list(&["y"]),
+                },
+                CardPick {
+                    source: by("s", false),
+                    offered: list(&["x", "w", "y"]),
+                    picked: list(&["x"]),
+                },
+            ]);
+            let mut p2 = seat(&["s"], &[], &[], &[]);
+            p2.created_unused = Some(list(&["u"]));
+            p2.created_unused_sources = Some(vec![Some(by("s", false))]);
+            GameRecord {
+                game: game(Winner::P1, GameOverReason::HeroDeath, 9, p1, p2),
+                ..record()
+            }
+        }
+
+        /// The record as one written before the variants, the makers and the picks.
+        fn without_choices(mut record: GameRecord) -> GameRecord {
+            for seat in PLAYER_IDS {
+                let summary = &mut record.game.seats[seat];
+                summary.played_variants = None;
+                summary.created_unused_sources = None;
+                summary.picks = None;
+                for uses in [
+                    &mut summary.created_used,
+                    &mut summary.created_played,
+                    &mut summary.cast_or_summoned,
+                ] {
+                    for one in uses.iter_mut().flatten() {
+                        one.variant = None;
+                        one.source = None;
+                    }
+                }
+            }
+            record
+        }
+
+        #[test]
+        fn r4672003_a_variant_s_label_names_its_parts_in_order() {
+            assert_eq!(variant(&["mana"], Some(1), None).label(), "mana, X=1");
+            assert_eq!(variant(&["health", "skip"], None, None).label(), "health + skip");
+            assert_eq!(variant(&[], None, Some(false)).label(), "Not Embiggened");
+            assert_eq!(variant(&[], None, Some(true)).label(), "Embiggened");
+        }
+
+        #[test]
+        fn r4672003_a_seat_counts_once_a_game_per_variant_and_face() {
+            let report = card_stats(&[variant_game()], &live());
+            // p1 played `one` Radiant twice: one Radiant game, won; normal once, as did p2: two games.
+            let a = choices_of(&report, "a");
+            assert_eq!(
+                a.variants,
+                IndexMap::from([("one".to_string(), face(tally(1, 1, 0), tally(2, 1, 0)))])
+            );
+            assert!(a.outputs.is_empty() && a.offers.is_empty());
+            // A cast's variant and a Created card's are counted as a play's are.
+            assert_eq!(
+                choices_of(&report, "c").variants,
+                IndexMap::from([("two".to_string(), face(tally(0, 0, 0), tally(1, 1, 0)))])
+            );
+            assert_eq!(
+                choices_of(&report, "d").variants,
+                IndexMap::from([("Embiggened".to_string(), face(tally(0, 0, 0), tally(1, 1, 0)))])
+            );
+            // The deck rows read as they did, and carry none of it.
+            assert_eq!(
+                report.cards,
+                card_stats(&[without_choices(variant_game())], &live()).cards
+            );
+            let json = serde_json::to_value(&report.cards).unwrap();
+            assert!(!json.to_string().contains("choices"), "{json}");
+        }
+
+        #[test]
+        fn r4672003_a_seat_with_two_variants_counts_in_both() {
+            let report = card_stats(&[variant_game()], &live());
+            let b = choices_of(&report, "b");
+            assert_eq!(
+                b.variants,
+                IndexMap::from([
+                    ("X=1".to_string(), face(tally(0, 0, 0), tally(1, 1, 0))),
+                    ("X=2".to_string(), face(tally(0, 0, 0), tally(1, 1, 0))),
+                ])
+            );
+            // The two add up to more seats than played the card: each counts its own.
+            assert_eq!(stats_of(&report, "b").played, tally(1, 1, 0));
+        }
+
+        #[test]
+        fn r4672003_outputs_and_offers_count_a_seat_once_a_game_by_the_source_s_face() {
+            let report = card_stats(&[output_game()], &live());
+            let ids: Vec<&str> = report.choices.iter().map(|row| row.card.as_str()).collect();
+            assert_eq!(
+                ids,
+                ["s"],
+                "The Coin names no source, so no card is credited with it"
+            );
+            let s = choices_of(&report, "s");
+            assert!(s.variants.is_empty());
+            // Two `t`s, one game, by the Radiant `s` that made them (whatever the `t`s' own faces).
+            assert_eq!(s.outputs["t"], face(tally(1, 1, 0), tally(0, 0, 0)));
+            // A `u` made and never used counts as made, for both seats.
+            assert_eq!(s.outputs["u"], face(tally(0, 0, 0), tally(2, 1, 0)));
+            assert_eq!(s.outputs.len(), 2);
+            // `x` and `y` were offered twice and picked once each, one game each; `z` and `w` once,
+            // never picked.
+            let normal = |games: i32, wins: i32| face(tally(0, 0, 0), tally(games, wins, 0));
+            for (card, picked) in [("x", true), ("y", true), ("z", false), ("w", false)] {
+                let offer = s.offers[card];
+                assert_eq!(offer.offered, normal(1, 1), "{card}");
+                assert_eq!(
+                    offer.picked,
+                    if picked {
+                        normal(1, 1)
+                    } else {
+                        FaceTally::default()
+                    },
+                    "{card}"
+                );
+            }
+            assert_eq!(s.offers.len(), 4);
+            // The rows read back in key order.
+            let keys: Vec<&str> = s.offers.keys().map(String::as_str).collect();
+            assert_eq!(keys, ["w", "x", "y", "z"]);
+        }
+
+        #[test]
+        fn r4672003_a_record_without_the_fields_adds_nothing() {
+            for record in [variant_game(), output_game()] {
+                let plain = without_choices(record);
+                let report = card_stats(std::slice::from_ref(&plain), &live());
+                assert!(report.choices.is_empty(), "{:?}", report.choices);
+                let mut totals = StatsTotals::default();
+                totals.fold(&plain, true);
+                for total in totals.cards.values().flat_map(|cards| cards.values()) {
+                    assert!(total.stats.choices.is_empty(), "{total:?}");
+                    let json = serde_json::to_value(&total.stats).unwrap();
+                    assert!(json.get("choices").is_none(), "{json}");
+                }
+                assert!(serde_json::to_value(&report).unwrap().get("choices").is_none());
+            }
+            // A seat whose only cards are choices still adds its key, and one with none adds nothing.
+            let mut only = seat(&[], &[], &[], &[]);
+            only.picks = Some(vec![CardPick {
+                source: by("s", true),
+                offered: list(&["x"]),
+                picked: Vec::new(),
+            }]);
+            let mut totals = StatsTotals::default();
+            totals.fold(
+                &GameRecord {
+                    game: game(
+                        Winner::P1,
+                        GameOverReason::Concede,
+                        1,
+                        only,
+                        SeatSummary::default(),
+                    ),
+                    ..record()
+                },
+                false,
+            );
+            assert_eq!(totals.cards.len(), 1);
+        }
+
+        #[test]
+        fn r4672003_an_older_total_without_the_keys_reads_as_none_and_a_new_one_round_trips() {
+            let mut totals = StatsTotals::default();
+            totals.fold(&output_game(), true);
+            let stats = totals.cards.values().next().unwrap()["s"].stats.clone();
+            assert!(!stats.choices.is_empty());
+            let mut json = serde_json::to_value(&stats).unwrap();
+            assert_eq!(serde_json::from_value::<CardStats>(json.clone()).unwrap(), stats);
+            json.as_object_mut().unwrap().remove("choices");
+            let older: CardStats = serde_json::from_value(json).unwrap();
+            assert!(older.choices.is_empty());
+            assert_eq!(
+                older,
+                CardStats {
+                    choices: Sparse::default(),
+                    ..stats
+                }
+            );
+            // An older total adds to a newer one as no data.
+            let mut newer = totals.clone();
+            let mut old_totals = StatsTotals::default();
+            old_totals.fold(&without_choices(output_game()), true);
+            newer.add(&old_totals);
+            let report = card_stats_of(&newer, &live());
+            assert_eq!(
+                choices_of(&report, "s").outputs["u"],
+                face(tally(0, 0, 0), tally(2, 1, 0))
+            );
+        }
+
+        #[test]
+        fn r4672000_parse_game_record_reads_the_new_fields_and_refuses_a_bad_one() {
+            for written in [variant_game(), output_game()] {
+                let json = serde_json::to_value(&written).unwrap();
+                assert_eq!(parse_game_record(&json).unwrap(), written);
+            }
+            let json = serde_json::to_value(output_game()).unwrap();
+            let p1 = &json["game"]["seats"]["p1"];
+            assert_eq!(
+                p1["createdUsed"][0],
+                json!({ "card": "t", "turn": 2, "radiant": false, "source": { "card": "s", "radiant": true } })
+            );
+            assert_eq!(
+                p1["createdUnusedSources"],
+                json!([{ "card": "s", "radiant": false }, null])
+            );
+            assert_eq!(
+                p1["picks"][0],
+                json!({ "source": { "card": "s", "radiant": false }, "offered": ["x", "y", "z"], "picked": ["y"] })
+            );
+            let json_v = serde_json::to_value(variant_game()).unwrap();
+            assert_eq!(
+                json_v["game"]["seats"]["p1"]["playedVariants"][3],
+                json!({ "x": 1 })
+            );
+            assert_eq!(
+                json_v["game"]["seats"]["p1"]["playedVariants"][0],
+                json!({ "modes": ["one"] })
+            );
+
+            let refusal = |json: &Value, key: &str, bad: Value| {
+                let mut bad_record = json.clone();
+                bad_record["game"]["seats"]["p1"][key] = bad;
+                parse_game_record(&bad_record).unwrap_err().message
+            };
+            assert!(
+                refusal(&json_v, "playedVariants", json!([{ "x": "one" }]))
+                    .contains("game.seats.p1.playedVariants is not a list of play variants")
+            );
+            assert!(
+                refusal(&json, "createdUnusedSources", json!(["s"]))
+                    .contains("game.seats.p1.createdUnusedSources is not a list of makers")
+            );
+            assert!(
+                refusal(&json, "picks", json!([{ "offered": [] }]))
+                    .contains("game.seats.p1.picks is not a list of picks")
+            );
+            assert!(
+                refusal(
+                    &json,
+                    "createdUsed",
+                    json!([{ "card": "t", "turn": 2, "radiant": false, "source": "s" }])
+                )
+                .contains("game.seats.p1.createdUsed[0] is not a Created card's use")
+            );
+            assert!(
+                refusal(
+                    &json_v,
+                    "castOrSummoned",
+                    json!([{ "card": "c", "turn": 2, "radiant": false, "variant": "two" }])
+                )
+                .contains("game.seats.p1.castOrSummoned[0] is not a cast or summon")
+            );
+        }
+
+        #[test]
+        fn r4672003_format_card_choices_prints_both_tables() {
+            let names: IndexMap<&str, &str> = [("s", "Source"), ("t", "Token")].into_iter().collect();
+            let name_of = |card: &str| names.get(card).map(|name| name.to_string());
+            let report = card_stats(&[variant_game(), output_game()], &live());
+
+            let text = format_card_choices(&report, "s", name_of);
+            let lines: Vec<&str> = text.split('\n').collect();
+            assert_eq!(lines[0], "Variants of s Source:");
+            assert_eq!(lines[1], "No variant recorded.");
+            assert_eq!(lines[2], "");
+            assert_eq!(lines[3], "Outputs of s Source:");
+            let heading = lines.iter().position(|line| line.starts_with("Made ")).unwrap();
+            assert_eq!(
+                split_wide(lines[heading]),
+                ["Made", "By Radiant", "By normal", "Offered", "Picked"]
+            );
+            let rows: Vec<Vec<String>> = lines[heading + 1..].iter().map(|line| split_wide(line)).collect();
+            assert_eq!(
+                rows,
+                [
+                    // `variant_game`'s `d`, made by a normal `s`.
+                    ["d", "— (0)", "100.0% (1)", "— (0)", "— (0)"],
+                    ["t Token", "100.0% (1)", "— (0)", "— (0)", "— (0)"],
+                    ["u", "— (0)", "50.0% (2)", "— (0)", "— (0)"],
+                    ["w", "— (0)", "— (0)", "100.0% (1)", "— (0)"],
+                    ["x", "— (0)", "— (0)", "100.0% (1)", "100.0% (1)"],
+                    ["y", "— (0)", "— (0)", "100.0% (1)", "100.0% (1)"],
+                    ["z", "— (0)", "— (0)", "100.0% (1)", "— (0)"],
+                ]
+                .map(|row| row.map(str::to_string).to_vec())
+                .to_vec()
+            );
+
+            let text = format_card_choices(&report, "b", name_of);
+            let lines: Vec<&str> = text.split('\n').collect();
+            assert_eq!(lines[0], "Variants of b:");
+            let heading = lines
+                .iter()
+                .position(|line| line.starts_with("Variant "))
+                .unwrap();
+            assert_eq!(split_wide(lines[heading]), ["Variant", "Radiant", "Normal"]);
+            assert_eq!(split_wide(lines[heading + 1]), ["X=1", "— (0)", "100.0% (1)"]);
+            assert_eq!(split_wide(lines[heading + 2]), ["X=2", "— (0)", "100.0% (1)"]);
+            assert_eq!(lines[heading + 3], "");
+            assert_eq!(lines[heading + 4], "Outputs of b:");
+            assert_eq!(lines[heading + 5], "No output recorded.");
+        }
+    }
+
     #[test]
     fn r1284000_forced_series_is_some_only_for_a_record_filed_under_a_forced_series() {
         let forced = GameRecord {
@@ -4770,6 +6357,8 @@ mod tests {
                 card: card.to_string(),
                 turn,
                 radiant,
+                variant: None,
+                source: None,
             }
         }
 
@@ -4836,7 +6425,7 @@ mod tests {
             assert_eq!(not_drawn(a), tally(0, 0, 0));
             let mut totals = StatsTotals::default();
             totals.fold(&lost, true);
-            let drills = card_drills_of(&totals, |_: &TotalsKey| true, 10);
+            let drills = face_drills_of(&totals, |_: &TotalsKey| true, 10, StatsFace::All);
             let once = DrillCount { games: 1, wins: 0 };
             assert_eq!(drills["a"].by_turn, vec![(4, once), (6, once)]);
         }
@@ -4868,6 +6457,804 @@ mod tests {
                 refusal(json!("a"))
                     .contains("game.seats.p1.castOrSummoned is not a list of casts and summons")
             );
+        }
+    }
+
+    // R4673000, R4673001: each face of a card read against a field of its own, and its drills.
+    mod r4673000_faces {
+        use super::*;
+
+        fn close(a: f64, b: f64) -> bool {
+            (a - b).abs() < 1e-9
+        }
+
+        /// `games` seats a side: played Radiant won at `radiant`, played normal at `normal`, and never drawn at
+        /// `never`.
+        fn faced(games: i32, radiant: f64, normal: f64, never: f64) -> CardStats {
+            let wins = |rate: f64| (f64::from(games) * rate).round() as i32;
+            let won = wins(radiant) + wins(normal);
+            CardStats {
+                card: "a".to_string(),
+                in_deck: tally(3 * games, won + wins(never), 0),
+                opening_hand: tally(0, 0, 0),
+                going_first: tally(0, 0, 0),
+                going_second: tally(0, 0, 0),
+                played: tally(2 * games, won, 0),
+                drawn_not_played: tally(0, 0, 0),
+                played_radiant: tally(games, wins(radiant), 0),
+                played_normal: tally(games, wins(normal), 0),
+                created_played: tally(0, 0, 0),
+                created_not_played: tally(0, 0, 0),
+                created_played_radiant: tally(0, 0, 0),
+                created_played_normal: tally(0, 0, 0),
+                swing: Sparse::default(),
+                created_swing: Sparse::default(),
+                choices: Sparse::default(),
+            }
+        }
+
+        /// Forty cards of 1,000 seats a face: half Radiant at 71%, half at 57%, every normal face at 52%, every
+        /// never-drawn deck at 50%. A Radiant face is 14 points above its never-drawn games on average, a
+        /// normal face 2.
+        fn upgraded_field() -> Vec<CardStats> {
+            (0..40)
+                .map(|at| faced(1000, if at < 20 { 0.71 } else { 0.57 }, 0.52, 0.50))
+                .collect()
+        }
+
+        #[test]
+        fn r4673000_a_typical_radiant_face_reads_an_even_game_against_the_radiant_field() {
+            let cards = upgraded_field();
+            let radiant = face_stats_field(&cards, StatsFace::Radiant, 1);
+            // Equal games, so equal weights: the centre is the mean delta, τ² the deltas' sample variance less
+            // their sampling variance.
+            assert_eq!(radiant.cards, 40);
+            assert!(close(radiant.center, 0.14), "{}", radiant.center);
+            let noise: f64 = 0.25 * (2.0 / 1000.0);
+            assert!(
+                close(radiant.spread, (40.0 * 0.07 * 0.07 / 39.0 - noise).sqrt()),
+                "{}",
+                radiant.spread
+            );
+            // The normal faces are alike: their centre is their shared 2 points, their spread the floor.
+            let normal = face_stats_field(&cards, StatsFace::Normal, 1);
+            assert!(close(normal.center, 0.02), "{}", normal.center);
+            assert!(close(normal.spread, ADJUSTED_FIELD_SPREAD_FLOOR));
+            // Every face's baseline is the average deck's, as All's is.
+            let all = stats_field(&cards, 1);
+            assert!(close(radiant.baseline, all.baseline) && close(normal.baseline, all.baseline));
+
+            // A card whose Radiant face is exactly as much better as the field's reads an even game on Radiant,
+            // and on Normal too, its normal face the field's.
+            let typical = faced(1000, 0.64, 0.52, 0.50);
+            let (rate, (low, high)) = face_adjusted(&typical, StatsFace::Radiant, &radiant).unwrap();
+            assert!(close(rate, ADJUSTED_WIN_RATE_CENTER), "{rate}");
+            assert!(low < rate && rate < high);
+            assert!(close(
+                face_adjusted(&typical, StatsFace::Normal, &normal).unwrap().0,
+                ADJUSTED_WIN_RATE_CENTER
+            ));
+            // Read with no field of its own (R2777000's prior, centred on no lift), the same Radiant face would
+            // read above the band.
+            assert!(
+                face_adjusted(&typical, StatsFace::Radiant, &StatsField::PRIOR)
+                    .unwrap()
+                    .0
+                    > TIER_BAND_HIGH
+            );
+        }
+
+        #[test]
+        fn r4673000_a_radiant_face_above_the_field_reads_above_it_and_its_gap_clears_zero() {
+            let cards = upgraded_field();
+            let radiant_field = face_stats_field(&cards, StatsFace::Radiant, 1);
+            let normal_field = face_stats_field(&cards, StatsFace::Normal, 1);
+            // 24 points above its never-drawn games on Radiant, 10 above the field's 14; its normal face the
+            // field's own.
+            let strong = faced(4000, 0.74, 0.52, 0.50);
+            let radiant = face_adjusted(&strong, StatsFace::Radiant, &radiant_field).unwrap();
+            let normal = face_adjusted(&strong, StatsFace::Normal, &normal_field).unwrap();
+            assert!(radiant.0 > TIER_BAND_HIGH, "{radiant:?}");
+            assert!(close(normal.0, ADJUSTED_WIN_RATE_CENTER), "{normal:?}");
+            let weight = |field: &StatsField| {
+                let prior = field.spread * field.spread;
+                prior / (prior + 0.25 * (2.0 / 4000.0))
+            };
+            assert!(close(radiant.0, 0.5 + weight(&radiant_field) * 0.10));
+            assert_eq!(
+                tier_in(radiant.0, radiant.1.0, radiant.1.1, StatsFace::Radiant.band()),
+                CardTier::S
+            );
+
+            // The gap: Radiant less Normal, its range the two half-widths summed in quadrature, clear of 0.
+            let (gap, (low, high)) = radiant_gap(normal, radiant);
+            assert!(close(gap, radiant.0 - normal.0));
+            let half = |(_, (from, to)): (f64, (f64, f64))| (to - from) / 2.0;
+            let spread = (half(normal).powi(2) + half(radiant).powi(2)).sqrt();
+            assert!(close(gap - low, spread) && close(high - gap, spread));
+            assert!(low > 0.0, "{low}");
+            // A card whose faces are both the field's has a gap of about 0, its range across 0.
+            let typical = faced(4000, 0.64, 0.52, 0.50);
+            let (even, (from, to)) = radiant_gap(
+                face_adjusted(&typical, StatsFace::Normal, &normal_field).unwrap(),
+                face_adjusted(&typical, StatsFace::Radiant, &radiant_field).unwrap(),
+            );
+            assert!(close(even, 0.0) && from < 0.0 && to > 0.0, "{even} {from} {to}");
+        }
+
+        #[test]
+        fn r4673000_a_face_short_of_games_or_of_never_drawn_games_reads_none() {
+            let cards = upgraded_field();
+            let field = face_stats_field(&cards, StatsFace::Radiant, 20);
+            // Never played Radiant: no Radiant rate, while its normal face has one.
+            let never_radiant = CardStats {
+                played_radiant: tally(0, 0, 0),
+                ..faced(1000, 0.64, 0.52, 0.50)
+            };
+            assert_eq!(face_adjusted(&never_radiant, StatsFace::Radiant, &field), None);
+            let normal = face_stats_field(&cards, StatsFace::Normal, 20);
+            assert!(face_adjusted(&never_radiant, StatsFace::Normal, &normal).is_some());
+            // Ten never-drawn games, below the floor of 20: no face reads a rate, though All reads the card against
+            // the average deck (R3070000).
+            let rarely_undrawn = CardStats {
+                in_deck: tally(2010, 1165, 0),
+                ..faced(1000, 0.64, 0.52, 0.50)
+            };
+            assert_eq!(not_drawn(&rarely_undrawn), tally(10, 5, 0));
+            for face in [StatsFace::Normal, StatsFace::Radiant] {
+                assert_eq!(face_adjusted(&rarely_undrawn, face, &field), None, "{face}");
+            }
+            assert!(face_adjusted(&rarely_undrawn, StatsFace::All, &field).is_some());
+            assert_eq!(
+                face_adjusted(&rarely_undrawn, StatsFace::All, &field),
+                adjusted_win_rate(&rarely_undrawn, &field).zip(adjusted_interval(&rarely_undrawn, &field))
+            );
+
+            // A face's field reads only the cards with the floor on both sides: 19 Radiant seats give no delta, and
+            // too few cards keep the prior's centre and spread.
+            let mut few: Vec<CardStats> = cards[..ADJUSTED_FIELD_MIN_CARDS - 1].to_vec();
+            few.push(CardStats {
+                played_radiant: tally(19, 14, 0),
+                ..faced(1000, 0.71, 0.52, 0.50)
+            });
+            let prior = face_stats_field(&few, StatsFace::Radiant, 20);
+            assert_eq!(
+                (prior.center, prior.spread, prior.cards),
+                (
+                    StatsField::PRIOR.center,
+                    StatsField::PRIOR.spread,
+                    StatsField::PRIOR.cards
+                )
+            );
+            assert_eq!(
+                face_stats_field(&few, StatsFace::Normal, 20).cards,
+                ADJUSTED_FIELD_MIN_CARDS
+            );
+
+            // A Created card no seat used on a face reads none on it.
+            let made = CreatedStats {
+                card: "t".to_string(),
+                created_played: tally(40, 24, 0),
+                created_not_played: tally(40, 20, 0),
+                created_played_radiant: tally(0, 0, 0),
+                created_played_normal: tally(40, 24, 0),
+                swing: SwingTally::default(),
+            };
+            let deck = StatsField {
+                baseline: 0.5,
+                ..StatsField::PRIOR
+            };
+            assert_eq!(
+                created_face_adjusted(&made, StatsFace::Radiant, &deck, &deck),
+                None
+            );
+            assert_eq!(
+                created_face_adjusted(&made, StatsFace::Normal, &deck, &deck),
+                held_adjusted(&tally(40, 24, 0), &deck)
+            );
+        }
+
+        #[test]
+        fn r4673000_all_reads_as_before() {
+            // R2777000's +20-point card over 4,000 games a side under the prior field: the very bits of its
+            // formula, `0.5 + τ²/(τ² + SE²) · delta`.
+            let card = CardStats {
+                in_deck: tally(8000, 4000, 0),
+                played: tally(4000, 2400, 0),
+                played_radiant: tally(0, 0, 0),
+                played_normal: tally(0, 0, 0),
+                ..faced(4000, 0.5, 0.5, 0.4)
+            };
+            let noise =
+                ADJUSTED_WIN_RATE_CENTER * (1.0 - ADJUSTED_WIN_RATE_CENTER) * (1.0 / 4000.0 + 1.0 / 4000.0);
+            let prior = ADJUSTED_WIN_RATE_PRIOR_SPREAD * ADJUSTED_WIN_RATE_PRIOR_SPREAD;
+            let weight = prior / (prior + noise);
+            let delta = 2400.0 / 4000.0 - 1600.0 / 4000.0;
+            let rate = ADJUSTED_WIN_RATE_CENTER + weight * (delta - 0.0);
+            let half = STATS_INTERVAL_Z * (weight * noise).sqrt();
+            let (all, (low, high)) = face_adjusted(&card, StatsFace::All, &StatsField::PRIOR).unwrap();
+            assert_eq!(all.to_bits(), rate.to_bits());
+            assert_eq!(low.to_bits(), (rate - half).to_bits());
+            assert_eq!(high.to_bits(), (rate + half).to_bits());
+            assert_eq!(
+                adjusted_win_rate(&card, &StatsField::PRIOR).map(f64::to_bits),
+                Some(rate.to_bits())
+            );
+
+            // On All the face functions are the card's own, field, Created field and tier alike.
+            let cards = upgraded_field();
+            for floor in [1, 20] {
+                let field = stats_field(&cards, floor);
+                assert_eq!(face_stats_field(&cards, StatsFace::All, floor), field);
+                for card in &cards {
+                    assert_eq!(
+                        face_adjusted(card, StatsFace::All, &field),
+                        adjusted_win_rate(card, &field).zip(adjusted_interval(card, &field))
+                    );
+                    assert_eq!(face_side(card, StatsFace::All), seen(card));
+                }
+            }
+            let created: Vec<CreatedStats> = (0..40)
+                .map(|at| CreatedStats {
+                    card: format!("t{at}"),
+                    created_played: tally(500, if at < 20 { 300 } else { 260 }, 0),
+                    created_not_played: tally(500, 280, 0),
+                    created_played_radiant: tally(200, 130, 0),
+                    created_played_normal: tally(300, if at < 20 { 170 } else { 130 }, 0),
+                    swing: SwingTally::default(),
+                })
+                .collect();
+            let deck = stats_field(&cards, 20);
+            let made = created_field(&created, &deck);
+            assert_eq!(created_face_field(&created, StatsFace::All, &deck), made);
+            assert_eq!(made.cards, 40);
+            for stats in &created {
+                assert_eq!(created_face_side(stats, StatsFace::All), stats.made());
+                assert_eq!(
+                    created_face_adjusted(stats, StatsFace::All, &made, &deck),
+                    created_adjusted(stats, &made, &deck)
+                );
+            }
+            // A Created face reads its own field: the normal uses differ, the Radiant ones are all alike.
+            let radiant = created_face_field(&created, StatsFace::Radiant, &deck);
+            assert_eq!(radiant.cards, 40);
+            assert!(close(radiant.spread, ADJUSTED_FIELD_SPREAD_FLOOR));
+            assert!(close(radiant.baseline, deck.baseline + radiant.center));
+            assert!(close(radiant.center, 0.65 - deck.baseline), "{}", radiant.center);
+
+            // All's band is R3022000's constants, each face's its own; a band moves the tiers read in it.
+            assert_eq!(
+                TierBand::ALL,
+                TierBand {
+                    low: TIER_BAND_LOW,
+                    high: TIER_BAND_HIGH,
+                    a_from: TIER_A_FROM,
+                    c_from: TIER_C_FROM
+                }
+            );
+            assert_eq!(
+                StatsFace::Normal.band(),
+                TierBand {
+                    low: NORMAL_TIER_BAND_LOW,
+                    high: NORMAL_TIER_BAND_HIGH,
+                    a_from: NORMAL_TIER_A_FROM,
+                    c_from: NORMAL_TIER_C_FROM
+                }
+            );
+            assert_eq!(
+                StatsFace::Radiant.band(),
+                TierBand {
+                    low: RADIANT_TIER_BAND_LOW,
+                    high: RADIANT_TIER_BAND_HIGH,
+                    a_from: RADIANT_TIER_A_FROM,
+                    c_from: RADIANT_TIER_C_FROM
+                }
+            );
+            assert_eq!(StatsFace::All.band(), TierBand::ALL);
+            for (rate, low, high) in [
+                (0.56, 0.51, 0.61),
+                (0.56, 0.49, 0.63),
+                (0.53, 0.4, 0.6),
+                (0.51, 0.4, 0.6),
+                (0.48, 0.4, 0.6),
+                (0.46, 0.4, 0.6),
+                (0.44, 0.39, 0.49),
+            ] {
+                assert_eq!(tier_in(rate, low, high, TierBand::ALL), tier_of(rate, low, high));
+            }
+            let wide = TierBand {
+                low: 0.40,
+                high: 0.60,
+                a_from: 0.55,
+                c_from: 0.45,
+            };
+            assert_eq!(tier_in(0.56, 0.51, 0.61, wide), CardTier::A);
+            assert_eq!(tier_in(0.53, 0.4, 0.6, wide), CardTier::B);
+            assert_eq!(tier_in(0.44, 0.39, 0.49, wide), CardTier::D);
+        }
+
+        /// A seat whose deck is a, b and c, which played `played` on turn 2 each, Radiant where `radiant` says, or
+        /// with no face flags at all when `radiant` is `None`.
+        fn played_seat(played: &[&str], radiant: Option<Vec<bool>>) -> SeatSummary {
+            SeatSummary {
+                played_turns: Some(vec![2; played.len()]),
+                played_radiant: radiant,
+                ..seat(&["a", "b", "c"], played, &[], played)
+            }
+        }
+
+        #[test]
+        fn r4673001_the_drills_are_folded_by_face_and_a_seat_without_face_flags_is_in_neither() {
+            let record = |id: &str, winner: Winner, p1: SeatSummary, p2: SeatSummary| GameRecord {
+                id: id.to_string(),
+                game: game(winner, GameOverReason::HeroDeath, 12, p1, p2),
+                ..record()
+            };
+            let records = [
+                // p1 plays a Radiant and wins; p2 plays a normal and loses.
+                record(
+                    "m1",
+                    Winner::P1,
+                    played_seat(&["a"], Some(vec![true])),
+                    played_seat(&["a"], Some(vec![false])),
+                ),
+                // a played twice, once Radiant: the seat counts on Radiant alone. p2's plays carry no flags.
+                record(
+                    "m2",
+                    Winner::P2,
+                    played_seat(&["a", "a"], Some(vec![false, true])),
+                    played_seat(&["a"], None),
+                ),
+                // p1 never plays a; p2 plays it normal and wins.
+                record(
+                    "m3",
+                    Winner::P2,
+                    played_seat(&["b"], Some(vec![true])),
+                    played_seat(&["a"], Some(vec![false])),
+                ),
+            ];
+            let mut totals = StatsTotals::default();
+            for record in &records {
+                totals.fold(record, true);
+            }
+            let mut a = CardTotal::new("a");
+            for cards in totals.cards.values() {
+                a.add(&cards["a"]);
+            }
+            let game = |games: i64, wins: i64| DrillCount { games, wins };
+            // R1147000's tallies and the face drills count the same seats.
+            assert_eq!(a.stats.played_radiant, tally(2, 1, 0));
+            assert_eq!(a.stats.played_normal, tally(2, 1, 0));
+            assert_eq!(a.radiant.get().unwrap().turns, IndexMap::from([(2, game(2, 1))]));
+            assert_eq!(a.normal.get().unwrap().turns, IndexMap::from([(2, game(2, 1))]));
+            assert_eq!(
+                a.radiant.get().unwrap().co,
+                IndexMap::from([("b".to_string(), game(2, 1)), ("c".to_string(), game(2, 1))])
+            );
+            // All counts every seat that held it, the flagless one among them.
+            assert_eq!(a.turns, IndexMap::from([(2, game(5, 3))]));
+            assert_eq!(a.co["b"].games, 6);
+            assert_eq!(a.face(StatsFace::All, &FaceDrills::default()), None);
+            // An empty face is that face's, empty, never All's.
+            let empty = FaceDrills::default();
+            assert_eq!(CardTotal::new("a").face(StatsFace::Radiant, &empty), Some(&empty));
+
+            // The drill-down reads each face's drills, its co-played ties in the order first met.
+            let drills = |face| face_drills_of(&totals, |_: &TotalsKey| true, 10, face);
+            let radiant = &drills(StatsFace::Radiant)["a"];
+            assert_eq!(radiant.by_turn, vec![(2, game(2, 1))]);
+            assert_eq!(
+                radiant.co_played,
+                vec![("b".to_string(), game(2, 1)), ("c".to_string(), game(2, 1))]
+            );
+            assert_eq!(drills(StatsFace::Normal)["a"].by_turn, vec![(2, game(2, 1))]);
+
+            // Totals folded before the faces were (or without drills) give a face none.
+            let mut old = totals.clone();
+            for cards in old.cards.values_mut() {
+                for total in cards.values_mut() {
+                    total.radiant = Sparse::default();
+                    total.normal = Sparse::default();
+                }
+            }
+            let empty = &face_drills_of(&old, |_: &TotalsKey| true, 10, StatsFace::Radiant)["a"];
+            assert!(empty.by_turn.is_empty() && empty.co_played.is_empty());
+            let selected = totals.select(&[GameSource::Live], None, None, false);
+            assert!(selected.cards.values().all(|cards| {
+                cards
+                    .values()
+                    .all(|total| total.radiant.is_empty() && total.normal.is_empty())
+            }));
+            assert_eq!(
+                totals.select(&[GameSource::Live], None, None, true).cards,
+                totals.cards
+            );
+
+            // A total with no face drills writes as before; one with them reads back the same.
+            let json = serde_json::to_value(&old.cards.values().next().unwrap()["a"]).unwrap();
+            assert!(json.get("radiant").is_none() && json.get("normal").is_none());
+            let written = &totals.cards.values().next().unwrap()["a"];
+            let back: CardTotal = serde_json::from_value(serde_json::to_value(written).unwrap()).unwrap();
+            assert_eq!(&back, written);
+        }
+    }
+
+    // R4676000: each choice a card offers read against a field of every card's variants.
+    mod r4676000_variants {
+        use super::*;
+
+        fn close(a: f64, b: f64) -> bool {
+            (a - b).abs() < 1e-9
+        }
+
+        fn won(games: i32, rate: f64) -> Tally {
+            tally(games, (f64::from(games) * rate).round() as i32, 0)
+        }
+
+        /// A card's choices, each `(label, radiant tally, normal tally)`.
+        fn choices(rows: &[(&str, Tally, Tally)]) -> CardChoices {
+            CardChoices {
+                variants: rows
+                    .iter()
+                    .map(|(label, radiant, normal)| {
+                        (
+                            label.to_string(),
+                            FaceTally {
+                                radiant: *radiant,
+                                normal: *normal,
+                            },
+                        )
+                    })
+                    .collect(),
+                ..CardChoices::default()
+            }
+        }
+
+        #[test]
+        fn r4676000_rows_split_a_label_by_kind_and_group_the_top_x() {
+            let a = won(10, 0.5);
+            let none = Tally::default();
+            let card = choices(&[
+                ("deal + heal, X=1, Embiggened", a, none),
+                ("deal + heal, X=2, Not Embiggened", a, none),
+                ("gain, X=7", a, a),
+                ("gain, X=5", a, none),
+                ("X=3", none, a),
+            ]);
+            let rows = variant_rows(&card);
+            let keys: Vec<(VariantKind, &str, &str)> = rows
+                .iter()
+                .map(|row| (row.kind, row.key.as_str(), row.label.as_str()))
+                .collect();
+            assert_eq!(
+                keys,
+                [
+                    (VariantKind::Mode, "deal + heal", "deal + heal"),
+                    (VariantKind::Mode, "gain", "gain"),
+                    (VariantKind::X, "1", "X = 1"),
+                    (VariantKind::X, "2", "X = 2"),
+                    (VariantKind::X, "3", "X = 3"),
+                    (VariantKind::X, VARIANT_X_GROUP_KEY, "X ≥ 5"),
+                    (VariantKind::Embiggen, VARIANT_EMBIGGENED_KEY, VARIANT_EMBIGGENED),
+                    (
+                        VariantKind::Embiggen,
+                        VARIANT_NOT_EMBIGGENED_KEY,
+                        VARIANT_NOT_EMBIGGENED
+                    ),
+                ]
+            );
+            // X=5 and X=7 are one row: their seats added, by face.
+            let top = &rows[5];
+            assert_eq!(top.games.radiant.games, 20);
+            assert_eq!(top.games.normal.games, 10);
+            assert_eq!(top.games.on(StatsFace::All).games, 30);
+            // The options' row adds every label that holds them, and names each option apart.
+            assert_eq!(rows[0].games.on(StatsFace::All).games, 20);
+            assert_eq!(rows[0].options(), ["deal", "heal"]);
+            assert_eq!(rows[1].options(), ["gain"]);
+            assert!(rows[2].options().is_empty());
+            assert!(rows[6].options().is_empty());
+            // A label is what `PlayVariant::label` writes.
+            let label = PlayVariant {
+                modes: vec!["deal".to_string(), "heal".to_string()],
+                x: Some(1),
+                embiggened: Some(true),
+            }
+            .label();
+            assert_eq!(label, "deal + heal, X=1, Embiggened");
+        }
+
+        #[test]
+        fn r4676000_a_variant_that_wins_more_than_its_sibling_reads_above_it() {
+            let never = won(400, 0.45);
+            let card = choices(&[
+                ("bounce all units", won(200, 0.60), Tally::default()),
+                ("destroy all enemy units", won(200, 0.50), Tally::default()),
+            ]);
+            let field = variant_field([(&card, never)], StatsFace::All, 20);
+            // Too few rows for a field of its own: the prior's centre and spread.
+            assert_eq!(field.cards, 0);
+            let rows = variant_rows(&card);
+            let read = |at: usize| {
+                variant_figures(&rows[at].games.on(StatsFace::All), &never, StatsFace::All, &field)
+            };
+            let (better, worse) = (read(0), read(1));
+            assert!(better.has_enough_games && worse.has_enough_games);
+            assert!(better.adjusted.unwrap().0 > worse.adjusted.unwrap().0);
+            assert!(
+                better.tier.unwrap() <= worse.tier.unwrap(),
+                "{better:?} {worse:?}"
+            );
+        }
+
+        #[test]
+        fn r4676000_the_field_is_read_over_every_cards_variants() {
+            // Forty cards, each two options 4 and 8 points over its never-drawn games: the field's centre is the
+            // typical play's 6 points, so a variant at 6 points reads an even game.
+            let never = won(1000, 0.50);
+            let cards: Vec<CardChoices> = (0..40)
+                .map(|_| {
+                    choices(&[
+                        ("a", won(1000, 0.54), Tally::default()),
+                        ("b", won(1000, 0.58), Tally::default()),
+                    ])
+                })
+                .collect();
+            let field = variant_field(cards.iter().map(|card| (card, never)), StatsFace::All, 20);
+            assert_eq!(field.cards, 80);
+            assert!(close(field.center, 0.06), "{}", field.center);
+            let typical = variant_figures(&won(1000, 0.56), &never, StatsFace::All, &field);
+            assert!(close(typical.adjusted.unwrap().0, ADJUSTED_WIN_RATE_CENTER));
+            // A card with too few never-drawn games gives the field nothing.
+            let short = variant_field(cards.iter().map(|card| (card, won(19, 0.5))), StatsFace::All, 20);
+            assert_eq!(short.cards, 0);
+        }
+
+        #[test]
+        fn r4676000_a_variant_below_the_floor_reads_none_and_faces_split_them() {
+            let never = won(400, 0.5);
+            let card = choices(&[("a", won(30, 0.6), won(10, 0.4))]);
+            let field = variant_field([(&card, never)], StatsFace::All, 20);
+            let row = &variant_rows(&card)[0];
+            // All reads both faces' 40 seats; Normal its 10, below the floor: no tier.
+            let all = variant_figures(&row.games.on(StatsFace::All), &never, StatsFace::All, &field);
+            assert_eq!(all.games, 40);
+            assert!(all.has_enough_games && all.tier.is_some());
+            let normal = variant_figures(
+                &row.games.on(StatsFace::Normal),
+                &never,
+                StatsFace::Normal,
+                &field,
+            );
+            assert_eq!(normal.games, 10);
+            assert!(!normal.has_enough_games);
+            assert_eq!(normal.tier, None);
+            let radiant = variant_figures(
+                &row.games.on(StatsFace::Radiant),
+                &never,
+                StatsFace::Radiant,
+                &field,
+            );
+            assert_eq!(radiant.games, 30);
+            assert!(radiant.adjusted.unwrap().0 > normal.adjusted.unwrap().0);
+            // A card with too few never-drawn games reads no rate at all.
+            let short = variant_figures(&won(30, 0.6), &won(19, 0.5), StatsFace::All, &field);
+            assert_eq!(short.adjusted, None);
+            assert_eq!(short.tier, None);
+        }
+    }
+
+    // R4679000: each card a source made read against the source's other outputs.
+    mod r4679000_outputs {
+        use super::*;
+
+        fn close(a: f64, b: f64) -> bool {
+            (a - b).abs() < 1e-9
+        }
+
+        fn won(games: i32, rate: f64) -> Tally {
+            tally(games, (f64::from(games) * rate).round() as i32, 0)
+        }
+
+        /// A source's outputs, each `(card, radiant tally, normal tally)`.
+        fn outputs(rows: &[(&str, Tally, Tally)]) -> CardChoices {
+            CardChoices {
+                outputs: rows
+                    .iter()
+                    .map(|(card, radiant, normal)| {
+                        (
+                            card.to_string(),
+                            FaceTally {
+                                radiant: *radiant,
+                                normal: *normal,
+                            },
+                        )
+                    })
+                    .collect(),
+                ..CardChoices::default()
+            }
+        }
+
+        /// The normal face's seats alone.
+        fn normal(games: Tally) -> FaceTally {
+            FaceTally {
+                radiant: Tally::default(),
+                normal: games,
+            }
+        }
+
+        fn keys(rows: &[OutputFigures]) -> Vec<&str> {
+            rows.iter().map(|row| row.card.as_str()).collect()
+        }
+
+        fn row<'a>(rows: &'a [OutputFigures], card: &str) -> &'a OutputFigures {
+            rows.iter().find(|row| row.card == card).unwrap()
+        }
+
+        #[test]
+        fn r4679000_siblings_are_read_against_each_other() {
+            let none = Tally::default();
+            // Written out of order: the rows come back by adjusted rate, best first.
+            let source = outputs(&[
+                ("c", none, tally(10, 5, 2)),
+                ("b", none, won(100, 0.4)),
+                ("a", none, won(100, 0.6)),
+            ]);
+            // Each output's siblings are every other output's seats, added.
+            let sides = output_sides(&source, StatsFace::All);
+            assert_eq!(
+                sides,
+                [
+                    ("c", tally(10, 5, 2), tally(200, 100, 0)),
+                    ("b", won(100, 0.4), tally(110, 65, 2)),
+                    ("a", won(100, 0.6), tally(110, 45, 2)),
+                ]
+            );
+            let field = output_field([&source], StatsFace::All, 20);
+            // Too few outputs for a field of their own: the prior's centre and spread.
+            assert_eq!(field.cards, 0);
+            let rows = output_figures(&source, StatsFace::All, &field);
+            assert_eq!(keys(&rows), ["a", "b", "c"]);
+            let (a, b, c) = (&rows[0], &rows[1], &rows[2]);
+            assert!(a.adjusted.unwrap().0 > ADJUSTED_WIN_RATE_CENTER, "{a:?}");
+            assert!(b.adjusted.unwrap().0 < ADJUSTED_WIN_RATE_CENTER, "{b:?}");
+            assert!(a.tier.is_some() && a.has_enough_games);
+            // c has too few seats of its own: no tier, and after every row with one.
+            assert!(!c.has_enough_games);
+            assert_eq!(c.tier, None);
+            assert_eq!(
+                rows.iter().map(|row| row.share).collect::<Vec<_>>(),
+                [0.476, 0.476, 0.048]
+            );
+            assert!(
+                rows.iter()
+                    .all(|row| row.offered.is_none() && row.pick_rate.is_none())
+            );
+            // A source with a single output has no sibling to read it against.
+            let alone = outputs(&[("only", none, won(50, 0.5))]);
+            let rows = output_figures(&alone, StatsFace::All, &field);
+            assert_eq!(rows.len(), 1);
+            assert!(close(rows[0].share, 1.0));
+            assert_eq!(rows[0].adjusted, None);
+            assert_eq!(rows[0].tier, None);
+        }
+
+        #[test]
+        fn r4679000_the_field_is_read_over_every_sources_outputs() {
+            // Forty sources, each two outputs 4 points apart: the field's centre is a typical output's distance
+            // from its siblings, none, so the two read as far above an even game as below it.
+            let sources: Vec<CardChoices> = (0..40)
+                .map(|_| {
+                    outputs(&[
+                        ("a", Tally::default(), won(1000, 0.54)),
+                        ("b", Tally::default(), won(1000, 0.58)),
+                    ])
+                })
+                .collect();
+            let field = output_field(&sources, StatsFace::All, 20);
+            assert_eq!(field.cards, 80);
+            assert!(field.center.abs() < 1e-9, "{}", field.center);
+            let rows = output_figures(&sources[0], StatsFace::All, &field);
+            let (a, b) = (
+                row(&rows, "a").adjusted.unwrap().0,
+                row(&rows, "b").adjusted.unwrap().0,
+            );
+            assert!(close(a + b, 2.0 * ADJUSTED_WIN_RATE_CENTER), "{a} {b}");
+            assert!(a < ADJUSTED_WIN_RATE_CENTER, "{a}");
+            // Outputs below the floor on either side give the field nothing.
+            let short: Vec<CardChoices> = (0..40)
+                .map(|_| {
+                    outputs(&[
+                        ("a", Tally::default(), won(19, 0.5)),
+                        ("b", Tally::default(), won(19, 0.5)),
+                    ])
+                })
+                .collect();
+            assert_eq!(output_field(&short, StatsFace::All, 20).cards, 0);
+        }
+
+        #[test]
+        fn r4679000_a_discover_reads_its_offers_and_pick_rate() {
+            let offer = |offered: i32, picked: i32| OfferTally {
+                offered: normal(tally(offered, 0, 0)),
+                picked: normal(tally(picked, 0, 0)),
+            };
+            // v was made though never offered (a copy of the source made it another way); w too few times to read.
+            let source = CardChoices {
+                outputs: [
+                    ("v", won(3, 0.5)),
+                    ("x", won(40, 0.6)),
+                    ("w", won(5, 0.4)),
+                    ("y", won(25, 0.4)),
+                ]
+                .into_iter()
+                .map(|(card, games)| (card.to_string(), normal(games)))
+                .collect(),
+                offers: [
+                    ("z", offer(30, 0)),
+                    ("y", offer(50, 25)),
+                    ("w", offer(10, 5)),
+                    ("x", offer(50, 40)),
+                ]
+                .into_iter()
+                .map(|(card, offer)| (card.to_string(), offer))
+                .collect(),
+                ..CardChoices::default()
+            };
+            let field = output_field([&source], StatsFace::All, 20);
+            let rows = output_figures(&source, StatsFace::All, &field);
+            // The two read first, then the rest by games.
+            assert_eq!(keys(&rows), ["x", "y", "w", "v", "z"]);
+            assert_eq!(
+                rows.iter().map(|row| row.pick_rate).collect::<Vec<_>>(),
+                [Some(0.8), Some(0.5), Some(0.5), None, Some(0.0)]
+            );
+            assert_eq!(
+                rows.iter().map(|row| row.offered).collect::<Vec<_>>(),
+                [Some(50), Some(50), Some(10), Some(0), Some(30)]
+            );
+            // z was offered and never picked: no seat made it.
+            let z = &rows[4];
+            assert_eq!(z.games, 0);
+            assert!(close(z.share, 0.0));
+            assert_eq!(z.adjusted, None);
+            assert_eq!(z.tier, None);
+            // Nothing offered on the Radiant face: no row there.
+            assert!(output_figures(&source, StatsFace::Radiant, &field).is_empty());
+            // A source that only offered: its rows have no share to read.
+            let asked = CardChoices {
+                offers: [("z".to_string(), offer(30, 6))].into_iter().collect(),
+                ..CardChoices::default()
+            };
+            let only = output_figures(&asked, StatsFace::All, &field);
+            assert_eq!(keys(&only), ["z"]);
+            assert!(close(only[0].share, 0.0) && only[0].pick_rate == Some(0.2));
+        }
+
+        #[test]
+        fn r4679000_a_source_made_on_both_faces_splits_by_its_face() {
+            let source = outputs(&[
+                ("t", won(30, 0.6), won(10, 0.4)),
+                ("u", won(30, 0.5), won(30, 0.5)),
+                ("v", won(20, 0.5), Tally::default()),
+            ]);
+            let read = |face: StatsFace| output_figures(&source, face, &output_field([&source], face, 20));
+            let all = read(StatsFace::All);
+            assert_eq!(["t", "u", "v"].map(|card| row(&all, card).games), [40, 60, 20]);
+            // Normal reads the normal sources' seats: v was made only by a Radiant one.
+            let normal = read(StatsFace::Normal);
+            assert_eq!(normal.len(), 2);
+            let (t, u) = (row(&normal, "t"), row(&normal, "u"));
+            assert_eq!(t.games, 10);
+            assert!(!t.has_enough_games);
+            assert!(close(t.share, 0.25) && close(u.share, 0.75));
+            // Radiant: t wins 60% against its siblings' 50%, u 50% against their 56%.
+            let radiant = read(StatsFace::Radiant);
+            let (t, u) = (row(&radiant, "t"), row(&radiant, "u"));
+            assert_eq!(t.games, 30);
+            assert!(close(t.share, 0.375));
+            assert!(t.adjusted.unwrap().0 > u.adjusted.unwrap().0, "{t:?} {u:?}");
+            assert_eq!(keys(&radiant)[0], "t");
         }
     }
 

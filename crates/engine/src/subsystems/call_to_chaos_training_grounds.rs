@@ -107,14 +107,19 @@ fn add_cards(name: &'static str, count: i32, radiant: bool, mana: i32) -> Effect
 
 /// R2200002, R2200004, R3135000: one random Call to Chaos of the sets that ship (R380, R1420), this edition
 /// among them once its set ships (R387), added at its printed price; a full hand burns it (§2.4).
+/// R673, R4845000: a card generated into a hand, so it is Glitch instead on the match's odds.
 fn add_random_call() -> Effect {
     Effect::new("callToChaosTrainingGrounds:addCall", |ctx| {
         let pool = crate::catalog::query(&json_as(json!({ "tags": [CHAOS_TAG] })));
         // R3563000: the pick draws through the run's tally, unique while `UNIQUE_RANDOM_DRAWS` holds.
-        let Some(def_id) =
-            crate::catalog::pick_generated_unique(&mut *ctx.sink.rng, &pool, None, &mut ctx.draw_tally)
-                .map(|def| def.id.clone())
-        else {
+        // R673, R4845000: a card generated into a hand may be Glitch (`catalog::GlitchOdds` is the state).
+        let Some(def_id) = crate::catalog::pick_generated_unique(
+            &mut *ctx.sink.rng,
+            &pool,
+            Some(&*ctx.sink.state),
+            &mut ctx.draw_tally,
+        )
+        .map(|def| def.id.clone()) else {
             return;
         };
         let add = crate::effects::add_to_hand::add_to_hand(AddToHandArgs {
@@ -142,7 +147,7 @@ pub fn alternate_effects_held(state: &GameState, player: PlayerId) -> i32 {
 /// R2200002, R3135000: entry 9's step at the start of each of its player's turns: it adds only when the
 /// turns begun since the effect was made are a positive multiple of `CHAOS_TG_EVERY`, 1 now, so on each of
 /// them, the turn the entry resolved in not counted (extra turns, R846).
-#[allow(
+#[expect(
     clippy::modulo_one,
     reason = "CHAOS_TG_EVERY is the designer's tunable and 1 now: the turns between two adds"
 )]

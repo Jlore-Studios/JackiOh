@@ -10,7 +10,7 @@
 //! Each constant is one line, `export const NAME<: type> = <JSON value>;`, sorted by name. The type
 //! annotation, from the generated ts-rs files, keeps the client's code typechecking against the shapes
 //! it expects (`DIFFICULTIES` is `readonly Difficulty[]`, not `string[]`).
-#![allow(
+#![expect(
     clippy::disallowed_methods,
     reason = "a generator, not the rules: it writes the client's constants file, as build.rs writes the registry"
 )]

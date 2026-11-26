@@ -38,6 +38,7 @@ import {
   ASSAULT_DATE_FORMAT,
   ASSAULT_FIRST_ATTEMPT,
   ASSAULT_FIRST_LEVEL,
+  ASSAULT_HELD_KEY,
   ASSAULT_RECORDS_KEY,
   ASSAULT_STORAGE_VERSION,
 } from "./config.ts";
@@ -60,6 +61,12 @@ export type Assault = {
   start(start: AssaultStart): string | null;
   /** The refusal, word for word, or null. */
   act(action: AssaultAction): string | null;
+  /**
+   * R4733000: hold a finished fight's report beside the kept attempt, for the fight screen's
+   * arrival effect. Silent unless an attempt stands on a fight: only the fight's own `fightOver`
+   * is ever held.
+   */
+  hold(action: AssaultAction): void;
   /** A finished attempt's Try again (R4581000): the refusal, word for word, or null. */
   tryAgain(): string | null;
   /** Leave a finished attempt's result for today's day screen. */
@@ -153,6 +160,37 @@ function readAttempt(): AssaultFile | null {
   return attempt;
 }
 
+/**
+ * R4733000: a finished fight's report, held beside the kept attempt keyed to its fight: the
+ * fight's own `fightOver` with the attempt and the level.
+ */
+type HeldAssault = { attempt: number; level: number; action: AssaultAction };
+
+function parseHeld(raw: unknown): HeldAssault | null {
+  if (!isRecord(raw)) return null;
+  const { attempt, level, action } = raw;
+  if (!isCount(attempt) || !isCount(level)) return null;
+  const parsed = parseAction(action);
+  if (parsed === null || parsed.kind !== "fightOver") return null;
+  return { attempt, level, action: parsed };
+}
+
+function readHeld(): HeldAssault | null {
+  const stored = readJson(ASSAULT_HELD_KEY);
+  if (!stored.present) return null;
+  const held = parseHeld(stored.value);
+  if (held === null) removeStored(ASSAULT_HELD_KEY);
+  return held;
+}
+
+function writeHeld(held: HeldAssault): void {
+  writeJson(ASSAULT_HELD_KEY, held);
+}
+
+function clearHeld(): void {
+  removeStored(ASSAULT_HELD_KEY);
+}
+
 function parseRecords(raw: unknown): Record<string, AssaultRecord> | null {
   if (!isRecord(raw) || raw.v !== ASSAULT_STORAGE_VERSION || !isRecord(raw.days)) return null;
   const days: Record<string, AssaultRecord> = {};
@@ -234,18 +272,49 @@ function loadCore(): Core {
       const record = assaultRecord(before, folded.state);
       records = trimRecords({ ...records, [record.date]: record }, constants);
       persistRecords(records);
-      if (terminal(folded.state)) removeStored(ASSAULT_ATTEMPT_KEY);
+      let state = folded.state;
+      let kept = file;
+      let foldedRecord = record;
+      // R4733000: a held report for this fight is the fight's result, left before Continue sent
+      // it: apply it once, as Continue would, in the same tick that clears the hold. A refused
+      // or mismatched hold is dropped, and the fight is dealt fresh from its seed as today.
+      const held = readHeld();
+      if (held !== null) {
+        if (state.phase === "fight" && state.setup.attempt === held.attempt && state.level === held.level) {
+          const base: Core = {
+            constants,
+            content: folded.content,
+            day: folded.day,
+            state,
+            file: kept,
+            records,
+            record: foldedRecord,
+          };
+          const applied = commitAction(base, held.action);
+          if (typeof applied !== "string") {
+            state = applied.state as AssaultState;
+            kept = applied.file as AssaultFile;
+            records = applied.records;
+            foldedRecord = applied.record;
+          }
+        }
+        // The hold is consumed either way: applied once, or dropped with the fight dealt fresh.
+        clearHeld();
+      }
+      if (terminal(state)) removeStored(ASSAULT_ATTEMPT_KEY);
       return {
         constants,
         content: folded.content,
         day: folded.day,
-        state: folded.state,
-        file,
+        state,
+        file: kept,
         records,
-        record,
+        record: foldedRecord,
       };
     }
     removeStored(ASSAULT_ATTEMPT_KEY);
+    // R4733000: no attempt stands on the held report's fight, so the hold goes with it.
+    clearHeld();
   }
   const date = assaultToday();
   const day = assaultDay(date, currentContent);
@@ -275,7 +344,9 @@ function commit(next: Core): void {
 }
 
 function onStorage(event: StorageEvent): void {
-  if (event.key !== null && event.key !== ASSAULT_ATTEMPT_KEY && event.key !== ASSAULT_RECORDS_KEY) return;
+  // R4733000: another tab holding or clearing a report reloads this tab too, so a report is
+  // applied once no matter which tab left the fight.
+  if (event.key !== null && event.key !== ASSAULT_ATTEMPT_KEY && event.key !== ASSAULT_RECORDS_KEY && event.key !== ASSAULT_HELD_KEY) return;
   commit(loadCore());
 }
 
@@ -316,6 +387,8 @@ function startAttempt(start: AssaultStart): string | null {
     const nextRecord = assaultRecord(record, created.state);
     const records = trimRecords({ ...from.records, [start.date]: nextRecord }, from.constants);
     persistAttempt(file);
+    // R4733000: a new attempt stands on no fight the hold names.
+    clearHeld();
     persistRecords(records);
     commit({ ...from, content, day, state: created.state, file, records, record: nextRecord });
     return null;
@@ -344,8 +417,12 @@ function tryAgain(): string | null {
   }
 }
 
-function actOn(action: AssaultAction): string | null {
-  const from = current();
+/**
+ * R4733000: the attempt after `action`, kept on the device, or the attempt's own refusal. The
+ * state in memory is the caller's to commit. A taken action clears any hold for its fight in the
+ * same tick that appends it, so Continue-then-leave and two tabs apply nothing twice.
+ */
+function commitAction(from: Core, action: AssaultAction): Core | string {
   if (from.state === null || from.file === null) return t("No attempt is in progress.");
   if (terminal(from.state)) return t("The attempt is over.");
   try {
@@ -357,16 +434,36 @@ function actOn(action: AssaultAction): string | null {
     persistRecords(records);
     if (terminal(reduced.state)) removeStored(ASSAULT_ATTEMPT_KEY);
     else persistAttempt(file);
-    commit({ ...from, state: reduced.state, file, records, record });
-    return null;
+    clearHeld();
+    return { ...from, state: reduced.state, file, records, record };
   } catch (cause) {
     return messageOf(cause);
   }
 }
 
+function actOn(action: AssaultAction): string | null {
+  const next = commitAction(current(), action);
+  if (typeof next === "string") return next;
+  commit(next);
+  return null;
+}
+
+/**
+ * R4733000: hold a finished fight's report beside the kept attempt, keyed to its fight. Only the
+ * fight's own `fightOver` is ever held, and only while the attempt still stands on a fight.
+ */
+function holdAttemptReport(action: AssaultAction): void {
+  const from = current();
+  if (from.state === null || from.state.phase !== "fight") return;
+  if (action.kind !== "fightOver") return;
+  writeHeld({ attempt: from.state.setup.attempt, level: from.state.level, action });
+}
+
 function dismissResult(): void {
   const from = current();
   if (from.state !== null && !terminal(from.state)) return;
+  // R4733000: leaving a finished attempt's result keeps no hold for its fight.
+  clearHeld();
   const content = assaultContent();
   const date = assaultToday();
   const day = assaultDay(date, content);
@@ -396,6 +493,7 @@ export function useAssault(): Assault {
       records: value.records,
       start: startAttempt,
       act: actOn,
+      hold: holdAttemptReport,
       tryAgain,
       dismiss: dismissResult,
     }),

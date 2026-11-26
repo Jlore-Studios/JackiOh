@@ -4,6 +4,9 @@ The JackiOh client: React 19 + Vite. It renders a `PlayerView` and nothing else.
 and the deck validator it runs locally are the Rust crates compiled to WebAssembly (`crates/wasm`,
 [The engine as WebAssembly](#the-engine-as-webassembly) below).
 
+`game/Game.tsx` is the one board; each of its layers has one owning module: animations (`game/animations.ts`),
+effects (`fx/`), audio (`audio/`), cards (`cards/`), drag (`game/drag/`) and settings (`settings/`).
+
 ## The one rule
 
 CLAUDE.md rule 7 and SPEC §10.8: **the client sends intent and renders `viewFor`. It never
@@ -279,7 +282,7 @@ read keeps it with `keepRead`, which is no write. `apiRequest` shares a `GET` of
 counts every spend that settles (it sends an `Idempotency-Key`) and every `rememberRead`, fold, `forgetRead` and
 `clearReadCache`: a read asked after it moved never joins an earlier one, and one that finished after it moved is
 not kept. A write that changes a kept read without carrying it drops it (`forgetRead`; `forgetPaidReads` for a
-game's paid result, which `announceWallet()` with no balance calls), and a dev tool's success empties the cache.
+game's paid result, which `announceWallet()` with no balance calls; it also has the mounted ownership providers read the owned cosmetics again, `forgetOwnedCosmetics`, R4780000), and a dev tool's success empties the cache.
 
 A move between two menus cross-fades (R2117000): `net/navigate.ts`'s `showMove` runs it inside `document.startViewTransition`, the render flushed with `flushSync`. A move into or out of a board's route (`isBoardPath`), off a board on screen, within one screen, under Reduce motion (`settings/motion.ts`) or without the API is drawn at once; a move the leave guard holds (R1754000) waits for it.
 
@@ -668,6 +671,14 @@ The GIF code still loads on demand, never in the main bundle.
 Each `/replays` row that can be watched also offers "Download JSON" (R1141000): every step's view through the
 row's own source, the row's facts and the build's catalog version, no account named, made in memory and saved
 to the browser's downloads, for a bug report.
+Every mode's end-of-game result offers one **Main menu** button after its own ways on (R4742000, issue #4742):
+`game/MainMenuButton.tsx` draws it for the result panels and screens (the dungeon run-over screen and fights, the
+Infinite Assault fight, the daily game's result, the co-op result), and `mainMenuAction` is the same label as a
+`DialogAction` for the two Dialog results (practice's and a lesson's). The button decides nothing: each result's
+`onClick` is where it leaves for (a fight's is its board Menu's handler, so Assault's still reports the fight
+first; Duos' comes from `DuosChrome.onMenu`, and `/dev/duos` hangs none). Practice's Menu, its leave
+question's Save and leave and both Dialog results leave for `playSoloPath()` (`/play#solo`): `PlayHub` reads
+that fragment once on arrival, scrolls its Solo group into view and focuses the Practice card.
 A finished co-op game's result panel offers "Watch the replay" too (§13.9): `duos/DuosReplay.tsx` reads
 `GET /api/duos/matches/:matchId/replay` once and steps the seat's `DuosView`s on `DuosBoard`'s replay mode,
 with the player's controls, a round standing for a turn; it is never in `/replays`.
@@ -687,7 +698,7 @@ src/replay/
   OpenedReplay.tsx  a source loaded first (a finished match's first page), then the player
   ShareGif.tsx    "Share as GIF" (#513, R513000): the clip, the shape, progress, cancel, Share or Download
   download.ts     "Download JSON" (#1141, R1141000): every step of a source and the row's facts as one file, and
-                  `parseReplayJsonFile` (`readReplayJsonFile`, then `replayStepsOf`) opens one again (#1160);
+                  `readReplayJsonFile`, then `replayStepsOf`, opens one again (#1160);
                   the download both it and the GIF's share.ts hand a file to
   gif/            what it loads on demand, never in the main bundle: plan.ts (a clip's views to frames, a pure
                   function on a fixed frame clock), raster.ts and raster.worker.ts (the frames drawn on an
@@ -865,7 +876,7 @@ routes/collection.tsx   /collection (#1307, #1579, R1579000, #3734, R3734000): f
 routes/QuestsPanel.tsx  /collection's Progress tab's quests (§14.9) from GET /api/quests: each held quest's progress and
                         reward, and the countdown to the next; moved from /account (#1307), and Replace on each, behind
                         a confirm, while a replace is left today (R2210000). The landing's bookmark
-                        shares `useQuests` and `QuestsView` (R2035000)
+                        shares `useQuests` and `QuestsView` (R2035000), and both read again once when the next quest falls due (R4818000)
 routes/NewsPanel.tsx    the landing's news (§14.13, #2875) from GET /api/news: the live entries, newest first (R2875001),
                         each with its reward in words (R2875003) and Claim, POST /api/news/:id/claim, a spend sent
                         once (R2875000); the bookmark's count is the entries the server says are unclaimed (R2875002)
@@ -1291,8 +1302,8 @@ routes/practice.tsx   the route: the tutorial path, setup, HUD, and Game.tsx unc
   `practice/aiTable.ts`; it has no `?pace=fast`. The controller's general form is `setHold(reason, held)`. The settings panel's "Reduce motion" gives the reduced pacing,
   as the media query does.
 - A lesson in progress asks before a reload or a closed tab ends it (`beforeunload`), and the HUD's
-  Menu leaves for the landing page, asking first (Save and leave, or Leave without saving) while the
-  game is on.
+  Menu leaves for the Play hub's Solo group (`/play#solo`, R4742000), asking first (Save and leave, or Leave
+  without saving) while the game is on.
 
 ## The tutorial
 
@@ -1467,7 +1478,14 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   the shop's pack reveal do; `routes/engine-gate.test.tsx` holds the landing to it with a played game's stats.
   The scene kits and both recipe tables load in a chunk beside the module (#4222:
   `src/cards/art/sceneLoader.ts`): `EngineGate` and `useEngineReady` wait for both before a face draws,
-  and `test/setup.ts` installs the tables synchronously. The sound-effect recipes load the same way
+  and `test/setup.ts` installs the tables synchronously. The cosmetic offers (`COSMETIC_OFFERS`, each
+  version's offered cards, `wire/generated/cosmeticOffers.ts`) load in the same step from a chunk of their
+  own (#4714, `loadCosmeticOffers` in `cards/versions.ts`, whose offer queries throw before they are in): the
+  shop's route chunk and the ownership read (`cards/ownedFullArt.ts`) await them too, and `test/setup.ts`
+  installs them. `main.tsx` starts the module's download at boot on every route with a low Fetch Priority
+  (`startWasmLoad`), so the route's own chunks come first; a screen that awaits the engine shares that one
+  download and never fetches it again. The full-screen art view imports the music player when it opens, never
+  with the faces that open it (`cards/FullScreenArt.tsx`). The sound-effect recipes load the same way
   (#4428: `src/audio/sfxLoader.ts`): `main.tsx` starts them off the first paint beside the page-wide
   sound, and the engine's `unlock()` is the backstop, never behind the module; a sound asked for
   before they land is skipped silently, and `test/setup.ts` installs them synchronously. The
@@ -1494,7 +1512,7 @@ strings go in and out; the state is an opaque JSON object the client hands back 
   `crates/cards` (the second and third generated from its `card-text.yaml`, #2498, each with a `"//"`
   entry that `flavour.ts` and `chinese.ts` drop).
 - The generated files (`src/wire/generated/`, `engineConfig.ts`, `serverConfig.ts`; among the first,
-  `generated/cosmetics.ts` is the server's cosmetics registry, the card slots, the deck slots and the full arts, R1295000, R1297000, R1313000) are written by
+  `generated/cosmetics.ts` is the server's cosmetics registry, the card slots, the deck slots and the full arts, R1295000, R1297000, R1313000, and `generated/cosmeticOffers.ts` beside it each version's offered cards, R2725001, #4714) are written by
   `cargo test --workspace --features jackioh-engine/testkit,jackioh-engine/ts`; CI fails when they
   differ from what is committed, so a Rust change that moves the wire commits them in the same change.
 - Three files hold a game's state, and nothing else imports the engine's game functions: `game/engine.ts`

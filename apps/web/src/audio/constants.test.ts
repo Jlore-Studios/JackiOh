@@ -15,6 +15,7 @@ import {
   CHAOS_REVEAL_MAX,
   CLOCK_ALARM_BEAT_MS,
   CLOCK_ALARM_FROM_MS,
+  CLOCK_ALARM_HIDDEN_LOOKAHEAD_MS,
   CLOCK_ALARM_LATE_MS,
   CLOCK_ALARM_LOOKAHEAD_MS,
   CLOCK_ALARM_SHARP_FROM_MS,
@@ -167,6 +168,8 @@ describe("audio constants", () => {
     expect(CLOCK_ALARM_BEAT_MS).toBe(1_000);
     expect(CLOCK_ALARM_LOOKAHEAD_MS).toBe(400);
     expect(CLOCK_ALARM_LATE_MS).toBe(250);
+    expect(CLOCK_ALARM_HIDDEN_LOOKAHEAD_MS).toBe(1_000);
+    expect(CLOCK_ALARM_HIDDEN_LOOKAHEAD_MS + CLOCK_ALARM_LATE_MS).toBeGreaterThanOrEqual(CLOCK_ALARM_BEAT_MS);
   });
 
   it("R631 pins the stations, the rotation key and the mix schedule", () => {
@@ -202,7 +205,7 @@ describe("audio constants", () => {
     expect(MUSIC_LOW_HEALTH_FRACTION).toBe(0.25);
     expect(MUSIC_DECODED_MAX).toBe(3);
     expect(MUSIC_BYTES_MAX).toBe(8);
-    expect(MUSIC_BUDGET_BYTES).toBe(51 * 1024 * 1024); // R3572000: 49 MiB until the Stinkyscape+ intros
+    expect(MUSIC_BUDGET_BYTES).toBe(54 * 1024 * 1024); // R4596000: 51 MiB until the Infinite Assault intros (R3572000: 49 until the Stinkyscape+ ones)
   });
 
   it("pins the v0.2.X polish stings, pans and ducks", () => {

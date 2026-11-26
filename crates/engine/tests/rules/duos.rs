@@ -210,7 +210,10 @@ fn scripts() -> IndexMap<String, CardScripts> {
             ))]
         }),
     );
-    map.insert(SWAP.into(), on_play(|| vec![effects::swap_health()]));
+    map.insert(
+        SWAP.into(),
+        on_play(|| vec![effects::swap(json_as(json!({ "what": "health" })))]),
+    );
     map.insert(
         TEMPO.into(),
         on_play(|| vec![effects::end_turn(json_as(json!({})))]),
@@ -2864,4 +2867,57 @@ mod r3925000_the_loop_cap {
         let state = ok(&result.state, A1, end_turn());
         assert!(state.ended[0]);
     }
+}
+
+// R4831000: a Duos hero's starting health
+
+#[test]
+fn r4831000_a_duos_seats_starting_health_is_its_own_hp_spent_or_not() {
+    let hard = DuosTeamRules {
+        pool_health: DUOS_POOL_HEALTH_HARD,
+        ..DUOS_HUMAN_TEAM
+    };
+    let mut state = begun_with("r4831000", hard);
+    for seat in DUOS_SEATS {
+        let start = query::starting_health_of(&state.duels[seat.duel()], seat.player());
+        assert_eq!(start, DUOS_OWN_HEALTH, "{seat:?}");
+        let life = side(&state, seat).duos.unwrap();
+        assert_eq!(
+            life.own_start, None,
+            "{seat:?}: the standard own HP writes nothing"
+        );
+        assert!(serde_json::to_value(life).unwrap().get("ownStart").is_none());
+    }
+    // Spent: the hero's health reads the Hard pool, its start stays its own HP.
+    let a1 = side_mut(&mut state, A1);
+    a1.duos.as_mut().unwrap().spent = true;
+    a1.hero.health = DUOS_POOL_HEALTH_HARD;
+    assert_eq!(
+        query::starting_health_of(&state.duels[A1.duel()], A1.player()),
+        DUOS_OWN_HEALTH
+    );
+    // Other rules' own HP is written and read.
+    let custom = DuosTeamRules {
+        own_health: DUOS_OWN_HEALTH + 6,
+        ..DUOS_HUMAN_TEAM
+    };
+    let state = begun_with("r4831000-custom", custom);
+    assert_eq!(
+        query::starting_health_of(&state.duels[A1.duel()], A1.player()),
+        DUOS_OWN_HEALTH + 6
+    );
+    assert_eq!(
+        side(&state, A1).duos.unwrap().own_start,
+        Some(DUOS_OWN_HEALTH + 6)
+    );
+    assert_eq!(
+        query::starting_health_of(&state.duels[B1.duel()], B1.player()),
+        DUOS_OWN_HEALTH
+    );
+    // A life stored before the field loads as the standard start.
+    let stored: DuosLife = serde_json::from_value(
+        json!({ "pool": DUOS_POOL_HEALTH, "poolCap": DUOS_POOL_HEALTH, "spent": false }),
+    )
+    .unwrap();
+    assert_eq!(stored.own_start, None);
 }

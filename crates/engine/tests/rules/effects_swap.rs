@@ -2,7 +2,7 @@
 //! the board lane by lane, and the libraries — with R12's ownership rule and its one exception,
 //! R33's face-down trap and §3.2's Stack pile. Its fixture Trap is registered here (BUILD §0).
 
-use jackioh_engine::effects::{swap, swap_board, swap_health, swap_library};
+use jackioh_engine::effects::{SwapArgs, swap, swap_library};
 use jackioh_engine::testkit::*;
 
 use super::fixtures::catalog as catalog_fx;
@@ -101,7 +101,11 @@ mod swap_s6_3_r73_m3_t1 {
         state.players.p1.hero = HeroState { health: 12, armor: 3 };
         state.players.p2.hero = HeroState { health: 27, armor: 5 };
 
-        let events = run(&mut state, swap_health(), HookOptions::default());
+        let events = run(
+            &mut state,
+            swap(json_as(json!({ "what": "health" }))),
+            HookOptions::default(),
+        );
 
         assert_eq!(state.players.p1.hero.health, 27);
         assert_eq!(state.players.p2.hero.health, 12);
@@ -159,7 +163,13 @@ mod swap_s6_3_r73_m3_t1 {
             json!({}),
         );
 
-        let events = run(&mut state, swap_board(), HookOptions::default());
+        let events = run(
+            &mut state,
+            swap(SwapArgs {
+                what: Some(SwapWhat::Board),
+            }),
+            HookOptions::default(),
+        );
 
         // Lane-preserving: the same row and lane on the other side (R73, §3.1).
         assert_eq!(where_is(&state, &mine), "p2 units 2");
@@ -252,7 +262,13 @@ mod swap_s6_3_r73_m3_t1 {
             json!({}),
         );
 
-        run(&mut state, swap_board(), HookOptions::default());
+        run(
+            &mut state,
+            swap(SwapArgs {
+                what: Some(SwapWhat::Board),
+            }),
+            HookOptions::default(),
+        );
         let mut now = live(&state, &card.id);
         assert_eq!(now.controller, PlayerId::P2);
         assert_eq!(now.owner, PlayerId::P1);
@@ -292,7 +308,13 @@ mod swap_s6_3_r73_m3_t1 {
             json!({}),
         );
 
-        let events = run(&mut state, swap_board(), HookOptions::default());
+        let events = run(
+            &mut state,
+            swap(SwapArgs {
+                what: Some(SwapWhat::Board),
+            }),
+            HookOptions::default(),
+        );
 
         assert_eq!(
             units
@@ -326,7 +348,13 @@ mod swap_s6_3_r73_m3_t1 {
         // §3.2: the lock spares the current occupant and outlasts it.
         lock_zone(&mut state, slot(PlayerId::P1, Row::Units, 1));
 
-        run(&mut state, swap_board(), HookOptions::default());
+        run(
+            &mut state,
+            swap(SwapArgs {
+                what: Some(SwapWhat::Board),
+            }),
+            HookOptions::default(),
+        );
 
         assert_eq!(where_is(&state, &card), "p2 units 1");
         // The lock stayed on its zone; the card's new zone did not become Locked (R73).
@@ -364,7 +392,13 @@ mod swap_s6_3_r73_m3_t1 {
         );
         lock_zone(&mut state, slot(PlayerId::P2, Row::Units, 3));
 
-        let events = run(&mut state, swap_board(), HookOptions::default());
+        let events = run(
+            &mut state,
+            swap(SwapArgs {
+                what: Some(SwapWhat::Board),
+            }),
+            HookOptions::default(),
+        );
 
         assert_eq!(where_is(&state, &blocked), "hand");
         assert!(ids_of(&state.players.p1.hand).contains(&blocked.id));
@@ -402,7 +436,13 @@ mod swap_s6_3_r73_m3_t1 {
             json!({ "faceDown": true, "cost": 1 })
         );
 
-        let events = run(&mut state, swap_board(), HookOptions::default());
+        let events = run(
+            &mut state,
+            swap(SwapArgs {
+                what: Some(SwapWhat::Board),
+            }),
+            HookOptions::default(),
+        );
 
         assert_eq!(where_is(&state, &hidden), "p2 backrow 2");
         let hidden_now = live(&state, &hidden.id);
@@ -443,7 +483,13 @@ mod swap_s6_3_r73_m3_t1 {
         live_mut(&mut state, &under.id).damage = 1;
         let top = stack_onto(&mut state, &combat_fx::stacker.id, PlayerId::P1, 5);
 
-        let events = run(&mut state, swap_board(), HookOptions::default());
+        let events = run(
+            &mut state,
+            swap(SwapArgs {
+                what: Some(SwapWhat::Board),
+            }),
+            HookOptions::default(),
+        );
 
         assert!(pile_at(&state, slot(PlayerId::P1, Row::Units, 5)).is_none());
         assert_eq!(
@@ -479,7 +525,13 @@ mod swap_s6_3_r73_m3_t1 {
         let token = put(&mut state, TOKEN_ID, slot(PlayerId::P1, Row::Units, 4), json!({}));
         lock_zone(&mut state, slot(PlayerId::P2, Row::Units, 4));
 
-        let events = run(&mut state, swap_board(), HookOptions::default());
+        let events = run(
+            &mut state,
+            swap(SwapArgs {
+                what: Some(SwapWhat::Board),
+            }),
+            HookOptions::default(),
+        );
 
         assert_eq!(bounced_ids(&events), vec![token.id.clone()]);
         assert!(find_instance(&state, &token.id).is_none());

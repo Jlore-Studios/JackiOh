@@ -3,13 +3,16 @@
 //! `crates/cards`: each a Classic or Classic+ card's shape, cut to the part the engine test exercises.
 //! Defs are prefixed `fd-` and indexed from 9400, so they collide with no other file's catalog (BUILD §0).
 
-#![allow(non_upper_case_globals)]
+#![expect(
+    non_upper_case_globals,
+    reason = "a fixture card's static is named as its card, as a value"
+)]
 
 use std::sync::LazyLock;
 
 use jackioh_engine::effects::{
-    animate, choose_target, damage, destroy_all, flicker, lock_lane, lock_own_zone, lock_played_zone,
-    lock_random_zone, unlock_all,
+    animate, choose_target, damage, destroy_all, flicker, lock_lane, lock_played_zone, lock_random_zone,
+    unlock_all,
 };
 use jackioh_engine::testkit::*;
 
@@ -485,7 +488,7 @@ pub static FIELD_SCRIPTS: LazyLock<IndexMap<String, CardScripts>> = LazyLock::ne
             doom.id.clone(),
             both(Script {
                 triggers: vec![TriggerDef::new("fd-doom", &[GameEventType::CardPlayed], |_ctx, _event| {
-                    vec![note("doomed"), lock_own_zone()]
+                    vec![note("doomed")]
                 })
                 .with_when(enemy_play)],
                 ..Script::default()

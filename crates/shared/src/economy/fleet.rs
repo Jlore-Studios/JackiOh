@@ -247,6 +247,8 @@ mod tests {
                 card: stinky.clone(),
                 turn: 3,
                 radiant: false,
+                variant: None,
+                source: None,
             }]),
             starship_pieces_fused: Some(3),
             starships_launched: Some(1),

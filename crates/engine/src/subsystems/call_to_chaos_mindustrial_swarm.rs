@@ -17,7 +17,7 @@ use crate::config::{
     CHAOS_MS_WEAPON_COST,
 };
 use crate::effects::delay::delayed_resume;
-use crate::params::param;
+use crate::params::{param, param_or};
 use crate::prelude::json_as;
 use crate::script::{Effect, EffectContext, EffectPart, Hook, hook};
 use crate::state::{DrawCount, GameState, ModifierKind};
@@ -42,6 +42,11 @@ const JLOCKEED_COUNT_KEY: &str = "card3";
 const TERMINUS_COUNT_KEY: &str = "card4";
 const TOXIC_KEY: &str = "toxic";
 const BURN_KEY: &str = "burn";
+/// R4783032: entry 5's replenish and entry 6's Toxopid price, declared since issue #4783 (3 and 2); a
+/// definition that declares neither, as every one through v0.6.13h, reads the numbers it printed,
+/// `CHAOS_MS_TERMINUS_REPLENISH` and `CHAOS_MS_CARD_COST` (`param_or`, R2657006).
+const TERMINUS_REPLENISH_KEY: &str = "replenish";
+const TOXOPID_COST_KEY: &str = "toxopidCost";
 
 /// R3570004: the hook of entry 8's rest-of-game effect, the engine's own: `work::script_step_for` answers it
 /// with `launch_watch_step` whatever card made it.
@@ -140,28 +145,31 @@ fn build_jlockeed() -> Effect {
 }
 
 /// 5. R3570000: `card4` random Terminus cards, tokens among them (S+ #142's designer text names no
-///    printed set: SP5), each at its printed price (the card prints no `(0)`), then Refresh 4.
+///    printed set: SP5), each at its printed price (the card prints no `(0)`), then Refresh `replenish`
+///    (R4783032; 4 through v0.6.13h).
 fn build_terminus() -> Effect {
     entry("terminus", |ctx| {
         let mut query = tag_pool(Tag::Terminus);
         query["withTokens"] = json!(true);
+        let replenish = param_or(&*ctx, TERMINUS_REPLENISH_KEY, CHAOS_MS_TERMINUS_REPLENISH);
         vec![
             crate::effects::add_to_hand::add_random_from_catalog(json_as(json!({
                 "query": query,
                 "count": param(&*ctx, TERMINUS_COUNT_KEY),
             }))),
-            crate::effects::mana::refresh_mana(json_as(json!({ "amount": CHAOS_MS_TERMINUS_REPLENISH }))),
+            crate::effects::mana::refresh_mana(json_as(json!({ "amount": replenish }))),
         ]
     })
 }
 
-/// 6. R3570000: S+ #121 Toxopid, a fresh hand card costing `CHAOS_MS_CARD_COST`; a full hand burns it (§2.4).
+/// 6. R3570000: S+ #121 Toxopid, a fresh hand card costing `toxopidCost` (R4783032; `CHAOS_MS_CARD_COST`
+///    through v0.6.13h); a full hand burns it (§2.4).
 fn build_toxopid() -> Effect {
-    entry("toxopid", |_ctx| match def_id_by_index(SET, TOXOPID_INDEX) {
+    entry("toxopid", |ctx| match def_id_by_index(SET, TOXOPID_INDEX) {
         None => vec![],
         Some(def_id) => vec![crate::effects::add_to_hand::add_to_hand(json_as(json!({
             "defId": def_id,
-            "costOverride": CHAOS_MS_CARD_COST,
+            "costOverride": param_or(&*ctx, TOXOPID_COST_KEY, CHAOS_MS_CARD_COST),
         })))],
     })
 }
@@ -273,7 +281,8 @@ fn build_recast() -> Effect {
 /// §8.12 row 142's ten entries, in the order the card prints them. Each `label` is the clause as the card
 /// prints it, which `chaosRolled` names to both players (R436); a tuned `param` does not change it
 /// (R3570000). Issue #3996 cut entry 4's count 5 → 4 and entry 7's Burn 3 → 2 (R3996200); issue #4154 cut
-/// entries 1, 2 and 5's counts 3 → 2, entry 4's 4 → 3 and entry 7's Burn 2 → 1 (R4154303), each a declared
+/// entries 1, 2 and 5's counts 3 → 2, entry 4's 4 → 3 and entry 7's Burn 2 → 1 (R4154303); issue #4783 cut
+/// entry 5's replenish 4 → 3 and raised entry 6's Toxopid price (0) → (2) (R4783032), each a declared
 /// number, so a replay reads its own catalog's.
 pub const CHAOS_MS_EFFECTS: &[ChaosEffectDef] = &[
     ChaosEffectDef {
@@ -298,12 +307,12 @@ pub const CHAOS_MS_EFFECTS: &[ChaosEffectDef] = &[
     },
     ChaosEffectDef {
         name: "terminus",
-        label: "Add 2 random Terminus cards to your hand, replenish 4 mana",
+        label: "Add 2 random Terminus cards to your hand, replenish 3 mana",
         build: build_terminus,
     },
     ChaosEffectDef {
         name: "toxopid",
-        label: "Add the Toxopid to your hand, it costs (0)",
+        label: "Add the Toxopid to your hand, it costs (2)",
         build: build_toxopid,
     },
     ChaosEffectDef {

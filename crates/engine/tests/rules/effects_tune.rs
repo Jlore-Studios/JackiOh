@@ -4,8 +4,8 @@
 //! (R57) and into a Fuse (R102), but not through a Transform.
 
 use jackioh_engine::effects::{
-    TuneDirection, applicable_changes, degrade, set_number, shuffle_copies_of_self, shuffle_into,
-    summon_copy, transform, tune_once, upgrade,
+    TuneDirection, applicable_changes, degrade, set_number, shuffle_into, summon_copy, transform, tune_once,
+    upgrade,
 };
 use jackioh_engine::testkit::*;
 
@@ -1285,7 +1285,9 @@ mod b3_4_rule_4_the_changes_are_the_cards_r57_r78_r102_r386_r443 {
         };
         run(
             &mut state,
-            shuffle_copies_of_self(json_as(json!({ "count": 2 }))),
+            shuffle_into(json_as(
+                json!({ "defId": numbered_id, "count": 2, "copyOf": spell.id }),
+            )),
             RunOptions {
                 self_: Some(spell.clone()),
                 ..RunOptions::default()

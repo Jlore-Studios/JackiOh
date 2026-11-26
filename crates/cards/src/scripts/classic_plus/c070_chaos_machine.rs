@@ -1,4 +1,5 @@
-//! C+ #70 Chaos Machine (SPEC §8.7 row 70, R386; BUILD M9 row C+ 70). (2) Field Spell, Rare.
+//! C+ #70 Chaos Machine (SPEC §8.7 row 70, R386; BUILD M9 row C+ 70). (3) Field Spell, Rare ((2) until
+//! issue #4783, catalog data).
 //!   Both faces: "Start of turn and end of turn: Buff {cards} random other card(s) in your hand or
 //!   field. Nerf {cards} random card(s) in your opponent's hand or field." — cards 1, Radiant 2
 //!

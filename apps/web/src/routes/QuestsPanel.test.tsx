@@ -10,7 +10,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { QUEST_MAX_HELD } from "@jackioh/server-config";
 import zhCN from "../i18n/zh-CN.json";
-import { ApiRequestError, getQuests, replaceQuest, type QuestView, type QuestsResponse } from "../net/api.ts";
+import { ApiRequestError, getQuests, keptPaths, replaceQuest, type QuestView, type QuestsResponse } from "../net/api.ts";
+import { rememberRead } from "../net/readCache.ts";
 import { expectEmptyState } from "../test/empty.ts";
 import { expectSkeleton } from "../test/skeleton.ts";
 import QuestsPanel, { QuestsList, countdownWords, questsTestid } from "./QuestsPanel.tsx";
@@ -280,6 +281,103 @@ describe("QuestsPanel", () => {
     expect(await screen.findByTestId(questsTestid.panel)).toHaveTextContent("Win 3 games");
     expect(getQuests).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("QuestsPanel at the due time", () => {
+  const traps = quest({ questId: "traps-3", title: "Play 3 Traps", progress: 0, jlore: 60, xp: 3000 });
+
+  it("R4818000 the next quest falling due reads again once and shows it, with no reopen sentence", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+    vi.setSystemTime(NOW);
+    vi.mocked(getQuests)
+      .mockResolvedValueOnce(book({ nextDueAt: NOW + 1_000, replacesLeft: 1 }))
+      .mockResolvedValueOnce(book({ quests: [quest(), traps], nextDueAt: NOW + 1_000 + 3_600_000, replacesLeft: 1 }));
+    render(<QuestsPanel token={TOKEN} />);
+    await act(async () => {
+      // The mount's read lands.
+    });
+
+    expect(screen.getByTestId(questsTestid.next)).toHaveTextContent("Next quest in 0:00:01");
+    expect(getQuests).toHaveBeenCalledTimes(1);
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    await act(async () => {
+      // The due time's read lands.
+    });
+
+    expect(getQuests).toHaveBeenCalledTimes(2);
+    expect(screen.getAllByTestId(questsTestid.quest)).toHaveLength(2);
+    expect(screen.getByText("Play 3 Traps")).toBeInTheDocument();
+    expect(screen.queryByText(/reopen this page/)).toBeNull();
+    expect(screen.getByTestId(questsTestid.next)).toHaveTextContent("Next quest in 1:00:00");
+    expect(screen.getAllByTestId(questsTestid.replace)).toHaveLength(2);
+
+    // One read per due time.
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    await act(async () => {
+      // Nothing new to read.
+    });
+    expect(getQuests).toHaveBeenCalledTimes(2);
+  });
+
+  it("R4818000 a failed read at the due time shows the alert with Try again, which reads again", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+    vi.setSystemTime(NOW);
+    vi.mocked(getQuests)
+      .mockResolvedValueOnce(book({ nextDueAt: NOW + 1_000 }))
+      .mockRejectedValueOnce(new Error("the server refused"))
+      .mockResolvedValue(book({ quests: [quest(), traps] }));
+    render(<QuestsPanel token={TOKEN} />);
+    await act(async () => {
+      // The mount's read lands.
+    });
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    await act(async () => {
+      // The due time's read fails.
+    });
+
+    expect(screen.getByTestId(questsTestid.error)).toHaveTextContent("the server refused");
+    expect(screen.getByTestId(questsTestid.retry)).toBeInTheDocument();
+    expect(getQuests).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText(/reopen this page/)).toBeNull();
+
+    fireEvent.click(screen.getByTestId(questsTestid.retry));
+    await act(async () => {
+      // Try again's read lands.
+    });
+
+    expect(screen.getAllByTestId(questsTestid.quest)).toHaveLength(2);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("R4818000 a failed read at the due time behind a kept answer keeps the quests and says nothing", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "Date"] });
+    vi.setSystemTime(NOW);
+    const held = book({ nextDueAt: NOW + 1_000 });
+    rememberRead(TOKEN, keptPaths.quests, held);
+    vi.mocked(getQuests).mockResolvedValueOnce(held).mockRejectedValue(new Error("the server refused"));
+    render(<QuestsPanel token={TOKEN} />);
+    await act(async () => {
+      // The mount's read lands.
+    });
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    await act(async () => {
+      // The due time's read fails behind the kept answer.
+    });
+
+    expect(screen.getByText("Win 3 games")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByTestId(questsTestid.error)).toBeNull();
+    expect(screen.queryByTestId(questsTestid.next)).toBeNull();
+    expect(getQuests).toHaveBeenCalledTimes(2);
   });
 });
 

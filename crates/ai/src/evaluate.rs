@@ -3,7 +3,7 @@
 //! a discount), cards in hand, library, the enemy's face damage next turn against our life and the
 //! reverse (in a Duos duel own HP and the team's pool, R964000), and, late in the game, the turn cap.
 //! #1086 prices what a side has banked in public state, #1224 what its coming refreshes will or will
-//! not give, #1506 the cards dormant under its Stack piles, #1602 three facts both seats see, #2928
+//! not give, #1506 the cards dormant under its Stack piles, #1602 a Windfury unit's second attack, #2928
 //! the cards a side may still play from its graveyard. The decision's root prices each Death the seat
 //! can read by what it leaves behind (#2424; a Starship Piece's by the copy it fuses into, #2566; a
 //! backrow card's, either side's, and a hand Field Spell's, #2687), each turn hook by one firing
@@ -48,19 +48,19 @@ use jackioh_engine::{
     gauntlet_acts, has_keyword, heal_multiplier_of, hero_armor_of, hero_burn_of, hero_toxic_of, is_asleep,
     is_dormant_starship, is_extra_turn_card, is_giga, is_sick, is_slumbering, is_standing_unit,
     is_starship_piece, is_temporary_card, is_tradable, left_field_after, legal_actions, lost_refreshes_left,
-    modifier_is_live, outcome_for, owed_mana_of, own_cost, pays_credits_like_a_resource, pierces, pile_at,
-    plague_on, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of, settle, slots_of,
-    stats_with_buffs, subsystems, sync_fused_scripts, takes_strike_back, toxic_on, trigger_holders_with_hook,
-    unit_damage_cap, unit_has, unit_view, units_on_field_of, why_sandbox_refused, with_pool_hold,
-    yard_at_turn_start,
+    modifier_is_live, new_instance, outcome_for, owed_mana_of, own_cost, pays_credits_like_a_resource,
+    pierces, pile_at, plague_on, playable_from_graveyard, query_cost, queue_hook, reset_instance, script_of,
+    settle, slots_of, stats_with_buffs, stolen_mana_crystals_of, subsystems, sync_fused_scripts,
+    takes_strike_back, toxic_on, trigger_holders_with_hook, unit_damage_cap, unit_has, unit_view,
+    units_on_field_of, why_sandbox_refused, with_pool_hold, yard_at_turn_start,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::candidates::{Side, action_key, blow, cleaved_neighbours_with, side_of};
 use crate::config::{
     AI_ACTIVATION_PROBE_NODES, AI_AFFLICTION_TICKS, AI_ATTACK_HOOK_PROBE_NODES, AI_AWAKEN_PROBE_NODES,
-    AI_DEATH_PROBE_NODES, AI_EVAL, AI_EVOLVE_PROBE_NODES, AI_HAND_ACTIVATION_PROBE_NODES, AI_PLAGUE_BOMBS,
-    AI_PROMPT_ACTIVATION_PROBE_NODES, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
+    AI_DEATH_PROBE_NODES, AI_EVAL, AI_EVOLVE_PROBE_NODES, AI_FENG_SHUI_ROCK, AI_HAND_ACTIVATION_PROBE_NODES,
+    AI_PLAGUE_BOMBS, AI_PROMPT_ACTIVATION_PROBE_NODES, AI_TURN_HOOK_PROBE_NODES, EvalWeights,
 };
 use crate::reply::{Known, hidden_card_ids, visible_activation};
 use crate::simulate::{create_sub_counter, note_sim_panic, simulate};
@@ -117,16 +117,6 @@ pub(crate) fn heal_converted(state: &GameState, player: PlayerId) -> bool {
 /// (`backrow_is_public`). A placeholder never is, and is asked first: the rule reads the definition.
 fn readable_by(state: &GameState, card: &CardInstance, seat: PlayerId) -> bool {
     find_def(Some(state), &card.def_id).is_some() && backrow_is_public(state, card, seat)
-}
-
-/// R351: the cost a backrow card the seat cannot read shows both players (`view_for`'s number): a
-/// placeholder's `cost_override` from `redact`, any other card's `effective_cost`. A determinization
-/// keeps the parked price on the trap it samples (R762), so every world shows what the true board does.
-fn shown_cost(state: &GameState, card: &CardInstance) -> i32 {
-    if find_def(Some(state), &card.def_id).is_none() {
-        return card.cost_override.unwrap_or(0);
-    }
-    effective_cost(state, card, CostOptions::default())
 }
 
 /// B3.3: the share of itself a card keeps under its Brittle count (`active_brittle_count`), 1 with none.
@@ -404,8 +394,7 @@ pub struct Prices {
 }
 
 impl Prices {
-    /// No price: what every call outside a decision reads (the probes, the baselines, the tools), but
-    /// `cargo jackioh positions`, which prices a row as its decision would (`decision_prices_at`, R4070000).
+    /// No price: what every call outside a decision reads (the probes, the baselines, the tools).
     pub const NONE: &'static Prices = &Prices {
         deaths: Vec::new(),
         turn_hooks: Vec::new(),
@@ -505,16 +494,24 @@ pub type AttackHookPrice = ActivationPrice;
 /// an ability to use (`abilities_of`: a Vanilla card has none). 0 with `Prices::NONE`, for a card its root
 /// did not price, and at a zero `activation` weight (no reading).
 fn activation_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices: &Prices) -> f64 {
-    if w.activation == 0.0 {
+    keyed_price(w.activation, &prices.activations, unit, || {
+        !subsystems::abilities_of(state, unit).is_empty()
+    })
+}
+
+/// The price `entries` hold for `unit` while `live` says its face still earns it: 0 at a zero `weight`
+/// (no reading), for a card its root did not price, and for one whose face earns it no more.
+fn keyed_price(
+    weight: f64,
+    entries: &[ActivationPrice],
+    unit: &CardInstance,
+    live: impl FnOnce() -> bool,
+) -> f64 {
+    if weight == 0.0 {
         return 0.0;
     }
-    let price = prices
-        .activations
-        .iter()
-        .find(|entry| entry.is_for(unit))
-        .map(|entry| entry.price);
-    match price {
-        Some(price) if !subsystems::abilities_of(state, unit).is_empty() => price,
+    match entries.iter().find(|entry| entry.is_for(unit)) {
+        Some(entry) if live() => entry.price,
         _ => 0.0,
     }
 }
@@ -533,18 +530,9 @@ fn has_attack_hook(state: &GameState, card: &CardInstance) -> bool {
 /// while its face has one (`has_attack_hook`). 0 with `Prices::NONE`, for a card its root did not
 /// price, and at a zero `attack_hook` weight (no reading).
 fn attack_hook_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices: &Prices) -> f64 {
-    if w.attack_hook == 0.0 {
-        return 0.0;
-    }
-    let price = prices
-        .attack_hooks
-        .iter()
-        .find(|entry| entry.is_for(unit))
-        .map(|entry| entry.price);
-    match price {
-        Some(price) if has_attack_hook(state, unit) => price,
-        _ => 0.0,
-    }
+    keyed_price(w.attack_hook, &prices.attack_hooks, unit, || {
+        has_attack_hook(state, unit)
+    })
 }
 
 /// R3064000: what a Dormant card's awakening gives its controller through its "When this awakens"
@@ -566,18 +554,9 @@ fn has_wake_trigger(state: &GameState, card: &CardInstance) -> bool {
 /// its face has one (`has_wake_trigger`). 0 with `Prices::NONE`, for a card its root did not price, and
 /// at a zero `awaken` weight (no reading).
 fn awaken_price(state: &GameState, unit: &CardInstance, w: &EvalWeights, prices: &Prices) -> f64 {
-    if w.awaken == 0.0 {
-        return 0.0;
-    }
-    let price = prices
-        .awakenings
-        .iter()
-        .find(|entry| entry.is_for(unit))
-        .map(|entry| entry.price);
-    match price {
-        Some(price) if has_wake_trigger(state, unit) => price,
-        _ => 0.0,
-    }
+    keyed_price(w.awaken, &prices.awakenings, unit, || {
+        has_wake_trigger(state, unit)
+    })
 }
 
 /// R4648000: how the root read an Evolve card's road to evolving (`evolve_condition`).
@@ -810,14 +789,7 @@ pub fn unit_worth(state: &GameState, unit: &CardInstance, w: &EvalWeights, price
         };
         value += w.attack * f64::from(view.attack) * share;
     }
-    for keyword in &view.keywords {
-        if let Some(weight) = weights.of(keyword.kind()) {
-            value += weight;
-        }
-        if let Keyword::SpellDamage { n } = keyword {
-            value += w.spell_damage * f64::from(*n);
-        }
-    }
+    value = with_keywords(value, &view.keywords, w);
     // §4.1: Defense Position's Taunt and Armor +1 are the position's, not the unit's: their worth is the
     // damage they soak, which `face_threat` and the reply already count, so here they count for only
     // `positionGrants`. `defenseOwnTauntKept` keeps a unit's own Taunt in full and discounts Armor only
@@ -905,6 +877,11 @@ fn face_worth(attack: i32, health: i32, keywords: &[Keyword], w: &EvalWeights) -
     if !has_keyword(keywords, KeywordKind::CantAttack) {
         value += w.attack * f64::from(attack);
     }
+    with_keywords(value, keywords, w)
+}
+
+/// `value` with each keyword's weight added, in the order the keywords stand, and Spell Damage's by its n.
+fn with_keywords(mut value: f64, keywords: &[Keyword], w: &EvalWeights) -> f64 {
     for keyword in keywords {
         if let Some(weight) = w.keyword.of(keyword.kind()) {
             value += weight;
@@ -996,16 +973,20 @@ fn doomed_hand_card_value(state: &GameState, card: &CardInstance, doomed: bool, 
         * kept
 }
 
-/// R4154400, §2.3: the crystals a turn adds to a seat's maximum until it reaches `MAX_MANA`.
+/// R4154400, R4812000, §2.3: the crystals a turn adds to a seat's maximum while its crystal count under the
+/// cap is under `MAX_MANA`.
 const CRYSTALS_PER_TURN: i32 = 1;
 
-/// R4154400, §2.3: the crystals `side`'s next refresh brings, read off the public counts and never through
-/// the handicap (R180), as `lost_crystals` reads them: this turn's maximum, `CRYSTALS_PER_TURN` more while it
-/// is under `MAX_MANA`, moved by the next-turn rider (`rider_crystals`). Temporary mana a later play might
-/// make is not counted.
+/// R4154400, R4812000, §2.3: the crystals `side`'s next refresh brings, read off the public counts and never
+/// through the handicap (R180), as `lost_crystals` reads them: this turn's maximum, `CRYSTALS_PER_TURN` more
+/// while its crystal count under the cap is under `MAX_MANA`, moved by the next-turn rider (`rider_crystals`).
+/// That count is the maximum less what stands on top of the cap (`max_mana_for`): the modifier for the rest
+/// of the game (`mana.perm_mod`) and the crystals stolen past the cap (R4331001). Not counted: temporary mana a
+/// later play might make, and a maximum §2.3 floors at 0, read as if nothing were floored.
 fn next_turn_crystals(side: &PlayerState) -> i32 {
     let max = side.mana.max;
-    let grown = if max < MAX_MANA {
+    let capped = max - side.mana.perm_mod - stolen_mana_crystals_of(side);
+    let grown = if capped < MAX_MANA {
         max + CRYSTALS_PER_TURN
     } else {
         max
@@ -1017,7 +998,8 @@ fn next_turn_crystals(side: &PlayerState) -> i32 {
 /// lent Tradable included, R1864002) with an own cost (`own_cost`; an X-cost card has none) that neither this
 /// turn's crystals nor its next refresh's (`next_turn_crystals`) pay for. A Trade swaps it for a card drawn
 /// and puts it back in the deck, under the top (R2657003), so the move order tries that Trade before the
-/// plays (`candidates.rs`) and `material` holds it at `dead_tradable_discount` off.
+/// plays (`candidates.rs`) and `material` holds it at `dead_tradable_discount` off. R4812000: that refresh
+/// grows only while the count under the cap does.
 pub fn dead_in_hand(state: &GameState, seat: PlayerId, card: &CardInstance) -> bool {
     own_cost(state, card).is_some_and(|cost| cost > next_turn_crystals(&state.players[seat]))
         && is_tradable(state, card)
@@ -1077,16 +1059,21 @@ pub(crate) fn feng_shui_verdict(
 /// the card would gain in hand as Radiant (`hand_card_value`, R983), a punishment its hits' cost on
 /// `hero_value`'s curve, never below 1 life (R985), and a neutral verdict nothing. The best alone, since
 /// the seat chooses which card it plays first and only that one is judged by this element, so a hand of
-/// rewarded cards is no reason to hold them back. The seat's own hand only: the enemy's is hidden.
+/// rewarded cards is no reason to hold them back. The seat's own hand only: the enemy's is hidden. While a
+/// Feng Shui of the seat's own acts, the Auspicious Rock its next turn's Activate adds (`coming_rock`,
+/// R4783041) is one more card it may play first, so a hand the element punishes costs nothing while that Rock
+/// is not punished, and the Rock's own reward counts.
 fn feng_shui_outlook(state: &GameState, seat: PlayerId, w: &EvalWeights) -> f64 {
     if !feng_shui_acts(state) {
         return 0.0;
     }
     let life = effective_life(state, seat);
     let start = starting_life(state, seat);
+    let rock = coming_rock(state, seat);
     state.players[seat]
         .hand
         .iter()
+        .chain(rock.as_ref())
         .filter(|card| {
             find_def(Some(state), &card.def_id).is_some() && subsystems::feng_shui::judged(state, card)
         })
@@ -1104,6 +1091,28 @@ fn feng_shui_outlook(state: &GameState, seat: PlayerId, w: &EvalWeights) -> f64 
         })
         .reduce(f64::max)
         .unwrap_or(0.0)
+}
+
+/// R4783041: the id of the Rock `coming_rock` makes, which no card of a game takes (theirs are `c<n>`).
+const COMING_ROCK_ID: &str = "ai-coming-rock";
+
+/// R4783041: the Auspicious Rock (`AI_FENG_SHUI_ROCK`) the Activate of a Feng Shui of `seat`'s own adds to
+/// its hand at its next turn (once a turn, free, R384), Radiant when one of its Feng Shuis runs its Radiant
+/// face, as a hand card no state holds; `None` while none of its own acts (a face-down one's text sleeps) or
+/// the catalog has no Rock. A Feng Shui leaving the field before then is not modelled, as R3951100 has it.
+fn coming_rock(state: &GameState, seat: PlayerId) -> Option<CardInstance> {
+    if !acting_with_flag(state, seat, |flags| flags.feng_shui) {
+        return None;
+    }
+    find_def(Some(state), AI_FENG_SHUI_ROCK)?;
+    let mut rock = new_instance(&mut 0u32, AI_FENG_SHUI_ROCK, seat, Zone::Hand { player: seat });
+    rock.id = COMING_ROCK_ID.to_string();
+    rock.radiant = state.players[seat]
+        .backrow
+        .iter()
+        .flatten()
+        .any(|card| card.radiant && flags_of(state, card).feng_shui == Some(true));
+    Some(rock)
 }
 
 /// R962: the steps a Jade Counter at `jade` has climbed toward the next threshold it has not crossed.
@@ -1388,6 +1397,27 @@ fn soaked(left: &mut i32, hit: i32) -> i32 {
     hit - take
 }
 
+/// §4.4 steps 2 to 3b for `by`'s strike of `hit` on `me`: less `armor` unless it pierces (R346), within
+/// `me`'s own cap (R2179005), less what `pool` soaks of it (R4064000).
+fn struck(
+    state: &GameState,
+    me: &CardInstance,
+    armor: i32,
+    by: &CardInstance,
+    hit: i32,
+    mut pool: i32,
+) -> i32 {
+    let dealt = if pierces(state, Some(by), None) {
+        hit
+    } else {
+        (hit - armor).max(0)
+    };
+    soaked(
+        &mut pool,
+        unit_damage_cap(state, me).map_or(dealt, |cap| dealt.min(cap)),
+    )
+}
+
 /// A hero's side of the ledger: its concave life (`effective_life`, R964000) and its armor, less
 /// `hero_affliction` of what `ticks` (`coming_hero_ticks`) costs on that curve (R3822000).
 fn hero_side(state: &GameState, player: PlayerId, ticks: i32, w: &EvalWeights) -> f64 {
@@ -1487,13 +1517,8 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
                     }
                 }
             }
-            // R351: the cost it shows is public; nothing else of it is (no call at a zero weight).
-            _ => {
-                value += w.enemy_face_down;
-                if w.enemy_face_down_per_cost != 0.0 {
-                    value += w.enemy_face_down_per_cost * f64::from(shown_cost(state, card));
-                }
-            }
+            // A card the seat cannot read counts alike whatever cost it shows (R4702003).
+            _ => value += w.enemy_face_down,
         }
     }
 
@@ -1526,10 +1551,7 @@ fn material(state: &GameState, player: PlayerId, seat: PlayerId, w: &EvalWeights
         }
     }
 
-    value += w.library_card * (side.library.len() as f64).min(w.library_comfort);
-    // §2.4: every fatigue draw taken adds a point to each one still to come.
-    value -= w.fatigue_draw * f64::from(side.fatigue_count);
-    value
+    value + w.library_card * (side.library.len() as f64).min(w.library_comfort)
 }
 
 /// The face damage `attacker`'s board could deal the other hero next turn, as AI_EVAL reads it
@@ -1555,7 +1577,8 @@ pub fn face_threat(state: &GameState, attacker: PlayerId) -> i32 {
 /// read as they will stand when the attacks come (R4064000, R4064001). With `w.strike_back_survival_read`
 /// (R4402000), an attacker a Taunt's strike back destroys swings no more, and a Frenzy one that destroys the
 /// Taunt it attacked and survives has its swings back to `attacks_per_turn`; an exile and a Cleave splash's
-/// kill free none.
+/// kill free none. With `w.splash_trample_read` (R4805000), a Cleave splash lands on every unit it strikes,
+/// and a Trample attacker's tramples over each onto the hero.
 pub fn face_threat_with(state: &GameState, attacker: PlayerId, w: &EvalWeights) -> i32 {
     face_threat_from(state, attacker, w, false)
 }
@@ -1626,6 +1649,7 @@ const REBORN_HEALTH: i32 = 1;
 
 /// One Taunt's standing while `damage_past_taunts` walks it: the unit, its view, and the shield
 /// and health its attackers (and their splashes) have left it with.
+#[derive(Clone)]
 struct TauntStand {
     unit: CardInstance,
     view: UnitView,
@@ -1693,7 +1717,10 @@ pub fn damage_past_taunts(
 /// With `w.strike_back_survival_read` (R4402000), each hit takes the Taunt's strike back (§4.3,
 /// `strike_back_spares`): an attacker it destroys swings no more, and a Frenzy one that destroys the Taunt
 /// it attacked and survives has its swings back to `attacks_per_turn` (R3543003); an exile and a Cleave
-/// splash's kill free none.
+/// splash's kill free none. With `w.splash_trample_read` (R4805000), a Cleave splash also meets each unit
+/// that binds nothing more (one without Taunt, a Taunt the walk has passed) as the walk left it, spending
+/// the pools, and a Trample attacker's sends what it deals beyond that unit's health to the hero (§4.4
+/// step 9).
 pub fn damage_past_taunts_with(
     state: &GameState,
     defender: PlayerId,
@@ -1802,6 +1829,9 @@ fn soak_past_taunts(
     let mut pool = pools.defender;
     // R4402000: each attacker's standing once a Taunt's strike back meets it, with `w`'s flag only.
     let mut standing: IndexMap<&str, AttackerStand> = IndexMap::new();
+    // R4805000: the units a splash meets that bind nothing more (no Taunt, a Taunt the walk has passed, a
+    // later one a splash destroyed), by id, as the walk has left them: `None` once destroyed with no body back.
+    let mut bystanders: IndexMap<String, Option<TauntStand>> = IndexMap::new();
     let mut i = 0;
     while i < stands.len() {
         // R4402000, R636: an attacker a strike back destroyed makes none of its later swings.
@@ -1896,8 +1926,7 @@ fn soak_past_taunts(
             // more, Poisonous or exiling (R1124). §4.3: a Ranged attacker takes none from a non-Ranged Taunt
             // (R783000), and one with First Strike none from a Taunt without it that its hit destroys (step
             // 1); any other strike back lands even when the hit destroys the Taunt (step 2, R59).
-            let fells = !stands[i].shield
-                && dealt > 0
+            let fells = dealt > 0
                 && !has_keyword(&stands[i].view.keywords, KeywordKind::Indestructible)
                 && (dealt >= stands[i].health || has_keyword(&keywords, KeywordKind::Poisonous) || exiling);
             let survives = !w.strike_back_survival_read
@@ -1931,13 +1960,12 @@ fn soak_past_taunts(
                     subsystems::projected_hero_damage(state, defender, dealt - stands[i].health, pierce);
                 total += soaked(&mut pool, excess);
             }
-            // The splash belongs to the attack rather than to the hit (R63), so it lands even when
-            // the hit on the Taunt itself is stopped below. Only live neighbouring Taunts matter:
-            // the target itself and the stands already walked bind nothing more.
+            // The splash belongs to the attack rather than to the hit (R63), so it lands even when the hit on
+            // the Taunt itself is stopped below. Only a later Taunt binds: the target takes no splash, and with
+            // `w.splash_trample_read` a unit that binds nothing more takes it as the walk left it (R4805000).
             if has_keyword(&keywords, KeywordKind::Cleave) {
-                // Combat-only bonuses stay out of the threat model, so the splash is Poisonous
-                // from the attacker's own keyword alone.
-                let poisonous = has_keyword(&keywords, KeywordKind::Poisonous);
+                // Combat-only bonuses stay out of the threat model, so the splash is Poisonous from the
+                // attacker's own keyword alone (`side_of`).
                 let mut from = side_of(state, attacker);
                 from.converts = if pools.read {
                     converts_to(state, attacker)
@@ -1946,62 +1974,56 @@ fn soak_past_taunts(
                 };
                 // R4065001: an exiling splash by these weights' flag, not `side_of`'s `AI_EVAL`.
                 from.exiles = exiling;
+                let tramples = has_keyword(&keywords, KeywordKind::Trample);
                 for neighbour in cleaved_neighbours_with(state, attacker, &stands[i].unit, w.giga_cleave_read)
                 {
-                    let Some(j) = stands.iter().position(|stand| stand.unit.id == neighbour.id) else {
-                        continue;
-                    };
-                    if j <= i || !has_keyword(&stands[j].view.keywords, KeywordKind::Taunt) {
-                        continue;
-                    }
-                    // The stand's tracked shield and health, not the state's: an earlier splash
-                    // may already have popped or hurt it.
-                    let mut damaged = stands[j].view.clone();
-                    damaged.health = stands[j].health;
-                    let to = Side {
-                        view: damaged,
-                        shield: stands[j].shield,
-                        indestructible: has_keyword(&stands[j].view.keywords, KeywordKind::Indestructible),
-                        first_strike: false,
-                        poisonous: false,
-                        pierce: false,
-                        cap: unit_damage_cap(state, &stands[j].unit),
-                        exiles: false,
-                        converts: None,
-                        pool,
-                    };
-                    let splash = blow(&from, attack, poisonous, &to);
-                    pool -= splash.soaked;
-                    if splash.pops_shield {
-                        stands[j].shield = false;
-                    } else {
-                        // Step 9: what Trample lands beyond the neighbour's health is a hit on
-                        // the hero (R63), as for the main hit above.
-                        if has_keyword(&keywords, KeywordKind::Trample) && splash.dealt > stands[j].health {
-                            let excess = subsystems::projected_hero_damage(
-                                state,
-                                defender,
-                                splash.dealt - stands[j].health,
-                                pierce,
-                            );
-                            total += soaked(&mut pool, excess);
-                        }
-                        if splash.kills {
-                            // §4.5 step 4: a destroyed Reborn neighbour comes back and binds what
-                            // is left, unless its body has no Taunt. Only a later stand is ever
-                            // removed, so `i` stays valid. An exiled one never comes back (R1124).
-                            if !exiling && has_keyword(&stands[j].view.keywords, KeywordKind::Reborn) {
-                                match reborn_body(state, &stands[j].unit) {
-                                    Some((body, view)) => stands[j] = TauntStand::of(body, view),
-                                    None => {
-                                        stands.remove(j);
-                                    }
+                    let at = stands.iter().position(|stand| stand.unit.id == neighbour.id);
+                    let Some(j) = at.filter(|&j| j > i) else {
+                        if w.splash_trample_read && at != Some(i) {
+                            let met = bystanders.entry(neighbour.id.clone()).or_insert_with(|| {
+                                Some(at.map_or_else(
+                                    || TauntStand::of(neighbour.clone(), unit_view(state, &neighbour)),
+                                    |j| stands[j].clone(),
+                                ))
+                            });
+                            if let Some(stand) = met.as_mut() {
+                                let (to_hero, kills) =
+                                    splash_onto(state, defender, &from, attack, tramples, stand, &mut pool);
+                                total += to_hero;
+                                if kills {
+                                    let left = left_behind(state, stand, exiling);
+                                    *met = left;
                                 }
-                            } else {
-                                stands.remove(j);
                             }
+                        }
+                        continue;
+                    };
+                    // Every stand is a Taunt: only Taunts enter the walk, and a Reborn body without one leaves it.
+                    let (to_hero, kills) = splash_onto(
+                        state,
+                        defender,
+                        &from,
+                        attack,
+                        tramples,
+                        &mut stands[j],
+                        &mut pool,
+                    );
+                    total += to_hero;
+                    if kills {
+                        // §4.5 step 4: a destroyed Reborn neighbour comes back and binds what is left, unless
+                        // its body has no Taunt. Only a later stand is ever removed, so `i` stays valid. An
+                        // exiled one never comes back (R1124).
+                        if !exiling
+                            && has_keyword(&stands[j].view.keywords, KeywordKind::Reborn)
+                            && let Some((body, view)) = reborn_body(state, &stands[j].unit)
+                        {
+                            stands[j] = TauntStand::of(body, view);
                         } else {
-                            stands[j].health -= splash.dealt;
+                            let gone = stands.remove(j);
+                            // R4805000: a later splash meets its body without Taunt, or nothing.
+                            if w.splash_trample_read {
+                                bystanders.insert(gone.unit.id.clone(), left_behind(state, &gone, exiling));
+                            }
                         }
                     }
                 }
@@ -2046,6 +2068,11 @@ fn soak_past_taunts(
             stands[i] = TauntStand::of(body, view);
             continue;
         }
+        // R4805000: a later splash meets what the walk leaves of a Taunt it destroyed: its body without
+        // Taunt, or nothing.
+        if w.splash_trample_read && (stands[i].health <= 0 || poisoned || exiled) {
+            bystanders.insert(stands[i].unit.id.clone(), left_behind(state, &stands[i], exiled));
+        }
         i += 1;
     }
 
@@ -2073,6 +2100,65 @@ fn dealt_to(state: &GameState, attack: i32, stand: &TauntStand, pierce: bool) ->
         (attack - stand.view.armor).max(0)
     };
     unit_damage_cap(state, &stand.unit).map_or(after_armor, |cap| after_armor.min(cap))
+}
+
+/// One Cleave splash of `attack` from `from` on `stand` as the walk left it (§4.4 step 10), through `pool`
+/// (R4064000); with `tramples`, what it deals beyond the stand's health hits `defender`'s hero (step 9, R63).
+/// It pops a shield or takes what it deals off the health. The hero damage, and whether it destroys the stand.
+fn splash_onto(
+    state: &GameState,
+    defender: PlayerId,
+    from: &Side,
+    attack: i32,
+    tramples: bool,
+    stand: &mut TauntStand,
+    pool: &mut i32,
+) -> (i32, bool) {
+    let splash = blow(from, attack, from.poisonous, &splashed(state, stand, *pool));
+    *pool -= splash.soaked;
+    if splash.pops_shield {
+        stand.shield = false;
+        return (0, false);
+    }
+    let to_hero = if tramples && splash.dealt > stand.health {
+        let excess =
+            subsystems::projected_hero_damage(state, defender, splash.dealt - stand.health, from.pierce);
+        soaked(pool, excess)
+    } else {
+        0
+    };
+    if !splash.kills {
+        stand.health -= splash.dealt;
+    }
+    (to_hero, splash.kills)
+}
+
+/// The side a Cleave splash meets on `stand`: its tracked shield and health, not the state's, since an
+/// earlier splash may already have popped or hurt it, and what the defender's pools have left.
+fn splashed(state: &GameState, stand: &TauntStand, pool: i32) -> Side {
+    let mut view = stand.view.clone();
+    view.health = stand.health;
+    Side {
+        view,
+        shield: stand.shield,
+        indestructible: has_keyword(&stand.view.keywords, KeywordKind::Indestructible),
+        first_strike: false,
+        poisonous: false,
+        pierce: false,
+        cap: unit_damage_cap(state, &stand.unit),
+        exiles: false,
+        converts: None,
+        pool,
+    }
+}
+
+/// R4805000: what a later Cleave splash meets of a unit the walk destroyed. That is the body a Reborn unit
+/// comes back as (`reborn_return`, §4.5 step 4), unless it was exiled (R1124); otherwise nothing.
+fn left_behind(state: &GameState, stand: &TauntStand, exiled: bool) -> Option<TauntStand> {
+    (!exiled && has_keyword(&stand.view.keywords, KeywordKind::Reborn)).then(|| {
+        let (body, view) = reborn_return(state, &stand.unit);
+        TauntStand::of(body, view)
+    })
 }
 
 /// R3937000: whether `attacker`'s one hit of `attack` destroys `stand` as the walk left it: no Divine Shield
@@ -2123,11 +2209,9 @@ fn first_giga_splash_breaker(
         cleaved_neighbours_with(state, attacker, &stand.unit, true)
             .iter()
             .any(|neighbour| {
-                later.iter().any(|next| {
-                    next.unit.id == neighbour.id
-                        && has_keyword(&next.view.keywords, KeywordKind::Taunt)
-                        && (is_giga(&stand.unit) || is_giga(&next.unit))
-                })
+                later
+                    .iter()
+                    .any(|next| next.unit.id == neighbour.id && (is_giga(&stand.unit) || is_giga(&next.unit)))
             })
             && breaks_alone(state, attacker, *attack, stand, pool, pools, w)
     })
@@ -2174,14 +2258,7 @@ fn falls_to_first_strike(
     {
         return false;
     }
-    let dealt = if pierces(state, Some(taunt), None) {
-        view.attack
-    } else {
-        (view.attack - mine.armor).max(0)
-    };
-    let dealt = unit_damage_cap(state, attacker).map_or(dealt, |cap| dealt.min(cap));
-    let mut left = pools.attacker;
-    let dealt = soaked(&mut left, dealt);
+    let dealt = struck(state, attacker, mine.armor, taunt, view.attack, pools.attacker);
     dealt > 0
         && (has_keyword(&view.keywords, KeywordKind::Poisonous)
             || exiles_what_it_damages(state, taunt, w)
@@ -2214,14 +2291,7 @@ fn strike_back_spares(
     if has_keyword(&mine.keywords, KeywordKind::Indestructible) || pools.converts(state, &stand.unit) {
         return true;
     }
-    let dealt = if pierces(state, Some(&stand.unit), None) {
-        strike
-    } else {
-        (strike - mine.armor).max(0)
-    };
-    let dealt = unit_damage_cap(state, attacker).map_or(dealt, |cap| dealt.min(cap));
-    let mut left = pools.attacker;
-    let dealt = soaked(&mut left, dealt);
+    let dealt = struck(state, attacker, mine.armor, &stand.unit, strike, pools.attacker);
     if dealt <= 0 {
         return true;
     }
@@ -2333,6 +2403,29 @@ fn death_probe(
     ))
 }
 
+/// `card` of `seat`'s hand as it would stand once played: a Unit on its field (`spawn_hand_unit`), a
+/// Field Spell set in its backrow (`spawn_hand_field_spell`). `Some(None)` for any other card.
+fn spawn_hand_card(
+    world: &GameState,
+    seat: PlayerId,
+    card: &CardInstance,
+    counter: &dyn NodeCounter,
+) -> Option<Option<(GameState, CardInstance)>> {
+    match card_type_of_face(world, &card.def_id, card.radiant) {
+        CardType::Unit => spawn_hand_unit(world, seat, card, counter),
+        CardType::FieldSpell => spawn_hand_field_spell(world, seat, card, counter),
+        _ => Some(None),
+    }
+}
+
+/// Whether `card` is one the hand probes spawn: a Unit or a Field Spell, by the face it holds.
+fn stays_once_played(world: &GameState, card: &CardInstance) -> bool {
+    matches!(
+        card_type_of_face(world, &card.def_id, card.radiant),
+        CardType::Unit | CardType::FieldSpell
+    )
+}
+
 /// R923001: `card`, a Unit in `seat`'s hand, spawned onto `world`'s field (a fresh card of its definition
 /// and face) in the zone a summon would take (`first_entry_zone`); on a full unit row the first zone whose
 /// pile is a single card is cleared first, by the sandbox's remove. `None` when the counter refuses a
@@ -2364,22 +2457,34 @@ fn spawn_hand_unit(
             (&cleared, slot)
         }
     };
+    spawn_at(room, seat, card, slot, counter)
+}
+
+/// `card` spawned on `slot` of `room`, a sandbox (one node, `sandbox_step`), and the card standing there.
+/// `None` when the counter is spent; `Some(None)` when the spawn is refused.
+fn spawn_at(
+    room: &GameState,
+    seat: PlayerId,
+    card: &CardInstance,
+    slot: jackioh_engine::ZoneSlot,
+    counter: &dyn NodeCounter,
+) -> Option<Option<(GameState, CardInstance)>> {
     let spawn = SandboxOp::Spawn {
         player: seat,
         def_id: card.def_id.clone(),
         radiant: card.radiant.then_some(true),
         to: SpawnZone::Field {
-            row: Row::Units,
+            row: slot.row,
             lane: slot.lane,
         },
     };
     let Some(placed) = sandbox_step(room, seat, spawn, counter)? else {
         return Some(None);
     };
-    let Some(unit) = card_at(&placed, slot).cloned() else {
+    let Some(standing) = card_at(&placed, slot).cloned() else {
         return Some(None);
     };
-    Some(Some((placed, unit)))
+    Some(Some((placed, standing)))
 }
 
 /// R923001, R2565000, R2687000: `card`, a Field Spell in `seat`'s hand, spawned into the backrow zone a
@@ -2395,22 +2500,7 @@ fn spawn_hand_field_spell(
     let Some(slot) = first_entry_zone(world, seat, Row::Backrow) else {
         return Some(None);
     };
-    let spawn = SandboxOp::Spawn {
-        player: seat,
-        def_id: card.def_id.clone(),
-        radiant: card.radiant.then_some(true),
-        to: SpawnZone::Field {
-            row: Row::Backrow,
-            lane: slot.lane,
-        },
-    };
-    let Some(placed) = sandbox_step(world, seat, spawn, counter)? else {
-        return Some(None);
-    };
-    let Some(set) = card_at(&placed, slot).cloned() else {
-        return Some(None);
-    };
-    Some(Some((placed, set)))
+    spawn_at(world, seat, card, slot, counter)
 }
 
 /// R2424000, R2687000: `death_probe` for a Unit or a Field Spell in `seat`'s hand, placed on its field
@@ -2421,12 +2511,7 @@ fn spawned_death_probe(
     card: &CardInstance,
     counter: &dyn NodeCounter,
 ) -> Option<Option<f64>> {
-    let spawned = match card_type_of_face(world, &card.def_id, card.radiant) {
-        CardType::Unit => spawn_hand_unit(world, seat, card, counter)?,
-        CardType::FieldSpell => spawn_hand_field_spell(world, seat, card, counter)?,
-        _ => return Some(None),
-    };
-    let Some((placed, spawned)) = spawned else {
+    let Some((placed, spawned)) = spawn_hand_card(world, seat, card, counter)? else {
         return Some(None);
     };
     death_probe(&placed, seat, &spawned, counter)
@@ -2459,12 +2544,7 @@ pub fn death_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter
     let hand = world.players[seat]
         .hand
         .iter()
-        .filter(|card| {
-            matches!(
-                card_type_of_face(world, &card.def_id, card.radiant),
-                CardType::Unit | CardType::FieldSpell
-            )
-        })
+        .filter(|card| stays_once_played(world, card))
         .map(|card| (card, true));
     let listed: Vec<(&CardInstance, bool)> = field.chain(backrow).chain(hand).collect();
     let mut candidates: Vec<(DeathPrice, &CardInstance, bool)> = Vec::new();
@@ -2483,11 +2563,7 @@ pub fn death_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounter
     if candidates.is_empty() {
         return Vec::new();
     }
-    let mut sandbox = world.clone();
-    sandbox.sandbox = Some(true);
-    for player in PLAYER_IDS {
-        sandbox.players[player].auto_end_turn = Some(false);
-    }
+    let sandbox = sandbox_copy(world);
     let probes = create_sub_counter(counter, AI_DEATH_PROBE_NODES);
     let mut priced = Vec::new();
     for (key, card, in_hand) in candidates {
@@ -2514,12 +2590,20 @@ const TURN_HOOKS: [HookName; 3] = [
     HookName::StartOfOpponentTurn,
 ];
 
-/// R2477000: `before` after one firing of `holder`'s `hook`, queued as its controller's turn would queue
-/// it (`queue_hook`, R68) and drained by the resolution loop (`settled_after`).
-fn fire_turn_hook(before: &GameState, holder: &TriggerHolder, hook: HookName) -> GameState {
-    settled_after(before, |sink| {
-        queue_hook(sink, holder, hook);
-    })
+/// A copy of `world` on which no turn ends by itself (R345), for a probe to step.
+fn held_copy(world: &GameState) -> GameState {
+    let mut start = world.clone();
+    for player in PLAYER_IDS {
+        start.players[player].auto_end_turn = Some(false);
+    }
+    start
+}
+
+/// `held_copy` of `world` as a sandbox (R923000).
+fn sandbox_copy(world: &GameState) -> GameState {
+    let mut sandbox = held_copy(world);
+    sandbox.sandbox = Some(true);
+    sandbox
 }
 
 /// R2477000, R3064000: `before` after `step` and the resolution loop (`settle`) that drains what it
@@ -2541,36 +2625,50 @@ fn settled_after(before: &GameState, step: impl FnOnce(&mut EngineSink<'_>)) -> 
     })
 }
 
-/// R2477000: what one firing of `holder`'s `hook` on `before` gives its controller: the controller's
-/// evaluation after it less before it, and `AI_EVAL.next_turn_mana` for each crystal it gained, which the
-/// evaluation does not count. One node of `counter`: `None` when the counter refuses it; `Some(None)`
-/// when the firing panics (`note_sim_panic`), or leaves a prompt open or the game over.
+/// `before` after `step` and the resolution loop that drains it (`settled_after`), for one node of
+/// `counter`: `None` when the counter refuses it; `Some(None)` when the step panics (`note_sim_panic`),
+/// or leaves a prompt open or the game over, which a probe neither answers nor prices.
+fn settled_once(
+    before: &GameState,
+    counter: &dyn NodeCounter,
+    step: impl FnOnce(&mut EngineSink<'_>),
+) -> Option<Option<GameState>> {
+    if !counter.take() {
+        return None;
+    }
+    match catch_unwind(AssertUnwindSafe(|| settled_after(before, step))) {
+        Ok(after) => Some((after.pending.is_none() && after.result.is_none()).then_some(after)),
+        Err(payload) => {
+            note_sim_panic(counter, payload.as_ref());
+            Some(None)
+        }
+    }
+}
+
+/// What `after` gives `owner` over `before`: its evaluation after less before, and
+/// `AI_EVAL.next_turn_mana` for each crystal it gained, which the evaluation does not count.
+fn gain_over(after: &GameState, before: &GameState, owner: PlayerId) -> f64 {
+    let gained = after.players[owner].mana.current - before.players[owner].mana.current;
+    evaluate(after, owner, NextSwing::Enemy, &AI_EVAL) - evaluate(before, owner, NextSwing::Enemy, &AI_EVAL)
+        + AI_EVAL.next_turn_mana * f64::from(gained)
+}
+
+/// R2477000: what one firing of `holder`'s `hook` on `before` gives its controller (`gain_over`), queued
+/// as its controller's turn would queue it (`queue_hook`, R68). One node of `counter`: `None` when the
+/// counter refuses it; `Some(None)` when the firing is not priced (`settled_once`).
 fn hook_firing_price(
     before: &GameState,
     holder: &TriggerHolder,
     hook: HookName,
     counter: &dyn NodeCounter,
 ) -> Option<Option<f64>> {
-    if !counter.take() {
-        return None;
-    }
-    let after = match catch_unwind(AssertUnwindSafe(|| fire_turn_hook(before, holder, hook))) {
-        Ok(after) => after,
-        Err(payload) => {
-            note_sim_panic(counter, payload.as_ref());
-            return Some(None);
-        }
-    };
-    if after.pending.is_some() || after.result.is_some() {
+    let Some(after) = settled_once(before, counter, |sink| {
+        queue_hook(sink, holder, hook);
+    })?
+    else {
         return Some(None);
-    }
-    let owner = holder.controller;
-    let gained = after.players[owner].mana.current - before.players[owner].mana.current;
-    Some(Some(
-        evaluate(&after, owner, NextSwing::Enemy, &AI_EVAL)
-            - evaluate(before, owner, NextSwing::Enemy, &AI_EVAL)
-            + AI_EVAL.next_turn_mana * f64::from(gained),
-    ))
+    };
+    Some(Some(gain_over(&after, before, holder.controller)))
 }
 
 /// R2477000, R2565000, R2689000: what one firing of each turn hook of `owner`'s card `instance_id`, in
@@ -2616,21 +2714,11 @@ fn spawned_turn_hook_probe(
     card: &CardInstance,
     counter: &dyn NodeCounter,
 ) -> Option<Option<(f64, f64)>> {
-    match card_type_of_face(world, &card.def_id, card.radiant) {
-        CardType::Unit => {
-            let Some((placed, unit)) = spawn_hand_unit(world, seat, card, counter)? else {
-                return Some(None);
-            };
-            turn_and_yard_probe(&placed, seat, &unit.id, counter)
-        }
-        CardType::FieldSpell => {
-            let Some((placed, set)) = spawn_hand_field_spell(world, seat, card, counter)? else {
-                return Some(None);
-            };
-            turn_hook_probe(&placed, seat, &set.id, counter)
-        }
-        _ => Some(None),
-    }
+    let Some((placed, spawned)) = spawn_hand_card(world, seat, card, counter)? else {
+        return Some(None);
+    };
+    // A Field Spell is no yard: `yard_probe` takes no node for it and adds nothing to its price.
+    turn_and_yard_probe(&placed, seat, &spawned.id, counter)
 }
 
 /// R3575402: whether `card` is a shipyard (`StaticFlags.starship_yard`, R3539004): a hull that fuses in a
@@ -2665,21 +2753,9 @@ fn yard_probe(
     if !yards.iter().any(|card| card.id == instance_id) {
         return Some(None);
     }
-    if !counter.take() {
-        return None;
-    }
-    let after = match catch_unwind(AssertUnwindSafe(|| {
-        settled_after(before, |sink| yard_at_turn_start(sink, owner))
-    })) {
-        Ok(after) => after,
-        Err(payload) => {
-            note_sim_panic(counter, payload.as_ref());
-            return Some(None);
-        }
-    };
-    if after.pending.is_some() || after.result.is_some() {
+    let Some(after) = settled_once(before, counter, |sink| yard_at_turn_start(sink, owner))? else {
         return Some(None);
-    }
+    };
     let gained = evaluate(&after, owner, NextSwing::Enemy, &AI_EVAL)
         - evaluate(before, owner, NextSwing::Enemy, &AI_EVAL);
     Some(Some(gained / yards.len() as f64))
@@ -2762,11 +2838,7 @@ pub fn turn_hook_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCou
     if candidates.is_empty() {
         return Vec::new();
     }
-    let mut sandbox = world.clone();
-    sandbox.sandbox = Some(true);
-    for player in PLAYER_IDS {
-        sandbox.players[player].auto_end_turn = Some(false);
-    }
+    let sandbox = sandbox_copy(world);
     let probes = create_sub_counter(counter, AI_TURN_HOOK_PROBE_NODES);
     let mut priced = Vec::new();
     for (key, owner, card, in_hand) in candidates {
@@ -2796,11 +2868,12 @@ fn next_turn(before: &GameState, player: PlayerId, counter: &dyn NodeCounter) ->
     let Ok(next) = simulate(before, player, &ActionBody::EndTurn, counter, Prices::NONE)? else {
         return Some(None);
     };
-    let ready = next.pending.is_none()
-        && next.result.is_none()
-        && next.active == player.opponent()
-        && next.phase == Phase::Main;
-    Some(ready.then_some(next))
+    Some(in_own_main(&next, player.opponent()).then_some(next))
+}
+
+/// Whether `player` stands in its own main phase with no prompt open and the game on.
+fn in_own_main(state: &GameState, player: PlayerId) -> bool {
+    state.pending.is_none() && state.result.is_none() && state.active == player && state.phase == Phase::Main
 }
 
 /// R2564000: what the use of `unit`'s Activate that took `turn` to `after` gives its controller: the
@@ -2818,11 +2891,7 @@ fn use_price(turn: &GameState, after: &GameState, unit: &CardInstance) -> Option
     if !wakes && !find_instance(after, &unit.id).is_some_and(|card| card.zone.z() == ZoneName::Field) {
         return None;
     }
-    let owner = unit.controller;
-    let gained = after.players[owner].mana.current - turn.players[owner].mana.current;
-    let price = evaluate(after, owner, NextSwing::Enemy, &AI_EVAL)
-        - evaluate(turn, owner, NextSwing::Enemy, &AI_EVAL)
-        + AI_EVAL.next_turn_mana * f64::from(gained);
+    let price = gain_over(after, turn, unit.controller);
     (price > 0.0).then_some(price)
 }
 
@@ -2947,22 +3016,14 @@ fn root_prices<P>(
     nodes: usize,
     price: PriceTurn<P>,
 ) -> Vec<P> {
-    if weight == 0.0
-        || world.pending.is_some()
-        || world.result.is_some()
-        || world.active != seat
-        || world.phase != Phase::Main
-    {
+    if weight == 0.0 || !in_own_main(world, seat) {
         return Vec::new();
     }
     let own = has(world, seat);
     if !own && !has(world, seat.opponent()) {
         return Vec::new();
     }
-    let mut start = world.clone();
-    for player in PLAYER_IDS {
-        start.players[player].auto_end_turn = Some(false);
-    }
+    let start = held_copy(world);
     let probes = create_sub_counter(counter, nodes);
     probe_turns(&start, seat, own, &probes, price)
 }
@@ -3006,12 +3067,7 @@ fn rekeyed_activation_prices(
     counter: &dyn NodeCounter,
     priced: &mut Vec<ActivationPrice>,
 ) {
-    if AI_EVAL.activation == 0.0
-        || world.pending.is_some()
-        || world.result.is_some()
-        || world.active != seat
-        || world.phase != Phase::Main
-    {
+    if AI_EVAL.activation == 0.0 || !in_own_main(world, seat) {
         return;
     }
     // R3575404: the seat's own Dormant cards acting for their awakening, whose definition the probe's
@@ -3022,12 +3078,8 @@ fn rekeyed_activation_prices(
         .into_iter()
         .filter(|card| acts_to_awaken(world, card));
     let mut cards: Vec<&CardInstance> = Vec::new();
-    for card in sleepers.chain(world.players[seat].hand.iter().filter(|card| {
-        matches!(
-            card_type_of_face(world, &card.def_id, card.radiant),
-            CardType::Unit | CardType::FieldSpell
-        )
-    })) {
+    let hand = world.players[seat].hand.iter();
+    for card in sleepers.chain(hand.filter(|card| stays_once_played(world, card))) {
         if !subsystems::abilities_of(world, card).is_empty()
             && !priced.iter().any(|entry| entry.is_for(card))
             && !cards.iter().any(|seen| ActivationPrice::key(seen).is_for(card))
@@ -3038,11 +3090,7 @@ fn rekeyed_activation_prices(
     if cards.is_empty() {
         return;
     }
-    let mut sandbox = world.clone();
-    sandbox.sandbox = Some(true);
-    for player in PLAYER_IDS {
-        sandbox.players[player].auto_end_turn = Some(false);
-    }
+    let sandbox = sandbox_copy(world);
     let hidden = hidden_card_ids(world, seat);
     let probes = create_sub_counter(counter, AI_HAND_ACTIVATION_PROBE_NODES);
     for card in cards {
@@ -3050,10 +3098,7 @@ fn rekeyed_activation_prices(
         let spawned = if card.zone.z() == ZoneName::Field {
             Some(Some((sandbox.clone(), card.clone())))
         } else {
-            match card_type_of_face(world, &card.def_id, card.radiant) {
-                CardType::Unit => spawn_hand_unit(&sandbox, seat, card, &probes),
-                _ => spawn_hand_field_spell(&sandbox, seat, card, &probes),
-            }
+            spawn_hand_card(&sandbox, seat, card, &probes)
         };
         let Some(spawned) = spawned else {
             return;
@@ -3061,30 +3106,14 @@ fn rekeyed_activation_prices(
         let Some((placed, unit)) = spawned else {
             continue;
         };
-        let Some(enemy_turn) = next_turn(&placed, seat, &probes) else {
+        // Only the spawned card is tried.
+        let Some((price, cut)) = uses_two_turns_on(&placed, seat, &unit.id, &hidden, &probes) else {
             return;
         };
-        let Some(enemy_turn) = enemy_turn else {
-            continue;
-        };
-        let Some(own_turn) = next_turn(&enemy_turn, seat.opponent(), &probes) else {
-            return;
-        };
-        let Some(own_turn) = own_turn else {
-            continue;
-        };
-        // Only the spawned card is tried: every other card of the seat's is marked tried.
-        let mut tried: Vec<ActivationPrice> = activate_sources(&own_turn, seat)
-            .into_iter()
-            .filter(|other| other.id != unit.id)
-            .map(ActivationPrice::key)
-            .collect();
-        let mut fresh: Vec<ActivationPrice> = Vec::new();
-        let cut = !price_uses(&own_turn, seat, &hidden, &probes, &mut tried, &mut fresh);
         // R3575400: the price is the hand card's, keyed by the card as the seat would play it: by its
         // own definition, never the one the probe's two turns made of it (a shipyard that fused a piece
         // in, R3539004), which no line of this decision holds.
-        if let Some(price) = fresh.into_iter().map(|entry| entry.price).reduce(f64::max) {
+        if let Some(price) = price {
             priced.push(ActivationPrice {
                 price,
                 ..ActivationPrice::key(card)
@@ -3094,6 +3123,32 @@ fn rekeyed_activation_prices(
             return;
         }
     }
+}
+
+/// Two turn ends on from `from`, then the uses of the card `id` alone, every other card of the seat's
+/// marked tried: the best of their prices, if it has a use, and whether the probes ran out pricing them.
+/// `None` when they ran out on the way there; no price and no cut where a turn would not end.
+fn uses_two_turns_on(
+    from: &GameState,
+    seat: PlayerId,
+    id: &str,
+    hidden: &IndexSet<String>,
+    probes: &dyn NodeCounter,
+) -> Option<(Option<f64>, bool)> {
+    let Some(enemy_turn) = next_turn(from, seat, probes)? else {
+        return Some((None, false));
+    };
+    let Some(own_turn) = next_turn(&enemy_turn, seat.opponent(), probes)? else {
+        return Some((None, false));
+    };
+    let mut tried: Vec<ActivationPrice> = activate_sources(&own_turn, seat)
+        .into_iter()
+        .filter(|other| other.id != id)
+        .map(ActivationPrice::key)
+        .collect();
+    let mut fresh: Vec<ActivationPrice> = Vec::new();
+    let cut = !price_uses(&own_turn, seat, hidden, probes, &mut tried, &mut fresh);
+    Some((fresh.into_iter().map(|entry| entry.price).reduce(f64::max), cut))
 }
 
 /// R4197000: the card `seat`'s own open prompt resumes on (`resume.instance_id`) when it is one of the
@@ -3148,10 +3203,7 @@ pub fn prompt_activation_prices(
     answers.sort_by_cached_key(action_key);
     // R345: automatic turn end off before the answer, else a pick that leaves nothing to play ends the
     // turn inside the answer's own reduce.
-    let mut start = world.clone();
-    for player in PLAYER_IDS {
-        start.players[player].auto_end_turn = Some(false);
-    }
+    let start = held_copy(world);
     let hidden = hidden_card_ids(world, seat);
     let probes = create_sub_counter(counter, AI_PROMPT_ACTIVATION_PROBE_NODES);
     for answer in &answers {
@@ -3160,11 +3212,7 @@ pub fn prompt_activation_prices(
             Some(Err(_)) => continue,
             Some(Ok(answered)) => answered,
         };
-        if answered.pending.is_some()
-            || answered.result.is_some()
-            || answered.active != seat
-            || answered.phase != Phase::Main
-        {
+        if !in_own_main(&answered, seat) {
             continue;
         }
         let Some(now) = activate_sources(&answered, seat)
@@ -3179,27 +3227,11 @@ pub fn prompt_activation_prices(
         {
             continue;
         }
-        // From here as `rekeyed_activation_prices`' tail: two turn ends, the card's uses alone.
-        let Some(enemy_turn) = next_turn(&answered, seat, &probes) else {
+        // As `rekeyed_activation_prices`: two turn ends, the card's uses alone.
+        let Some((price, cut)) = uses_two_turns_on(&answered, seat, &now.id, &hidden, &probes) else {
             break;
         };
-        let Some(enemy_turn) = enemy_turn else {
-            continue;
-        };
-        let Some(own_turn) = next_turn(&enemy_turn, seat.opponent(), &probes) else {
-            break;
-        };
-        let Some(own_turn) = own_turn else {
-            continue;
-        };
-        let mut tried: Vec<ActivationPrice> = activate_sources(&own_turn, seat)
-            .into_iter()
-            .filter(|other| other.id != now.id)
-            .map(ActivationPrice::key)
-            .collect();
-        let mut fresh: Vec<ActivationPrice> = Vec::new();
-        let cut = !price_uses(&own_turn, seat, &hidden, &probes, &mut tried, &mut fresh);
-        if let Some(price) = fresh.into_iter().map(|entry| entry.price).reduce(f64::max) {
+        if let Some(price) = price {
             priced.push(ActivationPrice {
                 price,
                 ..ActivationPrice::key(now)
@@ -3212,28 +3244,57 @@ pub fn prompt_activation_prices(
     priced
 }
 
-/// R2688000: `turn` with `unit` as its hookless twin, and the keywords it prints: the twin is Vanilla
-/// (§6.3), so `script_of` runs none of its text and neither of its attack hooks fires (nor its wake
-/// trigger, R3064000), and it is
-/// granted the keywords it prints, as tuning leaves them (`face_of`), so it fights as itself.
-fn hookless_twin(turn: &GameState, unit: &CardInstance) -> (GameState, Vec<Keyword>) {
-    let printed = face_of(turn, unit).keywords;
-    let mut twin = turn.clone();
-    if let Some(card) = find_instance_mut(&mut twin, &unit.id) {
-        card.granted_keywords.extend(printed.iter().cloned());
-        card.vanilla = true;
+/// R4811000: the keywords `held` lists that `kept` does not, one for each entry `kept` lacks (two Armor
+/// entries are two, as §6.1 sums them): what a Vanilla copy of a unit loses of the keywords it holds.
+fn keywords_lost(held: &[Keyword], kept: &[Keyword]) -> Vec<Keyword> {
+    let mut left = kept.to_vec();
+    let mut lost = Vec::new();
+    for keyword in held {
+        match left.iter().position(|other| other == keyword) {
+            Some(at) => {
+                left.remove(at);
+            }
+            None => lost.push(keyword.clone()),
+        }
     }
-    (twin, printed)
+    lost
 }
 
-/// R2688000: `after`, the hookless twin's attack, with the unit's text given back before it is scored:
-/// Vanilla off and the printed keywords it was granted taken off again, one of each, so its Brittle,
-/// its lent keywords, its auras and its set stats read on both sides of the price as they do on the
-/// unit's own. A twin the attack took off the field has nothing to give back.
-fn with_text_back(mut after: GameState, unit_id: &str, printed: &[Keyword]) -> GameState {
-    if let Some(card) = find_instance_mut(&mut after, unit_id) {
-        card.vanilla = false;
-        for keyword in printed {
+/// R2688000, R4811000: `turn` with `unit` as its hookless twin, and the keywords the twin was granted:
+/// the twin is Vanilla (§6.3), so `script_of` runs none of its text and neither of its attack hooks
+/// fires (nor its wake trigger, R3064000), and it is granted the keywords it prints, as tuning leaves
+/// them (`face_of`), then every keyword the unit holds (`unit_view`) that this Vanilla copy does not
+/// (`keywords_lost`), a "your Units have X" lend among them, which no Vanilla card takes (R1859007), so
+/// it fights as itself. A unit already Vanilla runs no text: it is its own twin, granted nothing.
+fn hookless_twin(turn: &GameState, unit: &CardInstance) -> (GameState, Vec<Keyword>) {
+    let mut twin = turn.clone();
+    if unit.vanilla {
+        return (twin, Vec::new());
+    }
+    let mut granted = face_of(turn, unit).keywords;
+    if let Some(card) = find_instance_mut(&mut twin, &unit.id) {
+        card.granted_keywords.extend(granted.iter().cloned());
+        card.vanilla = true;
+    }
+    let lost = find_instance(&twin, &unit.id)
+        .map(|card| keywords_lost(&unit_view(turn, unit).keywords, &unit_view(&twin, card).keywords))
+        .unwrap_or_default();
+    if let Some(card) = find_instance_mut(&mut twin, &unit.id) {
+        card.granted_keywords.extend(lost.iter().cloned());
+    }
+    granted.extend(lost);
+    (twin, granted)
+}
+
+/// R2688000, R4811000: `after`, the hookless twin's attack, with the unit's text given back before it
+/// is scored: Vanilla as the unit was (off, unless it was Vanilla already), and the keywords the twin
+/// was granted (`hookless_twin`) taken off again, one of each, so its Brittle, its lent keywords, its
+/// auras and its set stats read on both sides of the price as they do on the unit's own. A twin the
+/// attack took off the field has nothing to give back.
+fn with_text_back(mut after: GameState, unit: &CardInstance, granted: &[Keyword]) -> GameState {
+    if let Some(card) = find_instance_mut(&mut after, &unit.id) {
+        card.vanilla = unit.vanilla;
+        for keyword in granted {
             if let Some(at) = card
                 .granted_keywords
                 .iter()
@@ -3280,20 +3341,15 @@ fn attack_hook_probe(
     if !settled(&hooked) {
         return Some(None);
     }
-    let (twin, printed) = hookless_twin(turn, unit);
+    let (twin, granted) = hookless_twin(turn, unit);
     let Ok(plain) = simulate(&twin, owner, attack, counter, Prices::NONE)? else {
         return Some(None);
     };
     if !settled(&plain) {
         return Some(None);
     }
-    let plain = with_text_back(plain, &unit.id, &printed);
-    let gained = hooked.players[owner].mana.current - plain.players[owner].mana.current;
-    Some(Some(
-        evaluate(&hooked, owner, NextSwing::Enemy, &AI_EVAL)
-            - evaluate(&plain, owner, NextSwing::Enemy, &AI_EVAL)
-            + AI_EVAL.next_turn_mana * f64::from(gained),
-    ))
+    let plain = with_text_back(plain, unit, &granted);
+    Some(Some(gain_over(&hooked, &plain, owner)))
 }
 
 /// R2688000: prices into `priced` the next attack of each of `controller`'s units with an attack hook
@@ -3365,21 +3421,9 @@ pub fn attack_hook_prices(
 /// wake panics (`note_sim_panic`), or leaves a prompt open or the game over, which the probe neither
 /// answers nor prices.
 fn wake_once(before: &GameState, instance_id: &str, counter: &dyn NodeCounter) -> Option<Option<GameState>> {
-    if !counter.take() {
-        return None;
-    }
-    let woken = catch_unwind(AssertUnwindSafe(|| {
-        settled_after(before, |sink| {
-            awaken_card(sink, instance_id);
-        })
-    }));
-    match woken {
-        Ok(after) => Some((after.pending.is_none() && after.result.is_none()).then_some(after)),
-        Err(payload) => {
-            note_sim_panic(counter, payload.as_ref());
-            Some(None)
-        }
-    }
+    settled_once(before, counter, |sink| {
+        awaken_card(sink, instance_id);
+    })
 }
 
 /// R3064000: what `unit`'s awakening on `before`, a sandbox (R923000), gives its controller through its
@@ -3393,17 +3437,12 @@ fn awaken_probe(before: &GameState, unit: &CardInstance, counter: &dyn NodeCount
     let Some(hooked) = wake_once(before, &unit.id, counter)? else {
         return Some(None);
     };
-    let (twin, printed) = hookless_twin(before, unit);
+    let (twin, granted) = hookless_twin(before, unit);
     let Some(plain) = wake_once(&twin, &unit.id, counter)? else {
         return Some(None);
     };
-    let plain = with_text_back(plain, &unit.id, &printed);
-    let gained = hooked.players[owner].mana.current - plain.players[owner].mana.current;
-    Some(Some(
-        evaluate(&hooked, owner, NextSwing::Enemy, &AI_EVAL)
-            - evaluate(&plain, owner, NextSwing::Enemy, &AI_EVAL)
-            + AI_EVAL.next_turn_mana * f64::from(gained),
-    ))
+    let plain = with_text_back(plain, unit, &granted);
+    Some(Some(gain_over(&hooked, &plain, owner)))
 }
 
 /// R3064000, R923001: `awaken_probe` for `card`, a Unit in `seat`'s hand, placed on its field first
@@ -3456,11 +3495,7 @@ pub fn awaken_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounte
     if candidates.is_empty() {
         return Vec::new();
     }
-    let mut sandbox = world.clone();
-    sandbox.sandbox = Some(true);
-    for player in PLAYER_IDS {
-        sandbox.players[player].auto_end_turn = Some(false);
-    }
+    let sandbox = sandbox_copy(world);
     let probes = create_sub_counter(counter, AI_AWAKEN_PROBE_NODES);
     let mut priced = Vec::new();
     for (key, card, in_hand) in candidates {
@@ -3568,23 +3603,11 @@ fn evolve_once(
     instance_id: &str,
     counter: &dyn NodeCounter,
 ) -> Option<Option<GameState>> {
-    if !counter.take() {
-        return None;
-    }
-    let evolved = catch_unwind(AssertUnwindSafe(|| {
-        settled_after(before, |sink| {
-            if let Some(card) = find_instance(sink.state, instance_id).cloned() {
-                evolve_now(sink, &card);
-            }
-        })
-    }));
-    match evolved {
-        Ok(after) => Some((after.pending.is_none() && after.result.is_none()).then_some(after)),
-        Err(payload) => {
-            note_sim_panic(counter, payload.as_ref());
-            Some(None)
+    settled_once(before, counter, |sink| {
+        if let Some(card) = find_instance(sink.state, instance_id).cloned() {
+            evolve_now(sink, &card);
         }
-    }
+    })
 }
 
 /// R4648000: what one run of `unit`'s Evolve text on `before`, a sandbox (R923000), gives its controller,
@@ -3604,10 +3627,7 @@ fn evolve_probe(
     };
     let owner = unit.controller;
     let runs = 1 + extra_runs(before, owner, Multiplied::Evolutions).max(0);
-    let gained = after.players[owner].mana.current - before.players[owner].mana.current;
-    let gain = evaluate(&after, owner, NextSwing::Enemy, &AI_EVAL)
-        - evaluate(before, owner, NextSwing::Enemy, &AI_EVAL)
-        + AI_EVAL.next_turn_mana * f64::from(gained);
+    let gain = gain_over(&after, before, owner);
     Some(Some((
         gain / f64::from(runs),
         evolve_condition(before, seat, unit),
@@ -3665,11 +3685,7 @@ pub fn evolve_prices(world: &GameState, seat: PlayerId, counter: &dyn NodeCounte
     if candidates.is_empty() {
         return Vec::new();
     }
-    let mut sandbox = world.clone();
-    sandbox.sandbox = Some(true);
-    for player in PLAYER_IDS {
-        sandbox.players[player].auto_end_turn = Some(false);
-    }
+    let sandbox = sandbox_copy(world);
     let probes = create_sub_counter(counter, AI_EVOLVE_PROBE_NODES);
     let mut priced = Vec::new();
     for (key, card, in_hand) in candidates {

@@ -1,0 +1,214 @@
+//! R4552000, R4552002 (SPEC §9.11): a finished game's turn rows, the data Decisiveness is read off.
+//!
+//! The engine's record (`summarize_game`) cannot call the AI, so this fold replays the same log from the
+//! same start (`recorded_start`, `read_steps`) and, once every turn's start has resolved (a start that
+//! asks is read at the first step past it, R4785000), writes one row for the seat whose turn it is
+//! (`SwingTurn`): the turn counter, the AI's evaluation of the seat less its opponent's (`evaluate`, the
+//! true, whole state: the game is over and nothing is hidden from a statistic), and the cards acting on
+//! each side's field (`acting_on`, a face-down Trap left out).
+//!
+//! R4552002: a Created card (R943) on the field names its maker, the card whose play or trigger was
+//! resolving when it appeared (a summon's `sourceId` when the event names one; for a copy an effect cast,
+//! the card whose effect cast it, never the copy itself), unless a hand held it first: then it was
+//! played, and its play was the seat's decision (The Coin, Rosemary Triscuit). The
+//! fold follows every instance through the whole log, so no instance carries its maker.
+//!
+//! Pure (CLAUDE.md rule 4): the server calls it under the record's catalog pin, beside `summarize_game`
+//! (`crates/server/src/api/game_records.rs`), and the development runs call it as they file a record,
+//! each through `summarize_with_swing_turns`, which reads the summary and the rows off one fold.
+
+use indexmap::{IndexMap, IndexSet};
+use jackioh_engine::config::SWING_EVAL_SCALE;
+use jackioh_engine::{
+    ActingCard, CardInstance, CreatedActing, FoldArgs, GameEvent, GameState, GameSummary, PLAYER_IDS,
+    PerPlayer, Phase, PlayerId, StandingAt, SwingTurn, acting_on, find_instance, is_face_down, read_steps,
+    recorded_start, summarize_game_with,
+};
+
+use crate::config::AI_EVAL;
+use crate::evaluate::{NextSwing, evaluate};
+
+/// R4552000: reads a game's turn rows off its steps, one `(before, events, after)` at a time, as
+/// `swing_turns` folds a log; a test reads a `scenario()`'s verbs through it the same way.
+#[derive(Default)]
+pub struct SwingReader {
+    rows: PerPlayer<Vec<SwingTurn>>,
+    /// R4552002: each Created instance met on the field, by instance id, with its maker (`None` when a
+    /// hand held it first).
+    makers: IndexMap<String, Option<String>>,
+    /// R4552002: every Created instance a hand has held.
+    in_hand: IndexSet<String>,
+    /// R4785000: the turn whose start the last step left under way (its seat and turn counter): its
+    /// row waits for the first step past the start.
+    held: Option<(PlayerId, i32)>,
+}
+
+fn is_created(card: &CardInstance) -> bool {
+    card.created == Some(true)
+}
+
+impl SwingReader {
+    /// A reader with no rows yet.
+    pub fn new() -> SwingReader {
+        SwingReader::default()
+    }
+
+    /// One step: the state as it began, the events it emitted, and the state it left.
+    pub fn step(&mut self, before: &GameState, events: &[GameEvent], after: &GameState) {
+        for state in [before, after] {
+            for player in PLAYER_IDS {
+                for card in state.players[player].hand.iter().filter(|card| is_created(card)) {
+                    self.in_hand.insert(card.id.clone());
+                }
+            }
+        }
+        // R4785000: an answer continues the asking card's play or trigger, and the engine marks no hook
+        // for a run continued (`prompts.rs`), so an answer begins with the card whose script asked still
+        // resolving (an engine's own prompt names none).
+        let mut resolving: Option<String> = before
+            .pending
+            .as_ref()
+            .map(|pending| pending.resume.def_id.clone())
+            .filter(|def_id| !def_id.is_empty());
+        let mut turns_started: Vec<(PlayerId, i32)> = Vec::new();
+        for event in events {
+            match event {
+                GameEvent::CardPlayed {
+                    instance_id, def_id, ..
+                } => {
+                    // A Created card no hand held was cast by an effect (`castNew`: C+ #37 Wardrum's
+                    // copies): the cast was the resolving card's, so the copy names it as its maker and
+                    // it stays the resolving card. Any other play was the seat's own.
+                    let cast = find_instance(after, instance_id)
+                        .or_else(|| find_instance(before, instance_id))
+                        .is_some_and(is_created)
+                        && !self.in_hand.contains(instance_id)
+                        && !self.makers.contains_key(instance_id);
+                    if cast {
+                        self.makers.insert(instance_id.clone(), resolving.clone());
+                    } else {
+                        resolving = Some(def_id.clone());
+                    }
+                }
+                GameEvent::HookResolving { def_id, .. } => {
+                    resolving = Some(def_id.clone());
+                }
+                GameEvent::Summoned {
+                    instance_id,
+                    source_id,
+                    ..
+                } => {
+                    let made = find_instance(after, instance_id).is_some_and(is_created);
+                    if made && !self.makers.contains_key(instance_id) && !self.in_hand.contains(instance_id) {
+                        let source = source_id
+                            .as_deref()
+                            .and_then(|source| {
+                                find_instance(after, source).or_else(|| find_instance(before, source))
+                            })
+                            .map(|source| source.def_id.clone());
+                        self.makers
+                            .insert(instance_id.clone(), source.or_else(|| resolving.clone()));
+                    }
+                }
+                GameEvent::TurnStarted { player, turn, .. } => turns_started.push((*player, *turn)),
+                _ => {}
+            }
+        }
+        // A Created card no summon named (a Field Spell an effect cast: Jayaad's Shawarma Law) is the
+        // last resolving card's, unless a hand held it.
+        for player in PLAYER_IDS {
+            for card in acting_on(after, player, StandingAt::AmongUnits) {
+                if is_created(card) && !self.makers.contains_key(&card.id) {
+                    let maker = if self.in_hand.contains(&card.id) {
+                        None
+                    } else {
+                        resolving.clone()
+                    };
+                    self.makers.insert(card.id.clone(), maker);
+                }
+            }
+        }
+        // No row is written for a turn that begins on a finished game, nor (R4785000) for one whose start
+        // was still under way as the game ended: its row is held, never written.
+        if after.result.is_some() {
+            return;
+        }
+        // Every turn the step began has its row. A turn can begin and end inside one step (one with
+        // nothing but ending it left to do ends by itself, R345; the autopilot plays one, R1183002), and
+        // the step's own states are all there is to read: each such turn is read off the state the step
+        // left, as the last one is.
+        // R4785000: a turn whose start asked a question is read once the start has resolved. The engine
+        // leaves `Phase::Start` only when the start's last stage, the draw, is done (`turn.rs`), so while
+        // the step leaves it there, the turn under way (the last begun) waits, and the first later step
+        // past it reads it, ahead of any turn that step began.
+        let mut owed: Vec<(PlayerId, i32)> = self.held.take().into_iter().chain(turns_started).collect();
+        if after.phase == Phase::Start {
+            self.held = owed.pop();
+        }
+        for (seat, turn) in owed {
+            let opponent = seat.opponent();
+            let difference = evaluate(after, seat, NextSwing::Seat, &AI_EVAL)
+                - evaluate(after, opponent, NextSwing::Enemy, &AI_EVAL);
+            let row = SwingTurn {
+                turn,
+                eval: (difference * SWING_EVAL_SCALE).round() as i64,
+                acting: self.acting(after, seat),
+                facing: self.acting(after, opponent),
+            };
+            self.rows[seat].push(row);
+        }
+    }
+
+    /// `player`'s acting cards, each a row's entry: a face-down Trap has no text acting, so it is left
+    /// out (and it is hidden).
+    fn acting(&self, state: &GameState, player: PlayerId) -> Vec<ActingCard> {
+        acting_on(state, player, StandingAt::AmongUnits)
+            .into_iter()
+            .filter(|card| !is_face_down(state, card))
+            .map(|card| {
+                if is_created(card) {
+                    ActingCard::Created(CreatedActing {
+                        card: card.def_id.clone(),
+                        maker: self.makers.get(&card.id).cloned().flatten(),
+                    })
+                } else {
+                    ActingCard::Dealt(card.def_id.clone())
+                }
+            })
+            .collect()
+    }
+
+    /// Each seat's rows so far: a turn whose start is still asking has none yet (R4785000).
+    pub fn turns(&self) -> &PerPlayer<Vec<SwingTurn>> {
+        &self.rows
+    }
+}
+
+/// R4552000: each seat's turn rows of a finished game, `None` with no result. It replays the log as
+/// `summarize_game` does (the same start, an action the engine refuses skipped), so the rows are the
+/// game the record summarizes.
+pub fn swing_turns(input: &FoldArgs) -> Option<PerPlayer<Vec<SwingTurn>>> {
+    let start = recorded_start(input);
+    let mut reader = SwingReader::new();
+    let end = read_steps(&start, &input.log, |before, events, after| {
+        reader.step(before, events, after)
+    });
+    end.result?;
+    Some(reader.rows)
+}
+
+/// R4552000: a finished game's summary (`summarize_game`) with each seat's turn rows filed in it, both
+/// read off one fold of the log (#2213); `None` with no result. Every writer of a record calls it.
+pub fn summarize_with_swing_turns(input: &FoldArgs) -> Option<GameSummary> {
+    let mut reader = SwingReader::new();
+    let mut game = summarize_game_with(input, |before, events, after| reader.step(before, events, after))?;
+    attach_swing_turns(&mut game, reader.rows);
+    Some(game)
+}
+
+/// R4552000: files each seat's rows in its summary (`SeatSummary.swing_turns`).
+pub fn attach_swing_turns(game: &mut GameSummary, turns: PerPlayer<Vec<SwingTurn>>) {
+    let PerPlayer { p1, p2 } = turns;
+    game.seats.p1.swing_turns = Some(p1);
+    game.seats.p2.swing_turns = Some(p2);
+}

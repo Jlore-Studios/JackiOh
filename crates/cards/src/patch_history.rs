@@ -230,7 +230,9 @@ pub fn play_versions() -> IndexMap<String, Vec<PlayVersion>> {
 }
 
 /// R4675000: the play versions of every card a deck can hold, in catalog order: the catalog's cards that
-/// are no token, of a set that ships (R1420), each card's oldest first.
+/// are no token, of a set that ships (R1420), each card's oldest first. A card `catalog.json` holds before
+/// the shipped history does, one a branch adds or of a set a branch releases, has none until
+/// `patches ship` writes it into `patches.json` (docs/ADDING_CARDS.md).
 pub fn deck_play_versions() -> Vec<PlayVersion> {
     let mut by_card = play_versions();
     crate::CATALOG
@@ -243,6 +245,7 @@ pub fn deck_play_versions() -> Vec<PlayVersion> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jackioh_engine::CardDefs;
 
     fn step(version: &str, tier: PatchTier, plays: &[&str]) -> PatchStep {
         PatchStep {
@@ -430,23 +433,34 @@ mod tests {
         }
     }
 
-    #[test]
-    fn r4675000_the_compiled_in_history_gives_every_shipped_card_contiguous_versions() {
+    /// R4675000: the deck cards the shipped history holds, in `catalog`'s order: its cards that are no
+    /// token, of a set that ships, and that `newest`, the newest shipped catalog, holds. A card a branch
+    /// adds, or one of a set a branch releases, reaches `catalog.json` in its pull request and the history
+    /// only at `patches ship`.
+    fn held_deck_cards<'a>(catalog: &'a CardDefs, newest: &CardDefs) -> Vec<&'a str> {
+        catalog
+            .values()
+            .filter(|def| !def.token && jackioh_engine::set_ships(def.set) && newest.contains_key(&def.id))
+            .map(|def| def.id.as_str())
+            .collect()
+    }
+
+    /// R4675000: `versions` hold exactly the deck cards of `catalog` that `newest` holds, in catalog order,
+    /// each over the shipped versions from where it was added to the newest without a gap, its newest
+    /// play version alone live.
+    fn assert_every_held_card_contiguous(versions: &[PlayVersion], catalog: &CardDefs, newest: &CardDefs) {
         let shipped = crate::shipped_versions();
-        let versions = deck_play_versions();
         let mut ids: IndexSet<&str> = IndexSet::new();
         let mut by_card: IndexMap<&str, Vec<&PlayVersion>> = IndexMap::new();
-        for version in &versions {
+        for version in versions {
             assert!(ids.insert(&version.id), "{} repeats", version.id);
             assert!(!version.id.contains('@'), "{}", version.id);
             assert_eq!(version.id, play_version_id(&version.card, version.first()));
             by_card.entry(&version.card).or_default().push(version);
         }
-        let deckable = crate::CATALOG
-            .values()
-            .filter(|def| !def.token && jackioh_engine::set_ships(def.set))
-            .count();
-        assert_eq!(by_card.len(), deckable);
+        let held = held_deck_cards(catalog, newest);
+        assert!(!held.is_empty(), "the newest shipped catalog holds deck cards");
+        assert_eq!(by_card.keys().copied().collect::<Vec<&str>>(), held);
         for (card, versions) in &by_card {
             let spanned: Vec<&str> = versions
                 .iter()
@@ -462,6 +476,34 @@ mod tests {
             assert_eq!(live[0].last(), crate::catalog_version(), "{card}");
             assert!(versions.last().is_some_and(|version| version.live), "{card}");
         }
+    }
+
+    #[test]
+    fn r4675000_the_compiled_in_history_gives_every_shipped_card_contiguous_versions() {
+        let newest = crate::catalog_defs_at(crate::CATALOG_VERSION).expect("the newest is carried");
+        assert_every_held_card_contiguous(&deck_play_versions(), &crate::CATALOG, newest);
+    }
+
+    #[test]
+    fn r4675000_a_deck_card_the_shipped_history_lacks_yet_has_no_play_versions() {
+        let newest = crate::catalog_defs_at(crate::CATALOG_VERSION).expect("the newest is carried");
+        // A branch adds a Core card: `catalog.json` holds it in the pull request, `patches.json` only after
+        // `patches ship`.
+        let mut branch = crate::CATALOG.clone();
+        let mut added = crate::card_def("core-001");
+        added.id = "core-999".to_string();
+        assert!(
+            branch.insert(added.id.clone(), added).is_none(),
+            "core-999 is no catalog card yet"
+        );
+        assert!(!newest.contains_key("core-999"));
+        assert!(!play_versions().contains_key("core-999"));
+        let held = held_deck_cards(&branch, newest);
+        assert!(!held.contains(&"core-999"));
+        assert!(held.contains(&"core-001"));
+        // The branch's deck cards are the shipped ones and its own: the new card has none, and every card
+        // the history holds still has contiguous versions.
+        assert_every_held_card_contiguous(&deck_play_versions(), &branch, newest);
     }
 
     // R2529000: a patch a named system alone made one restarts no card's window but its own families'.

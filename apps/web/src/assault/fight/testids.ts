@@ -23,6 +23,8 @@ export const assaultFightTestid = {
   continue: "assault-fight-continue",
   /** R4582001: out to the day screen, or the Play menu with no way back: mid-fight it opens `leaveDialog`; once the fight has its result it leaves at once. */
   menu: "assault-fight-menu",
+  /** #4742, R4742000: in the result panel, after Continue: the same Menu, which sends the report first and leaves. */
+  resultMenu: "assault-fight-result-menu",
   /** R4582001: the question asked before a fight in progress is left. */
   leaveDialog: "assault-fight-leave",
   /** R4582001: stay in the fight. */

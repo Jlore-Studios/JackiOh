@@ -34,8 +34,8 @@ use jackioh_engine::testkit::golden::{
     seed_number, view_texts,
 };
 use jackioh_engine::{
-    Action, CardDef, CreateGameArgs, GameEvent, GameOverReason, GameState, Handicap, PerPlayerOpt, Winner,
-    begin_game, create_game, deckable, hash_state, reduce,
+    Action, CardDef, CreateGameArgs, DeckMark, GameEvent, GameOverReason, GameState, Handicap, PLAYER_IDS,
+    PerPlayerOpt, Winner, begin_game, create_game, deckable, hash_state, reduce,
 };
 
 use crate::fuzz::{
@@ -110,6 +110,9 @@ struct RecordArgs {
     /// Card ids to put into both decks; a token is forced through a card whose `refs` name it (R279).
     #[arg(long, value_name = "IDS", value_delimiter = ',')]
     force: Vec<String>,
+    /// Pin the forced cards Radiant in every recorded game (R4850000).
+    #[arg(long)]
+    radiant: bool,
     /// The file to write.
     #[arg(long, value_name = "PATH")]
     out: PathBuf,
@@ -301,6 +304,8 @@ pub(crate) struct GameSpec {
     pub(crate) decks: (Vec<String>, Vec<String>),
     /// R180, R187: the handicapped seat's handicap, or `None` for a game on this spec's resources.
     pub(crate) handicaps: Option<PerPlayerOpt<Handicap>>,
+    /// R4850000: deck marks pinning deck indices Radiant, or `None` for a plain game.
+    pub(crate) deck_marks: Option<PerPlayerOpt<Vec<DeckMark>>>,
     /// The policy's stream (§10.7), separate from the game rng, as the fuzz has it.
     pub(crate) policy: String,
     /// R265: the stream that picks which seat answers first while both mulligans are open.
@@ -318,6 +323,7 @@ pub(crate) fn spec_for_seed(k: u32) -> Result<GameSpec> {
             seed: format!("jackioh-fuzz-handicap-{k}"),
             decks: handicap_decks_for_seed_from(k, seat, &handicap, &SHIPPED_HANDICAP_POOL),
             handicaps: Some(handicaps),
+            deck_marks: None,
             policy: format!("jackioh-fuzz-handicap-policy-{k}"),
             order: format!("jackioh-fuzz-handicap-policy-order-{k}"),
         });
@@ -327,6 +333,7 @@ pub(crate) fn spec_for_seed(k: u32) -> Result<GameSpec> {
             seed: format!("jackioh-fuzz-{k}"),
             decks: decks_for_seed_from(k, &SHIPPED_FUZZ_POOL),
             handicaps: None,
+            deck_marks: None,
             policy: format!("jackioh-fuzz-policy-{k}"),
             order: format!("jackioh-fuzz-policy-order-{k}"),
         });
@@ -354,6 +361,9 @@ struct LineArgs {
     decks: (Vec<String>, Vec<String>),
     /// `null` for a game without one.
     handicaps: Option<PerPlayerOpt<Handicap>>,
+    /// R4850000: `deckMarks` pinning deck indices Radiant; absent for a plain game.
+    #[serde(rename = "deckMarks", skip_serializing_if = "Option::is_none")]
+    deck_marks: Option<PerPlayerOpt<Vec<DeckMark>>>,
 }
 
 #[derive(Serialize)]
@@ -395,6 +405,7 @@ fn record_game(spec: GameSpec, steer: &[String]) -> Result<GameLine> {
         seed: spec.seed.clone(),
         decks: spec.decks.clone(),
         handicaps: spec.handicaps.clone(),
+        deck_marks: spec.deck_marks.clone(),
         ..CreateGameArgs::default()
     };
     let begun = begin_game(&create_game(&args));
@@ -451,6 +462,7 @@ fn record_game(spec: GameSpec, steer: &[String]) -> Result<GameLine> {
             seed: spec.seed,
             decks: spec.decks,
             handicaps: spec.handicaps,
+            deck_marks: spec.deck_marks,
         },
         begin,
         end: Ending {
@@ -535,8 +547,29 @@ pub(crate) fn force_into(deck: &[String], forced: &[String]) -> Vec<String> {
     deal_deck(&mut forced.iter().chain(deck).cloned(), deck.len())
 }
 
+/// R4850000: both seats' marks pinning the first `count` deck indices Radiant — the forced
+/// cards' slots, since `force_into` puts them first. `None` when there is nothing to pin.
+fn radiant_marks(count: usize) -> Option<PerPlayerOpt<Vec<DeckMark>>> {
+    if count == 0 {
+        return None;
+    }
+    let mut marks = PerPlayerOpt::default();
+    for player in PLAYER_IDS {
+        *marks.slot(player) = Some(
+            (0..count)
+                .map(|index| DeckMark {
+                    index,
+                    radiant: true,
+                    upgrades: 0,
+                })
+                .collect(),
+        );
+    }
+    Some(marks)
+}
+
 /// Seed k's game with `forced` in both decks.
-fn record_forced(k: u32, forced: &[String], steer: &[String]) -> Result<GameLine> {
+fn record_forced(k: u32, forced: &[String], steer: &[String], radiant: bool) -> Result<GameLine> {
     let mut spec = spec_for_seed(k)?;
     for deck in [&mut spec.decks.0, &mut spec.decks.1] {
         if forced.len() > deck.len() {
@@ -548,6 +581,9 @@ fn record_forced(k: u32, forced: &[String], steer: &[String]) -> Result<GameLine
             );
         }
         *deck = force_into(deck, forced);
+    }
+    if radiant {
+        spec.deck_marks = radiant_marks(forced.len());
     }
     record_game(spec, steer)
 }
@@ -567,12 +603,13 @@ pub(crate) fn record_seeds(
     seeds: &[u32],
     force: &[String],
     steer: &[String],
+    radiant: bool,
     out: &Path,
 ) -> Result<Recorded> {
     let forced = resolve_force(force)?;
     let games: Vec<GameLine> = seeds
         .par_iter()
-        .map(|&k| record_forced(k, &forced, steer))
+        .map(|&k| record_forced(k, &forced, steer, radiant))
         .collect::<Result<Vec<_>>>()?;
     let steps: usize = games.iter().map(|game| game.steps.len()).sum();
 
@@ -591,7 +628,7 @@ pub(crate) fn record_seeds(
 
 fn run_record(args: &RecordArgs) -> Result<()> {
     let seeds = parse_seed_range(&args.seeds)?;
-    let recorded = record_seeds(&seeds, &args.force, &[], &args.out)?;
+    let recorded = record_seeds(&seeds, &args.force, &[], args.radiant, &args.out)?;
     let forced = if recorded.forced.is_empty() {
         "none".to_string()
     } else {
@@ -662,6 +699,65 @@ mod tests {
         assert_eq!(
             resolve_force(&ids(&["core-t-sheep", "core-041"])).unwrap(),
             ids(&["core-041"])
+        );
+    }
+
+    #[test]
+    fn r4850000_a_radiant_batch_pins_the_forced_cards_and_resolves_them_radiant() {
+        use jackioh_engine::PlayerId;
+
+        jackioh_cards::register_all();
+        let out = std::env::temp_dir().join(format!("jackioh-radiant-test-{}.jsonl", std::process::id()));
+        let seeds: Vec<u32> = (1..=40).collect();
+        record_seeds(&seeds, &ids(&["core-002"]), &[], true, &out).expect("recorded");
+        let text = fs::read_to_string(&out).expect("the traces");
+        let _ = fs::remove_file(&out);
+        let lines: Vec<&str> = text.lines().collect();
+        assert_eq!(lines.len(), 40);
+        let (mut resolved, mut resolved_radiant) = (0usize, 0usize);
+        for line in lines {
+            let game: Value = serde_json::from_str(line).expect("a game");
+            let args: CreateGameArgs = serde_json::from_value(game["args"].clone()).expect("its args");
+            let marks = args
+                .deck_marks
+                .as_ref()
+                .expect("a Radiant batch carries deckMarks");
+            for player in [PlayerId::P1, PlayerId::P2] {
+                let pinned = marks.get(player).expect("both seats carry marks");
+                assert!(
+                    pinned
+                        .iter()
+                        .any(|mark| mark.index == 0 && mark.radiant && mark.upgrades == 0),
+                    "seat {player} pins index 0 Radiant"
+                );
+            }
+            let seed = game["seed"].as_str().expect("a seed").to_string();
+            assert!(replay_game(&seed, &game).is_ok(), "the game replays: {seed}");
+            let mut state = begin_game(&create_game(&args)).state;
+            let mut radiant_here = false;
+            for step in game["steps"].as_array().expect("steps") {
+                let action: Action = serde_json::from_value(step["a"].clone()).expect("an action");
+                let result = reduce(&state, &action);
+                for event in &result.events {
+                    if let GameEvent::CardResolved { def_id, radiant, .. } = event
+                        && def_id == "core-002"
+                    {
+                        resolved += 1;
+                        if *radiant == Some(true) {
+                            radiant_here = true;
+                        }
+                    }
+                }
+                state = result.state;
+            }
+            if radiant_here {
+                resolved_radiant += 1;
+            }
+        }
+        assert!(resolved > 0, "the control: the forced games play the card");
+        assert!(
+            resolved_radiant > 0,
+            "none of the Radiant batch's games resolves it Radiant"
         );
     }
 

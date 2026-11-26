@@ -359,6 +359,50 @@ mod r1839000_a_dormant_card_fills_its_zone_and_nothing_reaches_it {
         assert_eq!(health_of(&s, P2), HERO_HEALTH - CRY_DAMAGE);
         assert_eq!(s.card(&napper_id).buffs, AttackHealth { attack: 0, health: 0 });
     }
+
+    /// R4816000: a Transform's new card arrives (S+ #103 making S #19 Imprisoned Cosmality), so the
+    /// Dormant it prints starts, and its "When this awakens" answers at the end of its countdown.
+    #[test]
+    fn r4816000_a_unit_a_transform_turns_into_one_that_prints_dormant_enters_dormant_and_awakens_on_its_countdown()
+     {
+        use crate::rules::fixtures::harness::apply_now;
+        use jackioh_engine::effects;
+
+        let mut s = board(
+            "p1",
+            json!([plain.id]),
+            json!([{ "def": plain.id, "lane": 1 }]),
+            json!([plain.id]),
+            json!([]),
+        );
+        let old = id_at(&s, P1, 1);
+        apply_now(
+            s.state_mut(),
+            effects::transform(json_as(json!({ "instanceId": old, "defId": imprisoned.id }))),
+        );
+        let id = id_at(&s, P1, 1);
+        assert_ne!(id, old, "a new card stands in the lane");
+        assert_eq!(s.card(&id).def_id, imprisoned.id);
+        assert_eq!(slumber_of(&s, &id), dormant_for(2), "its printed Dormant starts");
+        assert_eq!(
+            s.card(&id).awakened,
+            None,
+            "a Transform is a new card without the mark"
+        );
+        assert!(
+            !active_units_of(s.state(), P1).iter().any(|unit| unit.id == id),
+            "Dormant, it is no Unit"
+        );
+        // Its controller's second turn: it awakens, and its "When this awakens" answers.
+        s.end_turn().end_turn().end_turn().end_turn();
+        assert_eq!(s.state().active, P1);
+        assert_eq!(slumber_of(&s, &id), None);
+        assert_eq!(s.card(&id).awakened, Some(true));
+        assert_eq!(
+            health_of(&s, P2),
+            HERO_HEALTH - AWAKENING_DAMAGE - START_OF_TURN_DAMAGE
+        );
+    }
 }
 
 mod r1839001_dormant_for_n_turns_counts_its_controllers_turns {
@@ -866,5 +910,36 @@ mod r3556000_a_dormant_field_spell {
         assert_eq!(health_of(&s, P2), HERO_HEALTH - START_OF_TURN_DAMAGE);
         assert_eq!(attack_of(&s, P1, 1), 4);
         assert_eq!(attack_of(&s, P2, 1), 4);
+    }
+
+    /// R4816000: a face-up Field Spell a Transform turns into one printing Dormant (S+ #103 making S+ #62
+    /// Overdrive Projector) arrives Dormant, so its aura is off until it awakens.
+    #[test]
+    fn r4816000_a_field_spell_a_transform_turns_into_one_that_prints_dormant_enters_dormant_with_its_aura_off()
+     {
+        use crate::rules::fixtures::harness::apply_now;
+        use jackioh_engine::effects;
+
+        let mut s = board(
+            "p1",
+            json!([lamp.id, plain.id]),
+            json!([{ "def": plain.id, "lane": 1 }]),
+            json!([plain.id]),
+            json!([{ "def": plain.id, "lane": 1 }]),
+        );
+        s.play(lamp.id.as_str(), json!({ "zone": 1 }));
+        let old = s.card(lamp.id.as_str()).id.clone();
+        apply_now(
+            s.state_mut(),
+            effects::transform(json_as(json!({ "instanceId": old, "defId": dozer.id }))),
+        );
+        let id = s.card(dozer.id.as_str()).id.clone();
+        assert_ne!(id, old, "a new card lies in the zone");
+        assert_eq!(slumber_of(&s, &id), dormant_for(2), "its printed Dormant starts");
+        for viewer in [P1, P2] {
+            assert_eq!(backrow_slumber(&s, viewer), dormant_for(2), "{viewer:?}");
+        }
+        assert_eq!(attack_of(&s, P1, 1), 3, "its aura is off");
+        assert_eq!(attack_of(&s, P2, 1), 3, "its aura is off");
     }
 }

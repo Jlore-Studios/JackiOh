@@ -247,8 +247,17 @@ fn b34_every_snapshot_of_a_played_out_opening_is_view_for_of_the_true_state() {
 
 #[test]
 fn b34_an_ai_turn_the_ai_does_not_owe_changes_nothing_and_still_answers_with_a_snapshot() {
-    // The human first (p1): once the mulligans are answered it is on turn, and the AI owes nothing.
-    let mut session = started("practice-b34-idle", P1);
+    // The human first (p1): once the mulligans are answered it is on turn, and the AI owes nothing. The
+    // decks are dealt from the pools, which every card patch moves, so the test takes the first seed whose
+    // opening leaves the AI no prompt of its own to answer (a Discover the human's draw hands it, say), as
+    // the testkit's `seed_where` does (#848).
+    let owes_nothing = |seed: &str| {
+        let mut session = started(seed, P1);
+        session.answer_mulligans();
+        !session.snapshot().ai_to_act
+    };
+    let seed = jackioh_engine::testkit::seed_where("practice-b34-idle", owes_nothing);
+    let mut session = started(&seed, P1);
     session.answer_mulligans();
     let (hash, log, snapshots) = (
         jackioh_engine::hash_state(session.state()),
@@ -1139,6 +1148,7 @@ fn assault_config(seed: &str) -> PracticeConfig {
         enemy_deck: enemy_deck.clone(),
         enemy_handicap: enemy,
         enemy_marks: marks.clone(),
+        enemy_sets: Vec::new(),
         level: jackioh_run::AssaultLevel {
             level: 1,
             enemy: "Enemy".to_string(),
@@ -1188,6 +1198,28 @@ fn r4582000_an_assault_fight_is_created_from_its_setup_a_game_of_its_own_kind() 
     assert!(session.kept.is_empty());
     assert_eq!(session.save, Some(None));
     assert_eq!(session.records.len(), 1);
+}
+
+/// R4595000: an Assault fight names its enemy's sets at the AI's seat, so the game keeps them and the
+/// AI's and the hint's determinizations read them; a fight that names none stores nothing
+#[test]
+fn r4595000_an_assault_fight_names_the_enemys_sets_at_the_ais_seat() {
+    // The set is held until its release (R4577000), so a test deals it under a preview.
+    let _preview = jackioh_engine::testkit::preview_sets(&[jackioh_engine::SetName::InfiniteAssault]);
+    let mut setup = assault_config("practice-r4595000");
+    let enemy_deck: Vec<String> = (1..=12).map(|n| format!("infiniteassault-{n:03}")).collect();
+    let assault = setup.assault.as_mut().expect("an Assault fight");
+    assault.enemy_deck = enemy_deck.clone();
+    assault.level.deck = enemy_deck;
+    assault.enemy_sets = vec![jackioh_engine::SetName::InfiniteAssault];
+    let session = Session::start(&setup).expect("starts");
+    let sets = session.host.fold_args().deck_sets.expect("the enemy's sets");
+    assert_eq!(
+        (sets.p1, sets.p2),
+        (None, Some(vec![jackioh_engine::SetName::InfiniteAssault]))
+    );
+    let unnamed = Session::start(&assault_config("practice-r4595000-none")).expect("starts");
+    assert!(unnamed.host.fold_args().deck_sets.is_none());
 }
 
 #[test]

@@ -17,6 +17,7 @@ use crate::rules::fixtures::burn_toxic::{
 use crate::rules::fixtures::combat::{
     armored, big_body, cleaver, first_striker, indestructible, lifestealer, plain, shielded, trampler,
 };
+use crate::rules::fixtures::combat_judge::{banisher, banisher_cleave, register_combat_judge_fixtures};
 use crate::rules::fixtures::combat_reactions::{POOL, POOL_SIZE, register_e6_fixtures};
 use crate::rules::fixtures::harness::{act_ok, live, new_game, put, slot};
 use crate::rules::fixtures::scripts::anti_oneshot;
@@ -482,5 +483,89 @@ mod r4156000_a_first_strike_sweeper_projects_its_plain_strike_back {
         assert_eq!(projected(&state, &attacker, &unit_now(&state, &fuse)), 4);
         state.players.p2.hero.health = 4;
         assert!(lethal(&state, &attacker, &unit_now(&state, &fuse)));
+    }
+}
+
+mod r4823000_a_first_strike_exiler_fells_its_attacker_first {
+    use super::*;
+
+    /// R4823000, §4.3 step 1: a First Strike defender whose damage exiles marks the attacker with any hit
+    /// of 1 or more, so the attacker lands nothing and its Trample reaches no hero.
+    #[test]
+    fn r4823000_a_trampler_a_first_strike_banisher_exiles_first_tramples_nothing() {
+        let mut state = board("r4823000-trample");
+        register_combat_judge_fixtures();
+        let attacker = put(&mut state, &trampler.id, slot(P1, Row::Units, 1), json!({})); // 6/4 Trample
+        let exiler = put(&mut state, &banisher.id, slot(P2, Row::Units, 1), json!({})); // 2/2
+        state.players.p2.hero.health = 4;
+        // Struck back at the same time, the trampler's 6 lands on 2 health and 4 trample through.
+        assert_eq!(projected(&state, &attacker, &unit_now(&state, &exiler)), 4);
+        assert!(lethal(&state, &attacker, &unit_now(&state, &exiler)));
+
+        edit(&mut state, &exiler, |card| {
+            card.granted_keywords.push(Keyword::FirstStrike)
+        });
+        // The banisher's 2 comes first: short of 4 health, but it exiles the trampler all the same.
+        assert_eq!(projected(&state, &attacker, &unit_now(&state, &exiler)), 0);
+        assert!(!lethal(&state, &attacker, &unit_now(&state, &exiler)));
+        let after = act_ok(&state, attack_of(&attacker, &exiler.id));
+        assert_eq!(after.state.players.p2.hero.health, 4);
+        assert!(after.state.result.is_none());
+    }
+
+    /// R4823000: a First Strike hit a Divine Shield takes whole deals nothing and so exiles nothing; the
+    /// attacker lands its blow and tramples on.
+    #[test]
+    fn r4823000_a_first_strike_banisher_s_hit_a_divine_shield_takes_exiles_nothing_so_the_trample_counts() {
+        let mut state = board("r4823000-shield");
+        register_combat_judge_fixtures();
+        let attacker = put(&mut state, &trampler.id, slot(P1, Row::Units, 1), json!({})); // 6/4 Trample
+        let exiler = put(&mut state, &banisher.id, slot(P2, Row::Units, 1), json!({})); // 2/2
+        edit(&mut state, &exiler, |card| {
+            card.granted_keywords.push(Keyword::FirstStrike)
+        });
+        edit(&mut state, &attacker, |card| {
+            card.granted_keywords.push(Keyword::DivineShield)
+        });
+        state.players.p2.hero.health = 4;
+        assert_eq!(projected(&state, &attacker, &unit_now(&state, &exiler)), 4);
+        assert!(lethal(&state, &attacker, &unit_now(&state, &exiler)));
+        let after = act_ok(&state, attack_of(&attacker, &exiler.id));
+        assert_eq!(after.state.players.p2.hero.health, 0);
+        assert!(after.state.result.is_some());
+    }
+
+    /// R4823000, sides swapped: a First Strike attacker whose damage exiles marks the Lifesteal defender
+    /// with its blow, so no strike back comes and nothing heals the hero its Cleave tramples.
+    #[test]
+    fn r4823000_a_first_strike_banisher_attacker_exiles_a_lifesteal_defender_before_it_heals() {
+        let mut state = board("r4823000-lifesteal");
+        register_combat_judge_fixtures();
+        let attacker = put(
+            &mut state,
+            &banisher_cleave.id,
+            slot(P1, Row::Units, 2),
+            json!({}),
+        ); // 4/2 Cleave
+        edit(&mut state, &attacker, |card| {
+            card.granted_keywords.push(Keyword::FirstStrike);
+            card.granted_keywords.push(Keyword::Trample);
+        });
+        let leech = put(
+            &mut state,
+            &lifestealer.id,
+            slot(P2, Row::Units, 2),
+            json!({ "radiant": true }),
+        ); // 6/6 Lifesteal
+        put(&mut state, &plain.id, slot(P2, Row::Units, 3), json!({})); // 3/3
+        // The blow's 4 leaves the 6-health leech no excess; the Cleave hit's 4 tramples 1 past the 3/3.
+        assert_eq!(projected(&state, &attacker, &unit_now(&state, &leech)), 1);
+        state.players.p2.hero.health = 1;
+        // The leech is marked for exile before it strikes back, so its 6 never heals the hero.
+        assert!(lethal(&state, &attacker, &unit_now(&state, &leech)));
+
+        state.players.p2.hero.health = 5;
+        let after = act_ok(&state, attack_of(&attacker, &leech.id));
+        assert_eq!(after.state.players.p2.hero.health, 4);
     }
 }

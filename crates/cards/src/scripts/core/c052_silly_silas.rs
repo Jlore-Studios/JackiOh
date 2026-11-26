@@ -20,7 +20,7 @@
 //! `summonForOpponent` flag), or where the play named when they had none (R3837001). It was still the
 //! player's play and card, so the Cry that followed was the player's and read "left" and "right" from the
 //! player's seat (R3837002); Silas rotated with the rest and could cross back. `script_v0_6_8b` keeps
-//! those scripts, with no Float, for the replays from v0.6.2d through v0.6.8b, and `script_v0_6_2c` the
+//! those scripts, with no Float, for the replays from v0.6.2d through v0.6.8d, and `script_v0_6_2c` the
 //! scripts through v0.6.2c, both faces staying with their player, for those replays (R767000). A
 //! face-down play by a lent Cloaked (M #45) of the v0.6.8b base face is set, and revealed, on the
 //! player's own side (R4265000).
@@ -105,7 +105,7 @@ pub fn script() -> CardScripts {
     silly_silas(false, true)
 }
 
-/// R767000: from v0.6.2d through v0.6.8b the base face was summoned for the opponent and neither face
+/// R767000: from v0.6.2d through v0.6.8d the base face was summoned for the opponent and neither face
 /// had "Float reduces cost" (issue #4353); `KEPT_SCRIPTS` folds those replays under it.
 pub fn script_v0_6_8b() -> CardScripts {
     silly_silas(true, false)
@@ -275,7 +275,7 @@ mod tests {
         }
     }
 
-    /// R3837000: from v0.6.2d through v0.6.8b the base face was summoned for the opponent, which
+    /// R3837000: from v0.6.2d through v0.6.8d the base face was summoned for the opponent, which
     /// `script_v0_6_8b` keeps (issue #4353).
     mod n52_silly_silas_summoned_for_the_opponent_through_v0_6_8b_r3837000 {
         use super::*;
@@ -285,13 +285,14 @@ mod tests {
             crate::under_kept(super::super::ID, super::super::script_v0_6_8b(), run);
         }
 
-        /// R4265000: Silas set by M #45's lent Cloaked stays on p1's side and reveals there, sick (fuzz seed 9854).
+        /// R4265000: Silas set by the Cloaked M #45.1 lends (M #45's did through v0.6.13h) stays on p1's side and
+        /// reveals there, sick (fuzz seed 9854).
         #[test]
         fn r4265000_a_cloaked_play_sets_him_on_his_players_side_and_his_reveal_keeps_him_there() {
             through_v0_6_8b(|| {
                 let mut s = scenario(json!({
                     "seed": "silas-cloaked",
-                    "p1": { "mana": MANA, "hand": ["core-052"], "field": [{ "def": "meditative-045", "lane": 1 }], "library": ["core-001", "core-001"] },
+                    "p1": { "mana": MANA, "hand": ["core-052"], "field": [{ "def": "meditative-045-1", "lane": 1 }], "library": ["core-001", "core-001"] },
                     "p2": { "library": ["core-001", "core-001"] },
                 }));
                 s.play("core-052", json!({ "zone": 2, "row": "backrow", "faceDown": "cloaked" }));

@@ -2,7 +2,7 @@
 //!
 //! ```text
 //! jackioh-server stats-cards [--source=live|dev|all] [--mode=bo1|bo3|random]
-//!   [--patch=<version>] [--pilot=human|ai|unified] [--card=<id>] [--json]
+//!   [--patch=<version>] [--pilot=human|ai|unified] [--card=<id>] [--json] [--swing]
 //! jackioh-server stats-cards --versions [--mode=bo1|bo3|random] [--pilot=human|ai|unified]
 //!   [--card=<id>] [--json]
 //! ```
@@ -18,12 +18,18 @@
 //! reads it and as a match's win-rate snapshot is taken (R3049000). Only the totals hold every game a window spans (R1044001 purges a record's detail after
 //! `GAME_RECORD_RAW_RETENTION_DAYS`, so a `stats-export` file undercounts it).
 //!
+//! R4552001: `--swing` prints every card's play term, Board swing, Swing, raw RMS and Decisiveness after
+//! the table (`swing_report`), the figures `GET /api/stats/cards` keeps to itself but for Decisiveness.
+//!
 //! R4675001: `--versions` prints every deck card's play versions (R4675000) with their figures, the table
 //! `GET /api/stats/versions` sends, and with `--json` that table as JSON.
 //!
 //! The arithmetic is `card_stats_of` in `jackioh_engine::wire::stats`, which the AI's development run prints
 //! its own games with too, so a pre-release run and the live games after it compare figure for figure: run
 //! both with the same `--patch`.
+//!
+//! R4672003: with `--card`, the card's variants table and its outputs table follow its other tables
+//! (`format_card_choices`), and `--json` carries them as the report's `choices`.
 
 use anyhow::bail;
 use serde::Serialize;
@@ -31,8 +37,9 @@ use serde::Serialize;
 use jackioh_engine::wire::{
     CardStatsFilter, CardStatsReport, DEFAULT_CARD_STATS_FILTER, GAME_MODES, GameMode, ModeFilter,
     PILOT_FILTERS, PilotFilter, PlayVersionQuery, PlayVersionTable, SOURCE_FILTERS, SourceFilter,
-    WindowQuery, WindowRequest, WindowedReport, card_stats_of, format_card_stats, format_play_versions,
-    play_version_figures, windowed_card_stats,
+    StatsTotals, SwingTally, WindowQuery, WindowRequest, WindowedReport, card_stats_of, format_card_choices,
+    format_card_stats, format_play_versions, format_swing, play_version_figures, swing_baseline,
+    swing_report, swing_rows_of, windowed_card_stats,
 };
 
 use crate::cli::{connect_one, database_url};
@@ -46,8 +53,10 @@ const USAGE: &str = "Usage: jackioh-server stats-cards [options]
   --patch=<version>          One patch, as patches.json names it. Default: every patch.
   --pilot=human|ai|unified   The seats counted. Default: unified, every counted seat;
                              human reads the people's sides only, ai the bots'.
-  --card=<id>                One card's row only.
+  --card=<id>                One card's row only, then its variants and its outputs.
   --json                     The report as JSON.
+  --swing                    R4552001: each card's play term, Board swing, Swing, raw RMS and
+                             Decisiveness after the table. Not with --json or --window.
   --window[=<version>]       R1367000: every card over its own window at the version (default the
                              newest shipped), as GET /api/stats/cards reads it and a match's
                              win-rate snapshot is taken (R3049000), printed as JSON. Not with
@@ -64,6 +73,8 @@ pub struct CardStatsOptions {
     pub json: bool,
     /// R1367000: the version to read every card's window at, instead of the filter's report.
     pub window: Option<String>,
+    /// R4552001: the Swing and Decisiveness figures after the table.
+    pub swing: bool,
     /// R4675001: every play version's figures, instead of the filter's report.
     pub versions: bool,
 }
@@ -117,6 +128,7 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
     let mut filter: CardStatsFilter = DEFAULT_CARD_STATS_FILTER.clone();
     let mut card: Option<String> = None;
     let mut json = false;
+    let mut swing = false;
     let mut pilot: Option<PilotFilter> = None;
     let mut window: Option<String> = None;
     let mut versions = false;
@@ -126,6 +138,10 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
     for arg in argv {
         if arg == "--json" {
             json = true;
+            continue;
+        }
+        if arg == "--swing" {
+            swing = true;
             continue;
         }
         if arg == "--versions" {
@@ -161,6 +177,9 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
         }
     }
 
+    if swing && (json || window.is_some()) {
+        bail!("--swing prints a table; drop --json and --window.\n\n{USAGE}");
+    }
     if window.is_some() && filtered {
         bail!(
             "--window reads every source, mode and patch its windows hold; drop --source, --mode and --patch.\n\n{USAGE}"
@@ -178,6 +197,7 @@ pub fn parse_card_stats_args(argv: &[String]) -> anyhow::Result<CardStatsOptions
         card,
         json,
         window,
+        swing,
         versions,
     })
 }
@@ -235,10 +255,12 @@ pub async fn card_stats_versions(
     let totals = tx.stats_totals_load(&query).await?;
     tx.commit().await?;
     let versions = jackioh_cards::deck_play_versions();
+    let history = jackioh_cards::patch_history();
     let mut table = play_version_figures(
         &totals,
         &PlayVersionQuery {
             versions: &versions,
+            history: &history,
             live_pilot: options.filter.pilot,
             mode: options.filter.mode.map_or(ModeFilter::All, ModeFilter::Only),
             min_sample: crate::config::CARD_STATS_MIN_SAMPLE,
@@ -250,9 +272,8 @@ pub async fn card_stats_versions(
     Ok(table)
 }
 
-/// R377: the report the options ask for, off the totals the store holds (R1044000), the records
-/// folded as they were written.
-pub async fn card_stats_report(db: &Db, options: &CardStatsOptions) -> Result<CardStatsReport, StoreError> {
+/// The totals the options' filter reads (R1044000), the records folded as they were written.
+async fn load_totals(db: &Db, options: &CardStatsOptions) -> Result<StatsTotals, StoreError> {
     let query = StatsTotalsQuery {
         source: options.filter.source,
         mode: options.filter.mode,
@@ -262,13 +283,52 @@ pub async fn card_stats_report(db: &Db, options: &CardStatsOptions) -> Result<Ca
     let mut tx = db.begin(None).await?;
     let totals = tx.stats_totals_load(&query).await?;
     tx.commit().await?;
-    let mut report = card_stats_of(&totals, &options.filter);
+    Ok(totals)
+}
+
+/// R377: the report the options ask for, off the totals the store holds.
+fn report_of(totals: &StatsTotals, options: &CardStatsOptions) -> CardStatsReport {
+    let mut report = card_stats_of(totals, &options.filter);
     if let Some(only) = &options.card {
         report.cards.retain(|stats| &stats.card == only);
-        // R2089000: the Created table is filtered as the deck's is.
+        // R2089000: the Created table is filtered as the deck's is, and R4672003's choices.
         report.created.retain(|stats| &stats.card == only);
+        report.choices.retain(|row| &row.card == only);
     }
-    Ok(report)
+    report
+}
+
+/// R377: the report the options ask for, off the totals the store holds (R1044000), the records
+/// folded as they were written.
+pub async fn card_stats_report(db: &Db, options: &CardStatsOptions) -> Result<CardStatsReport, StoreError> {
+    Ok(report_of(&load_totals(db, options).await?, options))
+}
+
+/// R4552001: `--swing`'s text, every card's figures read off the whole report (each field holds every
+/// card, whichever one `--card` names), then the named card's alone.
+pub fn swing_text(
+    totals: &StatsTotals,
+    options: &CardStatsOptions,
+    name_of: &dyn Fn(&str) -> Option<String>,
+) -> String {
+    let every = card_stats_of(totals, &options.filter);
+    let empty = SwingTally::default();
+    let mut swing = swing_report(
+        every
+            .cards
+            .iter()
+            .map(|stats| (stats.card.as_str(), stats.swing.or(&empty))),
+        every
+            .created
+            .iter()
+            .map(|stats| (stats.card.as_str(), &stats.swing)),
+        &swing_baseline(&swing_rows_of(totals, &options.filter)),
+    );
+    if let Some(only) = &options.card {
+        swing.cards.retain(|card, _| card == only);
+        swing.created.retain(|card, _| card == only);
+    }
+    format_swing(&swing, name_of)
 }
 
 pub fn render_card_stats(
@@ -279,14 +339,15 @@ pub fn render_card_stats(
     if options.json {
         return serde_json::to_string_pretty(report).unwrap_or_default();
     }
-    let table = format_card_stats(report, name_of);
-    if let Some(card) = &options.card
-        && report.cards.is_empty()
-        && report.created.is_empty()
-    {
-        return format!("{table}\nNo deck the filter counts held {card}.");
+    let mut table = format_card_stats(report, name_of);
+    let Some(card) = &options.card else {
+        return table;
+    };
+    if report.cards.is_empty() && report.created.is_empty() {
+        table.push_str(&format!("\nNo deck the filter counts held {card}."));
     }
-    table
+    // R4672003: the card's variants and outputs, after its other tables.
+    format!("{table}\n\n{}", format_card_choices(report, card, name_of))
 }
 
 pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
@@ -312,10 +373,14 @@ pub async fn run(args: Vec<String>) -> anyhow::Result<()> {
         }
         return Ok(());
     }
-    let outcome = card_stats_report(&db, &options).await;
+    let outcome = load_totals(&db, &options).await;
     db.close().await;
-    let report = outcome?;
+    let totals = outcome?;
+    let report = report_of(&totals, &options);
     let name_of = |card: &str| catalog.get(card).map(|def| def.name.clone());
     println!("{}", render_card_stats(&report, &options, &name_of));
+    if options.swing {
+        println!("\n{}", swing_text(&totals, &options, &name_of));
+    }
     Ok(())
 }

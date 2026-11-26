@@ -57,17 +57,6 @@ impl WorkPlan {
             owner,
         }
     }
-
-    pub fn resume(&self) -> Resume {
-        Resume {
-            def_id: self.def_id.clone(),
-            hook: self.hook.clone(),
-            step: self.step.clone(),
-            radiant: self.radiant,
-            instance_id: self.instance_id.clone(),
-            data: self.data.clone(),
-        }
-    }
 }
 
 /// Where a parked effect list keeps its control block, so the rest of `data` stays the card's.
@@ -476,10 +465,6 @@ pub fn has_work(state: &GameState) -> bool {
     !state.work.is_empty()
 }
 
-pub fn peek_work(state: &GameState) -> Option<&WorkItem> {
-    state.work.first()
-}
-
 /// Every owed item, or only the ones belonging to one sequence.
 pub fn owed_work(state: &GameState, kind: Option<&WorkKind>) -> Vec<WorkItem> {
     match kind {
@@ -491,10 +476,6 @@ pub fn owed_work(state: &GameState, kind: Option<&WorkKind>) -> Vec<WorkItem> {
             .cloned()
             .collect(),
     }
-}
-
-pub fn is_owed(state: &GameState, kind: &WorkKind) -> bool {
-    state.work.iter().any(|item| item.resume.hook == kind)
 }
 
 /// Take the next owed item. Taking one ends the cascade that parked it, so the cursor resets (R113).
@@ -530,11 +511,6 @@ pub fn drop_work(state: &mut GameState, matches: impl Fn(&WorkItem) -> bool) -> 
     state.work_cursor = cursor.min(kept.len());
     state.work = kept;
     dropped
-}
-
-/// `drop_work` by id: the tail a step parked before it turned out not to need it.
-pub fn unpark_work(state: &mut GameState, id: &str) -> Option<WorkItem> {
-    drop_work(state, |item| item.id == id).into_iter().next()
 }
 
 // Running

@@ -539,7 +539,7 @@ const TERMINAL_REASONS: &[&str] = &[
 /// A card kept out of the pool, with the reason and the issue it waits on.
 pub struct PoolExclusion {
     pub id: &'static str,
-    #[allow(dead_code)]
+    #[expect(dead_code, reason = "read by the person editing the list; nothing prints it")]
     pub why: &'static str,
 }
 
@@ -2256,7 +2256,9 @@ pub(crate) fn largest_number(card: &CardInstance) -> i64 {
 /// The turn stamps `largest_number` leaves out, by their JSON names, left out of a card record a
 /// memory holds as well: S+ #84 Bogos Binted keeps its side's cards on its memory (R3550007), and a
 /// Unit frozen forever there carries `FROZEN_FOREVER` (R1848000), a turn, not a growth (issue #3800).
-const TURN_STAMP_KEYS: [&str; 3] = ["summonedTurn", "frozen", "since"];
+/// So is a launched Starship's `launched`, its launch order (`GameState.next_seq` as it launched,
+/// R1852005), which `largest_number` never reads on the live card (issue #4816).
+const TURN_STAMP_KEYS: [&str; 4] = ["summonedTurn", "frozen", "since", "launched"];
 
 pub(crate) fn largest_in_json(value: &Value) -> i64 {
     match value {
@@ -4892,6 +4894,13 @@ pub(crate) mod tests {
                 SIDE_SNAPSHOT_KEY.to_string(),
                 json!({ "turn": 12, "side": { "units": [[{ "frozen": FROZEN_FOREVER, "summonedTurn": 9,
                     "brittle": [{ "count": 2, "since": 11 }], "buffs": { "attack": 1, "health": 30 } }]] } }),
+            );
+            assert_eq!(largest_number(card), 30);
+            // Issue #4816: nor a launched Starship's launch order there (R1852005).
+            card.memory.insert(
+                SIDE_SNAPSHOT_KEY.to_string(),
+                json!({ "turn": 12, "side": { "backrow": [{ "starship": { "launched": 2542, "pieces": [] },
+                    "buffs": { "attack": 0, "health": 30 } }] } }),
             );
             assert_eq!(largest_number(card), 30);
             card.memory.clear();

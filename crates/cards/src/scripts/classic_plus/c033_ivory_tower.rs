@@ -136,6 +136,7 @@ mod tests {
     const SHEEP: &str = "core-t-sheep";
     const MAGIC_JAMMED: &str = "core-036"; // Magic Jammed: destroy target backrow card, Lock its zone.
     const BIG_SPELL: &str = "core-035"; // Lunar Eclipse: a hand card to discount
+    const GOLEM: &str = "core-055"; // Lava Golem: Tribute 3, may tribute enemy Units, handed over if any
     const FILLER: &str = "core-005";
     const DECK: [&str; 4] = [FILLER, FILLER, FILLER, FILLER];
 
@@ -456,6 +457,38 @@ mod tests {
                 assert!(!any_event(&s, GameEventType::Fused));
                 s.play(TOKENS, json!({ "zone": 2, "row": "backrow" }));
                 assert!(any_event(&s, GameEventType::Fused));
+            }
+
+            /// R4834000: #55 named into the Tower's zone and paid with p2's units is handed over (R360,
+            /// R1081000), so no Unit stood on the Tower: nothing is carried or fused, and it takes the next.
+            #[test]
+            fn r4834000_a_lava_golem_handed_to_the_opponent_from_the_tower_s_zone_is_neither_carried_nor_fused() {
+                let mut s = scenario(json!({
+                    "p1": {
+                        "hand": [GOLEM, VANILLA, FILLER],
+                        "backrow": [{ "def": TOWER, "lane": 2 }],
+                        "library": DECK,
+                        "mana": 10,
+                    },
+                    "p2": {
+                        "hand": [FILLER],
+                        "field": [{ "def": MENACE, "lane": 1 }, { "def": MENACE, "lane": 2 }, { "def": MENACE, "lane": 3 }],
+                        "library": DECK,
+                    },
+                }));
+                let golem = s.card(GOLEM).id.clone();
+                let theirs: Vec<String> = (1..=3).map(|lane| s.unit_at(P2, lane).id).collect();
+
+                s.play(GOLEM, json!({ "zone": 2, "row": "backrow", "tributes": theirs }));
+
+                assert_eq!(s.unit(P2, 2).map(|unit| unit.id), Some(golem.clone()));
+                assert_eq!(s.card(&golem).controller, P2);
+                assert!(carried_at(s.state(), tower_zone()).is_none());
+                assert!(!s.last_events().iter().any(|event| event.event_type() == GameEventType::Fused));
+                assert_eq!(s.card(TOWER).def_id, TOWER);
+
+                s.play(VANILLA, json!({ "zone": 2, "row": "backrow" }));
+                assert!(s.last_events().iter().any(|event| event.event_type() == GameEventType::Fused));
             }
         }
 

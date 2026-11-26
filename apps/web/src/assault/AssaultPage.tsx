@@ -109,6 +109,8 @@ export default function AssaultPage(): ReactElement {
             setAfterLevel(state.level);
           }
         }}
+        // R4733000: the report is held beside the kept attempt the moment it arrives.
+        onHold={(action) => { assault.hold(action); }}
         onLeave={() => { setAway(fight); }}
       />
     );

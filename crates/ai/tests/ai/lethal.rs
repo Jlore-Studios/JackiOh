@@ -306,6 +306,57 @@ mod the_lethal_solvers_walks {
         assert!(counter.used() < AI_SEARCH.lethal_quick_nodes as usize);
     }
 
+    /// R4807000: the AI holds only #97 Zephrys, an `AI_SEARCH.expensive_def_ids` card whose play costs
+    /// more than the depth-first walk's slice, against a hero at 3. That walk skips the play, and the
+    /// best-first walk proves the lethal on the rest of the allowance (Zephrys, C #69, its play, the attack).
+    #[test]
+    fn r4807000_a_step_the_quick_slice_cannot_pay_for_leaves_the_rest_of_the_allowance_to_the_second_walk() {
+        register_cards();
+        let state = scenario(json!({
+            "seed": "audit-zephrys", "active": AI, "turn": 9,
+            "p1": { "hand": ["core-097"], "library": ["core-008", "core-008"] },
+            "p2": { "health": 3, "library": ["core-008", "core-008"] },
+        }))
+        .state()
+        .clone();
+        let limit = AI_BUDGET.lethal_nodes;
+
+        // With no depth-first stage the lethal is proved well inside the allowance.
+        let counter = create_node_counter(limit, None);
+        let second_walk =
+            find_lethal_with_quick_nodes(std::slice::from_ref(&state), AI, &counter, limit, 0, Prices::NONE);
+        assert!(second_walk.is_some(), "the best-first walk proves it");
+        assert!(counter.used() < limit);
+
+        // The solver as `decide`, `lethal_hint` and `unstoppable_lethal` call it.
+        let counter = create_node_counter(limit, None);
+        let found = find_lethal(std::slice::from_ref(&state), AI, &counter, limit, Prices::NONE);
+        let Some(line) = found else {
+            panic!("find_lethal gave up after {} of {limit} nodes", counter.used())
+        };
+        assert!(
+            counter.used() > AI_SEARCH.lethal_quick_nodes as usize,
+            "the second walk ran"
+        );
+        assert!(counter.used() <= limit);
+        let zephrys = mine(&state, AI, "core-097").id;
+        assert!(
+            matches!(line.first(), Some(ActionBody::Play { instance_id, .. }) if *instance_id == zephrys),
+            "the line starts with the Zephrys play"
+        );
+
+        // `play_out`'s counter is too small to pay the Zephrys play's surcharge.
+        let replay = create_node_counter(limit, None);
+        let mut current = state.clone();
+        for action in &line {
+            match simulate(&current, AI, action, &replay, Prices::NONE) {
+                Some(Ok(next)) => current = next,
+                _ => panic!("the line was refused at {}", action_key(action)),
+            }
+        }
+        assert_eq!(current.result.and_then(|result| result.winner.player()), Some(AI));
+    }
+
     /// p1 (the AI) on turn 9 with `def_id` in Defense Position, on the field since before this turn;
     /// p2 at 4 health with no unit, so no Taunt. Both sides hold a library.
     fn in_defense_at_4(def_id: &str) -> GameState {
@@ -521,6 +572,7 @@ mod duos_life_r964000 {
             pool: 20,
             pool_cap: 20,
             spent,
+            own_start: None,
         });
         out
     }
@@ -866,5 +918,117 @@ mod hero_ineligible_attacks {
         // R3937000: next turn the smallest attacker that destroys Tommy Tempo (a 3/3 since issue #4154) alone,
         // Tempo Timmy's 3, breaks it first and Prem Panther's 5 goes face.
         assert_eq!(face_threat(&sick, AI), 5);
+    }
+}
+
+/// R4806000: a lethal that stands only in the second lane the solver tries a play in (SPEC §9.9): Core
+/// #45 Deft Duelist (4/3 Charge) in hand, the enemy hero at 4. `candidate_actions` offers the play in two
+/// lanes, the losing one first; both reach one `search_signature`, which reads no lane.
+mod lane_placements {
+    use super::*;
+    use jackioh_ai::lethal_hint;
+
+    const DUELIST: &str = "core-045";
+    /// Core #1 Big D-fender, a 0/7: fills an AI lane and deals nothing.
+    const WALL: &str = "core-001";
+    /// Core #19 Midrange Menace, a 9/9 Taunt.
+    const MENACE: &str = "core-019";
+    /// S #157 The Gauntlet: the middle three lanes' Units attack only each other (R1849005).
+    const GAUNTLET: &str = "stinkyscape-157";
+    /// R3554003: the lane the slash voids; lanes 1 and 2 are the Left half, 4 and 5 the Right.
+    const SLASH_LANE: i32 = 3;
+
+    /// The Taunt in the enemy's lane 2 walls the Left half alone; the Duelist's lanes are 2 and 4.
+    fn slashed_board() -> GameState {
+        register_cards();
+        let mut s = scenario(json!({
+            "seed": "r4806000-lanes", "active": AI, "turn": 9,
+            "p1": { "hand": [DUELIST], "field": [{ "def": WALL, "lane": 1 }], "library": ["core-008", "core-008"] },
+            "p2": { "field": [{ "def": MENACE, "lane": 2 }], "health": 4, "library": ["core-008", "core-008"] },
+        }));
+        s.state_mut().slashed_lane = Some(SLASH_LANE);
+        s.state().clone()
+    }
+
+    /// The AI's The Gauntlet, its 0/7s in lanes 1 to 3: the Duelist's lanes are 4 (inside) and 5 (outside).
+    fn gauntlet_board() -> GameState {
+        register_cards();
+        scenario(json!({
+            "seed": "r4806000-lanes", "active": AI, "turn": 9,
+            "p1": {
+                "hand": [DUELIST],
+                "backrow": [GAUNTLET],
+                "field": [{ "def": WALL, "lane": 1 }, { "def": WALL, "lane": 2 }, { "def": WALL, "lane": 3 }],
+                "library": ["core-008", "core-008"],
+            },
+            "p2": { "health": 4, "library": ["core-008", "core-008"] },
+        }))
+        .state()
+        .clone()
+    }
+
+    /// The Duelist's plays `candidate_actions` offers, in move order, each with its lane.
+    fn duelist_plays(state: &GameState) -> Vec<(i32, ActionBody)> {
+        let duelist = mine(state, AI, DUELIST).id;
+        candidate_actions(state, AI, Prices::NONE)
+            .into_iter()
+            .filter_map(|action| match &action {
+                ActionBody::Play {
+                    instance_id,
+                    zone: Some(zone),
+                    ..
+                } if *instance_id == duelist => Some((zone.lane, action.clone())),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// Offered in `losing` then `winning`; `losing` leaves no hero attack, `winning` and the attack win;
+    /// the solver finds that line on this one world, and the hint lights.
+    fn finds_the_lethal_in_the_second_lane(state: &GameState, losing: i32, winning: i32) {
+        let plays = duelist_plays(state);
+        assert_eq!(
+            plays.iter().map(|(lane, _)| *lane).collect::<Vec<_>>(),
+            vec![losing, winning]
+        );
+        let at_hero = ActionBody::Attack {
+            attacker_id: mine(state, AI, DUELIST).id,
+            target_id: format!("hero-{HUMAN}"),
+        };
+        let walled = play_out(state, std::slice::from_ref(&plays[0].1));
+        assert!(
+            !legal_actions(&walled, AI).contains(&at_hero),
+            "lane {losing} may hit the hero"
+        );
+        let line = vec![plays[1].1.clone(), at_hero];
+        assert_eq!(
+            play_out(state, &line)
+                .result
+                .and_then(|result| result.winner.player()),
+            Some(AI)
+        );
+
+        let counter = create_node_counter(AI_BUDGET.lethal_nodes, None);
+        assert_eq!(
+            find_lethal(
+                std::slice::from_ref(state),
+                AI,
+                &counter,
+                AI_BUDGET.lethal_nodes,
+                Prices::NONE
+            ),
+            Some(line)
+        );
+        assert!(lethal_hint(state, AI, None));
+    }
+
+    #[test]
+    fn r4806000_across_the_slash_the_solver_finds_the_lethal_in_the_second_lane_a_play_is_tried_in() {
+        finds_the_lethal_in_the_second_lane(&slashed_board(), 2, 4);
+    }
+
+    #[test]
+    fn r4806000_outside_the_gauntlet_the_solver_finds_the_lethal_in_the_second_lane_a_play_is_tried_in() {
+        finds_the_lethal_in_the_second_lane(&gauntlet_board(), 4, 5);
     }
 }

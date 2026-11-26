@@ -2,8 +2,10 @@
 //! `mod.rs` has the ones from `a` to `o` and `mod_3.rs` the ones from `s` on (#2957). All three
 //! take `fixtures`, so a module reaches it as `crate::rules::fixtures` in any of them.
 
-// A fixture only the other binary's modules use is dead code in this one.
-#[allow(dead_code)]
+#[expect(
+    dead_code,
+    reason = "a fixture only another binary's modules use is dead code in this one"
+)]
 pub mod fixtures;
 pub mod papaya;
 pub mod params;
@@ -30,6 +32,7 @@ pub mod queued_when;
 pub mod random_entries;
 pub mod ranged_flying;
 pub mod recruit_variants;
+pub mod recursion_log;
 pub mod reduce;
 pub mod replacements;
 pub mod replay;

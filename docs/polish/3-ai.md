@@ -760,8 +760,10 @@ The rule, one step at a time, each step one `reduce` (one node):
 5. **End.** Otherwise it ends its turn, and the engine runs the seat's start of turn.
 
 It never plays a card it held unseen: those are samples, and a guessed hand adds noise rather than
-information. At most `AI_REPLY.maxSteps` steps; the seat's own prompt at its next turn start ends
-the reply, since that is where its next decision begins.
+information. At most `AI_REPLY.maxSteps` steps, of which known plays and activations take at most
+`AI_REPLY.playSteps`, and a turn whose steps run out is ended in up to `AI_REPLY.closeSteps` more
+(R4810000); the seat's own prompt at its next turn start ends the reply, since that is where its
+next decision begins.
 
 **Countdowns** (#1995). A countdown still waiting where the reply ends (R1181000) is a payoff to its
 owner and a threat to the other side. `replyScore` replies again on a copy of the line's end whose

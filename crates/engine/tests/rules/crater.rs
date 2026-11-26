@@ -1,7 +1,7 @@
-//! Crater (#783, R783010, R783011, R1850006): a Unit Locks its zone as it arrives, however it arrives,
-//! before its Cry; a Trap as it is revealed; a Field Spell as it enters. The Lock is R688's: it
-//! refuses plays, a Stack play included, and outlasts the card. `fixtures/keywords_783.rs` stands in
-//! for #781's cards.
+//! Crater (#783, R783010, R783011, R1850006, R4693000): a Unit Locks its zone as it arrives, however
+//! it arrives, before its Cry; a Trap as it is revealed; a Field Spell as it enters; a GIGA card the
+//! four zones it fills. The Lock is R688's: it refuses plays, a Stack play included, and outlasts the
+//! card. `fixtures/keywords_783.rs` stands in for #781's cards, `fixtures/giga.rs` for GIGA ones.
 
 use jackioh_engine::testkit::*;
 use jackioh_engine::zones::is_locked;
@@ -321,5 +321,153 @@ mod r1850006_crater_field_spells {
         );
         assert!(plain.players.p1.backrow.iter().any(Option::is_some));
         assert_eq!(locked_count(&plain), 0);
+    }
+}
+
+mod r4693000_giga_craters {
+    use super::*;
+    use jackioh_engine::effects::grant_keyword_cards;
+    use jackioh_engine::zones::unlock_zone;
+
+    use super::super::fixtures::giga::{
+        CRATER_GIGA, GIGA_FIELD, GIGA_TRAP, GIGA_UNIT, PLAIN, register_giga_fixtures,
+    };
+    use super::super::fixtures::harness::{live, run_effect, run_on_sink};
+
+    /// p1's main phase with `hand` in hand (each given Crater there, as a Nerf may) and `field` on
+    /// the board.
+    fn board(seed: &str, hand: Value, field: Value) -> Scenario {
+        register_giga_fixtures();
+        let mut s = scenario(json!({
+            "seed": seed,
+            "active": "p1",
+            "p1": { "mana": 4, "hand": hand, "field": field, "library": [PLAIN, PLAIN, PLAIN] },
+            "p2": { "library": [PLAIN, PLAIN, PLAIN] },
+        }));
+        for player in [P1, P2] {
+            s.state_mut().players[player].auto_end_turn = Some(false);
+        }
+        run_effect(
+            s.state_mut(),
+            grant_keyword_cards(json_as(
+                json!({ "scope": { "zones": ["hand"] }, "keyword": { "kind": "Crater" } }),
+            )),
+            P1,
+        );
+        s
+    }
+
+    /// Both rows of lanes `lane` and `lane + 1`: the four zones a GIGA anchored in `lane` fills.
+    fn span(lane: i32) -> [ZoneSlot; 4] {
+        [
+            slot(P1, Row::Units, lane),
+            slot(P1, Row::Backrow, lane),
+            slot(P1, Row::Units, lane + 1),
+            slot(P1, Row::Backrow, lane + 1),
+        ]
+    }
+
+    fn locked_events(events: &[GameEvent]) -> Vec<ZoneSlot> {
+        events
+            .iter()
+            .filter_map(|event| match event {
+                GameEvent::Locked { player, row, lane } => Some(slot(*player, *row, *lane)),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn assert_span_locked(state: &GameState, lane: i32, what: &str) {
+        for at in span(lane) {
+            assert!(is_locked(state, at), "{what}: {at:?} is Locked");
+        }
+        assert_eq!(locked_count(state), 4, "{what}: those four and no more");
+    }
+
+    #[test]
+    fn r4693000_a_giga_crater_unit_locks_all_four_zones_it_fills_and_they_outlast_it() {
+        let mut s = board("r4693000-unit", json!([GIGA_UNIT, PLAIN]), json!([]));
+        let id = s.card(GIGA_UNIT).id.clone();
+        s.play(GIGA_UNIT, json!({ "zone": 2 }));
+        assert_eq!(live(s.state(), &id).giga, Some(true));
+        let mut locked = locked_events(s.last_events());
+        locked.sort_by_key(|at| (at.lane, at.row == Row::Backrow));
+        let mut want = span(2).to_vec();
+        want.sort_by_key(|at| (at.lane, at.row == Row::Backrow));
+        assert_eq!(locked, want, "one `locked` per zone of its span");
+        assert_span_locked(s.state(), 2, "played");
+
+        destroy(s.state_mut(), &id);
+        assert!(unit_in(s.state(), 2).is_none(), "the GIGA is gone");
+        assert_span_locked(s.state(), 2, "after it dies");
+        let plain = s.card(PLAIN).id.clone();
+        for lane in [2, 3] {
+            assert!(
+                play_into(s.state(), &plain, "units", lane).error.is_some(),
+                "a play into its lane {lane} is refused"
+            );
+        }
+        assert_eq!(play_into(s.state(), &plain, "units", 4).error, None);
+    }
+
+    #[test]
+    fn r4693000_a_summoned_or_reborn_giga_crater_locks_its_span() {
+        let mut s = board("r4693000-summon", json!([]), json!([]));
+        run_effect(
+            s.state_mut(),
+            jackioh_engine::effects::summon(json_as(json!({ "defId": CRATER_GIGA }))),
+            P1,
+        );
+        let id = must(unit_in(s.state(), 1), "the summoned GIGA");
+        assert_span_locked(s.state(), 1, "summoned");
+
+        for at in span(1) {
+            unlock_zone(s.state_mut(), at);
+        }
+        destroy(s.state_mut(), &id);
+        let back = must(unit_in(s.state(), 1), "the Reborn body");
+        assert_eq!(live(s.state(), &back).giga, Some(true));
+        assert_span_locked(s.state(), 1, "returned by Reborn");
+    }
+
+    #[test]
+    fn r4693000_a_giga_crater_field_spell_locks_both_rows_of_its_lanes() {
+        let mut s = board("r4693000-field", json!([GIGA_FIELD]), json!([]));
+        s.play(GIGA_FIELD, json!({ "zone": 3 }));
+        assert_eq!(locked_events(s.last_events()).len(), 4);
+        assert_span_locked(s.state(), 3, "a GIGA Field Spell");
+    }
+
+    #[test]
+    fn r4693000_a_giga_crater_trap_locks_its_span_as_it_fires() {
+        let mut s = board(
+            "r4693000-trap",
+            json!([]),
+            json!([{ "def": GIGA_TRAP, "lane": 1, "row": "backrow" }]),
+        );
+        let trap = live(s.state(), s.card(GIGA_TRAP).id.clone());
+        assert_eq!(trap.giga, Some(true));
+        run_effect(
+            s.state_mut(),
+            jackioh_engine::effects::grant_keyword(json_as(json!({
+                "target": { "of": "instance", "instanceId": trap.id },
+                "keyword": { "kind": "Crater" },
+            }))),
+            P1,
+        );
+        let trap = live(s.state(), &trap.id);
+        let ((), events) = run_on_sink(s.state_mut(), |sink| {
+            jackioh_engine::crater::lock_on_firing(sink, &trap, Some(slot(P1, Row::Backrow, 1)));
+        });
+        assert_eq!(locked_events(&events).len(), 4);
+        assert_span_locked(s.state(), 1, "a GIGA Trap firing");
+    }
+
+    #[test]
+    fn r4693000_a_plain_crater_unit_still_locks_its_one_zone() {
+        let mut s = board("r4693000-plain", json!([PLAIN]), json!([]));
+        s.play(PLAIN, json!({ "zone": 2 }));
+        assert_eq!(locked_events(s.last_events()), vec![unit_zone(2)]);
+        assert_eq!(locked_count(s.state()), 1);
     }
 }

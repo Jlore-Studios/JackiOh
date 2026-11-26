@@ -18,7 +18,7 @@ use crate::script::{EngineSink, HookArgs};
 use crate::scripts::script_of;
 use crate::state::{CardInstance, GameState, find_instance_mut};
 use crate::wire::{CounterKind, GameEvent, PlayerId, ZoneName, opponent_of};
-use crate::zones::{StandingAt, acting_on, is_buried};
+use crate::zones::{StandingAt, acting_on, is_buried, lies_on_unit_zone, lying_on_unit_zones_of};
 
 /// The tokens a card carries now; an untouched card carries none (§6.3 Plague Counter).
 pub fn plague_on(card: &CardInstance) -> i32 {
@@ -26,15 +26,24 @@ pub fn plague_on(card: &CardInstance) -> i32 {
 }
 
 /// Every permanent on the field in R68's order — the given side first (the active player's when
-/// `first` is `None`), units lane 1 upward, the Units its carriers hold, then the backrow lane 1 upward,
-/// then the other side (`zones::acting_on`): the top of a unit pile only (R13), a Unit a carrier holds
-/// (R446, R1824000), and every backrow card, face-down or not.
+/// `first` is `None`), units lane 1 upward, the Units its carriers hold, the backrow lane 1 upward,
+/// then the cards lying on that side's unit zones, then the other side the same way
+/// (`zones::acting_on`, `zones::lying_on_unit_zones_of`): the top of a unit pile only (R13), a Unit a
+/// carrier holds (R446, R1824000), every backrow card, face-down or not, and a card lying on a unit
+/// zone, no Unit but a backrow card there, after its side's backrow lanes (R4665000).
 pub fn permanents_on_field(state: &GameState, first: impl Into<Option<PlayerId>>) -> Vec<&CardInstance> {
     let first = first.into().unwrap_or(state.active);
-    [first, opponent_of(first)]
-        .into_iter()
-        .flat_map(|player| acting_on(state, player, StandingAt::ItsLane))
-        .collect()
+    let mut out: Vec<&CardInstance> = Vec::new();
+    for player in [first, opponent_of(first)] {
+        // R4665000: a card lying on a unit zone is no Unit; it is met after its side's backrow lanes.
+        out.extend(
+            acting_on(state, player, StandingAt::ItsLane)
+                .into_iter()
+                .filter(|card| !lies_on_unit_zone(state, card)),
+        );
+        out.extend(lying_on_unit_zones_of(state, player));
+    }
+    out
 }
 
 /// R4322000: the permanents an effect can reach — `permanents_on_field` less the Dormant cards, which

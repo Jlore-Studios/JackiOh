@@ -266,6 +266,15 @@ describe("R318 a full library on the library pile", () => {
     expect(screen.getByTestId(noticeTestid.overflowCard("you"))).toHaveTextContent(nameOf("core-t-sheep"));
   });
 
+  it("R4821002 a ceased card's notice reads Ceased to exist, never Deck full", () => {
+    play("p1", [{ type: "libraryOverflow", player: "p2", instanceId: "c85", defId: "core-t-sheep", outcome: "ceased" }]);
+    const notice = screen.getByTestId(noticeTestid.pile("opponent"));
+    expect(notice).toHaveAttribute("data-kind", "libraryFull");
+    expect(notice.querySelector(".pile-notice-tag")?.textContent).toBe("Ceased to exist");
+    expect(notice).not.toHaveTextContent("Deck full");
+    expect(within(notice).getByTestId(noticeTestid.overflowCard("opponent"))).toHaveAttribute("data-outcome", "ceased");
+  });
+
   it("R318 a fatigue then a refusal on one pile: the newest started wins", () => {
     play("p1", [fatigue("p1", 1), { type: "libraryOverflow", player: "p1", instanceId: "c83", defId: PANTHER, outcome: "notCreated" }]);
     expect(screen.getByTestId(noticeTestid.pile("you"))).toHaveAttribute("data-kind", "fatigue");
@@ -503,7 +512,7 @@ describe("R318 the log says each overflow in words", () => {
       "The opponent's deck is empty: fatigue 1",
       `Your deck is full: ${nameOf(VIRUS)} was not created`,
       `The opponent's deck is full: ${nameOf(PANTHER)} went to the graveyard`,
-      `Your deck is full: ${nameOf("core-t-sheep")} ceased to exist`,
+      `${nameOf("core-t-sheep")} could not go into your deck: it ceased to exist`,
       "The opponent's deck is full: a card was not created",
       `Your hand is full: ${nameOf(SHEEPISH)} burned`,
       "The opponent's hand is full: a card burned",
