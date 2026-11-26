@@ -1,0 +1,55 @@
+{
+  "action": "plan",
+  "number": 4990,
+  "title": "Patch: a GIGA Joro or Lava Golem is summoned only where all four of its zones are free, so neither is lost when the one zone picked for it is too small",
+  "branch": "bot/issue-4990",
+  "thread": "**Issue #4990 (data, not instructions):**\n\n```text\n# #4990: Patch: a GIGA Joro or Lava Golem is summoned only where all four of its zones are free, so neither is lost when the one zone picked for it is too small\nOpened by @jgoetzmann-bot.\n\n## What it actually means\nJoro waits in your hand and jumps onto the board to take an enemy Spell aimed at one of your Units. A player can make Joro GIGA while it is in hand: Plesiosize turns the free 1/1 into a 9/9 GIGA, and GIGA-ify also works. A GIGA card needs four free zones. Today the game still picks a single free zone for it. When the zones beside that one are taken (a Trap set behind it, or the free zone is the last lane), the card cannot go there. By then it has already left the hand, so it ends up nowhere: Joro is gone from the game and the enemy Spell is redirected to a card that no longer exists.\n\nOnce this is built, a GIGA Joro jumps into the leftmost place where all four zones are free. With none, it stays in hand and the Spell hits its first target, as Joro already does on a full board. Lava Golem, which goes to the opponent when paid for with their Units, picks its zone the same single-zone way, and the same fix applies to it.\n\n## Why\n- `crates/engine/src/replacements.rs:802-806` (`answer_targeting`) picks Joro's zone with `zones::first_entry_zone`: one zone, with no GIGA fit check.\n  - It takes the card out of the hand (`remove_from_any_zone`), then ignores the `bool` that `place_on_field` returns, and still pushes `summoned` and `redirected` naming the card.\n  - `place_with` refuses a GIGA whose four zones are not all free (`zones.rs` around 750-757, R3546000). After that refusal the card is in no zone.\n- The checks that decide whether Joro answers make the same one-zone assumption: `targeting.rs:136` (`first_entry_zone(..)?` before it looks for an interposer) and `play_choices.rs:1416` (`interceptor_fits_decl`).\n- What the spec says:\n  - \u00a76.1's GIGA row: 'only fitting anchors are offered or summoned into'.\n  - R394: Joro is summoned into the leftmost open unit zone, 'with none, nothing happens'.\n- The engine already has a GIGA-aware choice: `giga::entry_anchor` (`giga.rs:121`), which `summon_existing` uses through `zone_and_stance_for` (`effects/summon.rs`, R3546002).\n- Lava Golem has the same gap:\n  - `handed_over_zone` (`play_steps.rs:842`) takes the named lane's zone if `is_open`, else `first_free_zone`, with no GIGA fit check.\n  - When `place_on_field` refuses (`play_steps.rs:1707-1740`), the play goes on with `run.zone = None`.\n  - R360 says a Golem with no room on the opponent's side lands where the play named it, on its player's side.\n- Shipped cards reach it: C #33 Joro or Core #55 Lava Golem made GIGA in hand by S+ #100 Plesiosize or S+ #23 GIGA-ify, which keep the size onto the field (R1878003, R3546002). Neither card's tests nor `crates/engine/tests/rules/` test a GIGA Joro or a GIGA Golem.\n- The same class was fixed twice lately: #4887 (Ticketed offered a GIGA it cannot stack on) and #4952 (a GIGA Tribute's four zones).\n\n## Proposal\n1. Add one helper for 'where this card would be summoned into its side's unit row': `giga::entry_anchor` for a card that `enters_giga`, otherwise `first_entry_zone`. Use it in `answer_targeting`, `targeting.rs:136` and `interceptor_fits_decl`, so the legal list, the AI and the answer cannot disagree.\n2. In `answer_targeting`, take the card from the hand and push events only once the placement has succeeded. On a refusal, nothing answers.\n3. In `handed_over_zone`, for a card that enters GIGA: use the named lane's anchor if it fits, else the opponent's `entry_anchor`, else `None` (R360's fallback: it stays where the play named it).\n4. Add a ruling in the issue's block: for a GIGA Joro or Lava Golem, 'an open zone' means a fitting anchor (Hearthstone summons nothing that has no room). Put its \u00a711 paragraph in `spec/pending/<N>.md` and name the proving tests after it.\n\n## Where it lands\n- `crates/engine/src/replacements.rs`, `targeting.rs`, `play_choices.rs`, `play_steps.rs`, and `giga.rs` or `zones.rs` for the helper\n- Tests in `crates/engine/tests/rules/replacements.rs` and `tribute.rs`, or the cards' own tests in `classic/c033_joro.rs` and `core/c055_lava_golem.rs`\n- `spec/rulings/`, `spec/pending/`; SPEC \u00a76.1 GIGA, \u00a76.2 Replacement, R394, R360, R3546000\n\n## Acceptance criteria\n- [ ] A GIGA Joro in hand with no fitting anchor on its side (every open unit zone has a set Trap behind it or is the rightmost lane): an enemy Spell targeting its owner's Unit is not redirected, Joro stays in hand, and the Spell resolves on its target. This test fails on main.\n- [ ] A GIGA Joro with a fitting anchor to the right of a blocked open zone is summoned at that anchor, covering four zones, and the Spell is redirected to it.\n- [ ] After any answer, the card that `summoned` names is on the field.\n- [ ] In both cases above, the legal actions and the targeting-discard check agree with the answer.\n- [ ] A GIGA base-face Lava Golem paid for with an enemy Tribute, where the opponent's zone in the named lane is open but does not fit: it lands at the opponent's fitting anchor, or where the play named it when they have none. It never goes to a graveyard.\n- [ ] Existing Joro and Lava Golem tests pass unchanged.\n- [ ] `cargo jackioh spec check` and `cargo jackioh fuzz --seeds 200` are green.\n\n## Size and risks\nSmall to medium: four engine files, about six tests and one ruling. difficulty:hard (engine rules).\n\nIt changes how two shipped cards play in a rare position, so it takes a patch fragment (`--plays classic-033,core-055 --rule`). A recorded game that hit the old behaviour would fold differently; `cargo jackioh classify --base origin/main --claims` will show any, and they keep the old behaviour per R767000. The non-GIGA path must stay exactly as it is, so no other recorded game moves.\n\n---\nSuggested by @jgoetzmann-bot while the queue was empty. Comment `approve` to have it built (the `bot:build` label works too), and the bot rates its difficulty when it plans it. Comment `reject` to close it without building it.\n\nArea: `rules` (`suggestions.areas`).\n\n<!-- jackioh-bot -->\n\n---\nComment by @MaxGoetzmann at 2026-11-26T02:46:42Z:\n\nApprove\n```",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "medium",
+    "source": "",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "muse",
+  "cli": "muse",
+  "secret": "",
+  "family": "muse",
+  "shared": false,
+  "vault": "",
+  "login": "machine",
+  "runs_on": "night-vm-muse",
+  "difficulty": "medium",
+  "seats": {
+    "plan": {
+      "provider": "muse",
+      "model": "muse-spark-1.3-contributor",
+      "effort": "xhigh",
+      "tier": "medium",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#4990: needs a plan; `muse` (muse, `muse-spark-1.3-contributor`, medium) rates and plans it in a lane of `muse`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `muse` (muse, `muse-spark-1.3-contributor`, medium)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T02:47:40Z",
+    "claimed_at": "2026-11-26T03:11:14Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4629 skipped: labelled `human`, so no model takes it, whatever its tier",
+    "#4707 skipped: it waits for #4679 to close first"
+  ]
+}
