@@ -24387,14 +24387,15 @@
     "what": "review #5074 on claude-8"
   },
   "last_sweep": {
-    "at": "2026-11-26T12:53:33Z",
+    "at": "2026-11-26T13:02:39Z",
     "notes": [
       "#5068 is held for `agy` until 07:58 (5-hour usage is 95%, too close to its 100% cap to start a long run (it starts under 95%))",
       "#5035 is held for `claude-3` until 08:20 (it refused a call)",
       "#5036 is held for `claude-3` until 08:20 (it refused a call)",
-      "delivered build #5025 on claude-1 (run 45810018045): built",
-      "started review #5074 on claude-1 (run 45824261310)",
-      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-26T14:20:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` it refused a call; its limit resets at 2026-11-30T00:00:00Z; `agy` 5-hour usage is 95%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-26T13:58:46Z; it takes reviews only; it can start a build or a plan again in 1h 02m; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #5035 held for `claude-3` until 08:20 (it refused a call); #5036 held for `claude-3` until 08:20 (it refused a call); #5068 held for `agy` until 07:58 (5-hour usage is 95%, too close to its 100% cap to start a long run (it starts under 95%))"
+      "delivered review #5074 on claude-1 (run 45824261310): interrupted",
+      "delivered review #5062 on claude-8 (run 45802197806): approved",
+      "started review #5074 on claude-8 (run 45825817326)",
+      "nothing more to start: no subscription can take the queue now: `claude-3` it refused a call; its limit resets at 2026-11-26T14:20:00Z; `claude-7` is busy; `claude-8` is busy; `claude-1` is busy; `claude-4` is busy; `claude-6` is busy; `claude-5` switched off from 2026-11-17 (`off_from` in providers.json); `muse` it refused a call; its limit resets at 2026-11-30T00:00:00Z; `agy` 5-hour usage is 95%, too close to its 100% cap to start a long run (it starts under 95%); it resets at 2026-11-26T13:58:46Z; it takes reviews only; it can start a build or a plan again in 52m; `gpt` it refused a call; its limit resets at 2026-11-29T16:16:12Z; `claude-2` switched off from 2026-11-17 (`off_from` in providers.json); waiting for their owners: #5035 held for `claude-3` until 08:20 (it refused a call); #5036 held for `claude-3` until 08:20 (it refused a call); #5068 held for `agy` until 07:58 (5-hour usage is 95%, too close to its 100% cap to start a long run (it starts under 95%))"
     ],
     "since": "2026-09-30T11:21:05Z"
   },
@@ -25100,7 +25101,7 @@
       "tries": 1
     }
   },
-  "loop_tick": "2026-11-26T12:53:33Z",
+  "loop_tick": "2026-11-26T13:02:39Z",
   "machine_disk": {
     "issue": null,
     "reading": {
