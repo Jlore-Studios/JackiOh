@@ -21564,9 +21564,11 @@
         "by": "`claude` (strong)",
         "sha": "ac9d525db3dad839376d3c276ea60f6f53b64656"
       },
+      "died": 0,
       "difficulty": "medium",
       "failures": 0,
       "feedback_since": "2026-11-26T01:25:36Z",
+      "forced": false,
       "handoff": {
         "at": "2026-11-26T02:14:31Z",
         "family": "claude",
@@ -21576,6 +21578,7 @@
         "reason": "built and checked; its own review run, on this subscription, reviews it next",
         "trail": "- Bash: {\"command\": \"cat .bot-notes.md | head -30; grep -n \\\"fuzz\\\" scripts/ci-scope.sh | head -20; grep -n \\\"fuzz-corpus\\\" apps/web/src/net/ci-scope.test.ts; ls crates/tools/perf-corpus | head -3\"}\n- Bash: {\"command\": \"sed -n 170,178p scripts/ci-scope.sh; sed -n 476,484p apps/web/src/net/ci-scope.test.ts; ls crates/tools/perf-corpus/plain-1*\"}\n- Bash: {\"command\": \"python3 - <<'E'\\np='scripts/ci-scope.sh'\\ns=open(p).read()\\ns=s.replace(\\\"\\\"\\\"and the fuzz's records (crates/tools/fuzz-corpus/), so a\\n# change to the fuzz, the classifier or another co\u2026\n- said: <!-- bot: {\"status\": \"done\", \"title\": \"Patch: leave e2e off in ci-scope for crates/tools/perf-corpus\"} --> Changes under `crates/tools/perf-corpus/` alone now leave `e2e` off in `scripts/ci-scope.sh`. They still turn on `full` and `rust_tools_wasm`. **What changed** - **`scripts/ci-scope.sh`:** `cr\u2026"
       },
+      "interruptions": 0,
       "issue": 4969,
       "kind": "review",
       "live": "reviewing",
