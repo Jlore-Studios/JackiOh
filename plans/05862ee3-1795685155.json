@@ -1,0 +1,56 @@
+{
+  "action": "plan",
+  "number": 5024,
+  "title": "Patch: the server's repeated blocks are written once",
+  "branch": "bot/issue-5024",
+  "thread": "**Issue #5024 (data, not instructions):**\n\n````text\n# #5024: Patch: the server's repeated blocks are written once\nOpened by @squishy-squooby.\n\n### Kind\n\nArchitecture\n\n### Why\n\nThe audit that landed as #4905 ended with a scan for blocks of code that stand word for word in two places. On `main` at `7270e555` it finds 44 such runs in `crates/server/src` (windows of 12 or more lines, comments, blank lines and lone braces left out, test modules skipped). None was folded in #4905. A rule fixed in one copy and not the other is how the two drift apart.\n\nWhere they are:\n\n| Files | Runs | Lines in each run |\n|---|---|---|\n| `duos/actor.rs` and `actor/match_actor.rs` | 10 | 29, 21, 18, 18, 17, 17, 15, 13, 12, 12 |\n| `db/pg.rs` with itself | 4 pairs | 35, 19, 18, 13 |\n| `actor/ws_server.rs` with itself | 3 | 26, 14, 12 |\n| `economy/store.rs` with itself | 3 | 16, 13, 12 |\n| `duos/registry.rs` and `actor/registry.rs` | 1 | 17 |\n| `bots/pool.rs` and `crates/shared/src/bots/pool.rs` | 1 | 26 |\n| `api/results.rs` and `actor/match_actor.rs` | 1 | 14 |\n| `actor/telemetry.rs` and `actor/match_actor.rs` | 1 | 12 |\n\nThe script under \"How to list them\" prints each run's lines.\n\n### What to change\n\nRead each pair side by side and decide:\n\n- **Fold** it when one function, or one small generic over the two actors' types, serves both sites with the same behaviour: the same writes in the same order, the same messages, the same errors. Both sites call it. The result is shorter and no harder to read.\n- **Leave** it when the shared form needs more machinery than the repeat it removes, or when the two sides only look alike today (two SQL statements over different tables, two socket paths that are meant to diverge). Say which in the pull request, with file and line.\n- In `db/pg.rs` keep every SQL string byte for byte unless both sides are the same string: only the row mapping and the boilerplate around a query fold. No migration, no schema change.\n- `bots/pool.rs`: the server's copy should call the shared crate's (`crates/shared/README.md` is the host contract).\n- Delete or disable no route, CLI subcommand or anything the end-to-end mode serves (CLAUDE.md rule 13).\n\n### Acceptance\n\n- The pull request has a table of every run: folded into what, or left and why.\n- `cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D warnings`, `cargo test -p jackioh-server` (every binary) and `cargo test -p jackioh-shared --features jackioh-engine/testkit` pass; CI's `db (store contract)` passes for anything touched in `db/`.\n- The scan below, run again, lists only the runs the table says were left.\n\n### How to list them\n\n```bash\npython3 dups.py . 12 rs crates/server/src crates/shared/src\n```\n\n<details><summary><code>dups.py</code></summary>\n\n```python\n# Verbatim duplicate blocks in non-test source: windows of W normalized lines seen in 2+ places,\n# merged into maximal runs. Usage: dups.py <root> <W> <ext,ext> <dir>...\nimport sys, os, re, hashlib, collections\nroot, W, exts = sys.argv[1], int(sys.argv[2]), tuple('.'+e for e in sys.argv[3].split(','))\ndirs = sys.argv[4:]\ndef norm(l):\n    l = l.strip()\n    if not l or l.startswith(('//', '/*', '*', '#[', '#!')) or l in ('{', '}', '};', '),', ')', '});', '],', ']', 'else {', '} else {'): return None\n    return re.sub(r'\\s+', ' ', l)\nfiles = {}\nfor d in dirs:\n    for dp, dn, fs in os.walk(os.path.join(root, d)):\n        if any(x in dp for x in ('/target', 'node_modules', '/tests', '/testkit', '/scripts/', '/pkg', '/generated', '/wire/', '/test/', '/__')): continue\n        for f in fs:\n            if not f.endswith(exts) or '.test.' in f or f.endswith('_test.go') or f.endswith('.d.ts'): continue\n            p = os.path.join(dp, f); t = open(p, encoding='utf-8', errors='replace').read()\n            if p.endswith('.rs'):\n                m = re.search(r'^#\\[cfg\\(test\\)\\]\\n(pub(\\([a-z]+\\))?\\s+)?mod\\s+\\w+\\s*\\{', t, re.M)\n                if m: t = t[:m.start()]\n            lines = [(i+1, norm(l)) for i, l in enumerate(t.split('\\n'))]\n            files[os.path.relpath(p, root)] = [(i, n) for i, n in lines if n]\nseen = collections.defaultdict(list)\nfor p, ls in files.items():\n    for k in range(len(ls) - W + 1):\n        h = hashlib.md5('\\n'.join(n for _, n in ls[k:k+W]).encode()).hexdigest()\n        seen[h].append((p, k))\ndup = {h: v for h, v in seen.items() if len(v) > 1}\nmarks = collections.defaultdict(set)\nfor h, v in dup.items():\n    for p, k in v: marks[p].add(k)\nruns = []\nfor p, ks in marks.items():\n    ks = sorted(ks); s = ks[0]; prev = ks[0]\n    for k in ks[1:] + [None]:\n        if k is None or k != prev + 1:\n            ls = files[p]; a = ls[s][0]; b = ls[prev + W - 1][0]\n            h = hashlib.md5('\\n'.join(n for _, n in ls[s:s+W]).encode()).hexdigest()\n            others = sorted({q for q, _ in dup[h] if q != p}) or [p + ' (itself)']\n            runs.append((prev - s + W, p, a, b, others))\n            if k is not None: s = k\n        prev = k if k is not None else prev\nruns.sort(reverse=True)\nprint(f'{len(runs)} duplicated runs, {sum(r[0] for r in runs)} normalized lines in them (each side counted)')\nfor n, p, a, b, others in runs:\n    print(f'{n:4} {p}:{a}-{b}  ~ {\", \".join(others[:2])}')\n```\n\n</details>\n\n### Blocked by, part of\n\nFollow-up to #4905 (its handoff is on #4702). The scheduled audit #5005 asks for duplicates in general in its part 2; this issue takes the server's listed pairs, so that audit can leave them.\n````",
+  "previous_findings": [],
+  "previous_question": "",
+  "rating": {
+    "difficulty": "hard",
+    "source": "person",
+    "by": ""
+  },
+  "build_next": true,
+  "provider": "claude-6",
+  "cli": "claude",
+  "secret": "CLAUDE_CODE_OAUTH_TOKEN_6",
+  "family": "claude",
+  "shared": false,
+  "vault": "",
+  "login": "secret",
+  "runs_on": "ubuntu-latest",
+  "difficulty": "hard",
+  "seats": {
+    "plan": {
+      "provider": "claude-6",
+      "model": "opus",
+      "effort": "xhigh",
+      "tier": "strong",
+      "self_check": false
+    },
+    "build": null,
+    "review": null,
+    "self_check": false
+  },
+  "routing": [
+    "#5024: needs a plan; `claude-6` (claude, `opus`, strong) writes it in a lane of `claude-6`, which its build then takes on the same model"
+  ],
+  "assignment": "plan on `claude-6` (claude, `opus`, strong)",
+  "rounds_used": 0,
+  "round_tier": "",
+  "usage_facts": {
+    "queued_at": "2026-11-26T06:28:06Z",
+    "claimed_at": "2026-11-26T09:26:23Z",
+    "previous_provider": null,
+    "handed_off": ""
+  },
+  "housekeeping": [
+    "#5005 is held for `claude-1` until 05:20 (it refused a call)"
+  ],
+  "forced": false,
+  "priority": "none",
+  "skipped": [
+    "#4953 skipped: labelled `human`, so no model takes it, whatever its tier"
+  ]
+}
