@@ -1302,7 +1302,12 @@ mod tests {
 
         // One pair played twice: both arms start from the trunk's prefix and play on the same
         // streams, so both runs hash the same.
-        let (index, fork) = &forks[0];
+        // The second fork: the first sits at move 0, whose prefix is empty.
+        let (index, fork) = &forks[1];
+        assert!(
+            fork.at_move >= 1,
+            "the prefix check must compare a non-empty prefix"
+        );
         let outcome = &played[*index].0;
         let (cand, ctl) = play_pair(outcome, fork, 1).unwrap();
         let (cand_again, ctl_again) = play_pair(outcome, fork, 1).unwrap();
@@ -1571,6 +1576,39 @@ mod tests {
         }
     }
 
+    /// R4607000: a deal line from the trunk game alone: it plays one game and no fork's arms, so
+    /// its hash and fork points are what `play_deal` would save, and each fork holds
+    /// `FORK_ROLLOUTS * 2` placeholder arms, the count `load_save` checks and the only thing the
+    /// identity game reads of them (it compares the trunk hash and the fork points).
+    fn trunk_only_line(game: &ArenaGame, answered: ScriptedAnswer) -> DealLine {
+        let (outcome, points, probe_faults) =
+            play_game_probed(game, Some(Probe::scripted(game.n, answered))).unwrap();
+        DealLine {
+            deal: game.n,
+            duel: format!("duel {}", game.n),
+            record: None,
+            hash: outcome.hash.clone(),
+            forks: points
+                .iter()
+                .map(|point| SavedFork {
+                    seat: point.seat,
+                    at_move: point.at_move,
+                    candidate: point.candidate.clone(),
+                    control: point.control.clone(),
+                })
+                .collect(),
+            probe_faults,
+            arms: vec![
+                SavedArm {
+                    won: false,
+                    fault: None
+                };
+                points.len() * FORK_ROLLOUTS * 2
+            ],
+            rollouts: 0,
+        }
+    }
+
     /// R4607000's tally from saved lines is the live tally over the same lines: a hand-written
     /// finished save reprints without playing a game, so the daily run holds
     /// `r4607000_resume_after_cut_prints_the_same_tally` (a live cut and resume, several
@@ -1799,8 +1837,8 @@ mod tests {
     }
 
     /// R4607000: how long the partial-batch test's deal 2 waits for deal 1's line before it calls
-    /// the save broken: a deal at the tests' budget takes minutes on a small runner, and longer
-    /// under the pool probe, whose suites run at once.
+    /// the save broken: deal 1 is one `echo` game at the tests' budget, which takes about a
+    /// minute on a small runner and longer under the pool probe, whose suites run at once.
     const PARTIAL_DEAL_BOUND_SECS: u64 = 1200;
 
     #[test]
@@ -1825,8 +1863,8 @@ mod tests {
         let refused = deals.install(|| {
             resume_save(&path, &header, base, &control, 2, false, &|game: &ArenaGame| {
                 if game.n == 2 {
-                    // One deal at the tests' budget takes minutes on a small runner;
-                    // the bound only stops a run where deal 1 never lands.
+                    // Deal 1 is one game at the tests' budget; the bound only stops a run
+                    // where it never lands.
                     let deadline =
                         std::time::Instant::now() + std::time::Duration::from_secs(PARTIAL_DEAL_BOUND_SECS);
                     loop {
@@ -1842,7 +1880,7 @@ mod tests {
                     }
                     anyhow::bail!("r4607000-partial: deal 2 fails");
                 }
-                Ok(Probe::scripted(game.n, late_fork))
+                Ok(Probe::scripted(game.n, echo))
             })
             .unwrap_err()
         });
@@ -1864,17 +1902,7 @@ mod tests {
         let path = save_path("refuse");
         let _ = std::fs::remove_file(&path);
 
-        let fresh_calls = std::sync::atomic::AtomicUsize::new(0);
-        resume_save(
-            &path,
-            &header,
-            base,
-            &control,
-            1,
-            false,
-            &scripted_factory(&fresh_calls, late_fork),
-        )
-        .unwrap();
+        write_save(&path, &header, &[hand_line(1, 6, 2)]);
         let file = std::fs::read(&path).unwrap();
         assert_eq!(read_lines(&path).len(), 1);
 
@@ -1962,7 +1990,7 @@ mod tests {
         let _ = std::fs::remove_file(&path);
 
         let game = trunk_game(&format!("{base}:1"), 1);
-        let line = play_deal(&game, Probe::scripted(1, late_fork)).unwrap();
+        let line = trunk_only_line(&game, late_fork);
         assert_eq!(line.forks.len(), 1, "deal {}", line.deal);
         write_save(&path, &header, &[line]);
 
@@ -1997,7 +2025,7 @@ mod tests {
         let _ = std::fs::remove_file(&path);
 
         let game = trunk_game(&format!("{base}:1"), 1);
-        let line = play_deal(&game, Probe::scripted(1, late_fork)).unwrap();
+        let line = trunk_only_line(&game, late_fork);
         assert_eq!(line.forks.len(), 1, "deal {}", line.deal);
         write_save(&path, &header, &[line]);
 
@@ -2037,10 +2065,19 @@ mod tests {
             &control,
             2,
             false,
-            &scripted_factory(&fresh_calls, late_fork),
+            &scripted_factory(&fresh_calls, echo),
         )
         .unwrap();
         let file = std::fs::read(&path).unwrap();
+        // `echo` never forks, so each deal was one game: the test plays no fork's arm.
+        let lines = read_lines(&path);
+        assert_eq!(lines.len(), 2);
+        assert!(
+            lines
+                .iter()
+                .all(|line| line.forks.is_empty() && line.arms.is_empty()),
+            "{lines:?}"
+        );
 
         // Run again on the finished save: no game is played, not even the identity game, and
         // the tally is the same string.
@@ -2052,7 +2089,7 @@ mod tests {
             &control,
             2,
             false,
-            &scripted_factory(&calls, late_fork),
+            &scripted_factory(&calls, echo),
         )
         .unwrap();
         assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 0);
