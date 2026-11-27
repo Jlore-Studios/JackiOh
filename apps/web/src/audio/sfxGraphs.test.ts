@@ -8,9 +8,9 @@
 
 import { describe, expect, it } from "vitest";
 
-import { SFX, SFX_IDS } from "./sfx.ts";
+import { SFX, SFX_ELEMENTS, SFX_IDS } from "./sfx.ts";
 import { FakeAudio, FakeParam, type FakeNode, type ParamEvent } from "./test/fakeAudio.ts";
-import type { SfxId } from "./types.ts";
+import type { SfxId, SfxParams } from "./types.ts";
 
 /** The recipe is asked to start here, after the context's own clock, so every time prints as an offset from it. */
 const NOW = 1;
@@ -39,13 +39,13 @@ function eventText(event: ParamEvent): string {
   }
 }
 
-/** `id`'s recipe run once at `AT` with no parameters, printed node by node in the order it made them. */
-function graphOf(id: SfxId): string {
+/** `id`'s recipe run once at `AT` with `params` (none by default), printed node by node in the order it made them. */
+function graphOf(id: SfxId, params: SfxParams = {}): string {
   const audio = new FakeAudio({ state: "running", currentTime: NOW });
   const out = audio.context.createGain();
   const outNode = audio.nodeOf(out);
   const first = audio.nodes.length;
-  const length = SFX[id].recipe(audio.context, out, AT, {});
+  const length = SFX[id].recipe(audio.context, out, AT, params);
   const made = audio.nodes.slice(first);
   const name = (target: FakeNode | FakeParam): string => {
     if (target instanceof FakeParam) return `${name(target.node)}.${target.name}`;
@@ -76,5 +76,14 @@ function graphOf(id: SfxId): string {
 describe("B14 R3405001 R3407001 each recipe builds the graph it was tuned to by ear", () => {
   it.each(SFX_IDS)("B14 %s: every node, wire, start, stop and automation as recorded", (id) => {
     expect(graphOf(id)).toMatchSnapshot();
+  });
+});
+
+describe("#5190 the element recipes build one graph per element", () => {
+  const ELEMENT_RECIPES = ["elementWindUp", "elementBolt", "elementTail"] as const;
+  const cases = ELEMENT_RECIPES.flatMap((id) => SFX_ELEMENTS.map((element) => [id, element] as const));
+
+  it.each(cases)("#5190 %s as %s: every node, wire, start, stop and automation as recorded", (id, element) => {
+    expect(graphOf(id, { element })).toMatchSnapshot();
   });
 });

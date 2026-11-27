@@ -16,6 +16,7 @@ import { describe, expect, it } from "vitest";
 
 import { BANNED_RULES_WORDS, BANNED_WORDS_MAX_SHARE, CARD_HOOK_NAMES, VOICE_MAX_WORDS } from "./constants.ts";
 import { SFX_IDS } from "./sfx.ts";
+import { VERB_BANK_EFFECTS } from "./test/verbBank.ts";
 import { withVoiceText } from "./soundTables.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -539,7 +540,9 @@ describe("card-audio.json5's layout and effects (R655)", () => {
     const used = new Set(
       allAssignments().flatMap(({ value }) => (isRecord(value) && typeof value.effect === "string" ? [value.effect] : [])),
     );
-    const dead = Object.keys(EFFECTS).filter((name) => !used.has(name));
+    // #5190: the spell verbs' effects wait for the card parts (#5187) to name them; verbBank.test.ts holds
+    // this exemption to exactly the verb table's names, and it leaves each name as a card names it.
+    const dead = Object.keys(EFFECTS).filter((name) => !used.has(name) && !VERB_BANK_EFFECTS.has(name));
     expect(dead, "effects no card's hook names").toEqual([]);
   });
 });
