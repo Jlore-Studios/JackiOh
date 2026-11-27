@@ -22147,9 +22147,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T04:19:00Z",
+    "at": "2026-11-27T04:27:05Z",
     "url": "",
-    "what": "suggestions (rules) on claude-8"
+    "what": "suggestions (ai) on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-27T04:17:55Z",
@@ -46348,13 +46348,22 @@
         "why": "closed unbuilt by a person (not planned)"
       }
     ],
-    "idle_since": "2026-11-27T03:36:34Z",
-    "last_area": "rules",
-    "last_run": "2026-11-27T03:36:34Z",
+    "idle_since": "2026-11-27T04:27:05Z",
+    "last_area": "ai",
+    "last_run": "2026-11-27T04:27:05Z",
     "provider": null,
     "requested": false,
     "run_id": null,
-    "running": {},
+    "running": {
+      "1": {
+        "area": "ai",
+        "count": 1,
+        "last_run": "2026-11-27T04:27:05Z",
+        "provider": "claude-3",
+        "run_id": "pending:56f1c2d8-1795753609",
+        "taken_asks": []
+      }
+    },
     "taken_asks": []
   },
   "usage": null,
