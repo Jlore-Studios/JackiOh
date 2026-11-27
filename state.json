@@ -22208,6 +22208,14 @@
         "sha": "7187215196059fca09a1be3d6c69f874bf8d8e5e",
         "tiers": {}
       }
+    },
+    "5167": {
+      "difficulty": "medium",
+      "failures": 0,
+      "feedback_since": "2026-11-27T03:28:13Z",
+      "issue": 5154,
+      "kind": "revise",
+      "self_check_findings": []
     }
   },
   "labels_synced": "e752b3263433d01e",
