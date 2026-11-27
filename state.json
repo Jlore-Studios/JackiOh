@@ -21977,6 +21977,9 @@
       "stop_requested": false,
       "suggestion": true
     },
+    "5164": {
+      "suggestion": true
+    },
     "5165": {
       "action": "review",
       "asks": [],
@@ -45614,6 +45617,13 @@
         "title": "Patch: a unit in Defense Position stays on its side while it shakes, pulses or takes a buff",
         "verdict": "came to nothing",
         "why": "rejected by @jgoetzmann"
+      },
+      {
+        "at": "2026-11-27T20:35:40Z",
+        "number": 5164,
+        "title": "Patch: the Infinite Assault's ladder marks the levels beaten today, and its four untranslated Commanders read in Chinese",
+        "verdict": "approved",
+        "why": "approved by @jgoetzmann"
       }
     ],
     "declined": [
