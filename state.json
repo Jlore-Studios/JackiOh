@@ -20127,6 +20127,13 @@
     "5188": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "46070672183",
+        "model": "opus",
+        "provider": "claude-6",
+        "since": "2026-11-27T21:52:17Z",
+        "until": "2026-11-27T22:22:17Z"
+      },
       "failures": 0,
       "forced": false,
       "in_lane": true,
