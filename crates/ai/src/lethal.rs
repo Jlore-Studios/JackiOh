@@ -206,9 +206,16 @@ pub fn ready_gap(state: &GameState, seat: PlayerId) -> f64 {
     }
     // Fused scripts are built from state on lookup (SURFACE §6.6).
     let mut attacks: Vec<(&CardInstance, i32, bool)> = Vec::new();
+    // R4792000: while a Mayor acts each attack's target is drawn (R1200), so one counts only when the
+    // hero is the only target it may draw.
+    let drawn =
+        crate::config::AI_REPLY.drawn_attacks && jackioh_engine::random_targets::targets_random(state);
     for unit in active_units_of(state, seat) {
         let attack = unit_view(state, unit).attack;
-        if attack > 0 && has_attack(state, unit) {
+        if attack > 0
+            && has_attack(state, unit)
+            && (!drawn || crate::candidates::draws_only_hero(state, unit))
+        {
             let hits_hero = may_hit_hero(state, unit);
             for _ in 0..attacks_left(state, unit) {
                 attacks.push((unit, attack, hits_hero));

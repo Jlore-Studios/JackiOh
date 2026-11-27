@@ -332,7 +332,10 @@ deeper levels, the lethal solver and the reply try the first `AI_SEARCH.zone_var
 drops an open line whose position an earlier one reached (two orders of the same moves into the same lanes
 are one position). A position also holds the last Spell played while a card that copies it (C #57 Echo) is
 in the seat's hand or graveyard, and each unit's Churnwalker chain; its units' lanes include a Dormant card's
-lane and an animated card's home zone (R4808000). A line that differs from an earlier one only in where its cards stand is a lane variant
+lane and an animated card's home zone (R4808000). A card off the field signs its buffs and granted
+keywords, each only when it holds some and the keywords sorted (`grants_signature`,
+`AI_SEARCH.hand_grants_signed`), so which hand card an S+ #100 Plesiosize or an S+ #23 GIGA-ify went on is
+part of the position, for the beam, the lethal solver and the concession check's walk (R4793000). A line that differs from an earlier one only in where its cards stand is a lane variant
 (#1797; R4132000: a backrow card's lane, and which side of a standing unit a new one goes, included, read off
 `lane_free_signature`, which sorts each side's units and backrow cards and leaves out its empty zones): the
 evaluation reads no lane but through a unit's stats, which that signature keeps, so it takes no place in the
@@ -354,6 +357,17 @@ true state refuses (a cost no determinization could see) is never submitted: `su
 first action of the next finalist the true state accepts, best mean first, with the search's reason, and
 only when none is accepted falls back (`DecisionReason::Fallback`) to `replacements_for`'s endTurn, answer
 or other legal action (#1575).
+
+R4792000: while a Mayor acts (R1200) `legal_actions` lists one attack per attacker, naming
+`RANDOM_ATTACK_TARGET`, and the engine draws its target. Such an attack is worth the mean of a hit on each
+target it may draw (`candidates::drawn_attack`: `attack_targets`, each as likely, a hit on the hero by
+`face_value` and on a unit by `trade_value`), in the reply's `ranked_attacks` and the move order's
+`front_value` alike. The move order puts it with the attacks on the hero when the enemy hero is its only
+target, otherwise with the even trades when some draw hits the hero or kills and the mean is 0 or more
+(`Drawn::even`), otherwise among the other attacks. `ready_gap` counts it only when the hero is its only
+target (`draws_only_hero`), and only then does `face_is_lethal` make its hit the win. A Radiant Mayor's
+Lucky (R1201) is not read. `AI_REPLY.drawn_attacks` off prices it at nothing and counts it on the hero,
+as before.
 
 `decide_styled` is `decide` under an `AiStyle` (R1452), the server's ladder bots' strength knob beside
 their budget: a `missed_lethal_chance` to pass over the lethal line the solver found (the search then
