@@ -21904,13 +21904,14 @@
       "merge_owner": "claude-7",
       "merged": true,
       "pending_request": false,
-      "provider": "claude-7",
+      "provider": "claude-3",
       "queued_at": "2026-11-27T02:23:07Z",
-      "run_id": "45928093484",
+      "run_id": "pending:72fd6d1c-1795759640",
       "runs_on": "ubuntu-latest",
       "self_check_findings": [],
+      "spot_check": true,
       "spot_check_n": 625,
-      "started_at": "2026-11-27T02:23:54Z",
+      "started_at": "2026-11-27T06:07:37Z",
       "stop_requested": false,
       "taken_asks": [],
       "votes": {
@@ -22233,9 +22234,9 @@
   },
   "labels_synced": "e752b3263433d01e",
   "last_run": {
-    "at": "2026-11-27T05:40:19Z",
+    "at": "2026-11-27T06:07:37Z",
     "url": "",
-    "what": "suggestions (tests) on claude-3"
+    "what": "spot-check #5147 on claude-3"
   },
   "last_sweep": {
     "at": "2026-11-27T05:59:59Z",
@@ -45099,7 +45100,15 @@
         "n": 625,
         "pr": 5147,
         "queued_at": "2026-11-27T06:06:35Z",
+        "reviewer": {
+          "family": "claude",
+          "model": "opus",
+          "provider": "claude-3",
+          "tier": "strong"
+        },
+        "run_id": "pending:72fd6d1c-1795759640",
         "sha": "49b908bc47893c2a2cf4f9bc8371c42e587ddd9d",
+        "started_at": "2026-11-27T06:07:37Z",
         "status": "queued",
         "title": "Patch: an Embiggened version costs its normal price plus a premium, so every discount moves both prices alike",
         "tries": 0
