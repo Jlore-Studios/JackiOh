@@ -102,7 +102,9 @@ jobs:
           branch="winrates/refresh-$(git rev-parse --short HEAD)"
           login=$(gh api user --jq .login)
           id=$(gh api user --jq .id)
-          title="Patch: the tier cards and KPIs read the newest win rates"
+          # The fragment's own title, which names the version it reads so that no two refreshes share
+          # a stem (R4779000).
+          title=$(jq -r .title "$(git ls-files --others --exclude-standard crates/cards/patches/pending)")
 
           git checkout -b "$branch"
           git add -A
