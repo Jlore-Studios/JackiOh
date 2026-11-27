@@ -130,18 +130,18 @@ fn r2922000_a_seat_whose_handicap_sets_hero_armor_starts_with_it_and_stores_it()
 }
 
 #[test]
-fn r2922000_the_armor_cuts_every_hit_and_is_not_spent() {
+fn r2922000_r5183000_the_armor_cuts_every_hit_and_each_hit_wears_1_off_it() {
     let mut state = started("r2922000-hit", None, Some(armored(2)));
     run_settled(&mut state, &[hit("enemyHero", 5)], OTHER);
     assert_eq!(health(&state, ARMORED), HERO_HEALTH - 3, "5 less the Armor's 2");
-    assert_eq!(armor(&state, ARMORED), 2, "the Armor is not spent");
+    assert_eq!(armor(&state, ARMORED), 1, "the hit wore 1 off it");
     run_settled(&mut state, &[hit("enemyHero", 2)], OTHER);
     assert_eq!(
         health(&state, ARMORED),
-        HERO_HEALTH - 3,
-        "a hit no bigger than the Armor deals none"
+        HERO_HEALTH - 4,
+        "2 less the Armor's 1 left"
     );
-    assert_eq!(armor(&state, ARMORED), 2);
+    assert_eq!(armor(&state, ARMORED), 0);
 
     run_settled(&mut state, &[hit("enemyHero", 5)], ARMORED);
     assert_eq!(health(&state, OTHER), HERO_HEALTH - 5, "the other hero has none");

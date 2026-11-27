@@ -57,7 +57,7 @@ import { outcomeFor, splashFor } from "./attackOutcome.ts";
 import { sameHighlightAt } from "./cardHighlight.ts";
 import FieldBadges from "./FieldBadges.tsx";
 import { usePhonePortrait } from "./phoneBar.ts";
-import { TipsyBlurProvider } from "./tipsy.tsx";
+import { WoozyBlurProvider } from "./woozy.tsx";
 import { useCardInfo, useCopiedDef, useFieldPower, useTallies } from "./catalog.ts";
 import { useLiveFace } from "./faces.ts";
 import { printedCost } from "./decks.ts";
@@ -262,7 +262,7 @@ function Card(props: CardProps): ReactElement {
 
   // The card in play: the unit's view when it is one, else the card's own. A back has no face at all.
   const shown = unit ?? card;
-  // R3548001: the owner's-view-only Tipsy blur of this card, from the unit's view when it is one.
+  // R3548001: the owner's-view-only Woozy blur of this card, from the unit's view when it is one.
   const blur = unit?.tipsyBlur ?? card?.tipsyBlur ?? null;
   // #3478: the face memoized on the view object, the definition, the live facts and the language.
   const model: FaceModel = useLiveFace(info, shown, {
@@ -514,7 +514,7 @@ function Card(props: CardProps): ReactElement {
       data-unrevealed={props.unrevealed === true ? "true" : undefined}
       data-position={position}
       // R3548001: which of this card blurs on its owner's view alone; never on a back.
-      data-tipsy-blur={blur?.kind}
+      data-woozy-blur={blur?.kind}
       // `canAct` is drawn as state, never read as permission: legality is `props.highlight`.
       data-can-act={unit === undefined || unit === null ? undefined : unit.canAct ? "true" : "false"}
       // #258: no exertion left on the acting side's turn (spent.ts), drawn dimmed with a "Zz".
@@ -526,7 +526,7 @@ function Card(props: CardProps): ReactElement {
       // with it (R849000) the engine's reason a unit of yours cannot attack now.
       title={settings.hoverPreviews && panelHover ? undefined : cardTitle(face.name, unit, card)}
     >
-      <TipsyBlurProvider blur={blur}>
+      <WoozyBlurProvider blur={blur}>
         {unit !== undefined && unit !== null ? (
           <MinionFace face={face} unit={unit} worn={worn} keywordsOffFace={offFace} attacking={animatingEvent === "attackDeclared"} />
         ) : (
@@ -546,7 +546,7 @@ function Card(props: CardProps): ReactElement {
             />
           </TermTips>
         )}
-      </TipsyBlurProvider>
+      </WoozyBlurProvider>
 
       {/* Everything below is a sibling of `.cf`, not inside it, so it stays clickable while the
           face has `pointer-events: none`. */}

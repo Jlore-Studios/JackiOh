@@ -10471,5 +10471,620 @@
     "pr": 4997,
     "title": "bot: build pass 1 for #4981",
     "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "eca15f3983d9e220f299de483a8b60f2fd345b6f",
+    "pr": 5004,
+    "title": "the card animation tables' scales follow Balance Changes VIII's costs",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "6d97ef369aef40221bb0158e45fb20346edd9afc",
+    "pr": 5003,
+    "title": "bot: build pass 1 for #4982",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "a31be66559e2307b2783e4af773f2e1f794fed08",
+    "pr": 4972,
+    "title": "bot: build pass 1 for #4925",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "c55758adec975d7ce638155321f5b4356076976e",
+    "pr": 5000,
+    "title": "follow-up to #4960 from the after-merge spot-check",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "1f1103e532e620c5297c9b3871d6a3eb2051a072",
+    "pr": 5017,
+    "title": "bot: build pass 1 for #4679",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "cdea5d30c914e569405648726ad3531fdfd8673a",
+    "pr": 5020,
+    "title": "patches ship: v0.6.14j, v0.6.14k",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "7270e555e51ec50423aa8362fba0f6c292b10abf",
+    "pr": 5008,
+    "title": "a GIGA card's placement highlight lights all four zones it will take, not only its anchor",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "6d2e82544e96e7ee12ade8bf76b59cb6b18cee5f",
+    "pr": 5023,
+    "title": "bot: build pass 1 for #4990",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "23b380e992e0d1210646e25a3e10a8a7b06e0be0",
+    "pr": 5028,
+    "title": "patches ship: v0.6.14l",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "9d70b74d631c9e50db0e942d80a4b553cb91d23c",
+    "pr": 5030,
+    "title": "patches log: e046cab..2682cb7",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "61758a8b61caae7b24f87b4562792ba161f9f1bc",
+    "pr": 5031,
+    "title": "the tier cards and KPIs read the newest win rates",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "4844695f27c6bc3b4f40660f2bef1a5f2d371e93",
+    "pr": 5029,
+    "title": "staging's super run goes green on #4897's cards: four fuzz monitor allowances, spec 48's Cloaked play, and the AI's tutorial tier",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "26edb8bcf26bd5e8f4fa07a15f573d6f9de073e0",
+    "pr": 5032,
+    "title": "bot: build pass 1 for #5006",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "a6a0c4ae99e056049f1aa43f70bc1a472daced86",
+    "pr": 5034,
+    "title": "patches ship: v0.6.14m",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "7fb76d5cb458a91080dc4bb6b25f2176ac817cb1",
+    "pr": 4739,
+    "title": "a job ran over 10 minutes",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "e98230cb8297c2b4daa0586b3a271127e19e585e",
+    "pr": 4934,
+    "title": "bot: build pass 1 for #4839",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "22a9db19dd2732f368f4612dff9ddf08a9dbfc0b",
+    "pr": 4946,
+    "title": "bot: build pass 1 for #4817",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "aa3fdf0617139ab7a3359a3e827fd0ff4d947e33",
+    "pr": 5041,
+    "title": "bot: build pass 1 for #5011",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "62f270a22d8018f4e55afc71cfb8de3142b1f7e2",
+    "pr": 5043,
+    "title": "the statistics' kept snapshot holds the card totals of the patches anyone may read and the window before them, one per play version before that",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "469057d8b1a32e7083f79c1bf5a63bdbcd7280d6",
+    "pr": 4629,
+    "title": "the fuzz monitor's I21 allows five more of the game's own steps: an unseen play's resolve, a Burn tick on a Divine Shield, a transformed exile aura, a restored side and a Black Hole opened in the step",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "b6bcf7742afd5fa12080b2c323f7d6d02d228f13",
+    "pr": 5047,
+    "title": "patches ship: v0.6.14n",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "c075737d7aa2e8bbbe3df527a0d5eed4ba0d022d",
+    "pr": 5051,
+    "title": "The AI's beam simulates its root's End turn first, so a root move that spends the last node still leaves it a line",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "1b379828c6c381ee77c7bf74089e062136e23a6a",
+    "pr": 5052,
+    "title": "bot: build pass 1 for #4999",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "dfdca49c8ef837fbe711772359601f035eb89aaa",
+    "pr": 4893,
+    "title": "deeper card stats, X3, the Hall of Fame",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "9a1dbb8f75b36120e052f0b4b33ef73051471f00",
+    "pr": 5055,
+    "title": "bot: build pass 1 for #5010",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "e3d2f2da410f7e7278ea8e18f065a6364fa30032",
+    "pr": 5056,
+    "title": "a GIGA unit in Defense Position lies on its side across its four zones",
+    "kind": "app",
+    "player": "A GIGA unit in Defense Position now lies on its side across its four zones instead of standing on end over both heroes."
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "a0b3e987a376d00542ec1e01a3343ee4931c7245",
+    "pr": 5058,
+    "title": "a damage pool's soak is shown: Oct and Force Projector pulse, the hit's target shows what was nullified, and the log says so",
+    "kind": "app",
+    "player": "When Oct or Force Projector soaks damage, its card now pulses, the hit's target shows a shield with the damage nullified, and the log says where the damage went."
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "4b412e1f339bfcf31ec823db2a2573ffbf9c502d",
+    "pr": 5022,
+    "title": "the Infinite Assault, AI, the AI plays the Assault",
+    "kind": "ai",
+    "player": "None: no card plays differently."
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "dd55c8bf2953782983c6b52a32fb7da4248473ec",
+    "pr": 5061,
+    "title": "a face's adjusted win rate reads the games its card was seen on that face, not only played",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "d4fd02c8a392ae5cc5f4600ccb354a18eb7998d7",
+    "pr": 5069,
+    "title": "bot: build pass 1 for #5024",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "fed841b960695f623aadab139e0054744917b819",
+    "pr": 5070,
+    "title": "bot: build pass 1 for #5026",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "3736834b6c442da1083a4b5f16521c3ab2157084",
+    "pr": 5072,
+    "title": "patches ship: v0.6.14o, v0.6.14p, v0.6.14q",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "54d56db0e8f3abeec45448afb4810dcc8ce48300",
+    "pr": 5077,
+    "title": "bot: build pass 1 for #5040",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "18941ed2d7af95e1af58f786bf358f3e4001eb52",
+    "pr": 5080,
+    "title": "the Duos AI scores a passed card after its teammate's best play, and a ladder bot plays on while it can roll the board back or a secret is unseen",
+    "kind": "ai",
+    "player": "Ladder bots no longer concede a game a Rollback could still save, or one whose lethal hangs on your hidden Mind Games choice."
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "d7f8bbf22c7c3d156c40fb455d7cfa597d8b493a",
+    "pr": 5082,
+    "title": "patches ship: v0.6.14r, v0.6.14s, v0.6.14t; patches cut: v0.6.15",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "3cfb4e3b945fae7629025d3f1debef0c2d50c015",
+    "pr": 5074,
+    "title": "the engine's, the tools' and the shared crate's repeated blocks are written once",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "798bc44a809f0a8b83e27661960fd485d397bfe0",
+    "pr": 5086,
+    "title": "the AI reads a Reborn unit's body as the engine makes it: an X/X token keeps its X/X, and a stolen unit comes back to the thief",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "e5c8b669b01ff10318b5049d73b8f847d2f6fb8c",
+    "pr": 5087,
+    "title": "bot: build pass 1 for #5046",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "4dabf5c94ff444f2643ee99f75070561b090e45e",
+    "pr": 5089,
+    "title": "patches ship: v0.6.15b",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "db9a075d57eae3b08c1bb6b0644ec78d0a811181",
+    "pr": 5090,
+    "title": "a pull request that changes only a bot workflow runs the web test that reads every workflow, and the scope test checks each file of a directory a source reads",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "9663a7659ed1fc87cfffaf31f4ae622a70f2a130",
+    "pr": 5081,
+    "title": "the Infinite Assault, R, the release",
+    "kind": "ai",
+    "player": "New: the Infinite Assault, a daily 20-level solo gauntlet against AI-made bosses, opens from the Play hub, with the Infinite Assault set of 240 cards its enemies play."
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "2f6de7e28b852852397d6a94aba62b08261b2a9c",
+    "pr": 5092,
+    "title": "deal-screen the AI's attack-hook price, which the smoke gate reads the same at 0 and 0.5",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "4d65e8d8a04040c8d8cba28d3570f7be05085766",
+    "pr": 5078,
+    "title": "audit the codebase for dead code, duplicates and zombie routes, 2026-11-26",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "5395012b311d4ff10944af96cd81b47d5a8d6518",
+    "pr": 5083,
+    "title": "deeper card stats, X4, a Date sort on the Experimental tab's Running and Versions",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "04c800bf4aacbffddefca167b7508f39443ceaa6",
+    "pr": 5098,
+    "title": "patches ship: v0.6.15c, v0.6.15d, v0.6.15e",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "636d34b9a749d069264b438f761b82c9238e2bd7",
+    "pr": 5100,
+    "title": "the AI's three one-value switches settle: two removed at on, open lethal ships on (#5027)",
+    "kind": "ai",
+    "player": "The practice AI now expects you to take a lethal that needs more than one attack, and defends against it."
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "eaa4baf82dab717c5314e69f07423a9dd245f9e9",
+    "pr": 5102,
+    "title": "gather: five runners, and stats stops waiting on each chunk's slowest game",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "488e50eb5860995e5eadf46f7da490e9829c0697",
+    "pr": 5101,
+    "title": "bot: build pass 1 for #5085",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "9058f5d9990db7e284f2bddb8aed1d4ced82d81b",
+    "pr": 5105,
+    "title": "bot: the suggestion judge argues against each suggestion, and one that survives is approved as it opens",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "d2b2aa4939b5fe5a0b70c5e69b0d03a2ce3e2fc3",
+    "pr": 5110,
+    "title": "fold the pending §11 paragraphs, the rulings index and the card index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "c5ba7cef347f0629d5a72a7eba16ad0ce32f5d81",
+    "pr": 5112,
+    "title": "patches ship: v0.6.15f, v0.6.15g",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "cd5380f08472b80a439b9a85f31fa87d86a61167",
+    "pr": 5115,
+    "title": "bot: build pass 1 for #5099",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "05d0ca5454a651f05017fa60f8477c3ad1cb82ca",
+    "pr": 5118,
+    "title": "bot: build pass 1 for #5107",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "7e30376ee542082d6bf01a396ad70c3e5685c67c",
+    "pr": 5097,
+    "title": "bot: build pass 1 for #5091",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "7056a6d4cfabc4a6ddf63e8ea34423c4269f2c21",
+    "pr": 5093,
+    "title": "bot: build pass 1 for #5035",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "87085222a7f921ec9aaf70ac19c34c2f74845b72",
+    "pr": 5114,
+    "title": "the AI takes the lethal on a wide board (#4788, R4788000)",
+    "kind": "ai",
+    "player": "The AI no longer passes up a lethal on a crowded board."
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "a7e195165a5fbcea973da696e6bcf962643ed9c6",
+    "pr": 5121,
+    "title": "bot: build pass 1 for #5120",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "fc922ffebe07a18934bf338a362eaacea6a1aba2",
+    "pr": 5127,
+    "title": "the audit's long lethals pinned as fixtures, each proved given room (#4790)",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "83e4f11ce58e51602fe67440d01b9d113fa0245c",
+    "pr": 5126,
+    "title": "downloaded replay files are packed, each step its change from the last, gzipped",
+    "kind": "app",
+    "player": "Downloaded replay files are about a hundredth of their old size, and older replay files still open."
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "9002d655b2236436398bdf7e5ffd0732c634cf37",
+    "pr": 5134,
+    "title": "Infinite Assault fights are kept for replay (#5125, R5125000)",
+    "kind": "app",
+    "player": "Infinite Assault fights are now kept in your recent games, and a fight's result offers Watch the replay."
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "784bee620531f90cc0b4d225f17c7665d5b2bcb6",
+    "pr": 5135,
+    "title": "a Low graphics setting that turns off the expensive animations",
+    "kind": "app",
+    "player": "Low graphics, in Settings under Visuals, turns off particles, board shake, moving card art and big moments for a slow device; cards still move."
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "977f5a34184f4c7a0e8f623f7a556db7dba0887e",
+    "pr": 5138,
+    "title": "the Infinite Assault's cards in the Card Almanac",
+    "kind": "app",
+    "player": "The Card Almanac now shows the Infinite Assault's cards, with a set filter of their own and chips for their doctrines and Commanders."
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "78eb238cf5c2a9e556090341d20a90811a715e6a",
+    "pr": 5139,
+    "title": "tests that fail on the two ways /stats broke on 2026-11-24 to 11-26",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "12835a9809096fe759582c4cfc44f0efd2890a72",
+    "pr": 5141,
+    "title": "patches ship: v0.6.15h",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "b45c7c6b15c790ee873c62c89cc9dc7c1f44f96d",
+    "pr": 5088,
+    "title": "bot: build pass 1 for #5037",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "bfc8ba8334f01849dd6e880f47b81c49f38a5725",
+    "pr": 5142,
+    "title": "patches ship: v0.6.15i",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "66593a34efd302ee9524191b680253c034b94eb8",
+    "pr": 5143,
+    "title": "three small reads the AI audit found: the greedy baseline's surcharges, lanes beside a GIGA or across a slash, and Frenzy's hook probe",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "2858717e80516704847576068f442d7c186ade51",
+    "pr": 5140,
+    "title": "long games stay smooth: the board builds a pile's card list only when it is opened, and a view asks once whether a Feng Shui judges",
+    "kind": "app",
+    "player": "Long games stay smooth: the board no longer redraws every graveyard and exile card on each move, and the game builds each view faster late in a game."
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "752f632f0051ec6257104e8dc2300b0a79149097",
+    "pr": 5133,
+    "title": "keep Cloudflare's Web Analytics beacon out of the CSP (#5132)",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "aadfc6a1922c8b39759407360cb9b940b12901dc",
+    "pr": 5145,
+    "title": "patches ship: v0.6.15j",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "f51d8e0e99f35ce602bb9cb956ff3e5bcfcd6edb",
+    "pr": 5146,
+    "title": "bot: build pass 1 for #5123",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "9cafcdb7a9f6d4bc19202ec76644cf65551bc479",
+    "pr": 5094,
+    "title": "deeper card stats, X6, Decisiveness on the Experimental tab's Running and Versions",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "72533864c602e1a842735ac0e9bc34f501589575",
+    "pr": 5149,
+    "title": "the AI prices an attack whose target is drawn at random, and its search tells apart which hand card a buff went on",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "bf3c6fd85e4f85443c86886e40a47cd10008a54f",
+    "pr": 5150,
+    "title": "bot: build pass 1 for #5117",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "975b39f6522b23fd0a3568d504b3a5d4b381be6c",
+    "pr": 5153,
+    "title": "a beam its budget cut short ends its open lines' turns before they are scored, and a line pays for its unspent mana when the opponent has nothing to do",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "d1f4b46691114ce22f55b4b0479461974bd7e851",
+    "pr": 5155,
+    "title": "cap every mana amount and every chosen X at 15",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "6dde394462123331d2ca64857cf647b0bcba08d6",
+    "pr": 5162,
+    "title": "patches ship: v0.6.15k",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "d044f4d1b93d91830ebe702279e33bc73479e0a7",
+    "pr": 5163,
+    "title": "a launch-only Dormant Starship counts its launch in full",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "890ea0104b831b515d2214225f88f07c582cfc87",
+    "pr": 5167,
+    "title": "bot: build pass 1 for #5154",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "6e58a01482d9c27836b69b515715e1b3081841c2",
+    "pr": 5165,
+    "title": "bot: build pass 1 for #5152",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "b190a5bbc65487ee10544c764ea84d5b9966671c",
+    "pr": 5144,
+    "title": "the AI counts a price hike it puts on the opponent's next turn, so the Assault enemy casts Cost Injection",
+    "kind": "ai"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "5834990eb1c6d14e8537fd246b21210eb56da260",
+    "pr": 5170,
+    "title": "patches ship: v0.6.15l",
+    "kind": "app"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "fd542a8b662f26f55e666446bf9af9bb9ab95ef2",
+    "pr": 5172,
+    "title": "daily super run failed",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "3b0334c40808756c6575d506e1985380cdfd68d5",
+    "pr": 5177,
+    "title": "the card statistics read only the patches they show, and every deploy checks that /stats loads",
+    "kind": "app",
+    "player": "The Statistics page loads its card figures again, and sooner."
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "f6ef0c1c88e9b1df0b02f40e7c3d1308bf922ddc",
+    "pr": 5179,
+    "title": "fold the pending §11 paragraphs, the rulings index and the card index into the spec",
+    "kind": "internal"
+  },
+  {
+    "version": "v0.6.15",
+    "commit": "b01f8a744076ed880c0494803d4e554a09caef45",
+    "pr": 5176,
+    "title": "gather: play each part to its deadline and file every 50 games as they finish",
+    "kind": "internal"
   }
 ]

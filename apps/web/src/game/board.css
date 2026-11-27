@@ -236,13 +236,13 @@
   background: color-mix(in srgb, var(--toxic) 70%, var(--pal-black));
 }
 
-/* R3548000: the Tipsy counter, amber ale beside the Credits' gold, with its stein. #4251: as above. */
-.hero-counter.hero-tipsy {
+/* R3548000: the Woozy counter, amber ale beside the Credits' gold, with its stein. #4251: as above. */
+.hero-counter.hero-woozy {
   border: 1px solid color-mix(in srgb, var(--pal-brass-500) 55%, transparent);
   background: color-mix(in srgb, var(--pal-brass-500) 70%, var(--pal-black));
 }
 
-.hero-tipsy .cf-icon {
+.hero-woozy .cf-icon {
   width: 14px;
   height: 14px;
 }
@@ -455,7 +455,7 @@ button.modifier-badge[data-open="true"] {
 /* #2877: the Jade Counter (R961) and the Credits (R1840005) ride on the portrait as health and
    armor do (`emotes.css` anchors those): Jade top left, Credits top right, at the badges'
    overlay metrics, so gaining or spending one never moves the plate. #4251: Luck, Burn, Toxic
-   and Tipsy ride the tray now (`HeroTray.tsx`), so the oval's two top corners stay one badge each. */
+   and Woozy ride the tray now (`HeroTray.tsx`), so the oval's two top corners stay one badge each. */
 .hero-portrait .hero-jade,
 .hero-portrait .hero-credits {
   position: absolute;
@@ -473,15 +473,15 @@ button.modifier-badge[data-open="true"] {
   left: -6px;
 }
 
-/* R3548001: the Tipsy blur, on the owner's view alone. The card's root names which of it blurs;
-   a blurred name word or term wears `.tipsy-blur`, the keyword chip marks itself. */
-.tipsy-blur,
-.card[data-tipsy-blur="cost"] .cf-gem,
-.card[data-tipsy-blur="attack"] .stat-attack,
-.card[data-tipsy-blur="attack"] .cf-atk,
-.card[data-tipsy-blur="health"] .stat-health,
-.card[data-tipsy-blur="health"] .cf-hp,
-.keyword-icon[data-tipsy-blur="true"] {
+/* R3548001: the Woozy blur, on the owner's view alone. The card's root names which of it blurs;
+   a blurred name word or term wears `.woozy-blur`, the keyword chip marks itself. */
+.woozy-blur,
+.card[data-woozy-blur="cost"] .cf-gem,
+.card[data-woozy-blur="attack"] .stat-attack,
+.card[data-woozy-blur="attack"] .cf-atk,
+.card[data-woozy-blur="health"] .stat-health,
+.card[data-woozy-blur="health"] .cf-hp,
+.keyword-icon[data-woozy-blur="true"] {
   filter: blur(3px);
 }
 

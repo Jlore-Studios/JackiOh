@@ -32,7 +32,7 @@ string_union! {
     }
 }
 
-/// R3548001: what of a Tipsy-stamped card its owner's view blurs: one word of its name, its
+/// R3548001: what of a Woozy-stamped card its owner's view blurs: one word of its name, its
 /// cost, its attack, its health, or one keyword kind it carries. The client renders the blur and
 /// never changes a rule (CLAUDE.md rule 7).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
@@ -42,7 +42,7 @@ string_union! {
     ts(export, export_to = "../../../apps/web/src/wire/generated/")
 )]
 #[serde(tag = "kind", rename_all = "camelCase")]
-pub enum TipsyBlur {
+pub enum WoozyBlur {
     Name { word: i32 },
     Cost,
     Attack,
@@ -246,11 +246,13 @@ pub struct CardView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub fixed_x: Option<i32>,
-    /// R3548001: what of this card the owner's Tipsy stamp blurs on their view alone, or nothing.
+    /// R3548001: what of this card the owner's Woozy stamp blurs on their view alone, or nothing.
     /// Never on the opponent's view of it.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// Sent as `tipsyBlur`, the keyword's old name, so the view is what it was before the rename
+    /// (R5181000).
+    #[serde(rename = "tipsyBlur", default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
-    pub tipsy_blur: Option<TipsyBlur>,
+    pub woozy_blur: Option<WoozyBlur>,
 }
 
 /// One reward on offer, or one aura held, as `QuestView` lists it: `{ id, text }`.
@@ -743,11 +745,13 @@ pub struct UnitView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub tallies: Option<Vec<TallyView>>,
-    /// R3548001: what of this Unit the owner's Tipsy stamp blurs on their view alone, or nothing.
+    /// R3548001: what of this Unit the owner's Woozy stamp blurs on their view alone, or nothing.
     /// Never on the opponent's view of it.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// Sent as `tipsyBlur`, the keyword's old name, so the view is what it was before the rename
+    /// (R5181000).
+    #[serde(rename = "tipsyBlur", default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
-    pub tipsy_blur: Option<TipsyBlur>,
+    pub woozy_blur: Option<WoozyBlur>,
     /// R3554007: the shared damage chain this Unit is in, on both seats. Absent otherwise (D14).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
@@ -928,11 +932,13 @@ pub struct PublicBackrowView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub slumber: Option<Slumber>,
-    /// R3548001: what of this card the owner's Tipsy stamp blurs on their view alone, or nothing.
+    /// R3548001: what of this card the owner's Woozy stamp blurs on their view alone, or nothing.
     /// Never on a face-down card, and never on the opponent's view of it.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// Sent as `tipsyBlur`, the keyword's old name, so the view is what it was before the rename
+    /// (R5181000).
+    #[serde(rename = "tipsyBlur", default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
-    pub tipsy_blur: Option<TipsyBlur>,
+    pub woozy_blur: Option<WoozyBlur>,
 }
 
 /// The face-down member of `BackrowView`: a marker. §10.8 grants the non-controller the fact that
@@ -1336,11 +1342,12 @@ pub struct SideView {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
     pub jade: Option<i32>,
-    /// R3548000: this seat's Tipsy counter, shown to both seats beside its hero. Absent at none,
-    /// so a game without one sends the view it always did.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// R3548000: this seat's Woozy counter, shown to both seats beside its hero. Absent at none,
+    /// so a game without one sends the view it always did. Sent as `tipsy`, the keyword's old name,
+    /// so the view is what it was before the rename (R5181000).
+    #[serde(rename = "tipsy", default, skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "ts", ts(optional))]
-    pub tipsy: Option<i32>,
+    pub woozy: Option<i32>,
     /// R3548004: while a card giving infinite mana acts on this seat's field, its mana is not spent
     /// by paying costs, and the tray shows infinity. Public on both seats; absent otherwise. Only
     /// ever `Some(true)`.

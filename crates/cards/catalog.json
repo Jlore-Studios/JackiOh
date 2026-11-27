@@ -3741,8 +3741,8 @@
       },
       {
         "key": "armor",
-        "base": 2,
-        "radiant": 4,
+        "base": 1,
+        "radiant": 2,
         "better": "up",
         "step": 1,
         "min": 1,
@@ -3802,7 +3802,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nCry: Discover one of 14 powers. Each is an Activate that spends its (X).\n(2) Expedition Map: Recruit a permanent.\n(0) Life Tap: Draw {tapDraw}. Take {tapDamage} damage.\n(0) Steady Shot: Deal {shot} damage to the enemy hero.\n(1) Ranching: Summon a Rush Token.\n(0) Cat Cafe: Summon a Felinor Token.\n(0) Ping: Pierce. Deal {ping} damage.\n(1) Witness Value: Discover a Unit.\n(1) Stitching: Discover two ({stitchCost}) Cost or less Units. Fuse them.\n(0) Armor Up: Your hero gains {armor} Armor until your next turn.\n(1) Die Insect: Deal {insect} damage to a random enemy.\n(1) KY Brainstorm: Add a random KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(1) Pluck: Add a random Fruit to your hand. It costs ({fruitCost}).\n(2) Terminus Tricks: Discover a Trap to summon.\n({endTimes}) End Times: Discover a Terminus card. Each end of turn, reduce the cost of the next use of this by ({endTimesCut})."
+      "text": "Indestructible\nCry: Discover one of 14 powers. Each is an Activate that spends its (X).\n(2) Expedition Map: Recruit a permanent.\n(0) Life Tap: Draw {tapDraw}. Take {tapDamage} damage.\n(0) Steady Shot: Deal {shot} damage to the enemy hero.\n(1) Ranching: Summon a Rush Token.\n(0) Cat Cafe: Summon a Felinor Token.\n(0) Ping: Pierce. Deal {ping} damage.\n(1) Witness Value: Discover a Unit.\n(1) Stitching: Discover two ({stitchCost}) Cost or less Units. Fuse them.\n(0) Armor Up: Your hero gains {armor} Armor.\n(1) Die Insect: Deal {insect} damage to a random enemy.\n(1) KY Brainstorm: Add a random KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(1) Pluck: Add a random Fruit to your hand. It costs ({fruitCost}).\n(2) Terminus Tricks: Discover a Trap to summon.\n({endTimes}) End Times: Discover a Terminus card. Each end of turn, reduce the cost of the next use of this by ({endTimesCut})."
     },
     "radiant": {
       "keywords": [
@@ -3810,7 +3810,7 @@
           "kind": "Indestructible"
         }
       ],
-      "text": "Indestructible\nCry: Discover one of 14 powers. Each is an Activate that spends its (X).\n(2) Expedition Map: Recruit a permanent. Make it Radiant.\n(0) Life Tap: Draw {tapDraw} from each player's deck.\n(0) Steady Shot: Deal {shot} damage to the enemy hero. This permanently deals 2 more damage.\n(1) Ranching: Summon a Radiant Rush Token.\n(0) Cat Cafe: Summon a random Felinor.\n(0) Ping: Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.\n(1) Witness Value: Discover a Radiant Unit.\n(1) Stitching: Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.\n(0) Tank Up: Your hero gains {armor} Armor, then this power refreshes.\n(1) Die Insect: Lucky 1. Deal {insect} damage to a random enemy.\n(1) KY Brainstorm: Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(1) Pluck: Add a random Radiant Fruit to your hand. It costs ({fruitCost}).\n(2) Terminus Tricks: Discover a Radiant Trap to summon.\n({endTimes}) End Times: Discover a Terminus card. Each end of turn, reduce the cost of the next use of this by ({endTimesCut})."
+      "text": "Indestructible\nCry: Discover one of 14 powers. Each is an Activate that spends its (X).\n(2) Expedition Map: Recruit a permanent. Make it Radiant.\n(0) Life Tap: Draw {tapDraw} from each player's deck.\n(0) Steady Shot: Deal {shot} damage to the enemy hero. This permanently deals 2 more damage.\n(1) Ranching: Summon a Radiant Rush Token.\n(0) Cat Cafe: Summon a random Felinor.\n(0) Ping: Pierce. Deal {ping} damage. If this kills a Unit, summon a Ghoul Token with its stats.\n(1) Witness Value: Discover a Radiant Unit.\n(1) Stitching: Discover two Radiant ({stitchCost}) Cost or less Units. Fuse them.\n(0) Tank Up: Your hero gains {armor} Armor.\n(1) Die Insect: Lucky 1. Deal {insect} damage to a random enemy.\n(1) KY Brainstorm: Add a Radiant KY card to your hand. Reduce the cost of all Spells in your hand by ({discount}).\n(1) Pluck: Add a random Radiant Fruit to your hand. It costs ({fruitCost}).\n(2) Terminus Tricks: Discover a Radiant Trap to summon.\n({endTimes}) End Times: Discover a Terminus card. Each end of turn, reduce the cost of the next use of this by ({endTimesCut})."
     }
   },
   "core-099": {
@@ -10653,20 +10653,20 @@
     "base": {
       "keywords": [
         {
-          "kind": "Tipsy",
+          "kind": "Woozy",
           "n": 1
         }
       ],
-      "text": "Tipsy 1\nLose {loss} health."
+      "text": "Woozy 1\nLose {loss} health."
     },
     "radiant": {
       "keywords": [
         {
-          "kind": "Tipsy",
+          "kind": "Woozy",
           "n": 1
         }
       ],
-      "text": "Tipsy 1\nLose {loss} health."
+      "text": "Woozy 1\nLose {loss} health."
     }
   },
   "classicplus-065-2": {
@@ -17660,13 +17660,13 @@
       "attack": 1,
       "health": 5,
       "keywords": [],
-      "text": "Activate: Tribute this. Your hero has +{armor} Armor until the start of your next turn."
+      "text": "Activate: Tribute this. Your hero gains {armor} Armor."
     },
     "radiant": {
       "attack": 2,
       "health": 10,
       "keywords": [],
-      "text": "Activate: Your hero has +{armor} Armor until the start of your next turn."
+      "text": "Activate: Your hero gains {armor} Armor."
     }
   },
   "meditativeplus-013": {
@@ -23733,8 +23733,8 @@
     "params": [
       {
         "key": "heroArmor",
-        "base": 1,
-        "radiant": 2,
+        "base": 3,
+        "radiant": 6,
         "better": "up",
         "step": 1,
         "min": 1
@@ -24377,16 +24377,16 @@
     "params": [
       {
         "key": "least",
-        "base": 3,
-        "radiant": 3,
+        "base": 5,
+        "radiant": 5,
         "better": "up",
         "step": 1,
         "min": 1
       },
       {
         "key": "most",
-        "base": 5,
-        "radiant": 5,
+        "base": 8,
+        "radiant": 8,
         "better": "up",
         "step": 1,
         "min": 1
@@ -26129,11 +26129,11 @@
     "loc": 22,
     "base": {
       "keywords": [],
-      "text": "Your hero has +{armor} Armor until the start of your next turn."
+      "text": "Your hero gains {armor} Armor."
     },
     "radiant": {
       "keywords": [],
-      "text": "Your hero has +{armor} Armor until the start of your next turn."
+      "text": "Your hero gains {armor} Armor."
     }
   },
   "stinkyscape-t-korrelite": {
@@ -29101,20 +29101,20 @@
     "base": {
       "keywords": [
         {
-          "kind": "Tipsy",
+          "kind": "Woozy",
           "n": 2
         }
       ],
-      "text": "Tipsy 2\nEnd of turn: Fuse a different Grape into this."
+      "text": "Woozy 2\nEnd of turn: Fuse a different Grape into this."
     },
     "radiant": {
       "keywords": [
         {
-          "kind": "Tipsy",
+          "kind": "Woozy",
           "n": 2
         }
       ],
-      "text": "Tipsy 2\nEnd of turn: Fuse a different Radiant Grape into this."
+      "text": "Woozy 2\nEnd of turn: Fuse a different Radiant Grape into this."
     }
   },
   "stinkyscapeplus-006-2": {
@@ -32091,8 +32091,8 @@
       },
       {
         "key": "armor",
-        "base": 5,
-        "radiant": 5,
+        "base": 8,
+        "radiant": 8,
         "better": "up",
         "step": 1,
         "min": 1,
@@ -36508,8 +36508,8 @@
     "params": [
       {
         "key": "count",
-        "base": 5,
-        "radiant": 5,
+        "base": 8,
+        "radiant": 8,
         "better": "up",
         "step": 1,
         "min": 1,
@@ -37038,11 +37038,11 @@
     "base": {
       "keywords": [
         {
-          "kind": "Tipsy",
+          "kind": "Woozy",
           "n": 1
         }
       ],
-      "text": "Tipsy 1\nDraw a card."
+      "text": "Woozy 1\nDraw a card."
     },
     "radiant": {
       "keywords": [],

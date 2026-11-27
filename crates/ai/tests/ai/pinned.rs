@@ -245,7 +245,12 @@ fn r2575000_a_state_of_ordinary_width_spends_past_600_nodes() {
 /// The beam simulates End turn first, so the cut play still leaves it a line and the decision searches.
 #[test]
 fn r5044000_a_root_move_that_spends_the_last_node_leaves_the_beam_its_end_turn() {
-    let at = pinned(ASSAULT_ROOT_CUT);
+    let mut at = pinned(ASSAULT_ROOT_CUT);
+    // R5183000: the defender's Armor 1 wears off with the first hit since issue #5183, which put
+    // the seat's attacks in lethal reach and ended the search before the beam; this much more health
+    // keeps the position the budget case #5044 pinned, with no lethal to find.
+    const HEALTH_PAST_THE_WEAR: i32 = 6;
+    at.state.players.p1.hero.health += HEALTH_PAST_THE_WEAR;
     let mut options = AiOptions::with_budget(create_rng(&at.rng_seed, at.rng_cursor), TEST_BUDGET);
     let d = decide(&at.state, at.seat, &mut options).expect("a decision");
     assert_ne!(

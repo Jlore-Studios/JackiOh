@@ -2,8 +2,8 @@
 import type { PlayerId } from "./PlayerId";
 
 /**
- * R3548001: what a card carries of the Tipsy counter that was up as it arrived: whose, how high and
+ * R3548001: what a card carries of the Woozy counter that was up as it arrived: whose, how high and
  * on which turn. Written as the card is drawn, played or summoned while the counter is up; R78's
  * reset takes it off as the card leaves the field.
  */
-export type TipsyStamp = { player: PlayerId, level: number, turn: number, };
+export type WoozyStamp = { player: PlayerId, level: number, turn: number, };

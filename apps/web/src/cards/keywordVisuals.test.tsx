@@ -49,7 +49,7 @@ function keywordOf(kind: KeywordKind, n = 2): Keyword {
     case "Spell Damage":
     case "Burn":
     case "Toxic":
-    case "Tipsy":
+    case "Woozy":
       return { kind, n };
     default:
       return { kind } as Keyword;
@@ -538,7 +538,7 @@ describe("#2437 temporaryLeft: the count a card's Temporary keywords give it", (
 });
 
 describe("R2577000 a unit on the field draws only the keywords that can still act there", () => {
-  it("R2577000 Equip, Tradable, Cloaked, Crater, Flashback, Stack, Temporary, Flexible, Tipsy, Evolve, Burn and Toxic are the kinds off the field", () => {
+  it("R2577000 Equip, Tradable, Cloaked, Crater, Flashback, Stack, Temporary, Flexible, Woozy, Evolve, Burn and Toxic are the kinds off the field", () => {
     expect([...OFF_FIELD_KINDS].sort()).toEqual([
       "Burn",
       "Cloaked",
@@ -549,9 +549,9 @@ describe("R2577000 a unit on the field draws only the keywords that can still ac
       "Flexible",
       "Stack",
       "Temporary",
-      "Tipsy",
       "Toxic",
       "Tradable",
+      "Woozy",
     ]);
     for (const kind of ["Starship Piece", "Starship", "Can't Defend", "Charge", "Rush", "Brittle", "GIGA", "Frenzy", "Evasive"] as const) expect(KEYWORD_VISUALS[kind].onField, kind).toBe(true);
   });
@@ -621,9 +621,9 @@ describe("R3572000 the Stinkyscape+ keyword kinds", () => {
       expect(fxOf(cf, kind)?.getAttribute("data-kw-layer")).toBe("glyph");
       expect(cf.querySelector(`.keywords > [data-keyword="${kind}"]`)?.hasAttribute("data-chip"), `${kind}'s chip`).toBe(false);
     }
-    // Flexible and Tipsy act as a card is played; Evolve, Burn and Toxic are no printed keyword (R3535002, R3540000): their
+    // Flexible and Woozy act as a card is played; Evolve, Burn and Toxic are no printed keyword (R3535002, R3540000): their
     // badge stays, hidden, and nothing is drawn or counted in the "+n".
-    for (const kind of ["Flexible", "Tipsy", "Evolve", "Burn", "Toxic"] as const) {
+    for (const kind of ["Flexible", "Woozy", "Evolve", "Burn", "Toxic"] as const) {
       expect(KEYWORD_VISUALS[kind].onField, kind).toBe(false);
       const cf = renderUnit({ keywords: [keywordOf(kind)] });
       expect(treatments(cf), kind).toHaveLength(0);
@@ -632,7 +632,7 @@ describe("R3572000 the Stinkyscape+ keyword kinds", () => {
       expect(cf.querySelector(".cf-kw-more"), kind).toBeNull();
     }
     // Beside live keywords the dead ones take no slot, and a plan lists only the three that act.
-    const all = (["GIGA", "Flexible", "Frenzy", "Evasive", "Tipsy", "Evolve", "Burn", "Toxic"] as const).map((kind) => keywordOf(kind));
+    const all = (["GIGA", "Flexible", "Frenzy", "Evasive", "Woozy", "Evolve", "Burn", "Toxic"] as const).map((kind) => keywordOf(kind));
     expect(keywordFxPlan({ keywords: all, canAct: true, armor: 0 }).map((entry) => entry.kind)).toEqual(["GIGA", "Frenzy"]);
     expect(treatedKinds({ keywords: all, canAct: true, armor: 0 })).toEqual(["GIGA", "Frenzy", "Evasive"]);
     expect(keywordChips(all, 0).shown.map((keyword) => keyword.kind)).toEqual(["GIGA", "Frenzy", "Evasive"]);

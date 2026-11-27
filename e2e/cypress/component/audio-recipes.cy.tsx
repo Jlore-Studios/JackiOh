@@ -70,6 +70,8 @@ const EXPECTED_IDS = [
   "vaultHiss", "safeChirp", "stoneChime", "magiChord", "lectureRumble", "pressStamp", "corvetteRoar", "popGasp",
   "geigerHum", "wireRatchet", "beamWhine", "rattleSteam", "breechBoom", "flakWind", "crunchJackpot", "choirHulls",
   "hornEcho", "jetSnap", "whiteRing", "hullDrills", "klaxonSputter", "moltenSnarl", "shutterPurr", "venomDrip",
+  // #5190: the spell verbs' recipes.
+  "elementWindUp", "elementBolt", "elementTail", "windUp", "sparkleTail", "hush", "shatter", "morph", "revealGlint",
 ] as const;
 
 const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
@@ -291,6 +293,15 @@ const DURATION_MS: Readonly<Record<(typeof EXPECTED_IDS)[number], number>> = {
   moltenSnarl: 1500,
   shutterPurr: 1400,
   venomDrip: 1400,
+  elementWindUp: 600,
+  elementBolt: 700,
+  elementTail: 900,
+  windUp: 600,
+  sparkleTail: 1000,
+  hush: 900,
+  shatter: 600,
+  morph: 700,
+  revealGlint: 800,
 };
 
 /** B14 parameter sets used here too. */

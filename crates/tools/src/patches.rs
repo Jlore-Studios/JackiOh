@@ -2367,7 +2367,7 @@ fn includes_problems(patches: &[PatchEntry]) -> Vec<String> {
 
 /// R4779000: every pending fragment whose stem a shipped version already records as its `fragment`: a
 /// kept script keyed by that stem would resolve to the version before the old one, not the newest.
-fn reused_fragment_problems(patches: &[PatchEntry], files: &[NamedFragment]) -> Vec<String> {
+pub(crate) fn reused_fragment_problems(patches: &[PatchEntry], files: &[NamedFragment]) -> Vec<String> {
     let mut problems = Vec::new();
     for NamedFragment { name, .. } in files {
         let stem = fragment_stem(name);

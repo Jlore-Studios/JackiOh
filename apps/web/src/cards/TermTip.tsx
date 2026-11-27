@@ -19,7 +19,7 @@ import {
 import { createPortal } from "react-dom";
 
 import { TERM_HOVER_DELAY_MS } from "./constants.ts";
-import { useTipsyBlur } from "../game/tipsy.tsx";
+import { useWoozyBlur } from "../game/woozy.tsx";
 import type { GlossaryEntry } from "../wire/generated/GlossaryEntry.ts";
 import { LONG_PRESS_MS, LONG_PRESS_SLOP_PX } from "./inspect/constants.ts";
 import { placePreview, rectOf, type Rect } from "./inspect/placement.ts";
@@ -251,10 +251,10 @@ function LiveTerm({ entry, mode, children }: { entry: GlossaryEntry; mode: "poin
 export function TermTip({ entry, children }: { entry: GlossaryEntry; children: ReactNode }): ReactElement {
   const mode = useTermTipMode();
   // R3548001: the keyword the stamp blurs draws blurred.
-  const blur = useTipsyBlur();
+  const blur = useWoozyBlur();
   const body =
     blur?.kind === "keyword" && blur.keyword === entry.id ? (
-      <span className="tipsy-blur">{children}</span>
+      <span className="woozy-blur">{children}</span>
     ) : (
       children
     );

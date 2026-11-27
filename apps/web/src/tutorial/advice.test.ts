@@ -250,8 +250,9 @@ describe("R3100000 the coach's trades are the engine's own combat", () => {
   });
 
   it("R3100000 the board is lethal when the engine's blows, less the hero's Armor, finish it", () => {
-    // Two Duelists hit for 4 each less Armor 2: 2 + 2.
-    const lethal = laid("r3100000-lethal", { p1: [DUELIST, DUELIST], p2: [], hero: { health: 4, armor: 2 } });
+    // Two Duelists hit for 4 each: the first less Armor 2 is 2 and wears it to 1, the second less 1 is
+    // 3 (R5183000): 2 + 3.
+    const lethal = laid("r3100000-lethal", { p1: [DUELIST, DUELIST], p2: [], hero: { health: 5, armor: 2 } });
     expect(lethalOnBoard(coachCtx(lethal))).toBe(true);
     expect(nextMove(coachCtx(lethal))).toMatchObject({ kind: "hero", lethal: true });
     // Played for real, the two blows end the game.
@@ -264,7 +265,7 @@ describe("R3100000 the coach's trades are the engine's own combat", () => {
     expect(viewFor(state, "p1").result?.winner).toBe("p1");
 
     // One more life and the same two blows leave the hero standing.
-    const short = laid("r3100000-short", { p1: [DUELIST, DUELIST], p2: [], hero: { health: 5, armor: 2 } });
+    const short = laid("r3100000-short", { p1: [DUELIST, DUELIST], p2: [], hero: { health: 6, armor: 2 } });
     expect(lethalOnBoard(coachCtx(short))).toBe(false);
   });
 

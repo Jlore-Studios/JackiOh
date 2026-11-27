@@ -1738,8 +1738,9 @@ mod b13_damage_carries_over {
         let state = cast(state, A1, BOLT).state; // 6: 2 to armor, 3 to own HP, 1 from the pool
         let carried = BOLT_DAMAGE - 2 - 3;
 
-        // Armor takes its part of the hit "as today" (§4.4 step 2): it is subtracted and stays.
-        assert_eq!(side(&state, B1).hero.armor, 2);
+        // Armor takes its part of the hit "as today" (§4.4 step 2): it is subtracted, and the hit wears
+        // 1 off it (R5183000).
+        assert_eq!(side(&state, B1).hero.armor, 1);
         assert!(is_spent(&state, B1));
         assert_eq!(pool_of(&state, B1), DUOS_POOL_HEALTH - carried);
         assert_eq!(
@@ -1776,8 +1777,9 @@ mod b13_damage_carries_over {
         let mut state = begun("b13-armor");
         side_mut(&mut state, B1).hero.armor = BOLT_DAMAGE;
         let state = cast(state, A1, BOLT).state;
-        // Armor takes the hit "as today" (§4.4 step 2): subtracted, and still on the hero.
-        assert_eq!(side(&state, B1).hero.armor, BOLT_DAMAGE);
+        // Armor takes the hit "as today" (§4.4 step 2): subtracted, and still on the hero, worn by 1
+        // (R5183000).
+        assert_eq!(side(&state, B1).hero.armor, BOLT_DAMAGE - 1);
         assert_eq!(health(&state, B1), DUOS_OWN_HEALTH);
         assert!(!is_spent(&state, B1));
         assert_eq!(pool_of(&state, B1), DUOS_POOL_HEALTH);

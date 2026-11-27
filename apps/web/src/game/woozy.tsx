@@ -1,4 +1,4 @@
-// Tipsy X (Stinkyscape+ E5, issue #3548, R3548000–R3548001): the owner's-view-only blur.
+// Woozy X (Stinkyscape+ E5, issue #3548, R3548000–R3548001): the owner's-view-only blur.
 //
 // A stamped card may blur one of its words on its owner's view alone: one word of its name, its
 // cost, its attack, its health, or one keyword kind it carries. The engine decides what blurs, from
@@ -7,27 +7,27 @@
 
 import { createContext, Fragment, useContext, type ReactElement, type ReactNode } from "react";
 
-import type { TipsyBlur } from "@jackioh/shared";
+import type { WoozyBlur } from "@jackioh/shared";
 
-const TipsyBlurContext = createContext<TipsyBlur | null>(null);
+const WoozyBlurContext = createContext<WoozyBlur | null>(null);
 
-export function useTipsyBlur(): TipsyBlur | null {
-  return useContext(TipsyBlurContext);
+export function useWoozyBlur(): WoozyBlur | null {
+  return useContext(WoozyBlurContext);
 }
 
-export function TipsyBlurProvider({
+export function WoozyBlurProvider({
   blur,
   children,
 }: {
-  blur: TipsyBlur | null | undefined;
+  blur: WoozyBlur | null | undefined;
   children: ReactNode;
 }): ReactElement {
-  return <TipsyBlurContext.Provider value={blur ?? null}>{children}</TipsyBlurContext.Provider>;
+  return <WoozyBlurContext.Provider value={blur ?? null}>{children}</WoozyBlurContext.Provider>;
 }
 
-/** R3548001: the card's name with the word the stamp blurs wrapped in `.tipsy-blur`. */
-export function TipsyName({ name }: { name: string }): ReactElement | string {
-  const blur = useTipsyBlur();
+/** R3548001: the card's name with the word the stamp blurs wrapped in `.woozy-blur`. */
+export function WoozyName({ name }: { name: string }): ReactElement | string {
+  const blur = useWoozyBlur();
   if (blur?.kind !== "name") return name;
   const words = name.split(" ");
   if (words.length === 0) return name;
@@ -37,7 +37,7 @@ export function TipsyName({ name }: { name: string }): ReactElement | string {
       {words.map((word, index) => (
         <Fragment key={index}>
           {index > 0 ? " " : null}
-          {index === at ? <span className="tipsy-blur">{word}</span> : word}
+          {index === at ? <span className="woozy-blur">{word}</span> : word}
         </Fragment>
       ))}
     </>
