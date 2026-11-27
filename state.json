@@ -19760,6 +19760,13 @@
     "5158": {
       "action": "plan",
       "asks": [],
+      "build_next": {
+        "from_run": "46065868093",
+        "model": "sonnet",
+        "provider": "claude-7",
+        "since": "2026-11-27T21:06:17Z",
+        "until": "2026-11-27T21:36:17Z"
+      },
       "difficulty_by": {
         "at": "2026-11-27T21:06:07Z",
         "difficulty": "medium",
